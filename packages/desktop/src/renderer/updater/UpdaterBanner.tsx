@@ -44,8 +44,16 @@ export function UpdaterBanner() {
 
   if (status.kind === "available") {
     return (
-      <div className="border-b border-border bg-muted px-4 py-2 text-sm text-muted-foreground">
-        {t("misc.updater.available", { version: status.version })}
+      <div className="flex items-center gap-3 border-b border-border bg-primary/10 px-4 py-2 text-sm">
+        <span className="flex-1">{t("misc.updater.available", { version: status.version })}</span>
+        <Button size="sm" onClick={() => void window.codeshell.downloadUpdate()}>{t("misc.updater.download")}</Button>
+        <button
+          className="text-muted-foreground hover:text-foreground"
+          onClick={() => setDismissed(true)}
+          aria-label={t("misc.updater.close")}
+        >
+          ×
+        </button>
       </div>
     );
   }
@@ -74,6 +82,9 @@ export function UpdaterSettingsRow() {
         <Button size="sm" variant="outline" onClick={() => void window.codeshell.checkForUpdate()}>
           {t("misc.updater.checkUpdate")}
         </Button>
+        {status.kind === "available" && (
+          <Button size="sm" onClick={() => void window.codeshell.downloadUpdate()}>{t("misc.updater.download")}</Button>
+        )}
         {status.kind === "downloaded" && (
           <Button size="sm" onClick={() => void window.codeshell.installUpdate()}>{t("misc.updater.restartInstall")}</Button>
         )}

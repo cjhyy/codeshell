@@ -72,8 +72,11 @@ export function initUpdater(): void {
   // block emitted into the bundle by electron-builder. We don't
   // ship one yet — checkForUpdates will then no-op with an error.
 
-  autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
+  // Manual-update policy: only CHECK + notify automatically. The user decides
+  // when to download (downloadUpdate) and when to install (quitAndInstall) —
+  // no silent background download, no install-on-quit.
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
 
   autoUpdater.on("checking-for-update", () => set({ kind: "checking" }));
   autoUpdater.on("update-available", (info) =>
@@ -117,6 +120,21 @@ export async function checkForUpdate(): Promise<void> {
   }
   try {
     await autoUpdater.checkForUpdates();
+  } catch (e) {
+    set({ kind: "error", message: (e as Error).message });
+  }
+}
+
+/** User-triggered download (autoDownload is off). Only meaningful once an
+ *  update is available; electron-updater emits download-progress → downloaded. */
+export async function downloadUpdate(): Promise<void> {
+  if (!app.isPackaged) {
+    set({ kind: "error", message: "auto-update only runs in packaged builds" });
+    return;
+  }
+  if (lastStatus.kind !== "available") return;
+  try {
+    await autoUpdater.downloadUpdate();
   } catch (e) {
     set({ kind: "error", message: (e as Error).message });
   }

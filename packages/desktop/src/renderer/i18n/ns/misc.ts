@@ -5,9 +5,10 @@ export const misc = {
       updater: {
         downloaded: "新版本 {version} 已下载完成。",
         restartInstall: "重启并安装",
+        download: "下载",
         close: "关闭",
         downloading: "正在下载新版本… {percent}%",
-        available: "发现新版本 {version}，正在下载…",
+        available: "发现新版本 {version}。",
         autoUpdate: "自动更新",
         statusLabel: "状态：",
         checkUpdate: "检查更新",
@@ -95,9 +96,10 @@ export const misc = {
       updater: {
         downloaded: "Version {version} has finished downloading.",
         restartInstall: "Restart and install",
+        download: "Download",
         close: "Close",
         downloading: "Downloading new version… {percent}%",
-        available: "Found version {version}, downloading…",
+        available: "Version {version} is available.",
         autoUpdate: "Auto-update",
         statusLabel: "Status: ",
         checkUpdate: "Check for updates",

@@ -588,6 +588,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   setBadgeCount: (count: number) => ipcRenderer.invoke("badge:set", count),
   newWindow: () => ipcRenderer.invoke("window:new"),
   checkForUpdate: () => ipcRenderer.invoke("updater:check"),
+  downloadUpdate: () => ipcRenderer.invoke("updater:download"),
   installUpdate: () => ipcRenderer.invoke("updater:install"),
   getUpdaterStatus: () => ipcRenderer.invoke("updater:status"),
   onUpdaterStatus: (cb: (status: unknown) => void): (() => void) => {
