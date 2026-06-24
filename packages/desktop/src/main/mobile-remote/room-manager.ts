@@ -20,6 +20,7 @@ export interface RoomMeta {
   permissionMode: RoomPermissionMode;
   createdAt: number;
   lastActiveAt: number;
+  claudeSessionId?: string;
 }
 
 export interface RoomMessage {
@@ -43,6 +44,10 @@ export interface RoomAgent {
   send(text: string): boolean;
   isRunning(): boolean;
   stop(): void;
+  respondControl?(
+    requestId: string,
+    decision: { behavior: "allow"; updatedInput?: unknown } | { behavior: "deny"; message: string },
+  ): void;
 }
 
 export interface RoomAgentFactory {
@@ -54,6 +59,11 @@ export interface RoomManagerOptions {
   createAgent: RoomAgentFactory;
   /** Called whenever a room gains a new persisted message (push to phone). */
   onMessage: (roomId: string, msg: RoomMessage) => void;
+  /** Called when a room's resident agent requests tool-use approval. */
+  onApprovalRequest?: (
+    roomId: string,
+    req: { requestId: string; toolName: string; displayName?: string; input: unknown; description?: string },
+  ) => void;
   now?: () => number;
 }
 
@@ -86,6 +96,7 @@ export class RoomManager {
     name?: string;
     cwd: string;
     permissionMode?: RoomPermissionMode;
+    claudeSessionId?: string;
   }): RoomMeta {
     const id = `room_${this.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
     const meta: RoomMeta = {
@@ -96,6 +107,7 @@ export class RoomManager {
       permissionMode: input.permissionMode ?? "default",
       createdAt: this.now(),
       lastActiveAt: this.now(),
+      claudeSessionId: input.claudeSessionId,
     };
     mkdirSync(this.roomDir(id), { recursive: true });
     writeFileSync(this.metaPath(id), JSON.stringify(meta, null, 2), "utf-8");
@@ -173,6 +185,36 @@ export class RoomManager {
     return out;
   }
 
+  /**
+   * Open (or create) the room bound to a claude session id, deduping by that id
+   * so a given claude session maps to exactly one room. Returns the room id.
+   */
+  openForSession(claudeSessionId: string, cwd: string, mode: RoomPermissionMode): { roomId: string } {
+    const existing = claudeSessionId
+      ? this.listRooms().find((r) => r.claudeSessionId === claudeSessionId)
+      : undefined;
+    const meta =
+      existing ?? this.createRoom({ cwd, permissionMode: mode, claudeSessionId: claudeSessionId || undefined });
+    this.open(meta.id);
+    return { roomId: meta.id };
+  }
+
+  /**
+   * Forward a phone-side approval decision to the room's resident agent.
+   * Returns false if the room has no live agent (or it can't take control
+   * responses).
+   */
+  respondApproval(
+    roomId: string,
+    requestId: string,
+    decision: { behavior: "allow"; updatedInput?: unknown } | { behavior: "deny"; message: string },
+  ): boolean {
+    const agent = this.agents.get(roomId);
+    if (!agent?.respondControl) return false;
+    agent.respondControl(requestId, decision);
+    return true;
+  }
+
   /** Open a room: start its resident agent if not already running. */
   open(id: string): { status: "running" | "missing" } {
     const meta = this.getRoom(id);
@@ -201,6 +243,10 @@ export class RoomManager {
         break;
       case "error":
         this.append(id, { from: "system", type: "error", text: event.error });
+        break;
+      case "approval_request":
+        this.append(id, { from: "agent", type: "approval", tool: event.toolName, summary: event.description ?? "" });
+        this.opts.onApprovalRequest?.(id, event);
         break;
       case "exit":
         this.agents.delete(id);

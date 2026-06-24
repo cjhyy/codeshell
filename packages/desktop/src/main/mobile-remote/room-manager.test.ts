@@ -148,6 +148,73 @@ describe("RoomManager", () => {
     expect(mgr.getRoom(room.id)).toBeDefined();
   });
 
+  test("openForSession creates a room bound to claudeSessionId and reuses it on a second call", () => {
+    const { mgr } = makeManager();
+    const r1 = mgr.openForSession("cc-sess-A", "/tmp/p", "default");
+    const r2 = mgr.openForSession("cc-sess-A", "/tmp/p", "default");
+    expect(r1.roomId).toBe(r2.roomId);
+    expect(mgr.getRoom(r1.roomId)?.claudeSessionId).toBe("cc-sess-A");
+  });
+
+  test("openForSession creates distinct rooms for distinct sessions", () => {
+    const { mgr } = makeManager();
+    const a = mgr.openForSession("cc-A", "/tmp/p", "default");
+    const b = mgr.openForSession("cc-B", "/tmp/p", "default");
+    expect(a.roomId).not.toBe(b.roomId);
+  });
+
+  test("approval_request event persists an approval message and forwards to onApprovalRequest", () => {
+    dir = mkdtempSync(join(tmpdir(), "rooms-"));
+    let emit!: (e: ResidentAgentEvent) => void;
+    const forwarded: { roomId: string; requestId: string }[] = [];
+    const mgr = new RoomManager({
+      rootDir: dir,
+      now: (() => {
+        let c = 1;
+        return () => c++;
+      })(),
+      createAgent: (_r, onEvent) => {
+        emit = onEvent;
+        return { start() {}, send: () => true, isRunning: () => true, stop() {} };
+      },
+      onMessage: () => {},
+      onApprovalRequest: (roomId, req) => forwarded.push({ roomId, requestId: req.requestId }),
+    });
+    const room = mgr.createRoom({ cwd: "/repo" });
+    mgr.open(room.id);
+    emit({ type: "approval_request", requestId: "req-1", toolName: "Bash", input: { command: "ls" }, description: "run ls" });
+    const msgs = mgr.getMessages(room.id, 0).filter((m) => m.type === "approval");
+    expect(msgs).toHaveLength(1);
+    expect(msgs[0]).toMatchObject({ from: "agent", type: "approval", tool: "Bash", summary: "run ls" });
+    expect(forwarded).toEqual([{ roomId: room.id, requestId: "req-1" }]);
+  });
+
+  test("respondApproval routes the decision to the room's agent.respondControl", () => {
+    dir = mkdtempSync(join(tmpdir(), "rooms-"));
+    const calls: { requestId: string; decision: unknown }[] = [];
+    const mgr = new RoomManager({
+      rootDir: dir,
+      now: (() => {
+        let c = 1;
+        return () => c++;
+      })(),
+      createAgent: () => ({
+        start() {},
+        send: () => true,
+        isRunning: () => true,
+        stop() {},
+        respondControl: (requestId, decision) => calls.push({ requestId, decision }),
+      }),
+      onMessage: () => {},
+    });
+    const room = mgr.createRoom({ cwd: "/repo" });
+    mgr.open(room.id);
+    expect(mgr.respondApproval(room.id, "req-1", { behavior: "allow" })).toBe(true);
+    expect(calls).toEqual([{ requestId: "req-1", decision: { behavior: "allow" } }]);
+    // unopened / unknown room → false
+    expect(mgr.respondApproval("nope", "req-x", { behavior: "deny", message: "no" })).toBe(false);
+  });
+
   test("agent text/tool events persist with correct shape", () => {
     dir = mkdtempSync(join(tmpdir(), "rooms-"));
     let emit!: (e: ResidentAgentEvent) => void;
