@@ -930,6 +930,31 @@ export interface CodeshellApi {
     listSessions(cwd: string): Promise<DiscoveredSession[]>;
     listTasks(): Promise<{ job: CronJob; meta: CCTaskMeta | undefined }[]>;
     deleteTask(jobId: string): Promise<boolean>;
+    openSession(claudeSessionId: string, cwd: string, mode: string): Promise<{ roomId: string }>;
+    send(roomId: string, text: string): Promise<boolean>;
+    respondApproval(roomId: string, requestId: string, decision: unknown): Promise<boolean>;
+    roomHistory(roomId: string, sinceSeq?: number): Promise<unknown[]>;
+    readHistory(
+      cwd: string,
+      sessionId: string,
+      limit: number,
+    ): Promise<{
+      messages: { role: "user" | "assistant"; text: string; tools?: { name: string; summary: string }[] }[];
+      hasMore: boolean;
+      totalCount: number;
+    }>;
+    closeSession(roomId: string): Promise<void>;
+    onRoomMessage(cb: (env: { roomId: string; msg: unknown }) => void): () => void;
+    onApprovalRequest(
+      cb: (req: {
+        roomId: string;
+        requestId: string;
+        toolName: string;
+        displayName?: string;
+        input: unknown;
+        description?: string;
+      }) => void,
+    ): () => void;
   };
 }
 

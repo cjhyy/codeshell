@@ -103,7 +103,18 @@ export type MobileServerEvent =
   | { type: "room.message"; roomId: string; msg: unknown }
   | { type: "room.history.ok"; roomId: string; messages: unknown[]; latestSeq: number }
   | { type: "room.closed"; roomId: string }
-  | { type: "room.error"; roomId?: string; message: string };
+  | { type: "room.error"; roomId?: string; message: string }
+  | {
+      type: "ccRoom.approvalRequest";
+      roomId: string;
+      req: {
+        requestId: string;
+        toolName: string;
+        displayName?: string;
+        input: unknown;
+        description?: string;
+      };
+    };
 
 export interface RoomPublic {
   id: string;
