@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Plus, RefreshCw, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@ui/button";
-import type { RoomPublic } from "@protocol";
+import type { MobileProjectMeta, RoomPublic } from "@protocol";
 import { basename, relativeTime } from "@mobile/lib/format";
 
 /** Rooms = resident Claude Code sessions. List + create-from-project + open. */
@@ -16,7 +16,7 @@ export function RoomList({
   onClose,
 }: {
   rooms: RoomPublic[];
-  projects: { path: string; name: string }[];
+  projects: MobileProjectMeta[];
   activeRoomId?: string;
   onRefresh: () => void;
   onOpen: (room: RoomPublic) => void;

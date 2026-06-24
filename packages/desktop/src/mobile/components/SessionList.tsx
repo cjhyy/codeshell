@@ -1,24 +1,28 @@
-import { Plus, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { Plus, RefreshCw, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@ui/button";
-import type { MobileSessionMeta } from "@protocol";
+import type { MobileProjectMeta, MobileSessionMeta } from "@protocol";
 import { relativeTime, groupByProject } from "@mobile/lib/format";
 
 /** The desktop sessions the phone can open + drive, GROUPED BY PROJECT (cwd). */
 export function SessionList({
   sessions,
+  projects,
   activeSessionId,
   onSelect,
   onNew,
   onRefresh,
 }: {
   sessions: MobileSessionMeta[];
+  projects: MobileProjectMeta[];
   activeSessionId?: string;
   onSelect: (id: string) => void;
-  onNew: () => void;
+  onNew: (cwd?: string | null, name?: string) => void;
   onRefresh: () => void;
 }) {
-  const groups = groupByProject(sessions);
+  const [creating, setCreating] = useState(false);
+  const groups = groupByProject(sessions, projects);
   return (
     <div className="flex h-full flex-col">
       <div className="mobile-side-header flex items-center gap-2 px-3 py-3">
@@ -36,12 +40,44 @@ export function SessionList({
           >
             <RefreshCw />
           </Button>
-          <Button size="sm" onClick={onNew}>
-            <Plus />
-            新建
+          <Button size="sm" onClick={() => setCreating((c) => !c)}>
+            {creating ? <X /> : <Plus />}
+            {creating ? "取消" : "新建"}
           </Button>
         </div>
       </div>
+      {creating && (
+        <div className="border-b border-border/70 bg-black/12 p-2">
+          <p className="mb-1.5 px-1 text-[11px] text-muted-foreground">选一个项目开新会话</p>
+          <div className="flex flex-col gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                onNew(null);
+                setCreating(false);
+              }}
+              className="mobile-list-item flex flex-col rounded-lg px-2.5 py-2 text-left text-sm"
+            >
+              <span className="font-medium text-foreground">无项目对话</span>
+              <span className="truncate text-[11px] text-muted-foreground">不绑定 repo</span>
+            </button>
+            {projects.map((p) => (
+              <button
+                key={p.path}
+                type="button"
+                onClick={() => {
+                  onNew(p.path, p.name);
+                  setCreating(false);
+                }}
+                className="mobile-list-item flex flex-col rounded-lg px-2.5 py-2 text-left text-sm"
+              >
+                <span className="font-medium text-foreground">{p.name}</span>
+                <span className="truncate text-[11px] text-muted-foreground">{p.path}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="flex-1 overflow-y-auto px-2 py-2">
         {sessions.length === 0 ? (
           <p className="mobile-glass rounded-lg px-3 py-6 text-center text-xs text-muted-foreground">

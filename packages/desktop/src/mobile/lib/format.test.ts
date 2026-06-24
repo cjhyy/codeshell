@@ -17,6 +17,19 @@ test("groupByProject 按 cwd 分组,最新项目在前,无项目沉底", () => {
   expect(p1.updatedAt).toBe(200);
 });
 
+test("groupByProject 有桌面项目顺序时按项目顺序排列", () => {
+  const items = [
+    { id: "a", cwd: "/u/proj1", updatedAt: 900 },
+    { id: "b", cwd: "/u/proj2", updatedAt: 100 },
+    { id: "c", cwd: "/u/proj3", updatedAt: 800 },
+  ];
+  const groups = groupByProject(items, [
+    { path: "/u/proj2", name: "Pinned beta" },
+    { path: "/u/proj1", name: "Alpha" },
+  ]);
+  expect(groups.map((g) => g.name)).toEqual(["Pinned beta", "Alpha", "proj3"]);
+});
+
 test("groupByProject 空数组 → 空", () => {
   expect(groupByProject([])).toEqual([]);
 });

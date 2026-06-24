@@ -80,7 +80,12 @@ import { TrustedDeviceStore } from "./mobile-remote/trusted-device-store.js";
 import { CloudflaredBinary } from "./mobile-remote/cloudflared-binary.js";
 import { TunnelManager } from "./mobile-remote/tunnel-manager.js";
 import { AccessPasscode } from "./mobile-remote/access-passcode.js";
-import type { MobileClientEvent, MobileServerEvent, RoomPublic } from "./mobile-remote/types.js";
+import type {
+  MobileClientEvent,
+  MobileProjectMeta,
+  MobileServerEvent,
+  RoomPublic,
+} from "./mobile-remote/types.js";
 import { RoomManager } from "./mobile-remote/room-manager.js";
 import { ResidentAgentProcess } from "./mobile-remote/resident-agent.js";
 import { ApprovalBridge } from "./cc-room/approval-bridge.js";
@@ -228,6 +233,45 @@ const mobileRemote = new RemoteHostManager({
   },
 });
 
+let mobileProjects: MobileProjectMeta[] = [];
+function normalizeMobileProjects(projects: unknown): MobileProjectMeta[] {
+  if (!Array.isArray(projects)) return [];
+  const out: MobileProjectMeta[] = [];
+  const seen = new Set<string>();
+  for (const item of projects) {
+    const p = item as Partial<MobileProjectMeta> | null;
+    if (!p || typeof p.path !== "string" || !p.path || seen.has(p.path)) continue;
+    seen.add(p.path);
+    out.push({
+      path: p.path,
+      name: typeof p.name === "string" && p.name.trim() ? p.name : basename(p.path),
+      ...(typeof p.addedAt === "number" ? { addedAt: p.addedAt } : {}),
+      ...(typeof p.pinned === "boolean" ? { pinned: p.pinned } : {}),
+    });
+  }
+  return out;
+}
+async function mobileProjectList(): Promise<MobileProjectMeta[]> {
+  if (mobileProjects.length > 0) return mobileProjects;
+  const recents = await loadRecents().catch(() => []);
+  return recents.map((r) => ({ path: r.path, name: r.name, addedAt: r.lastOpenedAt }));
+}
+async function sendMobileProjectList(deviceId?: string): Promise<void> {
+  const event: MobileServerEvent = { type: "room.projects.ok", projects: await mobileProjectList() };
+  if (deviceId) mobileRemote.sendToDevice(deviceId, event);
+  else mobileRemote.broadcast(event);
+}
+function broadcastMobileSession(meta: { sessionId: string; cwd: string; title: string; prompt: string }): void {
+  const line = JSON.stringify({
+    jsonrpc: "2.0",
+    method: "agent/mobileSession",
+    params: meta,
+  });
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w.isDestroyed()) w.webContents.send("agent:msg", line);
+  }
+}
+
 // ── Public tunnel mode (off by default) ─────────────────────────────────────
 // cloudflared binary manager, tunnel process manager, and the access passcode
 // gate. All three live under <userData>/mobile-remote/. The tunnel is never
@@ -334,14 +378,17 @@ interface MobileDeviceState {
   sessionId?: string;
   /** The session this device explicitly selected (overrides everything). */
   selectedSessionId?: string;
-  /** This device's permission-mode preset, applied to its next run. */
-  permissionMode: PermissionMode;
+  /** The cwd bound to the selected or freshly-created mobile session. */
+  selectedCwd?: string | null;
+  /** This device's explicit permission-mode preset, applied to its next run. */
+  permissionMode?: PermissionMode;
 }
 const mobileDeviceStates = new Map<string, MobileDeviceState>();
+const mobileSessionCwds = new Map<string, string | null>();
 function deviceState(deviceId: string): MobileDeviceState {
   let s = mobileDeviceStates.get(deviceId);
   if (!s) {
-    s = { permissionMode: "default" };
+    s = {};
     mobileDeviceStates.set(deviceId, s);
   }
   return s;
@@ -351,6 +398,31 @@ function ensureMobileSessionId(st: MobileDeviceState): string {
     st.sessionId = `mobile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   }
   return st.sessionId;
+}
+
+async function lookupDiskSessionCwd(sessionId: string): Promise<string | null | undefined> {
+  const cached = mobileSessionCwds.get(sessionId);
+  if (cached !== undefined) return cached;
+  let cursor: string | undefined;
+  for (let page = 0; page < 10; page++) {
+    const res = await listDiskSessions({ limit: 100, cursor }).catch(() => ({ sessions: [], nextCursor: null }));
+    for (const s of res.sessions) {
+      mobileSessionCwds.set(s.id, s.cwd || null);
+      if (s.id === sessionId || s.engineSessionId === sessionId) {
+        const cwd = s.cwd || null;
+        mobileSessionCwds.set(sessionId, cwd);
+        return cwd;
+      }
+    }
+    if (!res.nextCursor) break;
+    cursor = res.nextCursor;
+  }
+  return undefined;
+}
+
+function effectiveMobileRunCwd(st: MobileDeviceState, ctxCwd?: string): string {
+  if (st.selectedCwd === null) return resolveNoRepoCwd();
+  return st.selectedCwd || ctxCwd || process.cwd();
 }
 
 /**
@@ -416,7 +488,7 @@ async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: s
   // back to ONLY that device via sendToDevice; the agent output stream is still
   // broadcast (each front-end filters to its bound session).
   const deviceId = event.deviceId;
-  const st = deviceId ? deviceState(deviceId) : { permissionMode: "default" as PermissionMode };
+  const st = deviceId ? deviceState(deviceId) : {};
   const reply = (e: MobileServerEvent): void => {
     if (deviceId) mobileRemote.sendToDevice(deviceId, e);
     else mobileRemote.broadcast(e);
@@ -427,18 +499,33 @@ async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: s
     explicit ?? st.selectedSessionId ?? ctx.sessionId ?? ensureMobileSessionId(st);
   if (event.type === "session.select") {
     st.selectedSessionId = event.sessionId;
+    const cwd = await lookupDiskSessionCwd(event.sessionId);
+    if (cwd !== undefined) st.selectedCwd = cwd;
     return;
   }
   if (event.type === "session.create") {
     // Mint a fresh session for THIS device and make it its active selection.
     st.sessionId = `mobile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
     st.selectedSessionId = st.sessionId;
+    if ("cwd" in event) {
+      st.selectedCwd = event.cwd ?? null;
+    } else {
+      st.selectedCwd = ctx.cwd ?? process.cwd();
+    }
+    mobileSessionCwds.set(st.sessionId, st.selectedCwd);
     reply({ type: "chat.accepted", sessionId: st.sessionId });
     return;
   }
   if (event.type === "chat.send") {
     const sessionId = resolveSessionId(event.sessionId);
-    const cwd = ctx.cwd ?? process.cwd();
+    const cwd = effectiveMobileRunCwd(st, ctx.cwd);
+    mobileSessionCwds.set(sessionId, st.selectedCwd ?? cwd);
+    broadcastMobileSession({
+      sessionId,
+      cwd,
+      title: event.text,
+      prompt: event.text,
+    });
     // Every phone chat turn is a normal CodeShell turn routed through the worker
     // run path. The device's permission-mode preset rides on the run.
     bridge.injectWorkerMessage(
@@ -446,7 +533,12 @@ async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: s
         jsonrpc: "2.0",
         id: `mobile-run-${Date.now()}`,
         method: "agent/run",
-        params: { task: event.text, cwd, sessionId, permissionMode: st.permissionMode },
+        params: {
+          task: event.text,
+          cwd,
+          sessionId,
+          ...(st.permissionMode ? { permissionMode: st.permissionMode } : {}),
+        },
       }),
     );
     // Tell THIS device which session its turn landed in.
@@ -495,6 +587,7 @@ async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: s
   if (event.type === "session.list") {
     // Every desktop session the sidebar would show (top-level, existing cwd).
     const { sessions } = await listDiskSessions({ limit: 100 });
+    for (const s of sessions) mobileSessionCwds.set(s.id, s.cwd || null);
     reply({
       type: "session.list.ok",
       sessions: sessions.map((s) => ({
@@ -601,10 +694,23 @@ async function resolveRoomPermissionMode(
   cwd: string,
   explicit: "default" | "acceptEdits" | "bypassPermissions" | undefined,
 ): Promise<"default" | "acceptEdits" | "bypassPermissions"> {
-  const settings = ((await readSettings("user", cwd).catch(() => null)) ?? {}) as {
+  const userSettings = ((await readSettings("user", cwd).catch(() => null)) ?? {}) as {
     externalAgents?: Parameters<typeof resolveExternalAgentConfig>[0];
   };
-  const cfg = resolveExternalAgentConfig(settings.externalAgents).claudeCode;
+  const projectSettings = ((await readSettings("project", cwd).catch(() => null)) ?? {}) as {
+    externalAgents?: Parameters<typeof resolveExternalAgentConfig>[0];
+  };
+  const userAgents = userSettings.externalAgents ?? {};
+  const projectAgents = projectSettings.externalAgents ?? {};
+  const mergedAgents = {
+    ...userAgents,
+    ...projectAgents,
+    claudeCode: {
+      ...userAgents.claudeCode,
+      ...projectAgents.claudeCode,
+    },
+  };
+  const cfg = resolveExternalAgentConfig(mergedAgents).claudeCode;
   const norm = (p: string) => p.replace(/\/+$/, "");
   const trusted = cfg.trustedWorkspaces.some((p) => norm(p) === norm(cwd));
   if (explicit === "bypassPermissions") {
@@ -620,18 +726,14 @@ async function resolveRoomPermissionMode(
  * a non-trusted cwd that requests bypassPermissions is downgraded to "default"
  * here (the high-risk gate is surfaced by the UI / future approval step).
  */
-async function handleRoomEvent(event: MobileClientEvent): Promise<void> {
+async function handleRoomEvent(event: MobileClientEvent & { deviceId?: string }): Promise<void> {
   try {
     if (event.type === "room.list") {
       mobileRemote.broadcast({ type: "room.list.ok", rooms: roomManager.listRooms().map(roomToPublic) });
       return;
     }
     if (event.type === "room.projects") {
-      const recents = await loadRecents().catch(() => []);
-      mobileRemote.broadcast({
-        type: "room.projects.ok",
-        projects: recents.map((r) => ({ path: r.path, name: r.name })),
-      });
+      await sendMobileProjectList(event.deviceId);
       return;
     }
     if (event.type === "room.create") {
@@ -641,8 +743,9 @@ async function handleRoomEvent(event: MobileClientEvent): Promise<void> {
         cwd: event.cwd,
         permissionMode,
       });
+      const opened = roomManager.open(room.id);
       mobileRemote.broadcast({ type: "room.list.ok", rooms: roomManager.listRooms().map(roomToPublic) });
-      mobileRemote.broadcast({ type: "room.opened", roomId: room.id, status: "missing" });
+      mobileRemote.broadcast({ type: "room.opened", roomId: room.id, status: opened.status });
       return;
     }
     if (event.type === "room.open") {
@@ -1690,13 +1793,15 @@ ipcMain.handle("mobileRemote:setPasscode", async (_e, passcode: string) => {
 ipcMain.handle("mobileRemote:tunnelStatus", async () => ({
   running: tunnelManager.isRunning(),
 }));
+ipcMain.handle("mobileRemote:updateProjects", async (_e, projects: unknown) => {
+  mobileProjects = normalizeMobileProjects(projects);
+  await sendMobileProjectList();
+  return true;
+});
 
 // ── Rooms (desktop side; same RoomManager the phone uses → dual-ended) ──────
 ipcMain.handle("rooms:list", async () => roomManager.listRooms().map(roomToPublic));
-ipcMain.handle("rooms:projects", async () => {
-  const recents = await loadRecents().catch(() => []);
-  return recents.map((r) => ({ path: r.path, name: r.name }));
-});
+ipcMain.handle("rooms:projects", async () => mobileProjectList());
 ipcMain.handle(
   "rooms:create",
   async (

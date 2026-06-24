@@ -2,6 +2,7 @@ import { useCallback, useMemo, useReducer, useRef, useState } from "react";
 import type {
   MobileServerEvent,
   MobileSessionMeta,
+  MobileProjectMeta,
   RoomPublic,
   PermissionMode,
   ApprovalScope,
@@ -39,7 +40,7 @@ export interface RemoteApp {
   sessions: MobileSessionMeta[];
   activeSessionId?: string;
   rooms: RoomPublic[];
-  projects: { path: string; name: string }[];
+  projects: MobileProjectMeta[];
   activeRoom?: RoomPublic;
   approvals: PendingApproval[];
   permissionMode: PermissionMode;
@@ -49,7 +50,7 @@ export interface RemoteApp {
   sendChat: (text: string) => void;
   stopRun: () => void;
   selectSession: (id: string) => void;
-  newSession: () => void;
+  newSession: (cwd?: string | null, name?: string) => void;
   refreshSessions: () => void;
   respondApproval: (
     requestId: string,
@@ -102,7 +103,7 @@ export function useRemoteApp(): RemoteApp {
   const [sessions, setSessions] = useState<MobileSessionMeta[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | undefined>();
   const [rooms, setRooms] = useState<RoomPublic[]>([]);
-  const [projects, setProjects] = useState<{ path: string; name: string }[]>([]);
+  const [projects, setProjects] = useState<MobileProjectMeta[]>([]);
   const [activeRoomId, setActiveRoomId] = useState<string | undefined>();
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const [permissionMode, setPermissionModeState] = useState<PermissionMode>("default");
@@ -327,12 +328,12 @@ export function useRemoteApp(): RemoteApp {
     [socket],
   );
 
-  const newSession = useCallback(() => {
+  const newSession = useCallback((cwd?: string | null, name?: string) => {
     boundSessionRef.current = undefined;
     setActiveRoomId(undefined);
     setApprovals([]);
     dispatchChat({ kind: "reset" });
-    socket.send({ type: "session.create" });
+    socket.send({ type: "session.create", cwd, name });
   }, [socket]);
 
   const respondApproval = useCallback(

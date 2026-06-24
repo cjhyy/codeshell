@@ -379,6 +379,14 @@ export interface CodeshellApi {
   onAutomationSession(
     cb: (meta: { sessionId: string; cwd: string; title: string; prompt: string; cronJobId: string }) => void,
   ): Unsubscribe;
+  /**
+   * Mobile remote session announcement. Fires when a paired phone starts a
+   * CodeShell run so the desktop renderer can place the session under the
+   * correct project before stream events arrive.
+   */
+  onMobileSession(
+    cb: (meta: { sessionId: string; cwd: string; title: string; prompt: string }) => void,
+  ): Unsubscribe;
   onApprovalRequest(cb: (env: ApprovalRequestEnvelope) => void): Unsubscribe;
   onStatus(cb: (evt: AgentStatusEvent) => void): Unsubscribe;
   onAgentLifecycle(cb: (evt: AgentLifecycleEvent) => void): Unsubscribe;
@@ -899,6 +907,7 @@ export interface CodeshellApi {
     onTunnelStatus(
       cb: (s: { status: string; detail?: unknown }) => void,
     ): Unsubscribe;
+    updateProjects(projects: MobileProjectMeta[]): Promise<boolean>;
   };
 
   /**
@@ -908,7 +917,7 @@ export interface CodeshellApi {
    */
   rooms: {
     list(): Promise<RoomPublic[]>;
-    projects(): Promise<{ path: string; name: string }[]>;
+    projects(): Promise<MobileProjectMeta[]>;
     create(input: {
       name?: string;
       cwd: string;
@@ -956,6 +965,13 @@ export interface CodeshellApi {
       }) => void,
     ): () => void;
   };
+}
+
+export interface MobileProjectMeta {
+  path: string;
+  name: string;
+  addedAt?: number;
+  pinned?: boolean;
 }
 
 export interface RoomPublic {

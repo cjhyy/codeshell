@@ -26,12 +26,19 @@ export type ApprovalScope = "once" | "session" | "project";
 export type ApprovalPathScope = "file" | "dir" | "tool";
 export type PermissionMode = "default" | "acceptEdits" | "bypassPermissions";
 
+export interface MobileProjectMeta {
+  path: string;
+  name: string;
+  addedAt?: number;
+  pinned?: boolean;
+}
+
 export type MobileClientEvent =
   | { type: "auth.device"; deviceId: string; secretHash: string }
   | { type: "pair.complete"; token: string; name: string; secretHash: string }
   | { type: "chat.send"; text: string; sessionId?: string }
   | { type: "session.select"; sessionId: string }
-  | { type: "session.create" }
+  | { type: "session.create"; cwd?: string | null; name?: string }
   | { type: "run.stop"; sessionId?: string }
   // Approval — full desktop parity: deny reason, AskUser answer, remembered
   // scope (once/session/project) + path scope (file/dir/tool).
@@ -98,7 +105,7 @@ export type MobileServerEvent =
   | { type: "goal.cleared"; sessionId: string; ok: boolean; cleared?: boolean; message?: string }
   // ── Rooms ─────────────────────────────────────────────────────────────
   | { type: "room.list.ok"; rooms: RoomPublic[] }
-  | { type: "room.projects.ok"; projects: { path: string; name: string }[] }
+  | { type: "room.projects.ok"; projects: MobileProjectMeta[] }
   | { type: "room.opened"; roomId: string; status: "running" | "missing" }
   | { type: "room.message"; roomId: string; msg: unknown }
   | { type: "room.history.ok"; roomId: string; messages: unknown[]; latestSeq: number }

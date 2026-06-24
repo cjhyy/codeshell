@@ -205,6 +205,7 @@ function SidePane({
   const sessions = (
     <SessionList
       sessions={app.sessions}
+      projects={app.projects}
       activeSessionId={app.activeSessionId}
       onSelect={(id) => {
         app.selectSession(id);

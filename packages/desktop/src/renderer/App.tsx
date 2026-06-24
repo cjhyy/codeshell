@@ -71,6 +71,8 @@ import {
   markRepoPathRemoved,
   unmarkRepoPathRemoved,
   makeCreateRepoForCwd,
+  repoLabel,
+  sortRepos,
   type Repo,
 } from "./repos";
 import { importAutomationRuns, type ImportableRun } from "./automation/importRuns";
@@ -491,6 +493,16 @@ function App() {
   }, [approvalQueue, sessionIndices, busyKeys, unreadBuckets]);
 
   useEffect(() => { saveRepos(repos); }, [repos]);
+  useEffect(() => {
+    void window.codeshell.mobileRemote.updateProjects(
+      sortRepos(repos).map((r) => ({
+        path: r.path,
+        name: repoLabel(r),
+        addedAt: r.addedAt,
+        pinned: Boolean(r.pinned),
+      })),
+    );
+  }, [repos]);
   useEffect(() => { saveActiveRepoId(activeRepoId); }, [activeRepoId]);
   useEffect(() => { saveView(view); }, [view]);
   // Persist per-bucket overrides so they survive a refresh (see the seeded
@@ -1414,6 +1426,70 @@ function App() {
       if (repoFactory.changed()) setRepos(reposNow.slice());
       setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: nextIdx }));
     });
+    const offMobileSession = window.codeshell.onMobileSession((meta) => {
+      window.codeshell.log("mobile.session.announce", {
+        sessionId: meta.sessionId,
+        cwd: meta.cwd,
+      });
+      const reposNow = loadRepos();
+      const knownRepoId =
+        [null as string | null, ...reposNow.map((r) => r.id)].find((rid) =>
+          loadSessionIndex(rid).sessions.some(
+            (s) => s.engineSessionId === meta.sessionId || s.id === meta.sessionId,
+          ),
+        ) ?? undefined;
+      const known =
+        knownRepoId !== undefined
+          ? loadSessionIndex(knownRepoId).sessions.find(
+              (s) => s.engineSessionId === meta.sessionId || s.id === meta.sessionId,
+            )
+          : undefined;
+
+      let repoId: string | null;
+      let sessionId: string;
+      let nextIdx: SessionIndex;
+      const title = titleFromWire(meta.prompt || meta.title || meta.sessionId);
+
+      if (known) {
+        repoId = knownRepoId ?? null;
+        sessionId = known.id;
+        nextIdx = touchSession(repoId, sessionId, title);
+      } else {
+        const repoFactory = makeCreateRepoForCwd(reposNow);
+        const now = Date.now();
+        const [placement] = planDiskRebuild(
+          [{
+            id: meta.sessionId,
+            engineSessionId: meta.sessionId,
+            cwd: meta.cwd,
+            title,
+            updatedAt: now,
+            origin: "desktop",
+          }],
+          reposNow,
+          {
+            caseInsensitive: isCaseInsensitivePlatform(),
+            createRepoForCwd: repoFactory.createRepoForCwd,
+          },
+        );
+        if (!placement) return;
+        repoId = placement.repoId;
+        sessionId = placement.summary.id;
+        nextIdx = upsertImportedSession(repoId, {
+          ...placement.summary,
+          title,
+          createdAt: now,
+          updatedAt: now,
+        });
+        if (repoFactory.changed()) setRepos(reposNow.slice());
+      }
+
+      const bucket = bucketKey(repoId, sessionId);
+      engineToBucketRef.current.set(meta.sessionId, bucket);
+      setBusyForKey(bucket, true);
+      if (meta.prompt.trim()) dispatch({ type: "user_message", bucket, text: meta.prompt });
+      setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: nextIdx }));
+    });
     const offApproval = window.codeshell.onApprovalRequest((env: ApprovalRequestEnvelope) => {
       window.codeshell.log("approval.request", {
         requestId: env.requestId,
@@ -1516,6 +1592,7 @@ function App() {
     return () => {
       offStream();
       offAutomationSession();
+      offMobileSession();
       offApproval();
       offStatus();
       offLifecycle();

@@ -46,6 +46,9 @@ const lifecycleListeners: Array<(evt: unknown) => void> = [];
 const automationSessionListeners: Array<
   (meta: { sessionId: string; cwd: string; title: string; prompt: string; cronJobId: string }) => void
 > = [];
+const mobileSessionListeners: Array<
+  (meta: { sessionId: string; cwd: string; title: string; prompt: string }) => void
+> = [];
 
 // Browser automation may need to OPEN the panel before it can drive it (the
 // agent asked to use the browser but no panel/tab is open yet). Main sends
@@ -95,6 +98,14 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
     const cronJobId = (params?.cronJobId as string | undefined) ?? "";
     if (sessionId) {
       automationSessionListeners.forEach((cb) => cb({ sessionId, cwd, title, prompt, cronJobId }));
+    }
+  } else if (method === "agent/mobileSession") {
+    const sessionId = (params?.sessionId as string | undefined) ?? "";
+    const cwd = (params?.cwd as string | undefined) ?? "";
+    const title = (params?.title as string | undefined) ?? "";
+    const prompt = (params?.prompt as string | undefined) ?? "";
+    if (sessionId) {
+      mobileSessionListeners.forEach((cb) => cb({ sessionId, cwd, title, prompt }));
     }
   } else if (method === "agent/approvalRequest") {
     // `{ sessionId, requestId, request }` envelope. requestId lets the
@@ -335,6 +346,15 @@ contextBridge.exposeInMainWorld("codeshell", {
     return () => {
       const i = automationSessionListeners.indexOf(cb);
       if (i >= 0) automationSessionListeners.splice(i, 1);
+    };
+  },
+  onMobileSession: (
+    cb: (meta: { sessionId: string; cwd: string; title: string; prompt: string }) => void,
+  ): (() => void) => {
+    mobileSessionListeners.push(cb);
+    return () => {
+      const i = mobileSessionListeners.indexOf(cb);
+      if (i >= 0) mobileSessionListeners.splice(i, 1);
     };
   },
   onApprovalRequest: (cb: (req: unknown) => void): (() => void) => {
@@ -777,6 +797,8 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer.on("mobileRemote:tunnelStatus", h);
       return () => ipcRenderer.removeListener("mobileRemote:tunnelStatus", h);
     },
+    updateProjects: (projects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>) =>
+      ipcRenderer.invoke("mobileRemote:updateProjects", projects),
   },
 
   // ── Rooms (resident Claude Code sessions; dual-ended with the phone) ──
