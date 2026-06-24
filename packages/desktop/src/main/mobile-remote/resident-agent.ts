@@ -14,7 +14,15 @@ export type ResidentAgentEvent =
   | { type: "tool_result"; summary: string; isError: boolean }
   | { type: "turn_end"; reason: string }
   | { type: "error"; error: string }
-  | { type: "exit"; code: number | null; signal: string | null };
+  | { type: "exit"; code: number | null; signal: string | null }
+  | {
+      type: "approval_request";
+      requestId: string;
+      toolName: string;
+      displayName?: string;
+      input: unknown;
+      description?: string;
+    };
 
 const TOOL_SUMMARY_KEYS = ["command", "file_path", "path", "url", "pattern", "query"];
 
@@ -43,6 +51,18 @@ export function parseStreamJsonLine(line: string): ResidentAgentEvent[] {
     return [];
   }
   const out: ResidentAgentEvent[] = [];
+  if (msg.type === "control_request" && msg.request?.subtype === "can_use_tool") {
+    return [
+      {
+        type: "approval_request",
+        requestId: String(msg.request_id ?? ""),
+        toolName: String(msg.request?.tool_name ?? "tool"),
+        displayName: typeof msg.request?.display_name === "string" ? msg.request.display_name : undefined,
+        input: msg.request?.input,
+        description: typeof msg.request?.description === "string" ? msg.request.description : undefined,
+      },
+    ];
+  }
   if (msg.type === "assistant" && Array.isArray(msg.message?.content)) {
     for (const c of msg.message.content) {
       if (c.type === "text" && typeof c.text === "string") {
@@ -90,6 +110,7 @@ export interface ResidentAgentOptions {
   command: string; // e.g. "claude"
   cwd: string;
   permissionMode: "default" | "acceptEdits" | "bypassPermissions";
+  resumeSessionId?: string;
   onEvent: (event: ResidentAgentEvent) => void;
 }
 
@@ -105,18 +126,23 @@ export class ResidentAgentProcess {
 
   start(): void {
     if (this.child) return;
+    const args = [
+      "--print",
+      "--verbose",
+      "--input-format",
+      "stream-json",
+      "--output-format",
+      "stream-json",
+      "--permission-prompt-tool",
+      "stdio",
+    ];
+    if (this.opts.resumeSessionId) {
+      args.push("--resume", this.opts.resumeSessionId);
+    }
+    args.push("--permission-mode", this.opts.permissionMode);
     const child = spawn(
       this.opts.command,
-      [
-        "--print",
-        "--verbose",
-        "--input-format",
-        "stream-json",
-        "--output-format",
-        "stream-json",
-        "--permission-mode",
-        this.opts.permissionMode,
-      ],
+      args,
       {
         cwd: this.opts.cwd,
         env: { ...process.env, PATH: pathWithCommonBins() },
@@ -159,6 +185,19 @@ export class ResidentAgentProcess {
     const line = JSON.stringify({ type: "user", message: { role: "user", content: text } });
     this.child.stdin.write(line + "\n");
     return true;
+  }
+
+  /** Reply to a `control_request` (can_use_tool) approval prompt over stdin. */
+  respondControl(
+    requestId: string,
+    decision: { behavior: "allow"; updatedInput?: unknown } | { behavior: "deny"; message: string },
+  ): void {
+    if (!this.child?.stdin || this.child.stdin.destroyed) return;
+    const resp = {
+      type: "control_response",
+      response: { subtype: "success", request_id: requestId, response: decision },
+    };
+    this.child.stdin.write(JSON.stringify(resp) + "\n");
   }
 
   isRunning(): boolean {

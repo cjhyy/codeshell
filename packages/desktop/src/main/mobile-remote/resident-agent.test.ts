@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, it, test } from "bun:test";
 import { parseStreamJsonLine } from "./resident-agent.js";
 
 describe("parseStreamJsonLine", () => {
@@ -66,5 +66,21 @@ describe("parseStreamJsonLine", () => {
       { type: "text", text: "let me check" },
       { type: "tool", tool: "Read", summary: "/a/b.ts" },
     ]);
+  });
+});
+
+describe("parseStreamJsonLine approval", () => {
+  it("maps control_request can_use_tool to approval_request event", () => {
+    const line = JSON.stringify({
+      type: "control_request", request_id: "r1",
+      request: { subtype: "can_use_tool", tool_name: "Write", display_name: "Write",
+        input: { file_path: "/a.txt" }, description: "a.txt" },
+    });
+    const evs = parseStreamJsonLine(line);
+    expect(evs).toHaveLength(1);
+    expect(evs[0]).toMatchObject({ type: "approval_request", requestId: "r1", toolName: "Write" });
+  });
+  it("still ignores system/init noise", () => {
+    expect(parseStreamJsonLine(JSON.stringify({ type: "system", subtype: "init" }))).toEqual([]);
   });
 });
