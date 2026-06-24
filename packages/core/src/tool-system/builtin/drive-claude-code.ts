@@ -22,7 +22,7 @@ export const driveClaudeCodeToolDef: ToolDefinition = {
       prompt: { type: "string", description: "The task/prompt to give Claude Code this turn." },
       resumeSessionId: { type: "string", description: "Existing CC session id to resume (keeps context). Omit for a fresh session." },
       cwd: { type: "string", description: "Working directory the CC run operates in." },
-      permissionMode: { type: "string", enum: ["default", "acceptEdits", "bypassPermissions"], description: "CC permission mode for this run. Default 'default'." },
+      permissionMode: { type: "string", enum: ["default", "acceptEdits", "bypassPermissions"], description: "CC permission mode for this run. Defaults to 'bypassPermissions' (full auto — needed so WebSearch/WebFetch/Write run unattended; headless has no approval loop here). Pass 'default'/'acceptEdits' to gate." },
       background: { type: "boolean", description: "Run in the background; completion will notify/wake you — do NOT sleep-poll for it." },
     },
     required: ["prompt", "cwd"],
@@ -41,7 +41,18 @@ export function makeDriveClaudeCodeTool(runner: Runner = defaultRunner) {
     const cwd = typeof args.cwd === "string" ? args.cwd : process.cwd();
     if (!prompt) return "Error: prompt is required";
     const resumeSessionId = typeof args.resumeSessionId === "string" ? args.resumeSessionId : undefined;
-    const permissionMode = (args.permissionMode === "acceptEdits" || args.permissionMode === "bypassPermissions") ? args.permissionMode : "default";
+    // Default to bypassPermissions: this tool is a fire-one-turn delegation to
+    // an external `claude` with nobody watching for approvals, and headless
+    // `claude -p` here has no interactive approval loop — so under "default" a
+    // tool that needs approval (WebSearch/WebFetch/Write) silently can't run
+    // (the "DriveClaudeCode 没有联网能力" report). A caller that wants gating
+    // passes an explicit mode, which is honored.
+    const permissionMode =
+      args.permissionMode === "default" ||
+      args.permissionMode === "acceptEdits" ||
+      args.permissionMode === "bypassPermissions"
+        ? args.permissionMode
+        : "bypassPermissions";
     if (args.background === true) {
       const sessionId = ctx?.sessionId ?? "";
       const jobId = `cc-${process.hrtime.bigint().toString(36)}`;
