@@ -11,14 +11,17 @@ import {
 import { CCConversationView } from "./CCConversationView";
 
 /**
- * CC Room — lists this project's Claude Code (external `claude` CLI) sessions
- * and the CC-backed scheduled tasks. Gated on CLI availability: if `claude`
- * isn't on PATH we render a muted install prompt with a re-detect button.
+ * CC Room — lists this project's Claude Code (external `claude` CLI) sessions.
+ * Gated on CLI availability: if `claude` isn't on PATH we render a muted install
+ * prompt with a re-detect button.
  *
  * Thin client: talks only to `window.codeshell.ccRoom.*`. The interfaces below
- * mirror the core types (CCAvailability / DiscoveredSession / CronJob +
- * CCTaskMeta) the preload returns — we can't import core in the renderer, so we
- * declare the shapes locally.
+ * mirror the core types (CCAvailability / DiscoveredSession) the preload returns
+ * — we can't import core in the renderer, so we declare the shapes locally.
+ *
+ * Scheduled tasks are NOT shown here: scheduling is generic (CronCreate), so
+ * cron jobs — including ones that drive Claude Code — live in the Automation
+ * view, not in a CC-specific task list.
  */
 interface DiscoveredSession {
   sessionId: string;
@@ -34,15 +37,9 @@ interface Availability {
   reason?: "not-found" | "not-executable";
 }
 
-interface CCTaskRow {
-  job: { id: string; name: string; schedule: string; prompt?: string; cwd?: string };
-  meta: { kind?: string; continuation?: string; goal?: string; sessionId?: string } | undefined;
-}
-
 export function CCRoomView({ cwd }: { cwd: string | null }) {
   const [avail, setAvail] = useState<Availability | null>(null);
   const [sessions, setSessions] = useState<DiscoveredSession[]>([]);
-  const [tasks, setTasks] = useState<CCTaskRow[]>([]);
   const [conv, setConv] = useState<{ roomId: string; sessionId: string; mode: string } | null>(
     null,
   );
@@ -64,7 +61,6 @@ export function CCRoomView({ cwd }: { cwd: string | null }) {
     } else {
       setSessions([]);
     }
-    void window.codeshell.ccRoom.listTasks().then(setTasks);
   }, [cwd]);
 
   useEffect(() => {
@@ -150,36 +146,6 @@ export function CCRoomView({ cwd }: { cwd: string | null }) {
                 </div>
               </div>
               <code className="shrink-0 text-xs text-muted-foreground">{s.sessionId.slice(0, 8)}</code>
-            </Card>
-          ))
-        )}
-      </section>
-
-      {/* Scheduled CC tasks */}
-      <section className="flex flex-col gap-2">
-        <h3 className="text-sm font-semibold text-muted-foreground">定时任务</h3>
-        {tasks.length === 0 ? (
-          <p className="text-sm text-muted-foreground">没有定时任务。</p>
-        ) : (
-          tasks.map((t) => (
-            <Card key={t.job.id} className="flex items-center justify-between gap-3 p-3">
-              <div className="min-w-0">
-                <div className="truncate font-medium">{t.job.name}</div>
-                <div className="truncate text-xs text-muted-foreground">
-                  {[t.job.schedule, t.meta?.kind, t.meta?.continuation].filter(Boolean).join(" · ")}
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="shrink-0"
-                onClick={async () => {
-                  await window.codeshell.ccRoom.deleteTask(t.job.id);
-                  refresh();
-                }}
-              >
-                删除
-              </Button>
             </Card>
           ))
         )}

@@ -9,8 +9,6 @@ import type {
   ApprovalRequest,
   CapabilityDescriptor,
   ReasoningControl,
-  CronJob,
-  CCTaskMeta,
   CCAvailability,
   DiscoveredSession,
 } from "@cjhyy/code-shell-core";
@@ -966,8 +964,6 @@ export interface CodeshellApi {
   ccRoom: {
     probe(force?: boolean): Promise<CCAvailability>;
     listSessions(cwd: string): Promise<DiscoveredSession[]>;
-    listTasks(): Promise<{ job: CronJob; meta: CCTaskMeta | undefined }[]>;
-    deleteTask(jobId: string): Promise<boolean>;
     openSession(claudeSessionId: string, cwd: string, mode: string): Promise<{ roomId: string }>;
     send(roomId: string, text: string): Promise<boolean>;
     respondApproval(roomId: string, requestId: string, decision: unknown): Promise<boolean>;
