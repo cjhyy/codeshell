@@ -34,17 +34,10 @@ import {
   type Credential,
   type CredentialScope,
   sweepStaleCredentialCookies,
-  // CC orchestrator (external claude-cli rooms + CC-aware scheduling).
-  makeCCAwareExecutor,
-  CCTaskStore,
-  runAgentOnce,
-  claudeAdapter,
+  // CC orchestrator (external claude-cli rooms).
   probeClaudeCli,
   discoverSessions,
   readRecentHistory,
-  resolveWritePolicy,
-  type CronJob,
-  type CronRunRequest,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { registerGuest } from "./browser-driver/active-guest.js";
@@ -1249,62 +1242,9 @@ app.whenReady().then(() => {
     });
     // Expose the live scheduler to the automation IPC service (Phase 3 UI).
     setAutomationScheduler(automationHandle.scheduler);
-
-    // ── CC-aware executor ──────────────────────────────────────────────
-    // startAutomation already installed bindCronToEngine(scheduler, runner)
-    // above. We REPLACE that executor with one that routes jobs carrying
-    // CC-task metadata (CCTaskStore) to runCCTask (drives the external
-    // `claude` CLI), and falls back to the ORIGINAL automation behavior for
-    // every non-CC job. The fallback below reproduces bindCronToEngine's
-    // executor body verbatim (resolveWritePolicy → CronRunRequest → runner)
-    // so existing automation jobs keep firing exactly as before.
-    {
-      const ccScheduler = automationHandle.scheduler;
-      // Fallback = original automation executor (mirror of bindCronToEngine).
-      const automationFallback = async (job: CronJob, signal: AbortSignal): Promise<void> => {
-        const policy = resolveWritePolicy(job.permissionLevel);
-        const req: CronRunRequest = {
-          job,
-          prompt: job.prompt,
-          permissionMode: policy.permissionMode,
-          approvalBackend: policy.approvalBackend,
-          sandboxMode: policy.sandboxMode,
-          signal,
-        };
-        await automationRunner(req);
-      };
-      const ccStore = new CCTaskStore(); // ~/.code-shell/cc-tasks.json
-      const ccRunner = (o: {
-        prompt: string;
-        resumeSessionId?: string;
-        cwd: string;
-        permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
-      }) =>
-        runAgentOnce(claudeAdapter, {
-          command: "claude",
-          prompt: o.prompt,
-          resumeSessionId: o.resumeSessionId,
-          cwd: o.cwd,
-          permissionMode: o.permissionMode ?? "default",
-        });
-      // Conservative default judge: always "continue-same". A real aux-model
-      // judge is not wired in this version, so loop+auto tasks keep their
-      // session context and the user stops them manually. DO NOT treat this as
-      // the final continuation policy — replace when an aux LLM is available.
-      const ccJudge = async () =>
-        ({
-          action: "continue-same" as const,
-          reason: "default judge (aux model not wired in this version)",
-        });
-      const ccAware = makeCCAwareExecutor({
-        store: ccStore,
-        runner: ccRunner,
-        judge: ccJudge,
-        scheduler: ccScheduler,
-        fallback: automationFallback,
-      });
-      ccScheduler.setExecutor(ccAware);
-    }
+    // startAutomation installed the default executor (bindCronToEngine):
+    // every cron job runs one headless codeshell turn. Driving Claude Code is
+    // just one such turn calling DriveClaudeCode — no CC-specific scheduling.
 
     // Surface background-agent completions (incl. automation runs) as desktop
     // notifications when the app isn't focused, so unattended jobs are visible.
@@ -1969,17 +1909,6 @@ ipcMain.handle("rooms:history", async (_e, roomId: string, sinceSeq?: number) =>
 // ── CC rooms (external `claude` CLI orchestration) ──────────────────────────
 ipcMain.handle("ccRoom:probe", async (_e, force?: boolean) => probeClaudeCli(Boolean(force)));
 ipcMain.handle("ccRoom:listSessions", async (_e, cwd: string) => discoverSessions(cwd));
-ipcMain.handle("ccRoom:listTasks", async () => {
-  const store = new CCTaskStore();
-  return (automationHandle?.scheduler.list() ?? [])
-    .filter((j) => store.get(j.id))
-    .map((j) => ({ job: j, meta: store.get(j.id) }));
-});
-ipcMain.handle("ccRoom:deleteTask", async (_e, jobId: string) => {
-  automationHandle?.scheduler.delete(jobId);
-  new CCTaskStore().delete(jobId);
-  return true;
-});
 ipcMain.handle(
   "ccRoom:openSession",
   async (_e, claudeSessionId: string, cwd: string, mode: "default" | "acceptEdits" | "bypassPermissions") =>
