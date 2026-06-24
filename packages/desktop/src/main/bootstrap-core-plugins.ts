@@ -29,6 +29,7 @@ export interface CorePlugin {
 /** Core plugins every fresh install gets (keep this list short). */
 export const CORE_PLUGINS: CorePlugin[] = [
   { plugin: "skill-creator", marketplace: "mimi-plugins" },
+  { plugin: "model-fact-finder", marketplace: "mimi-plugins" },
 ];
 
 function userHome(): string {
