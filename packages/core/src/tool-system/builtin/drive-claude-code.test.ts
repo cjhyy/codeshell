@@ -14,6 +14,30 @@ describe("DriveClaudeCode tool", () => {
     expect(out).toContain("S7");
     expect(out).toContain("did it");
   });
+
+  it("defaults to bypassPermissions so headless tools (WebSearch/WebFetch/Write) aren't blocked", async () => {
+    // headless `claude -p` has no interactive approval loop here (no
+    // --permission-prompt-tool), so under "default" a tool needing approval
+    // (e.g. WebSearch) silently can't run — the agent "loses網". DriveClaudeCode
+    // is a fire-one-turn delegation with nobody watching, so it auto-runs.
+    let seen: string | undefined;
+    const tool = makeDriveClaudeCodeTool(async (o) => {
+      seen = o.permissionMode;
+      return { sessionId: "S", finalText: "", isError: false, exitCode: 0, lines: [] };
+    });
+    await tool({ prompt: "search the web", cwd: "/x" });
+    expect(seen).toBe("bypassPermissions");
+  });
+
+  it("still honors an explicit permissionMode from the caller", async () => {
+    let seen: string | undefined;
+    const tool = makeDriveClaudeCodeTool(async (o) => {
+      seen = o.permissionMode;
+      return { sessionId: "S", finalText: "", isError: false, exitCode: 0, lines: [] };
+    });
+    await tool({ prompt: "edit code", cwd: "/x", permissionMode: "default" });
+    expect(seen).toBe("default");
+  });
 });
 
 describe("DriveClaudeCode background mode", () => {
