@@ -164,7 +164,7 @@ export function ModelCatalogPanel(_props: Props) {
             </strong>
             <Badge variant="accent">{t("settingsX.catalog.originUser")}</Badge>
           </header>
-          <EntryForm draft={draft} setDraft={setDraft} t={t} />
+          <EntryForm draft={draft} setDraft={setDraft} t={t} idLocked={false} />
           <ConnCardFooter>
             <Button size="sm" onClick={() => void save()}>
               {t("settingsX.catalog.save")}
@@ -217,7 +217,7 @@ export function ModelCatalogPanel(_props: Props) {
 
                 {isOpen && draft && (
                   <div className="flex flex-col gap-2.5 border-t border-border px-4 pb-4 pt-3">
-                    <EntryForm draft={draft} setDraft={setDraft} t={t} />
+                    <EntryForm draft={draft} setDraft={setDraft} t={t} idLocked />
                     <ConnCardFooter>
                       <Button size="sm" onClick={() => void save()}>
                         {t("settingsX.catalog.save")}
@@ -258,10 +258,19 @@ function EntryForm({
   draft,
   setDraft,
   t,
+  idLocked,
 }: {
   draft: CatalogEntry;
   setDraft: React.Dispatch<React.SetStateAction<CatalogEntry | null>>;
   t: TFn;
+  /**
+   * When true (editing an EXISTING entry), the id field is read-only. The id is
+   * the catalog key: changing it then saving would fork a duplicate (save keys
+   * by draft.id) rather than rename, and changing it then deleting would target
+   * the wrong/original id. To rename, delete + re-create. Only the new-entry
+   * card lets you choose the id.
+   */
+  idLocked: boolean;
 }) {
   const patch = (p: Partial<CatalogEntry>) =>
     setDraft((cur) => (cur ? { ...cur, ...p } : cur));
@@ -292,7 +301,11 @@ function EntryForm({
           <Input value={draft.displayName} onChange={(e) => patch({ displayName: e.target.value })} />
         </ConnField>
         <ConnField label={t("settingsX.catalog.fieldId")}>
-          <Input value={draft.id} onChange={(e) => patch({ id: e.target.value })} />
+          <Input
+            value={draft.id}
+            onChange={(e) => patch({ id: e.target.value })}
+            disabled={idLocked}
+          />
         </ConnField>
       </div>
       <ConnField label={t("settingsX.catalog.fieldDescription")}>
