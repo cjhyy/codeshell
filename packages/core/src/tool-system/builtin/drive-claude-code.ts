@@ -3,27 +3,30 @@ import { runAgentOnce } from "../../cc-orchestrator/external-agent-driver.js";
 import { claudeAdapter } from "../../cc-orchestrator/agent-adapter.js";
 import type { AgentRunResult } from "../../cc-orchestrator/external-agent-driver.js";
 import { backgroundJobRegistry } from "./background-jobs.js";
+import { notificationQueue } from "./agent-notifications.js";
 import type { ToolContext } from "../context.js";
 
 export const driveClaudeCodeToolDef: ToolDefinition = {
   name: "DriveClaudeCode",
   description:
-    "Run the external Claude Code CLI for ONE turn and return its final text + session id. " +
-    "Use to delegate a coding task to Claude Code, or to continue an existing CC session. " +
-    "This runs ONE turn then exits — it has NO time concept. For 'in N minutes' / 'every N' / " +
-    "looping, use ScheduleRoomTask instead (never sleep). " +
-    "To make this single turn work longer/deeper, write that into `prompt` (e.g. 'keep working " +
-    "until everything is done'); to have the turn self-loop until a condition holds, embed a goal " +
-    "directive in `prompt` such as '/goal all tests pass'. Pass `resumeSessionId` to continue a " +
-    "prior CC session (keeps its context); omit it to start fresh.",
+    "Delegate a task to the external Claude Code CLI (drives `claude` for one turn). " +
+    "Use to hand a coding/research task to Claude Code, or continue an existing CC session. " +
+    "Runs in the BACKGROUND by default — CC tasks are typically long (minutes to hours), so this " +
+    "returns immediately and CC's result is delivered to you later via a completion notification " +
+    "that wakes you. Do NOT sleep-poll for it; just continue or end your turn — you'll be woken " +
+    "with the result. For a quick task where you want the answer inline, pass background:false. " +
+    "It has NO time concept of its own: for 'in N minutes' / 'every N' / looping, use " +
+    "ScheduleRoomTask instead. To make CC's single turn work longer/deeper, write that into " +
+    "`prompt` (e.g. 'keep working until done'), or embed '/goal <condition>' to self-loop. " +
+    "Pass `resumeSessionId` to continue a prior CC session (keeps context); omit to start fresh.",
   inputSchema: {
     type: "object",
     properties: {
-      prompt: { type: "string", description: "The task/prompt to give Claude Code this turn." },
+      prompt: { type: "string", description: "The task/prompt to give Claude Code." },
       resumeSessionId: { type: "string", description: "Existing CC session id to resume (keeps context). Omit for a fresh session." },
       cwd: { type: "string", description: "Working directory the CC run operates in." },
       permissionMode: { type: "string", enum: ["default", "acceptEdits", "bypassPermissions"], description: "CC permission mode for this run. Defaults to 'bypassPermissions' (full auto — needed so WebSearch/WebFetch/Write run unattended; headless has no approval loop here). Pass 'default'/'acceptEdits' to gate." },
-      background: { type: "boolean", description: "Run in the background; completion will notify/wake you — do NOT sleep-poll for it." },
+      background: { type: "boolean", description: "Defaults to TRUE: run in the background and notify you on completion (right for long CC tasks). Pass false to run in the foreground and get the result inline (only for quick tasks)." },
     },
     required: ["prompt", "cwd"],
   },
@@ -53,14 +56,34 @@ export function makeDriveClaudeCodeTool(runner: Runner = defaultRunner) {
       args.permissionMode === "bypassPermissions"
         ? args.permissionMode
         : "bypassPermissions";
-    if (args.background === true) {
+    // Background by default (CC tasks are typically long). Only an explicit
+    // background:false runs in the foreground and returns the result inline.
+    const background = args.background !== false;
+    if (background) {
       const sessionId = ctx?.sessionId ?? "";
       const jobId = `cc-${process.hrtime.bigint().toString(36)}`;
-      backgroundJobRegistry.start(jobId, sessionId, `DriveClaudeCode: ${prompt.slice(0, 40)}`);
+      const label = prompt.slice(0, 40);
+      backgroundJobRegistry.start(jobId, sessionId, `DriveClaudeCode: ${label}`);
       void runner({ prompt, resumeSessionId, cwd, permissionMode })
-        .catch(() => undefined)
+        .then((r) => {
+          // Deliver CC's result back so the woken agent actually sees the answer
+          // (not just "a job finished"). Mirrors the video/sub-agent completion
+          // path — enqueue lands in the same notificationQueue the wakeup drains.
+          notificationQueue.enqueue(
+            r.isError
+              ? { agentId: jobId, description: `DriveClaudeCode: ${label}`, status: "failed", workKind: "cc", error: r.finalText || "(no output)", enqueuedAt: Date.now() }
+              : { agentId: jobId, description: `DriveClaudeCode: ${label}`, status: "completed", workKind: "cc", finalText: r.finalText, enqueuedAt: Date.now() },
+            sessionId,
+          );
+        })
+        .catch((err) => {
+          notificationQueue.enqueue(
+            { agentId: jobId, description: `DriveClaudeCode: ${label}`, status: "failed", workKind: "cc", error: (err as Error)?.message ?? String(err), enqueuedAt: Date.now() },
+            sessionId,
+          );
+        })
         .finally(() => backgroundJobRegistry.finish(jobId));
-      return `已在后台启动 Claude Code（jobId ${jobId}）。完成时会通知你。`;
+      return `已在后台启动 Claude Code（jobId ${jobId}）。完成后会通知你结果，无需轮询。`;
     }
     const r = await runner({ prompt, resumeSessionId, cwd, permissionMode });
     if (r.isError) return `Claude Code 运行出错（session ${r.sessionId}）：\n${r.finalText}`;

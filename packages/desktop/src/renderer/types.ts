@@ -349,7 +349,7 @@ export function bgCompletionText(event: {
   name?: string;
   description: string;
   status: "completed" | "failed";
-  workKind?: "agent" | "shell" | "video";
+  workKind?: "agent" | "shell" | "video" | "cc";
   command?: string;
   finalText?: string;
   error?: string;
