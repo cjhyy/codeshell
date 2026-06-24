@@ -343,10 +343,12 @@ Q4  ──→ Phase 4（Topology Agent + Checkpoint/Undo）
 
 ## 附录：三款标杆产品核心能力速览
 
+> 「Code Shell 当前」列已按 2026-06-25 实际代码勘误(早期表把已落地能力误标 ❌/TUI 为主;对标产品列未动,属产品判断)。
+
 | 能力 | Claude Code | OpenCode | OpenAI Codex | Code Shell 当前 |
 |------|-------------|----------|-------------|----------------|
 | CLI Agent | ✅ | ✅ | ✅ | ✅ |
-| IDE 集成 | ✅（VS Code/JetBrains） | TUI 为主 | ✅（VS Code） | TUI 为主 |
+| IDE 集成 | ✅（VS Code/JetBrains） | TUI 为主 | ✅（VS Code） | ✅ **Electron 桌面 App**(VS Code/JetBrains 扩展未做) |
 | Sub-Agent | ✅ Task tool | ✅ Task tool | ❌ | ✅ Agent tool |
 | MCP | ✅ | ✅ | ✅ | ✅ |
 | Custom Agent/Preset | ✅ plugins | ✅ builtin agents | ❌ | ✅ Preset |
@@ -355,6 +357,8 @@ Q4  ──→ Phase 4（Topology Agent + Checkpoint/Undo）
 | Git Worktree | ❌ | ❌ | ❌ | ✅ |
 | Protocol SDK | ❌ | ✅ Stainless | ❌ | ⚠️ 内部 protocol |
 | Hook 系统 | ✅ | ✅ plugin | ❌ | ✅ |
-| Slash Commands | ✅ | ❌ | ❌ | ❌ |
-| Checkpoint/Undo | ❌ | ✅ | ❌ | ❌ |
-| Long-term Memory | ✅ | ❌ | ❌ | ❌ |
+| Slash Commands | ✅ | ❌ | ❌ | ✅(tui slash 系统 + 自动补全) |
+| Checkpoint/Undo | ❌ | ✅ | ❌ | ✅ turn 级 undo |
+| Long-term Memory | ✅ | ❌ | ❌ | ✅ 记忆 + Dream |
+| Plugin/市场 | ✅ | ✅ | ❌ | ✅ 装 CC/Codex 格式 + 市场 |
+| 图片输入 | ✅ | ⚠️ | ✅ | ✅ |
