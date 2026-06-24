@@ -15,9 +15,12 @@ export const driveClaudeCodeToolDef: ToolDefinition = {
     "returns immediately and CC's result is delivered to you later via a completion notification " +
     "that wakes you. Do NOT sleep-poll for it; just continue or end your turn — you'll be woken " +
     "with the result. For a quick task where you want the answer inline, pass background:false. " +
-    "It has NO time concept of its own: for 'in N minutes' / 'every N' / looping, use " +
-    "ScheduleRoomTask instead. To make CC's single turn work longer/deeper, write that into " +
-    "`prompt` (e.g. 'keep working until done'), or embed '/goal <condition>' to self-loop. " +
+    "It has NO time concept of its own: for 'in N minutes' / 'every N' / looping, use CronCreate " +
+    "instead (never sleep). A scheduled CronCreate job runs one codeshell turn whose prompt can " +
+    "instruct it to call DriveClaudeCode; to continue a prior CC session across runs, have that " +
+    "turn pass the sessionId this tool returned as resumeSessionId. To make CC's single turn work " +
+    "longer/deeper, write that into `prompt` (e.g. 'keep working until done'), or embed " +
+    "'/goal <condition>' to self-loop. " +
     "Pass `resumeSessionId` to continue a prior CC session (keeps context); omit to start fresh.",
   inputSchema: {
     type: "object",

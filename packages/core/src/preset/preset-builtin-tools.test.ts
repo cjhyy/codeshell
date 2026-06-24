@@ -39,15 +39,15 @@ describe("preset builtin tool whitelist", () => {
     expect(general.builtinTools).toContain("EditModelCatalog");
   });
 
-  it("the general preset offers the cc-orchestrator tools (DriveClaudeCode / ScheduleRoomTask)", () => {
+  it("the general preset offers DriveClaudeCode (no ScheduleRoomTask — 定时统一走 CronCreate)", () => {
     // Regression (用户实测「为什么驱动 cc 没作为工具」,同 BashOutput/UseCredential/
-    // EditModelCatalog 第四次复发): DriveClaudeCode/ScheduleRoomTask 在 BUILTIN_TOOLS
-    // 注册了、工具描述也写了,但漏进 preset 白名单 → registerBuiltins 静默滤掉 → agent
-    // 工具箱里根本没有,被问「有指挥 Claude Code 的工具吗」时只能幻觉 RemoteTrigger /
-    // 建议 Bash claude -p 兜底。钉死它们在 general preset 可见。
+    // EditModelCatalog 第四次复发): DriveClaudeCode 在 BUILTIN_TOOLS 注册了、工具描述也
+    // 写了,但漏进 preset 白名单 → registerBuiltins 静默滤掉 → agent 工具箱里根本没有,
+    // 被问「有指挥 Claude Code 的工具吗」时只能幻觉 RemoteTrigger / 建议 Bash claude -p
+    // 兜底。钉死它在 general preset 可见。ScheduleRoomTask 已删:定时/循环统一走 CronCreate。
     const general = BUILTIN_AGENT_PRESETS.general ?? Object.values(BUILTIN_AGENT_PRESETS)[0]!;
     expect(general.builtinTools).toContain("DriveClaudeCode");
-    expect(general.builtinTools).toContain("ScheduleRoomTask");
+    expect(general.builtinTools).not.toContain("ScheduleRoomTask");
   });
 
   it("any preset offering Bash also offers its background-shell companions", () => {

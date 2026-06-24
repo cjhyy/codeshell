@@ -33,7 +33,6 @@ import { notebookEditToolDef, notebookEditTool } from "./notebook-edit.js";
 import { lspToolDef, lspTool } from "./lsp.js";
 import { cronCreateToolDef, cronCreateTool, cronDeleteToolDef, cronDeleteTool, cronListToolDef, cronListTool } from "./cron.js";
 import { driveClaudeCodeToolDef, driveClaudeCodeTool } from "./drive-claude-code.js";
-import { scheduleRoomTaskToolDef, scheduleRoomTaskTool } from "./schedule-room-task.js";
 import { skillToolDef, skillTool } from "./skill.js";
 import { mcpToolDef, mcpToolExecute, listMcpResourcesToolDef, listMcpResourcesTool, readMcpResourceToolDef, readMcpResourceTool } from "./mcp-tools.js";
 import { remoteTriggerToolDef, remoteTriggerTool } from "./remote-trigger.js";
@@ -481,16 +480,6 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       isConcurrencySafe: false,
     },
     execute: driveClaudeCodeTool,
-  },
-  {
-    definition: {
-      ...scheduleRoomTaskToolDef,
-      source: "builtin",
-      permissionDefault: "ask",
-      isReadOnly: false,
-      isConcurrencySafe: false,
-    },
-    execute: scheduleRoomTaskTool,
   },
   // ─── Phase 7: Missing tools from restored-src ─────────────────
   {

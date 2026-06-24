@@ -73,13 +73,13 @@ const GENERAL_BUILTIN_TOOLS = [
   "CronCreate",
   "CronDelete",
   "CronList",
-  // cc-orchestrator:驱动外部 claude CLI 跑一轮 + 定时调度这种驱动。同 BashOutput/
-  // UseCredential/EditModelCatalog 的 whitelist 要求:已在 BUILTIN_TOOLS 注册,但
-  // registerBuiltins 按 preset 集过滤 → 名单里没有它们,agent 就没有「指挥 Claude Code」
-  // 的工具,只能幻觉 RemoteTrigger / 兜底 Bash `claude -p`(用户实测「为什么驱动 cc
-  // 没作为工具」)。DriveClaudeCode permissionDefault:"ask",列入只让 AI 看得到,调用仍走审批。
+  // cc-orchestrator:驱动外部 claude CLI 跑一轮。同 BashOutput/UseCredential/
+  // EditModelCatalog 的 whitelist 要求:已在 BUILTIN_TOOLS 注册,但 registerBuiltins
+  // 按 preset 集过滤 → 名单里没有它,agent 就没有「指挥 Claude Code」的工具,只能幻觉
+  // RemoteTrigger / 兜底 Bash `claude -p`(用户实测「为什么驱动 cc 没作为工具」)。
+  // 定时/循环驱动统一走 CronCreate(到点跑一轮引擎,prompt 里调 DriveClaudeCode);
+  // 无人值守审批由 DriveClaudeCode 自身 bypass 解决,不需要定时层专门的 CC 调度工具。
   "DriveClaudeCode",
-  "ScheduleRoomTask",
   "Skill",
   "MCPTool",
   "ListMcpResources",
