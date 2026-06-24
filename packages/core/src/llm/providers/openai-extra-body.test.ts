@@ -59,6 +59,48 @@ describe("OpenAIClient extraBody passthrough", () => {
     expect(body.thinking).toEqual({ type: "enabled" });
   });
 
+  it("per-request temperature overrides a static extraBody temperature (review #4)", async () => {
+    // extraBody (connection-level static) sets temperature 0.2; the caller
+    // passes a per-request temperature 0.9. The per-request value must win —
+    // the old `...sampling, ...extra` order let the static value clobber it.
+    const { client, bodies } = clientThatSucceeds({
+      provider: "openai",
+      model: "gpt-4o",
+      apiKey: "test",
+      providerKind: "openai",
+      maxTokens: 2048,
+      extraBody: { temperature: 0.2, top_p: 0.95 },
+    });
+
+    await client.createMessage({ ...opts, temperature: 0.9 });
+
+    const body = bodies()[0];
+    expect(body.temperature).toBe(0.9); // per-request wins
+    expect(body.top_p).toBe(0.95); // static extra still rides through
+  });
+
+  it("deep-merges nested keys shared by extraBody and the reasoning body (review #5)", async () => {
+    // A catalog param wired to `thinking.budget_tokens` lands in extraBody as a
+    // nested object; the reasoning translation may also set `thinking`. A shallow
+    // spread would wholesale-replace one — deep merge keeps both nested fields.
+    const { client, bodies } = clientThatSucceeds({
+      provider: "openai",
+      model: "gpt-4o",
+      apiKey: "test",
+      providerKind: "openai",
+      maxTokens: 2048,
+      extraBody: { thinking: { budget_tokens: 4096 }, seed: 7 },
+    });
+
+    await client.createMessage(opts);
+
+    const body = bodies()[0];
+    // the nested field from extraBody survives (not replaced by an empty/other
+    // thinking object), and the sibling key rides through.
+    expect(body.thinking).toMatchObject({ budget_tokens: 4096 });
+    expect(body.seed).toBe(7);
+  });
+
   it("filters out any extraBody key the model rejects (temperature on gpt-5)", async () => {
     // gpt-5 rejects `temperature` (rejectedParams) — even though extraBody
     // carries it, the body must NOT include it. top_p is also rejected; a

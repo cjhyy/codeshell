@@ -290,11 +290,22 @@ export class OpenAIClient extends LLMClientBase {
           ? { max_completion_tokens: maxTokens }
           : { max_tokens: maxTokens };
 
-    // Sampling params — only include if the model accepts them.
-    const sampling: Record<string, number> = {};
+    // Sampling params — only include if the model accepts them. Split by
+    // precedence so the request body composes correctly against catalog
+    // extraBody (see the merge below):
+    //   - samplingDefault: the connection's DEFAULT temperature (this.temperature).
+    //     It's the BASE — a user's catalog `temperature` in extraBody should
+    //     override the bare default.
+    //   - samplingOverride: a PER-REQUEST temperature (options.temperature). It
+    //     wins over both the default and the catalog value.
+    const samplingDefault: Record<string, number> = {};
+    const samplingOverride: Record<string, number> = {};
     if (!cap.rejectedParams.has("temperature")) {
-      sampling.temperature =
-        options.temperature !== undefined ? options.temperature : this.temperature;
+      if (options.temperature !== undefined) {
+        samplingOverride.temperature = options.temperature;
+      } else {
+        samplingDefault.temperature = this.temperature;
+      }
     }
 
     // Reasoning shape — translate the user's ReasoningSetting to the wire
@@ -390,13 +401,29 @@ export class OpenAIClient extends LLMClientBase {
       extra[k] = v;
     }
 
+    // Compose the param fragments with explicit precedence + deep merge:
+    //   connection default sampling (base)
+    //     ← static catalog extraBody
+    //     ← per-request sampling override
+    //     ← reasoning translation (wins)
+    // - A catalog `temperature` in extraBody overrides the bare connection
+    //   default, but a PER-REQUEST temperature (options.temperature) overrides
+    //   both — a plain `...sampling, ...extra` got this backwards. (review #4)
+    // - extra and reasoningBody can both carry nested objects under the SAME
+    //   top-level key (a catalog param wired to `thinking.type`/`reasoning.effort`
+    //   vs the reasoning translation's `thinking`/`reasoning`). A shallow spread
+    //   would wholesale-replace one nested object; deepMergeInto merges them. (review #5)
+    const paramBody: Record<string, unknown> = {};
+    deepMergeInto(paramBody, samplingDefault);
+    deepMergeInto(paramBody, extra);
+    deepMergeInto(paramBody, samplingOverride);
+    deepMergeInto(paramBody, reasoningBody);
+
     return {
       model: this.model,
       messages,
       ...tokenLimit,
-      ...sampling,
-      ...extra,
-      ...reasoningBody,
+      ...paramBody,
       // service_tier (TODO 7.2): passed through verbatim when configured.
       ...(this.config.serviceTier ? { service_tier: this.config.serviceTier } : {}),
       ...(tools ? { tools } : {}),
@@ -965,6 +992,32 @@ export class OpenAIClient extends LLMClientBase {
     }
     throw err;
   }
+}
+
+/**
+ * Merge `src` into `dst` in place, recursing into plain-object values so a
+ * nested field (e.g. `thinking.type`) from one source doesn't wholesale-replace
+ * the nested object from another. Arrays and non-objects overwrite. `src` wins
+ * on leaf collisions. Used to compose the request body's param fragments
+ * (static extraBody base ← per-request sampling ← reasoning translation) so
+ * shared nested keys like `thinking`/`reasoning` merge instead of clobber.
+ */
+function deepMergeInto(
+  dst: Record<string, unknown>,
+  src: Record<string, unknown>,
+): Record<string, unknown> {
+  for (const [k, v] of Object.entries(src)) {
+    const cur = dst[k];
+    if (
+      v && typeof v === "object" && !Array.isArray(v) &&
+      cur && typeof cur === "object" && !Array.isArray(cur)
+    ) {
+      deepMergeInto(cur as Record<string, unknown>, v as Record<string, unknown>);
+    } else {
+      dst[k] = v;
+    }
+  }
+  return dst;
 }
 
 /**
