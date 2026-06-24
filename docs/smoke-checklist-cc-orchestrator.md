@@ -2,6 +2,18 @@
 
 > 注:按约定冒烟清单应统一进单一 `docs/smoke-checklist.md`。本文件是该 section 的独立草稿(worktree 从 origin/main 分出,主线的 smoke-checklist.md 未带入);合并到 main 时把下面这段并入 `docs/smoke-checklist.md` 的新 section,删除本文件。
 
+## CC 房间对话视图(历史 + resume 常驻 + 审批 + 合并 rooms)
+
+- [ ] 点 session → 弹权限档选择(default/acceptEdits/bypassPermissions)→ 进对话视图。
+- [ ] 历史区显示该 session 最近 20 条 user/assistant(含工具行),中文路径项目也行。
+- [ ] 选 default 档 → 实时区让它写文件 → 审批卡弹出(显示工具名/描述/input)→ 允许 → 文件真写、对话续。
+- [ ] 拒绝 → claude 收 deny、不执行、继续对话。
+- [ ] 审批 5 分钟不点 → 自动 deny、不挂死(ApprovalBridge 超时)。
+- [ ] resume 续接:实时区第一句后 claude 记得历史上下文。
+- [ ] 并发:同一 session 桌面已开,再点不重起(openForSession 按 claudeSessionId 复用)。
+- [ ] 删了桌面 rooms 面板后,手机端房间仍能用(RoomManager/rooms:* IPC 保留)。
+- [ ] "新开 session"(空 sessionId)→ 起全新常驻进程对话。
+
 ## 驱动 Claude Code 编排(CC 房间 / 定时 / 后台)
 
 前置:本机已装 `claude` CLI(`/opt/homebrew/bin/claude`,v2.1.186 已验证)。
