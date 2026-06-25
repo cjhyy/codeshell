@@ -609,15 +609,20 @@ function validateSchedule(schedule: string, timezone?: string): void {
  * a typo like "5mn" should surface as an error, not quietly schedule every
  * 10 minutes (review-2026-05-30).
  */
-function parseSchedule(schedule: string): number {
+export function parseSchedule(schedule: string): number {
   const match = schedule.match(/^(\d+)(s|m|h|d)$/);
   if (match) {
     const value = parseInt(match[1], 10);
-    switch (match[2]) {
-      case "s": return value * 1000;
-      case "m": return value * 60 * 1000;
-      case "h": return value * 60 * 60 * 1000;
-      case "d": return value * 24 * 60 * 60 * 1000;
+    // A zero interval ("0s"/"0m"/…) → 0ms → setInterval(fn, 0) spins
+    // continuously. Reject it (fall through to throw), matching the raw-ms
+    // path's `> 0` guard and the "throw on bad input" contract.
+    if (value > 0) {
+      switch (match[2]) {
+        case "s": return value * 1000;
+        case "m": return value * 60 * 1000;
+        case "h": return value * 60 * 60 * 1000;
+        case "d": return value * 24 * 60 * 60 * 1000;
+      }
     }
   }
   // Raw milliseconds — must be all digits and > 0 (parseInt would otherwise
