@@ -13,6 +13,8 @@ import {
   PinOff,
   Eraser,
   Check,
+  ArrowDown,
+  ArrowUp,
 } from "lucide-react";
 import type {
   MemoryLevel,
@@ -200,10 +202,30 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
     }
   };
 
+  const demotePending = async (name: string): Promise<void> => {
+    try {
+      await window.codeshell.demotePendingMemory(name);
+      await Promise.all([refreshPending(), refresh()]);
+    } catch (e: unknown) {
+      setError(String(e instanceof Error ? e.message : e));
+    }
+  };
+
   const rejectPending = async (name: string): Promise<void> => {
     try {
       await window.codeshell.rejectPendingMemory(name);
       await refreshPending();
+    } catch (e: unknown) {
+      setError(String(e instanceof Error ? e.message : e));
+    }
+  };
+
+  const promoteToGlobal = async (name: string): Promise<void> => {
+    if (level !== "project" || !cwd) return;
+    try {
+      await window.codeshell.promoteMemoryToGlobal(cwd, name);
+      setSelected(null);
+      await refresh();
     } catch (e: unknown) {
       setError(String(e instanceof Error ? e.message : e));
     }
@@ -516,6 +538,17 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
                   type="button"
                   variant="ghost"
                   size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                  onClick={() => void demotePending(p.name)}
+                  title={t("settingsX.memory.pendingDemote")}
+                  aria-label={t("settingsX.memory.pendingDemote")}
+                >
+                  <ArrowDown size={13} />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
                   className="h-7 w-7 text-muted-foreground hover:text-status-err"
                   onClick={() => void rejectPending(p.name)}
                   title={t("settingsX.memory.pendingReject")}
@@ -596,6 +629,20 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
               >
                 {e.pinned ? <PinOff size={12} /> : <Pin size={12} />}
               </Button>
+              {/* 手动「提升到全局」— only for project-level user entries. */}
+              {level === "project" && scope === "user" && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-primary"
+                  onClick={() => void promoteToGlobal(e.name)}
+                  aria-label={t("settingsX.memory.promoteToGlobal")}
+                  title={t("settingsX.memory.promoteToGlobalTitle")}
+                >
+                  <ArrowUp size={12} />
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="ghost"

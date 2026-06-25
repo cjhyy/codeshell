@@ -154,7 +154,17 @@ export function approvePendingMemory(name: string): string | null {
   return pendingMm().approvePending(name);
 }
 
+/** Demote → 不升全局但保留:落回它来源项目的 user store(无来源则全局兜底)。 */
+export function demotePendingMemory(name: string): string | null {
+  return pendingMm().demotePending(name);
+}
+
 /** Reject → soft-delete the pending entry (recoverable from trash). */
 export function rejectPendingMemory(name: string): boolean {
   return pendingMm().delete(name);
+}
+
+/** Promote a project-level user memory to the global user store (手动提升). */
+export function promoteMemoryToGlobal(cwd: string, name: string): string | null {
+  return new MemoryManager({ projectDir: cwd, scope: "user" }).promoteToGlobal(name);
 }

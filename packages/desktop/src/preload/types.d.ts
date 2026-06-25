@@ -666,8 +666,14 @@ export interface CodeshellApi {
   /** Approve a pending memory → moves it into the global user store (injected).
    *  Returns the new filename, or null if not found. */
   approvePendingMemory(name: string): Promise<string | null>;
+  /** Demote a pending memory → falls back to its source project's user store
+   *  (not promoted to global, but kept). Returns the new filename or null. */
+  demotePendingMemory(name: string): Promise<string | null>;
   /** Reject a pending memory → soft-delete (recoverable from trash). */
   rejectPendingMemory(name: string): Promise<boolean>;
+  /** Promote a project-level user memory to the global user store (manual ↑).
+   *  Returns the new global filename, or null if not found. */
+  promoteMemoryToGlobal(cwd: string, name: string): Promise<string | null>;
   /**
    * Run one manual dream consolidation pass over the `dream` scope at the
    * given level (project requires cwd). Runs an LLM in the main process; the

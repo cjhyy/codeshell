@@ -61,4 +61,37 @@ describe("PromptComposer dynamic context (skills out of system prefix)", () => {
       rmSync(bare, { recursive: true, force: true });
     }
   });
+
+  // Cache fix: memory mutates constantly (extraction / recall usage++ / approve),
+  // so it must ride the trailing message, NOT the cacheable prefix.
+  it("puts memory in the trailing dynamic message, never the system prefix", async () => {
+    const prevCsHome = process.env.CODE_SHELL_HOME;
+    const csHome = mkdtempSync(join(tmpdir(), "cs-memhome-"));
+    process.env.CODE_SHELL_HOME = csHome;
+    const bare = mkdtempSync(join(tmpdir(), "cs-mem-bare-"));
+    invalidateSkillCache();
+    try {
+      // Seed a global memory under csHome/memory/user.
+      const udir = join(csHome, "memory", "user");
+      mkdirSync(udir, { recursive: true });
+      writeFileSync(
+        join(udir, "pref.md"),
+        "---\nname: my-global-pref\ndescription: a durable global preference\ntype: user\n---\nbody",
+      );
+      const composer = new PromptComposer({ cwd: bare, model: "test-model" });
+      const sysPrompt = await composer.buildSystemPrompt([]);
+      const userCtx = composer.buildUserContextMessage();
+      const dyn = await composer.buildDynamicContextMessage();
+      // Not in the cacheable prefix:
+      expect(sysPrompt).not.toContain("my-global-pref");
+      expect(userCtx?.content ?? "").not.toContain("my-global-pref");
+      // In the trailing dynamic message:
+      expect(dyn?.content ?? "").toContain("my-global-pref");
+    } finally {
+      if (prevCsHome === undefined) delete process.env.CODE_SHELL_HOME;
+      else process.env.CODE_SHELL_HOME = prevCsHome;
+      rmSync(csHome, { recursive: true, force: true });
+      rmSync(bare, { recursive: true, force: true });
+    }
+  });
 });

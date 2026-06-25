@@ -133,6 +133,64 @@ describe("pruneByRecall (recall TTL)", () => {
   });
 });
 
+describe("pending 审批门 三态 + originProject", () => {
+  it("approve moves pending → global user store", () => {
+    withBase((base) => {
+      const pend = new MemoryManager({ baseDir: base, scope: "pending" });
+      pend.save({ name: "g", description: "d", type: "feedback", content: "c", origin: "auto" });
+      expect(pend.approvePending("g")).toBeTruthy();
+      expect(pend.loadAll().map((e) => e.name)).not.toContain("g");
+      const global = new MemoryManager({ baseDir: base, scope: "user" }).loadAll().map((e) => e.name);
+      expect(global).toContain("g");
+    });
+  });
+
+  it("demote moves pending → its originProject's user store, not global", () => {
+    withBase((base) => {
+      const projectDir = "/tmp/demote-origin-proj";
+      const pend = new MemoryManager({ baseDir: base, scope: "pending" });
+      pend.save({ name: "d1", description: "d", type: "project", content: "c", origin: "auto", originProject: projectDir });
+      expect(pend.demotePending("d1")).toBeTruthy();
+      const proj = new MemoryManager({ baseDir: base, projectDir, scope: "user" }).loadAll().map((e) => e.name);
+      expect(proj).toContain("d1");
+      const global = new MemoryManager({ baseDir: base, scope: "user" }).loadAll().map((e) => e.name);
+      expect(global).not.toContain("d1");
+    });
+  });
+
+  it("demote with no originProject falls back to global (never loses the memory)", () => {
+    withBase((base) => {
+      const pend = new MemoryManager({ baseDir: base, scope: "pending" });
+      pend.save({ name: "orphan", description: "d", type: "project", content: "c", origin: "auto" });
+      expect(pend.demotePending("orphan")).toBeTruthy();
+      const global = new MemoryManager({ baseDir: base, scope: "user" }).loadAll().map((e) => e.name);
+      expect(global).toContain("orphan");
+    });
+  });
+
+  it("promoteToGlobal moves a project user memory → global, removing the project copy", () => {
+    withBase((base) => {
+      const projectDir = "/tmp/promote-proj";
+      const proj = new MemoryManager({ baseDir: base, projectDir, scope: "user" });
+      proj.save({ name: "lesson", description: "d", type: "feedback", content: "c" });
+      expect(proj.promoteToGlobal("lesson")).toBeTruthy();
+      expect(proj.loadAll().map((e) => e.name)).not.toContain("lesson");
+      const global = new MemoryManager({ baseDir: base, scope: "user" }).loadAll().map((e) => e.name);
+      expect(global).toContain("lesson");
+    });
+  });
+
+  it("originProject roundtrips through frontmatter; origin not confused with originProject", () => {
+    withBase((base) => {
+      const pend = new MemoryManager({ baseDir: base, scope: "pending" });
+      pend.save({ name: "rt", description: "d", type: "project", content: "c", origin: "auto", originProject: "/some/proj" });
+      const e = pend.loadAll().find((x) => x.name === "rt")!;
+      expect(e.origin).toBe("auto");
+      expect(e.originProject).toBe("/some/proj");
+    });
+  });
+});
+
 describe("buildInjectionIndex (two-layer, global + project)", () => {
   it("merges global and project memories and shows NO body content", () => {
     withBase((base) => {

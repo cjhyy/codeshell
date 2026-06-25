@@ -75,6 +75,12 @@ export interface MemoryEntry {
   usageCount?: number;
   lastUsed?: string;
   created?: string;
+  /**
+   * 审批门 (用户拍板): for `pending`-scope entries, the project cwd the memory
+   * was extracted in. On "不批准/降级" the entry falls back to THIS project's
+   * user store (not the current one). Absent → fall back to no-repo / global.
+   */
+  originProject?: string;
 }
 
 /**
@@ -169,6 +175,7 @@ export class MemoryManager {
     const created = entry.created ?? existing?.created ?? nowIso;
     const usageCount = entry.usageCount ?? existing?.usageCount ?? 0;
     const lastUsed = entry.lastUsed ?? existing?.lastUsed ?? created;
+    const originProject = entry.originProject ?? existing?.originProject;
 
     // pinned/origin are written only when meaningful so legacy-shaped files
     // stay byte-identical for unpinned manual saves. Lifecycle fields are
@@ -180,6 +187,7 @@ export class MemoryManager {
       `type: ${entry.type}\n` +
       (entry.pinned ? `pinned: true\n` : "") +
       (entry.origin ? `origin: ${entry.origin}\n` : "") +
+      (originProject ? `originProject: ${originProject}\n` : "") +
       `created: ${created}\n` +
       `lastUsed: ${lastUsed}\n` +
       `usageCount: ${usageCount}\n` +
@@ -249,8 +257,11 @@ export class MemoryManager {
       const description = frontmatter.match(/description:\s*(.+)/)?.[1]?.trim() ?? "";
       const type = (frontmatter.match(/type:\s*(.+)/)?.[1]?.trim() ?? "project") as MemoryEntry["type"];
       const pinned = frontmatter.match(/pinned:\s*(.+)/)?.[1]?.trim() === "true";
-      const originRaw = frontmatter.match(/origin:\s*(.+)/)?.[1]?.trim();
+      // Anchor with ^…/m so `origin:` doesn't accidentally match the
+      // `originProject:` line (and vice-versa).
+      const originRaw = frontmatter.match(/^origin:\s*(.+)/m)?.[1]?.trim();
       const origin = originRaw === "auto" || originRaw === "manual" ? originRaw : undefined;
+      const originProject = frontmatter.match(/^originProject:\s*(.+)/m)?.[1]?.trim() || undefined;
 
       let updatedAt = 0;
       try {
@@ -269,7 +280,7 @@ export class MemoryManager {
 
       return {
         name, description, type, content, fileName, scope,
-        updatedAt, pinned, origin, usageCount, lastUsed, created,
+        updatedAt, pinned, origin, usageCount, lastUsed, created, originProject,
       };
     } catch {
       return null;
@@ -364,14 +375,29 @@ export class MemoryManager {
    * curated, injected global user store.
    */
   approvePending(nameOrFile: string): string | null {
+    return this.movePending(nameOrFile, "global");
+  }
+
+  /**
+   * Demote a pending memory: 不批准升全局,但它仍是有用记忆 → 落回它来源项目的
+   * user store (originProject)。无 originProject 时落全局 user(兜底,不丢)。
+   */
+  demotePending(nameOrFile: string): string | null {
+    return this.movePending(nameOrFile, "project");
+  }
+
+  /** Shared move for approve(→global user)/demote(→origin-project user). */
+  private movePending(nameOrFile: string, dest: "global" | "project"): string | null {
     if (this.scope !== "pending") return null;
     const entry = this.loadAll().find(
       (e) => e.name === nameOrFile || e.fileName === nameOrFile,
     );
     if (!entry) return null;
-    // pending is global-only → target the global user store (no projectDir).
-    const userMgr = new MemoryManager({ baseDir: this.baseDir, scope: "user" });
-    const fileName = userMgr.save({
+    const targetMgr =
+      dest === "project" && entry.originProject
+        ? new MemoryManager({ baseDir: this.baseDir, projectDir: entry.originProject, scope: "user" })
+        : new MemoryManager({ baseDir: this.baseDir, scope: "user" }); // global, or fallback
+    const fileName = targetMgr.save({
       name: entry.name,
       description: entry.description,
       type: entry.type,
@@ -380,8 +406,36 @@ export class MemoryManager {
       created: entry.created,
       lastUsed: entry.lastUsed,
       usageCount: entry.usageCount,
+      // originProject is no longer needed once it has landed in a real store.
     });
     this.delete(entry.name); // soft-delete the pending copy
+    return fileName;
+  }
+
+  /**
+   * Promote a project-level user memory to the GLOBAL user store (用户手动点
+   * "提升到全局")。Must be called on a project-scoped user manager. Copies the
+   * entry into global user/ and soft-deletes the project copy. Returns the new
+   * global filename, or null if not found.
+   */
+  promoteToGlobal(nameOrFile: string): string | null {
+    const entry = this.loadAll().find(
+      (e) => e.name === nameOrFile || e.fileName === nameOrFile,
+    );
+    if (!entry) return null;
+    const globalMgr = new MemoryManager({ baseDir: this.baseDir, scope: "user" });
+    const fileName = globalMgr.save({
+      name: entry.name,
+      description: entry.description,
+      type: entry.type,
+      content: entry.content,
+      origin: entry.origin,
+      pinned: entry.pinned,
+      created: entry.created,
+      lastUsed: entry.lastUsed,
+      usageCount: entry.usageCount,
+    });
+    this.delete(entry.name); // remove from the project store
     return fileName;
   }
 

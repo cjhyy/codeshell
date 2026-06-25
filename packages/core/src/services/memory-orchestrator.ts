@@ -122,10 +122,10 @@ export class MemoryOrchestrator {
       let pendingMm: MemoryManager | null = null;
       let globalCount = 0;
       for (const entry of entries) {
-        const target =
-          entry.scope === "global"
-            ? (pendingMm ??= new MemoryManager({ scope: "pending" }))
-            : mm;
+        const isGlobal = entry.scope === "global";
+        const target = isGlobal
+          ? (pendingMm ??= new MemoryManager({ scope: "pending" }))
+          : mm;
         target.save({
           type: entry.type,
           name: entry.name,
@@ -138,8 +138,13 @@ export class MemoryOrchestrator {
           // Provenance mark (feedback#18 方案 C): extractor writes are "auto"
           // so the UI can tell curated memories from extractor noise.
           origin: "auto",
+          // 审批门: stamp the source project on pending entries so "不批准/降级"
+          // can fall them back to the project they were extracted in.
+          ...(isGlobal && this.options.projectDir
+            ? { originProject: this.options.projectDir }
+            : {}),
         });
-        if (entry.scope === "global") globalCount++;
+        if (isGlobal) globalCount++;
       }
       const saveMs = Date.now() - t;
       extracted = entries.length;

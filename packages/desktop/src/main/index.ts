@@ -120,7 +120,9 @@ import {
   deleteMemory,
   listPendingMemory,
   approvePendingMemory,
+  demotePendingMemory,
   rejectPendingMemory,
+  promoteMemoryToGlobal,
   type MemoryLevel,
   type SaveMemoryInput,
 } from "./memory-service.js";
@@ -2355,9 +2357,18 @@ ipcMain.handle("memory:pending:approve", async (_e, name: unknown) => {
   if (typeof name !== "string" || !name) throw new Error("memory name required");
   return approvePendingMemory(name);
 });
+ipcMain.handle("memory:pending:demote", async (_e, name: unknown) => {
+  if (typeof name !== "string" || !name) throw new Error("memory name required");
+  return demotePendingMemory(name);
+});
 ipcMain.handle("memory:pending:reject", async (_e, name: unknown) => {
   if (typeof name !== "string" || !name) throw new Error("memory name required");
   return rejectPendingMemory(name);
+});
+ipcMain.handle("memory:promote", async (_e, cwd: unknown, name: unknown) => {
+  if (typeof cwd !== "string" || !cwd) throw new Error("memory promote requires cwd");
+  if (typeof name !== "string" || !name) throw new Error("memory name required");
+  return promoteMemoryToGlobal(cwd, name);
 });
 
 ipcMain.handle("memory:dream", async (_e, level: unknown, cwd?: string) => {
