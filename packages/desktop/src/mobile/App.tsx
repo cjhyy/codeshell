@@ -221,8 +221,8 @@ function SidePane({
         onDone();
       }}
       onSelectProject={app.selectProject}
-      onNew={() => {
-        app.newSession();
+      onNew={(cwd, name) => {
+        app.newSession(cwd, name);
         onDone();
       }}
       onRefresh={app.refreshSessions}

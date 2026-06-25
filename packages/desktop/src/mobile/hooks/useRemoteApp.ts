@@ -156,8 +156,6 @@ export function useRemoteApp(): RemoteApp {
   // External claude-CLI sessions discovered for activeProjectCwd.
   const [ccSessions, setCcSessions] = useState<CcDiscoveredSession[]>([]);
   const [ccProbe, setCcProbe] = useState<{ available: boolean; reason?: string } | null>(null);
-  /** Set while awaiting a server-minted session id after newSession(). */
-  const pendingNewSessionRef = useRef(false);
   /** socket.send via ref — onServerEvent is created BEFORE the socket (it's the
    *  socket's callback), so it can't close over `socket` directly. */
   const sendRef = useRef<((e: import("@protocol").MobileClientEvent) => void) | null>(null);
@@ -202,7 +200,9 @@ export function useRemoteApp(): RemoteApp {
           boundSessionRef.current = event.sessionId;
         }
         if ("cwd" in event) setActiveSessionCwd(event.cwd ?? null);
-        pendingNewSessionRef.current = false;
+        // A freshly minted session won't be on disk until its first turn, so
+        // pull the list now so the new conversation shows up as a row.
+        sendRef.current?.({ type: "session.list" });
         break;
       case "session.list.ok":
         setSessions(event.sessions);
@@ -527,9 +527,15 @@ export function useRemoteApp(): RemoteApp {
   const newSession = useCallback((cwd?: string | null, name?: string) => {
     const nextCwd = cwd === undefined ? activeCwdRef.current : cwd;
     boundSessionRef.current = undefined;
-    // Await the server-minted session id (chat.accepted) before binding — a
-    // chat.send issued before the id lands would race an undefined session.
-    pendingNewSessionRef.current = true;
+    // Enter a visible "fresh conversation" state immediately — clear the active
+    // session + chat so the user sees the new-conversation surface right away
+    // (the drawer closes after this; without it the screen looks unchanged and
+    // tapping 新建 feels like a no-op). The real id arrives via chat.accepted.
+    setActiveSessionId(undefined);
+    // The real id arrives via chat.accepted, which binds boundSessionRef. A
+    // chat.send sent before then carries sessionId:undefined, which the server
+    // resolves to this device's just-minted session (WS-ordered: session.create
+    // is processed before the following chat.send) — so no id race to guard.
     setActiveRoomId(undefined);
     setActiveSessionCwd(nextCwd === undefined ? undefined : nextCwd ?? null);
     setApprovals([]);
