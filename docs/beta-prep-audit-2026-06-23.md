@@ -16,6 +16,7 @@
 > ## 📄 文档收尾 + 基线复验交接(2026-06-25 02:38–起,**最新·回来先读这段**)
 >
 > > **✅ 推前权威 gate(2026-06-25 收尾跑全套)**:`bun run build`(core+tui+meta exit 0)· 全包 typecheck 0(core+tui+desktop)· 全包测试 **core 1751 / cdp 27 / tui 69 / desktop 988 全 0 fail** · desktop core symlink 完好 · 工作树净 · 领先 origin **366** · 无残留 worktree。**这批含本会话 11 个代码修复,叠加后整体绿、push-ready。** push / A 节交互真机冒烟仍待你。
+> > **✅ 修复运行时实证(非仅单测)**:直接 import 跑了 4 个修复确认真生效——`parseSchedule`(dist:`30s/5m/1h`→ms,`0s/0m/0/5mn/""`→throw)·`clampPtyDim`(`NaN/∞/0/-5`→1,`120.7`→120)·`cdp scroll(NaN)`→deltaY 600 finite·`cdp waitForLoad(NaN)`→ok 不挂。+ CLI 端到端 `run "say hi"` 真跑通一轮(续 G)。
 >
 > 用户开 `/goal` 循环「按本文档方向推进 beta 前准备,做满 3 小时」。这轮做的全是**「我能独立做、不需用户在场」**的收尾。后半段从文档核查转入**代码硬化**:**5 批 Explore bug-scan 近全仓 + 逐个亲自复核(证伪优先)**,修 **11 个孤立可测真 bug**(全 TDD·worktree→cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist 物化 core 导致的环境 breakage(bun install 恢复,记忆已存)**。详见下方「续 D/E/F」。**最终全量基线:core 1751 · cdp 27 · tui 69 · desktop 988 全 0 fail · 三包 tsc 0 · 工作树净 · 领先 origin ~361,仍未 push**。**打包已由你完成(见顶部 📦 段),剩 §1.2 真机冒烟 + push。**
 >
