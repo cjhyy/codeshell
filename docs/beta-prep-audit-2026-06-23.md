@@ -26,7 +26,7 @@
 > - `9cdcaaee` **Y-3:device `secretHash` 改 `timingSafeEqual`**(常量时间,长度不等先短路防抛错;+1 测)。
 > - `04ff5156` **`parseSchedule` 拒绝零间隔**(`"0s"`/`"0m"`→0ms→`setInterval(fn,0)` 自旋;单位路径漏 `>0` 守卫,raw-ms 路径本有;+4 测·导出供测)。
 > - `0dcb8d1c` **`secretHint` 不泄漏短 secret**(`"ab".slice(-4)`==="ab" 全量泄漏→`length>4` 才露末4位否则 `****`;+1 测)。
-> - **bug-scan(新代码:credentials/model-catalog/cdp/新工具)4 候选三筛**:#1 secretHint ✅修;#2 cdp scroll 负 amount 翻向→**判低价值不修**(自纠正、非安全);#3/#4 **path-traversal 真 gap 待修**——`generate-image.referenceImages` + `image-uploader.toUrl` 读文件**未走 pathPolicy/classifyPath**,`../../etc/passwd` 绕过 Read/Write 都强制的工作区 "ask" 门。**根因**:二者未声明 `pathPolicy`,且 executor `resolvePathPolicyTargets` 只认 string arg、不认 `referenceImages` 这种 **string[]**→ 即便声明也不生效。**正解**=扩 executor 支持数组 path arg + 给 GenerateImage/Video 声明 pathPolicy。这是多点改动,下一步 TDD 做。关联记忆 `path_containment_realpath`/`path_permission_system`。
+> - **bug-scan(新代码:credentials/model-catalog/cdp/新工具)4 候选三筛**:#1 secretHint ✅修;#2 cdp scroll 负 amount 翻向→**判低价值不修**(自纠正、非安全);#3/#4 **path-traversal 真 gap ✅已修**(`78bf8b9c`+`436a1498`)——`generate-image.referenceImages` + `generate-video.images/image` 读本地文件**未走 pathPolicy**,`../../etc/passwd` 绕过工作区 "ask" 门。两部分修:① executor `resolvePathPolicyTargets` 扩支持 **string[] arg**(相对路径按 ctx.cwd 解析、跳 http(s) URL)② 给 GenerateImage/Video 声明 pathPolicy。TDD +2 测,19 回归绿,tsc/build 0。关联记忆 `path_containment_realpath`/`path_permission_system`。
 >
 > ---
 >
