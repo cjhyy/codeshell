@@ -15,7 +15,7 @@
 
 > ## 📄 文档收尾 + 基线复验交接(2026-06-25 02:38–起,**最新·回来先读这段**)
 >
-> 用户开 `/goal` 循环「按本文档方向推进 beta 前准备,做满 3 小时」。这轮做的全是**「我能独立做、不需用户在场」**的收尾(真机冒烟/打包/push 仍只能用户)。**22 commit 在 main**(21 文档 + 1 个 CSC 构建脚本;另 `722b3642` 是用户自己的面板 feature 非本轮),累计领先 origin **338**,仍未 push。基线最终复验:core+tui tsc **0** · desktop tsc **0** · 工作树净,可安全 push。
+> 用户开 `/goal` 循环「按本文档方向推进 beta 前准备,做满 3 小时」。这轮做的全是**「我能独立做、不需用户在场」**的收尾。后半段从文档核查转入**代码硬化**:**5 批 Explore bug-scan 近全仓 + 逐个亲自复核(证伪优先)**,修 **11 个孤立可测真 bug**(全 TDD·worktree→cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist 物化 core 导致的环境 breakage(bun install 恢复,记忆已存)**。详见下方「续 D/E/F」。**最终全量基线:core 1751 · cdp 27 · tui 69 · desktop 988 全 0 fail · 三包 tsc 0 · 工作树净 · 领先 origin ~361,仍未 push**。**打包已由你完成(见顶部 📦 段),剩 §1.2 真机冒烟 + push。**
 >
 > **续(D)文档准确性核查(4 批 Explore subagent + 亲自复核,~19 份文档,按 receiving-code-review 纪律甄别误报):**
 > - `7de8708c` 修 3 份面向读者文档真错误:`hooks.md`(import 包名 `code-shell`→`@cjhyy/code-shell`;kill-switch 表用了不存在的 `strictSkills`/`CODESHELL_STRICT_SKILLS`→改真机制 `disabledPlugins/disabledPluginHooks/disabledSkills`)、`CODESHELL.md`(Build&Test 块 pre-monorepo:`dev` 指向不存在的 `src/cli/main.ts`)、`smoke-checklist-cc-orchestrator.md`(`ScheduleRoomTask` 已删→`CronCreate(once)`)。
