@@ -328,7 +328,11 @@ export class CdpActionsDriver {
 
   async waitForLoad(timeoutMs = 10_000): Promise<CdpActionResult> {
     try {
-      const deadline = Date.now() + timeoutMs;
+      // Guard a non-finite / non-positive timeout: `Date.now() + NaN === NaN`
+      // and `Date.now() > NaN` is always false → `while(true)` would never exit
+      // (infinite poll loop). Fall back to the default so the loop terminates.
+      const effectiveTimeout = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 10_000;
+      const deadline = Date.now() + effectiveTimeout;
       // eslint-disable-next-line no-constant-condition
       while (true) {
         const res = (await this.send("Runtime.evaluate", {
@@ -345,7 +349,9 @@ export class CdpActionsDriver {
   }
 
   async scroll(dir: "up" | "down", amount?: number): Promise<CdpActionResult> {
-    const deltaY = (dir === "down" ? 1 : -1) * (amount ?? 600);
+    // Guard a non-finite amount (NaN/Infinity) → would send NaN deltaY to CDP.
+    const magnitude = typeof amount === "number" && Number.isFinite(amount) ? Math.abs(amount) : 600;
+    const deltaY = (dir === "down" ? 1 : -1) * magnitude;
     try {
       await this.send("Input.dispatchMouseEvent", { type: "mouseWheel", x: 0, y: 0, deltaX: 0, deltaY });
       return { ok: true };

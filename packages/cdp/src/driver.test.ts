@@ -228,3 +228,70 @@ describe("cleanPageText", () => {
     expect(cleanPageText(long, 10)).toEqual({ text: "x".repeat(10) + "\n…(truncated)", truncated: true });
   });
 });
+
+describe("waitForLoad NaN/negative timeout guard", () => {
+  // Footgun: deadline = Date.now() + timeoutMs. A NaN timeout makes
+  // `Date.now() > NaN` always false, so `while(true)` never exits — an infinite
+  // loop hammering Runtime.evaluate. The default only applies to `undefined`,
+  // not NaN. waitForLoad must treat a non-finite/non-positive timeout as the
+  // default so it still terminates.
+  test("a NaN timeout uses the default deadline, not an infinite loop", async () => {
+    // Pre-guard, deadline = Date.now()+NaN = NaN → `Date.now() > NaN` always
+    // false → infinite loop even though readyState eventually completes. With
+    // the guard, the default 10s deadline applies and the loop polls normally,
+    // so once the page reports "complete" it returns. (Page completes on the
+    // 3rd poll → returns fast, proving the loop is live & bounded, not stuck.)
+    let polls = 0;
+    const { send } = fakeCdp({
+      "Runtime.evaluate": () => ({ result: { value: ++polls >= 3 ? "complete" : "loading" } }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+    const r = await d.waitForLoad(Number.NaN);
+    expect(r.ok).toBe(true);
+    expect(polls).toBe(3); // looped (not stuck at NaN-deadline), then completed
+  });
+
+  test("a completed page still returns immediately", async () => {
+    const { send } = fakeCdp({ "Runtime.evaluate": () => ({ result: { value: "complete" } }) });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+    expect((await d.waitForLoad(Number.NaN)).ok).toBe(true);
+  });
+
+  // The original infinite-loop case: page NEVER completes + NaN timeout. The
+  // guard makes it terminate at the default 10s deadline instead of spinning
+  // forever. Necessarily ~10s of real polling — the only path that proves
+  // termination of the never-completing case. (12s test budget.)
+  test(
+    "a never-completing page with NaN timeout terminates at the default deadline",
+    async () => {
+      const { send } = fakeCdp({ "Runtime.evaluate": () => ({ result: { value: "loading" } }) });
+      const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+      const started = Date.now();
+      const r = await d.waitForLoad(Number.NaN);
+      expect(r.ok).toBe(true);
+      expect(r.detail).toMatch(/timed out/i);
+      expect(Date.now() - started).toBeLessThan(11_500); // ~10s default, NOT forever
+    },
+    12_000,
+  );
+});
+
+describe("scroll NaN amount guard", () => {
+  test("a NaN amount does not send NaN deltaY to CDP", async () => {
+    const { send, calls } = fakeCdp();
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+    await d.scroll("down", Number.NaN);
+    const wheel = calls.find((c) => c.method === "Input.dispatchMouseEvent");
+    expect(wheel).toBeDefined();
+    expect(Number.isFinite(wheel!.params.deltaY)).toBe(true); // not NaN
+    expect(wheel!.params.deltaY).toBeGreaterThan(0); // fell back to default down-scroll
+  });
+
+  test("a normal amount scrolls by that amount", async () => {
+    const { send, calls } = fakeCdp();
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+    await d.scroll("down", 300);
+    const wheel = calls.find((c) => c.method === "Input.dispatchMouseEvent");
+    expect(wheel!.params.deltaY).toBe(300);
+  });
+});
