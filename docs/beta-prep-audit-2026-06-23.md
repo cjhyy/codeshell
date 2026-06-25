@@ -72,7 +72,7 @@
 >
 > ---
 >
-> ## 🔬 第五轮 workflow review:夜里 merge 的增量代码(2026-06-24 07:xx,回来先读这段)
+> ## 🔬 第五轮 workflow review:夜里 merge 的增量代码(2026-06-24 07:xx,历史·已被上方 2026-06-25 段取代)
 >
 > 对**上轮 review(1830a0a2)之后新合进来、还没 review 的代码**跑 workflow `review-unpushed-incremental`(4 域 fan-out review → 逐条独立对抗 verify,21 agent):manual catalog editor / desktop transcript-reader+sessions / P1 参数下发 / misc core-tui。**确认 7 / 证伪 10**。逐条按 receiving-code-review 纪律复核后:**修 3,判 4 不值/证伪**。
 >
@@ -90,7 +90,7 @@
 >
 > ---
 >
-> ## ✅ Push 前检查(2026-06-24 07:01,**回来先读这段**)
+> ## ✅ Push 前检查(2026-06-24 07:01,历史·已被上方 2026-06-25 段取代)
 >
 > 7 点开工先做了 **push 就绪预检**(只读·不触敏感路径)。**领先 origin/main 246 commit**(`391295ed`→`aae1abbe`):133 docs / 47 fix / 28 feat / 16 test / 13 refactor / 6 merge。
 > - **基线绿**:core **1689**/0 · desktop **961**/0 · tui 69/0 · tsc 0 · 工作树净(仅用户自己的 brainstorm scratch + plan doc 未追踪)。
@@ -100,7 +100,7 @@
 >
 > ---
 >
-> ## 🔁 自主循环交接(2026-06-24,**最新·回来先读这段**)
+> ## 🔁 自主循环交接(2026-06-24,历史·已被上方 2026-06-25 段取代)
 >
 > 用户开 `/goal` 循环「按文档推进」。这几轮做的是**「我能独立做、不需你在场」**的收尾项(桌面主流程冒烟/打包/push 仍等你;R-2 加密用户已决定暂缓)。**~20 commit 在 main**(累计领先 origin **229**,仍未 push):
 >
@@ -140,7 +140,7 @@
 >
 > ---
 
-> ## 🔬 Workflow Review 交接(2026-06-23 v2,**最新·回来先读这段**)
+> ## 🔬 Workflow Review 交接(2026-06-23 v2,历史·已被上方 2026-06-25 段取代)
 >
 > 用户拍板:对**全部未推 diff(`origin/main..HEAD`,当时 153 commit / 121 文件 / +5264-810)整体**跑一次多 agent 对抗式 review。
 > **workflow**(`review-unpushed-diff`,10 agent:按 5 域 fan-out review → 逐条 finding 独立 verify → 综合)。确认 **4 个回归**,我**全修+回归测+revert-verify**,已 commit `f5d23525`。
@@ -162,7 +162,7 @@
 >
 > ---
 
-> ## 🌙 夜循环交接(2026-06-23,回来先读这段)
+> ## 🌙 夜循环交接(2026-06-23,历史·已被上方 2026-06-25 段取代)
 >
 > 一整轮自主 bug-scan + 修复 + 文档整理。**~151 commit 全在本地 main,均未 push**(push 是你的决定,我没动)。~61 子系统 + 17 跨切模式对抗式审,真问题 ~28 个全修+回归测(下面列最重的;完整覆盖见**附A 矩阵**,完整 fix 列表 `git log --grep="^fix"`)。
 >
