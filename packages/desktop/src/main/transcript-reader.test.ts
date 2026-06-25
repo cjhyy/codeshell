@@ -148,6 +148,22 @@ describe("transcriptToFoldItems", () => {
     });
   });
 
+  // Robustness: a corrupt/hand-edited transcript line with a non-numeric `round`
+  // must not produce `round: NaN` (Number("abc") === NaN) and propagate invalid
+  // state into the rendered FoldItem. Fall back to 0.
+  it("coerces a corrupt non-numeric goal_progress round to 0, not NaN", () => {
+    const jsonl = [
+      line("goal_progress", { status: "not_met", round: "oops" }),
+      line("goal_progress", { status: "not_met" }), // missing round
+    ].join("\n");
+    const items = transcriptToFoldItems(jsonl);
+    const r0 = (items[0] as { event: { round: number } }).event.round;
+    const r1 = (items[1] as { event: { round: number } }).event.round;
+    expect(Number.isFinite(r0)).toBe(true);
+    expect(r0).toBe(0);
+    expect(r1).toBe(0);
+  });
+
   it("uses the event's turn number for assistant stream_request_start", () => {
     const t1 = JSON.stringify({ id: "x", type: "message", timestamp: 1, turnNumber: 1, data: { role: "assistant", content: "second" } });
     const items = transcriptToFoldItems(t1);

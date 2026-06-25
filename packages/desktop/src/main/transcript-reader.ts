@@ -226,7 +226,9 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
           event: {
             type: "goal_progress",
             status: (d.status as "not_met" | "met" | "exhausted") ?? "not_met",
-            round: Number(d.round ?? 0),
+            // A corrupt/hand-edited transcript may carry a non-numeric `round`;
+            // Number("abc") === NaN would propagate invalid state. Fall back to 0.
+            round: Number.isFinite(Number(d.round)) ? Number(d.round) : 0,
             ...(typeof d.gaps === "string" ? { gaps: d.gaps } : {}),
           },
           timestamp: ts,
