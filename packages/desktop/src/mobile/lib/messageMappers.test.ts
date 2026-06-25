@@ -1,5 +1,10 @@
 import { test, expect } from "bun:test";
-import { roomMsgToEvent, roomHistoryToEvents, extractAskUserOptions } from "./messageMappers";
+import {
+  roomMsgToEvent,
+  roomHistoryToEvents,
+  ccHistoryToEvents,
+  extractAskUserOptions,
+} from "./messageMappers";
 import { reduceStream, initialChatState } from "./streamReducer";
 
 // These shapes MUST mirror what RoomManager actually writes (room-manager.ts
@@ -56,6 +61,52 @@ test("房间消息经 roomMsgToEvent → reducer 重建对话(真实形状)", ()
   expect(tool.done).toBe(true);
   expect(tool.result).toBe("找到 12 个文件");
   expect(state.run).toBe("completed");
+});
+
+// ccRoom.readHistory.ok carries core HistoryMessage shape ({role,text,tools?}),
+// distinct from RoomManager's messages.jsonl. Mapping must expand tools first
+// then the prose, and rebuild a coherent conversation through the reducer.
+test("ccHistoryToEvents 映射 HistoryMessage 形状 + 经 reducer 重建", () => {
+  const msgs = [
+    { role: "user", text: "看一下仓库" },
+    {
+      role: "assistant",
+      text: "好,我用 Glob 扫一遍",
+      tools: [{ name: "Glob", summary: "**/*.ts" }],
+    },
+  ];
+  const events = ccHistoryToEvents(msgs);
+  // user → (tool start, prose, turn_complete)
+  expect(events).toEqual([
+    { type: "user_message", text: "看一下仓库" },
+    {
+      type: "tool_use_start",
+      toolCall: { id: "cc-hist-1-0", toolName: "Glob", summary: "**/*.ts" },
+    },
+    { type: "text_delta", text: "好,我用 Glob 扫一遍" },
+    { type: "turn_complete", reason: "completed" },
+  ]);
+  const state = events.reduce(reduceStream, initialChatState());
+  expect(state.items.map((i) => i.kind)).toEqual(["user", "tool", "assistant"]);
+  const assistant = state.items.find((i) => i.kind === "assistant") as { text: string };
+  expect(assistant.text).toBe("好,我用 Glob 扫一遍");
+});
+
+// Same untrusted-payload guard as roomHistoryToEvents: a non-array (or junk
+// entries) must yield an empty/clean replay, never throw.
+test("ccHistoryToEvents 守卫非数组 / 脏条目(不抛)", () => {
+  expect(ccHistoryToEvents(undefined)).toEqual([]);
+  expect(ccHistoryToEvents(null)).toEqual([]);
+  expect(ccHistoryToEvents(42)).toEqual([]);
+  expect(ccHistoryToEvents("x")).toEqual([]);
+  // junk entries are skipped, valid ones survive
+  expect(ccHistoryToEvents([null, { role: "user", text: "hi" }, 7])).toEqual([
+    { type: "user_message", text: "hi" },
+  ]);
+  // assistant with no tools and empty text → just a turn boundary
+  expect(ccHistoryToEvents([{ role: "assistant", text: "" }])).toEqual([
+    { type: "turn_complete", reason: "completed" },
+  ]);
 });
 
 test("extractAskUserOptions:字符串选项 / 对象 label / optionsOnly", () => {

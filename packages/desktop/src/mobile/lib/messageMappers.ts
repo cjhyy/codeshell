@@ -53,6 +53,45 @@ export function roomHistoryToEvents(messages: unknown): unknown[] {
   return Array.isArray(messages) ? messages.map(roomMsgToEvent) : [];
 }
 
+/**
+ * Map a `ccRoom.readHistory.ok` payload's `messages` (core HistoryMessage shape:
+ * `{role, text, tools?}`) into replay events for the chat reducer. Like
+ * roomHistoryToEvents, the payload is untrusted off the WebSocket, so guard the
+ * array and each entry. A message expands to its tool starts first (so the tools
+ * render under the turn) followed by the prose bubble.
+ */
+export function ccHistoryToEvents(messages: unknown): unknown[] {
+  if (!Array.isArray(messages)) return [];
+  const out: unknown[] = [];
+  for (let i = 0; i < messages.length; i++) {
+    const m = messages[i] as Record<string, unknown> | null;
+    if (!m || typeof m !== "object") continue;
+    const role = m.role === "assistant" ? "assistant" : "user";
+    if (role === "user") {
+      out.push({ type: "user_message", text: typeof m.text === "string" ? m.text : "" });
+      continue;
+    }
+    // Assistant: surface any tool calls first, then the prose.
+    const tools = Array.isArray(m.tools) ? m.tools : [];
+    for (let t = 0; t < tools.length; t++) {
+      const tool = tools[t] as Record<string, unknown> | null;
+      if (!tool || typeof tool !== "object") continue;
+      out.push({
+        type: "tool_use_start",
+        toolCall: {
+          id: `cc-hist-${i}-${t}`,
+          toolName: typeof tool.name === "string" ? tool.name : "tool",
+          summary: typeof tool.summary === "string" ? tool.summary : undefined,
+        },
+      });
+    }
+    const text = typeof m.text === "string" ? m.text : "";
+    if (text) out.push({ type: "text_delta", text });
+    out.push({ type: "turn_complete", reason: "completed" });
+  }
+  return out;
+}
+
 /** Detect an AskUser-style approval and pull its option labels + optionsOnly. */
 export function extractAskUserOptions(
   args: Record<string, unknown> | undefined,
