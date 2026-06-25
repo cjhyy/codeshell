@@ -17,6 +17,9 @@ interface Pending {
 export interface ApprovalBridgeOptions {
   timeoutMs?: number;
   onPush: (roomId: string, req: ApprovalRequestPayload & { requestId: string }) => void;
+  /** Fired whenever a parked request is decided (user response OR timeout
+   *  auto-deny), so every transport can clear its stale approval card. */
+  onResolve?: (roomId: string, requestId: string, decision: ApprovalDecision) => void;
 }
 
 /** Bridges claude's control_request:can_use_tool to a remote/UI decision.
@@ -36,7 +39,11 @@ export class ApprovalBridge {
     return new Promise<ApprovalDecision>((resolve) => {
       const k = this.key(roomId, requestId);
       const timer = setTimeout(() => {
-        if (this.pending.delete(k)) resolve({ behavior: "deny", message: "approval timed out" });
+        if (this.pending.delete(k)) {
+          const decision: ApprovalDecision = { behavior: "deny", message: "approval timed out" };
+          this.opts.onResolve?.(roomId, requestId, decision);
+          resolve(decision);
+        }
       }, this.timeoutMs);
       this.pending.set(k, { resolve, timer });
       this.opts.onPush(roomId, { ...payload, requestId });
@@ -49,6 +56,7 @@ export class ApprovalBridge {
     if (!p) return false;
     clearTimeout(p.timer);
     this.pending.delete(k);
+    this.opts.onResolve?.(roomId, requestId, decision);
     p.resolve(decision);
     return true;
   }
