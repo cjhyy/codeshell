@@ -1,5 +1,18 @@
 # Beta 发布前审计 + 行动清单(2026-06-23)
 
+> ## 📦 打包验证(2026-06-25,**回来先读这段**)
+>
+> 跑了 §1.4 全量打包 `cd packages/desktop && bun run dist`(dmg+zip × arm64+x64,未签名)+ 审了 §2.3 updater feed。
+> - **✅ updater/electron-builder 配置安全(§2.3 已解除)**:`package.json` `build` 块**无 `publish` key**(顶层也无)→ 产物不注入更新源;`updater.ts` 现 `autoDownload=false`+`autoInstallOnAppQuit=false`(只检查+通知,下载/安装都要用户手点),`!app.isPackaged` 时不跑,feed 仅来自 env `CODESHELL_UPDATE_FEED`(没设就 no-op)。**「发布后静默后台安装」不会发生**。`asarUnpack` 正确包 node-pty。
+> - **⚠️ 打包 toolchain 坑(已定位+修)**:首跑 arm64 app 成功但 **x64 node-pty 跨编译失败** —— 系统 `python3` 是 **3.14**(`brew python@3.14`),移除了 `distutils` 且无 `setuptools`,而 `node-gyp@9.4.1`(经 `@electron/rebuild`)还 import `distutils` → x64 `electron-builder` 退 1,只产出 arm64 zip(其余 dmg/x64 是 Jun-4 旧物)。**修=建带 setuptools 的 venv 提供 distutils 垫片,`PYTHON=<venv>/bin/python` 重跑**(setuptools 的 `_distutils` 兼容 3.12–3.14)。
+>   - **护栏(写给下个打包的人)**:本机 python 3.12+ 打 x64 必须先 `pip install setuptools`(或固定 python≤3.11)再 `dist`,否则 x64 native rebuild 必挂。CI 若用 3.12+ 同病。
+>   - ⚠️ `bun run dist | tee | tail` 会把退码吃成 tee 的 0 —— 判打包成败要看 **electron-builder 自己的退码**或日志尾 `⨯`/`exited with code 1`,别信管道退码。
+> - **✅ 二跑成功(PYTHON=venv)**:4 产物全今日新建、electron-builder 退 0、日志 0 错误。node-pty arm64+x64 都正确 rebuild。
+>   - `code-shell-0.5.0-rc.2-arm64.dmg`(124M)· `-arm64-mac.zip`(119M)· `.dmg`(x64,129M)· `-mac.zip`(x64,124M),都在 `packages/desktop/dist/`。
+>   - 未签名(首次右键打开)。**§1.4 打包验证完成**;剩 §1.2 桌面主流程真机冒烟(需你跑 app)+ push。
+>
+> ---
+
 > ## 📄 文档收尾 + 基线复验交接(2026-06-25 02:38–起,**最新·回来先读这段**)
 >
 > 用户开 `/goal` 循环「按本文档方向推进 beta 前准备,做满 3 小时」。这轮做的全是**「我能独立做、不需用户在场」**的收尾(真机冒烟/打包/push 仍只能用户)。**22 commit 在 main**(21 文档 + 1 个 CSC 构建脚本;另 `722b3642` 是用户自己的面板 feature 非本轮),累计领先 origin **338**,仍未 push。基线最终复验:core+tui tsc **0** · desktop tsc **0** · 工作树净,可安全 push。
