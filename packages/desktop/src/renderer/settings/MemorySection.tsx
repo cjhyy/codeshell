@@ -12,6 +12,9 @@ import {
   Pin,
   PinOff,
   Eraser,
+  Check,
+  ArrowDown,
+  ArrowUp,
 } from "lucide-react";
 import type {
   MemoryLevel,
@@ -55,7 +58,7 @@ const MEMORY_TYPES: Array<{ id: MemoryType; label: string }> = [
 
 function memoryTypeClassName(type: MemoryType): string {
   return cn(
-    "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+    "shrink-0 rounded px-1 py-0.5 text-[9px] font-medium uppercase leading-none",
     type === "feedback" && "bg-status-warn/10 text-status-warn",
     type === "project" && "bg-status-running/10 text-status-running",
     type === "reference" && "bg-muted text-muted-foreground",
@@ -155,6 +158,18 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [dreaming, setDreaming] = useState(false);
+  // 审批门: global memories the extractor flagged as "global" wait here. Only
+  // meaningful at the global (user) level — pending is global-only.
+  const [pending, setPending] = useState<RendererMemoryEntryFull[]>([]);
+
+  const refreshPending = useCallback(async () => {
+    if (level !== "user") return;
+    try {
+      setPending(await window.codeshell.listPendingMemory());
+    } catch {
+      /* best-effort — pending banner just stays empty */
+    }
+  }, [level]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -172,10 +187,49 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
 
   useEffect(() => {
     void refresh();
+    void refreshPending();
     setSelected(null);
     setDrafting(false);
     setNotice(null);
-  }, [refresh]);
+  }, [refresh, refreshPending]);
+
+  const approvePending = async (name: string): Promise<void> => {
+    try {
+      await window.codeshell.approvePendingMemory(name);
+      await Promise.all([refreshPending(), refresh()]);
+    } catch (e: unknown) {
+      setError(String(e instanceof Error ? e.message : e));
+    }
+  };
+
+  const demotePending = async (name: string): Promise<void> => {
+    try {
+      await window.codeshell.demotePendingMemory(name);
+      await Promise.all([refreshPending(), refresh()]);
+    } catch (e: unknown) {
+      setError(String(e instanceof Error ? e.message : e));
+    }
+  };
+
+  const rejectPending = async (name: string): Promise<void> => {
+    try {
+      await window.codeshell.rejectPendingMemory(name);
+      await refreshPending();
+    } catch (e: unknown) {
+      setError(String(e instanceof Error ? e.message : e));
+    }
+  };
+
+  const promoteToGlobal = async (name: string): Promise<void> => {
+    if (level !== "project" || !cwd) return;
+    try {
+      await window.codeshell.promoteMemoryToGlobal(cwd, name);
+      setSelected(null);
+      await refresh();
+    } catch (e: unknown) {
+      setError(String(e instanceof Error ? e.message : e));
+    }
+  };
 
   const openEntry = async (name: string): Promise<void> => {
     setError(null);
@@ -452,7 +506,65 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
       {notice && <div className="rounded-md bg-status-ok/10 p-2 text-sm text-status-ok">{notice}</div>}
       {error && <div className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">{error}</div>}
 
-      <div className="grid min-h-[420px] grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,0.42fr)_1fr]">
+      {/* 审批门: pending global candidates — only at the global (user) level.
+          Nothing auto-lands the injected global store; the user approves here. */}
+      {level === "user" && pending.length > 0 && (
+        <div className="rounded-md border border-status-warn/40 bg-status-warn/5 p-2">
+          <div className="mb-1.5 px-1 text-xs font-medium text-status-warn">
+            {t("settingsX.memory.pendingHeader", { count: pending.length })}
+          </div>
+          <ul className="flex flex-col gap-1" role="list">
+            {pending.map((p) => (
+              <li key={p.fileName} className="flex items-start gap-1 rounded-md px-2 py-1.5">
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <span className={memoryTypeClassName(p.type)}>{p.type}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{p.name}</span>
+                  </div>
+                  <span className="min-w-0 truncate text-xs text-muted-foreground">{p.description}</span>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-status-ok"
+                  onClick={() => void approvePending(p.name)}
+                  title={t("settingsX.memory.pendingApprove")}
+                  aria-label={t("settingsX.memory.pendingApprove")}
+                >
+                  <Check size={13} />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                  onClick={() => void demotePending(p.name)}
+                  title={t("settingsX.memory.pendingDemote")}
+                  aria-label={t("settingsX.memory.pendingDemote")}
+                >
+                  <ArrowDown size={13} />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-status-err"
+                  onClick={() => void rejectPending(p.name)}
+                  title={t("settingsX.memory.pendingReject")}
+                  aria-label={t("settingsX.memory.pendingReject")}
+                >
+                  <X size={13} />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="grid h-[min(60vh,560px)] min-h-[360px] grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,0.42fr)_1fr]">
+        {/* min-h-0 + the bounded grid height above let this list scroll on its own
+            instead of growing the whole panel (which left it without a scrollbar). */}
         <ul className="flex min-h-0 flex-col gap-1 overflow-y-auto rounded-md border p-2" role="list">
           {sortedEntries.length === 0 && !loading && (
             <li className="p-4 text-center text-sm text-muted-foreground">
@@ -463,34 +575,48 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
             <li
               key={e.fileName}
               className={cn(
-                "flex items-center gap-1 rounded-md px-2 py-1.5",
+                "flex items-start gap-1 rounded-md px-2 py-1.5",
                 selected?.fileName === e.fileName && "bg-accent",
               )}
             >
               <Button
                 type="button"
                 variant="ghost"
-                className="h-auto min-w-0 flex-1 justify-start gap-2 px-0 py-0 text-left hover:bg-transparent"
+                className="flex h-auto min-w-0 flex-1 flex-col items-stretch gap-0.5 px-0 py-0 text-left hover:bg-transparent"
                 onClick={() => void openEntry(e.name)}
               >
-                {e.pinned && (
-                  <Pin
-                    size={11}
-                    className="shrink-0 text-primary"
-                    aria-label={t("settingsX.memory.pinned")}
-                  />
+                {/* Line 1: name takes the width; badges shrink and don't squeeze it out */}
+                <span className="flex min-w-0 items-center gap-1.5">
+                  {e.pinned && (
+                    <Pin
+                      size={11}
+                      className="shrink-0 text-primary"
+                      aria-label={t("settingsX.memory.pinned")}
+                    />
+                  )}
+                  <span className={memoryTypeClassName(e.type)}>{e.type}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{e.name}</span>
+                  {e.origin === "auto" && (
+                    <span
+                      className="shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground"
+                      title={t("settingsX.memory.autoBadgeTitle")}
+                    >
+                      {t("settingsX.memory.autoBadge")}
+                    </span>
+                  )}
+                  {typeof e.usageCount === "number" && e.usageCount > 0 && (
+                    <span
+                      className="shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground tabular-nums"
+                      title={t("settingsX.memory.recalledTitle")}
+                    >
+                      {t("settingsX.memory.recalledBadge", { count: e.usageCount })}
+                    </span>
+                  )}
+                </span>
+                {/* Line 2: description, full row width, truncated */}
+                {e.description && (
+                  <span className="min-w-0 truncate text-xs text-muted-foreground">{e.description}</span>
                 )}
-                <span className={memoryTypeClassName(e.type)}>{e.type}</span>
-                {e.origin === "auto" && (
-                  <span
-                    className="shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground"
-                    title={t("settingsX.memory.autoBadgeTitle")}
-                  >
-                    {t("settingsX.memory.autoBadge")}
-                  </span>
-                )}
-                <span className="min-w-0 truncate text-sm font-medium text-foreground">{e.name}</span>
-                <span className="min-w-0 truncate text-xs text-muted-foreground">{e.description}</span>
               </Button>
               <Button
                 type="button"
@@ -503,6 +629,20 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
               >
                 {e.pinned ? <PinOff size={12} /> : <Pin size={12} />}
               </Button>
+              {/* 手动「提升到全局」— only for project-level user entries. */}
+              {level === "project" && scope === "user" && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-primary"
+                  onClick={() => void promoteToGlobal(e.name)}
+                  aria-label={t("settingsX.memory.promoteToGlobal")}
+                  title={t("settingsX.memory.promoteToGlobalTitle")}
+                >
+                  <ArrowUp size={12} />
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="ghost"
@@ -518,7 +658,7 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
           ))}
         </ul>
 
-        <div className="min-h-0 rounded-md border p-3">
+        <div className="min-h-0 overflow-y-auto rounded-md border p-3">
           {drafting && draft ? (
             <DraftEditor
               draft={draft}

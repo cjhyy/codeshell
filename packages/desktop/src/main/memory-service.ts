@@ -35,6 +35,11 @@ export interface RendererMemoryEntry {
   level: MemoryLevel;
   pinned?: boolean;
   origin?: "auto" | "manual";
+  /** Recall lifecycle — surfaced in the settings panel so the user can see
+   *  which memories are actually used and which are aging toward TTL pruning. */
+  usageCount?: number;
+  lastUsed?: string;
+  created?: string;
 }
 
 function mm(level: MemoryLevel, scope: MemoryScope, cwd?: string): MemoryManager {
@@ -60,6 +65,9 @@ export function listMemory(
     level,
     pinned: e.pinned,
     origin: e.origin,
+    usageCount: e.usageCount,
+    lastUsed: e.lastUsed,
+    created: e.created,
   }));
 }
 
@@ -115,4 +123,48 @@ export function deleteMemory(
   cwd?: string,
 ): boolean {
   return mm(level, scope, cwd).delete(name);
+}
+
+// ─── Pending (审批门) ────────────────────────────────────────────────────────
+// Auto-extracted "global" candidates wait here until the user approves them
+// into the injected global user store. Pending is global-only (no projectDir).
+
+function pendingMm(): MemoryManager {
+  return new MemoryManager({ scope: "pending" });
+}
+
+/** List global memories awaiting approval (full content included — the panel
+ *  shows it inline so the user can judge before approving). */
+export function listPendingMemory(): (RendererMemoryEntry & { content: string })[] {
+  return pendingMm().loadAll().map((e) => ({
+    name: e.name,
+    description: e.description,
+    type: e.type,
+    fileName: e.fileName,
+    scope: e.scope,
+    level: "user" as const,
+    content: e.content,
+    origin: e.origin,
+    created: e.created,
+  }));
+}
+
+/** Approve → moves the entry into the global user store (gets injected). */
+export function approvePendingMemory(name: string): string | null {
+  return pendingMm().approvePending(name);
+}
+
+/** Demote → 不升全局但保留:落回它来源项目的 user store(无来源则全局兜底)。 */
+export function demotePendingMemory(name: string): string | null {
+  return pendingMm().demotePending(name);
+}
+
+/** Reject → soft-delete the pending entry (recoverable from trash). */
+export function rejectPendingMemory(name: string): boolean {
+  return pendingMm().delete(name);
+}
+
+/** Promote a project-level user memory to the global user store (手动提升). */
+export function promoteMemoryToGlobal(cwd: string, name: string): string | null {
+  return new MemoryManager({ projectDir: cwd, scope: "user" }).promoteToGlobal(name);
 }

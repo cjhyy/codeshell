@@ -75,9 +75,14 @@ export class PromptComposer {
    */
   buildUserContextMessage(): Message | null {
     const instructions = this.getInstructions();
-    const memoryContext = this.getMemoryContext();
 
-    if (!instructions && !memoryContext) return null;
+    // NOTE: memory is intentionally NOT here. It used to be, but memory mutates
+    // constantly (extraction, recall usage++/lastUsed, approve/demote), and this
+    // message sits in the cacheable system prefix — so every memory change
+    // invalidated the whole prefix and re-billed it. Memory now rides
+    // buildDynamicContextMessage (tail, past the cache breakpoint), same as the
+    // skills listing and git status which had the identical problem.
+    if (!instructions) return null;
 
     // Local date, not UTC — toISOString() is UTC and would show the wrong
     // "today" for users whose timezone has crossed midnight (review-2026-05-30).
@@ -86,8 +91,7 @@ export class PromptComposer {
     const currentDate = `Today's date is ${ymd}.`;
 
     let content = `<system-reminder>\n${currentDate}\n\n`;
-    if (instructions) content += `${instructions}\n\n`;
-    if (memoryContext) content += `${memoryContext}\n`;
+    content += `${instructions}\n`;
     content += `</system-reminder>`;
 
     return { role: "user", content };
@@ -155,8 +159,12 @@ export class PromptComposer {
     });
     const skillsListing = buildSkillListing(skills);
     const gitStatus = await this.buildSystemContext();
+    // Memory rides here (tail, past the cache breakpoint) — not the system
+    // prefix — so a memory change (extraction / recall usage++ / approve) never
+    // re-bills the cached prefix. See buildUserContextMessage for the rationale.
+    const memoryContext = this.getMemoryContext();
 
-    const parts = [skillsListing, gitStatus].filter(Boolean);
+    const parts = [skillsListing, gitStatus, memoryContext].filter(Boolean);
     if (parts.length === 0) return null;
 
     return {
@@ -277,8 +285,14 @@ export class PromptComposer {
 
   private getMemoryContext(): string {
     try {
-      const mm = new MemoryManager(this.options.cwd);
-      return mm.buildMemoryContext({ maxAgeDays: this.options.memoriesMaxAgeDays });
+      // Two-layer injection (用户拍板): a compact index merging GLOBAL +
+      // PROJECT memories. Global memories are now surfaced every session
+      // regardless of cwd (the fix for "global memory never shows up"); the
+      // model reads full bodies on demand via MemoryRead.
+      return MemoryManager.buildInjectionIndex({
+        projectDir: this.options.cwd,
+        maxAgeDays: this.options.memoriesMaxAgeDays,
+      });
     } catch {
       return "";
     }

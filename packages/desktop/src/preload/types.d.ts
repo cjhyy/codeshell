@@ -186,6 +186,11 @@ export interface RendererMemoryEntry {
   pinned?: boolean;
   /** "auto" = end-of-session extractor wrote it; "manual"/absent = user. */
   origin?: "auto" | "manual";
+  /** Recall lifecycle — how many times read, when last read, when created.
+   *  Surfaced in the settings panel; drives recall-based TTL in core. */
+  usageCount?: number;
+  lastUsed?: string;
+  created?: string;
 }
 
 export interface RendererMemoryEntryFull extends RendererMemoryEntry {
@@ -655,6 +660,20 @@ export interface CodeshellApi {
     name: string,
     cwd?: string,
   ): Promise<boolean>;
+  /** 审批门: list global memories auto-extracted as "global" awaiting approval
+   *  (full content included so the panel shows it inline). */
+  listPendingMemory(): Promise<RendererMemoryEntryFull[]>;
+  /** Approve a pending memory → moves it into the global user store (injected).
+   *  Returns the new filename, or null if not found. */
+  approvePendingMemory(name: string): Promise<string | null>;
+  /** Demote a pending memory → falls back to its source project's user store
+   *  (not promoted to global, but kept). Returns the new filename or null. */
+  demotePendingMemory(name: string): Promise<string | null>;
+  /** Reject a pending memory → soft-delete (recoverable from trash). */
+  rejectPendingMemory(name: string): Promise<boolean>;
+  /** Promote a project-level user memory to the global user store (manual ↑).
+   *  Returns the new global filename, or null if not found. */
+  promoteMemoryToGlobal(cwd: string, name: string): Promise<string | null>;
   /**
    * Run one manual dream consolidation pass over the `dream` scope at the
    * given level (project requires cwd). Runs an LLM in the main process; the
