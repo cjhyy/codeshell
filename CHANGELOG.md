@@ -103,6 +103,15 @@ breaking.
   where a crafted git URL could be treated as a git flag.
 - `WebSearch` and `web-fetch` now carry a request timeout and honor the user's
   Stop signal, so a hung provider can no longer block a turn indefinitely.
+- Mobile-remote device authentication compares the device secret in constant
+  time (`timingSafeEqual`) instead of `===`, removing a timing side-channel on
+  the bearer credential.
+- `GenerateImage` / `GenerateVideo` local file inputs (`referenceImages` /
+  `images` / `image`) now go through the path-policy layer like `Read`, so an
+  out-of-workspace path (`../../etc/passwd`) prompts for approval instead of
+  being read and shipped silently.
+- A credential's masked hint no longer reveals a short secret in full
+  (`"ab".slice(-4)` used to return the whole secret).
 
 ### Fixed
 
@@ -111,6 +120,14 @@ breaking.
   withdrawn before the message is re-sent.
 - `AgentSendInput` refuses to resume a sub-agent that is still running,
   preventing two engines from writing the same child transcript concurrently.
+- Non-finite / non-positive numeric guards on several paths: the browser
+  `waitForLoad` no longer spins forever on a `NaN` timeout; `scroll` ignores a
+  `NaN` amount (and a negative amount no longer flips direction); terminal
+  resize clamps `NaN`/`<1` dimensions to 1; a `"0s"` cron interval is rejected
+  instead of busy-spinning a 0ms timer; and run-list pagination clamps negative
+  `offset`/`limit` instead of returning a surprise tail window.
+- `ListMcpResources` / `ReadMcpResource` forward the run's Stop signal so a
+  hung MCP server call can be cancelled promptly.
 
 ## [0.5.0-rc.0] - 2026-05-23
 
