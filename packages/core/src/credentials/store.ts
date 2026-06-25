@@ -109,7 +109,10 @@ export class CredentialStore {
       return {
         ...rest,
         hasSecret: typeof secret === "string" && secret.length > 0,
-        secretHint: secret ? `****${secret.slice(-4)}` : undefined,
+        // Reveal at most the last 4 chars — and ONLY when the secret is longer
+        // than 4, so those chars aren't the whole secret. `"ab".slice(-4)` is
+        // "ab", so a short secret would otherwise leak in full through the hint.
+        secretHint: secret ? (secret.length > 4 ? `****${secret.slice(-4)}` : "****") : undefined,
       };
     });
   }

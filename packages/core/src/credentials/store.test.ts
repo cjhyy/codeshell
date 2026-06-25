@@ -68,6 +68,21 @@ describe("CredentialStore", () => {
     expect((m as unknown as Record<string, unknown>).secret).toBeUndefined();
     expect(m.hasSecret).toBe(true);
     expect(m.secretHint).toMatch(/\*\*\*\*/);
+    // only the last 4 chars are revealed
+    expect(m.secretHint).toBe("****alue");
+  });
+
+  // A short secret must NOT leak in full through the hint: `"ab".slice(-4)`
+  // returns "ab", so the naive `****${slice(-4)}` exposed the entire secret
+  // for secrets ≤4 chars. The hint must never contain the secret's own bytes
+  // when the secret is short — show a fixed mask instead.
+  test("mask does not leak a short secret in the hint", () => {
+    const store = new CredentialStore(cwd);
+    store.save("user", { id: "short", type: "token", label: "S", secret: "ab" });
+    const m = store.listMasked().find((c) => c.id === "short")!;
+    expect(m.hasSecret).toBe(true);
+    expect(m.secretHint).toBeDefined();
+    expect(m.secretHint).not.toContain("ab"); // must not reveal the short secret
   });
 
   test("cookie credential round-trips (type + jar secret + meta)", () => {
