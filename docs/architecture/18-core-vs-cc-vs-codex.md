@@ -3,7 +3,7 @@
 > **Date:** 2026-05-27
 > **Scope:** `packages/core` 逐模块 review，与 Claude Code、Codex（codex-rs）内核对比，标注 drift 与改进点。
 > **方法:** codeshell 列基于真实 `.ts` 源码（file:line 已核对，非 dist）。CC 列参照 [`../claude-code-architecture.md`](../claude-code-architecture.md) 与官方文档；Codex 列参照 codex-rs 公开架构资料。
-> **配套:** sub-agent 专项见 [`../subagent-design-comparison-2026-05-27.md`](../subagent-design-comparison-2026-05-27.md) 及其实现计划 [`../superpowers/plans/2026-05-27-subagent-redesign.md`](../superpowers/plans/2026-05-27-subagent-redesign.md)。
+> **配套:** sub-agent 专项见 [`../archive/subagent-design-comparison-2026-05-27.md`](../archive/subagent-design-comparison-2026-05-27.md) 及其实现计划 [`../superpowers/plans/2026-05-27-subagent-redesign.md`](../superpowers/plans/2026-05-27-subagent-redesign.md)。
 
 ---
 
@@ -161,7 +161,7 @@ CC 和 Codex 都没有对等物，这是 codeshell 的差异化资产：
 ### P1 — 边界清晰度
 
 3. **公共 API 收口**：`packages/core/src/index.ts` 把 stable SDK / experimental / internal（迁移、TUI 支持）API 混在一个导出面（README 已自承）。拆成 stable/experimental/internal 子路径。**对比依据**：Codex 的 crate 边界（core/protocol/config/state）天然区分了公共与内部；codeshell 是单包，需要靠导出面纪律。
-4. **sub-agent 定义层**：见 [专项文档](../subagent-design-comparison-2026-05-27.md)——补 `.code-shell/agents/*.md` 角色注册表 + per-agent 工具白名单/模型路由。**对比依据**：CC 的 `.claude/agents` 与 Codex 的 `.codex/agents/*.toml` 都有声明式角色，codeshell 缺。
+4. **sub-agent 定义层**：见 [专项文档](../archive/subagent-design-comparison-2026-05-27.md)——补 `.code-shell/agents/*.md` 角色注册表 + per-agent 工具白名单/模型路由。**对比依据**：CC 的 `.claude/agents` 与 Codex 的 `.codex/agents/*.toml` 都有声明式角色，codeshell 缺。
 
 ### P2 — 工程打磨
 

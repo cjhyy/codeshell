@@ -23,7 +23,7 @@ This document focuses only on the terminal UI path: `src/render` and the TUI beh
 ## Current Capabilities
 
 The authoritative inventory of public exports lives in
-[`src/render/README.md`](../../src/render/README.md). This document focuses on
+[`packages/tui/src/render/README.md`](../../packages/tui/src/render/README.md). This document focuses on
 the **roadmap and gaps** — not on listing every export.
 
 For a snapshot of where the renderer currently lands on the L1/L2/L3 ladder, see
@@ -50,7 +50,7 @@ the Recommendation table above. For exact status (`supported` / `experimental`
 
 | Priority | Gap | Evidence | Action |
 |---|---|---|---|
-| P0 | 文档和导出不同步 | [`src/render/index.ts`](../../src/render/index.ts) 导出 `ScrollBox`、`AlternateScreen`、`render`；[`src/render/README.md`](../../src/render/README.md) 仍把部分能力写成未支持或未使用 | 更新 README，建立 API status 表 |
+| P0 | 文档和导出不同步 | [`packages/tui/src/render/index.ts`](../../packages/tui/src/render/index.ts) 导出 `ScrollBox`、`AlternateScreen`、`render`；[`packages/tui/src/render/README.md`](../../packages/tui/src/render/README.md) 仍把部分能力写成未支持或未使用 | 更新 README，建立 API status 表 |
 | P0 | render 专项测试不足 | `tests/` 主要覆盖 session/model/run/tool，缺 screen/ANSI/input/scroll tests | 新增 `tests/render-screen.test.ts`、`tests/render-input.test.ts`、`tests/render-scroll.test.ts` |
 | P0 | ScrollBox 已在 UI 关键路径，但验收不足 | `VirtualMessageList` 已使用 `ScrollBox` 和 `useVirtualScroll` | 做长 transcript、resize、wheel、PageUp/Down、sticky bottom 回归 |
 | P0 | 终端兼容靠代码分支而不是产品矩阵 | `terminal.ts`、`termio/osc.ts` 有大量 terminal-specific 判断 | 写 `docs/architecture/render-terminal-matrix.md` 或纳入本文后续维护 |
