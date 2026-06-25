@@ -44,23 +44,22 @@ function ctxWith(answer: string): { ctx: ToolContext; asked: () => number } {
 /** A tool that reads an array-of-paths arg, declaring path-policy on it. */
 function makeArrayPathTool(): RegisteredTool {
   return {
-    definition: {
-      name: "ReadMany",
-      description: "test tool: reads an array of file paths",
-      inputSchema: {
-        type: "object",
-        properties: { paths: { type: "array", items: { type: "string" } } },
-        required: ["paths"],
-      },
+    name: "ReadMany",
+    description: "test tool: reads an array of file paths",
+    inputSchema: {
+      type: "object",
+      properties: { paths: { type: "array", items: { type: "string" } } },
+      required: ["paths"],
     },
-    handler: async () => "ok",
+    source: "builtin",
+    permissionDefault: "allow",
     pathPolicy: [{ kind: "arg", arg: "paths", operation: "read" }],
   } as unknown as RegisteredTool;
 }
 
 async function execute(call: ToolCall, ctx: ToolContext): Promise<string> {
-  const registry = new ToolRegistry();
-  registry.register(makeArrayPathTool());
+  const registry = new ToolRegistry({ builtinTools: [] });
+  registry.registerTool(makeArrayPathTool(), async () => "ok");
   const executor = new ToolExecutor(
     registry,
     new PermissionClassifier([], "bypassPermissions"),

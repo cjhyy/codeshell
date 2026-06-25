@@ -3,7 +3,7 @@
  */
 
 import { setMaxListeners } from "node:events";
-import { resolve as resolvePath } from "node:path";
+import { resolve as resolvePath, isAbsolute as isAbsolutePath } from "node:path";
 import type {
   ToolCall,
   ToolResult,
@@ -526,9 +526,17 @@ export class ToolExecutor {
       // Array path args (e.g. GenerateImage `referenceImages`, GenerateVideo
       // `images`): enforce EVERY element. Without this an array yielded zero
       // targets, so out-of-workspace reads bypassed the path-policy "ask" gate
-      // that Read/Write enforce. Non-string / empty elements are skipped.
+      // that Read/Write enforce. http(s) URLs aren't file reads → skip them.
+      // Relative paths resolve against ctx.cwd (the workspace) before
+      // classification, like the apply_patch branch — otherwise classifyPath's
+      // process.cwd()-based resolution would mis-place an in-workspace relative
+      // path as "outside" and over-prompt. Non-string / empty elements skipped.
       if (Array.isArray(raw)) {
-        const paths = raw.filter((v): v is string => typeof v === "string" && v.length > 0);
+        const cwd = this.toolCtx?.cwd ?? process.cwd();
+        const paths = raw
+          .filter((v): v is string => typeof v === "string" && v.length > 0)
+          .filter((v) => !/^https?:\/\//i.test(v))
+          .map((v) => (isAbsolutePath(v) ? v : resolvePath(cwd, v)));
         if (paths.length > 0) return paths;
       }
       if (policy.defaultToCwd && this.toolCtx?.cwd) return [this.toolCtx.cwd];
