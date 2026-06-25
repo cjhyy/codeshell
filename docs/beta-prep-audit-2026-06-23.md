@@ -20,7 +20,13 @@
 > - `69bf5193` smoke §6 失效 merge hash `e4b99a52`(已解开不在主线)→指向代码。`3db8edb7` 删空的 `archive/test-outputs` 占位。`714c797e` 修 reading-order 活文档 4 处 pre-monorepo 断链。
 > - **全仓一致性批量核验(机械但有 beta 价值)**:文档 ~106 commit hash(仅 3 个无效=session-id/URL 片段误抓,~103 真引用全存在)· 92 源码路径引用(6 缺失全已正确标注:4 个 cookie-lease 提案路径已加 ⚠️/opencode 外部/profile 设计稿自标"示意")· 174 内部 .md 链接(9 断,修 4 活文档,余 5 在 superpowers/plans 历史稿不修)。
 > - **判定不改(按纪律)**:`plan-mode-allowlist` 列已删 Task* 名是有意无害前向兼容(注释明写);superpowers/plans 历史稿内部断链低价值;§4.2 归档候选断链风险>收益。
-> - **文档准确性线已穷尽**:面向读者文档 + 设计稿状态 + core-*/architecture reading-order 01-09 全核查过,硬错误全修;commit/路径/链接三类引用全验。**再扫只剩行号漂移类无价值项。剩的真全是只能用户做的:真机冒烟/打包(`bun run dist` 即可)/push 338 commit。**
+> - **文档准确性线已穷尽**:面向读者文档 + 设计稿状态 + core-*/architecture reading-order 01-09 全核查过,硬错误全修;commit/路径/链接三类引用全验。
+>
+> **续(F)代码硬化 — 孤立可测的真 bug(全 TDD·worktree→cherry-pick→main 验·core build):**
+> - `9cdcaaee` **Y-3:device `secretHash` 改 `timingSafeEqual`**(常量时间,长度不等先短路防抛错;+1 测)。
+> - `04ff5156` **`parseSchedule` 拒绝零间隔**(`"0s"`/`"0m"`→0ms→`setInterval(fn,0)` 自旋;单位路径漏 `>0` 守卫,raw-ms 路径本有;+4 测·导出供测)。
+> - `0dcb8d1c` **`secretHint` 不泄漏短 secret**(`"ab".slice(-4)`==="ab" 全量泄漏→`length>4` 才露末4位否则 `****`;+1 测)。
+> - **bug-scan(新代码:credentials/model-catalog/cdp/新工具)4 候选三筛**:#1 secretHint ✅修;#2 cdp scroll 负 amount 翻向→**判低价值不修**(自纠正、非安全);#3/#4 **path-traversal 真 gap 待修**——`generate-image.referenceImages` + `image-uploader.toUrl` 读文件**未走 pathPolicy/classifyPath**,`../../etc/passwd` 绕过 Read/Write 都强制的工作区 "ask" 门。**根因**:二者未声明 `pathPolicy`,且 executor `resolvePathPolicyTargets` 只认 string arg、不认 `referenceImages` 这种 **string[]**→ 即便声明也不生效。**正解**=扩 executor 支持数组 path arg + 给 GenerateImage/Video 声明 pathPolicy。这是多点改动,下一步 TDD 做。关联记忆 `path_containment_realpath`/`path_permission_system`。
 >
 > ---
 >
