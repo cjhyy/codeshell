@@ -55,7 +55,7 @@ const MEMORY_TYPES: Array<{ id: MemoryType; label: string }> = [
 
 function memoryTypeClassName(type: MemoryType): string {
   return cn(
-    "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+    "shrink-0 rounded px-1 py-0.5 text-[9px] font-medium uppercase leading-none",
     type === "feedback" && "bg-status-warn/10 text-status-warn",
     type === "project" && "bg-status-running/10 text-status-running",
     type === "reference" && "bg-muted text-muted-foreground",
@@ -452,7 +452,9 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
       {notice && <div className="rounded-md bg-status-ok/10 p-2 text-sm text-status-ok">{notice}</div>}
       {error && <div className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">{error}</div>}
 
-      <div className="grid min-h-[420px] grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,0.42fr)_1fr]">
+      <div className="grid h-[min(60vh,560px)] min-h-[360px] grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,0.42fr)_1fr]">
+        {/* min-h-0 + the bounded grid height above let this list scroll on its own
+            instead of growing the whole panel (which left it without a scrollbar). */}
         <ul className="flex min-h-0 flex-col gap-1 overflow-y-auto rounded-md border p-2" role="list">
           {sortedEntries.length === 0 && !loading && (
             <li className="p-4 text-center text-sm text-muted-foreground">
@@ -463,41 +465,47 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
             <li
               key={e.fileName}
               className={cn(
-                "flex items-center gap-1 rounded-md px-2 py-1.5",
+                "flex items-start gap-1 rounded-md px-2 py-1.5",
                 selected?.fileName === e.fileName && "bg-accent",
               )}
             >
               <Button
                 type="button"
                 variant="ghost"
-                className="h-auto min-w-0 flex-1 justify-start gap-2 px-0 py-0 text-left hover:bg-transparent"
+                className="flex h-auto min-w-0 flex-1 flex-col items-stretch gap-0.5 px-0 py-0 text-left hover:bg-transparent"
                 onClick={() => void openEntry(e.name)}
               >
-                {e.pinned && (
-                  <Pin
-                    size={11}
-                    className="shrink-0 text-primary"
-                    aria-label={t("settingsX.memory.pinned")}
-                  />
-                )}
-                <span className={memoryTypeClassName(e.type)}>{e.type}</span>
-                {e.origin === "auto" && (
-                  <span
-                    className="shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground"
-                    title={t("settingsX.memory.autoBadgeTitle")}
-                  >
-                    {t("settingsX.memory.autoBadge")}
-                  </span>
-                )}
-                <span className="min-w-0 truncate text-sm font-medium text-foreground">{e.name}</span>
-                <span className="min-w-0 truncate text-xs text-muted-foreground">{e.description}</span>
-                {typeof e.usageCount === "number" && e.usageCount > 0 && (
-                  <span
-                    className="shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground tabular-nums"
-                    title={t("settingsX.memory.recalledTitle")}
-                  >
-                    {t("settingsX.memory.recalledBadge", { count: e.usageCount })}
-                  </span>
+                {/* Line 1: name takes the width; badges shrink and don't squeeze it out */}
+                <span className="flex min-w-0 items-center gap-1.5">
+                  {e.pinned && (
+                    <Pin
+                      size={11}
+                      className="shrink-0 text-primary"
+                      aria-label={t("settingsX.memory.pinned")}
+                    />
+                  )}
+                  <span className={memoryTypeClassName(e.type)}>{e.type}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{e.name}</span>
+                  {e.origin === "auto" && (
+                    <span
+                      className="shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground"
+                      title={t("settingsX.memory.autoBadgeTitle")}
+                    >
+                      {t("settingsX.memory.autoBadge")}
+                    </span>
+                  )}
+                  {typeof e.usageCount === "number" && e.usageCount > 0 && (
+                    <span
+                      className="shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground tabular-nums"
+                      title={t("settingsX.memory.recalledTitle")}
+                    >
+                      {t("settingsX.memory.recalledBadge", { count: e.usageCount })}
+                    </span>
+                  )}
+                </span>
+                {/* Line 2: description, full row width, truncated */}
+                {e.description && (
+                  <span className="min-w-0 truncate text-xs text-muted-foreground">{e.description}</span>
                 )}
               </Button>
               <Button
@@ -526,7 +534,7 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
           ))}
         </ul>
 
-        <div className="min-h-0 rounded-md border p-3">
+        <div className="min-h-0 overflow-y-auto rounded-md border p-3">
           {drafting && draft ? (
             <DraftEditor
               draft={draft}
