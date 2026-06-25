@@ -54,14 +54,14 @@ export async function loadRecents(): Promise<RecentProject[]> {
   return all.filter(isLive).slice(0, MAX);
 }
 
-/** Full project list for UI (source of truth for the sidebar / mobile): live
- *  projects, pinned first. Pinned items are exempt from the MAX cap; only the
- *  unpinned tail is capped (recents semantics). */
+/** Full project list for UI (source of truth for the sidebar / mobile): ALL live
+ *  projects, pinned first. Unlike loadRecents (a capped "recent menu"), this is
+ *  the registry — it is NOT capped, so a user's full project set survives. */
 export async function loadProjects(): Promise<RecentProject[]> {
   const all = await readAll();
   const live = all.filter(isLive);
   const pinned = live.filter((r) => r.pinned);
-  const rest = live.filter((r) => !r.pinned).slice(0, MAX);
+  const rest = live.filter((r) => !r.pinned);
   return [...pinned, ...rest];
 }
 
