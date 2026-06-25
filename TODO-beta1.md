@@ -45,16 +45,14 @@
 - 🟡 **会话可靠性闭环**:长断网会话级重连(瞬时已被 withRetry 覆盖)、会话崩溃恢复产品闭环(disk 权威源恢复已做,缺崩溃后 UI 提示/一键恢复)、工具超时可取消性一致化、友好错误消息。
 - ✅ **审查面板 turn 级范围**(原标真 bug)— 已实现:`ReviewPanel.tsx` 收到 `files` prop 时默认 `scope="turn"`,并用快照的 `turnDiff` 让 turn 范围在提交后仍可看。核实于 2026-06-25,留档。
 - 🟡 **桌面面板 session 切换保活**:左侧切换 session 后再切回来,右侧面板 tab 元数据能恢复,但 BrowserPanel/webview 页面内容、面板内部状态会丢。根因是 App 只按 `activeBucket` 保存 `open/tabs/activeId`,未保存 per-panel 实例状态,session 切换会重建 PanelArea/PanelBody。后续做轻量版(保存 BrowserPanel 当前 URL 并恢复)或完整保活版(按 `activeBucket + tab.id` 缓存 panel 实例,配 LRU/idle eviction)。
-- ⚪️ **手机端 CC 会话 UX 对齐桌面端**:保留 CC 会话能力,但对普通用户去掉「房间/Room」概念,把详情体验对齐桌面端(CC 会话列表 → 选权限模式 → CCConversationView)。已核实现状(2026-06-25),三项独立修复已完成(2026-06-26),剩两项产品拍板项:
-  - 🔴 去房间外壳:`/mobile/` 仍渲染 `RoomList`、TopBar 仍有「打开房间」、`activeRoom` 仍驱动主聊天区标题/subtitle/loading 文案/composer 发送路径(`App.tsx`、`useRemoteApp.ts`)。底层 room/cc-room 留作内部 transport,但 UI 入口与文案全部移除。
-  - 🟡 进入前选权限模式:手机点 CC session 现在**硬编码 `"default"`**(`CcSessionList.tsx`),桌面是弹 default/acceptEdits/bypassPermissions 选择。补手机版选择弹窗(server 端 `resolveRoomPermissionMode` 仍会对非信任工作区收窄)。
-  - ✅ 补齐历史(分支 `worktree-mobile-cc-session`,2026-06-26):`ccRoom.opened` 先拉 `ccRoom.readHistory` 作 backlog 再绑 live feed;新增 `ccHistoryToEvents` 映射 + `ccHistorySessionRef` 门控防 `room.history` replay 覆盖。
-  - ✅ Markdown 渲染(同分支):新增手机版自包含 `Markdown.tsx`(react-markdown+remark-gfm+rehype-sanitize,无 IPC 依赖);完成态渲 Markdown、流式保持纯文本防抖。桌面 `CCConversationView` 仍是原始文本(留后,与手机不共享组件)。
-  - ✅ loading 接线(同分支):新增 `loading.ccSessions`;`selectProject` 置 loading 并重置 `ccProbe/ccSessions`,`listSessions.ok` 清 loading,`App.tsx` 传给 `CcSessionList`。
-  - ⚪️ 新建项目选择:点「新建」已能内联展开项目列表,只是没有显式「新建到项目…」标签;低优,改文案即可。
-  - ✅ 已做(留档,勿重做):`CcSessionList` 按项目列外部 CC 会话且文案为「CC 会话」;审批卡片 + `respondCcApproval` 全链路;`MessageStream` loading 仅在空列表显示且切换 `reset` 清旧内容。
-
-  > 上条整体降级为 ⚪️:三项独立修复已完成(待 push/合并),剩两项是产品拍板项(`worktree-mobile-cc-session` 未动):**🔴 去房间外壳**(撤掉 RoomList/「打开房间」是 UX 重构,room 基建是 live transport,不宜盲删)、**🟡 进入前选权限模式**(需新弹窗,与去房间外壳耦合,一起定方向再做)。
+- ✅ **手机端 CC 会话 UX 对齐桌面端**(全部完成,分支 `worktree-mobile-cc-session`,2026-06-26;待 push/合并):对普通用户去掉「房间/Room」概念,详情体验对齐桌面端(CC 会话列表 → 选权限模式 → CC 会话视图)。
+  - ✅ 去房间外壳:删 `RoomList` 组件 + 用法 + 「打开房间」按钮 + rooms 抽屉;SidePane 固定为「会话 + CC 会话」两段;「房间」徽章→「CC」、「退出房间」→「退出会话」、文案/notice 去「房间」。hook 剪掉只服务房间列表的死导出(`refreshRooms/openRoom/createRoom/closeRoom/rooms/allRooms`),保留 `activeRoom`(解析 CC 会话标题/cwd)+ `leaveRoom` + room.message/history 传输层。
+  - ✅ 进入前选权限模式:新增 `CcPermissionModeSheet` 底部弹窗(default/acceptEdits/bypassPermissions,全放行标红),点 CC session 先弹选择再 `openCcSession`,替换原硬编码 `"default"`;server `resolveRoomPermissionMode` 仍会收窄。
+  - ✅ 补齐历史:`ccRoom.opened` 先拉 `ccRoom.readHistory` 作 backlog 再绑 live feed;新增 `ccHistoryToEvents` 映射 + `ccHistorySessionRef` 门控防 `room.history` replay 覆盖。
+  - ✅ Markdown 渲染:新增手机版自包含 `Markdown.tsx`(react-markdown+remark-gfm+rehype-sanitize,无 IPC 依赖);完成态渲 Markdown、流式保持纯文本防抖。桌面 `CCConversationView` 仍是原始文本(留后,与手机不共享组件)。
+  - ✅ loading 接线:新增 `loading.ccSessions`;`selectProject` 置 loading 并重置 `ccProbe/ccSessions`,`listSessions.ok` 清 loading,`App.tsx` 传给 `CcSessionList`。
+  - ⚪️ 新建项目选择(低优,未做):点「新建」已能内联展开项目列表,只是没有显式「新建到项目…」标签;改文案即可。
+  - 留档(勿重做):`CcSessionList` 按项目列外部 CC 会话且文案为「CC 会话」;审批卡片 + `respondCcApproval` 全链路;`MessageStream` loading 仅在空列表显示且切换 `reset` 清旧内容。
 - 🟡 **真视频适配器**:替换 `FakeVideoProvider`,接 seedance/kling(待私有 API 文档)。框架 + 工具 + 后台轮询已就位,`getVideoProvider` 加 case 即可。
 
 ---
