@@ -40,6 +40,7 @@
 > - `04ff5156` **`parseSchedule` 拒绝零间隔**(`"0s"`/`"0m"`→0ms→`setInterval(fn,0)` 自旋;单位路径漏 `>0` 守卫,raw-ms 路径本有;+4 测·导出供测)。
 > - `0dcb8d1c` **`secretHint` 不泄漏短 secret**(`"ab".slice(-4)`==="ab" 全量泄漏→`length>4` 才露末4位否则 `****`;+1 测)。
 > - **bug-scan 第二批(automation/run/protocol/session)2 候选**:#1 `FileRunStore.list` 负 offset/limit→`slice` 尾窗 footgun ✅**已修**(`77de3560`,钳 offset≥0/非正 limit 空页+isFinite,+5 测);#2 `RunQueue` concurrency≤0→**核验判误报不修**(RunQueue.test 故意用 `concurrency:0` 当「never drains」测试模式,是有意行为非 bug,加守卫反破坏既有测试)。范围其余(JSON.parse/timer 清理/parseSchedule)均已妥善防卫。
+> - **bug-scan 第三批(llm/hooks/mcp/memory/context)3 候选**:#1 `context-tools.executeReadFile` 负 limit→`slice` 丢尾 ✅**已修**(`f64e376a`,limit 缺失/NaN→默认 200、≤0→空,+3 测);#2/#3 MCP `listResources`/`readResource` 不转发 abort signal ✅**已修**(`7e36048b`,加 signal 参数转发 SDK client + 工具读 `__signal`,Stop 可提前取消;subagent「永久挂起」夸大——SDK 默认超时本兜底,实为与 callTool 一致性 gap;tsc 验 SDK 签名正确,33 MCP 测回归绿)。范围其余(openai/anthropic JSON.parse·cost-tracker·model-pool·extract-memories·hooks emit)均已妥善守卫。
 > - **bug-scan 第一批(新代码:credentials/model-catalog/cdp/新工具)4 候选三筛**:#1 secretHint ✅修;#2 cdp scroll 负 amount 翻向→**判低价值不修**(自纠正、非安全);#3/#4 **path-traversal 真 gap ✅已修**(`78bf8b9c`+`436a1498`)——`generate-image.referenceImages` + `generate-video.images/image` 读本地文件**未走 pathPolicy**,`../../etc/passwd` 绕过工作区 "ask" 门。两部分修:① executor `resolvePathPolicyTargets` 扩支持 **string[] arg**(相对路径按 ctx.cwd 解析、跳 http(s) URL)② 给 GenerateImage/Video 声明 pathPolicy。TDD +2 测,19 回归绿,tsc/build 0。关联记忆 `path_containment_realpath`/`path_permission_system`。
 >
 > ---
