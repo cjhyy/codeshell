@@ -27,7 +27,8 @@
 
 - [x] 干净目录 `npm i @cjhyy/code-shell@rc` —— ✅ 装好,三包全解析到 0.5.0-rc.2,0 漏洞
 - [x] `code-shell --version` → 0.5.0-rc.2 —— ✅ 跑通无报错
-- [ ] 起一次 TUI,跑一轮对话,退出重进(需真 API key,留人工)
+- [x] **headless `run` 跑通一轮**(2026-06-25 验):`code-shell run "say hi"`(走 tui dist + 默认配置 gpt-5.5)→ 完成一轮 LLM 对话 + cost summary + 干净退出,无崩。**确认打包的 CLI 端到端引擎链路(bootstrap→LLM→响应→计费→退出)正常,且 dist 含本会话 core 改动无回归。**
+- [ ] 交互式 TUI(REPL)起一次、跑一轮、**退出重进恢复会话**(交互+resume 部分仍需人工)
 
 ## C. 给熟人的分发说明
 
