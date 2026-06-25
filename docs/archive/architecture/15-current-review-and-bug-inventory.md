@@ -234,7 +234,7 @@ bun run lint:engine-bypass
 ## Documentation Update Checklist
 
 - Treat this file as the current top-level bug/risk inventory.
-- Update `docs/repo-map-and-decoupling-review-2026-05-23.md` if continuing to use it as the main repo map; its desktop section is now stale.
+- Update `docs/archive/repo-map-and-decoupling-review-2026-05-23.md` if continuing to use it as the main repo map; its desktop section is now stale.
 - Update `docs/architecture/04-tool-system.md` for hook permission overrides, sandbox scope, MCP concurrency, and `acceptEdits` caveat.
 - Update `docs/architecture/06-ui-protocol-rendering.md` for monorepo paths, desktop stdio worker, and multi-server/global-state limitations.
 - Update `docs/architecture/08-extension-points.md` and `docs/hooks.md` for plugin hooks, plugin skills, arbitrary shell execution trust, and current priority order.

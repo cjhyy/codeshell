@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/codeshell-dog-icon.png" alt="CodeShell dog mascot" width="120" />
+  <img src="assets/codeshell-dog-icon.png" alt="CodeShell dog mascot" width="120" />
 </p>
 
 # CodeShell
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/codeshell-hero.png" alt="CodeShell terminal agent orchestration hero image" width="860" />
+  <img src="assets/codeshell-hero.png" alt="CodeShell terminal agent orchestration hero image" width="860" />
 </p>
 
 CodeShell is one orchestration engine wearing three faces:
@@ -190,7 +190,7 @@ When `CODESHELL_ENABLE_STREAM_WATCHDOG=1`, the openai provider aborts any LLM st
 ## Architecture
 
 <p align="center">
-  <img src="docs/architecture/images/00-framework-overview.png" alt="CodeShell framework overview architecture diagram" width="860" />
+  <img src="docs/archive/architecture/images/00-framework-overview.png" alt="CodeShell framework overview architecture diagram" width="860" />
 </p>
 
 At a high level, CodeShell routes CLI, headless, SDK, and desktop clients through the same engine runtime:
@@ -220,11 +220,12 @@ packages/
 ├── desktop/   # Electron desktop client + agent worker bridge + mobile remote app
 └── cdp/       # Environment-agnostic CDP browser-action layer (no Playwright)
 
+assets/       # README / product images (mascot, hero)
+
 docs/
-├── architecture/        # Architecture reading path and diagrams
-├── feature-inventory.md # Full inventory of desktop / tui capabilities
-├── smoke-checklist.md   # Manual smoke-test checklist
-└── images/              # README and product documentation images
+├── todo/                # Roadmap + forward-looking design docs (see todo/README.md)
+├── feature-inventory.md # Full inventory of desktop / tui capabilities (authority on current state)
+└── archive/             # Superseded design docs, audits, and the prior architecture set
 
 scripts/      # Build, release, and repo maintenance scripts
 ```
@@ -253,12 +254,9 @@ bun run build:renderer
 
 ## Further reading
 
-- [CodeShell architecture documentation set](docs/architecture/README.md)
-- [CodeShell architecture diagrams](docs/architecture/10-architecture-diagrams.md)
+- [Roadmap & TODO](docs/todo/README.md)
 - [Feature inventory (desktop / tui)](docs/feature-inventory.md)
-- [CodeShell current architecture & positioning](docs/codeshell-repo-architecture.md)
-- [TUI render capability plan](docs/architecture/11-render-tui-capability-plan.md)
-- [mac visual client research](docs/architecture/12-mac-visual-client-research.md)
+- [Prior architecture documentation set (archived, pending rewrite)](docs/archive/architecture/README.md)
 
 ---
 

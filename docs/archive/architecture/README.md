@@ -8,7 +8,7 @@ This directory is the current architecture documentation set for CodeShell. It i
 
 | # | Document | Use it for |
 |---|---|---|
-| 0 | [Current Repo Map and Decoupling Review](../repo-map-and-decoupling-review-2026-05-23.md) | Current `packages/*` layout, package-boundary review, coupling hotspots, and next-step plan after the monorepo split |
+| 0 | [Current Repo Map and Decoupling Review](../archive/repo-map-and-decoupling-review-2026-05-23.md) | Current `packages/*` layout, package-boundary review, coupling hotspots, and next-step plan after the monorepo split |
 | 1 | [System Overview](01-system-overview.md) | Product positioning, top-level layers, and the main architecture diagram |
 | 2 | [Runtime Flow](02-runtime-flow.md) | How CLI/headless/REPL requests become Engine turns and tool calls |
 | 3 | [Module Map](03-module-map.md) | Historical module ownership map; use document 0 for the current `packages/*` split |

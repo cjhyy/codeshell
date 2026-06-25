@@ -6,7 +6,7 @@
 
 > ## ⚠️ 现状勘误（2026-06-25，发 beta 前核查）
 >
-> 本 roadmap 的「当前架构基线」表、各 Phase 的「当前状态」和文末「三款标杆速览」表写于早期，**多项已落地但表里仍标"❌/低/缺失/未做"**。下方方向规划（Phase 1–6 的目标）保留作产品方向参考，但**事实现状以 [`docs/feature-inventory.md`](feature-inventory.md)（149 项盘点）为权威**。已 grep 源码确认、与表内标注不符的项：
+> 本 roadmap 的「当前架构基线」表、各 Phase 的「当前状态」和文末「三款标杆速览」表写于早期，**多项已落地但表里仍标"❌/低/缺失/未做"**。下方方向规划（Phase 1–6 的目标）保留作产品方向参考，但**事实现状以 [`docs/feature-inventory.md`](../feature-inventory.md)（149 项盘点）为权威**。已 grep 源码确认、与表内标注不符的项：
 >
 > | roadmap 标注 | 实际现状（已实现） | 证据 |
 > |---|---|---|
@@ -55,8 +55,8 @@
 
 **单一来源**：
 
-- 整体设计标准与 Gate 0–5 checklist：[`docs/architecture/16-core-overall-design-standard.md`](architecture/16-core-overall-design-standard.md)
-- 落地迭代（Phase A / B / C，含事实校验依据）：[`docs/superpowers/plans/2026-05-26-core-stabilization.md`](superpowers/plans/2026-05-26-core-stabilization.md)
+- 整体设计标准与 Gate 0–5 checklist：[`docs/archive/architecture/16-core-overall-design-standard.md`](../archive/architecture/16-core-overall-design-standard.md)
+- 落地迭代（Phase A / B / C，含事实校验依据）：[`docs/superpowers/plans/2026-05-26-core-stabilization.md`](../superpowers/plans/2026-05-26-core-stabilization.md)
 
 阻塞项与出关标准以上述两份文档为准，本节不再单列以避免三处漂移。0.0 在 Gate 0–4 全部关闭前**阻塞** 0.1 / 0.2 / 0.3 的启动。
 
