@@ -10,6 +10,7 @@ import { ApprovalCard } from "@mobile/components/ApprovalCard";
 import { Composer } from "@mobile/components/Composer";
 import { SessionList } from "@mobile/components/SessionList";
 import { RoomList } from "@mobile/components/RoomList";
+import { CcSessionList } from "@mobile/components/CcSessionList";
 import { PermissionModeControl } from "@mobile/components/PermissionModeControl";
 
 const WIDE = "(min-width: 820px)";
@@ -213,16 +214,29 @@ function SidePane({
       projects={app.projects}
       activeSessionId={app.activeSessionId}
       currentCwd={app.activeCwd}
+      activeProjectCwd={app.activeProjectCwd}
       loading={app.loading.sessions}
       onSelect={(id) => {
         app.selectSession(id);
         onDone();
       }}
+      onSelectProject={app.selectProject}
       onNew={() => {
         app.newSession();
         onDone();
       }}
       onRefresh={app.refreshSessions}
+    />
+  );
+  const ccSessions = (
+    <CcSessionList
+      cwd={app.activeProjectCwd ?? app.activeCwd ?? null}
+      probe={app.ccProbe}
+      sessions={app.ccSessions}
+      onOpen={(sid, cwd, mode) => {
+        app.openCcSession(sid, cwd, mode);
+        onDone();
+      }}
     />
   );
   const rooms = (
@@ -266,7 +280,8 @@ function SidePane({
   if (which === "rooms")
     return (
       <div className="flex h-full flex-col">
-        <div className="min-h-0 flex-1">{rooms}</div>
+        <div className="min-h-0 flex-1 overflow-hidden border-b border-border/70">{rooms}</div>
+        <div className="min-h-0 flex-1 overflow-hidden">{ccSessions}</div>
         {footer}
       </div>
     );
@@ -274,7 +289,8 @@ function SidePane({
   return (
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 overflow-hidden border-b border-border/70">{sessions}</div>
-      <div className="min-h-0 flex-1 overflow-hidden">{rooms}</div>
+      <div className="min-h-0 flex-1 overflow-hidden border-b border-border/70">{rooms}</div>
+      <div className="min-h-0 flex-1 overflow-hidden">{ccSessions}</div>
       {footer}
     </div>
   );
@@ -300,7 +316,20 @@ function ApprovalsArea({ app }: { app: ReturnType<typeof useRemoteApp> }) {
         <ApprovalCard
           key={a.requestId}
           approval={a}
-          onRespond={(decision, opts) => app.respondApproval(a.requestId, decision, opts)}
+          onRespond={(decision, opts) => {
+            if (a.roomId) {
+              // cc-room approval: route to the shared roomManager via the bridge.
+              app.respondCcApproval(
+                a.roomId,
+                a.requestId,
+                decision === "approve"
+                  ? { behavior: "allow", updatedInput: {} }
+                  : { behavior: "deny", message: opts?.reason || "denied by user" },
+              );
+            } else {
+              app.respondApproval(a.requestId, decision, opts);
+            }
+          }}
         />
       ))}
     </div>
