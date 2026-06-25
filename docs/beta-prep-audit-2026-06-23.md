@@ -46,6 +46,8 @@
 > - **bug-scan 第三批(llm/hooks/mcp/memory/context)3 候选**:#1 `context-tools.executeReadFile` 负 limit→`slice` 丢尾 ✅**已修**(`f64e376a`,limit 缺失/NaN→默认 200、≤0→空,+3 测);#2/#3 MCP `listResources`/`readResource` 不转发 abort signal ✅**已修**(`7e36048b`,加 signal 参数转发 SDK client + 工具读 `__signal`,Stop 可提前取消;subagent「永久挂起」夸大——SDK 默认超时本兜底,实为与 callTool 一致性 gap;tsc 验 SDK 签名正确,33 MCP 测回归绿)。范围其余(openai/anthropic JSON.parse·cost-tracker·model-pool·extract-memories·hooks emit)均已妥善守卫。
 > - **bug-scan 第一批(新代码:credentials/model-catalog/cdp/新工具)4 候选三筛**:#1 secretHint ✅修;#2 cdp scroll 负 amount 翻向→**判低价值不修**(自纠正、非安全);#3/#4 **path-traversal 真 gap ✅已修**(`78bf8b9c`+`436a1498`)——`generate-image.referenceImages` + `generate-video.images/image` 读本地文件**未走 pathPolicy**,`../../etc/passwd` 绕过工作区 "ask" 门。两部分修:① executor `resolvePathPolicyTargets` 扩支持 **string[] arg**(相对路径按 ctx.cwd 解析、跳 http(s) URL)② 给 GenerateImage/Video 声明 pathPolicy。TDD +2 测,19 回归绿,tsc/build 0。关联记忆 `path_containment_realpath`/`path_permission_system`。
 >
+> **续(G)打包 CLI 运行时冒烟(实跑 tui dist,非单测)**:`code-shell --version`→`0.5.0-rc.2`·`--help`/`run --help` 子命令(run/repl/sessions/arena/runs)全注册与 README 一致·**`run "say hi"` 完成一轮真 LLM 对话**(默认 gpt-5.5,cost summary,干净退出,无崩——确认打包 CLI 端到端引擎链路正常 + dist 含本会话 core 改动无回归)·`sessions` 列真实磁盘会话(transcript-reader/FileRunStore.list 对真实语料健壮,顺验了我改的两处)。**B 节 headless 已实测;剩 A 节交互真机 + push 待你。**
+>
 > ---
 >
 > **(以下为前半段 A/B/C,做到第 6 commit 时所写,保留)**
