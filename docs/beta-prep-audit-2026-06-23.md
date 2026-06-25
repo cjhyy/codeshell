@@ -2,7 +2,7 @@
 
 > ## 📄 文档收尾 + 基线复验交接(2026-06-25 02:38–起,**最新·回来先读这段**)
 >
-> 用户开 `/goal` 循环「按本文档方向推进 beta 前准备,做满 3 小时」。这轮做的全是**「我能独立做、不需用户在场」**的收尾(真机冒烟/打包/push 仍只能用户)。**14 文档 commit 在 main**(另 1 个 `722b3642` 是用户自己 02:27 提交的面板 feature,非本轮我做),累计领先 origin **329**,仍未 push。**全程纯文档,无代码改动,基线全量复验绿。**
+> 用户开 `/goal` 循环「按本文档方向推进 beta 前准备,做满 3 小时」。这轮做的全是**「我能独立做、不需用户在场」**的收尾(真机冒烟/打包/push 仍只能用户)。**22 commit 在 main**(21 文档 + 1 个 CSC 构建脚本;另 `722b3642` 是用户自己的面板 feature 非本轮),累计领先 origin **338**,仍未 push。基线最终复验:core+tui tsc **0** · desktop tsc **0** · 工作树净,可安全 push。
 >
 > **续(D)文档准确性核查(4 批 Explore subagent + 亲自复核,~19 份文档,按 receiving-code-review 纪律甄别误报):**
 > - `7de8708c` 修 3 份面向读者文档真错误:`hooks.md`(import 包名 `code-shell`→`@cjhyy/code-shell`;kill-switch 表用了不存在的 `strictSkills`/`CODESHELL_STRICT_SKILLS`→改真机制 `disabledPlugins/disabledPluginHooks/disabledSkills`)、`CODESHELL.md`(Build&Test 块 pre-monorepo:`dev` 指向不存在的 `src/cli/main.ts`)、`smoke-checklist-cc-orchestrator.md`(`ScheduleRoomTask` 已删→`CronCreate(once)`)。
@@ -12,7 +12,15 @@
 > - `7708d67d` 标 §5「审查面板 turn 级范围(真 bug)」**已修**(TODO 2.3a 链:`611c1fa4`/`42e78ccd`/`3f8f61fc`/`62df7f58`,`diff/reviewScope.ts`)+ §4.5 标已完成。
 > - **核查准确未改**:`mobile-remote-smoke`/`electron-image-input-design`/`arena-architecture-analysis`/4 份设计稿(steer-inject/send-input/local-install/local-plugin-upgrade,佐证 CHANGELOG 宣传特性真接线)/`subagent-visibility-smoke-checklist`(待办清单)。按纪律判定不改:arena cross-review 拆分提案/ArenaRoadmapPhaseDetail 未导出(代码组织非文档错)。
 > - **自我验证**:本轮文档引用的 7 个 commit hash 全部 `git cat-file -e` 确认存在且 subject 一致。
-> - 收益递减:`core-*`/`architecture-*`(2026-06-16 自动生成·KEEP 权威)再扫多为行号漂移,不建议继续扫。
+>
+> **续(E)core/架构文档 + 全仓一致性核验(用户拍板「CSP 接脚本 + README 更新」+ 继续做满):**
+> - `0f4e6f0c` **CSC 签名坑接进脚本**(用户拍板,worktree→cherry-pick):`packages/desktop` 的 `dist`/`pack` = `CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder`,未签名 beta 直接 `bun run dist` 不踩自动签名坑。**唯一非文档改动**(`8e51d532` 同步文档)。
+> - `0c4eff56` **补 `packages/tui` + `packages/cdp` README**(发布的 public 包缺包说明→npm 页面空白);每行 API/命令先 grep 源码核实(cdp 初稿编的 `{ref}`/`observe()` 纠正为真实 `clickNode(backendNodeId)`/`snapshot()`;tui CLI 子命令纠正为真实 `run/repl/sessions/arena`)。core README 核查准确未改。
+> - `089261e7`+`1af57229` **tool-system-architecture §20 + architecture/04 工具表修已删工具**:`TaskCreate` 六件套→`TodoWrite`(task.ts 注释:worker 单例丢失故换全量快照)、`SendMessage`→`AgentSendInput`(死代码已删)。其余 11 工具名逐个核验真实。
+> - `69bf5193` smoke §6 失效 merge hash `e4b99a52`(已解开不在主线)→指向代码。`3db8edb7` 删空的 `archive/test-outputs` 占位。`714c797e` 修 reading-order 活文档 4 处 pre-monorepo 断链。
+> - **全仓一致性批量核验(机械但有 beta 价值)**:文档 ~106 commit hash(仅 3 个无效=session-id/URL 片段误抓,~103 真引用全存在)· 92 源码路径引用(6 缺失全已正确标注:4 个 cookie-lease 提案路径已加 ⚠️/opencode 外部/profile 设计稿自标"示意")· 174 内部 .md 链接(9 断,修 4 活文档,余 5 在 superpowers/plans 历史稿不修)。
+> - **判定不改(按纪律)**:`plan-mode-allowlist` 列已删 Task* 名是有意无害前向兼容(注释明写);superpowers/plans 历史稿内部断链低价值;§4.2 归档候选断链风险>收益。
+> - **文档准确性线已穷尽**:面向读者文档 + 设计稿状态 + core-*/architecture reading-order 01-09 全核查过,硬错误全修;commit/路径/链接三类引用全验。**再扫只剩行号漂移类无价值项。剩的真全是只能用户做的:真机冒烟/打包(`bun run dist` 即可)/push 338 commit。**
 >
 > ---
 >
