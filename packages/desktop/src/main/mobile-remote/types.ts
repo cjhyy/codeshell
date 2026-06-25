@@ -91,7 +91,7 @@ export type MobileServerEvent =
   | { type: "auth.failed"; message: string }
   | { type: "pair.ok"; device: TrustedDevicePublic }
   | { type: "pair.failed"; message: string }
-  | { type: "chat.accepted"; sessionId?: string }
+  | { type: "chat.accepted"; sessionId?: string; cwd?: string | null }
   | {
       type: "approval.request";
       approvalId: string;

@@ -11,7 +11,6 @@ import { Composer } from "@mobile/components/Composer";
 import { SessionList } from "@mobile/components/SessionList";
 import { RoomList } from "@mobile/components/RoomList";
 import { PermissionModeControl } from "@mobile/components/PermissionModeControl";
-import { basename } from "@mobile/lib/format";
 
 const WIDE = "(min-width: 820px)";
 
@@ -103,7 +102,11 @@ export function App() {
               )}
             </div>
           )}
-          <MessageStream chat={app.chat} />
+          <MessageStream
+            chat={app.chat}
+            loading={app.loading.sessionHistory || app.loading.roomHistory}
+            loadingText={app.activeRoom ? "正在加载房间…" : "正在加载会话…"}
+          />
           <Composer
             disabled={app.status !== "online"}
             running={app.chat.run === "running" || app.chat.run === "waiting"}
@@ -128,9 +131,11 @@ function TopBar({
   const title = app.activeRoom ? app.activeRoom.name : app.chat.title || "对话";
   const activeSession = app.sessions.find((s) => s.id === app.activeSessionId);
   const subtitle = app.activeRoom
-    ? basename(app.activeRoom.cwd)
-    : activeSession?.cwd
-      ? basename(activeSession.cwd)
+    ? app.activeRoom.cwd
+    : app.activeCwd
+      ? app.activeCwd
+      : activeSession?.cwd
+        ? activeSession.cwd
       : app.activeSessionId
         ? "桌面会话"
         : "新会话";
@@ -207,6 +212,8 @@ function SidePane({
       sessions={app.sessions}
       projects={app.projects}
       activeSessionId={app.activeSessionId}
+      currentCwd={app.activeCwd}
+      loading={app.loading.sessions}
       onSelect={(id) => {
         app.selectSession(id);
         onDone();
@@ -222,7 +229,9 @@ function SidePane({
     <RoomList
       rooms={app.rooms}
       projects={app.projects}
+      currentCwd={app.activeCwd}
       activeRoomId={app.activeRoom?.id}
+      loading={app.loading.rooms}
       onRefresh={app.refreshRooms}
       onOpen={(r) => {
         app.openRoom(r);

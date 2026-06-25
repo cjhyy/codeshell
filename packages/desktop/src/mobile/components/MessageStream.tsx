@@ -94,7 +94,15 @@ function Row({ item }: { item: ChatItem }) {
 
 /** The scrollable message feed. Auto-scrolls to bottom on new content unless
  *  the user has scrolled up. */
-export function MessageStream({ chat }: { chat: ChatState }) {
+export function MessageStream({
+  chat,
+  loading,
+  loadingText = "正在加载…",
+}: {
+  chat: ChatState;
+  loading?: boolean;
+  loadingText?: string;
+}) {
   const endRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickRef = useRef(true);
@@ -116,9 +124,16 @@ export function MessageStream({ chat }: { chat: ChatState }) {
           <div className="mx-auto mb-3 grid size-10 place-items-center rounded-xl bg-primary/12 text-primary">
             <Bot className="size-5" />
           </div>
-          <p className="text-sm leading-6 text-muted-foreground">
-            发个任务试试,或在「房间」里开常驻 Claude Code 会话。
-          </p>
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 text-sm leading-6 text-muted-foreground">
+              <span className="size-2 rounded-full bg-status-running animate-pulse" />
+              {loadingText}
+            </div>
+          ) : (
+            <p className="text-sm leading-6 text-muted-foreground">
+              发个任务试试,或在「房间」里开常驻 Claude Code 会话。
+            </p>
+          )}
         </div>
       </div>
     );

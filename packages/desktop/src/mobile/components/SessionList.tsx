@@ -1,28 +1,39 @@
 import { useState } from "react";
-import { Plus, RefreshCw, X } from "lucide-react";
+import { Loader2, Plus, RefreshCw, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@ui/button";
 import type { MobileProjectMeta, MobileSessionMeta } from "@protocol";
-import { relativeTime, groupByProject } from "@mobile/lib/format";
+import { basename, relativeTime, groupByProject } from "@mobile/lib/format";
 
 /** The desktop sessions the phone can open + drive, GROUPED BY PROJECT (cwd). */
 export function SessionList({
   sessions,
   projects,
   activeSessionId,
+  currentCwd,
   onSelect,
   onNew,
   onRefresh,
+  loading,
 }: {
   sessions: MobileSessionMeta[];
   projects: MobileProjectMeta[];
   activeSessionId?: string;
+  currentCwd?: string | null;
   onSelect: (id: string) => void;
   onNew: (cwd?: string | null, name?: string) => void;
   onRefresh: () => void;
+  loading?: boolean;
 }) {
   const [creating, setCreating] = useState(false);
   const groups = groupByProject(sessions, projects);
+  const currentProject = currentCwd
+    ? projects.find((p) => p.path === currentCwd)
+    : undefined;
+  const currentKnown = currentCwd !== undefined;
+  const otherProjects = currentCwd
+    ? projects.filter((p) => p.path !== currentCwd)
+    : projects;
   return (
     <div className="flex h-full flex-col">
       <div className="mobile-side-header flex items-center gap-2 px-3 py-3">
@@ -37,8 +48,9 @@ export function SessionList({
             size="icon"
             variant="outline"
             onClick={onRefresh}
+            disabled={loading}
           >
-            <RefreshCw />
+            {loading ? <Loader2 className="animate-spin" /> : <RefreshCw />}
           </Button>
           <Button size="sm" onClick={() => setCreating((c) => !c)}>
             {creating ? <X /> : <Plus />}
@@ -48,38 +60,56 @@ export function SessionList({
       </div>
       {creating && (
         <div className="border-b border-border/70 bg-black/12 p-2">
-          <p className="mb-1.5 px-1 text-[11px] text-muted-foreground">选一个项目开新会话</p>
+          <p className="mb-1.5 px-1 text-[11px] text-muted-foreground">新会话默认使用当前目录</p>
           <div className="flex flex-col gap-1">
             <button
               type="button"
               onClick={() => {
-                onNew(null);
+                onNew(currentKnown ? currentCwd : undefined, currentProject?.name);
                 setCreating(false);
               }}
               className="mobile-list-item flex flex-col rounded-lg px-2.5 py-2 text-left text-sm"
             >
-              <span className="font-medium text-foreground">无项目对话</span>
-              <span className="truncate text-[11px] text-muted-foreground">不绑定 repo</span>
+              <span className="font-medium text-foreground">
+                {currentCwd
+                  ? `当前目录 · ${currentProject?.name ?? basename(currentCwd)}`
+                  : currentKnown
+                    ? "无项目对话"
+                    : "当前桌面目录"}
+              </span>
+              <span className="truncate text-[11px] text-muted-foreground">
+                {currentCwd || (currentKnown ? "不绑定 repo" : "跟随桌面当前 cwd")}
+              </span>
             </button>
-            {projects.map((p) => (
-              <button
-                key={p.path}
-                type="button"
-                onClick={() => {
-                  onNew(p.path, p.name);
-                  setCreating(false);
-                }}
-                className="mobile-list-item flex flex-col rounded-lg px-2.5 py-2 text-left text-sm"
-              >
-                <span className="font-medium text-foreground">{p.name}</span>
-                <span className="truncate text-[11px] text-muted-foreground">{p.path}</span>
-              </button>
-            ))}
+            {otherProjects.length > 0 && (
+              <>
+                <p className="px-1 pt-2 text-[11px] text-muted-foreground">其他项目</p>
+                {otherProjects.map((p) => (
+                  <button
+                    key={p.path}
+                    type="button"
+                    onClick={() => {
+                      onNew(p.path, p.name);
+                      setCreating(false);
+                    }}
+                    className="mobile-list-item flex flex-col rounded-lg px-2.5 py-2 text-left text-sm"
+                  >
+                    <span className="font-medium text-foreground">{p.name}</span>
+                    <span className="truncate text-[11px] text-muted-foreground">{p.path}</span>
+                  </button>
+                ))}
+              </>
+            )}
           </div>
         </div>
       )}
       <div className="flex-1 overflow-y-auto px-2 py-2">
-        {sessions.length === 0 ? (
+        {loading && sessions.length === 0 ? (
+          <p className="mobile-glass flex items-center justify-center gap-2 rounded-lg px-3 py-6 text-center text-xs text-muted-foreground">
+            <Loader2 className="size-3.5 animate-spin text-status-running" />
+            正在加载会话…
+          </p>
+        ) : sessions.length === 0 ? (
           <p className="mobile-glass rounded-lg px-3 py-6 text-center text-xs text-muted-foreground">
             还没有会话。点「新建」开一个,或在桌面端开始。
           </p>

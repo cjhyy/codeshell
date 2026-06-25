@@ -586,7 +586,7 @@ async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: s
     }
     mobileSessionCwds.set(st.sessionId, st.selectedCwd);
     if (st.permissionMode) mobilePermissionModes.set(st.sessionId, st.permissionMode);
-    reply({ type: "chat.accepted", sessionId: st.sessionId });
+    reply({ type: "chat.accepted", sessionId: st.sessionId, cwd: st.selectedCwd });
     if (deviceId) sendMobilePermissionMode(deviceId, st.sessionId);
     else {
       reply({
@@ -627,7 +627,7 @@ async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: s
       }),
     );
     // Tell THIS device which session its turn landed in.
-    reply({ type: "chat.accepted", sessionId });
+    reply({ type: "chat.accepted", sessionId, cwd });
     return;
   }
   if (event.type === "approval.respond") {

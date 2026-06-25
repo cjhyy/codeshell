@@ -53,7 +53,8 @@ test("RoomList 显示危险 badge", () => {
   const html = renderToStaticMarkup(
     <RoomList
       rooms={rooms}
-      projects={[]}
+      projects={projects}
+      currentCwd="/Users/x/codeshell"
       onRefresh={() => {}}
       onOpen={() => {}}
       onCreate={() => {}}

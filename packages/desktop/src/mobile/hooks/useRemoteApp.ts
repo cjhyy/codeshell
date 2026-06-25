@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type {
   MobileServerEvent,
   MobileSessionMeta,
@@ -39,11 +39,20 @@ export interface RemoteApp {
   chat: ChatState;
   sessions: MobileSessionMeta[];
   activeSessionId?: string;
+  activeCwd?: string | null;
   rooms: RoomPublic[];
+  allRooms: RoomPublic[];
   projects: MobileProjectMeta[];
   activeRoom?: RoomPublic;
   approvals: PendingApproval[];
   permissionMode: PermissionMode;
+  loading: {
+    sessions: boolean;
+    sessionHistory: boolean;
+    rooms: boolean;
+    projects: boolean;
+    roomHistory: boolean;
+  };
   notice?: string;
   logout: () => void;
   // actions
@@ -79,6 +88,11 @@ const PATH_SCOPED = new Set([
   "ApplyPatch",
 ]);
 
+function sameCwd(a?: string | null, b?: string | null): boolean {
+  const norm = (v?: string | null): string => (v ?? "").replace(/[/\\]+$/, "");
+  return norm(a) === norm(b);
+}
+
 type ChatAction =
   | { kind: "raw"; raw: unknown }
   | { kind: "user"; text: string }
@@ -102,6 +116,7 @@ export function useRemoteApp(): RemoteApp {
   const [chat, dispatchChat] = useReducer(chatReducer, undefined, initialChatState);
   const [sessions, setSessions] = useState<MobileSessionMeta[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | undefined>();
+  const [activeSessionCwd, setActiveSessionCwd] = useState<string | null | undefined>();
   const [rooms, setRooms] = useState<RoomPublic[]>([]);
   const [projects, setProjects] = useState<MobileProjectMeta[]>([]);
   const [activeRoomId, setActiveRoomId] = useState<string | undefined>();
@@ -119,6 +134,24 @@ export function useRemoteApp(): RemoteApp {
   }, []);
   /** Which session id the chat view is bound to (for filtering live stream). */
   const boundSessionRef = useRef<string | undefined>(undefined);
+  const activeCwdRef = useRef<string | null | undefined>(undefined);
+  const [loading, setLoading] = useState<RemoteApp["loading"]>({
+    sessions: false,
+    sessionHistory: false,
+    rooms: false,
+    projects: false,
+    roomHistory: false,
+  });
+
+  const setLoadingKey = useCallback((key: keyof RemoteApp["loading"], value: boolean) => {
+    setLoading((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }));
+  }, []);
+
+  const sessionCwdById = useMemo(() => {
+    const out = new Map<string, string | null>();
+    for (const s of sessions) out.set(s.id, s.cwd || null);
+    return out;
+  }, [sessions]);
 
   const onServerEvent = useCallback((event: MobileServerEvent) => {
     switch (event.type) {
@@ -130,15 +163,23 @@ export function useRemoteApp(): RemoteApp {
           setActiveSessionId(event.sessionId);
           boundSessionRef.current = event.sessionId;
         }
+        if ("cwd" in event) setActiveSessionCwd(event.cwd ?? null);
         break;
       case "session.list.ok":
         setSessions(event.sessions);
-        if (event.activeSessionId) setActiveSessionId(event.activeSessionId);
+        setLoadingKey("sessions", false);
+        if (event.activeSessionId) {
+          setActiveSessionId(event.activeSessionId);
+          const active = event.sessions.find((s) => s.id === event.activeSessionId);
+          if (active) setActiveSessionCwd(active.cwd || null);
+          else setActiveSessionCwd(undefined);
+        }
         break;
       case "session.history.ok":
         // Only apply if it's the session we're currently viewing.
         if (event.sessionId === boundSessionRef.current) {
           dispatchChat({ kind: "replay", events: event.events });
+          setLoadingKey("sessionHistory", false);
         }
         break;
       case "permission.mode":
@@ -152,9 +193,11 @@ export function useRemoteApp(): RemoteApp {
         break;
       case "room.list.ok":
         setRooms(event.rooms);
+        setLoadingKey("rooms", false);
         break;
       case "room.projects.ok":
         setProjects(event.projects);
+        setLoadingKey("projects", false);
         break;
       case "room.message":
         if (event.roomId === activeRoomIdRef.current && event.msg) {
@@ -167,12 +210,14 @@ export function useRemoteApp(): RemoteApp {
             kind: "replay",
             events: (event.messages ?? []).map(roomMsgToEvent),
           });
+          setLoadingKey("roomHistory", false);
         }
         break;
       case "room.opened":
         if (event.status === "missing") {
           setNotice("房间不存在或未就绪");
           setActiveRoomId(undefined);
+          setLoadingKey("roomHistory", false);
         }
         break;
       case "room.closed":
@@ -184,6 +229,13 @@ export function useRemoteApp(): RemoteApp {
         break;
       case "error":
         setNotice(event.message);
+        setLoading({
+          sessions: false,
+          sessionHistory: false,
+          rooms: false,
+          projects: false,
+          roomHistory: false,
+        });
         break;
       case "goal.extended":
         // Surface a real failure; success is silent (the run simply continues).
@@ -209,7 +261,7 @@ export function useRemoteApp(): RemoteApp {
       default:
         break;
     }
-  }, []);
+  }, [setLoadingKey]);
 
   // activeRoomId via ref so the message handler closure sees the latest value.
   const activeRoomIdRef = useRef<string | undefined>(undefined);
@@ -276,6 +328,7 @@ export function useRemoteApp(): RemoteApp {
           // Auto-bind to the first session we see so the feed is coherent.
           boundSessionRef.current = sid;
           setActiveSessionId(sid);
+          setActiveSessionCwd(sessionCwdById.get(sid));
         } else {
           return;
         }
@@ -291,7 +344,7 @@ export function useRemoteApp(): RemoteApp {
         }
       }
     },
-    [addApproval],
+    [addApproval, sessionCwdById],
   );
 
   const socket = useRemoteSocket({ onServerEvent, onRawLine });
@@ -321,28 +374,40 @@ export function useRemoteApp(): RemoteApp {
     socket.send({ type: "run.stop", sessionId: boundSessionRef.current });
   }, [socket]);
 
-  const refreshSessions = useCallback(() => socket.send({ type: "session.list" }), [socket]);
+  const refreshSessions = useCallback(() => {
+    setLoadingKey("sessions", true);
+    socket.send({ type: "session.list" });
+  }, [socket, setLoadingKey]);
 
   const selectSession = useCallback(
     (id: string) => {
       setActiveSessionId(id);
+      setActiveSessionCwd(sessionCwdById.get(id) ?? null);
       boundSessionRef.current = id;
       setActiveRoomId(undefined);
       setApprovals([]);
+      setLoadingKey("sessionHistory", true);
       dispatchChat({ kind: "reset" });
       socket.send({ type: "session.select", sessionId: id });
       socket.send({ type: "session.history", sessionId: id });
     },
-    [socket],
+    [socket, sessionCwdById, setLoadingKey],
   );
 
   const newSession = useCallback((cwd?: string | null, name?: string) => {
+    const nextCwd = cwd === undefined ? activeCwdRef.current : cwd;
     boundSessionRef.current = undefined;
     setActiveRoomId(undefined);
+    setActiveSessionCwd(nextCwd === undefined ? undefined : nextCwd ?? null);
     setApprovals([]);
+    setLoadingKey("sessionHistory", false);
     dispatchChat({ kind: "reset" });
-    socket.send({ type: "session.create", cwd, name });
-  }, [socket]);
+    socket.send(
+      cwd === undefined
+        ? { type: "session.create", ...(name ? { name } : {}) }
+        : { type: "session.create", cwd, ...(name ? { name } : {}) },
+    );
+  }, [socket, setLoadingKey]);
 
   const respondApproval = useCallback(
     (
@@ -391,30 +456,38 @@ export function useRemoteApp(): RemoteApp {
   );
 
   const refreshRooms = useCallback(() => {
+    setLoadingKey("rooms", true);
+    setLoadingKey("projects", true);
     socket.send({ type: "room.list" });
     socket.send({ type: "room.projects" });
-  }, [socket]);
+  }, [socket, setLoadingKey]);
 
   const openRoom = useCallback(
     (room: RoomPublic) => {
       setActiveRoomId(room.id);
+      setActiveSessionCwd(room.cwd || null);
       boundSessionRef.current = undefined;
       setApprovals([]);
+      setLoadingKey("roomHistory", true);
       dispatchChat({ kind: "reset" });
       socket.send({ type: "room.open", roomId: room.id });
       socket.send({ type: "room.history", roomId: room.id });
     },
-    [socket],
+    [socket, setLoadingKey],
   );
 
   const leaveRoom = useCallback(() => {
     setActiveRoomId(undefined);
+    setLoadingKey("roomHistory", false);
     dispatchChat({ kind: "reset" });
-  }, []);
+  }, [setLoadingKey]);
 
   const createRoom = useCallback(
-    (cwd: string, name?: string) => socket.send({ type: "room.create", cwd, name }),
-    [socket],
+    (cwd: string, name?: string) => {
+      setLoadingKey("rooms", true);
+      socket.send({ type: "room.create", cwd, name });
+    },
+    [socket, setLoadingKey],
   );
 
   const closeRoom = useCallback(
@@ -426,6 +499,18 @@ export function useRemoteApp(): RemoteApp {
     () => rooms.find((r) => r.id === activeRoomId),
     [rooms, activeRoomId],
   );
+  const activeCwd = activeRoom?.cwd || activeSessionCwd;
+  activeCwdRef.current = activeCwd;
+  const contextRooms = useMemo(
+    () => (activeCwd ? rooms.filter((r) => sameCwd(r.cwd, activeCwd)) : []),
+    [rooms, activeCwd],
+  );
+
+  useEffect(() => {
+    if (socket.status !== "online") return;
+    setLoadingKey("rooms", true);
+    socket.send({ type: "room.list" });
+  }, [socket.status, socket.send, activeCwd, setLoadingKey]);
 
   return {
     status: socket.status,
@@ -433,11 +518,14 @@ export function useRemoteApp(): RemoteApp {
     chat,
     sessions,
     activeSessionId,
-    rooms,
+    activeCwd,
+    rooms: contextRooms,
+    allRooms: rooms,
     projects,
     activeRoom,
     approvals,
     permissionMode,
+    loading,
     notice,
     logout: socket.logout,
     sendChat,
