@@ -151,7 +151,9 @@ export async function memoryReadTool(
       mm.recordRecall(entry.name);
       const cb = ctx?.streamCallback;
       if (cb) {
-        void cb({ type: "memory_recalled", name: entry.name, scope: scope as MemoryScope, location });
+        // scope here is always "user"|"dream" (validated above); pending is
+        // never tool-readable, so the narrower event type is correct.
+        void cb({ type: "memory_recalled", name: entry.name, scope: scope as "user" | "dream", location });
       }
     } catch {
       // ignore — the read result below is what matters

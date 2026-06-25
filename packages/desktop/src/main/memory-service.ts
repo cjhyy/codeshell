@@ -124,3 +124,37 @@ export function deleteMemory(
 ): boolean {
   return mm(level, scope, cwd).delete(name);
 }
+
+// ─── Pending (审批门) ────────────────────────────────────────────────────────
+// Auto-extracted "global" candidates wait here until the user approves them
+// into the injected global user store. Pending is global-only (no projectDir).
+
+function pendingMm(): MemoryManager {
+  return new MemoryManager({ scope: "pending" });
+}
+
+/** List global memories awaiting approval (full content included — the panel
+ *  shows it inline so the user can judge before approving). */
+export function listPendingMemory(): (RendererMemoryEntry & { content: string })[] {
+  return pendingMm().loadAll().map((e) => ({
+    name: e.name,
+    description: e.description,
+    type: e.type,
+    fileName: e.fileName,
+    scope: e.scope,
+    level: "user" as const,
+    content: e.content,
+    origin: e.origin,
+    created: e.created,
+  }));
+}
+
+/** Approve → moves the entry into the global user store (gets injected). */
+export function approvePendingMemory(name: string): string | null {
+  return pendingMm().approvePending(name);
+}
+
+/** Reject → soft-delete the pending entry (recoverable from trash). */
+export function rejectPendingMemory(name: string): boolean {
+  return pendingMm().delete(name);
+}

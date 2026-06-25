@@ -1,6 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import {
   parseExtractionResponse,
+  buildExtractionPrompt,
   MAX_MEMORIES_PER_EXTRACTION,
 } from "./extract-memories.js";
 
@@ -50,5 +51,37 @@ describe("parseExtractionResponse maxCount", () => {
     const out = parseExtractionResponse(mixed, 5);
     expect(out).toHaveLength(1);
     expect(out[0].name).toBe("ok");
+  });
+});
+
+describe("parseExtractionResponse global cap (审批门 克制)", () => {
+  test("at most 1 global survives; extra globals demoted to project", () => {
+    const json = JSON.stringify([
+      { type: "feedback", scope: "global", name: "g1", description: "d", content: "c" },
+      { type: "user", scope: "global", name: "g2", description: "d", content: "c" },
+      { type: "feedback", scope: "global", name: "g3", description: "d", content: "c" },
+    ]);
+    const out = parseExtractionResponse(json, 10);
+    const globals = out.filter((m) => m.scope === "global");
+    expect(globals).toHaveLength(1);
+    expect(globals[0].name).toBe("g1"); // first one kept
+    expect(out.filter((m) => m.scope === "project").map((m) => m.name).sort()).toEqual(["g2", "g3"]);
+  });
+
+  test("missing/invalid scope defaults to project (never accidental global)", () => {
+    const json = JSON.stringify([
+      { type: "project", name: "a", description: "d", content: "c" },
+      { type: "project", scope: "weird", name: "b", description: "d", content: "c" },
+    ]);
+    const out = parseExtractionResponse(json, 10);
+    expect(out.every((m) => m.scope === "project")).toBe(true);
+  });
+});
+
+describe("buildExtractionPrompt conservative global wording", () => {
+  test("prompt enforces at-most-1-global and conservative bar", () => {
+    const p = buildExtractionPrompt([{ role: "user", content: "hi" }], []);
+    expect(p).toContain("AT MOST 1");
+    expect(p.toLowerCase()).toContain("conservative");
   });
 });

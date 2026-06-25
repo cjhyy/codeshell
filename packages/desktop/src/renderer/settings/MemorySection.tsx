@@ -12,6 +12,7 @@ import {
   Pin,
   PinOff,
   Eraser,
+  Check,
 } from "lucide-react";
 import type {
   MemoryLevel,
@@ -155,6 +156,18 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [dreaming, setDreaming] = useState(false);
+  // 审批门: global memories the extractor flagged as "global" wait here. Only
+  // meaningful at the global (user) level — pending is global-only.
+  const [pending, setPending] = useState<RendererMemoryEntryFull[]>([]);
+
+  const refreshPending = useCallback(async () => {
+    if (level !== "user") return;
+    try {
+      setPending(await window.codeshell.listPendingMemory());
+    } catch {
+      /* best-effort — pending banner just stays empty */
+    }
+  }, [level]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -172,10 +185,29 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
 
   useEffect(() => {
     void refresh();
+    void refreshPending();
     setSelected(null);
     setDrafting(false);
     setNotice(null);
-  }, [refresh]);
+  }, [refresh, refreshPending]);
+
+  const approvePending = async (name: string): Promise<void> => {
+    try {
+      await window.codeshell.approvePendingMemory(name);
+      await Promise.all([refreshPending(), refresh()]);
+    } catch (e: unknown) {
+      setError(String(e instanceof Error ? e.message : e));
+    }
+  };
+
+  const rejectPending = async (name: string): Promise<void> => {
+    try {
+      await window.codeshell.rejectPendingMemory(name);
+      await refreshPending();
+    } catch (e: unknown) {
+      setError(String(e instanceof Error ? e.message : e));
+    }
+  };
 
   const openEntry = async (name: string): Promise<void> => {
     setError(null);
@@ -451,6 +483,51 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
 
       {notice && <div className="rounded-md bg-status-ok/10 p-2 text-sm text-status-ok">{notice}</div>}
       {error && <div className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">{error}</div>}
+
+      {/* 审批门: pending global candidates — only at the global (user) level.
+          Nothing auto-lands the injected global store; the user approves here. */}
+      {level === "user" && pending.length > 0 && (
+        <div className="rounded-md border border-status-warn/40 bg-status-warn/5 p-2">
+          <div className="mb-1.5 px-1 text-xs font-medium text-status-warn">
+            {t("settingsX.memory.pendingHeader", { count: pending.length })}
+          </div>
+          <ul className="flex flex-col gap-1" role="list">
+            {pending.map((p) => (
+              <li key={p.fileName} className="flex items-start gap-1 rounded-md px-2 py-1.5">
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <span className={memoryTypeClassName(p.type)}>{p.type}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{p.name}</span>
+                  </div>
+                  <span className="min-w-0 truncate text-xs text-muted-foreground">{p.description}</span>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-status-ok"
+                  onClick={() => void approvePending(p.name)}
+                  title={t("settingsX.memory.pendingApprove")}
+                  aria-label={t("settingsX.memory.pendingApprove")}
+                >
+                  <Check size={13} />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-status-err"
+                  onClick={() => void rejectPending(p.name)}
+                  title={t("settingsX.memory.pendingReject")}
+                  aria-label={t("settingsX.memory.pendingReject")}
+                >
+                  <X size={13} />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="grid h-[min(60vh,560px)] min-h-[360px] grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,0.42fr)_1fr]">
         {/* min-h-0 + the bounded grid height above let this list scroll on its own

@@ -660,6 +660,14 @@ export interface CodeshellApi {
     name: string,
     cwd?: string,
   ): Promise<boolean>;
+  /** 审批门: list global memories auto-extracted as "global" awaiting approval
+   *  (full content included so the panel shows it inline). */
+  listPendingMemory(): Promise<RendererMemoryEntryFull[]>;
+  /** Approve a pending memory → moves it into the global user store (injected).
+   *  Returns the new filename, or null if not found. */
+  approvePendingMemory(name: string): Promise<string | null>;
+  /** Reject a pending memory → soft-delete (recoverable from trash). */
+  rejectPendingMemory(name: string): Promise<boolean>;
   /**
    * Run one manual dream consolidation pass over the `dream` scope at the
    * given level (project requires cwd). Runs an LLM in the main process; the

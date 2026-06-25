@@ -118,6 +118,9 @@ import {
   readMemory,
   saveMemory,
   deleteMemory,
+  listPendingMemory,
+  approvePendingMemory,
+  rejectPendingMemory,
   type MemoryLevel,
   type SaveMemoryInput,
 } from "./memory-service.js";
@@ -2345,6 +2348,17 @@ ipcMain.handle(
     return deleteMemory(v.level, v.scope, name, typeof cwd === "string" ? cwd : undefined);
   },
 );
+
+// 审批门 (pending global memories)
+ipcMain.handle("memory:pending:list", async () => listPendingMemory());
+ipcMain.handle("memory:pending:approve", async (_e, name: unknown) => {
+  if (typeof name !== "string" || !name) throw new Error("memory name required");
+  return approvePendingMemory(name);
+});
+ipcMain.handle("memory:pending:reject", async (_e, name: unknown) => {
+  if (typeof name !== "string" || !name) throw new Error("memory name required");
+  return rejectPendingMemory(name);
+});
 
 ipcMain.handle("memory:dream", async (_e, level: unknown, cwd?: string) => {
   if (level !== "user" && level !== "project") {

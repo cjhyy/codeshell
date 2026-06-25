@@ -32,7 +32,16 @@ import {
 import { join } from "node:path";
 import { homedir } from "node:os";
 
-export type MemoryScope = "user" | "dream";
+/**
+ * Memory scopes (storage subdirs under a memory root):
+ *  - user    user-owned; tool writes here are permission-gated
+ *  - dream   the auto-consolidation workspace (LLM free-write)
+ *  - pending 待审批门 (用户拍板): auto-extracted memories the LLM 判为"提全局"
+ *            land here (global root only) and are NOT injected. The user
+ *            approves (→ moves to user/) or rejects (→ trash) in the settings
+ *            panel. Keeps the global layer curated — nothing auto-lands global.
+ */
+export type MemoryScope = "user" | "dream" | "pending";
 
 export interface MemoryEntry {
   name: string;
@@ -343,6 +352,37 @@ export class MemoryManager {
       }
     }
     return pruned;
+  }
+
+  /**
+   * Approve a pending memory: move it from the pending scope into the user scope
+   * of the SAME memory root (pending only ever exists at the global root — the
+   * approval门 only gates global writes). Must be called on a pending-scope
+   * manager. Returns the new user filename, or null if not found / wrong scope.
+   *
+   * 审批门 (用户拍板): the only path that moves an auto-extracted memory into the
+   * curated, injected global user store.
+   */
+  approvePending(nameOrFile: string): string | null {
+    if (this.scope !== "pending") return null;
+    const entry = this.loadAll().find(
+      (e) => e.name === nameOrFile || e.fileName === nameOrFile,
+    );
+    if (!entry) return null;
+    // pending is global-only → target the global user store (no projectDir).
+    const userMgr = new MemoryManager({ baseDir: this.baseDir, scope: "user" });
+    const fileName = userMgr.save({
+      name: entry.name,
+      description: entry.description,
+      type: entry.type,
+      content: entry.content,
+      origin: entry.origin ?? "auto",
+      created: entry.created,
+      lastUsed: entry.lastUsed,
+      usageCount: entry.usageCount,
+    });
+    this.delete(entry.name); // soft-delete the pending copy
+    return fileName;
   }
 
   /**

@@ -115,15 +115,16 @@ export class MemoryOrchestrator {
       const entries = parseExtractionResponse(response, this.options.maxCount);
       const parseMs = Date.now() - t;
       t = Date.now();
-      // Route by scope (用户拍板): "global" memories go to the cross-project
-      // store (no projectDir), "project" memories stay per-project. `mm` is the
-      // project manager; build the global one lazily only if needed.
-      let globalMm: MemoryManager | null = null;
+      // Route by scope (用户拍板 审批门): "project" memories auto-land in the
+      // per-project store (`mm`). "global" memories do NOT auto-land global —
+      // they go to the GLOBAL pending scope and wait for the user to approve in
+      // the settings panel. Nothing auto-writes the injected global store.
+      let pendingMm: MemoryManager | null = null;
       let globalCount = 0;
       for (const entry of entries) {
         const target =
           entry.scope === "global"
-            ? (globalMm ??= new MemoryManager({ scope: "user" }))
+            ? (pendingMm ??= new MemoryManager({ scope: "pending" }))
             : mm;
         target.save({
           type: entry.type,
@@ -145,7 +146,7 @@ export class MemoryOrchestrator {
       logger.info("memory.extraction_done", {
         sessionId,
         extracted,
-        globalCount,
+        pendingGlobalCount: globalCount, // global candidates queued for approval
         projectCount: extracted - globalCount,
         elapsedMs: Date.now() - startTime,
         loadMs,

@@ -490,6 +490,12 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("memory:save", input),
   deleteMemory: (level: string, scope: string, name: string, cwd?: string) =>
     ipcRenderer.invoke("memory:delete", level, scope, name, cwd),
+  // 审批门 (pending global memories)
+  listPendingMemory: () => ipcRenderer.invoke("memory:pending:list"),
+  approvePendingMemory: (name: string) =>
+    ipcRenderer.invoke("memory:pending:approve", name),
+  rejectPendingMemory: (name: string) =>
+    ipcRenderer.invoke("memory:pending:reject", name),
   runDream: (level: string, cwd?: string) =>
     ipcRenderer.invoke("memory:dream", level, cwd),
   /** Authoritative no-repo conversation cwd (~/.code-shell/no-repo) from main.
