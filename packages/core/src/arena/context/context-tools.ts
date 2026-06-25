@@ -165,7 +165,17 @@ function executeReadFile(args: Record<string, unknown>): string {
   const raw = readFileSync(filePath, "utf-8");
   const lines = raw.split("\n");
   const offset = Math.max(0, ((args.offset as number) ?? 1) - 1);
-  const limit = (args.limit as number) ?? 200;
+  // Guard `limit` before slicing: a negative limit makes lines.slice count
+  // "from the end" and silently drop the file's tail (reader thinks the file is
+  // shorter). A missing/NaN limit falls back to the default; a non-positive
+  // limit reads nothing.
+  const rawLimit = args.limit as number | undefined;
+  const limit =
+    rawLimit === undefined || !Number.isFinite(rawLimit)
+      ? 200
+      : rawLimit > 0
+        ? Math.floor(rawLimit)
+        : 0;
   const slice = lines.slice(offset, offset + limit);
   const numbered = slice.map((l, i) => `${offset + i + 1}\t${l}`).join("\n");
   return truncateResult(numbered);
