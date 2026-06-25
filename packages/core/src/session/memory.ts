@@ -293,9 +293,14 @@ export class MemoryManager {
 
     return (
       `# Persistent Memory\n\n` +
-      `The following memories from previous sessions may be relevant:\n\n` +
+      `Below is an INDEX of memories from past sessions — names and descriptions ONLY. ` +
+      `The full content of each memory is NOT loaded here.\n\n` +
+      `A description is a pointer, not the memory itself — it is never sufficient to ` +
+      `answer from. Before you act on or answer anything a memory's topic touches, ` +
+      `call MemoryRead to load that memory's full body first, then use it. Do not rely ` +
+      `on the description alone.\n\n` +
       lines.join("\n") +
-      `\n\nTo read a specific memory, look under ${this.memoryRoot}/{user,dream}/`
+      `\n\nTo load a memory's full content, call: MemoryRead { scope: "user" | "dream", name: "<name>" }`
     );
   }
 
