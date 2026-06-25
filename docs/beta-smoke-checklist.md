@@ -2,6 +2,9 @@
 
 ## A. 桌面 App 冒烟(本机,发前必跑)
 
+> **产物已打好(2026-06-25,见 audit 顶部 📦 段)**,在 `packages/desktop/dist/`:
+> `code-shell-0.5.0-rc.2-arm64.dmg`(124M)/ `-arm64-mac.zip`(119M)/ `.dmg`(x64,129M)/ `-mac.zip`(x64,124M)。**本机 Apple Silicon 装 arm64 那个**;未签名,首次右键「打开」。
+
 - [ ] 装 dmg / 解压 zip,拖进 Applications
 - [ ] hover Dock 图标 → 名字是 `code-shell`(非 Electron)
 - [ ] 双击打开(首次右键「打开」绕过 Gatekeeper)
