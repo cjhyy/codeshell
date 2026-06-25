@@ -29,7 +29,7 @@
 
 > 这些是 review 当时就标「conscious sign-off」的硬化项,不阻塞 beta1。
 
-- ⚪️ **browser-login 硬化**:① console 哨兵可被页面 `console.log` 伪造 → 换 per-window 高熵 nonce / 移出 console;② `persist:login-*` 分区只清 cookie,localStorage/IndexedDB/SW 残留,与「用完即焚」文案有出入 → 改非持久分区或 `clearStorageData` 全清;③ BrowserHost phase-2(webview 收编)`kind:'webview'` 类型未预留、两套 will-navigate/open-handler 策略未抽共享 helper。关联 `project_browser_login_window`。
+- ⚪️ **browser-login 硬化**(① 已修,核实 2026-06-25:已换 per-window `randomUUID()` nonce,哨兵必须带 nonce 全串,页面无法伪造):② `persist:login-*` 分区只清 cookie,localStorage/IndexedDB/SW 残留,与「用完即焚」文案有出入 → 改非持久分区或 `clearStorageData` 全清;③ BrowserHost phase-2(webview 收编)`kind:'webview'` 类型未预留、两套 will-navigate/open-handler 策略未抽共享 helper。关联 `project_browser_login_window`。
 - ⚪️ **JSON-Schema 导出未接线**:`schema-export.ts` 无 caller(「wiring TBD」)→ 要么宿主启动写 `~/.code-shell/settings.schema.json` + settings.json 加 `$schema`,要么 release notes 注明不对用户暴露。关联 `project_desktop_i18n`。
 - ⚪️ **i18n 收尾(增量)**:`"新对话"` 哨兵常量化;非 React helper(time.ts/streamGroups.ts)硬编码 localStorage key 应 import `KEY`;mobile(~149 处)单独接同套 i18n。
 - ⚪️ **mac 签名/公证**:beta 未做正式签名 → 首次需右键打开(已在分发说明里告知)。
@@ -43,17 +43,16 @@
 
 - 🔴 **记忆系统专项**(用户已拍板:先出整体设计再动手,别零敲碎打)— 第一批止血已做(96c5a3e:autoExtract 开关 + 批量清理 + redact + Dream 归档规则)。专项覆盖:生命周期状态机 / 完成态语义字段 / 自动提取确认流 / MEMORY.md 索引截断按需读 / 注入 token 预算。关联 `project_memory_and_dream_overview`、`reference_cc_codex_memory`。
 - 🟡 **会话可靠性闭环**:长断网会话级重连(瞬时已被 withRetry 覆盖)、会话崩溃恢复产品闭环(disk 权威源恢复已做,缺崩溃后 UI 提示/一键恢复)、工具超时可取消性一致化、友好错误消息。
-- 🟡 **审查面板 turn 级范围**(真 bug,非 nice-to-have):turn 卡片点审查应默认本 turn 范围,现落到整工作区 diff;需 desktop 审查面板较大改造。
+- ✅ **审查面板 turn 级范围**(原标真 bug)— 已实现:`ReviewPanel.tsx` 收到 `files` prop 时默认 `scope="turn"`,并用快照的 `turnDiff` 让 turn 范围在提交后仍可看。核实于 2026-06-25,留档。
 - 🟡 **桌面面板 session 切换保活**:左侧切换 session 后再切回来,右侧面板 tab 元数据能恢复,但 BrowserPanel/webview 页面内容、面板内部状态会丢。根因是 App 只按 `activeBucket` 保存 `open/tabs/activeId`,未保存 per-panel 实例状态,session 切换会重建 PanelArea/PanelBody。后续做轻量版(保存 BrowserPanel 当前 URL 并恢复)或完整保活版(按 `activeBucket + tab.id` 缓存 panel 实例,配 LRU/idle eviction)。
-- 🟡 **手机端 CC 会话 UX 对齐桌面端**:手机遥控需要保留 CC 会话,但去掉用户可见的 Room/房间概念。完整 TODO:
-  - 去掉手机端 Room/房间入口和文案:`/mobile/` 不再暴露“打开房间”按钮、不展示 `RoomList`,普通用户不可见“房间”;同时避免 `activeRoom` 继续影响主聊天区标题/subtitle/loading 文案/composer 发送路径。底层 room/cc-room 基础设施可保留,但只作为内部 transport。
-  - 保留 CC 会话入口:`CcSessionList` 或等价入口按项目展示外部 Claude Code 历史/会话;UI 文案用“CC 会话/Claude Code 会话”,不要叫“房间”。
-  - 对齐桌面端体验:当前手机端点 CC session 会暴露/进入一个 `cc room`,而桌面端体验是“CC 会话列表 → 选择权限模式(default/acceptEdits/bypassPermissions) → 进入 `CCConversationView`”。手机端也要做手机版 CCConversationView:点击 session 先弹权限模式选择;进入详情页后标题/状态显示“CC 会话/Claude Code 会话”,`roomId` 只作为内部字段。
-  - 补齐历史:进入 CC 会话详情页后先读原 Claude Code 历史 `readHistory(cwd, sessionId, 20)`,再接 room live history/message;不要只显示新 room/live feed,否则用户会觉得“CC 内容出来了但点进去没有历史”。
-  - 补齐对话与审批:composer 发送到底层 room transport;`ccRoom.approvalRequest` 必须以手机审批卡片弹出,支持 approve/deny/path scope/AskUser 等现有审批能力;审批响应走 `respondCcApproval`。
-  - 修复 CC loading 卡住:`CcSessionList` 已有 `loading?: boolean`,但 `App.tsx` 未传;`useRemoteApp.loading` 也缺 `ccProbe/ccSessions` 字段。增加 `ccProbe/ccSessions/openSession/readHistory` loading/error/timeout;`selectProject()` 发 `ccRoom.probe`/`ccRoom.listSessions` 时置 loading,收到 `ccRoom.probe.ok`/`ccRoom.listSessions.ok` 后清 loading,probe/list 失败不能无限显示“正在检测/加载”。
-  - 修复切换 loading 不明显:`MessageStream` 现在只有 `chat.items.length === 0` 才显示 loading,旧消息存在时 `loading=true` 不覆盖旧内容。普通 session/CC session 切换时要显示覆盖式 loading 或顶部 inline loading,或引入 `viewKey`/`activeConversationKey` 切换时立即清旧内容并显示“正在加载会话/正在加载 CC 会话”。
-  - 优化新建会话项目选择:手机端点“新建”后才展开项目选择,功能存在但入口隐藏;改成更清楚的“新建到项目…”流程,避免用户误以为没有项目可选。
+- 🟡 **手机端 CC 会话 UX 对齐桌面端**:保留 CC 会话能力,但对普通用户去掉「房间/Room」概念,把详情体验对齐桌面端(CC 会话列表 → 选权限模式 → CCConversationView)。已核实现状(2026-06-25),只列**未做/差口**:
+  - 🔴 去房间外壳:`/mobile/` 仍渲染 `RoomList`、TopBar 仍有「打开房间」、`activeRoom` 仍驱动主聊天区标题/subtitle/loading 文案/composer 发送路径(`App.tsx`、`useRemoteApp.ts`)。底层 room/cc-room 留作内部 transport,但 UI 入口与文案全部移除。
+  - 🟡 进入前选权限模式:手机点 CC session 现在**硬编码 `"default"`**(`CcSessionList.tsx`),桌面是弹 default/acceptEdits/bypassPermissions 选择。补手机版选择弹窗(server 端 `resolveRoomPermissionMode` 仍会对非信任工作区收窄)。
+  - 🟡 补齐历史:进入 CC 详情现在只绑 live room feed,**未调 `ccRoom.readHistory(cwd, sessionId, 20)`**(`useRemoteApp.ts` `ccRoom.opened` 分支),用户会觉得「点进去没历史」。
+  - 🟡 Markdown 渲染:CC 内容现以 `whitespace-pre-wrap` 原始文本展示(手机 `MessageStream.tsx` + 桌面 `CCConversationView` 同病),无共享渲染组件。抽共享 MarkdownMessage 两端复用。
+  - 🟡 loading 接线:`CcSessionList` 有 `loading?` prop 但 **`App.tsx` 没传**,`useRemoteApp` 也无 `ccProbe/ccSessions` loading 字段;`selectProject()` 发 probe/list 时置 loading、收 `.ok` 清 loading,避免无限「正在检测/加载」。
+  - ⚪️ 新建项目选择:点「新建」已能内联展开项目列表,只是没有显式「新建到项目…」标签;低优,改文案即可。
+  - ✅ 已做(留档,勿重做):`CcSessionList` 按项目列外部 CC 会话且文案为「CC 会话」;审批卡片 + `respondCcApproval` 全链路;`MessageStream` loading 仅在空列表显示且切换 `reset` 清旧内容。
 - 🟡 **真视频适配器**:替换 `FakeVideoProvider`,接 seedance/kling(待私有 API 文档)。框架 + 工具 + 后台轮询已就位,`getVideoProvider` 加 case 即可。
 
 ---
