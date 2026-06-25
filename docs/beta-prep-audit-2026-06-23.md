@@ -31,7 +31,7 @@
 >
 > **C. 基线复验(verification-before-completion)**:发现 `722b3642`(用户 02:27 的面板保活/浏览器空闲淘汰/统一后台面板 feature)夹在我的 commit 链里,**亲自全量复验**叠加后基线:core+tui tsc **0** · desktop tsc **0** · core protocol **46 绿**(含新 backgroundwork) · desktop **983 绿** · 工作树净。确认那个未参与的 feature commit 不是隐患。
 >
-> **本轮结论**:本文档明确列的「我能独立做」项已清空(§4.1 删、§2.3/§4.5 勘误、§1.4 静态核实);§4.2 评估后保留。**剩的全是只能用户做的**:① §1.2/1.3 真机冒烟(打包后逐项走 A 节冒烟;cookie-login 已验过一次)② §1.4 打包(记得带 `CSC_IDENTITY_AUTO_DISCOVERY=false`)③ push 321 commit。代码静态审三轮已饱和,不建议再找 bug。
+> **本轮结论**:本文档明确列的「我能独立做」项已清空(§4.1 删、§2.3/§4.5 勘误、§1.4 静态核实);§4.2 评估后保留。**剩的全是只能用户做的**:① §1.2/1.3 真机冒烟(打包后逐项走 A 节冒烟;cookie-login 已验过一次)② §1.4 打包(CSC 签名已接进 dist 脚本 `0f4e6f0c`,直接 `bun run dist` 即可)③ push(现 331 commit)。代码静态审三轮已饱和,不建议再找 bug。
 >
 > ---
 >
@@ -223,7 +223,7 @@
 > **✅ 打包配置静态核实(2026-06-25)** —— dist 前置项已逐个核实就位,降低真机打包踩坑:
 > - `predist`/`prepack` 钩子会在 `dist`/`pack` 前自动跑(npm 生命周期),物化 core workspace symlink → 真目录(解 electron-builder LICENSE 越界守卫,脚本含完整 WHY)。
 > - `build` block 引用的资源全在:`node_modules/node-pty`(asarUnpack)、`build/icon.icns`+`icon.png`、extraResources `../../examples/agents`(4 seed 角色)+`resources/known-marketplaces-seed.json`、`out/`(build 产物)。
-> - **⚠️ 打包命令务必带 env**:`mac` block **无** `identity`/`notarize`/`hardenedRuntime` 配置,而 `dist` 脚本本身**没设** `CSC_IDENTITY_AUTO_DISCOVERY`(electron-builder 默认 `true`)→ 在配了 Apple 证书的机器上直跑 `bun run dist` 会**自动尝试签名**(可能失败/产意外签名产物)。**未签名 beta 必须**:`CSC_IDENTITY_AUTO_DISCOVERY=false bun run dist`。是否改成进 dist 脚本默认禁用属发布决策,留你定(没擅改脚本)。
+> - **✅ CSC 签名坑已消解(2026-06-25,用户拍板接进脚本,commit `0f4e6f0c`)**:`mac` block 无 `identity`/`notarize` 配置,electron-builder `CSC_IDENTITY_AUTO_DISCOVERY` 默认 `true` 会在配了 Apple 证书的机器自动尝试签名。已把 `packages/desktop` 的 **`dist`/`pack` 脚本钉成 `CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder`**,未签名 beta 直接 `bun run dist` 即可,不再需手动带 env、不踩自动签名坑。后续要正式签名/公证再单独配 `identity` + `afterSign`。
 
 ### 1.5 npm 包(若本轮要发)
 **必用 `bun publish --tag rc` 不是 `npm publish`**(workspace:* 解析);**发后必真跑一次 bin**(`code-shell --version`),别只看 publish 打印(rc.1 装得上跑不起来的教训)。当前已是 rc.2,若要再发须 bump。
