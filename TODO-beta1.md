@@ -44,6 +44,16 @@
 - 🔴 **记忆系统专项**(用户已拍板:先出整体设计再动手,别零敲碎打)— 第一批止血已做(96c5a3e:autoExtract 开关 + 批量清理 + redact + Dream 归档规则)。专项覆盖:生命周期状态机 / 完成态语义字段 / 自动提取确认流 / MEMORY.md 索引截断按需读 / 注入 token 预算。关联 `project_memory_and_dream_overview`、`reference_cc_codex_memory`。
 - 🟡 **会话可靠性闭环**:长断网会话级重连(瞬时已被 withRetry 覆盖)、会话崩溃恢复产品闭环(disk 权威源恢复已做,缺崩溃后 UI 提示/一键恢复)、工具超时可取消性一致化、友好错误消息。
 - 🟡 **审查面板 turn 级范围**(真 bug,非 nice-to-have):turn 卡片点审查应默认本 turn 范围,现落到整工作区 diff;需 desktop 审查面板较大改造。
+- 🟡 **桌面面板 session 切换保活**:左侧切换 session 后再切回来,右侧面板 tab 元数据能恢复,但 BrowserPanel/webview 页面内容、面板内部状态会丢。根因是 App 只按 `activeBucket` 保存 `open/tabs/activeId`,未保存 per-panel 实例状态,session 切换会重建 PanelArea/PanelBody。后续做轻量版(保存 BrowserPanel 当前 URL 并恢复)或完整保活版(按 `activeBucket + tab.id` 缓存 panel 实例,配 LRU/idle eviction)。
+- 🟡 **手机端 CC 会话 UX 对齐桌面端**:手机遥控需要保留 CC 会话,但去掉用户可见的 Room/房间概念。完整 TODO:
+  - 去掉手机端 Room/房间入口和文案:`/mobile/` 不再暴露“打开房间”按钮、不展示 `RoomList`,普通用户不可见“房间”;同时避免 `activeRoom` 继续影响主聊天区标题/subtitle/loading 文案/composer 发送路径。底层 room/cc-room 基础设施可保留,但只作为内部 transport。
+  - 保留 CC 会话入口:`CcSessionList` 或等价入口按项目展示外部 Claude Code 历史/会话;UI 文案用“CC 会话/Claude Code 会话”,不要叫“房间”。
+  - 对齐桌面端体验:当前手机端点 CC session 会暴露/进入一个 `cc room`,而桌面端体验是“CC 会话列表 → 选择权限模式(default/acceptEdits/bypassPermissions) → 进入 `CCConversationView`”。手机端也要做手机版 CCConversationView:点击 session 先弹权限模式选择;进入详情页后标题/状态显示“CC 会话/Claude Code 会话”,`roomId` 只作为内部字段。
+  - 补齐历史:进入 CC 会话详情页后先读原 Claude Code 历史 `readHistory(cwd, sessionId, 20)`,再接 room live history/message;不要只显示新 room/live feed,否则用户会觉得“CC 内容出来了但点进去没有历史”。
+  - 补齐对话与审批:composer 发送到底层 room transport;`ccRoom.approvalRequest` 必须以手机审批卡片弹出,支持 approve/deny/path scope/AskUser 等现有审批能力;审批响应走 `respondCcApproval`。
+  - 修复 CC loading 卡住:`CcSessionList` 已有 `loading?: boolean`,但 `App.tsx` 未传;`useRemoteApp.loading` 也缺 `ccProbe/ccSessions` 字段。增加 `ccProbe/ccSessions/openSession/readHistory` loading/error/timeout;`selectProject()` 发 `ccRoom.probe`/`ccRoom.listSessions` 时置 loading,收到 `ccRoom.probe.ok`/`ccRoom.listSessions.ok` 后清 loading,probe/list 失败不能无限显示“正在检测/加载”。
+  - 修复切换 loading 不明显:`MessageStream` 现在只有 `chat.items.length === 0` 才显示 loading,旧消息存在时 `loading=true` 不覆盖旧内容。普通 session/CC session 切换时要显示覆盖式 loading 或顶部 inline loading,或引入 `viewKey`/`activeConversationKey` 切换时立即清旧内容并显示“正在加载会话/正在加载 CC 会话”。
+  - 优化新建会话项目选择:手机端点“新建”后才展开项目选择,功能存在但入口隐藏;改成更清楚的“新建到项目…”流程,避免用户误以为没有项目可选。
 - 🟡 **真视频适配器**:替换 `FakeVideoProvider`,接 seedance/kling(待私有 API 文档)。框架 + 工具 + 后台轮询已就位,`getVideoProvider` 加 case 即可。
 
 ---
