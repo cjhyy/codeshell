@@ -55,8 +55,8 @@ The built-in registry is defined in [`src/tool-system/builtin/index.ts`](../../s
 | Files and search | `Read`, `Write`, `Edit`, `ApplyPatch`, `Glob`, `Grep` |
 | Execution | `Bash`, `PowerShell`, `REPL` |
 | Web | `WebSearch`, `WebFetch` |
-| User and coordination | `AskUserQuestion`, `Agent`, `AgentStatus`, `AgentCancel`, `SendMessage`, `Sleep` |
-| Planning/tasks | `EnterPlanMode`, `ExitPlanMode`, `TaskCreate`, `TaskList`, `TaskUpdate`, `TaskStop`, `TaskGet`, `TaskOutput` |
+| User and coordination | `AskUserQuestion`, `Agent`, `AgentStatus`, `AgentCancel`, `AgentSendInput`, `Sleep` |
+| Planning/tasks | `EnterPlanMode`, `ExitPlanMode`, `TodoWrite` |
 | Configuration and discovery | `Config`, `ToolSearch`, `Skill` |
 | MCP | `MCPTool`, `ListMcpResources`, `ReadMcpResource` |
 | Coding preset extras | `EnterWorktree`, `ExitWorktree`, `NotebookEdit`, `LSP`, `Brief`, `Arena` |
