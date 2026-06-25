@@ -152,11 +152,18 @@ export function ptyReapDestroyed(): void {
   }
 }
 
+/** Clamp a pty dimension to a positive integer. `Math.max(1, NaN)` is NaN, and
+ *  node-pty.resize(NaN, …) throws / misbehaves — a non-finite or <1 dim (from a
+ *  malformed IPC resize) must floor to 1. Exported for unit testing. */
+export function clampPtyDim(n: number): number {
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
+}
+
 export function ptyResize(sessionId: string, cols: number, rows: number): void {
   const s = sessions.get(sessionId);
   if (!s) return;
   try {
-    s.pty.resize(Math.max(1, cols), Math.max(1, rows));
+    s.pty.resize(clampPtyDim(cols), clampPtyDim(rows));
   } catch (e) {
     dlog("main", "pty.resize.error", { sessionId, error: String(e) });
   }
