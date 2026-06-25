@@ -487,15 +487,15 @@ packages/core/src/tool-system/
 
 ### Task & Plan Tools
 
-#### 20. `builtin/task.ts` (TaskCreate, TaskList, TaskUpdate, TaskStop, TaskGet, TaskOutput)
+#### 20. `builtin/task.ts` (`TodoWrite`)
 
-| Property | Detail |
-|---|---|
-| **Lines** | ~330 |
+> **⚠️ 已重构(2026-06-25 核查)**:本节原描述的 **legacy `TaskCreate`/`TaskList`/`TaskUpdate`/`TaskStop`/`TaskGet`/`TaskOutput` 六件套已删除**,`builtin/task.ts` 现只导出**单个 `TodoWrite` 工具**(`todoWriteToolDef`/`todoWriteTool`,`BUILTIN_TOOLS` 表也只有它)。下方旧描述保留作演进背景。
+>
+> **为什么换**(见 task.ts 顶部注释):六件套把任务存在 module-level `TaskManager` 单例里;desktop 每 agent/run 一个 worker 进程 → 单例随进程消失,resume 后 `TaskList` 返回 "No tasks" 即使 transcript still 有完整 plan。换成**单个全量快照工具**(整张 todo 列表一次性写进 transcript)后 worker 生命周期不再相关:每次 restart 从快照免费重读。主/子代理列表按 `context.agentId ?? sessionId` 分桶。
 
-**Exports:** Six tool defs and six handlers.
+**Exports(旧·已不存在):** Six tool defs and six handlers.
 
-**Logic:**
+**Logic(旧·已不存在):**
 - Manages a task tracking system: tasks have id, status (`pending`/`in_progress`/`completed`/`stopped`), subject, description, activeForm, and optional dependencies.
 - **TaskCreate:** creates a task with `pending` status. Accepts optional `addBlockedBy` and `addBlocks` arrays for DAG dependencies.
 - **TaskUpdate:** updates status, subject, description, or dependencies.
@@ -503,7 +503,7 @@ packages/core/src/tool-system/
 - **TaskGet/Stop/Output:** CRUD operations on individual tasks.
 - Tasks are stored in memory during the session (process-local).
 
-**Design notes:**
+**Design notes(旧):**
 - The task DAG (blockedBy/blocks) is stored but not actively enforced — there's no scheduler that skips blocked tasks. It's informational for the model and user.
 - `activeForm` is a present-continuous string shown in spinners (e.g., "Fixing auth bug" → status line shows spinner + that text).
 
