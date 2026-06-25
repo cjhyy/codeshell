@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { DoorOpen, LogOut, Menu, MessageSquare, Shield } from "lucide-react";
+import { DoorOpen, LogOut, Menu, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@ui/button";
 import { useRemoteApp } from "@mobile/hooks/useRemoteApp";
@@ -9,7 +9,6 @@ import { MessageStream } from "@mobile/components/MessageStream";
 import { ApprovalCard } from "@mobile/components/ApprovalCard";
 import { Composer } from "@mobile/components/Composer";
 import { SessionList } from "@mobile/components/SessionList";
-import { RoomList } from "@mobile/components/RoomList";
 import { CcSessionList } from "@mobile/components/CcSessionList";
 import { PermissionModeControl } from "@mobile/components/PermissionModeControl";
 
@@ -18,7 +17,10 @@ const WIDE = "(min-width: 820px)";
 export function App() {
   const app = useRemoteApp();
   const [wide, setWide] = useState(() => window.matchMedia(WIDE).matches);
-  const [drawer, setDrawer] = useState<"sessions" | "rooms" | null>(null);
+  // The side pane stacks the project's chat sessions + external CC sessions. On a
+  // phone it's a drawer; this just tracks open/closed. (Rooms are no longer a
+  // user-facing concept — the room transport is internal to CC sessions.)
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Track the tablet/phone breakpoint.
   useEffect(() => {
@@ -28,11 +30,11 @@ export function App() {
     return () => mq.removeEventListener("change", on);
   }, []);
 
-  // Pull the world once we come online.
+  // Pull the world once we come online. (Rooms are no longer listed in the UI;
+  // the hook still pulls the project list on connect for the project picker.)
   useEffect(() => {
     if (app.status === "online") {
       app.refreshSessions();
-      app.refreshRooms();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app.status]);
@@ -41,19 +43,11 @@ export function App() {
     return <ConnectionGate status={app.status} />;
   }
 
-  const sidePane = (
-    <SidePane
-      app={app}
-      onDone={() => setDrawer(null)}
-      // On a tablet the side pane shows both lists stacked; on phone the drawer
-      // shows the one the user tapped.
-      which={wide ? "both" : (drawer ?? "sessions")}
-    />
-  );
+  const sidePane = <SidePane app={app} onDone={() => setDrawerOpen(false)} />;
 
   return (
     <div className="mobile-shell flex h-dvh flex-col text-foreground">
-      <TopBar app={app} wide={wide} onOpenDrawer={(w) => setDrawer(w)} />
+      <TopBar app={app} wide={wide} onOpenDrawer={() => setDrawerOpen(true)} />
 
       {app.notice && (
         <div className="border-b border-status-err/40 bg-status-err/10 px-3 py-2 text-xs text-status-err">
@@ -66,12 +60,12 @@ export function App() {
         {wide && (
           <aside className="mobile-panel w-80 shrink-0 border-r border-border/70">{sidePane}</aside>
         )}
-        {!wide && drawer && (
+        {!wide && drawerOpen && (
           <div className="fixed inset-0 z-20 flex">
             <div className="mobile-drawer w-[82%] max-w-sm">{sidePane}</div>
             <div
               className="flex-1 bg-black/55 backdrop-blur-[2px]"
-              onClick={() => setDrawer(null)}
+              onClick={() => setDrawerOpen(false)}
             />
           </div>
         )}
@@ -106,7 +100,7 @@ export function App() {
           <MessageStream
             chat={app.chat}
             loading={app.loading.sessionHistory || app.loading.roomHistory}
-            loadingText={app.activeRoom ? "正在加载房间…" : "正在加载会话…"}
+            loadingText={app.activeRoom ? "正在加载 CC 会话…" : "正在加载会话…"}
           />
           <Composer
             disabled={app.status !== "online"}
@@ -127,8 +121,10 @@ function TopBar({
 }: {
   app: ReturnType<typeof useRemoteApp>;
   wide: boolean;
-  onOpenDrawer: (w: "sessions" | "rooms") => void;
+  onOpenDrawer: () => void;
 }) {
+  // A bound "room" here is always an external CC (Claude Code) session — the
+  // room is internal transport, so it surfaces to the user as a CC 会话.
   const title = app.activeRoom ? app.activeRoom.name : app.chat.title || "对话";
   const activeSession = app.sessions.find((s) => s.id === app.activeSessionId);
   const subtitle = app.activeRoom
@@ -151,7 +147,7 @@ function TopBar({
           className="mobile-icon-button"
           size="icon"
           variant="outline"
-          onClick={() => onOpenDrawer("sessions")}
+          onClick={onOpenDrawer}
         >
           <Menu />
         </Button>
@@ -163,7 +159,7 @@ function TopBar({
         <div className="flex min-w-0 items-center gap-2">
           {app.activeRoom && (
             <span className="rounded-full border border-status-ok/35 bg-status-ok/10 px-1.5 text-[10px] font-medium text-status-ok">
-              房间
+              CC
             </span>
           )}
           <span className="truncate text-sm font-semibold leading-5">{title}</span>
@@ -173,7 +169,7 @@ function TopBar({
       <div className="ml-auto flex items-center gap-2">
         {app.activeRoom && (
           <Button
-            aria-label="退出房间"
+            aria-label="退出会话"
             className="mobile-icon-button"
             size="icon"
             variant="outline"
@@ -183,17 +179,6 @@ function TopBar({
           </Button>
         )}
         <StatusBar conn={app.status} run={app.chat.run} />
-        {!wide && (
-          <Button
-            aria-label="打开房间"
-            className="mobile-icon-button"
-            size="icon"
-            variant="outline"
-            onClick={() => onOpenDrawer("rooms")}
-          >
-            <MessageSquare />
-          </Button>
-        )}
       </div>
     </header>
   );
@@ -201,11 +186,9 @@ function TopBar({
 
 function SidePane({
   app,
-  which,
   onDone,
 }: {
   app: ReturnType<typeof useRemoteApp>;
-  which: "sessions" | "rooms" | "both";
   onDone: () => void;
 }) {
   const sessions = (
@@ -233,26 +216,11 @@ function SidePane({
       cwd={app.activeProjectCwd ?? app.activeCwd ?? null}
       probe={app.ccProbe}
       sessions={app.ccSessions}
+      loading={app.loading.ccSessions}
       onOpen={(sid, cwd, mode) => {
         app.openCcSession(sid, cwd, mode);
         onDone();
       }}
-    />
-  );
-  const rooms = (
-    <RoomList
-      rooms={app.rooms}
-      projects={app.projects}
-      currentCwd={app.activeCwd}
-      activeRoomId={app.activeRoom?.id}
-      loading={app.loading.rooms}
-      onRefresh={app.refreshRooms}
-      onOpen={(r) => {
-        app.openRoom(r);
-        onDone();
-      }}
-      onCreate={app.createRoom}
-      onClose={app.closeRoom}
     />
   );
   const footer = (
@@ -270,26 +238,11 @@ function SidePane({
     </div>
   );
 
-  if (which === "sessions")
-    return (
-      <div className="flex h-full flex-col">
-        <div className="min-h-0 flex-1">{sessions}</div>
-        {footer}
-      </div>
-    );
-  if (which === "rooms")
-    return (
-      <div className="flex h-full flex-col">
-        <div className="min-h-0 flex-1 overflow-hidden border-b border-border/70">{rooms}</div>
-        <div className="min-h-0 flex-1 overflow-hidden">{ccSessions}</div>
-        {footer}
-      </div>
-    );
-  // both (tablet): split vertically.
+  // Phone drawer and tablet pane are identical now: the project's own chat
+  // sessions on top, the external CC (Claude Code) sessions below. No rooms.
   return (
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 overflow-hidden border-b border-border/70">{sessions}</div>
-      <div className="min-h-0 flex-1 overflow-hidden border-b border-border/70">{rooms}</div>
       <div className="min-h-0 flex-1 overflow-hidden">{ccSessions}</div>
       {footer}
     </div>

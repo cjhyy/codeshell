@@ -3,6 +3,7 @@ import { Bot, Brain, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ChatItem, ChatState } from "@mobile/lib/streamReducer";
 import { ToolCard } from "./ToolCard";
+import { Markdown } from "./Markdown";
 
 /** Assistant bubble with a collapsible reasoning section. */
 function AssistantBubble({ item }: { item: Extract<ChatItem, { kind: "assistant" }> }) {
@@ -26,12 +27,20 @@ function AssistantBubble({ item }: { item: Extract<ChatItem, { kind: "assistant"
           )}
         </div>
       )}
-      {(item.text || !item.done) && (
-        <div className="whitespace-pre-wrap break-words text-[15px] leading-6 text-foreground">
-          {item.text}
-          {!item.done && <span className="ml-0.5 inline-block animate-pulse">▋</span>}
-        </div>
-      )}
+      {(item.text || !item.done) &&
+        (item.done && item.text ? (
+          // Completed prose → render Markdown (lists/code/headings/tables). While
+          // still streaming we keep plain text to avoid re-parsing half-formed
+          // markdown on every token (jitter), matching the desktop renderer.
+          <div className="break-words">
+            <Markdown text={item.text} />
+          </div>
+        ) : (
+          <div className="whitespace-pre-wrap break-words text-[15px] leading-6 text-foreground">
+            {item.text}
+            {!item.done && <span className="ml-0.5 inline-block animate-pulse">▋</span>}
+          </div>
+        ))}
     </div>
   );
 }
@@ -131,7 +140,7 @@ export function MessageStream({
             </div>
           ) : (
             <p className="text-sm leading-6 text-muted-foreground">
-              发个任务试试,或在「房间」里开常驻 Claude Code 会话。
+              发个任务试试,或在侧栏打开一个 Claude Code 会话。
             </p>
           )}
         </div>

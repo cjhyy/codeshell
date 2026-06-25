@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CcDiscoveredSession, PermissionMode } from "@protocol";
 import { relativeTime } from "@mobile/lib/format";
+import { CcPermissionModeSheet } from "./CcPermissionModeSheet";
 
 /** External `claude` CLI sessions for the selected project — the phone-side
  *  mirror of the desktop CCRoomView. Discovery/probe come from the hook (server
@@ -21,6 +23,10 @@ export function CcSessionList({
   loading?: boolean;
   onOpen: (sessionId: string, cwd: string, mode: PermissionMode) => void;
 }) {
+  // Tapping a session opens the permission-mode picker first (mirrors the desktop
+  // CCRoomView flow), then onOpen with the chosen mode — instead of silently
+  // hard-coding "default".
+  const [picking, setPicking] = useState<{ sessionId: string; label: string } | null>(null);
   return (
     <div className="flex h-full flex-col">
       <div className="mobile-side-header flex items-center gap-2 px-3 py-3">
@@ -58,7 +64,7 @@ export function CcSessionList({
               <li key={s.sessionId}>
                 <button
                   type="button"
-                  onClick={() => onOpen(s.sessionId, cwd, "default")}
+                  onClick={() => setPicking({ sessionId: s.sessionId, label: s.firstMessage || s.sessionId })}
                   className={cn("mobile-list-item flex w-full flex-col gap-1 rounded-lg px-3 py-2.5 text-left")}
                 >
                   <span className="truncate text-sm font-medium text-foreground">
@@ -74,6 +80,17 @@ export function CcSessionList({
           </ul>
         )}
       </div>
+      {picking && cwd && (
+        <CcPermissionModeSheet
+          sessionLabel={picking.label}
+          onPick={(mode) => {
+            const sid = picking.sessionId;
+            setPicking(null);
+            onOpen(sid, cwd, mode);
+          }}
+          onCancel={() => setPicking(null)}
+        />
+      )}
     </div>
   );
 }
