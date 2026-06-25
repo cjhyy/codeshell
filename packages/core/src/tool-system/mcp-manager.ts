@@ -588,7 +588,7 @@ export class MCPManager {
   /**
    * List resources from MCP servers.
    */
-  async listResources(serverName?: string): Promise<Array<{ uri: string; name: string; description?: string }>> {
+  async listResources(serverName?: string, signal?: AbortSignal): Promise<Array<{ uri: string; name: string; description?: string }>> {
     const results: Array<{ uri: string; name: string; description?: string }> = [];
     const servers = serverName ? [serverName] : [...this.connections.keys()];
 
@@ -596,7 +596,10 @@ export class MCPManager {
       const conn = this.connections.get(name);
       if (!conn) continue;
       try {
-        const res = await conn.client.listResources();
+        // Forward the run's abort signal so a user Stop cancels promptly
+        // instead of waiting out the SDK's default request timeout (same as
+        // callTool). The SDK still enforces its default timeout when no signal.
+        const res = await conn.client.listResources(undefined, signal ? { signal } : undefined);
         for (const r of res.resources) {
           results.push({
             uri: r.uri,
@@ -614,12 +617,14 @@ export class MCPManager {
   /**
    * Read a resource from an MCP server.
    */
-  async readResource(serverName: string, uri: string): Promise<string> {
+  async readResource(serverName: string, uri: string, signal?: AbortSignal): Promise<string> {
     const conn = this.connections.get(serverName);
     if (!conn) {
       throw new Error(`MCP server "${serverName}" is not connected.`);
     }
-    const result = await conn.client.readResource({ uri });
+    // Forward the run's abort signal so a user Stop cancels promptly (same as
+    // callTool); the SDK still enforces its default timeout when no signal.
+    const result = await conn.client.readResource({ uri }, signal ? { signal } : undefined);
     const parts: string[] = [];
     if (Array.isArray(result.contents)) {
       for (const item of result.contents) {

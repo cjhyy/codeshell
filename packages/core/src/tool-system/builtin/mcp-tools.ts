@@ -70,7 +70,10 @@ export async function listMcpResourcesTool(args: Record<string, unknown>): Promi
   try {
     const { MCPManager } = await import("../mcp-manager.js");
     const manager = MCPManager.getInstance();
-    const resources = await manager.listResources(server || undefined);
+    // Forward the run's abort signal (registry injects __signal) so Stop cancels
+    // promptly instead of waiting out the SDK's default request timeout.
+    const signal = args.__signal as AbortSignal | undefined;
+    const resources = await manager.listResources(server || undefined, signal);
 
     if (!resources || resources.length === 0) {
       return "No MCP resources available.";
@@ -111,7 +114,8 @@ export async function readMcpResourceTool(args: Record<string, unknown>): Promis
   try {
     const { MCPManager } = await import("../mcp-manager.js");
     const manager = MCPManager.getInstance();
-    const content = await manager.readResource(server, uri);
+    const signal = args.__signal as AbortSignal | undefined;
+    const content = await manager.readResource(server, uri, signal);
     return typeof content === "string" ? content : JSON.stringify(content, null, 2);
   } catch (err) {
     return `Error reading MCP resource: ${(err as Error).message}`;
