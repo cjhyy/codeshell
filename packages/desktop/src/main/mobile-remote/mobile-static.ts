@@ -152,19 +152,22 @@ export function serveMobile(
   createReadStream(file).pipe(res);
 }
 
-/** Dev-only: forward the request to the mobile vite dev server. With vite base
- *  "/mobile/", vite serves its HMR client and module URLs under /mobile/ too
- *  (/mobile/@vite/client, /mobile/src/main.tsx), so we strip just the /mobile
- *  prefix and forward — every dev asset stays under the routed prefix. */
+/** Dev-only: forward the request to the mobile vite dev server. The mobile vite
+ *  config sets base "/mobile/", so vite serves its HMR client, module graph, and
+ *  asset URLs UNDER that prefix (/mobile/@vite/client, /mobile/src/main.tsx). We
+ *  therefore forward the request path UNCHANGED — stripping /mobile would ask
+ *  vite for /@vite/client, which a base-"/mobile/" server 404s, breaking HMR so
+ *  the phone never live-updates. The /mobile prefix belongs to vite here (its
+ *  base), not to us — only prod static serving strips it (files live flat under
+ *  out/mobile). */
 function proxyToDev(req: IncomingMessage, res: ServerResponse, devUrl: string): void {
   const target = new URL(devUrl);
-  const sub = mobileAssetPath(req.url ?? "/mobile");
   const proxyReq = httpRequest(
     {
       hostname: target.hostname,
       port: target.port,
       method: req.method,
-      path: "/" + sub + (req.url?.includes("?") ? "?" + req.url.split("?")[1] : ""),
+      path: req.url ?? "/mobile/",
       headers: { ...req.headers, host: target.host },
     },
     (proxyRes) => {
