@@ -273,9 +273,9 @@
 </details>
 
 ### 2.4 🟡 Y-2/Y-3/Y-4:mobile-remote(默认关,开了才咬人)
-- Y-2:LAN 模式 `/health` 与 `/mobile/*` SPA 无鉴权下发;LAN WS `auth.device` 路径**无暴力破解锁定**(锁定只覆盖 tunnel 模式 `access-passcode.ts`)。`remote-host-manager.ts:129-182,195-215`。
+- Y-2:LAN 模式 `/health` 与 `/mobile/*` SPA 无鉴权下发;LAN WS `auth.device` 路径**无暴力破解锁定**(锁定只覆盖 tunnel 模式 `access-passcode.ts`)。`remote-host-manager.ts`。**评估(2026-06-25):暂不动**——给 `auth.device` 加锁定要改 live auth handler + 复用 `AccessPasscode` 锁定逻辑,且必须真机跑通手机配对全链路才能确认没误锁合法设备(只能用户在场验);默认关 + 熟人 beta 已 ship-as-is(见下「beta 取舍」),贸然改未经真机验的 auth 路径风险 > 收益。开放给更多人前与 secretHash 真 hash 一并做。
 - Y-3:设备 `secretHash` 实为明文 bearer token(**没 hash**,与记忆 `secretHash不hash` 一致),~~`===` 比较非 `timingSafeEqual`~~,~~`devices.json` 无 `mode`~~。`trusted-device-store.ts`。**✅ devices.json 0o600 已修(4419d366)**;**✅ `===`→`timingSafeEqual` 已修(2026-06-25,commit `9cdcaaee`,TDD:`authenticate` 用常量时间比 secretHash,长度不等先短路 false 防 timingSafeEqual 抛错;+1 测,desktop tsc 0)**;剩 **secretHash 真 hash**(现明文存盘)留本桶给用户——这是客户端+服务端的协议改动(client 存 raw secret、server 收 raw 比对),非单点可改,开放给更多人前做。
-- Y-4:cookie lease 明文经 `/tmp`(`credentials-service.ts:124-135`),文件 `0o600` 但 lease 目录 `mkdirSync` 无 mode。
+- Y-4:cookie lease 明文经 `/tmp`(`credentials-service.ts`),文件 `0o600`。**✅ lease 目录 `mkdirSync` mode 已修(commit `b9915a0f`,现 `mkdirSync(LEASE_DIR,{recursive:true,mode:0o700})`,带「audit Y-4」注释;与附A 矩阵一致,2026-06-25 核实)。** 余:明文经 /tmp 本身(非 keychain)同 R-2 留发后。
 - beta 取舍:这些**默认关**,给熟人的 beta 可 ship-as-is + release notes 注明;开放给更多人前再硬化。
 
 ### 2.5 ⚪️ 已确认安全(留档,无需动)
