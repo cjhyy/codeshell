@@ -22,8 +22,6 @@ import { MemoryManager, type MemoryScope } from "../../session/memory.js";
 const VALID_SCOPES: readonly MemoryScope[] = ["user", "dream"] as const;
 const VALID_TYPES = ["user", "feedback", "project", "reference"] as const;
 
-type MemoryLocation = "global" | "project";
-
 function parseScope(raw: unknown): MemoryScope | string {
   if (typeof raw !== "string") return "Error: scope is required (\"user\" or \"dream\")";
   if (!VALID_SCOPES.includes(raw as MemoryScope)) {
@@ -32,30 +30,9 @@ function parseScope(raw: unknown): MemoryScope | string {
   return raw as MemoryScope;
 }
 
-/** Location: "global" → cross-project store (no projectDir); "project"
- *  (default, back-compat) → this repo's store. Anything else → "project". */
-function parseLocation(raw: unknown): MemoryLocation {
-  return raw === "global" ? "global" : "project";
+function mmFor(ctx: ToolContext | undefined, scope: MemoryScope): MemoryManager {
+  return new MemoryManager({ projectDir: ctx?.cwd, scope });
 }
-
-function mmFor(
-  ctx: ToolContext | undefined,
-  scope: MemoryScope,
-  location: MemoryLocation = "project",
-): MemoryManager {
-  // location=global → omit projectDir so the manager points at the global store.
-  return new MemoryManager({
-    projectDir: location === "global" ? undefined : ctx?.cwd,
-    scope,
-  });
-}
-
-const LOCATION_SCHEMA = {
-  type: "string",
-  enum: ["global", "project"],
-  description:
-    'Which store: "global" (applies across all projects) or "project" (this repo only). Defaults to "project".',
-} as const;
 
 // ─── MemoryList ────────────────────────────────────────────────────────────
 
@@ -74,7 +51,6 @@ export const memoryListToolDef: ToolDefinition = {
         enum: ["user", "dream"],
         description: "Which scope to list",
       },
-      location: LOCATION_SCHEMA,
     },
     required: ["scope"],
   },
@@ -89,7 +65,7 @@ export async function memoryListTool(
     return scope as string;
   }
   try {
-    const mm = mmFor(ctx, scope as MemoryScope, parseLocation(args.location));
+    const mm = mmFor(ctx, scope as MemoryScope);
     const entries = mm.loadAll();
     if (entries.length === 0) return `(no memories in scope "${scope}")`;
     return entries
@@ -115,7 +91,6 @@ export const memoryReadToolDef: ToolDefinition = {
         enum: ["user", "dream"],
         description: "Which scope to read from",
       },
-      location: LOCATION_SCHEMA,
       name: {
         type: "string",
         description: "The memory entry's name (from MemoryList output)",
@@ -133,30 +108,14 @@ export async function memoryReadTool(
   if (typeof scope !== "string" || !VALID_SCOPES.includes(scope as MemoryScope)) {
     return scope as string;
   }
-  const location = parseLocation(args.location);
   const name = args.name;
   if (typeof name !== "string" || !name) return "Error: name is required";
 
   try {
-    const mm = mmFor(ctx, scope as MemoryScope, location);
+    const mm = mmFor(ctx, scope as MemoryScope);
     const entries = mm.loadAll();
     const entry = entries.find((e) => e.name === name || e.fileName === name);
     if (!entry) return `Error: no memory named "${name}" in scope "${scope}"`;
-
-    // Recall signal (用户拍板 C + 可见性): reading a memory bumps its usage so
-    // the recall-TTL sweep keeps frequently-read memories alive, and emits a
-    // stream event so the UI can show the user this memory was actually used.
-    // Best-effort — never let accounting failure break the read.
-    try {
-      mm.recordRecall(entry.name);
-      const cb = ctx?.streamCallback;
-      if (cb) {
-        void cb({ type: "memory_recalled", name: entry.name, scope: scope as MemoryScope, location });
-      }
-    } catch {
-      // ignore — the read result below is what matters
-    }
-
     return (
       `name: ${entry.name}\n` +
       `description: ${entry.description}\n` +
@@ -181,8 +140,6 @@ export const memorySaveToolDef: ToolDefinition = {
     "feedback (how to approach work), " +
     "project (non-obvious facts about ongoing work), " +
     "reference (pointers to external resources). " +
-    "Pick `location`: global (a lesson/preference true in ANY project) vs project (this repo only). " +
-    "If a memory in the injected index is now stale or wrong, overwrite it (same name) or MemoryDelete it — keep the store correct rather than letting contradictions pile up. " +
     "The `description` is a one-line summary shown in the index; the `content` is the full body.",
   inputSchema: {
     type: "object",
@@ -192,7 +149,6 @@ export const memorySaveToolDef: ToolDefinition = {
         enum: ["user", "dream"],
         description: "Which scope to save to",
       },
-      location: LOCATION_SCHEMA,
       name: {
         type: "string",
         description: "Short kebab-case identifier (also becomes the filename slug)",
@@ -235,15 +191,14 @@ export async function memorySaveTool(
   }
 
   try {
-    const location = parseLocation(args.location);
-    const mm = mmFor(ctx, scope as MemoryScope, location);
+    const mm = mmFor(ctx, scope as MemoryScope);
     const fileName = mm.save({
       name,
       description,
       type: type as (typeof VALID_TYPES)[number],
       content,
     });
-    return `Saved memory "${name}" → ${location}/${scope}/${fileName}`;
+    return `Saved memory "${name}" → ${scope}/${fileName}`;
   } catch (err) {
     return `Error saving memory: ${(err as Error).message}`;
   }
@@ -266,7 +221,6 @@ export const memoryDeleteToolDef: ToolDefinition = {
         enum: ["user", "dream"],
         description: "Which scope to delete from",
       },
-      location: LOCATION_SCHEMA,
       name: {
         type: "string",
         description: "The memory entry's name (from MemoryList output)",
@@ -288,7 +242,7 @@ export async function memoryDeleteTool(
   if (typeof name !== "string" || !name) return "Error: name is required";
 
   try {
-    const mm = mmFor(ctx, scope as MemoryScope, parseLocation(args.location));
+    const mm = mmFor(ctx, scope as MemoryScope);
     const ok = mm.delete(name);
     return ok
       ? `Deleted memory "${name}" from scope "${scope}" (moved to memory-trash/)`

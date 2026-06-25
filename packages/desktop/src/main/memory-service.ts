@@ -35,11 +35,6 @@ export interface RendererMemoryEntry {
   level: MemoryLevel;
   pinned?: boolean;
   origin?: "auto" | "manual";
-  /** Recall lifecycle — surfaced in the settings panel so the user can see
-   *  which memories are actually used and which are aging toward TTL pruning. */
-  usageCount?: number;
-  lastUsed?: string;
-  created?: string;
 }
 
 function mm(level: MemoryLevel, scope: MemoryScope, cwd?: string): MemoryManager {
@@ -65,9 +60,6 @@ export function listMemory(
     level,
     pinned: e.pinned,
     origin: e.origin,
-    usageCount: e.usageCount,
-    lastUsed: e.lastUsed,
-    created: e.created,
   }));
 }
 

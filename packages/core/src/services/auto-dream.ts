@@ -102,16 +102,14 @@ export function buildDreamSystemPrompt(): string {
     "",
     "Your job: clean up the `dream` scope by deduplicating, merging, removing stale, and improving descriptions.",
     "",
-    "Tools available (each takes `location`: 'global' = cross-project store, 'project' = this repo; default project):",
-    "- MemoryList({ scope, location }): list memories in a scope/location",
-    "- MemoryRead({ scope, location, name }): read full content of an entry",
-    "- MemorySave({ scope: 'dream', location, ... }): create or overwrite a dream entry (auto-approved)",
-    "- MemoryDelete({ scope: 'dream', location, name }): soft-delete a dream entry (auto-approved, recoverable from trash)",
-    "",
-    "Consolidate BOTH the project dream scope AND the global dream scope (pass location accordingly). Global holds cross-project lessons; keep it deduped too.",
+    "Tools available:",
+    "- MemoryList({ scope }): list memories in a scope",
+    "- MemoryRead({ scope, name }): read full content of an entry",
+    "- MemorySave({ scope: 'dream', ... }): create or overwrite a dream entry (auto-approved)",
+    "- MemoryDelete({ scope: 'dream', name }): soft-delete a dream entry (auto-approved, recoverable from trash)",
     "",
     "Rules — read carefully:",
-    "1. You may freely Save/Delete in the `dream` scope (any location). These operations DO NOT prompt the user.",
+    "1. You may freely Save/Delete in the `dream` scope. These operations DO NOT prompt the user.",
     "2. You may NOT Save/Delete in the `user` scope from this loop — those operations require interactive permission which is not available here. Treat user-scope entries as read-only context.",
     "3. If you find user-scope entries that look stale, surface them in your final summary text — don't try to delete them.",
     "4. Prefer fewer, higher-quality merged entries over many similar fragments.",
@@ -130,24 +128,26 @@ export function buildDreamSystemPrompt(): string {
 export function buildDreamUserPrompt(
   userMemories: Array<{ name: string; type: string; description: string }>,
   dreamMemories: Array<{ name: string; type: string; description: string }>,
-  globalMemories: Array<{ name: string; type: string; description: string }> = [],
 ): string {
   const fmt = (m: { name: string; type: string; description: string }) =>
     `  - [${m.type}] ${m.name}: ${m.description}`;
-  const listOrNone = (arr: typeof userMemories, noneMsg: string) =>
-    arr.length === 0 ? noneMsg : arr.map(fmt).join("\n");
 
   const sections: string[] = [];
-  sections.push(`Project user-scope memories (READ-ONLY context, ${userMemories.length} entries):`);
-  sections.push(listOrNone(userMemories, "  (none)"));
+  sections.push(`User-scope memories (READ-ONLY context, ${userMemories.length} entries):`);
+  if (userMemories.length === 0) {
+    sections.push("  (none)");
+  } else {
+    sections.push(userMemories.map(fmt).join("\n"));
+  }
   sections.push("");
-  sections.push(`Project dream-scope memories (YOUR WORKSPACE — location:'project', ${dreamMemories.length} entries):`);
-  sections.push(listOrNone(dreamMemories, "  (none — you may consolidate from user-scope by re-saving curated entries into dream)"));
+  sections.push(`Dream-scope memories (YOUR WORKSPACE, ${dreamMemories.length} entries):`);
+  if (dreamMemories.length === 0) {
+    sections.push("  (none — you may consolidate from user-scope by re-saving curated entries into dream)");
+  } else {
+    sections.push(dreamMemories.map(fmt).join("\n"));
+  }
   sections.push("");
-  sections.push(`Global memories (cross-project — clean these too via location:'global', ${globalMemories.length} entries):`);
-  sections.push(listOrNone(globalMemories, "  (none)"));
-  sections.push("");
-  sections.push("Begin consolidation. Use MemoryRead to inspect any entries whose names suggest duplication or staleness, then MemorySave/MemoryDelete (with the right location) to clean up.");
+  sections.push("Begin consolidation. Use MemoryRead to inspect any entries whose names suggest duplication or staleness, then MemorySave/MemoryDelete in dream scope to clean up.");
 
   return sections.join("\n");
 }

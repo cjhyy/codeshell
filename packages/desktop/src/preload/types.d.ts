@@ -186,11 +186,6 @@ export interface RendererMemoryEntry {
   pinned?: boolean;
   /** "auto" = end-of-session extractor wrote it; "manual"/absent = user. */
   origin?: "auto" | "manual";
-  /** Recall lifecycle — how many times read, when last read, when created.
-   *  Surfaced in the settings panel; drives recall-based TTL in core. */
-  usageCount?: number;
-  lastUsed?: string;
-  created?: string;
 }
 
 export interface RendererMemoryEntryFull extends RendererMemoryEntry {

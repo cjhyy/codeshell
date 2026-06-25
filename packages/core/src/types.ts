@@ -431,10 +431,6 @@ export type StreamEvent =
   | { type: "error"; error: string; agentId?: string }
   | { type: "tombstone"; messageId: string }
   | { type: "task_update"; tasks: TaskInfo[]; agentId?: string }
-  // 记忆被召回(用户拍板可见性):MemoryRead 命中一条记忆时发出,渲染端显示
-  // 「📖 读取了记忆 X」,让用户肉眼看到持久记忆真的被用上了。usageCount 记账
-  // 在工具内做,本事件仅为 UI 可见性。
-  | { type: "memory_recalled"; name: string; scope: "user" | "dream"; location: "global" | "project"; agentId?: string }
   | { type: "thinking_delta"; text: string; agentId?: string }
   | { type: "agent_start"; agentId: string; name?: string; description: string; agentType?: string }
   | {
