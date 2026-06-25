@@ -160,9 +160,14 @@ export class FileRunStore implements RunStore {
     // Sort by createdAt descending (newest first)
     snapshots.sort((a, b) => b.createdAt - a.createdAt);
 
-    // Pagination
-    const offset = query?.offset ?? 0;
-    const limit = query?.limit ?? 50;
+    // Pagination. Clamp to sane bounds before slicing: a negative offset would
+    // make Array.slice count "from the end" and silently return a surprise tail
+    // window; a negative limit would drop elements off the end. Both nonsensical
+    // for pagination — clamp offset≥0, treat a non-positive limit as an empty page.
+    const rawOffset = query?.offset ?? 0;
+    const rawLimit = query?.limit ?? 50;
+    const offset = Number.isFinite(rawOffset) && rawOffset > 0 ? Math.floor(rawOffset) : 0;
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.floor(rawLimit) : 0;
     return snapshots.slice(offset, offset + limit);
   }
 
