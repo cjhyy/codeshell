@@ -143,6 +143,11 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       // (image → video) are forced across turns and serialize naturally via the drain barrier.
       isConcurrencySafe: true,
       timeoutMs: 600_000, // 10min — high-quality / large image generation routinely exceeds the 120s default; give slow renders ample room while still bounding a hung request (Stop / ctx.signal cancels sooner)
+      // `referenceImages` are local files read off disk and shipped to the
+      // provider — gate them through the path-policy layer like Read, so an
+      // out-of-workspace ref ("../../etc/passwd") prompts for approval instead
+      // of silently leaking. (array arg → executor enforces each element)
+      pathPolicy: [{ kind: "arg", arg: "referenceImages", operation: "read" }],
     },
     execute: generateImageTool,
   },
@@ -155,6 +160,12 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       isConcurrencySafe: true,
       // Returns fast (fire-and-forget: submits + backgrounds the poll loop),
       // so the default timeout is plenty — the long poll runs detached.
+      // `images`/`image` may be local files (uploaded to the provider) — same
+      // path-policy gating as GenerateImage's referenceImages.
+      pathPolicy: [
+        { kind: "arg", arg: "images", operation: "read" },
+        { kind: "arg", arg: "image", operation: "read" },
+      ],
     },
     execute: generateVideoTool,
   },

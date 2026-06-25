@@ -523,6 +523,14 @@ export class ToolExecutor {
     if (policy.kind === "arg") {
       const raw = args[policy.arg];
       if (typeof raw === "string" && raw.length > 0) return [raw];
+      // Array path args (e.g. GenerateImage `referenceImages`, GenerateVideo
+      // `images`): enforce EVERY element. Without this an array yielded zero
+      // targets, so out-of-workspace reads bypassed the path-policy "ask" gate
+      // that Read/Write enforce. Non-string / empty elements are skipped.
+      if (Array.isArray(raw)) {
+        const paths = raw.filter((v): v is string => typeof v === "string" && v.length > 0);
+        if (paths.length > 0) return paths;
+      }
       if (policy.defaultToCwd && this.toolCtx?.cwd) return [this.toolCtx.cwd];
       return [];
     }
