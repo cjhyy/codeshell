@@ -7,6 +7,7 @@ import type {
   PermissionMode,
   ApprovalScope,
   ApprovalPathScope,
+  CcDiscoveredSession,
 } from "@protocol";
 import {
   reduceStream,
@@ -22,6 +23,9 @@ import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket";
 export interface PendingApproval {
   requestId: string;
   sessionId?: string;
+  /** Set for cc-room (external claude CLI) approvals — routes the response via
+   *  respondCcApproval(roomId, …) instead of the session approval path. */
+  roomId?: string;
   toolName: string;
   description: string;
   summary: string;
@@ -76,6 +80,17 @@ export interface RemoteApp {
   leaveRoom: () => void;
   createRoom: (cwd: string, name?: string) => void;
   closeRoom: (roomId: string) => void;
+  // cc rooms (external claude CLI sessions, per selected project)
+  activeProjectCwd: string | null;
+  selectProject: (cwd: string) => void;
+  ccSessions: CcDiscoveredSession[];
+  ccProbe: { available: boolean; reason?: string } | null;
+  openCcSession: (sessionId: string, cwd: string, mode: PermissionMode) => void;
+  respondCcApproval: (
+    roomId: string,
+    requestId: string,
+    decision: { behavior: "allow"; updatedInput?: unknown } | { behavior: "deny"; message: string },
+  ) => void;
 }
 
 /** Tools whose grants can be remembered with a path scope (file/dir). */
@@ -132,6 +147,20 @@ export function useRemoteApp(): RemoteApp {
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const approvalsRef = useRef(approvals);
   approvalsRef.current = approvals;
+  // The SELECTED project (one-true-source for "what am I looking at"), distinct
+  // from activeSessionCwd which is derived from the bound session. Drives session
+  // list filtering AND ccRoom.listSessions.
+  const [activeProjectCwd, setActiveProjectCwd] = useState<string | null>(null);
+  const activeProjectCwdRef = useRef(activeProjectCwd);
+  activeProjectCwdRef.current = activeProjectCwd;
+  // External claude-CLI sessions discovered for activeProjectCwd.
+  const [ccSessions, setCcSessions] = useState<CcDiscoveredSession[]>([]);
+  const [ccProbe, setCcProbe] = useState<{ available: boolean; reason?: string } | null>(null);
+  /** Set while awaiting a server-minted session id after newSession(). */
+  const pendingNewSessionRef = useRef(false);
+  /** socket.send via ref — onServerEvent is created BEFORE the socket (it's the
+   *  socket's callback), so it can't close over `socket` directly. */
+  const sendRef = useRef<((e: import("@protocol").MobileClientEvent) => void) | null>(null);
   const [permissionMode, setPermissionModeState] = useState<PermissionMode>("default");
   /** Transient banner message (errors, room-missing, …). Auto-clears. */
   const [notice, setNoticeState] = useState<string | undefined>();
@@ -173,6 +202,7 @@ export function useRemoteApp(): RemoteApp {
           boundSessionRef.current = event.sessionId;
         }
         if ("cwd" in event) setActiveSessionCwd(event.cwd ?? null);
+        pendingNewSessionRef.current = false;
         break;
       case "session.list.ok":
         setSessions(event.sessions);
@@ -267,10 +297,64 @@ export function useRemoteApp(): RemoteApp {
         });
         break;
       }
+      case "ccRoom.probe.ok":
+        setCcProbe({ available: event.available, reason: event.reason });
+        break;
+      case "ccRoom.listSessions.ok":
+        // cwd echo guard: ignore a reply for a project we've since left.
+        if (event.cwd === activeProjectCwdRef.current) setCcSessions(event.sessions);
+        break;
+      case "ccRoom.opened":
+        if (event.status === "missing") {
+          setNotice("cc 会话无法打开");
+          break;
+        }
+        // An opened cc room behaves like room.open — bind the room feed.
+        setActiveRoomId(event.roomId);
+        boundSessionRef.current = undefined;
+        setApprovals([]);
+        setLoadingKey("roomHistory", true);
+        dispatchChat({ kind: "reset" });
+        sendRef.current?.({ type: "room.history", roomId: event.roomId });
+        break;
+      case "ccRoom.readHistory.ok":
+        // Reserved for an in-place cc history preview; the room feed currently
+        // carries live messages. No-op keeps it from being a silent default.
+        break;
+      case "ccRoom.approvalRequest": {
+        // Only surface for the room this phone is viewing (rooms are shared, but
+        // an approval card for some other room would be confusing here).
+        if (event.roomId !== activeRoomIdRef.current) break;
+        const { summary, risk } = summarizeApproval(
+          event.req.input as Record<string, unknown> | undefined,
+          undefined,
+        );
+        setApprovals((prev) =>
+          prev.some((p) => p.requestId === event.req.requestId)
+            ? prev
+            : [
+                ...prev,
+                {
+                  requestId: event.req.requestId,
+                  roomId: event.roomId,
+                  toolName: event.req.displayName ?? event.req.toolName,
+                  description: event.req.description ?? "",
+                  summary,
+                  risk,
+                  pathScoped: PATH_SCOPED.has(event.req.toolName),
+                },
+              ],
+        );
+        break;
+      }
+      case "ccRoom.approvalResolved":
+        approvalsRef.current = approvalsRef.current.filter((p) => p.requestId !== event.requestId);
+        setApprovals((prev) => prev.filter((p) => p.requestId !== event.requestId));
+        break;
       default:
         break;
     }
-  }, [setLoadingKey]);
+  }, [setLoadingKey, setNotice]);
 
   // activeRoomId via ref so the message handler closure sees the latest value.
   const activeRoomIdRef = useRef<string | undefined>(undefined);
@@ -357,6 +441,7 @@ export function useRemoteApp(): RemoteApp {
   );
 
   const socket = useRemoteSocket({ onServerEvent, onRawLine });
+  sendRef.current = socket.send;
 
   // ── actions ────────────────────────────────────────────────────────────
   const sendChat = useCallback(
@@ -403,9 +488,48 @@ export function useRemoteApp(): RemoteApp {
     [socket, sessionCwdById, setLoadingKey],
   );
 
+  /** Select a project (like the desktop sidebar): set the one-true-source cwd and
+   *  pull that project's chat sessions + external cc sessions. */
+  const selectProject = useCallback(
+    (cwd: string) => {
+      setActiveProjectCwd(cwd);
+      setLoadingKey("sessions", true);
+      socket.send({ type: "session.list" });
+      socket.send({ type: "room.projects" });
+      socket.send({ type: "ccRoom.probe" });
+      socket.send({ type: "ccRoom.listSessions", cwd });
+    },
+    [socket, setLoadingKey],
+  );
+
+  const openCcSession = useCallback(
+    (sessionId: string, cwd: string, mode: PermissionMode) => {
+      socket.send({ type: "ccRoom.openSession", sessionId, cwd, mode });
+    },
+    [socket],
+  );
+
+  const respondCcApproval = useCallback(
+    (
+      roomId: string,
+      requestId: string,
+      decision: { behavior: "allow"; updatedInput?: unknown } | { behavior: "deny"; message: string },
+    ) => {
+      const a = approvalsRef.current.find((p) => p.requestId === requestId);
+      if (!a) return; // approve-once: already resolved
+      socket.send({ type: "ccRoom.respondApproval", roomId, requestId, decision });
+      approvalsRef.current = approvalsRef.current.filter((p) => p.requestId !== requestId);
+      setApprovals((prev) => prev.filter((p) => p.requestId !== requestId));
+    },
+    [socket],
+  );
+
   const newSession = useCallback((cwd?: string | null, name?: string) => {
     const nextCwd = cwd === undefined ? activeCwdRef.current : cwd;
     boundSessionRef.current = undefined;
+    // Await the server-minted session id (chat.accepted) before binding — a
+    // chat.send issued before the id lands would race an undefined session.
+    pendingNewSessionRef.current = true;
     setActiveRoomId(undefined);
     setActiveSessionCwd(nextCwd === undefined ? undefined : nextCwd ?? null);
     setApprovals([]);
@@ -523,6 +647,9 @@ export function useRemoteApp(): RemoteApp {
     if (socket.status !== "online") return;
     setLoadingKey("rooms", true);
     socket.send({ type: "room.list" });
+    // Pull the disk project list on connect; main re-broadcasts room.projects.ok
+    // on every disk change, so a desktop add/remove/pin reaches us live too.
+    socket.send({ type: "room.projects" });
   }, [socket.status, socket.send, activeCwd, setLoadingKey]);
 
   return {
@@ -555,5 +682,11 @@ export function useRemoteApp(): RemoteApp {
     leaveRoom,
     createRoom,
     closeRoom,
+    activeProjectCwd,
+    selectProject,
+    ccSessions,
+    ccProbe,
+    openCcSession,
+    respondCcApproval,
   };
 }

@@ -645,6 +645,25 @@ contextBridge.exposeInMainWorld("codeshell", {
   setTrust: (path: string, level: "trusted" | "untrusted") =>
     ipcRenderer.invoke("trust:set", path, level),
   recents: () => ipcRenderer.invoke("recents:list"),
+  projects: {
+    list: (): Promise<Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>> =>
+      ipcRenderer.invoke("projects:list"),
+    add: (project: { path: string; name: string }): Promise<void> =>
+      ipcRenderer.invoke("projects:add", project),
+    remove: (projectPath: string): Promise<void> => ipcRenderer.invoke("projects:remove", projectPath),
+    setPinned: (projectPath: string, pinned: boolean): Promise<void> =>
+      ipcRenderer.invoke("projects:setPinned", projectPath, pinned),
+    onChanged: (
+      cb: (projects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>) => void,
+    ): (() => void) => {
+      const h = (
+        _e: IpcRendererEvent,
+        p: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>,
+      ) => cb(p);
+      ipcRenderer.on("projects:changed", h);
+      return () => ipcRenderer.removeListener("projects:changed", h);
+    },
+  },
   notify: (opts: { title: string; body?: string; subtitle?: string }) =>
     ipcRenderer.invoke("notify:show", opts),
   setBadgeCount: (count: number) => ipcRenderer.invoke("badge:set", count),
@@ -907,6 +926,16 @@ contextBridge.exposeInMainWorld("codeshell", {
       ) => cb(req);
       ipcRenderer.on("ccRoom:approvalRequest", h);
       return () => ipcRenderer.removeListener("ccRoom:approvalRequest", h);
+    },
+    onApprovalResolved: (
+      cb: (p: { roomId: string; requestId: string; decision: unknown }) => void,
+    ): (() => void) => {
+      const h = (
+        _e: IpcRendererEvent,
+        p: { roomId: string; requestId: string; decision: unknown },
+      ) => cb(p);
+      ipcRenderer.on("ccRoom:approvalResolved", h);
+      return () => ipcRenderer.removeListener("ccRoom:approvalResolved", h);
     },
   },
 });

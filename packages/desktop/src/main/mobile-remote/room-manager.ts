@@ -198,7 +198,11 @@ export class RoomManager {
    * Open (or create) the room bound to a claude session id, deduping by that id
    * so a given claude session maps to exactly one room. Returns the room id.
    */
-  openForSession(claudeSessionId: string, cwd: string, mode: RoomPermissionMode): { roomId: string } {
+  openForSession(
+    claudeSessionId: string,
+    cwd: string,
+    mode: RoomPermissionMode,
+  ): { roomId: string; status: "running" | "missing" } {
     const existing = claudeSessionId
       ? this.listRooms().find((r) => r.claudeSessionId === claudeSessionId)
       : undefined;
@@ -213,8 +217,8 @@ export class RoomManager {
       writeFileSync(this.metaPath(meta.id), JSON.stringify({ ...meta, permissionMode: mode }, null, 2), "utf-8");
       this.close(meta.id); // stop the old-mode process so open() respawns fresh
     }
-    this.open(meta.id);
-    return { roomId: meta.id };
+    const { status } = this.open(meta.id);
+    return { roomId: meta.id, status };
   }
 
   /**

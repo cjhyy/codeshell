@@ -175,6 +175,35 @@ export function makeCreateRepoForCwd(repoList: Repo[]): {
   };
 }
 
+/**
+ * Reconcile the disk project list (source of truth for the project SET + pinned)
+ * with the localStorage repo cache (source of the stable random repoId per path).
+ *
+ * Disk decides which projects exist and their pinned state; the cache supplies
+ * each known path's existing repoId so session buckets (keyed by repoId) stay
+ * intact across reloads. A disk path not in the cache gets a fresh repoId minted
+ * once. Cache entries whose path is no longer on disk are dropped (the project
+ * was removed/soft-deleted elsewhere). User renames (displayName) are preserved
+ * from the cache since they're device-local and not synced to disk.
+ */
+export function reconcileReposFromDisk(
+  diskProjects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>,
+  cached: Repo[],
+): Repo[] {
+  const byPath = new Map(cached.map((r) => [r.path, r]));
+  return diskProjects.map((p) => {
+    const prior = byPath.get(p.path);
+    return {
+      id: prior?.id ?? makeRepoId(),
+      name: p.name,
+      path: p.path,
+      addedAt: p.addedAt ?? prior?.addedAt ?? Date.now(),
+      displayName: prior?.displayName,
+      pinned: p.pinned,
+    };
+  });
+}
+
 /** Display label for a repo — user rename wins over default basename. */
 export function repoLabel(repo: Repo): string {
   return repo.displayName?.trim() || repo.name;

@@ -75,6 +75,7 @@ import {
   markRepoPathRemoved,
   unmarkRepoPathRemoved,
   makeCreateRepoForCwd,
+  reconcileReposFromDisk,
   repoLabel,
   sortRepos,
   type Repo,
@@ -524,6 +525,45 @@ function App() {
   }, [approvalQueue, sessionIndices, busyKeys, unreadBuckets]);
 
   useEffect(() => { saveRepos(repos); }, [repos]);
+  // Disk recents are the source of truth for the project SET + pinned/soft-delete.
+  // Hydrate from disk on mount and re-project on every change (another window, a
+  // phone, or our own add/remove/pin), reconciling against the localStorage cache
+  // so each known path keeps its stable repoId (session buckets stay intact).
+  useEffect(() => {
+    let alive = true;
+    const apply = (
+      projects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>,
+    ): void => {
+      if (!alive) return;
+      setRepos((prev) => reconcileReposFromDisk(projects, prev));
+    };
+    void (async () => {
+      // Back-fill: legacy repos live only in the localStorage cache and were
+      // never written to disk. Push any cached path missing from disk so disk
+      // becomes a complete source of truth (no project silently disappears on
+      // the first run after this change). Soft-deleted ones stay deleted because
+      // pushRecent un-deletes only on explicit re-add, and we skip removed paths.
+      const disk = await window.codeshell.projects.list();
+      const onDisk = new Set(disk.map((p) => p.path));
+      const cached = loadRepos();
+      const missing = cached.filter((r) => !onDisk.has(r.path) && !isRepoPathRemoved(r.path));
+      if (missing.length > 0) {
+        for (const r of missing) {
+          await window.codeshell.projects.add({ path: r.path, name: r.name });
+        }
+        apply(await window.codeshell.projects.list());
+      } else {
+        apply(disk);
+      }
+    })();
+    const unsub = window.codeshell.projects.onChanged(apply);
+    return () => {
+      alive = false;
+      unsub();
+    };
+    // Mount-only: the subscription handles all subsequent changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     void window.codeshell.mobileRemote.updateProjects(
       sortRepos(repos).map((r) => ({
@@ -816,12 +856,19 @@ function App() {
       ...prev,
       [next.id]: loadSessionIndex(next.id),
     }));
+    // Persist to disk (source of truth). The projects:changed echo re-projects
+    // and, because the path now matches our cache, keeps this same repoId.
+    void window.codeshell.projects.add({ path: next.path, name: next.name });
     window.codeshell.log("repo.added", { id: next.id, path: next.path });
   };
 
   const handleRemoveRepo = (id: string): void => {
     const repo = repos.find((r) => r.id === id);
-    if (repo) markRepoPathRemoved(repo.path);
+    if (repo) {
+      markRepoPathRemoved(repo.path);
+      // Soft-delete on disk so the removal persists + reaches phones live.
+      void window.codeshell.projects.remove(repo.path);
+    }
     setRepos((prev) => prev.filter((r) => r.id !== id));
     if (activeRepoId === id) setActiveRepoId(null);
     setSessionIndices((prev) => {
@@ -841,7 +888,9 @@ function App() {
   };
 
   const handlePinRepo = (id: string, pinned: boolean): void => {
+    const repo = repos.find((r) => r.id === id);
     setRepos((prev) => prev.map((r) => (r.id === id ? { ...r, pinned } : r)));
+    if (repo) void window.codeshell.projects.setPinned(repo.path, pinned);
   };
 
   const handleRenameRepo = (id: string, name: string): void => {

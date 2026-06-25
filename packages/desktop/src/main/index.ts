@@ -172,7 +172,7 @@ import { checkSkillUpdateEntry, updateSkillEntry } from "./skill-update-entry.js
 import { resolveModelMeta } from "./model-meta-service.js";
 import { listRuns, getRun, deleteRunDir } from "./runs-service.js";
 import { initUpdater, checkForUpdate, downloadUpdate, quitAndInstall, getLastStatus } from "./updater.js";
-import { loadRecents, pushRecent } from "./recents-store.js";
+import { loadRecents, pushRecent, loadProjects, setPinned, softDelete } from "./recents-store.js";
 import { loadWindowState, saveWindowState } from "./window-state-store.js";
 import { getTrust, setTrust, type TrustLevel } from "./trust-store.js";
 import { installAppMenu, refreshAppMenu } from "./menu.js";
@@ -246,14 +246,33 @@ function normalizeMobileProjects(projects: unknown): MobileProjectMeta[] {
   return out;
 }
 async function mobileProjectList(): Promise<MobileProjectMeta[]> {
-  if (mobileProjects.length > 0) return mobileProjects;
-  const recents = await loadRecents().catch(() => []);
-  return recents.map((r) => ({ path: r.path, name: r.name, addedAt: r.lastOpenedAt }));
+  // Disk recents are the source of truth (pinned + soft-delete aware). The
+  // legacy in-memory `mobileProjects` (pushed from the renderer's localStorage)
+  // is only a fallback if disk is somehow empty — disk wins so a desktop
+  // add/remove/pin is reflected on phones and survives restart.
+  const projects = await loadProjects().catch(() => []);
+  if (projects.length > 0) {
+    return projects.map((r) => ({ path: r.path, name: r.name, addedAt: r.lastOpenedAt, pinned: r.pinned }));
+  }
+  return mobileProjects;
 }
 async function sendMobileProjectList(deviceId?: string): Promise<void> {
   const event: MobileServerEvent = { type: "room.projects.ok", projects: await mobileProjectList() };
   if (deviceId) mobileRemote.sendToDevice(deviceId, event);
   else mobileRemote.broadcast(event);
+}
+/**
+ * After a disk project change (add / remove / pin), push the fresh list to BOTH
+ * transports: phones via room.projects.ok, desktop windows via projects:changed
+ * (so the renderer re-projects its localStorage cache). Disk is the truth; this
+ * is how a desktop edit becomes live on phones and how every window stays synced.
+ */
+async function broadcastProjects(): Promise<void> {
+  const projects = await mobileProjectList();
+  mobileRemote.broadcast({ type: "room.projects.ok", projects });
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w.isDestroyed()) w.webContents.send("projects:changed", projects);
+  }
 }
 function broadcastMobileSession(meta: { sessionId: string; cwd: string; title: string; prompt: string }): void {
   const line = JSON.stringify({
@@ -310,6 +329,14 @@ const approvalBridge = new ApprovalBridge({
       if (!w.isDestroyed()) w.webContents.send("ccRoom:approvalRequest", { roomId, ...req });
     }
     mobileRemote.broadcast({ type: "ccRoom.approvalRequest", roomId, req });
+  },
+  onResolve: (roomId, requestId, decision) => {
+    // Mirror resolution to BOTH transports so every端 clears its stale card —
+    // fixes "点了/超时后审批卡不消失" across desktop windows + phones.
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed()) w.webContents.send("ccRoom:approvalResolved", { roomId, requestId, decision });
+    }
+    mobileRemote.broadcast({ type: "ccRoom.approvalResolved", roomId, requestId, decision });
   },
 });
 const roomManager = new RoomManager({
@@ -540,6 +567,12 @@ function injectAndAwaitResult(
  * goal logic, and snapshots all apply unchanged.
  */
 async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: string }): Promise<void> {
+  // ── CC Room (external claude CLI sessions) — checked first so "ccRoom.*"
+  // never gets misrouted by the "room." prefix check below ───────────────
+  if (event.type.startsWith("ccRoom.")) {
+    await handleCcRoomEvent(event);
+    return;
+  }
   // ── Rooms (independent of the chat worker bridge) ─────────────────────
   if (event.type.startsWith("room.")) {
     await handleRoomEvent(event);
@@ -881,6 +914,63 @@ async function handleRoomEvent(event: MobileClientEvent & { deviceId?: string })
     }
   } catch (err) {
     mobileRemote.broadcast({ type: "room.error", message: err instanceof Error ? err.message : String(err) });
+  }
+}
+
+/**
+ * CC Room (external `claude` CLI sessions) for mobile — mirrors the desktop
+ * ccRoom:* IPC handlers, reusing the SAME core discovery + roomManager backend.
+ * Discovery replies (probe/listSessions/readHistory) go per-device; open and
+ * approval-response feed the shared roomManager / approvalBridge (the room is
+ * dual-ended, like desktop). listSessions echoes the cwd so a phone that has
+ * since switched projects can discard a stale reply.
+ */
+async function handleCcRoomEvent(event: MobileClientEvent & { deviceId?: string }): Promise<void> {
+  const deviceId = event.deviceId;
+  const reply = (e: MobileServerEvent): void => {
+    if (deviceId) mobileRemote.sendToDevice(deviceId, e);
+    else mobileRemote.broadcast(e);
+  };
+  try {
+    if (event.type === "ccRoom.probe") {
+      const a = await probeClaudeCli(Boolean(event.force));
+      reply({
+        type: "ccRoom.probe.ok",
+        available: a.available,
+        command: a.command,
+        version: a.version,
+        reason: a.reason,
+      });
+      return;
+    }
+    if (event.type === "ccRoom.listSessions") {
+      const sessions = discoverSessions(event.cwd);
+      reply({ type: "ccRoom.listSessions.ok", cwd: event.cwd, sessions });
+      return;
+    }
+    if (event.type === "ccRoom.openSession") {
+      const mode = await resolveRoomPermissionMode(event.cwd, event.mode);
+      const { roomId, status } = roomManager.openForSession(event.sessionId, event.cwd, mode);
+      reply({ type: "ccRoom.opened", roomId, sessionId: event.sessionId, status });
+      return;
+    }
+    if (event.type === "ccRoom.readHistory") {
+      const h = readRecentHistory(event.cwd, event.sessionId, event.limit);
+      reply({
+        type: "ccRoom.readHistory.ok",
+        sessionId: event.sessionId,
+        messages: h.messages,
+        hasMore: h.hasMore,
+        totalCount: h.totalCount,
+      });
+      return;
+    }
+    if (event.type === "ccRoom.respondApproval") {
+      approvalBridge.respond(event.roomId, event.requestId, event.decision);
+      return;
+    }
+  } catch (err) {
+    reply({ type: "room.error", message: err instanceof Error ? err.message : String(err) });
   }
 }
 
@@ -1882,6 +1972,21 @@ ipcMain.handle(
     return true;
   },
 );
+
+// ── Projects (disk recents = source of truth; renderer is a projection) ─────
+ipcMain.handle("projects:list", async () => mobileProjectList());
+ipcMain.handle("projects:add", async (_e, project: { path: string; name: string }) => {
+  await pushRecent({ path: project.path, name: project.name, lastOpenedAt: Date.now() });
+  await broadcastProjects();
+});
+ipcMain.handle("projects:remove", async (_e, projectPath: string) => {
+  await softDelete(projectPath);
+  await broadcastProjects();
+});
+ipcMain.handle("projects:setPinned", async (_e, projectPath: string, pinned: boolean) => {
+  await setPinned(projectPath, pinned);
+  await broadcastProjects();
+});
 
 // ── Rooms (desktop side; same RoomManager the phone uses → dual-ended) ──────
 ipcMain.handle("rooms:list", async () => roomManager.listRooms().map(roomToPublic));

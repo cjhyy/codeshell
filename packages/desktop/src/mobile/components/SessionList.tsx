@@ -5,13 +5,23 @@ import { Button } from "@ui/button";
 import type { MobileProjectMeta, MobileSessionMeta } from "@protocol";
 import { basename, relativeTime, groupByProject, projectForCwd } from "@mobile/lib/format";
 
-/** The desktop sessions the phone can open + drive, GROUPED BY PROJECT (cwd). */
+function sameCwd(a?: string | null, b?: string | null): boolean {
+  const norm = (v?: string | null): string => (v ?? "").replace(/[/\\]+$/, "").toLowerCase();
+  return norm(a) === norm(b);
+}
+
+/** The desktop sessions the phone can open + drive, GROUPED BY PROJECT (cwd).
+ *  When a project is selected (activeProjectCwd) only that project's sessions
+ *  render; other projects collapse into a switcher (mirrors the desktop sidebar
+ *  "current project / other projects" split). */
 export function SessionList({
   sessions,
   projects,
   activeSessionId,
   currentCwd,
+  activeProjectCwd,
   onSelect,
+  onSelectProject,
   onNew,
   onRefresh,
   loading,
@@ -20,13 +30,21 @@ export function SessionList({
   projects: MobileProjectMeta[];
   activeSessionId?: string;
   currentCwd?: string | null;
+  activeProjectCwd?: string | null;
   onSelect: (id: string) => void;
+  onSelectProject?: (cwd: string) => void;
   onNew: (cwd?: string | null, name?: string) => void;
   onRefresh: () => void;
   loading?: boolean;
 }) {
   const [creating, setCreating] = useState(false);
-  const groups = groupByProject(sessions, projects);
+  const allGroups = groupByProject(sessions, projects);
+  // When a project is selected, show only its group; otherwise show all (so the
+  // screen is never empty on first load before a project is picked).
+  const currentGroup = activeProjectCwd
+    ? allGroups.find((g) => sameCwd(g.cwd, activeProjectCwd) || sameCwd(projectForCwd(g.cwd, projects)?.path, activeProjectCwd))
+    : undefined;
+  const groups = currentGroup ? [currentGroup] : activeProjectCwd ? [] : allGroups;
   const currentProject = projectForCwd(currentCwd, projects);
   const currentProjectCwd = currentProject?.path ?? currentCwd;
   const currentKnown = currentCwd !== undefined;
@@ -100,6 +118,25 @@ export function SessionList({
               </>
             )}
           </div>
+        </div>
+      )}
+      {onSelectProject && projects.length > 1 && (
+        <div className="flex gap-1.5 overflow-x-auto border-b border-border/70 px-2 py-1.5">
+          {projects.map((p) => (
+            <button
+              key={p.path}
+              type="button"
+              onClick={() => onSelectProject(p.path)}
+              className={cn(
+                "shrink-0 rounded-full border px-2.5 py-1 text-[11px]",
+                sameCwd(p.path, activeProjectCwd)
+                  ? "border-primary bg-primary/15 text-foreground"
+                  : "border-border/70 text-muted-foreground",
+              )}
+            >
+              {p.name}
+            </button>
+          ))}
         </div>
       )}
       <div className="flex-1 overflow-y-auto px-2 py-2">
