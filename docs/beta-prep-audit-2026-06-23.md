@@ -266,6 +266,7 @@
 
 ### 1.5 npm 包(若本轮要发)
 **必用 `bun publish --tag rc` 不是 `npm publish`**(workspace:* 解析);**发后必真跑一次 bin**(`code-shell --version`),别只看 publish 打印(rc.1 装得上跑不起来的教训)。当前已是 rc.2,若要再发须 bump。
+> **🟡 发布卫生(2026-06-25 核查,低优先·非阻塞)**:`packages/tui/package.json` **无 `files` 字段** → npm 默认会把 ~1.9M `src/`(含 .test)一并发布(core/meta 都有 `files:["dist"]` 收窄,tui 漏了)。tui 的 main/bin/exports 全指 `dist/`,**src 运行时不需要**,纯体积冗余(非功能/安全问题)。rc.2 已这样发过(可接受)。下次发版前可给 tui 补 `"files":["dist"]` 对齐 core——属发布配置决策,留你定,没擅改。meta dist 干净(只 3 文件,build-meta wipe 生效)。
 
 ---
 
