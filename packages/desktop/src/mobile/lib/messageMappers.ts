@@ -42,6 +42,17 @@ export function roomMsgToEvent(msg: unknown): unknown {
   return { type: "_noop" };
 }
 
+/**
+ * Map a `room.history.ok` payload's `messages` into replay events. The payload
+ * comes off the WebSocket from the (untrusted) host — `messages` may be missing
+ * or, on a malformed/hostile message, not an array. `(x ?? []).map` only guards
+ * null/undefined, so `messages: 123` would throw a TypeError and white-screen
+ * the phone. Guard with Array.isArray → non-arrays yield an empty replay.
+ */
+export function roomHistoryToEvents(messages: unknown): unknown[] {
+  return Array.isArray(messages) ? messages.map(roomMsgToEvent) : [];
+}
+
 /** Detect an AskUser-style approval and pull its option labels + optionsOnly. */
 export function extractAskUserOptions(
   args: Record<string, unknown> | undefined,

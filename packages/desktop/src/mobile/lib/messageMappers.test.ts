@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { roomMsgToEvent, extractAskUserOptions } from "./messageMappers";
+import { roomMsgToEvent, roomHistoryToEvents, extractAskUserOptions } from "./messageMappers";
 import { reduceStream, initialChatState } from "./streamReducer";
 
 // These shapes MUST mirror what RoomManager actually writes (room-manager.ts
@@ -67,4 +67,21 @@ test("extractAskUserOptions:字符串选项 / 对象 label / optionsOnly", () =>
   expect(extractAskUserOptions({ command: "ls" })).toBeUndefined();
   expect(extractAskUserOptions(undefined)).toBeUndefined();
   expect(extractAskUserOptions({ options: [] })).toBeUndefined();
+});
+
+// room.history.ok comes off the WS from the (untrusted) host. `messages` may be
+// missing or — on a malformed/hostile payload — not an array; `(x ?? []).map`
+// only guards null/undefined, so a non-array would throw and white-screen the
+// phone. roomHistoryToEvents guards Array.isArray.
+test("roomHistoryToEvents 守卫非数组 messages(不抛/白屏)", () => {
+  // valid array maps through roomMsgToEvent
+  expect(roomHistoryToEvents([{ from: "user", type: "text", text: "hi" }])).toEqual([
+    { type: "user_message", text: "hi" },
+  ]);
+  // missing / non-array → empty replay, NOT a throw
+  expect(roomHistoryToEvents(undefined)).toEqual([]);
+  expect(roomHistoryToEvents(null)).toEqual([]);
+  expect(roomHistoryToEvents(123)).toEqual([]);
+  expect(roomHistoryToEvents("oops")).toEqual([]);
+  expect(roomHistoryToEvents({ length: 2 })).toEqual([]);
 });

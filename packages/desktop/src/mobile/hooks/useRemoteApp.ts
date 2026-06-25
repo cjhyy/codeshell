@@ -15,7 +15,7 @@ import {
   type ChatState,
 } from "@mobile/lib/streamReducer";
 import { summarizeApproval, type Risk } from "@mobile/lib/riskClassify";
-import { roomMsgToEvent, extractAskUserOptions } from "@mobile/lib/messageMappers";
+import { roomMsgToEvent, roomHistoryToEvents, extractAskUserOptions } from "@mobile/lib/messageMappers";
 import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket";
 
 export interface PendingApproval {
@@ -208,7 +208,7 @@ export function useRemoteApp(): RemoteApp {
         if (event.roomId === activeRoomIdRef.current) {
           dispatchChat({
             kind: "replay",
-            events: (event.messages ?? []).map(roomMsgToEvent),
+            events: roomHistoryToEvents(event.messages),
           });
           setLoadingKey("roomHistory", false);
         }
