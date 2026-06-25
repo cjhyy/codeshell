@@ -530,16 +530,11 @@ export function useRemoteApp(): RemoteApp {
     (cwd: string) => {
       setActiveProjectCwd(cwd);
       setLoadingKey("sessions", true);
-      // Reset cc discovery for the new project so the previous project's probe
-      // verdict / session list don't linger while the fresh replies are in
-      // flight, and so CcSessionList shows an honest loading state.
-      setCcProbe(null);
-      setCcSessions([]);
-      setLoadingKey("ccSessions", true);
       socket.send({ type: "session.list" });
       socket.send({ type: "room.projects" });
-      socket.send({ type: "ccRoom.probe" });
-      socket.send({ type: "ccRoom.listSessions", cwd });
+      // CC discovery (probe + listSessions) is driven by the auto-discover effect
+      // keyed on the effective cwd — setting activeProjectCwd above triggers it.
+      // Doing it here too would double-fetch.
     },
     [socket, setLoadingKey],
   );
@@ -666,6 +661,25 @@ export function useRemoteApp(): RemoteApp {
     // on every disk change, so a desktop add/remove/pin reaches us live too.
     socket.send({ type: "room.projects" });
   }, [socket.status, socket.send, activeCwd, setLoadingKey]);
+
+  // Auto-discover CC (external claude CLI) sessions for the effective project cwd
+  // — mirrors the desktop CCRoomView, which probes + lists on mount/cwd-change.
+  // Without this, the CcSessionList shows (its cwd derives from activeCwd) but the
+  // probe is never sent unless the user happens to tap a project via
+  // selectProject, so it hangs on "正在检测…" forever. selectProject still does an
+  // eager refresh on explicit project switches; this covers the implicit cwd.
+  const ccDiscoverCwd = activeProjectCwd ?? activeContextCwd ?? null;
+  useEffect(() => {
+    if (socket.status !== "online" || !ccDiscoverCwd) return;
+    // Adopt this cwd as the project context so the listSessions echo guard
+    // (event.cwd === activeProjectCwdRef.current) matches the reply.
+    setActiveProjectCwd(ccDiscoverCwd);
+    setCcProbe(null);
+    setCcSessions([]);
+    setLoadingKey("ccSessions", true);
+    socket.send({ type: "ccRoom.probe" });
+    socket.send({ type: "ccRoom.listSessions", cwd: ccDiscoverCwd });
+  }, [socket.status, socket.send, ccDiscoverCwd, setLoadingKey]);
 
   return {
     status: socket.status,
