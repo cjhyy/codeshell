@@ -128,6 +128,9 @@ breaking.
   `offset`/`limit` instead of returning a surprise tail window.
 - `ListMcpResources` / `ReadMcpResource` forward the run's Stop signal so a
   hung MCP server call can be cancelled promptly.
+- The phone remote no longer white-screens if the host sends a `room.history`
+  payload whose `messages` is not an array — the history replay guards the
+  shape before mapping.
 
 ## [0.5.0-rc.0] - 2026-05-23
 
