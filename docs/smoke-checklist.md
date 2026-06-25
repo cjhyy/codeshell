@@ -98,7 +98,9 @@
 
 关联:`project_browser_login_window`、`project_multi_account_cookie_creds`。
 
-## 6. no-repo cwd 漂移 + gpt5.5 effort(merge `e4b99a52`,未 push)
+## 6. no-repo cwd 漂移 + gpt5.5 effort(未 push)
+
+> 注:原 merge `e4b99a52` 已在后续整理中解开(不在 HEAD 主线),但修复内容已在 HEAD——no-repo cwd 不传逻辑在 `settings/manager.ts`+`cli/agent-server-stdio.ts`,gpt5.5 `noEffortWithTools` capability 在 `llm/capabilities/rules.ts`(2026-06-25 核查)。
 
 - [ ] **6.1** 无项目纯聊天(no-repo)下,长命 worker 不再兜到陈旧项目;skill 关闭状态正确、搜对目录。
 - [ ] **6.2** gpt5.5 + 工具 + effort 不再每轮撞 400。
