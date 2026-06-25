@@ -140,7 +140,7 @@ export function MessageStream({
             </div>
           ) : (
             <p className="text-sm leading-6 text-muted-foreground">
-              发个任务试试,或在「房间」里开常驻 Claude Code 会话。
+              发个任务试试,或在侧栏打开一个 Claude Code 会话。
             </p>
           )}
         </div>

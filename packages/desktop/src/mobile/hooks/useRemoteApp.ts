@@ -50,15 +50,17 @@ export interface RemoteApp {
   sessions: MobileSessionMeta[];
   activeSessionId?: string;
   activeCwd?: string | null;
-  rooms: RoomPublic[];
-  allRooms: RoomPublic[];
   projects: MobileProjectMeta[];
+  /** The bound room — for the user this is always an external CC (Claude Code)
+   *  session. The room is internal transport; there is no user-facing room list. */
   activeRoom?: RoomPublic;
   approvals: PendingApproval[];
   permissionMode: PermissionMode;
   loading: {
     sessions: boolean;
     sessionHistory: boolean;
+    /** Internal: the room.list fetch that resolves `activeRoom`'s metadata for a
+     *  bound CC session. No user-facing room list consumes this. */
     rooms: boolean;
     projects: boolean;
     roomHistory: boolean;
@@ -80,12 +82,8 @@ export interface RemoteApp {
   setPermissionMode: (mode: PermissionMode) => void;
   extendGoal: (sessionId: string) => void;
   clearGoal: (sessionId: string) => void;
-  // rooms
-  refreshRooms: () => void;
-  openRoom: (room: RoomPublic) => void;
+  /** Leave the bound CC session (drops the room binding, clears the feed). */
   leaveRoom: () => void;
-  createRoom: (cwd: string, name?: string) => void;
-  closeRoom: (roomId: string) => void;
   // cc rooms (external claude CLI sessions, per selected project)
   activeProjectCwd: string | null;
   selectProject: (cwd: string) => void;
@@ -109,11 +107,6 @@ const PATH_SCOPED = new Set([
   "Grep",
   "ApplyPatch",
 ]);
-
-function sameCwd(a?: string | null, b?: string | null): boolean {
-  const norm = (v?: string | null): string => (v ?? "").replace(/[/\\]+$/, "").toLowerCase();
-  return norm(a) === norm(b);
-}
 
 function projectContextCwd(
   cwd: string | null | undefined,
@@ -271,18 +264,20 @@ export function useRemoteApp(): RemoteApp {
         }
         break;
       case "room.opened":
+        // The room is internal CC-session transport; surface it as a 会话 to the
+        // user (no room concept in the UI).
         if (event.status === "missing") {
-          setNotice("房间不存在或未就绪");
+          setNotice("会话不存在或未就绪");
           setActiveRoomId(undefined);
           setLoadingKey("roomHistory", false);
         }
         break;
       case "room.closed":
-        // Refresh the list so the closed room's online pip clears.
+        // Keep the internal room snapshot in sync (resolves activeRoom metadata).
         setRooms((prev) => prev.map((r) => (r.id === event.roomId ? { ...r, open: false } : r)));
         break;
       case "room.error":
-        setNotice(event.message || "房间错误");
+        setNotice(event.message || "会话错误");
         break;
       case "error":
         setNotice(event.message);
@@ -642,28 +637,9 @@ export function useRemoteApp(): RemoteApp {
     [socket],
   );
 
-  const refreshRooms = useCallback(() => {
-    setLoadingKey("rooms", true);
-    setLoadingKey("projects", true);
-    socket.send({ type: "room.list" });
-    socket.send({ type: "room.projects" });
-  }, [socket, setLoadingKey]);
-
-  const openRoom = useCallback(
-    (room: RoomPublic) => {
-      setActiveRoomId(room.id);
-      setActiveSessionCwd(room.cwd || null);
-      boundSessionRef.current = undefined;
-      ccHistorySessionRef.current = undefined;
-      setApprovals([]);
-      setLoadingKey("roomHistory", true);
-      dispatchChat({ kind: "reset" });
-      socket.send({ type: "room.open", roomId: room.id });
-      socket.send({ type: "room.history", roomId: room.id });
-    },
-    [socket, setLoadingKey],
-  );
-
+  // Leave the bound CC session: drop the room binding and clear the feed. (There
+  // is no user-facing room create/open/close — CC sessions are opened via
+  // openCcSession; the room is internal transport.)
   const leaveRoom = useCallback(() => {
     setActiveRoomId(undefined);
     ccHistorySessionRef.current = undefined;
@@ -671,19 +647,9 @@ export function useRemoteApp(): RemoteApp {
     dispatchChat({ kind: "reset" });
   }, [setLoadingKey]);
 
-  const createRoom = useCallback(
-    (cwd: string, name?: string) => {
-      setLoadingKey("rooms", true);
-      socket.send({ type: "room.create", cwd, name });
-    },
-    [socket, setLoadingKey],
-  );
-
-  const closeRoom = useCallback(
-    (roomId: string) => socket.send({ type: "room.close", roomId }),
-    [socket],
-  );
-
+  // activeRoom resolves the bound room's metadata (name/cwd) from the room.list
+  // snapshot — used for the CC session's title/subtitle and the cc-history cwd.
+  // There is no rendered room list; this lookup is internal.
   const activeRoom = useMemo(
     () => rooms.find((r) => r.id === activeRoomId),
     [rooms, activeRoomId],
@@ -691,13 +657,6 @@ export function useRemoteApp(): RemoteApp {
   const activeCwd = activeRoom?.cwd || activeSessionCwd;
   const activeContextCwd = projectContextCwd(activeCwd, projects);
   activeCwdRef.current = activeContextCwd;
-  const contextRooms = useMemo(
-    () =>
-      activeContextCwd
-        ? rooms.filter((r) => sameCwd(projectContextCwd(r.cwd, projects), activeContextCwd))
-        : [],
-    [rooms, activeContextCwd, projects],
-  );
 
   useEffect(() => {
     if (socket.status !== "online") return;
@@ -715,8 +674,6 @@ export function useRemoteApp(): RemoteApp {
     sessions,
     activeSessionId,
     activeCwd,
-    rooms: contextRooms,
-    allRooms: rooms,
     projects,
     activeRoom,
     approvals,
@@ -733,11 +690,7 @@ export function useRemoteApp(): RemoteApp {
     setPermissionMode,
     extendGoal,
     clearGoal,
-    refreshRooms,
-    openRoom,
     leaveRoom,
-    createRoom,
-    closeRoom,
     activeProjectCwd,
     selectProject,
     ccSessions,
