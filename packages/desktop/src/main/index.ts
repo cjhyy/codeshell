@@ -311,6 +311,14 @@ const approvalBridge = new ApprovalBridge({
     }
     mobileRemote.broadcast({ type: "ccRoom.approvalRequest", roomId, req });
   },
+  onResolve: (roomId, requestId, decision) => {
+    // Mirror resolution to BOTH transports so every端 clears its stale card —
+    // fixes "点了/超时后审批卡不消失" across desktop windows + phones.
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed()) w.webContents.send("ccRoom:approvalResolved", { roomId, requestId, decision });
+    }
+    mobileRemote.broadcast({ type: "ccRoom.approvalResolved", roomId, requestId, decision });
+  },
 });
 const roomManager = new RoomManager({
   rootDir: resolve(app.getPath("userData"), "mobile-remote", "rooms"),
@@ -540,6 +548,12 @@ function injectAndAwaitResult(
  * goal logic, and snapshots all apply unchanged.
  */
 async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: string }): Promise<void> {
+  // ── CC Room (external claude CLI sessions) — checked first so "ccRoom.*"
+  // never gets misrouted by the "room." prefix check below ───────────────
+  if (event.type.startsWith("ccRoom.")) {
+    await handleCcRoomEvent(event);
+    return;
+  }
   // ── Rooms (independent of the chat worker bridge) ─────────────────────
   if (event.type.startsWith("room.")) {
     await handleRoomEvent(event);
@@ -881,6 +895,63 @@ async function handleRoomEvent(event: MobileClientEvent & { deviceId?: string })
     }
   } catch (err) {
     mobileRemote.broadcast({ type: "room.error", message: err instanceof Error ? err.message : String(err) });
+  }
+}
+
+/**
+ * CC Room (external `claude` CLI sessions) for mobile — mirrors the desktop
+ * ccRoom:* IPC handlers, reusing the SAME core discovery + roomManager backend.
+ * Discovery replies (probe/listSessions/readHistory) go per-device; open and
+ * approval-response feed the shared roomManager / approvalBridge (the room is
+ * dual-ended, like desktop). listSessions echoes the cwd so a phone that has
+ * since switched projects can discard a stale reply.
+ */
+async function handleCcRoomEvent(event: MobileClientEvent & { deviceId?: string }): Promise<void> {
+  const deviceId = event.deviceId;
+  const reply = (e: MobileServerEvent): void => {
+    if (deviceId) mobileRemote.sendToDevice(deviceId, e);
+    else mobileRemote.broadcast(e);
+  };
+  try {
+    if (event.type === "ccRoom.probe") {
+      const a = await probeClaudeCli(Boolean(event.force));
+      reply({
+        type: "ccRoom.probe.ok",
+        available: a.available,
+        command: a.command,
+        version: a.version,
+        reason: a.reason,
+      });
+      return;
+    }
+    if (event.type === "ccRoom.listSessions") {
+      const sessions = discoverSessions(event.cwd);
+      reply({ type: "ccRoom.listSessions.ok", cwd: event.cwd, sessions });
+      return;
+    }
+    if (event.type === "ccRoom.openSession") {
+      const mode = await resolveRoomPermissionMode(event.cwd, event.mode);
+      const { roomId, status } = roomManager.openForSession(event.sessionId, event.cwd, mode);
+      reply({ type: "ccRoom.opened", roomId, sessionId: event.sessionId, status });
+      return;
+    }
+    if (event.type === "ccRoom.readHistory") {
+      const h = readRecentHistory(event.cwd, event.sessionId, event.limit);
+      reply({
+        type: "ccRoom.readHistory.ok",
+        sessionId: event.sessionId,
+        messages: h.messages,
+        hasMore: h.hasMore,
+        totalCount: h.totalCount,
+      });
+      return;
+    }
+    if (event.type === "ccRoom.respondApproval") {
+      approvalBridge.respond(event.roomId, event.requestId, event.decision);
+      return;
+    }
+  } catch (err) {
+    reply({ type: "room.error", message: err instanceof Error ? err.message : String(err) });
   }
 }
 

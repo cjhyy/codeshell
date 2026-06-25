@@ -26,6 +26,27 @@ export type ApprovalScope = "once" | "session" | "project";
 export type ApprovalPathScope = "file" | "dir" | "tool";
 export type PermissionMode = "default" | "acceptEdits" | "bypassPermissions";
 
+/** Mirror of core DiscoveredSession (mobile-remote can't import core). */
+export interface CcDiscoveredSession {
+  sessionId: string;
+  firstMessage: string;
+  lastModified: number;
+  messageCount: number;
+}
+
+/** Mirror of core HistoryMessage. */
+export interface CcHistoryMessage {
+  role: "user" | "assistant";
+  text: string;
+  tools?: { name: string; summary: string }[];
+  ts?: number;
+}
+
+/** Mirror of cc-room ApprovalDecision. */
+export type CcApprovalDecision =
+  | { behavior: "allow"; updatedInput?: unknown }
+  | { behavior: "deny"; message: string };
+
 export interface MobilePermissionModeSnapshotEntry {
   sessionId: string;
   mode: PermissionMode;
@@ -84,7 +105,13 @@ export type MobileClientEvent =
   | { type: "room.open"; roomId: string }
   | { type: "room.close"; roomId: string }
   | { type: "room.send"; roomId: string; text: string }
-  | { type: "room.history"; roomId: string; sinceSeq?: number };
+  | { type: "room.history"; roomId: string; sinceSeq?: number }
+  // ── CC Room (external claude CLI sessions, per-project) ───────────────
+  | { type: "ccRoom.probe"; force?: boolean }
+  | { type: "ccRoom.listSessions"; cwd: string }
+  | { type: "ccRoom.openSession"; sessionId: string; cwd: string; mode: PermissionMode }
+  | { type: "ccRoom.readHistory"; cwd: string; sessionId: string; limit: number }
+  | { type: "ccRoom.respondApproval"; roomId: string; requestId: string; decision: CcApprovalDecision };
 
 export type MobileServerEvent =
   | { type: "auth.ok"; device: TrustedDevicePublic }
@@ -132,7 +159,12 @@ export type MobileServerEvent =
         input: unknown;
         description?: string;
       };
-    };
+    }
+  | { type: "ccRoom.probe.ok"; available: boolean; command?: string; version?: string; reason?: "not-found" | "not-executable" }
+  | { type: "ccRoom.listSessions.ok"; cwd: string; sessions: CcDiscoveredSession[] }
+  | { type: "ccRoom.opened"; roomId: string; sessionId: string; status: "running" | "missing" }
+  | { type: "ccRoom.readHistory.ok"; sessionId: string; messages: CcHistoryMessage[]; hasMore: boolean; totalCount: number }
+  | { type: "ccRoom.approvalResolved"; roomId: string; requestId: string; decision: CcApprovalDecision };
 
 export interface RoomPublic {
   id: string;

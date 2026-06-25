@@ -1012,6 +1012,9 @@ export interface CodeshellApi {
         description?: string;
       }) => void,
     ): () => void;
+    onApprovalResolved(
+      cb: (p: { roomId: string; requestId: string; decision: unknown }) => void,
+    ): () => void;
   };
 }
 

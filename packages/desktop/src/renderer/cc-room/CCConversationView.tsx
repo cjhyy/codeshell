@@ -66,9 +66,15 @@ export function CCConversationView({
     const offApp = window.codeshell.ccRoom.onApprovalRequest((req) => {
       if (req.roomId === roomId) setPending((p) => [...p, req]);
     });
+    // Another端 (a phone, another desktop window) or a timeout resolved this
+    // request — drop the now-stale card so it doesn't linger ("点了还存在").
+    const offResolved = window.codeshell.ccRoom.onApprovalResolved(({ requestId }) => {
+      setPending((p) => p.filter((r) => r.requestId !== requestId));
+    });
     return () => {
       offMsg();
       offApp();
+      offResolved();
     };
   }, [roomId, cwd, sessionId]);
 

@@ -908,5 +908,15 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer.on("ccRoom:approvalRequest", h);
       return () => ipcRenderer.removeListener("ccRoom:approvalRequest", h);
     },
+    onApprovalResolved: (
+      cb: (p: { roomId: string; requestId: string; decision: unknown }) => void,
+    ): (() => void) => {
+      const h = (
+        _e: IpcRendererEvent,
+        p: { roomId: string; requestId: string; decision: unknown },
+      ) => cb(p);
+      ipcRenderer.on("ccRoom:approvalResolved", h);
+      return () => ipcRenderer.removeListener("ccRoom:approvalResolved", h);
+    },
   },
 });
