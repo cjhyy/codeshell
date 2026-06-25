@@ -16,6 +16,7 @@ import {
 } from "@mobile/lib/streamReducer";
 import { summarizeApproval, type Risk } from "@mobile/lib/riskClassify";
 import { roomMsgToEvent, roomHistoryToEvents, extractAskUserOptions } from "@mobile/lib/messageMappers";
+import { projectForCwd } from "@mobile/lib/format";
 import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket";
 
 export interface PendingApproval {
@@ -89,8 +90,16 @@ const PATH_SCOPED = new Set([
 ]);
 
 function sameCwd(a?: string | null, b?: string | null): boolean {
-  const norm = (v?: string | null): string => (v ?? "").replace(/[/\\]+$/, "");
+  const norm = (v?: string | null): string => (v ?? "").replace(/[/\\]+$/, "").toLowerCase();
   return norm(a) === norm(b);
+}
+
+function projectContextCwd(
+  cwd: string | null | undefined,
+  projects: MobileProjectMeta[],
+): string | null | undefined {
+  if (!cwd) return cwd;
+  return projectForCwd(cwd, projects)?.path ?? cwd;
 }
 
 type ChatAction =
@@ -500,10 +509,14 @@ export function useRemoteApp(): RemoteApp {
     [rooms, activeRoomId],
   );
   const activeCwd = activeRoom?.cwd || activeSessionCwd;
-  activeCwdRef.current = activeCwd;
+  const activeContextCwd = projectContextCwd(activeCwd, projects);
+  activeCwdRef.current = activeContextCwd;
   const contextRooms = useMemo(
-    () => (activeCwd ? rooms.filter((r) => sameCwd(r.cwd, activeCwd)) : []),
-    [rooms, activeCwd],
+    () =>
+      activeContextCwd
+        ? rooms.filter((r) => sameCwd(projectContextCwd(r.cwd, projects), activeContextCwd))
+        : [],
+    [rooms, activeContextCwd, projects],
   );
 
   useEffect(() => {

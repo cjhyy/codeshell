@@ -7,6 +7,36 @@ export function basename(p: string): string {
   return parts[parts.length - 1] ?? "";
 }
 
+function normalizePath(p: string): string {
+  const normalized = p.replace(/\\/g, "/").replace(/\/+$/, "");
+  return normalized === "" ? "/" : normalized;
+}
+
+function isSameOrInside(cwd: string, root: string): boolean {
+  const target = normalizePath(cwd).toLowerCase();
+  const base = normalizePath(root).toLowerCase();
+  return target === base || target.startsWith(`${base}/`);
+}
+
+/** Return the desktop project whose root owns `cwd` (longest prefix wins). */
+export function projectForCwd<T extends { path: string; name: string }>(
+  cwd: string | null | undefined,
+  projects: T[] = [],
+): T | undefined {
+  if (!cwd) return undefined;
+  let best: T | undefined;
+  let bestLen = -1;
+  for (const p of projects) {
+    if (!p.path || !isSameOrInside(cwd, p.path)) continue;
+    const len = normalizePath(p.path).length;
+    if (len > bestLen) {
+      best = p;
+      bestLen = len;
+    }
+  }
+  return best;
+}
+
 /** Group items by their cwd (project). When desktop project order is provided
  *  it wins; unknown projects fall back to newest-first. Empty cwd → "无项目"
  *  bucket, sorted last. Generic over any item carrying `cwd` + `updatedAt`. */
@@ -16,7 +46,7 @@ export function groupByProject<T extends { cwd: string; updatedAt: number }>(
 ): { cwd: string; name: string; items: T[]; updatedAt: number }[] {
   const map = new Map<string, T[]>();
   for (const it of items) {
-    const key = it.cwd || "";
+    const key = projectForCwd(it.cwd, projects)?.path ?? it.cwd ?? "";
     const arr = map.get(key);
     if (arr) arr.push(it);
     else map.set(key, [it]);

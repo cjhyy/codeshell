@@ -54,7 +54,7 @@ test("RoomList 显示危险 badge", () => {
     <RoomList
       rooms={rooms}
       projects={projects}
-      currentCwd="/Users/x/codeshell"
+      currentCwd="/Users/x/codeshell/packages/desktop"
       onRefresh={() => {}}
       onOpen={() => {}}
       onCreate={() => {}}
@@ -63,4 +63,5 @@ test("RoomList 显示危险 badge", () => {
   );
   expect(html).toContain("codeshell");
   expect(html).toContain("危险"); // bypassPermissions badge
+  expect(html).not.toContain("desktop ·");
 });

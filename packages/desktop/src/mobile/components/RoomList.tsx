@@ -3,7 +3,7 @@ import { Loader2, Plus, RefreshCw, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@ui/button";
 import type { MobileProjectMeta, RoomPublic } from "@protocol";
-import { basename, relativeTime } from "@mobile/lib/format";
+import { basename, projectForCwd, relativeTime } from "@mobile/lib/format";
 
 /** Rooms = resident Claude Code sessions. List + create-from-project + open. */
 export function RoomList({
@@ -28,17 +28,16 @@ export function RoomList({
   loading?: boolean;
 }) {
   const [creating, setCreating] = useState(false);
-  const currentProject = currentCwd
-    ? projects.find((p) => p.path === currentCwd)
-    : undefined;
-  const currentName = currentCwd ? currentProject?.name ?? basename(currentCwd) : "";
+  const currentProject = projectForCwd(currentCwd, projects);
+  const roomCwd = currentProject?.path ?? currentCwd;
+  const currentName = roomCwd ? currentProject?.name ?? basename(roomCwd) : "";
   return (
     <div className="flex h-full flex-col">
       <div className="mobile-side-header flex items-center gap-2 px-3 py-3">
         <div>
           <h2 className="text-sm font-semibold leading-5">房间</h2>
           <p className="max-w-[11rem] truncate text-[11px] text-muted-foreground">
-            {currentCwd ? `${currentName} · ${rooms.length} 个` : "当前会话无目录"}
+            {roomCwd ? `${currentName} · ${rooms.length} 个` : "当前会话无目录"}
           </p>
         </div>
         <div className="ml-auto flex gap-1.5">
@@ -52,7 +51,7 @@ export function RoomList({
           >
             {loading ? <Loader2 className="animate-spin" /> : <RefreshCw />}
           </Button>
-          <Button size="sm" disabled={!currentCwd} onClick={() => setCreating((c) => !c)}>
+          <Button size="sm" disabled={!roomCwd} onClick={() => setCreating((c) => !c)}>
             {creating ? <X /> : <Plus />}
             {creating ? "取消" : "新建"}
           </Button>
@@ -66,17 +65,17 @@ export function RoomList({
           </p>
           <button
             type="button"
-            disabled={!currentCwd}
+            disabled={!roomCwd}
             onClick={() => {
-              if (!currentCwd) return;
-              onCreate(currentCwd, currentName);
+              if (!roomCwd) return;
+              onCreate(roomCwd, currentName);
               setCreating(false);
             }}
             className="mobile-list-item flex w-full flex-col rounded-lg px-2.5 py-2 text-left text-sm disabled:opacity-50"
           >
             <span className="font-medium text-foreground">{currentName || "无目录"}</span>
             <span className="truncate text-[11px] text-muted-foreground">
-              {currentCwd || "请先选择一个带目录的会话"}
+              {roomCwd || "请先选择一个带目录的会话"}
             </span>
           </button>
         </div>
@@ -88,7 +87,7 @@ export function RoomList({
             <Loader2 className="size-3.5 animate-spin text-status-running" />
             正在加载房间…
           </p>
-        ) : !currentCwd ? (
+        ) : !roomCwd ? (
           <p className="mobile-glass rounded-lg px-3 py-6 text-center text-xs text-muted-foreground">
             当前会话没有项目目录。选择一个带 cwd 的会话后,这里会显示对应的 Claude Code 房间。
           </p>

@@ -3,7 +3,7 @@ import { Loader2, Plus, RefreshCw, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@ui/button";
 import type { MobileProjectMeta, MobileSessionMeta } from "@protocol";
-import { basename, relativeTime, groupByProject } from "@mobile/lib/format";
+import { basename, relativeTime, groupByProject, projectForCwd } from "@mobile/lib/format";
 
 /** The desktop sessions the phone can open + drive, GROUPED BY PROJECT (cwd). */
 export function SessionList({
@@ -27,12 +27,11 @@ export function SessionList({
 }) {
   const [creating, setCreating] = useState(false);
   const groups = groupByProject(sessions, projects);
-  const currentProject = currentCwd
-    ? projects.find((p) => p.path === currentCwd)
-    : undefined;
+  const currentProject = projectForCwd(currentCwd, projects);
+  const currentProjectCwd = currentProject?.path ?? currentCwd;
   const currentKnown = currentCwd !== undefined;
-  const otherProjects = currentCwd
-    ? projects.filter((p) => p.path !== currentCwd)
+  const otherProjects = currentProject
+    ? projects.filter((p) => p.path !== currentProject.path)
     : projects;
   return (
     <div className="flex h-full flex-col">
@@ -65,20 +64,20 @@ export function SessionList({
             <button
               type="button"
               onClick={() => {
-                onNew(currentKnown ? currentCwd : undefined, currentProject?.name);
+                onNew(currentKnown ? currentProjectCwd : undefined, currentProject?.name);
                 setCreating(false);
               }}
               className="mobile-list-item flex flex-col rounded-lg px-2.5 py-2 text-left text-sm"
             >
               <span className="font-medium text-foreground">
-                {currentCwd
-                  ? `当前目录 · ${currentProject?.name ?? basename(currentCwd)}`
+                {currentProjectCwd
+                  ? `当前项目 · ${currentProject?.name ?? basename(currentProjectCwd)}`
                   : currentKnown
                     ? "无项目对话"
                     : "当前桌面目录"}
               </span>
               <span className="truncate text-[11px] text-muted-foreground">
-                {currentCwd || (currentKnown ? "不绑定 repo" : "跟随桌面当前 cwd")}
+                {currentProjectCwd || (currentKnown ? "不绑定 repo" : "跟随桌面当前 cwd")}
               </span>
             </button>
             {otherProjects.length > 0 && (

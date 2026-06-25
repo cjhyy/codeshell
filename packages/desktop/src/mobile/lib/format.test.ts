@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { basename, relativeTime, groupByProject } from "./format";
+import { basename, relativeTime, groupByProject, projectForCwd } from "./format";
 
 test("groupByProject 按 cwd 分组,最新项目在前,无项目沉底", () => {
   const items = [
@@ -28,6 +28,28 @@ test("groupByProject 有桌面项目顺序时按项目顺序排列", () => {
     { path: "/u/proj1", name: "Alpha" },
   ]);
   expect(groups.map((g) => g.name)).toEqual(["Pinned beta", "Alpha", "proj3"]);
+});
+
+test("groupByProject 将项目子目录归到桌面项目根", () => {
+  const items = [
+    { id: "a", cwd: "/u/codeshell/packages/desktop", updatedAt: 100 },
+    { id: "b", cwd: "/u/codeshell", updatedAt: 200 },
+  ];
+  const groups = groupByProject(items, [{ path: "/u/codeshell", name: "codeshell" }]);
+  expect(groups).toHaveLength(1);
+  expect(groups[0]?.cwd).toBe("/u/codeshell");
+  expect(groups[0]?.name).toBe("codeshell");
+  expect(groups[0]?.items.map((i) => i.id).sort()).toEqual(["a", "b"]);
+});
+
+test("projectForCwd 用最长项目前缀匹配", () => {
+  const projects = [
+    { path: "/u/codeshell", name: "codeshell" },
+    { path: "/u/codeshell/packages/desktop", name: "desktop-dev" },
+  ];
+  expect(projectForCwd("/u/codeshell/packages/desktop/src", projects)?.name).toBe("desktop-dev");
+  expect(projectForCwd("/u/codeshell/packages/mobile", projects)?.name).toBe("codeshell");
+  expect(projectForCwd("/u/other", projects)).toBeUndefined();
 });
 
 test("groupByProject 空数组 → 空", () => {
