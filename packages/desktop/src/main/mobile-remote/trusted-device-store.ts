@@ -1,7 +1,22 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { TrustedDevice, TrustedDevicePublic } from "./types.js";
+
+/**
+ * Constant-time compare for a device's bearer credential (secretHash), so
+ * authentication doesn't leak hash bytes through compare-timing (Y-3).
+ * `timingSafeEqual` requires equal-length buffers and throws otherwise — a
+ * length mismatch is itself a non-match, so we short-circuit to false. The
+ * length check isn't constant-time, but it only reveals the (fixed, public)
+ * length of a correct hash, not its content.
+ */
+function secretHashEquals(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, "utf-8");
+  const bufB = Buffer.from(b, "utf-8");
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
+}
 
 export class TrustedDeviceStore {
   constructor(private readonly filePath: string) {}
@@ -41,7 +56,7 @@ export class TrustedDeviceStore {
   authenticate(id: string, secretHash: string): TrustedDevicePublic | undefined {
     const devices = this.readAll();
     const device = devices.find(
-      (item) => item.id === id && item.secretHash === secretHash && !item.revokedAt,
+      (item) => item.id === id && !item.revokedAt && secretHashEquals(item.secretHash, secretHash),
     );
     if (!device) return undefined;
     device.lastSeenAt = Date.now();

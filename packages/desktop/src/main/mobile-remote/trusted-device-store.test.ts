@@ -74,6 +74,27 @@ describe("TrustedDeviceStore", () => {
     expect(store.authenticate(a.id, "hashA")).toBeUndefined();
   });
 
+  // Y-3 hardening: secretHash is the device's bearer credential, compared with
+  // timingSafeEqual (constant-time) instead of `===`. The comparison must stay
+  // correct across all inputs — crucially, a wrong hash of a DIFFERENT LENGTH
+  // must reject cleanly (return undefined), not throw, since timingSafeEqual
+  // requires equal-length buffers.
+  test("authenticate rejects a wrong-length secretHash without throwing (timing-safe)", () => {
+    dir = mkdtempSync(join(tmpdir(), "mobile-devices-"));
+    const store = new TrustedDeviceStore(join(dir, "devices.json"));
+    const created = store.addDevice({ name: "iPhone", secretHash: "0123456789abcdef" });
+
+    // correct hash → authenticates
+    expect(store.authenticate(created.id, "0123456789abcdef")?.name).toBe("iPhone");
+    // wrong hash, SAME length → rejected, no throw
+    expect(store.authenticate(created.id, "fedcba9876543210")).toBeUndefined();
+    // wrong hash, DIFFERENT length → rejected, no throw (the length-mismatch trap)
+    expect(store.authenticate(created.id, "short")).toBeUndefined();
+    expect(store.authenticate(created.id, "")).toBeUndefined();
+    // wrong id → rejected
+    expect(store.authenticate("nope", "0123456789abcdef")).toBeUndefined();
+  });
+
   test("rename() changes a device's display name", () => {
     dir = mkdtempSync(join(tmpdir(), "mobile-devices-"));
     const store = new TrustedDeviceStore(join(dir, "devices.json"));
