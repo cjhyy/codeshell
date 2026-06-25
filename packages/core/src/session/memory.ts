@@ -55,6 +55,17 @@ export interface MemoryEntry {
    * UI distinguish curated memories from extractor noise.
    */
   origin?: "auto" | "manual";
+  /**
+   * Recall lifecycle (召回 TTL). `usageCount` increments each time MemoryRead
+   * hits this entry; `lastUsed` is the ISO timestamp of that last hit; `created`
+   * is set on first save and preserved across UPDATE. Drives recall-based TTL:
+   * a `project`-type memory not read for N days is pruned. Stored in frontmatter
+   * — no SQLite. Legacy files lacking these fields read back as
+   * {usageCount:0, lastUsed/created ← mtime}, never hidden.
+   */
+  usageCount?: number;
+  lastUsed?: string;
+  created?: string;
 }
 
 /**
@@ -140,8 +151,19 @@ export class MemoryManager {
     const fileName = this.slugify(entry.name) + ".md";
     const filePath = join(this.memoryDir, fileName);
 
+    const nowIso = new Date().toISOString();
+    // Overwrite = UPDATE: preserve the original `created` and accumulated
+    // `usageCount` of the file being replaced (only `created` is load-bearing
+    // for TTL; carrying usageCount avoids resetting a popular memory's score).
+    // explicit entry fields win over the existing file (lets callers force a value).
+    const existing = existsSync(filePath) ? this.loadFile(fileName) : null;
+    const created = entry.created ?? existing?.created ?? nowIso;
+    const usageCount = entry.usageCount ?? existing?.usageCount ?? 0;
+    const lastUsed = entry.lastUsed ?? existing?.lastUsed ?? created;
+
     // pinned/origin are written only when meaningful so legacy-shaped files
-    // stay byte-identical for unpinned manual saves.
+    // stay byte-identical for unpinned manual saves. Lifecycle fields are
+    // always written now (created/lastUsed/usageCount) — they're how TTL works.
     const content =
       `---\n` +
       `name: ${entry.name}\n` +
@@ -149,6 +171,9 @@ export class MemoryManager {
       `type: ${entry.type}\n` +
       (entry.pinned ? `pinned: true\n` : "") +
       (entry.origin ? `origin: ${entry.origin}\n` : "") +
+      `created: ${created}\n` +
+      `lastUsed: ${lastUsed}\n` +
+      `usageCount: ${usageCount}\n` +
       `---\n\n` +
       `${entry.content}\n`;
 
@@ -188,6 +213,21 @@ export class MemoryManager {
     const filePath = join(this.memoryDir, fileName);
     if (!existsSync(filePath)) return null;
 
+    return this.loadFileFromDir(this.memoryDir, fileName, this.scope);
+  }
+
+  /**
+   * Parse a memory file's frontmatter + body into a MemoryEntry. Shared by both
+   * loadFile (own scope) and loadScope (cross-scope) so the parsing of every
+   * field — including the lifecycle fields — lives in exactly one place.
+   * Returns null on missing file / unparseable frontmatter.
+   */
+  private parseMemoryFile(
+    filePath: string,
+    fileName: string,
+    scope: MemoryScope,
+  ): MemoryEntry | null {
+    if (!existsSync(filePath)) return null;
     try {
       const raw = readFileSync(filePath, "utf-8");
       const frontmatterMatch = raw.match(/^---\n([\s\S]*?)\n---\n\n?([\s\S]*)$/);
@@ -202,6 +242,7 @@ export class MemoryManager {
       const pinned = frontmatter.match(/pinned:\s*(.+)/)?.[1]?.trim() === "true";
       const originRaw = frontmatter.match(/origin:\s*(.+)/)?.[1]?.trim();
       const origin = originRaw === "auto" || originRaw === "manual" ? originRaw : undefined;
+
       let updatedAt = 0;
       try {
         updatedAt = statSync(filePath).mtimeMs;
@@ -209,7 +250,18 @@ export class MemoryManager {
         // mtime best-effort; 0 = unknown (never filtered out by maxAge).
       }
 
-      return { name, description, type, content, fileName, scope: this.scope, updatedAt, pinned, origin };
+      // Lifecycle fields. Legacy files lack them → fall back to mtime so a TTL
+      // sweep treats them as "last used = file age" rather than "never used".
+      const mtimeIso = updatedAt > 0 ? new Date(updatedAt).toISOString() : undefined;
+      const created = frontmatter.match(/created:\s*(.+)/)?.[1]?.trim() || mtimeIso;
+      const lastUsed = frontmatter.match(/lastUsed:\s*(.+)/)?.[1]?.trim() || created;
+      const usageRaw = frontmatter.match(/usageCount:\s*(\d+)/)?.[1];
+      const usageCount = usageRaw ? parseInt(usageRaw, 10) : 0;
+
+      return {
+        name, description, type, content, fileName, scope,
+        updatedAt, pinned, origin, usageCount, lastUsed, created,
+      };
     } catch {
       return null;
     }
@@ -239,6 +291,58 @@ export class MemoryManager {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Record a recall: a MemoryRead hit this entry. Bumps usageCount and sets
+   * lastUsed=now, rewriting only the frontmatter (content untouched). This is
+   * the signal that drives recall-based TTL — a memory that keeps getting read
+   * never ages out. Idempotent-safe: missing entry → false, no throw.
+   */
+  recordRecall(nameOrFile: string, now: Date = new Date()): boolean {
+    const entry = this.loadAll().find(
+      (e) => e.name === nameOrFile || e.fileName === nameOrFile,
+    );
+    if (!entry) return false;
+    try {
+      this.save({
+        name: entry.name,
+        description: entry.description,
+        type: entry.type,
+        content: entry.content,
+        pinned: entry.pinned,
+        origin: entry.origin,
+        created: entry.created,
+        usageCount: (entry.usageCount ?? 0) + 1,
+        lastUsed: now.toISOString(),
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Recall-based TTL sweep. Soft-deletes `project`-type memories not read for
+   * more than `ttlDays` (by lastUsed). Stable types (user/feedback/reference)
+   * and pinned entries are NEVER pruned — only ephemeral project events age out.
+   * Returns the names pruned. ttlDays<=0 disables the sweep.
+   */
+  pruneByRecall(ttlDays: number, now: Date = new Date()): string[] {
+    if (!ttlDays || ttlDays <= 0) return [];
+    const cutoff = now.getTime() - ttlDays * 24 * 60 * 60 * 1000;
+    const pruned: string[] = [];
+    for (const e of this.loadAll()) {
+      if (e.type !== "project") continue; // stable types are exempt
+      if (e.pinned) continue; // pinned exempt
+      const lastUsedMs = e.lastUsed ? new Date(e.lastUsed).getTime() : NaN;
+      // Unknown lastUsed (unparseable) → keep, never prune on missing data.
+      if (!Number.isFinite(lastUsedMs)) continue;
+      if (lastUsedMs < cutoff) {
+        if (this.delete(e.name)) pruned.push(e.name);
+      }
+    }
+    return pruned;
   }
 
   /**
@@ -300,6 +404,68 @@ export class MemoryManager {
   }
 
   /**
+   * Two-layer injection index (用户拍板). Merges GLOBAL (cross-project
+   * experience) + PROJECT (this repo's facts) memories into a compact index —
+   * one line per entry, name + description only, NO body. The model reads a
+   * specific entry's full content on demand via MemoryRead (which records a
+   * recall → drives TTL + UI visibility).
+   *
+   * This is what fixes "global memory never shows up": global memories are now
+   * injected alongside project ones, every session, regardless of cwd.
+   *
+   * Static because it must construct two managers (global = no projectDir,
+   * project = with projectDir). `projectDir` undefined → only global is shown.
+   */
+  static buildInjectionIndex(opts: {
+    projectDir?: string;
+    baseDir?: string;
+    maxAgeDays?: number;
+    now?: number;
+  }): string {
+    const global = new MemoryManager({ baseDir: opts.baseDir });
+    const project = opts.projectDir
+      ? new MemoryManager({ baseDir: opts.baseDir, projectDir: opts.projectDir })
+      : null;
+
+    const pinnedFirst = (a: MemoryEntry, b: MemoryEntry): number =>
+      Number(b.pinned ?? false) - Number(a.pinned ?? false);
+
+    const collect = (mm: MemoryManager): MemoryEntry[] =>
+      filterByAge(
+        [...mm.loadScope("user"), ...mm.loadScope("dream")],
+        opts.maxAgeDays,
+        opts.now,
+      ).sort(pinnedFirst);
+
+    const globalEntries = collect(global);
+    const projectEntries = project ? collect(project) : [];
+
+    if (globalEntries.length === 0 && projectEntries.length === 0) return "";
+
+    const fmt = (e: MemoryEntry): string =>
+      `- ${e.pinned ? "[pinned] " : ""}[${e.type}] ${e.name}: ${e.description}`;
+
+    const lines: string[] = [];
+    if (globalEntries.length > 0) {
+      lines.push("## Global memories (apply across all projects)");
+      for (const e of globalEntries) lines.push(fmt(e));
+    }
+    if (projectEntries.length > 0) {
+      if (lines.length > 0) lines.push("");
+      lines.push("## Project memories (this repo)");
+      for (const e of projectEntries) lines.push(fmt(e));
+    }
+
+    return (
+      `# Persistent Memory (index)\n\n` +
+      `These are summaries of memories from previous sessions. Only the summary is shown here.\n` +
+      `When a memory looks relevant to the current task, read its full content with the ` +
+      `MemoryRead tool (scope = user or dream; location = global or project) before relying on it.\n\n` +
+      lines.join("\n")
+    );
+  }
+
+  /**
    * Load every entry belonging to the given scope, without changing the
    * manager's own scope. Used by buildMemoryContext to merge user + dream
    * in one pass and by tools that need cross-scope visibility.
@@ -323,30 +489,7 @@ export class MemoryManager {
     fileName: string,
     scope: MemoryScope,
   ): MemoryEntry | null {
-    const filePath = join(dir, fileName);
-    if (!existsSync(filePath)) return null;
-    try {
-      const raw = readFileSync(filePath, "utf-8");
-      const frontmatterMatch = raw.match(/^---\n([\s\S]*?)\n---\n\n?([\s\S]*)$/);
-      if (!frontmatterMatch) return null;
-      const frontmatter = frontmatterMatch[1];
-      const content = frontmatterMatch[2].trim();
-      const name = frontmatter.match(/name:\s*(.+)/)?.[1]?.trim() ?? fileName;
-      const description = frontmatter.match(/description:\s*(.+)/)?.[1]?.trim() ?? "";
-      const type = (frontmatter.match(/type:\s*(.+)/)?.[1]?.trim() ?? "project") as MemoryEntry["type"];
-      const pinned = frontmatter.match(/pinned:\s*(.+)/)?.[1]?.trim() === "true";
-      const originRaw = frontmatter.match(/origin:\s*(.+)/)?.[1]?.trim();
-      const origin = originRaw === "auto" || originRaw === "manual" ? originRaw : undefined;
-      let updatedAt = 0;
-      try {
-        updatedAt = statSync(filePath).mtimeMs;
-      } catch {
-        // best-effort
-      }
-      return { name, description, type, content, fileName, scope, updatedAt, pinned, origin };
-    } catch {
-      return null;
-    }
+    return this.parseMemoryFile(join(dir, fileName), fileName, scope);
   }
 
   /**

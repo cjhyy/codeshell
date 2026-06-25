@@ -277,8 +277,14 @@ export class PromptComposer {
 
   private getMemoryContext(): string {
     try {
-      const mm = new MemoryManager(this.options.cwd);
-      return mm.buildMemoryContext({ maxAgeDays: this.options.memoriesMaxAgeDays });
+      // Two-layer injection (用户拍板): a compact index merging GLOBAL +
+      // PROJECT memories. Global memories are now surfaced every session
+      // regardless of cwd (the fix for "global memory never shows up"); the
+      // model reads full bodies on demand via MemoryRead.
+      return MemoryManager.buildInjectionIndex({
+        projectDir: this.options.cwd,
+        maxAgeDays: this.options.memoriesMaxAgeDays,
+      });
     } catch {
       return "";
     }

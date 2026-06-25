@@ -491,6 +491,14 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
                 )}
                 <span className="min-w-0 truncate text-sm font-medium text-foreground">{e.name}</span>
                 <span className="min-w-0 truncate text-xs text-muted-foreground">{e.description}</span>
+                {typeof e.usageCount === "number" && e.usageCount > 0 && (
+                  <span
+                    className="shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground tabular-nums"
+                    title={t("settingsX.memory.recalledTitle")}
+                  >
+                    {t("settingsX.memory.recalledBadge", { count: e.usageCount })}
+                  </span>
+                )}
               </Button>
               <Button
                 type="button"

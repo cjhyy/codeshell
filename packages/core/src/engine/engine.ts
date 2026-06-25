@@ -2400,6 +2400,10 @@ export class Engine {
         // autoExtract=false turns the extractor off (summaries/dream stay).
         maxCount: this.readMemoriesConfig()?.maxCount,
         autoExtract: this.readMemoriesConfig()?.autoExtract,
+        // Recall-based TTL (用户拍板 C): project-type memories not read for N
+        // days are soft-deleted. Defaults to 30; settings.memories.recallTtlDays
+        // overrides; set to 0 to disable the sweep.
+        recallTtlDays: this.readMemoriesConfig()?.recallTtlDays ?? 30,
       });
 
       await orchestrator.run(plainMessages, sessionId);
@@ -3212,7 +3216,7 @@ export class Engine {
    * falls back to its built-in defaults.
    */
   private readMemoriesConfig():
-    | { maxCount?: number; maxAge?: number; extractionModel?: string; autoExtract?: boolean }
+    | { maxCount?: number; maxAge?: number; extractionModel?: string; autoExtract?: boolean; recallTtlDays?: number }
     | undefined {
     try {
       const settings = this.getSettingsManager().get() as {
@@ -3221,6 +3225,7 @@ export class Engine {
           maxAge?: number;
           extractionModel?: string;
           autoExtract?: boolean;
+          recallTtlDays?: number;
         };
       };
       return settings.memories;

@@ -7,6 +7,14 @@
 
 export interface ExtractedMemory {
   type: "user" | "feedback" | "project" | "reference";
+  /**
+   * Storage location (用户拍板). "global" = a general lesson/preference that
+   * still holds in a different project (→ ~/.code-shell/memory). "project" =
+   * specific to the current repo (→ projects/<hash>/memory). Decided by the
+   * extracting LLM. Missing/invalid → "project" (conservative: don't pollute
+   * the global layer with one-off events).
+   */
+  scope: "global" | "project";
   name: string;
   description: string;
   content: string;
@@ -36,11 +44,16 @@ ${existingList}
 ${conversationText.slice(0, 30000)}
 
 ## Instructions
-Identify NEW information that should be saved as persistent memories. Categories:
+Identify NEW information that should be saved as persistent memories. Categories (type):
 - **user**: Information about the user's role, preferences, or expertise
 - **feedback**: Guidance about how to approach work (corrections or confirmations)
 - **project**: Non-obvious facts about ongoing work, goals, or decisions
 - **reference**: Pointers to external resources or systems
+
+Also decide each memory's storage SCOPE — the single most important call:
+- **global**: a general lesson or preference that would STILL be true in a DIFFERENT project (e.g. "the user prefers Chinese replies", "always grep for consumers before declaring code dead", "git subprocess args need a -- separator"). Goes into the cross-project store.
+- **project**: specific to THIS repository — only makes sense here (e.g. "this repo uses worktrees", "the real settings page is SettingsPage not SettingsView"). Goes into the per-project store.
+- The test: "would this still be true in another project?" Yes → global. No → project. When unsure, choose project.
 
 Rules:
 - Extract AT MOST 2 memories per session. Prefer 0 to a marginal one — most sessions are noise.
@@ -52,7 +65,8 @@ Rules:
 - NEVER include secrets: API keys, tokens, passwords, private URLs with credentials. If the durable fact involves a credential, describe WHERE it lives (e.g. "key is in .env as FOO_KEY"), never the value itself
 - Each memory should have a clear, specific description
 
-Respond with a JSON array of objects with fields: type, name, description, content
+Respond with a JSON array of objects with fields: type, scope, name, description, content
+(scope must be "global" or "project")
 If nothing worth remembering, respond with an empty array: []`;
 }
 
@@ -85,15 +99,25 @@ export function parseExtractionResponse(
     const parsed = JSON.parse(jsonMatch[0]);
     if (!Array.isArray(parsed)) return [];
 
-    const valid = parsed.filter(
-      (m: unknown): m is ExtractedMemory =>
-        typeof m === "object" &&
-        m !== null &&
-        typeof (m as any).type === "string" &&
-        typeof (m as any).name === "string" &&
-        typeof (m as any).content === "string" &&
-        ["user", "feedback", "project", "reference"].includes((m as any).type),
-    );
+    const valid = parsed
+      .filter(
+        (m: unknown): m is Omit<ExtractedMemory, "scope"> & { scope?: unknown } =>
+          typeof m === "object" &&
+          m !== null &&
+          typeof (m as any).type === "string" &&
+          typeof (m as any).name === "string" &&
+          typeof (m as any).content === "string" &&
+          ["user", "feedback", "project", "reference"].includes((m as any).type),
+      )
+      // Normalize scope: only "global" survives as global; everything else
+      // (absent, "project", typos) → "project" — never promote to global by accident.
+      .map((m): ExtractedMemory => ({
+        type: m.type,
+        scope: m.scope === "global" ? "global" : "project",
+        name: m.name,
+        description: m.description,
+        content: m.content,
+      }));
 
     return valid.slice(0, cap);
   } catch {

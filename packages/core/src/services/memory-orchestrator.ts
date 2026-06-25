@@ -55,6 +55,13 @@ export interface MemoryOrchestratorOptions {
    * Absent/true = extract (default behavior).
    */
   autoExtract?: boolean;
+  /**
+   * Recall-based TTL in days (用户拍板 C). A `project`-type memory not read for
+   * this many days is soft-deleted (moved to memory-trash). Stable types
+   * (user/feedback/reference) and pinned entries are never pruned. From
+   * settings.memories.recallTtlDays; undefined/<=0 → no sweep.
+   */
+  recallTtlDays?: number;
 }
 
 export interface MemoryOrchestratorResult {
@@ -62,6 +69,8 @@ export interface MemoryOrchestratorResult {
   extracted: number;
   /** Whether the auto-dream consolidation was triggered. */
   dreamTriggered: boolean;
+  /** Names of memories pruned by the recall-TTL sweep. */
+  pruned: string[];
 }
 
 export class MemoryOrchestrator {
@@ -106,8 +115,17 @@ export class MemoryOrchestrator {
       const entries = parseExtractionResponse(response, this.options.maxCount);
       const parseMs = Date.now() - t;
       t = Date.now();
+      // Route by scope (用户拍板): "global" memories go to the cross-project
+      // store (no projectDir), "project" memories stay per-project. `mm` is the
+      // project manager; build the global one lazily only if needed.
+      let globalMm: MemoryManager | null = null;
+      let globalCount = 0;
       for (const entry of entries) {
-        mm.save({
+        const target =
+          entry.scope === "global"
+            ? (globalMm ??= new MemoryManager({ scope: "user" }))
+            : mm;
+        target.save({
           type: entry.type,
           name: entry.name,
           // Defense-in-depth: the extraction prompt forbids secrets, but a prompt
@@ -120,12 +138,15 @@ export class MemoryOrchestrator {
           // so the UI can tell curated memories from extractor noise.
           origin: "auto",
         });
+        if (entry.scope === "global") globalCount++;
       }
       const saveMs = Date.now() - t;
       extracted = entries.length;
       logger.info("memory.extraction_done", {
         sessionId,
         extracted,
+        globalCount,
+        projectCount: extracted - globalCount,
         elapsedMs: Date.now() - startTime,
         loadMs,
         promptMs,
@@ -197,14 +218,17 @@ export class MemoryOrchestrator {
     let dreamTriggered = false;
     try {
       if (shouldAutoDream() && this.options.runDream) {
-        // Dream sees BOTH scopes — user/ is read-only context so it can spot
-        // duplicates spanning scopes, dream/ is the workspace it edits.
+        // Dream sees project user/ (read-only context) + project dream/
+        // (workspace) + global dream/ (cross-project workspace it also cleans).
         const userMems = mm.loadScope("user");
         const dreamMems = mm.loadScope("dream");
-        if (userMems.length + dreamMems.length > 0) {
+        const globalDreamMems = this.options.projectDir
+          ? new MemoryManager({ scope: "dream" }).loadScope("dream")
+          : [];
+        if (userMems.length + dreamMems.length + globalDreamMems.length > 0) {
           const ran = await this.options.runDream({
             systemPrompt: buildDreamSystemPrompt(),
-            userPrompt: buildDreamUserPrompt(userMems, dreamMems),
+            userPrompt: buildDreamUserPrompt(userMems, dreamMems, globalDreamMems),
             projectDir: this.options.projectDir,
           });
           if (ran) {
@@ -226,6 +250,30 @@ export class MemoryOrchestrator {
       });
     }
 
-    return { extracted, dreamTriggered };
+    // --------------- 5. Recall-based TTL sweep (用户拍板 C) ---------------
+    // Soft-delete project-type memories not read for recallTtlDays. Runs on
+    // both the project store and the global store (global also accumulates
+    // project-type events if the LLM mis-scopes). Never throws into the result.
+    const pruned: string[] = [];
+    try {
+      const ttl = this.options.recallTtlDays;
+      if (ttl && ttl > 0) {
+        pruned.push(...mm.pruneByRecall(ttl));
+        // Only sweep the global store when we're not already it (projectDir set).
+        if (this.options.projectDir) {
+          pruned.push(...new MemoryManager({ scope: "user" }).pruneByRecall(ttl));
+        }
+        if (pruned.length > 0) {
+          logger.info("memory.recall_ttl_pruned", { sessionId, pruned, ttlDays: ttl });
+        }
+      }
+    } catch (err) {
+      logger.warn("memory.recall_ttl_failed", {
+        sessionId,
+        error: (err as Error).message,
+      });
+    }
+
+    return { extracted, dreamTriggered, pruned };
   }
 }
