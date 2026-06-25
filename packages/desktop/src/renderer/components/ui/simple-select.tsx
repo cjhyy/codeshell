@@ -112,7 +112,16 @@ export function SimpleSelect<V extends string = string>({
       disabled={disabled}
     >
       <SelectTrigger aria-label={ariaLabel} className={cn(size === "sm" && "h-8 text-xs", className)}>
-        <SelectValue placeholder={placeholder}>{selectedLabel}</SelectValue>
+        {selectedLabel !== undefined ? (
+          // Render the label ourselves as a leaf span. We deliberately do NOT
+          // pass children to <SelectValue>: radix uses that node as its own
+          // portal container (attaches a ref), so giving it React children is
+          // ambiguous and warns under React 19. When nothing is selected we
+          // fall back to a childless <SelectValue> purely for its placeholder.
+          <span className="pointer-events-none">{selectedLabel}</span>
+        ) : (
+          <SelectValue placeholder={placeholder} />
+        )}
       </SelectTrigger>
       <SelectContent>
         {grouped
