@@ -172,7 +172,7 @@ import { checkSkillUpdateEntry, updateSkillEntry } from "./skill-update-entry.js
 import { resolveModelMeta } from "./model-meta-service.js";
 import { listRuns, getRun, deleteRunDir } from "./runs-service.js";
 import { initUpdater, checkForUpdate, downloadUpdate, quitAndInstall, getLastStatus } from "./updater.js";
-import { loadRecents, pushRecent } from "./recents-store.js";
+import { loadRecents, pushRecent, loadProjects, setPinned, softDelete } from "./recents-store.js";
 import { loadWindowState, saveWindowState } from "./window-state-store.js";
 import { getTrust, setTrust, type TrustLevel } from "./trust-store.js";
 import { installAppMenu, refreshAppMenu } from "./menu.js";
@@ -246,14 +246,33 @@ function normalizeMobileProjects(projects: unknown): MobileProjectMeta[] {
   return out;
 }
 async function mobileProjectList(): Promise<MobileProjectMeta[]> {
-  if (mobileProjects.length > 0) return mobileProjects;
-  const recents = await loadRecents().catch(() => []);
-  return recents.map((r) => ({ path: r.path, name: r.name, addedAt: r.lastOpenedAt }));
+  // Disk recents are the source of truth (pinned + soft-delete aware). The
+  // legacy in-memory `mobileProjects` (pushed from the renderer's localStorage)
+  // is only a fallback if disk is somehow empty — disk wins so a desktop
+  // add/remove/pin is reflected on phones and survives restart.
+  const projects = await loadProjects().catch(() => []);
+  if (projects.length > 0) {
+    return projects.map((r) => ({ path: r.path, name: r.name, addedAt: r.lastOpenedAt, pinned: r.pinned }));
+  }
+  return mobileProjects;
 }
 async function sendMobileProjectList(deviceId?: string): Promise<void> {
   const event: MobileServerEvent = { type: "room.projects.ok", projects: await mobileProjectList() };
   if (deviceId) mobileRemote.sendToDevice(deviceId, event);
   else mobileRemote.broadcast(event);
+}
+/**
+ * After a disk project change (add / remove / pin), push the fresh list to BOTH
+ * transports: phones via room.projects.ok, desktop windows via projects:changed
+ * (so the renderer re-projects its localStorage cache). Disk is the truth; this
+ * is how a desktop edit becomes live on phones and how every window stays synced.
+ */
+async function broadcastProjects(): Promise<void> {
+  const projects = await mobileProjectList();
+  mobileRemote.broadcast({ type: "room.projects.ok", projects });
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w.isDestroyed()) w.webContents.send("projects:changed", projects);
+  }
 }
 function broadcastMobileSession(meta: { sessionId: string; cwd: string; title: string; prompt: string }): void {
   const line = JSON.stringify({
@@ -1953,6 +1972,21 @@ ipcMain.handle(
     return true;
   },
 );
+
+// ── Projects (disk recents = source of truth; renderer is a projection) ─────
+ipcMain.handle("projects:list", async () => mobileProjectList());
+ipcMain.handle("projects:add", async (_e, project: { path: string; name: string }) => {
+  await pushRecent({ path: project.path, name: project.name, lastOpenedAt: Date.now() });
+  await broadcastProjects();
+});
+ipcMain.handle("projects:remove", async (_e, projectPath: string) => {
+  await softDelete(projectPath);
+  await broadcastProjects();
+});
+ipcMain.handle("projects:setPinned", async (_e, projectPath: string, pinned: boolean) => {
+  await setPinned(projectPath, pinned);
+  await broadcastProjects();
+});
 
 // ── Rooms (desktop side; same RoomManager the phone uses → dual-ended) ──────
 ipcMain.handle("rooms:list", async () => roomManager.listRooms().map(roomToPublic));
