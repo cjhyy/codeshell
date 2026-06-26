@@ -25,16 +25,30 @@ export function roomMsgToEvent(msg: unknown): unknown {
   // whole-message text correctly too.
   if (type === "text") return { type: "text_delta", text: m.text };
   // Tool start carries a human `summary` (not structured args). Surface it via
-  // the tool item's summary field; the seq gives a stable id to seal later.
-  if (type === "tool")
+  // the tool item's summary field. Prefer the real claude tool_use id (toolId)
+  // so the result can be paired by id; fall back to the seq-derived id for
+  // legacy messages that predate id threading.
+  if (type === "tool") {
+    const toolId = typeof m.toolId === "string" ? m.toolId : undefined;
     return {
       type: "tool_use_start",
-      toolCall: { id: `room-tool-${m.seq ?? ""}`, toolName: m.tool, summary: m.summary },
+      toolCall: { id: toolId ?? `room-tool-${m.seq ?? ""}`, toolName: m.tool, summary: m.summary },
     };
-  // Tool result is a coarse summary with no id back to its start → seal the last
-  // open tool item with it.
-  if (type === "tool_result")
+  }
+  // Tool result: if we have the real id, emit an id-paired `tool_result` so the
+  // reducer seals exactly the matching card (correct under parallel tools).
+  // Without an id (legacy), fall back to `room_tool_result` (seal the last open
+  // tool) — the old, best-effort behavior.
+  if (type === "tool_result") {
+    const toolId = typeof m.toolId === "string" ? m.toolId : undefined;
+    if (toolId) {
+      return {
+        type: "tool_result",
+        result: { id: toolId, result: m.summary, isError: m.isError },
+      };
+    }
     return { type: "room_tool_result", summary: m.summary, isError: m.isError };
+  }
   if (type === "turn_end") return { type: "turn_complete", reason: m.reason ?? "completed" };
   if (type === "error") return { type: "error", error: m.text };
   if (type === "agent_exit") return { type: "error", error: `agent 退出 (code ${m.reason ?? "?"})` };

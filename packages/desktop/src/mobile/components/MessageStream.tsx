@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bot, Brain, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ChatItem, ChatState } from "@mobile/lib/streamReducer";
+import type { ChatItem, ChatState } from "@/lib/streamReducer";
 import { ToolCard } from "./ToolCard";
 import { Markdown } from "./Markdown";
 

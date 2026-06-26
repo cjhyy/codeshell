@@ -42,32 +42,50 @@ describe("parseStreamJsonLine", () => {
     expect(parseStreamJsonLine(line)).toEqual([{ type: "text", text: "hello world" }]);
   });
 
-  test("extracts tool_use with arg summary", () => {
+  test("extracts tool_use with arg summary AND its tool_use id (for pairing)", () => {
     const line = JSON.stringify({
       type: "assistant",
-      message: { content: [{ type: "tool_use", name: "Bash", input: { command: "ls package.json" } }] },
+      message: {
+        content: [{ type: "tool_use", id: "toolu_01", name: "Bash", input: { command: "ls package.json" } }],
+      },
     });
     expect(parseStreamJsonLine(line)).toEqual([
-      { type: "tool", tool: "Bash", summary: "ls package.json" },
+      { type: "tool", id: "toolu_01", tool: "Bash", summary: "ls package.json" },
     ]);
   });
 
-  test("extracts tool_result (claude-fed user message)", () => {
+  test("tool_use with no id falls back to undefined id (old transcripts / malformed)", () => {
     const line = JSON.stringify({
-      type: "user",
-      message: { content: [{ type: "tool_result", content: [{ type: "text", text: "package.json\n" }] }] },
+      type: "assistant",
+      message: { content: [{ type: "tool_use", name: "Bash", input: { command: "ls" } }] },
     });
     expect(parseStreamJsonLine(line)).toEqual([
-      { type: "tool_result", summary: "package.json\n", isError: false },
+      { type: "tool", id: undefined, tool: "Bash", summary: "ls" },
     ]);
   });
 
-  test("flags tool_result errors", () => {
+  test("extracts tool_result (claude-fed user message) with its tool_use_id", () => {
     const line = JSON.stringify({
       type: "user",
-      message: { content: [{ type: "tool_result", is_error: true, content: "boom" }] },
+      message: {
+        content: [
+          { type: "tool_result", tool_use_id: "toolu_01", content: [{ type: "text", text: "package.json\n" }] },
+        ],
+      },
     });
-    expect(parseStreamJsonLine(line)).toEqual([{ type: "tool_result", summary: "boom", isError: true }]);
+    expect(parseStreamJsonLine(line)).toEqual([
+      { type: "tool_result", id: "toolu_01", summary: "package.json\n", isError: false },
+    ]);
+  });
+
+  test("flags tool_result errors and carries the id", () => {
+    const line = JSON.stringify({
+      type: "user",
+      message: { content: [{ type: "tool_result", tool_use_id: "toolu_02", is_error: true, content: "boom" }] },
+    });
+    expect(parseStreamJsonLine(line)).toEqual([
+      { type: "tool_result", id: "toolu_02", summary: "boom", isError: true },
+    ]);
   });
 
   test("maps result → turn_end with reason", () => {
@@ -82,13 +100,13 @@ describe("parseStreamJsonLine", () => {
       message: {
         content: [
           { type: "text", text: "let me check" },
-          { type: "tool_use", name: "Read", input: { file_path: "/a/b.ts" } },
+          { type: "tool_use", id: "toolu_x", name: "Read", input: { file_path: "/a/b.ts" } },
         ],
       },
     });
     expect(parseStreamJsonLine(line)).toEqual([
       { type: "text", text: "let me check" },
-      { type: "tool", tool: "Read", summary: "/a/b.ts" },
+      { type: "tool", id: "toolu_x", tool: "Read", summary: "/a/b.ts" },
     ]);
   });
 });

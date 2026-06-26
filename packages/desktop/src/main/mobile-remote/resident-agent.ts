@@ -11,8 +11,12 @@ import { CC_COST_GUARD_PROMPT } from "@cjhyy/code-shell-core";
  */
 export type ResidentAgentEvent =
   | { type: "text"; text: string }
-  | { type: "tool"; tool: string; summary: string }
-  | { type: "tool_result"; summary: string; isError: boolean }
+  // `id` is claude's tool_use block id — threaded through so tool_result can be
+  // paired back to its start by id (not the fragile "seal the last open tool"
+  // heuristic, which breaks when a turn runs tools in parallel). Optional: old
+  // transcripts and malformed lines may lack it.
+  | { type: "tool"; id?: string; tool: string; summary: string }
+  | { type: "tool_result"; id?: string; summary: string; isError: boolean }
   | { type: "turn_end"; reason: string }
   | { type: "error"; error: string }
   | { type: "exit"; code: number | null; signal: string | null }
@@ -96,7 +100,12 @@ export function parseStreamJsonLine(line: string): ResidentAgentEvent[] {
       if (c.type === "text" && typeof c.text === "string") {
         out.push({ type: "text", text: c.text });
       } else if (c.type === "tool_use") {
-        out.push({ type: "tool", tool: c.name ?? "tool", summary: argsSummary(c.input) });
+        out.push({
+          type: "tool",
+          id: typeof c.id === "string" ? c.id : undefined,
+          tool: c.name ?? "tool",
+          summary: argsSummary(c.input),
+        });
       }
     }
     return out;
@@ -109,7 +118,12 @@ export function parseStreamJsonLine(line: string): ResidentAgentEvent[] {
           : typeof c.content === "string"
             ? c.content
             : "";
-        out.push({ type: "tool_result", summary: text.slice(0, 400), isError: Boolean(c.is_error) });
+        out.push({
+          type: "tool_result",
+          id: typeof c.tool_use_id === "string" ? c.tool_use_id : undefined,
+          summary: text.slice(0, 400),
+          isError: Boolean(c.is_error),
+        });
       }
     }
     return out;

@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import type { ConnStatus } from "@mobile/hooks/useRemoteSocket";
-import type { RunState } from "@mobile/lib/streamReducer";
+import type { RunState } from "@/lib/streamReducer";
 
 const CONN_LABEL: Record<ConnStatus, string> = {
   connecting: "连接中…",

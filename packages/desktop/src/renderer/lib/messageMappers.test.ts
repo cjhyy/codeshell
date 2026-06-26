@@ -109,6 +109,62 @@ test("ccHistoryToEvents 守卫非数组 / 脏条目(不抛)", () => {
   ]);
 });
 
+// Bug: tools stacked forever in a CC room until a session switch re-rendered
+// from disk. Root cause: tool_result had no id, so the reducer "sealed the last
+// open tool" — wrong when a turn runs tools in parallel. When room messages
+// carry a `toolId`, the mapper must use it as the tool_use_start id AND emit an
+// id-paired `tool_result` (not the id-less `room_tool_result`).
+test("roomMsgToEvent:有 toolId 时用真 id + 走 id-配对的 tool_result", () => {
+  expect(
+    roomMsgToEvent({ from: "agent", type: "tool", tool: "Read", summary: "读 a.ts", toolId: "toolu_01", seq: 3 }),
+  ).toEqual({
+    type: "tool_use_start",
+    toolCall: { id: "toolu_01", toolName: "Read", summary: "读 a.ts" },
+  });
+  expect(
+    roomMsgToEvent({ from: "agent", type: "tool_result", summary: "ok", isError: false, toolId: "toolu_01" }),
+  ).toEqual({
+    type: "tool_result",
+    result: { id: "toolu_01", result: "ok", isError: false },
+  });
+});
+
+test("并行工具按 id 各自收口(回归:不再封错/堆叠)", () => {
+  const msgs = [
+    { from: "user", type: "text", text: "并行跑两个", seq: 1 },
+    { from: "agent", type: "tool", tool: "Read", summary: "a.ts", toolId: "t1", seq: 2 },
+    { from: "agent", type: "tool", tool: "Read", summary: "b.ts", toolId: "t2", seq: 3 },
+    // Results arrive in the SAME order as starts — "seal last open" would attach
+    // r1 to t2 (the most recent open) and leave t1 stuck. id-pairing fixes both.
+    { from: "agent", type: "tool_result", summary: "A内容", isError: false, toolId: "t1", seq: 4 },
+    { from: "agent", type: "tool_result", summary: "B内容", isError: false, toolId: "t2", seq: 5 },
+    { from: "agent", type: "turn_end", reason: "completed", seq: 6 },
+  ];
+  const state = msgs.map(roomMsgToEvent).reduce(reduceStream, initialChatState());
+  const tools = state.items.filter((i) => i.kind === "tool") as {
+    id: string;
+    done: boolean;
+    result?: string;
+  }[];
+  expect(tools).toHaveLength(2);
+  expect(tools.every((t) => t.done)).toBe(true);
+  expect(tools.find((t) => t.id === "t1")?.result).toBe("A内容");
+  expect(tools.find((t) => t.id === "t2")?.result).toBe("B内容");
+});
+
+test("无 toolId(旧 transcript)仍回退到 room-tool seq id + room_tool_result", () => {
+  // Back-compat: messages persisted before the id fix have no toolId.
+  expect(roomMsgToEvent({ from: "agent", type: "tool", tool: "Read", summary: "x", seq: 7 })).toEqual({
+    type: "tool_use_start",
+    toolCall: { id: "room-tool-7", toolName: "Read", summary: "x" },
+  });
+  expect(roomMsgToEvent({ from: "agent", type: "tool_result", summary: "ok", isError: false })).toEqual({
+    type: "room_tool_result",
+    summary: "ok",
+    isError: false,
+  });
+});
+
 test("extractAskUserOptions:字符串选项 / 对象 label / optionsOnly", () => {
   expect(extractAskUserOptions({ options: ["A", "B"] })).toEqual({ options: ["A", "B"], optionsOnly: false });
   expect(extractAskUserOptions({ options: [{ label: "甲" }, { label: "乙" }], optionsOnly: true })).toEqual({
