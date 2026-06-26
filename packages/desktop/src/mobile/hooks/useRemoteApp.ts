@@ -14,16 +14,16 @@ import {
   initialChatState,
   appendUserMessage,
   type ChatState,
-} from "@mobile/lib/streamReducer";
+} from "@/lib/streamReducer";
 import { summarizeApproval, type Risk } from "@mobile/lib/riskClassify";
 import {
   roomMsgToEvent,
   roomHistoryToEvents,
   ccHistoryToEvents,
   extractAskUserOptions,
-} from "@mobile/lib/messageMappers";
+} from "@/lib/messageMappers";
 import { projectForCwd } from "@mobile/lib/format";
-import { extractCcAskUser, buildCcAskUserAnswer } from "@/lib/ccAskUser";
+import { extractCcAskUser } from "@/lib/ccAskUser";
 import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket";
 
 export interface PendingApproval {

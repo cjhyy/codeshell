@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, TerminalSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ChatItem } from "@mobile/lib/streamReducer";
+import type { ChatItem } from "@/lib/streamReducer";
 
 type Tool = Extract<ChatItem, { kind: "tool" }>;
 

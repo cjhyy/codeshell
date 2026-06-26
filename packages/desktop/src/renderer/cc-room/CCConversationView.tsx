@@ -1,20 +1,34 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useReducer, useState, useCallback } from "react";
+import { Bot, ChevronDown, ChevronRight, ShieldAlert, TerminalSquare, UserRound } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Markdown } from "@/Markdown";
+import {
+  reduceStream,
+  initialChatState,
+  appendUserMessage,
+  type ChatItem,
+  type ChatState,
+} from "@/lib/streamReducer";
+import { roomMsgToEvent, ccHistoryToEvents } from "@/lib/messageMappers";
+import { extractCcAskUser, buildCcAskUserAnswer } from "@/lib/ccAskUser";
 
 /**
- * CCConversationView — one resident Claude Code (external CLI) conversation:
- * disk history (loaded once) + live room messages (streamed) + inline approval
- * cards. Thin client: talks only to `window.codeshell.ccRoom.*`; the shapes
- * below mirror the preload wire types since the renderer can't import core.
+ * CCConversationView — one resident Claude Code (external CLI) conversation.
+ *
+ * Renders through the SAME stream reducer + mappers the phone uses
+ * (src/renderer/lib), so the desktop and mobile CC views share ONE rendering
+ * logic: disk history (ccHistoryToEvents) + live room messages (roomMsgToEvent)
+ * fold into ChatItem[], tools pair by id, AskUserQuestion surfaces real options.
+ * Thin client: talks only to `window.codeshell.ccRoom.*`.
  */
 interface HistoryMessage {
   role: "user" | "assistant";
   text: string;
   tools?: { name: string; summary: string }[];
 }
-interface RoomMessage {
+interface RoomMessageWire {
   seq: number;
   from: string;
   type: string;
@@ -23,6 +37,7 @@ interface RoomMessage {
   summary?: string;
   reason?: string;
   isError?: boolean;
+  toolId?: string;
 }
 interface ApprovalReq {
   roomId: string;
@@ -31,6 +46,28 @@ interface ApprovalReq {
   displayName?: string;
   input: unknown;
   description?: string;
+}
+
+type ChatAction =
+  | { kind: "raw"; raw: unknown }
+  | { kind: "user"; text: string }
+  | { kind: "replayHistory"; messages: unknown }
+  | { kind: "replayLive"; messages: RoomMessageWire[] };
+
+function chatReducer(state: ChatState, action: ChatAction): ChatState {
+  switch (action.kind) {
+    case "raw":
+      return reduceStream(state, action.raw);
+    case "user":
+      return appendUserMessage(state, action.text);
+    case "replayHistory":
+      // Disk backlog (the original CC transcript) is the conversation's base —
+      // a full reset, so it must be dispatched before the live replay.
+      return ccHistoryToEvents(action.messages).reduce(reduceStream, initialChatState());
+    case "replayLive":
+      // Live room messages already observed before mount — fold on top of base.
+      return action.messages.map(roomMsgToEvent).reduce(reduceStream, state);
+  }
 }
 
 export function CCConversationView({
@@ -46,32 +83,41 @@ export function CCConversationView({
   mode: string;
   onBack: () => void;
 }) {
-  const [history, setHistory] = useState<HistoryMessage[]>([]);
-  const [live, setLive] = useState<RoomMessage[]>([]);
+  const [chat, dispatch] = useReducer(chatReducer, undefined, initialChatState);
   const [pending, setPending] = useState<ApprovalReq[]>([]);
   const [input, setInput] = useState("");
 
   useEffect(() => {
-    if (sessionId && cwd) {
-      void window.codeshell.ccRoom
-        .readHistory(cwd, sessionId, 20)
-        .then((r) => setHistory(r.messages));
-    }
-    void window.codeshell.ccRoom
-      .roomHistory(roomId)
-      .then((m) => setLive(m as RoomMessage[]));
+    let cancelled = false;
+    // Order matters: history replay RESETS the reducer, so it must land before
+    // the live backlog/stream are folded on top.
+    const boot = async () => {
+      if (sessionId && cwd) {
+        const r = await window.codeshell.ccRoom.readHistory(cwd, sessionId, 50);
+        if (!cancelled) {
+          dispatch({ kind: "replayHistory", messages: (r as { messages: HistoryMessage[] }).messages });
+        }
+      }
+      const live = (await window.codeshell.ccRoom.roomHistory(roomId)) as RoomMessageWire[];
+      if (!cancelled) dispatch({ kind: "replayLive", messages: live });
+    };
+    void boot();
+
     const offMsg = window.codeshell.ccRoom.onRoomMessage(({ roomId: rid, msg }) => {
-      if (rid === roomId) setLive((p) => [...p, msg as RoomMessage]);
+      if (rid === roomId) dispatch({ kind: "raw", raw: roomMsgToEvent(msg) });
     });
     const offApp = window.codeshell.ccRoom.onApprovalRequest((req) => {
-      if (req.roomId === roomId) setPending((p) => [...p, req]);
+      if (req.roomId === roomId) {
+        setPending((p) => (p.some((r) => r.requestId === req.requestId) ? p : [...p, req]));
+      }
     });
-    // Another端 (a phone, another desktop window) or a timeout resolved this
-    // request — drop the now-stale card so it doesn't linger ("点了还存在").
+    // Another端 (a phone, another window) or a timeout resolved this request —
+    // drop the now-stale card so it doesn't linger ("点了还存在").
     const offResolved = window.codeshell.ccRoom.onApprovalResolved(({ requestId }) => {
       setPending((p) => p.filter((r) => r.requestId !== requestId));
     });
     return () => {
+      cancelled = true;
       offMsg();
       offApp();
       offResolved();
@@ -81,104 +127,63 @@ export function CCConversationView({
   const send = useCallback(() => {
     const t = input.trim();
     if (!t) return;
+    // The room doesn't echo the user turn back until history replay, so echo
+    // locally for immediate feedback.
+    dispatch({ kind: "user", text: t });
     void window.codeshell.ccRoom.send(roomId, t);
     setInput("");
   }, [input, roomId]);
 
-  const decide = (req: ApprovalReq, allow: boolean) => {
-    void window.codeshell.ccRoom.respondApproval(
-      roomId,
-      req.requestId,
-      // The stdio control protocol requires updatedInput (a record) on allow;
-      // echo back the original, unmodified tool input. (resident-agent's
-      // buildControlResponse also defaults a missing one to {} as a safety net.)
-      allow
-        ? { behavior: "allow", updatedInput: (req.input as Record<string, unknown>) ?? {} }
-        : { behavior: "deny", message: "denied by user" },
-    );
-    setPending((p) => p.filter((r) => r.requestId !== req.requestId));
-  };
+  const resolve = useCallback(
+    (
+      req: ApprovalReq,
+      decision:
+        | { behavior: "allow"; updatedInput?: unknown }
+        | { behavior: "deny"; message: string },
+    ) => {
+      void window.codeshell.ccRoom.respondApproval(roomId, req.requestId, decision);
+      setPending((p) => p.filter((r) => r.requestId !== req.requestId));
+    },
+    [roomId],
+  );
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border p-2">
         <div className="text-sm font-medium">
           CC 会话 ·{" "}
-          <code className="text-xs text-muted-foreground">
-            {(sessionId || roomId).slice(0, 8)}
-          </code>{" "}
-          · {mode}
+          <code className="text-xs text-muted-foreground">{(sessionId || roomId).slice(0, 8)}</code> · {mode}
         </div>
         <Button variant="ghost" size="sm" onClick={onBack}>
           返回
         </Button>
       </div>
-      <div className="flex-1 space-y-2 overflow-y-auto p-3">
-        {history.length > 0 && <div className="text-xs text-muted-foreground">— 历史 —</div>}
-        {history.map((m, i) => (
-          <div key={`h${i}`} className="opacity-70">
-            <span className="text-xs font-semibold">{m.role}: </span>
-            <span className="whitespace-pre-wrap text-sm">{m.text}</span>
-            {m.tools?.map((t, j) => (
-              <div key={j} className="text-xs text-muted-foreground">
-                🔧 {t.name} {t.summary}
-              </div>
-            ))}
-          </div>
-        ))}
-        {live.length > 0 && <div className="text-xs text-muted-foreground">— 实时 —</div>}
-        {live.map((m) => (
-          <div key={m.seq} className="text-sm">
-            <span className="text-xs font-semibold">{m.from}: </span>
-            {m.type === "text" && <span className="whitespace-pre-wrap">{m.text}</span>}
-            {m.type === "tool" && (
-              <span className="text-muted-foreground">
-                🔧 {m.tool} {m.summary}
-              </span>
-            )}
-            {m.type === "tool_result" && (
-              <span className={m.isError ? "text-status-err" : "text-muted-foreground"}>
-                ↳ {m.summary}
-              </span>
-            )}
-            {m.type === "turn_end" && (
-              <span className="text-xs text-muted-foreground">（完成）</span>
-            )}
-            {m.type === "error" && <span className="text-status-err">{m.text}</span>}
-            {m.type === "approval" && (
-              <span className="text-status-warn">需审批：{m.tool}</span>
-            )}
-          </div>
-        ))}
-        {pending.map((req) => (
-          <Card key={req.requestId} className="space-y-1 p-3">
-            <div className="text-sm font-medium">
-              请求执行工具：{req.displayName ?? req.toolName}
-            </div>
-            {req.description && (
-              <div className="text-xs text-muted-foreground">{req.description}</div>
-            )}
-            <pre className="mt-1 overflow-x-auto rounded bg-muted p-1 text-xs">
-              {JSON.stringify(req.input, null, 2).slice(0, 400)}
-            </pre>
-            <div className="mt-2 flex gap-2">
-              <Button size="sm" onClick={() => decide(req, true)}>
-                允许
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => decide(req, false)}>
-                拒绝
-              </Button>
-            </div>
-          </Card>
-        ))}
+
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+          {chat.items.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              还没有消息。发条消息开始对话。
+            </p>
+          ) : (
+            chat.items.map((item) => <MessageRow key={item.id} item={item} />)
+          )}
+          {pending.map((req) => (
+            <CcApprovalCard key={req.requestId} req={req} onResolve={resolve} />
+          ))}
+        </div>
       </div>
+
       <div className="flex gap-2 border-t border-border p-2">
         <Input
           className="flex-1"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") send();
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              send();
+            }
           }}
           placeholder="发消息给 Claude Code…"
         />
@@ -186,6 +191,227 @@ export function CCConversationView({
           发送
         </Button>
       </div>
+    </div>
+  );
+}
+
+// ── one chat row ───────────────────────────────────────────────────────────
+function MessageRow({ item }: { item: ChatItem }) {
+  switch (item.kind) {
+    case "user":
+      return (
+        <div className="flex justify-end gap-2">
+          <div className="max-w-[80%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-sm text-primary-foreground">
+            {item.text}
+          </div>
+          <div className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full border border-primary/30 bg-primary/15 text-primary">
+            <UserRound className="size-3.5" />
+          </div>
+        </div>
+      );
+    case "assistant":
+      return (
+        <div className="flex justify-start gap-2">
+          <div className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full border border-status-ok/25 bg-status-ok/10 text-status-ok">
+            <Bot className="size-3.5" />
+          </div>
+          <div className="min-w-0 max-w-[90%] rounded-xl rounded-tl-md bg-muted/40 px-3 py-2 text-sm">
+            {item.done && item.text ? (
+              <Markdown text={item.text} />
+            ) : (
+              <div className="whitespace-pre-wrap break-words">
+                {item.text}
+                {!item.done && <span className="ml-0.5 inline-block animate-pulse">▋</span>}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    case "tool":
+      return (
+        <div className="ml-9 max-w-[90%]">
+          <CcToolCard tool={item} />
+        </div>
+      );
+    case "subagent":
+      return (
+        <div className="ml-9 flex items-center gap-2 rounded-full border border-border bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">
+          <span
+            className={cn(
+              "size-1.5 rounded-full",
+              item.status === "running"
+                ? "animate-pulse bg-status-running"
+                : item.status === "error"
+                  ? "bg-status-err"
+                  : "bg-status-ok",
+            )}
+          />
+          <span className="font-medium">子代理</span>
+          <span className="truncate">{item.label}</span>
+        </div>
+      );
+    case "system_error":
+      return (
+        <div className="ml-9 rounded-lg border border-status-err/40 bg-status-err/10 px-3 py-2 text-xs text-status-err">
+          {item.text}
+        </div>
+      );
+  }
+}
+
+function CcToolCard({ tool }: { tool: Extract<ChatItem, { kind: "tool" }> }) {
+  const [open, setOpen] = useState(false);
+  const argStr = tool.args ? JSON.stringify(tool.args) : "";
+  const hasBody = Boolean(argStr && argStr !== "{}") || Boolean(tool.result);
+  return (
+    <div
+      className={cn(
+        "overflow-hidden rounded-lg border border-border text-xs",
+        tool.error && "border-status-err/40",
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => hasBody && setOpen((o) => !o)}
+        className="flex w-full items-center gap-2 px-3 py-2 text-left"
+      >
+        <TerminalSquare className="size-3.5 shrink-0 text-muted-foreground" />
+        <span
+          className={cn(
+            "size-1.5 shrink-0 rounded-full",
+            !tool.done ? "animate-pulse bg-status-running" : tool.error ? "bg-status-err" : "bg-status-ok",
+          )}
+        />
+        <span className="font-mono font-medium text-foreground">{tool.name}</span>
+        {tool.summary && <span className="truncate text-muted-foreground">· {tool.summary}</span>}
+        {hasBody && (
+          <span className="ml-auto text-muted-foreground">
+            {open ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+          </span>
+        )}
+      </button>
+      {open && hasBody && (
+        <div className="flex flex-col gap-2 border-t border-border px-3 py-2">
+          {argStr && argStr !== "{}" && (
+            <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded bg-muted/50 p-2 font-mono text-[11px] text-muted-foreground">
+              {argStr}
+            </pre>
+          )}
+          {tool.result && (
+            <pre
+              className={cn(
+                "overflow-x-auto whitespace-pre-wrap break-words rounded bg-muted/50 p-2 font-mono text-[11px]",
+                tool.error ? "text-status-err" : "text-foreground/80",
+              )}
+            >
+              {tool.result.length > 4000 ? tool.result.slice(0, 4000) + "\n… (truncated)" : tool.result}
+            </pre>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── approval card (allow/deny + AskUserQuestion options) ─────────────────────
+function CcApprovalCard({
+  req,
+  onResolve,
+}: {
+  req: ApprovalReq;
+  onResolve: (
+    req: ApprovalReq,
+    decision: { behavior: "allow"; updatedInput?: unknown } | { behavior: "deny"; message: string },
+  ) => void;
+}) {
+  const ask = useMemo(
+    () => (req.toolName === "AskUserQuestion" ? extractCcAskUser(req.input) : undefined),
+    [req],
+  );
+  const [free, setFree] = useState("");
+
+  return (
+    <div className="rounded-xl border border-status-warn/50 bg-status-warn/5 p-3">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="grid size-7 place-items-center rounded-lg bg-status-warn/15 text-status-warn">
+          <ShieldAlert className="size-4" />
+        </span>
+        <span className="font-mono text-sm font-semibold">{req.displayName ?? req.toolName}</span>
+      </div>
+      {req.description && <p className="mb-2 text-xs text-muted-foreground">{req.description}</p>}
+
+      {ask ? (
+        <div className="flex flex-col gap-2">
+          {ask.question && <p className="text-sm">{ask.question}</p>}
+          <div className="flex flex-wrap gap-2">
+            {ask.options.map((opt) => (
+              <Button
+                key={opt}
+                size="sm"
+                variant="outline"
+                onClick={() => onResolve(req, buildCcAskUserAnswer(req.input, opt))}
+              >
+                {opt}
+              </Button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Input
+              className="flex-1"
+              value={free}
+              onChange={(e) => setFree(e.target.value)}
+              placeholder="或输入自定义回答…"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && free.trim()) {
+                  onResolve(req, buildCcAskUserAnswer(req.input, free.trim()));
+                }
+              }}
+            />
+            <Button
+              size="sm"
+              disabled={!free.trim()}
+              onClick={() => onResolve(req, buildCcAskUserAnswer(req.input, free.trim()))}
+            >
+              回答
+            </Button>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => onResolve(req, { behavior: "deny", message: "用户取消" })}
+          >
+            取消
+          </Button>
+        </div>
+      ) : (
+        <>
+          <pre className="mb-3 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded bg-muted/50 p-2 font-mono text-[11px]">
+            {JSON.stringify(req.input, null, 2).slice(0, 600)}
+          </pre>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              className="flex-1"
+              onClick={() =>
+                onResolve(req, {
+                  behavior: "allow",
+                  updatedInput: (req.input as Record<string, unknown>) ?? {},
+                })
+              }
+            >
+              允许
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1"
+              onClick={() => onResolve(req, { behavior: "deny", message: "denied by user" })}
+            >
+              拒绝
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

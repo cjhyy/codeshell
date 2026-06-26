@@ -2,7 +2,7 @@ import { test, expect } from "bun:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MessageStream } from "./MessageStream";
-import { initialChatState, type ChatState, type ChatItem } from "@mobile/lib/streamReducer";
+import { initialChatState, type ChatState, type ChatItem } from "@/lib/streamReducer";
 
 function withItems(items: ChatItem[]): ChatState {
   return { ...initialChatState(), items };
