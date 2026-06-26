@@ -23,6 +23,7 @@ import {
   extractAskUserOptions,
 } from "@mobile/lib/messageMappers";
 import { projectForCwd } from "@mobile/lib/format";
+import { extractCcAskUser, buildCcAskUserAnswer } from "@/lib/ccAskUser";
 import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket";
 
 export interface PendingApproval {
@@ -39,6 +40,10 @@ export interface PendingApproval {
   options?: string[];
   /** When true, the user must pick an option (no free text). */
   optionsOnly?: boolean;
+  /** For a CC-room AskUserQuestion: the raw tool input, kept so the chosen
+   *  answer can be baked into updatedInput.answers on respond (the CC control
+   *  protocol keys answers by the question text). */
+  ccAskInput?: unknown;
   /** True for path-scoped tools (Read/Edit/Write/…) → show file/dir scope. */
   pathScoped: boolean;
 }
@@ -364,6 +369,14 @@ export function useRemoteApp(): RemoteApp {
           event.req.input as Record<string, unknown> | undefined,
           undefined,
         );
+        // AskUserQuestion over CC carries a nested `questions[]` input — surface
+        // its first question's options so the card lets the user actually answer
+        // (auto-allowing it server-side = "did not answer"). optionsOnly: CC's
+        // AskUser always offers free-text "Other…", so never force options-only.
+        const ccAsk =
+          event.req.toolName === "AskUserQuestion"
+            ? extractCcAskUser(event.req.input)
+            : undefined;
         setApprovals((prev) =>
           prev.some((p) => p.requestId === event.req.requestId)
             ? prev
@@ -376,6 +389,9 @@ export function useRemoteApp(): RemoteApp {
                   description: event.req.description ?? "",
                   summary,
                   risk,
+                  options: ccAsk?.options,
+                  optionsOnly: false,
+                  ccAskInput: ccAsk ? event.req.input : undefined,
                   pathScoped: PATH_SCOPED.has(event.req.toolName),
                 },
               ],

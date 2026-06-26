@@ -213,7 +213,7 @@ describe("RoomManager", () => {
     expect(forwarded).toEqual([{ roomId: room.id, requestId: "req-1" }]);
   });
 
-  test("interactive-input tools (AskUserQuestion/Skill) auto-allow, never prompt for approval", () => {
+  test("Skill auto-allows (no answer to collect), never prompts for approval", () => {
     dir = mkdtempSync(join(tmpdir(), "rooms-"));
     let emit!: (e: ResidentAgentEvent) => void;
     const forwarded: string[] = [];
@@ -233,12 +233,40 @@ describe("RoomManager", () => {
     });
     const room = mgr.createRoom({ cwd: "/repo" });
     mgr.open(room.id);
-    emit({ type: "approval_request", requestId: "ask-1", toolName: "AskUserQuestion", input: { questions: [] }, description: "" });
+    emit({ type: "approval_request", requestId: "skill-1", toolName: "Skill", input: { name: "x" }, description: "" });
     // NOT forwarded to the approval UI (no allow/deny card)…
     expect(forwarded).toEqual([]);
-    // …and auto-allowed via respondControl so claude proceeds (then degrades to
-    // asking in-conversation). updatedInput echoes the original input.
-    expect(controls).toEqual([{ requestId: "ask-1", decision: { behavior: "allow", updatedInput: { questions: [] } } }]);
+    // …and auto-allowed via respondControl so claude proceeds. updatedInput
+    // echoes the original input.
+    expect(controls).toEqual([{ requestId: "skill-1", decision: { behavior: "allow", updatedInput: { name: "x" } } }]);
+  });
+
+  test("AskUserQuestion does NOT auto-allow — it surfaces as an approval the user answers", () => {
+    dir = mkdtempSync(join(tmpdir(), "rooms-"));
+    let emit!: (e: ResidentAgentEvent) => void;
+    const forwarded: { requestId: string; input: unknown }[] = [];
+    const controls: { requestId: string; decision: unknown }[] = [];
+    const mgr = new RoomManager({
+      rootDir: dir,
+      now: (() => { let c = 1; return () => c++; })(),
+      createAgent: (_r, onEvent) => {
+        emit = onEvent;
+        return {
+          start() {}, send: () => true, isRunning: () => true, stop() {},
+          respondControl: (requestId, decision) => controls.push({ requestId, decision }),
+        };
+      },
+      onMessage: () => {},
+      onApprovalRequest: (_roomId, req) => forwarded.push({ requestId: req.requestId, input: req.input }),
+    });
+    const room = mgr.createRoom({ cwd: "/repo" });
+    mgr.open(room.id);
+    const input = { questions: [{ question: "选哪个?", options: [{ label: "甲" }, { label: "乙" }] }] };
+    emit({ type: "approval_request", requestId: "ask-1", toolName: "AskUserQuestion", input, description: "" });
+    // Forwarded to the UI WITH the questions input (so it can render options)…
+    expect(forwarded).toEqual([{ requestId: "ask-1", input }]);
+    // …and NOT auto-allowed (the user must answer).
+    expect(controls).toEqual([]);
   });
 
   test("respondApproval routes the decision to the room's agent.respondControl", () => {

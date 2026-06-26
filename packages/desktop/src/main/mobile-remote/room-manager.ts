@@ -13,13 +13,19 @@ import type { ResidentAgentEvent } from "./resident-agent.js";
 export type RoomPermissionMode = "default" | "acceptEdits" | "bypassPermissions";
 
 /**
- * Tools whose `can_use_tool` control request is a request for a STRUCTURED host
- * response (not a permission gate). A plain allow/deny can't satisfy them and
- * they emit the request regardless of permission mode, so we auto-allow them
- * rather than show a dead-end approval card. claude then degrades gracefully
- * (e.g. AskUserQuestion asks in-conversation).
+ * Tools whose `can_use_tool` control request is NOT a permission gate but a
+ * structured host call, AND for which we have nothing to collect from the user —
+ * so a plain allow/deny card is a dead end and we auto-allow instead (echoing
+ * the original input back as updatedInput).
+ *
+ * NOTE: AskUserQuestion is deliberately NOT here. It DOES need the user's
+ * answer: auto-allowing it with the unmodified input makes claude report "the
+ * user did not answer the questions". It is surfaced as a real approval whose
+ * answer is baked into updatedInput.answers (see the approval flow + the phone/
+ * desktop CC views). Only Skill (which carries its own args, nothing to ask)
+ * stays auto-allowed.
  */
-const INTERACTIVE_INPUT_TOOLS = new Set(["AskUserQuestion", "Skill"]);
+const AUTO_ALLOW_TOOLS = new Set(["Skill"]);
 
 export interface RoomMeta {
   id: string;
@@ -42,6 +48,10 @@ export interface RoomMessage {
   summary?: string;
   reason?: string;
   isError?: boolean;
+  /** claude's tool_use block id — present on `tool` (the start) and
+   *  `tool_result` (the matching result) so the UI can pair them by id rather
+   *  than guessing "the last open tool". Absent on legacy messages. */
+  toolId?: string;
 }
 
 /**
@@ -255,10 +265,16 @@ export class RoomManager {
         this.append(id, { from: "agent", type: "text", text: event.text });
         break;
       case "tool":
-        this.append(id, { from: "agent", type: "tool", tool: event.tool, summary: event.summary });
+        this.append(id, { from: "agent", type: "tool", tool: event.tool, summary: event.summary, toolId: event.id });
         break;
       case "tool_result":
-        this.append(id, { from: "agent", type: "tool_result", summary: event.summary, isError: event.isError });
+        this.append(id, {
+          from: "agent",
+          type: "tool_result",
+          summary: event.summary,
+          isError: event.isError,
+          toolId: event.id,
+        });
         break;
       case "turn_end":
         this.append(id, { from: "agent", type: "turn_end", reason: event.reason });
@@ -267,14 +283,13 @@ export class RoomManager {
         this.append(id, { from: "system", type: "error", text: event.error });
         break;
       case "approval_request":
-        // Some tools route through can_use_tool not for permission but to
-        // request a structured host response (AskUserQuestion wants the user's
-        // choice; Skill its args). A plain allow/deny card can't satisfy those —
-        // approving without an answer makes claude report "did not answer". They
-        // also emit a control_request even under bypassPermissions. So auto-allow
-        // them here (claude then degrades to asking in-conversation) instead of
-        // surfacing a dead-end approval card.
-        if (INTERACTIVE_INPUT_TOOLS.has(event.toolName)) {
+        // Skill routes through can_use_tool only to deliver its args (nothing to
+        // ask the user), and emits the request even under bypassPermissions —
+        // auto-allow it, echoing the input back, rather than show a dead-end
+        // card. AskUserQuestion is NOT auto-allowed: it falls through to the real
+        // approval path below so the user's chosen answer can be collected and
+        // baked into updatedInput.answers (auto-allowing it = "did not answer").
+        if (AUTO_ALLOW_TOOLS.has(event.toolName)) {
           this.agents.get(id)?.respondControl?.(event.requestId, { behavior: "allow", updatedInput: event.input });
           break;
         }
