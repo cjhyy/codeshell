@@ -67,6 +67,7 @@
 - **Workspace 数据源绑定**(P4 roadmap):资源模型 / link 外部源(Figma/issue/云盘)/ scope 分配 / 工具 scope 检查。大子系统。
 - **远程控制 / 跨代理编排**(P5 roadmap):SSH / 扫码配对 / 远控会话 / 编排 Codex+CC / 安全边界。大子系统。
 - **手机遥控**(低优搁置):房间续跑(`--session-id`/`--resume`)+ 手机驱动真 codeshell session(走 core,复用 `outboundTaps`);现 mobile 无 Markdown 渲染。
+- **聊天软件接入(channel,参考 OpenClaw)**:把微信/Telegram 等聊天软件做成可插拔 channel 前端,消息桥接进 codeshell 引擎。设计要点(参考 OpenClaw `docs.openclaw.ai/channels`):① **core 保持 channel-agnostic**,各平台接入做成外部插件(对齐 `project_core_minimal_harness_business_layer`),别塞 core;② 接入做成**一类凭证**进 CredentialStore(对齐 `project_multi_account_cookie_creds`)——微信走**扫码登录、token 存本地**(腾讯官方插件 `@tencent-weixin/openclaw-weixin`),Telegram 走 bot token;③ **扫码的那个微信号被绑死成该 channel 的收发身份**(机器人身份固定;换号要重扫;一般用小号),谁发都触发 → 必配 **allowlist** 白名单 + 绑定目标 agent;④ 微信当前只支持私聊 + 媒体,**不支持群聊**。未立项,先记方向。
 - **工程质量 P7**:builtin tools 集成测试(已补 65 例)/ E2E / CI 覆盖率 >60% / 性能(启动懒加载、流式重渲染、大文件、MCP 连接池)/ 文档(用户指南/开发者文档/TypeDoc/中文文档)。
 - **Markdown 渲染一致性**(desktop/TUI):标题/列表/引用/代码块/表格系统性梳理。
 - **view_image TUI inline**(iTerm/kitty graphics protocol)+ 历史图降级文字摘要省 token。
