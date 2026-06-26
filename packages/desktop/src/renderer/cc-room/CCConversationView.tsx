@@ -7,7 +7,6 @@ import { Markdown } from "@/Markdown";
 import {
   reduceStream,
   initialChatState,
-  appendUserMessage,
   type ChatItem,
   type ChatState,
 } from "@/lib/streamReducer";
@@ -53,7 +52,6 @@ interface ApprovalReq {
 
 type ChatAction =
   | { kind: "raw"; raw: unknown }
-  | { kind: "user"; text: string }
   | { kind: "replayHistory"; messages: unknown }
   | { kind: "replayLive"; messages: RoomMessageWire[] };
 
@@ -61,8 +59,6 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.kind) {
     case "raw":
       return reduceStream(state, action.raw);
-    case "user":
-      return appendUserMessage(state, action.text);
     case "replayHistory":
       // Disk backlog (the original CC transcript) is the conversation's base —
       // a full reset, so it must be dispatched before the live replay.
@@ -92,17 +88,23 @@ export function CCConversationView({
 
   useEffect(() => {
     let cancelled = false;
-    // Order matters: history replay RESETS the reducer, so it must land before
-    // the live backlog/stream are folded on top.
+    // The backlog comes from EXACTLY ONE source, never both (the room's
+    // messages.jsonl and the CC disk transcript overlap, so replaying both
+    // double-renders turns — the "工具堆叠" / duplicated-feed bug):
+    //   - cc session bound → the on-disk CC transcript (readHistory) is the
+    //     authoritative backlog; new turns arrive live via onRoomMessage.
+    //   - no cc session (plain room) → the room's own messages.jsonl backlog.
+    // Mirrors the phone (useRemoteApp's ccHistorySessionRef gate).
     const boot = async () => {
       if (sessionId && cwd) {
         const r = await window.codeshell.ccRoom.readHistory(cwd, sessionId, 50);
         if (!cancelled) {
           dispatch({ kind: "replayHistory", messages: (r as { messages: HistoryMessage[] }).messages });
         }
+      } else {
+        const live = (await window.codeshell.ccRoom.roomHistory(roomId)) as RoomMessageWire[];
+        if (!cancelled) dispatch({ kind: "replayLive", messages: live });
       }
-      const live = (await window.codeshell.ccRoom.roomHistory(roomId)) as RoomMessageWire[];
-      if (!cancelled) dispatch({ kind: "replayLive", messages: live });
     };
     void boot();
 
@@ -130,9 +132,10 @@ export function CCConversationView({
   const send = useCallback(() => {
     const t = input.trim();
     if (!t) return;
-    // The room doesn't echo the user turn back until history replay, so echo
-    // locally for immediate feedback.
-    dispatch({ kind: "user", text: t });
+    // NO local echo: RoomManager.send persists the user line and broadcasts it
+    // back as a `room.message`, which onRoomMessage folds into the feed. Echoing
+    // locally too would render the user bubble twice (the desktop "1 条消息变 2
+    // 条" bug). The broadcast round-trips over loopback ~instantly.
     void window.codeshell.ccRoom.send(roomId, t);
     setInput("");
   }, [input, roomId]);
