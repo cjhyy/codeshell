@@ -2278,6 +2278,13 @@ function App() {
   // PanelArea is a controlled component over these.
   const [panelTabs, setPanelTabs] = useState<{ id: string; kind: PanelTab }[]>([]);
   const [panelActiveId, setPanelActiveId] = useState<string | null>(null);
+  // Buckets that currently have ≥1 open panel. PanelArea keeps EVERY such
+  // bucket's panel bodies mounted (hidden when not active) so a session's
+  // browser/terminal survives switching away and back. We must therefore keep
+  // PanelArea itself mounted while ANY bucket has panels — not just the active
+  // one — otherwise switching to a panel-less session would unmount PanelArea
+  // and tear down the other sessions' live panels. This set drives that gate.
+  const [bucketsWithPanels, setBucketsWithPanels] = useState<Set<string>>(new Set());
   // Top-bar toggle opens the dock on the card landing (kind null) / closes it.
   const togglePanel = (): void =>
     setPanelRequest((r) => ({ nonce: r.nonce + 1, kind: r.open ? r.kind : null, open: !r.open }));
@@ -2321,6 +2328,20 @@ function App() {
     // Only re-run when the active session/repo bucket changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBucket]);
+  // Track whether the active bucket has panels (drives keeping PanelArea mounted
+  // for OTHER buckets too). Runs every render of these deps, including the
+  // restore transition (unlike the save effect, which skips that tick) — so a
+  // bucket that restores WITH panels is recorded immediately.
+  useEffect(() => {
+    setBucketsWithPanels((prev) => {
+      const has = panelTabs.length > 0;
+      if (has === prev.has(activeBucket)) return prev;
+      const next = new Set(prev);
+      if (has) next.add(activeBucket);
+      else next.delete(activeBucket);
+      return next;
+    });
+  }, [panelTabs, activeBucket]);
   useEffect(() => {
     // Eat the transition tick after a restore so we don't write the previous
     // session's leftover values under the freshly-switched bucket.
@@ -2888,6 +2909,9 @@ function App() {
           onToggleSidebar={toggleSidebar}
           panelOpen={panelRequest.open}
           onTogglePanel={togglePanel}
+          // Draft state (no active session yet) has no conversation/context to
+          // attach panels to — hide the dock toggle until a real session exists.
+          panelAvailable={activeSessionId !== null}
           activity={liveActivity}
           tasks={latestTasks}
           activeGoal={state.activeGoal}
@@ -3062,7 +3086,7 @@ function App() {
           is reclaimed by BrowserPanel's own idle-eviction after a few minutes.
           We still gate on having tabs so an empty dock doesn't mount stray
           panel bodies before the user has opened anything. */}
-      {(panelRequest.open || panelTabs.length > 0) && (
+      {(panelRequest.open || bucketsWithPanels.size > 0) && (
         <PanelArea
           hidden={!panelRequest.open}
           cwd={activeRepo?.path ?? null}
@@ -3088,6 +3112,7 @@ function App() {
           setTabs={setPanelTabs}
           activeId={panelActiveId}
           setActiveId={setPanelActiveId}
+          bucket={activeBucket}
         />
       )}
       </div>

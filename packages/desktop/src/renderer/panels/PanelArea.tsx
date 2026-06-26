@@ -44,6 +44,14 @@ interface Props {
   activeId: string | null;
   setActiveId: React.Dispatch<React.SetStateAction<string | null>>;
   /**
+   * The active session bucket (repo+session key). Panel BODIES for every bucket
+   * the user has visited stay MOUNTED (hidden via display:none when not the
+   * active bucket) so switching sessions and back keeps each session's browser
+   * <webview> / terminal pty / etc. alive instead of tearing them down. The tab
+   * strip and all tab mutations operate on the active bucket's `tabs` only.
+   */
+  bucket: string;
+  /**
    * Bumped by the parent to request opening a tab of `requestKind`. Every time
    * the nonce changes we open (or focus) a tab of that kind. This is the single
    * source for creating tabs, so opening the dock can't double-create.
@@ -129,11 +137,22 @@ export function PanelArea({
   setTabs,
   activeId,
   setActiveId,
+  bucket,
 }: Props) {
   const { t } = useT();
   // Module-level id counter (not a per-mount ref) so ids stay unique across a
   // dock close→reopen — tabs live in App now and outlive this component.
   const mkId = (kind: PanelTab): string => `${kind}-${(panelTabSeq += 1)}`;
+
+  // Keep panel BODIES mounted across session switches. `mountedByBucket` snaps
+  // the active bucket's current tabs every render; buckets the user has visited
+  // stay in the map (their Slots keep rendering, hidden) so a browser/terminal
+  // for session A survives while session B is on screen — switch back and it's
+  // exactly as left. A bucket whose tabs go empty is dropped (its panels closed)
+  // so we don't leak mounted webviews/ptys for closed docks forever.
+  const mountedByBucket = useRef<Map<string, OpenTab[]>>(new Map());
+  if (tabs.length > 0) mountedByBucket.current.set(bucket, tabs);
+  else mountedByBucket.current.delete(bucket);
 
   // Maximized = overlay the chat column (incl. composer) for more room (TODO
   // 2.4). Resets each open (local) — chat/composer state lives in App.
@@ -290,20 +309,25 @@ export function PanelArea({
             closing calls onClose). Keeps one consistent "close" affordance. */}
       </div>
 
-      {/* Bodies — all mounted, toggled via display. Empty dock shows the
-          card landing so the user picks what to open. */}
+      {/* Bodies. We render the panels of EVERY visited bucket (keyed
+          bucket:id), but only the ACTIVE bucket's active tab is visible — the
+          rest are display:none but stay mounted, so a session's browser/terminal
+          survives a switch away and back. The empty-dock landing shows only for
+          the active bucket when it has no tabs. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
-        {tabs.length === 0 ? (
-          <PanelLanding onPick={addTab} />
-        ) : (
-          tabs.map((t) => (
-            <Slot key={t.id} active={t.id === activeId}>
-              {/* A panel body is truly on-screen only when the dock is open AND
-                  it's the active tab. BrowserPanel uses this to idle-evict its
-                  <webview> after it's been off-screen a while. */}
-              <PanelBody tab={t} visible={!hidden && t.id === activeId} cwd={cwd} repoId={repoId} reviewFiles={reviewFiles} reviewDiff={reviewDiff} revealFile={revealFile} openUrl={openUrl} engineSessionId={engineSessionId} onAttachImage={onAttachImage} browserAnchors={browserAnchors} onRemoveBrowserAnchor={onRemoveBrowserAnchor} onUpdateBrowserAnchor={onUpdateBrowserAnchor} />
-            </Slot>
-          ))
+        {tabs.length === 0 && <PanelLanding onPick={addTab} />}
+        {[...mountedByBucket.current.entries()].flatMap(([b, bTabs]) =>
+          bTabs.map((t) => {
+            const onActiveBucket = b === bucket;
+            return (
+              <Slot key={`${b}:${t.id}`} active={onActiveBucket && t.id === activeId}>
+                {/* A panel body is truly on-screen only when the dock is open AND
+                    it's the active bucket's active tab. BrowserPanel uses this to
+                    idle-evict its <webview> after it's been off-screen a while. */}
+                <PanelBody tab={t} visible={!hidden && onActiveBucket && t.id === activeId} cwd={cwd} repoId={repoId} reviewFiles={reviewFiles} reviewDiff={reviewDiff} revealFile={revealFile} openUrl={openUrl} engineSessionId={engineSessionId} onAttachImage={onAttachImage} browserAnchors={browserAnchors} onRemoveBrowserAnchor={onRemoveBrowserAnchor} onUpdateBrowserAnchor={onUpdateBrowserAnchor} />
+              </Slot>
+            );
+          }),
         )}
       </div>
     </div>

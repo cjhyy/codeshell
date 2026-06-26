@@ -16,6 +16,10 @@ interface Props {
   /** Right-side panel dock (files/browser/review/terminal) open state + toggle. */
   panelOpen: boolean;
   onTogglePanel: () => void;
+  /** Whether the panel dock can be opened at all. False in draft state (no
+   *  active session yet) — panels need a real conversation/context, so the
+   *  toggle is hidden entirely rather than opening an empty dock. */
+  panelAvailable?: boolean;
   /**
    * Snapshot of what the agent is doing right now. Only used to
    * populate the hover popover; the dot itself only needs `busy`.
@@ -50,6 +54,7 @@ function TopBarImpl({
   onToggleSidebar,
   panelOpen,
   onTogglePanel,
+  panelAvailable = true,
   activity,
   tasks,
   activeGoal,
@@ -91,15 +96,17 @@ function TopBarImpl({
           activeGoal={activeGoal ?? null}
           onClearGoal={onClearGoal}
         />
-        <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-          <IconButton
-            label={panelOpen ? t("topbar.closePanel") : t("topbar.openPanel")}
-            onClick={onTogglePanel}
-            active={panelOpen}
-          >
-            <PanelRight size={14} />
-          </IconButton>
-        </span>
+        {panelAvailable && (
+          <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+            <IconButton
+              label={panelOpen ? t("topbar.closePanel") : t("topbar.openPanel")}
+              onClick={onTogglePanel}
+              active={panelOpen}
+            >
+              <PanelRight size={14} />
+            </IconButton>
+          </span>
+        )}
       </div>
     </header>
   );
