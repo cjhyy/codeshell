@@ -74,6 +74,149 @@ describe("hostnameOf / injectionScript", () => {
   test("a different window mints different tokens", () => {
     expect(tokensFor("a").save).not.toBe(tokensFor("b").save);
   });
+
+  // Regression: the save bar judders on SPA sites (YouTube) because each page
+  // navigation swaps out document.body, deleting our bar; the old script then
+  // rebuilt it from scratch on did-finish-load → visible delete→recreate flicker.
+  // The bar now self-heals via a MutationObserver that re-appends the SAME node,
+  // and re-injection is a no-op while the node lives. We exercise the real
+  // injected script against a minimal DOM stub to prove that behavior.
+  describe("save bar self-heal (no judder on SPA body swap)", () => {
+    function makeDomStub() {
+      let observerCb: (() => void) | null = null;
+      const makeEl = () => {
+        const el: any = {
+          style: {},
+          children: [] as any[],
+          parentNode: null as any,
+          get isConnected() {
+            // connected iff it chains up to documentElement
+            let n: any = el;
+            while (n) {
+              if (n === root.documentElement) return true;
+              n = n.parentNode;
+            }
+            return false;
+          },
+          appendChild(c: any) {
+            if (c.parentNode) c.parentNode.children = c.parentNode.children.filter((x: any) => x !== c);
+            c.parentNode = el;
+            el.children.push(c);
+            return c;
+          },
+          // Minimal stubs so the drag wiring (grip.addEventListener,
+          // bar.getBoundingClientRect) doesn't throw when the script runs. Drag
+          // *behavior* is verified at the string level + on the real machine.
+          addEventListener() {},
+          removeEventListener() {},
+          getBoundingClientRect() {
+            return { left: 0, top: 0, width: 0, height: 0 };
+          },
+        };
+        return el;
+      };
+      const root: any = {
+        documentElement: null as any,
+        body: null as any,
+        createElement: () => makeEl(),
+        getElementById: () => null,
+        addEventListener() {},
+        removeEventListener() {},
+      };
+      root.documentElement = makeEl();
+      root.documentElement.parentNode = root.documentElement; // root of the tree
+      root.body = makeEl();
+      root.documentElement.appendChild(root.body);
+      const win: any = {
+        innerWidth: 1280,
+        innerHeight: 800,
+        MutationObserver: class {
+          constructor(cb: () => void) {
+            observerCb = cb;
+          }
+          observe() {}
+        },
+      };
+      return {
+        win,
+        document: root,
+        // simulate a YouTube-style navigation that throws away the old body
+        swapBody() {
+          // detach the old body subtree (sever upward links, like real removal)
+          for (const c of root.body.children) c.parentNode = null;
+          root.body.children = [];
+          root.body.parentNode = null;
+          root.documentElement.children = [];
+          root.body = makeEl();
+          root.documentElement.appendChild(root.body);
+          observerCb?.(); // mutation fires
+        },
+      };
+    }
+
+    function run(script: string, env: ReturnType<typeof makeDomStub>) {
+      // The script reads bare `document`/`window`/`MutationObserver` globals.
+      new Function("window", "document", "MutationObserver", script)(
+        env.win,
+        env.document,
+        env.win.MutationObserver,
+      );
+    }
+
+    const barIn = (env: ReturnType<typeof makeDomStub>) =>
+      env.document.body.children.find((c: any) => c.id === "__cs_login_bar__");
+
+    test("bar is appended once on initial inject", () => {
+      const env = makeDomStub();
+      run(injectionScript(NONCE), env);
+      expect(barIn(env)).toBeTruthy();
+      expect(env.document.body.children.filter((c: any) => c.id === "__cs_login_bar__").length).toBe(1);
+    });
+
+    test("re-injecting (did-finish-load) does NOT create a second bar or a new node", () => {
+      const env = makeDomStub();
+      run(injectionScript(NONCE), env);
+      const first = barIn(env);
+      run(injectionScript(NONCE), env); // simulate did-finish-load re-inject
+      expect(env.document.body.children.filter((c: any) => c.id === "__cs_login_bar__").length).toBe(1);
+      expect(barIn(env)).toBe(first); // SAME node, not rebuilt → no flicker
+    });
+
+    test("SPA body swap re-attaches the SAME bar node via observer", () => {
+      const env = makeDomStub();
+      run(injectionScript(NONCE), env);
+      const original = barIn(env);
+      env.swapBody(); // YouTube nav nukes our bar from the old body
+      const healed = barIn(env);
+      expect(healed).toBe(original); // re-appended, never recreated
+      expect(healed.isConnected).toBe(true);
+    });
+
+    test("running the script with drag wiring present does not throw", () => {
+      // Smoke: the pointerdown/move/up wiring + getBoundingClientRect calls run
+      // against the stub without exploding. Real drag motion is verified on the
+      // machine (pure DOM event handling, not worth a full event simulator).
+      const env = makeDomStub();
+      expect(() => run(injectionScript(NONCE), env)).not.toThrow();
+    });
+  });
+
+  // The bar can cover the page's own controls (e.g. a top-right account menu),
+  // so it's draggable by its handle. Assert the wiring is in the injected script.
+  describe("save bar is draggable (can be moved out of the way)", () => {
+    test("script wires a move-cursor drag handle, pointer drag, and viewport clamp", () => {
+      const s = injectionScript(NONCE);
+      expect(s).toContain("cursor:move");
+      expect(s).toContain("pointerdown");
+      expect(s).toContain("pointermove");
+      expect(s).toContain("pointerup");
+      // clamps to the viewport so it can't be dragged fully off-screen
+      expect(s).toContain("innerWidth");
+      expect(s).toContain("innerHeight");
+      // switches off the initial right-anchor once dragged
+      expect(s).toContain("right='auto'");
+    });
+  });
 });
 
 describe("extractConsoleMessage (Electron signature compat)", () => {

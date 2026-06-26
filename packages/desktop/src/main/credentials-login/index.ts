@@ -68,23 +68,72 @@ export type LoginCaptureResult =
 /**
  * 浮窗注入脚本:提示条 + 两个按钮,点击打印**带 nonce 的** console 哨兵(main 侧监听)。
  * `nonce` 是 per-window 一次性高熵值 —— 页面自身 JS 不知道它,无法伪造点击。
+ *
+ * 抖动修复:浮窗自带 MutationObserver,页面(YouTube 等 SPA 每次导航整段换 body)
+ * 把浮窗删掉时,observer 立刻把同一个 DOM 节点重新挂回去 —— 节点本身只创建一次,
+ * 不销毁重建,所以不闪。`did-finish-load` 的重注入因此变成 no-op(节点还在直接跳过),
+ * 不再走「整页删 → 重新 createElement → 重新 appendChild」的可见循环。
  */
 export function injectionScript(nonce: string): string {
   const { save: saveToken, cancel: cancelToken } = tokensFor(nonce);
   return `(function(){
-    if(document.getElementById('__cs_login_bar__'))return;
+    if(window.__csLoginBarReattach){window.__csLoginBarReattach();return;}
     var bar=document.createElement('div');
     bar.id='__cs_login_bar__';
-    bar.style.cssText='position:fixed;top:12px;right:12px;z-index:2147483647;background:#1e293b;color:#fff;padding:10px 12px;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.3);font:13px -apple-system,system-ui,sans-serif;display:flex;gap:8px;align-items:center;';
-    var txt=document.createElement('span');txt.textContent='登录成功后点「保存」';
+    bar.style.cssText='position:fixed;top:12px;right:12px;left:auto;z-index:2147483647;background:#1e293b;color:#fff;padding:10px 12px;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.3);font:13px -apple-system,system-ui,sans-serif;display:flex;gap:8px;align-items:center;user-select:none;';
+    // 拖动手柄(挡住页面时可拖开)。拖的是手柄不是按钮,所以保存/取消的点击不受影响。
+    var grip=document.createElement('span');grip.textContent='⠿';
+    grip.style.cssText='cursor:move;opacity:.6;padding-right:2px;';
+    grip.title='拖动';
+    var txt=document.createElement('span');txt.textContent='登录成功后点「保存」(可拖动)';
+    txt.style.cssText='cursor:move;';
     var save=document.createElement('button');save.textContent='我已登录,保存';
     save.style.cssText='background:#22c55e;color:#fff;border:0;border-radius:6px;padding:6px 10px;cursor:pointer;font:inherit;';
     save.onclick=function(){console.log(${JSON.stringify(saveToken)});};
     var cancel=document.createElement('button');cancel.textContent='取消';
     cancel.style.cssText='background:transparent;color:#cbd5e1;border:1px solid #475569;border-radius:6px;padding:6px 10px;cursor:pointer;font:inherit;';
     cancel.onclick=function(){console.log(${JSON.stringify(cancelToken)});};
-    bar.appendChild(txt);bar.appendChild(save);bar.appendChild(cancel);
-    document.body.appendChild(bar);
+    bar.appendChild(grip);bar.appendChild(txt);bar.appendChild(save);bar.appendChild(cancel);
+
+    // ── 拖动:按住手柄/文字移动整条浮窗,松手停下,clamp 在视口内 ──
+    // 一旦拖过就切成 left/top 定位(px),不再吃初始的 right:12px。
+    var drag=null; // {dx,dy} 指针相对 bar 左上角的偏移
+    var clamp=function(v,max){return v<0?0:(v>max?max:v);};
+    var onMove=function(e){
+      if(!drag)return;
+      var r=bar.getBoundingClientRect();
+      var x=clamp(e.clientX-drag.dx,window.innerWidth-r.width);
+      var y=clamp(e.clientY-drag.dy,window.innerHeight-r.height);
+      bar.style.left=x+'px';bar.style.top=y+'px';bar.style.right='auto';
+    };
+    var onUp=function(){
+      drag=null;
+      document.removeEventListener('pointermove',onMove,true);
+      document.removeEventListener('pointerup',onUp,true);
+    };
+    var onDown=function(e){
+      // 只接左键 / 主指针;右键和按钮点击不触发拖动。
+      if(e.button!==undefined&&e.button!==0)return;
+      var r=bar.getBoundingClientRect();
+      drag={dx:e.clientX-r.left,dy:e.clientY-r.top};
+      document.addEventListener('pointermove',onMove,true);
+      document.addEventListener('pointerup',onUp,true);
+      e.preventDefault();
+    };
+    grip.addEventListener('pointerdown',onDown,true);
+    txt.addEventListener('pointerdown',onDown,true);
+
+    // 同一个 bar 节点,不在场就挂回去(幂等,反复调安全)。
+    var reattach=function(){
+      if(document.body&&bar.parentNode!==document.body)document.body.appendChild(bar);
+    };
+    window.__csLoginBarReattach=reattach;
+    reattach();
+    // 页面整段换 body / 删节点后自愈:同步重挂,用户看不到删→建的中间态。
+    try{
+      var obs=new MutationObserver(function(){if(!bar.isConnected)reattach();});
+      obs.observe(document.documentElement,{childList:true,subtree:true});
+    }catch(e){/* 老引擎无 MutationObserver 时退回靠 did-finish-load 重注入 */}
   })();`;
 }
 
