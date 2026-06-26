@@ -23,6 +23,17 @@ export interface OpenTab {
   kind: PanelTab;
 }
 
+/** Session-scoped panel context captured per bucket so a kept-mounted hidden
+ *  bucket renders against ITS session's cwd/diff/anchors, not the live one. */
+interface BucketCtx {
+  cwd: string | null;
+  repoId: string | null;
+  reviewFiles?: string[];
+  reviewDiff?: string;
+  engineSessionId?: string | null;
+  browserAnchors?: Anchor[];
+}
+
 /** Monotonic tab-id counter; module-level so ids stay unique across remounts. */
 let panelTabSeq = 0;
 
@@ -145,14 +156,24 @@ export function PanelArea({
   const mkId = (kind: PanelTab): string => `${kind}-${(panelTabSeq += 1)}`;
 
   // Keep panel BODIES mounted across session switches. `mountedByBucket` snaps
-  // the active bucket's current tabs every render; buckets the user has visited
-  // stay in the map (their Slots keep rendering, hidden) so a browser/terminal
-  // for session A survives while session B is on screen — switch back and it's
-  // exactly as left. A bucket whose tabs go empty is dropped (its panels closed)
-  // so we don't leak mounted webviews/ptys for closed docks forever.
-  const mountedByBucket = useRef<Map<string, OpenTab[]>>(new Map());
-  if (tabs.length > 0) mountedByBucket.current.set(bucket, tabs);
-  else mountedByBucket.current.delete(bucket);
+  // the active bucket's tabs AND its session-scoped context (cwd/repoId/review
+  // files+diff/engineSessionId/anchors) every render; buckets the user has
+  // visited stay in the map (their Slots keep rendering, hidden) so a browser/
+  // terminal/review for session A survives while session B is on screen — switch
+  // back and it's exactly as left. Crucially each bucket renders with ITS OWN
+  // captured context, not the live active session's — otherwise a hidden review/
+  // files panel would re-render against the wrong cwd/diff and lose its git
+  // state. A bucket whose tabs go empty is dropped (panels closed) so we don't
+  // leak mounted webviews/ptys.
+  const mountedByBucket = useRef<Map<string, { tabs: OpenTab[]; ctx: BucketCtx }>>(new Map());
+  if (tabs.length > 0) {
+    mountedByBucket.current.set(bucket, {
+      tabs,
+      ctx: { cwd, repoId, reviewFiles, reviewDiff, engineSessionId, browserAnchors },
+    });
+  } else {
+    mountedByBucket.current.delete(bucket);
+  }
 
   // Maximized = overlay the chat column (incl. composer) for more room (TODO
   // 2.4). Resets each open (local) — chat/composer state lives in App.
@@ -316,15 +337,32 @@ export function PanelArea({
           the active bucket when it has no tabs. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
         {tabs.length === 0 && <PanelLanding onPick={addTab} />}
-        {[...mountedByBucket.current.entries()].flatMap(([b, bTabs]) =>
+        {[...mountedByBucket.current.entries()].flatMap(([b, { tabs: bTabs, ctx }]) =>
           bTabs.map((t) => {
             const onActiveBucket = b === bucket;
+            // Each bucket renders with ITS captured session context. Only the
+            // ACTIVE bucket also gets the live transient/nonce props (revealFile/
+            // openUrl) — those target the session the user is driving now.
             return (
               <Slot key={`${b}:${t.id}`} active={onActiveBucket && t.id === activeId}>
                 {/* A panel body is truly on-screen only when the dock is open AND
                     it's the active bucket's active tab. BrowserPanel uses this to
                     idle-evict its <webview> after it's been off-screen a while. */}
-                <PanelBody tab={t} visible={!hidden && onActiveBucket && t.id === activeId} cwd={cwd} repoId={repoId} reviewFiles={reviewFiles} reviewDiff={reviewDiff} revealFile={revealFile} openUrl={openUrl} engineSessionId={engineSessionId} onAttachImage={onAttachImage} browserAnchors={browserAnchors} onRemoveBrowserAnchor={onRemoveBrowserAnchor} onUpdateBrowserAnchor={onUpdateBrowserAnchor} />
+                <PanelBody
+                  tab={t}
+                  visible={!hidden && onActiveBucket && t.id === activeId}
+                  cwd={ctx.cwd}
+                  repoId={ctx.repoId}
+                  reviewFiles={ctx.reviewFiles}
+                  reviewDiff={ctx.reviewDiff}
+                  engineSessionId={ctx.engineSessionId}
+                  browserAnchors={ctx.browserAnchors}
+                  revealFile={onActiveBucket ? revealFile : undefined}
+                  openUrl={onActiveBucket ? openUrl : undefined}
+                  onAttachImage={onAttachImage}
+                  onRemoveBrowserAnchor={onRemoveBrowserAnchor}
+                  onUpdateBrowserAnchor={onUpdateBrowserAnchor}
+                />
               </Slot>
             );
           }),
