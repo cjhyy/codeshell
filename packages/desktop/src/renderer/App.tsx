@@ -32,6 +32,8 @@ import {
   deleteSessionLocal,
   renameSessionLocal,
   archiveSession,
+  archiveAllSessions,
+  loadDeletedArchivedIndices,
   bindEngineSession,
   upsertImportedSession,
   updateSessionRunStatus,
@@ -325,8 +327,16 @@ function App() {
   // Session indices per repo (keyed by repoKey).
   const [sessionIndices, setSessionIndices] = useState<Record<string, SessionIndex>>(() => {
     const out: Record<string, SessionIndex> = {};
-    for (const r of loadRepos()) out[r.id] = loadSessionIndex(r.id);
+    const liveRepos = loadRepos();
+    for (const r of liveRepos) out[r.id] = loadSessionIndex(r.id);
     out[GLOBAL_KEY] = loadSessionIndex(null);
+    // Re-surface deleted projects' all-archived indices so 设置→高级→已归档
+    // still lists them (under their original name) after a restart — App only
+    // seeds from live repos above, which a removed project is no longer in.
+    Object.assign(
+      out,
+      loadDeletedArchivedIndices(new Set(liveRepos.map((r) => r.id))),
+    );
     return out;
   });
 
@@ -869,11 +879,24 @@ function App() {
       // Soft-delete on disk so the removal persists + reaches phones live.
       void window.codeshell.projects.remove(repo.path);
     }
+    // Archive (don't orphan) the project's sessions: persist every session as
+    // archived + stamp the project label so they remain visible/restorable in
+    // 设置→高级→已归档 under their original project name. The project row still
+    // leaves the sidebar (the sidebar iterates `repos`), but the conversations
+    // survive instead of silently vanishing from localStorage.
+    const archived = repo
+      ? archiveAllSessions(id, repoLabel(repo))
+      : undefined;
     setRepos((prev) => prev.filter((r) => r.id !== id));
     if (activeRepoId === id) setActiveRepoId(null);
     setSessionIndices((prev) => {
-      const { [id]: _drop, ...rest } = prev;
-      return rest;
+      // Keep the index in state (now all-archived) so the archived view can
+      // list them; drop it only if there was nothing to archive.
+      if (!archived) {
+        const { [id]: _drop, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [id]: archived };
     });
     window.codeshell.log("repo.removed", { id });
   };

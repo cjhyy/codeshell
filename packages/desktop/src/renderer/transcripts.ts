@@ -76,6 +76,14 @@ export interface SessionIndex {
   /** Sessions ordered most-recently-updated first. */
   sessions: SessionSummary[];
   activeSessionId: string | null;
+  /**
+   * Project label captured at delete time. Set ONLY when the owning project was
+   * removed from the sidebar (handleRemoveRepo) — the repo is gone from `repos[]`
+   * so the archived-sessions view can no longer resolve its name. We stash the
+   * label here so those archived sessions still show "原项目名" instead of
+   * "未知项目". Absent for live projects (their name comes from `repos`).
+   */
+  deletedProjectLabel?: string;
 }
 
 function repoKey(repoId: string | null): string {
@@ -345,6 +353,11 @@ export function loadSessionIndex(repoId: string | null): SessionIndex {
         parsed.activeSessionId !== undefined
           ? parsed.activeSessionId
           : parsed.sessions[0]?.id ?? null,
+      // Carry the deleted-project label through so the archived-sessions view
+      // can still name a removed project. Only string values survive.
+      ...(typeof parsed.deletedProjectLabel === "string"
+        ? { deletedProjectLabel: parsed.deletedProjectLabel }
+        : {}),
     };
   } catch {
     return { sessions: [], activeSessionId: null };
@@ -357,6 +370,38 @@ export function saveSessionIndex(repoId: string | null, idx: SessionIndex): void
   } catch {
     // best effort
   }
+}
+
+const INDEX_KEY_PREFIX = "codeshell.sessionIndex.";
+
+/**
+ * Find session indices for projects that were DELETED (carry deletedProjectLabel)
+ * but whose repoId is no longer in the live repo set. On reload App seeds
+ * `sessionIndices` only from `loadRepos()`, so a deleted project's all-archived
+ * index would otherwise vanish from the 已归档 view after a restart. This scans
+ * localStorage for those orphaned-but-archived indices so they survive a refresh.
+ * Returns a `{ repoId: SessionIndex }` map (never includes the no-repo bucket).
+ */
+export function loadDeletedArchivedIndices(
+  liveRepoIds: Set<string>,
+): Record<string, SessionIndex> {
+  const out: Record<string, SessionIndex> = {};
+  try {
+    if (typeof localStorage === "undefined") return out;
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith(INDEX_KEY_PREFIX)) continue;
+      const repoKeySeg = key.slice(INDEX_KEY_PREFIX.length);
+      if (repoKeySeg === NO_REPO_KEY || liveRepoIds.has(repoKeySeg)) continue;
+      const idx = loadSessionIndex(repoKeySeg);
+      // Only surface indices we deliberately stamped at delete time — never
+      // resurrect arbitrary stale buckets.
+      if (idx.deletedProjectLabel && idx.sessions.length > 0) out[repoKeySeg] = idx;
+    }
+  } catch {
+    // best effort — a malformed localStorage shouldn't break startup.
+  }
+  return out;
 }
 
 export function loadTranscript(
@@ -538,6 +583,30 @@ export function archiveSession(
     // returns to draft state until the user picks another).
     activeSessionId:
       archived && idx.activeSessionId === sessionId ? null : idx.activeSessionId,
+  };
+  saveSessionIndex(repoId, next);
+  return next;
+}
+
+/**
+ * Archive EVERY session in a repo's index in one write, stamping the project's
+ * display label so the archived-sessions view can still name it after the
+ * project is removed from `repos[]`. Used by handleRemoveRepo so deleting a
+ * project archives its conversations (visible + restorable under 设置→高级)
+ * instead of orphaning them in localStorage. Returns the updated index so the
+ * caller can keep it in `sessionIndices` state (the project row is gone from
+ * the sidebar regardless, since the sidebar iterates `repos`).
+ */
+export function archiveAllSessions(
+  repoId: string | null,
+  projectLabel: string,
+): SessionIndex {
+  const idx = loadSessionIndex(repoId);
+  const next: SessionIndex = {
+    ...idx,
+    sessions: idx.sessions.map((s) => (s.archived ? s : { ...s, archived: true })),
+    activeSessionId: null,
+    deletedProjectLabel: projectLabel,
   };
   saveSessionIndex(repoId, next);
   return next;
