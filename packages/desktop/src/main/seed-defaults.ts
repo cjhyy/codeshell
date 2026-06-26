@@ -108,7 +108,10 @@ export async function seedMarketplaces(seedFile: string, home: string): Promise<
 export async function seedDefaults(): Promise<void> {
   const home = userHome();
   try {
-    const n = seedAgents(resourcePath("examples", "agents"), home);
+    const n = seedAgents(
+      resourcePath("packages", "desktop", "resources", "agents"),
+      home,
+    );
     if (n > 0) console.log(`seed: copied ${n} default agent(s)`);
   } catch (err) {
     console.error("seed: agents failed", err);

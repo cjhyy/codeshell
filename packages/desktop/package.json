@@ -35,8 +35,8 @@
     ],
     "extraResources": [
       {
-        "from": "../../examples/agents",
-        "to": "examples/agents"
+        "from": "resources/agents",
+        "to": "packages/desktop/resources/agents"
       },
       {
         "from": "resources/known-marketplaces-seed.json",
