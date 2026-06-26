@@ -17,8 +17,10 @@ test("roomMsgToEvent 映射真实 RoomManager 形状", () => {
     type: "user_message",
     text: "hi",
   });
+  // Each agent prose line is a COMPLETE chunk → its own finished bubble
+  // (assistant_text), not a token delta folded into one bubble.
   expect(roomMsgToEvent({ from: "agent", type: "text", text: "好" })).toEqual({
-    type: "text_delta",
+    type: "assistant_text",
     text: "好",
   });
   expect(roomMsgToEvent({ from: "agent", type: "tool", tool: "Read", summary: "读 a.ts", seq: 3 })).toEqual({
@@ -64,8 +66,8 @@ test("房间消息经 roomMsgToEvent → reducer 重建对话(真实形状)", ()
 });
 
 // ccRoom.readHistory.ok carries core HistoryMessage shape ({role,text,tools?}),
-// distinct from RoomManager's messages.jsonl. Mapping must expand tools first
-// then the prose, and rebuild a coherent conversation through the reducer.
+// distinct from RoomManager's messages.jsonl. Prose comes first (its own
+// assistant_text bubble), then tools — matching "说一句 → 干活".
 test("ccHistoryToEvents 映射 HistoryMessage 形状 + 经 reducer 重建", () => {
   const msgs = [
     { role: "user", text: "看一下仓库" },
@@ -76,20 +78,41 @@ test("ccHistoryToEvents 映射 HistoryMessage 形状 + 经 reducer 重建", () =
     },
   ];
   const events = ccHistoryToEvents(msgs);
-  // user → (tool start, prose, turn_complete)
+  // user → (prose bubble, tool start, turn_complete)
   expect(events).toEqual([
     { type: "user_message", text: "看一下仓库" },
+    { type: "assistant_text", text: "好,我用 Glob 扫一遍" },
     {
       type: "tool_use_start",
       toolCall: { id: "cc-hist-1-0", toolName: "Glob", summary: "**/*.ts" },
     },
-    { type: "text_delta", text: "好,我用 Glob 扫一遍" },
     { type: "turn_complete", reason: "completed" },
   ]);
   const state = events.reduce(reduceStream, initialChatState());
-  expect(state.items.map((i) => i.kind)).toEqual(["user", "tool", "assistant"]);
+  expect(state.items.map((i) => i.kind)).toEqual(["user", "assistant", "tool"]);
   const assistant = state.items.find((i) => i.kind === "assistant") as { text: string };
   expect(assistant.text).toBe("好,我用 Glob 扫一遍");
+});
+
+// THE key fix (A): two separate agent prose lines in one turn must render as
+// TWO bubbles, interleaved with the tool — not folded into one ("说一句 → 干活
+// → 再说一句"). Pre-fix, text_delta folded both into a single open bubble.
+test("一回合多条 text → 多个独立气泡,与工具穿插", () => {
+  const msgs = [
+    { from: "user", type: "text", text: "干活", seq: 1 },
+    { from: "agent", type: "text", text: "我来看一下", seq: 2 },
+    { from: "agent", type: "tool", tool: "Read", summary: "a.ts", toolId: "t1", seq: 3 },
+    { from: "agent", type: "tool_result", summary: "内容", isError: false, toolId: "t1", seq: 4 },
+    { from: "agent", type: "text", text: "找到了,这就改", seq: 5 },
+    { from: "agent", type: "turn_end", reason: "completed", seq: 6 },
+  ];
+  const state = msgs.map(roomMsgToEvent).reduce(reduceStream, initialChatState());
+  // user, assistant("我来看一下"), tool, assistant("找到了,这就改") — 两个独立气泡
+  expect(state.items.map((i) => i.kind)).toEqual(["user", "assistant", "tool", "assistant"]);
+  const texts = state.items.filter((i) => i.kind === "assistant").map((i) => (i as { text: string }).text);
+  expect(texts).toEqual(["我来看一下", "找到了,这就改"]);
+  // both finished (no streaming cursor stuck)
+  expect(state.items.filter((i) => i.kind === "assistant").every((i) => (i as { done: boolean }).done)).toBe(true);
 });
 
 // Same untrusted-payload guard as roomHistoryToEvents: a non-array (or junk

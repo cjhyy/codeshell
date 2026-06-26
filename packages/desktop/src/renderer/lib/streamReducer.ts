@@ -481,6 +481,34 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       };
     }
 
+    case "assistant_text": {
+      // A WHOLE assistant text message (not a token delta). Used by CC-room
+      // replay/live, where each `type:"text"` room message is a complete,
+      // self-contained chunk that claude emitted between tool calls. Each one
+      // becomes its OWN finished bubble (done:true) and is NOT registered in
+      // liveByAgent — so a later text message opens a fresh bubble instead of
+      // being appended to this one. That restores the "说一句 → 干活 → 再说一
+      // 句" progression (the糊成一坨 / "卡住最后才出" complaint came from
+      // text_delta folding every chunk into one open bubble). Streaming token
+      // deltas still go through text_delta.
+      const [id, s2] = freshId("a");
+      return {
+        ...s2,
+        run: "running",
+        items: [
+          ...s2.items,
+          {
+            kind: "assistant",
+            id,
+            text: (event.text as string) ?? "",
+            reasoning: "",
+            done: true,
+            agentId: event.agentId as string | undefined,
+          },
+        ],
+      };
+    }
+
     default:
       // Unknown / not-displayed events (session_started, usage_update,
       // context_compact, tombstone, …) are no-ops.

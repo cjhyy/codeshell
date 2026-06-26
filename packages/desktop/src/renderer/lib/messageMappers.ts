@@ -20,10 +20,12 @@ export function roomMsgToEvent(msg: unknown): unknown {
   const type = m.type as string;
   // A user line: the agent's resident transcript records the prompt verbatim.
   if (from === "user") return { type: "user_message", text: m.text };
-  // RoomManager writes agent prose as type:"text" (NOT "text_delta"); the
-  // reducer's text_delta path opens/appends an assistant bubble, which renders a
-  // whole-message text correctly too.
-  if (type === "text") return { type: "text_delta", text: m.text };
+  // RoomManager writes agent prose as type:"text" — each line is a COMPLETE
+  // chunk claude emitted between tool calls, not a token delta. Map to
+  // `assistant_text` (its own finished bubble) so consecutive chunks render as
+  // separate bubbles interleaved with tools ("说一句 → 干活 → 再说一句"),
+  // instead of text_delta folding them all into one bubble.
+  if (type === "text") return { type: "assistant_text", text: m.text };
   // Tool start carries a human `summary` (not structured args). Surface it via
   // the tool item's summary field. Prefer the real claude tool_use id (toolId)
   // so the result can be paired by id; fall back to the seq-derived id for
@@ -85,7 +87,14 @@ export function ccHistoryToEvents(messages: unknown): unknown[] {
       out.push({ type: "user_message", text: typeof m.text === "string" ? m.text : "" });
       continue;
     }
-    // Assistant: surface any tool calls first, then the prose.
+    // Assistant: prose first (its own finished bubble via assistant_text), then
+    // any tool calls — matching how claude actually emits a turn ("说一句 → 干
+    // 活"). In practice each CC transcript message is single-type (pure text OR
+    // pure tools, never mixed), so only one branch fires per message; ordering
+    // across messages is preserved by the loop. Each text chunk is a SEPARATE
+    // bubble (assistant_text), not folded.
+    const text = typeof m.text === "string" ? m.text : "";
+    if (text) out.push({ type: "assistant_text", text });
     const tools = Array.isArray(m.tools) ? m.tools : [];
     for (let t = 0; t < tools.length; t++) {
       const tool = tools[t] as Record<string, unknown> | null;
@@ -99,8 +108,6 @@ export function ccHistoryToEvents(messages: unknown): unknown[] {
         },
       });
     }
-    const text = typeof m.text === "string" ? m.text : "";
-    if (text) out.push({ type: "text_delta", text });
     out.push({ type: "turn_complete", reason: "completed" });
   }
   return out;
