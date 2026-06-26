@@ -1,5 +1,7 @@
 export type ApprovalDecision =
-  | { behavior: "allow"; updatedInput?: unknown }
+  // `answer` carries the user's AskUserQuestion choice (string; multiSelect joins
+  // labels with ", "); RoomManager bakes it into the CLI's `answers` record.
+  | { behavior: "allow"; updatedInput?: unknown; answer?: string }
   | { behavior: "deny"; message: string };
 
 export interface ApprovalRequestPayload {
@@ -7,6 +9,9 @@ export interface ApprovalRequestPayload {
   displayName?: string;
   input: unknown;
   description?: string;
+  /** Present for AskUserQuestion: the parsed prompt + selectable option labels,
+   *  so the UI renders a choice card instead of a yes/no permission card. */
+  askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
 }
 
 interface Pending {

@@ -369,6 +369,7 @@ const roomManager = new RoomManager({
         displayName: ev.displayName,
         input: ev.input,
         description: ev.description,
+        askUser: ev.askUser,
       })
       .then((decision) => roomManager.respondApproval(roomId, ev.requestId, decision));
   },
@@ -2031,7 +2032,9 @@ ipcMain.handle(
     _e,
     roomId: string,
     requestId: string,
-    decision: { behavior: "allow"; updatedInput?: unknown } | { behavior: "deny"; message: string },
+    decision:
+      | { behavior: "allow"; updatedInput?: unknown; answer?: string }
+      | { behavior: "deny"; message: string },
   ) => approvalBridge.respond(roomId, requestId, decision),
 );
 ipcMain.handle("ccRoom:roomHistory", async (_e, roomId: string, sinceSeq?: number) =>

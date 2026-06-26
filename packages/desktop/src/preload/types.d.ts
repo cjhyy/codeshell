@@ -1033,6 +1033,8 @@ export interface CodeshellApi {
         displayName?: string;
         input: unknown;
         description?: string;
+        /** AskUserQuestion only: parsed prompt + option labels for a choice card. */
+        askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
       }) => void,
     ): () => void;
     onApprovalResolved(
@@ -1068,6 +1070,9 @@ export interface RoomMessageWire {
   summary?: string;
   reason?: string;
   isError?: boolean;
+  /** claude tool_use id (toolu_…) — pairs a tool_result to its start so the UI
+   *  seals the right card even when tools run in parallel. */
+  toolId?: string;
 }
 
 export type UpdaterStatus =

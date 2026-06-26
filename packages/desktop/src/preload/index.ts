@@ -921,6 +921,7 @@ contextBridge.exposeInMainWorld("codeshell", {
         displayName?: string;
         input: unknown;
         description?: string;
+        askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
       }) => void,
     ): (() => void) => {
       const h = (
@@ -932,6 +933,7 @@ contextBridge.exposeInMainWorld("codeshell", {
           displayName?: string;
           input: unknown;
           description?: string;
+          askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
         },
       ) => cb(req);
       ipcRenderer.on("ccRoom:approvalRequest", h);

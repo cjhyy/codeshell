@@ -23,7 +23,6 @@ import {
   extractAskUserOptions,
 } from "@/lib/messageMappers";
 import { projectForCwd } from "@mobile/lib/format";
-import { extractCcAskUser } from "@/lib/ccAskUser";
 import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket";
 
 export interface PendingApproval {
@@ -40,10 +39,6 @@ export interface PendingApproval {
   options?: string[];
   /** When true, the user must pick an option (no free text). */
   optionsOnly?: boolean;
-  /** For a CC-room AskUserQuestion: the raw tool input, kept so the chosen
-   *  answer can be baked into updatedInput.answers on respond (the CC control
-   *  protocol keys answers by the question text). */
-  ccAskInput?: unknown;
   /** True for path-scoped tools (Read/Edit/Write/…) → show file/dir scope. */
   pathScoped: boolean;
 }
@@ -369,14 +364,12 @@ export function useRemoteApp(): RemoteApp {
           event.req.input as Record<string, unknown> | undefined,
           undefined,
         );
-        // AskUserQuestion over CC carries a nested `questions[]` input — surface
-        // its first question's options so the card lets the user actually answer
-        // (auto-allowing it server-side = "did not answer"). optionsOnly: CC's
-        // AskUser always offers free-text "Other…", so never force options-only.
-        const ccAsk =
-          event.req.toolName === "AskUserQuestion"
-            ? extractCcAskUser(event.req.input)
-            : undefined;
+        // AskUserQuestion is parsed in main → `askUser` carries the question +
+        // option labels. Render a choice card; the chosen label is sent back as
+        // the decision's `answer` (main bakes it into the CLI's `answers`
+        // record). CC AskUser always allows a free-text "Other", so optionsOnly
+        // stays false.
+        const askUser = event.req.askUser;
         setApprovals((prev) =>
           prev.some((p) => p.requestId === event.req.requestId)
             ? prev
@@ -386,12 +379,11 @@ export function useRemoteApp(): RemoteApp {
                   requestId: event.req.requestId,
                   roomId: event.roomId,
                   toolName: event.req.displayName ?? event.req.toolName,
-                  description: event.req.description ?? "",
-                  summary,
+                  description: askUser?.question ?? event.req.description ?? "",
+                  summary: askUser ? askUser.question : summary,
                   risk,
-                  options: ccAsk?.options,
+                  options: askUser?.options,
                   optionsOnly: false,
-                  ccAskInput: ccAsk ? event.req.input : undefined,
                   pathScoped: PATH_SCOPED.has(event.req.toolName),
                 },
               ],

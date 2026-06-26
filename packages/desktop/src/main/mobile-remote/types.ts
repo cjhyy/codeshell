@@ -42,9 +42,10 @@ export interface CcHistoryMessage {
   ts?: number;
 }
 
-/** Mirror of cc-room ApprovalDecision. */
+/** Mirror of cc-room ApprovalDecision. `answer` carries the user's
+ *  AskUserQuestion choice (string; multiSelect joins labels with ", "). */
 export type CcApprovalDecision =
-  | { behavior: "allow"; updatedInput?: unknown }
+  | { behavior: "allow"; updatedInput?: unknown; answer?: string }
   | { behavior: "deny"; message: string };
 
 export interface MobilePermissionModeSnapshotEntry {
@@ -158,6 +159,8 @@ export type MobileServerEvent =
         displayName?: string;
         input: unknown;
         description?: string;
+        /** AskUserQuestion only: parsed prompt + option labels for a choice card. */
+        askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
       };
     }
   | { type: "ccRoom.probe.ok"; available: boolean; command?: string; version?: string; reason?: "not-found" | "not-executable" }

@@ -2,8 +2,61 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
-import { RoomManager, type RoomAgent, type RoomMessage } from "./room-manager.js";
+import {
+  RoomManager,
+  askUserPrompt,
+  buildAskUserUpdatedInput,
+  type RoomAgent,
+  type RoomMessage,
+} from "./room-manager.js";
 import type { ResidentAgentEvent } from "./resident-agent.js";
+
+describe("askUserPrompt", () => {
+  test("parses the first question's prompt/header/options/multiSelect", () => {
+    const input = {
+      questions: [
+        { question: "用哪个?", header: "方案", options: [{ label: "甲", description: "x" }, { label: "乙" }], multiSelect: true },
+        { question: "第二问", options: [{ label: "丙" }] },
+      ],
+    };
+    expect(askUserPrompt(input)).toEqual({
+      question: "用哪个?",
+      header: "方案",
+      options: ["甲", "乙"],
+      multiSelect: true,
+    });
+  });
+  test("undefined for malformed / non-AskUser input", () => {
+    expect(askUserPrompt(undefined)).toBeUndefined();
+    expect(askUserPrompt({})).toBeUndefined();
+    expect(askUserPrompt({ questions: [] })).toBeUndefined();
+    expect(askUserPrompt({ questions: [{ options: [{ label: "甲" }] }] })).toBeUndefined(); // no question text
+  });
+  test("drops non-string option labels", () => {
+    expect(askUserPrompt({ questions: [{ question: "q", options: [{ label: "A" }, { x: 1 }, { label: "B" }] }] })?.options).toEqual([
+      "A",
+      "B",
+    ]);
+  });
+});
+
+describe("buildAskUserUpdatedInput", () => {
+  test("keys answers by question text, passes the original input through", () => {
+    const input = { questions: [{ question: "用哪个?", options: [{ label: "甲" }] }], extra: 1 };
+    expect(buildAskUserUpdatedInput(input, { "用哪个?": "甲" })).toEqual({
+      questions: input.questions,
+      extra: 1,
+      answers: { "用哪个?": "甲" },
+    });
+  });
+  test("only includes answers for questions actually present (ignores stray keys)", () => {
+    const input = { questions: [{ question: "A" }] };
+    expect(buildAskUserUpdatedInput(input, { A: "x", B: "y" })).toEqual({
+      questions: input.questions,
+      answers: { A: "x" },
+    });
+  });
+});
 
 let dir: string | undefined;
 afterEach(() => {
@@ -241,10 +294,10 @@ describe("RoomManager", () => {
     expect(controls).toEqual([{ requestId: "skill-1", decision: { behavior: "allow", updatedInput: { name: "x" } } }]);
   });
 
-  test("AskUserQuestion does NOT auto-allow — it surfaces as an approval the user answers", () => {
+  test("AskUserQuestion does NOT auto-allow — it surfaces an approval w/ parsed askUser, then bakes the answer", () => {
     dir = mkdtempSync(join(tmpdir(), "rooms-"));
     let emit!: (e: ResidentAgentEvent) => void;
-    const forwarded: { requestId: string; input: unknown }[] = [];
+    const forwarded: { requestId: string; askUser: unknown }[] = [];
     const controls: { requestId: string; decision: unknown }[] = [];
     const mgr = new RoomManager({
       rootDir: dir,
@@ -257,16 +310,54 @@ describe("RoomManager", () => {
         };
       },
       onMessage: () => {},
-      onApprovalRequest: (_roomId, req) => forwarded.push({ requestId: req.requestId, input: req.input }),
+      onApprovalRequest: (_roomId, req) => forwarded.push({ requestId: req.requestId, askUser: req.askUser }),
     });
     const room = mgr.createRoom({ cwd: "/repo" });
     mgr.open(room.id);
-    const input = { questions: [{ question: "选哪个?", options: [{ label: "甲" }, { label: "乙" }] }] };
+    const input = {
+      questions: [{ question: "选哪个?", header: "方案", options: [{ label: "甲" }, { label: "乙" }], multiSelect: false }],
+    };
     emit({ type: "approval_request", requestId: "ask-1", toolName: "AskUserQuestion", input, description: "" });
-    // Forwarded to the UI WITH the questions input (so it can render options)…
-    expect(forwarded).toEqual([{ requestId: "ask-1", input }]);
+    // Forwarded to the UI WITH parsed askUser options (main does the parsing)…
+    expect(forwarded).toEqual([
+      { requestId: "ask-1", askUser: { question: "选哪个?", header: "方案", options: ["甲", "乙"], multiSelect: false } },
+    ]);
     // …and NOT auto-allowed (the user must answer).
     expect(controls).toEqual([]);
+
+    // Now the user answers "乙" → main bakes it into updatedInput.answers keyed by question text.
+    mgr.respondApproval(room.id, "ask-1", { behavior: "allow", answer: "乙" });
+    expect(controls).toEqual([
+      {
+        requestId: "ask-1",
+        decision: { behavior: "allow", updatedInput: { ...input, answers: { "选哪个?": "乙" } } },
+      },
+    ]);
+  });
+
+  test("malformed AskUserQuestion (no questions) auto-allows so the turn isn't wedged", () => {
+    dir = mkdtempSync(join(tmpdir(), "rooms-"));
+    let emit!: (e: ResidentAgentEvent) => void;
+    const forwarded: string[] = [];
+    const controls: { requestId: string; decision: unknown }[] = [];
+    const mgr = new RoomManager({
+      rootDir: dir,
+      now: (() => { let c = 1; return () => c++; })(),
+      createAgent: (_r, onEvent) => {
+        emit = onEvent;
+        return {
+          start() {}, send: () => true, isRunning: () => true, stop() {},
+          respondControl: (requestId, decision) => controls.push({ requestId, decision }),
+        };
+      },
+      onMessage: () => {},
+      onApprovalRequest: (_roomId, req) => forwarded.push(req.requestId),
+    });
+    const room = mgr.createRoom({ cwd: "/repo" });
+    mgr.open(room.id);
+    emit({ type: "approval_request", requestId: "ask-bad", toolName: "AskUserQuestion", input: {}, description: "" });
+    expect(forwarded).toEqual([]); // no card (nothing to render)
+    expect(controls).toEqual([{ requestId: "ask-bad", decision: { behavior: "allow", updatedInput: {} } }]);
   });
 
   test("respondApproval routes the decision to the room's agent.respondControl", () => {

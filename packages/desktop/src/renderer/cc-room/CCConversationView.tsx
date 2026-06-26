@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useState, useCallback } from "react";
+import { useEffect, useReducer, useState, useCallback } from "react";
 import { Bot, ChevronDown, ChevronRight, ShieldAlert, TerminalSquare, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,6 @@ import {
   type ChatState,
 } from "@/lib/streamReducer";
 import { roomMsgToEvent, ccHistoryToEvents } from "@/lib/messageMappers";
-import { extractCcAskUser, buildCcAskUserAnswer } from "@/lib/ccAskUser";
 
 /**
  * CCConversationView — one resident Claude Code (external CLI) conversation.
@@ -46,6 +45,10 @@ interface ApprovalReq {
   displayName?: string;
   input: unknown;
   description?: string;
+  /** AskUserQuestion only: parsed by main, so the card renders a choice list.
+   *  The chosen label is sent back as the decision's `answer`; main bakes it
+   *  into the CLI's `answers` record. */
+  askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
 }
 
 type ChatAction =
@@ -138,7 +141,7 @@ export function CCConversationView({
     (
       req: ApprovalReq,
       decision:
-        | { behavior: "allow"; updatedInput?: unknown }
+        | { behavior: "allow"; updatedInput?: unknown; answer?: string }
         | { behavior: "deny"; message: string },
     ) => {
       void window.codeshell.ccRoom.respondApproval(roomId, req.requestId, decision);
@@ -321,14 +324,14 @@ function CcApprovalCard({
   req: ApprovalReq;
   onResolve: (
     req: ApprovalReq,
-    decision: { behavior: "allow"; updatedInput?: unknown } | { behavior: "deny"; message: string },
+    decision: { behavior: "allow"; updatedInput?: unknown; answer?: string } | { behavior: "deny"; message: string },
   ) => void;
 }) {
-  const ask = useMemo(
-    () => (req.toolName === "AskUserQuestion" ? extractCcAskUser(req.input) : undefined),
-    [req],
-  );
+  const ask = req.askUser;
   const [free, setFree] = useState("");
+  // multiSelect: accumulate chosen labels, confirm together (joined with ", ").
+  const [picked, setPicked] = useState<string[]>([]);
+  const answer = (label: string) => onResolve(req, { behavior: "allow", answer: label });
 
   return (
     <div className="rounded-xl border border-status-warn/50 bg-status-warn/5 p-3">
@@ -344,17 +347,30 @@ function CcApprovalCard({
         <div className="flex flex-col gap-2">
           {ask.question && <p className="text-sm">{ask.question}</p>}
           <div className="flex flex-wrap gap-2">
-            {ask.options.map((opt) => (
-              <Button
-                key={opt}
-                size="sm"
-                variant="outline"
-                onClick={() => onResolve(req, buildCcAskUserAnswer(req.input, opt))}
-              >
-                {opt}
-              </Button>
-            ))}
+            {ask.options.map((opt) =>
+              ask.multiSelect ? (
+                <Button
+                  key={opt}
+                  size="sm"
+                  variant={picked.includes(opt) ? "default" : "outline"}
+                  onClick={() =>
+                    setPicked((p) => (p.includes(opt) ? p.filter((x) => x !== opt) : [...p, opt]))
+                  }
+                >
+                  {opt}
+                </Button>
+              ) : (
+                <Button key={opt} size="sm" variant="outline" onClick={() => answer(opt)}>
+                  {opt}
+                </Button>
+              ),
+            )}
           </div>
+          {ask.multiSelect && (
+            <Button size="sm" disabled={picked.length === 0} onClick={() => answer(picked.join(", "))}>
+              确认所选 ({picked.length})
+            </Button>
+          )}
           <div className="flex gap-2">
             <Input
               className="flex-1"
@@ -362,16 +378,10 @@ function CcApprovalCard({
               onChange={(e) => setFree(e.target.value)}
               placeholder="或输入自定义回答…"
               onKeyDown={(e) => {
-                if (e.key === "Enter" && free.trim()) {
-                  onResolve(req, buildCcAskUserAnswer(req.input, free.trim()));
-                }
+                if (e.key === "Enter" && free.trim()) answer(free.trim());
               }}
             />
-            <Button
-              size="sm"
-              disabled={!free.trim()}
-              onClick={() => onResolve(req, buildCcAskUserAnswer(req.input, free.trim()))}
-            >
+            <Button size="sm" disabled={!free.trim()} onClick={() => answer(free.trim())}>
               回答
             </Button>
           </div>

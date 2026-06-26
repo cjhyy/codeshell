@@ -11,7 +11,6 @@ import { Composer } from "@mobile/components/Composer";
 import { SessionList } from "@mobile/components/SessionList";
 import { CcSessionList } from "@mobile/components/CcSessionList";
 import { PermissionModeControl } from "@mobile/components/PermissionModeControl";
-import { buildCcAskUserAnswer } from "@/lib/ccAskUser";
 
 const WIDE = "(min-width: 820px)";
 
@@ -273,18 +272,14 @@ function ApprovalsArea({ app }: { app: ReturnType<typeof useRemoteApp> }) {
           onRespond={(decision, opts) => {
             if (a.roomId) {
               // cc-room approval: route to the shared roomManager via the bridge.
-              // For an AskUserQuestion the chosen answer must be baked into
-              // updatedInput.answers (keyed by question text) or claude reports
-              // "the user did not answer". Plain tools just echo allow/deny.
-              const allow =
-                a.ccAskInput !== undefined && opts?.answer
-                  ? buildCcAskUserAnswer(a.ccAskInput, opts.answer)
-                  : { behavior: "allow" as const, updatedInput: {} };
+              // For an AskUserQuestion the chosen label rides in opts.answer; main
+              // bakes it into the CLI's `answers` record (a bare allow would make
+              // claude report "did not answer"). Plain tools just echo allow/deny.
               app.respondCcApproval(
                 a.roomId,
                 a.requestId,
                 decision === "approve"
-                  ? allow
+                  ? { behavior: "allow", updatedInput: {}, ...(opts?.answer ? { answer: opts.answer } : {}) }
                   : { behavior: "deny", message: opts?.reason || "denied by user" },
               );
             } else {

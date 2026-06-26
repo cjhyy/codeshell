@@ -13,19 +13,69 @@ import type { ResidentAgentEvent } from "./resident-agent.js";
 export type RoomPermissionMode = "default" | "acceptEdits" | "bypassPermissions";
 
 /**
- * Tools whose `can_use_tool` control request is NOT a permission gate but a
- * structured host call, AND for which we have nothing to collect from the user —
- * so a plain allow/deny card is a dead end and we auto-allow instead (echoing
- * the original input back as updatedInput).
+ * Tools whose `can_use_tool` control request is a structured host call, not a
+ * yes/no permission gate, AND for which we have nothing to collect from the
+ * user — so a plain allow/deny card is a dead end and we auto-allow instead
+ * (echoing the original input back as updatedInput). Skill is the only one:
+ * it just needs its args echoed.
  *
- * NOTE: AskUserQuestion is deliberately NOT here. It DOES need the user's
- * answer: auto-allowing it with the unmodified input makes claude report "the
- * user did not answer the questions". It is surfaced as a real approval whose
- * answer is baked into updatedInput.answers (see the approval flow + the phone/
- * desktop CC views). Only Skill (which carries its own args, nothing to ask)
- * stays auto-allowed.
+ * AskUserQuestion is handled separately (NOT here): it needs the user's actual
+ * choice, baked into updatedInput.answers — auto-allowing the unanswered input
+ * is what made claude report "The user did not answer the questions".
  */
 const AUTO_ALLOW_TOOLS = new Set(["Skill"]);
+
+/**
+ * Build the `updatedInput` that answers an AskUserQuestion `can_use_tool`
+ * request. Empirically (claude CLI, verified against the live control protocol
+ * + the Agent SDK docs), the answer must go in an `answers` RECORD keyed by each
+ * question's `question` text, with STRING values (arrays/objects fail schema
+ * validation). For multiSelect the caller joins chosen labels with ", ". The
+ * original `questions` array is passed through (claude validates against it).
+ * `answersByQuestion` maps question text → answer string.
+ */
+export function buildAskUserUpdatedInput(
+  input: unknown,
+  answersByQuestion: Record<string, string>,
+): Record<string, unknown> {
+  const obj = (input ?? {}) as Record<string, unknown>;
+  const questions = Array.isArray(obj.questions) ? obj.questions : [];
+  const answers: Record<string, string> = {};
+  for (const q of questions) {
+    const text = (q as { question?: unknown })?.question;
+    if (typeof text === "string" && typeof answersByQuestion[text] === "string") {
+      answers[text] = answersByQuestion[text];
+    }
+  }
+  return { ...obj, answers };
+}
+
+/**
+ * Parse an AskUserQuestion input into the first question's prompt/header/options
+ * so the UI can render a choice card. The room UI answers one question at a time
+ * (the first); returns undefined for a non-AskUser / malformed input (no
+ * questions), which the caller treats as "fall back to auto-allow".
+ */
+export function askUserPrompt(
+  input: unknown,
+): { question: string; header?: string; options: string[]; multiSelect: boolean } | undefined {
+  const obj = (input ?? {}) as Record<string, unknown>;
+  const q0 = (Array.isArray(obj.questions) ? obj.questions[0] : undefined) as
+    | { question?: unknown; header?: unknown; options?: unknown; multiSelect?: unknown }
+    | undefined;
+  if (!q0 || typeof q0.question !== "string") return undefined;
+  const options = Array.isArray(q0.options)
+    ? q0.options
+        .map((o) => (o as { label?: unknown })?.label)
+        .filter((l): l is string => typeof l === "string")
+    : [];
+  return {
+    question: q0.question,
+    header: typeof q0.header === "string" ? q0.header : undefined,
+    options,
+    multiSelect: q0.multiSelect === true,
+  };
+}
 
 export interface RoomMeta {
   id: string;
@@ -78,10 +128,20 @@ export interface RoomManagerOptions {
   createAgent: RoomAgentFactory;
   /** Called whenever a room gains a new persisted message (push to phone). */
   onMessage: (roomId: string, msg: RoomMessage) => void;
-  /** Called when a room's resident agent requests tool-use approval. */
+  /** Called when a room's resident agent requests tool-use approval. For
+   *  AskUserQuestion, `askUser` carries the parsed prompt + options so the UI
+   *  renders a choice card; the user's pick is routed back via respondApproval's
+   *  `answer` field and baked into updatedInput.answers here in main. */
   onApprovalRequest?: (
     roomId: string,
-    req: { requestId: string; toolName: string; displayName?: string; input: unknown; description?: string },
+    req: {
+      requestId: string;
+      toolName: string;
+      displayName?: string;
+      input: unknown;
+      description?: string;
+      askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
+    },
   ) => void;
   now?: () => number;
 }
@@ -94,6 +154,10 @@ export interface RoomManagerOptions {
  */
 export class RoomManager {
   private agents = new Map<string, RoomAgent>();
+  /** Pending AskUserQuestion control requests, keyed by `${roomId}:${requestId}`.
+   *  Holds the raw tool input so respondApproval can bake the user's answer into
+   *  the `answers` record the CLI expects. Cleared on response. */
+  private pendingAskUser = new Map<string, unknown>();
   private now: () => number;
 
   constructor(private readonly opts: RoomManagerOptions) {
@@ -239,10 +303,35 @@ export class RoomManager {
   respondApproval(
     roomId: string,
     requestId: string,
-    decision: { behavior: "allow"; updatedInput?: unknown } | { behavior: "deny"; message: string },
+    decision:
+      | { behavior: "allow"; updatedInput?: unknown; answer?: string }
+      | { behavior: "deny"; message: string },
   ): boolean {
     const agent = this.agents.get(roomId);
     if (!agent?.respondControl) return false;
+
+    // AskUserQuestion: an "allow" carries the user's chosen answer string, which
+    // main (the single source of truth) bakes into the `answers` record keyed by
+    // question text — the only shape the CLI accepts. The raw input was stashed
+    // on approval_request. Deny passes through (claude treats it as "did not
+    // answer", same as the desktop CLI's own cancel).
+    const askKey = `${roomId}:${requestId}`;
+    const pending = this.pendingAskUser.get(askKey);
+    if (pending !== undefined) {
+      this.pendingAskUser.delete(askKey);
+      if (decision.behavior === "deny") {
+        agent.respondControl(requestId, decision);
+        return true;
+      }
+      const prompt = askUserPrompt(pending);
+      const answersByQuestion = prompt ? { [prompt.question]: decision.answer ?? "" } : {};
+      agent.respondControl(requestId, {
+        behavior: "allow",
+        updatedInput: buildAskUserUpdatedInput(pending, answersByQuestion),
+      });
+      return true;
+    }
+
     agent.respondControl(requestId, decision);
     return true;
   }
@@ -282,20 +371,37 @@ export class RoomManager {
       case "error":
         this.append(id, { from: "system", type: "error", text: event.error });
         break;
-      case "approval_request":
+      case "approval_request": {
         // Skill routes through can_use_tool only to deliver its args (nothing to
         // ask the user), and emits the request even under bypassPermissions —
         // auto-allow it, echoing the input back, rather than show a dead-end
-        // card. AskUserQuestion is NOT auto-allowed: it falls through to the real
-        // approval path below so the user's chosen answer can be collected and
-        // baked into updatedInput.answers (auto-allowing it = "did not answer").
+        // card.
         if (AUTO_ALLOW_TOOLS.has(event.toolName)) {
+          this.agents.get(id)?.respondControl?.(event.requestId, { behavior: "allow", updatedInput: event.input });
+          break;
+        }
+        // AskUserQuestion is NOT a permission gate — it needs the user's actual
+        // choice. Parse the options (askUser) so the UI shows a choice card, and
+        // stash the raw input so respondApproval can bake the answer into the
+        // `answers` record the CLI requires. Auto-allowing the unanswered input
+        // is what made claude report "The user did not answer the questions".
+        if (event.toolName === "AskUserQuestion") {
+          const askUser = askUserPrompt(event.input);
+          if (askUser) {
+            this.pendingAskUser.set(`${id}:${event.requestId}`, event.input);
+            this.append(id, { from: "agent", type: "approval", tool: event.toolName, summary: askUser.question });
+            this.opts.onApprovalRequest?.(id, { ...event, askUser });
+            break;
+          }
+          // Malformed AskUser (no questions) → auto-allow so the turn isn't
+          // wedged forever waiting on an answer that can't be collected.
           this.agents.get(id)?.respondControl?.(event.requestId, { behavior: "allow", updatedInput: event.input });
           break;
         }
         this.append(id, { from: "agent", type: "approval", tool: event.toolName, summary: event.description ?? "" });
         this.opts.onApprovalRequest?.(id, event);
         break;
+      }
       case "exit":
         this.agents.delete(id);
         this.append(id, { from: "system", type: "agent_exit", reason: String(event.code ?? event.signal ?? "") });
