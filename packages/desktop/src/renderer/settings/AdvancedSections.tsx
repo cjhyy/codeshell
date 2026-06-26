@@ -653,10 +653,27 @@ export function GitSection() {
 
   useEffect(() => { setPrefs(loadGitPrefs()); }, []);
   useEffect(() => {
+    let cancelled = false;
     void (async () => {
       const s = (await window.codeshell.getSettings("user")) ?? {};
+      if (cancelled) return;
       setGitPath(stringOf(objectOf(s.git).path));
+      // Auto-probe git availability on mount so the result is shown right away
+      // and survives leaving/returning to settings — `gitOk` is in-memory state
+      // that resets on unmount, so without this the user had to re-click 检查
+      // every time (the "检测了需要保留/回显" complaint). Read-only probe; no
+      // settings write (unlike the manual checkGit, which flushes the path).
+      setChecking(true);
+      try {
+        const r = await window.codeshell.checkGit();
+        if (!cancelled) setGitOk(r.available);
+      } catch {
+        if (!cancelled) setGitOk(false);
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
     })();
+    return () => { cancelled = true; };
   }, []);
 
   const { schedule: scheduleGitPath, flush: flushGitPath } = useDebouncedSave((value) =>
@@ -1234,8 +1251,11 @@ export function ArchivedConversationsSection({
     const repoMap = new Map(repos.map((r) => [r.id, repoLabel(r)]));
     return Object.entries(sessionIndices).flatMap(([key, idx]) => {
       const repoId = key === NO_REPO_KEY ? null : key;
+      // A deleted project is gone from `repos`, so fall back to the label
+      // stamped at delete time (deletedProjectLabel) before giving up to
+      // "未知项目" — keeps archived sessions named after their original project.
       const project = repoId
-        ? repoMap.get(repoId) ?? t("settingsX.adv.unknownProject")
+        ? repoMap.get(repoId) ?? idx.deletedProjectLabel ?? t("settingsX.adv.unknownProject")
         : t("settingsX.adv.noRepoConv");
       return idx.sessions
         .filter((s) => s.archived)
