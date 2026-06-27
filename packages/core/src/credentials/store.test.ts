@@ -59,6 +59,49 @@ describe("CredentialStore", () => {
     expect(store.resolve("tok-a")).toBeUndefined();
   });
 
+  // envExposures: the missing wiring for Credential.exposeAsEnv. A credential
+  // flagged "expose as env var" must surface { ENV_NAME: secret } so the engine
+  // can layer it into the shell env — previously the flag was stored but never
+  // consumed, so $FIGMA_TOKEN was always empty.
+  describe("envExposures (exposeAsEnv → shell env map)", () => {
+    test("returns ENV_NAME→secret for flagged credentials", () => {
+      const store = new CredentialStore(cwd);
+      store.save("user", {
+        id: "figma",
+        type: "token",
+        label: "Figma",
+        secret: "s-mquq0f4p",
+        exposeAsEnv: "FIGMA_TOKEN",
+      });
+      expect(store.envExposures("full")).toEqual({ FIGMA_TOKEN: "s-mquq0f4p" });
+    });
+
+    test("ignores credentials without exposeAsEnv or without a secret", () => {
+      const store = new CredentialStore(cwd);
+      store.save("user", { id: "no-env", type: "token", label: "X", secret: "s1" });
+      store.save("user", { id: "no-secret", type: "token", label: "Y", exposeAsEnv: "Y_TOKEN" });
+      store.save("user", { id: "blank-name", type: "token", label: "Z", secret: "s2", exposeAsEnv: "  " });
+      expect(store.envExposures("full")).toEqual({});
+    });
+
+    test("project scope ONLY reads the project store (host isolation)", () => {
+      const store = new CredentialStore(cwd);
+      store.save("user", { id: "g", type: "token", label: "g", secret: "gs", exposeAsEnv: "G_TOKEN" });
+      store.save("project", { id: "p", type: "token", label: "p", secret: "ps", exposeAsEnv: "P_TOKEN" });
+      // project scope: user credential must NOT leak
+      expect(store.envExposures("project")).toEqual({ P_TOKEN: "ps" });
+      // full scope: both, project wins on a name clash
+      expect(store.envExposures("full")).toEqual({ G_TOKEN: "gs", P_TOKEN: "ps" });
+    });
+
+    test("project credential overrides user on the same env name (full scope)", () => {
+      const store = new CredentialStore(cwd);
+      store.save("user", { id: "g", type: "token", label: "g", secret: "global", exposeAsEnv: "TOK" });
+      store.save("project", { id: "p", type: "token", label: "p", secret: "local", exposeAsEnv: "TOK" });
+      expect(store.envExposures("full")).toEqual({ TOK: "local" });
+    });
+  });
+
   test("mask hides secret value", () => {
     const store = new CredentialStore(cwd);
     store.save("user", { id: "tok-a", type: "token", label: "A", secret: "supersecretvalue" });

@@ -103,6 +103,38 @@ export class CredentialStore {
     return this.list().find((c) => c.id === id);
   }
 
+  /**
+   * Credentials flagged "expose as env var" → a `{ ENV_NAME: secret }` map for
+   * layering into the shell env (Engine.readShellEnv). This is the missing
+   * consumer of `Credential.exposeAsEnv` — the UI/store recorded the flag but
+   * nothing injected the secret, so `$FIGMA_TOKEN` was always empty.
+   *
+   * `scope` mirrors the engine's settings scope to keep the host-isolation
+   * contract identical to top-level `env`:
+   *   - "full": merge user(~/.code-shell) then project (project wins), matching
+   *     `list()` precedence.
+   *   - "project": ONLY the project store — a project-scoped engine must never
+   *     surface the host user's credentials (SDK-embedding safety).
+   * Only credentials with BOTH a non-empty exposeAsEnv and a non-empty secret
+   * contribute; a later layer (project) overrides an earlier env name.
+   */
+  envExposures(scope: "full" | "project"): Record<string, string> {
+    const out: Record<string, string> = {};
+    const layers: Credential[][] =
+      scope === "project"
+        ? [this.read("project").credentials]
+        : [this.read("user").credentials, this.read("project").credentials];
+    for (const layer of layers) {
+      for (const c of layer) {
+        const name = c.exposeAsEnv?.trim();
+        if (name && typeof c.secret === "string" && c.secret.length > 0) {
+          out[name] = c.secret;
+        }
+      }
+    }
+    return out;
+  }
+
   listMasked(): MaskedCredential[] {
     return this.list().map((c) => {
       const { secret, ...rest } = c;

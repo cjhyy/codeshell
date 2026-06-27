@@ -81,6 +81,7 @@ import { TurnLoop, type TurnLoopConfig } from "./turn-loop.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
 import { SettingsManager, userHome, noRepoDir, type SettingsScope } from "../settings/manager.js";
+import { CredentialStore } from "../credentials/store.js";
 import type { CapabilityOverride, CapabilityOverrides } from "../settings/schema.js";
 import {
   isFeatureEnabled,
@@ -3056,17 +3057,24 @@ export class Engine {
    *      that wants to override a global key wins.
    *
    * Each scope is read UNMERGED so the layering here is the single source of
-   * precedence (getForScope merges nothing). Sub-agents and no-cwd contexts
-   * get nothing (same minimal surface as readBuiltinOverride). Returns
-   * undefined when no layer contributes a key, so the caller passes it through
-   * unchanged for projects that configure none.
+   * precedence (getForScope merges nothing). Returns undefined when no layer
+   * contributes a key, so the caller passes it through unchanged for projects
+   * that configure none.
+   *
+   * Sub-agents: a sub-agent is the user's OWN agent doing the user's work
+   * (mirrors Claude Code, where sub-agents inherit the parent environment), so
+   * it now reads the SAME env as the parent. The sub-agent branch is kept as an
+   * explicit seam (`filterSubagentEnv`) rather than removed — a future policy
+   * could narrow what a sub-agent sees (e.g. drop credential secrets) by
+   * changing that one hook; today it passes everything through unchanged.
+   * A no-cwd context still gets nothing (there is genuinely no project to read).
    *
    * None of these is filtered through the deny regex (mergeShellEnv): the user
    * put them there deliberately. The allowlist/deny machinery only guards the
    * host's process.env from a tainted model exfiltrating it via `env | curl`.
    */
   private readShellEnv(cwd?: string): Record<string, string> | undefined {
-    if (this.config.isSubAgent === true || !cwd) return undefined;
+    if (!cwd) return undefined;
     const merged: Record<string, string> = {};
     const layer = (env: Record<string, string> | undefined): void => {
       if (!env) return;
@@ -3085,11 +3093,31 @@ export class Engine {
         localEnvironment?: { env?: Record<string, string> };
       };
       layer(settings.localEnvironment?.env); // floor
+      // Credentials flagged "expose as env var" (Credential.exposeAsEnv). This
+      // is the wiring that was missing — the UI/store recorded the flag but no
+      // code ever injected the secret, so `$FIGMA_TOKEN` was always empty.
+      // Scope mirrors settingsScope so a project-scoped engine never surfaces
+      // the host user's credentials (same isolation contract as top-level env).
+      // Placed below settings.env so an explicit `env` entry can still override.
+      const credScope = (this.config.settingsScope ?? "project") === "full" ? "full" : "project";
+      layer(new CredentialStore(cwd).envExposures(credScope));
       layer(settings.env); // top-level env (global ⊕ project) wins
     } catch {
       return undefined;
     }
-    return Object.keys(merged).length > 0 ? merged : undefined;
+    const result = this.config.isSubAgent === true ? this.filterSubagentEnv(merged) : merged;
+    return Object.keys(result).length > 0 ? result : undefined;
+  }
+
+  /**
+   * Policy seam for what a sub-agent's shell sees. A sub-agent inherits the
+   * parent environment by default (mirrors Claude Code), so this is the
+   * identity function today. It exists so a future policy can narrow the set
+   * (e.g. strip credential `exposeAsEnv` secrets, or allowlist by name) in ONE
+   * place instead of scattering `isSubAgent` checks through readShellEnv.
+   */
+  private filterSubagentEnv(env: Record<string, string>): Record<string, string> {
+    return env;
   }
 
   /**

@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Engine } from "./engine.js";
+import { CredentialStore } from "../credentials/store.js";
 
 const baseLlm = { provider: "openai", model: "gpt-5", apiKey: "test-key" } as any;
 
@@ -10,7 +11,8 @@ const baseLlm = { provider: "openai", model: "gpt-5", apiKey: "test-key" } as an
  * Beta cleanup: localEnvironment.env wiring. Engine.buildToolContext() must
  * surface the project's `.code-shell/settings.json` localEnvironment.env as
  * ctx.shellEnv so the Bash tool / background shells can layer it onto the
- * spawn env (mergeShellEnv). Sub-agents and no-env projects get undefined.
+ * spawn env (mergeShellEnv). Sub-agents inherit the parent's env (Claude Code
+ * parity); only a no-cwd / no-env context yields undefined.
  */
 describe("Engine shellEnv (localEnvironment.env wiring)", () => {
   let home: string;
@@ -67,10 +69,15 @@ describe("Engine shellEnv (localEnvironment.env wiring)", () => {
     expect(engine.buildToolContext().shellEnv).toBeUndefined();
   });
 
-  it("is undefined for sub-agents (minimal surface)", () => {
-    writeProjectEnv({ SECRET_THING: "x" });
+  it("sub-agents inherit the SAME project env as the parent", () => {
+    // A sub-agent is the user's own agent doing the user's work (mirrors Claude
+    // Code), so it reads the same project localEnvironment.env as the parent.
+    writeProjectEnv({ DATABASE_URL: "postgres://local", NODE_ENV: "test" });
     const engine = new Engine({ llm: baseLlm, cwd: proj, isSubAgent: true } as any);
-    expect(engine.buildToolContext().shellEnv).toBeUndefined();
+    expect(engine.buildToolContext().shellEnv).toEqual({
+      DATABASE_URL: "postgres://local",
+      NODE_ENV: "test",
+    });
   });
 
   it("is undefined with no cwd", () => {
@@ -144,10 +151,10 @@ describe("Engine shellEnv (localEnvironment.env wiring)", () => {
     rmSync(proj2, { recursive: true, force: true });
   });
 
-  it("is undefined for sub-agents even with global env (minimal surface)", () => {
+  it("sub-agents inherit global env too (full scope)", () => {
     writeGlobalSettings({ env: { OPENAI_API_KEY: "sk-global" } });
     const engine = new Engine({ llm: baseLlm, cwd: proj, isSubAgent: true, ...full } as any);
-    expect(engine.buildToolContext().shellEnv).toBeUndefined();
+    expect(engine.buildToolContext().shellEnv).toEqual({ OPENAI_API_KEY: "sk-global" });
   });
 
   it("does NOT read global env under default (project) scope — host isolation", () => {
@@ -156,5 +163,65 @@ describe("Engine shellEnv (localEnvironment.env wiring)", () => {
     writeGlobalSettings({ env: { OPENAI_API_KEY: "sk-global" } });
     const engine = new Engine({ llm: baseLlm, cwd: proj });
     expect(engine.buildToolContext().shellEnv).toBeUndefined();
+  });
+
+  // ── Credential.exposeAsEnv → shell env. The previously-missing wiring: a
+  // token credential flagged "expose as env var" must reach ctx.shellEnv (and
+  // thus the Bash tool) under the same scope/subagent isolation as top-level
+  // env. This is the "$FIGMA_TOKEN is empty" bug — secret stored, never injected.
+
+  it("surfaces a credential flagged exposeAsEnv (full scope)", () => {
+    new CredentialStore(proj).save("user", {
+      id: "figma",
+      type: "token",
+      label: "Figma",
+      secret: "s-mquq0f4p",
+      exposeAsEnv: "FIGMA_TOKEN",
+    });
+    const engine = new Engine({ llm: baseLlm, cwd: proj, ...full } as any);
+    expect(engine.buildToolContext().shellEnv).toEqual({ FIGMA_TOKEN: "s-mquq0f4p" });
+  });
+
+  it("top-level env overrides a credential exposing the same name", () => {
+    new CredentialStore(proj).save("user", {
+      id: "figma",
+      type: "token",
+      label: "Figma",
+      secret: "from-credential",
+      exposeAsEnv: "FIGMA_TOKEN",
+    });
+    writeGlobalSettings({ env: { FIGMA_TOKEN: "from-env" } });
+    const engine = new Engine({ llm: baseLlm, cwd: proj, ...full } as any);
+    // settings.env layers above credentials → explicit env wins.
+    expect(engine.buildToolContext().shellEnv).toEqual({ FIGMA_TOKEN: "from-env" });
+  });
+
+  it("does NOT surface a user-scope credential under default (project) scope", () => {
+    // Host isolation: a project-scoped engine must not leak the host user's
+    // credentials, mirroring the top-level-env behavior above.
+    new CredentialStore(proj).save("user", {
+      id: "figma",
+      type: "token",
+      label: "Figma",
+      secret: "s-mquq0f4p",
+      exposeAsEnv: "FIGMA_TOKEN",
+    });
+    const engine = new Engine({ llm: baseLlm, cwd: proj });
+    expect(engine.buildToolContext().shellEnv).toBeUndefined();
+  });
+
+  it("sub-agents inherit exposeAsEnv credentials too (full scope)", () => {
+    // Default policy: a sub-agent sees the same credential-exposed env as the
+    // parent. The filterSubagentEnv seam is where a future policy could narrow
+    // this (e.g. strip secrets) — today it passes through.
+    new CredentialStore(proj).save("user", {
+      id: "figma",
+      type: "token",
+      label: "Figma",
+      secret: "s-mquq0f4p",
+      exposeAsEnv: "FIGMA_TOKEN",
+    });
+    const engine = new Engine({ llm: baseLlm, cwd: proj, isSubAgent: true, ...full } as any);
+    expect(engine.buildToolContext().shellEnv).toEqual({ FIGMA_TOKEN: "s-mquq0f4p" });
   });
 });
