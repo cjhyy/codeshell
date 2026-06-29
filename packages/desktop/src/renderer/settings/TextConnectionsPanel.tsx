@@ -262,8 +262,47 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
       )}
 
       {instances.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
-          {t("settingsX.textConn.emptyHint", { heading })}
+        // Empty state: don't just hint "click 添加模型" — surface the available
+        // templates right here as quick-add cards so the user can SEE what models
+        // exist (e.g. OpenAI / Groq 语音转写) and add one in a single click.
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-muted-foreground">{t("settingsX.textConn.emptyHint", { heading })}</p>
+          {textTemplates.length > 0 && (
+            <ConnCardGrid>
+              {textTemplates.map((entry) => (
+                <ConnCard key={entry.id}>
+                  <header className="flex items-start justify-between gap-2">
+                    <strong className="text-sm font-medium text-foreground">{entry.displayName}</strong>
+                    {entry.signupUrl && (
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="h-auto shrink-0 p-0 text-xs"
+                        onClick={() => void window.codeshell.openExternal(entry.signupUrl!)}
+                      >
+                        {t("settingsX.searchConn.getKey")}
+                      </Button>
+                    )}
+                  </header>
+                  {entry.description && (
+                    <p className="text-xs leading-relaxed text-muted-foreground">{entry.description}</p>
+                  )}
+                  {entry.defaultModel && (
+                    <p className="text-xs text-muted-foreground">
+                      <span className="opacity-70">{t("settingsX.textConn.defaultModelLabel")}</span>{" "}
+                      <code className="rounded bg-muted px-1 py-0.5">{entry.defaultModel}</code>
+                    </p>
+                  )}
+                  <ConnCardFooter>
+                    <Button variant="solid" size="sm" onClick={() => void addFromTemplate(entry)}>
+                      <Plus />
+                      {t("settingsX.textConn.add")}
+                    </Button>
+                  </ConnCardFooter>
+                </ConnCard>
+              ))}
+            </ConnCardGrid>
+          )}
         </div>
       ) : (
         <ConnCardGrid>
