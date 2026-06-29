@@ -42,6 +42,7 @@ import {
   transcribe,
   resolveTranscribeProvider,
   isTranscribeAvailable,
+  describeTranscribe,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { registerGuest } from "./browser-driver/active-guest.js";
@@ -1592,6 +1593,12 @@ ipcMain.handle(
 ipcMain.handle("stt:available", async (_e, cwd: string) => ({
   available: typeof cwd === "string" ? isTranscribeAvailable(cwd) : false,
 }));
+// What voice input will ACTUALLY use right now (configured connection vs reused
+// OpenAI key vs none) — key already masked in core. Lets the connection page
+// show the active/fallback config instead of looking unconfigured.
+ipcMain.handle("stt:describe", async (_e, cwd: string) =>
+  typeof cwd === "string" ? describeTranscribe(cwd) : { source: "none" as const },
+);
 // macOS gates microphone access at the OS level (TCC). Ask BEFORE getUserMedia
 // so the user gets the system prompt with our NSMicrophoneUsageDescription, and
 // so a previously-denied state is reported back (renderer then shows guidance).

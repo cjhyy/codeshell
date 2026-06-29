@@ -87,6 +87,14 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
   const [defaultId, setDefaultId] = useState<string>("");
   const [auxId, setAuxId] = useState<string>(""); // background-task model (text only)
   const [showKey, setShowKey] = useState<Record<string, boolean>>({});
+  // Audio only: what voice input falls back to when no audio connection is
+  // configured (reused OpenAI key) — so the empty state shows the ACTIVE config
+  // instead of looking unconfigured. null = not audio / nothing to fall back to.
+  const [sttFallback, setSttFallback] = useState<{
+    model?: string;
+    maskedKey?: string;
+    reusedCredentialCatalogId?: string;
+  } | null>(null);
 
   const textTemplates = useMemo(() => catalog.filter((e) => e.tag === tag), [catalog, tag]);
   const entryById = useCallback(
@@ -106,6 +114,20 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
     const defaults = (s.defaults ?? {}) as Record<string, string | undefined>;
     setDefaultId(defaults[tag] ?? "");
     setAuxId(defaults.auxText ?? "");
+    // Audio: surface the active fallback (reused OpenAI key) so the empty state
+    // can show what voice input is actually using right now.
+    if (tag === "audio") {
+      try {
+        const d = await window.codeshell.sttDescribe(cwd ?? "");
+        setSttFallback(
+          d.source === "fallback"
+            ? { model: d.model, maskedKey: d.maskedKey, reusedCredentialCatalogId: d.reusedCredentialCatalogId }
+            : null,
+        );
+      } catch {
+        setSttFallback(null);
+      }
+    }
   }, [scope, cwd, cacheKey, tag]);
 
   /** Set the background-task (aux) model = a text connection id, or clear. */
@@ -267,6 +289,23 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
         // exist (e.g. OpenAI / Groq 语音转写) and add one in a single click.
         <div className="flex flex-col gap-3">
           <p className="text-sm text-muted-foreground">{t("settingsX.textConn.emptyHint", { heading })}</p>
+          {sttFallback && (
+            // Audio fallback active: voice input already works by reusing an
+            // OpenAI key — show what it's using so the page doesn't look dead.
+            <div className="rounded-lg border border-status-ok/30 bg-status-ok/5 p-3 text-sm">
+              <div className="mb-1 flex items-center gap-1.5 font-medium text-status-ok">
+                <span className="size-1.5 rounded-full bg-status-ok" />
+                {t("settingsX.textConn.sttFallbackActive")}
+              </div>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {t("settingsX.textConn.sttFallbackDesc", {
+                  model: sttFallback.model ?? "",
+                  cred: sttFallback.reusedCredentialCatalogId ?? "OpenAI",
+                  key: sttFallback.maskedKey ?? "",
+                })}
+              </p>
+            </div>
+          )}
           {textTemplates.length > 0 && (
             <ConnCardGrid>
               {textTemplates.map((entry) => (

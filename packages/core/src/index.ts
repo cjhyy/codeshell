@@ -688,7 +688,9 @@ export {
 export {
   resolveTranscribeProvider,
   isTranscribeAvailable,
+  describeTranscribe,
   type ResolvedTranscribeProvider,
+  type TranscribeDescription,
 } from "./stt/resolve-transcribe.js";
 
 export {

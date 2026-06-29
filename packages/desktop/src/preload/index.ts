@@ -597,6 +597,16 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("stt:transcribe", payload),
   sttAvailable: (cwd: string): Promise<{ available: boolean }> =>
     ipcRenderer.invoke("stt:available", cwd),
+  sttDescribe: (
+    cwd: string,
+  ): Promise<{
+    source: "connection" | "fallback" | "none";
+    model?: string;
+    baseUrl?: string;
+    maskedKey?: string;
+    reusedCredentialId?: string;
+    reusedCredentialCatalogId?: string;
+  }> => ipcRenderer.invoke("stt:describe", cwd),
   ensureMicAccess: (): Promise<{ granted: boolean }> =>
     ipcRenderer.invoke("stt:ensureMicAccess"),
   listMarketplaces: () => ipcRenderer.invoke("marketplace:list"),
