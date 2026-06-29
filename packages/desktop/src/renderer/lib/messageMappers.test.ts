@@ -152,6 +152,56 @@ test("roomMsgToEvent:有 toolId 时用真 id + 走 id-配对的 tool_result", ()
   });
 });
 
+// A driven agent's tool call carries FULL structured args (the tool_use input —
+// e.g. a sub-agent Task's multi-paragraph `prompt`), not just the one-field
+// `summary`. roomMsgToEvent must forward `args` so the tool card can show the
+// real parameters. When a (legacy) message has no `args`, the key is omitted so
+// the older exact-shape tests stay green.
+test("roomMsgToEvent 透传完整 args(prompt 等不再只剩 summary)", () => {
+  const args = { description: "build X", prompt: "一大段子任务 prompt……", subagent_type: "general-purpose" };
+  expect(
+    roomMsgToEvent({ from: "agent", type: "tool", tool: "Agent", summary: "build X", args, toolId: "t9", seq: 7 }),
+  ).toEqual({
+    type: "tool_use_start",
+    toolCall: { id: "t9", toolName: "Agent", summary: "build X", args },
+  });
+  // No args on the message → no args key on the event (legacy shape preserved).
+  expect(
+    roomMsgToEvent({ from: "agent", type: "tool", tool: "Read", summary: "a.ts", seq: 3 }),
+  ).toEqual({
+    type: "tool_use_start",
+    toolCall: { id: "room-tool-3", toolName: "Read", summary: "a.ts" },
+  });
+});
+
+test("ccHistoryToEvents 透传 tools[].args", () => {
+  const args = { prompt: "做点啥", subagent_type: "general-purpose" };
+  const events = ccHistoryToEvents([
+    { role: "assistant", text: "", tools: [{ name: "Agent", summary: "做点啥", args }] },
+  ]);
+  expect(events).toEqual([
+    {
+      type: "tool_use_start",
+      toolCall: { id: "cc-hist-0-0", toolName: "Agent", summary: "做点啥", args },
+    },
+    { type: "turn_complete", reason: "completed" },
+  ]);
+});
+
+test("透传的 args 经 reducer 落到 tool item(卡片可展示完整参数)", () => {
+  const args = { prompt: "完整 prompt 文本", description: "子任务" };
+  const state = [
+    { from: "user", type: "text", text: "跑个子代理", seq: 1 },
+    { from: "agent", type: "tool", tool: "Agent", summary: "子任务", args, toolId: "t1", seq: 2 },
+    { from: "agent", type: "tool_result", summary: "done", isError: false, toolId: "t1", seq: 3 },
+    { from: "agent", type: "turn_end", reason: "completed", seq: 4 },
+  ]
+    .map(roomMsgToEvent)
+    .reduce(reduceStream, initialChatState());
+  const tool = state.items.find((i) => i.kind === "tool") as { args?: Record<string, unknown> };
+  expect(tool.args).toEqual(args);
+});
+
 test("并行工具按 id 各自收口(回归:不再封错/堆叠)", () => {
   const msgs = [
     { from: "user", type: "text", text: "并行跑两个", seq: 1 },

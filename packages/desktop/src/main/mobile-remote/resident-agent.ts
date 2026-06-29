@@ -15,7 +15,10 @@ export type ResidentAgentEvent =
   // paired back to its start by id (not the fragile "seal the last open tool"
   // heuristic, which breaks when a turn runs tools in parallel). Optional: old
   // transcripts and malformed lines may lack it.
-  | { type: "tool"; id?: string; tool: string; summary: string }
+  // `input` is the FULL tool_use args (e.g. a sub-agent's multi-paragraph
+  // `prompt`). `summary` is a lossy one-field preview for compact lists; `input`
+  // is what the tool card expands to so the real parameters are visible.
+  | { type: "tool"; id?: string; tool: string; summary: string; input?: Record<string, unknown> }
   | { type: "tool_result"; id?: string; summary: string; isError: boolean }
   | { type: "turn_end"; reason: string }
   | { type: "error"; error: string }
@@ -105,6 +108,7 @@ export function parseStreamJsonLine(line: string): ResidentAgentEvent[] {
           id: typeof c.id === "string" ? c.id : undefined,
           tool: c.name ?? "tool",
           summary: argsSummary(c.input),
+          input: c.input && typeof c.input === "object" ? c.input : undefined,
         });
       }
     }

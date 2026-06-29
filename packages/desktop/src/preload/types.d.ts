@@ -1053,7 +1053,7 @@ export interface CodeshellApi {
       sessionId: string,
       limit: number,
     ): Promise<{
-      messages: { role: "user" | "assistant"; text: string; tools?: { name: string; summary: string }[] }[];
+      messages: { role: "user" | "assistant"; text: string; tools?: { name: string; summary: string; args?: Record<string, unknown> }[] }[];
       hasMore: boolean;
       totalCount: number;
     }>;
@@ -1062,7 +1062,7 @@ export interface CodeshellApi {
       threadId: string,
       limit: number,
     ): Promise<{
-      messages: { role: "user" | "assistant"; text: string; tools?: { name: string; summary: string }[] }[];
+      messages: { role: "user" | "assistant"; text: string; tools?: { name: string; summary: string; args?: Record<string, unknown> }[] }[];
       hasMore: boolean;
       totalCount: number;
     }>;
@@ -1117,6 +1117,9 @@ export interface RoomMessageWire {
   /** claude tool_use id (toolu_…) — pairs a tool_result to its start so the UI
    *  seals the right card even when tools run in parallel. */
   toolId?: string;
+  /** Full structured tool_use input (e.g. a sub-agent's `prompt`) on `tool`
+   *  messages — what the tool card expands to. Absent on legacy messages. */
+  args?: Record<string, unknown>;
 }
 
 export type UpdaterStatus =

@@ -67,7 +67,9 @@ export function parseCodexJsonLine(line: string): ResidentAgentEvent[] {
           isError: typeof item.exit_code === "number" ? item.exit_code !== 0 : false,
         }];
       }
-      return phase === "started" ? [{ type: "tool", id, tool: "Bash", summary: String(item.command ?? "") }] : [];
+      return phase === "started"
+        ? [{ type: "tool", id, tool: "Bash", summary: String(item.command ?? ""), input: { command: String(item.command ?? "") } }]
+        : [];
 
     case "mcp_tool_call":
       if (phase === "completed") {
@@ -79,14 +81,30 @@ export function parseCodexJsonLine(line: string): ResidentAgentEvent[] {
         }];
       }
       return phase === "started"
-        ? [{ type: "tool", id, tool: `${item.server ?? "mcp"}__${item.tool ?? "tool"}`, summary: "" }]
+        ? [{
+            type: "tool",
+            id,
+            tool: `${item.server ?? "mcp"}__${item.tool ?? "tool"}`,
+            summary: "",
+            input: { arguments: item.arguments },
+          }]
         : [];
 
     case "web_search":
-      return phase === "started" ? [{ type: "tool", id, tool: "WebSearch", summary: String(item.query ?? "") }] : [];
+      return phase === "started"
+        ? [{ type: "tool", id, tool: "WebSearch", summary: String(item.query ?? ""), input: { query: String(item.query ?? "") } }]
+        : [];
 
     case "file_change":
-      return phase === "started" ? [{ type: "tool", id, tool: "Edit", summary: String(item.path ?? "") }] : [];
+      return phase === "started"
+        ? [{
+            type: "tool",
+            id,
+            tool: "Edit",
+            summary: String(item.path ?? ""),
+            input: item.kind !== undefined ? { path: String(item.path ?? ""), kind: item.kind } : { path: String(item.path ?? "") },
+          }]
+        : [];
 
     default:
       return [];

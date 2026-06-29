@@ -6,7 +6,10 @@ import { encodeCwd } from "./session-discovery.js";
 export interface HistoryMessage {
   role: "user" | "assistant";
   text: string;
-  tools?: { name: string; summary: string }[];
+  /** `summary` is a lossy one-field preview; `args` is the full tool_use input
+   *  (e.g. a sub-agent's `prompt`) so a replayed tool card can show the real
+   *  parameters, not just the whitelisted field. */
+  tools?: { name: string; summary: string; args?: Record<string, unknown> }[];
   ts?: number;
 }
 
@@ -17,14 +20,15 @@ function textOf(content: unknown): string {
     return content.map((p: any) => (typeof p?.text === "string" ? p.text : "")).join("");
   return "";
 }
-function toolsOf(content: unknown): { name: string; summary: string }[] {
+function toolsOf(content: unknown): { name: string; summary: string; args?: Record<string, unknown> }[] {
   if (!Array.isArray(content)) return [];
-  const out: { name: string; summary: string }[] = [];
+  const out: { name: string; summary: string; args?: Record<string, unknown> }[] = [];
   for (const p of content as any[]) {
     if (p?.type === "tool_use") {
       const inp = p.input ?? {};
       const summary = inp.command ?? inp.file_path ?? inp.path ?? inp.url ?? inp.pattern ?? inp.query ?? "";
-      out.push({ name: typeof p.name === "string" ? p.name : "tool", summary: String(summary).slice(0, 120) });
+      const args = inp && typeof inp === "object" && Object.keys(inp).length > 0 ? inp : undefined;
+      out.push({ name: typeof p.name === "string" ? p.name : "tool", summary: String(summary).slice(0, 120), args });
     }
   }
   return out;

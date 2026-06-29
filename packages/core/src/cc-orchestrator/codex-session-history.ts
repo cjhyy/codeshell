@@ -56,7 +56,7 @@ export function readCodexRecentHistory(
       if (!t || t.startsWith("<environment_context>")) continue;
       all.push({ role: p.role, text: t.slice(0, 4000) });
     } else if (p.type === "function_call" || p.type === "custom_tool_call") {
-      const tool = { name: typeof p.name === "string" ? p.name : "tool", summary: summaryOf(p) };
+      const tool = { name: typeof p.name === "string" ? p.name : "tool", summary: summaryOf(p), args: argsOf(p) };
       const last = all[all.length - 1];
       // Attach the tool to the preceding assistant turn; otherwise start one.
       if (last && last.role === "assistant") {
@@ -95,6 +95,27 @@ function summaryOf(payload: any): string {
   }
   if (typeof payload.input === "string") return payload.input.slice(0, 120);
   return "";
+}
+
+/**
+ * Build the FULL structured tool args for a codex tool event so a replayed tool
+ * card can show the real parameters (not just the lossy one-field summary).
+ * `function_call.arguments` is a JSON string → parse it; `custom_tool_call.input`
+ * is a raw string → keep it under `{input}`. Returns undefined when neither is
+ * present or the JSON is malformed.
+ */
+function argsOf(payload: any): Record<string, unknown> | undefined {
+  if (typeof payload.arguments === "string") {
+    try {
+      const a = JSON.parse(payload.arguments);
+      if (a && typeof a === "object") return a as Record<string, unknown>;
+    } catch {
+      /* malformed JSON → fall through */
+    }
+    return { arguments: payload.arguments };
+  }
+  if (typeof payload.input === "string") return { input: payload.input };
+  return undefined;
 }
 
 /** Find the rollout file whose `session_meta` matches both `threadId` and `cwd`. */

@@ -1,4 +1,4 @@
-import { describe, expect, it, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { parseCodexJsonLine, extractThreadId } from "./codex-parse.js";
 
 describe("parseCodexJsonLine", () => {
@@ -21,12 +21,16 @@ describe("parseCodexJsonLine", () => {
     expect(parseCodexJsonLine(line)).toEqual([]);
   });
 
-  test("command_execution started → tool(Bash) carrying the item id", () => {
+  // Tool starts carry BOTH a lossy `summary` (compact preview) AND structured
+  // `input` (so the card shows the real parameters, mirroring the claude room).
+  test("command_execution started → tool(Bash) carrying the item id + input.command", () => {
     const line = JSON.stringify({
       type: "item.started",
       item: { id: "i0", type: "command_execution", command: "echo hi", status: "in_progress" },
     });
-    expect(parseCodexJsonLine(line)).toEqual([{ type: "tool", id: "i0", tool: "Bash", summary: "echo hi" }]);
+    expect(parseCodexJsonLine(line)).toEqual([
+      { type: "tool", id: "i0", tool: "Bash", summary: "echo hi", input: { command: "echo hi" } },
+    ]);
   });
 
   test("command_execution completed → tool_result paired by id, isError from exit_code", () => {
@@ -43,12 +47,14 @@ describe("parseCodexJsonLine", () => {
     expect(parseCodexJsonLine(bad)).toEqual([{ type: "tool_result", id: "i1", summary: "", isError: true }]);
   });
 
-  test("mcp_tool_call → tool named <server>__<tool> (started) + tool_result (completed)", () => {
+  test("mcp_tool_call → tool named <server>__<tool> (started, carries input.arguments) + tool_result (completed)", () => {
     const started = JSON.stringify({
       type: "item.started",
-      item: { id: "m0", type: "mcp_tool_call", server: "fs", tool: "read", status: "in_progress" },
+      item: { id: "m0", type: "mcp_tool_call", server: "fs", tool: "read", arguments: { path: "/x" }, status: "in_progress" },
     });
-    expect(parseCodexJsonLine(started)).toEqual([{ type: "tool", id: "m0", tool: "fs__read", summary: "" }]);
+    expect(parseCodexJsonLine(started)).toEqual([
+      { type: "tool", id: "m0", tool: "fs__read", summary: "", input: { arguments: { path: "/x" } } },
+    ]);
     const done = JSON.stringify({
       type: "item.completed",
       item: { id: "m0", type: "mcp_tool_call", server: "fs", tool: "read", result: "ok", status: "completed" },
@@ -56,20 +62,24 @@ describe("parseCodexJsonLine", () => {
     expect(parseCodexJsonLine(done)).toEqual([{ type: "tool_result", id: "m0", summary: "ok", isError: false }]);
   });
 
-  test("web_search → tool(WebSearch)", () => {
+  test("web_search → tool(WebSearch) with input.query", () => {
     const line = JSON.stringify({
       type: "item.started",
       item: { id: "w0", type: "web_search", query: "codex cli" },
     });
-    expect(parseCodexJsonLine(line)).toEqual([{ type: "tool", id: "w0", tool: "WebSearch", summary: "codex cli" }]);
+    expect(parseCodexJsonLine(line)).toEqual([
+      { type: "tool", id: "w0", tool: "WebSearch", summary: "codex cli", input: { query: "codex cli" } },
+    ]);
   });
 
-  test("file_change → tool(Edit) with the path summary", () => {
+  test("file_change → tool(Edit) with the path summary + input.path", () => {
     const line = JSON.stringify({
       type: "item.started",
       item: { id: "f0", type: "file_change", path: "/a/b.ts", kind: "modify" },
     });
-    expect(parseCodexJsonLine(line)).toEqual([{ type: "tool", id: "f0", tool: "Edit", summary: "/a/b.ts" }]);
+    expect(parseCodexJsonLine(line)).toEqual([
+      { type: "tool", id: "f0", tool: "Edit", summary: "/a/b.ts", input: { path: "/a/b.ts", kind: "modify" } },
+    ]);
   });
 
   test("turn.completed → turn_end", () => {

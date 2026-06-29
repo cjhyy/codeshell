@@ -110,6 +110,11 @@ export interface RoomMessage {
    *  `tool_result` (the matching result) so the UI can pair them by id rather
    *  than guessing "the last open tool". Absent on legacy messages. */
   toolId?: string;
+  /** Full structured tool_use input (e.g. a sub-agent's `prompt`) on `tool`
+   *  messages. `summary` is a lossy one-field preview; `args` is what the tool
+   *  card expands to so the real parameters are visible. Absent on legacy
+   *  messages that predate args persistence. */
+  args?: Record<string, unknown>;
 }
 
 /**
@@ -376,7 +381,7 @@ export class RoomManager {
         this.append(id, { from: "agent", type: "text", text: event.text });
         break;
       case "tool":
-        this.append(id, { from: "agent", type: "tool", tool: event.tool, summary: event.summary, toolId: event.id });
+        this.append(id, { from: "agent", type: "tool", tool: event.tool, summary: event.summary, toolId: event.id, args: event.input });
         break;
       case "tool_result":
         this.append(id, {

@@ -42,7 +42,7 @@ describe("parseStreamJsonLine", () => {
     expect(parseStreamJsonLine(line)).toEqual([{ type: "text", text: "hello world" }]);
   });
 
-  test("extracts tool_use with arg summary AND its tool_use id (for pairing)", () => {
+  test("extracts tool_use with arg summary, FULL input, AND its tool_use id (for pairing)", () => {
     const line = JSON.stringify({
       type: "assistant",
       message: {
@@ -50,7 +50,7 @@ describe("parseStreamJsonLine", () => {
       },
     });
     expect(parseStreamJsonLine(line)).toEqual([
-      { type: "tool", id: "toolu_01", tool: "Bash", summary: "ls package.json" },
+      { type: "tool", id: "toolu_01", tool: "Bash", summary: "ls package.json", input: { command: "ls package.json" } },
     ]);
   });
 
@@ -60,7 +60,21 @@ describe("parseStreamJsonLine", () => {
       message: { content: [{ type: "tool_use", name: "Bash", input: { command: "ls" } }] },
     });
     expect(parseStreamJsonLine(line)).toEqual([
-      { type: "tool", id: undefined, tool: "Bash", summary: "ls" },
+      { type: "tool", id: undefined, tool: "Bash", summary: "ls", input: { command: "ls" } },
+    ]);
+  });
+
+  // The bug: a tool whose key arg is NOT in the summary whitelist (e.g. a
+  // sub-agent Task's `prompt`) produced an EMPTY summary, so the UI showed
+  // nothing. The full `input` must still flow through so the card can render it.
+  test("carries full input even when no summary-whitelist key matches (e.g. Agent prompt)", () => {
+    const input = { description: "build X", prompt: "一大段子任务 prompt……", subagent_type: "general-purpose" };
+    const line = JSON.stringify({
+      type: "assistant",
+      message: { content: [{ type: "tool_use", id: "toolu_9", name: "Agent", input }] },
+    });
+    expect(parseStreamJsonLine(line)).toEqual([
+      { type: "tool", id: "toolu_9", tool: "Agent", summary: "", input },
     ]);
   });
 
@@ -106,7 +120,7 @@ describe("parseStreamJsonLine", () => {
     });
     expect(parseStreamJsonLine(line)).toEqual([
       { type: "text", text: "let me check" },
-      { type: "tool", id: "toolu_x", tool: "Read", summary: "/a/b.ts" },
+      { type: "tool", id: "toolu_x", tool: "Read", summary: "/a/b.ts", input: { file_path: "/a/b.ts" } },
     ]);
   });
 });

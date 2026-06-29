@@ -432,4 +432,27 @@ describe("RoomManager", () => {
     expect(msgs[0]).toMatchObject({ from: "agent", type: "tool", tool: "Bash", summary: "ls" });
     expect(msgs[1]).toMatchObject({ from: "agent", type: "tool_result", summary: "out", isError: false });
   });
+
+  test("tool 事件持久化完整 args(prompt 等不再只剩 summary)", () => {
+    dir = mkdtempSync(join(tmpdir(), "rooms-"));
+    let emit!: (e: ResidentAgentEvent) => void;
+    const mgr = new RoomManager({
+      rootDir: dir,
+      now: (() => {
+        let c = 1;
+        return () => c++;
+      })(),
+      createAgent: (_r, onEvent) => {
+        emit = onEvent;
+        return { start() {}, send: () => true, isRunning: () => true, stop() {} };
+      },
+      onMessage: () => {},
+    });
+    const room = mgr.createRoom({ cwd: "/repo" });
+    mgr.open(room.id);
+    const input = { description: "build X", prompt: "一大段子任务 prompt……", subagent_type: "general-purpose" };
+    emit({ type: "tool", tool: "Agent", summary: "", input, id: "t1" });
+    const msgs = mgr.getMessages(room.id, 0).filter((m) => m.type !== "room_created");
+    expect(msgs[0]).toMatchObject({ from: "agent", type: "tool", tool: "Agent", toolId: "t1", args: input });
+  });
 });

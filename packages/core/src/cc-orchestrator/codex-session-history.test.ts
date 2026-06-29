@@ -65,9 +65,16 @@ describe("readCodexRecentHistory", () => {
       assistantItem("done"),
     ]);
     const r = readCodexRecentHistory(cwd, id, 10, home);
-    const names = r.messages.flatMap((m) => m.tools ?? []).map((t) => t.name);
+    const tools = r.messages.flatMap((m) => m.tools ?? []);
+    const names = tools.map((t) => t.name);
     expect(names).toContain("exec_command");
     expect(names).toContain("apply_patch");
+    // function_call `arguments` (JSON string) is parsed into structured args;
+    // custom_tool_call `input` (raw string) is preserved under {input}.
+    expect(tools.find((t) => t.name === "exec_command")?.args).toEqual({ cmd: "ls -la", workdir: "/tmp/proj" });
+    expect(tools.find((t) => t.name === "apply_patch")?.args).toEqual({
+      input: "*** Begin Patch\n*** Update File: /tmp/proj/a.txt",
+    });
   });
 
   it("matches the rollout by threadId even across date dirs; ignores other cwds", () => {

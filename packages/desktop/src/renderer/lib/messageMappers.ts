@@ -32,9 +32,13 @@ export function roomMsgToEvent(msg: unknown): unknown {
   // legacy messages that predate id threading.
   if (type === "tool") {
     const toolId = typeof m.toolId === "string" ? m.toolId : undefined;
+    // `args` carries the FULL tool_use input (e.g. a sub-agent's `prompt`), so
+    // the card can show real parameters rather than the lossy one-field summary.
+    // Omit the key when the message predates args persistence (legacy lines).
+    const args = m.args && typeof m.args === "object" ? (m.args as Record<string, unknown>) : undefined;
     return {
       type: "tool_use_start",
-      toolCall: { id: toolId ?? `room-tool-${m.seq ?? ""}`, toolName: m.tool, summary: m.summary },
+      toolCall: { id: toolId ?? `room-tool-${m.seq ?? ""}`, toolName: m.tool, summary: m.summary, ...(args ? { args } : {}) },
     };
   }
   // Tool result: if we have the real id, emit an id-paired `tool_result` so the
@@ -99,12 +103,14 @@ export function ccHistoryToEvents(messages: unknown): unknown[] {
     for (let t = 0; t < tools.length; t++) {
       const tool = tools[t] as Record<string, unknown> | null;
       if (!tool || typeof tool !== "object") continue;
+      const args = tool.args && typeof tool.args === "object" ? (tool.args as Record<string, unknown>) : undefined;
       out.push({
         type: "tool_use_start",
         toolCall: {
           id: `cc-hist-${i}-${t}`,
           toolName: typeof tool.name === "string" ? tool.name : "tool",
           summary: typeof tool.summary === "string" ? tool.summary : undefined,
+          ...(args ? { args } : {}),
         },
       });
     }

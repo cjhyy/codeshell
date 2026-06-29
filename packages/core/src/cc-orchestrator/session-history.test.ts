@@ -40,6 +40,19 @@ describe("readRecentHistory", () => {
     const a = r.messages.find((m) => m.role === "assistant");
     expect(a?.tools?.[0].name).toBe("Write");
   });
+  it("captures the FULL tool input as args (e.g. a sub-agent prompt not in the summary whitelist)", () => {
+    const input = { description: "build X", prompt: "一大段子任务 prompt……", subagent_type: "general-purpose" };
+    const lines = [
+      { type: "user", message: { role: "user", content: "go" } },
+      { type: "assistant", message: { content: [{ type: "tool_use", name: "Agent", input }] } },
+    ];
+    const { cwd, home, sid } = setup(lines);
+    const a = readRecentHistory(cwd, sid, 10, home).messages.find((m) => m.role === "assistant");
+    expect(a?.tools?.[0].name).toBe("Agent");
+    // summary is empty (prompt isn't a whitelist key) but the full args survive.
+    expect(a?.tools?.[0].summary).toBe("");
+    expect(a?.tools?.[0].args).toEqual(input);
+  });
   it("skips caveat noise; returns empty when session absent", () => {
     expect(readRecentHistory("/tmp/none", "nope", 10, mkdtempSync(join(tmpdir(), "h-"))).messages).toEqual([]);
   });

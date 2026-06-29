@@ -38,7 +38,7 @@ export interface CcDiscoveredSession {
 export interface CcHistoryMessage {
   role: "user" | "assistant";
   text: string;
-  tools?: { name: string; summary: string }[];
+  tools?: { name: string; summary: string; args?: Record<string, unknown> }[];
   ts?: number;
 }
 
