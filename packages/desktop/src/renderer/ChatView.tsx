@@ -1076,6 +1076,12 @@ export function ChatView({
                           ? t("chat.composer.voiceTranscribing")
                           : t("chat.composer.voiceInputTitle")
                   }
+                  // Don't steal focus from the composer: a plain button click
+                  // blurs the textarea, so during record→transcribe the keyboard
+                  // can't reach it (the "录音时打不了字" bug). preventDefault on
+                  // mousedown keeps focus in the textarea so the user can keep
+                  // typing while dictating.
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={onVoiceClick}
                   // Disabled while transcribing, OR when no provider is configured
                   // (and not mid-recording — never block stopping an active take).
