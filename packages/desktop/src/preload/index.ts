@@ -919,9 +919,11 @@ contextBridge.exposeInMainWorld("codeshell", {
   // ── CC rooms (external `claude` CLI orchestration) ──
   ccRoom: {
     probe: (force?: boolean) => ipcRenderer.invoke("ccRoom:probe", force),
+    codexProbe: (force?: boolean) => ipcRenderer.invoke("ccRoom:codexProbe", force),
     listSessions: (cwd: string) => ipcRenderer.invoke("ccRoom:listSessions", cwd),
-    openSession: (claudeSessionId: string, cwd: string, mode: string) =>
-      ipcRenderer.invoke("ccRoom:openSession", claudeSessionId, cwd, mode),
+    listCodexSessions: (cwd: string) => ipcRenderer.invoke("ccRoom:listCodexSessions", cwd),
+    openSession: (claudeSessionId: string, cwd: string, mode: string, kind?: "claude-code" | "codex") =>
+      ipcRenderer.invoke("ccRoom:openSession", claudeSessionId, cwd, mode, kind),
     send: (roomId: string, text: string) => ipcRenderer.invoke("ccRoom:send", roomId, text),
     respondApproval: (roomId: string, requestId: string, decision: unknown) =>
       ipcRenderer.invoke("ccRoom:respondApproval", roomId, requestId, decision),

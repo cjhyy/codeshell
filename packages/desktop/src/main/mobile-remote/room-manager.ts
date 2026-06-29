@@ -293,12 +293,17 @@ export class RoomManager {
     claudeSessionId: string,
     cwd: string,
     mode: RoomPermissionMode,
+    kind: RoomKind = "claude-code",
   ): { roomId: string; status: "running" | "missing" } {
+    // Reuse must match BOTH id and kind: a codex thread id and a claude session
+    // id live in the same `claudeSessionId` field, so a bare id match could
+    // otherwise hand back a claude room when a codex room was asked for.
     const existing = claudeSessionId
-      ? this.listRooms().find((r) => r.claudeSessionId === claudeSessionId)
+      ? this.listRooms().find((r) => r.claudeSessionId === claudeSessionId && r.kind === kind)
       : undefined;
     const meta =
-      existing ?? this.createRoom({ cwd, permissionMode: mode, claudeSessionId: claudeSessionId || undefined });
+      existing ??
+      this.createRoom({ cwd, kind, permissionMode: mode, claudeSessionId: claudeSessionId || undefined });
     // permissionMode is a spawn-time CLI arg (--permission-mode), so it can't be
     // changed on a live process. If the caller reopens an existing room under a
     // DIFFERENT mode, persist the new mode and restart the resident agent;

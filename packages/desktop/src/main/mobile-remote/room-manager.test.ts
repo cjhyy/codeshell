@@ -216,6 +216,28 @@ describe("RoomManager", () => {
     expect(a.roomId).not.toBe(b.roomId);
   });
 
+  test("openForSession passes kind through to the created room (codex)", () => {
+    const { mgr } = makeManager();
+    const r = mgr.openForSession("thread-1", "/tmp/p", "default", "codex");
+    expect(mgr.getRoom(r.roomId)?.kind).toBe("codex");
+  });
+
+  test("openForSession defaults kind to claude-code when omitted", () => {
+    const { mgr } = makeManager();
+    const r = mgr.openForSession("sess-1", "/tmp/p", "default");
+    expect(mgr.getRoom(r.roomId)?.kind).toBe("claude-code");
+  });
+
+  test("openForSession does NOT reuse a room of a different kind even if the id collides", () => {
+    const { mgr } = makeManager();
+    // Same id string, but one is a claude session and one is a codex thread.
+    const claude = mgr.openForSession("collide-id", "/tmp/p", "default", "claude-code");
+    const codex = mgr.openForSession("collide-id", "/tmp/p", "default", "codex");
+    expect(codex.roomId).not.toBe(claude.roomId);
+    expect(mgr.getRoom(claude.roomId)?.kind).toBe("claude-code");
+    expect(mgr.getRoom(codex.roomId)?.kind).toBe("codex");
+  });
+
   test("openForSession reusing a room with a CHANGED mode restarts the agent under the new mode", () => {
     const { mgr, agents } = makeManager();
     const r1 = mgr.openForSession("cc-X", "/tmp/p", "default");

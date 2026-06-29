@@ -1036,8 +1036,15 @@ export interface CodeshellApi {
    */
   ccRoom: {
     probe(force?: boolean): Promise<CCAvailability>;
+    codexProbe(force?: boolean): Promise<CCAvailability>;
     listSessions(cwd: string): Promise<DiscoveredSession[]>;
-    openSession(claudeSessionId: string, cwd: string, mode: string): Promise<{ roomId: string }>;
+    listCodexSessions(cwd: string): Promise<DiscoveredSession[]>;
+    openSession(
+      claudeSessionId: string,
+      cwd: string,
+      mode: string,
+      kind?: "claude-code" | "codex",
+    ): Promise<{ roomId: string }>;
     send(roomId: string, text: string): Promise<boolean>;
     respondApproval(roomId: string, requestId: string, decision: unknown): Promise<boolean>;
     roomHistory(roomId: string, sinceSeq?: number): Promise<unknown[]>;

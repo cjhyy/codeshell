@@ -36,7 +36,9 @@ import {
   sweepStaleCredentialCookies,
   // CC orchestrator (external claude-cli rooms).
   probeClaudeCli,
+  probeCodexCli,
   discoverSessions,
+  discoverCodexSessions,
   readRecentHistory,
   // Speech-to-text (voice input / 听写).
   transcribe,
@@ -2104,11 +2106,18 @@ ipcMain.handle("rooms:history", async (_e, roomId: string, sinceSeq?: number) =>
 
 // ── CC rooms (external `claude` CLI orchestration) ──────────────────────────
 ipcMain.handle("ccRoom:probe", async (_e, force?: boolean) => probeClaudeCli(Boolean(force)));
+ipcMain.handle("ccRoom:codexProbe", async (_e, force?: boolean) => probeCodexCli(Boolean(force)));
 ipcMain.handle("ccRoom:listSessions", async (_e, cwd: string) => discoverSessions(cwd));
+ipcMain.handle("ccRoom:listCodexSessions", async (_e, cwd: string) => discoverCodexSessions(cwd));
 ipcMain.handle(
   "ccRoom:openSession",
-  async (_e, claudeSessionId: string, cwd: string, mode: "default" | "acceptEdits" | "bypassPermissions") =>
-    roomManager.openForSession(claudeSessionId, cwd, mode),
+  async (
+    _e,
+    claudeSessionId: string,
+    cwd: string,
+    mode: "default" | "acceptEdits" | "bypassPermissions",
+    kind?: "claude-code" | "codex",
+  ) => roomManager.openForSession(claudeSessionId, cwd, mode, kind ?? "claude-code"),
 );
 ipcMain.handle("ccRoom:send", async (_e, roomId: string, text: string) => roomManager.send(roomId, text));
 ipcMain.handle(

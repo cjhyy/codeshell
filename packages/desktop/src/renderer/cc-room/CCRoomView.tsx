@@ -11,18 +11,27 @@ import {
 import { CCConversationView } from "./CCConversationView";
 
 /**
- * CC Room — lists this project's Claude Code (external `claude` CLI) sessions.
- * Gated on CLI availability: if `claude` isn't on PATH we render a muted install
- * prompt with a re-detect button.
+ * CC Room — lists this project's external coding-agent CLI sessions for the
+ * selected CLI (Claude Code or Codex). Gated on CLI availability: if the chosen
+ * CLI isn't on PATH we render a muted install prompt with a re-detect button.
+ *
+ * Both CLIs drive the SAME RoomManager (kind="claude-code"|"codex"); the room
+ * renders through the CLI-blind CCConversationView. Only discovery + probe
+ * differ per CLI, dispatched on `cliKind` below.
  *
  * Thin client: talks only to `window.codeshell.ccRoom.*`. The interfaces below
  * mirror the core types (CCAvailability / DiscoveredSession) the preload returns
  * — we can't import core in the renderer, so we declare the shapes locally.
  *
  * Scheduled tasks are NOT shown here: scheduling is generic (CronCreate), so
- * cron jobs — including ones that drive Claude Code — live in the Automation
- * view, not in a CC-specific task list.
+ * cron jobs — including ones that drive these CLIs — live in the Automation
+ * view, not in a CLI-specific task list.
  */
+type CliKind = "claude-code" | "codex";
+const CLI_LABEL: Record<CliKind, string> = { "claude-code": "Claude Code", codex: "Codex" };
+const CLI_COMMAND: Record<CliKind, string> = { "claude-code": "claude", codex: "codex" };
+const CLI_KINDS: CliKind[] = ["claude-code", "codex"];
+
 interface DiscoveredSession {
   sessionId: string;
   firstMessage: string;
@@ -38,6 +47,7 @@ interface Availability {
 }
 
 export function CCRoomView({ cwd }: { cwd: string | null }) {
+  const [cliKind, setCliKind] = useState<CliKind>("claude-code");
   const [avail, setAvail] = useState<Availability | null>(null);
   const [sessions, setSessions] = useState<DiscoveredSession[]>([]);
   const [conv, setConv] = useState<{ roomId: string; sessionId: string; mode: string } | null>(
@@ -45,53 +55,101 @@ export function CCRoomView({ cwd }: { cwd: string | null }) {
   );
   const [picking, setPicking] = useState<{ sessionId: string } | null>(null);
 
+  const probeFor = useCallback(
+    (kind: CliKind, force = false) =>
+      kind === "codex"
+        ? window.codeshell.ccRoom.codexProbe(force)
+        : window.codeshell.ccRoom.probe(force),
+    [],
+  );
+
   const openWithMode = useCallback(
     async (mode: "default" | "acceptEdits" | "bypassPermissions") => {
       if (!cwd || !picking) return;
-      const { roomId } = await window.codeshell.ccRoom.openSession(picking.sessionId, cwd, mode);
+      const { roomId } = await window.codeshell.ccRoom.openSession(
+        picking.sessionId,
+        cwd,
+        mode,
+        cliKind,
+      );
       setConv({ roomId, sessionId: picking.sessionId, mode });
       setPicking(null);
     },
-    [cwd, picking],
+    [cwd, picking, cliKind],
   );
 
   const refresh = useCallback(() => {
-    if (cwd) {
-      void window.codeshell.ccRoom.listSessions(cwd).then(setSessions);
-    } else {
+    if (!cwd) {
       setSessions([]);
+      return;
     }
-  }, [cwd]);
+    const list =
+      cliKind === "codex"
+        ? window.codeshell.ccRoom.listCodexSessions(cwd)
+        : window.codeshell.ccRoom.listSessions(cwd);
+    void list.then(setSessions);
+  }, [cwd, cliKind]);
 
+  // Re-probe whenever the selected CLI changes. setAvail(null) shows the loading
+  // state and avoids briefly listing the other CLI's sessions under the new kind.
   useEffect(() => {
-    void window.codeshell.ccRoom.probe().then(setAvail);
-  }, []);
+    setAvail(null);
+    setSessions([]);
+    void probeFor(cliKind).then(setAvail);
+  }, [cliKind, probeFor]);
 
   useEffect(() => {
     if (avail?.available) refresh();
   }, [avail?.available, refresh]);
 
+  const label = CLI_LABEL[cliKind];
+
+  const cliSwitch = (
+    <div className="flex gap-1.5">
+      {CLI_KINDS.map((k) => (
+        <Button
+          key={k}
+          size="sm"
+          variant={cliKind === k ? "default" : "outline"}
+          onClick={() => setCliKind(k)}
+        >
+          {CLI_LABEL[k]}
+        </Button>
+      ))}
+    </div>
+  );
+
   // Loading (probe in flight).
   if (avail === null) {
-    return <div className="p-4 text-sm text-muted-foreground">正在检测 Claude Code CLI…</div>;
+    return (
+      <div className="flex flex-col gap-3 p-4">
+        {cliSwitch}
+        <div className="text-sm text-muted-foreground">正在检测 {label} CLI…</div>
+      </div>
+    );
   }
 
   // Gated state — CLI not available.
   if (!avail.available) {
     return (
-      <div className="flex flex-col gap-2 p-4 text-muted-foreground">
-        <p>未检测到 Claude Code CLI。</p>
-        <p className="text-sm">
-          请先安装 <code className="rounded bg-muted px-1 py-0.5 text-xs">claude</code> 并确保它在 PATH 中。
-        </p>
-        <div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void window.codeshell.ccRoom.probe(true).then(setAvail)}
-          >
-            重新检测
-          </Button>
+      <div className="flex flex-col gap-3 p-4">
+        {cliSwitch}
+        <div className="flex flex-col gap-2 text-muted-foreground">
+          <p>未检测到 {label} CLI。</p>
+          <p className="text-sm">
+            请先安装{" "}
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">{CLI_COMMAND[cliKind]}</code>{" "}
+            并确保它在 PATH 中。
+          </p>
+          <div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void probeFor(cliKind, true).then(setAvail)}
+            >
+              重新检测
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -112,9 +170,10 @@ export function CCRoomView({ cwd }: { cwd: string | null }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+      {cliSwitch}
       <div className="flex items-center justify-between gap-2">
         <h2 className="min-w-0 truncate text-base font-semibold">
-          Claude Code 会话
+          {label} 会话
           {cwd && <span className="ml-1 font-normal text-muted-foreground">· {cwd}</span>}
         </h2>
         <Button
@@ -131,7 +190,7 @@ export function CCRoomView({ cwd }: { cwd: string | null }) {
       {/* Sessions */}
       <section className="flex flex-col gap-2">
         {sessions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">该项目下还没有 Claude Code 会话。</p>
+          <p className="text-sm text-muted-foreground">该项目下还没有 {label} 会话。</p>
         ) : (
           sessions.map((s) => (
             <Card
@@ -142,7 +201,9 @@ export function CCRoomView({ cwd }: { cwd: string | null }) {
               <div className="min-w-0">
                 <div className="truncate font-medium">{s.firstMessage || "(无消息)"}</div>
                 <div className="text-xs text-muted-foreground">
-                  {s.messageCount} 条消息 · {new Date(s.lastModified).toLocaleString()}
+                  {/* messageCount isn't tracked for codex (would need a full scan) → omit it there. */}
+                  {s.messageCount > 0 && <span>{s.messageCount} 条消息 · </span>}
+                  {new Date(s.lastModified).toLocaleString()}
                 </div>
               </div>
               <code className="shrink-0 text-xs text-muted-foreground">{s.sessionId.slice(0, 8)}</code>
