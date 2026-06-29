@@ -18,6 +18,7 @@ export function RoomsPanel() {
   const [rooms, setRooms] = useState<RoomPublic[]>([]);
   const [projects, setProjects] = useState<{ path: string; name: string }[]>([]);
   const [creating, setCreating] = useState(false);
+  const [cliKind, setCliKind] = useState<"claude-code" | "codex">("claude-code");
   const [active, setActive] = useState<RoomPublic | null>(null);
   const [messages, setMessages] = useState<RoomMessageWire[]>([]);
   const [input, setInput] = useState("");
@@ -57,7 +58,7 @@ export function RoomsPanel() {
   }
 
   async function createFor(project: { path: string; name: string }) {
-    await window.codeshell.rooms.create({ name: project.name, cwd: project.path });
+    await window.codeshell.rooms.create({ name: project.name, cwd: project.path, kind: cliKind });
     setCreating(false);
     await refreshRooms();
   }
@@ -122,6 +123,19 @@ export function RoomsPanel() {
         <div className="min-h-0 flex-1 overflow-y-auto p-3 space-y-2">
           {creating && (
             <div className="rounded-lg border border-border p-3">
+              <p className="mb-2 text-xs text-muted-foreground">{t("panels.rooms.pickCli")}</p>
+              <div className="mb-3 flex gap-1.5">
+                {(["claude-code", "codex"] as const).map((k) => (
+                  <Button
+                    key={k}
+                    size="sm"
+                    variant={cliKind === k ? "default" : "outline"}
+                    onClick={() => setCliKind(k)}
+                  >
+                    {k === "codex" ? "Codex" : "Claude Code"}
+                  </Button>
+                ))}
+              </div>
               <p className="mb-2 text-xs text-muted-foreground">{t("panels.rooms.pickProject")}</p>
               {projects.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t("panels.rooms.noProjects")}</p>
@@ -158,6 +172,9 @@ export function RoomsPanel() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="min-w-0 truncate font-medium">{r.name}</span>
+                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                        {r.kind === "codex" ? "Codex" : "Claude"}
+                      </span>
                       <span
                         className={cn(
                           "shrink-0 rounded-full px-2 py-0.5 text-[10px]",

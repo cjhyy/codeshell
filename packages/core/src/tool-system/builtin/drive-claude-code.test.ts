@@ -1,10 +1,36 @@
 import { describe, it, expect } from "bun:test";
-import { driveClaudeCodeToolDef, makeDriveClaudeCodeTool } from "./drive-claude-code.js";
+import { driveClaudeCodeToolDef, makeDriveClaudeCodeTool, driveAgentToolDef, makeDriveAgentTool } from "./drive-claude-code.js";
 import { backgroundJobRegistry } from "./background-jobs.js";
 import { notificationQueue } from "./agent-notifications.js";
 import { makeDriveClaudeCodeTool as mkBg } from "./drive-claude-code.js";
 
-describe("DriveClaudeCode tool", () => {
+describe("DriveAgent tool", () => {
+  it("has a name and an inputSchema with prompt + background + cli", () => {
+    expect(driveAgentToolDef.name).toBe("DriveAgent");
+    expect((driveAgentToolDef.inputSchema as any).properties.prompt).toBeDefined();
+    expect((driveAgentToolDef.inputSchema as any).properties.background).toBeDefined();
+    expect((driveAgentToolDef.inputSchema as any).properties.cli.enum).toEqual(["claude", "codex"]);
+  });
+
+  it("routes cli:'codex' to the codex runner, defaults (omitted) to claude", async () => {
+    const seen: string[] = [];
+    const tool = makeDriveAgentTool(async (o) => {
+      seen.push(o.cli);
+      return { sessionId: "S", finalText: "", isError: false, exitCode: 0, lines: [] };
+    });
+    await tool({ prompt: "p", cwd: "/x", background: false, cli: "codex" } as any);
+    await tool({ prompt: "p", cwd: "/x", background: false } as any);
+    expect(seen).toEqual(["codex", "claude"]);
+  });
+
+  it("rejects an unknown cli value", async () => {
+    const tool = makeDriveAgentTool(async () => ({ sessionId: "S", finalText: "x", isError: false, exitCode: 0, lines: [] }));
+    const out = await tool({ prompt: "p", cwd: "/x", background: false, cli: "gpt" } as any);
+    expect(out.toLowerCase()).toContain("cli");
+  });
+});
+
+describe("DriveClaudeCode alias (back-compat)", () => {
   it("has a name and an inputSchema with prompt + background", () => {
     expect(driveClaudeCodeToolDef.name).toBe("DriveClaudeCode");
     expect((driveClaudeCodeToolDef.inputSchema as any).properties.prompt).toBeDefined();

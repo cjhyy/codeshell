@@ -77,8 +77,11 @@ const GENERAL_BUILTIN_TOOLS = [
   // EditModelCatalog 的 whitelist 要求:已在 BUILTIN_TOOLS 注册,但 registerBuiltins
   // 按 preset 集过滤 → 名单里没有它,agent 就没有「指挥 Claude Code」的工具,只能幻觉
   // RemoteTrigger / 兜底 Bash `claude -p`(用户实测「为什么驱动 cc 没作为工具」)。
-  // 定时/循环驱动统一走 CronCreate(到点跑一轮引擎,prompt 里调 DriveClaudeCode);
-  // 无人值守审批由 DriveClaudeCode 自身 bypass 解决,不需要定时层专门的 CC 调度工具。
+  // 定时/循环驱动统一走 CronCreate(到点跑一轮引擎,prompt 里调 DriveAgent);
+  // 无人值守审批由 DriveAgent 自身 bypass 解决,不需要定时层专门的 CC 调度工具。
+  // DriveAgent 是通用驱动(cli: claude|codex);DriveClaudeCode 保留为 cli:claude 的
+  // 别名(老 prompt/记忆兼容)。两个都要在白名单里,否则 registerBuiltins 滤掉。
+  "DriveAgent",
   "DriveClaudeCode",
   "Skill",
   "MCPTool",

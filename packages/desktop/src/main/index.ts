@@ -83,6 +83,7 @@ import type {
 } from "./mobile-remote/types.js";
 import { RoomManager } from "./mobile-remote/room-manager.js";
 import { ResidentAgentProcess } from "./mobile-remote/resident-agent.js";
+import { CodexRoomAgent } from "./mobile-remote/codex-room-agent.js";
 import { ApprovalBridge } from "./cc-room/approval-bridge.js";
 import { buildSessionHistory } from "./mobile-remote/mobile-history.js";
 import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } from "./fs-service.js";
@@ -347,13 +348,23 @@ const approvalBridge = new ApprovalBridge({
 const roomManager = new RoomManager({
   rootDir: resolve(app.getPath("userData"), "mobile-remote", "rooms"),
   createAgent: (room, onEvent) =>
-    new ResidentAgentProcess({
-      command: "claude",
-      cwd: room.cwd,
-      permissionMode: room.permissionMode,
-      resumeSessionId: room.claudeSessionId,
-      onEvent,
-    }),
+    room.kind === "codex"
+      ? new CodexRoomAgent({
+          command: "codex",
+          cwd: room.cwd,
+          permissionMode: room.permissionMode,
+          resumeThreadId: room.claudeSessionId,
+          onEvent,
+          // Persist codex's thread id so the next turn / app restart resumes it.
+          onThreadId: (threadId) => roomManager.setRoomSessionId(room.id, threadId),
+        })
+      : new ResidentAgentProcess({
+          command: "claude",
+          cwd: room.cwd,
+          permissionMode: room.permissionMode,
+          resumeSessionId: room.claudeSessionId,
+          onEvent,
+        }),
   onMessage: (roomId, msg) => {
     // Mirror to BOTH transports: phone (WS) and desktop renderer(s) (IPC), so
     // a room is dual-ended — same resident CC, same messages, either side sends.
@@ -822,6 +833,7 @@ function roomToPublic(room: {
   id: string;
   name: string;
   cwd: string;
+  kind: "claude-code" | "codex";
   permissionMode: "default" | "acceptEdits" | "bypassPermissions";
   createdAt: number;
   lastActiveAt: number;
@@ -890,6 +902,7 @@ async function handleRoomEvent(event: MobileClientEvent & { deviceId?: string })
       const room = roomManager.createRoom({
         name: event.name,
         cwd: event.cwd,
+        kind: event.kind,
         permissionMode,
       });
       const opened = roomManager.open(room.id);
@@ -2001,10 +2014,10 @@ ipcMain.handle(
   "rooms:create",
   async (
     _e,
-    input: { name?: string; cwd: string; permissionMode?: "default" | "acceptEdits" | "bypassPermissions" },
+    input: { name?: string; cwd: string; kind?: "claude-code" | "codex"; permissionMode?: "default" | "acceptEdits" | "bypassPermissions" },
   ) => {
     const permissionMode = await resolveRoomPermissionMode(input.cwd, input.permissionMode);
-    const room = roomManager.createRoom({ name: input.name, cwd: input.cwd, permissionMode });
+    const room = roomManager.createRoom({ name: input.name, cwd: input.cwd, kind: input.kind, permissionMode });
     return roomToPublic(room);
   },
 );

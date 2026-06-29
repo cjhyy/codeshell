@@ -35,6 +35,11 @@ export function runAgentOnce(
       permissionMode: opts.permissionMode ?? "default",
       cwd: opts.cwd,
     });
+    // claude takes the prompt in argv (`-p <prompt>`) and wants stdin closed
+    // (verified: avoids a 3s wait). codex `exec` reads the prompt from stdin
+    // (argv ends with `-`), so adapters that set promptViaStdin get a piped
+    // stdin we write the prompt to.
+    const viaStdin = adapter.promptViaStdin === true;
     const child = spawn(opts.command, args, {
       cwd: opts.cwd,
       env: { ...process.env, PATH: pathWithCommonBins() },
@@ -44,8 +49,11 @@ export function runAgentOnce(
       // fired (the "后台任务没返回" bug). Bound to the worker, it lives or dies
       // with the process that's actually listening for its result.
       detached: false,
-      stdio: ["ignore", "pipe", "pipe"], // close stdin (verified: avoids 3s wait)
+      stdio: [viaStdin ? "pipe" : "ignore", "pipe", "pipe"],
     });
+    if (viaStdin && child.stdin) {
+      child.stdin.end(opts.prompt);
+    }
     const lines: string[] = [];
     if (child.stdout) {
       const rl = createInterface({ input: child.stdout });
@@ -60,6 +68,13 @@ export function runAgentOnce(
     signal?.addEventListener("abort", onAbort, { once: true });
     child.on("error", (err) => {
       signal?.removeEventListener("abort", onAbort);
+      // A missing binary is the most common failure (user hasn't installed the
+      // CLI, or GUI-launched Electron's PATH misses it). Turn the cryptic
+      // "spawn codex ENOENT" into something actionable that names the command.
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+        reject(new Error(`未找到命令 "${opts.command}"。请先安装该 CLI 并确保它在 PATH 中（${adapter.kind === "codex" ? "Codex CLI" : "Claude Code CLI"}）。`));
+        return;
+      }
       reject(err);
     });
     child.on("exit", (code) => {

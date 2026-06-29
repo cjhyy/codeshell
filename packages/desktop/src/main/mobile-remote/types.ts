@@ -101,6 +101,7 @@ export type MobileClientEvent =
       type: "room.create";
       name?: string;
       cwd: string;
+      kind?: "claude-code" | "codex";
       permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
     }
   | { type: "room.open"; roomId: string }
@@ -173,6 +174,7 @@ export interface RoomPublic {
   id: string;
   name: string;
   cwd: string;
+  kind: "claude-code" | "codex";
   permissionMode: "default" | "acceptEdits" | "bypassPermissions";
   createdAt: number;
   lastActiveAt: number;

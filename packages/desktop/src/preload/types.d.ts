@@ -994,6 +994,7 @@ export interface CodeshellApi {
     create(input: {
       name?: string;
       cwd: string;
+      kind?: "claude-code" | "codex";
       permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
     }): Promise<RoomPublic>;
     open(roomId: string): Promise<{ status: "running" | "missing" }>;
@@ -1054,6 +1055,7 @@ export interface RoomPublic {
   id: string;
   name: string;
   cwd: string;
+  kind: "claude-code" | "codex";
   permissionMode: "default" | "acceptEdits" | "bypassPermissions";
   createdAt: number;
   lastActiveAt: number;

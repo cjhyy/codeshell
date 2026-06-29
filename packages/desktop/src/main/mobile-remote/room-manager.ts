@@ -77,14 +77,22 @@ export function askUserPrompt(
   };
 }
 
+/** Which external CLI backs the room. "claude-code" drives `claude` (long-lived
+ *  stdin process with per-tool approval); "codex" drives `codex exec` (one
+ *  process per turn, resumed by thread id, no per-tool approval — the sandbox
+ *  tier chosen at open is the only guardrail). */
+export type RoomKind = "claude-code" | "codex";
+
 export interface RoomMeta {
   id: string;
   name: string;
   cwd: string;
-  kind: "claude-code";
+  kind: RoomKind;
   permissionMode: RoomPermissionMode;
   createdAt: number;
   lastActiveAt: number;
+  /** Session/thread id to resume: claude's session_id OR codex's thread_id.
+   *  (Named claudeSessionId for back-compat with persisted room.json files.) */
   claudeSessionId?: string;
 }
 
@@ -178,6 +186,7 @@ export class RoomManager {
   createRoom(input: {
     name?: string;
     cwd: string;
+    kind?: RoomKind;
     permissionMode?: RoomPermissionMode;
     claudeSessionId?: string;
   }): RoomMeta {
@@ -186,7 +195,7 @@ export class RoomManager {
       id,
       name: input.name ?? input.cwd.split("/").filter(Boolean).pop() ?? "room",
       cwd: input.cwd,
-      kind: "claude-code",
+      kind: input.kind ?? "claude-code",
       permissionMode: input.permissionMode ?? "default",
       createdAt: this.now(),
       lastActiveAt: this.now(),
@@ -250,6 +259,14 @@ export class RoomManager {
     const meta = this.getRoom(id);
     if (!meta) return;
     writeFileSync(this.metaPath(id), JSON.stringify({ ...meta, lastActiveAt: ts }, null, 2), "utf-8");
+  }
+
+  /** Persist the room's resume id (claude session_id / codex thread_id) so the
+   *  next open() can continue the same conversation. No-op if unchanged. */
+  setRoomSessionId(id: string, sessionId: string): void {
+    const meta = this.getRoom(id);
+    if (!meta || meta.claudeSessionId === sessionId) return;
+    writeFileSync(this.metaPath(id), JSON.stringify({ ...meta, claudeSessionId: sessionId }, null, 2), "utf-8");
   }
 
   getMessages(id: string, sinceSeq = 0): RoomMessage[] {

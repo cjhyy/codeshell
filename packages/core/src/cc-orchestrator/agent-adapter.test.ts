@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { claudeAdapter } from "./agent-adapter.js";
+import { claudeAdapter, codexAdapter } from "./agent-adapter.js";
 
 describe("claudeAdapter.buildArgs", () => {
   it("includes core headless flags + permission mode", () => {
@@ -47,5 +47,80 @@ describe("claudeAdapter.parseResult", () => {
     const r = claudeAdapter.parseResult([JSON.stringify({ type: "system", subtype: "init", session_id: "S2" })]);
     expect(r.sessionId).toBe("S2");
     expect(r.finalText).toBe("");
+  });
+});
+
+describe("codexAdapter.buildArgs", () => {
+  it("uses `codex exec --json` with read-only sandbox for default mode + stdin prompt marker", () => {
+    const args = codexAdapter.buildArgs({ prompt: "hi", permissionMode: "default", cwd: "/x" });
+    expect(args.slice(0, 4)).toEqual(["exec", "--json", "--color", "never"]);
+    expect(args).toContain("--skip-git-repo-check");
+    expect(args).toContain("--sandbox");
+    expect(args[args.indexOf("--sandbox") + 1]).toBe("read-only");
+    // prompt is fed via stdin (promptViaStdin), so the bare `-` marker is last
+    // and the prompt text is NOT in argv.
+    expect(args[args.length - 1]).toBe("-");
+    expect(args).not.toContain("hi");
+  });
+  it("maps acceptEdits → workspace-write sandbox", () => {
+    const args = codexAdapter.buildArgs({ prompt: "hi", permissionMode: "acceptEdits", cwd: "/x" });
+    expect(args[args.indexOf("--sandbox") + 1]).toBe("workspace-write");
+  });
+  it("maps bypassPermissions → --dangerously-bypass-approvals-and-sandbox (no --sandbox)", () => {
+    const args = codexAdapter.buildArgs({ prompt: "hi", permissionMode: "bypassPermissions", cwd: "/x" });
+    expect(args).toContain("--dangerously-bypass-approvals-and-sandbox");
+    expect(args).not.toContain("--sandbox");
+  });
+  it("adds `resume <id> -` when resumeSessionId present", () => {
+    const args = codexAdapter.buildArgs({ prompt: "go", resumeSessionId: "T1", permissionMode: "default", cwd: "/x" });
+    const i = args.indexOf("resume");
+    expect(i).toBeGreaterThan(-1);
+    expect(args[i + 1]).toBe("T1");
+    expect(args[i + 2]).toBe("-");
+  });
+  it("declares promptViaStdin so the driver feeds the prompt over stdin", () => {
+    expect(codexAdapter.promptViaStdin).toBe(true);
+  });
+});
+
+describe("codexAdapter.parseResult", () => {
+  it("extracts thread_id as sessionId and the last agent_message as finalText", () => {
+    const lines = [
+      JSON.stringify({ type: "thread.started", thread_id: "019f-abc" }),
+      JSON.stringify({ type: "turn.started" }),
+      JSON.stringify({ type: "item.completed", item: { id: "i0", type: "command_execution", aggregated_output: "hi\n", exit_code: 0 } }),
+      JSON.stringify({ type: "item.completed", item: { id: "i1", type: "agent_message", text: "done" } }),
+      JSON.stringify({ type: "turn.completed", usage: { input_tokens: 1 } }),
+    ];
+    const r = codexAdapter.parseResult(lines);
+    expect(r.sessionId).toBe("019f-abc");
+    expect(r.finalText).toBe("done");
+    expect(r.isError).toBe(false);
+  });
+  it("takes the LAST agent_message when several are emitted", () => {
+    const lines = [
+      JSON.stringify({ type: "thread.started", thread_id: "T" }),
+      JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: "first" } }),
+      JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: "last" } }),
+    ];
+    expect(codexAdapter.parseResult(lines).finalText).toBe("last");
+  });
+  it("flags isError on turn.failed and surfaces the failure message", () => {
+    const lines = [
+      JSON.stringify({ type: "thread.started", thread_id: "T" }),
+      JSON.stringify({ type: "turn.failed", error: { message: "model exploded" } }),
+    ];
+    const r = codexAdapter.parseResult(lines);
+    expect(r.isError).toBe(true);
+    expect(r.finalText).toContain("model exploded");
+  });
+  it("flags isError on a standalone error event", () => {
+    const lines = [
+      JSON.stringify({ type: "thread.started", thread_id: "T" }),
+      JSON.stringify({ type: "error", message: "boom" }),
+    ];
+    const r = codexAdapter.parseResult(lines);
+    expect(r.isError).toBe(true);
+    expect(r.finalText).toContain("boom");
   });
 });

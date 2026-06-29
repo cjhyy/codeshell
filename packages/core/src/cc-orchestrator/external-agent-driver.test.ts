@@ -18,8 +18,25 @@ describe("runWithLines（纯解析路径，无子进程）", () => {
 });
 
 import { runAgentOnce } from "./external-agent-driver.js";
-import { claudeAdapter as adp } from "./agent-adapter.js";
+import { claudeAdapter as adp, codexAdapter } from "./agent-adapter.js";
+import type { AgentAdapter } from "./agent-adapter.js";
 import { probeCli } from "./cc-capability.js";
+
+describe("runAgentOnce promptViaStdin（用 cat 做可移植子进程,不依赖 claude/codex）", () => {
+  // A fake adapter that drives `cat`: with promptViaStdin the driver must pipe
+  // the prompt to the child's stdin, and `cat` echoes it back on stdout. This
+  // exercises the real stdin-wiring code path without needing codex installed.
+  it("feeds the prompt over stdin when adapter.promptViaStdin is true", async () => {
+    const catAdapter: AgentAdapter = {
+      kind: "cat",
+      promptViaStdin: true,
+      buildArgs: () => [],
+      parseResult: (lines) => ({ sessionId: "", finalText: lines.join("\n"), isError: false }),
+    };
+    const r = await runAgentOnce(catAdapter, { command: "cat", prompt: "ECHO_ME_123", cwd: process.cwd() });
+    expect(r.finalText).toContain("ECHO_ME_123");
+  }, 15_000);
+});
 
 describe("runAgentOnce（真机集成,无 CLI 自动跳过）", () => {
   it("spawns claude and returns a sessionId + final text", async () => {
@@ -56,5 +73,20 @@ describe("runAgentOnce（真机集成,无 CLI 自动跳过）", () => {
     });
     // Same conversation → CC recalls the token from turn 1's context.
     expect(second.finalText.toUpperCase()).toContain("ZEBRA42");
+  }, 120_000);
+});
+
+describe("runAgentOnce codex（真机集成,无 codex 自动跳过）", () => {
+  it("spawns codex exec, feeds the prompt over stdin, returns thread_id + final text", async () => {
+    const avail = await probeCli("codex");
+    if (!avail.available) { console.log("codex 未安装,跳过集成测试"); return; }
+    const r = await runAgentOnce(codexAdapter, {
+      command: "codex",
+      prompt: "Reply with exactly: PONG",
+      permissionMode: "bypassPermissions",
+      cwd: process.cwd(),
+    });
+    expect(r.sessionId.length).toBeGreaterThan(0); // codex thread_id
+    expect(r.finalText.toUpperCase()).toContain("PONG");
   }, 120_000);
 });

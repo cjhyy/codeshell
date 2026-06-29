@@ -52,3 +52,11 @@ export async function probeClaudeCli(force = false): Promise<CCAvailability> {
   cached = await probeCli("claude");
   return cached;
 }
+
+let cachedCodex: CCAvailability | undefined;
+/** Cached probe for the OpenAI Codex CLI; force=true re-detects. */
+export async function probeCodexCli(force = false): Promise<CCAvailability> {
+  if (cachedCodex && !force) return cachedCodex;
+  cachedCodex = await probeCli("codex");
+  return cachedCodex;
+}

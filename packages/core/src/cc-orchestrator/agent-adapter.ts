@@ -20,6 +20,12 @@ export interface AgentAdapter {
   buildArgs(opts: BuildArgsOpts): string[];
   /** Reduce collected stream-json output lines to {sessionId, finalText, isError}. */
   parseResult(lines: string[]): ParsedResult;
+  /**
+   * When true, the prompt is fed over stdin instead of being passed in argv.
+   * claude takes the prompt as `-p <prompt>` (argv) so leaves this unset; codex
+   * `exec` reads the prompt from stdin (its argv ends with a bare `-`).
+   */
+  promptViaStdin?: boolean;
 }
 
 /**
@@ -74,4 +80,62 @@ export const claudeAdapter: AgentAdapter = {
   },
 };
 
-// codex adapter placeholder — future work; do NOT implement now.
+/**
+ * Drives the OpenAI Codex CLI via `codex exec`. Mirrors claudeAdapter but for
+ * codex's different surface:
+ *  - prompt is fed over STDIN (argv ends with a bare `-`), not argv → promptViaStdin
+ *  - permission is a spawn-time SANDBOX choice, not a per-tool approval loop:
+ *      default        → --sandbox read-only      (codex can read, not write)
+ *      acceptEdits    → --sandbox workspace-write (codex can write the workspace)
+ *      bypassPermissions → --dangerously-bypass-approvals-and-sandbox (full auto)
+ *    (Matches the only model codex supports — same choice the `wand` tool makes;
+ *    codex has no `--permission-prompt-tool stdio` equivalent.)
+ *  - JSONL event shape differs: session id is `thread.started`.thread_id, the
+ *    final answer is the last `item.completed` of item.type "agent_message", and
+ *    failure is `turn.failed` / `error` events (no `is_error` flag).
+ */
+export const codexAdapter: AgentAdapter = {
+  kind: "codex",
+  promptViaStdin: true,
+  buildArgs(opts) {
+    const args = ["exec", "--json", "--color", "never", "--skip-git-repo-check"];
+    if (opts.permissionMode === "bypassPermissions") {
+      args.push("--dangerously-bypass-approvals-and-sandbox");
+    } else {
+      args.push("--sandbox", opts.permissionMode === "acceptEdits" ? "workspace-write" : "read-only");
+    }
+    // `resume <thread_id>` continues a prior codex session; the trailing `-`
+    // tells codex exec to read the prompt from stdin (we feed it there).
+    if (opts.resumeSessionId) args.push("resume", opts.resumeSessionId, "-");
+    else args.push("-");
+    return args;
+  },
+  parseResult(lines) {
+    let sessionId = "";
+    let finalText = "";
+    let isError = false;
+    const errorBits: string[] = [];
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t) continue;
+      let d: any;
+      try { d = JSON.parse(t); } catch { continue; }
+      if (d.type === "thread.started" && typeof d.thread_id === "string") sessionId = d.thread_id;
+      else if (d.type === "item.completed" && d.item?.type === "agent_message" && typeof d.item.text === "string") {
+        finalText = d.item.text; // keep the LAST agent_message
+      } else if (d.type === "turn.failed") {
+        isError = true;
+        const msg = d.error?.message ?? d.error ?? "turn failed";
+        if (typeof msg === "string") errorBits.push(msg);
+      } else if (d.type === "error") {
+        isError = true;
+        const msg = d.message ?? d.error?.message ?? d.error ?? "error";
+        if (typeof msg === "string") errorBits.push(msg);
+      }
+    }
+    // On failure, surface the error text as finalText (so the caller/notification
+    // shows *why*), preferring it over any partial agent_message.
+    if (isError && errorBits.length) finalText = errorBits.join("\n");
+    return { sessionId, finalText, isError };
+  },
+};
