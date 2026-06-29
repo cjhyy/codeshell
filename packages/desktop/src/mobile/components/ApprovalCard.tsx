@@ -39,6 +39,10 @@ export function ApprovalCard({
   const [scope, setScope] = useState<ApprovalScope>("once");
   const [pathScope, setPathScope] = useState<ApprovalPathScope>("tool");
   const [freeText, setFreeText] = useState("");
+  const askQuestion = approval.summary || approval.description;
+  const showDescription = Boolean(
+    approval.description && (!isAsk || approval.description !== askQuestion),
+  );
 
   return (
     <div
@@ -47,47 +51,63 @@ export function ApprovalCard({
         approval.risk === "high" ? "border-status-err/60" : "border-border",
       )}
     >
-      <div className="mb-2 flex items-center gap-2">
-        <span className="grid size-7 place-items-center rounded-lg bg-status-warn/12 text-status-warn">
+      <div className="mb-2 flex min-w-0 items-center gap-2">
+        <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-status-warn/12 text-status-warn">
           <ShieldAlert className="size-4" />
         </span>
-        <span className="font-mono text-sm font-semibold text-foreground">{approval.toolName}</span>
+        <span className="min-w-0 flex-1 truncate font-mono text-sm font-semibold text-foreground">
+          {approval.toolName}
+        </span>
         <span
           className={cn(
-            "rounded-full border px-1.5 py-0.5 text-[10px] font-semibold",
+            "shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold",
             RISK_TONE[approval.risk],
           )}
         >
           {RISK_LABEL[approval.risk]}
         </span>
       </div>
-      {approval.description && (
+      {showDescription && (
         <p className="mb-2 text-xs text-muted-foreground">{approval.description}</p>
       )}
-      <pre className="mb-3 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border/70 bg-muted/35 p-2.5 font-mono text-[11px] text-foreground/90">
-        {approval.summary}
-      </pre>
+      {isAsk ? (
+        <div className="mb-3 rounded-lg border border-border/70 bg-muted/30 p-3">
+          <div className="mb-1 text-[11px] font-medium text-muted-foreground">问题</div>
+          <div className="whitespace-pre-wrap break-words text-sm leading-6 text-foreground">
+            {askQuestion}
+          </div>
+        </div>
+      ) : (
+        <pre className="mb-3 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border/70 bg-muted/35 p-2.5 font-mono text-[11px] text-foreground/90">
+          {approval.summary}
+        </pre>
+      )}
 
       {isAsk ? (
         // AskUser approval: tap an option, or type a free answer (if allowed).
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap gap-2">
-            {approval.options!.map((opt) => (
-              <Button
+        <div className="flex flex-col gap-2.5">
+          <div className="flex min-w-0 flex-col gap-2">
+            {approval.options!.map((opt, index) => (
+              <button
                 key={opt}
-                size="sm"
-                variant="outline"
-                className="rounded-lg"
+                type="button"
+                className="mobile-list-item flex min-h-12 w-full min-w-0 items-center gap-2 rounded-lg border border-border/70 px-3 py-2.5 text-left hover:bg-primary/10"
                 onClick={() => onRespond("approve", { answer: opt })}
               >
-                {opt}
-              </Button>
+                <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/12 text-[11px] font-semibold text-primary">
+                  {index + 1}
+                </span>
+                <span className="min-w-0 flex-1 whitespace-normal break-words text-sm leading-5 text-foreground">
+                  {opt}
+                </span>
+                <Check className="size-4 shrink-0 text-muted-foreground" />
+              </button>
             ))}
           </div>
           {!approval.optionsOnly && (
-            <div className="flex gap-2">
+            <div className="flex min-w-0 flex-col gap-2 rounded-lg border border-border/70 bg-black/10 p-2">
               <Textarea
-                rows={1}
+                rows={2}
                 value={freeText}
                 onChange={(e) => setFreeText(e.target.value)}
                 placeholder="或输入自定义回答…"
@@ -99,14 +119,16 @@ export function ApprovalCard({
                 data-1p-ignore="true"
                 data-lpignore="true"
                 // text-base (16px): avoid iOS focus auto-zoom.
-                className="min-h-10 flex-1 rounded-lg text-base"
+                className="min-h-16 min-w-0 resize-none rounded-lg text-base"
               />
               <Button
                 size="sm"
+                className="h-9 w-full rounded-lg"
                 disabled={!freeText.trim()}
                 onClick={() => onRespond("approve", { answer: freeText.trim() })}
               >
-                回答
+                <Check />
+                发送自定义回答
               </Button>
             </div>
           )}
@@ -185,16 +207,16 @@ function ScopeChips({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="w-16 shrink-0 text-[11px] text-muted-foreground">{label}</span>
-      <div className="flex flex-wrap gap-1.5">
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <span className="text-[11px] text-muted-foreground">{label}</span>
+      <div className="grid min-w-0 grid-cols-3 gap-1">
         {options.map(([v, lbl]) => (
           <button
             key={v}
             type="button"
             onClick={() => onChange(v)}
             className={cn(
-              "rounded-full border px-2 py-0.5 text-[11px]",
+              "min-h-8 rounded-lg border px-1.5 py-1 text-[11px]",
               value === v
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border text-muted-foreground",

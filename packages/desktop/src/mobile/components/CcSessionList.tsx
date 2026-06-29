@@ -40,21 +40,21 @@ export function CcSessionList({
   // hard-coding "default".
   const [picking, setPicking] = useState<{ sessionId: string; label: string } | null>(null);
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="mobile-side-header flex flex-col gap-2 px-3 py-3">
-        <div className="flex items-center gap-2">
-          <div>
-            <h2 className="text-sm font-semibold leading-5">CC 会话</h2>
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-sm font-semibold leading-5">CC 会话</h2>
             <p className="text-[11px] text-muted-foreground">外部 {label} 会话</p>
           </div>
         </div>
-        <div className="flex gap-1.5">
+        <div className="flex min-w-0 gap-1.5">
           {CLI_KINDS.map((k) => (
             <Button
               key={k}
               size="sm"
               variant={cliKind === k ? "default" : "outline"}
-              className="h-7 px-2.5 text-xs"
+              className="h-7 min-w-0 px-2.5 text-xs"
               onClick={() => onCliKindChange(k)}
             >
               {CLI_LABEL[k]}
@@ -62,7 +62,7 @@ export function CcSessionList({
           ))}
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto px-2 py-2">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2">
         {!cwd ? (
           <p className="mobile-glass rounded-lg px-3 py-6 text-center text-xs text-muted-foreground">
             先选择一个项目。
@@ -92,13 +92,15 @@ export function CcSessionList({
                 <button
                   type="button"
                   onClick={() => setPicking({ sessionId: s.sessionId, label: s.firstMessage || s.sessionId })}
-                  className={cn("mobile-list-item flex w-full flex-col gap-1 rounded-lg px-3 py-2.5 text-left")}
+                  className={cn(
+                    "mobile-list-item flex w-full min-w-0 flex-col gap-1 rounded-lg px-3 py-2.5 text-left",
+                  )}
                 >
-                  <span className="truncate text-sm font-medium text-foreground">
+                  <span className="min-w-0 truncate text-sm font-medium text-foreground">
                     {s.firstMessage || s.sessionId}
                   </span>
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                    <span>{s.messageCount} 条</span>
+                  <div className="flex w-full min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
+                    <span className="min-w-0 flex-1 truncate">{s.messageCount} 条</span>
                     <span className="ml-auto shrink-0">{relativeTime(s.lastModified)}</span>
                   </div>
                 </button>

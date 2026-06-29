@@ -77,7 +77,7 @@ function Row({ item }: { item: ChatItem }) {
       );
     case "subagent":
       return (
-        <div className="ml-9 flex items-center gap-2 rounded-full border border-border/65 bg-muted/25 px-3 py-1.5 text-xs text-muted-foreground">
+        <div className="ml-9 flex min-w-0 items-center gap-2 rounded-full border border-border/65 bg-muted/25 px-3 py-1.5 text-xs text-muted-foreground">
           <span
             className={cn(
               "size-1.5 rounded-full",
@@ -88,8 +88,8 @@ function Row({ item }: { item: ChatItem }) {
                   : "bg-status-ok",
             )}
           />
-          <span className="font-medium">子代理</span>
-          <span className="truncate">{item.label}</span>
+          <span className="shrink-0 font-medium">子代理</span>
+          <span className="min-w-0 flex-1 truncate">{item.label}</span>
         </div>
       );
     case "system_error":

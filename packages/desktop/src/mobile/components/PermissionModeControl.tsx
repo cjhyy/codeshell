@@ -23,7 +23,7 @@ export function PermissionModeControl({
     onChange(m);
   };
   return (
-    <div className="mobile-tab-strip flex items-center gap-1 rounded-full p-0.5">
+    <div className="mobile-tab-strip flex shrink-0 items-center gap-1 rounded-full p-0.5">
       {MODES.map(([m, label]) => (
         <button
           key={m}

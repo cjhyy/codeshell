@@ -61,8 +61,8 @@ export function App() {
           <aside className="mobile-panel w-80 shrink-0 border-r border-border/70">{sidePane}</aside>
         )}
         {!wide && drawerOpen && (
-          <div className="fixed inset-0 z-20 flex">
-            <div className="mobile-drawer w-[82%] max-w-sm">{sidePane}</div>
+          <div className="fixed inset-0 z-20 flex overscroll-contain">
+            <div className="mobile-drawer h-full w-[82%] max-w-sm min-w-0">{sidePane}</div>
             <div
               className="flex-1 bg-black/55 backdrop-blur-[2px]"
               onClick={() => setDrawerOpen(false)}
@@ -73,10 +73,10 @@ export function App() {
         <main className="mobile-main flex min-h-0 flex-1 flex-col">
           <ApprovalsArea app={app} />
           {app.chat.goal && (
-            <div className="flex items-center gap-2 border-b border-border/70 bg-card/45 px-3 py-2 text-xs">
-              <span className="text-muted-foreground">{app.chat.goal}</span>
+            <div className="flex min-w-0 items-center gap-2 border-b border-border/70 bg-card/45 px-3 py-2 text-xs">
+              <span className="min-w-0 flex-1 truncate text-muted-foreground">{app.chat.goal}</span>
               {app.activeSessionId && (
-                <div className="ml-auto flex items-center gap-1">
+                <div className="ml-auto flex shrink-0 items-center gap-1">
                   <Button
                     size="sm"
                     variant="ghost"
@@ -144,7 +144,7 @@ function TopBar({
       {!wide && (
         <Button
           aria-label="打开会话"
-          className="mobile-icon-button"
+          className="mobile-icon-button shrink-0"
           size="icon"
           variant="outline"
           onClick={onOpenDrawer}
@@ -155,18 +155,20 @@ function TopBar({
       <div className="mobile-logo grid size-8 shrink-0 place-items-center rounded-lg text-xs font-black text-white">
         C
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-2">
+      <div className="min-w-0 flex-1 overflow-hidden">
+        <div className="flex w-full min-w-0 items-center gap-2">
           {app.activeRoom && (
-            <span className="rounded-full border border-status-ok/35 bg-status-ok/10 px-1.5 text-[10px] font-medium text-status-ok">
+            <span className="shrink-0 rounded-full border border-status-ok/35 bg-status-ok/10 px-1.5 text-[10px] font-medium text-status-ok">
               CC
             </span>
           )}
-          <span className="truncate text-sm font-semibold leading-5">{title}</span>
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold leading-5">{title}</span>
         </div>
-        <div className="truncate text-[11px] leading-4 text-muted-foreground">{subtitle}</div>
+        <div className="min-w-0 truncate text-[11px] leading-4 text-muted-foreground">
+          {subtitle}
+        </div>
       </div>
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-2">
         {app.activeRoom && (
           <Button
             aria-label="退出会话"
@@ -226,13 +228,13 @@ function SidePane({
     />
   );
   const footer = (
-    <div className="mobile-safe-bottom flex items-center gap-2 border-t border-border/70 px-3 pt-2 text-xs text-muted-foreground">
-      <span className="truncate">{app.deviceName || "设备"}</span>
+    <div className="mobile-safe-bottom flex min-w-0 items-center gap-2 border-t border-border/70 px-3 pt-2 text-xs text-muted-foreground">
+      <span className="min-w-0 flex-1 truncate">{app.deviceName || "设备"}</span>
       <Button
         aria-label="退出登录"
         size="icon"
         variant="ghost"
-        className="ml-auto size-8"
+        className="ml-auto size-8 shrink-0"
         onClick={app.logout}
       >
         <LogOut />
@@ -243,7 +245,7 @@ function SidePane({
   // Phone drawer and tablet pane are identical now: the project's own chat
   // sessions on top, the external CC (Claude Code) sessions below. No rooms.
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="min-h-0 flex-1 overflow-hidden border-b border-border/70">{sessions}</div>
       <div className="min-h-0 flex-1 overflow-hidden">{ccSessions}</div>
       {footer}
@@ -256,8 +258,8 @@ function ApprovalsArea({ app }: { app: ReturnType<typeof useRemoteApp> }) {
     // Surface the permission-mode control in a thin strip when idle so it's
     // always reachable without an approval pending.
     return (
-      <div className="flex items-center gap-2 border-b border-border/70 bg-black/10 px-3 py-2">
-        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+      <div className="flex min-w-0 items-center gap-2 border-b border-border/70 bg-black/10 px-3 py-2">
+        <span className="inline-flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
           <Shield className="size-3" />
           权限
         </span>
@@ -266,7 +268,11 @@ function ApprovalsArea({ app }: { app: ReturnType<typeof useRemoteApp> }) {
     );
   }
   return (
-    <div className={cn("flex flex-col gap-2 border-b border-border/70 bg-black/18 p-2")}>
+    <div
+      className={cn(
+        "flex max-h-[48dvh] min-h-0 flex-col gap-2 overflow-y-auto overscroll-contain border-b border-border/70 bg-black/18 p-2",
+      )}
+    >
       {app.approvals.map((a) => (
         <ApprovalCard
           key={a.requestId}

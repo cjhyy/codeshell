@@ -5,12 +5,18 @@ import type { ChatItem } from "@/lib/streamReducer";
 
 type Tool = Extract<ChatItem, { kind: "tool" }>;
 
+function statusLabel(tool: Tool): string {
+  if (!tool.done) return "运行中";
+  return tool.error ? "失败" : "完成";
+}
+
 /** A compact tool card: header (name + status), optional args/result body that
  *  expands on tap. Mirrors the desktop tool card's information, phone-sized. */
 export function ToolCard({ tool }: { tool: Tool }) {
   const [open, setOpen] = useState(false);
-  const argStr = tool.args ? JSON.stringify(tool.args) : "";
+  const argStr = tool.args ? JSON.stringify(tool.args, null, 2) : "";
   const hasBody = Boolean(argStr) || Boolean(tool.result) || Boolean(tool.summary);
+  const status = statusLabel(tool);
   return (
     <div
       className={cn(
@@ -21,7 +27,8 @@ export function ToolCard({ tool }: { tool: Tool }) {
       <button
         type="button"
         onClick={() => hasBody && setOpen((o) => !o)}
-        className="flex w-full items-center gap-2 px-3 py-2.5 text-left"
+        aria-expanded={hasBody ? open : undefined}
+        className="flex w-full min-w-0 items-center gap-2 px-3 py-2.5 text-left"
       >
         <TerminalSquare className="size-3.5 shrink-0 text-muted-foreground" />
         <span
@@ -34,10 +41,26 @@ export function ToolCard({ tool }: { tool: Tool }) {
                 : "bg-status-ok",
           )}
         />
-        <span className="font-mono font-medium text-foreground">{tool.name}</span>
-        {tool.summary && <span className="truncate text-muted-foreground">· {tool.summary}</span>}
+        <span className="min-w-0 max-w-32 shrink-0 truncate font-mono font-medium text-foreground">
+          {tool.name}
+        </span>
+        <span
+          className={cn(
+            "shrink-0 rounded-full border px-1.5 py-0.5 text-[10px]",
+            !tool.done
+              ? "border-status-running/35 text-status-running"
+              : tool.error
+                ? "border-status-err/35 text-status-err"
+                : "border-status-ok/35 text-status-ok",
+          )}
+        >
+          {status}
+        </span>
+        {tool.summary && (
+          <span className="min-w-0 flex-1 truncate text-muted-foreground">· {tool.summary}</span>
+        )}
         {hasBody && (
-          <span className="ml-auto text-muted-foreground">
+          <span className="ml-auto shrink-0 text-muted-foreground">
             {open ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
           </span>
         )}

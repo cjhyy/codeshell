@@ -52,13 +52,13 @@ export function SessionList({
     ? projects.filter((p) => p.path !== currentProject.path)
     : projects;
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="mobile-side-header flex items-center gap-2 px-3 py-3">
-        <div>
-          <h2 className="text-sm font-semibold leading-5">会话</h2>
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-sm font-semibold leading-5">会话</h2>
           <p className="text-[11px] text-muted-foreground">{sessions.length} 个可接管</p>
         </div>
-        <div className="ml-auto flex gap-1.5">
+        <div className="ml-auto flex shrink-0 gap-1.5">
           <Button
             aria-label="刷新会话"
             className="mobile-icon-button size-8"
@@ -76,7 +76,7 @@ export function SessionList({
         </div>
       </div>
       {creating && (
-        <div className="border-b border-border/70 bg-black/12 p-2">
+        <div className="mobile-create-panel border-b border-border/70 bg-black/12 p-2">
           <p className="mb-1.5 px-1 text-[11px] text-muted-foreground">新会话默认使用当前目录</p>
           <div className="flex flex-col gap-1">
             <button
@@ -85,16 +85,16 @@ export function SessionList({
                 onNew(currentKnown ? currentProjectCwd : undefined, currentProject?.name);
                 setCreating(false);
               }}
-              className="mobile-list-item flex flex-col rounded-lg px-2.5 py-2 text-left text-sm"
+              className="mobile-list-item flex w-full min-w-0 flex-col rounded-lg px-2.5 py-2 text-left text-sm"
             >
-              <span className="font-medium text-foreground">
+              <span className="truncate font-medium text-foreground">
                 {currentProjectCwd
                   ? `当前项目 · ${currentProject?.name ?? basename(currentProjectCwd)}`
                   : currentKnown
                     ? "无项目对话"
                     : "当前桌面目录"}
               </span>
-              <span className="truncate text-[11px] text-muted-foreground">
+              <span className="min-w-0 truncate text-[11px] text-muted-foreground">
                 {currentProjectCwd || (currentKnown ? "不绑定 repo" : "跟随桌面当前 cwd")}
               </span>
             </button>
@@ -109,10 +109,12 @@ export function SessionList({
                       onNew(p.path, p.name);
                       setCreating(false);
                     }}
-                    className="mobile-list-item flex flex-col rounded-lg px-2.5 py-2 text-left text-sm"
+                    className="mobile-list-item flex w-full min-w-0 flex-col rounded-lg px-2.5 py-2 text-left text-sm"
                   >
-                    <span className="font-medium text-foreground">{p.name}</span>
-                    <span className="truncate text-[11px] text-muted-foreground">{p.path}</span>
+                    <span className="truncate font-medium text-foreground">{p.name}</span>
+                    <span className="min-w-0 truncate text-[11px] text-muted-foreground">
+                      {p.path}
+                    </span>
                   </button>
                 ))}
               </>
@@ -121,14 +123,14 @@ export function SessionList({
         </div>
       )}
       {onSelectProject && projects.length > 1 && (
-        <div className="flex gap-1.5 overflow-x-auto border-b border-border/70 px-2 py-1.5">
+        <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain border-b border-border/70 px-2 py-1.5">
           {projects.map((p) => (
             <button
               key={p.path}
               type="button"
               onClick={() => onSelectProject(p.path)}
               className={cn(
-                "shrink-0 rounded-full border px-2.5 py-1 text-[11px]",
+                "max-w-44 shrink-0 truncate rounded-full border px-2.5 py-1 text-[11px]",
                 sameCwd(p.path, activeProjectCwd)
                   ? "border-primary bg-primary/15 text-foreground"
                   : "border-border/70 text-muted-foreground",
@@ -139,7 +141,7 @@ export function SessionList({
           ))}
         </div>
       )}
-      <div className="flex-1 overflow-y-auto px-2 py-2">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2">
         {loading && sessions.length === 0 ? (
           <p className="mobile-glass flex items-center justify-center gap-2 rounded-lg px-3 py-6 text-center text-xs text-muted-foreground">
             <Loader2 className="size-3.5 animate-spin text-status-running" />
@@ -151,17 +153,17 @@ export function SessionList({
           </p>
         ) : (
           groups.map((g) => (
-            <section key={g.cwd || "__none__"} className="mb-3">
+            <section key={g.cwd || "__none__"} className="mb-3 min-w-0">
               {/* Project header — sticky so you always know which project the
                   sessions below belong to while scrolling a long list. */}
               <div
-                className="sticky top-0 z-10 flex items-center gap-2 bg-background/90 px-1 py-1.5 backdrop-blur"
+                className="sticky top-0 z-10 flex min-w-0 items-center gap-2 bg-background/90 px-1 py-1.5 backdrop-blur"
                 title={g.cwd}
               >
-                <span className="truncate text-[11px] font-semibold uppercase text-muted-foreground">
+                <span className="min-w-0 flex-1 truncate text-[11px] font-semibold uppercase text-muted-foreground">
                   {g.name}
                 </span>
-                <span className="rounded-full bg-muted/70 px-1.5 text-[10px] text-muted-foreground">
+                <span className="shrink-0 rounded-full bg-muted/70 px-1.5 text-[10px] text-muted-foreground">
                   {g.items.length}
                 </span>
               </div>
@@ -172,22 +174,22 @@ export function SessionList({
                       type="button"
                       onClick={() => onSelect(s.id)}
                       className={cn(
-                        "mobile-list-item flex w-full flex-col gap-1 rounded-lg px-3 py-2.5 text-left",
+                        "mobile-list-item flex w-full min-w-0 flex-col gap-1 rounded-lg px-3 py-2.5 text-left",
                         s.id === activeSessionId && "active",
                       )}
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="truncate text-sm font-medium text-foreground">
+                      <div className="flex w-full min-w-0 items-center gap-2">
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                           {s.title}
                         </span>
                         {s.origin === "automation" && (
-                          <span className="rounded-full border border-status-running/35 bg-status-running/10 px-1.5 text-[10px] text-status-running">
+                          <span className="shrink-0 rounded-full border border-status-running/35 bg-status-running/10 px-1.5 text-[10px] text-status-running">
                             自动
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                        <span className="truncate">{s.cwd || "无项目路径"}</span>
+                      <div className="flex w-full min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
+                        <span className="min-w-0 flex-1 truncate">{s.cwd || "无项目路径"}</span>
                         <span className="ml-auto shrink-0">{relativeTime(s.updatedAt)}</span>
                       </div>
                     </button>

@@ -39,7 +39,7 @@ export function StatusBar({ conn, run }: { conn: ConnStatus; run: RunState }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] font-medium",
+        "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-1 text-[11px] font-medium",
         "border-border/75 bg-white/[0.045] text-muted-foreground shadow-[0_1px_0_rgb(255_255_255_/_0.04)_inset]",
       )}
     >
