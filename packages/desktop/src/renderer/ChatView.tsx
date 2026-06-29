@@ -195,6 +195,31 @@ export function ChatView({
   const [voiceState, setVoiceState] = useState<"idle" | "recording" | "transcribing">("idle");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  // Whether a transcription provider is configured (or fallback-reachable). When
+  // false the mic button is disabled with a "configure in settings" tooltip,
+  // instead of letting the user record and only then hit "no-audio-provider".
+  const [sttAvailable, setSttAvailable] = useState(false);
+  // Auto-stop a runaway recording so a forgotten mic can't rack up cost / hit
+  // the provider's upload size limit. The user can still stop earlier manually.
+  const MAX_RECORDING_MS = 120_000; // 2 min
+  const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Probe transcription availability on mount + when the project changes, so the
+  // mic button reflects whether voice input is usable right now.
+  useEffect(() => {
+    let cancelled = false;
+    void window.codeshell
+      .sttAvailable(activeRepoPath ?? "")
+      .then((r) => {
+        if (!cancelled) setSttAvailable(r.available);
+      })
+      .catch(() => {
+        if (!cancelled) setSttAvailable(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeRepoPath]);
 
   const transcribeChunks = useCallback(
     async (blob: Blob, mimeType: string) => {
@@ -228,6 +253,13 @@ export function ChatView({
 
   const startRecording = useCallback(async () => {
     try {
+      // macOS gates the mic at the OS level — request access first so the user
+      // gets the system prompt (and we surface a clear message if denied).
+      const access = await window.codeshell.ensureMicAccess();
+      if (!access.granted) {
+        toast({ message: t("chat.composer.voicePermissionDenied"), variant: "error" });
+        return;
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
@@ -247,6 +279,12 @@ export function ChatView({
       mediaRecorderRef.current = mr;
       mr.start();
       setVoiceState("recording");
+      // Cap recording length; auto-stop (→ transcribe what we have).
+      if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
+      maxDurationTimerRef.current = setTimeout(() => {
+        mediaRecorderRef.current?.stop();
+        mediaRecorderRef.current = null;
+      }, MAX_RECORDING_MS);
     } catch (err) {
       const name = (err as Error)?.name;
       toast({
@@ -261,6 +299,10 @@ export function ChatView({
   }, [transcribeChunks, toast, t]);
 
   const stopRecording = useCallback(() => {
+    if (maxDurationTimerRef.current) {
+      clearTimeout(maxDurationTimerRef.current);
+      maxDurationTimerRef.current = null;
+    }
     mediaRecorderRef.current?.stop();
     mediaRecorderRef.current = null;
   }, []);
@@ -1026,14 +1068,18 @@ export function ChatView({
                   )}
                   aria-label={t("chat.composer.voiceInput")}
                   title={
-                    voiceState === "recording"
-                      ? t("chat.composer.voiceRecording")
-                      : voiceState === "transcribing"
-                        ? t("chat.composer.voiceTranscribing")
-                        : t("chat.composer.voiceInputTitle")
+                    !sttAvailable && voiceState === "idle"
+                      ? t("chat.composer.voiceNoProviderTitle")
+                      : voiceState === "recording"
+                        ? t("chat.composer.voiceRecording")
+                        : voiceState === "transcribing"
+                          ? t("chat.composer.voiceTranscribing")
+                          : t("chat.composer.voiceInputTitle")
                   }
                   onClick={onVoiceClick}
-                  disabled={voiceState === "transcribing"}
+                  // Disabled while transcribing, OR when no provider is configured
+                  // (and not mid-recording — never block stopping an active take).
+                  disabled={voiceState === "transcribing" || (!sttAvailable && voiceState === "idle")}
                 >
                   {voiceState === "recording" ? (
                     <Square size={14} className="animate-pulse fill-current" />

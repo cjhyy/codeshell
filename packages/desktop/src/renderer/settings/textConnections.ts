@@ -19,7 +19,7 @@ export interface Credential {
 export interface ModelInstance {
   id: string;
   catalogId: string;
-  tag: "text" | "image" | "video";
+  tag: "text" | "image" | "video" | "audio";
   model: string;
   baseUrl?: string;
   /** Which credential supplies this connection's key. */
@@ -40,7 +40,7 @@ export function buildInstance(
   entry: CatalogEntry,
   model: string | undefined,
   taken: Set<string>,
-  tag: "text" | "image" | "video",
+  tag: "text" | "image" | "video" | "audio",
 ): ModelInstance {
   const chosen = model ?? entry.defaultModel ?? entry.modelPresets?.[0]?.value ?? "";
   const preset = entry.modelPresets?.find((p) => p.value === chosen);

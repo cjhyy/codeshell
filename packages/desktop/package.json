@@ -65,7 +65,10 @@
         }
       ],
       "category": "public.app-category.developer-tools",
-      "icon": "build/icon.icns"
+      "icon": "build/icon.icns",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Code Shell 使用麦克风进行语音输入(把你的话转写成文字填进输入框)。"
+      }
     },
     "win": {
       "target": [

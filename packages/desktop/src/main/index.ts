@@ -3,7 +3,7 @@
  * agent worker subprocess (stdio JSON-RPC). See agent-bridge.ts.
  */
 
-import { app, BrowserWindow, dialog, ipcMain, session, shell, webContents, Notification } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, session, shell, systemPreferences, webContents, Notification } from "electron";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve, basename, extname, isAbsolute } from "node:path";
 import { readFile, lstat, writeFile } from "node:fs/promises";
@@ -1579,6 +1579,19 @@ ipcMain.handle(
 ipcMain.handle("stt:available", async (_e, cwd: string) => ({
   available: typeof cwd === "string" ? isTranscribeAvailable(cwd) : false,
 }));
+// macOS gates microphone access at the OS level (TCC). Ask BEFORE getUserMedia
+// so the user gets the system prompt with our NSMicrophoneUsageDescription, and
+// so a previously-denied state is reported back (renderer then shows guidance).
+// No-op / always-true on other platforms. Returns whether access is granted.
+ipcMain.handle("stt:ensureMicAccess", async (): Promise<{ granted: boolean }> => {
+  if (process.platform !== "darwin") return { granted: true };
+  const status = systemPreferences.getMediaAccessStatus("microphone");
+  if (status === "granted") return { granted: true };
+  // "not-determined" → triggers the system prompt; "denied"/"restricted" →
+  // resolves false immediately (user must change it in System Settings).
+  const granted = await systemPreferences.askForMediaAccess("microphone");
+  return { granted };
+});
 ipcMain.handle("marketplace:list", async () => listMarketplacesForUi());
 ipcMain.handle("marketplace:load", async (_e, name: string) =>
   loadMarketplaceForUi(name),

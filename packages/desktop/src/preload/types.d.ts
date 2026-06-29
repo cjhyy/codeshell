@@ -785,6 +785,8 @@ export interface CodeshellApi {
   }): Promise<{ ok: true; text: string } | { ok: false; error: string }>;
   /** Whether a transcription provider is resolvable (drives mic-button enablement). */
   sttAvailable(cwd: string): Promise<{ available: boolean }>;
+  /** Ensure OS-level microphone access (macOS TCC prompt). True on other OSes. */
+  ensureMicAccess(): Promise<{ granted: boolean }>;
   /** List known plugin marketplaces (never throws — returns [] on read error). */
   listMarketplaces(): Promise<
     Array<{
