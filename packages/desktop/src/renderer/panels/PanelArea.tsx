@@ -151,9 +151,25 @@ export function PanelArea({
   bucket,
 }: Props) {
   const { t } = useT();
-  // Module-level id counter (not a per-mount ref) so ids stay unique across a
-  // dock close→reopen — tabs live in App now and outlive this component.
-  const mkId = (kind: PanelTab): string => `${kind}-${(panelTabSeq += 1)}`;
+  // Fresh, collision-proof tab id. The module counter resets to 0 on a renderer
+  // reload, but tabs are PERSISTED per bucket — so a naive `${kind}-${++seq}`
+  // re-mints ids that already exist on disk (e.g. ccRoom-1), producing duplicate
+  // React keys across buckets ("two children with the same key `ccRoom-1`").
+  // Guard by bumping the counter past the highest suffix already in use for this
+  // kind across EVERY mounted bucket + the active tab list before minting.
+  const mkId = (kind: PanelTab): string => {
+    const existing: OpenTab[] = [...tabs];
+    for (const { tabs: bTabs } of mountedByBucket.current.values()) existing.push(...bTabs);
+    const prefix = `${kind}-`;
+    let max = panelTabSeq;
+    for (const tb of existing) {
+      if (tb.kind !== kind || !tb.id.startsWith(prefix)) continue;
+      const n = Number(tb.id.slice(prefix.length));
+      if (Number.isFinite(n) && n > max) max = n;
+    }
+    panelTabSeq = max + 1;
+    return `${prefix}${panelTabSeq}`;
+  };
 
   // Keep panel BODIES mounted across session switches. `mountedByBucket` snaps
   // the active bucket's tabs AND its session-scoped context (cwd/repoId/review
@@ -167,13 +183,21 @@ export function PanelArea({
   // leak mounted webviews/ptys.
   const mountedByBucket = useRef<Map<string, { tabs: OpenTab[]; ctx: BucketCtx }>>(new Map());
   if (tabs.length > 0) {
+    // Dedup by id defensively: state persisted before the mkId-collision fix can
+    // still carry duplicate ids (e.g. two ccRoom-1), which would crash React with
+    // "two children with the same key". Keep the first of each id.
+    const seen = new Set<string>();
+    const dedupedTabs = tabs.filter((tb) => (seen.has(tb.id) ? false : (seen.add(tb.id), true)));
     mountedByBucket.current.set(bucket, {
-      tabs,
+      tabs: dedupedTabs,
       ctx: { cwd, repoId, reviewFiles, reviewDiff, engineSessionId, browserAnchors },
     });
   } else {
     mountedByBucket.current.delete(bucket);
   }
+  // The active bucket's deduped tabs — used by the tab strip so it can't render
+  // duplicate keys either.
+  const activeTabs = mountedByBucket.current.get(bucket)?.tabs ?? tabs;
 
   // Maximized = overlay the chat column (incl. composer) for more room (TODO
   // 2.4). Resets each open (local) — chat/composer state lives in App.
@@ -261,7 +285,7 @@ export function PanelArea({
       )}
       {/* Tab strip */}
       <div className="flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-border px-1.5 py-1">
-        {tabs.map((tab) => {
+        {activeTabs.map((tab) => {
           const { Icon } = META[tab.kind];
           const label = kindLabel(t, tab.kind);
           const active = tab.id === activeId;

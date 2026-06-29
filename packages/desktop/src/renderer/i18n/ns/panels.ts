@@ -22,7 +22,7 @@ export const panels = {
         review: "审查",
         terminal: "终端",
         shells: "后台",
-        ccRoom: "Claude Code",
+        ccRoom: "Claude Code / Codex",
       },
       area: {
         resizeWidth: "调整面板宽度",
@@ -202,7 +202,7 @@ export const panels = {
         review: "Review",
         terminal: "Terminal",
         shells: "Background",
-        ccRoom: "Claude Code",
+        ccRoom: "Claude Code / Codex",
       },
       area: {
         resizeWidth: "Resize panel width",

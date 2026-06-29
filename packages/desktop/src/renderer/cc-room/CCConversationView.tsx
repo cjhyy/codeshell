@@ -74,12 +74,16 @@ export function CCConversationView({
   cwd,
   sessionId,
   mode,
+  cliLabel = "Claude Code",
   onBack,
 }: {
   roomId: string;
   cwd: string | null;
   sessionId: string;
   mode: string;
+  /** Which external CLI drives this room ("Claude Code" | "Codex") — labels the
+   *  header + composer so a Codex room isn't mislabeled "Claude Code". */
+  cliLabel?: string;
   onBack: () => void;
 }) {
   const [chat, dispatch] = useReducer(chatReducer, undefined, initialChatState);
@@ -157,7 +161,7 @@ export function CCConversationView({
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border p-2">
         <div className="text-sm font-medium">
-          CC 会话 ·{" "}
+          {cliLabel} 会话 ·{" "}
           <code className="text-xs text-muted-foreground">{(sessionId || roomId).slice(0, 8)}</code> · {mode}
         </div>
         <Button variant="ghost" size="sm" onClick={onBack}>
@@ -191,7 +195,7 @@ export function CCConversationView({
               send();
             }
           }}
-          placeholder="发消息给 Claude Code…"
+          placeholder={`发消息给 ${cliLabel}…`}
         />
         <Button size="sm" onClick={send}>
           发送
