@@ -215,7 +215,25 @@ async function buildAndWatch(): Promise<void> {
   await preloadCtx.watch();
 }
 
+/**
+ * Ensure node-pty's native binary matches the current Electron/host arch before
+ * launching. rebuild:native now self-heals an arch mismatch (e.g. left x86_64
+ * by a dual-arch dist build) and no-ops fast when it's already correct, so this
+ * is cheap to run every dev start and keeps the terminal panel working.
+ */
+function ensureNativeArch(): void {
+  const res = spawnSync("bun", ["run", "rebuild:native"], {
+    cwd: root,
+    stdio: "inherit",
+  });
+  if (res.status !== 0) {
+    // eslint-disable-next-line no-console
+    console.warn("[dev] rebuild:native failed; terminal panel may not work.");
+  }
+}
+
 async function main(): Promise<void> {
+  ensureNativeArch();
   startCoreWatch();
   await startVite();
   await startMobileVite();
