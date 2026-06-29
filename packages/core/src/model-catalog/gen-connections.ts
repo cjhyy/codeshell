@@ -23,7 +23,7 @@ export function genInstancesFromConnections(
   connections: ModelInstance[],
   credentials: Credential[],
   catalog: CatalogEntry[],
-  tag: "image" | "video",
+  tag: "image" | "video" | "audio",
 ): GenRuntimeInstance[] {
   const out: GenRuntimeInstance[] = [];
   for (const inst of connections) {

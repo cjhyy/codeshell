@@ -73,7 +73,7 @@ export type ModelPreset = z.infer<typeof modelPresetSchema>;
 export const catalogEntrySchema = z.object({
   /** Template id, e.g. "openai" / "openai-images" / "fal-video". */
   id: z.string(),
-  /** Which 连接 page group this lands in. (audio reserved, not built this version.) */
+  /** Which 连接 page group this lands in. (audio = speech-to-text / voice input.) */
   tag: z.enum(["text", "image", "video", "audio"]),
   /** Runtime adapter selector — reuses existing "openai" | "anthropic" | "google" | "fal". */
   adapterKind: z.string(),

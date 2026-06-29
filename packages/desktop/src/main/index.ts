@@ -38,6 +38,10 @@ import {
   probeClaudeCli,
   discoverSessions,
   readRecentHistory,
+  // Speech-to-text (voice input / 听写).
+  transcribe,
+  resolveTranscribeProvider,
+  isTranscribeAvailable,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { registerGuest } from "./browser-driver/active-guest.js";
@@ -1133,6 +1137,20 @@ async function createWindow(): Promise<BrowserWindow> {
         },
       });
     });
+
+    // Voice input (听写) needs microphone access via getUserMedia. Electron
+    // denies media by default unless a handler grants it. Allow ONLY `media`,
+    // and ONLY for our own renderer (the file:/dev-URL origin); deny everything
+    // else — keeps the secure default while enabling the mic. The browser-panel
+    // <webview> guests live in the separate "persist:browser" partition, so this
+    // defaultSession handler does not touch their permissions.
+    session.defaultSession.setPermissionRequestHandler((wc, permission, cb) => {
+      if (permission === "media") {
+        cb(isRendererRequest(wc.getURL()));
+        return;
+      }
+      cb(false);
+    });
   }
 
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -1527,6 +1545,40 @@ ipcMain.handle("git:check", async () => {
   await applyGitPathFromSettings();
   return { available: isGitAvailable() };
 });
+
+// ─── Voice input (speech-to-text / 听写) ───
+// Renderer records the mic, ships raw audio bytes here; we resolve the
+// configured (or OpenAI-fallback) transcription provider and POST to its
+// /audio/transcriptions. Pure request/response — NOT an agent tool.
+ipcMain.handle(
+  "stt:transcribe",
+  async (
+    _e,
+    payload: { cwd: string; audio: ArrayBuffer; mimeType?: string; provider?: string; language?: string },
+  ): Promise<{ ok: true; text: string } | { ok: false; error: string }> => {
+    const { cwd, audio, mimeType, provider, language } = payload ?? {};
+    if (typeof cwd !== "string" || !(audio instanceof ArrayBuffer)) {
+      return { ok: false, error: "bad-request" };
+    }
+    const resolved = resolveTranscribeProvider(cwd, provider);
+    if (!resolved) return { ok: false, error: "no-audio-provider" };
+    const mime = typeof mimeType === "string" && mimeType ? mimeType : "audio/webm";
+    // Pick a filename extension matching the mime so picky servers accept it.
+    const ext = mime.includes("webm") ? "webm" : mime.includes("mp4") || mime.includes("m4a") ? "m4a" : mime.includes("wav") ? "wav" : "webm";
+    return transcribe({
+      audio: new Uint8Array(audio),
+      mimeType: mime,
+      filename: `audio.${ext}`,
+      model: resolved.model,
+      creds: resolved.creds,
+      language,
+      fetchImpl: fetch,
+    });
+  },
+);
+ipcMain.handle("stt:available", async (_e, cwd: string) => ({
+  available: typeof cwd === "string" ? isTranscribeAvailable(cwd) : false,
+}));
 ipcMain.handle("marketplace:list", async () => listMarketplacesForUi());
 ipcMain.handle("marketplace:load", async (_e, name: string) =>
   loadMarketplaceForUi(name),
