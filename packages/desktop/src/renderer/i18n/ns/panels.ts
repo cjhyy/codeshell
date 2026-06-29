@@ -60,6 +60,7 @@ export const panels = {
       },
       rooms: {
         listTitle: "房间 · 常驻 Claude Code",
+        pickCli: "选择 CLI:",
         pickProject: "选择项目目录(常驻 CC 在此干活):",
         noProjects: "无最近项目。先在桌面打开一个项目。",
         empty: "还没有房间,点「新建」",
@@ -252,6 +253,7 @@ export const panels = {
       },
       rooms: {
         listTitle: "Rooms · Resident Claude Code",
+        pickCli: "Pick a CLI:",
         pickProject: "Pick a project directory (resident CC works here):",
         noProjects: "No recent projects. Open a project on the desktop first.",
         empty: "No rooms yet — click \"New\"",

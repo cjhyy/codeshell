@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createInterface } from "node:readline";
-import { delimiter } from "node:path";
 import { CC_COST_GUARD_PROMPT } from "@cjhyy/code-shell-core";
+import { pathWithCommonBins } from "./path-bins.js";
 
 /**
  * Normalized event emitted from a resident stream-json claude process. The
@@ -136,17 +136,6 @@ export function parseStreamJsonLine(line: string): ResidentAgentEvent[] {
   return out;
 }
 
-/**
- * macOS GUI-launched Electron has a minimal PATH (no Homebrew). Prepend common
- * CLI dirs so `claude` resolves. Mirrors the external-agent adapter's fix.
- */
-function pathWithCommonBins(env: NodeJS.ProcessEnv = process.env): string {
-  const extra = ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"];
-  const current = (env.PATH ?? "").split(delimiter).filter(Boolean);
-  const merged: string[] = [];
-  for (const dir of [...extra, ...current]) if (!merged.includes(dir)) merged.push(dir);
-  return merged.join(delimiter);
-}
 
 export interface ResidentAgentOptions {
   command: string; // e.g. "claude"

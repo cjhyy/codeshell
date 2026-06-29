@@ -32,7 +32,7 @@ import { configToolDef, configTool } from "./config.js";
 import { notebookEditToolDef, notebookEditTool } from "./notebook-edit.js";
 import { lspToolDef, lspTool } from "./lsp.js";
 import { cronCreateToolDef, cronCreateTool, cronDeleteToolDef, cronDeleteTool, cronListToolDef, cronListTool } from "./cron.js";
-import { driveClaudeCodeToolDef, driveClaudeCodeTool } from "./drive-claude-code.js";
+import { driveClaudeCodeToolDef, driveClaudeCodeTool, driveAgentToolDef, driveAgentTool } from "./drive-claude-code.js";
 import { skillToolDef, skillTool } from "./skill.js";
 import { mcpToolDef, mcpToolExecute, listMcpResourcesToolDef, listMcpResourcesTool, readMcpResourceToolDef, readMcpResourceTool } from "./mcp-tools.js";
 import { remoteTriggerToolDef, remoteTriggerTool } from "./remote-trigger.js";
@@ -481,7 +481,19 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     },
     execute: cronListTool,
   },
-  // ─── Drive Claude Code (external agent orchestration) ──────────
+  // ─── Drive external coding-agent CLI (claude / codex) ──────────
+  {
+    definition: {
+      ...driveAgentToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: driveAgentTool,
+  },
+  // Back-compat alias: DriveClaudeCode = DriveAgent pinned to cli:claude. Kept
+  // registered so old prompts/memories that name DriveClaudeCode still resolve.
   {
     definition: {
       ...driveClaudeCodeToolDef,
