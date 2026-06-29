@@ -785,6 +785,16 @@ export interface CodeshellApi {
   }): Promise<{ ok: true; text: string } | { ok: false; error: string }>;
   /** Whether a transcription provider is resolvable (drives mic-button enablement). */
   sttAvailable(cwd: string): Promise<{ available: boolean }>;
+  /** What voice input will actually use now (configured / fallback / none),
+   *  key masked. Lets the UI show the active or fallback transcribe config. */
+  sttDescribe(cwd: string): Promise<{
+    source: "connection" | "fallback" | "none";
+    model?: string;
+    baseUrl?: string;
+    maskedKey?: string;
+    reusedCredentialId?: string;
+    reusedCredentialCatalogId?: string;
+  }>;
   /** Ensure OS-level microphone access (macOS TCC prompt). True on other OSes. */
   ensureMicAccess(): Promise<{ granted: boolean }>;
   /** List known plugin marketplaces (never throws — returns [] on read error). */

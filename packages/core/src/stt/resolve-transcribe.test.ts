@@ -7,7 +7,7 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { resolveTranscribeProvider, isTranscribeAvailable } from "./resolve-transcribe.js";
+import { resolveTranscribeProvider, isTranscribeAvailable, describeTranscribe } from "./resolve-transcribe.js";
 
 let ws: string;
 let prevHome: string | undefined;
@@ -79,5 +79,37 @@ describe("resolveTranscribeProvider", () => {
   test("isTranscribeAvailable true when resolvable", () => {
     writeSettings({ credentials: [{ id: "c1", catalogId: "openai", apiKey: "sk-text" }] });
     expect(isTranscribeAvailable(ws)).toBe(true);
+  });
+});
+
+describe("describeTranscribe", () => {
+  test("source=connection when an audio connection is configured (key masked)", () => {
+    writeSettings({
+      credentials: [{ id: "c1", catalogId: "openai-transcribe", apiKey: "sk-abcdef123456" }],
+      modelConnections: [
+        { id: "my-stt", catalogId: "openai-transcribe", tag: "audio", model: "whisper-1", credentialId: "c1" },
+      ],
+    });
+    const d = describeTranscribe(ws);
+    expect(d.source).toBe("connection");
+    expect(d.model).toBe("whisper-1");
+    expect(d.baseUrl).toBe("https://api.openai.com/v1");
+    expect(d.maskedKey).toBe("sk-abc...3456");
+    expect(d.maskedKey).not.toContain("def123"); // never the full key
+  });
+
+  test("source=fallback (reused OpenAI credential) when no audio connection", () => {
+    writeSettings({ credentials: [{ id: "c1", catalogId: "openai", apiKey: "sk-abcdef123456" }] });
+    const d = describeTranscribe(ws);
+    expect(d.source).toBe("fallback");
+    expect(d.model).toBe("gpt-4o-transcribe");
+    expect(d.maskedKey).toBe("sk-abc...3456");
+    expect(d.reusedCredentialId).toBe("c1");
+    expect(d.reusedCredentialCatalogId).toBe("openai");
+  });
+
+  test("source=none when nothing usable", () => {
+    writeSettings({ credentials: [{ id: "c1", catalogId: "fal-video", apiKey: "x" }] });
+    expect(describeTranscribe(ws).source).toBe("none");
   });
 });

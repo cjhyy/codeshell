@@ -16,6 +16,7 @@
 import { SettingsManager } from "../settings/manager.js";
 import { getMergedCatalog } from "../model-catalog/index.js";
 import { genInstancesFromConnections } from "../model-catalog/gen-connections.js";
+import { maskKey } from "../onboarding.js";
 import type { TranscribeCreds } from "./transcribe.js";
 
 export interface ResolvedTranscribeProvider {
@@ -104,4 +105,62 @@ export function resolveTranscribeProvider(
  *  resolvable)? Lets the desktop disable/enable the mic button. */
 export function isTranscribeAvailable(cwd: string): boolean {
   return resolveTranscribeProvider(cwd) !== null;
+}
+
+/**
+ * A renderer-safe description of what voice input will ACTUALLY use right now —
+ * so the UI can show "currently using gpt-4o-transcribe, reusing your OpenAI key
+ * sk-…1234" instead of looking unconfigured when the fallback is silently in
+ * effect. The key is MASKED (never ship the full secret to the renderer for
+ * display). `source`:
+ *   - "connection": an explicit audio modelConnection is configured
+ *   - "fallback":   no audio connection; reusing an OpenAI-family credential
+ *   - "none":       nothing usable — voice input unavailable
+ */
+export interface TranscribeDescription {
+  source: "connection" | "fallback" | "none";
+  model?: string;
+  baseUrl?: string;
+  /** Masked key for display (e.g. "sk-123...cdef"). */
+  maskedKey?: string;
+  /** For "fallback": the credential id/catalog whose key is being reused. */
+  reusedCredentialId?: string;
+  reusedCredentialCatalogId?: string;
+}
+
+export function describeTranscribe(cwd: string): TranscribeDescription {
+  const settings = new SettingsManager(cwd, "full").get();
+  const conns = (settings as { modelConnections?: GenInstanceSource[] }).modelConnections;
+  const creds = (settings as { credentials?: CredentialSource[] }).credentials;
+
+  // A configured audio connection wins (mirror resolveTranscribeProvider's order).
+  if (Array.isArray(conns) && conns.some((c) => c.tag === "audio")) {
+    const resolved = resolveTranscribeProvider(cwd);
+    if (resolved) {
+      return {
+        source: "connection",
+        model: resolved.model,
+        baseUrl: resolved.creds.baseUrl,
+        maskedKey: maskKey(resolved.creds.apiKey),
+      };
+    }
+  }
+
+  // Fallback: reused OpenAI-family credential.
+  if (Array.isArray(creds)) {
+    const openaiCred = creds.find(
+      (c) => typeof c.apiKey === "string" && c.apiKey && OPENAI_CRED_CATALOG_IDS.has(c.catalogId ?? ""),
+    );
+    if (openaiCred?.apiKey) {
+      return {
+        source: "fallback",
+        model: OPENAI_DEFAULT_TRANSCRIBE_MODEL,
+        baseUrl: OPENAI_AUDIO_BASE_URL,
+        maskedKey: maskKey(openaiCred.apiKey),
+        reusedCredentialId: openaiCred.id,
+        reusedCredentialCatalogId: openaiCred.catalogId,
+      };
+    }
+  }
+  return { source: "none" };
 }
