@@ -40,6 +40,7 @@ import {
   discoverSessions,
   discoverCodexSessions,
   readRecentHistory,
+  readCodexRecentHistory,
   // Speech-to-text (voice input / 听写).
   transcribe,
   resolveTranscribeProvider,
@@ -2136,6 +2137,9 @@ ipcMain.handle("ccRoom:roomHistory", async (_e, roomId: string, sinceSeq?: numbe
 );
 ipcMain.handle("ccRoom:readHistory", async (_e, cwd: string, sessionId: string, limit: number) =>
   readRecentHistory(cwd, sessionId, limit),
+);
+ipcMain.handle("ccRoom:readCodexHistory", async (_e, cwd: string, threadId: string, limit: number) =>
+  readCodexRecentHistory(cwd, threadId, limit),
 );
 ipcMain.handle("ccRoom:closeSession", async (_e, roomId: string) => roomManager.close(roomId));
 

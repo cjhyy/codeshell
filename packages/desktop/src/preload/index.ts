@@ -931,6 +931,8 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer.invoke("ccRoom:roomHistory", roomId, sinceSeq),
     readHistory: (cwd: string, sessionId: string, limit: number) =>
       ipcRenderer.invoke("ccRoom:readHistory", cwd, sessionId, limit),
+    readCodexHistory: (cwd: string, threadId: string, limit: number) =>
+      ipcRenderer.invoke("ccRoom:readCodexHistory", cwd, threadId, limit),
     closeSession: (roomId: string) => ipcRenderer.invoke("ccRoom:closeSession", roomId),
     onRoomMessage: (cb: (env: { roomId: string; msg: unknown }) => void): (() => void) => {
       const h = (_e: IpcRendererEvent, env: { roomId: string; msg: unknown }) => cb(env);

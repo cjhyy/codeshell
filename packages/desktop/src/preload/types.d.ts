@@ -1057,6 +1057,15 @@ export interface CodeshellApi {
       hasMore: boolean;
       totalCount: number;
     }>;
+    readCodexHistory(
+      cwd: string,
+      threadId: string,
+      limit: number,
+    ): Promise<{
+      messages: { role: "user" | "assistant"; text: string; tools?: { name: string; summary: string }[] }[];
+      hasMore: boolean;
+      totalCount: number;
+    }>;
     closeSession(roomId: string): Promise<void>;
     onRoomMessage(cb: (env: { roomId: string; msg: unknown }) => void): () => void;
     onApprovalRequest(

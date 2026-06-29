@@ -74,6 +74,7 @@ export function CCConversationView({
   cwd,
   sessionId,
   mode,
+  cliKind = "claude-code",
   cliLabel = "Claude Code",
   onBack,
 }: {
@@ -81,6 +82,11 @@ export function CCConversationView({
   cwd: string | null;
   sessionId: string;
   mode: string;
+  /** Which external CLI drives this room. Selects the on-disk history reader:
+   *  codex sessions live in a different store/format than claude (see
+   *  readCodexRecentHistory) — reading a codex thread via the claude reader
+   *  finds nothing, so the backlog comes back empty. */
+  cliKind?: "claude-code" | "codex";
   /** Which external CLI drives this room ("Claude Code" | "Codex") — labels the
    *  header + composer so a Codex room isn't mislabeled "Claude Code". */
   cliLabel?: string;
@@ -101,7 +107,10 @@ export function CCConversationView({
     // Mirrors the phone (useRemoteApp's ccHistorySessionRef gate).
     const boot = async () => {
       if (sessionId && cwd) {
-        const r = await window.codeshell.ccRoom.readHistory(cwd, sessionId, 50);
+        const r =
+          cliKind === "codex"
+            ? await window.codeshell.ccRoom.readCodexHistory(cwd, sessionId, 50)
+            : await window.codeshell.ccRoom.readHistory(cwd, sessionId, 50);
         if (!cancelled) {
           dispatch({ kind: "replayHistory", messages: (r as { messages: HistoryMessage[] }).messages });
         }
@@ -131,7 +140,7 @@ export function CCConversationView({
       offApp();
       offResolved();
     };
-  }, [roomId, cwd, sessionId]);
+  }, [roomId, cwd, sessionId, cliKind]);
 
   const send = useCallback(() => {
     const t = input.trim();

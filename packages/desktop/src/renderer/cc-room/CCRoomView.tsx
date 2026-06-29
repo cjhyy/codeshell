@@ -163,6 +163,7 @@ export function CCRoomView({ cwd }: { cwd: string | null }) {
         cwd={cwd}
         sessionId={conv.sessionId}
         mode={conv.mode}
+        cliKind={cliKind}
         cliLabel={CLI_LABEL[cliKind]}
         onBack={() => setConv(null)}
       />
