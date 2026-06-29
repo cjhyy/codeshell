@@ -960,29 +960,40 @@ async function handleCcRoomEvent(event: MobileClientEvent & { deviceId?: string 
   };
   try {
     if (event.type === "ccRoom.probe") {
-      const a = await probeClaudeCli(Boolean(event.force));
+      const kind = event.kind ?? "claude-code";
+      const a = await (kind === "codex" ? probeCodexCli : probeClaudeCli)(Boolean(event.force));
       reply({
         type: "ccRoom.probe.ok",
         available: a.available,
         command: a.command,
         version: a.version,
         reason: a.reason,
+        kind,
       });
       return;
     }
     if (event.type === "ccRoom.listSessions") {
-      const sessions = discoverSessions(event.cwd);
-      reply({ type: "ccRoom.listSessions.ok", cwd: event.cwd, sessions });
+      const kind = event.kind ?? "claude-code";
+      const sessions = kind === "codex" ? discoverCodexSessions(event.cwd) : discoverSessions(event.cwd);
+      reply({ type: "ccRoom.listSessions.ok", cwd: event.cwd, sessions, kind });
       return;
     }
     if (event.type === "ccRoom.openSession") {
       const mode = await resolveRoomPermissionMode(event.cwd, event.mode);
-      const { roomId, status } = roomManager.openForSession(event.sessionId, event.cwd, mode);
+      const { roomId, status } = roomManager.openForSession(
+        event.sessionId,
+        event.cwd,
+        mode,
+        event.kind ?? "claude-code",
+      );
       reply({ type: "ccRoom.opened", roomId, sessionId: event.sessionId, status });
       return;
     }
     if (event.type === "ccRoom.readHistory") {
-      const h = readRecentHistory(event.cwd, event.sessionId, event.limit);
+      const h =
+        event.kind === "codex"
+          ? readCodexRecentHistory(event.cwd, event.sessionId, event.limit)
+          : readRecentHistory(event.cwd, event.sessionId, event.limit);
       reply({
         type: "ccRoom.readHistory.ok",
         sessionId: event.sessionId,

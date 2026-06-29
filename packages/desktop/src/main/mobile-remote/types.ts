@@ -108,11 +108,13 @@ export type MobileClientEvent =
   | { type: "room.close"; roomId: string }
   | { type: "room.send"; roomId: string; text: string }
   | { type: "room.history"; roomId: string; sinceSeq?: number }
-  // ── CC Room (external claude CLI sessions, per-project) ───────────────
-  | { type: "ccRoom.probe"; force?: boolean }
-  | { type: "ccRoom.listSessions"; cwd: string }
-  | { type: "ccRoom.openSession"; sessionId: string; cwd: string; mode: PermissionMode }
-  | { type: "ccRoom.readHistory"; cwd: string; sessionId: string; limit: number }
+  // ── CC Room (external claude CLI / codex sessions, per-project) ───────
+  //   `kind` selects which CLI to probe/list/open/read (defaults to
+  //   "claude-code" when absent, so older phone clients keep working).
+  | { type: "ccRoom.probe"; force?: boolean; kind?: "claude-code" | "codex" }
+  | { type: "ccRoom.listSessions"; cwd: string; kind?: "claude-code" | "codex" }
+  | { type: "ccRoom.openSession"; sessionId: string; cwd: string; mode: PermissionMode; kind?: "claude-code" | "codex" }
+  | { type: "ccRoom.readHistory"; cwd: string; sessionId: string; limit: number; kind?: "claude-code" | "codex" }
   | { type: "ccRoom.respondApproval"; roomId: string; requestId: string; decision: CcApprovalDecision };
 
 export type MobileServerEvent =
@@ -164,8 +166,8 @@ export type MobileServerEvent =
         askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
       };
     }
-  | { type: "ccRoom.probe.ok"; available: boolean; command?: string; version?: string; reason?: "not-found" | "not-executable" }
-  | { type: "ccRoom.listSessions.ok"; cwd: string; sessions: CcDiscoveredSession[] }
+  | { type: "ccRoom.probe.ok"; available: boolean; command?: string; version?: string; reason?: "not-found" | "not-executable"; kind: "claude-code" | "codex" }
+  | { type: "ccRoom.listSessions.ok"; cwd: string; sessions: CcDiscoveredSession[]; kind: "claude-code" | "codex" }
   | { type: "ccRoom.opened"; roomId: string; sessionId: string; status: "running" | "missing" }
   | { type: "ccRoom.readHistory.ok"; sessionId: string; messages: CcHistoryMessage[]; hasMore: boolean; totalCount: number }
   | { type: "ccRoom.approvalResolved"; roomId: string; requestId: string; decision: CcApprovalDecision };

@@ -25,6 +25,9 @@ import {
 import { projectForCwd } from "@mobile/lib/format";
 import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket";
 
+/** Which external coding-CLI the CC pane drives. Mirrors desktop CCRoomView. */
+export type CcCliKind = "claude-code" | "codex";
+
 export interface PendingApproval {
   requestId: string;
   sessionId?: string;
@@ -89,6 +92,9 @@ export interface RemoteApp {
   selectProject: (cwd: string) => void;
   ccSessions: CcDiscoveredSession[];
   ccProbe: { available: boolean; reason?: string } | null;
+  /** Selected CC CLI (Claude Code / Codex). Switching re-probes + re-lists. */
+  ccCliKind: CcCliKind;
+  setCcCliKind: (kind: CcCliKind) => void;
   openCcSession: (sessionId: string, cwd: string, mode: PermissionMode) => void;
   respondCcApproval: (
     roomId: string,
@@ -152,7 +158,12 @@ export function useRemoteApp(): RemoteApp {
   const [activeProjectCwd, setActiveProjectCwd] = useState<string | null>(null);
   const activeProjectCwdRef = useRef(activeProjectCwd);
   activeProjectCwdRef.current = activeProjectCwd;
-  // External claude-CLI sessions discovered for activeProjectCwd.
+  // Which external CLI the CC pane is showing (Claude Code or Codex). Switching
+  // re-probes + re-lists for that CLI (mirrors desktop CCRoomView's cliKind).
+  const [ccCliKind, setCcCliKind] = useState<CcCliKind>("claude-code");
+  const ccCliKindRef = useRef<CcCliKind>(ccCliKind);
+  ccCliKindRef.current = ccCliKind;
+  // External-CLI sessions discovered for activeProjectCwd (under ccCliKind).
   const [ccSessions, setCcSessions] = useState<CcDiscoveredSession[]>([]);
   const [ccProbe, setCcProbe] = useState<{ available: boolean; reason?: string } | null>(null);
   /** socket.send via ref — onServerEvent is created BEFORE the socket (it's the
@@ -174,6 +185,10 @@ export function useRemoteApp(): RemoteApp {
    *  switch to a plain session/room — gates whether room.history is allowed to
    *  replay (it must not clobber the cc backlog). */
   const ccHistorySessionRef = useRef<string | undefined>(undefined);
+  /** Which CLI the currently-open cc session belongs to — selects the on-disk
+   *  history reader (claude vs codex rollout) for ccRoom.readHistory. Captured
+   *  at open time so a later CLI switch can't misroute this session's backlog. */
+  const ccHistoryKindRef = useRef<CcCliKind>("claude-code");
   const activeCwdRef = useRef<string | null | undefined>(undefined);
   const [loading, setLoading] = useState<RemoteApp["loading"]>({
     sessions: false,
@@ -312,11 +327,15 @@ export function useRemoteApp(): RemoteApp {
         break;
       }
       case "ccRoom.probe.ok":
-        setCcProbe({ available: event.available, reason: event.reason });
+        // kind guard: ignore a probe reply for a CLI we've since switched away
+        // from (else a slow claude probe could overwrite a codex result).
+        if (event.kind === ccCliKindRef.current) {
+          setCcProbe({ available: event.available, reason: event.reason });
+        }
         break;
       case "ccRoom.listSessions.ok":
-        // cwd echo guard: ignore a reply for a project we've since left.
-        if (event.cwd === activeProjectCwdRef.current) {
+        // cwd + kind echo guard: ignore a reply for a project/CLI we've left.
+        if (event.cwd === activeProjectCwdRef.current && event.kind === ccCliKindRef.current) {
           setCcSessions(event.sessions);
           setLoadingKey("ccSessions", false);
         }
@@ -343,6 +362,7 @@ export function useRemoteApp(): RemoteApp {
             cwd: activeProjectCwdRef.current,
             sessionId: event.sessionId,
             limit: 50,
+            kind: ccHistoryKindRef.current,
           });
         }
         sendRef.current?.({ type: "room.history", roomId: event.roomId });
@@ -549,7 +569,10 @@ export function useRemoteApp(): RemoteApp {
 
   const openCcSession = useCallback(
     (sessionId: string, cwd: string, mode: PermissionMode) => {
-      socket.send({ type: "ccRoom.openSession", sessionId, cwd, mode });
+      // Pin the CLI this session belongs to so its on-disk backlog is read with
+      // the right reader even if the user switches the pane's CLI afterward.
+      ccHistoryKindRef.current = ccCliKindRef.current;
+      socket.send({ type: "ccRoom.openSession", sessionId, cwd, mode, kind: ccCliKindRef.current });
     },
     [socket],
   );
@@ -685,9 +708,9 @@ export function useRemoteApp(): RemoteApp {
     setCcProbe(null);
     setCcSessions([]);
     setLoadingKey("ccSessions", true);
-    socket.send({ type: "ccRoom.probe" });
-    socket.send({ type: "ccRoom.listSessions", cwd: ccDiscoverCwd });
-  }, [socket.status, socket.send, ccDiscoverCwd, setLoadingKey]);
+    socket.send({ type: "ccRoom.probe", kind: ccCliKind });
+    socket.send({ type: "ccRoom.listSessions", cwd: ccDiscoverCwd, kind: ccCliKind });
+  }, [socket.status, socket.send, ccDiscoverCwd, ccCliKind, setLoadingKey]);
 
   return {
     status: socket.status,
@@ -717,6 +740,8 @@ export function useRemoteApp(): RemoteApp {
     selectProject,
     ccSessions,
     ccProbe,
+    ccCliKind,
+    setCcCliKind,
     openCcSession,
     respondCcApproval,
   };

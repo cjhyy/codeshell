@@ -217,6 +217,8 @@ function SidePane({
       probe={app.ccProbe}
       sessions={app.ccSessions}
       loading={app.loading.ccSessions}
+      cliKind={app.ccCliKind}
+      onCliKindChange={app.setCcCliKind}
       onOpen={(sid, cwd, mode) => {
         app.openCcSession(sid, cwd, mode);
         onDone();
