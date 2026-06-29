@@ -52,7 +52,7 @@ import {
   type Credential,
 } from "./textConnections";
 
-type ConnTag = "text" | "image" | "video";
+type ConnTag = "text" | "image" | "video" | "audio";
 
 interface Props {
   scope: "user" | "project";
@@ -73,7 +73,9 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
       ? t("settingsX.textConn.headingImage")
       : tag === "video"
         ? t("settingsX.textConn.headingVideo")
-        : t("settingsX.textConn.headingText"));
+        : tag === "audio"
+          ? t("settingsX.textConn.headingAudio")
+          : t("settingsX.textConn.headingText"));
   const confirm = useConfirm();
   const toast = useToast();
 

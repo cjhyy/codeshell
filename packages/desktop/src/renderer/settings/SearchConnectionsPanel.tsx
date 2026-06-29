@@ -69,6 +69,14 @@ export function ConnectionsPanel({ scope, activeRepoPath }: Props) {
         >
           <UnifiedConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} tag="video" />
         </CollapsibleGroup>
+
+        <CollapsibleGroup
+          title={t("settingsX.searchConn.groupAudio")}
+          subtitle={t("settingsX.searchConn.groupAudioSub")}
+          defaultOpen={false}
+        >
+          <UnifiedConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} tag="audio" />
+        </CollapsibleGroup>
       </div>
     </section>
   );

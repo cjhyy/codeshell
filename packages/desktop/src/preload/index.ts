@@ -597,6 +597,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("stt:transcribe", payload),
   sttAvailable: (cwd: string): Promise<{ available: boolean }> =>
     ipcRenderer.invoke("stt:available", cwd),
+  ensureMicAccess: (): Promise<{ granted: boolean }> =>
+    ipcRenderer.invoke("stt:ensureMicAccess"),
   listMarketplaces: () => ipcRenderer.invoke("marketplace:list"),
   loadMarketplace: (name: string) => ipcRenderer.invoke("marketplace:load", name),
   addMarketplace: (input: string) => ipcRenderer.invoke("marketplace:add", input),
