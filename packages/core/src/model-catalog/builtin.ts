@@ -342,4 +342,40 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
       "fal 视频:用 model 选底层模型(文生 vs 图生)。传 image/images(本地路径自动上传)→ 用图生视频模型;1 张=图生视频,2+ 张=参考生视频(最多 9,prompt 里用 @Image1/@Image2 引用)。" +
       "续接/参考视频:传 videos(http/https URL,非本地路径;最多 3)续接已有视频,prompt 里用 @Video1/@Video2 引用(如「从 @Video1 结尾继续」);需用 Seedance 模型(走 reference-to-video,Kling 不支持)。异步后台生成。",
   },
+  // ─── audio (speech-to-text / 语音输入听写) ───
+  {
+    id: "openai-transcribe",
+    tag: "audio",
+    adapterKind: "openai",
+    shape: "generic-sync",
+    displayName: "OpenAI 语音转写 (Whisper / gpt-4o-transcribe)",
+    description: "OpenAI 兼容 /audio/transcriptions,用于语音输入听写。可复用 OpenAI key。",
+    defaultBaseUrl: "https://api.openai.com/v1",
+    defaultModel: "gpt-4o-transcribe",
+    signupUrl: "https://platform.openai.com/api-keys",
+    test: false,
+    modelPresets: [
+      { value: "gpt-4o-transcribe", label: "gpt-4o-transcribe" },
+      { value: "gpt-4o-mini-transcribe", label: "gpt-4o-mini-transcribe" },
+      { value: "whisper-1", label: "Whisper (whisper-1)" },
+    ],
+    paramsDoc: "语音转写:录音(webm/opus)→ 文字,填进输入框。换 baseUrl+model 可指向 Groq/本地 whisper.cpp。",
+  },
+  {
+    id: "groq-transcribe",
+    tag: "audio",
+    adapterKind: "openai",
+    shape: "generic-sync",
+    displayName: "Groq 语音转写 (whisper-large-v3-turbo)",
+    description: "Groq 的 OpenAI 兼容 /audio/transcriptions,极快且便宜。需要 Groq key。",
+    defaultBaseUrl: "https://api.groq.com/openai/v1",
+    defaultModel: "whisper-large-v3-turbo",
+    signupUrl: "https://console.groq.com/keys",
+    test: false,
+    modelPresets: [
+      { value: "whisper-large-v3-turbo", label: "whisper-large-v3-turbo" },
+      { value: "whisper-large-v3", label: "whisper-large-v3" },
+    ],
+    paramsDoc: "语音转写(Groq):同 OpenAI /audio/transcriptions 形状,换 baseUrl+model。",
+  },
 ];

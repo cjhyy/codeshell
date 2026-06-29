@@ -771,6 +771,20 @@ export interface CodeshellApi {
    * Marketplace install needs git; the UI uses this to prompt up front.
    */
   checkGit(): Promise<{ available: boolean }>;
+  /**
+   * Voice input (听写): transcribe recorded audio → text. Resolves the
+   * configured (or OpenAI-fallback) STT provider in main. `error:"no-audio-provider"`
+   * when none is configured.
+   */
+  transcribeAudio(payload: {
+    cwd: string;
+    audio: ArrayBuffer;
+    mimeType?: string;
+    provider?: string;
+    language?: string;
+  }): Promise<{ ok: true; text: string } | { ok: false; error: string }>;
+  /** Whether a transcription provider is resolvable (drives mic-button enablement). */
+  sttAvailable(cwd: string): Promise<{ available: boolean }>;
   /** List known plugin marketplaces (never throws — returns [] on read error). */
   listMarketplaces(): Promise<
     Array<{

@@ -21,7 +21,7 @@ export interface Credential {
 export interface ModelInstance {
   id: string;
   catalogId: string;
-  tag: "text" | "image" | "video";
+  tag: "text" | "image" | "video" | "audio";
   model: string;
   baseUrl?: string;
   /** Which credential supplies the key (independent entity, shareable). */

@@ -587,6 +587,16 @@ contextBridge.exposeInMainWorld("codeshell", {
   updatePlugin: (name: string) => ipcRenderer.invoke("plugins:update", name),
   checkPluginUpdate: (name: string) => ipcRenderer.invoke("plugins:checkUpdate", name),
   checkGit: () => ipcRenderer.invoke("git:check"),
+  transcribeAudio: (payload: {
+    cwd: string;
+    audio: ArrayBuffer;
+    mimeType?: string;
+    provider?: string;
+    language?: string;
+  }): Promise<{ ok: true; text: string } | { ok: false; error: string }> =>
+    ipcRenderer.invoke("stt:transcribe", payload),
+  sttAvailable: (cwd: string): Promise<{ available: boolean }> =>
+    ipcRenderer.invoke("stt:available", cwd),
   listMarketplaces: () => ipcRenderer.invoke("marketplace:list"),
   loadMarketplace: (name: string) => ipcRenderer.invoke("marketplace:load", name),
   addMarketplace: (input: string) => ipcRenderer.invoke("marketplace:add", input),

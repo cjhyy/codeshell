@@ -678,6 +678,19 @@ export {
   type ImageGenerateResult,
 } from "./tool-system/builtin/image-providers.js";
 
+// ─── Speech-to-text (voice input / 听写) ────────────────────────
+export {
+  transcribe,
+  type TranscribeCreds,
+  type TranscribeRequest,
+  type TranscribeResult,
+} from "./stt/transcribe.js";
+export {
+  resolveTranscribeProvider,
+  isTranscribeAvailable,
+  type ResolvedTranscribeProvider,
+} from "./stt/resolve-transcribe.js";
+
 export {
   BUILTIN_CATALOG,
   getMergedCatalog,

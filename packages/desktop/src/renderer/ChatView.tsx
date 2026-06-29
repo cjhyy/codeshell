@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { CornerDownRight, Paperclip, MicOff, ArrowUp, Square, Monitor, Trash2, X } from "lucide-react";
+import { CornerDownRight, Paperclip, Mic, Loader2, ArrowUp, Square, Monitor, Trash2, X } from "lucide-react";
 import { MessageStream } from "./MessageStream";
 import type { Message } from "./types";
 import { loadHistory, pushHistory } from "./promptHistory";
@@ -29,7 +29,8 @@ import { compressBatch, type ImageDetail } from "./chat/compress";
 import { MentionPopover, type MentionItem } from "./chat/MentionPopover";
 import { detectMention } from "./chat/mention";
 import { classifyPath } from "./tool-cards/attachments";
-import { formatBytes } from "@/lib/utils";
+import { formatBytes, cn } from "@/lib/utils";
+import { useToast } from "./ui/ToastProvider";
 import { encodeAnchorsForWire, type Anchor } from "./chat/anchors";
 import { pageAttribution } from "./browser/markerEcho";
 import { useT } from "./i18n/I18nProvider";
@@ -185,6 +186,90 @@ export function ChatView({
   const [zoomed, setZoomed] = useState<{ items: LightboxItem[]; index: number } | null>(null);
   const setDraft = onDraftChange;
   const setAttachments = onAttachmentsChange;
+  const toast = useToast();
+
+  // ─── Voice input (听写) ───────────────────────────────────────────────
+  // Record the mic → transcribe via core (window.codeshell.transcribeAudio) →
+  // append the text to the draft for the user to edit (NOT auto-send). idle →
+  // recording → transcribing → idle.
+  const [voiceState, setVoiceState] = useState<"idle" | "recording" | "transcribing">("idle");
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  const transcribeChunks = useCallback(
+    async (blob: Blob, mimeType: string) => {
+      setVoiceState("transcribing");
+      try {
+        const buf = await blob.arrayBuffer();
+        const res = await window.codeshell.transcribeAudio({
+          cwd: activeRepoPath ?? "",
+          audio: buf,
+          mimeType,
+        });
+        if (res.ok) {
+          const text = res.text.trim();
+          if (text) {
+            setDraft(draft && !/\s$/.test(draft) ? `${draft} ${text}` : `${draft}${text}`);
+            textareaRef.current?.focus();
+          }
+        } else if (res.error === "no-audio-provider") {
+          toast({ message: t("chat.composer.voiceNoProvider"), variant: "error" });
+        } else {
+          toast({ message: t("chat.composer.voiceFailed"), variant: "error" });
+        }
+      } catch {
+        toast({ message: t("chat.composer.voiceFailed"), variant: "error" });
+      } finally {
+        setVoiceState("idle");
+      }
+    },
+    [activeRepoPath, draft, setDraft, toast, t],
+  );
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : "audio/webm";
+      const mr = new MediaRecorder(stream, { mimeType: mime });
+      audioChunksRef.current = [];
+      mr.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      mr.onstop = () => {
+        stream.getTracks().forEach((tr) => tr.stop()); // release the mic
+        const blob = new Blob(audioChunksRef.current, { type: mr.mimeType });
+        audioChunksRef.current = [];
+        if (blob.size > 0) void transcribeChunks(blob, mr.mimeType);
+        else setVoiceState("idle");
+      };
+      mediaRecorderRef.current = mr;
+      mr.start();
+      setVoiceState("recording");
+    } catch (err) {
+      const name = (err as Error)?.name;
+      toast({
+        message:
+          name === "NotAllowedError" || name === "SecurityError"
+            ? t("chat.composer.voicePermissionDenied")
+            : t("chat.composer.voiceFailed"),
+        variant: "error",
+      });
+      setVoiceState("idle");
+    }
+  }, [transcribeChunks, toast, t]);
+
+  const stopRecording = useCallback(() => {
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
+  }, []);
+
+  const onVoiceClick = useCallback(() => {
+    if (voiceState === "recording") stopRecording();
+    else if (voiceState === "idle") void startRecording();
+    // transcribing: ignore clicks until it resolves.
+  }, [voiceState, startRecording, stopRecording]);
 
   // @-mention state. `mention` is non-null while the caret sits inside
   // an @-token (no whitespace between the `@` and caret); `start` marks
@@ -929,26 +1014,35 @@ export function ChatView({
                   onSelect={onModelChange}
                   disabled={busy}
                 />
-                {/* 语音输入:STT 尚未实现。用 MicOff(带斜杠)+ 红色描边,视觉上明确"已关闭",
-                    并用自绘 tooltip(group-hover)解释,因为 disabled 的原生 title 不会触发。
-                    实现后换回 Mic 图标、去掉 voice-off 样式、接上 onClick 即可。 */}
-                <span className="group relative inline-flex shrink-0">
-                  <button
-                    type="button"
-                    className="inline-flex items-center rounded-md border border-status-err/60 p-1.5 text-status-err/70 hover:bg-accent disabled:cursor-not-allowed"
-                    aria-label={t("chat.composer.voiceInput")}
-                    aria-disabled
-                    disabled
-                  >
-                    <MicOff size={14} />
-                  </button>
-                  <span
-                    role="tooltip"
-                    className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-popover px-2 py-1 text-xs text-popover-foreground opacity-0 shadow-md ring-1 ring-border transition-opacity group-hover:opacity-100"
-                  >
-                    {t("chat.composer.voiceInputTitle")}
-                  </span>
-                </span>
+                {/* 语音输入(听写):点击录音 → 再点停止 → 转写填进输入框(不自动发)。
+                    idle=Mic / recording=红色 Square 脉冲 / transcribing=spinner。 */}
+                <button
+                  type="button"
+                  className={cn(
+                    "inline-flex shrink-0 items-center rounded-md p-1.5 hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50",
+                    voiceState === "recording"
+                      ? "border border-status-err/60 text-status-err"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                  aria-label={t("chat.composer.voiceInput")}
+                  title={
+                    voiceState === "recording"
+                      ? t("chat.composer.voiceRecording")
+                      : voiceState === "transcribing"
+                        ? t("chat.composer.voiceTranscribing")
+                        : t("chat.composer.voiceInputTitle")
+                  }
+                  onClick={onVoiceClick}
+                  disabled={voiceState === "transcribing"}
+                >
+                  {voiceState === "recording" ? (
+                    <Square size={14} className="animate-pulse fill-current" />
+                  ) : voiceState === "transcribing" ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Mic size={14} />
+                  )}
+                </button>
                 {busy && draft.trim() && onForceSend && (
                   <button
                     type="button"
