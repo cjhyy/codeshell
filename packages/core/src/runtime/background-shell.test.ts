@@ -130,6 +130,48 @@ describe("port detection", () => {
   });
 });
 
+describe("incremental read never loses data when a single read exceeds the cap (#5)", () => {
+  test("a >16KB burst is delivered completely across successive incremental reads", async () => {
+    // Emit 3000 uniquely-numbered lines (~24KB > 16KB cap) in one burst, then
+    // exit. Each line "L<NNNN>X\n" is 8 bytes and distinct, so we can prove no
+    // bytes were dropped. 3000*8 ≈ 24KB comfortably exceeds READ_RETURN_CAP.
+    const lines = 3000;
+    const r = mgr.spawnBackground({
+      command: `for i in $(seq 1 ${lines}); do printf 'L%05dX\\n' "$i"; done`,
+      cwd: home,
+      sessionId: "sessBig",
+    });
+    if (!r.ok) throw new Error("spawn failed");
+    const id = r.shellId;
+
+    await until(() => mgr.get(id)?.status === "exited");
+
+    // Drain via repeated INCREMENTAL reads (the agent's default path). The
+    // total exceeds READ_RETURN_CAP (16KB), so a buggy reader that advances the
+    // cursor to the end but only returns the trailing 16KB silently drops the
+    // earliest lines forever.
+    let combined = "";
+    for (let i = 0; i < 50; i++) {
+      const out = mgr.readOutput(id, "incremental");
+      if (!out.ok) throw new Error("read failed");
+      if (out.text.length === 0) break;
+      combined += out.text;
+    }
+
+    // Every single line must be present — first, last, and a middle sample.
+    expect(combined).toContain("L00001X");
+    expect(combined).toContain("L01500X");
+    expect(combined).toContain("L03000X");
+    // And no line is missing.
+    const missing: string[] = [];
+    for (let i = 1; i <= lines; i++) {
+      const tag = `L${String(i).padStart(5, "0")}X`;
+      if (!combined.includes(tag)) missing.push(tag);
+    }
+    expect(missing).toEqual([]);
+  });
+});
+
 describe("process group kill (难点2)", () => {
   test("KillShell reaps the whole group", async () => {
     const r = mgr.spawnBackground({

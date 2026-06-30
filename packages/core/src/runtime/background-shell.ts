@@ -390,23 +390,54 @@ export class BackgroundShellManager {
     }
 
     let rawSlice: string;
+    let capped = false;
     if (mode === "all") {
+      // Snapshot of the full retained buffer. This is explicitly a "show me the
+      // tail" view — when it exceeds the cap we keep the LAST 16KB (most recent
+      // output) and don't touch the incremental cursor.
       rawSlice = sh.ring.readAll();
-    } else {
-      // Absolute stream cursor — survives ring wraparound (a window-relative
-      // offset would silently skip new bytes once the window slides).
-      const slice = sh.ring.sliceFromAbsolute(sh.agentReadOffset);
-      rawSlice = slice.toString("utf8");
-      sh.agentReadOffset = sh.ring.totalWritten();
+      let text = cleanOutput(rawSlice);
+      if (text.length > READ_RETURN_CAP) {
+        text = text.slice(-READ_RETURN_CAP);
+        capped = true;
+      }
+      return { ok: true, text, header: this.buildHeader(sh, capped, "all") };
     }
 
-    let text = cleanOutput(rawSlice);
-    let capped = false;
-    if (text.length > READ_RETURN_CAP) {
-      text = text.slice(-READ_RETURN_CAP);
+    // Incremental: deliver bytes since the agent's last read WITHOUT dropping
+    // any. A single burst larger than the cap is paginated across successive
+    // reads — we consume only the leading READ_RETURN_CAP *raw* bytes this call
+    // and advance the absolute cursor by exactly that many, so the remainder is
+    // returned next read. (Truncating to the trailing 16KB while advancing the
+    // cursor to the end silently dropped the earliest bytes forever — #5.)
+    //
+    // Absolute stream cursor — survives ring wraparound (a window-relative
+    // offset would silently skip new bytes once the window slides).
+    const sliceBuf = sh.ring.sliceFromAbsolute(sh.agentReadOffset);
+    let consumedBytes = sliceBuf.length;
+    let rawBuf = sliceBuf;
+    if (rawBuf.length > READ_RETURN_CAP) {
+      // Cap on RAW bytes (not cleaned length): cleanOutput only ever shrinks,
+      // so the cleaned result of the first 16KB raw bytes is itself ≤ 16KB and
+      // won't need a second truncation. Advancing the cursor by exactly
+      // consumedBytes keeps the next read seamless.
+      rawBuf = rawBuf.subarray(0, READ_RETURN_CAP);
+      consumedBytes = READ_RETURN_CAP;
       capped = true;
     }
+    rawSlice = rawBuf.toString("utf8");
+    sh.agentReadOffset += consumedBytes;
 
+    const text = cleanOutput(rawSlice);
+    return { ok: true, text, header: this.buildHeader(sh, capped, "incremental") };
+  }
+
+  /**
+   * Build the status header line for a readOutput result. `mode` shapes the cap
+   * note: `all` keeps the trailing 16KB (older output omitted from THIS view),
+   * while incremental paginates (more output available on the next read).
+   */
+  private buildHeader(sh: InternalShell, capped: boolean, mode: "incremental" | "all"): string {
     const portPart = sh.detectedPort !== undefined ? ` port=${sh.detectedPort}` : "";
     const exitPart =
       sh.status === "exited" || sh.status === "killed"
@@ -415,11 +446,13 @@ export class BackgroundShellManager {
           : ` exit=${sh.exitCode ?? "?"}`
         : "";
     const wrapNote = sh.didWrap ? " (older output discarded)" : "";
-    const capNote = capped ? " (truncated to last 16KB)" : "";
+    const capNote = capped
+      ? mode === "all"
+        ? " (showing last 16KB)"
+        : " (16KB this read; call again for more)"
+      : "";
     const diskNote = sh.diskAvailable ? "" : " (disk buffer unavailable)";
-    const header = `[${sh.shellId} status=${sh.status}${portPart}${exitPart}]${wrapNote}${capNote}${diskNote}`;
-
-    return { ok: true, text, header };
+    return `[${sh.shellId} status=${sh.status}${portPart}${exitPart}]${wrapNote}${capNote}${diskNote}`;
   }
 
   /** Terminate a shell (its whole process group). Idempotent. */
