@@ -28,6 +28,11 @@ function user(text = "hi"): Message {
   return { kind: "user", id: freshId(), text };
 }
 
+/** An engine-injected user turn (step-gap steer / goal wakeup). */
+function injectedUser(text = "continue"): Message {
+  return { kind: "user", id: freshId(), text, injected: true };
+}
+
 describe("aggregateFileChanges", () => {
   test("returns null when no qualifying tools after last user", () => {
     expect(aggregateFileChanges([user(), tool("Read", { file_path: "a.ts" })])).toBeNull();
@@ -48,6 +53,34 @@ describe("aggregateFileChanges", () => {
     ];
     expect(aggregateFileChanges(msgs)).toEqual([
       { path: "a.ts", added: 3, removed: 2, count: 1 },
+    ]);
+  });
+
+  test("injected user turns (steer/wakeup) do NOT reset the aggregation boundary (#9)", () => {
+    // A goal-driven task: real user send → edit a.ts → engine wakes itself
+    // (injected user) → edit b.ts → wakes again → edit c.ts. All three edits
+    // belong to the same user task and must all appear, not just c.ts.
+    const msgs: Message[] = [
+      user("do the big task"),
+      tool("Write", { file_path: "a.ts", content: "x" }),
+      injectedUser(),
+      tool("Write", { file_path: "b.ts", content: "y" }),
+      injectedUser(),
+      tool("Write", { file_path: "c.ts", content: "z" }),
+    ];
+    const paths = (aggregateFileChanges(msgs) ?? []).map((f) => f.path).sort();
+    expect(paths).toEqual(["a.ts", "b.ts", "c.ts"]);
+  });
+
+  test("a REAL user send still resets the boundary (only that turn's edits)", () => {
+    const msgs: Message[] = [
+      user("first task"),
+      tool("Write", { file_path: "old.ts", content: "x" }),
+      user("second task"), // real send → new boundary
+      tool("Write", { file_path: "new.ts", content: "y" }),
+    ];
+    expect(aggregateFileChanges(msgs)).toEqual([
+      { path: "new.ts", added: 1, removed: 0, count: 1 },
     ]);
   });
 
