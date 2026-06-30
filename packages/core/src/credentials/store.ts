@@ -8,6 +8,8 @@ import {
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import type { Credential, CredentialStoreFile } from "./types.js";
+import { type EncryptionCipher, getDefaultCredentialCipher } from "./cipher.js";
+import { logger } from "../logging/logger.js";
 
 /** 测试可经 process.env.HOME 覆盖(镜像 settings/manager.ts userHome)。 */
 function userHome(): string {
@@ -29,7 +31,22 @@ const EMPTY: CredentialStoreFile = { version: 1, credentials: [] };
  * 双层模型。只存 token / link;cookie 不进库(见 credentials-module 设计稿)。
  */
 export class CredentialStore {
-  constructor(private readonly cwd?: string) {}
+  private readonly cipher: EncryptionCipher;
+
+  /**
+   * @param cwd     project root for the project-scope store (undefined → user only).
+   * @param cipher  secret encryption strategy. Defaults to the process-wide
+   *                cipher (see setDefaultCredentialCipher) — PlaintextCipher
+   *                unless the host installed one. The store always sees and
+   *                returns PLAINTEXT secrets; encryption is applied only at the
+   *                disk boundary (read decrypts, write encrypts).
+   */
+  constructor(
+    private readonly cwd?: string,
+    cipher?: EncryptionCipher,
+  ) {
+    this.cipher = cipher ?? getDefaultCredentialCipher();
+  }
 
   private pathFor(scope: CredentialScope): string | undefined {
     if (scope === "user") return join(userHome(), ".code-shell", "credentials.json");
@@ -37,12 +54,36 @@ export class CredentialStore {
     return join(this.cwd, ".code-shell", "credentials.json");
   }
 
+  /**
+   * Decrypt a stored secret to plaintext. A value this cipher can't decrypt
+   * (foreign ciphertext, or legacy plaintext under an encrypting cipher that
+   * rejects it) is left as-is rather than crashing the whole store — the worst
+   * case is one unusable credential, not an empty list. Re-encryption happens
+   * lazily on the next save() of that credential.
+   */
+  private decryptSecret(stored: string): string {
+    try {
+      if (this.cipher.canDecrypt && !this.cipher.canDecrypt(stored)) return stored;
+      return this.cipher.decrypt(stored);
+    } catch (err) {
+      logger.warn("credentials.decrypt_fail", { error: (err as Error).message });
+      return stored;
+    }
+  }
+
   private read(scope: CredentialScope): CredentialStoreFile {
     const p = this.pathFor(scope);
     if (!p || !existsSync(p)) return { ...EMPTY, credentials: [] };
     try {
       const raw = JSON.parse(readFileSync(p, "utf8")) as Partial<CredentialStoreFile>;
-      return { version: 1, credentials: Array.isArray(raw.credentials) ? raw.credentials : [] };
+      const creds = Array.isArray(raw.credentials) ? raw.credentials : [];
+      // Decrypt secrets at the disk boundary so all callers see plaintext.
+      for (const c of creds) {
+        if (typeof c.secret === "string" && c.secret.length > 0) {
+          c.secret = this.decryptSecret(c.secret);
+        }
+      }
+      return { version: 1, credentials: creds };
     } catch {
       return { ...EMPTY, credentials: [] };
     }
@@ -52,8 +93,19 @@ export class CredentialStore {
     const p = this.pathFor(scope);
     if (!p) return;
     mkdirSync(dirname(p), { recursive: true });
+    // Encrypt secrets at the disk boundary. `file` carries plaintext secrets
+    // (read() decrypted them); serialize a copy with each secret encrypted so
+    // we never persist plaintext under an encrypting cipher.
+    const onDisk: CredentialStoreFile = {
+      version: file.version,
+      credentials: file.credentials.map((c) =>
+        typeof c.secret === "string" && c.secret.length > 0
+          ? { ...c, secret: this.cipher.encrypt(c.secret) }
+          : c,
+      ),
+    };
     const tmp = `${p}.${process.pid}.${String(performance.now()).replace(".", "")}.tmp`;
-    writeFileSync(tmp, JSON.stringify(file, null, 2), { mode: 0o600 });
+    writeFileSync(tmp, JSON.stringify(onDisk, null, 2), { mode: 0o600 });
     renameSync(tmp, p);
   }
 

@@ -22,7 +22,7 @@
 import type { PermissionRule, MCPServerConfig } from "../types.js";
 import type { Evaluator } from "../run/Evaluator.js";
 import type { RegisteredTool } from "../types.js";
-import type { EngineHookConfig } from "../engine/engine.js";
+import type { EngineHookConfig } from "../engine/types.js";
 
 // ─── 1. Preset (brain) ──────────────────────────────────────────
 

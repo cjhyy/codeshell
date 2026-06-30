@@ -18,7 +18,25 @@ import type { ToolRegistry } from "./registry.js";
 import type { AgentPresetName } from "../preset/index.js";
 import type { SandboxBackend } from "./sandbox/index.js";
 import type { HookRegistry } from "../hooks/registry.js";
-import type { Engine } from "../engine/engine.js";
+
+/**
+ * Narrow view of the owning Engine that tools are allowed to call back into.
+ * Defined here (in the low-level tool-system) rather than importing the
+ * concrete `Engine` type so tool-system does NOT depend on the top-level
+ * engine module — that import created a tool-system ↔ engine cycle. The Engine
+ * class satisfies this structurally (no `implements` needed); this interface
+ * lists exactly the members tools use today (see plan.ts / worktree.ts).
+ */
+export interface ToolRuntimeHost {
+  /** Whether the owning Engine is currently in plan mode. */
+  readonly planMode: boolean;
+  /** Toggle plan mode (EnterPlanMode / ExitPlanMode tools). */
+  setPlanMode(value: boolean): void;
+  /** Per-worktree setup scripts, or undefined for sub-agents / no cwd. */
+  readWorktreeSetupScripts(
+    cwd?: string,
+  ): { default?: string; macos?: string; linux?: string; windows?: string } | undefined;
+}
 
 /** One choice in a multiple-choice AskUserQuestion. */
 export interface AskUserChoice {
@@ -204,9 +222,11 @@ export interface ToolContext {
    * skips ALL checks including path validation. Undefined → treat as
    * "default" (always enforce). */
   permissionMode?: string;
-  /** The Engine that built this context. Lets tools call back into the engine
-   *  (e.g. ctx.engine.setPlanMode(true/false)) without a module-level singleton. */
-  engine: Engine;
+  /** The Engine that built this context, as the narrow {@link ToolRuntimeHost}
+   *  view. Lets tools call back into the engine (e.g. ctx.engine.setPlanMode)
+   *  without a module-level singleton — and without tool-system depending on
+   *  the concrete Engine type (which would re-introduce the import cycle). */
+  engine: ToolRuntimeHost;
   /**
    * sessionId of the Engine.run() turn this context was built for. Tools
    * that emit session-scoped side effects (today: background-agent

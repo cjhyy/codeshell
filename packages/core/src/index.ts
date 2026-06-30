@@ -57,7 +57,7 @@ export {
 // ─── Engine (primary API) ────────────────────────────────────────
 
 export { Engine, loadAgentDefinitionsForCwd } from "./engine/engine.js";
-export type { EngineConfig, EngineHookConfig, EngineResult } from "./engine/engine.js";
+export type { EngineConfig, EngineHookConfig, EngineResult } from "./engine/types.js";
 export { resolveLLMConfigForTag } from "./engine/resolve-llm-config.js";
 export { resolveAuxKey } from "./engine/aux-key.js";
 export {
@@ -449,6 +449,10 @@ export {
   useCredentialToolDef,
   useCredentialToolDefFor,
   sweepStaleCredentialCookies,
+  type EncryptionCipher,
+  PlaintextCipher,
+  setDefaultCredentialCipher,
+  getDefaultCredentialCipher,
 } from "./credentials/index.js";
 
 // ─── State (runtime singletons shared with TUI) ──────────────────

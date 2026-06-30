@@ -1,7 +1,7 @@
 import { ChatSession } from "./chat-session.js";
 import type { Engine } from "../engine/engine.js";
 import type { EngineRuntime } from "../engine/runtime.js";
-import type { EngineConfig } from "../engine/engine.js";
+import type { EngineConfig } from "../engine/types.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
 import { clearAgentOutputFiles } from "../tool-system/builtin/agent-output-file.js";
 

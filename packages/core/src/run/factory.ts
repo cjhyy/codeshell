@@ -21,7 +21,7 @@
 import { join } from "node:path";
 import { homedir } from "node:os";
 import type { LLMConfig, PermissionMode } from "../types.js";
-import type { EngineConfig, EngineHookConfig } from "../engine/engine.js";
+import type { EngineConfig, EngineHookConfig } from "../engine/types.js";
 import type { Evaluator } from "./Evaluator.js";
 import { RunManager } from "./RunManager.js";
 import { FileRunStore } from "./FileRunStore.js";

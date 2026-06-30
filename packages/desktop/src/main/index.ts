@@ -46,8 +46,10 @@ import {
   resolveTranscribeProvider,
   isTranscribeAvailable,
   describeTranscribe,
+  setDefaultCredentialCipher,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
+import { SafeStorageCipher } from "./credential-cipher.js";
 import { registerGuest } from "./browser-driver/active-guest.js";
 import { buildDesktopAutomationRunner } from "./automation-host.js";
 import {
@@ -1333,6 +1335,18 @@ async function applyGitPathFromSettings(): Promise<void> {
 }
 
 app.whenReady().then(() => {
+  // Credential encryption boundary (EncryptionCipher) is now in place, but we
+  // intentionally do NOT install SafeStorageCipher yet: the agent runs in a
+  // separate worker process that has no safeStorage key, so if main wrote
+  // `enc:safeStorage:…` the worker (which reads credentials for UseCredential /
+  // env exposure) could not decrypt them — a regression. Encryption is enabled
+  // only once the cipher is handed across the stdio boundary to the worker
+  // (P1). Until then the process default stays PlaintextCipher (0o600), i.e.
+  // identical to pre-boundary behavior. SafeStorageCipher is implemented and
+  // ready in ./credential-cipher.ts; wire it together with the worker.
+  void setDefaultCredentialCipher; // referenced; see note above
+  void SafeStorageCipher;
+
   if (process.platform === "darwin" && app.dock) {
     try {
       app.dock.setIcon(resolve(__dirname, "..", "..", "build", "icon.png"));

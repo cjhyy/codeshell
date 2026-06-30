@@ -1,5 +1,5 @@
 import type { ValidatedSettings } from "./schema.js";
-import type { EngineConfig } from "../engine/engine.js";
+import type { EngineConfig } from "../engine/types.js";
 import { personalizationFrom } from "./personalization.js";
 import { mergePluginMcpServers } from "../plugins/installer/loadPluginMcp.js";
 
