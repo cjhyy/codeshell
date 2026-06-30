@@ -18,8 +18,7 @@
  */
 
 import type { ToolCall, ToolResult } from "../types.js";
-
-const READ_ONLY_TOOLS = new Set(["Read", "Grep", "Glob", "WebFetch", "WebSearch", "ToolSearch"]);
+import { READ_ONLY_TOOLS } from "./plan-mode-allowlist.js";
 
 const READ_BUDGET = 3;
 const SILENT_TURN_BUDGET = 3;

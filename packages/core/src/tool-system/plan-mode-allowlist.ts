@@ -15,9 +15,28 @@
  * Membership policy: read-only tools, planning/agent tools, and
  * non-destructive task-tracking tools. Bash is included so the model sees it;
  * the executor additionally gates Bash to read-only commands at call time
- * (see executor.isReadOnlyBashCommand). Write/Edit/ApplyPatch/NotebookEdit and
- * other mutating tools are intentionally excluded.
+ * (executor defers to classifyBashCommand, admitting only "safe-read").
+ * Write/Edit/ApplyPatch/NotebookEdit and other mutating tools are
+ * intentionally excluded.
  */
+
+/**
+ * The built-in tools that only READ — no file writes, no side effects, no
+ * network mutations. Single source of truth shared by:
+ *   - investigation-guard.ts (which tools count as "just looking")
+ *   - permission.ts HeadlessApprovalBackend (approve-read-only mode)
+ *   - permission.ts assessRisk (these are genuinely low-risk; everything else,
+ *     including MCP tools, is at least medium so it isn't auto-approved blind)
+ * These three lists were independent byte-for-byte copies that could drift.
+ */
+export const READ_ONLY_TOOLS: ReadonlySet<string> = new Set([
+  "Read",
+  "Glob",
+  "Grep",
+  "WebSearch",
+  "WebFetch",
+  "ToolSearch",
+]);
 export const PLAN_MODE_ALLOWED_TOOLS: ReadonlySet<string> = new Set([
   // Plan lifecycle
   "EnterPlanMode",

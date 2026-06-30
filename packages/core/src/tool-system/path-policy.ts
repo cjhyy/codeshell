@@ -116,6 +116,16 @@ const SENSITIVE_FILE_PATTERNS = [
   ),
   // Bare (extensionless) credential files: `secret`, `credentials`, `token`.
   /^(secrets?|credentials?|token)$/i,
+  // Well-known credential files matched by EXACT name (anchored both ends, so
+  // npmrc-helper.ts / git-credentials.md stay writable). These carry no
+  // secret-y stem and aren't .env/.pem, so the patterns above miss them, yet
+  // they routinely hold auth tokens / passwords:
+  //   .git-credentials (git creds), .npmrc (_authToken), .netrc (login creds),
+  //   .pgpass (postgres passwords).
+  /^\.git-credentials$/i,
+  /^\.npmrc$/i,
+  /^\.netrc$/i,
+  /^\.pgpass$/i,
 ] as const;
 
 const ENV_DISABLE = "CODESHELL_PATH_POLICY";
@@ -147,8 +157,27 @@ function expandTilde(p: string): string {
 
 export type PathApprovalScope = "once" | "session" | "project";
 
-/** sessionId → set of approved directory prefixes (absolute, trailing sep). */
-const sessionPathGrants = new Map<string, Set<string>>();
+/**
+ * A remembered grant carries the OPERATION it was granted for. A `read` grant
+ * covers only reads; a `write` grant covers reads AND writes (if you may write
+ * a file you may certainly read it). This is the fix for "approving a read of a
+ * folder silently let the agent write to it too" — grants used to be bare
+ * directory prefixes compared without regard to operation.
+ */
+interface PathGrant {
+  /** Absolute directory prefix ending in `sep`. */
+  prefix: string;
+  op: PathOperation;
+}
+
+/** sessionId → set of approved directory grants (prefix + operation). */
+const sessionPathGrants = new Map<string, Set<PathGrant>>();
+
+/** True if a grant for `grantOp` authorizes an operation of `wantOp`. */
+function grantCoversOp(grantOp: PathOperation, wantOp: PathOperation): boolean {
+  // write ⊇ {read, write}; read ⊇ {read}.
+  return grantOp === "write" || grantOp === wantOp;
+}
 
 /**
  * Normalize a path for comparison. Windows file systems are case-INsensitive,
@@ -168,48 +197,92 @@ function dirPrefix(absPath: string): string {
   return d;
 }
 
-/** True if `resolved` sits inside any approved directory prefix in `grants`. */
-function coveredBy(grants: Iterable<string>, resolved: string): boolean {
+/**
+ * True if `resolved` sits inside any grant whose prefix covers it AND whose
+ * operation authorizes `operation` (write grants cover reads; read grants do
+ * not cover writes).
+ */
+function coveredBy(
+  grants: Iterable<PathGrant>,
+  resolved: string,
+  operation: PathOperation,
+): boolean {
   const target = normPath(resolved.endsWith(sep) ? resolved : resolved + sep);
   for (const g of grants) {
-    const gn = normPath(g);
+    if (!grantCoversOp(g.op, operation)) continue;
+    const gn = normPath(g.prefix);
     if (target === gn || target.startsWith(gn)) return true;
   }
   return false;
 }
 
-function projectPathGrants(cwd: string): string[] {
+/**
+ * Read persisted project grants. Two on-disk shapes are accepted:
+ *   - legacy bare string  "/dir/"            → interpreted as a READ-only grant
+ *     (conservative: pre-fix entries were written without an operation, and we
+ *     must not retroactively treat them as write authority).
+ *   - object  { path: "/dir/", op: "write" } → operation as stored.
+ */
+function projectPathGrants(cwd: string): PathGrant[] {
   const file = join(cwd, ".code-shell", "settings.local.json");
   if (!existsSync(file)) return [];
   try {
     const s = JSON.parse(readFileSync(file, "utf-8")) as {
       pathApprovals?: unknown;
     };
-    return Array.isArray(s.pathApprovals)
-      ? (s.pathApprovals.filter((x) => typeof x === "string") as string[])
-      : [];
+    if (!Array.isArray(s.pathApprovals)) return [];
+    const out: PathGrant[] = [];
+    for (const entry of s.pathApprovals) {
+      if (typeof entry === "string") {
+        out.push({ prefix: entry, op: "read" });
+      } else if (
+        entry &&
+        typeof entry === "object" &&
+        typeof (entry as { path?: unknown }).path === "string"
+      ) {
+        const op = (entry as { op?: unknown }).op === "write" ? "write" : "read";
+        out.push({ prefix: (entry as { path: string }).path, op });
+      }
+    }
+    return out;
   } catch {
     return [];
   }
 }
 
-/** Has the user already approved a directory covering `resolved`? */
+/** Has the user already approved `operation` on a directory covering `resolved`? */
 function isPathPreApproved(
   resolved: string,
+  operation: PathOperation,
   cwd: string,
   sessionId?: string,
 ): boolean {
   if (sessionId) {
     const s = sessionPathGrants.get(sessionId);
-    if (s && coveredBy(s, resolved)) return true;
+    if (s && coveredBy(s, resolved, operation)) return true;
   }
-  return coveredBy(projectPathGrants(cwd), resolved);
+  return coveredBy(projectPathGrants(cwd), resolved, operation);
 }
 
-/** Record a session/project grant for the DIRECTORY containing `resolved`. */
+/** A persisted project grant: object form carries the operation. */
+type StoredGrant = string | { path: string; op: PathOperation };
+
+function storedPrefix(g: StoredGrant): string {
+  return typeof g === "string" ? g : g.path;
+}
+function storedOp(g: StoredGrant): PathOperation {
+  return typeof g === "string" ? "read" : g.op;
+}
+
+/**
+ * Record a session/project grant for the DIRECTORY containing `resolved`,
+ * tagged with the OPERATION the user approved. A write grant subsumes read,
+ * so granting write where a read grant already exists upgrades it.
+ */
 function recordPathApproval(
   scope: PathApprovalScope,
   resolved: string,
+  operation: PathOperation,
   cwd: string,
   sessionId?: string,
 ): void {
@@ -222,7 +295,14 @@ function recordPathApproval(
       s = new Set();
       sessionPathGrants.set(sessionId, s);
     }
-    s.add(prefix);
+    // Drop a weaker (read) grant for the same prefix when upgrading to write,
+    // and skip adding a redundant read when a write grant already covers it.
+    for (const g of s) {
+      if (g.prefix !== prefix) continue;
+      if (grantCoversOp(g.op, operation)) return; // already covered
+      if (operation === "write" && g.op === "read") s.delete(g); // upgrade
+    }
+    s.add({ prefix, op: operation });
     return;
   }
   // project: persist to settings.local.json (atomic, idempotent).
@@ -234,7 +314,7 @@ function recordPathApproval(
     // gone. Persistence here is best-effort, so skip when the root is missing.
     if (!existsSync(cwd)) return;
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    let settings: { pathApprovals?: string[] } = {};
+    let settings: { pathApprovals?: StoredGrant[] } = {};
     if (existsSync(file)) {
       try {
         settings = JSON.parse(readFileSync(file, "utf-8"));
@@ -243,14 +323,28 @@ function recordPathApproval(
       }
     }
     if (!Array.isArray(settings.pathApprovals)) settings.pathApprovals = [];
-    if (!settings.pathApprovals.includes(prefix)) {
-      settings.pathApprovals.push(prefix);
-      // randomUUID() guards against temp-name collisions between writers in
-      // the same millisecond; the rename keeps the swap atomic.
-      const tmp = `${file}.${randomUUID()}.tmp`;
-      writeFileSync(tmp, JSON.stringify(settings, null, 2) + "\n", "utf-8");
-      renameSync(tmp, file);
+    const existing = settings.pathApprovals.find(
+      (g) => storedPrefix(g) === prefix,
+    );
+    if (existing) {
+      // Already covered (read-or-better matching the request)? Nothing to do.
+      if (grantCoversOp(storedOp(existing), operation)) return;
+      // Upgrade read → write in place.
+      if (operation === "write") {
+        settings.pathApprovals = settings.pathApprovals.map((g) =>
+          storedPrefix(g) === prefix ? { path: prefix, op: "write" as const } : g,
+        );
+      } else {
+        return;
+      }
+    } else {
+      settings.pathApprovals.push({ path: prefix, op: operation });
     }
+    // randomUUID() guards against temp-name collisions between writers in
+    // the same millisecond; the rename keeps the swap atomic.
+    const tmp = `${file}.${randomUUID()}.tmp`;
+    writeFileSync(tmp, JSON.stringify(settings, null, 2) + "\n", "utf-8");
+    renameSync(tmp, file);
   } catch {
     // Persistence is best-effort; an unwritable disk must not break the op.
   }
@@ -488,10 +582,11 @@ export async function enforcePathPolicyWithApproval(
     return `Error: blocked by path policy — ${c.reason}. Path: ${c.resolvedPath}. ` +
       `Plan mode does not allow file writes.`;
   }
-  // Already approved this directory (this session or persisted for the
-  // project)? Proceed without re-prompting — this is the fix for "I keep
-  // having to click allow for the same folder".
-  if (isPathPreApproved(c.resolvedPath, ctx.cwd, ctx.sessionId)) return null;
+  // Already approved this directory for this OPERATION (this session or
+  // persisted for the project)? Proceed without re-prompting — this is the fix
+  // for "I keep having to click allow for the same folder". A read grant does
+  // NOT cover a write; a write grant covers both.
+  if (isPathPreApproved(c.resolvedPath, operation, ctx.cwd, ctx.sessionId)) return null;
   if (!ctx.askUser) {
     return `Error: path requires approval — ${c.reason}. Path: ${c.resolvedPath}. ` +
       `No interactive approval UI is available in this run.`;
@@ -508,7 +603,7 @@ export async function enforcePathPolicyWithApproval(
   askChains.set(chainKey, new Promise<void>((r) => (release = r)));
   try {
     await prevTurn;
-    if (isPathPreApproved(c.resolvedPath, ctx.cwd, ctx.sessionId)) return null;
+    if (isPathPreApproved(c.resolvedPath, operation, ctx.cwd, ctx.sessionId)) return null;
     return await promptForPathApproval(
       c,
       operation,
@@ -569,11 +664,11 @@ async function promptForPathApproval(
 
   if (answer === ALLOW_ONCE) return null;
   if (answer === ALLOW_SESSION) {
-    recordPathApproval("session", c.resolvedPath, ctx.cwd!, ctx.sessionId);
+    recordPathApproval("session", c.resolvedPath, operation, ctx.cwd!, ctx.sessionId);
     return null;
   }
   if (answer === ALLOW_PROJECT) {
-    recordPathApproval("project", c.resolvedPath, ctx.cwd!, ctx.sessionId);
+    recordPathApproval("project", c.resolvedPath, operation, ctx.cwd!, ctx.sessionId);
     return null;
   }
   return `Error: path approval denied by user — ${c.reason}. Path: ${c.resolvedPath}`;

@@ -67,4 +67,66 @@ describe("ToolExecutor plan-mode Bash gate", () => {
     expect(result.isError).toBe(true);
     expect(ranHandler()).toBe(false);
   });
+
+  // #1 regression: the prior hand-rolled isReadOnlyBashCommand whitelisted
+  // `find` and `awk` wholesale and missed process substitution / difftool,
+  // so these file-mutating commands ran silently while planning. The gate
+  // now defers to classifyBashCommand and only admits safe-read.
+  it("blocks find -delete (mutating find)", async () => {
+    const { executor, ranHandler } = setup();
+    const result = await executor.executeSingle(bashCall("find . -name '*.log' -delete"));
+    expect(result.isError).toBe(true);
+    expect(ranHandler()).toBe(false);
+  });
+
+  it("blocks find -exec rm", async () => {
+    const { executor, ranHandler } = setup();
+    const result = await executor.executeSingle(bashCall("find . -name '*.tmp' -exec rm {} +"));
+    expect(result.isError).toBe(true);
+    expect(ranHandler()).toBe(false);
+  });
+
+  it("blocks awk system() shell-out", async () => {
+    const { executor, ranHandler } = setup();
+    const result = await executor.executeSingle(bashCall("awk 'BEGIN{system(\"rm -rf build\")}'"));
+    expect(result.isError).toBe(true);
+    expect(ranHandler()).toBe(false);
+  });
+
+  it("blocks process substitution (cat <(sh -c ...))", async () => {
+    const { executor, ranHandler } = setup();
+    const result = await executor.executeSingle(bashCall("cat <(sh -c 'touch evil')"));
+    expect(result.isError).toBe(true);
+    expect(ranHandler()).toBe(false);
+  });
+
+  it("blocks git difftool -x arbitrary command", async () => {
+    const { executor, ranHandler } = setup();
+    const result = await executor.executeSingle(bashCall("git difftool -x 'touch evil' HEAD"));
+    expect(result.isError).toBe(true);
+    expect(ranHandler()).toBe(false);
+  });
+
+  // Plan mode is strictly read-only: even non-destructive writes (mkdir/touch/cp)
+  // must be blocked while planning — they belong after ExitPlanMode.
+  it("blocks a safe-write command (mkdir) in plan mode", async () => {
+    const { executor, ranHandler } = setup();
+    const result = await executor.executeSingle(bashCall("mkdir newdir"));
+    expect(result.isError).toBe(true);
+    expect(ranHandler()).toBe(false);
+  });
+
+  it("still allows legit read-only find (no mutating action)", async () => {
+    const { executor, ranHandler } = setup();
+    const result = await executor.executeSingle(bashCall("find . -name '*.ts'"));
+    expect(result.isError).toBeFalsy();
+    expect(ranHandler()).toBe(true);
+  });
+
+  it("still allows a read-only pipe (ls | grep)", async () => {
+    const { executor, ranHandler } = setup();
+    const result = await executor.executeSingle(bashCall("ls | grep foo"));
+    expect(result.isError).toBeFalsy();
+    expect(ranHandler()).toBe(true);
+  });
 });

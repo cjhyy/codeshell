@@ -19,6 +19,7 @@ import {
 } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { logger as rootPermLogger } from "../logging/logger.js";
+import { READ_ONLY_TOOLS } from "./plan-mode-allowlist.js";
 
 export interface ApprovalBackend {
   requestApproval(request: ApprovalRequest): Promise<ApprovalResult>;
@@ -34,8 +35,7 @@ export class HeadlessApprovalBackend implements ApprovalBackend {
       case "deny-all":
         return { approved: false, reason: "headless deny-all mode" };
       case "approve-read-only": {
-        const readOnlyTools = ["Read", "Glob", "Grep", "WebSearch", "WebFetch", "ToolSearch"];
-        if (readOnlyTools.includes(req.toolName)) {
+        if (READ_ONLY_TOOLS.has(req.toolName)) {
           return { approved: true };
         }
         return { approved: false, reason: "read-only mode: write operations denied" };
@@ -542,9 +542,16 @@ const DANGEROUS_PATTERNS = [
 
 const SAFE_READ_PATTERNS = [
   /^(cat|head|tail|less|more|wc|file|stat|du|df)\s/,
-  /^(ls|tree|find|locate|which|whereis|type)\s/,
+  /^(ls|tree|locate|which|whereis|type)\s/,
+  // `find` is read-only ONLY without an action that executes or mutates:
+  // -delete, -exec/-execdir/-ok/-okdir run commands; -fprint/-fprintf/-fls
+  // write files. Reject those so `find . -delete` / `find . -exec rm {} +`
+  // are NOT classified safe-read. Plain predicates (-name, -type, -print) stay.
+  /^find\s(?!.*\s-(delete|exec(dir)?|ok(dir)?|fprintf?|fls)\b)/,
   /^(grep|rg|ag|ack|fgrep|egrep)\s/,
-  /^(git\s+(status|log|diff|branch|show|blame|remote|tag|stash\s+list|rev-parse|describe))/,
+  // Word-boundary the git read subcommands so `git difftool -x <cmd>` (which
+  // runs an arbitrary external command) does NOT match on the `diff` branch.
+  /^(git\s+(status|log|diff|branch|show|blame|remote|tag|stash\s+list|rev-parse|describe))\b/,
   /^(node|python|ruby|go|rustc|java|javac)\s+--version/,
   /^(npm|pnpm|yarn|cargo|pip|gem|brew)\s+(list|ls|info|show|view|outdated|audit)/,
   /^pwd$/,
@@ -1009,7 +1016,13 @@ export class PermissionClassifier {
     if (toolName === "Bash" && this.isDangerousCommand(args)) return "high";
     if (["Write", "Edit"].includes(toolName)) return "medium";
     if (toolName === "Bash") return "medium";
-    return "low";
+    // Only genuinely read-only built-ins are "low" (the sole tier
+    // AutoApprovalBackend approves with no delegate). Everything else —
+    // crucially every MCP tool, which can delete records, send messages, or
+    // deploy — defaults to "medium" so auto mode delegates it (UI prompt) or
+    // fails closed, instead of blind-approving an unknown side-effecting tool.
+    if (READ_ONLY_TOOLS.has(toolName)) return "low";
+    return "medium";
   }
 
   /**

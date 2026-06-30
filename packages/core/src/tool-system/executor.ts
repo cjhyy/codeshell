@@ -16,7 +16,7 @@ import type {
 } from "../types.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import { ToolRegistry } from "./registry.js";
-import { PermissionClassifier } from "./permission.js";
+import { PermissionClassifier, classifyBashCommand } from "./permission.js";
 import { PermissionDeniedError, ToolNotFoundError } from "../exceptions.js";
 import { logger as rootLogger, getCurrentSid } from "../logging/logger.js";
 import { recordToolCall, recordToolResult } from "../logging/session-recorder.js";
@@ -173,7 +173,14 @@ export class ToolExecutor {
       // would slip past plan mode into the normal permission flow (where the user
       // could approve it) AND leave no diff, since it never touches Write/Edit.
       const allowed = PLAN_MODE_ALLOWED_TOOLS.has(call.toolName);
-      const bashWrite = call.toolName === "Bash" && !this.isReadOnlyBashCommand(call.args);
+      // Defer to the canonical shell classifier (the same one the permission
+      // flow uses) instead of a second hand-rolled allowlist that drifted and
+      // let find -delete / awk system() / process substitution / git difftool
+      // through. Plan mode is strictly read-only, so ONLY "safe-read" passes —
+      // safe-write (mkdir/touch/cp), unsafe, and dangerous are all blocked.
+      const bashWrite =
+        call.toolName === "Bash" &&
+        classifyBashCommand(String(call.args.command ?? "")) !== "safe-read";
       if (!allowed || bashWrite) {
         return {
           id: call.id,
@@ -522,7 +529,15 @@ export class ToolExecutor {
   ): string[] | string {
     if (policy.kind === "arg") {
       const raw = args[policy.arg];
-      if (typeof raw === "string" && raw.length > 0) return [raw];
+      if (typeof raw === "string" && raw.length > 0) {
+        // Resolve a RELATIVE single-string path arg against ctx.cwd before
+        // classification, mirroring the array branch below and the apply_patch
+        // branch — otherwise classifyPath's process.cwd()-based resolution
+        // mis-places an in-workspace relative path (e.g. Read "src/x.ts") as
+        // "outside workspace" and over-prompts. Absolute paths pass through.
+        const cwd = this.toolCtx?.cwd ?? process.cwd();
+        return [isAbsolutePath(raw) ? raw : resolvePath(cwd, raw)];
+      }
       // Array path args (e.g. GenerateImage `referenceImages`, GenerateVideo
       // `images`): enforce EVERY element. Without this an array yielded zero
       // targets, so out-of-workspace reads bypassed the path-policy "ask" gate
@@ -559,92 +574,6 @@ export class ToolExecutor {
     } catch (err) {
       return `Error: ${(err as Error).message}`;
     }
-  }
-
-  private isReadOnlyBashCommand(args: Record<string, unknown>): boolean {
-    const cmd = String(args.command ?? "").trim();
-
-    // Reject shell metacharacters that could chain a write command after a
-    // read-only prefix: ; && || ` $(...) redirections. A single pipe (|) is
-    // still allowed — the per-part whitelist further down validates it.
-    const DANGEROUS = /;|&&|\|\||`|\$\(|>/;
-    if (DANGEROUS.test(cmd)) return false;
-
-    // Extract the base command (first word, ignoring env vars like VAR=val)
-    const baseCmd = cmd.replace(/^(\w+=\S+\s+)*/, "").split(/\s/)[0];
-
-    const readOnlyCommands = new Set([
-      "ls",
-      "find",
-      "cat",
-      "head",
-      "tail",
-      "wc",
-      "file",
-      "stat",
-      "tree",
-      "du",
-      "df",
-      "pwd",
-      "echo",
-      "which",
-      "type",
-      "env",
-      "printenv",
-      "grep",
-      "rg",
-      "ag",
-      "awk",
-      "less",
-      "more",
-      "sort",
-      "uniq",
-      "diff",
-      "readlink",
-      "realpath",
-      "basename",
-      "dirname",
-      "date",
-      "whoami",
-      "uname",
-      "hostname",
-      "id",
-      "groups",
-      "locale",
-      "uptime",
-    ]);
-
-    // Whitelisted read-only git/tool subcommands.
-    // Deliberately exclude `node -e`, `python -c`, `sed -n`, etc. — those can
-    // execute arbitrary code even though they "look read-only".
-    const readOnlyPrefixes = [
-      "git log",
-      "git status",
-      "git diff",
-      "git branch",
-      "git show",
-      "git blame",
-      "git remote",
-      "git tag",
-      "git stash list",
-      "git rev-parse",
-      "npx tsc --noEmit",
-    ];
-
-    if (readOnlyCommands.has(baseCmd)) return true;
-    if (readOnlyPrefixes.some((p) => cmd.startsWith(p))) return true;
-
-    // Allow piped commands if all parts are read-only. Redirections were
-    // already rejected above, so a bare `|` here is a real pipeline.
-    if (cmd.includes("|")) {
-      const parts = cmd.split("|").map((p) => p.trim());
-      return parts.every((part) => {
-        const partBase = part.replace(/^(\w+=\S+\s+)*/, "").split(/\s/)[0];
-        return readOnlyCommands.has(partBase);
-      });
-    }
-
-    return false;
   }
 
   /**

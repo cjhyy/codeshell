@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, realpathSync } from "node:fs";
 import { tmpdir, homedir } from "node:os";
 import { join } from "node:path";
 import { enforcePathPolicyWithApproval, _resetSessionPathGrants } from "./path-policy.js";
@@ -180,6 +180,102 @@ describe("enforcePathPolicyWithApproval", () => {
     expect(await enforcePathPolicyWithApproval(file, "read", ctxFresh)).toBeNull();
     expect(asked).toBe(false); // covered by persisted project grant
     expect(calls).toBe(1);
+    cleanup();
+  });
+});
+
+describe("路径授权区分读/写(operation-aware grants)", () => {
+  test("read 授权不覆盖 write — 同目录 write 仍要问", async () => {
+    _resetSessionPathGrants();
+    const ws = tmpWorkspace();
+    const dir = mkdtempSync(join(tmpdir(), "cs-rw-readgrant-"));
+    dirs.push(dir);
+    const fileA = join(dir, "a.txt");
+    const fileB = join(dir, "b.txt");
+
+    let calls = 0;
+    const ctx = {
+      cwd: ws,
+      sessionId: "s-rw-1",
+      askUser: async () => {
+        calls += 1;
+        return "本目录本会话允许";
+      },
+    } as unknown as ToolContext;
+
+    // Grant a READ on fileA.
+    expect(await enforcePathPolicyWithApproval(fileA, "read", ctx)).toBeNull();
+    expect(calls).toBe(1);
+    // A WRITE to the same dir must NOT be silently allowed — it asks again.
+    expect(await enforcePathPolicyWithApproval(fileB, "write", ctx)).toBeNull();
+    expect(calls).toBe(2);
+    cleanup();
+  });
+
+  test("write 授权覆盖 read — 同目录 read 不再问", async () => {
+    _resetSessionPathGrants();
+    const ws = tmpWorkspace();
+    const dir = mkdtempSync(join(tmpdir(), "cs-rw-writegrant-"));
+    dirs.push(dir);
+    const fileA = join(dir, "a.txt");
+    const fileB = join(dir, "b.txt");
+
+    let calls = 0;
+    const ctx = {
+      cwd: ws,
+      sessionId: "s-rw-2",
+      askUser: async () => {
+        calls += 1;
+        return "本目录本会话允许";
+      },
+    } as unknown as ToolContext;
+
+    // Grant a WRITE on fileA → read+write covered.
+    expect(await enforcePathPolicyWithApproval(fileA, "write", ctx)).toBeNull();
+    expect(calls).toBe(1);
+    // A READ in the same dir is covered by the write grant — no prompt.
+    expect(await enforcePathPolicyWithApproval(fileB, "read", ctx)).toBeNull();
+    expect(calls).toBe(1);
+    cleanup();
+  });
+
+  test("旧式裸字符串 pathApprovals 条目保守解释为只读", async () => {
+    _resetSessionPathGrants();
+    const ws = tmpWorkspace();
+    const dir = mkdtempSync(join(tmpdir(), "cs-rw-legacy-"));
+    dirs.push(dir);
+    const file = join(dir, "report.md");
+
+    // Seed a legacy bare-string project grant for the dir (trailing sep prefix,
+    // the format recordPathApproval used before this fix). realpath the dir so
+    // the prefix matches the resolved path coveredBy compares against (macOS
+    // /var → /private/var).
+    const realDir = realpathSync(dir);
+    const prefix = realDir.endsWith("/") ? realDir : realDir + "/";
+    const cfgDir = join(ws, ".code-shell");
+    mkdirSync(cfgDir, { recursive: true });
+    writeFileSync(
+      join(cfgDir, "settings.local.json"),
+      JSON.stringify({ pathApprovals: [prefix] }, null, 2) + "\n",
+      "utf-8",
+    );
+
+    let asked = false;
+    const ctx = {
+      cwd: ws,
+      sessionId: "s-rw-legacy",
+      askUser: async () => {
+        asked = true;
+        return "拒绝";
+      },
+    } as unknown as ToolContext;
+
+    // Legacy entry covers READ → no prompt.
+    expect(await enforcePathPolicyWithApproval(file, "read", ctx)).toBeNull();
+    expect(asked).toBe(false);
+    // …but NOT write — the conservative interpretation of legacy bare entries.
+    expect(await enforcePathPolicyWithApproval(file, "write", ctx)).toContain("denied");
+    expect(asked).toBe(true);
     cleanup();
   });
 });

@@ -60,10 +60,27 @@ describe("classifyPath — sensitive-file matching is not a source-code substrin
       "secrets.yml",
       "auth.json",
       "token.json",
+      // #3: well-known credential files by exact name — no secret-y stem and
+      // not a .env/.pem, so the stem+extension patterns miss them. Must be
+      // protected by an exact-name allowlist.
+      ".git-credentials",
+      ".npmrc",
+      ".netrc",
+      ".pgpass",
     ];
     for (const name of protectedFiles) {
       const c = classifyPath(join(ws, name), { workspaceRoot: ws, operation: "write" });
       expect(c.decision).toBe("deny"); // genuine secret-bearing file
+    }
+    cleanup();
+  });
+
+  test("source files that merely resemble a credential file stay writable", () => {
+    const ws = tmpWorkspace();
+    // Guard against the exact-name allowlist regressing into a substring match.
+    for (const name of ["npmrc-helper.ts", "netrc.test.ts", "git-credentials.md"]) {
+      const c = classifyPath(join(ws, name), { workspaceRoot: ws, operation: "write" });
+      expect(c.decision).toBe("allow");
     }
     cleanup();
   });
