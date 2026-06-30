@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import type { ToolMessage } from "../types";
 import { ToolCardShell } from "./ToolCardShell";
-import { prettyJson, truncate } from "./utils";
+import { parsedArgs, truncate } from "./utils";
 import { detectAttachments } from "./attachments";
 import { AttachmentCard } from "./AttachmentCard";
 import { Lightbox } from "../chat/Lightbox";
@@ -14,10 +14,18 @@ interface Props {
 }
 
 export function GenericToolCard({ message, onSelect, selected, turnEpoch }: Props) {
-  const oneLine = summarizeArgs(message.args);
+  // Use parsedArgs (argsLive ?? parsed message.args), NOT raw message.args —
+  // message.args is the tool_use_start snapshot ("{}" while streaming); the real
+  // args arrive via tool_use_args_delta and live in argsLive. Reading the raw
+  // string made every tool falling through to this generic card (DriveAgent,
+  // etc.) show args as "{}" in live view. parsedArgs covers replay too (no
+  // argsLive → parse the persisted args string).
+  const args = parsedArgs(message);
+  const argsJson = JSON.stringify(args);
+  const oneLine = summarizeArgs(args);
   const attachments = detectAttachments(
     message.toolName,
-    message.args,
+    argsJson,
     message.result,
   );
   // Screenshots / images the tool returned (browser_observe vision/image,
@@ -32,7 +40,7 @@ export function GenericToolCard({ message, onSelect, selected, turnEpoch }: Prop
     <div className="flex flex-col gap-2">
       <div className="flex flex-col gap-1">
         <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">args</span>
-        <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{prettyJson(message.args)}</pre>
+        <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{JSON.stringify(args, null, 2)}</pre>
       </div>
       {message.result !== undefined && (
         <div className="flex flex-col gap-1">
@@ -104,14 +112,9 @@ export function GenericToolCard({ message, onSelect, selected, turnEpoch }: Prop
   );
 }
 
-function summarizeArgs(argsJson: string): string {
-  if (!argsJson || argsJson === "{}") return "";
-  let obj: Record<string, unknown>;
-  try {
-    obj = JSON.parse(argsJson) as Record<string, unknown>;
-  } catch {
-    return truncate(argsJson, 80);
-  }
+function summarizeArgs(obj: Record<string, unknown>): string {
+  const keys = Object.keys(obj);
+  if (keys.length === 0) return "";
   const preferred = ["command", "file_path", "url", "path", "pattern", "query", "task", "prompt"];
   for (const key of preferred) {
     if (typeof obj[key] === "string") return truncate(obj[key] as string, 80);
@@ -119,5 +122,5 @@ function summarizeArgs(argsJson: string): string {
   for (const v of Object.values(obj)) {
     if (typeof v === "string") return truncate(v, 80);
   }
-  return Object.keys(obj).join(", ");
+  return keys.join(", ");
 }
