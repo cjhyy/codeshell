@@ -11,6 +11,7 @@
 | [`roadmap.md`](roadmap.md) | 规划中 | 对标 Claude Code / OpenCode / OpenAI Codex 的分阶段产品路线(Phase 0–6),含优先级矩阵与执行顺序。注意:文内「当前状态」表多为早期写法,事实现状以 feature-inventory 为准 |
 | [`workspace-profile-讨论稿.md`](workspace-profile-讨论稿.md) | 讨论中(P3,未实现) | WorkspaceProfile / 数字人:全局 Profile 库、本地安装/激活/切换、主指令 + 经验三层 + Team Board。设计锚点,非实现承诺 |
 | [`prompt-cache-optimization.md`](prompt-cache-optimization.md) | 规划中(未动手) | Prompt 缓存优化对标 CC:现状只 systemPrompt 一个断点、命中率不可见;含 CC 真实做法(扒自 sourcemap)+ 可抄清单 + 执行顺序(先做"命中率可见")。关联记忆 `project_prompt_cache_gaps` |
+| [`architecture-debt.md`](architecture-debt.md) | **P0 已落地 main**(`c191bb51`),P1/P2 待排期 | 架构债路线图:P0=断循环依赖/抽 engine 类型/凭证加密边界(已并);P1=拆 index、arena builtin 可选、拆 engine.ts、拆 App.tsx、真启用 safeStorage;P2=arena 移包/state 单例/cron 测试/文档措辞。含每条正解与落地顺序。配套源码级现状见 `docs/architecture/` |
 
 ## 仍准确未做的代表项
 
