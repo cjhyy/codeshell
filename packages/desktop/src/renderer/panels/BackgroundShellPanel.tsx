@@ -34,6 +34,11 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
   const [output, setOutput] = useState<{ header: string; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Drives the manual refresh-button spinner. Separate from `loading` (which is
+  // per-shell-output) so the top button gives its own feedback — auto-refresh
+  // (turn-complete / poll) was the only signal before, leaving the manual click
+  // with no visible response (TODO-background-panel #1).
+  const [refreshing, setRefreshing] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!sessionId) {
@@ -65,6 +70,18 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
       setError(String(e instanceof Error ? e.message : e));
     }
   }, [sessionId]);
+
+  // Manual refresh from the top button — spins the icon until the fetch settles
+  // so the click has visible feedback. Guards against a double-spin if clicked
+  // mid-refresh.
+  const manualRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refresh]);
 
   // Load once on mount / session change.
   useEffect(() => {
@@ -196,10 +213,11 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
           type="button"
           title={t("panels.common.refresh")}
           aria-label={t("panels.common.refresh")}
-          className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-          onClick={() => void refresh()}
+          className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-60"
+          onClick={() => void manualRefresh()}
+          disabled={refreshing}
         >
-          <RefreshCw className="h-3.5 w-3.5" />
+          <RefreshCw className={`h-3.5 w-3.5${refreshing ? " animate-spin" : ""}`} />
         </button>
       </div>
 
