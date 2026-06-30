@@ -1175,7 +1175,13 @@ async function createWindow(): Promise<BrowserWindow> {
     // <webview> guests live in the separate "persist:browser" partition, so this
     // defaultSession handler does not touch their permissions.
     session.defaultSession.setPermissionRequestHandler((wc, permission, cb) => {
-      if (permission === "media") {
+      // Allow ONLY for our own renderer (the file:/dev-URL origin); deny
+      // everything else. `media` enables the mic. `clipboard-sanitized-write`
+      // is what `navigator.clipboard.writeText` requests under the dev server's
+      // http://localhost origin — without granting it, the copy buttons throw
+      // `NotAllowedError: Write permission denied` (the file:// prod origin
+      // skips the request, so this only bites in dev).
+      if (permission === "media" || permission === "clipboard-sanitized-write") {
         cb(isRendererRequest(wc.getURL()));
         return;
       }

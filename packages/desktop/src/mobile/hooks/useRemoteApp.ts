@@ -456,7 +456,7 @@ export function useRemoteApp(): RemoteApp {
             sessionId: typeof params.sessionId === "string" ? params.sessionId : undefined,
             toolName: rq.toolName ?? "操作",
             description: rq.description ?? "",
-            summary,
+            summary: askOptions ? rq.description ?? summary : summary,
             risk,
             options: askOptions?.options,
             optionsOnly: askOptions?.optionsOnly,

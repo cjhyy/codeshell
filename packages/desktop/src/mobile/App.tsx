@@ -270,7 +270,7 @@ function ApprovalsArea({ app }: { app: ReturnType<typeof useRemoteApp> }) {
   return (
     <div
       className={cn(
-        "flex max-h-[48dvh] min-h-0 flex-col gap-2 overflow-y-auto overscroll-contain border-b border-border/70 bg-black/18 p-2",
+        "mobile-approval-stack flex max-h-[48dvh] min-h-0 flex-col gap-2 overflow-y-auto overscroll-contain border-b border-border/70 bg-black/18 p-2",
       )}
     >
       {app.approvals.map((a) => (

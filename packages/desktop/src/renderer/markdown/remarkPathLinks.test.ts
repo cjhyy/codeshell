@@ -10,6 +10,7 @@ import {
   remarkPathLinks,
   decodePathHref,
   decodeLocalPathHref,
+  isDomainShapedFirstSegment,
   CODESHELL_PATH_SCHEME,
 } from "./remarkPathLinks";
 
@@ -305,5 +306,49 @@ describe("decodeLocalPathHref", () => {
 
   it("still decodes explicit-relative paths with dotted dirs via ./", () => {
     expect(decodeLocalPathHref("./my.app/foo.ts")).toEqual({ path: "./my.app/foo.ts" });
+  });
+});
+
+describe("remarkPathLinks — leading-dot dir is local, not a host (#7 image-link)", () => {
+  const linkUrl = (value: string): string | null =>
+    inlineCodeLinkUrls(value)
+      .filter((u) => u.startsWith(CODESHELL_PATH_SCHEME))
+      .map((u) => decodePathHref(u)?.path ?? null)[0] ?? null;
+
+  it("isDomainShapedFirstSegment: leading-dot dir is local, interior-dot is a host", () => {
+    // leading dot → hidden local dir, NOT a host
+    expect(isDomainShapedFirstSegment(".code-shell")).toBe(false);
+    expect(isDomainShapedFirstSegment(".github")).toBe(false);
+    expect(isDomainShapedFirstSegment(".config")).toBe(false);
+    // interior dot → host-shaped
+    expect(isDomainShapedFirstSegment("example.com")).toBe(true);
+    expect(isDomainShapedFirstSegment("www.google.com")).toBe(true);
+    // no dot → plain local dir
+    expect(isDomainShapedFirstSegment("packages")).toBe(false);
+  });
+
+  it("decodeLocalPathHref recognizes a relative .code-shell generated image", () => {
+    // The exact shape that was rendering as a dead <a> before the fix.
+    expect(decodeLocalPathHref(".code-shell/generated_images/x.png")).toEqual({
+      path: ".code-shell/generated_images/x.png",
+    });
+    expect(decodeLocalPathHref(".github/workflows/ci.yml")).toEqual({
+      path: ".github/workflows/ci.yml",
+    });
+  });
+
+  it("decodeLocalPathHref still rejects host-shaped first segments", () => {
+    expect(decodeLocalPathHref("example.com/x.html")).toBeNull();
+    expect(decodeLocalPathHref("www.google.com/x.js")).toBeNull();
+  });
+
+  it("inlineCode: a relative .code-shell image path links (shared host rule)", () => {
+    expect(linkUrl(".code-shell/generated_images/x.png")).toBe(
+      ".code-shell/generated_images/x.png",
+    );
+  });
+
+  it("inlineCode: still does not link a host-shaped first segment", () => {
+    expect(linkUrl("example.com/index.html")).toBeNull();
   });
 });

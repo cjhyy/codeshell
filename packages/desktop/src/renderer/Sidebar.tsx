@@ -18,6 +18,8 @@ import { Badge } from "./ui/Badge";
 import { ContextMenu, type ContextMenuItem } from "./ui/ContextMenu";
 import { truncateTitle } from "./ui/ConfirmDialog";
 import { useConfirm, usePrompt } from "./ui/DialogProvider";
+import { useToast } from "./ui/ToastProvider";
+import { copyText } from "./lib/clipboard";
 import { SettingsMenu } from "./settings/SettingsMenu";
 import type { ViewMode } from "./view";
 import { repoLabel, sortRepos, type Repo } from "./repos";
@@ -100,6 +102,7 @@ export function Sidebar({
   const closeMenu = (): void => setMenu(null);
   const confirm = useConfirm();
   const prompt = usePrompt();
+  const toast = useToast();
 
   // Pin sort (sortRepos: pinned first, then by addedAt asc).
   const orderedRepos = useMemo(() => sortRepos(repos), [repos]);
@@ -179,7 +182,12 @@ export function Sidebar({
     {
       label: t("sidebar.copySessionId"),
       onClick: () => {
-        void navigator.clipboard.writeText(s.id);
+        void copyText(s.id).then((ok) =>
+          toast({
+            message: ok ? t("sidebar.sessionIdCopied") : t("sidebar.copyFailed"),
+            variant: ok ? "success" : "error",
+          }),
+        );
       },
     },
     s.archived

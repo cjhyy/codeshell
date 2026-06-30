@@ -116,6 +116,25 @@ function bareFilenameExtOk(name: string): boolean {
   return KNOWN_FILE_EXT.has(name.slice(dot + 1).toLowerCase());
 }
 
+/**
+ * True when the first path segment looks like a HOST (example.com, www.google.com)
+ * rather than a workspace directory — used to reject scheme-less URLs that the
+ * author meant to open externally, so they don't become dead local-file links.
+ *
+ * The discriminator is WHERE the dot sits: a domain's dot is interior
+ * (`example` · `.` · `com`), whereas a hidden local dir's dot is LEADING
+ * (`.code-shell`, `.github`, `.config`). So a dot-prefixed segment is local,
+ * not a host. Generated images live under `.code-shell/generated_images/`, so
+ * without this carve-out a relative link to one was rejected and rendered as a
+ * dead `<a>` that did nothing on click.
+ *
+ * Single source of truth for this rule — both decodeLocalPathHref (markdown
+ * anchors) and inlineCodePath (backtick spans) call it, so the two can't drift.
+ */
+export function isDomainShapedFirstSegment(firstSeg: string): boolean {
+  return firstSeg.includes(".") && !firstSeg.startsWith(".");
+}
+
 const SKIP_PARENTS = new Set(["link", "linkReference", "inlineCode", "code"]);
 
 // Whole-string path matcher for an inlineCode span. The span is already
@@ -160,9 +179,11 @@ function inlineCodePath(value: string): { path: string; line?: string } | null {
   const hasSlash = path.includes("/");
   if (hasSlash) {
     // Reject a domain-shaped first segment (example.com/x.html) — that's a URL,
-    // not a workspace path. Mirrors decodeLocalPathHref's guard.
+    // not a workspace path. Shared rule with decodeLocalPathHref (a leading-dot
+    // dir like .code-shell/ stays local; an interior dot like example.com is a
+    // host). Absolute paths are always local, never host-shaped.
     const firstSeg = path.split("/", 1)[0] ?? "";
-    if (!path.startsWith("/") && !path.startsWith(".") && firstSeg.includes(".")) {
+    if (!path.startsWith("/") && isDomainShapedFirstSegment(firstSeg)) {
       return null;
     }
   } else if (!KNOWN_FILE_EXT.has(ext)) {
@@ -322,8 +343,10 @@ export function decodeLocalPathHref(
   // `//cdn/x.js` got linked as local files that openPath can't resolve.
   const firstSeg = pathPart.split("/", 1)[0] ?? "";
   // \p{L}\p{N} (not ASCII \w) so a CJK first segment counts as a local dir.
+  // Reject a host-shaped first segment (example.com/x.html); a leading-dot dir
+  // (.code-shell/, .github/) is local — see isDomainShapedFirstSegment.
   const bareLocal =
-    /^[\p{L}\p{N}_@.-]+\//u.test(pathPart) && !firstSeg.includes(".");
+    /^[\p{L}\p{N}_@.-]+\//u.test(pathPart) && !isDomainShapedFirstSegment(firstSeg);
   const looksLocal = isExplicitLocal || bareLocal;
 
   const hasExtension = /\.[\w]{1,12}$/.test(pathPart);
