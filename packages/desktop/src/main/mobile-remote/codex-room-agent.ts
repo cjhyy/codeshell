@@ -45,6 +45,41 @@ export function codexStderrError(stderrLines: string[], exitCode: number | null)
   return text.slice(0, 800);
 }
 
+/**
+ * Decide whether a finished codex turn needs a FALLBACK seal event so the room
+ * UI doesn't hang on "working". Pure → unit-testable.
+ *
+ * The room is sealed (turn_end / error) the moment a `turn.completed` or
+ * `turn.failed` JSON line arrives on stdout. But a codex process can die WITHOUT
+ * emitting either — OOM-killed, segfaulted, or non-zero exit with output only
+ * half-written — and then nothing tells the reducer the turn is over: the
+ * progress card spins forever. This function returns the event the exit handler
+ * must emit in that gap.
+ *
+ * Cases:
+ *   - already sealed (turn JSON seen)        → null (don't double-seal)
+ *   - user stopped the room                  → null (stop() tears down the UI)
+ *   - a stderr error will be emitted          → null (that error seals the run)
+ *   - otherwise (crash / silent exit)         → a turn_end so the UI settles.
+ *     reason encodes how it ended for the transcript.
+ */
+export function sealEventOnExit(opts: {
+  code: number | null;
+  signal: NodeJS.Signals | null;
+  turnSealed: boolean;
+  stopping: boolean;
+  hasStderrError: boolean;
+}): ResidentAgentEvent | null {
+  if (opts.turnSealed || opts.stopping || opts.hasStderrError) return null;
+  const reason =
+    opts.signal != null
+      ? `killed:${opts.signal}`
+      : opts.code && opts.code !== 0
+        ? `exited:${opts.code}`
+        : "completed";
+  return { type: "turn_end", reason };
+}
+
 export interface CodexRoomAgentOptions {
   command: string; // e.g. "codex"
   cwd: string;
@@ -70,6 +105,12 @@ export class CodexRoomAgent implements RoomAgent {
   private child?: ChildProcess;
   private threadId?: string;
   private started = false;
+  /** True once the CURRENT turn emitted a sealing event (turn_end via
+   *  turn.completed, or an error). Reset at the start of each send(). */
+  private turnSealed = false;
+  /** True while stop() is tearing the room down, so the exit handler doesn't
+   *  mistake an intentional SIGTERM for a crash. */
+  private stopping = false;
 
   constructor(private readonly opts: CodexRoomAgentOptions) {
     this.threadId = opts.resumeThreadId;
@@ -83,6 +124,7 @@ export class CodexRoomAgent implements RoomAgent {
   send(text: string): boolean {
     if (!this.started) return false;
     if (this.child) return false; // a turn is already running; one turn at a time
+    this.turnSealed = false; // fresh turn — not yet sealed
     const args = codexArgsForTurn({ mode: this.opts.permissionMode, threadId: this.threadId });
     const child = spawn(this.opts.command, args, {
       cwd: this.opts.cwd,
@@ -105,7 +147,12 @@ export class CodexRoomAgent implements RoomAgent {
           this.threadId = tid;
           this.opts.onThreadId?.(tid);
         }
-        for (const ev of parseCodexJsonLine(line)) this.opts.onEvent(ev);
+        for (const ev of parseCodexJsonLine(line)) {
+          // turn_end / error are the reducer's sealing events — once one fires
+          // for this turn, the exit handler need not synthesize a fallback.
+          if (ev.type === "turn_end" || ev.type === "error") this.turnSealed = true;
+          this.opts.onEvent(ev);
+        }
       });
     }
     // Accumulate stderr by LINE; only surface it as an error if the turn exits
@@ -119,6 +166,7 @@ export class CodexRoomAgent implements RoomAgent {
     }
     child.on("error", (err) => {
       const isMissing = (err as NodeJS.ErrnoException).code === "ENOENT";
+      this.turnSealed = true; // this error seals the run in the reducer
       this.opts.onEvent({
         type: "error",
         error: isMissing
@@ -127,14 +175,29 @@ export class CodexRoomAgent implements RoomAgent {
       });
       this.child = undefined;
     });
-    child.on("exit", (code) => {
+    child.on("exit", (code, signal) => {
       // The turn's process is done; the room stays "running" (ready for the next
       // turn). We do NOT emit `exit` here — that would tear the room down in the
       // UI after every turn. turn.completed already produced a `turn_end`.
       // A non-zero exit whose error went only to stderr (no turn.failed JSON)
       // is surfaced now so the room shows *why* it failed.
       const stderrErr = codexStderrError(stderrLines, code);
-      if (stderrErr) this.opts.onEvent({ type: "error", error: stderrErr });
+      if (stderrErr) {
+        this.turnSealed = true;
+        this.opts.onEvent({ type: "error", error: stderrErr });
+      }
+      // FALLBACK SEAL (#6): if the process died without ever sealing the turn
+      // (no turn.completed / turn.failed JSON, no stderr error) and we didn't
+      // stop it ourselves, the room UI would hang on "working" forever. Emit a
+      // synthetic turn_end so the progress card settles.
+      const seal = sealEventOnExit({
+        code,
+        signal,
+        turnSealed: this.turnSealed,
+        stopping: this.stopping,
+        hasStderrError: stderrErr != null,
+      });
+      if (seal) this.opts.onEvent(seal);
       this.child = undefined;
     });
     return true;
@@ -148,6 +211,7 @@ export class CodexRoomAgent implements RoomAgent {
 
   stop(): void {
     this.started = false;
+    this.stopping = true; // the upcoming SIGTERM exit is intentional, not a crash
     const child = this.child;
     this.child = undefined;
     if (!child?.pid || child.pid <= 1) {

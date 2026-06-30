@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { codexArgsForTurn, sandboxForMode, codexStderrError } from "./codex-room-agent.js";
+import {
+  codexArgsForTurn,
+  sandboxForMode,
+  codexStderrError,
+  sealEventOnExit,
+} from "./codex-room-agent.js";
 
 describe("sandboxForMode", () => {
   it("maps the three room permission modes to codex sandbox tiers", () => {
@@ -62,5 +67,51 @@ describe("codexStderrError", () => {
     expect(codexStderrError(lines, 1)).toBe(
       "Error: something failed\n  caused by: downstream blew up",
     );
+  });
+});
+
+describe("sealEventOnExit (#6 — never leave the room stuck on 'working')", () => {
+  it("returns null on a clean exit that already sealed via turn.completed", () => {
+    // turnSealed=true: a turn_end already fired from turn.completed JSON.
+    expect(
+      sealEventOnExit({ code: 0, signal: null, turnSealed: true, stopping: false, hasStderrError: false }),
+    ).toBeNull();
+  });
+
+  it("returns null when the user stopped the room (not a crash)", () => {
+    expect(
+      sealEventOnExit({ code: null, signal: "SIGTERM", turnSealed: false, stopping: true, hasStderrError: false }),
+    ).toBeNull();
+  });
+
+  it("returns null when a stderr error will already surface (avoid double-seal)", () => {
+    // The exit handler emits an `error` event from codexStderrError; that error
+    // already seals the run in the reducer, so don't also emit a turn_end.
+    expect(
+      sealEventOnExit({ code: 1, signal: null, turnSealed: false, stopping: false, hasStderrError: true }),
+    ).toBeNull();
+  });
+
+  it("emits a fallback turn_end when the process dies non-zero with NO stderr and NO turn JSON", () => {
+    // The bug: codex crashes / is OOM-killed mid-turn, produces no turn.completed
+    // and no stderr — the room would hang on 'working' forever. We must seal it.
+    const ev = sealEventOnExit({ code: 137, signal: null, turnSealed: false, stopping: false, hasStderrError: false });
+    expect(ev).not.toBeNull();
+    expect(ev!.type).toBe("turn_end");
+  });
+
+  it("emits a fallback turn_end when the process is killed by a signal with no seal", () => {
+    const ev = sealEventOnExit({ code: null, signal: "SIGKILL", turnSealed: false, stopping: false, hasStderrError: false });
+    expect(ev).not.toBeNull();
+    expect(ev!.type).toBe("turn_end");
+  });
+
+  it("returns null on a clean (zero) exit even if the turn JSON was somehow missed", () => {
+    // A zero exit means codex finished normally; even if we didn't see a
+    // turn.completed line, don't manufacture a crash seal — but DO seal so the
+    // UI doesn't hang. A turn_end with a benign reason is correct here.
+    const ev = sealEventOnExit({ code: 0, signal: null, turnSealed: false, stopping: false, hasStderrError: false });
+    expect(ev).not.toBeNull();
+    expect(ev!.type).toBe("turn_end");
   });
 });
