@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Run、Automation 与 Persistent Goal</title>
+  <desc id="desc">展示 RunManager、CronScheduler、persistent goal、approval/input suspension 与可恢复边界，并标注哪些机制不是普适重启可恢复。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M2,2 L10,6 L2,10 Z" fill="#334155"/></marker>
+    <style>
+      .bg{fill:#f8fafc}.title{font:700 34px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#0f172a}.sub{font:400 16px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#475569}.h{font:700 16px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#0f172a}.t{font:500 14px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#334155}.s{font:400 12px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#64748b}.box{stroke:#cbd5e1;stroke-width:1.5;rx:8}.blue{fill:#dbeafe;stroke:#60a5fa}.purple{fill:#ede9fe;stroke:#a78bfa}.green{fill:#dcfce7;stroke:#4ade80}.orange{fill:#ffedd5;stroke:#fb923c}.red{fill:#fee2e2;stroke:#f87171}.gray{fill:#f1f5f9;stroke:#94a3b8}.warn{fill:#fef3c7;stroke:#f59e0b}.group{fill:#ffffff;stroke:#e2e8f0;stroke-width:1.5;rx:8}.line{fill:none;stroke:#334155;stroke-width:2;marker-end:url(#arrow)}.dash{fill:none;stroke:#64748b;stroke-width:2;stroke-dasharray:7 6;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect class="bg" width="1600" height="900"/>
+  <text class="title" x="56" y="58">Run / Cron / Persistent Goal：长任务外壳与恢复边界</text>
+  <text class="sub" x="56" y="88">RunManager 把可恢复状态机放在 Engine 外；cron 与 persistent goal 复用这套持久化约束，但不能推广到所有后台任务。</text>
+
+  <rect class="group" x="60" y="126" width="980" height="360"/>
+  <text class="h" x="86" y="158">RunManager 状态机与持久层</text>
+  <rect class="box blue" x="110" y="204" width="150" height="54"/><text class="h" x="158" y="227">queued</text><text class="s" x="138" y="246">RunQueue</text>
+  <rect class="box green" x="330" y="204" width="150" height="54"/><text class="h" x="374" y="227">running</text><text class="s" x="356" y="246">EngineRunner</text>
+  <rect class="box warn" x="550" y="174" width="190" height="54"/><text class="h" x="590" y="197">waiting approval</text><text class="s" x="582" y="216">RunApprovalBackend</text>
+  <rect class="box warn" x="550" y="264" width="190" height="54"/><text class="h" x="604" y="287">waiting input</text><text class="s" x="582" y="306">ask_user / suspension</text>
+  <rect class="box red" x="820" y="174" width="150" height="54"/><text class="h" x="862" y="197">blocked</text><text class="s" x="846" y="216">needs external action</text>
+  <rect class="box green" x="820" y="264" width="150" height="54"/><text class="h" x="856" y="287">terminal</text><text class="s" x="850" y="306">succeeded / failed</text>
+  <path class="line" d="M260 231 L330 231"/><path class="line" d="M480 231 C512 221 528 210 550 201"/><path class="line" d="M480 231 C512 250 528 276 550 291"/><path class="dash" d="M645 228 C645 248 548 238 480 231"/><path class="dash" d="M645 264 C645 244 548 226 480 231"/><path class="line" d="M740 201 L820 201"/><path class="line" d="M740 291 L820 291"/>
+  <rect class="box orange" x="120" y="372" width="170" height="56"/><text class="h" x="162" y="395">FileRunStore</text><text class="s" x="150" y="414">run JSON + transcript</text>
+  <rect class="box orange" x="350" y="372" width="150" height="56"/><text class="h" x="388" y="395">RunLock</text><text class="s" x="376" y="414">cross-process</text>
+  <rect class="box orange" x="560" y="372" width="150" height="56"/><text class="h" x="596" y="395">Heartbeat</text><text class="s" x="588" y="414">stale detection</text>
+  <rect class="box orange" x="770" y="372" width="170" height="56"/><text class="h" x="810" y="395">Checkpoint</text><text class="s" x="798" y="414">resume snapshot</text>
+  <path class="dash" d="M405 258 C405 320 250 330 205 372"/><path class="dash" d="M405 258 C410 318 422 344 425 372"/><path class="dash" d="M405 258 C500 318 605 330 635 372"/><path class="dash" d="M405 258 C592 330 805 332 855 372"/>
+
+  <rect class="group" x="1100" y="126" width="440" height="360"/>
+  <text class="h" x="1126" y="158">CronScheduler 与 automation</text>
+  <rect class="box blue" x="1150" y="206" width="160" height="58"/><text class="h" x="1192" y="230">Schedule</text><text class="s" x="1174" y="249">cron expr / once / store</text>
+  <rect class="box purple" x="1350" y="206" width="150" height="58"/><text class="h" x="1386" y="230">Scheduler</text><text class="s" x="1378" y="249">reload / wake</text>
+  <rect class="box green" x="1255" y="324" width="170" height="58"/><text class="h" x="1298" y="348">run-now</text><text class="s" x="1282" y="367">enqueue RunManager</text>
+  <rect class="box orange" x="1150" y="424" width="350" height="34"/><text class="s" x="1176" y="446">write-policy 可隔离 worktree / PR；cron 权限靠后端约束</text>
+  <path class="line" d="M1310 235 L1350 235"/><path class="line" d="M1425 264 C1425 296 1384 310 1340 324"/><path class="line" d="M1255 353 C1148 350 1072 330 970 291"/>
+
+  <rect class="group" x="60" y="542" width="680" height="218"/>
+  <text class="h" x="86" y="574">Persistent goal 在 session 中续跑</text>
+  <rect class="box orange" x="110" y="626" width="180" height="58"/><text class="h" x="154" y="650">activeGoal</text><text class="s" x="136" y="669">Session State 持久化</text>
+  <rect class="box purple" x="350" y="626" width="180" height="58"/><text class="h" x="388" y="650">goal-stop-hook</text><text class="s" x="378" y="669">裁判是否达成</text>
+  <rect class="box green" x="590" y="626" width="110" height="58"/><text class="h" x="612" y="650">工具</text><text class="s" x="608" y="669">complete_goal</text>
+  <rect class="box warn" x="230" y="708" width="340" height="32"/><text class="s" x="256" y="729">token / elapsed time budget 是硬停止，不能靠 prompt 绕过</text>
+  <path class="line" d="M290 655 L350 655"/><path class="line" d="M530 655 L590 655"/><path class="dash" d="M200 626 C205 560 300 510 405 486"/>
+
+  <rect class="group" x="790" y="542" width="750" height="218"/>
+  <text class="h" x="816" y="574">恢复边界：durable 与 not generally restart-durable 分开看</text>
+  <rect class="box green" x="840" y="622" width="300" height="78"/><text class="h" x="936" y="647">durable</text><text class="s" x="870" y="667">Run / cron / persistent goal</text><text class="s" x="870" y="684">依赖 FileRunStore、Heartbeat、Lock、State</text>
+  <rect class="box red" x="1190" y="622" width="300" height="78"/><text class="h" x="1238" y="647">not generally restart-durable</text><text class="s" x="1220" y="667">background shell / synchronous sub-agent</text><text class="s" x="1220" y="684">driver child process 和 live buffers 绑 worker</text>
+  <path class="line" d="M635 428 C748 536 866 576 990 622"/>
+  <path class="dash" d="M895 201 C1040 492 1210 548 1340 622"/>
+
+  <rect class="box gray" x="88" y="812" width="1424" height="44"/>
+  <text class="s" x="112" y="839">准确性提醒：可以说 Run / cron / persistent goal 设计为跨进程重启可恢复；不要写成所有后台工作都会自动恢复。</text>
+</svg>

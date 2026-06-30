@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-labelledby="title desc">
+  <title id="title">Engine 与 TurnLoop 单次 run 循环</title>
+  <desc id="desc">展示 Engine.run 从输入解析、会话恢复、上下文管理、模型流式输出、工具调用到最终回答的循环。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M2,2 L10,6 L2,10 Z" fill="#334155"/></marker>
+    <style>
+      .bg{fill:#f8fafc}.title{font:700 34px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#0f172a}.sub{font:400 16px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#475569}.h{font:700 16px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#0f172a}.t{font:500 14px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#334155}.s{font:400 12px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#64748b}.box{stroke:#cbd5e1;stroke-width:1.5;rx:8}.blue{fill:#dbeafe;stroke:#60a5fa}.purple{fill:#ede9fe;stroke:#a78bfa}.green{fill:#dcfce7;stroke:#4ade80}.orange{fill:#ffedd5;stroke:#fb923c}.gray{fill:#f1f5f9;stroke:#94a3b8}.warn{fill:#fef3c7;stroke:#f59e0b}.line{fill:none;stroke:#334155;stroke-width:2;marker-end:url(#arrow)}.dash{fill:none;stroke:#64748b;stroke-width:2;stroke-dasharray:7 6;marker-end:url(#arrow)}.group{fill:#ffffff;stroke:#e2e8f0;stroke-width:1.5;rx:8}.decision{fill:#fff7ed;stroke:#fb923c;stroke-width:1.5}
+    </style>
+  </defs>
+  <rect class="bg" width="1400" height="900"/>
+  <text class="title" x="56" y="58">Engine.run 到 TurnLoop 的一次循环</text>
+  <text class="sub" x="56" y="88">Engine 负责装配依赖，TurnLoop 负责多轮状态机；工具调用会把 tool_result 追加回消息，再进入下一轮。</text>
+
+  <rect class="group" x="60" y="124" width="1280" height="138"/>
+  <text class="h" x="84" y="154">Engine.run setup</text>
+  <rect class="box blue" x="92" y="182" width="210" height="54"/><text class="h" x="138" y="205">输入解析</text><text class="s" x="118" y="224">task / cwd / image / goal</text>
+  <rect class="box blue" x="356" y="182" width="210" height="54"/><text class="h" x="408" y="205">Session</text><text class="s" x="389" y="224">create / resume / repair</text>
+  <rect class="box blue" x="620" y="182" width="210" height="54"/><text class="h" x="668" y="205">PromptComposer</text><text class="s" x="650" y="224">preset + dynamic context</text>
+  <rect class="box blue" x="884" y="182" width="210" height="54"/><text class="h" x="934" y="205">依赖装配</text><text class="s" x="916" y="224">ModelFacade / Executor</text>
+  <rect class="box blue" x="1148" y="182" width="150" height="54"/><text class="h" x="1196" y="205">开始</text><text class="s" x="1178" y="224">TurnLoop.run</text>
+  <path class="line" d="M302 209 L356 209"/><path class="line" d="M566 209 L620 209"/><path class="line" d="M830 209 L884 209"/><path class="line" d="M1094 209 L1148 209"/>
+
+  <rect class="group" x="110" y="314" width="1180" height="410"/>
+  <text class="h" x="134" y="344">TurnLoop while 循环：一个 iteration = 一个 turn</text>
+  <rect class="box green" x="170" y="380" width="190" height="58"/><text class="h" x="218" y="404">Pre-check</text><text class="s" x="198" y="423">abort / steer / limits</text>
+  <rect class="box green" x="430" y="380" width="210" height="58"/><text class="h" x="476" y="404">ContextManager</text><text class="s" x="462" y="423">compact / estimate / state</text>
+  <rect class="box purple" x="710" y="380" width="220" height="58"/><text class="h" x="765" y="404">Model stream</text><text class="s" x="738" y="423">text / thinking / tool_use</text>
+  <path class="line" d="M360 409 L430 409"/><path class="line" d="M640 409 L710 409"/>
+
+  <path class="decision" d="M1056 372 L1166 409 L1056 446 L946 409 Z"/>
+  <text class="h" x="1015" y="405">是否有</text><text class="h" x="1005" y="425">tool_use?</text>
+  <path class="line" d="M930 409 L946 409"/>
+
+  <rect class="box orange" x="810" y="540" width="220" height="60"/><text class="h" x="858" y="564">ToolExecutor</text><text class="s" x="842" y="583">permission / path / handler</text>
+  <rect class="box orange" x="520" y="540" width="220" height="60"/><text class="h" x="572" y="564">tool_result</text><text class="s" x="550" y="583">append to messages</text>
+  <rect class="box green" x="230" y="540" width="220" height="60"/><text class="h" x="280" y="564">下一轮</text><text class="s" x="264" y="583">带上结果继续推理</text>
+  <path class="line" d="M1056 446 C1056 498 1002 520 963 540"/><text class="s" x="1080" y="492">yes</text>
+  <path class="line" d="M810 570 L740 570"/><path class="line" d="M520 570 L450 570"/>
+  <path class="dash" d="M340 540 C260 510 238 470 265 438"/>
+
+  <rect class="box purple" x="1010" y="540" width="210" height="60"/><text class="h" x="1065" y="564">最终回答</text><text class="s" x="1041" y="583">assistant_message / stop</text>
+  <path class="line" d="M1166 409 C1226 440 1229 500 1190 540"/><text class="s" x="1198" y="454">no</text>
+  <rect class="box purple" x="1010" y="638" width="210" height="52"/><text class="h" x="1065" y="660">保存结果</text><text class="s" x="1044" y="678">transcript / state / usage</text>
+  <path class="line" d="M1115 600 L1115 638"/>
+
+  <rect class="box warn" x="146" y="638" width="330" height="52"/><text class="h" x="166" y="660">强约束：tool_use/result 成对</text><text class="s" x="166" y="678">resume repair 与 compaction 都要保持该 invariant</text>
+  <rect class="box gray" x="514" y="638" width="260" height="52"/><text class="h" x="552" y="660">Abort 是终止态</text><text class="s" x="544" y="678">stop 不进入 retry 策略</text>
+
+  <rect class="group" x="60" y="770" width="1280" height="72"/>
+  <text class="h" x="86" y="802">旁路服务</text>
+  <text class="t" x="190" y="802">Transcript 记录事件</text>
+  <text class="t" x="400" y="802">HookRegistry 介入生命周期与工具</text>
+  <text class="t" x="710" y="802">Goal budget 在工具前做硬停止</text>
+  <text class="t" x="1010" y="802">ModelFacade 处理流式、usage、cost</text>
+</svg>

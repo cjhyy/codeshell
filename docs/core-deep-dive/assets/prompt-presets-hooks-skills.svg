@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-labelledby="title desc">
+  <title id="title">Preset、Prompt、Hooks 与 Skills 行为组合</title>
+  <desc id="desc">展示 preset 如何选择 prompt sections、工具白名单与权限默认，dynamic context、hooks、skills 如何一起组合 agent 行为。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M2,2 L10,6 L2,10 Z" fill="#334155"/></marker>
+    <style>
+      .bg{fill:#f8fafc}.title{font:700 34px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#0f172a}.sub{font:400 16px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#475569}.h{font:700 16px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#0f172a}.t{font:500 14px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#334155}.s{font:400 12px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#64748b}.box{stroke:#cbd5e1;stroke-width:1.5;rx:8}.blue{fill:#dbeafe;stroke:#60a5fa}.purple{fill:#ede9fe;stroke:#a78bfa}.green{fill:#dcfce7;stroke:#4ade80}.orange{fill:#ffedd5;stroke:#fb923c}.gray{fill:#f1f5f9;stroke:#94a3b8}.warn{fill:#fef3c7;stroke:#f59e0b}.group{fill:#ffffff;stroke:#e2e8f0;stroke-width:1.5;rx:8}.line{fill:none;stroke:#334155;stroke-width:2;marker-end:url(#arrow)}.dash{fill:none;stroke:#64748b;stroke-width:2;stroke-dasharray:7 6;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect class="bg" width="1400" height="900"/>
+  <text class="title" x="56" y="58">行为即配置：preset + prompt + hooks + skills</text>
+  <text class="sub" x="56" y="88">core 提供通用机制；“会写代码”来自 preset 选择的工具、prompt section、权限默认与动态上下文。</text>
+
+  <rect class="group" x="70" y="126" width="1260" height="172"/>
+  <text class="h" x="96" y="158">Preset 决定基础行为</text>
+  <rect class="box blue" x="120" y="190" width="210" height="64"/><text class="h" x="176" y="215">preset</text><text class="s" x="150" y="234">general / terminal-coding</text>
+  <rect class="box green" x="410" y="184" width="210" height="76"/><text class="h" x="466" y="209">工具白名单</text><text class="s" x="440" y="230">builtin tools / MCP exposure</text><text class="s" x="440" y="246">漏白名单即静默不可见</text>
+  <rect class="box orange" x="690" y="184" width="210" height="76"/><text class="h" x="748" y="209">prompt sections</text><text class="s" x="720" y="230">base / coding / browser</text><text class="s" x="720" y="246">按工具能力 gate</text>
+  <rect class="box purple" x="970" y="184" width="230" height="76"/><text class="h" x="1036" y="209">权限默认</text><text class="s" x="1000" y="230">sandbox / approval / shell policy</text><text class="s" x="1000" y="246">可被更严格控制收紧</text>
+  <path class="line" d="M330 222 L410 222"/><path class="line" d="M330 222 C500 145 642 145 752 184"/><path class="line" d="M330 222 C625 132 910 132 1048 184"/>
+
+  <rect class="group" x="70" y="352" width="760" height="330"/>
+  <text class="h" x="96" y="384">PromptComposer 拼装 system prompt</text>
+  <rect class="box orange" x="120" y="430" width="220" height="64"/><text class="h" x="170" y="455">SectionCache</text><text class="s" x="148" y="474">cacheable prefix / stable text</text>
+  <rect class="box orange" x="120" y="548" width="220" height="64"/><text class="h" x="166" y="573">Dynamic context</text><text class="s" x="148" y="592">cwd / git / memory / tools</text>
+  <rect class="box green" x="420" y="430" width="220" height="64"/><text class="h" x="474" y="455">Skills</text><text class="s" x="448" y="474">SKILL.md / frontmatter / allowlist</text>
+  <rect class="box purple" x="420" y="548" width="220" height="64"/><text class="h" x="474" y="573">Prompt tail</text><text class="s" x="448" y="592">本轮任务 + 附件 + runtime 状态</text>
+  <rect class="box blue" x="620" y="488" width="160" height="66"/><text class="h" x="654" y="514">Final prompt</text><text class="s" x="646" y="533">prefix | dynamic tail</text>
+  <path class="line" d="M340 462 L420 462"/><path class="line" d="M340 580 L420 580"/><path class="line" d="M640 462 C670 468 690 478 700 488"/><path class="line" d="M640 580 C670 572 692 562 700 554"/>
+
+  <rect class="group" x="880" y="352" width="450" height="330"/>
+  <text class="h" x="906" y="384">Hooks 在生命周期上收紧行为</text>
+  <rect class="box purple" x="930" y="428" width="170" height="54"/><text class="h" x="974" y="451">HookRegistry</text><text class="s" x="960" y="470">plugin + shell hooks</text>
+  <rect class="box purple" x="1130" y="428" width="150" height="54"/><text class="h" x="1168" y="451">events</text><text class="s" x="1154" y="470">turn / tool / stop</text>
+  <rect class="box warn" x="930" y="536" width="350" height="60"/><text class="h" x="1026" y="560">strictest decision wins</text><text class="s" x="960" y="579">pre_tool_use 可 deny / ask / rewrite，不能越权放大权限</text>
+  <path class="line" d="M1100 455 L1130 455"/><path class="line" d="M1205 482 L1205 536"/>
+
+  <rect class="group" x="70" y="740" width="1260" height="92"/>
+  <text class="h" x="96" y="772">进入 TurnLoop 的组合结果</text>
+  <rect class="box green" x="130" y="790" width="220" height="28"/><text class="s" x="160" y="809">System prompt + selected tools</text>
+  <rect class="box green" x="420" y="790" width="230" height="28"/><text class="s" x="450" y="809">Tool definitions 来自白名单与 MCP</text>
+  <rect class="box green" x="720" y="790" width="210" height="28"/><text class="s" x="754" y="809">Hooks 介入 lifecycle</text>
+  <rect class="box green" x="1000" y="790" width="250" height="28"/><text class="s" x="1030" y="809">Skills 注入专门知识，不直接给权限</text>
+  <path class="line" d="M700 554 C700 650 240 704 240 790"/>
+  <path class="dash" d="M1105 596 C1105 675 1115 728 1125 790"/>
+  <path class="line" d="M515 260 C515 330 505 380 505 430"/>
+  <path class="line" d="M795 260 C795 330 670 388 560 430"/>
+  <path class="dash" d="M1085 260 C1085 315 1085 370 1085 428"/>
+
+  <rect class="box gray" x="108" y="852" width="1184" height="34"/>
+  <text class="s" x="132" y="873">边界提醒：hooks 是少数跨层数组拼接的特例；不要把它推广成所有 settings 都用追加合并。coding 能力来自 terminal-coding preset，而非 Engine 写死。</text>
+</svg>

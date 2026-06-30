@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-labelledby="title desc">
+  <title id="title">CodeShell Core 全局分层图</title>
+  <desc id="desc">展示 hosts、可选协议层、Engine、TurnLoop、工具、LLM、持久化与扩展系统之间的关系。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
+    </marker>
+    <style>
+      .bg{fill:#f8fafc}.title{font:700 34px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#0f172a}.sub{font:400 16px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#475569}.h{font:700 16px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#0f172a}.t{font:500 14px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#334155}.s{font:400 12px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#64748b}.box{stroke:#cbd5e1;stroke-width:1.5;rx:8}.blue{fill:#dbeafe;stroke:#60a5fa}.purple{fill:#ede9fe;stroke:#a78bfa}.green{fill:#dcfce7;stroke:#4ade80}.orange{fill:#ffedd5;stroke:#fb923c}.gray{fill:#f1f5f9;stroke:#94a3b8}.line{fill:none;stroke:#334155;stroke-width:2;marker-end:url(#arrow)}.dash{fill:none;stroke:#64748b;stroke-width:2;stroke-dasharray:7 6;marker-end:url(#arrow)}.group{fill:#ffffff;stroke:#e2e8f0;stroke-width:1.5;rx:8}.tag{fill:#e0f2fe;stroke:#38bdf8;stroke-width:1;rx:7}.tagText{font:700 13px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#0369a1}
+    </style>
+  </defs>
+  <rect class="bg" width="1400" height="900"/>
+  <text class="title" x="56" y="58">CodeShell Core 全局分层</text>
+  <text class="sub" x="56" y="88">核心是通用 Agent 编排层；coding 能力来自 preset、工具白名单、prompt section 与扩展，而不是写死在 Engine 内。</text>
+
+  <rect class="group" x="60" y="118" width="1280" height="105"/>
+  <text class="h" x="84" y="148">Hosts / 入口</text>
+  <rect class="box blue" x="90" y="165" width="220" height="40"/><text class="t" x="124" y="190">TUI / headless CLI</text>
+  <rect class="box blue" x="350" y="165" width="220" height="40"/><text class="t" x="377" y="190">desktop renderer / phone</text>
+  <rect class="box blue" x="610" y="165" width="220" height="40"/><text class="t" x="679" y="190">SDK</text>
+  <rect class="box blue" x="870" y="165" width="220" height="40"/><text class="t" x="920" y="190">automation / run</text>
+  <rect class="box blue" x="1130" y="165" width="180" height="40"/><text class="t" x="1178" y="190">sub-agent</text>
+
+  <rect class="group" x="190" y="260" width="840" height="95"/>
+  <text class="h" x="214" y="290">Protocol seam（常见 host 路径，可 in-process / stdio / tcp）</text>
+  <rect class="box purple" x="250" y="310" width="180" height="34"/><text class="t" x="302" y="332">AgentClient</text>
+  <rect class="box purple" x="520" y="310" width="160" height="34"/><text class="t" x="570" y="332">Transport</text>
+  <rect class="box purple" x="770" y="310" width="180" height="34"/><text class="t" x="824" y="332">AgentServer</text>
+
+  <rect class="box purple" x="570" y="398" width="260" height="58"/><text class="h" x="650" y="424">Engine.run</text><text class="s" x="608" y="444">session / runtime / hooks / config</text>
+  <rect class="box green" x="570" y="500" width="260" height="58"/><text class="h" x="660" y="526">TurnLoop</text><text class="s" x="606" y="546">multi-turn state machine</text>
+
+  <rect class="box orange" x="130" y="626" width="230" height="72"/><text class="h" x="184" y="654">Tool System</text><text class="s" x="162" y="676">Registry / Executor / MCP</text>
+  <rect class="box green" x="430" y="626" width="230" height="72"/><text class="h" x="500" y="654">LLM Layer</text><text class="s" x="462" y="676">ModelPool / ProviderClient</text>
+  <rect class="box blue" x="740" y="626" width="230" height="72"/><text class="h" x="799" y="654">Persistence</text><text class="s" x="768" y="676">sessions / runs / memory</text>
+  <rect class="box purple" x="1040" y="626" width="230" height="72"/><text class="h" x="1098" y="654">Extensions</text><text class="s" x="1070" y="676">plugins / skills / hooks</text>
+
+  <path class="line" d="M200 205 L315 310"/>
+  <path class="line" d="M460 205 L430 310"/>
+  <path class="line" d="M340 327 L520 327"/>
+  <path class="line" d="M680 327 L770 327"/>
+  <path class="line" d="M860 344 C860 370 790 374 742 398"/>
+  <path class="dash" d="M720 205 C720 250 700 330 700 398"/>
+  <path class="dash" d="M980 205 C980 285 865 362 810 398"/>
+  <path class="dash" d="M1220 205 C1220 300 900 365 828 408"/>
+  <path class="line" d="M700 456 L700 500"/>
+  <path class="line" d="M620 558 C540 590 380 602 255 626"/>
+  <path class="line" d="M675 558 C620 590 570 603 545 626"/>
+  <path class="line" d="M730 558 C780 590 830 603 855 626"/>
+  <path class="line" d="M790 558 C880 592 1030 604 1155 626"/>
+  <path class="line" d="M545 626 C594 590 638 570 676 558"/>
+  <path class="line" d="M255 626 C438 585 511 565 570 535"/>
+
+  <rect class="tag" x="88" y="754" width="230" height="38"/><text class="tagText" x="117" y="778">Core First</text>
+  <rect class="tag" x="338" y="754" width="250" height="38"/><text class="tagText" x="368" y="778">Presets over Hardcoding</text>
+  <rect class="tag" x="608" y="754" width="250" height="38"/><text class="tagText" x="647" y="778">Secure by Default</text>
+  <rect class="tag" x="878" y="754" width="250" height="38"/><text class="tagText" x="918" y="778">Long-running Ready</text>
+  <rect class="box gray" x="88" y="815" width="1240" height="48"/>
+  <text class="s" x="112" y="839">边界提醒：Protocol 是 UI/host 的主路径，不代表所有 Engine.run 都必须经由 protocol；SDK、子 Agent 或专用 runner 可以按场景直接嵌入 Engine。</text>
+</svg>

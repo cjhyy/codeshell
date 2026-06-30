@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="860" viewBox="0 0 1600 860" role="img" aria-labelledby="title desc">
+  <title id="title">LLM 与模型层解析链路</title>
+  <desc id="desc">展示 settings、catalog、credentials 如何解析模型 tag，并经 ModelPool、LLMConfig、provider client、capabilities rules 形成最终请求。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M2,2 L10,6 L2,10 Z" fill="#334155"/></marker>
+    <style>
+      .bg{fill:#f8fafc}.title{font:700 34px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#0f172a}.sub{font:400 16px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#475569}.h{font:700 16px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#0f172a}.t{font:500 14px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#334155}.s{font:400 12px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#64748b}.box{stroke:#cbd5e1;stroke-width:1.5;rx:8}.blue{fill:#dbeafe;stroke:#60a5fa}.purple{fill:#ede9fe;stroke:#a78bfa}.green{fill:#dcfce7;stroke:#4ade80}.orange{fill:#ffedd5;stroke:#fb923c}.gray{fill:#f1f5f9;stroke:#94a3b8}.warn{fill:#fef3c7;stroke:#f59e0b}.group{fill:#ffffff;stroke:#e2e8f0;stroke-width:1.5;rx:8}.line{fill:none;stroke:#334155;stroke-width:2;marker-end:url(#arrow)}.dash{fill:none;stroke:#64748b;stroke-width:2;stroke-dasharray:7 6;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect class="bg" width="1600" height="860"/>
+  <text class="title" x="56" y="58">LLM 与模型层：从 tag 到 provider request</text>
+  <text class="sub" x="56" y="88">模型身份、连接信息、凭证和运行旋钮分开解析；厂商差异落在 capabilities rules 和 request shaping，而不是散落在调用点。</text>
+
+  <rect class="group" x="60" y="126" width="1480" height="160"/>
+  <text class="h" x="86" y="158">输入与解析来源</text>
+  <rect class="box blue" x="100" y="190" width="180" height="58"/><text class="h" x="148" y="213">model tag</text><text class="s" x="126" y="232">用户选择 / flags / state</text>
+  <rect class="box blue" x="340" y="182" width="210" height="74"/><text class="h" x="394" y="207">settings</text><text class="s" x="370" y="228">modelConnections</text><text class="s" x="370" y="244">scope merge / defaults</text>
+  <rect class="box orange" x="610" y="182" width="230" height="74"/><text class="h" x="672" y="207">catalog</text><text class="s" x="642" y="228">builtin + saved ModelEntry</text><text class="s" x="642" y="244">model-catalog / data</text>
+  <rect class="box green" x="900" y="182" width="230" height="74"/><text class="h" x="960" y="207">credentials</text><text class="s" x="934" y="228">provider key / auth command</text><text class="s" x="934" y="244">user scope or project scope</text>
+  <rect class="box purple" x="1190" y="182" width="280" height="74"/><text class="h" x="1246" y="207">resolve-llm-config</text><text class="s" x="1218" y="228">把 tag 解析成连接 + 模型条目</text><text class="s" x="1218" y="244">缺凭证时 fail fast / fallback</text>
+  <path class="line" d="M280 219 L340 219"/><path class="line" d="M550 219 L610 219"/><path class="line" d="M840 219 L900 219"/><path class="line" d="M1130 219 L1190 219"/>
+
+  <rect class="group" x="60" y="342" width="980" height="320"/>
+  <text class="h" x="86" y="374">运行链路</text>
+  <rect class="box orange" x="110" y="430" width="210" height="66"/><text class="h" x="164" y="455">ModelEntry</text><text class="s" x="140" y="475">id / provider / endpoint</text>
+  <rect class="box green" x="390" y="430" width="210" height="66"/><text class="h" x="446" y="455">ModelPool</text><text class="s" x="420" y="475">toLLMConfig(entry)</text>
+  <rect class="box green" x="670" y="430" width="230" height="66"/><text class="h" x="748" y="455">LLMConfig</text><text class="s" x="700" y="475">模型身份 + provider 参数</text>
+  <path class="line" d="M320 463 L390 463"/><path class="line" d="M600 463 L670 463"/>
+
+  <rect class="box blue" x="250" y="552" width="230" height="66"/><text class="h" x="304" y="577">ClientDefaults</text><text class="s" x="280" y="597">温度 / reasoning / max tokens</text>
+  <rect class="box purple" x="560" y="552" width="220" height="66"/><text class="h" x="610" y="577">client-factory</text><text class="s" x="594" y="597">OpenAIClient / AnthropicClient</text>
+  <rect class="box purple" x="850" y="552" width="150" height="66"/><text class="h" x="878" y="577">Provider</text><text class="s" x="878" y="597">stream API</text>
+  <path class="line" d="M785 496 L672 552"/><path class="line" d="M480 585 L560 585"/><path class="line" d="M780 585 L850 585"/>
+
+  <rect class="group" x="1090" y="342" width="450" height="320"/>
+  <text class="h" x="1116" y="374">capabilities rules 影响 request shaping</text>
+  <rect class="box purple" x="1130" y="414" width="170" height="56"/><text class="h" x="1172" y="437">RULES</text><text class="s" x="1158" y="456">kind + model pattern</text>
+  <rect class="box purple" x="1340" y="414" width="160" height="56"/><text class="h" x="1388" y="437">ParamSpec</text><text class="s" x="1362" y="456">UI 控件 + wire 映射</text>
+  <rect class="box orange" x="1130" y="516" width="370" height="72"/><text class="h" x="1248" y="540">request shaping</text><text class="s" x="1162" y="560">reasoning 形态 / max_tokens 字段 / parallel tools</text><text class="s" x="1162" y="576">stream usage / vision stripping / extraBody passthrough</text>
+  <path class="line" d="M1215 470 L1215 516"/><path class="line" d="M1420 470 L1420 516"/>
+  <path class="dash" d="M1130 552 C1030 552 1008 568 1000 585"/>
+
+  <rect class="group" x="60" y="704" width="1480" height="94"/>
+  <text class="h" x="86" y="736">边界与不变量</text>
+  <rect class="box gray" x="110" y="756" width="390" height="32"/><text class="s" x="132" y="777">LLMConfig 描述“用哪个模型与连接”，ClientDefaults 描述“这次怎么跑”。</text>
+  <rect class="box gray" x="545" y="756" width="445" height="32"/><text class="s" x="567" y="777">Provider client 统一输出 LLMResponse / ToolCall / usage，TurnLoop 不关心厂商 SDK 细节。</text>
+  <rect class="box warn" x="1035" y="756" width="440" height="32"/><text class="s" x="1057" y="777">新增模型优先改 catalog / rules / ParamSpec，避免在业务路径写 per-model switch。</text>
+  <path class="line" d="M1470 552 C1515 590 1510 706 1450 756"/>
+</svg>

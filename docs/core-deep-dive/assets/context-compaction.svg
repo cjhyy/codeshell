@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-labelledby="title desc">
+  <title id="title">Context Compaction 分层策略</title>
+  <desc id="desc">展示 tier 0 persistence、tier 1 microcompact、tier 2 summarize、tier 3 window emergency，以及 tool_use/result 成对不变量。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M2,2 L10,6 L2,10 Z" fill="#334155"/></marker>
+    <style>
+      .bg{fill:#f8fafc}.title{font:700 34px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#0f172a}.sub{font:400 16px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#475569}.h{font:700 16px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#0f172a}.t{font:500 14px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#334155}.s{font:400 12px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#64748b}.box{stroke:#cbd5e1;stroke-width:1.5;rx:8}.blue{fill:#dbeafe;stroke:#60a5fa}.purple{fill:#ede9fe;stroke:#a78bfa}.green{fill:#dcfce7;stroke:#4ade80}.orange{fill:#ffedd5;stroke:#fb923c}.gray{fill:#f1f5f9;stroke:#94a3b8}.warn{fill:#fef3c7;stroke:#f59e0b}.group{fill:#ffffff;stroke:#e2e8f0;stroke-width:1.5;rx:8}.line{fill:none;stroke:#334155;stroke-width:2;marker-end:url(#arrow)}.dash{fill:none;stroke:#64748b;stroke-width:2;stroke-dasharray:7 6;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect class="bg" width="1400" height="900"/>
+  <text class="title" x="56" y="58">Context Compaction：逐级降本，不破坏消息语义</text>
+  <text class="sub" x="56" y="88">ContextManager 先做便宜的本地收缩，仍放不下才摘要；任何阶段都必须保持 tool_use/result 成对。</text>
+
+  <rect class="group" x="70" y="128" width="1260" height="130"/>
+  <text class="h" x="96" y="160">进入 compaction 前</text>
+  <rect class="box blue" x="120" y="184" width="210" height="54"/><text class="h" x="168" y="207">Transcript</text><text class="s" x="150" y="226">append-only 事实源</text>
+  <rect class="box blue" x="410" y="184" width="210" height="54"/><text class="h" x="452" y="207">LLM messages</text><text class="s" x="442" y="226">由 session 派生</text>
+  <rect class="box blue" x="700" y="184" width="210" height="54"/><text class="h" x="744" y="207">Token probe</text><text class="s" x="732" y="226">estimate + threshold</text>
+  <rect class="box blue" x="990" y="184" width="240" height="54"/><text class="h" x="1050" y="207">ContextManager</text><text class="s" x="1020" y="226">冻结决策 / reactive threshold</text>
+  <path class="line" d="M330 211 L410 211"/><path class="line" d="M620 211 L700 211"/><path class="line" d="M910 211 L990 211"/>
+
+  <rect class="group" x="70" y="312" width="1260" height="360"/>
+  <text class="h" x="96" y="344">四层策略：从无损持久化到紧急窗口处理</text>
+  <rect class="box orange" x="110" y="390" width="250" height="92"/><text class="h" x="150" y="418">Tier 0 persistence</text><text class="s" x="140" y="440">Transcript / State / FileHistory</text><text class="s" x="140" y="458">tool_result 原文可落盘保留</text>
+  <rect class="box green" x="420" y="390" width="250" height="92"/><text class="h" x="466" y="418">Tier 1 microcompact</text><text class="s" x="450" y="440">去重 file reads / 修剪 tool result</text><text class="s" x="450" y="458">mask browser snapshots / 小修小补</text>
+  <rect class="box purple" x="730" y="390" width="250" height="92"/><text class="h" x="790" y="418">Tier 2 summarize</text><text class="s" x="760" y="440">模型摘要旧上下文</text><text class="s" x="760" y="458">保留最近 turn 与边界</text>
+  <rect class="box warn" x="1040" y="390" width="250" height="92"/><text class="h" x="1092" y="418">Tier 3 emergency</text><text class="s" x="1070" y="440">窗口紧急裁剪 / hard fit</text><text class="s" x="1070" y="458">宁可降级，也不交错消息</text>
+  <path class="line" d="M360 436 L420 436"/><path class="line" d="M670 436 L730 436"/><path class="line" d="M980 436 L1040 436"/>
+
+  <rect class="box gray" x="200" y="552" width="210" height="54"/><text class="h" x="244" y="575">不触发时</text><text class="s" x="230" y="594">原 messages 继续进入模型</text>
+  <rect class="box gray" x="500" y="552" width="260" height="54"/><text class="h" x="560" y="575">触发后冻结</text><text class="s" x="530" y="594">本轮使用同一 compaction 决策</text>
+  <rect class="box gray" x="850" y="552" width="300" height="54"/><text class="h" x="930" y="575">输出窗口</text><text class="s" x="880" y="594">system + summary + recent turns + user task</text>
+  <path class="dash" d="M305 482 L305 552"/><path class="dash" d="M855 482 C855 520 670 528 630 552"/><path class="dash" d="M1165 482 C1165 520 1040 536 1000 552"/>
+
+  <rect class="group" x="70" y="720" width="1260" height="116"/>
+  <text class="h" x="96" y="752">硬不变量：tool_use/result 必须成对保序</text>
+  <rect class="box warn" x="120" y="776" width="310" height="38"/><text class="t" x="150" y="800">assistant tool_use(id) 后必须有 matching tool_result(id)</text>
+  <rect class="box warn" x="480" y="776" width="250" height="38"/><text class="t" x="514" y="800">不能只保留一半或跨摘要拆开</text>
+  <rect class="box warn" x="780" y="776" width="230" height="38"/><text class="t" x="820" y="800">resume repair 同样遵守</text>
+  <rect class="box warn" x="1060" y="776" width="220" height="38"/><text class="t" x="1096" y="800">坏 pair 会阻断 provider</text>
+  <path class="line" d="M225 238 C220 290 222 344 232 390"/>
+  <path class="line" d="M1110 238 C1128 286 1150 334 1164 390"/>
+  <path class="line" d="M1000 606 C1000 660 1128 696 1170 776"/>
+  <path class="dash" d="M545 482 C545 624 570 708 602 776"/>
+</svg>

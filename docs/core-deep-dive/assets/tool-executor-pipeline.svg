@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="760" viewBox="0 0 1600 760" role="img" aria-labelledby="title desc">
+  <title id="title">ToolExecutor 执行管线</title>
+  <desc id="desc">展示工具调用从 registry 到 executor，再经过 abort、capability、plan、schema、hooks、path、permission、sandbox、handler、result 的路径。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M2,2 L10,6 L2,10 Z" fill="#334155"/></marker>
+    <style>
+      .bg{fill:#f8fafc}.title{font:700 34px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#0f172a}.sub{font:400 16px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#475569}.h{font:700 15px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#0f172a}.t{font:500 13px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#334155}.s{font:400 12px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#64748b}.box{stroke:#cbd5e1;stroke-width:1.5;rx:8}.blue{fill:#dbeafe;stroke:#60a5fa}.purple{fill:#ede9fe;stroke:#a78bfa}.green{fill:#dcfce7;stroke:#4ade80}.orange{fill:#ffedd5;stroke:#fb923c}.red{fill:#fee2e2;stroke:#f87171}.gray{fill:#f1f5f9;stroke:#94a3b8}.group{fill:#ffffff;stroke:#e2e8f0;stroke-width:1.5;rx:8}.line{fill:none;stroke:#334155;stroke-width:2;marker-end:url(#arrow)}.dash{fill:none;stroke:#64748b;stroke-width:2;stroke-dasharray:7 6;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect class="bg" width="1600" height="760"/>
+  <text class="title" x="56" y="58">ToolExecutor：模型工具调用的安全闸口</text>
+  <text class="sub" x="56" y="88">所有 builtin 与 MCP 工具进入同一个执行管线；前置检查按“便宜且致命优先”的顺序排列。</text>
+
+  <rect class="box blue" x="70" y="164" width="180" height="62"/><text class="h" x="114" y="190">LLM tool_use</text><text class="s" x="100" y="209">name + JSON args</text>
+  <rect class="box purple" x="300" y="164" width="210" height="62"/><text class="h" x="348" y="190">ToolExecutor</text><text class="s" x="330" y="209">executeSingle(call)</text>
+  <path class="line" d="M250 195 L300 195"/>
+
+  <rect class="group" x="70" y="286" width="1460" height="262"/>
+  <text class="h" x="96" y="318">执行前半段：拒绝、降级、重写、确认</text>
+  <rect class="box red" x="100" y="354" width="120" height="52"/><text class="h" x="130" y="376">abort</text><text class="s" x="120" y="394">fast path</text>
+  <rect class="box red" x="250" y="354" width="142" height="52"/><text class="h" x="276" y="376">capability</text><text class="s" x="270" y="394">disabled / MCP</text>
+  <rect class="box orange" x="422" y="354" width="126" height="52"/><text class="h" x="454" y="376">plan</text><text class="s" x="440" y="394">read-only gate</text>
+  <rect class="box orange" x="578" y="354" width="126" height="52"/><text class="h" x="610" y="376">schema</text><text class="s" x="598" y="394">validate args</text>
+  <rect class="box purple" x="734" y="354" width="144" height="52"/><text class="h" x="766" y="376">pre hook</text><text class="s" x="756" y="394">rewrite / ask / deny</text>
+  <rect class="box orange" x="908" y="354" width="146" height="52"/><text class="h" x="944" y="376">path</text><text class="s" x="928" y="394">workspace / secret</text>
+  <rect class="box gray" x="1084" y="354" width="142" height="52"/><text class="h" x="1112" y="376">guard</text><text class="s" x="1100" y="394">redundant reads</text>
+  <rect class="box orange" x="1256" y="354" width="146" height="52"/><text class="h" x="1284" y="376">permission</text><text class="s" x="1275" y="394">rules / approval</text>
+  <path class="line" d="M220 380 L250 380"/><path class="line" d="M392 380 L422 380"/><path class="line" d="M548 380 L578 380"/><path class="line" d="M704 380 L734 380"/><path class="line" d="M878 380 L908 380"/><path class="line" d="M1054 380 L1084 380"/><path class="line" d="M1226 380 L1256 380"/>
+
+  <rect class="box purple" x="1260" y="458" width="142" height="52"/><text class="h" x="1284" y="480">perm hook</text><text class="s" x="1280" y="498">只能收紧决策</text>
+  <path class="line" d="M1329 406 L1329 458"/>
+  <path class="line" d="M405 226 C405 260 160 282 160 354"/>
+
+  <rect class="group" x="70" y="585" width="1460" height="110"/>
+  <text class="h" x="96" y="618">执行后半段：真正 handler 只在通过所有门禁后运行</text>
+  <rect class="box purple" x="260" y="640" width="160" height="38"/><text class="t" x="303" y="664">on_tool_start</text>
+  <rect class="box green" x="500" y="630" width="180" height="58"/><text class="h" x="546" y="653">Sandbox</text><text class="s" x="530" y="672">seatbelt / bwrap / off</text>
+  <rect class="box green" x="760" y="630" width="210" height="58"/><text class="h" x="810" y="653">ToolRegistry</text><text class="s" x="800" y="672">lookup / timeout / signal</text>
+  <rect class="box green" x="1050" y="630" width="180" height="58"/><text class="h" x="1102" y="653">handler</text><text class="s" x="1078" y="672">builtin or MCP tool</text>
+  <rect class="box purple" x="1300" y="640" width="166" height="38"/><text class="t" x="1320" y="664">post hooks / result</text>
+  <path class="line" d="M1331 510 C1331 570 420 600 340 640"/>
+  <path class="line" d="M420 659 L500 659"/><path class="line" d="M680 659 L760 659"/><path class="line" d="M970 659 L1050 659"/><path class="line" d="M1230 659 L1300 659"/>
+
+  <rect class="box gray" x="1040" y="154" width="430" height="88"/>
+  <text class="h" x="1070" y="182">不变量</text>
+  <text class="s" x="1070" y="204">Executor 捕获异常并返回 ToolResult error，坏工具名不杀死 turn。</text>
+  <text class="s" x="1070" y="224">Hooks 与 capability control 可以限制能力，不能越权放大权限。</text>
+  <path class="dash" d="M920 195 L1040 195"/>
+</svg>

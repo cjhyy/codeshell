@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="900" viewBox="0 0 1500 900" role="img" aria-labelledby="title desc">
+  <title id="title">Plugins、Capabilities、Credentials、Memory 与 Dream</title>
+  <desc id="desc">展示 plugins、skills、MCP、hooks、capability-control、credentials、memory、dream 如何连接到 core。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M2,2 L10,6 L2,10 Z" fill="#334155"/></marker>
+    <style>
+      .bg{fill:#f8fafc}.title{font:700 34px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#0f172a}.sub{font:400 16px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#475569}.h{font:700 16px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#0f172a}.t{font:500 14px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#334155}.s{font:400 12px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#64748b}.box{stroke:#cbd5e1;stroke-width:1.5;rx:8}.blue{fill:#dbeafe;stroke:#60a5fa}.purple{fill:#ede9fe;stroke:#a78bfa}.green{fill:#dcfce7;stroke:#4ade80}.orange{fill:#ffedd5;stroke:#fb923c}.gray{fill:#f1f5f9;stroke:#94a3b8}.warn{fill:#fef3c7;stroke:#f59e0b}.group{fill:#ffffff;stroke:#e2e8f0;stroke-width:1.5;rx:8}.line{fill:none;stroke:#334155;stroke-width:2;marker-end:url(#arrow)}.dash{fill:none;stroke:#64748b;stroke-width:2;stroke-dasharray:7 6;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect class="bg" width="1500" height="900"/>
+  <text class="title" x="56" y="58">运行时长能力：Plugins、能力总览、凭证与 Memory/Dream</text>
+  <text class="sub" x="56" y="88">插件扩展行为，capability-control 投射并收紧能力，credentials 受 scope gate 保护，memory 通过 Dream 做跨会话整理。</text>
+
+  <rect class="group" x="60" y="126" width="1380" height="198"/>
+  <text class="h" x="86" y="158">Plugin 安装与加载</text>
+  <rect class="box blue" x="110" y="200" width="170" height="56"/><text class="h" x="154" y="223">source</text><text class="s" x="136" y="242">marketplace / git / archive</text>
+  <rect class="box blue" x="340" y="200" width="180" height="56"/><text class="h" x="384" y="223">installer</text><text class="s" x="368" y="242">detect / validate / install</text>
+  <rect class="box orange" x="580" y="200" width="190" height="56"/><text class="h" x="628" y="223">manifest</text><text class="s" x="608" y="242">plugin@marketplace key</text>
+  <rect class="box purple" x="840" y="188" width="130" height="42"/><text class="t" x="874" y="214">MCP</text>
+  <rect class="box purple" x="840" y="246" width="130" height="42"/><text class="t" x="872" y="272">hooks</text>
+  <rect class="box purple" x="1030" y="188" width="130" height="42"/><text class="t" x="1064" y="214">skills</text>
+  <rect class="box purple" x="1030" y="246" width="130" height="42"/><text class="t" x="1064" y="272">agents</text>
+  <rect class="box purple" x="1220" y="216" width="150" height="42"/><text class="t" x="1256" y="242">commands</text>
+  <path class="line" d="M280 228 L340 228"/><path class="line" d="M520 228 L580 228"/><path class="line" d="M770 228 L840 209"/><path class="line" d="M770 228 L840 267"/><path class="line" d="M770 228 L1030 209"/><path class="line" d="M770 228 L1030 267"/><path class="line" d="M1160 267 L1220 237"/>
+
+  <rect class="group" x="60" y="380" width="640" height="250"/>
+  <text class="h" x="86" y="412">扩展面进入 core</text>
+  <rect class="box green" x="110" y="460" width="190" height="58"/><text class="h" x="154" y="484">ToolRegistry</text><text class="s" x="138" y="503">builtin + MCP tools</text>
+  <rect class="box purple" x="360" y="460" width="190" height="58"/><text class="h" x="408" y="484">HookRegistry</text><text class="s" x="390" y="503">lifecycle / tool gates</text>
+  <rect class="box orange" x="110" y="548" width="190" height="58"/><text class="h" x="154" y="572">SkillScanner</text><text class="s" x="138" y="591">SKILL.md 注入 prompt</text>
+  <rect class="box blue" x="360" y="548" width="190" height="58"/><text class="h" x="392" y="572">AgentDefinition</text><text class="s" x="390" y="591">agent registry / sub-agent</text>
+  <path class="dash" d="M905 288 C800 360 380 400 205 460"/><path class="dash" d="M905 288 C840 350 548 392 455 460"/><path class="dash" d="M1095 230 C920 396 352 504 205 548"/><path class="dash" d="M1095 288 C980 420 590 505 455 548"/>
+
+  <rect class="group" x="760" y="380" width="680" height="250"/>
+  <text class="h" x="786" y="412">Capability control 与 Credentials</text>
+  <rect class="box green" x="810" y="458" width="230" height="60"/><text class="h" x="858" y="482">capability-control</text><text class="s" x="838" y="501">service / project / overlay</text>
+  <rect class="box green" x="1080" y="458" width="160" height="60"/><text class="h" x="1126" y="482">tri-state</text><text class="s" x="1112" y="501">on / off / inherit</text>
+  <rect class="box orange" x="1270" y="458" width="130" height="60"/><text class="h" x="1300" y="482">disabled</text><text class="s" x="1294" y="501">deny projection</text>
+  <path class="line" d="M1040 488 L1080 488"/><path class="line" d="M1240 488 L1270 488"/>
+  <rect class="box blue" x="810" y="548" width="200" height="58"/><text class="h" x="860" y="572">CredentialStore</text><text class="s" x="838" y="591">user/project scope, 0o600</text>
+  <rect class="box warn" x="1060" y="548" width="170" height="58"/><text class="h" x="1104" y="572">use-gate</text><text class="s" x="1088" y="591">allow / ask / deny</text>
+  <rect class="box blue" x="1280" y="548" width="120" height="58"/><text class="h" x="1312" y="572">inject</text><text class="s" x="1300" y="591">tool env / args</text>
+  <path class="line" d="M1010 577 L1060 577"/><path class="line" d="M1230 577 L1280 577"/>
+
+  <rect class="group" x="60" y="690" width="1380" height="128"/>
+  <text class="h" x="86" y="722">Memory / Dream 跨会话整理后回到 prompt dynamic context</text>
+  <rect class="box orange" x="120" y="752" width="170" height="42"/><text class="t" x="158" y="778">session memory</text>
+  <rect class="box orange" x="360" y="752" width="180" height="42"/><text class="t" x="394" y="778">memory orchestrator</text>
+  <rect class="box purple" x="610" y="752" width="180" height="42"/><text class="t" x="650" y="778">Dream loop</text>
+  <rect class="box purple" x="860" y="752" width="190" height="42"/><text class="t" x="892" y="778">extract / consolidate</text>
+  <rect class="box green" x="1120" y="752" width="210" height="42"/><text class="t" x="1152" y="778">Prompt dynamic context</text>
+  <path class="line" d="M290 773 L360 773"/><path class="line" d="M540 773 L610 773"/><path class="line" d="M790 773 L860 773"/><path class="line" d="M1050 773 L1120 773"/>
+
+  <rect class="box gray" x="88" y="846" width="1324" height="34"/>
+  <text class="s" x="112" y="867">准确性提醒：凭证与 cookie 当前按文件权限和 scope gate 保护，不把图画成“已全量加密”；capability-control 只能投射和收紧能力。</text>
+</svg>
