@@ -39,6 +39,10 @@ import {
   probeCodexCli,
   discoverSessions,
   discoverCodexSessions,
+  countSessions,
+  countCodexSessions,
+  DEFAULT_DISCOVER_LIMIT,
+  DEFAULT_DISCOVER_SINCE_MS,
   readRecentHistory,
   readCodexRecentHistory,
   // Speech-to-text (voice input / 听写).
@@ -976,7 +980,13 @@ async function handleCcRoomEvent(event: MobileClientEvent & { deviceId?: string 
     }
     if (event.type === "ccRoom.listSessions") {
       const kind = event.kind ?? "claude-code";
-      const sessions = kind === "codex" ? discoverCodexSessions(event.cwd) : discoverSessions(event.cwd);
+      // Bound the mobile list too (recent 2 weeks AND ≤20) — phones especially
+      // shouldn't pull + deep-read an entire project's session history.
+      const opts = { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
+      const sessions =
+        kind === "codex"
+          ? discoverCodexSessions(event.cwd, undefined, opts)
+          : discoverSessions(event.cwd, undefined, opts);
       reply({ type: "ccRoom.listSessions.ok", cwd: event.cwd, sessions, kind });
       return;
     }
@@ -2139,8 +2149,17 @@ ipcMain.handle("rooms:history", async (_e, roomId: string, sinceSeq?: number) =>
 // ── CC rooms (external `claude` CLI orchestration) ──────────────────────────
 ipcMain.handle("ccRoom:probe", async (_e, force?: boolean) => probeClaudeCli(Boolean(force)));
 ipcMain.handle("ccRoom:codexProbe", async (_e, force?: boolean) => probeCodexCli(Boolean(force)));
-ipcMain.handle("ccRoom:listSessions", async (_e, cwd: string) => discoverSessions(cwd));
-ipcMain.handle("ccRoom:listCodexSessions", async (_e, cwd: string) => discoverCodexSessions(cwd));
+// Bounded by default (recent 2 weeks AND ≤20) so a project with lots of history
+// doesn't deep-read every session file on open. `all:true` returns everything
+// (the "load more" path). `total` lets the UI show how many are hidden.
+ipcMain.handle("ccRoom:listSessions", async (_e, cwd: string, all?: boolean) => {
+  const opts = all ? {} : { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
+  return { sessions: discoverSessions(cwd, undefined, opts), total: countSessions(cwd) };
+});
+ipcMain.handle("ccRoom:listCodexSessions", async (_e, cwd: string, all?: boolean) => {
+  const opts = all ? {} : { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
+  return { sessions: discoverCodexSessions(cwd, undefined, opts), total: countCodexSessions(cwd) };
+});
 ipcMain.handle(
   "ccRoom:openSession",
   async (

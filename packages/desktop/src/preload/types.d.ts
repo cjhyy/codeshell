@@ -1037,8 +1037,13 @@ export interface CodeshellApi {
   ccRoom: {
     probe(force?: boolean): Promise<CCAvailability>;
     codexProbe(force?: boolean): Promise<CCAvailability>;
-    listSessions(cwd: string): Promise<DiscoveredSession[]>;
-    listCodexSessions(cwd: string): Promise<DiscoveredSession[]>;
+    /** Bounded by default (recent 2 weeks AND ≤20); pass all=true to fetch every
+     *  session (the "load more" path). `total` is the full unbounded count. */
+    listSessions(cwd: string, all?: boolean): Promise<{ sessions: DiscoveredSession[]; total: number }>;
+    listCodexSessions(
+      cwd: string,
+      all?: boolean,
+    ): Promise<{ sessions: DiscoveredSession[]; total: number }>;
     openSession(
       claudeSessionId: string,
       cwd: string,
