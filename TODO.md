@@ -212,8 +212,8 @@
   - 修复方向：LAN/tunnel 两种 upgrade 都校验 Origin/Host；LAN 模式对 `auth.device` / `pair.complete` 加 per-socket/per-IP 失败计数和退避；可选在 pairing 期外禁止裸连。
   - 回归验证：伪造 Origin 的 upgrade 被拒；合法 Origin 可连接但仍需 auth；缺失 Origin 按策略拒绝或白名单；多次错误 auth 触发限速；真配对流程与 tunnel passcode lockout 不回归。
 
-- [ ] **DriveAgent / background job 的 `files_changed` 汇总与 invalid sessionId 通知边界**
-  - 影响：外部 agent（DriveAgent claude/codex）改的文件不进 `files_changed` 汇总卡；FilesPanel 与审查面板仍能看到，故非完全不可见，但内联汇总卡会漏报外部 agent 的改动量/diff。另有 Low edge：`DriveAgent` 后台路径用 `ctx?.sessionId ?? ""`，ctx 缺失 sessionId 时结果通知被丢、永不唤醒。
+- [~] **DriveAgent / background job 的 `files_changed` 汇总与 invalid sessionId 通知边界** — 部分修：外部 agent 改动已在后台面板 job 详情显示(93ce1e3f，见 #6)。剩：聊天流内联汇总卡仍未合入外部改动 + invalid sessionId edge 未做。
+  - 影响：外部 agent（DriveAgent claude/codex）改的文件不进**聊天流内联 `files_changed` 汇总卡**（已在后台面板 job 详情可见）。另有 Low edge：`DriveAgent` 后台路径用 `ctx?.sessionId ?? ""`，ctx 缺失 sessionId 时结果通知被丢、永不唤醒。
   - 相关文件：`packages/core/src/tool-system/builtin/drive-claude-code.ts:83-104`；`packages/core/src/tool-system/builtin/background-jobs.ts`；`packages/core/src/tool-system/builtin/background-work.ts`；`packages/core/src/protocol/server.ts`；`packages/desktop/src/renderer/messages/fileChangeAggregator.ts`；`packages/core/src/tool-system/builtin/agent-notifications.ts:75-83`。
   - 已核实边界：notification wakeup 时序基本健全，见“已核实未作为 Bug”；本条只保留已确认的 Low / UX 缺口与 invalid sessionId edge。
   - 修复方向：DriveAgent 完成后附带改动文件清单（外部 CLI 输出 changed files 或 cwd git diff），喂进汇总；后台任务创建时强制有效 sessionId，缺失时 fail loud 或记录可见错误。
@@ -369,15 +369,15 @@
 
 ## 未做（核对 2026-07-01 确认）
 
-- [ ] **#2/#5 后台 job 完成即消失、无结果详情** — 【确认 NOT DONE — `finish(jobId)` 仍直接 `jobs.delete`,`BackgroundJobEntry` 只有 jobId/sessionId/description 不存结果】
+- [x] **#2/#5 后台 job 完成即消失、无结果详情** — 已修(270de583)：`finish` 改标 status 不删 + 存 finalText/ccSessionId；面板 job 行状态图标 + 点开看详情；清理=删会话时 dropForSession + 每 session 终态 job 上限 50 兜内存；hasRunning/listRunning 只数 running(引擎+裁判语义不变)。+7 TDD。
   - 修复方向(需拍方案):`finish` 不删改标 `status:completed/failed` + 存 `finalText`/`ccSessionId`;面板 job 类加点击展开看详情;保留 cli 徽标。需定何时清理(turn 结束/数量上限)。
   - 相关文件:`background-jobs.ts`;`drive-claude-code.ts:82-105`;`background-work.ts`;`panels/BackgroundShellPanel.tsx:263-283`;`preload/types.d.ts:49-61`。
 
-- [ ] **#6 后台外部 agent 改的文件对宿主 UI 不可见** — 【确认 NOT DONE — 完成通知无 files_changed 字段】（与 Low「DriveAgent files_changed 汇总」同根）
+- [x] **#6 后台外部 agent 改的文件对宿主 UI 不可见** — 已修(93ce1e3f)：core `external-agent-changes.ts` 按 cli 定位外部 transcript(claude projects / codex rollout)解析 Edit/Write/apply_patch 文件清单；DriveAgent 完成存进 `BackgroundJobEntry.changedFiles`；后台面板 job 行显「编辑了 N 个文件」+展开列清单。MVP 只文件名+计数。+8 TDD。（与 Low「DriveAgent files_changed 汇总」同根）
   - 现状:外部 CLI 的 Edit/Write 在外部 transcript,`fileChangeAggregator` 只扫本会话 tool 消息,外部改动无 diff/无计数/无文件名。
   - 修复方向(需拍方案,与 #2/#5 一起设计):完成通知带 `ccSessionId`,可读外部 CLI transcript 解析改动文件回填;或至少在工具卡/后台 job 详情展示「编辑了 N 个文件」。
 
-- [ ] **#10 浏览器新标签页 localhost 端口探测刷控制台报错** — 【确认 NOT DONE — 仍 renderer fetch 扫描】（非 bug,纯噪音 + 功能不精确）
+- [x] **#10 浏览器新标签页 localhost 端口探测刷控制台报错** — 已修(81d82f42)：端口探测下沉 main `net.connect` 真 TCP(port-probe.ts)+IPC browser:probePorts+preload；useLocalhostPorts 改调 preload 纯展示，删 renderer no-cors fetch，消控制台噪音+403 误报。+5 TDD。
   - 现状:`useLocalhostPorts.ts`(L10-34)仍用 renderer `fetch(..., {mode:"no-cors"})` 扫 CANDIDATE_PORTS,失败请求在 catch 前已进 DevTools;`no-cors` opaque response 读不到状态码 → 403 误报;硬编码端口表既不全又浪费。
   - 修复方向(需拍方案):端口发现下沉 main —— 最小 `net.connect` 真 TCP 探测 + preload 暴露 + renderer 改调;更彻底 main 枚举系统监听端口(`lsof -iTCP -sTCP:LISTEN`)。renderer 纯展示。
   - 临时:DevTools 控制台过滤框输 `-useLocalhostPorts` 屏蔽。
