@@ -25,6 +25,7 @@ import {
   writeInstalledPlugins,
 } from "./installedPlugins.js";
 import { rewritePluginVars } from "./varRewrite.js";
+import { assertSafePluginName } from "./installer/paths.js";
 import { pruneDisabledSettingsForPlugin } from "./installer/pruneDisabled.js";
 import type {
   PluginEntrySource,
@@ -40,7 +41,22 @@ function pluginCacheRoot(): string {
   return join(userHome(), ".code-shell", "plugins", "cache");
 }
 
-function pluginCacheDir(marketplace: string, plugin: string, version: string): string {
+/**
+ * Compose the on-disk cache directory for a plugin version. Every path segment
+ * (marketplace / plugin / version) can originate from an attacker-controlled
+ * marketplace manifest, so each must be validated as a single safe path
+ * segment before it enters `join`. Without this a manifest entry named `..`
+ * (or containing a separator) would let the materialized plugin tree be
+ * written outside the plugin cache root — a supply-chain path traversal.
+ *
+ * Reuses `assertSafePluginName` (rejects empty / "." / ".." / separators /
+ * NUL). Exported so the segment-validation contract can be unit-tested
+ * directly.
+ */
+export function pluginCacheDir(marketplace: string, plugin: string, version: string): string {
+  assertSafePluginName(marketplace);
+  assertSafePluginName(plugin);
+  assertSafePluginName(version);
   return join(pluginCacheRoot(), marketplace, plugin, version);
 }
 
@@ -296,7 +312,17 @@ export async function installPlugin(
     return { ok: false, error: `plugin "${pluginName}" not found in marketplace "${marketplaceName}".` };
   }
 
-  const mat = await materialize(entry.source, km.installLocation, marketplaceName, pluginName);
+  // materialize() validates every cache path segment (marketplace / plugin /
+  // version) and throws a PluginInstallError on an unsafe one. Convert that to
+  // a clean failure result — every caller (bootstrap / marketplace-service /
+  // tui handler) consumes { ok, error } and must not be crashed by a hostile
+  // marketplace manifest.
+  let mat: Awaited<ReturnType<typeof materialize>>;
+  try {
+    mat = await materialize(entry.source, km.installLocation, marketplaceName, pluginName);
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
   if (!mat.ok) return mat;
 
   // Rewrite ${CLAUDE_PLUGIN_ROOT} → ${CODESHELL_PLUGIN_ROOT} across every
