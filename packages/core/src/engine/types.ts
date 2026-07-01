@@ -143,6 +143,21 @@ export interface EngineConfig {
    * Subagents inherit the parent Engine's scope. See SettingsScope.
    */
   settingsScope?: SettingsScope;
+  /**
+   * Workspace trust for the project directory (`cwd`). When explicitly `false`,
+   * dangerous fields committed into the project's own
+   * `.code-shell/settings.{json,local.json}` (permissions / env / hooks /
+   * mcpServers / localEnvironment) are stripped before merge, so a cloned
+   * malicious repo can't self-authorize permission rules, inject env
+   * (BASH_ENV/LD_PRELOAD), register hooks, or auto-connect MCP servers. Safe
+   * fields still apply. The user/managed layers are never gated.
+   *
+   * Undefined / true keeps the pre-trust behavior (fully trusted) so embedders
+   * that don't wire a trust store are unaffected. Host terminals (desktop) pass
+   * the real decision from their per-directory trust store; when it's "unknown"
+   * they should pass `false` (fail-closed) until the user grants trust.
+   */
+  projectTrusted?: boolean;
 }
 
 export interface EngineHookConfig {

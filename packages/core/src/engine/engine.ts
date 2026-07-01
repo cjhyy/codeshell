@@ -2615,6 +2615,7 @@ export class Engine {
       this.settingsManager = new SettingsManager(
         this.config.cwd,
         this.config.settingsScope ?? "project",
+        this.config.projectTrusted !== false,
       );
     }
     return this.settingsManager;
@@ -2675,7 +2676,11 @@ export class Engine {
     }
 
     try {
-      const settingsManager = new SettingsManager(cwd, this.config.settingsScope ?? "project");
+      const settingsManager = new SettingsManager(
+        cwd,
+        this.config.settingsScope ?? "project",
+        this.config.projectTrusted !== false,
+      );
       const settings = settingsManager.get();
       if (settings.permissions?.rules?.length) {
         rules.unshift(...settings.permissions.rules);

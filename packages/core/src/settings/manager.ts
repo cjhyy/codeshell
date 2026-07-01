@@ -44,6 +44,30 @@ export function noRepoDir(): string {
 export type SettingsSourceName = "managed" | "user" | "project" | "local" | "flag";
 
 /**
+ * Top-level settings fields that can influence code execution and are therefore
+ * stripped from an UNTRUSTED project's disk layers (project + local) before
+ * merge. A repo commits these into its `.code-shell/settings.json`, so an
+ * untrusted clone must not have them take effect:
+ *   - permissions  — `rules` can self-authorize (allow Bash …); `defaultMode`
+ *                     can set bypassPermissions.
+ *   - env          — injected into Bash child env unfiltered (BASH_ENV,
+ *                     LD_PRELOAD, PATH → arbitrary code on next command).
+ *   - localEnvironment — same, as the env floor.
+ *   - hooks        — arbitrary commands on lifecycle events.
+ *   - mcpServers   — auto-connect to attacker-controlled MCP servers.
+ * Only project-scoped layers are filtered; user/managed/flag are trusted.
+ * Mirrors Claude Code's TRUSTED_SETTING_SOURCES model (project sources excluded
+ * from dangerous env application until trust is granted).
+ */
+export const DANGEROUS_PROJECT_FIELDS = [
+  "permissions",
+  "env",
+  "localEnvironment",
+  "hooks",
+  "mcpServers",
+] as const;
+
+/**
  * Which disk layers a SettingsManager is allowed to read.
  *   'full'     — managed + user (~/.code-shell) + project + local (host terminal entrypoints)
  *   'project'  — project + local only (${cwd}/.code-shell); never the host user dir. [default]
@@ -67,6 +91,19 @@ export class SettingsManager {
   constructor(
     private readonly cwd: string = process.cwd(),
     private readonly scope: SettingsScope = "project",
+    /**
+     * Workspace trust for the project directory. When false, dangerous fields
+     * committed into the project's own `.code-shell/settings.{json,local.json}`
+     * ({@link DANGEROUS_PROJECT_FIELDS}) are stripped before merge, so a cloned
+     * malicious repo can't self-authorize permission rules, inject `env`
+     * (BASH_ENV/LD_PRELOAD/…), register hooks, or connect MCP servers. Safe
+     * fields (model choice, UI prefs, …) still merge. The user/managed/flag
+     * layers are never gated — the user put those there deliberately.
+     *
+     * Defaults to `true` so existing embedders/tests keep their behavior; the
+     * host (desktop) passes the real trust decision from its trust-store.
+     */
+    private readonly projectTrusted: boolean = true,
   ) {}
 
   /**
@@ -120,6 +157,20 @@ export class SettingsManager {
     }
     if (readProject) {
       this.applyConfigMigration(join(this.cwd, ".code-shell", "settings.json"), "project");
+    }
+
+    // Workspace-trust gate: an untrusted project must not influence execution
+    // through dangerous fields committed into its own .code-shell/settings.*.
+    // Strip them from the project/local layers (after migration re-read the
+    // files, so we filter the final data) before merge. See
+    // DANGEROUS_PROJECT_FIELDS and the `projectTrusted` ctor arg.
+    if (!this.projectTrusted) {
+      for (const source of this.sources) {
+        if (source.name !== "project" && source.name !== "local") continue;
+        for (const field of DANGEROUS_PROJECT_FIELDS) {
+          if (field in source.data) delete source.data[field];
+        }
+      }
     }
 
     // Deep merge
@@ -334,6 +385,13 @@ export class SettingsManager {
     const validated = validateSettings(raw) as Record<string, unknown>;
     const out: Record<string, unknown> = {};
     for (const k of Object.keys(raw)) out[k] = validated[k];
+    // Same workspace-trust gate as load(): getForScope("project") is a direct
+    // file read that bypasses the merge, so an untrusted project's dangerous
+    // fields (e.g. localEnvironment.setupScripts — shell run at worktree setup)
+    // must be stripped here too. See DANGEROUS_PROJECT_FIELDS.
+    if (scope === "project" && !this.projectTrusted) {
+      for (const field of DANGEROUS_PROJECT_FIELDS) delete out[field];
+    }
     return out as Partial<ValidatedSettings>;
   }
 
