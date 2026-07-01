@@ -55,7 +55,8 @@ import {
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { registerGuest } from "./browser-driver/active-guest.js";
-import { buildDesktopAutomationRunner } from "./automation-host.js";
+import { buildDesktopAutomationRunner, makeCronRunnerWithResume } from "./automation-host.js";
+import type { CronRunResult } from "@cjhyy/code-shell-core";
 import {
   setAutomationScheduler,
   listAutomations,
@@ -1407,7 +1408,27 @@ app.whenReady().then(() => {
     // callback streams events to a live snapshot for renderer reconnect; the
     // announce callback fires once with cwd+title so the renderer can place
     // the live run in the right project sidebar group immediately.
-    const automationRunner = buildDesktopAutomationRunner(emitAutomationEvent, announceAutomationSession);
+    const headlessAutomationRunner = buildDesktopAutomationRunner(emitAutomationEvent, announceAutomationSession);
+    // "Continue this conversation" jobs (job.resumeSessionId) don't run a
+    // headless Engine — they feed their prompt into the LIVE session as a new
+    // user turn, exactly like a human typing at a scheduled time. agent/run with
+    // an existing sessionId makes the worker resume it from disk if it isn't
+    // already live (engine.ts: exists()→resume). The run then inherits that
+    // session's own cwd / permission mode / tools / background-completion wakeup.
+    const injectResumeTurn = async (
+      sessionId: string,
+      prompt: string,
+      _signal?: AbortSignal,
+    ): Promise<CronRunResult> => {
+      if (!bridge) return { text: "", reason: "no-bridge" };
+      const res = await injectAndAwaitResult(bridge, "agent/run", { task: prompt, sessionId });
+      if (res.ok) {
+        const r = res.result as { text?: string; reason?: string } | undefined;
+        return { text: r?.text ?? "", reason: r?.reason ?? "done" };
+      }
+      return { text: "", reason: res.message };
+    };
+    const automationRunner = makeCronRunnerWithResume(headlessAutomationRunner, injectResumeTurn);
     automationHandle = startAutomation({
       store: new CronStore(defaultCronStorePath()),
       runner: automationRunner,
