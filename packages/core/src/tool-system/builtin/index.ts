@@ -36,7 +36,6 @@ import { driveClaudeCodeToolDef, driveClaudeCodeTool, driveAgentToolDef, driveAg
 import { checkQuotaToolDef, checkQuotaTool } from "./check-quota.js";
 import { skillToolDef, skillTool } from "./skill.js";
 import { mcpToolDef, mcpToolExecute, listMcpResourcesToolDef, listMcpResourcesTool, readMcpResourceToolDef, readMcpResourceTool } from "./mcp-tools.js";
-import { remoteTriggerToolDef, remoteTriggerTool } from "./remote-trigger.js";
 import { replToolDef, replTool } from "./repl.js";
 import { briefToolDef, briefTool } from "./brief.js";
 import { powershellToolDef, powershellTool } from "./powershell.js";
@@ -565,16 +564,6 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       isConcurrencySafe: true,
     },
     execute: readMcpResourceTool,
-  },
-  {
-    definition: {
-      ...remoteTriggerToolDef,
-      source: "builtin",
-      permissionDefault: "ask",
-      isReadOnly: false,
-      isConcurrencySafe: false,
-    },
-    execute: remoteTriggerTool,
   },
   {
     definition: {

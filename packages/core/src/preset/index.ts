@@ -89,7 +89,6 @@ const GENERAL_BUILTIN_TOOLS = [
   "MCPTool",
   "ListMcpResources",
   "ReadMcpResource",
-  "RemoteTrigger",
   "REPL",
   "PowerShell",
   // Persistent cross-session memory. Including these in the default preset is
