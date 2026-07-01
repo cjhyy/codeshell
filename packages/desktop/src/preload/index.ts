@@ -920,8 +920,9 @@ contextBridge.exposeInMainWorld("codeshell", {
   ccRoom: {
     probe: (force?: boolean) => ipcRenderer.invoke("ccRoom:probe", force),
     codexProbe: (force?: boolean) => ipcRenderer.invoke("ccRoom:codexProbe", force),
-    listSessions: (cwd: string) => ipcRenderer.invoke("ccRoom:listSessions", cwd),
-    listCodexSessions: (cwd: string) => ipcRenderer.invoke("ccRoom:listCodexSessions", cwd),
+    listSessions: (cwd: string, all?: boolean) => ipcRenderer.invoke("ccRoom:listSessions", cwd, all),
+    listCodexSessions: (cwd: string, all?: boolean) =>
+      ipcRenderer.invoke("ccRoom:listCodexSessions", cwd, all),
     openSession: (claudeSessionId: string, cwd: string, mode: string, kind?: "claude-code" | "codex") =>
       ipcRenderer.invoke("ccRoom:openSession", claudeSessionId, cwd, mode, kind),
     send: (roomId: string, text: string) => ipcRenderer.invoke("ccRoom:send", roomId, text),

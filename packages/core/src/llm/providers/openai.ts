@@ -26,6 +26,19 @@ import {
   StreamIdleTimeoutError,
 } from "../stream-watchdog.js";
 
+/**
+ * Extract OpenAI's automatic prompt-cache hit count. The API reports cached
+ * input tokens under `usage.prompt_tokens_details.cached_tokens` (NOT a
+ * top-level field). Returns a spreadable partial so callers omit the key
+ * entirely when the API reports no cache details — keeping cacheReadTokens
+ * `undefined` rather than a misleading 0. See docs/todo/prompt-cache-optimization.md.
+ */
+function cachedTokensOf(usage: unknown): { cacheReadTokens?: number } {
+  const cached = (usage as { prompt_tokens_details?: { cached_tokens?: number } } | undefined)
+    ?.prompt_tokens_details?.cached_tokens;
+  return typeof cached === "number" ? { cacheReadTokens: cached } : {};
+}
+
 interface RunStreamOpts {
   idleTimeoutMs?: number;
   requestId?: string;
@@ -457,6 +470,9 @@ export class OpenAIClient extends LLMClientBase {
         promptTokens: response.usage?.prompt_tokens ?? 0,
         completionTokens: response.usage?.completion_tokens ?? 0,
         totalTokens: response.usage?.total_tokens ?? 0,
+        // OpenAI caching is automatic; hits land here, NOT in a top-level
+        // cacheReadTokens field. Reading the wrong field made hit-rate invisible.
+        ...cachedTokensOf(response.usage),
       };
       this.recordUsage(usage, options);
 
@@ -629,6 +645,7 @@ export class OpenAIClient extends LLMClientBase {
         promptTokens: streamUsage?.prompt_tokens ?? 0,
         completionTokens: streamUsage?.completion_tokens ?? 0,
         totalTokens: streamUsage?.total_tokens ?? 0,
+        ...cachedTokensOf(streamUsage),
       };
       this.recordUsage(usage, options);
 

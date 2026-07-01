@@ -265,9 +265,16 @@ export function aggregateFileChanges(messages: Message[]): FileEditEntry[] | nul
 export function aggregateFileChangeSummary(
   messages: Message[],
 ): { files: FileEditEntry[]; sessionDiffs: SessionFileDiff[] } | null {
+  // Find the last REAL user turn. Engine-injected user messages (step-gap
+  // steering / goal wakeup continuation, marked injected) are transparent: a
+  // goal-driven task spans many engine.run boundaries — each inserts an injected
+  // user turn — and the summary must cover ALL its edits, not just the final
+  // run's. Skipping them lands the boundary on the last thing the user actually
+  // typed (TODO-background-panel #9).
   let start = -1;
   for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i].kind === "user") {
+    const m = messages[i];
+    if (m.kind === "user" && !m.injected) {
       start = i;
       break;
     }

@@ -20,6 +20,18 @@ function user(text = "hi", createdAt?: number): Message {
   return { kind: "user", id: freshId("user"), text, createdAt };
 }
 
+/** An engine-injected user turn (steer / goal wakeup / cron续接) — carries
+ *  injected:true. Such a message must NOT open a new turn boundary. */
+function injectedUser(text = "steer", createdAt?: number): Message {
+  return { kind: "user", id: freshId("user"), text, createdAt, injected: true };
+}
+
+/** A still-streaming assistant message (done:false) — the turn hasn't finalized,
+ *  so a live turn stays isLive until turn_complete. */
+function streamingAssistant(text: string, createdAt?: number): AssistantMessage {
+  return { kind: "assistant", id: freshId("assistant"), text, done: false, createdAt };
+}
+
 function assistant(
   text: string,
   times: { createdAt?: number; doneAt?: number } = {},
@@ -267,6 +279,54 @@ describe("buildStreamItems", () => {
     expect(groups).toHaveLength(1);
     expect(groups[0]!.isLive).toBe(false);
     expect(groups[0]!.durationMs).toBe(3_000);
+  });
+
+  // 渐进插入(steer / goal wakeup / cron续接)注入一条 injected user 消息时,
+  // 上一正在流的轮不能被折叠:injected 消息是"当前工作的延续",不开启新轮。
+  test("an injected user message does NOT fold the prior in-flight live turn", () => {
+    const messages: Message[] = [
+      user("run the task", 0),
+      streamingAssistant("working…", 100), // NOT done yet (streaming)
+      tool("Bash", 1_000, 2_000),
+      injectedUser("also check the logs", 2_500), // steer spliced in mid-turn
+    ];
+
+    const groups = processGroups(buildStreamItems(messages, { liveTurnActive: true }));
+
+    // Exactly ONE turn group, and it stays live (not folded) — the injected
+    // message did not become a new turn boundary demoting the prior turn.
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.isLive).toBe(true);
+  });
+
+  test("a real (non-injected) new user turn DOES fold the prior completed turn (regression)", () => {
+    const messages: Message[] = [
+      user("first task", 0),
+      tool("Bash", 1_000, 2_000),
+      assistant("done", { createdAt: 500, doneAt: 3_000 }),
+      user("second task", 4_000), // a genuine new turn
+    ];
+
+    const groups = processGroups(buildStreamItems(messages, { liveTurnActive: true }));
+
+    // Prior turn is a normal closed/folded group; only the new turn is live.
+    expect(groups.length).toBeGreaterThanOrEqual(1);
+    expect(groups[0]!.isLive).toBe(false);
+  });
+
+  test("an injected user message's text is still present in the stream (not dropped)", () => {
+    const messages: Message[] = [
+      user("run the task", 0),
+      assistant("working…", { createdAt: 100 }),
+      tool("Bash", 1_000, 2_000),
+      injectedUser("also check the logs", 2_500),
+    ];
+
+    const items = buildStreamItems(messages, { liveTurnActive: true });
+    const hasInjectedBubble = items.some(
+      (it) => it.kind === "user" && (it as { text?: string }).text === "also check the logs",
+    );
+    expect(hasInjectedBubble).toBe(true);
   });
 
   // The interrupted turn should render flat, not behind "已处理 Xs ⌄". The

@@ -20,6 +20,27 @@ function nextReqId(): string {
   return `r${_reqSeq.toString(36)}`;
 }
 
+/**
+ * Prompt-cache hit rate for one request, as CC computes it:
+ *   cacheRead / (cacheRead + cacheCreation + uncachedInput)
+ * where uncachedInput = promptTokens − cacheRead − cacheCreation (promptTokens
+ * already includes the cached portion). Returns undefined when the provider
+ * reported no cache info at all, so `llm.request` only carries the field when
+ * it's meaningful. Makes hit-rate observable in logs — the prerequisite for
+ * any caching tuning (docs/todo/prompt-cache-optimization.md §四 step 1).
+ */
+export function cacheHitRate(usage: LLMResponse["usage"]): number | undefined {
+  if (!usage) return undefined;
+  const read = usage.cacheReadTokens ?? 0;
+  const creation = usage.cacheCreationTokens ?? 0;
+  if (read === 0 && creation === 0) return undefined;
+  const prompt = usage.promptTokens ?? 0;
+  const uncached = Math.max(0, prompt - read - creation);
+  const denom = read + creation + uncached;
+  if (denom === 0) return undefined;
+  return read / denom;
+}
+
 export class ModelFacade {
   constructor(
     private readonly client: LLMClientBase,
@@ -100,6 +121,7 @@ export class ModelFacade {
       toolCalls: response.toolCalls.length,
       textLen: response.text?.length ?? 0,
       usage: response.usage,
+      cacheHitRate: cacheHitRate(response.usage),
     });
     recordLLMResponse(
       sid,
@@ -170,6 +192,7 @@ export class ModelFacade {
       toolCalls: response.toolCalls.length,
       textLen: response.text?.length ?? 0,
       usage: response.usage,
+      cacheHitRate: cacheHitRate(response.usage),
     });
     recordLLMResponse(
       sid,

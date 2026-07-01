@@ -1,7 +1,8 @@
 import { readdirSync, statSync, existsSync, openSync, readSync, closeSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import type { DiscoveredSession } from "./session-discovery.js";
+import type { DiscoveredSession, DiscoverOptions } from "./session-discovery.js";
+import { selectRecentStats } from "./session-discovery.js";
 
 /**
  * Discover codex CLI sessions for a given `cwd`, mirroring the claude-side
@@ -25,33 +26,56 @@ import type { DiscoveredSession } from "./session-discovery.js";
 export function discoverCodexSessions(
   cwd: string,
   codexHome = join(homedir(), ".codex"),
+  opts: DiscoverOptions = {},
 ): DiscoveredSession[] {
   const root = join(codexHome, "sessions");
   if (!existsSync(root)) return [];
-  const out: DiscoveredSession[] = [];
+
+  // Cheap pass: stat every rollout (no read). Apply the recency window here so
+  // the meta read (first line) only runs on in-window files. The limit can't be
+  // applied yet — we don't know which files match `cwd` until we read the meta,
+  // so we'd otherwise drop matching-but-not-yet-seen sessions.
+  const stats: { file: string; mtimeMs: number }[] = [];
   for (const file of walkRollouts(root)) {
+    let st;
+    try { st = statSync(file); } catch { continue; }
+    stats.push({ file, mtimeMs: st.mtimeMs });
+  }
+  const windowed = selectRecentStats(stats, { sinceMs: opts.sinceMs, now: opts.now });
+
+  const limit = opts.limit && opts.limit > 0 ? opts.limit : Infinity;
+  const out: DiscoveredSession[] = [];
+  for (const s of windowed) {
+    if (out.length >= limit) break;
     let meta: { id?: string; cwd?: string } | undefined;
     try {
-      meta = readSessionMeta(file);
+      meta = readSessionMeta(s.file);
     } catch {
       continue;
     }
     if (!meta || !meta.id || meta.cwd !== cwd) continue;
-    let st;
-    try {
-      st = statSync(file);
-    } catch {
-      continue;
-    }
     out.push({
       sessionId: meta.id,
-      firstMessage: readFirstUserMessage(file),
-      lastModified: st.mtimeMs,
+      firstMessage: readFirstUserMessage(s.file),
+      lastModified: s.mtimeMs,
       messageCount: 0, // not tracked for codex (would need a full scan); UI shows time + title.
     });
   }
-  out.sort((a, b) => b.lastModified - a.lastModified);
   return out;
+}
+
+/** Count codex sessions for `cwd` (reads first-line meta of every rollout; no
+ *  window). Used so the UI knows whether a bounded list left older ones hidden. */
+export function countCodexSessions(cwd: string, codexHome = join(homedir(), ".codex")): number {
+  const root = join(codexHome, "sessions");
+  if (!existsSync(root)) return 0;
+  let n = 0;
+  for (const file of walkRollouts(root)) {
+    let meta: { id?: string; cwd?: string } | undefined;
+    try { meta = readSessionMeta(file); } catch { continue; }
+    if (meta && meta.id && meta.cwd === cwd) n++;
+  }
+  return n;
 }
 
 /** Recursively yield every `rollout-*.jsonl` file under `root`. */

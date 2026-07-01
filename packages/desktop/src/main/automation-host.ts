@@ -92,6 +92,12 @@ export function buildDesktopAutomationRunner(
     const settings = new SettingsManager(jobCwd, "full").get();
     const llm = resolveLLMConfigForTag(settings, "text", (settings as { defaults?: { text?: string } }).defaults?.text);
     if (!llm) throw new Error("自动化任务:没有可用的文本模型连接。");
+
+    // This runner is ONLY the isolated-automation path (a fresh headless session
+    // per fire). "Continue this conversation" jobs (job.resumeSessionId set) are
+    // routed away from here by makeCronRunnerWithResume — they feed their prompt
+    // into the LIVE session instead, so they never build a headless Engine.
+
     // Task-level cross-run memory: prior run summaries the job left for itself.
     // This is system-level context (notes from earlier runs), NOT something the
     // user typed — so it rides appendSystemPrompt, not the user prompt. Folding
@@ -124,7 +130,7 @@ export function buildDesktopAutomationRunner(
       // Reject Bash(run_in_background=true) too — the param survives even
       // though the companion tools are stripped (design §5.5).
       allowBackgroundShells: false,
-      // Read-only contract from bindCronToEngine — cron is unattended.
+      // Permission tier from the job (bindCronToEngine → resolveWritePolicy).
       permissionMode: req.permissionMode,
       approvalBackend: req.approvalBackend,
       // Confine writes/shell to the workspace per the job's tier — defense in
@@ -183,5 +189,42 @@ export function buildDesktopAutomationRunner(
       }
       throw err;
     }
+  };
+}
+
+/**
+ * Feed a "continue this conversation" job's prompt into an EXISTING codeshell
+ * session as a new user turn — the "cron = a human typing at a scheduled time"
+ * model. The resumed run is a real chat, so it inherits that session's own cwd /
+ * permission mode / tools / background-completion wakeup — none of the isolated
+ * headless-automation framing applies. Resolves with the run outcome (or a
+ * failure result the scheduler can log). See
+ * docs/superpowers/specs/2026-07-01-cron-resume-as-fed-input-and-fold-fix-design.md.
+ */
+export type ResumeInjector = (
+  sessionId: string,
+  prompt: string,
+  signal?: AbortSignal,
+) => Promise<CronRunResult>;
+
+/**
+ * Wrap the isolated-automation headless runner so that jobs carrying a
+ * `resumeSessionId` are routed to `injectResume` (feed the live session)
+ * instead of building a fresh headless Engine. Jobs without one keep the
+ * headless isolated-automation path unchanged.
+ *
+ * An empty-string resumeSessionId is treated as absent (defensive: a persisted
+ * "" must not force a resume with no target).
+ */
+export function makeCronRunnerWithResume(
+  headless: CronRunner,
+  injectResume: ResumeInjector,
+): CronRunner {
+  return async (req): Promise<CronRunResult> => {
+    const sid = req.job.resumeSessionId;
+    if (typeof sid === "string" && sid.length > 0) {
+      return injectResume(sid, req.prompt, req.signal);
+    }
+    return headless(req);
   };
 }

@@ -50,6 +50,10 @@ export function CCRoomView({ cwd }: { cwd: string | null }) {
   const [cliKind, setCliKind] = useState<CliKind>("claude-code");
   const [avail, setAvail] = useState<Availability | null>(null);
   const [sessions, setSessions] = useState<DiscoveredSession[]>([]);
+  // Total session count (unbounded) vs the bounded default we show. When total >
+  // shown and not expanded, offer "load more" (TODO room-list convergence).
+  const [total, setTotal] = useState(0);
+  const [expanded, setExpanded] = useState(false);
   const [conv, setConv] = useState<{ roomId: string; sessionId: string; mode: string } | null>(
     null,
   );
@@ -78,23 +82,31 @@ export function CCRoomView({ cwd }: { cwd: string | null }) {
     [cwd, picking, cliKind],
   );
 
-  const refresh = useCallback(() => {
-    if (!cwd) {
-      setSessions([]);
-      return;
-    }
-    const list =
-      cliKind === "codex"
-        ? window.codeshell.ccRoom.listCodexSessions(cwd)
-        : window.codeshell.ccRoom.listSessions(cwd);
-    void list.then(setSessions);
-  }, [cwd, cliKind]);
+  const refresh = useCallback(
+    (all = false) => {
+      if (!cwd) {
+        setSessions([]);
+        setTotal(0);
+        return;
+      }
+      const list =
+        cliKind === "codex"
+          ? window.codeshell.ccRoom.listCodexSessions(cwd, all)
+          : window.codeshell.ccRoom.listSessions(cwd, all);
+      void list.then((res) => {
+        setSessions(res.sessions);
+        setTotal(res.total);
+      });
+    },
+    [cwd, cliKind],
+  );
 
   // Re-probe whenever the selected CLI changes. setAvail(null) shows the loading
   // state and avoids briefly listing the other CLI's sessions under the new kind.
   useEffect(() => {
     setAvail(null);
     setSessions([]);
+    setExpanded(false);
     void probeFor(cliKind).then(setAvail);
   }, [cliKind, probeFor]);
 
@@ -211,6 +223,19 @@ export function CCRoomView({ cwd }: { cwd: string | null }) {
               <code className="shrink-0 text-xs text-muted-foreground">{s.sessionId.slice(0, 8)}</code>
             </Card>
           ))
+        )}
+        {!expanded && total > sessions.length && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="self-center text-muted-foreground"
+            onClick={() => {
+              setExpanded(true);
+              refresh(true);
+            }}
+          >
+            加载更多（还有 {total - sessions.length} 个更早的会话）
+          </Button>
         )}
       </section>
 

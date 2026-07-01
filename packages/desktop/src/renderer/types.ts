@@ -29,6 +29,12 @@ export interface UserMessage {
   /** True when this send established/advanced a persistent goal (CC /goal).
    *  Drives the ◎ goal marker on the message bubble. */
   isGoal?: boolean;
+  /** True when this "user" message was INJECTED by the engine (step-gap steering
+   *  / goal wakeup continuation), not typed by the user. The file-change
+   *  aggregator treats it as transparent so a goal-driven task that spans many
+   *  engine.run boundaries still summarizes ALL its edits, not just the last
+   *  run's (TODO-background-panel #9). */
+  injected?: boolean;
 }
 
 export interface AssistantMessage {
@@ -420,7 +426,9 @@ export function applyStreamEvent(
       // it into the running turn at a step boundary. Render it as a user bubble
       // in the feed so the injected guidance is visible inline (it really did
       // join the conversation — it's persisted to the transcript core-side).
-      return appendUserMessage(state, event.text, now());
+      // Mark injected so it doesn't reset the file-change aggregation boundary
+      // (a goal-driven task steers/wakes across many runs — #9).
+      return appendUserMessage(state, event.text, now(), false, true);
     }
 
     case "text_delta": {
@@ -1022,12 +1030,15 @@ export function appendUserMessage(
   createdAt?: number,
   /** True when this send sets/advances a persistent goal (drives ◎ marker). */
   isGoal?: boolean,
+  /** True for engine-injected user turns (steer / goal wakeup) — see
+   *  UserMessage.injected. */
+  injected?: boolean,
 ): MessagesReducerState {
   return {
     ...state,
     messages: [
       ...state.messages,
-      { kind: "user", id: freshId("user"), text, createdAt, isGoal },
+      { kind: "user", id: freshId("user"), text, createdAt, isGoal, injected },
     ],
   };
 }
