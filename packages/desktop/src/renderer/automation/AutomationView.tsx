@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { AutomationSummary, AutomationPermissionLevel, RunSummary } from "../../preload/types";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -382,8 +381,8 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
   );
 }
 
-function AutomationDetail(props: {
-  t: TFunction;
+export function AutomationDetail(props: {
+  t?: TFunction;
   job: AutomationSummary;
   repos: Repo[];
   onToggleEnabled: (next: boolean) => void;
@@ -407,9 +406,15 @@ function AutomationDetail(props: {
   onOpenDiskSession: (session: DiskSessionMeta) => void;
   onOpenSession: (repoId: string | null, sessionId: string) => void;
 }) {
-  const { job, t } = props;
-  const sessionCount = props.sessions.length;
-  const lastSession = props.sessions[0];
+  const { job } = props;
+  // `t` is normally supplied by the parent (which holds the provider-bound
+  // translator). It is optional so the component can be rendered in isolation
+  // (e.g. renderToStaticMarkup in unit tests); the provider-less `useT()`
+  // fallback resolves real strings against the stored/default language.
+  const fallback = useT();
+  const t = props.t ?? fallback.t;
+  const sessions = props.sessions ?? [];
+  const lastSession = sessions[0];
 
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [promptDraft, setPromptDraft] = useState(job.prompt);
@@ -543,8 +548,8 @@ function AutomationDetail(props: {
           <strong className="mt-1 block text-sm text-foreground">{fmtTime(job.lastRun)}</strong>
         </div>
         <div className="rounded-md border bg-card p-3">
-          <span className="text-xs text-muted-foreground">{t("auto.detail.historySession")}</span>
-          <strong className="mt-1 block text-sm text-foreground">{sessionCount}</strong>
+          <span className="text-xs text-muted-foreground">{t("auto.detail.runTimes")}</span>
+          <strong className="mt-1 block text-sm text-foreground">{job.runCount}</strong>
         </div>
       </div>
 
@@ -585,18 +590,7 @@ function AutomationDetail(props: {
       )}
 
       <div className="rounded-md border bg-card p-3">
-        <FieldRow label={t("auto.detail.status")}>
-          <Badge
-            variant="outline"
-            className={
-              job.enabled
-                ? "border-status-ok/30 bg-status-ok/15 text-status-ok"
-                : undefined
-            }
-          >
-            {job.enabled ? t("auto.detail.statusActive") : t("auto.detail.statusPaused")}
-          </Badge>
-        </FieldRow>
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("auto.detail.configSection")}</p>
 
         <FieldRow label={t("auto.detail.frequency")}>
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -703,9 +697,6 @@ function AutomationDetail(props: {
           </Select>
         </FieldRow>
 
-        <FieldRow label={t("auto.detail.nextRun")}>{fmtTime(job.nextRun)}</FieldRow>
-        <FieldRow label={t("auto.detail.lastRun")}>{fmtTime(job.lastRun)}</FieldRow>
-        <FieldRow label={t("auto.detail.runTimes")}>{job.runCount}</FieldRow>
         <FieldRow label={t("auto.detail.project")}>
           <Select
             value={selectedProjectValue(job.cwd)}
@@ -722,16 +713,6 @@ function AutomationDetail(props: {
             </SelectContent>
           </Select>
         </FieldRow>
-        <FieldRow label={t("auto.detail.recentRun")}>
-          {job.lastRunId ? (
-            <Button size="sm" variant="outline" onClick={() => props.onViewRun(job.lastRunId!)}>
-              <History size={14} />
-              {t("auto.detail.recentRunView")}
-            </Button>
-          ) : (
-            "—"
-          )}
-        </FieldRow>
       </div>
 
       <div className="rounded-md border bg-card p-3">
@@ -747,11 +728,11 @@ function AutomationDetail(props: {
             </Button>
           )}
         </div>
-        {props.sessions.length === 0 ? (
+        {sessions.length === 0 ? (
           <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">{t("auto.detail.noJumpableSession")}</div>
         ) : (
           <ul className="space-y-1">
-            {props.sessions.map(({ repoId, session, run, disk, needsImport }) => {
+            {sessions.map(({ repoId, session, run, disk, needsImport }) => {
               // Trust the flag set at link synthesis (automationSessionLinks):
               // local-present links carry needsImport=false, disk/run-only links
               // carry true. The old per-row `props.sessions.find()` was O(rows²)
