@@ -16,9 +16,11 @@ interface Props {
   /** "read" or "write" — affects the summary verbiage and detail layout. */
   variant: "read" | "write" | "edit";
   turnEpoch?: number;
+  /** Session cwd, used to resolve relative attachment paths. */
+  cwd?: string | null;
 }
 
-export function FileToolCard({ message, onSelect, selected, variant, turnEpoch }: Props) {
+export function FileToolCard({ message, onSelect, selected, variant, turnEpoch, cwd }: Props) {
   const { t } = useT();
   const a = parsedArgs(message);
   const path =
@@ -96,6 +98,7 @@ export function FileToolCard({ message, onSelect, selected, variant, turnEpoch }
           <div className="flex flex-wrap gap-2">
             <AttachmentCard
               attachment={{ path, kind: writeAttachmentKind(path, message)! }}
+              cwd={cwd}
             />
           </div>
         </div>

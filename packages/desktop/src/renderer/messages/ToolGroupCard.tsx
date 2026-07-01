@@ -12,6 +12,8 @@ interface Props {
   group: ToolGroup;
   turnEpoch?: number;
   defaultOpen?: boolean;
+  /** Session cwd, forwarded to member tool cards for attachment resolution. */
+  cwd?: string | null;
 }
 
 /**
@@ -27,7 +29,7 @@ interface Props {
  *
  * On turnEpoch change, the group force-collapses back to summary.
  */
-function ToolGroupCardImpl({ group, turnEpoch, defaultOpen = false }: Props) {
+function ToolGroupCardImpl({ group, turnEpoch, defaultOpen = false, cwd }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   useEffect(() => {
     if (turnEpoch !== undefined) setOpen(defaultOpen);
@@ -50,7 +52,7 @@ function ToolGroupCardImpl({ group, turnEpoch, defaultOpen = false }: Props) {
         <div className="flex flex-col gap-2 border-t p-2">
           {group.items.map((it) => {
             if (it.kind === "tool") {
-              return <ToolCard key={it.id} message={it} turnEpoch={turnEpoch} />;
+              return <ToolCard key={it.id} message={it} turnEpoch={turnEpoch} cwd={cwd} />;
             }
             // thinking — the only non-tool item a tool_group can hold.
             return <ThinkingMessageView key={it.id} message={it} />;

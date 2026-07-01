@@ -12,6 +12,8 @@ interface Props {
   onSelect?: (m: ToolMessage) => void;
   selectedId?: string | null;
   turnEpoch?: number;
+  /** Session cwd, used to resolve relative attachment paths. */
+  cwd?: string | null;
 }
 
 /**
@@ -25,7 +27,7 @@ interface Props {
  * `messages.map` keeps untouched items by reference identity — so the
  * default shallow compare correctly short-circuits.
  */
-function ToolCardImpl({ message, onSelect, selectedId, turnEpoch }: Props) {
+function ToolCardImpl({ message, onSelect, selectedId, turnEpoch, cwd }: Props) {
   const selected = selectedId === message.id;
   const name = message.toolName.toLowerCase();
 
@@ -33,13 +35,13 @@ function ToolCardImpl({ message, onSelect, selectedId, turnEpoch }: Props) {
     return <BashToolCard message={message} onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;
   }
   if (name === "read" || name === "view" || name === "fileread") {
-    return <FileToolCard message={message} variant="read" onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;
+    return <FileToolCard message={message} variant="read" onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} cwd={cwd} />;
   }
   if (name === "write" || name === "filewrite") {
-    return <FileToolCard message={message} variant="write" onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;
+    return <FileToolCard message={message} variant="write" onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} cwd={cwd} />;
   }
   if (name === "edit" || name === "multiedit" || name === "applypatch" || name === "apply_patch") {
-    return <FileToolCard message={message} variant="edit" onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;
+    return <FileToolCard message={message} variant="edit" onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} cwd={cwd} />;
   }
   if (name === "grep" || name === "glob" || name === "search") {
     return <SearchToolCard message={message} onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;
@@ -50,7 +52,7 @@ function ToolCardImpl({ message, onSelect, selectedId, turnEpoch }: Props) {
   if (name === "agent" || name === "task" || name.startsWith("agent")) {
     return <AgentToolCard message={message} onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;
   }
-  return <GenericToolCard message={message} onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;
+  return <GenericToolCard message={message} onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} cwd={cwd} />;
 }
 
 export const ToolCard = memo(ToolCardImpl);

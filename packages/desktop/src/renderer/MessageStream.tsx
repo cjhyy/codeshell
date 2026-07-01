@@ -144,10 +144,10 @@ export function MessageStream({
     <div className="flex-1 overflow-y-auto" ref={ref}>
       {items.map((m) => {
         if (m.kind === "turn_process_group") {
-          return <TurnProcessGroupCard key={m.id} group={m} turnEpoch={turnEpoch} />;
+          return <TurnProcessGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} />;
         }
         if (m.kind === "tool_group") {
-          return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} />;
+          return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} />;
         }
         if (m.kind === "agent_group") {
           return <AgentGroupCard key={m.id} group={m} />;
@@ -156,7 +156,7 @@ export function MessageStream({
           case "tool":
             // Tool cards now display their full args/result body inline
             // when expanded — no separate inspector pane to feed.
-            return <ToolCard key={m.id} message={m} turnEpoch={turnEpoch} />;
+            return <ToolCard key={m.id} message={m} turnEpoch={turnEpoch} cwd={cwd} />;
           case "user": {
             // decodeWireForDisplay drops images with an empty data URL (dead
             // ephemeral screenshots), so a turn that was only such an image

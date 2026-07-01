@@ -11,9 +11,11 @@ interface Props {
   onSelect?: (m: ToolMessage) => void;
   selected?: boolean;
   turnEpoch?: number;
+  /** Session cwd, used to resolve relative attachment paths. */
+  cwd?: string | null;
 }
 
-export function GenericToolCard({ message, onSelect, selected, turnEpoch }: Props) {
+export function GenericToolCard({ message, onSelect, selected, turnEpoch, cwd }: Props) {
   // Use parsedArgs (argsLive ?? parsed message.args), NOT raw message.args —
   // message.args is the tool_use_start snapshot ("{}" while streaming); the real
   // args arrive via tool_use_args_delta and live in argsLive. Reading the raw
@@ -75,7 +77,7 @@ export function GenericToolCard({ message, onSelect, selected, turnEpoch }: Prop
           <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">files</span>
           <div className="flex flex-wrap gap-2">
             {attachments.map((a) => (
-              <AttachmentCard key={a.path} attachment={a} />
+              <AttachmentCard key={a.path} attachment={a} cwd={cwd} />
             ))}
           </div>
         </div>

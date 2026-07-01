@@ -14,6 +14,8 @@ interface Props {
   /** Rendered shape: inner items may include an AgentGroup (foldAgentGroups). */
   group: RenderedTurnProcessGroup;
   turnEpoch?: number;
+  /** Session cwd, forwarded to member tool cards for attachment resolution. */
+  cwd?: string | null;
 }
 
 /**
@@ -42,7 +44,7 @@ function dedupeById<T extends { id: string }>(items: T[]): T[] {
  * Live turn: defaults to OPEN with a 1s elapsed ticker. Closed turn:
  * defaults to CLOSED with static total wall time.
  */
-function TurnProcessGroupCardImpl({ group, turnEpoch }: Props) {
+function TurnProcessGroupCardImpl({ group, turnEpoch, cwd }: Props) {
   const [open, setOpen] = useState(group.isLive);
 
   // Force-collapse on turn boundary, but only for already-closed groups — and
@@ -92,10 +94,10 @@ function TurnProcessGroupCardImpl({ group, turnEpoch }: Props) {
         <div className={showHeader ? "mt-1 flex flex-col gap-1" : "flex flex-col gap-1"}>
           {dedupeById(group.items).map((m) => {
             if (m.kind === "tool_group") {
-              return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} defaultOpen />;
+              return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} defaultOpen />;
             }
             if (m.kind === "tool") {
-              return <ToolCard key={m.id} message={m} turnEpoch={turnEpoch} />;
+              return <ToolCard key={m.id} message={m} turnEpoch={turnEpoch} cwd={cwd} />;
             }
             if (m.kind === "assistant") {
               // Empty assistant = nothing to draw (only text renders here).

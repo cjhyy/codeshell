@@ -62,9 +62,15 @@ export function detectAttachments(
   const name = toolName.toLowerCase();
   const found: Attachment[] = [];
   const seen = new Set<string>();
-  const push = (p: string): void => {
+  const push = (p: string, requireDir = false): void => {
     const trimmed = p.trim().replace(/[.,;:!?]+$/, "");
     if (!trimmed || seen.has(trimmed)) return;
+    // Prose-scraped paths must carry a directory (absolute `/`, `./`/`../`,
+    // or `dir/file`). A bare filename like `TODO.md` mentioned in a sentence
+    // has no cwd we can resolve it against, so clicking it opens a wrong
+    // Finder location — skip it. Args-derived paths (Write/GenerateImage)
+    // bypass this: the card supplies the session cwd to resolve them.
+    if (requireDir && !trimmed.includes("/")) return;
     const kind = classifyPath(trimmed);
     if (kind === "file") return; // unknown extension — skip
     seen.add(trimmed);
@@ -98,7 +104,7 @@ export function detectAttachments(
     PATH_RE.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = PATH_RE.exec(result))) {
-      push(m[1]!);
+      push(m[1]!, /* requireDir */ true);
     }
   }
 
