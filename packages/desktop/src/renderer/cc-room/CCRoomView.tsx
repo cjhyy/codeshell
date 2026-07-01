@@ -9,6 +9,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { CCConversationView } from "./CCConversationView";
+import { QuotaPanel } from "./QuotaPanel";
 
 /**
  * CC Room — lists this project's external coding-agent CLI sessions for the
@@ -190,15 +191,17 @@ export function CCRoomView({ cwd }: { cwd: string | null }) {
           {label} 会话
           {cwd && <span className="ml-1 font-normal text-muted-foreground">· {cwd}</span>}
         </h2>
-        <Button
-          size="sm"
-          className="shrink-0"
-          disabled={!cwd}
-          title="新开 session"
-          onClick={() => setPicking({ sessionId: "" })}
-        >
-          新开 session
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          <QuotaPanel which={cliKind === "codex" ? "codex" : "claude"} />
+          <Button
+            size="sm"
+            disabled={!cwd}
+            title="新开 session"
+            onClick={() => setPicking({ sessionId: "" })}
+          >
+            新开 session
+          </Button>
+        </div>
       </div>
 
       {/* Sessions */}
