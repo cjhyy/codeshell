@@ -68,9 +68,9 @@ export const automation = {
       },
       // permission level options
       permission: {
-        readOnly: "只读",
-        workspaceWrite: "可写工作区",
-        full: "完全(可提 PR)",
+        readOnly: "只读（只看不改）",
+        workspaceWrite: "可写工作区（改本项目文件）",
+        full: "完全（改文件 + 提 PR）",
       },
       // cadence options
       cadence: {
@@ -260,9 +260,9 @@ export const automation = {
         daysAgo: "{n} d ago",
       },
       permission: {
-        readOnly: "Read-only",
-        workspaceWrite: "Workspace write",
-        full: "Full (can open PRs)",
+        readOnly: "Read-only (look, don't touch)",
+        workspaceWrite: "Workspace write (edit project files)",
+        full: "Full (edit + open PRs)",
       },
       cadence: {
         daily: "Daily",

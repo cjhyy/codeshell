@@ -34,10 +34,10 @@ import { fmtRelative } from "./relativeTime";
 import { useT, type TFunction } from "../i18n/I18nProvider";
 import type { TranslationKey } from "../i18n/dict";
 
-const PERMISSION_OPTIONS: { value: string; labelKey: TranslationKey }[] = [
-  { value: "read-only", labelKey: "auto.permission.readOnly" },
-  { value: "workspace-write", labelKey: "auto.permission.workspaceWrite" },
-  { value: "full", labelKey: "auto.permission.full" },
+export const PERMISSION_OPTIONS: { value: string; labelKey: TranslationKey; tone: "ok" | "warn" | "err" }[] = [
+  { value: "read-only", labelKey: "auto.permission.readOnly", tone: "ok" },
+  { value: "workspace-write", labelKey: "auto.permission.workspaceWrite", tone: "warn" },
+  { value: "full", labelKey: "auto.permission.full", tone: "err" },
 ];
 
 // Cadence types for the "pick a cadence → pick a time" frequency control. The
@@ -699,7 +699,17 @@ export function AutomationDetail(props: {
             <SelectTrigger className="h-8 w-[160px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               {PERMISSION_OPTIONS.map((p) => (
-                <SelectItem key={p.value} value={p.value}>{t(p.labelKey)}</SelectItem>
+                <SelectItem key={p.value} value={p.value}>
+                  <span className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "inline-block h-2 w-2 rounded-full",
+                        p.tone === "ok" ? "bg-status-ok" : p.tone === "warn" ? "bg-status-warn" : "bg-status-err",
+                      )}
+                    />
+                    {t(p.labelKey)}
+                  </span>
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
