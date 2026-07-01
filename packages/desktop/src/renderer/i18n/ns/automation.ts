@@ -170,6 +170,13 @@ export const automation = {
         body: "Agent 会在此目录读写文件、运行命令。只信任你确认安全的项目。未信任项目仍可对话,但所有写工具调用会被拒绝。",
         viewOnly: "仅查看(拒绝写工具)",
         trustContinue: "信任并继续",
+        risksTitle: "此项目自带以下配置,仅在你信任后生效:",
+        risksNone: "此项目未自带 .code-shell 配置。",
+        riskPermissions: "{n} 条权限规则(可自授权免审批)",
+        riskEnv: "环境变量注入: {keys}",
+        riskHooks: "{n} 个生命周期钩子(会自动执行命令)",
+        riskMcp: "MCP 服务器: {names}",
+        riskSetup: "工作区初始化脚本(打开时执行 shell)",
       },
       // CustomizeView
       customize: {
@@ -332,6 +339,13 @@ export const automation = {
         body: "The agent will read/write files and run commands in this directory. Only trust projects you have confirmed are safe. Untrusted projects can still chat, but all write tool calls will be denied.",
         viewOnly: "View only (deny write tools)",
         trustContinue: "Trust and continue",
+        risksTitle: "This project ships config that only takes effect once you trust it:",
+        risksNone: "This project ships no .code-shell config.",
+        riskPermissions: "{n} permission rule(s) (can self-authorize without prompting)",
+        riskEnv: "Environment variable injection: {keys}",
+        riskHooks: "{n} lifecycle hook(s) (run commands automatically)",
+        riskMcp: "MCP servers: {names}",
+        riskSetup: "Workspace setup scripts (shell run on open)",
       },
       customize: {
         title: "Extensions",
