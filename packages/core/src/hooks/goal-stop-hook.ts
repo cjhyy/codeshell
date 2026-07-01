@@ -50,6 +50,18 @@ export interface GoalStopHookOptions {
   /** Override the goal instead of reading ctx.data.goal (mainly for tests). */
   goal?: string | GoalConfig;
   /**
+   * Re-check whether the session STILL has a live persisted goal, evaluated
+   * fresh each time the hook fires. The hook's `goal` above is frozen at
+   * creation, so a goal cleared mid-run (user hit 清除 while a long-lived
+   * run kept going) would otherwise be judged forever off the stale copy —
+   * the unregister path in Engine.clearGoal only fires for the one in-flight
+   * hook it tracks, which misses automation / resumed runs. When this returns
+   * false the hook allows the stop immediately without calling the judge.
+   * Injectable (reads SessionManager on the engine); omit to disable the
+   * re-check (tests / non-persistent callers).
+   */
+  isGoalActive?: (sessionId: string) => boolean;
+  /**
    * Called once when the judge first returns met:true, before this handler
    * returns. The engine uses it to clear the session's persisted activeGoal so
    * a later bare send doesn't re-inherit a satisfied goal. Optional so tests /
@@ -169,13 +181,29 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     if (!g) return {};
     const goal = g.objective;
 
+    const sessionId = ctx.data.sessionId;
+
+    // Re-check the LIVE goal each turn. `goal` above is frozen at hook creation,
+    // so a goal cleared mid-run (清除) on a long-lived run (automation / resumed)
+    // would keep being judged off the stale copy — Engine.clearGoal's unregister
+    // only reaches the single in-flight hook it tracks. If the persisted goal is
+    // gone, allow the stop now and skip the judge call entirely.
+    if (
+      opts.isGoalActive &&
+      typeof sessionId === "string" &&
+      sessionId.length > 0 &&
+      !opts.isGoalActive(sessionId)
+    ) {
+      log.info("goal_stop.cleared_midrun", { cat: "goal" });
+      return {};
+    }
+
     // Background work is no longer a mechanical short-circuit. Instead we list
     // what's running and let the judge decide (s-mqe0ox7n-a8d11c26 bug): a
     // boolean "has background work" can't tell a finite download/render (→ wait
     // for the wakeup, allow stop) from a never-ending dev server (→ judge the
     // goal normally). The judge sees each task's kind + command and returns a
     // three-state verdict; `waiting:true` allows the stop without pushing.
-    const sessionId = ctx.data.sessionId;
     const runningWork =
       typeof sessionId === "string" && sessionId.length > 0
         ? listRunningBackgroundWork(sessionId)

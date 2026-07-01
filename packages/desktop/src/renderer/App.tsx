@@ -2876,19 +2876,28 @@ function App() {
   }, [state.messages]);
 
   // Clear the active persistent goal (CC /goal clear) for the active session.
-  // The reducer will also drop state.activeGoal on the goal_cleared event, but
-  // we don't get that event back over the stream for an idle session, so the
-  // TopBar reflects the cleared state via the engine round-trip + a local nudge
-  // isn't needed: goalClear's core path is authoritative and the next render
-  // reads the (now-absent) goal once the session reloads. For immediate UI
-  // feedback we also turn the composer goal toggle off below.
+  // goalClear's core path clears state.json authoritatively, but for an idle /
+  // aborted session there is NO live worker and thus NO stream to push a
+  // goal_cleared event back on — so state.activeGoal (which drives the GOAL
+  // popover) would never get nulled and the block would stay on screen despite
+  // the disk clear succeeding ("清除 点了没反应"). So we optimistically feed a
+  // goal_cleared event into the reducer for this bucket ourselves: the popover
+  // disappears immediately, independent of whether a worker exists. The dropped
+  // composer toggle keeps the next bare send from re-inheriting the goal.
   const handleClearGoal = (): void => {
     const eid = engineSessionIdForActive();
     if (!eid) return;
     void window.codeshell.goalClear(eid).catch((e) =>
       window.codeshell.log("goal.clear.failed", { error: String(e) }),
     );
-    // Reflect immediately: drop the composer goal toggle for this bucket.
+    // Reflect immediately (client-side, no dependency on a backend event):
+    // null out state.activeGoal for this bucket so the GOAL block hides now.
+    dispatch({
+      type: "stream",
+      bucket: activeBucket,
+      event: { type: "goal_cleared" } as StreamEvent,
+    });
+    // And drop the composer goal toggle for this bucket.
     setGoalOverrides((prev) => ({ ...prev, [activeBucket]: false }));
   };
 

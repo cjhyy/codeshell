@@ -80,6 +80,36 @@ describe("createGoalStopHook — three-state judge", () => {
     expect(res.messages?.[0]).toContain("tests still failing");
   });
 
+  it("goal cleared mid-run → allows stop WITHOUT calling the judge", async () => {
+    // The persisted goal was cleared (user hit 清除) while a long-lived run was
+    // still going. The hook's frozen `opts.goal` copy would otherwise keep
+    // judging not_met forever. isGoalActive lets it re-check the live goal each
+    // turn: cleared → allow stop, skip the LLM entirely.
+    const judge = fakeJudge('{"met": false, "waiting": false, "gaps": "still going"}');
+    const hook = createGoalStopHook({
+      goal: "ship it",
+      llm: judge,
+      log: noopLog,
+      isGoalActive: () => false, // goal was cleared on disk
+    });
+    const res = await hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "wip" } });
+    expect(res.continueSession).toBeUndefined(); // allow stop, no re-block
+    expect(judge.calls).toBe(0); // never paid for the judge
+  });
+
+  it("goal still active (isGoalActive true) → judges normally", async () => {
+    const judge = fakeJudge('{"met": false, "waiting": false, "gaps": "tests failing"}');
+    const hook = createGoalStopHook({
+      goal: "ship it",
+      llm: judge,
+      log: noopLog,
+      isGoalActive: () => true,
+    });
+    const res = await hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "wip" } });
+    expect(res.continueSession).toBe(true);
+    expect(judge.calls).toBe(1);
+  });
+
   it("GUARD: waiting:true with NO running background work falls through to not_met", async () => {
     // The session has no registered background work, so honoring `waiting` would
     // abandon the goal with nothing left to wake it. Must continueSession instead.

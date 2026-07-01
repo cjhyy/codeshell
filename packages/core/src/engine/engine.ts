@@ -417,6 +417,18 @@ export class Engine {
    * otherwise keep re-blocking the stop). Null when no goal run is active.
    */
   private activeGoalHook: ReturnType<typeof createGoalStopHook> | null = null;
+  /**
+   * The in-flight run's session bundle, held so clearGoal() can wipe the goal
+   * on the SAME instance the run loop is persisting each turn — not a fresh
+   * detached copy from resume(). Without this, a mid-run 清除 clears disk, but
+   * the still-running loop's next saveState(bundle.state) resurrects the goal
+   * (bundle.state.activeGoal was never dropped). A never-completing goal run
+   * (judge keeps returning not_met → continueSession) stays live for a long
+   * time, so this write-back race is the norm, not an edge case, for such runs.
+   * Single-valued like activeTurnLoop — one top-level run per engine at a time.
+   * Null when idle; set at run start, cleared in run's finally.
+   */
+  private activeRunSession: SessionBundle | null = null;
 
   /** Public accessor so UI/clients can read the resolved per-model window. */
   get maxContextTokens(): number {
@@ -1872,6 +1884,12 @@ export class Engine {
             this.sessionManager.saveState(session.state);
           }
         },
+        // Re-read the persisted goal each turn so a mid-run 清除 (clearGoal
+        // wrote state.json but this hook's frozen goal copy + the closure's
+        // in-RAM session are untouched) actually stops the judge. Reads disk
+        // via readActiveGoal — authoritative and independent of which session
+        // instance the run closure holds.
+        isGoalActive: (sid) => this.sessionManager.readActiveGoal(sid) !== undefined,
       });
       this.hooks.register("on_stop", goalHookHandler, 0, "goal-stop");
       // Expose for clearGoal() mid-run. Already guarded by isSubAgent above.
@@ -1973,6 +1991,10 @@ export class Engine {
     // Expose this run's loop for mid-run extension (TODO 3.1). Top-level only —
     // a sub-agent's loop is its own concern and isn't user-extendable.
     if (this.config.isSubAgent !== true) this.activeTurnLoop = turnLoop;
+    // Expose this run's session bundle so a mid-run clearGoal() wipes the goal
+    // on the very instance this loop keeps saving (see field doc). Top-level
+    // only — sub-agents don't carry user-clearable persistent goals.
+    if (this.config.isSubAgent !== true) this.activeRunSession = session;
 
     let result: Awaited<ReturnType<typeof turnLoop.run>>;
     try {
@@ -2044,6 +2066,7 @@ export class Engine {
       if (goalHookHandler) this.hooks.unregister("on_stop", goalHookHandler);
       if (this.activeGoalHook === goalHookHandler) this.activeGoalHook = null;
       if (this.activeTurnLoop === turnLoop) this.activeTurnLoop = null;
+      if (this.activeRunSession === session) this.activeRunSession = null;
       // Run-scoped too: this handler is re-registered every run(), so it must be
       // dropped here or it stacks duplicates that re-snapshot on every tool.
       this.hooks.unregister("on_tool_start", fileHistoryHandler);
@@ -2549,7 +2572,17 @@ export class Engine {
    */
   clearGoal(sessionId: string): boolean {
     if (!this.sessionManager.exists(sessionId)) return false;
-    const session = this.sessionManager.resume(sessionId);
+    // Prefer the LIVE run's bundle when it's this session: clearing its
+    // in-RAM state.activeGoal is what stops the run loop from writing the goal
+    // back on its next saveState. A fresh resume() copy would be cleared and
+    // persisted, but the running loop's own detached bundle still holds the
+    // goal and resurrects it — the stale-write-back race. Falls back to a
+    // resumed copy when no run of this session is currently in flight.
+    const live =
+      this.activeRunSession && this.activeRunSession.state.sessionId === sessionId
+        ? this.activeRunSession
+        : null;
+    const session = live ?? this.sessionManager.resume(sessionId);
     const had = session.state.activeGoal !== undefined;
     if (had) {
       session.state.activeGoal = undefined;

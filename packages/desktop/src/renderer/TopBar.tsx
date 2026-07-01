@@ -72,9 +72,9 @@ function TopBarImpl({
       className="flex h-11 items-center justify-between border-b border-border px-3 text-sm"
       style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         <span className="w-[68px] shrink-0" aria-hidden="true" />
-        <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+        <span className="shrink-0" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
           <IconButton
             label={sidebarCollapsed ? t("topbar.expandSidebar") : t("topbar.collapseSidebar")}
             onClick={onToggleSidebar}
@@ -82,11 +82,19 @@ function TopBarImpl({
             <PanelLeft size={14} />
           </IconButton>
         </span>
-        <span className="font-semibold">code-shell</span>
-        {repoName && <span className="text-muted-foreground">/</span>}
-        {repoName && <span className="text-foreground">{repoName}</span>}
-        {sessionTitle && <span className="text-muted-foreground">·</span>}
-        {sessionTitle && <span className="truncate text-muted-foreground">{sessionTitle}</span>}
+        <span className="shrink-0 font-semibold">code-shell</span>
+        {repoName && <span className="shrink-0 text-muted-foreground">/</span>}
+        {repoName && <span className="shrink-0 text-foreground">{repoName}</span>}
+        {sessionTitle && <span className="shrink-0 text-muted-foreground">·</span>}
+        {/* Only the title shrinks + ellipsizes. min-w-0 is required for
+            truncate to work inside a flex row — without it the span keeps its
+            intrinsic width and pushes the right-side status/GOAL icons out of
+            the header. */}
+        {sessionTitle && (
+          <span className="min-w-0 truncate text-muted-foreground" title={sessionTitle}>
+            {sessionTitle}
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-1">
         <StatusBadge
