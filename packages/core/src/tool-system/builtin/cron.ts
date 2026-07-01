@@ -51,7 +51,7 @@ export const cronCreateToolDef: ToolDefinition = {
       prompt: { type: "string", description: "The task prompt the agent runs on each execution" },
       timezone: {
         type: "string",
-        description: "IANA timezone for cron-expression schedules (e.g. 'Asia/Shanghai'). Optional; defaults to UTC.",
+        description: "IANA timezone for cron-expression schedules (e.g. 'Asia/Shanghai'). Optional; defaults to the host system's timezone.",
       },
       cwd: { type: "string", description: "Working directory / project the job runs in. Optional." },
       permissionLevel: {
