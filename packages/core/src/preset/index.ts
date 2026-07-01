@@ -83,6 +83,8 @@ const GENERAL_BUILTIN_TOOLS = [
   // 别名(老 prompt/记忆兼容)。两个都要在白名单里,否则 registerBuiltins 滤掉。
   "DriveAgent",
   "DriveClaudeCode",
+  // 编排时读 CC/Codex 剩余额度做规划(开几个/等重置/换 provider)。
+  "CheckQuota",
   "Skill",
   "MCPTool",
   "ListMcpResources",
@@ -143,6 +145,7 @@ const GENERAL_PERMISSION_RULES: PermissionRule[] = [
   { tool: "TodoWrite", decision: "allow" },
   { tool: "Sleep", decision: "allow" },
   { tool: "CronList", decision: "allow" },
+  { tool: "CheckQuota", decision: "allow" },
   { tool: "Skill", decision: "allow" },
   { tool: "ListMcpResources", decision: "allow" },
   { tool: "ReadMcpResource", decision: "allow" },

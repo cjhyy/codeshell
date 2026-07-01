@@ -11,6 +11,7 @@ import type {
   ReasoningControl,
   CCAvailability,
   DiscoveredSession,
+  QuotaResult,
 } from "@cjhyy/code-shell-core";
 
 /** One step in replaying a persisted transcript into renderer state. */
@@ -1083,6 +1084,11 @@ export interface CodeshellApi {
     onApprovalResolved(
       cb: (p: { roomId: string; requestId: string; decision: unknown }) => void,
     ): () => void;
+  };
+
+  /** Remaining CC/Codex subscription quota. "codex" is free; "claude" costs ~1 token. */
+  quota: {
+    get(provider?: "claude" | "codex" | "both"): Promise<QuotaResult>;
   };
 }
 

@@ -33,6 +33,7 @@ import { notebookEditToolDef, notebookEditTool } from "./notebook-edit.js";
 import { lspToolDef, lspTool } from "./lsp.js";
 import { cronCreateToolDef, cronCreateTool, cronDeleteToolDef, cronDeleteTool, cronListToolDef, cronListTool } from "./cron.js";
 import { driveClaudeCodeToolDef, driveClaudeCodeTool, driveAgentToolDef, driveAgentTool } from "./drive-claude-code.js";
+import { checkQuotaToolDef, checkQuotaTool } from "./check-quota.js";
 import { skillToolDef, skillTool } from "./skill.js";
 import { mcpToolDef, mcpToolExecute, listMcpResourcesToolDef, listMcpResourcesTool, readMcpResourceToolDef, readMcpResourceTool } from "./mcp-tools.js";
 import { remoteTriggerToolDef, remoteTriggerTool } from "./remote-trigger.js";
@@ -503,6 +504,20 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       isConcurrencySafe: false,
     },
     execute: driveClaudeCodeTool,
+  },
+  // ─── Check remaining CC/Codex subscription quota ──────────────
+  {
+    definition: {
+      ...checkQuotaToolDef,
+      source: "builtin",
+      // Read-only intent (reports quota, mutates nothing). Note: the "claude"
+      // path sends a 1-token probe (Anthropic exposes quota only via response
+      // headers) — that tiny cost is documented in the tool description.
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: checkQuotaTool,
   },
   // ─── Phase 7: Missing tools from restored-src ─────────────────
   {

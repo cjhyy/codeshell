@@ -659,6 +659,10 @@ export {
 } from "./automation/index.js";
 // CC orchestrator (external claude-cli rooms + CC-aware scheduling).
 export * from "./cc-orchestrator/index.js";
+// Quota — remaining CC/Codex subscription usage (self-contained, plugin-liftable).
+export { checkQuota, formatQuota } from "./quota/index.js";
+export { resolveQuotaCredentials } from "./quota/credentials.js";
+export type { QuotaResult, ProviderQuota, QuotaWindow, QuotaCredentials } from "./quota/types.js";
 export {
   asyncAgentRegistry,
   type AsyncAgentEntry,

@@ -976,4 +976,9 @@ contextBridge.exposeInMainWorld("codeshell", {
       return () => ipcRenderer.removeListener("ccRoom:approvalResolved", h);
     },
   },
+
+  // ── Remaining CC/Codex subscription quota ──
+  quota: {
+    get: (provider?: "claude" | "codex" | "both") => ipcRenderer.invoke("quota:get", provider),
+  },
 });

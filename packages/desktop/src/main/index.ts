@@ -46,6 +46,10 @@ import {
   resolveTranscribeProvider,
   isTranscribeAvailable,
   describeTranscribe,
+  // Quota — remaining CC/Codex subscription usage.
+  checkQuota,
+  resolveQuotaCredentials,
+  type QuotaResult,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { registerGuest } from "./browser-driver/active-guest.js";
@@ -2153,6 +2157,20 @@ ipcMain.handle("ccRoom:readCodexHistory", async (_e, cwd: string, threadId: stri
   readCodexRecentHistory(cwd, threadId, limit),
 );
 ipcMain.handle("ccRoom:closeSession", async (_e, roomId: string) => roomManager.close(roomId));
+
+// Remaining CC/Codex subscription quota. Reads tokens from Keychain / ~/.codex
+// then hits each vendor's usage source. `provider` restricts the lookup
+// ("codex" is free; "claude" sends a ~1-token probe). Never throws — a failed
+// lookup lands in the per-provider `error` field.
+ipcMain.handle(
+  "quota:get",
+  async (_e, provider?: "claude" | "codex" | "both"): Promise<QuotaResult> => {
+    const creds = await resolveQuotaCredentials();
+    const providers: ("claude" | "codex")[] =
+      provider === "claude" ? ["claude"] : provider === "codex" ? ["codex"] : ["claude", "codex"];
+    return checkQuota({ creds, providers });
+  },
+);
 
 ipcMain.handle("dialog:pickDir", async (e): Promise<{ path: string; name: string } | null> => {
   const res = await dialog.showOpenDialog({
