@@ -26,6 +26,14 @@ describe("automationBuiltinTools", () => {
     expect(names).not.toContain("KillShell");
     expect(names).not.toContain("ListShells");
   });
+  it("excludes DriveAgent / DriveClaudeCode / RemoteTrigger (bypass sandbox+tier / dead tool)", () => {
+    const names = automationBuiltinTools();
+    // full-tier cron could otherwise drive an external claude/codex with
+    // bypassPermissions and no seatbelt, escaping the automation write-policy.
+    expect(names).not.toContain("DriveAgent");
+    expect(names).not.toContain("DriveClaudeCode");
+    expect(names).not.toContain("RemoteTrigger");
+  });
   it("keeps a normal read tool like Read", () => {
     expect(automationBuiltinTools()).toContain("Read");
   });
