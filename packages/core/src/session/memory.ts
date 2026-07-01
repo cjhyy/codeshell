@@ -113,7 +113,13 @@ export function resolveMemoryBaseDir(override?: string): string {
   if (override) return override;
   const fromEnv = process.env.CODE_SHELL_HOME;
   if (fromEnv && fromEnv.length > 0) return fromEnv;
-  return join(homedir(), ".code-shell");
+  // `process.env.HOME ?? homedir()` (NOT raw homedir()): bun caches homedir()
+  // at process start and never re-reads it, so a test's HOME override — and any
+  // code that relies on $HOME — would be ignored, and memory would read the
+  // REAL ~/.code-shell (leaking global memories into isolated tests). See the
+  // homedir()-cache trap; mirrors settings/manager.ts userHome().
+  const home = process.env.HOME ?? homedir();
+  return join(home, ".code-shell");
 }
 
 export class MemoryManager {
