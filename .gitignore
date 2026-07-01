@@ -1,3 +1,8 @@
+# Match both the real directory AND a `node_modules` symlink (a materialized
+# predist run / a git-worktree can leave a symlink named node_modules; the
+# trailing-slash form below only ignores directories, so a symlink slipped
+# through and got committed once — see the node_modules untrack commit).
+node_modules
 node_modules/
 dist/
 *.tsbuildinfo
