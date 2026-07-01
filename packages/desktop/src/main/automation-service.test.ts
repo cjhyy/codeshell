@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach } from "bun:test";
 import { CronScheduler } from "@cjhyy/code-shell-core";
 import {
+  reloadAutomations,
   setAutomationScheduler,
   listAutomations,
   getAutomation,
@@ -84,4 +85,12 @@ describe("automation-service", () => {
   test("create throws on an invalid cron expression", () => {
     expect(() => createAutomation({ name: "bad", schedule: "99 9 * * *", prompt: "p" })).toThrow();
   });
+});
+
+test("reloadAutomations calls scheduler.loadJobs", () => {
+  let loaded = 0;
+  setAutomationScheduler({ loadJobs: () => { loaded++; } } as unknown as import("@cjhyy/code-shell-core").CronScheduler);
+  reloadAutomations();
+  expect(loaded).toBe(1);
+  setAutomationScheduler(null);
 });

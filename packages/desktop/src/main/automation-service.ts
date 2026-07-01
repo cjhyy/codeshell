@@ -78,6 +78,14 @@ function syncFromStore(): void {
   scheduler?.loadJobs();
 }
 
+/** Reload cron jobs from the shared on-disk store into main's live scheduler,
+ *  arming any newly-seen job. Called when the worker reports a cron change
+ *  (agent/cronChanged) so an AI-created job takes effect without the user
+ *  opening the automation UI. loadJobs() is idempotent. */
+export function reloadAutomations(): void {
+  scheduler?.loadJobs();
+}
+
 export function listAutomations(): AutomationSummary[] {
   if (!scheduler) return [];
   syncFromStore();
