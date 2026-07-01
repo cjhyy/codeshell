@@ -37,11 +37,39 @@ export function readRequiredEnv(serverName: string, field: string, envName: stri
 }
 
 /**
+ * Env var names whose VALUE is treated as a secret. A stdio MCP server does not
+ * need the host's API keys / tokens / passwords, so these are stripped from the
+ * inherited base env — least-privilege for plugin-bundled / auto-connected
+ * servers, which would otherwise receive Credential.exposeAsEnv injections and
+ * top-level `env` API keys. Matched case-insensitively against the key name.
+ * Explicit `envVars` / `config.env` are the user's declared intent and layer
+ * back on top, so a deliberately-forwarded secret still reaches the server.
+ */
+const SENSITIVE_ENV_KEY_RE = /(_KEY|_TOKEN|SECRET|PASSWORD|PASSWD|_PAT|CREDENTIAL|APIKEY|ACCESS_KEY)/i;
+
+/**
+ * Strip secret-shaped keys from an inherited env map. Exported for unit testing
+ * of the filter predicate independent of the spawn path.
+ */
+export function filterSensitiveEnv(
+  env: Record<string, string | undefined>,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(env)) {
+    if (v === undefined) continue;
+    if (SENSITIVE_ENV_KEY_RE.test(k)) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
+/**
  * Build the spawned stdio server's environment. Priority (lowest → highest):
- * inherited `process.env` < forwarded `envVars` (read from process.env by name)
- * < explicit plaintext `config.env`. Returns `undefined` when neither `env`
- * nor `envVars` is present, preserving the old "inherit nothing extra" behavior
- * (transport gets `env: undefined`). Pure + exported for unit testing.
+ * inherited `process.env` (with secret-shaped keys stripped) < forwarded
+ * `envVars` (read from process.env by name) < explicit plaintext `config.env`.
+ * Returns `undefined` when neither `env` nor `envVars` is present, preserving
+ * the old "inherit nothing extra" behavior (transport gets `env: undefined`).
+ * Pure + exported for unit testing.
  */
 export function buildStdioEnv(
   serverName: string,
@@ -53,7 +81,7 @@ export function buildStdioEnv(
     forwarded[en] = readRequiredEnv(serverName, "envVars", en);
   }
   return {
-    ...(process.env as Record<string, string>),
+    ...filterSensitiveEnv(process.env),
     ...forwarded,
     ...(config.env ?? {}),
   };
