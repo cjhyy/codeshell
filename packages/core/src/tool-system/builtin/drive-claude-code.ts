@@ -28,11 +28,21 @@ export const driveAgentToolDef: ToolDefinition = {
     "instruct it to call DriveAgent; to continue a prior session across runs, have that turn pass " +
     "the sessionId this tool returned as resumeSessionId (same cli). To make the single turn work " +
     "longer/deeper, write that into `prompt` (e.g. 'keep working until done'). " +
-    "Pass `resumeSessionId` to continue a prior session of the SAME cli (keeps context); omit to start fresh.",
+    "Pass `resumeSessionId` to continue a prior session of the SAME cli (keeps context); omit to start fresh.\n" +
+    "SCOPE & BUDGET (read before fanning out): each driven agent consumes a large, SHARED token budget. " +
+    "Do NOT launch many agents at once to 'cover more ground' — that burns the budget and leaves every " +
+    "task half-done. Default to ONE agent at a time; only run a few in parallel when the work TRULY splits " +
+    "into independent pieces, and even then keep the count small (≈2-3). Prefer finishing one task before " +
+    "starting the next. " +
+    "Make each `prompt` a COMPLETE, self-contained task that instructs the agent to finish the whole thing " +
+    "end-to-end and verify its own work before returning — never a vague 'start looking into X'. " +
+    "Give it a concrete definition of done and, for open-ended work, a bound (files/scope/steps) so it " +
+    "doesn't sprawl. If a big job must be split, split it into a SEQUENCE you drive one at a time (resume " +
+    "the same session), not a swarm launched simultaneously.",
   inputSchema: {
     type: "object",
     properties: {
-      prompt: { type: "string", description: "The task/prompt to give the agent." },
+      prompt: { type: "string", description: "The task for the agent. Make it COMPLETE and self-contained: state the goal, a concrete definition of done, and (for open-ended work) an explicit scope bound so it finishes end-to-end and verifies its own work rather than sprawling or stopping half-way." },
       cli: { type: "string", enum: ["claude", "codex"], description: "Which external CLI to drive. 'claude' = Claude Code (default), 'codex' = OpenAI Codex. resumeSessionId is only valid against the same cli that produced it." },
       resumeSessionId: { type: "string", description: "Existing session id to resume (keeps context). Must come from a prior run of the SAME cli. Omit for a fresh session." },
       cwd: { type: "string", description: "Working directory the run operates in." },
