@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Clock3, History, Loader2, Play, Plus, Trash2 } from "lucide-react";
+import { Clock3, History, Link2, Loader2, Play, Plus, Trash2 } from "lucide-react";
 import { NO_REPO_KEY, type SessionIndex, type SessionSummary } from "../transcripts";
 import {
   parseSchedule,
@@ -499,9 +499,14 @@ export function AutomationDetail(props: {
               job.enabled ? "bg-status-ok" : "bg-muted-foreground",
             )}
           />
-          <div className="min-w-0">
+          <div className="flex min-w-0 flex-col">
             <h3 className="truncate text-base font-semibold text-foreground">{job.name}</h3>
             <p className="text-xs text-muted-foreground">{describeSchedule(job.schedule)} · {job.timezone ?? "UTC"}</p>
+            {job.resumeSessionId && (
+              <span className="mt-1 inline-flex w-fit items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                <Link2 size={11} />{t("auto.detail.resumeBadge")}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -715,56 +720,92 @@ export function AutomationDetail(props: {
         </FieldRow>
       </div>
 
-      <div className="rounded-md border bg-card p-3">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div>
-            <h4 className="text-sm font-semibold text-foreground">{t("auto.detail.runSession")}</h4>
-            <p className="text-xs text-muted-foreground">{lastSession ? t("auto.detail.recentAt", { when: shortDate(lastSession.run?.updatedAt ?? lastSession.session.updatedAt) }) : t("auto.detail.noSession")}</p>
+      {job.resumeSessionId ? (
+        <div className="rounded-md border bg-card p-3">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("auto.detail.boundConversation")}</p>
+          {(() => {
+            const bound = sessions.find(
+              (l) => (l.session.engineSessionId ?? l.session.id) === job.resumeSessionId,
+            );
+            if (!bound)
+              return (
+                <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">{t("auto.detail.boundNotFound")}</div>
+              );
+            const status = bound.run?.status ?? bound.session.runStatus;
+            const when = bound.run?.updatedAt ?? bound.session.updatedAt;
+            return (
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-auto w-full justify-start gap-2 px-2 py-2 text-left"
+                onClick={() => {
+                  if (bound.needsImport && bound.run) props.onOpenRunSession(bound.run);
+                  else if (bound.disk) props.onOpenDiskSession(bound.disk);
+                  else props.onOpenSession(bound.repoId, bound.session.id);
+                }}
+              >
+                <Link2 size={14} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">{bound.session.title || t("auto.detail.untitled")}</span>
+                  <small className="block truncate text-xs text-muted-foreground">{shortDate(when)} · {runStatusLabel(t, status)}</small>
+                </span>
+                <span className="text-xs text-primary">{t("auto.detail.openConversation")} →</span>
+              </Button>
+            );
+          })()}
+        </div>
+      ) : (
+        <div className="rounded-md border bg-card p-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h4 className="text-sm font-semibold text-foreground">{t("auto.detail.runSession")}</h4>
+              <p className="text-xs text-muted-foreground">{lastSession ? t("auto.detail.recentAt", { when: shortDate(lastSession.run?.updatedAt ?? lastSession.session.updatedAt) }) : t("auto.detail.noSession")}</p>
+            </div>
+            {job.lastRunId && (
+              <Button size="sm" variant="outline" onClick={() => props.onViewRun(job.lastRunId!)}>
+                <History size={14} />
+                {t("auto.detail.runDetail")}
+              </Button>
+            )}
           </div>
-          {job.lastRunId && (
-            <Button size="sm" variant="outline" onClick={() => props.onViewRun(job.lastRunId!)}>
-              <History size={14} />
-              {t("auto.detail.runDetail")}
-            </Button>
+          {sessions.length === 0 ? (
+            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">{t("auto.detail.noJumpableSession")}</div>
+          ) : (
+            <ul className="space-y-1">
+              {sessions.map(({ repoId, session, run, disk, needsImport }) => {
+                // Trust the flag set at link synthesis (automationSessionLinks):
+                // local-present links carry needsImport=false, disk/run-only links
+                // carry true. The old per-row `props.sessions.find()` was O(rows²)
+                // and used a different predicate, risking re-import of an
+                // already-local session.
+                const status = run?.status ?? session.runStatus;
+                const when = run?.updatedAt ?? session.updatedAt;
+                return (
+                  <li key={`${repoId ?? NO_REPO_KEY}:${session.id}`}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-auto w-full justify-start gap-2 px-2 py-2 text-left"
+                      onClick={() => {
+                        if (needsImport && run) props.onOpenRunSession(run);
+                        else if (disk) props.onOpenDiskSession(disk);
+                        else props.onOpenSession(repoId, session.id);
+                      }}
+                    >
+                      <Clock3 size={14} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{session.title}</span>
+                        <small className="block truncate text-xs text-muted-foreground">{shortDate(when)} · {runStatusLabel(t, status)}</small>
+                      </span>
+                      <span className="text-xs text-primary">{t("auto.detail.sessionView")}</span>
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
-        {sessions.length === 0 ? (
-          <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">{t("auto.detail.noJumpableSession")}</div>
-        ) : (
-          <ul className="space-y-1">
-            {sessions.map(({ repoId, session, run, disk, needsImport }) => {
-              // Trust the flag set at link synthesis (automationSessionLinks):
-              // local-present links carry needsImport=false, disk/run-only links
-              // carry true. The old per-row `props.sessions.find()` was O(rows²)
-              // and used a different predicate, risking re-import of an
-              // already-local session.
-              const status = run?.status ?? session.runStatus;
-              const when = run?.updatedAt ?? session.updatedAt;
-              return (
-                <li key={`${repoId ?? NO_REPO_KEY}:${session.id}`}>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-auto w-full justify-start gap-2 px-2 py-2 text-left"
-                    onClick={() => {
-                      if (needsImport && run) props.onOpenRunSession(run);
-                      else if (disk) props.onOpenDiskSession(disk);
-                      else props.onOpenSession(repoId, session.id);
-                    }}
-                  >
-                    <Clock3 size={14} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">{session.title}</span>
-                      <small className="block truncate text-xs text-muted-foreground">{shortDate(when)} · {runStatusLabel(t, status)}</small>
-                    </span>
-                    <span className="text-xs text-primary">{t("auto.detail.sessionView")}</span>
-                  </Button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+      )}
     </div>
   );
 }
