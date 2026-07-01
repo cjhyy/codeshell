@@ -1,6 +1,6 @@
 import { describe, test, expect, afterEach } from "bun:test";
 import { buildStdioEnv } from "./mcp-manager.js";
-import type { MCPServerConfig } from "./types.js";
+import type { MCPServerConfig } from "../types.js";
 
 function cfg(name: string, extra: Partial<MCPServerConfig> = {}): MCPServerConfig {
   return { name, command: "node", args: ["server.js"], ...extra };
