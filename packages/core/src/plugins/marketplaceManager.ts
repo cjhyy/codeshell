@@ -16,6 +16,7 @@ import {
   removeKnownMarketplace,
 } from "./knownMarketplaces.js";
 import { validateMarketplace } from "./schemas.js";
+import { assertSafePluginName } from "./installer/paths.js";
 import type {
   KnownMarketplace,
   MarketplaceFormat,
@@ -34,6 +35,11 @@ export function marketplacesRoot(): string {
 }
 
 export function marketplaceDir(name: string): string {
+  // Single choke point for add/remove/refresh (all derive `dir` from here and
+  // then gitClone / rmSync it). Validate `name` as one safe path segment so a
+  // `..` / separator / NUL can't escape marketplacesRoot. Normal derived names
+  // (lowercase repo tails) are unaffected; reuses the plugin segment guard.
+  assertSafePluginName(name);
   return join(marketplacesRoot(), name);
 }
 
