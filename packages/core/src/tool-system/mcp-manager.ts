@@ -12,6 +12,7 @@ import type { MCPServerConfig, RegisteredTool } from "../types.js";
 import { ToolRegistry } from "./registry.js";
 import { logger } from "../logging/logger.js";
 import { CredentialStore } from "../credentials/index.js";
+import { ENV_ALLOWLIST } from "../runtime/spawn-common.js";
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -37,39 +38,32 @@ export function readRequiredEnv(serverName: string, field: string, envName: stri
 }
 
 /**
- * Env var names whose VALUE is treated as a secret. A stdio MCP server does not
- * need the host's API keys / tokens / passwords, so these are stripped from the
- * inherited base env — least-privilege for plugin-bundled / auto-connected
- * servers, which would otherwise receive Credential.exposeAsEnv injections and
- * top-level `env` API keys. Matched case-insensitively against the key name.
- * Explicit `envVars` / `config.env` are the user's declared intent and layer
- * back on top, so a deliberately-forwarded secret still reaches the server.
+ * Minimal set of host env vars a spawned stdio MCP server inherits by default.
+ * Allowlist, not blacklist — aligned with CC/Codex's env-secret-by-name model:
+ * a server gets only the runtime basics (PATH/HOME/LANG/…), and ANYTHING else
+ * it needs (an API key, a custom config dir) must be declared explicitly via
+ * `envVars` (forward by name) or `config.env` (literal). This avoids the
+ * fragile "guess which key looks like a secret" regex and its two failure
+ * modes (a bespoke key name leaks; a benign `FOO_TOKENIZER` gets stripped).
+ *
+ * Reuses the sandboxed-shell {@link ENV_ALLOWLIST} so the two spawn paths share
+ * one source of truth for "what's safe to forward".
  */
-const SENSITIVE_ENV_KEY_RE = /(_KEY|_TOKEN|SECRET|PASSWORD|PASSWD|_PAT|CREDENTIAL|APIKEY|ACCESS_KEY)/i;
-
-/**
- * Strip secret-shaped keys from an inherited env map. Exported for unit testing
- * of the filter predicate independent of the spawn path.
- */
-export function filterSensitiveEnv(
-  env: Record<string, string | undefined>,
-): Record<string, string> {
+function inheritAllowlistedEnv(source: NodeJS.ProcessEnv): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const [k, v] of Object.entries(env)) {
-    if (v === undefined) continue;
-    if (SENSITIVE_ENV_KEY_RE.test(k)) continue;
-    out[k] = v;
+  for (const name of ENV_ALLOWLIST) {
+    const v = source[name];
+    if (v !== undefined) out[name] = v;
   }
   return out;
 }
 
 /**
  * Build the spawned stdio server's environment. Priority (lowest → highest):
- * inherited `process.env` (with secret-shaped keys stripped) < forwarded
- * `envVars` (read from process.env by name) < explicit plaintext `config.env`.
- * Returns `undefined` when neither `env` nor `envVars` is present, preserving
- * the old "inherit nothing extra" behavior (transport gets `env: undefined`).
- * Pure + exported for unit testing.
+ * a minimal inherited allowlist < forwarded `envVars` (read from process.env by
+ * name) < explicit plaintext `config.env`. Returns `undefined` when neither
+ * `env` nor `envVars` is present, preserving the old "inherit nothing extra"
+ * behavior (transport gets `env: undefined`). Pure + exported for unit testing.
  */
 export function buildStdioEnv(
   serverName: string,
@@ -81,7 +75,7 @@ export function buildStdioEnv(
     forwarded[en] = readRequiredEnv(serverName, "envVars", en);
   }
   return {
-    ...filterSensitiveEnv(process.env),
+    ...inheritAllowlistedEnv(process.env),
     ...forwarded,
     ...(config.env ?? {}),
   };
