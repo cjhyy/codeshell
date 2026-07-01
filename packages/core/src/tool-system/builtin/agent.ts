@@ -510,6 +510,19 @@ export async function agentTool(
         });
       })
       .catch((err: Error) => {
+        // runSubAgent emits its terminal agent_end only on the RESOLVE path
+        // (line ~344). On fail/cancel it threw before that, so the main-feed
+        // card started by agent_start is still 'working' — seal it here or the
+        // TUI spins forever. Emit once for BOTH branches (mirrors the sync→bg
+        // detach path ~885), then branch on abort for the notification only.
+        safeEmit(parentStream, {
+          type: "agent_end",
+          agentId,
+          name,
+          description,
+          error: err.message,
+          agentType: overrides.resolvedType,
+        });
         if (controller.signal.aborted) {
           // User-initiated cancel: mark status but do NOT enqueue —
           // the main agent doesn't need a follow-up turn. Dock still
