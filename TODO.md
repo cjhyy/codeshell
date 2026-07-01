@@ -93,7 +93,7 @@
 
 ## Medium
 
-- [x] **自动化/cron full 档可调 DriveAgent 绕开 tier+sandbox（外部 CLI 无沙箱）** — 已修(279ef935)：`DriveAgent`/`DriveClaudeCode`/`RemoteTrigger` 加入 `AUTOMATION_DISABLED_TOOLS`；`automationBuiltinTools()` 据此过滤，drift-guard 测试保证三名都是真实 builtin。备注:外部 CLI env allowlist 未做(留加固);RemoteTrigger 死工具本身仍待处理(见下方 Medium)。
+- [ ] **自动化/cron full 档可调 DriveAgent 绕开 tier+sandbox（外部 CLI 无沙箱）** — 【用户决策：不管这块】。曾在 279ef935 禁用，已于 ccc55146 撤销(DriveAgent/DriveClaudeCode 自动化里重新可用)。RemoteTrigger 仍随 7e372357 整体移除(死工具)。
   - 严重级别：Medium。前置是存在 `permissionLevel:"full"` 的 cron/automation run；read-only/workspace-write 档会被 TierApprovalBackend 正确拒绝。
   - 影响：full 档 cron run 可调用 DriveAgent → 外部 claude/codex 以 `bypassPermissions` + 无 seatbelt 运行，打破 automation write-policy“即使 full 也逃不出 workspace”的不变量。DriveAgent 子进程继承 worker 真实 `process.env`，不会自动拿到 CodeShell `Credential.exposeAsEnv` 或 settings 顶层 `env`，但用户从带 API key 的 shell 启动桌面/worker 时仍会传给外部 CLI。
   - 相关文件：`packages/desktop/src/main/automationToolset.ts:19-33`；`packages/desktop/src/main/automation-host.ts:105-133`；`packages/core/src/preset/index.ts:84-85,90`；`packages/core/src/tool-system/builtin/drive-claude-code.ts:71-105`；`packages/core/src/cc-orchestrator/external-agent-driver.ts:26-53`；`packages/core/src/sandbox/index.ts:5-9`；`packages/core/src/engine/engine.ts:2947-2981`；`packages/core/src/tool-system/builtin/bash.ts:99-103`。
