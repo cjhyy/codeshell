@@ -52,6 +52,7 @@ import {
   type SessionIndex,
   type SessionSummary,
 } from "./transcripts";
+import { planSessionDeletion } from "./sessionDeletionPlan";
 import { titleFromWire, buildPathAttachment, type ImageAttachment } from "./chat/attachments";
 import { resolveBucket, findAskUserOrigin } from "./streamRouting";
 import { resolveStopBucket } from "./stopRouting";
@@ -1136,41 +1137,35 @@ function App() {
     sessionId: string,
   ): void => {
     // Capture source/runId BEFORE wiping the local entry — needed to also
-    // remove the on-disk session + run dirs for imported automation sessions.
+    // remove the on-disk session + run dirs.
     const summary = sessionIndices[repoKeyOf(repoId)]?.sessions.find((s) => s.id === sessionId);
     const next = deleteSessionLocal(repoId, sessionId);
     setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
-    if (summary?.source === "automation") {
-      // Delete means delete — always remove the on-disk dirs, even if the run is
-      // still in flight (user's explicit intent: kill it). The old code skipped
-      // disk deletion for "running" runs, but a live-announced run's runStatus
-      // is frozen at "running" and never refreshed, so it was ALWAYS skipped →
-      // the session dir survived → the next backfill re-imported it forever.
-      //
-      // Cancel first (so the in-main automation run stops writing the session
-      // dir we're about to delete and doesn't recreate it post-delete), THEN
-      // delete. Cancel is best-effort: a no-op for an already-finished run.
-      void (async () => {
-        const inFlight = new Set(["queued", "running", "waiting_input", "waiting_approval", "blocked"]);
-        const maybeRunning = summary.runStatus ? inFlight.has(summary.runStatus) : false;
-        if (maybeRunning && summary.cronJobId) {
-          await window.codeshell.cancelAutomationRun(summary.cronJobId).catch((e) =>
-            window.codeshell.log("automation.delete.cancel.failed", { cronJobId: summary.cronJobId, error: String(e) }),
-          );
-        }
-        const engineId = summary.engineSessionId ?? sessionId;
-        await window.codeshell.deleteSession(engineId).catch((e) =>
-          window.codeshell.log("automation.delete.session.failed", { engineId, error: String(e) }),
+
+    // Delete means delete: EVERY session (not just automation) must have its
+    // on-disk dir removed and its background shells reaped, else
+    // ~/.code-shell/sessions/<id>/ + orphan shells leak. The `sessions:delete`
+    // IPC does closeSession(reap shells) → deleteSession(rm dir) → forgetSession.
+    // Automation additionally cancels the in-flight run first (so it stops
+    // rewriting the dir we're about to delete) and clears any legacy run dir.
+    const plan = planSessionDeletion(summary ?? { id: sessionId, title: "", createdAt: 0, updatedAt: 0 });
+    void (async () => {
+      if (plan.cancelCronJobId) {
+        await window.codeshell.cancelAutomationRun(plan.cancelCronJobId).catch((e) =>
+          window.codeshell.log("session.delete.cancel.failed", { cronJobId: plan.cancelCronJobId, error: String(e) }),
         );
-        // deleteRun is a no-op for current jobs (which write sessions/, not
-        // runs/), but still clears legacy RunManager-era run dirs.
-        if (summary.runId) {
-          await window.codeshell.deleteRun(summary.runId).catch((e) =>
-            window.codeshell.log("automation.delete.run.failed", { runId: summary.runId, error: String(e) }),
-          );
-        }
-      })();
-    }
+      }
+      await window.codeshell.deleteSession(plan.deleteEngineId).catch((e) =>
+        window.codeshell.log("session.delete.session.failed", { engineId: plan.deleteEngineId, error: String(e) }),
+      );
+      // deleteRun is a no-op for current jobs (which write sessions/, not
+      // runs/), but still clears legacy RunManager-era run dirs.
+      if (plan.deleteRunId) {
+        await window.codeshell.deleteRun(plan.deleteRunId).catch((e) =>
+          window.codeshell.log("session.delete.run.failed", { runId: plan.deleteRunId, error: String(e) }),
+        );
+      }
+    })();
   };
 
   useEffect(() => {
