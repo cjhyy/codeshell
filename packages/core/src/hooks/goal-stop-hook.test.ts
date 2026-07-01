@@ -21,13 +21,20 @@ const noopLog = {
 };
 
 /** A judge LLM that returns a fixed text and records how it was called. */
-function fakeJudge(text: string): GoalJudgeLLM & { calls: number; lastSignal?: AbortSignal } {
+function fakeJudge(
+  text: string,
+): GoalJudgeLLM & { calls: number; lastSignal?: AbortSignal; lastUserContent?: string } {
   const j = {
     calls: 0,
     lastSignal: undefined as AbortSignal | undefined,
-    async createMessage(opts: { signal?: AbortSignal }): Promise<LLMResponse> {
+    lastUserContent: undefined as string | undefined,
+    async createMessage(opts: {
+      signal?: AbortSignal;
+      messages?: { role: string; content: string }[];
+    }): Promise<LLMResponse> {
       j.calls += 1;
       j.lastSignal = opts.signal;
+      j.lastUserContent = opts.messages?.[0]?.content;
       return { text, toolCalls: [] };
     },
   };
@@ -141,5 +148,45 @@ describe("createGoalStopHook — three-state judge", () => {
       data: { sessionId: SID, finalText: "x", signal: ac.signal },
     });
     expect(judge.lastSignal).toBe(ac.signal);
+  });
+
+  it("feeds the current time (injected `now`) into the judge prompt", async () => {
+    const judge = fakeJudge('{"met": false, "waiting": false, "gaps": "x"}');
+    const fixed = new Date("2026-07-01T04:11:00Z");
+    const hook = createGoalStopHook({
+      goal: "干到 12:00 停",
+      llm: judge,
+      log: noopLog,
+      now: () => fixed,
+    });
+    await hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "x" } });
+    // The judge must see a current-time line so it can reason about a deadline.
+    expect(judge.lastUserContent).toContain("当前时间");
+    // The UTC anchor is always present regardless of the runner's timezone.
+    expect(judge.lastUserContent).toContain("2026-07-01T04:11:00.000Z");
+  });
+
+  it("cache re-judges when the clock advances to the next minute", async () => {
+    // Same goal + same finalText + same (empty) tasks — the ONLY thing that
+    // changes is the wall clock. A time-blind cache would replay the stale
+    // verdict and a deadline would never fire; the minute bucket must bust it.
+    let t = new Date("2026-07-01T11:59:30Z");
+    const judge = fakeJudge('{"met": false, "waiting": false, "gaps": "more"}');
+    const hook = createGoalStopHook({
+      goal: "干到 12:00 停",
+      llm: judge,
+      log: noopLog,
+      now: () => t,
+    });
+    const data = { sessionId: SID, finalText: "same" };
+    await hook({ eventName: "on_stop", data });
+    // Same minute → served from cache, no second call.
+    t = new Date("2026-07-01T11:59:55Z");
+    await hook({ eventName: "on_stop", data: { ...data } });
+    expect(judge.calls).toBe(1);
+    // Clock crosses into the next minute → cache miss, judge re-runs.
+    t = new Date("2026-07-01T12:00:05Z");
+    await hook({ eventName: "on_stop", data: { ...data } });
+    expect(judge.calls).toBe(2);
   });
 });
