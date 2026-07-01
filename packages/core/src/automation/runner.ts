@@ -22,6 +22,23 @@ import type { ApprovalBackend } from "../tool-system/permission.js";
 import type { SandboxMode } from "../tool-system/sandbox/index.js";
 import { AUTOMATION_RUN_SOURCE } from "../run/EngineRunner.js";
 import { resolveWritePolicy } from "./write-policy.js";
+import { logger } from "../logging/logger.js";
+
+/**
+ * Log a cron executor failure, then re-throw so the scheduler's own try/catch
+ * still records run stats and keeps ticking. Without this the failure was
+ * silently swallowed (the scheduler catch is empty) — a job could fail every
+ * fire with zero trace, which is the exact opposite of what the executor
+ * docstrings claimed ("we still log here so failures are visible").
+ */
+function logCronFailure(job: CronJob, err: unknown): void {
+  logger.warn("cron.executor_failed", {
+    cat: "automation",
+    jobId: job.id,
+    jobName: job.name,
+    error: err instanceof Error ? err.message : String(err),
+  });
+}
 
 /** What the executor hands to the run backend for one fired job. */
 export interface CronRunRequest {
@@ -70,7 +87,12 @@ export function bindCronToEngine(scheduler: CronScheduler, runner: CronRunner): 
       sandboxMode: policy.sandboxMode,
       signal,
     };
-    await runner(req);
+    try {
+      await runner(req);
+    } catch (err) {
+      logCronFailure(job, err);
+      throw err; // let the scheduler's catch record stats + keep ticking
+    }
   });
 }
 
@@ -103,12 +125,17 @@ export function bindCronToRunManager(
   runManager: RunSubmitter,
 ): void {
   scheduler.setExecutor(async (job: CronJob, _signal: AbortSignal) => {
-    const snapshot = await runManager.submit({
-      objective: job.prompt,
-      cwd: job.cwd,
-      metadata: { source: AUTOMATION_RUN_SOURCE, cronJobId: job.id, cronJobName: job.name },
-    });
-    // Record the run id on the job so the UI can link to run history.
-    job.lastRunId = snapshot.runId;
+    try {
+      const snapshot = await runManager.submit({
+        objective: job.prompt,
+        cwd: job.cwd,
+        metadata: { source: AUTOMATION_RUN_SOURCE, cronJobId: job.id, cronJobName: job.name },
+      });
+      // Record the run id on the job so the UI can link to run history.
+      job.lastRunId = snapshot.runId;
+    } catch (err) {
+      logCronFailure(job, err);
+      throw err; // let the scheduler's catch record stats + keep ticking
+    }
   });
 }
