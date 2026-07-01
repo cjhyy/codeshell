@@ -6,7 +6,7 @@
 
 import { appendFileSync, mkdirSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { homedir } from "node:os";
+import { userHome } from "../settings/manager.js";
 
 export interface DiagnosticEntry {
   timestamp: string;
@@ -18,11 +18,15 @@ export interface DiagnosticEntry {
 }
 
 class DiagnosticsTracker {
-  private logDir: string;
   private entries: DiagnosticEntry[] = [];
 
-  constructor() {
-    this.logDir = join(homedir(), ".code-shell", "diagnostics");
+  // Resolve per-write (NOT cached in the constructor): the module exports a
+  // singleton constructed at import, so a constructor-captured dir would freeze
+  // to import-time HOME. userHome() (not raw homedir(), bun-cached) reads $HOME
+  // live, so a relocated/test HOME redirects writes instead of hitting real
+  // ~/.code-shell.
+  private logDir(): string {
+    return join(userHome(), ".code-shell", "diagnostics");
   }
 
   /**
@@ -113,11 +117,12 @@ class DiagnosticsTracker {
 
   private persist(entry: DiagnosticEntry): void {
     try {
-      if (!existsSync(this.logDir)) {
-        mkdirSync(this.logDir, { recursive: true });
+      const logDir = this.logDir();
+      if (!existsSync(logDir)) {
+        mkdirSync(logDir, { recursive: true });
       }
       const dateStr = entry.timestamp.split("T")[0];
-      const logFile = join(this.logDir, `${dateStr}.jsonl`);
+      const logFile = join(logDir, `${dateStr}.jsonl`);
       appendFileSync(logFile, JSON.stringify(entry) + "\n", "utf-8");
     } catch {
       // Best-effort persistence

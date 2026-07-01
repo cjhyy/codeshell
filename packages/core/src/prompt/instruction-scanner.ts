@@ -18,7 +18,7 @@
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { execSync } from "node:child_process";
-import { homedir } from "node:os";
+import { userHome } from "../settings/manager.js";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -65,8 +65,10 @@ export function scanInstructions(cwd: string, options: ScanOptions = {}): Instru
   const entries: InstructionEntry[] = [];
 
   // 1. User-level instructions
-  const homeConfigDir = join(homedir(), ".code-shell");
-  const homeCompatDir = join(homedir(), ".claude");
+  // userHome() (not raw homedir(), bun-cached) so a test/host HOME override
+  // scans the intended user-level dirs, not the developer's real ~/.code-shell.
+  const homeConfigDir = join(userHome(), ".code-shell");
+  const homeCompatDir = join(userHome(), ".claude");
   for (const name of allNames) {
     tryAddFile(join(homeConfigDir, name), "user", -1, entries);
   }
