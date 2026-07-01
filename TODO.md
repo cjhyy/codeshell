@@ -199,7 +199,7 @@
 
 ## Low
 
-- [ ] **marketplace name 无路径校验，存在越界 rmSync/clone latent 风险**
+- [x] **marketplace name 无路径校验，存在越界 rmSync/clone latent 风险** — 已修(df3fdbd7)：`marketplaceDir` 单一 choke point 复用 `assertSafePluginName`，恶意 name 在 rmSync/clone 前 fail-closed(desktop remove IPC throw→renderer reject)。+3 TDD。
   - 严重级别：Low / latent / defense-in-depth。`marketplaceDir(name)` 缺少 path segment 校验，技术上可让 `..` 逃出 marketplacesRoot；但当前没有 model/远程直接可达路径，主要风险来自被攻陷 renderer 或本地 IPC 直发。
   - 影响：若任意字符串 `name` 进入 `marketplaceDir`，`addMarketplace` 可能越界 `rmSync`/`gitClone`，`removeMarketplace` 可越界递归删除。最现实入口是 desktop `marketplace:remove` IPC 直传 name；正常 UI add 走 `deriveMarketplaceName` 消毒，AddMarketplace builtin 不在 preset 白名单。
   - 相关文件：`packages/core/src/plugins/marketplaceManager.ts:36-38,87-150,171-178`；`packages/core/src/plugins/knownMarketplaces.ts:39-51`；`packages/core/src/plugins/pluginInstaller.ts:104,205,207,299`；`packages/core/src/tool-system/builtin/add-marketplace.ts:74`；`packages/desktop/src/main/marketplace-service.ts:111-132`。
@@ -225,7 +225,7 @@
   - 修复方向：全量抓取 cookie 必须走 main 级显式用户确认，并展示影响范围。
   - 回归验证：无确认时调用 `credentials:captureAllCookies` 被拒。
 
-- [ ] **BashOutput 增量分页按固定 16KB 原始字节硬切，切断多字节 UTF-8 与 ANSI 序列**
+- [x] **BashOutput 增量分页按固定 16KB 原始字节硬切，切断多字节 UTF-8 与 ANSI 序列** — 已修 UTF-8 面(5d1aaaf1)：`utf8SafeCutLength` 把切点回退到最后完整字符边界，rawBuf/consumedBytes 都按边界，下次读无缝续。+5 TDD。备注:ANSI 跨界残片面未做(cleanOutput 已处理大部分，残片低频，留加固)。
   - 严重级别：Low。非数据丢失、非安全问题；原始 `.log` / ring buffer 字节完好，但喂给模型的增量文本可能出现 `�` 或裸 ANSI 残片。
   - 相关文件：`packages/core/src/runtime/background-shell.ts:416,419-431,268-269`；`packages/core/src/runtime/ring-file.ts:34,96,99,147-152`；`packages/core/src/runtime/output-clean.ts:21-25,43`；`packages/core/src/tool-system/builtin/background-shell-tools.ts:58`。
   - 修复方向：切点从固定 16384 回退到最近 UTF-8 字符边界，`consumedBytes` 使用回退后的长度；同时避免切在未闭合 ESC/CSI 序列中间，或引入跨读 StringDecoder 状态后按行/码点切。
