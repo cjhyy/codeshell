@@ -87,6 +87,8 @@
   "//deps": "Runtime deps ONLY. The main process is esbuild-bundled (everything inlined except `electron` + `@cjhyy/code-shell-core`), and the renderer is vite-bundled — so node_modules is NOT shipped except for what's resolved at runtime: node-pty (native, can't bundle) and code-shell-core (spawned as a child process). Everything else is build-time → devDependencies. This is also what keeps electron-builder from walking bun's .bun-store symlinks and ENOENT-ing during packaging (electron-builder skips devDependencies). When adding a dep: if it's `require`d unbundled at runtime (a native addon, or anything kept `external` in scripts/build.ts), it goes here; otherwise it's a devDependency.",
   "dependencies": {
     "@cjhyy/code-shell-core": "workspace:*",
+    "@radix-ui/react-popover": "^1.1.18",
+    "cmdk": "^1.1.1",
     "node-pty": "^1.1.0"
   },
   "devDependencies": {
