@@ -100,7 +100,7 @@
   - 修复方向：把 DriveAgent / DriveClaudeCode / RemoteTrigger 加入 `AUTOMATION_DISABLED_TOOLS`；或 DriveAgent 识别 automation origin 时拒绝/强制 default+sandbox；外部 CLI env 改成 allowlist。
   - 回归验证：`automationBuiltinTools()` 不含 Drive* / RemoteTrigger；full 档 cron run 调 DriveAgent 被拒/不可见且不 spawn；外部 agent env 不含来自 CredentialStore.envExposures/settings.env 的键。
 
-- [ ] **CronCreate 的 `permissionLevel` 由模型自选 `full`，且 full 档 headless 可无人值守调用 MCP 副作用工具** — 【核对 2026-07-01：确认 NOT DONE — schema enum 无上限约束,描述仅 advisory】
+- [ ] **CronCreate 的 `permissionLevel` 由模型自选 `full`，且 full 档 headless 可无人值守调用 MCP 副作用工具** — 【核对 2026-07-01：确认 NOT DONE — schema enum 无上限约束,描述仅 advisory】【复评 2026-07-01：触发面已收窄 — CronCreate `permissionDefault:"ask"`，交互会话每次建 job 都弹审批并展示 permissionLevel；`full`/`workspace-write` 非静默。auto/DriveAgent-bypass 递归路径已随 279ef935(automation 禁 DriveAgent)关闭。blanket cap 会破坏合法「建每日开 PR 的 full 任务」→ 属产品决策待用户拍板：是否对 full/workspace-write cron 加二次专门确认 + MCP allowlist，而非硬上限。剩 MCP allowlist 子面(cron 执行套 allowlist)仍可做】
   - 影响：被 prompt-injection 诱导的模型可自建 `permissionLevel:"full"` 的循环 cron job；到点以 bypass 档无人值守执行任意 prompt，并可调用任意 MCP 副作用工具。sandbox 管不住 MCP server 的网络/外部副作用。
   - 相关文件：`packages/core/src/tool-system/builtin/cron.ts:39-45,67-72`；`packages/core/src/automation/scheduler.ts:31,411-437`。
   - 状态：已确认 MCP 子面。`CronCreate` 默认 `default` 模式下分类为 ask，故非静默；但在 auto / DriveAgent bypass 上下文中不弹。credential 工具在 cron full 下无 `askUser` 会 fail-closed，已证伪为非问题。
@@ -120,7 +120,7 @@
   - 修复方向：默认只传最小 env（PATH、HOME、必要运行时变量），对 `*_KEY`、`*_TOKEN`、`SECRET`、`PASSWORD`、credential 注入变量等做 denylist/allowlist；项目/用户显式配置的 MCP env 才传入。
   - 回归验证：启动 fake stdio MCP server，断言默认 env 不含测试 API key；显式配置 env 时才出现。
 
-- [ ] **Desktop 普通会话删除只清 renderer localStorage，遗漏 on-disk 会话目录与后台 shell 回收** — 【核对 2026-07-01：确认 NOT DONE — 只有 `source==="automation"` 走 `window.codeshell.deleteSession`,普通会话只 `deleteSessionLocal`】
+- [x] **Desktop 普通会话删除只清 renderer localStorage，遗漏 on-disk 会话目录与后台 shell 回收** — 已修(667470b8)：抽纯函数 `planSessionDeletion`，所有 source 都 `deleteSession`(IPC 回收 shell+rm dir+forget)，automation 额外 cancel 在途 run + deleteRun。+5 TDD，desktop tsc 干净。
   - 影响：删普通对话后，`~/.code-shell/sessions/<sessionId>/`（transcript.jsonl + state.json）残留；该会话关联的后台 shell 不被回收，造成孤儿进程与磁盘堆积。
   - 相关文件：`packages/desktop/src/renderer/App.tsx:1132-1172`；`packages/desktop/src/renderer/transcripts.ts:460-466,490-504`；`packages/desktop/src/main/index.ts:2619-2628`；`packages/desktop/src/main/sessions-service.ts:61-81`；`packages/core/src/protocol/server.ts:847-864`；`packages/core/src/runtime/background-shell.ts:479-484`。
   - 结论：确认。普通会话只走 localStorage；IPC 回收路径仅 automation 会话触达。idle sweeper/tab-close 不杀 shell，“显式删除”本应是会 kill 的路径。
@@ -148,7 +148,7 @@
   - 修复方向：`images:readDataUrl` 接收 `root` 并复用 `resolveWithin`；或渲染层先过 rooted `fileExists`；域外路径改为点击确认后读取。
   - 回归验证：含工作区外 `.png/.svg` 的 assistant 消息或 AttachmentCard 不应读取域外路径；工作区内图片仍显示；workspace 内 symlink 指向域外图片应拒绝。
 
-- [ ] **provider `httpHeaders` 自定义 header 值可通过 `config_get("providers")` 明文返回**
+- [x] **provider `httpHeaders` 自定义 header 值可通过 `config_get("providers")` 明文返回** — 已修(315adc68)：`redactSecrets` 加 `HEADERS_CONTAINER_RE`(httpHeaders/headers/defaultHeaders/envHeaders)整块脱敏，不看内层 header 名全 redact 非空值(保留 present-vs-absent)；普通含 header 字样字段不误伤。+3 TDD。
   - 当前归档：Medium（偏 Low，但属于确认的敏感信息脱敏缺口）。
   - 影响：`config_get` 面向协议对端做脱敏，但 `httpHeaders` 只按 header 键名匹配 secret 词根；如 `x-custom-auth: s3cr3t` 这类自定义鉴权 header 不匹配词根时会原样返回。
   - 相关文件：`packages/core/src/llm/provider-catalog.ts:19`；`packages/core/src/llm/provider-auth.ts:17-24`；`packages/core/src/protocol/server.ts:1266-1271`；`packages/core/src/engine/engine.ts:2620-2629`；`packages/core/src/protocol/redact.ts:52-57`；`packages/core/src/logging/sanitize-messages.ts:169-170,226-227`。
@@ -162,7 +162,7 @@
   - 修复方向：首选从 GENERAL_BUILTIN_TOOLS/BUILTIN_TOOLS 移除 RemoteTrigger，导向 CronCreate/DriveAgent；若保留，则实现 pickup 回路、状态更新和完成通知，并修正文案。
   - 回归验证：移除路线下工具清单不含 RemoteTrigger；实现路线下调用后在有限时间内启动真实执行、trigger JSON 从 pending 变 terminal，并产生完成通知。
 
-- [ ] **后台 sub-agent 失败/取消不发 `agent_end`，TUI 主 feed 的 agent 卡永久转圈** — 【核对 2026-07-01：确认 NOT DONE — agent.ts L512/L526 两 catch 只 markCancelled/markFailed,无 safeEmit agent_end】
+- [x] **后台 sub-agent 失败/取消不发 `agent_end`，TUI 主 feed 的 agent 卡永久转圈** — 已修(aff3c693)：直接后台路径 `.catch` 顶部 `safeEmit(parentStream, agent_end{error})` 一次(cancel/fail 共用，对齐 sync→bg ~885)，再按 aborted 分派 notification；成功路径不变。+2 TDD。
   - 影响：`Agent(run_in_background=true)` 直接后台派发后，如果子 agent 失败或被 `AgentCancel` 取消，dock 会显示 failed/cancelled 后淡出，但主 feed 的 `AgentBlockStart` 依赖 stream 里的 `agent_end` 才能 seal；直接后台 fail/cancel 路径不发 `agent_end`。
   - 相关文件：`packages/core/src/tool-system/builtin/agent.ts:335,342,344,444,512-524,526-559,769,861-865`；`packages/tui/src/ui/App.tsx:697-704,706-730,2071-2080`；`packages/tui/src/ui/AgentDock.tsx:200-211`。
   - 触发边界：仅直接后台 `Agent(run_in_background=true)` 且失败/取消；成功路径、同步 agent、同步自动转后台路径不受影响。
