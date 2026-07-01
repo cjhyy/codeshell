@@ -398,9 +398,17 @@ function foldTurnProcess(
   items: Array<Message | ToolGroup>,
   liveTurnActive: boolean,
 ): StreamItem[] {
+  // Turn boundaries are USER messages — but NOT engine-injected ones. A steer /
+  // goal wakeup / cron续接 splices in a user message with injected:true; that is
+  // a continuation of the CURRENT turn, not a new user-initiated turn. Counting
+  // it as a boundary would move `lastTurnStart` forward and demote the prior
+  // (still-streaming) turn from isLive→false, folding it mid-flight. So injected
+  // user messages are NOT boundaries: they fall inside the preceding turn's slice
+  // and render inline as a user bubble there.
   const userIdxs: number[] = [];
   for (let i = 0; i < items.length; i++) {
-    if (items[i]!.kind === "user") userIdxs.push(i);
+    const it = items[i]!;
+    if (it.kind === "user" && !(it as { injected?: boolean }).injected) userIdxs.push(i);
   }
   if (userIdxs.length === 0) return items.slice();
 
