@@ -25,6 +25,8 @@ export interface AutomationSummary {
   lastRunId: string | null;
   /** True = one-shot job: runs once then auto-deletes (CronCreate once:true). */
   once: boolean;
+  /** Bound conversation to continue on fire (CronCreate resumeSessionId); null = fresh session. */
+  resumeSessionId: string | null;
 }
 
 export interface CreateAutomationInput {
@@ -59,6 +61,7 @@ function toSummary(job: CronJob): AutomationSummary {
     createdAt: job.createdAt,
     lastRunId: job.lastRunId ?? null,
     once: job.once === true,
+    resumeSessionId: job.resumeSessionId ?? null,
   };
 }
 
@@ -75,6 +78,14 @@ function requireScheduler(): CronScheduler {
  * execution enabled) arms any newly-seen job so main takes over its schedule.
  */
 function syncFromStore(): void {
+  scheduler?.loadJobs();
+}
+
+/** Reload cron jobs from the shared on-disk store into main's live scheduler,
+ *  arming any newly-seen job. Called when the worker reports a cron change
+ *  (agent/cronChanged) so an AI-created job takes effect without the user
+ *  opening the automation UI. loadJobs() is idempotent. */
+export function reloadAutomations(): void {
   scheduler?.loadJobs();
 }
 

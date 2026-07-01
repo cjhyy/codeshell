@@ -39,6 +39,7 @@ import { activeGuest, listGuests, focusGuest } from "./browser-driver/active-gue
 import { loadBrowserAutomationPolicy } from "./browser-driver/load-policy.js";
 import { buildNoChildFallbackReply, type ParsedRpc } from "./agent-bridge-fallback.js";
 import { getTrustCachedSync } from "./trust-store.js";
+import { reloadAutomations } from "./automation-service.js";
 
 /**
  * Neutral sandbox directory used when the user is in a "no project"
@@ -162,6 +163,9 @@ export class AgentBridge {
       // InjectCredential: intercept __credential_action__ (restore a cookie
       // credential into the built-in browser) here; DON'T forward to renderer.
       if (this.maybeHandleCredentialAction(line)) return;
+      // cron change: the worker created/deleted a cron job (agent/cronChanged);
+      // reload main's scheduler so it arms immediately. DON'T forward to renderer.
+      if (this.maybeHandleCronChanged(line)) return;
       let summary: Record<string, unknown> = { raw: previewLine(line) };
       try {
         const m = JSON.parse(line) as { method?: string; id?: number };
@@ -376,6 +380,21 @@ export class AgentBridge {
    * Never throws — a failure still replies so the worker tool unblocks.
    * The AI-side approval gate already ran in the worker tool; this just executes.
    */
+  /** Intercept the worker's `agent/cronChanged` notification: reload main's
+   *  cron scheduler so an AI-created/deleted job arms immediately. Returns true
+   *  (consume, don't forward to renderer) when handled. */
+  private maybeHandleCronChanged(line: string): boolean {
+    let parsed: { method?: string };
+    try { parsed = JSON.parse(line); } catch { return false; }
+    if (parsed.method !== "agent/cronChanged") return false;
+    try {
+      reloadAutomations();
+    } catch (err) {
+      dlog("bridge", "cronChanged.reload_failed", { error: String(err) });
+    }
+    return true;
+  }
+
   private maybeHandleCredentialAction(line: string): boolean {
     const parsed = parseCredentialActionLine(line);
     if (!parsed) return false;

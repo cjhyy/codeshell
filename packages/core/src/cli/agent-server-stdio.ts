@@ -37,6 +37,8 @@ import type { EngineConfigSlice } from "../protocol/chat-session-manager.js";
 import type { ValidatedSettings } from "../settings/schema.js";
 import { AgentServer } from "../protocol/server.js";
 import { StdioTransport } from "../protocol/transport.js";
+import { createNotification } from "../protocol/types.js";
+import { setCronChangedSink } from "../tool-system/builtin/cron.js";
 import { SettingsManager, noRepoDir } from "../settings/manager.js";
 import { personalizationFrom } from "../settings/personalization.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
@@ -277,6 +279,14 @@ cronScheduler.loadJobs();
 // ─── Step 5: AgentServer over stdio ──────────────────────────────
 
 const stdioTransport = new StdioTransport(process.stdin, process.stdout);
+
+// Cron jobs are persisted by this worker but only main arms/executes their
+// timers (this worker keeps setExecutionEnabled(false) above). When an AI tool
+// creates/deletes a cron job here, notify main over stdio so it reloads the
+// store and (re)arms its scheduler — otherwise AI-created jobs never fire.
+setCronChangedSink(() => {
+  stdioTransport.send(createNotification("agent/cronChanged", {}));
+});
 
 const agentServer = new AgentServer({
   chatManager,

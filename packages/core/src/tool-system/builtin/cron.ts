@@ -7,6 +7,23 @@ import { cronScheduler } from "../../automation/scheduler.js";
 import type { CronPermissionLevel } from "../../automation/scheduler.js";
 import { getCurrentSid } from "../../logging/logger.js";
 
+/** Sink notified after a cron job is created/deleted, so the host (Electron
+ *  main) can reload+arm the scheduler that actually executes jobs. The worker
+ *  process only persists cron jobs (executionEnabled=false); without this the
+ *  host never learns about an AI-created job until the user opens the UI. */
+type CronChangedSink = () => void;
+let cronChangedSink: CronChangedSink | null = null;
+export function setCronChangedSink(sink: CronChangedSink | null): void {
+  cronChangedSink = sink;
+}
+function fireCronChanged(): void {
+  try {
+    cronChangedSink?.();
+  } catch {
+    // Notifying the host is best-effort; never break the tool on it.
+  }
+}
+
 export const cronCreateToolDef: ToolDefinition = {
   name: "CronCreate",
   description:
@@ -34,7 +51,7 @@ export const cronCreateToolDef: ToolDefinition = {
       prompt: { type: "string", description: "The task prompt the agent runs on each execution" },
       timezone: {
         type: "string",
-        description: "IANA timezone for cron-expression schedules (e.g. 'Asia/Shanghai'). Optional; defaults to UTC.",
+        description: "IANA timezone for cron-expression schedules (e.g. 'Asia/Shanghai'). Optional; defaults to the host system's timezone.",
       },
       cwd: { type: "string", description: "Working directory / project the job runs in. Optional." },
       permissionLevel: {
@@ -72,7 +89,13 @@ export async function cronCreateTool(args: Record<string, unknown>): Promise<str
   const schedule = args.schedule as string;
   const prompt = args.prompt as string;
   if (!name || !schedule || !prompt) return "Error: name, schedule, and prompt are required";
-  const timezone = typeof args.timezone === "string" ? args.timezone : undefined;
+  const timezone =
+    typeof args.timezone === "string"
+      ? args.timezone
+      : (() => {
+          try { return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; }
+          catch { return undefined; }
+        })();
   const cwd = typeof args.cwd === "string" ? args.cwd : undefined;
   const once = args.once === true;
   const permissionLevel =
@@ -98,6 +121,7 @@ export async function cronCreateTool(args: Record<string, unknown>): Promise<str
   } catch (err) {
     return `Error: ${err instanceof Error ? err.message : String(err)}`;
   }
+  fireCronChanged();
   const tz = job.timezone ? ` (${job.timezone})` : "";
   const next = job.nextRun ? new Date(job.nextRun).toLocaleString() : "n/a";
   const cont = job.resumeSessionId ? "(到点续接当前对话,带上下文)" : "";
@@ -123,6 +147,7 @@ export async function cronDeleteTool(args: Record<string, unknown>): Promise<str
   const id = args.jobId as string;
   if (!id) return "Error: jobId is required";
   const deleted = cronScheduler.delete(id);
+  if (deleted) fireCronChanged();
   return deleted ? `Cron job #${id} deleted.` : `Cron job #${id} not found.`;
 }
 

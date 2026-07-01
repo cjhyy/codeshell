@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type { AutomationSummary, AutomationPermissionLevel, RunSummary } from "../../preload/types";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Clock3, History, Loader2, Play, Plus, Trash2 } from "lucide-react";
+import { Clock3, History, Link2, Loader2, Play, Plus, Trash2 } from "lucide-react";
 import { NO_REPO_KEY, type SessionIndex, type SessionSummary } from "../transcripts";
 import {
   parseSchedule,
@@ -28,14 +27,17 @@ import {
   selectedProjectValue,
   cwdFromSelection,
 } from "./projectOptions";
+import { Combobox } from "@/components/ui/combobox";
+import { allTimezones, offsetLabel, offsetBucket, uniqueOffsetBuckets, bucketLabel } from "./timezones";
 import { cn } from "@/lib/utils";
+import { fmtRelative } from "./relativeTime";
 import { useT, type TFunction } from "../i18n/I18nProvider";
 import type { TranslationKey } from "../i18n/dict";
 
-const PERMISSION_OPTIONS: { value: string; labelKey: TranslationKey }[] = [
-  { value: "read-only", labelKey: "auto.permission.readOnly" },
-  { value: "workspace-write", labelKey: "auto.permission.workspaceWrite" },
-  { value: "full", labelKey: "auto.permission.full" },
+export const PERMISSION_OPTIONS: { value: string; labelKey: TranslationKey; tone: "ok" | "warn" | "err" }[] = [
+  { value: "read-only", labelKey: "auto.permission.readOnly", tone: "ok" },
+  { value: "workspace-write", labelKey: "auto.permission.workspaceWrite", tone: "warn" },
+  { value: "full", labelKey: "auto.permission.full", tone: "err" },
 ];
 
 // Cadence types for the "pick a cadence → pick a time" frequency control. The
@@ -51,56 +53,6 @@ const CADENCE_OPTIONS: { value: Schedule["kind"]; labelKey: TranslationKey }[] =
 const HOURLY_OPTIONS = [1, 2, 3, 4, 6, 8, 12];
 
 const DEFAULT_TIME = "09:00";
-
-// Timezone choices. Default is UTC; the system-local zone is appended with a
-// "()" note so the user can recognise their own offset without IANA fluency.
-// Only the system zone carries that note — the rest are plain IANA ids.
-function systemTimezone(): string | null {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
-  } catch {
-    return null;
-  }
-}
-
-/** "(UTC+8)" style offset note for a zone, or "" if it can't be computed. */
-function offsetNote(tz: string): string {
-  try {
-    const parts = new Intl.DateTimeFormat("en-US", {
-      timeZone: tz,
-      timeZoneName: "shortOffset",
-    }).formatToParts(new Date(0));
-    const name = parts.find((p) => p.type === "timeZoneName")?.value ?? "";
-    return name.replace("GMT", "UTC");
-  } catch {
-    return "";
-  }
-}
-
-const BASE_TIMEZONES = [
-  "UTC",
-  "Asia/Shanghai",
-  "America/New_York",
-  "America/Los_Angeles",
-  "Europe/London",
-  "Asia/Tokyo",
-];
-
-function timezoneOptions(current: string): { value: string; label: string }[] {
-  const sys = systemTimezone();
-  const seen = new Set<string>();
-  const out: { value: string; label: string }[] = [];
-  const add = (tz: string, note?: string) => {
-    if (seen.has(tz)) return;
-    seen.add(tz);
-    out.push({ value: tz, label: note ? `${tz} (${note})` : tz });
-  };
-  // System zone first, with its offset note — the only entry that gets one.
-  if (sys) add(sys, offsetNote(sys) || undefined);
-  for (const tz of BASE_TIMEZONES) add(tz);
-  add(current); // keep a previously-saved zone selectable even if exotic
-  return out;
-}
 
 function fmtTime(ms: number | null): string {
   if (ms == null) return "—";
@@ -430,8 +382,8 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
   );
 }
 
-function AutomationDetail(props: {
-  t: TFunction;
+export function AutomationDetail(props: {
+  t?: TFunction;
   job: AutomationSummary;
   repos: Repo[];
   onToggleEnabled: (next: boolean) => void;
@@ -455,9 +407,15 @@ function AutomationDetail(props: {
   onOpenDiskSession: (session: DiskSessionMeta) => void;
   onOpenSession: (repoId: string | null, sessionId: string) => void;
 }) {
-  const { job, t } = props;
-  const sessionCount = props.sessions.length;
-  const lastSession = props.sessions[0];
+  const { job } = props;
+  // `t` is normally supplied by the parent (which holds the provider-bound
+  // translator). It is optional so the component can be rendered in isolation
+  // (e.g. renderToStaticMarkup in unit tests); the provider-less `useT()`
+  // fallback resolves real strings against the stored/default language.
+  const fallback = useT();
+  const t = props.t ?? fallback.t;
+  const sessions = props.sessions ?? [];
+  const lastSession = sessions[0];
 
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [promptDraft, setPromptDraft] = useState(job.prompt);
@@ -515,7 +473,21 @@ function AutomationDetail(props: {
     if (v && v !== job.schedule) props.onSave({ schedule: v });
   };
 
-  const tzOptions = timezoneOptions(job.timezone ?? "UTC");
+  const [tzOffsetFilter, setTzOffsetFilter] = useState<number | "all">("all");
+  const tzCityOptions = useMemo(
+    () =>
+      allTimezones()
+        .filter((z) => tzOffsetFilter === "all" || offsetBucket(z) === tzOffsetFilter)
+        .map((z) => ({ value: z, label: z, hint: offsetLabel(z) })),
+    [tzOffsetFilter],
+  );
+  const offsetOptions = useMemo(
+    () => [
+      { value: "all", label: t("auto.detail.tzAllOffsets") },
+      ...uniqueOffsetBuckets().map((b) => ({ value: String(b), label: bucketLabel(b) })),
+    ],
+    [t],
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -528,9 +500,14 @@ function AutomationDetail(props: {
               job.enabled ? "bg-status-ok" : "bg-muted-foreground",
             )}
           />
-          <div className="min-w-0">
+          <div className="flex min-w-0 flex-col">
             <h3 className="truncate text-base font-semibold text-foreground">{job.name}</h3>
             <p className="text-xs text-muted-foreground">{describeSchedule(job.schedule)} · {job.timezone ?? "UTC"}</p>
+            {job.resumeSessionId && (
+              <span className="mt-1 inline-flex w-fit items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                <Link2 size={11} />{t("auto.detail.resumeBadge")}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -570,15 +547,17 @@ function AutomationDetail(props: {
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-md border bg-card p-3">
           <span className="text-xs text-muted-foreground">{t("auto.detail.nextRun")}</span>
-          <strong className="mt-1 block text-sm text-foreground">{fmtTime(job.nextRun)}</strong>
+          <strong className="mt-1 block text-sm text-foreground">{fmtRelative(job.nextRun, t)}</strong>
+          {job.nextRun != null && <span className="block text-[10px] text-muted-foreground tabular-nums">{fmtTime(job.nextRun)}</span>}
         </div>
         <div className="rounded-md border bg-card p-3">
           <span className="text-xs text-muted-foreground">{t("auto.detail.lastRun")}</span>
-          <strong className="mt-1 block text-sm text-foreground">{fmtTime(job.lastRun)}</strong>
+          <strong className="mt-1 block text-sm text-foreground">{fmtRelative(job.lastRun, t)}</strong>
+          {job.lastRun != null && <span className="block text-[10px] text-muted-foreground tabular-nums">{fmtTime(job.lastRun)}</span>}
         </div>
         <div className="rounded-md border bg-card p-3">
-          <span className="text-xs text-muted-foreground">{t("auto.detail.historySession")}</span>
-          <strong className="mt-1 block text-sm text-foreground">{sessionCount}</strong>
+          <span className="text-xs text-muted-foreground">{t("auto.detail.runTimes")}</span>
+          <strong className="mt-1 block text-sm text-foreground">{job.runCount}</strong>
         </div>
       </div>
 
@@ -619,18 +598,7 @@ function AutomationDetail(props: {
       )}
 
       <div className="rounded-md border bg-card p-3">
-        <FieldRow label={t("auto.detail.status")}>
-          <Badge
-            variant="outline"
-            className={
-              job.enabled
-                ? "border-status-ok/30 bg-status-ok/15 text-status-ok"
-                : undefined
-            }
-          >
-            {job.enabled ? t("auto.detail.statusActive") : t("auto.detail.statusPaused")}
-          </Badge>
-        </FieldRow>
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("auto.detail.configSection")}</p>
 
         <FieldRow label={t("auto.detail.frequency")}>
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -700,17 +668,23 @@ function AutomationDetail(props: {
         </FieldRow>
 
         <FieldRow label={t("auto.detail.timezone")}>
-          <Select
-            value={job.timezone ?? "UTC"}
-            onValueChange={(v) => { if (v !== job.timezone) props.onSave({ timezone: v }); }}
-          >
-            <SelectTrigger className="h-8 w-[200px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {tzOptions.map((tz) => (
-                <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Combobox
+              options={offsetOptions}
+              value={tzOffsetFilter === "all" ? "all" : String(tzOffsetFilter)}
+              onChange={(v) => setTzOffsetFilter(v === "all" ? "all" : Number(v))}
+              triggerClassName="w-[110px]"
+              searchPlaceholder={t("auto.detail.tzSearch")}
+            />
+            <Combobox
+              options={tzCityOptions}
+              value={job.timezone ?? "UTC"}
+              onChange={(v) => { if (v !== job.timezone) props.onSave({ timezone: v }); }}
+              triggerClassName="w-[200px]"
+              searchPlaceholder={t("auto.detail.tzSearch")}
+              emptyText={t("auto.detail.tzEmpty")}
+            />
+          </div>
         </FieldRow>
 
         <FieldRow label={t("auto.detail.permission")}>
@@ -725,15 +699,22 @@ function AutomationDetail(props: {
             <SelectTrigger className="h-8 w-[160px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               {PERMISSION_OPTIONS.map((p) => (
-                <SelectItem key={p.value} value={p.value}>{t(p.labelKey)}</SelectItem>
+                <SelectItem key={p.value} value={p.value}>
+                  <span className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "inline-block h-2 w-2 rounded-full",
+                        p.tone === "ok" ? "bg-status-ok" : p.tone === "warn" ? "bg-status-warn" : "bg-status-err",
+                      )}
+                    />
+                    {t(p.labelKey)}
+                  </span>
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </FieldRow>
 
-        <FieldRow label={t("auto.detail.nextRun")}>{fmtTime(job.nextRun)}</FieldRow>
-        <FieldRow label={t("auto.detail.lastRun")}>{fmtTime(job.lastRun)}</FieldRow>
-        <FieldRow label={t("auto.detail.runTimes")}>{job.runCount}</FieldRow>
         <FieldRow label={t("auto.detail.project")}>
           <Select
             value={selectedProjectValue(job.cwd)}
@@ -750,68 +731,94 @@ function AutomationDetail(props: {
             </SelectContent>
           </Select>
         </FieldRow>
-        <FieldRow label={t("auto.detail.recentRun")}>
-          {job.lastRunId ? (
-            <Button size="sm" variant="outline" onClick={() => props.onViewRun(job.lastRunId!)}>
-              <History size={14} />
-              {t("auto.detail.recentRunView")}
-            </Button>
-          ) : (
-            "—"
-          )}
-        </FieldRow>
       </div>
 
-      <div className="rounded-md border bg-card p-3">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div>
-            <h4 className="text-sm font-semibold text-foreground">{t("auto.detail.runSession")}</h4>
-            <p className="text-xs text-muted-foreground">{lastSession ? t("auto.detail.recentAt", { when: shortDate(lastSession.run?.updatedAt ?? lastSession.session.updatedAt) }) : t("auto.detail.noSession")}</p>
+      {job.resumeSessionId ? (
+        <div className="rounded-md border bg-card p-3">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("auto.detail.boundConversation")}</p>
+          {(() => {
+            const bound = sessions.find(
+              (l) => (l.session.engineSessionId ?? l.session.id) === job.resumeSessionId,
+            );
+            if (!bound)
+              return (
+                <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">{t("auto.detail.boundNotFound")}</div>
+              );
+            const status = bound.run?.status ?? bound.session.runStatus;
+            const when = bound.run?.updatedAt ?? bound.session.updatedAt;
+            return (
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-auto w-full justify-start gap-2 px-2 py-2 text-left"
+                onClick={() => {
+                  if (bound.needsImport && bound.run) props.onOpenRunSession(bound.run);
+                  else if (bound.disk) props.onOpenDiskSession(bound.disk);
+                  else props.onOpenSession(bound.repoId, bound.session.id);
+                }}
+              >
+                <Link2 size={14} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">{bound.session.title || t("auto.detail.untitled")}</span>
+                  <small className="block truncate text-xs text-muted-foreground">{shortDate(when)} · {runStatusLabel(t, status)}</small>
+                </span>
+                <span className="text-xs text-primary">{t("auto.detail.openConversation")} →</span>
+              </Button>
+            );
+          })()}
+        </div>
+      ) : (
+        <div className="rounded-md border bg-card p-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h4 className="text-sm font-semibold text-foreground">{t("auto.detail.runSession")}</h4>
+              <p className="text-xs text-muted-foreground">{lastSession ? t("auto.detail.recentAt", { when: shortDate(lastSession.run?.updatedAt ?? lastSession.session.updatedAt) }) : t("auto.detail.noSession")}</p>
+            </div>
+            {job.lastRunId && (
+              <Button size="sm" variant="outline" onClick={() => props.onViewRun(job.lastRunId!)}>
+                <History size={14} />
+                {t("auto.detail.runDetail")}
+              </Button>
+            )}
           </div>
-          {job.lastRunId && (
-            <Button size="sm" variant="outline" onClick={() => props.onViewRun(job.lastRunId!)}>
-              <History size={14} />
-              {t("auto.detail.runDetail")}
-            </Button>
+          {sessions.length === 0 ? (
+            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">{t("auto.detail.noJumpableSession")}</div>
+          ) : (
+            <ul className="space-y-1">
+              {sessions.map(({ repoId, session, run, disk, needsImport }) => {
+                // Trust the flag set at link synthesis (automationSessionLinks):
+                // local-present links carry needsImport=false, disk/run-only links
+                // carry true. The old per-row `props.sessions.find()` was O(rows²)
+                // and used a different predicate, risking re-import of an
+                // already-local session.
+                const status = run?.status ?? session.runStatus;
+                const when = run?.updatedAt ?? session.updatedAt;
+                return (
+                  <li key={`${repoId ?? NO_REPO_KEY}:${session.id}`}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-auto w-full justify-start gap-2 px-2 py-2 text-left"
+                      onClick={() => {
+                        if (needsImport && run) props.onOpenRunSession(run);
+                        else if (disk) props.onOpenDiskSession(disk);
+                        else props.onOpenSession(repoId, session.id);
+                      }}
+                    >
+                      <Clock3 size={14} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{session.title}</span>
+                        <small className="block truncate text-xs text-muted-foreground">{shortDate(when)} · {runStatusLabel(t, status)}</small>
+                      </span>
+                      <span className="text-xs text-primary">{t("auto.detail.sessionView")}</span>
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
-        {props.sessions.length === 0 ? (
-          <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">{t("auto.detail.noJumpableSession")}</div>
-        ) : (
-          <ul className="space-y-1">
-            {props.sessions.map(({ repoId, session, run, disk, needsImport }) => {
-              // Trust the flag set at link synthesis (automationSessionLinks):
-              // local-present links carry needsImport=false, disk/run-only links
-              // carry true. The old per-row `props.sessions.find()` was O(rows²)
-              // and used a different predicate, risking re-import of an
-              // already-local session.
-              const status = run?.status ?? session.runStatus;
-              const when = run?.updatedAt ?? session.updatedAt;
-              return (
-                <li key={`${repoId ?? NO_REPO_KEY}:${session.id}`}>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-auto w-full justify-start gap-2 px-2 py-2 text-left"
-                    onClick={() => {
-                      if (needsImport && run) props.onOpenRunSession(run);
-                      else if (disk) props.onOpenDiskSession(disk);
-                      else props.onOpenSession(repoId, session.id);
-                    }}
-                  >
-                    <Clock3 size={14} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">{session.title}</span>
-                      <small className="block truncate text-xs text-muted-foreground">{shortDate(when)} · {runStatusLabel(t, status)}</small>
-                    </span>
-                    <span className="text-xs text-primary">{t("auto.detail.sessionView")}</span>
-                  </Button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+      )}
     </div>
   );
 }
