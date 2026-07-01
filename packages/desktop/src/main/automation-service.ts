@@ -25,6 +25,8 @@ export interface AutomationSummary {
   lastRunId: string | null;
   /** True = one-shot job: runs once then auto-deletes (CronCreate once:true). */
   once: boolean;
+  /** Bound conversation to continue on fire (CronCreate resumeSessionId); null = fresh session. */
+  resumeSessionId: string | null;
 }
 
 export interface CreateAutomationInput {
@@ -59,6 +61,7 @@ function toSummary(job: CronJob): AutomationSummary {
     createdAt: job.createdAt,
     lastRunId: job.lastRunId ?? null,
     once: job.once === true,
+    resumeSessionId: job.resumeSessionId ?? null,
   };
 }
 

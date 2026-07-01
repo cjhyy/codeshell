@@ -85,6 +85,12 @@ describe("automation-service", () => {
   test("create throws on an invalid cron expression", () => {
     expect(() => createAutomation({ name: "bad", schedule: "99 9 * * *", prompt: "p" })).toThrow();
   });
+
+  test("summary carries resumeSessionId (null when unset)", () => {
+    const created = createAutomation({ name: "n", schedule: "5m", prompt: "p" });
+    expect(created).toHaveProperty("resumeSessionId");
+    expect(created.resumeSessionId).toBeNull();
+  });
 });
 
 test("reloadAutomations calls scheduler.loadJobs", () => {

@@ -1377,6 +1377,7 @@ export interface AutomationSummary {
   createdAt: number;
   lastRunId: string | null;
   once: boolean;
+  resumeSessionId: string | null;
 }
 
 export interface CreateAutomationInput {
