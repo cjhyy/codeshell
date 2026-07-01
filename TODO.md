@@ -93,7 +93,7 @@
 
 ## Medium
 
-- [ ] **自动化/cron full 档可调 DriveAgent 绕开 tier+sandbox（外部 CLI 无沙箱）** — 【核对 2026-07-01：确认 NOT DONE — `AUTOMATION_DISABLED_TOOLS` 只禁 cron 三件套,不含 DriveAgent/DriveClaudeCode】
+- [x] **自动化/cron full 档可调 DriveAgent 绕开 tier+sandbox（外部 CLI 无沙箱）** — 已修(279ef935)：`DriveAgent`/`DriveClaudeCode`/`RemoteTrigger` 加入 `AUTOMATION_DISABLED_TOOLS`；`automationBuiltinTools()` 据此过滤，drift-guard 测试保证三名都是真实 builtin。备注:外部 CLI env allowlist 未做(留加固);RemoteTrigger 死工具本身仍待处理(见下方 Medium)。
   - 严重级别：Medium。前置是存在 `permissionLevel:"full"` 的 cron/automation run；read-only/workspace-write 档会被 TierApprovalBackend 正确拒绝。
   - 影响：full 档 cron run 可调用 DriveAgent → 外部 claude/codex 以 `bypassPermissions` + 无 seatbelt 运行，打破 automation write-policy“即使 full 也逃不出 workspace”的不变量。DriveAgent 子进程继承 worker 真实 `process.env`，不会自动拿到 CodeShell `Credential.exposeAsEnv` 或 settings 顶层 `env`，但用户从带 API key 的 shell 启动桌面/worker 时仍会传给外部 CLI。
   - 相关文件：`packages/desktop/src/main/automationToolset.ts:19-33`；`packages/desktop/src/main/automation-host.ts:105-133`；`packages/core/src/preset/index.ts:84-85,90`；`packages/core/src/tool-system/builtin/drive-claude-code.ts:71-105`；`packages/core/src/cc-orchestrator/external-agent-driver.ts:26-53`；`packages/core/src/sandbox/index.ts:5-9`；`packages/core/src/engine/engine.ts:2947-2981`；`packages/core/src/tool-system/builtin/bash.ts:99-103`。
@@ -107,13 +107,13 @@
   - 修复方向：限制模型可申请的最高 `permissionLevel`；对 `full`/`workspace-write` cron 强制用户显式确认且展示 MCP/网络副作用风险；cron 执行时套用 MCP allowlist。
   - 回归验证：cron full 执行 MCP 写/发网络类工具时应被拦截或要求预授权；credential 工具无 askUser 继续 fail-closed。
 
-- [ ] **Bash safe-read 绕过 path-policy，敏感文件/凭证可零审批外泄** — 【核对 2026-07-01：确认 NOT DONE — `SAFE_READ_PATTERNS` 含 `/^env$/`、`/^printenv/`,无敏感路径降级】
+- [x] **Bash safe-read 绕过 path-policy，敏感文件/凭证可零审批外泄** — 已修(f946e0db)：新增 `segmentIsSensitiveRead`，safe-read 命中 env-dump(`env`/`printenv`)或敏感路径(.ssh/id_*、.env*、credentials.json、.aws/.npmrc/.netrc/.pgpass/.docker/.kube/gh hosts/.gnupg/.git-credentials)降级为 unsafe→ask；整段+pipe 每段都接入，普通读仍 safe-read。+5 TDD，tool-system 509 pass。
   - 影响：`Read ~/.ssh/id_rsa` 走 path-policy 会 ask，但等价的 `cat ~/.ssh/id_rsa` 被 YOLO 分类为 `safe-read`；桌面默认 sandbox=off 下直接自动放行、无审批、无沙箱。`env` / `printenv` 同属 safe-read，会 dump `Credential.exposeAsEnv` 注入的密钥与顶层 `env` 的 API key。
   - 相关文件：`packages/core/src/tool-system/permission.ts:543-564`；`packages/core/src/tool-system/executor.ts:249-261,507-524`；`packages/core/src/engine/sandbox-config.ts:52`；`packages/core/src/engine/engine.ts:2967-2974`。
   - 修复方向：safe-read 分类对命中敏感路径的参数降级为 ask；`env`/`printenv` 在有敏感 env 时降级为 ask；或桌面默认开 seatbelt deniedReads。
   - 回归验证：默认（非 bypass）模式下 `Bash("cat ~/.ssh/id_rsa")`、`Bash("printenv")` 应触发审批而非静默放行。
 
-- [ ] **stdio MCP server 默认继承宿主全量 `process.env`，缺少敏感环境变量过滤** — 【核对 2026-07-01：确认 NOT DONE — `buildStdioEnv()` 直接 spread `process.env`,无过滤】
+- [x] **stdio MCP server 默认继承宿主全量 `process.env`，缺少敏感环境变量过滤** — 已修(cd6dfbf1)：新增 `filterSensitiveEnv`，`buildStdioEnv` 从继承 base 剥掉 secret-shaped key(_KEY/_TOKEN/SECRET/PASSWORD/PASSWD/_PAT/CREDENTIAL/APIKEY/ACCESS_KEY)；显式 envVars/config.env 用户意图仍下发，PATH/HOME 保留。+4 TDD，tool-system 513 pass。
   - 影响：插件自带或自动连接的 stdio MCP server 可默认获得 CodeShell 进程环境中的 API key、tokens、代理配置等敏感变量；这与用户对 MCP server 的最小授权预期不一致。
   - 相关范围：`packages/core/src/tool-system/mcp-manager.ts`；MCP server stdio 启动 / env merge 相关代码。
   - 状态：已确认。`exposeAsEnv` 只进 Bash 不经 MCP 的说法已证伪为低风险；但 stdio MCP 继承宿主 `process.env` 本身是确认问题。
@@ -155,7 +155,7 @@
   - 修复方向：把 `httpHeaders` / `headers` / `defaultHeaders` 容器整块视为敏感，只返回 header key/presence；或对所有 header value 统一 redact。
   - 回归验证：provider 配置 `httpHeaders: { "x-custom-auth": "s3cr3t" }`，`config_get("providers")` 返回中不应包含 `s3cr3t`。
 
-- [ ] **RemoteTrigger 死工具：写 `~/.code-shell/triggers` 后无人消费，任务静默丢失** — 【核对 2026-07-01：确认死工具 — 全仓无 pickup,工具仍在 BUILTIN_TOOLS】
+- [x] **RemoteTrigger 死工具：写 `~/.code-shell/triggers` 后无人消费，任务静默丢失** — 已修(31b077e2)：从 GENERAL_BUILTIN_TOOLS 白名单 + BUILTIN_TOOLS 注册表移除，删 remote-trigger.ts；定时/循环统一走 CronCreate+DriveAgent。+2 TDD(preset 白名单/注册表都不含)。
   - 影响：模型调用 RemoteTrigger 后写入 pending JSON 并返回 dispatched 成功；全仓没有 pickup/scheduler/worker 读取该目录，任务永不执行，pending 文件堆积。default 模式会 ask，但用户可能按工具描述批准；auto/bypass 上下文更隐蔽。
   - 相关文件：`packages/core/src/tool-system/builtin/remote-trigger.ts:9-11,44-59`；`packages/core/src/tool-system/builtin/index.ts:38,551-557`；`packages/core/src/preset/index.ts:90`。
   - 复核结论：全仓 grep 只有工具自身、注册、preset 白名单命中；`packages/desktop/src/main`、`packages/core/src/automation`、`packages/core/src/cc-orchestrator` 没有消费 `~/.code-shell/triggers/`。
