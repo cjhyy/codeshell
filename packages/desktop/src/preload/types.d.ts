@@ -59,7 +59,16 @@ export type BackgroundWorkInfo =
       startedAt: number;
       finishedAt?: number;
     }
-  | { kind: "job"; jobId: string; description: string };
+  | {
+      kind: "job";
+      jobId: string;
+      description: string;
+      status: "running" | "completed" | "failed";
+      startedAt: number;
+      finishedAt?: number;
+      /** Result summary / error, once finished. */
+      finalText?: string;
+    };
 
 /** A plugin-provided hook surfaced to the settings 钩子 page. Mirrors
  *  core's PluginHookEntry (renderer can't import core). */

@@ -21,7 +21,7 @@ import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { SettingsManager } from "../../settings/manager.js";
 import { notificationQueue } from "./agent-notifications.js";
-import { backgroundJobRegistry } from "./background-jobs.js";
+import { backgroundJobRegistry, type BackgroundJobOutcome } from "./background-jobs.js";
 import { logger } from "../../logging/logger.js";
 import {
   getVideoProvider,
@@ -342,9 +342,11 @@ export async function generateVideoTool(
   const jobKey = `video-${jobId}`;
   const promptPreview = prompt.length > 80 ? `${prompt.slice(0, 80)}…` : prompt;
   backgroundJobRegistry.start(jobKey, sessionId ?? "", `生成视频中:${promptPreview}`);
-  void pollToCompletion(adapter, jobId, creds, cwd, sessionId, prompt, pollIntervalMs).finally(
-    () => backgroundJobRegistry.finish(jobKey),
-  );
+  void pollToCompletion(adapter, jobId, creds, cwd, sessionId, prompt, pollIntervalMs)
+    .then((outcome) => backgroundJobRegistry.finish(jobKey, outcome))
+    .catch((err) =>
+      backgroundJobRegistry.finish(jobKey, { status: "failed", finalText: (err as Error).message }),
+    );
 
   return [
     `Video generation started in the background.`,
@@ -364,22 +366,23 @@ async function pollToCompletion(
   sessionId: string | undefined,
   prompt: string,
   pollIntervalMs: number,
-): Promise<void> {
+): Promise<BackgroundJobOutcome> {
   const started = Date.now();
   try {
     for (;;) {
       if (Date.now() - started > MAX_POLL_MS) {
-        notifyVideo(sessionId, "failed", prompt, undefined, `video job ${jobId} timed out after ${Math.round(MAX_POLL_MS / 1000)}s`);
-        return;
+        const msg = `video job ${jobId} timed out after ${Math.round(MAX_POLL_MS / 1000)}s`;
+        notifyVideo(sessionId, "failed", prompt, undefined, msg);
+        return { status: "failed", finalText: msg };
       }
       const res = await adapter.poll({ jobId, creds });
       if (!res.ok) {
         notifyVideo(sessionId, "failed", prompt, undefined, res.error);
-        return;
+        return { status: "failed", finalText: res.error };
       }
       if (res.status === "failed") {
         notifyVideo(sessionId, "failed", prompt, undefined, res.error);
-        return;
+        return { status: "failed", finalText: res.error };
       }
       if (res.status === "succeeded") break;
       await new Promise((r) => setTimeout(r, pollIntervalMs));
@@ -388,15 +391,17 @@ async function pollToCompletion(
     const dl = await adapter.download({ jobId, creds });
     if (!dl.ok) {
       notifyVideo(sessionId, "failed", prompt, undefined, dl.error);
-      return;
+      return { status: "failed", finalText: dl.error };
     }
     const dir = join(cwd, ".code-shell", "generated_videos");
     await mkdir(dir, { recursive: true });
     const path = join(dir, `${Date.now()}.${dl.ext || "mp4"}`);
     await writeFile(path, dl.bytes);
     notifyVideo(sessionId, "completed", prompt, path, undefined, dl.url);
+    return { status: "completed", finalText: path };
   } catch (err) {
     notifyVideo(sessionId, "failed", prompt, undefined, (err as Error).message);
+    return { status: "failed", finalText: (err as Error).message };
   }
 }
 

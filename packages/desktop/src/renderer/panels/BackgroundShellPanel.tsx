@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bot, RefreshCw, Square, Terminal, Film } from "lucide-react";
+import { Bot, RefreshCw, Square, Terminal, Film, CheckCircle2, XCircle } from "lucide-react";
 import type { BackgroundShellInfo, BackgroundWorkInfo } from "../../preload/types";
 import { useT, type TFunction } from "../i18n/I18nProvider";
 
@@ -25,6 +25,8 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
   const { t } = useT();
   const [items, setItems] = useState<BackgroundWorkInfo[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
+  // Which finished job's result detail is expanded (click to toggle).
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   // Mirror of `selected` for the poll tick, so reading the current selection
   // doesn't force the interval to re-arm on every selection change.
   const selectedRef = useRef<string | null>(null);
@@ -149,7 +151,7 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
   const anyRunning =
     shells.some((s) => s.status === "running") ||
     agents.some((a) => a.status === "running") ||
-    jobs.length > 0;
+    jobs.some((j) => j.status === "running");
 
   // Mirror the latest shells + callbacks into refs so the poll interval below can
   // read them without listing them as effect deps. Otherwise `refresh`(dep
@@ -282,20 +284,43 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
           {jobs.length > 0 && (
             <Section title={t("panels.shells.sectionJobs")}>
               <ul className="m-0 list-none p-0">
-                {jobs.map((j) => (
-                  <li key={j.jobId} className="border-b border-border/60">
-                    <div className="flex items-center gap-2 px-2 py-1.5 text-xs">
-                      <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-status-running" />
-                      <Film className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                      <span className="min-w-0 flex-1 truncate text-foreground" title={j.description}>
-                        {j.description}
-                      </span>
-                      <span className="shrink-0 text-[10px] text-muted-foreground">
-                        {t("panels.shells.jobRunning")}
-                      </span>
-                    </div>
-                  </li>
-                ))}
+                {jobs.map((j) => {
+                  const done = j.status !== "running";
+                  const expandable = done && !!j.finalText;
+                  const isOpen = expandedJobId === j.jobId;
+                  const statusLabel =
+                    j.status === "completed"
+                      ? t("panels.shells.jobCompleted")
+                      : j.status === "failed"
+                        ? t("panels.shells.jobFailed")
+                        : t("panels.shells.jobRunning");
+                  return (
+                    <li key={j.jobId} className="border-b border-border/60">
+                      <div
+                        className={`flex items-center gap-2 px-2 py-1.5 text-xs ${expandable ? "cursor-pointer hover:bg-muted/40" : ""}`}
+                        onClick={expandable ? () => setExpandedJobId(isOpen ? null : j.jobId) : undefined}
+                      >
+                        {j.status === "running" ? (
+                          <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-status-running" />
+                        ) : j.status === "completed" ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-status-ok" />
+                        ) : (
+                          <XCircle className="h-3.5 w-3.5 shrink-0 text-status-err" />
+                        )}
+                        <Film className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <span className="min-w-0 flex-1 truncate text-foreground" title={j.description}>
+                          {j.description}
+                        </span>
+                        <span className="shrink-0 text-[10px] text-muted-foreground">{statusLabel}</span>
+                      </div>
+                      {isOpen && j.finalText && (
+                        <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words border-t border-border/60 bg-muted/30 px-2 py-1.5 text-[11px] text-muted-foreground">
+                          {j.finalText}
+                        </pre>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </Section>
           )}

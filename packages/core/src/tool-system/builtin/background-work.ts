@@ -12,7 +12,7 @@
  * but the judge — given each task's kind + command — can.
  */
 import { asyncAgentRegistry, type AsyncAgentStatus } from "./agent-registry.js";
-import { backgroundJobRegistry } from "./background-jobs.js";
+import { backgroundJobRegistry, type BackgroundJobStatus } from "./background-jobs.js";
 import { backgroundShellManager, type BgShell } from "../../runtime/background-shell.js";
 
 export type BackgroundWorkKind = "subagent" | "job" | "shell";
@@ -43,7 +43,7 @@ export function listRunningBackgroundWork(sessionId: string): BackgroundWorkItem
     }
   }
 
-  for (const j of backgroundJobRegistry.listForSession(sessionId)) {
+  for (const j of backgroundJobRegistry.listRunningForSession(sessionId)) {
     items.push({ kind: "job", description: j.description || "(background job)" });
   }
 
@@ -90,6 +90,11 @@ export type BackgroundWorkEntry =
       kind: "job";
       jobId: string;
       description: string;
+      status: BackgroundJobStatus;
+      startedAt: number;
+      finishedAt?: number;
+      /** Result summary / error, once finished. */
+      finalText?: string;
     };
 
 /**
@@ -126,7 +131,15 @@ export function listBackgroundWorkForUI(sessionId: string): BackgroundWorkEntry[
   }
 
   for (const j of backgroundJobRegistry.listForSession(sessionId)) {
-    entries.push({ kind: "job", jobId: j.jobId, description: j.description });
+    entries.push({
+      kind: "job",
+      jobId: j.jobId,
+      description: j.description,
+      status: j.status,
+      startedAt: j.startedAt,
+      ...(j.finishedAt != null ? { finishedAt: j.finishedAt } : {}),
+      ...(j.finalText != null ? { finalText: j.finalText } : {}),
+    });
   }
 
   return entries;

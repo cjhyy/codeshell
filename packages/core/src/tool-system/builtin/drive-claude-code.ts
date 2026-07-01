@@ -104,14 +104,22 @@ export function makeDriveAgentTool(runner: Runner = defaultRunner, fixedCli?: Dr
               : { agentId: jobId, description: label, status: "completed", workKind: "cc", finalText: r.finalText, ccSessionId: r.sessionId || undefined, enqueuedAt: Date.now() },
             sessionId,
           );
+          // Retain the job in the panel with its result + the external CLI
+          // session id (so #6 can attribute file changes from that transcript).
+          backgroundJobRegistry.finish(jobId, {
+            status: r.isError ? "failed" : "completed",
+            finalText: r.finalText || undefined,
+            ccSessionId: r.sessionId || undefined,
+          });
         })
         .catch((err) => {
+          const msg = (err as Error)?.message ?? String(err);
           notificationQueue.enqueue(
-            { agentId: jobId, description: label, status: "failed", workKind: "cc", error: (err as Error)?.message ?? String(err), enqueuedAt: Date.now() },
+            { agentId: jobId, description: label, status: "failed", workKind: "cc", error: msg, enqueuedAt: Date.now() },
             sessionId,
           );
-        })
-        .finally(() => backgroundJobRegistry.finish(jobId));
+          backgroundJobRegistry.finish(jobId, { status: "failed", finalText: msg });
+        });
       return `已在后台启动 ${cliName}（jobId ${jobId}）。完成后会通知你结果，无需轮询。`;
     }
     const r = await runner({ cli, prompt, resumeSessionId, cwd, permissionMode });
