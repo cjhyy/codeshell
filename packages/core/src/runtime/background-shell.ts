@@ -35,6 +35,7 @@ import {
   readFileSync,
 } from "node:fs";
 import { StringDecoder } from "node:string_decoder";
+import { utf8SafeCutLength } from "./utf8-cut.js";
 import { resolveSpawnTarget, buildSandboxEnv, mergeShellEnv, killProcessGroup, groupAlive, defaultShellBinary } from "./spawn-common.js";
 import { RingFile } from "./ring-file.js";
 import { cleanOutput } from "./output-clean.js";
@@ -421,8 +422,14 @@ export class BackgroundShellManager {
       // so the cleaned result of the first 16KB raw bytes is itself ≤ 16KB and
       // won't need a second truncation. Advancing the cursor by exactly
       // consumedBytes keeps the next read seamless.
-      rawBuf = rawBuf.subarray(0, READ_RETURN_CAP);
-      consumedBytes = READ_RETURN_CAP;
+      // Back the cut off to the last complete UTF-8 char boundary so a
+      // multibyte char straddling the 16KB line isn't split into a `�` — and
+      // so consumedBytes lands on a boundary and the next read resumes cleanly.
+      // Guard against a pathological 0 (buffer starting mid-char) to guarantee
+      // forward progress.
+      const safeCut = utf8SafeCutLength(rawBuf, READ_RETURN_CAP) || READ_RETURN_CAP;
+      rawBuf = rawBuf.subarray(0, safeCut);
+      consumedBytes = safeCut;
       capped = true;
     }
     rawSlice = rawBuf.toString("utf8");
