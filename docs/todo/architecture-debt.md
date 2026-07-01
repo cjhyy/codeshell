@@ -16,7 +16,7 @@
 - **③ 抽 `engine/types.ts`** — `EngineConfig`/`EngineHookConfig`/`EngineResult` 移出 3301 行的 engine.ts,纯类型消费者改指 types.ts(P1-⑦ 拆 engine 的前置,避免类型反向 import 抵消收益)。
 - **④ 凭证加密边界 `EncryptionCipher` + `PlaintextCipher`** — core 定义接口,`CredentialStore` 在磁盘边界 read 解密 / write 加密,默认 `PlaintextCipher`(= 现状 0o600 明文);旧明文文件仍可读、下次保存自动迁移。`grep safeStorage packages/core/src` 仅注释无代码。
 
-验证:根 typecheck 0;core 测试净增 4 pass(cipher,含双重加密回归守卫)。
+验证:typecheck **无新增**相关错误(项目 typecheck 非 clean gate,有预存错误 — 见 `CODESHELL.md`,别当"根 0" gate);core 测试净增 4 pass(cipher,含双重加密回归守卫)。
 
 ---
 
@@ -25,7 +25,8 @@
 ### ⑤ 拆 `index.ts`(843 行)成分层入口
 `index.ts`(稳定 SDK)/ `index.internal.ts`(in-repo desktop/tui)/ 可选 `index.experimental.ts`。8 处 `@internal` 导出搬到 internal,TUI/desktop 改 import 路径。
 **收益**:外部 SDK 面收窄,core 内部重构不再处处算 breaking。
-**验证**:`bun run typecheck` 后确认**无新增**与本次相关的错误(项目 typecheck 非 clean gate,有预存错误,别要求"全绿");`bun test` 绿。
+**纪律(只做机械分层,别做语义迁移)**:Arena 是一大片**裸公开**导出(`Arena`/`MODEL_PRESETS`/三 Strategy/约 20 个 `Arena*` type/`IterativeArena`,`index.ts` 268–325 行,**未打** `@internal`;而 459 行起 `@internal` 机制已在用)。本步先把 Arena 统一标 `@internal`/experimental,**是否 breaking 删除/迁移留到 P2-⑨** — 否则会提前引爆 P2-⑨ 的产品语义(arena_status/settings.arena/`/arena` 命令)。
+**验证**:`bun run typecheck` 确认**无新增**相关错误(非 clean gate 见 `CODESHELL.md`);`bun test` 绿;**`bun run lint:engine-bypass`**(架构回退守卫)+ **`bun run build`**。
 
 ### ⑥ arena builtin 改成「可选注册」
 把 `tool-system/builtin/arena.ts` 从默认 builtin 抽出 / 注册层可开关。这是 arena 真正解绑 core 的**第一步实操**(比挪目录更要紧)。
@@ -33,7 +34,8 @@
 
 ### ⑦ 拆 `engine.ts`(3301 行上帝对象)
 **前置**:P0-① + ③ 已就绪。按现成边界切:image-policy / sandbox-config / subagent-spawner / runtime-config,engine.ts 只留装配 + run 编排。
-**纪律**:动核心必走 worktree + 充分回归;**一次抽一块、每块单测**,别一把梭。
+**纪律**:动核心必走 worktree + 充分回归;**一次抽一块、每块单测**,别一把梭;**别新增对 `state.ts`(进程级可变单例,见 P2-⑩)的依赖**,否则加深债务。
+**验证**:每块 `bun run typecheck` + 对应 `bun test packages/core/src/engine`;整体收口跑 **`bun run lint:engine-bypass`**(防 engine 绕路/架构回退)+ **`bun run build`**。
 
 ### ⑧ 两个 `App.tsx` 抽 reducer/hook
 desktop(3188 行)/ tui(2278 行)的巨型 App。stream 事件路由 + bucket 管理抽 `useStreamRouter`,状态机对齐已共享的 `streamReducer`。
@@ -41,8 +43,9 @@ desktop(3188 行)/ tui(2278 行)的巨型 App。stream 事件路由 + bucket 管
 
 ### ④-后续 真启用凭证加密(SafeStorageCipher)
 P0 只落地了**边界**;`SafeStorageCipher` 已实现待命(`packages/desktop/src/main/credential-cipher.ts`)但**故意未启用**。
-**真因 / 必须先解决**:agent 跑在独立 **worker 进程**(无 safeStorage 钥匙)。若 desktop main 用 safeStorage 写 `enc:safeStorage:…`,worker 端读凭证(`UseCredential` / env 暴露)解不出 → **回归**。
-**正解**:把 cipher(或解密能力)跨 stdio 递给 worker,两端用同一把钥匙后再 `setDefaultCredentialCipher(new SafeStorageCipher())`。
+**真因 / 必须先解决**:agent 跑在独立 **worker 进程**(无 safeStorage 钥匙)。若 desktop main 用 safeStorage 写 `enc:safeStorage:…`,worker 端读凭证(`UseCredential` / env 暴露)解不出 → **回归**。(`main/index.ts:1345` 明确 intentionally do NOT install yet。)
+**正解(注意:不是"传同一把钥匙给 worker")**:safeStorage 的 OS 钥匙**不该复制进 worker**(否则解密能力变成无审批 oracle)。应让 **desktop main 作 decrypt service / host-mediated credential resolution**,worker 只拿解密后的 lease/token、不直接读 encrypted 文件,再 `setDefaultCredentialCipher(new SafeStorageCipher())`。
+**规模**:非一行调用 — 是 **worker↔main 协议小设计**,须覆盖 `UseCredential` / env 暴露 / automation-cron 场景。
 
 ---
 
