@@ -1,7 +1,7 @@
 # docs/todo — 后续规划 / Roadmap
 
 > 本目录收集**尚未做 / 前瞻性**的文档:产品路线规划与待实现的设计稿。
-> 已落地的现状以仓库根的 [`docs/feature-inventory.md`](../feature-inventory.md)(全量能力盘点)为权威;
+> 已落地的现状以 [`docs/architecture/feature-inventory.md`](../architecture/feature-inventory.md)(全量能力盘点)为权威;
 > 历史/已完成的设计稿、审计、旧架构集见 [`docs/archive/`](../archive/)。
 
 ## 文档
@@ -29,4 +29,4 @@
 ## 约定
 
 - 新的待办/前瞻设计稿往这里放,并在上表登记一行 + link。
-- 一旦落地,把对应条目移出本目录:设计稿归 [`docs/archive/`](../archive/),能力登记进 [`feature-inventory.md`](../feature-inventory.md)。
+- 一旦落地,把对应条目移出本目录:设计稿归 [`docs/archive/`](../archive/),能力登记进 [`feature-inventory.md`](../architecture/feature-inventory.md)。

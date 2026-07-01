@@ -6,7 +6,7 @@
 
 > ## ⚠️ 现状勘误（2026-06-25，发 beta 前核查）
 >
-> 本 roadmap 的「当前架构基线」表、各 Phase 的「当前状态」和文末「三款标杆速览」表写于早期，**多项已落地但表里仍标"❌/低/缺失/未做"**。下方方向规划（Phase 1–6 的目标）保留作产品方向参考，但**事实现状以 [`docs/feature-inventory.md`](../feature-inventory.md)（149 项盘点）为权威**。已 grep 源码确认、与表内标注不符的项：
+> 本 roadmap 的「当前架构基线」表、各 Phase 的「当前状态」和文末「三款标杆速览」表写于早期，**多项已落地但表里仍标"❌/低/缺失/未做"**。下方方向规划（Phase 1–6 的目标）保留作产品方向参考，但**事实现状以 [`docs/architecture/feature-inventory.md`](../architecture/feature-inventory.md)（149 项盘点）为权威**。已 grep 源码确认、与表内标注不符的项：
 >
 > | roadmap 标注 | 实际现状（已实现） | 证据 |
 > |---|---|---|

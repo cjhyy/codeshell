@@ -223,8 +223,8 @@ packages/
 assets/       # README / product images (mascot, hero)
 
 docs/
+├── architecture/        # System architecture chapters + feature inventory (see architecture/README.md)
 ├── todo/                # Roadmap + forward-looking design docs (see todo/README.md)
-├── feature-inventory.md # Full inventory of desktop / tui capabilities (authority on current state)
 └── archive/             # Superseded design docs, audits, and the prior architecture set
 
 scripts/      # Build, release, and repo maintenance scripts
@@ -254,8 +254,8 @@ bun run build:renderer
 
 ## Further reading
 
+- [Architecture & feature inventory](docs/architecture/README.md)
 - [Roadmap & TODO](docs/todo/README.md)
-- [Feature inventory (desktop / tui)](docs/feature-inventory.md)
 - [Prior architecture documentation set (archived, pending rewrite)](docs/archive/architecture/README.md)
 
 ---
