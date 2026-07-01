@@ -561,6 +561,9 @@ export interface CodeshellApi {
   };
 
   // ── Browser popout window ─────────────────────────────────────────────
+  /** Probe common localhost dev-server ports via real TCP connect in main;
+   *  returns the open ports (ascending). */
+  probeLocalhostPorts(ports?: number[]): Promise<number[]>;
   /** Open the standalone browser window, optionally at an initial URL. */
   openBrowserPopout(initialUrl?: string): Promise<void>;
   /** From a popout: send an element-pick anchor back to the parent window. */

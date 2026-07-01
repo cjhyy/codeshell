@@ -149,6 +149,7 @@ import {
 import { runDream } from "./dream-service.js";
 import type { MemoryScope } from "@cjhyy/code-shell-core";
 import { listSessions, deleteSession, getSessionTranscript, listDiskSessions } from "./sessions-service.js";
+import { probeLocalhostPorts } from "./port-probe.js";
 import { getSessionEvents } from "./rawTranscript.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
 import { tailLog, type LogBucket } from "./logs-service.js";
@@ -2320,6 +2321,20 @@ ipcMain.handle("browser:popout", async (e, initialUrl?: string) => {
   const parent = BrowserWindow.fromWebContents(e.sender);
   if (!parent) return;
   await createBrowserPopout(parent, typeof initialUrl === "string" ? initialUrl : undefined);
+});
+
+// Common dev-server ports (subset of Codex's list). Probed in main via real TCP
+// connect (see port-probe.ts) instead of renderer no-cors fetch — no console
+// noise, no opaque-response 403 false-reads. The renderer only renders the
+// resulting open set.
+const CANDIDATE_DEV_PORTS = [
+  3000, 3001, 4000, 5000, 5173, 5174, 6006, 7000, 8000, 8080, 8888, 9000, 1420, 1313,
+];
+ipcMain.handle("browser:probePorts", async (_e, ports?: unknown) => {
+  const candidates = Array.isArray(ports) && ports.every((p) => typeof p === "number")
+    ? (ports as number[])
+    : CANDIDATE_DEV_PORTS;
+  return probeLocalhostPorts(candidates);
 });
 
 // A popout pinned an element anchor → forward it to the parent window's
