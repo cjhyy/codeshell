@@ -169,6 +169,23 @@ export function sanitizeMessages(messages: readonly Message[]): Message[] {
 const SECRET_KEY_RE =
   /(^|[._-])(api[_-]?key|authorization|x[_-]api[_-]key|bearer[_-]?token|access[_-]?token|refresh[_-]?token|session[_-]?token|token|secret|password|client[_-]?secret|cookie)($|[._-])/i;
 
+// Header containers whose VALUES are all header values — any of them can carry
+// a bespoke auth token under a non-secret-looking key name (e.g.
+// `x-custom-auth`), which SECRET_KEY_RE alone would miss. Treat the whole
+// container as sensitive: every non-empty value inside is redacted.
+const HEADERS_CONTAINER_RE = /^(httpHeaders|headers|defaultHeaders|envHeaders)$/;
+
+/** Redact all non-empty string/scalar values of a headers container object. */
+function redactHeaderValues(headers: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [hName, hVal] of Object.entries(headers)) {
+    // Preserve present-vs-absent for empty/null, redact everything else.
+    if (hVal === null || hVal === undefined || hVal === "") out[hName] = hVal;
+    else out[hName] = REDACTED;
+  }
+  return out;
+}
+
 const BEARER_RE = /\bBearer\s+[A-Za-z0-9._\-+/=~]{8,}/g;
 
 // URL query parameters that look like credentials. Conservative — only
@@ -239,6 +256,10 @@ export function redactSecrets<T>(value: T, depth = 0): T {
         // collapse to [redacted]).
         if (v === null || v === undefined || v === "") out[k] = v;
         else out[k] = REDACTED;
+      } else if (HEADERS_CONTAINER_RE.test(k) && v && typeof v === "object" && !Array.isArray(v)) {
+        // Blanket-redact header values regardless of the inner header name, so a
+        // custom `x-custom-auth` doesn't leak in cleartext.
+        out[k] = redactHeaderValues(v as Record<string, unknown>);
       } else {
         out[k] = redactSecrets(v, depth + 1);
       }

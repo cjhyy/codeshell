@@ -65,4 +65,35 @@ describe("redactSecrets", () => {
     expect(redactSecrets(true)).toBe(true);
     expect(redactSecrets("plain text")).toBe("plain text");
   });
+
+  // A custom auth header keyed by a non-secret-looking name (e.g.
+  // `x-custom-auth`) would slip through the per-key SECRET_KEY_RE match. Any
+  // value inside a headers container is a header value → treat the whole
+  // container as sensitive. Guards config_get("providers") from returning
+  // provider.httpHeaders values in cleartext.
+  test("redacts ALL values inside a headers container, incl. non-secret-named keys", () => {
+    const out = redactSecrets({
+      httpHeaders: { "x-custom-auth": "s3cr3t", "x-tenant": "acme-123" },
+      headers: { "my-signing-key": "deadbeef" },
+      defaultHeaders: { "x-app-token": "tok-xyz" },
+    }) as any;
+    expect(out.httpHeaders["x-custom-auth"]).toBe("[redacted]");
+    expect(out.httpHeaders["x-tenant"]).toBe("[redacted]");
+    expect(out.headers["my-signing-key"]).toBe("[redacted]");
+    expect(out.defaultHeaders["x-app-token"]).toBe("[redacted]");
+  });
+
+  test("preserves header presence for empty/null values", () => {
+    const out = redactSecrets({ headers: { "x-a": "", "x-b": null } }) as any;
+    expect(out.headers["x-a"]).toBe("");
+    expect(out.headers["x-b"]).toBeNull();
+  });
+
+  test("a non-headers key literally named 'header' is not blanket-redacted", () => {
+    // Only the known header-container keys trip the blanket rule; an ordinary
+    // field whose name merely contains 'header' recurses normally.
+    const out = redactSecrets({ headerText: "visible", pageHeader: { title: "keep" } }) as any;
+    expect(out.headerText).toBe("visible");
+    expect(out.pageHeader.title).toBe("keep");
+  });
 });
