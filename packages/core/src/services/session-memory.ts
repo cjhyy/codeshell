@@ -7,7 +7,7 @@
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { homedir } from "node:os";
+import { userHome } from "../settings/manager.js";
 import { sortSessionMemoriesByRecency } from "./session-memory-sort.js";
 
 export interface SessionMemoryEntry {
@@ -19,14 +19,20 @@ export interface SessionMemoryEntry {
   tokenCount?: number;
 }
 
-const MEMORY_DIR = join(homedir(), ".code-shell", "session-memories");
+// Resolve per-call (NOT a module const): userHome() reads $HOME live, so a
+// relocated/test HOME redirects writes instead of pinning the real ~/.code-shell
+// at import time (bun freezes a module-level homedir() and never re-reads it).
+function memoryDir(): string {
+  return join(userHome(), ".code-shell", "session-memories");
+}
 
 /**
  * Save a session memory entry.
  */
 export function saveSessionMemory(entry: SessionMemoryEntry): void {
-  mkdirSync(MEMORY_DIR, { recursive: true });
-  const file = join(MEMORY_DIR, `${entry.sessionId}.json`);
+  const dir = memoryDir();
+  mkdirSync(dir, { recursive: true });
+  const file = join(dir, `${entry.sessionId}.json`);
   writeFileSync(file, JSON.stringify(entry, null, 2), "utf-8");
 }
 
@@ -34,7 +40,7 @@ export function saveSessionMemory(entry: SessionMemoryEntry): void {
  * Load a session memory by session ID.
  */
 export function loadSessionMemory(sessionId: string): SessionMemoryEntry | null {
-  const file = join(MEMORY_DIR, `${sessionId}.json`);
+  const file = join(memoryDir(), `${sessionId}.json`);
   if (!existsSync(file)) return null;
   try {
     return JSON.parse(readFileSync(file, "utf-8"));
@@ -47,15 +53,16 @@ export function loadSessionMemory(sessionId: string): SessionMemoryEntry | null 
  * List all session memories, most recent first.
  */
 export function listSessionMemories(limit = 50): SessionMemoryEntry[] {
-  if (!existsSync(MEMORY_DIR)) return [];
+  const dir = memoryDir();
+  if (!existsSync(dir)) return [];
 
   // Read all entries, then order by createdAt (not by filename — the filename
   // is the sessionId, which has no chronological meaning), then take `limit`.
   const entries: SessionMemoryEntry[] = [];
-  for (const file of readdirSync(MEMORY_DIR)) {
+  for (const file of readdirSync(dir)) {
     if (!file.endsWith(".json")) continue;
     try {
-      entries.push(JSON.parse(readFileSync(join(MEMORY_DIR, file), "utf-8")));
+      entries.push(JSON.parse(readFileSync(join(dir, file), "utf-8")));
     } catch {
       /* intentional: skip a corrupt/torn memory file rather than failing the
          whole listing — one bad entry must not hide all the others. */

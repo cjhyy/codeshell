@@ -7,8 +7,8 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
+import { userHome } from "../settings/manager.js";
 
 export interface CachedModel {
   id: string;
@@ -59,5 +59,7 @@ export function isStale(file: ModelCacheFile, now: number = Date.now()): boolean
 }
 
 export function defaultCacheDir(): string {
-  return join(homedir(), ".code-shell", "cache", "models");
+  // userHome() (not raw homedir(), which bun caches at process start) so a
+  // relocated/test HOME redirects the cache dir instead of writing real ~/.code-shell.
+  return join(userHome(), ".code-shell", "cache", "models");
 }

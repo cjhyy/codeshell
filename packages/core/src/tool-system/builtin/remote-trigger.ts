@@ -3,6 +3,7 @@
  */
 
 import type { ToolDefinition } from "../../types.js";
+import { userHome } from "../../settings/manager.js";
 
 export const remoteTriggerToolDef: ToolDefinition = {
   name: "RemoteTrigger",
@@ -38,10 +39,10 @@ export async function remoteTriggerTool(args: Record<string, unknown>): Promise<
   try {
     const { existsSync, readFileSync, writeFileSync, mkdirSync } = await import("node:fs");
     const { join } = await import("node:path");
-    const { homedir } = await import("node:os");
 
-    // Store trigger request for pickup by external scheduler
-    const triggerDir = join(homedir(), ".code-shell", "triggers");
+    // Store trigger request for pickup by external scheduler. userHome() (not
+    // raw homedir(), bun-cached) so a relocated/test HOME redirects the dir.
+    const triggerDir = join(userHome(), ".code-shell", "triggers");
     mkdirSync(triggerDir, { recursive: true });
 
     const trigger = {

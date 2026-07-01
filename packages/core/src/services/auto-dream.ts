@@ -7,7 +7,7 @@
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { homedir } from "node:os";
+import { resolveMemoryBaseDir } from "../session/memory.js";
 
 export interface AutoDreamConfig {
   /** Minimum sessions between dream runs */
@@ -29,8 +29,11 @@ interface DreamState {
   sessionsSinceLastDream: number;
 }
 
+// Co-locate the dream-cadence state with the memories it tracks: both resolve
+// through resolveMemoryBaseDir (CODE_SHELL_HOME ?? $HOME ?? homedir()), so a
+// relocated/test HOME moves them together and never writes the real ~/.code-shell.
 function getStateFile(): string {
-  return join(homedir(), ".code-shell", "auto-dream-state.json");
+  return join(resolveMemoryBaseDir(), "auto-dream-state.json");
 }
 
 function loadState(): DreamState {
@@ -45,7 +48,7 @@ function loadState(): DreamState {
 
 function saveState(state: DreamState): void {
   const stateFile = getStateFile();
-  mkdirSync(join(homedir(), ".code-shell"), { recursive: true });
+  mkdirSync(resolveMemoryBaseDir(), { recursive: true });
   writeFileSync(stateFile, JSON.stringify(state, null, 2), "utf-8");
 }
 
