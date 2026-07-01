@@ -5,6 +5,7 @@
 排序规则：按最终优先级归档为 `Critical` / `High` / `Medium` / `Low` / `Follow-up / 待复核` / `Hardening / Product TODO` / `已核实未作为 Bug`。原分轮来源只在必要时进入条目正文，不再作为 section 标题。
 
 > 状态复核（2026-07-01，用 Explore agent 逐条核对源码）：Critical + High 前 9 项已在 commit `d9541fc9`（另含 ws-trust-v2）修复合入 main，下方标 `[x]`。其余 High/Medium/Low 逐条核对结论标注在条目正文。
+> 更新（2026-07-01）：最后一项 High（插件缓存路径 segment 校验）已修合入 main（`3b6df273`）。High 全清，剩 Medium/Low/加固项与发布关键路径。
 
 ## Critical
 
@@ -83,7 +84,7 @@
   - 修复方向：在 `parseBrowserActionLine` 构造 request 时补齐字段并做类型校验。
   - 回归验证：新增 intercept 单测，覆盖 selectOption/pressKey/fetchImages/switchTab 四类 action 的参数透传。
 
-- [ ] **校验插件缓存路径 segment，避免 marketplace manifest 写出 cache root** — 【核对 2026-07-01：确认 NOT DONE — `pluginCacheDir()` 直接 join,`materialize()` 从 manifest 取 marketplace/plugin 不调 `assertSafePluginName()`】（唯一剩余 High）
+- [x] **校验插件缓存路径 segment，避免 marketplace manifest 写出 cache root** — 已修(3b6df273)：`pluginCacheDir` 导出并对 marketplace/plugin/version 三段复用 `assertSafePluginName`；`installPlugin` 包 materialize try/catch 把 `PluginInstallError` 转 `{ ok:false }` 防崩宿主。+7 TDD,plugins 163 pass。
   - 影响：供应链路径穿越；恶意 marketplace manifest 可将插件缓存写出 cache root。
   - 相关文件：`packages/core/src/plugins/pluginInstaller.ts:43-44,191,209,235,257`；`packages/core/src/plugins/installer/paths.ts:10-16`。
   - 问题：manifest 中进入缓存路径的 marketplace/plugin/version path segment 进入 `join(cacheRoot, marketplace, plugin, version)`，但未复用本地 install 路径已有的安全名称校验。注意：这不同于下方 Low 的 marketplace root name latent 项。
