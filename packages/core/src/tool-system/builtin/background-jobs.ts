@@ -49,6 +49,8 @@ export interface BackgroundJobEntry {
   /** External CLI session id, when the job is a DriveAgent run — lets the host
    *  read that CLI's transcript to attribute file changes (#6). */
   ccSessionId?: string;
+  /** Files the external agent changed (parsed from its transcript, #6). */
+  changedFiles?: string[];
 }
 
 /** Outcome passed to finish() to record how a job ended. */
@@ -56,6 +58,7 @@ export interface BackgroundJobOutcome {
   status?: "completed" | "failed";
   finalText?: string;
   ccSessionId?: string;
+  changedFiles?: string[];
 }
 
 class BackgroundJobRegistry {
@@ -84,6 +87,7 @@ class BackgroundJobRegistry {
     entry.finishedAt = Date.now();
     if (outcome?.finalText !== undefined) entry.finalText = outcome.finalText;
     if (outcome?.ccSessionId !== undefined) entry.ccSessionId = outcome.ccSessionId;
+    if (outcome?.changedFiles !== undefined) entry.changedFiles = outcome.changedFiles;
     this.evictTerminalOverCap(entry.sessionId);
     this.notify();
   }

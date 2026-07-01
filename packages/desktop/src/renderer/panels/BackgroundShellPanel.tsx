@@ -286,7 +286,8 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
               <ul className="m-0 list-none p-0">
                 {jobs.map((j) => {
                   const done = j.status !== "running";
-                  const expandable = done && !!j.finalText;
+                  const changed = j.changedFiles ?? [];
+                  const expandable = done && (!!j.finalText || changed.length > 0);
                   const isOpen = expandedJobId === j.jobId;
                   const statusLabel =
                     j.status === "completed"
@@ -311,12 +312,30 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
                         <span className="min-w-0 flex-1 truncate text-foreground" title={j.description}>
                           {j.description}
                         </span>
+                        {changed.length > 0 && (
+                          <span className="shrink-0 text-[10px] text-muted-foreground">
+                            {t("panels.shells.jobChangedFiles", { count: changed.length })}
+                          </span>
+                        )}
                         <span className="shrink-0 text-[10px] text-muted-foreground">{statusLabel}</span>
                       </div>
-                      {isOpen && j.finalText && (
-                        <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words border-t border-border/60 bg-muted/30 px-2 py-1.5 text-[11px] text-muted-foreground">
-                          {j.finalText}
-                        </pre>
+                      {isOpen && (
+                        <div className="border-t border-border/60 bg-muted/30">
+                          {changed.length > 0 && (
+                            <ul className="m-0 list-none px-2 py-1.5 text-[11px] text-muted-foreground">
+                              {changed.map((f) => (
+                                <li key={f} className="truncate" title={f}>
+                                  {f}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          {j.finalText && (
+                            <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words px-2 py-1.5 text-[11px] text-muted-foreground">
+                              {j.finalText}
+                            </pre>
+                          )}
+                        </div>
                       )}
                     </li>
                   );

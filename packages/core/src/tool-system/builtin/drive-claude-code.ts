@@ -3,6 +3,7 @@ import { runAgentOnce } from "../../cc-orchestrator/external-agent-driver.js";
 import { claudeAdapter, codexAdapter } from "../../cc-orchestrator/agent-adapter.js";
 import type { AgentRunResult } from "../../cc-orchestrator/external-agent-driver.js";
 import { backgroundJobRegistry } from "./background-jobs.js";
+import { readExternalChangedFiles } from "../../cc-orchestrator/external-agent-changes.js";
 import { notificationQueue } from "./agent-notifications.js";
 import type { ToolContext } from "../context.js";
 
@@ -104,12 +105,19 @@ export function makeDriveAgentTool(runner: Runner = defaultRunner, fixedCli?: Dr
               : { agentId: jobId, description: label, status: "completed", workKind: "cc", finalText: r.finalText, ccSessionId: r.sessionId || undefined, enqueuedAt: Date.now() },
             sessionId,
           );
+          // Attribute the files the external agent changed by parsing its own
+          // transcript (#6) — those Edit/Write calls are invisible to the host's
+          // in-session aggregator. Best-effort; [] on any failure.
+          const changedFiles = r.sessionId
+            ? readExternalChangedFiles(cli, cwd, r.sessionId)
+            : [];
           // Retain the job in the panel with its result + the external CLI
-          // session id (so #6 can attribute file changes from that transcript).
+          // session id + changed files.
           backgroundJobRegistry.finish(jobId, {
             status: r.isError ? "failed" : "completed",
             finalText: r.finalText || undefined,
             ccSessionId: r.sessionId || undefined,
+            ...(changedFiles.length ? { changedFiles } : {}),
           });
         })
         .catch((err) => {

@@ -68,6 +68,8 @@ export type BackgroundWorkInfo =
       finishedAt?: number;
       /** Result summary / error, once finished. */
       finalText?: string;
+      /** Files an external agent (DriveAgent) changed, parsed from its transcript. */
+      changedFiles?: string[];
     };
 
 /** A plugin-provided hook surfaced to the settings 钩子 page. Mirrors

@@ -95,6 +95,8 @@ export type BackgroundWorkEntry =
       finishedAt?: number;
       /** Result summary / error, once finished. */
       finalText?: string;
+      /** Files an external agent (DriveAgent) changed, parsed from its transcript. */
+      changedFiles?: string[];
     };
 
 /**
@@ -139,6 +141,7 @@ export function listBackgroundWorkForUI(sessionId: string): BackgroundWorkEntry[
       startedAt: j.startedAt,
       ...(j.finishedAt != null ? { finishedAt: j.finishedAt } : {}),
       ...(j.finalText != null ? { finalText: j.finalText } : {}),
+      ...(j.changedFiles && j.changedFiles.length ? { changedFiles: j.changedFiles } : {}),
     });
   }
 
