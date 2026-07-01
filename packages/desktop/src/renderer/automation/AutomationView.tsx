@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type { AutomationSummary, AutomationPermissionLevel, RunSummary } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,8 @@ import {
   selectedProjectValue,
   cwdFromSelection,
 } from "./projectOptions";
+import { Combobox } from "@/components/ui/combobox";
+import { allTimezones, offsetLabel, offsetBucket, uniqueOffsetBuckets, bucketLabel } from "./timezones";
 import { cn } from "@/lib/utils";
 import { useT, type TFunction } from "../i18n/I18nProvider";
 import type { TranslationKey } from "../i18n/dict";
@@ -51,56 +53,6 @@ const CADENCE_OPTIONS: { value: Schedule["kind"]; labelKey: TranslationKey }[] =
 const HOURLY_OPTIONS = [1, 2, 3, 4, 6, 8, 12];
 
 const DEFAULT_TIME = "09:00";
-
-// Timezone choices. Default is UTC; the system-local zone is appended with a
-// "()" note so the user can recognise their own offset without IANA fluency.
-// Only the system zone carries that note — the rest are plain IANA ids.
-function systemTimezone(): string | null {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
-  } catch {
-    return null;
-  }
-}
-
-/** "(UTC+8)" style offset note for a zone, or "" if it can't be computed. */
-function offsetNote(tz: string): string {
-  try {
-    const parts = new Intl.DateTimeFormat("en-US", {
-      timeZone: tz,
-      timeZoneName: "shortOffset",
-    }).formatToParts(new Date(0));
-    const name = parts.find((p) => p.type === "timeZoneName")?.value ?? "";
-    return name.replace("GMT", "UTC");
-  } catch {
-    return "";
-  }
-}
-
-const BASE_TIMEZONES = [
-  "UTC",
-  "Asia/Shanghai",
-  "America/New_York",
-  "America/Los_Angeles",
-  "Europe/London",
-  "Asia/Tokyo",
-];
-
-function timezoneOptions(current: string): { value: string; label: string }[] {
-  const sys = systemTimezone();
-  const seen = new Set<string>();
-  const out: { value: string; label: string }[] = [];
-  const add = (tz: string, note?: string) => {
-    if (seen.has(tz)) return;
-    seen.add(tz);
-    out.push({ value: tz, label: note ? `${tz} (${note})` : tz });
-  };
-  // System zone first, with its offset note — the only entry that gets one.
-  if (sys) add(sys, offsetNote(sys) || undefined);
-  for (const tz of BASE_TIMEZONES) add(tz);
-  add(current); // keep a previously-saved zone selectable even if exotic
-  return out;
-}
 
 function fmtTime(ms: number | null): string {
   if (ms == null) return "—";
@@ -515,7 +467,21 @@ function AutomationDetail(props: {
     if (v && v !== job.schedule) props.onSave({ schedule: v });
   };
 
-  const tzOptions = timezoneOptions(job.timezone ?? "UTC");
+  const [tzOffsetFilter, setTzOffsetFilter] = useState<number | "all">("all");
+  const tzCityOptions = useMemo(
+    () =>
+      allTimezones()
+        .filter((z) => tzOffsetFilter === "all" || offsetBucket(z) === tzOffsetFilter)
+        .map((z) => ({ value: z, label: z, hint: offsetLabel(z) })),
+    [tzOffsetFilter],
+  );
+  const offsetOptions = useMemo(
+    () => [
+      { value: "all", label: t("auto.detail.tzAllOffsets") },
+      ...uniqueOffsetBuckets().map((b) => ({ value: String(b), label: bucketLabel(b) })),
+    ],
+    [t],
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -700,17 +666,23 @@ function AutomationDetail(props: {
         </FieldRow>
 
         <FieldRow label={t("auto.detail.timezone")}>
-          <Select
-            value={job.timezone ?? "UTC"}
-            onValueChange={(v) => { if (v !== job.timezone) props.onSave({ timezone: v }); }}
-          >
-            <SelectTrigger className="h-8 w-[200px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {tzOptions.map((tz) => (
-                <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Combobox
+              options={offsetOptions}
+              value={tzOffsetFilter === "all" ? "all" : String(tzOffsetFilter)}
+              onChange={(v) => setTzOffsetFilter(v === "all" ? "all" : Number(v))}
+              triggerClassName="w-[110px]"
+              searchPlaceholder={t("auto.detail.tzSearch")}
+            />
+            <Combobox
+              options={tzCityOptions}
+              value={job.timezone ?? "UTC"}
+              onChange={(v) => { if (v !== job.timezone) props.onSave({ timezone: v }); }}
+              triggerClassName="w-[200px]"
+              searchPlaceholder={t("auto.detail.tzSearch")}
+              emptyText={t("auto.detail.tzEmpty")}
+            />
+          </div>
         </FieldRow>
 
         <FieldRow label={t("auto.detail.permission")}>

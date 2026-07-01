@@ -89,7 +89,13 @@ export async function cronCreateTool(args: Record<string, unknown>): Promise<str
   const schedule = args.schedule as string;
   const prompt = args.prompt as string;
   if (!name || !schedule || !prompt) return "Error: name, schedule, and prompt are required";
-  const timezone = typeof args.timezone === "string" ? args.timezone : undefined;
+  const timezone =
+    typeof args.timezone === "string"
+      ? args.timezone
+      : (() => {
+          try { return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; }
+          catch { return undefined; }
+        })();
   const cwd = typeof args.cwd === "string" ? args.cwd : undefined;
   const once = args.once === true;
   const permissionLevel =

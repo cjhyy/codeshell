@@ -46,6 +46,9 @@ export const automation = {
         noJumpableSession: "这个任务还没有可跳转的历史 session。",
         sessionView: "查看",
         cronPlaceholder: "0 9 * * 1-5 或 1h",
+        tzAllOffsets: "全部时区",
+        tzSearch: "搜索城市/时区",
+        tzEmpty: "无匹配时区",
       },
       // permission level options
       permission: {
@@ -221,6 +224,9 @@ export const automation = {
         noJumpableSession: "This job has no past sessions to open yet.",
         sessionView: "View",
         cronPlaceholder: "0 9 * * 1-5 or 1h",
+        tzAllOffsets: "All offsets",
+        tzSearch: "Search city / zone",
+        tzEmpty: "No matching zone",
       },
       permission: {
         readOnly: "Read-only",
