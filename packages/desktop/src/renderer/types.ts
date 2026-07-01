@@ -886,12 +886,19 @@ export function applyStreamEvent(
         return m;
       });
 
-      // 3. Compute the per-turn files-changed summary. Remove any
-      //    prior files_changed from this user-turn first so multiple
-      //    turn_complete events within one user-turn don't stack.
+      // 3. Compute the per-turn files-changed summary. Remove any prior
+      //    files_changed from this logical task first so multiple turn_complete
+      //    events don't stack. The boundary MUST match aggregateFileChangeSummary:
+      //    scope to the last NON-injected user message. A goal/steer task spans
+      //    many engine.run boundaries — each inserts an injected user turn — and
+      //    the new card already re-aggregates edits from ALL of them. Anchoring
+      //    the sweep on the last user message of ANY kind would leave earlier
+      //    runs' cards standing (they sit before the injected user turn), so a
+      //    file edited across runs would show in two cards (#9 follow-up).
       let lastUserIdx = -1;
       for (let i = finalized.length - 1; i >= 0; i--) {
-        if (finalized[i].kind === "user") {
+        const m = finalized[i];
+        if (m.kind === "user" && !m.injected) {
           lastUserIdx = i;
           break;
         }

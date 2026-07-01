@@ -592,6 +592,52 @@ describe("applyStreamEvent — turn_complete files_changed + turnEpoch", () => {
       expect(cards[0].files.length).toBe(2);
     }
   });
+
+  test("collapses across an injected user turn — one file, one card (not two)", () => {
+    // A goal/steer task spans two engine.run boundaries: run 1 edits a.ts and a
+    // clean turn_complete emits a files_changed card; then steer_injected inserts
+    // an INJECTED user turn; run 2 edits a.ts again and turn_complete fires.
+    // aggregateFileChangeSummary scopes from the last NON-injected user message,
+    // so the second card correctly covers BOTH runs' edits — but the stale-card
+    // sweep must use the SAME boundary, or run 1's card survives before the
+    // injected user message and a.ts shows in two cards.
+    const messages: Message[] = [
+      { kind: "user", id: "u1", text: "improve a.ts" },
+      {
+        kind: "tool",
+        id: "t1",
+        toolName: "Edit",
+        args: JSON.stringify({ file_path: "a.ts", old_string: "x", new_string: "y" }),
+        status: "succeeded",
+        startedAt: 0,
+      },
+    ];
+    let s = withMessages(messages);
+    s = applyStreamEvent(s, turnComplete); // run 1 emits the first card
+
+    s = applyStreamEvent(s, { type: "steer_injected", text: "keep going" } as StreamEvent);
+    s = {
+      ...s,
+      messages: [
+        ...s.messages,
+        {
+          kind: "tool",
+          id: "t2",
+          toolName: "Edit",
+          args: JSON.stringify({ file_path: "a.ts", old_string: "y", new_string: "z" }),
+          status: "succeeded",
+          startedAt: 0,
+        },
+      ],
+    };
+    s = applyStreamEvent(s, turnComplete); // run 2
+
+    const cards = s.messages.filter((m) => m.kind === "files_changed");
+    expect(cards.length).toBe(1);
+    if (cards[0].kind === "files_changed") {
+      expect(cards[0].files).toEqual([{ path: "a.ts", added: 2, removed: 2, count: 2 }]);
+    }
+  });
 });
 
 describe("applyStreamEvent — message timestamps", () => {
