@@ -5,6 +5,7 @@
 import type { ToolDefinition } from "../../types.js";
 import { cronScheduler } from "../../automation/scheduler.js";
 import type { CronPermissionLevel } from "../../automation/scheduler.js";
+import { getCurrentSid } from "../../logging/logger.js";
 
 export const cronCreateToolDef: ToolDefinition = {
   name: "CronCreate",
@@ -51,6 +52,16 @@ export const cronCreateToolDef: ToolDefinition = {
           "A one-shot still uses `schedule` for its time: interval '10m' = 10 minutes from now; " +
           "cron '0 7 25 6 *' = once at 07:00 on June 25.",
       },
+      continueInSession: {
+        type: "boolean",
+        description:
+          "true = when the job fires, CONTINUE THE CURRENT conversation: the prompt is appended as " +
+          "a new user turn to THIS chat session (restored from disk if needed), carrying its full " +
+          "transcript / goal / context. Set this when the user says things like '一小时后接着做 / " +
+          "继续 / in this conversation'. Default false = a fresh standalone session per run (right " +
+          "for independent recurring tasks like daily reports). The current session id is resolved " +
+          "automatically — you do NOT supply it.",
+      },
     },
     required: ["name", "schedule", "prompt"],
   },
@@ -70,6 +81,11 @@ export async function cronCreateTool(args: Record<string, unknown>): Promise<str
     args.permissionLevel === "full"
       ? (args.permissionLevel as CronPermissionLevel)
       : undefined;
+  // Resolve "continue this conversation" to the current session id at create
+  // time (the model never supplies it — getCurrentSid() reads the running
+  // Engine's ALS context). Empty/unknown sid → treat as standalone.
+  const resumeSessionId =
+    args.continueInSession === true && getCurrentSid() ? getCurrentSid() : undefined;
   let job;
   try {
     job = cronScheduler.create(name, schedule, prompt, {
@@ -77,16 +93,18 @@ export async function cronCreateTool(args: Record<string, unknown>): Promise<str
       ...(cwd !== undefined ? { cwd } : {}),
       ...(permissionLevel !== undefined ? { permissionLevel } : {}),
       ...(once ? { once: true } : {}),
+      ...(resumeSessionId !== undefined ? { resumeSessionId } : {}),
     });
   } catch (err) {
     return `Error: ${err instanceof Error ? err.message : String(err)}`;
   }
   const tz = job.timezone ? ` (${job.timezone})` : "";
   const next = job.nextRun ? new Date(job.nextRun).toLocaleString() : "n/a";
+  const cont = job.resumeSessionId ? "(到点续接当前对话,带上下文)" : "";
   if (job.once) {
-    return `一次性任务 #${job.id} "${job.name}" 已创建。将于 ${next}${tz} 执行一次后自动删除。`;
+    return `一次性任务 #${job.id} "${job.name}" 已创建${cont}。将于 ${next}${tz} 执行一次后自动删除。`;
   }
-  return `Cron job #${job.id} "${job.name}" created. Schedule: ${job.schedule}${tz}. Next run: ${next}.`;
+  return `Cron job #${job.id} "${job.name}" created${cont}. Schedule: ${job.schedule}${tz}. Next run: ${next}.`;
 }
 
 export const cronDeleteToolDef: ToolDefinition = {

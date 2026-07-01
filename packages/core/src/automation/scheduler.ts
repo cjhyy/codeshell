@@ -51,6 +51,12 @@ export interface CronJob {
   /** True = one-shot: delete the job after its first real execution so it never
    *  fires again (e.g. "in 10 minutes, do X once"). */
   once?: boolean;
+  /** When set, the fired job RESUMES this codeshell chat session instead of
+   *  starting a fresh one: the prompt is appended as a new user turn to that
+   *  session (restored from disk if not in memory), carrying its transcript /
+   *  goal / context. Unset = the default standalone behaviour (new session per
+   *  fire). The host's executor honours this. */
+  resumeSessionId?: string;
 }
 
 /** Optional metadata accepted by create(). */
@@ -59,6 +65,7 @@ export interface CreateJobOptions {
   timezone?: string;
   permissionLevel?: CronPermissionLevel;
   once?: boolean;
+  resumeSessionId?: string;
 }
 
 /** Fields editable via update(). Any omitted field is left unchanged. */
@@ -280,6 +287,7 @@ export class CronScheduler {
           ...(opts?.timezone !== undefined ? { timezone: opts.timezone } : {}),
           ...(opts?.permissionLevel !== undefined ? { permissionLevel: opts.permissionLevel } : {}),
           ...(opts?.once === true ? { once: true } : {}),
+          ...(opts?.resumeSessionId !== undefined ? { resumeSessionId: opts.resumeSessionId } : {}),
         };
         this.refreshNextRunForDisplay(job);
         return { jobs: [...jobs, job], result: job };
@@ -301,6 +309,7 @@ export class CronScheduler {
       ...(opts?.timezone !== undefined ? { timezone: opts.timezone } : {}),
       ...(opts?.permissionLevel !== undefined ? { permissionLevel: opts.permissionLevel } : {}),
       ...(opts?.once === true ? { once: true } : {}),
+      ...(opts?.resumeSessionId !== undefined ? { resumeSessionId: opts.resumeSessionId } : {}),
     };
 
     this.jobs.set(id, job);

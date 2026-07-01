@@ -1,6 +1,7 @@
 import { describe, test, expect, afterEach } from "bun:test";
 import { cronCreateTool, cronCreateToolDef, cronListTool } from "./cron.js";
 import { cronScheduler } from "../../automation/scheduler.js";
+import { runWithSid } from "../../logging/logger.js";
 
 // The tools operate on the shared cronScheduler singleton. Clean up jobs we
 // create so tests don't leak timers/state into each other.
@@ -77,5 +78,48 @@ describe("CronCreate tool — conversational config", () => {
   test("schema 暴露 once 供模型填写", () => {
     const props = (cronCreateToolDef.inputSchema as { properties: Record<string, unknown> }).properties;
     expect(props.once).toBeDefined();
+  });
+
+  // #8: continueInSession → resumeSessionId. The model never supplies the sid;
+  // the tool resolves it from the running Engine's ALS context (getCurrentSid),
+  // which we pin here via runWithSid.
+  test("continueInSession:true 绑定当前会话 id 到 resumeSessionId", async () => {
+    await runWithSid("sess-current-42", async () => {
+      const out = await cronCreateTool({
+        name: "接着做",
+        schedule: "1h",
+        prompt: "继续刚才的活",
+        continueInSession: true,
+      });
+      expect(out).toContain("续接当前对话");
+    });
+    const job = cronScheduler.list().find((j) => j.name === "接着做");
+    expect(job?.resumeSessionId).toBe("sess-current-42");
+  });
+
+  test("不传 continueInSession 时不绑定 resumeSessionId(独立会话默认)", async () => {
+    await runWithSid("sess-current-42", async () => {
+      await cronCreateTool({ name: "独立", schedule: "1h", prompt: "daily report" });
+    });
+    const job = cronScheduler.list().find((j) => j.name === "独立");
+    expect(job?.resumeSessionId).toBeUndefined();
+  });
+
+  test("continueInSession:false 显式关闭也不绑定", async () => {
+    await runWithSid("sess-current-42", async () => {
+      await cronCreateTool({
+        name: "显式关",
+        schedule: "1h",
+        prompt: "p",
+        continueInSession: false,
+      });
+    });
+    const job = cronScheduler.list().find((j) => j.name === "显式关");
+    expect(job?.resumeSessionId).toBeUndefined();
+  });
+
+  test("schema 暴露 continueInSession 供模型填写", () => {
+    const props = (cronCreateToolDef.inputSchema as { properties: Record<string, unknown> }).properties;
+    expect(props.continueInSession).toBeDefined();
   });
 });

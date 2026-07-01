@@ -92,39 +92,52 @@ export function buildDesktopAutomationRunner(
     const settings = new SettingsManager(jobCwd, "full").get();
     const llm = resolveLLMConfigForTag(settings, "text", (settings as { defaults?: { text?: string } }).defaults?.text);
     if (!llm) throw new Error("自动化任务:没有可用的文本模型连接。");
+
+    // #8: "continue this conversation" jobs carry the codeshell session id to
+    // resume. Passing it to engine.run({ sessionId }) restores that session's
+    // transcript/goal/cwd from disk and appends the prompt as a new user turn —
+    // NOT a fresh standalone session. Such a run is NOT an isolated automation:
+    //   - no AUTOMATION_PROMPT_NOTE / cross-run memory framing (it's a real chat)
+    //   - cron tools stay available (the user may want it to schedule follow-ups)
+    //   - the job's permission tier is honored (the user picked "continue" with a
+    //     tier; unattended still means a headless backend, no interactive prompts)
+    const resumeSid = req.job.resumeSessionId;
+    const isResume = typeof resumeSid === "string" && resumeSid.length > 0;
+
     // Task-level cross-run memory: prior run summaries the job left for itself.
     // This is system-level context (notes from earlier runs), NOT something the
     // user typed — so it rides appendSystemPrompt, not the user prompt. Folding
     // it into req.prompt made it indistinguishable from a user instruction
     // (prompt-injection shaped) and polluted the user turn shown in the UI.
-    const memory = readAutomationMemory(req.job.id);
-    const appendSystemPrompt = memory.trim()
-      ? `${AUTOMATION_PROMPT_NOTE}\n\n<previous_runs_memory>\n${memory.trim()}\n</previous_runs_memory>`
-      : AUTOMATION_PROMPT_NOTE;
+    // Skipped for resume runs — that framing is for isolated automation.
+    const memory = isResume ? "" : readAutomationMemory(req.job.id);
+    const appendSystemPrompt = isResume
+      ? undefined
+      : memory.trim()
+        ? `${AUTOMATION_PROMPT_NOTE}\n\n<previous_runs_memory>\n${memory.trim()}\n</previous_runs_memory>`
+        : AUTOMATION_PROMPT_NOTE;
 
     const engine = new Engine({
       llm,
       cwd: jobCwd,
       settingsScope: "full",
       headless: true,
-      origin: "automation",
-      // This is an unattended automation run — tell the model so it doesn't
-      // ask the user or offer to schedule automation, and so it persists a
-      // cross-run memory summary on finish. Prior-run memory is appended here
-      // too (see above) so it's framed as system context, not a user message.
-      appendSystemPrompt,
+      // Resume continues a real chat session; keep its origin so the sidebar
+      // treats it like the conversation it is, not a fresh automation entry.
+      origin: isResume ? "desktop" : "automation",
+      // Automation framing only for isolated runs (see above).
+      ...(appendSystemPrompt !== undefined ? { appendSystemPrompt } : {}),
       // Automation runs are unattended and should not block before the first
       // LLM request on plugin/user MCP startup. MCP tools are disabled below,
       // so explicitly keep the engine's MCP config empty for this one-shot run.
       mcpServers: {},
-      // Strip the cron tools so an unattended run can't recursively schedule
-      // more automations. (disabledBuiltinTools is a delta on the preset's
-      // builtin set — see resolveBuiltinToolNames.)
-      disabledBuiltinTools: [...AUTOMATION_DISABLED_TOOLS],
-      // Reject Bash(run_in_background=true) too — the param survives even
-      // though the companion tools are stripped (design §5.5).
-      allowBackgroundShells: false,
-      // Read-only contract from bindCronToEngine — cron is unattended.
+      // Strip the cron tools for isolated automation so it can't recursively
+      // schedule more. A resume run IS the user's conversation, so leave them.
+      ...(isResume ? {} : { disabledBuiltinTools: [...AUTOMATION_DISABLED_TOOLS] }),
+      // Reject Bash(run_in_background=true) for isolated automation; a resumed
+      // chat may legitimately background work as the user's session would.
+      ...(isResume ? {} : { allowBackgroundShells: false }),
+      // Permission tier from the job (bindCronToEngine → resolveWritePolicy).
       permissionMode: req.permissionMode,
       approvalBackend: req.approvalBackend,
       // Confine writes/shell to the workspace per the job's tier — defense in
@@ -132,12 +145,15 @@ export function buildDesktopAutomationRunner(
       sandbox: defaultSandboxConfig(req.sandboxMode),
     });
 
-    // Let the run persist a one-paragraph summary for the NEXT scheduled run.
-    // The sink writes to this job's task-level memory.md.
-    const memoryTool = makeUpdateAutomationMemoryTool((summary) =>
-      appendAutomationMemory(req.job.id, summary),
-    );
-    engine.registerCustomTool(memoryTool.definition, memoryTool.execute);
+    // Let an isolated automation run persist a one-paragraph summary for the
+    // NEXT scheduled run (task-level memory.md). A resume run is a real chat —
+    // it uses the session's own transcript for continuity, not this side-channel.
+    if (!isResume) {
+      const memoryTool = makeUpdateAutomationMemoryTool((summary) =>
+        appendAutomationMemory(req.job.id, summary),
+      );
+      engine.registerCustomTool(memoryTool.definition, memoryTool.execute);
+    }
 
     // Key emitted events by the REAL engine sessionId (carried on the first
     // `session_started` event) so renderer routing/reconnect matches interactive
@@ -162,7 +178,12 @@ export function buildDesktopAutomationRunner(
           }
         : undefined;
     try {
-      const result = await engine.run(req.prompt, { cwd: jobCwd, onStream, signal: req.signal });
+      // Resume: pass the existing sessionId so engine.run restores that session
+      // from disk and appends the prompt as a new user turn (carrying context).
+      // Omit cwd on resume so the engine recovers the session's own bound cwd.
+      const result = isResume
+        ? await engine.run(req.prompt, { sessionId: resumeSid, onStream, signal: req.signal })
+        : await engine.run(req.prompt, { cwd: jobCwd, onStream, signal: req.signal });
       return { text: result.text, reason: result.reason };
     } catch (err) {
       // engine.run normally emits its own terminal turn_complete/error, which
