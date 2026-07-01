@@ -199,7 +199,7 @@ import { listRuns, getRun, deleteRunDir } from "./runs-service.js";
 import { initUpdater, checkForUpdate, downloadUpdate, quitAndInstall, getLastStatus } from "./updater.js";
 import { loadRecents, pushRecent, loadProjects, setPinned, softDelete } from "./recents-store.js";
 import { loadWindowState, saveWindowState } from "./window-state-store.js";
-import { getTrust, setTrust, type TrustLevel } from "./trust-store.js";
+import { getTrust, setTrust, warmTrustCache, type TrustLevel } from "./trust-store.js";
 import { installAppMenu, refreshAppMenu } from "./menu.js";
 import { seedDefaults } from "./seed-defaults.js";
 import { bootstrapCorePlugins } from "./bootstrap-core-plugins.js";
@@ -1375,6 +1375,10 @@ app.whenReady().then(() => {
       // dev-only nicety; ignore if the asset is missing in some build paths
     }
   }
+  // Prime the workspace-trust cache so the agent-bridge's synchronous
+  // agent/run handler can resolve project trust without a disk read. Until it
+  // resolves, unknown → fail-closed (untrusted), which is the safe default.
+  void warmTrustCache();
   void createWindow();
   initUpdater();
   sweepStaleLeases(); // clear any cookie-lease temp files left by a prior crash

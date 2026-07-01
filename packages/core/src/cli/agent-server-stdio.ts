@@ -239,6 +239,10 @@ const chatManager = new ChatSessionManager({
       // `live` is re-read from disk per session, so settings edits take effect
       // on the next session without a worker restart.
       permissionMode: slice.permissionMode,
+      // Workspace trust for this project (asserted by desktop main's
+      // trust-store, threaded via RunParams). When false, core strips the
+      // project's dangerous .code-shell settings (permissions/env/hooks/…).
+      projectTrusted: slice.projectTrusted,
       ...resolveSessionAgentConfig(slice, live),
       // Personalization + instruction compat come from disk settings only
       // (not per-request protocol overrides), so they read straight from

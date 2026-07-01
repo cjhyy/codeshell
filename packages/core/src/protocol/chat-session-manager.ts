@@ -15,6 +15,7 @@ export type EngineConfigSlice = Pick<
   | "maxTurns"
   | "maxContextTokens"
   | "cwd"
+  | "projectTrusted"
 >;
 
 export interface ChatSessionManagerOptions {

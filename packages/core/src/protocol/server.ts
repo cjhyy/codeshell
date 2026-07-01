@@ -357,6 +357,7 @@ export class AgentServer {
       session = cm.getOrCreate(params.sessionId, {
         permissionMode: params.permissionMode,
         cwd: params.cwd,
+        projectTrusted: params.projectTrusted,
       } as any);
     } catch (err: any) {
       const code = err.code ?? ErrorCodes.InternalError;
