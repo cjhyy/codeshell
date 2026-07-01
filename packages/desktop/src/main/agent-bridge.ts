@@ -38,6 +38,7 @@ import { restoreCookiesToBrowser, type ElectronCookieLike } from "./credentials-
 import { activeGuest, listGuests, focusGuest } from "./browser-driver/active-guest.js";
 import { loadBrowserAutomationPolicy } from "./browser-driver/load-policy.js";
 import { buildNoChildFallbackReply, type ParsedRpc } from "./agent-bridge-fallback.js";
+import { getTrustCachedSync } from "./trust-store.js";
 
 /**
  * Neutral sandbox directory used when the user is in a "no project"
@@ -264,12 +265,29 @@ export class AgentBridge {
       let parsed: ParsedRpc = {};
       try { parsed = JSON.parse(line); } catch { /* fall through */ }
 
+      // Line forwarded to the worker. Only rewritten when we inject fields
+      // (agent/run trust) — everything else is passed through verbatim so we
+      // don't re-serialize on the hot path.
+      let outLine = line;
+
       if (parsed.method === "agent/run") {
         this.spawnChild(parsed.params?.cwd);
         this.lastRunContext = {
           cwd: parsed.params?.cwd,
           sessionId: parsed.params?.sessionId,
         };
+        // Workspace trust is a main-process authority (trust-store), never the
+        // renderer's to assert — inject it here so a cloned malicious repo's
+        // .code-shell settings can't self-authorize. "unknown"/never-trusted →
+        // fail-closed (projectTrusted:false), which makes core strip the
+        // dangerous project settings fields. Synchronous cache read: this IPC
+        // handler can't await without reordering run vs approve/cancel.
+        if (parsed.params && typeof parsed.params === "object") {
+          const cwd = parsed.params.cwd;
+          const trusted = typeof cwd === "string" && getTrustCachedSync(cwd) === "trusted";
+          (parsed.params as Record<string, unknown>).projectTrusted = trusted;
+          outLine = JSON.stringify(parsed);
+        }
       }
 
       if (!this.child?.stdin || this.child.stdin.destroyed) {
@@ -293,8 +311,8 @@ export class AgentBridge {
         });
         return;
       }
-      dlog("bridge", "renderer→worker", { method: parsed.method, raw: previewLine(line) });
-      this.child.stdin.write(line + "\n");
+      dlog("bridge", "renderer→worker", { method: parsed.method, raw: previewLine(outLine) });
+      this.child.stdin.write(outLine + "\n");
     });
 
     ipcMain.on("desktop:log", (_event, payload: { msg: string; data?: Record<string, unknown> }) => {

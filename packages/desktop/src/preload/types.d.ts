@@ -944,6 +944,13 @@ export interface CodeshellApi {
   // Phase 6 — native polish & security.
   getTrust(path: string): Promise<"trusted" | "untrusted" | "unknown">;
   setTrust(path: string, level: "trusted" | "untrusted"): Promise<void>;
+  getTrustRisks(path: string): Promise<{
+    permissionRules: number;
+    envKeys: string[];
+    hooks: number;
+    mcpServers: string[];
+    setupScripts: boolean;
+  }>;
   recents(): Promise<{ path: string; name: string; lastOpenedAt: number }[]>;
   projects: {
     list(): Promise<Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>>;

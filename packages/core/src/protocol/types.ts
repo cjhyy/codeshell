@@ -87,6 +87,14 @@ export interface RunParams {
    */
   permissionMode?: PermissionMode;
   /**
+   * Workspace trust for this run's project (`cwd`), asserted by the host
+   * (desktop main from its trust-store) — never by the renderer. When false,
+   * the engine strips dangerous fields from the project's own .code-shell
+   * settings (permissions/env/hooks/mcpServers/localEnvironment). Omitted →
+   * trusted (preserves behavior for hosts that don't wire trust).
+   */
+  projectTrusted?: boolean;
+  /**
    * Per-run plan-mode flag. When true, the Engine enters plan mode for
    * this run; when omitted, the engine keeps its configured default.
    */

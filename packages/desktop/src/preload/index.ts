@@ -676,6 +676,15 @@ contextBridge.exposeInMainWorld("codeshell", {
   getTrust: (path: string) => ipcRenderer.invoke("trust:get", path),
   setTrust: (path: string, level: "trusted" | "untrusted") =>
     ipcRenderer.invoke("trust:set", path, level),
+  getTrustRisks: (
+    path: string,
+  ): Promise<{
+    permissionRules: number;
+    envKeys: string[];
+    hooks: number;
+    mcpServers: string[];
+    setupScripts: boolean;
+  }> => ipcRenderer.invoke("trust:risks", path),
   recents: () => ipcRenderer.invoke("recents:list"),
   projects: {
     list: (): Promise<Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>> =>
