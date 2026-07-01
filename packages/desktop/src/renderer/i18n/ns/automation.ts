@@ -56,6 +56,16 @@ export const automation = {
         tzSearch: "搜索城市/时区",
         tzEmpty: "无匹配时区",
       },
+      // relative time for next/last run
+      rel: {
+        now: "刚刚",
+        inMinutes: "约 {n} 分钟后",
+        minutesAgo: "{n} 分钟前",
+        inHours: "约 {n} 小时后",
+        hoursAgo: "{n} 小时前",
+        inDays: "约 {n} 天后",
+        daysAgo: "{n} 天前",
+      },
       // permission level options
       permission: {
         readOnly: "只读",
@@ -239,6 +249,15 @@ export const automation = {
         tzAllOffsets: "All offsets",
         tzSearch: "Search city / zone",
         tzEmpty: "No matching zone",
+      },
+      rel: {
+        now: "just now",
+        inMinutes: "in ~{n} min",
+        minutesAgo: "{n} min ago",
+        inHours: "in ~{n} h",
+        hoursAgo: "{n} h ago",
+        inDays: "in ~{n} d",
+        daysAgo: "{n} d ago",
       },
       permission: {
         readOnly: "Read-only",

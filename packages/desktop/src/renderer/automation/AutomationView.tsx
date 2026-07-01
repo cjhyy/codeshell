@@ -30,6 +30,7 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 import { allTimezones, offsetLabel, offsetBucket, uniqueOffsetBuckets, bucketLabel } from "./timezones";
 import { cn } from "@/lib/utils";
+import { fmtRelative } from "./relativeTime";
 import { useT, type TFunction } from "../i18n/I18nProvider";
 import type { TranslationKey } from "../i18n/dict";
 
@@ -546,11 +547,13 @@ export function AutomationDetail(props: {
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-md border bg-card p-3">
           <span className="text-xs text-muted-foreground">{t("auto.detail.nextRun")}</span>
-          <strong className="mt-1 block text-sm text-foreground">{fmtTime(job.nextRun)}</strong>
+          <strong className="mt-1 block text-sm text-foreground">{fmtRelative(job.nextRun, t)}</strong>
+          {job.nextRun != null && <span className="block text-[10px] text-muted-foreground tabular-nums">{fmtTime(job.nextRun)}</span>}
         </div>
         <div className="rounded-md border bg-card p-3">
           <span className="text-xs text-muted-foreground">{t("auto.detail.lastRun")}</span>
-          <strong className="mt-1 block text-sm text-foreground">{fmtTime(job.lastRun)}</strong>
+          <strong className="mt-1 block text-sm text-foreground">{fmtRelative(job.lastRun, t)}</strong>
+          {job.lastRun != null && <span className="block text-[10px] text-muted-foreground tabular-nums">{fmtTime(job.lastRun)}</span>}
         </div>
         <div className="rounded-md border bg-card p-3">
           <span className="text-xs text-muted-foreground">{t("auto.detail.runTimes")}</span>
