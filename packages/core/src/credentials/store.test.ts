@@ -52,6 +52,30 @@ describe("CredentialStore", () => {
     expect(store.resolve("missing")).toBeUndefined();
   });
 
+  test('project scope hides host user credentials from list/resolve/listMasked', () => {
+    const store = new CredentialStore(cwd);
+    store.save("user", { id: "host-tok", type: "token", label: "host", secret: "hs" });
+    store.save("project", { id: "proj-tok", type: "token", label: "proj", secret: "ps" });
+
+    // full scope (host app): sees both
+    const fullIds = store.list("full").map((c) => c.id).sort();
+    expect(fullIds).toEqual(["host-tok", "proj-tok"]);
+    expect(store.resolve("host-tok", "full")?.secret).toBe("hs");
+
+    // project scope (isolated/SDK-embedded): only project store, host user hidden
+    const projIds = store.list("project").map((c) => c.id);
+    expect(projIds).toEqual(["proj-tok"]);
+    expect(store.resolve("host-tok", "project")).toBeUndefined();
+    expect(store.resolve("proj-tok", "project")?.secret).toBe("ps");
+    expect(store.listMasked("project").map((c) => c.id)).toEqual(["proj-tok"]);
+  });
+
+  test('list() defaults to full scope (backward compat)', () => {
+    const store = new CredentialStore(cwd);
+    store.save("user", { id: "u", type: "token", label: "u", secret: "x" });
+    expect(store.list().map((c) => c.id)).toContain("u");
+  });
+
   test("remove deletes from the given scope", () => {
     const store = new CredentialStore(cwd);
     store.save("user", { id: "tok-a", type: "token", label: "A", secret: "s1" });

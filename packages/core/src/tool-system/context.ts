@@ -293,6 +293,14 @@ export interface ToolContext {
    */
   allowedMcpServers?: Set<string>;
   /**
+   * The engine's settings scope, so tools that read disk config directly (e.g.
+   * the credential tools) can honor host-isolation instead of always merging
+   * the host user's ~/.code-shell. "full" = host app (user + project); "project"
+   * / "isolated" = must not surface host user credentials or autoApprove.
+   * Undefined = legacy/no-cwd → treated as "full" by consumers for compat.
+   */
+  settingsScope?: import("../settings/manager.js").SettingsScope;
+  /**
    * Project-scoped extra environment variables (the user's
    * `localEnvironment.env` KEY=VALUE pairs for this cwd). Layered on top of
    * the shell env that the Bash tool and background shells build, so a project

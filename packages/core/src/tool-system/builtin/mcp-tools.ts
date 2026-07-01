@@ -66,6 +66,11 @@ export const listMcpResourcesToolDef: ToolDefinition = {
 
 export async function listMcpResourcesTool(args: Record<string, unknown>): Promise<string> {
   const server = (args.server as string) ?? "";
+  // The executor injects the session's allowed-server set (see executor.ts).
+  // When no explicit server filter is given, we must only enumerate resources
+  // from servers THIS session enabled — otherwise a shared worker leaks another
+  // session's MCP resources. An undefined set means "no gating" (legacy/sub-agent).
+  const allowed = args.__allowedMcpServers as Set<string> | undefined;
 
   try {
     const { MCPManager } = await import("../mcp-manager.js");
@@ -73,7 +78,16 @@ export async function listMcpResourcesTool(args: Record<string, unknown>): Promi
     // Forward the run's abort signal (registry injects __signal) so Stop cancels
     // promptly instead of waiting out the SDK's default request timeout.
     const signal = args.__signal as AbortSignal | undefined;
-    const resources = await manager.listResources(server || undefined, signal);
+    let resources = await manager.listResources(server || undefined, signal);
+
+    if (allowed && resources) {
+      resources = resources.filter((r: any) => {
+        // Resource entries may carry the owning server on `serverName`/`server`;
+        // when unknown, drop it under gating rather than risk a cross-session leak.
+        const owner = (r.serverName ?? r.server) as string | undefined;
+        return owner ? allowed.has(owner) : false;
+      });
+    }
 
     if (!resources || resources.length === 0) {
       return "No MCP resources available.";

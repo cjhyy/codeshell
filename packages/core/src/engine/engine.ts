@@ -3078,6 +3078,11 @@ export class Engine {
       browser: this.config.browserBridge,
       injectCredentialToBrowser: this.config.injectCredentialToBrowser,
       isSubAgent: this.config.isSubAgent === true,
+      // Credential tools narrow their disk reads to this scope: a project/
+      // isolated engine (SDK-embedded) must not surface the host user's
+      // ~/.code-shell credentials or credentialUse.autoApprove. "full" (the
+      // host-application default) merges user + project as before.
+      settingsScope: this.config.settingsScope ?? "project",
       hooks: this.hooks,
       planMode: this.planMode,
       permissionMode: this.permissionMode,

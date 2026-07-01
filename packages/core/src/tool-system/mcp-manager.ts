@@ -195,7 +195,9 @@ export function wrapMcpOutput(serverName: string, toolName: string, body: string
 }
 
 export function stripInternalToolArgs(args: Record<string, unknown>): Record<string, unknown> {
-  const { __signal: _signal, ...toolArgs } = args;
+  // Drop executor-injected internal fields so they never reach the MCP server as
+  // tool arguments: __signal (abort) and __allowedMcpServers (auth allowlist).
+  const { __signal: _signal, __allowedMcpServers: _allowed, ...toolArgs } = args;
   return toolArgs;
 }
 

@@ -1067,7 +1067,12 @@ export function App({
         chatStore.update((prev) => prev.filter((e) => e.type !== "tool_running"));
         chatStore.commitInterruptedStreaming("\n\n[Request interrupted by user]");
         queryGuard.forceEnd("user-cancel");
-        client.cancel().catch(() => {});
+        // Multi-session server rejects cancel without a sessionId; pass the
+        // current session so the underlying run actually aborts (not just the
+        // optimistic UI flip). Log failures instead of swallowing them.
+        client
+          .cancel(sidRef.current ?? sessionId ?? "", "user-cancel")
+          .catch((err) => uiLog.warn("ctrl+c cancel failed", { err: String(err) }));
         // Ctrl+C = nuke everything: also cancel every running background agent
         // so the user gets a clean idle state. ESC only stops the main query.
         for (const a of asyncAgentRegistry.list()) {
@@ -1126,7 +1131,11 @@ export function App({
       chatStore.update((prev) => prev.filter((e) => e.type !== "tool_running"));
       chatStore.commitInterruptedStreaming("\n\n[Request interrupted by user]");
       queryGuard.forceEnd("user-cancel");
-      client.cancel().catch(() => {});
+      // Multi-session server rejects cancel without a sessionId — pass it so
+      // the run truly aborts. See ctrl+c branch above.
+      client
+        .cancel(sidRef.current ?? sessionId ?? "", "user-cancel")
+        .catch((err) => uiLog.warn("esc cancel failed", { err: String(err) }));
       // Optimistic UI: flip back to idle immediately. The server-side abort
       // still propagates through the LLM SDK in the background (1–7s for
       // socket teardown), and the awaited client.run() in handleSubmit will
@@ -1433,7 +1442,9 @@ export function App({
         const next = trimmed.slice("/force".length).trim();
         if (next) setQueuedInputs((prev) => [...prev, next]);
         setInput("");
-        client.cancel().catch(() => {});
+        client
+          .cancel(sidRef.current ?? sessionId ?? "", "user-force")
+          .catch((err) => uiLog.warn("/force cancel failed", { err: String(err) }));
         return;
       }
       if (isQueryActive && !READ_ONLY_WHILE_RUNNING.has(head ?? "")) {

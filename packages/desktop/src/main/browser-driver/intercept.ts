@@ -48,6 +48,13 @@ export function parseBrowserActionLine(line: string): ParsedBrowserAction | null
       dir: a.dir as "up" | "down" | undefined,
       amount: a.amount as number | undefined,
       timeoutMs: a.timeoutMs as number | undefined,
+      // These four were dropped here, so selectOption(value) / pressKey(key) /
+      // fetchImages(refs) / switchTab(tabId) silently no-op'd even though
+      // automation-host's handler consumes them. Forward with light type guards.
+      value: typeof a.value === "string" ? a.value : undefined,
+      key: typeof a.key === "string" ? a.key : undefined,
+      refs: Array.isArray(a.refs) ? (a.refs.filter((x) => typeof x === "string") as string[]) : undefined,
+      tabId: typeof a.tabId === "string" ? a.tabId : undefined,
     },
   };
 }

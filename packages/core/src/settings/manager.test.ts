@@ -11,7 +11,41 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { SettingsManager } from "./manager.js";
+import { SettingsManager, isProtectedSettingKey } from "./manager.js";
+
+describe("isProtectedSettingKey", () => {
+  test("blocks trust-root fields (exact and nested)", () => {
+    for (const key of [
+      "permissions",
+      "permissions.rules",
+      "permissions.defaultMode",
+      "env",
+      "env.BASH_ENV",
+      "localEnvironment",
+      "hooks",
+      "hooks.pre_tool_use",
+      "mcpServers",
+      "mcpServers.evil",
+      "mcpServerOverrides",
+      "mcpServerOverrides.fs.command",
+    ]) {
+      expect(isProtectedSettingKey(key)).toBe(true);
+    }
+  });
+
+  test("allows ordinary/provider/model config keys", () => {
+    for (const key of [
+      "providers",
+      "models",
+      "llm.apiKey",
+      "arena.participants",
+      "context.compactAtRatio",
+      "theme",
+    ]) {
+      expect(isProtectedSettingKey(key)).toBe(false);
+    }
+  });
+});
 
 /**
  * Scope isolation tests. We point HOME at a temp dir (userHome() reads

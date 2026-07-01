@@ -53,7 +53,7 @@ import {
   type SessionSummary,
 } from "./transcripts";
 import { titleFromWire, buildPathAttachment, type ImageAttachment } from "./chat/attachments";
-import { resolveBucket } from "./streamRouting";
+import { resolveBucket, findAskUserOrigin } from "./streamRouting";
 import { resolveStopBucket } from "./stopRouting";
 import { statusForBucket, type SessionStatus } from "./sessionStatus";
 import { selectReplayEvents } from "./snapshotReplay";
@@ -186,6 +186,7 @@ type Action =
       type: "ask_user";
       bucket: string;
       requestId: string;
+      engineSessionId?: string;
       question: string;
       header?: string;
       options?: AskUserOption[];
@@ -214,6 +215,7 @@ function reducer(map: TranscriptsMap, action: Action): TranscriptsMap {
     case "ask_user":
       next = appendAskUserMessage(current, {
         requestId: action.requestId,
+        engineSessionId: action.engineSessionId,
         question: action.question,
         header: action.header,
         options: action.options,
@@ -1648,14 +1650,31 @@ function App() {
                 )
                 .map((o) => ({ label: o.label, description: o.description }))
             : undefined;
-        const bucket =
-          (env.sessionId && engineToBucketRef.current.get(env.sessionId)) ||
-          runningBucketRef.current ||
-          activeBucketRef.current;
+        // Resolve the ORIGINATING session's bucket via the shared resolver
+        // (live table → on-disk index reverse lookup → runningBucket only when
+        // there's no sessionId). When a sessionId is present but unresolvable
+        // (cold table + not yet in the index), fall back to the active bucket so
+        // the user still sees the prompt, but warn — and either way carry
+        // env.sessionId on the message so the ANSWER routes back to the right
+        // session regardless of which bucket rendered it.
+        const resolved = resolveBucket(
+          env.sessionId ?? "",
+          engineToBucketRef.current,
+          sessionIndicesRef.current,
+          runningBucketRef.current,
+        );
+        if (env.sessionId && !resolved) {
+          console.warn(
+            "[ask_user] could not resolve bucket for session; rendering in active bucket",
+            env.sessionId,
+          );
+        }
+        const bucket = resolved ?? activeBucketRef.current;
         dispatch({
           type: "ask_user",
           bucket,
           requestId: env.requestId,
+          engineSessionId: env.sessionId,
           question,
           header,
           options,
@@ -1671,9 +1690,12 @@ function App() {
       // modal. Resolve the request's OWN bucket (not the active one) —
       // concurrent runs may target a different tab.
       const targetBucket =
-        (env.sessionId && engineToBucketRef.current.get(env.sessionId)) ||
-        runningBucketRef.current ||
-        activeBucketRef.current;
+        resolveBucket(
+          env.sessionId ?? "",
+          engineToBucketRef.current,
+          sessionIndicesRef.current,
+          runningBucketRef.current,
+        ) ?? activeBucketRef.current;
       if (permissionForBucketRef.current(targetBucket) === "bypass") {
         if (env.sessionId) {
           void window.codeshell.approve(env.sessionId, env.requestId, "approve");
@@ -2715,16 +2737,26 @@ function App() {
   }, [busy, activeRepo]);
 
   const handleAskUserAnswer = (requestId: string, answer: string): void => {
-    // AskUser is always inside the active bucket — derive the engine
-    // sessionId so the worker routes the answer to the right session's
-    // pending approval map.
-    const sep = activeBucket.indexOf("::");
-    const uiSessionId = sep > 0 ? activeBucket.slice(sep + 2) : null;
-    const repoKey = sep > 0 ? activeBucket.slice(0, sep) : null;
-    const summary = uiSessionId && uiSessionId !== "_none_"
-      ? sessionIndices[repoKey ?? GLOBAL_KEY]?.sessions.find((s) => s.id === uiSessionId)
-      : undefined;
-    const engineSessionId = summary?.engineSessionId ?? uiSessionId ?? undefined;
+    // Route the answer to the session that ORIGINATED the prompt. The prompt
+    // message carries engineSessionId (stamped at dispatch from env.sessionId),
+    // so we no longer assume "AskUser is always in the active bucket" — that
+    // misrouted answers when the prompt belonged to a background session (cold
+    // route table after a remount). Find the message by requestId to recover it.
+    const origin = findAskUserOrigin(transcripts, requestId);
+    const originEngineSessionId = origin?.engineSessionId;
+    const originBucket = origin?.bucket;
+    // Fallback (legacy prompts with no stamped sessionId): derive from the
+    // active bucket, preserving the previous behavior.
+    let engineSessionId = originEngineSessionId;
+    if (!engineSessionId) {
+      const sep = activeBucket.indexOf("::");
+      const uiSessionId = sep > 0 ? activeBucket.slice(sep + 2) : null;
+      const repoKey = sep > 0 ? activeBucket.slice(0, sep) : null;
+      const summary = uiSessionId && uiSessionId !== "_none_"
+        ? sessionIndices[repoKey ?? GLOBAL_KEY]?.sessions.find((s) => s.id === uiSessionId)
+        : undefined;
+      engineSessionId = summary?.engineSessionId ?? uiSessionId ?? undefined;
+    }
     if (engineSessionId) {
       void window.codeshell.approve(engineSessionId, requestId, "approve", undefined, answer);
     } else {
@@ -2732,7 +2764,9 @@ function App() {
     }
     dispatch({
       type: "ask_user_answered",
-      bucket: activeBucket,
+      // Mark answered in the bucket that actually holds the prompt (found above),
+      // not blindly the active bucket — they differ for a background-session ask.
+      bucket: originBucket ?? activeBucket,
       requestId,
       answer,
     });

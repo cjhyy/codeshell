@@ -35,6 +35,7 @@ import {
 import type { Engine, EngineConfig } from "../engine/engine.js";
 import { diskDefaultsFrom } from "../engine/engine.js";
 import type { ValidatedSettings } from "../settings/schema.js";
+import { isProtectedSettingKey } from "../settings/manager.js";
 import type { ApprovalRequest, ApprovalResult, PermissionMode, StreamEvent } from "../types.js";
 import { setInteractiveApprovalFn } from "../tool-system/permission.js";
 import { getArenaStatus } from "../tool-system/builtin/arena.js";
@@ -1243,6 +1244,17 @@ export class AgentServer {
         try {
           const { key, value } = params;
           if (!key) throw new Error("key is required for config_set");
+          // Refuse writes to trust-root fields via the generic config path. A
+          // protocol peer (external driver, paired phone, compromised renderer)
+          // could otherwise self-authorize tools or inject env/hooks/MCP servers,
+          // which is equivalent to remotely bypassing workspace trust. Legit
+          // writes to these go through the dedicated settings UI, not config_set;
+          // provider/model edits use provider_add / models handlers below.
+          if (isProtectedSettingKey(key)) {
+            throw new Error(
+              `config_set refused: "${key}" is a protected trust/permission field and cannot be written through this path.`,
+            );
+          }
           engine.updateConfig(key, value);
           // Echo back through the same secret-aware masker as config_get so
           // a `config_set("llm.apiKey", "...")` confirmation doesn't ship

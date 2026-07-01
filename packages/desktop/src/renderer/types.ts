@@ -194,6 +194,14 @@ export interface AskUserMessage {
   kind: "ask_user";
   id: string;
   requestId: string;
+  /**
+   * The engine sessionId that ORIGINATED this prompt. Carried so the answer
+   * routes back to that exact session's pending-approval map — deriving it from
+   * the active bucket at answer time misroutes when the prompt belongs to a
+   * background/non-active session (e.g. after a renderer remount left the route
+   * table cold). Undefined for legacy/pre-bind prompts with no sessionId.
+   */
+  engineSessionId?: string;
   question: string;
   header?: string;
   options?: AskUserOption[];

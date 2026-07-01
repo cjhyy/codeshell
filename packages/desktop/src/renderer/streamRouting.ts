@@ -48,3 +48,32 @@ export function resolveBucket(
 
   return sessionId ? null : runningBucket;
 }
+
+/**
+ * Find, across all rendered transcripts, the bucket + originating engine
+ * sessionId of the pending AskUser prompt with `requestId`.
+ *
+ * Needed because an AskUser answer must route back to the session that ASKED —
+ * not the currently-active bucket. When the prompt belongs to a background
+ * session (or the route table went cold after a remount), the active bucket and
+ * the prompt's bucket differ, and answering the active session's pending map
+ * strands the real request until it times out. The prompt message carries the
+ * engine sessionId it was stamped with at dispatch; this recovers it by id.
+ *
+ * `transcripts` is the App reducer map (bucket → { messages }). Kept pure +
+ * structurally typed so it's testable without importing the full reducer types.
+ * Returns undefined bucket/engineSessionId when the prompt isn't found (caller
+ * falls back to the active-bucket derivation for legacy prompts).
+ */
+export function findAskUserOrigin(
+  transcripts: Record<string, { messages: Array<{ kind: string; requestId?: string; engineSessionId?: string }> }>,
+  requestId: string,
+): { bucket: string; engineSessionId?: string } | undefined {
+  for (const [bucket, state] of Object.entries(transcripts)) {
+    const msg = state.messages.find(
+      (m) => m.kind === "ask_user" && m.requestId === requestId,
+    );
+    if (msg) return { bucket, engineSessionId: msg.engineSessionId };
+  }
+  return undefined;
+}

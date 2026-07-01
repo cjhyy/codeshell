@@ -25,7 +25,7 @@ import {
   type SessionCredentialAllow,
   type CredentialAskFn,
 } from "./use-gate.js";
-import { SettingsManager } from "../settings/manager.js";
+import { SettingsManager, type SettingsScope } from "../settings/manager.js";
 import { logger } from "../logging/logger.js";
 
 const TOOL_NAME = "UseCredential";
@@ -122,9 +122,21 @@ function sessionAllowFor(ctx?: ToolContext): SessionCredentialAllow {
   return set;
 }
 
-function readAutoApprove(cwd: string): boolean {
+// CredentialStore only distinguishes "full" (user+project) from "project"
+// (project-only). An "isolated" engine is at least as restrictive as project,
+// so it maps to "project" — it must never read the host user's ~/.code-shell.
+function credentialScope(scope: SettingsScope | undefined): "full" | "project" {
+  return scope === "full" || scope === undefined ? "full" : "project";
+}
+
+function readAutoApprove(cwd: string, scope: "full" | "project"): boolean {
   try {
-    const s = new SettingsManager(cwd, "full").get() as { credentialUse?: { autoApprove?: boolean } };
+    // A project/isolated engine must read autoApprove from its own scope, not
+    // the host user's ~/.code-shell — otherwise a host `credentialUse.autoApprove`
+    // would silently auto-approve credential use inside an isolated engine.
+    const s = new SettingsManager(cwd, scope === "full" ? "full" : "project").get() as {
+      credentialUse?: { autoApprove?: boolean };
+    };
     return s.credentialUse?.autoApprove === true;
   } catch {
     return false;
@@ -137,16 +149,20 @@ export async function useCredentialTool(
 ): Promise<string> {
   const cwd = ctx?.cwd ?? process.cwd();
   const store = new CredentialStore(cwd);
+  const scope = credentialScope(ctx?.settingsScope);
   const id = typeof args.id === "string" ? args.id.trim() : "";
   const purpose = typeof args.purpose === "string" ? args.purpose : undefined;
 
-  // 无 id → 清单(脱敏,权威实时源)
+  // 无 id → 清单(脱敏,权威实时源)。按 engine scope 过滤:project/isolated
+  // 引擎不得列出宿主 user 层凭证。
   if (!id) {
-    const credentials = store.listMasked().map((c) => ({ id: c.id, label: c.label, type: c.type }));
+    const credentials = store
+      .listMasked(scope)
+      .map((c) => ({ id: c.id, label: c.label, type: c.type }));
     return json({ kind: "list", credentials });
   }
 
-  const cred = store.resolve(id);
+  const cred = store.resolve(id, scope);
   if (!cred) {
     return json({ kind: "error", error: `凭证不存在: "${id}"。调用本工具(无参)可列出可用凭证。` });
   }
@@ -158,7 +174,7 @@ export async function useCredentialTool(
   const decision = await credentialUseGate(
     { id: cred.id, label: cred.label, purpose },
     {
-      autoApprove: readAutoApprove(cwd),
+      autoApprove: readAutoApprove(cwd, scope),
       credentialAutoUse: cred.autoUseByAI === true,
       sessionAllow: sessionAllowFor(ctx),
       ask,

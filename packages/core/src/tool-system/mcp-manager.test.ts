@@ -409,13 +409,100 @@ describe("executor gate: MCP tool from a server this session didn't enable", () 
     } as never);
     const executor = new ToolExecutor(
       registry,
-      new PermissionClassifier({ mode: "bypassPermissions" } as never),
+      new PermissionClassifier([], "bypassPermissions"),
       new HookRegistry(),
     );
     executor.setContext({ allowedMcpServers: new Set(["mine:srv"]) } as never);
     const result = await executor.executeSingle({ id: "c1", toolName: "mcp_other_srv_doit", args: {} } as never);
     expect(result.isError).toBe(true);
     expect(String(result.error)).toContain("not enabled for this project");
+  });
+});
+
+describe("executor gate: generic MCP builtins with a server arg", () => {
+  // Registers the three generic MCP builtins with a sentinel executor that
+  // records the args it received. A leak (gate bypass) would show up as a
+  // recorded call for a disallowed server instead of a gate error result.
+  function makeExecutor(allowed: string[]) {
+    const registry = new ToolRegistry();
+    const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
+    for (const name of ["MCPTool", "ReadMcpResource", "ListMcpResources"]) {
+      registry.registerTool(
+        {
+          name,
+          description: name,
+          inputSchema: { type: "object", properties: {} },
+          source: "builtin",
+        } as never,
+        async (args: Record<string, unknown>) => {
+          calls.push({ name, args });
+          return "ran";
+        },
+      );
+    }
+    const executor = new ToolExecutor(
+      registry,
+      new PermissionClassifier([], "bypassPermissions"),
+      new HookRegistry(),
+    );
+    executor.setContext({ allowedMcpServers: new Set(allowed) } as never);
+    return { executor, calls };
+  }
+
+  test("MCPTool(server: not-enabled) is rejected, handler never runs", async () => {
+    const { executor, calls } = makeExecutor(["mine:srv"]);
+    const result = await executor.executeSingle({
+      id: "c1",
+      toolName: "MCPTool",
+      args: { server: "other:srv", tool: "doit" },
+    } as never);
+    expect(result.isError).toBe(true);
+    expect(String(result.error)).toContain("not enabled for this project");
+    expect(calls.length).toBe(0); // handler never ran
+  });
+
+  test("ReadMcpResource(server: not-enabled) is rejected", async () => {
+    const { executor, calls } = makeExecutor(["mine:srv"]);
+    const result = await executor.executeSingle({
+      id: "c2",
+      toolName: "ReadMcpResource",
+      args: { server: "other:srv", uri: "res://x" },
+    } as never);
+    expect(result.isError).toBe(true);
+    expect(String(result.error)).toContain("not enabled for this project");
+    expect(calls.length).toBe(0);
+  });
+
+  test("MCPTool(server: enabled) passes the gate and runs", async () => {
+    const { executor, calls } = makeExecutor(["mine:srv"]);
+    const result = await executor.executeSingle({
+      id: "c3",
+      toolName: "MCPTool",
+      args: { server: "mine:srv", tool: "doit" },
+    } as never);
+    expect(result.isError).toBeFalsy();
+    expect(calls.map((c) => c.name)).toEqual(["MCPTool"]);
+  });
+
+  test("ListMcpResources receives the allowlist to filter by", async () => {
+    const { executor, calls } = makeExecutor(["mine:srv"]);
+    await executor.executeSingle({ id: "c4", toolName: "ListMcpResources", args: {} } as never);
+    expect(calls.length).toBe(1);
+    const seen = calls[0]!.args.__allowedMcpServers;
+    expect(seen instanceof Set).toBe(true);
+    expect((seen as Set<string>).has("mine:srv")).toBe(true);
+  });
+
+  test("ListMcpResources(server: not-enabled) is rejected", async () => {
+    const { executor, calls } = makeExecutor(["mine:srv"]);
+    const result = await executor.executeSingle({
+      id: "c5",
+      toolName: "ListMcpResources",
+      args: { server: "other:srv" },
+    } as never);
+    expect(result.isError).toBe(true);
+    expect(String(result.error)).toContain("not enabled for this project");
+    expect(calls.length).toBe(0);
   });
 });
 

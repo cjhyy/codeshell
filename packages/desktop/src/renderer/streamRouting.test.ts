@@ -14,7 +14,7 @@
  * survive a remount, loaded from localStorage) to reconstruct the bucket.
  */
 import { describe, it, expect } from "bun:test";
-import { resolveBucket } from "./streamRouting";
+import { resolveBucket, findAskUserOrigin } from "./streamRouting";
 import { bucketKey, NO_REPO_KEY, type SessionIndex } from "./transcripts";
 
 const GLOBAL_KEY = "__global__";
@@ -107,5 +107,56 @@ describe("resolveBucket", () => {
     };
     const result = resolveBucket("eng-1", table, indices, null);
     expect(result).toBe("repoA::ui-1");
+  });
+});
+
+describe("findAskUserOrigin", () => {
+  const ask = (requestId: string, engineSessionId?: string) => ({
+    kind: "ask_user",
+    requestId,
+    engineSessionId,
+  });
+
+  it("finds the prompt in a BACKGROUND bucket, not the active one", () => {
+    const transcripts = {
+      // active bucket has an unrelated message
+      "repoA::ui-active": { messages: [{ kind: "text" }] },
+      // the prompt lives in a different (background) bucket
+      "repoB::ui-bg": { messages: [ask("req-1", "eng-bg")] },
+    };
+    const origin = findAskUserOrigin(transcripts, "req-1");
+    expect(origin).toEqual({ bucket: "repoB::ui-bg", engineSessionId: "eng-bg" });
+  });
+
+  it("returns undefined when no prompt matches the requestId", () => {
+    const transcripts = {
+      "repoA::ui-1": { messages: [ask("req-1", "eng-1")] },
+    };
+    expect(findAskUserOrigin(transcripts, "req-missing")).toBeUndefined();
+  });
+
+  it("recovers a prompt with no stamped engineSessionId (legacy) — bucket only", () => {
+    const transcripts = {
+      "repoA::ui-1": { messages: [ask("req-1")] },
+    };
+    expect(findAskUserOrigin(transcripts, "req-1")).toEqual({
+      bucket: "repoA::ui-1",
+      engineSessionId: undefined,
+    });
+  });
+
+  it("ignores non-ask_user messages sharing the requestId field", () => {
+    const transcripts = {
+      "repoA::ui-1": {
+        messages: [
+          { kind: "tool", requestId: "req-1" },
+          ask("req-1", "eng-1"),
+        ],
+      },
+    };
+    expect(findAskUserOrigin(transcripts, "req-1")).toEqual({
+      bucket: "repoA::ui-1",
+      engineSessionId: "eng-1",
+    });
   });
 });

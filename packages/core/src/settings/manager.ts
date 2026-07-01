@@ -31,6 +31,38 @@ export function userHome(): string {
 }
 
 /**
+ * Settings keys that form the trust/permission root and therefore must NOT be
+ * writable through the generic `config_set` / provider-agnostic write path.
+ * A protocol peer (external driver, paired phone, or a compromised renderer)
+ * can send arbitrary config writes; letting it set these would be equivalent to
+ * remotely disabling the workspace-trust / permission model:
+ *   - permissions      → self-authorize any tool (permissions.rules / defaultMode)
+ *   - env / localEnvironment → inject BASH_ENV / NODE_OPTIONS / LD_PRELOAD / PATH
+ *   - hooks            → run arbitrary commands on tool events
+ *   - mcpServers / mcpServerOverrides → point tools at attacker-controlled servers
+ * These are only meant to be changed by the local settings UI (a trusted write
+ * path) or by hand-editing the file, never by a generic remote config write.
+ */
+const PROTECTED_SETTING_ROOTS = new Set([
+  "permissions",
+  "env",
+  "localEnvironment",
+  "hooks",
+  "mcpServers",
+  "mcpServerOverrides",
+]);
+
+/**
+ * True if `key` (a dotted path like "permissions.rules" or just "env") targets a
+ * protected trust-root field. Matches on the FIRST segment so nested writes
+ * ("permissions.defaultMode", "env.FOO") are caught too.
+ */
+export function isProtectedSettingKey(key: string): boolean {
+  const root = key.split(".")[0] ?? "";
+  return PROTECTED_SETTING_ROOTS.has(root);
+}
+
+/**
  * The fixed cwd used for "no-repo" pure-chat conversations (a chat not bound to
  * any code project). Same location as desktop's `resolveNoRepoCwd`
  * (`join(homedir(), ".code-shell", "no-repo")`), but built from {@link userHome}

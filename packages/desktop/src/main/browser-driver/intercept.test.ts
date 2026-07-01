@@ -23,6 +23,30 @@ describe("parseBrowserActionLine", () => {
     });
   });
 
+  test("forwards value/key/refs/tabId (selectOption/pressKey/fetchImages/switchTab)", () => {
+    const sel = parseBrowserActionLine(browserActionLine({ action: "select", ref: "e1", value: "opt-2" }));
+    expect(sel?.request.value).toBe("opt-2");
+
+    const press = parseBrowserActionLine(browserActionLine({ action: "press_key", key: "Control+a" }));
+    expect(press?.request.key).toBe("Control+a");
+
+    const imgs = parseBrowserActionLine(browserActionLine({ action: "fetch_images", refs: ["img1", "img2"] }));
+    expect(imgs?.request.refs).toEqual(["img1", "img2"]);
+
+    const tab = parseBrowserActionLine(browserActionLine({ action: "switch_tab", tabId: "t3" }));
+    expect(tab?.request.tabId).toBe("t3");
+  });
+
+  test("drops non-string refs entries and mistyped value/key/tabId", () => {
+    const p = parseBrowserActionLine(
+      browserActionLine({ action: "fetch_images", refs: ["ok", 42, null, "ok2"], value: 1, key: {}, tabId: [] }),
+    );
+    expect(p?.request.refs).toEqual(["ok", "ok2"]);
+    expect(p?.request.value).toBeUndefined();
+    expect(p?.request.key).toBeUndefined();
+    expect(p?.request.tabId).toBeUndefined();
+  });
+
   test("returns null for a normal ask-user approval request (not browser)", () => {
     const line = JSON.stringify({
       method: "agent/approvalRequest",

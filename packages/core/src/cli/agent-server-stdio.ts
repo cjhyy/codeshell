@@ -34,7 +34,7 @@ import { Engine } from "../engine/engine.js";
 import { EngineRuntime } from "../engine/runtime.js";
 import { ChatSessionManager } from "../protocol/chat-session-manager.js";
 import type { EngineConfigSlice } from "../protocol/chat-session-manager.js";
-import type { ValidatedSettings } from "../settings/schema.js";
+import { validateSettings, type ValidatedSettings } from "../settings/schema.js";
 import { AgentServer } from "../protocol/server.js";
 import { StdioTransport } from "../protocol/transport.js";
 import { createNotification } from "../protocol/types.js";
@@ -93,7 +93,23 @@ const cwd = process.env.AGENT_CWD ?? process.cwd();
 // Desktop is a host application: read the full disk hierarchy (incl. the
 // user's ~/.code-shell). The SDK default 'project' would skip user config.
 const settingsManager = new SettingsManager(cwd, "full");
-const settings = settingsManager.get();
+// Bootstrap load must NOT crash the worker on a schema-invalid (but JSON-valid)
+// settings file: a hand-edited settings.json with e.g. `permissions.defaultMode:
+// "ask"` or `env.FOO: 123` makes SettingsSchema.parse throw a ZodError at module
+// top level, which the desktop/mobile host sees as "connection lost" / a
+// nonzero-exit worker. Fall back to schema defaults and print a readable,
+// truncated reason so the user can fix the file (freshSettings() applies the
+// same best-effort contract per session once the worker is up).
+let settings: ValidatedSettings;
+try {
+  settings = settingsManager.get();
+} catch (err) {
+  const reason = (err instanceof Error ? err.message : String(err)).slice(0, 2000);
+  console.error(
+    `[agent-server] settings.json 校验失败,已回退到默认配置(请修正后重启):\n${reason}`,
+  );
+  settings = validateSettings({});
+}
 
 // LLMConfig is pure model identity now — only the bare identity fields go here.
 // temperature/imageDetail/timeout/retryMaxAttempts are ClientDefaults, derived
@@ -192,17 +208,32 @@ const chatManager = new ChatSessionManager({
   // each time the factory fires; fall back to the snapshot only when the
   // pool can't resolve (no active key — shouldn't happen in practice).
   engineFactory: (slice) => {
-    const live = freshSettings();
     // Effective cwd for THIS session: explicit slice.cwd → that project; absent
     // → the no-repo sandbox (NOT the worker's stale boot cwd). See
     // resolveSessionCwd for the full rationale.
     const sessionCwd = resolveSessionCwd(slice);
+    // Read settings for THIS session's cwd, not the worker's boot cwd. A single
+    // worker serves many projects; the boot-cwd `freshSettings()` snapshot pins
+    // every session to the first project's project-layer settings, so project
+    // `mcpServers` / `agent.*` / permissions from the boot project would leak
+    // into (and shadow) other projects' sessions. A per-session SettingsManager
+    // still reads the full hierarchy (user ~/.code-shell + THIS project's
+    // .code-shell), keeping user-global settings while picking up the correct
+    // project overlay. Falls back to the boot snapshot if this project's file is
+    // malformed (same best-effort contract as freshSettings()).
+    const sessionSettingsManager = new SettingsManager(sessionCwd, "full");
+    let live: typeof settings;
+    try {
+      live = sessionSettingsManager.load();
+    } catch {
+      live = freshSettings();
+    }
     // Fold project capabilityOverrides over the global disabledPlugins before
     // the MCP merge — a plugin force-enabled in 能力总览 (project "on") must
     // contribute its MCP servers even while globally disabled, and vice versa.
     // Raw `live.disabledPlugins` alone ignored the project layer.
     const { disabledPlugins } = computeEffectiveDisabledLists(
-      new SettingsManager(sessionCwd, "full"),
+      sessionSettingsManager,
       sessionCwd,
     );
     return new Engine({

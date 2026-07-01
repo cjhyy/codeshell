@@ -143,16 +143,25 @@ export class CredentialStore {
     this.write(scope, file);
   }
 
-  /** Merged list: project overrides user on same id. */
-  list(): Credential[] {
+  /**
+   * List credentials visible to an engine of the given settings scope.
+   *   - "full" (default): merge user(~/.code-shell) then project, project wins —
+   *     the host-application behavior.
+   *   - "project": ONLY the project store. A project/isolated-scope engine
+   *     (e.g. SDK-embedded) must never surface the host user's credentials —
+   *     same host-isolation contract as {@link envExposures} and top-level env.
+   */
+  list(scope: "full" | "project" = "full"): Credential[] {
     const byId = new Map<string, Credential>();
-    for (const c of this.read("user").credentials) byId.set(c.id, c);
+    if (scope === "full") {
+      for (const c of this.read("user").credentials) byId.set(c.id, c);
+    }
     for (const c of this.read("project").credentials) byId.set(c.id, c); // project wins
     return [...byId.values()];
   }
 
-  resolve(id: string): Credential | undefined {
-    return this.list().find((c) => c.id === id);
+  resolve(id: string, scope: "full" | "project" = "full"): Credential | undefined {
+    return this.list(scope).find((c) => c.id === id);
   }
 
   /**
@@ -187,8 +196,8 @@ export class CredentialStore {
     return out;
   }
 
-  listMasked(): MaskedCredential[] {
-    return this.list().map((c) => {
+  listMasked(scope: "full" | "project" = "full"): MaskedCredential[] {
+    return this.list(scope).map((c) => {
       const { secret, ...rest } = c;
       return {
         ...rest,

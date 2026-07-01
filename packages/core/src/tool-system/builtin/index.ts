@@ -555,7 +555,12 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     definition: {
       ...readMcpResourceToolDef,
       source: "builtin",
-      permissionDefault: "allow",
+      // Reading resource CONTENT (unlike enumerating names) can pull arbitrary
+      // data — potentially secrets — from a connected MCP server. Default to ask
+      // rather than the old unconditional allow so a default-mode session
+      // confirms the read; the executor also gates the target server against the
+      // session's allowedMcpServers.
+      permissionDefault: "ask",
       isReadOnly: true,
       isConcurrencySafe: true,
     },

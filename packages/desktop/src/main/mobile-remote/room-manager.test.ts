@@ -2,10 +2,12 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
+import { existsSync } from "node:fs";
 import {
   RoomManager,
   askUserPrompt,
   buildAskUserUpdatedInput,
+  isValidRoomId,
   type RoomAgent,
   type RoomMessage,
 } from "./room-manager.js";
@@ -454,5 +456,48 @@ describe("RoomManager", () => {
     emit({ type: "tool", tool: "Agent", summary: "", input, id: "t1" });
     const msgs = mgr.getMessages(room.id, 0).filter((m) => m.type !== "room_created");
     expect(msgs[0]).toMatchObject({ from: "agent", type: "tool", tool: "Agent", toolId: "t1", args: input });
+  });
+});
+
+describe("isValidRoomId", () => {
+  test("accepts the generated shape only", () => {
+    expect(isValidRoomId("room_abc123_def456")).toBe(true);
+    expect(isValidRoomId("room_l9x_a1b2c3")).toBe(true);
+  });
+  test("rejects traversal / malformed / non-string ids", () => {
+    for (const bad of [
+      "..",
+      "../x",
+      "../../etc",
+      "room_../evil",
+      "room/abc",
+      "room_abc",
+      "",
+      "ROOM_abc_def",
+      "room_abc_def/..",
+      "room_abc_def ",
+      42 as unknown as string,
+      undefined as unknown as string,
+    ]) {
+      expect(isValidRoomId(bad)).toBe(false);
+    }
+  });
+});
+
+describe("RoomManager roomId path-traversal guard", () => {
+  test("getRoom/getMessages return safe defaults for a traversal id (no throw)", () => {
+    const { mgr } = makeManager();
+    expect(mgr.getRoom("../../etc")).toBeUndefined();
+    expect(mgr.getMessages("../../etc", 0)).toEqual([]);
+  });
+
+  test("open/send/close on a traversal id are no-ops and never write outside rootDir", () => {
+    const { mgr } = makeManager();
+    const evil = "../../../pwned";
+    expect(mgr.open(evil)).toEqual({ status: "missing" });
+    expect(mgr.send(evil, "x")).toBe(false);
+    expect(() => mgr.close(evil)).not.toThrow();
+    // No directory/file created outside the rooms rootDir.
+    expect(existsSync(join(dir!, "..", "..", "..", "pwned"))).toBe(false);
   });
 });

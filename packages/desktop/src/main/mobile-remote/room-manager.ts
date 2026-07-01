@@ -10,6 +10,18 @@ import {
 import { join } from "node:path";
 import type { ResidentAgentEvent } from "./resident-agent.js";
 
+/**
+ * The exact shape createRoom() generates: `room_<base36>_<base36>`. Anything
+ * else — path separators, `..`, NUL, empty — is rejected before it can reach a
+ * filesystem path, closing the room-storage traversal via client-supplied
+ * event.roomId.
+ */
+const ROOM_ID_RE = /^room_[a-z0-9]+_[a-z0-9]+$/;
+
+export function isValidRoomId(id: unknown): id is string {
+  return typeof id === "string" && ROOM_ID_RE.test(id);
+}
+
 export type RoomPermissionMode = "default" | "acceptEdits" | "bypassPermissions";
 
 /**
@@ -179,6 +191,15 @@ export class RoomManager {
   }
 
   private roomDir(id: string): string {
+    // roomId reaches path-building from client WS events (room.open/history/
+    // send/close all pass event.roomId straight through), so it is NOT always a
+    // system-generated id — an authenticated device could send "../../etc" and
+    // traverse out of rootDir. Enforce the generated shape (see createRoom:
+    // `room_<base36>_<base36>`) at this single chokepoint so every path-builder
+    // (metaPath/msgPath/getRoom/getMessages/open/send/close) is covered.
+    if (!isValidRoomId(id)) {
+      throw new Error(`invalid roomId: ${JSON.stringify(id)}`);
+    }
     return join(this.opts.rootDir, id);
   }
   private metaPath(id: string): string {
@@ -235,6 +256,10 @@ export class RoomManager {
   }
 
   getRoom(id: string): RoomMeta | undefined {
+    // Invalid ids resolve to "no such room" rather than throwing, so the WS
+    // event handlers (which call this first) degrade to a missing response
+    // instead of crashing on a malicious roomId.
+    if (!isValidRoomId(id)) return undefined;
     const p = this.metaPath(id);
     if (!existsSync(p)) return undefined;
     try {
@@ -275,6 +300,7 @@ export class RoomManager {
   }
 
   getMessages(id: string, sinceSeq = 0): RoomMessage[] {
+    if (!isValidRoomId(id)) return [];
     const p = this.msgPath(id);
     if (!existsSync(p)) return [];
     const out: RoomMessage[] = [];

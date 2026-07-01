@@ -156,8 +156,11 @@ const GENERAL_PERMISSION_RULES: PermissionRule[] = [
   { tool: "CronList", decision: "allow" },
   { tool: "CheckQuota", decision: "allow" },
   { tool: "Skill", decision: "allow" },
+  // ListMcpResources only enumerates resource names (and the executor filters
+  // the list to this session's enabled servers). ReadMcpResource pulls actual
+  // content and is intentionally NOT auto-allowed here — it falls back to its
+  // tool-level "ask" default so a default-mode session confirms the read.
   { tool: "ListMcpResources", decision: "allow" },
-  { tool: "ReadMcpResource", decision: "allow" },
   // Reading memory is always safe; writes (MemorySave/MemoryDelete) stay gated
   // by the tools' own permissionDefault so the user confirms each change.
   { tool: "MemoryList", decision: "allow" },

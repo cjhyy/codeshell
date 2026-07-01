@@ -151,16 +151,46 @@ export class ToolExecutor {
     // tools from servers OTHER sessions enabled. Visibility filtering hides
     // them from this session's tool list; this rejects a direct call anyway.
     if (this.toolCtx?.allowedMcpServers) {
+      const allowed = this.toolCtx.allowedMcpServers;
       const reg = this.registry.getTool(call.toolName) as
         | { source?: string; serverName?: string }
         | null;
-      if (reg?.source === "mcp" && !this.toolCtx.allowedMcpServers.has(reg.serverName ?? "")) {
+      if (reg?.source === "mcp" && !allowed.has(reg.serverName ?? "")) {
         return {
           id: call.id,
           toolName: call.toolName,
           error: `Tool ${call.toolName} belongs to an MCP server that is not enabled for this project. Do NOT retry this tool call.`,
           isError: true,
         };
+      }
+      // The generic MCP builtins (MCPTool / ReadMcpResource) take the target
+      // server as an ARGUMENT and call MCPManager directly, so the source==="mcp"
+      // check above can't see them — without this a session could invoke a tool
+      // or read a resource on a server only ANOTHER session enabled. Gate on the
+      // server arg. ListMcpResources has an optional server filter and would
+      // otherwise enumerate every connected server's resources, so we inject the
+      // allowlist for it to filter by (see mcp-tools.ts).
+      if (call.toolName === "MCPTool" || call.toolName === "ReadMcpResource") {
+        const server = String((call.args as Record<string, unknown>).server ?? "");
+        if (!allowed.has(server)) {
+          return {
+            id: call.id,
+            toolName: call.toolName,
+            error: `MCP server "${server}" is not enabled for this project. Do NOT retry this tool call.`,
+            isError: true,
+          };
+        }
+      } else if (call.toolName === "ListMcpResources") {
+        const server = String((call.args as Record<string, unknown>).server ?? "");
+        if (server && !allowed.has(server)) {
+          return {
+            id: call.id,
+            toolName: call.toolName,
+            error: `MCP server "${server}" is not enabled for this project. Do NOT retry this tool call.`,
+            isError: true,
+          };
+        }
+        (call.args as Record<string, unknown>).__allowedMcpServers = allowed;
       }
     }
     // 0. Plan mode: only allow read-only tools — no file writes at all
