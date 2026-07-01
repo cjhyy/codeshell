@@ -47,6 +47,7 @@ import {
   memoryDeleteToolDef, memoryDeleteTool,
 } from "./memory.js";
 import { completeGoalToolDef, completeGoalTool } from "./complete-goal.js";
+import { cancelGoalToolDef, cancelGoalTool } from "./cancel-goal.js";
 import { addMarketplaceToolDef, addMarketplaceTool } from "./add-marketplace.js";
 import {
   bashOutputToolDef, bashOutputTool,
@@ -655,6 +656,21 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       isConcurrencySafe: true,
     },
     execute: completeGoalTool,
+  },
+  // ─── Goal mode: user-initiated cancellation ────────────────────
+  // Distinct from complete_goal — the user explicitly asked to abandon the
+  // goal. The turn-loop short-circuits on this call (only when confirm===true)
+  // AND clears the persisted goal. The tool itself only records an
+  // acknowledgement string, so it's read-only and concurrency-safe.
+  {
+    definition: {
+      ...cancelGoalToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: cancelGoalTool,
   },
   // ─── Plugin marketplace: model-driven source registration ──────
   {

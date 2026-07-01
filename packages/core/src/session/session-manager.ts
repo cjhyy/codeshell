@@ -213,6 +213,42 @@ export class SessionManager {
     }
   }
 
+  /**
+   * Disk-only "wipe this session's persistent goal" — the counterpart to
+   * readActiveGoal. Reads state.json, removes state.activeGoal, and rewrites it
+   * atomically (via saveState). Returns true only if a goal was actually
+   * present (idempotent — clearing a session with no goal is a no-op returning
+   * false). Never throws on an unknown / malformed / traversal-shaped id
+   * (returns false), matching readActiveGoal's tolerance.
+   *
+   * Why it lives here and not only on Engine: a persistent goal can strand a
+   * session whose worker is NOT live (aborted/reloaded) — Engine.clearGoal
+   * needs a resumed in-RAM session and a matching in-flight hook, neither of
+   * which exists once the worker has exited. Hosts (the desktop bridge) call
+   * THIS to clear such a goal off disk without spinning up a full Engine.
+   * Engine.clearGoal also delegates its disk write here so the wipe logic lives
+   * in exactly one place.
+   */
+  clearActiveGoal(sessionId: string): boolean {
+    try {
+      assertSafeSessionId(sessionId);
+    } catch {
+      return false;
+    }
+    const stateFile = join(this.sessionsDir, sessionId, "state.json");
+    if (!existsSync(stateFile)) return false;
+    let state: SessionState;
+    try {
+      state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
+    } catch {
+      return false;
+    }
+    if (state.activeGoal === undefined) return false;
+    state.activeGoal = undefined;
+    this.saveState(state);
+    return true;
+  }
+
   resume(sessionId: string): SessionBundle {
     assertSafeSessionId(sessionId);
     const sessionDir = join(this.sessionsDir, sessionId);

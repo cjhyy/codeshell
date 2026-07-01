@@ -32,6 +32,7 @@ import { isTruncatedStop } from "../llm/stop-reason.js";
 import { isAbortError } from "../llm/client-base.js";
 import { crossedReactiveThreshold } from "./reactive-threshold.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js";
+import { CANCEL_GOAL_TOOL_NAME } from "../tool-system/builtin/cancel-goal.js";
 import {
   type GoalConfig,
   type GoalBudgetTracker,
@@ -119,6 +120,15 @@ export interface TurnLoopDeps {
    * tests (turn loop tolerates undefined).
    */
   consumeSteer?: () => SteerItem[];
+  /**
+   * Clear this session's PERSISTED goal (state.activeGoal) and drop the
+   * in-flight goal-stop hook, so a user-initiated cancel_goal both stops the
+   * current run AND prevents the goal from re-inheriting on the next bare send.
+   * Wired by Engine (delegates to Engine.clearGoal for the running session);
+   * absent in standalone tests (turn loop tolerates undefined — the local
+   * goalTracker short-circuit still stops the run).
+   */
+  clearPersistedGoal?: () => void;
 }
 
 export interface TurnLoopResult {
@@ -927,10 +937,30 @@ export class TurnLoop {
       // it has DECLARED the goal done — short-circuit to "completed" WITHOUT
       // running the judge hook. The tool's result is already in `messages`
       // above so the summary lands in the transcript. Reset the stop-block
-      // counter so a prior judge-driven block streak doesn't leak out.
+      // counter so a prior judge-driven block streak doesn't leak out. Also
+      // clear the PERSISTED goal so a later bare send doesn't re-inherit a goal
+      // the model just declared finished (the judge's onMet does this when IT
+      // decides; a self-report must do the same, else the goal outlives its
+      // completion and re-arms every follow-up turn).
       if (goalTracker && toolCalls.some((tc) => tc.toolName === COMPLETE_GOAL_TOOL_NAME)) {
         tlog.info("turn.goal_self_reported_complete", { cat: "goal" });
         this.stopBlockCount = 0;
+        this.deps.clearPersistedGoal?.();
+        return { text: finalText, reason: "completed", messages };
+      }
+
+      // Goal mode: user-initiated cancellation. cancel_goal is the "strong
+      // intent" escape hatch — honor it ONLY when confirm===true (the guard the
+      // tool advertises). A confirmed cancel stops the run AND clears the
+      // persisted goal so it never re-arms; an unconfirmed call is a no-op here
+      // (the tool's own result string already told the model it was ignored).
+      const confirmedCancel = toolCalls.some(
+        (tc) => tc.toolName === CANCEL_GOAL_TOOL_NAME && tc.args?.confirm === true,
+      );
+      if (goalTracker && confirmedCancel) {
+        tlog.info("turn.goal_user_cancelled", { cat: "goal" });
+        this.stopBlockCount = 0;
+        this.deps.clearPersistedGoal?.();
         return { text: finalText, reason: "completed", messages };
       }
 

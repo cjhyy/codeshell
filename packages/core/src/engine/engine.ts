@@ -1906,6 +1906,20 @@ export class Engine {
           return info;
         },
         consumeSteer: () => this.consumeSteer(sid),
+        // Clear the persisted goal for a self-reported completion / confirmed
+        // cancel. Clears the in-RAM session's activeGoal (so THIS run's later
+        // turns don't re-arm) AND persists it, and drops the in-flight stop
+        // hook so nothing re-blocks the stop we're about to return.
+        clearPersistedGoal: () => {
+          if (session.state.activeGoal !== undefined) {
+            session.state.activeGoal = undefined;
+            this.sessionManager.saveState(session.state);
+          }
+          if (goalHookHandler) {
+            this.hooks.unregister("on_stop", goalHookHandler);
+            if (this.activeGoalHook === goalHookHandler) this.activeGoalHook = null;
+          }
+        },
         ctxOverheadStore: {
           get: (s) => this.ctxOverheadBySid.get(s) ?? 0,
           set: (s, n) => {

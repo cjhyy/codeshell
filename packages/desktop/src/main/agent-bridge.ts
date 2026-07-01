@@ -33,10 +33,11 @@ import {
   buildCredentialActionReply,
 } from "./browser-driver/intercept.js";
 import { handleBrowserAction } from "./browser-driver/automation-host.js";
-import { CredentialStore } from "@cjhyy/code-shell-core";
+import { CredentialStore, SessionManager } from "@cjhyy/code-shell-core";
 import { restoreCookiesToBrowser, type ElectronCookieLike } from "./credentials-service.js";
 import { activeGuest, listGuests, focusGuest } from "./browser-driver/active-guest.js";
 import { loadBrowserAutomationPolicy } from "./browser-driver/load-policy.js";
+import { buildNoChildFallbackReply, type ParsedRpc } from "./agent-bridge-fallback.js";
 
 /**
  * Neutral sandbox directory used when the user is in a "no project"
@@ -70,6 +71,13 @@ export class AgentBridge {
   private restartCount = 0;
   private restartWindowStart = Date.now();
   private ipcListenerAttached = false;
+  /**
+   * Lazily-created SessionManager for disk-backed fallbacks when no worker is
+   * live (goalGet / goalClear reach state.json without spinning up a worker).
+   * Reads CODE_SHELL_HOME / ~/.code-shell like the worker does, so it targets
+   * the same sessions dir. Created on first use to keep construction cheap.
+   */
+  private fallbackSessions: SessionManager | null = null;
   /**
    * All BrowserWindows we should broadcast worker events to. The bridge
    * is process-global; each window registers via attachWindow(). When
@@ -239,6 +247,12 @@ export class AgentBridge {
     return this.restartCount > RESTART_LIMIT;
   }
 
+  /** Lazily build the disk-backed SessionManager used for no-worker fallbacks. */
+  private sessionsForFallback(): SessionManager {
+    if (!this.fallbackSessions) this.fallbackSessions = new SessionManager();
+    return this.fallbackSessions;
+  }
+
   private attachIpcListener(): void {
     if (this.ipcListenerAttached) return;
     this.ipcListenerAttached = true;
@@ -247,7 +261,7 @@ export class AgentBridge {
       // Inspect the message: an agent/run is the only one that can trigger
       // a fresh spawn. Other messages (agent/approve, agent/cancel) only
       // make sense if the worker is already alive.
-      let parsed: { id?: number | string; method?: string; params?: { cwd?: string; sessionId?: string } } = {};
+      let parsed: ParsedRpc = {};
       try { parsed = JSON.parse(line); } catch { /* fall through */ }
 
       if (parsed.method === "agent/run") {
@@ -262,30 +276,20 @@ export class AgentBridge {
         // No live worker. For approve / cancel this is fine — drop.
         // For run, spawnChild above should have created one; if it
         // didn't, log and drop.
-        // BUT a read-only query like agent/backgroundShells must still get a
-        // REPLY, or the renderer's rpc() hangs the full 30s timeout and the
-        // background-shell panel freezes on stale "running" rows (the worker
-        // recycled between sessions, so the in-RAM registry is simply gone).
-        // Answer "no shells" so the panel resolves and clears. (#7)
-        if (parsed.method === "agent/backgroundShells" && parsed.id !== undefined) {
-          this.safeSend("agent:msg", JSON.stringify({
-            jsonrpc: "2.0",
-            id: parsed.id,
-            result: { shells: [] },
-          }));
-        }
-        // Same reasoning for the unified background-work query: answer "nothing
-        // running" so the panel resolves instead of hanging the rpc() timeout.
-        if (parsed.method === "agent/backgroundWork" && parsed.id !== undefined) {
-          this.safeSend("agent:msg", JSON.stringify({
-            jsonrpc: "2.0",
-            id: parsed.id,
-            result: { items: [] },
-          }));
+        // BUT some requests must still get a REPLY, or the renderer's rpc()
+        // hangs its 30s timeout: read-only registry queries (backgroundShells /
+        // backgroundWork — the in-RAM registry is gone with the worker) and
+        // disk-backed goal ops (goalGet / goalClear — a persistent goal lives
+        // in state.json and outlives the worker; without this the "Clear goal"
+        // button did nothing for an aborted goal session).
+        const fallback = buildNoChildFallbackReply(parsed, this.sessionsForFallback());
+        if (fallback !== null) {
+          this.safeSend("agent:msg", fallback);
         }
         dlog("bridge", "renderer→worker.dropped", {
           reason: this.child ? "stdin destroyed" : "no child",
           method: parsed.method,
+          answered: fallback !== null,
         });
         return;
       }

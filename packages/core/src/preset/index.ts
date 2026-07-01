@@ -114,6 +114,15 @@ const GENERAL_BUILTIN_TOOLS = [
   // 名单里没有它 → 即使工具已注册,AI 列表里也没有 → 用户实测「找不到这个工具」。
   // permissionDefault: "ask",列入只是让 AI 看得到,调用仍走审批,无条件列入安全。
   "EditModelCatalog",
+  // Goal-mode control tools. Same whitelist requirement as the rest:
+  // registerBuiltins filters BUILTIN_TOOLS by the preset set, so a goal tool
+  // absent here is registered-but-invisible — the model never sees it and can
+  // neither self-declare completion (complete_goal) nor honor a user's request
+  // to abandon the goal (cancel_goal), stranding a persistent goal that only a
+  // manual disk edit could clear. cancel_goal is the "strong intent" escape
+  // hatch (requires confirm+reason); the turn-loop enforces the guard.
+  "complete_goal",
+  "cancel_goal",
 ] as const;
 
 const TERMINAL_CODING_EXTRA_TOOLS = [
