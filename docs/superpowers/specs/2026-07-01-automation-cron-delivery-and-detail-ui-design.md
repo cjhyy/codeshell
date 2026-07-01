@@ -102,7 +102,7 @@ codeshell 的定时有两条创建路径，命运不同：
 - **下拉2（UTC 偏移）**：`UTC-12 … UTC+14` 的快捷筛选器。选一个偏移 → 把下拉1 的城市列表**过滤**成当前该偏移的城市。不单独存值，只影响下拉1 的可见项。
 - 因为全量时区有几百个，下拉1 **必须可搜索**。
 
-**前置任务**：现有 `components/ui/simple-select.tsx` 的 `searchable` 是「accepted but ignored」（注释明说），仓库无 Command/cmdk/combobox。需**新增一个可搜索的 select/combobox 组件**（按 shadcn 惯例放 `components/ui/`，供时区城市下拉使用）。
+**前置任务（复用优先，已核实无现成件）**：仓库现无可搜索下拉——`simple-select.tsx` 的 `searchable` 是「accepted but ignored」，各处搜索（LogsView/FilesPanel/SessionsView）都是手搓 input+filter 过滤列表，形态不对不可复用。按 shadcn 官方标准做法：**装 `cmdk` 依赖 + 拷 shadcn `command.tsx`/`popover.tsx` → 组一个通用 `components/ui/combobox.tsx`**。时区城市下拉用它；做成通用件供将来别处「可搜索下拉」复用（用户明确要求各处复用）。选此方案而非纯手搓 Radix Popover+Input，因为 cmdk 是 shadcn 生态标准件，键盘导航/无障碍开箱即好，与现有 shadcn+Radix 体系一致。
 
 **默认值**：新建 job 默认用系统时区（`Intl.DateTimeFormat().resolvedOptions().timeZone`）而非 UTC。改在 `CronCreate` 默认值 + UI 新建默认值两处（保持一致）。
 
