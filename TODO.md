@@ -81,7 +81,7 @@
 
 - 🔴 **真机冒烟:弹窗登录抓 cookie 全链路** — 登 YouTube → 保存 → 切换账号 → AI 取用。唯一没真机验过的核心新功能。关联 `project_browser_login_window`。
 - 🔴 **桌面 App 冒烟**（本机,发前必跑）:装包→Gatekeeper 右键打开→主界面→子代理列表非空→市场有源→配 OpenAI 跑一轮→切模型→默认 agent 跑一次→生成一张图→关掉重开能恢复会话。
-- 🔴 **全量打包构建**:`bun run build` + `cd packages/desktop && bun run dist`（electron-builder,未签名,`CSC_IDENTITY_AUTO_DISCOVERY=false`），确认 main 进程 / node-pty ABI / asarUnpack 没崩。
+- 🔴 **全量打包构建**:`bun run build` + `cd packages/desktop && bun run dist`（electron-builder,未签名,已移除 CSC_IDENTITY_AUTO_DISCOVERY），确认 main 进程 / node-pty ABI / asarUnpack 没崩。
 - 🔴 **`git push`** 未推的 commit 到 origin/main。
 - 🟡 **npm 包**（若本轮要发）:**必用 `bun publish --tag rc` 不是 `npm publish`**（workspace:* 解析）;**发后必真跑一次 bin**（`code-shell --version`）。
 - 🟡 **i18n 全语言点一遍**:中/英切换走主流程,确认无未翻译泄漏 / 无 localStorage 报错。
