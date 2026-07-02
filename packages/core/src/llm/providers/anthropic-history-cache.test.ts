@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { AnthropicClient } from "./anthropic.js";
-import type { CreateMessageOptions, Message } from "../types.js";
+import type { CreateMessageOptions } from "../types.js";
+import type { Message } from "../../types.js";
 
 /**
  * Prompt-cache optimization step 3 (docs/todo/prompt-cache-optimization.md §四):

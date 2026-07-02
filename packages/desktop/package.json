@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-desktop",
-  "version": "0.5.0-rc.2",
+  "version": "0.6.0",
   "private": true,
   "description": "Electron desktop client for code-shell (POC).",
   "type": "module",

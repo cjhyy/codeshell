@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { PermissionClassifier, AutoApprovalBackend } from "./permission.js";
-import type { ApprovalBackend, ApprovalRequest, ApprovalResult } from "./permission.js";
+import type { ApprovalBackend } from "./permission.js";
+import type { ApprovalRequest, ApprovalResult } from "../types.js";
 
 /**
  * #2 regression: in `auto` mode, AutoApprovalBackend auto-approves any request

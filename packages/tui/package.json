@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-tui",
-  "version": "0.5.0-rc.2",
+  "version": "0.6.0",
   "description": "Terminal UI for code-shell — Ink-based REPL on top of @cjhyy/code-shell-core.",
   "type": "module",
   "main": "./dist/index.js",
@@ -17,6 +17,9 @@
   "bin": {
     "code-shell": "./dist/cli/main.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json && node ../../scripts/copy-assets.mjs dist/cli/commands/builtin/init src/cli/commands/builtin/init/templates",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
