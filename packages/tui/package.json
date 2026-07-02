@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-tui",
-  "version": "0.6.0-rc.1",
+  "version": "0.6.0-rc.2",
   "description": "Terminal UI for code-shell — Ink-based REPL on top of @cjhyy/code-shell-core.",
   "type": "module",
   "main": "./dist/index.js",

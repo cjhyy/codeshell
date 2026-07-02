@@ -37,10 +37,10 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
-  readdirSync,
+  readFileSync,
   readlinkSync,
   rmSync,
-  statSync,
+  writeFileSync,
 } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
@@ -90,52 +90,65 @@ function main(): void {
   copyFile(resolve(coreSrc, "package.json"), resolve(target, "package.json"));
 
   // core's production deps — the spawned agent-server requires them at runtime.
-  // bun nests these as symlinks into the global .bun store; dereference into
-  // real files so the packaged app doesn't ship links to absolute store paths
-  // that won't exist on the user's machine. Skip dead/orphan links (dev cruft).
-  materializeNodeModules(
-    resolve(coreSrc, "node_modules"),
-    resolve(target, "node_modules"),
-  );
+  installProductionDeps(target);
 
   log(`materialized core into node_modules (LICENSE/README excluded)`);
 }
 
-function materializeNodeModules(from: string, to: string): void {
-  if (!existsSync(from)) {
-    log(`core has no node_modules (deps hoisted) — nothing to materialize`);
-    return;
-  }
-  mkdirSync(to, { recursive: true });
-  let copied = 0;
-  let skipped = 0;
-  for (const name of readdirSync(from)) {
-    if (name === ".bin" || name === ".vite" || name === ".cache") continue;
-    const src = resolve(from, name);
-    if (name.startsWith("@")) {
-      // Scope dir: copy each inner package independently.
-      mkdirSync(resolve(to, name), { recursive: true });
-      for (const inner of readdirSync(src)) {
-        if (copyPkg(resolve(src, inner), resolve(to, name, inner))) copied++;
-        else skipped++;
-      }
-      continue;
-    }
-    if (copyPkg(src, resolve(to, name))) copied++;
-    else skipped++;
-  }
-  log(`node_modules: copied ${copied}, skipped ${skipped} dead/orphan link(s)`);
-}
+// Install core's FULL production dependency CLOSURE as real files under the
+// materialized target. We deliberately do NOT copy from bun's .bun store: that
+// store lays each package's transitive deps out as siblings inside the store
+// (e.g. @modelcontextprotocol/sdk's `cross-spawn` lives next to it in the
+// store, not in core/node_modules' top level). An earlier version walked only
+// core/node_modules' top level and dereferenced each package — which shipped
+// the SDK but NOT its transitive `cross-spawn`/`express`/`hono`/…, so the
+// packaged app crashed at runtime with `Cannot find package 'cross-spawn'`.
+//
+// Instead, let bun compute the closure: write a minimal package.json carrying
+// ONLY core's `dependencies`, then `bun install --production --linker=hoisted`.
+// `--production` drops devDependencies; `--linker=hoisted` produces a flat tree
+// of REAL directories (no symlinks into an absolute .bun store path that won't
+// exist on the user's machine). This is self-maintaining: when a dep bumps and
+// pulls in new transitive deps, they are installed automatically — no manual
+// store-walking to keep in sync.
+function installProductionDeps(coreTarget: string): void {
+  const corePkg = JSON.parse(
+    readFileSync(resolve(coreSrc, "package.json"), "utf8"),
+  ) as { name: string; version: string; dependencies?: Record<string, string> };
 
-/** Copy one package dir, dereferencing links. Returns false on dead link. */
-function copyPkg(src: string, dest: string): boolean {
-  try {
-    statSync(src); // follows links; throws on a dead link → skip
-    cpSync(src, dest, { recursive: true, dereference: true });
-    return true;
-  } catch {
-    return false;
-  }
+  // Minimal manifest: name/version + prod deps only. Omitting workspace fields
+  // (workspaces, scripts, devDependencies) keeps bun from re-linking the
+  // monorepo or running lifecycle scripts here.
+  writeFileSync(
+    resolve(coreTarget, "package.json"),
+    JSON.stringify(
+      {
+        name: corePkg.name,
+        version: corePkg.version,
+        dependencies: corePkg.dependencies ?? {},
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+
+  log(`installing core production dependency closure (bun install --production)`);
+  execFileSync("bun", ["install", "--production", "--linker=hoisted"], {
+    cwd: coreTarget,
+    stdio: "inherit",
+  });
+
+  // Restore core's REAL package.json (with `main`/`exports` entry points) — the
+  // minimal manifest above was only a vehicle for the install. Use an explicit
+  // readFileSync→writeFileSync, NOT cpSync: `bun install` leaves the target
+  // package.json in a state where cpSync(dereference) silently fails to
+  // overwrite it, so the minimal manifest (no main/exports) would ship and the
+  // app would fail to resolve `@cjhyy/code-shell-core` and its
+  // `/bin/agent-server-stdio` subpath. The node_modules/ bun just created stays.
+  writeFileSync(
+    resolve(coreTarget, "package.json"),
+    readFileSync(resolve(coreSrc, "package.json"), "utf8"),
+  );
 }
 
 function copyDir(from: string, to: string): void {
