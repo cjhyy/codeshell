@@ -440,11 +440,20 @@ export class AnthropicClient extends LLMClientBase {
   }
 
   private convertTools(tools: ToolDefinition[]): Anthropic.Tool[] {
-    return tools.map((t) => ({
+    const converted: Anthropic.Tool[] = tools.map((t) => ({
       name: t.name,
       description: t.description,
       input_schema: t.inputSchema as Anthropic.Tool.InputSchema,
     }));
+    // Prompt-cache breakpoint: mark ONLY the last tool. The API caches every
+    // block up to and including a cache_control marker, so one marker on the
+    // tail makes the whole (stable) tools array a cached prefix — vs 73
+    // definitions re-billed as input every turn. CC does the same (one marker,
+    // not per-tool); a second marker here would waste a scarce cache_control
+    // slot (max 4) and risk KV eviction. See docs/todo/prompt-cache-optimization.md.
+    const last = converted[converted.length - 1];
+    if (last) last.cache_control = { type: "ephemeral" };
+    return converted;
   }
 
   private handleApiError(err: unknown): never {
