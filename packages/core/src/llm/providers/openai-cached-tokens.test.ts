@@ -102,4 +102,28 @@ describe("OpenAIClient cached-token mapping", () => {
     const resp = await client.createMessage(opts);
     expect(resp.usage?.cacheReadTokens).toBeUndefined();
   });
+
+  it("maps OpenRouter cache_write_tokens → usage.cacheCreationTokens (first-turn write)", async () => {
+    const client = nonStreamClient({
+      prompt_tokens: 4000,
+      completion_tokens: 5,
+      total_tokens: 4005,
+      prompt_tokens_details: { cached_tokens: 0, cache_write_tokens: 3511 },
+    });
+    const resp = await client.createMessage(opts);
+    expect(resp.usage?.cacheReadTokens).toBe(0);
+    expect(resp.usage?.cacheCreationTokens).toBe(3511);
+  });
+
+  it("leaves cacheCreationTokens undefined when the API omits cache_write_tokens", async () => {
+    const client = nonStreamClient({
+      prompt_tokens: 1000,
+      completion_tokens: 5,
+      total_tokens: 1005,
+      prompt_tokens_details: { cached_tokens: 800 },
+    });
+    const resp = await client.createMessage(opts);
+    expect(resp.usage?.cacheReadTokens).toBe(800);
+    expect(resp.usage?.cacheCreationTokens).toBeUndefined();
+  });
 });

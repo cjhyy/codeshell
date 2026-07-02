@@ -27,16 +27,31 @@ import {
 } from "../stream-watchdog.js";
 
 /**
- * Extract OpenAI's automatic prompt-cache hit count. The API reports cached
- * input tokens under `usage.prompt_tokens_details.cached_tokens` (NOT a
- * top-level field). Returns a spreadable partial so callers omit the key
- * entirely when the API reports no cache details — keeping cacheReadTokens
- * `undefined` rather than a misleading 0. See docs/todo/prompt-cache-optimization.md.
+ * Extract prompt-cache counts from an OpenAI-compatible usage object.
+ *
+ * - Cache HITS live under `usage.prompt_tokens_details.cached_tokens` (NOT a
+ *   top-level field). Both OpenAI and OpenRouter report this.
+ * - Cache WRITES (first-time prefix ingestion) are reported by OpenRouter as
+ *   `prompt_tokens_details.cache_write_tokens` (verified live 2026-07-02).
+ *   OpenAI's automatic caching has no separate write charge and omits it. We
+ *   map it to `cacheCreationTokens` so the UI can show "writing cache" on the
+ *   first turn, not just hits on later turns.
+ *
+ * Returns a spreadable partial so callers omit each key entirely when the API
+ * reports no value — keeping the field `undefined` rather than a misleading 0.
+ * See docs/todo/prompt-cache-optimization.md.
  */
-function cachedTokensOf(usage: unknown): { cacheReadTokens?: number } {
-  const cached = (usage as { prompt_tokens_details?: { cached_tokens?: number } } | undefined)
-    ?.prompt_tokens_details?.cached_tokens;
-  return typeof cached === "number" ? { cacheReadTokens: cached } : {};
+function cachedTokensOf(usage: unknown): { cacheReadTokens?: number; cacheCreationTokens?: number } {
+  const details = (
+    usage as
+      | { prompt_tokens_details?: { cached_tokens?: number; cache_write_tokens?: number } }
+      | undefined
+  )?.prompt_tokens_details;
+  const out: { cacheReadTokens?: number; cacheCreationTokens?: number } = {};
+  if (typeof details?.cached_tokens === "number") out.cacheReadTokens = details.cached_tokens;
+  if (typeof details?.cache_write_tokens === "number")
+    out.cacheCreationTokens = details.cache_write_tokens;
+  return out;
 }
 
 interface RunStreamOpts {
@@ -226,6 +241,23 @@ export class OpenAIClient extends LLMClientBase {
       this._capability = capabilitiesFor(kind, this.model);
     }
     return this._capability;
+  }
+
+  /**
+   * True when this client routes an Anthropic-family model through OpenRouter's
+   * OpenAI-compatible endpoint. Anthropic caching is EXPLICIT — nothing is
+   * cached unless the request carries `cache_control` breakpoints (verified live
+   * 2026-07-02: plain requests to anthropic/claude-opus-4.7-fast via OpenRouter
+   * report cached_tokens 0 on every repeat; a single system-block breakpoint
+   * turns the whole stable prefix — tools + system — into a cache hit, ~89%
+   * cheaper on the follow-up). OpenAI and other OpenRouter models cache
+   * automatically, so they must NOT get breakpoints. The slug arrives resolved
+   * (e.g. "anthropic/claude-opus-4.7-fast") or as the router alias
+   * ("~anthropic/claude-opus-latest") — both start with an optional "~" then
+   * "anthropic/".
+   */
+  private get isOpenRouterAnthropic(): boolean {
+    return this.config.providerKind === "openrouter" && /^~?anthropic\//.test(this.model);
   }
 
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
@@ -909,7 +941,57 @@ export class OpenAIClient extends LLMClientBase {
       }
     }
 
+    if (this.isOpenRouterAnthropic) {
+      this.applyAnthropicCacheBreakpoints(result);
+    }
+
     return result;
+  }
+
+  /**
+   * In-place: add prompt-cache breakpoints for Anthropic-over-OpenRouter.
+   * Mirrors the native anthropic provider (≤4 breakpoints):
+   *   1. System block  — the stable prefix. Anthropic sees tools BEFORE the
+   *      system prompt, so one marker on the system block caches tools too
+   *      (verified live: system-only marker cached 3511/3952 prompt tokens
+   *      including tool defs).
+   *   2. Last message  — one rolling breakpoint so the growing conversation
+   *      history becomes a cached prefix. Not scrolled: as history grows the
+   *      "last message" naturally advances and its tail is the next write.
+   * A string `content` is lifted to a single-element `[{type:"text",...}]`
+   * array so it can carry `cache_control`; OpenRouter accepts this OpenAI
+   * multimodal wire form for text.
+   */
+  private applyAnthropicCacheBreakpoints(messages: OpenAI.ChatCompletionMessageParam[]): void {
+    const mark = (m: OpenAI.ChatCompletionMessageParam | undefined): void => {
+      if (!m) return;
+      // Lift a plain-string content to a text-block array so it can carry the
+      // marker. Non-text content (tool messages, image arrays) already uses an
+      // array of parts — mark the last part instead.
+      if (typeof m.content === "string") {
+        (m as { content: unknown }).content = [
+          { type: "text", text: m.content, cache_control: { type: "ephemeral" } },
+        ];
+        return;
+      }
+      if (Array.isArray(m.content) && m.content.length > 0) {
+        // cache_control is an Anthropic-via-OpenRouter extension field, not in
+        // the OpenAI content-part union — attach through `unknown`.
+        const last = m.content[m.content.length - 1] as unknown as {
+          cache_control?: { type: "ephemeral" };
+        };
+        last.cache_control = { type: "ephemeral" };
+      }
+    };
+
+    // 1. System block (always index 0 — buildMessages seeds it first).
+    const sys = messages[0];
+    if (sys && sys.role === "system") mark(sys);
+
+    // 2. Rolling history breakpoint on the very last message. Skip if it IS the
+    //    system message (no conversation yet) — one breakpoint already covers it.
+    const last = messages[messages.length - 1];
+    if (last && last !== sys) mark(last);
   }
 
   private convertTools(tools: ToolDefinition[]): OpenAI.ChatCompletionTool[] {
