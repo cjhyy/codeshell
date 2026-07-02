@@ -2417,6 +2417,32 @@ export class Engine {
   }
 
   /**
+   * Zero a session's cumulative token/cache usage on disk. Called on a model
+   * switch: a different model has its own prompt cache, so the accumulated
+   * cache-hit stats from the prior model are no longer meaningful. The next
+   * run's baseline (snapshotted from state.tokenUsage) then starts from zero.
+   */
+  resetSessionUsage(sessionId: string): void {
+    const zero: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+    // If the session is mid-run right now, update its live state so the next
+    // turn-boundary write doesn't re-fold a stale baseline.
+    if (this.activeRunSession?.state.sessionId === sessionId) {
+      this.activeRunSession.state.tokenUsage = { ...zero };
+    }
+    // Persist to disk so a reload / next run picks up the reset.
+    if (this.sessionManager.exists(sessionId)) {
+      try {
+        const bundle = this.sessionManager.resume(sessionId);
+        bundle.state.tokenUsage = { ...zero };
+        this.sessionManager.saveState(bundle.state);
+      } catch {
+        // Session not resumable (never persisted yet) — the in-memory reset
+        // above covers the live case; nothing else to do.
+      }
+    }
+  }
+
+  /**
    * Write the active model selection to ~/.code-shell/settings.json.
    *
    * Persists settings.defaults.text = entry.key (the connection id == pool
