@@ -419,6 +419,13 @@ export function loadTranscript(
       streamingThinkingId: parsed.streamingThinkingId ?? null,
       sessionId: parsed.sessionId ?? null,
       promptTokens: parsed.promptTokens ?? 0,
+      // Session-cumulative cache/prompt totals: persisted so the "本会话累计
+      // 命中率" tooltip survives a refresh / localStorage reload (the cumulative
+      // usage_update isn't replayed from the transcript). Absent on legacy
+      // saved transcripts → 0.
+      sessionCacheReadTokens: parsed.sessionCacheReadTokens ?? 0,
+      sessionCacheCreationTokens: parsed.sessionCacheCreationTokens ?? 0,
+      sessionPromptTokens: parsed.sessionPromptTokens ?? 0,
       activeAgents: parsed.activeAgents ?? {},
       agentMessageIndex: parsed.agentMessageIndex ?? {},
       turnEpoch: parsed.turnEpoch ?? 0,

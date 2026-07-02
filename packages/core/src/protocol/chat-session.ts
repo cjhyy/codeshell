@@ -173,7 +173,20 @@ export class ChatSession {
       this.pendingModel = key;
       return;
     }
+    this.applyModelSwitch(key);
+  }
+
+  /**
+   * Perform the actual model switch for this session: rotate the engine's model
+   * and reset the session's cumulative usage on disk — a different model has a
+   * different prompt cache, so the old cache-hit stats no longer apply. The
+   * renderer zeroes its own cumulative display when it issues the switch (it's
+   * renderer-initiated), so no stream event is needed here. Shared by the idle
+   * path and the deferred run-boundary path.
+   */
+  private applyModelSwitch(key: string): void {
     this.engine.switchModel(key);
+    this.engine.resetSessionUsage(this.id);
   }
 
   queueDepth(): number {
@@ -224,7 +237,7 @@ export class ChatSession {
       // requested mid-run. Done here (not in pump) so it still applies when
       // no further turn is queued.
       if (this.pendingModel !== null) {
-        this.engine.switchModel(this.pendingModel);
+        this.applyModelSwitch(this.pendingModel);
         this.pendingModel = null;
       }
       // Drain the next turn if one is waiting.

@@ -9,8 +9,15 @@ import type { Engine, EngineResult } from "../engine/engine.js";
  * per-session handling and the "don't change the model under a running client"
  * rule from the session-isolation research).
  */
-function fakeEngine(): { engine: Engine; switched: string[]; release: () => void; runStarted: Promise<void> } {
+function fakeEngine(): {
+  engine: Engine;
+  switched: string[];
+  resetUsage: string[];
+  release: () => void;
+  runStarted: Promise<void>;
+} {
   const switched: string[] = [];
+  const resetUsage: string[] = [];
   let releaseRun!: () => void;
   let signalStarted!: () => void;
   const runStarted = new Promise<void>((r) => (signalStarted = r));
@@ -20,6 +27,9 @@ function fakeEngine(): { engine: Engine; switched: string[]; release: () => void
     switchModel(key: string) {
       switched.push(key);
       return { key, model: key } as never;
+    },
+    resetSessionUsage(sessionId: string) {
+      resetUsage.push(sessionId);
     },
     async run(): Promise<EngineResult> {
       signalStarted();
@@ -34,7 +44,7 @@ function fakeEngine(): { engine: Engine; switched: string[]; release: () => void
     },
   } as unknown as Engine;
 
-  return { engine, switched, release: releaseRun, runStarted };
+  return { engine, switched, resetUsage, release: releaseRun, runStarted };
 }
 
 describe("ChatSession.requestModelSwitch", () => {
@@ -43,6 +53,26 @@ describe("ChatSession.requestModelSwitch", () => {
     const session = new ChatSession({ id: "s", engine });
     session.requestModelSwitch("haiku");
     expect(switched).toEqual(["haiku"]);
+  });
+
+  it("resets session cumulative usage on an idle switch", () => {
+    const { engine, resetUsage } = fakeEngine();
+    const session = new ChatSession({ id: "s", engine });
+    session.requestModelSwitch("haiku");
+    // Different model = different prompt cache → cumulative cache stats reset.
+    expect(resetUsage).toEqual(["s"]);
+  });
+
+  it("resets usage on a deferred (mid-run) switch too, at the run boundary", async () => {
+    const { engine, resetUsage, release, runStarted } = fakeEngine();
+    const session = new ChatSession({ id: "s", engine });
+    const turn = session.enqueueTurn("do work", {});
+    await runStarted;
+    session.requestModelSwitch("gpt");
+    expect(resetUsage).toEqual([]); // deferred, not yet
+    release();
+    await turn;
+    expect(resetUsage).toEqual(["s"]);
   });
 
   it("defers the switch until the run boundary when a turn is in flight", async () => {
