@@ -81,6 +81,14 @@ interface Props {
    * to true (popout window / older callers are always considered visible).
    */
   visible?: boolean;
+  /**
+   * Electron webview partition for storage/session isolation. Passed per chat
+   * session so one session's browsing (cookies, logged-in state, the live page)
+   * doesn't bleed into another's — sessions each got the same global
+   * `persist:browser` before, so switching sessions showed the prior session's
+   * page. Defaults to the shared partition for the popout / legacy callers.
+   */
+  partition?: string;
 }
 
 /**
@@ -88,7 +96,7 @@ interface Props {
  * persistent partition) with a self-drawn address bar, tabs, and a
  * localhost bookmark list discovered by port-probing common dev ports.
  */
-export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveAnchor, onUpdateAnchor, showPopout = true, visible = true }: Props) {
+export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveAnchor, onUpdateAnchor, showPopout = true, visible = true, partition }: Props) {
   const { t } = useT();
   const emitAnchor = onAnchor ?? addAnchor;
 
@@ -286,6 +294,7 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
             key={activeId}
             ref={viewRef}
             initialUrl={active.url}
+            partition={partition}
           />
         )}
 

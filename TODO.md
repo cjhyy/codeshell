@@ -8,7 +8,7 @@
 
 > 用户在 macOS arm64 真机测试 v0.6.0-rc.2（桌面端 + CLI）。发现的问题按报告顺序记录在此,待批量修复。
 
-- ⬜ **[浏览器面板/跨session] 切换 session 时旧浏览器内容串到新 session 的浏览器面板** — 复现:session A 面板开了浏览器(某网页),切到 session B(B 面板也有浏览器),A 的浏览器内容自动出现在了 B 的浏览器面板上。期望:浏览器 webview 内容按 session 隔离,各 session 的浏览器互不串。疑似浏览器面板/webview 是全局单例(或按 panel 而非 session 归属),切 session 时没换成该 session 自己的 webview/URL。与"权限弹窗归属错 session"同类(跨 session 状态未隔离)。待定位:浏览器面板组件的 webview 实例/URL 归属——是全局共享一个 webview 还是按 sessionId 分。关联 `project_browser_panel_nav_bugs`、`project_browser_selection_echo_session`(浏览器按 session 归桶)、`project_desktop_four_panels`。⚠️ 需真机验(webview 行为)。
+- ✅ **[浏览器面板/跨session] 切换 session 时旧浏览器内容串到新 session 的浏览器面板**(worktree beta-rc2-fixes)— 根因:所有 session 的 webview 共享全局 `partition="persist:browser"`(`WebviewHost.tsx:25` 硬编码 + `main/index.ts:1078` 强制),存储/会话不隔离(终端对比:pty 按 sessionId 隔离所以没问题)。修:WebviewHost 加 `partition` prop(冻结,默认仍 persist:browser 兼容 popout);BrowserPanel 透传;PanelArea 按 bucket 传 `persist:browser:${bucket}`(每 session 独立分区);main will-attach-webview 只放行 `persist:browser` 前缀分区(防越权)。⚠️ 真机验 webview 隔离。原始描述: 复现:session A 面板开了浏览器(某网页),切到 session B(B 面板也有浏览器),A 的浏览器内容自动出现在了 B 的浏览器面板上。期望:浏览器 webview 内容按 session 隔离,各 session 的浏览器互不串。疑似浏览器面板/webview 是全局单例(或按 panel 而非 session 归属),切 session 时没换成该 session 自己的 webview/URL。与"权限弹窗归属错 session"同类(跨 session 状态未隔离)。待定位:浏览器面板组件的 webview 实例/URL 归属——是全局共享一个 webview 还是按 sessionId 分。关联 `project_browser_panel_nav_bugs`、`project_browser_selection_echo_session`(浏览器按 session 归桶)、`project_desktop_four_panels`。⚠️ 需真机验(webview 行为)。
 > 已修:桌面端启动崩溃 `Cannot find package 'cross-spawn'`（predist 依赖闭包,见 `project_release_ci_pipeline`）。
 
 <!-- 用户反馈问题追加到这里,格式:

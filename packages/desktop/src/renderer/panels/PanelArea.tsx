@@ -378,6 +378,7 @@ export function PanelArea({
                     idle-evict its <webview> after it's been off-screen a while. */}
                 <PanelBody
                   tab={t}
+                  bucket={b}
                   visible={!hidden && onActiveBucket && t.id === activeId}
                   cwd={ctx.cwd}
                   repoId={ctx.repoId}
@@ -426,6 +427,7 @@ function PanelLanding({ onPick }: { onPick: (k: PanelTab) => void }) {
 
 function PanelBody({
   tab,
+  bucket,
   visible,
   cwd,
   repoId,
@@ -441,6 +443,7 @@ function PanelBody({
   onUpdateBrowserAnchor,
 }: {
   tab: OpenTab;
+  bucket: string;
   visible: boolean;
   cwd: string | null;
   repoId: string | null;
@@ -459,7 +462,11 @@ function PanelBody({
     case "files":
       return <FilesPanel cwd={cwd} onAttachImage={onAttachImage} revealFile={revealFile} onRevealConsumed={onRevealConsumed} />;
     case "browser":
-      return <BrowserPanel cwd={cwd} visible={visible} openUrl={openUrl} anchors={browserAnchors} onRemoveAnchor={onRemoveBrowserAnchor} onUpdateAnchor={onUpdateBrowserAnchor} />;
+      // Per-bucket partition so each chat session's browser is storage/page
+      // isolated (bucket = `${repoKey}::${sessionId}`). Sanitize to the chars
+      // Electron allows in a partition name (the bucket has `::`, which is fine,
+      // but be defensive about anything exotic).
+      return <BrowserPanel cwd={cwd} visible={visible} openUrl={openUrl} anchors={browserAnchors} onRemoveAnchor={onRemoveBrowserAnchor} onUpdateAnchor={onUpdateBrowserAnchor} partition={`persist:browser:${bucket.replace(/[^a-zA-Z0-9_:.@-]/g, "_")}`} />;
     case "review":
       return <ReviewPanel cwd={cwd} files={reviewFiles} turnDiff={reviewDiff} />;
     case "terminal":

@@ -1075,7 +1075,16 @@ function hardenWebviewGuests(win: BrowserWindow): void {
     // OS popup window while still intercepting the URL. Not a security loosening:
     // every popup is denied; we only read its URL to open an in-app tab.
     (params as Record<string, unknown>).allowpopups = true;
-    if (!params.partition) params.partition = "persist:browser";
+    // Partition = the guest's isolated storage/session. The renderer passes a
+    // per-chat-session partition (`persist:browser:<bucket>`) so one session's
+    // cookies/logged-in state/live page don't bleed into another's. Only honor a
+    // `persist:browser`-prefixed value (defense-in-depth: never let a guest pick
+    // an arbitrary partition, e.g. the app's own default session); anything else
+    // → the shared browser partition.
+    const wantPartition = typeof params.partition === "string" ? params.partition : "";
+    params.partition = wantPartition.startsWith("persist:browser")
+      ? wantPartition
+      : "persist:browser";
   });
   win.webContents.on("did-attach-webview", (_e, guest) => {
     // Register as the browser-automation target (most-recent guest = active tab).

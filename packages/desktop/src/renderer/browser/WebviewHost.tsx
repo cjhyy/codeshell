@@ -15,16 +15,22 @@ import type { WebviewElement } from "./types";
  * Mounted fresh per tab (keyed by tab id upstream), so each tab loads its own
  * initial url exactly once.
  */
-export const WebviewHost = React.forwardRef<WebviewElement, { initialUrl: string }>(
-  function WebviewHost({ initialUrl }, ref) {
-    const frozenSrc = useRef(initialUrl).current;
-    return (
-      <webview
-        ref={ref as unknown as React.Ref<HTMLElement>}
-        src={frozenSrc}
-        partition="persist:browser"
-        style={{ width: "100%", height: "100%", display: "flex" }}
-      />
-    );
-  },
-);
+export const WebviewHost = React.forwardRef<
+  WebviewElement,
+  { initialUrl: string; partition?: string }
+>(function WebviewHost({ initialUrl, partition = "persist:browser" }, ref) {
+  const frozenSrc = useRef(initialUrl).current;
+  // Freeze the partition too (like src): a webview's partition can't change
+  // after attach, and it identifies the isolated storage/session the guest runs
+  // in. Per-session partitions keep one chat session's browsing (cookies, logged-
+  // in state, and the live page) from bleeding into another's.
+  const frozenPartition = useRef(partition).current;
+  return (
+    <webview
+      ref={ref as unknown as React.Ref<HTMLElement>}
+      src={frozenSrc}
+      partition={frozenPartition}
+      style={{ width: "100%", height: "100%", display: "flex" }}
+    />
+  );
+});
