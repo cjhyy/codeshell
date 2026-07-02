@@ -5,6 +5,7 @@
 排序规则：按最终优先级归档为 `Critical` / `High` / `Medium` / `Low` / `Follow-up / 待复核` / `Hardening / Product TODO` / `已核实未作为 Bug`。原分轮来源只在必要时进入条目正文，不再作为 section 标题。
 
 > 状态复核（2026-07-01，用 Explore agent 逐条核对源码）：Critical + High 前 9 项已在 commit `d9541fc9`（另含 ws-trust-v2）修复合入 main，下方标 `[x]`。其余 High/Medium/Low 逐条核对结论标注在条目正文。
+> 更新（2026-07-01）：最后一项 High（插件缓存路径 segment 校验）已修合入 main（`3b6df273`）。High 全清，剩 Medium/Low/加固项与发布关键路径。
 
 ## Critical
 
@@ -83,7 +84,7 @@
   - 修复方向：在 `parseBrowserActionLine` 构造 request 时补齐字段并做类型校验。
   - 回归验证：新增 intercept 单测，覆盖 selectOption/pressKey/fetchImages/switchTab 四类 action 的参数透传。
 
-- [ ] **校验插件缓存路径 segment，避免 marketplace manifest 写出 cache root** — 【核对 2026-07-01：确认 NOT DONE — `pluginCacheDir()` 直接 join,`materialize()` 从 manifest 取 marketplace/plugin 不调 `assertSafePluginName()`】（唯一剩余 High）
+- [x] **校验插件缓存路径 segment，避免 marketplace manifest 写出 cache root** — 已修(3b6df273)：`pluginCacheDir` 导出并对 marketplace/plugin/version 三段复用 `assertSafePluginName`；`installPlugin` 包 materialize try/catch 把 `PluginInstallError` 转 `{ ok:false }` 防崩宿主。+7 TDD,plugins 163 pass。
   - 影响：供应链路径穿越；恶意 marketplace manifest 可将插件缓存写出 cache root。
   - 相关文件：`packages/core/src/plugins/pluginInstaller.ts:43-44,191,209,235,257`；`packages/core/src/plugins/installer/paths.ts:10-16`。
   - 问题：manifest 中进入缓存路径的 marketplace/plugin/version path segment 进入 `join(cacheRoot, marketplace, plugin, version)`，但未复用本地 install 路径已有的安全名称校验。注意：这不同于下方 Low 的 marketplace root name latent 项。
@@ -92,34 +93,34 @@
 
 ## Medium
 
-- [ ] **自动化/cron full 档可调 DriveAgent 绕开 tier+sandbox（外部 CLI 无沙箱）** — 【核对 2026-07-01：确认 NOT DONE — `AUTOMATION_DISABLED_TOOLS` 只禁 cron 三件套,不含 DriveAgent/DriveClaudeCode】
+- [ ] **自动化/cron full 档可调 DriveAgent 绕开 tier+sandbox（外部 CLI 无沙箱）** — 【用户决策：不管这块】。曾在 279ef935 禁用，已于 ccc55146 撤销(DriveAgent/DriveClaudeCode 自动化里重新可用)。RemoteTrigger 仍随 7e372357 整体移除(死工具)。
   - 严重级别：Medium。前置是存在 `permissionLevel:"full"` 的 cron/automation run；read-only/workspace-write 档会被 TierApprovalBackend 正确拒绝。
   - 影响：full 档 cron run 可调用 DriveAgent → 外部 claude/codex 以 `bypassPermissions` + 无 seatbelt 运行，打破 automation write-policy“即使 full 也逃不出 workspace”的不变量。DriveAgent 子进程继承 worker 真实 `process.env`，不会自动拿到 CodeShell `Credential.exposeAsEnv` 或 settings 顶层 `env`，但用户从带 API key 的 shell 启动桌面/worker 时仍会传给外部 CLI。
   - 相关文件：`packages/desktop/src/main/automationToolset.ts:19-33`；`packages/desktop/src/main/automation-host.ts:105-133`；`packages/core/src/preset/index.ts:84-85,90`；`packages/core/src/tool-system/builtin/drive-claude-code.ts:71-105`；`packages/core/src/cc-orchestrator/external-agent-driver.ts:26-53`；`packages/core/src/sandbox/index.ts:5-9`；`packages/core/src/engine/engine.ts:2947-2981`；`packages/core/src/tool-system/builtin/bash.ts:99-103`。
   - 修复方向：把 DriveAgent / DriveClaudeCode / RemoteTrigger 加入 `AUTOMATION_DISABLED_TOOLS`；或 DriveAgent 识别 automation origin 时拒绝/强制 default+sandbox；外部 CLI env 改成 allowlist。
   - 回归验证：`automationBuiltinTools()` 不含 Drive* / RemoteTrigger；full 档 cron run 调 DriveAgent 被拒/不可见且不 spawn；外部 agent env 不含来自 CredentialStore.envExposures/settings.env 的键。
 
-- [ ] **CronCreate 的 `permissionLevel` 由模型自选 `full`，且 full 档 headless 可无人值守调用 MCP 副作用工具** — 【核对 2026-07-01：确认 NOT DONE — schema enum 无上限约束,描述仅 advisory】
+- [ ] **CronCreate 的 `permissionLevel` 由模型自选 `full`，且 full 档 headless 可无人值守调用 MCP 副作用工具** — 【核对 2026-07-01：确认 NOT DONE — schema enum 无上限约束,描述仅 advisory】【复评 2026-07-01：触发面已收窄 — CronCreate `permissionDefault:"ask"`，交互会话每次建 job 都弹审批并展示 permissionLevel；`full`/`workspace-write` 非静默。auto/DriveAgent-bypass 递归路径已随 279ef935(automation 禁 DriveAgent)关闭。blanket cap 会破坏合法「建每日开 PR 的 full 任务」→ 属产品决策待用户拍板：是否对 full/workspace-write cron 加二次专门确认 + MCP allowlist，而非硬上限。剩 MCP allowlist 子面(cron 执行套 allowlist)仍可做】
   - 影响：被 prompt-injection 诱导的模型可自建 `permissionLevel:"full"` 的循环 cron job；到点以 bypass 档无人值守执行任意 prompt，并可调用任意 MCP 副作用工具。sandbox 管不住 MCP server 的网络/外部副作用。
   - 相关文件：`packages/core/src/tool-system/builtin/cron.ts:39-45,67-72`；`packages/core/src/automation/scheduler.ts:31,411-437`。
   - 状态：已确认 MCP 子面。`CronCreate` 默认 `default` 模式下分类为 ask，故非静默；但在 auto / DriveAgent bypass 上下文中不弹。credential 工具在 cron full 下无 `askUser` 会 fail-closed，已证伪为非问题。
   - 修复方向：限制模型可申请的最高 `permissionLevel`；对 `full`/`workspace-write` cron 强制用户显式确认且展示 MCP/网络副作用风险；cron 执行时套用 MCP allowlist。
   - 回归验证：cron full 执行 MCP 写/发网络类工具时应被拦截或要求预授权；credential 工具无 askUser 继续 fail-closed。
 
-- [ ] **Bash safe-read 绕过 path-policy，敏感文件/凭证可零审批外泄** — 【核对 2026-07-01：确认 NOT DONE — `SAFE_READ_PATTERNS` 含 `/^env$/`、`/^printenv/`,无敏感路径降级】
+- [x] **Bash safe-read 绕过 path-policy，敏感文件/凭证可零审批外泄** — 已修(f946e0db)：新增 `segmentIsSensitiveRead`，safe-read 命中 env-dump(`env`/`printenv`)或敏感路径(.ssh/id_*、.env*、credentials.json、.aws/.npmrc/.netrc/.pgpass/.docker/.kube/gh hosts/.gnupg/.git-credentials)降级为 unsafe→ask；整段+pipe 每段都接入，普通读仍 safe-read。+5 TDD，tool-system 509 pass。
   - 影响：`Read ~/.ssh/id_rsa` 走 path-policy 会 ask，但等价的 `cat ~/.ssh/id_rsa` 被 YOLO 分类为 `safe-read`；桌面默认 sandbox=off 下直接自动放行、无审批、无沙箱。`env` / `printenv` 同属 safe-read，会 dump `Credential.exposeAsEnv` 注入的密钥与顶层 `env` 的 API key。
   - 相关文件：`packages/core/src/tool-system/permission.ts:543-564`；`packages/core/src/tool-system/executor.ts:249-261,507-524`；`packages/core/src/engine/sandbox-config.ts:52`；`packages/core/src/engine/engine.ts:2967-2974`。
   - 修复方向：safe-read 分类对命中敏感路径的参数降级为 ask；`env`/`printenv` 在有敏感 env 时降级为 ask；或桌面默认开 seatbelt deniedReads。
   - 回归验证：默认（非 bypass）模式下 `Bash("cat ~/.ssh/id_rsa")`、`Bash("printenv")` 应触发审批而非静默放行。
 
-- [ ] **stdio MCP server 默认继承宿主全量 `process.env`，缺少敏感环境变量过滤** — 【核对 2026-07-01：确认 NOT DONE — `buildStdioEnv()` 直接 spread `process.env`,无过滤】
+- [x] **stdio MCP server 默认继承宿主全量 `process.env`，缺少敏感环境变量过滤** — 已修(cd6dfbf1)：新增 `filterSensitiveEnv`，`buildStdioEnv` 从继承 base 剥掉 secret-shaped key(_KEY/_TOKEN/SECRET/PASSWORD/PASSWD/_PAT/CREDENTIAL/APIKEY/ACCESS_KEY)；显式 envVars/config.env 用户意图仍下发，PATH/HOME 保留。+4 TDD，tool-system 513 pass。
   - 影响：插件自带或自动连接的 stdio MCP server 可默认获得 CodeShell 进程环境中的 API key、tokens、代理配置等敏感变量；这与用户对 MCP server 的最小授权预期不一致。
   - 相关范围：`packages/core/src/tool-system/mcp-manager.ts`；MCP server stdio 启动 / env merge 相关代码。
   - 状态：已确认。`exposeAsEnv` 只进 Bash 不经 MCP 的说法已证伪为低风险；但 stdio MCP 继承宿主 `process.env` 本身是确认问题。
   - 修复方向：默认只传最小 env（PATH、HOME、必要运行时变量），对 `*_KEY`、`*_TOKEN`、`SECRET`、`PASSWORD`、credential 注入变量等做 denylist/allowlist；项目/用户显式配置的 MCP env 才传入。
   - 回归验证：启动 fake stdio MCP server，断言默认 env 不含测试 API key；显式配置 env 时才出现。
 
-- [ ] **Desktop 普通会话删除只清 renderer localStorage，遗漏 on-disk 会话目录与后台 shell 回收** — 【核对 2026-07-01：确认 NOT DONE — 只有 `source==="automation"` 走 `window.codeshell.deleteSession`,普通会话只 `deleteSessionLocal`】
+- [x] **Desktop 普通会话删除只清 renderer localStorage，遗漏 on-disk 会话目录与后台 shell 回收** — 已修(667470b8)：抽纯函数 `planSessionDeletion`，所有 source 都 `deleteSession`(IPC 回收 shell+rm dir+forget)，automation 额外 cancel 在途 run + deleteRun。+5 TDD，desktop tsc 干净。
   - 影响：删普通对话后，`~/.code-shell/sessions/<sessionId>/`（transcript.jsonl + state.json）残留；该会话关联的后台 shell 不被回收，造成孤儿进程与磁盘堆积。
   - 相关文件：`packages/desktop/src/renderer/App.tsx:1132-1172`；`packages/desktop/src/renderer/transcripts.ts:460-466,490-504`；`packages/desktop/src/main/index.ts:2619-2628`；`packages/desktop/src/main/sessions-service.ts:61-81`；`packages/core/src/protocol/server.ts:847-864`；`packages/core/src/runtime/background-shell.ts:479-484`。
   - 结论：确认。普通会话只走 localStorage；IPC 回收路径仅 automation 会话触达。idle sweeper/tab-close 不杀 shell，“显式删除”本应是会 kill 的路径。
@@ -147,21 +148,21 @@
   - 修复方向：`images:readDataUrl` 接收 `root` 并复用 `resolveWithin`；或渲染层先过 rooted `fileExists`；域外路径改为点击确认后读取。
   - 回归验证：含工作区外 `.png/.svg` 的 assistant 消息或 AttachmentCard 不应读取域外路径；工作区内图片仍显示；workspace 内 symlink 指向域外图片应拒绝。
 
-- [ ] **provider `httpHeaders` 自定义 header 值可通过 `config_get("providers")` 明文返回**
+- [x] **provider `httpHeaders` 自定义 header 值可通过 `config_get("providers")` 明文返回** — 已修(315adc68)：`redactSecrets` 加 `HEADERS_CONTAINER_RE`(httpHeaders/headers/defaultHeaders/envHeaders)整块脱敏，不看内层 header 名全 redact 非空值(保留 present-vs-absent)；普通含 header 字样字段不误伤。+3 TDD。
   - 当前归档：Medium（偏 Low，但属于确认的敏感信息脱敏缺口）。
   - 影响：`config_get` 面向协议对端做脱敏，但 `httpHeaders` 只按 header 键名匹配 secret 词根；如 `x-custom-auth: s3cr3t` 这类自定义鉴权 header 不匹配词根时会原样返回。
   - 相关文件：`packages/core/src/llm/provider-catalog.ts:19`；`packages/core/src/llm/provider-auth.ts:17-24`；`packages/core/src/protocol/server.ts:1266-1271`；`packages/core/src/engine/engine.ts:2620-2629`；`packages/core/src/protocol/redact.ts:52-57`；`packages/core/src/logging/sanitize-messages.ts:169-170,226-227`。
   - 修复方向：把 `httpHeaders` / `headers` / `defaultHeaders` 容器整块视为敏感，只返回 header key/presence；或对所有 header value 统一 redact。
   - 回归验证：provider 配置 `httpHeaders: { "x-custom-auth": "s3cr3t" }`，`config_get("providers")` 返回中不应包含 `s3cr3t`。
 
-- [ ] **RemoteTrigger 死工具：写 `~/.code-shell/triggers` 后无人消费，任务静默丢失** — 【核对 2026-07-01：确认死工具 — 全仓无 pickup,工具仍在 BUILTIN_TOOLS】
+- [x] **RemoteTrigger 死工具：写 `~/.code-shell/triggers` 后无人消费，任务静默丢失** — 已修(31b077e2)：从 GENERAL_BUILTIN_TOOLS 白名单 + BUILTIN_TOOLS 注册表移除，删 remote-trigger.ts；定时/循环统一走 CronCreate+DriveAgent。+2 TDD(preset 白名单/注册表都不含)。
   - 影响：模型调用 RemoteTrigger 后写入 pending JSON 并返回 dispatched 成功；全仓没有 pickup/scheduler/worker 读取该目录，任务永不执行，pending 文件堆积。default 模式会 ask，但用户可能按工具描述批准；auto/bypass 上下文更隐蔽。
   - 相关文件：`packages/core/src/tool-system/builtin/remote-trigger.ts:9-11,44-59`；`packages/core/src/tool-system/builtin/index.ts:38,551-557`；`packages/core/src/preset/index.ts:90`。
   - 复核结论：全仓 grep 只有工具自身、注册、preset 白名单命中；`packages/desktop/src/main`、`packages/core/src/automation`、`packages/core/src/cc-orchestrator` 没有消费 `~/.code-shell/triggers/`。
   - 修复方向：首选从 GENERAL_BUILTIN_TOOLS/BUILTIN_TOOLS 移除 RemoteTrigger，导向 CronCreate/DriveAgent；若保留，则实现 pickup 回路、状态更新和完成通知，并修正文案。
   - 回归验证：移除路线下工具清单不含 RemoteTrigger；实现路线下调用后在有限时间内启动真实执行、trigger JSON 从 pending 变 terminal，并产生完成通知。
 
-- [ ] **后台 sub-agent 失败/取消不发 `agent_end`，TUI 主 feed 的 agent 卡永久转圈** — 【核对 2026-07-01：确认 NOT DONE — agent.ts L512/L526 两 catch 只 markCancelled/markFailed,无 safeEmit agent_end】
+- [x] **后台 sub-agent 失败/取消不发 `agent_end`，TUI 主 feed 的 agent 卡永久转圈** — 已修(aff3c693)：直接后台路径 `.catch` 顶部 `safeEmit(parentStream, agent_end{error})` 一次(cancel/fail 共用，对齐 sync→bg ~885)，再按 aborted 分派 notification；成功路径不变。+2 TDD。
   - 影响：`Agent(run_in_background=true)` 直接后台派发后，如果子 agent 失败或被 `AgentCancel` 取消，dock 会显示 failed/cancelled 后淡出，但主 feed 的 `AgentBlockStart` 依赖 stream 里的 `agent_end` 才能 seal；直接后台 fail/cancel 路径不发 `agent_end`。
   - 相关文件：`packages/core/src/tool-system/builtin/agent.ts:335,342,344,444,512-524,526-559,769,861-865`；`packages/tui/src/ui/App.tsx:697-704,706-730,2071-2080`；`packages/tui/src/ui/AgentDock.tsx:200-211`。
   - 触发边界：仅直接后台 `Agent(run_in_background=true)` 且失败/取消；成功路径、同步 agent、同步自动转后台路径不受影响。
@@ -198,7 +199,7 @@
 
 ## Low
 
-- [ ] **marketplace name 无路径校验，存在越界 rmSync/clone latent 风险**
+- [x] **marketplace name 无路径校验，存在越界 rmSync/clone latent 风险** — 已修(df3fdbd7)：`marketplaceDir` 单一 choke point 复用 `assertSafePluginName`，恶意 name 在 rmSync/clone 前 fail-closed(desktop remove IPC throw→renderer reject)。+3 TDD。
   - 严重级别：Low / latent / defense-in-depth。`marketplaceDir(name)` 缺少 path segment 校验，技术上可让 `..` 逃出 marketplacesRoot；但当前没有 model/远程直接可达路径，主要风险来自被攻陷 renderer 或本地 IPC 直发。
   - 影响：若任意字符串 `name` 进入 `marketplaceDir`，`addMarketplace` 可能越界 `rmSync`/`gitClone`，`removeMarketplace` 可越界递归删除。最现实入口是 desktop `marketplace:remove` IPC 直传 name；正常 UI add 走 `deriveMarketplaceName` 消毒，AddMarketplace builtin 不在 preset 白名单。
   - 相关文件：`packages/core/src/plugins/marketplaceManager.ts:36-38,87-150,171-178`；`packages/core/src/plugins/knownMarketplaces.ts:39-51`；`packages/core/src/plugins/pluginInstaller.ts:104,205,207,299`；`packages/core/src/tool-system/builtin/add-marketplace.ts:74`；`packages/desktop/src/main/marketplace-service.ts:111-132`。
@@ -211,8 +212,8 @@
   - 修复方向：LAN/tunnel 两种 upgrade 都校验 Origin/Host；LAN 模式对 `auth.device` / `pair.complete` 加 per-socket/per-IP 失败计数和退避；可选在 pairing 期外禁止裸连。
   - 回归验证：伪造 Origin 的 upgrade 被拒；合法 Origin 可连接但仍需 auth；缺失 Origin 按策略拒绝或白名单；多次错误 auth 触发限速；真配对流程与 tunnel passcode lockout 不回归。
 
-- [ ] **DriveAgent / background job 的 `files_changed` 汇总与 invalid sessionId 通知边界**
-  - 影响：外部 agent（DriveAgent claude/codex）改的文件不进 `files_changed` 汇总卡；FilesPanel 与审查面板仍能看到，故非完全不可见，但内联汇总卡会漏报外部 agent 的改动量/diff。另有 Low edge：`DriveAgent` 后台路径用 `ctx?.sessionId ?? ""`，ctx 缺失 sessionId 时结果通知被丢、永不唤醒。
+- [~] **DriveAgent / background job 的 `files_changed` 汇总与 invalid sessionId 通知边界** — 部分修：外部 agent 改动已在后台面板 job 详情显示(93ce1e3f，见 #6)。剩：聊天流内联汇总卡仍未合入外部改动 + invalid sessionId edge 未做。
+  - 影响：外部 agent（DriveAgent claude/codex）改的文件不进**聊天流内联 `files_changed` 汇总卡**（已在后台面板 job 详情可见）。另有 Low edge：`DriveAgent` 后台路径用 `ctx?.sessionId ?? ""`，ctx 缺失 sessionId 时结果通知被丢、永不唤醒。
   - 相关文件：`packages/core/src/tool-system/builtin/drive-claude-code.ts:83-104`；`packages/core/src/tool-system/builtin/background-jobs.ts`；`packages/core/src/tool-system/builtin/background-work.ts`；`packages/core/src/protocol/server.ts`；`packages/desktop/src/renderer/messages/fileChangeAggregator.ts`；`packages/core/src/tool-system/builtin/agent-notifications.ts:75-83`。
   - 已核实边界：notification wakeup 时序基本健全，见“已核实未作为 Bug”；本条只保留已确认的 Low / UX 缺口与 invalid sessionId edge。
   - 修复方向：DriveAgent 完成后附带改动文件清单（外部 CLI 输出 changed files 或 cwd git diff），喂进汇总；后台任务创建时强制有效 sessionId，缺失时 fail loud 或记录可见错误。
@@ -224,7 +225,7 @@
   - 修复方向：全量抓取 cookie 必须走 main 级显式用户确认，并展示影响范围。
   - 回归验证：无确认时调用 `credentials:captureAllCookies` 被拒。
 
-- [ ] **BashOutput 增量分页按固定 16KB 原始字节硬切，切断多字节 UTF-8 与 ANSI 序列**
+- [x] **BashOutput 增量分页按固定 16KB 原始字节硬切，切断多字节 UTF-8 与 ANSI 序列** — 已修 UTF-8 面(5d1aaaf1)：`utf8SafeCutLength` 把切点回退到最后完整字符边界，rawBuf/consumedBytes 都按边界，下次读无缝续。+5 TDD。备注:ANSI 跨界残片面未做(cleanOutput 已处理大部分，残片低频，留加固)。
   - 严重级别：Low。非数据丢失、非安全问题；原始 `.log` / ring buffer 字节完好，但喂给模型的增量文本可能出现 `�` 或裸 ANSI 残片。
   - 相关文件：`packages/core/src/runtime/background-shell.ts:416,419-431,268-269`；`packages/core/src/runtime/ring-file.ts:34,96,99,147-152`；`packages/core/src/runtime/output-clean.ts:21-25,43`；`packages/core/src/tool-system/builtin/background-shell-tools.ts:58`。
   - 修复方向：切点从固定 16384 回退到最近 UTF-8 字符边界，`consumedBytes` 使用回退后的长度；同时避免切在未闭合 ESC/CSI 序列中间，或引入跨读 StringDecoder 状态后按行/码点切。
@@ -368,15 +369,15 @@
 
 ## 未做（核对 2026-07-01 确认）
 
-- [ ] **#2/#5 后台 job 完成即消失、无结果详情** — 【确认 NOT DONE — `finish(jobId)` 仍直接 `jobs.delete`,`BackgroundJobEntry` 只有 jobId/sessionId/description 不存结果】
+- [x] **#2/#5 后台 job 完成即消失、无结果详情** — 已修(270de583)：`finish` 改标 status 不删 + 存 finalText/ccSessionId；面板 job 行状态图标 + 点开看详情；清理=删会话时 dropForSession + 每 session 终态 job 上限 50 兜内存；hasRunning/listRunning 只数 running(引擎+裁判语义不变)。+7 TDD。
   - 修复方向(需拍方案):`finish` 不删改标 `status:completed/failed` + 存 `finalText`/`ccSessionId`;面板 job 类加点击展开看详情;保留 cli 徽标。需定何时清理(turn 结束/数量上限)。
   - 相关文件:`background-jobs.ts`;`drive-claude-code.ts:82-105`;`background-work.ts`;`panels/BackgroundShellPanel.tsx:263-283`;`preload/types.d.ts:49-61`。
 
-- [ ] **#6 后台外部 agent 改的文件对宿主 UI 不可见** — 【确认 NOT DONE — 完成通知无 files_changed 字段】（与 Low「DriveAgent files_changed 汇总」同根）
+- [x] **#6 后台外部 agent 改的文件对宿主 UI 不可见** — 已修(93ce1e3f)：core `external-agent-changes.ts` 按 cli 定位外部 transcript(claude projects / codex rollout)解析 Edit/Write/apply_patch 文件清单；DriveAgent 完成存进 `BackgroundJobEntry.changedFiles`；后台面板 job 行显「编辑了 N 个文件」+展开列清单。MVP 只文件名+计数。+8 TDD。（与 Low「DriveAgent files_changed 汇总」同根）
   - 现状:外部 CLI 的 Edit/Write 在外部 transcript,`fileChangeAggregator` 只扫本会话 tool 消息,外部改动无 diff/无计数/无文件名。
   - 修复方向(需拍方案,与 #2/#5 一起设计):完成通知带 `ccSessionId`,可读外部 CLI transcript 解析改动文件回填;或至少在工具卡/后台 job 详情展示「编辑了 N 个文件」。
 
-- [ ] **#10 浏览器新标签页 localhost 端口探测刷控制台报错** — 【确认 NOT DONE — 仍 renderer fetch 扫描】（非 bug,纯噪音 + 功能不精确）
+- [x] **#10 浏览器新标签页 localhost 端口探测刷控制台报错** — 已修(81d82f42)：端口探测下沉 main `net.connect` 真 TCP(port-probe.ts)+IPC browser:probePorts+preload；useLocalhostPorts 改调 preload 纯展示，删 renderer no-cors fetch，消控制台噪音+403 误报。+5 TDD。
   - 现状:`useLocalhostPorts.ts`(L10-34)仍用 renderer `fetch(..., {mode:"no-cors"})` 扫 CANDIDATE_PORTS,失败请求在 catch 前已进 DevTools;`no-cors` opaque response 读不到状态码 → 403 误报;硬编码端口表既不全又浪费。
   - 修复方向(需拍方案):端口发现下沉 main —— 最小 `net.connect` 真 TCP 探测 + preload 暴露 + renderer 改调;更彻底 main 枚举系统监听端口(`lsof -iTCP -sTCP:LISTEN`)。renderer 纯展示。
   - 临时:DevTools 控制台过滤框输 `-useLocalhostPorts` 屏蔽。

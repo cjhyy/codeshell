@@ -59,7 +59,18 @@ export type BackgroundWorkInfo =
       startedAt: number;
       finishedAt?: number;
     }
-  | { kind: "job"; jobId: string; description: string };
+  | {
+      kind: "job";
+      jobId: string;
+      description: string;
+      status: "running" | "completed" | "failed";
+      startedAt: number;
+      finishedAt?: number;
+      /** Result summary / error, once finished. */
+      finalText?: string;
+      /** Files an external agent (DriveAgent) changed, parsed from its transcript. */
+      changedFiles?: string[];
+    };
 
 /** A plugin-provided hook surfaced to the settings 钩子 page. Mirrors
  *  core's PluginHookEntry (renderer can't import core). */
@@ -561,6 +572,9 @@ export interface CodeshellApi {
   };
 
   // ── Browser popout window ─────────────────────────────────────────────
+  /** Probe common localhost dev-server ports via real TCP connect in main;
+   *  returns the open ports (ascending). */
+  probeLocalhostPorts(ports?: number[]): Promise<number[]>;
   /** Open the standalone browser window, optionally at an initial URL. */
   openBrowserPopout(initialUrl?: string): Promise<void>;
   /** From a popout: send an element-pick anchor back to the parent window. */

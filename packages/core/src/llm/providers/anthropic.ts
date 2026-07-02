@@ -436,15 +436,59 @@ export class AnthropicClient extends LLMClientBase {
       }
     }
 
+    // Prompt-cache breakpoint on the history: mark the LAST content block of
+    // the LAST message. The API caches everything up to the marker, so the
+    // stable prefix (all prior turns) is reused; only the growing tail is
+    // re-billed. CC does exactly this (one marker at messages.length - 1) and
+    // warns a second history marker causes KV page eviction. We only ANNOTATE
+    // the tail block — never reorder — so the tool_use/tool_result adjacency
+    // invariant is untouched. A string-content message is lifted to a single
+    // text block so it can carry cache_control. See
+    // docs/todo/prompt-cache-optimization.md.
+    const lastMsg = result[result.length - 1];
+    if (lastMsg) {
+      if (typeof lastMsg.content === "string") {
+        lastMsg.content = [
+          {
+            type: "text",
+            text: lastMsg.content,
+            cache_control: { type: "ephemeral" },
+          },
+        ];
+      } else {
+        const lastBlock = lastMsg.content[lastMsg.content.length - 1];
+        // Skip thinking/redacted_thinking blocks: they reject cache_control and
+        // marking them would 400. buildMessages never emits them today (thinking
+        // is a top-level request field, not history content), but guard anyway
+        // so a future block type can't silently break the request.
+        if (
+          lastBlock &&
+          lastBlock.type !== "thinking" &&
+          lastBlock.type !== "redacted_thinking"
+        ) {
+          lastBlock.cache_control = { type: "ephemeral" };
+        }
+      }
+    }
+
     return result;
   }
 
   private convertTools(tools: ToolDefinition[]): Anthropic.Tool[] {
-    return tools.map((t) => ({
+    const converted: Anthropic.Tool[] = tools.map((t) => ({
       name: t.name,
       description: t.description,
       input_schema: t.inputSchema as Anthropic.Tool.InputSchema,
     }));
+    // Prompt-cache breakpoint: mark ONLY the last tool. The API caches every
+    // block up to and including a cache_control marker, so one marker on the
+    // tail makes the whole (stable) tools array a cached prefix — vs 73
+    // definitions re-billed as input every turn. CC does the same (one marker,
+    // not per-tool); a second marker here would waste a scarce cache_control
+    // slot (max 4) and risk KV eviction. See docs/todo/prompt-cache-optimization.md.
+    const last = converted[converted.length - 1];
+    if (last) last.cache_control = { type: "ephemeral" };
+    return converted;
   }
 
   private handleApiError(err: unknown): never {

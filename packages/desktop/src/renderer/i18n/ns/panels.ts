@@ -53,6 +53,9 @@ export const panels = {
         agentFailed: "失败",
         agentCancelled: "已取消",
         jobRunning: "进行中",
+        jobCompleted: "已完成",
+        jobFailed: "失败",
+        jobChangedFiles: "编辑了 {{count}} 个文件",
       },
       terminal: {
         title: "终端",
@@ -232,6 +235,9 @@ export const panels = {
         agentFailed: "failed",
         agentCancelled: "cancelled",
         jobRunning: "in progress",
+        jobCompleted: "completed",
+        jobFailed: "failed",
+        jobChangedFiles: "edited {{count}} file(s)",
       },
       terminal: {
         title: "Terminal",

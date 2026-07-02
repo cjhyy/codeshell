@@ -811,6 +811,11 @@ contextBridge.exposeInMainWorld("codeshell", {
       | { ok: false; cancelled?: boolean; error?: string }
     > => ipcRenderer.invoke("credentials:loginCapture", req),
   },
+  /** Probe common localhost dev-server ports via real TCP connect in main.
+   *  Returns the open ports (ascending). Pass a custom candidate list or omit
+   *  for the default set. */
+  probeLocalhostPorts: (ports?: number[]): Promise<number[]> =>
+    ipcRenderer.invoke("browser:probePorts", ports),
   /** Open the standalone browser window, optionally at an initial URL. */
   openBrowserPopout: (initialUrl?: string) => ipcRenderer.invoke("browser:popout", initialUrl),
   /** From a popout: send an element-pick anchor back to the parent window. */

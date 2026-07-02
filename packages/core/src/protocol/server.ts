@@ -45,6 +45,7 @@ import {
   buildNotificationMessage,
 } from "../tool-system/builtin/agent-notifications.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
+import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
 import { listBackgroundWorkForUI } from "../tool-system/builtin/background-work.js";
 import { logger } from "../logging/logger.js";
 import { nanoid } from "nanoid";
@@ -888,6 +889,9 @@ export class AgentServer {
     // (agent/closeSession from the host on delete), distinct from the idle
     // sweeper's chatManager.close() which must NOT kill (§6). Fire-and-forget.
     void backgroundShellManager.killSession(params.sessionId);
+    // Drop this session's retained background jobs too (#2/#5): finished jobs
+    // are kept for the panel, so explicit teardown is where they're released.
+    backgroundJobRegistry.dropForSession(params.sessionId);
     this.transport.send(createResponse(req.id, { ok: true }));
   }
 

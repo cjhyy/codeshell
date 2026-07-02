@@ -27,8 +27,16 @@ const BASE_DESCRIPTION =
   "Inject a stored COOKIE credential into the built-in browser to restore its " +
   "login state, so you can then drive the page as that logged-in account with the " +
   "browser_* tools (snapshot/click/type/navigate). This replaces the browser's " +
-  "current cookies. Call UseCredential with no args first to see available " +
-  "credentials; then call this with `id` of a cookie credential. For HTTP " +
+  "current cookies.\n\n" +
+  "ONLY call this when the user EXPLICITLY asks to log in / act as a specific " +
+  "account / do something that requires being signed in. Do NOT call it just to " +
+  "open, navigate to, or browse a site — 'open 小红书 / go to <url> / take a look' " +
+  "is plain navigation: use browser_navigate WITHOUT injecting any cookies. " +
+  "Injecting overwrites the browser's current session, so an unrequested inject is " +
+  "a surprising, destructive side effect. When unsure whether login is wanted, " +
+  "navigate first and ask the user rather than injecting.\n\n" +
+  "When it IS wanted: call UseCredential with no args first to see available " +
+  "credentials, then call this with `id` of a cookie credential. For HTTP " +
   "scraping/downloads (curl/yt-dlp) use UseCredential instead — this is only for " +
   "driving the built-in browser UI. Gated by a quick user approval unless the " +
   "credential has auto-inject enabled.";

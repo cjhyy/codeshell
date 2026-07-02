@@ -14,8 +14,9 @@
  */
 import { BUILTIN_TOOLS } from "@cjhyy/code-shell-core";
 
-/** Tools removed from automation runs: cron trio (no recursive scheduling) +
- *  AskUserQuestion (no human to answer in an unattended run). */
+/** Tools removed from automation runs: cron trio (no recursive scheduling),
+ *  AskUserQuestion (no human to answer), MCP tools (no blocking on external
+ *  startup), and background-shell tools (no unreaped dev server). */
 export const AUTOMATION_DISABLED_TOOLS = [
   "CronCreate",
   "CronDelete",

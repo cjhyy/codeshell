@@ -1,10 +1,11 @@
-import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { describe, test, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CronScheduler } from "./scheduler.js";
 import { CronStore } from "./store.js";
 import { bindCronToRunManager, type RunSubmitter } from "./runner.js";
+import { logger } from "../logging/logger.js";
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -111,5 +112,33 @@ describe("bindCronToRunManager", () => {
     sched.delete(job.id);
     await sleep(10);
     expect(calls).toBeGreaterThanOrEqual(2); // kept ticking despite throwing
+  });
+
+  test("a submit that throws is logged (not silently swallowed)", async () => {
+    const warn = spyOn(logger, "warn");
+    try {
+      const fake: RunSubmitter = {
+        async submit() {
+          throw new Error("submit boom");
+        },
+      };
+      const sched = new CronScheduler();
+      bindCronToRunManager(sched, fake);
+      const job = sched.create("flaky", "20", "p", { cwd: "/tmp/proj" });
+      await sleep(40);
+      sched.delete(job.id);
+      await sleep(10);
+
+      const cronWarn = warn.mock.calls.find(
+        (c) => typeof c[0] === "string" && c[0].includes("cron") && /fail|error/i.test(c[0]),
+      );
+      expect(cronWarn, "expected a cron-failure warn log").toBeTruthy();
+      // The log must carry enough to debug: job id/name and the error message.
+      const data = cronWarn?.[1] as Record<string, unknown> | undefined;
+      expect(JSON.stringify(data ?? {})).toContain("submit boom");
+      expect(JSON.stringify({ ...data, id: job.id })).toContain(job.id);
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

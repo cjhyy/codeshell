@@ -25,14 +25,22 @@ function cleanup() {
 function ctxAnswering(
   cwd: string,
   answer: string,
-  capture?: { question?: string; header?: string },
+  capture?: {
+    question?: string;
+    header?: string;
+    options?: { label: string; description: string; tone?: string }[];
+  },
 ): ToolContext {
   return {
     cwd,
-    askUser: async (question: string, opts?: { header?: string }) => {
+    askUser: async (
+      question: string,
+      opts?: { header?: string; options?: { label: string; description: string; tone?: string }[] },
+    ) => {
       if (capture) {
         capture.question = question;
         capture.header = opts?.header;
+        capture.options = opts?.options;
       }
       return answer;
     },
@@ -67,6 +75,23 @@ describe("enforcePathPolicyWithApproval", () => {
     const outside = join(tmpdir(), "definitely-outside-the-workspace.txt");
     const res = await enforcePathPolicyWithApproval(outside, "read", ctxAnswering(ws, "拒绝"));
     expect(res).toContain("approval denied");
+    cleanup();
+  });
+
+  test("options carry semantic tone: allow → ok, 拒绝 → danger (UI colors deny red not green)", async () => {
+    const ws = tmpWorkspace();
+    const outside = join(tmpdir(), "tone-check.txt");
+    const cap: {
+      options?: { label: string; description: string; tone?: string }[];
+    } = {};
+    await enforcePathPolicyWithApproval(outside, "read", ctxAnswering(ws, "拒绝", cap));
+    const opts = cap.options ?? [];
+    const deny = opts.find((o) => o.label === "拒绝");
+    expect(deny?.tone).toBe("danger");
+    // every non-deny option is an allow variant → ok
+    for (const o of opts.filter((o) => o.label !== "拒绝")) {
+      expect(o.tone).toBe("ok");
+    }
     cleanup();
   });
 

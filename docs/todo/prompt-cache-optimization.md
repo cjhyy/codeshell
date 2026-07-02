@@ -1,6 +1,6 @@
 # Prompt 缓存优化 — 对标 Claude Code
 
-> 状态:规划中(未动手)。2026-06-26 整理。
+> 状态:步骤 1(命中率可见)+ 步骤 2(tools 断点)+ 步骤 3(messages 末尾断点)已落地;步骤 4 待整体设计。2026-06-26 整理,2026-07-02 更新。
 > 背景:codeshell 当前缓存覆盖面极窄,且命中率不可见。本稿记录 CC 的真实做法
 > (扒自 CC sourcemap)、codeshell 现状差距、以及分步计划。
 > 关联记忆 `project_prompt_cache_gaps`。
@@ -74,11 +74,20 @@ API 限制 4 个 cache_control。CC 标准用 2-3 个(system 1 + message 1,
 
 ## 四、建议执行顺序
 
-1. **命中率可见**(最小、低风险、立刻有用):修 `openai.ts:250` 字段名为
-   `prompt_tokens_details.cached_tokens` + 在 `llm.request` 日志 emit
-   cacheRead/cacheCreation。有了数字才能判断后续改动值多少。
-2. **tools 缓存**(Anthropic):tools 末尾挂断点 / 动态工具追加尾部。
-3. **messages 末尾断点**(Anthropic,避上述坑)。
+1. ✅ **命中率可见**(最小、低风险、立刻有用):修 `openai.ts` 字段名为
+   `prompt_tokens_details.cached_tokens`(`cachedTokensOf`)+ 在 `llm.request` 日志 emit
+   cacheRead/cacheCreation + `cacheHitRate` 助手(model-facade.ts,带测试)。
+   **已做:提交 `a7f81610`。**
+2. ✅ **tools 缓存**(Anthropic):`convertTools` 只给**最后一个**工具挂
+   `cache_control: ephemeral`,让整段 tools 数组成为缓存前缀(CC 同做法:一个标记非逐工具)。
+   stream + 非 stream 两路共用 `convertTools` 故同时生效。测试 `anthropic-tools-cache.test.ts`。
+   **已做(本次)。** 动态工具追加尾部暂未做(当前 tools 顺序稳定即可)。
+3. ✅ **messages 末尾断点**(Anthropic):`buildMessages` 末尾 post-pass 给
+   **最后一条 message 的最后一个 content block** 挂 `cache_control: ephemeral`。
+   string content 先提升为单个 text block 承载;跳过 thinking/redacted_thinking 块(会 400);
+   只标注不重排,tool_use/tool_result 配对不变量不动。测试 `anthropic-history-cache.test.ts`。
+   **已做(本次)。** 断点固定末尾不滚动——历史变长时"最后一条"自然右移,新尾巴成为下次写入。
+   当前 cache_control 用量 = system 1 + tools 1 + history 1 = 3,在 API 上限 4 之内。
 4. 静态/动态分离、粘性锁定、破坏检测 → 进记忆系统/性能专项整体设计,别零敲碎打。
 
 > ⚠️ 缓存断点打错位置会**负优化**(贵价 cache write 却永不命中)。

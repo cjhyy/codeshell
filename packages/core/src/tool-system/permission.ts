@@ -563,6 +563,49 @@ const SAFE_READ_PATTERNS = [
   /^printenv/,
 ];
 
+// ─── Sensitive safe-read downgrade ────────────────────────────────
+//
+// `Read ~/.ssh/id_rsa` routes through path-policy (asks); the equivalent
+// `cat ~/.ssh/id_rsa` was YOLO-classified safe-read and auto-allowed with the
+// desktop's default sandbox=off — a zero-approval credential exfil channel.
+// A segment that would otherwise be safe-read is downgraded to `unsafe` (→
+// ask) when it dumps the process env or its arguments touch a sensitive path.
+// Conservative-and-narrow: only known credential/secret shapes trip it, so
+// ordinary reads (README.md, src/*.ts) stay safe-read.
+
+// Whole-command env dumps that leak Credential.exposeAsEnv / top-level `env`
+// API keys. `env FOO=bar cmd` (env used as a launcher) is intentionally NOT
+// matched — only a bare dump.
+const ENV_DUMP_RE = /^(env|printenv)(\s+[A-Za-z_][A-Za-z0-9_]*)*\s*$/;
+
+const SENSITIVE_PATH_PATTERNS = [
+  /\.ssh\//, // ~/.ssh/id_rsa, authorized_keys, known_hosts
+  /(^|\/)id_(rsa|dsa|ecdsa|ed25519)\b/,
+  /(^|\/|\s)\.env(\.[A-Za-z0-9]|\b)/, // .env, .env.local, .env.production
+  /\.aws\/credentials\b/,
+  /\.code-shell\/credentials\b/,
+  /credentials\.json\b/,
+  /\.npmrc\b/,
+  /\.netrc\b/,
+  /\.pgpass\b/,
+  /\.docker\/config\.json\b/,
+  /\.kube\/config\b/,
+  /\.config\/gh\/hosts\b/,
+  /\.gnupg\//,
+  /(^|\/)\.git-credentials\b/,
+];
+
+/**
+ * True when an otherwise-safe-read shell segment must be downgraded to `unsafe`
+ * because it dumps the environment or reads a sensitive credential/secret path.
+ * Exported for direct unit testing of the predicate.
+ */
+export function segmentIsSensitiveRead(segment: string): boolean {
+  const s = segment.trim();
+  if (ENV_DUMP_RE.test(s)) return true;
+  return SENSITIVE_PATH_PATTERNS.some((re) => re.test(s));
+}
+
 const SAFE_WRITE_PATTERNS = [
   /^(git\s+(add|commit|stash\s+(save|push)))/,
   /^mkdir\s/,
@@ -724,12 +767,17 @@ function classifySegment(segment: string): BashSafetyLevel {
     const partIsSafeRead = (p: string) =>
       SAFE_READ_PATTERNS.some((re) => re.test(p) || re.test(`${p} `));
     if (parts.every(partIsSafeRead)) {
+      // A sensitive read anywhere in the pipe (`cat ~/.ssh/id_rsa | base64`,
+      // `env | grep KEY`) downgrades the whole pipe.
+      if (parts.some(segmentIsSensitiveRead)) return "unsafe";
       return "safe-read";
     }
     return "unsafe";
   }
 
-  if (SAFE_READ_PATTERNS.some((p) => p.test(segment))) return "safe-read";
+  if (SAFE_READ_PATTERNS.some((p) => p.test(segment))) {
+    return segmentIsSensitiveRead(segment) ? "unsafe" : "safe-read";
+  }
   if (SAFE_WRITE_PATTERNS.some((p) => p.test(segment))) return "safe-write";
   return "unsafe";
 }
