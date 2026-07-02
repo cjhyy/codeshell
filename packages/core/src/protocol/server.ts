@@ -73,6 +73,20 @@ export interface AgentServerOptions {
    * When absent, `configure({ reloadSettings })` returns an explicit error.
    */
   settingsReader?: () => ValidatedSettings;
+  /**
+   * Disk-only active-goal reader, used by agent/goalGet when the session is NOT
+   * live in chatManager. In worker (chatManager) mode there is no legacyEngine
+   * to fall back to, and a reopened-after-restart session isn't a live
+   * ChatSession yet (one is only created on agent/run), so chatManager.get()
+   * misses — without this the handler returned goal:null even though state.json
+   * still held the goal, and the UI's goal block never re-surfaced ("goal 还在
+   * 但页面不显示"). Wire it to SessionManager.readActiveGoal. Optional: legacy
+   * mode already reads disk via the engine, and tests that don't exercise the
+   * reopened-session path can omit it.
+   */
+  readActiveGoalFromDisk?: (
+    sessionId: string,
+  ) => import("../engine/goal.js").GoalConfig | undefined;
 }
 
 export class AgentServer {
@@ -82,6 +96,10 @@ export class AgentServer {
   private transport: Transport;
   /** Fresh-disk settings reader for config hot-reload; null when not wired. */
   private readonly settingsReader: (() => ValidatedSettings) | null;
+  /** Disk-only active-goal reader for agent/goalGet on a non-live session. */
+  private readonly readActiveGoalFromDisk:
+    | ((sessionId: string) => import("../engine/goal.js").GoalConfig | undefined)
+    | null;
   /**
    * Monotonic config-reload version, bumped per reloadSettings request so each
    * Engine.refreshRuntimeConfig can drop out-of-order (stale) deliveries (Q5).
@@ -121,6 +139,7 @@ export class AgentServer {
     this.chatManager = options.chatManager ?? null;
     this.legacyEngine = options.engine ?? null;
     this.settingsReader = options.settingsReader ?? null;
+    this.readActiveGoalFromDisk = options.readActiveGoalFromDisk ?? null;
 
     if (!this.chatManager && !this.legacyEngine) {
       throw new Error("AgentServer: either chatManager or engine must be supplied");
@@ -739,9 +758,10 @@ export class AgentServer {
    * Read a session's persisted active goal so the host can re-surface the goal
    * block + Cancel button on session load. A persistent goal lives only in
    * state.activeGoal and is never replayed from the transcript, so a reloaded
-   * (or disk-rebuilt) session has no other way to learn it. Reads disk-only —
-   * works whether or not the session is live in chatManager (the bug case is an
-   * aborted/reloaded session that is NOT live). Returns { ok, goal } where goal
+   * (or disk-rebuilt) session has no other way to learn it. Prefers a live
+   * chatManager session, else falls through to a disk read (readActiveGoalFromDisk
+   * in worker mode, or the legacy engine's disk read in single-engine mode) — the
+   * bug case is an aborted/reloaded session that is NOT live. Returns { ok, goal } where goal
    * is the objective string, or null when there's no goal / unknown session.
    * Never errors on "no goal" — null is the normal "nothing to show" answer.
    */
@@ -755,13 +775,19 @@ export class AgentServer {
       );
       return;
     }
-    // Prefer the live session, else read straight off disk via the legacy
-    // engine — the goal we want to recover belongs to a session that is, by
-    // definition of this bug, usually NOT currently active.
+    // Prefer the live session; otherwise read straight off disk. The goal we
+    // want to recover belongs to a session that is, by definition of this bug,
+    // usually NOT currently live: reopening after restart doesn't create a
+    // ChatSession (that only happens on a send), so chatManager.get() misses.
+    // In worker (chatManager) mode there is no legacyEngine, so the disk read
+    // MUST come from readActiveGoalFromDisk — relying on legacyEngine there
+    // silently returned null and the UI goal block never re-surfaced.
     const live = this.chatManager ? this.chatManager.get(params.sessionId) : undefined;
     const goal = live
       ? live.getGoal()
-      : (this.legacyEngine?.getGoal(params.sessionId) ?? undefined);
+      : (this.readActiveGoalFromDisk?.(params.sessionId) ??
+        this.legacyEngine?.getGoal(params.sessionId) ??
+        undefined);
     this.transport.send(
       createResponse(req.id, { ok: true, goal: goal ? goal.objective : null }),
     );

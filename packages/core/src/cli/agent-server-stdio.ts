@@ -34,6 +34,7 @@ import { Engine } from "../engine/engine.js";
 import { EngineRuntime } from "../engine/runtime.js";
 import { ChatSessionManager } from "../protocol/chat-session-manager.js";
 import type { EngineConfigSlice } from "../protocol/chat-session-manager.js";
+import { SessionManager } from "../session/session-manager.js";
 import { validateSettings, type ValidatedSettings } from "../settings/schema.js";
 import { AgentServer } from "../protocol/server.js";
 import { StdioTransport } from "../protocol/transport.js";
@@ -319,6 +320,13 @@ setCronChangedSink(() => {
   stdioTransport.send(createNotification("agent/cronChanged", {}));
 });
 
+// Disk-only active-goal reader for agent/goalGet. In worker mode there is no
+// legacyEngine, and reopening a session after restart doesn't create a live
+// ChatSession (that only happens on a send), so chatManager.get() misses. This
+// reads the same ~/.code-shell/sessions/<id>/state.json every Engine writes, so
+// the goal block re-surfaces on load ("goal 还在但页面不显示" fix).
+const goalDiskReader = new SessionManager();
+
 const agentServer = new AgentServer({
   chatManager,
   transport: stdioTransport,
@@ -326,6 +334,7 @@ const agentServer = new AgentServer({
   // engineFactory uses for new sessions, so a reloaded running session and a
   // newly-created session converge on identical disk config (no divergence).
   settingsReader: freshSettings,
+  readActiveGoalFromDisk: (sessionId) => goalDiskReader.readActiveGoal(sessionId),
 });
 
 // Clean up on termination signals. Without this, SIGTERM (parent kill),

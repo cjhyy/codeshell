@@ -61,6 +61,42 @@ describe("AgentServer agent/goalGet", () => {
     expect(lastResult(t.sent)).toEqual({ ok: true, goal: null });
   });
 
+  it("chatManager mode: session NOT live falls through to the disk reader", () => {
+    // Worker (chatManager) mode has no legacyEngine. Reopening a session after
+    // restart doesn't create a live ChatSession (that only happens on a send),
+    // so chatManager.get() misses. Without a disk fallback the handler returned
+    // goal:null even though state.json still held the goal → UI showed nothing.
+    const chatManager = { get: () => undefined } as any;
+    const t = makeTransport();
+    new AgentServer({
+      transport: t.transport,
+      chatManager,
+      readActiveGoalFromDisk: (sid) =>
+        sid === "s-3" ? { objective: "重启后仍在跑的目标" } : undefined,
+    });
+
+    t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/goalGet", params: { sessionId: "s-3" } });
+
+    expect(lastResult(t.sent)).toEqual({ ok: true, goal: "重启后仍在跑的目标" });
+  });
+
+  it("chatManager mode: a LIVE session's goal wins over the disk reader", () => {
+    const chatManager = {
+      get: (sid: string) =>
+        sid === "s-4" ? { getGoal: () => ({ objective: "live goal" }) } : undefined,
+    } as any;
+    const t = makeTransport();
+    new AgentServer({
+      transport: t.transport,
+      chatManager,
+      readActiveGoalFromDisk: () => ({ objective: "stale disk goal" }),
+    });
+
+    t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/goalGet", params: { sessionId: "s-4" } });
+
+    expect(lastResult(t.sent)).toEqual({ ok: true, goal: "live goal" });
+  });
+
   it("errors when sessionId is missing", () => {
     const engine = makeEngine({});
     const t = makeTransport();
