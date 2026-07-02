@@ -14,7 +14,7 @@
  * background.
  */
 
-import React, { memo, useEffect, useRef, useState } from "react";
+import React, { memo, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -244,21 +244,48 @@ function toAbsolute(path: string, cwd?: string | null): string {
 
 // Existence-check cache: keyed by `${cwd}\0${path}`. A path can appear many
 // times across a transcript; this keeps repeated answers from re-hitting the
-// fs:exists IPC for the same file. Holds a Promise so concurrent mounts of the
-// same path share one in-flight check.
-const existsCache = new Map<string, Promise<boolean>>();
+// fs:exists IPC for the same file.
+//
+// We cache ONLY positive results. A file that exists won't stop existing mid
+// session, so `true` is safe to memoize forever. A `false` is NOT: the model
+// very often writes a path to a file it CREATES this same turn, and the first
+// existence check races the write — the file isn't on disk yet, so fs:exists
+// returns false. Caching that false permanently pinned the link as dead text,
+// and it only came back after a session switch happened to build a new cache
+// key (the "刚输出点不了,切一下 session 才能点" bug). So a negative check is
+// re-run on the next mount, and `files-changed` (fired when an AI turn ends)
+// also clears the cache so a just-written file re-validates immediately.
+const existsCache = new Map<string, boolean>();
 function checkExists(cwd: string | null, path: string): Promise<boolean> {
   const root = cwd ?? "";
   const key = `${root}\0${path}`;
-  let p = existsCache.get(key);
-  if (!p) {
-    // No workspace root → can't resolve a relative path; treat absolute-only.
-    p = root || path.startsWith("/")
+  if (existsCache.get(key) === true) return Promise.resolve(true);
+  // No workspace root → can't resolve a relative path; treat absolute-only.
+  const p =
+    root || path.startsWith("/")
       ? window.codeshell.fileExists(root || "/", path).catch(() => false)
       : Promise.resolve(false);
-    existsCache.set(key, p);
-  }
-  return p;
+  return p.then((ok) => {
+    if (ok) existsCache.set(key, true); // memoize positives only
+    return ok;
+  });
+}
+
+// A bump source so PathLink re-checks existence after an AI turn writes files.
+// files-changed carries no payload, so we clear the whole cache and nudge every
+// mounted PathLink to re-run its check via useSyncExternalStore.
+let filesChangedNonce = 0;
+const filesChangedListeners = new Set<() => void>();
+if (typeof window !== "undefined") {
+  window.addEventListener("codeshell:files-changed", () => {
+    existsCache.clear();
+    filesChangedNonce++;
+    for (const l of filesChangedListeners) l();
+  });
+}
+function subscribeFilesChanged(cb: () => void): () => void {
+  filesChangedListeners.add(cb);
+  return () => filesChangedListeners.delete(cb);
 }
 
 /**
@@ -288,16 +315,27 @@ function PathLink({
   // plain text (no flash of a link that might turn out dead).
   const [exists, setExists] = useState<boolean | null>(null);
 
+  // Re-checks existence when an AI turn writes files (see filesChangedNonce):
+  // a path to a just-created file whose FIRST check raced the write (→ false)
+  // re-validates and becomes clickable without a session switch.
+  const filesNonce = useSyncExternalStore(
+    subscribeFilesChanged,
+    () => filesChangedNonce,
+    () => 0,
+  );
+
   useEffect(() => {
     let cancelled = false;
-    setExists(null);
+    // Don't blink an already-resolved link back to plain text on a re-check;
+    // only show the neutral "checking" state on a genuinely new path/cwd.
+    setExists((prev) => (prev === true ? true : null));
     void checkExists(cwd ?? null, path).then((ok) => {
       if (!cancelled) setExists(ok);
     });
     return () => {
       cancelled = true;
     };
-  }, [path, cwd]);
+  }, [path, cwd, filesNonce]);
 
   // Not (yet) a known-existing file → render the original text, unstyled.
   if (exists !== true) {
