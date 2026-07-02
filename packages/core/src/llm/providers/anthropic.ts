@@ -436,6 +436,41 @@ export class AnthropicClient extends LLMClientBase {
       }
     }
 
+    // Prompt-cache breakpoint on the history: mark the LAST content block of
+    // the LAST message. The API caches everything up to the marker, so the
+    // stable prefix (all prior turns) is reused; only the growing tail is
+    // re-billed. CC does exactly this (one marker at messages.length - 1) and
+    // warns a second history marker causes KV page eviction. We only ANNOTATE
+    // the tail block — never reorder — so the tool_use/tool_result adjacency
+    // invariant is untouched. A string-content message is lifted to a single
+    // text block so it can carry cache_control. See
+    // docs/todo/prompt-cache-optimization.md.
+    const lastMsg = result[result.length - 1];
+    if (lastMsg) {
+      if (typeof lastMsg.content === "string") {
+        lastMsg.content = [
+          {
+            type: "text",
+            text: lastMsg.content,
+            cache_control: { type: "ephemeral" },
+          },
+        ];
+      } else {
+        const lastBlock = lastMsg.content[lastMsg.content.length - 1];
+        // Skip thinking/redacted_thinking blocks: they reject cache_control and
+        // marking them would 400. buildMessages never emits them today (thinking
+        // is a top-level request field, not history content), but guard anyway
+        // so a future block type can't silently break the request.
+        if (
+          lastBlock &&
+          lastBlock.type !== "thinking" &&
+          lastBlock.type !== "redacted_thinking"
+        ) {
+          lastBlock.cache_control = { type: "ephemeral" };
+        }
+      }
+    }
+
     return result;
   }
 
