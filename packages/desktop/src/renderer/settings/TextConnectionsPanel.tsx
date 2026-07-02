@@ -174,7 +174,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
     const inst = buildInstance(entry, model, taken, tag);
     // Auto-attach to an existing credential for this provider when one exists
     // (so the user doesn't re-enter the key); else leave unset until they fill it.
-    const existing = credentialCandidates(credentials, entry.id)[0];
+    const existing = credentialCandidates(credentials, entry.id, catalog)[0];
     if (existing) inst.credentialId = existing.id;
     const next = [...instances, inst];
     const nextDefault = defaultId || inst.id;
@@ -291,20 +291,41 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
           <p className="text-sm text-muted-foreground">{t("settingsX.textConn.emptyHint", { heading })}</p>
           {sttFallback && (
             // Audio fallback active: voice input already works by reusing an
-            // OpenAI key — show what it's using so the page doesn't look dead.
-            <div className="rounded-lg border border-status-ok/30 bg-status-ok/5 p-3 text-sm">
-              <div className="mb-1 flex items-center gap-1.5 font-medium text-status-ok">
-                <span className="size-1.5 rounded-full bg-status-ok" />
-                {t("settingsX.textConn.sttFallbackActive")}
-              </div>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                {t("settingsX.textConn.sttFallbackDesc", {
-                  model: sttFallback.model ?? "",
-                  cred: sttFallback.reusedCredentialCatalogId ?? "OpenAI",
-                  key: sttFallback.maskedKey ?? "",
-                })}
-              </p>
-            </div>
+            // OpenAI key. Render it as a real (read-only) connection CARD — not a
+            // passive hint — so it sits in the list like any configured provider:
+            // the user SEES the active voice provider + which key it borrows,
+            // rather than an "unconfigured, go add one" impression. It carries no
+            // delete/edit controls because it's implicit (adding a real audio
+            // connection simply supersedes it).
+            <ConnCardGrid>
+              <ConnCard isDefault>
+                <header className="flex min-w-0 flex-col gap-1">
+                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                    <span className="size-1.5 rounded-full bg-status-ok" />
+                    <strong className="truncate text-sm font-medium text-foreground">
+                      {sttFallback.reusedCredentialCatalogId ?? "OpenAI"}
+                    </strong>
+                    <Badge variant="accent">{t("settingsX.textConn.sttFallbackActive")}</Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    {sttFallback.model && <code className="break-all font-mono">{sttFallback.model}</code>}
+                    {sttFallback.maskedKey && (
+                      <>
+                        <span>·</span>
+                        <code className="font-mono">key ⋯{sttFallback.maskedKey}</code>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    {t("settingsX.textConn.sttFallbackDesc", {
+                      model: sttFallback.model ?? "",
+                      cred: sttFallback.reusedCredentialCatalogId ?? "OpenAI",
+                      key: sttFallback.maskedKey ?? "",
+                    })}
+                  </p>
+                </header>
+              </ConnCard>
+            </ConnCardGrid>
           )}
           {textTemplates.length > 0 && (
             <ConnCardGrid>
@@ -348,7 +369,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
           {instances.map((inst) => {
             const entry = entryById(inst.catalogId);
             const preset = entry?.modelPresets?.find((p) => p.value === inst.model);
-            const credChoices = credentialCandidates(credentials, inst.catalogId);
+            const credChoices = credentialCandidates(credentials, inst.catalogId, catalog);
             const boundCred = credentials.find((c) => c.id === inst.credentialId);
             const isDefault = inst.id === defaultId;
             return (

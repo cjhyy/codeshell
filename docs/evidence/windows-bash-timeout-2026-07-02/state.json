@@ -1,0 +1,21 @@
+{
+  "sessionId": "s-mr3k8kst-4b585dac",
+  "cwd": "D:\\github\\listen-bd",
+  "startedAt": 1783000124246,
+  "model": "deepseek-v4-pro",
+  "provider": "openai",
+  "tokenUsage": {
+    "promptTokens": 778534,
+    "completionTokens": 1186,
+    "totalTokens": 779720,
+    "cacheReadTokens": 776704,
+    "cacheCreationTokens": 0
+  },
+  "turnCount": 3,
+  "invokedSkills": [],
+  "status": "active",
+  "parentSessionId": null,
+  "origin": "desktop",
+  "summary": "s-mr3jzbqo-bb1c1646 这个日志能读到吗",
+  "turnSeq": 34
+}

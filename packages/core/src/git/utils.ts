@@ -43,6 +43,26 @@ export function isGitRepo(cwd: string): boolean {
   }
 }
 
+/**
+ * Resolve a directory to its PROJECT ROOT: the enclosing git repository's
+ * top-level dir if `cwd` is inside a git repo, otherwise `cwd` unchanged.
+ *
+ * This is the project-boundary rule the desktop uses when adding/identifying a
+ * project: picking a SUBDIRECTORY of a git repo should belong to that one repo
+ * (its root), not spawn a separate project per subdir — mirrors how editors
+ * (and Claude Code) treat a repo as one workspace. A non-git folder is its own
+ * project (returned as-is). Never throws; on any git failure falls back to cwd.
+ * Returns the git-reported toplevel (already absolute, forward-slashed on win).
+ */
+export function resolveProjectRoot(cwd: string): string {
+  try {
+    const top = git(cwd, ["rev-parse", "--show-toplevel"], 5000);
+    return top || cwd;
+  } catch {
+    return cwd;
+  }
+}
+
 export function getCurrentBranch(cwd: string): string {
   return git(cwd, ["branch", "--show-current"], 5000);
 }

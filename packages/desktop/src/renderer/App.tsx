@@ -269,6 +269,7 @@ function App() {
   const [approvalQueue, setApprovalQueue] = useState<ApprovalRequestEnvelope[]>([]);
   const [approvalHistory, setApprovalHistory] = useState<ApprovalHistoryEntry[]>([]);
   const [lifecycle, setLifecycle] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [busyKeys, setBusyKeys] = useState<Set<string>>(() => new Set());
   const [queuedInputs, setQueuedInputs] = useState<QueuedInputState>({});
   // Buckets mid-引导打断: the turn was cancelled and a merged re-send is about
@@ -297,7 +298,6 @@ function App() {
   const [defaultActiveModelKey, setDefaultActiveModelKey] = useState<string | null>(null);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [defaultPermissionMode, setDefaultPermissionMode] = useState<PermissionMode | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   // Provider-agnostic image clarity (low/standard/high) from merged settings;
   // drives renderer-side downscale before send. Undefined = follow default.
   const [imageDetail, setImageDetail] = useState<"low" | "standard" | "high" | undefined>(undefined);

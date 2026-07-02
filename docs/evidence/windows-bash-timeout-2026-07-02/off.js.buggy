@@ -1,0 +1,8 @@
+export function createOffBackend() {
+    return {
+        name: "off",
+        wrap(command, opts) {
+            return { file: opts.shell, args: ["-c", command] };
+        },
+    };
+}

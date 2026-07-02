@@ -28,10 +28,10 @@ import {
   deleteUserCatalogEntry,
   userCatalogPath,
   catalogEntryOrigins,
-  findExecutable,
-  resolveGit,
   setGitPathOverride,
   isGitAvailable,
+  resolveGitPath,
+  resolveProjectRoot,
   CredentialStore,
   type Credential,
   type CredentialScope,
@@ -1075,7 +1075,16 @@ function hardenWebviewGuests(win: BrowserWindow): void {
     // OS popup window while still intercepting the URL. Not a security loosening:
     // every popup is denied; we only read its URL to open an in-app tab.
     (params as Record<string, unknown>).allowpopups = true;
-    if (!params.partition) params.partition = "persist:browser";
+    // Partition = the guest's isolated storage/session. The renderer passes a
+    // per-chat-session partition (`persist:browser:<bucket>`) so one session's
+    // cookies/logged-in state/live page don't bleed into another's. Only honor a
+    // `persist:browser`-prefixed value (defense-in-depth: never let a guest pick
+    // an arbitrary partition, e.g. the app's own default session); anything else
+    // → the shared browser partition.
+    const wantPartition = typeof params.partition === "string" ? params.partition : "";
+    params.partition = wantPartition.startsWith("persist:browser")
+      ? wantPartition
+      : "persist:browser";
   });
   win.webContents.on("did-attach-webview", (_e, guest) => {
     // Register as the browser-automation target (most-recent guest = active tab).
@@ -1122,6 +1131,12 @@ async function createWindow(): Promise<BrowserWindow> {
     // contents don't sit underneath the traffic-light cluster.
     // Other platforms get the standard window frame (no-op there).
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
+    // Windows/Linux: hide the native menu bar (文件/编辑/视图) by default so it
+    // doesn't clutter the window — it looked out of place jammed inside the
+    // frame (macOS has a global menu bar; win/linux render it in-window). Still
+    // reachable via Alt, and every item also has a shortcut / in-app affordance.
+    // No-op on macOS (global menu bar, not in-window).
+    autoHideMenuBar: process.platform !== "darwin",
     webPreferences: {
       preload: resolve(__dirname, "..", "preload", "index.cjs"),
       contextIsolation: true,
@@ -1689,7 +1704,7 @@ ipcMain.handle("plugins:checkUpdate", async (_e, name: string) => {
 ipcMain.handle("git:check", async () => {
   await applyGitPathFromSettings();
   const available = isGitAvailable();
-  const path = available ? findExecutable(resolveGit()) ?? undefined : undefined;
+  const path = available ? resolveGitPath() ?? undefined : undefined;
   return { available, ...(path ? { path } : {}) };
 });
 
@@ -2324,7 +2339,15 @@ ipcMain.handle("dialog:pickDir", async (e): Promise<{ path: string; name: string
     properties: ["openDirectory", "createDirectory"],
   });
   if (res.canceled || res.filePaths.length === 0) return null;
-  const path = res.filePaths[0];
+  // Project-boundary rule: if the user picked a SUBDIRECTORY of a git repo,
+  // snap to the repo root so it belongs to that one project (not a separate
+  // project per subdir — e.g. picking packages/desktop in a monorepo opens the
+  // repo root). Non-git folders are returned unchanged. Best-effort; falls back
+  // to the picked path on any git failure. applyGitPathFromSettings first so a
+  // user-configured git.path is honored by resolveGit.
+  await applyGitPathFromSettings();
+  const picked = res.filePaths[0];
+  const path = resolveProjectRoot(picked);
   const result = { path, name: basename(path) };
   await pushRecent({ ...result, lastOpenedAt: Date.now() });
   const win = BrowserWindow.fromWebContents(e.sender);

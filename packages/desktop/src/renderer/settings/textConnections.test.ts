@@ -103,6 +103,41 @@ describe("credentialCandidates", () => {
   test("excludes other-catalog credentials (a key belongs to one provider account)", () => {
     expect(credentialCandidates(creds, "openai").some((c) => c.id === "anth-acct")).toBe(false);
   });
+
+  test("with catalog: shares a key across same-provider catalogIds (openai key → openai-transcribe)", () => {
+    // Regression: adding a voice connection (openai-transcribe) showed NO existing
+    // key even though an OpenAI text key was saved, because the old filter matched
+    // catalogId exactly. Now same adapterKind (openai) shares.
+    const catalog: CatalogEntry[] = [
+      OPENAI, // id "openai", adapterKind "openai"
+      {
+        id: "openai-transcribe",
+        tag: "audio",
+        adapterKind: "openai",
+        displayName: "OpenAI 语音转写",
+        description: "x",
+        defaultBaseUrl: "https://api.openai.com/v1",
+      },
+      {
+        id: "anthropic",
+        tag: "text",
+        adapterKind: "anthropic",
+        displayName: "Anthropic",
+        description: "x",
+        defaultBaseUrl: "https://api.anthropic.com",
+      },
+    ];
+    const cands = credentialCandidates(creds, "openai-transcribe", catalog);
+    // the two openai-account keys are candidates; the anthropic one is not.
+    expect(cands.map((c) => c.id).sort()).toEqual(["openai-acct", "openai-acct-2"]);
+    expect(cands.some((c) => c.id === "anth-acct")).toBe(false);
+  });
+
+  test("without catalog: falls back to exact catalogId (no accidental over-sharing)", () => {
+    // openai-transcribe with no catalog → can't resolve adapterKind → exact match
+    // only, so it sees no "openai"-catalogId creds (safe default).
+    expect(credentialCandidates(creds, "openai-transcribe")).toEqual([]);
+  });
 });
 
 describe("credentialLabel", () => {

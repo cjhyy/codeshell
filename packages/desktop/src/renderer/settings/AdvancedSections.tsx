@@ -657,7 +657,8 @@ export function GitSection() {
     void (async () => {
       const s = (await window.codeshell.getSettings("user")) ?? {};
       if (cancelled) return;
-      setGitPath(stringOf(objectOf(s.git).path));
+      const savedPath = stringOf(objectOf(s.git).path);
+      setGitPath(savedPath);
       // Auto-probe git availability on mount so the result is shown right away
       // and survives leaving/returning to settings — `gitOk` is in-memory state
       // that resets on unmount, so without this the user had to re-click 检查

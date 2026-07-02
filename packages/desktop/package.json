@@ -24,6 +24,7 @@
   "build": {
     "appId": "com.cjhyy.codeshell",
     "productName": "code-shell",
+    "afterPack": "scripts/after-pack-adhoc-sign.cjs",
     "files": [
       "out/**/*",
       "build/icon.png",
@@ -75,6 +76,13 @@
         "nsis"
       ],
       "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     },
     "linux": {
       "target": [

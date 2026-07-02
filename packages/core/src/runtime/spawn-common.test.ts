@@ -2,6 +2,7 @@ import { describe, test, expect, afterEach } from "bun:test";
 import { spawn } from "node:child_process";
 import { resolveSpawnTarget, killProcessGroup, groupAlive, buildSandboxEnv, mergeShellEnv, ENV_DENY_REGEX } from "./spawn-common.js";
 import { createOffBackend } from "../tool-system/sandbox/off.js";
+import type { SandboxBackend } from "../tool-system/sandbox/index.js";
 
 describe("resolveSpawnTarget", () => {
   test("no sandbox → shell -c command", () => {
@@ -11,7 +12,7 @@ describe("resolveSpawnTarget", () => {
     expect(t.cleanup).toBeUndefined();
   });
 
-  test("off backend → delegates to backend.wrap", () => {
+  test("off backend → platform shell invocation (POSIX -c)", () => {
     const t = resolveSpawnTarget("echo hi", {
       cwd: "/tmp",
       shell: "/bin/zsh",
@@ -19,6 +20,46 @@ describe("resolveSpawnTarget", () => {
     });
     expect(t.file).toBe("/bin/zsh");
     expect(t.args).toEqual(["-c", "echo hi"]);
+  });
+
+  test("off backend on Windows → cmd.exe /c, NOT the hardcoded -c (Windows Bash hang regression)", () => {
+    // Regression: createOffBackend().wrap() used to hardcode ["-c", command]. On
+    // Windows that produced `cmd.exe -c "..."` — cmd treats -c as a filename and
+    // hangs in interactive mode until timeout, so Bash "never ran". off.wrap() now
+    // delegates to resolveShellInvocation, which gives win → /c.
+    const orig = process.platform;
+    Object.defineProperty(process, "platform", { value: "win32", configurable: true });
+    try {
+      const t = resolveSpawnTarget("echo hi", {
+        cwd: "C:\\tmp",
+        shell: "C:\\Windows\\System32\\cmd.exe",
+        sandbox: createOffBackend(),
+      });
+      expect(t.file).toBe("C:\\Windows\\System32\\cmd.exe");
+      expect(t.args).toEqual(["/c", "echo hi"]);
+      expect(t.args).not.toContain("-c");
+    } finally {
+      Object.defineProperty(process, "platform", { value: orig, configurable: true });
+    }
+  });
+
+  test("a REAL sandbox backend still goes through wrap()", () => {
+    // Only `off` bypasses wrap; a genuine sandbox (name !== "off") must delegate,
+    // because the flag form is that backend's responsibility (e.g. seatbelt).
+    const fakeSandbox: SandboxBackend = {
+      name: "seatbelt",
+      wrap: (command, o) => ({
+        file: "sandbox-exec",
+        args: ["-p", "profile", o.shell, "-c", command],
+      }),
+    };
+    const t = resolveSpawnTarget("echo hi", {
+      cwd: "/tmp",
+      shell: "/bin/bash",
+      sandbox: fakeSandbox,
+    });
+    expect(t.file).toBe("sandbox-exec");
+    expect(t.args).toEqual(["-p", "profile", "/bin/bash", "-c", "echo hi"]);
   });
 });
 
