@@ -23,6 +23,7 @@ import { applyDynamicToolDef } from "./dynamic-tool-defs.js";
 import { getMergedCatalog } from "../model-catalog/index.js";
 import { modelEntriesFromConnections } from "./model-connections-pool.js";
 import { resolveAuxKey } from "./aux-key.js";
+import { foldRunUsage } from "./session-usage.js";
 import {
   enqueueSteerItem,
   consumeSteerItems,
@@ -1778,6 +1779,12 @@ export class Engine {
     // Create components (requires resolved llmClient).
     const modelFacade = new ModelFacade(llmClient, session.transcript);
 
+    // Session-cumulative usage baseline: the LLM client is recreated per run
+    // (its getUsage() counts only THIS run), so to accumulate across runs we
+    // capture the persisted total at run start and fold this run's usage onto
+    // it (see foldRunUsage). Snapshot now, before any turn boundary fires.
+    const usageBaseline: TokenUsage = { ...session.state.tokenUsage };
+
     // Wire getOutputTokens for token budget tracking
     modelFacade.getOutputTokens = () => {
       const usage = llmClient.getUsage();
@@ -2002,12 +2009,9 @@ export class Engine {
         // completed run.
         onTurnBoundary: (turnCount) => {
           session.state.turnCount = turnCount;
-          const u = modelFacade.getUsage();
-          session.state.tokenUsage = {
-            promptTokens: u.totalPromptTokens,
-            completionTokens: u.totalCompletionTokens,
-            totalTokens: u.totalTokens,
-          };
+          // baseline + this run's running total (idempotent per boundary,
+          // accumulates across runs; carries cacheRead/cacheCreation too).
+          session.state.tokenUsage = foldRunUsage(usageBaseline, modelFacade.getUsage());
           if (this.config.costStore) {
             session.state.costState = this.config.costStore.serialize() as Record<
               string,
@@ -2177,12 +2181,9 @@ export class Engine {
     // distinction and misled anyone reading state.json.
     session.state.turnCount = turnLoop.currentTurn;
     session.state.status = result.reason;
+    // Session-cumulative (baseline + this run) for persistence...
     const usage = modelFacade.getUsage();
-    session.state.tokenUsage = {
-      promptTokens: usage.totalPromptTokens,
-      completionTokens: usage.totalCompletionTokens,
-      totalTokens: usage.totalTokens,
-    };
+    session.state.tokenUsage = foldRunUsage(usageBaseline, usage);
     if (this.config.costStore) {
       session.state.costState = this.config.costStore.serialize() as Record<string, unknown>;
     }
