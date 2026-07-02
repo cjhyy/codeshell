@@ -815,6 +815,40 @@ function App() {
   }, [activeBucket]);
   const state = transcripts[activeBucket] ?? fallbackState;
 
+  // Distinguish "existing session still hydrating" from "genuinely new chat".
+  // When you click a session this renderer hasn't opened before, its transcript
+  // isn't in `transcripts` yet and localStorage is empty, so `state` falls back
+  // to INITIAL_STATE (0 messages) — which ChatView would render as the welcome /
+  // "new chat" screen, flashing it for a beat until the async subscribeSession
+  // hydrate lands. But an EXISTING session is present in the session index; a
+  // genuinely new/draft session is not. So: in the index + still 0 messages =
+  // hydrating (suppress welcome, show the normal empty stream), not new.
+  const hydratingExistingSession =
+    !!activeSessionId &&
+    state.messages.length === 0 &&
+    (sessionIndices[activeRepoKey]?.sessions.some((s) => s.id === activeSessionId) ?? false);
+
+  // Route the approval modal to the ORIGINATING session's tab, not whatever tab
+  // happens to be active. `approval` is a single global slot; without this gate
+  // a request from session A pops its modal on session B (the tab the user is
+  // looking at) — and A's turn silently blocks waiting for a decision the user
+  // never sees on A. Resolve the approval's own bucket from its sessionId (same
+  // resolver AskUser uses) and only surface the modal when it matches the active
+  // bucket. The state stays global, so switching TO session A reveals it then.
+  // No sessionId (legacy/room path) → fall back to showing on the active tab.
+  const approvalForActiveBucket = useMemo(() => {
+    if (!approval) return null;
+    if (!approval.sessionId) return approval; // unattributable → show where we are
+    const srcBucket =
+      resolveBucket(
+        approval.sessionId,
+        engineToBucketRef.current,
+        sessionIndicesRef.current,
+        runningBucketRef.current,
+      ) ?? activeBucket;
+    return srcBucket === activeBucket ? approval : null;
+  }, [approval, activeBucket, sessionIndices]);
+
   // The "正在思考…" live line shows whenever a turn is busy. Normally
   // streamingAssistantId flips it on once stream_request_start arrives; but on
   // the "打断接力" path (stop → re-send queued input) the new turn is busy with
@@ -3110,10 +3144,11 @@ function App() {
               onExtendGoal={extendGoal}
               onAttachImagePath={(p) => void attachImageByPath(p)}
               imageDetail={imageDetail}
-              pendingApproval={approval}
+              hydrating={hydratingExistingSession}
+              pendingApproval={approvalForActiveBucket}
               onApprovalDecide={
-                approval
-                  ? (decision, reason, scope, pathScope) => decideEnvelope(approval, decision, reason, scope, pathScope)
+                approvalForActiveBucket
+                  ? (decision, reason, scope, pathScope) => decideEnvelope(approvalForActiveBucket, decision, reason, scope, pathScope)
                   : undefined
               }
               permissionMode={permissionMode}

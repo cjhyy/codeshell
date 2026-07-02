@@ -110,6 +110,14 @@ interface Props {
   // Title shown above the composer in new-chat mode (empty stream)
   welcomeNode?: React.ReactNode;
   /**
+   * True when the active session is an EXISTING session whose transcript hasn't
+   * hydrated yet (0 messages so far, but present in the session index). Used to
+   * suppress the "new chat" welcome screen during the brief pre-hydration gap —
+   * otherwise clicking a not-yet-opened session flashes the welcome UI before
+   * its history streams in. A genuinely new/draft session leaves this false.
+   */
+  hydrating?: boolean;
+  /**
    * Seed text to drop into the composer (without sending). Bump `composerSeedNonce`
    * to re-apply the same text. Used by the "新建自动化" entry to start a
    * conversational automation setup.
@@ -175,6 +183,7 @@ export function ChatView({
   messageCwd,
   repoClean,
   welcomeNode,
+  hydrating,
   composerSeed,
   composerSeedNonce,
   draft,
@@ -595,7 +604,10 @@ export function ChatView({
     }
   }
 
-  const isNewChat = messages.length === 0;
+  // An empty stream is the "new chat" welcome — UNLESS we're mid-hydration of an
+  // existing session (App sets `hydrating`), where 0 messages is just the gap
+  // before history streams in. Treating that as new-chat flashes the welcome UI.
+  const isNewChat = messages.length === 0 && !hydrating;
 
   // Codex-style inline approvals: when an approval is pending, drop
   // the full ApprovalCard at the tail of the chat stream so it scrolls
