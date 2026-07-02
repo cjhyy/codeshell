@@ -35,5 +35,9 @@ export interface LLMUsageTracker {
   totalPromptTokens: number;
   totalCompletionTokens: number;
   totalTokens: number;
+  /** Sum of cache-read tokens across responses (0 when no provider reported any). */
+  totalCacheReadTokens: number;
+  /** Sum of cache-creation tokens across responses. */
+  totalCacheCreationTokens: number;
   requestCount: number;
 }

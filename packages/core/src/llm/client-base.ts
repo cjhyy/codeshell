@@ -7,6 +7,18 @@ import type { CreateMessageOptions, LLMUsageTracker } from "./types.js";
 import { LLMError, ContextLimitError, LLMRateLimitError } from "../exceptions.js";
 import { logger } from "../logging/logger.js";
 
+function emptyUsageTracker(): LLMUsageTracker {
+  return {
+    records: [],
+    totalPromptTokens: 0,
+    totalCompletionTokens: 0,
+    totalTokens: 0,
+    totalCacheReadTokens: 0,
+    totalCacheCreationTokens: 0,
+    requestCount: 0,
+  };
+}
+
 export abstract class LLMClientBase {
   readonly provider: string;
   readonly model: string;
@@ -24,13 +36,7 @@ export abstract class LLMClientBase {
    */
   static onUsage?: (model: string, usage: TokenUsage) => void;
 
-  protected usage: LLMUsageTracker = {
-    records: [],
-    totalPromptTokens: 0,
-    totalCompletionTokens: 0,
-    totalTokens: 0,
-    requestCount: 0,
-  };
+  protected usage: LLMUsageTracker = emptyUsageTracker();
 
   /**
    * `config` carries model identity (provider/model/apiKey/baseUrl/maxTokens/
@@ -67,12 +73,21 @@ export abstract class LLMClientBase {
     this.usage.totalPromptTokens += usage.promptTokens;
     this.usage.totalCompletionTokens += usage.completionTokens;
     this.usage.totalTokens += usage.totalTokens;
+    this.usage.totalCacheReadTokens += usage.cacheReadTokens ?? 0;
+    this.usage.totalCacheCreationTokens += usage.cacheCreationTokens ?? 0;
     this.usage.requestCount++;
     LLMClientBase.onUsage?.(this.model, usage);
   }
 
   getUsage(): LLMUsageTracker {
     return { ...this.usage };
+  }
+
+  /** Zero all accumulated usage. Used when starting a fresh accounting window
+   *  (e.g. after a model switch, where the prior model's cache stats no longer
+   *  apply). */
+  resetUsage(): void {
+    this.usage = emptyUsageTracker();
   }
 
   /**
