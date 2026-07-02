@@ -143,6 +143,8 @@ interface Props {
   sessionIndices: Record<string, SessionIndex>;
   onRestoreArchivedSession: (repoId: string | null, sessionId: string) => void;
   onDeleteArchivedSession: (repoId: string | null, sessionId: string) => void;
+  isMac: boolean;
+  isFullscreen: boolean;
   onBack: () => void;
 }
 
@@ -160,6 +162,8 @@ export function SettingsPage({
   sessionIndices,
   onRestoreArchivedSession,
   onDeleteArchivedSession,
+  isMac,
+  isFullscreen,
   onBack,
 }: Props) {
   const { t } = useT();
@@ -170,11 +174,17 @@ export function SettingsPage({
   // supported in the UI; sections still take a `scope`/`activeRepoPath`
   // prop pair, so we pass the fixed user scope through unchanged.
   const scope = "user" as const;
+  const showTrafficLightGutter = isMac && !isFullscreen;
 
   return (
     <div className="h-full">
       <div className="flex h-full max-[720px]:flex-col">
-        <nav className="w-60 shrink-0 overflow-y-auto border-r border-border px-4 pb-4 pt-8 max-[720px]:h-44 max-[720px]:w-full max-[720px]:border-b max-[720px]:border-r-0 max-[720px]:px-3 max-[720px]:py-3">
+        <nav
+          className={
+            "w-60 shrink-0 overflow-y-auto border-r border-border px-4 pb-4 max-[720px]:h-44 max-[720px]:w-full max-[720px]:border-b max-[720px]:border-r-0 max-[720px]:px-3 max-[720px]:py-3 " +
+            (showTrafficLightGutter ? "pt-8" : "pt-4")
+          }
+        >
           <button
             className="mb-5 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
             onClick={onBack}

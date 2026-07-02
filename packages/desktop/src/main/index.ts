@@ -1100,6 +1100,11 @@ function hardenWebviewGuests(win: BrowserWindow): void {
   });
 }
 
+function sendWindowFullscreenState(win: BrowserWindow): void {
+  if (win.isDestroyed()) return;
+  win.webContents.send("window:fullscreen", { fullscreen: win.isFullScreen() });
+}
+
 async function createWindow(): Promise<BrowserWindow> {
   const ws = await loadWindowState();
 
@@ -1256,6 +1261,7 @@ async function createWindow(): Promise<BrowserWindow> {
   win.webContents.on("console-message", (_e, level, message, line, sourceId) => {
     dlog("renderer", "console", { level, message, line, sourceId });
   });
+  win.webContents.on("did-finish-load", () => sendWindowFullscreenState(win));
 
   const persist = (): void => {
     if (win.isDestroyed()) return;
@@ -1271,6 +1277,8 @@ async function createWindow(): Promise<BrowserWindow> {
   win.on("close", persist);
   win.on("resize", persist);
   win.on("move", persist);
+  win.on("enter-full-screen", () => sendWindowFullscreenState(win));
+  win.on("leave-full-screen", () => sendWindowFullscreenState(win));
   // macOS keeps the app alive after the last window closes, so ptys whose
   // window is gone would otherwise leak until quit. Reap them once the
   // webContents is actually torn down (next tick after `closed`).
@@ -2376,6 +2384,10 @@ ipcMain.handle("dialog:pickGitBinary", async (): Promise<string | null> => {
 
 ipcMain.handle("window:new", async () => {
   await createWindow();
+});
+
+ipcMain.handle("window:isFullscreen", async (e): Promise<boolean> => {
+  return BrowserWindow.fromWebContents(e.sender)?.isFullScreen() ?? false;
 });
 
 // Open the standalone browser popout, parented to the requesting window so its

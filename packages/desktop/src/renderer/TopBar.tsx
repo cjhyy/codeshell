@@ -16,6 +16,8 @@ interface Props {
   /** Right-side panel dock (files/browser/review/terminal) open state + toggle. */
   panelOpen: boolean;
   onTogglePanel: () => void;
+  isMac: boolean;
+  isFullscreen: boolean;
   /** Whether the panel dock can be opened at all. False in draft state (no
    *  active session yet) — panels need a real conversation/context, so the
    *  toggle is hidden entirely rather than opening an empty dock. */
@@ -54,6 +56,8 @@ function TopBarImpl({
   onToggleSidebar,
   panelOpen,
   onTogglePanel,
+  isMac,
+  isFullscreen,
   panelAvailable = true,
   activity,
   tasks,
@@ -73,7 +77,7 @@ function TopBarImpl({
       style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <span className="w-[68px] shrink-0" aria-hidden="true" />
+        {isMac && !isFullscreen && <span className="w-[68px] shrink-0" aria-hidden="true" />}
         <span className="shrink-0" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
           <IconButton
             label={sidebarCollapsed ? t("topbar.expandSidebar") : t("topbar.collapseSidebar")}

@@ -297,6 +297,7 @@ function App() {
   const [defaultActiveModelKey, setDefaultActiveModelKey] = useState<string | null>(null);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [defaultPermissionMode, setDefaultPermissionMode] = useState<PermissionMode | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   // Provider-agnostic image clarity (low/standard/high) from merged settings;
   // drives renderer-side downscale before send. Undefined = follow default.
   const [imageDetail, setImageDetail] = useState<"low" | "standard" | "high" | undefined>(undefined);
@@ -366,6 +367,10 @@ function App() {
   const activeModelKey = modelOverrides[activeBucket] ?? defaultActiveModelKey;
   const goalEnabled = goalOverrides[activeBucket] ?? false;
   const busy = busyKeys.has(activeBucket);
+  const platform = typeof window !== "undefined" ? window.codeshell?.platform : undefined;
+  const isMac =
+    platform === "darwin" ||
+    (!platform && typeof navigator !== "undefined" && /Mac/.test(navigator.platform));
   const [composerDrafts, setComposerDrafts] = useState<ComposerDraftsMap>({});
   const composerDraft = composerDrafts[activeBucket] ?? {
     text: "",
@@ -538,6 +543,22 @@ function App() {
   }, [approvalQueue, sessionIndices, busyKeys, unreadBuckets]);
 
   useEffect(() => { saveRepos(repos); }, [repos]);
+  useEffect(() => {
+    let cancelled = false;
+    void window.codeshell
+      ?.isWindowFullscreen?.()
+      .then((value) => {
+        if (!cancelled) setIsFullscreen(Boolean(value));
+      })
+      .catch(() => undefined);
+    const off = window.codeshell?.onWindowFullscreenChange?.((state) => {
+      setIsFullscreen(Boolean(state.fullscreen));
+    });
+    return () => {
+      cancelled = true;
+      off?.();
+    };
+  }, []);
   // Disk recents are the source of truth for the project SET + pinned/soft-delete.
   // Hydrate from disk on mount and re-project on every change (another window, a
   // phone, or our own add/remove/pin), reconciling against the localStorage cache
@@ -2963,10 +2984,7 @@ function App() {
     setGoalOverrides((prev) => ({ ...prev, [activeBucket]: false }));
   };
 
-  const platformClassEarly =
-    typeof navigator !== "undefined" && /Mac/.test(navigator.platform)
-      ? "platform-darwin"
-      : "";
+  const platformClassEarly = isMac ? "platform-darwin" : "";
 
   if (view.viewMode === "settings_page") {
     return (
@@ -2980,6 +2998,8 @@ function App() {
             setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
           }}
           onDeleteArchivedSession={handleDeleteSession}
+          isMac={isMac}
+          isFullscreen={isFullscreen}
           onBack={() => setViewMode("chat")}
         />
       </div>
@@ -3003,6 +3023,8 @@ function App() {
           onToggleSidebar={toggleSidebar}
           panelOpen={panelRequest.open}
           onTogglePanel={togglePanel}
+          isMac={isMac}
+          isFullscreen={isFullscreen}
           // Draft state (no active session yet) has no conversation/context to
           // attach panels to — hide the dock toggle until a real session exists.
           panelAvailable={activeSessionId !== null}

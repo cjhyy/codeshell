@@ -226,6 +226,8 @@ function rpc(
 }
 
 contextBridge.exposeInMainWorld("codeshell", {
+  /** Main-process platform, exposed explicitly so renderer layout doesn't infer it from UA strings. */
+  platform: process.platform,
   /** Forward a renderer-side log line into ~/.code-shell/logs/desktop-*.log. */
   log: (msg: string, data?: Record<string, unknown>) =>
     ipcRenderer.send("desktop:log", { msg, data }),
@@ -707,6 +709,12 @@ contextBridge.exposeInMainWorld("codeshell", {
   },
   notify: (opts: { title: string; body?: string; subtitle?: string }) =>
     ipcRenderer.invoke("notify:show", opts),
+  isWindowFullscreen: () => ipcRenderer.invoke("window:isFullscreen"),
+  onWindowFullscreenChange: (cb: (state: { fullscreen: boolean }) => void): (() => void) => {
+    const h = (_e: IpcRendererEvent, state: { fullscreen: boolean }) => cb(state);
+    ipcRenderer.on("window:fullscreen", h);
+    return () => ipcRenderer.removeListener("window:fullscreen", h);
+  },
   setBadgeCount: (count: number) => ipcRenderer.invoke("badge:set", count),
   newWindow: () => ipcRenderer.invoke("window:new"),
   checkForUpdate: () => ipcRenderer.invoke("updater:check"),

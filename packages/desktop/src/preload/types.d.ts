@@ -317,6 +317,8 @@ export interface MaskedCredentialView extends Omit<CredentialView, "secret"> {
 }
 
 export interface CodeshellApi {
+  /** Main-process platform (`process.platform`), used for window chrome layout. */
+  platform: string;
   /** Forward a structured log line to ~/.code-shell/logs/desktop-*.log via main. */
   log(msg: string, data?: Record<string, unknown>): void;
   run(
@@ -976,6 +978,8 @@ export interface CodeshellApi {
     ): () => void;
   };
   notify(opts: { title: string; body?: string; subtitle?: string }): Promise<void>;
+  isWindowFullscreen(): Promise<boolean>;
+  onWindowFullscreenChange(cb: (state: { fullscreen: boolean }) => void): Unsubscribe;
   setBadgeCount(count: number): Promise<void>;
   onMenuEvent(cb: (event: string, payload?: unknown) => void): Unsubscribe;
   newWindow(): Promise<void>;
