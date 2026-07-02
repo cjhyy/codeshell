@@ -3,9 +3,11 @@
  * Fetch the latest model catalog from OpenRouter and write a slimmed
  * snapshot to packages/core/src/data/openrouter-models.json.
  *
- * Run via `bun run scripts/sync-models.ts` or implicitly during build
- * (see package.json `prebuild` hook). Network failures keep the existing
- * snapshot and exit 0 so offline builds still succeed.
+ * Run MANUALLY via `bun run scripts/sync-models.ts` to refresh the committed
+ * snapshot — it is NOT wired into any build/prebuild hook, so the checked-in
+ * JSON is what ships until someone re-runs this. Network failures keep the
+ * existing snapshot and exit 0 so a manual refresh offline is a no-op, not a
+ * failure.
  */
 
 import { writeFileSync, existsSync, mkdirSync } from "node:fs";
