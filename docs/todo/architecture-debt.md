@@ -2,6 +2,7 @@
 
 > 状态:**P0 已落地并入 main**(commit `c191bb51`);P1/P2 待排期。
 > 本文是对 `packages/core` 等的架构债务清单 + 修复顺序 + 已知正解。债务的「现状描述」见 `docs/architecture/`(源码级架构文档);本文只记**该改什么、为什么、怎么改**。
+> 关联:**目标架构路线**(core 通用化 harness + 插件面板)见 `core-harness-and-plugin-panels.md`(2026-07-02 review 产出)——其 Phase B③④ 覆盖本文 P1-⑥(arena 可选注册推广为 CapabilityModule),Phase C① = P1-⑤,排期时合并执行别做两遍。
 
 原则:每条独立可做、可单独验证、不大爆改。改 core 必走 worktree + rebuild;subagent 不碰 git。
 
