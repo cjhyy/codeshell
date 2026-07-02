@@ -12,6 +12,7 @@
 | [`workspace-profile-讨论稿.md`](workspace-profile-讨论稿.md) | 讨论中(P3,未实现) | WorkspaceProfile / 数字人:全局 Profile 库、本地安装/激活/切换、主指令 + 经验三层 + Team Board。设计锚点,非实现承诺 |
 | [`prompt-cache-optimization.md`](prompt-cache-optimization.md) | 规划中(未动手) | Prompt 缓存优化对标 CC:现状只 systemPrompt 一个断点、命中率不可见;含 CC 真实做法(扒自 sourcemap)+ 可抄清单 + 执行顺序(先做"命中率可见")。关联记忆 `project_prompt_cache_gaps` |
 | [`architecture-debt.md`](architecture-debt.md) | **P0 已落地 main**(`c191bb51`),P1/P2 待排期 | 架构债路线图:P0=断循环依赖/抽 engine 类型/凭证加密边界(已并);P1=拆 index、arena builtin 可选、拆 engine.ts、拆 App.tsx、真启用 safeStorage;P2=arena 移包/state 单例/cron 测试/文档措辞。含每条正解与落地顺序。配套源码级现状见 `docs/architecture/` |
+| [`smoke-automation-mock-provider.md`](smoke-automation-mock-provider.md) | 设计定稿(未动手) | 冒烟自动化:本地起 mock provider server 讲 provider wire 协议,app 配置指 localhost,零 core 改动。L1 启动+UI(扩展 smoke-panels)、L2 LLM 全链路(mock server + 隔离 HOME 临时 catalog + Playwright 存在性断言);先本地 `bun run smoke` 不接 CI。OpenAI 路由先做,Anthropic fast-follow。完整设计 spec `2026-07-02-smoke-automation-mock-provider-design.md` |
 
 ## 仍准确未做的代表项
 
