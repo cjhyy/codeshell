@@ -314,6 +314,7 @@ export class ToolExecutor {
         call.toolName,
         call.args,
         reason,
+        { sessionId: this.toolCtx?.sessionId },
       );
       if (!approved) {
         return {
@@ -392,7 +393,9 @@ export class ToolExecutor {
 
       if (decision === "ask") {
         const reason = permHook.messages?.join("\n");
-        const approved = await this.permission.handleAsk(call.toolName, call.args, reason);
+        const approved = await this.permission.handleAsk(call.toolName, call.args, reason, {
+          sessionId: this.toolCtx?.sessionId,
+        });
         if (!approved) {
           return {
             id: call.id,

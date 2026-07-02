@@ -304,6 +304,8 @@ export interface AgentStreamEventNotification {
 
 /** Server requests approval from the client (UI). */
 export interface ApprovalRequestNotification {
+  /** Originating engine session when known. */
+  sessionId?: string;
   requestId: string;
   request: ApprovalRequest;
 }

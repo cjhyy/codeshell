@@ -297,6 +297,8 @@ export interface PermissionRule {
 }
 
 export interface ApprovalRequest {
+  /** Originating engine session. Hosts use this only to route the prompt UI. */
+  sessionId?: string;
   toolName: string;
   args: Record<string, unknown>;
   description: string;

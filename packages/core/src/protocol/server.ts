@@ -593,13 +593,24 @@ export class AgentServer {
       }
       const resolve = s.pendingApprovals.get(params.requestId);
       if (!resolve) {
-        this.transport.send(
-          createErrorResponse(
-            req.id,
-            ErrorCodes.InvalidParams,
-            `No pending approval: ${params.requestId}`,
-          ),
-        );
+        // Tool approvals still resolve through the interactive backend's
+        // legacy pending map; the sessionId on their envelope is UI routing
+        // metadata. Accept a session-tagged response for those requests too.
+        const legacyResolve = this.pendingApprovals.get(params.requestId);
+        if (!legacyResolve) {
+          this.transport.send(
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InvalidParams,
+              `No pending approval: ${params.requestId}`,
+            ),
+          );
+          return;
+        }
+        this.pendingApprovals.delete(params.requestId);
+        this.clearApprovalTimer(params.requestId);
+        legacyResolve(params.decision);
+        this.transport.send(createResponse(req.id, { ok: true }));
         return;
       }
       s.pendingApprovals.delete(params.requestId);
@@ -1634,6 +1645,7 @@ export class AgentServer {
   private requestApprovalFromClient(request: ApprovalRequest): Promise<ApprovalResult> {
     return new Promise((resolve) => {
       const requestId = nanoid(12);
+      const sessionId = typeof request.sessionId === "string" ? request.sessionId : undefined;
       this.pendingApprovals.set(requestId, resolve);
 
       const timer = setTimeout(() => {
@@ -1645,7 +1657,11 @@ export class AgentServer {
       }, AgentServer.APPROVAL_TIMEOUT_MS);
       this.approvalTimers.set(requestId, timer);
 
-      this.notify(Methods.ApprovalRequest, { requestId, request });
+      this.notify(Methods.ApprovalRequest, {
+        ...(sessionId ? { sessionId } : {}),
+        requestId,
+        request,
+      });
     });
   }
 

@@ -967,6 +967,7 @@ export class PermissionClassifier {
     toolName: string,
     args: Record<string, unknown>,
     reason?: string,
+    opts?: { sessionId?: string },
   ): Promise<boolean> {
     if (this.defaultMode === "dontAsk") {
       this.log.info("permission.auto_deny", {
@@ -1008,6 +1009,7 @@ export class PermissionClassifier {
         ? `${baseDescription}\n\nReason (from pre_tool_use hook): ${reason}`
         : baseDescription;
       result = await this.approvalBackend.requestApproval({
+        ...(opts?.sessionId ? { sessionId: opts.sessionId } : {}),
         toolName,
         args,
         description,

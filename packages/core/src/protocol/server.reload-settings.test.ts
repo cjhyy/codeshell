@@ -73,8 +73,10 @@ describe("AgentServer configure({ reloadSettings })", () => {
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
+    chatManager.getOrCreate("sess-1", {} as never);
 
     const approval = getInteractiveApprovalBackend().requestApproval({
+      sessionId: "sess-1",
       toolName: "MemoryDelete",
       args: { scope: "user", name: "stale" },
       description: "Delete a user memory",
@@ -83,6 +85,7 @@ describe("AgentServer configure({ reloadSettings })", () => {
 
     await new Promise((r) => setTimeout(r, 10));
     const notification = t.sent.find((m: any) => m.method === "agent/approvalRequest");
+    expect(notification?.params?.sessionId).toBe("sess-1");
     expect(notification?.params?.request?.toolName).toBe("MemoryDelete");
 
     t.deliver({
@@ -90,6 +93,7 @@ describe("AgentServer configure({ reloadSettings })", () => {
       id: 1,
       method: "agent/approve",
       params: {
+        sessionId: "sess-1",
         requestId: notification.params.requestId,
         decision: { approved: true },
       },
