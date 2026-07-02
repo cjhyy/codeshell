@@ -320,6 +320,7 @@ function EntryForm({
               { value: "text", label: "text" },
               { value: "image", label: "image" },
               { value: "video", label: "video" },
+              { value: "audio", label: "audio" },
             ]}
           />
         </ConnField>

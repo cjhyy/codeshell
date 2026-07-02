@@ -18,8 +18,8 @@
     "start": "electron .",
     "predist": "bun run scripts/predist.ts",
     "prepack": "bun run scripts/predist.ts",
-    "pack": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir",
-    "dist": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder"
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
   },
   "build": {
     "appId": "com.cjhyy.codeshell",

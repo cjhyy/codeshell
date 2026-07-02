@@ -37,6 +37,13 @@ import { useT } from "./i18n/I18nProvider";
 
 interface Props {
   messages: Message[];
+  /**
+   * True while an EXISTING session picked from the sidebar is being hydrated
+   * (no localStorage projection yet). `messages` is empty in this frame, but it
+   * is NOT a fresh draft — show a loading placeholder instead of the "新建对话"
+   * welcome hero so we don't flash "new chat" before history paints.
+   */
+  awaitingHydration?: boolean;
   turnEpoch?: number;
   /** Engine session id — lets the Files-Changed card do turn-level undo/redo. */
   engineSessionId?: string | null;
@@ -135,6 +142,7 @@ const MIN_TEXTAREA_PX = 36;
 
 export function ChatView({
   messages,
+  awaitingHydration = false,
   turnEpoch,
   engineSessionId,
   liveTurnActive,
@@ -595,7 +603,11 @@ export function ChatView({
     }
   }
 
-  const isNewChat = messages.length === 0;
+  // A truly new/draft chat has no messages AND isn't mid-hydration. An existing
+  // session being hydrated also has messages.length === 0 for a frame, but must
+  // NOT render as the welcome hero (see awaitingHydration) — it shows a loading
+  // placeholder below instead.
+  const isNewChat = messages.length === 0 && !awaitingHydration;
 
   // Codex-style inline approvals: when an approval is pending, drop
   // the full ApprovalCard at the tail of the chat stream so it scrolls
@@ -710,19 +722,29 @@ export function ChatView({
         eat the vertical space and push the welcome + composer to the bottom.
         The welcome block below owns the flex-1 and centers itself instead.
       */}
-      {!isNewChat && (
-        <MessageStream
-          messages={messages}
-          turnEpoch={turnEpoch}
-          engineSessionId={engineSessionId}
-          liveTurnActive={liveTurnActive}
-          onAskUserAnswer={onAskUserAnswer}
-          onExtendGoal={onExtendGoal}
-          trailing={inlineApproval}
-          trailingKey={pendingApproval?.requestId ?? null}
-          cwd={messageCwd ?? activeRepoPath}
-          sendEpoch={sendEpoch}
-        />
+      {awaitingHydration ? (
+        // Existing session picked from the sidebar, not hydrated yet: owns the
+        // flex-1 stream space with a centered spinner so the pane isn't blank
+        // and doesn't flash the new-chat hero before history paints.
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
+          <Loader2 className="size-5 animate-spin" />
+          <span className="text-sm">{t("chat.loadingSession")}</span>
+        </div>
+      ) : (
+        !isNewChat && (
+          <MessageStream
+            messages={messages}
+            turnEpoch={turnEpoch}
+            engineSessionId={engineSessionId}
+            liveTurnActive={liveTurnActive}
+            onAskUserAnswer={onAskUserAnswer}
+            onExtendGoal={onExtendGoal}
+            trailing={inlineApproval}
+            trailingKey={pendingApproval?.requestId ?? null}
+            cwd={messageCwd ?? activeRepoPath}
+            sendEpoch={sendEpoch}
+          />
+        )
       )}
 
       {(openAsk || showStickyApproval) && (

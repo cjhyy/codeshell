@@ -2,6 +2,7 @@
 export const chat = {
   zh: {
     chat: {
+      loadingSession: "正在加载会话…",
       composer: {
         placeholderBusy: "要求后续变更",
         placeholderIdle: "可向 agent 询问任何事。输入 @ 使用插件或提及文件",
@@ -169,6 +170,7 @@ export const chat = {
   },
   en: {
     chat: {
+      loadingSession: "Loading conversation…",
       composer: {
         placeholderBusy: "Request a follow-up change",
         placeholderIdle: "Ask the agent anything. Type @ to use a skill or mention a file",

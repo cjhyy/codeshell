@@ -836,6 +836,20 @@ function App() {
   }, [activeBucket]);
   const state = transcripts[activeBucket] ?? fallbackState;
 
+  // Existing session picked from the sidebar that this renderer hasn't hydrated
+  // yet AND has no localStorage projection (ran headless / on another renderer):
+  // `state` is INITIAL_STATE for the frame(s) before the async hydrate effect
+  // dispatches, which ChatView would otherwise render as the "新建对话" welcome
+  // hero — flashing "new chat" before the real conversation paints. Flag that
+  // gap so ChatView shows a loading placeholder instead. A genuine fresh draft
+  // has activeSessionId === null (never solidified) and is excluded; a just-sent
+  // session already has its user bubble in `transcripts`, so messages.length > 0
+  // there and this stays false. (rc.2 "先闪新建页再渲染内容" fix)
+  const awaitingHydration =
+    activeSessionId !== null &&
+    transcripts[activeBucket] === undefined &&
+    state.messages.length === 0;
+
   // The "正在思考…" live line shows whenever a turn is busy. Normally
   // streamingAssistantId flips it on once stream_request_start arrives; but on
   // the "打断接力" path (stop → re-send queued input) the new turn is busy with
@@ -3027,7 +3041,11 @@ function App() {
           isFullscreen={isFullscreen}
           // Draft state (no active session yet) has no conversation/context to
           // attach panels to — hide the dock toggle until a real session exists.
-          panelAvailable={activeSessionId !== null}
+          // The dock lives alongside chat only; other full-screen views
+          // (credentials / automation / …) reuse this render tree (incl. TopBar)
+          // but have no panel area, so also gate on the chat viewMode — otherwise
+          // the toggle wrongly shows on those pages whenever a session is active.
+          panelAvailable={activeSessionId !== null && view.viewMode === "chat"}
           activity={liveActivity}
           tasks={latestTasks}
           activeGoal={state.activeGoal}
@@ -3104,6 +3122,7 @@ function App() {
           <>
             <ChatView
               messages={state.messages}
+              awaitingHydration={awaitingHydration}
               turnEpoch={state.turnEpoch}
               engineSessionId={state.sessionId}
               liveTurnActive={liveTurnActive}
