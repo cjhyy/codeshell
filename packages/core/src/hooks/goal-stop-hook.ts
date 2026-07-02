@@ -35,6 +35,8 @@ export interface GoalJudgeLLM {
     maxTokens?: number;
     recordUsage?: boolean;
     signal?: AbortSignal;
+    /** Reasoning control — the judge always asks for it OFF (see call site). */
+    reasoning?: import("../llm/reasoning-setting.js").ReasoningSetting;
   }): Promise<LLMResponse>;
 }
 
@@ -233,6 +235,8 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     const signal = ctx.data.signal as AbortSignal | undefined;
 
     let verdict: JudgeVerdict | null = null;
+    let respText = "";
+    let respStopReason: string | undefined;
     try {
       const resp = await llm.createMessage({
         systemPrompt: JUDGE_SYSTEM,
@@ -248,13 +252,28 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
           },
         ],
         stream: false,
-        maxTokens: 400,
+        // Headroom, not 400. A reasoning-capable aux model (e.g. DeepSeek V4)
+        // shares this budget between hidden reasoning tokens and the visible
+        // JSON. At 400 the reasoning ate the budget and the JSON got truncated
+        // (stopReason:"length") → extractJson returned null → the P0
+        // "unparseable" branch kept the run going forever, so a wall-clock
+        // deadline in the goal never fired. `reasoning:off` below is the real
+        // fix; 1500 is the belt-and-suspenders for models that ignore it.
+        maxTokens: 1500,
         // Auxiliary sub-call — keep it out of the session cost/turn stats.
         recordUsage: false,
+        // Turn thinking OFF. The judge only emits a tiny JSON verdict; reasoning
+        // tokens are pure waste here and (per above) actively caused truncation.
+        // On DeepSeek V4 / Anthropic-budget this genuinely disables thinking; on
+        // effort/adaptive/unknown models the field is a no-op (never a 400), so
+        // it is safe to always send — matching the aux summary/memory calls.
+        reasoning: { mode: "off" },
         // Let a user Stop mid-judge abort this call rather than block on it.
         signal,
       });
-      verdict = extractJson(resp.text ?? "");
+      respText = resp.text ?? "";
+      respStopReason = resp.stopReason;
+      verdict = extractJson(respText);
     } catch (err) {
       log.warn("goal_stop.judge_failed", {
         cat: "goal",
@@ -273,7 +292,15 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     }
 
     if (!verdict) {
-      log.warn("goal_stop.unparseable", { cat: "goal" });
+      // Record enough to diagnose WHY the verdict didn't parse without having to
+      // reproduce it live: stopReason ("length" ⇒ the reply was truncated, the
+      // most common cause) plus a short preview of the raw text. Preview is
+      // capped so a runaway reply can't bloat the log line.
+      log.warn("goal_stop.unparseable", {
+        cat: "goal",
+        stopReason: respStopReason,
+        preview: respText.slice(0, 200),
+      });
       // P0: same as the throw path — unparseable judge output must not be
       // treated as "done". Continue instead of silently allowing the stop.
       return {

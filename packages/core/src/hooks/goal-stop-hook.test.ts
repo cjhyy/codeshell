@@ -23,18 +23,30 @@ const noopLog = {
 /** A judge LLM that returns a fixed text and records how it was called. */
 function fakeJudge(
   text: string,
-): GoalJudgeLLM & { calls: number; lastSignal?: AbortSignal; lastUserContent?: string } {
+): GoalJudgeLLM & {
+  calls: number;
+  lastSignal?: AbortSignal;
+  lastUserContent?: string;
+  lastMaxTokens?: number;
+  lastReasoning?: unknown;
+} {
   const j = {
     calls: 0,
     lastSignal: undefined as AbortSignal | undefined,
     lastUserContent: undefined as string | undefined,
+    lastMaxTokens: undefined as number | undefined,
+    lastReasoning: undefined as unknown,
     async createMessage(opts: {
       signal?: AbortSignal;
       messages?: { role: string; content: string }[];
+      maxTokens?: number;
+      reasoning?: unknown;
     }): Promise<LLMResponse> {
       j.calls += 1;
       j.lastSignal = opts.signal;
       j.lastUserContent = opts.messages?.[0]?.content;
+      j.lastMaxTokens = opts.maxTokens;
+      j.lastReasoning = opts.reasoning;
       return { text, toolCalls: [] };
     },
   };
@@ -141,6 +153,43 @@ describe("createGoalStopHook — three-state judge", () => {
     });
     const res = await hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "x" } });
     expect(res.continueSession).toBe(true);
+  });
+
+  it("judge call turns reasoning OFF (aux call — no thinking tokens to spend/truncate)", async () => {
+    const judge = fakeJudge('{"met": false, "waiting": false, "gaps": "x"}');
+    const hook = createGoalStopHook({ goal: "ship it", llm: judge, log: noopLog });
+    await hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "x" } });
+    expect(judge.lastReasoning).toEqual({ mode: "off" });
+  });
+
+  it("judge call requests a maxTokens large enough to survive a reasoning model", async () => {
+    const judge = fakeJudge('{"met": false, "waiting": false, "gaps": "x"}');
+    const hook = createGoalStopHook({ goal: "ship it", llm: judge, log: noopLog });
+    await hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "x" } });
+    // 400 was too small once reasoning tokens shared the budget (real bug:
+    // deepseek burned ~256 on reasoning, JSON got truncated). Give real headroom.
+    expect(judge.lastMaxTokens).toBeGreaterThanOrEqual(1500);
+  });
+
+  it("unparseable judge output logs stopReason + response preview for diagnosis", async () => {
+    const logs: { msg: string; data?: Record<string, unknown> }[] = [];
+    const spyLog = {
+      info: () => {},
+      warn: (msg: string, data?: Record<string, unknown>) => logs.push({ msg, data }),
+      error: () => {},
+    };
+    const truncated: GoalJudgeLLM = {
+      async createMessage(): Promise<LLMResponse> {
+        // A truncated judge reply: prose, no closing brace — extractJson fails.
+        return { text: '{"met": false, "waiting": fal', toolCalls: [], stopReason: "length" };
+      },
+    };
+    const hook = createGoalStopHook({ goal: "ship it", llm: truncated, log: spyLog });
+    await hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "x" } });
+    const rec = logs.find((l) => l.msg === "goal_stop.unparseable");
+    expect(rec).toBeDefined();
+    expect(rec!.data?.stopReason).toBe("length");
+    expect(String(rec!.data?.preview)).toContain('{"met"');
   });
 
   it("no goal → allows stop without calling the judge", async () => {
