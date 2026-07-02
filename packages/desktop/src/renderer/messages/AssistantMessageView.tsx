@@ -1,6 +1,6 @@
 import React, { memo, useState } from "react";
 import { Copy, Check } from "lucide-react";
-import { Markdown, streamingMarkdownClassName } from "../Markdown";
+import { StreamingMarkdown } from "./StreamingMarkdown";
 import { stripMarkdownToPlain } from "../markdown/stripMarkdown";
 import { formatMessageTime } from "../messages/time";
 import type { AssistantMessage } from "../types";
@@ -45,13 +45,7 @@ function AssistantMessageViewImpl({ message, cwd }: Props) {
 
   return (
     <div className="group px-4 py-2 text-sm">
-      {message.done ? (
-        <Markdown text={message.text} cwd={cwd} />
-      ) : (
-        <div className={streamingMarkdownClassName}>
-          <pre className="whitespace-pre-wrap font-sans">{message.text}</pre>
-        </div>
-      )}
+      <StreamingMarkdown text={message.text} done={message.done} cwd={cwd} />
       {message.done && (
         <div className="mt-1 flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
           {(() => {

@@ -6,7 +6,7 @@ import { ThinkingMessageView } from "./ThinkingMessageView";
 import { AgentMessageView } from "./AgentMessageView";
 import { ContextBoundaryView } from "./ContextBoundaryView";
 import { GoalProgressView } from "./GoalProgressView";
-import { Markdown, streamingMarkdownClassName } from "../Markdown";
+import { StreamingMarkdown } from "./StreamingMarkdown";
 import { processGroupLabel, type RenderedTurnProcessGroup } from "./streamGroups";
 import { AgentGroupCard } from "./AgentGroupCard";
 
@@ -106,13 +106,9 @@ function TurnProcessGroupCardImpl({ group, turnEpoch, cwd }: Props) {
               if (m.text === "") return null;
               return (
                 <div key={m.id} className="py-1 text-sm">
-                  {m.done ? (
-                    <Markdown text={m.text} />
-                  ) : (
-                    <div className={streamingMarkdownClassName}>
-                      <pre className="whitespace-pre-wrap font-sans">{m.text}</pre>
-                    </div>
-                  )}
+                  {/* cwd intentionally omitted here (stage 0a); stage 0b decides
+                      whether inline turn-process assistant snippets get it. */}
+                  <StreamingMarkdown text={m.text} done={m.done} />
                 </div>
               );
             }
