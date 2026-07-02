@@ -17,6 +17,7 @@ import {
   Bot,
   Brain,
   Layers,
+  LayoutTemplate,
   Smartphone,
   MessageSquare,
 } from "lucide-react";
@@ -54,6 +55,7 @@ type ModuleId =
   | "general"
   | "appearance"
   | "config"
+  | "model-catalog"
   | "personalization"
   | "shortcuts"
   | "mcp"
@@ -99,6 +101,7 @@ function buildModuleGroups(t: TFunction): ModuleGroup[] {
         { id: "general", label: t("settingsX.page.general"), Icon: SettingsIcon },
         { id: "appearance", label: t("settingsX.page.appearance"), Icon: Sun },
         { id: "config", label: t("settingsX.page.config"), Icon: Sliders },
+        { id: "model-catalog", label: t("settingsX.page.modelCatalog"), Icon: LayoutTemplate },
         { id: "personalization", label: t("settingsX.page.personalization"), Icon: User },
         { id: "shortcuts", label: t("settingsX.page.shortcuts"), Icon: Keyboard },
       ],
@@ -220,9 +223,11 @@ export function SettingsPage({
             {active === "config" && (
               <>
                 <TextConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} />
-                <ModelCatalogPanel scope={scope} activeRepoPath={activeRepoPath} />
                 <ImageSettingsSection scope={scope} activeRepoPath={activeRepoPath} />
               </>
+            )}
+            {active === "model-catalog" && (
+              <ModelCatalogPanel scope={scope} activeRepoPath={activeRepoPath} />
             )}
             {active === "personalization" && (
               <>
