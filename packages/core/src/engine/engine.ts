@@ -550,6 +550,18 @@ export class Engine {
       this.hooks.unregister(event, handler);
     }
     this.settingsHookHandles = [];
+    // Also drop & re-load plugin hooks. Plugin hooks are registered under
+    // `plugin:<name>:<event>` names; without this, disabling a plugin
+    // mid-session left its hooks firing until the next new session (asymmetric
+    // with settings-hook hot-reload). Re-reading readDisabledLists means a
+    // now-disabled plugin's hooks are simply not re-registered.
+    this.hooks.removeByNamePrefix("plugin:");
+    try {
+      const { disabledPlugins, disabledPluginHooks } = this.readDisabledLists();
+      loadPluginHooks(this.hooks, disabledPlugins, disabledPluginHooks);
+    } catch {
+      // best-effort — a plugin-load failure must not break settings reload below
+    }
     // Force the next get() to re-read disk so reloaded hooks reflect the
     // newest settings.json, not a stale merged cache.
     try {

@@ -54,6 +54,23 @@ describe("DriveClaudeCode alias (back-compat)", () => {
     expect(backgroundJobRegistry.hasRunningForSession("S-DEF")).toBe(false);
   });
 
+  it("fails loud (no job started) when background but ctx has no sessionId — result would be dropped", async () => {
+    backgroundJobRegistry.reset?.();
+    let ran = false;
+    const runner = async () => {
+      ran = true;
+      return { sessionId: "X", finalText: "", isError: false, exitCode: 0, lines: [] };
+    };
+    const tool = mkBg(runner as any);
+    // background (default) + ctx without sessionId
+    const out = await tool({ prompt: "p", cwd: "/x" }, { cwd: "/x" } as any);
+    expect(out.toLowerCase()).toContain("error");
+    expect(out).toContain("session");
+    expect(ran).toBe(false); // runner never launched
+    // No orphaned running job left behind.
+    expect(backgroundJobRegistry.hasRunningForSession("")).toBe(false);
+  });
+
   it("background:false runs in the foreground and returns the result inline", async () => {
     const tool = makeDriveClaudeCodeTool(async () => ({ sessionId: "S7", finalText: "did it", isError: false, exitCode: 0, lines: [] }));
     const out = await tool({ prompt: "go", cwd: "/x", background: false } as any);

@@ -228,7 +228,9 @@ export class SettingsManager {
             providers: result.providers,
             models: result.models,
           };
-          writeFileSync(userPath, JSON.stringify(migrated, null, 2), "utf-8");
+          // Atomic write (tmp+rename) — a concurrent load must not see a
+          // half-written file. File exists here (existsSync guard above).
+          this.atomicWriteJson(userPath, migrated);
           // Re-deep-merge with the migrated user data so the validate
           // call sees the new shape rather than the legacy one.
           const userSource = this.sources.find((s) => s.name === "user");
@@ -271,7 +273,10 @@ export class SettingsManager {
       };
       if (JSON.stringify(stripStamp(raw)) === JSON.stringify(stripStamp(result.config))) return;
       copyFileSync(path, `${path}.bak`);
-      writeFileSync(path, JSON.stringify(result.config, null, 2), "utf-8");
+      // Atomic write (tmp+rename) so a concurrent load can't read a half-written
+      // migrated file — matches the normal save path (atomicWriteJson). The file
+      // exists here (existsSync guard above), so the recursive mkdir is a no-op.
+      this.atomicWriteJson(path, result.config as Record<string, unknown>);
       const source = this.sources.find((s) => s.name === sourceName);
       if (source) source.data = result.config;
     } catch {

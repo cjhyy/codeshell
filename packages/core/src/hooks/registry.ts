@@ -57,6 +57,24 @@ export class HookRegistry {
     else this.hooks.set(eventName, next);
   }
 
+  /**
+   * Remove every registered hook whose `name` starts with `prefix`, across all
+   * events. Used to drop a whole source's hooks by naming convention (e.g.
+   * `plugin:` handlers) when that source is reloaded mid-session — so disabling
+   * a plugin stops its hooks on the live session, not just on new sessions.
+   * Returns the number removed.
+   */
+  removeByNamePrefix(prefix: string): number {
+    let removed = 0;
+    for (const [event, list] of this.hooks) {
+      const next = list.filter((h) => !(h.name && h.name.startsWith(prefix)));
+      removed += list.length - next.length;
+      if (next.length === 0) this.hooks.delete(event);
+      else this.hooks.set(event, next);
+    }
+    return removed;
+  }
+
   async emit(eventName: HookEventName, data: Record<string, unknown> = {}): Promise<HookResult> {
     const handlers = this.hooks.get(eventName);
     if (!handlers?.length) return {};

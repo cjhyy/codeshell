@@ -131,6 +131,24 @@ describe("SettingsManager scope", () => {
     new SettingsManager(cwd, "project").get();
     expect(existsSync(join(home, ".code-shell", "settings.json.bak"))).toBe(false);
   });
+
+  test("model migration write-back is atomic (tmp+rename, no torn file, no lingering .tmp)", () => {
+    const { readdirSync } = require("node:fs");
+    const dir = join(home, ".code-shell");
+    const userFile = join(dir, "settings.json");
+    // Legacy models[] triggers the user-file migration under full scope.
+    writeFileSync(userFile, JSON.stringify({ models: [{ id: "legacy", provider: "x" }] }), "utf-8");
+
+    new SettingsManager(cwd, "full").get();
+
+    // .bak preserved (rollback safety) and the target is complete valid JSON.
+    expect(existsSync(`${userFile}.bak`)).toBe(true);
+    const written = JSON.parse(readFileSync(userFile, "utf-8"));
+    expect(written).toBeTypeOf("object");
+    // Atomicity signal: the staged tmp file was renamed away, not left behind.
+    const leftovers = (readdirSync(dir) as string[]).filter((f: string) => f.includes(".tmp"));
+    expect(leftovers).toEqual([]);
+  });
 });
 
 /**

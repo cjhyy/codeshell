@@ -2013,55 +2013,77 @@ ipcMain.handle("updater:install", async () => quitAndInstall());
 ipcMain.handle("updater:status", async () => getLastStatus());
 
 // ── Mobile Web Remote ───────────────────────────────────────────────────────
+// In-flight mutex for mobileRemote:start. Without it, a concurrent second
+// start (double-click / multi-window / IPC re-entry) sees an already-running
+// tunnel child, throws, and its catch UNCONDITIONALLY tears down the FIRST
+// call's tunnel — so both fail. Reusing the in-flight promise makes concurrent
+// starts idempotent: the second caller awaits the first's result instead of
+// launching a competing start.
+let mobileRemoteStartInFlight: Promise<{
+  url: string;
+  pairingUrl: string;
+  expiresAt: number;
+  mode: "tunnel" | "lan";
+}> | null = null;
+
 ipcMain.handle(
   "mobileRemote:start",
   async (_e, opts?: { mode?: "lan" | "tunnel" }) => {
-    const mode = opts?.mode ?? "lan";
-    if (mode === "tunnel") {
-      // Public tunnel: passcode MUST be set first (UI also disables the button).
-      if (!accessPasscode.isSet()) {
-        throw new Error("请先设置访问口令,再开启公网模式");
+    if (mobileRemoteStartInFlight) return mobileRemoteStartInFlight;
+    const run = (async () => {
+      const mode = opts?.mode ?? "lan";
+      if (mode === "tunnel") {
+        // Public tunnel: passcode MUST be set first (UI also disables the button).
+        if (!accessPasscode.isSet()) {
+          throw new Error("请先设置访问口令,再开启公网模式");
+        }
+        // Ensure cloudflared is present (no-op if already downloaded).
+        await cloudflaredBinary.ensureBinary();
+        // Bind loopback; cloudflared connects to 127.0.0.1.
+        const started = await mobileRemote.start({
+          mode: "tunnel",
+          host: "lan",
+          port: 0,
+          passcode: accessPasscode,
+        });
+        try {
+          const { url } = await tunnelManager.start(started.port);
+          mobileRemote.setPublicBaseUrl(url);
+          const pairing = mobileRemote.createPairingUrl();
+          return {
+            url,
+            pairingUrl: pairing.url,
+            expiresAt: pairing.expiresAt,
+            mode: "tunnel" as const,
+          };
+        } catch (err) {
+          // Tunnel failed (binary error / 15s URL timeout): tear everything down
+          // and surface a friendly error so the UI returns to the off state.
+          tunnelManager.stop();
+          await mobileRemote.stop();
+          throw new Error(
+            `公网隧道启动失败:${err instanceof Error ? err.message : String(err)}`,
+            { cause: err },
+          );
+        }
       }
-      // Ensure cloudflared is present (no-op if already downloaded).
-      await cloudflaredBinary.ensureBinary();
-      // Bind loopback; cloudflared connects to 127.0.0.1.
-      const started = await mobileRemote.start({
-        mode: "tunnel",
-        host: "lan",
-        port: 0,
-        passcode: accessPasscode,
-      });
-      try {
-        const { url } = await tunnelManager.start(started.port);
-        mobileRemote.setPublicBaseUrl(url);
-        const pairing = mobileRemote.createPairingUrl();
-        return {
-          url,
-          pairingUrl: pairing.url,
-          expiresAt: pairing.expiresAt,
-          mode: "tunnel" as const,
-        };
-      } catch (err) {
-        // Tunnel failed (binary error / 15s URL timeout): tear everything down
-        // and surface a friendly error so the UI returns to the off state.
-        tunnelManager.stop();
-        await mobileRemote.stop();
-        throw new Error(
-          `公网隧道启动失败:${err instanceof Error ? err.message : String(err)}`,
-          { cause: err },
-        );
-      }
+      // LAN mode (unchanged): bind the Mac's real LAN IP so a phone on the same
+      // Wi-Fi can reach it (falls back to localhost). Never 0.0.0.0.
+      const started = await mobileRemote.start({ host: "lan", port: 0 });
+      const pairing = mobileRemote.createPairingUrl();
+      return {
+        url: started.url,
+        pairingUrl: pairing.url,
+        expiresAt: pairing.expiresAt,
+        mode: "lan" as const,
+      };
+    })();
+    mobileRemoteStartInFlight = run;
+    try {
+      return await run;
+    } finally {
+      if (mobileRemoteStartInFlight === run) mobileRemoteStartInFlight = null;
     }
-    // LAN mode (unchanged): bind the Mac's real LAN IP so a phone on the same
-    // Wi-Fi can reach it (falls back to localhost). Never 0.0.0.0.
-    const started = await mobileRemote.start({ host: "lan", port: 0 });
-    const pairing = mobileRemote.createPairingUrl();
-    return {
-      url: started.url,
-      pairingUrl: pairing.url,
-      expiresAt: pairing.expiresAt,
-      mode: "lan" as const,
-    };
   },
 );
 ipcMain.handle("mobileRemote:stop", async () => {
