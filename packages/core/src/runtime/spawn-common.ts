@@ -164,8 +164,10 @@ export function resolveSpawnTarget(
     const wrapped = opts.sandbox.wrap(command, { cwd: opts.cwd, shell: opts.shell });
     return { file: wrapped.file, args: wrapped.args, cleanup: wrapped.cleanup };
   }
-  // No sandbox (the `off` backend / Windows): pick the shell + command-flag
-  // form for the platform instead of assuming POSIX `-c`.
+  // No sandbox configured: pick the shell + command-flag form for the
+  // platform instead of assuming POSIX `-c`. Note Bash always passes a
+  // backend (off at minimum), so it never reaches this line — the off
+  // backend's wrap() delegates to resolveShellInvocation itself.
   return resolveShellInvocation(command, opts.shell);
 }
 

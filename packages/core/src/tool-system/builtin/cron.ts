@@ -37,7 +37,14 @@ export const cronCreateToolDef: ToolDefinition = {
     "'30 8 * * 1' = 8:30am every Monday. Day-of-week: 0=Sunday..6=Saturday.\n\n" +
     "For calendar schedules, set `timezone` to the user's IANA zone (e.g. 'Asia/Shanghai', " +
     "'America/New_York'); ask the user if unknown. Set `cwd` to the project the job operates on. " +
-    "Leave `permissionLevel` as 'read-only' unless the user explicitly wants the job to modify code.",
+    "Leave `permissionLevel` as 'read-only' unless the user explicitly wants the job to modify code.\n\n" +
+    "SELF-WAKEUP / background-task safety net: you can also schedule THIS job for yourself, with no user " +
+    "request, to re-check on a long-running background task (a download, a build, a background shell/agent) " +
+    "that might hang and never signal completion. Use a short interval + `once: true` + `continueInSession: true` " +
+    "and a `prompt` that reminds you what to check, e.g. schedule '5m', once true, continueInSession true, " +
+    "prompt 'check whether the yt-dlp download finished (BashOutput/ListShells); if still running, wait again'. " +
+    "You wake back in THIS conversation with full context, inspect the task, and either finish or reschedule. " +
+    "This is the right pattern for a simple poll-until-done loop or a hang safety net — prefer it over looping Sleep.",
   inputSchema: {
     type: "object",
     properties: {
@@ -65,7 +72,8 @@ export const cronCreateToolDef: ToolDefinition = {
         type: "boolean",
         description:
           "true = one-shot: run once at the scheduled time, then auto-delete (for 'in N minutes / " +
-          "at <time>, do X once' reminders or tasks). Default false = recurring per `schedule`. " +
+          "at <time>, do X once' reminders, tasks, or a self-wakeup to re-check a background task). " +
+          "Default false = recurring per `schedule`. " +
           "A one-shot still uses `schedule` for its time: interval '10m' = 10 minutes from now; " +
           "cron '0 7 25 6 *' = once at 07:00 on June 25.",
       },

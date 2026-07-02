@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, test, expect, afterEach } from "bun:test";
 import { spawn } from "node:child_process";
 import { resolveSpawnTarget, killProcessGroup, groupAlive, buildSandboxEnv, mergeShellEnv, ENV_DENY_REGEX } from "./spawn-common.js";
 import { createOffBackend } from "../tool-system/sandbox/off.js";
@@ -19,6 +19,35 @@ describe("resolveSpawnTarget", () => {
     });
     expect(t.file).toBe("/bin/zsh");
     expect(t.args).toEqual(["-c", "echo hi"]);
+  });
+});
+
+describe("off backend on Windows — platform-correct command flag", () => {
+  // Bash always passes a sandbox backend (off at minimum), so resolveSpawnTarget
+  // takes the wrap() branch and the no-sandbox platform fallback never runs.
+  // wrap() itself must therefore be platform-aware: cmd.exe has no -c flag —
+  // `cmd.exe -c <cmd>` drops into an interactive prompt and hangs until timeout.
+  const realPlatform = process.platform;
+  const setPlatform = (p: NodeJS.Platform) =>
+    Object.defineProperty(process, "platform", { value: p, configurable: true });
+  afterEach(() => setPlatform(realPlatform));
+
+  test("win32 + cmd.exe shell → /c, not -c", () => {
+    setPlatform("win32");
+    const t = resolveSpawnTarget("echo hi", {
+      cwd: "C:\\tmp",
+      shell: "C:\\Windows\\system32\\cmd.exe",
+      sandbox: createOffBackend(),
+    });
+    expect(t.file).toBe("C:\\Windows\\system32\\cmd.exe");
+    expect(t.args).toEqual(["/c", "echo hi"]);
+  });
+
+  test("win32 + pwsh shell → -Command", () => {
+    setPlatform("win32");
+    const t = createOffBackend().wrap("gci", { cwd: "C:\\tmp", shell: "pwsh.exe" });
+    expect(t.file).toBe("pwsh.exe");
+    expect(t.args).toEqual(["-Command", "gci"]);
   });
 });
 
