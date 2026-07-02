@@ -386,6 +386,22 @@ export class AgentServer {
       return;
     }
 
+    // `requireExisting`: reject if the target session isn't on disk rather than
+    // running the prompt against a freshly-created blank session. A cron
+    // "continue this conversation" job whose session the user deleted must fail
+    // loudly here (SessionNotFound) so the scheduler can auto-disable it,
+    // instead of silently executing with no transcript/goal/context.
+    if (params.requireExisting === true && !session.engine.sessionExistsOnDisk(params.sessionId)) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.SessionNotFound,
+          `session ${params.sessionId} does not exist`,
+        ),
+      );
+      return;
+    }
+
     if (typeof params.planMode === "boolean") {
       session.engine.setPlanMode(params.planMode);
     }

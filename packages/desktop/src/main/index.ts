@@ -55,6 +55,7 @@ import {
   checkQuota,
   resolveQuotaCredentials,
   type QuotaResult,
+  ErrorCodes,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
@@ -574,11 +575,13 @@ function injectAndAwaitResult(
   b: AgentBridge,
   method: string,
   params: Record<string, unknown>,
-): Promise<{ ok: true; result: unknown } | { ok: false; message: string }> {
+): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }> {
   const id = `mobile-${method.replace(/\W+/g, "-")}-${Date.now()}-${mobileRequestSeq++}`;
   return new Promise((resolveResult) => {
     let settled = false;
-    const done = (v: { ok: true; result: unknown } | { ok: false; message: string }): void => {
+    const done = (
+      v: { ok: true; result: unknown } | { ok: false; message: string; code?: number },
+    ): void => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
@@ -587,9 +590,18 @@ function injectAndAwaitResult(
     };
     const unsub = b.subscribeOutbound((line) => {
       try {
-        const m = JSON.parse(line) as { id?: string; result?: unknown; error?: { message?: string } };
+        const m = JSON.parse(line) as {
+          id?: string;
+          result?: unknown;
+          error?: { message?: string; code?: number };
+        };
         if (m.id !== id) return;
-        if (m.error) done({ ok: false, message: m.error.message ?? "worker rejected the request" });
+        if (m.error)
+          done({
+            ok: false,
+            message: m.error.message ?? "worker rejected the request",
+            code: m.error.code,
+          });
         else done({ ok: true, result: m.result });
       } catch {
         /* not JSON / not ours */
@@ -1436,10 +1448,39 @@ app.whenReady().then(() => {
       _signal?: AbortSignal,
     ): Promise<CronRunResult> => {
       if (!bridge) return { text: "", reason: "no-bridge" };
-      const res = await injectAndAwaitResult(bridge, "agent/run", { task: prompt, sessionId });
+      // requireExisting: if the user deleted the target conversation, the worker
+      // returns SessionNotFound instead of running the prompt against a blank
+      // session. We turn that into a `stop` so the scheduler auto-disables this
+      // recurring job (and the host notifies the user) rather than silently
+      // re-firing into nothing every tick.
+      const res = await injectAndAwaitResult(bridge, "agent/run", {
+        task: prompt,
+        sessionId,
+        requireExisting: true,
+      });
       if (res.ok) {
         const r = res.result as { text?: string; reason?: string } | undefined;
         return { text: r?.text ?? "", reason: r?.reason ?? "done" };
+      }
+      if (res.code === ErrorCodes.SessionNotFound) {
+        // Tell the user their scheduled "continue this conversation" job was
+        // stopped because its target conversation is gone — best-effort, fires
+        // even when focused since it's a rare, consequential state change.
+        try {
+          if (Notification.isSupported()) {
+            new Notification({
+              title: "定时任务已停止",
+              body: "续接的对话已被删除,该定时任务已自动停用。可在自动化面板查看或删除。",
+            }).show();
+          }
+        } catch {
+          // Notifications are best-effort.
+        }
+        return {
+          text: "",
+          reason: "resume-target-missing",
+          stop: { reason: "续接的对话已被删除,已停止该定时任务" },
+        };
       }
       return { text: "", reason: res.message };
     };
