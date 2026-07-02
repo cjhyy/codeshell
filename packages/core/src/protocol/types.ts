@@ -100,6 +100,15 @@ export interface RunParams {
    */
   planMode?: boolean;
   /**
+   * Require the target session to already exist on disk. When true and the
+   * session is absent, the run is rejected with `SessionNotFound` instead of
+   * silently creating a fresh empty session. Used by cron "continue this
+   * conversation" jobs: if the user deleted the target session, the job must
+   * fail loudly (so it can be auto-disabled) rather than run its prompt against
+   * a blank context. Omitted/false → the normal resume-or-create behavior.
+   */
+  requireExisting?: boolean;
+  /**
    * Goal mode for this run. When set, the engine runs loop-until-done:
    * on each natural completion a GoalStopHook judges whether this goal is
    * met and re-prompts if not (bounded). Orthogonal to permissionMode.
