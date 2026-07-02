@@ -8,6 +8,9 @@ dist/
 *.tsbuildinfo
 .env
 .env.local
+# npm auth token — never commit. CI passes the token via NPM_CONFIG_TOKEN env,
+# not a checked-in .npmrc.
+.npmrc
 .env.*.local
 logs/
 log/

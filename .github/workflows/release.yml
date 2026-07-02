@@ -63,14 +63,19 @@ jobs:
       - name: install
         run: bun install --frozen-lockfile
 
-      # Build ONLY core — desktop depends on @cjhyy/code-shell-core via
-      # workspace:* and loads its dist/ at runtime (main keeps it external, so
-      # the dist must exist). We deliberately do NOT run the root `bun run build`
-      # (which also builds tui): the desktop app doesn't use tui, and tui's
-      # build script uses `cp -r`, which the Windows runner's cp rejects
-      # ("illegal option -- r"). Scoping to core sidesteps that and is faster.
-      - name: build core
-        run: bun run --filter '@cjhyy/code-shell-core' build
+      # Build core + cdp — desktop needs both workspace packages' dist/ present.
+      # core: kept external in the main bundle and loaded at runtime (main
+      # process spawns it), so its dist must exist. cdp: imported by
+      # src/main/browser-driver/cdp-driver.ts and bundled INTO the main process
+      # (not external), so esbuild must resolve its dist at build time — without
+      # this the desktop build fails with `Could not resolve "@cjhyy/code-shell-cdp"`.
+      # We deliberately do NOT run the root `bun run build` (which also builds
+      # tui): the desktop app doesn't use tui, and tui's build script uses
+      # `cp -r`, which the Windows runner's cp rejects ("illegal option -- r").
+      - name: build core + cdp
+        run: |
+          bun run --filter '@cjhyy/code-shell-core' build
+          bun run --filter '@cjhyy/code-shell-cdp' build
 
       # Four desktop sub-builds (main / preload / renderer / mobile) → out/.
       - name: build desktop
@@ -129,15 +134,6 @@ jobs:
       - name: build
         run: bun run build
 
-      # bun publish reads the auth token from .npmrc. An npm *automation* token
-      # (stored as the NPM_TOKEN repo secret) bypasses 2FA, which interactive
-      # `npm publish` would otherwise require.
-      - name: authenticate to npm
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       # dist-tag policy: a plain tag (v0.6.0) → latest; a pre-release tag with a
       # hyphen (v0.6.0-rc.1) → next, so `npm i @cjhyy/code-shell` never resolves
       # to a pre-release. Mirrors the GitHub-release prerelease判定 above.
@@ -145,7 +141,16 @@ jobs:
       # and meta depends on both; bun publish rewrites each `workspace:*` to the
       # concrete version, but the referenced version must already be on the
       # registry, so the depended-upon package must publish first.
+      #
+      # Auth: `bun publish` reads NPM_CONFIG_TOKEN from the environment (its
+      # documented CI mechanism). Writing ~/.npmrc does NOT work — bun does not
+      # reliably read $HOME/.npmrc when publishing with --cwd, so it fails with
+      # "missing authentication". The NPM_TOKEN secret must be a token whose 2FA
+      # level allows non-interactive publish (automation token, or account with
+      # publish-2FA off).
       - name: publish (core → tui → meta)
+        env:
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if [[ "${{ github.ref_name }}" == *-* ]]; then
             NPM_TAG=next
