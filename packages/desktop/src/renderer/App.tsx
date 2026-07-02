@@ -438,6 +438,7 @@ function App() {
    */
   const engineToBucketRef = useRef<Map<string, string>>(new Map());
   const activeBucketRef = useRef(activeBucket);
+  const approvalBucketsRef = useRef<Map<string, string>>(new Map());
   /**
    * The no-repo sandbox cwd (~/.code-shell/no-repo), fetched once from main.
    * A no-repo "纯聊天" send must pass THIS explicitly as cwd — if we omit cwd,
@@ -520,6 +521,11 @@ function App() {
 
     const asking = new Set<string>();
     for (const env of approvalQueue) {
+      const routedBucket = approvalBucketsRef.current.get(env.requestId);
+      if (routedBucket) {
+        asking.add(routedBucket);
+        continue;
+      }
       const sid = env.sessionId ?? "";
       // Replicate resolveBucket order: live table → precomputed reverse index →
       // runningBucket → activeBucket fallback. Same bucket choice, O(1) per item.
@@ -1725,13 +1731,19 @@ function App() {
       // is belt-and-braces so "full access" never silently blocks on a
       // modal. Resolve the request's OWN bucket (not the active one) —
       // concurrent runs may target a different tab.
-      const targetBucket =
-        resolveBucket(
-          env.sessionId ?? "",
-          engineToBucketRef.current,
-          sessionIndicesRef.current,
-          runningBucketRef.current,
-        ) ?? activeBucketRef.current;
+      const resolved = resolveBucket(
+        env.sessionId ?? "",
+        engineToBucketRef.current,
+        sessionIndicesRef.current,
+        runningBucketRef.current,
+      );
+      if (env.sessionId && !resolved) {
+        console.warn(
+          "[approval] could not resolve bucket for session; rendering in active bucket",
+          env.sessionId,
+        );
+      }
+      const targetBucket = resolved ?? activeBucketRef.current;
       if (permissionForBucketRef.current(targetBucket) === "bypass") {
         if (env.sessionId) {
           void window.codeshell.approve(env.sessionId, env.requestId, "approve");
@@ -1745,11 +1757,13 @@ function App() {
         });
         return;
       }
+      approvalBucketsRef.current.set(env.requestId, targetBucket);
       setApprovalQueue((q) => [...q, env]);
       setApproval((cur) => cur ?? env);
     });
     const offApprovalResolved = window.codeshell.onApprovalResolved((env: ApprovalResolvedEnvelope) => {
       if (!env.requestId) return;
+      approvalBucketsRef.current.delete(env.requestId);
       setApprovalQueue((prev) => {
         const remaining = prev.filter((e) => e.requestId !== env.requestId);
         setApproval((cur) => {
@@ -2260,6 +2274,7 @@ function App() {
       sessionId: env.sessionId,
       approved: decision === "approve",
     });
+    approvalBucketsRef.current.delete(env.requestId);
     // The card itself gives instant optimistic feedback via its own local
     // state (ApprovalCard `decided`), so the user never waits on this root-App
     // re-render. Time the synchronous state churn anyway: if a future large
@@ -2290,6 +2305,10 @@ function App() {
   };
 
   const showWelcome = state.messages.length === 0;
+  const visibleApproval =
+    approval && approvalBucketsRef.current.get(approval.requestId) === activeBucket
+      ? approval
+      : null;
 
   const setViewMode = (v: ViewMode): void => setView((prev) => ({ ...prev, viewMode: v }));
 
@@ -3151,10 +3170,10 @@ function App() {
               onExtendGoal={extendGoal}
               onAttachImagePath={(p) => void attachImageByPath(p)}
               imageDetail={imageDetail}
-              pendingApproval={approval}
+              pendingApproval={visibleApproval}
               onApprovalDecide={
-                approval
-                  ? (decision, reason, scope, pathScope) => decideEnvelope(approval, decision, reason, scope, pathScope)
+                visibleApproval
+                  ? (decision, reason, scope, pathScope) => decideEnvelope(visibleApproval, decision, reason, scope, pathScope)
                   : undefined
               }
               permissionMode={permissionMode}
