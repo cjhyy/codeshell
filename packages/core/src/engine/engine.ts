@@ -860,6 +860,17 @@ export class Engine {
   }
 
   /**
+   * Probe whether a session already exists on disk (its state/transcript dir is
+   * present). Used by the protocol server to distinguish "resume an existing
+   * session" from "silently create a fresh empty one" — e.g. a cron resume job
+   * whose target session the user deleted must fail loudly, not run its prompt
+   * against a blank session. A stat probe, not a load.
+   */
+  sessionExistsOnDisk(sessionId: string): boolean {
+    return this.sessionManager.exists(sessionId);
+  }
+
+  /**
    * Run a task from start to finish.
    */
   async run(

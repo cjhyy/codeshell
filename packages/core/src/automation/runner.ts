@@ -63,6 +63,13 @@ export interface CronRunRequest {
 export interface CronRunResult {
   text: string;
   reason: string;
+  /**
+   * When present, this fire hit a PERMANENT failure that will recur every tick
+   * (e.g. a `resumeSessionId` whose session was deleted). The scheduler should
+   * auto-disable the job with `stop.reason` rather than silently retrying
+   * forever. Absent = transient/normal outcome; keep scheduling.
+   */
+  stop?: { reason: string };
 }
 
 /** The pluggable run backend. Production wires this to a headless Engine run;
@@ -71,10 +78,12 @@ export type CronRunner = (req: CronRunRequest) => Promise<CronRunResult>;
 
 /**
  * Install the cron executor. After this call, a fired job invokes `runner`
- * with a run request whose permission tier comes from the job. Errors from
- * `runner` are swallowed by the
- * scheduler's existing try/catch (scheduler.ts) so one bad run never stops
- * future ticks — we still log here so failures are visible.
+ * with a run request whose permission tier comes from the job. A thrown error
+ * is logged (`logCronFailure`) and re-thrown so the scheduler's catch records
+ * stats and keeps ticking — one transient bad run never stops future ticks. A
+ * PERMANENT failure the runner flags via `result.stop` (e.g. a resume target
+ * whose session was deleted) auto-disables the job with that reason, so it
+ * stops silently retrying forever.
  */
 export function bindCronToEngine(scheduler: CronScheduler, runner: CronRunner): void {
   scheduler.setExecutor(async (job: CronJob, signal: AbortSignal) => {
@@ -88,7 +97,12 @@ export function bindCronToEngine(scheduler: CronScheduler, runner: CronRunner): 
       signal,
     };
     try {
-      await runner(req);
+      const result = await runner(req);
+      // A PERMANENT failure the runner flags (e.g. a resume target whose session
+      // was deleted) auto-disables the job so it stops silently retrying.
+      if (result?.stop) {
+        scheduler.disableWithReason(job.id, result.stop.reason);
+      }
     } catch (err) {
       logCronFailure(job, err);
       throw err; // let the scheduler's catch record stats + keep ticking

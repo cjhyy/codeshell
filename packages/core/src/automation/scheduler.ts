@@ -57,6 +57,10 @@ export interface CronJob {
    *  goal / context. Unset = the default standalone behaviour (new session per
    *  fire). The host's executor honours this. */
   resumeSessionId?: string;
+  /** Why the job was auto-disabled (set by `disableWithReason`), e.g. a resume
+   *  target whose session no longer exists. Surfaced in the UI so a silently
+   *  stopped job is explainable; cleared when the job is re-enabled. */
+  disabledReason?: string;
 }
 
 /** Optional metadata accepted by create(). */
@@ -365,6 +369,37 @@ export class CronScheduler {
     return true;
   }
 
+  /**
+   * Auto-disable a job and record WHY (e.g. its resume target session was
+   * deleted). Unlike `delete`, the job is retained (enabled=false) so the user
+   * can see it stopped and its reason in the UI, then delete or re-point it.
+   * Mirrors `pause` but also stamps `disabledReason`. Idempotent-safe: a
+   * subsequent `resume()` clears the reason.
+   */
+  disableWithReason(id: string, reason: string): boolean {
+    if (this.store) {
+      const tx = this.store.mutate((jobs) => {
+        let changed = false;
+        const next = jobs.map((j) => {
+          if (j.id !== id) return j;
+          changed = true;
+          return { ...j, enabled: false, disabledReason: reason };
+        });
+        return { jobs: next, result: changed };
+      });
+      this.reconcileJobs(tx.jobs);
+      return tx.result;
+    }
+
+    const job = this.jobs.get(id);
+    if (!job) return false;
+    job.enabled = false;
+    job.disabledReason = reason;
+    this.clearTimer(id);
+    this.persist();
+    return true;
+  }
+
   resume(id: string): boolean {
     if (this.store) {
       const tx = this.store.mutate((jobs) => {
@@ -372,7 +407,7 @@ export class CronScheduler {
         const next = jobs.map((j) => {
           if (j.id !== id) return j;
           changed = true;
-          const job = { ...j, enabled: true };
+          const job = { ...j, enabled: true, disabledReason: undefined };
           this.refreshNextRunForDisplay(job);
           return job;
         });
@@ -385,6 +420,7 @@ export class CronScheduler {
     const job = this.jobs.get(id);
     if (!job) return false;
     job.enabled = true;
+    job.disabledReason = undefined;
     this.arm(job);
     this.persist();
     return true;
