@@ -33,6 +33,10 @@ interface Props {
   activeGoal?: { objective: string; round: number } | null;
   /** Clear the active goal (agent/goalClear). */
   onClearGoal?: () => void;
+  /** Reserve the top-left gutter for the macOS traffic lights. Only true on
+   *  macOS windowed mode: non-mac has no inset lights, and macOS fullscreen
+   *  hides them — reserving space in those cases leaves dead space. */
+  reserveTrafficLights?: boolean;
 }
 
 /**
@@ -59,6 +63,7 @@ function TopBarImpl({
   tasks,
   activeGoal,
   onClearGoal,
+  reserveTrafficLights = true,
 }: Props) {
   const { t } = useT();
   return (
@@ -73,7 +78,10 @@ function TopBarImpl({
       style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <span className="w-[68px] shrink-0" aria-hidden="true" />
+        {/* macOS traffic-light gutter — only when the inset lights are actually
+            there (macOS, windowed). Non-mac has no inset lights and macOS
+            fullscreen hides them, so reserving 68px would be dead space. */}
+        {reserveTrafficLights && <span className="w-[68px] shrink-0" aria-hidden="true" />}
         <span className="shrink-0" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
           <IconButton
             label={sidebarCollapsed ? t("topbar.expandSidebar") : t("topbar.collapseSidebar")}

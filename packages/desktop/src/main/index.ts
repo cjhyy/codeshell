@@ -1117,6 +1117,12 @@ async function createWindow(): Promise<BrowserWindow> {
     // contents don't sit underneath the traffic-light cluster.
     // Other platforms get the standard window frame (no-op there).
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
+    // Windows/Linux: hide the native menu bar (文件/编辑/视图) by default so it
+    // doesn't clutter the window — it looked out of place jammed inside the
+    // frame (macOS has a global menu bar; win/linux render it in-window). Still
+    // reachable via Alt, and every item also has a shortcut / in-app affordance.
+    // No-op on macOS (global menu bar, not in-window).
+    autoHideMenuBar: process.platform !== "darwin",
     webPreferences: {
       preload: resolve(__dirname, "..", "preload", "index.cjs"),
       contextIsolation: true,
@@ -1273,6 +1279,14 @@ async function createWindow(): Promise<BrowserWindow> {
   win.on("close", persist);
   win.on("resize", persist);
   win.on("move", persist);
+  // Tell the renderer when we enter/leave fullscreen so it can collapse the
+  // macOS traffic-light gutter (the lights disappear in fullscreen — a reserved
+  // gutter would then be dead space at the top-left). Cheap to always wire.
+  const sendFullscreen = (isFullscreen: boolean) => {
+    if (!win.isDestroyed()) win.webContents.send("window:fullscreen", isFullscreen);
+  };
+  win.on("enter-full-screen", () => sendFullscreen(true));
+  win.on("leave-full-screen", () => sendFullscreen(false));
   // macOS keeps the app alive after the last window closes, so ptys whose
   // window is gone would otherwise leak until quit. Reap them once the
   // webContents is actually torn down (next tick after `closed`).
@@ -1684,6 +1698,13 @@ ipcMain.handle("git:check", async () => {
   // field after detection (the "检测到了但没回填 path" fix) instead of only a
   // boolean. null when git isn't found.
   return { available: isGitAvailable(), path: resolveGitPath() };
+});
+
+// Current fullscreen state — the renderer queries this on mount so the initial
+// traffic-light-gutter decision is correct before any enter/leave event fires.
+ipcMain.handle("window:isFullscreen", (e): boolean => {
+  const win = BrowserWindow.fromWebContents(e.sender);
+  return win ? win.isFullScreen() : false;
 });
 
 // ─── Voice input (speech-to-text / 听写) ───

@@ -317,6 +317,11 @@ export interface MaskedCredentialView extends Omit<CredentialView, "secret"> {
 }
 
 export interface CodeshellApi {
+  /** Host OS platform (process.platform), for platform-conditional UI. */
+  platform: NodeJS.Platform;
+  /** Subscribe to fullscreen-state changes; fires with the current state on
+   *  subscribe and on each enter/leave. Returns an unsubscribe fn. */
+  onFullscreenChange(cb: (isFullscreen: boolean) => void): () => void;
   /** Forward a structured log line to ~/.code-shell/logs/desktop-*.log via main. */
   log(msg: string, data?: Record<string, unknown>): void;
   run(

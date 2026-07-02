@@ -269,6 +269,9 @@ function App() {
   const [approvalQueue, setApprovalQueue] = useState<ApprovalRequestEnvelope[]>([]);
   const [approvalHistory, setApprovalHistory] = useState<ApprovalHistoryEntry[]>([]);
   const [lifecycle, setLifecycle] = useState<string | null>(null);
+  // Window fullscreen state (macOS hides its traffic lights in fullscreen).
+  // Seeded false; the subscribe callback fires with the real state immediately.
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [busyKeys, setBusyKeys] = useState<Set<string>>(() => new Set());
   const [queuedInputs, setQueuedInputs] = useState<QueuedInputState>({});
   // Buckets mid-引导打断: the turn was cancelled and a merged re-send is about
@@ -648,6 +651,14 @@ function App() {
     };
     window.addEventListener("codeshell:settings-changed", refreshSettings);
     return () => window.removeEventListener("codeshell:settings-changed", refreshSettings);
+  }, []);
+
+  // Track window fullscreen so the macOS traffic-light gutter can collapse
+  // (the lights vanish in fullscreen). The subscribe fires with the current
+  // state immediately, then on every enter/leave.
+  useEffect(() => {
+    const off = window.codeshell.onFullscreenChange?.((fs) => setIsFullscreen(fs));
+    return off;
   }, []);
 
   // Push Electron-local Git prefs to main on mount and whenever the
@@ -3043,6 +3054,10 @@ function App() {
           // chat view, so the toggle must not linger when the user switches to
           // credentials / automation / customize / etc. (which reuse this TopBar).
           panelAvailable={activeSessionId !== null && view.viewMode === "chat"}
+          // Reserve the traffic-light gutter only on macOS windowed mode. Non-mac
+          // has no inset lights; macOS fullscreen hides them — both cases must
+          // collapse the gutter (else dead space top-left).
+          reserveTrafficLights={window.codeshell.platform === "darwin" && !isFullscreen}
           activity={liveActivity}
           tasks={latestTasks}
           activeGoal={state.activeGoal}

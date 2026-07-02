@@ -226,6 +226,20 @@ function rpc(
 }
 
 contextBridge.exposeInMainWorld("codeshell", {
+  /** The host OS platform (process.platform), exposed once at load so the
+   *  renderer can do reliable platform-conditional UI (e.g. reserve the macOS
+   *  traffic-light gutter only on darwin) instead of sniffing navigator.platform. */
+  platform: process.platform,
+  /** Subscribe to window fullscreen-state changes (macOS hides the traffic
+   *  lights in fullscreen, so the reserved gutter must collapse). Fires with the
+   *  current state on the next tick and on every enter/leave. Returns unsubscribe. */
+  onFullscreenChange: (cb: (isFullscreen: boolean) => void): (() => void) => {
+    const handler = (_e: IpcRendererEvent, isFullscreen: boolean) => cb(isFullscreen);
+    ipcRenderer.on("window:fullscreen", handler);
+    // Ask main for the current state so the initial render is correct.
+    void ipcRenderer.invoke("window:isFullscreen").then((v) => cb(Boolean(v)));
+    return () => ipcRenderer.removeListener("window:fullscreen", handler);
+  },
   /** Forward a renderer-side log line into ~/.code-shell/logs/desktop-*.log. */
   log: (msg: string, data?: Record<string, unknown>) =>
     ipcRenderer.send("desktop:log", { msg, data }),
