@@ -14,6 +14,33 @@ interface Props {
   max?: number;
   /** True while an agent run is in flight — show breathing animation. */
   busy?: boolean;
+  /**
+   * Provider-reported prompt-cache counts from the latest authoritative
+   * usage_update. Used to show a cache hit rate in the tooltip. Both undefined
+   * on first/short turns or providers with no cache info → the row is hidden.
+   */
+  cacheReadTokens?: number;
+  cacheCreationTokens?: number;
+}
+
+/**
+ * Prompt-cache hit rate, same formula as core's cacheHitRate:
+ *   read / (read + creation + uncachedInput), uncachedInput = prompt − read − creation.
+ * Returns null when there's no cache signal at all, so the tooltip hides the
+ * row rather than showing a misleading 0%.
+ */
+function computeHitRate(
+  prompt: number,
+  read: number | undefined,
+  creation: number | undefined,
+): number | null {
+  const r = read ?? 0;
+  const cr = creation ?? 0;
+  if (r === 0 && cr === 0) return null;
+  const uncached = Math.max(0, prompt - r - cr);
+  const denom = r + cr + uncached;
+  if (denom === 0) return null;
+  return r / denom;
 }
 
 // Fallback when the active model entry doesn't declare maxContextTokens.
@@ -22,7 +49,7 @@ interface Props {
 // 200k-context models look ~50% fuller than they really were.
 const FALLBACK_MAX = 200_000;
 
-export function ContextRing({ used, max, busy }: Props) {
+export function ContextRing({ used, max, busy, cacheReadTokens, cacheCreationTokens }: Props) {
   const { t } = useT();
   const [hover, setHover] = useState(false);
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -41,6 +68,7 @@ export function ContextRing({ used, max, busy }: Props) {
   const pct = Math.round(ratio * 100);
   const remaining = Math.max(0, safeMax - used);
   const hasUsage = used > 0;
+  const hitRate = computeHitRate(used, cacheReadTokens, cacheCreationTokens);
 
   const size = 22;
   const stroke = 3;
@@ -125,6 +153,12 @@ export function ContextRing({ used, max, busy }: Props) {
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
                 <div className="h-full rounded-full" style={{ width: `${pct}%`, background: tone }} />
               </div>
+              {hitRate !== null && (
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">{t("chat.contextRing.cacheHit")}</span>
+                  <span>{Math.round(hitRate * 100)}%</span>
+                </div>
+              )}
               {!hasDeclaredMax && (
                 <div className="mt-2 text-xs text-muted-foreground">
                   {t("chat.contextRing.fallbackNote")}

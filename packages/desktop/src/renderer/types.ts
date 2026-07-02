@@ -293,6 +293,14 @@ export interface MessagesReducerState {
   sessionId: string | null;
   /** Latest known context token count (session_started / usage_update). */
   promptTokens: number;
+  /**
+   * Latest provider-reported prompt-cache counts, from the authoritative
+   * usage_update emits. Feed the context-ring hover tooltip's hit rate.
+   * undefined until the first usage_update that carries them (short/first
+   * turns, or providers with no cache info, leave them undefined).
+   */
+  cacheReadTokens?: number;
+  cacheCreationTokens?: number;
   /** Currently-active sub-agents by id. */
   activeAgents: Record<string, AgentRuntime>;
   /**
@@ -831,7 +839,19 @@ export function applyStreamEvent(
     }
 
     case "usage_update": {
-      return { ...state, promptTokens: event.promptTokens };
+      // Cache counts ride only the authoritative (LLM-response) emits; the
+      // estimate emits between calls omit them. Keep the last-known values on
+      // those so the ring tooltip doesn't flicker its hit rate away to nothing.
+      return {
+        ...state,
+        promptTokens: event.promptTokens,
+        ...(event.cacheReadTokens !== undefined
+          ? { cacheReadTokens: event.cacheReadTokens }
+          : {}),
+        ...(event.cacheCreationTokens !== undefined
+          ? { cacheCreationTokens: event.cacheCreationTokens }
+          : {}),
+      };
     }
 
     case "tombstone": {

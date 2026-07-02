@@ -470,6 +470,15 @@ export type StreamEvent =
   | {
       type: "usage_update";
       promptTokens: number;
+      /**
+       * Provider-reported prompt-cache counts, forwarded so the UI can show a
+       * cache hit rate in the context-ring tooltip. Present only when the LLM
+       * response carried them (authoritative-usage emits); omitted on the
+       * message-estimate emits that fire between LLM calls. See
+       * docs/todo/prompt-cache-optimization.md.
+       */
+      cacheReadTokens?: number;
+      cacheCreationTokens?: number;
       agentId?: string;
     }
   // B2.2 — background sub-agent finished (completed | failed). Mirrors the

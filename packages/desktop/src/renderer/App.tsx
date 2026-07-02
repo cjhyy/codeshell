@@ -3100,6 +3100,8 @@ function App() {
               contextMax={
                 modelOptions.find((o) => o.key === activeModelKey)?.maxContextTokens
               }
+              cacheReadTokens={state.cacheReadTokens}
+              cacheCreationTokens={state.cacheCreationTokens}
               repos={repos}
               // Picking a project (or 不使用项目) from the composer's
               // ProjectPicker enters a fresh draft for that repo rather than a

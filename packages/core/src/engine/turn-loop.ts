@@ -11,6 +11,7 @@ import type {
   TerminalReason,
   ContentBlock,
   ToolResult,
+  LLMResponse,
 } from "../types.js";
 import type { TurnState } from "./turn-state.js";
 import type { SteerItem } from "./steer-queue.js";
@@ -378,8 +379,9 @@ export class TurnLoop {
     this.config.onStream({ type: "usage_update", promptTokens: ctx });
   }
 
-  private emitCtxFromUsage(promptTokens: number, messages: Message[]): void {
+  private emitCtxFromUsage(usage: NonNullable<LLMResponse["usage"]>, messages: Message[]): void {
     if (!this.config.onStream) return;
+    const promptTokens = usage.promptTokens;
     // Reverse-derive overhead from this authoritative reading so the next
     // estimate-based emit (post-tool-result) is calibrated.
     const msgsEstimate = estimateTokens(messages);
@@ -394,7 +396,21 @@ export class TurnLoop {
     });
     if (promptTokens === this.lastCtxEmit) return;
     this.lastCtxEmit = promptTokens;
-    this.config.onStream({ type: "usage_update", promptTokens });
+    // Forward the provider's cache counts so the UI can show a hit rate. Only
+    // attach fields the provider actually reported — a spread keeps them off
+    // the event entirely when undefined, so the renderer can tell "no cache
+    // info this turn" from "0 cached". Estimate-path emits don't call this and
+    // so carry no cache fields (correct: an estimate has no cache reading).
+    this.config.onStream({
+      type: "usage_update",
+      promptTokens,
+      ...(usage.cacheReadTokens !== undefined
+        ? { cacheReadTokens: usage.cacheReadTokens }
+        : {}),
+      ...(usage.cacheCreationTokens !== undefined
+        ? { cacheCreationTokens: usage.cacheCreationTokens }
+        : {}),
+    });
   }
 
   /**
@@ -605,7 +621,7 @@ export class TurnLoop {
 
       // UI ctx bar: prefer the provider's authoritative promptTokens.
       if (response!.usage?.promptTokens !== undefined) {
-        this.emitCtxFromUsage(response!.usage.promptTokens, messages);
+        this.emitCtxFromUsage(response!.usage, messages);
       }
 
       // Feed actual token usage back to the context manager so subsequent
@@ -684,7 +700,7 @@ export class TurnLoop {
 
       // After any continuation, send latest usage so ctx bar reflects real context
       if (response.usage?.promptTokens !== undefined) {
-        this.emitCtxFromUsage(response.usage.promptTokens, messages);
+        this.emitCtxFromUsage(response.usage, messages);
       }
 
       // Goal-mode run-scoped accounting: add this turn's total token usage

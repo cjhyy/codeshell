@@ -90,6 +90,8 @@ interface Props {
   onModelChange: (opt: ModelOption) => void;
   contextTokens: number;
   contextMax?: number;
+  cacheReadTokens?: number;
+  cacheCreationTokens?: number;
 
   // Project picker (composer second row)
   repos: Repo[];
@@ -156,6 +158,8 @@ export function ChatView({
   onModelChange,
   contextTokens,
   contextMax,
+  cacheReadTokens,
+  cacheCreationTokens,
   repos,
   onSelectRepo,
   onAddRepo,
@@ -1049,7 +1053,13 @@ export function ChatView({
               </div>
 
               <div className="flex min-w-0 items-center justify-end gap-1.5">
-                <ContextRing used={contextTokens} max={contextMax} busy={busy} />
+                <ContextRing
+                  used={contextTokens}
+                  max={contextMax}
+                  busy={busy}
+                  cacheReadTokens={cacheReadTokens}
+                  cacheCreationTokens={cacheCreationTokens}
+                />
                 <ModelPill
                   activeKey={activeModelKey}
                   options={modelOptions}
