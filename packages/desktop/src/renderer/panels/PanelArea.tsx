@@ -76,6 +76,9 @@ interface Props {
   reviewDiff?: string;
   /** File a chat path-link asked to reveal in the Files panel (nonce re-fires). */
   revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
+  /** A Files panel reveals the requested file and reports the nonce back, so the
+   *  parent marks it consumed (no timing race — see App.onRevealConsumed). */
+  onRevealConsumed?: (nonce: number) => void;
   /** URL a chat http(s)-link asked the Browser panel to open (nonce re-fires). */
   openUrl?: { url: string; nonce: number };
   /** Active engine sessionId — the background-shell panel queries shells by it (TODO 3.2). */
@@ -136,6 +139,7 @@ export function PanelArea({
   reviewFiles,
   reviewDiff,
   revealFile,
+  onRevealConsumed,
   openUrl,
   engineSessionId,
   width,
@@ -382,6 +386,7 @@ export function PanelArea({
                   engineSessionId={ctx.engineSessionId}
                   browserAnchors={ctx.browserAnchors}
                   revealFile={onActiveBucket ? revealFile : undefined}
+                  onRevealConsumed={onActiveBucket ? onRevealConsumed : undefined}
                   openUrl={onActiveBucket ? openUrl : undefined}
                   onAttachImage={onAttachImage}
                   onRemoveBrowserAnchor={onRemoveBrowserAnchor}
@@ -427,6 +432,7 @@ function PanelBody({
   reviewFiles,
   reviewDiff,
   revealFile,
+  onRevealConsumed,
   openUrl,
   engineSessionId,
   onAttachImage,
@@ -441,6 +447,7 @@ function PanelBody({
   reviewFiles?: string[];
   reviewDiff?: string;
   revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
+  onRevealConsumed?: (nonce: number) => void;
   openUrl?: { url: string; nonce: number };
   engineSessionId?: string | null;
   onAttachImage?: (absPath: string) => void;
@@ -450,7 +457,7 @@ function PanelBody({
 }) {
   switch (tab.kind) {
     case "files":
-      return <FilesPanel cwd={cwd} onAttachImage={onAttachImage} revealFile={revealFile} />;
+      return <FilesPanel cwd={cwd} onAttachImage={onAttachImage} revealFile={revealFile} onRevealConsumed={onRevealConsumed} />;
     case "browser":
       return <BrowserPanel cwd={cwd} visible={visible} openUrl={openUrl} anchors={browserAnchors} onRemoveAnchor={onRemoveBrowserAnchor} onUpdateAnchor={onUpdateBrowserAnchor} />;
     case "review":

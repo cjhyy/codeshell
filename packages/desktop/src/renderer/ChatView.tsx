@@ -98,6 +98,10 @@ interface Props {
   onSelectRepo: (id: string | null) => void;
   onAddRepo: () => void;
   activeRepoPath: string | null;
+  /** cwd for resolving message content (relative path links / inline images).
+   *  Equals activeRepoPath for a real repo, the sandbox cwd for a no-repo chat.
+   *  Kept separate from activeRepoPath so git/STT/branch stay repo-only. */
+  messageCwd?: string | null;
   repoClean?: boolean | null;
 
   // Title shown above the composer in new-chat mode (empty stream)
@@ -164,6 +168,7 @@ export function ChatView({
   onSelectRepo,
   onAddRepo,
   activeRepoPath,
+  messageCwd,
   repoClean,
   welcomeNode,
   composerSeed,
@@ -711,7 +716,7 @@ export function ChatView({
           onExtendGoal={onExtendGoal}
           trailing={inlineApproval}
           trailingKey={pendingApproval?.requestId ?? null}
-          cwd={activeRepoPath}
+          cwd={messageCwd ?? activeRepoPath}
           sendEpoch={sendEpoch}
         />
       )}

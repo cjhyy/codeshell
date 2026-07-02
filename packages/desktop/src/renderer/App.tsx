@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
 import { Sidebar } from "./Sidebar";
@@ -2276,6 +2276,15 @@ function App() {
   // Monotonic nonce source for revealFile, in a ref so the open-file handler
   // (registered once) doesn't close over a stale `revealFile`.
   const revealFileNonceRef = useRef<number>(0);
+  // A Files panel reports it has actually revealed the requested file; mark that
+  // nonce consumed so the request keeps lingering on the shared prop (a later
+  // manually-opened Files tab reads it as already-handled and won't replay the
+  // old file) WITHOUT the timing race the old setTimeout(0) flip had.
+  const onRevealConsumed = useCallback((nonce: number) => {
+    setRevealFile((prev) =>
+      prev && prev.nonce === nonce && !prev.consumed ? { ...prev, consumed: true } : prev,
+    );
+  }, []);
   // URL the Browser panel should navigate to, set when a chat answer's http(s)
   // link is clicked. Threaded as a prop (not relied on via a window event the
   // panel listens for) so it survives the panel being CLOSED at click time —
@@ -2545,14 +2554,17 @@ function App() {
       const nonce = (revealFileNonceRef.current ?? 0) + 1;
       revealFileNonceRef.current = nonce;
       // Fresh, un-consumed request — the targeted (or newly opened) Files panel
-      // reveals it. We flip `consumed` true on the next tick so the request
-      // lingers on the shared prop without making a LATER manually-opened Files
-      // tab replay it (that was the "new tab shows the old file" bug).
+      // reveals it, then reports back via onRevealConsumed so we flip `consumed`
+      // true. The request lingers on the shared prop (so a LATER manually-opened
+      // Files tab sees it already-consumed and does NOT replay it — the "new tab
+      // shows the old file" bug), but we mark it consumed only AFTER a panel has
+      // actually revealed it. The old code flipped `consumed` on a setTimeout(0),
+      // which raced the freshly-mounted panel's effect: when THIS click also
+      // created the Files tab, the flip landed before the new panel's reveal
+      // effect ran, so the first click opened an empty tab and you had to click
+      // again. Event-driven consume removes that race.
       setRevealFile({ path: detail.path!, cwd: detail.cwd ?? null, nonce, consumed: false });
       setPanelRequest((prev) => ({ nonce: prev.nonce + 1, kind: "files", open: true }));
-      setTimeout(() => {
-        setRevealFile((prev) => (prev && prev.nonce === nonce ? { ...prev, consumed: true } : prev));
-      }, 0);
     };
     window.addEventListener("codeshell:open-file", onOpenFile);
     return () => window.removeEventListener("codeshell:open-file", onOpenFile);
@@ -3113,6 +3125,12 @@ function App() {
               onSelectRepo={handleNewConversationForRepo}
               onAddRepo={() => { void handleAddRepo(); }}
               activeRepoPath={activeRepo?.path ?? null}
+              // cwd used to RESOLVE message content (relative path links, inline
+              // images) — distinct from activeRepoPath (git/STT/branch, which
+              // must stay null for a no-repo chat). A no-repo session actually
+              // runs under the sandbox cwd, so fall back to it; otherwise a
+              // relative `docs/x.md` link can't resolve and renders as dead text.
+              messageCwd={activeRepo?.path ?? noRepoCwdRef.current}
               repoClean={activeGitMeta.clean}
               welcomeNode={
                 showWelcome ? (
@@ -3169,6 +3187,7 @@ function App() {
           reviewFiles={reviewFiles}
           reviewDiff={reviewDiff}
           revealFile={revealFile}
+          onRevealConsumed={onRevealConsumed}
           openUrl={openUrl}
           width={panelWidth}
           onResizeStart={beginPanelResize}

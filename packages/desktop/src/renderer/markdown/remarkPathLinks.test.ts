@@ -221,6 +221,46 @@ describe("remarkPathLinks — inlineCode path spans", () => {
   });
 });
 
+describe("remarkPathLinks — line RANGE suffix (:N-M)", () => {
+  it("links a bare path with a :N-M range and jumps to the start line", () => {
+    // The model very often cites a span, e.g. "AssistantMessageView.tsx:46-54".
+    // Before the fix the range suffix wasn't matched at all → plain text.
+    expect(linkedPaths("见 packages/desktop/src/MessageStream.tsx:101-106 这里")).toEqual([
+      "packages/desktop/src/MessageStream.tsx",
+    ]);
+    // The href carries the START line so the editor jumps into the span.
+    const url = linkUrls("见 packages/desktop/src/MessageStream.tsx:101-106 这里")[0]!;
+    expect(url).toContain(":101");
+    expect(url).not.toContain("-106");
+    // And it round-trips: decode yields the start line as a number.
+    expect(decodePathHref(url)).toEqual({
+      path: "packages/desktop/src/MessageStream.tsx",
+      line: 101,
+    });
+  });
+
+  it("links a backtick path with a :N-M range", () => {
+    const url = inlineCodeLinkUrls("messages/AssistantMessageView.tsx:46-54")[0]!;
+    expect(url.startsWith(CODESHELL_PATH_SCHEME)).toBe(true);
+    expect(decodePathHref(url)).toEqual({
+      path: "messages/AssistantMessageView.tsx",
+      line: 46,
+    });
+  });
+
+  it("links a bare filename with a :N-M range", () => {
+    const url = linkUrls("改了 dev.ts:53-70 这段")[0]!;
+    expect(decodePathHref(url)).toEqual({ path: "dev.ts", line: 53 });
+  });
+
+  it("does not treat a trailing dash without a second number as a range", () => {
+    // "a.ts:42-" is malformed; we still link at line 42, not swallow the dash
+    // into the path or break decoding.
+    const urls = linkUrls("见 src/a.ts:42 这里");
+    expect(decodePathHref(urls[0]!)).toEqual({ path: "src/a.ts", line: 42 });
+  });
+});
+
 describe("remarkPathLinks — CJK characters inside the path itself", () => {
   it("links a bare path with a CJK directory segment", () => {
     // The user's whole workspace lives under a Chinese directory. With ASCII

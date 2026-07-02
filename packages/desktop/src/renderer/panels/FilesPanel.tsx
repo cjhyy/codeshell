@@ -62,13 +62,16 @@ interface Props {
   onAttachImage?: (absPath: string) => void;
   /** A chat path-link asked to reveal this file; nonce re-fires on re-click. */
   revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
+  /** Report back once we've actually revealed a request, so the parent marks it
+   *  consumed (a later manually-opened tab then won't replay it). */
+  onRevealConsumed?: (nonce: number) => void;
 }
 
 /**
  * File-browser panel, modeled on Codex's fs RPC tree: lazy directory
  * expansion (fs:readDir per level) + a capped text preview (fs:readFile).
  */
-export function FilesPanel({ cwd, onAttachImage, revealFile }: Props) {
+export function FilesPanel({ cwd, onAttachImage, revealFile, onRevealConsumed }: Props) {
   const { t } = useT();
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
@@ -112,7 +115,13 @@ export function FilesPanel({ cwd, onAttachImage, revealFile }: Props) {
     if (!abs) return;
     setSelected(abs);
     setRevealDirs(ancestorDirs(cwd, abs));
-  }, [revealFile?.nonce, cwd]);
+    // Tell the parent we handled this nonce. Consuming AFTER the reveal (rather
+    // than on a setTimeout in App) is what fixes the "click once opens an empty
+    // tab, click again to see the file" race: when this same click also created
+    // the Files tab, this effect runs on the freshly-mounted panel and reveals
+    // immediately — the request is only marked consumed once that has happened.
+    onRevealConsumed?.(revealFile.nonce);
+  }, [revealFile?.nonce, revealFile?.consumed, cwd, onRevealConsumed]);
 
   if (!cwd) {
     return (

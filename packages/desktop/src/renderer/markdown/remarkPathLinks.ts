@@ -70,10 +70,12 @@ const LEAD = `(?<=^|[\\s(,${CJK_OPEN}])`;
 // bare matcher (which stops at whitespace) can't capture. The closing quote is
 // a backreference (\\1) so open/close must be the SAME char — '…' and "…" pair,
 // but '…` doesn't. Requires a "/" and an extension inside so we don't link
-// arbitrary quoted prose, and an optional :line[:col] before the close quote.
+// arbitrary quoted prose, and an optional :line[:col] / :line-range before the
+// close quote. The trailing `[:-]\\d+` swallows a :col (`:42:3`) OR a range end
+// (`:46-54`) after the captured START line, so a span citation links at line N.
 const QUOTED =
   LEAD +
-  `(['"\`])([^'"\`\\n]*?\\/[^'"\`\\n:]*?\\.[\\w]{1,8})(?::(\\d+)(?::\\d+)?)?\\1`;
+  `(['"\`])([^'"\`\\n]*?\\/[^'"\`\\n:]*?\\.[\\w]{1,8})(?::(\\d+)(?:[:-]\\d+)?)?\\1`;
 
 // Bare form (group 4 = path, group 5 = optional :line): an unquoted path
 // bounded by whitespace / sentence punctuation. The boundary classes include
@@ -83,7 +85,9 @@ const QUOTED =
 const BARE =
   LEAD +
   `((?:\\/|\\.{1,2}\\/|${PATH_CHAR}+\\/)(?:${PATH_CHAR}|\\/)+\\.[\\w]{1,8})` +
-  `(?::(\\d+)(?::\\d+)?)?` +
+  // Capture the START line; a trailing `-M` range end or `:col` is consumed but
+  // not captured, so "MessageStream.tsx:101-106" links and jumps to line 101.
+  `(?::(\\d+)(?:[:-]\\d+)?)?` +
   `(?=$|[\\s),.;!?${CJK_CLOSE}])`;
 
 // Bare FILENAME form (no directory): a lone `name.ext` in prose, e.g. the
@@ -100,7 +104,8 @@ const FNAME_LEAD = "[\\p{L}\\p{N}_@-]";
 const BARE_FILENAME =
   `(?<=^|[\\s(${CJK_OPEN}])` +
   `(${FNAME_LEAD}${PATH_CHAR}*\\.[\\w]{1,8})` +
-  `(?::(\\d+)(?::\\d+)?|\\s*\\(line\\s+(\\d+)\\))?` +
+  // `:N`, `:N:col`, `:N-M` range, or `(line N)` — all capture just the start.
+  `(?::(\\d+)(?:[:-]\\d+)?|\\s*\\(line\\s+(\\d+)\\))?` +
   `(?=$|[\\s),.;!?${CJK_CLOSE}]|\\s*\\(line\\s)`;
 
 // Combined: quoted form, then bare-with-directory, then bare filename. Group
@@ -150,7 +155,7 @@ const SKIP_PARENTS = new Set(["link", "linkReference", "inlineCode", "code"]);
 // Doesn't: `npm run build`, `--flag`, `useState` (no "."), `obj.method` (ext
 // not whitelisted).
 const INLINE_CODE_PATH_RE = new RegExp(
-  `^((?:(?:\\/|\\.{1,2}\\/|${PATH_CHAR}+\\/)[^\\n:]*?|${FNAME_LEAD}${PATH_CHAR}*?)\\.([\\w]{1,8}))(?::(\\d+)(?::\\d+)?)?$`,
+  `^((?:(?:\\/|\\.{1,2}\\/|${PATH_CHAR}+\\/)[^\\n:]*?|${FNAME_LEAD}${PATH_CHAR}*?)\\.([\\w]{1,8}))(?::(\\d+)(?:[:-]\\d+)?)?$`,
   "u",
 );
 
