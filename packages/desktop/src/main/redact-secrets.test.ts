@@ -50,4 +50,34 @@ describe("redactSecrets", () => {
     expect(out.name).toBe("x");
     expect(out.self).toBe("[CIRCULAR]");
   });
+
+  // F2: a short UseCredential token rides inside a STRING value under a benign
+  // key (the bridge logs a whole JSON-RPC line under `raw`). Key-name redaction
+  // misses it; content scrubbing must catch it.
+  test("scrubs a secret embedded in a JSON string under a benign key (raw)", () => {
+    const raw = JSON.stringify({
+      method: "agent/streamEvent",
+      result: { kind: "value", value: "ghp_abc123DEF456ghi789" },
+    });
+    const out = redactSecrets({ raw }) as { raw: string };
+    expect(out.raw).not.toContain("ghp_abc123DEF456ghi789");
+    expect(out.raw).toContain("[REDACTED]");
+    // Structure/keys preserved for debugging — only the secret is gone.
+    expect(out.raw).toContain("agent/streamEvent");
+  });
+
+  test('scrubs "value":"…"/"token":"…" pairs and prefixed tokens in a raw line', () => {
+    const raw = 'x {"token":"s3cr3t-XYZ"} and Bearer aGVsbG8gd29ybGQ= and sk-liveKEY12345';
+    const out = redactSecrets({ raw }) as { raw: string };
+    expect(out.raw).not.toContain("s3cr3t-XYZ");
+    expect(out.raw).not.toContain("aGVsbG8gd29ybGQ=");
+    expect(out.raw).not.toContain("sk-liveKEY12345");
+  });
+
+  test("does NOT mangle ordinary log strings", () => {
+    const out = redactSecrets({ msg: "opened file src/a.ts:12 and ran 3 tools" }) as {
+      msg: string;
+    };
+    expect(out.msg).toBe("opened file src/a.ts:12 and ran 3 tools");
+  });
 });

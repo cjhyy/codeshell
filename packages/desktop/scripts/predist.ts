@@ -42,6 +42,7 @@ import {
   rmSync,
   statSync,
 } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -58,6 +59,15 @@ function log(msg: string): void {
 
 function main(): void {
   if (!existsSync(coreSrc)) throw new Error(`core package not found at ${coreSrc}`);
+
+  // Rebuild the desktop bundle FIRST. electron-builder only packs whatever is
+  // already in out/**; predist itself just materializes core. Without this, a
+  // stale out/ (source changed but never rebuilt) is silently packaged — you
+  // ship old main/renderer/mobile code. `build` is fast (esbuild + vite prod)
+  // and idempotent, so always running it makes `dist`/`pack` reproducible.
+  // (core's own dist must already be built — copyDir below asserts it exists.)
+  log("building desktop bundle (out/) before packaging");
+  execFileSync("bun", ["run", "build"], { cwd: desktopRoot, stdio: "inherit" });
 
   // Drop whatever is currently at the target (symlink, or a stale real dir from
   // a previous run). On Windows a workspace link is a directory JUNCTION, and

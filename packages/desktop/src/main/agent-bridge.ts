@@ -106,6 +106,15 @@ export class AgentBridge {
    * explicit session — the phone follows whatever the desktop is working on.
    */
   private lastRunContext: { cwd?: string; sessionId?: string } = {};
+  /**
+   * Per-session cwd, populated on each `agent/run`. Cookie restore
+   * (InjectCredential) must resolve the credential against the ORIGINATING
+   * session's cwd — reading the global `lastRunContext.cwd` instead would, in a
+   * shared-worker multi-tab desktop, resolve session B's cookie against session
+   * A's project (injecting the wrong account's cookie when two projects share a
+   * credentialId). Keyed by sessionId; cleared in forgetSession.
+   */
+  private sessionCwd = new Map<string, string>();
 
   constructor(window: BrowserWindow) {
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
@@ -280,6 +289,12 @@ export class AgentBridge {
           cwd: parsed.params?.cwd,
           sessionId: parsed.params?.sessionId,
         };
+        if (
+          typeof parsed.params?.sessionId === "string" &&
+          typeof parsed.params?.cwd === "string"
+        ) {
+          this.sessionCwd.set(parsed.params.sessionId, parsed.params.cwd);
+        }
         // Workspace trust is a main-process authority (trust-store), never the
         // renderer's to assert — inject it here so a cloned malicious repo's
         // .code-shell settings can't self-authorize. "unknown"/never-trusted →
@@ -401,9 +416,16 @@ export class AgentBridge {
     void (async () => {
       let resultJson: string;
       try {
-        const cred = new CredentialStore(this.lastRunContext.cwd || undefined).resolve(
-          parsed.credentialId,
-        );
+        // Resolve the credential against the ORIGINATING session's cwd (from the
+        // parsed action's sessionId), NOT the global lastRunContext — otherwise
+        // a concurrent tab's run could have moved lastRunContext to another
+        // project and we'd inject the wrong account's cookie. Fall back to the
+        // global cwd only when the action carries no sessionId.
+        const sessionCwd =
+          (parsed.sessionId ? this.sessionCwd.get(parsed.sessionId) : undefined) ??
+          this.lastRunContext.cwd ??
+          undefined;
+        const cred = new CredentialStore(sessionCwd).resolve(parsed.credentialId);
         if (!cred || cred.type !== "cookie") {
           resultJson = JSON.stringify({ ok: false, error: `无 cookie 凭证: "${parsed.credentialId}"` });
         } else {
@@ -473,6 +495,7 @@ export class AgentBridge {
   /** Drop a session's snapshot (e.g. when the session is deleted). */
   forgetSession(sessionId: string): void {
     this.snapshots.forget(sessionId);
+    this.sessionCwd.delete(sessionId);
   }
 
   /**
@@ -496,6 +519,12 @@ export class AgentBridge {
         cwd: parsed.params?.cwd,
         sessionId: parsed.params?.sessionId,
       };
+      if (
+        typeof parsed.params?.sessionId === "string" &&
+        typeof parsed.params?.cwd === "string"
+      ) {
+        this.sessionCwd.set(parsed.params.sessionId, parsed.params.cwd);
+      }
     }
     if (!this.child?.stdin || this.child.stdin.destroyed) {
       dlog("bridge", "inject.dropped", {
