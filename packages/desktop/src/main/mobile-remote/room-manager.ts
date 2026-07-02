@@ -185,6 +185,17 @@ export class RoomManager {
   private pendingAskUser = new Map<string, unknown>();
   private now: () => number;
 
+  /** Drop all pending AskUser entries for a room. Called when its agent goes
+   *  away (exit/close) so a request that can no longer be answered doesn't leak
+   *  in the map (small memory leak) and its approval card doesn't hang until the
+   *  5-min timeout. Keys are `${roomId}:${requestId}`. */
+  private clearPendingAskUser(roomId: string): void {
+    const prefix = `${roomId}:`;
+    for (const key of this.pendingAskUser.keys()) {
+      if (key.startsWith(prefix)) this.pendingAskUser.delete(key);
+    }
+  }
+
   constructor(private readonly opts: RoomManagerOptions) {
     this.now = opts.now ?? (() => Date.now());
     mkdirSync(opts.rootDir, { recursive: true });
@@ -360,6 +371,15 @@ export class RoomManager {
       | { behavior: "allow"; updatedInput?: unknown; answer?: string }
       | { behavior: "deny"; message: string },
   ): boolean {
+    // Reap the stashed AskUser input FIRST, before the agent-existence check.
+    // Otherwise, if the agent already exited, the early return below would skip
+    // the delete and leak the pending entry (and the approval card would hang
+    // until its timeout). Deleting up front is safe: a missing agent means the
+    // request can no longer be answered anyway.
+    const askKey = `${roomId}:${requestId}`;
+    const pending = this.pendingAskUser.get(askKey);
+    if (pending !== undefined) this.pendingAskUser.delete(askKey);
+
     const agent = this.agents.get(roomId);
     if (!agent?.respondControl) return false;
 
@@ -368,10 +388,7 @@ export class RoomManager {
     // question text — the only shape the CLI accepts. The raw input was stashed
     // on approval_request. Deny passes through (claude treats it as "did not
     // answer", same as the desktop CLI's own cancel).
-    const askKey = `${roomId}:${requestId}`;
-    const pending = this.pendingAskUser.get(askKey);
     if (pending !== undefined) {
-      this.pendingAskUser.delete(askKey);
       if (decision.behavior === "deny") {
         agent.respondControl(requestId, decision);
         return true;
@@ -457,6 +474,7 @@ export class RoomManager {
       }
       case "exit":
         this.agents.delete(id);
+        this.clearPendingAskUser(id);
         this.append(id, { from: "system", type: "agent_exit", reason: String(event.code ?? event.signal ?? "") });
         break;
     }
@@ -474,11 +492,13 @@ export class RoomManager {
   close(id: string): void {
     this.agents.get(id)?.stop();
     this.agents.delete(id);
+    this.clearPendingAskUser(id);
   }
 
   closeAll(): void {
     for (const agent of this.agents.values()) agent.stop();
     this.agents.clear();
+    this.pendingAskUser.clear();
   }
 
   isOpen(id: string): boolean {

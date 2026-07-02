@@ -91,7 +91,14 @@ export function makeDriveAgentTool(runner: Runner = defaultRunner, fixedCli?: Dr
     // background:false runs in the foreground and returns the result inline.
     const background = args.background !== false;
     if (background) {
-      const sessionId = ctx?.sessionId ?? "";
+      // Fail loud on a missing sessionId: a background job whose completion
+      // notification can't be routed (enqueue drops invalid/empty sessionId)
+      // would run to completion and then silently vanish — nobody gets woken
+      // with the result. Refuse up front instead of launching disappearing work.
+      const sessionId = ctx?.sessionId;
+      if (typeof sessionId !== "string" || sessionId.length === 0) {
+        return `Error: cannot start a background ${cliName} job without a session — its result notification would be dropped. Retry with background:false, or ensure the tool runs inside a session.`;
+      }
       const jobId = `cc-${process.hrtime.bigint().toString(36)}`;
       backgroundJobRegistry.start(jobId, sessionId, label);
       void runner({ cli, prompt, resumeSessionId, cwd, permissionMode })

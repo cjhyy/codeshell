@@ -43,6 +43,28 @@ describe("settings-service", () => {
     });
   });
 
+  it("atomic MCP rename: one patch adds new + deletes old (nested null), no old+new leftover", async () => {
+    await withCwd(async (cwd) => {
+      // Seed an existing server "old".
+      await writeSettings(
+        "project",
+        { mcpServers: { old: { command: "echo", transport: "stdio" } } },
+        cwd,
+      );
+      // Rename old -> new in a SINGLE patch (what McpSection.saveEdit now sends).
+      await writeSettings(
+        "project",
+        { mcpServers: { new: { command: "echo", transport: "stdio" }, old: null } },
+        cwd,
+      );
+      const after = (await readSettings("project", cwd)) as {
+        mcpServers?: Record<string, unknown>;
+      };
+      // Only "new" survives — "old" is gone, and mcpServers wasn't wiped.
+      expect(Object.keys(after.mcpServers ?? {})).toEqual(["new"]);
+    });
+  });
+
   it("keeps concurrent writes to different keys (no lost updates)", async () => {
     await withCwd(async (cwd) => {
       await Promise.all([

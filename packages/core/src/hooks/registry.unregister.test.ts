@@ -55,3 +55,31 @@ describe("HookRegistry unregister-by-identity (file_history_backup leak)", () =>
     expect(reg.countHandlers("on_tool_start")).toBe(1);
   });
 });
+
+// L4: reloadHooks drops all plugin hooks (named `plugin:*`) across every event
+// and re-loads, so disabling a plugin mid-session stops its hooks on the LIVE
+// session. This pins the registry mechanism that fix relies on.
+describe("HookRegistry removeByNamePrefix (mid-session plugin hook drop)", () => {
+  test("removes every hook whose name starts with the prefix, across all events; leaves others", () => {
+    const reg = new HookRegistry();
+    reg.register("on_tool_start", async () => ({}), 80, "plugin:foo:on_tool_start");
+    reg.register("on_tool_end", async () => ({}), 80, "plugin:foo:on_tool_end");
+    reg.register("on_tool_start", async () => ({}), 80, "plugin:bar:on_tool_start");
+    // Non-plugin hooks must survive.
+    reg.register("on_tool_start", async () => ({}), 50, "settings:shell");
+    reg.register("on_tool_start", async () => ({}), 0, undefined);
+
+    const removed = reg.removeByNamePrefix("plugin:");
+    expect(removed).toBe(3);
+    // Only the non-plugin hooks remain on on_tool_start; on_tool_end is drained.
+    expect(reg.countHandlers("on_tool_start")).toBe(2);
+    expect(reg.listHooks().has("on_tool_end")).toBe(false);
+  });
+
+  test("no plugin hooks → no-op, returns 0", () => {
+    const reg = new HookRegistry();
+    reg.register("on_tool_start", async () => ({}), 50, "settings:shell");
+    expect(reg.removeByNamePrefix("plugin:")).toBe(0);
+    expect(reg.countHandlers("on_tool_start")).toBe(1);
+  });
+});

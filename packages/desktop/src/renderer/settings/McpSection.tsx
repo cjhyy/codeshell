@@ -247,9 +247,20 @@ export function McpSection({ scope, activeRepoPath }: Props) {
   const saveEdit = async (next: McpServer, originalName?: string) => {
     const others = servers.filter((s) => s.name !== originalName && s.name !== next.name);
     const updated = [...others, next];
-    await persist(updated);
+    // Rename must be ATOMIC: write the new server AND delete the old key in ONE
+    // updateSettings patch. The old two-step (persist new, then a separate patch
+    // to null the old key) could persist BOTH old+new if the second write
+    // failed/crashed. deepMerge in settings-service honors nested `null` to
+    // delete a key, so { mcpServers: { new: {...}, old: null } } does both.
+    const record: Record<string, unknown> = Object.fromEntries(
+      persistableMcpServers(updated).map((s) => [s.name, stripNameFromServer(s)]),
+    );
     if (originalName && originalName !== next.name) {
-      await window.codeshell.updateSettings(scope, { mcpServers: { [originalName]: null } }, cwd);
+      record[originalName] = null;
+    }
+    await window.codeshell.updateSettings(scope, { mcpServers: record }, cwd);
+    setServers(updated);
+    if (originalName && originalName !== next.name) {
       await window.codeshell.invalidateMcpProbeCache(originalName);
     }
     await window.codeshell.invalidateMcpProbeCache(next.name);
