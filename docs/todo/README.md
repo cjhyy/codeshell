@@ -13,6 +13,7 @@
 | [`prompt-cache-optimization.md`](prompt-cache-optimization.md) | 规划中(未动手) | Prompt 缓存优化对标 CC:现状只 systemPrompt 一个断点、命中率不可见;含 CC 真实做法(扒自 sourcemap)+ 可抄清单 + 执行顺序(先做"命中率可见")。关联记忆 `project_prompt_cache_gaps` |
 | [`architecture-debt.md`](architecture-debt.md) | **P0 已落地 main**(`c191bb51`),P1/P2 待排期 | 架构债路线图:P0=断循环依赖/抽 engine 类型/凭证加密边界(已并);P1=拆 index、arena builtin 可选、拆 engine.ts、拆 App.tsx、真启用 safeStorage;P2=arena 移包/state 单例/cron 测试/文档措辞。含每条正解与落地顺序。配套源码级现状见 `docs/architecture/` |
 | [`smoke-automation-mock-provider.md`](smoke-automation-mock-provider.md) | 设计定稿(未动手) | 冒烟自动化:本地起 mock provider server 讲 provider wire 协议,app 配置指 localhost,零 core 改动。L1 启动+UI(扩展 smoke-panels)、L2 LLM 全链路(mock server + 隔离 HOME 临时 catalog + Playwright 存在性断言);先本地 `bun run smoke` 不接 CI。OpenAI 路由先做,Anthropic fast-follow。完整设计 spec `2026-07-02-smoke-automation-mock-provider-design.md` |
+| [`im-gateway-remote-orchestration.md`](im-gateway-remote-orchestration.md) | 设计稿/方向锚点(未动手,非承诺) | IM Gateway(对标 openclaw):独立常驻进程,IM(Telegram/飞书)发指令→远程拉起隧道→手机配对入口回推 IM→手机操作。下游隧道/配对/房间全已存在(复用),纯新增 IM 控制入口。gateway 是**通道非大脑**,高阶编排委托给未来「assistant 主体」(§6 留衔接口,与整体产品形态 design 强绑)。MVP=Telegram+开关+复用隧道,方案 A 唤起 main |
 
 ## 仍准确未做的代表项
 
