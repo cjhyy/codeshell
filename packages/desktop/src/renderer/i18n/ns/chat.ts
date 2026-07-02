@@ -50,6 +50,10 @@ export const chat = {
         file: "文件",
         removeAria: "移除标注",
       },
+      stream: {
+        jumpToBottomAria: "回到底部",
+        jumpToBottomTitle: "回到最新消息",
+      },
       localMode: "本地模式",
       localModeTitle: "在本机当前工作区运行",
       project: {
@@ -211,6 +215,10 @@ export const chat = {
         browser: "Web",
         file: "File",
         removeAria: "Remove annotation",
+      },
+      stream: {
+        jumpToBottomAria: "Scroll to bottom",
+        jumpToBottomTitle: "Jump to latest",
       },
       localMode: "Local mode",
       localModeTitle: "Run in the current local workspace",

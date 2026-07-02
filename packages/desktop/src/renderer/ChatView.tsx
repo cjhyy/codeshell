@@ -462,6 +462,8 @@ export function ChatView({
     const payload = encodeAttachmentsForWire(withAnchors, attachments);
     if (busy) onQueueInput?.(payload);
     else onSend(payload);
+    // Snap the stream to the bottom + re-arm follow regardless of scroll pos.
+    setSendEpoch((n) => n + 1);
     if (text) setHistory(pushHistory(activeRepoId, text));
     setDraft("");
     setAttachments([]);
@@ -588,6 +590,10 @@ export function ChatView({
   // composer only when the inline card scrolls out of the viewport.
   const inlineApprovalRef = useRef<HTMLDivElement>(null);
   const [inlineApprovalVisible, setInlineApprovalVisible] = useState(true);
+  // Bumped on each user send so the MessageStream unconditionally snaps to the
+  // bottom + re-arms follow — the user always sees their own message, even if
+  // they had scrolled up to read history.
+  const [sendEpoch, setSendEpoch] = useState(0);
   useEffect(() => {
     if (!pendingApproval) { setInlineApprovalVisible(true); return; }
     const el = inlineApprovalRef.current;
@@ -702,6 +708,7 @@ export function ChatView({
           trailing={inlineApproval}
           trailingKey={pendingApproval?.requestId ?? null}
           cwd={activeRepoPath}
+          sendEpoch={sendEpoch}
         />
       )}
 
