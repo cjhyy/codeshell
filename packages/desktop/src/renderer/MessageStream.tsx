@@ -18,6 +18,9 @@ import { buildStreamItems, reconcileStreamItems, type StreamItem } from "./messa
 import { foldAgentGroups } from "./messages/agentGroup";
 import { AgentGroupCard } from "./messages/AgentGroupCard";
 import { useStickToBottom } from "./chat/stickToBottom";
+import { buildScrollTrigger } from "./chat/scrollTrigger";
+import { Button } from "@/components/ui/button";
+import { ChevronDown } from "./ui/icons";
 import { decodeWireForDisplay } from "./chat/attachments";
 import { extractAnnotations } from "./chat/anchors";
 import { AnnotationsBlock } from "./messages/AnnotationsBlock";
@@ -73,6 +76,13 @@ interface Props {
    * this cwd. Null when the session was created without a repo.
    */
   cwd?: string | null;
+  /**
+   * Monotonic counter bumped by ChatView on each user send. Forces the
+   * stream to snap to the bottom + re-arm follow so the user always sees
+   * their own message, even if they had scrolled up. Kept separate from
+   * the session id so a send never reads as a session switch.
+   */
+  sendEpoch?: number;
 }
 
 export function MessageStream({
@@ -85,6 +95,7 @@ export function MessageStream({
   engineSessionId,
   liveTurnActive,
   cwd,
+  sendEpoch,
 }: Props) {
   const { t } = useT();
   // The LAST files_changed message = the most recent turn's file edits. Only
@@ -98,12 +109,15 @@ export function MessageStream({
       break;
     }
   }
-  const ref = useStickToBottom<HTMLDivElement>(
-    `${messages.length}:${trailingKey ?? ""}`,
-    32,
+  const { ref, showJump, scrollToBottom } = useStickToBottom<HTMLDivElement>({
+    // Trigger encodes message count + trailing key + bucketed streaming tail
+    // length, so growth within a single streaming message keeps following.
+    trigger: buildScrollTrigger(messages, liveTurnActive, trailingKey),
     // Session switch → snap to bottom instantly (before paint), no scroll flash.
-    engineSessionId ?? null,
-  );
+    jumpKey: engineSessionId ?? null,
+    // User send → unconditional re-arm + snap (separate dep from session id).
+    sendEpoch,
+  });
   // Zoom state carries the whole sibling-image group plus the clicked index,
   // so the Lightbox can offer prev/next across the images in one message.
   const [zoomed, setZoomed] = useState<
@@ -141,8 +155,10 @@ export function MessageStream({
   );
 
   return (
-    <div className="flex-1 overflow-y-auto" ref={ref}>
-      {items.map((m) => {
+    <div className="relative flex-1 overflow-hidden">
+      <div className="h-full overflow-y-auto" ref={ref}>
+        <div>
+          {items.map((m) => {
         if (m.kind === "turn_process_group") {
           return <TurnProcessGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} />;
         }
@@ -268,12 +284,27 @@ export function MessageStream({
                 isLatest={m.id === lastFilesChangedId}
               />
             );
-          case "turn_end":
-            return <TurnEndMessageView key={m.id} message={m} />;
-        }
-      })}
-      {liveTurnActive && <LiveActivityLine messages={messages} running={liveTurnActive} />}
-      {trailing}
+            case "turn_end":
+              return <TurnEndMessageView key={m.id} message={m} />;
+          }
+        })}
+          {liveTurnActive && <LiveActivityLine messages={messages} running={liveTurnActive} />}
+          {trailing}
+        </div>
+      </div>
+      {showJump && (
+        <Button
+          type="button"
+          variant="solid"
+          size="icon"
+          onClick={scrollToBottom}
+          aria-label={t("chat.stream.jumpToBottomAria")}
+          title={t("chat.stream.jumpToBottomTitle")}
+          className="absolute bottom-4 right-4 h-9 w-9 rounded-full shadow-md"
+        >
+          <ChevronDown className="h-4 w-4" />
+        </Button>
+      )}
       {zoomed && (
         <Lightbox
           items={zoomed.items}

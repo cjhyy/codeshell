@@ -6,7 +6,7 @@ import { ThinkingMessageView } from "./ThinkingMessageView";
 import { AgentMessageView } from "./AgentMessageView";
 import { ContextBoundaryView } from "./ContextBoundaryView";
 import { GoalProgressView } from "./GoalProgressView";
-import { Markdown, streamingMarkdownClassName } from "../Markdown";
+import { StreamingMarkdown } from "./StreamingMarkdown";
 import { processGroupLabel, type RenderedTurnProcessGroup } from "./streamGroups";
 import { AgentGroupCard } from "./AgentGroupCard";
 
@@ -106,13 +106,11 @@ function TurnProcessGroupCardImpl({ group, turnEpoch, cwd }: Props) {
               if (m.text === "") return null;
               return (
                 <div key={m.id} className="py-1 text-sm">
-                  {m.done ? (
-                    <Markdown text={m.text} />
-                  ) : (
-                    <div className={streamingMarkdownClassName}>
-                      <pre className="whitespace-pre-wrap font-sans">{m.text}</pre>
-                    </div>
-                  )}
+                  {/* Inline assistant text belongs to the MAIN agent of this
+                      turn — same session, same cwd the card already holds — so
+                      forward it (matches AssistantMessageView). Relative image
+                      paths / path links now resolve here too (stage 0b). */}
+                  <StreamingMarkdown text={m.text} done={m.done} cwd={cwd ?? null} />
                 </div>
               );
             }

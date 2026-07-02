@@ -1,7 +1,7 @@
 import React, { useState, memo } from "react";
 import type { AgentMessage } from "../types";
 import { StatusDot } from "../ui/StatusDot";
-import { Markdown, streamingMarkdownClassName } from "../Markdown";
+import { StreamingMarkdown } from "./StreamingMarkdown";
 import { summarizeAgentActivity, describeActivity } from "../topbar/liveActivity";
 import { useT } from "../i18n/I18nProvider";
 
@@ -85,14 +85,15 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
                     re-parsing Markdown (remark + rehype-highlight) on every
                     token was a ~150ms-per-frame commit that froze the UI
                     (perf: subagent-stream-markdown-reparse). Only the settled
-                    text, on done, goes through Markdown. */}
-                {message.done ? (
-                  <Markdown text={bodyText} />
-                ) : (
-                  <div className={streamingMarkdownClassName}>
-                    <pre className="whitespace-pre-wrap font-sans">{bodyText}</pre>
-                  </div>
-                )}
+                    text, on done, goes through Markdown.
+
+                    cwd is intentionally NOT passed (stage 0b decision): a
+                    sub-agent may run in a different workspace than the parent
+                    session, so resolving relative paths against the parent cwd
+                    would point at the WRONG directory. Graceful degradation to
+                    plain links (Markdown's default when cwd is absent) is the
+                    safe behaviour here. */}
+                <StreamingMarkdown text={bodyText} done={message.done} />
               </div>
             )}
             {message.error && <div className="text-sm text-status-err">{message.error}</div>}
