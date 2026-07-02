@@ -1,10 +1,11 @@
 import React, { memo, useState } from "react";
 import type { AskUserMessage } from "../types";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
+import { resolveAnswerTone, toneEchoStyle } from "./askUserTone";
 
 interface Props {
   message: AskUserMessage;
@@ -32,14 +33,21 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
   const [picked, setPicked] = useState<Set<number>>(() => new Set());
 
   if (message.answer !== undefined) {
+    // Color the resolved echo by the chosen option's engine-supplied tone —
+    // an affirmative choice is green ✓, a deny is red ✕, anything we can't map
+    // (free text, multiSelect, LLM prompts without a tone) stays neutral. This
+    // is what keeps a "拒绝" answer from rendering with the approve styling.
+    const echo = toneEchoStyle(resolveAnswerTone(message.answer, message.options));
     return (
       <div className="my-2 max-w-[720px] rounded-md border bg-muted/30 p-3 text-sm">
         <div className="mb-2 flex flex-col gap-1">
           {message.header && <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{message.header}</span>}
           <span className="font-medium text-foreground">{message.question}</span>
         </div>
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-status-ok/10 px-2 py-1 text-xs font-medium text-status-ok">
-          <Check size={12} /> {message.answer}
+        <div className={cn("inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium", echo.className)}>
+          {echo.icon === "check" && <Check size={12} />}
+          {echo.icon === "cross" && <X size={12} />}
+          {message.answer}
         </div>
       </div>
     );
@@ -100,7 +108,15 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                         {isPicked ? <Check size={11} /> : null}
                       </span>
                     )}
-                    <span className="font-medium text-foreground">{o.label}</span>
+                    <span
+                      className={cn(
+                        "font-medium text-foreground",
+                        o.tone === "danger" && "text-status-err",
+                        o.tone === "ok" && "text-status-ok",
+                      )}
+                    >
+                      {o.label}
+                    </span>
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">{o.description}</div>
                 </li>

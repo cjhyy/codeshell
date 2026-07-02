@@ -59,6 +59,28 @@ describe("askUserTool", () => {
     ]);
   });
 
+  it("strips a model-supplied `tone` so LLM prompts can't self-color (stays neutral)", async () => {
+    const { ctx, lastOpts } = ctxWith("A");
+    await askUserTool(
+      {
+        question: "pick",
+        options: [
+          { label: "A", description: "first", tone: "ok" },
+          { label: "B", description: "second", tone: "danger" },
+        ],
+      },
+      ctx,
+    );
+    // Only label/description survive — no tone key on any option.
+    expect(lastOpts()?.options).toEqual([
+      { label: "A", description: "first" },
+      { label: "B", description: "second" },
+    ]);
+    for (const o of lastOpts()?.options ?? []) {
+      expect("tone" in o).toBe(false);
+    }
+  });
+
   it("drops malformed options (missing label/description)", async () => {
     const { ctx, lastOpts } = ctxWith("x");
     await askUserTool(

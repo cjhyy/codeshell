@@ -1642,13 +1642,19 @@ function App() {
           Array.isArray(args.options)
             ? (args.options as unknown[])
                 .filter(
-                  (o): o is { label: string; description: string } =>
+                  (o): o is { label: string; description: string; tone?: unknown } =>
                     !!o &&
                     typeof o === "object" &&
                     typeof (o as Record<string, unknown>).label === "string" &&
                     typeof (o as Record<string, unknown>).description === "string",
                 )
-                .map((o) => ({ label: o.label, description: o.description }))
+                .map((o): AskUserOption => {
+                  const tone: AskUserOption["tone"] =
+                    o.tone === "ok" || o.tone === "danger" || o.tone === "neutral"
+                      ? o.tone
+                      : undefined;
+                  return { label: o.label, description: o.description, ...(tone ? { tone } : {}) };
+                })
             : undefined;
         // Resolve the ORIGINATING session's bucket via the shared resolver
         // (live table → on-disk index reverse lookup → runningBucket only when
