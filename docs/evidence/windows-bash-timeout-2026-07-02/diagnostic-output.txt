@@ -1,0 +1,8 @@
+﻿safeSpawnShell diagnostic output (before fix):
+{
+  "reason": "timeout",
+  "stdout": "Microsoft Windows [Version 10.0.26200.8655]\r\n(c) Microsoft Corporation...\r\n\r\nD:\\github\\listen-bd>",
+  "exitCode": 1,
+  "timedOut": true,
+  "spawnFailed": false
+}

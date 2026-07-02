@@ -1,0 +1,9 @@
+﻿import { resolveShellInvocation } from "../../runtime/spawn-common.js";
+export function createOffBackend() {
+    return {
+        name: "off",
+        wrap(command, opts) {
+            return resolveShellInvocation(command, opts.shell);
+        },
+    };
+}
