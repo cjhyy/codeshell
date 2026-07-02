@@ -179,24 +179,61 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
     defaultModel: "~anthropic/claude-opus-latest",
     signupUrl: "https://openrouter.ai/keys",
     needsKey: true,
-    // OpenRouter ~latest router aliases — auto-track the newest version so the
-    // slug never goes stale (vs. dated slugs like anthropic/claude-opus-4.8-20260528).
+    // Two kinds of entries per family:
+    //  - "~vendor/model-latest" router aliases — OpenRouter resolves them
+    //    server-side to the newest version, so the slug never goes stale (vs.
+    //    dated slugs like anthropic/claude-opus-4.8-20260528). Verified live
+    //    2026-07-02: ~anthropic/claude-opus-latest→opus-4.8,
+    //    ~anthropic/claude-sonnet-latest→sonnet-5, ~google/gemini-pro-latest→
+    //    gemini-3.1-pro. (~openai/gpt-latest is NOT a real alias — it 400s —
+    //    so it's dropped; pin a concrete openai slug instead.)
+    //  - concrete versioned slugs — so the picker can select a SPECIFIC
+    //    version (e.g. Opus 4.7-fast) instead of only "latest". Every concrete
+    //    slug + context window below verified live 2026-07-02 against this
+    //    account's OpenRouter key.
     // Explicit params (not capability-projected): reasoning models opt into
-    // OPENROUTER_REASONING; non-reasoning ones omit params — no catch-all forcing
-    // reasoning onto a model that doesn't support it.
-    // All slugs verified live (2026-06-23) via this account's OpenRouter key:
-    // every entry below returned a successful chat completion. reasoning/tools
-    // support read from OpenRouter's /models supported_parameters: deepseek-chat
-    // (V3) and llama-4-maverick are NOT reasoning models, so they carry no params.
+    // OPENROUTER_REASONING; non-reasoning ones (deepseek-chat V3, llama-4)
+    // omit params — no catch-all forcing reasoning onto a model that lacks it.
     modelPresets: [
+      // Anthropic (Claude) — alias + concrete versions
       orPreset("~anthropic/claude-opus-latest", "Claude Opus (latest)", [OPENROUTER_REASONING], 1_000_000),
       orPreset("~anthropic/claude-sonnet-latest", "Claude Sonnet (latest)", [OPENROUTER_REASONING], 1_000_000),
-      orPreset("~openai/gpt-latest", "GPT (latest)", [OPENROUTER_REASONING], 1_050_000),
+      orPreset("anthropic/claude-opus-4.8", "Claude Opus 4.8", [OPENROUTER_REASONING], 1_000_000),
+      orPreset("anthropic/claude-opus-4.8-fast", "Claude Opus 4.8 (fast)", [OPENROUTER_REASONING], 1_000_000),
+      orPreset("anthropic/claude-opus-4.7", "Claude Opus 4.7", [OPENROUTER_REASONING], 1_000_000),
+      orPreset("anthropic/claude-opus-4.7-fast", "Claude Opus 4.7 (fast)", [OPENROUTER_REASONING], 1_000_000),
+      orPreset("anthropic/claude-sonnet-5", "Claude Sonnet 5", [OPENROUTER_REASONING], 1_000_000),
+      orPreset("anthropic/claude-sonnet-4.6", "Claude Sonnet 4.6", [OPENROUTER_REASONING], 1_000_000),
+      orPreset("anthropic/claude-fable-5", "Claude Fable 5", [OPENROUTER_REASONING], 1_000_000),
+      // OpenAI (GPT) — concrete only (no working ~latest alias). Led by 5.5 to
+      // match the direct-OpenAI default (state.json model = gpt-5.5).
+      orPreset("openai/gpt-5.5", "GPT-5.5", [OPENROUTER_REASONING], 1_050_000),
+      orPreset("openai/gpt-5.5-pro", "GPT-5.5 Pro", [OPENROUTER_REASONING], 1_050_000),
+      orPreset("openai/gpt-5.4", "GPT-5.4", [OPENROUTER_REASONING], 1_050_000),
+      orPreset("openai/gpt-5.4-mini", "GPT-5.4 Mini", [OPENROUTER_REASONING], 400_000),
+      orPreset("openai/gpt-5.1-codex-max", "GPT-5.1 Codex Max", [OPENROUTER_REASONING], 400_000),
+      // Google (Gemini) — alias + concrete
       orPreset("~google/gemini-pro-latest", "Gemini Pro (latest)", [OPENROUTER_REASONING], 1_048_576),
-      orPreset("qwen/qwen3.7-max", "Qwen3.7 Max", [OPENROUTER_REASONING], 1_000_000),
+      orPreset("google/gemini-3-flash-preview", "Gemini 3 Flash (preview)", [OPENROUTER_REASONING], 1_048_576),
+      orPreset("google/gemini-2.5-pro", "Gemini 2.5 Pro", [OPENROUTER_REASONING], 1_048_576),
+      orPreset("google/gemini-2.5-flash", "Gemini 2.5 Flash", [OPENROUTER_REASONING], 1_048_576),
+      // xAI (Grok)
+      orPreset("x-ai/grok-4.3", "Grok 4.3", [OPENROUTER_REASONING], 1_000_000),
+      orPreset("x-ai/grok-4.20", "Grok 4.20", [OPENROUTER_REASONING], 2_000_000),
+      // DeepSeek — V4 reasoning + V3 chat (non-reasoning)
+      orPreset("deepseek/deepseek-v4-pro", "DeepSeek V4 Pro", [OPENROUTER_REASONING], 1_048_576),
+      orPreset("deepseek/deepseek-v4-flash", "DeepSeek V4 Flash", [OPENROUTER_REASONING], 1_048_576),
+      orPreset("deepseek/deepseek-chat", "DeepSeek V3 (chat)", undefined, 131_072),
+      // Zhipu (GLM) — glm-5.1 (65k ctx) omitted: below the catalog's ≥100k
+      // context floor; glm-5.2 (1M) and glm-5 (202k) cover the family.
       orPreset("z-ai/glm-5.2", "GLM 5.2 (Z.ai)", [OPENROUTER_REASONING], 1_048_576),
-      orPreset("deepseek/deepseek-chat", "DeepSeek V3", undefined, 131_072),
+      orPreset("z-ai/glm-5", "GLM 5 (Z.ai)", [OPENROUTER_REASONING], 202_752),
+      // Qwen
+      orPreset("qwen/qwen3.7-max", "Qwen3.7 Max", [OPENROUTER_REASONING], 1_000_000),
+      orPreset("qwen/qwen3-coder", "Qwen3 Coder", [OPENROUTER_REASONING], 262_144),
+      // Meta Llama (non-reasoning)
       orPreset("meta-llama/llama-4-maverick", "Llama 4 Maverick", undefined, 1_048_576),
+      orPreset("meta-llama/llama-4-scout", "Llama 4 Scout", undefined, 327_680),
     ],
   },
   {
@@ -292,6 +329,14 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
     description: "OpenAI 图像 API。需要 OpenAI key；baseUrl 默认官方端点。",
     defaultBaseUrl: "https://api.openai.com/v1",
     defaultModel: "gpt-image-2",
+    // Live-verified 2026-07-02 against this account's OpenAI key (GET /v1/models):
+    // gpt-image-2 (current), gpt-image-1.5, gpt-image-1, gpt-image-1-mini.
+    modelPresets: [
+      { value: "gpt-image-2", label: "GPT Image 2" },
+      { value: "gpt-image-1.5", label: "GPT Image 1.5" },
+      { value: "gpt-image-1", label: "GPT Image 1" },
+      { value: "gpt-image-1-mini", label: "GPT Image 1 mini" },
+    ],
     signupUrl: "https://platform.openai.com/api-keys",
     test: true,
     paramsDoc:
