@@ -661,12 +661,16 @@ export function GitSection() {
       // Auto-probe git availability on mount so the result is shown right away
       // and survives leaving/returning to settings — `gitOk` is in-memory state
       // that resets on unmount, so without this the user had to re-click 检查
-      // every time (the "检测了需要保留/回显" complaint). Read-only probe; no
-      // settings write (unlike the manual checkGit, which flushes the path).
+      // every time (the "检测了需要保留/回显" complaint). When main can resolve
+      // the actual binary path, persist it so GUI launches that later miss PATH
+      // still use the detected git.
       setChecking(true);
       try {
         const r = await window.codeshell.checkGit();
-        if (!cancelled) setGitOk(r.available);
+        if (!cancelled) {
+          setGitOk(r.available);
+          if (r.available) await applyDetectedGitPath(r.path);
+        }
       } catch {
         if (!cancelled) setGitOk(false);
       } finally {
@@ -680,12 +684,21 @@ export function GitSection() {
     writeSettings("user", { git: { path: value } }),
   );
 
+  const applyDetectedGitPath = async (path: string | undefined): Promise<void> => {
+    const detected = path?.trim();
+    if (!detected) return;
+    setGitPath(detected);
+    await writeSettings("user", { git: { path: detected } });
+  };
+
   const checkGit = async () => {
     setChecking(true);
     try {
       flushGitPath();
+      await writeSettings("user", { git: { path: gitPath } });
       const r = await window.codeshell.checkGit();
       setGitOk(r.available);
+      if (r.available) await applyDetectedGitPath(r.path);
     } catch {
       setGitOk(false);
     } finally {

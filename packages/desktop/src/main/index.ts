@@ -28,6 +28,8 @@ import {
   deleteUserCatalogEntry,
   userCatalogPath,
   catalogEntryOrigins,
+  findExecutable,
+  resolveGit,
   setGitPathOverride,
   isGitAvailable,
   CredentialStore,
@@ -1686,7 +1688,9 @@ ipcMain.handle("plugins:checkUpdate", async (_e, name: string) => {
 // only after a clone fails.
 ipcMain.handle("git:check", async () => {
   await applyGitPathFromSettings();
-  return { available: isGitAvailable() };
+  const available = isGitAvailable();
+  const path = available ? findExecutable(resolveGit()) ?? undefined : undefined;
+  return { available, ...(path ? { path } : {}) };
 });
 
 // ─── Voice input (speech-to-text / 听写) ───
