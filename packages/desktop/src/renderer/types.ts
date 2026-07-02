@@ -180,6 +180,13 @@ export interface TurnEndMessage {
 export interface AskUserOption {
   label: string;
   description: string;
+  /**
+   * Semantic coloring hint from the engine — `ok` (allow → green ✓),
+   * `danger` (deny → red ✕), or absent/`neutral` (no coloring). Only trusted
+   * first-party prompts (e.g. the credential-use gate) set it; LLM-authored
+   * AskUserQuestion options arrive without it and render neutral.
+   */
+  tone?: "ok" | "danger" | "neutral";
 }
 
 /**

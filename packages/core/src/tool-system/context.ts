@@ -42,6 +42,14 @@ export interface ToolRuntimeHost {
 export interface AskUserChoice {
   label: string;
   description: string;
+  /**
+   * Optional semantic hint for how the UI colors this choice and its resolved
+   * echo — `ok` (affirmative / allow → green ✓), `danger` (negative / deny →
+   * red ✕), `neutral` (no coloring). Only set by trusted first-party callers
+   * with fixed option sets (e.g. the credential-use gate); the LLM-facing
+   * AskUserQuestion tool strips it so model-authored prompts stay neutral.
+   */
+  tone?: "ok" | "danger" | "neutral";
 }
 
 /**

@@ -34,7 +34,11 @@ export type SessionCredentialAllow = Set<string>;
 /** 审批问询函数(对接 ToolContext.askUser;返回用户所选 label)。 */
 export type CredentialAskFn = (
   question: string,
-  opts: { header?: string; options: { label: string; description: string }[]; optionsOnly: true },
+  opts: {
+    header?: string;
+    options: { label: string; description: string; tone?: "ok" | "danger" | "neutral" }[];
+    optionsOnly: true;
+  },
 ) => Promise<string>;
 
 export interface CredentialUseGateDeps {
@@ -73,9 +77,9 @@ export async function credentialUseGate(
   const choice = await deps.ask(question, {
     header: "凭证取用",
     options: [
-      { label: ALLOW_ONCE, description: "仅本次取用该凭证" },
-      { label: ALLOW_SESSION, description: "本会话内该凭证不再询问(关 app 后失效)" },
-      { label: DENY, description: "拒绝本次取用" },
+      { label: ALLOW_ONCE, description: "仅本次取用该凭证", tone: "ok" },
+      { label: ALLOW_SESSION, description: "本会话内该凭证不再询问(关 app 后失效)", tone: "ok" },
+      { label: DENY, description: "拒绝本次取用", tone: "danger" },
     ],
     optionsOnly: true,
   });

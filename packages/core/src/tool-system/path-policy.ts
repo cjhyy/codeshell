@@ -646,13 +646,18 @@ async function promptForPathApproval(
       {
         header,
         options: [
-          { label: ALLOW_ONCE, description: "仅允许当前这一次文件操作继续执行" },
-          { label: ALLOW_SESSION, description: `本会话内不再询问 ${grantDir} 下的文件` },
+          { label: ALLOW_ONCE, description: "仅允许当前这一次文件操作继续执行", tone: "ok" },
+          {
+            label: ALLOW_SESSION,
+            description: `本会话内不再询问 ${grantDir} 下的文件`,
+            tone: "ok",
+          },
           {
             label: ALLOW_PROJECT,
             description: `永久允许 ${grantDir} 下的文件（写入 .code-shell/settings.local.json）`,
+            tone: "ok",
           },
-          { label: "拒绝", description: "阻止当前文件操作" },
+          { label: "拒绝", description: "阻止当前文件操作", tone: "danger" },
         ],
         // Closed-set decision: no free-text "其它…" box. The answer is matched
         // against the labels below by exact string, so a typed answer must not
