@@ -3039,7 +3039,10 @@ function App() {
           onTogglePanel={togglePanel}
           // Draft state (no active session yet) has no conversation/context to
           // attach panels to — hide the dock toggle until a real session exists.
-          panelAvailable={activeSessionId !== null}
+          // Also chat-only: the file/browser/review/terminal panels belong to the
+          // chat view, so the toggle must not linger when the user switches to
+          // credentials / automation / customize / etc. (which reuse this TopBar).
+          panelAvailable={activeSessionId !== null && view.viewMode === "chat"}
           activity={liveActivity}
           tasks={latestTasks}
           activeGoal={state.activeGoal}

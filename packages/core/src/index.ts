@@ -496,6 +496,7 @@ export {
   setGitPathOverride,
   resolveGit,
   isGitAvailable,
+  resolveGitPath,
 } from "./utils/exec.js";
 export { gte } from "./utils/semver.js";
 // Cross-process file lock (proper-lockfile via createRequire, ESM-safe). Used by
@@ -581,6 +582,7 @@ export {
 
 export {
   isGitRepo,
+  resolveProjectRoot,
   getCurrentBranch,
   getGitStatus,
   getGitDiff,

@@ -121,6 +121,17 @@ export function isGitAvailable(env: NodeJS.ProcessEnv = process.env): boolean {
   return findExecutable(gitPathOverride ?? "git", env) !== null;
 }
 
+/**
+ * The RESOLVED absolute path of the usable git binary (override path, or git
+ * found on PATH), or null if none. Lets the settings UI auto-fill the git.path
+ * field after a successful detection instead of only reporting available:true
+ * with no path (the "检测到了但没回填 path" complaint). Returns the real path so
+ * the user can see/keep exactly what was found.
+ */
+export function resolveGitPath(env: NodeJS.ProcessEnv = process.env): string | null {
+  return findExecutable(gitPathOverride ?? "git", env);
+}
+
 function resolveExecutableUncached(trimmed: string, env: NodeJS.ProcessEnv): string {
   const command = trimmed;
 

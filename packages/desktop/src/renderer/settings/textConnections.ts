@@ -113,10 +113,29 @@ export function catalogModelOptions(
 
 /**
  * Credentials usable for a given catalogId. A key belongs to one provider
- * account, so candidates are scoped to the same catalogId — never cross-provider.
+ * ACCOUNT (adapterKind = openai/google/fal/…), and the same account key works
+ * across that provider's model types — e.g. an OpenAI key configured for a text
+ * model is equally valid for `openai-transcribe` (audio). So candidates are
+ * scoped to the same *adapterKind*, not the exact catalogId. Without the catalog
+ * (or if either side's adapterKind is unresolvable) we fall back to the old
+ * exact-catalogId match so nothing silently over-shares.
+ *
+ * This is why adding a voice connection used to show NO existing key even though
+ * an OpenAI key was already saved: the old exact-catalogId filter never matched
+ * `openai-transcribe` against a text-OpenAI credential.
  */
-export function credentialCandidates(credentials: Credential[], catalogId: string): Credential[] {
-  return credentials.filter((c) => c.catalogId === catalogId);
+export function credentialCandidates(
+  credentials: Credential[],
+  catalogId: string,
+  catalog?: CatalogEntry[],
+): Credential[] {
+  const kindOf = (id: string): string | undefined =>
+    catalog?.find((e) => e.id === id)?.adapterKind;
+  const wantKind = kindOf(catalogId);
+  if (!wantKind) return credentials.filter((c) => c.catalogId === catalogId);
+  return credentials.filter(
+    (c) => c.catalogId === catalogId || kindOf(c.catalogId) === wantKind,
+  );
 }
 
 /**

@@ -7,6 +7,8 @@
 # beta 真机测试反馈（v0.6.0-rc.2，2026-07-02 起）
 
 > 用户在 macOS arm64 真机测试 v0.6.0-rc.2（桌面端 + CLI）。发现的问题按报告顺序记录在此,待批量修复。
+
+- ⬜ **[浏览器面板/跨session] 切换 session 时旧浏览器内容串到新 session 的浏览器面板** — 复现:session A 面板开了浏览器(某网页),切到 session B(B 面板也有浏览器),A 的浏览器内容自动出现在了 B 的浏览器面板上。期望:浏览器 webview 内容按 session 隔离,各 session 的浏览器互不串。疑似浏览器面板/webview 是全局单例(或按 panel 而非 session 归属),切 session 时没换成该 session 自己的 webview/URL。与"权限弹窗归属错 session"同类(跨 session 状态未隔离)。待定位:浏览器面板组件的 webview 实例/URL 归属——是全局共享一个 webview 还是按 sessionId 分。关联 `project_browser_panel_nav_bugs`、`project_browser_selection_echo_session`(浏览器按 session 归桶)、`project_desktop_four_panels`。⚠️ 需真机验(webview 行为)。
 > 已修:桌面端启动崩溃 `Cannot find package 'cross-spawn'`（predist 依赖闭包,见 `project_release_ci_pipeline`）。
 
 <!-- 用户反馈问题追加到这里,格式:
@@ -14,14 +16,16 @@
 -->
 
 - ⬜ **[项目边界] 项目归属改为:有 git 用 git 根,无 git 用 cwd**（架构改进,非 bug）— 现状:codeshell 纯按 cwd 归项目(`project_disk_authoritative_recovery`),monorepo 里在仓库根 vs `packages/desktop` 分别打开会被当成**两个不同项目**。期望(对齐 CC):cwd → 向上找 `.git` 仓库根,有则用 git 根作项目 key(子目录归父项目);无 git 则用 cwd 本身。保留 `isNoRepoCwd` 护栏(no-repo/临时目录仍归 NO_REPO_KEY,不建项目)。
-  - **要点**:所有"cwd → 项目"映射点都要过这层归一化(不止一处——记忆提示 placement 的 rebuildFromDisk/importRuns/liveSession + automation/projectOptions.ts 至少 4 处)。抽一个 `resolveProjectKey(cwd)` = isNoRepoCwd ? NO_REPO_KEY : (gitRootOf(cwd) ?? cwd),各处统一调用。git 根探测走 `git rev-parse --show-toplevel` 或向上找 `.git`(注意 realpath 防 symlink,关联 `project_path_containment_realpath`)。CC 做法参考 `reference_cc_codex_workspace_trust`(trust 也按目录向上继承,和项目边界同源)。⚠️ 已存量 session 的项目 key 会变,需考虑迁移/兼容。
+  - **✅ 已做最小版(worktree beta-rc2-fixes)**:核心诉求"添加项目时若选的是 git 子目录,归到仓库根,非 git 才按目录本身"已实现——core 新增 `resolveProjectRoot(cwd)`(`git/utils.ts`:`git rev-parse --show-toplevel`,非 git/失败→原样返回,不抛)+ export;desktop `dialog:pickDir`(main)选目录后先 `applyGitPathFromSettings()` 再 `resolveProjectRoot` 归一化,子目录自动 snap 到仓库根 → `handleAddRepo` 按 path 去重即命中同一项目。带 3 例单测(子目录→root/非git→自身/不存在→不抛)。**不碰存量**(旧项目不变)。
+  - **⬜ 剩完整版(未做,后面单开)**:① 其他 cwd→项目映射点也归一化(rebuildFromDisk/importRuns/liveSession + automation/projectOptions.ts);② session 的 cwd 自动建项目路径也过 resolveProjectRoot;③ 存量已建的"子目录项目"迁移/合并到 git 根;④ realpath 防 symlink(关联 `project_path_containment_realpath`)。CC 做法参考 `reference_cc_codex_workspace_trust`。
 
 - ⬜ **[设置/catalog] 语音类型模型无选项 + 语音模型配置展示不出来** — 复现:设置里的模型/连接页。实际:模型类型分类里没有"语音/STT(/TTS)"这一类,配好语音模型后配置项也不展示。期望:catalog 支持语音类型模型,能像文本/图/视频那样在连接页配置并展示。背景:STT 听写桌面端已实现,但记忆 `project_voice_input_stt` 记它是"纯 UI 非工具+回退复用 OpenAI 凭证",可能从没进 catalog 的模型类型枚举。关联 `project_unified_model_catalog_design`/`project_model_catalog`/`project_voice_input_stt`。
   - **调查结论(agent)**:audio 类型其实已 90% 接好——✅ catalog 枚举含 `audio`(`core/model-catalog/types.ts:77` `tag: enum(text,image,video,audio)`);✅ builtin 有 2 条 audio(`builtin.ts:390-425` openai-transcribe / groq-transcribe);✅ 连接页有 audio 分组(`SearchConnectionsPanel.tsx:73-79`)+ 按 tag 过滤渲染(`TextConnectionsPanel.tsx:55,99`);✅ STT 后端已走 catalog 读 audio 连接(`core/stt/resolve-transcribe.ts:54-84`,无连接时回退 OpenAI 凭证)。
   - **唯一确认缺口**:`ModelCatalogPanel.tsx:319-323` 模型类型下拉 options 只有 text/image/video,**漏了 audio** → 用户在 catalog 编辑器手动加/编辑模型时看不到"语音"类型。修法:options 补 `{value:"audio",label:...}`;顺带 `catalogEditor.ts` blankEntry 默认值 + i18n 标签(`settingsX.textConn.headingAudio`/`searchConn.groupAudio*`)核实存在。
   - **用户真机确认(2026-07-02)**:两处都缺,都要修——① **连接页 audio 没像图片那样默认展示**;② **模型页面(Catalog 编辑器)没有 audio 类型**。
   - ⚠️ **纠偏**:agent 看的 `SearchConnectionsPanel.tsx:57-79` 里 image/video/audio **全是 `defaultOpen={false}`(折叠)**,只有 web search 默认展开——所以用户说的"图片默认展示出来"**不是这个面板**。用户实际看的是另一个页面(image 在那里直接铺开展示),audio 在**那个页面**缺席。待重新定位:哪个页面把 image 直接展示(不折叠)?ModelSection / 主连接页 / GenConnectionsPanel?找到后 audio 要在同一处同样默认展示。别再认 SearchConnectionsPanel 这个折叠面板。
-  - **确认要改**:`ModelCatalogPanel.tsx:319-323` 类型下拉补 audio。
+  - **✅ 已修(worktree beta-rc2-fixes)**:`ModelCatalogPanel.tsx:320-323` 类型下拉补了 audio 选项——catalog 编辑器现在能建/编辑 audio 类型条目。
+  - **⬜ 剩 UX 待用户拍板**:用户想要"配了语音连接就在下面显示出来,而不是只显示那句提示"。核实 `TextConnectionsPanel.tsx:286`——`instances.length>0` 时**已经**渲染完整连接卡片(347+),配了就显示。当前只在 **空状态**(instances===0)显示 sttFallback 提示条(292-308:"语音输入已可用,复用 OpenAI key...")。真实缺口=**回退态(复用 OpenAI key 的隐式 provider)不是真 instance,只作被动提示条**;用户可能想把它作为一张**可见的连接卡**呈现(能看/能"提升"为正式连接)。这是 UX 设计选择(要不要把隐式回退显示成 pseudo-connection card),需用户明确要不要做,别臆测实现。
 
 - ⬜ **[会话切换] 点击未渲染过的 session 先闪"新建页面"再渲染内容** — 复现:点侧边栏一个本 renderer 进程还没打开过的 session。实际:先闪空的新建/欢迎态,随后异步 hydrate 出历史内容。期望:加载期显示 loading 或占位,不露出新建态。
   - **根因(已定位)**:`App.tsx:809-816` `fallbackState`——`transcripts[activeBucket]` 尚无(undefined)时兜底读 localStorage,该 session 从没在本 renderer 打开过 → localStorage 空 → `local.messages.length===0` → 返回 `INITIAL_STATE`;`ChatView.tsx:598` `isNewChat = messages.length===0` 遂为 true,渲染欢迎页;`App.tsx:701-787` 异步 `subscribeSession` hydrate 到达后才切成内容。
@@ -62,9 +66,6 @@
   - **🟢 免费修法(Mac 可改+验,优先试)**:**去掉 `packages/desktop/package.json` scripts 里 `pack`/`dist` 的 `CSC_IDENTITY_AUTO_DISCOVERY=false`**,让 electron-builder 自动 ad-hoc 签名(学 video downloader)。大概率把"损坏"降级成温和的"未验证开发者"(右键可开)。可能需配合确保 asarUnpack 的 node-pty 被签名覆盖(或 `signIgnore` 处理)。改完本地 `bun run dist` + 浏览器下载模拟(`xattr -w com.apple.quarantine` 打标)+ `spctl -a` 验。⚠️ CI release.yml 也走 electron-builder,同步核对有没有传这个 env。
   - **根治(要花钱)**:Apple 开发者账号($99/年)→ Developer ID 签名 + 公证(notarize)+ stapler。`project_macos_signing_notarization` 记账号到位改 4 处。⚠️ Windows 同理未签名(SmartScreen 拦),已在 release.yml body 注明。
 
-- ⬜ **[Windows/性能] Windows 上进程/终端起 cmd.exe 开销大(真机实测慢)** — 用户 Windows 真机实测慢,AI 当时给的结论是"每次 Bash 工具都起 cmd.exe pty 开销大"。
-  - ⚠️ **纠偏(已核实代码,推翻 AI 结论)**:**Bash 工具根本没用 node-pty** —— core `bash.ts`/`safe-spawn.ts` grep 无 node-pty,走普通 `child_process.spawn`。node-pty **只用在两处**:`packages/desktop/src/main/pty-service.ts` + `renderer/panels/TerminalPanel.tsx`(即**只有终端面板**用 pty)。所以"每次 Bash 都起 pty"不成立。
-  - **真实候选(待 Windows 真机测证实)**:① **终端面板** conpty 冷启动 cmd.exe 慢(conpty 冷启已知慢,真机验面板打开耗时);② Bash 工具若慢=普通 spawn cmd.exe 的开销(和上一条 shell 选择相关——bash 命令走 cmd 本就别扭);③ 优化方向:一次性命令本就不该用 pty(现在也没用,✓);终端面板可考虑 pty 复用/预热,或 Windows 上默认起更轻的 shell。⚠️ **必须 Windows 真机 profiling 定位到底哪里慢**,别再拿 AI 结论当根因。关联 `project_desktop_four_panels`(node-pty 按 Electron ABI 重编)、`project_windows_port`。
 
 - ⬜ **[种子/预装 · Windows] 默认预装 skill 没出现 + 默认市场列表空(Windows 新装机)** — 复现:**Windows** 全新装 v0.6.0-rc.2 首启。实际:① 应预装的 skill 在列表看不到;② marketplace 页没有默认源列表。期望:首启软预装官方 skill/plugin + 市场默认列出官方源。背景:官方 repo=`cjhyy/mimi-plugins`,首启软预装,`project_official_marketplace_seed`。
   - ⚠️ **平台更正(2026-07-02)**:用户在 **Windows 新装机**遇到,**不是 Mac**。下面 agent 的验证是在 **Mac 仓库/`dist/mac-arm64`** 上做的,**不代表 Windows**——Windows 打包是否带种子、Windows 上 git clone 是否能跑,都得单独在 Windows 验。**极可能与 Windows bash/git 那条同源**:seed 的 `addMarketplace` 要 `git clone cjhyy/mimi-plugins`,若 Windows 上 git/shell spawn 有问题(见 Windows/Bash 条),clone 失败 → 市场空 + skill 装不上。关联 `project_official_marketplace_seed`、`project_marketplace_version_display`。

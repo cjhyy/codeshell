@@ -21,7 +21,9 @@
  * (1) and (2) here. The background manager uses all three.
  */
 
-import { spawn } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
 import type { SandboxBackend } from "../tool-system/sandbox/index.js";
 
 /**
@@ -133,19 +135,80 @@ export function resolveShellInvocation(
 ): { file: string; args: string[] } {
   if (process.platform === "win32") {
     const file = shell ?? process.env.ComSpec ?? "cmd.exe";
-    // PowerShell variants take -Command; cmd.exe (and cmd-like) take /c.
+    // Flag form depends on the shell: PowerShell → -Command; a POSIX shell such
+    // as Git Bash's bash.exe / sh → -c (it does NOT understand cmd's /c); cmd.exe
+    // (and cmd-like) → /c. Detecting bash/sh matters now that defaultShellBinary
+    // prefers Git Bash on Windows — feeding it /c would break every command.
     const isPwsh = /(^|[\\/])(pwsh|powershell)(\.exe)?$/i.test(file);
-    return isPwsh ? { file, args: ["-Command", command] } : { file, args: ["/c", command] };
+    if (isPwsh) return { file, args: ["-Command", command] };
+    const isPosixShell = /(^|[\\/])(bash|sh|zsh|dash)(\.exe)?$/i.test(file);
+    return { file, args: [isPosixShell ? "-c" : "/c", command] };
   }
   const file = shell ?? process.env.SHELL ?? "/bin/bash";
   return { file, args: ["-c", command] };
 }
 
+/**
+ * Best-effort locate Git Bash's `bash.exe` on Windows. Returns undefined on
+ * non-Windows, when git isn't installed, or when no bash.exe is found.
+ *
+ * WHY: The Bash tool and background shells feed the model's *bash* commands
+ * (`ls`, `&&`, `$(…)`, pipes, quoting) to the shell. On Windows the historical
+ * default is `cmd.exe`, which can't run any of that — so "Bash" was effectively
+ * broken on Windows. Git for Windows (which most devs already have — we detect
+ * it for repo ops anyway) ships a full bash at `<git>\bin\bash.exe`, so prefer
+ * it. Only falls back to cmd.exe when Git Bash truly isn't present.
+ *
+ * Resolution order:
+ *   1. CODE_SHELL_GIT_BASH_PATH env override (explicit user config wins).
+ *   2. Reverse-engineer from the git binary's location: `where git` gives e.g.
+ *      `C:\Program Files\Git\cmd\git.exe` → `…\Git\bin\bash.exe`.
+ *   3. The two default install locations (Program Files / Program Files (x86)).
+ * Cached after first probe (a spawn per command would be wasteful).
+ */
+let gitBashCache: string | null | undefined;
+export function resolveGitBash(): string | undefined {
+  if (process.platform !== "win32") return undefined;
+  if (gitBashCache !== undefined) return gitBashCache ?? undefined;
+
+  const override = process.env.CODE_SHELL_GIT_BASH_PATH;
+  if (override && existsSync(override)) return (gitBashCache = override);
+
+  const candidates: string[] = [];
+  // (2) derive from `where git`. Git installs git.exe under either \cmd\ or
+  // \bin\; bash.exe lives under the sibling \bin\. Walk up to the Git root.
+  try {
+    const out = execFileSync("where", ["git"], { encoding: "utf-8", timeout: 3000 });
+    const gitExe = out.split(/\r?\n/).find((l) => l.trim().toLowerCase().endsWith("git.exe"));
+    if (gitExe) {
+      const gitRoot = dirname(dirname(gitExe.trim())); // …\Git\cmd\git.exe → …\Git
+      candidates.push(join(gitRoot, "bin", "bash.exe"));
+    }
+  } catch {
+    // git not on PATH — fall through to the well-known locations.
+  }
+  // (3) default install locations.
+  const pf = process.env["ProgramFiles"] ?? "C:\\Program Files";
+  const pf86 = process.env["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)";
+  candidates.push(join(pf, "Git", "bin", "bash.exe"));
+  candidates.push(join(pf86, "Git", "bin", "bash.exe"));
+
+  const found = candidates.find((p) => existsSync(p));
+  return (gitBashCache = found ?? null) ?? undefined;
+}
+
+/** Reset the Git Bash probe cache. Test-only (platform is stubbed per test). */
+export function _resetGitBashCache(): void {
+  gitBashCache = undefined;
+}
+
 /** The platform's default interactive shell binary, for spawning a bare shell
- *  (no `-c`/`/c` command). Windows → ComSpec/cmd.exe; POSIX → $SHELL/bin/bash. */
+ *  (no `-c`/`/c` command). Windows → Git Bash if present, else ComSpec/cmd.exe;
+ *  POSIX → $SHELL/bin/bash. Windows prefers Git Bash so the model's bash-syntax
+ *  commands actually run (cmd.exe can't). */
 export function defaultShellBinary(shell?: string): string {
   if (shell) return shell;
-  if (process.platform === "win32") return process.env.ComSpec ?? "cmd.exe";
+  if (process.platform === "win32") return resolveGitBash() ?? process.env.ComSpec ?? "cmd.exe";
   return process.env.SHELL ?? "/bin/bash";
 }
 

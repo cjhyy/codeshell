@@ -30,6 +30,8 @@ import {
   catalogEntryOrigins,
   setGitPathOverride,
   isGitAvailable,
+  resolveGitPath,
+  resolveProjectRoot,
   CredentialStore,
   type Credential,
   type CredentialScope,
@@ -1678,7 +1680,10 @@ ipcMain.handle("plugins:checkUpdate", async (_e, name: string) => {
 // only after a clone fails.
 ipcMain.handle("git:check", async () => {
   await applyGitPathFromSettings();
-  return { available: isGitAvailable() };
+  // Return the RESOLVED path too so the settings UI can auto-fill the git.path
+  // field after detection (the "检测到了但没回填 path" fix) instead of only a
+  // boolean. null when git isn't found.
+  return { available: isGitAvailable(), path: resolveGitPath() };
 });
 
 // ─── Voice input (speech-to-text / 听写) ───
@@ -2312,7 +2317,15 @@ ipcMain.handle("dialog:pickDir", async (e): Promise<{ path: string; name: string
     properties: ["openDirectory", "createDirectory"],
   });
   if (res.canceled || res.filePaths.length === 0) return null;
-  const path = res.filePaths[0];
+  // Project-boundary rule: if the user picked a SUBDIRECTORY of a git repo,
+  // snap to the repo root so it belongs to that one project (not a separate
+  // project per subdir — e.g. picking packages/desktop in a monorepo opens the
+  // repo root). Non-git folders are returned unchanged. Best-effort; falls back
+  // to the picked path on any git failure. applyGitPathFromSettings first so a
+  // user-configured git.path is honored by resolveGit.
+  await applyGitPathFromSettings();
+  const picked = res.filePaths[0];
+  const path = resolveProjectRoot(picked);
   const result = { path, name: basename(path) };
   await pushRecent({ ...result, lastOpenedAt: Date.now() });
   const win = BrowserWindow.fromWebContents(e.sender);

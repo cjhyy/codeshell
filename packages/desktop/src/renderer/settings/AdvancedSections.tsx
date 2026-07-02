@@ -657,7 +657,8 @@ export function GitSection() {
     void (async () => {
       const s = (await window.codeshell.getSettings("user")) ?? {};
       if (cancelled) return;
-      setGitPath(stringOf(objectOf(s.git).path));
+      const savedPath = stringOf(objectOf(s.git).path);
+      setGitPath(savedPath);
       // Auto-probe git availability on mount so the result is shown right away
       // and survives leaving/returning to settings — `gitOk` is in-memory state
       // that resets on unmount, so without this the user had to re-click 检查
@@ -666,7 +667,16 @@ export function GitSection() {
       setChecking(true);
       try {
         const r = await window.codeshell.checkGit();
-        if (!cancelled) setGitOk(r.available);
+        if (cancelled) return;
+        setGitOk(r.available);
+        // Auto-fill the resolved git path when the user hasn't set one — the
+        // "检测到了但没回填 path" fix. Only when the field is empty (never clobber
+        // a user-typed path) and detection actually found one. Persist it so it
+        // survives reload and the core override picks it up.
+        if (!savedPath && r.available && r.path) {
+          setGitPath(r.path);
+          void writeSettings("user", { git: { path: r.path } });
+        }
       } catch {
         if (!cancelled) setGitOk(false);
       } finally {
@@ -686,6 +696,13 @@ export function GitSection() {
       flushGitPath();
       const r = await window.codeshell.checkGit();
       setGitOk(r.available);
+      // Auto-fill the resolved path when the field is empty (detection found git
+      // on PATH but the user never configured a path) — so "检查" both verifies
+      // AND surfaces where git lives. Never overwrite a user-entered path.
+      if (!gitPath.trim() && r.available && r.path) {
+        setGitPath(r.path);
+        await writeSettings("user", { git: { path: r.path } });
+      }
     } catch {
       setGitOk(false);
     } finally {
