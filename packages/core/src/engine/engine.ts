@@ -2012,6 +2012,17 @@ export class Engine {
           // baseline + this run's running total (idempotent per boundary,
           // accumulates across runs; carries cacheRead/cacheCreation too).
           session.state.tokenUsage = foldRunUsage(usageBaseline, modelFacade.getUsage());
+          // Surface the session-cumulative cache counts to the UI (the "本会话
+          // 累计命中率" tooltip). Separate from turn-loop's per-response
+          // usage_update (which drives the live context reading).
+          const cum = session.state.tokenUsage;
+          options?.onStream?.({
+            type: "usage_update",
+            promptTokens: cum.promptTokens,
+            sessionPromptTokens: cum.promptTokens,
+            sessionCacheReadTokens: cum.cacheReadTokens ?? 0,
+            sessionCacheCreationTokens: cum.cacheCreationTokens ?? 0,
+          });
           if (this.config.costStore) {
             session.state.costState = this.config.costStore.serialize() as Record<
               string,

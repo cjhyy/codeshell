@@ -90,8 +90,11 @@ interface Props {
   onModelChange: (opt: ModelOption) => void;
   contextTokens: number;
   contextMax?: number;
+  /** Session-cumulative cache totals (drive the ContextRing hit-rate tooltip). */
   cacheReadTokens?: number;
   cacheCreationTokens?: number;
+  /** Session-cumulative prompt tokens — the hit-rate denominator. */
+  sessionPromptTokens?: number;
 
   // Project picker (composer second row)
   repos: Repo[];
@@ -164,6 +167,7 @@ export function ChatView({
   contextMax,
   cacheReadTokens,
   cacheCreationTokens,
+  sessionPromptTokens,
   repos,
   onSelectRepo,
   onAddRepo,
@@ -1071,6 +1075,7 @@ export function ChatView({
                   busy={busy}
                   cacheReadTokens={cacheReadTokens}
                   cacheCreationTokens={cacheCreationTokens}
+                  sessionPromptTokens={sessionPromptTokens}
                 />
                 <ModelPill
                   activeKey={activeModelKey}

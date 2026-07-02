@@ -301,6 +301,16 @@ export interface MessagesReducerState {
    */
   cacheReadTokens?: number;
   cacheCreationTokens?: number;
+  /**
+   * SESSION-CUMULATIVE cache/prompt totals (sum across every LLM response this
+   * session). Drive the "本会话累计命中率" tooltip. Fed by the cumulative
+   * usage_update emit (carries session* fields) from the engine turn boundary;
+   * reset to 0 on a model switch (a new model has its own prompt cache).
+   * Persisted to localStorage so they survive reload (rehydrate).
+   */
+  sessionCacheReadTokens: number;
+  sessionCacheCreationTokens: number;
+  sessionPromptTokens: number;
   /** Currently-active sub-agents by id. */
   activeAgents: Record<string, AgentRuntime>;
   /**
@@ -332,6 +342,9 @@ export const INITIAL_STATE: MessagesReducerState = {
   streamingThinkingId: null,
   sessionId: null,
   promptTokens: 0,
+  sessionCacheReadTokens: 0,
+  sessionCacheCreationTokens: 0,
+  sessionPromptTokens: 0,
   activeAgents: {},
   agentMessageIndex: {},
   turnEpoch: 0,
@@ -839,6 +852,21 @@ export function applyStreamEvent(
     }
 
     case "usage_update": {
+      // Two flavours share this event:
+      //  1. Per-response / estimate emit (turn-loop): drives the live context
+      //     reading `promptTokens` + last-known per-response cache counts.
+      //  2. Session-cumulative emit (engine turn boundary): carries session*
+      //     fields = totals across the whole session, driving the "本会话累计
+      //     命中率" tooltip. It must NOT clobber the context reading, so when
+      //     sessionPromptTokens is present we update ONLY the cumulative fields.
+      if (event.sessionPromptTokens !== undefined) {
+        return {
+          ...state,
+          sessionPromptTokens: event.sessionPromptTokens,
+          sessionCacheReadTokens: event.sessionCacheReadTokens ?? 0,
+          sessionCacheCreationTokens: event.sessionCacheCreationTokens ?? 0,
+        };
+      }
       // Cache counts ride only the authoritative (LLM-response) emits; the
       // estimate emits between calls omit them. Keep the last-known values on
       // those so the ring tooltip doesn't flicker its hit rate away to nothing.

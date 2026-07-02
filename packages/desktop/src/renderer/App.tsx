@@ -2818,6 +2818,21 @@ function App() {
     //    `modelOverrides[activeBucket] ?? defaultActiveModelKey`, so this is
     //    what makes the switch local — other sessions keep their own model.
     setModelOverrides((prev) => ({ ...prev, [activeBucket]: opt.key }));
+    // Zero this session's cumulative cache stats immediately: a different model
+    // has its own prompt cache, so the accumulated hit rate no longer applies.
+    // The engine also resets its persisted copy (resetSessionUsage) — this is
+    // the renderer-local mirror so the tooltip updates without a round-trip.
+    dispatch({
+      type: "stream",
+      bucket: activeBucket,
+      event: {
+        type: "usage_update",
+        promptTokens: 0,
+        sessionPromptTokens: 0,
+        sessionCacheReadTokens: 0,
+        sessionCacheCreationTokens: 0,
+      } as StreamEvent,
+    });
     // 2) Also adopt it as the global default so the NEXT 新对话 inherits it
     //    (user-chosen semantics). This only seeds future sessions; it never
     //    rewrites another bucket's existing override above.
@@ -3112,8 +3127,11 @@ function App() {
               contextMax={
                 modelOptions.find((o) => o.key === activeModelKey)?.maxContextTokens
               }
-              cacheReadTokens={state.cacheReadTokens}
-              cacheCreationTokens={state.cacheCreationTokens}
+              // Session-cumulative cache totals drive the "本会话累计命中率"
+              // tooltip (per-turn hit rate isn't actionable — see ContextRing).
+              cacheReadTokens={state.sessionCacheReadTokens}
+              cacheCreationTokens={state.sessionCacheCreationTokens}
+              sessionPromptTokens={state.sessionPromptTokens}
               repos={repos}
               // Picking a project (or 不使用项目) from the composer's
               // ProjectPicker enters a fresh draft for that repo rather than a

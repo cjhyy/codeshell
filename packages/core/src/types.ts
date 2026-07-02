@@ -479,6 +479,18 @@ export type StreamEvent =
        */
       cacheReadTokens?: number;
       cacheCreationTokens?: number;
+      /**
+       * SESSION-CUMULATIVE cache counts (sum across every LLM response this
+       * session, across runs and turns), emitted from the engine's turn
+       * boundary off the persisted session.state.tokenUsage. Distinct from the
+       * per-response cacheReadTokens/cacheCreationTokens above: those drive the
+       * live context reading, these drive the "本会话累计命中率" tooltip. Reset
+       * to 0 on a model switch. Present only on the cumulative (turn-boundary)
+       * emit; omitted on per-response / estimate emits.
+       */
+      sessionCacheReadTokens?: number;
+      sessionCacheCreationTokens?: number;
+      sessionPromptTokens?: number;
       agentId?: string;
     }
   // B2.2 — background sub-agent finished (completed | failed). Mirrors the

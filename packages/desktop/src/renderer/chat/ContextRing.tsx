@@ -15,12 +15,18 @@ interface Props {
   /** True while an agent run is in flight — show breathing animation. */
   busy?: boolean;
   /**
-   * Provider-reported prompt-cache counts from the latest authoritative
-   * usage_update. Used to show a cache hit rate in the tooltip. Both undefined
-   * on first/short turns or providers with no cache info → the row is hidden.
+   * SESSION-CUMULATIVE prompt-cache counts (summed across the whole session,
+   * reset on model switch). Drive the "本会话累计命中率" tooltip row. Both 0 /
+   * undefined on a fresh session or providers with no cache info → row hidden.
    */
   cacheReadTokens?: number;
   cacheCreationTokens?: number;
+  /**
+   * Session-cumulative prompt tokens (sum across every response). The hit-rate
+   * denominator: uncached = sessionPromptTokens − read − creation. Distinct
+   * from `used` (the CURRENT context size), which drives the ring fill.
+   */
+  sessionPromptTokens?: number;
 }
 
 /**
@@ -49,7 +55,14 @@ function computeHitRate(
 // 200k-context models look ~50% fuller than they really were.
 const FALLBACK_MAX = 200_000;
 
-export function ContextRing({ used, max, busy, cacheReadTokens, cacheCreationTokens }: Props) {
+export function ContextRing({
+  used,
+  max,
+  busy,
+  cacheReadTokens,
+  cacheCreationTokens,
+  sessionPromptTokens,
+}: Props) {
   const { t } = useT();
   const [hover, setHover] = useState(false);
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -68,7 +81,13 @@ export function ContextRing({ used, max, busy, cacheReadTokens, cacheCreationTok
   const pct = Math.round(ratio * 100);
   const remaining = Math.max(0, safeMax - used);
   const hasUsage = used > 0;
-  const hitRate = computeHitRate(used, cacheReadTokens, cacheCreationTokens);
+  // Cumulative hit rate uses the cumulative prompt total as the denominator
+  // (falls back to `used` for legacy states that predate sessionPromptTokens).
+  const hitRate = computeHitRate(
+    sessionPromptTokens ?? used,
+    cacheReadTokens,
+    cacheCreationTokens,
+  );
 
   const size = 22;
   const stroke = 3;
@@ -155,7 +174,7 @@ export function ContextRing({ used, max, busy, cacheReadTokens, cacheCreationTok
               </div>
               {hitRate !== null && (
                 <div className="mt-2 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">{t("chat.contextRing.cacheHit")}</span>
+                  <span className="text-muted-foreground">{t("chat.contextRing.cacheHitSession")}</span>
                   <span>{Math.round(hitRate * 100)}%</span>
                 </div>
               )}
