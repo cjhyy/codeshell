@@ -106,9 +106,11 @@ function TurnProcessGroupCardImpl({ group, turnEpoch, cwd }: Props) {
               if (m.text === "") return null;
               return (
                 <div key={m.id} className="py-1 text-sm">
-                  {/* cwd intentionally omitted here (stage 0a); stage 0b decides
-                      whether inline turn-process assistant snippets get it. */}
-                  <StreamingMarkdown text={m.text} done={m.done} />
+                  {/* Inline assistant text belongs to the MAIN agent of this
+                      turn — same session, same cwd the card already holds — so
+                      forward it (matches AssistantMessageView). Relative image
+                      paths / path links now resolve here too (stage 0b). */}
+                  <StreamingMarkdown text={m.text} done={m.done} cwd={cwd ?? null} />
                 </div>
               );
             }

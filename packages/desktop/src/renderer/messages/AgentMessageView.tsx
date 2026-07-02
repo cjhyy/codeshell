@@ -85,9 +85,14 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
                     re-parsing Markdown (remark + rehype-highlight) on every
                     token was a ~150ms-per-frame commit that froze the UI
                     (perf: subagent-stream-markdown-reparse). Only the settled
-                    text, on done, goes through Markdown. cwd intentionally
-                    omitted (no reliable workspace context for a sub-agent body;
-                    relative images degrade to links — see stage 0b). */}
+                    text, on done, goes through Markdown.
+
+                    cwd is intentionally NOT passed (stage 0b decision): a
+                    sub-agent may run in a different workspace than the parent
+                    session, so resolving relative paths against the parent cwd
+                    would point at the WRONG directory. Graceful degradation to
+                    plain links (Markdown's default when cwd is absent) is the
+                    safe behaviour here. */}
                 <StreamingMarkdown text={bodyText} done={message.done} />
               </div>
             )}
