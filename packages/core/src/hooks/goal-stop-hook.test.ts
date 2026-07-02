@@ -192,6 +192,30 @@ describe("createGoalStopHook — three-state judge", () => {
     expect(String(rec!.data?.preview)).toContain('{"met"');
   });
 
+  it("judge prompt includes the goal-set time when the goal carries setAtMs", async () => {
+    const judge = fakeJudge('{"met": false, "waiting": false, "gaps": "x"}');
+    const setAt = Date.UTC(2026, 6, 1, 14, 0, 0); // 2026-07-01 14:00 UTC
+    const hook = createGoalStopHook({
+      goal: { objective: "做到3点后就不再做了", setAtMs: setAt },
+      llm: judge,
+      log: noopLog,
+    });
+    await hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "x" } });
+    // The prompt must anchor the relative deadline to WHEN the goal was set, so
+    // a "3点" written at 14:00 today isn't misread as tomorrow's 3点 once the
+    // clock passes it. We don't pin the exact locale rendering — just that the
+    // set-time label is present.
+    expect(judge.lastUserContent).toContain("目标设定于");
+    expect(judge.lastUserContent).toContain("2026-07-01");
+  });
+
+  it("judge prompt omits the goal-set time when setAtMs is absent (back-compat)", async () => {
+    const judge = fakeJudge('{"met": false, "waiting": false, "gaps": "x"}');
+    const hook = createGoalStopHook({ goal: { objective: "ship it" }, llm: judge, log: noopLog });
+    await hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "x" } });
+    expect(judge.lastUserContent).not.toContain("目标设定于");
+  });
+
   it("no goal → allows stop without calling the judge", async () => {
     const judge = fakeJudge('{"met": true, "waiting": false, "gaps": ""}');
     const hook = createGoalStopHook({ goal: "", llm: judge, log: noopLog });

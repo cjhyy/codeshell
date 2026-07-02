@@ -6,6 +6,7 @@ import {
   goalBudgetExceeded,
   resolveMaxTurns,
   resolveMaxStopBlocks,
+  resolveGoalSetAt,
   applyGoalExtension,
   limitProximity,
   GOAL_DEFAULT_MAX_TURNS,
@@ -131,6 +132,25 @@ describe("applyGoalExtension (TODO 3.1 — 运行中续轮/加预算)", () => {
   });
 });
 
+describe("resolveGoalSetAt (goal-set anchor for relative deadlines)", () => {
+  const NOW = 2_000_000_000_000;
+  test("first goal on a session → stamps now", () => {
+    expect(resolveGoalSetAt("做到3点", undefined, NOW)).toBe(NOW);
+  });
+  test("a CHANGED objective → fresh stamp (user restated a new goal/deadline)", () => {
+    const stored: GoalConfig = { objective: "旧目标", setAtMs: 1_000 };
+    expect(resolveGoalSetAt("新目标 做到5点", stored, NOW)).toBe(NOW);
+  });
+  test("the SAME objective continuing → keeps the original anchor, not now", () => {
+    const stored: GoalConfig = { objective: "做到3点", setAtMs: 1_000 };
+    expect(resolveGoalSetAt("做到3点", stored, NOW)).toBe(1_000);
+  });
+  test("same objective but stored predates the field → falls back to now", () => {
+    const stored: GoalConfig = { objective: "做到3点" }; // no setAtMs
+    expect(resolveGoalSetAt("做到3点", stored, NOW)).toBe(NOW);
+  });
+});
+
 describe("normalizeGoal", () => {
   test("undefined → undefined", () => {
     expect(normalizeGoal(undefined)).toBeUndefined();
@@ -153,6 +173,17 @@ describe("normalizeGoal", () => {
     expect(normalizeGoal({ objective: "x", tokenBudget: 0, timeBudgetMs: -1 })).toEqual({
       objective: "x",
     });
+  });
+  test("setAtMs (goal-set timestamp) is preserved when positive, dropped otherwise", () => {
+    // Preserved so a resumed/inherited goal keeps the moment the user set it —
+    // the judge needs it to anchor relative deadlines like 「做到3点」.
+    expect(normalizeGoal({ objective: "x", setAtMs: 1_700_000_000_000 })).toEqual({
+      objective: "x",
+      setAtMs: 1_700_000_000_000,
+    });
+    // Junk values don't leak through as a bogus anchor.
+    expect(normalizeGoal({ objective: "x", setAtMs: 0 })?.setAtMs).toBeUndefined();
+    expect(normalizeGoal({ objective: "x", setAtMs: -5 })?.setAtMs).toBeUndefined();
   });
   test("maxTurns is normalized: positive kept (floored), non-positive dropped", () => {
     expect(normalizeGoal({ objective: "x", maxTurns: 250 })).toEqual({

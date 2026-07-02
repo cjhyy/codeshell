@@ -36,6 +36,17 @@ export interface GoalConfig {
    * Overrides GOAL_DEFAULT_MAX_STOP_BLOCKS. Non-positive values are dropped.
    */
   maxStopBlocks?: number;
+  /**
+   * Epoch-ms timestamp of when the user last set/replaced this goal. The judge
+   * uses it to anchor RELATIVE deadlines written in the objective ("做到3点"、
+   * "until 15:00"): a bare "3点" is read as the first such time AFTER the goal
+   * was set, not after "now" — otherwise, once the clock passes the deadline,
+   * the judge could misread it as tomorrow's 3点 and never stop. Stamped at the
+   * override site (Engine), preserved through normalize so a resumed/inherited
+   * goal keeps its original anchor. Absent for goals created before this field
+   * existed → the judge falls back to reasoning from current time alone.
+   */
+  setAtMs?: number;
 }
 
 /**
@@ -103,7 +114,31 @@ export function normalizeGoal(raw: string | GoalConfig | undefined): GoalConfig 
   if (typeof obj.maxStopBlocks === "number" && obj.maxStopBlocks > 0) {
     out.maxStopBlocks = Math.floor(obj.maxStopBlocks);
   }
+  // Preserve a positive goal-set timestamp so a resumed/inherited goal keeps
+  // the anchor for relative deadlines. Non-positive/junk is dropped, matching
+  // the budget fields (a bogus anchor is worse than none).
+  if (typeof obj.setAtMs === "number" && obj.setAtMs > 0) out.setAtMs = obj.setAtMs;
   return out;
+}
+
+/**
+ * Decide the goal-set timestamp (setAtMs) to persist when a send supplies an
+ * explicit goal. Pure so the engine and tests agree on the anchor rule:
+ *   - A NEW or CHANGED objective → stamp `nowMs` (the user just expressed a
+ *     fresh goal; any relative deadline in it is anchored to now).
+ *   - The SAME objective continuing (bare re-send inheriting the stored goal) →
+ *     keep the stored anchor, so a re-send doesn't silently move the deadline.
+ *     Falls back to `nowMs` if the stored goal predates this field.
+ * `stored` is the previously-persisted active goal (or undefined for the first
+ * goal on a session).
+ */
+export function resolveGoalSetAt(
+  explicitObjective: string,
+  stored: GoalConfig | undefined,
+  nowMs: number,
+): number {
+  const sameGoalContinues = !!stored && stored.objective === explicitObjective;
+  return sameGoalContinues ? stored!.setAtMs ?? nowMs : nowMs;
 }
 
 /** Interactive (no-goal) turn ceiling — a single prompt rarely needs more. */

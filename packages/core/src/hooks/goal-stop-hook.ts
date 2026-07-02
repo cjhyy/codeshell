@@ -113,6 +113,11 @@ const JUDGE_SYSTEM =
   "不算‘在等的任务’——它永远在跑,目标若不依赖它就照常判断达成与否,绝不要因为它而返回 waiting。" +
   "时间截止:若目标里写了明确的时间截止(如“到 12:00 停”“until 15:00”“干到今晚 22 点”)," +
   "你会拿到【当前时间】(含时区),据此自行判断截止时刻是否已到、目标是否应当结束;解读截止以【当前时间】所在时区为准。" +
+  "关键——解读【相对/不完整的时间】(如只说“3点”“今晚”而没写日期):以【目标设定时间】为基准," +
+  "取其之后【最近的那个】时点。例如目标设定于 07-01 23:00、说“做到3点”,那就是 07-02 03:00;" +
+  "设定于 10:00、说“做到3点”,那就是当天 15:00(下午3点,设定后最近的3点)。" +
+  "绝不要因为“当前时间已过那个钟点”就把它顺延到第二天——只要当前时间已过【据设定时间算出的】截止时刻,就应当结束。" +
+  "(未提供【目标设定时间】时,退回仅凭当前时间按常理推断。)" +
   "目标没有时间截止时,忽略当前时间,照常按内容判断。" +
   "不要输出任何额外文字。宁可严格:只有确信目标已完全完成时才返回 met:true。";
 
@@ -217,6 +222,14 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
 
     const nowDate = now();
     const nowLabel = renderNow(nowDate);
+    // The goal-set instant (when the user last set/replaced this goal), used by
+    // the judge to anchor relative deadlines ("做到3点"). renderNow renders any
+    // instant, not just "now". Absent for pre-field goals → line omitted, judge
+    // falls back to reasoning from current time alone.
+    const setAtLabel =
+      typeof g.setAtMs === "number" && g.setAtMs > 0
+        ? renderNow(new Date(g.setAtMs))
+        : undefined;
 
     // Verdict cache key: same goal + same final text + same running tasks +
     // same MINUTE ⇒ verdict unchanged; skip the LLM call and replay it.
@@ -245,6 +258,7 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
             role: "user",
             content:
               `目标:\n${goal}\n\n` +
+              (setAtLabel ? `目标设定于:${setAtLabel}\n\n` : "") +
               `当前时间:${nowLabel}\n\n` +
               `agent 最近的输出:\n${finalText || "(无文本输出)"}\n\n` +
               `当前在后台运行的任务:\n${backgroundTasks}\n\n` +

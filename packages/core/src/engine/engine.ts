@@ -54,6 +54,7 @@ import { wrapHookMessages } from "../hooks/inject.js";
 import { createGoalStopHook } from "../hooks/goal-stop-hook.js";
 import {
   normalizeGoal,
+  resolveGoalSetAt,
   resolveMaxTurns,
   resolveMaxStopBlocks,
   type GoalConfig,
@@ -1859,6 +1860,13 @@ export class Engine {
     const storedGoal = this.config.isSubAgent !== true ? session.state.activeGoal : undefined;
     if (explicitGoal && this.config.isSubAgent !== true) {
       const replaced = !!storedGoal && storedGoal.objective !== explicitGoal.objective;
+      // Stamp WHEN this goal was set so the judge can anchor relative deadlines
+      // ("做到3点") to the set time, not "now" — else once the clock passes the
+      // deadline the judge could read "3点" as tomorrow's and never stop. A new
+      // or changed objective gets a fresh stamp; re-sending the SAME objective
+      // keeps the original anchor (the goal continues, the user didn't restate a
+      // new deadline). User input never carries setAtMs, so we set it here.
+      explicitGoal.setAtMs = resolveGoalSetAt(explicitGoal.objective, storedGoal, Date.now());
       session.state.activeGoal = explicitGoal;
       this.sessionManager.saveState(session.state);
       options?.onStream?.({
