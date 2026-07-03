@@ -1625,11 +1625,15 @@ export class Engine {
     // cwd. Recomputed every message, so configuring a key takes effect on the
     // NEXT message without a restart. Tools with no guard entry are always kept.
     const guardCwd = toolCtx.cwd;
-    const hasGoalForToolVisibility =
-      this.config.isSubAgent !== true &&
-      (normalizeGoal(options?.goal) !== undefined ||
-        session.state.activeGoal !== undefined ||
-        normalizeGoal(this.config.goal) !== undefined);
+    const toolVisibility = {
+      cwd: guardCwd,
+      hasGoal:
+        this.config.isSubAgent !== true &&
+        (normalizeGoal(options?.goal) !== undefined ||
+          session.state.activeGoal !== undefined ||
+          normalizeGoal(this.config.goal) !== undefined),
+    };
+    toolCtx.toolVisibility = toolVisibility;
     // #7: per-turn project builtin override. The toolRegistry's builtin tool
     // SET is ctor-frozen (and may be shared via runtime), so a mid-session
     // project override of a builtin can't rebuild the registry. But the tool
@@ -1692,7 +1696,7 @@ export class Engine {
       .filter((t) => mcpVisible(t.name))
       .filter((t) => {
         const guard = BUILTIN_TOOL_GUARDS.get(t.name);
-        return guard ? guard(guardCwd, { cwd: guardCwd, hasGoal: hasGoalForToolVisibility }) : true;
+        return guard ? guard(toolVisibility) : true;
       })
       .filter((t) => {
         const flag = TOOL_FEATURE_FLAGS.get(t.name);

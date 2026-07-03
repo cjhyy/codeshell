@@ -3,6 +3,7 @@
  */
 
 import type { RegisteredTool } from "../../types.js";
+import type { ToolVisibilityContext } from "../context.js";
 import { readToolDef, readTool } from "./read.js";
 import { writeToolDef, writeTool } from "./write.js";
 import { generateImageToolDef, generateImageTool, isGenerateImageAvailable } from "./generate-image.js";
@@ -94,12 +95,7 @@ export type BuiltinToolFn = (
   ctx?: import("../context.js").ToolContext,
 ) => Promise<BuiltinToolResult>;
 
-export interface BuiltinToolGuardContext {
-  cwd: string;
-  hasGoal: boolean;
-}
-
-export type BuiltinToolGuard = (cwd: string, ctx?: BuiltinToolGuardContext) => boolean;
+export type BuiltinToolGuard = (ctx: ToolVisibilityContext) => boolean;
 
 export interface BuiltinTool {
   definition: RegisteredTool;
@@ -776,11 +772,11 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
  * Keyed by the tool's `name` (must match the toolDef name).
  */
 export const BUILTIN_TOOL_GUARDS: Map<string, BuiltinToolGuard> = new Map([
-  [webSearchToolDef.name, isWebSearchAvailable],
-  [generateImageToolDef.name, isGenerateImageAvailable],
-  [generateVideoToolDef.name, isGenerateVideoAvailable],
-  [completeGoalToolDef.name, (_cwd, ctx) => ctx?.hasGoal === true],
-  [cancelGoalToolDef.name, (_cwd, ctx) => ctx?.hasGoal === true],
+  [webSearchToolDef.name, (ctx) => isWebSearchAvailable(ctx.cwd)],
+  [generateImageToolDef.name, (ctx) => isGenerateImageAvailable(ctx.cwd)],
+  [generateVideoToolDef.name, (ctx) => isGenerateVideoAvailable(ctx.cwd)],
+  [completeGoalToolDef.name, (ctx) => ctx.hasGoal],
+  [cancelGoalToolDef.name, (ctx) => ctx.hasGoal],
   // UseCredential is hidden until at least one credential exists — keeps it out
   // of the tool list (and the context) for the common no-credentials case,
   // matching the spec's "quiet when empty" intent (true ToolSearch-deferral for

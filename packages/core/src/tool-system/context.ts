@@ -170,6 +170,11 @@ export interface SubAgentSpawner {
  * Optional fields are filled in by Engine.run(); some headless paths may
  * leave them undefined (e.g. running without UI → no askUser).
  */
+export interface ToolVisibilityContext {
+  cwd: string;
+  hasGoal: boolean;
+}
+
 export interface ToolContext {
   /** Active working directory for this Engine. */
   cwd: string;
@@ -291,6 +296,12 @@ export interface ToolContext {
    * sub-agents and no-cwd contexts (same as readBuiltinOverride).
    */
   disabledBuiltins?: Set<string>;
+  /**
+   * Per-turn context used by builtin availability guards. Engine.run() uses the
+   * same object to hide tools from the model; ToolExecutor reuses it to reject
+   * direct calls to tools that are not available in the current runtime state.
+   */
+  toolVisibility?: ToolVisibilityContext;
   /**
    * MCP servers THIS session's merged config enables (keys of
    * config.mcpServers, enabled!==false). The pool + registry are

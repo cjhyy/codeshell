@@ -67,6 +67,7 @@ import { imageCommand } from "../cli/commands/builtin/image-command.js";
 import { buildPluginSlashCommands } from "../cli/commands/builtin/plugin-commands-registration.js";
 import type { ApprovalRequest, ApprovalResult, StreamEvent, TaskInfo } from "@cjhyy/code-shell-core";
 import { chatStore, createEntry, type ChatEntry } from "./store.js";
+import { nextPermissionMode, permissionConfigurePayload, type TuiPermissionMode } from "./permission-mode.js";
 import { formatDuration, formatTokens } from "@cjhyy/code-shell-core";
 import { removeLastFromHistory } from "./input-history.js";
 import { logger } from "@cjhyy/code-shell-core";
@@ -251,7 +252,7 @@ export function App({
   const [totalCost, setTotalCost] = useState(0);
   const [contextTokens, setContextTokens] = useState(0);
   const [currentEffort, setCurrentEffort] = useState(effort);
-  const [permMode, setPermMode] = useState<"plan" | "normal" | "bypass">("normal");
+  const [permMode, setPermMode] = useState<TuiPermissionMode>("normal");
   const [pendingApproval, setPendingApproval] = useState<{
     requestId: string;
     toolName: string;
@@ -1092,15 +1093,11 @@ export function App({
     // Shift+Tab: cycle permission mode (plan → normal → bypass → plan)
     if (key.shift && key.tab && !isRunning) {
       setPermMode((prev) => {
-        const modes: Array<"plan" | "normal" | "bypass"> = ["plan", "normal", "bypass"];
-        const next = modes[(modes.indexOf(prev) + 1) % modes.length];
+        const next = nextPermissionMode(prev);
 
         // Notify server of mode change
         client
-          .configure({
-            planMode: next === "plan",
-            bypassPermissions: next === "bypass",
-          })
+          .configure({ sessionId: sidRef.current ?? sessionId, ...permissionConfigurePayload(next) })
           .catch(() => {});
 
         return next;

@@ -27,6 +27,7 @@ import type { TaskGuard } from "./task-guard.js";
 import { PLAN_MODE_ALLOWED_TOOLS } from "./plan-mode-allowlist.js";
 import { enforcePathPolicyWithApproval, type PathOperation } from "./path-policy.js";
 import { parsePatch } from "./builtin/apply-patch/parser.js";
+import { BUILTIN_TOOL_GUARDS } from "./builtin/index.js";
 
 type Logger = typeof rootLogger;
 
@@ -144,6 +145,15 @@ export class ToolExecutor {
         id: call.id,
         toolName: call.toolName,
         error: `Tool ${call.toolName} is disabled by this project's capability override and cannot be used. Do NOT retry this tool call.`,
+        isError: true,
+      };
+    }
+    const visibilityGuard = BUILTIN_TOOL_GUARDS.get(call.toolName);
+    if (visibilityGuard && this.toolCtx?.toolVisibility && !visibilityGuard(this.toolCtx.toolVisibility)) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        error: `Tool ${call.toolName} is not available in the current session context. Do NOT retry this tool call unless the relevant context changes.`,
         isError: true,
       };
     }
