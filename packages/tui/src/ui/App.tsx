@@ -234,6 +234,7 @@ export function App({
   const sidRef = useRef<string | undefined>(initialSessionId);
   useEffect(() => { sidRef.current = sessionId; }, [sessionId]);
   const [model, setModel] = useState(initialModel);
+  const [activeMaxContextTokens, setActiveMaxContextTokens] = useState(maxContextTokens);
   const pendingContextRef = useRef<string | null>(null);
   // Image attachments staged by the `/image` command, drained on next
   // submitToEngine. See `cli/commands/builtin/image-command.ts`.
@@ -1489,6 +1490,7 @@ export function App({
         cwd,
         model,
         setModel,
+        setMaxContextTokens: setActiveMaxContextTokens,
         sessionId,
         setSessionId,
         queryGuard,
@@ -1588,6 +1590,16 @@ export function App({
 
   const addStatus = (reason: string) => {
     chatStore.update((prev) => [...prev, entry({ type: "status", reason })]);
+  };
+
+  const applyModelConfigureResult = (result: unknown, fallbackModel: string): string => {
+    const data = result as { model?: string; maxContextTokens?: number } | undefined;
+    const newModel = data?.model ?? fallbackModel;
+    setModel(newModel);
+    if (typeof data?.maxContextTokens === "number") {
+      setActiveMaxContextTokens(data.maxContextTokens);
+    }
+    return newModel;
   };
 
   const addMessage = (text: string) => {
@@ -1752,12 +1764,12 @@ export function App({
               // picked — use it as-is. Re-deriving with modelKey() collapsed
               // same-family ids (v4-flash + v4-pro → "deepseek") and silently
               // switched to whichever entry happened to claim the alias first.
-              const res = (await client.configure({
+              const res = await client.configure({
+                sessionId: sidRef.current ?? sessionId,
                 reloadModels: true,
                 model: result.key,
-              })) as { model?: string };
-              const activeModel = res?.model ?? result.model;
-              setModel(activeModel);
+              });
+              const activeModel = applyModelConfigureResult(res, result.model);
               addStatus(`✓ 配置已保存,已切换到: ${result.key} (${activeModel})`);
             } catch (err) {
               addStatus(
@@ -1778,10 +1790,8 @@ export function App({
           onSelect={async (key) => {
             setModelEntries(null);
             try {
-              const result = await client.configure({ model: key });
-              const data = result as { model?: string };
-              const newModel = data?.model ?? key;
-              setModel(newModel);
+              const result = await client.configure({ sessionId: sidRef.current ?? sessionId, model: key });
+              const newModel = applyModelConfigureResult(result, key);
               addStatus(`✓ 切换到: ${key} (${newModel})`);
             } catch (err) {
               addStatus(`切换失败: ${(err as Error).message}`);
@@ -1838,7 +1848,7 @@ export function App({
               }
             }
             setWizard(null);
-            try { await client.configure({ reloadModels: true }); } catch { /* best-effort */ }
+            try { await client.configure({ sessionId: sidRef.current ?? sessionId, reloadModels: true }); } catch { /* best-effort */ }
             await refreshModelManagerState();
             if (failures.length > 0) {
               chatStore.update((prev) => [
@@ -1870,9 +1880,8 @@ export function App({
             );
           }}
           onSwitch={async (key) => {
-            const result = await client.configure({ model: key });
-            const newModel = (result as { model?: string })?.model ?? key;
-            setModel(newModel);
+            const result = await client.configure({ sessionId: sidRef.current ?? sessionId, model: key });
+            applyModelConfigureResult(result, key);
             // Mutate the local panel state so the active marker updates
             // without re-fetching from the server.
             setModelManager((prev) =>
@@ -2001,7 +2010,7 @@ export function App({
           cost={totalCost}
           sessionId={sessionId}
           baseContextTokens={contextTokens}
-          maxContextTokens={maxContextTokens}
+          maxContextTokens={activeMaxContextTokens}
           isRunning={isRunning}
           streamingTokensRef={streamingTokensRef}
           runStartRef={runStartRef}

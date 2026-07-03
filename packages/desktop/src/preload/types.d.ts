@@ -970,6 +970,7 @@ export interface CodeshellApi {
   recents(): Promise<{ path: string; name: string; lastOpenedAt: number }[]>;
   projects: {
     list(): Promise<Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>>;
+    resolveRoot(path: string): Promise<{ path: string; name: string }>;
     add(project: { path: string; name: string }): Promise<void>;
     remove(projectPath: string): Promise<void>;
     setPinned(projectPath: string, pinned: boolean): Promise<void>;

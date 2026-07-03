@@ -26,6 +26,11 @@ describe("resolveLLMConfigForTag", () => {
     expect(cfg!.provider).toBe("openai"); // deepseek protocol → openai client
   });
 
+  it("preserves the catalog preset context window on LLMConfig", () => {
+    const cfg = resolveLLMConfigForTag(settingsWith(), "text");
+    expect(cfg!.maxContextTokens).toBe(1_000_000);
+  });
+
   it("preferredId wins over defaults.text", () => {
     const s = settingsWith({
       credentials: [

@@ -88,6 +88,17 @@ describe("importAutomationRuns", () => {
     expect(imported[0].repoId).toBe("new-repo");
   });
 
+  it("imports into an existing root repo after resolving a git subdirectory cwd", async () => {
+    let createCalls = 0;
+    const { d, imported } = deps({
+      resolveCwd: (cwd) => cwd === "/repo/alpha/packages/desktop" ? "/repo/alpha" : cwd,
+      createRepoForCwd: () => { createCalls += 1; return "SHOULD_NOT_CREATE"; },
+    });
+    await importAutomationRuns([run({ cwd: "/repo/alpha/packages/desktop" })], repos, d);
+    expect(createCalls).toBe(0);
+    expect(imported[0].repoId).toBe("r1");
+  });
+
   it("skips an unmatched cwd when repo creation returns null", async () => {
     const { d, imported } = deps({ createRepoForCwd: () => null });
     await importAutomationRuns([run({ cwd: "/somewhere/removed" })], repos, d);

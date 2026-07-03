@@ -553,6 +553,8 @@ export interface LLMConfig {
   apiKey?: string;
   baseUrl?: string;
   maxTokens?: number;
+  /** Per-model context window size used by hosts to seed Engine.maxContextTokens. */
+  maxContextTokens?: number;
   /**
    * Shell command whose stdout is the auth token (TODO 7.2). Resolved at
    * client-build time when `apiKey` is absent. The trimmed first line of

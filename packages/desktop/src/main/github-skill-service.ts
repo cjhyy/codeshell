@@ -595,6 +595,7 @@ export async function updateSkillFromSource(
         `更新失败，已保留(restored/kept)旧版本：${
           err instanceof Error ? err.message : String(err)
         }`,
+        { cause: err },
       );
     }
 

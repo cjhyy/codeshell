@@ -2236,8 +2236,13 @@ ipcMain.handle(
 
 // ── Projects (disk recents = source of truth; renderer is a projection) ─────
 ipcMain.handle("projects:list", async () => mobileProjectList());
+ipcMain.handle("projects:resolveRoot", async (_e, path: string) => {
+  const root = resolveProjectRoot(path);
+  return { path: root, name: basename(root) };
+});
 ipcMain.handle("projects:add", async (_e, project: { path: string; name: string }) => {
-  await pushRecent({ path: project.path, name: project.name, lastOpenedAt: Date.now() });
+  const path = resolveProjectRoot(project.path);
+  await pushRecent({ path, name: project.name || basename(path), lastOpenedAt: Date.now() });
   await broadcastProjects();
 });
 ipcMain.handle("projects:remove", async (_e, projectPath: string) => {
@@ -2869,12 +2874,14 @@ ipcMain.handle("automation:create", async (_e, input: CreateAutomationInput) => 
   if (!input || typeof input.name !== "string" || typeof input.schedule !== "string" || typeof input.prompt !== "string") {
     throw new Error("name, schedule and prompt are required");
   }
-  return createAutomation(input);
+  const normalized = input.cwd ? { ...input, cwd: resolveProjectRoot(input.cwd) } : input;
+  return createAutomation(normalized);
 });
 ipcMain.handle("automation:update", async (_e, id: string, patch: UpdateAutomationInput) => {
   if (typeof id !== "string") throw new Error("id required");
   if (!patch || typeof patch !== "object") throw new Error("patch required");
-  return updateAutomation(id, patch);
+  const normalized = patch.cwd ? { ...patch, cwd: resolveProjectRoot(patch.cwd) } : patch;
+  return updateAutomation(id, normalized);
 });
 ipcMain.handle("automation:delete", async (_e, id: string) => {
   if (typeof id !== "string") throw new Error("id required");

@@ -30,6 +30,21 @@ describe("planDiskRebuild", () => {
     expect(out[0].repoId).toBe("r-new");
   });
 
+  it("matches an existing root repo after resolving a git subdirectory cwd", () => {
+    let created = false;
+    const out = planDiskRebuild(
+      [{ id: "s-sub", engineSessionId: "s-sub", cwd: "/repo/root/packages/desktop", title: "x", updatedAt: 1 }],
+      [repo("root", "/repo/root")],
+      {
+        caseInsensitive: false,
+        resolveCwd: (cwd) => cwd === "/repo/root/packages/desktop" ? "/repo/root" : cwd,
+        createRepoForCwd: () => { created = true; return "SHOULD_NOT_CREATE"; },
+      },
+    );
+    expect(created).toBe(false);
+    expect(out[0].repoId).toBe("root");
+  });
+
   it("skips an unmatched cwd when repo creation returns null", () => {
     const out = planDiskRebuild(
       [{ id: "s2", engineSessionId: "s2", cwd: "/proj/removed", title: "x", updatedAt: 1 }],

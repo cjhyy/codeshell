@@ -24,6 +24,7 @@ export interface CommandContext {
   cwd: string;
   model: string;
   setModel: (model: string) => void;
+  setMaxContextTokens?: (tokens: number) => void;
   sessionId: string | undefined;
   setSessionId: (id: string) => void;
   queryGuard: import("../../ui/query-guard.js").QueryGuard;

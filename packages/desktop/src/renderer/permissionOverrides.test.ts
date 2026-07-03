@@ -8,7 +8,12 @@
  * pure helpers are what App.tsx's send()/handleNewConversationForRepo call.
  */
 import { describe, it, expect } from "bun:test";
-import { bucketKey, migrateBucketOverride, clearBucketOverride } from "./transcripts";
+import {
+  bucketKey,
+  migrateBucketOverride,
+  clearBucketOverride,
+  migrateRepoBucketOverrides,
+} from "./transcripts";
 
 type Mode = "default" | "bypassPermissions" | "acceptEdits";
 
@@ -53,6 +58,37 @@ describe("clearBucketOverride (新对话 resets the shared draft slot)", () => {
     const draft = bucketKey("repoA", null);
     const before: Record<string, Mode> = {};
     expect(clearBucketOverride(before, draft)).toBe(before);
+  });
+});
+
+describe("migrateRepoBucketOverrides (repo id merge)", () => {
+  it("moves all bucket overrides from a merged repo id onto the surviving repo id", () => {
+    const before: Record<string, Mode> = {
+      [bucketKey("old-subdir", "s1")]: "bypassPermissions",
+      [bucketKey("old-subdir", null)]: "acceptEdits",
+      [bucketKey("root", "s2")]: "default",
+    };
+
+    const after = migrateRepoBucketOverrides(before, { "old-subdir": "root" });
+
+    expect(after).toEqual({
+      [bucketKey("root", "s1")]: "bypassPermissions",
+      [bucketKey("root", null)]: "acceptEdits",
+      [bucketKey("root", "s2")]: "default",
+    });
+  });
+
+  it("keeps an existing surviving bucket value when both repos have the same session key", () => {
+    const target = bucketKey("root", "s1");
+    const before: Record<string, Mode> = {
+      [bucketKey("old-subdir", "s1")]: "bypassPermissions",
+      [target]: "acceptEdits",
+    };
+
+    const after = migrateRepoBucketOverrides(before, { "old-subdir": "root" });
+
+    expect(after[target]).toBe("acceptEdits");
+    expect(after[bucketKey("old-subdir", "s1")]).toBeUndefined();
   });
 });
 

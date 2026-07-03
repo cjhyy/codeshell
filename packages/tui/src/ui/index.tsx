@@ -71,7 +71,7 @@ export async function startInkRepl(options: InkReplOptions): Promise<void> {
         maxTurns={options.maxTurns}
         cwd={options.cwd}
         maxContextTokens={options.maxContextTokens}
-        sessionId={options.sessionId}
+        sessionId={sessionId}
         prefill={options.prefill}
       />
     </ThemeProvider>,

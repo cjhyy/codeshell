@@ -9,6 +9,44 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import { scanSkills } from "@cjhyy/code-shell-core";
 
+const AUTH_KEYS = [
+  "model",
+  "models",
+  "providers",
+  "arena",
+  "activeKey",
+  "credentials",
+  "modelConnections",
+  "defaults",
+] as const;
+
+export function clearAuthSettingsFile(settingsFile: string): string[] {
+  if (!existsSync(settingsFile)) return [];
+
+  const settings = JSON.parse(readFileSync(settingsFile, "utf-8"));
+  const cleared: string[] = [];
+  for (const k of AUTH_KEYS) {
+    if (settings[k] !== undefined) {
+      delete settings[k];
+      cleared.push(k);
+    }
+  }
+
+  if (cleared.length > 0) {
+    writeFileSync(settingsFile, JSON.stringify(settings, null, 2), "utf-8");
+  }
+  return cleared;
+}
+
+export function loginConfigureParams(
+  sessionId: string | undefined,
+  model: string,
+): { sessionId?: string; reloadModels: true; model: string } {
+  return sessionId
+    ? { sessionId, reloadModels: true, model }
+    : { reloadModels: true, model };
+}
+
 export const extraCommands: SlashCommand[] = [
   {
     name: "/login",
@@ -32,7 +70,9 @@ export const extraCommands: SlashCommand[] = [
         // Unified store: the active text model is settings.defaults.text (a
         // connection id). Route the key into that connection's credential —
         // settings.model.apiKey is dead (nothing reads it anymore).
-        const activeConnId = settings.defaults?.text;
+        const activeConnId = typeof settings.defaults?.text === "string"
+          ? settings.defaults.text
+          : undefined;
         const connections: any[] = Array.isArray(settings.modelConnections)
           ? settings.modelConnections
           : [];
@@ -44,7 +84,7 @@ export const extraCommands: SlashCommand[] = [
           ? credentials.find((c) => c?.id === conn.credentialId)
           : undefined;
 
-        if (!cred) {
+        if (!activeConnId || !cred) {
           ctx.addStatus(
             "No active model connection to attach the key to. " +
               "Add a connection first via /login (onboarding) or the desktop Connections page, then re-run /login <key>.",
@@ -57,7 +97,7 @@ export const extraCommands: SlashCommand[] = [
         // Hot-reload the model pool so the new key takes effect without a
         // restart — matches the onboarding flow's behavior.
         try {
-          await ctx.client.configure({ reloadModels: true });
+          await ctx.client.configure(loginConfigureParams(ctx.sessionId, activeConnId));
           ctx.addStatus("✓ API key saved and applied.");
         } catch (err) {
           ctx.addStatus(
@@ -78,28 +118,16 @@ export const extraCommands: SlashCommand[] = [
     name: "/logout",
     group: "config",
     description: "Remove saved API key and configuration",
-    execute: (_arg, ctx) => {
-      const settingsFile = join(homedir(), ".code-shell", "settings.json");
-      if (!existsSync(settingsFile)) {
-        ctx.addStatus("No saved config.");
-        return;
-      }
+    execute: async (_arg, ctx) => {
       try {
-        const settings = JSON.parse(readFileSync(settingsFile, "utf-8"));
-        const cleared: string[] = [];
-        // Wipe the entire auth/model surface. Leaving model/providers
-        // structure behind (even with apiKey deleted) put the user in a
-        // half-configured state where onboarding's "use existing" branch
-        // still listed the cleared providers — making /logout look like a
-        // no-op. Mirrors Anthropic's own logout: next launch starts the
-        // onboarding wizard from scratch.
-        const AUTH_KEYS = ["model", "models", "providers", "arena", "activeKey"];
-        for (const k of AUTH_KEYS) {
-          if (settings[k] !== undefined) {
-            delete settings[k];
-            cleared.push(k);
-          }
-        }
+        const files = [
+          join(homedir(), ".code-shell", "settings.json"),
+          join(process.cwd(), ".code-shell", "settings.json"),
+          join(process.cwd(), ".code-shell", "settings.local.json"),
+        ];
+        const cleared = files.flatMap((file) =>
+          clearAuthSettingsFile(file).map((key) => `${file.replace(`${homedir()}/`, "~/")}:${key}`),
+        );
 
         // Detect provider env vars that would silently override a "logged out"
         // state on next startup, so the user knows /logout alone isn't enough.
@@ -119,12 +147,16 @@ export const extraCommands: SlashCommand[] = [
           return;
         }
 
-        writeFileSync(settingsFile, JSON.stringify(settings, null, 2), "utf-8");
+        try {
+          await ctx.client.configure({ sessionId: ctx.sessionId, clearModels: true });
+        } catch {
+          // Best effort: saved credentials are already removed; a restart will also clear memory.
+        }
         const envNote = activeEnv.length
           ? `\n⚠ Env var(s) still set: ${activeEnv.join(", ")} — unset to fully log out.`
           : "";
         ctx.addStatus(
-          `✓ Cleared: ${cleared.join(", ")}. Restart to re-enter onboarding.${envNote}`,
+          `✓ Cleared saved auth/model config:\n${cleared.map((x) => `  ${x}`).join("\n")}\nRestart to re-enter onboarding.${envNote}`,
         );
       } catch (err) {
         ctx.addStatus(`Failed: ${(err as Error).message}`);

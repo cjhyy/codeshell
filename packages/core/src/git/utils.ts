@@ -9,8 +9,9 @@
  */
 
 import { execFileSync } from "node:child_process";
+import { realpathSync } from "node:fs";
 import { parseGitLog, type GitLogEntry } from "./parse-log.js";
-import { resolveExecutable } from "../utils/exec.js";
+import { resolveExecutable, resolveGit } from "../utils/exec.js";
 
 export interface GitStatusEntry {
   status: string;
@@ -21,12 +22,11 @@ export type { GitLogEntry };
 
 // Resolve git/gh through PATH×PATHEXT on Windows so a .cmd/.exe shim is found
 // (bare execFile doesn't walk PATHEXT). No-op on POSIX. See utils/exec.ts.
-const GIT_BIN = resolveExecutable("git");
 const GH_BIN = resolveExecutable("gh");
 
 /** Run git with an argv array and return its trimmed stdout. */
 function git(cwd: string, args: string[], timeoutMs = 10000): string {
-  return execFileSync(GIT_BIN, args, { cwd, encoding: "utf-8", timeout: timeoutMs }).trim();
+  return execFileSync(resolveGit(), args, { cwd, encoding: "utf-8", timeout: timeoutMs }).trim();
 }
 
 /** Run gh with an argv array and return its trimmed stdout. */
@@ -55,11 +55,17 @@ export function isGitRepo(cwd: string): boolean {
  * Returns the git-reported toplevel (already absolute, forward-slashed on win).
  */
 export function resolveProjectRoot(cwd: string): string {
+  let realCwd = cwd;
   try {
-    const top = git(cwd, ["rev-parse", "--show-toplevel"], 5000);
-    return top || cwd;
+    realCwd = realpathSync(cwd);
   } catch {
-    return cwd;
+    // Non-existent paths are allowed to fall back unchanged below.
+  }
+  try {
+    const top = git(realCwd, ["rev-parse", "--show-toplevel"], 5000);
+    return top ? realpathSync(top) : realCwd;
+  } catch {
+    return realCwd;
   }
 }
 
@@ -117,14 +123,14 @@ export function gitAdd(cwd: string, files: string[] = ["."]): void {
   // `--` ensures a path starting with `-` cannot be parsed as a flag.
   // Each file is its own argv token, so spaces / quotes / non-ASCII pass
   // through verbatim with no shell parsing.
-  execFileSync(GIT_BIN, ["add", "--", ...files], { cwd, timeout: 10000 });
+  execFileSync(resolveGit(), ["add", "--", ...files], { cwd, timeout: 10000 });
 }
 
 export function gitCommit(cwd: string, message: string): string {
   // Pre-fix this used `JSON.stringify(message)` which only happened to be
   // safe because JSON.stringify covers most shell metacharacters — but it's
   // not real escaping. The argv form is.
-  return execFileSync(GIT_BIN, ["commit", "-m", message], {
+  return execFileSync(resolveGit(), ["commit", "-m", message], {
     cwd,
     encoding: "utf-8",
     timeout: 30000,
@@ -152,7 +158,7 @@ export function gitCheckout(cwd: string, branch: string, create = false): void {
     throw new Error(`refusing branch name that starts with '-': ${branch}`);
   }
   const args = create ? ["checkout", "-b", branch] : ["checkout", branch];
-  execFileSync(GIT_BIN, args, { cwd, timeout: 10000 });
+  execFileSync(resolveGit(), args, { cwd, timeout: 10000 });
 }
 
 export function ghAvailable(): boolean {

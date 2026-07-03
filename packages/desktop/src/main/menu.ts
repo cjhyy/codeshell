@@ -9,8 +9,13 @@ import { loadRecents } from "./recents-store.js";
  * recents change (we re-read the file each call).
  */
 export async function installAppMenu(win: BrowserWindow): Promise<void> {
-  const recents = await loadRecents();
   const isMac = process.platform === "darwin";
+  if (!isMac) {
+    Menu.setApplicationMenu(null);
+    return;
+  }
+
+  const recents = await loadRecents();
 
   const template: Electron.MenuItemConstructorOptions[] = [
     ...(isMac

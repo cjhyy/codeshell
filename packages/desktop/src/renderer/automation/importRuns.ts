@@ -36,6 +36,7 @@ export interface ImportDeps {
   ) => void;
   /** Create a repo for an unmatched cwd; returns its id. */
   createRepoForCwd: (cwd: string) => string | null;
+  resolveCwd?: (cwd: string) => string;
   /** Max runs imported per repo (most-recent first). */
   cap: number;
 }
@@ -62,14 +63,15 @@ export async function importAutomationRuns(
   // instead of spawning a new repo per run.
   const autoCreated = new Map<string, string>();
   for (const r of candidates) {
+    const cwd = deps.resolveCwd?.(r.cwd) ?? r.cwd;
     // The internal no-repo sandbox is a no-project chat → NO_REPO_KEY bucket
     // (repoId null), never a real repo.
-    let repoId = isNoRepoCwd(r.cwd) ? null : matchRepoIdForCwd(r.cwd, repos, deps.caseInsensitive);
-    if (!repoId && !isNoRepoCwd(r.cwd)) {
-      const key = normalizeCwd(r.cwd, deps.caseInsensitive);
+    let repoId = isNoRepoCwd(cwd) ? null : matchRepoIdForCwd(cwd, repos, deps.caseInsensitive);
+    if (!repoId && !isNoRepoCwd(cwd)) {
+      const key = normalizeCwd(cwd, deps.caseInsensitive);
       repoId = autoCreated.get(key) ?? null;
       if (!repoId) {
-        repoId = deps.createRepoForCwd(r.cwd);
+        repoId = deps.createRepoForCwd(cwd);
         if (!repoId) continue;
         autoCreated.set(key, repoId);
       }

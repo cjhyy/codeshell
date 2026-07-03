@@ -127,6 +127,8 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
       } catch {
         setSttFallback(null);
       }
+    } else {
+      setSttFallback(null);
     }
   }, [scope, cwd, cacheKey, tag]);
 
@@ -288,7 +290,11 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
         // templates right here as quick-add cards so the user can SEE what models
         // exist (e.g. OpenAI / Groq 语音转写) and add one in a single click.
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-muted-foreground">{t("settingsX.textConn.emptyHint", { heading })}</p>
+          <p className="text-sm text-muted-foreground">
+            {sttFallback
+              ? t("settingsX.textConn.sttFallbackListHint")
+              : t("settingsX.textConn.emptyHint", { heading })}
+          </p>
           {sttFallback && (
             // Audio fallback active: voice input already works by reusing an
             // OpenAI key. Render it as a real (read-only) connection CARD — not a

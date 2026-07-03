@@ -9,7 +9,7 @@ import type { Engine, EngineResult } from "../engine/engine.js";
  * per-session handling and the "don't change the model under a running client"
  * rule from the session-isolation research).
  */
-function fakeEngine(): {
+function fakeEngine(models?: string[]): {
   engine: Engine;
   switched: string[];
   resetUsage: string[];
@@ -30,6 +30,13 @@ function fakeEngine(): {
     },
     resetSessionUsage(sessionId: string) {
       resetUsage.push(sessionId);
+    },
+    getModelPool: () => {
+      const pool = models ? new Set(models) : null;
+      return {
+        get: (key: string) =>
+          pool && !pool.has(key) ? undefined : ({ key, model: key } as never),
+      };
     },
     async run(): Promise<EngineResult> {
       signalStarted();
@@ -91,5 +98,16 @@ describe("ChatSession.requestModelSwitch", () => {
 
     // Applied at the run boundary.
     expect(switched).toEqual(["gpt"]);
+  });
+
+  it("rejects an unknown model immediately even while a turn is in flight", async () => {
+    const { engine, release, runStarted } = fakeEngine(["known"]);
+    const session = new ChatSession({ id: "s", engine });
+
+    const turn = session.enqueueTurn("do work", {});
+    await runStarted;
+    expect(() => session.requestModelSwitch("missing")).toThrow("Model not found: missing");
+    release();
+    await turn;
   });
 });

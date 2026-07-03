@@ -175,6 +175,11 @@ export function makeCreateRepoForCwd(repoList: Repo[]): {
   };
 }
 
+export interface ReconciledRepos {
+  repos: Repo[];
+  repoIdRemap: Record<string, string>;
+}
+
 /**
  * Reconcile the disk project list (source of truth for the project SET + pinned)
  * with the localStorage repo cache (source of the stable random repoId per path).
@@ -190,8 +195,15 @@ export function reconcileReposFromDisk(
   diskProjects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>,
   cached: Repo[],
 ): Repo[] {
+  return reconcileReposFromDiskWithRemap(diskProjects, cached).repos;
+}
+
+export function reconcileReposFromDiskWithRemap(
+  diskProjects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>,
+  cached: Repo[],
+): ReconciledRepos {
   const byPath = new Map(cached.map((r) => [r.path, r]));
-  return diskProjects.map((p) => {
+  const repos = diskProjects.map((p) => {
     const prior = byPath.get(p.path);
     return {
       id: prior?.id ?? makeRepoId(),
@@ -202,6 +214,13 @@ export function reconcileReposFromDisk(
       pinned: p.pinned,
     };
   });
+  const targetByPath = new Map(repos.map((r) => [r.path, r]));
+  const repoIdRemap: Record<string, string> = {};
+  for (const r of cached) {
+    const target = targetByPath.get(r.path);
+    if (target && target.id !== r.id) repoIdRemap[r.id] = target.id;
+  }
+  return { repos, repoIdRemap };
 }
 
 /** Display label for a repo — user rename wins over default basename. */

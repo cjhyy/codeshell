@@ -1,4 +1,5 @@
 import type { Engine, EngineResult } from "../engine/engine.js";
+import type { ModelEntry } from "../llm/model-pool.js";
 import type { StreamEvent } from "../types.js";
 import { isAbortError } from "../llm/client-base.js";
 
@@ -168,12 +169,15 @@ export class ChatSession {
    * turn is in flight so a hot switch never mutates the model under a
    * running LLM client.
    */
-  requestModelSwitch(key: string): void {
+  requestModelSwitch(key: string): ModelEntry {
     if (this.isBusy()) {
+      const pool = this.engine.getModelPool();
+      const entry = pool.get(key);
+      if (!entry) throw new Error(`Model not found: ${key}`);
       this.pendingModel = key;
-      return;
+      return entry;
     }
-    this.applyModelSwitch(key);
+    return this.applyModelSwitch(key);
   }
 
   /**
@@ -184,9 +188,10 @@ export class ChatSession {
    * renderer-initiated), so no stream event is needed here. Shared by the idle
    * path and the deferred run-boundary path.
    */
-  private applyModelSwitch(key: string): void {
-    this.engine.switchModel(key);
+  private applyModelSwitch(key: string): ModelEntry {
+    const entry = this.engine.switchModel(key);
     this.engine.resetSessionUsage(this.id);
+    return entry;
   }
 
   queueDepth(): number {

@@ -1,6 +1,7 @@
 import React, { memo, useState } from "react";
 import type { ThinkingMessage } from "../types";
 import { ChevronDown, ChevronRight } from "../ui/icons";
+import { StreamingMarkdown } from "./StreamingMarkdown";
 
 // Memoized — see Markdown / ToolCard for the rationale. ThinkingMessage
 // references are stable across text_delta dispatches, so default
@@ -20,9 +21,9 @@ function ThinkingMessageViewImpl({ message }: { message: ThinkingMessage }) {
         <span>{message.done ? "thinking" : "thinking…"}</span>
       </button>
       {open && (
-        <pre className="mt-1 whitespace-pre-wrap rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
-          {message.text}
-        </pre>
+        <div className="mt-1 rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
+          <StreamingMarkdown text={message.text} done={message.done} />
+        </div>
       )}
     </div>
   );

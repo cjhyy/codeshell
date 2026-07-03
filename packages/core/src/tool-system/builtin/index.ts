@@ -94,6 +94,13 @@ export type BuiltinToolFn = (
   ctx?: import("../context.js").ToolContext,
 ) => Promise<BuiltinToolResult>;
 
+export interface BuiltinToolGuardContext {
+  cwd: string;
+  hasGoal: boolean;
+}
+
+export type BuiltinToolGuard = (cwd: string, ctx?: BuiltinToolGuardContext) => boolean;
+
 export interface BuiltinTool {
   definition: RegisteredTool;
   execute: BuiltinToolFn;
@@ -768,10 +775,12 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
  * engine.ts toolDefs assembly). Tools NOT listed here are always visible.
  * Keyed by the tool's `name` (must match the toolDef name).
  */
-export const BUILTIN_TOOL_GUARDS: Map<string, (cwd: string) => boolean> = new Map([
+export const BUILTIN_TOOL_GUARDS: Map<string, BuiltinToolGuard> = new Map([
   [webSearchToolDef.name, isWebSearchAvailable],
   [generateImageToolDef.name, isGenerateImageAvailable],
   [generateVideoToolDef.name, isGenerateVideoAvailable],
+  [completeGoalToolDef.name, (_cwd, ctx) => ctx?.hasGoal === true],
+  [cancelGoalToolDef.name, (_cwd, ctx) => ctx?.hasGoal === true],
   // UseCredential is hidden until at least one credential exists — keeps it out
   // of the tool list (and the context) for the common no-credentials case,
   // matching the spec's "quiet when empty" intent (true ToolSearch-deferral for

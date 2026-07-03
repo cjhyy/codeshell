@@ -4,6 +4,7 @@ import {
   loadRemovedRepoPaths,
   makeCreateRepoForCwd,
   markRepoPathRemoved,
+  reconcileReposFromDiskWithRemap,
   saveRemovedRepoPaths,
   unmarkRepoPathRemoved,
   type Repo,
@@ -99,5 +100,24 @@ describe("makeCreateRepoForCwd", () => {
     markRepoPathRemoved("/proj/late");
     expect(f.createRepoForCwd("/proj/late")).toBeTruthy();
     expect(list).toHaveLength(1);
+  });
+});
+
+describe("reconcileReposFromDiskWithRemap", () => {
+  it("returns an old repo id to surviving repo id remap for normalized duplicate paths", () => {
+    const cached: Repo[] = [
+      { id: "old-subdir", name: "desktop", path: "/repo/root", addedAt: 1 },
+      { id: "root", name: "root", path: "/repo/root", addedAt: 2 },
+    ];
+
+    const plan = reconcileReposFromDiskWithRemap(
+      [{ path: "/repo/root", name: "root", pinned: true, addedAt: 3 }],
+      cached,
+    );
+
+    expect(plan.repos).toEqual([
+      { id: "root", name: "root", path: "/repo/root", addedAt: 3, pinned: true },
+    ]);
+    expect(plan.repoIdRemap).toEqual({ "old-subdir": "root" });
   });
 });

@@ -3,8 +3,10 @@ import type { StreamEvent } from "@cjhyy/code-shell-core";
 import {
   INITIAL_STATE,
   applyStreamEvent,
+  appendUserMessage,
   appendTurnEndMessage,
   bgCompletionText,
+  removePendingSteerMessages,
   type AgentMessage,
   type AssistantMessage,
   type Message,
@@ -24,6 +26,43 @@ describe("steer_injected → user bubble (引导不打断注入)", () => {
     // It must NOT open/close an assistant streaming message — steering only
     // adds a user bubble; the running turn keeps its own assistant message.
     expect(s.streamingAssistantId).toBe(INITIAL_STATE.streamingAssistantId);
+  });
+
+  test("confirms an optimistic pending steer bubble instead of appending a duplicate", () => {
+    const pending = appendUserMessage(
+      INITIAL_STATE,
+      "queued draft",
+      100,
+      false,
+      true,
+      "q-1",
+      true,
+    );
+    const s = applyStreamEvent(pending, {
+      type: "steer_injected",
+      id: "q-1",
+      text: "queued draft confirmed",
+    } as StreamEvent);
+    const users = s.messages.filter((m) => m.kind === "user");
+    expect(users).toHaveLength(1);
+    expect(users[0]).toMatchObject({
+      kind: "user",
+      text: "queued draft confirmed",
+      injected: true,
+      steerId: "q-1",
+      pending: false,
+    });
+  });
+
+  test("drops only matching pending steer bubbles when a queued steer is revoked", () => {
+    let s = appendUserMessage(INITIAL_STATE, "keep", 1, false, true, "keep", true);
+    s = appendUserMessage(s, "drop", 2, false, true, "drop", true);
+    s = appendUserMessage(s, "real", 3);
+
+    const next = removePendingSteerMessages(s, ["drop"]);
+
+    expect(next.messages.map((m) => (m.kind === "user" ? m.text : ""))).toEqual(["keep", "real"]);
+    expect(next.messages.some((m) => m.kind === "user" && m.steerId === "drop")).toBe(false);
   });
 });
 

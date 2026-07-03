@@ -200,11 +200,12 @@ describe("AgentServer configure({ reloadSettings })", () => {
     expect(oks.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("reloadModels refreshes every live session model pool", () => {
+  it("reloadModels refreshes the shared runtime model pool", () => {
     const a = makeFakeEngine("A");
     const b = makeFakeEngine("B");
+    const runtimeReloads: string[] = [];
     const chatManager = new ChatSessionManager({
-      runtime: {} as never,
+      runtime: { reloadModelsFromSettings: () => runtimeReloads.push("runtime") } as never,
       engineFactory: () => {
         throw new Error("factory should not be called");
       },
@@ -217,8 +218,9 @@ describe("AgentServer configure({ reloadSettings })", () => {
 
     t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/configure", params: { reloadModels: true } });
 
-    expect(a.reloadModelCalls).toEqual(["A"]);
-    expect(b.reloadModelCalls).toEqual(["B"]);
+    expect(runtimeReloads).toEqual(["runtime"]);
+    expect(a.reloadModelCalls).toEqual([]);
+    expect(b.reloadModelCalls).toEqual([]);
     expect(t.sent.some((m: any) => m.id === 1 && m.result?.ok === true)).toBe(true);
   });
 

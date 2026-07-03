@@ -19,6 +19,7 @@ export interface DiskSessionMeta {
 
 export interface RebuildDeps {
   caseInsensitive: boolean;
+  resolveCwd?: (cwd: string) => string;
   createRepoForCwd: (cwd: string) => string | null;
 }
 
@@ -34,11 +35,12 @@ export function planDiskRebuild(
   deps: RebuildDeps,
 ): RebuildPlacement[] {
   return sessions.flatMap((s) => {
+    const cwd = deps.resolveCwd?.(s.cwd) ?? s.cwd;
     // The internal no-repo sandbox is a no-project chat, never a real repo.
-    const repoId = isNoRepoCwd(s.cwd)
+    const repoId = isNoRepoCwd(cwd)
       ? null
-      : (matchRepoIdForCwd(s.cwd, repos, deps.caseInsensitive) ?? deps.createRepoForCwd(s.cwd));
-    if (repoId === null && !isNoRepoCwd(s.cwd)) return [];
+      : (matchRepoIdForCwd(cwd, repos, deps.caseInsensitive) ?? deps.createRepoForCwd(cwd));
+    if (repoId === null && !isNoRepoCwd(cwd)) return [];
     const summary: SessionSummary = {
       id: s.id,
       title: (s.title || s.id).slice(0, 60),

@@ -161,15 +161,19 @@ export const coreCommands: SlashCommand[] = [
       // the server's confirmed model id so we don't claim a switch the
       // backend didn't actually perform.
       try {
-        const result = (await ctx.client.configure({ model: key })) as {
+        const result = (await ctx.client.configure({ sessionId: ctx.sessionId, model: key })) as {
           ok?: boolean;
           model?: string;
+          maxContextTokens?: number;
         };
         if (!result?.ok || !result.model) {
           ctx.addStatus(`Failed to switch model: server did not confirm switch`);
           return;
         }
         ctx.setModel(result.model);
+        if (typeof result.maxContextTokens === "number") {
+          ctx.setMaxContextTokens?.(result.maxContextTokens);
+        }
         ctx.addStatus(`Switched to: ${key} (${result.model})`);
       } catch (err) {
         ctx.addStatus(`Failed to switch model: ${(err as Error).message}`);
@@ -727,7 +731,11 @@ export const coreCommands: SlashCommand[] = [
             /* keep as string */
           }
           await ctx.client.query("config_set", key, parsed);
-          ctx.addStatus(`Set ${key} = ${JSON.stringify(parsed)}`);
+          await ctx.client.configure({ sessionId: ctx.sessionId, reloadSettings: true });
+          if (key === "context.maxTokens" && typeof parsed === "number") {
+            ctx.setMaxContextTokens?.(parsed);
+          }
+          ctx.addStatus(`Set ${key} = ${JSON.stringify(parsed)} (applied to current session)`);
         } else {
           ctx.addStatus("Usage: /config [show | set <key> <value> | get <key>]");
         }

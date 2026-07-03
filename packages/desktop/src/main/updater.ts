@@ -5,8 +5,8 @@
  * launch time, or falls back to the `publish` block in package.json
  * (when present) that `electron-builder` writes for you on `dist`.
  *
- * If neither is configured (which is the current state of the
- * project), we silently do nothing — the rest of the app keeps working.
+ * If neither is configured, electron-updater cannot discover the
+ * update feed and reports a configuration error.
  *
  * Lifecycle events fan out to all known BrowserWindows via the
  * channel `updater:status`. The renderer can subscribe through
@@ -68,9 +68,10 @@ export function initUpdater(): void {
       return;
     }
   }
-  // If no feed is set, electron-updater will look for a `publish`
-  // block emitted into the bundle by electron-builder. We don't
-  // ship one yet — checkForUpdates will then no-op with an error.
+  // If no feed is set, electron-updater will look for the `publish`
+  // block emitted into app-update.yml by electron-builder.
+
+  autoUpdater.allowPrerelease = app.getVersion().includes("-");
 
   // Manual-update policy: only CHECK + notify automatically. The user decides
   // when to download (downloadUpdate) and when to install (quitAndInstall) —

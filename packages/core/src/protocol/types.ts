@@ -182,6 +182,8 @@ export interface ConfigureParams {
    * running engine picks them up without a process restart.
    */
   reloadModels?: boolean;
+  /** Clear the live model pool, used after logout removes saved credentials. */
+  clearModels?: boolean;
   /**
    * Re-read disk settings and hot-push the disk-default config fields (preset /
    * customSystemPrompt / appendSystemPrompt / personalization / mcpServers) +

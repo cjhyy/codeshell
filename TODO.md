@@ -17,7 +17,7 @@
 
 - ✅ **[项目边界] 项目归属改为:有 git 用 git 根,无 git 用 cwd**（架构改进,非 bug）— 现状:codeshell 纯按 cwd 归项目(`project_disk_authoritative_recovery`),monorepo 里在仓库根 vs `packages/desktop` 分别打开会被当成**两个不同项目**。期望(对齐 CC):cwd → 向上找 `.git` 仓库根,有则用 git 根作项目 key(子目录归父项目);无 git 则用 cwd 本身。保留 `isNoRepoCwd` 护栏(no-repo/临时目录仍归 NO_REPO_KEY,不建项目)。
   - **✅ 已做最小版(worktree beta-rc2-fixes)**:核心诉求"添加项目时若选的是 git 子目录,归到仓库根,非 git 才按目录本身"已实现——core 新增 `resolveProjectRoot(cwd)`(`git/utils.ts`:`git rev-parse --show-toplevel`,非 git/失败→原样返回,不抛)+ export;desktop `dialog:pickDir`(main)选目录后先 `applyGitPathFromSettings()` 再 `resolveProjectRoot` 归一化,子目录自动 snap 到仓库根 → `handleAddRepo` 按 path 去重即命中同一项目。带 3 例单测(子目录→root/非git→自身/不存在→不抛)。**不碰存量**(旧项目不变)。
-  - **⬜ 剩完整版(未做,后面单开)**:① 其他 cwd→项目映射点也归一化(rebuildFromDisk/importRuns/liveSession + automation/projectOptions.ts);② session 的 cwd 自动建项目路径也过 resolveProjectRoot;③ 存量已建的"子目录项目"迁移/合并到 git 根;④ realpath 防 symlink(关联 `project_path_containment_realpath`)。CC 做法参考 `reference_cc_codex_workspace_trust`。
+  - **✅ 剩完整版已做(2026-07-03)**:① picker/projects:add 强制 `resolveProjectRoot`;② automation 源头 cwd 归一化,覆盖 rebuildFromDisk/importRuns/liveSession 自动归桶;③ 启动回填存量 localStorage repo 时先 resolveRoot 去重,子目录项目合并到 git 根;④ `resolveProjectRoot` 先 realpath 防 symlink,并补 symlink 单测。
 
 - ✅ **[设置/catalog] 语音类型模型无选项 + 语音模型配置展示不出来**（rc.3 已修：ModelCatalogPanel 补 audio 类型下拉） — 复现:设置里的模型/连接页。实际:模型类型分类里没有"语音/STT(/TTS)"这一类,配好语音模型后配置项也不展示。期望:catalog 支持语音类型模型,能像文本/图/视频那样在连接页配置并展示。背景:STT 听写桌面端已实现,但记忆 `project_voice_input_stt` 记它是"纯 UI 非工具+回退复用 OpenAI 凭证",可能从没进 catalog 的模型类型枚举。关联 `project_unified_model_catalog_design`/`project_model_catalog`/`project_voice_input_stt`。
   - **调查结论(agent)**:audio 类型其实已 90% 接好——✅ catalog 枚举含 `audio`(`core/model-catalog/types.ts:77` `tag: enum(text,image,video,audio)`);✅ builtin 有 2 条 audio(`builtin.ts:390-425` openai-transcribe / groq-transcribe);✅ 连接页有 audio 分组(`SearchConnectionsPanel.tsx:73-79`)+ 按 tag 过滤渲染(`TextConnectionsPanel.tsx:55,99`);✅ STT 后端已走 catalog 读 audio 连接(`core/stt/resolve-transcribe.ts:54-84`,无连接时回退 OpenAI 凭证)。
@@ -25,7 +25,7 @@
   - **用户真机确认(2026-07-02)**:两处都缺,都要修——① **连接页 audio 没像图片那样默认展示**;② **模型页面(Catalog 编辑器)没有 audio 类型**。
   - ⚠️ **纠偏**:agent 看的 `SearchConnectionsPanel.tsx:57-79` 里 image/video/audio **全是 `defaultOpen={false}`(折叠)**,只有 web search 默认展开——所以用户说的"图片默认展示出来"**不是这个面板**。用户实际看的是另一个页面(image 在那里直接铺开展示),audio 在**那个页面**缺席。待重新定位:哪个页面把 image 直接展示(不折叠)?ModelSection / 主连接页 / GenConnectionsPanel?找到后 audio 要在同一处同样默认展示。别再认 SearchConnectionsPanel 这个折叠面板。
   - **✅ 已修(worktree beta-rc2-fixes)**:`ModelCatalogPanel.tsx:320-323` 类型下拉补了 audio 选项——catalog 编辑器现在能建/编辑 audio 类型条目。
-  - **⬜ 剩 UX 待用户拍板**:用户想要"配了语音连接就在下面显示出来,而不是只显示那句提示"。核实 `TextConnectionsPanel.tsx:286`——`instances.length>0` 时**已经**渲染完整连接卡片(347+),配了就显示。当前只在 **空状态**(instances===0)显示 sttFallback 提示条(292-308:"语音输入已可用,复用 OpenAI key...")。真实缺口=**回退态(复用 OpenAI key 的隐式 provider)不是真 instance,只作被动提示条**;用户可能想把它作为一张**可见的连接卡**呈现(能看/能"提升"为正式连接)。这是 UX 设计选择(要不要把隐式回退显示成 pseudo-connection card),需用户明确要不要做,别臆测实现。
+  - **✅ UX 已做(2026-07-03)**:回退态(复用 OpenAI key 的隐式 STT provider)现在在 audio 空态中渲染为只读连接卡,并有专用提示文案;添加正式 audio 连接后自动替代它。
 
 - ✅ **[会话切换] 点击未渲染过的 session 先闪"新建页面"再渲染内容**（rc.3 已修：fallbackState 区分真新建 vs 待 hydrate，ChatView 显示 loading 占位） — 复现:点侧边栏一个本 renderer 进程还没打开过的 session。实际:先闪空的新建/欢迎态,随后异步 hydrate 出历史内容。期望:加载期显示 loading 或占位,不露出新建态。
   - **根因(已定位)**:`App.tsx:809-816` `fallbackState`——`transcripts[activeBucket]` 尚无(undefined)时兜底读 localStorage,该 session 从没在本 renderer 打开过 → localStorage 空 → `local.messages.length===0` → 返回 `INITIAL_STATE`;`ChatView.tsx:598` `isNewChat = messages.length===0` 遂为 true,渲染欢迎页;`App.tsx:701-787` 异步 `subscribeSession` hydrate 到达后才切成内容。
@@ -35,7 +35,7 @@
   - **根因(agent 已定位)**:① 窗口配置本身有平台判断——`main/index.ts:1117` `titleBarStyle: darwin?"hiddenInset":"default"`(对);② 但 renderer **`TopBar.tsx:76` 硬编码 `<span className="w-[68px] shrink-0">` 红绿灯占位,所有平台都渲染,无平台判断** ← 非 Mac 突兀根因;③ **全屏事件完全没监听**——main(`index.ts:1061-1277` 窗口事件列表里)无 `enter-full-screen`/`leave-full-screen`,renderer(App.tsx)无 fullscreen 响应 ← Mac 全屏留白不消失根因;④ platform 没经 preload 正式下发,renderer 只靠 `navigator.platform`(App.tsx:2967)兜,不够可靠。
   - **改动清单(agent)**:(a) `preload/index.ts` 暴露 `window.codeshell.platform=process.platform`;(b) `TopBar.tsx:76` 占位改 `{isMac && !isFullscreen && <span…/>}`;(c) `main/index.ts:~1271` 加 `enter/leave-full-screen` 监听 + IPC 下发 fullscreen;(d) `App.tsx:2966` 订阅 fullscreen 态控制占位;(e) `SettingsPage.tsx:177` 左上角同样按平台判断(设置页左上角问题在此);(f) 可选 `window-state-store.ts` 加 fullscreen 字段。⚠️ 改完必在 Win + Mac(含全屏)真机验。
 
-- ⬜ **[Windows] 原生菜单栏突兀 + nsis 安装器不友好(不能选安装位置)**（rc.3 延后：Windows 整条待真机统一过） — 两个子点:① **菜单栏"文件/编辑"看着奇怪**:`packages/desktop/src/main/menu.ts:138-139` 有自定义菜单模板(`buildFromTemplate`+`setApplicationMenu`),但没针对 Windows 优化——Mac 菜单在顶部全局栏,Windows 菜单贴窗口内很突兀。修法方向:Windows 上要么隐藏/精简原生菜单(`setApplicationMenu(null)` 或 `autoHideMenuBar`),要么把菜单项收进应用内自绘 UI;菜单模板按平台分支(Mac 保留全局菜单,Win/Linux 精简)。② **nsis 安装不能选目录**:`build.win` **无 `nsis` 配置段** → electron-builder 默认一键装 AppData、不让选路径。修法:package.json build 加 `nsis: { oneClick: false, allowToChangeInstallationDirectory: true, perMachine: false, createDesktopShortcut: true, ... }`。⚠️ 未签名 exe,SmartScreen 仍会拦(已在 release notes 注明)。
+- ✅ **[Windows] 原生菜单栏突兀 + nsis 安装器不友好(不能选安装位置)**（2026-07-03 已做,待 Windows 真机验） — Windows/Linux 不再安装原生应用菜单(`Menu.setApplicationMenu(null)`),窗口仍设 `autoHideMenuBar`;NSIS 已配置 `oneClick:false` + `allowToChangeInstallationDirectory:true` + 桌面/开始菜单快捷方式。⚠️ 未签名 exe,SmartScreen 仍会拦(已在 release notes 注明)。
   - **Codex 参照**:Codex 是纯 CLI(npm 全局装),**没有 Electron 桌面端 + nsis 安装器**,所以菜单栏/安装位置这块 Codex 无直接可参照做法。这两点走 Electron/electron-builder 标准解法即可(见上)。CLI 侧 codeshell 本就有 `npm i -g` 路径与 Codex 一致。
 
 - ✅ **[面板按钮] 右侧面板切换按钮在非 chat 页(自动化/凭证)仍显示**（rc.3 已修：panelAvailable 加 view.viewMode === "chat" 判断） — 复现:chat 页右上角有面板开关按钮(文件/浏览器/审查/终端),切到自动化凭证页后右上角**还有**这些面板按钮。期望:面板按钮是 chat 专属,切到非 chat 页(自动化/凭证/设置等)应隐藏。关联 `project_desktop_four_panels`(文件/浏览器/审查/终端四面板)。
@@ -97,6 +97,7 @@
 
 - ⚪️ **browser-login 硬化**:① 已修(per-window `randomUUID()` nonce);② `persist:login-*` 分区只清 cookie,localStorage/IndexedDB/SW 残留 → 改非持久分区或 `clearStorageData`;③ BrowserHost phase-2 webview 收编未预留类型/未抽共享 helper。
 - ⚪️ **JSON-Schema 导出未接线**:`schema-export.ts` 无 caller → 宿主启动写 `~/.code-shell/settings.schema.json` 或 release notes 注明不暴露。
+- ⚪️ **模型 catalog/user override 落地规则硬化**:更新 `model-fact-finder` / `EditModelCatalog` 流程——新增模型前先查内置/merged catalog 是否已有 provider(如 `openrouter`);若已有,优先用 user catalog patch/merge 补 `modelPresets` 而不是新建孤立 catalog id。合并优先级应为 user/project > built-in;数组按 key 合并(`modelPresets.value`,`params.name`)而不是整条替换。写入后校验现有 `modelConnections`:若 `connection.model` 命中新 preset 但 `catalogId` 仍指旧 provider,应提示或迁移,避免 `supportsVision`/context/params 能力断链。
 - ⚪️ **i18n 收尾（增量）**:`"新对话"` 哨兵常量化;非 React helper 硬编码 localStorage key 应 import KEY;mobile(~149 处)单独接同套 i18n。
 
 ---

@@ -35,6 +35,10 @@ export interface UserMessage {
    *  engine.run boundaries still summarizes ALL its edits, not just the last
    *  run's (TODO-background-panel #9). */
   injected?: boolean;
+  /** Stable queued-steer id for optimistic step-in bubbles. */
+  steerId?: string;
+  /** True until the engine echoes steer_injected for this steerId. */
+  pending?: boolean;
 }
 
 export interface AssistantMessage {
@@ -458,6 +462,17 @@ export function applyStreamEvent(
     }
 
     case "steer_injected": {
+      if (event.id) {
+        let matched = false;
+        const messages = state.messages.map((m) => {
+          if (m.kind === "user" && m.steerId === event.id) {
+            matched = true;
+            return { ...m, pending: false, text: event.text, injected: true };
+          }
+          return m;
+        });
+        if (matched) return { ...state, messages };
+      }
       // 引导(不打断): the host queued this user message and the engine spliced
       // it into the running turn at a step boundary. Render it as a user bubble
       // in the feed so the injected guidance is visible inline (it really did
@@ -1103,14 +1118,33 @@ export function appendUserMessage(
   /** True for engine-injected user turns (steer / goal wakeup) — see
    *  UserMessage.injected. */
   injected?: boolean,
+  steerId?: string,
+  pending?: boolean,
 ): MessagesReducerState {
   return {
     ...state,
     messages: [
       ...state.messages,
-      { kind: "user", id: freshId("user"), text, createdAt, isGoal, injected },
+      { kind: "user", id: freshId("user"), text, createdAt, isGoal, injected, steerId, pending },
     ],
   };
+}
+
+export function removePendingSteerMessages(
+  state: MessagesReducerState,
+  steerIds: Iterable<string>,
+): MessagesReducerState {
+  const ids = new Set(steerIds);
+  if (ids.size === 0) return state;
+  let changed = false;
+  const messages = state.messages.filter((m) => {
+    if (m.kind === "user" && m.pending && m.steerId && ids.has(m.steerId)) {
+      changed = true;
+      return false;
+    }
+    return true;
+  });
+  return changed ? { ...state, messages } : state;
 }
 
 /**

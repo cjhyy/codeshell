@@ -141,7 +141,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
   };
 
   const permissionMode = (options.permissionMode ?? "acceptEdits") as PermissionMode;
-  const maxContextTokens = settings.context.maxTokens ?? 200_000;
+  const maxContextTokens = llmConfig.maxContextTokens ?? settings.context.maxTokens ?? 200_000;
 
   // ── Shared config passed into every session engine ─────────────
   const sharedCfg = {
@@ -225,7 +225,11 @@ export async function replCommand(options: ReplOptions): Promise<void> {
   const [serverTransport, clientTransport] = createInProcessTransport();
 
   // 6. Wire up AgentServer (wraps chatManager, handles protocol)
-  const _server = new AgentServer({ chatManager, transport: serverTransport });
+  const _server = new AgentServer({
+    chatManager,
+    transport: serverTransport,
+    settingsReader: () => settingsManager.load(),
+  });
 
   // 7. Create AgentClient (UI-side)
   const client = new AgentClient({ transport: clientTransport });

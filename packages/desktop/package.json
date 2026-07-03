@@ -25,6 +25,14 @@
     "appId": "com.cjhyy.codeshell",
     "productName": "code-shell",
     "afterPack": "scripts/after-pack-adhoc-sign.cjs",
+    "detectUpdateChannel": true,
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "cjhyy",
+        "repo": "codeshell"
+      }
+    ],
     "files": [
       "out/**/*",
       "build/icon.png",

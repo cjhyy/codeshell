@@ -49,6 +49,21 @@ describe("placeLiveAutomationSession", () => {
     expect(createdWith).toBe("/Users/me/fresh");
   });
 
+  it("places a live session into the root repo after resolving a git subdirectory cwd", () => {
+    let created = false;
+    const { repoId } = placeLiveAutomationSession(
+      { sessionId: "s", cwd: "/Users/me/proj/packages/desktop", title: "t", cronJobId: "j" },
+      repos,
+      {
+        caseInsensitive: true,
+        resolveCwd: (cwd) => cwd === "/Users/me/proj/packages/desktop" ? "/Users/me/proj" : cwd,
+        createRepoForCwd: () => { created = true; return "SHOULD_NOT_CREATE"; },
+      },
+    );
+    expect(created).toBe(false);
+    expect(repoId).toBe("r1");
+  });
+
   it("returns null for an unmatched cwd when repo creation returns null", () => {
     const placement = placeLiveAutomationSession(
       { sessionId: "s", cwd: "/Users/me/removed", title: "t", cronJobId: "j" },

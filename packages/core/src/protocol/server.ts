@@ -932,14 +932,29 @@ export class AgentServer {
       const sid = params.sessionId;
       const s = this.chatManager.get(sid);
       if (!s) {
-        this.transport.send(
-          createErrorResponse(req.id, ErrorCodes.SessionClosed, `No such session: ${sid}`),
-        );
+        // Session not found (already cleaned by idle sweeper, or never created).
+        // Don't create one just for configure — let the subsequent run() do it
+        // with proper per-session config. Return OK since there's nothing to
+        // configure on a non-existent session.
+        this.transport.send(createResponse(req.id, { ok: true }));
         return;
       }
       if (typeof params.planMode === "boolean") s.engine.setPlanMode(params.planMode);
       if (typeof params.permissionMode === "string") {
         s.engine.setPermissionMode(params.permissionMode as NonNullable<EngineConfig["permissionMode"]>);
+      }
+      if (params.clearModels) {
+        this.chatManager.runtime.clearModels();
+      }
+      if (params.reloadModels) {
+        try {
+          this.chatManager.runtime.reloadModelsFromSettings();
+        } catch (err) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
+          );
+          return;
+        }
       }
       // Per-session model switch — the missing piece that made model changes
       // worker-global (session-isolation research §3). requestModelSwitch
@@ -947,7 +962,16 @@ export class AgentServer {
       // so it never swaps the model under a running LLM client.
       if (typeof params.model === "string") {
         try {
-          s.requestModelSwitch(params.model);
+          const entry = s.requestModelSwitch(params.model);
+          this.transport.send(
+            createResponse(req.id, {
+              ok: true,
+              model: entry.model,
+              key: entry.key,
+              maxContextTokens: entry.maxContextTokens,
+            }),
+          );
+          return;
         } catch (err) {
           this.transport.send(
             createErrorResponse(req.id, ErrorCodes.InvalidParams, (err as Error).message),
@@ -982,20 +1006,30 @@ export class AgentServer {
     // or to any session's engine from chatManager for settings ops
     const engine = this.legacyEngine ?? this.anyEngine();
 
+    if (params.clearModels) {
+      if (this.chatManager) {
+        this.chatManager.runtime.clearModels();
+      } else {
+        this.legacyEngine?.getModelPool().clear();
+        this.globalQueryEngine?.getModelPool().clear();
+      }
+    }
+
     if (params.reloadModels) {
       try {
-        const seen = new Set<Engine>();
-        const reload = (target: Engine | null | undefined) => {
-          if (!target || seen.has(target)) return;
-          seen.add(target);
-          target.reloadModelPool();
-        };
-        reload(this.legacyEngine);
-        reload(this.globalQueryEngine);
         if (this.chatManager) {
-          this.chatManager.forEachSession((s) => reload(s.engine));
+          this.chatManager.runtime.reloadModelsFromSettings();
+        } else {
+          const seen = new Set<Engine>();
+          const reload = (target: Engine | null | undefined) => {
+            if (!target || seen.has(target)) return;
+            seen.add(target);
+            target.reloadModelPool();
+          };
+          reload(this.legacyEngine);
+          reload(this.globalQueryEngine);
+          if (seen.size === 0) reload(engine);
         }
-        if (seen.size === 0) reload(engine);
       } catch (err) {
         this.transport.send(
           createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
@@ -1007,7 +1041,12 @@ export class AgentServer {
       try {
         const entry = engine.switchModel(params.model);
         this.transport.send(
-          createResponse(req.id, { ok: true, model: entry.model, key: entry.key }),
+          createResponse(req.id, {
+            ok: true,
+            model: entry.model,
+            key: entry.key,
+            maxContextTokens: entry.maxContextTokens,
+          }),
         );
         return;
       } catch (err) {

@@ -24,6 +24,7 @@ import {
   AUTOMATION_PROMPT_NOTE,
   defaultSandboxConfig,
   resolveLLMConfigForTag,
+  resolveProjectRoot,
   type RunManager,
   type CronRunner,
   type CronRunResult,
@@ -88,7 +89,7 @@ export function buildDesktopAutomationRunner(
   onSession?: (meta: AutomationSessionMeta) => void,
 ): CronRunner {
   return async (req): Promise<CronRunResult> => {
-    const jobCwd = req.job.cwd ?? process.cwd();
+    const jobCwd = resolveProjectRoot(req.job.cwd ?? process.cwd());
     const settings = new SettingsManager(jobCwd, "full").get();
     const llm = resolveLLMConfigForTag(settings, "text", (settings as { defaults?: { text?: string } }).defaults?.text);
     if (!llm) throw new Error("自动化任务:没有可用的文本模型连接。");

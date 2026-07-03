@@ -691,6 +691,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   projects: {
     list: (): Promise<Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>> =>
       ipcRenderer.invoke("projects:list"),
+    resolveRoot: (path: string): Promise<{ path: string; name: string }> =>
+      ipcRenderer.invoke("projects:resolveRoot", path),
     add: (project: { path: string; name: string }): Promise<void> =>
       ipcRenderer.invoke("projects:add", project),
     remove: (projectPath: string): Promise<void> => ipcRenderer.invoke("projects:remove", projectPath),

@@ -189,6 +189,12 @@ export class ModelPool {
     }
   }
 
+  /** Clear all registered models and active selection. */
+  clear(): void {
+    this.models.clear();
+    this.activeKey = undefined;
+  }
+
   /** Register a model at runtime. */
   register(entry: ModelEntry): void {
     this.models.set(entry.key, this.withBuiltinDefaults(entry));
@@ -279,6 +285,7 @@ export class ModelPool {
       // instead of fabricating 8192, which silently truncates long outputs and
       // masks the real per-model cap.
       maxTokens: entry.maxOutputTokens,
+      ...(entry.maxContextTokens !== undefined ? { maxContextTokens: entry.maxContextTokens } : {}),
       // reasoning: entry overrides catalog. No base fallback — see class doc.
       ...(entry.reasoning ?? fromCat?.reasoning
         ? { reasoning: entry.reasoning ?? fromCat?.reasoning }

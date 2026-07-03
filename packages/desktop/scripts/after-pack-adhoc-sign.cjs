@@ -21,6 +21,8 @@
 // No-op on non-macOS. Best-effort: a signing failure logs but does not abort
 // the build (an unsigned build is still better than no build).
 
+/* global require, exports */
+
 const { execFileSync } = require("node:child_process");
 const { join } = require("node:path");
 

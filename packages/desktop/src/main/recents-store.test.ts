@@ -1,4 +1,5 @@
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
@@ -40,7 +41,7 @@ describe("recents-store project source", () => {
     await pushRecent({ path: dir, name: "a", lastOpenedAt: 1 });
     await softDelete(dir);
     await pushRecent({ path: dir, name: "a", lastOpenedAt: 2 });
-    expect((await loadProjects()).find((p) => p.path === dir)).toBeDefined();
+    expect((await loadProjects()).find((p) => p.path === realpathSync(dir))).toBeDefined();
   });
 
   test("pinned project survives even when many recents are pushed", async () => {
@@ -52,6 +53,21 @@ describe("recents-store project source", () => {
       await pushRecent({ path: p, name: `n${i}`, lastOpenedAt: i + 2 });
     }
     const projects = await loadProjects();
-    expect(projects.find((p) => p.path === dir)?.pinned).toBe(true);
+    expect(projects.find((p) => p.path === realpathSync(dir))?.pinned).toBe(true);
+  });
+
+  test("git subdirectories merge into the repository root", async () => {
+    execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+    const sub = join(dir, "packages", "desktop");
+    mkdirSync(sub, { recursive: true });
+    await pushRecent({ path: sub, name: "desktop", lastOpenedAt: 1 });
+    await pushRecent({ path: dir, name: "root", lastOpenedAt: 2 });
+    await setPinned(sub, true);
+    const projects = await loadProjects();
+    expect(projects).toHaveLength(1);
+    const root = realpathSync(dir);
+    expect(projects[0]?.path).toBe(root);
+    expect(projects[0]?.name).toBe("root");
+    expect(projects[0]?.pinned).toBe(true);
   });
 });

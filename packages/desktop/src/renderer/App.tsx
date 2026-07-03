@@ -13,10 +13,6 @@ import { useT } from "./i18n/I18nProvider";
 import {
   applyStreamEvent,
   bgCompletionText,
-  appendUserMessage,
-  appendAskUserMessage,
-  markAskUserAnswered,
-  appendTurnEndMessage,
   INITIAL_STATE,
   type MessagesReducerState,
   type ApprovalState,
@@ -24,9 +20,11 @@ import {
   type AskUserOption,
   type TaskListMessage,
 } from "./types";
+import { transcriptsReducer, type TranscriptsMap } from "./transcriptsReducer";
 import {
   loadTranscript,
   saveTranscript,
+  migrateRepoSessionBucket,
   loadSessionIndex,
   createSession,
   deleteSessionLocal,
@@ -43,6 +41,7 @@ import {
   bucketKey,
   repoKeyOf,
   migrateBucketOverride,
+  migrateRepoBucketOverrides,
   clearBucketOverride,
   loadPanelState,
   clearPanelState,
@@ -58,6 +57,9 @@ import { resolveBucket, findAskUserOrigin } from "./streamRouting";
 import { resolveStopBucket } from "./stopRouting";
 import { statusForBucket, type SessionStatus } from "./sessionStatus";
 import { selectReplayEvents } from "./snapshotReplay";
+import { runAfterModelSwitch } from "./modelSwitchRun";
+import { persistDefaultTextModel } from "./modelSelection";
+import { writeSettings } from "./settingsBus";
 import type {
   AgentLifecycleEvent,
   ApprovalRequestEnvelope,
@@ -79,6 +81,7 @@ import {
   unmarkRepoPathRemoved,
   makeCreateRepoForCwd,
   reconcileReposFromDisk,
+  reconcileReposFromDiskWithRemap,
   repoLabel,
   sortRepos,
   type Repo,
@@ -167,8 +170,6 @@ function fromMobilePermissionMode(mode: MobilePermissionMode): PermissionMode {
   }
 }
 
-type TranscriptsMap = Record<string, MessagesReducerState>;
-
 interface ComposerDraftState {
   text: string;
   attachments: ImageAttachment[];
@@ -177,82 +178,6 @@ interface ComposerDraftState {
 type ComposerDraftsMap = Record<string, ComposerDraftState>;
 
 const EMPTY_ATTACHMENTS: ImageAttachment[] = [];
-
-type Action =
-  | { type: "user_message"; bucket: string; text: string; isGoal?: boolean }
-  | { type: "stream"; bucket: string; event: StreamEvent }
-  | { type: "stream_batch"; bucket: string; events: StreamEvent[] }
-  | { type: "hydrate"; bucket: string; state: MessagesReducerState }
-  | {
-      type: "ask_user";
-      bucket: string;
-      requestId: string;
-      engineSessionId?: string;
-      question: string;
-      header?: string;
-      options?: AskUserOption[];
-      multiSelect: boolean;
-      optionsOnly?: boolean;
-    }
-  | { type: "ask_user_answered"; bucket: string; requestId: string; answer: string }
-  | {
-      type: "turn_end";
-      bucket: string;
-      reason: "stopped" | "timeout" | "error";
-      elapsedMs?: number;
-      detail?: string;
-    };
-
-function reducer(map: TranscriptsMap, action: Action): TranscriptsMap {
-  if (action.type === "hydrate") {
-    return { ...map, [action.bucket]: action.state };
-  }
-  const current = map[action.bucket] ?? INITIAL_STATE;
-  let next: MessagesReducerState;
-  switch (action.type) {
-    case "user_message":
-      next = appendUserMessage(current, action.text, Date.now(), action.isGoal);
-      break;
-    case "ask_user":
-      next = appendAskUserMessage(current, {
-        requestId: action.requestId,
-        engineSessionId: action.engineSessionId,
-        question: action.question,
-        header: action.header,
-        options: action.options,
-        multiSelect: action.multiSelect,
-        optionsOnly: action.optionsOnly,
-      });
-      break;
-    case "ask_user_answered":
-      next = markAskUserAnswered(current, action.requestId, action.answer);
-      break;
-    case "turn_end":
-      next = appendTurnEndMessage(current, action.reason, action.elapsedMs, action.detail);
-      break;
-    case "stream":
-      next = applyStreamEvent(current, action.event);
-      break;
-    case "stream_batch": {
-      // Fold the whole 50ms batch into one new state so the list re-renders
-      // once per window, not once per event. applyStreamEvent returns the
-      // same ref when an event is a no-op, so an all-no-op batch leaves
-      // `next === current` and the dispatch below bails out.
-      next = timePhase(
-        "reducer.batch",
-        () => {
-          let acc = current;
-          for (const ev of action.events) acc = applyStreamEvent(acc, ev);
-          return acc;
-        },
-        () => ({ events: action.events.length, msgs: current.messages.length }),
-      );
-      break;
-    }
-  }
-  if (next === current) return map;
-  return { ...map, [action.bucket]: next };
-}
 
 interface ApprovalHistoryEntry {
   decision: "approve" | "deny";
@@ -264,7 +189,7 @@ interface ApprovalHistoryEntry {
 function App() {
   const toast = useToast();
   const { t } = useT();
-  const [transcripts, dispatch] = useReducer(reducer, {} as TranscriptsMap);
+  const [transcripts, dispatch] = useReducer(transcriptsReducer, {} as TranscriptsMap);
   const [approval, setApproval] = useState<ApprovalState>(null);
   const [approvalQueue, setApprovalQueue] = useState<ApprovalRequestEnvelope[]>([]);
   const [approvalHistory, setApprovalHistory] = useState<ApprovalHistoryEntry[]>([]);
@@ -421,6 +346,10 @@ function App() {
   // user bubble (insert-time and display-time are decoupled). Cleared per id on
   // confirmation / removal so the set can't grow unbounded.
   const steeredIdsRef = useRef<Set<string>>(new Set());
+  // Queued ids already confirmed by steer_injected. React state updates can race
+  // with the auto-steer effect's closed-over queuedInputs; keep a ref tombstone
+  // so a confirmed draft is never sent again even if an old queue snapshot renders.
+  const injectedSteerIdsRef = useRef<Set<string>>(new Set());
   // Monotonic fallback counter for queued-draft ids when crypto.randomUUID is
   // unavailable (older webview). crypto path is the norm.
   const queuedSeqRef = useRef<number>(0);
@@ -586,14 +515,53 @@ function App() {
       const disk = await window.codeshell.projects.list();
       const onDisk = new Set(disk.map((p) => p.path));
       const cached = loadRepos();
-      const missing = cached.filter((r) => !onDisk.has(r.path) && !isRepoPathRemoved(r.path));
-      if (missing.length > 0) {
-        for (const r of missing) {
-          await window.codeshell.projects.add({ path: r.path, name: r.name });
-        }
-        apply(await window.codeshell.projects.list());
-      } else {
-        apply(disk);
+      const normalizedCached = await Promise.all(
+        cached.map(async (r) => {
+          try {
+            const root = await window.codeshell.projects.resolveRoot(r.path);
+            return { ...r, path: root.path, name: r.name || root.name };
+          } catch {
+            return r;
+          }
+        }),
+      );
+      const seenMissing = new Set<string>();
+      const missing = normalizedCached.filter((r) => {
+        if (onDisk.has(r.path) || isRepoPathRemoved(r.path) || seenMissing.has(r.path)) return false;
+        seenMissing.add(r.path);
+        return true;
+      });
+      const latestDisk = missing.length > 0
+        ? await (async () => {
+            for (const r of missing) {
+              await window.codeshell.projects.add({ path: r.path, name: r.name });
+            }
+            return window.codeshell.projects.list();
+          })()
+        : disk;
+      const { repos: reconciled, repoIdRemap } = reconcileReposFromDiskWithRemap(
+        latestDisk,
+        normalizedCached,
+      );
+      const remapEntries = Object.entries(repoIdRemap);
+      const migratedRepoIds = new Set<string>();
+      for (const [fromRepoId, toRepoId] of remapEntries) {
+        migrateRepoSessionBucket(fromRepoId, toRepoId);
+        migratedRepoIds.add(toRepoId);
+      }
+      if (!alive) return;
+      setRepos(reconciled);
+      if (remapEntries.length > 0) {
+        setActiveRepoId((prev) => (prev && repoIdRemap[prev] ? repoIdRemap[prev] : prev));
+        setPermissionOverrides((prev) => migrateRepoBucketOverrides(prev, repoIdRemap));
+        setModelOverrides((prev) => migrateRepoBucketOverrides(prev, repoIdRemap));
+        setGoalOverrides((prev) => migrateRepoBucketOverrides(prev, repoIdRemap));
+        setSessionIndices((prev) => {
+          const next = { ...prev };
+          for (const [fromRepoId] of remapEntries) delete next[fromRepoId];
+          for (const id of migratedRepoIds) next[id] = loadSessionIndex(id);
+          return next;
+        });
       }
     })();
     const unsub = window.codeshell.projects.onChanged(apply);
@@ -1040,6 +1008,15 @@ function App() {
     return null;
   };
 
+  const resolveProjectCwd = async (cwd: string): Promise<string> => {
+    if (!cwd) return cwd;
+    try {
+      return (await window.codeshell.projects.resolveRoot(cwd)).path;
+    } catch {
+      return cwd;
+    }
+  };
+
   const handleOpenAutomationRunSession = async (run: RunSummary): Promise<void> => {
     if (!run.sessionId) {
       setRunsInitialRunId(run.runId);
@@ -1060,7 +1037,7 @@ function App() {
       [{
         runId: run.runId,
         sessionId: run.sessionId,
-        cwd: run.cwd,
+        cwd: await resolveProjectCwd(run.cwd),
         objective: run.objective,
         status: run.status,
         finishedAt: run.finishedAt,
@@ -1109,7 +1086,11 @@ function App() {
 
     const reposNow = loadRepos();
     const repoFactory = makeCreateRepoForCwd(reposNow);
-    const [placement] = planDiskRebuild([session], reposNow, {
+    const resolvedSession: DiskSessionMeta = {
+      ...session,
+      cwd: await resolveProjectCwd(session.cwd),
+    };
+    const [placement] = planDiskRebuild([resolvedSession], reposNow, {
       caseInsensitive: isCaseInsensitivePlatform(),
       createRepoForCwd: repoFactory.createRepoForCwd,
     });
@@ -1242,6 +1223,10 @@ function App() {
         return; // no runs dir / read error — nothing to backfill
       }
       if (cancelled || runs.length === 0) return;
+      runs = await Promise.all(
+        runs.map(async (r) => ({ ...r, cwd: await resolveProjectCwd(r.cwd) })),
+      );
+      if (cancelled) return;
 
       // Known engineSessionIds across every repo index (manual + already-imported).
       // A still-running automation import is intentionally NOT counted, so the
@@ -1306,9 +1291,13 @@ function App() {
         const page = await window.codeshell.listDiskSessions({ limit: 30 });
         probed = true;
         if (cancelled || page.sessions.length === 0) return;
+        const sessions = await Promise.all(
+          page.sessions.map(async (s) => ({ ...s, cwd: await resolveProjectCwd(s.cwd) })),
+        );
+        if (cancelled) return;
         const reposNow = loadRepos();
         const repoFactory = makeCreateRepoForCwd(reposNow);
-        const placements = planDiskRebuild(page.sessions, reposNow, {
+        const placements = planDiskRebuild(sessions, reposNow, {
           caseInsensitive: isCaseInsensitivePlatform(),
           createRepoForCwd: repoFactory.createRepoForCwd,
         });
@@ -1399,6 +1388,7 @@ function App() {
       // and revocable until this confirmation arrived.
       if (event.type === "steer_injected" && event.id) {
         const id = event.id;
+        injectedSteerIdsRef.current.add(id);
         steeredIdsRef.current.delete(id);
         setQueuedInputs((prev) => removeQueuedInputById(prev, target, id));
       }
@@ -1556,39 +1546,59 @@ function App() {
         );
         return;
       }
-      const repoFactory = makeCreateRepoForCwd(reposNow);
-      const placement = placeLiveAutomationSession(meta, reposNow, {
-        caseInsensitive: isCaseInsensitivePlatform(),
-        createRepoForCwd: repoFactory.createRepoForCwd,
-      });
-      if (!placement) return;
-      const { repoId, summary } = placement;
-      const nextIdx = upsertImportedSession(repoId, summary);
-      const bucket = bucketKey(repoId, summary.id);
-      // Register the route so this run's stream events (already arriving) bucket
-      // correctly. The session_started handler's reverse-lookup would also find
-      // it now that it's on disk, but setting the fast path is cheap.
-      engineToBucketRef.current.set(meta.sessionId, bucket);
-      // Mark the bucket busy NOW so the sidebar shows the running spinner
-      // immediately. Automation never goes through send() (it runs headless in
-      // main), so without this the run-now session would sit with no status
-      // indicator until — and only ever — turn_complete, which then clears busy
-      // and (if off-screen) flips it to the unread dot. The announce arrives
-      // before this run's session_started stream event (automation-host emits
-      // onSession() then emit() on the same ordered channel), so no turn_complete
-      // can clear this before we set it. asking>running>unread precedence then
-      // matches interactive chat.
-      setBusyForKey(bucket, true);
-      // Show the triggering prompt as the opening user message. Automation never
-      // goes through send() (it runs in main), so without this the live UI would
-      // open straight into the assistant's reply with no visible question. Only
-      // on first placement (re-announce hits the alreadyKnown early-return above),
-      // so the bubble isn't duplicated.
-      if (meta.prompt.trim()) {
-        dispatch({ type: "user_message", bucket, text: meta.prompt });
-      }
-      if (repoFactory.changed()) setRepos(reposNow.slice());
-      setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: nextIdx }));
+      void (async () => {
+        const resolvedMeta = {
+          ...meta,
+          cwd: await resolveProjectCwd(meta.cwd),
+        };
+        const reposAfterResolve = loadRepos();
+        const existingRepoId =
+          [null as string | null, ...reposAfterResolve.map((r) => r.id)].find((rid) =>
+            loadSessionIndex(rid).sessions.some(
+              (s) => s.engineSessionId === meta.sessionId,
+            ),
+          );
+        if (existingRepoId !== undefined) {
+          engineToBucketRef.current.set(
+            meta.sessionId,
+            bucketKey(existingRepoId, meta.sessionId),
+          );
+          return;
+        }
+        const repoFactory = makeCreateRepoForCwd(reposAfterResolve);
+        const placement = placeLiveAutomationSession(resolvedMeta, reposAfterResolve, {
+          caseInsensitive: isCaseInsensitivePlatform(),
+          createRepoForCwd: repoFactory.createRepoForCwd,
+        });
+        if (!placement) return;
+        const { repoId, summary } = placement;
+        const nextIdx = upsertImportedSession(repoId, summary);
+        const bucket = bucketKey(repoId, summary.id);
+        // Register the route so this run's stream events (already arriving) bucket
+        // correctly. The session_started handler's reverse-lookup would also find
+        // it now that it's on disk, but setting the fast path is cheap.
+        engineToBucketRef.current.set(meta.sessionId, bucket);
+        // Mark the bucket busy NOW so the sidebar shows the running spinner
+        // immediately. Automation never goes through send() (it runs headless in
+        // main), so without this the run-now session would sit with no status
+        // indicator until — and only ever — turn_complete, which then clears busy
+        // and (if off-screen) flips it to the unread dot. The announce arrives
+        // before this run's session_started stream event (automation-host emits
+        // onSession() then emit() on the same ordered channel), so no turn_complete
+        // can clear this before we set it. asking>running>unread precedence then
+        // matches interactive chat.
+        setBusyForKey(bucket, true);
+        // Show the triggering prompt as the opening user message. Automation never
+        // goes through send() (it runs in main), so without this the live UI would
+        // open straight into the assistant's reply with no visible question. Only
+        // on first placement (re-announce hits the alreadyKnown early-return above),
+        // so the bubble isn't duplicated.
+        if (meta.prompt.trim()) {
+          dispatch({ type: "user_message", bucket, text: meta.prompt });
+        }
+        if (repoFactory.changed()) setRepos(reposAfterResolve.slice());
+        setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: nextIdx }));
+      })();
     });
     const offMobileSession = window.codeshell.onMobileSession((meta) => {
       window.codeshell.log("mobile.session.announce", {
@@ -1964,13 +1974,14 @@ function App() {
     // turn so the engine matches what the UI claims.
     const bucketModel =
       modelOverrides[bucket] ?? modelOverrides[activeBucket] ?? activeModelKey;
-    if (bucketModel) {
-      void window.codeshell.configure({ sessionId: engineSessionId, model: bucketModel });
-    }
-
-    void window.codeshell
-      .run(text, opts)
-      .then((r) => {
+    void runAfterModelSwitch({
+      sessionId: engineSessionId,
+      model: bucketModel,
+      text,
+      opts,
+      configure: window.codeshell.configure,
+      run: window.codeshell.run,
+    }).then((r) => {
         // Belt-and-braces: clear busy for THIS run's bucket even if the
         // stream never delivered turn_complete (e.g. error in setup, or
         // the worker shutdown before flushing the event). Use the closed-
@@ -2039,7 +2050,9 @@ function App() {
       const engineSessionId = resolveActiveEngineSessionId();
       if (!engineSessionId) return; // run starting up; re-fires once it resolves
       for (const item of queued) {
-        if (steeredIdsRef.current.has(item.id)) continue;
+        if (injectedSteerIdsRef.current.has(item.id) || steeredIdsRef.current.has(item.id)) {
+          continue;
+        }
         steeredIdsRef.current.add(item.id);
         void window.codeshell.steer(engineSessionId, item.text, item.id);
       }
@@ -2052,7 +2065,11 @@ function App() {
     const isRelay = relayingBuckets.has(activeBucket);
     if (isRelay) {
       const { text, ids, state: next } = drainQueuedInput(queuedInputs, activeBucket);
-      ids.forEach((id) => steeredIdsRef.current.delete(id));
+      ids.forEach((id) => {
+        steeredIdsRef.current.delete(id);
+        injectedSteerIdsRef.current.delete(id);
+      });
+      dispatch({ type: "remove_pending_steers", bucket: activeBucket, steerIds: ids });
       setQueuedInputs(next);
       setRelayingBuckets((prev) => {
         if (!prev.has(activeBucket)) return prev;
@@ -2080,6 +2097,8 @@ function App() {
       if (engineSessionId) void window.codeshell.unsteer(engineSessionId, item.id);
       steeredIdsRef.current.delete(item.id);
     }
+    injectedSteerIdsRef.current.delete(item.id);
+    dispatch({ type: "remove_pending_steers", bucket: activeBucket, steerIds: [item.id] });
     setQueuedInputs(next);
     if (item.text) send(item.text);
   }, [busy, activeBucket, activeSessionId, queuedInputs, relayingBuckets]);
@@ -2090,7 +2109,11 @@ function App() {
       : `q-${queuedSeqRef.current++}`;
 
   const queueInput = (text: string): void => {
-    setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, newQueuedId(), text));
+    const id = newQueuedId();
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    dispatch({ type: "user_message", bucket: activeBucket, text: trimmed, injected: true, steerId: id, pending: true });
+    setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, id, trimmed));
   };
 
   // Before a relay (打断重发) aborts + re-sends the queue as a fresh run, revoke
@@ -2121,10 +2144,12 @@ function App() {
     const engineSessionId = resolveActiveEngineSessionId();
     ids.forEach((id) => {
       steeredIdsRef.current.delete(id);
+      injectedSteerIdsRef.current.delete(id);
       // Best-effort revoke any that were already steered; consumed ones are a
       // no-op (removed=false) and will still arrive as bubbles.
       if (engineSessionId) void window.codeshell.unsteer(engineSessionId, id);
     });
+    dispatch({ type: "remove_pending_steers", bucket: activeBucket, steerIds: ids });
   };
 
   const removeActiveQueuedInputAt = (index: number): void => {
@@ -2135,6 +2160,8 @@ function App() {
     // unsteer reply (another item could inject/remove meanwhile).
     const drop = (): void => {
       steeredIdsRef.current.delete(item.id);
+      injectedSteerIdsRef.current.delete(item.id);
+      dispatch({ type: "remove_pending_steers", bucket, steerIds: [item.id] });
       setQueuedInputs((prev) => removeQueuedInputById(prev, bucket, item.id));
     };
     const engineSessionId = resolveActiveEngineSessionId();
@@ -2891,19 +2918,11 @@ function App() {
     //    (user-chosen semantics). This only seeds future sessions; it never
     //    rewrites another bucket's existing override above.
     setDefaultActiveModelKey(opt.key);
-    void (async () => {
-      // Unified catalog: persist the choice as defaults.text (the engine's
-      // active-text priority #1; the value is the connection instance id ==
-      // pool key). Merge with any existing defaults so we don't clobber the
-      // image/video defaults.
-      const userS = ((await window.codeshell.getSettings("user")) ?? {}) as Record<string, unknown>;
-      const defaults = userS.defaults && typeof userS.defaults === "object"
-        ? (userS.defaults as Record<string, unknown>)
-        : {};
-      await window.codeshell.updateSettings("user", {
-        defaults: { ...defaults, text: opt.key },
-      });
-    })();
+    void persistDefaultTextModel({
+      key: opt.key,
+      getSettings: window.codeshell.getSettings,
+      writeSettings,
+    });
     // 3) Hot-switch the running worker. Scope it to THIS session's engine so
     //    we don't swap the model under any OTHER live session. The backend
     //    (server.ts handleConfigure) routes a sessionId'd configure to

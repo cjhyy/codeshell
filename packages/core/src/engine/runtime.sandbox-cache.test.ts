@@ -1,5 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { EngineRuntime, type EngineRuntimeOptions } from "./runtime.js";
+import { ModelPool } from "../llm/model-pool.js";
 import { defaultSandboxConfig } from "../tool-system/sandbox/index.js";
 
 // TODO §3.3 — resolveSandboxBackend must not re-resolve every turn. The
@@ -60,5 +61,72 @@ describe("EngineRuntime.resolveSandbox caching", () => {
     // failed one was evicted), not the cached rejection.
     const second = rt.resolveSandbox(cfg, "/proj");
     expect(second).not.toBe(first);
+  });
+});
+
+describe("EngineRuntime model pool ownership", () => {
+  test("clearModels clears the shared model pool", () => {
+    const modelPool = new ModelPool();
+    modelPool.register({ key: "ds", provider: "openai", model: "deepseek-v4-flash" });
+    const rt = new EngineRuntime({
+      modelPool,
+      toolRegistry: {} as never,
+      settings: { load: () => ({}) } as never,
+      mcpPool: { disconnectAll: async () => {} } as never,
+      costTracker: {} as never,
+    });
+
+    rt.clearModels();
+    expect(modelPool.list()).toEqual([]);
+  });
+
+  test("reloads the shared model pool from fresh settings", () => {
+    let model = "deepseek-v4-flash";
+    const modelPool = new ModelPool();
+    const rt = new EngineRuntime({
+      modelPool,
+      toolRegistry: {} as never,
+      settings: {
+        load: () => ({
+          credentials: [
+            {
+              id: "ds-key",
+              catalogId: "deepseek",
+              apiKey: "sk-test",
+              baseUrl: "https://api.deepseek.com/v1",
+            },
+          ],
+          modelConnections: [
+            { id: "ds", catalogId: "deepseek", tag: "text", model, credentialId: "ds-key" },
+          ],
+          defaults: { text: "ds" },
+        }),
+      } as never,
+      mcpPool: { disconnectAll: async () => {} } as never,
+      costTracker: {} as never,
+    });
+
+    rt.reloadModelsFromSettings();
+    expect(modelPool.get("ds")?.model).toBe("deepseek-v4-flash");
+
+    model = "deepseek-v4-pro";
+    rt.reloadModelsFromSettings();
+    expect(modelPool.get("ds")?.model).toBe("deepseek-v4-pro");
+  });
+
+  test("reloadModelsFromSettings clears stale live models when no connections remain", () => {
+    const modelPool = new ModelPool();
+    modelPool.register({ key: "old", provider: "openai", model: "old-model" });
+    const rt = new EngineRuntime({
+      modelPool,
+      toolRegistry: {} as never,
+      settings: { load: () => ({ modelConnections: [], credentials: [] }) } as never,
+      mcpPool: { disconnectAll: async () => {} } as never,
+      costTracker: {} as never,
+    });
+
+    rt.reloadModelsFromSettings();
+
+    expect(modelPool.list()).toEqual([]);
   });
 });

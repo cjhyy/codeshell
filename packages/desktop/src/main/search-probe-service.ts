@@ -49,7 +49,7 @@ async function withTimeout<T>(
     return await fn(ctrl.signal);
   } catch (err) {
     // Surface the timeout as a friendly message rather than a raw AbortError.
-    if (ctrl.signal.aborted) throw new Error(`${label} timed out after ${ms}ms`);
+    if (ctrl.signal.aborted) throw new Error(`${label} timed out after ${ms}ms`, { cause: err });
     throw err;
   } finally {
     clearTimeout(timeout);

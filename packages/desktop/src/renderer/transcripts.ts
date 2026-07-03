@@ -152,6 +152,28 @@ export function clearBucketOverride<V>(
   const { [bucket]: _drop, ...rest } = prev;
   return rest;
 }
+
+export function migrateRepoBucketOverrides<V>(
+  prev: Record<string, V>,
+  repoIdRemap: Record<string, string>,
+): Record<string, V> {
+  const remaps = Object.entries(repoIdRemap).filter(([from, to]) => from && to && from !== to);
+  if (remaps.length === 0) return prev;
+
+  let next: Record<string, V> | null = null;
+  for (const [bucket, value] of Object.entries(prev)) {
+    for (const [from, to] of remaps) {
+      const prefix = `${from}::`;
+      if (!bucket.startsWith(prefix)) continue;
+      const targetBucket = `${to}${bucket.slice(from.length)}`;
+      next ??= { ...prev };
+      delete next[bucket];
+      if (!(targetBucket in next)) next[targetBucket] = value;
+      break;
+    }
+  }
+  return next ?? prev;
+}
 /**
  * Per-bucket override maps (permission / model / goal) keyed by bucketKey, the
  * whole map persisted under one namespaced localStorage key.
@@ -470,6 +492,30 @@ export function clearTranscript(repoId: string | null, sessionId: string): void 
   } catch {
     // best effort
   }
+}
+
+/** Merge one repo bucket into another, moving index rows and transcript blobs. */
+export function migrateRepoSessionBucket(fromRepoId: string, toRepoId: string): SessionIndex {
+  if (fromRepoId === toRepoId) return loadSessionIndex(toRepoId);
+  const from = loadSessionIndex(fromRepoId);
+  const to = loadSessionIndex(toRepoId);
+  const existing = new Set(to.sessions.map((s) => s.engineSessionId || s.id));
+  const moved = from.sessions.filter((s) => !existing.has(s.engineSessionId || s.id));
+  for (const s of moved) {
+    saveTranscript(toRepoId, s.id, loadTranscript(fromRepoId, s.id));
+  }
+  const next: SessionIndex = {
+    sessions: [...moved, ...to.sessions].sort((a, b) => b.updatedAt - a.updatedAt),
+    activeSessionId: to.activeSessionId ?? from.activeSessionId,
+  };
+  saveSessionIndex(toRepoId, next);
+  try {
+    localStorage.removeItem(indexKey(fromRepoId));
+    for (const s of from.sessions) localStorage.removeItem(transcriptKey(fromRepoId, s.id));
+  } catch {
+    // best effort
+  }
+  return next;
 }
 
 /** Create a new session under `repoId` and make it active. */

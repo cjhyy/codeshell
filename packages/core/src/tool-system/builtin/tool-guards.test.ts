@@ -39,6 +39,16 @@ describe("builtin tool availability guards", () => {
     expect(names).toContain("GenerateVideo");
   });
 
+  test("goal-control tools are hidden unless a goal is active", () => {
+    const completeGoalGuard = BUILTIN_TOOL_GUARDS.get("complete_goal");
+    const cancelGoalGuard = BUILTIN_TOOL_GUARDS.get("cancel_goal");
+
+    expect(completeGoalGuard?.("/x", { cwd: "/x", hasGoal: false })).toBe(false);
+    expect(cancelGoalGuard?.("/x", { cwd: "/x", hasGoal: false })).toBe(false);
+    expect(completeGoalGuard?.("/x", { cwd: "/x", hasGoal: true })).toBe(true);
+    expect(cancelGoalGuard?.("/x", { cwd: "/x", hasGoal: true })).toBe(true);
+  });
+
   test("ungated tools have no guard entry (so they're always visible)", () => {
     expect(BUILTIN_TOOL_GUARDS.has("Read")).toBe(false);
   });

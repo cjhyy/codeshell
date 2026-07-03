@@ -1,4 +1,7 @@
 import type { ModelPool } from "../llm/model-pool.js";
+import { getMergedCatalog } from "../model-catalog/index.js";
+import { modelEntriesFromConnections } from "./model-connections-pool.js";
+import { defaultCacheDir } from "../llm/model-cache.js";
 import type { ToolRegistry } from "../tool-system/registry.js";
 import type { SettingsManager } from "../settings/manager.js";
 import type { MCPManager } from "../tool-system/mcp-manager.js";
@@ -41,6 +44,28 @@ export class EngineRuntime {
     this.settings = opts.settings;
     this.mcpPool = opts.mcpPool;
     this.costTracker = opts.costTracker;
+  }
+
+  clearModels(): void {
+    this.modelPool.clear();
+  }
+
+  reloadModelsFromSettings(): void {
+    const settings = this.settings.load();
+    const connections = (settings as { modelConnections?: unknown[] }).modelConnections ?? [];
+    const credentials = (settings as { credentials?: unknown[] }).credentials ?? [];
+    const catalog = getMergedCatalog();
+    const entries = modelEntriesFromConnections(connections as never[], credentials as never[], catalog);
+    this.modelPool.clear();
+    if (entries.length === 0) return;
+    for (const entry of entries) this.modelPool.register(entry);
+    if (entries.length > 0) {
+      const defaultText = (settings as { defaults?: { text?: string } }).defaults?.text;
+      const key = defaultText && entries.some((e) => e.key === defaultText) ? defaultText : entries[0].key;
+      this.modelPool.switch(key);
+      this.modelPool.setCacheDir(defaultCacheDir());
+      this.modelPool.reloadCachedContextWindows();
+    }
   }
 
   /**

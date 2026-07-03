@@ -33,12 +33,14 @@ export interface ChatSessionManagerOptions {
 
 export class ChatSessionManager {
   private readonly sessions = new Map<string, ChatSession>();
+  readonly runtime: EngineRuntime;
   private readonly factory: (slice: EngineConfigSlice) => Engine;
   private readonly maxSessions: number;
   private readonly idleTtlMs: number;
   private sweeper: ReturnType<typeof setInterval> | null = null;
 
   constructor(opts: ChatSessionManagerOptions) {
+    this.runtime = opts.runtime;
     this.factory = opts.engineFactory;
     this.maxSessions = opts.maxSessions ?? 16;
     this.idleTtlMs = opts.idleTtlMs ?? 30 * 60 * 1000;
