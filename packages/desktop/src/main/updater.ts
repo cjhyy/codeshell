@@ -13,14 +13,17 @@
  * `window.codeshell.onUpdaterStatus`.
  */
 
+import { spawnSync } from "node:child_process";
 import { BrowserWindow, app } from "electron";
 import { autoUpdater } from "electron-updater";
 import { dlog } from "./desktop-logger.js";
+import { macSignatureTextLooksAdHoc, releaseUrlForVersion } from "./updater-signature.js";
 
 export type UpdaterStatus =
   | { kind: "idle" }
   | { kind: "checking" }
   | { kind: "available"; version: string }
+  | { kind: "manual-required"; version: string; url: string; message: string }
   | { kind: "not-available"; version: string }
   | { kind: "downloading"; percent: number; transferred: number; total: number }
   | { kind: "downloaded"; version: string }
@@ -28,6 +31,7 @@ export type UpdaterStatus =
 
 let lastStatus: UpdaterStatus = { kind: "idle" };
 let configured = false;
+let macManualInstallRequired: boolean | undefined;
 
 function broadcast(): void {
   for (const w of BrowserWindow.getAllWindows()) {
@@ -40,6 +44,43 @@ function set(status: UpdaterStatus): void {
   lastStatus = status;
   dlog("main", "updater.status", status as unknown as Record<string, unknown>);
   broadcast();
+}
+
+function isMacManualInstallRequired(): boolean {
+  if (process.platform !== "darwin") return false;
+  if (!app.isPackaged) return false;
+  if (process.env.CODESHELL_FORCE_MAC_AUTO_UPDATE === "1") return false;
+  if (macManualInstallRequired !== undefined) return macManualInstallRequired;
+
+  const result = spawnSync("codesign", ["-dv", "--verbose=4", app.getPath("exe")], {
+    encoding: "utf8",
+  });
+  const text = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+  if (!text.trim()) {
+    dlog("main", "updater.mac_signature.unknown", {
+      status: result.status ?? null,
+      error: result.error?.message,
+    });
+    macManualInstallRequired = false;
+    return macManualInstallRequired;
+  }
+
+  macManualInstallRequired = macSignatureTextLooksAdHoc(text);
+  dlog("main", "updater.mac_signature.detected", {
+    manualInstallRequired: macManualInstallRequired,
+  });
+  return macManualInstallRequired;
+}
+
+function availableStatus(version: string): UpdaterStatus {
+  if (!isMacManualInstallRequired()) return { kind: "available", version };
+  return {
+    kind: "manual-required",
+    version,
+    url: releaseUrlForVersion(version),
+    message:
+      "This macOS build is ad-hoc signed, so the in-app updater cannot replace the app safely. Download the DMG/zip and install it manually.",
+  };
 }
 
 export function getLastStatus(): UpdaterStatus {
@@ -80,9 +121,9 @@ export function initUpdater(): void {
   autoUpdater.autoInstallOnAppQuit = false;
 
   autoUpdater.on("checking-for-update", () => set({ kind: "checking" }));
-  autoUpdater.on("update-available", (info) =>
-    set({ kind: "available", version: String((info as { version?: string }).version ?? "") }),
-  );
+  autoUpdater.on("update-available", (info) => {
+    set(availableStatus(String((info as { version?: string }).version ?? "")));
+  });
   autoUpdater.on("update-not-available", (info) =>
     set({ kind: "not-available", version: String((info as { version?: string }).version ?? "") }),
   );

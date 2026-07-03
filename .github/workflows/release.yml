@@ -90,6 +90,37 @@ jobs:
         working-directory: packages/desktop
         run: bun run scripts/predist.ts
 
+      - name: expose optional mac signing secrets
+        if: matrix.artifact == 'mac'
+        shell: bash
+        env:
+          MAC_CSC_LINK: ${{ secrets.CSC_LINK }}
+          MAC_CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          MAC_CSC_NAME: ${{ secrets.CSC_NAME }}
+          MAC_APPLE_ID: ${{ secrets.APPLE_ID }}
+          MAC_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          MAC_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          append_env() {
+            local name="$1"
+            local value="$2"
+            if [[ -n "$value" ]]; then
+              {
+                echo "$name<<__CODESHELL_${name}__"
+                printf '%s\n' "$value"
+                echo "__CODESHELL_${name}__"
+              } >> "$GITHUB_ENV"
+            fi
+          }
+
+          append_env CSC_LINK "$MAC_CSC_LINK"
+          append_env CSC_KEY_PASSWORD "$MAC_CSC_KEY_PASSWORD"
+          append_env CSC_NAME "$MAC_CSC_NAME"
+          append_env APPLE_ID "$MAC_APPLE_ID"
+          append_env APPLE_APP_SPECIFIC_PASSWORD "$MAC_APPLE_APP_SPECIFIC_PASSWORD"
+          append_env APPLE_TEAM_ID "$MAC_APPLE_TEAM_ID"
+
       # electron-builder. Per-OS target comes from packages/desktop/package.json
       # build.{mac,win,linux}. `--publish never`: we attach artifacts ourselves
       # in the release job, so electron-builder must NOT try to publish (and a
@@ -197,9 +228,10 @@ jobs:
           body: |
             自动打包构建 — 用于在其他电脑(尤其 Windows)安装测试。
 
-            **安装包未签名**:
+            **安装包签名说明**:
             - Windows (.exe / nsis):SmartScreen 会拦,点「更多信息 → 仍要运行」。
-            - macOS (.dmg):提示「无法验证开发者」,右键 App → 打开 → 仍要打开。
+            - macOS 未配置 Developer ID 签名密钥时,应用内自动安装不可用;请下载 .dmg 手动覆盖安装。
+            - macOS 如已配置 Developer ID + notarization secrets,应用内自动更新可直接安装。
 
             产物按平台分目录上传。node-pty 已按各平台 Electron ABI 重编。
           files: artifacts/**/*

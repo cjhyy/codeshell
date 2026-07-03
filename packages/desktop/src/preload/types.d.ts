@@ -1165,6 +1165,7 @@ export type UpdaterStatus =
   | { kind: "idle" }
   | { kind: "checking" }
   | { kind: "available"; version: string }
+  | { kind: "manual-required"; version: string; url: string; message: string }
   | { kind: "not-available"; version: string }
   | { kind: "downloading"; percent: number; transferred: number; total: number }
   | { kind: "downloaded"; version: string }

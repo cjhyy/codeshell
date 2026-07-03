@@ -34,6 +34,22 @@ export function UpdaterBanner() {
     );
   }
 
+  if (status.kind === "manual-required") {
+    return (
+      <div className="flex items-center gap-3 border-b border-border bg-primary/10 px-4 py-2 text-sm">
+        <span className="flex-1">{t("misc.updater.manualRequired", { version: status.version })}</span>
+        <Button size="sm" onClick={() => void window.codeshell.openExternal(status.url)}>{t("misc.updater.openRelease")}</Button>
+        <button
+          className="text-muted-foreground hover:text-foreground"
+          onClick={() => setDismissed(true)}
+          aria-label={t("misc.updater.close")}
+        >
+          ×
+        </button>
+      </div>
+    );
+  }
+
   if (status.kind === "downloading") {
     return (
       <div className="border-b border-border bg-muted px-4 py-2 text-sm text-muted-foreground">
@@ -88,6 +104,9 @@ export function UpdaterSettingsRow() {
         {status.kind === "downloaded" && (
           <Button size="sm" onClick={() => void window.codeshell.installUpdate()}>{t("misc.updater.restartInstall")}</Button>
         )}
+        {status.kind === "manual-required" && (
+          <Button size="sm" onClick={() => void window.codeshell.openExternal(status.url)}>{t("misc.updater.openRelease")}</Button>
+        )}
       </div>
       <p className="text-xs text-muted-foreground">
         {t("misc.updater.feedHint")}
@@ -101,6 +120,7 @@ function describeStatus(s: UpdaterStatus, t: TFunction): string {
     case "idle": return t("misc.updater.statusIdle");
     case "checking": return t("misc.updater.statusChecking");
     case "available": return t("misc.updater.statusAvailable", { version: s.version });
+    case "manual-required": return t("misc.updater.statusManualRequired", { version: s.version });
     case "not-available": return t("misc.updater.statusNotAvailable", { version: s.version });
     case "downloading": return t("misc.updater.statusDownloading", { percent: s.percent });
     case "downloaded": return t("misc.updater.statusDownloaded", { version: s.version });
