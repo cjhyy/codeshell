@@ -7,11 +7,31 @@ const realPlatform = process.platform;
 function setPlatform(p: NodeJS.Platform) {
   Object.defineProperty(process, "platform", { value: p, configurable: true });
 }
+// Neutralize Git Bash auto-discovery so the fallback paths are exercised
+// deterministically regardless of host. On a real Windows CI runner Git for
+// Windows IS preinstalled, so `where git` + the Program Files locations would
+// otherwise resolve a real bash.exe and defeat these fallback assertions.
+// Emptying PATH makes `where` itself un-spawnable (ENOENT → caught → skip);
+// pointing ProgramFiles at a bogus dir makes the well-known locations miss.
+const realPath = process.env.PATH;
+const realProgramFiles = process.env["ProgramFiles"];
+const realProgramFiles86 = process.env["ProgramFiles(x86)"];
+function disableGitBashDiscovery() {
+  process.env.PATH = "";
+  process.env["ProgramFiles"] = "C:\\__no_such_root__";
+  process.env["ProgramFiles(x86)"] = "C:\\__no_such_root_x86__";
+}
 afterEach(() => {
   setPlatform(realPlatform);
   delete process.env.ComSpec;
   delete process.env.SHELL;
   delete process.env.CODE_SHELL_GIT_BASH_PATH;
+  if (realPath === undefined) delete process.env.PATH;
+  else process.env.PATH = realPath;
+  if (realProgramFiles === undefined) delete process.env["ProgramFiles"];
+  else process.env["ProgramFiles"] = realProgramFiles;
+  if (realProgramFiles86 === undefined) delete process.env["ProgramFiles(x86)"];
+  else process.env["ProgramFiles(x86)"] = realProgramFiles86;
   _resetGitBashCache();
 });
 
@@ -98,17 +118,22 @@ describe("resolveGitBash", () => {
 
   test("ignores a non-existent override (falls through)", () => {
     setPlatform("win32");
+    disableGitBashDiscovery();
     _resetGitBashCache();
     process.env.CODE_SHELL_GIT_BASH_PATH = "/no/such/bash.exe";
-    // On this non-Windows host neither `where git` nor the Program Files paths
-    // resolve, so it ends up undefined — proving the bogus override didn't stick.
+    // With git discovery neutralized, neither `where git` nor the Program Files
+    // paths resolve, so it ends up undefined — proving the bogus override didn't
+    // stick. (Real Windows CI preinstalls Git; disableGitBashDiscovery() keeps
+    // this hermetic there too.)
     expect(resolveGitBash()).toBeUndefined();
   });
 });
 
 describe("defaultShellBinary", () => {
-  test("Windows → cmd.exe (or ComSpec)", () => {
+  test("Windows → cmd.exe (or ComSpec) when Git Bash is absent", () => {
     setPlatform("win32");
+    disableGitBashDiscovery();
+    _resetGitBashCache();
     delete process.env.ComSpec;
     expect(defaultShellBinary()).toBe("cmd.exe");
     process.env.ComSpec = "C:\\cmd.exe";
