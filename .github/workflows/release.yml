@@ -99,17 +99,30 @@ jobs:
         working-directory: packages/desktop
         run: bunx electron-builder --publish never
 
+      - name: verify auto-update metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ matrix.artifact }}" in
+            mac) test -f packages/desktop/dist/latest-mac.yml ;;
+            windows) test -f packages/desktop/dist/latest.yml ;;
+            linux) test -f packages/desktop/dist/latest-linux.yml ;;
+          esac
+
       - name: upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: codeshell-${{ matrix.artifact }}
-          # electron-builder writes installers to packages/desktop/dist. Grab the
-          # distributable formats only (skip the unpacked dir, blockmaps, yml).
+          # electron-builder writes installers and update metadata to
+          # packages/desktop/dist. The *.yml files are the updater entry points
+          # (e.g. latest-mac.yml); *.blockmap enables differential downloads.
           path: |
             packages/desktop/dist/*.exe
             packages/desktop/dist/*.dmg
             packages/desktop/dist/*.zip
             packages/desktop/dist/*.AppImage
+            packages/desktop/dist/*.yml
+            packages/desktop/dist/*.blockmap
           if-no-files-found: error
           retention-days: 14
 

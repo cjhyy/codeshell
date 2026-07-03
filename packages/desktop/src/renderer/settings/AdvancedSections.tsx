@@ -96,10 +96,18 @@ function useDebouncedSave(
     [delay],
   );
 
+  const cancel = useCallback(() => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+    pending.current = null;
+  }, []);
+
   // Flush any pending write on unmount (e.g. switching tabs/scopes).
   useEffect(() => () => flush(), [flush]);
 
-  return { schedule, flush };
+  return { schedule, flush, cancel };
 }
 
 /**
@@ -648,6 +656,7 @@ export function GitSection() {
   // inherit PATH. null check status: undefined=unchecked, true/false=probed.
   const [gitPath, setGitPath] = useState("");
   const [gitOk, setGitOk] = useState<boolean | undefined>(undefined);
+  const [gitInstallUrl, setGitInstallUrl] = useState("https://git-scm.com/downloads");
   const [checking, setChecking] = useState(false);
   const { t } = useT();
 
@@ -670,6 +679,7 @@ export function GitSection() {
         const r = await window.codeshell.checkGit();
         if (!cancelled) {
           setGitOk(r.available);
+          if (r.installUrl) setGitInstallUrl(r.installUrl);
           if (r.available) await applyDetectedGitPath(r.path);
         }
       } catch {
@@ -681,7 +691,7 @@ export function GitSection() {
     return () => { cancelled = true; };
   }, []);
 
-  const { schedule: scheduleGitPath, flush: flushGitPath } = useDebouncedSave((value) =>
+  const { schedule: scheduleGitPath, flush: flushGitPath, cancel: cancelGitPath } = useDebouncedSave((value) =>
     writeSettings("user", { git: { path: value } }),
   );
 
@@ -692,13 +702,16 @@ export function GitSection() {
     await writeSettings("user", { git: { path: detected } });
   };
 
-  const checkGit = async () => {
+  const checkGit = async (pathOverride?: string) => {
+    const pathToCheck = pathOverride ?? gitPath;
     setChecking(true);
     try {
-      flushGitPath();
-      await writeSettings("user", { git: { path: gitPath } });
+      if (pathOverride === undefined) flushGitPath();
+      else cancelGitPath();
+      await writeSettings("user", { git: { path: pathToCheck } });
       const r = await window.codeshell.checkGit();
       setGitOk(r.available);
+      if (r.installUrl) setGitInstallUrl(r.installUrl);
       if (r.available) await applyDetectedGitPath(r.path);
     } catch {
       setGitOk(false);
@@ -712,9 +725,8 @@ export function GitSection() {
     if (!picked) return;
     setGitPath(picked);
     setGitOk(undefined);
-    await writeSettings("user", { git: { path: picked } });
     // 选完立刻验证这个路径到底是不是能用的 git,免得用户选错文件还以为成了。
-    await checkGit();
+    await checkGit(picked);
   };
 
   const update = <K extends keyof GitPrefs>(key: K, value: GitPrefs[K]) => {
@@ -733,26 +745,36 @@ export function GitSection() {
           title={t("settingsX.adv.gitPathTitle")}
           help={t("settingsX.adv.gitPathHelp")}
           control={
-            <div className="flex items-center gap-2">
-              <input
-                className="rounded-sm border bg-transparent px-2 py-1.5 text-sm"
-                value={gitPath}
-                placeholder={t("settingsX.adv.gitPathPlaceholder")}
-                onChange={(e) => {
-                  setGitPath(e.target.value);
-                  setGitOk(undefined);
-                  scheduleGitPath(e.target.value);
-                }}
-                onBlur={flushGitPath}
-              />
-              <Button size="sm" variant="outline" onClick={() => void pickGit()}>
-                {t("settingsX.adv.pick")}
-              </Button>
-              <Button size="sm" variant="outline" disabled={checking} onClick={() => void checkGit()}>
-                {checking ? t("settingsX.adv.checking") : t("settingsX.adv.check")}
-              </Button>
-              {gitOk === true && <span className="text-xs text-status-ok">{t("settingsX.adv.gitAvailable")}</span>}
-              {gitOk === false && <span className="text-xs text-status-err">{t("settingsX.adv.gitNotFound")}</span>}
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <input
+                  className="rounded-sm border bg-transparent px-2 py-1.5 text-sm"
+                  value={gitPath}
+                  placeholder={t("settingsX.adv.gitPathPlaceholder")}
+                  onChange={(e) => {
+                    setGitPath(e.target.value);
+                    setGitOk(undefined);
+                    scheduleGitPath(e.target.value);
+                  }}
+                  onBlur={flushGitPath}
+                />
+                <Button size="sm" variant="outline" onClick={() => void pickGit()}>
+                  {t("settingsX.adv.pick")}
+                </Button>
+                <Button size="sm" variant="outline" disabled={checking} onClick={() => void checkGit()}>
+                  {checking ? t("settingsX.adv.checking") : t("settingsX.adv.check")}
+                </Button>
+                {gitOk === true && <span className="text-xs text-status-ok">{t("settingsX.adv.gitAvailable")}</span>}
+                {gitOk === false && <span className="text-xs text-status-err">{t("settingsX.adv.gitNotFound")}</span>}
+              </div>
+              {gitOk === false && (
+                <span className="max-w-xl text-xs text-muted-foreground">
+                  {t("settingsX.adv.gitInstallHint")}{" "}
+                  <a className="underline" href={gitInstallUrl} target="_blank" rel="noreferrer">
+                    {t("settingsX.adv.gitDownload")}
+                  </a>
+                </span>
+              )}
             </div>
           }
         />

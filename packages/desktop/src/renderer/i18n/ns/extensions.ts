@@ -50,7 +50,7 @@ export const extensions = {
         removeAction: "移除市场",
         refreshFailedTitle: "刷新失败",
         gitMissingBold: "未检测到 Git。",
-        gitMissingPrefix: "安装/更新插件市场需要 Git。请从 ",
+        gitMissingPrefix: "安装/更新插件市场需要 Git。Windows 上请安装 Git for Windows(包含 Git Bash)。请从 ",
         gitMissingSuffix:
           " 安装后重启;若已安装但仍提示(常见于 Windows 的 PATH 问题),可在 设置 里填写 ",
         gitMissingTail: " 指向 git 可执行文件。",
@@ -312,7 +312,7 @@ export const extensions = {
         removeAction: "Remove marketplace",
         refreshFailedTitle: "Failed to refresh",
         gitMissingBold: "Git not detected.",
-        gitMissingPrefix: "Installing/updating plugin marketplaces requires Git. Install it from ",
+        gitMissingPrefix: "Installing/updating plugin marketplaces requires Git. On Windows, install Git for Windows (includes Git Bash). Install it from ",
         gitMissingSuffix:
           " and restart. If it is already installed but still flagged (common with PATH issues on Windows), set ",
         gitMissingTail: " in Settings to point at the git executable.",

@@ -789,7 +789,7 @@ export interface CodeshellApi {
    * Is a usable git binary available (on PATH, or the configured `git.path`)?
    * Marketplace install needs git; the UI uses this to prompt up front.
    */
-  checkGit(): Promise<{ available: boolean; path?: string }>;
+  checkGit(): Promise<{ available: boolean; path?: string; installUrl?: string; message?: string }>;
   /**
    * Voice input (听写): transcribe recorded audio → text. Resolves the
    * configured (or OpenAI-fallback) STT provider in main. `error:"no-audio-provider"`

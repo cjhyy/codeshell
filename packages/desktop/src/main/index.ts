@@ -178,6 +178,8 @@ import {
   refreshMarketplaceForUi,
   installPluginForUi,
   installLocalPluginForUi,
+  gitDownloadUrl,
+  gitInstallGuidance,
 } from "./marketplace-service.js";
 import {
   listCapabilities,
@@ -1705,7 +1707,13 @@ ipcMain.handle("git:check", async () => {
   await applyGitPathFromSettings();
   const available = isGitAvailable();
   const path = available ? resolveGitPath() ?? undefined : undefined;
-  return { available, ...(path ? { path } : {}) };
+  const installUrl = gitDownloadUrl();
+  return {
+    available,
+    installUrl,
+    ...(path ? { path } : {}),
+    ...(!available ? { message: gitInstallGuidance({ includeUrl: false }) } : {}),
+  };
 });
 
 // ─── Voice input (speech-to-text / 听写) ───

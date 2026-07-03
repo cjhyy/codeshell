@@ -22,6 +22,7 @@ interface Props {
 type Marketplace = Awaited<
   ReturnType<typeof window.codeshell.listMarketplaces>
 >[number];
+type GitCheckResult = Awaited<ReturnType<typeof window.codeshell.checkGit>>;
 
 const FORMAT_BADGE: Record<
   Marketplace["format"],
@@ -63,7 +64,7 @@ export function MarketList({ cwd, onInstalled }: Props) {
   const [refreshing, setRefreshing] = useState<Set<string>>(new Set());
   // Marketplace install shells out to git; probe up front so we can warn before
   // the user hits a clone failure. null = not yet checked.
-  const [gitOk, setGitOk] = useState<boolean | null>(null);
+  const [gitCheck, setGitCheck] = useState<GitCheckResult | null>(null);
 
   const retry = () => setReloadKey((k) => k + 1);
 
@@ -72,10 +73,10 @@ export function MarketList({ cwd, onInstalled }: Props) {
     window.codeshell
       .checkGit()
       .then((r) => {
-        if (alive) setGitOk(r.available);
+        if (alive) setGitCheck(r);
       })
       .catch(() => {
-        if (alive) setGitOk(null);
+        if (alive) setGitCheck(null);
       });
     return () => {
       alive = false;
@@ -175,11 +176,11 @@ export function MarketList({ cwd, onInstalled }: Props) {
   if (markets === null) return <div className="p-4 text-sm text-muted-foreground">{t("ext.common.loading")}</div>;
 
   const gitBanner =
-    gitOk === false ? (
+    gitCheck?.available === false ? (
       <div className="mb-3 rounded-md border border-status-warn/40 bg-status-warn/10 px-3 py-2 text-xs text-foreground">
         <span className="font-medium">{t("ext.market.gitMissingBold")}</span> {t("ext.market.gitMissingPrefix")}
         <a
-          href="https://git-scm.com/downloads"
+          href={gitCheck.installUrl ?? "https://git-scm.com/downloads"}
           target="_blank"
           rel="noreferrer"
           className="underline"

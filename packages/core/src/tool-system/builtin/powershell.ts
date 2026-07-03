@@ -13,7 +13,10 @@ import { safeSpawn } from "../../runtime/safe-spawn.js";
 export const powershellToolDef: ToolDefinition = {
   name: "PowerShell",
   description:
-    "Execute PowerShell commands. Available on Windows and cross-platform where PowerShell Core is installed.",
+    "Execute PowerShell commands. Use only when the user explicitly asks for PowerShell " +
+    "or the task requires PowerShell-specific cmdlets, Windows APIs, registry access, " +
+    "or .ps1 behavior. For ordinary shell/git/package/test commands, prefer Bash " +
+    "(Git Bash on Windows when available).",
   inputSchema: {
     type: "object",
     properties: {

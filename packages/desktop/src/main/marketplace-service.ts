@@ -29,6 +29,29 @@ import {
 } from "@cjhyy/code-shell-core";
 
 /**
+ * Platform-aware Git download URL for user-facing setup guidance.
+ */
+export function gitDownloadUrl(platform: NodeJS.Platform = process.platform): string {
+  if (platform === "win32") return "https://git-scm.com/download/win";
+  if (platform === "darwin") return "https://git-scm.com/download/mac";
+  if (platform === "linux") return "https://git-scm.com/download/linux";
+  return "https://git-scm.com/downloads";
+}
+
+export function gitInstallGuidance(opts: { includeUrl?: boolean } = {}): string {
+  const includeUrl = opts.includeUrl !== false;
+  const platformNote =
+    process.platform === "win32"
+      ? "Windows 上建议安装 Git for Windows,它会同时提供 git.exe 和 Git Bash。"
+      : "请安装 Git 后重启应用。";
+  return (
+    `未找到 Git。安装/更新插件市场需要 Git。${platformNote}` +
+    (includeUrl ? `下载: ${gitDownloadUrl()}。` : "") +
+    "若已安装但仍报此错,请在 设置 → Git 可执行文件路径 填写 git.path 指向 git 可执行文件。"
+  );
+}
+
+/**
  * Turn core's machine-readable git errors into a friendly, actionable message.
  * `GIT_NOT_FOUND:` is emitted by gitOps when no git binary is reachable — the
  * most common first-run snag (git not installed, or a GUI launch that didn't
@@ -37,10 +60,7 @@ import {
 function humanizeGitError(error: string | undefined): string | undefined {
   if (!error) return error;
   if (error.startsWith("GIT_NOT_FOUND")) {
-    return (
-      "未找到 Git。安装插件市场需要 Git:请从 https://git-scm.com/downloads 安装后重启;" +
-      "若已安装但仍报此错(常见于 Windows 的 PATH 问题),可在 设置 → 填写 git.path 指向 git 可执行文件。"
-    );
+    return gitInstallGuidance();
   }
   return error;
 }

@@ -7,6 +7,9 @@
 // native addon and keeps it resolvable from node_modules at runtime.
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
+import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
 import type { WebContents } from "electron";
 import { dlog } from "./desktop-logger.js";
 
@@ -41,17 +44,95 @@ function loadPty(): NodePty {
   return nodePty;
 }
 
-/** Resolve the login shell, mirroring Codex: $SHELL, else /bin/zsh on darwin. */
-function resolveShell(): string {
+let gitBashCache: string | null | undefined;
+let powershellCache: string | null | undefined;
+
+function isBashLike(shellPath: string): boolean {
+  return /(^|[\\/])(bash|sh)(\.exe)?$/i.test(shellPath);
+}
+
+/**
+ * Best-effort locate Git for Windows' bash.exe. This is for the interactive
+ * desktop terminal only. The Bash and PowerShell execution tools stay separate:
+ * Bash should use Git Bash on Windows, while PowerShell commands belong to the
+ * dedicated PowerShell tool.
+ */
+export function resolveGitBashForPty(): string | undefined {
+  if (process.platform !== "win32") return undefined;
+  if (gitBashCache !== undefined) return gitBashCache ?? undefined;
+
+  const override = process.env.CODE_SHELL_GIT_BASH_PATH?.trim();
+  if (override && existsSync(override)) return (gitBashCache = override);
+
+  const candidates: string[] = [];
+  try {
+    const out = execFileSync("where", ["git"], { encoding: "utf8", timeout: 3000 });
+    const gitExe = out.split(/\r?\n/).find((line) => line.trim().toLowerCase().endsWith("git.exe"));
+    if (gitExe) {
+      const gitRoot = dirname(dirname(gitExe.trim()));
+      candidates.push(join(gitRoot, "bin", "bash.exe"));
+    }
+  } catch {
+    // Git isn't on PATH, or `where` itself is unavailable. Try default installs.
+  }
+
+  const pf = process.env.ProgramFiles ?? "C:\\Program Files";
+  const pf86 = process.env["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)";
+  candidates.push(join(pf, "Git", "bin", "bash.exe"));
+  candidates.push(join(pf86, "Git", "bin", "bash.exe"));
+
+  const found = candidates.find((candidate) => existsSync(candidate));
+  return (gitBashCache = found ?? null) ?? undefined;
+}
+
+function resolvePowerShellForPty(): string | undefined {
+  if (process.platform !== "win32") return undefined;
+  if (powershellCache !== undefined) return powershellCache ?? undefined;
+
+  const override = process.env.CODE_SHELL_POWERSHELL_PATH?.trim();
+  if (override && existsSync(override)) return (powershellCache = override);
+
+  try {
+    const out = execFileSync("where", ["powershell.exe"], { encoding: "utf8", timeout: 3000 });
+    const found = out.split(/\r?\n/).find((line) => line.trim().toLowerCase().endsWith("powershell.exe"));
+    if (found) return (powershellCache = found.trim());
+  } catch {
+    // Fall through to the standard Windows PowerShell location / executable name.
+  }
+
+  const systemRoot = process.env.SystemRoot ?? process.env.windir ?? "C:\\Windows";
+  const candidate = join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+  if (existsSync(candidate)) return (powershellCache = candidate);
+
+  powershellCache = null;
+  return undefined;
+}
+
+export function _resetPtyGitBashCache(): void {
+  gitBashCache = undefined;
+  powershellCache = undefined;
+}
+
+/** Resolve the login shell, mirroring Codex on POSIX and preferring Git Bash on Windows. */
+export function resolveShell(): string {
   // Windows: $SHELL is a POSIX concept and virtually never set; if a stray
   // unix value leaked in (e.g. from a Git-Bash env) it points at a path that
-  // doesn't exist on the host. Prefer COMSPEC/powershell and ignore $SHELL.
+  // doesn't exist on the host. Prefer Git Bash for a POSIX-like terminal.
+  // Without it, PowerShell is a more capable interactive fallback than cmd;
+  // cmd remains the final always-present option.
   if (process.platform === "win32") {
-    return process.env.COMSPEC?.trim() || "powershell.exe";
+    return resolveGitBashForPty() ?? resolvePowerShellForPty() ?? process.env.COMSPEC?.trim() ?? "cmd.exe";
   }
   const fromEnv = process.env.SHELL?.trim();
   if (fromEnv) return fromEnv;
   return process.platform === "darwin" ? "/bin/zsh" : "/bin/bash";
+}
+
+export function shellArgs(shellPath: string): string[] {
+  if (process.platform === "win32") {
+    return isBashLike(shellPath) ? ["--login", "-i"] : [];
+  }
+  return ["-il"];
 }
 
 function buildEnv(): Record<string, string> {
@@ -109,7 +190,7 @@ export function ptyStart(wc: WebContents, opts: PtyStartOpts): { pid: number } {
   }
   const shell = resolveShell();
   // Login + interactive so the user gets their normal prompt/aliases.
-  const args = process.platform === "win32" ? [] : ["-il"];
+  const args = shellArgs(shell);
   const cwd = opts.cwd && opts.cwd.length > 0 ? opts.cwd : homedir();
   const pty = loadPty().spawn(shell, args, {
     name: "xterm-256color",
