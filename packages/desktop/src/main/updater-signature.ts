@@ -6,7 +6,11 @@ export function releaseUrlForVersion(version: string): string {
   return `${RELEASE_TAG_BASE_URL}/${encodeURIComponent(tag)}`;
 }
 
-export function macSignatureTextLooksAdHoc(text: string): boolean {
+export function macSignatureNeedsManualInstall(text: string): boolean {
+  if (/^\s*designated => identifier "com\.cjhyy\.codeshell"\s*$/m.test(text)) {
+    return false;
+  }
+
   return (
     /^\s*Signature=adhoc\s*$/m.test(text) ||
     /^\s*TeamIdentifier=not set\s*$/m.test(text) ||

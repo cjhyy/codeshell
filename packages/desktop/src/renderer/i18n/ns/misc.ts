@@ -4,7 +4,7 @@ export const misc = {
     misc: {
       updater: {
         downloaded: "新版本 {version} 已下载完成。",
-        manualRequired: "发现新版本 {version}。当前 macOS 构建未使用 Developer ID 签名,需要手动下载安装。",
+        manualRequired: "发现新版本 {version}。当前 macOS 安装包使用旧的 cdhash ad-hoc 签名,需要手动下载安装一次。",
         restartInstall: "重启并安装",
         openRelease: "打开下载页",
         download: "下载",
@@ -19,7 +19,7 @@ export const misc = {
         statusIdle: "尚未检查",
         statusChecking: "正在检查…",
         statusAvailable: "发现新版本 {version}",
-        statusManualRequired: "发现新版本 {version},需要手动安装",
+        statusManualRequired: "发现新版本 {version},需要手动过渡安装",
         statusNotAvailable: "已是最新 ({version})",
         statusDownloading: "下载中 {percent}%",
         statusDownloaded: "新版本 {version} 已下载",
@@ -98,7 +98,7 @@ export const misc = {
     misc: {
       updater: {
         downloaded: "Version {version} has finished downloading.",
-        manualRequired: "Version {version} is available. This macOS build is not Developer ID signed, so install it manually.",
+        manualRequired: "Version {version} is available. This macOS install uses the old cdhash ad-hoc signature, so install this transition manually once.",
         restartInstall: "Restart and install",
         openRelease: "Open download page",
         download: "Download",
@@ -113,7 +113,7 @@ export const misc = {
         statusIdle: "Not checked yet",
         statusChecking: "Checking…",
         statusAvailable: "Found version {version}",
-        statusManualRequired: "Found version {version}, manual install required",
+        statusManualRequired: "Found version {version}, manual transition install required",
         statusNotAvailable: "Up to date ({version})",
         statusDownloading: "Downloading {percent}%",
         statusDownloaded: "Version {version} downloaded",

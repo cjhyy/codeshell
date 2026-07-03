@@ -230,8 +230,9 @@ jobs:
 
             **安装包签名说明**:
             - Windows (.exe / nsis):SmartScreen 会拦,点「更多信息 → 仍要运行」。
-            - macOS 未配置 Developer ID 签名密钥时,应用内自动安装不可用;请下载 .dmg 手动覆盖安装。
-            - macOS 如已配置 Developer ID + notarization secrets,应用内自动更新可直接安装。
+            - macOS 未配置 Developer ID 签名密钥时,产物会使用固定 requirement 的 ad-hoc 签名。
+            - 从旧 cdhash ad-hoc 版本升级到固定 requirement 版本时,需要下载 .dmg 手动覆盖安装一次;之后固定 requirement 版本之间可走应用内更新。
+            - macOS 如已配置 Developer ID + notarization secrets,会使用正式签名/公证,应用内自动更新可直接安装。
 
             产物按平台分目录上传。node-pty 已按各平台 Electron ABI 重编。
           files: artifacts/**/*

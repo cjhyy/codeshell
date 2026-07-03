@@ -17,7 +17,7 @@ import { spawnSync } from "node:child_process";
 import { BrowserWindow, app } from "electron";
 import { autoUpdater } from "electron-updater";
 import { dlog } from "./desktop-logger.js";
-import { macSignatureTextLooksAdHoc, releaseUrlForVersion } from "./updater-signature.js";
+import { macSignatureNeedsManualInstall, releaseUrlForVersion } from "./updater-signature.js";
 
 export type UpdaterStatus =
   | { kind: "idle" }
@@ -52,20 +52,34 @@ function isMacManualInstallRequired(): boolean {
   if (process.env.CODESHELL_FORCE_MAC_AUTO_UPDATE === "1") return false;
   if (macManualInstallRequired !== undefined) return macManualInstallRequired;
 
-  const result = spawnSync("codesign", ["-dv", "--verbose=4", app.getPath("exe")], {
+  const packagedAppPath = app.getAppPath();
+  const appBundleMarker = ".app/";
+  const appBundleIndex = packagedAppPath.indexOf(appBundleMarker);
+  const appPath = appBundleIndex >= 0
+    ? packagedAppPath.slice(0, appBundleIndex + ".app".length)
+    : app.getPath("exe");
+  const detail = spawnSync("codesign", ["-dv", "--verbose=4", appPath], {
     encoding: "utf8",
   });
-  const text = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+  const requirement = spawnSync("codesign", ["-d", "-r-", appPath], {
+    encoding: "utf8",
+  });
+  const text = [
+    detail.stdout ?? "",
+    detail.stderr ?? "",
+    requirement.stdout ?? "",
+    requirement.stderr ?? "",
+  ].join("\n");
   if (!text.trim()) {
     dlog("main", "updater.mac_signature.unknown", {
-      status: result.status ?? null,
-      error: result.error?.message,
+      status: detail.status ?? null,
+      error: detail.error?.message,
     });
     macManualInstallRequired = false;
     return macManualInstallRequired;
   }
 
-  macManualInstallRequired = macSignatureTextLooksAdHoc(text);
+  macManualInstallRequired = macSignatureNeedsManualInstall(text);
   dlog("main", "updater.mac_signature.detected", {
     manualInstallRequired: macManualInstallRequired,
   });
