@@ -327,6 +327,8 @@ export interface CodeshellApi {
       cwd?: string;
       sessionId?: string;
       permissionMode?: "plan" | "default" | "acceptEdits" | "auto" | "bypassPermissions";
+      /** Model pool key to apply before this turn starts. */
+      model?: string;
       planMode?: boolean;
       /**
        * Goal mode: when set, the engine runs loop-until-done — on each

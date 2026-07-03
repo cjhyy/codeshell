@@ -1979,7 +1979,6 @@ function App() {
       model: bucketModel,
       text,
       opts,
-      configure: window.codeshell.configure,
       run: window.codeshell.run,
     }).then((r) => {
         // Belt-and-braces: clear busy for THIS run's bucket even if the

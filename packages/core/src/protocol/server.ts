@@ -402,6 +402,23 @@ export class AgentServer {
       return;
     }
 
+    if (params.model !== undefined) {
+      if (typeof params.model !== "string" || params.model.length === 0) {
+        this.transport.send(
+          createErrorResponse(req.id, ErrorCodes.InvalidParams, "model must be a non-empty string"),
+        );
+        return;
+      }
+      try {
+        session.requestModelSwitch(params.model);
+      } catch (err) {
+        this.transport.send(
+          createErrorResponse(req.id, ErrorCodes.InvalidParams, (err as Error).message),
+        );
+        return;
+      }
+    }
+
     if (typeof params.planMode === "boolean") {
       session.engine.setPlanMode(params.planMode);
     }
@@ -502,6 +519,23 @@ export class AgentServer {
       // setRuntimeBypass / setInPlanMode singletons were removed in T4/T5;
       // Engine.setPermissionMode now keeps this.permissionMode + this.planMode
       // in sync and tools read them via ToolContext.permissionMode/planMode.
+    }
+
+    if (params.model !== undefined) {
+      if (typeof params.model !== "string" || params.model.length === 0) {
+        this.transport.send(
+          createErrorResponse(req.id, ErrorCodes.InvalidParams, "model must be a non-empty string"),
+        );
+        return;
+      }
+      try {
+        this.legacyEngine!.switchModel(params.model);
+      } catch (err) {
+        this.transport.send(
+          createErrorResponse(req.id, ErrorCodes.InvalidParams, (err as Error).message),
+        );
+        return;
+      }
     }
 
     this.running = true;

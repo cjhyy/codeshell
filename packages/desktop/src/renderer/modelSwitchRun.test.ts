@@ -2,37 +2,40 @@ import { describe, expect, it } from "bun:test";
 import { runAfterModelSwitch } from "./modelSwitchRun";
 
 describe("runAfterModelSwitch", () => {
-  it("waits for the session model switch before starting the run", async () => {
+  it("starts run synchronously with the model so a cold desktop worker can spawn", () => {
     const calls: string[] = [];
-    let releaseConfigure!: () => void;
 
-    const configureDone = new Promise<void>((resolve) => {
-      releaseConfigure = resolve;
-    });
-
-    const runPromise = runAfterModelSwitch({
+    void runAfterModelSwitch({
       sessionId: "s1",
       model: "openrouter",
       text: "hello",
       opts: { sessionId: "s1" },
-      configure: async () => {
-        calls.push("configure:start");
-        await configureDone;
-        calls.push("configure:end");
-      },
-      run: async () => {
+      run: async (_text, opts) => {
         calls.push("run");
+        expect(opts).toEqual({ sessionId: "s1", model: "openrouter" });
+        return new Promise(() => {});
+      },
+    });
+
+    expect(calls).toEqual(["run"]);
+  });
+
+  it("passes the pinned model on the run request", async () => {
+    const calls: string[] = [];
+
+    const result = await runAfterModelSwitch({
+      sessionId: "s1",
+      model: "openrouter",
+      text: "hello",
+      opts: { sessionId: "s1" },
+      run: async (_text, opts) => {
+        calls.push("run");
+        expect(opts).toEqual({ sessionId: "s1", model: "openrouter" });
         return { ok: true };
       },
     });
 
-    await Promise.resolve();
-    expect(calls).toEqual(["configure:start"]);
-
-    releaseConfigure();
-    const result = await runPromise;
-
-    expect(calls).toEqual(["configure:start", "configure:end", "run"]);
+    expect(calls).toEqual(["run"]);
     expect(result).toEqual({ ok: true });
   });
 
@@ -44,11 +47,9 @@ describe("runAfterModelSwitch", () => {
       model: null,
       text: "hello",
       opts: { sessionId: "s1" },
-      configure: async () => {
-        calls.push("configure");
-      },
-      run: async () => {
+      run: async (_text, opts) => {
         calls.push("run");
+        expect(opts).toEqual({ sessionId: "s1" });
         return { ok: true };
       },
     });

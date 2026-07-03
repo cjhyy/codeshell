@@ -49,6 +49,7 @@ export interface AgentRunOptions {
   cwd?: string;
   sessionId?: string;
   permissionMode?: PermissionMode;
+  model?: string;
   planMode?: boolean;
 }
 

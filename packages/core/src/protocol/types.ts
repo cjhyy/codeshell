@@ -87,6 +87,12 @@ export interface RunParams {
    */
   permissionMode?: PermissionMode;
   /**
+   * Per-run model pool key. Applied after the session exists and before the
+   * turn starts, so cold desktop runs don't need a separate pre-run configure
+   * request to a worker that has not been spawned yet.
+   */
+  model?: string;
+  /**
    * Workspace trust for this run's project (`cwd`), asserted by the host
    * (desktop main from its trust-store) — never by the renderer. When false,
    * the engine strips dangerous fields from the project's own .code-shell
