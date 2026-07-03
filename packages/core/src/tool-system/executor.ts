@@ -28,6 +28,8 @@ import { PLAN_MODE_ALLOWED_TOOLS } from "./plan-mode-allowlist.js";
 import { enforcePathPolicyWithApproval, type PathOperation } from "./path-policy.js";
 import { parsePatch } from "./builtin/apply-patch/parser.js";
 import { BUILTIN_TOOL_GUARDS } from "./builtin/index.js";
+import { COMPLETE_GOAL_TOOL_NAME } from "./builtin/complete-goal.js";
+import { CANCEL_GOAL_TOOL_NAME } from "./builtin/cancel-goal.js";
 
 type Logger = typeof rootLogger;
 
@@ -145,6 +147,17 @@ export class ToolExecutor {
         id: call.id,
         toolName: call.toolName,
         error: `Tool ${call.toolName} is disabled by this project's capability override and cannot be used. Do NOT retry this tool call.`,
+        isError: true,
+      };
+    }
+    if (
+      (call.toolName === COMPLETE_GOAL_TOOL_NAME || call.toolName === CANCEL_GOAL_TOOL_NAME) &&
+      this.toolCtx?.toolVisibility?.hasGoal !== true
+    ) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        error: `Tool ${call.toolName} is only available while an active goal is present. Do NOT retry this tool call unless a goal is active.`,
         isError: true,
       };
     }

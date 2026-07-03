@@ -96,6 +96,7 @@
 # beta1 延后（非 bug，记 release notes）
 
 - ⚪️ **browser-login 硬化**:① 已修(per-window `randomUUID()` nonce);② `persist:login-*` 分区只清 cookie,localStorage/IndexedDB/SW 残留 → 改非持久分区或 `clearStorageData`;③ BrowserHost phase-2 webview 收编未预留类型/未抽共享 helper。
+- ⚪️ **内部浏览器 Network 可视化/请求复用 UX**:当前内置浏览器面板看不到 Network,调试网页/站点操作时只能手点 UI,很多流程本可通过抓请求后模拟更快完成。方向:给浏览器面板提供 Network 观察能力(请求列表/过滤/查看 payload/response/copy as fetch 或转工具调用),让用户/agent 可在授权上下文内复用请求而不是反复操作页面。注意隐私与凭证边界,默认只对当前 session/browser partition 可见。
 - ⚪️ **JSON-Schema 导出未接线**:`schema-export.ts` 无 caller → 宿主启动写 `~/.code-shell/settings.schema.json` 或 release notes 注明不暴露。
 - ⚪️ **模型 catalog/user override 落地规则硬化**:更新 `model-fact-finder` / `EditModelCatalog` 流程——新增模型前先查内置/merged catalog 是否已有 provider(如 `openrouter`);若已有,优先用 user catalog patch/merge 补 `modelPresets` 而不是新建孤立 catalog id。合并优先级应为 user/project > built-in;数组按 key 合并(`modelPresets.value`,`params.name`)而不是整条替换。写入后校验现有 `modelConnections`:若 `connection.model` 命中新 preset 但 `catalogId` 仍指旧 provider,应提示或迁移,避免 `supportsVision`/context/params 能力断链。
 - ⚪️ **i18n 收尾（增量）**:`"新对话"` 哨兵常量化;非 React helper 硬编码 localStorage key 应 import KEY;mobile(~149 处)单独接同套 i18n。

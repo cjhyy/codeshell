@@ -47,6 +47,8 @@ export interface ComposerOptions {
    * dispatch gate.
    */
   skillAllowlist?: string[];
+  /** Volatile goal state used only in the trailing dynamic-context message. */
+  goalToolState?: { hasGoal: boolean };
   /**
    * settings.memories.maxAge (days). When > 0, memories whose file mtime is
    * older than this are dropped from the injected memory context (TODO 8.1).
@@ -163,14 +165,22 @@ export class PromptComposer {
     // prefix — so a memory change (extraction / recall usage++ / approve) never
     // re-bills the cached prefix. See buildUserContextMessage for the rationale.
     const memoryContext = this.getMemoryContext();
+    const goalToolContext = this.buildGoalToolContext();
 
-    const parts = [skillsListing, gitStatus, memoryContext].filter(Boolean);
+    const parts = [skillsListing, gitStatus, memoryContext, goalToolContext].filter(Boolean);
     if (parts.length === 0) return null;
 
     return {
       role: "user",
       content: `<system-reminder>\n${parts.join("\n\n")}\n</system-reminder>`,
     };
+  }
+
+  private buildGoalToolContext(): string {
+    if (!this.options.goalToolState) return "";
+    return this.options.goalToolState.hasGoal
+      ? "当前存在 active goal。只有在目标完全完成时才可调用 complete_goal；只有用户明确要求取消/停止/放弃该目标时才可调用 cancel_goal。"
+      : "当前没有 active goal。不要调用 complete_goal/cancel_goal；如果误调用，系统会拒绝。";
   }
 
   invalidateCache(sectionName?: string): void {

@@ -28,7 +28,7 @@ describe("builtin tool availability guards", () => {
     expect(BUILTIN_TOOL_GUARDS.has("WebSearch")).toBe(true);
     expect(BUILTIN_TOOL_GUARDS.has("GenerateImage")).toBe(true);
     expect(BUILTIN_TOOL_GUARDS.has("GenerateVideo")).toBe(true);
-    expect(typeof BUILTIN_TOOL_GUARDS.get("WebSearch")!("/x")).toBe("boolean");
+    expect(typeof BUILTIN_TOOL_GUARDS.get("WebSearch")!({ cwd: "/x", hasGoal: false })).toBe("boolean");
   });
 
   test("default preset includes GenerateVideo (regression: was missing → tool invisible)", () => {
@@ -39,14 +39,11 @@ describe("builtin tool availability guards", () => {
     expect(names).toContain("GenerateVideo");
   });
 
-  test("goal-control tools are hidden unless a goal is active", () => {
-    const completeGoalGuard = BUILTIN_TOOL_GUARDS.get("complete_goal");
-    const cancelGoalGuard = BUILTIN_TOOL_GUARDS.get("cancel_goal");
-
-    expect(completeGoalGuard?.({ cwd: "/x", hasGoal: false })).toBe(false);
-    expect(cancelGoalGuard?.({ cwd: "/x", hasGoal: false })).toBe(false);
-    expect(completeGoalGuard?.({ cwd: "/x", hasGoal: true })).toBe(true);
-    expect(cancelGoalGuard?.({ cwd: "/x", hasGoal: true })).toBe(true);
+  test("goal-control tools are not schema-visibility gated", () => {
+    // Goal state changes per session/turn. Keep these tool schemas stable for
+    // prompt-cache friendliness; runtime execution is gated in ToolExecutor.
+    expect(BUILTIN_TOOL_GUARDS.has("complete_goal")).toBe(false);
+    expect(BUILTIN_TOOL_GUARDS.has("cancel_goal")).toBe(false);
   });
 
   test("ungated tools have no guard entry (so they're always visible)", () => {

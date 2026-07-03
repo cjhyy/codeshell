@@ -49,6 +49,44 @@ describe("PromptComposer dynamic context (skills out of system prefix)", () => {
     expect(msg!.content).toContain("</system-reminder>");
   });
 
+  it("puts volatile goal-tool guidance in the trailing dynamic-context message", async () => {
+    const withoutGoal = await new PromptComposer({
+      cwd,
+      model: "test-model",
+      goalToolState: { hasGoal: false },
+    }).buildDynamicContextMessage();
+    expect(withoutGoal!.role).toBe("user");
+    expect(withoutGoal!.content).toContain("当前没有 active goal");
+    expect(withoutGoal!.content).toContain("不要调用 complete_goal/cancel_goal");
+
+    const withGoal = await new PromptComposer({
+      cwd,
+      model: "test-model",
+      goalToolState: { hasGoal: true },
+    }).buildDynamicContextMessage();
+    expect(withGoal!.content).toContain("当前存在 active goal");
+    expect(withGoal!.content).toContain("complete_goal");
+    expect(withGoal!.content).toContain("cancel_goal");
+  });
+
+  it("returns a trailing dynamic message with goal guidance even when it is the only dynamic context", async () => {
+    const bare = mkdtempSync(join(tmpdir(), "cs-goal-only-"));
+    invalidateSkillCache();
+    try {
+      const msg = await new PromptComposer({
+        cwd: bare,
+        model: "test-model",
+        goalToolState: { hasGoal: false },
+      }).buildDynamicContextMessage();
+      expect(msg).not.toBeNull();
+      expect(msg!.role).toBe("user");
+      expect(msg!.content).toContain("当前没有 active goal");
+      expect(msg!.content).not.toContain("demo-skill");
+    } finally {
+      rmSync(bare, { recursive: true, force: true });
+    }
+  });
+
   it("returns null when there are no skills and no git status", async () => {
     // A cwd with no skills and not a git repo → nothing dynamic to inject.
     const bare = mkdtempSync(join(tmpdir(), "cs-bare-"));

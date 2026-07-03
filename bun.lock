@@ -27,11 +27,11 @@
     },
     "packages/cdp": {
       "name": "@cjhyy/code-shell-cdp",
-      "version": "0.6.0-rc.3",
+      "version": "0.6.0-rc.4",
     },
     "packages/core": {
       "name": "@cjhyy/code-shell-core",
-      "version": "0.6.0-rc.3",
+      "version": "0.6.0-rc.4",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.39.0",
         "@modelcontextprotocol/sdk": "^1.12.1",
@@ -54,7 +54,7 @@
     },
     "packages/desktop": {
       "name": "@cjhyy/code-shell-desktop",
-      "version": "0.6.0-rc.3",
+      "version": "0.6.0-rc.4",
       "dependencies": {
         "@cjhyy/code-shell-core": "workspace:*",
         "node-pty": "^1.1.0",
@@ -109,7 +109,7 @@
     },
     "packages/tui": {
       "name": "@cjhyy/code-shell-tui",
-      "version": "0.6.0-rc.3",
+      "version": "0.6.0-rc.4",
       "bin": {
         "code-shell": "./dist/cli/main.js",
       },

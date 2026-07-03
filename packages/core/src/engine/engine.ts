@@ -1589,6 +1589,13 @@ export class Engine {
       disabledPlugins,
       skillAllowlist: this.config.skillAllowlist,
       memoriesMaxAgeDays: this.readMemoriesConfig()?.maxAge,
+      goalToolState: {
+        hasGoal:
+          this.config.isSubAgent !== true &&
+          (normalizeGoal(options?.goal) !== undefined ||
+            session.state.activeGoal !== undefined ||
+            normalizeGoal(this.config.goal) !== undefined),
+      },
     });
 
     // Connect MCP servers (if configured and not already connected).

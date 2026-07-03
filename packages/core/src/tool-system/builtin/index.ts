@@ -775,16 +775,14 @@ export const BUILTIN_TOOL_GUARDS: Map<string, BuiltinToolGuard> = new Map([
   [webSearchToolDef.name, (ctx) => isWebSearchAvailable(ctx.cwd)],
   [generateImageToolDef.name, (ctx) => isGenerateImageAvailable(ctx.cwd)],
   [generateVideoToolDef.name, (ctx) => isGenerateVideoAvailable(ctx.cwd)],
-  [completeGoalToolDef.name, (ctx) => ctx.hasGoal],
-  [cancelGoalToolDef.name, (ctx) => ctx.hasGoal],
   // UseCredential is hidden until at least one credential exists — keeps it out
   // of the tool list (and the context) for the common no-credentials case,
   // matching the spec's "quiet when empty" intent (true ToolSearch-deferral for
   // builtins isn't wired in the engine).
-  [useCredentialToolDef.name, isUseCredentialAvailable],
+  [useCredentialToolDef.name, (ctx) => isUseCredentialAvailable(ctx.cwd)],
   // InjectCredential hidden until ≥1 cookie credential exists (browser injection
   // is cookie-only). Also degrades at call time if no browser bridge is wired.
-  [injectCredentialToolDef.name, isInjectCredentialAvailable],
+  [injectCredentialToolDef.name, (ctx) => isInjectCredentialAvailable(ctx.cwd)],
 ]);
 
 /** UseCredential is available when the cwd's CredentialStore has ≥1 credential. */
