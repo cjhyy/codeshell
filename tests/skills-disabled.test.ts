@@ -351,7 +351,7 @@ describe("settings.disabledSkills — skillTool", () => {
   });
 });
 
-describe("settings.disabledSkills — PromptComposer skills section", () => {
+describe("settings.disabledSkills — PromptComposer dynamic skills section", () => {
   let projectRoot: string;
   let fakeHome: string;
   let originalHome: string | undefined;
@@ -372,7 +372,7 @@ describe("settings.disabledSkills — PromptComposer skills section", () => {
     else delete process.env.HOME;
   });
 
-  it("omits disabled skills from the assembled system prompt", async () => {
+  it("omits disabled skills from the dynamic context prompt", async () => {
     const userBase = join(fakeHome, ".code-shell", "skills");
     makeSkill(userBase, "alpha", "alpha description text", "alpha body");
     makeSkill(userBase, "beta", "beta description text", "beta body");
@@ -382,7 +382,7 @@ describe("settings.disabledSkills — PromptComposer skills section", () => {
       model: "test-model",
       disabledSkills: ["alpha"],
     });
-    const prompt = await composer.buildSystemPrompt([]);
+    const prompt = (await composer.buildDynamicContextMessage())?.content ?? "";
 
     // The exact format of the listing is owned by buildSkillListing; we
     // only assert that the disabled name (and its description) does not
@@ -401,12 +401,12 @@ describe("settings.disabledSkills — PromptComposer skills section", () => {
       cwd: projectRoot,
       model: "test-model",
     });
-    const prompt = await composer.buildSystemPrompt([]);
+    const prompt = (await composer.buildDynamicContextMessage())?.content ?? "";
     expect(prompt).toContain("alpha");
     expect(prompt).toContain("beta");
   });
 
-  it("omits every skill from a disabled plugin in the system prompt", async () => {
+  it("omits every skill from a disabled plugin in the dynamic context prompt", async () => {
     // Install a fake plugin with two skills; disabledPlugins:
     // ["fake-plugin"] removes both. We assert by namespace prefix so
     // the test stays robust if buildSkillListing formatting changes.
@@ -445,7 +445,7 @@ describe("settings.disabledSkills — PromptComposer skills section", () => {
         model: "test-model",
         disabledPlugins: ["fake-plugin"],
       });
-      const prompt = await composer.buildSystemPrompt([]);
+      const prompt = (await composer.buildDynamicContextMessage())?.content ?? "";
       expect(prompt).not.toContain("fake-plugin:foo");
       expect(prompt).not.toContain("fake-plugin:bar");
     } finally {

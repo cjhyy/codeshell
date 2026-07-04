@@ -22,6 +22,9 @@ import { claudeAdapter as adp, codexAdapter } from "./agent-adapter.js";
 import type { AgentAdapter } from "./agent-adapter.js";
 import { probeCli } from "./cc-capability.js";
 
+const RUN_REAL_AGENT_TESTS = process.env.CODESHELL_RUN_REAL_AGENT_TESTS === "1";
+const describeRealAgent = RUN_REAL_AGENT_TESTS ? describe : describe.skip;
+
 describe("runAgentOnce promptViaStdin（用 cat 做可移植子进程,不依赖 claude/codex）", () => {
   // A fake adapter that drives `cat`: with promptViaStdin the driver must pipe
   // the prompt to the child's stdin, and `cat` echoes it back on stdout. This
@@ -38,7 +41,7 @@ describe("runAgentOnce promptViaStdin（用 cat 做可移植子进程,不依赖 
   }, 15_000);
 });
 
-describe("runAgentOnce（真机集成,无 CLI 自动跳过）", () => {
+describeRealAgent("runAgentOnce（真机集成,需 CODESHELL_RUN_REAL_AGENT_TESTS=1）", () => {
   it("spawns claude and returns a sessionId + final text", async () => {
     const avail = await probeCli("claude");
     if (!avail.available) { console.log("claude 未安装,跳过集成测试"); return; }
@@ -76,7 +79,7 @@ describe("runAgentOnce（真机集成,无 CLI 自动跳过）", () => {
   }, 120_000);
 });
 
-describe("runAgentOnce codex（真机集成,无 codex 自动跳过）", () => {
+describeRealAgent("runAgentOnce codex（真机集成,需 CODESHELL_RUN_REAL_AGENT_TESTS=1）", () => {
   it("spawns codex exec, feeds the prompt over stdin, returns thread_id + final text", async () => {
     const avail = await probeCli("codex");
     if (!avail.available) { console.log("codex 未安装,跳过集成测试"); return; }

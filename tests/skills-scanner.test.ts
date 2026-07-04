@@ -257,19 +257,19 @@ describe("scanSkills - memoization", () => {
     expect(a).toBe(b);
   });
 
-  it("invalidateSkillCache forces a re-scan that picks up new skills", () => {
+  it("invalidateSkillCache forces a re-scan that picks up edited skill content", () => {
     const userBase = join(fakeHome, ".code-shell", "skills");
-    makeSkillDir(userBase, "first", "description: 1", "b");
+    const skillDir = makeSkillDir(userBase, "first", "description: 1", "old body");
     const before = scanSkills(projectRoot);
-    expect(before.find((s) => s.name === "second")).toBeUndefined();
+    expect(before.find((s) => s.name === "first")?.content).toBe("old body");
 
-    makeSkillDir(userBase, "second", "description: 2", "b");
+    writeFileSync(join(skillDir, "SKILL.md"), "---\ndescription: 2\n---\nnew body");
     const stillCached = scanSkills(projectRoot);
-    expect(stillCached.find((s) => s.name === "second")).toBeUndefined();
+    expect(stillCached.find((s) => s.name === "first")?.content).toBe("old body");
 
     invalidateSkillCache();
     const fresh = scanSkills(projectRoot);
-    expect(fresh.find((s) => s.name === "second")).toBeDefined();
+    expect(fresh.find((s) => s.name === "first")?.content).toBe("new body");
   });
 
   it("treats a changed HOME as a fresh cache entry", () => {

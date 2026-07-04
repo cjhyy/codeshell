@@ -3,10 +3,15 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { writeTool } from "../packages/core/src/tool-system/builtin/write.js";
-import { editTool } from "../packages/core/src/tool-system/builtin/edit.js";
 import { readTool } from "../packages/core/src/tool-system/builtin/read.js";
-import { globTool } from "../packages/core/src/tool-system/builtin/glob.js";
-import { grepTool } from "../packages/core/src/tool-system/builtin/grep.js";
+import { ToolExecutor } from "../packages/core/src/tool-system/executor.js";
+import { ToolRegistry } from "../packages/core/src/tool-system/registry.js";
+import {
+  HeadlessApprovalBackend,
+  PermissionClassifier,
+} from "../packages/core/src/tool-system/permission.js";
+import { HookRegistry } from "../packages/core/src/hooks/registry.js";
+import type { ToolContext } from "../packages/core/src/tool-system/context.js";
 
 /**
  * Task 6 — verify the file tools actually consult PathPolicy when called
@@ -17,8 +22,27 @@ import { grepTool } from "../packages/core/src/tool-system/builtin/grep.js";
  * tools touch (`.cwd`). The cast is intentional — only `cwd` matters here.
  */
 
-function ctx(cwd: string): { cwd: string } {
-  return { cwd };
+function ctx(cwd: string): ToolContext {
+  return {
+    cwd,
+    planMode: false,
+    askUser: async () => "拒绝",
+  } as unknown as ToolContext;
+}
+
+async function runTool(
+  toolName: string,
+  args: Record<string, unknown>,
+  cwd: string,
+): Promise<string> {
+  const executor = new ToolExecutor(
+    new ToolRegistry({ builtinTools: [toolName] }),
+    new PermissionClassifier([], "default", new HeadlessApprovalBackend("approve-all")),
+    new HookRegistry(),
+  );
+  executor.setContext(ctx(cwd));
+  const result = await executor.executeSingle({ id: `${toolName}-1`, toolName, args });
+  return result.error ?? result.result ?? "";
 }
 
 describe("Write tool — PathPolicy wired", () => {
@@ -39,7 +63,7 @@ describe("Write tool — PathPolicy wired", () => {
   test("in-workspace write succeeds", async () => {
     const target = join(workspace, "ok.txt");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const out = await writeTool({ file_path: target, content: "hi" }, ctx(workspace) as any);
+    const out = await runTool("Write", { file_path: target, content: "hi" }, workspace);
     expect(out).toContain("Successfully wrote");
     expect(existsSync(target)).toBe(true);
   });
@@ -47,7 +71,7 @@ describe("Write tool — PathPolicy wired", () => {
   test("outside-workspace write is refused with policy message", async () => {
     const target = join(outside, "leaked.txt");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const out = await writeTool({ file_path: target, content: "hi" }, ctx(workspace) as any);
+    const out = await runTool("Write", { file_path: target, content: "hi" }, workspace);
     expect(out.toLowerCase()).toMatch(/approval|denied|blocked|outside|path policy/);
     // Sanity: the file must NOT have been written.
     expect(existsSync(target)).toBe(false);
@@ -56,7 +80,7 @@ describe("Write tool — PathPolicy wired", () => {
   test("write to a .env file inside workspace is denied", async () => {
     const target = join(workspace, ".env");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const out = await writeTool({ file_path: target, content: "SECRET=x" }, ctx(workspace) as any);
+    const out = await runTool("Write", { file_path: target, content: "SECRET=x" }, workspace);
     expect(out).toContain("blocked by path policy");
     expect(existsSync(target)).toBe(false);
   });
@@ -99,10 +123,10 @@ describe("Edit tool — PathPolicy wired", () => {
   test("in-workspace edit succeeds", async () => {
     const target = join(workspace, "x.txt");
     writeFileSync(target, "hello world");
-    const out = await editTool(
+    const out = await runTool(
+      "Edit",
       { file_path: target, old_string: "world", new_string: "there" },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ctx(workspace) as any,
+      workspace,
     );
     expect(out).toContain("Successfully");
   });
@@ -110,10 +134,10 @@ describe("Edit tool — PathPolicy wired", () => {
   test("outside-workspace edit is refused", async () => {
     const target = join(outside, "x.txt");
     writeFileSync(target, "hello world");
-    const out = await editTool(
+    const out = await runTool(
+      "Edit",
       { file_path: target, old_string: "world", new_string: "there" },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ctx(workspace) as any,
+      workspace,
     );
     expect(out.toLowerCase()).toMatch(/approval|blocked|outside|path policy/);
     // File must be untouched.
@@ -141,7 +165,7 @@ describe("Read tool — PathPolicy wired", () => {
     const target = join(workspace, "ok.txt");
     writeFileSync(target, "hello");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const out = await readTool({ file_path: target }, ctx(workspace) as any);
+    const out = await runTool("Read", { file_path: target }, workspace);
     expect(out).toContain("hello");
   });
 
@@ -149,7 +173,7 @@ describe("Read tool — PathPolicy wired", () => {
     const target = join(outside, "leaked.txt");
     writeFileSync(target, "secret-contents");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const out = await readTool({ file_path: target }, ctx(workspace) as any);
+    const out = await runTool("Read", { file_path: target }, workspace);
     expect(out.toLowerCase()).toMatch(/approval|outside|path policy/);
     // Critical: the body must NOT appear in the error message.
     expect(out).not.toContain("secret-contents");
@@ -182,7 +206,7 @@ describe("Glob tool — PathPolicy wired", () => {
 
   test("Glob with outside-workspace path is refused", async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const out = await globTool({ pattern: "*.txt", path: outside }, ctx(workspace) as any);
+    const out = await runTool("Glob", { pattern: "*.txt", path: outside }, workspace);
     expect(out.toLowerCase()).toMatch(/approval|outside|path policy/);
     // Must not have enumerated the files — names must not leak.
     expect(out).not.toContain("a.txt");
@@ -207,11 +231,7 @@ describe("Grep tool — PathPolicy wired", () => {
   });
 
   test("Grep with outside-workspace path is refused", async () => {
-    const out = await grepTool(
-      { pattern: "MAGIC_TOKEN_SHOULD_NOT_LEAK", path: outside },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ctx(workspace) as any,
-    );
+    const out = await runTool("Grep", { pattern: "MAGIC_TOKEN_SHOULD_NOT_LEAK", path: outside }, workspace);
     expect(out.toLowerCase()).toMatch(/approval|outside|path policy/);
     expect(out).not.toContain("MAGIC_TOKEN_SHOULD_NOT_LEAK");
   });

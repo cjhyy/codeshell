@@ -12,15 +12,27 @@ let cwd: string;
 let prevHome: string | undefined;
 
 const settings = {
-  activeKey: "primary",
-  providers: [
-    { key: "p", kind: "openai", baseUrl: "https://primary.example/v1", apiKey: "pk" },
-    { key: "f", kind: "openai", baseUrl: "https://flash.example/v1", apiKey: "fk" },
+  credentials: [
+    { id: "primary-key", catalogId: "openai", baseUrl: "https://primary.example/v1", apiKey: "pk" },
+    { id: "flash-key", catalogId: "openai", baseUrl: "https://flash.example/v1", apiKey: "fk" },
   ],
-  models: [
-    { key: "primary", provider: "openai", providerKey: "p", model: "primary-model", baseUrl: "https://primary.example/v1", apiKey: "pk" },
-    { key: "flash", provider: "openai", providerKey: "f", model: "flash-model", baseUrl: "https://flash.example/v1", apiKey: "fk" },
+  modelConnections: [
+    {
+      id: "primary",
+      catalogId: "openai",
+      tag: "text",
+      model: "gpt-5.5",
+      credentialId: "primary-key",
+    },
+    {
+      id: "flash",
+      catalogId: "openai",
+      tag: "text",
+      model: "gpt-4o",
+      credentialId: "flash-key",
+    },
   ],
+  defaults: { text: "primary" },
 };
 
 beforeEach(() => {
@@ -61,6 +73,7 @@ describe("sub-agent model resync", () => {
       cwd,
       settingsScope: "full",
     });
-    expect(top.getConfig().llm.model).toBe("primary-model");
+    expect(top.getConfig().llm.model).toBe("gpt-5.5");
+    expect(top.getConfig().llm.baseUrl).toBe("https://primary.example/v1");
   });
 });

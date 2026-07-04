@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,6 +19,21 @@ function makeProjectWithSettings(settings: object): string {
 }
 
 describe("Engine — settings.hooks → shell-runner wrappers", () => {
+  let fakeHome: string;
+  let originalHome: string | undefined;
+
+  beforeEach(() => {
+    originalHome = process.env.HOME;
+    fakeHome = mkdtempSync(join(tmpdir(), "engine-settings-hooks-home-"));
+    process.env.HOME = fakeHome;
+  });
+
+  afterEach(() => {
+    rmSync(fakeHome, { recursive: true, force: true });
+    if (originalHome !== undefined) process.env.HOME = originalHome;
+    else delete process.env.HOME;
+  });
+
   it("registers one wrapper handler per settings entry", () => {
     const cwd = makeProjectWithSettings({
       hooks: [
@@ -36,9 +51,7 @@ describe("Engine — settings.hooks → shell-runner wrappers", () => {
       const reg = engine.getHookRegistry();
       expect(reg.countHandlers("pre_tool_use")).toBe(1);
       expect(reg.countHandlers("post_tool_use")).toBe(1);
-      // on_session_start gets +1 from the built-in superpowers handler;
-      // shell-runner wrapper raises it to 2.
-      expect(reg.countHandlers("on_session_start")).toBe(2);
+      expect(reg.countHandlers("on_session_start")).toBe(1);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -104,14 +117,21 @@ describe("Engine — settings.hooks → shell-runner wrappers", () => {
         llm: { provider: "openai", model: "test", apiKey: "test" },
         cwd,
         sessionStorageDir: join(cwd, ".code-shell", "sessions"),
+        hooks: [
+          {
+            event: "on_session_start",
+            handler: async () => ({}),
+            name: "config:on_session_start",
+          },
+        ],
       });
       const reg = engine.getHookRegistry();
-      // 1 built-in superpowers handler + 1 settings shell wrapper.
+      // 1 config hook + 1 settings shell wrapper.
       expect(reg.countHandlers("on_session_start")).toBe(2);
       // Remove the settings hook entirely.
       writeSettings(cwd, {});
       engine.reloadHooks();
-      // Settings wrapper gone; built-in superpowers handler survives.
+      // Settings wrapper gone; non-settings config hook survives.
       expect(reg.countHandlers("on_session_start")).toBe(1);
     } finally {
       rmSync(cwd, { recursive: true, force: true });

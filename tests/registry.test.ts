@@ -170,9 +170,11 @@ describe("SettingsManager", () => {
     try {
       const sm = new SettingsManager(tmpDir);
       const s = sm.get();
-      expect(s.model.provider).toBeTruthy();
+      expect(s.agent.preset).toBeTruthy();
       expect(s.permissions.defaultMode).toBeTruthy();
       expect(s.context.maxTokens).toBeGreaterThan(0);
+      expect(Array.isArray(s.modelConnections)).toBe(true);
+      expect(Array.isArray(s.credentials)).toBe(true);
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }

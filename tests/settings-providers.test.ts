@@ -12,12 +12,11 @@ describe("settings schema — providers", () => {
     expect(s.providers[0].kind).toBe("deepseek");
   });
 
-  it("rejects unknown kind", () => {
-    expect(() =>
-      validateSettings({
-        providers: [{ key: "x", kind: "nope", baseUrl: "https://x", apiKey: "k" }],
-      }),
-    ).toThrow();
+  it("accepts custom provider kinds", () => {
+    const s = validateSettings({
+      providers: [{ key: "x", kind: "custom-gateway", baseUrl: "https://x", apiKey: "k" }],
+    });
+    expect(s.providers[0].kind).toBe("custom-gateway");
   });
 
   it("accepts new models[] with providerKey", () => {

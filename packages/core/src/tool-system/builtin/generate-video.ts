@@ -117,6 +117,7 @@ export const generateVideoToolDef: ToolDefinition = {
 let injectedProvider: VideoProvider | null = null;
 export function __setVideoProviderForTests(p: VideoProvider | null): void {
   injectedProvider = p;
+  availCache.clear();
 }
 
 /**
@@ -132,6 +133,7 @@ export function isGenerateVideoAvailable(
   cwd: string = process.cwd(),
   nowMs: number = Date.now(),
 ): boolean {
+  if (injectedProvider) return true;
   const hit = availCache.get(cwd);
   if (hit && nowMs - hit.at < AVAIL_TTL_MS) return hit.value;
   let value = false;

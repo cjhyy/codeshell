@@ -19,7 +19,7 @@ function capturingSpawner(): { spawner: SubAgentSpawner; captured: SubAgentSpawn
     describe: () => ({ cwd: "/tmp", permissionMode: "acceptEdits" }),
     spawn: async (req) => {
       captured.push(req);
-      return `ran ${req.agentId}`;
+      return { text: `ran ${req.agentId}`, sessionId: req.agentId };
     },
   };
   return { spawner, captured };

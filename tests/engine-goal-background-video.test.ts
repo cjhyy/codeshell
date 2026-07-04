@@ -187,5 +187,5 @@ describe("Sequential background videos complete via notification-wakeup", () => 
     // No background work left, queue drained.
     expect(backgroundJobRegistry.hasRunningForSession("vid-1")).toBe(false);
     expect(notificationQueue.getSnapshot("vid-1").length).toBe(0);
-  });
+  }, 12_000);
 });

@@ -9,6 +9,13 @@ function ctxWith(signal: AbortSignal): ToolContext {
   return { signal, cwd: process.cwd() } as unknown as ToolContext;
 }
 
+function textOf(result: unknown): string {
+  if (typeof result === "object" && result !== null && "result" in result) {
+    return String((result as { result?: unknown }).result ?? "");
+  }
+  return typeof result === "string" ? result : "";
+}
+
 describe("A2 — Bash honors ctx.signal abort", () => {
   it("returns 'aborted by signal' when signal fires mid-flight", async () => {
     const controller = new AbortController();
@@ -16,7 +23,7 @@ describe("A2 — Bash honors ctx.signal abort", () => {
     const promise = bashTool({ command: "sleep 10", timeout: 60_000 }, ctx);
     setTimeout(() => controller.abort(), 200);
     const result = await promise;
-    expect(result).toMatch(/aborted by signal/i);
+    expect(textOf(result)).toMatch(/aborted by signal/i);
   });
 
   it("returns immediately when signal is already aborted", async () => {
@@ -26,7 +33,7 @@ describe("A2 — Bash honors ctx.signal abort", () => {
     const start = Date.now();
     const result = await bashTool({ command: "sleep 10" }, ctx);
     const elapsed = Date.now() - start;
-    expect(result).toMatch(/aborted before starting/);
+    expect(textOf(result)).toMatch(/aborted before starting/);
     expect(elapsed).toBeLessThan(500);
   });
 
@@ -41,7 +48,7 @@ describe("A2 — Bash honors ctx.signal abort", () => {
       { command: "echo hello" },
       ctxWith(controller.signal),
     );
-    expect(result.trim()).toBe("hello");
+    expect(textOf(result).trim()).toBe("hello");
   });
 });
 
