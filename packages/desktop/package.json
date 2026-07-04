@@ -50,6 +50,10 @@
       {
         "from": "resources/known-marketplaces-seed.json",
         "to": "packages/desktop/resources/known-marketplaces-seed.json"
+      },
+      {
+        "from": "resources/recommended-marketplaces.json",
+        "to": "packages/desktop/resources/recommended-marketplaces.json"
       }
     ],
     "directories": {

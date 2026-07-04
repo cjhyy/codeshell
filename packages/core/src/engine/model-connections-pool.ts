@@ -61,6 +61,7 @@ export function modelEntriesFromConnections(
     const e: ModelEntry = {
       key: inst.id,
       provider: clientProvider(entry),
+      providerKind: entry.adapterKind,
       model: resolved.model,
       baseUrl: resolved.baseUrl,
       needsKey: resolved.needsKey,

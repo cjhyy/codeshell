@@ -1266,14 +1266,24 @@ export class AgentServer {
         break;
       }
       case "compact": {
-        if (!engine) {
+        const compactEngine =
+          this.chatManager && typeof params.sessionId === "string"
+            ? this.chatManager.get(params.sessionId)?.engine
+            : engine;
+        if (!compactEngine) {
           this.transport.send(
-            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for compact query"),
+            createErrorResponse(
+              req.id,
+              this.chatManager && params.sessionId ? ErrorCodes.SessionClosed : ErrorCodes.InternalError,
+              this.chatManager && params.sessionId
+                ? `No such live session: ${params.sessionId}`
+                : "No engine available for compact query",
+            ),
           );
           return;
         }
         try {
-          const result = engine.forceCompact();
+          const result = compactEngine.forceCompact();
           this.transport.send(
             createResponse(req.id, {
               type: "compact",

@@ -81,15 +81,19 @@
 
 # 发布关键路径（beta1，必须用户亲自做）
 
-> 原 `TODO-beta1.md` 合并进来。代码侧 review 确认 bug 已修;剩下是验证 + 打包 + 发布,AI 无法代做。
+> 原 `TODO-beta1.md` 合并进来。代码侧 review 确认 bug 已修;剩下是当前改动收口 + 发布信息校验。
 
-- 🔴 **真机冒烟:弹窗登录抓 cookie 全链路** — 登 YouTube → 保存 → 切换账号 → AI 取用。唯一没真机验过的核心新功能。关联 `project_browser_login_window`。
-- 🔴 **桌面 App 冒烟**（本机,发前必跑）:装包→Gatekeeper 右键打开→主界面→子代理列表非空→市场有源→配 OpenAI 跑一轮→切模型→默认 agent 跑一次→生成一张图→关掉重开能恢复会话。
-- 🔴 **全量打包构建**:`bun run build` + `cd packages/desktop && bun run dist`（electron-builder,未签名,已移除 CSC_IDENTITY_AUTO_DISCOVERY），确认 main 进程 / node-pty ABI / asarUnpack 没崩。
-- 🔴 **`git push`** 未推的 commit 到 origin/main。
+## 当前缺口（先做）
+
+- 🔴 **收口当前未提交改动**:确认 model catalog/user override/model pool、safe-spawn/grep、TUI 消息渲染/store 这批改动是否进 beta1;若进,先跑相关测试,再 commit。
+  - 建议测试:`bun test packages/core/src/model-catalog` / `bun test packages/core/src/tool-system/builtin/edit-model-catalog.test.ts` / `bun test packages/core/src/engine/model-connections-pool.test.ts` / `bun test packages/tui/src/ui/store-notify.test.ts`。
+- 🟡 **todo 索引整理**:`docs/todo/README.md` 还没登记 `core-harness-and-plugin-panels.md`、`desktop-streaming-markdown-autoscroll-plan.md`、`session-cumulative-cache-usage-plan.md`;已完成的计划后续移到 `docs/archive/`。
+
 - 🟡 **npm 包**（若本轮要发）:**必用 `bun publish --tag rc` 不是 `npm publish`**（workspace:* 解析）;**发后必真跑一次 bin**（`code-shell --version`）。
 - 🟡 **i18n 全语言点一遍**:中/英切换走主流程,确认无未翻译泄漏 / 无 localStorage 报错。
 - ✅ **Windows P8 真机冒烟**（2026-07-04 用户确认通过）:Windows 装包级检查覆盖安装/启动、marketplace/skill seed、Git/Bash、权限弹窗、终端面板、浏览器/session 隔离、模型连接、重启恢复等,未发现明显问题。关联 `project_windows_port`。
+- ✅ **插件安装队列/状态可见性**（2026-07-05 已做）:main 持有安装 job registry,状态含 queued/installing/installed/failed;renderer 市场首页/详情页拉取并订阅全局安装列表。切走再回来仍显示等待/安装中/失败/已安装,失败可重试,完成后刷新插件/能力状态。
+- ✅ **插件市场推荐列表**（2026-07-05 已做）:市场页新增推荐列表,默认从固定 GitHub JSON (`packages/desktop/resources/recommended-marketplaces.json`) 读取;失败时走缓存/内置推荐兜底。推荐项支持显示来源/简介/format/官方标记/插件数量(已添加时),并可一键添加。
 
 ---
 
@@ -98,7 +102,6 @@
 - ⚪️ **browser-login 硬化**:① 已修(per-window `randomUUID()` nonce);② `persist:login-*` 分区只清 cookie,localStorage/IndexedDB/SW 残留 → 改非持久分区或 `clearStorageData`;③ BrowserHost phase-2 webview 收编未预留类型/未抽共享 helper。
 - ⚪️ **内部浏览器 Network 可视化/请求复用 UX**:当前内置浏览器面板看不到 Network,调试网页/站点操作时只能手点 UI,很多流程本可通过抓请求后模拟更快完成。方向:给浏览器面板提供 Network 观察能力(请求列表/过滤/查看 payload/response/copy as fetch 或转工具调用),让用户/agent 可在授权上下文内复用请求而不是反复操作页面。注意隐私与凭证边界,默认只对当前 session/browser partition 可见。
 - ⚪️ **JSON-Schema 导出未接线**:`schema-export.ts` 无 caller → 宿主启动写 `~/.code-shell/settings.schema.json` 或 release notes 注明不暴露。
-- ⚪️ **模型 catalog/user override 落地规则硬化**:更新 `model-fact-finder` / `EditModelCatalog` 流程——新增模型前先查内置/merged catalog 是否已有 provider(如 `openrouter`);若已有,优先用 user catalog patch/merge 补 `modelPresets` 而不是新建孤立 catalog id。合并优先级应为 user/project > built-in;数组按 key 合并(`modelPresets.value`,`params.name`)而不是整条替换。写入后校验现有 `modelConnections`:若 `connection.model` 命中新 preset 但 `catalogId` 仍指旧 provider,应提示或迁移,避免 `supportsVision`/context/params 能力断链。
 - ⚪️ **i18n 收尾（增量）**:`"新对话"` 哨兵常量化;非 React helper 硬编码 localStorage key 应 import KEY;mobile(~149 处)单独接同套 i18n。
 
 ---
@@ -106,11 +109,8 @@
 # 大路线图（beta1 不做，留存方向）
 
 - **core 通用化 + 插件面板**（`docs/todo/core-harness-and-plugin-panels.md`,2026-07-02 全仓 review 产出）:① core=无 coding/git 预设的通用 harness——4 个内核 git 触点参数化 / harness-min preset + CI 纯度 smoke / coding pack 外移(git/lsp/review/worktree/cc-orchestrator/quota…);② 插件={UI 面板+能力}——PanelRegistry / manifest `panels` / csplugin:// 沙箱 host / 按 permissions 过滤的 scoped bridge,能力侧 v1 走自带 MCP。**Phase A(工具元数据合一,消灭「加工具改三处」+ PanelRegistry)最小可先做;面板线只依赖 A②,不被 core 改造阻塞**。与 `architecture-debt.md` P1-⑤⑥ 重叠处合并执行。
-- **Cookie Lease**（`docs/browser-cookie-export-design-2026-06-14.md`）:浏览器登录态→CLI 工具受控桥接(按域/按任务/一次性/审批 + 三层清理)。整套未实现。
-- **Workspace / Profile / 数字人**（`docs/workspace-profile-讨论稿.md` v0.5）:base preset + 主指令 + 可移植经验三层 / 可切换 / Team Board。下一步 P3 seedance 手动落地。
+- **Workspace / Profile / 数字人**（`docs/todo/workspace-profile-讨论稿.md` v0.5）:base preset + 主指令 + 可移植经验三层 / 可切换 / Team Board。下一步 P3 seedance 手动落地。
 - **Workspace 数据源绑定**（P4）:资源模型 / link 外部源(Figma/issue/云盘)/ scope 分配。大子系统。
-- **远程控制 / 跨代理编排**（P5）:SSH / 扫码配对 / 远控会话 / 编排 Codex+CC / 安全边界。大子系统。
-- **手机遥控**（低优）:房间续跑 + 手机驱动真 codeshell session;现 mobile 无 Markdown 渲染。
 - **聊天软件接入（channel，参考 OpenClaw）**:微信/Telegram 做成可插拔 channel 前端。要点:① core 保持 channel-agnostic,平台接入做外部插件;② 接入做成一类凭证进 CredentialStore(微信扫码登录 token 存本地,Telegram bot token);③ 扫码微信号绑死为收发身份 + 必配 allowlist + 绑定目标 agent;④ 微信当前只私聊 + 媒体,不支持群聊。未立项。
 - **工程质量 P7**:builtin tools 集成测试(已补 65 例)/ E2E / CI 覆盖率 >60% / 性能 / 文档。
   - **Electron e2e 设施**（playwright 现是孤儿依赖）:用 `_electron` API 驱动真机 app,沉淀 `verifier-electron` 基座。最小落地:`playwright.config.ts` + `e2e/`;`launchApp()` 按 title/URL 抓主窗（**别用 `firstWindow()`,会抓 DevTools 窗**）;第一个用例验浏览器面板;`package.json` 加 `test:e2e`。难点:抓错窗 / webview 嵌套需 `frameLocator` / node-pty 按 Electron ABI 重编 + CI 需 `xvfb-run`。约半天。

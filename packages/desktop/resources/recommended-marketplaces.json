@@ -1,0 +1,29 @@
+{
+  "marketplaces": [
+    {
+      "id": "mimi-plugins",
+      "name": "mimi-plugins",
+      "description": "CodeShell official recommended plugin marketplace.",
+      "reason": "Includes the default skills and commonly used plugins for a fresh setup.",
+      "source": {
+        "source": "github",
+        "repo": "cjhyy/mimi-plugins"
+      },
+      "format": "universal",
+      "official": true,
+      "sort": 10
+    },
+    {
+      "id": "official",
+      "name": "official",
+      "description": "Community plugin marketplace for Superpowers / Claude Code format plugins.",
+      "reason": "Useful for compatibility with the Claude Code plugin ecosystem.",
+      "source": {
+        "source": "github",
+        "repo": "obra/superpowers-marketplace"
+      },
+      "format": "claude-code",
+      "sort": 20
+    }
+  ]
+}

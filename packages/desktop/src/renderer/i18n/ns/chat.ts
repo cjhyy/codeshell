@@ -34,6 +34,13 @@ export const chat = {
         cachedHint: "已排队 {count} 条，将在下一步插入当前轮",
         imagesPlaceholder: "[图片 ×{count}]",
       },
+      compact: {
+        running: "当前会话正在运行,请先停止或等这一轮结束后再压缩。",
+        noSession: "当前还没有可压缩的会话。",
+        done: "已压缩上下文:{before} → {after},节省 {saved} tokens。",
+        unchanged: "上下文已足够紧凑,当前约 {tokens} tokens。",
+        failed: "压缩失败:{error}",
+      },
       queue: {
         heading: "后续变更",
         guideAllAria: "打断当前轮，并把全部后续变更合并发送",
@@ -201,6 +208,13 @@ export const chat = {
         runningAgents: "{count} sub-agent(s) running in the background…",
         cachedHint: "{count} message(s) queued; will be inserted into the current turn at the next step",
         imagesPlaceholder: "[Images ×{count}]",
+      },
+      compact: {
+        running: "This conversation is running. Stop or wait for this turn to finish before compacting.",
+        noSession: "There is no active conversation to compact yet.",
+        done: "Context compacted: {before} → {after}, saved {saved} tokens.",
+        unchanged: "Context is already compact enough, currently about {tokens} tokens.",
+        failed: "Compaction failed: {error}",
       },
       queue: {
         heading: "Follow-up changes",

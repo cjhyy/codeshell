@@ -9,6 +9,7 @@
 import { logger } from "@cjhyy/code-shell-core";
 
 const storeLog = logger.child({ cat: "chat-store" });
+const STREAM_DIAG_ON = process.env.CODESHELL_DEBUG_STREAM === "1";
 
 type ChatEntryData =
   | { type: "user"; text: string }
@@ -77,6 +78,7 @@ class ChatStore {
 
   /** Replace all entries (used for clear, resume). */
   setEntries(entries: ChatEntry[]): void {
+    if (entries === this.entries) return;
     this.entries = entries;
     this.notify();
   }
@@ -90,9 +92,20 @@ class ChatStore {
   /** Functional update — same API as setState(fn). */
   update(fn: (prev: ChatEntry[]) => ChatEntry[]): void {
     const before = this.entries.length;
-    const fnStart = process.env.CODESHELL_DEBUG_STREAM !== "0" ? performance.now() : 0;
-    this.entries = fn(this.entries);
-    const fnMs = process.env.CODESHELL_DEBUG_STREAM !== "0" ? performance.now() - fnStart : 0;
+    const fnStart = STREAM_DIAG_ON ? performance.now() : 0;
+    const next = fn(this.entries);
+    const fnMs = STREAM_DIAG_ON ? performance.now() - fnStart : 0;
+    if (Object.is(next, this.entries)) {
+      if (STREAM_DIAG_ON && fnMs > 2) {
+        storeLog.info("debug.chat_store.noop_update", {
+          fnMs: Math.round(fnMs * 10) / 10,
+          entries: before,
+          listeners: this.listeners.size,
+        });
+      }
+      return;
+    }
+    this.entries = next;
     const after = this.entries.length;
     // Debug: track suspicious "still updating after run completed" loops.
     // Counts listener notifications too so we can see render fan-out.
@@ -100,10 +113,10 @@ class ChatStore {
       // eslint-disable-next-line no-console
       console.error(`[chatStore.update] ${before} -> ${after}, listeners=${this.listeners.size}`);
     }
-    const notifyStart = process.env.CODESHELL_DEBUG_STREAM !== "0" ? performance.now() : 0;
+    const notifyStart = STREAM_DIAG_ON ? performance.now() : 0;
     this.notify();
-    const notifyMs = process.env.CODESHELL_DEBUG_STREAM !== "0" ? performance.now() - notifyStart : 0;
-    if (process.env.CODESHELL_DEBUG_STREAM !== "0" && (fnMs > 2 || notifyMs > 5)) {
+    const notifyMs = STREAM_DIAG_ON ? performance.now() - notifyStart : 0;
+    if (STREAM_DIAG_ON && (fnMs > 2 || notifyMs > 5)) {
       storeLog.info("debug.chat_store.update", {
         fnMs: Math.round(fnMs * 10) / 10,
         notifyMs: Math.round(notifyMs * 10) / 10,
@@ -123,21 +136,32 @@ class ChatStore {
    * suffix — keeps the store transition consistent without persisting noise.
    */
   commitInterruptedStreaming(suffix: string): void {
-    this.entries = this.entries
-      .filter((e) => e.type !== "thinking")
-      .map((e) => {
-        if (e.type !== "assistant_text" || !e.streaming) return e;
+    let changed = false;
+    const next: ChatEntry[] = [];
+    for (const e of this.entries) {
+      if (e.type === "thinking") {
+        changed = true;
+        continue;
+      }
+      if (e.type === "assistant_text" && e.streaming) {
         const hasText = e.text.trim().length > 0;
-        return {
+        next.push({
           ...e,
           streaming: false,
           text: hasText ? e.text + suffix : e.text,
-        };
-      });
+        });
+        changed = true;
+        continue;
+      }
+      next.push(e);
+    }
+    if (!changed) return;
+    this.entries = next;
     this.notify();
   }
 
   clear(): void {
+    if (this.entries.length === 0) return;
     this.entries = [];
     this.notify();
   }

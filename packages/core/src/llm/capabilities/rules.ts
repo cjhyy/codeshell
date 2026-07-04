@@ -200,7 +200,7 @@ export const RULES: ReadonlyArray<CapabilityRule> = [
     // Most modern frontier models on OpenRouter are multimodal; flag the
     // big families explicitly. The catch-all below stays vision=false so
     // older/text-only routes don't get a green checkmark they don't earn.
-    match: /^(?:openai\/(?:gpt-4o|gpt-5|o[1-9])|anthropic\/claude-(?:3|4|opus|sonnet|haiku)|google\/gemini-[2-9]|x-ai\/grok-[4-9]|qwen\/qwen-?vl|meta\/llama-(?:3\.2|4))/i,
+    match: /^~?(?:openai\/(?:gpt-4o|gpt-5|o[1-9])|anthropic\/claude-(?:3|4|opus|sonnet|haiku|fable)|google\/gemini-(?:[2-9]|pro)|x-ai\/grok-[4-9]|qwen\/qwen-?vl|meta\/llama-(?:3\.2|4))/i,
     capability: {
       supportsVision: true,
       reasoning: { kind: "openrouter-reasoning" },

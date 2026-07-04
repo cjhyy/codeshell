@@ -20,6 +20,7 @@ import {
   LayoutTemplate,
   Smartphone,
   MessageSquare,
+  Gauge,
 } from "lucide-react";
 import { TextConnectionsPanel } from "./TextConnectionsPanel";
 import { ModelCatalogPanel } from "./ModelCatalogPanel";
@@ -32,6 +33,7 @@ import { SandboxSection } from "./SandboxSection";
 import { AppearanceSection } from "./AppearanceSection";
 import { CapabilitiesOverviewSection } from "./CapabilitiesOverviewSection";
 import { ConversationSettingsSection } from "./ConversationSettingsSection";
+import { ContextSettingsSection } from "./ContextSettingsSection";
 import {
   ArchivedConversationsSection,
   ConnectionsSection,
@@ -65,6 +67,7 @@ type ModuleId =
   | "environment"
   | "sandbox"
   | "conversation"
+  | "context"
   | "mobile-remote"
   | "archived"
   | "capabilities"
@@ -124,6 +127,7 @@ function buildModuleGroups(t: TFunction): ModuleGroup[] {
         { id: "environment", label: t("settingsX.page.environment"), Icon: Terminal },
         { id: "sandbox", label: t("settingsX.page.sandbox"), Icon: ShieldCheck },
         { id: "conversation", label: t("settingsX.page.conversation"), Icon: MessageSquare },
+        { id: "context", label: t("settingsX.page.context"), Icon: Gauge },
         { id: "mobile-remote", label: t("settingsX.page.mobileRemote"), Icon: Smartphone },
       ],
     },
@@ -291,6 +295,7 @@ export function SettingsPage({
               <SandboxSection repos={repos} />
             )}
             {active === "conversation" && <ConversationSettingsSection />}
+            {active === "context" && <ContextSettingsSection />}
             {active === "mobile-remote" && <MobileRemoteSection />}
             {active === "plugins-skills" && (
               <ExtensionsPage activeRepoPath={activeRepoPath} showDiscover={false} />

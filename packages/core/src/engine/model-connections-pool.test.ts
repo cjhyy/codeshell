@@ -8,6 +8,7 @@
  */
 import { describe, test, it, expect } from "bun:test";
 import { modelEntriesFromConnections } from "./model-connections-pool.js";
+import { ModelPool } from "../llm/model-pool.js";
 import { validateSettings } from "../settings/schema.js";
 import type { CatalogEntry } from "../model-catalog/index.js";
 import type { ModelInstance, Credential } from "../model-catalog/resolve.js";
@@ -25,6 +26,16 @@ const CATALOG: CatalogEntry[] = [
       { value: "gpt-5.5", maxContextTokens: 400000, maxOutputTokens: 128000 },
       { value: "gpt-4o" },
     ],
+  },
+  {
+    id: "openrouter",
+    tag: "text",
+    adapterKind: "openrouter",
+    protocol: "openai-compat",
+    displayName: "OpenRouter",
+    description: "x",
+    defaultBaseUrl: "https://openrouter.ai/api/v1",
+    modelPresets: [{ value: "anthropic/claude-opus-4.8" }],
   },
   {
     id: "anthropic",
@@ -74,6 +85,24 @@ describe("modelEntriesFromConnections", () => {
     const entries = modelEntriesFromConnections(insts, CREDS, CATALOG);
     expect(entries.find((e) => e.key === "o")!.provider).toBe("openai");
     expect(entries.find((e) => e.key === "a")!.provider).toBe("anthropic");
+  });
+
+  test("providerKind comes from the catalog entry for openai-compatible gateways", () => {
+    const insts: ModelInstance[] = [
+      {
+        id: "or",
+        catalogId: "openrouter",
+        tag: "text",
+        model: "anthropic/claude-opus-4.8",
+        credentialId: "openai-acct",
+      },
+    ];
+    const e = modelEntriesFromConnections(insts, CREDS, CATALOG)[0]!;
+    expect(e.provider).toBe("openai");
+    expect(e.providerKind).toBe("openrouter");
+
+    const pool = new ModelPool();
+    expect(pool.toLLMConfig(e).providerKind).toBe("openrouter");
   });
 
   test("connections sharing one credential both get its key", () => {

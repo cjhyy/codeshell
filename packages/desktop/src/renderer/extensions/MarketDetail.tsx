@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAlert } from "../ui/DialogProvider";
 import { useT } from "../i18n/I18nProvider";
 import { notifySettingsChanged } from "../settingsBus";
 import { Puzzle } from "lucide-react";
+import { PluginInstallJobsPanel } from "./PluginInstallJobsPanel";
 
 interface Props {
   cwd: string;
@@ -15,6 +16,9 @@ interface Props {
 type Marketplace = Awaited<
   ReturnType<typeof window.codeshell.loadMarketplace>
 >;
+type PluginInstallJob = Awaited<
+  ReturnType<typeof window.codeshell.listPluginInstallJobs>
+>[number];
 
 export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
   const { t } = useT();
@@ -22,8 +26,9 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [busy, setBusy] = useState<Set<string>>(new Set());
+  const [installJobs, setInstallJobs] = useState<PluginInstallJob[]>([]);
   const alert = useAlert();
+  const seenInstalledJobs = useRef<Set<string>>(new Set());
   // plugin name → installed version (git short SHA or "local"); presence = installed.
   const [installed, setInstalled] = useState<Map<string, string>>(new Map());
 
@@ -64,31 +69,62 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
     };
   }, [cwd, marketName, reloadKey]);
 
+  useEffect(() => {
+    let alive = true;
+    window.codeshell
+      .listPluginInstallJobs()
+      .then((jobs) => {
+        if (alive) setInstallJobs(jobs);
+      })
+      .catch(() => {
+        if (alive) setInstallJobs([]);
+      });
+    const off = window.codeshell.onPluginInstallJobsChanged((jobs) => {
+      if (alive) setInstallJobs(jobs);
+    });
+    return () => {
+      alive = false;
+      off();
+    };
+  }, []);
+
+  useEffect(() => {
+    for (const job of installJobs) {
+      if (job.marketplaceName !== marketName || job.status !== "installed") continue;
+      if (seenInstalledJobs.current.has(job.id)) continue;
+      seenInstalledJobs.current.add(job.id);
+      setInstalled((prev) => new Map(prev).set(job.pluginName, prev.get(job.pluginName) ?? ""));
+      notifySettingsChanged();
+      onInstalled();
+      setReloadKey((k) => k + 1);
+    }
+  }, [installJobs, marketName, onInstalled]);
+
   const install = async (pluginName: string) => {
-    setBusy((prev) => new Set(prev).add(pluginName));
     try {
       const res = await window.codeshell.installPlugin(pluginName, marketName);
       if (!res.ok) {
         void alert({ title: t("ext.market.installFailedTitle"), message: res.error ?? t("ext.market.unknownError") });
         return;
       }
-      // Version unknown until the next listPlugins round-trip — empty string
-      // marks "installed, version pending" (the chip just omits the number).
-      setInstalled((prev) => new Map(prev).set(pluginName, ""));
-      // Hot-reload plugin hooks into already-running sessions (App.tsx →
-      // configure({reloadSettings}) → worker reloadHooks). Skills come for free
-      // via the scanner's per-turn mtime cache key; hooks need this nudge.
-      notifySettingsChanged();
-      onInstalled();
     } catch (e) {
       void alert({ title: t("ext.market.installFailedTitle"), message: String((e as Error)?.message ?? e) });
-    } finally {
-      setBusy((prev) => {
-        const next = new Set(prev);
-        next.delete(pluginName);
-        return next;
-      });
     }
+  };
+
+  const retryInstallJob = async (id: string) => {
+    const res = await window.codeshell.retryPluginInstallJob(id);
+    if (!res.ok) {
+      void alert({ title: t("ext.market.installFailedTitle"), message: res.error ?? t("ext.market.unknownError") });
+    }
+  };
+
+  const buttonLabel = (job: PluginInstallJob | undefined, isInstalled: boolean): string => {
+    if (isInstalled) return t("ext.market.installed");
+    if (job?.status === "queued") return t("ext.market.jobQueued");
+    if (job?.status === "installing") return t("ext.market.installing");
+    if (job?.status === "failed") return t("ext.market.retryInstall");
+    return t("ext.market.install");
   };
 
   if (error)
@@ -113,13 +149,18 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
         </Button>
         <span className="font-semibold">{market.name}</span>
       </div>
+      <PluginInstallJobsPanel
+        jobs={installJobs.filter((job) => job.marketplaceName === marketName)}
+        onRetry={retryInstallJob}
+      />
       {market.plugins.length === 0 ? (
         <div className="p-4 text-sm text-muted-foreground">{t("ext.market.noPlugins")}</div>
       ) : (
         <ul className="space-y-1">
           {market.plugins.map((p) => {
-            const isBusy = busy.has(p.name);
-            const isInstalled = installed.has(p.name);
+            const job = installJobs.find((j) => j.marketplaceName === marketName && j.pluginName === p.name);
+            const isPending = job?.status === "queued" || job?.status === "installing";
+            const isInstalled = installed.has(p.name) || job?.status === "installed";
             const installedVersion = installed.get(p.name);
             return (
               <li key={p.name} className="flex items-center gap-3 rounded-lg border bg-card p-3 text-sm">
@@ -150,10 +191,13 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
                 </span>
                 <Button
                   size="sm"
-                  disabled={isBusy || isInstalled}
-                  onClick={() => void install(p.name)}
+                  disabled={isPending || isInstalled}
+                  onClick={() => {
+                    if (job?.status === "failed") void retryInstallJob(job.id);
+                    else void install(p.name);
+                  }}
                 >
-                  {isInstalled ? t("ext.market.installed") : isBusy ? t("ext.market.installing") : t("ext.market.install")}
+                  {buttonLabel(job, isInstalled)}
                 </Button>
               </li>
             );

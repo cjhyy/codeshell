@@ -34,3 +34,13 @@ describe("capability supportsVision — OpenAI gpt-4o family", () => {
     expect(cap.tokenLimitField).toBe("max_completion_tokens");
   });
 });
+
+describe("capability supportsVision — OpenRouter aliases", () => {
+  it.each([
+    "~anthropic/claude-opus-latest",
+    "~anthropic/claude-sonnet-latest",
+    "~google/gemini-pro-latest",
+  ])("treats %s as vision-capable", (model) => {
+    expect(capabilitiesFor("openrouter", model).supportsVision).toBe(true);
+  });
+});

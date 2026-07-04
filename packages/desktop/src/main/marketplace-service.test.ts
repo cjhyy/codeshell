@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { classifyLocalInstallError } from "./marketplace-service.js";
+import { classifyLocalInstallError, parseRecommendedMarketplaces } from "./marketplace-service.js";
 
 /**
  * Local-install error classification (protects the unsubmitted overwrite UI
@@ -39,5 +39,43 @@ describe("classifyLocalInstallError", () => {
       expect(r.error).toContain("Git");
       expect(r.error).toContain("git-scm.com");
     }
+  });
+});
+
+describe("parseRecommendedMarketplaces", () => {
+  test("accepts the object shape served by the GitHub recommendation list", () => {
+    const list = parseRecommendedMarketplaces({
+      marketplaces: [
+        {
+          id: "mimi",
+          name: "Mimi Plugins",
+          reason: "default recommendation",
+          source: { source: "github", repo: "cjhyy/mimi-plugins" },
+          format: "universal",
+          official: true,
+          sort: 5,
+        },
+      ],
+    });
+    expect(list).toEqual([
+      expect.objectContaining({
+        id: "mimi",
+        name: "Mimi Plugins",
+        reason: "default recommendation",
+        source: { source: "github", repo: "cjhyy/mimi-plugins" },
+        format: "universal",
+        official: true,
+      }),
+    ]);
+  });
+
+  test("derives stable names/ids and drops invalid entries", () => {
+    const list = parseRecommendedMarketplaces([
+      { source: { source: "github", repo: "owner/cool-market" } },
+      { name: "bad" },
+      { source: { source: "git", url: "https://example.com/team/second-market.git" } },
+    ]);
+    expect(list.map((item) => item.id)).toEqual(["cool-market", "second-market"]);
+    expect(list.map((item) => item.name)).toEqual(["cool-market", "second-market"]);
   });
 });

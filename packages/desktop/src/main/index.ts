@@ -174,10 +174,15 @@ import {
   listMarketplacesForUi,
   loadMarketplaceForUi,
   addMarketplaceFromInput,
+  addRecommendedMarketplaceForUi,
+  listPluginInstallJobsForUi,
+  listRecommendedMarketplacesForUi,
   removeMarketplaceForUi,
   refreshMarketplaceForUi,
   installPluginForUi,
   installLocalPluginForUi,
+  onPluginInstallJobsChanged,
+  retryPluginInstallJobForUi,
   gitDownloadUrl,
   gitInstallGuidance,
 } from "./marketplace-service.js";
@@ -245,6 +250,12 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
 let bridge: AgentBridge | null = null;
 let cspInstalled = false;
 let automationHandle: AutomationHandle | null = null;
+
+onPluginInstallJobsChanged((jobs) => {
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w.isDestroyed()) w.webContents.send("plugins:installJobsChanged", jobs);
+  }
+});
 
 // ── Mobile Web Remote (LAN phone controller; off by default) ────────────────
 // Trusted-device store + HTTP/WS host. The host is NOT started on launch — the
@@ -1772,8 +1783,14 @@ ipcMain.handle("marketplace:list", async () => listMarketplacesForUi());
 ipcMain.handle("marketplace:load", async (_e, name: string) =>
   loadMarketplaceForUi(name),
 );
+ipcMain.handle("marketplace:recommended", async () =>
+  listRecommendedMarketplacesForUi(),
+);
 ipcMain.handle("marketplace:add", async (_e, input: string) =>
   addMarketplaceFromInput(input),
+);
+ipcMain.handle("marketplace:addRecommended", async (_e, id: string) =>
+  addRecommendedMarketplaceForUi(id),
 );
 ipcMain.handle("marketplace:remove", async (_e, name: string) =>
   removeMarketplaceForUi(name),
@@ -1781,10 +1798,14 @@ ipcMain.handle("marketplace:remove", async (_e, name: string) =>
 ipcMain.handle("marketplace:refresh", async (_e, name: string) =>
   refreshMarketplaceForUi(name),
 );
+ipcMain.handle("plugins:installJobs", async () => listPluginInstallJobsForUi());
 ipcMain.handle(
   "plugins:install",
   async (_e, pluginName: string, marketplaceName: string) =>
     installPluginForUi(pluginName, marketplaceName),
+);
+ipcMain.handle("plugins:retryInstallJob", async (_e, id: string) =>
+  retryPluginInstallJobForUi(id),
 );
 ipcMain.handle(
   "plugins:installLocal",

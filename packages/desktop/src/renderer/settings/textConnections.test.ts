@@ -67,6 +67,29 @@ describe("buildTextInstance", () => {
     const inst = buildTextInstance(OPENAI, "gpt-5.5", new Set());
     expect((inst as { apiKey?: string }).apiKey).toBeUndefined();
   });
+
+  test("uses a model-specific id for a second connection on the same provider", () => {
+    const DEEPSEEK: CatalogEntry = {
+      id: "deepseek",
+      tag: "text",
+      adapterKind: "deepseek",
+      protocol: "openai-compat",
+      displayName: "DeepSeek",
+      description: "x",
+      defaultBaseUrl: "https://api.deepseek.com/v1",
+      defaultModel: "deepseek-v4-flash",
+      modelPresets: [
+        { value: "deepseek-v4-flash" },
+        { value: "deepseek-v4-pro" },
+      ],
+    };
+    const inst = buildTextInstance(DEEPSEEK, "deepseek-v4-pro", new Set(["deepseek"]));
+    expect(inst).toMatchObject({
+      id: "deepseek-v4-pro",
+      catalogId: "deepseek",
+      model: "deepseek-v4-pro",
+    });
+  });
 });
 
 describe("buildInstance (any tag)", () => {

@@ -2244,10 +2244,7 @@ function App() {
     void window.codeshell.cancel(engineSessionId);
   };
 
-  // Resolve the engine sessionId for the currently-running bucket (same logic
-  // stop() uses). Returns undefined when nothing maps.
-  const resolveActiveEngineSessionId = (): string | undefined => {
-    const bucket = runningBucketRef.current ?? activeBucket;
+  const resolveEngineSessionIdForBucket = (bucket: string): string | undefined => {
     const sep = bucket.indexOf("::");
     const uiSessionId = sep > 0 ? bucket.slice(sep + 2) : null;
     const repoKey = sep > 0 ? bucket.slice(0, sep) : null;
@@ -2258,6 +2255,61 @@ function App() {
           loadSessionIndex(repoId).sessions.find((s) => s.id === uiSessionId)
         : undefined;
     return summary?.engineSessionId ?? uiSessionId ?? undefined;
+  };
+
+  // Resolve the engine sessionId for the currently-running bucket (same logic
+  // stop() uses). Returns undefined when nothing maps.
+  const resolveActiveEngineSessionId = (): string | undefined =>
+    resolveEngineSessionIdForBucket(runningBucketRef.current ?? activeBucket);
+
+  const compactActiveSession = (): void => {
+    if (busyKeys.has(activeBucket)) {
+      toast({ message: t("chat.compact.running"), variant: "error" });
+      return;
+    }
+    const bucket = activeBucket;
+    const engineSessionId = resolveEngineSessionIdForBucket(bucket);
+    if (!engineSessionId) {
+      toast({ message: t("chat.compact.noSession"), variant: "error" });
+      return;
+    }
+    const fmt = new Intl.NumberFormat();
+    void window.codeshell
+      .compactSession(engineSessionId)
+      .then((result) => {
+        const data = result.data;
+        dispatch({
+          type: "stream",
+          bucket,
+          event: {
+            type: "usage_update",
+            promptTokens: data.after,
+          } as StreamEvent,
+        });
+        if (data.before === data.after) {
+          toast({
+            message: t("chat.compact.unchanged", { tokens: fmt.format(data.after) }),
+            variant: "success",
+          });
+          return;
+        }
+        toast({
+          message: t("chat.compact.done", {
+            before: fmt.format(data.before),
+            after: fmt.format(data.after),
+            saved: fmt.format(Math.max(0, data.before - data.after)),
+          }),
+          variant: "success",
+        });
+      })
+      .catch((e) => {
+        toast({
+          message: t("chat.compact.failed", {
+            error: e instanceof Error ? e.message : String(e),
+          }),
+          variant: "error",
+        });
+      });
   };
 
   // Extend the running goal (TODO 3.1). Fired by the "approaching limit" extend
@@ -3166,6 +3218,7 @@ function App() {
               onSend={send}
               onQueueInput={queueInput}
               onForceSend={forceSend}
+              onCompactCommand={compactActiveSession}
               onStop={() => stop()}
               busy={busy}
               queuedInputCount={queuedInputs[activeBucket]?.length ?? 0}

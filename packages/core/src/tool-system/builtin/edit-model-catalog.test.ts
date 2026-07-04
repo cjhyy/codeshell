@@ -65,6 +65,28 @@ describe("EditModelCatalog tool", () => {
     expect(out).toContain('Updated catalog entry "acme"');
   });
 
+  test("same id as a built-in provider writes a user override instead of merging presets", async () => {
+    const out = await editModelCatalogTool({
+      entry: {
+        id: "openai",
+        tag: "text",
+        adapterKind: "openai",
+        displayName: "OpenAI patched",
+        description: "OpenAI plus a test model",
+        defaultBaseUrl: "https://api.openai.com/v1",
+        modelPresets: [{ value: "gpt-test-new", label: "GPT Test New" }],
+      },
+    });
+    expect(out).toContain('catalog entry "openai"');
+    const written = JSON.parse(readFileSync(userCatalogPath(), "utf-8")) as Array<{
+      id: string;
+      modelPresets?: Array<{ value: string }>;
+    }>;
+    const openai = written.find((e) => e.id === "openai")!;
+    expect(openai.modelPresets?.some((p) => p.value === "gpt-5.5")).toBe(false);
+    expect(openai.modelPresets?.some((p) => p.value === "gpt-test-new")).toBe(true);
+  });
+
   test("(no modelPresets) is surfaced", async () => {
     const out = await editModelCatalogTool({ entry: baseEntry() });
     expect(out).toContain("(no modelPresets)");

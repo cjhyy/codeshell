@@ -26,10 +26,9 @@ const renderCache = new Map<string, string>();
 // the work attributable to that delta. Module-level so renderHybrid's
 // internal cachedRender calls also contribute.
 const cacheStats = { hits: 0, misses: 0, missMs: 0 };
-// Default ON — the diag output is gated to "something interesting" so
-// it stays quiet on steady-state ticks. Set CODESHELL_DEBUG_STREAM=0 to
-// disable entirely (e.g. for perf benchmarks).
-const STREAM_DIAG_ON = process.env.CODESHELL_DEBUG_STREAM !== "0";
+// Opt-in streaming diagnostics. Rendering sits on a hot path, so normal
+// sessions keep counters and parse timing off unless explicitly requested.
+const STREAM_DIAG_ON = process.env.CODESHELL_DEBUG_STREAM === "1";
 
 function cachedRender(text: string, renderFn: (t: string) => string): string {
   const cached = renderCache.get(text);

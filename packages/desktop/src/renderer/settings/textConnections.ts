@@ -35,6 +35,25 @@ export function uniqueInstanceId(base: string, taken: Set<string>): string {
   return `${base}-${n}`;
 }
 
+function slugPart(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^[~@]+/, "")
+    .split("/")
+    .filter(Boolean)
+    .pop()
+    ?.replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "model";
+}
+
+function instanceIdBase(entry: CatalogEntry, model: string, taken: Set<string>): string {
+  if (!taken.has(entry.id)) return entry.id;
+  const modelSlug = slugPart(model);
+  if (modelSlug === entry.id || modelSlug.startsWith(`${entry.id}-`)) return modelSlug;
+  return `${entry.id}-${modelSlug}`;
+}
+
 /** Build a connection from a template + picked model, seeding param defaults. */
 export function buildInstance(
   entry: CatalogEntry,
@@ -49,7 +68,7 @@ export function buildInstance(
     if (p.default !== undefined) paramValues[p.name] = p.default;
   }
   const inst: ModelInstance = {
-    id: uniqueInstanceId(entry.id, taken),
+    id: uniqueInstanceId(instanceIdBase(entry, chosen, taken), taken),
     catalogId: entry.id,
     tag,
     model: chosen,

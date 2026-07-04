@@ -128,6 +128,7 @@ export function safeSpawn(
     args,
     opts,
     cleanup: undefined,
+    resolveMs: undefined,
   });
 }
 

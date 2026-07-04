@@ -1,7 +1,7 @@
 /**
  * upsertCatalogEntry — pure add-or-update of a CatalogEntry into the user
  * catalog array, keyed by id. The catalog edit tool wraps this with
- * backup + validate + write. Pure so the merge semantics are unit-tested
+ * backup + validate + write. Pure so the replace semantics are unit-tested
  * without touching disk.
  * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §7.
  */

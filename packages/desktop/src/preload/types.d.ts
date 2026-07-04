@@ -316,6 +316,46 @@ export interface MaskedCredentialView extends Omit<CredentialView, "secret"> {
   secretHint?: string;
 }
 
+export type MarketplaceSource =
+  | { source: "github"; repo: string }
+  | { source: "git"; url: string };
+
+export type MarketplaceFormat = "claude-code" | "codex" | "universal";
+
+export type PluginInstallJobStatus = "queued" | "installing" | "installed" | "failed";
+
+export interface PluginInstallJob {
+  id: string;
+  pluginName: string;
+  marketplaceName: string;
+  status: PluginInstallJobStatus;
+  requestedAt: number;
+  startedAt?: number;
+  finishedAt?: number;
+  error?: string;
+}
+
+export interface RecommendedMarketplace {
+  id: string;
+  name: string;
+  description?: string;
+  reason?: string;
+  homepage?: string;
+  source: MarketplaceSource;
+  format?: MarketplaceFormat;
+  official?: boolean;
+  sort?: number;
+  added?: boolean;
+  pluginCount?: number;
+}
+
+export interface RecommendedMarketplaceList {
+  source: "remote" | "cache" | "builtin";
+  url?: string;
+  error?: string;
+  items: RecommendedMarketplace[];
+}
+
 export interface CodeshellApi {
   /** Main-process platform (`process.platform`), used for window chrome layout. */
   platform: string;
@@ -769,6 +809,10 @@ export interface CodeshellApi {
     id: string,
     state: "inherit" | "on" | "off",
   ): Promise<void>;
+  /** Force context compaction for a live engine session. */
+  compactSession(
+    sessionId: string,
+  ): Promise<{ type: "compact"; data: { before: number; after: number; strategy: string } }>;
   uninstallPlugin(
     pluginName: string,
     marketplaceName: string,
@@ -820,11 +864,11 @@ export interface CodeshellApi {
   listMarketplaces(): Promise<
     Array<{
       name: string;
-      source: { source: "github"; repo: string } | { source: "git"; url: string };
+      source: MarketplaceSource;
       installLocation: string;
       lastUpdated: string;
       pluginCount: number;
-      format: "claude-code" | "codex" | "universal";
+      format: MarketplaceFormat;
     }>
   >;
   /** Load one marketplace's manifest (flattened owner/author). Null if missing. */
@@ -842,17 +886,27 @@ export interface CodeshellApi {
       version?: string;
     }>;
   } | null>;
+  /** Load the curated/recommended marketplace list (remote → cache → builtin fallback). */
+  listRecommendedMarketplaces(): Promise<RecommendedMarketplaceList>;
   /** Parse a github repo / git url string and add it as a marketplace. */
   addMarketplace(input: string): Promise<{ ok: boolean; name?: string; error?: string }>;
+  /** Add one marketplace by id/name from the recommended list. */
+  addRecommendedMarketplace(id: string): Promise<{ ok: boolean; name?: string; error?: string }>;
   /** Remove a marketplace by name. Returns true if it existed. */
   removeMarketplace(name: string): Promise<boolean>;
   /** Re-pull a known marketplace from its source (git fetch + reset). */
   refreshMarketplace(name: string): Promise<{ ok: boolean; error?: string }>;
+  /** Current marketplace plugin install jobs, including queued/running/failed items. */
+  listPluginInstallJobs(): Promise<PluginInstallJob[]>;
+  /** Subscribe to install-job changes emitted by main. */
+  onPluginInstallJobsChanged(cb: (jobs: PluginInstallJob[]) => void): () => void;
   /** Install a plugin from a marketplace. */
   installPlugin(
     pluginName: string,
     marketplaceName: string,
-  ): Promise<{ ok: boolean; error?: string }>;
+  ): Promise<{ ok: boolean; job?: PluginInstallJob; error?: string }>;
+  /** Retry a failed marketplace plugin install job. */
+  retryPluginInstallJob(id: string): Promise<{ ok: boolean; job?: PluginInstallJob; error?: string }>;
   /** Open a native picker for a local plugin source (a directory or a .zip). */
   pickPluginSource(
     kind: "dir" | "zip",

@@ -54,6 +54,11 @@ export interface ModelEntry {
   provider: string;
   /** Full model path: "anthropic/claude-opus-4-6" */
   model: string;
+  /**
+   * Catalog/provider kind used by capability rules. This can differ from
+   * `provider`, which only selects the client protocol family.
+   */
+  providerKind?: string;
   baseUrl?: string;
   apiKey?: string;
   /** Whether the catalog template requires a key (default true; false = local/
@@ -272,6 +277,7 @@ export class ModelPool {
       if (kind === "anthropic") return "anthropic";
       return "openai";
     };
+    const providerKind = entry.providerKind ?? fromCat?.kind;
     return {
       provider:
         entry.provider ||
@@ -302,7 +308,7 @@ export class ModelPool {
       ...(entry.reasoningSummary ? { reasoningSummary: entry.reasoningSummary } : {}),
       // Carry the catalog kind through so the capability layer can pick
       // per-(kind, model) request-shape rules.
-      ...(fromCat?.kind ? { providerKind: fromCat.kind } : {}),
+      ...(providerKind ? { providerKind } : {}),
       ...(entry.extraBody && Object.keys(entry.extraBody).length > 0
         ? { extraBody: entry.extraBody }
         : {}),

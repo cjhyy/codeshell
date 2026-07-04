@@ -11,13 +11,15 @@ import { randomBytes } from "node:crypto";
 import type { ToolDefinition } from "../../types.js";
 import { userCatalogPath } from "../../model-catalog/index.js";
 import { saveCatalogEntry } from "../../model-catalog/save-entry.js";
+import { catalogEntrySchema } from "../../model-catalog/types.js";
 
 export const editModelCatalogToolDef: ToolDefinition = {
   name: "EditModelCatalog",
   description:
     "Add or update a provider/model template in the user model catalog so it " +
-    "appears in the connection page (text/image/video). Keyed by `id` — a new id " +
-    "adds, an existing id updates (in place). Backs up the file before writing and " +
+    "appears in the connection page (text/image/video). Keyed by `id`: a new id " +
+    "adds a provider, an existing id replaces that user-catalog entry. Backs up " +
+    "the file before writing and " +
     "validates the entry. Use after researching a model's real facts (id, context " +
     "window, supported params, modalities) — do NOT guess; verify against the " +
     "provider's official docs first (see the model-fact-finder skill). Does NOT set " +
@@ -35,7 +37,8 @@ export const editModelCatalogToolDef: ToolDefinition = {
           "maxContextTokens?, maxOutputTokens?, supportsVision?, params?[]}). Each param: " +
           "{name, label?, control (enum|number|toggle|text), options?[], min?, max?, default?, " +
           "doc?, wire?{field}}. Fill maxContextTokens with the model's REAL window; declare " +
-          "params per-model (only what that model supports).",
+          "params per-model (only what that model supports). To keep a custom provider " +
+          "beside a built-in one, use a distinct id.",
       },
     },
     required: ["entry"],
@@ -49,10 +52,17 @@ export async function editModelCatalogTool(
   if (!entry || typeof entry !== "object") {
     return "Error: `entry` (a CatalogEntry object) is required.";
   }
+  const parsed = catalogEntrySchema.safeParse(entry);
+  if (!parsed.success) {
+    return `Error: invalid catalog entry: ${parsed.error.issues.map((i) => i.message).join("; ")}`;
+  }
   const stamp = `${Date.now()}-${randomBytes(3).toString("hex")}`;
-  const r = saveCatalogEntry(entry, { path: userCatalogPath(), stamp });
+  const r = saveCatalogEntry(parsed.data, {
+    path: userCatalogPath(),
+    stamp,
+  });
   if (!r.ok) return `Error: ${r.error}`;
-  return summarizeWrite(entry as CatalogEntryShape, r.action ?? "added", r.backup);
+  return summarizeWrite(parsed.data as CatalogEntryShape, r.action ?? "added", r.backup);
 }
 
 /** Shape we read off the written entry for the summary (loose — schema already validated it). */

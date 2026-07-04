@@ -67,6 +67,19 @@ describe("BUILTIN_CATALOG text entries", () => {
     expect(ctxOf("google", "gemini-3.5-flash")).toBe(1_048_576);
   });
 
+  test("known vision-capable text presets are marked for the composer", () => {
+    const presetOf = (entryId: string, value: string) =>
+      text.find((e) => e.id === entryId)?.modelPresets?.find((p) => p.value === value);
+
+    expect(presetOf("openai", "gpt-5.5")?.supportsVision).toBe(true);
+    expect(presetOf("openai", "gpt-4o")?.supportsVision).toBe(true);
+    expect(presetOf("anthropic", "claude-opus-4-8")?.supportsVision).toBe(true);
+    expect(presetOf("google", "gemini-2.5-pro")?.supportsVision).toBe(true);
+    expect(presetOf("openrouter", "anthropic/claude-opus-4.8")?.supportsVision).toBe(true);
+    expect(presetOf("deepseek", "deepseek-v4-pro")?.supportsVision).toBe(false);
+    expect(presetOf("zhipu", "glm-5.2")?.supportsVision).toBe(false);
+  });
+
   test("every text preset's params parse against the schema (well-formed)", () => {
     // If params were malformed, catalogEntrySchema (validated on user load) would
     // reject them; assert the built-in shape holds the same contract.

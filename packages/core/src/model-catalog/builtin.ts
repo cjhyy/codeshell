@@ -11,6 +11,7 @@
 
 import type { CatalogEntry, ModelPreset, ParamSpec } from "./types.js";
 import type { ProviderKindName } from "../llm/provider-kinds.js";
+import { capabilitiesFor } from "../llm/capabilities/index.js";
 import { paramSpecsFromCapability } from "../llm/capabilities/param-specs.js";
 
 /**
@@ -24,11 +25,13 @@ function textPreset(
   label?: string,
   ctx?: number,
 ): ModelPreset {
+  const capability = capabilitiesFor(kind, value);
   const params = paramSpecsFromCapability(kind, value);
   return {
     value,
     ...(label ? { label } : {}),
     ...(ctx !== undefined ? { maxContextTokens: ctx } : {}),
+    supportsVision: capability.supportsVision,
     ...(params.length > 0 ? { params } : {}),
   };
 }
@@ -109,15 +112,17 @@ const ZHIPU_PARAMS: ParamSpec[] = [
 
 /** Zhipu GLM preset — shared ZHIPU_PARAMS, with per-model context window. */
 function glmPreset(value: string, label: string, ctx: number): ModelPreset {
-  return { value, label, maxContextTokens: ctx, params: ZHIPU_PARAMS };
+  return { value, label, maxContextTokens: ctx, supportsVision: false, params: ZHIPU_PARAMS };
 }
 
 /** OpenRouter preset with explicit params (no capability-layer projection). */
 function orPreset(value: string, label: string, params?: ParamSpec[], ctx?: number): ModelPreset {
+  const capability = capabilitiesFor("openrouter", value);
   return {
     value,
     label,
     ...(ctx !== undefined ? { maxContextTokens: ctx } : {}),
+    supportsVision: capability.supportsVision,
     ...(params && params.length > 0 ? { params } : {}),
   };
 }

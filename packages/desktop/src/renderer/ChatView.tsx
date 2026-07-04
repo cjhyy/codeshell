@@ -51,6 +51,7 @@ interface Props {
   onSend: (text: string) => void;
   onQueueInput?: (text: string) => void;
   onForceSend?: (text: string) => void;
+  onCompactCommand?: () => void;
   onStop: () => void;
   busy: boolean;
   queuedInputCount?: number;
@@ -149,6 +150,7 @@ export function ChatView({
   onSend,
   onQueueInput,
   onForceSend,
+  onCompactCommand,
   onStop,
   busy,
   queuedInputCount = 0,
@@ -470,6 +472,14 @@ export function ChatView({
     const hasImages = attachments.length > 0;
     const hasAnchors = anchors.length > 0;
     if (!text && !hasImages && !hasAnchors) return;
+    if (text === "/compact" && !hasImages && !hasAnchors) {
+      onCompactCommand?.();
+      setDraft("");
+      setAttachmentError(null);
+      setHistoryCursor(-1);
+      liveDraftStash.current = "";
+      return;
+    }
     // Block send when there are images but the active model can't accept
     // them. The UI shows an inline banner with options (switch model /
     // remove images) so this branch is just a safety net.

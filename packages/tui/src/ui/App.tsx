@@ -20,7 +20,6 @@ import { VirtualMessageList, type VirtualMessageListHandle } from "./components/
 import {
   FullscreenModeContext,
   INITIAL_FULLSCREEN_MODE,
-  useFullscreenMode,
 } from "./fullscreen-mode.js";
 import {
   MessageContent,
@@ -65,7 +64,7 @@ import { moreCommands } from "../cli/commands/builtin/more-commands.js";
 import { goalCommand } from "../cli/commands/builtin/goal-command.js";
 import { imageCommand } from "../cli/commands/builtin/image-command.js";
 import { buildPluginSlashCommands } from "../cli/commands/builtin/plugin-commands-registration.js";
-import type { ApprovalRequest, ApprovalResult, StreamEvent, TaskInfo } from "@cjhyy/code-shell-core";
+import type { ApprovalRequest, StreamEvent, TaskInfo } from "@cjhyy/code-shell-core";
 import { chatStore, createEntry, type ChatEntry } from "./store.js";
 import { nextPermissionMode, permissionConfigurePayload, type TuiPermissionMode } from "./permission-mode.js";
 import { formatDuration, formatTokens } from "@cjhyy/code-shell-core";
@@ -85,6 +84,16 @@ import {
 // unified engine.jsonl) so display bugs can be aligned with LLM responses
 // by sid.
 const uiLog = logger.child({ cat: "ui" });
+const STREAM_DIAG_ON = process.env.CODESHELL_DEBUG_STREAM === "1";
+const HIGH_FREQUENCY_STREAM_EVENTS = new Set<StreamEvent["type"]>([
+  "text_delta",
+  "thinking_delta",
+  "tool_use_args_delta",
+]);
+
+function shouldTraceStreamEvent(type: StreamEvent["type"]): boolean {
+  return STREAM_DIAG_ON || !HIGH_FREQUENCY_STREAM_EVENTS.has(type);
+}
 
 // ─── Global command registry ────────────────────────────────────
 
@@ -457,15 +466,23 @@ export function App({
     const pending = new Map(buf);
     buf.clear();
 
-    const gap = lastFlushAtRef.current === 0 ? 0 : flushEnter - lastFlushAtRef.current;
+    const gap =
+      STREAM_DIAG_ON && lastFlushAtRef.current !== 0
+        ? flushEnter - lastFlushAtRef.current
+        : 0;
     const scheduledAt = flushScheduledAtRef.current;
-    const timerDelay = scheduledAt === 0 ? 0 : flushEnter - scheduledAt - 50; // 50 = setTimeout target
+    const timerDelay =
+      STREAM_DIAG_ON && scheduledAt !== 0
+        ? flushEnter - scheduledAt - 50 // 50 = setTimeout target
+        : 0;
     flushScheduledAtRef.current = 0;
     lastFlushAtRef.current = flushEnter;
     let pendingChars = 0;
-    for (const v of pending.values()) pendingChars += v.length;
+    if (STREAM_DIAG_ON) {
+      for (const v of pending.values()) pendingChars += v.length;
+    }
 
-    const updateStart = performance.now();
+    const updateStart = STREAM_DIAG_ON ? performance.now() : 0;
 
     chatStore.update((prev) => {
       let next = prev;
@@ -487,15 +504,17 @@ export function App({
       }
       return next;
     });
-    flushUpdateMsRef.current = performance.now() - updateStart;
+    flushUpdateMsRef.current = STREAM_DIAG_ON ? performance.now() - updateStart : 0;
 
-    uiLog.info("debug.ui.flush", {
-      agents: Array.from(pending.keys()).map((k) => k ?? "(main)"),
-      chars: pendingChars,
-      gapSinceLastFlush_ms: gap,
-      timerDelayOverSchedule_ms: Math.max(0, timerDelay),
-      chatStoreUpdate_ms: Math.round(flushUpdateMsRef.current * 10) / 10,
-    });
+    if (STREAM_DIAG_ON) {
+      uiLog.info("debug.ui.flush", {
+        agents: Array.from(pending.keys()).map((k) => k ?? "(main)"),
+        chars: pendingChars,
+        gapSinceLastFlush_ms: gap,
+        timerDelayOverSchedule_ms: Math.max(0, timerDelay),
+        chatStoreUpdate_ms: Math.round(flushUpdateMsRef.current * 10) / 10,
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -510,13 +529,15 @@ export function App({
   const handleStreamEvent = useCallback(
     (event: StreamEvent) => {
       const agentId = (event as any).agentId as string | undefined;
-      uiLog.info("debug.stream.event", { type: event.type, agentId });
       recordStreamEvent(event.type, agentId);
       // session_started carries the authoritative sid; use it directly so the
       // record lands in the correct dir even before sidRef has caught up.
       const eventSid =
         event.type === "session_started" ? event.sessionId : sidRef.current;
-      recordUIEvent(eventSid, "ui.stream_event", { type: event.type, agentId });
+      if (shouldTraceStreamEvent(event.type)) {
+        uiLog.debug("debug.stream.event", { type: event.type, agentId });
+        recordUIEvent(eventSid, "ui.stream_event", { type: event.type, agentId });
+      }
 
       switch (event.type) {
         case "session_started":
@@ -587,13 +608,15 @@ export function App({
             flushTimerRef.current = setTimeout(flushTextBuffer, 50);
             // Flicker probe: count text-delta arrivals into the flush window
             // so we can spot whether a runaway stream is jamming the
-            // renderer with high-rate setStates. Sampled (one log per
-            // arrival is harmless; ChatEntry buffer flush coalesces).
-            uiLog.info("flicker.text_delta_arrival", {
-              cat: "flicker",
-              chunkLen: event.text.length,
-              tokens: event.tokens ?? 0,
-            });
+            // renderer with high-rate setStates. Opt-in only: this path is
+            // hot during normal streaming.
+            if (STREAM_DIAG_ON) {
+              uiLog.info("flicker.text_delta_arrival", {
+                cat: "flicker",
+                chunkLen: event.text.length,
+                tokens: event.tokens ?? 0,
+              });
+            }
           }
           break;
         }

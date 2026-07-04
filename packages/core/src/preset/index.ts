@@ -271,6 +271,12 @@ export interface BuildPresetSystemPromptOptions {
   platform?: NodeJS.Platform;
 }
 
+function isActiveToolNamesList(
+  value: BuildPresetSystemPromptOptions | readonly string[] | undefined,
+): value is readonly string[] {
+  return Array.isArray(value);
+}
+
 function platformShellGuidance(platform: NodeJS.Platform): string {
   if (platform !== "win32") return "";
   return [
@@ -295,7 +301,7 @@ export function buildPresetSystemPrompt(
   optionsOrActiveToolNames?: BuildPresetSystemPromptOptions | readonly string[],
 ): string {
   let sections = preset.promptSections;
-  const options = Array.isArray(optionsOrActiveToolNames)
+  const options: BuildPresetSystemPromptOptions = isActiveToolNamesList(optionsOrActiveToolNames)
     ? { activeToolNames: optionsOrActiveToolNames }
     : (optionsOrActiveToolNames ?? {});
   const activeToolNames = options.activeToolNames;

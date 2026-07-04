@@ -9,12 +9,16 @@ import { basename, join, relative, resolve, sep, isAbsolute } from "node:path";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 
-const execFileAsync = promisify(execFile);
+type ExecFileForGrep = (
+  file: string,
+  args: readonly string[],
+  options: { maxBuffer: number; timeout: number },
+) => Promise<{ stdout: string; stderr: string }>;
 
-type ExecFileAsync = typeof execFileAsync;
-let execFileForTest: ExecFileAsync = execFileAsync;
+const execFileAsync = promisify(execFile) as ExecFileForGrep;
+let execFileForTest: ExecFileForGrep = execFileAsync;
 
-export function _setGrepExecFileForTest(fn?: ExecFileAsync): void {
+export function _setGrepExecFileForTest(fn?: ExecFileForGrep): void {
   execFileForTest = fn ?? execFileAsync;
 }
 

@@ -353,6 +353,11 @@ contextBridge.exposeInMainWorld("codeshell", {
     });
   },
   closeSession: (sessionId: string) => rpc("agent/closeSession", { sessionId }),
+  compactSession: (sessionId: string) =>
+    rpc("agent/query", { type: "compact", sessionId }).then(rpcResult) as Promise<{
+      type: "compact";
+      data: { before: number; after: number; strategy: string };
+    }>,
   configure: (params: {
     sessionId?: string;
     model?: string;
@@ -613,12 +618,26 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("stt:ensureMicAccess"),
   listMarketplaces: () => ipcRenderer.invoke("marketplace:list"),
   loadMarketplace: (name: string) => ipcRenderer.invoke("marketplace:load", name),
+  listRecommendedMarketplaces: () =>
+    ipcRenderer.invoke("marketplace:recommended"),
   addMarketplace: (input: string) => ipcRenderer.invoke("marketplace:add", input),
+  addRecommendedMarketplace: (id: string) =>
+    ipcRenderer.invoke("marketplace:addRecommended", id),
   removeMarketplace: (name: string) => ipcRenderer.invoke("marketplace:remove", name),
   refreshMarketplace: (name: string): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke("marketplace:refresh", name),
+  listPluginInstallJobs: () => ipcRenderer.invoke("plugins:installJobs"),
+  onPluginInstallJobsChanged: (
+    cb: (jobs: import("./types").PluginInstallJob[]) => void,
+  ) => {
+    const h = (_e: IpcRendererEvent, jobs: import("./types").PluginInstallJob[]) => cb(jobs);
+    ipcRenderer.on("plugins:installJobsChanged", h);
+    return () => ipcRenderer.removeListener("plugins:installJobsChanged", h);
+  },
   installPlugin: (pluginName: string, marketplaceName: string) =>
     ipcRenderer.invoke("plugins:install", pluginName, marketplaceName),
+  retryPluginInstallJob: (id: string) =>
+    ipcRenderer.invoke("plugins:retryInstallJob", id),
   pickPluginSource: (
     kind: "dir" | "zip",
   ): Promise<{ kind: "dir" | "zip"; path: string; name: string } | null> =>

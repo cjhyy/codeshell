@@ -11,6 +11,7 @@ describe("chatStore.notify error isolation", () => {
   });
   afterEach(() => {
     errSpy.mockRestore();
+    chatStore.setEntries([]);
   });
 
   test("a throwing listener does not prevent others from being notified", () => {
@@ -28,6 +29,36 @@ describe("chatStore.notify error isolation", () => {
     } finally {
       unsubBad();
       unsubGood();
+    }
+  });
+
+  test("update returning the same entries reference does not notify", () => {
+    chatStore.setEntries([]);
+    let calls = 0;
+    const unsub = chatStore.subscribe(() => {
+      calls++;
+    });
+    try {
+      chatStore.update((prev) => prev);
+      expect(calls).toBe(0);
+    } finally {
+      unsub();
+    }
+  });
+
+  test("commitInterruptedStreaming is quiet when nothing changes", () => {
+    chatStore.setEntries([]);
+    chatStore.append({ type: "user", text: "hi" });
+
+    let calls = 0;
+    const unsub = chatStore.subscribe(() => {
+      calls++;
+    });
+    try {
+      chatStore.commitInterruptedStreaming("...");
+      expect(calls).toBe(0);
+    } finally {
+      unsub();
     }
   });
 });
