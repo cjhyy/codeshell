@@ -42,12 +42,30 @@ describe("fileExists", () => {
     }
   });
 
+  it("treats Windows drive-letter paths as absolute instead of joining them onto root", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fsx-"));
+    try {
+      const file = join(root, "win-path.txt");
+      await writeFile(file, "x");
+
+      expect(await fileExists(root, file)).toBe(true);
+      expect(await fileExists(root, `${root}${file}`)).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("rejects a symlink that escapes root", async () => {
     const root = await mkdtemp(join(tmpdir(), "fsx-"));
     const outside = await mkdtemp(join(tmpdir(), "fsx-out-"));
     try {
       await writeFile(join(outside, "secret.txt"), "s");
-      await symlink(join(outside, "secret.txt"), join(root, "link.txt"));
+      try {
+        await symlink(join(outside, "secret.txt"), join(root, "link.txt"));
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "EPERM") return;
+        throw err;
+      }
       // The symlink target's realpath leaves root → rejected.
       expect(await fileExists(root, "link.txt")).toBe(false);
     } finally {

@@ -1,8 +1,27 @@
 import { describe, test, expect, afterEach } from "bun:test";
-import { spawn } from "node:child_process";
-import { resolveSpawnTarget, killProcessGroup, groupAlive, buildSandboxEnv, mergeShellEnv, ENV_DENY_REGEX } from "./spawn-common.js";
+import { execFileSync, spawn } from "node:child_process";
+import {
+  resolveSpawnTarget,
+  killProcessGroup,
+  groupAlive,
+  buildSandboxEnv,
+  mergeShellEnv,
+  ENV_DENY_REGEX,
+  resolveShellInvocation,
+} from "./spawn-common.js";
 import { createOffBackend } from "../tool-system/sandbox/off.js";
 import type { SandboxBackend } from "../tool-system/sandbox/index.js";
+
+function testShPath(): string | undefined {
+  if (process.platform !== "win32") return "/bin/sh";
+  try {
+    const msysPath = execFileSync("which", ["sh"], { encoding: "utf8", timeout: 3000 }).trim();
+    if (!msysPath) return undefined;
+    return execFileSync("cygpath", ["-w", msysPath], { encoding: "utf8", timeout: 3000 }).trim();
+  } catch {
+    return undefined;
+  }
+}
 
 describe("resolveSpawnTarget", () => {
   test("no sandbox → shell -c command", () => {
@@ -90,6 +109,44 @@ describe("off backend on Windows — platform-correct command flag", () => {
     expect(t.file).toBe("pwsh.exe");
     expect(t.args).toEqual(["-Command", "gci"]);
   });
+
+  test("win32 + Git Bash shell → -c, not /c", () => {
+    setPlatform("win32");
+    const t = createOffBackend().wrap("ls -la", {
+      cwd: "C:\\tmp",
+      shell: "C:\\Program Files\\Git\\bin\\bash.exe",
+    });
+    expect(t.file).toBe("C:\\Program Files\\Git\\bin\\bash.exe");
+    expect(t.args).toEqual(["-c", "ls -la"]);
+  });
+});
+
+describe("Windows shell invocation", () => {
+  const realPlatform = process.platform;
+  const setPlatform = (p: NodeJS.Platform) =>
+    Object.defineProperty(process, "platform", { value: p, configurable: true });
+  afterEach(() => setPlatform(realPlatform));
+
+  test("explicit PowerShell uses -Command", () => {
+    setPlatform("win32");
+    const t = resolveShellInvocation("Write-Output hi", "C:\\Program Files\\PowerShell\\7\\pwsh.exe");
+    expect(t.file).toBe("C:\\Program Files\\PowerShell\\7\\pwsh.exe");
+    expect(t.args).toEqual(["-Command", "Write-Output hi"]);
+  });
+
+  test("explicit cmd uses /c", () => {
+    setPlatform("win32");
+    const t = resolveShellInvocation("echo hi", "C:\\Windows\\System32\\cmd.exe");
+    expect(t.file).toBe("C:\\Windows\\System32\\cmd.exe");
+    expect(t.args).toEqual(["/c", "echo hi"]);
+  });
+
+  test("explicit Git Bash uses -c", () => {
+    setPlatform("win32");
+    const t = resolveShellInvocation("echo hi", "C:\\Program Files\\Git\\bin\\bash.exe");
+    expect(t.file).toBe("C:\\Program Files\\Git\\bin\\bash.exe");
+    expect(t.args).toEqual(["-c", "echo hi"]);
+  });
 });
 
 describe("buildSandboxEnv", () => {
@@ -155,10 +212,12 @@ describe("mergeShellEnv", () => {
 
 describe("killProcessGroup", () => {
   test("kills a process and its forked child (whole group)", async () => {
+    const sh = testShPath();
+    if (!sh) return;
     // A command that forks a child sleeper into the same process group.
     // If we only killed the outer sh, the inner sleep would survive.
     const child = spawn(
-      "/bin/sh",
+      sh,
       ["-c", "sleep 30 & sleep 30 & wait"],
       { detached: true, stdio: "ignore" },
     );
@@ -182,7 +241,9 @@ describe("killProcessGroup", () => {
   });
 
   test("idempotent on an already-dead group (no throw)", async () => {
-    const child = spawn("/bin/sh", ["-c", "true"], { detached: true, stdio: "ignore" });
+    const sh = testShPath();
+    if (!sh) return;
+    const child = spawn(sh, ["-c", "true"], { detached: true, stdio: "ignore" });
     const pid = child.pid!;
     await new Promise((r) => setTimeout(r, 100));
     // Should not throw even though the group is already gone.

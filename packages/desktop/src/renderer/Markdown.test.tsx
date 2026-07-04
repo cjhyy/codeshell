@@ -18,6 +18,18 @@ describe("Markdown", () => {
     expect(html).not.toContain('node="[object Object]"');
   });
 
+  test("does not join a Windows absolute path onto cwd", () => {
+    const html = renderToStaticMarkup(
+      <Markdown
+        text="D:\\github\\codeshell\\packages\\desktop\\src\\renderer\\lib\\streamReducer.ts"
+        cwd="D:\\github\\codeshell"
+      />,
+    );
+
+    expect(html).toContain("streamReducer.ts");
+    expect(html).not.toContain("D:\\github\\codeshell\\D:\\github\\codeshell");
+  });
+
   test("routes repo-relative markdown image syntax through the inline image loader", () => {
     const html = renderToStaticMarkup(
       <Markdown

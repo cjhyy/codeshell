@@ -23,19 +23,29 @@ function noTrailingSlash(p: string): string {
   return p.length > 1 ? p.replace(/\/+$/, "") : p;
 }
 
+function isAbsolutePath(p: string): boolean {
+  return p.startsWith("/") || /^[A-Za-z]:[\\/]/.test(p) || p.startsWith("\\\\");
+}
+
+function joinPath(base: string, child: string): string {
+  const sep = base.includes("\\") ? "\\" : "/";
+  return `${base.replace(/[\\/]+$/, "")}${sep}${child.replace(/^\.\//, "")}`;
+}
+
 /**
  * Resolve a path from a chat link to an absolute path inside `root`. Accepts
  * either an already-absolute path or one relative to root. Returns null if the
  * result escapes the workspace root — those open in the OS editor instead, since
- * the lazy tree can only reach files under root. POSIX-only (desktop targets
- * macOS/Linux); no `..` normalization beyond the containment check, mirroring
+ * the lazy tree can only reach files under root. Handles POSIX and Windows
+ * absolute paths; no `..` normalization beyond the containment check, mirroring
  * the main-side resolveWithin guard.
  */
 function resolveUnderRoot(root: string, path: string): string | null {
   const r = noTrailingSlash(root);
-  const abs = path.startsWith("/") ? noTrailingSlash(path) : `${r}/${path.replace(/^\.\//, "")}`;
-  if (abs !== r && !abs.startsWith(`${r}/`)) return null;
-  if (abs.includes("/../") || abs.endsWith("/..")) return null;
+  const abs = isAbsolutePath(path) ? noTrailingSlash(path) : joinPath(r, path);
+  const prefix = r.includes("\\") ? `${r}\\` : `${r}/`;
+  if (abs !== r && !abs.startsWith(prefix)) return null;
+  if (/[\\/]\.\.[\\/]/.test(abs) || /[\\/]\.\.$/.test(abs)) return null;
   return abs;
 }
 
@@ -454,12 +464,11 @@ function ImagePreview({ path, reloadNonce }: { path: string; reloadNonce: number
 /**
  * Absolute directory of a previewed file, used as `cwd` for the Markdown
  * renderer so relative image paths in the doc resolve. `path` may be absolute
- * or relative to `root` (mirrors fs:readFile's `path.startsWith("/") ? path :
- * join(root, path)`); strip the last segment to get the containing dir.
+ * or relative to `root`; strip the last segment to get the containing dir.
  */
 function mdBaseDir(root: string, path: string): string {
-  const abs = path.startsWith("/") ? path : `${root.replace(/\/$/, "")}/${path}`;
-  const slash = abs.lastIndexOf("/");
+  const abs = isAbsolutePath(path) ? path : joinPath(root, path);
+  const slash = Math.max(abs.lastIndexOf("/"), abs.lastIndexOf("\\"));
   return slash > 0 ? abs.slice(0, slash) : abs;
 }
 

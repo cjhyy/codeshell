@@ -16,6 +16,12 @@
  * by agentId so a subagent never clobbers the main list).
  */
 
+/** Strip <system-reminder>…</system-reminder> blocks from tool output before
+ *  rendering — they're context for the model, not status for the user. */
+function stripSystemReminders(s: string): string {
+  return s.replace(/<system-reminder>[\s\S]*?<\/system-reminder>\s*/g, "");
+}
+
 export type RunState = "idle" | "running" | "waiting" | "completed" | "error";
 
 export type ChatItem =
@@ -297,7 +303,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
             ? {
                 ...i,
                 done: true,
-                result: result.result ?? result.error ?? "",
+                result: stripSystemReminders(result.result ?? result.error ?? ""),
                 error: Boolean(result.isError || result.error),
               }
             : i,
@@ -309,6 +315,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       // Room transcripts emit a coarse tool_result with no id linking it to its
       // start; seal the most recent open tool item with the summary + error.
       const summary = (event.summary as string) ?? "";
+      const resultText = stripSystemReminders(summary);
       const isError = Boolean(event.isError);
       let idx = -1;
       for (let i = s.items.length - 1; i >= 0; i--) {
@@ -320,7 +327,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       if (idx === -1) return s;
       const items = s.items.slice();
       const tool = items[idx] as Extract<ChatItem, { kind: "tool" }>;
-      items[idx] = { ...tool, done: true, result: summary, summary: summary || tool.summary, error: isError };
+      items[idx] = { ...tool, done: true, result: resultText, summary: resultText || tool.summary, error: isError };
       return { ...s, items };
     }
 

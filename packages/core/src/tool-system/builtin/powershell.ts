@@ -15,8 +15,8 @@ export const powershellToolDef: ToolDefinition = {
   description:
     "Execute PowerShell commands. Use only when the user explicitly asks for PowerShell " +
     "or the task requires PowerShell-specific cmdlets, Windows APIs, registry access, " +
-    "or .ps1 behavior. For ordinary shell/git/package/test commands, prefer Bash " +
-    "(Git Bash on Windows when available).",
+    "or .ps1 behavior. Do NOT use for ordinary file, git, package-manager, test, " +
+    "or POSIX-style shell commands; use Bash for those.",
   inputSchema: {
     type: "object",
     properties: {

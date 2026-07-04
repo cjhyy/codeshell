@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { grepTool } from "./grep.js";
+import { grepTool, _setGrepExecFileForTest } from "./grep.js";
 import type { ToolContext } from "../context.js";
 
 let dir: string;
@@ -15,6 +15,7 @@ beforeEach(() => {
   writeFileSync(join(dir, "c.md"), "needle in markdown\n");
 });
 afterEach(() => {
+  _setGrepExecFileForTest();
   rmSync(dir, { recursive: true, force: true });
 });
 
@@ -52,5 +53,17 @@ describe("grepTool", () => {
     writeFileSync(join(dir, "node_modules", "x.ts"), "needle here\n");
     const out = await grepTool({ pattern: "needle" }, ctx());
     expect(out).not.toContain("node_modules");
+  });
+
+  it("falls back to a built-in recursive search when rg and grep are unavailable", async () => {
+    _setGrepExecFileForTest(async () => {
+      const err = new Error("spawn ENOENT") as NodeJS.ErrnoException;
+      err.code = "ENOENT";
+      throw err;
+    });
+
+    const out = await grepTool({ pattern: "needle", glob: "*.ts", output_mode: "content" }, ctx());
+    expect(out).toContain("a.ts:1:const needle = 1;");
+    expect(out).not.toContain("c.md");
   });
 });

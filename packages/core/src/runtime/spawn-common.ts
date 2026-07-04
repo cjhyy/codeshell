@@ -120,9 +120,11 @@ export interface SpawnTarget {
  * in five places (bash.ts, safe-spawn.ts, background-shell.ts, worktree.ts):
  *
  *   - POSIX: `<explicit ?? $SHELL ?? /bin/bash> -c "<command>"`
- *   - Windows: `cmd.exe /c "<command>"` (the `-c` flag does not exist on cmd;
- *     a bare `-c` would be taken as a filename and fail). PowerShell uses
- *     `-Command`, but cmd.exe is the safe default present on every Windows.
+ *   - Windows: `<explicit shell ?? Git Bash ?? PowerShell ?? ComSpec ?? cmd.exe>` with the
+ *     shell-appropriate flag: Git Bash/POSIX shells use `-c`, PowerShell uses
+ *     `-Command`, and cmd.exe uses `/c` (`-c` would be taken as a filename and
+ *     fail/hang). Git Bash is preferred because the Bash tool receives POSIX
+ *     syntax from the model.
  *
  * `$SHELL` is ignored on Windows — it is virtually never set there, and when
  * it is (e.g. a stray value from a Unix-y env) it points at a POSIX path that
@@ -134,7 +136,7 @@ export function resolveShellInvocation(
   shell?: string,
 ): { file: string; args: string[] } {
   if (process.platform === "win32") {
-    const file = shell ?? process.env.ComSpec ?? "cmd.exe";
+    const file = shell ?? defaultShellBinary();
     // Flag form depends on the shell: PowerShell → -Command; a POSIX shell such
     // as Git Bash's bash.exe / sh → -c (it does NOT understand cmd's /c); cmd.exe
     // (and cmd-like) → /c. Detecting bash/sh matters now that defaultShellBinary
@@ -157,7 +159,7 @@ export function resolveShellInvocation(
  * default is `cmd.exe`, which can't run any of that — so "Bash" was effectively
  * broken on Windows. Git for Windows (which most devs already have — we detect
  * it for repo ops anyway) ships a full bash at `<git>\bin\bash.exe`, so prefer
- * it. Only falls back to cmd.exe when Git Bash truly isn't present.
+ * it. Falls back to PowerShell before cmd.exe when Git Bash truly isn't present.
  *
  * Resolution order:
  *   1. CODE_SHELL_GIT_BASH_PATH env override (explicit user config wins).
@@ -202,13 +204,49 @@ export function _resetGitBashCache(): void {
   gitBashCache = undefined;
 }
 
+let powerShellCache: string | null | undefined;
+export function resolvePowerShell(): string | undefined {
+  if (process.platform !== "win32") return undefined;
+  if (powerShellCache !== undefined) return powerShellCache ?? undefined;
+
+  const override = process.env.CODE_SHELL_POWERSHELL_PATH;
+  if (override && existsSync(override)) return (powerShellCache = override);
+
+  const candidates: string[] = [];
+  for (const exe of ["pwsh", "powershell"]) {
+    try {
+      const out = execFileSync("where", [exe], { encoding: "utf-8", timeout: 3000 });
+      const found = out.split(/\r?\n/).find((l) => l.trim().toLowerCase().endsWith(`${exe}.exe`));
+      if (found) candidates.push(found.trim());
+    } catch {
+      // Not on PATH; try the next shell / well-known locations.
+    }
+  }
+
+  const pf = process.env["ProgramFiles"] ?? "C:\\Program Files";
+  const systemRoot = process.env.SystemRoot ?? "C:\\Windows";
+  candidates.push(join(pf, "PowerShell", "7", "pwsh.exe"));
+  candidates.push(join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"));
+
+  const found = candidates.find((p) => existsSync(p));
+  return (powerShellCache = found ?? null) ?? undefined;
+}
+
+/** Reset the PowerShell probe cache. Test-only (platform is stubbed per test). */
+export function _resetPowerShellCache(): void {
+  powerShellCache = undefined;
+}
+
 /** The platform's default interactive shell binary, for spawning a bare shell
- *  (no `-c`/`/c` command). Windows → Git Bash if present, else ComSpec/cmd.exe;
+ *  (no `-c`/`/c` command). Windows → Git Bash if present, else PowerShell,
+ *  else ComSpec/cmd.exe;
  *  POSIX → $SHELL/bin/bash. Windows prefers Git Bash so the model's bash-syntax
  *  commands actually run (cmd.exe can't). */
 export function defaultShellBinary(shell?: string): string {
   if (shell) return shell;
-  if (process.platform === "win32") return resolveGitBash() ?? process.env.ComSpec ?? "cmd.exe";
+  if (process.platform === "win32") {
+    return resolveGitBash() ?? resolvePowerShell() ?? process.env.ComSpec ?? "cmd.exe";
+  }
   return process.env.SHELL ?? "/bin/bash";
 }
 

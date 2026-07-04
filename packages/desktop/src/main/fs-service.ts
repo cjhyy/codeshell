@@ -2,7 +2,7 @@
 // (fs-read-directory / fs-read-file) but local-only: one directory level at a
 // time so the renderer can lazily expand a tree, plus a capped file reader.
 import { promises as fs } from "node:fs";
-import { join, normalize, sep } from "node:path";
+import { isAbsolute, join, normalize, sep } from "node:path";
 
 export interface FsEntry {
   name: string;
@@ -102,7 +102,7 @@ export async function fileExists(root: string, path: string): Promise<boolean> {
     // `packages/x/y.ts`); resolveWithin only accepts a path already under root,
     // so join a non-absolute path onto root first. (readDir/readFile always get
     // absolute paths from the tree, so they never needed this.)
-    const target = path.startsWith("/") ? path : join(root, path);
+    const target = isAbsolute(path) ? path : join(root, path);
     const real = await resolveWithin(root, target);
     const stat = await fs.stat(real);
     return stat.isFile();

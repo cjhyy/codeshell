@@ -3,12 +3,20 @@
  */
 
 import { execFile } from "node:child_process";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { promisify } from "node:util";
-import { resolve, sep, isAbsolute } from "node:path";
+import { basename, join, relative, resolve, sep, isAbsolute } from "node:path";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 
 const execFileAsync = promisify(execFile);
+
+type ExecFileAsync = typeof execFileAsync;
+let execFileForTest: ExecFileAsync = execFileAsync;
+
+export function _setGrepExecFileForTest(fn?: ExecFileAsync): void {
+  execFileForTest = fn ?? execFileAsync;
+}
 
 /**
  * Strip the cwd prefix from each line so results display as relative
@@ -85,9 +93,16 @@ export async function grepTool(
       return await runGrep(pattern, searchPath, fileGlob, context, maxResults, outputMode, caseInsensitive);
     } catch (grepErr) {
       if (isNoMatchExit(grepErr)) return "No matches found.";
+      if (isCommandNotFound(rgErr) || isCommandNotFound(grepErr)) {
+        return await runNodeGrep(pattern, searchPath, fileGlob, context, maxResults, outputMode, caseInsensitive);
+      }
       return `Error in search: ${(grepErr as Error).message}`;
     }
   }
+}
+
+function isCommandNotFound(err: unknown): boolean {
+  return (err as NodeJS.ErrnoException)?.code === "ENOENT";
 }
 
 async function runRipgrep(
@@ -121,7 +136,7 @@ async function runRipgrep(
 
   args.push("--", pattern, path);
 
-  const { stdout } = await execFileAsync("rg", args, {
+  const { stdout } = await execFileForTest("rg", args, {
     maxBuffer: 10 * 1024 * 1024,
     timeout: 30_000,
   });
@@ -167,7 +182,7 @@ async function runGrep(
   args.push("--exclude-dir=node_modules", "--exclude-dir=.git", "--exclude-dir=dist");
   args.push(path);
 
-  const { stdout } = await execFileAsync("grep", args, {
+  const { stdout } = await execFileForTest("grep", args, {
     maxBuffer: 10 * 1024 * 1024,
     timeout: 30_000,
   });
@@ -180,4 +195,93 @@ async function runGrep(
     return lines.slice(0, 200).join("\n") + `\n\n... ${lines.length - 200} more results`;
   }
   return result;
+}
+
+const IGNORED_DIRS = new Set(["node_modules", ".git", "dist", "coverage"]);
+
+async function runNodeGrep(
+  pattern: string,
+  path: string,
+  fileGlob: string | undefined,
+  context: number,
+  maxResults: number,
+  outputMode: string,
+  caseInsensitive: boolean,
+): Promise<string> {
+  let regex: RegExp;
+  try {
+    regex = new RegExp(pattern, caseInsensitive ? "i" : "");
+  } catch (err) {
+    return `Error in search: ${(err as Error).message}`;
+  }
+
+  const matches: string[] = [];
+  await walkTextFiles(path, fileGlob, async (file) => {
+    if (matches.length >= maxResults) return;
+    let text: string;
+    try {
+      text = await readFile(file, "utf8");
+    } catch {
+      return;
+    }
+    const lines = text.split(/\r?\n/);
+    const matchingLines: number[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      regex.lastIndex = 0;
+      if (regex.test(lines[i])) matchingLines.push(i);
+    }
+    if (matchingLines.length === 0) return;
+
+    const rel = relative(path, file) || basename(file);
+    if (outputMode === "files_with_matches") {
+      matches.push(rel);
+    } else if (outputMode === "count") {
+      matches.push(`${rel}:${matchingLines.length}`);
+    } else {
+      const emitted = new Set<number>();
+      for (const lineIndex of matchingLines) {
+        const start = Math.max(0, lineIndex - context);
+        const end = Math.min(lines.length - 1, lineIndex + context);
+        for (let i = start; i <= end; i++) {
+          if (emitted.has(i)) continue;
+          emitted.add(i);
+          matches.push(`${rel}:${i + 1}:${lines[i]}`);
+          if (matches.length >= maxResults) return;
+        }
+      }
+    }
+  });
+
+  if (matches.length === 0) return "No matches found.";
+  if (matches.length > 200) return matches.slice(0, 200).join("\n") + `\n\n... ${matches.length - 200} more results`;
+  return matches.join("\n");
+}
+
+async function walkTextFiles(
+  root: string,
+  fileGlob: string | undefined,
+  visit: (file: string) => Promise<void>,
+): Promise<void> {
+  const info = await stat(root).catch(() => null);
+  if (!info) return;
+  if (info.isFile()) {
+    if (!fileGlob || matchesSimpleGlob(basename(root), fileGlob)) await visit(root);
+    return;
+  }
+  if (!info.isDirectory()) return;
+
+  const entries = await readdir(root, { withFileTypes: true }).catch(() => []);
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      if (IGNORED_DIRS.has(entry.name)) continue;
+      await walkTextFiles(join(root, entry.name), fileGlob, visit);
+    } else if (entry.isFile()) {
+      if (!fileGlob || matchesSimpleGlob(entry.name, fileGlob)) await visit(join(root, entry.name));
+    }
+  }
+}
+
+function matchesSimpleGlob(name: string, glob: string): boolean {
+  const escaped = glob.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".");
+  return new RegExp(`^${escaped}$`).test(name);
 }

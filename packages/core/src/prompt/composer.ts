@@ -248,7 +248,7 @@ export class PromptComposer {
       cacheBreak: true,
       compute: () => {
         const preset = this.options.preset ?? resolveAgentPreset();
-        return buildPresetSystemPrompt(preset, activeToolNames);
+        return buildPresetSystemPrompt(preset, { activeToolNames, platform: process.platform });
       },
     });
 

@@ -234,12 +234,21 @@ function basename(path: string): string {
   return parts[parts.length - 1] || path;
 }
 
+function isAbsolutePath(path: string): boolean {
+  return path.startsWith("/") || /^[A-Za-z]:[\\/]/.test(path) || path.startsWith("\\\\");
+}
+
+function joinPath(cwd: string, path: string): string {
+  const sep = cwd.includes("\\") ? "\\" : "/";
+  return `${cwd.replace(/[\\/]+$/, "")}${sep}${path.replace(/^\.\//, "")}`;
+}
+
 /** Resolve a (possibly relative) path against cwd into an absolute path for the
  *  hover tooltip. Absolute paths pass through; relative joins onto cwd. */
 function toAbsolute(path: string, cwd?: string | null): string {
-  if (path.startsWith("/")) return path;
+  if (isAbsolutePath(path)) return path;
   if (!cwd) return path;
-  return `${cwd.replace(/\/$/, "")}/${path.replace(/^\.\//, "")}`;
+  return joinPath(cwd, path);
 }
 
 // Existence-check cache: keyed by `${cwd}\0${path}`. A path can appear many
@@ -262,7 +271,7 @@ function checkExists(cwd: string | null, path: string): Promise<boolean> {
   if (existsCache.get(key) === true) return Promise.resolve(true);
   // No workspace root → can't resolve a relative path; treat absolute-only.
   const p =
-    root || path.startsWith("/")
+    root || isAbsolutePath(path)
       ? window.codeshell.fileExists(root || "/", path).catch(() => false)
       : Promise.resolve(false);
   return p.then((ok) => {
@@ -387,8 +396,8 @@ function InlineImageLink({
   // allows `img-src 'self' data:`. Main reads the bytes and returns a
   // base64 data: URL. Absolute paths used as-is; relative (docs/x.png) joined
   // onto the session workspace.
-  const isAbs = path.startsWith("/");
-  const abs = isAbs ? path : cwd ? `${cwd.replace(/\/$/, "")}/${path}` : null;
+  const isAbs = isAbsolutePath(path);
+  const abs = isAbs ? path : cwd ? joinPath(cwd, path) : null;
   // Tri-state: while the IPC is in flight we render nothing rather than the
   // fallback link, so a valid image doesn't flash "link → thumbnail" on every
   // mount. The link only shows once we know the image won't load (`failed`).

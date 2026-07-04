@@ -37,9 +37,8 @@ export const bashToolDef: ToolDefinition = {
   description:
     "Execute a shell command and return its output. " +
     "Use for ordinary shell commands, system operations, git commands, " +
-    "package-manager commands, running tests, installing packages, etc. " +
-    "On Windows this tool prefers Git Bash when available, so prefer Bash over " +
-    "PowerShell unless the task needs PowerShell-specific syntax or APIs.",
+    "package-manager commands, running tests, installing packages, etc. Prefer Bash " +
+    "over PowerShell unless the task needs PowerShell-specific syntax or APIs.",
   inputSchema: {
     type: "object",
     properties: {

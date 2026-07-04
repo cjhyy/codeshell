@@ -1,8 +1,13 @@
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
+import { describe, expect, it, beforeEach, afterEach, mock } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { seedAgents } from "./seed-defaults.js";
+
+mock.module("@cjhyy/code-shell-core", () => ({
+  addMarketplace: async () => ({ ok: false, error: "mocked" }),
+}));
+
+const { seedAgents, seedMarketplacesWith } = await import("./seed-defaults.js");
 
 let home: string;
 let agentSrc: string;
@@ -43,5 +48,43 @@ describe("seedAgents", () => {
   it("returns 0 when source dir is missing (no throw)", () => {
     const n = seedAgents(join(agentSrc, "nonexistent"), home);
     expect(n).toBe(0);
+  });
+});
+
+describe("seedMarketplaces", () => {
+  it("writes status for skipped, added, and failed marketplace seeds", async () => {
+    const seedFile = join(home, "known-marketplaces-seed.json");
+    writeFileSync(
+      seedFile,
+      JSON.stringify({
+        official: { source: "github", repo: "cjhyy/mimi-plugins" },
+        broken: { source: "git", url: "https://example.invalid/broken.git" },
+        existing: { source: "github", repo: "cjhyy/existing" },
+      }),
+    );
+    const knownDir = join(home, ".code-shell", "plugins");
+    mkdirSync(knownDir, { recursive: true });
+    writeFileSync(
+      join(knownDir, "known_marketplaces.json"),
+      JSON.stringify({ existing: { source: { source: "github", repo: "cjhyy/existing" } } }),
+    );
+
+    const attempted = await seedMarketplacesWith(seedFile, home, async (name, _source) => {
+      if (name === "broken") return { ok: false, error: "clone failed" };
+      return {
+        ok: true,
+        name,
+        marketplace: { name, plugins: [] },
+        replaced: false,
+      };
+    });
+
+    expect(attempted).toEqual(["official", "broken"]);
+    const status = JSON.parse(
+      readFileSync(join(knownDir, "seed_marketplaces_status.json"), "utf-8"),
+    );
+    expect(status.added).toEqual(["official"]);
+    expect(status.skipped).toEqual(["existing"]);
+    expect(status.failed).toEqual([{ name: "broken", error: "clone failed" }]);
   });
 });

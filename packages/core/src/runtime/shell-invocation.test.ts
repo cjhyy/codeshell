@@ -1,5 +1,8 @@
 import { describe, test, expect, afterEach } from "bun:test";
-import { resolveShellInvocation, defaultShellBinary, resolveGitBash, _resetGitBashCache } from "./spawn-common.js";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { resolveShellInvocation, defaultShellBinary, resolveGitBash, _resetGitBashCache, _resetPowerShellCache } from "./spawn-common.js";
 
 // resolveShellInvocation branches on process.platform; redefine it per-case so
 // the Windows path is exercised on a non-Windows CI host. Restore afterwards.
@@ -16,6 +19,22 @@ function setPlatform(p: NodeJS.Platform) {
 const realPath = process.env.PATH;
 const realProgramFiles = process.env["ProgramFiles"];
 const realProgramFiles86 = process.env["ProgramFiles(x86)"];
+const realSystemRoot = process.env.SystemRoot;
+let tempDirs: string[] = [];
+function fakeExistingBashExe(): string {
+  const dir = mkdtempSync(join(tmpdir(), "codeshell-git-bash-test-"));
+  tempDirs.push(dir);
+  const bash = join(dir, "bash.exe");
+  writeFileSync(bash, "");
+  return bash;
+}
+function fakeExistingPowerShellExe(): string {
+  const dir = mkdtempSync(join(tmpdir(), "codeshell-powershell-test-"));
+  tempDirs.push(dir);
+  const powershell = join(dir, "powershell.exe");
+  writeFileSync(powershell, "");
+  return powershell;
+}
 function disableGitBashDiscovery() {
   process.env.PATH = "";
   process.env["ProgramFiles"] = "C:\\__no_such_root__";
@@ -26,13 +45,19 @@ afterEach(() => {
   delete process.env.ComSpec;
   delete process.env.SHELL;
   delete process.env.CODE_SHELL_GIT_BASH_PATH;
+  delete process.env.CODE_SHELL_POWERSHELL_PATH;
   if (realPath === undefined) delete process.env.PATH;
   else process.env.PATH = realPath;
   if (realProgramFiles === undefined) delete process.env["ProgramFiles"];
   else process.env["ProgramFiles"] = realProgramFiles;
   if (realProgramFiles86 === undefined) delete process.env["ProgramFiles(x86)"];
   else process.env["ProgramFiles(x86)"] = realProgramFiles86;
+  if (realSystemRoot === undefined) delete process.env.SystemRoot;
+  else process.env.SystemRoot = realSystemRoot;
+  for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
+  tempDirs = [];
   _resetGitBashCache();
+  _resetPowerShellCache();
 });
 
 describe("resolveShellInvocation — platform-correct shell + command flag", () => {
@@ -48,19 +73,17 @@ describe("resolveShellInvocation — platform-correct shell + command flag", () 
     expect(resolveShellInvocation("ls")).toEqual({ file: "/bin/bash", args: ["-c", "ls"] });
   });
 
-  test("Windows uses cmd.exe /c (NOT -c) and ignores a stray POSIX $SHELL", () => {
+  test("Windows falls back to PowerShell when Git Bash is absent and ignores a stray POSIX $SHELL", () => {
     setPlatform("win32");
+    disableGitBashDiscovery();
+    _resetGitBashCache();
+    _resetPowerShellCache();
     process.env.SHELL = "/bin/bash"; // stray unix value — must be ignored on win
     delete process.env.ComSpec;
-    expect(resolveShellInvocation("dir")).toEqual({ file: "cmd.exe", args: ["/c", "dir"] });
-  });
-
-  test("Windows honors ComSpec for the cmd path", () => {
-    setPlatform("win32");
-    process.env.ComSpec = "C:\\Windows\\System32\\cmd.exe";
+    process.env.CODE_SHELL_POWERSHELL_PATH = fakeExistingPowerShellExe();
     expect(resolveShellInvocation("dir")).toEqual({
-      file: "C:\\Windows\\System32\\cmd.exe",
-      args: ["/c", "dir"],
+      file: process.env.CODE_SHELL_POWERSHELL_PATH,
+      args: ["-Command", "dir"],
     });
   });
 
@@ -88,6 +111,16 @@ describe("resolveShellInvocation — platform-correct shell + command flag", () 
     expect(resolveShellInvocation("echo hi", "sh.exe")).toEqual({
       file: "sh.exe",
       args: ["-c", "echo hi"],
+    });
+  });
+
+  test("Windows default shell invocation uses discovered Git Bash when available", () => {
+    setPlatform("win32");
+    _resetGitBashCache();
+    process.env.CODE_SHELL_GIT_BASH_PATH = fakeExistingBashExe();
+    expect(resolveShellInvocation("ls -la")).toEqual({
+      file: process.env.CODE_SHELL_GIT_BASH_PATH,
+      args: ["-c", "ls -la"],
     });
   });
 
@@ -130,15 +163,22 @@ describe("resolveGitBash", () => {
 });
 
 describe("defaultShellBinary", () => {
-  test("Windows → cmd.exe (or ComSpec) when Git Bash is absent", () => {
+  test("Windows → Git Bash override when available", () => {
+    setPlatform("win32");
+    _resetGitBashCache();
+    process.env.CODE_SHELL_GIT_BASH_PATH = fakeExistingBashExe();
+    expect(defaultShellBinary()).toBe(process.env.CODE_SHELL_GIT_BASH_PATH);
+  });
+
+  test("Windows → PowerShell when Git Bash is absent", () => {
     setPlatform("win32");
     disableGitBashDiscovery();
     _resetGitBashCache();
-    delete process.env.ComSpec;
-    expect(defaultShellBinary()).toBe("cmd.exe");
-    process.env.ComSpec = "C:\\cmd.exe";
-    expect(defaultShellBinary()).toBe("C:\\cmd.exe");
+    _resetPowerShellCache();
+    process.env.CODE_SHELL_POWERSHELL_PATH = fakeExistingPowerShellExe();
+    expect(defaultShellBinary()).toBe(process.env.CODE_SHELL_POWERSHELL_PATH);
   });
+
   test("POSIX → $SHELL or /bin/bash", () => {
     setPlatform("linux");
     process.env.SHELL = "/bin/zsh";

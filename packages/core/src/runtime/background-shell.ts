@@ -183,6 +183,7 @@ export class BackgroundShellManager {
       };
     }
 
+    const profileStartedAt = backgroundSpawnProfileEnabled() ? performance.now() : 0;
     const shell = opts.shell ?? defaultShellBinary();
     const { file, args } = resolveSpawnTarget(opts.command, {
       cwd: opts.cwd,
@@ -208,8 +209,10 @@ export class BackgroundShellManager {
         stdio: ["ignore", "pipe", "pipe"],
       });
     } catch (err) {
+      logBackgroundSpawnProfile(file, args, elapsedProfileMs(profileStartedAt), "spawn_failed");
       return { ok: false, error: `Failed to spawn background shell: ${(err as Error).message}` };
     }
+    logBackgroundSpawnProfile(file, args, elapsedProfileMs(profileStartedAt), "started");
 
     if (child.pid === undefined) {
       return { ok: false, error: "Failed to spawn background shell: no pid" };
@@ -608,3 +611,23 @@ export class BackgroundShellManager {
 
 /** Process-local singleton, mirroring asyncAgentRegistry's lifetime contract. */
 export const backgroundShellManager = new BackgroundShellManager();
+
+function backgroundSpawnProfileEnabled(): boolean {
+  return process.env.CODESHELL_SPAWN_PROFILE === "1";
+}
+
+function elapsedProfileMs(startedAt: number): number | undefined {
+  return startedAt > 0 ? Math.round(performance.now() - startedAt) : undefined;
+}
+
+function logBackgroundSpawnProfile(
+  file: string,
+  args: string[],
+  elapsedMs: number | undefined,
+  status: "started" | "spawn_failed",
+): void {
+  if (!backgroundSpawnProfileEnabled()) return;
+  console.error(
+    `[spawn-profile] background shell=${JSON.stringify(file)} flag=${JSON.stringify(args[0] ?? "")} elapsedMs=${elapsedMs ?? "n/a"} status=${status}`,
+  );
+}

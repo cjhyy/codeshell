@@ -142,6 +142,7 @@ export function safeSpawnShell(
   command: string,
   opts: SafeSpawnShellOptions,
 ): Promise<SafeSpawnResult> {
+  const resolveStartedAt = spawnProfileEnabled() ? performance.now() : 0;
   // Don't hardcode a POSIX default here — resolveSpawnTarget →
   // resolveShellInvocation picks the platform shell (cmd.exe on Windows,
   // $SHELL/bin/bash on POSIX) when opts.shell is omitted.
@@ -151,7 +152,7 @@ export function safeSpawnShell(
     shell,
     sandbox: opts.sandbox,
   });
-  return runLifecycle({ file, args, opts, cleanup });
+  return runLifecycle({ file, args, opts, cleanup, resolveMs: elapsedMs(resolveStartedAt) });
 }
 
 interface LifecycleArgs {
@@ -159,11 +160,13 @@ interface LifecycleArgs {
   args: string[];
   opts: SafeSpawnOptions;
   cleanup: (() => void) | undefined;
+  resolveMs: number | undefined;
 }
 
-function runLifecycle({ file, args, opts, cleanup }: LifecycleArgs): Promise<SafeSpawnResult> {
+function runLifecycle({ file, args, opts, cleanup, resolveMs }: LifecycleArgs): Promise<SafeSpawnResult> {
   const maxBytes = opts.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_BYTES;
   const abortGrace = opts.ioDrainGraceMs ?? DEFAULT_IO_DRAIN_GRACE_MS;
+  const lifecycleStartedAt = spawnProfileEnabled() ? performance.now() : 0;
 
   // Pre-spawn abort: don't pay spawn cost.
   if (opts.signal?.aborted) {
@@ -176,6 +179,7 @@ function runLifecycle({ file, args, opts, cleanup }: LifecycleArgs): Promise<Saf
     const finish = (result: SafeSpawnResult) => {
       if (settled) return;
       settled = true;
+      logSpawnProfile(file, args, resolveMs, elapsedMs(lifecycleStartedAt), result.reason);
       // Always release backend-allocated resources, regardless of exit path.
       // cleanup is best-effort — see seatbelt backend for rationale.
       safeCleanup(cleanup);
@@ -312,6 +316,27 @@ function runLifecycle({ file, args, opts, cleanup }: LifecycleArgs): Promise<Saf
       });
     });
   });
+}
+
+function spawnProfileEnabled(): boolean {
+  return process.env.CODESHELL_SPAWN_PROFILE === "1";
+}
+
+function elapsedMs(startedAt: number): number | undefined {
+  return startedAt > 0 ? Math.round(performance.now() - startedAt) : undefined;
+}
+
+function logSpawnProfile(
+  file: string,
+  args: string[],
+  resolveMs: number | undefined,
+  lifecycleMs: number | undefined,
+  reason: SafeSpawnReason,
+): void {
+  if (!spawnProfileEnabled()) return;
+  console.error(
+    `[spawn-profile] shell=${JSON.stringify(file)} flag=${JSON.stringify(args[0] ?? "")} resolveMs=${resolveMs ?? "n/a"} lifecycleMs=${lifecycleMs ?? "n/a"} reason=${reason}`,
+  );
 }
 
 function safeCleanup(cleanup: (() => void) | undefined): void {

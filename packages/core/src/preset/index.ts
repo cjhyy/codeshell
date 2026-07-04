@@ -266,6 +266,21 @@ const TOOL_GATED_SECTIONS: Record<string, string[]> = {
   browser: BROWSER_SECTION_TOOLS,
 };
 
+export interface BuildPresetSystemPromptOptions {
+  activeToolNames?: readonly string[];
+  platform?: NodeJS.Platform;
+}
+
+function platformShellGuidance(platform: NodeJS.Platform): string {
+  if (platform !== "win32") return "";
+  return [
+    "# Windows Shell Guidance",
+    "- On Windows, Bash uses Git Bash when it is available. Prefer Bash for ordinary shell commands, git operations, package-manager commands, tests, and POSIX-style command lines.",
+    "- Do not choose PowerShell merely because the OS is Windows. Use PowerShell only when the user explicitly asks for it or the task requires PowerShell-specific cmdlets, Windows APIs, registry access, or `.ps1` behavior.",
+    "- When writing Bash commands on Windows, use Git Bash paths such as `/d/github/project` instead of PowerShell-only syntax or raw `D:\\...` paths inside `cd` commands.",
+  ].join("\n");
+}
+
 /**
  * Build the full system prompt for a preset by loading and joining its sections.
  *
@@ -275,8 +290,15 @@ const TOOL_GATED_SECTIONS: Record<string, string[]> = {
  * (tools + usage instructions disappear together). Omit `activeToolNames` to
  * include all sections (e.g. when assembling a generic/preview prompt).
  */
-export function buildPresetSystemPrompt(preset: AgentPreset, activeToolNames?: readonly string[]): string {
+export function buildPresetSystemPrompt(
+  preset: AgentPreset,
+  optionsOrActiveToolNames?: BuildPresetSystemPromptOptions | readonly string[],
+): string {
   let sections = preset.promptSections;
+  const options = Array.isArray(optionsOrActiveToolNames)
+    ? { activeToolNames: optionsOrActiveToolNames }
+    : (optionsOrActiveToolNames ?? {});
+  const activeToolNames = options.activeToolNames;
   if (activeToolNames) {
     const active = new Set(activeToolNames);
     sections = sections.filter((s) => {
@@ -284,7 +306,9 @@ export function buildPresetSystemPrompt(preset: AgentPreset, activeToolNames?: r
       return !gate || gate.some((t) => active.has(t));
     });
   }
-  return loadSections(sections);
+  return [loadSections(sections), platformShellGuidance(options.platform ?? process.platform)]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 export function resolveBuiltinToolNames(options?: {

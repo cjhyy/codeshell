@@ -17,12 +17,21 @@ import {
   readdirSync,
   copyFileSync,
   readFileSync,
+  writeFileSync,
 } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { createRequire } from "node:module";
 import { addMarketplace } from "@cjhyy/code-shell-core";
+
+type SeedMarketplaceStatus = {
+  checkedAt: string;
+  attempted: string[];
+  added: string[];
+  skipped: string[];
+  failed: Array<{ name: string; error: string }>;
+};
 
 // ESM has no implicit __dirname; derive it from this module's URL. Bundled
 // desktop main lives at packages/desktop/out/main, so the repo root is four
@@ -74,6 +83,14 @@ export function seedAgents(srcDir: string, home: string): number {
  * network on first launch must not block startup). Returns names attempted.
  */
 export async function seedMarketplaces(seedFile: string, home: string): Promise<string[]> {
+  return seedMarketplacesWith(seedFile, home, addMarketplace);
+}
+
+export async function seedMarketplacesWith(
+  seedFile: string,
+  home: string,
+  add: typeof addMarketplace,
+): Promise<string[]> {
   if (!existsSync(seedFile)) return [];
   // Skip entries already present in the user's known_marketplaces.json.
   const knownPath = join(home, ".code-shell", "plugins", "known_marketplaces.json");
@@ -92,16 +109,36 @@ export async function seedMarketplaces(seedFile: string, home: string): Promise<
     return [];
   }
   const attempted: string[] = [];
+  const added: string[] = [];
+  const skipped: string[] = [];
+  const failed: Array<{ name: string; error: string }> = [];
   for (const [name, source] of Object.entries(seed)) {
-    if (known[name]) continue;
+    if (known[name]) {
+      skipped.push(name);
+      continue;
+    }
     attempted.push(name);
     try {
-      await addMarketplace(name, source);
+      const result = await add(name, source);
+      if (result.ok) {
+        added.push(name);
+      } else {
+        failed.push({ name, error: result.error });
+        console.error(`seed: failed to add marketplace ${name}: ${result.error}`);
+      }
     } catch (err) {
+      failed.push({ name, error: err instanceof Error ? err.message : String(err) });
       console.error(`seed: failed to add marketplace ${name}`, err);
     }
   }
+  writeSeedMarketplaceStatus(home, { checkedAt: new Date().toISOString(), attempted, added, skipped, failed });
   return attempted;
+}
+
+function writeSeedMarketplaceStatus(home: string, status: SeedMarketplaceStatus): void {
+  const statusPath = join(home, ".code-shell", "plugins", "seed_marketplaces_status.json");
+  mkdirSync(dirname(statusPath), { recursive: true });
+  writeFileSync(statusPath, `${JSON.stringify(status, null, 2)}\n`);
 }
 
 /** Top-level first-run seeding, called once from app.whenReady. */
