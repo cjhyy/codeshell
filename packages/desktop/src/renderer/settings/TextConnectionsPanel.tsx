@@ -7,7 +7,7 @@
  * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §5.
  */
 import React, { useCallback, useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { ExternalLink, Plus } from "lucide-react";
 
 /** Compact token count, e.g. 400000 → "400K". Mirrors ModelSection. */
 function formatTok(n: number): string {
@@ -61,6 +61,24 @@ interface Props {
   tag?: ConnTag;
   /** Section heading. */
   title?: string;
+}
+
+function SignupLink({ url }: { url?: string }) {
+  const { t } = useT();
+  if (!url) return null;
+  return (
+    <Button
+      type="button"
+      variant="link"
+      size="sm"
+      className="h-auto shrink-0 gap-1 p-0 text-xs"
+      title={url}
+      onClick={() => void window.codeshell.openExternal(url)}
+    >
+      <ExternalLink className="h-3.5 w-3.5" />
+      {t("settingsX.searchConn.getKey")}
+    </Button>
+  );
 }
 
 export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", title }: Props) {
@@ -339,16 +357,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
                 <ConnCard key={entry.id}>
                   <header className="flex items-start justify-between gap-2">
                     <strong className="text-sm font-medium text-foreground">{entry.displayName}</strong>
-                    {entry.signupUrl && (
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="h-auto shrink-0 p-0 text-xs"
-                        onClick={() => void window.codeshell.openExternal(entry.signupUrl!)}
-                      >
-                        {t("settingsX.searchConn.getKey")}
-                      </Button>
-                    )}
+                    {entry.needsKey !== false && <SignupLink url={entry.signupUrl} />}
                   </header>
                   {entry.description && (
                     <p className="text-xs leading-relaxed text-muted-foreground">{entry.description}</p>
@@ -380,24 +389,27 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
             const isDefault = inst.id === defaultId;
             return (
               <ConnCard key={inst.id} isDefault={isDefault}>
-                <header className="flex min-w-0 flex-col gap-1">
-                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                    <strong className="truncate text-sm font-medium text-foreground">
-                      {entry?.displayName ?? inst.catalogId}
-                    </strong>
-                    {isDefault && <Badge variant="accent">{t("settingsX.textConn.current")}</Badge>}
-                    {preset?.maxContextTokens && (
-                      <Badge variant="secondary">{formatTok(preset.maxContextTokens)} ctx</Badge>
-                    )}
-                    {preset?.maxOutputTokens && (
-                      <Badge variant="secondary">{formatTok(preset.maxOutputTokens)} out</Badge>
-                    )}
+                <header className="flex min-w-0 items-start justify-between gap-2">
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                      <strong className="truncate text-sm font-medium text-foreground">
+                        {entry?.displayName ?? inst.catalogId}
+                      </strong>
+                      {isDefault && <Badge variant="accent">{t("settingsX.textConn.current")}</Badge>}
+                      {preset?.maxContextTokens && (
+                        <Badge variant="secondary">{formatTok(preset.maxContextTokens)} ctx</Badge>
+                      )}
+                      {preset?.maxOutputTokens && (
+                        <Badge variant="secondary">{formatTok(preset.maxOutputTokens)} out</Badge>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <code className="font-mono">#{inst.id}</code>
+                      <span>·</span>
+                      <code className="break-all font-mono">{inst.model}</code>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <code className="font-mono">#{inst.id}</code>
-                    <span>·</span>
-                    <code className="break-all font-mono">{inst.model}</code>
-                  </div>
+                  {entry?.needsKey !== false && <SignupLink url={entry?.signupUrl} />}
                 </header>
 
                 <ConnField label={t("settingsX.textConn.fieldModel")}>
