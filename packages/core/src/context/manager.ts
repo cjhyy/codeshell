@@ -433,6 +433,91 @@ export class ContextManager {
   }
 
   /**
+   * Force maximum compaction, ignoring the ratio gates. This is what a manual
+   * `/compact` invokes: the user explicitly asked to shrink NOW, so we don't
+   * wait for the prompt to reach compactAtRatio.
+   *
+   * Order: tier-0 cleanups (persist/truncate/dedupe/mask) + microcompact, then
+   * an unconditional LLM summary of the older messages. If no summarizeFn is
+   * wired (or it fails / yields nothing), fall back to snip → window so the
+   * call still shrinks the conversation rather than no-opping.
+   *
+   * Unlike manage()/manageAsync(), there is NO `ratio >= compactAtRatio` gate:
+   * a long-but-under-threshold text-only conversation (the /compact bug) still
+   * gets summarized here.
+   */
+  async forceSummarize(messages: Message[]): Promise<Message[]> {
+    let result = messages;
+
+    // Tier 0: same waste-removal + micro as the automatic path.
+    result = this.persistLargeToolResults(result);
+    result = this.truncateToolResults(result);
+    result = applyToolResultBudget(result);
+    const dedup = dedupeFileReads(result);
+    if (dedup.clearedCount > 0) result = dedup.messages;
+    const masked = maskOldObservations(result);
+    if (masked.maskedCount > 0) result = masked.messages;
+
+    const keepRecentN =
+      this.config.microcompactKeepRecent ?? defaultKeepRecent(this.config.maxTokens);
+    result = microcompact(result, { keepRecentN });
+
+    let tokens = this.estimateTokensHybrid(result);
+
+    // Unconditional LLM summary (no ratio gate).
+    if (this.summarizeFn && this.consecutiveSummaryFailures < 3) {
+      try {
+        const summaryKeepN = Math.max(8, Math.floor(result.length * 0.3));
+        const messagesToSummarize = result.slice(1, -summaryKeepN);
+        if (messagesToSummarize.length > 3) {
+          const priorSummary = extractAnchoredSummary(result) ?? this.lastSummary;
+          const prompt = buildSummarizationPrompt(messagesToSummarize, priorSummary);
+          const before = tokens;
+          const summary = await this.summarizeFn(prompt);
+          if (summary && summary.length > 50) {
+            result = applySummaryCompaction(result, summary, summaryKeepN, this.transcriptPath);
+            this.consecutiveSummaryFailures = 0;
+            this.lastSummary = summary;
+            const after = estimateTokens(result);
+            logger.info("context.force_summary_compact", {
+              before,
+              after,
+              summaryLen: summary.length,
+              rolling: priorSummary !== undefined,
+            });
+            this.onCompact?.({ strategy: "summary", before, after });
+            return result;
+          }
+        }
+      } catch (err) {
+        this.consecutiveSummaryFailures++;
+        logger.warn("context.summary_failed", {
+          failures: this.consecutiveSummaryFailures,
+          error: (err as Error).message,
+        });
+      }
+    }
+
+    // Fallback: no summary available — snip, then window, so /compact still
+    // shrinks the conversation instead of no-opping.
+    {
+      const before = tokens;
+      result = snipCompact(result, 3, 8);
+      tokens = this.estimateTokensHybrid(result);
+      if (tokens < before) this.onCompact?.({ strategy: "snip", before, after: tokens });
+    }
+    if (this.estimateTokensHybrid(result) >= this.estimateTokensHybrid(messages)) {
+      const before = tokens;
+      const keepN = Math.max(10, Math.floor(result.length * 0.4));
+      result = windowCompact(result, keepN);
+      tokens = this.estimateTokensHybrid(result);
+      this.onCompact?.({ strategy: "window", before, after: tokens });
+    }
+
+    return result;
+  }
+
+  /**
    * Persist large tool_result blocks to disk and replace them with a
    * preview + filepath. No-op when transcript path hasn't been set
    * (e.g. unit tests that exercise compaction directly without a session).
