@@ -114,6 +114,27 @@ function TurnProcessGroupCardImpl({ group, turnEpoch, cwd }: Props) {
                 </div>
               );
             }
+            if (m.kind === "user") {
+              // A steer / goal-wakeup / cron续接 spliced into a still-live turn
+              // lands INSIDE this group (injected user is not a turn boundary,
+              // see streamGroups foldTurnProcess). It must render as a
+              // right-aligned user bubble here — without this branch the
+              // confirmed steer hit `return null` and visibly vanished after
+              // being consumed (regression: steer bubble disappears).
+              // BUT a still-pending optimistic steer is owned by the queued-input
+              // panel (visible + revocable there until steer_injected flips it to
+              // pending:false). Rendering it here too would double it and show it
+              // as already-in-transcript before the engine consumed it. Only draw
+              // the CONFIRMED bubble; the panel handles the pending one.
+              if (m.pending || m.text === "") return null;
+              return (
+                <div key={m.id} className="flex min-w-0 max-w-full flex-col items-end py-1">
+                  <div className="min-w-0 max-w-[80%] rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm">
+                    <div className="whitespace-pre-wrap break-words">{m.text}</div>
+                  </div>
+                </div>
+              );
+            }
             if (m.kind === "thinking") {
               return <ThinkingMessageView key={m.id} message={m} />;
             }

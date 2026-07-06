@@ -355,6 +355,29 @@ describe("buildStreamItems", () => {
     expect(hasInjectedBubble).toBe(true);
   });
 
+  // A mid-turn steer while the turn is still streaming lands INSIDE the live
+  // turn's process group (it's not a boundary). The group card must therefore
+  // render user members — regression guard for the "steer bubble disappears
+  // after it's actually consumed" bug: the injected user was a group member
+  // but TurnProcessGroupCard had no `user` branch, so it hit `return null`.
+  test("a mid-turn injected steer bubble is carried as a member of the live group", () => {
+    const messages: Message[] = [
+      user("run the task", 0),
+      streamingAssistant("working…", 100), // still streaming → no boundary
+      tool("Bash", 1_000, 2_000),
+      injectedUser("also check the logs", 2_500), // steer spliced in mid-turn
+    ];
+
+    const groups = processGroups(buildStreamItems(messages, { liveTurnActive: true }));
+    expect(groups).toHaveLength(1);
+    // The steer bubble must live inside the (still live) group so the card can
+    // draw it — otherwise the confirmed steer visibly vanishes from the chat.
+    const insideGroup = groups[0]!.items.some(
+      (it) => it.kind === "user" && (it as { text?: string }).text === "also check the logs",
+    );
+    expect(insideGroup).toBe(true);
+  });
+
   // The interrupted turn should render flat, not behind "已处理 Xs ⌄". The
   // process group must carry stopped=true when a trailing turn_end
   // reason="stopped" sits in the turn slice, so the card drops its fold header.
@@ -495,6 +518,35 @@ describe("reconcileStreamItems", () => {
     const built3 = buildStreamItems([u, t, agent("a1", 2, { done: true })], { liveTurnActive: true });
     const recon3 = reconcileStreamItems(recon2, built3);
     expect(findAgentIn(recon3)?.done).toBe(true);
+  });
+
+  // An in-group steer bubble flips pending→confirmed in place (same id). The
+  // group signature MUST change so the memoized card re-renders — otherwise the
+  // card stays frozen at the pending render and the confirmed bubble (which
+  // TurnProcessGroupCard only draws once pending is false) never appears.
+  test("does NOT reuse the group when an in-group steer flips pending→confirmed", () => {
+    const u = user("run", 0);
+    const a = streamingAssistant("working…", 100);
+    const t = tool("Bash", 1_000, 2_000);
+    const pendingSteer: Message = {
+      kind: "user",
+      id: "steer-1",
+      text: "also check logs",
+      injected: true,
+      pending: true,
+      createdAt: 2_500,
+    };
+    const confirmedSteer: Message = { ...pendingSteer, pending: false };
+
+    const prev = reconcileStreamItems(
+      [],
+      buildStreamItems([u, a, t, pendingSteer], { liveTurnActive: true }),
+    );
+    const next = buildStreamItems([u, a, t, confirmedSteer], { liveTurnActive: true });
+    const reconciled = reconcileStreamItems(prev, next);
+    const prevGroup = prev.find((i) => i.kind === "turn_process_group");
+    const recGroup = reconciled.find((i) => i.kind === "turn_process_group");
+    expect(recGroup).not.toBe(prevGroup);
   });
 
   test("empty previous render passes new items through unchanged", () => {

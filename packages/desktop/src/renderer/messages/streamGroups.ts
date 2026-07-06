@@ -237,6 +237,14 @@ function innerItemToken(it: Message | ToolGroup): string {
     if (!it.done && !it.error) return `a-live(${it.id}:${(liveAgentToken += 1)})`;
     return `a(${it.id}:1:${it.error ? 1 : 0}:${it.toolCount}:${(it.text ?? "").length})`;
   }
+  if (it.kind === "user") {
+    // An in-group steer bubble mutates in place on confirmation: same id, but
+    // pending flips true→false and the text may resolve from the optimistic
+    // draft to the engine-echoed text (steer_injected). Keying on id alone would
+    // reuse the stale group object (memoized card frozen at pending → the
+    // confirmed bubble never appears). Fold pending + text length into the token.
+    return `u(${it.id}:${(it as { pending?: boolean }).pending ? 1 : 0}:${it.text.length})`;
+  }
   return it.id;
 }
 
