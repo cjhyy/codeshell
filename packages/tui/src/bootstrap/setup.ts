@@ -8,7 +8,8 @@
 
 import chalk from "chalk";
 import type { PermissionMode } from "@cjhyy/code-shell-core";
-import { rotateLogs, logger } from "@cjhyy/code-shell-core";
+import { rotateLogs, logger, writeSettingsSchemaFile, userHome } from "@cjhyy/code-shell-core";
+import { join } from "node:path";
 
 export interface SetupOptions {
   cwd: string;
@@ -21,6 +22,11 @@ export async function setup(options: SetupOptions): Promise<void> {
 
   // 0. Trim old log files (keep last 7 days), then mark startup.
   rotateLogs();
+  try {
+    writeSettingsSchemaFile(join(userHome(), ".code-shell"));
+  } catch {
+    // Best-effort editor aid; startup must not depend on schema file writes.
+  }
   logger.info("setup.start", { cwd, permissionMode, level: logger.getMinLevel() });
 
   // 1. Node.js version check. Must match package.json `engines` (>=20.10) and

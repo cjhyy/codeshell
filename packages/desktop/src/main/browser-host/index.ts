@@ -19,7 +19,7 @@ export interface BrowserHostOpenOptions {
   kind: "window";
   /** 初始加载的 URL(外部站点,如登录页)。 */
   url: string;
-  /** session 分区(如 persist:login-<id>);决定 cookie 隔离。 */
+  /** session 分区(如 login-<id> 或 persist:browser);决定 cookie 隔离。 */
   partition: string;
   width?: number;
   height?: number;
@@ -144,13 +144,13 @@ export async function openBrowserHost(opts: BrowserHostOpenOptions): Promise<Bro
 }
 
 /**
- * 销毁一个分区的 cookie(登完即焚 = 无痕)。best-effort。
- * 仅清 cookie(本期不动 localStorage,见设计稿已知局限)。
+ * 销毁一个分区的站点存储(登完即焚 = 无痕)。best-effort。
+ * 清 cookie/localStorage/IndexedDB/Service Worker 等 Electron 支持的站点数据。
  */
-export async function destroyPartitionCookies(partition: string): Promise<void> {
+export async function destroyPartitionStorage(partition: string): Promise<void> {
   try {
     const { session } = await import("electron");
-    await session.fromPartition(partition).clearStorageData({ storages: ["cookies"] });
+    await session.fromPartition(partition).clearStorageData();
   } catch {
     /* best-effort */
   }

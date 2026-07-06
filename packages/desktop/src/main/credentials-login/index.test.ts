@@ -250,11 +250,15 @@ describe("loginAndCaptureCookies", () => {
 
   test("SAVE sentinel → captures cookies + username + loginCheck, closes & destroys partition", async () => {
     const fake = makeFakeHandle({ cookies: ytLoggedIn, username: "Alice" });
+    let openedPartition: string | undefined;
     let destroyed: string | undefined;
     const p = loginAndCaptureCookies(
       { url: "https://www.youtube.com", platform: "youtube" },
       {
-        open: async () => fake.handle,
+        open: async (opts) => {
+          openedPartition = opts.partition;
+          return fake.handle;
+        },
         nonce: NONCE,
         destroy: async (part) => {
           destroyed = part;
@@ -273,7 +277,9 @@ describe("loginAndCaptureCookies", () => {
       expect(r.loginCheck.ok).toBe(true);
     }
     expect(fake.closeCalls()).toBe(1);
-    expect(destroyed).toMatch(/^persist:login-/);
+    expect(openedPartition).toMatch(/^login-/);
+    expect(openedPartition?.startsWith("persist:")).toBe(false);
+    expect(destroyed).toBe(openedPartition);
   });
 
   test("guest-only cookies → ok=true result but loginCheck.ok=false (soft warn)", async () => {

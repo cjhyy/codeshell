@@ -2,7 +2,7 @@
  * 登录窗口控制层(凭证登录抓 cookie 第一个业务用例,建在 BrowserHost 上)。
  *
  * 流程(设计稿 §4):
- *   1. 开全新临时分区 persist:login-<id>(= 无痕、天然多账号)
+ *   1. 开全新临时分区 login-<id>(非 persist,会话结束自动清理)
  *   2. BrowserHost 开独立窗口加载登录 URL
  *   3. did-finish-load 注入浮窗:提示 + 「我已登录,保存」+「取消」,点击经 console 哨兵回 main
  *   4. 点保存 → 读该域 cookie + 抓用户名 + 登录态校验
@@ -16,7 +16,7 @@ import { randomUUID } from "node:crypto";
 import type { ElectronCookieLike } from "../credentials-service.js";
 import {
   openBrowserHost,
-  destroyPartitionCookies,
+  destroyPartitionStorage,
   type BrowserHostHandle,
 } from "../browser-host/index.js";
 import {
@@ -190,7 +190,7 @@ export async function loginAndCaptureCookies(
   req: LoginCaptureRequest,
   deps: {
     open?: typeof openBrowserHost;
-    destroy?: typeof destroyPartitionCookies;
+    destroy?: typeof destroyPartitionStorage;
     /** Override the per-window nonce (tests only); production mints a random one. */
     nonce?: string;
   } = {},
@@ -199,12 +199,12 @@ export async function loginAndCaptureCookies(
   if (!targetDomain) return { ok: false, error: "无效的 URL" };
 
   const open = deps.open ?? openBrowserHost;
-  const destroy = deps.destroy ?? destroyPartitionCookies;
+  const destroy = deps.destroy ?? destroyPartitionStorage;
   // Per-window one-time secret: the page cannot guess it, so it cannot forge a
   // save/cancel click by printing a known constant to the console.
   const nonce = deps.nonce ?? randomUUID();
   const { save: saveToken, cancel: cancelToken } = tokensFor(nonce);
-  const partition = `persist:login-${randomUUID()}`;
+  const partition = `login-${randomUUID()}`;
 
   let handle: BrowserHostHandle;
   try {

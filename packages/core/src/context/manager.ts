@@ -112,6 +112,8 @@ export class ContextManager {
   private lastActualTokens: number | undefined;
   /** Message count at the time lastActualTokens was recorded. */
   private lastActualAtMessageCount: number | undefined;
+  /** Heuristic token estimate for the same messages as lastActualTokens. */
+  private lastActualAnchorEstimate: number | undefined;
   /** Path to session transcript — passed to summary compaction for on-demand access. */
   private transcriptPath: string | undefined;
   /** Notified whenever any compaction tier fires, including microcompact. */
@@ -136,9 +138,10 @@ export class ContextManager {
    * Record actual token usage from API response.
    * Used for hybrid estimation: actual + estimate for new messages.
    */
-  recordActualUsage(inputTokens: number, messageCount: number): void {
+  recordActualUsage(inputTokens: number, messageCount: number, messages?: Message[]): void {
     this.lastActualTokens = inputTokens;
     this.lastActualAtMessageCount = messageCount;
+    this.lastActualAnchorEstimate = messages ? estimateTokens(messages) : undefined;
   }
 
   /**
@@ -146,16 +149,24 @@ export class ContextManager {
    * plus estimation for messages added since the last API call.
    */
   private estimateTokensHybrid(messages: Message[]): number {
+    const currentEstimate = estimateTokens(messages);
     if (
       this.lastActualTokens !== undefined &&
-      this.lastActualAtMessageCount !== undefined &&
-      this.lastActualAtMessageCount < messages.length
+      this.lastActualAtMessageCount !== undefined
     ) {
-      const newMessages = messages.slice(this.lastActualAtMessageCount);
-      const newTokens = estimateTokens(newMessages);
-      return this.lastActualTokens + newTokens;
+      if (this.lastActualAtMessageCount < messages.length) {
+        const newMessages = messages.slice(this.lastActualAtMessageCount);
+        const newTokens = estimateTokens(newMessages);
+        return this.lastActualTokens + newTokens;
+      }
+
+      if (this.lastActualAnchorEstimate !== undefined && this.lastActualAnchorEstimate > 0) {
+        return Math.round(
+          this.lastActualTokens * (currentEstimate / this.lastActualAnchorEstimate),
+        );
+      }
     }
-    return estimateTokens(messages);
+    return currentEstimate;
   }
 
   /**
@@ -205,7 +216,7 @@ export class ContextManager {
         keepRecentN,
         this.transcriptPath,
       );
-      const after = estimateTokens(compacted);
+      const after = this.estimateTokensHybrid(compacted);
 
       if (after >= before) {
         this.consecutiveSummaryFailures++;

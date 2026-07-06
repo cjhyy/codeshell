@@ -4,6 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadPluginHooks, listPluginHooks, pluginHookKey } from "./loadPluginHooks.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { Engine } from "../engine/engine.js";
+import { LLMClientBase } from "../llm/client-base.js";
+import { registerProvider } from "../llm/client-factory.js";
+import type { CreateMessageOptions } from "../llm/types.js";
+import type { LLMResponse, Message } from "../types.js";
 
 /**
  * loadPluginHooks reads the real ~/.code-shell/plugins/installed_plugins.json
@@ -23,7 +28,10 @@ afterEach(() => {
   dirs.length = 0;
 });
 
-function stagePlugin(pluginKey: string): void {
+function stagePlugin(
+  pluginKey: string,
+  sessionStartGroups: unknown[] = [{ hooks: [{ type: "command", command: "echo hi" }] }],
+): void {
   const home = mkdtempSync(join(tmpdir(), "plughome-"));
   dirs.push(home);
   process.env.HOME = home;
@@ -34,9 +42,7 @@ function stagePlugin(pluginKey: string): void {
     join(installPath, "hooks", "hooks.json"),
     JSON.stringify({
       hooks: {
-        SessionStart: [
-          { hooks: [{ type: "command", command: "echo hi" }] },
-        ],
+        SessionStart: sessionStartGroups,
       },
     }),
   );
@@ -60,6 +66,38 @@ function stagePlugin(pluginKey: string): void {
       },
     }),
   );
+}
+
+const fakeProvider = "fake-session-start-source";
+const scenarios = new Map<string, { calls: Message[][] }>();
+
+class FakeSessionStartClient extends LLMClientBase {
+  protected initClient(): void {}
+
+  async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
+    const scenario = scenarios.get(this.model);
+    if (!scenario) throw new Error(`missing fake scenario: ${this.model}`);
+    if ((options.tools?.length ?? 0) > 0) {
+      scenario.calls.push(options.messages.map((message) => ({ ...message })));
+    }
+    this.recordUsage({ promptTokens: 1, completionTokens: 1, totalTokens: 2 }, options);
+    return {
+      text: "ok",
+      toolCalls: [],
+      stopReason: "stop",
+      usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+    };
+  }
+}
+
+registerProvider(fakeProvider, FakeSessionStartClient);
+
+function messageText(messages: Message[]): string {
+  return messages
+    .map((message) =>
+      typeof message.content === "string" ? message.content : JSON.stringify(message.content),
+    )
+    .join("\n");
 }
 
 describe("loadPluginHooks disabledPlugins filter", () => {
@@ -110,6 +148,85 @@ describe("loadPluginHooks disabledPluginHooks (per-hook) filter", () => {
     const reg = new HookRegistry();
     loadPluginHooks(reg, [], ["superpowers:SessionStart:echo other"]);
     expect(reg.hasHooks("on_session_start")).toBe(true);
+  });
+});
+
+describe("loadPluginHooks SessionStart matcher source", () => {
+  test("matcher 'resume' fires on resume and not on startup", async () => {
+    stagePlugin("superpowers@market", [
+      {
+        matcher: "resume",
+        hooks: [
+          {
+            type: "command",
+            command: `printf '%s' '{"additionalContext":"resume-hook-fired"}'`,
+          },
+        ],
+      },
+    ]);
+
+    const dir = mkdtempSync(join(tmpdir(), "session-start-source-"));
+    dirs.push(dir);
+    const model = `${fakeProvider}-${Date.now()}-${Math.random()}`;
+    const scenario = { calls: [] as Message[][] };
+    scenarios.set(model, scenario);
+    try {
+      const engine = new Engine({
+        llm: { provider: fakeProvider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        headless: true,
+      });
+
+      const first = await engine.run("startup turn", { cwd: dir });
+      await engine.run("resume turn", { cwd: dir, sessionId: first.sessionId });
+
+      expect(scenario.calls).toHaveLength(2);
+      expect(messageText(scenario.calls[0]!)).not.toContain("resume-hook-fired");
+      expect(messageText(scenario.calls[1]!)).toContain("resume-hook-fired");
+    } finally {
+      scenarios.delete(model);
+    }
+  });
+
+  test("fresh session with caller-supplied id is startup, not resume", async () => {
+    stagePlugin("superpowers@market", [
+      {
+        matcher: "resume",
+        hooks: [
+          {
+            type: "command",
+            command: `printf '%s' '{"additionalContext":"resume-hook-fired"}'`,
+          },
+        ],
+      },
+    ]);
+
+    const dir = mkdtempSync(join(tmpdir(), "session-start-explicit-id-"));
+    dirs.push(dir);
+    const model = `${fakeProvider}-${Date.now()}-${Math.random()}`;
+    const scenario = { calls: [] as Message[][] };
+    scenarios.set(model, scenario);
+    try {
+      const engine = new Engine({
+        llm: { provider: fakeProvider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        headless: true,
+      });
+
+      await engine.run("startup with explicit id", {
+        cwd: dir,
+        sessionId: "caller-fresh-id",
+      });
+      await engine.run("truly resumed", { cwd: dir, sessionId: "caller-fresh-id" });
+
+      expect(scenario.calls).toHaveLength(2);
+      expect(messageText(scenario.calls[0]!)).not.toContain("resume-hook-fired");
+      expect(messageText(scenario.calls[1]!)).toContain("resume-hook-fired");
+    } finally {
+      scenarios.delete(model);
+    }
   });
 });
 

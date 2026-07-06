@@ -21,6 +21,8 @@
  * loop observe the same instance.
  */
 
+import { normalizeCwdPath } from "../../cc-orchestrator/cwd-normalize.js";
+
 function isValidSessionId(sid: unknown): sid is string {
   return typeof sid === "string" && sid.length > 0;
 }
@@ -51,6 +53,8 @@ export interface BackgroundJobEntry {
   ccSessionId?: string;
   /** Files the external agent changed (parsed from its transcript, #6). */
   changedFiles?: string[];
+  /** Working directory for jobs that operate on the filesystem, e.g. DriveAgent. */
+  cwd?: string;
 }
 
 /** Outcome passed to finish() to record how a job ended. */
@@ -61,12 +65,16 @@ export interface BackgroundJobOutcome {
   changedFiles?: string[];
 }
 
+export interface BackgroundJobStartOptions {
+  cwd?: string;
+}
+
 class BackgroundJobRegistry {
   private jobs = new Map<string, BackgroundJobEntry>(); // jobId -> entry (insertion-ordered)
   private listeners = new Set<Listener>();
 
   /** Register a running job. Invalid sessionId is ignored (cannot be waited on). */
-  start(jobId: string, sessionId: string, description = ""): void {
+  start(jobId: string, sessionId: string, description = "", options?: BackgroundJobStartOptions): void {
     if (!isValidSessionId(sessionId)) return;
     this.jobs.set(jobId, {
       jobId,
@@ -74,6 +82,7 @@ class BackgroundJobRegistry {
       description,
       status: "running",
       startedAt: Date.now(),
+      ...(options?.cwd ? { cwd: normalizeCwdPath(options.cwd) } : {}),
     });
     this.notify();
   }
@@ -104,6 +113,14 @@ class BackgroundJobRegistry {
   listRunningForSession(sessionId: string): BackgroundJobEntry[] {
     return [...this.jobs.values()].filter(
       (e) => e.sessionId === sessionId && e.status === "running",
+    );
+  }
+
+  /** Running jobs, across all sessions, that are operating in the same cwd. */
+  listRunningByCwd(cwd: string): BackgroundJobEntry[] {
+    const normalized = normalizeCwdPath(cwd);
+    return [...this.jobs.values()].filter(
+      (e) => e.status === "running" && e.cwd === normalized,
     );
   }
 

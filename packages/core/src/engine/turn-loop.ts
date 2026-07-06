@@ -738,7 +738,11 @@ export class TurnLoop {
         // compaction decisions use hybrid (actual + delta) estimation rather than
         // pure heuristics. Without this the manager falls back to char/4 estimates.
         if (response!.usage?.promptTokens !== undefined) {
-          this.deps.contextManager.recordActualUsage(response!.usage.promptTokens, messages.length);
+          this.deps.contextManager.recordActualUsage(
+            response!.usage.promptTokens,
+            messages.length,
+            messages,
+          );
         }
 
         messages = this.markPendingImagesConsumed(messages);

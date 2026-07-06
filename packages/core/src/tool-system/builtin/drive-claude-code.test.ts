@@ -1,8 +1,13 @@
 import { describe, it, expect } from "bun:test";
+import { mkdtempSync, realpathSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
+import { tmpdir } from "node:os";
 import { driveClaudeCodeToolDef, makeDriveClaudeCodeTool, driveAgentToolDef, makeDriveAgentTool } from "./drive-claude-code.js";
 import { backgroundJobRegistry } from "./background-jobs.js";
 import { notificationQueue } from "./agent-notifications.js";
 import { makeDriveClaudeCodeTool as mkBg } from "./drive-claude-code.js";
+import { ExternalAgentSessionStore } from "../../cc-orchestrator/external-agent-session-store.js";
+import { BUILTIN_TOOLS } from "./index.js";
 
 describe("DriveAgent tool", () => {
   it("has a name and an inputSchema with prompt + background + cli", () => {
@@ -27,6 +32,35 @@ describe("DriveAgent tool", () => {
     const tool = makeDriveAgentTool(async () => ({ sessionId: "S", finalText: "x", isError: false, exitCode: 0, lines: [] }));
     const out = await tool({ prompt: "p", cwd: "/x", background: false, cli: "gpt" } as any);
     expect(out.toLowerCase()).toContain("cli");
+  });
+
+  it("registers DriveAgent and DriveClaudeCode with explicit long timeouts", () => {
+    const drive = BUILTIN_TOOLS.find((t) => t.definition.name === "DriveAgent")?.definition;
+    const alias = BUILTIN_TOOLS.find((t) => t.definition.name === "DriveClaudeCode")?.definition;
+    expect(drive?.timeoutMs).toBeGreaterThan(120_000);
+    expect(alias?.timeoutMs).toBe(drive?.timeoutMs);
+  });
+
+  it("passes the ToolContext AbortSignal through to the runner", async () => {
+    const controller = new AbortController();
+    let seen: AbortSignal | undefined;
+    const tool = makeDriveAgentTool(async (o) => {
+      seen = o.signal;
+      return { sessionId: "S", finalText: "", isError: false, exitCode: 0, lines: [] };
+    });
+    await tool({ prompt: "p", cwd: "/x", background: false } as any, { cwd: "/x", sessionId: "S-CTX", signal: controller.signal } as any);
+    expect(seen).toBe(controller.signal);
+  });
+
+  it("uses the registry-injected __signal when ToolContext is absent", async () => {
+    const controller = new AbortController();
+    let seen: AbortSignal | undefined;
+    const tool = makeDriveAgentTool(async (o) => {
+      seen = o.signal;
+      return { sessionId: "S", finalText: "", isError: false, exitCode: 0, lines: [] };
+    });
+    await tool({ prompt: "p", cwd: "/x", background: false, __signal: controller.signal } as any);
+    expect(seen).toBe(controller.signal);
   });
 });
 
@@ -96,6 +130,208 @@ describe("DriveClaudeCode alias (back-compat)", () => {
     });
     await tool({ prompt: "edit code", cwd: "/x", background: false, permissionMode: "default" } as any);
     expect(seen).toBe("default");
+  });
+
+  it("background:false auto-hands off to a tracked background job after the foreground threshold", async () => {
+    backgroundJobRegistry.reset?.();
+    notificationQueue.drainAll("S-HANDOFF");
+    const tmp = mkdtempSync(join(tmpdir(), "drive-handoff-"));
+    try {
+      let resolveRun!: (r: any) => void;
+      let runCount = 0;
+      const runner = () => {
+        runCount++;
+        return new Promise<any>((res) => { resolveRun = res; });
+      };
+      const store = new ExternalAgentSessionStore(join(tmp, "sessions.json"));
+      const tool = makeDriveClaudeCodeTool(runner as any, { foregroundHandoffMs: 5, sessionStore: store });
+
+      const out = await tool({ prompt: "long but requested foreground", cwd: tmp, background: false } as any, { cwd: tmp, sessionId: "S-HANDOFF" } as any);
+
+      expect(out).toContain("jobId");
+      expect(out).toContain("background");
+      expect(runCount).toBe(1);
+      expect(backgroundJobRegistry.hasRunningForSession("S-HANDOFF")).toBe(true);
+      const job = backgroundJobRegistry.listRunningForSession("S-HANDOFF")[0];
+      const jobId = out.match(/jobId ([^)]+)\)/)?.[1];
+      expect(jobId).toBeDefined();
+      expect(job.jobId).toBe(jobId);
+      expect(job.cwd).toBe(realpathSync(tmp));
+
+      resolveRun({ sessionId: "CC-HANDOFF", finalText: "eventual result", isError: false, exitCode: 0, lines: [] });
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(backgroundJobRegistry.hasRunningForSession("S-HANDOFF")).toBe(false);
+      const items = notificationQueue.drainAll("S-HANDOFF");
+      expect(items).toHaveLength(1);
+      expect(items[0].status).toBe("completed");
+      expect(items[0].finalText).toContain("eventual result");
+      expect(store.get("claude", "CC-HANDOFF")?.cwd).toBe(realpathSync(tmp));
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("warns when a new writable background DriveAgent starts in a cwd already used by a running job", async () => {
+    backgroundJobRegistry.reset?.();
+    const tmp = mkdtempSync(join(tmpdir(), "drive-cwd-"));
+    try {
+      const never = () => new Promise<any>(() => {});
+      const tool = makeDriveClaudeCodeTool(never as any);
+
+      const first = await tool({ prompt: "first", cwd: tmp } as any, { cwd: tmp, sessionId: "S-CWD" } as any);
+      const second = await tool({ prompt: "second", cwd: tmp } as any, { cwd: tmp, sessionId: "S-CWD" } as any);
+
+      expect(first).not.toContain("Warning");
+      expect(second).toContain("Warning");
+      expect(second).toContain(realpathSync(tmp));
+      expect(backgroundJobRegistry.listRunningForSession("S-CWD").map((j) => j.cwd)).toEqual([
+        realpathSync(tmp),
+        realpathSync(tmp),
+      ]);
+    } finally {
+      backgroundJobRegistry.reset?.();
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("background job registry compares normalized cwd values", () => {
+    backgroundJobRegistry.reset?.();
+    const tmp = mkdtempSync(join(tmpdir(), "drive-registry-cwd-"));
+    try {
+      backgroundJobRegistry.start("job-normalized", "S-REGISTRY", "job", { cwd: `${tmp}/` });
+
+      const running = backgroundJobRegistry.listRunningByCwd(tmp);
+      expect(running).toHaveLength(1);
+      expect(running[0]!.cwd).toBe(realpathSync(tmp));
+    } finally {
+      backgroundJobRegistry.reset?.();
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("warns for the same running cwd even when one caller uses a relative path with a trailing slash", async () => {
+    backgroundJobRegistry.reset?.();
+    const tmp = mkdtempSync(join(tmpdir(), "drive-cwd-normalized-"));
+    const prevCwd = process.cwd();
+    try {
+      process.chdir(dirname(tmp));
+      const never = () => new Promise<any>(() => {});
+      const tool = makeDriveClaudeCodeTool(never as any);
+      const relative = `${basename(tmp)}/`;
+
+      const first = await tool({ prompt: "first", cwd: relative } as any, { cwd: relative, sessionId: "S-CWD-NORM" } as any);
+      const second = await tool({ prompt: "second", cwd: tmp } as any, { cwd: tmp, sessionId: "S-CWD-NORM" } as any);
+
+      expect(first).not.toContain("Warning");
+      expect(second).toContain("Warning");
+      expect(second).toContain(realpathSync(tmp));
+      expect(backgroundJobRegistry.listRunningForSession("S-CWD-NORM").map((j) => j.cwd)).toEqual([
+        realpathSync(tmp),
+        realpathSync(tmp),
+      ]);
+    } finally {
+      process.chdir(prevCwd);
+      backgroundJobRegistry.reset?.();
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("resumeSessionId forces the stored cwd when caller passes a different cwd", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "drive-resume-"));
+    try {
+      const storedCwd = join(tmp, "stored");
+      const callerCwd = join(tmp, "caller");
+      mkdirSync(storedCwd);
+      mkdirSync(callerCwd);
+      const store = new ExternalAgentSessionStore(join(tmp, "sessions.json"));
+      store.record({ cli: "claude", sessionId: "CC-OLD", cwd: storedCwd });
+      let seenCwd = "";
+      const tool = makeDriveClaudeCodeTool(async (o) => {
+        seenCwd = o.cwd;
+        return { sessionId: "CC-OLD", finalText: "continued", isError: false, exitCode: 0, lines: [] };
+      }, { sessionStore: store });
+
+      const out = await tool({ prompt: "continue", resumeSessionId: "CC-OLD", cwd: callerCwd, background: false } as any, { cwd: callerCwd, sessionId: "S-RESUME" } as any);
+
+      expect(seenCwd).toBe(realpathSync(storedCwd));
+      expect(out).toContain("stored cwd");
+      expect(out).toContain(realpathSync(storedCwd));
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("resumeSessionId treats relative and absolute cwd spellings of the same directory as equal", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "drive-resume-normalized-"));
+    const prevCwd = process.cwd();
+    try {
+      const storedCwd = join(tmp, "stored");
+      mkdirSync(storedCwd);
+      process.chdir(tmp);
+      const store = new ExternalAgentSessionStore(join(tmp, "sessions.json"));
+      store.record({ cli: "claude", sessionId: "CC-SAME", cwd: storedCwd });
+      let seenCwd = "";
+      const tool = makeDriveClaudeCodeTool(async (o) => {
+        seenCwd = o.cwd;
+        return { sessionId: "CC-SAME", finalText: "continued", isError: false, exitCode: 0, lines: [] };
+      }, { sessionStore: store });
+
+      const out = await tool({ prompt: "continue", resumeSessionId: "CC-SAME", cwd: "stored/", background: false } as any, { cwd: "stored/", sessionId: "S-RESUME" } as any);
+
+      expect(seenCwd).toBe(realpathSync(storedCwd));
+      expect(out).not.toContain("ignoring requested cwd");
+    } finally {
+      process.chdir(prevCwd);
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("resumeSessionId errors clearly when the stored cwd no longer exists", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "drive-resume-missing-"));
+    try {
+      const missingCwd = join(tmp, "deleted");
+      const store = new ExternalAgentSessionStore(join(tmp, "sessions.json"));
+      store.record({ cli: "claude", sessionId: "CC-GONE", cwd: missingCwd });
+      let ran = false;
+      const tool = makeDriveClaudeCodeTool(async () => {
+        ran = true;
+        return { sessionId: "CC-GONE", finalText: "should not run", isError: false, exitCode: 0, lines: [] };
+      }, { sessionStore: store });
+
+      const out = await tool({ prompt: "continue", resumeSessionId: "CC-GONE", cwd: tmp, background: false } as any, { cwd: tmp, sessionId: "S-RESUME" } as any);
+
+      expect(out).toContain("Error");
+      expect(out).toContain("stored cwd no longer exists");
+      expect(out).toContain(missingCwd);
+      expect(ran).toBe(false);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("resumeSessionId errors clearly when the stored cwd is now a file", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "drive-resume-file-"));
+    try {
+      const fileCwd = join(tmp, "not-a-dir");
+      writeFileSync(fileCwd, "not a directory");
+      const store = new ExternalAgentSessionStore(join(tmp, "sessions.json"));
+      store.record({ cli: "claude", sessionId: "CC-FILE", cwd: fileCwd });
+      let ran = false;
+      const tool = makeDriveClaudeCodeTool(async () => {
+        ran = true;
+        return { sessionId: "CC-FILE", finalText: "should not run", isError: false, exitCode: 0, lines: [] };
+      }, { sessionStore: store });
+
+      const out = await tool({ prompt: "continue", resumeSessionId: "CC-FILE", cwd: tmp, background: false } as any, { cwd: tmp, sessionId: "S-RESUME" } as any);
+
+      expect(out).toContain("Error");
+      expect(out).toContain("not a directory");
+      expect(out).toContain(fileCwd);
+      expect(ran).toBe(false);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
   });
 });
 

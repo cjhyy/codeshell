@@ -7,9 +7,8 @@
  *
  * This module is side-effect free: it only EXPOSES the generator and a writer.
  * `manager.load()` deliberately does NOT call these — emitting a file during
- * load would pollute test HOMEs and add disk I/O to every boot. A host that
- * wants the file on disk should call `writeSettingsSchemaFile()` explicitly
- * (wiring TBD — see the task return note).
+ * load would pollute test HOMEs and add disk I/O to every settings read. Hosts
+ * write it explicitly during startup as a best-effort editor aid.
  */
 
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";

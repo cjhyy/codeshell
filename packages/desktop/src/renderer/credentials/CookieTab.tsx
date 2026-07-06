@@ -43,7 +43,7 @@ function pushUrlHistory(url: string): string[] {
 
 /**
  * Cookie 账号凭证。两条抓取路径:
- *  1. 弹窗登录(主路径):开**全新隔离无痕窗**(persist:login-<uuid>,登完即焚),用户现登 →
+ *  1. 弹窗登录(主路径):开**全新隔离无痕窗**(非持久 login-<uuid>,登完即焚),用户现登 →
  *     抓该窗口**全量** cookie。因 session 干净,无需配域名/范围。只填登录地址(免 https,
  *     输过的地址以标签复用)。
  *  2. 从内置浏览器全量拓取:把你平时用的内置浏览器面板(persist:browser)里**所有**已登录

@@ -5,7 +5,7 @@
 
 import { app, BrowserWindow, dialog, ipcMain, session, shell, systemPreferences, webContents, Notification } from "electron";
 import { fileURLToPath } from "node:url";
-import { dirname, resolve, basename, extname, isAbsolute } from "node:path";
+import { dirname, resolve, basename, extname, isAbsolute, join } from "node:path";
 import { readFile, lstat, writeFile } from "node:fs/promises";
 import {
   defaultCacheDir,
@@ -21,6 +21,8 @@ import {
   listPluginHooks,
   computeEffectiveDisabledLists,
   SettingsManager,
+  writeSettingsSchemaFile,
+  userHome,
   type AutomationHandle,
   resolveExternalAgentConfig,
   getMergedCatalog,
@@ -1413,7 +1415,17 @@ async function applyGitPathFromSettings(): Promise<void> {
   }
 }
 
+function writeSettingsSchemaAtStartup(): void {
+  try {
+    writeSettingsSchemaFile(join(userHome(), ".code-shell"));
+  } catch {
+    // Best-effort editor aid; desktop startup must not depend on schema writes.
+  }
+}
+
 app.whenReady().then(async () => {
+  writeSettingsSchemaAtStartup();
+
   await injectLoginShellPathAtStartup({
     log: (event, data) => dlog("main", event, data),
   });

@@ -33,7 +33,7 @@ import { configToolDef, configTool } from "./config.js";
 import { notebookEditToolDef, notebookEditTool } from "./notebook-edit.js";
 import { lspToolDef, lspTool } from "./lsp.js";
 import { cronCreateToolDef, cronCreateTool, cronDeleteToolDef, cronDeleteTool, cronListToolDef, cronListTool } from "./cron.js";
-import { driveClaudeCodeToolDef, driveClaudeCodeTool, driveAgentToolDef, driveAgentTool } from "./drive-claude-code.js";
+import { driveClaudeCodeToolDef, driveClaudeCodeTool, driveAgentToolDef, driveAgentTool, DRIVE_AGENT_TOOL_TIMEOUT_MS } from "./drive-claude-code.js";
 import { checkQuotaToolDef, checkQuotaTool } from "./check-quota.js";
 import { skillToolDef, skillTool } from "./skill.js";
 import { mcpToolDef, mcpToolExecute, listMcpResourcesToolDef, listMcpResourcesTool, readMcpResourceToolDef, readMcpResourceTool } from "./mcp-tools.js";
@@ -493,6 +493,7 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       permissionDefault: "ask",
       isReadOnly: false,
       isConcurrencySafe: false,
+      timeoutMs: DRIVE_AGENT_TOOL_TIMEOUT_MS,
     },
     execute: driveAgentTool,
   },
@@ -505,6 +506,7 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       permissionDefault: "ask",
       isReadOnly: false,
       isConcurrencySafe: false,
+      timeoutMs: DRIVE_AGENT_TOOL_TIMEOUT_MS,
     },
     execute: driveClaudeCodeTool,
   },
@@ -783,6 +785,8 @@ export const BUILTIN_TOOL_GUARDS: Map<string, BuiltinToolGuard> = new Map([
   // InjectCredential hidden until ≥1 cookie credential exists (browser injection
   // is cookie-only). Also degrades at call time if no browser bridge is wired.
   [injectCredentialToolDef.name, (ctx) => isInjectCredentialAvailable(ctx.cwd)],
+  [completeGoalToolDef.name, (ctx) => ctx.hasGoal === true],
+  [cancelGoalToolDef.name, (ctx) => ctx.hasGoal === true],
 ]);
 
 /** UseCredential is available when the cwd's CredentialStore has ≥1 credential. */

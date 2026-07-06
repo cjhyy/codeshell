@@ -13,6 +13,11 @@ import type { LLMResponse, Message, StreamEvent, TokenUsage } from "../types.js"
 function makeDeps(
   responses: LLMResponse[],
   recordCumulativeUsage?: TurnLoopDeps["recordCumulativeUsage"],
+  recordActualUsage: (
+    inputTokens: number,
+    messageCount: number,
+    messages?: Message[],
+  ) => void = () => {},
 ): {
   deps: TurnLoopDeps;
 } {
@@ -44,7 +49,7 @@ function makeDeps(
     manage(m: Message[]) {
       return m;
     },
-    recordActualUsage() {},
+    recordActualUsage,
     shouldReactiveCompact() {
       return false;
     },
@@ -158,6 +163,30 @@ async function runCapturingEventsWithCumulative(responses: LLMResponse[]): Promi
 }
 
 describe("TurnLoop usage_update carries cache tokens", () => {
+  it("records actual usage with the current messages for hybrid estimation", async () => {
+    const calls: Array<{
+      inputTokens: number;
+      messageCount: number;
+      messages?: Message[];
+    }> = [];
+    const { deps } = makeDeps([respNoCache()], undefined, (inputTokens, messageCount, messages) => {
+      calls.push({ inputTokens, messageCount, messages: messages ? [...messages] : undefined });
+    });
+    const config: TurnLoopConfig = {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+    };
+    const loop = new TurnLoop(deps, config);
+
+    await loop.run([{ role: "user", content: "hi" }]);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.inputTokens).toBe(1000);
+    expect(calls[0]!.messages).toBeDefined();
+    expect(calls[0]!.messageCount).toBe(calls[0]!.messages!.length);
+    expect(calls[0]!.messages).toEqual([{ role: "user", content: "hi" }]);
+  });
+
   it("forwards cacheReadTokens and cacheCreationTokens from the response usage", async () => {
     const events = await runCapturingEvents([respWithCache()]);
     const usageUpdate = events.find((e) => e.type === "usage_update") as
