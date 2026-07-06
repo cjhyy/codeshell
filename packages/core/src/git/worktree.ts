@@ -57,29 +57,43 @@ export function selectPlatformScript(
 export function validateWorktreeSlug(slug: string): void {
   if (slug.length > 64) throw new Error("Worktree slug too long (max 64 chars)");
   if (/[^a-zA-Z0-9._-]/.test(slug)) throw new Error("Worktree slug contains invalid characters");
-  if (slug.startsWith(".") || slug.includes("..")) throw new Error("Worktree slug cannot start with '.' or contain '..'");
+  if (slug.startsWith(".") || slug.includes(".."))
+    throw new Error("Worktree slug cannot start with '.' or contain '..'");
 }
 
 /**
  * Find the canonical git root (resolves worktree → main repo).
  */
 export function findGitRoot(cwd: string): string {
-  return execFileSync(GIT_BIN, ["rev-parse", "--show-toplevel"], { cwd, encoding: "utf-8", timeout: 5000 }).trim();
+  return execFileSync(GIT_BIN, ["rev-parse", "--show-toplevel"], {
+    cwd,
+    encoding: "utf-8",
+    timeout: 5000,
+  }).trim();
+}
+
+export function findWorktreeForBranch(cwd: string, branch: string): string | undefined {
+  const normalized = normalizeBranchName(branch);
+  return listWorktrees(cwd).find((entry) => entry.branch === normalized)?.path;
+}
+
+export function assertBranchNotCheckedOut(cwd: string, branch: string): void {
+  const existingPath = findWorktreeForBranch(cwd, branch);
+  if (existingPath) {
+    throw new Error(`branch ${normalizeBranchName(branch)} already checked out at ${existingPath}`);
+  }
 }
 
 /**
  * Create an isolated git worktree for an agent session.
  */
-export function createWorktree(
-  cwd: string,
-  slug: string,
-  sessionId: string,
-): WorktreeSession {
+export function createWorktree(cwd: string, slug: string, sessionId: string): WorktreeSession {
   validateWorktreeSlug(slug);
 
   const gitRoot = findGitRoot(cwd);
   const branchName = `worktree/${slug}-${sessionId.slice(0, 8)}`;
   const worktreePath = resolve(gitRoot, "..", `.worktrees/${slug}-${sessionId.slice(0, 8)}`);
+  assertBranchNotCheckedOut(gitRoot, branchName);
 
   // Get current branch for later reference
   let originalBranch: string | undefined;
@@ -232,6 +246,20 @@ export function removeWorktree(worktreePath: string, removeBranch = false): void
   }
 }
 
+export function worktreeHasUncommittedChanges(worktreePath: string): boolean {
+  try {
+    return (
+      execFileSync(GIT_BIN, ["status", "--porcelain"], {
+        cwd: worktreePath,
+        encoding: "utf-8",
+        timeout: 10000,
+      }).trim().length > 0
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * List active worktrees.
  */
@@ -260,6 +288,10 @@ export function listWorktrees(cwd: string): Array<{ path: string; branch: string
   if (current.path) entries.push(current);
 
   return entries;
+}
+
+function normalizeBranchName(branch: string): string {
+  return branch.replace(/^refs\/heads\//, "");
 }
 
 /**

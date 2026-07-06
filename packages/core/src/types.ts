@@ -188,9 +188,22 @@ export type SessionStatus = "active" | "paused" | TerminalReason;
  *  filter the sidebar (only `desktop` + `automation` are shown). */
 export type SessionOrigin = "desktop" | "tui" | "automation" | "subagent";
 
+export interface SessionWorkspace {
+  root: string;
+  kind: "main" | "worktree";
+  worktree?: {
+    path: string;
+    branch: string;
+    baseRef: string;
+    createdBy: "codeshell";
+  };
+}
+
 export interface SessionState {
   sessionId: string;
   cwd: string;
+  /** Current session workspace pointer. Absent only on legacy state.json files. */
+  workspace?: SessionWorkspace;
   startedAt: number;
   model: string;
   provider: string;

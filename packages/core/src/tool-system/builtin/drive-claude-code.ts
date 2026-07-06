@@ -6,6 +6,13 @@ import { backgroundJobRegistry } from "./background-jobs.js";
 import { readExternalChangedFiles } from "../../cc-orchestrator/external-agent-changes.js";
 import { notificationQueue } from "./agent-notifications.js";
 import type { ToolContext } from "../context.js";
+import {
+  detectExternalAgentWorktree,
+  externalAgentBindingStore,
+  externalAgentResumeCwdError,
+  type ExternalAgentRunBinding,
+} from "../../cc-orchestrator/external-agent-bindings.js";
+import { resolve } from "node:path";
 
 export type DriveCli = "claude" | "codex";
 
@@ -43,23 +50,62 @@ export const driveAgentToolDef: ToolDefinition = {
   inputSchema: {
     type: "object",
     properties: {
-      prompt: { type: "string", description: "The task for the agent. Make it COMPLETE and self-contained: state the goal, a concrete definition of done, and (for open-ended work) an explicit scope bound so it finishes end-to-end and verifies its own work rather than sprawling or stopping half-way." },
-      cli: { type: "string", enum: ["claude", "codex"], description: "Which external CLI to drive. 'claude' = Claude Code (default), 'codex' = OpenAI Codex. resumeSessionId is only valid against the same cli that produced it." },
-      resumeSessionId: { type: "string", description: "Existing session id to resume (keeps context). Must come from a prior run of the SAME cli. Omit for a fresh session." },
-      cwd: { type: "string", description: "Working directory the run operates in." },
-      permissionMode: { type: "string", enum: ["default", "acceptEdits", "bypassPermissions"], description: "Permission/sandbox level. Defaults to 'bypassPermissions' (full auto — needed so the agent's tools run unattended; there is no interactive approval loop here). For codex: default→read-only sandbox, acceptEdits→workspace-write, bypassPermissions→no sandbox. Pass 'default'/'acceptEdits' to gate." },
-      background: { type: "boolean", description: "Defaults to TRUE: run in the background and notify you on completion (right for long tasks). Pass false to run in the foreground and get the result inline (only for quick tasks)." },
+      prompt: {
+        type: "string",
+        description:
+          "The task for the agent. Make it COMPLETE and self-contained: state the goal, a concrete definition of done, and (for open-ended work) an explicit scope bound so it finishes end-to-end and verifies its own work rather than sprawling or stopping half-way.",
+      },
+      cli: {
+        type: "string",
+        enum: ["claude", "codex"],
+        description:
+          "Which external CLI to drive. 'claude' = Claude Code (default), 'codex' = OpenAI Codex. resumeSessionId is only valid against the same cli that produced it.",
+      },
+      resumeSessionId: {
+        type: "string",
+        description:
+          "Existing session id to resume (keeps context). Must come from a prior run of the SAME cli. Omit for a fresh session.",
+      },
+      cwd: {
+        type: "string",
+        description:
+          "Working directory the run operates in. Required for fresh sessions; on resume, " +
+          "omitting it reuses the cwd bound to the external session.",
+      },
+      permissionMode: {
+        type: "string",
+        enum: ["default", "acceptEdits", "bypassPermissions"],
+        description:
+          "Permission/sandbox level. Defaults to 'bypassPermissions' (full auto — needed so the agent's tools run unattended; there is no interactive approval loop here). For codex: default→read-only sandbox, acceptEdits→workspace-write, bypassPermissions→no sandbox. Pass 'default'/'acceptEdits' to gate.",
+      },
+      background: {
+        type: "boolean",
+        description:
+          "Defaults to TRUE: run in the background and notify you on completion (right for long tasks). Pass false to run in the foreground and get the result inline (only for quick tasks).",
+      },
     },
-    required: ["prompt", "cwd"],
+    required: ["prompt"],
   },
 };
 
 type PermMode = "default" | "acceptEdits" | "bypassPermissions";
-type Runner = (opts: { cli: DriveCli; prompt: string; resumeSessionId?: string; cwd: string; permissionMode?: PermMode }) => Promise<AgentRunResult>;
+type Runner = (opts: {
+  cli: DriveCli;
+  prompt: string;
+  resumeSessionId?: string;
+  cwd: string;
+  permissionMode?: PermMode;
+}) => Promise<AgentRunResult>;
 
 const defaultRunner: Runner = (opts) => {
   const { adapter, command } = CLI_ADAPTERS[opts.cli];
-  return runAgentOnce(adapter, { command, prompt: opts.prompt, resumeSessionId: opts.resumeSessionId, cwd: opts.cwd, permissionMode: opts.permissionMode ?? "default" });
+  return runAgentOnce(adapter, {
+    command,
+    prompt: opts.prompt,
+    resumeSessionId: opts.resumeSessionId,
+    cwd: opts.cwd,
+    permissionMode: opts.permissionMode ?? "default",
+  });
 };
 
 /** Factory so tests can inject a fake runner. `fixedCli` (back-compat) forces a
@@ -67,11 +113,21 @@ const defaultRunner: Runner = (opts) => {
 export function makeDriveAgentTool(runner: Runner = defaultRunner, fixedCli?: DriveCli) {
   return async (args: Record<string, unknown>, ctx?: ToolContext): Promise<string> => {
     const prompt = typeof args.prompt === "string" ? args.prompt : "";
-    const cwd = typeof args.cwd === "string" ? args.cwd : process.cwd();
     if (!prompt) return "Error: prompt is required";
-    const cli: DriveCli = fixedCli ?? (args.cli === "codex" ? "codex" : args.cli === "claude" || args.cli === undefined ? "claude" : ("invalid" as DriveCli));
-    if (cli === ("invalid" as DriveCli)) return `Error: unknown cli "${String(args.cli)}" (expected "claude" or "codex")`;
-    const resumeSessionId = typeof args.resumeSessionId === "string" ? args.resumeSessionId : undefined;
+    const cli: DriveCli =
+      fixedCli ??
+      (args.cli === "codex"
+        ? "codex"
+        : args.cli === "claude" || args.cli === undefined
+          ? "claude"
+          : ("invalid" as DriveCli));
+    if (cli === ("invalid" as DriveCli))
+      return `Error: unknown cli "${String(args.cli)}" (expected "claude" or "codex")`;
+    const resumeSessionId =
+      typeof args.resumeSessionId === "string" ? args.resumeSessionId : undefined;
+    const cwdResolution = resolveDriveAgentCwd(cli, args, ctx, resumeSessionId);
+    if (!cwdResolution.ok) return cwdResolution.error;
+    const { cwd, binding } = cwdResolution;
     // Default to bypassPermissions: this tool is a fire-one-turn delegation to
     // an external CLI with nobody watching for approvals, and there is no
     // interactive approval loop here — so under "default" a tool that needs
@@ -103,21 +159,36 @@ export function makeDriveAgentTool(runner: Runner = defaultRunner, fixedCli?: Dr
       backgroundJobRegistry.start(jobId, sessionId, label);
       void runner({ cli, prompt, resumeSessionId, cwd, permissionMode })
         .then((r) => {
+          persistExternalAgentBinding(cli, cwd, r, ctx, binding);
           // Deliver the result back so the woken agent actually sees the answer
           // (not just "a job finished"). Mirrors the video/sub-agent completion
           // path — enqueue lands in the same notificationQueue the wakeup drains.
           notificationQueue.enqueue(
             r.isError
-              ? { agentId: jobId, description: label, status: "failed", workKind: "cc", error: r.finalText || "(no output)", ccSessionId: r.sessionId || undefined, enqueuedAt: Date.now() }
-              : { agentId: jobId, description: label, status: "completed", workKind: "cc", finalText: r.finalText, ccSessionId: r.sessionId || undefined, enqueuedAt: Date.now() },
+              ? {
+                  agentId: jobId,
+                  description: label,
+                  status: "failed",
+                  workKind: "cc",
+                  error: r.finalText || "(no output)",
+                  ccSessionId: r.sessionId || undefined,
+                  enqueuedAt: Date.now(),
+                }
+              : {
+                  agentId: jobId,
+                  description: label,
+                  status: "completed",
+                  workKind: "cc",
+                  finalText: r.finalText,
+                  ccSessionId: r.sessionId || undefined,
+                  enqueuedAt: Date.now(),
+                },
             sessionId,
           );
           // Attribute the files the external agent changed by parsing its own
           // transcript (#6) — those Edit/Write calls are invisible to the host's
           // in-session aggregator. Best-effort; [] on any failure.
-          const changedFiles = r.sessionId
-            ? readExternalChangedFiles(cli, cwd, r.sessionId)
-            : [];
+          const changedFiles = r.sessionId ? readExternalChangedFiles(cli, cwd, r.sessionId) : [];
           // Retain the job in the panel with its result + the external CLI
           // session id + changed files.
           backgroundJobRegistry.finish(jobId, {
@@ -130,7 +201,14 @@ export function makeDriveAgentTool(runner: Runner = defaultRunner, fixedCli?: Dr
         .catch((err) => {
           const msg = (err as Error)?.message ?? String(err);
           notificationQueue.enqueue(
-            { agentId: jobId, description: label, status: "failed", workKind: "cc", error: msg, enqueuedAt: Date.now() },
+            {
+              agentId: jobId,
+              description: label,
+              status: "failed",
+              workKind: "cc",
+              error: msg,
+              enqueuedAt: Date.now(),
+            },
             sessionId,
           );
           backgroundJobRegistry.finish(jobId, { status: "failed", finalText: msg });
@@ -138,6 +216,7 @@ export function makeDriveAgentTool(runner: Runner = defaultRunner, fixedCli?: Dr
       return `已在后台启动 ${cliName}（jobId ${jobId}）。完成后会通知你结果，无需轮询。`;
     }
     const r = await runner({ cli, prompt, resumeSessionId, cwd, permissionMode });
+    persistExternalAgentBinding(cli, cwd, r, ctx, binding);
     if (r.isError) return `${cliName} 运行出错（session ${r.sessionId}）：\n${r.finalText}`;
     return `${cliName} 完成（session ${r.sessionId}）：\n${r.finalText}`;
   };
@@ -154,30 +233,95 @@ export const driveClaudeCodeToolDef: ToolDefinition = {
   description:
     "(Alias of DriveAgent with cli:claude.) Delegate a task to the external Claude Code CLI " +
     "(drives `claude` for one turn). Prefer DriveAgent for new calls; this name is kept for " +
-    "compatibility. " + driveAgentToolDef.description,
+    "compatibility. " +
+    driveAgentToolDef.description,
   inputSchema: {
     type: "object",
     properties: {
       // intentionally omit `cli` — this alias is always claude
       prompt: (driveAgentToolDef.inputSchema as any).properties.prompt,
-      resumeSessionId: { type: "string", description: "Existing CC session id to resume (keeps context). Omit for a fresh session." },
+      resumeSessionId: {
+        type: "string",
+        description: "Existing CC session id to resume (keeps context). Omit for a fresh session.",
+      },
       cwd: (driveAgentToolDef.inputSchema as any).properties.cwd,
       permissionMode: (driveAgentToolDef.inputSchema as any).properties.permissionMode,
       background: (driveAgentToolDef.inputSchema as any).properties.background,
     },
-    required: ["prompt", "cwd"],
+    required: ["prompt"],
   },
 };
 
 /** Back-compat factory: a DriveAgent pinned to cli:"claude" with the `cli` arg
  *  hidden. The injected `runner` here keeps the old shape (no `cli` field); we
  *  adapt it to the generic Runner so existing tests' fakes still work. */
-type LegacyRunner = (opts: { prompt: string; resumeSessionId?: string; cwd: string; permissionMode?: PermMode }) => Promise<AgentRunResult>;
+type LegacyRunner = (opts: {
+  prompt: string;
+  resumeSessionId?: string;
+  cwd: string;
+  permissionMode?: PermMode;
+}) => Promise<AgentRunResult>;
 export function makeDriveClaudeCodeTool(runner?: LegacyRunner) {
   const generic: Runner | undefined = runner
-    ? ({ prompt, resumeSessionId, cwd, permissionMode }) => runner({ prompt, resumeSessionId, cwd, permissionMode })
+    ? ({ prompt, resumeSessionId, cwd, permissionMode }) =>
+        runner({ prompt, resumeSessionId, cwd, permissionMode })
     : undefined;
   return makeDriveAgentTool(generic ?? defaultRunner, "claude");
 }
 
 export const driveClaudeCodeTool = makeDriveClaudeCodeTool();
+
+type CwdResolution =
+  | { ok: true; cwd: string; binding?: ExternalAgentRunBinding }
+  | { ok: false; error: string };
+
+function resolveDriveAgentCwd(
+  cli: DriveCli,
+  args: Record<string, unknown>,
+  ctx: ToolContext | undefined,
+  resumeSessionId: string | undefined,
+): CwdResolution {
+  const explicitCwd = typeof args.cwd === "string" ? args.cwd : undefined;
+  const binding = resumeSessionId ? externalAgentBindingStore.get(resumeSessionId) : undefined;
+  if (binding) {
+    if (binding.cli !== cli) {
+      return {
+        ok: false,
+        error:
+          `Error: external session ${resumeSessionId} belongs to ${binding.cli}, ` +
+          `not ${cli}. Resume it with the same cli.`,
+      };
+    }
+    if (explicitCwd && resolve(explicitCwd) !== resolve(binding.cwd)) {
+      return {
+        ok: false,
+        error:
+          `Error: external session ${resumeSessionId} is bound to cwd ${binding.cwd}; ` +
+          `refusing to resume in different cwd ${explicitCwd}.`,
+      };
+    }
+    const missingCwdError = externalAgentResumeCwdError(binding);
+    if (missingCwdError) return { ok: false, error: missingCwdError };
+    return { ok: true, cwd: binding.cwd, binding };
+  }
+  return { ok: true, cwd: explicitCwd ?? ctx?.cwd ?? process.cwd() };
+}
+
+function persistExternalAgentBinding(
+  cli: DriveCli,
+  cwd: string,
+  result: AgentRunResult,
+  ctx: ToolContext | undefined,
+  previous?: ExternalAgentRunBinding,
+): void {
+  if (!result.sessionId) return;
+  const detected = detectExternalAgentWorktree(cwd);
+  externalAgentBindingStore.upsert({
+    cli,
+    externalSessionId: result.sessionId,
+    codeShellSessionId: ctx?.sessionId ?? previous?.codeShellSessionId ?? "",
+    cwd,
+    worktreePath: detected.worktreePath ?? previous?.worktreePath,
+    worktreeBranch: detected.worktreeBranch ?? previous?.worktreeBranch,
+  });
+}

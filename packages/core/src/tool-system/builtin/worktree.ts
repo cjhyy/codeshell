@@ -11,6 +11,7 @@ import {
   validateWorktreeSlug,
   selectPlatformScript,
   runWorktreeSetup,
+  worktreeHasUncommittedChanges,
   type WorktreeSession,
 } from "../../git/worktree.js";
 
@@ -61,7 +62,7 @@ export async function enterWorktreeTool(
 
   try {
     // Use a placeholder session ID (the agent should set this properly)
-    const sessionId = args.__sessionId as string ?? `wt-${Date.now()}`;
+    const sessionId = (args.__sessionId as string) ?? `wt-${Date.now()}`;
     const cwd = (args.__cwd as string) ?? ctx?.cwd ?? process.cwd();
 
     _activeWorktree = createWorktree(cwd, slug, sessionId);
@@ -110,19 +111,22 @@ export const exitWorktreeToolDef: ToolDefinition = {
   name: "ExitWorktree",
   description:
     "Exit the current worktree and return to the main working directory. " +
-    "Choose whether to keep or discard the changes made in the worktree.",
+    "Choose whether to keep the worktree, detach it while preserving the branch, " +
+    "or discard it entirely.",
   inputSchema: {
     type: "object",
     properties: {
       action: {
         type: "string",
-        enum: ["keep", "discard"],
+        enum: ["keep", "detach", "discard"],
         description:
-          "'keep' preserves the worktree branch for later merging. " +
-          "'discard' removes the worktree and its branch entirely.",
+          "'keep' preserves the worktree directory and branch for later. " +
+          "'detach' removes the directory but keeps the branch. " +
+          "'discard' removes the directory and its branch entirely. " +
+          "If omitted, a clean worktree is detached automatically; a dirty worktree requires keep/discard.",
       },
     },
-    required: ["action"],
+    required: [],
   },
 };
 
@@ -131,18 +135,50 @@ export async function exitWorktreeTool(args: Record<string, unknown>): Promise<s
     return "Not currently in a worktree.";
   }
 
-  const action = args.action as string;
+  const requested = args.action as string | undefined;
   const session = _activeWorktree;
-  _activeWorktree = undefined;
+
+  if (
+    requested !== undefined &&
+    requested !== "keep" &&
+    requested !== "detach" &&
+    requested !== "discard"
+  ) {
+    return `Error: unknown action "${requested}" (expected keep, detach, or discard).`;
+  }
+
+  const hasUncommittedChanges = worktreeHasUncommittedChanges(session.worktreePath);
+  const action = requested ?? (hasUncommittedChanges ? undefined : "detach");
+  if (!action) {
+    return (
+      `Error: worktree has uncommitted changes. Choose action "keep" to preserve ` +
+      `the directory or "discard" to delete the worktree and branch.`
+    );
+  }
+  if (action === "detach" && hasUncommittedChanges) {
+    return (
+      `Error: detach would drop uncommitted changes. Choose action "keep" to preserve ` +
+      `the directory or "discard" to delete the worktree and branch.`
+    );
+  }
 
   try {
-    if (action === "discard") {
+    if (action === "keep") {
+      _activeWorktree = undefined;
+      return (
+        `Worktree preserved at ${session.worktreePath}. Branch ${session.worktreeBranch} preserved.\n` +
+        `Back to ${session.originalCwd}.`
+      );
+    } else if (action === "discard") {
       removeWorktree(session.worktreePath, true);
+      _activeWorktree = undefined;
       return `Worktree removed and branch ${session.worktreeBranch} deleted. Back to ${session.originalCwd}.`;
     } else {
       removeWorktree(session.worktreePath, false);
+      _activeWorktree = undefined;
       return (
-        `Worktree removed. Branch ${session.worktreeBranch} preserved.\n` +
+        `Worktree removed${requested ? "" : " (auto-detached clean worktree)"}. ` +
+        `Branch ${session.worktreeBranch} preserved.\n` +
         `To merge: git merge ${session.worktreeBranch}\n` +
         `Back to ${session.originalCwd}.`
       );
