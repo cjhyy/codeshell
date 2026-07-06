@@ -961,7 +961,7 @@ export class Engine {
       return {
         text: `ERROR: ${workspaceResume.message}`,
         reason: "completed",
-        sessionId: options.sessionId!,
+        sessionId: options!.sessionId!,
         turnCount: 0,
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
@@ -974,7 +974,7 @@ export class Engine {
       return {
         text: workspaceResume.message,
         reason: "completed",
-        sessionId: options.sessionId!,
+        sessionId: options!.sessionId!,
         turnCount: 0,
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
