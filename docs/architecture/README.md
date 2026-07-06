@@ -6,7 +6,7 @@ directory holds two complementary views:
 - **The chapters** (`00`–`10`) describe *how the system works* — each subsystem's
   mechanism, anchored to real `file:line` locations. Read `00-overview.md` first;
   the rest stand on their own.
-- **[`feature-inventory.md`](feature-inventory.md)** is the *breadth map* — a flat
+- **[`11-feature-inventory.md`](11-feature-inventory.md)** is the *breadth map* — a flat
   inventory of what CodeShell can do today (179 capabilities across desktop main /
   renderer / TUI), each with entry point and usage. It answers "does capability X
   exist and where," where the chapters answer "how does subsystem Y work."
@@ -33,10 +33,11 @@ see [`docs/todo/`](../todo/README.md).
 | 08 | [Arena & Integrations](08-arena-and-integrations.md) | Arena, CC/Codex orchestration, external CLIs |
 | 09 | [TUI Package](09-tui.md) | The `code-shell` terminal client (Ink) |
 | 10 | [Desktop & Mobile](10-desktop-and-mobile.md) | Electron main/renderer/IPC, panels, phone remote |
+| 11 | [Feature Inventory](11-feature-inventory.md) | Flat breadth map — 179 capabilities across desktop main / renderer / TUI |
 
 ## Reference
 
-- [Feature inventory (desktop / tui)](feature-inventory.md) — full capability breadth map
+- [Feature inventory (desktop / tui)](11-feature-inventory.md) — full capability breadth map
 
 > The prior architecture set lives in [`docs/archive/architecture/`](../archive/architecture/README.md);
 > it is kept for history but predates large subsystems. This directory supersedes it.
