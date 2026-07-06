@@ -24,8 +24,38 @@ permissions:
   contents: write
 
 jobs:
+  # Guard: on a tag push, package.json's version MUST equal the tag (minus the
+  # leading `v`). electron-builder names artifacts and writes latest-*.yml from
+  # package.json's version — NOT the tag — so a tag/version mismatch ships a
+  # release whose assets carry the WRONG version (users auto-update to a stale
+  # build, or the updater manifest points back at an older release). This
+  # happened with v0.6.0-rc.10 (tag moved, package.json still rc.9). Fail loud
+  # here instead of silently publishing mislabeled binaries.
+  verify-version:
+    name: verify tag matches package.json version
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: assert version == tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF#refs/tags/v}"
+          PKG="$(node -p "require('./package.json').version")"
+          echo "tag=$TAG  package.json=$PKG"
+          if [[ "$TAG" != "$PKG" ]]; then
+            echo "::error::Tag v$TAG does not match package.json version $PKG. Bump the version (scripts/release.ts) and re-tag." >&2
+            exit 1
+          fi
+
   package:
     name: package (${{ matrix.os }})
+    # Gate on the version check so a mismatch never produces mislabeled artifacts.
+    # verify-version is skipped on workflow_dispatch (no tag); allow that path so
+    # manual smoke-test builds still run, but block only a real FAILURE.
+    needs: verify-version
+    if: ${{ always() && needs.verify-version.result != 'failure' }}
     strategy:
       # Don't cancel the other OS builds if one fails — a red Windows build
       # shouldn't deprive you of the mac/linux artifacts.

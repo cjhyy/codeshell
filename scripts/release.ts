@@ -1,0 +1,159 @@
+#!/usr/bin/env bun
+/**
+ * One-shot release helper: bump every package to the same version, verify they
+ * agree, commit `chore: release <version>`, and (optionally) push + tag to fire
+ * the tag-driven GitHub Actions release workflow.
+ *
+ * Why this exists
+ * ---------------
+ * The release depends on package.json's `version` in FIVE places
+ * (root + cdp/core/tui/desktop) plus the four `bun.lock` references.
+ * electron-builder names its artifacts and writes latest-*.yml from
+ * package.json's version — NOT the git tag. Two real incidents came from doing
+ * this by hand:
+ *   - moved a tag but never rebuilt the release → users auto-updated to a stale
+ *     build (see codeshell-release-version-tag-desync-root-cause).
+ *   - tagged rc.10 while package.json still said rc.9 → artifacts were named
+ *     rc.9 and latest-mac.yml pointed back at rc.9.
+ * This script makes the bump atomic and asserts consistency so the CI
+ * `verify-version` gate never even has to fire.
+ *
+ * Usage
+ * -----
+ *   bun run scripts/release.ts 0.6.0-rc.11          # bump + commit (dry: no push)
+ *   bun run scripts/release.ts --bump rc            # auto-increment the rc number
+ *   bun run scripts/release.ts 0.6.0-rc.11 --push   # also push main + tag → CI
+ *
+ * Flags:
+ *   --push        after committing, push main and push an annotated tag v<version>.
+ *   --bump <part> compute the next version instead of passing it explicitly.
+ *                 part ∈ { rc, patch, minor, major }. `rc` bumps/appends -rc.N.
+ *   --allow-dirty skip the clean-tree check (default: refuse if other changes exist).
+ *
+ * Safe by default: without --push it only edits files + commits locally, so you
+ * can review before anything leaves the machine.
+ */
+
+import { $ } from "bun";
+import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+const ROOT = resolve(import.meta.dir, "..");
+const PKG_FILES = [
+  "package.json",
+  "packages/cdp/package.json",
+  "packages/core/package.json",
+  "packages/tui/package.json",
+  "packages/desktop/package.json",
+] as const;
+const LOCKFILE = "bun.lock";
+
+function die(msg: string): never {
+  console.error(`\x1b[31m✗ ${msg}\x1b[0m`);
+  process.exit(1);
+}
+
+function readVersion(rel: string): string {
+  return JSON.parse(readFileSync(resolve(ROOT, rel), "utf8")).version;
+}
+
+/** Compute the next version from the current one for `--bump <part>`. */
+function computeBump(current: string, part: string): string {
+  const rcMatch = current.match(/^(\d+)\.(\d+)\.(\d+)-rc\.(\d+)$/);
+  const relMatch = current.match(/^(\d+)\.(\d+)\.(\d+)$/);
+  if (part === "rc") {
+    if (rcMatch) {
+      const [, a, b, c, n] = rcMatch;
+      return `${a}.${b}.${c}-rc.${Number(n) + 1}`;
+    }
+    if (relMatch) {
+      const [, a, b, c] = relMatch;
+      return `${a}.${b}.${c}-rc.1`;
+    }
+    die(`can't --bump rc from non-standard version "${current}"`);
+  }
+  const base = rcMatch ?? relMatch;
+  if (!base) die(`can't --bump ${part} from non-standard version "${current}"`);
+  let [, a, b, c] = base.map(Number) as unknown as [string, number, number, number];
+  if (part === "patch") c += 1;
+  else if (part === "minor") (b += 1), (c = 0);
+  else if (part === "major") (a += 1), (b = 0), (c = 0);
+  else die(`unknown --bump part "${part}" (use rc|patch|minor|major)`);
+  return `${a}.${b}.${c}`;
+}
+
+// ── parse args ────────────────────────────────────────────────────────────
+const argv = process.argv.slice(2);
+const push = argv.includes("--push");
+const allowDirty = argv.includes("--allow-dirty");
+const bumpIdx = argv.indexOf("--bump");
+const positional = argv.filter((a, i) => !a.startsWith("--") && i !== bumpIdx + 1);
+
+const current = readVersion("package.json");
+let target: string;
+if (bumpIdx !== -1) {
+  const part = argv[bumpIdx + 1];
+  if (!part) die("--bump needs a part: rc|patch|minor|major");
+  target = computeBump(current, part);
+} else if (positional[0]) {
+  target = positional[0];
+} else {
+  die("give a version (e.g. 0.6.0-rc.11) or --bump rc");
+}
+
+if (!/^\d+\.\d+\.\d+(-rc\.\d+)?$/.test(target)) {
+  die(`version "${target}" is not X.Y.Z or X.Y.Z-rc.N`);
+}
+if (target === current) die(`version is already ${target} — nothing to bump`);
+
+console.log(`\x1b[36m→ ${current}  →  ${target}\x1b[0m`);
+
+// ── clean-tree check ────────────────────────────────────────────────────────
+const status = (await $`git status --porcelain`.cwd(ROOT).text()).trim();
+if (status && !allowDirty) {
+  die(`working tree not clean — commit/stash first, or pass --allow-dirty:\n${status}`);
+}
+
+// ── rewrite versions ────────────────────────────────────────────────────────
+const esc = current.replace(/[.]/g, "\\.");
+const files = [...PKG_FILES, LOCKFILE];
+for (const rel of files) {
+  const p = resolve(ROOT, rel);
+  const before = readFileSync(p, "utf8");
+  // package.json: the version only appears as the top-level "version" field and
+  // as workspace dep refs — all are the exact current version string. bun.lock:
+  // same literal. A global literal replace is correct because rc.X only ever
+  // appears as this project's own version in these files.
+  const after = before.replaceAll(current, target);
+  if (after !== before) writeFileSync(p, after);
+}
+
+// ── verify consistency (the whole point) ────────────────────────────────────
+const bad = PKG_FILES.filter((f) => readVersion(f) !== target);
+if (bad.length) die(`version rewrite failed for: ${bad.join(", ")}`);
+console.log(`\x1b[32m✓ all ${PKG_FILES.length} package.json + bun.lock now ${target}\x1b[0m`);
+
+// ── commit ──────────────────────────────────────────────────────────────────
+await $`git add ${files}`.cwd(ROOT);
+await $`git commit -m ${`chore: release ${target}`}`.cwd(ROOT);
+console.log(`\x1b[32m✓ committed "chore: release ${target}"\x1b[0m`);
+
+if (!push) {
+  console.log(
+    `\nDry run (no --push). Review, then:\n` +
+      `  git push origin main\n` +
+      `  git tag -a v${target} -m "release ${target}" && git push origin v${target}\n`,
+  );
+  process.exit(0);
+}
+
+// ── push main + tag → fires CI ──────────────────────────────────────────────
+await $`git push origin main`.cwd(ROOT);
+await $`git tag -a ${`v${target}`} -m ${`release ${target}`}`.cwd(ROOT);
+await $`git push origin ${`v${target}`}`.cwd(ROOT);
+console.log(`\x1b[32m✓ pushed main + tag v${target} — CI release workflow triggered\x1b[0m`);
+console.log(
+  `\nVerify when CI finishes:\n` +
+    `  curl -sL https://github.com/cjhyy/codeshell/releases/download/v${target}/latest-mac.yml | grep version\n` +
+    `  → must read "version: ${target}"\n`,
+);

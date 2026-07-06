@@ -18,6 +18,7 @@ import { BrowserWindow, app } from "electron";
 import { autoUpdater } from "electron-updater";
 import { dlog } from "./desktop-logger.js";
 import { macSignatureNeedsManualInstall, releaseUrlForVersion } from "./updater-signature.js";
+import { isNoUpdateManifestError, isReadOnlyInstallError } from "./updater-error-classify.js";
 
 type ManualInstallReason = "mac-signature" | "mac-readonly-volume";
 
@@ -141,9 +142,7 @@ function versionFromStatus(status: UpdaterStatus): string | null {
   }
 }
 
-function isReadOnlyInstallError(message: string): boolean {
-  return /read-only volume|move the application|move .* out of the Downloads directory/i.test(message);
-}
+
 
 export function getLastStatus(): UpdaterStatus {
   return lastStatus;
@@ -227,6 +226,14 @@ export function initUpdater(): void {
       return;
     }
     if (!downloadInFlight && !installInFlight && lastStatus.kind === "downloaded") return;
+    // A missing/404 manifest while merely CHECKING (not downloading/installing)
+    // means "release still publishing / nothing available" — surface it as a
+    // quiet not-available, not a scary error card.
+    if (!downloadInFlight && !installInFlight && isNoUpdateManifestError(message)) {
+      dlog("main", "updater.no_manifest", { message });
+      set({ kind: "not-available", version: app.getVersion() });
+      return;
+    }
     downloadInFlight = false;
     activeDownloadVersion = null;
     installInFlight = false;
