@@ -143,6 +143,19 @@ export { Transcript } from "./session/transcript.js";
 export { SessionManager } from "./session/session-manager.js";
 export { FileHistory } from "./session/file-history.js";
 export {
+  createWorktree,
+  currentBranch,
+  findMainWorktreeRoot,
+  listWorktrees,
+  removeWorktree,
+  validateWorktreeSlug,
+  worktreeHasUncommittedChanges,
+  type ListWorktreesOptions,
+  type WorktreeDiffSummary,
+  type WorktreeInfo,
+  type WorktreeWorkspaceOwner,
+} from "./git/worktree.js";
+export {
   latestUndoTarget,
   earliestSnapshotsPerFile,
   latestTurnUndoTargets,

@@ -9,6 +9,7 @@ import { safeSpawnShell } from "../runtime/safe-spawn.js";
 import { buildSandboxEnv, mergeShellEnv, defaultShellBinary } from "../runtime/spawn-common.js";
 import { resolveExecutable } from "../utils/exec.js";
 import type { SandboxBackend } from "../tool-system/sandbox/index.js";
+import type { SessionWorkspace } from "../types.js";
 
 // git resolved via PATH×PATHEXT on Windows (.cmd/.exe shim); no-op on POSIX.
 const GIT_BIN = resolveExecutable("git");
@@ -296,10 +297,42 @@ export function worktreeHasUncommittedChanges(worktreePath: string): boolean {
   }
 }
 
+export interface WorktreeDiffSummary {
+  /** Best-effort base used for the branch comparison, usually main/master. */
+  baseRef?: string;
+  /** Unique files changed either by commits ahead of base or by uncommitted changes. */
+  changedFiles: number;
+  /** Commits reachable from HEAD but not from baseRef. */
+  aheadCommits: number;
+  /** True when `git status --porcelain` reports local changes. */
+  hasUncommittedChanges: boolean;
+}
+
+export interface WorktreeWorkspaceOwner {
+  sessionId: string;
+  workspace?: SessionWorkspace;
+}
+
+export interface ListWorktreesOptions {
+  includeDiffSummary?: boolean;
+  currentSessionId?: string;
+  workspaceOwners?: WorktreeWorkspaceOwner[];
+}
+
+export interface WorktreeInfo {
+  path: string;
+  branch: string;
+  head: string;
+  isMain?: boolean;
+  diff?: WorktreeDiffSummary;
+  occupiedBySessionIds?: string[];
+  occupiedByOtherSession?: boolean;
+}
+
 /**
  * List active worktrees.
  */
-export function listWorktrees(cwd: string): Array<{ path: string; branch: string; head: string }> {
+export function listWorktrees(cwd: string, opts: ListWorktreesOptions = {}): WorktreeInfo[] {
   const raw = execFileSync(GIT_BIN, ["worktree", "list", "--porcelain"], {
     cwd,
     encoding: "utf-8",
@@ -308,8 +341,8 @@ export function listWorktrees(cwd: string): Array<{ path: string; branch: string
 
   if (!raw) return [];
 
-  const entries: Array<{ path: string; branch: string; head: string }> = [];
-  let current: { path: string; branch: string; head: string } = { path: "", branch: "", head: "" };
+  const entries: WorktreeInfo[] = [];
+  let current: WorktreeInfo = { path: "", branch: "", head: "" };
 
   for (const line of raw.split("\n")) {
     if (line.startsWith("worktree ")) {
@@ -323,7 +356,124 @@ export function listWorktrees(cwd: string): Array<{ path: string; branch: string
   }
   if (current.path) entries.push(current);
 
-  return entries;
+  if (!opts.includeDiffSummary && !opts.workspaceOwners?.length) return entries;
+
+  let mainRoot = "";
+  try {
+    mainRoot = findMainWorktreeRoot(cwd);
+  } catch {
+    mainRoot = entries[0]?.path ?? "";
+  }
+  const baseRef = opts.includeDiffSummary ? findComparisonBaseRef(mainRoot || cwd) : undefined;
+
+  return entries.map((entry) => {
+    const owners = ownersForWorktree(entry.path, opts.workspaceOwners ?? []);
+    return {
+      ...entry,
+      ...(mainRoot ? { isMain: resolve(entry.path) === resolve(mainRoot) } : {}),
+      ...(opts.includeDiffSummary ? { diff: diffSummary(entry.path, baseRef) } : {}),
+      ...(owners.length > 0
+        ? {
+            occupiedBySessionIds: owners,
+            occupiedByOtherSession: owners.some((id) => id !== opts.currentSessionId),
+          }
+        : {}),
+    };
+  });
+}
+
+function ownersForWorktree(path: string, owners: WorktreeWorkspaceOwner[]): string[] {
+  const target = resolve(path);
+  return owners
+    .filter((owner) => {
+      const workspace = owner.workspace;
+      if (!workspace) return false;
+      return resolve(workspace.root) === target;
+    })
+    .map((owner) => owner.sessionId);
+}
+
+function findComparisonBaseRef(cwd: string): string | undefined {
+  for (const ref of ["main", "master", "origin/main", "origin/master"]) {
+    if (commitRefExists(cwd, ref)) return ref;
+  }
+  return undefined;
+}
+
+function commitRefExists(cwd: string, ref: string): boolean {
+  try {
+    execFileSync(GIT_BIN, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`], {
+      cwd,
+      encoding: "utf-8",
+      timeout: 5000,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function diffSummary(cwd: string, baseRef: string | undefined): WorktreeDiffSummary {
+  const dirtyFiles = statusFileSet(cwd);
+  const committedFiles = baseRef ? changedFilesSinceBase(cwd, baseRef) : new Set<string>();
+  const changedFiles = new Set([...dirtyFiles, ...committedFiles]);
+  return {
+    ...(baseRef ? { baseRef } : {}),
+    changedFiles: changedFiles.size,
+    aheadCommits: baseRef ? aheadCommitCount(cwd, baseRef) : 0,
+    hasUncommittedChanges: dirtyFiles.size > 0,
+  };
+}
+
+function changedFilesSinceBase(cwd: string, baseRef: string): Set<string> {
+  const out = gitOutput(cwd, ["diff", "--name-only", `${baseRef}...HEAD`]);
+  const raw = out ?? gitOutput(cwd, ["diff", "--name-only", `${baseRef}..HEAD`]) ?? "";
+  return new Set(
+    raw
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean),
+  );
+}
+
+function aheadCommitCount(cwd: string, baseRef: string): number {
+  const out = gitOutput(cwd, ["rev-list", "--count", `${baseRef}..HEAD`]);
+  const n = Number.parseInt(out?.trim() ?? "0", 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function statusFileSet(cwd: string): Set<string> {
+  const raw = gitOutput(cwd, ["status", "--porcelain=v1"]) ?? "";
+  const files = new Set<string>();
+  for (const line of raw.split("\n")) {
+    if (!line.trim()) continue;
+    const path = line.slice(3).trim();
+    if (!path) continue;
+    const renameTarget = path.includes(" -> ") ? path.split(" -> ").at(-1) : path;
+    if (renameTarget) files.add(unquoteGitPath(renameTarget));
+  }
+  return files;
+}
+
+function unquoteGitPath(path: string): string {
+  if (!path.startsWith('"') || !path.endsWith('"')) return path;
+  try {
+    return JSON.parse(path) as string;
+  } catch {
+    return path.slice(1, -1);
+  }
+}
+
+function gitOutput(cwd: string, args: string[]): string | undefined {
+  try {
+    return execFileSync(GIT_BIN, args, {
+      cwd,
+      encoding: "utf-8",
+      timeout: 10000,
+    });
+  } catch {
+    return undefined;
+  }
 }
 
 function normalizeBranchName(branch: string): string {
