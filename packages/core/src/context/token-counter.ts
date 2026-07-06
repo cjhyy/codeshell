@@ -76,11 +76,24 @@ function estimateBlockTokens(block: ContentBlock): number {
   if (block.text) tokens += estimateStringTokens(block.text);
   if (block.content && typeof block.content === "string") {
     tokens += estimateStringTokens(block.content);
+  } else if (Array.isArray(block.content)) {
+    for (const nested of block.content) {
+      tokens += estimateBlockTokens(nested);
+    }
   }
   if (block.input) {
     tokens += estimateStringTokens(JSON.stringify(block.input));
   }
   if (block.name) tokens += estimateStringTokens(block.name);
+  if (block.source?.data) {
+    tokens += estimateStringTokens(block.source.media_type);
+    tokens += estimateStringTokens(block.source.data);
+  }
+
+  const maybeOpenAI = block as unknown as { image_url?: { url?: string } };
+  if (typeof maybeOpenAI.image_url?.url === "string") {
+    tokens += estimateStringTokens(maybeOpenAI.image_url.url);
+  }
 
   return tokens;
 }

@@ -16,6 +16,7 @@ import type {
 } from "../types.js";
 import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js";
 import { logger } from "../logging/logger.js";
+import { messageHasBase64ImagePayload } from "../context/compaction.js";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -92,6 +93,7 @@ export async function* query(
     maxToolCallsPerTurn,
     onStream,
     signal,
+    freshImageMessages: messages.filter(messageHasBase64ImagePayload),
   };
 
   // Local overhead store — query() is a standalone entry point without a real

@@ -29,7 +29,11 @@ import { ContextLimitError } from "../exceptions.js";
 import { logger } from "../logging/logger.js";
 import { checkTokenBudget, type BudgetTracker, createBudgetTracker } from "./token-budget.js";
 import { StreamingToolQueue } from "./streaming-tool-queue.js";
-import { estimateTokens } from "../context/compaction.js";
+import {
+  downgradeImagePayloadsInHistory,
+  estimateTokens,
+  messageHasBase64ImagePayload,
+} from "../context/compaction.js";
 import { isTruncatedStop } from "../llm/stop-reason.js";
 import { isAbortError } from "../llm/client-base.js";
 import { crossedReactiveThreshold } from "./reactive-threshold.js";
@@ -59,6 +63,12 @@ export interface TurnLoopConfig {
   tokenBudget?: number;
   onStream?: StreamCallback;
   signal?: AbortSignal;
+  /**
+   * Image-bearing messages added for the current request and not yet consumed
+   * by the model. TurnLoop preserves their base64 for one successful model
+   * response, then downgrades them to placeholders in the working history.
+   */
+  freshImageMessages?: Iterable<Message>;
   /**
    * Fired after each turn boundary is recorded. Lets the engine flush an
    * up-to-date snapshot to state.json mid-run, so a long run doesn't leave
@@ -189,6 +199,7 @@ export class TurnLoop {
     cacheCreationTokens: 0,
   };
   private currentCumulativeUsage: CumulativeUsageCounters | undefined;
+  private readonly pendingImageMessages = new Set<Message>();
 
   /**
    * Consecutive on_stop blocks (Goal mode kept the agent going). Reset to 0
@@ -302,6 +313,10 @@ export class TurnLoop {
     // each turn so mutations take effect on the next iteration.
     private config: TurnLoopConfig,
   ) {
+    for (const msg of this.config.freshImageMessages ?? []) {
+      this.pendingImageMessages.add(msg);
+    }
+
     // Wrap onStream so a single throwing handler can't silently break
     // the channel for the rest of the run. A 2026-05-25 incident saw a
     // sub-agent's events stop reaching the renderer ~23s into its run —
@@ -352,6 +367,41 @@ export class TurnLoop {
   private markStopped(): void {
     if (this.deps.isSubAgent === true) return;
     this.deps.transcript.appendTurnStopped();
+  }
+
+  private prepareMessagesForModel(messages: Message[]): Message[] {
+    const preserveMessages =
+      this.pendingImageMessages.size > 0 ? this.pendingImageMessages : undefined;
+    const result = downgradeImagePayloadsInHistory(messages, { preserveMessages });
+    if (result.replacedCount > 0) {
+      this.currentTurnLog.info("context.image_payload_downgrade", {
+        cat: "context",
+        images: result.replacedCount,
+        pendingFresh: this.pendingImageMessages.size,
+      });
+    }
+    return result.messages;
+  }
+
+  private markPendingImagesConsumed(messages: Message[]): Message[] {
+    if (this.pendingImageMessages.size === 0) return messages;
+    const consumedMessages = this.pendingImageMessages.size;
+    this.pendingImageMessages.clear();
+    const result = downgradeImagePayloadsInHistory(messages);
+    if (result.replacedCount > 0) {
+      this.currentTurnLog.info("context.image_payload_consumed", {
+        cat: "context",
+        images: result.replacedCount,
+        messages: consumedMessages,
+      });
+    }
+    return result.messages;
+  }
+
+  private trackFreshImageMessage(message: Message): void {
+    if (messageHasBase64ImagePayload(message)) {
+      this.pendingImageMessages.add(message);
+    }
   }
 
   private async emitHook(
@@ -577,7 +627,12 @@ export class TurnLoop {
         // stop-blocks) so the UI can offer a "再续" button while still live.
         this.maybeAnnounceApproachingLimit();
 
-        // Pre-check: context management (async — may trigger LLM summarization)
+        // Pre-check: downgrade image payloads that have already had their one
+        // model-consumption turn, then run context management. Fresh images in
+        // pendingImageMessages are preserved through this next model request.
+        messages = this.prepareMessagesForModel(messages);
+
+        // Context management (async — may trigger LLM summarization)
         messages = await this.deps.contextManager.manageAsync(messages);
 
         // manageAsync can itself issue an LLM summarization call lasting several
@@ -680,6 +735,8 @@ export class TurnLoop {
           this.deps.contextManager.recordActualUsage(response!.usage.promptTokens, messages.length);
         }
 
+        messages = this.markPendingImagesConsumed(messages);
+
         // Truncation that cut off a TOOL CALL: the model overflowed
         // max_output_tokens mid tool-call, so the arg JSON is incomplete (e.g. a
         // Write whose `content` was clipped, leaving file_path unset). Executing
@@ -731,7 +788,7 @@ export class TurnLoop {
             try {
               const contResponse = await this.deps.model.call(
                 this.deps.systemPrompt,
-                contMessages,
+                this.prepareMessagesForModel(contMessages),
                 this.deps.tools,
                 this.config.onStream,
                 this.config.signal,
@@ -979,7 +1036,9 @@ export class TurnLoop {
             });
         }
 
-        messages.push({ role: "user", content: resultBlocks });
+        const toolResultMessage: Message = { role: "user", content: resultBlocks };
+        messages.push(toolResultMessage);
+        this.trackFreshImageMessage(toolResultMessage);
 
         // B-3: tell the model which of its requested tool calls were dropped by
         // the per-turn cap so it can re-issue them, instead of silently assuming
@@ -1151,6 +1210,7 @@ export class TurnLoop {
     });
 
     this.consumeQueuedSteer(messages, "finalize_backfill");
+    messages = this.prepareMessagesForModel(messages);
     messages = this.deps.contextManager.manage(messages);
     messages.push({
       role: "user",
@@ -1162,11 +1222,12 @@ export class TurnLoop {
     try {
       const summaryResponse = await this.deps.model.call(
         this.deps.systemPrompt,
-        messages,
+        this.prepareMessagesForModel(messages),
         [], // No tools available for summary turn
         this.config.onStream,
         this.config.signal,
       );
+      messages = this.markPendingImagesConsumed(messages);
       if (summaryResponse.text) {
         finalText = summaryResponse.text;
       }

@@ -1382,6 +1382,7 @@ export class Engine {
     // call) instead of a try/catch on resume.
     let session: SessionBundle;
     let messages: Message[];
+    let freshImageMessage: Message | undefined;
 
     if (options?.sessionId && this.sessionManager.exists(options.sessionId)) {
       session = this.sessionManager.resume(options.sessionId);
@@ -1406,6 +1407,7 @@ export class Engine {
       }
       // Append new user message
       const userMsg: Message = { role: "user", content: userMessageContent };
+      if (parsedTask.hasImages) freshImageMessage = userMsg;
       messages.push(userMsg);
       session.transcript.appendMessage("user", userMessageContent, {
         injected: options?.injected === true,
@@ -1428,7 +1430,9 @@ export class Engine {
         this.config.isSubAgent === true ? getCurrentSid() : undefined,
         this.config.isSubAgent === true ? "subagent" : this.config.origin,
       );
-      messages = [{ role: "user", content: userMessageContent }];
+      const userMsg: Message = { role: "user", content: userMessageContent };
+      if (parsedTask.hasImages) freshImageMessage = userMsg;
+      messages = [userMsg];
       session.transcript.appendMessage("user", userMessageContent, {
         clientMessageId: options?.clientMessageId,
       });
@@ -2065,6 +2069,7 @@ export class Engine {
           maxToolCallsPerTurn: this.config.maxToolCallsPerTurn ?? 25,
           onStream: options?.onStream,
           signal: options?.signal,
+          freshImageMessages: freshImageMessage ? [freshImageMessage] : undefined,
           // Goal mode: the active goal is surfaced to the on_stop handler via
           // ctx.data.goal; the GoalStopHook (registered above) judges it.
           goal: normalizedGoal,

@@ -11,7 +11,7 @@
  * to prevent splitting tool_use / tool_result pairs.
  */
 
-import type { Message } from "../types.js";
+import type { ContentBlock, Message } from "../types.js";
 import { estimateMessagesTokens } from "./token-counter.js";
 
 /**
@@ -20,6 +20,141 @@ import { estimateMessagesTokens } from "./token-counter.js";
  */
 export function estimateTokens(messages: Message[]): number {
   return Math.ceil(estimateMessagesTokens(messages) * (4 / 3));
+}
+
+export const IMAGE_HISTORY_PLACEHOLDER_PREFIX = "[image #";
+export const IMAGE_HISTORY_PLACEHOLDER_SUFFIX = ", 已处理 / already provided earlier]";
+
+interface ImagePreserveSet {
+  has(message: Message): boolean;
+}
+
+export interface DowngradeImageHistoryOptions {
+  /**
+   * Messages whose image payloads are being sent for their first model
+   * consumption in this request. They still count toward image numbering but
+   * keep their base64 until the caller clears the preserve set after a
+   * successful model response.
+   */
+  preserveMessages?: ImagePreserveSet;
+}
+
+export interface DowngradeImageHistoryResult {
+  messages: Message[];
+  replacedCount: number;
+}
+
+/**
+ * Replace already-consumed image payload blocks with compact text markers.
+ *
+ * The transcript may retain the full image bytes for rendering/resume, but the
+ * working message history sent to the model should not re-send base64 after the
+ * model has seen it once. This handles both our internal Anthropic-style image
+ * blocks and OpenAI-style data-url image blocks defensively, including images
+ * nested inside tool_result.content arrays (view_image / browser screenshots).
+ */
+export function downgradeImagePayloadsInHistory(
+  messages: Message[],
+  options: DowngradeImageHistoryOptions = {},
+): DowngradeImageHistoryResult {
+  let nextImageNumber = 1;
+  let replacedCount = 0;
+  let changed = false;
+
+  const placeholderFor = (imageNumber: number): ContentBlock => ({
+    type: "text",
+    text: `${IMAGE_HISTORY_PLACEHOLDER_PREFIX}${imageNumber}${IMAGE_HISTORY_PLACEHOLDER_SUFFIX}`,
+  });
+
+  const transformBlocks = (
+    blocks: ContentBlock[],
+    preserve: boolean,
+  ): { blocks: ContentBlock[]; changed: boolean } => {
+    let blocksChanged = false;
+    const out = blocks.map((block) => {
+      const placeholderNumber = imageHistoryPlaceholderNumber(block);
+      if (placeholderNumber !== undefined) {
+        nextImageNumber = Math.max(nextImageNumber, placeholderNumber + 1);
+        return block;
+      }
+
+      if (isBase64ImageBlock(block)) {
+        const imageNumber = nextImageNumber++;
+        if (preserve) return block;
+        replacedCount++;
+        blocksChanged = true;
+        return placeholderFor(imageNumber);
+      }
+
+      if (block.type === "tool_result" && Array.isArray(block.content)) {
+        const nested = transformBlocks(block.content, preserve);
+        if (nested.changed) {
+          blocksChanged = true;
+          return { ...block, content: nested.blocks };
+        }
+      }
+
+      return block;
+    });
+
+    return { blocks: blocksChanged ? out : blocks, changed: blocksChanged };
+  };
+
+  const out = messages.map((msg) => {
+    if (!Array.isArray(msg.content)) return msg;
+    const preserve = options.preserveMessages?.has(msg) === true;
+    const result = transformBlocks(msg.content, preserve);
+    if (!result.changed) return msg;
+    changed = true;
+    return { ...msg, content: result.blocks };
+  });
+
+  return { messages: changed ? out : messages, replacedCount };
+}
+
+export function messageHasBase64ImagePayload(message: Message): boolean {
+  if (!Array.isArray(message.content)) return false;
+  return message.content.some(blockHasBase64ImagePayload);
+}
+
+function blockHasBase64ImagePayload(block: ContentBlock): boolean {
+  if (isBase64ImageBlock(block)) return true;
+  return (
+    block.type === "tool_result" &&
+    Array.isArray(block.content) &&
+    block.content.some(blockHasBase64ImagePayload)
+  );
+}
+
+function imageHistoryPlaceholderNumber(block: ContentBlock): number | undefined {
+  if (block.type !== "text" || typeof block.text !== "string") return undefined;
+  const escapedPrefix = IMAGE_HISTORY_PLACEHOLDER_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapedSuffix = IMAGE_HISTORY_PLACEHOLDER_SUFFIX.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = block.text.match(new RegExp(`^${escapedPrefix}(\\d+)${escapedSuffix}$`));
+  if (!match?.[1]) return undefined;
+  const n = Number(match[1]);
+  return Number.isSafeInteger(n) && n > 0 ? n : undefined;
+}
+
+function isBase64ImageBlock(block: ContentBlock): boolean {
+  if (
+    block.type === "image" &&
+    block.source?.type === "base64" &&
+    typeof block.source.data === "string" &&
+    block.source.data.length > 0
+  ) {
+    return true;
+  }
+
+  const maybeOpenAI = block as unknown as {
+    type?: string;
+    image_url?: { url?: string };
+  };
+  return (
+    maybeOpenAI.type === "image_url" &&
+    typeof maybeOpenAI.image_url?.url === "string" &&
+    /^data:image\/[^;,]+;base64,/i.test(maybeOpenAI.image_url.url)
+  );
 }
 
 /**
