@@ -1,5 +1,16 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Archive, CornerDownRight, Paperclip, Mic, Loader2, ArrowUp, Square, Monitor, Trash2, X } from "lucide-react";
+import {
+  Archive,
+  CornerDownRight,
+  Paperclip,
+  Mic,
+  Loader2,
+  ArrowUp,
+  Square,
+  Monitor,
+  Trash2,
+  X,
+} from "lucide-react";
 import { MessageStream } from "./MessageStream";
 import type { Message } from "./types";
 import { loadHistory, pushHistory } from "./promptHistory";
@@ -98,11 +109,12 @@ interface Props {
   onModelChange: (opt: ModelOption) => void;
   contextTokens: number;
   contextMax?: number;
-  /** Session-cumulative cache totals (drive the ContextRing hit-rate tooltip). */
-  cacheReadTokens?: number;
-  cacheCreationTokens?: number;
-  /** Session-cumulative prompt tokens — the hit-rate denominator. */
-  sessionPromptTokens?: number;
+  singleTurnPromptTokens?: number;
+  singleTurnCacheReadTokens?: number;
+  singleTurnCacheCreationTokens?: number;
+  cumulativePromptTokens?: number;
+  cumulativeCacheReadTokens?: number;
+  cumulativeCacheCreationTokens?: number;
 
   // Project picker (composer second row)
   repos: Repo[];
@@ -190,9 +202,12 @@ export function ChatView({
   onModelChange,
   contextTokens,
   contextMax,
-  cacheReadTokens,
-  cacheCreationTokens,
-  sessionPromptTokens,
+  singleTurnPromptTokens,
+  singleTurnCacheReadTokens,
+  singleTurnCacheCreationTokens,
+  cumulativePromptTokens,
+  cumulativeCacheReadTokens,
+  cumulativeCacheCreationTokens,
   repos,
   onSelectRepo,
   onAddRepo,
@@ -380,8 +395,7 @@ export function ChatView({
     if (!query) return slashCommands;
     return slashCommands.filter(
       (cmd) =>
-        cmd.name.slice(1).toLowerCase().includes(query) ||
-        cmd.title.toLowerCase().includes(query),
+        cmd.name.slice(1).toLowerCase().includes(query) || cmd.title.toLowerCase().includes(query),
     );
   }, [slash, slashCommands]);
 
@@ -485,9 +499,7 @@ export function ChatView({
   };
 
   useEffect(() => {
-    setSlashSelected((s) =>
-      slashItems.length === 0 ? 0 : Math.min(s, slashItems.length - 1),
-    );
+    setSlashSelected((s) => (slashItems.length === 0 ? 0 : Math.min(s, slashItems.length - 1)));
   }, [slashItems]);
 
   // Insert an `@path` reference into the draft (file-panel drag of a non-image
@@ -520,8 +532,7 @@ export function ChatView({
     const caret = ta?.selectionStart ?? draft.length;
     const before = draft.slice(0, mention.start);
     const after = draft.slice(caret);
-    const insertion =
-      item.kind === "skill" ? `@${item.skill.name} ` : `@${item.file.path} `;
+    const insertion = item.kind === "skill" ? `@${item.skill.name} ` : `@${item.file.path} `;
     const next = before + insertion + after;
     setDraft(next);
     closeMention();
@@ -613,7 +624,6 @@ export function ChatView({
     await acceptFiles(imageFiles);
   };
 
-
   const removeAttachment = (id: string) => {
     setAttachments((cur) => cur.filter((a) => a.id !== id));
   };
@@ -693,8 +703,7 @@ export function ChatView({
 
     const browsingHistory = historyCursor !== -1;
     const canEnterHistory =
-      (e.key === "ArrowUp" || e.key === "ArrowDown") &&
-      (draft.length === 0 || browsingHistory);
+      (e.key === "ArrowUp" || e.key === "ArrowDown") && (draft.length === 0 || browsingHistory);
 
     if (!canEnterHistory) return;
 
@@ -748,7 +757,10 @@ export function ChatView({
   // they had scrolled up to read history.
   const [sendEpoch, setSendEpoch] = useState(0);
   useEffect(() => {
-    if (!pendingApproval) { setInlineApprovalVisible(true); return; }
+    if (!pendingApproval) {
+      setInlineApprovalVisible(true);
+      return;
+    }
     const el = inlineApprovalRef.current;
     if (!el) return;
     const io = new IntersectionObserver(
@@ -770,8 +782,7 @@ export function ChatView({
       </div>
     ) : null;
 
-  const showStickyApproval =
-    !!pendingApproval && !!onApprovalDecide && !inlineApprovalVisible;
+  const showStickyApproval = !!pendingApproval && !!onApprovalDecide && !inlineApprovalVisible;
 
   // Show ALL queued items, not a 2-item slice — the old slice(0, 2) is what
   // made 引导 look like it "只能打断 2 句": only the first two ever rendered a
@@ -779,7 +790,11 @@ export function ChatView({
   // queue at once anyway, so the list is purely a preview of what will send.
   const queuedPreviewItems = queuedInputItems.map((item) => {
     const decoded = decodeWireForDisplay(item);
-    const text = decoded.text || (decoded.images.length > 0 ? t("chat.composer.imagesPlaceholder", { count: decoded.images.length }) : item);
+    const text =
+      decoded.text ||
+      (decoded.images.length > 0
+        ? t("chat.composer.imagesPlaceholder", { count: decoded.images.length })
+        : item);
     return text.length > 180 ? `${text.slice(0, 180)}...` : text;
   });
 
@@ -836,9 +851,7 @@ export function ChatView({
 
   return (
     <div
-      className={
-        "flex h-full flex-col" + (dragOver ? " ring-2 ring-inset ring-primary/40" : "")
-      }
+      className={"flex h-full flex-col" + (dragOver ? " ring-2 ring-inset ring-primary/40" : "")}
       data-mode={isNewChat ? "new" : "active"}
       onDragEnter={onChatDragEnter}
       onDragOver={onChatDragOver}
@@ -878,10 +891,7 @@ export function ChatView({
       {(openAsk || showStickyApproval) && (
         <div className="px-4">
           {openAsk && (
-            <AskUserMessageView
-              message={openAsk}
-              onAnswer={onAskUserAnswer ?? (() => undefined)}
-            />
+            <AskUserMessageView message={openAsk} onAnswer={onAskUserAnswer ?? (() => undefined)} />
           )}
           {showStickyApproval && pendingApproval && onApprovalDecide && (
             <ApprovalCard envelope={pendingApproval} onDecide={onApprovalDecide} />
@@ -899,11 +909,7 @@ export function ChatView({
         at the bottom as a plain p-3 block.
       */}
       <div
-        className={
-          isNewChat
-            ? "flex flex-1 flex-col items-center justify-center px-4"
-            : "contents"
-        }
+        className={isNewChat ? "flex flex-1 flex-col items-center justify-center px-4" : "contents"}
       >
         {isNewChat && welcomeNode && (
           <div className="mb-4 flex flex-col items-center">{welcomeNode}</div>
@@ -921,7 +927,9 @@ export function ChatView({
                 <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-muted-foreground">
                   <CornerDownRight size={14} />
                   <span>{t("chat.queue.heading")}</span>
-                  <span className="text-xs font-normal tabular-nums">{queuedInputItems.length}</span>
+                  <span className="text-xs font-normal tabular-nums">
+                    {queuedInputItems.length}
+                  </span>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   {busy && onGuideQueuedInput && (
@@ -955,7 +963,9 @@ export function ChatView({
                     key={i}
                     className="flex min-w-0 items-start gap-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-sm text-foreground"
                   >
-                    <div className="line-clamp-2 min-w-0 flex-1 whitespace-pre-wrap break-words">{item}</div>
+                    <div className="line-clamp-2 min-w-0 flex-1 whitespace-pre-wrap break-words">
+                      {item}
+                    </div>
                     <div className="flex shrink-0 items-center gap-1">
                       {onRemoveQueuedInput && (
                         <button
@@ -980,406 +990,422 @@ export function ChatView({
             anywhere in the chat surface. The composer keeps the visual highlight
             to make the landing spot obvious, but no longer owns the handlers.
           */}
-        <div
-          className={
-            // min-w-[300px]: stop the composer collapsing into an unusable sliver
-            // when a side panel squeezes the chat. Keep this card out of the
-            // container-query tree: putting container-type on the textarea's
-            // ancestor has collapsed the composer during session/dock reflow.
-            "min-w-[300px] rounded-xl border bg-card p-2 shadow-sm" +
-            (dragOver ? " ring-2 ring-primary/40" : "")
-          }
-        >
-          {anchors.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-1.5">
-              {anchors.map((a) => (
-                <div
-                  key={a.id}
-                  className="flex max-w-full items-center gap-1.5 rounded-md border border-border bg-muted px-2 py-1 text-xs"
-                  title={`${a.comment}\n${Object.entries(a.locator).map(([k, v]) => `${k}: ${v}`).join("\n")}`}
-                >
-                  <span className="shrink-0 text-muted-foreground">
-                    {a.kind === "diff" ? t("chat.anchors.diff") : a.kind === "browser" ? t("chat.anchors.browser") : t("chat.anchors.file")}
-                  </span>
-                  <span className="truncate font-medium text-foreground">{a.label}</span>
-                  {/* Page attribution for browser anchors — which page this was
+          <div
+            className={
+              // min-w-[300px]: stop the composer collapsing into an unusable sliver
+              // when a side panel squeezes the chat. Keep this card out of the
+              // container-query tree: putting container-type on the textarea's
+              // ancestor has collapsed the composer during session/dock reflow.
+              "min-w-[300px] rounded-xl border bg-card p-2 shadow-sm" +
+              (dragOver ? " ring-2 ring-primary/40" : "")
+            }
+          >
+            {anchors.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {anchors.map((a) => (
+                  <div
+                    key={a.id}
+                    className="flex max-w-full items-center gap-1.5 rounded-md border border-border bg-muted px-2 py-1 text-xs"
+                    title={`${a.comment}\n${Object.entries(a.locator)
+                      .map(([k, v]) => `${k}: ${v}`)
+                      .join("\n")}`}
+                  >
+                    <span className="shrink-0 text-muted-foreground">
+                      {a.kind === "diff"
+                        ? t("chat.anchors.diff")
+                        : a.kind === "browser"
+                          ? t("chat.anchors.browser")
+                          : t("chat.anchors.file")}
+                    </span>
+                    <span className="truncate font-medium text-foreground">{a.label}</span>
+                    {/* Page attribution for browser anchors — which page this was
                       circled on (圈选统一: feedback「不知道是哪一个页面的」). */}
-                  {a.browser && (
-                    <span className="truncate text-muted-foreground">
-                      @ {pageAttribution(a.browser)}
-                    </span>
-                  )}
-                  {a.comment && (
-                    <span className="truncate text-muted-foreground">· {a.comment}</span>
-                  )}
-                  <button
-                    type="button"
-                    className="shrink-0 rounded-full p-0.5 text-muted-foreground hover:bg-background"
-                    aria-label={t("chat.anchors.removeAria")}
-                    onClick={() => onRemoveAnchor?.(a.id)}
-                  >
-                    <X size={11} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {attachments.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-2">
-              {attachments.map((a) => (
-                <div
-                  className="group/att relative flex max-w-[220px] items-center gap-2 rounded-md border bg-muted/40 py-1 pl-1 pr-6"
-                  key={a.id}
-                  title={a.name}
-                >
-                  <img
-                    src={a.dataUrl}
-                    alt={a.name}
-                    className="h-9 w-9 shrink-0 cursor-pointer rounded object-cover"
-                    title={t("chat.composer.imageClickToZoom", { name: a.name || t("chat.composer.imageFallbackName") })}
-                    onClick={() =>
-                      setZoomed({
-                        items: attachments.map((g) => ({
-                          src: g.dataUrl,
-                          alt: g.name || t("chat.composer.imageFallbackName"),
-                          name: g.name || undefined,
-                        })),
-                        index: attachments.indexOf(a),
-                      })
-                    }
-                  />
-                  <div className="flex min-w-0 flex-col">
-                    <span className="truncate text-xs text-foreground" title={a.name}>
-                      {a.name || t("chat.composer.imageFallbackName")}
-                    </span>
-                    <span className="text-[10px] tabular-nums text-muted-foreground">
-                      {formatBytes(a.size)}
-                    </span>
+                    {a.browser && (
+                      <span className="truncate text-muted-foreground">
+                        @ {pageAttribution(a.browser)}
+                      </span>
+                    )}
+                    {a.comment && (
+                      <span className="truncate text-muted-foreground">· {a.comment}</span>
+                    )}
+                    <button
+                      type="button"
+                      className="shrink-0 rounded-full p-0.5 text-muted-foreground hover:bg-background"
+                      aria-label={t("chat.anchors.removeAria")}
+                      onClick={() => onRemoveAnchor?.(a.id)}
+                    >
+                      <X size={11} />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    className="absolute right-1 top-1 rounded-full bg-background/80 p-0.5 text-muted-foreground hover:text-foreground"
-                    aria-label={t("chat.composer.removeImageAria", { name: a.name })}
-                    onClick={() => removeAttachment(a.id)}
-                  >
-                    <X size={11} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {attachments.length > 0 && !activeSupportsVision && (
-            <div className="mb-2 flex flex-col gap-1 rounded-md bg-status-warn/10 p-2 text-xs text-status-warn">
-              <strong>{t("chat.composer.visionUnsupportedTitle")}</strong>
-              <span>
-                {activeModel
-                  ? t("chat.composer.visionUnsupportedWithModel", { label: activeModel.label })
-                  : t("chat.composer.visionUnsupportedUnknown")}
-              </span>
-              <button
-                type="button"
-                className="self-start underline"
-                onClick={() => {
-                  setAttachments([]);
-                  setAttachmentError(null);
-                }}
-              >
-                {t("chat.composer.removeAllImages")}
-              </button>
-            </div>
-          )}
-          {attachmentError && (
-            <div className="mb-2 text-xs text-status-err">{attachmentError}</div>
-          )}
-
-          <div className="relative">
-            {mention && (
-              <MentionPopover
-                cwd={activeRepoPath}
-                query={mention.query}
-                selected={mentionSelected}
-                onPick={applyMentionPick}
-                onItemsChange={(items) => {
-                  setMentionItems(items);
-                  // Clamp selection if the list shrank under us.
-                  setMentionSelected((s) =>
-                    items.length === 0 ? 0 : Math.min(s, items.length - 1),
-                  );
-                }}
-              />
-            )}
-            {slash && (
-              <div
-                className="cs-popup-surface absolute bottom-full left-0 z-50 mb-2 max-h-[min(18rem,calc(100vh-120px))] w-80 max-w-[min(20rem,calc(100vw-24px))] overflow-y-auto rounded-md p-1"
-                role="listbox"
-                aria-label={t("chat.slash.ariaLabel")}
-              >
-                <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t("chat.slash.commands")}
-                </div>
-                {slashItems.length > 0 ? (
-                  <ul className="space-y-0.5">
-                    {slashItems.map((item, idx) => {
-                      const active = idx === slashSelected;
-                      return (
-                        <li
-                          key={item.name}
-                          className={cn(
-                            "grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm",
-                            active && "bg-accent text-accent-foreground",
-                          )}
-                          role="option"
-                          aria-selected={active}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            executeSlashCommand(item);
-                          }}
-                        >
-                          <Archive size={14} className="mt-0.5 text-muted-foreground" />
-                          <span className="min-w-0 truncate font-medium">{item.name}</span>
-                          <span className="col-start-2 min-w-0 truncate text-xs text-muted-foreground">
-                            {item.description}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <div className="px-2 py-3 text-sm text-muted-foreground">
-                    {t("chat.slash.noMatch")}
-                  </div>
-                )}
+                ))}
               </div>
             )}
-            <textarea
-              ref={textareaRef}
-              value={draft}
-              onChange={(e) => {
-                const value = e.target.value;
-                setDraft(value);
-                if (historyCursor !== -1) setHistoryCursor(-1);
-                const caret = e.target.selectionStart ?? value.length;
-                updateInlinePickers(value, caret);
-              }}
-              onKeyDown={handleKeyDown}
-              onKeyUp={(e) => {
-                // Arrow / click moves can shift the caret without changing
-                // text; re-detect so the popover follows the caret.
-                if (
-                  e.key === "ArrowLeft" ||
-                  e.key === "ArrowRight" ||
-                  e.key === "Home" ||
-                  e.key === "End"
-                ) {
+
+            {attachments.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-2">
+                {attachments.map((a) => (
+                  <div
+                    className="group/att relative flex max-w-[220px] items-center gap-2 rounded-md border bg-muted/40 py-1 pl-1 pr-6"
+                    key={a.id}
+                    title={a.name}
+                  >
+                    <img
+                      src={a.dataUrl}
+                      alt={a.name}
+                      className="h-9 w-9 shrink-0 cursor-pointer rounded object-cover"
+                      title={t("chat.composer.imageClickToZoom", {
+                        name: a.name || t("chat.composer.imageFallbackName"),
+                      })}
+                      onClick={() =>
+                        setZoomed({
+                          items: attachments.map((g) => ({
+                            src: g.dataUrl,
+                            alt: g.name || t("chat.composer.imageFallbackName"),
+                            name: g.name || undefined,
+                          })),
+                          index: attachments.indexOf(a),
+                        })
+                      }
+                    />
+                    <div className="flex min-w-0 flex-col">
+                      <span className="truncate text-xs text-foreground" title={a.name}>
+                        {a.name || t("chat.composer.imageFallbackName")}
+                      </span>
+                      <span className="text-[10px] tabular-nums text-muted-foreground">
+                        {formatBytes(a.size)}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="absolute right-1 top-1 rounded-full bg-background/80 p-0.5 text-muted-foreground hover:text-foreground"
+                      aria-label={t("chat.composer.removeImageAria", { name: a.name })}
+                      onClick={() => removeAttachment(a.id)}
+                    >
+                      <X size={11} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {attachments.length > 0 && !activeSupportsVision && (
+              <div className="mb-2 flex flex-col gap-1 rounded-md bg-status-warn/10 p-2 text-xs text-status-warn">
+                <strong>{t("chat.composer.visionUnsupportedTitle")}</strong>
+                <span>
+                  {activeModel
+                    ? t("chat.composer.visionUnsupportedWithModel", { label: activeModel.label })
+                    : t("chat.composer.visionUnsupportedUnknown")}
+                </span>
+                <button
+                  type="button"
+                  className="self-start underline"
+                  onClick={() => {
+                    setAttachments([]);
+                    setAttachmentError(null);
+                  }}
+                >
+                  {t("chat.composer.removeAllImages")}
+                </button>
+              </div>
+            )}
+            {attachmentError && (
+              <div className="mb-2 text-xs text-status-err">{attachmentError}</div>
+            )}
+
+            <div className="relative">
+              {mention && (
+                <MentionPopover
+                  cwd={activeRepoPath}
+                  query={mention.query}
+                  selected={mentionSelected}
+                  onPick={applyMentionPick}
+                  onItemsChange={(items) => {
+                    setMentionItems(items);
+                    // Clamp selection if the list shrank under us.
+                    setMentionSelected((s) =>
+                      items.length === 0 ? 0 : Math.min(s, items.length - 1),
+                    );
+                  }}
+                />
+              )}
+              {slash && (
+                <div
+                  className="cs-popup-surface absolute bottom-full left-0 z-50 mb-2 max-h-[min(18rem,calc(100vh-120px))] w-80 max-w-[min(20rem,calc(100vw-24px))] overflow-y-auto rounded-md p-1"
+                  role="listbox"
+                  aria-label={t("chat.slash.ariaLabel")}
+                >
+                  <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t("chat.slash.commands")}
+                  </div>
+                  {slashItems.length > 0 ? (
+                    <ul className="space-y-0.5">
+                      {slashItems.map((item, idx) => {
+                        const active = idx === slashSelected;
+                        return (
+                          <li
+                            key={item.name}
+                            className={cn(
+                              "grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm",
+                              active && "bg-accent text-accent-foreground",
+                            )}
+                            role="option"
+                            aria-selected={active}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              executeSlashCommand(item);
+                            }}
+                          >
+                            <Archive size={14} className="mt-0.5 text-muted-foreground" />
+                            <span className="min-w-0 truncate font-medium">{item.name}</span>
+                            <span className="col-start-2 min-w-0 truncate text-xs text-muted-foreground">
+                              {item.description}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <div className="px-2 py-3 text-sm text-muted-foreground">
+                      {t("chat.slash.noMatch")}
+                    </div>
+                  )}
+                </div>
+              )}
+              <textarea
+                ref={textareaRef}
+                value={draft}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setDraft(value);
+                  if (historyCursor !== -1) setHistoryCursor(-1);
+                  const caret = e.target.selectionStart ?? value.length;
+                  updateInlinePickers(value, caret);
+                }}
+                onKeyDown={handleKeyDown}
+                onKeyUp={(e) => {
+                  // Arrow / click moves can shift the caret without changing
+                  // text; re-detect so the popover follows the caret.
+                  if (
+                    e.key === "ArrowLeft" ||
+                    e.key === "ArrowRight" ||
+                    e.key === "Home" ||
+                    e.key === "End"
+                  ) {
+                    const ta = e.currentTarget;
+                    const caret = ta.selectionStart ?? ta.value.length;
+                    updateInlinePickers(ta.value, caret);
+                  }
+                }}
+                onClick={(e) => {
                   const ta = e.currentTarget;
                   const caret = ta.selectionStart ?? ta.value.length;
                   updateInlinePickers(ta.value, caret);
-                }
+                }}
+                onBlur={() => {
+                  // Delay so a mousedown pick on the popover still resolves.
+                  setTimeout(() => {
+                    closeMention();
+                    closeSlash();
+                  }, 120);
+                }}
+                onCompositionStart={() => setIsComposing(true)}
+                onCompositionEnd={() => setIsComposing(false)}
+                onPaste={(e) => void handlePaste(e)}
+                placeholder={placeholder}
+                disabled={false}
+                rows={1}
+                className="max-h-[200px] min-h-[36px] w-full resize-none bg-transparent px-2 py-1.5 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-60"
+              />
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              multiple
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                if (e.target) e.target.value = "";
+                void acceptFiles(files);
               }}
-              onClick={(e) => {
-                const ta = e.currentTarget;
-                const caret = ta.selectionStart ?? ta.value.length;
-                updateInlinePickers(ta.value, caret);
-              }}
-              onBlur={() => {
-                // Delay so a mousedown pick on the popover still resolves.
-                setTimeout(() => {
-                  closeMention();
-                  closeSlash();
-                }, 120);
-              }}
-              onCompositionStart={() => setIsComposing(true)}
-              onCompositionEnd={() => setIsComposing(false)}
-              onPaste={(e) => void handlePaste(e)}
-              placeholder={placeholder}
-              disabled={false}
-              rows={1}
-              className="max-h-[200px] min-h-[36px] w-full resize-none bg-transparent px-2 py-1.5 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-60"
             />
-          </div>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/gif"
-            multiple
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const files = Array.from(e.target.files ?? []);
-              if (e.target) e.target.value = "";
-              void acceptFiles(files);
-            }}
-          />
-
-          {runningAgents > 0 && (
-            // Codex-style low-contrast status line: muted grey text, the small
-            // pulsing dot keeps the running color so it still reads as "active"
-            // without the whole line looking like a blue link (TODO 2.7).
-            <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-status-running" />
-              <span>{t("chat.composer.runningAgents", { count: runningAgents })}</span>
-            </div>
-          )}
-
-          <div className="@container/composer-controls mt-1 min-h-8 w-full min-w-0">
-            <div className="flex min-w-0 items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-1.5">
-                <button
-                  type="button"
-                  className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-                  aria-label={t("chat.composer.addImage")}
-                  title={
-                    activeSupportsVision
-                      ? t("chat.composer.addImageTitle")
-                      : t("chat.composer.addImageDisabledTitle")
-                  }
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={busy}
-                >
-                  <Paperclip size={14} />
-                </button>
-                <PermissionPill
-                  value={permissionMode}
-                  onChange={onPermissionChange}
-                  disabled={controlsDisabled}
-                />
-                <GoalToggle
-                  enabled={goalEnabled}
-                  onToggle={onGoalToggle}
-                  disabled={controlsDisabled}
-                />
+            {runningAgents > 0 && (
+              // Codex-style low-contrast status line: muted grey text, the small
+              // pulsing dot keeps the running color so it still reads as "active"
+              // without the whole line looking like a blue link (TODO 2.7).
+              <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-status-running" />
+                <span>{t("chat.composer.runningAgents", { count: runningAgents })}</span>
               </div>
+            )}
 
-              <div className="flex min-w-0 items-center justify-end gap-1.5">
-                <ContextRing
-                  used={contextTokens}
-                  max={contextMax}
-                  busy={busy}
-                  cacheReadTokens={cacheReadTokens}
-                  cacheCreationTokens={cacheCreationTokens}
-                  sessionPromptTokens={sessionPromptTokens}
-                />
-                <ModelPill
-                  activeKey={activeModelKey}
-                  options={modelOptions}
-                  onSelect={onModelChange}
-                  disabled={busy}
-                />
-                {/* 语音输入(听写):点击录音 → 再点停止 → 转写填进输入框(不自动发)。
-                    idle=Mic / recording=红色 Square 脉冲 / transcribing=spinner。 */}
-                <button
-                  type="button"
-                  className={cn(
-                    "inline-flex shrink-0 items-center rounded-md p-1.5 hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50",
-                    voiceState === "recording"
-                      ? "border border-status-err/60 text-status-err"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                  aria-label={t("chat.composer.voiceInput")}
-                  title={
-                    !sttAvailable && voiceState === "idle"
-                      ? t("chat.composer.voiceNoProviderTitle")
-                      : voiceState === "recording"
-                        ? t("chat.composer.voiceRecording")
-                        : voiceState === "transcribing"
-                          ? t("chat.composer.voiceTranscribing")
-                          : t("chat.composer.voiceInputTitle")
-                  }
-                  // Don't steal focus from the composer: a plain button click
-                  // blurs the textarea, so during record→transcribe the keyboard
-                  // can't reach it (the "录音时打不了字" bug). preventDefault on
-                  // mousedown keeps focus in the textarea so the user can keep
-                  // typing while dictating.
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={onVoiceClick}
-                  // Disabled while transcribing, OR when no provider is configured
-                  // (and not mid-recording — never block stopping an active take).
-                  disabled={voiceState === "transcribing" || (!sttAvailable && voiceState === "idle")}
-                >
-                  {voiceState === "recording" ? (
-                    <Square size={14} className="animate-pulse fill-current" />
-                  ) : voiceState === "transcribing" ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    <Mic size={14} />
-                  )}
-                </button>
-                {busy && draft.trim() && onForceSend && (
+            <div className="@container/composer-controls mt-1 min-h-8 w-full min-w-0">
+              <div className="flex min-w-0 items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-1.5">
                   <button
                     type="button"
-                    className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
-                    onClick={() => {
-                      const payload = encodeAttachmentsForWire(draft.trim(), attachments);
-                      onForceSend(payload);
-                      if (draft.trim()) setHistory(pushHistory(activeRepoId, draft.trim()));
-                      setDraft("");
-                      setAttachments([]);
-                      setAttachmentError(null);
-                    }}
-                    aria-label={t("chat.composer.guideAria")}
-                    title={t("chat.composer.guideTitle")}
-                  >
-                    <CornerDownRight size={13} />
-                    {t("chat.composer.guide")}
-                  </button>
-                )}
-                {busy && (
-                  <button
-                    type="button"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-status-err/30 bg-status-err/10 text-status-err transition-all duration-150 hover:border-status-err hover:bg-status-err hover:text-white active:scale-95"
-                    onClick={onStop}
-                    aria-label={t("chat.composer.stop")}
-                  >
-                    <Square size={14} fill="currentColor" />
-                  </button>
-                )}
-                {!busy && (
-                  <button
-                    type="button"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary transition-all duration-150 hover:border-primary hover:bg-primary hover:text-primary-foreground active:scale-95 disabled:scale-100 disabled:border-border disabled:bg-muted disabled:text-muted-foreground/50 disabled:opacity-50"
-                    onClick={submit}
-                    disabled={
-                      (!draft.trim() && attachments.length === 0) ||
-                      (attachments.length > 0 && !activeSupportsVision)
+                    className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+                    aria-label={t("chat.composer.addImage")}
+                    title={
+                      activeSupportsVision
+                        ? t("chat.composer.addImageTitle")
+                        : t("chat.composer.addImageDisabledTitle")
                     }
-                    aria-label={t("chat.composer.send")}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={busy}
                   >
-                    <ArrowUp size={16} />
+                    <Paperclip size={14} />
                   </button>
-                )}
+                  <PermissionPill
+                    value={permissionMode}
+                    onChange={onPermissionChange}
+                    disabled={controlsDisabled}
+                  />
+                  <GoalToggle
+                    enabled={goalEnabled}
+                    onToggle={onGoalToggle}
+                    disabled={controlsDisabled}
+                  />
+                </div>
+
+                <div className="flex min-w-0 items-center justify-end gap-1.5">
+                  <ContextRing
+                    used={contextTokens}
+                    max={contextMax}
+                    busy={busy}
+                    singleTurnPromptTokens={singleTurnPromptTokens}
+                    singleTurnCacheReadTokens={singleTurnCacheReadTokens}
+                    singleTurnCacheCreationTokens={singleTurnCacheCreationTokens}
+                    cumulativePromptTokens={cumulativePromptTokens}
+                    cumulativeCacheReadTokens={cumulativeCacheReadTokens}
+                    cumulativeCacheCreationTokens={cumulativeCacheCreationTokens}
+                  />
+                  <ModelPill
+                    activeKey={activeModelKey}
+                    options={modelOptions}
+                    onSelect={onModelChange}
+                    disabled={busy}
+                  />
+                  {/* 语音输入(听写):点击录音 → 再点停止 → 转写填进输入框(不自动发)。
+                    idle=Mic / recording=红色 Square 脉冲 / transcribing=spinner。 */}
+                  <button
+                    type="button"
+                    className={cn(
+                      "inline-flex shrink-0 items-center rounded-md p-1.5 hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50",
+                      voiceState === "recording"
+                        ? "border border-status-err/60 text-status-err"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                    aria-label={t("chat.composer.voiceInput")}
+                    title={
+                      !sttAvailable && voiceState === "idle"
+                        ? t("chat.composer.voiceNoProviderTitle")
+                        : voiceState === "recording"
+                          ? t("chat.composer.voiceRecording")
+                          : voiceState === "transcribing"
+                            ? t("chat.composer.voiceTranscribing")
+                            : t("chat.composer.voiceInputTitle")
+                    }
+                    // Don't steal focus from the composer: a plain button click
+                    // blurs the textarea, so during record→transcribe the keyboard
+                    // can't reach it (the "录音时打不了字" bug). preventDefault on
+                    // mousedown keeps focus in the textarea so the user can keep
+                    // typing while dictating.
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={onVoiceClick}
+                    // Disabled while transcribing, OR when no provider is configured
+                    // (and not mid-recording — never block stopping an active take).
+                    disabled={
+                      voiceState === "transcribing" || (!sttAvailable && voiceState === "idle")
+                    }
+                  >
+                    {voiceState === "recording" ? (
+                      <Square size={14} className="animate-pulse fill-current" />
+                    ) : voiceState === "transcribing" ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Mic size={14} />
+                    )}
+                  </button>
+                  {busy && draft.trim() && onForceSend && (
+                    <button
+                      type="button"
+                      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                      onClick={() => {
+                        const payload = encodeAttachmentsForWire(draft.trim(), attachments);
+                        onForceSend(payload);
+                        if (draft.trim()) setHistory(pushHistory(activeRepoId, draft.trim()));
+                        setDraft("");
+                        setAttachments([]);
+                        setAttachmentError(null);
+                      }}
+                      aria-label={t("chat.composer.guideAria")}
+                      title={t("chat.composer.guideTitle")}
+                    >
+                      <CornerDownRight size={13} />
+                      {t("chat.composer.guide")}
+                    </button>
+                  )}
+                  {busy && (
+                    <button
+                      type="button"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-status-err/30 bg-status-err/10 text-status-err transition-all duration-150 hover:border-status-err hover:bg-status-err hover:text-white active:scale-95"
+                      onClick={onStop}
+                      aria-label={t("chat.composer.stop")}
+                    >
+                      <Square size={14} fill="currentColor" />
+                    </button>
+                  )}
+                  {!busy && (
+                    <button
+                      type="button"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary transition-all duration-150 hover:border-primary hover:bg-primary hover:text-primary-foreground active:scale-95 disabled:scale-100 disabled:border-border disabled:bg-muted disabled:text-muted-foreground/50 disabled:opacity-50"
+                      onClick={submit}
+                      disabled={
+                        (!draft.trim() && attachments.length === 0) ||
+                        (attachments.length > 0 && !activeSupportsVision)
+                      }
+                      aria-label={t("chat.composer.send")}
+                    >
+                      <ArrowUp size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
+            {queuedInputCount > 0 && queuedInputItems.length === 0 && (
+              <div className="mt-1 text-xs text-muted-foreground">
+                {t("chat.composer.cachedHint", { count: queuedInputCount })}
+              </div>
+            )}
           </div>
-          {queuedInputCount > 0 && queuedInputItems.length === 0 && (
-            <div className="mt-1 text-xs text-muted-foreground">
-              {t("chat.composer.cachedHint", { count: queuedInputCount })}
-            </div>
-          )}
-        </div>
 
-        {/* Project picker only appears for fresh conversations — once
+          {/* Project picker only appears for fresh conversations — once
             the session has any messages, switching project mid-chat
             would be confusing (cwd / context / engine sessionId are
             already tied to the existing repo). Use the sidebar to
             jump projects after a session has started. */}
-        {isNewChat && (
-          <div className="mt-2 flex items-center gap-2">
-            <ProjectPicker
-              repos={repos}
-              activeRepoId={activeRepoId}
-              onSelect={onSelectRepo}
-              onAddRepo={onAddRepo}
-              disabled={busy}
-            />
-            <span className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground" title={t("chat.localModeTitle")}>
-              <Monitor size={12} />
-              <span>{t("chat.localMode")}</span>
-            </span>
-            <BranchPicker cwd={activeRepoPath} clean={repoClean} disabled={busy} />
-          </div>
-        )}
+          {isNewChat && (
+            <div className="mt-2 flex items-center gap-2">
+              <ProjectPicker
+                repos={repos}
+                activeRepoId={activeRepoId}
+                onSelect={onSelectRepo}
+                onAddRepo={onAddRepo}
+                disabled={busy}
+              />
+              <span
+                className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground"
+                title={t("chat.localModeTitle")}
+              >
+                <Monitor size={12} />
+                <span>{t("chat.localMode")}</span>
+              </span>
+              <BranchPicker cwd={activeRepoPath} clean={repoClean} disabled={busy} />
+            </div>
+          )}
         </div>
       </div>
       {zoomed && (

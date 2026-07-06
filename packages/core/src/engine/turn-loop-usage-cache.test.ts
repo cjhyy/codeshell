@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { TurnLoop, type TurnLoopDeps, type TurnLoopConfig } from "./turn-loop.js";
-import type { LLMResponse, Message, StreamEvent } from "../types.js";
+import type { LLMResponse, Message, StreamEvent, TokenUsage } from "../types.js";
 
 /**
  * Prompt-cache visibility in the UI: the usage_update event that feeds the
@@ -10,7 +10,10 @@ import type { LLMResponse, Message, StreamEvent } from "../types.js";
  * parsed by the providers and logged — never reached the renderer.
  * See docs/todo/prompt-cache-optimization.md.
  */
-function makeDeps(responses: LLMResponse[]): {
+function makeDeps(
+  responses: LLMResponse[],
+  recordCumulativeUsage?: TurnLoopDeps["recordCumulativeUsage"],
+): {
   deps: TurnLoopDeps;
 } {
   let i = 0;
@@ -83,6 +86,7 @@ function makeDeps(responses: LLMResponse[]): {
     tools: [],
     sessionId: "test",
     ctxOverheadStore: { get: () => 0, set: () => {} },
+    recordCumulativeUsage,
   };
 
   return { deps };
@@ -123,6 +127,36 @@ async function runCapturingEvents(responses: LLMResponse[]): Promise<StreamEvent
   return events;
 }
 
+async function runCapturingEventsWithCumulative(responses: LLMResponse[]): Promise<StreamEvent[]> {
+  let cumulative = {
+    cumulativePromptTokens: 0,
+    cumulativeCacheReadTokens: 0,
+    cumulativeCacheCreationTokens: 0,
+  };
+  const recordCumulativeUsage = (usage: TokenUsage) => {
+    cumulative = {
+      cumulativePromptTokens: cumulative.cumulativePromptTokens + usage.promptTokens,
+      cumulativeCacheReadTokens:
+        cumulative.cumulativeCacheReadTokens + (usage.cacheReadTokens ?? 0),
+      cumulativeCacheCreationTokens:
+        cumulative.cumulativeCacheCreationTokens + (usage.cacheCreationTokens ?? 0),
+    };
+    return cumulative;
+  };
+  const { deps } = makeDeps(responses, recordCumulativeUsage);
+  const events: StreamEvent[] = [];
+  const config: TurnLoopConfig = {
+    maxTurns: 5,
+    maxToolCallsPerTurn: 10,
+    onStream: (e) => {
+      events.push(e);
+    },
+  };
+  const loop = new TurnLoop(deps, config);
+  await loop.run([{ role: "user", content: "hi" }]);
+  return events;
+}
+
 describe("TurnLoop usage_update carries cache tokens", () => {
   it("forwards cacheReadTokens and cacheCreationTokens from the response usage", async () => {
     const events = await runCapturingEvents([respWithCache()]);
@@ -133,6 +167,10 @@ describe("TurnLoop usage_update carries cache tokens", () => {
     expect(usageUpdate!.promptTokens).toBe(1000);
     expect(usageUpdate!.cacheReadTokens).toBe(800);
     expect(usageUpdate!.cacheCreationTokens).toBe(50);
+    expect(usageUpdate!.singleTurnPromptTokens).toBe(1000);
+    expect(usageUpdate!.singleTurnCacheReadTokens).toBe(800);
+    expect(usageUpdate!.singleTurnCacheCreationTokens).toBe(50);
+    expect(usageUpdate!.singleTurnCacheHitRate).toBeCloseTo(0.8, 5);
   });
 
   it("omits cache fields when the provider reported none", async () => {
@@ -144,5 +182,51 @@ describe("TurnLoop usage_update carries cache tokens", () => {
     expect(usageUpdate!.promptTokens).toBe(1000);
     expect(usageUpdate!.cacheReadTokens).toBeUndefined();
     expect(usageUpdate!.cacheCreationTokens).toBeUndefined();
+    expect(usageUpdate!.singleTurnCacheHitRate).toBeUndefined();
+  });
+
+  it("emits whole-session cumulative fields from the monotonic recorder", async () => {
+    const events = await runCapturingEventsWithCumulative([respWithCache()]);
+    const usageUpdate = events.find((e) => e.type === "usage_update") as
+      | Extract<StreamEvent, { type: "usage_update" }>
+      | undefined;
+    expect(usageUpdate).toBeDefined();
+    expect(usageUpdate!.cumulativePromptTokens).toBe(1000);
+    expect(usageUpdate!.cumulativeCacheReadTokens).toBe(800);
+    expect(usageUpdate!.cumulativeCacheCreationTokens).toBe(50);
+    expect(usageUpdate!.cumulativeCacheHitRate).toBeCloseTo(0.8, 5);
+    expect(usageUpdate!.sessionPromptTokens).toBe(1000);
+  });
+
+  it("sums continuation responses into the current single-turn metric", async () => {
+    const events = await runCapturingEvents([
+      {
+        ...respWithCache(),
+        text: "part one",
+        stopReason: "max_tokens",
+      },
+      {
+        text: "part two",
+        toolCalls: [],
+        stopReason: "stop",
+        usage: {
+          promptTokens: 200,
+          completionTokens: 10,
+          totalTokens: 210,
+          cacheReadTokens: 100,
+          cacheCreationTokens: 0,
+        },
+      },
+    ]);
+    const usageUpdates = events.filter(
+      (e): e is Extract<StreamEvent, { type: "usage_update" }> =>
+        e.type === "usage_update" && e.singleTurnPromptTokens !== undefined,
+    );
+    expect(usageUpdates.length).toBeGreaterThanOrEqual(2);
+    const finalUpdate = usageUpdates[usageUpdates.length - 1]!;
+    expect(finalUpdate.singleTurnPromptTokens).toBe(1200);
+    expect(finalUpdate.singleTurnCacheReadTokens).toBe(900);
+    expect(finalUpdate.singleTurnCacheCreationTokens).toBe(50);
+    expect(finalUpdate.singleTurnCacheHitRate).toBeCloseTo(0.75, 5);
   });
 });

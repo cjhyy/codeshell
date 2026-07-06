@@ -125,7 +125,8 @@ export const chat = {
         used: "已用",
         remaining: "剩余",
         maxLabel: "上限",
-        cacheHitSession: "缓存命中(本会话)",
+        cacheHitSingleTurn: "单轮命中率",
+        cacheHitCumulative: "整会话累计命中率",
         defaultSuffix: " 默认",
         fallbackNote: "当前模型未在 settings.json 声明 maxContextTokens，使用 200k 作为默认。",
       },
@@ -188,10 +189,13 @@ export const chat = {
       composer: {
         placeholderBusy: "Request a follow-up change",
         placeholderIdle: "Ask the agent anything. Type @ to use a skill or mention a file",
-        visionUnsupportedSend: "The current model does not accept image input. Switch to a vision-capable model, or remove the images first.",
+        visionUnsupportedSend:
+          "The current model does not accept image input. Switch to a vision-capable model, or remove the images first.",
         visionUnsupportedTitle: "Current model does not support images",
-        visionUnsupportedWithModel: "{label} has no vision capability. Switch to a model that supports images, or remove the images first.",
-        visionUnsupportedUnknown: "Current model is unknown; please pick a model that supports images first.",
+        visionUnsupportedWithModel:
+          "{label} has no vision capability. Switch to a model that supports images, or remove the images first.",
+        visionUnsupportedUnknown:
+          "Current model is unknown; please pick a model that supports images first.",
         removeAllImages: "Remove all images",
         imageFallbackName: "Image",
         imageClickToZoom: "{name} (click to zoom)",
@@ -203,8 +207,10 @@ export const chat = {
         voiceInputTitle: "Voice input (click to speak, fills the box as text)",
         voiceRecording: "Recording… click to stop",
         voiceTranscribing: "Transcribing…",
-        voiceNoProvider: "No transcription provider configured. Add a voice connection, or set an OpenAI key.",
-        voiceNoProviderTitle: "Voice input not set up: add one under Settings → Connections → Speech-to-text, or set an OpenAI key",
+        voiceNoProvider:
+          "No transcription provider configured. Add a voice connection, or set an OpenAI key.",
+        voiceNoProviderTitle:
+          "Voice input not set up: add one under Settings → Connections → Speech-to-text, or set an OpenAI key",
         voicePermissionDenied: "Microphone access denied. Allow it in system settings and retry.",
         voiceFailed: "Transcription failed, please try again.",
         guide: "Guide",
@@ -213,11 +219,13 @@ export const chat = {
         stop: "Stop",
         send: "Send",
         runningAgents: "{count} sub-agent(s) running in the background…",
-        cachedHint: "{count} message(s) queued; will be inserted into the current turn at the next step",
+        cachedHint:
+          "{count} message(s) queued; will be inserted into the current turn at the next step",
         imagesPlaceholder: "[Images ×{count}]",
       },
       compact: {
-        running: "This conversation is running. Stop or wait for this turn to finish before compacting.",
+        running:
+          "This conversation is running. Stop or wait for this turn to finish before compacting.",
         noSession: "There is no active conversation to compact yet.",
         done: "Context compacted: {before} → {after}, saved {saved} tokens.",
         unchanged: "Context is already compact enough, currently about {tokens} tokens.",
@@ -233,7 +241,8 @@ export const chat = {
       queue: {
         heading: "Follow-up changes",
         guideAllAria: "Interrupt the current turn and merge all follow-up changes to send",
-        guideAllTitle: "Interrupt the current turn and merge all follow-up changes into one message sent immediately",
+        guideAllTitle:
+          "Interrupt the current turn and merge all follow-up changes into one message sent immediately",
         guideAll: "Guide all",
         clearAria: "Clear follow-up changes",
         clearTitle: "Clear follow-up changes",
@@ -270,7 +279,8 @@ export const chat = {
       goal: {
         on: "Goal mode is on",
         off: "Goal mode is off",
-        onTitle: "Goal mode: treat this message as a goal and run until done (dangerous actions still respect permissions)",
+        onTitle:
+          "Goal mode: treat this message as a goal and run until done (dangerous actions still respect permissions)",
         offTitle: "Goal mode (off): turn on to set a goal and let the agent run until done",
       },
       model: {
@@ -307,9 +317,11 @@ export const chat = {
         used: "Used",
         remaining: "Remaining",
         maxLabel: "Max",
-        cacheHitSession: "Cache hit (session)",
+        cacheHitSingleTurn: "Single-turn hit rate",
+        cacheHitCumulative: "Whole-session cumulative hit rate",
         defaultSuffix: " default",
-        fallbackNote: "The current model does not declare maxContextTokens in settings.json; using 200k as the default.",
+        fallbackNote:
+          "The current model does not declare maxContextTokens in settings.json; using 200k as the default.",
       },
       comment: {
         localComment: "Local comment · {title}",

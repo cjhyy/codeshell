@@ -194,7 +194,19 @@ export interface SessionState {
   startedAt: number;
   model: string;
   provider: string;
+  /**
+   * Legacy/model-scoped usage summary. Some flows reset this accounting window
+   * (for example model switches), so it must not drive whole-session metrics.
+   */
   tokenUsage: TokenUsage;
+  /**
+   * Monotonic prompt-cache counters for the whole session. These only increase
+   * from session start and are separate from the resettable tokenUsage window.
+   * Optional on legacy state.json files; SessionManager normalizes them on load.
+   */
+  cumulativePromptTokens?: number;
+  cumulativeCacheReadTokens?: number;
+  cumulativeCacheCreationTokens?: number;
   turnCount: number;
   /**
    * Conversation-turn counter where ONE user message = one turn (incremented in
@@ -436,7 +448,13 @@ export type StreamEvent =
   // 记忆被召回(用户拍板可见性):MemoryRead 命中一条记忆时发出,渲染端显示
   // 「📖 读取了记忆 X」,让用户肉眼看到持久记忆真的被用上了。usageCount 记账
   // 在工具内做,本事件仅为 UI 可见性。
-  | { type: "memory_recalled"; name: string; scope: "user" | "dream"; location: "global" | "project"; agentId?: string }
+  | {
+      type: "memory_recalled";
+      name: string;
+      scope: "user" | "dream";
+      location: "global" | "project";
+      agentId?: string;
+    }
   | { type: "thinking_delta"; text: string; agentId?: string }
   | { type: "agent_start"; agentId: string; name?: string; description: string; agentType?: string }
   | {
@@ -451,7 +469,15 @@ export type StreamEvent =
       description: string;
       agentType?: string;
     }
-  | { type: "agent_end"; agentId: string; name?: string; description: string; text?: string; error?: string; agentType?: string }
+  | {
+      type: "agent_end";
+      agentId: string;
+      name?: string;
+      description: string;
+      text?: string;
+      error?: string;
+      agentType?: string;
+    }
   | {
       // Periodic liveness ping for backgrounded agents (B). The worker emits
       // every ~30s with the agentIds still running, so the UI knows they're
@@ -481,6 +507,24 @@ export type StreamEvent =
        */
       cacheReadTokens?: number;
       cacheCreationTokens?: number;
+      /**
+       * Prompt-cache metrics for the current turn only. These are reset at the
+       * start of each turn-loop iteration and sum every LLM response in that
+       * turn, including max-token continuations.
+       */
+      singleTurnPromptTokens?: number;
+      singleTurnCacheReadTokens?: number;
+      singleTurnCacheCreationTokens?: number;
+      singleTurnCacheHitRate?: number;
+      /**
+       * Whole-session monotonic prompt-cache counters/rate. Unlike the legacy
+       * session* fields below, these are not derived from the resettable
+       * tokenUsage accounting window.
+       */
+      cumulativePromptTokens?: number;
+      cumulativeCacheReadTokens?: number;
+      cumulativeCacheCreationTokens?: number;
+      cumulativeCacheHitRate?: number;
       /**
        * SESSION-CUMULATIVE cache counts (sum across every LLM response this
        * session, across runs and turns), emitted from the engine's turn

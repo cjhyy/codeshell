@@ -12,6 +12,7 @@ import type {
   ContentBlock,
   ToolResult,
   LLMResponse,
+  TokenUsage,
 } from "../types.js";
 import type { TurnState } from "./turn-state.js";
 import type { SteerItem } from "./steer-queue.js";
@@ -34,6 +35,12 @@ import { isAbortError } from "../llm/client-base.js";
 import { crossedReactiveThreshold } from "./reactive-threshold.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js";
 import { CANCEL_GOAL_TOOL_NAME } from "../tool-system/builtin/cancel-goal.js";
+import {
+  addTokenUsage,
+  cacheHitRateFromUsage,
+  cumulativeCacheHitRate,
+  type CumulativeUsageCounters,
+} from "./session-usage.js";
 import {
   type GoalConfig,
   type GoalBudgetTracker,
@@ -113,6 +120,11 @@ export interface TurnLoopDeps {
     after: number;
   } | null;
   /**
+   * Records one LLM response into the session-monotonic cumulative counters.
+   * Returns the updated counters so usage_update can carry both metric scopes.
+   */
+  recordCumulativeUsage?: (usage: TokenUsage) => CumulativeUsageCounters;
+  /**
    * Reads/clears any user messages queued for THIS session via the steering
    * channel (Engine.enqueueSteer) while a run is in flight. Consumed at the top
    * of each turn so the messages join the next LLM request WITHOUT aborting the
@@ -147,10 +159,9 @@ export function toolResultToBlock(result: ToolResult): ContentBlock {
   const block: ContentBlock = {
     type: "tool_result",
     tool_use_id: result.id,
-    content:
-      result.error
-        ? `Error: ${result.error}`
-        : result.contentBlocks ?? (result.result ?? "(no output)"),
+    content: result.error
+      ? `Error: ${result.error}`
+      : (result.contentBlocks ?? result.result ?? "(no output)"),
   };
   if (result.isError || result.error) block.is_error = true;
   return block;
@@ -170,6 +181,14 @@ export class TurnLoop {
 
   /** Last emitted ctx token estimate; used to skip no-op usage_update events. */
   private lastCtxEmit = -1;
+  private currentTurnUsage: TokenUsage = {
+    promptTokens: 0,
+    completionTokens: 0,
+    totalTokens: 0,
+    cacheReadTokens: 0,
+    cacheCreationTokens: 0,
+  };
+  private currentCumulativeUsage: CumulativeUsageCounters | undefined;
 
   /**
    * Consecutive on_stop blocks (Goal mode kept the agent going). Reset to 0
@@ -379,6 +398,11 @@ export class TurnLoop {
     this.config.onStream({ type: "usage_update", promptTokens: ctx });
   }
 
+  private recordResponseUsage(usage: NonNullable<LLMResponse["usage"]>): void {
+    this.currentTurnUsage = addTokenUsage(this.currentTurnUsage, usage);
+    this.currentCumulativeUsage = this.deps.recordCumulativeUsage?.(usage);
+  }
+
   private emitCtxFromUsage(usage: NonNullable<LLMResponse["usage"]>, messages: Message[]): void {
     if (!this.config.onStream) return;
     const promptTokens = usage.promptTokens;
@@ -394,21 +418,44 @@ export class TurnLoop {
       derivedOverhead: overhead,
       prev: this.lastCtxEmit,
     });
-    if (promptTokens === this.lastCtxEmit) return;
-    this.lastCtxEmit = promptTokens;
+    const promptChanged = promptTokens !== this.lastCtxEmit;
+    if (promptChanged) this.lastCtxEmit = promptTokens;
     // Forward the provider's cache counts so the UI can show a hit rate. Only
     // attach fields the provider actually reported — a spread keeps them off
     // the event entirely when undefined, so the renderer can tell "no cache
     // info this turn" from "0 cached". Estimate-path emits don't call this and
     // so carry no cache fields (correct: an estimate has no cache reading).
+    const singleTurnCacheHitRate = cacheHitRateFromUsage(this.currentTurnUsage);
+    const cumulative = this.currentCumulativeUsage;
+    const cumulativeHitRate = cumulative ? cumulativeCacheHitRate(cumulative) : undefined;
+    if (!promptChanged && singleTurnCacheHitRate === undefined && cumulativeHitRate === undefined) {
+      return;
+    }
     this.config.onStream({
       type: "usage_update",
       promptTokens,
-      ...(usage.cacheReadTokens !== undefined
-        ? { cacheReadTokens: usage.cacheReadTokens }
-        : {}),
+      ...(usage.cacheReadTokens !== undefined ? { cacheReadTokens: usage.cacheReadTokens } : {}),
       ...(usage.cacheCreationTokens !== undefined
         ? { cacheCreationTokens: usage.cacheCreationTokens }
+        : {}),
+      singleTurnPromptTokens: this.currentTurnUsage.promptTokens,
+      singleTurnCacheReadTokens: this.currentTurnUsage.cacheReadTokens ?? 0,
+      singleTurnCacheCreationTokens: this.currentTurnUsage.cacheCreationTokens ?? 0,
+      ...(singleTurnCacheHitRate !== undefined ? { singleTurnCacheHitRate } : {}),
+      ...(cumulative
+        ? {
+            cumulativePromptTokens: cumulative.cumulativePromptTokens,
+            cumulativeCacheReadTokens: cumulative.cumulativeCacheReadTokens,
+            cumulativeCacheCreationTokens: cumulative.cumulativeCacheCreationTokens,
+            ...(cumulativeHitRate !== undefined
+              ? { cumulativeCacheHitRate: cumulativeHitRate }
+              : {}),
+            // Legacy aliases for existing renderer builds. New UI code reads the
+            // cumulative* fields above.
+            sessionPromptTokens: cumulative.cumulativePromptTokens,
+            sessionCacheReadTokens: cumulative.cumulativeCacheReadTokens,
+            sessionCacheCreationTokens: cumulative.cumulativeCacheCreationTokens,
+          }
         : {}),
     });
   }
@@ -440,626 +487,639 @@ export class TurnLoop {
     // throws from the surrounding scaffolding (contextManager.manageAsync,
     // hook emits, guards) and surfaces them as a model_error result.
     try {
-    while (this.turnCount < this.config.maxTurns) {
-      this.turnCount++;
+      while (this.turnCount < this.config.maxTurns) {
+        this.turnCount++;
+        this.currentTurnUsage = {
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+          cacheReadTokens: 0,
+          cacheCreationTokens: 0,
+        };
 
-      // Abort fast-path: bail at the loop TOP before doing any per-turn work.
-      // Without this, an aborted child (parent abort, or the 30min per-call
-      // registry timeout) would run a full contextManager.manageAsync (itself
-      // an LLM summarization call) + model call + tool batch before the
-      // post-model check at the bottom of the loop noticed — exactly the
-      // sub-agent leak where a synchronous child kept burning turns/tokens for
-      // minutes after the parent Agent call already returned. The model call's
-      // own signal check only fires AFTER the call resolves; this guards the
-      // boundary between turns. (Mirrors Claude Code's query.ts, where the
-      // aborted check short-circuits before re-entering the streaming loop.)
-      if (this.config.signal?.aborted) {
-        this.markStopped();
-        return { text: finalText, reason: "aborted_streaming", messages };
-      }
-
-      // Step-gap steering: messages the host queued via Engine.enqueueSteer
-      // while the previous step was running. Splice them in as user messages so
-      // they join THIS step's request — no abort, no lost in-flight work. Same
-      // loop-top user-push pattern as turnStartInjection / turn-limit warnings
-      // below. Push to transcript too so they persist + survive resume.
-      this.consumeQueuedSteer(messages, "normal_step");
-
-      const state = initialTurnState(this.turnCount);
-
-      // Per-turn correlation ID. Every log written through `tlog` (or any
-      // child derived from it) is stamped with `turn` + `turnId`, so
-      // `jq 'select(.turnId == "...")'` reconstructs one turn's timeline.
-      // Span is *not* used for the loop itself because there are 6+ early
-      // returns; instead, each return-causing branch logs its own terminal
-      // event (model_error, completed, etc.).
-      const turnId = newTurnId();
-      const tlog = logger.child({ turn: this.turnCount, turnId });
-      this.currentTurnLog = tlog;
-
-      const turnStartedAt = Date.now();
-      tlog.info("turn.start", { cat: "turn", messageCount: messages.length });
-
-      // Tag downstream tool-exec / permission lines with this turn's IDs.
-      this.deps.toolExecutor.setLogger(tlog);
-      this.config.onStream?.({ type: "stream_request_start", turnNumber: this.turnCount });
-      const turnStartHook = await this.emitHook("on_turn_start", {
-        turnNumber: this.turnCount,
-      });
-      const turnStartInjection = wrapHookMessages(turnStartHook.messages);
-      if (turnStartInjection) {
-        messages.push(turnStartInjection);
-      }
-
-      // Approaching max turns: inject a warning so the model can wrap up.
-      // (Model-facing only — the user-facing "再续" marker is handled by
-      // maybeAnnounceApproachingLimit below, which also watches the stop-block
-      // cap, the limit a re-blocked goal actually hits first.)
-      const turnsRemaining = this.config.maxTurns - this.turnCount;
-      if (turnsRemaining === 2) {
-        messages.push({
-          role: "user",
-          content:
-            "<system-reminder>Warning: you have only 2 turns remaining before the turn limit is reached. " +
-            "Start wrapping up your work and prepare a summary of what you've accomplished and what remains to be done.</system-reminder>",
-        });
-      } else if (turnsRemaining === 1) {
-        messages.push({
-          role: "user",
-          content:
-            "<system-reminder>Warning: you have only 1 turn remaining before the turn limit is reached. " +
-            "Wrap up your work now — your next turn will be your last.</system-reminder>",
-        });
-      } else if (turnsRemaining === 0) {
-        messages.push({
-          role: "user",
-          content:
-            "<system-reminder>This is your LAST turn. You MUST respond with a final text summary now. " +
-            "Do NOT call any tools. Summarize what you have accomplished and list any remaining work.</system-reminder>",
-        });
-      }
-
-      // Goal mode: announce once when nearing EITHER stop ceiling (turns or
-      // stop-blocks) so the UI can offer a "再续" button while still live.
-      this.maybeAnnounceApproachingLimit();
-
-      // Pre-check: context management (async — may trigger LLM summarization)
-      messages = await this.deps.contextManager.manageAsync(messages);
-
-      // manageAsync can itself issue an LLM summarization call lasting several
-      // seconds; if the signal aborted during it, stop here rather than
-      // proceeding into the (expensive) main model call. Belt to the loop-top
-      // brace: this catches an abort that landed *inside* context management.
-      if (this.config.signal?.aborted) {
-        this.markStopped();
-        return { text: finalText, reason: "aborted_streaming", messages };
-      }
-      // No pre-llm ctx emit here: the messages-only estimate would be ~16k
-      // smaller than the real prompt (system + tools not included), making
-      // the bar visibly drop on every submit. Post-llm/post-tool-result
-      // events carry an accurate value; if compaction shrank the array, the
-      // dedicated context_compact event has already informed the UI.
-
-      // post_compact hook: ContextManager just finished a manage() pass.
-      // If any non-micro tier fired, give handlers a chance to inject a
-      // <system-reminder> ("context was compacted — recall earlier
-      // decisions from the transcript") into THIS turn before the model
-      // call. Microcompact is lossless (just clearing redundant
-      // tool_results) so we suppress hook emits for it to keep token
-      // overhead down.
-      const pending = this.deps.consumePendingCompactInfo?.();
-      if (pending && pending.strategy !== "micro") {
-        const compactHook = await this.emitHook("post_compact", {
-          strategy: pending.strategy,
-          beforeTokens: pending.before,
-          afterTokens: pending.after,
-        });
-        const compactInjection = wrapHookMessages(compactHook.messages);
-        if (compactInjection) {
-          messages.push(compactInjection);
-        }
-      }
-
-      // Model call (with streaming fallback and max_output_tokens continuation)
-      // Track tool IDs streamed during this turn to avoid duplicate UI events
-      this.streamedToolIds.clear();
-      // Streaming tool queue: start concurrency-safe tools during streaming
-      const streamingQueue = new StreamingToolQueue(this.deps.toolExecutor);
-      let response;
-      try {
-        response = await this.callModelWithFallback(messages);
-      } catch (err) {
-        if (err instanceof ContextLimitError) {
-          // Progressive recovery: drop oldest API rounds, up to 3 retries
-          const { dropOldestRounds } = await import("../context/compaction.js");
-          let recovered = false;
-          for (let retry = 1; retry <= 3; retry++) {
-            tlog.warn("turn.ptl_recovery", { cat: "turn", retry, roundsToDrop: retry });
-            messages = dropOldestRounds(messages, retry);
-            try {
-              response = await this.callModelWithFallback(messages);
-              recovered = true;
-              break;
-            } catch (retryErr) {
-              if (!(retryErr instanceof ContextLimitError)) {
-                this.config.onStream?.({ type: "error", error: formatFriendlyError(retryErr) });
-                return { text: finalText, reason: "model_error", messages };
-              }
-            }
-          }
-          if (!recovered) {
-            this.patchOrphanedToolUses(messages);
-            this.config.onStream?.({
-              type: "error",
-              error: "Context limit exceeded after 3 recovery attempts",
-            });
-            return { text: finalText, reason: "prompt_too_long", messages };
-          }
-        } else if (isAbortError(err) || this.config.signal?.aborted) {
-          // User pressed Stop: the in-flight model call rejected with an
-          // AbortError. This is NOT a failure — the UI already shows the
-          // "你在 Ns 后停止了" line, so emitting an error event would stack a
-          // spurious red "Error:" block on top of an intentional stop.
-          // Persist a turn_stopped marker so a resume can rebuild that line
-          // (the renderer's turn_end is in-memory only; without this the
-          // interrupted turn folds behind the process-card header on reload).
-          this.patchOrphanedToolUses(messages);
+        // Abort fast-path: bail at the loop TOP before doing any per-turn work.
+        // Without this, an aborted child (parent abort, or the 30min per-call
+        // registry timeout) would run a full contextManager.manageAsync (itself
+        // an LLM summarization call) + model call + tool batch before the
+        // post-model check at the bottom of the loop noticed — exactly the
+        // sub-agent leak where a synchronous child kept burning turns/tokens for
+        // minutes after the parent Agent call already returned. The model call's
+        // own signal check only fires AFTER the call resolves; this guards the
+        // boundary between turns. (Mirrors Claude Code's query.ts, where the
+        // aborted check short-circuits before re-entering the streaming loop.)
+        if (this.config.signal?.aborted) {
           this.markStopped();
           return { text: finalText, reason: "aborted_streaming", messages };
-        } else {
-          this.patchOrphanedToolUses(messages);
-          this.config.onStream?.({ type: "error", error: formatFriendlyError(err) });
-          return { text: finalText, reason: "model_error", messages };
         }
-      }
 
-      // UI ctx bar: prefer the provider's authoritative promptTokens.
-      if (response!.usage?.promptTokens !== undefined) {
-        this.emitCtxFromUsage(response!.usage, messages);
-      }
+        // Step-gap steering: messages the host queued via Engine.enqueueSteer
+        // while the previous step was running. Splice them in as user messages so
+        // they join THIS step's request — no abort, no lost in-flight work. Same
+        // loop-top user-push pattern as turnStartInjection / turn-limit warnings
+        // below. Push to transcript too so they persist + survive resume.
+        this.consumeQueuedSteer(messages, "normal_step");
 
-      // Feed actual token usage back to the context manager so subsequent
-      // compaction decisions use hybrid (actual + delta) estimation rather than
-      // pure heuristics. Without this the manager falls back to char/4 estimates.
-      if (response!.usage?.promptTokens !== undefined) {
-        this.deps.contextManager.recordActualUsage(response!.usage.promptTokens, messages.length);
-      }
+        const state = initialTurnState(this.turnCount);
 
-      // Truncation that cut off a TOOL CALL: the model overflowed
-      // max_output_tokens mid tool-call, so the arg JSON is incomplete (e.g. a
-      // Write whose `content` was clipped, leaving file_path unset). Executing
-      // it raised a misleading "Missing required parameter: file_path". Instead,
-      // tell the model its output was truncated and let the next turn retry —
-      // bounded by the outer maxTurns loop.
-      if (isTruncatedStop(response.stopReason) && response.toolCalls.length > 0) {
-        tlog.info("turn.truncated_tool_call", {
-          cat: "turn",
-          toolCount: response.toolCalls.length,
+        // Per-turn correlation ID. Every log written through `tlog` (or any
+        // child derived from it) is stamped with `turn` + `turnId`, so
+        // `jq 'select(.turnId == "...")'` reconstructs one turn's timeline.
+        // Span is *not* used for the loop itself because there are 6+ early
+        // returns; instead, each return-causing branch logs its own terminal
+        // event (model_error, completed, etc.).
+        const turnId = newTurnId();
+        const tlog = logger.child({ turn: this.turnCount, turnId });
+        this.currentTurnLog = tlog;
+
+        const turnStartedAt = Date.now();
+        tlog.info("turn.start", { cat: "turn", messageCount: messages.length });
+
+        // Tag downstream tool-exec / permission lines with this turn's IDs.
+        this.deps.toolExecutor.setLogger(tlog);
+        this.config.onStream?.({ type: "stream_request_start", turnNumber: this.turnCount });
+        const turnStartHook = await this.emitHook("on_turn_start", {
+          turnNumber: this.turnCount,
         });
-        if (response.text) {
-          messages.push({ role: "assistant", content: response.text });
+        const turnStartInjection = wrapHookMessages(turnStartHook.messages);
+        if (turnStartInjection) {
+          messages.push(turnStartInjection);
         }
-        messages.push({
-          role: "user",
-          content:
-            "<system-reminder>Your previous response was truncated by the max output token limit before the tool call finished, so its arguments are incomplete. Do not assume it ran. Either retry with a smaller/more focused tool call (e.g. write the file in sections via Edit), or raise this model's maxOutputTokens.</system-reminder>",
-        });
-        continue;
-      }
 
-      // Handle max_output_tokens: if response was truncated, do continuation
-      // (up to 3 times). Truncation is reported as finish_reason "length"
-      // (OpenAI) or stop_reason "max_tokens" (Anthropic) — isTruncatedStop
-      // accepts both, so the OpenAI streaming path triggers continuation too.
-      if (
-        isTruncatedStop(response.stopReason) &&
-        response.toolCalls.length === 0 &&
-        response.text
-      ) {
-        let combinedText = response.text;
-        for (let retry = 0; retry < 3; retry++) {
-          // Don't fire another continuation call if the user cancelled — without
-          // this an abort during a truncated response could still issue up to 3
-          // more model calls, emitting text after Stop.
-          if (this.config.signal?.aborted) break;
-          tlog.info("turn.max_tokens_continuation", { cat: "turn", retry: retry + 1 });
-          const contMessages = [
-            ...messages,
-            { role: "assistant" as const, content: combinedText },
-            {
-              role: "user" as const,
-              content:
-                "<system-reminder>Your previous response was truncated due to length. Please continue from where you left off.</system-reminder>",
-            },
-          ];
-          try {
-            const contResponse = await this.deps.model.call(
-              this.deps.systemPrompt,
-              contMessages,
-              this.deps.tools,
-              this.config.onStream,
-              this.config.signal,
-            );
-            combinedText += contResponse.text;
-            if (!isTruncatedStop(contResponse.stopReason) || contResponse.toolCalls.length > 0) {
-              response = { ...contResponse, text: combinedText };
+        // Approaching max turns: inject a warning so the model can wrap up.
+        // (Model-facing only — the user-facing "再续" marker is handled by
+        // maybeAnnounceApproachingLimit below, which also watches the stop-block
+        // cap, the limit a re-blocked goal actually hits first.)
+        const turnsRemaining = this.config.maxTurns - this.turnCount;
+        if (turnsRemaining === 2) {
+          messages.push({
+            role: "user",
+            content:
+              "<system-reminder>Warning: you have only 2 turns remaining before the turn limit is reached. " +
+              "Start wrapping up your work and prepare a summary of what you've accomplished and what remains to be done.</system-reminder>",
+          });
+        } else if (turnsRemaining === 1) {
+          messages.push({
+            role: "user",
+            content:
+              "<system-reminder>Warning: you have only 1 turn remaining before the turn limit is reached. " +
+              "Wrap up your work now — your next turn will be your last.</system-reminder>",
+          });
+        } else if (turnsRemaining === 0) {
+          messages.push({
+            role: "user",
+            content:
+              "<system-reminder>This is your LAST turn. You MUST respond with a final text summary now. " +
+              "Do NOT call any tools. Summarize what you have accomplished and list any remaining work.</system-reminder>",
+          });
+        }
+
+        // Goal mode: announce once when nearing EITHER stop ceiling (turns or
+        // stop-blocks) so the UI can offer a "再续" button while still live.
+        this.maybeAnnounceApproachingLimit();
+
+        // Pre-check: context management (async — may trigger LLM summarization)
+        messages = await this.deps.contextManager.manageAsync(messages);
+
+        // manageAsync can itself issue an LLM summarization call lasting several
+        // seconds; if the signal aborted during it, stop here rather than
+        // proceeding into the (expensive) main model call. Belt to the loop-top
+        // brace: this catches an abort that landed *inside* context management.
+        if (this.config.signal?.aborted) {
+          this.markStopped();
+          return { text: finalText, reason: "aborted_streaming", messages };
+        }
+        // No pre-llm ctx emit here: the messages-only estimate would be ~16k
+        // smaller than the real prompt (system + tools not included), making
+        // the bar visibly drop on every submit. Post-llm/post-tool-result
+        // events carry an accurate value; if compaction shrank the array, the
+        // dedicated context_compact event has already informed the UI.
+
+        // post_compact hook: ContextManager just finished a manage() pass.
+        // If any non-micro tier fired, give handlers a chance to inject a
+        // <system-reminder> ("context was compacted — recall earlier
+        // decisions from the transcript") into THIS turn before the model
+        // call. Microcompact is lossless (just clearing redundant
+        // tool_results) so we suppress hook emits for it to keep token
+        // overhead down.
+        const pending = this.deps.consumePendingCompactInfo?.();
+        if (pending && pending.strategy !== "micro") {
+          const compactHook = await this.emitHook("post_compact", {
+            strategy: pending.strategy,
+            beforeTokens: pending.before,
+            afterTokens: pending.after,
+          });
+          const compactInjection = wrapHookMessages(compactHook.messages);
+          if (compactInjection) {
+            messages.push(compactInjection);
+          }
+        }
+
+        // Model call (with streaming fallback and max_output_tokens continuation)
+        // Track tool IDs streamed during this turn to avoid duplicate UI events
+        this.streamedToolIds.clear();
+        // Streaming tool queue: start concurrency-safe tools during streaming
+        const streamingQueue = new StreamingToolQueue(this.deps.toolExecutor);
+        let response;
+        try {
+          response = await this.callModelWithFallback(messages);
+        } catch (err) {
+          if (err instanceof ContextLimitError) {
+            // Progressive recovery: drop oldest API rounds, up to 3 retries
+            const { dropOldestRounds } = await import("../context/compaction.js");
+            let recovered = false;
+            for (let retry = 1; retry <= 3; retry++) {
+              tlog.warn("turn.ptl_recovery", { cat: "turn", retry, roundsToDrop: retry });
+              messages = dropOldestRounds(messages, retry);
+              try {
+                response = await this.callModelWithFallback(messages);
+                recovered = true;
+                break;
+              } catch (retryErr) {
+                if (!(retryErr instanceof ContextLimitError)) {
+                  this.config.onStream?.({ type: "error", error: formatFriendlyError(retryErr) });
+                  return { text: finalText, reason: "model_error", messages };
+                }
+              }
+            }
+            if (!recovered) {
+              this.patchOrphanedToolUses(messages);
+              this.config.onStream?.({
+                type: "error",
+                error: "Context limit exceeded after 3 recovery attempts",
+              });
+              return { text: finalText, reason: "prompt_too_long", messages };
+            }
+          } else if (isAbortError(err) || this.config.signal?.aborted) {
+            // User pressed Stop: the in-flight model call rejected with an
+            // AbortError. This is NOT a failure — the UI already shows the
+            // "你在 Ns 后停止了" line, so emitting an error event would stack a
+            // spurious red "Error:" block on top of an intentional stop.
+            // Persist a turn_stopped marker so a resume can rebuild that line
+            // (the renderer's turn_end is in-memory only; without this the
+            // interrupted turn folds behind the process-card header on reload).
+            this.patchOrphanedToolUses(messages);
+            this.markStopped();
+            return { text: finalText, reason: "aborted_streaming", messages };
+          } else {
+            this.patchOrphanedToolUses(messages);
+            this.config.onStream?.({ type: "error", error: formatFriendlyError(err) });
+            return { text: finalText, reason: "model_error", messages };
+          }
+        }
+
+        // Record the response once into current-turn and whole-session counters.
+        if (response!.usage?.promptTokens !== undefined) {
+          this.recordResponseUsage(response!.usage);
+          this.emitCtxFromUsage(response!.usage, messages);
+        }
+
+        // Feed actual token usage back to the context manager so subsequent
+        // compaction decisions use hybrid (actual + delta) estimation rather than
+        // pure heuristics. Without this the manager falls back to char/4 estimates.
+        if (response!.usage?.promptTokens !== undefined) {
+          this.deps.contextManager.recordActualUsage(response!.usage.promptTokens, messages.length);
+        }
+
+        // Truncation that cut off a TOOL CALL: the model overflowed
+        // max_output_tokens mid tool-call, so the arg JSON is incomplete (e.g. a
+        // Write whose `content` was clipped, leaving file_path unset). Executing
+        // it raised a misleading "Missing required parameter: file_path". Instead,
+        // tell the model its output was truncated and let the next turn retry —
+        // bounded by the outer maxTurns loop.
+        if (isTruncatedStop(response.stopReason) && response.toolCalls.length > 0) {
+          tlog.info("turn.truncated_tool_call", {
+            cat: "turn",
+            toolCount: response.toolCalls.length,
+          });
+          if (response.text) {
+            messages.push({ role: "assistant", content: response.text });
+          }
+          messages.push({
+            role: "user",
+            content:
+              "<system-reminder>Your previous response was truncated by the max output token limit before the tool call finished, so its arguments are incomplete. Do not assume it ran. Either retry with a smaller/more focused tool call (e.g. write the file in sections via Edit), or raise this model's maxOutputTokens.</system-reminder>",
+          });
+          continue;
+        }
+
+        // Handle max_output_tokens: if response was truncated, do continuation
+        // (up to 3 times). Truncation is reported as finish_reason "length"
+        // (OpenAI) or stop_reason "max_tokens" (Anthropic) — isTruncatedStop
+        // accepts both, so the OpenAI streaming path triggers continuation too.
+        if (
+          isTruncatedStop(response.stopReason) &&
+          response.toolCalls.length === 0 &&
+          response.text
+        ) {
+          let combinedText = response.text;
+          let continuedResponse = false;
+          for (let retry = 0; retry < 3; retry++) {
+            // Don't fire another continuation call if the user cancelled — without
+            // this an abort during a truncated response could still issue up to 3
+            // more model calls, emitting text after Stop.
+            if (this.config.signal?.aborted) break;
+            tlog.info("turn.max_tokens_continuation", { cat: "turn", retry: retry + 1 });
+            const contMessages = [
+              ...messages,
+              { role: "assistant" as const, content: combinedText },
+              {
+                role: "user" as const,
+                content:
+                  "<system-reminder>Your previous response was truncated due to length. Please continue from where you left off.</system-reminder>",
+              },
+            ];
+            try {
+              const contResponse = await this.deps.model.call(
+                this.deps.systemPrompt,
+                contMessages,
+                this.deps.tools,
+                this.config.onStream,
+                this.config.signal,
+              );
+              if (contResponse.usage?.promptTokens !== undefined) {
+                this.recordResponseUsage(contResponse.usage);
+                continuedResponse = true;
+              }
+              combinedText += contResponse.text;
+              if (!isTruncatedStop(contResponse.stopReason) || contResponse.toolCalls.length > 0) {
+                response = { ...contResponse, text: combinedText };
+                break;
+              }
+            } catch {
               break;
             }
-          } catch {
-            break;
+          }
+          response = { ...response, text: combinedText };
+          if (continuedResponse && response.usage?.promptTokens !== undefined) {
+            this.emitCtxFromUsage(response.usage, messages);
           }
         }
-        response = { ...response, text: combinedText };
-      }
 
-      // After any continuation, send latest usage so ctx bar reflects real context
-      if (response.usage?.promptTokens !== undefined) {
-        this.emitCtxFromUsage(response.usage, messages);
-      }
-
-      // Goal-mode run-scoped accounting: add this turn's total token usage
-      // (prompt + completion) to the running total. Done after continuation so
-      // continued output is counted against the budget.
-      if (goalTracker && response.usage) {
-        const used =
-          (response.usage.promptTokens ?? 0) + (response.usage.completionTokens ?? 0);
-        recordGoalUsage(goalTracker, used);
-      }
-
-      // Aborted?
-      if (this.config.signal?.aborted) {
-        this.markStopped();
-        return { text: finalText, reason: "aborted_streaming", messages };
-      }
-
-      // Accumulate text
-      if (response.text) {
-        finalText = response.text;
-      }
-
-      // Goal budget guardrail (P0): a run that has blown its token/time budget
-      // is force-stopped regardless of what the model wants to do next (stop OR
-      // continue with tool calls). This is the unattended-safety backstop, so
-      // it sits BEFORE the "tool calls?" branch — both paths pass the gate.
-      if (goalTracker && goalBudgetExceeded(goalTracker, Date.now())) {
-        tlog.info("turn.goal_budget_exhausted", {
-          cat: "goal",
-          tokensUsed: goalTracker.tokensUsed,
-          tokenBudget: this.config.goal?.tokenBudget,
-          timeBudgetMs: this.config.goal?.timeBudgetMs,
-        });
-        this.config.onStream?.({
-          type: "assistant_message",
-          message: {
-            role: "assistant",
-            content: "（Goal 预算已耗尽，强制停止。）",
-          },
-        });
-        return { text: finalText, reason: "goal_budget_exhausted", messages };
-      }
-
-      // Post-check: tool calls?
-      if (response.toolCalls.length === 0) {
-        // No tool use — final answer
-        this.config.onStream?.({
-          type: "assistant_message",
-          message: { role: "assistant", content: finalText },
-        });
-        await this.emitHook("on_turn_end", {
-          turnNumber: this.turnCount,
-          hasToolUse: false,
-        });
-        messages.push({ role: "assistant", content: finalText });
-        if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
-          continue;
+        // Goal-mode run-scoped accounting: add this turn's total token usage
+        // (prompt + completion) to the running total. Done after continuation so
+        // continued output is counted against the budget.
+        if (goalTracker && response.usage) {
+          const used = (response.usage.promptTokens ?? 0) + (response.usage.completionTokens ?? 0);
+          recordGoalUsage(goalTracker, used);
         }
 
-        // on_stop seam: the model wants to stop. Give handlers (Goal mode)
-        // a chance to BLOCK termination and keep the agent working. A
-        // handler returning continueSession=true injects its messages and
-        // we run another turn instead of returning. Bounded by
-        // maxStopBlocks (consecutive) and the outer maxTurns ceiling.
-        const maxStopBlocks = this.config.maxStopBlocks ?? GOAL_DEFAULT_MAX_STOP_BLOCKS;
-        const stopHook = await this.emitHook("on_stop", {
-          goal: this.config.goal,
-          finalText,
-          turnCount: this.turnCount,
-        });
-        // The judge's structured verdict (set by GoalStopHook in result.data)
-        // rides back here so we can show goal progress WITHOUT a second LLM
-        // call — `gaps` is whatever the judge already computed.
-        const goalVerdict = stopHook.data?.goalVerdict as
-          | { met: boolean; gaps: string }
-          | undefined;
-        if (stopHook.continueSession && this.stopBlockCount < maxStopBlocks) {
-          this.stopBlockCount++;
-          // Goal visibility: one not_met marker per re-prompt. round counts
-          // up with stopBlockCount so the UI can show "第 N 轮".
-          this.config.onStream?.({
-            type: "goal_progress",
-            status: "not_met",
-            round: this.stopBlockCount,
-            gaps: goalVerdict?.gaps || undefined,
-          });
-          // The streak just grew — we may now be nearing the stop-block cap.
-          // Announce here (before the next turn's top check) so the "再续"
-          // button shows up against the limit that's actually about to bite.
-          this.maybeAnnounceApproachingLimit();
-          const injection = wrapHookMessages(stopHook.messages);
-          if (injection) {
-            messages.push(injection);
-          } else {
-            // No guidance from the handler — inject a generic nudge so the
-            // model knows it must keep going rather than re-emitting the
-            // same final answer.
-            messages.push({
-              role: "user",
-              content:
-                "<system-reminder>The goal is not yet complete. Continue working toward it.</system-reminder>",
-            });
-          }
-          tlog.info("turn.stop_blocked", {
-            cat: "turn",
-            stopBlockCount: this.stopBlockCount,
-            maxStopBlocks,
-            hasGuidance: !!injection,
-          });
-          continue;
+        // Aborted?
+        if (this.config.signal?.aborted) {
+          this.markStopped();
+          return { text: finalText, reason: "aborted_streaming", messages };
         }
-        if (stopHook.continueSession && this.stopBlockCount >= maxStopBlocks) {
-          // Cap hit: stop anyway, but tell the user why we're not looping
-          // forever on an unsatisfiable goal.
-          tlog.info("turn.stop_block_cap", {
-            cat: "turn",
-            stopBlockCount: this.stopBlockCount,
-            maxStopBlocks,
-          });
-          this.config.onStream?.({
-            type: "goal_progress",
-            status: "exhausted",
-            round: this.stopBlockCount,
+
+        // Accumulate text
+        if (response.text) {
+          finalText = response.text;
+        }
+
+        // Goal budget guardrail (P0): a run that has blown its token/time budget
+        // is force-stopped regardless of what the model wants to do next (stop OR
+        // continue with tool calls). This is the unattended-safety backstop, so
+        // it sits BEFORE the "tool calls?" branch — both paths pass the gate.
+        if (goalTracker && goalBudgetExceeded(goalTracker, Date.now())) {
+          tlog.info("turn.goal_budget_exhausted", {
+            cat: "goal",
+            tokensUsed: goalTracker.tokensUsed,
+            tokenBudget: this.config.goal?.tokenBudget,
+            timeBudgetMs: this.config.goal?.timeBudgetMs,
           });
           this.config.onStream?.({
             type: "assistant_message",
             message: {
               role: "assistant",
-              content: `（Goal 续跑已达 ${maxStopBlocks} 次上限，先停下。）`,
+              content: "（Goal 预算已耗尽，强制停止。）",
             },
           });
-        } else if (this.config.goal && goalVerdict?.met) {
-          // Goal run completed cleanly: the judge says met. round = total
-          // rounds = prior blocks + this accepted final round.
+          return { text: finalText, reason: "goal_budget_exhausted", messages };
+        }
+
+        // Post-check: tool calls?
+        if (response.toolCalls.length === 0) {
+          // No tool use — final answer
           this.config.onStream?.({
-            type: "goal_progress",
-            status: "met",
-            round: this.stopBlockCount + 1,
+            type: "assistant_message",
+            message: { role: "assistant", content: finalText },
           });
-        }
-        this.stopBlockCount = 0;
-        if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
-          continue;
-        }
-        return { text: finalText, reason: "completed", messages };
-      }
+          await this.emitHook("on_turn_end", {
+            turnNumber: this.turnCount,
+            hasToolUse: false,
+          });
+          messages.push({ role: "assistant", content: finalText });
+          if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+            continue;
+          }
 
-      // Tool execution phase
-      tlog.info("turn.tool_use", { cat: "turn", tools: response.toolCalls.map((t) => t.toolName) });
-      const toolCalls = response.toolCalls.slice(0, this.config.maxToolCallsPerTurn);
-      // Per-turn cap: any calls beyond maxToolCallsPerTurn are NOT executed and
-      // NOT added to the assistant message below, so the model never sees a
-      // result for them. Without a heads-up it assumes all ran (acting on
-      // tool output that never happened). Remember the dropped ones so we can
-      // inject a reminder after the executed batch's results. (B-3)
-      const droppedToolCalls = response.toolCalls.slice(this.config.maxToolCallsPerTurn);
-
-      // Add assistant message with tool_use blocks to messages
-      const assistantBlocks: ContentBlock[] = [];
-      if (response.text) {
-        assistantBlocks.push({ type: "text", text: response.text });
-      }
-      for (const tc of toolCalls) {
-        assistantBlocks.push({
-          type: "tool_use",
-          id: tc.id,
-          name: tc.toolName,
-          input: tc.args,
-        });
-        // Only emit tool_use_start if not already emitted during streaming
-        if (!this.streamedToolIds.has(tc.id)) {
-          this.config.onStream?.({ type: "tool_use_start", toolCall: tc });
-        }
-        // Record in transcript
-        this.deps.transcript.appendToolUse(tc.toolName, tc.id, tc.args);
-      }
-      messages.push({ role: "assistant", content: assistantBlocks });
-
-      // Execute tools — enqueue concurrency-safe tools for early start,
-      // drain remaining (unsafe) tools sequentially.
-      for (const tc of toolCalls) {
-        streamingQueue.enqueue(tc);
-      }
-      const results = await streamingQueue.drain();
-
-      // Record results in transcript and stream
-      const resultBlocks: ContentBlock[] = [];
-      for (const result of results) {
-        resultBlocks.push(toolResultToBlock(result));
-
-        this.deps.transcript.appendToolResult(
-          result.id,
-          result.toolName,
-          result.result,
-          result.error,
-        );
-
-        this.config.onStream?.({ type: "tool_result", result });
-      }
-
-      // Fire-and-forget tool use summary (non-blocking). The whole chain is
-      // best-effort observability — a thrown onStream handler, a failed dynamic
-      // import, or a rejecting summarize must never surface as an unhandled
-      // rejection (Node can treat those as fatal). Swallow at the tail. (B-2)
-      if (this.config.onStream) {
-        void import("./tool-summary.js")
-          .then(({ generateToolUseSummary }) => {
-            if (!this.deps.model.summarize) return;
-            return generateToolUseSummary(toolCalls, results, this.deps.model.summarize).then(
-              (summary) => {
-                if (summary) {
-                  this.config.onStream?.({ type: "tool_summary", summary });
-                }
-              },
-            );
-          })
-          .catch((err) => {
-            this.currentTurnLog.warn("tool_summary.dispatch_failed", {
-              cat: "turn",
-              error: (err as Error).message,
+          // on_stop seam: the model wants to stop. Give handlers (Goal mode)
+          // a chance to BLOCK termination and keep the agent working. A
+          // handler returning continueSession=true injects its messages and
+          // we run another turn instead of returning. Bounded by
+          // maxStopBlocks (consecutive) and the outer maxTurns ceiling.
+          const maxStopBlocks = this.config.maxStopBlocks ?? GOAL_DEFAULT_MAX_STOP_BLOCKS;
+          const stopHook = await this.emitHook("on_stop", {
+            goal: this.config.goal,
+            finalText,
+            turnCount: this.turnCount,
+          });
+          // The judge's structured verdict (set by GoalStopHook in result.data)
+          // rides back here so we can show goal progress WITHOUT a second LLM
+          // call — `gaps` is whatever the judge already computed.
+          const goalVerdict = stopHook.data?.goalVerdict as
+            | { met: boolean; gaps: string }
+            | undefined;
+          if (stopHook.continueSession && this.stopBlockCount < maxStopBlocks) {
+            this.stopBlockCount++;
+            // Goal visibility: one not_met marker per re-prompt. round counts
+            // up with stopBlockCount so the UI can show "第 N 轮".
+            this.config.onStream?.({
+              type: "goal_progress",
+              status: "not_met",
+              round: this.stopBlockCount,
+              gaps: goalVerdict?.gaps || undefined,
             });
+            // The streak just grew — we may now be nearing the stop-block cap.
+            // Announce here (before the next turn's top check) so the "再续"
+            // button shows up against the limit that's actually about to bite.
+            this.maybeAnnounceApproachingLimit();
+            const injection = wrapHookMessages(stopHook.messages);
+            if (injection) {
+              messages.push(injection);
+            } else {
+              // No guidance from the handler — inject a generic nudge so the
+              // model knows it must keep going rather than re-emitting the
+              // same final answer.
+              messages.push({
+                role: "user",
+                content:
+                  "<system-reminder>The goal is not yet complete. Continue working toward it.</system-reminder>",
+              });
+            }
+            tlog.info("turn.stop_blocked", {
+              cat: "turn",
+              stopBlockCount: this.stopBlockCount,
+              maxStopBlocks,
+              hasGuidance: !!injection,
+            });
+            continue;
+          }
+          if (stopHook.continueSession && this.stopBlockCount >= maxStopBlocks) {
+            // Cap hit: stop anyway, but tell the user why we're not looping
+            // forever on an unsatisfiable goal.
+            tlog.info("turn.stop_block_cap", {
+              cat: "turn",
+              stopBlockCount: this.stopBlockCount,
+              maxStopBlocks,
+            });
+            this.config.onStream?.({
+              type: "goal_progress",
+              status: "exhausted",
+              round: this.stopBlockCount,
+            });
+            this.config.onStream?.({
+              type: "assistant_message",
+              message: {
+                role: "assistant",
+                content: `（Goal 续跑已达 ${maxStopBlocks} 次上限，先停下。）`,
+              },
+            });
+          } else if (this.config.goal && goalVerdict?.met) {
+            // Goal run completed cleanly: the judge says met. round = total
+            // rounds = prior blocks + this accepted final round.
+            this.config.onStream?.({
+              type: "goal_progress",
+              status: "met",
+              round: this.stopBlockCount + 1,
+            });
+          }
+          this.stopBlockCount = 0;
+          if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+            continue;
+          }
+          return { text: finalText, reason: "completed", messages };
+        }
+
+        // Tool execution phase
+        tlog.info("turn.tool_use", {
+          cat: "turn",
+          tools: response.toolCalls.map((t) => t.toolName),
+        });
+        const toolCalls = response.toolCalls.slice(0, this.config.maxToolCallsPerTurn);
+        // Per-turn cap: any calls beyond maxToolCallsPerTurn are NOT executed and
+        // NOT added to the assistant message below, so the model never sees a
+        // result for them. Without a heads-up it assumes all ran (acting on
+        // tool output that never happened). Remember the dropped ones so we can
+        // inject a reminder after the executed batch's results. (B-3)
+        const droppedToolCalls = response.toolCalls.slice(this.config.maxToolCallsPerTurn);
+
+        // Add assistant message with tool_use blocks to messages
+        const assistantBlocks: ContentBlock[] = [];
+        if (response.text) {
+          assistantBlocks.push({ type: "text", text: response.text });
+        }
+        for (const tc of toolCalls) {
+          assistantBlocks.push({
+            type: "tool_use",
+            id: tc.id,
+            name: tc.toolName,
+            input: tc.args,
           });
-      }
+          // Only emit tool_use_start if not already emitted during streaming
+          if (!this.streamedToolIds.has(tc.id)) {
+            this.config.onStream?.({ type: "tool_use_start", toolCall: tc });
+          }
+          // Record in transcript
+          this.deps.transcript.appendToolUse(tc.toolName, tc.id, tc.args);
+        }
+        messages.push({ role: "assistant", content: assistantBlocks });
 
-      messages.push({ role: "user", content: resultBlocks });
+        // Execute tools — enqueue concurrency-safe tools for early start,
+        // drain remaining (unsafe) tools sequentially.
+        for (const tc of toolCalls) {
+          streamingQueue.enqueue(tc);
+        }
+        const results = await streamingQueue.drain();
 
-      // B-3: tell the model which of its requested tool calls were dropped by
-      // the per-turn cap so it can re-issue them, instead of silently assuming
-      // they ran. Appended to the same user message that carries the results.
-      if (droppedToolCalls.length > 0) {
-        tlog.info("turn.tool_calls_capped", {
+        // Record results in transcript and stream
+        const resultBlocks: ContentBlock[] = [];
+        for (const result of results) {
+          resultBlocks.push(toolResultToBlock(result));
+
+          this.deps.transcript.appendToolResult(
+            result.id,
+            result.toolName,
+            result.result,
+            result.error,
+          );
+
+          this.config.onStream?.({ type: "tool_result", result });
+        }
+
+        // Fire-and-forget tool use summary (non-blocking). The whole chain is
+        // best-effort observability — a thrown onStream handler, a failed dynamic
+        // import, or a rejecting summarize must never surface as an unhandled
+        // rejection (Node can treat those as fatal). Swallow at the tail. (B-2)
+        if (this.config.onStream) {
+          void import("./tool-summary.js")
+            .then(({ generateToolUseSummary }) => {
+              if (!this.deps.model.summarize) return;
+              return generateToolUseSummary(toolCalls, results, this.deps.model.summarize).then(
+                (summary) => {
+                  if (summary) {
+                    this.config.onStream?.({ type: "tool_summary", summary });
+                  }
+                },
+              );
+            })
+            .catch((err) => {
+              this.currentTurnLog.warn("tool_summary.dispatch_failed", {
+                cat: "turn",
+                error: (err as Error).message,
+              });
+            });
+        }
+
+        messages.push({ role: "user", content: resultBlocks });
+
+        // B-3: tell the model which of its requested tool calls were dropped by
+        // the per-turn cap so it can re-issue them, instead of silently assuming
+        // they ran. Appended to the same user message that carries the results.
+        if (droppedToolCalls.length > 0) {
+          tlog.info("turn.tool_calls_capped", {
+            cat: "turn",
+            executed: toolCalls.length,
+            dropped: droppedToolCalls.length,
+            cap: this.config.maxToolCallsPerTurn,
+          });
+          const droppedNames = droppedToolCalls.map((t) => t.toolName).join(", ");
+          // Separate user message (not folded into the tool_result blocks) so the
+          // OpenAI converter — which lifts tool_results into standalone role:tool
+          // messages — keeps the reminder as a plain user turn after them.
+          messages.push({
+            role: "user",
+            content:
+              `<system-reminder>Only the first ${toolCalls.length} of your ${response.toolCalls.length} ` +
+              `tool calls ran this turn (per-turn limit is ${this.config.maxToolCallsPerTurn}). ` +
+              `These were NOT executed and produced no result — do NOT assume they ran: ${droppedNames}. ` +
+              `Re-issue the ones you still need in the next turn.</system-reminder>`,
+          });
+        }
+
+        // Tool results just pushed; recompute ctx so the bar updates *before*
+        // the next model round-trip — large tool outputs can move it sharply.
+        this.emitCtxFromMessages(messages);
+
+        // Goal mode P0: explicit completion. If the model called complete_goal,
+        // it has DECLARED the goal done — short-circuit to "completed" WITHOUT
+        // running the judge hook. The tool's result is already in `messages`
+        // above so the summary lands in the transcript. Reset the stop-block
+        // counter so a prior judge-driven block streak doesn't leak out. Also
+        // clear the PERSISTED goal so a later bare send doesn't re-inherit a goal
+        // the model just declared finished (the judge's onMet does this when IT
+        // decides; a self-report must do the same, else the goal outlives its
+        // completion and re-arms every follow-up turn).
+        if (goalTracker && toolCalls.some((tc) => tc.toolName === COMPLETE_GOAL_TOOL_NAME)) {
+          tlog.info("turn.goal_self_reported_complete", { cat: "goal" });
+          this.stopBlockCount = 0;
+          this.deps.clearPersistedGoal?.();
+          if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+            continue;
+          }
+          return { text: finalText, reason: "completed", messages };
+        }
+
+        // Goal mode: user-initiated cancellation. cancel_goal is the "strong
+        // intent" escape hatch — honor it ONLY when confirm===true (the guard the
+        // tool advertises). A confirmed cancel stops the run AND clears the
+        // persisted goal so it never re-arms; an unconfirmed call is a no-op here
+        // (the tool's own result string already told the model it was ignored).
+        const confirmedCancel = toolCalls.some(
+          (tc) => tc.toolName === CANCEL_GOAL_TOOL_NAME && tc.args?.confirm === true,
+        );
+        if (goalTracker && confirmedCancel) {
+          tlog.info("turn.goal_user_cancelled", { cat: "goal" });
+          this.stopBlockCount = 0;
+          this.deps.clearPersistedGoal?.();
+          if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+            continue;
+          }
+          return { text: finalText, reason: "completed", messages };
+        }
+
+        // Token budget check
+        const totalOutputTokens = this.deps.model.getOutputTokens?.() ?? 0;
+        const budgetDecision = checkTokenBudget(
+          totalOutputTokens,
+          this.config.tokenBudget ?? Infinity,
+          budgetTracker,
+        );
+        if (budgetDecision === "stop") {
+          tlog.info("turn.budget_stop", {
+            cat: "turn",
+            outputTokens: totalOutputTokens,
+            budget: this.config.tokenBudget,
+          });
+          this.config.onStream?.({
+            type: "assistant_message",
+            message: { role: "assistant", content: finalText },
+          });
+          messages.push({ role: "assistant", content: finalText });
+          if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+            continue;
+          }
+          return { text: finalText, reason: "completed", messages };
+        }
+        if (budgetDecision === "nudge") {
+          messages.push({
+            role: "user",
+            content:
+              "<system-reminder>You are approaching the token budget limit. Please start wrapping up your work and provide a summary.</system-reminder>",
+          });
+        }
+
+        // Investigation guard: end-of-turn check. If too many consecutive
+        // read-only turns went by without any user-visible text or side-effecting
+        // tool, inject a reminder that will land at the top of the next turn.
+        const guard = this.deps.toolExecutor.getInvestigationGuard();
+        if (guard) {
+          guard.noteText(response.text);
+          const turnReminder = guard.turnEnded(this.turnCount);
+          if (turnReminder) {
+            messages.push({ role: "user", content: turnReminder });
+            tlog.info("guard.silent_turn", { cat: "guard", turn: this.turnCount });
+          }
+        }
+
+        // Task guard: nudge the model if it has an in_progress task that
+        // hasn't moved in several turns. TaskCreate is sticky in working
+        // memory for the first few turns only; without this, the spinner
+        // runs forever on tasks the model has mentally finished.
+        const taskGuard = this.deps.toolExecutor.getTaskGuard();
+        if (taskGuard) {
+          const taskReminder = taskGuard.turnEnded(this.turnCount);
+          if (taskReminder) {
+            messages.push({ role: "user", content: taskReminder });
+            tlog.info("guard.stale_task", { cat: "guard", turn: this.turnCount });
+          }
+        }
+
+        // Hook: turn end
+        await this.emitHook("on_turn_end", {
+          turnNumber: this.turnCount,
+          hasToolUse: true,
+          toolCallCount: toolCalls.length,
+        });
+
+        // Record turn boundary
+        this.deps.transcript.appendTurnBoundary();
+        this.config.onTurnBoundary?.(this.turnCount);
+
+        tlog.info("turn.end", {
           cat: "turn",
-          executed: toolCalls.length,
-          dropped: droppedToolCalls.length,
-          cap: this.config.maxToolCallsPerTurn,
-        });
-        const droppedNames = droppedToolCalls.map((t) => t.toolName).join(", ");
-        // Separate user message (not folded into the tool_result blocks) so the
-        // OpenAI converter — which lifts tool_results into standalone role:tool
-        // messages — keeps the reminder as a plain user turn after them.
-        messages.push({
-          role: "user",
-          content:
-            `<system-reminder>Only the first ${toolCalls.length} of your ${response.toolCalls.length} ` +
-            `tool calls ran this turn (per-turn limit is ${this.config.maxToolCallsPerTurn}). ` +
-            `These were NOT executed and produced no result — do NOT assume they ran: ${droppedNames}. ` +
-            `Re-issue the ones you still need in the next turn.</system-reminder>`,
+          duration_ms: Date.now() - turnStartedAt,
+          outcome: "continue",
         });
       }
-
-      // Tool results just pushed; recompute ctx so the bar updates *before*
-      // the next model round-trip — large tool outputs can move it sharply.
-      this.emitCtxFromMessages(messages);
-
-      // Goal mode P0: explicit completion. If the model called complete_goal,
-      // it has DECLARED the goal done — short-circuit to "completed" WITHOUT
-      // running the judge hook. The tool's result is already in `messages`
-      // above so the summary lands in the transcript. Reset the stop-block
-      // counter so a prior judge-driven block streak doesn't leak out. Also
-      // clear the PERSISTED goal so a later bare send doesn't re-inherit a goal
-      // the model just declared finished (the judge's onMet does this when IT
-      // decides; a self-report must do the same, else the goal outlives its
-      // completion and re-arms every follow-up turn).
-      if (goalTracker && toolCalls.some((tc) => tc.toolName === COMPLETE_GOAL_TOOL_NAME)) {
-        tlog.info("turn.goal_self_reported_complete", { cat: "goal" });
-        this.stopBlockCount = 0;
-        this.deps.clearPersistedGoal?.();
-        if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
-          continue;
-        }
-        return { text: finalText, reason: "completed", messages };
-      }
-
-      // Goal mode: user-initiated cancellation. cancel_goal is the "strong
-      // intent" escape hatch — honor it ONLY when confirm===true (the guard the
-      // tool advertises). A confirmed cancel stops the run AND clears the
-      // persisted goal so it never re-arms; an unconfirmed call is a no-op here
-      // (the tool's own result string already told the model it was ignored).
-      const confirmedCancel = toolCalls.some(
-        (tc) => tc.toolName === CANCEL_GOAL_TOOL_NAME && tc.args?.confirm === true,
-      );
-      if (goalTracker && confirmedCancel) {
-        tlog.info("turn.goal_user_cancelled", { cat: "goal" });
-        this.stopBlockCount = 0;
-        this.deps.clearPersistedGoal?.();
-        if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
-          continue;
-        }
-        return { text: finalText, reason: "completed", messages };
-      }
-
-      // Token budget check
-      const totalOutputTokens = this.deps.model.getOutputTokens?.() ?? 0;
-      const budgetDecision = checkTokenBudget(
-        totalOutputTokens,
-        this.config.tokenBudget ?? Infinity,
-        budgetTracker,
-      );
-      if (budgetDecision === "stop") {
-        tlog.info("turn.budget_stop", {
-          cat: "turn",
-          outputTokens: totalOutputTokens,
-          budget: this.config.tokenBudget,
-        });
-        this.config.onStream?.({
-          type: "assistant_message",
-          message: { role: "assistant", content: finalText },
-        });
-        messages.push({ role: "assistant", content: finalText });
-        if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
-          continue;
-        }
-        return { text: finalText, reason: "completed", messages };
-      }
-      if (budgetDecision === "nudge") {
-        messages.push({
-          role: "user",
-          content:
-            "<system-reminder>You are approaching the token budget limit. Please start wrapping up your work and provide a summary.</system-reminder>",
-        });
-      }
-
-      // Investigation guard: end-of-turn check. If too many consecutive
-      // read-only turns went by without any user-visible text or side-effecting
-      // tool, inject a reminder that will land at the top of the next turn.
-      const guard = this.deps.toolExecutor.getInvestigationGuard();
-      if (guard) {
-        guard.noteText(response.text);
-        const turnReminder = guard.turnEnded(this.turnCount);
-        if (turnReminder) {
-          messages.push({ role: "user", content: turnReminder });
-          tlog.info("guard.silent_turn", { cat: "guard", turn: this.turnCount });
-        }
-      }
-
-      // Task guard: nudge the model if it has an in_progress task that
-      // hasn't moved in several turns. TaskCreate is sticky in working
-      // memory for the first few turns only; without this, the spinner
-      // runs forever on tasks the model has mentally finished.
-      const taskGuard = this.deps.toolExecutor.getTaskGuard();
-      if (taskGuard) {
-        const taskReminder = taskGuard.turnEnded(this.turnCount);
-        if (taskReminder) {
-          messages.push({ role: "user", content: taskReminder });
-          tlog.info("guard.stale_task", { cat: "guard", turn: this.turnCount });
-        }
-      }
-
-      // Hook: turn end
-      await this.emitHook("on_turn_end", {
-        turnNumber: this.turnCount,
-        hasToolUse: true,
-        toolCallCount: toolCalls.length,
-      });
-
-      // Record turn boundary
-      this.deps.transcript.appendTurnBoundary();
-      this.config.onTurnBoundary?.(this.turnCount);
-
-      tlog.info("turn.end", {
-        cat: "turn",
-        duration_ms: Date.now() - turnStartedAt,
-        outcome: "continue",
-      });
-    }
     } catch (err) {
       // Unexpected throw from the per-turn scaffolding (manageAsync, hooks,
       // guards). Patch any dangling tool_use so a later resume isn't poisoned,

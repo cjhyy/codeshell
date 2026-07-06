@@ -13,6 +13,7 @@ import {
 } from "../logging/session-recorder.js";
 import { sanitizeMessages } from "../logging/sanitize-messages.js";
 import { addAPIDuration, addToModelUsage, addInputTokens, addOutputTokens } from "../state.js";
+import { cacheHitRateFromUsage } from "./session-usage.js";
 
 let _reqSeq = 0;
 function nextReqId(): string {
@@ -30,15 +31,7 @@ function nextReqId(): string {
  * any caching tuning (docs/todo/prompt-cache-optimization.md §四 step 1).
  */
 export function cacheHitRate(usage: LLMResponse["usage"]): number | undefined {
-  if (!usage) return undefined;
-  const read = usage.cacheReadTokens ?? 0;
-  const creation = usage.cacheCreationTokens ?? 0;
-  if (read === 0 && creation === 0) return undefined;
-  const prompt = usage.promptTokens ?? 0;
-  const uncached = Math.max(0, prompt - read - creation);
-  const denom = read + creation + uncached;
-  if (denom === 0) return undefined;
-  return read / denom;
+  return cacheHitRateFromUsage(usage);
 }
 
 export class ModelFacade {

@@ -14,19 +14,14 @@ interface Props {
   max?: number;
   /** True while an agent run is in flight — show breathing animation. */
   busy?: boolean;
-  /**
-   * SESSION-CUMULATIVE prompt-cache counts (summed across the whole session,
-   * reset on model switch). Drive the "本会话累计命中率" tooltip row. Both 0 /
-   * undefined on a fresh session or providers with no cache info → row hidden.
-   */
-  cacheReadTokens?: number;
-  cacheCreationTokens?: number;
-  /**
-   * Session-cumulative prompt tokens (sum across every response). The hit-rate
-   * denominator: uncached = sessionPromptTokens − read − creation. Distinct
-   * from `used` (the CURRENT context size), which drives the ring fill.
-   */
-  sessionPromptTokens?: number;
+  /** Prompt-cache counts for the current turn only. */
+  singleTurnPromptTokens?: number;
+  singleTurnCacheReadTokens?: number;
+  singleTurnCacheCreationTokens?: number;
+  /** Monotonic prompt-cache counts summed from session start. */
+  cumulativePromptTokens?: number;
+  cumulativeCacheReadTokens?: number;
+  cumulativeCacheCreationTokens?: number;
 }
 
 /**
@@ -59,9 +54,12 @@ export function ContextRing({
   used,
   max,
   busy,
-  cacheReadTokens,
-  cacheCreationTokens,
-  sessionPromptTokens,
+  singleTurnPromptTokens,
+  singleTurnCacheReadTokens,
+  singleTurnCacheCreationTokens,
+  cumulativePromptTokens,
+  cumulativeCacheReadTokens,
+  cumulativeCacheCreationTokens,
 }: Props) {
   const { t } = useT();
   const [hover, setHover] = useState(false);
@@ -81,12 +79,15 @@ export function ContextRing({
   const pct = Math.round(ratio * 100);
   const remaining = Math.max(0, safeMax - used);
   const hasUsage = used > 0;
-  // Cumulative hit rate uses the cumulative prompt total as the denominator
-  // (falls back to `used` for legacy states that predate sessionPromptTokens).
-  const hitRate = computeHitRate(
-    sessionPromptTokens ?? used,
-    cacheReadTokens,
-    cacheCreationTokens,
+  const singleTurnHitRate = computeHitRate(
+    singleTurnPromptTokens ?? 0,
+    singleTurnCacheReadTokens,
+    singleTurnCacheCreationTokens,
+  );
+  const cumulativeHitRate = computeHitRate(
+    cumulativePromptTokens ?? 0,
+    cumulativeCacheReadTokens,
+    cumulativeCacheCreationTokens,
   );
 
   const size = 22;
@@ -95,11 +96,13 @@ export function ContextRing({
   const c = 2 * Math.PI * r;
   const offset = c * (1 - ratio);
 
-  const tone =
-    !hasUsage ? "hsl(var(--cs-muted-foreground))" :
-    ratio >= 0.9 ? "hsl(var(--cs-status-err))" :
-    ratio >= 0.7 ? "hsl(var(--cs-status-warn))" :
-    "hsl(var(--cs-status-ok))";
+  const tone = !hasUsage
+    ? "hsl(var(--cs-muted-foreground))"
+    : ratio >= 0.9
+      ? "hsl(var(--cs-status-err))"
+      : ratio >= 0.7
+        ? "hsl(var(--cs-status-warn))"
+        : "hsl(var(--cs-status-ok))";
 
   const pctLabel = !hasUsage ? (busy ? "·" : "—") : `${pct}%`;
 
@@ -136,13 +139,15 @@ export function ContextRing({
           )}
         </svg>
       </div>
-      <span className="text-xs font-medium" style={{ color: tone }}>{pctLabel}</span>
+      <span className="text-xs font-medium" style={{ color: tone }}>
+        {pctLabel}
+      </span>
 
       {hover && (
         <div
           ref={popoverRef}
           style={popoverStyle}
-          className="w-56 rounded-md border bg-popover p-3 text-popover-foreground shadow-md"
+          className="w-64 rounded-md border bg-popover p-3 text-popover-foreground shadow-md"
         >
           {!hasUsage ? (
             <div className="text-sm">
@@ -166,16 +171,37 @@ export function ContextRing({
                 <span className="text-muted-foreground">{t("chat.contextRing.maxLabel")}</span>
                 <span>
                   {formatTok(safeMax)}
-                  {!hasDeclaredMax && <span className="text-muted-foreground">{t("chat.contextRing.defaultSuffix")}</span>}
+                  {!hasDeclaredMax && (
+                    <span className="text-muted-foreground">
+                      {t("chat.contextRing.defaultSuffix")}
+                    </span>
+                  )}
                 </span>
               </div>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                <div className="h-full rounded-full" style={{ width: `${pct}%`, background: tone }} />
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${pct}%`, background: tone }}
+                />
               </div>
-              {hitRate !== null && (
-                <div className="mt-2 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">{t("chat.contextRing.cacheHitSession")}</span>
-                  <span>{Math.round(hitRate * 100)}%</span>
+              {(singleTurnHitRate !== null || cumulativeHitRate !== null) && (
+                <div className="mt-2 space-y-1">
+                  {singleTurnHitRate !== null && (
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <span className="min-w-0 text-muted-foreground">
+                        {t("chat.contextRing.cacheHitSingleTurn")}
+                      </span>
+                      <span className="shrink-0">{Math.round(singleTurnHitRate * 100)}%</span>
+                    </div>
+                  )}
+                  {cumulativeHitRate !== null && (
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <span className="min-w-0 text-muted-foreground">
+                        {t("chat.contextRing.cacheHitCumulative")}
+                      </span>
+                      <span className="shrink-0">{Math.round(cumulativeHitRate * 100)}%</span>
+                    </div>
+                  )}
                 </div>
               )}
               {!hasDeclaredMax && (

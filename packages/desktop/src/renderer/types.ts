@@ -11,13 +11,7 @@ import { aggregateFileChangeSummary } from "./messages/fileChangeAggregator";
 import { translate } from "./i18n/translate";
 import { loadUILanguage } from "./uiLanguage";
 
-export type ToolStatus =
-  | "queued"
-  | "running"
-  | "succeeded"
-  | "failed"
-  | "denied"
-  | "cancelled";
+export type ToolStatus = "queued" | "running" | "succeeded" | "failed" | "denied" | "cancelled";
 
 export interface UserMessage {
   kind: "user";
@@ -299,21 +293,15 @@ export interface MessagesReducerState {
   sessionId: string | null;
   /** Latest known context token count (session_started / usage_update). */
   promptTokens: number;
-  /**
-   * Latest provider-reported prompt-cache counts, from the authoritative
-   * usage_update emits. Feed the context-ring hover tooltip's hit rate.
-   * undefined until the first usage_update that carries them (short/first
-   * turns, or providers with no cache info, leave them undefined).
-   */
-  cacheReadTokens?: number;
-  cacheCreationTokens?: number;
-  /**
-   * SESSION-CUMULATIVE cache/prompt totals (sum across every LLM response this
-   * session). Drive the "本会话累计命中率" tooltip. Fed by the cumulative
-   * usage_update emit (carries session* fields) from the engine turn boundary;
-   * reset to 0 on a model switch (a new model has its own prompt cache).
-   * Persisted to localStorage so they survive reload (rehydrate).
-   */
+  /** Prompt-cache totals for the current turn only. */
+  singleTurnPromptTokens: number;
+  singleTurnCacheReadTokens: number;
+  singleTurnCacheCreationTokens: number;
+  /** Whole-session monotonic prompt-cache totals. */
+  cumulativePromptTokens: number;
+  cumulativeCacheReadTokens: number;
+  cumulativeCacheCreationTokens: number;
+  /** Legacy aliases kept for localStorage migration. */
   sessionCacheReadTokens: number;
   sessionCacheCreationTokens: number;
   sessionPromptTokens: number;
@@ -348,6 +336,12 @@ export const INITIAL_STATE: MessagesReducerState = {
   streamingThinkingId: null,
   sessionId: null,
   promptTokens: 0,
+  singleTurnPromptTokens: 0,
+  singleTurnCacheReadTokens: 0,
+  singleTurnCacheCreationTokens: 0,
+  cumulativePromptTokens: 0,
+  cumulativeCacheReadTokens: 0,
+  cumulativeCacheCreationTokens: 0,
   sessionCacheReadTokens: 0,
   sessionCacheCreationTokens: 0,
   sessionPromptTokens: 0,
@@ -608,13 +602,13 @@ export function applyStreamEvent(
       // view_image) so the card can show them — core streams them in the result
       // but the UI dropped them before this. Map to the minimal local shape.
       const images: ToolImageBlock[] | undefined = (event.result.contentBlocks ?? [])
-        .filter((b): b is typeof b & { source: { media_type: string; data: string } } =>
-          b.type === "image" && b.source?.type === "base64" && typeof b.source.data === "string",
+        .filter(
+          (b): b is typeof b & { source: { media_type: string; data: string } } =>
+            b.type === "image" && b.source?.type === "base64" && typeof b.source.data === "string",
         )
         .map((b) => ({ mediaType: b.source.media_type, data: b.source.data }));
       const patch = (t: ToolMessage): ToolMessage => {
-        const failed =
-          event.result.error !== undefined || event.result.isError === true;
+        const failed = event.result.error !== undefined || event.result.isError === true;
         const end = endedAt ?? t.startedAt;
         return {
           ...t,
@@ -635,9 +629,7 @@ export function applyStreamEvent(
         if (!m || m.kind !== "agent") return state;
         msgs[idx] = {
           ...m,
-          toolCalls: m.toolCalls.map((t) =>
-            t.id === event.result.id ? patch(t) : t,
-          ),
+          toolCalls: m.toolCalls.map((t) => (t.id === event.result.id ? patch(t) : t)),
         };
         return { ...state, messages: msgs };
       }
@@ -783,9 +775,7 @@ export function applyStreamEvent(
           // must not flip back to "done" with text). Keep the first terminal
           // result; just refresh activeAgents bookkeeping.
           if (!m.done) {
-            const flushed = m.textBuffer.length > 0
-              ? (m.text ?? "") + m.textBuffer
-              : m.text;
+            const flushed = m.textBuffer.length > 0 ? (m.text ?? "") + m.textBuffer : m.text;
             msgs[idx] = {
               ...m,
               done: true,
@@ -871,30 +861,41 @@ export function applyStreamEvent(
     case "usage_update": {
       // Two flavours share this event:
       //  1. Per-response / estimate emit (turn-loop): drives the live context
-      //     reading `promptTokens` + last-known per-response cache counts.
-      //  2. Session-cumulative emit (engine turn boundary): carries session*
-      //     fields = totals across the whole session, driving the "本会话累计
-      //     命中率" tooltip. It must NOT clobber the context reading, so when
-      //     sessionPromptTokens is present we update ONLY the cumulative fields.
-      if (event.sessionPromptTokens !== undefined) {
+      //     reading and, when present, the single-turn cache metric.
+      //  2. Cumulative-only heartbeat (engine turn boundary): carries cumulative*
+      //     fields. It must NOT clobber the context reading.
+      if (event.cumulativePromptTokens !== undefined || event.sessionPromptTokens !== undefined) {
+        const cumulativePromptTokens =
+          event.cumulativePromptTokens ?? event.sessionPromptTokens ?? 0;
+        const cumulativeCacheReadTokens =
+          event.cumulativeCacheReadTokens ?? event.sessionCacheReadTokens ?? 0;
+        const cumulativeCacheCreationTokens =
+          event.cumulativeCacheCreationTokens ?? event.sessionCacheCreationTokens ?? 0;
         return {
           ...state,
-          sessionPromptTokens: event.sessionPromptTokens,
-          sessionCacheReadTokens: event.sessionCacheReadTokens ?? 0,
-          sessionCacheCreationTokens: event.sessionCacheCreationTokens ?? 0,
+          cumulativePromptTokens,
+          cumulativeCacheReadTokens,
+          cumulativeCacheCreationTokens,
+          sessionPromptTokens: cumulativePromptTokens,
+          sessionCacheReadTokens: cumulativeCacheReadTokens,
+          sessionCacheCreationTokens: cumulativeCacheCreationTokens,
         };
       }
-      // Cache counts ride only the authoritative (LLM-response) emits; the
-      // estimate emits between calls omit them. Keep the last-known values on
-      // those so the ring tooltip doesn't flicker its hit rate away to nothing.
+      const hasSingleTurn =
+        event.singleTurnPromptTokens !== undefined ||
+        event.cacheReadTokens !== undefined ||
+        event.cacheCreationTokens !== undefined;
       return {
         ...state,
         promptTokens: event.promptTokens,
-        ...(event.cacheReadTokens !== undefined
-          ? { cacheReadTokens: event.cacheReadTokens }
-          : {}),
-        ...(event.cacheCreationTokens !== undefined
-          ? { cacheCreationTokens: event.cacheCreationTokens }
+        ...(hasSingleTurn
+          ? {
+              singleTurnPromptTokens: event.singleTurnPromptTokens ?? event.promptTokens,
+              singleTurnCacheReadTokens:
+                event.singleTurnCacheReadTokens ?? event.cacheReadTokens ?? 0,
+              singleTurnCacheCreationTokens:
+                event.singleTurnCacheCreationTokens ?? event.cacheCreationTokens ?? 0,
+            }
           : {}),
       };
     }
@@ -932,8 +933,7 @@ export function applyStreamEvent(
         if (idx === undefined) continue;
         const m = msgs[idx];
         if (!m || m.kind !== "agent") continue;
-        const flushedText =
-          m.textBuffer.length > 0 ? (m.text ?? "") + m.textBuffer : m.text;
+        const flushedText = m.textBuffer.length > 0 ? (m.text ?? "") + m.textBuffer : m.text;
         if (cleanSweep && !m.done && !m.backgrounded) {
           // Sweep only true ORPHANS (agent_start, no agent_end, agent_end
           // dropped/raced). A `backgrounded` agent is legitimately still running
@@ -984,9 +984,7 @@ export function applyStreamEvent(
         }
       }
       if (lastUserIdx >= 0) {
-        finalized = finalized.filter(
-          (m, i) => !(i > lastUserIdx && m.kind === "files_changed"),
-        );
+        finalized = finalized.filter((m, i) => !(i > lastUserIdx && m.kind === "files_changed"));
       }
       const summary = aggregateFileChangeSummary(finalized);
       if (summary) {
@@ -1033,9 +1031,10 @@ export function applyStreamEvent(
       const isAbort = /\b(abort|aborted|cancell?ed|interrupt)\b/i.test(errText);
       return {
         ...state,
-        messages: errText && !isAbort
-          ? [...state.messages, { kind: "system", id: freshId("err"), text: `Error: ${errText}` }]
-          : state.messages,
+        messages:
+          errText && !isAbort
+            ? [...state.messages, { kind: "system", id: freshId("err"), text: `Error: ${errText}` }]
+            : state.messages,
         streamingAssistantId: null,
         streamingThinkingId: null,
       };
@@ -1061,7 +1060,7 @@ export function applyStreamEvent(
               done: true,
               backgrounded: false,
               text: (event as { finalText?: string }).finalText ?? m.text,
-              error: isFail ? (event as { error?: string }).error ?? m.error : m.error,
+              error: isFail ? ((event as { error?: string }).error ?? m.error) : m.error,
               endedAt: m.endedAt ?? now(),
             };
           }
@@ -1087,10 +1086,7 @@ export function appendAskUserMessage(
 ): MessagesReducerState {
   return {
     ...state,
-    messages: [
-      ...state.messages,
-      { kind: "ask_user", id: freshId("ask"), ...payload },
-    ],
+    messages: [...state.messages, { kind: "ask_user", id: freshId("ask"), ...payload }],
   };
 }
 
@@ -1102,9 +1098,7 @@ export function markAskUserAnswered(
   return {
     ...state,
     messages: state.messages.map((m) =>
-      m.kind === "ask_user" && m.requestId === requestId
-        ? { ...m, answer }
-        : m,
+      m.kind === "ask_user" && m.requestId === requestId ? { ...m, answer } : m,
     ),
   };
 }

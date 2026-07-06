@@ -144,10 +144,7 @@ export function migrateBucketOverride<V>(
   return { ...rest, [toBucket]: value };
 }
 
-export function clearBucketOverride<V>(
-  prev: Record<string, V>,
-  bucket: string,
-): Record<string, V> {
+export function clearBucketOverride<V>(prev: Record<string, V>, bucket: string): Record<string, V> {
   if (!(bucket in prev)) return prev;
   const { [bucket]: _drop, ...rest } = prev;
   return rest;
@@ -260,7 +257,8 @@ function panelStateKey(bucket: string): string {
 /** Load the saved panel state for a bucket, or a closed/empty default. */
 export function loadPanelState<K extends string = string>(bucket: string): PanelStateSnapshot<K> {
   try {
-    if (typeof localStorage === "undefined") return { ...(EMPTY_PANEL_STATE as PanelStateSnapshot<K>) };
+    if (typeof localStorage === "undefined")
+      return { ...(EMPTY_PANEL_STATE as PanelStateSnapshot<K>) };
     const raw = localStorage.getItem(panelStateKey(bucket));
     if (!raw) return { ...(EMPTY_PANEL_STATE as PanelStateSnapshot<K>) };
     const parsed = JSON.parse(raw) as Partial<PanelStateSnapshot<K>>;
@@ -296,7 +294,10 @@ export function clearPanelState(bucket: string): void {
 }
 
 /** Persist a bucket's panel state. Closed + empty clears the key to avoid clutter. */
-export function savePanelState<K extends string>(bucket: string, state: PanelStateSnapshot<K>): void {
+export function savePanelState<K extends string>(
+  bucket: string,
+  state: PanelStateSnapshot<K>,
+): void {
   try {
     if (typeof localStorage === "undefined") return;
     if (!state.open && state.tabs.length === 0) {
@@ -374,7 +375,7 @@ export function loadSessionIndex(repoId: string | null): SessionIndex {
       activeSessionId:
         parsed.activeSessionId !== undefined
           ? parsed.activeSessionId
-          : parsed.sessions[0]?.id ?? null,
+          : (parsed.sessions[0]?.id ?? null),
       // Carry the deleted-project label through so the archived-sessions view
       // can still name a removed project. Only string values survive.
       ...(typeof parsed.deletedProjectLabel === "string"
@@ -404,9 +405,7 @@ const INDEX_KEY_PREFIX = "codeshell.sessionIndex.";
  * localStorage for those orphaned-but-archived indices so they survive a refresh.
  * Returns a `{ repoId: SessionIndex }` map (never includes the no-repo bucket).
  */
-export function loadDeletedArchivedIndices(
-  liveRepoIds: Set<string>,
-): Record<string, SessionIndex> {
+export function loadDeletedArchivedIndices(liveRepoIds: Set<string>): Record<string, SessionIndex> {
   const out: Record<string, SessionIndex> = {};
   try {
     if (typeof localStorage === "undefined") return out;
@@ -426,10 +425,7 @@ export function loadDeletedArchivedIndices(
   return out;
 }
 
-export function loadTranscript(
-  repoId: string | null,
-  sessionId: string,
-): MessagesReducerState {
+export function loadTranscript(repoId: string | null, sessionId: string): MessagesReducerState {
   try {
     const raw = localStorage.getItem(transcriptKey(repoId, sessionId));
     if (!raw) return INITIAL_STATE;
@@ -441,13 +437,22 @@ export function loadTranscript(
       streamingThinkingId: parsed.streamingThinkingId ?? null,
       sessionId: parsed.sessionId ?? null,
       promptTokens: parsed.promptTokens ?? 0,
-      // Session-cumulative cache/prompt totals: persisted so the "本会话累计
-      // 命中率" tooltip survives a refresh / localStorage reload (the cumulative
-      // usage_update isn't replayed from the transcript). Absent on legacy
-      // saved transcripts → 0.
-      sessionCacheReadTokens: parsed.sessionCacheReadTokens ?? 0,
-      sessionCacheCreationTokens: parsed.sessionCacheCreationTokens ?? 0,
-      sessionPromptTokens: parsed.sessionPromptTokens ?? 0,
+      singleTurnPromptTokens: parsed.singleTurnPromptTokens ?? 0,
+      singleTurnCacheReadTokens: parsed.singleTurnCacheReadTokens ?? 0,
+      singleTurnCacheCreationTokens: parsed.singleTurnCacheCreationTokens ?? 0,
+      // Whole-session cache/prompt totals: persisted so the cumulative hit-rate
+      // tooltip survives a refresh / localStorage reload. Legacy saved
+      // transcripts used session* names, so fall back to those.
+      cumulativePromptTokens: parsed.cumulativePromptTokens ?? parsed.sessionPromptTokens ?? 0,
+      cumulativeCacheReadTokens:
+        parsed.cumulativeCacheReadTokens ?? parsed.sessionCacheReadTokens ?? 0,
+      cumulativeCacheCreationTokens:
+        parsed.cumulativeCacheCreationTokens ?? parsed.sessionCacheCreationTokens ?? 0,
+      sessionCacheReadTokens:
+        parsed.cumulativeCacheReadTokens ?? parsed.sessionCacheReadTokens ?? 0,
+      sessionCacheCreationTokens:
+        parsed.cumulativeCacheCreationTokens ?? parsed.sessionCacheCreationTokens ?? 0,
+      sessionPromptTokens: parsed.cumulativePromptTokens ?? parsed.sessionPromptTokens ?? 0,
       activeAgents: parsed.activeAgents ?? {},
       agentMessageIndex: parsed.agentMessageIndex ?? {},
       turnEpoch: parsed.turnEpoch ?? 0,
@@ -540,16 +545,11 @@ export function createSession(
   return { index: next, sessionId: id };
 }
 
-export function deleteSessionLocal(
-  repoId: string | null,
-  sessionId: string,
-): SessionIndex {
+export function deleteSessionLocal(repoId: string | null, sessionId: string): SessionIndex {
   const idx = loadSessionIndex(repoId);
   const remaining = idx.sessions.filter((s) => s.id !== sessionId);
   const nextActive =
-    idx.activeSessionId === sessionId
-      ? remaining[0]?.id ?? null
-      : idx.activeSessionId;
+    idx.activeSessionId === sessionId ? (remaining[0]?.id ?? null) : idx.activeSessionId;
   const next: SessionIndex = { sessions: remaining, activeSessionId: nextActive };
   saveSessionIndex(repoId, next);
   clearTranscript(repoId, sessionId);
@@ -571,9 +571,7 @@ export function updateSessionRunStatus(
   const idx = loadSessionIndex(repoId);
   const next: SessionIndex = {
     ...idx,
-    sessions: idx.sessions.map((s) =>
-      s.id === sessionId ? { ...s, runStatus } : s,
-    ),
+    sessions: idx.sessions.map((s) => (s.id === sessionId ? { ...s, runStatus } : s)),
   };
   saveSessionIndex(repoId, next);
   return next;
@@ -588,9 +586,7 @@ export function bindEngineSession(
   const idx = loadSessionIndex(repoId);
   const next: SessionIndex = {
     ...idx,
-    sessions: idx.sessions.map((s) =>
-      s.id === sessionId ? { ...s, engineSessionId } : s,
-    ),
+    sessions: idx.sessions.map((s) => (s.id === sessionId ? { ...s, engineSessionId } : s)),
   };
   saveSessionIndex(repoId, next);
   return next;
@@ -629,13 +625,10 @@ export function archiveSession(
   const idx = loadSessionIndex(repoId);
   const next: SessionIndex = {
     ...idx,
-    sessions: idx.sessions.map((s) =>
-      s.id === sessionId ? { ...s, archived } : s,
-    ),
+    sessions: idx.sessions.map((s) => (s.id === sessionId ? { ...s, archived } : s)),
     // If we just archived the active session, clear it (the chat surface
     // returns to draft state until the user picks another).
-    activeSessionId:
-      archived && idx.activeSessionId === sessionId ? null : idx.activeSessionId,
+    activeSessionId: archived && idx.activeSessionId === sessionId ? null : idx.activeSessionId,
   };
   saveSessionIndex(repoId, next);
   return next;
@@ -650,10 +643,7 @@ export function archiveSession(
  * caller can keep it in `sessionIndices` state (the project row is gone from
  * the sidebar regardless, since the sidebar iterates `repos`).
  */
-export function archiveAllSessions(
-  repoId: string | null,
-  projectLabel: string,
-): SessionIndex {
+export function archiveAllSessions(repoId: string | null, projectLabel: string): SessionIndex {
   const idx = loadSessionIndex(repoId);
   const next: SessionIndex = {
     ...idx,
@@ -713,10 +703,7 @@ export function touchSession(
   return next;
 }
 
-export function setActiveSession(
-  repoId: string | null,
-  sessionId: string | null,
-): SessionIndex {
+export function setActiveSession(repoId: string | null, sessionId: string | null): SessionIndex {
   const idx = loadSessionIndex(repoId);
   const next: SessionIndex = { ...idx, activeSessionId: sessionId };
   saveSessionIndex(repoId, next);

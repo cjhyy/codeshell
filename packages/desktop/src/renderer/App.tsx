@@ -145,7 +145,9 @@ import { catalogModelOptions, type ModelInstance } from "./settings/textConnecti
 // can't drift from Sidebar's row lookup.
 const GLOBAL_KEY = NO_REPO_KEY;
 
-function toMobilePermissionMode(mode: PermissionMode | null | undefined): MobilePermissionMode | null {
+function toMobilePermissionMode(
+  mode: PermissionMode | null | undefined,
+): MobilePermissionMode | null {
   switch (mode) {
     case "accept_edits":
       return "acceptEdits";
@@ -208,7 +210,11 @@ function hydratePanelBucketState(bucket: string): PanelBucketState {
   return { ...snap, requestNonce: 0, requestKind: null };
 }
 
-function parsePanelBucket(bucket: string): { repoKey: string; repoId: string | null; sessionId: string | null } {
+function parsePanelBucket(bucket: string): {
+  repoKey: string;
+  repoId: string | null;
+  sessionId: string | null;
+} {
   const sep = bucket.indexOf("::");
   const repoKey = sep >= 0 ? bucket.slice(0, sep) : bucket;
   const rawSessionId = sep >= 0 ? bucket.slice(sep + 2) : null;
@@ -258,7 +264,9 @@ function App() {
   const [defaultPermissionMode, setDefaultPermissionMode] = useState<PermissionMode | null>(null);
   // Provider-agnostic image clarity (low/standard/high) from merged settings;
   // drives renderer-side downscale before send. Undefined = follow default.
-  const [imageDetail, setImageDetail] = useState<"low" | "standard" | "high" | undefined>(undefined);
+  const [imageDetail, setImageDetail] = useState<"low" | "standard" | "high" | undefined>(
+    undefined,
+  );
   // Seed from localStorage so a refresh (F5) keeps each session's permission
   // choice — without this the map reset to {} on remount and every session
   // fell back to the default mode (a 完全访问 session silently reverted to 默认).
@@ -273,12 +281,12 @@ function App() {
    * 的模型": each session remembers its own model, and changing the global
    * default never overwrites an existing bucket's entry.
    */
-  const [modelOverrides, setModelOverrides] = useState<Record<string, string>>(
-    () => loadOverrideMap<string>("model"),
+  const [modelOverrides, setModelOverrides] = useState<Record<string, string>>(() =>
+    loadOverrideMap<string>("model"),
   );
   /** Per-bucket Goal-mode toggle (orthogonal to permission). */
-  const [goalOverrides, setGoalOverrides] = useState<Record<string, boolean>>(
-    () => loadOverrideMap<boolean>("goal"),
+  const [goalOverrides, setGoalOverrides] = useState<Record<string, boolean>>(() =>
+    loadOverrideMap<boolean>("goal"),
   );
   const [settingsRevision, setSettingsRevision] = useState(0);
   const [collapsedRepos, setCollapsedRepos] = useState<Set<string>>(new Set());
@@ -295,10 +303,7 @@ function App() {
     // Re-surface deleted projects' all-archived indices so 设置→高级→已归档
     // still lists them (under their original name) after a restart — App only
     // seeds from live repos above, which a removed project is no longer in.
-    Object.assign(
-      out,
-      loadDeletedArchivedIndices(new Set(liveRepos.map((r) => r.id))),
-    );
+    Object.assign(out, loadDeletedArchivedIndices(new Set(liveRepos.map((r) => r.id))));
     return out;
   });
 
@@ -316,8 +321,7 @@ function App() {
   };
 
   const activeRepoKey = repoKeyOf(activeRepoId);
-  const activeSessionId =
-    sessionIndices[activeRepoKey]?.activeSessionId ?? null;
+  const activeSessionId = sessionIndices[activeRepoKey]?.activeSessionId ?? null;
   const activeBucket = bucketKey(activeRepoId, activeSessionId);
   const permissionMode = permissionOverrides[activeBucket] ?? defaultPermissionMode;
   // The model shown/used for the ACTIVE session: its own override if it has
@@ -342,7 +346,9 @@ function App() {
       return { ...prev, [activeBucket]: { ...current, text } };
     });
   };
-  const setComposerDraftAttachments: React.Dispatch<React.SetStateAction<ImageAttachment[]>> = (next) => {
+  const setComposerDraftAttachments: React.Dispatch<React.SetStateAction<ImageAttachment[]>> = (
+    next,
+  ) => {
     setComposerDrafts((prev) => {
       const current = prev[activeBucket] ?? { text: "", attachments: EMPTY_ATTACHMENTS };
       const attachments = typeof next === "function" ? next(current.attachments) : next;
@@ -418,9 +424,7 @@ function App() {
    */
   const sessionIndicesRef = useRef(sessionIndices);
   /** Per-bucket event coalescers — buffer rapid text_delta / tool_use_args_delta. */
-  const coalescersRef = useRef<Map<string, ReturnType<typeof createEventCoalescer>>>(
-    new Map(),
-  );
+  const coalescersRef = useRef<Map<string, ReturnType<typeof createEventCoalescer>>>(new Map());
   const permissionModeRef = useRef<PermissionMode | null>(permissionMode);
   /**
    * Repo keys already probed for a disk rebuild this session. Guards against an
@@ -437,9 +441,7 @@ function App() {
    * default. Used to honor 完全访问权限 (bypass) by auto-approving requests
    * that still reach the renderer.
    */
-  const permissionForBucketRef = useRef<(bucket: string) => PermissionMode | null>(
-    () => null,
-  );
+  const permissionForBucketRef = useRef<(bucket: string) => PermissionMode | null>(() => null);
   const defaultPermissionModeRef = useRef<PermissionMode | null>(null);
   const activeRepo = repos.find((r) => r.id === activeRepoId) ?? null;
   const [activeGitMeta, setActiveGitMeta] = useState<{
@@ -511,7 +513,9 @@ function App() {
     return map;
   }, [approvalQueue, sessionIndices, busyKeys, unreadBuckets]);
 
-  useEffect(() => { saveRepos(repos); }, [repos]);
+  useEffect(() => {
+    saveRepos(repos);
+  }, [repos]);
   useEffect(() => {
     let cancelled = false;
     void window.codeshell
@@ -561,18 +565,20 @@ function App() {
       );
       const seenMissing = new Set<string>();
       const missing = normalizedCached.filter((r) => {
-        if (onDisk.has(r.path) || isRepoPathRemoved(r.path) || seenMissing.has(r.path)) return false;
+        if (onDisk.has(r.path) || isRepoPathRemoved(r.path) || seenMissing.has(r.path))
+          return false;
         seenMissing.add(r.path);
         return true;
       });
-      const latestDisk = missing.length > 0
-        ? await (async () => {
-            for (const r of missing) {
-              await window.codeshell.projects.add({ path: r.path, name: r.name });
-            }
-            return window.codeshell.projects.list();
-          })()
-        : disk;
+      const latestDisk =
+        missing.length > 0
+          ? await (async () => {
+              for (const r of missing) {
+                await window.codeshell.projects.add({ path: r.path, name: r.name });
+              }
+              return window.codeshell.projects.list();
+            })()
+          : disk;
       const { repos: reconciled, repoIdRemap } = reconcileReposFromDiskWithRemap(
         latestDisk,
         normalizedCached,
@@ -634,24 +640,47 @@ function App() {
         add(s.id, mode);
       }
     }
-    void window.codeshell.mobileRemote.updatePermissionModes(entries).catch((err) =>
-      window.codeshell.log("mobile.permissionModes.update.failed", { error: String(err) }),
-    );
+    void window.codeshell.mobileRemote
+      .updatePermissionModes(entries)
+      .catch((err) =>
+        window.codeshell.log("mobile.permissionModes.update.failed", { error: String(err) }),
+      );
   }, [sessionIndices, permissionOverrides, defaultPermissionMode]);
-  useEffect(() => { saveActiveRepoId(activeRepoId); }, [activeRepoId]);
-  useEffect(() => { saveView(view); }, [view]);
+  useEffect(() => {
+    saveActiveRepoId(activeRepoId);
+  }, [activeRepoId]);
+  useEffect(() => {
+    saveView(view);
+  }, [view]);
   // Persist per-bucket overrides so they survive a refresh (see the seeded
   // useState initializers above). Each write mirrors loadOverrideMap's namespace.
-  useEffect(() => { saveOverrideMap("permission", permissionOverrides); }, [permissionOverrides]);
-  useEffect(() => { saveOverrideMap("model", modelOverrides); }, [modelOverrides]);
-  useEffect(() => { saveOverrideMap("goal", goalOverrides); }, [goalOverrides]);
-  useEffect(() => { activeBucketRef.current = activeBucket; }, [activeBucket]);
+  useEffect(() => {
+    saveOverrideMap("permission", permissionOverrides);
+  }, [permissionOverrides]);
+  useEffect(() => {
+    saveOverrideMap("model", modelOverrides);
+  }, [modelOverrides]);
+  useEffect(() => {
+    saveOverrideMap("goal", goalOverrides);
+  }, [goalOverrides]);
+  useEffect(() => {
+    activeBucketRef.current = activeBucket;
+  }, [activeBucket]);
   // Fetch the no-repo sandbox cwd once; a no-repo send passes it explicitly.
   useEffect(() => {
-    window.codeshell.noRepoCwd().then((p) => { noRepoCwdRef.current = p; }).catch(() => {});
+    window.codeshell
+      .noRepoCwd()
+      .then((p) => {
+        noRepoCwdRef.current = p;
+      })
+      .catch(() => {});
   }, []);
-  useEffect(() => { sessionIndicesRef.current = sessionIndices; }, [sessionIndices]);
-  useEffect(() => { permissionModeRef.current = permissionMode; }, [permissionMode]);
+  useEffect(() => {
+    sessionIndicesRef.current = sessionIndices;
+  }, [sessionIndices]);
+  useEffect(() => {
+    permissionModeRef.current = permissionMode;
+  }, [permissionMode]);
   useEffect(() => {
     permissionForBucketRef.current = (bucket: string): PermissionMode | null =>
       permissionOverrides[bucket] ?? defaultPermissionMode;
@@ -695,9 +724,12 @@ function App() {
     let cancelled = false;
     if (!activeRepo?.path) {
       setActiveGitMeta({ branch: null, clean: null });
-      return () => { cancelled = true; };
+      return () => {
+        cancelled = true;
+      };
     }
-    void window.codeshell.getGitStatus(activeRepo.path)
+    void window.codeshell
+      .getGitStatus(activeRepo.path)
       .then((status) => {
         if (!cancelled) {
           setActiveGitMeta({
@@ -709,7 +741,9 @@ function App() {
       .catch(() => {
         if (!cancelled) setActiveGitMeta({ branch: null, clean: null });
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [activeRepo?.path, busy]);
 
   // No auto-create here: a null activeSessionId is the legitimate
@@ -731,9 +765,7 @@ function App() {
     if (!activeSessionId) return;
     if (transcripts[activeBucket]) return;
     const local = loadTranscript(activeRepoId, activeSessionId);
-    const summary = sessionIndices[activeRepoKey]?.sessions.find(
-      (s) => s.id === activeSessionId,
-    );
+    const summary = sessionIndices[activeRepoKey]?.sessions.find((s) => s.id === activeSessionId);
     const engineId = summary?.engineSessionId;
     const bucket = activeBucket;
     let cancelled = false;
@@ -930,9 +962,7 @@ function App() {
     // 设置→高级→已归档 under their original project name. The project row still
     // leaves the sidebar (the sidebar iterates `repos`), but the conversations
     // survive instead of silently vanishing from localStorage.
-    const archived = repo
-      ? archiveAllSessions(id, repoLabel(repo))
-      : undefined;
+    const archived = repo ? archiveAllSessions(id, repoLabel(repo)) : undefined;
     setRepos((prev) => prev.filter((r) => r.id !== id));
     if (activeRepoId === id) setActiveRepoId(null);
     setSessionIndices((prev) => {
@@ -1029,7 +1059,9 @@ function App() {
     setView((v) => ({ ...v, viewMode: "chat" }));
   };
 
-  const findSessionByEngineId = (engineSessionId: string): { repoId: string | null; session: SessionSummary } | null => {
+  const findSessionByEngineId = (
+    engineSessionId: string,
+  ): { repoId: string | null; session: SessionSummary } | null => {
     const reposNow = loadRepos();
     for (const repoId of [null as string | null, ...reposNow.map((r) => r.id)]) {
       const session = loadSessionIndex(repoId).sessions.find(
@@ -1066,17 +1098,19 @@ function App() {
     const touchedRepoIds = new Set<string | null>();
     const repoFactory = makeCreateRepoForCwd(reposNow);
     await importAutomationRuns(
-      [{
-        runId: run.runId,
-        sessionId: run.sessionId,
-        cwd: await resolveProjectCwd(run.cwd),
-        objective: run.objective,
-        status: run.status,
-        finishedAt: run.finishedAt,
-        createdAt: run.createdAt,
-        source: "automation",
-        cronJobName: run.cronJobName,
-      }],
+      [
+        {
+          runId: run.runId,
+          sessionId: run.sessionId,
+          cwd: await resolveProjectCwd(run.cwd),
+          objective: run.objective,
+          status: run.status,
+          finishedAt: run.finishedAt,
+          createdAt: run.createdAt,
+          source: "automation",
+          cronJobName: run.cronJobName,
+        },
+      ],
       reposNow,
       {
         caseInsensitive: isCaseInsensitivePlatform(),
@@ -1166,11 +1200,7 @@ function App() {
     setView((v) => ({ ...v, viewMode: "chat" }));
   };
 
-  const handleRenameSession = (
-    repoId: string | null,
-    sessionId: string,
-    title: string,
-  ): void => {
+  const handleRenameSession = (repoId: string | null, sessionId: string, title: string): void => {
     const next = renameSessionLocal(repoId, sessionId, title, true);
     setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
   };
@@ -1184,10 +1214,7 @@ function App() {
     setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
   };
 
-  const handleDeleteSession = (
-    repoId: string | null,
-    sessionId: string,
-  ): void => {
+  const handleDeleteSession = (repoId: string | null, sessionId: string): void => {
     // Capture source/runId BEFORE wiping the local entry — needed to also
     // remove the on-disk session + run dirs.
     const summary = sessionIndices[repoKeyOf(repoId)]?.sessions.find((s) => s.id === sessionId);
@@ -1212,22 +1239,39 @@ function App() {
     // IPC does closeSession(reap shells) → deleteSession(rm dir) → forgetSession.
     // Automation additionally cancels the in-flight run first (so it stops
     // rewriting the dir we're about to delete) and clears any legacy run dir.
-    const plan = planSessionDeletion(summary ?? { id: sessionId, title: "", createdAt: 0, updatedAt: 0 });
+    const plan = planSessionDeletion(
+      summary ?? { id: sessionId, title: "", createdAt: 0, updatedAt: 0 },
+    );
     void (async () => {
       if (plan.cancelCronJobId) {
-        await window.codeshell.cancelAutomationRun(plan.cancelCronJobId).catch((e) =>
-          window.codeshell.log("session.delete.cancel.failed", { cronJobId: plan.cancelCronJobId, error: String(e) }),
-        );
+        await window.codeshell
+          .cancelAutomationRun(plan.cancelCronJobId)
+          .catch((e) =>
+            window.codeshell.log("session.delete.cancel.failed", {
+              cronJobId: plan.cancelCronJobId,
+              error: String(e),
+            }),
+          );
       }
-      await window.codeshell.deleteSession(plan.deleteEngineId).catch((e) =>
-        window.codeshell.log("session.delete.session.failed", { engineId: plan.deleteEngineId, error: String(e) }),
-      );
+      await window.codeshell
+        .deleteSession(plan.deleteEngineId)
+        .catch((e) =>
+          window.codeshell.log("session.delete.session.failed", {
+            engineId: plan.deleteEngineId,
+            error: String(e),
+          }),
+        );
       // deleteRun is a no-op for current jobs (which write sessions/, not
       // runs/), but still clears legacy RunManager-era run dirs.
       if (plan.deleteRunId) {
-        await window.codeshell.deleteRun(plan.deleteRunId).catch((e) =>
-          window.codeshell.log("session.delete.run.failed", { runId: plan.deleteRunId, error: String(e) }),
-        );
+        await window.codeshell
+          .deleteRun(plan.deleteRunId)
+          .catch((e) =>
+            window.codeshell.log("session.delete.run.failed", {
+              runId: plan.deleteRunId,
+              error: String(e),
+            }),
+          );
       }
     })();
   };
@@ -1314,7 +1358,9 @@ function App() {
         });
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Rebuild an empty repo's session list from disk (localStorage cleared/lost).
@@ -1372,9 +1418,7 @@ function App() {
   function getCoalescer(bucket: string) {
     let c = coalescersRef.current.get(bucket);
     if (!c) {
-      c = createEventCoalescer((events) =>
-        dispatch({ type: "stream_batch", bucket, events }),
-      );
+      c = createEventCoalescer((events) => dispatch({ type: "stream_batch", bucket, events }));
       coalescersRef.current.set(bucket, c);
     }
     return c;
@@ -1568,24 +1612,16 @@ function App() {
       // Idempotency: if any repo already has this engine session (a prior
       // announce, or a disk-backfilled import), don't duplicate.
       const reposNow = loadRepos();
-      const alreadyKnown =
-        [null as string | null, ...reposNow.map((r) => r.id)].some((rid) =>
-          loadSessionIndex(rid).sessions.some(
-            (s) => s.engineSessionId === meta.sessionId,
-          ),
-        );
+      const alreadyKnown = [null as string | null, ...reposNow.map((r) => r.id)].some((rid) =>
+        loadSessionIndex(rid).sessions.some((s) => s.engineSessionId === meta.sessionId),
+      );
       if (alreadyKnown) {
         // Still (re)register the route in case the table was wiped by a remount.
         const knownRepoId =
           [null as string | null, ...reposNow.map((r) => r.id)].find((rid) =>
-            loadSessionIndex(rid).sessions.some(
-              (s) => s.engineSessionId === meta.sessionId,
-            ),
+            loadSessionIndex(rid).sessions.some((s) => s.engineSessionId === meta.sessionId),
           ) ?? null;
-        engineToBucketRef.current.set(
-          meta.sessionId,
-          bucketKey(knownRepoId, meta.sessionId),
-        );
+        engineToBucketRef.current.set(meta.sessionId, bucketKey(knownRepoId, meta.sessionId));
         return;
       }
       void (async () => {
@@ -1594,17 +1630,11 @@ function App() {
           cwd: await resolveProjectCwd(meta.cwd),
         };
         const reposAfterResolve = loadRepos();
-        const existingRepoId =
-          [null as string | null, ...reposAfterResolve.map((r) => r.id)].find((rid) =>
-            loadSessionIndex(rid).sessions.some(
-              (s) => s.engineSessionId === meta.sessionId,
-            ),
-          );
+        const existingRepoId = [null as string | null, ...reposAfterResolve.map((r) => r.id)].find(
+          (rid) => loadSessionIndex(rid).sessions.some((s) => s.engineSessionId === meta.sessionId),
+        );
         if (existingRepoId !== undefined) {
-          engineToBucketRef.current.set(
-            meta.sessionId,
-            bucketKey(existingRepoId, meta.sessionId),
-          );
+          engineToBucketRef.current.set(meta.sessionId, bucketKey(existingRepoId, meta.sessionId));
           return;
         }
         const repoFactory = makeCreateRepoForCwd(reposAfterResolve);
@@ -1674,14 +1704,16 @@ function App() {
         const repoFactory = makeCreateRepoForCwd(reposNow);
         const now = Date.now();
         const [placement] = planDiskRebuild(
-          [{
-            id: meta.sessionId,
-            engineSessionId: meta.sessionId,
-            cwd: meta.cwd,
-            title,
-            updatedAt: now,
-            origin: "desktop",
-          }],
+          [
+            {
+              id: meta.sessionId,
+              engineSessionId: meta.sessionId,
+              cwd: meta.cwd,
+              title,
+              updatedAt: now,
+              origin: "desktop",
+            },
+          ],
           reposNow,
           {
             caseInsensitive: isCaseInsensitivePlatform(),
@@ -1720,30 +1752,27 @@ function App() {
       if (env.request.toolName === "__ask_user__") {
         const args = (env.request.args ?? {}) as Record<string, unknown>;
         const question =
-          (typeof args.question === "string" && args.question) ||
-          env.request.description ||
-          "";
+          (typeof args.question === "string" && args.question) || env.request.description || "";
         const header = typeof args.header === "string" ? args.header : undefined;
         const multiSelect = args.multiSelect === true;
         const optionsOnly = args.optionsOnly === true;
-        const options =
-          Array.isArray(args.options)
-            ? (args.options as unknown[])
-                .filter(
-                  (o): o is { label: string; description: string; tone?: unknown } =>
-                    !!o &&
-                    typeof o === "object" &&
-                    typeof (o as Record<string, unknown>).label === "string" &&
-                    typeof (o as Record<string, unknown>).description === "string",
-                )
-                .map((o): AskUserOption => {
-                  const tone: AskUserOption["tone"] =
-                    o.tone === "ok" || o.tone === "danger" || o.tone === "neutral"
-                      ? o.tone
-                      : undefined;
-                  return { label: o.label, description: o.description, ...(tone ? { tone } : {}) };
-                })
-            : undefined;
+        const options = Array.isArray(args.options)
+          ? (args.options as unknown[])
+              .filter(
+                (o): o is { label: string; description: string; tone?: unknown } =>
+                  !!o &&
+                  typeof o === "object" &&
+                  typeof (o as Record<string, unknown>).label === "string" &&
+                  typeof (o as Record<string, unknown>).description === "string",
+              )
+              .map((o): AskUserOption => {
+                const tone: AskUserOption["tone"] =
+                  o.tone === "ok" || o.tone === "danger" || o.tone === "neutral"
+                    ? o.tone
+                    : undefined;
+                return { label: o.label, description: o.description, ...(tone ? { tone } : {}) };
+              })
+          : undefined;
         // Resolve the ORIGINATING session's bucket via the shared resolver
         // (live table → on-disk index reverse lookup → runningBucket only when
         // there's no sessionId). When a sessionId is present but unresolvable
@@ -1813,18 +1842,20 @@ function App() {
       setApprovalQueue((q) => [...q, env]);
       setApproval((cur) => cur ?? env);
     });
-    const offApprovalResolved = window.codeshell.onApprovalResolved((env: ApprovalResolvedEnvelope) => {
-      if (!env.requestId) return;
-      approvalBucketsRef.current.delete(env.requestId);
-      setApprovalQueue((prev) => {
-        const remaining = prev.filter((e) => e.requestId !== env.requestId);
-        setApproval((cur) => {
-          if (!cur || cur.requestId === env.requestId) return remaining[0] ?? null;
-          return cur;
+    const offApprovalResolved = window.codeshell.onApprovalResolved(
+      (env: ApprovalResolvedEnvelope) => {
+        if (!env.requestId) return;
+        approvalBucketsRef.current.delete(env.requestId);
+        setApprovalQueue((prev) => {
+          const remaining = prev.filter((e) => e.requestId !== env.requestId);
+          setApproval((cur) => {
+            if (!cur || cur.requestId === env.requestId) return remaining[0] ?? null;
+            return cur;
+          });
+          return remaining;
         });
-        return remaining;
-      });
-    });
+      },
+    );
     const offMobilePermissionMode = window.codeshell.onMobilePermissionMode(
       (env: MobilePermissionModeEnvelope) => {
         if (!env.sessionId) return;
@@ -1863,7 +1894,8 @@ function App() {
     const offLifecycle = window.codeshell.onAgentLifecycle((evt: AgentLifecycleEvent) => {
       window.codeshell.log("lifecycle", evt as Record<string, unknown>);
       if (evt.type === "restarted") setLifecycle("Agent restarted.");
-      else if (evt.type === "gave_up") setLifecycle("Agent crashed too many times. Quit and reopen.");
+      else if (evt.type === "gave_up")
+        setLifecycle("Agent crashed too many times. Quit and reopen.");
       else if (evt.type === "exited") {
         if (evt.code === 0) setLifecycle(null);
         else setLifecycle(`Agent exited (code ${evt.code}).`);
@@ -1950,8 +1982,8 @@ function App() {
     // new sessions we use the UI sessionId directly as the engine
     // sessionId so the engineToBucket route is populated synchronously.
     const summary =
-      sessionIndices[repoKey]?.sessions.find((s) => s.id === sid)
-      ?? loadSessionIndex(targetRepoId).sessions.find((s) => s.id === sid);
+      sessionIndices[repoKey]?.sessions.find((s) => s.id === sid) ??
+      loadSessionIndex(targetRepoId).sessions.find((s) => s.id === sid);
     const engineSessionId = summary?.engineSessionId ?? sid;
 
     window.codeshell.log("send", {
@@ -2040,7 +2072,8 @@ function App() {
       text,
       opts,
       run: window.codeshell.run,
-    }).then((r) => {
+    })
+      .then((r) => {
         // Belt-and-braces: clear busy for THIS run's bucket even if the
         // stream never delivered turn_complete (e.g. error in setup, or
         // the worker shutdown before flushing the event). Use the closed-
@@ -2064,11 +2097,7 @@ function App() {
         // as a turn_end(error) line in the stream + an error toast.
         const result = r as { reason?: string; text?: string } | null;
         const reason = result?.reason;
-        if (
-          reason === "image_error" ||
-          reason === "model_error" ||
-          reason === "prompt_too_long"
-        ) {
+        if (reason === "image_error" || reason === "model_error" || reason === "prompt_too_long") {
           const detail = result?.text?.replace(/^ERROR:\s*/, "") || t("misc.app.requestRejected");
           dispatch({ type: "turn_end", bucket, reason: "error", detail });
           toast({ message: detail, variant: "error" });
@@ -2315,10 +2344,11 @@ function App() {
     const uiSessionId = sep > 0 ? bucket.slice(sep + 2) : null;
     const repoKey = sep > 0 ? bucket.slice(0, sep) : null;
     const repoId = repoKey === GLOBAL_KEY || repoKey === null ? null : repoKey;
-    const summary = uiSessionId && uiSessionId !== "_none_"
-      ? sessionIndices[repoKey ?? GLOBAL_KEY]?.sessions.find((s) => s.id === uiSessionId)
-        ?? loadSessionIndex(repoId).sessions.find((s) => s.id === uiSessionId)
-      : undefined;
+    const summary =
+      uiSessionId && uiSessionId !== "_none_"
+        ? (sessionIndices[repoKey ?? GLOBAL_KEY]?.sessions.find((s) => s.id === uiSessionId) ??
+          loadSessionIndex(repoId).sessions.find((s) => s.id === uiSessionId))
+        : undefined;
     const engineSessionId = summary?.engineSessionId ?? uiSessionId ?? undefined;
     window.codeshell.log("stop.click", { bucket, engineSessionId });
     // Fire the cancel IPC, but don't wait for the round-trip — the
@@ -2346,11 +2376,10 @@ function App() {
 
   const resolveEngineSessionIdForBucket = (bucket: string): string | undefined => {
     const { repoKey, repoId, sessionId: uiSessionId } = parsePanelBucket(bucket);
-    const summary =
-      uiSessionId
-        ? sessionIndices[repoKey]?.sessions.find((s) => s.id === uiSessionId) ??
-          loadSessionIndex(repoId).sessions.find((s) => s.id === uiSessionId)
-        : undefined;
+    const summary = uiSessionId
+      ? (sessionIndices[repoKey]?.sessions.find((s) => s.id === uiSessionId) ??
+        loadSessionIndex(repoId).sessions.find((s) => s.id === uiSessionId))
+      : undefined;
     return summary?.engineSessionId ?? uiSessionId ?? undefined;
   };
 
@@ -2419,9 +2448,9 @@ function App() {
   }): void => {
     const engineSessionId = resolveActiveEngineSessionId();
     if (!engineSessionId) return;
-    void window.codeshell.goalExtend(engineSessionId, opts).catch((e) =>
-      window.codeshell.log("goal.extend.failed", { error: String(e) }),
-    );
+    void window.codeshell
+      .goalExtend(engineSessionId, opts)
+      .catch((e) => window.codeshell.log("goal.extend.failed", { error: String(e) }));
   };
 
   const decideEnvelope = (
@@ -2439,10 +2468,25 @@ function App() {
     const approvePathScope = decision === "approve" ? pathScope : undefined;
     if (env.sessionId) {
       // (sessionId, requestId, decision, reason, answer, scope, pathScope)
-      void window.codeshell.approve(env.sessionId, env.requestId, decision, reason, undefined, approveScope, approvePathScope);
+      void window.codeshell.approve(
+        env.sessionId,
+        env.requestId,
+        decision,
+        reason,
+        undefined,
+        approveScope,
+        approvePathScope,
+      );
     } else {
       // Legacy (requestId, decision, reason, answer, scope, pathScope)
-      void window.codeshell.approve(env.requestId, decision, reason, undefined, approveScope, approvePathScope);
+      void window.codeshell.approve(
+        env.requestId,
+        decision,
+        reason,
+        undefined,
+        approveScope,
+        approvePathScope,
+      );
     }
     void window.codeshell.mobileRemote.notifyApprovalResolved({
       requestId: env.requestId,
@@ -2466,10 +2510,7 @@ function App() {
       // filtered list instead.
       const remaining = approvalQueue.filter((e) => e.requestId !== env.requestId);
       setApprovalQueue(remaining);
-      setApprovalHistory((h) => [
-        ...h,
-        { decision, envelope: env, reason, at: Date.now() },
-      ]);
+      setApprovalHistory((h) => [...h, { decision, envelope: env, reason, at: Date.now() }]);
       setApproval((cur) => {
         if (!cur || cur.requestId === env.requestId) {
           return remaining[0] ?? null;
@@ -2514,9 +2555,7 @@ function App() {
     setAnchorsByBucket((s) => removeAnchorFrom(s, activeAnchorBucketRef.current, id));
   };
   const updateAnchorComment = (id: string, comment: string): void => {
-    setAnchorsByBucket((s) =>
-      updateAnchorCommentIn(s, activeAnchorBucketRef.current, id, comment),
-    );
+    setAnchorsByBucket((s) => updateAnchorCommentIn(s, activeAnchorBucketRef.current, id, comment));
   };
   const clearAnchors = (): void => {
     // Clear the active bucket AND the repo's draft slot — see clearAnchorBuckets.
@@ -2528,9 +2567,9 @@ function App() {
   // mirrors Codex's thread-owned dock model: switching sessions changes which
   // PanelArea is visible; it never rewrites one session's browser/files/terminal
   // state into another session.
-  const [panelByBucket, setPanelByBucket] = useState<Record<string, PanelBucketState>>(
-    () => ({ [activeBucket]: hydratePanelBucketState(activeBucket) }),
-  );
+  const [panelByBucket, setPanelByBucket] = useState<Record<string, PanelBucketState>>(() => ({
+    [activeBucket]: hydratePanelBucketState(activeBucket),
+  }));
 
   const updatePanelBucket = useCallback(
     (targetBucket: string, updater: (state: PanelBucketState) => PanelBucketState) => {
@@ -2547,7 +2586,8 @@ function App() {
   const onRevealConsumed = useCallback(
     (targetBucket: string, nonce: number) => {
       updatePanelBucket(targetBucket, (state) => {
-        if (!state.revealFile || state.revealFile.nonce !== nonce || state.revealFile.consumed) return state;
+        if (!state.revealFile || state.revealFile.nonce !== nonce || state.revealFile.consumed)
+          return state;
         return { ...state, revealFile: { ...state.revealFile, consumed: true } };
       });
     },
@@ -2903,7 +2943,7 @@ function App() {
     const refresh = async (): Promise<void> => {
       try {
         const cwd = activeRepo?.path;
-        const projectS = cwd ? (await window.codeshell.getSettings("project", cwd)) ?? {} : {};
+        const projectS = cwd ? ((await window.codeshell.getSettings("project", cwd)) ?? {}) : {};
         const userS = (await window.codeshell.getSettings("user")) ?? {};
         const merged: Record<string, unknown> = { ...userS, ...projectS };
         // Unified catalog (统一模型接入方案 §6): the composer picker lists text
@@ -2914,10 +2954,13 @@ function App() {
         const catalog = await window.codeshell.getModelCatalog().catch(() => []);
         if (cancelled) return;
         setDefaultActiveModelKey(resolveActiveKey(merged));
-        const permissions = merged.permissions && typeof merged.permissions === "object"
-          ? (merged.permissions as Record<string, unknown>)
-          : {};
-        setDefaultPermissionMode(fromSettingsPermissionMode(merged.permissionMode ?? permissions.defaultMode));
+        const permissions =
+          merged.permissions && typeof merged.permissions === "object"
+            ? (merged.permissions as Record<string, unknown>)
+            : {};
+        setDefaultPermissionMode(
+          fromSettingsPermissionMode(merged.permissionMode ?? permissions.defaultMode),
+        );
         // Image clarity: migrate legacy "original" → "high"; anything else
         // unrecognized → undefined (follow default, no downscale).
         const rawDetail = (merged.images as { detail?: string } | undefined)?.detail;
@@ -2961,7 +3004,9 @@ function App() {
       }
     };
     void refresh();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [activeRepo, view.viewMode, settingsRevision]);
 
   useEffect(() => {
@@ -2997,9 +3042,10 @@ function App() {
       const sep = activeBucket.indexOf("::");
       const uiSessionId = sep > 0 ? activeBucket.slice(sep + 2) : null;
       const repoKey = sep > 0 ? activeBucket.slice(0, sep) : null;
-      const summary = uiSessionId && uiSessionId !== "_none_"
-        ? sessionIndices[repoKey ?? GLOBAL_KEY]?.sessions.find((s) => s.id === uiSessionId)
-        : undefined;
+      const summary =
+        uiSessionId && uiSessionId !== "_none_"
+          ? sessionIndices[repoKey ?? GLOBAL_KEY]?.sessions.find((s) => s.id === uiSessionId)
+          : undefined;
       engineSessionId = summary?.engineSessionId ?? uiSessionId ?? undefined;
     }
     if (engineSessionId) {
@@ -3050,19 +3096,17 @@ function App() {
     //    `modelOverrides[activeBucket] ?? defaultActiveModelKey`, so this is
     //    what makes the switch local — other sessions keep their own model.
     setModelOverrides((prev) => ({ ...prev, [activeBucket]: opt.key }));
-    // Zero this session's cumulative cache stats immediately: a different model
-    // has its own prompt cache, so the accumulated hit rate no longer applies.
-    // The engine also resets its persisted copy (resetSessionUsage) — this is
-    // the renderer-local mirror so the tooltip updates without a round-trip.
+    // Clear only the single-turn cache metric. Whole-session cumulative
+    // counters are monotonic from session start and must not reset here.
     dispatch({
       type: "stream",
       bucket: activeBucket,
       event: {
         type: "usage_update",
-        promptTokens: 0,
-        sessionPromptTokens: 0,
-        sessionCacheReadTokens: 0,
-        sessionCacheCreationTokens: 0,
+        promptTokens: state.promptTokens,
+        singleTurnPromptTokens: 0,
+        singleTurnCacheReadTokens: 0,
+        singleTurnCacheCreationTokens: 0,
       } as StreamEvent,
     });
     // 2) Also adopt it as the global default so the NEXT 新对话 inherits it
@@ -3094,9 +3138,7 @@ function App() {
    */
   const engineSessionIdForActive = (): string | null => {
     if (!activeSessionId) return null;
-    const summary = sessionIndices[activeRepoKey]?.sessions.find(
-      (s) => s.id === activeSessionId,
-    );
+    const summary = sessionIndices[activeRepoKey]?.sessions.find((s) => s.id === activeSessionId);
     return summary?.engineSessionId ?? activeSessionId;
   };
 
@@ -3129,10 +3171,7 @@ function App() {
   // Live-activity summary for the TopBar status popover. Recomputed
   // whenever messages change — cheap (single pass from the most
   // recent user message), no allocations beyond the returned object.
-  const liveActivity = useMemo(
-    () => summarizeLiveActivity(state.messages),
-    [state.messages],
-  );
+  const liveActivity = useMemo(() => summarizeLiveActivity(state.messages), [state.messages]);
 
   // Count background sub-agents still running in THIS session. When the model
   // spawns with run_in_background, the main run resolves immediately (busy
@@ -3143,10 +3182,7 @@ function App() {
   // agent_end), so no extra state to track. (perf/ux: bg-agent-busy-2026-06-02)
   const runningAgents = useMemo(
     () =>
-      state.messages.reduce(
-        (n, m) => (m.kind === "agent" && !m.done && !m.error ? n + 1 : n),
-        0,
-      ),
+      state.messages.reduce((n, m) => (m.kind === "agent" && !m.done && !m.error ? n + 1 : n), 0),
     [state.messages],
   );
 
@@ -3173,9 +3209,9 @@ function App() {
   const handleClearGoal = (): void => {
     const eid = engineSessionIdForActive();
     if (!eid) return;
-    void window.codeshell.goalClear(eid).catch((e) =>
-      window.codeshell.log("goal.clear.failed", { error: String(e) }),
-    );
+    void window.codeshell
+      .goalClear(eid)
+      .catch((e) => window.codeshell.log("goal.clear.failed", { error: String(e) }));
     // Reflect immediately (client-side, no dependency on a backend event):
     // null out state.activeGoal for this bucket so the GOAL block hides now.
     dispatch({
@@ -3191,7 +3227,9 @@ function App() {
 
   if (view.viewMode === "settings_page") {
     return (
-      <div className={`h-screen overflow-hidden bg-background text-foreground ${platformClassEarly}`.trim()}>
+      <div
+        className={`h-screen overflow-hidden bg-background text-foreground ${platformClassEarly}`.trim()}
+      >
         <SettingsPage
           activeRepoPath={activeRepo?.path ?? null}
           repos={repos}
@@ -3244,247 +3282,264 @@ function App() {
       </div>
 
       <div className="flex min-h-0 flex-1">
-      {!view.sidebarCollapsed && (
-      <div className="flex shrink-0 overflow-hidden">
-        <Sidebar
-          repos={repos}
-          sessions={sessionIndices}
-          activeRepoId={activeRepoId}
-          activeSessionId={activeSessionId}
-          collapsedRepos={collapsedRepos}
-          sidebarCollapsed={view.sidebarCollapsed}
-          sessionStatuses={sessionStatusMap}
-          onSelectRepo={setActiveRepoId}
-          onSelectSession={handleSelectSession}
-          onToggleRepo={handleToggleRepo}
-          onAddRepo={() => { void handleAddRepo(); }}
-          onRemoveRepo={handleRemoveRepo}
-          onPinRepo={handlePinRepo}
-          onRenameRepo={handleRenameRepo}
-          onArchiveAllSessions={handleArchiveAllSessions}
-          onNewConversationForRepo={handleNewConversationForRepo}
-          onNewConversation={handleNewConversation}
-          onOpenSearch={() => setSessionSearchOpen(true)}
-          onOpenAutomations={() => setViewMode("automation")}
-          onOpenCustomize={() => setViewMode("customize")}
-          onOpenCredentials={() => setViewMode("credentials")}
-          onOpenSettingsPage={() => setViewMode("settings_page")}
-          onRenameSession={handleRenameSession}
-          onArchiveSession={handleArchiveSession}
-          onDeleteSession={handleDeleteSession}
-          activeRepoPath={activeRepo?.path ?? null}
-          viewMode={view.viewMode}
-        />
-      </div>
-      )}
-
-      {/* Chat column + dock share a relative container so a maximized panel can
-          overlay the chat/composer (TODO 2.4) without covering the sidebar. */}
-      <div className="relative flex min-w-0 flex-1 overflow-hidden">
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {lifecycle && <div className="border-b border-border bg-muted px-4 py-1.5 text-xs text-muted-foreground">{lifecycle}</div>}
-        {view.viewMode === "approvals" ? (
-          <ApprovalsView
-            queue={approvalQueue}
-            history={approvalHistory}
-            onDecide={decideEnvelope}
-          />
-        ) : view.viewMode === "logs" ? (
-          <LogsView />
-        ) : view.viewMode === "customize" ? (
-          <CustomizeView activeRepoPath={activeRepo?.path ?? null} />
-        ) : view.viewMode === "credentials" ? (
-          <CredentialsPage activeRepoPath={activeRepo?.path ?? null} />
-        ) : view.viewMode === "runs" ? (
-          <RunsView initialRunId={runsInitialRunId} />
-        ) : view.viewMode === "automation" ? (
-          <AutomationView
-            onCreateConversational={startConversationalAutomation}
-            onViewRun={(runId) => { setRunsInitialRunId(runId); setViewMode("runs"); }}
-            onOpenRunSession={(run) => { void handleOpenAutomationRunSession(run); }}
-            onOpenDiskSession={(session) => { void handleOpenAutomationDiskSession(session); }}
-            onOpenSession={handleSelectSession}
-            sessionIndices={sessionIndices}
-            repos={repos}
-          />
-        ) : (
-          <>
-            <ChatView
-              messages={state.messages}
-              awaitingHydration={awaitingHydration}
-              turnEpoch={state.turnEpoch}
-              engineSessionId={state.sessionId}
-              liveTurnActive={liveTurnActive}
-              onSend={send}
-              onQueueInput={queueInput}
-              onForceSend={forceSend}
-              onCompactCommand={compactActiveSession}
-              onStop={() => stop()}
-              busy={busy}
-              queuedInputCount={queuedInputs[activeBucket]?.length ?? 0}
-              queuedInputItems={(queuedInputs[activeBucket] ?? []).map((i) => i.text)}
-              onClearQueuedInput={clearActiveQueuedInput}
-              onRemoveQueuedInput={removeActiveQueuedInputAt}
-              onGuideQueuedInput={guideActiveQueuedInput}
-              runningAgents={runningAgents}
-              activeRepoId={activeRepoId}
-              composerSeed={composerSeed}
-              composerSeedNonce={composerSeedNonce}
-              draft={composerDraft.text}
-              onDraftChange={setComposerDraftText}
-              attachments={composerDraft.attachments}
-              onAttachmentsChange={setComposerDraftAttachments}
-              anchors={anchors}
-              onRemoveAnchor={removeAnchor}
-              onClearAnchors={clearAnchors}
-              onAskUserAnswer={handleAskUserAnswer}
-              onExtendGoal={extendGoal}
-              onAttachImagePath={(p) => void attachImageByPath(p)}
-              imageDetail={imageDetail}
-              pendingApproval={visibleApproval}
-              onApprovalDecide={
-                visibleApproval
-                  ? (decision, reason, scope, pathScope) => decideEnvelope(visibleApproval, decision, reason, scope, pathScope)
-                  : undefined
-              }
-              permissionMode={permissionMode}
-              onPermissionChange={onPermissionChange}
-              goalEnabled={goalEnabled}
-              onGoalToggle={onGoalToggle}
-              modelOptions={modelOptions}
-              activeModelKey={activeModelKey}
-              onModelChange={onModelChange}
-              contextTokens={state.promptTokens}
-              contextMax={
-                modelOptions.find((o) => o.key === activeModelKey)?.maxContextTokens
-              }
-              // Session-cumulative cache totals drive the "本会话累计命中率"
-              // tooltip (per-turn hit rate isn't actionable — see ContextRing).
-              cacheReadTokens={state.sessionCacheReadTokens}
-              cacheCreationTokens={state.sessionCacheCreationTokens}
-              sessionPromptTokens={state.sessionPromptTokens}
+        {!view.sidebarCollapsed && (
+          <div className="flex shrink-0 overflow-hidden">
+            <Sidebar
               repos={repos}
-              // Picking a project (or 不使用项目) from the composer's
-              // ProjectPicker enters a fresh draft for that repo rather than a
-              // bare setActiveRepoId — otherwise the chat snaps to whatever
-              // session that bucket last had active (the top of its list),
-              // which reads as an unexpected auto-jump. (The reload-time
-              // auto-jump was fixed separately in transcripts.ts; this is the
-              // interactive project-switch path, same symptom, different code.)
-              onSelectRepo={handleNewConversationForRepo}
-              onAddRepo={() => { void handleAddRepo(); }}
+              sessions={sessionIndices}
+              activeRepoId={activeRepoId}
+              activeSessionId={activeSessionId}
+              collapsedRepos={collapsedRepos}
+              sidebarCollapsed={view.sidebarCollapsed}
+              sessionStatuses={sessionStatusMap}
+              onSelectRepo={setActiveRepoId}
+              onSelectSession={handleSelectSession}
+              onToggleRepo={handleToggleRepo}
+              onAddRepo={() => {
+                void handleAddRepo();
+              }}
+              onRemoveRepo={handleRemoveRepo}
+              onPinRepo={handlePinRepo}
+              onRenameRepo={handleRenameRepo}
+              onArchiveAllSessions={handleArchiveAllSessions}
+              onNewConversationForRepo={handleNewConversationForRepo}
+              onNewConversation={handleNewConversation}
+              onOpenSearch={() => setSessionSearchOpen(true)}
+              onOpenAutomations={() => setViewMode("automation")}
+              onOpenCustomize={() => setViewMode("customize")}
+              onOpenCredentials={() => setViewMode("credentials")}
+              onOpenSettingsPage={() => setViewMode("settings_page")}
+              onRenameSession={handleRenameSession}
+              onArchiveSession={handleArchiveSession}
+              onDeleteSession={handleDeleteSession}
               activeRepoPath={activeRepo?.path ?? null}
-              // cwd used to RESOLVE message content (relative path links, inline
-              // images) — distinct from activeRepoPath (git/STT/branch, which
-              // must stay null for a no-repo chat). A no-repo session actually
-              // runs under the sandbox cwd, so fall back to it; otherwise a
-              // relative `docs/x.md` link can't resolve and renders as dead text.
-              messageCwd={activeRepo?.path ?? noRepoCwdRef.current}
-              repoClean={activeGitMeta.clean}
-              welcomeNode={
-                showWelcome ? (
-                  <div className="flex flex-col items-center gap-4 text-center">
-                    <img
-                      src={dogIcon}
-                      alt="CodeShell"
-                      draggable={false}
-                      className="h-32 w-32 select-none rounded-2xl object-contain"
-                    />
-                    <div className="text-3xl font-semibold tracking-tight text-foreground">
-                      {activeRepo
-                        ? t("misc.app.welcomeTitleRepo", { name: activeRepo.name })
-                        : t("misc.app.welcomeTitleNoRepo")}
-                    </div>
-                    {!activeRepo && (
-                      <div className="text-sm text-muted-foreground">
-                        {t("misc.app.welcomeHintNoRepo")}
-                      </div>
-                    )}
-                  </div>
-                ) : null
-              }
+              viewMode={view.viewMode}
             />
-          </>
+          </div>
         )}
-        <SearchBar
-          open={searchOpen}
-          value={searchQuery}
-          onChange={setSearchQuery}
-          onClose={() => setSearchOpen(false)}
-          matchCount={matchCount}
-        />
-      </main>
 
-      {/* PanelArea stays MOUNTED across close→reopen (hidden via display:none
+        {/* Chat column + dock share a relative container so a maximized panel can
+          overlay the chat/composer (TODO 2.4) without covering the sidebar. */}
+        <div className="relative flex min-w-0 flex-1 overflow-hidden">
+          <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            {lifecycle && (
+              <div className="border-b border-border bg-muted px-4 py-1.5 text-xs text-muted-foreground">
+                {lifecycle}
+              </div>
+            )}
+            {view.viewMode === "approvals" ? (
+              <ApprovalsView
+                queue={approvalQueue}
+                history={approvalHistory}
+                onDecide={decideEnvelope}
+              />
+            ) : view.viewMode === "logs" ? (
+              <LogsView />
+            ) : view.viewMode === "customize" ? (
+              <CustomizeView activeRepoPath={activeRepo?.path ?? null} />
+            ) : view.viewMode === "credentials" ? (
+              <CredentialsPage activeRepoPath={activeRepo?.path ?? null} />
+            ) : view.viewMode === "runs" ? (
+              <RunsView initialRunId={runsInitialRunId} />
+            ) : view.viewMode === "automation" ? (
+              <AutomationView
+                onCreateConversational={startConversationalAutomation}
+                onViewRun={(runId) => {
+                  setRunsInitialRunId(runId);
+                  setViewMode("runs");
+                }}
+                onOpenRunSession={(run) => {
+                  void handleOpenAutomationRunSession(run);
+                }}
+                onOpenDiskSession={(session) => {
+                  void handleOpenAutomationDiskSession(session);
+                }}
+                onOpenSession={handleSelectSession}
+                sessionIndices={sessionIndices}
+                repos={repos}
+              />
+            ) : (
+              <>
+                <ChatView
+                  messages={state.messages}
+                  awaitingHydration={awaitingHydration}
+                  turnEpoch={state.turnEpoch}
+                  engineSessionId={state.sessionId}
+                  liveTurnActive={liveTurnActive}
+                  onSend={send}
+                  onQueueInput={queueInput}
+                  onForceSend={forceSend}
+                  onCompactCommand={compactActiveSession}
+                  onStop={() => stop()}
+                  busy={busy}
+                  queuedInputCount={queuedInputs[activeBucket]?.length ?? 0}
+                  queuedInputItems={(queuedInputs[activeBucket] ?? []).map((i) => i.text)}
+                  onClearQueuedInput={clearActiveQueuedInput}
+                  onRemoveQueuedInput={removeActiveQueuedInputAt}
+                  onGuideQueuedInput={guideActiveQueuedInput}
+                  runningAgents={runningAgents}
+                  activeRepoId={activeRepoId}
+                  composerSeed={composerSeed}
+                  composerSeedNonce={composerSeedNonce}
+                  draft={composerDraft.text}
+                  onDraftChange={setComposerDraftText}
+                  attachments={composerDraft.attachments}
+                  onAttachmentsChange={setComposerDraftAttachments}
+                  anchors={anchors}
+                  onRemoveAnchor={removeAnchor}
+                  onClearAnchors={clearAnchors}
+                  onAskUserAnswer={handleAskUserAnswer}
+                  onExtendGoal={extendGoal}
+                  onAttachImagePath={(p) => void attachImageByPath(p)}
+                  imageDetail={imageDetail}
+                  pendingApproval={visibleApproval}
+                  onApprovalDecide={
+                    visibleApproval
+                      ? (decision, reason, scope, pathScope) =>
+                          decideEnvelope(visibleApproval, decision, reason, scope, pathScope)
+                      : undefined
+                  }
+                  permissionMode={permissionMode}
+                  onPermissionChange={onPermissionChange}
+                  goalEnabled={goalEnabled}
+                  onGoalToggle={onGoalToggle}
+                  modelOptions={modelOptions}
+                  activeModelKey={activeModelKey}
+                  onModelChange={onModelChange}
+                  contextTokens={state.promptTokens}
+                  contextMax={modelOptions.find((o) => o.key === activeModelKey)?.maxContextTokens}
+                  singleTurnPromptTokens={state.singleTurnPromptTokens}
+                  singleTurnCacheReadTokens={state.singleTurnCacheReadTokens}
+                  singleTurnCacheCreationTokens={state.singleTurnCacheCreationTokens}
+                  cumulativePromptTokens={state.cumulativePromptTokens}
+                  cumulativeCacheReadTokens={state.cumulativeCacheReadTokens}
+                  cumulativeCacheCreationTokens={state.cumulativeCacheCreationTokens}
+                  repos={repos}
+                  // Picking a project (or 不使用项目) from the composer's
+                  // ProjectPicker enters a fresh draft for that repo rather than a
+                  // bare setActiveRepoId — otherwise the chat snaps to whatever
+                  // session that bucket last had active (the top of its list),
+                  // which reads as an unexpected auto-jump. (The reload-time
+                  // auto-jump was fixed separately in transcripts.ts; this is the
+                  // interactive project-switch path, same symptom, different code.)
+                  onSelectRepo={handleNewConversationForRepo}
+                  onAddRepo={() => {
+                    void handleAddRepo();
+                  }}
+                  activeRepoPath={activeRepo?.path ?? null}
+                  // cwd used to RESOLVE message content (relative path links, inline
+                  // images) — distinct from activeRepoPath (git/STT/branch, which
+                  // must stay null for a no-repo chat). A no-repo session actually
+                  // runs under the sandbox cwd, so fall back to it; otherwise a
+                  // relative `docs/x.md` link can't resolve and renders as dead text.
+                  messageCwd={activeRepo?.path ?? noRepoCwdRef.current}
+                  repoClean={activeGitMeta.clean}
+                  welcomeNode={
+                    showWelcome ? (
+                      <div className="flex flex-col items-center gap-4 text-center">
+                        <img
+                          src={dogIcon}
+                          alt="CodeShell"
+                          draggable={false}
+                          className="h-32 w-32 select-none rounded-2xl object-contain"
+                        />
+                        <div className="text-3xl font-semibold tracking-tight text-foreground">
+                          {activeRepo
+                            ? t("misc.app.welcomeTitleRepo", { name: activeRepo.name })
+                            : t("misc.app.welcomeTitleNoRepo")}
+                        </div>
+                        {!activeRepo && (
+                          <div className="text-sm text-muted-foreground">
+                            {t("misc.app.welcomeHintNoRepo")}
+                          </div>
+                        )}
+                      </div>
+                    ) : null
+                  }
+                />
+              </>
+            )}
+            <SearchBar
+              open={searchOpen}
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onClose={() => setSearchOpen(false)}
+              matchCount={matchCount}
+            />
+          </main>
+
+          {/* PanelArea stays MOUNTED across close→reopen (hidden via display:none
           when !open) so the browser <webview> and terminal pty survive a dock
           close — reopening lands on the same live page instead of reloading
           from scratch (matches Codex). Closing only hides; the webview process
           is reclaimed by BrowserPanel's own idle-eviction after a few minutes.
           We still gate on having tabs so an empty dock doesn't mount stray
           panel bodies before the user has opened anything. */}
-      {panelBuckets.map((panelBucket) => {
-        const panelState = panelByBucket[panelBucket] ?? emptyPanelBucketState();
-        const isActivePanelBucket = panelBucket === activeBucket;
-        const { repoId: panelRepoId } = parsePanelBucket(panelBucket);
-        const panelRepo = panelRepoId ? repos.find((r) => r.id === panelRepoId) ?? null : null;
-        const hidden = !isActivePanelBucket || !isChatView || !panelState.open;
-        const keepActiveBodyLive = panelState.open && (!isActivePanelBucket || !isChatView);
+          {panelBuckets.map((panelBucket) => {
+            const panelState = panelByBucket[panelBucket] ?? emptyPanelBucketState();
+            const isActivePanelBucket = panelBucket === activeBucket;
+            const { repoId: panelRepoId } = parsePanelBucket(panelBucket);
+            const panelRepo = panelRepoId
+              ? (repos.find((r) => r.id === panelRepoId) ?? null)
+              : null;
+            const hidden = !isActivePanelBucket || !isChatView || !panelState.open;
+            const keepActiveBodyLive = panelState.open && (!isActivePanelBucket || !isChatView);
 
-        return (
-          <PanelArea
-            key={panelBucket}
-            // The dock is a chat-only surface. Hidden session-owned docks stay
-            // mounted under their own bucket so browser/files/terminal state
-            // cannot be rewritten by another session.
-            hidden={hidden}
-            keepActiveBodyLive={keepActiveBodyLive}
-            cwd={panelRepo?.path ?? null}
-            onClose={() =>
-              updatePanelBucket(panelBucket, (state) => ({
-                ...state,
-                open: false,
-                requestNonce: state.requestNonce + 1,
-                requestKind: null,
-                openUrl: undefined,
-              }))
-            }
-            requestNonce={panelState.requestNonce}
-            requestKind={panelState.requestKind}
-            reviewFiles={panelState.reviewFiles}
-            reviewDiff={panelState.reviewDiff}
-            revealFile={panelState.revealFile}
-            onRevealConsumed={(nonce) => onRevealConsumed(panelBucket, nonce)}
-            openUrl={panelState.openUrl}
-            width={panelWidth}
-            onResizeStart={beginPanelResize}
-            onAttachImage={(p) => void attachImageByPath(p)}
-            browserAnchors={anchorsIn(anchorsByBucket, panelBucket)}
-            onRemoveBrowserAnchor={isActivePanelBucket ? removeAnchor : undefined}
-            onUpdateBrowserAnchor={isActivePanelBucket ? updateAnchorComment : undefined}
-            engineSessionId={resolveEngineSessionIdForBucket(panelBucket) ?? null}
-            tabs={panelState.tabs}
-            setTabs={(next) =>
-              updatePanelBucket(panelBucket, (state) => {
-                const tabs = typeof next === "function" ? next(state.tabs) : next;
-                const activeId =
-                  state.activeId && tabs.some((tab) => tab.id === state.activeId)
-                    ? state.activeId
-                    : tabs[0]?.id ?? null;
-                return { ...state, tabs, activeId };
-              })
-            }
-            activeId={panelState.activeId}
-            setActiveId={(next) =>
-              updatePanelBucket(panelBucket, (state) => ({
-                ...state,
-                activeId: typeof next === "function" ? next(state.activeId) : next,
-              }))
-            }
-            bucket={panelBucket}
-          />
-        );
-      })}
-      </div>
+            return (
+              <PanelArea
+                key={panelBucket}
+                // The dock is a chat-only surface. Hidden session-owned docks stay
+                // mounted under their own bucket so browser/files/terminal state
+                // cannot be rewritten by another session.
+                hidden={hidden}
+                keepActiveBodyLive={keepActiveBodyLive}
+                cwd={panelRepo?.path ?? null}
+                onClose={() =>
+                  updatePanelBucket(panelBucket, (state) => ({
+                    ...state,
+                    open: false,
+                    requestNonce: state.requestNonce + 1,
+                    requestKind: null,
+                    openUrl: undefined,
+                  }))
+                }
+                requestNonce={panelState.requestNonce}
+                requestKind={panelState.requestKind}
+                reviewFiles={panelState.reviewFiles}
+                reviewDiff={panelState.reviewDiff}
+                revealFile={panelState.revealFile}
+                onRevealConsumed={(nonce) => onRevealConsumed(panelBucket, nonce)}
+                openUrl={panelState.openUrl}
+                width={panelWidth}
+                onResizeStart={beginPanelResize}
+                onAttachImage={(p) => void attachImageByPath(p)}
+                browserAnchors={anchorsIn(anchorsByBucket, panelBucket)}
+                onRemoveBrowserAnchor={isActivePanelBucket ? removeAnchor : undefined}
+                onUpdateBrowserAnchor={isActivePanelBucket ? updateAnchorComment : undefined}
+                engineSessionId={resolveEngineSessionIdForBucket(panelBucket) ?? null}
+                tabs={panelState.tabs}
+                setTabs={(next) =>
+                  updatePanelBucket(panelBucket, (state) => {
+                    const tabs = typeof next === "function" ? next(state.tabs) : next;
+                    const activeId =
+                      state.activeId && tabs.some((tab) => tab.id === state.activeId)
+                        ? state.activeId
+                        : (tabs[0]?.id ?? null);
+                    return { ...state, tabs, activeId };
+                  })
+                }
+                activeId={panelState.activeId}
+                setActiveId={(next) =>
+                  updatePanelBucket(panelBucket, (state) => ({
+                    ...state,
+                    activeId: typeof next === "function" ? next(state.activeId) : next,
+                  }))
+                }
+                bucket={panelBucket}
+              />
+            );
+          })}
+        </div>
       </div>
 
       <CommandPalette
@@ -3511,7 +3566,9 @@ function App() {
 
       <TrustGate
         repoPath={activeRepo?.path ?? null}
-        onDecide={() => { /* trust persisted in main */ }}
+        onDecide={() => {
+          /* trust persisted in main */
+        }}
       />
 
       {/* Inspector panel removed — tool detail lives inline in each
@@ -3523,9 +3580,8 @@ function App() {
 function resolveActiveKey(s: Record<string, unknown>): string | null {
   // Unified catalog: defaults.text holds the active text connection's instance
   // id — the engine's priority #1 (engine.ts) and the picker's option key.
-  const defaults = s.defaults && typeof s.defaults === "object"
-    ? (s.defaults as Record<string, unknown>)
-    : {};
+  const defaults =
+    s.defaults && typeof s.defaults === "object" ? (s.defaults as Record<string, unknown>) : {};
   if (typeof defaults.text === "string" && defaults.text) return defaults.text;
   return null;
 }

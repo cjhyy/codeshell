@@ -20,6 +20,7 @@ import { nanoid } from "nanoid";
 import type { SessionState } from "../types.js";
 import { Transcript } from "./transcript.js";
 import { SessionError } from "../exceptions.js";
+import { normalizeCumulativeUsageCounters } from "../engine/session-usage.js";
 
 export interface SessionBundle {
   state: SessionState;
@@ -113,6 +114,9 @@ export class SessionManager {
       model,
       provider,
       tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      cumulativePromptTokens: 0,
+      cumulativeCacheReadTokens: 0,
+      cumulativeCacheCreationTokens: 0,
       turnCount: 0,
       invokedSkills: [],
       status: "active",
@@ -276,6 +280,7 @@ export class SessionManager {
     const transcript = Transcript.loadFromFile(transcriptFile);
 
     state.status = "active";
+    Object.assign(state, normalizeCumulativeUsageCounters(state, state.tokenUsage));
 
     return { state, transcript };
   }
@@ -307,16 +312,15 @@ export class SessionManager {
     const forkTurn = forkAtTurn ?? source.state.turnCount;
 
     // Create new session
-    const newBundle = this.create(
-      source.state.cwd,
-      source.state.model,
-      source.state.provider,
-    );
+    const newBundle = this.create(source.state.cwd, source.state.model, source.state.provider);
     newBundle.state.parentSessionId = sourceSessionId;
 
     // Copy events up to the fork point
     for (const event of events) {
-      if (event.type === "turn_boundary" && ((event.data.turnNumber as number | undefined) ?? -1) > forkTurn) {
+      if (
+        event.type === "turn_boundary" &&
+        ((event.data.turnNumber as number | undefined) ?? -1) > forkTurn
+      ) {
         break;
       }
       newBundle.transcript.append(event.type, event.data);
@@ -338,7 +342,13 @@ export class SessionManager {
     // winners do we open state.json + tail the transcript for a
     // preview. With ~1 k sessions on disk the difference is ~1 s
     // (preview-every) vs ~50 ms (preview-top-20).
-    type Candidate = { dir: string; lastActiveAt: number; transcriptFile: string; stateFile: string; transcriptExists: boolean };
+    type Candidate = {
+      dir: string;
+      lastActiveAt: number;
+      transcriptFile: string;
+      stateFile: string;
+      transcriptExists: boolean;
+    };
     const candidates: Candidate[] = [];
     for (const dir of dirs) {
       const stateFile = join(this.sessionsDir, dir, "state.json");
@@ -484,9 +494,7 @@ function parseUserPreview(line: string | undefined): string | undefined {
     typeof content === "string"
       ? content
       : Array.isArray(content)
-        ? (content.find(
-            (b: { type?: string; text?: string }) => b.type === "text",
-          )?.text ?? "")
+        ? (content.find((b: { type?: string; text?: string }) => b.type === "text")?.text ?? "")
         : "";
   if (!text.trim()) return undefined;
   return text.replace(/\s+/g, " ").trim();
