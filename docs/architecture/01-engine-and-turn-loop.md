@@ -1,153 +1,183 @@
 # 01 · Engine & Turn Loop
 
-> The heart of CodeShell. Everything else — tools, sessions, models, presets — exists to feed or be driven by the turn loop. Source-mapped against the current tree under `packages/core/src/engine/` and `packages/core/src/context/`.
+> The heart of CodeShell. Everything else — tools, sessions, models, presets, hooks, and context management — exists to feed or be driven by the turn loop. Source-mapped against the current tree under `packages/core/src/engine/`, `packages/core/src/context/`, and the adjacent session/protocol seams.
+
+![Engine turn-loop flow](images/engine-turn-loop.png)
 
 ## 1. What this layer is
 
-The engine layer is the **orchestration facade** that wires the LLM client, the tool executor, context management, hooks, sessions, and lifecycle events into a single multi-turn agent loop. It is deliberately domain-agnostic: it knows how to *run an agent*, not how to *write code* (that is a preset — see [05](05-presets-prompt-hooks-skills.md)).
+The engine layer is the **orchestration facade** that wires an LLM client, the tool executor, context management, hooks, persistent sessions, cancellation, and lifecycle events into one multi-turn agent run. It is deliberately domain-agnostic: it knows how to *run an agent*, not how to *write code* (that behavior comes from presets and prompt sections — see [05](05-presets-prompt-hooks-skills.md)).
 
-Two files carry almost all the weight:
+Two files carry most of the weight:
 
 | File | Role | ~LOC |
 |------|------|------|
-| `engine/engine.ts` | The `Engine` facade — session lifecycle, run setup, image policy, permission modes, goal entry, hook coordination, sub-agent spawning | ~3,300 |
-| `engine/turn-loop.ts` | The `TurnLoop` state machine — model streaming, tool execution, context management, goal arbitration, termination | ~1,200 |
+| `packages/core/src/engine/engine.ts` | `Engine` facade — run setup, session lifecycle, image policy, permission mode, prompt/tool assembly, persistent goals, sub-agent spawning, force compaction | ~3,476 |
+| `packages/core/src/engine/turn-loop.ts` | `TurnLoop` state machine — model streaming, context management, tool execution, goal arbitration, cancellation, termination | ~1,408 |
 
 Supporting modules:
 
 | File | Role |
 |------|------|
-| `engine/model-facade.ts` | Wraps the LLM client: request logging, streaming relay, transcript recording, token accounting |
-| `engine/query.ts` | Async-generator query API (an alternate, event-queue-drain entry point) |
-| `engine/turn-state.ts` | The turn phase enum + per-turn state bag (`turnId` correlation) |
-| `engine/runtime.ts` | `EngineRuntime` — worker-level shared resources (`ModelPool`, `ToolRegistry`, `MCPManager`, sandbox cache) |
-| `engine/goal.ts` | Persistent-goal budget structure, turn/stop-block ceilings, tracker |
-| `engine/steer-queue.ts` | Step-gap steering queue (non-interrupting user-message insertion) |
-| `engine/streaming-tool-queue.ts` | Concurrent vs. sequential tool execution during streaming |
-| `engine/token-budget.ts` | Per-turn output-token decision (continue / nudge / stop) |
-| `engine/reactive-threshold.ts` | Per-2000-token-bucket gate for mid-stream reactive compaction |
-| `engine/resolve-llm-config.ts` | Settings + tag → `LLMConfig` (text); image/video resolve independently |
-| `engine/patch-orphaned-tools.ts` | Resume repair: synthesize `tool_result` for orphaned `tool_use` blocks |
-| `engine/image-policy.ts` | Per-turn image gate (size/count caps, drop-oversized) |
-| `engine/parse-task.ts` | Extract `<codeshell-image>` blocks out of the task string |
-| `engine/friendly-error.ts` | Pattern-match errors → user-facing suggestions |
-| `engine/session-title.ts` | Aux-LLM one-line session title from the first exchange |
+| `engine/model-facade.ts` | Wraps the concrete `LLMClient`: request/response logging, stream relay, transcript recording, token accounting (`packages/core/src/engine/model-facade.ts:37`) |
+| `engine/query.ts` | Async-generator query API that constructs a `TurnLoop` and drains its event queue (`packages/core/src/engine/query.ts:91`) |
+| `engine/runtime.ts` | `EngineRuntime` — shared worker resources such as `ModelPool`, `ToolRegistry`, MCP pool, and sandbox cache (`packages/core/src/engine/runtime.ts:28`) |
+| `engine/goal.ts` | Normalized goal shape, default ceilings, budget tracker, and mid-run extension math (`packages/core/src/engine/goal.ts:14`, `packages/core/src/engine/goal.ts:237`) |
+| `engine/steer-queue.ts` | Pure helpers for non-interrupting step-gap user-message insertion (`packages/core/src/engine/engine.ts:830`, `packages/core/src/engine/turn-loop.ts:1333`) |
+| `engine/streaming-tool-queue.ts` | Starts concurrency-safe tools immediately and drains unsafe tools sequentially, returning results in original order (`packages/core/src/engine/streaming-tool-queue.ts:17`) |
+| `engine/parse-task.ts` | Extracts `<codeshell-image>` blocks from the raw task string (`packages/core/src/engine/parse-task.ts:124`) |
+| `engine/image-policy.ts` | Engine-side image caps, oversized-image dropping, and attachment path extraction (`packages/core/src/engine/image-policy.ts:58`, `packages/core/src/engine/image-policy.ts:198`) |
+| `engine/patch-orphaned-tools.ts` | Resume / failure repair for dangling `tool_use` blocks (`packages/core/src/engine/engine.ts:1396`, `packages/core/src/engine/turn-loop.ts:1354`) |
 
 ## 2. The run, end to end
 
-`Engine.run(task, options?) → EngineResult` (`engine/engine.ts:981`, wrapped in an outer try/catch at `:416`). It proceeds in five stages.
+`Engine.run(task, options?) -> EngineResult` starts at `packages/core/src/engine/engine.ts:929`. It resolves the run boundary, then delegates the hot loop to `TurnLoop.run()` at `packages/core/src/engine/engine.ts:2127`.
 
-### Stage 1 — Validate & parse input
-- **Resolve cwd** by precedence: `options.cwd > session.cwd > config.cwd > process.cwd()`.
-- **Parse images**: `parseTaskWithImages` (`parse-task.ts:124`) pulls `<codeshell-image mime=… name=…>data:…;base64,…</codeshell-image>` blocks out of the task text. Malformed markup throws `ImageParseError` — there is no silent fallback.
-- **Enforce image policy** (`image-policy.ts`): per-image cap, per-turn cumulative cap, and a count cap. Oversized single images are compressed engine-side or dropped with a placeholder; exceeding the cumulative/count cap **refuses the turn** (fail-closed, not silent truncation).
-- **Normalize the goal**: `normalizeGoal` (`goal.ts:94`) coerces `string | GoalConfig` into a `GoalConfig`, dropping empty objectives and non-positive budgets.
-- **Resolve ceilings**: `resolveMaxTurns` and `resolveMaxStopBlocks` (`goal.ts:68`) — goal-aware, see §4.
+### Stage 1 — Validate and parse input
 
-### Stage 2 — Session & context setup
-- `SessionManager.resume()` or `.create()` returns a `{ transcript, state }` bundle.
-- `ContextManager.initReplacementStateFromMessages()` reconstructs the tool-result-persistence decisions from the loaded transcript (see §5).
-- `PromptComposer` builds the system prompt from `preset + customSystemPrompt + appendSystemPrompt` (see [05](05-presets-prompt-hooks-skills.md)).
-- **Resume repair**: `patchOrphanedToolUses` (`patch-orphaned-tools.ts:59`) scans the loaded history and injects synthetic error `tool_result` blocks for any `tool_use` that never got a result. This keeps the message array valid for the provider API (see §3, invariant 1).
+- **Resolve cwd** by precedence: `options.cwd > resumed session state.cwd > config.cwd > process.cwd()`. The cheap session-cwd probe is `SessionManager.readCwd()` (`packages/core/src/session/session-manager.ts:177`), and `Engine.run()` applies the precedence at `packages/core/src/engine/engine.ts:961`.
+- **Parse inline images before noise detection.** `parseTaskWithImages()` removes `<codeshell-image ...>data:...;base64,...</codeshell-image>` blocks, keeps images in source order, and throws `ImageParseError` on malformed markup (`packages/core/src/engine/parse-task.ts:109`). `Engine.run()` catches that and returns `reason: "image_error"` without starting a session (`packages/core/src/engine/engine.ts:1009`).
+- **Fail fast on non-vision models.** If parsed images exist, `capabilitiesFor()` must report `supportsVision`; otherwise the turn is refused with an image error (`packages/core/src/engine/engine.ts:1023`).
+- **Apply image policy.** The shared limits are 2 MB per image, 6 MB per turn, and 6 images per turn (`packages/core/src/engine/image-policy.ts:58`). A single oversize image is first compressed (`packages/core/src/engine/engine.ts:1049`), then still-oversize images are dropped with a textual placeholder so they do not poison history (`packages/core/src/engine/engine.ts:1066`). Count and cumulative-size failures remain fail-closed (`packages/core/src/engine/engine.ts:1086`).
+- **Run pasted-noise detection on text only.** After image extraction, `taskText` excludes base64 bytes (`packages/core/src/engine/engine.ts:1106`) and may be rejected as accidental terminal output (`packages/core/src/engine/engine.ts:1112`).
 
-### Stage 3 — Build the turn-loop dependencies
-- A `ModelFacade` wraps the concrete `LLMClient` (from `createLLMClient`, or a pooled client via `ModelPool`).
-- A `subAgentSpawner` closure is created — the `Agent` tool spawns children with resolved cwd/preset/permission scope.
-- `TurnLoopDeps { model, toolExecutor, contextManager, hooks, transcript, … }` and `TurnLoopConfig { maxTurns, maxToolCallsPerTurn, onStream, signal, goal, maxStopBlocks }` are assembled and handed to `TurnLoop`.
+### Stage 2 — Build run-scoped services
 
-### Stage 4 — The loop (`TurnLoop.run`, `turn-loop.ts:393`)
+- **Tool context and sub-agent spawner.** `subAgentSpawner` anchors a child session in the parent transcript, strips nested-agent tools, resolves child model/tool scope, and starts a child `Engine` with inherited runtime knobs (`packages/core/src/engine/engine.ts:1131`). The per-run `ToolContext` carries cwd, sandbox, stream callback, session id, browser/credential bridges, agent definitions, and later tool visibility (`packages/core/src/engine/engine.ts:1300`).
+- **Sandbox and permission setup.** Engine resolves `config.sandbox > project settings > global settings > default`, then caches/probes a sandbox backend (`packages/core/src/engine/engine.ts:1249`). It builds a `PermissionClassifier` and approval backend from the active permission mode (`packages/core/src/engine/engine.ts:1579`, `packages/core/src/engine/engine.ts:2924`).
+- **Tool executor.** `ToolExecutor` receives the run signal and tool context (`packages/core/src/engine/engine.ts:1613`). Its own per-call fast path returns immediately on an already-aborted signal before hooks, permission, or the handler run (`packages/core/src/tool-system/executor.ts:119`).
+- **Context manager.** The run creates a `ContextManager` with the model's current context window and clamped user ratios (`packages/core/src/engine/engine.ts:1617`, `packages/core/src/engine/engine.ts:451`).
+- **Prompt and tool list.** The available tool list is assembled fresh for the run: project builtin overrides, MCP server visibility, tool guards, feature flags, dynamic `Agent` schema, and plan-mode filtering all apply before the system prompt is built (`packages/core/src/engine/engine.ts:1693`, `packages/core/src/engine/engine.ts:1728`, `packages/core/src/engine/engine.ts:1747`, `packages/core/src/engine/engine.ts:1772`). `PromptComposer` then builds a stable system prompt and a trailing dynamic context message in parallel with LLM client creation (`packages/core/src/engine/engine.ts:1776`).
 
-Each iteration of the `while` loop (`turn-loop.ts:417`) is one **turn**:
+### Stage 3 — Session, transcript, and prompt shape
+
+- **Create or resume session.** Existing `options.sessionId` resumes from disk; a fresh caller-supplied id is materialized; otherwise `SessionManager.create()` generates one (`packages/core/src/engine/engine.ts:1370`, `packages/core/src/session/session-manager.ts:94`). `SessionManager.resume()` reads `state.json`, loads the transcript JSONL, marks the state active in memory, and normalizes cumulative usage counters (`packages/core/src/session/session-manager.ts:256`).
+- **Repair resumed history.** On resume, `patchOrphanedToolUses()` injects synthetic error `tool_result` blocks for any dangling assistant `tool_use` before the next provider request (`packages/core/src/engine/engine.ts:1391`).
+- **Persist the new user message.** The user content is either plain text or content blocks containing text plus base64 image blocks (`packages/core/src/engine/engine.ts:1329`). Image attachments that name real workspace files also get an `<attached-image-paths>` hint for tools such as `GenerateImage` (`packages/core/src/engine/engine.ts:1343`).
+- **Hooks can inject around the prompt.** `on_session_start` and `user_prompt_submit` run before the model turn; the prompt submit hook can rewrite the latest string user message, and hook messages are wrapped as one reminder before the latest user task (`packages/core/src/engine/engine.ts:1493`, `packages/core/src/engine/engine.ts:1518`, `packages/core/src/engine/engine.ts:1790`).
+- **Stable prefix, volatile tail.** `buildUserContextMessage()` is prepended (`packages/core/src/engine/engine.ts:1784`); dynamic context (skills, git status, memory, goal-tool state) is appended after the user task to avoid busting the cached history prefix (`packages/core/src/engine/engine.ts:1804`).
+- **Context replacement state is restored.** The manager points at the transcript path and reconstructs tool-result persistence decisions from the loaded messages (`packages/core/src/engine/engine.ts:1813`, `packages/core/src/context/manager.ts:247`, `packages/core/src/context/manager.ts:259`).
+
+### Stage 4 — Goal and model facade setup
+
+- **Aux and primary summarizers are distinct.** Automatic context compaction uses the primary run client for high-fidelity summaries through `buildSummarizeFn()` (`packages/core/src/engine/engine.ts:1845`, `packages/core/src/engine/engine.ts:2324`). Per-turn tool-use one-line summaries use the cheaper aux client and `recordUsage: false` (`packages/core/src/engine/engine.ts:1862`).
+- **ModelFacade records the provider boundary.** Streaming calls log sanitized prompts, relay text/tool deltas, pass the run signal, record responses and usage, and append assistant content to the transcript (`packages/core/src/engine/model-facade.ts:43`, `packages/core/src/engine/model-facade.ts:73`, `packages/core/src/engine/model-facade.ts:230`).
+- **Persistent goals are resolved once per run.** Explicit `options.goal` replaces the stored session goal; otherwise a top-level run inherits `session.state.activeGoal`, then falls back to `config.goal` (`packages/core/src/engine/engine.ts:1936`, `packages/core/src/engine/engine.ts:1957`). `resolveGoalSetAt()` preserves deadline anchors for unchanged goals (`packages/core/src/engine/engine.ts:1967`, `packages/core/src/engine/goal.ts:135`).
+- **Goal stop hook is run-scoped.** A normalized top-level goal registers `createGoalStopHook()` on `on_stop`; `clearPersistedGoal` later removes both `state.activeGoal` and the active hook (`packages/core/src/engine/engine.ts:1978`, `packages/core/src/engine/engine.ts:2034`).
+
+### Stage 5 — The loop (`TurnLoop.run`, `packages/core/src/engine/turn-loop.ts:516`)
+
+Each `while (turnCount < maxTurns)` iteration is one agent turn (`packages/core/src/engine/turn-loop.ts:540`):
 
 ```
-pre-check ─▶ model call ─▶ post-model checks ─▶ tool decision ─┬─▶ final answer ─▶ on_stop
-                                                                └─▶ tool exec ─▶ (next turn)
+loop top
+  -> abort / steer / turn-start hooks / limit warnings
+  -> image-history downgrade
+  -> ContextManager.manageAsync()
+  -> post_compact hook
+  -> model call
+  -> usage + goal-budget checks
+  -> final-answer path OR tool-execution path
+  -> turn boundary / next turn
 ```
 
-**a. Pre-check** (`turn-loop.ts:418`+)
-- Abort fast-path: check `signal.aborted` at the loop top (`:430`) before any expensive work.
-- **Steering**: `consumeSteerItems` (`:440`) drains the step-gap queue and splices any queued user messages in *without aborting the current turn* (see §4).
-- Approaching-limit warnings at `turnsRemaining === 2 / 1 / 0` inject a `system-reminder` so the model wraps up; at `0` the final turn is constrained to answer with no tools.
-- `ContextManager.manageAsync(messages)` runs the compaction tiers (see §5).
+**a. Pre-check.** Abort is checked before any per-turn work (`packages/core/src/engine/turn-loop.ts:550`). Step-gap steering is consumed and persisted as user messages (`packages/core/src/engine/turn-loop.ts:565`, `packages/core/src/engine/turn-loop.ts:1333`). `on_turn_start` may inject a reminder (`packages/core/src/engine/turn-loop.ts:590`). The model receives warnings when only 2, 1, or 0 turns remain, with the last turn instructed not to use tools (`packages/core/src/engine/turn-loop.ts:598`).
 
-**b. Model call** (`turn-loop.ts:549`+)
-- `callModelWithFallback` streams from the `ModelFacade`; `tool_use` blocks are enqueued into the streaming tool queue as they arrive.
-- On `ContextLimitError`: drop oldest rounds and retry (up to 3×), then `patchOrphanedToolUses` if exhausted.
-- On `AbortError` / `signal.aborted`: `markStopped()` and return `aborted_streaming` (an abort is **not** an error).
-- Truncated-stop continuation: if the model stops mid-tool-call because it hit max output tokens, retry up to 3× with a continuation nudge.
+**b. Image and context management.** Fresh image payloads are preserved for one successful model response and older image base64 blocks are replaced with numbered placeholders (`packages/core/src/engine/turn-loop.ts:372`, `packages/core/src/context/compaction.ts:47`). `ContextManager.manageAsync()` then runs the compaction ladder (`packages/core/src/engine/turn-loop.ts:630`, `packages/core/src/context/manager.ts:395`). If a non-micro compaction fired, `post_compact` hooks may inject a reminder before the model call (`packages/core/src/engine/turn-loop.ts:652`).
 
-**c. Post-model checks**
-- `emitCtxFromUsage` derives prompt overhead from `promptTokens` and feeds `ContextManager.recordActualUsage` (hybrid estimation — see §5).
-- **Goal budget check** (`turn-loop.ts:704`): token + time caps are checked *after* the model call but *before* tool execution; exceeding them force-stops the run.
+**c. Model call.** `callModelWithFallback()` calls the `ModelFacade` with streaming; text/tool deltas pass through a wrapper that tracks streamed tool IDs and reactive context-pressure buckets (`packages/core/src/engine/turn-loop.ts:1254`). A streaming failure emits a tombstone and retries without streaming, but `ContextLimitError` and user aborts are propagated instead of retried (`packages/core/src/engine/turn-loop.ts:1286`, `packages/core/src/engine/turn-loop.ts:1295`).
 
-**d. Tool decision** — no tool calls ⇒ final-answer path; tool calls ⇒ execute and iterate.
+**d. Model-result checks.** Provider usage updates per-turn and cumulative counters, calibrates the context-overhead cache, and feeds actual prompt tokens back to the context manager (`packages/core/src/engine/turn-loop.ts:725`, `packages/core/src/engine/turn-loop.ts:456`, `packages/core/src/context/manager.ts:139`). Truncated tool-call responses are not executed; a reminder is injected and the loop retries (`packages/core/src/engine/turn-loop.ts:740`). Truncated text responses can ask for up to 3 continuations unless the signal aborts (`packages/core/src/engine/turn-loop.ts:762`).
 
-**e. Final-answer path** (`turn-loop.ts:722`+)
-- Emit `assistant_message`, then the `on_turn_end` and `on_stop` hooks. The `on_stop` hook carries the goal context.
-- If a hook returns `continueSession` and `stopBlockCount < maxStopBlocks`: increment the counter, emit `goal_progress(not_met)`, inject the nudge, and continue the loop. Otherwise complete normally (or, at the stop-block cap, complete with an `exhausted` status). For a plain interactive run with no goal, the built-in goal handler is a no-op.
+**e. Goal budget gate.** Goal token/time usage is accumulated after any continuation and checked before both final-answer and tool-execution branches (`packages/core/src/engine/turn-loop.ts:815`, `packages/core/src/engine/turn-loop.ts:834`). Budget exhaustion returns `goal_budget_exhausted`, not a tool or model error.
 
-**f. Tool-execution path** (`turn-loop.ts:800`+)
-- `streamingQueue.drain()` awaits concurrency-safe tools and runs unsafe ones sequentially (see §4).
-- The `maxToolCallsPerTurn` cap refuses overflow.
-- Per tool: `pre_tool_use` hook (permission + pre-hooks) → `ToolExecutor.executeSingle` → `post_tool_use` hook → `toolResultToBlock` → push `tool_result` into the message array → continue.
+**f. Final-answer path.** With no tool calls, the loop emits `assistant_message`, appends the assistant message to working history, runs `on_turn_end`, and then runs `on_stop` (`packages/core/src/engine/turn-loop.ts:855`). A stop hook can return `continueSession`; if the consecutive stop-block cap is not reached, the loop emits `goal_progress(not_met)`, injects hook guidance or a generic nudge, and continues (`packages/core/src/engine/turn-loop.ts:871`). At the cap, the loop emits `goal_progress(exhausted)` and stops; if the goal judge says met, it emits `goal_progress(met)` (`packages/core/src/engine/turn-loop.ts:923`, `packages/core/src/engine/turn-loop.ts:943`).
 
-### Stage 5 — Termination
-Emit `on_session_end`, flush the transcript, save state (terminal reason, turn count, usage), and return `EngineResult { text, reason, sessionId, turnCount, usage }`.
+**g. Tool-execution path.** The loop caps calls to `maxToolCallsPerTurn`, emits/records `tool_use` blocks, and drains `StreamingToolQueue` (`packages/core/src/engine/turn-loop.ts:959`, `packages/core/src/engine/streaming-tool-queue.ts:62`). Each `ToolResult` becomes a `tool_result` content block via `toolResultToBlock()` (`packages/core/src/engine/turn-loop.ts:168`). Dropped tool calls are reported back to the model in a reminder (`packages/core/src/engine/turn-loop.ts:1043`). `complete_goal` and confirmed `cancel_goal` short-circuit the run and clear the persisted goal (`packages/core/src/engine/turn-loop.ts:1071`, `packages/core/src/engine/turn-loop.ts:1090`).
+
+**h. Turn boundary.** After tool results, token-budget nudges, investigation/task guards, and `on_turn_end`, the transcript records a turn boundary and the engine flushes turn count and cumulative usage to `state.json` (`packages/core/src/engine/turn-loop.ts:1108`, `packages/core/src/engine/turn-loop.ts:1139`, `packages/core/src/engine/turn-loop.ts:1172`, `packages/core/src/engine/engine.ts:2080`).
+
+### Stage 6 — Termination and cleanup
+
+`TurnLoop.run()` is guarded so unexpected throws become a terminal `model_error` result instead of leaving the session `active` on disk (`packages/core/src/engine/turn-loop.ts:532`, `packages/core/src/engine/turn-loop.ts:1182`). If the main loop reaches `maxTurns`, it performs one final no-tools summary call and returns `reason: "max_turns"` (`packages/core/src/engine/turn-loop.ts:1205`).
+
+Back in `Engine.run()`, the run-scoped goal hook, active loop/session pointers, and file-history hook are cleared in `finally` (`packages/core/src/engine/engine.ts:2189`). Engine stores the compacted message cache, emits `on_session_end`, starts the fire-and-forget memory pipeline and first-turn title generation, persists terminal session state, emits `turn_complete`, and returns `EngineResult { text, reason, sessionId, turnCount, usage }` (`packages/core/src/engine/engine.ts:2200`, `packages/core/src/engine/engine.ts:2218`, `packages/core/src/engine/engine.ts:2228`, `packages/core/src/engine/engine.ts:2268`, `packages/core/src/engine/engine.ts:2290`).
 
 ## 3. Invariants the loop guarantees
 
-1. **`tool_use` ↔ `tool_result` pairing.** Every `tool_use` block must be answered by a `tool_result`, and every `tool_result` must follow its `tool_use` — a hard requirement of the Anthropic/OpenAI message shapes. The loop maintains this by emitting results immediately after execution; on resume it is *repaired* by `patchOrphanedToolUses` (`patch-orphaned-tools.ts:59`); during compaction it is *preserved* by `adjustIndexToPreserveAPIInvariants` (see §5). The context-compaction pass that protects this pairing is single-pass and depends on "result immediately follows use" — see the memory note on the compaction tool-pair invariant before reordering tool results.
+1. **`tool_use` / `tool_result` pairing is protected.** The hot loop emits results immediately after execution and maps them to content blocks (`packages/core/src/engine/turn-loop.ts:1000`). Resume and error paths repair dangling `tool_use` blocks with synthetic error results (`packages/core/src/engine/engine.ts:1396`, `packages/core/src/engine/turn-loop.ts:1354`). Compaction slice boundaries expand backward when needed so a kept `tool_result` never loses its `tool_use` (`packages/core/src/context/compaction.ts:197`).
 
-2. **Abort is terminal, not retryable.** A user Esc/Ctrl+C sets the signal; the loop checks it at the top, after context management, and after the model call, and returns a non-error `aborted_streaming`. User-initiated aborts are never fed back into the retry policy.
+2. **Abort is terminal, not retryable.** User Stop flows as an `AbortSignal` through ChatSession, Engine, TurnLoop, ModelFacade, ToolExecutor, and tool handlers (`packages/core/src/protocol/chat-session.ts:118`, `packages/core/src/engine/engine.ts:1613`, `packages/core/src/engine/model-facade.ts:73`, `packages/core/src/tool-system/executor.ts:90`). TurnLoop returns `aborted_streaming` without emitting a red error event and persists a `turn_stopped` marker (`packages/core/src/engine/turn-loop.ts:707`, `packages/core/src/engine/turn-loop.ts:359`, `packages/core/src/session/transcript.ts:99`).
 
-3. **Goal budgets are a hard backstop.** The run-scoped tracker (token + wall-clock + turns + consecutive stop-blocks) is checked before tool execution and cannot be overridden mid-run.
+3. **Goal budgets and ceilings are hard backstops.** `normalizeGoal()` drops empty/non-positive fields (`packages/core/src/engine/goal.ts:105`). Goal runs default to 300 turns and 25 stop-blocks; plain interactive runs default to 100 turns and 8 stop-blocks (`packages/core/src/engine/goal.ts:59`, `packages/core/src/engine/goal.ts:98`, `packages/core/src/engine/goal.ts:144`, `packages/core/src/engine/goal.ts:159`). Token/time budgets are checked in-loop before tools run (`packages/core/src/engine/goal.ts:285`, `packages/core/src/engine/turn-loop.ts:834`).
 
-4. **Fail-closed image policy.** Over-cap image payloads refuse the turn rather than silently dropping content.
+4. **The tool list the model sees and the executor gate stay aligned.** Engine filters visible tools per run for builtin overrides, MCP server scope, guards, feature flags, and plan mode (`packages/core/src/engine/engine.ts:1747`). ToolExecutor repeats the critical gates at execution time so a remembered or hallucinated hidden tool is rejected rather than run from the registry (`packages/core/src/tool-system/executor.ts:139`, `packages/core/src/tool-system/executor.ts:173`, `packages/core/src/tool-system/executor.ts:219`).
 
-## 4. Two mechanisms worth their own section
+5. **Images enter model context once.** The transcript can keep image bytes for replay, but the working message history downgrades consumed image payloads to compact placeholders before future model calls (`packages/core/src/context/compaction.ts:47`, `packages/core/src/engine/turn-loop.ts:386`).
+
+## 4. Three mechanisms worth their own section
 
 ### Step-gap steering (non-interrupting)
-`steer-queue.ts` is a set of **pure** helpers over a per-session list of `{ id, text }` (`SteerItem`). The host calls `Engine.enqueueSteer(sessionId, text, id)` while a run is in flight; the loop drains the queue at each step boundary (`consumeSteerItems`, `turn-loop.ts:440`) and splices the messages in as ordinary user turns — **no abort**. A `steer_injected` event lets the UI match the injected bubble to the draft it showed (by `id`). A still-pending entry can be revoked with `removeSteerItem` (the 撤回 path); once consumed, it cannot be taken back. This is distinct from *interrupt-and-resend* ("steer" in the UI sense), which aborts and starts a new turn.
 
-### Goal ceilings (`goal.ts`)
-A `GoalConfig` carries an objective plus optional `tokenBudget`, `timeBudgetMs`, `maxTurns`, and `maxStopBlocks`. The defaults differ for goal vs. interactive runs precisely because a goal is *unattended* and the stop-hook keeps re-blocking completion:
+`Engine.enqueueSteer(sessionId, text, id, clientMessageId)` accepts a queued user message only when that same session has an active top-level `TurnLoop` (`packages/core/src/engine/engine.ts:830`). The RPC layer exposes this as "Steer" and documents that it does not abort or trigger a model call by itself (`packages/core/src/protocol/server.ts:1729`). The loop consumes the queue at normal step boundaries and again just before finalizing, appends the text to the transcript with `steerId`, and emits `steer_injected` so the host can match the UI draft (`packages/core/src/engine/turn-loop.ts:565`, `packages/core/src/engine/turn-loop.ts:867`, `packages/core/src/engine/turn-loop.ts:1333`).
 
-- `maxTurns`: interactive `100` (`INTERACTIVE_DEFAULT_MAX_TURNS`), goal `300` (`GOAL_DEFAULT_MAX_TURNS`). Precedence: config > `goal.maxTurns` > default (`resolveMaxTurns`).
-- `maxStopBlocks` (consecutive judge re-blocks before forced stop): interactive `8`, goal `25`. Precedence: config > `goal.maxStopBlocks` > default (`resolveMaxStopBlocks`, `goal.ts:68`). The tighter interactive cap exists so a plugin `on_stop` hook can't loop 25× on a plain session.
+A still-pending item can be revoked through `unsteer`; once consumed, it is ordinary persisted user input and cannot be taken back (`packages/core/src/engine/engine.ts:864`).
 
-The real safety net for an unattended goal is the token/time budget; `maxStopBlocks` only bites a goal the judge keeps re-blocking with no progress between blocks.
+### Persistent goals and live extension
+
+A `GoalConfig` carries an objective plus optional `tokenBudget`, `timeBudgetMs`, `maxTurns`, `maxStopBlocks`, and `setAtMs` (`packages/core/src/engine/goal.ts:14`). The session stores exactly one active goal in `state.activeGoal`, not in transcript events, so hosts can recover or clear it cheaply from `state.json` (`packages/core/src/session/session-manager.ts:193`, `packages/core/src/session/session-manager.ts:236`).
+
+The loop exposes `extendGoalRun()` through `ChatSession`, `Engine`, and `TurnLoop`. Extensions can add turns, token budget, time budget, and stop-block allowance; any real extension resets the consecutive stop-block streak and re-arms approaching-limit announcements (`packages/core/src/protocol/chat-session.ts:136`, `packages/core/src/engine/engine.ts:3022`, `packages/core/src/engine/turn-loop.ts:226`). The UI-facing approach marker watches both turns remaining and stop-blocks remaining because re-blocked goals usually hit the stop-block cap first (`packages/core/src/engine/turn-loop.ts:286`, `packages/core/src/engine/goal.ts:196`).
+
+### Cancellation boundaries
+
+Cancellation has three layers:
+
+- **Session layer:** `ChatSession.cancel()` marks the active run as user-cancelled, aborts the controller, drains queued turns, and suppresses automatic background wakeups until a new user turn starts (`packages/core/src/protocol/chat-session.ts:118`).
+- **Turn-loop layer:** checks occur at loop top, after context management, after model return, inside continuation loops, and in the outer catch (`packages/core/src/engine/turn-loop.ts:550`, `packages/core/src/engine/turn-loop.ts:638`, `packages/core/src/engine/turn-loop.ts:823`, `packages/core/src/engine/turn-loop.ts:773`, `packages/core/src/engine/turn-loop.ts:1189`).
+- **Model/tool layer:** `callModelWithFallback()` refuses to retry a cancelled streaming request as non-streaming (`packages/core/src/engine/turn-loop.ts:1298`), while `ToolExecutor.executeSingle()` returns an error result immediately if the signal is already aborted (`packages/core/src/tool-system/executor.ts:123`).
+
+![Context and cancellation state](images/context-cancellation.png)
 
 ## 5. Context management (`context/`)
 
-When the message array approaches the model's window, the `ContextManager` applies increasingly aggressive compaction — from free-and-lossless to expensive-and-lossy.
+Context management combines always-on waste removal, pressure-gated compaction, LLM summaries, and emergency windowing.
 
 | File | Role | ~LOC |
 |------|------|------|
-| `context/manager.ts` | `ContextManager` — tier orchestration, config/state, hybrid token estimation | ~515 |
-| `context/compaction.ts` | Pure tier functions (microcompact, snip, window, summary), token estimation, dedup & masking | ~1,200 |
-| `context/tool-result-storage.ts` | Tier-0 persistence: oversized `tool_result` → disk file + preview block | ~400 |
+| `packages/core/src/context/manager.ts` | `ContextManager` — tier orchestration, config/state, hybrid token estimation, force summarize | ~662 |
+| `packages/core/src/context/compaction.ts` | Pure compaction functions: image downgrade, ratio clamps, pair-safe slicing, micro/snip/window/summary helpers, prompt-too-long recovery | ~951 |
+| `packages/core/src/context/tool-result-storage.ts` | Tier-0 persistence: oversized `tool_result` -> disk file + preview block with frozen per-session decisions | ~367 |
 
-`ContextManager.manageAsync(messages)` (`manager.ts:312`) runs:
+Default thresholds are `compactAtRatio = 0.85`, `summarizeAtRatio = 0.92`, and `microcompactFloorRatio = 0.7` (`packages/core/src/context/manager.ts:53`). User-provided ratios are clamped so floor never exceeds compact and summarize never falls below compact (`packages/core/src/context/compaction.ts:160`, `packages/core/src/engine/engine.ts:451`).
 
-- **Tier 0 — persistence & always-on waste removal.**
-  - `persistLargeToolResults` (`tool-result-storage.ts:223`): a single `tool_result` over `DEFAULT_PERSIST_THRESHOLD` (≈50 KB) is written to `<transcriptDir>/tool-results/<toolUseId>.txt` and replaced in-context with a `[filepath + 2 KB preview]` block. A per-message aggregate cap (`PER_MESSAGE_AGGREGATE_CAP`, ≈200 KB) packs the largest results until under budget.
-  - `truncateToolResults`: hard per-block fallback when persistence is off or the FS write failed.
-  - `dedupeFileReads`: same path Read more than once ⇒ keep the newest, replace older copies with a supersede marker.
-  - `maskOldObservations`: keep the newest `browser_observe` snapshot verbatim, collapse earlier ones (the highest-leverage browser-token saving).
-- **Tier 1 — microcompact** (`compaction.ts:273`): zero-cost, lossless. For re-fetchable tools (`COMPACTABLE_TOOL_NAMES` — Read/Glob/Grep/Bash/PowerShell/REPL/WebFetch/WebSearch/NotebookEdit) it clears old `tool_result` *content* beyond the last few rounds, leaving a `[Old tool result cleared — Tool arg=…]` fingerprint. State-bearing tools (TaskUpdate/Agent/Skill) are left intact. Gated by a floor ratio (~0.7).
-- **Tier 2 — summarize** (async): above `compactAtRatio` (~0.85) it asks the aux LLM for a *rolling* summary (it merges the prior summary rather than re-summarizing from scratch, so detail erodes slowly). After 3 consecutive failures it falls back to the sync `snipCompact → windowCompact` path.
-- **Tier 3 — window-compact emergency**: above `summarizeAtRatio` (~0.92), keep first + last N as a last resort before `prompt_too_long`.
-- **Reactive probe**: during streaming the loop accumulates response tokens and, on crossing each 2000-token bucket (`reactive-threshold.ts:13`), may trigger an emergency window-compact mid-turn.
+`ContextManager.manageAsync(messages)` (`packages/core/src/context/manager.ts:395`) runs:
 
-Two design choices stand out:
+- **Tier 0 — always-on waste removal.**
+  - `persistLargeToolResults` writes a single `tool_result` above 50 KB, or enough large results to get a user message below the 200 KB aggregate cap, to `<transcriptDir>/tool-results/<toolUseId>.txt`, replacing the block with a 2 KB preview and path (`packages/core/src/context/tool-result-storage.ts:32`, `packages/core/src/context/tool-result-storage.ts:96`, `packages/core/src/context/tool-result-storage.ts:223`).
+  - `truncateToolResults` is the hard fallback for oversized string results that were not persisted (`packages/core/src/context/manager.ts:401`, `packages/core/src/context/manager.ts:605`).
+  - `applyToolResultBudget` trims largest per-message results first when a message still exceeds the char budget (`packages/core/src/context/manager.ts:405`, `packages/core/src/context/compaction.ts:644`).
+  - `dedupeFileReads` keeps the newest `Read` result for each file path and replaces older copies with a supersede marker (`packages/core/src/context/compaction.ts:510`).
+  - `maskOldObservations` keeps the newest `browser_observe(snapshot)` result verbatim and collapses older snapshots (`packages/core/src/context/compaction.ts:606`).
 
-- **Frozen decisions.** Once a `tool_use_id` is seen, its persistence fate is immutable for the session (`ContentReplacementState`). Re-applying the same byte-identical replacement avoids flapping the content the model built its state on; `reconstructContentReplacementState` re-derives this on resume.
-- **Invariant-preserving slices.** `adjustIndexToPreserveAPIInvariants` (`compaction.ts:70`) expands a compaction slice backwards to never split a `tool_use`/`tool_result` pair. Used by both `snipCompact` and `windowCompact`.
-- **Hybrid token estimation.** `recordActualUsage` stores the last *actual* `promptTokens`; `estimateTokensHybrid` uses it as a base and only estimates messages added since — so the estimate converges to ground truth every turn.
+- **Tier 1 — microcompact.** Above the 0.7 floor, old compactable tool results are replaced with fingerprints such as `[Old tool result cleared — Read file_path=...]`. The compactable set is data-fetching tools only (`Read`, `Glob`, `Grep`, `Bash`, `PowerShell`, `NotebookEdit`, `WebFetch`, `WebSearch`, `REPL`); orchestration/state-bearing tool results are left intact (`packages/core/src/context/manager.ts:408`, `packages/core/src/context/compaction.ts:300`, `packages/core/src/context/compaction.ts:391`).
+
+- **Tier 2 — summary.** At or above `compactAtRatio`, or in the 0.70-0.85 band when microcompact did nothing, `trySummaryCompact()` asks the injected summarizer for a rolling 9-section summary (`packages/core/src/context/manager.ts:457`, `packages/core/src/context/manager.ts:168`, `packages/core/src/context/compaction.ts:729`). Existing anchored summaries are merged forward rather than re-summarized from scratch (`packages/core/src/context/compaction.ts:793`).
+
+- **Tier 2 fallback — snip/window.** If summary is absent, failed three times, or did not shrink, `snipCompact` keeps head + tail with a marker, then `windowCompact` keeps the first message + recent tail if needed (`packages/core/src/context/manager.ts:492`, `packages/core/src/context/compaction.ts:256`, `packages/core/src/context/compaction.ts:289`).
+
+- **Tier 3 — emergency window.** Above `summarizeAtRatio`, the manager keeps only a tiny tail (`windowCompact(result, 6)`) as the last pre-request defense (`packages/core/src/context/manager.ts:509`).
+
+Two design choices matter:
+
+- **Frozen persistence decisions.** Once a `tool_use_id` is evaluated, its persist-or-not decision is fixed for the session; resumed sessions reconstruct this state from the message history, and existing replacements are byte-identical map lookups (`packages/core/src/context/tool-result-storage.ts:48`, `packages/core/src/context/tool-result-storage.ts:73`, `packages/core/src/context/tool-result-storage.ts:213`).
+- **Hybrid token estimation.** After each provider response, `recordActualUsage(promptTokens, messageCount)` stores the real prompt size; future estimates add only messages appended since that reading (`packages/core/src/context/manager.ts:135`, `packages/core/src/context/manager.ts:148`, `packages/core/src/engine/turn-loop.ts:731`).
+- **Manual `/compact` ignores ratio gates.** `Engine.forceCompact()` rebuilds or reuses a context manager, wires a primary-model summarizer, and calls `forceSummarize()` so a below-threshold but long text-only conversation can still compact on request (`packages/core/src/engine/engine.ts:2800`, `packages/core/src/engine/engine.ts:2840`, `packages/core/src/context/manager.ts:520`).
 
 ## 6. Where to read next
 
 - Tools fired by the loop: [02 · Tool system](02-tool-system.md)
 - The `ModelFacade`'s client and how a tag resolves to a model: [03 · LLM & model layer](03-llm-and-model-layer.md)
-- Sessions/transcripts the loop persists into, and how all `run` goes through the protocol layer: [04 · Protocol & sessions](04-protocol-and-sessions.md)
-- The `on_stop` goal judge and hooks: [05](05-presets-prompt-hooks-skills.md), and persistent goals end-to-end: [06](06-long-running-orchestration.md)
+- Sessions/transcripts the loop persists into, and how `run` goes through the protocol layer: [04 · Protocol & sessions](04-protocol-and-sessions.md)
+- Presets, prompt sections, hook registration, and the goal stop judge: [05](05-presets-prompt-hooks-skills.md)
+- Persistent goals, background work, automation, and cron: [06](06-long-running-orchestration.md)
