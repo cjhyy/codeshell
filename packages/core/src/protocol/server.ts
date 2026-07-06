@@ -633,7 +633,10 @@ export class AgentServer {
   private handleApprove(req: RpcRequest): void {
     const params = (req.params ?? {}) as unknown as ApproveParams;
 
-    // ChatSessionManager path: look up per-session pendingApprovals
+    // ChatSessionManager path: approvals are scoped by (sessionId, requestId).
+    // Never fall back from a session-tagged response to the legacy global map:
+    // a stale/misrouted UI response must fail closed instead of resolving a
+    // pending prompt from another session.
     if (this.chatManager && typeof params.sessionId === "string") {
       const s = this.chatManager.get(params.sessionId);
       if (!s) {
@@ -648,24 +651,13 @@ export class AgentServer {
       }
       const resolve = s.pendingApprovals.get(params.requestId);
       if (!resolve) {
-        // Tool approvals still resolve through the interactive backend's
-        // legacy pending map; the sessionId on their envelope is UI routing
-        // metadata. Accept a session-tagged response for those requests too.
-        const legacyResolve = this.pendingApprovals.get(params.requestId);
-        if (!legacyResolve) {
-          this.transport.send(
-            createErrorResponse(
-              req.id,
-              ErrorCodes.InvalidParams,
-              `No pending approval: ${params.requestId}`,
-            ),
-          );
-          return;
-        }
-        this.pendingApprovals.delete(params.requestId);
-        this.clearApprovalTimer(params.requestId);
-        legacyResolve(params.decision);
-        this.transport.send(createResponse(req.id, { ok: true }));
+        this.transport.send(
+          createErrorResponse(
+            req.id,
+            ErrorCodes.InvalidParams,
+            `No pending approval for session ${params.sessionId}: ${params.requestId}`,
+          ),
+        );
         return;
       }
       s.pendingApprovals.delete(params.requestId);
@@ -1801,11 +1793,26 @@ export class AgentServer {
     return new Promise((resolve) => {
       const requestId = nanoid(12);
       const sessionId = typeof request.sessionId === "string" ? request.sessionId : undefined;
-      this.pendingApprovals.set(requestId, resolve);
+      const session =
+        this.chatManager && sessionId ? this.chatManager.get(sessionId) : undefined;
+
+      if (this.chatManager && sessionId && !session) {
+        resolve({ approved: false, reason: `session closed: ${sessionId}` });
+        return;
+      }
+
+      if (session) {
+        session.pendingApprovals.set(requestId, (decision: unknown) => {
+          resolve(decision as ApprovalResult);
+        });
+      } else {
+        this.pendingApprovals.set(requestId, resolve);
+      }
 
       const timer = setTimeout(() => {
-        if (this.pendingApprovals.has(requestId)) {
-          this.pendingApprovals.delete(requestId);
+        const pending = session?.pendingApprovals ?? this.pendingApprovals;
+        if (pending.has(requestId)) {
+          pending.delete(requestId);
           this.approvalTimers.delete(requestId);
           resolve({ approved: false, reason: "approval timed out" });
         }
@@ -2085,6 +2092,9 @@ export class AgentServer {
     }
 
     if (this.chatManager) {
+      this.chatManager.forEachSession((session) => {
+        this.cancelSessionApprovals(session, "server closing");
+      });
       this.chatManager.closeAll();
     }
 
@@ -2122,11 +2132,14 @@ export class AgentServer {
    * the tool hanging. Bounded request types have same-keyed timer entries;
    * AskUserQuestion does not.
    */
-  private cancelSessionApprovals(session: import("./chat-session.js").ChatSession): void {
+  private cancelSessionApprovals(
+    session: import("./chat-session.js").ChatSession,
+    reason = "cancelled",
+  ): void {
     for (const [requestId, resolve] of session.pendingApprovals) {
       this.clearApprovalTimer(requestId);
       try {
-        resolve({ approved: false, reason: "cancelled" });
+        resolve({ approved: false, reason });
       } catch {
         /* a resolver must never break cancel cleanup */
       }
