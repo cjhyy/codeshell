@@ -1,0 +1,94 @@
+import { describe, it, expect } from "bun:test";
+import { estimateTokens } from "./compaction.js";
+import { ContextManager } from "./manager.js";
+import type { Message } from "../types.js";
+
+function textConversation(rounds: number): Message[] {
+  const msgs: Message[] = [];
+  for (let i = 0; i < rounds; i++) {
+    msgs.push({ role: "user", content: `question ${i} ` + "lorem ipsum ".repeat(500) });
+    msgs.push({ role: "assistant", content: `answer ${i} ` + "dolor sit amet ".repeat(500) });
+  }
+  return msgs;
+}
+
+describe("ContextManager.manageAsync micro no-op escalation", () => {
+  it("summarizes a text-only conversation in the 0.7-0.85 spin band", async () => {
+    const mgr = new ContextManager({ maxTokens: 200_000 });
+    let summarizeCalls = 0;
+    mgr.setSummarizeFn(async () => {
+      summarizeCalls++;
+      return "SUMMARY: " + "the prior text-only discussion was condensed. ".repeat(4);
+    });
+
+    const messages = textConversation(32);
+    const before = estimateTokens(messages);
+    expect(before).toBeGreaterThanOrEqual(200_000 * 0.7);
+    expect(before).toBeLessThan(200_000 * 0.85);
+
+    const result = await mgr.manageAsync(messages);
+    const after = estimateTokens(result);
+
+    expect(summarizeCalls).toBe(1);
+    expect(after).toBeLessThan(before);
+  });
+
+  it("does not summarize below the microcompact floor", async () => {
+    const mgr = new ContextManager({ maxTokens: 200_000 });
+    let summarizeCalls = 0;
+    mgr.setSummarizeFn(async () => {
+      summarizeCalls++;
+      return "SUMMARY: " + "this should not be used. ".repeat(4);
+    });
+
+    const messages = textConversation(28);
+    const before = estimateTokens(messages);
+    expect(before).toBeLessThan(200_000 * 0.7);
+
+    const result = await mgr.manageAsync(messages);
+    const after = estimateTokens(result);
+
+    expect(summarizeCalls).toBe(0);
+    expect(after).toBe(before);
+  });
+
+  it("still summarizes at or above the compact ratio", async () => {
+    const mgr = new ContextManager({ maxTokens: 200_000 });
+    let summarizeCalls = 0;
+    mgr.setSummarizeFn(async () => {
+      summarizeCalls++;
+      return "SUMMARY: " + "the over-threshold conversation was condensed. ".repeat(4);
+    });
+
+    const messages = textConversation(40);
+    const before = estimateTokens(messages);
+    expect(before).toBeGreaterThanOrEqual(200_000 * 0.85);
+
+    const result = await mgr.manageAsync(messages);
+    const after = estimateTokens(result);
+
+    expect(summarizeCalls).toBe(1);
+    expect(after).toBeLessThan(before);
+  });
+
+  it("does not repeatedly summarize after an escalated summary makes no progress", async () => {
+    const mgr = new ContextManager({ maxTokens: 200_000 });
+    let summarizeCalls = 0;
+    mgr.setSummarizeFn(async () => {
+      summarizeCalls++;
+      return "NO-PROGRESS ".repeat(100_000);
+    });
+
+    const messages = textConversation(32);
+    const before = estimateTokens(messages);
+    expect(before).toBeGreaterThanOrEqual(200_000 * 0.7);
+    expect(before).toBeLessThan(200_000 * 0.85);
+
+    const first = await mgr.manageAsync(messages);
+    expect(summarizeCalls).toBe(1);
+    expect(estimateTokens(first)).toBe(before);
+
+    await mgr.manageAsync(first);
+    expect(summarizeCalls).toBe(1);
+  });
+});

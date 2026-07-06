@@ -93,11 +93,20 @@ export type OnCompactFn = (info: {
   before: number;
   after: number;
 }) => void;
+type SummaryCompactLogEvent = "context.summary_compact" | "context.force_summary_compact";
+type SummaryCompactResult = {
+  messages: Message[];
+  tokens: number;
+  compacted: boolean;
+  noProgress: boolean;
+};
 
 export class ContextManager {
   private config: ContextManagerConfig;
   private summarizeFn: SummarizeFn | undefined;
   private consecutiveSummaryFailures = 0;
+  /** Prevents repeated spin-band LLM calls after a summary generated no shrink. */
+  private suppressNoOpMicroSummaryUntilCompact = false;
   private lastSummary: string | undefined;
   /** Last known actual token count from API usage data. */
   private lastActualTokens: number | undefined;
@@ -154,6 +163,80 @@ export class ContextManager {
    */
   setSummarizeFn(fn: SummarizeFn): void {
     this.summarizeFn = fn;
+  }
+
+  private async trySummaryCompact(
+    messages: Message[],
+    before: number,
+    logEvent: SummaryCompactLogEvent,
+  ): Promise<SummaryCompactResult> {
+    if (!this.summarizeFn || this.consecutiveSummaryFailures >= 3) {
+      return { messages, tokens: before, compacted: false, noProgress: false };
+    }
+
+    try {
+      const keepRecentN = Math.max(8, Math.floor(messages.length * 0.3));
+      const messagesToSummarize = messages.slice(1, -keepRecentN); // skip first (userContext) and recent
+
+      if (messagesToSummarize.length <= 3) {
+        return { messages, tokens: before, compacted: false, noProgress: false };
+      }
+
+      // Rolling summary: if a prior summary is already anchored in the
+      // messages (from an earlier compaction in this session or in a resumed
+      // session), feed it back so the LLM merges-updates rather than
+      // re-summarizes from scratch.
+      const priorSummary = extractAnchoredSummary(messages) ?? this.lastSummary;
+      const prompt = buildSummarizationPrompt(messagesToSummarize, priorSummary);
+      const summary = await this.summarizeFn(prompt);
+
+      if (!summary || summary.length <= 50) {
+        this.consecutiveSummaryFailures++;
+        logger.warn("context.summary_failed", {
+          failures: this.consecutiveSummaryFailures,
+          error: "summary was empty or too short",
+        });
+        return { messages, tokens: before, compacted: false, noProgress: true };
+      }
+
+      const compacted = applySummaryCompaction(
+        messages,
+        summary,
+        keepRecentN,
+        this.transcriptPath,
+      );
+      const after = estimateTokens(compacted);
+
+      if (after >= before) {
+        this.consecutiveSummaryFailures++;
+        logger.warn("context.summary_no_progress", {
+          failures: this.consecutiveSummaryFailures,
+          before,
+          after,
+          summaryLen: summary.length,
+          rolling: priorSummary !== undefined,
+        });
+        return { messages, tokens: before, compacted: false, noProgress: true };
+      }
+
+      this.consecutiveSummaryFailures = 0;
+      this.lastSummary = summary;
+      logger.info(logEvent, {
+        before,
+        after,
+        summaryLen: summary.length,
+        rolling: priorSummary !== undefined,
+      });
+      this.onCompact?.({ strategy: "summary", before, after });
+      return { messages: compacted, tokens: after, compacted: true, noProgress: false };
+    } catch (err) {
+      this.consecutiveSummaryFailures++;
+      logger.warn("context.summary_failed", {
+        failures: this.consecutiveSummaryFailures,
+        error: (err as Error).message,
+      });
+      return { messages, tokens: before, compacted: false, noProgress: false };
+    }
   }
 
   /**
@@ -324,7 +407,9 @@ export class ContextManager {
 
     // Tier 1: microcompact — see manage() for the rationale on the floor.
     const preTier1Tokens = this.estimateTokensHybrid(result);
-    if (preTier1Tokens > this.config.maxTokens * this.config.microcompactFloorRatio) {
+    const microFloorGate = this.config.maxTokens * this.config.microcompactFloorRatio;
+    let microNoOpAtFloor = false;
+    if (preTier1Tokens > microFloorGate) {
       const keepRecentN =
         this.config.microcompactKeepRecent ?? defaultKeepRecent(this.config.maxTokens);
       // See manage(): onClear fires synchronously before microcompact returns,
@@ -336,69 +421,69 @@ export class ContextManager {
           clearedInfo = info;
         },
       });
+      const postTier1Tokens = this.estimateTokensHybrid(result);
+      microNoOpAtFloor = postTier1Tokens === preTier1Tokens;
+      if (postTier1Tokens < preTier1Tokens) {
+        this.suppressNoOpMicroSummaryUntilCompact = false;
+      }
       if (clearedInfo) {
-        const after = this.estimateTokensHybrid(result);
         logger.info("context.microcompact", {
           before: preTier1Tokens,
-          after,
+          after: postTier1Tokens,
           keepRecentN,
           clearedRounds: (clearedInfo as { clearedRounds: number }).clearedRounds,
           toolNames: (clearedInfo as { toolNames: string[] }).toolNames,
         });
-        this.onCompact?.({ strategy: "micro", before: preTier1Tokens, after });
-      }
-    }
-
-    const tokens = this.estimateTokensHybrid(result);
-    const ratio = tokens / this.config.maxTokens;
-
-    // Tier 2: LLM summary if approaching limit
-    if (
-      ratio >= this.config.compactAtRatio &&
-      this.summarizeFn &&
-      this.consecutiveSummaryFailures < 3
-    ) {
-      try {
-        const keepRecentN = Math.max(8, Math.floor(result.length * 0.3));
-        const messagesToSummarize = result.slice(1, -keepRecentN); // skip first (userContext) and recent
-
-        if (messagesToSummarize.length > 3) {
-          // Rolling summary: if a prior summary is already anchored in the
-          // messages (from an earlier compaction in this session or in a
-          // resumed session), feed it back so the LLM merges-updates rather
-          // than re-summarizes from scratch — preserves info that would
-          // otherwise erode across successive compactions.
-          const priorSummary = extractAnchoredSummary(result) ?? this.lastSummary;
-          const prompt = buildSummarizationPrompt(messagesToSummarize, priorSummary);
-          const summary = await this.summarizeFn(prompt);
-
-          if (summary && summary.length > 50) {
-            result = applySummaryCompaction(result, summary, keepRecentN, this.transcriptPath);
-            this.consecutiveSummaryFailures = 0;
-            this.lastSummary = summary;
-            const after = estimateTokens(result);
-            logger.info("context.summary_compact", {
-              before: tokens,
-              after,
-              summaryLen: summary.length,
-              rolling: priorSummary !== undefined,
-            });
-            this.onCompact?.({ strategy: "summary", before: tokens, after });
-            return result;
-          }
-        }
-      } catch (err) {
-        this.consecutiveSummaryFailures++;
-        logger.warn("context.summary_failed", {
-          failures: this.consecutiveSummaryFailures,
-          error: (err as Error).message,
+        this.onCompact?.({
+          strategy: "micro",
+          before: preTier1Tokens,
+          after: postTier1Tokens,
         });
       }
     }
 
-    // Reuse the `tokens` we already computed above. We only get here if the
-    // LLM summary path didn't fire (no summarizeFn, too many failures, or it
-    // threw) — fall back to the same severity ladder as manage().
+    let tokens = this.estimateTokensHybrid(result);
+    const ratio = tokens / this.config.maxTokens;
+    if (ratio < this.config.microcompactFloorRatio) {
+      this.suppressNoOpMicroSummaryUntilCompact = false;
+    }
+    const noOpMicroSpinBand =
+      microNoOpAtFloor &&
+      ratio >= this.config.microcompactFloorRatio &&
+      ratio < this.config.compactAtRatio;
+    const shouldEscalateNoOpMicro =
+      noOpMicroSpinBand && !this.suppressNoOpMicroSummaryUntilCompact;
+
+    // Tier 2: LLM summary if approaching limit, or if micro was the only tier
+    // available in the 0.70-0.85 band and it freed nothing.
+    if (ratio >= this.config.compactAtRatio || shouldEscalateNoOpMicro) {
+      const summarized = await this.trySummaryCompact(
+        result,
+        tokens,
+        "context.summary_compact",
+      );
+      result = summarized.messages;
+      tokens = summarized.tokens;
+
+      if (summarized.compacted) {
+        this.suppressNoOpMicroSummaryUntilCompact = false;
+        return result;
+      }
+
+      if (shouldEscalateNoOpMicro && summarized.noProgress) {
+        this.suppressNoOpMicroSummaryUntilCompact = true;
+        logger.info("context.micro_noop_summary_suppressed", {
+          tokens,
+          ratio,
+          compactAtRatio: this.config.compactAtRatio,
+          microcompactFloorRatio: this.config.microcompactFloorRatio,
+        });
+      }
+    }
+
+    // Reuse the `tokens` we already computed above. We only get here if no
+    // summary compacted the prompt (no summarizeFn, too many failures, a
+    // thrown error, or a generated summary that did not shrink anything).
     let live = tokens;
     const snipGate = this.config.maxTokens * this.config.compactAtRatio;
     const windowGate = this.config.maxTokens * (this.config.compactAtRatio + 0.05);
@@ -465,37 +550,15 @@ export class ContextManager {
     let tokens = this.estimateTokensHybrid(result);
 
     // Unconditional LLM summary (no ratio gate).
-    if (this.summarizeFn && this.consecutiveSummaryFailures < 3) {
-      try {
-        const summaryKeepN = Math.max(8, Math.floor(result.length * 0.3));
-        const messagesToSummarize = result.slice(1, -summaryKeepN);
-        if (messagesToSummarize.length > 3) {
-          const priorSummary = extractAnchoredSummary(result) ?? this.lastSummary;
-          const prompt = buildSummarizationPrompt(messagesToSummarize, priorSummary);
-          const before = tokens;
-          const summary = await this.summarizeFn(prompt);
-          if (summary && summary.length > 50) {
-            result = applySummaryCompaction(result, summary, summaryKeepN, this.transcriptPath);
-            this.consecutiveSummaryFailures = 0;
-            this.lastSummary = summary;
-            const after = estimateTokens(result);
-            logger.info("context.force_summary_compact", {
-              before,
-              after,
-              summaryLen: summary.length,
-              rolling: priorSummary !== undefined,
-            });
-            this.onCompact?.({ strategy: "summary", before, after });
-            return result;
-          }
-        }
-      } catch (err) {
-        this.consecutiveSummaryFailures++;
-        logger.warn("context.summary_failed", {
-          failures: this.consecutiveSummaryFailures,
-          error: (err as Error).message,
-        });
-      }
+    {
+      const summarized = await this.trySummaryCompact(
+        result,
+        tokens,
+        "context.force_summary_compact",
+      );
+      result = summarized.messages;
+      tokens = summarized.tokens;
+      if (summarized.compacted) return result;
     }
 
     // Fallback: no summary available — snip, then window, so /compact still
