@@ -37,7 +37,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { StringDecoder } from "node:string_decoder";
 import type { SandboxBackend } from "../tool-system/sandbox/index.js";
-import { resolveSpawnTarget, defaultShellBinary, killChildTree } from "./spawn-common.js";
+import { resolveSpawnTarget, defaultShellBinary, killChildTree, killProcessGroup } from "./spawn-common.js";
 
 export interface SafeSpawnOptions {
   /** Process working directory. Required — callers know their cwd; SafeSpawn does not fall back to process.cwd(). */
@@ -153,7 +153,19 @@ export function safeSpawnShell(
     shell,
     sandbox: opts.sandbox,
   });
-  return runLifecycle({ file, args, opts, cleanup, resolveMs: elapsedMs(resolveStartedAt) });
+  // Shell commands run free-form LLM strings that routinely background
+  // grandchildren (`pytest &`, `sh → npm → node`). Spawn as a process-group
+  // leader (detached) so a timeout/abort kill reaches the WHOLE subtree, not
+  // just the direct shell — otherwise an orphaned grandchild keeps the
+  // inherited stdout pipe open and Node's `close` never fires (the hang).
+  return runLifecycle({
+    file,
+    args,
+    opts,
+    cleanup,
+    resolveMs: elapsedMs(resolveStartedAt),
+    detached: true,
+  });
 }
 
 interface LifecycleArgs {
@@ -162,9 +174,11 @@ interface LifecycleArgs {
   opts: SafeSpawnOptions;
   cleanup: (() => void) | undefined;
   resolveMs: number | undefined;
+  /** Spawn as a process-group leader so kills reap the whole subtree (shell mode). */
+  detached?: boolean;
 }
 
-function runLifecycle({ file, args, opts, cleanup, resolveMs }: LifecycleArgs): Promise<SafeSpawnResult> {
+function runLifecycle({ file, args, opts, cleanup, resolveMs, detached }: LifecycleArgs): Promise<SafeSpawnResult> {
   const maxBytes = opts.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_BYTES;
   const abortGrace = opts.ioDrainGraceMs ?? DEFAULT_IO_DRAIN_GRACE_MS;
   const lifecycleStartedAt = spawnProfileEnabled() ? performance.now() : 0;
@@ -177,9 +191,16 @@ function runLifecycle({ file, args, opts, cleanup, resolveMs }: LifecycleArgs): 
 
   return new Promise<SafeSpawnResult>((resolve) => {
     let settled = false;
+    // Declared before finish() so the spawn-failed early-return (which calls
+    // finish before these are assigned) doesn't hit a TDZ reference.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let settleTimer: ReturnType<typeof setTimeout> | undefined;
+    let onAbort: (() => void) | undefined;
     const finish = (result: SafeSpawnResult) => {
       if (settled) return;
       settled = true;
+      if (timer) clearTimeout(timer);
+      if (settleTimer) clearTimeout(settleTimer);
       logSpawnProfile(file, args, resolveMs, elapsedMs(lifecycleStartedAt), result.reason);
       // Always release backend-allocated resources, regardless of exit path.
       // cleanup is best-effort — see seatbelt backend for rationale.
@@ -194,7 +215,7 @@ function runLifecycle({ file, args, opts, cleanup, resolveMs }: LifecycleArgs): 
 
     let child: ChildProcess;
     try {
-      child = spawn(file, args, { cwd: opts.cwd, env: opts.env });
+      child = spawn(file, args, { cwd: opts.cwd, env: opts.env, detached });
     } catch (err) {
       finish(emptyResult({ reason: "spawn_failed", spawnFailed: true, error: (err as Error).message }));
       return;
@@ -208,23 +229,66 @@ function runLifecycle({ file, args, opts, cleanup, resolveMs }: LifecycleArgs): 
     let stderrTruncated = false;
     let timedOut = false;
     let aborted = false;
+    let lastExitCode: number | null = null;
+    let lastExitSignal: NodeJS.Signals | null = null;
 
-    const timer = setTimeout(() => {
+    // Terminate the child on timeout/abort. When detached (shell mode) the
+    // child leads its own process group, so kill the WHOLE group — this reaps
+    // backgrounded grandchildren (`pytest &`, `sh → npm → node`) that a bare
+    // child.kill() would orphan. After the kill, arm a settle deadline:
+    // Node's `close` waits for every inherited stdio pipe to close, and an
+    // orphaned grandchild can hold stdout open forever, so `close` may never
+    // fire. Force a resolve via the last-seen `exit` code once the kill grace
+    // has elapsed — the promise must never hang past terminate().
+    const terminate = (graceMs: number) => {
+      if (detached && typeof child.pid === "number") {
+        void killProcessGroup(child.pid, { graceMs });
+      } else {
+        killChildTree(child, graceMs);
+      }
+      if (settleTimer) return;
+      settleTimer = setTimeout(() => {
+        finishFromExit();
+      }, graceMs + 500);
+      settleTimer.unref?.();
+    };
+
+    timer = setTimeout(() => {
       timedOut = true;
-      // win32: taskkill /T reaps the whole tree (a foreground `npm test`
-      // spawns node children that child.kill() alone would orphan). POSIX:
-      // SIGTERM → grace → SIGKILL. See killChildTree.
-      killChildTree(child, TIMEOUT_SIGKILL_GRACE_MS);
+      terminate(TIMEOUT_SIGKILL_GRACE_MS);
     }, opts.timeoutMs);
 
-    let onAbort: (() => void) | undefined;
     if (opts.signal) {
       onAbort = () => {
         aborted = true;
-        killChildTree(child, abortGrace);
+        terminate(abortGrace);
       };
       opts.signal.addEventListener("abort", onAbort, { once: true });
     }
+
+    // Fallback finish when `close` never arrives because a killed process's
+    // orphaned grandchild still holds a stdio pipe. Uses whatever `exit` code
+    // we saw (exit fires when the direct child dies, independent of stdio).
+    const finishFromExit = () => {
+      const reason: SafeSpawnReason = timedOut ? "timeout" : aborted ? "aborted" : "ok";
+      finish({
+        reason,
+        stdout,
+        stderr,
+        exitCode: lastExitCode,
+        signal: lastExitSignal,
+        stdoutTruncated,
+        stderrTruncated,
+        timedOut,
+        aborted,
+        spawnFailed: false,
+      });
+    };
+
+    child.on("exit", (code, sig) => {
+      lastExitCode = code;
+      lastExitSignal = sig;
+    });
 
     child.stdout?.on("data", (chunk: Buffer) => {
       if (stdoutTruncated) return;

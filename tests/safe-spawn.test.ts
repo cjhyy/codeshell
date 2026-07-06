@@ -106,6 +106,26 @@ describe("A6 — safeSpawn timeout", () => {
     expect(elapsed).toBeLessThan(5000);
     expect(r.reason).toBe("timeout");
   });
+
+  // Regression: a fast-exiting direct child that leaves a grandchild holding
+  // the inherited stdout pipe. Node's `close` waits for all stdio to close,
+  // so the grandchild keeps the pipe open and `close` never fires — the
+  // promise would hang forever past the timeout. The lifecycle must resolve
+  // on timeout regardless. (Real-world: `bash -c "pytest"` where pytest
+  // deadlocks in interpreter finalize.)
+  it("resolves on timeout even when a grandchild holds the stdout pipe", async () => {
+    const start = Date.now();
+    const r = await safeSpawnShell("sleep 30 & echo started", {
+      cwd: CWD,
+      env: ENV,
+      timeoutMs: 300,
+    });
+    const elapsed = Date.now() - start;
+    expect(r.timedOut).toBe(true);
+    // Must not hang: timeout(300) + SIGKILL grace(2s) + settle → well under 10s.
+    expect(elapsed).toBeLessThan(10_000);
+    expect(r.reason).toBe("timeout");
+  });
 });
 
 describe("A6 — safeSpawn byte caps", () => {

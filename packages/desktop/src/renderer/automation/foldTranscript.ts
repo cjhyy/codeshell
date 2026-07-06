@@ -19,7 +19,12 @@ export function foldTranscript(items: FoldItem[]): MessagesReducerState {
     // replay-time — never stamp "now" onto history.
     const replayClock = () => item.timestamp;
     if (item.kind === "user") {
-      state = appendUserMessage(state, item.text, item.timestamp);
+      // A persisted steerId marks an engine-injected step-in turn (steer). Replay
+      // it as injected + carry the steerId so hydrate can dedup the optimistic
+      // bubble against this disk snapshot (session s-mr8s3w5i loss/dup bug).
+      state = item.steerId
+        ? appendUserMessage(state, item.text, item.timestamp, undefined, true, item.steerId)
+        : appendUserMessage(state, item.text, item.timestamp);
     } else if (item.kind === "turn_stopped") {
       // Rebuild the user-interrupt marker so the stopped turn renders flat
       // (turnWasStopped finds this turn_end → no fold header). No elapsed on

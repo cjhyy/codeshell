@@ -49,12 +49,13 @@ export class Transcript {
   appendMessage(
     role: string,
     content: string | ContentBlock[],
-    opts?: { injected?: boolean },
+    opts?: { injected?: boolean; steerId?: string },
   ): TranscriptEvent {
     return this.append("message", {
       role,
       content,
       ...(opts?.injected ? { injected: true } : {}),
+      ...(opts?.steerId ? { steerId: opts.steerId } : {}),
     });
   }
 

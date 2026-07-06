@@ -467,7 +467,7 @@ export class TurnLoop {
       for (const { id, text } of steered) {
         if (!text) continue;
         messages.push({ role: "user", content: text });
-        this.deps.transcript.appendMessage("user", text);
+        this.deps.transcript.appendMessage("user", text, { steerId: id });
         this.config.onStream?.({ type: "steer_injected", text, id });
       }
 

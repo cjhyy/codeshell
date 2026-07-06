@@ -22,6 +22,15 @@ describe("foldTranscript", () => {
     expect(assistant && (assistant as { text: string }).text).toBe("hi there");
   });
 
+  it("replays a steerId onto the user bubble (injected step-in)", () => {
+    const items: FoldItem[] = [
+      { kind: "user", text: "直接搜一下 给我第8个", steerId: "q-1" },
+    ];
+    const state = foldTranscript(items);
+    const user = state.messages.find((m) => m.kind === "user");
+    expect(user).toMatchObject({ text: "直接搜一下 给我第8个", steerId: "q-1", injected: true });
+  });
+
   it("renders a tool call", () => {
     const items: FoldItem[] = [
       { kind: "stream", event: { type: "tool_use_start", toolCall: { id: "tc1", toolName: "Bash", args: { command: "ls" } } } },

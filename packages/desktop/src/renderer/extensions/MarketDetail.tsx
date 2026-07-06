@@ -143,16 +143,18 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
 
   return (
     <>
-      <div className="mb-3 flex items-center gap-2">
-        <Button variant="ghost" size="sm" className="h-7 px-2 text-sm text-muted-foreground hover:text-foreground" onClick={onBack}>
-          ‹ {t("ext.common.back")}
-        </Button>
-        <span className="font-semibold">{market.name}</span>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-sm text-muted-foreground hover:text-foreground" onClick={onBack}>
+            ‹ {t("ext.common.back")}
+          </Button>
+          <span className="truncate font-semibold">{market.name}</span>
+        </div>
+        <PluginInstallJobsPanel
+          jobs={installJobs.filter((job) => job.marketplaceName === marketName)}
+          onRetry={retryInstallJob}
+        />
       </div>
-      <PluginInstallJobsPanel
-        jobs={installJobs.filter((job) => job.marketplaceName === marketName)}
-        onRetry={retryInstallJob}
-      />
       {market.plugins.length === 0 ? (
         <div className="p-4 text-sm text-muted-foreground">{t("ext.market.noPlugins")}</div>
       ) : (

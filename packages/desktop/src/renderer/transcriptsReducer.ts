@@ -54,16 +54,24 @@ export function transcriptsReducer(
 ): TranscriptsMap {
   if (action.type === "hydrate") {
     const current = map[action.bucket];
-    const pendingSteers = (current?.messages ?? []).flatMap((m) =>
-      m.kind === "user" && m.steerId && m.pending ? [m] : [],
+    // Protect ALL local steer bubbles (not just still-pending ones) from a
+    // lagging snapshot. A steer that steer_injected already confirmed
+    // (pending:false) can still be missing from a hydrate whose disk read
+    // happened before core appended it — the old pending-only guard let that
+    // wholesale-replace wipe it (session s-mr8s3w5i loss bug). Now core
+    // persists the steerId (plan A), so the snapshot replays the same bubble
+    // with the same id → we keep the server copy and drop the local one
+    // (no dup); only a steer the snapshot still LACKS is re-appended (no loss).
+    const localSteers = (current?.messages ?? []).flatMap((m) =>
+      m.kind === "user" && m.steerId ? [m] : [],
     );
-    if (pendingSteers.length === 0) return { ...map, [action.bucket]: action.state };
+    if (localSteers.length === 0) return { ...map, [action.bucket]: action.state };
     const existing = new Set(
       action.state.messages.flatMap((m) =>
         m.kind === "user" && m.steerId ? [m.steerId] : [],
       ),
     );
-    const missing = pendingSteers.filter((m) => m.steerId && !existing.has(m.steerId));
+    const missing = localSteers.filter((m) => m.steerId && !existing.has(m.steerId));
     return {
       ...map,
       [action.bucket]: missing.length === 0

@@ -28,6 +28,22 @@ describe("transcriptToFoldItems", () => {
     expect(items[5]).toEqual({ kind: "stream", event: { type: "turn_complete", reason: "completed" }, timestamp: 1 });
   });
 
+  it("carries a persisted steerId onto the user FoldItem (step-in dedup key)", () => {
+    // Step-gap steering messages are persisted as a real user turn (unmarked),
+    // now stamped with the queued-draft id so hydrate can dedup the optimistic
+    // bubble against the disk snapshot (session s-mr8s3w5i loss bug).
+    const jsonl = [
+      line("message", { role: "user", content: "直接搜一下 给我第8个", steerId: "q-1" }),
+    ].join("\n");
+    const items = transcriptToFoldItems(jsonl);
+    expect(items[0]).toEqual({
+      kind: "user",
+      text: "直接搜一下 给我第8个",
+      steerId: "q-1",
+      timestamp: 1,
+    });
+  });
+
   it("skips a synthetic injected user message (background-wakeup system-reminder)", () => {
     // Background-job completion notifications are submitted as a `role:user`
     // turn (the model must see them as a user message), but they are NOT the

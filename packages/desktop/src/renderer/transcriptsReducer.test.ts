@@ -53,4 +53,58 @@ describe("transcriptsReducer pending steer bubbles", () => {
     expect(users).toHaveLength(1);
     expect(users[0]).toMatchObject({ text: "confirmed", steerId: "q-1", pending: false });
   });
+
+  it("keeps a CONFIRMED steer bubble when a lagging snapshot lacks it (no loss)", () => {
+    // The bug (session s-mr8s3w5i): steer_injected confirmed the bubble
+    // (pending:false), then a hydrate fired before the disk transcript's
+    // append was visible to the reader → the snapshot has no matching steerId
+    // and the old guard (pending-only) wiped the bubble.
+    let map: TranscriptsMap = {};
+    map = transcriptsReducer(map, {
+      type: "user_message",
+      bucket: "b",
+      text: "直接搜一下 给我第8个",
+      injected: true,
+      steerId: "q-1",
+      pending: false,
+    });
+
+    map = transcriptsReducer(map, {
+      type: "hydrate",
+      bucket: "b",
+      state: INITIAL_STATE, // snapshot lagged — steerId not yet on disk
+    });
+
+    const users = map.b.messages.filter((m) => m.kind === "user");
+    expect(users).toHaveLength(1);
+    expect(users[0]).toMatchObject({ text: "直接搜一下 给我第8个", steerId: "q-1" });
+  });
+
+  it("does NOT duplicate a confirmed steer bubble when the snapshot already carries its steerId", () => {
+    // Once core persists the steerId (plan A), the disk snapshot replays the
+    // same bubble with the same steerId. Hydrate must keep exactly one.
+    let map: TranscriptsMap = {};
+    map = transcriptsReducer(map, {
+      type: "user_message",
+      bucket: "b",
+      text: "confirmed",
+      injected: true,
+      steerId: "q-1",
+      pending: false,
+    });
+
+    map = transcriptsReducer(map, {
+      type: "hydrate",
+      bucket: "b",
+      state: {
+        ...INITIAL_STATE,
+        messages: [
+          { kind: "user", id: "srv-1", text: "confirmed", injected: true, steerId: "q-1" },
+        ],
+      },
+    });
+
+    const users = map.b.messages.filter((m) => m.kind === "user" && m.steerId === "q-1");
+    expect(users).toHaveLength(1);
+  });
 });

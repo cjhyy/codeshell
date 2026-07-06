@@ -129,7 +129,12 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
           // `injected:true` (steering messages are real user input and are NOT
           // marked, so they correctly survive as bubbles). See engine.ts run().
           if (d.injected === true) break;
-          items.push({ kind: "user", text: textOf(d.content), timestamp: ts });
+          items.push({
+            kind: "user",
+            text: textOf(d.content),
+            ...(d.steerId ? { steerId: String(d.steerId) } : {}),
+            timestamp: ts,
+          });
         } else if (role === "assistant") {
           items.push({ kind: "stream", event: { type: "stream_request_start", turnNumber: ev.turnNumber }, timestamp: ts });
           items.push({ kind: "stream", event: { type: "text_delta", text: textOf(d.content) }, timestamp: ts });
