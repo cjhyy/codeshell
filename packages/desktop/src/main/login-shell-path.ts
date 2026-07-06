@@ -1,8 +1,25 @@
 import { spawn } from "node:child_process";
 import { delimiter } from "node:path";
+import { ENV_DENY_REGEX } from "../../../core/src/runtime/spawn-common.js";
 
 const DEFAULT_TIMEOUT_MS = 2_500;
 const MAX_CAPTURE_BYTES = 64 * 1024;
+const LOGIN_SHELL_ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const LOGIN_SHELL_ENV_SYSTEM_KEYS = new Set([
+  "HOME",
+  "USER",
+  "LOGNAME",
+  "SHELL",
+  "PWD",
+  "OLDPWD",
+  "SHLVL",
+  "_",
+  "TMPDIR",
+  "SSH_AUTH_SOCK",
+  "COMMAND_MODE",
+  "MallocNanoZone",
+]);
+const LOGIN_SHELL_ENV_SYSTEM_PREFIXES = ["XPC_", "__CF"];
 
 function redactedStderrLogFields(stderr: string | undefined): Record<string, unknown> {
   if (!stderr) return {};
@@ -15,7 +32,7 @@ function redactedStderrLogFields(stderr: string | undefined): Record<string, unk
 type SupportedPlatform = NodeJS.Platform;
 
 export type LoginShellPathProbeResult =
-  | { ok: true; shell: string; path: string }
+  | { ok: true; shell: string; path: string; env?: Record<string, string> }
   | {
       ok: false;
       shell?: string;
@@ -26,20 +43,32 @@ export type LoginShellPathProbeResult =
       stderr?: string;
     };
 
+type LoginShellEnvInjectionBase = { addedEnvKeys: string[] };
+
 export type LoginShellPathInjectionResult =
-  | { status: "skipped"; reason: "unsupported-platform" | "no-shell" }
+  | ({
+      status: "skipped";
+      reason: "unsupported-platform" | "no-shell";
+    } & LoginShellEnvInjectionBase)
   | {
       status: "unchanged";
       reason: "probe-failed" | "already-current";
       probe: LoginShellPathProbeResult;
-    }
+    } & LoginShellEnvInjectionBase
   | {
       status: "updated";
       before: string;
       after: string;
       added: string[];
       probe: Extract<LoginShellPathProbeResult, { ok: true }>;
-    };
+    } & LoginShellEnvInjectionBase;
+
+export type LoginShellEnvMergeResult = {
+  path: string;
+  addedPathEntries: string[];
+  addedEnv: Record<string, string>;
+  addedEnvKeys: string[];
+};
 
 export function splitPathEntries(
   pathValue: string | undefined,
@@ -84,12 +113,64 @@ export function mergeLoginShellPath(
   return [...missingLoginEntries, ...existingEntries].join(pathDelimiter);
 }
 
+export function parseLoginShellEnvOutput(output: string): Record<string, string> {
+  const parsed: Record<string, string> = {};
+  for (const line of output.split(/\r?\n/)) {
+    const separatorIndex = line.indexOf("=");
+    if (separatorIndex <= 0) continue;
+    const key = line.slice(0, separatorIndex);
+    if (!LOGIN_SHELL_ENV_NAME_PATTERN.test(key)) continue;
+    parsed[key] = line.slice(separatorIndex + 1);
+  }
+  return parsed;
+}
+
 export function parseEnvPathOutput(output: string): string | null {
   let found: string | null = null;
   for (const line of output.split(/\r?\n/)) {
     if (line.startsWith("PATH=")) found = line.slice("PATH=".length);
   }
   return found && found.trim() ? found.trim() : null;
+}
+
+function isLoginShellSystemEnvKey(key: string): boolean {
+  if (LOGIN_SHELL_ENV_SYSTEM_KEYS.has(key)) return true;
+  return LOGIN_SHELL_ENV_SYSTEM_PREFIXES.some((prefix) => key.startsWith(prefix));
+}
+
+function shouldInjectLoginShellEnvKey(key: string, current: NodeJS.ProcessEnv): boolean {
+  if (!LOGIN_SHELL_ENV_NAME_PATTERN.test(key)) return false;
+  if (key === "PATH") return false;
+  if (ENV_DENY_REGEX.test(key)) return false;
+  if (isLoginShellSystemEnvKey(key)) return false;
+  if (current[key] !== undefined) return false;
+  return true;
+}
+
+export function mergeLoginShellEnv(
+  current: NodeJS.ProcessEnv,
+  snapshot: Record<string, string>,
+  pathDelimiter = delimiter,
+): LoginShellEnvMergeResult {
+  const currentPath = current.PATH ?? "";
+  const path = mergeLoginShellPath(currentPath, snapshot.PATH, pathDelimiter);
+  const currentPathEntries = new Set(splitPathEntries(currentPath, pathDelimiter));
+  const addedPathEntries = splitPathEntries(path, pathDelimiter).filter(
+    (entry) => !currentPathEntries.has(entry),
+  );
+  const addedEnv: Record<string, string> = {};
+
+  for (const key of Object.keys(snapshot).sort()) {
+    if (!shouldInjectLoginShellEnvKey(key, current)) continue;
+    addedEnv[key] = snapshot[key];
+  }
+
+  return {
+    path,
+    addedPathEntries,
+    addedEnv,
+    addedEnvKeys: Object.keys(addedEnv),
+  };
 }
 
 function defaultShellForPlatform(platform: SupportedPlatform): string | null {
@@ -172,9 +253,10 @@ export async function probeLoginShellPath(
       finish({ ok: false, shell, reason: "spawn-error", error: err.message });
     });
     child.on("close", (code, signal) => {
+      const envSnapshot = parseLoginShellEnvOutput(stdout);
       const path = parseEnvPathOutput(stdout);
       if (code === 0 && path) {
-        finish({ ok: true, shell, path });
+        finish({ ok: true, shell, path, env: { ...envSnapshot, PATH: path } });
         return;
       }
       finish({
@@ -200,11 +282,11 @@ export async function injectLoginShellPathAtStartup(
   const env = options.env ?? process.env;
   const platform = options.platform ?? process.platform;
   if (platform !== "darwin" && platform !== "linux") {
-    return { status: "skipped", reason: "unsupported-platform" };
+    return { status: "skipped", reason: "unsupported-platform", addedEnvKeys: [] };
   }
 
   const shell = resolveLoginShell(env, platform);
-  if (!shell) return { status: "skipped", reason: "no-shell" };
+  if (!shell) return { status: "skipped", reason: "no-shell", addedEnvKeys: [] };
 
   const before = env.PATH ?? "";
   const probe = await probeLoginShellPath({
@@ -223,23 +305,34 @@ export async function injectLoginShellPathAtStartup(
       signal: probe.signal,
       ...redactedStderrLogFields(probe.stderr),
     });
-    return { status: "unchanged", reason: "probe-failed", probe };
+    return { status: "unchanged", reason: "probe-failed", probe, addedEnvKeys: [] };
   }
 
-  const after = mergeLoginShellPath(before, probe.path);
-  if (!after || after === before) {
-    options.log?.("login-shell-path.unchanged", { shell, reason: "already-current" });
-    return { status: "unchanged", reason: "already-current", probe };
+  const merge = mergeLoginShellEnv(env, { ...(probe.env ?? {}), PATH: probe.path });
+  const after = merge.path;
+  if (!after || (after === before && merge.addedEnvKeys.length === 0)) {
+    options.log?.("login-shell-path.unchanged", {
+      shell,
+      reason: "already-current",
+      addedEnvKeys: [],
+    });
+    return { status: "unchanged", reason: "already-current", probe, addedEnvKeys: [] };
   }
 
-  const beforeEntries = new Set(splitPathEntries(before));
-  const added = splitPathEntries(after).filter((entry) => !beforeEntries.has(entry));
-  env.PATH = after;
+  if (after !== before) env.PATH = after;
+  for (const key of merge.addedEnvKeys) env[key] = merge.addedEnv[key];
   options.log?.("login-shell-path.updated", {
     shell,
-    added,
+    pathChanged: after !== before,
+    addedPathEntryCount: merge.addedPathEntries.length,
+    addedEnvKeys: merge.addedEnvKeys,
+  });
+  return {
+    status: "updated",
     before,
     after,
-  });
-  return { status: "updated", before, after, added, probe };
+    added: merge.addedPathEntries,
+    addedEnvKeys: merge.addedEnvKeys,
+    probe,
+  };
 }

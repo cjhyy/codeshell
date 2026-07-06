@@ -679,6 +679,7 @@ export {
   type BgShell,
   type BgShellStatus,
 } from "./runtime/background-shell.js";
+export { ENV_DENY_REGEX, ENV_ALLOWLIST } from "./runtime/spawn-common.js";
 export {
   getImageProvider,
   DEFAULT_IMAGE_MODEL,
