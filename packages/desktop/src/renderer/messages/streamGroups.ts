@@ -405,10 +405,25 @@ function foldTurnProcess(
   // (still-streaming) turn from isLive→false, folding it mid-flight. So injected
   // user messages are NOT boundaries: they fall inside the preceding turn's slice
   // and render inline as a user bubble there.
+  // A non-injected user message is always a turn boundary. An injected one
+  // (steer / goal wakeup / cron续接) usually is NOT — it continues the current
+  // turn (see the comment above). EXCEPTION: a wakeup that arrives AFTER the
+  // prior turn already finished (a done assistant sits before it) is really the
+  // start of NEW work; treating it as a boundary keeps that new streaming work
+  // live instead of folding it into the completed prior turn's card.
   const userIdxs: number[] = [];
   for (let i = 0; i < items.length; i++) {
     const it = items[i]!;
-    if (it.kind === "user" && !(it as { injected?: boolean }).injected) userIdxs.push(i);
+    if (it.kind !== "user") continue;
+    const injected = (it as { injected?: boolean }).injected === true;
+    if (!injected) {
+      userIdxs.push(i);
+      continue;
+    }
+    // Injected: only a boundary if a done assistant precedes it since the last
+    // real boundary (i.e. the prior turn completed before this wakeup).
+    const priorStart = userIdxs.length ? userIdxs[userIdxs.length - 1]! : -1;
+    if (turnHasDoneAssistant(items, priorStart, i)) userIdxs.push(i);
   }
   if (userIdxs.length === 0) return items.slice();
 

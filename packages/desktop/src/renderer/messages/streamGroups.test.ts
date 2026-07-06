@@ -299,6 +299,32 @@ describe("buildStreamItems", () => {
     expect(groups[0]!.isLive).toBe(true);
   });
 
+  // Real wakeup form: the PRIOR turn already finished (assistant done + tool),
+  // THEN a cron续接 / background-completion injects a user message and a NEW
+  // assistant starts streaming. That new work must render live, not be folded
+  // into the already-completed prior turn's "已处理 Xs" card.
+  test("an injected wakeup after a COMPLETED turn opens a new live segment (not folded)", () => {
+    const messages: Message[] = [
+      user("run the task", 0),
+      assistant("all done", { createdAt: 100, doneAt: 3_000 }), // prior turn finished
+      tool("Bash", 1_000, 2_000),
+      injectedUser("background job finished", 4_000), // wakeup spliced in
+      streamingAssistant("picking up the result…", 4_100), // NEW work, still streaming
+    ];
+
+    const items = buildStreamItems(messages, { liveTurnActive: true });
+
+    // The wakeup opens a NEW segment: the prior completed turn folds into its
+    // own (non-live) card, and the new streaming assistant renders inline as a
+    // top-level item — NOT swallowed into the prior turn's fold card.
+    const priorCard = items.find((it) => it.kind === "turn_process_group") as TurnProcessGroup | undefined;
+    expect(priorCard?.isLive).toBe(false);
+    const streamingInline = items.some(
+      (it) => it.kind === "assistant" && (it as { text?: string }).text === "picking up the result…",
+    );
+    expect(streamingInline).toBe(true);
+  });
+
   test("a real (non-injected) new user turn DOES fold the prior completed turn (regression)", () => {
     const messages: Message[] = [
       user("first task", 0),
