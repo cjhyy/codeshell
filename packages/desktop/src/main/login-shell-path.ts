@@ -4,6 +4,14 @@ import { delimiter } from "node:path";
 const DEFAULT_TIMEOUT_MS = 2_500;
 const MAX_CAPTURE_BYTES = 64 * 1024;
 
+function redactedStderrLogFields(stderr: string | undefined): Record<string, unknown> {
+  if (!stderr) return {};
+  return {
+    stderrRedacted: true,
+    stderrLength: stderr.length,
+  };
+}
+
 type SupportedPlatform = NodeJS.Platform;
 
 export type LoginShellPathProbeResult =
@@ -213,7 +221,7 @@ export async function injectLoginShellPathAtStartup(
       error: probe.error,
       code: probe.code,
       signal: probe.signal,
-      stderr: probe.stderr,
+      ...redactedStderrLogFields(probe.stderr),
     });
     return { status: "unchanged", reason: "probe-failed", probe };
   }

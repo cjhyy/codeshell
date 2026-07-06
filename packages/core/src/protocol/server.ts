@@ -954,6 +954,10 @@ export class AgentServer {
       return;
     }
     if (this.chatManager) {
+      const session = this.chatManager.get(params.sessionId);
+      if (session) {
+        this.cancelSessionApprovals(session, "session closed");
+      }
       this.chatManager.close(params.sessionId);
     }
     // Explicit session teardown — reap that session's background shells

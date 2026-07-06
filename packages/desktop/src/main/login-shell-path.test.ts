@@ -1,5 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { mergeLoginShellPath, parseEnvPathOutput, resolveLoginShell } from "./login-shell-path.js";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  injectLoginShellPathAtStartup,
+  mergeLoginShellPath,
+  parseEnvPathOutput,
+  resolveLoginShell,
+} from "./login-shell-path.js";
 
 describe("mergeLoginShellPath", () => {
   test("keeps existing order, prepends missing login-shell entries, and dedupes", () => {
@@ -46,5 +54,37 @@ describe("resolveLoginShell", () => {
 
   test("does not run on Windows", () => {
     expect(resolveLoginShell({ SHELL: "/bin/bash" } as NodeJS.ProcessEnv, "win32")).toBeNull();
+  });
+});
+
+describe("injectLoginShellPathAtStartup logging", () => {
+  test("does not log raw shell stderr on probe failure", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "login-shell-path-"));
+    const shell = join(dir, "fake-shell.sh");
+    writeFileSync(
+      shell,
+      "#!/bin/sh\nprintf 'startup secret: TOKEN=super-secret-value\\n' >&2\nexit 1\n",
+      "utf-8",
+    );
+    chmodSync(shell, 0o755);
+    const logs: Array<{ event: string; data?: Record<string, unknown> }> = [];
+
+    try {
+      await injectLoginShellPathAtStartup({
+        env: { SHELL: shell, PATH: "/usr/bin:/bin" } as NodeJS.ProcessEnv,
+        platform: "darwin",
+        timeoutMs: 500,
+        log: (event, data) => logs.push({ event, data }),
+      });
+
+      const failed = logs.find((entry) => entry.event === "login-shell-path.failed");
+      expect(failed).toBeDefined();
+      expect(JSON.stringify(failed?.data)).not.toContain("super-secret-value");
+      expect(failed?.data).not.toHaveProperty("stderr");
+      expect(failed?.data?.stderrRedacted).toBe(true);
+      expect(typeof failed?.data?.stderrLength).toBe("number");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

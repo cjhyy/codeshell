@@ -3,7 +3,7 @@ import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js
 import type { LLMResponse, Message, ToolCall, ToolResult } from "../types.js";
 import type { SteerItem } from "./steer-queue.js";
 
-function makeDeps(responses: LLMResponse[], steer: SteerItem): {
+function makeDeps(responses: LLMResponse[], steer: SteerItem | SteerItem[]): {
   deps: TurnLoopDeps;
   modelMessages: Message[][];
   consumeSources: string[];
@@ -14,6 +14,7 @@ function makeDeps(responses: LLMResponse[], steer: SteerItem): {
   const modelMessages: Message[][] = [];
   const consumeSources: string[] = [];
   const appended: Array<{ role: string; content: unknown; opts: unknown }> = [];
+  const steers = Array.isArray(steer) ? steer : [steer];
 
   const call = async (_sys: string, messages: Message[]): Promise<LLMResponse> => {
     modelMessages.push(messages.map((m) => ({ ...m })));
@@ -81,7 +82,7 @@ function makeDeps(responses: LLMResponse[], steer: SteerItem): {
         consumeSources.push(source);
         if (source === "finalize_backfill" && !backfillServed) {
           backfillServed = true;
-          return [steer];
+          return steers;
         }
         return [];
       },
@@ -152,5 +153,48 @@ describe("TurnLoop steer finalize backfill", () => {
       e !== null &&
       (e as { type?: string }).type === "steer_injected"
     )).toHaveLength(1);
+  });
+
+  it("skips duplicate queued steers with the same clientMessageId before model history", async () => {
+    const events: unknown[] = [];
+    const { deps, modelMessages, appended } = makeDeps(
+      [stop("done"), stop("continued")],
+      [
+        { id: "steer-1", text: "first steer", clientMessageId: "client-dup" },
+        { id: "steer-2", text: "duplicate steer", clientMessageId: "client-dup" },
+      ],
+    );
+    const claimed = new Set<string>();
+    deps.claimClientMessageId = (clientMessageId) => {
+      if (claimed.has(clientMessageId)) return false;
+      claimed.add(clientMessageId);
+      return true;
+    };
+    const loop = new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+      onStream: (event) => {
+        events.push(event);
+      },
+    });
+
+    const result = await loop.run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(modelMessages).toHaveLength(2);
+    expect(modelMessages[1]!.some((m) => m.role === "user" && m.content === "first steer")).toBe(true);
+    expect(modelMessages[1]!.some((m) => m.role === "user" && m.content === "duplicate steer")).toBe(false);
+    expect(appended).toEqual([
+      {
+        role: "user",
+        content: "first steer",
+        opts: { steerId: "steer-1", clientMessageId: "client-dup" },
+      },
+    ]);
+    expect(events.filter((e) =>
+      typeof e === "object" &&
+      e !== null &&
+      (e as { type?: string }).type === "steer_injected"
+    )).toEqual([{ type: "steer_injected", text: "first steer", id: "steer-1" }]);
   });
 });

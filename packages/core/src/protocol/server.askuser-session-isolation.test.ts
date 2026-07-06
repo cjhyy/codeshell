@@ -160,4 +160,40 @@ describe("AgentServer AskUserQuestion session isolation", () => {
 
     server.close();
   });
+
+  it("resolves a pending askUser when closeSession deletes the session", async () => {
+    const { engine, state } = makeAskingEngine("sess-close");
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => engine,
+    });
+    const t = makeTransport();
+    const server = new AgentServer({ transport: t.transport, chatManager });
+
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: Methods.Run,
+      params: { sessionId: "sess-close", task: "ask then close" },
+    });
+
+    await waitFor(() => askRequests(t.sent).length === 1, "askUser request should be pending");
+    const session = chatManager.get("sess-close")!;
+    expect(session.pendingApprovals.size).toBe(1);
+    expect(state.answer).toBeUndefined();
+
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 2,
+      method: Methods.CloseSession,
+      params: { sessionId: "sess-close" },
+    });
+
+    await waitFor(() => state.answer === "session closed", "askUser should settle on closeSession");
+    expect(session.pendingApprovals.size).toBe(0);
+    expect(chatManager.get("sess-close")).toBeUndefined();
+    expect(t.sent.some((m) => m.id === 2 && m.result?.ok === true)).toBe(true);
+
+    server.close();
+  });
 });

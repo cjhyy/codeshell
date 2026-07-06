@@ -1383,6 +1383,27 @@ export class Engine {
     let session: SessionBundle;
     let messages: Message[];
     let freshImageMessage: Message | undefined;
+    const claimedClientMessageIds = new Set<string>();
+    const claimClientMessageId = (
+      bundle: SessionBundle,
+      clientMessageId: string | undefined,
+      source: "submit" | "steer",
+    ): boolean => {
+      if (!clientMessageId) return true;
+      if (
+        claimedClientMessageIds.has(clientMessageId) ||
+        bundle.transcript.hasClientMessageId(clientMessageId)
+      ) {
+        logger.info("engine.client_message.duplicate_ignored", {
+          sessionId: bundle.state.sessionId,
+          clientMessageId,
+          source,
+        });
+        return false;
+      }
+      claimedClientMessageIds.add(clientMessageId);
+      return true;
+    };
 
     if (options?.sessionId && this.sessionManager.exists(options.sessionId)) {
       session = this.sessionManager.resume(options.sessionId);
@@ -1407,6 +1428,24 @@ export class Engine {
       }
       // Append new user message
       const userMsg: Message = { role: "user", content: userMessageContent };
+      if (!claimClientMessageId(session, options?.clientMessageId, "submit")) {
+        const usage = session.state.tokenUsage ?? {
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+        };
+        return {
+          text: "",
+          reason: "completed",
+          sessionId: session.state.sessionId,
+          turnCount: session.state.turnCount ?? 0,
+          usage: {
+            promptTokens: usage.promptTokens ?? 0,
+            completionTokens: usage.completionTokens ?? 0,
+            totalTokens: usage.totalTokens ?? 0,
+          },
+        };
+      }
       if (parsedTask.hasImages) freshImageMessage = userMsg;
       messages.push(userMsg);
       session.transcript.appendMessage("user", userMessageContent, {
@@ -1431,6 +1470,7 @@ export class Engine {
         this.config.isSubAgent === true ? "subagent" : this.config.origin,
       );
       const userMsg: Message = { role: "user", content: userMessageContent };
+      claimClientMessageId(session, options?.clientMessageId, "submit");
       if (parsedTask.hasImages) freshImageMessage = userMsg;
       messages = [userMsg];
       session.transcript.appendMessage("user", userMessageContent, {
@@ -2030,6 +2070,8 @@ export class Engine {
             return info;
           },
           consumeSteer: (source) => this.consumeSteer(sid, source),
+          claimClientMessageId: (clientMessageId, source) =>
+            claimClientMessageId(session, clientMessageId, source),
           recordCumulativeUsage,
           // Clear the persisted goal for a self-reported completion / confirmed
           // cancel. Clears the in-RAM session's activeGoal (so THIS run's later

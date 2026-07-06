@@ -144,6 +144,12 @@ export interface TurnLoopDeps {
    */
   consumeSteer?: (source?: "normal_step" | "finalize_backfill") => SteerItem[];
   /**
+   * Execution-level idempotency guard for host-supplied user/steer intents.
+   * Returns false only when a present clientMessageId has already entered this
+   * run or the persisted transcript. Messages without an id bypass this guard.
+   */
+  claimClientMessageId?: (clientMessageId: string, source: "steer") => boolean;
+  /**
    * Clear this session's PERSISTED goal (state.activeGoal) and drop the
    * in-flight goal-stop hook, so a user-initiated cancel_goal both stops the
    * current run AND prevents the goal from re-inheriting on the next bare send.
@@ -1338,6 +1344,15 @@ export class TurnLoop {
     let consumed = false;
     for (const { id, text, clientMessageId } of steered) {
       if (!text) continue;
+      if (clientMessageId && this.deps.claimClientMessageId?.(clientMessageId, "steer") === false) {
+        logger.info("steer.submit.duplicate_ignored", {
+          clientMessageId,
+          steerId: id,
+          sessionId: this.deps.sessionId,
+          source,
+        });
+        continue;
+      }
       consumed = true;
       messages.push({ role: "user", content: text });
       this.deps.transcript.appendMessage("user", text, { steerId: id, clientMessageId });
