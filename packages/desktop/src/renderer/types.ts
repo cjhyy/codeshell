@@ -474,8 +474,13 @@ export function applyStreamEvent(
       // in the feed so the injected guidance is visible inline (it really did
       // join the conversation — it's persisted to the transcript core-side).
       // Mark injected so it doesn't reset the file-change aggregation boundary
-      // (a goal-driven task steers/wakes across many runs — #9).
-      return appendUserMessage(state, event.text, now(), false, true);
+      // (a goal-driven task steers/wakes across many runs — #9). Carry the
+      // steerId (event.id) so this bubble is protected by hydrate's steer guard
+      // and dedupes against the disk replay of the SAME steerId — otherwise a
+      // lagging snapshot would wipe it (the s-mr8s3w5i loss bug) or a later
+      // hydrate would duplicate it. Since queueInput no longer plants an
+      // optimistic bubble, this append IS the bubble's first appearance.
+      return appendUserMessage(state, event.text, now(), false, true, event.id, false);
     }
 
     case "text_delta": {

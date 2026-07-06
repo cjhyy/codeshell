@@ -2233,15 +2233,13 @@ function App() {
     const clientMessageId = newQueuedId();
     const trimmed = text.trim();
     if (!trimmed) return;
-    dispatch({
-      type: "user_message",
-      bucket: activeBucket,
-      text: trimmed,
-      injected: true,
-      steerId: id,
-      pending: true,
-      clientMessageId,
-    });
+    // No optimistic right-side bubble here. A queued draft lives ONLY in the
+    // left waiting panel (enqueueQueuedInput) until the engine consumes it and
+    // echoes steer_injected — the reducer then appends the real user bubble
+    // (types.ts steer_injected fallback). This matches Codex (queued = not
+    // shown in the feed; shown only once actually injected). The optimistic
+    // bubble was a workaround for TurnProcessGroupCard's missing user branch,
+    // now fixed, so it's no longer needed.
     setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, id, trimmed, clientMessageId));
   };
 

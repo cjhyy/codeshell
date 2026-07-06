@@ -56,6 +56,56 @@ describe("transcriptsReducer pending steer bubbles", () => {
     expect(users[0]).toMatchObject({ text: "confirmed", steerId: "q-1", pending: false });
   });
 
+  // Regression guard for the "queue shows no right-side bubble; it appears only
+  // when consumed" behavior. queueInput no longer optimistically dispatches a
+  // pending user_message — the queued draft lives ONLY in the left waiting
+  // panel until the engine echoes steer_injected. So steer_injected must be
+  // able to materialize the bubble WITHOUT a pre-existing pending one (the
+  // fallback-append path). If this ever regresses to upgrade-only, removing the
+  // optimistic dispatch would make consumed steers vanish from the feed.
+  it("appends a user bubble on steer_injected with no prior optimistic bubble", () => {
+    let map: TranscriptsMap = {};
+    map = transcriptsReducer(map, {
+      type: "stream",
+      bucket: "b",
+      event: { type: "steer_injected", id: "q-1", text: "consumed at last" } as StreamEvent,
+    });
+
+    const users = map.b.messages.filter((m) => m.kind === "user");
+    expect(users).toHaveLength(1);
+    // Must carry the steerId so hydrate's guard protects/dedupes it against the
+    // disk replay of the same steer — no loss, no duplicate.
+    expect(users[0]).toMatchObject({
+      text: "consumed at last",
+      injected: true,
+      steerId: "q-1",
+      pending: false,
+    });
+  });
+
+  // With no optimistic bubble, the feed bubble is born from steer_injected. A
+  // later hydrate whose snapshot replays the SAME steerId must not duplicate it.
+  it("does not duplicate a steer_injected-born bubble when hydrate replays its steerId", () => {
+    let map: TranscriptsMap = {};
+    map = transcriptsReducer(map, {
+      type: "stream",
+      bucket: "b",
+      event: { type: "steer_injected", id: "q-9", text: "check the logs" } as StreamEvent,
+    });
+    map = transcriptsReducer(map, {
+      type: "hydrate",
+      bucket: "b",
+      state: {
+        ...map.b,
+        messages: [
+          { kind: "user", id: "srv", text: "check the logs", injected: true, steerId: "q-9" },
+        ],
+      },
+    });
+    const users = map.b.messages.filter((m) => m.kind === "user");
+    expect(users).toHaveLength(1);
+  });
+
   it("keeps a CONFIRMED steer bubble when a lagging snapshot lacks it (no loss)", () => {
     // The bug (session s-mr8s3w5i): steer_injected confirmed the bubble
     // (pending:false), then a hydrate fired before the disk transcript's
