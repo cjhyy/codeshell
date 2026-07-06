@@ -1,15 +1,14 @@
 import React, { memo } from "react";
 import type { ContextBoundaryMessage } from "../types";
+import { compactBoundaryDetail } from "../chat/compactFeedback";
+import { useT } from "../i18n/I18nProvider";
 
 function ContextBoundaryViewImpl({ message }: { message: ContextBoundaryMessage }) {
-  const delta = message.before - message.after;
+  const { t, lang } = useT();
   return (
-    <div className="flex items-center justify-center gap-2 px-4 py-2 text-xs text-muted-foreground">
-      <span>— context compacted ({message.strategy}) —</span>
-      <span>
-        {message.before.toLocaleString()} → {message.after.toLocaleString()} tokens
-        {delta > 0 && ` (−${delta.toLocaleString()})`}
-      </span>
+    <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 px-4 py-2 text-center text-xs text-muted-foreground">
+      <span>— {t("chat.compact.boundaryTitle")} —</span>
+      <span>{compactBoundaryDetail(message, t, lang)}</span>
     </div>
   );
 }

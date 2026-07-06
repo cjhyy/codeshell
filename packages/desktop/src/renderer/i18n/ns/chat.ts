@@ -37,8 +37,18 @@ export const chat = {
       compact: {
         running: "当前会话正在运行,请先停止或等这一轮结束后再压缩。",
         noSession: "当前还没有可压缩的会话。",
-        done: "已压缩上下文:{before} → {after},节省 {saved} tokens。",
-        unchanged: "上下文已足够紧凑,当前约 {tokens} tokens。",
+        done: "已压缩:{before} → {after} tokens(省 {percent}%),策略:{strategy}。",
+        unchanged: "上下文已是最简,无需压缩(当前约 {tokens} tokens)。",
+        boundaryTitle: "上下文已压缩",
+        boundaryDetail: "{before} → {after} tokens(省 {percent}%),策略:{strategy}",
+        strategy: {
+          compacted: "综合压缩",
+          summary: "摘要",
+          snip: "裁剪",
+          window: "窗口保留",
+          micro: "轻量清理",
+          emergency: "紧急窗口",
+        },
         failed: "压缩失败:{error}",
       },
       slash: {
@@ -227,8 +237,18 @@ export const chat = {
         running:
           "This conversation is running. Stop or wait for this turn to finish before compacting.",
         noSession: "There is no active conversation to compact yet.",
-        done: "Context compacted: {before} → {after}, saved {saved} tokens.",
-        unchanged: "Context is already compact enough, currently about {tokens} tokens.",
+        done: "Context compacted: {before} → {after} tokens (saved {percent}%), strategy: {strategy}.",
+        unchanged: "Context already minimal - nothing to compact (about {tokens} tokens).",
+        boundaryTitle: "Context compacted",
+        boundaryDetail: "{before} → {after} tokens (saved {percent}%), strategy: {strategy}",
+        strategy: {
+          compacted: "general compaction",
+          summary: "summary",
+          snip: "snip",
+          window: "window",
+          micro: "micro cleanup",
+          emergency: "emergency window",
+        },
         failed: "Compaction failed: {error}",
       },
       slash: {

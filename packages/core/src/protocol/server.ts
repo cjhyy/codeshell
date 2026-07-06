@@ -53,6 +53,23 @@ import type { ChatSessionManager } from "./chat-session-manager.js";
 import { redactLlmConfig, maskSecretValue } from "./redact.js";
 import { redactSecrets } from "../logging/sanitize-messages.js";
 
+type ContextCompactStreamEvent = Extract<StreamEvent, { type: "context_compact" }>;
+
+const COMPACT_STREAM_STRATEGIES = new Set<ContextCompactStreamEvent["strategy"]>([
+  "micro",
+  "summary",
+  "window",
+  "snip",
+  "emergency",
+  "compacted",
+]);
+
+function toCompactStreamStrategy(strategy: string): ContextCompactStreamEvent["strategy"] {
+  return COMPACT_STREAM_STRATEGIES.has(strategy as ContextCompactStreamEvent["strategy"])
+    ? (strategy as ContextCompactStreamEvent["strategy"])
+    : "compacted";
+}
+
 export interface AgentServerOptions {
   /**
    * Multi-session manager. Required for the new multi-session protocol.
@@ -1324,10 +1341,10 @@ export class AgentServer {
         }
         try {
           const result = await compactEngine.forceCompact(compactSessionId);
-          if (result.strategy === "compacted" && result.before > result.after) {
+          if (result.before > result.after) {
             const event = {
               type: "context_compact",
-              strategy: result.strategy,
+              strategy: toCompactStreamStrategy(result.strategy),
               before: result.before,
               after: result.after,
             } satisfies StreamEvent;

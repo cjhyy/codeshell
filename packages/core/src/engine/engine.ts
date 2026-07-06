@@ -71,7 +71,7 @@ import { loadPluginHooks } from "../plugins/loadPluginHooks.js";
 import { pluginAgentDirs } from "../plugins/installer/loadPluginAgents.js";
 import { patchOrphanedToolUses } from "./patch-orphaned-tools.js";
 import { runShellHook, shellHookMatches } from "../hooks/shell-runner.js";
-import { ContextManager } from "../context/manager.js";
+import { ContextManager, type CompactStrategy } from "../context/manager.js";
 import {
   estimateTokens,
   clampContextRatios as clampContextRatiosImpl,
@@ -2795,7 +2795,11 @@ export class Engine {
   async forceCompact(sessionId?: string): Promise<{
     before: number;
     after: number;
-    strategy: "none (no active session)" | "no compaction needed" | "compacted";
+    strategy:
+      | "none (no active session)"
+      | "no compaction needed"
+      | "compacted"
+      | CompactStrategy;
   }> {
     const effectiveSessionId = sessionId ?? this.lastSessionId;
     if (!effectiveSessionId) {
@@ -2820,9 +2824,13 @@ export class Engine {
       this.lastContextManager = contextManager;
     }
     // Manual /compact emits its UI boundary at the protocol layer from the
-    // final before/after result. Avoid reusing a stale run callback retained on
-    // lastContextManager, which could otherwise double-emit.
-    contextManager.setOnCompact(() => {});
+    // final before/after result. Capture the tier here, but avoid reusing a
+    // stale run callback retained on lastContextManager, which could otherwise
+    // double-emit.
+    let compactStrategy: CompactStrategy | undefined;
+    contextManager.setOnCompact((info) => {
+      if (info.after < info.before) compactStrategy = info.strategy;
+    });
 
     // Manual /compact = maximum compaction NOW. The automatic ladder waits for
     // compactAtRatio (0.85 * window), so on a 1M-window model an 800k text-only
@@ -2864,7 +2872,7 @@ export class Engine {
     return {
       before,
       after,
-      strategy: before === after ? "no compaction needed" : "compacted",
+      strategy: after >= before ? "no compaction needed" : (compactStrategy ?? "compacted"),
     };
   }
 

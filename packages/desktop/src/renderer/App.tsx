@@ -53,6 +53,7 @@ import {
 } from "./transcripts";
 import { planSessionDeletion } from "./sessionDeletionPlan";
 import { titleFromWire, buildPathAttachment, type ImageAttachment } from "./chat/attachments";
+import { compactOutcomeMessage, compactWasNoop } from "./chat/compactFeedback";
 import { resolveBucket, findAskUserOrigin } from "./streamRouting";
 import { resolveStopBucket } from "./stopRouting";
 import { statusForBucket, type SessionStatus } from "./sessionStatus";
@@ -227,7 +228,7 @@ function parsePanelBucket(bucket: string): {
 
 function App() {
   const toast = useToast();
-  const { t } = useT();
+  const { t, lang } = useT();
   const [transcripts, dispatch] = useReducer(transcriptsReducer, {} as TranscriptsMap);
   const [approval, setApproval] = useState<ApprovalState>(null);
   const [approvalQueue, setApprovalQueue] = useState<ApprovalRequestEnvelope[]>([]);
@@ -2399,7 +2400,6 @@ function App() {
       toast({ message: t("chat.compact.noSession"), variant: "error" });
       return;
     }
-    const fmt = new Intl.NumberFormat();
     void window.codeshell
       .compactSession(engineSessionId)
       .then((result) => {
@@ -2412,21 +2412,12 @@ function App() {
             promptTokens: data.after,
           } as StreamEvent,
         });
-        if (data.before === data.after) {
+        if (compactWasNoop(data)) {
           toast({
-            message: t("chat.compact.unchanged", { tokens: fmt.format(data.after) }),
+            message: compactOutcomeMessage(data, t, lang),
             variant: "success",
           });
-          return;
         }
-        toast({
-          message: t("chat.compact.done", {
-            before: fmt.format(data.before),
-            after: fmt.format(data.after),
-            saved: fmt.format(Math.max(0, data.before - data.after)),
-          }),
-          variant: "success",
-        });
       })
       .catch((e) => {
         toast({

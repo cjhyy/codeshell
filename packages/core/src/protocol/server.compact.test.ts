@@ -118,6 +118,50 @@ describe("AgentServer compact query", () => {
     expect(streamEvents(t.sent)).toEqual([]);
   });
 
+  it("emits a context boundary stream event for concrete shrink strategies", async () => {
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () =>
+        ({
+          isHeadless: () => true,
+          sessionExistsOnDisk: (sessionId: string) => sessionId === "s-summary",
+          getSessionManager: () => ({ readCwd: () => "/project/from/disk" }),
+          forceCompact: () => ({ before: 128_000, after: 46_000, strategy: "summary" }),
+        }) as unknown as Engine,
+    });
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager });
+
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 4,
+      method: "agent/query",
+      params: { type: "compact", sessionId: "s-summary" },
+    });
+
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(last(t.sent).result).toEqual({
+      type: "compact",
+      data: { before: 128_000, after: 46_000, strategy: "summary" },
+    });
+    expect(streamEvents(t.sent)).toEqual([
+      {
+        jsonrpc: "2.0",
+        method: Methods.StreamEvent,
+        params: {
+          sessionId: "s-summary",
+          event: {
+            type: "context_compact",
+            strategy: "summary",
+            before: 128_000,
+            after: 46_000,
+          },
+        },
+      },
+    ]);
+  });
+
   it("returns SessionNotFound instead of creating a blank session for an unknown id", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
