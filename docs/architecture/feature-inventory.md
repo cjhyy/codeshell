@@ -1,206 +1,227 @@
 # codeshell 功能清单（desktop / tui）
 
-> **⏱ 时效（2026-06-25 标注）**：本清单是 **2026-06-17 快照**，之后又合入 **~55 个 feat commit**，部分新能力尚未盘点进来。已知**未收录/已演进**的代表项：**统一后台面板**（按 shell/子代理/任务分组 + 实时刷新,core RPC `agent/backgroundWork`,commit `722b3642`,取代旧的只列 shell 的 BackgroundShellPanel）、**面板关闭保活 + 浏览器 5min 空闲淘汰**（PanelArea 常驻挂载 + display 隐藏,`722b3642`）。需要某子系统的**确切现状**时以**实际代码**为准;本清单作"功能广度总览"仍是最全的单一来源。
->
-> 由多 agent review 自动盘点生成（2026-06-17）。三块分列：
-> **Desktop 主进程**（Electron main，IPC 服务层）、**Desktop UI**（渲染进程，用户可见交互）、**TUI/CLI**（`code-shell` 终端）。
-> 每项含：功能、做什么、入口（文件:行 + 触发点）、怎么使用。行号为盘点时快照，可能随代码演进漂移。
+> **核对日期（2026-07-06）**：本清单已按当前代码树只读核对，覆盖 Desktop 主进程、Desktop 渲染进程和 TUI/CLI 三块能力。每项含：功能、做什么、入口（文件:行 + 触发点）、怎么使用。
+
+![CodeShell feature inventory overview](images/feature-inventory-overview.png)
 
 ---
 
 ## 目录
 
-- [一、Desktop 主进程（packages/desktop/src/main/）](#一desktop-主进程packagesdesktopsrcmain) — 30 项 IPC 服务能力
-- [二、Desktop UI（packages/desktop/src/renderer/）](#二desktop-uipackagesdesktopsrcrenderer) — 56 项用户可见功能
-- [三、TUI/CLI（packages/tui/src/）](#三tuiclipackagestuisrc) — 63 项 CLI 子命令 + slash 命令 + 交互能力
+- [一、Desktop 主进程（packages/desktop/src/main/）](#一desktop-主进程packagesdesktopsrcmain) — 31 项 IPC / 系统服务能力
+- [二、Desktop UI（packages/desktop/src/renderer/）](#二desktop-uipackagesdesktopsrcrenderer) — 72 项用户可见功能
+- [三、TUI/CLI（packages/tui/src/）](#三tuiclipackagestuisrc) — 76 项 CLI 子命令 + slash 命令 + 交互能力
+
+**总计：179 项能力。**
 
 ---
 
 ## 一、Desktop 主进程（packages/desktop/src/main/）
 
-主进程不直接跑 Engine，而是作为 IPC 服务层：把渲染进程的请求转发给按需 spawn 的 core agent 子进程，并提供文件/终端/凭证/插件/记忆等系统能力。
+主进程是 Electron IPC 与系统能力层：按需代理 core agent 子进程，并提供文件、终端、浏览器、凭证、插件、记忆、自动化、移动端和外部 CLI 房间等能力。
 
 ### 运行核心与终端
 
 | 功能 | 做什么 | 入口 | 怎么用 |
 |------|--------|------|--------|
-| **会话/聊天运行核心 (AgentBridge)** | 把渲染进程聊天 JSON-RPC（agent/run、approve、cancel、configure、goalExtend、goalClear、backgroundShells、closeSession）经 `ipcMain 'agent:msg'` 转发给按需 spawn 的 core agent 子进程，stdout 逐行回传；每会话流事件存进 SessionSnapshotStore 供重挂载补齐；拦截 worker 的 `__browser_action__` 交浏览器自动化主机 | `agent-bridge.ts:208`（agent:msg）spawn `:110`；snapshot 重放 `index.ts:1921`（agent:subscribe） | 聊天框发消息触发 agent/run；批准弹窗=approve；停止=cancel。全经 preload `window.codeshell` |
-| **交互式终端 (pty)** | node-pty 为每个 sessionId 起登录交互 shell（win 用 powershell），输出经 `pty:data`/`pty:exit` 流给渲染；256KB 滚动缓冲，重挂载回放 | `pty-service.ts:98`；IPC `index.ts:1795` pty:start / 1804 write / 1807 resize / 1810 kill | 打开「终端」面板即起 shell，像普通终端敲命令 |
+| **会话/聊天运行核心 (AgentBridge)** | 转发 `agent/run`、steer、goal、approval、backgroundWork 等 JSON-RPC 到按需 spawn 的 core agent 子进程；stdout 逐行回传，并用 snapshot 支持重挂载补齐 | `packages/desktop/src/main/agent-bridge.ts:73`，`packages/desktop/src/main/agent-bridge.ts:278`，`packages/desktop/src/preload/index.ts:237` | 渲染进程聊天、审批、停止、Goal、后台工作查询都经 `window.codeshell` 进入 |
+| **交互式终端 (pty)** | 为每个 sessionId 起登录 shell，输出通过 `pty:data`/`pty:exit` 回传；保留 256KB 滚动缓冲并支持写入、resize、kill | `packages/desktop/src/main/pty-service.ts:179`，`packages/desktop/src/main/index.ts:2723`，`packages/desktop/src/main/index.ts:2726`，`packages/desktop/src/main/index.ts:2729` | 打开 Terminal 面板后像普通终端输入命令 |
 
-### 文件系统
+### 文件系统与代码工作区
 
 | 功能 | 做什么 | 入口 | 怎么用 |
 |------|--------|------|--------|
-| **文件浏览面板 (只读 fs)** | 逐层目录/单文件读取，symlink-escape 防护（realpath 必须在 workspace root 内）、2MB 上限、二进制嗅探；fileExists 判断答案里路径可否点击 | `fs-service.ts:52`/`114`/`99`；IPC `index.ts:1815` fs:readDir / 1819 readFile / 1824 exists | 文件面板浏览目录树、点文件查看；答案里 `路径` 经 fs:exists 判断后渲染成可点链接 |
-| **文件改动撤销/重做 (turn 级 undo)** | 基于 core FileHistory 快照（非 git）做轮级撤销：回滚最近一轮对话的文件编辑（删本轮新建文件），redo 再应用 | `file-history-service.ts`；IPC `index.ts:1774` turnUndoState / 1780 undoTurn / 1786 redoTurn | AI 改完文件后在 Files-Changed 卡片点撤销/重做 |
-| **@-提及文件搜索** | composer 的 @ 弹窗做文件名模糊搜索：git 仓库用 `git ls-files`（尊重 .gitignore），否则递归 readdir；按 cwd 缓存 15s，子序列模糊打分 | `file-search-service.ts`；IPC `index.ts:1107` files:search | 聊天输入框打 @ 后接关键字，弹窗列匹配文件 |
+| **文件浏览面板服务 (只读 fs)** | 目录读取、文件读取、路径存在性判断；限制工作区内 realpath、防 symlink escape、限制大文件和二进制预览 | `packages/desktop/src/main/fs-service.ts:52`，`packages/desktop/src/main/fs-service.ts:99`，`packages/desktop/src/main/fs-service.ts:114`，`packages/desktop/src/main/index.ts:2734` | 文件面板浏览目录，聊天里的路径链接先经 `fs:exists` 判断 |
+| **文件改动撤销/重做 (turn 级 undo)** | 基于 core FileHistory 快照回滚或重做最近一轮文件改动，不依赖 git | `packages/desktop/src/main/file-history-service.ts:45`，`packages/desktop/src/main/file-history-service.ts:60`，`packages/desktop/src/main/file-history-service.ts:69`，`packages/desktop/src/main/index.ts:2693` | Files Changed 卡片点撤销/重做 |
+| **@ 文件搜索** | composer 的 `@` 文件搜索：优先 `git ls-files`，否则递归扫描；15s 缓存，子序列模糊打分 | `packages/desktop/src/main/file-search-service.ts:169`，`packages/desktop/src/main/index.ts:1827` | 输入框打 `@` 后继续输入文件名 |
+| **Git / diff / worktree / 打开路径服务** | 提供 status、numstat、range changes、分支、切分支、stash 切换、worktree、range diff、打开外部 URL/访达/编辑器 | `packages/desktop/src/main/index.ts:2532`，`packages/desktop/src/main/index.ts:2542`，`packages/desktop/src/main/index.ts:2553`，`packages/desktop/src/main/index.ts:2636`，`packages/desktop/src/main/index.ts:2655`，`packages/desktop/src/main/index.ts:2675` | Review 面板、BranchPicker、路径/URL 点击和外部编辑器入口调用 |
 
 ### 浏览器自动化
 
 | 功能 | 做什么 | 入口 | 怎么用 |
 |------|--------|------|--------|
-| **浏览器自动化主机** | 把 agent 的 browser_* 工具落到真实 webview：CDP 驱动活跃浏览器面板 guest，支持 snapshot/click/type/navigate/scroll/readContent/waitForLoad/pressEnter；域名白名单 + 敏感操作（支付/删除/凭证）检测，未接审批器时 fail-closed 拒绝 | `browser-driver/automation-host.ts:56`/`78`；拦截 `agent-bridge.ts:270` | 浏览器面板打开网页（成活跃 guest），让 AI 执行浏览任务 |
-| **浏览器面板 popout + 圈选锚点同步** | 打开独立浏览器弹出窗；统一元素圈选锚点 hub：主窗持每会话锚点状态并向所有 popout 广播同一标注集，popout 增删改回传父窗，发消息时一起清空 | `index.ts:1556` browser:popout / 1564~1604 anchor* | 浏览器面板点弹出按钮开独立窗，圈选元素生成锚点注入 composer |
+| **浏览器自动化主机** | 把 agent 的浏览器动作落到真实 webview/CDP guest，支持观察、点击、输入、导航、滚动、读内容、等待加载；敏感操作审批 | `packages/desktop/src/main/browser-driver/automation-host.ts:116`，`packages/desktop/src/main/agent-bridge.ts:375` | 浏览器面板打开网页后让 AI 操作当前页面 |
+| **浏览器 popout / localhost 探测 / 锚点同步** | 打开独立浏览器窗，探测常见本地端口；主窗与 popout 共享圈选锚点的增删改同步 | `packages/desktop/src/main/index.ts:2461`，`packages/desktop/src/main/index.ts:2474`，`packages/desktop/src/main/index.ts:2483`，`packages/desktop/src/main/index.ts:2507` | 浏览器面板点弹出、打开 localhost 或圈选页面元素 |
 
-### 会话与设置
-
-| 功能 | 做什么 | 入口 | 怎么用 |
-|------|--------|------|--------|
-| **会话管理** | 枚举 `~/.code-shell/sessions`（按更新时间）；删除会话目录（让 worker reap 后台 shell）；从磁盘分页列顶层（非子代理）desktop/automation 会话重建侧边栏；读 transcript、原始事件、LLM 标题 | `sessions-service.ts:24`/`61`/`105`；IPC `index.ts:1903` list / 1904 delete / 1926 titles / 1927 rename / 1945 transcript / 1949 listDisk / 1953 rawEvents | 侧边栏切换/重命名/删除会话；清缓存后自动从磁盘重建 |
-| **设置读写 (user/project 两层)** | 读写 `~/.code-shell/settings.json`（user）与 `<cwd>/.code-shell/settings.json`（project），原子写（temp+rename）；经 settingsBus 热生效到运行中会话 | `settings-service.ts`；IPC `index.ts:1835` get / 1840 set / 1833 no-repo:cwd | 设置页改模型/权限/工具开关，按 scope 落文件，下条消息生效 |
-
-### 凭证与模型
+### 会话、运行与设置
 
 | 功能 | 做什么 | 入口 | 怎么用 |
 |------|--------|------|--------|
-| **凭证管理 + 浏览器 Cookie 拓取** | core CredentialStore 列（脱敏）/存/删凭证；额外把 Electron 浏览器分区（persist:browser）的 Cookie 按域列出/预览，生成 Netscape cookies.txt 临时租约（0600 + 5 分钟过期清扫）供 yt-dlp/curl | `credentials-service.ts`；IPC `index.ts:1037` list / 1040 save / 1046 remove / 1052 cookieDomains / 1053 cookiePreview | 凭证页填 API key 保存；浏览器登录过的站点 cookie 可列/预览 |
-| **模型目录/连接 + 元数据** | 返回合并 Catalog（内置+用户）；解析真实 maxContextTokens（settings→OpenRouter/硬表，6h 缓存）；列 provider 可用模型；返回推理控制元信息。切模型经 agent/configure 应用后才确认 | `model-meta-service.ts`；IPC `index.ts:1336` catalog:list / 1338 resolve-meta / 1343 reasoning-control / 1352 models:list | 连接页配置多实例 provider、复用 key、设默认；聊天切模型 |
-| **Provider 探针（搜索/图像/MCP）** | 保存后真实验证而非只说「已保存」：搜索探针（Serper/Tavily/SearXNG）返回标题样例；图像探针真生成小图返回 base64；MCP 探针列工具数/连通性（TTL 缓存），错误友好化 | `search-probe-service.ts` / `image-probe-service.ts` / `mcp-probe-service.ts`；IPC `index.ts:1314` search:probe / 1325 image:probe / 1251 mcp:probe / 1260 mcp:listMerged | 连接/MCP 页保存后探测，显示连通状态+预览 |
+| **会话管理** | 枚举、删除、标题、重命名、transcript、磁盘会话分页和原始事件读取 | `packages/desktop/src/main/sessions-service.ts:24`，`packages/desktop/src/main/sessions-service.ts:61`，`packages/desktop/src/main/sessions-service.ts:105`，`packages/desktop/src/main/index.ts:2842` | 侧边栏和 Sessions 视图切换、重命名、删除或从磁盘恢复会话 |
+| **Runs 管理** | 列运行、读运行详情、删除运行目录；供桌面 Runs 视图查看 headless/自动化任务 | `packages/desktop/src/main/runs-service.ts:97`，`packages/desktop/src/main/runs-service.ts:123`，`packages/desktop/src/main/runs-service.ts:131`，`packages/desktop/src/main/index.ts:2879` | Runs 视图按状态查看运行和 transcript |
+| **设置读写 (user/project 两层)** | 读写 `~/.code-shell/settings.json` 与项目 `.code-shell/settings.json`，原子写并通过 settings bus 生效 | `packages/desktop/src/main/settings-service.ts:25`，`packages/desktop/src/main/settings-service.ts:31`，`packages/desktop/src/main/settings-service.ts:84`，`packages/desktop/src/main/index.ts:2754` | 设置页改模型、权限、工具、环境等配置 |
+
+### 凭证、模型与连接探针
+
+| 功能 | 做什么 | 入口 | 怎么用 |
+|------|--------|------|--------|
+| **凭证管理 + 浏览器 Cookie 桥接** | 列/存/删/改元数据；枚举浏览器分区 Cookie，预览、导出临时 Netscape cookie lease、把 cookie 恢复到浏览器 | `packages/desktop/src/main/credentials-service.ts:51`，`packages/desktop/src/main/credentials-service.ts:68`，`packages/desktop/src/main/credentials-service.ts:90`，`packages/desktop/src/main/credentials-service.ts:125`，`packages/desktop/src/main/index.ts:1603` | Credentials 页保存 API key 或桥接浏览器登录态 |
+| **浏览器登录捕获窗口** | 打开隔离浏览器宿主窗口执行登录流程，并在完成后保留/清理 Electron partition cookie | `packages/desktop/src/main/browser-host/index.ts:90`，`packages/desktop/src/main/browser-host/index.ts:150`，`packages/desktop/src/preload/index.ts:834` | Cookie tab 填 URL 后点“在浏览器打开登录” |
+| **模型目录 / 用户模型 / 元数据** | 合并内置和用户 catalog，保存/删除模型条目，解析 max context 与 reasoning-control，并列 provider 模型 | `packages/desktop/src/main/model-meta-service.ts:126`，`packages/desktop/src/main/index.ts:2066`，`packages/desktop/src/main/index.ts:2068`，`packages/desktop/src/main/index.ts:2074`，`packages/desktop/src/main/index.ts:2088` | 设置页 Model Catalog、连接页和聊天模型选择器调用 |
+| **Provider 探针（搜索/图像/MCP）** | 对搜索、图像和 MCP 连接做真实探测：返回搜索标题样例、图像 base64 预览、MCP 工具列表和友好错误 | `packages/desktop/src/main/search-probe-service.ts:93`，`packages/desktop/src/main/image-probe-service.ts:61`，`packages/desktop/src/main/mcp-probe-service.ts:235`，`packages/desktop/src/main/mcp-probe-service.ts:263` | 设置页保存连接后点探测或自动刷新状态 |
+| **语音转文字 (STT) 网关** | 转录音频、检查可用性、描述 provider、请求麦克风权限 | `packages/desktop/src/main/index.ts:1765`，`packages/desktop/src/main/index.ts:1771`，`packages/desktop/src/main/index.ts:1778`，`packages/desktop/src/preload/index.ts:604` | 聊天输入框点麦克风录音后转为文字 |
 
 ### 扩展（插件/技能/市场/子代理/能力）
 
 | 功能 | 做什么 | 入口 | 怎么用 |
 |------|--------|------|--------|
-| **插件管理** | 枚举已装插件（名/源/skill 数/描述）；详情列 skills/commands/agents/hooks/MCP 五类；卸载、按记录源重装（更新）、`git ls-remote` 检查上游新提交 | `plugins-service.ts`；IPC `index.ts:1030` list / 1060 detail / 1066 uninstall / 1072 update / 1075 checkUpdate / 1095 install | 插件页看已装、点行看详情、卸载/更新 |
-| **技能管理** | 扫描 project/user/plugin 三源；读 SKILL.md；从本地目录或 GitHub URL（先 inspect 预览→选→下 tarball）安装；卸载（仅 user/project）；检查/更新 | `skills-service.ts` / `github-skill-service.ts`；IPC `index.ts:1007` list / 1211 inspectGithub / 1221 installFromGithub / 1234 installLocal | 技能页粘 GitHub 链接预览并安装，或选本地文件夹 |
-| **插件市场** | 列已知市场（名/源/插件数/格式）、加载某市场清单、用 owner/repo 或 git URL 添加/删除市场、从市场安装；git 缺失等友好提示 | `marketplace-service.ts`；IPC `index.ts:1085` list / 1086 load / 1089 add / 1092 remove | 市场页添加来源、浏览、安装 |
-| **子代理(Agent)角色管理** | 列合并角色（项目内置4个 + 用户级）、读/存/删；写只动 user 级（编辑内置生成同名 user 覆盖） | `agents-service.ts`；IPC `index.ts:1122` list / 1126 read / 1194 save / 1203 delete | 子代理页查看/新建/编辑角色 |
-| **能力总览开关** | 汇总工具/技能/插件/MCP/agent 启用状态并按 key 启停（写 user 级 disabled 列表） | `capabilities-service.ts`；IPC `index.ts:1008` list / 1012/1020 set/toggle | 扩展能力页逐项开关 |
+| **插件管理** | 枚举、详情、卸载、更新、检查更新；详情列 skills、commands、agents、hooks、MCP 等 | `packages/desktop/src/main/plugins-service.ts:92`，`packages/desktop/src/main/plugins-service.ts:135`，`packages/desktop/src/main/plugins-service.ts:155`，`packages/desktop/src/main/plugins-service.ts:189`，`packages/desktop/src/main/index.ts:1596` | 扩展页 Plugin tab 查看、启停、详情、更新或卸载 |
+| **技能管理** | 扫描 project/user/plugin 三源，读 `SKILL.md`，本地目录安装、GitHub inspect/install、更新、卸载 | `packages/desktop/src/main/skills-service.ts:38`，`packages/desktop/src/main/skills-service.ts:67`，`packages/desktop/src/main/skills-service.ts:78`，`packages/desktop/src/main/skills-service.ts:103`，`packages/desktop/src/main/index.ts:1820` | Skills tab 预览、安装、启停、更新或卸载技能 |
+| **插件市场 + 安装任务** | 列市场、加载市场、添加/删除/刷新、推荐市场、市场安装；安装以 job 队列展示并可重试 | `packages/desktop/src/main/marketplace-service.ts:272`，`packages/desktop/src/main/marketplace-service.ts:301`，`packages/desktop/src/main/marketplace-service.ts:331`，`packages/desktop/src/main/marketplace-service.ts:375`，`packages/desktop/src/main/marketplace-service.ts:447` | Market tab 浏览官方/自定义 marketplace 并安装插件 |
+| **子代理角色管理** | 列、读、保存、删除 agent 角色；内置角色可被 user 级同名覆盖 | `packages/desktop/src/main/agents-service.ts:64`，`packages/desktop/src/main/agents-service.ts:89`，`packages/desktop/src/main/agents-service.ts:111`，`packages/desktop/src/main/agents-service.ts:153` | Settings 的 Agents 模块新建或编辑角色 |
+| **能力总览开关** | 汇总 builtin/tool/skill/plugin/MCP/agent 启用状态，写 user/project override | `packages/desktop/src/main/capabilities-service.ts:49`，`packages/desktop/src/main/capabilities-service.ts:59`，`packages/desktop/src/main/capabilities-service.ts:68`，`packages/desktop/src/main/index.ts:1574` | Settings 的 Capabilities 模块逐项继承、开启或关闭 |
 
-### 记忆 / 自动化 / 系统
+### 记忆、自动化、移动端与系统
 
 | 功能 | 做什么 | 入口 | 怎么用 |
 |------|--------|------|--------|
-| **记忆管理** | core MemoryManager 的壳：按 level(user/project)×scope(user/dream) 列/读/存/删（含 pinned/origin）；project 级落该 repo 的 memory 目录 | `memory-service.ts`；IPC `index.ts:1864` list / 1872 read / 1881 save / 1887 delete | 记忆页查看/编辑/Pin/删除 |
-| **Dream 手动整理** | 临时 seed 一个 Engine（取模型池+工具表）+ LLM client，跑一次 dream 一致性整理（去重/合并/删过期，仅写 dream scope） | `dream-service.ts:46`；IPC `index.ts:1896` memory:dream | 记忆页点 Dream/整理按钮真跑 LLM |
-| **定时任务/自动化 (cron)** | 桥接 UI 到主进程 CronScheduler：列/取/创建/更新/删除/暂停/恢复/立即运行/取消运行 cron 任务（名/cron/prompt/cwd/时区/权限档）；读取前从磁盘 reload 纳入 worker 写的任务；用主进程内 headless Engine 执行，结果作 automation 会话进侧边栏 | `automation-service.ts`；IPC（cron:* 系列） | 自动化视图新建/启停/立即运行（见 UI 部分） |
-| **应用更新器** | 检查/下载/安装更新，更新可用时通知渲染显示横幅 | `updater.ts` | 更新横幅点安装 |
-| **图像处理** | image-probe（探测图像 provider）、image-save（保存生成的图） | `image-probe-service.ts` / `image-save.ts` | 图像生成/保存自动调用 |
-| **手机遥控主机** | mobile-remote：WS 服务器让手机端 React 应用接入同一进程/消息（房间共享） | `mobile-remote/`（remote-host-manager.ts） | 设置→手机遥控配对 |
-| **日志/搜索探针** | logs-service（ui-ink + engine 分桶日志）、search-probe（搜索连接验证） | `logs-service.ts` / `search-probe-service.ts` | 日志视图查看 |
-| **菜单/窗口/信任/最近** | 应用菜单、窗口状态持久化、工作区信任 store、最近项目 store | `menu.ts` / `window-state-store.ts` / `trust-store.ts` / `recents-store.ts` | 自动 |
-
+| **记忆管理** | 按 level/scope 列、读、存、删；支持 pending memory 审批、降级、拒绝和提升为全局 | `packages/desktop/src/main/memory-service.ts:53`，`packages/desktop/src/main/memory-service.ts:74`，`packages/desktop/src/main/memory-service.ts:108`，`packages/desktop/src/main/memory-service.ts:138`，`packages/desktop/src/main/index.ts:2816` | Settings 的 Memory 模块查看、编辑、批准、提升或删除记忆 |
+| **Dream 手动整理** | 临时 seed Engine 与 LLM client，运行 dream consolidation 去重、合并、清理过期记忆 | `packages/desktop/src/main/dream-service.ts:48`，`packages/desktop/src/main/index.ts:2835` | Memory 模块点 Dream/整理 |
+| **定时任务/自动化 (cron)** | 列、取、创建、更新、删除、暂停、恢复、立即运行、取消运行；运行结果变成 automation 会话 | `packages/desktop/src/main/automation-service.ts:88`，`packages/desktop/src/main/automation-service.ts:105`，`packages/desktop/src/main/automation-service.ts:125`，`packages/desktop/src/main/automation-service.ts:151`，`packages/desktop/src/main/index.ts:2902` | Automation 视图创建 cron 任务或立即运行 |
+| **应用更新器** | 检查、下载、安装更新，并把状态通知渲染进程 | `packages/desktop/src/main/updater.ts:152`，`packages/desktop/src/main/updater.ts:249`，`packages/desktop/src/main/updater.ts:270`，`packages/desktop/src/main/index.ts:2113` | 更新横幅或设置入口触发检查/下载/安装 |
+| **图像读取/保存与图像 provider 探针** | 读取本地图片为 data URL；解析/命名保存生成图片；验证图像模型连接 | `packages/desktop/src/main/index.ts:1871`，`packages/desktop/src/main/image-save.ts:20`，`packages/desktop/src/main/image-save.ts:61`，`packages/desktop/src/main/image-probe-service.ts:61` | 聊天图片附件、图像生成保存和连接探测调用 |
+| **手机遥控主机** | 启动本地或 tunnel WebSocket/HTTP 主机，配对设备，管理 cloudflared、passcode、在线设备和权限回传 | `packages/desktop/src/main/mobile-remote/remote-host-manager.ts:77`，`packages/desktop/src/main/index.ts:2192`，`packages/desktop/src/main/index.ts:2231`，`packages/desktop/src/preload/index.ts:899` | Settings 的 Mobile Remote 配对手机端 |
+| **项目、最近、信任、通知与 badge** | 最近项目、置顶/移除、项目根解析、工作区信任风险、系统通知和 Dock/任务栏 badge | `packages/desktop/src/main/recents-store.ts:100`，`packages/desktop/src/main/recents-store.ts:116`，`packages/desktop/src/main/trust-store.ts:41`，`packages/desktop/src/main/trust-store.ts:101`，`packages/desktop/src/main/index.ts:2272` | 侧栏项目列表、TrustGate、通知和 badge 使用 |
+| **Claude/Codex 外部 CLI 房间 + quota** | 管理 legacy rooms 和 `ccRoom`：探测 Claude/Codex CLI、列历史 session、打开外部 CLI 房间、发送消息、读历史、审批桥接、查订阅 quota | `packages/desktop/src/main/index.ts:2315`，`packages/desktop/src/main/index.ts:2320`，`packages/desktop/src/main/index.ts:2353`，`packages/desktop/src/main/cc-room/approval-bridge.ts:33`，`packages/desktop/src/main/mobile-remote/codex-room-agent.ts:104` | 右侧 CC Room 面板连接 Claude Code 或 Codex CLI 会话 |
+| **日志读取** | 从 `~/.code-shell/logs` 读取最近日志 bucket 尾部 | `packages/desktop/src/main/logs-service.ts:16`，`packages/desktop/src/main/index.ts:2872` | Logs 视图查看 UI/engine 日志 |
+| **菜单、窗口与生命周期** | 安装/刷新系统菜单，新建窗口，窗口全屏状态，退出前清理 pty 和服务 | `packages/desktop/src/main/menu.ts:11`，`packages/desktop/src/main/menu.ts:148`，`packages/desktop/src/main/index.ts:2451`，`packages/desktop/src/main/index.ts:2455` | 应用菜单、快捷键、新窗口和窗口状态自动调用 |
 
 ---
 
 ## 二、Desktop UI（packages/desktop/src/renderer/）
 
-渲染进程是瘦客户端，只通过 `window.codeshell.*` 与主进程通信。导航分两层：主区**全屏视图**（viewMode）+ 右侧**面板坞**（PanelArea，与对话并存）。
+渲染进程是用户界面层，只通过 `window.codeshell.*` 调 IPC。主区以 viewMode 切全屏视图，右侧 PanelArea 以多 tab 面板与聊天并存。
 
 ### 导航与聊天
 
 | 功能 | 做什么 | 入口 | 怎么用 |
 |------|--------|------|--------|
-| **全局导航结构** | App 维护 viewMode（chat/sessions/approvals/runs/automation/settings_page/customize/credentials/logs）切主区全屏视图；独立右侧面板坞（tab=files/browser/review/terminal/shells/rooms）；顶栏显 repo/标题/忙碌点/面板开关；侧栏顶部入口、中部项目+会话树、底部设置 | `App.tsx:1795` setViewMode + 2437/2520 分发；`TopBar.tsx:64`；`Sidebar.tsx:200`；`panels/PanelArea.tsx:98` | 侧栏按钮或 ⌘K 切视图；顶栏右上「打开面板」开/关面板坞 |
-| **对话/聊天（发送消息）** | 核心聊天界面：发消息给 agent，渲染消息流；空对话居中欢迎+输入框，有消息后输入框固定底部 | `ChatView.tsx:125`（composer）；`MessageStream.tsx`；入口 `Sidebar.tsx:202`「新对话」 | 侧栏点「新对话」或选会话→打字→Enter 发送（Shift+Enter 换行）|
-| **图片附件（上传/拖拽/粘贴）** | 回形针选图、拖拽、粘贴；发送前按清晰度档压缩；非视觉模型拦截提示；缩略图点击放大 | `ChatView.tsx:898` 回形针 / 531 onChatDrop / 365 handlePaste；`compress.ts` | 点回形针/拖图/粘贴；点缩略图放大 |
-| **@提及（文件/技能）** | 打 @ 弹补全浮层，提及工作区文件或已装技能，回车/Tab 插入 | `ChatView.tsx:800` MentionPopover；`chat/mention.ts` | 输入框打 @ → 上下键选 → 回车/Tab 插入 |
-| **权限模式切换（PermissionPill）** | 输入框权限药丸，切本会话审批严格度（default/接受编辑/全自动/bypass），与 Goal 正交 | `ChatView.tsx:912`；`chat/PermissionPill.tsx` | 点权限药丸→下拉选挡位 |
-| **Goal 模式开关** | 开启后消息当持久目标，agent 跑到完成；运行中在 TopBar 状态弹层看/清除/延长 | `ChatView.tsx:917` GoalToggle；`TopBar.tsx:156` ◎ + StatusPopover | 发消息前点 Goal 开关；运行中悬停状态点清除/延长 |
-| **模型选择（ModelPill）** | 输入框右侧药丸切模型（catalog 多实例），显示上下文 token 环 | `ChatView.tsx:926` ModelPill + 925 ContextRing | 点模型药丸→下拉选 |
-| **项目/分支选择（新对话时）** | 空对话时输入框下显项目选择器+本地标记+Git 分支选择器；会话开始后隐藏 | `ChatView.tsx:999` ProjectPicker + 1012 BranchPicker | 开新对话→选项目/看分支→发首条消息 |
-| **停止 / 引导 / 后续变更队列** | 忙碌时：红停止中断当前轮；「引导」打断并立刻发；Enter 入「后续变更」队列（本轮后发），可预览/删/全部引导/清空；显后台子代理数 | `ChatView.tsx:960` 停止 / 941 引导 / 621 队列卡 / 885 后台提示 | 跑时点红方块停止/点引导插话/Enter 入队 |
-| **AskUser 内联提问 / 内联审批** | agent 提问时在输入框上方钉选项；工具审批卡内联在消息流尾，滚出视口后显粘性审批条 | `ChatView.tsx:581`；`messages/AskUserMessageView.tsx`；`approvals/ApprovalCard.tsx` | 提问卡点选项；审批卡选范围或拒绝 |
+| **全局 viewMode 与 PanelTab 结构** | 定义 chat、sessions、approvals、runs、automation、settings_page、customize、credentials、logs；右侧面板为 files/browser/review/terminal/shells/ccRoom | `packages/desktop/src/renderer/view.ts:1`，`packages/desktop/src/renderer/view.ts:18`，`packages/desktop/src/renderer/App.tsx:2654` | 侧栏、命令面板或顶栏按钮切换视图/面板 |
+| **Sidebar 主导航** | 侧栏固定入口，包含 chat、sessions、approvals、runs、automation、customize、credentials、logs 等 | `packages/desktop/src/renderer/SidebarNav.tsx:46`，`packages/desktop/src/renderer/SidebarNav.tsx:57` | 点击侧栏图标切换模块 |
+| **TopBar 状态与面板入口** | 显示项目、会话状态、运行状态、目标状态和右侧面板开关 | `packages/desktop/src/renderer/TopBar.tsx:51`，`packages/desktop/src/renderer/TopBar.tsx:133`，`packages/desktop/src/renderer/TopBar.tsx:260` | 顶栏查看状态或打开面板 |
+| **对话/聊天发送** | 聊天主界面，空态 composer 居中，有消息后 composer 固定底部；发送消息进 AgentBridge | `packages/desktop/src/renderer/ChatView.tsx:171`，`packages/desktop/src/renderer/ChatView.tsx:569`，`packages/desktop/src/preload/index.ts:237` | 输入消息后 Enter 发送，Shift+Enter 换行 |
+| **消息流与工具卡** | 折叠/分组展示 assistant、thinking、tool、agent、task、goal、文件变更等消息 | `packages/desktop/src/renderer/messages/streamGroups.ts:183`，`packages/desktop/src/renderer/messages/ToolGroupCard.tsx:66`，`packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |
+| **Files Changed 卡片** | 汇总文件改动，显示变更行数、文件列表、撤销/重做入口 | `packages/desktop/src/renderer/messages/FilesChangedCard.tsx:41`，`packages/desktop/src/renderer/messages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |
+| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |
+| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |
+| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |
+| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |
+| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |
+| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 |
+| **项目/分支选择** | 空会话 composer 下方选择项目和 Git 分支 | `packages/desktop/src/renderer/chat/ProjectPicker.tsx:29`，`packages/desktop/src/renderer/chat/BranchPicker.tsx:17`，`packages/desktop/src/renderer/ChatView.tsx:1392` | 新对话发首条消息前选择项目/分支 |
+| **停止 / 引导 / 后续变更队列** | 忙碌时可停止；输入新内容会入队或作为 guide 打断；队列可预览、移除、清空、全部引导 | `packages/desktop/src/renderer/ChatView.tsx:924`，`packages/desktop/src/renderer/ChatView.tsx:939`，`packages/desktop/src/renderer/ChatView.tsx:1356` | agent 正在跑时输入后回车或点 guide/stop |
+| **AskUser 内联提问 / 工具审批** | 未回答 AskUser 固定在 composer 上方；工具审批卡可内联展示并提交决定 | `packages/desktop/src/renderer/ChatView.tsx:731`，`packages/desktop/src/renderer/ChatView.tsx:897`，`packages/desktop/src/renderer/messages/AskUserMessageView.tsx:211` | 点问题选项或审批按钮继续运行 |
 
 ### 搜索与命令
 
 | 功能 | 做什么 | 入口 | 怎么用 |
 |------|--------|------|--------|
-| **命令面板（⌘K）** | 模糊搜索：跳各视图、开关侧栏/详情、清空 transcript、搜索、开新窗口 | `shell/CommandPalette.tsx:19` + 104；`App.tsx:1991` | ⌘/Ctrl+K → 键入过滤 → 回车 |
-| **跨项目会话搜索（⌘P）** | 模态跨所有项目按标题搜会话，无输入列近期，选中跳转 | `shell/SessionSearchModal.tsx:38`；`App.tsx:1994` / 2500 侧栏「搜索」 | ⌘/Ctrl+P 或侧栏「搜索」 |
-| **当前 transcript 内搜索（⌘F）** | 当前会话消息流内查找，显匹配数，Esc 关 | `shell/SearchBar.tsx:14`；`App.tsx:1997` | 会话里 ⌘/Ctrl+F |
+| **命令面板（Command Palette）** | 构造可执行命令，支持跳视图、打开设置、搜索、开新窗口、面板操作等 | `packages/desktop/src/renderer/shell/CommandPalette.tsx:22`，`packages/desktop/src/renderer/shell/CommandPalette.tsx:108` | `Cmd/Ctrl+K` 后输入命令 |
+| **跨项目会话搜索** | 模态搜索所有项目会话，无输入时列最近会话 | `packages/desktop/src/renderer/shell/SessionSearchModal.tsx:41` | `Cmd/Ctrl+P` 或侧栏搜索 |
+| **当前 transcript 搜索** | 当前会话内查找文本并显示匹配数 | `packages/desktop/src/renderer/shell/SearchBar.tsx:15` | 会话里 `Cmd/Ctrl+F` |
 
-### 侧栏
+### 侧栏与项目/会话管理
 
 | 功能 | 做什么 | 入口 | 怎么用 |
 |------|--------|------|--------|
-| **侧栏项目管理** | 加项目(+)、展开/折叠、更多菜单（置顶/访达/重命名/归档全部对话/移除）、项目内 ✎ 新对话 | `Sidebar.tsx:228` / 109 repoMenu / 336 ProjectGroup | 「项目」+ 添加；悬停 ⋯ 菜单或 ✎ |
-| **侧栏会话管理** | 会话行显标题+状态点（运行/待输入/未读）+时间/⌘1-9 标；悬停归档（二次确认）；右键重命名/复制 ID/归档恢复/删除 | `Sidebar.tsx:161` sessionMenu / 502 SessionRow；`App.tsx:2003` ⌘数字 | 点会话切换；右键菜单；⌘/Ctrl+1..9 跳转 |
-| **设置入口 + 语言切换** | 侧栏底部「设置」上拉菜单：打开设置页 + 切换语言（中/英）级联子菜单 | `settings/SettingsMenu.tsx:36`；`Sidebar.tsx:289` | 点「设置」→打开设置/切语言 |
+| **侧栏容器与项目树** | 管理项目列表、会话索引、展开状态、当前 repo/session 和底部菜单 | `packages/desktop/src/renderer/Sidebar.tsx:72` | 侧栏选择项目或打开新会话 |
+| **最近项目与置顶/移除** | UI 调用 projects/recents API 添加、置顶、移除、刷新项目列表 | `packages/desktop/src/preload/index.ts:710`，`packages/desktop/src/main/index.ts:2272` | 项目菜单中置顶、移除或添加项目 |
+| **会话行状态与快捷跳转** | 会话行显示运行/待输入/未读状态，支持重命名、复制 ID、归档/删除和数字快捷键 | `packages/desktop/src/renderer/Sidebar.tsx:72`，`packages/desktop/src/renderer/App.tsx:2865` | 点击会话切换或用 `Cmd/Ctrl+1..9` |
+| **设置入口 + 语言切换** | 底部 SettingsMenu 打开设置页并切换中/英文 | `packages/desktop/src/renderer/settings/SettingsMenu.tsx:37` | 侧栏底部点设置 |
 
 ### 设置页（全屏，分组左导航）
 
-> 入口统一：侧栏「设置」→「打开设置…」→左导航切模块。`settings/SettingsPage.tsx:148`（MODULE_GROUPS:89）
-
-| 模块 | 做什么 | 入口 |
-|------|--------|------|
-| **常规 / 外观** | 常规设置 + 明暗主题 | `GeneralSection.tsx` / `AppearanceSection.tsx`（SettingsPage:205/208）|
-| **配置（文本/图像连接）** | 文本模型连接面板 + 图像生成设置（清晰度档） | `TextConnectionsPanel.tsx`；`AdvancedSections.tsx` ImageSettingsSection（:211）|
-| **个性化** | 指令文件、回复偏好、个性化（昵称/语气） | `AdvancedSections.tsx`（:217）|
-| **键盘快捷键** | 展示/配置快捷键 | `AdvancedSections.tsx` ShortcutsSection（:224）|
-| **能力总览** | 汇总所有能力 + 按项目覆盖（继承/开/关三态），点行跳详情 tab | `CapabilitiesOverviewSection.tsx`（:227）|
-| **MCP 服务器** | 增删改、鉴权（bearer/env header）、按插件归组、连接探测+友好错误 | `McpSection.tsx`（:244）|
-| **扩展** | 设置页内嵌插件/技能/MCP/市场 tab（无发现首页） | `ExtensionsPage`（:269）|
-| **子代理** | 全局/按项目（三态）管理角色 | `AgentsSection.tsx`（:272）|
-| **钩子** | 全局 + 项目级（core 拼接两层）+ 单条软开关 | `AdvancedSections.tsx` HooksSection（:247）|
-| **连接 / Git** | 通用/搜索连接；Git 偏好 | `ConnectionsSection` / `GitSection`（:253/256）|
-| **本地环境 + 沙箱** | 项目级环境变量（setup/cleanup/env）+ 沙箱策略 | `EnvironmentSection` / `SandboxSection.tsx`（:259-265）|
-| **对话设置** | 对话相关（如自动提取记忆开关） | `ConversationSettingsSection.tsx`（:267）|
-| **手机遥控** | 配对/密钥，配合手机端 React 应用 | `AdvancedSections.tsx` MobileRemoteSection（:268）|
-| **记忆** | 选存储→查看/编辑/Pin/批量清理/手动 Dream/清空 | `MemorySection.tsx`（:278）|
-| **已归档对话** | 列各项目归档会话，恢复/删除 | `AdvancedSections.tsx` ArchivedConversationsSection（:283）|
+| 模块 | 做什么 | 入口 | 怎么用 |
+|------|--------|------|--------|
+| **设置页框架** | 全屏设置页，左侧分组模块导航，右侧渲染当前模块 | `packages/desktop/src/renderer/settings/SettingsPage.tsx:56`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:99`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:163` | 侧栏设置 -> 打开设置页 |
+| **常规 / 外观** | 常规配置和主题外观 | `packages/desktop/src/renderer/settings/GeneralSection.tsx:71`，`packages/desktop/src/renderer/settings/AppearanceSection.tsx:6`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:231` | 设置页选 General 或 Appearance |
+| **文本连接 + 图像设置** | 配置文本模型 provider/实例、STT 连接提示和图像生成清晰度等 | `packages/desktop/src/renderer/settings/TextConnectionsPanel.tsx:84`，`packages/desktop/src/renderer/settings/AdvancedSections.tsx:1204`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:237` | 设置页选 Config |
+| **模型目录编辑器** | 新增、编辑、删除、重置用户模型 catalog 条目 | `packages/desktop/src/renderer/settings/ModelCatalogPanel.tsx:48`，`packages/desktop/src/renderer/settings/catalogEditor.ts:26`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:243` | 设置页选 Model Catalog |
+| **个性化 / 指令 / 回复偏好** | 管理指令文件、回复偏好、昵称和语气等 personalization | `packages/desktop/src/renderer/settings/AdvancedSections.tsx:125`，`packages/desktop/src/renderer/settings/AdvancedSections.tsx:172`，`packages/desktop/src/renderer/settings/AdvancedSections.tsx:235` | 设置页选 Personalization |
+| **快捷键** | 展示快捷键说明与可用入口 | `packages/desktop/src/renderer/settings/AdvancedSections.tsx:292`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:253` | 设置页选 Shortcuts |
+| **能力总览** | 按能力类型分组，折叠浏览 builtin/tool/skill/plugin/MCP/agent，支持跳转详情和三态覆盖 | `packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx:115`，`packages/desktop/src/renderer/settings/capabilitiesOverview.ts:86`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:256` | 设置页选 Capabilities |
+| **MCP 服务器** | 增删改 MCP server，按插件归属展示，配置鉴权，探测连通性和工具列表 | `packages/desktop/src/renderer/settings/McpSection.tsx:137`，`packages/desktop/src/renderer/settings/McpSection.tsx:1083`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:273` | 设置页选 MCP |
+| **扩展（插件/技能/MCP/市场）** | 设置页内嵌 ExtensionsPage，隐藏发现首页，直接进入管理 tab | `packages/desktop/src/renderer/extensions/ExtensionsPage.tsx:27`，`packages/desktop/src/renderer/extensions/ManagePage.tsx:44`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:300` | 设置页选 Extensions |
+| **子代理** | 全局/项目级管理 agent 角色和覆盖策略 | `packages/desktop/src/renderer/settings/AgentsSection.tsx:58`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:303` | 设置页选 Agents |
+| **Hooks** | 管理全局和项目 hook，核心按两层拼接 | `packages/desktop/src/renderer/settings/AdvancedSections.tsx:326`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:276` | 设置页选 Hooks |
+| **连接 / Git** | 搜索连接、通用连接和 Git 偏好配置 | `packages/desktop/src/renderer/settings/AdvancedSections.tsx:647`，`packages/desktop/src/renderer/settings/AdvancedSections.tsx:651`，`packages/desktop/src/renderer/settings/SearchConnectionsPanel.tsx:35` | 设置页选 Connections 或 Git |
+| **本地环境** | 项目级 setup、cleanup、env 配置 | `packages/desktop/src/renderer/settings/AdvancedSections.tsx:935`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:288` | 设置页选 Environment |
+| **沙箱策略** | 配置隔离模式、网络策略和项目覆盖 | `packages/desktop/src/renderer/settings/SandboxSection.tsx:39`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:292` | 设置页选 Sandbox |
+| **对话设置** | 管理对话级设置，例如自动记忆抽取等 | `packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx:59`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:297` | 设置页选 Conversation |
+| **上下文设置** | 管理上下文策略与 token 预算相关配置 | `packages/desktop/src/renderer/settings/ContextSettingsSection.tsx:79`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:298` | 设置页选 Context |
+| **手机遥控** | 启停远程主机、设备、配对、passcode、tunnel/cloudflared | `packages/desktop/src/renderer/settings/AdvancedSections.tsx:1475`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:299` | 设置页选 Mobile Remote |
+| **记忆** | 选择全局/项目 store，查看、编辑、Pin、批量处理 pending memory，手动 Dream | `packages/desktop/src/renderer/settings/MemorySection.tsx:87`，`packages/desktop/src/renderer/settings/MemorySection.tsx:163`，`packages/desktop/src/renderer/settings/MemorySection.tsx:311` | 设置页选 Memory |
+| **已归档会话** | 列出各项目归档会话并恢复或删除 | `packages/desktop/src/renderer/settings/AdvancedSections.tsx:1274`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:314` | 设置页选 Archived |
 
 ### 扩展全屏视图 + 凭证
 
 | 功能 | 做什么 | 入口 | 怎么用 |
 |------|--------|------|--------|
-| **扩展全屏视图（发现首页）** | 侧栏「扩展」开 CustomizeView：发现首页（搜索+已装概览）+ 下钻插件/技能/MCP/市场 tab | `customize/CustomizeView.tsx:15`；`extensions/ExtensionsPage.tsx:26`；`Sidebar.tsx:204` | 侧栏「扩展」→搜索/点已装数 |
-| **插件 tab** | 列插件、启停（写 user disabledPlugins 级联）、git/市场安装、详情（hooks/MCP/技能枚举） | `extensions/PluginsTab.tsx`；`PluginDetailView.tsx` | 扩展页「插件」→启停/详情/安装 |
-| **技能 tab** | 列技能、搜索/启停（user disabledSkills）、详情弹窗 | `extensions/SkillsTab.tsx`；`SkillDetailModal.tsx` | 扩展页「技能」→搜索/开关/详情 |
-| **市场 tab** | 插件市场列表+详情，从官方/自定义 marketplace 浏览安装，显版本（短 SHA/local） | `extensions/MarketList.tsx`；`MarketDetail.tsx` | 扩展页「市场」→浏览→安装 |
-| **凭证页（Cookie/Token/Link）** | 侧栏「凭证」三 tab：Cookie 登录态桥接、Permission Token、业务方 Link | `credentials/CredentialsPage.tsx:9`；`Sidebar.tsx:220` | 侧栏「凭证」→切 tab |
-| **凭证-Cookie 登录态桥接** | 填 URL「在浏览器打开登陆」（独立浏览器窗登录，存 persist:browser）；列域名/预览可桥接 cookie 数；不长期明文存，AI 用时弹审批临时桥接 | `credentials/CookieTab.tsx:12` / 41 / 21 | Cookie→填 URL→登录→刷新看域名 |
-| **凭证-Permission Token / Link** | 新增/保存命名 token（id/标签/URL/env 名）/Link 凭证，列出/删除 | `credentials/TokenTab.tsx:15`；`LinkTab.tsx:5` | 填 id/label/env→保存 |
+| **Customize/Extensions 发现首页** | 侧栏 Extensions 打开发现首页，展示搜索、已安装概览和插件/技能/MCP/市场入口 | `packages/desktop/src/renderer/extensions/ExtensionsPage.tsx:27`，`packages/desktop/src/renderer/extensions/DiscoverHome.tsx:32` | 侧栏点 Extensions |
+| **插件 tab** | 插件列表、启停、安装、本地/市场来源、详情 | `packages/desktop/src/renderer/extensions/PluginsTab.tsx:35`，`packages/desktop/src/renderer/extensions/PluginDetailView.tsx:13` | Extensions -> Plugins |
+| **技能 tab** | 技能列表、搜索、启停、详情 modal | `packages/desktop/src/renderer/extensions/SkillsTab.tsx:31`，`packages/desktop/src/renderer/extensions/SkillDetailModal.tsx:15` | Extensions -> Skills |
+| **MCP tab** | Extensions 管理页内直接复用 McpSection 管理 MCP server | `packages/desktop/src/renderer/extensions/ManagePage.tsx:119`，`packages/desktop/src/renderer/extensions/ManagePage.tsx:169` | Extensions -> MCP |
+| **市场 tab + 安装任务面板** | 浏览市场插件、安装、查看后台 install jobs 并重试 | `packages/desktop/src/renderer/extensions/MarketList.tsx:84`，`packages/desktop/src/renderer/extensions/MarketDetail.tsx:23`，`packages/desktop/src/renderer/extensions/PluginInstallJobsPanel.tsx:89` | Extensions -> Market |
+| **凭证页（Cookie/Token/Link）** | 三 tab 管理 cookie 登录态、permission token 和业务 link | `packages/desktop/src/renderer/credentials/CredentialsPage.tsx:11` | 侧栏点 Credentials |
+| **Cookie 登录态桥接** | 登录 URL、列域名、预览 cookie、捕获/恢复浏览器 cookie | `packages/desktop/src/renderer/credentials/CookieTab.tsx:55` | Credentials -> Cookie |
+| **Permission Token / Link** | 新增、保存、删除 token/link 凭证 | `packages/desktop/src/renderer/credentials/TokenTab.tsx:17`，`packages/desktop/src/renderer/credentials/LinkTab.tsx:16` | Credentials -> Token 或 Link |
 
 ### 全屏视图（自动化/运行/审批/会话/日志）
 
 | 功能 | 做什么 | 入口 | 怎么用 |
 |------|--------|------|--------|
-| **自动化视图（定时任务）** | 侧栏「自动化」：列任务、「新建自动化」用对话方式创建；每任务启停/立即运行/删除/编辑 prompt/看上次运行；权限档（只读/可写/完全）+ cron 频率（每天/工作日/每周/按小时/自定义）+时区 | `automation/AutomationView.tsx:252`（新建340/立即运行532/删除549/启停528/编辑606/查看744）| 侧栏「自动化」→新建/启停/立即运行/编辑/查看 |
-| **运行视图（Runs）** | 列所有运行（headless/自动化产生），按状态过滤，选中看 transcript | `runs/RunsView.tsx:23`；命令面板 go.runs | ⌘K「打开 运行」或自动化「查看」 |
-| **审批视图（全屏）** | 待批准队列（ApprovalCard）+ 历史（最近 50 条 approve/deny+工具/摘要/时间） | `approvals/ApprovalsView.tsx:18`；命令面板 go.approvals | ⌘K「打开 审批」 |
-| **工具审批卡（范围批准/拒绝）** | 「仅本次」「本会话一直允许」+ ▾ 菜单（本项目/文件/目录路径范围）；拒绝可填原因；按操作而非工具名缓存 | `approvals/ApprovalCard.tsx:58` / 143 / 160 / 95；`approvalDecision.ts` | 点「仅本次/本会话」或 ▾ 选范围/填原因拒绝 |
-| **会话视图（磁盘会话管理）** | 全屏列磁盘引擎会话（按 id/标题搜）、重命名、显大小/时间、删除、新建 | `sessions/SessionsView.tsx:11`；命令面板 go.sessions | ⌘K「打开 会话」 |
-| **日志视图** | 全屏查看应用日志（ui-ink + engine 分桶） | `logs/LogsView.tsx`；命令面板 go.logs | ⌘K「打开 日志」 |
+| **自动化视图** | 列定时任务，新建、编辑、启停、立即运行、取消和查看上次运行 | `packages/desktop/src/renderer/automation/AutomationView.tsx:206`，`packages/desktop/src/renderer/automation/AutomationView.tsx:385` | 侧栏点 Automation |
+| **自动化时间与项目辅助** | cron schedule 解析/描述、时区分组、项目选项与磁盘会话重建辅助 | `packages/desktop/src/renderer/automation/scheduleModel.ts:66`，`packages/desktop/src/renderer/automation/timezones.ts:6`，`packages/desktop/src/renderer/automation/projectOptions.ts:53`，`packages/desktop/src/renderer/automation/rebuildFromDisk.ts:32` | 自动化表单选择频率、时区、项目或查看运行 |
+| **运行视图（Runs）** | 列所有 runs，选中看详情/transcript | `packages/desktop/src/renderer/runs/RunsView.tsx:24` | 侧栏或命令面板打开 Runs |
+| **审批视图** | 全屏待审批队列和历史记录 | `packages/desktop/src/renderer/approvals/ApprovalsView.tsx:19` | 打开 Approvals 处理待批任务 |
+| **工具审批卡** | 按操作生成 approve/deny 决策，支持本次、本会话、范围批准和拒绝原因 | `packages/desktop/src/renderer/approvals/ApprovalCard.tsx:63`，`packages/desktop/src/renderer/approvals/approvalDecision.ts:37`，`packages/desktop/src/renderer/approvals/approvalDecision.ts:74` | 审批卡点击批准范围或拒绝 |
+| **会话视图** | 全屏磁盘会话列表，搜索、重命名、删除、新建 | `packages/desktop/src/renderer/sessions/SessionsView.tsx:12` | 打开 Sessions 管理历史会话 |
+| **日志视图** | 查看应用日志 bucket 尾部 | `packages/desktop/src/renderer/logs/LogsView.tsx:8` | 打开 Logs |
 
 ### 右侧面板坞（与对话并存）
 
 | 功能 | 做什么 | 入口 | 怎么用 |
 |------|--------|------|--------|
-| **文件面板** | 懒加载文件树（可隐藏/刷新），预览图片/Markdown 富文本切源码/代码带行号每行可加评论锚点（钉输入框）；文件/目录拖到输入框（图片→附件，其他→@路径）；聊天点路径链接在此定位 | `panels/FilesPanel.tsx:70`；PanelArea「+」→文件 或 ⌘⇧E | 面板坞「+」选文件→预览/评论/拖文件 |
-| **浏览器面板** | 内置 webview：多标签、后退/前进/刷新、地址栏、外部打开、弹出独立窗；「圈选元素」框选加评论锚点（跨主窗/弹出窗回显）；聊天点 http 链接在此新标签开 | `panels/BrowserPanel.tsx`（493~567）；PanelArea「+」→浏览器 或 ⌘T | 面板坞「+」选浏览器→输 URL→圈选元素 |
-| **审查面板（Diff）** | 全宽统一 diff：范围下拉（本轮/未暂存/已暂存/全部未提交/提交[子菜单]/分支 vs base），+/- 统计、本轮按文件过滤、刷新；对 diff 行加评论锚点 | `panels/ReviewPanel.tsx:46`；`diff/UnifiedDiffViewer.tsx`；PanelArea「+」→审查 或 ⌃⇧G | 面板坞「+」选审查→选范围→看 diff/加评论 |
-| **终端面板** | 内置交互 shell（xterm.js + node-pty），每 tab 独立 shell 随会话存活；输出里路径/URL 可点（路径开编辑器，URL 开外部浏览器） | `panels/TerminalPanel.tsx:19`；PanelArea「+」→终端 或 ⌃\` | 面板坞「+」选终端→输命令 |
-| **后台 Shell 面板** | 列当前会话后台 shell（Bash run_in_background）：状态点/命令/端口/退出码；点看输出（拉取式 3s 轻轮询），运行中可停止/刷新 | `panels/BackgroundShellPanel.tsx:12`；PanelArea「+」→后台 Shell | 面板坞「+」选后台 Shell→点看输出 |
-| **房间面板** | 常驻 Claude Code（stream-json）房间，与手机端共享同进程：房间列表（从近期项目新建/关闭/刷新）+ 进房对话（历史+实时流+输入框）+权限徽标+运行状态 | `panels/RoomsPanel.tsx:15`；PanelArea「+」→房间 | 面板坞「+」选房间→新建选项目→进房发消息 |
-| **面板坞放大/调宽/落地卡** | 拖左边缘调宽、放大覆盖输入区/还原；空坞显六类面板卡片网格 | `panels/PanelArea.tsx:259` / 192 / 292 | 拖边缘/点放大/空坞点卡片 |
+| **PanelArea 多 tab 面板坞** | 六类面板可多开 tab，关闭最后一个 tab 关闭坞，支持 + 菜单、放大和调宽 | `packages/desktop/src/renderer/panels/PanelArea.tsx:90`，`packages/desktop/src/renderer/panels/PanelArea.tsx:122`，`packages/desktop/src/renderer/panels/PanelArea.tsx:177` | 顶栏/命令面板打开面板或点 `+` 新建 tab |
+| **面板保活与浏览器空闲淘汰** | PanelArea tab body 常驻挂载；隐藏面板用 CSS 保活，BrowserPanel 隐藏超过 5 分钟后卸载 webview 释放资源 | `packages/desktop/src/renderer/panels/PanelArea.tsx:229`，`packages/desktop/src/renderer/panels/PanelArea.tsx:442`，`packages/desktop/src/renderer/browser/useIdleEvict.ts:9`，`packages/desktop/src/renderer/browser/useIdleEvict.ts:17` | 切换面板不丢终端/页面，长时间隐藏浏览器自动释放 |
+| **文件面板** | 文件树、图片/Markdown/代码预览、行级评论锚点、拖拽到 composer、路径 reveal | `packages/desktop/src/renderer/panels/FilesPanel.tsx:84`，`packages/desktop/src/renderer/panels/FilesPanel.tsx:387`，`packages/desktop/src/renderer/panels/FilesPanel.tsx:531` | PanelArea -> Files |
+| **浏览器面板** | 多标签 webview、地址栏、刷新/后退/前进、外部打开、popout、锚点圈选 | `packages/desktop/src/renderer/panels/BrowserPanel.tsx:99`，`packages/desktop/src/renderer/browser/useBrowserTabs.ts:16`，`packages/desktop/src/renderer/browser/WebviewHost.tsx:18` | PanelArea -> Browser |
+| **本地端口发现** | 探测 localhost 常用端口并为浏览器面板提供快速入口 | `packages/desktop/src/renderer/browser/useLocalhostPorts.ts:7`，`packages/desktop/src/renderer/browser/useLocalhostPorts.ts:12` | Browser 面板选择本地服务 |
+| **审查面板（Diff）** | 选择本轮/未暂存/已暂存/全部未提交/提交/分支范围，展示 unified diff 并支持行评论 | `packages/desktop/src/renderer/panels/ReviewPanel.tsx:47` | PanelArea -> Review |
+| **终端面板** | xterm.js 交互终端，多 tab 独立 pty，输出路径/URL 可点 | `packages/desktop/src/renderer/panels/TerminalPanel.tsx:20`，`packages/desktop/src/renderer/panels/TerminalPanel.tsx:60`，`packages/desktop/src/renderer/panels/TerminalPanel.tsx:131` | PanelArea -> Terminal |
+| **统一后台工作面板** | 展示后台 shell、子代理、后台任务，支持刷新、轮询、分类、查看详情和停止 | `packages/desktop/src/renderer/panels/BackgroundShellPanel.tsx:24`，`packages/desktop/src/renderer/panels/BackgroundShellPanel.tsx:51`，`packages/desktop/src/renderer/panels/BackgroundShellPanel.tsx:176`，`packages/desktop/src/preload/index.ts:293` | PanelArea -> Background |
+| **CC/Codex Room 面板** | 探测 Claude/Codex CLI，列外部 CLI session，打开/发送/关闭房间，选择权限模式 | `packages/desktop/src/renderer/cc-room/CCRoomView.tsx:50`，`packages/desktop/src/renderer/cc-room/CCRoomView.tsx:120` | PanelArea -> CC Room |
+| **CC/Codex Conversation** | 读历史、订阅实时消息、发送输入、展示工具卡和审批卡，回传审批结果 | `packages/desktop/src/renderer/cc-room/CCConversationView.tsx:72`，`packages/desktop/src/renderer/cc-room/CCConversationView.tsx:108`，`packages/desktop/src/renderer/cc-room/CCConversationView.tsx:145`，`packages/desktop/src/renderer/cc-room/CCConversationView.tsx:336` | 在 CC Room 内进入某个 session 后对话 |
+| **Quota 面板** | 查询 Claude/Codex 订阅剩余额度并以 provider blocks/bars 展示 | `packages/desktop/src/renderer/cc-room/QuotaPanel.tsx:16`，`packages/desktop/src/preload/index.ts:1025` | CC Room 顶部查看 quota |
+| **面板空态落地卡** | 空面板坞显示六类面板卡片网格 | `packages/desktop/src/renderer/panels/PanelArea.tsx:368` | 打开空面板后点卡片 |
 
 ### 其它
 
 | 功能 | 做什么 | 入口 | 怎么用 |
 |------|--------|------|--------|
-| **顶栏状态弹层** | 状态点 hover：当前工具/步数/耗时或任务列表；有活跃目标显 ◎ + 目标块 + 清除/延长 | `TopBar.tsx:112` StatusBadge；`topbar/StatusPopover.tsx` | 悬停顶栏右侧状态点 |
-| **信任门 / 更新横幅 / 新窗口** | 未信任工作区弹信任门；有更新显横幅；⌘⇧N 或命令面板开新窗口 | `workspace-trust/TrustGate.tsx`；`updater/UpdaterBanner.tsx` | 信任门确认；横幅点安装；⌘/Ctrl+⇧+N |
-
+| **状态弹层** | 顶栏状态 hover 展示当前运行、目标、工具和耗时 | `packages/desktop/src/renderer/TopBar.tsx:133` | 悬停顶栏状态点 |
+| **信任门** | 未信任工作区显示风险摘要并要求用户确认 | `packages/desktop/src/renderer/workspace-trust/TrustGate.tsx:1`，`packages/desktop/src/main/index.ts:2941` | 首次打开项目时确认信任 |
+| **更新横幅** | 显示更新状态并触发下载/安装 | `packages/desktop/src/renderer/updater/UpdaterBanner.tsx:1`，`packages/desktop/src/main/index.ts:2113` | 顶部横幅点击更新 |
+| **新窗口与系统打开** | 命令或快捷键新建窗口，路径/URL 在系统中打开 | `packages/desktop/src/main/index.ts:2451`，`packages/desktop/src/main/index.ts:2660`，`packages/desktop/src/main/index.ts:2675` | 命令面板或快捷键打开 |
 
 ---
 
 ## 三、TUI/CLI（packages/tui/src/）
 
-`code-shell` 终端：bin → `dist/cli/main.js`。不带子命令直接运行=有位置参数走 headless，无参进交互式 REPL。
+`code-shell` 终端入口：bin -> `dist/cli/main.js`。不带子命令且有位置参数时走 headless run；无位置参数时进入 Ink REPL。
 
 ### CLI 子命令
 
 | 命令 | 做什么 | 入口 | 用法示例 |
 |------|--------|------|----------|
-| **默认调用（positional task）** | 有 `[task]` 走 headless 单次（等价 run），无参进 REPL；`--prefill` 预填不提交 | `cli/main.ts:180-201` | `code-shell` / `code-shell "修复bug"` / `code-shell --prefill "草稿"` |
-| **run（headless 单任务）** | 无界面执行单任务，参数或 stdin 管道；续接会话、写文件、退出是否等后台 agent；输出 text/json/jsonl/stream-json | `cli/main.ts:64-93`；`commands/run.ts` | `code-shell run "列TODO"` / `echo "分析" \| code-shell run` / `... --resume <id> -o json --output-last-message out.txt` |
-| **repl（显式交互式）** | 显式进 Ink REPL，同默认无参 | `cli/main.ts:97-104`；`commands/repl.ts:63` | `code-shell repl -m anthropic/claude-opus-4-6 --effort high` |
-| **公共选项** | run/repl/arena 共享：`-m/--model`、`-p/--provider`、`--preset`、`--base-url`、`--api-key`、`--permission-mode`、`-o/--output`、`--max-turns`、`--effort` | `cli/main.ts:49-60` | `code-shell run "任务" -m gpt-4o -p openai --permission-mode bypassPermissions --max-turns 50 --effort max` |
-| **sessions（列会话）** | 列最近会话：ID/时间/状态/模型/轮数 | `cli/main.ts:108-127` | `code-shell sessions -n 20` |
-| **arena（多模型评审擂台）** | agent 先收集相关代码上下文，多模型就主题讨论/评审/规划；`--models` 指定，`--mode review\|discussion\|planning`（可自动检测） | `cli/main.ts:131-161`；`commands/arena.ts:48` | `code-shell arena "评审认证模块" --models claude,gpt4o,deepseek --mode review` |
-| **runs（长任务管理）** | list/get/submit/resume（--input/--approve/--reject）/cancel/events/recover | `commands/runs.ts:76`；注册 `main.ts:165-166` | `code-shell runs submit "重构X" --tag wip` / `runs list -s running` / `runs resume <id> --approve` / `runs events <id> -n 50` / `runs recover` |
-| **plugin（CLI 插件管理）** | 从本地目录或 git（github:/https/ssh/@ref #subdir）安装、列出、按源更新（--force）、卸载；兼容 CC + Codex | `commands/plugin.ts:12`；注册 `main.ts:170-171` | `code-shell plugin install github:org/repo --name myplugin` / `plugin update myplugin --force` / `plugin uninstall myplugin` |
+| **默认调用（positional task）** | 有 `[task]` 走 headless 单次，无参进 REPL；`--prefill` 预填不提交 | `packages/tui/src/cli/main.ts:176`，`packages/tui/src/cli/main.ts:193` | `code-shell` / `code-shell "修复 bug"` / `code-shell --prefill "草稿"` |
+| **run（headless 单任务）** | 执行单任务，任务可来自参数或 stdin；支持 resume、输出格式、最后消息写文件、等待后台 agent | `packages/tui/src/cli/main.ts:70`，`packages/tui/src/cli/commands/run.ts:69`，`packages/tui/src/cli/output/renderer.ts:119` | `code-shell run "列 TODO"` / `echo "分析" \| code-shell run -o json` |
+| **repl（显式交互式）** | 进入 Ink REPL，并初始化 Engine、MCP、ChatSessionManager、cron runtime | `packages/tui/src/cli/main.ts:103`，`packages/tui/src/cli/commands/repl.ts:63`，`packages/tui/src/cli/commands/repl.ts:192` | `code-shell repl -m gpt-4.1 --effort high` |
+| **公共选项** | run/repl/arena 共享模型、provider、preset、base-url、api-key、permission-mode、output、max-turns、effort 等选项 | `packages/tui/src/cli/main.ts:42`，`packages/tui/src/cli/main.ts:69` | `code-shell run "任务" -m gpt-4.1 --permission-mode bypassPermissions` |
+| **sessions** | 列最近会话 ID、时间、状态、模型、轮数 | `packages/tui/src/cli/main.ts:113` | `code-shell sessions -n 20` |
+| **arena（多模型评审/讨论/规划）** | 多模型围绕主题进行 review/discussion/planning，可指定模型和 mode | `packages/tui/src/cli/main.ts:137`，`packages/tui/src/cli/commands/arena.ts:68` | `code-shell arena "评审认证模块" --models claude,gpt4o --mode review` |
+| **runs（长任务管理）** | list/get/submit/resume/cancel/events/recover 长任务 | `packages/tui/src/cli/main.ts:161`，`packages/tui/src/cli/commands/runs.ts:77` | `code-shell runs submit "重构 X"` / `code-shell runs events <id>` |
+| **plugin（CLI 插件管理）** | 安装、列出、更新、卸载 CC + Codex 格式插件 | `packages/tui/src/cli/main.ts:166`，`packages/tui/src/cli/commands/plugin.ts:12` | `code-shell plugin install github:org/repo --name myplugin` |
 
 ### slash 命令（REPL 内）
 
@@ -208,89 +229,96 @@
 
 | 命令 | 做什么 | 入口 | 用法 |
 |------|--------|------|------|
-| `/help` | 列全部 slash 命令（Core/Git/Context/Config/Advanced 分组）| `ui/App.tsx:1471`；`registry.ts:128` | `/help` |
-| `/model` · `/m` | 无参开 Ink 模型选择器，带 key 直接切 | `core-commands.ts:122`；`ModelSelector.tsx`；`App.tsx:831` | `/model` / `/model gpt4o`（Alt+M 也可） |
-| `/models` | 模型管理面板：列/切/同步 OpenRouter 目录/管理 arena 参与者/增删 provider·model/统一添加向导 | `extra-commands.ts:142`；`ModelManager.tsx`；`App.tsx:940` | `/models`（Tab/↑↓/Enter，q/Esc 退） |
-| `/login` · `/logout` | login 带 key 直接保存热加载，不带开 onboarding；logout 清空 model/models/providers/arena/activeKey | `extra-commands.ts:13` / 54 | `/login sk-xxxx` / `/login` / `/logout` |
-| `/effort` | 设/查推理 effort（low\|medium\|high\|max） | `core-commands.ts:74` | `/effort high` |
-| `/permissions` · `/perm` | 查/切权限模式（default/acceptEdits/dontAsk/bypassPermissions/auto/plan）；`rules` 列生效规则 | `permissions-command.ts:17` | `/permissions` / `/permissions plan` / `/permissions rules` |
-| `/config` | show 打印全部设置；get 取点路径值；set 改（JSON 解析） | `core-commands.ts:690` | `/config show` / `/config get model.name` / `/config set model.temperature 0.5` |
-| `/features` | 只读列引擎解析后的 feature flags | `features-command.ts:11` | `/features` |
+| `/help` | 列全部 slash 命令，按分组显示 | `packages/tui/src/ui/App.tsx:1632` | `/help` |
+| `/model` · `/m` | 无参开模型选择器，带 key 直接切换模型 | `packages/tui/src/cli/commands/builtin/core-commands.ts:123`，`packages/tui/src/ui/components/ModelSelector.tsx:22` | `/model` / `/model gpt4o` |
+| `/models` | 模型管理面板：列、切、同步、添加 provider/model，管理 arena 参与者 | `packages/tui/src/cli/commands/builtin/extra-commands.ts:198`，`packages/tui/src/ui/components/ModelManager.tsx:83` | `/models` |
+| `/login` | 带 key 直接保存并热加载；不带参数进入 onboarding | `packages/tui/src/cli/commands/builtin/extra-commands.ts:52`，`packages/tui/src/ui/components/OnboardingPrompt.tsx:40` | `/login sk-...` / `/login` |
+| `/logout` | 清空模型和凭证相关设置 | `packages/tui/src/cli/commands/builtin/extra-commands.ts:118` | `/logout` |
+| `/effort` | 设/查推理 effort | `packages/tui/src/cli/commands/builtin/core-commands.ts:75` | `/effort high` |
+| `/permissions` · `/perm` | 查/切权限模式，`rules` 列生效规则 | `packages/tui/src/cli/commands/builtin/permissions-command.ts:17` | `/permissions auto` / `/permissions rules` |
+| `/config` | show/get/set 设置，set 尝试 JSON 解析 | `packages/tui/src/cli/commands/builtin/core-commands.ts:695` | `/config show` / `/config set model.temperature 0.5` |
+| `/features` | 列引擎解析后的 feature flags | `packages/tui/src/cli/commands/builtin/features-command.ts:11` | `/features` |
 
 **状态 / 工具 / 用量**
 
 | 命令 | 做什么 | 入口 | 用法 |
 |------|--------|------|------|
-| `/cost` | token 用量与成本；`stats` 汇总，`detail` 细分 | `core-commands.ts:32` | `/cost` / `/cost stats` / `/cost detail` |
-| `/status` | 模型/effort/权限/会话/CWD/工具数/git/token/成本；`env` 环境；`doctor` 诊断 | `core-commands.ts:553` | `/status` / `/status env` / `/status doctor` |
-| `/tools` | 列当前可用工具及数量 | `core-commands.ts:255` | `/tools` |
-| `/skills` | 列 project/user/plugin 三类 skill | `extra-commands.ts:155` | `/skills` |
-| `/plugin` | REPL 内插件市场管理：marketplace add/remove/list、install/uninstall、list | `extra-commands.ts:200`；`plugin-handler.ts` | `/plugin list` / `/plugin marketplace add <url>` / `/plugin install foo@official` |
-| `/mcp` | 列已配置 MCP 服务器（名/transport/command·url），无配置给示例 | `extra-commands.ts:112` | `/mcp` |
+| `/cost` | 显示 token 用量和成本，支持 stats/detail | `packages/tui/src/cli/commands/builtin/core-commands.ts:33` | `/cost` / `/cost detail` |
+| `/status` | 显示模型、effort、权限、会话、cwd、工具数、git、token、成本；支持 env/doctor | `packages/tui/src/cli/commands/builtin/core-commands.ts:558` | `/status` / `/status doctor` |
+| `/tools` | 列当前可用工具及数量 | `packages/tui/src/cli/commands/builtin/core-commands.ts:260` | `/tools` |
+| `/skills` | 列 project/user/plugin 三类 skill | `packages/tui/src/cli/commands/builtin/extra-commands.ts:211` | `/skills` |
+| `/plugin` | REPL 内插件市场管理：marketplace add/remove/list、install/uninstall、list | `packages/tui/src/cli/commands/builtin/extra-commands.ts:256`，`packages/tui/src/cli/commands/builtin/plugin-handler.ts:1` | `/plugin list` / `/plugin install foo@official` |
+| `/mcp` | 列已配置 MCP server，含 transport 和 command/url | `packages/tui/src/cli/commands/builtin/extra-commands.ts:168` | `/mcp` |
 
 **会话 / 上下文 / 记忆**
 
 | 命令 | 做什么 | 入口 | 用法 |
 |------|--------|------|------|
-| `/memory` · `/memories` | 跨会话持久记忆：list/add/delete/edit/clear（软删 memory-trash）/open | `core-commands.ts:271` | `/memory list` / `/memory add user_role 后端工程师` / `/memory clear` |
-| `/compact` | 立即压缩上下文，报压缩前后 token | `core-commands.ts:360` | `/compact` |
-| `/session` · `/sessions` · `/sid` | session 显当前；list 列最近；tag 打标；resume 提示恢复；sid 单打当前 ID（运行中也可用） | `core-commands.ts:197` / 180 | `/session list` / `/session tag wip` / `/sid` |
-| `/resume` | 无参开 Ink 会话选择器（过滤空会话），带数字/查询词匹配恢复并重建记录 | `core-commands.ts:388`；`SessionPicker.tsx`；`App.tsx:847` | `/resume` / `/resume 2` / `/resume 重构` |
-| `/export` | 导出 transcript 为 markdown（默认，含 sidecar）或 json | `core-commands.ts:651`；`export-md.ts` | `/export` / `/export json` |
-| `/clear` · `/exit` · `/quit` · `/version` | 清空记录 / 退出 / 版本 | `core-commands.ts:19` / 26 / 638 | `/clear` / `/exit` / `/version` |
-| `/init` | 据 cwd 选 improve/migrate/create/empty，LLM 生成/改进 CODESHELL.md 并注入上下文 | `init/index.ts:95`；`init/detect.ts` | `/init` |
-| `/tasks` · `/goal` | tasks 显多步任务列表；goal 设持久目标并执行，goal 看当前，goal clear 清除 | `core-commands.ts:88`；`goal-command.ts:19` | `/tasks` / `/goal 让所有测试通过` / `/goal clear` |
-| `/image` · `/img` | 读本地图片 base64 暂存到下条消息；无参列暂存，clear 清空；支持多路径/引号 | `image-command.ts:96` | `/image ./shot.png` / `/image "a b.png" c.jpg` / `/image clear` |
+| `/memory` · `/memories` | 跨会话持久记忆 list/add/delete/edit/clear/open | `packages/tui/src/cli/commands/builtin/core-commands.ts:276` | `/memory list` / `/memory add user_role 后端工程师` |
+| `/compact` | 立即压缩上下文并报告压缩前后 token | `packages/tui/src/cli/commands/builtin/core-commands.ts:365` | `/compact` |
+| `/session` · `/sessions` | 显示当前 session，list 最近会话，tag 打标，resume 提示恢复 | `packages/tui/src/cli/commands/builtin/core-commands.ts:202` | `/session list` / `/session tag wip` |
+| `/sid` | 输出当前 session ID，运行中也可用 | `packages/tui/src/cli/commands/builtin/core-commands.ts:189` | `/sid` |
+| `/resume` | 无参开会话选择器；带数字或查询词匹配恢复 | `packages/tui/src/cli/commands/builtin/core-commands.ts:393`，`packages/tui/src/ui/components/SessionPicker.tsx:28` | `/resume` / `/resume 重构` |
+| `/export` | 导出 transcript 为 markdown 或 json | `packages/tui/src/cli/commands/builtin/core-commands.ts:656`，`packages/tui/src/cli/commands/builtin/export-md.ts:42` | `/export` / `/export json` |
+| `/clear` | 清空当前 transcript 记录 | `packages/tui/src/cli/commands/builtin/core-commands.ts:27` | `/clear` |
+| `/exit` · `/quit` | 退出 REPL | `packages/tui/src/cli/commands/builtin/core-commands.ts:20` | `/exit` |
+| `/version` | 显示版本 | `packages/tui/src/cli/commands/builtin/core-commands.ts:643` | `/version` |
+| `/init` | 检测项目类型并生成/改进 CODESHELL.md | `packages/tui/src/cli/commands/builtin/init/index.ts:95`，`packages/tui/src/cli/commands/builtin/init/detect.ts:64` | `/init` |
+| `/tasks` | 显示多步任务列表 | `packages/tui/src/cli/commands/builtin/core-commands.ts:89` | `/tasks` |
+| `/goal` | 设置/查看/清除持久目标 | `packages/tui/src/cli/commands/builtin/goal-command.ts:19` | `/goal 让测试通过` / `/goal clear` |
+| `/image` · `/img` | 读本地图片并暂存到下条消息；支持列出和 clear | `packages/tui/src/cli/commands/builtin/image-command.ts:96` | `/image ./shot.png` / `/image clear` |
 
 **Git / 评审**
 
 | 命令 | 做什么 | 入口 | 用法 |
 |------|--------|------|------|
-| `/diff` · `/commit` · `/branch` | diff 显 git diff（截断）；commit 用模型生成 message 提交（或 -m）；branch 列/建/切（--create） | `core-commands.ts:532`；`git-commands.ts:24,97` | `/diff` / `/commit` / `/commit -m "fix"` / `/branch feature-x --create` |
-| `/review` | git diff 做 P0-P3 结构化评审；`[file]` 限定、`--json`、`--dimensions=...`、`--staged` | `git-commands.ts:128` | `/review` / `/review src/auth.ts --dimensions=security --staged --json` |
-| `/security-review` · `/sec` | 待提交 diff 安全评审（注入/越权/硬编码密钥/XSS/路径穿越），给 file:line+严重度+利用+修复 | `more-commands.ts:60` | `/security-review` |
-| `/pr-comments` · `/autofix-pr` | 经 gh 拉 PR 评论；autofix 拉后让 agent 逐条修复（需 gh） | `git-commands.ts:185` / 212 | `/pr-comments 123` / `/autofix-pr <PR-url>` |
+| `/diff` | 显示 git diff，自动截断 | `packages/tui/src/cli/commands/builtin/core-commands.ts:537` | `/diff` |
+| `/commit` | 生成或使用指定 message 提交 | `packages/tui/src/cli/commands/builtin/git-commands.ts:25` | `/commit` / `/commit -m "fix"` |
+| `/branch` | 列、建、切分支 | `packages/tui/src/cli/commands/builtin/git-commands.ts:98` | `/branch feature-x --create` |
+| `/review` | 对 diff 做 P0-P3 结构化评审，支持 file/staged/json/dimensions | `packages/tui/src/cli/commands/builtin/git-commands.ts:129` | `/review --staged --json` |
+| `/security-review` · `/sec` | 对待提交 diff 做安全评审 | `packages/tui/src/cli/commands/builtin/more-commands.ts:61` | `/security-review` |
+| `/pr-comments` | 通过 gh 拉 PR 评论 | `packages/tui/src/cli/commands/builtin/git-commands.ts:186` | `/pr-comments 123` |
+| `/autofix-pr` | 拉 PR 评论后让 agent 逐条修复 | `packages/tui/src/cli/commands/builtin/git-commands.ts:213` | `/autofix-pr <PR-url>` |
 
 **文件 / 变更 / 实用**
 
 | 命令 | 做什么 | 入口 | 用法 |
 |------|--------|------|------|
-| `/files` | 列 cwd 文件（可带 pattern），最多 50，find 经 argv 安全调用 | `more-commands.ts:13`；`list-files.ts` | `/files` / `/files *.ts` |
-| `/release-notes` · `/changelog` · `/whatsnew` | 显 CHANGELOG/CHANGES/HISTORY.md，无则回退 git log -20 | `more-commands.ts:30` | `/release-notes` |
-| `/log` · `/logs` | 当天日志，按 sid/turn/cat 过滤限条数；显耗时/token/工具/决策/错误 | `extra-commands.ts:217` | `/log 50` / `/log sid <id>` / `/log cat llm` |
-| `/undo` | 基于 FileHistory 撤销：撤最近一轮文件改动，all 撤整会话；先预览 diff，confirm 才执行 | `utility-commands.ts:41` | `/undo` / `/undo confirm` / `/undo all confirm` |
-| `/copy` | 复制最后一条 assistant 回复到剪贴板（pbcopy/clip/xclip） | `utility-commands.ts:9` | `/copy` |
-| `/update` | 检查新版本，提示退出时自动装或手动 npm install | `utility-commands.ts:197` | `/update` |
-| `/fullscreen` | 全屏（alt-screen+ScrollBox）与流式（终端 scrollback）切换 | `utility-commands.ts:169`；`fullscreen-mode.ts` | `/fullscreen` / `/fullscreen on\|off\|toggle` |
-| `/feedback` · `/bug` | 反馈+模型/会话/平台写入 `~/.code-shell/feedback/feedback.jsonl` | `more-commands.ts:127` | `/feedback 输入框塌陷了……` |
-| `/hooks` · `/voice` | 占位/未实现（提示） | `utility-commands.ts:160`；`advanced-commands.ts:8` | `/hooks` / `/voice` |
-| **插件自带 slash 命令** | 已装插件命令动态注册为 `/<name>`，body（$ARGUMENTS/{args} 替换）暂存为下条消息上下文，Enter 提交 | `plugin-commands-registration.ts:34`；`App.tsx:101` | `/<插件命令> 参数` 然后回车 |
+| `/files` | 列 cwd 文件，可带 pattern，最多 50 | `packages/tui/src/cli/commands/builtin/more-commands.ts:14`，`packages/tui/src/cli/commands/builtin/list-files.ts:19` | `/files` / `/files *.ts` |
+| `/release-notes` · `/changelog` · `/whatsnew` | 显示 changelog 类文件，无则回退 git log | `packages/tui/src/cli/commands/builtin/more-commands.ts:31` | `/release-notes` |
+| `/log` · `/logs` | 按 sid/turn/cat 过滤当天日志 | `packages/tui/src/cli/commands/builtin/extra-commands.ts:273` | `/log 50` / `/log cat llm` |
+| `/undo` | 撤销上一轮文件编辑 | `packages/tui/src/cli/commands/builtin/utility-commands.ts:42` | `/undo` |
+| `/copy` | 复制最近 assistant 输出或指定文本 | `packages/tui/src/cli/commands/builtin/utility-commands.ts:10` | `/copy` |
+| `/update` | 检查/执行 CLI 更新 | `packages/tui/src/cli/commands/builtin/utility-commands.ts:198` | `/update` |
+| `/fullscreen` | 切换 TUI 全屏布局 | `packages/tui/src/cli/commands/builtin/utility-commands.ts:170` | `/fullscreen` |
+| `/feedback` · `/bug` | 打开或提示反馈入口 | `packages/tui/src/cli/commands/builtin/more-commands.ts:128` | `/feedback` |
+| `/hooks` | 查看 hook 状态和配置提示 | `packages/tui/src/cli/commands/builtin/utility-commands.ts:161` | `/hooks` |
+| `/voice` | 语音相关高级命令入口 | `packages/tui/src/cli/commands/builtin/advanced-commands.ts:9` | `/voice` |
+| **插件贡献 slash 命令** | 从插件声明动态生成 slash 命令 | `packages/tui/src/cli/commands/builtin/plugin-commands-registration.ts:34`，`packages/tui/src/ui/App.tsx:111` | 安装插件后执行插件命令，如 `/my-command` |
 
-### 交互能力（Ink REPL）
+### REPL 交互能力
 
 | 功能 | 做什么 | 入口 | 怎么用 |
 |------|--------|------|--------|
-| **onboarding 向导** | 无 API key 且 TTY 时 REPL 前弹向导配 provider/模型/key；非 TTY 报错退 | `commands/repl.ts:90-114`；`OnboardingPrompt.tsx` | 首次运行自动进，或 `/login` |
-| **退出打印用量/费用** | 退出时若有消耗，stderr 输出成本汇总 | `cli/main.ts:240-245` | 跑完自动显示 |
-| **Slash 自动补全 + 用法提示** | 输入 / 弹可过滤下拉（↑↓/Tab·Enter/Esc），补全后空格显参数提示 | `CommandInput.tsx:92-197` | 敲 / 触发 |
-| **输入历史导航** | 非命令态 ↑/↓ 浏览历史；打断时回退最后一条 | `CommandInput.tsx:117-137`；`input-history.ts` | ↑/↓ 翻历史 |
-| **Vim 模式输入** | Normal/Insert/Visual/Command + 基本 motion；Esc 入 Normal | `vim-mode.ts:38` | Esc 进 Normal 用 vim 动作 |
-| **运行中排队输入 + /force 插队** | 运行中输入缓存（显「已缓存 N 条」），本轮后依次发；`/force` 立即打断优先发；运行中 /sid·/help 仍可用 | `App.tsx:1425-1467`；提示 1941 | 运行中直接输入排队；`/force <text>` 插队 |
-| **中断/取消（ESC / Ctrl+C）** | ESC 仅取消主查询（后台 agent 继续），保留流式文本标 [Request interrupted]；Ctrl+C 取消主查询+所有后台 agent，空闲时退出 | `App.tsx:1056-1141` | 运行中 ESC 取消；Ctrl+C 取消全部/退出 |
-| **权限审批对话框** | 危险工具弹 y/n，可选 once/session/project（仅本次/会话规则/写 settings） | `PermissionPrompt.tsx`；`App.tsx:1672-1695` | 弹窗选允许/拒绝及作用域 |
-| **AskUser 提问对话框** | agent 经 `__ask_user__` 提问，渲染文本输入或多选（header/multiSelect） | `AskUserPrompt.tsx`；`App.tsx:1915-1933` | 输入答案或勾选 |
-| **Transcript 只读浏览（Ctrl+O）** | Ctrl+O 切只读，↑↓ 在条目间移光标高亮；Esc 取消，再 Ctrl+O 返回 | `App.tsx:1173-1202` | Ctrl+O 进，↑↓ 选，Ctrl+O 退 |
-| **聊天滚动** | 全屏滚轮逐行/PageUp·Down 翻页；有未读显「N 条新消息」气泡跳底部；流式模式走终端原生 | `App.tsx:1159-1168`；`FullscreenLayout.tsx` | 滚轮/PgUp·PgDn；点气泡跳最新 |
-| **Shift+Tab 循环权限模式** | 非运行态 Shift+Tab 在 plan→normal→bypass 循环，底部 ModeIndicator 显示 | `App.tsx:1087-1102` / 2237 | 按 Shift+Tab |
-| **子代理 Dock + 详情切换** | 底部 AgentDock 显运行中/刚完成后台子代理；输入框空 ↓ 进 dock，↑↓ 选，Enter 看 transcript 详情，Esc 返回 | `App.tsx:993-1037` / 1955；`AgentDock.tsx` | 输入框空 ↓ 入 dock |
-| **后台子代理完成自动注入** | 完成后在主 agent 空闲、输入框空、无弹窗时自动作新一轮注入，系统行显摘要 | `App.tsx:1404-1423` | 自动 |
-| **状态栏 + 上下文用量条** | 底部显模型/effort/token/成本/会话+上下文占用条（>60%黄 >80%红）；运行中 spinner+动词+耗时+流式 token | `StatusLine.tsx:36`；`ContextUsageBar.tsx:13`；`SpinnerWithVerb.tsx` | 常驻显示 |
-| **启动横幅 + 更新 + 欢迎提示** | 启动显 Banner（模型/effort/maxTurns/cwd）、UpdateBanner、首启 WelcomeTips | `App.tsx:1628-1634`；`Banner.tsx` 等 | 启动自动 |
-| **输出格式渲染（headless）** | run/默认任务按 -o 选 text/json/jsonl/stream-json | `cli/output/renderer.ts` | `code-shell run "任务" -o stream-json` |
-| **REPL 内置 cron 调度** | REPL 启动恢复已存 cron 并绑一次性 headless Engine（只读+沙箱按任务分级），定时触发 | `commands/repl.ts:232-259` | cron 任务后台按计划运行 |
-
----
-
-## 附：本次 review 修复的 bug
-
-详见 git 分支 `fix/desktop-tui-review-bugs`（commit `2b9c0e37`）。修复 9 个对抗验证确认的 bug（agent worker spawn 卡死 / cancel 漏清审批 / provider 默认值覆盖 / 损坏 settings 致设置页全挂 / settings 写竞态 / listDisk 同步阻塞 / runs parseInt / vim 越界与光标 / cookie lease 碰撞 / git ls-files 无超时），全部配回归测试。core 1408 + tui 69 + desktop main 252 测试通过。
+| **REPL App 启动与 command registry** | 注册 core/git/context/config/advanced/plugin slash 命令并渲染 Ink App | `packages/tui/src/ui/App.tsx:100`，`packages/tui/src/ui/App.tsx:111`，`packages/tui/src/ui/App.tsx:130` | `code-shell` 或 `code-shell repl` |
+| **CommandInput** | 输入框、命令补全、提交和文本编辑 | `packages/tui/src/ui/components/CommandInput.tsx:48` | 输入文字或 slash 命令 |
+| **Vim 模式输入** | 处理 vim key state 和按键转换 | `packages/tui/src/ui/vim-mode.ts:17`，`packages/tui/src/ui/vim-mode.ts:38` | 开启 vim 模式后用 normal/insert 操作 |
+| **权限审批 prompt** | 工具调用审批 UI | `packages/tui/src/ui/components/PermissionPrompt.tsx:44`，`packages/tui/src/ui/App.tsx:350` | 工具需要许可时选择批准/拒绝 |
+| **AskUser prompt** | agent 提问时展示选项/输入 | `packages/tui/src/ui/components/AskUserPrompt.tsx:39` | 在 TUI 内回答 agent 问题 |
+| **流事件与子代理事件渲染** | 处理 agent_start、agent_end、tool、assistant 等流事件并写入 store | `packages/tui/src/ui/App.tsx:726`，`packages/tui/src/ui/store.ts:47`，`packages/tui/src/ui/store.ts:188` | agent 运行时自动更新 transcript |
+| **提交/排队/force guide** | 运行中输入可排队或作为 guide 插入，统一经 `handleSlashCommand` / submit 流程处理 | `packages/tui/src/ui/App.tsx:1455`，`packages/tui/src/ui/App.tsx:1501` | 忙碌时输入新指令或 slash 命令 |
+| **ESC/Ctrl+C/Shift+Tab/Alt+M/Ctrl+O 快捷键** | 停止、切权限、切模型、打开辅助 UI 等快捷键处理 | `packages/tui/src/ui/App.tsx:1094`，`packages/tui/src/ui/App.tsx:1116`，`packages/tui/src/ui/App.tsx:1173`，`packages/tui/src/ui/App.tsx:1200` | 按对应快捷键 |
+| **FullscreenLayout** | 全屏布局和未读分隔线 | `packages/tui/src/ui/components/FullscreenLayout.tsx:39`，`packages/tui/src/ui/components/FullscreenLayout.tsx:166` | `/fullscreen` 或配置启用 |
+| **虚拟滚动消息列表** | 大 transcript 下虚拟化渲染消息 | `packages/tui/src/ui/components/VirtualMessageList.tsx:76`，`packages/tui/src/ui/hooks/useVirtualScroll.ts:142` | 长会话自动使用 |
+| **AgentDock** | 展示正在运行的子代理，限制可见数量并格式化耗时 | `packages/tui/src/ui/components/AgentDock.tsx:34`，`packages/tui/src/ui/components/AgentDock.tsx:200` | 子代理运行时自动出现 |
+| **StatusLine** | 底部状态行展示模型、权限、session、token 等 | `packages/tui/src/ui/components/StatusLine.tsx:36` | REPL 底部自动显示 |
+| **ContextUsageBar** | 上下文 token 使用进度条 | `packages/tui/src/ui/components/ContextUsageBar.tsx:13` | token 接近上限时查看 |
+| **SpinnerWithVerb / Spinner** | 运行中动词化 spinner、耗时和 token 提示 | `packages/tui/src/ui/components/SpinnerWithVerb.tsx:237`，`packages/tui/src/ui/components/Spinner.tsx:20` | agent 思考或工具运行时显示 |
+| **Banner / UpdateBanner / WelcomeTips** | 顶部启动信息、更新提示和欢迎提示 | `packages/tui/src/ui/components/Banner.tsx:42`，`packages/tui/src/ui/components/UpdateBanner.tsx:25`，`packages/tui/src/ui/components/WelcomeTips.tsx:36` | REPL 启动或更新可用时显示 |
+| **消息内容渲染** | Markdown、代码块、错误、限流、上下文限制、thinking 等消息视图 | `packages/tui/src/ui/components/MessageContent.tsx:425`，`packages/tui/src/ui/components/CodeBlock.tsx:16` | transcript 自动渲染 |
+| **工具调用视图** | 展示工具 start/running/result 和嵌套前缀 | `packages/tui/src/ui/components/ToolCall.tsx:42`，`packages/tui/src/ui/components/ToolCall.tsx:98`，`packages/tui/src/ui/components/AgentBlock.tsx:26` | 工具调用时自动折叠/展开 |
+| **Diff 视图** | 渲染 diff 行、结构化 diff 和普通 diff view | `packages/tui/src/ui/components/DiffView.tsx:18`，`packages/tui/src/ui/components/DiffLine.tsx:52`，`packages/tui/src/ui/components/StructuredDiff.tsx:17` | `/diff`、审批和文件编辑结果中使用 |
+| **输入历史** | 按 session/project 记录、搜索、导航、flush 历史 | `packages/tui/src/ui/input-history.ts:66`，`packages/tui/src/ui/input-history.ts:192`，`packages/tui/src/ui/input-history.ts:286` | 上下键或历史搜索复用旧输入 |
+| **主题系统** | 解析主题色和主题设置 | `packages/tui/src/ui/theme.ts:31`，`packages/tui/src/ui/theme.ts:71` | 配置主题后自动应用 |
+| **性能探针** | 可选事件循环、stream rate、render frame 性能探针 | `packages/tui/src/ui/perf-probes.ts:31`，`packages/tui/src/ui/perf-probes.ts:80`，`packages/tui/src/ui/perf-probes.ts:240` | 设置 `CODESHELL_UI_PERF=1` 后启用 |
+| **CLI 输出渲染器** | headless 输出 text/json/jsonl/stream-json，并压缩工具输出摘要 | `packages/tui/src/cli/output/renderer.ts:119` | `code-shell run -o jsonl` 或 `-o stream-json` |

@@ -7,9 +7,12 @@ directory holds two complementary views:
   mechanism, anchored to real `file:line` locations. Read `00-overview.md` first;
   the rest stand on their own.
 - **[`feature-inventory.md`](feature-inventory.md)** is the *breadth map* — a flat
-  inventory of what CodeShell can do today (149 capabilities across desktop main /
+  inventory of what CodeShell can do today (179 capabilities across desktop main /
   renderer / TUI), each with entry point and usage. It answers "does capability X
   exist and where," where the chapters answer "how does subsystem Y work."
+
+Each chapter embeds generated PNG architecture diagrams under
+[`images/`](images/) to illustrate the mechanism it describes.
 
 Both describe the as-built system. For *what changed in which release* see the
 repo-root [`CHANGELOG.md`](../../CHANGELOG.md); for *planned / not-yet-built* work

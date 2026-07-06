@@ -1,80 +1,82 @@
 # 10 · Desktop & Mobile
 
-> The headline product: an Electron desktop client, a phone-remote web app, and the environment-agnostic CDP browser layer. Source-mapped against `packages/desktop/` and `packages/cdp/`.
+> The headline product shell: an Electron desktop client, a phone-remote React app, and the environment-agnostic CDP browser-action layer. Source-mapped against `packages/desktop/` and `packages/cdp/`.
 
-## 1. The three-process model
+## 1. Runtime boundary
 
-The defining architecture: **the Electron main process is an IPC service broker — it does NOT run the `Engine`**. Instead it spawns a per-session **core agent worker** (`agent-server-stdio`), pipes its stdout to the renderer, and provides system capabilities. The renderer is a thin React client that talks to main only through `window.codeshell.*`.
+![Electron main, renderer, preload, worker, and mobile WebSocket boundaries](images/desktop-main-renderer-ipc.png)
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│ Electron Main  (src/main/index.ts ~2,739 LOC)                  │
-│  ipcMain service layer · spawns worker · provides files/term/  │
-│  creds/browser-host/memory/automation/updater/mobile-WS        │
-└───────────┬───────────────────────────────┬────────────────────┘
-   stdio JSON-RPC                       ipcMain send/on
-┌───────────▼────────────┐      ┌───────────▼──────────────────┐
-│ Worker (agent-server-  │      │ Renderer (React 19 + shadcn   │
-│ stdio): Engine, turns, │      │ + Tailwind v4) — NO core      │
-│ StreamEvents           │      │ imports; window.codeshell.*   │
-└────────────────────────┘      └───────────────────────────────┘
-```
+The invariant: **Electron main is an IPC service broker, not the `Engine` host**. It owns BrowserWindows, OS/filesystem/native services, hardened webviews, mobile HTTP/WS, and the stdio pipe to the core worker. The renderer and the phone are clients of that broker.
 
-- **Worker spawn** (`main/agent-bridge.ts`): on `agent/run`, `spawnChild(cwd)` launches the core stdio server with `ELECTRON_RUN_AS_NODE=1` (Electron binary running Node). Crash tracking: 3 restarts in 60 s ⇒ "gave_up". Session snapshots survive worker exit so a remount can replay them.
-- **Preload RPC** (`main/../preload/index.ts`): `rpc()` has a 30 s timeout — **except `agent/run`, which passes 0 (no timeout)** so long turns aren't killed. Worker death rejects pending calls; a wedged worker is handled by the user's Stop button. (This is the rpc-30s-timeout-freeze fix.)
-
-Isolation is enforced by the build: the renderer **cannot** import `@cjhyy/code-shell-core` (Vite alias), main cannot import React/DOM (esbuild node platform), preload is stateless transport only.
+- Main keeps a **process-global** `AgentBridge`; extra windows are additional views into the same bridge, not independent engine hosts (`packages/desktop/src/main/index.ts:244`, `packages/desktop/src/main/index.ts:1320`). `AgentBridge` is the only place that spawns `@cjhyy/code-shell-core/bin/agent-server-stdio` (`packages/desktop/src/main/agent-bridge.ts:1`, `packages/desktop/src/main/agent-bridge.ts:61`).
+- The worker is spawned on demand for `agent/run` with `ELECTRON_RUN_AS_NODE=1` and `CODESHELL_AGENT_STDIO=1`; `cwd` falls back through the main-side repo resolver before spawn (`packages/desktop/src/main/agent-bridge.ts:140`, `packages/desktop/src/main/agent-bridge.ts:274`). Clean exit resets restart accounting; repeated crashes in the 60-second window eventually surface as `gave_up` (`packages/desktop/src/main/agent-bridge.ts:223`, `packages/desktop/src/main/agent-bridge.ts:257`).
+- Worker stdout lines are parsed once in main: normal JSON-RPC lines are sent to the renderer as `agent:msg`, session snapshots are retained in main, and outbound taps feed the mobile remote (`packages/desktop/src/main/agent-bridge.ts:95`, `packages/desktop/src/main/agent-bridge.ts:170`, `packages/desktop/src/main/agent-bridge.ts:556`).
+- The preload is a typed transport boundary. It parses `agent:msg`, resolves pending RPCs, fans notifications out to stream/automation/mobile/approval/status listeners, rejects pending calls on worker death, and deliberately passes `timeoutMs = 0` for `agent/run` (`packages/desktop/src/preload/index.ts:81`, `packages/desktop/src/preload/index.ts:141`, `packages/desktop/src/preload/index.ts:160`, `packages/desktop/src/preload/index.ts:228`). Renderer-visible shared types are type-only imports, not runtime core imports (`packages/desktop/src/preload/types.d.ts:1`).
+- The renderer process is isolated: BrowserWindows use preload, `contextIsolation`, no Node integration, sandboxing, and a renderer-origin CSP; the webview tag is enabled only because the embedded browser panel needs it (`packages/desktop/src/main/index.ts:1133`, `packages/desktop/src/main/index.ts:1173`, `packages/desktop/src/main/index.ts:1241`).
 
 ## 2. Main-process services (`src/main/`)
 
-~60 service modules. A representative slice:
+The main tree is now a service broker around roughly eighty non-test TS/TSX files. A representative slice:
 
-| Service | Role |
-|---------|------|
-| `agent-bridge.ts` | worker spawn, stdio piping, event routing, `__browser_action__`/`__credential_action__` intercepts |
-| `desktop-services.ts` | git/files/terminal/undo via native tools |
-| `pty-service.ts` | node-pty terminal backend (rebuilt for Electron ABI, asarUnpack) |
-| `credentials-service.ts` + `credentials-login/` | cookie capture/restore, OAuth login window |
-| `browser-driver/` (6 files) | implements core's `BrowserBridge` on CDP (no Playwright) |
-| `mobile-remote/` (~20 files) | phone-remote WS host, rooms, pairing, optional Cloudflare tunnel |
-| `automation-service.ts`, `automationMemory.ts` | cron scheduler bridge → renderer UI |
-| `sessions-service.ts`, `runs-service.ts`, `transcript-reader.ts` | list/replay sessions and runs |
-| `settings-service.ts` | read/write settings (also takes the shared lockfile so worker + main don't clobber `settings.json`) |
-| `plugins-service.ts`, `marketplace-service.ts`, `skills-service.ts`, `github-skill-service.ts` | extensions install/discovery |
-| `memory-service.ts`, `dream-service.ts` | memory approve/promote, manual Dream |
-| `model-meta-service.ts`, `mcp-probe-service.ts` | model lists/pricing, MCP introspection cache |
-| `updater.ts`, `menu.ts`, `window-state-store.ts` | electron-updater, app menu, window geometry |
+| Area | Current source truth |
+|------|----------------------|
+| Agent bridge | Spawns and supervises the stdio worker, injects mobile-originated JSON-RPC, preserves snapshots, and intercepts `__browser_action__` / `__credential_action__` before they reach the renderer (`packages/desktop/src/main/agent-bridge.ts:274`, `packages/desktop/src/main/agent-bridge.ts:363`, `packages/desktop/src/main/agent-bridge.ts:424`, `packages/desktop/src/main/agent-bridge.ts:520`). |
+| Browser host | Hardens every webview guest, strips renderer-controlled preload, forces sandboxed web preferences, normalizes partitions, registers guests, blocks non-web navigations, and routes new-window attempts into tabs (`packages/desktop/src/main/index.ts:1067`). Popout browser windows are the same renderer with `?popout=browser` and shared anchor state (`packages/desktop/src/main/index.ts:1338`). |
+| Files/git/shell services | `desktop-services.ts` shells out asynchronously for git/status/path helpers (`packages/desktop/src/main/desktop-services.ts:57`); `fs-service.ts` resolves real paths under the project root, skips symlink escapes, caps file reads at 2 MB, and sniffs binary content (`packages/desktop/src/main/fs-service.ts:24`, `packages/desktop/src/main/fs-service.ts:81`). |
+| Terminal | `pty-service.ts` lazily loads the native `node-pty` addon, starts or reuses PTYs by session id, replays scrollback, emits `pty:data` / `pty:exit`, and reaps sessions when a BrowserWindow dies (`packages/desktop/src/main/pty-service.ts:1`, `packages/desktop/src/main/pty-service.ts:175`, `packages/desktop/src/main/pty-service.ts:229`). |
+| Credentials | Credential restore targets the browser cookie partition, clears or merges cookies, and then asks the renderer browser panel to reload (`packages/desktop/src/main/credentials-service.ts:17`, `packages/desktop/src/main/credentials-service.ts:44`, `packages/desktop/src/main/credentials-service.ts:84`, `packages/desktop/src/main/agent-bridge.ts:424`). |
+| Mobile remote and rooms | Device state lives under `<userData>/mobile-remote`, tunnel status is broadcast to renderers, room agents are created by `RoomManager`, and approvals are bridged to both desktop and phones (`packages/desktop/src/main/index.ts:261`, `packages/desktop/src/main/index.ts:337`, `packages/desktop/src/main/index.ts:369`, `packages/desktop/src/main/index.ts:391`). |
+| Sessions, runs, automation | Disk sessions are listed asynchronously and filtered by cwd existence (`packages/desktop/src/main/sessions-service.ts:105`); `runs-service.ts` remains a read-only run-store adapter (`packages/desktop/src/main/runs-service.ts:1`); automation events are accepted from the worker and rebroadcast to desktop UI state (`packages/desktop/src/main/agent-bridge.ts:591`). |
+| Settings and extensions | Settings writes are serialized per path and also take the shared core lock before temp-file rename (`packages/desktop/src/main/settings-service.ts:59`, `packages/desktop/src/main/settings-service.ts:98`). Plugin, marketplace, skill, GitHub skill, model metadata, MCP probe, memory, Dream, updater, menu, and window-state services are all composed from `index.ts` imports (`packages/desktop/src/main/index.ts:1`). |
 
-A discipline that recurs: main must avoid synchronous fs (`cpSync` etc.) — it blocks the event loop and freezes the UI (the main-sync-fs-freeze memory note).
+The recurring performance rule remains: main-side operations should avoid synchronous filesystem work in UI paths, because the main process is the event loop for every desktop window.
 
-## 3. Renderer (`src/renderer/`, ~11 K LOC, 283 files)
+## 3. Renderer and panels (`src/renderer/`)
 
-React 19 + shadcn/ui + Tailwind v4 (zinc + blue). `App.tsx` (~3,188 LOC) routes `StreamEvent`s by `sessionId` into per-session buckets and drives a reducer. Surfaces:
-- **Chat** with streaming, image attachments, and the steering/queue model (queue = non-interrupting step-gap insertion; "steer" = interrupt-and-resend — see [01](01-engine-and-turn-loop.md)).
-- **Panel dock**: read-only **Files**, **Browser** (CDP, selection-anchor sync), interactive **Terminal** (node-pty), **Diff/Review**, plus a background-shell panel.
-- **Connections & catalog** (full provider/model CRUD, key reuse by company), **Extensions/marketplace**, **Automation**, **persistent goals**, **memory management** (pin/edit/clear, manual Dream), **hooks** config, **i18n** (zh/en via `useT`).
-- Command palette ⌘K, cross-project session search ⌘P, in-transcript ⌘F; onboarding wizard, trust gate, app updater.
+![Desktop panel dock, webview, CDP driver, and browser-action path](images/desktop-panel-browser-cdp.png)
 
-The **shared `streamReducer`** (`renderer/lib/streamReducer.ts`) is used by *both* desktop and mobile, keeping CC rendering identical across the two (the cc-room-render-alignment memory note). UI conventions: a `DialogProvider` (`useConfirm`/`useAlert`/`usePrompt`, no native dialogs) and a `ToastProvider` (the dialog-unification / desktop-toast notes). Tool cards expand inline (no separate inspector pane). When debugging "clicked, nothing happened" here, suspect a stale `out/` bundle before the source (the verify-mobile-ui-on-fresh-bundle note).
+React owns UI state, routing, and presentation; main owns capabilities. `App.tsx` keeps bucket state for transcripts, approvals, active model/cwd, mobile sessions, and panel dock state (`packages/desktop/src/renderer/App.tsx:193`, `packages/desktop/src/renderer/App.tsx:229`). Incoming `StreamEvent` envelopes are routed by `sessionId`, coalesced for noisy deltas, and then reduced into the correct bucket (`packages/desktop/src/renderer/App.tsx:1420`, `packages/desktop/src/renderer/App.tsx:1431`). Sends always go through `window.codeshell.run`, with cwd, model, goal, and session metadata pinned at dispatch time (`packages/desktop/src/renderer/App.tsx:1937`).
 
-## 4. Mobile (`src/mobile/`)
+The panel dock is bucket-owned and currently has six panel kinds: `files`, `browser`, `review`, `terminal`, `shells`, and `ccRoom` (`packages/desktop/src/renderer/panels/PanelArea.tsx:90`). Dynamic tabs stay mounted and are hidden with CSS, so browser, terminal, and shell state survive panel switches (`packages/desktop/src/renderer/panels/PanelArea.tsx:113`). The content map wires each tab kind to its concrete surface: `FilesPanel`, `BrowserPanel`, `ReviewPanel`, `TerminalPanel`, `BackgroundShellPanel`, and `CCRoomView`; browser partitions are bucket-scoped, terminal session ids include the bucket/tab id, and background shells receive the active engine session (`packages/desktop/src/renderer/panels/PanelArea.tsx:421`).
 
-A separate Vite build of the same React codebase (no sidebar, full chat area), served by the main process over a local WebSocket and reached via QR pairing (device token + desktop token). It reuses `streamReducer`, `MessageStream`, composer/tool/approval components. **Rooms** (`mobile-remote/room-manager.ts`, `resident-agent.ts`, `codex-room-agent.ts`) are long-lived stream-json sessions persisted under `~/.code-shell/mobile-remote/rooms/`, mirrored to the phone over WS; approval requests route through an `ApprovalBridge` to both desktop and phone. The optional public tunnel (`tunnel-manager.ts`, Cloudflared) is off by default and gated by an access passcode. CC/Codex rooms are device-keyed, not room-accumulated (the beta1-feedback-batch-fixes note on phone remote).
+The browser panel is not a normal iframe. It is an Electron `webview` with an address bar, tabs, localhost bookmarks, element picking, and anchor echo back into chat context (`packages/desktop/src/renderer/panels/BrowserPanel.tsx:94`, `packages/desktop/src/renderer/panels/BrowserPanel.tsx:118`, `packages/desktop/src/renderer/panels/BrowserPanel.tsx:360`). `WebviewHost` freezes initial `src` and partition so React rerenders do not re-drive navigation or mutate storage identity (`packages/desktop/src/renderer/browser/WebviewHost.tsx:4`, `packages/desktop/src/renderer/browser/WebviewHost.tsx:21`). `useBrowserTabs` owns lifecycle, target-blank tab creation, reload after cookie switch, and prop-driven open-url requests from chat while the panel is closed (`packages/desktop/src/renderer/browser/useBrowserTabs.ts:60`, `packages/desktop/src/renderer/browser/useBrowserTabs.ts:199`, `packages/desktop/src/renderer/browser/useBrowserTabs.ts:209`, `packages/desktop/src/renderer/browser/useBrowserTabs.ts:215`).
 
-The phone-remote UI was rebuilt from inlined strings into a proper React app reusing the desktop shadcn components (the mobile-ui-react-rebuild note: `secretHash` is not hashed; event names follow core's `StreamEvent`).
+Terminal and files follow the same capability split. The terminal renderer is xterm-style UI over main-process `node-pty` IPC, uses a window-unique session prefix, and intentionally does not kill PTYs when the panel unmounts (`packages/desktop/src/renderer/panels/TerminalPanel.tsx:15`, `packages/desktop/src/renderer/panels/TerminalPanel.tsx:28`, `packages/desktop/src/renderer/panels/TerminalPanel.tsx:62`, `packages/desktop/src/renderer/panels/TerminalPanel.tsx:104`). `FilesPanel` lazy-loads directories, caps previews through `fs:readFile`, refreshes on `codeshell:files-changed`, and resolves path-link reveal under cwd (`packages/desktop/src/renderer/panels/FilesPanel.tsx:80`, `packages/desktop/src/renderer/panels/FilesPanel.tsx:100`, `packages/desktop/src/renderer/panels/FilesPanel.tsx:122`).
 
-## 5. The CDP layer (`packages/cdp/`, 6 files, ~400 LOC)
+Mobile-originated and automation-originated events land in the same bucket model as desktop sends: automation sessions create sidebar entries (`packages/desktop/src/renderer/App.tsx:1602`), mobile sessions are created/routed from `agent/mobileSession` (`packages/desktop/src/renderer/App.tsx:1676`), approvals can resolve from either UI (`packages/desktop/src/renderer/App.tsx:1742`), and phone permission mode changes update the desktop bucket override (`packages/desktop/src/renderer/App.tsx:1860`). The normal renderer mounts with `I18nProvider`, `DialogProvider`, and `ToastProvider`; browser popouts mount a smaller `BrowserPopoutApp` from the same entry file (`packages/desktop/src/renderer/main.tsx:16`, `packages/desktop/src/renderer/main.tsx:54`).
 
-An **environment-agnostic** CDP browser-action layer with zero runtime deps and no Playwright. `CdpActionsDriver` is stateless — it takes only an injected `CdpSender = (method, params) => Promise<unknown>`. It exposes `snapshot()`, `clickNode()`, `typeNode()`, `pressKey()`, `scroll()`, `waitSelector()`, `extractContent()`, working from raw `Accessibility.getFullAXTree` nodes and dispatching **real** input events (`isTrusted: true`, not synthetic JS). Caps: 12 KB content, 200 links, 1568 px max image dim.
+## 4. Mobile remote (`src/mobile/` and `src/main/mobile-remote/`)
 
-The desktop adapter (`main/browser-driver/electron-cdp.ts`) wraps `webContents.debugger.sendCommand` as the `CdpSender`, and `cdp-driver.ts` implements core's `BrowserBridge` (which `flattenAxTree` and the browser tools in [02](02-tool-system.md) consume). The worker emits `__browser_action__` lines on stdout; `agent-bridge` intercepts them (doesn't forward to the renderer), executes via the driver, and writes the reply back to the worker's stdin. The browser-panel architecture (single Anchor source of truth, session-bucketed markers, main-hub broadcast) is covered by the browser-selection-echo and browser-panel-nav memory notes.
+![Mobile remote HTTP/WS host, pairing, trusted devices, project chat, and rooms](images/mobile-remote-room-transport.png)
+
+The phone app is a separate Vite build rooted at `src/mobile`, served under `/mobile/`, and it talks to desktop through HTTP and WebSocket rather than Electron preload (`packages/desktop/vite.mobile.config.ts:6`, `packages/desktop/vite.mobile.config.ts:18`, `packages/desktop/vite.mobile.config.ts:38`). In production the main process serves `out/mobile`; in development it can proxy to the mobile Vite server, while preserving the `/mobile` prefix and SPA fallback (`packages/desktop/src/main/mobile-remote/mobile-static.ts:5`, `packages/desktop/src/main/mobile-remote/mobile-static.ts:100`).
+
+The remote host binds a real LAN IPv4 for LAN mode, or `127.0.0.1` for tunnel mode (`packages/desktop/src/main/mobile-remote/remote-host-manager.ts:13`, `packages/desktop/src/main/mobile-remote/remote-host-manager.ts:225`). It gates every HTTP route with the tunnel passcode when a public tunnel is active, serves `/health` and `/mobile`, and accepts WebSocket clients on `/ws` (`packages/desktop/src/main/mobile-remote/remote-host-manager.ts:130`). Pairing uses a one-use random token with a 10-minute TTL (`packages/desktop/src/main/mobile-remote/pairing.ts:9`); unauthenticated sockets can only pair/auth, and authenticated events are handed to main with a `deviceId` (`packages/desktop/src/main/mobile-remote/remote-host-manager.ts:184`, `packages/desktop/src/main/mobile-remote/remote-host-manager.ts:275`).
+
+Main routes authenticated mobile events before they touch the worker. `ccRoom.*` goes to the external-session path, `room.*` goes to `RoomManager`, and project-chat events go through `AgentBridge.injectWorkerMessage` so there is still only one core run loop (`packages/desktop/src/main/index.ts:633`, `packages/desktop/src/main/index.ts:640`). Project chat sends resolve device cwd/permission mode, broadcast `agent/mobileSession` to desktop, then inject `agent/run`; approvals inject `agent/approve`; stop injects `agent/cancel`; model and goal operations use a short-lived outbound-tap request/response helper (`packages/desktop/src/main/index.ts:579`, `packages/desktop/src/main/index.ts:704`, `packages/desktop/src/main/index.ts:737`, `packages/desktop/src/main/index.ts:771`, `packages/desktop/src/main/index.ts:836`).
+
+Rooms are separate from project chat. The room root is `<userData>/mobile-remote/rooms`, old rooms are garbage-collected after 14 days, and each room has an on-disk log with monotonic sequence numbers (`packages/desktop/src/main/index.ts:391`, `packages/desktop/src/main/index.ts:432`, `packages/desktop/src/main/mobile-remote/room-manager.ts:174`, `packages/desktop/src/main/mobile-remote/room-manager.ts:313`). `ResidentAgentProcess` runs long-lived Claude stream-json sessions with the stdio permission prompt tool (`packages/desktop/src/main/mobile-remote/resident-agent.ts:152`, `packages/desktop/src/main/mobile-remote/resident-agent.ts:195`); `CodexRoomAgent` runs one `codex exec --json` process per turn and resumes by thread id (`packages/desktop/src/main/mobile-remote/codex-room-agent.ts:10`, `packages/desktop/src/main/mobile-remote/codex-room-agent.ts:17`, `packages/desktop/src/main/mobile-remote/codex-room-agent.ts:95`). Room approvals are normalized through `ApprovalBridge`, with a five-minute auto-deny timeout (`packages/desktop/src/main/cc-room/approval-bridge.ts:30`).
+
+The phone React app folds typed server events and raw worker JSON-RPC lines into the same chat model. `useRemoteSocket` derives the `/ws` URL, authenticates with pairing or trusted device credentials, and reconnects on visibility/network changes (`packages/desktop/src/mobile/hooks/useRemoteSocket.ts:14`, `packages/desktop/src/mobile/hooks/useRemoteSocket.ts:100`, `packages/desktop/src/mobile/hooks/useRemoteSocket.ts:178`). `useRemoteApp` imports the shared desktop stream reducer, isolates raw `agent/streamEvent` by bound session, sends `room.send` for room chats and `chat.send` for project chats, and de-duplicates approval responses (`packages/desktop/src/mobile/hooks/useRemoteApp.ts:12`, `packages/desktop/src/mobile/hooks/useRemoteApp.ts:442`, `packages/desktop/src/mobile/hooks/useRemoteApp.ts:510`, `packages/desktop/src/mobile/hooks/useRemoteApp.ts:620`). The mobile UI is a phone/tablet layout with side pane, approvals, goal controls, message stream, and composer (`packages/desktop/src/mobile/App.tsx:17`, `packages/desktop/src/mobile/App.tsx:58`, `packages/desktop/src/mobile/components/MessageStream.tsx:30`).
+
+Optional public access is a Cloudflare quick tunnel around the loopback host. The tunnel manager starts `cloudflared tunnel --url ... --protocol http2`, waits for a `trycloudflare.com` URL plus `/ready`, broadcasts tunnel status, and does not auto-restart because silent URL changes would break pairing (`packages/desktop/src/main/mobile-remote/tunnel-manager.ts:57`, `packages/desktop/src/main/mobile-remote/tunnel-manager.ts:101`, `packages/desktop/src/main/mobile-remote/tunnel-manager.ts:146`).
+
+## 5. CDP browser-action layer (`packages/cdp/`)
+
+`packages/cdp` is the environment-agnostic action layer. It exports a driver with no Playwright, no Electron dependency, and zero runtime deps; the host injects only `CdpSender = (method, params) => Promise<unknown>` (`packages/cdp/src/index.ts:1`, `packages/cdp/src/driver.ts:1`). The package reads raw `Accessibility.getFullAXTree`, applies caps for content/link/image extraction, and drives browser interaction through CDP input/page/runtime commands (`packages/cdp/src/driver.ts:24`, `packages/cdp/src/driver.ts:53`, `packages/cdp/src/driver.ts:78`, `packages/cdp/src/driver.ts:113`, `packages/cdp/src/driver.ts:157`, `packages/cdp/src/driver.ts:200`, `packages/cdp/src/driver.ts:234`, `packages/cdp/src/driver.ts:288`, `packages/cdp/src/driver.ts:351`).
+
+Desktop glue lives under `src/main/browser-driver/`. `electron-cdp.ts` is the only layer that touches Electron `webContents.debugger`; it attaches/detaches and converts debugger commands into a `CdpSender` (`packages/desktop/src/main/browser-driver/electron-cdp.ts:1`, `packages/desktop/src/main/browser-driver/electron-cdp.ts:16`, `packages/desktop/src/main/browser-driver/electron-cdp.ts:33`). `cdp-driver.ts` wraps the package driver, flattens AX snapshots, owns the ref-to-backend-node map, and exposes the core `BrowserBridge` shape (`packages/desktop/src/main/browser-driver/cdp-driver.ts:1`, `packages/desktop/src/main/browser-driver/cdp-driver.ts:39`, `packages/desktop/src/main/browser-driver/cdp-driver.ts:61`, `packages/desktop/src/main/browser-driver/cdp-driver.ts:119`).
+
+The action path is worker -> `__browser_action__` stdout -> `AgentBridge` -> active webview guest -> CDP driver -> worker stdin. `automation-host.ts` keeps a per-guest driver cache so refs and debugger attachment survive consecutive actions on the same tab, auto-opens the browser panel when needed, enforces domain whitelist/sensitive-action hooks, and returns structured errors instead of throwing through the worker bridge (`packages/desktop/src/main/browser-driver/automation-host.ts:1`, `packages/desktop/src/main/browser-driver/automation-host.ts:18`, `packages/desktop/src/main/browser-driver/automation-host.ts:54`, `packages/desktop/src/main/browser-driver/automation-host.ts:116`, `packages/desktop/src/main/browser-driver/automation-host.ts:153`, `packages/desktop/src/main/browser-driver/automation-host.ts:170`).
 
 ## 6. Build
 
-The desktop has its **own** build and typecheck — the root checks do not cover it:
-- `build:main` / `build:preload` via esbuild (ESM main, CJS preload), `build:renderer` / `build:mobile` via Vite.
-- `typecheck`: `tsc --noEmit` for main+preload, plus a mobile tsconfig.
-- node-pty is rebuilt for the Electron ABI and `asarUnpack`'d (can't live in asar); the renderer Vite output stays outside asar too. `webviewTag` is enabled for the embedded browser. (The desktop-four-panels and desktop-shadcn notes.)
+The desktop package has four build products:
+
+- `build:main` and `build:preload` run esbuild; `build:renderer` and `build:mobile` run Vite (`packages/desktop/package.json:13`, `packages/desktop/scripts/build.ts:15`, `packages/desktop/scripts/build.ts:32`, `packages/desktop/scripts/build.ts:45`, `packages/desktop/scripts/build.ts:59`).
+- Main is bundled for Electron/Node with `electron` and `@cjhyy/code-shell-core` externalized; preload is CommonJS and also externalizes Electron (`packages/desktop/scripts/build.ts:15`, `packages/desktop/scripts/build.ts:32`).
+- The renderer Vite config is renderer-only and aliases UI/protocol paths without making the renderer a Node process (`packages/desktop/vite.config.ts:6`, `packages/desktop/vite.config.ts:20`). Mobile has its own Vite config, root, dev-server port, and `out/mobile` target (`packages/desktop/vite.mobile.config.ts:18`, `packages/desktop/vite.mobile.config.ts:27`, `packages/desktop/vite.mobile.config.ts:38`).
+- Runtime desktop dependencies are intentionally narrow: the core package and `node-pty`; `node-pty` is unpacked from asar because it is a native module (`packages/desktop/package.json:42`, `packages/desktop/package.json:107`).
 
 ## 7. Where to read next
 - The worker's engine and the StreamEvents it emits: [01 · Engine & turn loop](01-engine-and-turn-loop.md)
