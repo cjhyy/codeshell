@@ -859,35 +859,25 @@ export function applyStreamEvent(
     }
 
     case "usage_update": {
-      // Two flavours share this event:
-      //  1. Per-response / estimate emit (turn-loop): drives the live context
-      //     reading and, when present, the single-turn cache metric.
-      //  2. Cumulative-only heartbeat (engine turn boundary): carries cumulative*
-      //     fields. It must NOT clobber the context reading.
-      if (event.cumulativePromptTokens !== undefined || event.sessionPromptTokens !== undefined) {
-        const cumulativePromptTokens =
-          event.cumulativePromptTokens ?? event.sessionPromptTokens ?? 0;
-        const cumulativeCacheReadTokens =
-          event.cumulativeCacheReadTokens ?? event.sessionCacheReadTokens ?? 0;
-        const cumulativeCacheCreationTokens =
-          event.cumulativeCacheCreationTokens ?? event.sessionCacheCreationTokens ?? 0;
-        return {
-          ...state,
-          cumulativePromptTokens,
-          cumulativeCacheReadTokens,
-          cumulativeCacheCreationTokens,
-          sessionPromptTokens: cumulativePromptTokens,
-          sessionCacheReadTokens: cumulativeCacheReadTokens,
-          sessionCacheCreationTokens: cumulativeCacheCreationTokens,
-        };
-      }
+      // Fields update independently and additively — a single event can carry
+      // any combination of them. The turn-loop's per-response emit carries the
+      // context reading + single-turn cache + cumulative cache all at once, so
+      // we must NOT early-return on cumulative presence (that dropped the
+      // single-turn metric and left its tooltip row stuck at nothing).
+      const hasCumulative =
+        event.cumulativePromptTokens !== undefined || event.sessionPromptTokens !== undefined;
       const hasSingleTurn =
         event.singleTurnPromptTokens !== undefined ||
         event.cacheReadTokens !== undefined ||
         event.cacheCreationTokens !== undefined;
+      // A pure cumulative-only heartbeat (engine turn boundary) carries a
+      // cumulative-derived promptTokens that must NOT clobber the live context
+      // reading. Only adopt event.promptTokens when it's a real reading, i.e.
+      // not a heartbeat that lacks any single-turn signal.
+      const isCumulativeHeartbeat = hasCumulative && !hasSingleTurn;
       return {
         ...state,
-        promptTokens: event.promptTokens,
+        ...(isCumulativeHeartbeat ? {} : { promptTokens: event.promptTokens }),
         ...(hasSingleTurn
           ? {
               singleTurnPromptTokens: event.singleTurnPromptTokens ?? event.promptTokens,
@@ -896,6 +886,24 @@ export function applyStreamEvent(
               singleTurnCacheCreationTokens:
                 event.singleTurnCacheCreationTokens ?? event.cacheCreationTokens ?? 0,
             }
+          : {}),
+        ...(hasCumulative
+          ? (() => {
+              const cumulativePromptTokens =
+                event.cumulativePromptTokens ?? event.sessionPromptTokens ?? 0;
+              const cumulativeCacheReadTokens =
+                event.cumulativeCacheReadTokens ?? event.sessionCacheReadTokens ?? 0;
+              const cumulativeCacheCreationTokens =
+                event.cumulativeCacheCreationTokens ?? event.sessionCacheCreationTokens ?? 0;
+              return {
+                cumulativePromptTokens,
+                cumulativeCacheReadTokens,
+                cumulativeCacheCreationTokens,
+                sessionPromptTokens: cumulativePromptTokens,
+                sessionCacheReadTokens: cumulativeCacheReadTokens,
+                sessionCacheCreationTokens: cumulativeCacheCreationTokens,
+              };
+            })()
           : {}),
       };
     }
