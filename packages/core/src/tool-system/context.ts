@@ -18,6 +18,7 @@ import type { ToolRegistry } from "./registry.js";
 import type { AgentPresetName } from "../preset/index.js";
 import type { SandboxBackend } from "./sandbox/index.js";
 import type { HookRegistry } from "../hooks/registry.js";
+import type { SessionManager } from "../session/session-manager.js";
 
 /**
  * Narrow view of the owning Engine that tools are allowed to call back into.
@@ -36,6 +37,8 @@ export interface ToolRuntimeHost {
   readWorktreeSetupScripts(
     cwd?: string,
   ): { default?: string; macos?: string; linux?: string; windows?: string } | undefined;
+  /** Session state store used by session-scoped tools such as worktree switching. */
+  getSessionManager?(): SessionManager;
 }
 
 /** One choice in a multiple-choice AskUserQuestion. */
@@ -178,6 +181,8 @@ export interface ToolVisibilityContext {
 export interface ToolContext {
   /** Active working directory for this Engine. */
   cwd: string;
+  /** Mutate the owning live context cwd after a session workspace switch. */
+  setCwd?(cwd: string): void;
   /** LLM credentials/endpoint for tools that need to make their own calls. */
   llmConfig: LLMConfig;
   /** Active model pool (Arena reads this to pick participants). */

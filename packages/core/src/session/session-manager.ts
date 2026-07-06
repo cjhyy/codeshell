@@ -21,11 +21,28 @@ import type { SessionState, SessionWorkspace } from "../types.js";
 import { Transcript } from "./transcript.js";
 import { SessionError } from "../exceptions.js";
 import { normalizeCumulativeUsageCounters } from "../engine/session-usage.js";
+import { branchExists } from "../git/worktree.js";
 
 export interface SessionBundle {
   state: SessionState;
   transcript: Transcript;
 }
+
+export type SessionWorkspaceResumeResolution =
+  | {
+      ok: true;
+      cwd: string;
+      workspace: SessionWorkspace;
+      message?: string;
+      reason?: "main" | "worktree" | "legacy" | "worktree_missing_branch_gone";
+    }
+  | {
+      ok: false;
+      cwd: string;
+      workspace: SessionWorkspace;
+      message: string;
+      reason: "worktree_missing_branch_exists";
+    };
 
 /**
  * Validate a session ID before it is joined into a filesystem path.
@@ -258,6 +275,105 @@ export class SessionManager {
     }
     state.workspace = workspace;
     this.saveState(state);
+  }
+
+  recordWorkspaceHandoff(
+    sessionId: string,
+    from: SessionWorkspace | undefined,
+    to: SessionWorkspace,
+  ): void {
+    assertSafeSessionId(sessionId);
+    const transcriptFile = join(this.sessionsDir, sessionId, "transcript.jsonl");
+    if (!existsSync(transcriptFile)) return;
+    try {
+      const transcript = new Transcript(transcriptFile);
+      transcript.append("session_meta", {
+        sessionId,
+        cwd: to.root,
+        workspace: to,
+        handoffFrom: from?.root,
+        handoffAt: Date.now(),
+      });
+    } catch {
+      // Transcript handoff metadata is best-effort; state.workspace is the
+      // authoritative switch pointer.
+    }
+  }
+
+  /**
+   * Resolve the cwd a resumed session must run in from its persisted workspace
+   * pointer. A missing worktree directory is never silently treated as the main
+   * repo: if the branch still exists callers get a blocking recreate message;
+   * if the branch is gone the workspace pointer is reset to main and a warning
+   * message is returned for the host to surface before continuing.
+   */
+  resolveSessionWorkspaceForResume(sessionId: string): SessionWorkspaceResumeResolution {
+    assertSafeSessionId(sessionId);
+    const stateFile = join(this.sessionsDir, sessionId, "state.json");
+    if (!existsSync(stateFile)) {
+      throw new SessionError(`Session state file not found: ${sessionId}`);
+    }
+    let state: SessionState;
+    try {
+      state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
+    } catch (err) {
+      throw new SessionError(
+        `Session state is corrupt for ${sessionId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    const legacyMain =
+      typeof state.cwd === "string" && state.cwd.length > 0
+        ? ({ root: state.cwd, kind: "main" } as const)
+        : undefined;
+    const workspace = isSessionWorkspace(state.workspace) ? state.workspace : legacyMain;
+    if (!workspace) {
+      throw new SessionError(`Session ${sessionId} has no recoverable cwd`);
+    }
+
+    if (workspace.kind === "main") {
+      return {
+        ok: true,
+        cwd: workspace.root,
+        workspace,
+        reason: isSessionWorkspace(state.workspace) ? "main" : "legacy",
+      };
+    }
+
+    if (existsSync(workspace.root)) {
+      return { ok: true, cwd: workspace.root, workspace, reason: "worktree" };
+    }
+
+    const branch = workspace.worktree?.branch;
+    const mainRoot =
+      typeof state.cwd === "string" && state.cwd.length > 0 ? state.cwd : workspace.root;
+    if (branch && existsSync(mainRoot) && branchExists(mainRoot, branch)) {
+      return {
+        ok: false,
+        cwd: mainRoot,
+        workspace,
+        reason: "worktree_missing_branch_exists",
+        message:
+          `Session ${sessionId} is bound to worktree ${workspace.root}, but that directory ` +
+          `no longer exists. Branch ${branch} still exists; recreate the worktree at ` +
+          `${workspace.worktree?.path ?? workspace.root} before resuming, or switch this session ` +
+          `back to main explicitly.`,
+      };
+    }
+
+    const fallback: SessionWorkspace = { root: mainRoot, kind: "main" };
+    state.workspace = fallback;
+    this.saveState(state);
+    return {
+      ok: true,
+      cwd: mainRoot,
+      workspace: fallback,
+      reason: "worktree_missing_branch_gone",
+      message:
+        `Session ${sessionId} was bound to worktree ${workspace.root}, but that directory ` +
+        `is gone${branch ? ` and branch ${branch} is gone` : ""}; fell back to main ` +
+        `${mainRoot}. Re-run the request if you want to continue there.`,
+    };
   }
 
   /**

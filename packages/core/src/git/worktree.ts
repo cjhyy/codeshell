@@ -65,11 +65,20 @@ export function validateWorktreeSlug(slug: string): void {
  * Find the canonical git root (resolves worktree → main repo).
  */
 export function findGitRoot(cwd: string): string {
-  return execFileSync(GIT_BIN, ["rev-parse", "--show-toplevel"], {
-    cwd,
-    encoding: "utf-8",
-    timeout: 5000,
-  }).trim();
+  return findMainWorktreeRoot(cwd);
+}
+
+export function findMainWorktreeRoot(cwd: string): string {
+  const commonDir = execFileSync(
+    GIT_BIN,
+    ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+    {
+      cwd,
+      encoding: "utf-8",
+      timeout: 5000,
+    },
+  ).trim();
+  return dirname(commonDir);
 }
 
 export function findWorktreeForBranch(cwd: string, branch: string): string | undefined {
@@ -81,6 +90,33 @@ export function assertBranchNotCheckedOut(cwd: string, branch: string): void {
   const existingPath = findWorktreeForBranch(cwd, branch);
   if (existingPath) {
     throw new Error(`branch ${normalizeBranchName(branch)} already checked out at ${existingPath}`);
+  }
+}
+
+export function branchExists(cwd: string, branch: string): boolean {
+  try {
+    return (
+      execFileSync(GIT_BIN, ["branch", "--list", normalizeBranchName(branch)], {
+        cwd,
+        encoding: "utf-8",
+        timeout: 10000,
+      }).trim().length > 0
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function currentBranch(cwd: string): string | undefined {
+  try {
+    const branch = execFileSync(GIT_BIN, ["branch", "--show-current"], {
+      cwd,
+      encoding: "utf-8",
+      timeout: 5000,
+    }).trim();
+    return branch || undefined;
+  } catch {
+    return undefined;
   }
 }
 
