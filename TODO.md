@@ -1,7 +1,7 @@
 # TODO
 
 > 已完成项一律删除（记录在 git 历史与记忆里）。本文件只保留**未完成**的待办。
-> 最近一次清理：2026-07-06（逐条核实代码现状后重写）。
+> 最近一次清理：2026-07-06（三路 Codex 并行核实代码现状后重写，附 file:line 证据）。
 
 ---
 
@@ -9,7 +9,7 @@
 
 - 🔴 **[压缩/token] 压缩用 `estimateTokensHybrid` 估算比真实 tokenizer 低 ~2.5×，压完仍远超真实上限且不再触发二次压缩** — 实测硬证据(session `s-mr908xtp-3a414dad`，同点无 confound)：`13:42:46 COMPACT before=239030 after=162940`(估)，`13:43:58` 压完首个真实请求 `msgs=190 promptTokens=409612`(真) → 压完估 162,940 vs 真实 409,612 = **2.5× 低估**；压缩前那侧估 ~239k vs 真实 ~694k ≈ 2.9× 低估。**现象**：压缩把 msgs 630→190、真实 ~694k→~409k(压缩本身有效)，但之后历史长回 190→234 条 / 真实 409k→**482k**，却再没触发第二次压缩 —— 因为估算以为只有 ~162k(41% of 400k，远低于 gate) = 用户看到的「压完还很满 / 一条就回弹」。
   - **机制(代码确认 `packages/core/src/context/manager.ts`)**：① 所有压缩 gate 与 before/after 一律用 `estimateTokensHybrid()`(:338/:350-352/:445-459)，**从不用**引擎每轮已拿到的真实 `promptTokens`(尽管 `recordActualUsage` 已接线在 `turn-loop.ts:741`)；② `estimateTokensHybrid`(:148-159)只在 `lastActualAtMessageCount < messages.length` 时才用真实锚点，**一次 summary 压缩把消息 630→190 后该条件变 false → 丢弃真实锚点回退纯启发式** = 2.5× 偏低的 162,940。
-  - **修复方向**：(a) 压缩判定阈值与 before/after 优先采用引擎已有的真实 `promptTokens`；(b) `estimateTokensHybrid` 在压缩缩容(messages.length < lastActualAtMessageCount)后不应直接丢真实锚点回退纯启发式，应按缩容比例重估或立即用下一轮真实用量重锚；(c) 可选：给启发式针对代码/中文/JSON 更高系数，或直接接真实 tokenizer。
+  - **修复方向(Codex 核实,effort M)**：(a) `manager.ts:139-158` `recordActualUsage`/`estimateTokensHybrid` 在缩容时按比例 rescale 真实锚点而非丢弃；(b) `turn-loop.ts:741` 调用改为把当前 `messages`(或其 `estimateTokens`)连同 `promptTokens` 一起传；(c) summary 压缩 after 值(`manager.ts:202-208`)也用修正后的 hybrid，别用纯 `estimateTokens(compacted)`。测试补 `manager-micro-escalation.test.ts` 或新建 `manager-hybrid.test.ts`，方法签名变了同步改 `turn-loop-usage-cache.test.ts`。**不加**每轮动态预算重请求(与 prompt cache 冲突,刻意不做)。
   - **已排除**：图片驻留(已修，实测 cacheRead 紧跟 prompt 无大图重发)、「磁盘大=上下文大」、压缩空转。关联记忆 `codeshell-compaction-underestimates-tokens-2p5x-evidence`、`codeshell-tui-context-window-uses-global-default-not-model-maxContextTokens`(窗口用 200k 全局默认而非模型真实窗口，同源需一并核)。
 
 ---
@@ -17,14 +17,14 @@
 # 🟡 待改进 / 待优化
 
 - 🟡 **[记忆/dream · 不对称] 会自动打扫的区(dream)小，不能自动打扫的区(user)反而堆最多** — 现状：平时会话记的东西几乎都直接进 **user 区**(要转正、跨会话可靠)，但 user 区 **dream 永远碰不到**(`dream-consolidation.ts:184-190` 硬拒非 dream scope 写入，因为后台 dream 无交互式权限后端)，只能靠交互会话里逐条批准删。结果**最该被自动清理的完成态 changelog 恰恰落在永不自动清理的区**。**根治方向(二选一或都做)**：① 让 dream 能对 user 区**提议**清理(列候选清单，用户一次性批准)；② 把 changelog/过程类记忆改成默认存 **dream 区**(可自动归档)，user 区只留耐用事实(架构/根因/偏好)。另 `shouldAutoDream()` 缺 Codex 的 rate-limit 阈值跳过(配额低时别烧 token 跑 dream)，可一并考虑。
-- 🟡 **[编排] DriveAgent 前台超时静默丢任务**(`codeshell-driveagent-foreground-timeout-silent-drop`)：`background:false` 调用 120s 超时后返回通用错误字符串，任务未真移到后台也无 jobId，ListShells 查不到，完成通知永不来——与文档承诺不符，会误导编排 agent 谎报进度。
-- 🟡 **[编排] 并发子代理同工作区碰撞风险**(`codeshell-multi-agent-collision-risk`)：并发 DriveAgent 在同一 cwd 无隔离，可能互相覆盖。关联 worktree 隔离。
-- 🟡 **[worktree] CC/Codex session resume cwd 不匹配**(`codeshell-cc-codex-worktree-session-resume-cwd-mismatch`)：worktree 已删或 cwd 不符时 resume 出错。建议记 sessionId→cwd/worktree 映射，resume 强制原 cwd。
-- 🟡 **[goal] complete_goal 无活跃 goal 仍被暴露/调用**(`complete-goal-no-active-goal-guard-root-cause`)：工具在 coding preset 无条件注册，turn-loop 处理时未检查 active goal 存在性。方向：运行时 gating + preset 层限制暴露。
-- 🟡 **[会话] TodoWrite 列表 resume 后不恢复**(`codeshell-todo-session-resume-empty-list`)：resume 后模型看到空列表。
-- 🟡 **[前端] panel state 保存写放大**(`codeshell-panel-refactor-save-all-buckets-write-amplification`)：保存副作用每次遍历全部 bucket，任意 bucket 变更即全量 savePanelState。
-- 🟡 **[前端] 乐观输入气泡短暂丢失**(`codeshell-optimistic-input-bubble-overwritten-by-hydrate`)：hydrate 覆盖渐进式输入气泡。
-- 🟡 **[CI] Windows CI 长期红**(`codeshell-windows-ci-gitbash-discovery-test-flake`)：shell-invocation 测试假设宿主无 Git Bash，但 Windows runner 预装 Git for Windows。
+- 🟡 **[编排] DriveAgent 前台超时静默丢任务**(`codeshell-driveagent-foreground-timeout-silent-drop`,effort M)：`background:false` 只 `await runner`(`drive-claude-code.ts:140-142`)，无 jobId/无 backgroundJobRegistry/无完成通知(那些只在后台分支 `:93-138`)；registry 默认 120s 超时(`registry.ts:11-16`)返回通用错误(`registry.ts:175-183`)；且 `defaultRunner` 不传 `ctx.signal`(`:60-62`)→ 超时后 CLI 可能继续跑但结果被丢。修法：前台阈值到点自动 handoff 到后台(复用后台完成处理器 + 发 jobId)，并把 `ctx.signal` 传进 `runAgentOnce`。测试 `drive-claude-code.test.ts`。
+- 🟡 **[编排] 并发子代理同工作区碰撞风险**(`codeshell-multi-agent-collision-risk`,effort M)：cwd 由 caller 传、无 per-invocation 隔离(`drive-claude-code.ts:70` → `external-agent-driver.ts:43-45` 直接 spawn)；同轮 unsafe 调用串行(`streaming-tool-queue.ts:37-46`,DriveAgent `isConcurrencySafe:false`)，但**后台任务启动即返回，多个后台 DriveAgent 仍可在同 cwd 重叠写文件**。修法：BackgroundJobEntry 记 cwd，同 cwd 已有 writable 任务时拒绝/警告；或加 `isolateWithWorktree` 选项。
+- 🟡 **[worktree] CC/Codex session resume 无 cwd 绑定**(`codeshell-cc-codex-worktree-session-resume-cwd-mismatch`,effort M)：resume 只透传字符串(`drive-claude-code.ts:74`)，cwd 独立取自 args(`:70`)，无 `sessionId→cwd/worktree` 权威映射。CC/Codex 的 transcript 查找是 cwd-keyed(`session-history.ts:38-45`/`codex-session-history.ts:25-33`)→ 跨 cwd resume 不纠正、原 cwd 是被删的 worktree 则失败。修法：新增持久化 external-agent session 存储(keyed by {cli,sessionId}→{cwd,worktreePath?,worktreeBranch?})，resume 时强制原 cwd，worktree 丢失则阻止或重建。
+- 🟡 **[goal] complete_goal/cancel_goal 无 goal 时 schema 仍暴露**(`complete-goal-no-active-goal-guard-root-cause`,effort S)：⚠️**运行时 guard 已存在**——`executor.ts:153-163` 无 `hasGoal` 时拒绝执行，turn-loop 短路需 goalTracker(无 goal 为 null,`:527-534`)，engine 从 explicit/persisted/config goal 算 `hasGoal`(`:1724-1731`)。**仅剩缺口**：`BUILTIN_TOOL_GUARDS` 没 gate 这俩(`builtin/index.ts:774-786`)，无 goal 时工具 schema 仍暴露给模型(执行会被拒但白占位)。修法：给 `BUILTIN_TOOL_GUARDS` 加 `[completeGoalToolDef.name, ctx=>ctx.hasGoal]` + cancel 同理，改 `tool-guards.test.ts` 断言。
+- 🟢 **[会话] TodoWrite resume 恢复 — Codex 核实已修，仅缺测试**(`codeshell-todo-session-resume-empty-list`)：`readLastTodoSnapshot`(`task.ts:154-168`) + `engine.ts:1608-1613` resume 时重放最新 TodoWrite 为 `task_update`，模型也从 resumed transcript 看到旧 tool-use。除非无 TodoWrite 或末次全 completed(刻意清空)。剩：补 `task.test.ts`/`engine.todo-resume.test.ts`；`engine.ts:1605` 注释说容忍 legacy TaskCreate/Update 但 `readLastTodoSnapshot` 只认 TodoWrite(注释误导)。
+- 🟢 **[前端] panel 写放大 — Codex 核实已修**(`codeshell-panel-refactor-save-all-buckets-write-amplification`)：effect 仍 O(n) 遍历但缓存快照跳过未变 bucket(`App.tsx:2613-2622` 有 `continue`)，只写变更的(`transcripts.ts:297-307` 单 key 写)。写放大已消除。可选优化：`updatePanelBucket` 记 dirty bucket 免 O(n) 扫描。
+- 🟢 **[前端] 乐观气泡 — Codex 核实基本已修，仅剩 announce 边缘**(`codeshell-optimistic-input-bubble-overwritten-by-hydrate`)：正常 composer send + queued/steer send 都受保护(reducer 按 `steerId`/`clientMessageId` 跨 hydrate 保留本地 intent,`transcriptsReducer.ts:56-88` + 回归测试)。**仅剩缺口**：automation/mobile announce 气泡无 key 派发(`App.tsx:1670/1739`)，后续 hydrate 可覆盖。修法：给 announce 派发稳定 `clientMessageId`(如 `automation:${sid}:prompt`)。
+- 🟡 **[SessionStart] 插件 SessionStart matcher 的 `source` 未传 → matcher 过于宽松**(`codeshell-plugin-sessionstart-gap`)：⚠️Codex 核实 CODESHELL.md 说法不精确。真相：hook 事件**已接线且能注入 context**(`engine.ts:1538` emit → `pluginCommandHook.ts:57-78` 转 HookResult.messages → `engine.ts:1833-1841` 注入 prompt 前)；插件 skill 文件本就不自动读(靠模型调 Skill 工具或 hook 命令自吐内容)。**真缺口**：`loadPluginHooks.ts:121-125` matcher 期待 `ctx.data.source`，但 engine emit 只传 `resumed`(`:1538-1542`)→ 缺 source 使 SessionStart matcher 一律放行、触发过宽。修法(effort S)：`engine.ts` 传 `source: options.sessionId?"resume":"startup"`，并更正 CODESHELL.md 措辞。若真要 skill 自动加载则另做(effort M)。
 
 ---
 
@@ -37,9 +37,9 @@
 
 # beta1 延后（非 bug，记 release notes）
 
-- ⚪️ **browser-login 硬化**：`persist:login-*` 分区只清 cookie，localStorage/IndexedDB/SW 残留 → 改非持久分区或 `clearStorageData`；BrowserHost phase-2 webview 收编未预留类型/未抽共享 helper。
+- ⚪️ **browser-login 硬化**(effort M)：登录用持久分区 `persist:login-${uuid}`(`credentials-login/index.ts:207`)，登出 `destroyPartitionCookies` 只清 cookie(`browser-host/index.ts:146-153`)，账号切换 clear 模式也只清 cookie 且注释明说不碰 localStorage(`credentials-service.ts:84-95`)→ localStorage/IndexedDB/CacheStorage/SW 残留。修法：登录分区改非持久 `login-${uuid}`；`destroyPartitionCookies`→`clearStorageData()` 清全部站点存储。另 BrowserHost 仍只 `kind:"window"`(`:17-23`,拒 webview `:90-93`)，webview 硬化逻辑散在 `main/index.ts:1076-1102` 未抽共享 helper。
 - ⚪️ **内部浏览器 Network 可视化/请求复用 UX**：内置浏览器面板看不到 Network。方向：给浏览器面板提供 Network 观察能力(请求列表/过滤/查看 payload/response/copy as fetch 或转工具调用)。注意隐私与凭证边界，默认只对当前 session/browser partition 可见。
-- ⚪️ **JSON-Schema 导出未接线**：`schema-export.ts` 无 caller → 宿主启动写 `~/.code-shell/settings.schema.json` 或 release notes 注明不暴露。
+- ⚪️ **JSON-Schema 导出未接线**(effort S)：`schema-export.ts:8-12` 注释明说 `manager.load()` 故意不写文件；`settingsJsonSchema()`/`writeSettingsSchemaFile()` 存在但只被 `index.ts:436-437` re-export，无生产 caller。修法：TUI+desktop 启动调 `writeSettingsSchemaFile(join(userHome(),".code-shell"))`，或 release notes 注明 SDK-only。
 - ⚪️ **i18n 收尾（增量）**：`"新对话"` 哨兵常量化；非 React helper 硬编码 localStorage key 应 import KEY；mobile(~149 处)单独接同套 i18n。
 
 ---

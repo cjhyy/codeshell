@@ -1,15 +1,19 @@
 <p align="center">
-  <img src="assets/codeshell-dog-icon.png" alt="CodeShell dog mascot" width="120" />
+  <img src="assets/codeshell-dog-icon.png" alt="CodeShell mascot" width="120" />
 </p>
 
 # CodeShell
+
+<p align="center">
+  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a>
+</p>
 
 <p align="center">
   <strong>A general-purpose AI agent orchestration framework — terminal, headless, and a full desktop app.</strong>
 </p>
 
 <p align="center">
-  <img src="assets/codeshell-hero.png" alt="CodeShell terminal agent orchestration hero image" width="860" />
+  <img src="assets/codeshell-promo.png" alt="CodeShell desktop AI agent orchestration promotional image" width="860" />
 </p>
 
 CodeShell is one orchestration engine wearing three faces:
@@ -20,7 +24,7 @@ CodeShell is one orchestration engine wearing three faces:
 
 The core is deliberately **domain-agnostic**. The turn loop, context management, permissions, MCP integration, hooks, tasks, cron, sub-agents, sessions, and memory all stay generic; coding behavior is just a *preset* layered on top — not baked into the engine. (See `packages/core/CONTRIBUTING.md`: "core only carries mechanism, not policy.")
 
-> Status: **0.5.0-rc.2**, preparing for beta. The desktop app is the headline product; the CLI and SDK share the same core engine.
+> Status: **0.6.0-rc.10**, preparing for beta. The desktop app is the headline product; the CLI and SDK share the same core engine.
 
 ---
 
@@ -62,6 +66,12 @@ bun run dev          # launches the desktop app in dev mode
 ```
 
 It gives you chat with streaming output, a side-by-side file / browser / terminal / diff panel dock, model & credential management, an extensions marketplace, automation/cron scheduling, persistent goals, memory, and a phone remote — all driving the same core engine via per-session agent worker processes.
+
+### Desktop preview
+
+<p align="center">
+  <img src="assets/codeshell-desktop-screenshot-en.png" alt="Actual CodeShell desktop app screenshot captured with Playwright" width="860" />
+</p>
 
 ---
 
@@ -220,7 +230,7 @@ packages/
 ├── desktop/   # Electron desktop client + agent worker bridge + mobile remote app
 └── cdp/       # Environment-agnostic CDP browser-action layer (no Playwright)
 
-assets/       # README / product images (mascot, hero)
+assets/       # README / product images (mascot, promo hero, Playwright desktop screenshots)
 
 docs/
 ├── architecture/        # System architecture chapters + feature inventory (see architecture/README.md)
