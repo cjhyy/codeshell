@@ -106,15 +106,17 @@
 
 # Context / Steer / Compact 体验待办（2026-07-06 本轮对话挖掘）
 
-> 来源:本轮从 code review + 真实使用体验挖出的一批 context/steer/compact 相关问题。多数工作区已有未提交改动(见 `git status`:steer-queue / turn-loop / manager / transcriptsReducer 等),标 🔧 者代表在做/部分已做,需 review 收口。
+> 来源:本轮从 code review + 真实使用体验挖出的一批 context/steer/compact 相关问题。**已于 v0.6.0-rc.9 全部落地并发布**(串行 Codex 执行 + Codex 只读审查过关)。
 
-- 🔧 **steer 竞态双层修复**（idle 降级 + 收尾兜底 + 探索工具执行中途注入）:steer 消息只在当前工具/请求边界被消费,winding-down / idle 窗口发的会被孤立(日志实锤:Write 卡 74s 期间 steer 直到 tool_result 后才注入)。已有改动:`engine/steer-queue.ts`、`turn-loop.ts`、`engine-steer-idle.test.ts`、`turn-loop-steer-backfill.test.ts`、`server.steer.test.ts`;设计文档 `docs/superpowers/specs/2026-07-06-steer-race-orphan-fix-design.md`。用户选 B 方向:深挖 steer 能否在工具执行中途生效。
-- ⬜ **AskUserQuestion / 交互态审批不该有 5 分钟超时**（应无限等,对齐 CC/Codex）:交互问询复用了工具审批的 `pendingApprovals` + `APPROVAL_TIMEOUT_MS`(5min) 逻辑,超时后 `resolve("(approval timed out)")` 返回一个普通字符串,模型无法区分「用户拒答」与「根本没等到」,当成有效答复继续跑 → 用户感觉「问了问题不卡住等回答」(s-mr8x5nhc 日志实锤:两次 AskUserQuestion 各跑满 300s 超时)。根因位置 `protocol/server.ts:2007-2013`(`requestAskUserFromClient` 的 setTimeout),常量 `server.ts:129`。**关键**:框架已在 `server.ts:166-176` 用 `!isHeadless()` 区分「有真人 vs 无人值守」——headless 时根本不接 `askUser`,AskUserQuestion 直接走报错分支立即返回,压根不经过那个超时;唯一走到 5min 超时的恰恰是「有真人在」的交互态,而那正是应该无限等的场景。CC 官方文档明确「callback can stay pending indefinitely…只在 query cancel 时取消」,防挂靠 `defer`(持久化后退出、resume 续跑)而非超时放行;Codex 同理(无内建超时,#11816 客户端不响应即 `await` 永挂)。修法:交互态 askUser 去掉超时(方案 A),真要防无人值守用 headless 分支(已有)或复用现有 steer 落盘+hydrate resume 链路做 defer,而非超时喂假字符串。关联记忆 `codeshell-askuserquestion-approval-timeout-not-infinite-wait`。
-- 🔧 **micro 压缩空转带**:`microcompactFloorRatio(0.7)` < `compactAtRatio(0.85)`,0.7~0.85 区间只有 micro 反复空转(日志实证 `before===after`,如 716294→716294,每轮重触发)。图片 base64 / system-reminder 是大头但 micro 碰不到。对齐 CC/Codex「压不动就升级摘要」:micro no-op → 升级 Tier2 summary。已有改动:`context/manager.ts`、`context/force-summarize.test.ts`。关联记忆 `codeshell-compact-noop-and-summarizer-model-tiering`。
-- 🔧 **/compact 反馈不一致**:手动压缩成功后除 toast 外未 dispatch `context_boundary` 分隔线(带 before/after/strategy),与自动压缩不一致。已有改动:`protocol/server.compact.test.ts` 等。
-- ⬜ **/compact 整体 UX 差**:无反馈 / 空转 / `before===after` 无提示 / 不能选更狠档位。设计清晰的手动 compact UX(显示压了什么/多少、可选档位、no-op 提示)。
-- ⬜ **缓存命中率重做:单轮 + 真整会话累计**:`sessionPromptTokens` 在 turn/compact 边界会被重置(日志实证骤降重涨,34%→98% 剧烈跳变),导致标签叫「本会话」实为「近段/边界间」。需:① 单轮命中率(当轮 read/(read+creation+uncached));② 新增真正从 session 开头只增不重置的累计计数器(cumulativeCacheRead/Creation/Prompt),分子分母单调递增;③ UI 两者分开展示并正确命名。
-- ⬜ **图片上下文优化(后续轮不重带 base64)**:对齐 CC/Codex——图片 base64 只在首次被模型消费那轮发送,后续轮从历史剔除/降级为占位或存盘引用(如 `[image #N, 已处理]`/文件路径),避免每轮重发几万 token 污染上下文与缓存;旧 vision 截图应可被压缩档清理。
+- ✅ **steer 竞态三层修复**（idle 降级 + 收尾兜底 + 提交幂等）— commit `f7c6466f`。收尾期/idle 窗口的 steer 不再成为孤儿;设计文档 `docs/superpowers/specs/2026-07-06-steer-race-orphan-fix-design.md`。**遗留后续方向(未做)**:探索 steer 能否在长工具执行中途注入(用户选 B 方向,当前仍是 turn/工具边界注入)。
+- ✅ **AskUserQuestion 交互态去 5 分钟超时**（改为无限等,Stop/abort 解锁）— commit `a005557a`;并修复关闭/删除 session 时取消 pending ask 防挂死 — commit `31908c81`。
+- ✅ **AskUserQuestion 跨会话串投(严重)**:pending resolver 按 (sessionId,requestId) 精确隔离,删除全局 fail-open 回退 — commit `9ff46639`。
+- ✅ **micro 压缩空转带**:0.7~0.85 区间 micro no-op → 升级 Tier2 摘要 + 防抖护栏 — commit `75f7ab95`(基础设施 `forceSummarize` 见 `3c905128`)。
+- ✅ **/compact 反馈不一致**:手动压缩补 `context_boundary` 分隔线 — commit `bb3123b3`。
+- ✅ **/compact 整体 UX**:no-op 提示 + 压缩前后 token/占比/策略展示 — commit `6d15968f`。(档位选择器评估后延后,非低风险。)
+- ✅ **缓存命中率重做**:单轮 + 整会话单调累计双指标 — commit `2af3905f`。
+- ✅ **图片上下文优化**:base64 仅首轮发送,后续轮降级占位 — commit `2e32726c`。
+- ✅ **提交/steer 执行层幂等**:重复 clientMessageId 进入模型历史前去重 — commit `31908c81`。
 
 ---
 
