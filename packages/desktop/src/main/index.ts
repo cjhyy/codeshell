@@ -228,6 +228,7 @@ import {
 import { probeSearch, type SearchProbeInput } from "./search-probe-service.js";
 import { probeImage, type ImageProbeInput } from "./image-probe-service.js";
 import { parseDataUrl, suggestImageFilename } from "./image-save.js";
+import { injectLoginShellPathAtStartup } from "./login-shell-path.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -1412,7 +1413,11 @@ async function applyGitPathFromSettings(): Promise<void> {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await injectLoginShellPathAtStartup({
+    log: (event, data) => dlog("main", event, data),
+  });
+
   // Credential encryption boundary (EncryptionCipher) is now in place, but we
   // intentionally do NOT install SafeStorageCipher yet: the agent runs in a
   // separate worker process that has no safeStorage key, so if main wrote

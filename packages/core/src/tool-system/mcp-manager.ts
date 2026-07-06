@@ -15,6 +15,7 @@ import { CredentialStore } from "../credentials/index.js";
 import { ENV_ALLOWLIST } from "../runtime/spawn-common.js";
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import { diagnoseMcpStdioMissingCommand, previewPath } from "./mcp-stdio-diagnostics.js";
 
 interface MCPConnection {
   client: Client;
@@ -455,6 +456,22 @@ export class MCPManager {
         await transport.close?.();
       } catch {
         // ignore cleanup errors
+      }
+      if (transportType === "stdio" && config.command) {
+        const diagnostic = await diagnoseMcpStdioMissingCommand(config.command, err);
+        if (diagnostic) {
+          logger.warn("mcp.stdio_command_missing", {
+            server: name,
+            command: config.command,
+            foundPaths: diagnostic.foundPaths,
+            path: previewPath(),
+            message: diagnostic.message,
+          });
+          const original = err instanceof Error ? err.message : String(err);
+          const enhanced = new Error(`${original}\n${diagnostic.message}`);
+          (enhanced as Error & { cause?: unknown }).cause = err;
+          throw enhanced;
+        }
       }
       throw err;
     } finally {
