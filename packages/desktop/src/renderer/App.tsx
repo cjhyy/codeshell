@@ -1191,6 +1191,18 @@ function App() {
     const next = deleteSessionLocal(repoId, sessionId);
     setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
 
+    // Drop the deleted session's panel state so its (hidden) PanelArea — and the
+    // browser <webview> / terminal pty it keeps mounted — is torn down instead of
+    // leaking, and its persisted layout doesn't linger in localStorage.
+    const deletedBucket = bucketKey(repoId, sessionId);
+    clearPanelState(deletedBucket);
+    setPanelByBucket((prev) => {
+      if (!(deletedBucket in prev)) return prev;
+      const rest = { ...prev };
+      delete rest[deletedBucket];
+      return rest;
+    });
+
     // Delete means delete: EVERY session (not just automation) must have its
     // on-disk dir removed and its background shells reaped, else
     // ~/.code-shell/sessions/<id>/ + orphan shells leak. The `sessions:delete`
@@ -2482,18 +2494,45 @@ function App() {
   );
 
   useEffect(() => {
-    setPanelByBucket((prev) =>
-      prev[activeBucket] ? prev : { ...prev, [activeBucket]: hydratePanelBucketState(activeBucket) },
-    );
+    setPanelByBucket((prev) => {
+      // Ensure the active bucket has state, and prune stale entries that are
+      // fully empty (closed, no tabs) and not the active one — those render no
+      // PanelArea, so keeping them would only grow the map without effect.
+      let changed = false;
+      const nextEntries: [string, PanelBucketState][] = [];
+      for (const [bucket, state] of Object.entries(prev)) {
+        if (bucket !== activeBucket && !state.open && state.tabs.length === 0) {
+          changed = true; // drop it
+          continue;
+        }
+        nextEntries.push([bucket, state]);
+      }
+      if (!prev[activeBucket]) {
+        nextEntries.push([activeBucket, hydratePanelBucketState(activeBucket)]);
+        changed = true;
+      }
+      return changed ? Object.fromEntries(nextEntries) : prev;
+    });
   }, [activeBucket]);
 
+  // Persist only buckets whose serialized panel state actually changed, so a
+  // single-bucket edit (e.g. switching a tab) doesn't rewrite every bucket's
+  // localStorage key.
+  const savedPanelSnapshotsRef = useRef<Map<string, string>>(new Map());
   useEffect(() => {
+    const seen = new Set<string>();
     for (const [bucket, state] of Object.entries(panelByBucket)) {
-      savePanelState<PanelTab>(bucket, {
-        open: state.open,
-        tabs: state.tabs,
-        activeId: state.activeId,
-      });
+      seen.add(bucket);
+      const snapshot = { open: state.open, tabs: state.tabs, activeId: state.activeId };
+      const serialized = JSON.stringify(snapshot);
+      if (savedPanelSnapshotsRef.current.get(bucket) === serialized) continue;
+      savePanelState<PanelTab>(bucket, snapshot);
+      savedPanelSnapshotsRef.current.set(bucket, serialized);
+    }
+    // Forget buckets that were removed (e.g. pruned or session-deleted); their
+    // localStorage key is cleared at the removal site, so just drop the cache.
+    for (const bucket of [...savedPanelSnapshotsRef.current.keys()]) {
+      if (!seen.has(bucket)) savedPanelSnapshotsRef.current.delete(bucket);
     }
   }, [panelByBucket]);
 
