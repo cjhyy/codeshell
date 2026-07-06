@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell",
-  "version": "0.6.0-rc.11",
+  "version": "0.6.0-rc.12",
   "description": "Code Shell — meta package. Installs @cjhyy/code-shell-core and @cjhyy/code-shell-tui.",
   "type": "module",
   "main": "./dist/index.js",
@@ -54,9 +54,13 @@
     "node": ">=20.10"
   },
   "files": [
+    "assets/codeshell-dog-icon.png",
+    "assets/codeshell-promo.png",
+    "assets/codeshell-desktop-screenshot-en.png",
     "dist",
     "scripts/check-node.cjs",
     "README.md",
+    "README.zh-CN.md",
     "LICENSE",
     "CHANGELOG.md"
   ],
