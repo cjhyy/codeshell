@@ -1324,6 +1324,18 @@ export class AgentServer {
         }
         try {
           const result = await compactEngine.forceCompact(compactSessionId);
+          if (result.strategy === "compacted" && result.before > result.after) {
+            const event = {
+              type: "context_compact",
+              strategy: result.strategy,
+              before: result.before,
+              after: result.after,
+            } satisfies StreamEvent;
+            this.notify(Methods.StreamEvent, {
+              sessionId: compactSessionId ?? "",
+              event,
+            });
+          }
           this.transport.send(
             createResponse(req.id, {
               type: "compact",

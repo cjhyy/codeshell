@@ -17,7 +17,7 @@ describe("Engine.forceCompact", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("can compact a persisted session before this Engine has run it live", () => {
+  it("can compact a persisted session before this Engine has run it live", async () => {
     const engine = new Engine({
       llm: baseLlm,
       cwd: "/tmp",
@@ -47,7 +47,7 @@ describe("Engine.forceCompact", () => {
       );
     }
 
-    const result = engine.forceCompact("persisted-session");
+    const result = await engine.forceCompact("persisted-session");
 
     expect(result.before).toBeGreaterThan(result.after);
     expect(result.strategy).toBe("compacted");

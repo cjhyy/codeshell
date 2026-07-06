@@ -2766,7 +2766,11 @@ export class Engine {
    */
   async forceCompact(
     sessionId?: string,
-  ): Promise<{ before: number; after: number; strategy: string }> {
+  ): Promise<{
+    before: number;
+    after: number;
+    strategy: "none (no active session)" | "no compaction needed" | "compacted";
+  }> {
     const effectiveSessionId = sessionId ?? this.lastSessionId;
     if (!effectiveSessionId) {
       return { before: 0, after: 0, strategy: "none (no active session)" };
@@ -2790,6 +2794,10 @@ export class Engine {
       contextManager.initReplacementStateFromMessages(sourceMessages);
       this.lastContextManager = contextManager;
     }
+    // Manual /compact emits its UI boundary at the protocol layer from the
+    // final before/after result. Avoid reusing a stale run callback retained on
+    // lastContextManager, which could otherwise double-emit.
+    contextManager.setOnCompact(() => {});
 
     // Manual /compact = maximum compaction NOW. The automatic ladder waits for
     // compactAtRatio (0.85 * window), so on a 1M-window model an 800k text-only
