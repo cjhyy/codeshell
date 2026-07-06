@@ -32,6 +32,9 @@ describe("A6 — safeSpawn happy path", () => {
       ["-e", "process.stderr.write('oops'); process.stdout.write('ok')"],
       { cwd: CWD, env: ENV, timeoutMs: 10_000 },
     );
+    // Guard: a missing `node` on PATH surfaces as spawn_failed (exitCode null),
+    // which would otherwise fail the asserts below with a misleading message.
+    expect(r.spawnFailed).toBe(false);
     expect(r.stdout).toBe("ok");
     expect(r.stderr).toBe("oops");
     expect(r.exitCode).toBe(0);
@@ -43,6 +46,7 @@ describe("A6 — safeSpawn happy path", () => {
       ["-e", "process.exit(7)"],
       { cwd: CWD, env: ENV, timeoutMs: 10_000 },
     );
+    expect(r.spawnFailed).toBe(false);
     expect(r.exitCode).toBe(7);
     expect(r.aborted).toBe(false);
     expect(r.timedOut).toBe(false);
