@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { Transcript } from "../packages/core/src/session/transcript.js";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -88,5 +88,35 @@ describe("Transcript", () => {
     expect(summaries).toHaveLength(1);
     expect(summaries[0].data.summary).toBe("Work summary");
     expect(summaries[0].data.compactedRange).toEqual({ fromTurn: 0, toTurn: 5, eventCount: 20 });
+  });
+
+  it("deduplicates message appends with the same clientMessageId", () => {
+    const t = new Transcript(filePath);
+    const first = t.appendMessage("user", "hello", { clientMessageId: "client-1" });
+    const second = t.appendMessage("user", "hello", { clientMessageId: "client-1" });
+
+    expect(second.id).toBe(first.id);
+    expect(t.getEvents("message")).toHaveLength(1);
+    expect(t.getEvents("message")[0]!.data.clientMessageId).toBe("client-1");
+  });
+
+  it("deduplicates message appends with the same clientMessageId after reload", () => {
+    const first = new Transcript(filePath);
+    first.appendMessage("user", "hello", { clientMessageId: "client-1" });
+
+    const reloaded = Transcript.loadFromFile(filePath);
+    const second = reloaded.appendMessage("user", "hello", { clientMessageId: "client-1" });
+
+    expect(second.data.clientMessageId).toBe("client-1");
+    expect(reloaded.getEvents("message")).toHaveLength(1);
+    expect(readFileSync(filePath, "utf-8").trim().split("\n")).toHaveLength(1);
+  });
+
+  it("keeps repeated text when clientMessageId differs", () => {
+    const t = new Transcript(filePath);
+    t.appendMessage("user", "continue", { clientMessageId: "client-1" });
+    t.appendMessage("user", "continue", { clientMessageId: "client-2" });
+
+    expect(t.getEvents("message")).toHaveLength(2);
   });
 });

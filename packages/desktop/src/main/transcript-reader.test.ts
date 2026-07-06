@@ -33,13 +33,19 @@ describe("transcriptToFoldItems", () => {
     // now stamped with the queued-draft id so hydrate can dedup the optimistic
     // bubble against the disk snapshot (session s-mr8s3w5i loss bug).
     const jsonl = [
-      line("message", { role: "user", content: "直接搜一下 给我第8个", steerId: "q-1" }),
+      line("message", {
+        role: "user",
+        content: "直接搜一下 给我第8个",
+        steerId: "q-1",
+        clientMessageId: "client-1",
+      }),
     ].join("\n");
     const items = transcriptToFoldItems(jsonl);
     expect(items[0]).toEqual({
       kind: "user",
       text: "直接搜一下 给我第8个",
       steerId: "q-1",
+      clientMessageId: "client-1",
       timestamp: 1,
     });
   });

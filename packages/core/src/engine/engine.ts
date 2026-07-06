@@ -196,6 +196,11 @@ function sameLlmIdentity(a: LLMConfig, b: LLMConfig): boolean {
 export type { EngineConfig, EngineHookConfig, EngineResult } from "./types.js";
 import type { EngineConfig, EngineHookConfig, EngineResult } from "./types.js";
 
+export interface EnqueueSteerResult {
+  accepted: boolean;
+  id: string;
+}
+
 // Re-export the config hot-reload patch builder from here so the protocol
 // server (and tests) can import it alongside Engine without reaching into the
 // settings/ subtree directly. The implementation lives in settings/ to keep
@@ -817,21 +822,42 @@ export class Engine {
    * Queue a user message to be spliced into the in-flight run for `sessionId`
    * at the next turn-loop step boundary — the 不打断 steering path (vs cancel +
    * resend). General-purpose: any host path (UI 引导, future agent coordination,
-   * external triggers) can call it. If no run is active for the session the
-   * message simply waits in the queue and is consumed when that session next
-   * runs (rare race; host normally only steers while busy). No-op on blank text.
+   * external triggers) can call it. If no run is active for this session, reject
+   * without queueing so the host can downgrade to a normal run immediately.
+   * No-op on blank text.
    *
    * `id` is the host's stable queue-entry id. It rides through to the
    * `steer_injected` event (so the host can match the injected bubble back to
    * the queued draft) and is the handle `unsteer` uses to revoke a still-pending
    * entry. A blank id is tolerated but means the entry can't be revoked.
    */
-  enqueueSteer(sessionId: string, text: string, id = ""): void {
-    if (!sessionId) return;
+  enqueueSteer(sessionId: string, text: string, id = "", clientMessageId?: string): EnqueueSteerResult {
     const q = this.steerQueueBySid.get(sessionId) ?? [];
-    const next = enqueueSteerItem(q, id || `steer-${q.length}`, text);
-    if (next === q) return; // blank text dropped
+    const entryId = id || `steer-${q.length}`;
+    if (!sessionId) return { accepted: false, id: entryId };
+    const activeRunSessionId = this.activeRunSession?.state.sessionId;
+    const active = this.activeTurnLoop !== null && activeRunSessionId === sessionId;
+    if (!active) {
+      logger.info("steer.enqueue.idle_rejected", {
+        sessionId,
+        id: entryId,
+        clientMessageId,
+        activeRunSessionId: activeRunSessionId ?? null,
+        queueLength: q.length,
+      });
+      return { accepted: false, id: entryId };
+    }
+    const next = enqueueSteerItem(q, entryId, text, clientMessageId);
+    if (next === q) return { accepted: false, id: entryId }; // blank text dropped
     this.steerQueueBySid.set(sessionId, next);
+    logger.info("steer.enqueue.accepted", {
+      sessionId,
+      id: entryId,
+      clientMessageId,
+      activeRunSessionId,
+      queueLength: next.length,
+    });
+    return { accepted: true, id: entryId };
   }
 
   /**
@@ -848,11 +874,24 @@ export class Engine {
   }
 
   /** Drain + clear the steer queue for a session (turn loop consumes per step). */
-  private consumeSteer(sessionId: string): SteerItem[] {
+  private consumeSteer(
+    sessionId: string,
+    source: "normal_step" | "finalize_backfill" = "normal_step",
+  ): SteerItem[] {
     const q = this.steerQueueBySid.get(sessionId);
     if (!q || q.length === 0) return [];
     const { drained, rest } = consumeSteerItems(q);
     this.steerQueueBySid.set(sessionId, rest);
+    logger.info("steer.consume.drained", {
+      sessionId,
+      source,
+      count: drained.length,
+      ids: drained.map((item) => item.id),
+      clientMessageIds: drained.flatMap((item) =>
+        item.clientMessageId ? [item.clientMessageId] : [],
+      ),
+      queueLength: rest.length,
+    });
     return drained;
   }
 
@@ -909,6 +948,8 @@ export class Engine {
        * on replay (matching the live UI, which shows only the assistant reply).
        */
       injected?: boolean;
+      /** Stable id for this user-intent, used to make duplicate submits idempotent. */
+      clientMessageId?: string;
     },
   ): Promise<EngineResult> {
     // When the caller omits cwd but is resuming an existing session, recover
@@ -1370,7 +1411,10 @@ export class Engine {
       // Append new user message
       const userMsg: Message = { role: "user", content: userMessageContent };
       messages.push(userMsg);
-      session.transcript.appendMessage("user", userMessageContent, { injected: options?.injected === true });
+      session.transcript.appendMessage("user", userMessageContent, {
+        injected: options?.injected === true,
+        clientMessageId: options?.clientMessageId,
+      });
       // Flush "active" status to disk immediately. resume() set it in memory
       // (session-manager.ts), but without this write the on-disk state.json
       // still shows the previous run's terminal reason — so any external
@@ -1389,7 +1433,9 @@ export class Engine {
         this.config.isSubAgent === true ? "subagent" : this.config.origin,
       );
       messages = [{ role: "user", content: userMessageContent }];
-      session.transcript.appendMessage("user", userMessageContent);
+      session.transcript.appendMessage("user", userMessageContent, {
+        clientMessageId: options?.clientMessageId,
+      });
       // Save first user message as session summary — text only. The summary
       // shows up in the session list; "[image]" is more informative than a
       // truncated `[object Object]` when the prompt was purely visual.
@@ -1771,26 +1817,21 @@ export class Engine {
     // run would be evaluated fresh and might get a different replacement
     // string than the one already in the message, breaking idempotency.
     contextManager.initReplacementStateFromMessages(messages);
-    // Summarization (context-compaction + tool-result summaries) are auxiliary
-    // calls — route them to the configured aux model so they don't burn the
-    // expensive primary model every turn (same rationale as runMemoryPipeline).
-    // Resolved once here (not per-call) so the magnetic-disk settings re-read
-    // in resolveAuxClient stays off the compaction hot path. Falls back to the
-    // primary client when no aux model is configured.
+    // Two summarizers with DIFFERENT quality needs:
+    //
+    // 1. Context-compaction summary (setSummarizeFn) → PRIMARY model. This
+    //    condenses many rounds into the running summary that REPLACES the real
+    //    history; a dropped decision makes the conversation "forget" and poisons
+    //    every subsequent turn. It fires only near the compact ratio (~0.85), so
+    //    it's infrequent — quality far outweighs the occasional extra cost of a
+    //    primary-model call. (Manual /compact uses the primary for the same
+    //    reason; see forceCompact.)
+    //
+    // 2. Tool-use one-liner summaries (modelFacade.summarize below) → AUX model.
+    //    These are tiny throwaway outputs ("Wrote design doc") fired every turn;
+    //    that high-frequency, low-stakes chore is exactly what aux is for.
     const auxSummaryClient = await this.resolveAuxClient(llmClient);
-    contextManager.setSummarizeFn(async (prompt: string) => {
-      const summaryResponse = await auxSummaryClient.createMessage({
-        systemPrompt: "You are a conversation summarizer. Be concise and factual.",
-        messages: [{ role: "user", content: prompt }],
-        tools: [],
-        maxTokens: 1024,
-        // Auxiliary call — no need to burn reasoning tokens. On DeepSeek V4
-        // this flips thinking off (~3x faster, fewer tokens); on every other
-        // OpenAI-compatible provider the field is ignored.
-        reasoning: { mode: "off" },
-      });
-      return summaryResponse.text;
-    });
+    contextManager.setSummarizeFn(this.buildSummarizeFn(llmClient));
 
     // Create components (requires resolved llmClient).
     const modelFacade = new ModelFacade(llmClient, session.transcript);
@@ -1977,7 +2018,7 @@ export class Engine {
           pendingCompactInfo = null;
           return info;
         },
-        consumeSteer: () => this.consumeSteer(sid),
+        consumeSteer: (source) => this.consumeSteer(sid, source),
         // Clear the persisted goal for a self-reported completion / confirmed
         // cancel. Clears the in-RAM session's activeGoal (so THIS run's later
         // turns don't re-arm) AND persists it, and drops the in-flight stop
@@ -2253,6 +2294,28 @@ export class Engine {
    * active run's client) when unset, unknown, or on any build failure — aux
    * work is best-effort and must never break a run.
    */
+  /**
+   * Build the SummarizeFn used for context compaction. Extracted so both the
+   * run path and forceCompact share one definition of the summarization call.
+   */
+  private buildSummarizeFn(
+    auxSummaryClient: Awaited<ReturnType<typeof createLLMClient>>,
+  ): (prompt: string) => Promise<string> {
+    return async (prompt: string) => {
+      const summaryResponse = await auxSummaryClient.createMessage({
+        systemPrompt: "You are a conversation summarizer. Be concise and factual.",
+        messages: [{ role: "user", content: prompt }],
+        tools: [],
+        maxTokens: 1024,
+        // Auxiliary call — no need to burn reasoning tokens. On DeepSeek V4
+        // this flips thinking off (~3x faster, fewer tokens); on every other
+        // OpenAI-compatible provider the field is ignored.
+        reasoning: { mode: "off" },
+      });
+      return summaryResponse.text;
+    };
+  }
+
   private async resolveAuxClient(
     fallback: Awaited<ReturnType<typeof createLLMClient>>,
   ): Promise<Awaited<ReturnType<typeof createLLMClient>>> {
@@ -2701,7 +2764,9 @@ export class Engine {
    * Force context compaction on a session.
    * Returns token stats before/after.
    */
-  forceCompact(sessionId?: string): { before: number; after: number; strategy: string } {
+  async forceCompact(
+    sessionId?: string,
+  ): Promise<{ before: number; after: number; strategy: string }> {
     const effectiveSessionId = sessionId ?? this.lastSessionId;
     if (!effectiveSessionId) {
       return { before: 0, after: 0, strategy: "none (no active session)" };
@@ -2726,7 +2791,29 @@ export class Engine {
       this.lastContextManager = contextManager;
     }
 
-    const compacted = contextManager.manage(sourceMessages);
+    // Manual /compact = maximum compaction NOW. The automatic ladder waits for
+    // compactAtRatio (0.85 * window), so on a 1M-window model an 800k text-only
+    // conversation sits under the gate and manage() only runs a no-op micro.
+    // Wire a summarizeFn (the run path does this per-run; a cold forceCompact on
+    // a resumed-but-never-run session has none) and call forceSummarize, which
+    // ignores the ratio gate and always summarizes (falling back to snip/window).
+    //
+    // Use the PRIMARY model, not the aux model. Automatic background compaction
+    // routes to aux to keep the high-frequency path cheap, but summarization is
+    // a high-fidelity task (drop a decision and the conversation "forgets"), and
+    // a manual /compact is a low-frequency, user-initiated request for quality.
+    // The aux model is sized for tiny outputs (titles, memory extraction), so
+    // downgrading the one compaction the user explicitly asked for is backwards.
+    try {
+      const primaryClient = await createLLMClient(this.config.llm, this.config.clientDefaults);
+      contextManager.setSummarizeFn(this.buildSummarizeFn(primaryClient));
+    } catch (err) {
+      logger.warn("engine.force_compact_client_failed", {
+        error: (err as Error).message,
+      });
+    }
+
+    const compacted = await contextManager.forceSummarize(sourceMessages);
     const after = estimateTokens(compacted);
     this.compactedMessagesBySession.set(effectiveSessionId, compacted);
     this.lastSessionId = effectiveSessionId;

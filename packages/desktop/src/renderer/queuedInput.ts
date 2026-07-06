@@ -11,21 +11,36 @@
 export interface QueuedItem {
   id: string;
   text: string;
+  clientMessageId: string;
 }
 
 export type QueuedInputState = Record<string, QueuedItem[]>;
+
+export interface SerialTaskQueue {
+  tail: Promise<void>;
+}
+
+export function enqueueSerialTask(
+  queue: SerialTaskQueue,
+  task: () => Promise<void> | void,
+): Promise<void> {
+  const run = queue.tail.catch(() => undefined).then(task);
+  queue.tail = run.catch(() => undefined);
+  return run;
+}
 
 export function enqueueQueuedInput(
   state: QueuedInputState,
   bucket: string,
   id: string,
   text: string,
+  clientMessageId = id,
 ): QueuedInputState {
   const trimmed = text.trim();
   if (!trimmed || !id) return state;
   return {
     ...state,
-    [bucket]: [...(state[bucket] ?? []), { id, text: trimmed }],
+    [bucket]: [...(state[bucket] ?? []), { id, text: trimmed, clientMessageId }],
   };
 }
 

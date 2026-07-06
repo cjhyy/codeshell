@@ -7,6 +7,7 @@ import {
   removeQueuedInputAt,
   removeQueuedInputById,
   promoteQueuedInputAt,
+  enqueueSerialTask,
 } from "./queuedInput";
 
 describe("queued input", () => {
@@ -17,20 +18,20 @@ describe("queued input", () => {
     state = enqueueQueuedInput(state, "repo:s2", "c", "other");
 
     const first = dequeueQueuedInput(state, "repo:s1");
-    expect(first.item).toEqual({ id: "a", text: "first" });
-    expect(first.state["repo:s1"]).toEqual([{ id: "b", text: "second" }]);
-    expect(first.state["repo:s2"]).toEqual([{ id: "c", text: "other" }]);
+    expect(first.item).toEqual({ id: "a", text: "first", clientMessageId: "a" });
+    expect(first.state["repo:s1"]).toEqual([{ id: "b", text: "second", clientMessageId: "b" }]);
+    expect(first.state["repo:s2"]).toEqual([{ id: "c", text: "other", clientMessageId: "c" }]);
 
     const second = dequeueQueuedInput(first.state, "repo:s1");
-    expect(second.item).toEqual({ id: "b", text: "second" });
+    expect(second.item).toEqual({ id: "b", text: "second", clientMessageId: "b" });
     expect(second.state["repo:s1"]).toBeUndefined();
   });
 
   it("ignores blank input and blank id, and can clear a bucket", () => {
-    let state = { "repo:s1": [{ id: "x", text: "hello" }] };
+    let state = { "repo:s1": [{ id: "x", text: "hello", clientMessageId: "x" }] };
     state = enqueueQueuedInput(state, "repo:s1", "y", "   ");
     state = enqueueQueuedInput(state, "repo:s1", "", "no-id");
-    expect(state["repo:s1"]).toEqual([{ id: "x", text: "hello" }]);
+    expect(state["repo:s1"]).toEqual([{ id: "x", text: "hello", clientMessageId: "x" }]);
 
     state = clearQueuedInput(state, "repo:s1");
     expect(state["repo:s1"]).toBeUndefined();
@@ -39,24 +40,24 @@ describe("queued input", () => {
   it("removes a single queued item by index and reports the removed item", () => {
     const state = {
       "repo:s1": [
-        { id: "1", text: "one" },
-        { id: "2", text: "two" },
-        { id: "3", text: "three" },
+        { id: "1", text: "one", clientMessageId: "c1" },
+        { id: "2", text: "two", clientMessageId: "c2" },
+        { id: "3", text: "three", clientMessageId: "c3" },
       ],
     };
     const { state: next, removed } = removeQueuedInputAt(state, "repo:s1", 1);
 
-    expect(removed).toEqual({ id: "2", text: "two" });
+    expect(removed).toEqual({ id: "2", text: "two", clientMessageId: "c2" });
     expect(next["repo:s1"]).toEqual([
-      { id: "1", text: "one" },
-      { id: "3", text: "three" },
+      { id: "1", text: "one", clientMessageId: "c1" },
+      { id: "3", text: "three", clientMessageId: "c3" },
     ]);
     // original not mutated
     expect(state["repo:s1"]).toHaveLength(3);
   });
 
   it("removeAt on an invalid index reports removed=null and keeps state", () => {
-    const state = { "repo:s1": [{ id: "1", text: "one" }] };
+    const state = { "repo:s1": [{ id: "1", text: "one", clientMessageId: "c1" }] };
     const { state: next, removed } = removeQueuedInputAt(state, "repo:s1", 9);
     expect(removed).toBeNull();
     expect(next).toBe(state);
@@ -65,22 +66,22 @@ describe("queued input", () => {
   it("removes a queued item by id (steer_injected confirmation)", () => {
     const state = {
       "repo:s1": [
-        { id: "1", text: "one" },
-        { id: "2", text: "two" },
+        { id: "1", text: "one", clientMessageId: "c1" },
+        { id: "2", text: "two", clientMessageId: "c2" },
       ],
     };
     const next = removeQueuedInputById(state, "repo:s1", "1");
-    expect(next["repo:s1"]).toEqual([{ id: "2", text: "two" }]);
+    expect(next["repo:s1"]).toEqual([{ id: "2", text: "two", clientMessageId: "c2" }]);
   });
 
   it("removeById is a no-op when the id is absent (already deleted)", () => {
-    const state = { "repo:s1": [{ id: "2", text: "two" }] };
+    const state = { "repo:s1": [{ id: "2", text: "two", clientMessageId: "c2" }] };
     const next = removeQueuedInputById(state, "repo:s1", "1");
     expect(next).toBe(state);
   });
 
   it("removeById clears the bucket when it empties", () => {
-    const state = { "repo:s1": [{ id: "1", text: "one" }] };
+    const state = { "repo:s1": [{ id: "1", text: "one", clientMessageId: "c1" }] };
     const next = removeQueuedInputById(state, "repo:s1", "1");
     expect(next["repo:s1"]).toBeUndefined();
   });
@@ -88,42 +89,70 @@ describe("queued input", () => {
   it("promotes a queued item to the front", () => {
     const state = {
       "repo:s1": [
-        { id: "1", text: "one" },
-        { id: "2", text: "two" },
-        { id: "3", text: "three" },
+        { id: "1", text: "one", clientMessageId: "c1" },
+        { id: "2", text: "two", clientMessageId: "c2" },
+        { id: "3", text: "three", clientMessageId: "c3" },
       ],
     };
     const next = promoteQueuedInputAt(state, "repo:s1", 2);
     expect(next["repo:s1"]).toEqual([
-      { id: "3", text: "three" },
-      { id: "1", text: "one" },
-      { id: "2", text: "two" },
+      { id: "3", text: "three", clientMessageId: "c3" },
+      { id: "1", text: "one", clientMessageId: "c1" },
+      { id: "2", text: "two", clientMessageId: "c2" },
     ]);
   });
 
   it("drains the whole queue as one merged message + ids, and clears the slot", () => {
     const state = {
       "repo:s1": [
-        { id: "1", text: "one" },
-        { id: "2", text: "two" },
-        { id: "3", text: "three" },
+        { id: "1", text: "one", clientMessageId: "c1" },
+        { id: "2", text: "two", clientMessageId: "c2" },
+        { id: "3", text: "three", clientMessageId: "c3" },
       ],
-      "repo:s2": [{ id: "k", text: "keep" }],
+      "repo:s2": [{ id: "k", text: "keep", clientMessageId: "ck" }],
     };
     const drained = drainQueuedInput(state, "repo:s1");
 
     expect(drained.text).toBe("one\n\ntwo\n\nthree");
     expect(drained.ids).toEqual(["1", "2", "3"]);
     expect(drained.state["repo:s1"]).toBeUndefined();
-    expect(drained.state["repo:s2"]).toEqual([{ id: "k", text: "keep" }]);
+    expect(drained.state["repo:s2"]).toEqual([{ id: "k", text: "keep", clientMessageId: "ck" }]);
     expect(state["repo:s1"]).toHaveLength(3);
   });
 
   it("drain on an empty bucket returns null without touching state", () => {
-    const state = { "repo:s1": [{ id: "x", text: "x" }] };
+    const state = { "repo:s1": [{ id: "x", text: "x", clientMessageId: "cx" }] };
     const drained = drainQueuedInput(state, "repo:empty");
     expect(drained.text).toBeNull();
     expect(drained.ids).toEqual([]);
     expect(drained.state).toBe(state);
+  });
+
+  it("runs queued async tasks serially", async () => {
+    const queue = { tail: Promise.resolve() };
+    const order: string[] = [];
+    let markStarted: () => void = () => {};
+    const started = new Promise<void>((resolve) => {
+      markStarted = resolve;
+    });
+    let releaseFirst: () => void = () => {};
+    const first = enqueueSerialTask(queue, async () => {
+      order.push("first:start");
+      markStarted();
+      await new Promise<void>((resolve) => {
+        releaseFirst = resolve;
+      });
+      order.push("first:end");
+    });
+    const second = enqueueSerialTask(queue, () => {
+      order.push("second");
+    });
+
+    await started;
+    expect(order).toEqual(["first:start"]);
+    releaseFirst();
+    await first;
+    await second;
+    expect(order).toEqual(["first:start", "first:end", "second"]);
   });
 });

@@ -9,13 +9,19 @@
 export interface SteerItem {
   id: string;
   text: string;
+  clientMessageId?: string;
 }
 
 /** Append a steer entry. Blank text is dropped (returns the list unchanged). */
-export function enqueueSteerItem(list: SteerItem[], id: string, text: string): SteerItem[] {
+export function enqueueSteerItem(
+  list: SteerItem[],
+  id: string,
+  text: string,
+  clientMessageId?: string,
+): SteerItem[] {
   const t = text?.trim();
   if (!id || !t) return list;
-  return [...list, { id, text: t }];
+  return [...list, { id, text: t, ...(clientMessageId ? { clientMessageId } : {}) }];
 }
 
 /**

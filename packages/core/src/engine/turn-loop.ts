@@ -120,7 +120,7 @@ export interface TurnLoopDeps {
    * Returns [] when nothing is queued. Wired by Engine; absent in standalone
    * tests (turn loop tolerates undefined).
    */
-  consumeSteer?: () => SteerItem[];
+  consumeSteer?: (source?: "normal_step" | "finalize_backfill") => SteerItem[];
   /**
    * Clear this session's PERSISTED goal (state.activeGoal) and drop the
    * in-flight goal-stop hook, so a user-initiated cancel_goal both stops the
@@ -463,13 +463,7 @@ export class TurnLoop {
       // they join THIS step's request — no abort, no lost in-flight work. Same
       // loop-top user-push pattern as turnStartInjection / turn-limit warnings
       // below. Push to transcript too so they persist + survive resume.
-      const steered = this.deps.consumeSteer?.() ?? [];
-      for (const { id, text } of steered) {
-        if (!text) continue;
-        messages.push({ role: "user", content: text });
-        this.deps.transcript.appendMessage("user", text, { steerId: id });
-        this.config.onStream?.({ type: "steer_injected", text, id });
-      }
+      this.consumeQueuedSteer(messages, "normal_step");
 
       const state = initialTurnState(this.turnCount);
 
@@ -756,6 +750,9 @@ export class TurnLoop {
           hasToolUse: false,
         });
         messages.push({ role: "assistant", content: finalText });
+        if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+          continue;
+        }
 
         // on_stop seam: the model wants to stop. Give handlers (Goal mode)
         // a chance to BLOCK termination and keep the agent working. A
@@ -839,6 +836,9 @@ export class TurnLoop {
           });
         }
         this.stopBlockCount = 0;
+        if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+          continue;
+        }
         return { text: finalText, reason: "completed", messages };
       }
 
@@ -962,6 +962,9 @@ export class TurnLoop {
         tlog.info("turn.goal_self_reported_complete", { cat: "goal" });
         this.stopBlockCount = 0;
         this.deps.clearPersistedGoal?.();
+        if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+          continue;
+        }
         return { text: finalText, reason: "completed", messages };
       }
 
@@ -977,6 +980,9 @@ export class TurnLoop {
         tlog.info("turn.goal_user_cancelled", { cat: "goal" });
         this.stopBlockCount = 0;
         this.deps.clearPersistedGoal?.();
+        if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+          continue;
+        }
         return { text: finalText, reason: "completed", messages };
       }
 
@@ -998,6 +1004,9 @@ export class TurnLoop {
           message: { role: "assistant", content: finalText },
         });
         messages.push({ role: "assistant", content: finalText });
+        if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+          continue;
+        }
         return { text: finalText, reason: "completed", messages };
       }
       if (budgetDecision === "nudge") {
@@ -1081,6 +1090,7 @@ export class TurnLoop {
       turnCount: this.turnCount,
     });
 
+    this.consumeQueuedSteer(messages, "finalize_backfill");
     messages = this.deps.contextManager.manage(messages);
     messages.push({
       role: "user",
@@ -1197,6 +1207,22 @@ export class TurnLoop {
 
   get currentTurn(): number {
     return this.turnCount;
+  }
+
+  private consumeQueuedSteer(
+    messages: Message[],
+    source: "normal_step" | "finalize_backfill",
+  ): boolean {
+    const steered = this.deps.consumeSteer?.(source) ?? [];
+    let consumed = false;
+    for (const { id, text, clientMessageId } of steered) {
+      if (!text) continue;
+      consumed = true;
+      messages.push({ role: "user", content: text });
+      this.deps.transcript.appendMessage("user", text, { steerId: id, clientMessageId });
+      this.config.onStream?.({ type: "steer_injected", text, id });
+    }
+    return consumed;
   }
 
   /**

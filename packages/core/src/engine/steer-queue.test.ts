@@ -37,10 +37,10 @@ describe("steer-injection wiring contract", () => {
 describe("steer-queue helpers (id-keyed, revocable)", () => {
   test("enqueue appends with id + trimmed text", () => {
     let q: SteerItem[] = [];
-    q = enqueueSteerItem(q, "a", "  hi  ");
+    q = enqueueSteerItem(q, "a", "  hi  ", "client-a");
     q = enqueueSteerItem(q, "b", "there");
     expect(q).toEqual([
-      { id: "a", text: "hi" },
+      { id: "a", text: "hi", clientMessageId: "client-a" },
       { id: "b", text: "there" },
     ]);
   });

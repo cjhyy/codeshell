@@ -231,7 +231,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   /** Forward a renderer-side log line into ~/.code-shell/logs/desktop-*.log. */
   log: (msg: string, data?: Record<string, unknown>) =>
     ipcRenderer.send("desktop:log", { msg, data }),
-  run: (task: string, opts?: { cwd?: string; sessionId?: string; permissionMode?: string; planMode?: boolean } & Record<string, unknown>) =>
+  run: (task: string, opts?: { cwd?: string; sessionId?: string; permissionMode?: string; planMode?: boolean; clientMessageId?: string } & Record<string, unknown>) =>
     // No timeout: a run resolves only when the whole turn completes (can be
     // minutes). The Stop button (agent/cancel) is the abort path, not a clock.
     rpc("agent/run", { task, ...(opts ?? {}) }, 0),
@@ -247,8 +247,8 @@ contextBridge.exposeInMainWorld("codeshell", {
    * guidance mid-run). No-op-ish if the session has no active run (message waits
    * for its next run).
    */
-  steer: (sessionId: string, text: string, id?: string) =>
-    rpc("agent/steer", { sessionId, text, id }),
+  steer: (sessionId: string, text: string, id?: string, clientMessageId?: string) =>
+    rpc("agent/steer", { sessionId, text, id, clientMessageId }),
   /**
    * Revoke a still-pending steer entry by id (撤回). Returns { removed } —
    * false means the turn loop already consumed it (can't take it back; it will

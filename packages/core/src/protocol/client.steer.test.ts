@@ -19,7 +19,7 @@ describe("AgentClient.steer / unsteer", () => {
       if (!isRequest(m)) return;
       seen.push(m);
       if (m.method === Methods.Steer) {
-        serverSide.send(createResponse(m.id, { ok: true }));
+        serverSide.send(createResponse(m.id, { ok: true, accepted: true, id: "draft-1" }));
       } else if (m.method === Methods.Unsteer) {
         const id = (m.params as { id?: string }).id;
         serverSide.send(createResponse(m.id, { ok: true, removed: id === "live" }));
@@ -31,10 +31,16 @@ describe("AgentClient.steer / unsteer", () => {
 
   it("steer() sends agent/steer with sessionId+text+id", async () => {
     const { client, seen } = setup();
-    await client.steer("s1", "hello", "draft-1");
+    const result = await client.steer("s1", "hello", "draft-1", "client-1");
     expect(seen).toHaveLength(1);
     expect(seen[0]!.method).toBe(Methods.Steer);
-    expect(seen[0]!.params).toEqual({ sessionId: "s1", text: "hello", id: "draft-1" });
+    expect(seen[0]!.params).toEqual({
+      sessionId: "s1",
+      text: "hello",
+      id: "draft-1",
+      clientMessageId: "client-1",
+    });
+    expect(result).toEqual({ accepted: true, id: "draft-1" });
   });
 
   it("unsteer() returns true when the entry was still pending (removed)", async () => {

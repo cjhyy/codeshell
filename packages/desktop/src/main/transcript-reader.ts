@@ -133,6 +133,7 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
             kind: "user",
             text: textOf(d.content),
             ...(d.steerId ? { steerId: String(d.steerId) } : {}),
+            ...(d.clientMessageId ? { clientMessageId: String(d.clientMessageId) } : {}),
             timestamp: ts,
           });
         } else if (role === "assistant") {

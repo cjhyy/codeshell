@@ -76,6 +76,8 @@ export const ErrorCodes = {
 export interface RunParams {
   sessionId: string;          // required, client-minted
   task: string;
+  /** Stable id for the user's submit intent; duplicate ids are idempotent. */
+  clientMessageId?: string;
   /**
    * Working directory for this run. When omitted, the Engine uses its
    * configured cwd.
@@ -164,6 +166,8 @@ export interface SteerParams {
   /** Stable host-side id for this queued draft. Rides through to the
    *  steer_injected event and is the handle Unsteer uses to revoke it. */
   id?: string;
+  /** Stable submit-intent id, distinct from the queued steer id. */
+  clientMessageId?: string;
 }
 
 /** Revoke a still-pending steer entry by id (before the loop consumes it). */

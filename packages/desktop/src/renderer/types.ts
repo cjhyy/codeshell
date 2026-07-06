@@ -37,6 +37,8 @@ export interface UserMessage {
   injected?: boolean;
   /** Stable queued-steer id for optimistic step-in bubbles. */
   steerId?: string;
+  /** Stable submit-intent id used to merge duplicate local/server echoes. */
+  clientMessageId?: string;
   /** True until the engine echoes steer_injected for this steerId. */
   pending?: boolean;
 }
@@ -1120,12 +1122,43 @@ export function appendUserMessage(
   injected?: boolean,
   steerId?: string,
   pending?: boolean,
+  clientMessageId?: string,
 ): MessagesReducerState {
+  if (clientMessageId) {
+    let replaced = false;
+    const messages = state.messages.map((m) => {
+      if (m.kind === "user" && m.clientMessageId === clientMessageId) {
+        replaced = true;
+        return {
+          ...m,
+          text,
+          createdAt: createdAt ?? m.createdAt,
+          isGoal: isGoal ?? m.isGoal,
+          injected: injected ?? m.injected,
+          steerId: steerId ?? m.steerId,
+          pending: pending ?? m.pending,
+          clientMessageId,
+        };
+      }
+      return m;
+    });
+    if (replaced) return { ...state, messages };
+  }
   return {
     ...state,
     messages: [
       ...state.messages,
-      { kind: "user", id: freshId("user"), text, createdAt, isGoal, injected, steerId, pending },
+      {
+        kind: "user",
+        id: freshId("user"),
+        text,
+        createdAt,
+        isGoal,
+        injected,
+        steerId,
+        pending,
+        clientMessageId,
+      },
     ],
   };
 }

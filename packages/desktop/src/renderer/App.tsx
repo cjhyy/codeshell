@@ -98,6 +98,8 @@ import {
   drainQueuedInput,
   clearQueuedInput,
   removeQueuedInputById,
+  enqueueSerialTask,
+  type SerialTaskQueue,
   type QueuedInputState,
 } from "./queuedInput";
 import { loadView, saveView, type ViewState, type ViewMode } from "./view";
@@ -384,6 +386,7 @@ function App() {
   // Monotonic fallback counter for queued-draft ids when crypto.randomUUID is
   // unavailable (older webview). crypto path is the norm.
   const queuedSeqRef = useRef<number>(0);
+  const downgradeRunQueueRef = useRef<SerialTaskQueue>({ tail: Promise.resolve() });
   /**
    * Per-bucket timestamp of when the current turn went busy, so a manual Stop
    * can show "你在 Ns 后停止了" (TODO 2.8). Set when busy flips true, read+cleared
@@ -1898,13 +1901,24 @@ function App() {
     // so listing it here does not re-register these long-lived IPC listeners.
   }, [toast]);
 
-  const send = (text: string): void => {
+  const send = (
+    text: string,
+    sendOpts: { bucket?: string; clientMessageId?: string } = {},
+  ): Promise<void> => {
     // createSession persists to localStorage synchronously, so reading
     // it back via touchSession() right after sees the new entry.
-    const wasDraft = activeSessionId === null;
-    const sid = activeSessionId ?? ensureActiveSession(activeRepoId);
-    const bucket = bucketKey(activeRepoId, sid);
-    const repoKey = repoKeyOf(activeRepoId);
+    const parsedBucket = sendOpts.bucket ? parsePanelBucket(sendOpts.bucket) : null;
+    const targetRepoId = parsedBucket ? parsedBucket.repoId : activeRepoId;
+    const targetSessionId = parsedBucket ? parsedBucket.sessionId : activeSessionId;
+    const wasDraft = targetSessionId === null;
+    const sid = targetSessionId ?? ensureActiveSession(targetRepoId);
+    const bucket = bucketKey(targetRepoId, sid);
+    const repoKey = repoKeyOf(targetRepoId);
+    const targetRepo = repos.find((r) => r.id === targetRepoId) ?? null;
+    const sendPermissionMode = permissionOverrides[bucket] ?? defaultPermissionMode;
+    const sendGoalEnabled = goalOverrides[bucket] ?? false;
+    const sendModelKey = modelOverrides[bucket] ?? defaultActiveModelKey;
+    const clientMessageId = sendOpts.clientMessageId ?? newQueuedId();
 
     // A draft has no sessionId, so its permission/goal overrides were keyed
     // under the SHARED per-repo "_none_" bucket (bucketKey collapses every
@@ -1913,8 +1927,8 @@ function App() {
     // FOLLOWS this session, then clear the shared draft slot so it doesn't
     // "粘连" onto the next 新对话 / other drafts in this repo (#11 per-session
     // permission stickiness).
-    if (wasDraft && bucket !== activeBucket) {
-      const draftBucket = activeBucket;
+    if (wasDraft && bucket !== (sendOpts.bucket ?? activeBucket)) {
+      const draftBucket = sendOpts.bucket ?? activeBucket;
       setPermissionOverrides((prev) => migrateBucketOverride(prev, draftBucket, bucket));
       setGoalOverrides((prev) => migrateBucketOverride(prev, draftBucket, bucket));
       setModelOverrides((prev) => migrateBucketOverride(prev, draftBucket, bucket));
@@ -1923,8 +1937,8 @@ function App() {
     // effect right now means a LATER change to the global default won't drag
     // this (now-existing) session onto a different model. Only seed if the
     // bucket has no explicit override yet — never clobber a deliberate switch.
-    if (activeModelKey && modelOverrides[bucket] === undefined) {
-      const pinned = activeModelKey;
+    if (sendModelKey && modelOverrides[bucket] === undefined) {
+      const pinned = sendModelKey;
       setModelOverrides((prev) =>
         prev[bucket] === undefined ? { ...prev, [bucket]: pinned } : prev,
       );
@@ -1937,16 +1951,23 @@ function App() {
     // sessionId so the engineToBucket route is populated synchronously.
     const summary =
       sessionIndices[repoKey]?.sessions.find((s) => s.id === sid)
-      ?? loadSessionIndex(activeRepoId).sessions.find((s) => s.id === sid);
+      ?? loadSessionIndex(targetRepoId).sessions.find((s) => s.id === sid);
     const engineSessionId = summary?.engineSessionId ?? sid;
 
     window.codeshell.log("send", {
       textLen: text.length,
-      repo: activeRepo?.name ?? null,
+      repo: targetRepo?.name ?? null,
       bucket,
       engineSessionId,
+      clientMessageId,
     });
-    dispatch({ type: "user_message", bucket, text, isGoal: goalEnabled && !!text.trim() });
+    dispatch({
+      type: "user_message",
+      bucket,
+      text,
+      isGoal: sendGoalEnabled && !!text.trim(),
+      clientMessageId,
+    });
     setBusyForKey(bucket, true);
     runningBucketRef.current = bucket;
     // Register the route NOW so concurrent sends can each find their own
@@ -1958,10 +1979,10 @@ function App() {
     // and persist engineSessionId so future sends in this UI session
     // pass the same value (and the engine resumes the right convo).
     setSessionIndices((prev) => {
-      const touched = touchSession(activeRepoId, sid, titleFromWire(text));
+      const touched = touchSession(targetRepoId, sid, titleFromWire(text));
       const next = summary?.engineSessionId
         ? touched
-        : bindEngineSession(activeRepoId, sid, engineSessionId);
+        : bindEngineSession(targetRepoId, sid, engineSessionId);
       return { ...prev, [repoKey]: next };
     });
 
@@ -1970,16 +1991,17 @@ function App() {
       sessionId?: string;
       permissionMode?: ReturnType<typeof toCorePermissionMode>;
       goal?: string;
-    } = { sessionId: engineSessionId };
-    if (permissionMode !== null) {
-      opts.permissionMode = toCorePermissionMode(permissionMode);
+      clientMessageId?: string;
+    } = { sessionId: engineSessionId, clientMessageId };
+    if (sendPermissionMode !== null) {
+      opts.permissionMode = toCorePermissionMode(sendPermissionMode);
     }
     // Pass cwd explicitly in BOTH cases: a real repo → its path; no-repo chat →
     // the no-repo sandbox. Never leave cwd undefined — the long-lived worker
     // would otherwise default to a stale project (see noRepoCwdRef). Falls back
     // to undefined only if the one-time fetch hasn't resolved yet, in which case
     // the core-side stdio worker still defaults to noRepoDir() (defense #2).
-    if (activeRepo) opts.cwd = activeRepo.path;
+    if (targetRepo) opts.cwd = targetRepo.path;
     else if (noRepoCwdRef.current) opts.cwd = noRepoCwdRef.current;
     // Goal mode: this send's prompt IS the goal — the engine runs
     // loop-until-done. Goal text == prompt text (reuses the composer input).
@@ -1989,9 +2011,9 @@ function App() {
     // toggle left on would make every follow-up REPLACE the goal with its own
     // text (one active goal per session), which is never what the user wants.
     // The active goal stays visible in the TopBar popover; clear it there.
-    if (goalEnabled && text.trim()) {
+    if (sendGoalEnabled && text.trim()) {
       opts.goal = text;
-      setGoalOverrides((prev) => ({ ...prev, [activeBucket]: false }));
+      setGoalOverrides((prev) => ({ ...prev, [bucket]: false }));
     }
 
     // Pin this session's engine to its per-bucket model before the turn. The
@@ -2011,9 +2033,8 @@ function App() {
     // deepseek-vision rejection bug, where a "switched to gpt-5" session still
     // ran on deepseek-v4-flash and refused the image. Always pin before the
     // turn so the engine matches what the UI claims.
-    const bucketModel =
-      modelOverrides[bucket] ?? modelOverrides[activeBucket] ?? activeModelKey;
-    void runAfterModelSwitch({
+    const bucketModel = modelOverrides[bucket] ?? sendModelKey;
+    return runAfterModelSwitch({
       sessionId: engineSessionId,
       model: bucketModel,
       text,
@@ -2087,12 +2108,43 @@ function App() {
       // point it renders as a user bubble. Send each id exactly once.
       const engineSessionId = resolveActiveEngineSessionId();
       if (!engineSessionId) return; // run starting up; re-fires once it resolves
+      const bucket = activeBucket;
       for (const item of queued) {
         if (injectedSteerIdsRef.current.has(item.id) || steeredIdsRef.current.has(item.id)) {
           continue;
         }
         steeredIdsRef.current.add(item.id);
-        void window.codeshell.steer(engineSessionId, item.text, item.id);
+        void window.codeshell
+          .steer(engineSessionId, item.text, item.id, item.clientMessageId)
+          .then((res) => {
+            const accepted = (res as { result?: { accepted?: boolean } })?.result?.accepted;
+            if (accepted !== false) return;
+            if (!steeredIdsRef.current.has(item.id)) return;
+            void enqueueSerialTask(downgradeRunQueueRef.current, async () => {
+              if (!steeredIdsRef.current.has(item.id)) return;
+              steeredIdsRef.current.delete(item.id);
+              injectedSteerIdsRef.current.delete(item.id);
+              setQueuedInputs((prev) => removeQueuedInputById(prev, bucket, item.id));
+              dispatch({ type: "remove_pending_steers", bucket, steerIds: [item.id] });
+              window.codeshell.log("steer.idle_downgrade.run_started", {
+                bucket,
+                engineSessionId,
+                steerId: item.id,
+                clientMessageId: item.clientMessageId,
+              });
+              await send(item.text, { bucket, clientMessageId: item.clientMessageId });
+            });
+          })
+          .catch((err) => {
+            steeredIdsRef.current.delete(item.id);
+            window.codeshell.log("steer.enqueue_failed", {
+              bucket,
+              engineSessionId,
+              steerId: item.id,
+              clientMessageId: item.clientMessageId,
+              error: String((err as Error)?.message ?? err),
+            });
+          });
       }
       return;
     }
@@ -2138,7 +2190,7 @@ function App() {
     injectedSteerIdsRef.current.delete(item.id);
     dispatch({ type: "remove_pending_steers", bucket: activeBucket, steerIds: [item.id] });
     setQueuedInputs(next);
-    if (item.text) send(item.text);
+    if (item.text) send(item.text, { bucket: activeBucket, clientMessageId: item.clientMessageId });
   }, [busy, activeBucket, activeSessionId, queuedInputs, relayingBuckets]);
 
   const newQueuedId = (): string =>
@@ -2148,10 +2200,19 @@ function App() {
 
   const queueInput = (text: string): void => {
     const id = newQueuedId();
+    const clientMessageId = newQueuedId();
     const trimmed = text.trim();
     if (!trimmed) return;
-    dispatch({ type: "user_message", bucket: activeBucket, text: trimmed, injected: true, steerId: id, pending: true });
-    setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, id, trimmed));
+    dispatch({
+      type: "user_message",
+      bucket: activeBucket,
+      text: trimmed,
+      injected: true,
+      steerId: id,
+      pending: true,
+      clientMessageId,
+    });
+    setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, id, trimmed, clientMessageId));
   };
 
   // Before a relay (打断重发) aborts + re-sends the queue as a fresh run, revoke

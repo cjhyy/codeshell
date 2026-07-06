@@ -22,6 +22,7 @@ export type TranscriptsAction =
       isGoal?: boolean;
       injected?: boolean;
       steerId?: string;
+      clientMessageId?: string;
       pending?: boolean;
     }
   | { type: "stream"; bucket: string; event: StreamEvent }
@@ -62,16 +63,23 @@ export function transcriptsReducer(
     // persists the steerId (plan A), so the snapshot replays the same bubble
     // with the same id → we keep the server copy and drop the local one
     // (no dup); only a steer the snapshot still LACKS is re-appended (no loss).
-    const localSteers = (current?.messages ?? []).flatMap((m) =>
-      m.kind === "user" && m.steerId ? [m] : [],
+    const localUserIntents = (current?.messages ?? []).flatMap((m) =>
+      m.kind === "user" && (m.steerId || m.clientMessageId) ? [m] : [],
     );
-    if (localSteers.length === 0) return { ...map, [action.bucket]: action.state };
-    const existing = new Set(
+    if (localUserIntents.length === 0) return { ...map, [action.bucket]: action.state };
+    const existingSteerIds = new Set(
+      action.state.messages.flatMap((m) => (m.kind === "user" && m.steerId ? [m.steerId] : [])),
+    );
+    const existingClientIds = new Set(
       action.state.messages.flatMap((m) =>
-        m.kind === "user" && m.steerId ? [m.steerId] : [],
+        m.kind === "user" && m.clientMessageId ? [m.clientMessageId] : [],
       ),
     );
-    const missing = localSteers.filter((m) => m.steerId && !existing.has(m.steerId));
+    const missing = localUserIntents.filter((m) => {
+      if (m.clientMessageId && existingClientIds.has(m.clientMessageId)) return false;
+      if (m.steerId && existingSteerIds.has(m.steerId)) return false;
+      return true;
+    });
     return {
       ...map,
       [action.bucket]: missing.length === 0
@@ -91,6 +99,7 @@ export function transcriptsReducer(
         action.injected,
         action.steerId,
         action.pending,
+        action.clientMessageId,
       );
       break;
     case "remove_pending_steers":

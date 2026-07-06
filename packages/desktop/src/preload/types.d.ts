@@ -17,7 +17,7 @@ import type {
 /** One step in replaying a persisted transcript into renderer state. */
 export type FoldItem =
   | { kind: "stream"; event: StreamEvent; timestamp?: number }
-  | { kind: "user"; text: string; steerId?: string; timestamp?: number }
+  | { kind: "user"; text: string; steerId?: string; clientMessageId?: string; timestamp?: number }
   // User interrupted this turn (Stop). Rebuilt from the core transcript's
   // `turn_stopped` event so resume restores the "你停止了本轮" marker; without
   // it the interrupted turn folds behind the process-card header on reload.
@@ -369,6 +369,8 @@ export interface CodeshellApi {
       permissionMode?: "plan" | "default" | "acceptEdits" | "auto" | "bypassPermissions";
       /** Model pool key to apply before this turn starts. */
       model?: string;
+      /** Stable submit-intent id used for transcript/UI idempotency. */
+      clientMessageId?: string;
       planMode?: boolean;
       /**
        * Goal mode: when set, the engine runs loop-until-done — on each
@@ -385,7 +387,7 @@ export interface CodeshellApi {
    *  step (不打断, for 引导). `id` is a stable handle echoed back on the
    *  steer_injected event and used to revoke via unsteer. Waits for the next
    *  run if none is active. */
-  steer(sessionId: string, text: string, id?: string): Promise<RpcResponse>;
+  steer(sessionId: string, text: string, id?: string, clientMessageId?: string): Promise<RpcResponse>;
   /** Revoke a still-pending steer entry by id (撤回). The response data carries
    *  `{ removed }` — false if the loop already consumed it. */
   unsteer(sessionId: string, id: string): Promise<RpcResponse>;

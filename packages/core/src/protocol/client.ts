@@ -206,8 +206,19 @@ export class AgentClient {
    * the desktop preload's steer(); without it the SDK can't reach the method
    * (request() is private) — the protocol was asymmetric after the steer merge.
    */
-  async steer(sessionId: string, text: string, id?: string): Promise<void> {
-    await this.request(Methods.Steer, { sessionId, text, id } as Record<string, unknown>);
+  async steer(
+    sessionId: string,
+    text: string,
+    id?: string,
+    clientMessageId?: string,
+  ): Promise<{ accepted: boolean; id?: string }> {
+    const res = (await this.request(Methods.Steer, {
+      sessionId,
+      text,
+      id,
+      clientMessageId,
+    } as Record<string, unknown>)) as { accepted?: boolean; id?: string } | undefined;
+    return { accepted: res?.accepted === true, id: res?.id };
   }
 
   /**

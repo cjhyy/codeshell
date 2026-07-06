@@ -21,6 +21,8 @@ export interface TurnOpts {
    *  completion notification) rather than the user's own input — persisted so
    *  the disk reader skips it as a user bubble on replay. See Engine.run. */
   injected?: boolean;
+  /** Stable id for this user-intent; forwarded to Engine.run for idempotency. */
+  clientMessageId?: string;
 }
 
 interface QueuedTurn {
@@ -214,6 +216,7 @@ export class ChatSession {
         onStream,
         goal: next.opts.goal,
         injected: next.opts.injected,
+        clientMessageId: next.opts.clientMessageId,
       });
       this.lastActivityAt = Date.now();
       next.resolve(result);

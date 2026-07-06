@@ -2,6 +2,8 @@ import { describe, expect, it } from "bun:test";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { INITIAL_STATE } from "./types";
 import { transcriptsReducer, type TranscriptsMap } from "./transcriptsReducer";
+import { foldTranscript } from "./automation/foldTranscript";
+import type { FoldItem } from "../preload/types";
 
 describe("transcriptsReducer pending steer bubbles", () => {
   it("removes optimistic pending steer bubbles by steer id", () => {
@@ -106,5 +108,112 @@ describe("transcriptsReducer pending steer bubbles", () => {
 
     const users = map.b.messages.filter((m) => m.kind === "user" && m.steerId === "q-1");
     expect(users).toHaveLength(1);
+  });
+
+  it("deduplicates local user messages by clientMessageId", () => {
+    let map: TranscriptsMap = {};
+    map = transcriptsReducer(map, {
+      type: "user_message",
+      bucket: "b",
+      text: "same intent",
+      clientMessageId: "client-1",
+    });
+    map = transcriptsReducer(map, {
+      type: "user_message",
+      bucket: "b",
+      text: "same intent",
+      clientMessageId: "client-1",
+    });
+
+    expect(map.b.messages.filter((m) => m.kind === "user")).toHaveLength(1);
+  });
+
+  it("does NOT duplicate a local message when hydrate already carries its clientMessageId", () => {
+    let map: TranscriptsMap = {};
+    map = transcriptsReducer(map, {
+      type: "user_message",
+      bucket: "b",
+      text: "confirmed",
+      clientMessageId: "client-1",
+    });
+
+    map = transcriptsReducer(map, {
+      type: "hydrate",
+      bucket: "b",
+      state: {
+        ...INITIAL_STATE,
+        messages: [
+          { kind: "user", id: "srv-1", text: "confirmed", clientMessageId: "client-1" },
+        ],
+      },
+    });
+
+    const users = map.b.messages.filter(
+      (m) => m.kind === "user" && m.clientMessageId === "client-1",
+    );
+    expect(users).toHaveLength(1);
+  });
+
+  it("downgrades an idle steer as a normal user message without carrying steerId", () => {
+    let map: TranscriptsMap = {};
+    map = transcriptsReducer(map, {
+      type: "user_message",
+      bucket: "b",
+      text: "queued while busy",
+      injected: true,
+      steerId: "steer-1",
+      pending: true,
+      clientMessageId: "client-1",
+    });
+    map = transcriptsReducer(map, {
+      type: "remove_pending_steers",
+      bucket: "b",
+      steerIds: ["steer-1"],
+    });
+    map = transcriptsReducer(map, {
+      type: "user_message",
+      bucket: "b",
+      text: "queued while busy",
+      clientMessageId: "client-1",
+    });
+
+    const users = map.b.messages.filter((m) => m.kind === "user");
+    expect(users).toHaveLength(1);
+    expect(users[0]).toMatchObject({ text: "queued while busy", clientMessageId: "client-1" });
+    expect(users[0]!.steerId).toBeUndefined();
+    expect(users[0]!.injected).toBeUndefined();
+  });
+
+  it("replays s-mr8uh4ru-style duplicate submits by clientMessageId, not text or steerId", () => {
+    const items: FoldItem[] = [
+      {
+        kind: "user",
+        text: "而且2个steer 都没有一起合并输入",
+        clientMessageId: "old-orphan-without-steer-id",
+      },
+      { kind: "user", text: "same submit", clientMessageId: "client-dup" },
+      { kind: "user", text: "same submit", clientMessageId: "client-dup" },
+      { kind: "user", text: "same submit", clientMessageId: "client-legit-repeat" },
+    ];
+
+    const state = foldTranscript(items);
+    const oldOrphan = state.messages.find(
+      (m) => m.kind === "user" && m.clientMessageId === "old-orphan-without-steer-id",
+    );
+    const duplicateSubmit = state.messages.filter(
+      (m) => m.kind === "user" && m.clientMessageId === "client-dup",
+    );
+    const repeatedText = state.messages.filter(
+      (m) => m.kind === "user" && m.text === "same submit",
+    );
+
+    expect(oldOrphan).toMatchObject({
+      text: "而且2个steer 都没有一起合并输入",
+      clientMessageId: "old-orphan-without-steer-id",
+    });
+    expect(oldOrphan!.steerId).toBeUndefined();
+    expect(oldOrphan!.injected).toBeUndefined();
+    expect(duplicateSubmit).toHaveLength(1);
+    expect(repeatedText).toHaveLength(2);
   });
 });

@@ -459,6 +459,8 @@ export class AgentServer {
             : undefined,
         onStream: (event: StreamEvent) =>
           this.notify(Methods.StreamEvent, { sessionId: sid, event }),
+        clientMessageId:
+          typeof params.clientMessageId === "string" ? params.clientMessageId : undefined,
       });
 
       const runResult: RunResult = {
@@ -559,6 +561,8 @@ export class AgentServer {
         sessionId: params.sessionId,
         signal: runController.signal,
         onStream: streamToClient,
+        clientMessageId:
+          typeof params.clientMessageId === "string" ? params.clientMessageId : undefined,
         goal:
           typeof params.goal === "string" ||
           (params.goal != null && typeof params.goal === "object")
@@ -1319,7 +1323,7 @@ export class AgentServer {
           return;
         }
         try {
-          const result = compactEngine.forceCompact(compactSessionId);
+          const result = await compactEngine.forceCompact(compactSessionId);
           this.transport.send(
             createResponse(req.id, {
               type: "compact",
@@ -1718,8 +1722,13 @@ export class AgentServer {
       return;
     }
     try {
-      engine.enqueueSteer(params.sessionId, params.text, params.id);
-      this.transport.send(createResponse(req.id, { ok: true }));
+      const result = engine.enqueueSteer(
+        params.sessionId,
+        params.text,
+        params.id,
+        params.clientMessageId,
+      );
+      this.transport.send(createResponse(req.id, { ok: true, ...result }));
     } catch (err) {
       this.transport.send(
         createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),

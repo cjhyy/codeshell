@@ -7,6 +7,7 @@ import { appendFileSync, readFileSync, existsSync, mkdirSync, writeFileSync } fr
 import { dirname } from "node:path";
 import { nanoid } from "nanoid";
 import type { TranscriptEvent, TranscriptEventType, Message, ContentBlock } from "../types.js";
+import { logger } from "../logging/logger.js";
 
 export class Transcript {
   private events: TranscriptEvent[] = [];
@@ -49,14 +50,30 @@ export class Transcript {
   appendMessage(
     role: string,
     content: string | ContentBlock[],
-    opts?: { injected?: boolean; steerId?: string },
+    opts?: { injected?: boolean; steerId?: string; clientMessageId?: string },
   ): TranscriptEvent {
+    if (opts?.clientMessageId) {
+      const existing = this.findMessageByClientId(opts.clientMessageId);
+      if (existing) {
+        logger.info("steer.submit.duplicate_ignored", {
+          clientMessageId: opts.clientMessageId,
+          role,
+          transcript: this.filePath,
+        });
+        return existing;
+      }
+    }
     return this.append("message", {
       role,
       content,
       ...(opts?.injected ? { injected: true } : {}),
       ...(opts?.steerId ? { steerId: opts.steerId } : {}),
+      ...(opts?.clientMessageId ? { clientMessageId: opts.clientMessageId } : {}),
     });
+  }
+
+  hasClientMessageId(clientMessageId: string): boolean {
+    return this.findMessageByClientId(clientMessageId) !== undefined;
   }
 
   appendToolUse(toolName: string, toolCallId: string, args: Record<string, unknown>): TranscriptEvent {
@@ -179,6 +196,14 @@ export class Transcript {
 
   get eventCount(): number {
     return this.events.length;
+  }
+
+  private findMessageByClientId(clientMessageId: string): TranscriptEvent | undefined {
+    return this.events.find(
+      (event) =>
+        event.type === "message" &&
+        (event.data as { clientMessageId?: unknown }).clientMessageId === clientMessageId,
+    );
   }
 
   private flush(event: TranscriptEvent): void {

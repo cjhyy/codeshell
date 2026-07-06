@@ -23,8 +23,26 @@ export function foldTranscript(items: FoldItem[]): MessagesReducerState {
       // it as injected + carry the steerId so hydrate can dedup the optimistic
       // bubble against this disk snapshot (session s-mr8s3w5i loss/dup bug).
       state = item.steerId
-        ? appendUserMessage(state, item.text, item.timestamp, undefined, true, item.steerId)
-        : appendUserMessage(state, item.text, item.timestamp);
+        ? appendUserMessage(
+            state,
+            item.text,
+            item.timestamp,
+            undefined,
+            true,
+            item.steerId,
+            undefined,
+            item.clientMessageId,
+          )
+        : appendUserMessage(
+            state,
+            item.text,
+            item.timestamp,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            item.clientMessageId,
+          );
     } else if (item.kind === "turn_stopped") {
       // Rebuild the user-interrupt marker so the stopped turn renders flat
       // (turnWasStopped finds this turn_end → no fold header). No elapsed on
