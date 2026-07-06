@@ -10,7 +10,20 @@ import type { SessionManager } from "@cjhyy/code-shell-core";
 export interface ParsedRpc {
   id?: number | string;
   method?: string;
-  params?: { cwd?: string; sessionId?: string };
+  params?: { cwd?: string; sessionId?: string; type?: string };
+}
+
+export function compactQuerySessionId(parsed: ParsedRpc): string | null {
+  const sid = parsed.params?.sessionId;
+  if (
+    parsed.method === "agent/query" &&
+    parsed.params?.type === "compact" &&
+    typeof sid === "string" &&
+    sid.length > 0
+  ) {
+    return sid;
+  }
+  return null;
 }
 
 /**

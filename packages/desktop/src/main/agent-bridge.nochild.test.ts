@@ -13,7 +13,10 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager } from "@cjhyy/code-shell-core";
-import { buildNoChildFallbackReply } from "./agent-bridge-fallback.js";
+import {
+  buildNoChildFallbackReply,
+  compactQuerySessionId,
+} from "./agent-bridge-fallback.js";
 
 describe("buildNoChildFallbackReply — no live worker", () => {
   let dir: string;
@@ -103,5 +106,16 @@ describe("buildNoChildFallbackReply — no live worker", () => {
     expect(
       buildNoChildFallbackReply({ id: 3, method: "agent/goalClear", params: {} }, sm()),
     ).toBeNull();
+  });
+
+  test("compact query is recognized as worker-spawning, not no-child fallback", () => {
+    const parsed = {
+      id: 4,
+      method: "agent/query",
+      params: { type: "compact", sessionId: "s-compact" },
+    };
+
+    expect(compactQuerySessionId(parsed)).toBe("s-compact");
+    expect(buildNoChildFallbackReply(parsed, sm())).toBeNull();
   });
 });

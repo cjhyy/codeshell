@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { CornerDownRight, Paperclip, Mic, Loader2, ArrowUp, Square, Monitor, Trash2, X } from "lucide-react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Archive, CornerDownRight, Paperclip, Mic, Loader2, ArrowUp, Square, Monitor, Trash2, X } from "lucide-react";
 import { MessageStream } from "./MessageStream";
 import type { Message } from "./types";
 import { loadHistory, pushHistory } from "./promptHistory";
@@ -140,6 +140,21 @@ const MAX_TEXTAREA_PX = 200;
 // session switch) can report scrollHeight ~0; flooring here stops the box from
 // collapsing to a sliver. Matches the textarea's CSS min-h backstop.
 const MIN_TEXTAREA_PX = 36;
+
+type SlashCommandItem = {
+  name: "/compact";
+  title: string;
+  description: string;
+};
+
+function detectSlashCommand(value: string, caret: number): { query: string } | null {
+  if (!value.startsWith("/")) return null;
+  const beforeCaret = value.slice(0, caret);
+  if (!beforeCaret.startsWith("/") || /\s/.test(beforeCaret)) return null;
+  const firstWhitespace = value.search(/\s/);
+  if (firstWhitespace !== -1 && caret > firstWhitespace) return null;
+  return { query: beforeCaret.slice(1).toLowerCase() };
+}
 
 export function ChatView({
   messages,
@@ -344,9 +359,31 @@ export function ChatView({
   const [mention, setMention] = useState<{ start: number; query: string } | null>(null);
   const [mentionItems, setMentionItems] = useState<MentionItem[]>([]);
   const [mentionSelected, setMentionSelected] = useState(0);
+  const [slash, setSlash] = useState<{ query: string } | null>(null);
+  const [slashSelected, setSlashSelected] = useState(0);
 
   const activeModel = modelOptions.find((o) => o.key === activeModelKey) ?? null;
   const activeSupportsVision = activeModel?.supportsVision === true;
+  const slashCommands = useMemo<SlashCommandItem[]>(
+    () => [
+      {
+        name: "/compact",
+        title: t("chat.slash.compactTitle"),
+        description: t("chat.slash.compactDescription"),
+      },
+    ],
+    [t],
+  );
+  const slashItems = useMemo(() => {
+    if (!slash) return [];
+    const query = slash.query.trim().toLowerCase();
+    if (!query) return slashCommands;
+    return slashCommands.filter(
+      (cmd) =>
+        cmd.name.slice(1).toLowerCase().includes(query) ||
+        cmd.title.toLowerCase().includes(query),
+    );
+  }, [slash, slashCommands]);
 
   // Seed the composer from outside (e.g. the "新建自动化" entry) without
   // sending. Keyed on the nonce so re-clicking re-applies the same text.
@@ -422,6 +459,37 @@ export function ChatView({
     setMentionSelected(0);
   };
 
+  const closeSlash = (): void => {
+    setSlash(null);
+    setSlashSelected(0);
+  };
+
+  const updateInlinePickers = (value: string, caret: number): void => {
+    const nextMention = detectMention(value, caret);
+    if (nextMention) {
+      if (!mention || mention.query !== nextMention.query) setMentionSelected(0);
+      setMention(nextMention);
+      if (slash) closeSlash();
+      return;
+    }
+
+    if (mention) closeMention();
+
+    const nextSlash = detectSlashCommand(value, caret);
+    if (nextSlash) {
+      if (!slash || slash.query !== nextSlash.query) setSlashSelected(0);
+      setSlash(nextSlash);
+    } else if (slash) {
+      closeSlash();
+    }
+  };
+
+  useEffect(() => {
+    setSlashSelected((s) =>
+      slashItems.length === 0 ? 0 : Math.min(s, slashItems.length - 1),
+    );
+  }, [slashItems]);
+
   // Insert an `@path` reference into the draft (file-panel drag of a non-image
   // file — TODO 2.1). Appends at the caret, or at the end with a leading space
   // if the draft doesn't already end with whitespace.
@@ -467,17 +535,33 @@ export function ChatView({
     });
   };
 
+  const completeSlashCommand = (item: SlashCommandItem): void => {
+    setDraft(item.name);
+    closeSlash();
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+      textareaRef.current?.setSelectionRange(item.name.length, item.name.length);
+    });
+  };
+
+  const executeSlashCommand = (item: SlashCommandItem): void => {
+    if (item.name === "/compact") {
+      onCompactCommand?.();
+      setDraft("");
+      setAttachmentError(null);
+      setHistoryCursor(-1);
+      liveDraftStash.current = "";
+      closeSlash();
+    }
+  };
+
   const submit = (): void => {
     const text = draft.trim();
     const hasImages = attachments.length > 0;
     const hasAnchors = anchors.length > 0;
     if (!text && !hasImages && !hasAnchors) return;
     if (text === "/compact" && !hasImages && !hasAnchors) {
-      onCompactCommand?.();
-      setDraft("");
-      setAttachmentError(null);
-      setHistoryCursor(-1);
-      liveDraftStash.current = "";
+      executeSlashCommand(slashCommands[0]);
       return;
     }
     // Block send when there are images but the active model can't accept
@@ -536,6 +620,40 @@ export function ChatView({
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
     if (isComposing || e.nativeEvent.isComposing) return;
+
+    if (slash) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeSlash();
+        return;
+      }
+      if (slashItems.length > 0) {
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setSlashSelected((s) => (s + 1) % slashItems.length);
+          return;
+        }
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setSlashSelected((s) => (s - 1 + slashItems.length) % slashItems.length);
+          return;
+        }
+        if (e.key === "Tab") {
+          e.preventDefault();
+          const pick = slashItems[Math.min(slashSelected, slashItems.length - 1)];
+          if (pick) completeSlashCommand(pick);
+          return;
+        }
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const pick = slashItems[Math.min(slashSelected, slashItems.length - 1)];
+          if (!pick) return;
+          if (draft.trim() === pick.name) executeSlashCommand(pick);
+          else completeSlashCommand(pick);
+          return;
+        }
+      }
+    }
 
     // While the @-mention popover is open, intercept navigation keys.
     // Backspace falls through so the user can edit the query naturally;
@@ -992,6 +1110,49 @@ export function ChatView({
                 }}
               />
             )}
+            {slash && (
+              <div
+                className="cs-popup-surface absolute bottom-full left-0 z-50 mb-2 max-h-[min(18rem,calc(100vh-120px))] w-80 max-w-[min(20rem,calc(100vw-24px))] overflow-y-auto rounded-md p-1"
+                role="listbox"
+                aria-label={t("chat.slash.ariaLabel")}
+              >
+                <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t("chat.slash.commands")}
+                </div>
+                {slashItems.length > 0 ? (
+                  <ul className="space-y-0.5">
+                    {slashItems.map((item, idx) => {
+                      const active = idx === slashSelected;
+                      return (
+                        <li
+                          key={item.name}
+                          className={cn(
+                            "grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm",
+                            active && "bg-accent text-accent-foreground",
+                          )}
+                          role="option"
+                          aria-selected={active}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            executeSlashCommand(item);
+                          }}
+                        >
+                          <Archive size={14} className="mt-0.5 text-muted-foreground" />
+                          <span className="min-w-0 truncate font-medium">{item.name}</span>
+                          <span className="col-start-2 min-w-0 truncate text-xs text-muted-foreground">
+                            {item.description}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <div className="px-2 py-3 text-sm text-muted-foreground">
+                    {t("chat.slash.noMatch")}
+                  </div>
+                )}
+              </div>
+            )}
             <textarea
               ref={textareaRef}
               value={draft}
@@ -1000,15 +1161,7 @@ export function ChatView({
                 setDraft(value);
                 if (historyCursor !== -1) setHistoryCursor(-1);
                 const caret = e.target.selectionStart ?? value.length;
-                const next = detectMention(value, caret);
-                if (next) {
-                  // Reset cursor to top whenever the query changes so the
-                  // first match is always primed.
-                  if (!mention || mention.query !== next.query) setMentionSelected(0);
-                  setMention(next);
-                } else if (mention) {
-                  closeMention();
-                }
+                updateInlinePickers(value, caret);
               }}
               onKeyDown={handleKeyDown}
               onKeyUp={(e) => {
@@ -1022,21 +1175,20 @@ export function ChatView({
                 ) {
                   const ta = e.currentTarget;
                   const caret = ta.selectionStart ?? ta.value.length;
-                  const next = detectMention(ta.value, caret);
-                  if (next) setMention(next);
-                  else if (mention) closeMention();
+                  updateInlinePickers(ta.value, caret);
                 }
               }}
               onClick={(e) => {
                 const ta = e.currentTarget;
                 const caret = ta.selectionStart ?? ta.value.length;
-                const next = detectMention(ta.value, caret);
-                if (next) setMention(next);
-                else if (mention) closeMention();
+                updateInlinePickers(ta.value, caret);
               }}
               onBlur={() => {
                 // Delay so a mousedown pick on the popover still resolves.
-                setTimeout(() => closeMention(), 120);
+                setTimeout(() => {
+                  closeMention();
+                  closeSlash();
+                }, 120);
               }}
               onCompositionStart={() => setIsComposing(true)}
               onCompositionEnd={() => setIsComposing(false)}

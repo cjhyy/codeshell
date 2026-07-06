@@ -2698,21 +2698,38 @@ export class Engine {
   }
 
   /**
-   * Force context compaction on the current session.
+   * Force context compaction on a session.
    * Returns token stats before/after.
    */
-  forceCompact(): { before: number; after: number; strategy: string } {
-    const sessionId = this.lastSessionId;
-    if (!this.lastContextManager || !sessionId) {
+  forceCompact(sessionId?: string): { before: number; after: number; strategy: string } {
+    const effectiveSessionId = sessionId ?? this.lastSessionId;
+    if (!effectiveSessionId) {
       return { before: 0, after: 0, strategy: "none (no active session)" };
     }
+
+    const session = this.sessionManager.resume(effectiveSessionId);
     const sourceMessages =
-      this.compactedMessagesBySession.get(sessionId) ??
-      this.sessionManager.resume(sessionId).transcript.toMessages();
+      this.compactedMessagesBySession.get(effectiveSessionId) ??
+      session.transcript.toMessages();
     const before = estimateTokens(sourceMessages);
-    const compacted = this.lastContextManager.manage(sourceMessages);
+
+    let contextManager = this.lastContextManager;
+    if (!contextManager || this.lastSessionId !== effectiveSessionId) {
+      contextManager = new ContextManager({
+        maxTokens: this.resolveMaxContextTokens(),
+        ...Object.fromEntries(
+          Object.entries(this.resolveContextRatios()).filter(([, v]) => v !== undefined),
+        ),
+      });
+      contextManager.setTranscriptPath(session.transcript.getFilePath());
+      contextManager.initReplacementStateFromMessages(sourceMessages);
+      this.lastContextManager = contextManager;
+    }
+
+    const compacted = contextManager.manage(sourceMessages);
     const after = estimateTokens(compacted);
-    this.compactedMessagesBySession.set(sessionId, compacted);
+    this.compactedMessagesBySession.set(effectiveSessionId, compacted);
+    this.lastSessionId = effectiveSessionId;
     this.lastMessages = compacted;
     return {
       before,

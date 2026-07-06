@@ -41,6 +41,13 @@ export const chat = {
         unchanged: "上下文已足够紧凑,当前约 {tokens} tokens。",
         failed: "压缩失败:{error}",
       },
+      slash: {
+        ariaLabel: "命令列表",
+        commands: "命令",
+        noMatch: "没有匹配的命令",
+        compactTitle: "压缩上下文",
+        compactDescription: "立即整理当前会话上下文",
+      },
       queue: {
         heading: "后续变更",
         guideAllAria: "打断当前轮，并把全部后续变更合并发送",
@@ -215,6 +222,13 @@ export const chat = {
         done: "Context compacted: {before} → {after}, saved {saved} tokens.",
         unchanged: "Context is already compact enough, currently about {tokens} tokens.",
         failed: "Compaction failed: {error}",
+      },
+      slash: {
+        ariaLabel: "Command list",
+        commands: "Commands",
+        noMatch: "No matching commands",
+        compactTitle: "Compact context",
+        compactDescription: "Compact this conversation now",
       },
       queue: {
         heading: "Follow-up changes",

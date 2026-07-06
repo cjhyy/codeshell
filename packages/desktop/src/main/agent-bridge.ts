@@ -37,7 +37,11 @@ import { CredentialStore, SessionManager } from "@cjhyy/code-shell-core";
 import { restoreCookiesToBrowser, type ElectronCookieLike } from "./credentials-service.js";
 import { activeGuest, listGuests, focusGuest } from "./browser-driver/active-guest.js";
 import { loadBrowserAutomationPolicy } from "./browser-driver/load-policy.js";
-import { buildNoChildFallbackReply, type ParsedRpc } from "./agent-bridge-fallback.js";
+import {
+  buildNoChildFallbackReply,
+  compactQuerySessionId,
+  type ParsedRpc,
+} from "./agent-bridge-fallback.js";
 import { getTrustCachedSync } from "./trust-store.js";
 import { reloadAutomations } from "./automation-service.js";
 
@@ -306,6 +310,13 @@ export class AgentBridge {
           const trusted = typeof cwd === "string" && getTrustCachedSync(cwd) === "trusted";
           (parsed.params as Record<string, unknown>).projectTrusted = trusted;
           outLine = JSON.stringify(parsed);
+        }
+      } else {
+        const compactSessionId = compactQuerySessionId(parsed);
+        if (compactSessionId) {
+          this.spawnChild(
+            this.sessionsForFallback().readCwd(compactSessionId) ?? parsed.params?.cwd,
+          );
         }
       }
 
