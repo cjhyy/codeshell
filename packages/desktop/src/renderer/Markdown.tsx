@@ -82,7 +82,7 @@ interface Props {
 }
 
 export const markdownBodyClassName =
-  "max-w-[720px] text-sm leading-relaxed text-foreground " +
+  "min-w-0 max-w-[720px] text-sm leading-relaxed text-foreground " +
   "[&_p]:my-2 [&_h1]:mb-2 [&_h1]:mt-3 [&_h1]:text-xl [&_h1]:font-semibold " +
   "[&_h2]:mb-2 [&_h2]:mt-3 [&_h2]:text-lg [&_h2]:font-semibold " +
   "[&_h3]:mb-1.5 [&_h3]:mt-2.5 [&_h3]:text-base [&_h3]:font-semibold " +
@@ -97,9 +97,19 @@ export const markdownBodyClassName =
   "[&_a:hover]:underline [&_code:not(pre_code)]:rounded-sm [&_code:not(pre_code)]:bg-muted " +
   "[&_code:not(pre_code)]:px-1.5 [&_code:not(pre_code)]:py-0.5 " +
   "[&_code:not(pre_code)]:font-mono [&_code:not(pre_code)]:text-[0.92em] " +
-  "[&_table]:my-2 [&_table]:border-collapse [&_table]:text-xs " +
+  "[&_table]:border-collapse [&_table]:text-xs " +
   "[&_th]:border [&_td]:border [&_th]:border-border [&_td]:border-border " +
   "[&_th]:bg-muted [&_th]:px-2 [&_th]:py-1 [&_td]:px-2 [&_td]:py-1";
+
+type MarkdownTableProps = React.ComponentPropsWithoutRef<"table"> & { node?: unknown };
+
+export function MarkdownTable({ node: _node, className, ...props }: MarkdownTableProps) {
+  return (
+    <div className="my-2 min-w-0 max-w-full overflow-x-auto">
+      <table className={cn("w-max min-w-full border-collapse text-xs", className)} {...props} />
+    </div>
+  );
+}
 
 export const streamingMarkdownClassName = cn(
   markdownBodyClassName,
@@ -208,6 +218,7 @@ function MarkdownImpl({ text, cwd }: Props) {
               </a>
             );
           },
+          table: MarkdownTable,
           // Wrap multi-line code blocks with a header bar showing the
           // language label (when react-markdown supplies a `language-*`
           // class) and a copy button. Inline `code` (no language class

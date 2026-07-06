@@ -33,11 +33,11 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
   const hasBody = bodyText.trim().length > 0 || !!message.error;
 
   return (
-    <div className="px-4 py-1">
-      <div className="rounded-lg border border-border">
+    <div className="min-w-0 max-w-full px-4 py-1">
+      <div className="min-w-0 max-w-full rounded-lg border border-border">
         <button
           type="button"
-          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm disabled:cursor-default"
+          className="flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-sm disabled:cursor-default"
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
           aria-controls={`agent-body-${message.id}`}
@@ -78,9 +78,9 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
           )}
         </button>
         {expanded && (
-          <div id={`agent-body-${message.id}`} className="flex flex-col gap-2 border-t border-border p-3">
+          <div id={`agent-body-${message.id}`} className="flex min-w-0 flex-col gap-2 border-t border-border p-3">
             {bodyText.trim().length > 0 && (
-              <div className="text-sm">
+              <div className="min-w-0 text-sm">
                 {/* While the sub-agent is still streaming, render plain text —
                     re-parsing Markdown (remark + rehype-highlight) on every
                     token was a ~150ms-per-frame commit that froze the UI

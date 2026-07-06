@@ -150,4 +150,14 @@ describe("Markdown", () => {
     expect(html).toContain("[&amp;_ul]:list-disc");
     expect(html).toContain("[&amp;_ol]:list-decimal");
   });
+
+  test("wraps markdown tables in a horizontal scroll container", () => {
+    const html = renderToStaticMarkup(
+      <Markdown text={"| very long heading | another heading |\n| --- | --- |\n| a | b |"} />,
+    );
+
+    expect(html).toContain("overflow-x-auto");
+    expect(html).toContain("max-w-full");
+    expect(html).toContain("<table");
+  });
 });

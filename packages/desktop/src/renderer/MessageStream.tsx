@@ -155,9 +155,9 @@ export function MessageStream({
   );
 
   return (
-    <div className="relative flex-1 overflow-hidden">
-      <div className="h-full overflow-y-auto" ref={ref}>
-        <div>
+    <div className="relative min-w-0 max-w-full flex-1 overflow-hidden">
+      <div className="h-full min-w-0 max-w-full overflow-x-hidden overflow-y-auto" ref={ref}>
+        <div className="min-w-0 max-w-full">
           {items.map((m) => {
         if (m.kind === "turn_process_group") {
           return <TurnProcessGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} />;
@@ -187,7 +187,7 @@ export function MessageStream({
             // render no bubble rather than an empty selectable box.
             if (!text && !annotations && images.length === 0) return null;
             return (
-              <div key={m.id} className="group flex flex-col items-end px-4 py-1.5">
+              <div key={m.id} className="group flex min-w-0 max-w-full flex-col items-end px-4 py-1.5">
                 {m.isGoal && (
                   // Persistent-goal marker (CC /goal). This send set/advanced a goal.
                   <span className="mb-0.5 flex items-center gap-1 px-1 text-[11px] font-medium text-status-running">

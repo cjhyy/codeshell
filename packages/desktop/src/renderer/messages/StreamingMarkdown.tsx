@@ -1,7 +1,12 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Markdown, markdownBodyClassName, streamingMarkdownClassName } from "../Markdown";
+import {
+  Markdown,
+  MarkdownTable,
+  markdownBodyClassName,
+  streamingMarkdownClassName,
+} from "../Markdown";
 import { splitStreamingMarkdown } from "../markdown/splitStreamingMarkdown";
 
 interface StreamingMarkdownProps {
@@ -141,5 +146,9 @@ function splitIntoChunks(prefix: string): string[] {
  * Memoized so a settled chunk never re-parses when a later chunk grows.
  */
 const StreamMarkdownChunk = memo(function StreamMarkdownChunk({ text }: { text: string }) {
-  return <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>;
+  return (
+    <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ table: MarkdownTable }}>
+      {text}
+    </ReactMarkdown>
+  );
 });

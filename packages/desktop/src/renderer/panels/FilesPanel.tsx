@@ -65,6 +65,14 @@ function ancestorDirs(root: string, file: string): Set<string> {
   return dirs;
 }
 
+function sameStringSet(a: Set<string>, b: Set<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const value of a) {
+    if (!b.has(value)) return false;
+  }
+  return true;
+}
+
 interface Props {
   /** Workspace root; null when no project is active. */
   cwd: string | null;
@@ -132,6 +140,14 @@ export function FilesPanel({ cwd, onAttachImage, revealFile, onRevealConsumed }:
     // immediately — the request is only marked consumed once that has happened.
     onRevealConsumed?.(revealFile.nonce);
   }, [revealFile?.nonce, revealFile?.consumed, cwd, onRevealConsumed]);
+
+  useEffect(() => {
+    if (!treeOpen || !selected || !cwd) return;
+    const abs = resolveUnderRoot(cwd, selected);
+    if (!abs) return;
+    const dirs = ancestorDirs(cwd, abs);
+    setRevealDirs((prev) => (sameStringSet(prev, dirs) ? prev : dirs));
+  }, [cwd, selected, treeOpen]);
 
   if (!cwd) {
     return (

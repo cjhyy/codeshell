@@ -44,7 +44,7 @@ function AssistantMessageViewImpl({ message, cwd }: Props) {
   };
 
   return (
-    <div className="group px-4 py-2 text-sm">
+    <div className="group min-w-0 max-w-full px-4 py-2 text-sm">
       <StreamingMarkdown text={message.text} done={message.done} cwd={cwd} />
       {message.done && (
         <div className="mt-1 flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">

@@ -851,7 +851,7 @@ export function ChatView({
 
   return (
     <div
-      className={"flex h-full flex-col" + (dragOver ? " ring-2 ring-inset ring-primary/40" : "")}
+      className={"flex h-full min-w-0 max-w-full flex-col overflow-hidden" + (dragOver ? " ring-2 ring-inset ring-primary/40" : "")}
       data-mode={isNewChat ? "new" : "active"}
       onDragEnter={onChatDragEnter}
       onDragOver={onChatDragOver}
@@ -909,7 +909,7 @@ export function ChatView({
         at the bottom as a plain p-3 block.
       */}
       <div
-        className={isNewChat ? "flex flex-1 flex-col items-center justify-center px-4" : "contents"}
+        className={isNewChat ? "flex min-w-0 max-w-full flex-1 flex-col items-center justify-center px-4" : "contents"}
       >
         {isNewChat && welcomeNode && (
           <div className="mb-4 flex flex-col items-center">{welcomeNode}</div>
@@ -920,7 +920,7 @@ export function ChatView({
             smaller on every re-layout (session switch with the dock open),
             collapsing the input row by row. Pinning shrink to 0 keeps it at its
             content height regardless of how tall the stream gets. */}
-        <div className={isNewChat ? "w-full max-w-2xl p-3" : "shrink-0 p-3"}>
+        <div className={isNewChat ? "w-full min-w-0 max-w-2xl p-3" : "min-w-0 max-w-full shrink-0 p-3"}>
           {queuedInputItems.length > 0 && (
             <div className="mb-2 rounded-2xl border border-border/80 bg-background/80 px-3 py-2 shadow-sm">
               <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -992,11 +992,13 @@ export function ChatView({
           */}
           <div
             className={
-              // min-w-[300px]: stop the composer collapsing into an unusable sliver
-              // when a side panel squeezes the chat. Keep this card out of the
-              // container-query tree: putting container-type on the textarea's
-              // ancestor has collapsed the composer during session/dock reflow.
-              "min-w-[300px] rounded-xl border bg-card p-2 shadow-sm" +
+              // sm:min-w-[300px]: stop the composer collapsing into an unusable
+              // sliver when a side panel squeezes the desktop chat; keep phones
+              // at min-w-0 so wide message content cannot force horizontal page
+              // overflow. Keep this card out of the container-query tree: putting
+              // container-type on the textarea's ancestor has collapsed the
+              // composer during session/dock reflow.
+              "min-w-0 max-w-full rounded-xl border bg-card p-2 shadow-sm sm:min-w-[300px]" +
               (dragOver ? " ring-2 ring-primary/40" : "")
             }
           >
