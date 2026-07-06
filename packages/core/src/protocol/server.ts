@@ -456,9 +456,9 @@ export class AgentServer {
       );
       // Browser automation bridge: each method routes a browser action to the
       // client (Electron main drives the webview via CDP) over the SAME
-      // request/response channel as askUser (pendingApprovals + requestId),
-      // reusing its proven resolve/timeout/cleanup. The main-side handler
-      // replies with the action's JSON result.
+      // request/response channel as askUser (pendingApprovals + requestId).
+      // Browser actions still keep their own bounded timeout; AskUserQuestion
+      // waits for a real answer or Stop/cancel.
       session.engine.setBrowserBridge(this.makeBrowserBridge(session, sid));
       // Cookie→browser injection (InjectCredential tool): same cross-process
       // channel; main restores the cookie jar into the built-in browser.
@@ -669,10 +669,9 @@ export class AgentServer {
         return;
       }
       s.pendingApprovals.delete(params.requestId);
-      // Cancel the pending timeout for THIS request (the ask path armed one).
-      // The legacy single-engine branch below already does this; without it
-      // here a decided request leaves a live timer that fires at
-      // APPROVAL_TIMEOUT_MS and churns a dead map entry.
+      // Cancel the pending timeout for requests that arm one (browser actions,
+      // credential injection, and tool approvals). AskUserQuestion does not use
+      // a timeout; this is harmless for those request ids.
       this.clearApprovalTimer(params.requestId);
       resolve(params.decision);
       this.transport.send(createResponse(req.id, { ok: true }));
@@ -725,11 +724,10 @@ export class AgentServer {
       s.cancel();
       // s.cancel() only aborts the engine controller + drains queued turns. The
       // session's pendingApprovals (askUser / browser_action / tool approvals)
-      // are NOT driven by the abort signal — they only settle on a client reply
-      // or the 5-minute APPROVAL_TIMEOUT_MS. Left alone, the awaiting tool call
-      // hangs until that timeout (delaying run wind-down) and the server-side
-      // approvalTimers entry leaks. Resolve them as cancelled now and clear the
-      // matching timers, mirroring the legacy path below.
+      // are NOT driven directly by the abort signal. Left alone, an awaiting
+      // AskUserQuestion would now wait forever, while bounded request types
+      // would wait until APPROVAL_TIMEOUT_MS. Resolve them as cancelled now and
+      // clear any matching timers, mirroring the legacy path below.
       this.cancelSessionApprovals(s);
       this.transport.send(createResponse(req.id, { ok: true }));
       return;
@@ -1823,14 +1821,11 @@ export class AgentServer {
   }
 
   /**
-   * Ask the client to answer a question from the agent (legacy single-engine path).
-   */
-  /**
-   * Per-session AskUserQuestion for the chatManager path. Mirrors
-   * requestAskUserFromClient but resolves via the SESSION's pendingApprovals
-   * (the chatManager approve handler looks there, keyed by sessionId+requestId)
-   * and tags the notify with sessionId so the renderer routes the question to
-   * the right chat tab.
+   * Per-session AskUserQuestion for the chatManager path. Resolves via the
+   * SESSION's pendingApprovals (the chatManager approve handler looks there,
+   * keyed by sessionId+requestId) and tags the notify with sessionId so the
+   * renderer routes the question to the right chat tab. This intentionally has
+   * no wall-clock timeout; Stop/cancel drains the pending ask.
    */
   private requestAskUserForSession(
     session: import("./chat-session.js").ChatSession,
@@ -1850,15 +1845,6 @@ export class AgentServer {
           resolve(typeof decision === "string" ? decision : "");
         }
       });
-
-      const timer = setTimeout(() => {
-        if (session.pendingApprovals.has(requestId)) {
-          session.pendingApprovals.delete(requestId);
-          this.approvalTimers.delete(requestId);
-          resolve("(approval timed out)");
-        }
-      }, AgentServer.APPROVAL_TIMEOUT_MS);
-      this.approvalTimers.set(requestId, timer);
 
       const args: Record<string, unknown> = { question };
       if (opts?.header !== undefined) args.header = opts.header;
@@ -2018,6 +2004,11 @@ export class AgentServer {
     });
   }
 
+  /**
+   * Ask the client to answer a question from the agent (legacy single-engine
+   * path). This intentionally has no wall-clock timeout; Stop/cancel drains
+   * the pending ask.
+   */
   private requestAskUserFromClient(
     question: string,
     opts?: import("../tool-system/context.js").AskUserOptions,
@@ -2032,15 +2023,6 @@ export class AgentServer {
           resolve(result.reason ?? "(user declined to answer)");
         }
       });
-
-      const timer = setTimeout(() => {
-        if (this.pendingApprovals.has(requestId)) {
-          this.pendingApprovals.delete(requestId);
-          this.approvalTimers.delete(requestId);
-          resolve("(approval timed out)");
-        }
-      }, AgentServer.APPROVAL_TIMEOUT_MS);
-      this.approvalTimers.set(requestId, timer);
 
       const args: Record<string, unknown> = { question };
       if (opts?.header !== undefined) args.header = opts.header;
@@ -2135,11 +2117,10 @@ export class AgentServer {
 
   /**
    * Resolve all of a chat session's pending approvals as cancelled and clear
-   * the matching server-side approval timers. Used by handleCancel's
+   * any matching server-side approval timers. Used by handleCancel's
    * per-session path so a Stop while a tool is awaiting approval doesn't leave
-   * the tool hanging until APPROVAL_TIMEOUT_MS (and leak the timer). Each
-   * requestId in the session map has a same-keyed entry in this.approvalTimers
-   * (see requestAskUserForSession / makeBrowserBridge).
+   * the tool hanging. Bounded request types have same-keyed timer entries;
+   * AskUserQuestion does not.
    */
   private cancelSessionApprovals(session: import("./chat-session.js").ChatSession): void {
     for (const [requestId, resolve] of session.pendingApprovals) {
