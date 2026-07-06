@@ -1,10 +1,15 @@
-import { describe, test, expect } from "bun:test";
-import { buildWindowOptions, shouldBlockNavigation, openBrowserHost } from "./index.js";
+import { describe, test, expect, mock } from "bun:test";
+import {
+  buildWindowOptions,
+  shouldBlockNavigation,
+  openBrowserHost,
+  destroyPartitionStorage,
+} from "./index.js";
 
 describe("buildWindowOptions", () => {
   test("hardened webPreferences, no preload, carries partition", () => {
-    const o = buildWindowOptions({ kind: "window", url: "https://x", partition: "persist:login-1" });
-    expect(o.webPreferences.partition).toBe("persist:login-1");
+    const o = buildWindowOptions({ kind: "window", url: "https://x", partition: "login-1" });
+    expect(o.webPreferences.partition).toBe("login-1");
     expect(o.webPreferences.nodeIntegration).toBe(false);
     expect(o.webPreferences.contextIsolation).toBe(true);
     expect(o.webPreferences.sandbox).toBe(true);
@@ -45,5 +50,29 @@ describe("openBrowserHost", () => {
     await expect(openBrowserHost({ kind: "webview", url: "https://x", partition: "p" })).rejects.toThrow(
       /not implemented/,
     );
+  });
+});
+
+describe("destroyPartitionStorage", () => {
+  test("clears all site storage for the partition", async () => {
+    const partitions: string[] = [];
+    const clearCalls: unknown[][] = [];
+    mock.module("electron", () => ({
+      session: {
+        fromPartition(partition: string) {
+          partitions.push(partition);
+          return {
+            clearStorageData: async (...args: unknown[]) => {
+              clearCalls.push(args);
+            },
+          };
+        },
+      },
+    }));
+
+    await destroyPartitionStorage("login-1");
+
+    expect(partitions).toEqual(["login-1"]);
+    expect(clearCalls).toEqual([[]]);
   });
 });

@@ -39,11 +39,16 @@ describe("builtin tool availability guards", () => {
     expect(names).toContain("GenerateVideo");
   });
 
-  test("goal-control tools are not schema-visibility gated", () => {
-    // Goal state changes per session/turn. Keep these tool schemas stable for
-    // prompt-cache friendliness; runtime execution is gated in ToolExecutor.
-    expect(BUILTIN_TOOL_GUARDS.has("complete_goal")).toBe(false);
-    expect(BUILTIN_TOOL_GUARDS.has("cancel_goal")).toBe(false);
+  test("goal-control tools are schema-visible only while a goal is active", () => {
+    const complete = BUILTIN_TOOL_GUARDS.get("complete_goal");
+    const cancel = BUILTIN_TOOL_GUARDS.get("cancel_goal");
+    expect(complete).toBeFunction();
+    expect(cancel).toBeFunction();
+
+    expect(complete!({ cwd: "/x", hasGoal: false })).toBe(false);
+    expect(cancel!({ cwd: "/x", hasGoal: false })).toBe(false);
+    expect(complete!({ cwd: "/x", hasGoal: true })).toBe(true);
+    expect(cancel!({ cwd: "/x", hasGoal: true })).toBe(true);
   });
 
   test("ungated tools have no guard entry (so they're always visible)", () => {

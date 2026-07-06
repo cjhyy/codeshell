@@ -1383,6 +1383,7 @@ export class Engine {
     let session: SessionBundle;
     let messages: Message[];
     let freshImageMessage: Message | undefined;
+    let resumedFromDisk = false;
     const claimedClientMessageIds = new Set<string>();
     const claimClientMessageId = (
       bundle: SessionBundle,
@@ -1406,6 +1407,7 @@ export class Engine {
     };
 
     if (options?.sessionId && this.sessionManager.exists(options.sessionId)) {
+      resumedFromDisk = true;
       session = this.sessionManager.resume(options.sessionId);
       const cachedCompacted = this.compactedMessagesBySession.get(options.sessionId);
       messages = cachedCompacted ? [...cachedCompacted] : session.transcript.toMessages();
@@ -1527,7 +1529,7 @@ export class Engine {
         model: this.config.llm.model,
         provider: this.config.llm.provider,
         permissionMode: this.config.permissionMode ?? "acceptEdits",
-        resumed: !!options?.sessionId,
+        resumed: resumedFromDisk,
       });
 
       // Session-level hook: fired once per Engine.run() entry, regardless of
@@ -1538,7 +1540,8 @@ export class Engine {
       const sessionStartHook = await this.emitHook("on_session_start", {
         sessionId: session.state.sessionId,
         cwd,
-        resumed: !!options?.sessionId,
+        resumed: resumedFromDisk,
+        source: resumedFromDisk ? "resume" : "startup",
       });
 
       // Per-turn hook: fired every time a new user prompt enters the loop.
@@ -1553,7 +1556,7 @@ export class Engine {
         // and silently leaking attachment bytes through hooks is the kind of
         // exfiltration risk a curious user-installed shell hook shouldn't carry.
         prompt: taskText,
-        resumed: !!options?.sessionId,
+        resumed: resumedFromDisk,
       });
       // updatedPrompt: handler rewrote the user's prompt text. Replace the
       // last user message we just pushed (cold-start: line ~511; resume:

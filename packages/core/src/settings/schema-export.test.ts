@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { settingsJsonSchema, writeSettingsSchemaFile } from "./schema-export.js";
+import { userHome } from "./manager.js";
 
 describe("settingsJsonSchema", () => {
   it("returns a plain JSON Schema object", () => {
@@ -38,6 +39,23 @@ describe("writeSettingsSchemaFile", () => {
       expect(parsed).toEqual(settingsJsonSchema());
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("writes a valid schema under isolated HOME/.code-shell", () => {
+    const origHome = process.env.HOME;
+    const home = mkdtempSync(join(tmpdir(), "codeshell-schema-home-"));
+    try {
+      process.env.HOME = home;
+      const out = writeSettingsSchemaFile(join(userHome(), ".code-shell"));
+      expect(out).toBe(join(home, ".code-shell", "settings.schema.json"));
+
+      const parsed = JSON.parse(readFileSync(out, "utf-8"));
+      expect(parsed).toEqual(settingsJsonSchema());
+    } finally {
+      if (origHome === undefined) delete process.env.HOME;
+      else process.env.HOME = origHome;
+      rmSync(home, { recursive: true, force: true });
     }
   });
 });

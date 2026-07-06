@@ -426,7 +426,7 @@ export { logger } from "./logging/logger.js";
 
 // ─── Settings ────────────────────────────────────────────────────
 
-export { SettingsManager, type SettingsScope } from "./settings/manager.js";
+export { SettingsManager, userHome, type SettingsScope } from "./settings/manager.js";
 export {
   migrateConfig,
   configVersionOf,
