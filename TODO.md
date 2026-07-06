@@ -85,9 +85,9 @@
 
 ## 当前缺口（先做）
 
-- 🔴 **收口当前未提交改动**:确认 model catalog/user override/model pool、safe-spawn/grep、TUI 消息渲染/store 这批改动是否进 beta1;若进,先跑相关测试,再 commit。
-  - 建议测试:`bun test packages/core/src/model-catalog` / `bun test packages/core/src/tool-system/builtin/edit-model-catalog.test.ts` / `bun test packages/core/src/engine/model-connections-pool.test.ts` / `bun test packages/tui/src/ui/store-notify.test.ts`。
-- 🟡 **todo 索引整理**:`docs/todo/README.md` 还没登记 `core-harness-and-plugin-panels.md`、`desktop-streaming-markdown-autoscroll-plan.md`、`session-cumulative-cache-usage-plan.md`;已完成的计划后续移到 `docs/archive/`。
+- 🔴 **收口当前未提交改动**:当前工作树除 TODO 文档外,还有 updater/侧边栏更新入口相关改动(`updater.ts`、`UpdaterBanner.tsx`、`Sidebar.tsx`、preload 类型与 i18n)。若进 beta1,还需 commit;若不进,需明确取舍。
+  - 已跑:`bun test packages/desktop/src/main/updater-signature.test.ts`、`bun run --filter '@cjhyy/code-shell-desktop' typecheck` 均通过。仍建议做一次打包/真机更新流程验证。
+- ✅ **todo 索引整理**:`docs/todo/README.md` 已补登记 `core-harness-and-plugin-panels.md`、`desktop-streaming-markdown-autoscroll-plan.md`、`session-cumulative-cache-usage-plan.md`;已完成的计划后续确认并入 main 后再移到 `docs/archive/`。
 
 - 🟡 **npm 包**（若本轮要发）:**必用 `bun publish --tag rc` 不是 `npm publish`**（workspace:* 解析）;**发后必真跑一次 bin**（`code-shell --version`）。
 - 🟡 **i18n 全语言点一遍**:中/英切换走主流程,确认无未翻译泄漏 / 无 localStorage 报错。

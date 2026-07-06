@@ -21,6 +21,7 @@ import { useConfirm, usePrompt } from "./ui/DialogProvider";
 import { useToast } from "./ui/ToastProvider";
 import { copyText } from "./lib/clipboard";
 import { SettingsMenu } from "./settings/SettingsMenu";
+import { SidebarUpdaterButton } from "./updater/UpdaterBanner";
 import type { ViewMode } from "./view";
 import { repoLabel, sortRepos, type Repo } from "./repos";
 import { NO_REPO_KEY, bucketKey, type SessionIndex, type SessionSummary } from "./transcripts";
@@ -299,7 +300,12 @@ export function Sidebar({
       </div>
 
       <div className="border-t border-border p-2">
-        <SettingsMenu onOpenSettingsPage={onOpenSettingsPage} sidebarCollapsed={sidebarCollapsed} />
+        <div className="flex items-center gap-1.5">
+          <div className="min-w-0 flex-1">
+            <SettingsMenu onOpenSettingsPage={onOpenSettingsPage} sidebarCollapsed={sidebarCollapsed} />
+          </div>
+          <SidebarUpdaterButton />
+        </div>
       </div>
 
       {menu && (

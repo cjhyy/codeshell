@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
   isEditableMcpServer,
+  isHttpMcpAuthConfigured,
   mcpServersFromSettings,
   persistableMcpServers,
   ownerPluginOf,
@@ -40,5 +41,13 @@ describe("plugin MCP servers in settings UI", () => {
     expect(ownerPluginOf({ name: "local", command: "x", source: "settings" })).toBeUndefined();
     // plugin server with no prefix → undefined (defensive)
     expect(ownerPluginOf({ name: "weird", command: "x", source: "plugin" })).toBeUndefined();
+  });
+
+  it("treats Bearer and custom header auth as configured HTTP auth", () => {
+    expect(isHttpMcpAuthConfigured({})).toBe(false);
+    expect(isHttpMcpAuthConfigured({ credentialRef: "stored-token" })).toBe(true);
+    expect(isHttpMcpAuthConfigured({ bearerTokenEnvVar: "MCP_TOKEN" })).toBe(true);
+    expect(isHttpMcpAuthConfigured({ envHeaders: { "x-api-key": "MCP_API_KEY" } })).toBe(true);
+    expect(isHttpMcpAuthConfigured({ headers: { "X-Client-Name": "code-shell" } })).toBe(true);
   });
 });

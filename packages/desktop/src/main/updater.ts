@@ -19,19 +19,26 @@ import { autoUpdater } from "electron-updater";
 import { dlog } from "./desktop-logger.js";
 import { macSignatureNeedsManualInstall, releaseUrlForVersion } from "./updater-signature.js";
 
+type ManualInstallReason = "mac-signature" | "mac-readonly-volume";
+
 export type UpdaterStatus =
   | { kind: "idle" }
   | { kind: "checking" }
   | { kind: "available"; version: string }
-  | { kind: "manual-required"; version: string; url: string; message: string }
+  | { kind: "manual-required"; version: string; url: string; message: string; reason: ManualInstallReason }
   | { kind: "not-available"; version: string }
   | { kind: "downloading"; percent: number; transferred: number; total: number }
   | { kind: "downloaded"; version: string }
+  | { kind: "installing"; version: string }
   | { kind: "error"; message: string };
 
 let lastStatus: UpdaterStatus = { kind: "idle" };
 let configured = false;
 let macManualInstallRequired: boolean | undefined;
+let downloadInFlight = false;
+let activeDownloadVersion: string | null = null;
+let downloadedVersion: string | null = null;
+let installInFlight = false;
 
 function broadcast(): void {
   for (const w of BrowserWindow.getAllWindows()) {
@@ -46,18 +53,35 @@ function set(status: UpdaterStatus): void {
   broadcast();
 }
 
-function isMacManualInstallRequired(): boolean {
-  if (process.platform !== "darwin") return false;
-  if (!app.isPackaged) return false;
-  if (process.env.CODESHELL_FORCE_MAC_AUTO_UPDATE === "1") return false;
-  if (macManualInstallRequired !== undefined) return macManualInstallRequired;
-
+function macAppBundlePath(): string {
   const packagedAppPath = app.getAppPath();
   const appBundleMarker = ".app/";
   const appBundleIndex = packagedAppPath.indexOf(appBundleMarker);
-  const appPath = appBundleIndex >= 0
+  return appBundleIndex >= 0
     ? packagedAppPath.slice(0, appBundleIndex + ".app".length)
     : app.getPath("exe");
+}
+
+function macManualInstallReason(): ManualInstallReason | null {
+  if (process.platform !== "darwin") return null;
+  if (!app.isPackaged) return null;
+  if (process.env.CODESHELL_FORCE_MAC_AUTO_UPDATE === "1") return null;
+
+  const appPath = macAppBundlePath();
+  const downloadsPath = app.getPath("downloads");
+  if (
+    appPath.startsWith("/Volumes/") ||
+    appPath.includes("/AppTranslocation/") ||
+    (downloadsPath && appPath.startsWith(`${downloadsPath}/`))
+  ) {
+    dlog("main", "updater.mac_manual.location", { appPath });
+    return "mac-readonly-volume";
+  }
+
+  if (macManualInstallRequired !== undefined) {
+    return macManualInstallRequired ? "mac-signature" : null;
+  }
+
   const detail = spawnSync("codesign", ["-dv", "--verbose=4", appPath], {
     encoding: "utf8",
   });
@@ -76,25 +100,49 @@ function isMacManualInstallRequired(): boolean {
       error: detail.error?.message,
     });
     macManualInstallRequired = false;
-    return macManualInstallRequired;
+    return null;
   }
 
   macManualInstallRequired = macSignatureNeedsManualInstall(text);
   dlog("main", "updater.mac_signature.detected", {
     manualInstallRequired: macManualInstallRequired,
   });
-  return macManualInstallRequired;
+  return macManualInstallRequired ? "mac-signature" : null;
 }
 
-function availableStatus(version: string): UpdaterStatus {
-  if (!isMacManualInstallRequired()) return { kind: "available", version };
+function manualRequiredStatus(version: string, reason: ManualInstallReason): UpdaterStatus {
   return {
     kind: "manual-required",
     version,
     url: releaseUrlForVersion(version),
+    reason,
     message:
-      "This macOS build is ad-hoc signed, so the in-app updater cannot replace the app safely. Download the DMG/zip and install it manually.",
+      reason === "mac-readonly-volume"
+        ? "The app is running from a read-only or translocated location. Move it to Applications, or download and install the release manually."
+        : "This macOS build is ad-hoc signed, so the in-app updater cannot replace the app safely. Download the DMG/zip and install it manually.",
   };
+}
+
+function availableStatus(version: string): UpdaterStatus {
+  const reason = macManualInstallReason();
+  return reason ? manualRequiredStatus(version, reason) : { kind: "available", version };
+}
+
+function versionFromStatus(status: UpdaterStatus): string | null {
+  switch (status.kind) {
+    case "available":
+    case "manual-required":
+    case "not-available":
+    case "downloaded":
+    case "installing":
+      return status.version;
+    default:
+      return null;
+  }
+}
+
+function isReadOnlyInstallError(message: string): boolean {
+  return /read-only volume|move the application|move .* out of the Downloads directory/i.test(message);
 }
 
 export function getLastStatus(): UpdaterStatus {
@@ -134,27 +182,56 @@ export function initUpdater(): void {
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
 
-  autoUpdater.on("checking-for-update", () => set({ kind: "checking" }));
-  autoUpdater.on("update-available", (info) => {
-    set(availableStatus(String((info as { version?: string }).version ?? "")));
+  autoUpdater.on("checking-for-update", () => {
+    if (downloadInFlight || installInFlight || lastStatus.kind === "downloaded" || lastStatus.kind === "installing") return;
+    set({ kind: "checking" });
   });
-  autoUpdater.on("update-not-available", (info) =>
-    set({ kind: "not-available", version: String((info as { version?: string }).version ?? "") }),
-  );
-  autoUpdater.on("download-progress", (p) =>
+  autoUpdater.on("update-available", (info) => {
+    const version = String((info as { version?: string }).version ?? "");
+    if (downloadInFlight || installInFlight) return;
+    if (version && downloadedVersion === version) {
+      set({ kind: "downloaded", version });
+      return;
+    }
+    if (lastStatus.kind === "downloaded" || lastStatus.kind === "installing") return;
+    set(availableStatus(version));
+  });
+  autoUpdater.on("update-not-available", (info) => {
+    if (downloadInFlight || installInFlight || lastStatus.kind === "downloaded" || lastStatus.kind === "installing") return;
+    set({ kind: "not-available", version: String((info as { version?: string }).version ?? "") });
+  });
+  autoUpdater.on("download-progress", (p) => {
+    if (!downloadInFlight) return;
     set({
       kind: "downloading",
       percent: Math.round(p.percent),
       transferred: p.transferred,
       total: p.total,
-    }),
-  );
-  autoUpdater.on("update-downloaded", (info) =>
-    set({ kind: "downloaded", version: String((info as { version?: string }).version ?? "") }),
-  );
-  autoUpdater.on("error", (e) =>
-    set({ kind: "error", message: e instanceof Error ? e.message : String(e) }),
-  );
+    });
+  });
+  autoUpdater.on("update-downloaded", (info) => {
+    const version = String((info as { version?: string }).version ?? activeDownloadVersion ?? "");
+    downloadInFlight = false;
+    activeDownloadVersion = null;
+    downloadedVersion = version || downloadedVersion;
+    set({ kind: "downloaded", version });
+  });
+  autoUpdater.on("error", (e) => {
+    const message = e instanceof Error ? e.message : String(e);
+    if (isReadOnlyInstallError(message)) {
+      const version = versionFromStatus(lastStatus) ?? downloadedVersion ?? activeDownloadVersion ?? app.getVersion();
+      downloadInFlight = false;
+      activeDownloadVersion = null;
+      installInFlight = false;
+      set(manualRequiredStatus(version, "mac-readonly-volume"));
+      return;
+    }
+    if (!downloadInFlight && !installInFlight && lastStatus.kind === "downloaded") return;
+    downloadInFlight = false;
+    activeDownloadVersion = null;
+    installInFlight = false;
+    set({ kind: "error", message });
+  });
 
   // First check shortly after launch; then every 6h. Track the handles and
   // clear them on quit so the periodic check doesn't keep firing (or hold a
@@ -174,6 +251,13 @@ export async function checkForUpdate(): Promise<void> {
     set({ kind: "error", message: "auto-update only runs in packaged builds" });
     return;
   }
+  if (
+    downloadInFlight ||
+    installInFlight ||
+    lastStatus.kind === "downloading" ||
+    lastStatus.kind === "downloaded" ||
+    lastStatus.kind === "installing"
+  ) return;
   try {
     await autoUpdater.checkForUpdates();
   } catch (e) {
@@ -188,15 +272,38 @@ export async function downloadUpdate(): Promise<void> {
     set({ kind: "error", message: "auto-update only runs in packaged builds" });
     return;
   }
+  if (
+    downloadInFlight ||
+    installInFlight ||
+    lastStatus.kind === "downloading" ||
+    lastStatus.kind === "downloaded" ||
+    lastStatus.kind === "installing"
+  ) return;
   if (lastStatus.kind !== "available") return;
+  downloadInFlight = true;
+  activeDownloadVersion = lastStatus.version;
   try {
+    set({ kind: "downloading", percent: 0, transferred: 0, total: 0 });
     await autoUpdater.downloadUpdate();
   } catch (e) {
+    downloadInFlight = false;
+    activeDownloadVersion = null;
     set({ kind: "error", message: (e as Error).message });
   }
 }
 
 export function quitAndInstall(): void {
   if (lastStatus.kind !== "downloaded") return;
-  autoUpdater.quitAndInstall();
+  if (installInFlight) return;
+  installInFlight = true;
+  const version = lastStatus.version;
+  set({ kind: "installing", version });
+  setImmediate(() => {
+    try {
+      autoUpdater.quitAndInstall(false, true);
+    } catch (e) {
+      installInFlight = false;
+      set({ kind: "error", message: e instanceof Error ? e.message : String(e) });
+    }
+  });
 }

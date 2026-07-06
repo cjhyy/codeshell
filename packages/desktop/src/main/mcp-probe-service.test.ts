@@ -23,7 +23,8 @@ describe("humanizeError auth classification", () => {
     ]) {
       const msg = humanizeError(raw);
       expect(msg).toContain("401");
-      expect(msg).toContain("Bearer Token 环境变量");
+      expect(msg).toContain("Bearer");
+      expect(msg).toContain("自定义认证 Header");
     }
   });
 

@@ -126,7 +126,6 @@ import { CommandPalette, buildCommands } from "./shell/CommandPalette";
 import { SessionSearchModal } from "./shell/SessionSearchModal";
 import { SearchBar } from "./shell/SearchBar";
 import { TrustGate } from "./workspace-trust/TrustGate";
-import { UpdaterBanner } from "./updater/UpdaterBanner";
 import { loadGitPrefs } from "./gitPrefs";
 import { createEventCoalescer } from "./streamCoalescer";
 import {
@@ -973,6 +972,7 @@ function App() {
     clearPanelState(draftBucket);
     setPanelTabs([]);
     setPanelActiveId(null);
+    if (draftBucket === activeBucket) setPanelStateBucket(draftBucket);
     setPanelRequest((r) => ({ nonce: r.nonce + 1, kind: null, open: false }));
     setView((v) => ({ ...v, viewMode: "chat" }));
   };
@@ -1132,6 +1132,7 @@ function App() {
     clearPanelState(draftBucket);
     setPanelTabs([]);
     setPanelActiveId(null);
+    if (draftBucket === activeBucket) setPanelStateBucket(draftBucket);
     setPanelRequest((r) => ({ nonce: r.nonce + 1, kind: null, open: false }));
     setView((v) => ({ ...v, viewMode: "chat" }));
   };
@@ -2465,6 +2466,11 @@ function App() {
   // PanelArea is a controlled component over these.
   const [panelTabs, setPanelTabs] = useState<{ id: string; kind: PanelTab }[]>([]);
   const [panelActiveId, setPanelActiveId] = useState<string | null>(null);
+  // Owner of panelTabs/panelActiveId. On a session switch, activeBucket updates
+  // one render before the restore effect installs the new bucket's snapshot; this
+  // guard prevents that transition frame from overwriting another bucket's live
+  // mounted panel cache.
+  const [panelStateBucket, setPanelStateBucket] = useState(activeBucket);
   // Buckets that currently have ≥1 open panel. PanelArea keeps EVERY such
   // bucket's panel bodies mounted (hidden when not active) so a session's
   // browser/terminal survives switching away and back. We must therefore keep
@@ -2510,6 +2516,7 @@ function App() {
     const snap = loadPanelState<PanelTab>(activeBucket);
     setPanelTabs(snap.tabs);
     setPanelActiveId(snap.activeId);
+    setPanelStateBucket(activeBucket);
     setPanelRequest((r) => ({ nonce: r.nonce + 1, kind: null, open: snap.open }));
     skipSaveForRef.current = activeBucket;
     // Only re-run when the active session/repo bucket changes.
@@ -2520,6 +2527,7 @@ function App() {
   // restore transition (unlike the save effect, which skips that tick) — so a
   // bucket that restores WITH panels is recorded immediately.
   useEffect(() => {
+    if (panelStateBucket !== activeBucket) return;
     setBucketsWithPanels((prev) => {
       const has = panelTabs.length > 0;
       if (has === prev.has(activeBucket)) return prev;
@@ -2528,8 +2536,9 @@ function App() {
       else next.delete(activeBucket);
       return next;
     });
-  }, [panelTabs, activeBucket]);
+  }, [panelTabs, activeBucket, panelStateBucket]);
   useEffect(() => {
+    if (panelStateBucket !== activeBucket) return;
     // Eat the transition tick after a restore so we don't write the previous
     // session's leftover values under the freshly-switched bucket.
     if (skipSaveForRef.current === activeBucket) {
@@ -2541,7 +2550,7 @@ function App() {
       tabs: panelTabs,
       activeId: panelActiveId,
     });
-  }, [panelTabs, panelActiveId, panelRequest.open, activeBucket]);
+  }, [panelTabs, panelActiveId, panelRequest.open, activeBucket, panelStateBucket]);
 
   // Dock width (px), persisted. The divider on the dock's left edge drags it.
   const PANEL_MIN = 320;
@@ -3110,6 +3119,7 @@ function App() {
   }
 
   const platformClass = platformClassEarly;
+  const isChatView = view.viewMode === "chat";
 
   return (
     <div
@@ -3134,7 +3144,7 @@ function App() {
           // (credentials / automation / …) reuse this render tree (incl. TopBar)
           // but have no panel area, so also gate on the chat viewMode — otherwise
           // the toggle wrongly shows on those pages whenever a session is active.
-          panelAvailable={activeSessionId !== null && view.viewMode === "chat"}
+          panelAvailable={activeSessionId !== null && isChatView}
           activity={liveActivity}
           tasks={latestTasks}
           activeGoal={state.activeGoal}
@@ -3181,7 +3191,6 @@ function App() {
           overlay the chat/composer (TODO 2.4) without covering the sidebar. */}
       <div className="relative flex min-w-0 flex-1 overflow-hidden">
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <UpdaterBanner />
         {lifecycle && <div className="border-b border-border bg-muted px-4 py-1.5 text-xs text-muted-foreground">{lifecycle}</div>}
         {view.viewMode === "approvals" ? (
           <ApprovalsView
@@ -3324,7 +3333,11 @@ function App() {
           panel bodies before the user has opened anything. */}
       {(panelRequest.open || bucketsWithPanels.size > 0) && (
         <PanelArea
-          hidden={!panelRequest.open}
+          // The dock is a chat-only surface. Hide it outside chat so full-page
+          // views such as Extensions/Marketplace take the whole area, while
+          // keeping the active panel body live instead of blanking webviews.
+          hidden={!panelRequest.open || !isChatView}
+          keepActiveBodyLive={panelRequest.open && !isChatView}
           cwd={activeRepo?.path ?? null}
           repoId={activeRepoId}
           // Match togglePanel's contract on close (bump nonce, clear kind) so
@@ -3347,6 +3360,7 @@ function App() {
           engineSessionId={resolveActiveEngineSessionId() ?? null}
           tabs={panelTabs}
           setTabs={setPanelTabs}
+          tabsBucket={panelStateBucket}
           activeId={panelActiveId}
           setActiveId={setPanelActiveId}
           bucket={activeBucket}

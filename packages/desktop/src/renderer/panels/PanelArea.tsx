@@ -41,16 +41,26 @@ interface Props {
   cwd: string | null;
   repoId: string | null;
   /**
-   * When true the whole dock is collapsed via display:none — kept mounted (so
-   * the browser <webview> / terminal pty survive a close→reopen) but removed
-   * from the flex row so it occupies no width while hidden.
+   * When true the whole dock is visually hidden. Normal close uses display:none
+   * so the dock occupies no width; keepActiveBodyLive uses an invisible absolute
+   * box instead, avoiding display:none because Electron <webview> can blank
+   * after an ancestor is removed from layout.
    */
   hidden?: boolean;
+  /**
+   * Keep the active panel body live for lifecycle decisions even while the dock
+   * is visually hidden. Used when a full-page non-chat view (Extensions,
+   * Settings-like surfaces) temporarily covers the chat area: the user did not
+   * close the dock, so BrowserPanel should not start its idle-evict timer.
+   */
+  keepActiveBodyLive?: boolean;
   /** Called when the dock should close (last tab closed). */
   onClose: () => void;
   /** Controlled open tabs (owned by App so they survive a close→reopen). */
   tabs: OpenTab[];
   setTabs: React.Dispatch<React.SetStateAction<OpenTab[]>>;
+  /** Bucket that the controlled tabs/activeId currently belong to. */
+  tabsBucket?: string;
   /** Controlled active tab id. */
   activeId: string | null;
   setActiveId: React.Dispatch<React.SetStateAction<string | null>>;
@@ -133,6 +143,7 @@ export function PanelArea({
   cwd,
   repoId,
   hidden = false,
+  keepActiveBodyLive = false,
   onClose,
   requestNonce,
   requestKind,
@@ -150,6 +161,7 @@ export function PanelArea({
   onUpdateBrowserAnchor,
   tabs,
   setTabs,
+  tabsBucket,
   activeId,
   setActiveId,
   bucket,
@@ -185,23 +197,35 @@ export function PanelArea({
   // files panel would re-render against the wrong cwd/diff and lose its git
   // state. A bucket whose tabs go empty is dropped (panels closed) so we don't
   // leak mounted webviews/ptys.
-  const mountedByBucket = useRef<Map<string, { tabs: OpenTab[]; ctx: BucketCtx }>>(new Map());
-  if (tabs.length > 0) {
+  const mountedByBucket = useRef<Map<string, { tabs: OpenTab[]; activeId: string | null; ctx: BucketCtx }>>(new Map());
+  const ownerBucket = tabsBucket ?? bucket;
+  if (ownerBucket === bucket && tabs.length > 0) {
     // Dedup by id defensively: state persisted before the mkId-collision fix can
     // still carry duplicate ids (e.g. two ccRoom-1), which would crash React with
     // "two children with the same key". Keep the first of each id.
     const seen = new Set<string>();
     const dedupedTabs = tabs.filter((tb) => (seen.has(tb.id) ? false : (seen.add(tb.id), true)));
+    const snapshotActiveId =
+      activeId && dedupedTabs.some((tb) => tb.id === activeId)
+        ? activeId
+        : dedupedTabs[0]?.id ?? null;
     mountedByBucket.current.set(bucket, {
       tabs: dedupedTabs,
+      activeId: snapshotActiveId,
       ctx: { cwd, repoId, reviewFiles, reviewDiff, engineSessionId, browserAnchors },
     });
-  } else {
+  } else if (ownerBucket === bucket) {
     mountedByBucket.current.delete(bucket);
   }
   // The active bucket's deduped tabs — used by the tab strip so it can't render
   // duplicate keys either.
-  const activeTabs = mountedByBucket.current.get(bucket)?.tabs ?? tabs;
+  const activeSnapshot = mountedByBucket.current.get(bucket);
+  const activeTabs = activeSnapshot?.tabs ?? (ownerBucket === bucket ? tabs : []);
+  const candidateActiveId = ownerBucket === bucket ? activeId : activeSnapshot?.activeId ?? activeId;
+  const visibleActiveId =
+    candidateActiveId && activeTabs.some((tb) => tb.id === candidateActiveId)
+      ? candidateActiveId
+      : activeTabs[0]?.id ?? null;
 
   // Maximized = overlay the chat column (incl. composer) for more room (TODO
   // 2.4). Resets each open (local) — chat/composer state lives in App.
@@ -221,7 +245,7 @@ export function PanelArea({
         onClose(); // closing the last tab closes the dock
         return next;
       }
-      if (id === activeId) {
+      if (id === visibleActiveId) {
         // Activate the neighbour (prefer the one to the left).
         setActiveId(next[Math.max(0, idx - 1)].id);
       }
@@ -260,6 +284,16 @@ export function PanelArea({
     });
   }, [requestNonce, requestKind]);
 
+  const panelStyle: React.CSSProperties | undefined = hidden
+    ? keepActiveBodyLive
+      ? maximized
+        ? { opacity: 0, pointerEvents: "none" }
+        : { position: "absolute", top: 0, right: 0, bottom: 0, width, opacity: 0, pointerEvents: "none" }
+      : { display: "none" }
+    : maximized
+      ? undefined
+      : { width };
+
   return (
     <div
       className={cn(
@@ -268,10 +302,10 @@ export function PanelArea({
           ? "absolute inset-0 z-30 shrink"
           : "shrink-0 border-l border-border",
       )}
-      // display:none when hidden so the dock keeps its full subtree mounted
-      // (webview/pty survive a close) yet drops out of the flex row entirely —
-      // no leftover width, border, or pointer target while closed.
-      style={hidden ? { display: "none" } : maximized ? undefined : { width }}
+      // Closed docks use display:none so BrowserPanel may idle-evict. Temporary
+      // full-page views keep the dock invisible but laid out enough for webview
+      // guests to stay alive instead of returning blank after display:none.
+      style={panelStyle}
       aria-hidden={hidden || undefined}
     >
       {/* Drag handle on the left edge to resize the dock — hidden when maximized. */}
@@ -292,7 +326,7 @@ export function PanelArea({
         {activeTabs.map((tab) => {
           const { Icon } = META[tab.kind];
           const label = kindLabel(t, tab.kind);
-          const active = tab.id === activeId;
+          const active = tab.id === visibleActiveId;
           return (
             <div
               key={tab.id}
@@ -372,14 +406,15 @@ export function PanelArea({
             // ACTIVE bucket also gets the live transient/nonce props (revealFile/
             // openUrl) — those target the session the user is driving now.
             return (
-              <Slot key={`${b}:${t.id}`} active={onActiveBucket && t.id === activeId}>
-                {/* A panel body is truly on-screen only when the dock is open AND
-                    it's the active bucket's active tab. BrowserPanel uses this to
-                    idle-evict its <webview> after it's been off-screen a while. */}
+              <Slot key={`${b}:${t.id}`} active={onActiveBucket && t.id === visibleActiveId}>
+                {/* A panel body is live when the dock is open and this is the
+                    active bucket/tab. A full-page non-chat view may visually
+                    hide the dock without closing it; keepActiveBodyLive keeps
+                    BrowserPanel from idle-evicting that still-open page. */}
                 <PanelBody
                   tab={t}
                   bucket={b}
-                  visible={!hidden && onActiveBucket && t.id === activeId}
+                  visible={(!hidden || keepActiveBodyLive) && onActiveBucket && t.id === visibleActiveId}
                   cwd={ctx.cwd}
                   repoId={ctx.repoId}
                   reviewFiles={ctx.reviewFiles}

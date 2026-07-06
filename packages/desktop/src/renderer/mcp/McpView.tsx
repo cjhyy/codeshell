@@ -15,6 +15,14 @@ interface McpServer {
   transport?: "stdio" | "streamable-http" | "sse";
   env?: Record<string, string>;
   headers?: Record<string, string>;
+  /** (stdio) NAMES of env vars forwarded from the parent process. */
+  envVars?: string[];
+  /** (HTTP) NAME of an env var sent as `Authorization: Bearer <value>`. */
+  bearerTokenEnvVar?: string;
+  /** (HTTP) header-name → env-var-NAME map, values read at connect time. */
+  envHeaders?: Record<string, string>;
+  /** (HTTP) id of a stored credential used as the Bearer token. */
+  credentialRef?: string;
   /** Codex-style toggle. Absent/true = on; only false disables. */
   enabled?: boolean;
 }
@@ -57,6 +65,10 @@ export function McpView() {
         url: s.url,
         transport: s.transport,
         headers: s.headers,
+        envVars: s.envVars,
+        bearerTokenEnvVar: s.bearerTokenEnvVar,
+        envHeaders: s.envHeaders,
+        credentialRef: s.credentialRef,
       }));
       const results = await window.codeshell.probeMcpServers(inputs, force);
       const map: Record<string, McpProbeResult> = {};

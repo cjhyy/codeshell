@@ -1219,10 +1219,11 @@ export type UpdaterStatus =
   | { kind: "idle" }
   | { kind: "checking" }
   | { kind: "available"; version: string }
-  | { kind: "manual-required"; version: string; url: string; message: string }
+  | { kind: "manual-required"; version: string; url: string; message: string; reason: "mac-signature" | "mac-readonly-volume" }
   | { kind: "not-available"; version: string }
   | { kind: "downloading"; percent: number; transferred: number; total: number }
   | { kind: "downloaded"; version: string }
+  | { kind: "installing"; version: string }
   | { kind: "error"; message: string };
 
 export interface DesktopSessionSummary {

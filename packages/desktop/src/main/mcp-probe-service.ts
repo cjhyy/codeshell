@@ -79,6 +79,7 @@ function hashConfig(cfg: McpServerConfig): string {
     ev: cfg.envVars ?? [],
     b: cfg.bearerTokenEnvVar ?? "",
     eh: cfg.envHeaders ?? {},
+    cr: cfg.credentialRef ?? "",
   });
 }
 
@@ -113,7 +114,7 @@ export function humanizeError(raw: string, command?: string): string {
   // 2. Credentials reached the server but were rejected (401) vs accepted
   //    but lacking permission (403).
   if (/unauthorized|\b401\b|-32001/i.test(raw)) {
-    return "鉴权失败（HTTP 401）— 该 server 需要鉴权：未配置时请在编辑里填 Headers 或「Bearer Token 环境变量」；已配置则检查 key 是否正确、未过期";
+    return "鉴权失败（HTTP 401）— 该 server 需要认证：如果是 Bearer/JWT，请配置 Bearer 凭证或 Bearer Token 环境变量；如果是 API key，请配置服务要求的自定义认证 Header（如 x-api-key）";
   }
   if (/forbidden|\b403\b/i.test(raw)) {
     return "无权限（HTTP 403）— 凭证有效但权限不足，请检查该 token / key 的权限范围";

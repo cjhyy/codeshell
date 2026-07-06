@@ -80,6 +80,39 @@ function isEnabled(s: McpServer): boolean {
   return s.enabled !== false && !s.pluginDisabled;
 }
 
+function hasEntries(obj: Record<string, string> | undefined): boolean {
+  return Boolean(obj && Object.keys(obj).length > 0);
+}
+
+export function isHttpMcpAuthConfigured(s: {
+  headers?: Record<string, string>;
+  credentialRef?: string;
+  bearerTokenEnvVar?: string;
+  envHeaders?: Record<string, string>;
+}): boolean {
+  return Boolean(
+    hasEntries(s.headers) ||
+      s.credentialRef ||
+      s.bearerTokenEnvVar ||
+      hasEntries(s.envHeaders),
+  );
+}
+
+function isRemoteMcpTransport(s: McpServer): boolean {
+  const transport = s.transport ?? (s.url ? "streamable-http" : "stdio");
+  return transport !== "stdio";
+}
+
+function isAuthErrorText(text: string | undefined): boolean {
+  if (!text) return false;
+  return /unauthorized|\b401\b|-32001|invalid token|no auth provider|鉴权/i.test(text);
+}
+
+function isHttpAuthProbeError(s: McpServer, probe: McpProbeResult | undefined): boolean {
+  if (!probe || probe.status !== "error" || !isRemoteMcpTransport(s)) return false;
+  return isAuthErrorText(probe.errorMessage) || isAuthErrorText(probe.errorDetail);
+}
+
 /**
  * Tell other components that read mcpServers (e.g. McpView in the sidebar)
  * to re-read settings. Same channel ModelSection / PermissionSection use.
@@ -481,6 +514,7 @@ function McpCard({
     : server.url ?? "";
   const enabled = isEnabled(server);
   const editable = isEditableMcpServer(server);
+  const authIssue = isHttpAuthProbeError(server, probe);
   // Owning plugin name (TODO 6.2) — see ownerPluginOf.
   const ownerPlugin = ownerPluginOf(server);
   // Inside a plugin group the `plugin:` prefix is noise — show the bare name.
@@ -529,8 +563,33 @@ function McpCard({
               {t("settingsX.mcp.overrideBadge")}
             </span>
           )}
+          {transport !== "stdio" && (
+            <span
+              className={cn(
+                "rounded px-1.5 py-0.5 text-[10px] font-medium",
+                authIssue
+                  ? "bg-status-err/10 text-status-err"
+                  : isHttpMcpAuthConfigured(server)
+                    ? "bg-primary/10 text-primary"
+                    : "bg-muted text-muted-foreground",
+              )}
+              title={
+                authIssue
+                  ? t("settingsX.mcp.authRequiredTitle")
+                  : isHttpMcpAuthConfigured(server)
+                    ? t("settingsX.mcp.authConfiguredTitle")
+                    : t("settingsX.mcp.authNoneTitle")
+              }
+            >
+              {authIssue
+                ? t("settingsX.mcp.authRequired")
+                : isHttpMcpAuthConfigured(server)
+                  ? t("settingsX.mcp.authConfigured")
+                  : t("settingsX.mcp.authNone")}
+            </span>
+          )}
           {enabled ? (
-            <StatusPill probe={probe} loading={loading} />
+            <StatusPill probe={probe} loading={loading} authIssue={authIssue} />
           ) : (
             // 随插件禁用时组头已有「插件已禁用」徽标 — 卡片不再重复。
             !server.pluginDisabled && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{t("settingsX.mcp.disabled")}</span>
@@ -608,7 +667,9 @@ function McpCard({
         )}
         {probe?.status === "error" && (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-status-err">{probe.errorMessage}</span>
+            <span className="text-status-err">
+              {authIssue ? t("settingsX.mcp.authRequiredError") : probe.errorMessage}
+            </span>
             {probe.errorDetail && (
               <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={onShowErrorDetail}>
                 {t("settingsX.mcp.viewDetail")}
@@ -626,12 +687,20 @@ function McpCard({
   );
 }
 
-function StatusPill({ probe, loading }: { probe?: McpProbeResult; loading: boolean }) {
+function StatusPill({
+  probe,
+  loading,
+  authIssue = false,
+}: {
+  probe?: McpProbeResult;
+  loading: boolean;
+  authIssue?: boolean;
+}) {
   const { t } = useT();
   if (loading) return <span className="rounded bg-status-running/10 px-1.5 py-0.5 text-[10px] font-medium text-status-running">{t("settingsX.mcp.connecting")}</span>;
   if (!probe) return <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{t("settingsX.mcp.untested")}</span>;
   if (probe.status === "ok") return <span className="rounded bg-status-ok/10 px-1.5 py-0.5 text-[10px] font-medium text-status-ok">{t("settingsX.mcp.connected")}</span>;
-  if (probe.status === "error") return <span className="rounded bg-status-err/10 px-1.5 py-0.5 text-[10px] font-medium text-status-err">{t("settingsX.mcp.connFailed")}</span>;
+  if (probe.status === "error") return <span className="rounded bg-status-err/10 px-1.5 py-0.5 text-[10px] font-medium text-status-err">{authIssue ? t("settingsX.mcp.authRequired") : t("settingsX.mcp.connFailed")}</span>;
   return <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{t("settingsX.mcp.unknown")}</span>;
 }
 
@@ -889,17 +958,14 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
           )}
           {!isStdio && (
             <>
-              <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
-                <span>{t("settingsX.mcp.headersLabel")}</span>
-                <Textarea
-                  value={headersText}
-                  onChange={(e) => setHeadersText(e.target.value)}
-                  placeholder={"Authorization: Bearer ...\nX-N8N-API-KEY: ..."}
-                />
-                <span className="text-xs text-muted-foreground">
-                  {t("settingsX.mcp.headersHint")}
-                </span>
-              </label>
+              <div className="border-t pt-3 md:col-span-2">
+                <div className="text-sm font-medium text-foreground">
+                  {t("settingsX.mcp.httpAuthTitle")}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t("settingsX.mcp.httpAuthDesc")}
+                </p>
+              </div>
               <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground">
                 <span>{t("settingsX.mcp.useCredential")}</span>
                 <Select<string>
@@ -922,17 +988,30 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
                   {t("settingsX.mcp.bearerEnvVarHint")}
                 </span>
               </label>
-              <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
+              <label className="flex flex-col gap-1.5 text-sm md:col-span-2 [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
                 <span>{t("settingsX.mcp.envHeadersLabel")}</span>
                 <Textarea
                   value={envHeadersText}
                   onChange={(e) => setEnvHeadersText(e.target.value)}
-                  placeholder={"X-N8N-API-KEY: N8N_API_KEY"}
+                  placeholder={"x-api-key: MCP_API_KEY\nX-API-Key: OTHER_MCP_KEY"}
                 />
                 <span className="text-xs text-muted-foreground">
                   {t("settingsX.mcp.envHeadersHint")}
                 </span>
               </label>
+              {!isOverride && (
+                <label className="flex flex-col gap-1.5 text-sm md:col-span-2 [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
+                  <span>{t("settingsX.mcp.headersLabel")}</span>
+                  <Textarea
+                    value={headersText}
+                    onChange={(e) => setHeadersText(e.target.value)}
+                    placeholder={"Accept: application/json\nX-Client-Name: code-shell"}
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {t("settingsX.mcp.headersHint")}
+                  </span>
+                </label>
+              )}
             </>
           )}
         </div>
