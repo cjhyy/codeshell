@@ -185,6 +185,38 @@ interface ApprovalHistoryEntry {
   at: number;
 }
 
+interface PanelBucketState {
+  open: boolean;
+  tabs: { id: string; kind: PanelTab }[];
+  activeId: string | null;
+  requestNonce: number;
+  requestKind: PanelTab | null;
+  reviewFiles?: string[];
+  reviewDiff?: string;
+  revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
+  openUrl?: { url: string; nonce: number };
+}
+
+function emptyPanelBucketState(): PanelBucketState {
+  return { open: false, tabs: [], activeId: null, requestNonce: 0, requestKind: null };
+}
+
+function hydratePanelBucketState(bucket: string): PanelBucketState {
+  const snap = loadPanelState<PanelTab>(bucket);
+  return { ...snap, requestNonce: 0, requestKind: null };
+}
+
+function parsePanelBucket(bucket: string): { repoKey: string; repoId: string | null; sessionId: string | null } {
+  const sep = bucket.indexOf("::");
+  const repoKey = sep >= 0 ? bucket.slice(0, sep) : bucket;
+  const rawSessionId = sep >= 0 ? bucket.slice(sep + 2) : null;
+  return {
+    repoKey: repoKey || NO_REPO_KEY,
+    repoId: repoKey && repoKey !== NO_REPO_KEY ? repoKey : null,
+    sessionId: rawSessionId && rawSessionId !== "_none_" ? rawSessionId : null,
+  };
+}
+
 function App() {
   const toast = useToast();
   const { t } = useT();
@@ -970,10 +1002,7 @@ function App() {
     // panel state — the restore effect only re-runs when `activeBucket`
     // changes, which it won't if we're already in the draft bucket.
     clearPanelState(draftBucket);
-    setPanelTabs([]);
-    setPanelActiveId(null);
-    if (draftBucket === activeBucket) setPanelStateBucket(draftBucket);
-    setPanelRequest((r) => ({ nonce: r.nonce + 1, kind: null, open: false }));
+    setPanelByBucket((prev) => ({ ...prev, [draftBucket]: emptyPanelBucketState() }));
     setView((v) => ({ ...v, viewMode: "chat" }));
   };
 
@@ -1130,10 +1159,7 @@ function App() {
     // handleNewConversationForRepo — same reasoning, same in-memory reset).
     const draftBucket = bucketKey(repoId, null);
     clearPanelState(draftBucket);
-    setPanelTabs([]);
-    setPanelActiveId(null);
-    if (draftBucket === activeBucket) setPanelStateBucket(draftBucket);
-    setPanelRequest((r) => ({ nonce: r.nonce + 1, kind: null, open: false }));
+    setPanelByBucket((prev) => ({ ...prev, [draftBucket]: emptyPanelBucketState() }));
     setView((v) => ({ ...v, viewMode: "chat" }));
   };
 
@@ -2246,13 +2272,10 @@ function App() {
   };
 
   const resolveEngineSessionIdForBucket = (bucket: string): string | undefined => {
-    const sep = bucket.indexOf("::");
-    const uiSessionId = sep > 0 ? bucket.slice(sep + 2) : null;
-    const repoKey = sep > 0 ? bucket.slice(0, sep) : null;
-    const repoId = repoKey === GLOBAL_KEY || repoKey === null ? null : repoKey;
+    const { repoKey, repoId, sessionId: uiSessionId } = parsePanelBucket(bucket);
     const summary =
-      uiSessionId && uiSessionId !== "_none_"
-        ? sessionIndices[repoKey ?? GLOBAL_KEY]?.sessions.find((s) => s.id === uiSessionId) ??
+      uiSessionId
+        ? sessionIndices[repoKey]?.sessions.find((s) => s.id === uiSessionId) ??
           loadSessionIndex(repoId).sessions.find((s) => s.id === uiSessionId)
         : undefined;
     return summary?.engineSessionId ?? uiSessionId ?? undefined;
@@ -2391,40 +2414,16 @@ function App() {
 
   const setViewMode = (v: ViewMode): void => setView((prev) => ({ ...prev, viewMode: v }));
 
-  // Right-side panel dock (dynamic tabs: files/browser/review/terminal). Lives
-  // alongside chat; the top-bar button toggles it. The dock manages its own
-  // open tabs; App only asks it to open/focus a given kind via a request nonce.
-  // Files the review tab should focus, set when a chat "files changed" card
-  // requests review. Cleared is fine — review falls back to the whole tree.
-  const [reviewFiles, setReviewFiles] = useState<string[] | undefined>(undefined);
-  // The originating turn's diff snapshot (TODO 2.3a) — lets the review panel
-  // show what that turn changed even after the edits are committed.
-  const [reviewDiff, setReviewDiff] = useState<string | undefined>(undefined);
-  // File the Files panel should select + reveal, set when a chat answer's path
-  // link is clicked. The nonce re-fires reveal even when the same file is
-  // clicked twice, and lets a freshly-created Files tab pick it up on mount.
-  const [revealFile, setRevealFile] = useState<
-    { path: string; cwd: string | null; nonce: number; consumed?: boolean } | undefined
-  >(undefined);
+  // Right-side panel dock (dynamic tabs: files/browser/review/terminal). Panel
+  // state is bucket-owned below; only nonce sources stay global so repeated
+  // clicks can refire even if the same file/url is selected twice.
   // Monotonic nonce source for revealFile, in a ref so the open-file handler
   // (registered once) doesn't close over a stale `revealFile`.
   const revealFileNonceRef = useRef<number>(0);
   // A Files panel reports it has actually revealed the requested file; mark that
-  // nonce consumed so the request keeps lingering on the shared prop (a later
+  // nonce consumed so the request keeps lingering on its bucket prop (a later
   // manually-opened Files tab reads it as already-handled and won't replay the
   // old file) WITHOUT the timing race the old setTimeout(0) flip had.
-  const onRevealConsumed = useCallback((nonce: number) => {
-    setRevealFile((prev) =>
-      prev && prev.nonce === nonce && !prev.consumed ? { ...prev, consumed: true } : prev,
-    );
-  }, []);
-  // URL the Browser panel should navigate to, set when a chat answer's http(s)
-  // link is clicked. Threaded as a prop (not relied on via a window event the
-  // panel listens for) so it survives the panel being CLOSED at click time —
-  // the panel mounts fresh and still navigates. The nonce re-fires on re-click.
-  const [openUrl, setOpenUrl] = useState<{ url: string; nonce: number } | undefined>(
-    undefined,
-  );
   const openUrlNonceRef = useRef<number>(0);
   // Comment anchors pinned from the panels (diff line / browser element / file
   // line). They show as chips above the composer and ride along with the next
@@ -2452,105 +2451,82 @@ function App() {
       clearAnchorBuckets(s, [activeAnchorBucketRef.current, bucketKey(activeRepoId, null)]),
     );
   };
-  // Panel-dock request: nonce + kind, in ONE state object so opening the dock
-  // and choosing the kind is a single atomic update — PanelArea then mounts
-  // seeing the right kind and never opens a stray tab for a stale value.
-  // open=false means the dock is closed; the nonce only matters while open.
-  const [panelRequest, setPanelRequest] = useState<{ nonce: number; kind: PanelTab | null; open: boolean }>({
-    nonce: 0,
-    kind: null,
-    open: false,
-  });
-  // Panel dock tabs live in App (not PanelArea) so closing the dock and
-  // reopening it doesn't wipe the open tabs (the dock unmounts on close).
-  // PanelArea is a controlled component over these.
-  const [panelTabs, setPanelTabs] = useState<{ id: string; kind: PanelTab }[]>([]);
-  const [panelActiveId, setPanelActiveId] = useState<string | null>(null);
-  // Owner of panelTabs/panelActiveId. On a session switch, activeBucket updates
-  // one render before the restore effect installs the new bucket's snapshot; this
-  // guard prevents that transition frame from overwriting another bucket's live
-  // mounted panel cache.
-  const [panelStateBucket, setPanelStateBucket] = useState(activeBucket);
-  // Buckets that currently have ≥1 open panel. PanelArea keeps EVERY such
-  // bucket's panel bodies mounted (hidden when not active) so a session's
-  // browser/terminal survives switching away and back. We must therefore keep
-  // PanelArea itself mounted while ANY bucket has panels — not just the active
-  // one — otherwise switching to a panel-less session would unmount PanelArea
-  // and tear down the other sessions' live panels. This set drives that gate.
-  const [bucketsWithPanels, setBucketsWithPanels] = useState<Set<string>>(new Set());
-  // Top-bar toggle opens the dock on the card landing (kind null) / closes it.
-  const togglePanel = (): void =>
-    setPanelRequest((r) => ({ nonce: r.nonce + 1, kind: r.open ? r.kind : null, open: !r.open }));
-  // Clear the pending open-url whenever the dock is closed. BrowserPanel now
-  // stays mounted across a close (so its per-mount nonce-dedup ref does NOT
-  // reset), but clearing on close is still correct: it leaves no stale openUrl
-  // lingering for a future re-open to re-consume, and is a no-op once the panel
-  // has already navigated. The click-while-closed flow is unaffected: that sets
-  // openUrl AND opens the dock together (the nonce bump re-fires navigation).
-  useEffect(() => {
-    if (!panelRequest.open && openUrl) setOpenUrl(undefined);
-  }, [panelRequest.open, openUrl]);
-  // Open the dock and request a tab of `kind` (used by hotkeys, palette, cards).
-  const openPanel = (kind: PanelTab): void =>
-    setPanelRequest((r) => ({ nonce: r.nonce + 1, kind, open: true }));
+  // Panel state is owned by session bucket, not by the global App shell. This
+  // mirrors Codex's thread-owned dock model: switching sessions changes which
+  // PanelArea is visible; it never rewrites one session's browser/files/terminal
+  // state into another session.
+  const [panelByBucket, setPanelByBucket] = useState<Record<string, PanelBucketState>>(
+    () => ({ [activeBucket]: hydratePanelBucketState(activeBucket) }),
+  );
 
-  // Per-session panel state (open/tabs/activeId). The dock rides with the
-  // conversation: switching sessions restores that session's panels. Driven
-  // off `activeBucket` (= bucketKey(activeRepoId, activeSessionId)), which is
-  // the SINGLE derived key that changes on EVERY active-session switch — so
-  // this covers every setActiveSession path (select / new / draft / delete /
-  // automation) without instrumenting each call site.
-  //
-  // Race control. When `activeBucket` changes BOTH effects below re-run in the
-  // same pass. The restore effect runs first and queues setState for the new
-  // session's values, but those don't apply until the NEXT render — so on this
-  // pass the save effect still sees the OLD session's panel values. Writing
-  // them under the new `activeBucket` would corrupt the new session's saved
-  // state. To prevent that, the restore effect sets `skipSaveForRef` to the
-  // bucket it just restored; the save effect skips exactly one run for that
-  // bucket (the transition tick) and then resumes. After that, every change to
-  // the three panel states is the user's and gets persisted. panelWidth stays
-  // global and is NOT keyed here.
-  const skipSaveForRef = useRef<string | null>(activeBucket);
+  const updatePanelBucket = useCallback(
+    (targetBucket: string, updater: (state: PanelBucketState) => PanelBucketState) => {
+      setPanelByBucket((prev) => {
+        const current = prev[targetBucket] ?? hydratePanelBucketState(targetBucket);
+        const next = updater(current);
+        if (next === current) return prev;
+        return { ...prev, [targetBucket]: next };
+      });
+    },
+    [],
+  );
+
+  const onRevealConsumed = useCallback(
+    (targetBucket: string, nonce: number) => {
+      updatePanelBucket(targetBucket, (state) => {
+        if (!state.revealFile || state.revealFile.nonce !== nonce || state.revealFile.consumed) return state;
+        return { ...state, revealFile: { ...state.revealFile, consumed: true } };
+      });
+    },
+    [updatePanelBucket],
+  );
+
   useEffect(() => {
-    const snap = loadPanelState<PanelTab>(activeBucket);
-    setPanelTabs(snap.tabs);
-    setPanelActiveId(snap.activeId);
-    setPanelStateBucket(activeBucket);
-    setPanelRequest((r) => ({ nonce: r.nonce + 1, kind: null, open: snap.open }));
-    skipSaveForRef.current = activeBucket;
-    // Only re-run when the active session/repo bucket changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setPanelByBucket((prev) =>
+      prev[activeBucket] ? prev : { ...prev, [activeBucket]: hydratePanelBucketState(activeBucket) },
+    );
   }, [activeBucket]);
-  // Track whether the active bucket has panels (drives keeping PanelArea mounted
-  // for OTHER buckets too). Runs every render of these deps, including the
-  // restore transition (unlike the save effect, which skips that tick) — so a
-  // bucket that restores WITH panels is recorded immediately.
+
   useEffect(() => {
-    if (panelStateBucket !== activeBucket) return;
-    setBucketsWithPanels((prev) => {
-      const has = panelTabs.length > 0;
-      if (has === prev.has(activeBucket)) return prev;
-      const next = new Set(prev);
-      if (has) next.add(activeBucket);
-      else next.delete(activeBucket);
-      return next;
-    });
-  }, [panelTabs, activeBucket, panelStateBucket]);
-  useEffect(() => {
-    if (panelStateBucket !== activeBucket) return;
-    // Eat the transition tick after a restore so we don't write the previous
-    // session's leftover values under the freshly-switched bucket.
-    if (skipSaveForRef.current === activeBucket) {
-      skipSaveForRef.current = null;
-      return;
+    for (const [bucket, state] of Object.entries(panelByBucket)) {
+      savePanelState<PanelTab>(bucket, {
+        open: state.open,
+        tabs: state.tabs,
+        activeId: state.activeId,
+      });
     }
-    savePanelState<PanelTab>(activeBucket, {
-      open: panelRequest.open,
-      tabs: panelTabs,
-      activeId: panelActiveId,
+  }, [panelByBucket]);
+
+  const activePanelState = panelByBucket[activeBucket] ?? emptyPanelBucketState();
+
+  const panelBuckets = useMemo(() => {
+    const buckets = new Set<string>();
+    for (const [bucket, state] of Object.entries(panelByBucket)) {
+      if (state.tabs.length > 0) buckets.add(bucket);
+    }
+    if (activePanelState.open || activePanelState.tabs.length > 0) buckets.add(activeBucket);
+    return [...buckets];
+  }, [activeBucket, activePanelState.open, activePanelState.tabs.length, panelByBucket]);
+
+  const togglePanel = (): void =>
+    updatePanelBucket(activeBucket, (state) => {
+      const open = !state.open;
+      return {
+        ...state,
+        open,
+        requestNonce: state.requestNonce + 1,
+        requestKind: null,
+        openUrl: open ? state.openUrl : undefined,
+      };
     });
-  }, [panelTabs, panelActiveId, panelRequest.open, activeBucket, panelStateBucket]);
+
+  const openPanel = (kind: PanelTab): void =>
+    updatePanelBucket(activeBucket, (state) => ({
+      ...state,
+      open: true,
+      requestNonce: state.requestNonce + 1,
+      requestKind: kind,
+    }));
 
   // Dock width (px), persisted. The divider on the dock's left edge drags it.
   const PANEL_MIN = 320;
@@ -2659,13 +2635,18 @@ function App() {
     const onReview = (e: Event): void => {
       const detail = (e as CustomEvent<{ files?: string[]; diff?: string }>).detail;
       const files = detail?.files;
-      setReviewFiles(Array.isArray(files) && files.length > 0 ? files : undefined);
-      setReviewDiff(detail?.diff || undefined);
-      setPanelRequest((prev) => ({ nonce: prev.nonce + 1, kind: "review", open: true }));
+      updatePanelBucket(activeBucketRef.current, (state) => ({
+        ...state,
+        open: true,
+        reviewFiles: Array.isArray(files) && files.length > 0 ? files : undefined,
+        reviewDiff: detail?.diff || undefined,
+        requestNonce: state.requestNonce + 1,
+        requestKind: "review",
+      }));
     };
     window.addEventListener("codeshell:review-files", onReview);
     return () => window.removeEventListener("codeshell:review-files", onReview);
-  }, []);
+  }, [updatePanelBucket]);
 
   // A chat answer link (http/https) was clicked: open it in the in-app browser
   // panel instead of the OS browser. BrowserPanel listens for the same event to
@@ -2674,16 +2655,21 @@ function App() {
     const onOpenUrl = (e: Event): void => {
       const url = (e as CustomEvent<{ url?: string }>).detail?.url;
       if (!url) return;
-      // Carry the URL down to BrowserPanel as a prop (see openUrl state) BEFORE
-      // surfacing the panel, so a freshly-mounted panel navigates to it.
+      // Carry the URL down on the target bucket BEFORE surfacing the panel, so
+      // a freshly-mounted BrowserPanel navigates to it immediately.
       const nonce = (openUrlNonceRef.current ?? 0) + 1;
       openUrlNonceRef.current = nonce;
-      setOpenUrl({ url, nonce });
-      setPanelRequest((prev) => ({ nonce: prev.nonce + 1, kind: "browser", open: true }));
+      updatePanelBucket(activeBucketRef.current, (state) => ({
+        ...state,
+        open: true,
+        openUrl: { url, nonce },
+        requestNonce: state.requestNonce + 1,
+        requestKind: "browser",
+      }));
     };
     window.addEventListener("codeshell:open-url", onOpenUrl);
     return () => window.removeEventListener("codeshell:open-url", onOpenUrl);
-  }, []);
+  }, [updatePanelBucket]);
 
   // A chat answer's file path link was clicked: open it in the in-app Files
   // panel. FilesPanel listens for the same event to select + reveal the file;
@@ -2704,12 +2690,17 @@ function App() {
       // created the Files tab, the flip landed before the new panel's reveal
       // effect ran, so the first click opened an empty tab and you had to click
       // again. Event-driven consume removes that race.
-      setRevealFile({ path: detail.path!, cwd: detail.cwd ?? null, nonce, consumed: false });
-      setPanelRequest((prev) => ({ nonce: prev.nonce + 1, kind: "files", open: true }));
+      updatePanelBucket(activeBucketRef.current, (state) => ({
+        ...state,
+        open: true,
+        revealFile: { path: detail.path!, cwd: detail.cwd ?? null, nonce, consumed: false },
+        requestNonce: state.requestNonce + 1,
+        requestKind: "files",
+      }));
     };
     window.addEventListener("codeshell:open-file", onOpenFile);
     return () => window.removeEventListener("codeshell:open-file", onOpenFile);
-  }, []);
+  }, [updatePanelBucket]);
 
   // A panel pinned a comment anchor (diff line / browser element / file line).
   // Accumulate it as a chip above the composer (into the active bucket).
@@ -3134,7 +3125,7 @@ function App() {
           busy={busy}
           sidebarCollapsed={view.sidebarCollapsed}
           onToggleSidebar={toggleSidebar}
-          panelOpen={panelRequest.open}
+          panelOpen={activePanelState.open}
           onTogglePanel={togglePanel}
           isMac={isMac}
           isFullscreen={isFullscreen}
@@ -3331,41 +3322,68 @@ function App() {
           is reclaimed by BrowserPanel's own idle-eviction after a few minutes.
           We still gate on having tabs so an empty dock doesn't mount stray
           panel bodies before the user has opened anything. */}
-      {(panelRequest.open || bucketsWithPanels.size > 0) && (
-        <PanelArea
-          // The dock is a chat-only surface. Hide it outside chat so full-page
-          // views such as Extensions/Marketplace take the whole area, while
-          // keeping the active panel body live instead of blanking webviews.
-          hidden={!panelRequest.open || !isChatView}
-          keepActiveBodyLive={panelRequest.open && !isChatView}
-          cwd={activeRepo?.path ?? null}
-          repoId={activeRepoId}
-          // Match togglePanel's contract on close (bump nonce, clear kind) so
-          // closing via the dock's own tab-X leaves the same state as the
-          // top-bar toggle — avoids a stale `kind` lingering after close.
-          onClose={() => setPanelRequest((r) => ({ nonce: r.nonce + 1, kind: null, open: false }))}
-          requestNonce={panelRequest.nonce}
-          requestKind={panelRequest.kind}
-          reviewFiles={reviewFiles}
-          reviewDiff={reviewDiff}
-          revealFile={revealFile}
-          onRevealConsumed={onRevealConsumed}
-          openUrl={openUrl}
-          width={panelWidth}
-          onResizeStart={beginPanelResize}
-          onAttachImage={(p) => void attachImageByPath(p)}
-          browserAnchors={browserAnchors}
-          onRemoveBrowserAnchor={removeAnchor}
-          onUpdateBrowserAnchor={updateAnchorComment}
-          engineSessionId={resolveActiveEngineSessionId() ?? null}
-          tabs={panelTabs}
-          setTabs={setPanelTabs}
-          tabsBucket={panelStateBucket}
-          activeId={panelActiveId}
-          setActiveId={setPanelActiveId}
-          bucket={activeBucket}
-        />
-      )}
+      {panelBuckets.map((panelBucket) => {
+        const panelState = panelByBucket[panelBucket] ?? emptyPanelBucketState();
+        const isActivePanelBucket = panelBucket === activeBucket;
+        const { repoId: panelRepoId } = parsePanelBucket(panelBucket);
+        const panelRepo = panelRepoId ? repos.find((r) => r.id === panelRepoId) ?? null : null;
+        const hidden = !isActivePanelBucket || !isChatView || !panelState.open;
+        const keepActiveBodyLive = panelState.open && (!isActivePanelBucket || !isChatView);
+
+        return (
+          <PanelArea
+            key={panelBucket}
+            // The dock is a chat-only surface. Hidden session-owned docks stay
+            // mounted under their own bucket so browser/files/terminal state
+            // cannot be rewritten by another session.
+            hidden={hidden}
+            keepActiveBodyLive={keepActiveBodyLive}
+            cwd={panelRepo?.path ?? null}
+            onClose={() =>
+              updatePanelBucket(panelBucket, (state) => ({
+                ...state,
+                open: false,
+                requestNonce: state.requestNonce + 1,
+                requestKind: null,
+                openUrl: undefined,
+              }))
+            }
+            requestNonce={panelState.requestNonce}
+            requestKind={panelState.requestKind}
+            reviewFiles={panelState.reviewFiles}
+            reviewDiff={panelState.reviewDiff}
+            revealFile={panelState.revealFile}
+            onRevealConsumed={(nonce) => onRevealConsumed(panelBucket, nonce)}
+            openUrl={panelState.openUrl}
+            width={panelWidth}
+            onResizeStart={beginPanelResize}
+            onAttachImage={(p) => void attachImageByPath(p)}
+            browserAnchors={anchorsIn(anchorsByBucket, panelBucket)}
+            onRemoveBrowserAnchor={isActivePanelBucket ? removeAnchor : undefined}
+            onUpdateBrowserAnchor={isActivePanelBucket ? updateAnchorComment : undefined}
+            engineSessionId={resolveEngineSessionIdForBucket(panelBucket) ?? null}
+            tabs={panelState.tabs}
+            setTabs={(next) =>
+              updatePanelBucket(panelBucket, (state) => {
+                const tabs = typeof next === "function" ? next(state.tabs) : next;
+                const activeId =
+                  state.activeId && tabs.some((tab) => tab.id === state.activeId)
+                    ? state.activeId
+                    : tabs[0]?.id ?? null;
+                return { ...state, tabs, activeId };
+              })
+            }
+            activeId={panelState.activeId}
+            setActiveId={(next) =>
+              updatePanelBucket(panelBucket, (state) => ({
+                ...state,
+                activeId: typeof next === "function" ? next(state.activeId) : next,
+              }))
+            }
+            bucket={panelBucket}
+          />
+        );
+      })}
       </div>
       </div>
 

@@ -23,23 +23,11 @@ export interface OpenTab {
   kind: PanelTab;
 }
 
-/** Session-scoped panel context captured per bucket so a kept-mounted hidden
- *  bucket renders against ITS session's cwd/diff/anchors, not the live one. */
-interface BucketCtx {
-  cwd: string | null;
-  repoId: string | null;
-  reviewFiles?: string[];
-  reviewDiff?: string;
-  engineSessionId?: string | null;
-  browserAnchors?: Anchor[];
-}
-
 /** Monotonic tab-id counter; module-level so ids stay unique across remounts. */
 let panelTabSeq = 0;
 
 interface Props {
   cwd: string | null;
-  repoId: string | null;
   /**
    * When true the whole dock is visually hidden. Normal close uses display:none
    * so the dock occupies no width; keepActiveBodyLive uses an invisible absolute
@@ -59,18 +47,10 @@ interface Props {
   /** Controlled open tabs (owned by App so they survive a close→reopen). */
   tabs: OpenTab[];
   setTabs: React.Dispatch<React.SetStateAction<OpenTab[]>>;
-  /** Bucket that the controlled tabs/activeId currently belong to. */
-  tabsBucket?: string;
   /** Controlled active tab id. */
   activeId: string | null;
   setActiveId: React.Dispatch<React.SetStateAction<string | null>>;
-  /**
-   * The active session bucket (repo+session key). Panel BODIES for every bucket
-   * the user has visited stay MOUNTED (hidden via display:none when not the
-   * active bucket) so switching sessions and back keeps each session's browser
-   * <webview> / terminal pty / etc. alive instead of tearing them down. The tab
-   * strip and all tab mutations operate on the active bucket's `tabs` only.
-   */
+  /** Owning session bucket (repo+session key). One PanelArea is mounted per bucket. */
   bucket: string;
   /**
    * Bumped by the parent to request opening a tab of `requestKind`. Every time
@@ -141,7 +121,6 @@ function kindLabel(t: TFunction, kind: PanelTab): string {
  */
 export function PanelArea({
   cwd,
-  repoId,
   hidden = false,
   keepActiveBodyLive = false,
   onClose,
@@ -161,21 +140,16 @@ export function PanelArea({
   onUpdateBrowserAnchor,
   tabs,
   setTabs,
-  tabsBucket,
   activeId,
   setActiveId,
   bucket,
 }: Props) {
   const { t } = useT();
   // Fresh, collision-proof tab id. The module counter resets to 0 on a renderer
-  // reload, but tabs are PERSISTED per bucket — so a naive `${kind}-${++seq}`
-  // re-mints ids that already exist on disk (e.g. ccRoom-1), producing duplicate
-  // React keys across buckets ("two children with the same key `ccRoom-1`").
-  // Guard by bumping the counter past the highest suffix already in use for this
-  // kind across EVERY mounted bucket + the active tab list before minting.
+  // reload, but tabs are persisted per bucket; bump past ids already present in
+  // this bucket so restored tabs and newly-opened tabs don't collide.
   const mkId = (kind: PanelTab): string => {
     const existing: OpenTab[] = [...tabs];
-    for (const { tabs: bTabs } of mountedByBucket.current.values()) existing.push(...bTabs);
     const prefix = `${kind}-`;
     let max = panelTabSeq;
     for (const tb of existing) {
@@ -187,41 +161,10 @@ export function PanelArea({
     return `${prefix}${panelTabSeq}`;
   };
 
-  // Keep panel BODIES mounted across session switches. `mountedByBucket` snaps
-  // the active bucket's tabs AND its session-scoped context (cwd/repoId/review
-  // files+diff/engineSessionId/anchors) every render; buckets the user has
-  // visited stay in the map (their Slots keep rendering, hidden) so a browser/
-  // terminal/review for session A survives while session B is on screen — switch
-  // back and it's exactly as left. Crucially each bucket renders with ITS OWN
-  // captured context, not the live active session's — otherwise a hidden review/
-  // files panel would re-render against the wrong cwd/diff and lose its git
-  // state. A bucket whose tabs go empty is dropped (panels closed) so we don't
-  // leak mounted webviews/ptys.
-  const mountedByBucket = useRef<Map<string, { tabs: OpenTab[]; activeId: string | null; ctx: BucketCtx }>>(new Map());
-  const ownerBucket = tabsBucket ?? bucket;
-  if (ownerBucket === bucket && tabs.length > 0) {
-    // Dedup by id defensively: state persisted before the mkId-collision fix can
-    // still carry duplicate ids (e.g. two ccRoom-1), which would crash React with
-    // "two children with the same key". Keep the first of each id.
-    const seen = new Set<string>();
-    const dedupedTabs = tabs.filter((tb) => (seen.has(tb.id) ? false : (seen.add(tb.id), true)));
-    const snapshotActiveId =
-      activeId && dedupedTabs.some((tb) => tb.id === activeId)
-        ? activeId
-        : dedupedTabs[0]?.id ?? null;
-    mountedByBucket.current.set(bucket, {
-      tabs: dedupedTabs,
-      activeId: snapshotActiveId,
-      ctx: { cwd, repoId, reviewFiles, reviewDiff, engineSessionId, browserAnchors },
-    });
-  } else if (ownerBucket === bucket) {
-    mountedByBucket.current.delete(bucket);
-  }
-  // The active bucket's deduped tabs — used by the tab strip so it can't render
-  // duplicate keys either.
-  const activeSnapshot = mountedByBucket.current.get(bucket);
-  const activeTabs = activeSnapshot?.tabs ?? (ownerBucket === bucket ? tabs : []);
-  const candidateActiveId = ownerBucket === bucket ? activeId : activeSnapshot?.activeId ?? activeId;
+  // Dedup defensively: persisted state from older builds can carry duplicate ids.
+  const seenTabIds = new Set<string>();
+  const activeTabs = tabs.filter((tb) => (seenTabIds.has(tb.id) ? false : (seenTabIds.add(tb.id), true)));
+  const candidateActiveId = activeId;
   const visibleActiveId =
     candidateActiveId && activeTabs.some((tb) => tb.id === candidateActiveId)
       ? candidateActiveId
@@ -238,19 +181,18 @@ export function PanelArea({
   };
 
   const closeTab = (id: string): void => {
-    setTabs((prev) => {
-      const idx = prev.findIndex((t) => t.id === id);
-      const next = prev.filter((t) => t.id !== id);
-      if (next.length === 0) {
-        onClose(); // closing the last tab closes the dock
-        return next;
-      }
-      if (id === visibleActiveId) {
-        // Activate the neighbour (prefer the one to the left).
-        setActiveId(next[Math.max(0, idx - 1)].id);
-      }
-      return next;
-    });
+    const idx = activeTabs.findIndex((t) => t.id === id);
+    if (idx === -1) return;
+    const next = activeTabs.filter((t) => t.id !== id);
+    setTabs((prev) => prev.filter((t) => t.id !== id));
+    if (next.length === 0) {
+      onClose(); // closing the last tab closes the dock
+      return;
+    }
+    if (id === visibleActiveId) {
+      // Activate the neighbour (prefer the one to the left).
+      setActiveId(next[Math.max(0, idx - 1)].id);
+    }
   };
 
   // Single source for opening tabs: react to each new request nonce. Focus an
@@ -392,46 +334,31 @@ export function PanelArea({
             closing calls onClose). Keeps one consistent "close" affordance. */}
       </div>
 
-      {/* Bodies. We render the panels of EVERY visited bucket (keyed
-          bucket:id), but only the ACTIVE bucket's active tab is visible — the
-          rest are display:none but stay mounted, so a session's browser/terminal
-          survives a switch away and back. The empty-dock landing shows only for
-          the active bucket when it has no tabs. */}
+      {/* Bodies. This PanelArea belongs to exactly one session bucket. App keeps
+          one mounted PanelArea per bucket, so no body here ever changes owner
+          during a session switch. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
-        {tabs.length === 0 && <PanelLanding onPick={addTab} />}
-        {[...mountedByBucket.current.entries()].flatMap(([b, { tabs: bTabs, ctx }]) =>
-          bTabs.map((t) => {
-            const onActiveBucket = b === bucket;
-            // Each bucket renders with ITS captured session context. Only the
-            // ACTIVE bucket also gets the live transient/nonce props (revealFile/
-            // openUrl) — those target the session the user is driving now.
-            return (
-              <Slot key={`${b}:${t.id}`} active={onActiveBucket && t.id === visibleActiveId}>
-                {/* A panel body is live when the dock is open and this is the
-                    active bucket/tab. A full-page non-chat view may visually
-                    hide the dock without closing it; keepActiveBodyLive keeps
-                    BrowserPanel from idle-evicting that still-open page. */}
-                <PanelBody
-                  tab={t}
-                  bucket={b}
-                  visible={(!hidden || keepActiveBodyLive) && onActiveBucket && t.id === visibleActiveId}
-                  cwd={ctx.cwd}
-                  repoId={ctx.repoId}
-                  reviewFiles={ctx.reviewFiles}
-                  reviewDiff={ctx.reviewDiff}
-                  engineSessionId={ctx.engineSessionId}
-                  browserAnchors={ctx.browserAnchors}
-                  revealFile={onActiveBucket ? revealFile : undefined}
-                  onRevealConsumed={onActiveBucket ? onRevealConsumed : undefined}
-                  openUrl={onActiveBucket ? openUrl : undefined}
-                  onAttachImage={onAttachImage}
-                  onRemoveBrowserAnchor={onRemoveBrowserAnchor}
-                  onUpdateBrowserAnchor={onUpdateBrowserAnchor}
-                />
-              </Slot>
-            );
-          }),
-        )}
+        {activeTabs.length === 0 && <PanelLanding onPick={addTab} />}
+        {activeTabs.map((t) => (
+          <Slot key={t.id} active={t.id === visibleActiveId}>
+            <PanelBody
+              tab={t}
+              bucket={bucket}
+              visible={(!hidden || keepActiveBodyLive) && t.id === visibleActiveId}
+              cwd={cwd}
+              reviewFiles={reviewFiles}
+              reviewDiff={reviewDiff}
+              engineSessionId={engineSessionId}
+              browserAnchors={browserAnchors}
+              revealFile={revealFile}
+              onRevealConsumed={onRevealConsumed}
+              openUrl={openUrl}
+              onAttachImage={onAttachImage}
+              onRemoveBrowserAnchor={onRemoveBrowserAnchor}
+              onUpdateBrowserAnchor={onUpdateBrowserAnchor}
+            />
+          </Slot>
+        ))}
       </div>
     </div>
   );
@@ -465,7 +392,6 @@ function PanelBody({
   bucket,
   visible,
   cwd,
-  repoId,
   reviewFiles,
   reviewDiff,
   revealFile,
@@ -481,7 +407,6 @@ function PanelBody({
   bucket: string;
   visible: boolean;
   cwd: string | null;
-  repoId: string | null;
   reviewFiles?: string[];
   reviewDiff?: string;
   revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
@@ -506,7 +431,7 @@ function PanelBody({
       return <ReviewPanel cwd={cwd} files={reviewFiles} turnDiff={reviewDiff} />;
     case "terminal":
       // Per-tab session id so multiple terminals are independent shells.
-      return <TerminalPanel cwd={cwd} sessionId={`term:${repoId ?? "no-repo"}:${tab.id}`} />;
+      return <TerminalPanel cwd={cwd} sessionId={`term:${bucket}:${tab.id}`} />;
     case "shells":
       return <BackgroundShellPanel sessionId={engineSessionId ?? null} />;
     case "ccRoom":
