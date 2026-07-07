@@ -28,11 +28,11 @@ export class ExternalAgentBindingStore {
   constructor(private readonly filePath?: string) {}
 
   get(externalSessionId: string): ExternalAgentRunBinding | undefined {
-    return this.read().bindings[externalSessionId];
+    return this.read({ failOnCorrupt: true }).bindings[externalSessionId];
   }
 
   upsert(next: Omit<ExternalAgentRunBinding, "createdAt" | "lastUsedAt">): ExternalAgentRunBinding {
-    const data = this.read();
+    const data = this.read({ failOnCorrupt: false });
     const existing = data.bindings[next.externalSessionId];
     const now = Date.now();
     const binding: ExternalAgentRunBinding = {
@@ -46,15 +46,26 @@ export class ExternalAgentBindingStore {
     return binding;
   }
 
-  private read(): ExternalAgentBindingsFile {
+  private read(opts: { failOnCorrupt: boolean }): ExternalAgentBindingsFile {
     const file = this.file();
     if (!existsSync(file)) return { bindings: {} };
     try {
       const parsed = JSON.parse(readFileSync(file, "utf-8")) as Partial<ExternalAgentBindingsFile>;
-      return parsed && typeof parsed.bindings === "object" && parsed.bindings
-        ? { bindings: parsed.bindings as Record<string, ExternalAgentRunBinding> }
-        : { bindings: {} };
-    } catch {
+      if (parsed && typeof parsed.bindings === "object" && parsed.bindings) {
+        return { bindings: parsed.bindings as Record<string, ExternalAgentRunBinding> };
+      }
+      if (opts.failOnCorrupt) {
+        throw new Error(`external agent bindings file is corrupt: expected object with bindings`);
+      }
+      return { bindings: {} };
+    } catch (err) {
+      if (opts.failOnCorrupt) {
+        throw new Error(
+          `external agent bindings file is corrupt or unreadable: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      }
       return { bindings: {} };
     }
   }

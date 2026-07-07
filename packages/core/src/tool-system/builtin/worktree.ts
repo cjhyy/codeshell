@@ -13,7 +13,7 @@ import {
   validateWorktreeSlug,
   selectPlatformScript,
   runWorktreeSetup,
-  worktreeHasUncommittedChanges,
+  worktreeHasUncommittedOrAheadChanges,
   currentBranch,
   type WorktreeSession,
 } from "../../git/worktree.js";
@@ -61,18 +61,18 @@ export async function enterWorktreeTool(
     kind: "main" as const,
   };
   const fromRoot = fromWorkspace.root;
+  const currentTurnRoot = ctx?.cwd ?? fromRoot;
 
   try {
     if (target === "main") {
       const workspace: SessionWorkspace = { root: mainRoot, kind: "main" };
-      sessionManager.setSessionWorkspace(sessionId, workspace);
+      persistSessionWorkspace(sessionManager, sessionId, workspace, ctx);
       sessionManager.recordWorkspaceHandoff(sessionId, fromWorkspace, workspace);
-      updateLiveCwd(ctx, mainRoot);
       return (
         `Switched to main workspace:\n` +
         `  Path: ${mainRoot}\n` +
         `  From: ${fromRoot}\n\n` +
-        `Subsequent file and shell tools will run in ${mainRoot}.`
+        nextTurnNotice(mainRoot, currentTurnRoot)
       );
     }
 
@@ -85,9 +85,8 @@ export async function enterWorktreeTool(
     });
 
     const workspace = toSessionWorkspace(selected, fromWorkspace);
-    sessionManager.setSessionWorkspace(sessionId, workspace);
+    persistSessionWorkspace(sessionManager, sessionId, workspace, ctx);
     sessionManager.recordWorkspaceHandoff(sessionId, fromWorkspace, workspace);
-    updateLiveCwd(ctx, workspace.root);
 
     const setupNote = selected.created
       ? await runSetupIfConfigured(selected.session.worktreePath, mainRoot, ctx)
@@ -99,7 +98,7 @@ export async function enterWorktreeTool(
       `  Branch: ${workspace.worktree!.branch}\n` +
       `  From:   ${selected.from}\n` +
       `  Previous: ${fromRoot}\n\n` +
-      `Subsequent file and shell tools will run in ${workspace.root}.` +
+      nextTurnNotice(workspace.root, currentTurnRoot) +
       setupNote
     );
   } catch (err) {
@@ -110,6 +109,23 @@ export async function enterWorktreeTool(
 /** Keep setup output from bloating the tool result — head+tail-ish trim. */
 function truncate(s: string, max = 2000): string {
   return s.length <= max ? s : `${s.slice(0, max)}\n…(${s.length - max} more chars)`;
+}
+
+function persistSessionWorkspace(
+  sessionManager: SessionManager,
+  sessionId: string,
+  workspace: SessionWorkspace,
+  ctx?: ToolContext,
+): void {
+  sessionManager.setSessionWorkspace(sessionId, workspace);
+  ctx?.setSessionWorkspace?.(workspace);
+}
+
+function nextTurnNotice(nextRoot: string, currentTurnRoot: string): string {
+  return (
+    `Workspace switched to ${nextRoot}. This takes effect on the next turn - ` +
+    `file/shell/sandbox tools in the CURRENT turn still target ${currentTurnRoot}.`
+  );
 }
 
 export const exitWorktreeToolDef: ToolDefinition = {
@@ -158,23 +174,25 @@ export async function exitWorktreeTool(
     return `Error: unknown action "${requested}" (expected keep, detach, or discard).`;
   }
 
-  const hasUncommittedChanges =
-    existsSync(workspace.worktree.path) && worktreeHasUncommittedChanges(workspace.worktree.path);
-  const action = requested ?? (hasUncommittedChanges ? undefined : "detach");
+  const hasPendingChanges =
+    existsSync(workspace.worktree.path) &&
+    worktreeHasUncommittedOrAheadChanges(workspace.worktree.path, workspace.worktree.baseRef);
+  const action = requested ?? (hasPendingChanges ? undefined : "detach");
   if (!action) {
     return (
-      `Error: worktree has uncommitted changes. Choose action "keep" to preserve ` +
+      `Error: worktree has uncommitted changes or new commits. Choose action "keep" to preserve ` +
       `the directory or "discard" to delete the worktree and branch.`
     );
   }
-  if (action === "detach" && hasUncommittedChanges) {
+  if (action === "detach" && hasPendingChanges) {
     return (
-      `Error: detach would drop uncommitted changes. Choose action "keep" to preserve ` +
+      `Error: detach would drop uncommitted changes or new commits. Choose action "keep" to preserve ` +
       `the directory or "discard" to delete the worktree and branch.`
     );
   }
 
   const mainRoot = sessionManager.readCwd(sessionId) ?? workspace.root;
+  const currentTurnRoot = ctx?.cwd ?? workspace.root;
   try {
     if (action === "discard") {
       removeWorktree(workspace.worktree.path, true);
@@ -182,25 +200,30 @@ export async function exitWorktreeTool(
       removeWorktree(workspace.worktree.path, false);
     }
     const mainWorkspace: SessionWorkspace = { root: mainRoot, kind: "main" };
-    sessionManager.setSessionWorkspace(sessionId, mainWorkspace);
+    persistSessionWorkspace(sessionManager, sessionId, mainWorkspace, ctx);
     sessionManager.recordWorkspaceHandoff(sessionId, workspace, mainWorkspace);
-    updateLiveCwd(ctx, mainRoot);
 
     if (action === "keep") {
       return (
         `Worktree preserved at ${workspace.worktree.path}. ` +
         `Branch ${workspace.worktree.branch} preserved.\n` +
-        `Back to ${mainRoot}.`
+        `Back to ${mainRoot} starting next turn.\n` +
+        nextTurnNotice(mainRoot, currentTurnRoot)
       );
     }
     if (action === "discard") {
-      return `Worktree removed and branch ${workspace.worktree.branch} deleted. Back to ${mainRoot}.`;
+      return (
+        `Worktree removed and branch ${workspace.worktree.branch} deleted. ` +
+        `Back to ${mainRoot} starting next turn.\n` +
+        nextTurnNotice(mainRoot, currentTurnRoot)
+      );
     }
     return (
       `Worktree removed${requested ? "" : " (auto-detached clean worktree)"}. ` +
       `Branch ${workspace.worktree.branch} preserved.\n` +
       `To merge: git merge ${workspace.worktree.branch}\n` +
-      `Back to ${mainRoot}.`
+      `Back to ${mainRoot} starting next turn.\n` +
+      nextTurnNotice(mainRoot, currentTurnRoot)
     );
   } catch (err) {
     return `Error exiting worktree: ${(err as Error).message}`;
@@ -309,12 +332,6 @@ async function runSetupIfConfigured(
     `\n\n⚠️ Setup script failed (exit ${setup.exitCode ?? "?"}) — continuing anyway. ` +
     `You may need to run setup manually.${setup.output ? `\n${truncate(setup.output)}` : ""}`
   );
-}
-
-function updateLiveCwd(ctx: ToolContext | undefined, cwd: string): void {
-  if (!ctx) return;
-  ctx.cwd = cwd;
-  ctx.setCwd?.(cwd);
 }
 
 function stringArg(value: unknown): string | undefined {

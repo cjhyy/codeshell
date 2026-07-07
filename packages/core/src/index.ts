@@ -149,6 +149,7 @@ export {
   listWorktrees,
   removeWorktree,
   validateWorktreeSlug,
+  worktreeHasUncommittedOrAheadChanges,
   worktreeHasUncommittedChanges,
   type ListWorktreesOptions,
   type WorktreeDiffSummary,

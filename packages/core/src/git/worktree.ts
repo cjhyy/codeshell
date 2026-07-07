@@ -56,6 +56,7 @@ export function selectPlatformScript(
  * Validate worktree slug to prevent path traversal attacks.
  */
 export function validateWorktreeSlug(slug: string): void {
+  if (slug.trim().length === 0) throw new Error("Worktree slug cannot be empty");
   if (slug.length > 64) throw new Error("Worktree slug too long (max 64 chars)");
   if (/[^a-zA-Z0-9._-]/.test(slug)) throw new Error("Worktree slug contains invalid characters");
   if (slug.startsWith(".") || slug.includes(".."))
@@ -238,48 +239,60 @@ export async function runWorktreeSetup(
  * Remove a worktree and optionally its branch.
  */
 export function removeWorktree(worktreePath: string, removeBranch = false): void {
+  // The MAIN repo root, not the worktree's own toplevel. `git rev-parse
+  // --show-toplevel` from inside a worktree returns the worktree path, which
+  // is about to be deleted; the branch-delete must run from the main repo,
+  // which outlives the worktree. Derive it from the common git dir.
+  let mainRoot: string;
   try {
-    // The MAIN repo root, not the worktree's own toplevel. `git rev-parse
-    // --show-toplevel` from inside a worktree returns the worktree path, which
-    // is about to be deleted; the branch-delete must run from the main repo,
-    // which outlives the worktree. Derive it from the common git dir.
     const commonDir = execFileSync(
       GIT_BIN,
       ["rev-parse", "--path-format=absolute", "--git-common-dir"],
       { cwd: worktreePath, encoding: "utf-8", timeout: 5000 },
     ).trim();
-    const mainRoot = dirname(commonDir); // <main>/.git → <main>
+    mainRoot = dirname(commonDir); // <main>/.git → <main>
+  } catch (err) {
+    throw new Error(`failed to inspect worktree ${worktreePath}: ${gitErrorMessage(err)}`);
+  }
 
-    // Capture the worktree's branch BEFORE removing the worktree — afterwards
-    // the directory is gone and `git branch --show-current` in it would fail
-    // (silently, leaving removeBranch a no-op).
-    let branch = "";
-    if (removeBranch) {
-      try {
-        branch = execFileSync(GIT_BIN, ["branch", "--show-current"], {
-          cwd: worktreePath,
-          encoding: "utf-8",
-          timeout: 5000,
-        }).trim();
-      } catch {
-        // Detached HEAD or unreadable — nothing to delete.
-      }
+  // Capture the worktree's branch BEFORE removing the worktree — afterwards
+  // the directory is gone and `git branch --show-current` in it would fail.
+  let branch = "";
+  if (removeBranch) {
+    try {
+      branch = execFileSync(GIT_BIN, ["branch", "--show-current"], {
+        cwd: worktreePath,
+        encoding: "utf-8",
+        timeout: 5000,
+      }).trim();
+    } catch (err) {
+      throw new Error(
+        `failed to determine branch for worktree ${worktreePath}: ${gitErrorMessage(err)}`,
+      );
     }
+    if (!branch) {
+      throw new Error(`failed to determine branch for worktree ${worktreePath}`);
+    }
+    if (!branch.startsWith("worktree/")) {
+      throw new Error(`refusing to delete non-CodeShell worktree branch ${branch}`);
+    }
+  }
 
+  try {
     execFileSync(GIT_BIN, ["worktree", "remove", worktreePath, "--force"], {
       cwd: mainRoot,
       timeout: 30000,
     });
+  } catch (err) {
+    throw new Error(`failed to remove worktree ${worktreePath}: ${gitErrorMessage(err)}`);
+  }
 
-    if (removeBranch && branch.startsWith("worktree/")) {
-      try {
-        execFileSync(GIT_BIN, ["branch", "-D", branch], { cwd: mainRoot, timeout: 10000 });
-      } catch {
-        // Branch might already be removed.
-      }
+  if (removeBranch) {
+    try {
+      execFileSync(GIT_BIN, ["branch", "-D", branch], { cwd: mainRoot, timeout: 10000 });
+    } catch (err) {
+      throw new Error(`failed to delete branch ${branch}: ${gitErrorMessage(err)}`);
     }
-  } catch {
-    // Worktree might already be removed
   }
 }
 
@@ -295,6 +308,18 @@ export function worktreeHasUncommittedChanges(worktreePath: string): boolean {
   } catch {
     return false;
   }
+}
+
+export function worktreeHasUncommittedOrAheadChanges(
+  worktreePath: string,
+  baseRef?: string,
+): boolean {
+  if (worktreeHasUncommittedChanges(worktreePath)) return true;
+  const comparisonBase =
+    baseRef && commitRefExists(worktreePath, baseRef)
+      ? baseRef
+      : findComparisonBaseRef(worktreePath);
+  return comparisonBase ? aheadCommitCount(worktreePath, comparisonBase) > 0 : false;
 }
 
 export interface WorktreeDiffSummary {
@@ -474,6 +499,16 @@ function gitOutput(cwd: string, args: string[]): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function gitErrorMessage(err: unknown): string {
+  const stderr = (err as { stderr?: Buffer | string }).stderr;
+  if (Buffer.isBuffer(stderr)) {
+    const msg = stderr.toString("utf-8").trim();
+    if (msg) return msg;
+  }
+  if (typeof stderr === "string" && stderr.trim()) return stderr.trim();
+  return err instanceof Error ? err.message : String(err);
 }
 
 function normalizeBranchName(branch: string): string {

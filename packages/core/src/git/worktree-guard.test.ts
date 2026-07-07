@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
-import { createWorktree } from "./worktree.js";
+import { createWorktree, validateWorktreeSlug } from "./worktree.js";
 
 const ENV = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
 
@@ -35,5 +35,10 @@ describe("createWorktree same-branch guard", () => {
         `branch ${first.worktreeBranch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} already checked out at `,
       ),
     );
+  });
+
+  test("validateWorktreeSlug rejects empty or whitespace slugs", () => {
+    expect(() => validateWorktreeSlug("")).toThrow(/empty/i);
+    expect(() => validateWorktreeSlug("   ")).toThrow(/empty/i);
   });
 });

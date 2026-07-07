@@ -174,6 +174,53 @@ describe("DriveAgent external session bindings", () => {
     }
   });
 
+  it("rejects resume when the external session id has no binding", async () => {
+    let ran = false;
+    const tool = makeDriveAgentTool(async () => {
+      ran = true;
+      return { sessionId: "UNKNOWN", finalText: "ok", isError: false, exitCode: 0, lines: [] };
+    });
+
+    const out = await tool(
+      {
+        prompt: "resume",
+        resumeSessionId: "UNKNOWN",
+        background: false,
+        cli: "claude",
+      } as any,
+      { cwd: "/fallback-cwd", sessionId: "CS-UNKNOWN" } as any,
+    );
+
+    expect(out.toLowerCase()).toContain("error");
+    expect(out.toLowerCase()).toContain("no binding");
+    expect(ran).toBe(false);
+  });
+
+  it("blocks resume when bindings.json is corrupt instead of treating it as empty", async () => {
+    mkdirSync(join(home, "external-agents"), { recursive: true });
+    writeFileSync(bindingFile(home), "{not json", "utf-8");
+    let ran = false;
+    const tool = makeDriveAgentTool(async () => {
+      ran = true;
+      return { sessionId: "EXT-CORRUPT", finalText: "ok", isError: false, exitCode: 0, lines: [] };
+    });
+
+    const out = await tool(
+      {
+        prompt: "resume",
+        resumeSessionId: "EXT-CORRUPT",
+        background: false,
+        cli: "claude",
+      } as any,
+      { cwd: "/fallback-cwd", sessionId: "CS-CORRUPT" } as any,
+    );
+
+    expect(out.toLowerCase()).toContain("error");
+    expect(out.toLowerCase()).toContain("bindings");
+    expect(out.toLowerCase()).toContain("corrupt");
+    expect(ran).toBe(false);
+  });
+
   it("blocks resume when the bound worktree directory is gone but the branch still exists", async () => {
     const repo = mkdtempSync(join(tmpdir(), "cs-drive-repo-"));
     try {

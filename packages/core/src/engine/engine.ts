@@ -1552,6 +1552,9 @@ export class Engine {
     // the first point we can set it. After this assignment treat the
     // field as immutable for the rest of the run.
     toolCtx.sessionId = session.state.sessionId;
+    toolCtx.setSessionWorkspace = (workspace) => {
+      session.state.workspace = workspace;
+    };
     return runWithSid(session.state.sessionId, async () => {
       recordSessionStart(session.state.sessionId, {
         // Strip <codeshell-image> base64 payloads before they reach

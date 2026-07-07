@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
@@ -121,6 +121,25 @@ describe("ExitWorktree cleanup actions", () => {
     removeWorktree(active.path, true);
   });
 
+  test("omitted action refuses to auto-detach a clean tree with new commits", async () => {
+    const toolCtx = ctx("ahead123456");
+    await enterWorktreeTool({ target: "ahead" }, toolCtx);
+    const before = sm.getSessionWorkspace("ahead123456")!;
+    const active = before.worktree!;
+    writeFileSync(join(active.path, "committed.txt"), "committed\n");
+    git(active.path, ["add", "-A"]);
+    git(active.path, ["commit", "-q", "-m", "worktree commit"]);
+
+    const out = await exitWorktreeTool({}, toolCtx);
+
+    expect(out.toLowerCase()).toContain("error");
+    expect(out).toContain("keep");
+    expect(out).toContain("discard");
+    expect(existsSync(active.path)).toBe(true);
+    expect(sm.getSessionWorkspace("ahead123456")).toEqual(before);
+    removeWorktree(active.path, true);
+  });
+
   test("detach refuses to drop uncommitted changes", async () => {
     const toolCtx = ctx("dirtydt123456");
     await enterWorktreeTool({ target: "dirty-detach" }, toolCtx);
@@ -170,10 +189,10 @@ describe("ExitWorktree cleanup actions", () => {
     removeWorktree(shared.path, true);
   });
 
-  test("enter updates the live ToolContext cwd to the target root", async () => {
+  test("enter persists a breadcrumb but keeps the current turn cwd on the old root", async () => {
     const toolCtx = ctx("ctxcwd123456");
 
-    await enterWorktreeTool({ target: "ctxcwd" }, toolCtx);
+    const out = await enterWorktreeTool({ target: "ctxcwd" }, toolCtx);
     const ws = sm.getSessionWorkspace("ctxcwd123456")!;
     const transcript = readFileSync(join(sessions, "ctxcwd123456", "transcript.jsonl"), "utf-8")
       .trim()
@@ -181,9 +200,25 @@ describe("ExitWorktree cleanup actions", () => {
       .map((line) => JSON.parse(line));
     const lastMeta = transcript.filter((event) => event.type === "session_meta").at(-1);
 
-    expect(toolCtx.cwd).toBe(ws.root);
+    expect(out).toContain("next turn");
+    expect(out).toContain("CURRENT turn");
+    expect(toolCtx.cwd).toBe(repo);
     expect(lastMeta.data.workspace.root).toBe(ws.root);
     expect(lastMeta.data.handoffFrom).toBe(repo);
     removeWorktree(ws.worktree!.path, true);
+  });
+
+  test("remove failure returns an error and leaves the session pointed at the worktree", async () => {
+    const toolCtx = ctx("rmfail123456");
+    await enterWorktreeTool({ target: "rmfail" }, toolCtx);
+    const before = sm.getSessionWorkspace("rmfail123456")!;
+    const active = before.worktree!;
+    unlinkSync(join(active.path, ".git"));
+
+    const out = await exitWorktreeTool({ action: "detach" }, toolCtx);
+
+    expect(out.toLowerCase()).toContain("error");
+    expect(existsSync(active.path)).toBe(true);
+    expect(sm.getSessionWorkspace("rmfail123456")).toEqual(before);
   });
 });

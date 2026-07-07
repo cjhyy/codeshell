@@ -7,7 +7,7 @@ import {
   removeWorktree,
   SessionManager,
   validateWorktreeSlug,
-  worktreeHasUncommittedChanges,
+  worktreeHasUncommittedOrAheadChanges,
   type SessionWorkspace,
   type WorktreeInfo,
   type WorktreeWorkspaceOwner,
@@ -132,10 +132,14 @@ export function cleanupSessionWorktreeForUi(
   if (resolve(match.path) === resolve(mainRoot))
     throw new Error("cannot clean up the main workspace");
 
-  const dirty = worktreeHasUncommittedChanges(match.path);
+  const baseRef =
+    current.kind === "worktree" && resolve(current.root) === resolve(match.path)
+      ? current.worktree?.baseRef
+      : undefined;
+  const dirty = worktreeHasUncommittedOrAheadChanges(match.path, baseRef);
   if (action === "detach" && dirty) {
     throw new Error(
-      "detach would drop uncommitted changes. Choose discard to delete the worktree and branch.",
+      "detach would drop uncommitted changes or new commits. Choose discard to delete the worktree and branch.",
     );
   }
 

@@ -19,6 +19,7 @@ import type { AgentPresetName } from "../preset/index.js";
 import type { SandboxBackend } from "./sandbox/index.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type { SessionManager } from "../session/session-manager.js";
+import type { SessionWorkspace } from "../types.js";
 
 /**
  * Narrow view of the owning Engine that tools are allowed to call back into.
@@ -181,8 +182,10 @@ export interface ToolVisibilityContext {
 export interface ToolContext {
   /** Active working directory for this Engine. */
   cwd: string;
-  /** Mutate the owning live context cwd after a session workspace switch. */
+  /** Mutate the owning live context cwd. Worktree switching intentionally does not use this. */
   setCwd?(cwd: string): void;
+  /** Mutate the owning live session state after a session workspace switch. */
+  setSessionWorkspace?(workspace: SessionWorkspace): void;
   /** LLM credentials/endpoint for tools that need to make their own calls. */
   llmConfig: LLMConfig;
   /** Active model pool (Arena reads this to pick participants). */

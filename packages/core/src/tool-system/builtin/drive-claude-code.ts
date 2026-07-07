@@ -282,7 +282,29 @@ function resolveDriveAgentCwd(
   resumeSessionId: string | undefined,
 ): CwdResolution {
   const explicitCwd = typeof args.cwd === "string" ? args.cwd : undefined;
-  const binding = resumeSessionId ? externalAgentBindingStore.get(resumeSessionId) : undefined;
+  let binding: ExternalAgentRunBinding | undefined;
+  if (resumeSessionId) {
+    try {
+      binding = externalAgentBindingStore.get(resumeSessionId);
+    } catch (err) {
+      return {
+        ok: false,
+        error:
+          `Error: cannot resume external session ${resumeSessionId}; ` +
+          `bindings store is corrupt or unreadable: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+      };
+    }
+    if (!binding) {
+      return {
+        ok: false,
+        error:
+          `Error: external session ${resumeSessionId} has no binding; ` +
+          `refusing to resume with an unverified cwd.`,
+      };
+    }
+  }
   if (binding) {
     if (binding.cli !== cli) {
       return {
