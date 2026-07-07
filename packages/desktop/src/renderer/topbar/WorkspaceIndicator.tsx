@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GitBranch, Loader2, MoreHorizontal, Plus } from "lucide-react";
 import { Button } from "../components/ui/button";
 import {
@@ -34,6 +34,7 @@ interface Props {
   repoPath: string | null;
   repoName: string | null;
   sessionBusy?: boolean;
+  includeRepoNameInLabel?: boolean;
 }
 
 interface CleanupConfirm {
@@ -44,10 +45,12 @@ interface CleanupConfirm {
 export function workspaceIndicatorText(
   workspace: SessionWorkspace | null,
   repoName: string | null,
+  opts: { includeRepoName?: boolean } = {},
 ): string {
   if (workspace?.kind === "worktree" && workspace.worktree?.branch) {
     return `⑃ ${workspace.worktree.branch}`;
   }
+  if (opts.includeRepoName === false) return "main";
   return repoName ? `main (${repoName})` : "main";
 }
 
@@ -72,7 +75,33 @@ export function workspaceRowDisabledReason(
   return null;
 }
 
-export function WorkspaceIndicator({ sessionId, repoPath, repoName, sessionBusy = false }: Props) {
+export function workspaceCleanupDisabledReason(row: SessionWorkspaceWorktreeInfo): string | null {
+  if (row.occupiedByOtherSession) {
+    return "This worktree is owned by another session. Cleanup is disabled.";
+  }
+  return null;
+}
+
+export function workspaceCleanupActionState(row: SessionWorkspaceWorktreeInfo): {
+  reason: string | null;
+  detachDisabled: boolean;
+  discardDisabled: boolean;
+} {
+  const reason = workspaceCleanupDisabledReason(row);
+  return {
+    reason,
+    detachDisabled: row.diff?.hasUncommittedChanges === true || reason !== null,
+    discardDisabled: reason !== null,
+  };
+}
+
+export function WorkspaceIndicator({
+  sessionId,
+  repoPath,
+  repoName,
+  sessionBusy = false,
+  includeRepoNameInLabel = true,
+}: Props) {
   const { t } = useT();
   const toast = useToast();
   const [open, setOpen] = useState(false);
@@ -83,6 +112,7 @@ export function WorkspaceIndicator({ sessionId, repoPath, repoName, sessionBusy 
   const [newOpen, setNewOpen] = useState(false);
   const [slug, setSlug] = useState("");
   const [confirm, setConfirm] = useState<CleanupConfirm | null>(null);
+  const refreshRequestId = useRef(0);
 
   const canLoad = Boolean(sessionId && repoPath);
 
@@ -99,6 +129,7 @@ export function WorkspaceIndicator({ sessionId, repoPath, repoName, sessionBusy 
   );
 
   const refreshCurrent = useCallback(async () => {
+    const requestId = ++refreshRequestId.current;
     if (!sessionId || !repoPath) {
       setWorkspace(null);
       setList(null);
@@ -106,25 +137,39 @@ export function WorkspaceIndicator({ sessionId, repoPath, repoName, sessionBusy 
     }
     try {
       const next = await window.codeshell.getSessionWorkspace(sessionId, repoPath);
+      if (refreshRequestId.current !== requestId) return;
       setWorkspace(next);
     } catch {
+      if (refreshRequestId.current !== requestId) return;
       setWorkspace({ root: repoPath, kind: "main" });
     }
   }, [repoPath, sessionId]);
 
   const refreshList = useCallback(async () => {
-    if (!sessionId || !repoPath) return;
+    const requestId = ++refreshRequestId.current;
+    if (!sessionId || !repoPath) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const next = await window.codeshell.listSessionWorktrees(sessionId, repoPath);
+      if (refreshRequestId.current !== requestId) return;
       setList(next);
       setWorkspace(next.current);
     } catch (error) {
+      if (refreshRequestId.current !== requestId) return;
       reportError(error);
     } finally {
-      setLoading(false);
+      if (refreshRequestId.current === requestId) setLoading(false);
     }
   }, [repoPath, reportError, sessionId]);
+
+  useEffect(() => {
+    return () => {
+      refreshRequestId.current += 1;
+    };
+  }, []);
 
   useEffect(() => {
     void refreshCurrent();
@@ -182,7 +227,10 @@ export function WorkspaceIndicator({ sessionId, repoPath, repoName, sessionBusy 
     }
   };
 
-  const label = useMemo(() => workspaceIndicatorText(workspace, repoName), [repoName, workspace]);
+  const label = useMemo(
+    () => workspaceIndicatorText(workspace, repoName, { includeRepoName: includeRepoNameInLabel }),
+    [includeRepoNameInLabel, repoName, workspace],
+  );
 
   if (!canLoad) return null;
 
@@ -301,21 +349,25 @@ export function WorkspaceIndicator({ sessionId, repoPath, repoName, sessionBusy 
   );
 }
 
-function WorkspaceRow({
+export function WorkspaceRow({
   row,
   current,
   busy,
   onSwitch,
   onCleanup,
+  cleanupMenuOpen,
 }: {
   row: SessionWorkspaceWorktreeInfo;
   current: SessionWorkspace | null;
   busy: string | null;
   onSwitch: (target: string) => void;
   onCleanup: (action: CleanupAction) => void;
+  cleanupMenuOpen?: boolean;
 }) {
   const { t } = useT();
   const disabledReason = workspaceRowDisabledReason(row, current, t);
+  const cleanupState = workspaceCleanupActionState(row);
+  const cleanupDisabledReason = cleanupState.reason;
   const dirty = row.diff?.hasUncommittedChanges === true;
   const rowLabel = row.isMain
     ? t("topbar.workspace.main")
@@ -323,6 +375,25 @@ function WorkspaceRow({
   const path = compactPath(row.path);
   const target = row.isMain ? "main" : row.path;
   const switching = busy === target;
+  const detachDisabled = cleanupState.detachDisabled;
+  const discardDisabled = cleanupState.discardDisabled;
+
+  const cleanupTrigger = (
+    <DropdownMenuTrigger asChild>
+      <button
+        type="button"
+        className="my-2 inline-flex h-8 w-8 items-center justify-center rounded-sm text-muted-foreground opacity-80 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
+        title={cleanupDisabledReason ?? t("topbar.workspace.cleanup")}
+        aria-label={
+          cleanupDisabledReason
+            ? `${t("topbar.workspace.cleanup")}: ${cleanupDisabledReason}`
+            : t("topbar.workspace.cleanup")
+        }
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
+    </DropdownMenuTrigger>
+  );
 
   const button = (
     <button
@@ -380,24 +451,44 @@ function WorkspaceRow({
       {row.isMain ? (
         <span />
       ) : (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="my-2 inline-flex h-8 w-8 items-center justify-center rounded-sm text-muted-foreground opacity-80 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
-              title={t("topbar.workspace.cleanup")}
-              aria-label={t("topbar.workspace.cleanup")}
+        <DropdownMenu {...(cleanupMenuOpen === undefined ? {} : { open: cleanupMenuOpen })}>
+          {cleanupDisabledReason ? (
+            <Tooltip>
+              <TooltipTrigger asChild>{cleanupTrigger}</TooltipTrigger>
+              <TooltipContent>{cleanupDisabledReason}</TooltipContent>
+            </Tooltip>
+          ) : (
+            cleanupTrigger
+          )}
+          <DropdownMenuContent
+            align="end"
+            forceMount={cleanupMenuOpen ? true : undefined}
+            title={cleanupDisabledReason ?? undefined}
+          >
+            <DropdownMenuItem
+              disabled={detachDisabled}
+              title={cleanupDisabledReason ?? undefined}
+              onSelect={(event) => {
+                if (detachDisabled) {
+                  event.preventDefault();
+                  return;
+                }
+                onCleanup("detach");
+              }}
             >
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem disabled={dirty} onSelect={() => onCleanup("detach")}>
               {t("topbar.workspace.detach")}
             </DropdownMenuItem>
             <DropdownMenuItem
+              disabled={discardDisabled}
               className="text-status-err focus:text-status-err"
-              onSelect={() => onCleanup("discard")}
+              title={cleanupDisabledReason ?? undefined}
+              onSelect={(event) => {
+                if (discardDisabled) {
+                  event.preventDefault();
+                  return;
+                }
+                onCleanup("discard");
+              }}
             >
               {t("topbar.workspace.discard")}
             </DropdownMenuItem>

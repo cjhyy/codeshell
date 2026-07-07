@@ -101,6 +101,7 @@ function TopBarImpl({
               repoPath={repoPath}
               repoName={repoName}
               sessionBusy={busy}
+              includeRepoNameInLabel={false}
             />
           </span>
         )}
@@ -192,7 +193,9 @@ function StatusBadge({
       <div className="flex items-center gap-1.5">
         {activeGoal && (
           // ◎ marker: an active persistent goal exists. Hover the dot to see it.
-          <span className="text-xs text-status-running" title={t("topbar.hasActiveGoal")}>◎</span>
+          <span className="text-xs text-status-running" title={t("topbar.hasActiveGoal")}>
+            ◎
+          </span>
         )}
         {/* Persistent task indicator: TodoWrite tasks used to be visible ONLY on
             hover (the popover), so users kept missing them. Show a compact
@@ -207,10 +210,7 @@ function StatusBadge({
             {tasks.tasks.filter((tk) => tk.status === "completed").length}/{tasks.tasks.length}
           </span>
         )}
-        <StatusDot
-          status={busy ? "running" : "idle"}
-          title={busy ? "running" : "idle"}
-        />
+        <StatusDot status={busy ? "running" : "idle"} title={busy ? "running" : "idle"} />
       </div>
       {open && (
         <div className="absolute right-0 top-full z-50 mt-1">

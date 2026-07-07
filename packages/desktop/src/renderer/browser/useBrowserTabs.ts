@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  NEW_TAB,
-  freshTab,
-  normalizeUrl,
-  type Tab,
-  type WebviewElement,
-} from "./types";
+import { NEW_TAB, freshTab, normalizeUrl, type Tab, type WebviewElement } from "./types";
 
 export const OPEN_TAB_SENTINEL = "__CS_OPEN_TAB__";
 export const OPEN_TAB_RATE_WINDOW_MS = 1000;
@@ -77,6 +71,25 @@ export function shouldAcceptOpenTabConsoleUrl(
   state.recentUrls.set(url, now);
   state.openedInWindow += 1;
   return true;
+}
+
+export function buildOpenTabBridgeScript(nonce: string | null): string {
+  return `(() => {
+      if (window.__cs_tab_hook_v2) return; window.__cs_tab_hook_v2 = 1;
+      const sentinel = ${JSON.stringify(OPEN_TAB_SENTINEL)};
+      const nonce = ${JSON.stringify(nonce)};
+      document.addEventListener('click', (e) => {
+        if (!e.isTrusted) return;
+        const a = e.target && e.target.closest && e.target.closest('a[href]');
+        if (!a) return;
+        const href = a.href;
+        if (!/^https?:/i.test(href)) return;
+        const wantsNew = a.target === '_blank' || e.metaKey || e.ctrlKey || e.button === 1;
+        if (!wantsNew) return;
+        e.preventDefault(); e.stopPropagation();
+        console.info(sentinel + JSON.stringify({ nonce, url: href }));
+      }, true);
+    })();`;
 }
 
 /**
@@ -189,24 +202,10 @@ export function useBrowserTabs(
     // new window (target=_blank, or ⌘/Ctrl/middle-click) and signals the URL out
     // via console.info with a sentinel; we parse it in onConsole below and open
     // an in-app tab. Same-tab links keep working through normal navigation.
-    const INJECT = `(() => {
-      if (window.__cs_tab_hook_v2) return; window.__cs_tab_hook_v2 = 1;
-      const sentinel = ${JSON.stringify(OPEN_TAB_SENTINEL)};
-      const nonce = ${JSON.stringify(openTabConsoleNonce.current)};
-      document.addEventListener('click', (e) => {
-        const a = e.target && e.target.closest && e.target.closest('a[href]');
-        if (!a) return;
-        const href = a.href;
-        if (!/^https?:/i.test(href)) return;
-        const wantsNew = a.target === '_blank' || e.metaKey || e.ctrlKey || e.button === 1;
-        if (!wantsNew) return;
-        e.preventDefault(); e.stopPropagation();
-        console.info(sentinel + JSON.stringify({ nonce, url: href }));
-      }, true);
-    })();`;
+    const inject = buildOpenTabBridgeScript(openTabConsoleNonce.current);
     const onDomReady = () => {
       try {
-        void view.executeJavaScript(INJECT, true).catch(() => undefined);
+        void view.executeJavaScript(inject, true).catch(() => undefined);
       } catch {
         /* guest torn down */
       }
@@ -334,5 +333,16 @@ export function useBrowserTabs(
     [activeId],
   );
 
-  return { tabs, activeId, active, nav, viewRef, setActiveId, patchTab, closeTab, openInNewTab, navigate };
+  return {
+    tabs,
+    activeId,
+    active,
+    nav,
+    viewRef,
+    setActiveId,
+    patchTab,
+    closeTab,
+    openInNewTab,
+    navigate,
+  };
 }

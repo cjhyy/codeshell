@@ -46,6 +46,12 @@ function currentWorkspaceFor(
   return sm.getSessionWorkspace(sessionId) ?? { root: mainRoot, kind: "main" };
 }
 
+function requireKnownSession(sm: SessionManager, sessionId: string): void {
+  if (!sm.exists(sessionId)) {
+    throw new Error(`unknown session: ${sessionId}`);
+  }
+}
+
 export function getSessionWorkspaceForUi(sessionId: string, cwd: string): SessionWorkspace {
   const sm = sessions();
   const mainRoot = mainRootFor(sm, sessionId, cwd);
@@ -73,6 +79,7 @@ export function switchSessionWorkspaceForUi(
   target: string,
 ): SessionWorkspaceList {
   const sm = sessions();
+  requireKnownSession(sm, sessionId);
   const trimmed = target.trim();
   if (!trimmed) throw new Error("target is required");
   const mainRoot = mainRootFor(sm, sessionId, cwd);
@@ -124,13 +131,20 @@ export function cleanupSessionWorktreeForUi(
     throw new Error("action must be detach or discard");
   }
   const sm = sessions();
+  requireKnownSession(sm, sessionId);
   const mainRoot = mainRootFor(sm, sessionId, cwd);
   const current = currentWorkspaceFor(sm, sessionId, mainRoot);
-  const entries = listWorktrees(mainRoot);
+  const entries = listWorktrees(mainRoot, {
+    currentSessionId: sessionId,
+    workspaceOwners: workspaceOwners(sm),
+  });
   const match = entries.find((entry) => resolve(entry.path) === resolve(worktreePath));
   if (!match) throw new Error(`worktree not found: ${worktreePath}`);
   if (resolve(match.path) === resolve(mainRoot))
     throw new Error("cannot clean up the main workspace");
+  if (match.occupiedByOtherSession) {
+    throw new Error("worktree is occupied by another session");
+  }
 
   const baseRef =
     current.kind === "worktree" && resolve(current.root) === resolve(match.path)

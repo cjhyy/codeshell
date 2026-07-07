@@ -4,7 +4,10 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createWorktree, SessionManager } from "@cjhyy/code-shell-core";
-import { cleanupSessionWorktreeForUi } from "./session-workspace-service";
+import {
+  cleanupSessionWorktreeForUi,
+  switchSessionWorkspaceForUi,
+} from "./session-workspace-service";
 
 const ENV = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
 
@@ -68,5 +71,54 @@ describe("cleanupSessionWorktreeForUi", () => {
     });
     rmSync(lockPath, { force: true });
     execFileSync("git", ["branch", "-D", wt.worktreeBranch], { cwd: repo, env: ENV });
+  });
+
+  test("rejects cleanup for a worktree owned by another session", () => {
+    const ownerSessionId = "desktopowner";
+    const callerSessionId = "desktopcaller";
+    const sm = new SessionManager();
+    sm.create(repo, "m", "p", ownerSessionId);
+    sm.create(repo, "m", "p", callerSessionId);
+    const wt = createWorktree(repo, "occupied", ownerSessionId);
+    sm.setSessionWorkspace(ownerSessionId, {
+      root: wt.worktreePath,
+      kind: "worktree",
+      worktree: {
+        path: wt.worktreePath,
+        branch: wt.worktreeBranch,
+        baseRef: wt.originalBranch ?? "HEAD",
+        createdBy: "codeshell",
+      },
+    });
+
+    expect(() =>
+      cleanupSessionWorktreeForUi(callerSessionId, repo, wt.worktreePath, "discard"),
+    ).toThrow(/another session|occupied/i);
+
+    expect(existsSync(wt.worktreePath)).toBe(true);
+    expect(git(repo, ["branch", "--list", wt.worktreeBranch])).toContain(wt.worktreeBranch);
+  });
+
+  test("rejects unknown-session switch before creating a worktree or branch", () => {
+    expect(() => switchSessionWorkspaceForUi("missing-session", repo, "unknownswitch")).toThrow(
+      /unknown session/i,
+    );
+
+    expect(existsSync(join(repo, "..", ".worktrees", "unknownswitch-missing-"))).toBe(false);
+    expect(git(repo, ["branch", "--list", "worktree/unknownswitch-missing-"])).toBe("");
+  });
+
+  test("rejects unknown-session cleanup before removing a matched worktree", () => {
+    const ownerSessionId = "desktopowner";
+    const sm = new SessionManager();
+    sm.create(repo, "m", "p", ownerSessionId);
+    const wt = createWorktree(repo, "unknownclean", ownerSessionId);
+
+    expect(() =>
+      cleanupSessionWorktreeForUi("missing-session", repo, wt.worktreePath, "discard"),
+    ).toThrow(/unknown session/i);
+
+    expect(existsSync(wt.worktreePath)).toBe(true);
+    expect(git(repo, ["branch", "--list", wt.worktreeBranch])).toContain(wt.worktreeBranch);
   });
 });

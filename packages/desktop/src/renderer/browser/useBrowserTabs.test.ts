@@ -4,6 +4,7 @@ import {
   OPEN_TAB_MAX_PER_RATE_WINDOW,
   OPEN_TAB_RATE_WINDOW_MS,
   OPEN_TAB_SENTINEL,
+  buildOpenTabBridgeScript,
   createOpenTabConsoleGuardState,
   parseOpenTabConsoleMessage,
   shouldAcceptOpenTabConsoleUrl,
@@ -75,5 +76,64 @@ describe("shouldAcceptOpenTabConsoleUrl", () => {
         2000 + OPEN_TAB_RATE_WINDOW_MS,
       ),
     ).toBe(true);
+  });
+});
+
+describe("target-blank bridge script", () => {
+  test("ignores synthetic clicks and processes trusted new-tab clicks", () => {
+    let clickListener: ((event: Record<string, unknown>) => void) | null = null;
+    const messages: string[] = [];
+    const previousWindow = globalThis.window;
+    const previousDocument = globalThis.document;
+    const previousConsole = globalThis.console;
+
+    Object.assign(globalThis, {
+      window: {},
+      document: {
+        addEventListener(type: string, listener: (event: Record<string, unknown>) => void) {
+          if (type === "click") clickListener = listener;
+        },
+      },
+      console: {
+        ...previousConsole,
+        info(message: string) {
+          messages.push(message);
+        },
+      },
+    });
+
+    try {
+      Function(buildOpenTabBridgeScript(nonce))();
+      if (!clickListener) throw new Error("click listener was not installed");
+      const anchor = {
+        href: "https://example.com/docs",
+        target: "_blank",
+      };
+      const target = {
+        closest: () => anchor,
+      };
+      const event = (isTrusted: boolean) => ({
+        isTrusted,
+        target,
+        metaKey: false,
+        ctrlKey: false,
+        button: 0,
+        preventDefault() {},
+        stopPropagation() {},
+      });
+
+      clickListener(event(false));
+      expect(messages).toHaveLength(0);
+
+      clickListener(event(true));
+      expect(messages).toHaveLength(1);
+      expect(parseOpenTabConsoleMessage(messages[0], nonce)).toBe("https://example.com/docs");
+    } finally {
+      Object.assign(globalThis, {
+        window: previousWindow,
+        document: previousDocument,
+        console: previousConsole,
+      });
+    }
   });
 });
