@@ -1,5 +1,7 @@
 # System Overview
 
+> Archive note: this page predates the monorepo split. Many `src/...` links below are historical and may be broken; use the current architecture set starting at [`../../architecture/00-overview.md`](../../architecture/00-overview.md) for package-aligned links.
+
 ## What CodeShell Is
 
 CodeShell is a TypeScript/Bun agent framework that can be used as both:

@@ -1,6 +1,6 @@
 # bench/
 
-Local performance benches for `src/render`. Not run in CI. Output is plain text
+Local performance benches for `packages/tui/src/render`. Not run in CI. Output is plain text
 to stdout, one table row per measurement plus auxiliary counters
 (`bytes_written`, `frame_count`).
 
@@ -21,7 +21,7 @@ to stdout, one table row per measurement plus auxiliary counters
 | `render-spinner.bench.ts`        | Spinner ticks 60× atop 5k history         | `bytes_written` per tick                      |
 | `render-wheel.bench.ts`          | 100 `scrollBy` steps over 10k transcript  | `perIterMs`                                   |
 
-Baselines are recorded in `src/render/README.md` under "Perf baselines".
+Baselines are recorded in `packages/tui/src/render/README.md` under "Perf baselines".
 
 ## Interpretation guide
 

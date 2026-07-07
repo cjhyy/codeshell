@@ -24,7 +24,7 @@ CodeShell is one orchestration engine wearing three faces:
 
 The core is deliberately **domain-agnostic**. The turn loop, context management, permissions, MCP integration, hooks, tasks, cron, sub-agents, sessions, and memory all stay generic; coding behavior is just a *preset* layered on top — not baked into the engine. (See `packages/core/CONTRIBUTING.md`: "core only carries mechanism, not policy.")
 
-> Status: **0.6.0-rc.10**, preparing for beta. The desktop app is the headline product; the CLI and SDK share the same core engine.
+> Status: **0.6.0-rc.12**, preparing for beta. The desktop app is the headline product; the CLI and SDK share the same core engine.
 
 ---
 
@@ -119,15 +119,17 @@ Presets select the system prompt, the built-in tool set, and permission defaults
 
 ### Built-in tools
 
-A broad orchestration toolbox is available across presets:
+The default `general` preset whitelists 47 built-ins. The CLI defaults to
+`terminal-coding`, which adds coding extras. Runtime guards may hide tools that
+need unavailable providers, credentials, cookies, or an active goal.
 
-- **File**: `Read`, `Write`, `Edit`, `Glob`, `Grep`
-- **Execution**: `Bash`, `PowerShell`, `REPL`
-- **Coordination**: `TaskCreate`, `TaskUpdate`, `TaskList`, `TaskGet`, `TaskOutput`, `Agent`, `SendMessage`, `Sleep`
-- **Planning / runtime**: `EnterPlanMode`, `ExitPlanMode`, `CronCreate`, `CronDelete`, `CronList`
-- **Discovery / integration**: `ToolSearch`, `Skill`, `MCPTool`, `ListMcpResources`, `ReadMcpResource`
-- **Generation**: `GenerateImage`, `GenerateVideo` (image/video providers via the unified catalog)
-- **Coding preset extras**: `EnterWorktree`, `ExitWorktree`, `NotebookEdit`, `LSP`, `Brief`, `Arena`
+- **File / workspace**: `Read`, `Write`, `Edit`, `ApplyPatch`, `Glob`, `Grep`
+- **Shell / execution**: `Bash`, `BashOutput`, `KillShell`, `ListShells`, `PowerShell`, `REPL`, `Sleep`
+- **Web / media / browser**: `browser_observe`, `browser_act`, `browser_navigate`, `WebSearch`, `WebFetch`, `GenerateImage`, `GenerateVideo`
+- **Planning / orchestration**: `AskUserQuestion`, `EnterPlanMode`, `ExitPlanMode`, `ToolSearch`, `TodoWrite`, `Agent`, `AgentCancel`, `DriveAgent`, `DriveClaudeCode`, `CheckQuota`
+- **Automation / integration**: `CronCreate`, `CronDelete`, `CronList`, `Config`, `Skill`, `MCPTool`, `ListMcpResources`, `ReadMcpResource`, `EditModelCatalog`
+- **Memory / credentials / goals**: `MemoryList`, `MemoryRead`, `MemorySave`, `MemoryDelete`, `UseCredential`, `InjectCredential`, `complete_goal`, `cancel_goal`
+- **Terminal-coding preset extras**: `EnterWorktree`, `ExitWorktree`, `NotebookEdit`, `LSP`, `Brief`, `Arena`
 
 ---
 
@@ -191,16 +193,16 @@ CodeShell's terminal UI defaults to **fullscreen** (alt-screen + ScrollBox) — 
 
 Opt out at startup with `CODESHELL_FULLSCREEN=0|false|off`, or toggle at runtime with `/fullscreen off`. Flow mode lets the transcript flow into the terminal's native scrollback (useful if you prefer keeping shell history above CodeShell visible).
 
-### Stream idle watchdog (opt-in)
+### Stream idle watchdog (on by default)
 
-When `CODESHELL_ENABLE_STREAM_WATCHDOG=1`, the openai provider aborts any LLM stream idle for `CODESHELL_STREAM_IDLE_TIMEOUT_MS` ms (default `90000`) without a chunk. The engine then retries via the existing `withRetry` policy, capped by `CODESHELL_STREAM_WATCHDOG_RETRIES` (default `2`). This bounds upstream hangs at ~90 s instead of indefinitely. User-initiated aborts (Esc / Ctrl+C) are never retried. Disabled by default.
+The OpenAI-compatible provider aborts any LLM stream idle for `CODESHELL_STREAM_IDLE_TIMEOUT_MS` ms (default `90000`) without a chunk, then retries via the existing `withRetry` policy, capped by `CODESHELL_STREAM_WATCHDOG_RETRIES` (default `2`). This bounds upstream hangs at ~90 s instead of indefinitely. Set `CODESHELL_ENABLE_STREAM_WATCHDOG=0` to opt out. User-initiated aborts (Esc / Ctrl+C) are never retried.
 
 ---
 
 ## Architecture
 
 <p align="center">
-  <img src="docs/archive/architecture/images/00-framework-overview.png" alt="CodeShell framework overview architecture diagram" width="860" />
+  <img src="docs/architecture/images/overview-runtime-layers.png" alt="CodeShell runtime layering and protocol flow architecture diagram" width="860" />
 </p>
 
 At a high level, CodeShell routes CLI, headless, SDK, and desktop clients through the same engine runtime:
@@ -247,14 +249,16 @@ scripts/      # Build, release, and repo maintenance scripts
 ```bash
 bun install
 bun run build          # build core + tui + meta package
-bun run typecheck      # core + tui (tsc --noEmit)
+bun run typecheck      # root core + tui check; currently not a clean gate
 bun test               # core / tui test suites
 
 # Desktop has its OWN typecheck and build (the root checks do NOT cover it):
 cd packages/desktop
-bunx tsc --noEmit
-bun run build:renderer
+bun run typecheck
+bun run build
 ```
+
+> Current caveat: `bun run typecheck` at the repo root reports a pre-existing test typing error in `packages/core/src/tool-system/builtin/drive-claude-code.test.ts:158`. Use it for signal, but do not treat it as a clean gate until that is fixed.
 
 `bun run dev` launches the desktop app. For the TUI in dev: `bun run dev:tui`.
 

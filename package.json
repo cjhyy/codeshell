@@ -57,6 +57,7 @@
     "assets/codeshell-dog-icon.png",
     "assets/codeshell-promo.png",
     "assets/codeshell-desktop-screenshot-en.png",
+    "docs/architecture/images/overview-runtime-layers.png",
     "dist",
     "scripts/check-node.cjs",
     "README.md",

@@ -119,7 +119,7 @@ CodeShell 的答案是：**这些差异住在一张数据表里**，不是在客
 ### 2.3 流式、重试、用量：模型层的可靠性细节
 
 - **重试 + 截止**（`client-base.ts`）：`withRetry` 把调用方的 `AbortSignal` 和一个每请求硬截止（约 2× SDK 超时，最少 120s）组合起来，拆掉半死的 socket。重试 5xx + 限流，**不重试**确定性的 4xx——这避免了对一个注定失败的坏请求反复等待。（曾有 bug：4xx-retry 守卫被 `LLMError` 的 status burial 打穿，导致坏请求也重试；已修。）
-- **流空闲看门狗**（`stream-watchdog.ts`）：可选；空闲超过 `idleTimeoutMs`（默认 90s）就中止并重试。`onChunk` 在中止检查**之后**调用，所以 Stop 之后缓冲的 chunk 不会漏到 UI。
+- **流空闲看门狗**（`stream-watchdog.ts`）：默认开启；空闲超过 `idleTimeoutMs`（默认 90s）就中止并重试。设置 `CODESHELL_ENABLE_STREAM_WATCHDOG=0` 可关闭。`onChunk` 在中止检查**之后**调用，所以 Stop 之后缓冲的 chunk 不会漏到 UI。
 - **用量与成本**：`LLMClientBase.onUsage` 是每次响应触发的静态 hook，宿主装它来喂 `CostTracker`。`TokenUsage` 带 `cacheReadTokens`/`cacheCreationTokens`。
 - **构造时不给 `maxTokens` 兜底**：留 undefined 让各 provider 用自己的默认，而不是在某个硬编码值上悄悄截断（曾有 max_tokens bleed 未 clamp 的 bug；已修）。
 

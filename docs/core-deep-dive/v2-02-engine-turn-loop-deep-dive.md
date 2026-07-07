@@ -212,7 +212,7 @@ pre_tool_use hook（权限 + 前置）
   - `truncateToolResults`：持久化关掉或写盘失败时的硬截断兜底。
   - `dedupeFileReads`：同一路径被 Read 多次 ⇒ 只留最新，旧的换成"已被取代"标记。
   - `maskOldObservations`：只留最新一份 `browser_observe` 快照，旧的折叠掉（浏览器场景下省 token 杠杆最大）。
-- **Tier 1 — microcompact**（`compaction.ts`）：**零成本、无损**。对可重取的工具（`COMPACTABLE_TOOL_NAMES`：Read / Glob / Grep / Bash / PowerShell / REPL / WebFetch / WebSearch / NotebookEdit）清掉较老的 `tool_result` **内容**，只留一行指纹 `[Old tool result cleared — …]`——反正需要时模型能再调一次。**带状态的工具（TaskUpdate / Agent / Skill）原样保留**，因为它们不可重取。有一个约 0.7 的下限比例，没到就不动。
+- **Tier 1 — microcompact**（`compaction.ts`）：**零成本、无损**。对可重取的工具（`COMPACTABLE_TOOL_NAMES`：Read / Glob / Grep / Bash / PowerShell / REPL / WebFetch / WebSearch / NotebookEdit）清掉较老的 `tool_result` **内容**，只留一行指纹 `[Old tool result cleared — …]`——反正需要时模型能再调一次。**带状态的工具（TodoWrite / Agent / Skill）原样保留**，因为它们不可重取。有一个约 0.7 的下限比例，没到就不动。
 - **Tier 2 — summarize**（异步）：超过约 0.85 占比时，让 aux 模型做**滚动**摘要——在上一版摘要上合并，而非从头重摘，所以细节是缓慢侵蚀而不是一次性丢光。连续失败 3 次回退到同步的 `snipCompact → windowCompact` 路径。
 - **Tier 3 — window 紧急压缩**：超过约 0.92 时，只保留首 + 尾 N 条，作为撞 `prompt_too_long` 之前的最后手段。
 - **流式反应探针**（`reactive-threshold.ts`）：流式期间累计响应 token，每跨过一个 2000-token 桶，可能触发一次流内紧急 window 压缩——防止单轮模型输出过长把窗口在 turn 中途撑爆。

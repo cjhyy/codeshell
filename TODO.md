@@ -5,6 +5,24 @@
 
 ---
 
+# 🆕 2026-07-07 三路 Codex 只读审查发现（待复核）
+
+> 三路并行 codex 审查产出，明细见 `docs/todo/review-core.md`(17)、`docs/todo/review-ui.md`(17)、`docs/todo/review-docs.md`(20)。**已经历「审查→修复→独立复核(`review-verification.md`)→补修」全流程**：core 安全 P1 5 项 + core P2 6 项 + UI 安全 P1 2 项 + UI/CDP P2 + docs 20 项全部落地并有回归测试；复核发现的 1 个 BROKEN(Config 原型污染) + 2 个关键 WEAK(审批乱序、Markdown className) 已补修并加负向测试；VERSION 常量对齐 rc.12。全部未提交，待分组 commit（安全修复 / P2 / docs 三组）。
+
+**core — 安全/正确性 P1（最高危，优先复核）**
+- 🔴 **[安全] 插件安装路径穿越**：`installFromSource.ts:37` 远程插件 `#subdir` 未拒 `..`；`pluginInstaller.ts:118/157` marketplace 源允许绝对/`../` 路径且无 containment 检查 → 可安装/复制任意本地目录。修：realpath 校验 subdir/path 严格落在 clone/marketplace 根下。
+- 🔴 **[安全] 原型污染**：`settings/manager.ts:325` 点号写入遍历继承对象，`config_set("__proto__.polluted",v)` 可达 `Object.prototype`（protocol 仅 `server.ts:1456` 挡受保护根）。修：所有点号读写删拒 `__proto__`/`prototype`/`constructor`/空段，只下降 own plain object。
+- 🔴 **[正确性] 路径策略与执行不一致**：`executor.ts:595` 按 `ctx.cwd` 解析批准，但 read/write/edit/notebook-edit/lsp 用原始 arg（`process.cwd()` 相对）→ 批准一个文件却读写另一个。修：执行前归一化 path arg 或让每个 builtin 都过 `ctx.cwd`；`generate-video.ts:328`+`image-uploader.ts:41` 同源。
+- 🔴 **[安全] runId 未校验**：`FileRunStore.ts:45` runId 直接拼进 runs 目录（delete/lock/heartbeat 复用），无 `assertSafeRunId`（session 有）→ 路径穿越。修：加单段 guard。
+- 🔴 **[并发] run 审批竞态**：`RunApprovalBackend.ts:76` 只存一个 pending，并发 ask-gated 工具第二个覆盖第一个 promise → 首个永挂；`RunManager.ts:204` resume 对 null/非 pending 记录也 resolve；`:270` cancel 未走 `resolvingRuns` guard 与 resume 竞态。修：队列化审批 + 校验 approvalId 归属/pending + cancel 同 guard。
+
+**UI — 安全 P1**
+- 🔴 **[安全] Markdown span style 注入**：`renderer/Markdown.tsx:51` sanitize 后仍允许 span 任意 `style` → 助手供给的 HTML 可视觉欺骗/隐藏内容。修：移除 style 或窄允许列表。
+- 🔴 **[安全] console 消息伪造强开 tab**：`browser/useBrowserTabs.ts:137` guest 页 console 打印 `__CS_OPEN_TAB__` 即可强制宿主开 tab/搜索。修：`startsWith`+解析+要求 http(s)+限流，或换不可伪造通道。
+- 🟡 其余 UI：ChatView 录音无卸载清理、ProviderModelFlow fetch 无 try/finally（`review-ui.md` P1）；13 个 P2（listener/timer/pty cwd/CDP 等泄漏与硬化）。
+
+---
+
 # 🔴 未修 bug（有实证）
 
 - 🔴 **[压缩/token] 压缩用 `estimateTokensHybrid` 估算比真实 tokenizer 低 ~2.5×，压完仍远超真实上限且不再触发二次压缩** — 实测硬证据(session `s-mr908xtp-3a414dad`，同点无 confound)：`13:42:46 COMPACT before=239030 after=162940`(估)，`13:43:58` 压完首个真实请求 `msgs=190 promptTokens=409612`(真) → 压完估 162,940 vs 真实 409,612 = **2.5× 低估**；压缩前那侧估 ~239k vs 真实 ~694k ≈ 2.9× 低估。**现象**：压缩把 msgs 630→190、真实 ~694k→~409k(压缩本身有效)，但之后历史长回 190→234 条 / 真实 409k→**482k**，却再没触发第二次压缩 —— 因为估算以为只有 ~162k(41% of 400k，远低于 gate) = 用户看到的「压完还很满 / 一条就回弹」。
@@ -24,8 +42,6 @@
 - 🟢 **[会话] TodoWrite resume 恢复 — Codex 核实已修，仅缺测试**(`codeshell-todo-session-resume-empty-list`)：`readLastTodoSnapshot`(`task.ts:154-168`) + `engine.ts:1608-1613` resume 时重放最新 TodoWrite 为 `task_update`，模型也从 resumed transcript 看到旧 tool-use。除非无 TodoWrite 或末次全 completed(刻意清空)。剩：补 `task.test.ts`/`engine.todo-resume.test.ts`；`engine.ts:1605` 注释说容忍 legacy TaskCreate/Update 但 `readLastTodoSnapshot` 只认 TodoWrite(注释误导)。
 - 🟢 **[前端] panel 写放大 — Codex 核实已修**(`codeshell-panel-refactor-save-all-buckets-write-amplification`)：effect 仍 O(n) 遍历但缓存快照跳过未变 bucket(`App.tsx:2613-2622` 有 `continue`)，只写变更的(`transcripts.ts:297-307` 单 key 写)。写放大已消除。可选优化：`updatePanelBucket` 记 dirty bucket 免 O(n) 扫描。
 - 🟢 **[前端] 乐观气泡 — Codex 核实基本已修，仅剩 announce 边缘**(`codeshell-optimistic-input-bubble-overwritten-by-hydrate`)：正常 composer send + queued/steer send 都受保护(reducer 按 `steerId`/`clientMessageId` 跨 hydrate 保留本地 intent,`transcriptsReducer.ts:56-88` + 回归测试)。**仅剩缺口**：automation/mobile announce 气泡无 key 派发(`App.tsx:1670/1739`)，后续 hydrate 可覆盖。修法：给 announce 派发稳定 `clientMessageId`(如 `automation:${sid}:prompt`)。
-- 🟡 **[SessionStart] 插件 SessionStart matcher 的 `source` 未传 → matcher 过于宽松**(`codeshell-plugin-sessionstart-gap`)：⚠️Codex 核实 CODESHELL.md 说法不精确。真相：hook 事件**已接线且能注入 context**(`engine.ts:1538` emit → `pluginCommandHook.ts:57-78` 转 HookResult.messages → `engine.ts:1833-1841` 注入 prompt 前)；插件 skill 文件本就不自动读(靠模型调 Skill 工具或 hook 命令自吐内容)。**真缺口**：`loadPluginHooks.ts:121-125` matcher 期待 `ctx.data.source`，但 engine emit 只传 `resumed`(`:1538-1542`)→ 缺 source 使 SessionStart matcher 一律放行、触发过宽。修法(effort S)：`engine.ts` 传 `source: options.sessionId?"resume":"startup"`，并更正 CODESHELL.md 措辞。若真要 skill 自动加载则另做(effort M)。
-
 ---
 
 # 发布关键路径（beta1，必须用户亲自做）
@@ -48,6 +64,7 @@
 
 - **core 通用化 + 插件面板**（`docs/todo/core-harness-and-plugin-panels.md`）：① core=无 coding/git 预设的通用 harness——4 个内核 git 触点参数化 / harness-min preset + CI 纯度 smoke / coding pack 外移(git/lsp/review/worktree/cc-orchestrator/quota…)；② 插件={UI 面板+能力}——PanelRegistry / manifest `panels` / csplugin:// 沙箱 host / 按 permissions 过滤的 scoped bridge。**Phase A(工具元数据合一 + PanelRegistry)最小可先做**。与 `architecture-debt.md` P1-⑤⑥ 重叠处合并执行。
 - **架构债 P1/P2**（`docs/todo/architecture-debt.md`，P0 已并 main）：P1=拆 index、arena builtin 可选、拆 engine.ts、拆 App.tsx、真启用 safeStorage；P2=arena 移包/state 单例/cron 测试/文档措辞。
+  - ✅ **拆 engine.ts 的两个前置已完成**（2026-07-07 codex 核实）：`extractJSON` 已提取到 `utils/json.ts`（arena 三步第①步，arena/utils.ts re-export 保留旧面）；`EngineConfig`/`EngineHookConfig`/`EngineResult` 已在 `engine/types.ts`，类型级 `tool-system→engine` 循环已不存在，仅剩一条 test-only 的 `Engine` runtime import（`agent.send-input.llm.test.ts`，可移入 engine 测试区或 allowlist）。拆 engine.ts 本体仍待做。
 - **Workspace / Profile / 数字人**（`docs/todo/workspace-profile-讨论稿.md` v0.5）：base preset + 主指令 + 可移植经验三层 / 可切换 / Team Board。P3。
 - **Workspace 数据源绑定**（P4）：资源模型 / link 外部源(Figma/issue/云盘)/ scope 分配。大子系统。
 - **聊天软件接入（channel，参考 OpenClaw）**（`docs/todo/im-gateway-remote-orchestration.md`）：微信/Telegram 做成可插拔 channel 前端。core 保持 channel-agnostic，平台接入做外部插件；接入做成一类凭证进 CredentialStore；扫码微信号绑死为收发身份 + 必配 allowlist。未立项。

@@ -80,14 +80,14 @@ capabilitiesFor(providerKind, model)  塑形 wire 请求
 ## 6. 流式、重试、用量
 
 - **重试 + 截止**(`client-base.ts`):`withRetry` 把调用方的 `AbortSignal` 和一个每请求硬截止(约 2× SDK 超时,最少 120s)组合起来拆掉半死的 socket。重试 5xx + 限流,**不重试**确定性的 4xx(省掉对坏请求的等待)。
-- **流空闲看门狗**(`stream-watchdog.ts`):可选;空闲超过 `idleTimeoutMs`(默认 90s)中止并重试。`onChunk` 在中止检查**之后**调用,所以 Stop 后缓冲的 chunk 不会漏到 UI。
+- **流空闲看门狗**(`stream-watchdog.ts`):默认开启;空闲超过 `idleTimeoutMs`(默认 90s)中止并重试。设置 `CODESHELL_ENABLE_STREAM_WATCHDOG=0` 可关闭。`onChunk` 在中止检查**之后**调用,所以 Stop 后缓冲的 chunk 不会漏到 UI。
 - **用量与成本**:`LLMClientBase.onUsage` 是每次响应触发的静态 hook,TUI/桌面宿主装它来喂 `CostTracker`(按 OpenRouter 快照 → 静态表 → 保守兜底定价)。`TokenUsage` 带 `cacheReadTokens`/`cacheCreationTokens`。
 - **构造时不给 `maxTokens` 兜底**:留 undefined 让各 provider 用自己的默认,而不是在某个硬编码值上悄悄截断。
 
 ## 7. 模型元数据与同步
 
 - `model-fetcher.ts` 拉某 provider 的 `/models`,归一化各家形状,过滤非 chat 模型,从静态 catalog + 内置 OpenRouter 快照富化,结果缓存到 `~/.code-shell/cache/models/<providerKey>.json`(7 天 TTL)。
-- `data/openrouter-sync.ts` 运行时刷新 OpenRouter catalog(`/sync-models` 命令);要持久进 bundle 则构建时先跑 `scripts/sync-models.ts`(构建依赖它)。
+- `data/openrouter-sync.ts` 运行时刷新 OpenRouter catalog(`/sync-models` 命令);`scripts/sync-models.ts` 是手动快照刷新脚本,不会被 `bun run build` 自动执行。
 - `api-key-sanitize.ts` 防御性剥掉粘贴 key 里的括号包裹、零宽字符、智能引号、中文全角空格。
 
 `provider-kinds.ts` 是已知家族(openai/anthropic/deepseek/zai/xai/mistral/groq/google/openrouter/ollama/custom)的元数据表。注意:这里的 Gemini 支持是 **AI-Studio(`AIza…`)口径**走 OpenAI-compat 端点;**不支持 Vertex OAuth token**(用户填了 `AQ.` 开头的 Vertex token 会 400)。

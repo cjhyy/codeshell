@@ -6,12 +6,12 @@
 
 > ## ⚠️ 现状勘误（2026-06-25，发 beta 前核查）
 >
-> 本 roadmap 的「当前架构基线」表、各 Phase 的「当前状态」和文末「三款标杆速览」表写于早期，**多项已落地但表里仍标"❌/低/缺失/未做"**。下方方向规划（Phase 1–6 的目标）保留作产品方向参考，但**事实现状以 [`docs/architecture/feature-inventory.md`](../architecture/feature-inventory.md)（149 项盘点）为权威**。已 grep 源码确认、与表内标注不符的项：
+> 本 roadmap 的「当前架构基线」表、各 Phase 的「当前状态」和文末「三款标杆速览」表写于早期，**多项已落地但表里仍标"❌/低/缺失/未做"**。下方方向规划（Phase 1–6 的目标）保留作产品方向参考，但**事实现状以 [`docs/architecture/11-feature-inventory.md`](../architecture/11-feature-inventory.md)（179 项盘点）为权威**。已 grep 源码确认、与表内标注不符的项：
 >
 > | roadmap 标注 | 实际现状（已实现） | 证据 |
 > |---|---|---|
 > | Phase 0.1 项目指令文件全局化 | ✅ 已做 | `packages/core/src/prompt/instruction-scanner.ts`（CLAUDE/AGENTS/CODESHELL 层级发现注入） |
-> | Phase 0.2 `TodoWrite`/`TodoRead` | ✅ 已做 | preset 内置工具；冒烟清单 §2 任务面板 |
+> | Phase 0.2 `TodoWrite` task snapshots | ✅ 已做 | preset 内置 `TodoWrite`；任务状态从最近一次 `TodoWrite` 完整快照恢复 |
 > | Phase 3.3 / 速览表 Slash Commands「❌」 | ✅ 已做 | tui 完整 slash 命令系统 + 自动补全 + 用法提示 |
 > | Phase 3.4 Plugin 系统 | ✅ 大量已做 | `packages/core/src/plugins/`（本地安装/zip/升级/卸载 + 市场 + CC/Codex 格式适配） |
 > | Phase 4.2 / 速览表 Checkpoint/Undo「❌」 | ✅ turn 级 undo 已做 | `feature-flags.ts` + 一次 user 发送=一轮的快照/回滚 |
@@ -82,7 +82,7 @@
 | 缺失工具 | 对标来源 | 说明 |
 |----------|----------|------|
 | `List` | OpenCode ListTool | 目录列表，当前只有 Glob/Grep |
-| `TodoWrite` / `TodoRead` | OpenCode Todo 工具 | 结构化任务追踪，与 Task 互补 |
+| `TodoWrite` task snapshots | OpenCode Todo-like tracking | 单一 `TodoWrite` 工具提交完整任务快照；没有独立 `TodoRead`，状态从最近快照恢复 |
 | `WebSearch + WebFetch` 联合 | OpenCode fetch→analyze | 当前两个工具独立，缺乏流水线 |
 
 ---

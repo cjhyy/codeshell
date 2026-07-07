@@ -38,8 +38,9 @@ code-shell run "summarize the changes in this repo and list follow-ups"
 | `repl` | Interactive REPL mode (the default when no subcommand is given). |
 | `sessions` | List recent sessions. |
 | `arena` | Multi-model review arena — the agent gathers context, then multiple models discuss (a differentiator: review/compare across models). |
+| `plugin` | Manage installed plugins: `install`, `list`, `update`, and `uninstall`. |
 
-Plugin/skill management and the model registry are surfaced **inside** the REPL (slash commands, `@`-mentions) and in the desktop app, rather than as top-level CLI subcommands.
+Skill management and the model registry are surfaced **inside** the REPL (slash commands, `@`-mentions) and in the desktop app, rather than as top-level CLI subcommands.
 
 ### Interactive features
 
@@ -67,7 +68,7 @@ Preset and tool selection come from `~/.code-shell/settings.json` (with project-
 ### Environment flags
 
 - `CODESHELL_FULLSCREEN=0|false|off` — start in flow mode instead of fullscreen.
-- `CODESHELL_ENABLE_STREAM_WATCHDOG=1` — abort an LLM stream idle for `CODESHELL_STREAM_IDLE_TIMEOUT_MS` ms (default `90000`) and retry via the engine's `withRetry` policy (capped by `CODESHELL_STREAM_WATCHDOG_RETRIES`, default `2`). Disabled by default.
+- Stream idle watchdog is enabled by default: it aborts an LLM stream idle for `CODESHELL_STREAM_IDLE_TIMEOUT_MS` ms (default `90000`) and retries via the engine's `withRetry` policy (capped by `CODESHELL_STREAM_WATCHDOG_RETRIES`, default `2`). Set `CODESHELL_ENABLE_STREAM_WATCHDOG=0` to opt out.
 - `CODE_SHELL_HOME` — relocate the `~/.code-shell` state directory (sessions, settings, memory).
 
 ## Relationship to other packages

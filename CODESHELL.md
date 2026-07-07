@@ -39,7 +39,7 @@ bun run bench:render   # render benchmarks (tail / streaming / spinner / wheel)
 - **Prettier**: double quotes, semicolons always, trailing commas (`all`), 2-space indent, 100 print width.
 - **ESLint**: unused vars must be prefixed with `_`; `no-explicit-any` is off; `ts-expect-error` needs a ≥3-char description.
 - **tsconfig**: `strict: true` but `noImplicitAny: false` — implicit `any` is tolerated.
-- **`@/*` path alias** maps to `src/*` in each package (tsconfig paths + tsup).
+- **`@/*` path alias** exists only in the desktop renderer/mobile tsconfigs, where it maps to `packages/desktop/src/renderer/*`. Other package code uses package imports or relative paths.
 
 ## Architecture Gotchas
 
@@ -50,7 +50,7 @@ bun run bench:render   # render benchmarks (tail / streaming / spinner / wheel)
 - **Typecheck is not a clean gate**: `bun run typecheck` reports pre-existing errors across the repo. Don't treat it as a blocker for your changes.
 - **Two hard ESLint guardrails** (in `eslint.config.js`):
   - `packages/core/**` MUST NOT import `@cjhyy/code-shell-tui` (core is UI-agnostic).
-  - `packages/desktop/src/renderer/**` MUST NOT runtime-import any codeshell package — talk to main via `window.codeShell.*`. Type-only imports are allowed and used to share `StreamEvent`/`TaskInfo` shapes.
+  - `packages/desktop/src/renderer/**` MUST NOT runtime-import any codeshell package — talk to main via `window.codeshell.*`. Type-only imports are allowed and used to share `StreamEvent`/`TaskInfo` shapes.
 - **Custom ESLint rules are stubbed** (`no-sync-fs`, `no-top-level-side-effects`, `no-top-level-dynamic-import`, `no-process-exit`, `no-process-cwd`, `no-process-env-top-level`) — they declare intent but don't actually lint. Follow them by convention.
 - **`sync-models.ts` exists** at `scripts/sync-models.ts` but is NOT run automatically by `bun run build`. Run it manually to refresh OpenRouter model data (`bun run scripts/sync-models.ts`).
 - **Markdown rendering stacks differ**: Desktop uses `react-markdown + remark-gfm + rehype-highlight` (streaming phase uses plain/pre without live parse); TUI uses `marked + marked-terminal`. Don't assume they render identically.
@@ -59,7 +59,7 @@ bun run bench:render   # render benchmarks (tail / streaming / spinner / wheel)
 
 ## Where to put things
 
-- **Roadmap TODOs** → root `TODO.md` (has P0-P7 priority sections). There is no `todo/` directory for roadmap items. `TODO-week.md` is for the current week's plan.
+- **Roadmap TODOs** → root `TODO.md` (has P0-P7 priority sections). There is no `todo/` directory for roadmap items.
 - **In-progress design drafts** → `docs/todo/*.md` (e.g. `desktop-streaming-markdown-autoscroll-plan.md`).
 - **Test files** → `tests/` and `packages/*/src/**/*.test.ts`.
 - **Prompt sections** → `packages/core/src/prompt/sections/*.md` (copied to `dist/prompt/sections/` at build via `scripts/copy-assets.mjs`).
@@ -68,7 +68,7 @@ bun run bench:render   # render benchmarks (tail / streaming / spinner / wheel)
 
 - **`core → tool-system → engine` import cycle** must be broken before splitting `engine.ts` (3301 lines). Extract common types like `EngineConfig` into separate type files first.
 - **Arena is entangled in core** via `tool-system/builtin/arena.ts`, `protocol/server.ts`, `settings/schema.ts`, `onboarding.ts`, `index.ts`. Three-step extraction plan: (a) move `extractJSON` → `utils/json.ts`, (b) make arena a selectable/optional builtin, (c) move to `packages/arena` or a product package.
-- **Plugin SessionStart hooks are not wired** into session bootstrap → plugin-provided skills don't auto-load on session start.
+- **Plugin SessionStart hooks are wired** and receive `source: "startup" | "resume"`; plugin `SKILL.md` files still are not auto-injected unless a hook emits messages or the model invokes the `Skill` tool.
 
 ## Commit Style
 

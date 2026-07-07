@@ -24,6 +24,5 @@ or editing renderer UI:
 
 The renderer is a thin client: it imports no `@cjhyy/code-shell-core`. It talks
 to main only through `window.codeshell.*` (see `src/preload/index.ts`). Desktop
-has its OWN `tsc --noEmit` and `vite build` — the repo root's checks do not
-cover it; run `bunx tsc --noEmit` and `bun run build:renderer` in
-`packages/desktop` after UI changes.
+has its OWN typecheck and build — the repo root's checks do not cover it; run
+`bun run typecheck` and `bun run build` in `packages/desktop` after UI changes.
