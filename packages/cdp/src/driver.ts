@@ -116,9 +116,11 @@ export class CdpActionsDriver {
         model?: { content: number[] };
       };
       if (!model?.content || model.content.length < 8) return null;
-      const xs = [model.content[0]!, model.content[2]!, model.content[4]!, model.content[6]!];
-      const ys = [model.content[1]!, model.content[3]!, model.content[5]!, model.content[7]!];
-      return { x: avg(xs), y: avg(ys) };
+      const viewport = await this.layoutViewportRect();
+      const box = rectFromQuad(model.content);
+      const visible = intersectRects(box, viewport);
+      if (!visible) return null;
+      return { x: visible.x + visible.width / 2, y: visible.y + visible.height / 2 };
     } catch {
       return null; // node detached / no box → treat as stale
     }
@@ -470,10 +472,6 @@ export class CdpActionsDriver {
       return { ok: false, detail: errMsg(e) };
     }
   }
-}
-
-function avg(ns: number[]): number {
-  return ns.reduce((a, b) => a + b, 0) / ns.length;
 }
 
 function finiteOr(value: number | undefined, fallback: number): number {

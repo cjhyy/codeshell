@@ -54,6 +54,7 @@ describe("CdpActionsDriver.clickNode", () => {
       "Accessibility.enable:",
       "DOM.scrollIntoViewIfNeeded:",
       "DOM.getBoxModel:",
+      "Page.getLayoutMetrics:",
       "Input.dispatchMouseEvent:mouseMoved",
       "Input.dispatchMouseEvent:mousePressed",
       "Input.dispatchMouseEvent:mouseReleased",
@@ -75,6 +76,35 @@ describe("CdpActionsDriver.clickNode", () => {
     const methods = calls.map((c) => c.method);
     expect(methods).not.toContain("DOM.resolveNode");
     expect(methods).not.toContain("Runtime.callFunctionOn");
+  });
+
+  test("clicks inside the visible viewport intersection", async () => {
+    const { send, calls } = fakeCdp({
+      "DOM.getBoxModel": () => ({
+        model: { content: [760, 10, 860, 10, 860, 50, 760, 50] },
+      }),
+      "Page.getLayoutMetrics": () => ({ layoutViewport: { clientWidth: 800, clientHeight: 600 } }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+
+    const r = await d.clickNode(20);
+    expect(r.ok).toBe(true);
+    const press = calls.find((c) => c.params?.type === "mousePressed");
+    expect(press?.params).toMatchObject({ x: 780, y: 30 });
+  });
+
+  test("fails when the node has no visible viewport intersection", async () => {
+    const { send, calls } = fakeCdp({
+      "DOM.getBoxModel": () => ({
+        model: { content: [900, 10, 1000, 10, 1000, 50, 900, 50] },
+      }),
+      "Page.getLayoutMetrics": () => ({ layoutViewport: { clientWidth: 800, clientHeight: 600 } }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+
+    const r = await d.clickNode(20);
+    expect(r.ok).toBe(false);
+    expect(calls.some((c) => c.method === "Input.dispatchMouseEvent")).toBe(false);
   });
 });
 
