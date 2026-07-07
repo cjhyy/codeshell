@@ -11,6 +11,7 @@ import { resolveCodexMcpServers } from "./codex/convertMcp.js";
 import { copyCodexSkills } from "./codex/convertSkills.js";
 import { copyCodexCommands } from "./codex/convertCommands.js";
 import { appendInstallEntry, pluginInstallKey } from "../installedPlugins.js";
+import { rewritePluginVars } from "../varRewrite.js";
 
 /**
  * Install a local plugin directory into ~/.code-shell/plugins/<name>/.
@@ -76,6 +77,7 @@ export async function installPluginFromPath(
       meta = { name, format: "codex", version: manifest.version, source: sourceDir, installedAt };
     }
 
+    rewritePluginVars(tmpDir);
     await writeFile(join(tmpDir, ".cs-meta.json"), JSON.stringify(meta, null, 2));
     await rename(tmpDir, finalDir);
     // Register so existing loaders (scanInstalledPlugins / loadPluginHooks)
