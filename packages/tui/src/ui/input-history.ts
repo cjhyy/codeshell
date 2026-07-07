@@ -192,6 +192,7 @@ function scheduleFlush(): void {
 export function addToHistory(input: string): void {
   const trimmed = input.trim();
   if (!trimmed) return;
+  if (isSensitiveHistoryInput(trimmed)) return;
 
   const entries = ensureLoaded();
   const logEntry: HistoryLogEntry = {
@@ -208,6 +209,10 @@ export function addToHistory(input: string): void {
   // Queue for disk write
   _pendingEntries.push(logEntry);
   scheduleFlush();
+}
+
+function isSensitiveHistoryInput(input: string): boolean {
+  return /^\/login\s+\S/i.test(input);
 }
 
 /**
