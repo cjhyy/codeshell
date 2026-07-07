@@ -201,6 +201,10 @@ describe("buildExtractScript", () => {
     expect(s).toContain("removeAttribute(REF_ATTR)");
     expect(s).not.toContain("data-cs-ref");
     expect(s).toContain("var cap=50");
+    expect(s).toContain("function pushVid(s,ref)");
+    expect(s).toContain("videos.push({url:s,ref:ref})");
+    expect(s).toContain("pushVid(vd.currentSrc,ref)");
+    expect(s).toContain("pushVid(srcs[m].src,ref)");
   });
 });
 

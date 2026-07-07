@@ -622,14 +622,14 @@ export function buildExtractScript(cap = EXTRACT_LINK_CAP): string {
       var o={url:s,ref:ref};var alt=(im.getAttribute('alt')||'').trim();if(alt)o.alt=alt.slice(0,200);
       images.push(o);
     }
-    function pushVid(s){if(!s||s.indexOf('data:')===0||s.indexOf('blob:')===0)return;if(seenV[s])return;seenV[s]=1;if(videos.length>=cap){vt=true;return;}videos.push({url:s});}
+    function pushVid(s,ref){if(!s||s.indexOf('data:')===0||s.indexOf('blob:')===0)return;if(seenV[s])return;seenV[s]=1;if(videos.length>=cap){vt=true;return;}videos.push({url:s,ref:ref});}
     var vs=document.querySelectorAll('video'),vidN=0;
     for(var k=0;k<vs.length&&!vt;k++){
       var vd=vs[k];
-      vidN++;try{vd.setAttribute(REF_ATTR,'vid'+vidN);vd.setAttribute(RUN_ATTR,run);}catch(e){}
-      if(vd.currentSrc)pushVid(vd.currentSrc);else if(vd.src)pushVid(vd.src);
+      vidN++;var ref='vid'+vidN;try{vd.setAttribute(REF_ATTR,ref);vd.setAttribute(RUN_ATTR,run);}catch(e){}
+      if(vd.currentSrc)pushVid(vd.currentSrc,ref);else if(vd.src)pushVid(vd.src,ref);
       var srcs=vd.querySelectorAll('source[src]');
-      for(var m=0;m<srcs.length&&!vt;m++)pushVid(srcs[m].src);
+      for(var m=0;m<srcs.length&&!vt;m++)pushVid(srcs[m].src,ref);
     }
     return {links:links,images:images,videos:videos,truncated:lt||it||vt};
   })()`;
