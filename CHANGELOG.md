@@ -115,6 +115,34 @@ breaking.
 
 ### Fixed
 
+- **Cookie credentials now target the browser panel's per-session partition.**
+  The credential service was hardcoded to the shared `persist:browser`
+  partition while browser tabs run under per-session `persist:browser:<bucket>`
+  partitions, so captured/injected/switched cookies never reached the session
+  the user was actually driving. Capture, restore, and the AI-driven
+  `InjectCredential` path now resolve the active guest's real partition
+  (`restoreCookiesToBrowser` accepts a live `Session`), and the main-process
+  partition builder matches the renderer's cleaning rule exactly. Default
+  restore mode is now `merge` (only `clear` on an explicit "clean switch").
+- **New-conversation Goal / permission / model toggles are no longer dropped on
+  the first send.** A draft's pre-send toggles live under the shared draft
+  bucket, but the first send read them from the freshly-created real session
+  bucket (empty) — so enabling Goal, then typing and sending, silently failed to
+  set the goal even though the Goal icon stayed lit. The send now reads the
+  draft bucket's overrides before migrating them onto the real session.
+- **Compaction keeps shrinking when one summary pass isn't enough.** After a
+  summary compaction the context manager returned even if the re-estimated
+  token count was still over the gate; it now continues down the
+  snip → window → emergency ladder until under budget, using the real
+  prompt-token anchor when available instead of a pure heuristic.
+- **Concurrent sessions no longer cross log session IDs.** `Engine.run()` no
+  longer writes a module-level `setCurrentSid` fallback before the
+  AsyncLocalStorage context is established, so two sessions running at once
+  can't overwrite each other's sid on disk vs. in the logs.
+- **TUI `run` / `runs` honor the model connection's context window.** Both
+  non-REPL entry points now use the active model connection's
+  `maxContextTokens` (falling back to the global default) instead of always
+  using `settings.context.maxTokens`, matching the REPL path.
 - Step-gap steering no longer leaves a duplicate user bubble: a queued
   steer entry that is interrupted (or that survives into the next turn) is
   withdrawn before the message is re-sent.
