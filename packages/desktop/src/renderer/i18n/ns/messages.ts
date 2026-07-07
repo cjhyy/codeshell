@@ -38,6 +38,7 @@ export const messagesNs = {
         answerPlaceholder: "输入你的回答…",
         submit: "提交",
         answer: "回答",
+        timedOut: "未回答,已自动继续",
       },
       // turn-end marker line
       turnEnd: {
@@ -160,6 +161,7 @@ export const messagesNs = {
         answerPlaceholder: "Type your answer…",
         submit: "Submit",
         answer: "Answer",
+        timedOut: "No answer — continued automatically",
       },
       turnEnd: {
         stoppedAt: "You stopped this turn after {time}",

@@ -144,6 +144,14 @@ export class AgentServer {
   private approvalTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Default approval timeout: 5 minutes */
   private static readonly APPROVAL_TIMEOUT_MS = 5 * 60 * 1000;
+  /**
+   * Wall-clock timeout for AskUserQuestion during a GOAL run (10 minutes).
+   * Plain interactive asks stay untimed; only a self-driving goal run arms this
+   * so a mid-goal question can't suspend the loop forever with nobody watching.
+   * Longer than the tool-approval timeout — a user who IS present deserves more
+   * time to compose a real answer before we assume-and-continue.
+   */
+  private static readonly GOAL_ASKUSER_TIMEOUT_MS = 10 * 60 * 1000;
 
   /**
    * Unsubscribe handle for the process-local `agentNotificationBus`
@@ -1897,8 +1905,13 @@ export class AgentServer {
             resolveFn(
               "(用户未在限定时间内回答;目标运行中请自行做出合理假设并继续推进。)",
             );
+            // Tell every client the ask is resolved (nobody answered) so the
+            // stale AskUserQuestion card is dismissed instead of lingering as
+            // if still waiting. Reuses the same envelope shape the desktop main
+            // already broadcasts / the renderer's onApprovalResolved consumes.
+            this.notify(Methods.ApprovalResolved, { sessionId, requestId });
           }
-        }, AgentServer.APPROVAL_TIMEOUT_MS);
+        }, AgentServer.GOAL_ASKUSER_TIMEOUT_MS);
         this.approvalTimers.set(requestId, timer);
       }
     });

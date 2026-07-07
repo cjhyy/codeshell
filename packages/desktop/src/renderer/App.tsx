@@ -409,6 +409,10 @@ function App() {
   const engineToBucketRef = useRef<Map<string, string>>(new Map());
   const activeBucketRef = useRef(activeBucket);
   const approvalBucketsRef = useRef<Map<string, string>>(new Map());
+  // Live mirror of transcripts so long-lived event listeners (onApprovalResolved,
+  // which is registered once with a [toast]-only dep) can find an ask_user card
+  // by requestId without capturing a stale transcripts snapshot.
+  const transcriptsRef = useRef(transcripts);
   /**
    * The no-repo sandbox cwd (~/.code-shell/no-repo), fetched once from main.
    * A no-repo "纯聊天" send must pass THIS explicitly as cwd — if we omit cwd,
@@ -667,6 +671,9 @@ function App() {
   useEffect(() => {
     activeBucketRef.current = activeBucket;
   }, [activeBucket]);
+  useEffect(() => {
+    transcriptsRef.current = transcripts;
+  }, [transcripts]);
   // Fetch the no-repo sandbox cwd once; a no-repo send passes it explicitly.
   useEffect(() => {
     window.codeshell
@@ -1846,6 +1853,20 @@ function App() {
     const offApprovalResolved = window.codeshell.onApprovalResolved(
       (env: ApprovalResolvedEnvelope) => {
         if (!env.requestId) return;
+        // A server-initiated resolve (e.g. a goal-mode AskUserQuestion that timed
+        // out with nobody answering) must also retire the inline ask_user card,
+        // which lives in the transcript — not just the approval modal queue below.
+        // A user-driven answer already marks it via handleAskUserAnswer, so only
+        // touch a card that's still unanswered here.
+        const origin = findAskUserOrigin(transcriptsRef.current, env.requestId);
+        if (origin && origin.answer === undefined) {
+          dispatch({
+            type: "ask_user_answered",
+            bucket: origin.bucket,
+            requestId: env.requestId,
+            answer: t("msg.ask.timedOut"),
+          });
+        }
         approvalBucketsRef.current.delete(env.requestId);
         setApprovalQueue((prev) => {
           const remaining = prev.filter((e) => e.requestId !== env.requestId);

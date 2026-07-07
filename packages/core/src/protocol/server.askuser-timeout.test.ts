@@ -6,6 +6,7 @@ import type { Engine, EngineResult } from "../engine/engine.js";
 import type { ApprovalRequest, ApprovalResult } from "../types.js";
 
 const APPROVAL_TIMEOUT_MS = 5 * 60 * 1000;
+const GOAL_ASKUSER_TIMEOUT_MS = 10 * 60 * 1000;
 
 function makeTransport() {
   const sent: any[] = [];
@@ -153,8 +154,9 @@ describe("AgentServer AskUserQuestion timeout behavior", () => {
 
       const session = chatManager.get("goal-sess")!;
       expect(session.pendingApprovals.size).toBe(1);
-      // Goal-active ask arms the shared 5-minute timeout.
-      const askTimer = scheduled.find((s) => s.timeout === APPROVAL_TIMEOUT_MS);
+      // Goal-active ask arms a dedicated 10-minute timeout (longer than the
+      // 5-minute tool-approval timeout — a present user deserves more time).
+      const askTimer = scheduled.find((s) => s.timeout === GOAL_ASKUSER_TIMEOUT_MS);
       expect(askTimer).toBeDefined();
       expect((server as any).approvalTimers.size).toBe(1);
       expect(state.answer).toBeUndefined();
@@ -167,6 +169,15 @@ describe("AgentServer AskUserQuestion timeout behavior", () => {
       expect(session.pendingApprovals.size).toBe(0);
       expect((server as any).approvalTimers.size).toBe(0);
       expect(state.answer).toContain("自行做出合理假设并继续");
+      // The server also notifies clients so the stale ask card is dismissed.
+      expect(
+        t.sent.some(
+          (m) =>
+            m.method === Methods.ApprovalResolved &&
+            m.params?.sessionId === "goal-sess" &&
+            typeof m.params?.requestId === "string",
+        ),
+      ).toBe(true);
     } finally {
       timeoutSpy.mockRestore();
     }

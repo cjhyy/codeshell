@@ -361,6 +361,10 @@ export const Methods = {
   // Server → Client (notifications, no id)
   StreamEvent: "agent/streamEvent",
   ApprovalRequest: "agent/approvalRequest",
+  /** Server-initiated resolution of a pending approval/ask (e.g. a goal-mode
+   *  AskUserQuestion that timed out) so every client can dismiss its stale card
+   *  without a user decision. Same envelope the desktop main broadcasts. */
+  ApprovalResolved: "agent/approvalResolved",
   Status: "agent/status",
 } as const;
 

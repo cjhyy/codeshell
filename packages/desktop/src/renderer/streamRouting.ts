@@ -66,14 +66,17 @@ export function resolveBucket(
  * falls back to the active-bucket derivation for legacy prompts).
  */
 export function findAskUserOrigin(
-  transcripts: Record<string, { messages: Array<{ kind: string; requestId?: string; engineSessionId?: string }> }>,
+  transcripts: Record<
+    string,
+    { messages: Array<{ kind: string; requestId?: string; engineSessionId?: string; answer?: string }> }
+  >,
   requestId: string,
-): { bucket: string; engineSessionId?: string } | undefined {
+): { bucket: string; engineSessionId?: string; answer?: string } | undefined {
   for (const [bucket, state] of Object.entries(transcripts)) {
     const msg = state.messages.find(
       (m) => m.kind === "ask_user" && m.requestId === requestId,
     );
-    if (msg) return { bucket, engineSessionId: msg.engineSessionId };
+    if (msg) return { bucket, engineSessionId: msg.engineSessionId, answer: msg.answer };
   }
   return undefined;
 }
