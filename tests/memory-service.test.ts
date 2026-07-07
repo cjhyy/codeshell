@@ -1,22 +1,7 @@
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  expect,
-  mock,
-  test,
-} from "bun:test";
+import { afterEach, beforeAll, beforeEach, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-
-// Mock electron so the memory-service module imports cleanly. It
-// doesn't actually use electron — only main/index.ts does — but
-// other top-level files in the package transitively pull it in via
-// barrel exports during type resolution.
-mock.module("electron", () => ({
-  shell: { openExternal: async () => undefined, openPath: async () => "", showItemInFolder: () => undefined },
-}));
 
 let listMemory: typeof import("../packages/desktop/src/main/memory-service").listMemory;
 let readMemory: typeof import("../packages/desktop/src/main/memory-service").readMemory;

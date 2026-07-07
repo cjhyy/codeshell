@@ -3,12 +3,68 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-mock.module("electron", () => ({
-  shell: {
+type ElectronMockSessionEntry = {
+  session: Electron.Session;
+  onFromPartition?: (partition: string) => void;
+};
+
+type ElectronMockState = {
+  sessions: Map<string, ElectronMockSessionEntry>;
+  openExternal: (...args: unknown[]) => Promise<void>;
+  openPath: (...args: unknown[]) => Promise<string>;
+  showItemInFolder: (...args: unknown[]) => void;
+};
+
+const electronMockGlobal = globalThis as typeof globalThis & {
+  __codeshellElectronMockState?: ElectronMockState;
+};
+
+function createDefaultElectronSession(): Electron.Session {
+  return {
+    cookies: {
+      get: async () => [],
+      set: async () => undefined,
+    },
+    clearStorageData: async () => undefined,
+  } as Electron.Session;
+}
+
+function electronMockState(): ElectronMockState {
+  return (electronMockGlobal.__codeshellElectronMockState ??= {
+    sessions: new Map(),
     openExternal: async () => undefined,
+    openPath: async () => "",
     showItemInFolder: () => undefined,
+  });
+}
+
+const electronShellMock = {
+  openExternal: (...args: unknown[]) => electronMockState().openExternal(...args),
+  openPath: (...args: unknown[]) => electronMockState().openPath(...args),
+  showItemInFolder: (...args: unknown[]) => electronMockState().showItemInFolder(...args),
+};
+
+const electronSessionMock = {
+  fromPartition(partition: string) {
+    const entry = electronMockState().sessions.get(partition);
+    entry?.onFromPartition?.(partition);
+    return entry?.session ?? createDefaultElectronSession();
   },
-}));
+};
+
+function installElectronMock(): void {
+  electronMockState();
+  mock.module("electron", () => ({
+    app: { isPackaged: false },
+    safeStorage: {
+      isEncryptionAvailable: () => false,
+      encryptString: (value: string) => Buffer.from(value),
+      decryptString: (value: Buffer) => value.toString("utf-8"),
+    },
+    session: electronSessionMock,
+    shell: electronShellMock,
+  }));
+}
 
 let getGitBranches: typeof import("../packages/desktop/src/main/desktop-services").getGitBranches;
 let switchGitBranch: typeof import("../packages/desktop/src/main/desktop-services").switchGitBranch;
@@ -25,6 +81,7 @@ async function run(args: string[], cwd = dir): Promise<string> {
 }
 
 beforeAll(async () => {
+  installElectronMock();
   const services = await import("../packages/desktop/src/main/desktop-services");
   getGitBranches = services.getGitBranches;
   switchGitBranch = services.switchGitBranch;
@@ -89,5 +146,7 @@ test("stashAndSwitchGitBranch stashes dirty changes before switching", async () 
   expect(branches.current).toBe("feature/local");
   expect((await run(["rev-parse", "--abbrev-ref", "HEAD"])).trim()).toBe("feature/local");
   expect((await run(["status", "--porcelain=v1"])).trim()).toBe("");
-  expect(await run(["stash", "list"])).toContain("CodeShell auto-stash before switching to feature/local");
+  expect(await run(["stash", "list"])).toContain(
+    "CodeShell auto-stash before switching to feature/local",
+  );
 });

@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
   BROWSER_PARTITION,
   captureAllCookies,
@@ -139,6 +139,11 @@ beforeEach(() => {
 
 afterEach(() => {
   clearRegisteredElectronSessions();
+});
+
+afterAll(() => {
+  clearRegisteredElectronSessions();
+  delete electronMockGlobal.__codeshellElectronMockState;
 });
 
 describe("formatNetscapeCookies", () => {

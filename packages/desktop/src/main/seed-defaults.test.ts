@@ -1,11 +1,15 @@
-import { describe, expect, it, beforeEach, afterEach, mock } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync, readdirSync, readFileSync } from "node:fs";
+import { describe, expect, it, beforeEach, afterEach } from "bun:test";
+import {
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+  mkdirSync,
+  existsSync,
+  readdirSync,
+  readFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
-mock.module("@cjhyy/code-shell-core", () => ({
-  addMarketplace: async () => ({ ok: false, error: "mocked" }),
-}));
 
 const { seedAgents, seedMarketplacesWith } = await import("./seed-defaults.js");
 
