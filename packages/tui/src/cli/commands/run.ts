@@ -30,6 +30,7 @@ import {
   buildNotificationSummary,
 } from "@cjhyy/code-shell-core";
 import { drainBackgroundNotifications } from "./drain-notifications.js";
+import { resolveMaxContextTokens } from "./max-context-tokens.js";
 
 export interface RunOptions {
   task: string;
@@ -102,6 +103,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
   // resolved config — no explicit pass needed here.
 
   const sandboxConfig = mergeSandboxConfig(settings.sandbox, "auto");
+  const maxContextTokens = resolveMaxContextTokens(llmConfig, settings.context.maxTokens);
 
   // ── Shared config passed into every session engine ─────────────
   const sharedCfg = {
@@ -114,7 +116,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
     // Personalization + instruction compat (shared helper → no per-host drift).
     ...personalizationFrom(settings.agent),
     maxTurns: options.maxTurns ?? 30,
-    maxContextTokens: settings.context.maxTokens,
+    maxContextTokens,
     sessionStorageDir: settings.session.storageDir,
     costStore: costTracker,
     mcpServers: mergePluginMcpServers(

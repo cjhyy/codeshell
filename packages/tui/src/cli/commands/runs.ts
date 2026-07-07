@@ -20,6 +20,7 @@ import { resolveLLMConfigForTag } from "@cjhyy/code-shell-core";
 import type { PermissionMode } from "@cjhyy/code-shell-core";
 import type { AgentPresetName } from "@cjhyy/code-shell-core";
 import type { RunStatus } from "@cjhyy/code-shell-core";
+import { resolveMaxContextTokens } from "./max-context-tokens.js";
 
 // ─── Helpers ─────────────────────────────────────────────────────
 
@@ -45,7 +46,7 @@ function createRunManager(): RunManager {
       // temperature is a ClientDefaults knob now; the executor's engine derives
       // it from the unified catalog — no explicit pass needed.
       maxTurns: 30,
-      maxContextTokens: settings.context.maxTokens,
+      maxContextTokens: resolveMaxContextTokens(llm, settings.context.maxTokens),
       sessionStorageDir: settings.session.storageDir,
       permissionMode: (settings.permissions.defaultMode ?? "acceptEdits") as PermissionMode,
       mcpServers: settings.mcpServers,

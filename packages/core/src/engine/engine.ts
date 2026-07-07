@@ -82,7 +82,7 @@ import { SessionManager, type SessionBundle } from "../session/session-manager.j
 import { Transcript } from "../session/transcript.js";
 import { ModelFacade } from "./model-facade.js";
 import type { CostStateStore } from "./cost-store.js";
-import { logger, setCurrentSid, runWithSid, getCurrentSid } from "../logging/logger.js";
+import { logger, runWithSid, getCurrentSid } from "../logging/logger.js";
 import { recordSessionStart, recordSessionEnd } from "../logging/session-recorder.js";
 import { sanitizeContent, sanitizeTaskString } from "../logging/sanitize-messages.js";
 import { TurnLoop, type TurnLoopConfig } from "./turn-loop.js";
@@ -1510,22 +1510,6 @@ export class Engine {
     // with this value so `/undo` reverts exactly this turn's file changes.
     // (Both resume and cold-start paths converge here.)
     session.state.turnSeq = (session.state.turnSeq ?? 0) + 1;
-
-    // Stamp the resolved session id for downstream logging.
-    //
-    // `setCurrentSid` updates the module-level fallback so any code path
-    // running outside an ALS scope (bootstrap, /sid before a run starts)
-    // still sees the latest sid.
-    //
-    // The real isolation comes from wrapping the rest of `run` in
-    // `runWithSid(sid, async () => { ... })`: every `getCurrentSid()`
-    // call inside that closure — including those inside `await`ed child
-    // Engine.run() calls — reads sid from this scope's
-    // AsyncLocalStorage binding, not the module global. Sibling Engines
-    // running concurrently each get their own scope; an `enterSid` inside
-    // a child mutates that child's scope only and doesn't leak back to
-    // the parent's chain after `await child.run(...)` returns.
-    setCurrentSid(session.state.sessionId);
 
     // B2 / Gate 1: stamp the resolved sid onto the tool context so
     // session-scoped side effects (background-agent completion

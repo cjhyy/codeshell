@@ -464,6 +464,9 @@ export class ContextManager {
       ratio < this.config.compactAtRatio;
     const shouldEscalateNoOpMicro =
       noOpMicroSpinBand && !this.suppressNoOpMicroSummaryUntilCompact;
+    const snipGate = this.config.maxTokens * this.config.compactAtRatio;
+    const windowGate = this.config.maxTokens * (this.config.compactAtRatio + 0.05);
+    const emergencyGate = this.config.maxTokens * this.config.summarizeAtRatio;
 
     // Tier 2: LLM summary if approaching limit, or if micro was the only tier
     // available in the 0.70-0.85 band and it freed nothing.
@@ -478,7 +481,7 @@ export class ContextManager {
 
       if (summarized.compacted) {
         this.suppressNoOpMicroSummaryUntilCompact = false;
-        return result;
+        if (tokens <= snipGate) return result;
       }
 
       if (shouldEscalateNoOpMicro && summarized.noProgress) {
@@ -492,13 +495,10 @@ export class ContextManager {
       }
     }
 
-    // Reuse the `tokens` we already computed above. We only get here if no
-    // summary compacted the prompt (no summarizeFn, too many failures, a
-    // thrown error, or a generated summary that did not shrink anything).
+    // Reuse the `tokens` we already computed above. We get here if no summary
+    // compacted the prompt, or if summary helped but the hybrid estimate is
+    // still above the fallback gate.
     let live = tokens;
-    const snipGate = this.config.maxTokens * this.config.compactAtRatio;
-    const windowGate = this.config.maxTokens * (this.config.compactAtRatio + 0.05);
-    const emergencyGate = this.config.maxTokens * this.config.summarizeAtRatio;
 
     // Tier 2 fallback: snip first (cheapest sync option)
     if (live > snipGate) {

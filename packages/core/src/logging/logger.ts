@@ -137,12 +137,12 @@ function resolveCategoryFilter(): Set<string> | null {
 //
 // Two mechanisms, layered:
 //
-// 1. `runWithSid(sid, fn)` — preferred. Engine.run wraps its entire body
-//    in this AsyncLocalStorage scope, so every log line emitted inside the
-//    (possibly deeply async) call tree picks up the right sid. Concurrent
-//    parent + child Engines coexist because each `await` boundary preserves
-//    the ALS context — they don't trample each other like a single module
-//    global would.
+// 1. `runWithSid(sid, fn)` — preferred. Once Engine.run has resolved the
+//    authoritative sid, its session-bound execution body runs in this
+//    AsyncLocalStorage scope, so every log line emitted inside the (possibly
+//    deeply async) call tree picks up the right sid. Concurrent parent + child
+//    Engines coexist because each `await` boundary preserves the ALS context —
+//    they don't trample each other like a single module global would.
 //
 // 2. `_currentSidFallback` — module-level mutable, written by `setCurrentSid`.
 //    Used only as a fallback when a code path runs outside any ALS scope

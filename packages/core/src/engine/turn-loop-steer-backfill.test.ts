@@ -97,7 +97,140 @@ const stop = (text: string): LLMResponse => ({
   usage: { promptTokens: 10, completionTokens: 1, totalTokens: 11 },
 });
 
+const toolUse = (): LLMResponse => ({
+  text: "",
+  toolCalls: [{ id: "tool-1", toolName: "Read", args: {} }],
+  stopReason: "tool_use",
+  usage: { promptTokens: 10, completionTokens: 1, totalTokens: 11 },
+});
+
 describe("TurnLoop steer finalize backfill", () => {
+  it("consumes steer queued during a tool batch before the next model call without splitting tool adjacency", async () => {
+    const events: unknown[] = [];
+    let responseIdx = 0;
+    let steerQueuedAfterTool = false;
+    let steerServed = false;
+    const modelMessages: Message[][] = [];
+    const appended: Array<{ role: string; content: unknown; opts: unknown }> = [];
+    const consumeSources: string[] = [];
+    const responses = [toolUse(), stop("done")];
+    const call = async (_sys: string, messages: Message[]): Promise<LLMResponse> => {
+      modelMessages.push(messages.map((m) => ({ ...m })));
+      return responses[Math.min(responseIdx++, responses.length - 1)]!;
+    };
+    const deps: TurnLoopDeps = {
+      model: {
+        call,
+        callWithoutStreaming: call,
+        getUsage: () => ({
+          records: [],
+          totalPromptTokens: 0,
+          totalCompletionTokens: 0,
+          totalTokens: 0,
+          requestCount: 0,
+        }),
+        getOutputTokens: () => 0,
+      } as unknown as TurnLoopDeps["model"],
+      toolExecutor: {
+        setLogger() {},
+        getInvestigationGuard: () => undefined,
+        getTaskGuard: () => undefined,
+        isConcurrencySafe: () => false,
+        async executeSingle(c: ToolCall): Promise<ToolResult> {
+          steerQueuedAfterTool = true;
+          return { id: c.id, toolName: c.toolName, result: "ok" };
+        },
+      } as unknown as TurnLoopDeps["toolExecutor"],
+      contextManager: {
+        async manageAsync(m: Message[]) {
+          return m;
+        },
+        manage(m: Message[]) {
+          return m;
+        },
+        recordActualUsage() {},
+        shouldReactiveCompact() {
+          return false;
+        },
+      } as unknown as TurnLoopDeps["contextManager"],
+      hooks: {
+        async emit() {
+          return {};
+        },
+      } as unknown as TurnLoopDeps["hooks"],
+      transcript: {
+        appendToolUse() {},
+        appendToolResult() {},
+        appendTurnBoundary() {},
+        appendMessage(role: string, content: unknown, opts: unknown) {
+          appended.push({ role, content, opts });
+        },
+      } as unknown as TurnLoopDeps["transcript"],
+      systemPrompt: "sys",
+      tools: [],
+      sessionId: "s1",
+      ctxOverheadStore: { get: () => 0, set: () => {} },
+      consumeSteer: (source = "normal_step") => {
+        consumeSources.push(source);
+        if (source === "normal_step" && steerQueuedAfterTool && !steerServed) {
+          steerServed = true;
+          return [
+            {
+              id: "steer-after-tool",
+              text: "check the adjacent result first",
+              clientMessageId: "client-after-tool",
+            },
+          ];
+        }
+        return [];
+      },
+    };
+    const loop = new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+      onStream: (event) => {
+        events.push(event);
+      },
+    });
+
+    const result = await loop.run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(modelMessages).toHaveLength(2);
+    expect(consumeSources.slice(0, 2)).toEqual(["normal_step", "normal_step"]);
+
+    const turn2Messages = modelMessages[1]!;
+    const toolUseIdx = turn2Messages.findIndex(
+      (m) =>
+        m.role === "assistant" &&
+        Array.isArray(m.content) &&
+        m.content.some((b) => b.type === "tool_use" && b.id === "tool-1"),
+    );
+    const toolResultIdx = turn2Messages.findIndex(
+      (m) =>
+        m.role === "user" &&
+        Array.isArray(m.content) &&
+        m.content.some((b) => b.type === "tool_result" && b.tool_use_id === "tool-1"),
+    );
+    const steerIdx = turn2Messages.findIndex(
+      (m) => m.role === "user" && m.content === "check the adjacent result first",
+    );
+
+    expect(toolUseIdx).toBeGreaterThan(-1);
+    expect(toolResultIdx).toBe(toolUseIdx + 1);
+    expect(steerIdx).toBe(toolResultIdx + 1);
+    expect(appended).toContainEqual({
+      role: "user",
+      content: "check the adjacent result first",
+      opts: { steerId: "steer-after-tool", clientMessageId: "client-after-tool" },
+    });
+    expect(events).toContainEqual({
+      type: "steer_injected",
+      text: "check the adjacent result first",
+      id: "steer-after-tool",
+    });
+  });
+
   it("consumes a steer queued during normal shutdown before run() returns", async () => {
     const events: unknown[] = [];
     const { deps, modelMessages, consumeSources, appended } = makeDeps(

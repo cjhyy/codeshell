@@ -92,3 +92,48 @@ describe("ContextManager.manageAsync micro no-op escalation", () => {
     expect(summarizeCalls).toBe(1);
   });
 });
+
+describe("ContextManager.manageAsync compaction ladder", () => {
+  it("continues to snip when summary compaction still exceeds the anchored gate", async () => {
+    const maxTokens = 200_000;
+    const mgr = new ContextManager({ maxTokens });
+    const strategies: string[] = [];
+    mgr.setOnCompact(({ strategy }) => {
+      strategies.push(strategy);
+    });
+    mgr.setSummarizeFn(async () => {
+      return "SUMMARY: " + "the prior long discussion was condensed. ".repeat(4);
+    });
+
+    const messages = textConversation(80);
+    const heuristicBefore = estimateTokens(messages);
+    mgr.recordActualUsage(heuristicBefore * 2, messages.length, messages);
+
+    const result = await mgr.manageAsync(messages);
+    const { tokens } = mgr.checkLimits(result);
+
+    expect(strategies).toEqual(["summary", "snip"]);
+    expect(tokens).toBeLessThanOrEqual(maxTokens * 0.85);
+  });
+
+  it("does not run fallback tiers when summary compaction gets below the gate", async () => {
+    const mgr = new ContextManager({ maxTokens: 200_000 });
+    const strategies: string[] = [];
+    mgr.setOnCompact(({ strategy }) => {
+      strategies.push(strategy);
+    });
+    mgr.setSummarizeFn(async () => {
+      return "SUMMARY: " + "the prior long discussion was condensed. ".repeat(4);
+    });
+
+    const messages = textConversation(80);
+    const before = estimateTokens(messages);
+    expect(before).toBeGreaterThan(200_000 * 0.85);
+
+    const result = await mgr.manageAsync(messages);
+    const after = estimateTokens(result);
+
+    expect(strategies).toEqual(["summary"]);
+    expect(after).toBeLessThanOrEqual(200_000 * 0.85);
+  });
+});
