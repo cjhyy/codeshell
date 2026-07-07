@@ -52,8 +52,12 @@ describe("SessionManager workspace resume resolution", () => {
     const resolved = sm.resolveSessionWorkspaceForResume("resume-ok");
 
     expect(resolved.ok).toBe(true);
+    if (!resolved.ok) throw new Error(resolved.message);
     expect(resolved.cwd).toBe(wt.worktreePath);
-    expect(resolved.workspace).toEqual(sm.getSessionWorkspace("resume-ok"));
+    const expectedWorkspace = sm.getSessionWorkspace("resume-ok");
+    expect(expectedWorkspace).toBeDefined();
+    if (!expectedWorkspace) throw new Error("expected persisted workspace");
+    expect(resolved.workspace).toEqual(expectedWorkspace);
     removeWorktree(wt.worktreePath, true);
   });
 
@@ -124,10 +128,14 @@ describe("SessionManager workspace resume resolution", () => {
     const resolved = sm.resolveSessionWorkspaceForResume("resume-main");
 
     expect(resolved.ok).toBe(true);
+    if (!resolved.ok) throw new Error(resolved.message);
     expect(resolved.cwd).toBe(repo);
     expect(resolved.workspace).toEqual({ root: repo, kind: "main" });
-    expect(resolved.message).toContain("fell back to main");
-    expect(resolved.message).toContain(wt.worktreeBranch);
+    const message = resolved.message;
+    expect(message).toBeDefined();
+    if (!message) throw new Error("expected resume fallback message");
+    expect(message).toContain("fell back to main");
+    expect(message).toContain(wt.worktreeBranch);
     expect(sm.getSessionWorkspace("resume-main")).toEqual({ root: repo, kind: "main" });
   });
 });

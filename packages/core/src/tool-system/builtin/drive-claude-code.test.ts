@@ -155,8 +155,14 @@ describe("DriveClaudeCode alias (back-compat)", () => {
       const job = backgroundJobRegistry.listRunningForSession("S-HANDOFF")[0];
       const jobId = out.match(/jobId ([^)]+)\)/)?.[1];
       expect(jobId).toBeDefined();
+      if (!jobId) throw new Error("expected background job id");
+      expect(job).toBeDefined();
+      if (!job) throw new Error("expected background job");
       expect(job.jobId).toBe(jobId);
-      expect(job.cwd).toBe(realpathSync(tmp));
+      const jobCwd = job.cwd;
+      expect(jobCwd).toBeDefined();
+      if (!jobCwd) throw new Error("expected background job cwd");
+      expect(jobCwd).toBe(realpathSync(tmp));
 
       resolveRun({ sessionId: "CC-HANDOFF", finalText: "eventual result", isError: false, exitCode: 0, lines: [] });
       await new Promise((r) => setTimeout(r, 20));

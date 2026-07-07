@@ -26,7 +26,7 @@ class FakeWorkspaceCwdClient extends LLMClientBase {
     const scenario = scenarios.get(this.model);
     if (!scenario) throw new Error(`missing scenario ${this.model}`);
     this.recordUsage({ promptTokens: 1, completionTokens: 1, totalTokens: 2 }, options);
-    if (options.tools.length === 0) {
+    if ((options.tools ?? []).length === 0) {
       return {
         text: "summary",
         toolCalls: [],

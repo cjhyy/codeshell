@@ -47,7 +47,16 @@ describe("ExitWorktree cleanup actions", () => {
 
   function ctx(sessionId: string, cwd = repo): ToolContext {
     if (!sm.exists(sessionId)) sm.create(repo, "m", "p", sessionId);
-    const toolCtx = {
+    type MockToolContext = {
+      cwd: string;
+      sessionId: string;
+      engine: {
+        getSessionManager: () => SessionManager;
+        readWorktreeSetupScripts: () => undefined;
+      };
+      setCwd(this: MockToolContext, next: string): void;
+    };
+    const toolCtx: MockToolContext = {
       cwd,
       sessionId,
       engine: {
@@ -57,8 +66,8 @@ describe("ExitWorktree cleanup actions", () => {
       setCwd(next: string) {
         this.cwd = next;
       },
-    } as unknown as ToolContext;
-    return toolCtx;
+    };
+    return toolCtx as unknown as ToolContext;
   }
 
   test("keep preserves the directory and branch", async () => {
