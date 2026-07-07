@@ -24,6 +24,13 @@ function image(data: string): ContentBlock {
   };
 }
 
+function openAIImageUrl(data: string): ContentBlock {
+  return {
+    type: "image_url",
+    image_url: { url: `data:image/jpeg;base64,${data}` },
+  } as unknown as ContentBlock;
+}
+
 function fixtureMessages(): Message[] {
   return [
     {
@@ -42,6 +49,20 @@ function fixtureMessages(): Message[] {
       ],
     },
   ];
+}
+
+function appendPersistedImageHistory(sm: SessionManager, root: string, sessionId: string): void {
+  const session = sm.create(root, "claude-sonnet-4-6", "anthropic", sessionId);
+  session.transcript.appendMessage("user", [{ type: "text", text: "first" }, image(IMAGE_1)]);
+  session.transcript.appendMessage("assistant", [
+    { type: "tool_use", id: "view_1", name: "view_image", input: { path: "a.png" } },
+  ]);
+  session.transcript.appendToolUse("view_image", "view_1", { path: "a.png" });
+  session.transcript.appendToolResult("view_1", "view_image", "(image)", undefined, [
+    { type: "text", text: "nested" },
+    image(IMAGE_2),
+  ]);
+  session.transcript.appendMessage("user", [{ type: "text", text: "third" }, image(IMAGE_3)]);
 }
 
 function placeholderTexts(messages: Message[]): string[] {
@@ -93,19 +114,16 @@ describe("view_image by imageNumber", () => {
     await rm(sessions, { recursive: true, force: true });
   });
 
-  it("retrieves the same #2 image assigned by image-history downgrade", async () => {
-    const messages = fixtureMessages();
+  it("retrieves the same #2 tool-result image assigned by image-history downgrade after resume", async () => {
+    appendPersistedImageHistory(sm, root, "imagehist123");
+
+    const messages = sm.resume("imagehist123").transcript.toMessages();
     const downgraded = downgradeImagePayloadsInHistory(messages).messages;
     expect(placeholderTexts(downgraded)).toEqual([
       `${IMAGE_HISTORY_PLACEHOLDER_PREFIX}1${IMAGE_HISTORY_PLACEHOLDER_SUFFIX}`,
       `${IMAGE_HISTORY_PLACEHOLDER_PREFIX}2${IMAGE_HISTORY_PLACEHOLDER_SUFFIX}`,
       `${IMAGE_HISTORY_PLACEHOLDER_PREFIX}3${IMAGE_HISTORY_PLACEHOLDER_SUFFIX}`,
     ]);
-
-    const session = sm.create(root, "claude-sonnet-4-6", "anthropic", "imagehist123");
-    for (const message of messages) {
-      session.transcript.appendMessage(message.role, message.content);
-    }
 
     const out = await viewImageTool({ imageNumber: 2 }, ctxWith(sm, "imagehist123", root));
 
@@ -125,6 +143,22 @@ describe("view_image by imageNumber", () => {
     expect(typeof out).toBe("string");
     expect(out as string).toContain("image #5");
     expect(out as string).toContain("1");
+  });
+
+  it("normalizes OpenAI data-url history images to internal image blocks", async () => {
+    const session = sm.create(root, "claude-sonnet-4-6", "anthropic", "imageopenai123");
+    session.transcript.appendMessage("user", [
+      { type: "text", text: "openai" },
+      openAIImageUrl(IMAGE_1),
+    ]);
+
+    const out = await viewImageTool({ imageNumber: 1 }, ctxWith(sm, "imageopenai123", root));
+
+    expect(typeof out).toBe("object");
+    const block = (out as { contentBlocks: ContentBlock[] }).contentBlocks[0]!;
+    expect(block.type).toBe("image");
+    expect(block.source?.media_type).toBe("image/jpeg");
+    expect(block.source?.data).toBe(IMAGE_1);
   });
 
   it("fails closed when sessionManager or sessionId is unavailable", async () => {

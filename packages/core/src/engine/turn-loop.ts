@@ -1017,6 +1017,7 @@ export class TurnLoop {
             result.toolName,
             result.result,
             result.error,
+            result.contentBlocks,
           );
 
           this.config.onStream?.({ type: "tool_result", result });

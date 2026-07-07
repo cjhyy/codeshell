@@ -160,18 +160,27 @@ async function viewHistoricalImage(
     return `Error: 未找到 image #${imageNumber}; 当前 session 历史中共有 ${images.length} 张可取回图片。`;
   }
 
-  const size = decodedImageBlockBytes(found.block);
+  const block = normalizeImageBlockForReturn(found.block);
+  const size = decodedImageBlockBytes(block);
   if (size !== undefined && size > MAX_BYTES) {
     const mb = (size / 1024 / 1024).toFixed(1);
     return `[图片未取回: image #${imageNumber} —— 图片过大 (${mb} MB > 5 MB),请先压缩或缩放原图。]`;
   }
 
   const kb = size === undefined ? "unknown" : String(Math.round(size / 1024));
-  const mediaType = mediaTypeOfImageBlock(found.block) ?? "base64 image";
+  const mediaType = mediaTypeOfImageBlock(block) ?? "base64 image";
   return {
-    contentBlocks: [found.block],
+    contentBlocks: [block],
     result: `[已取回 image #${imageNumber}: ${mediaType}, ${kb} KB]`,
   };
+}
+
+function normalizeImageBlockForReturn(
+  block: import("../../types.js").ContentBlock,
+): import("../../types.js").ContentBlock {
+  if (block.type === "image" && block.source?.type === "base64") return block;
+  const source = openAIDataUrlImageSource(block);
+  return source ? { type: "image", source } : block;
 }
 
 function decodedImageBlockBytes(block: import("../../types.js").ContentBlock): number | undefined {
@@ -184,16 +193,21 @@ function base64DataOfImageBlock(block: import("../../types.js").ContentBlock): s
   if (block.type === "image" && block.source?.type === "base64") {
     return block.source.data;
   }
-  const maybeOpenAI = block as unknown as { type?: string; image_url?: { url?: string } };
-  const match = maybeOpenAI.image_url?.url?.match(/^data:image\/[^;,]+;base64,(.+)$/i);
-  return maybeOpenAI.type === "image_url" ? match?.[1] : undefined;
+  return openAIDataUrlImageSource(block)?.data;
 }
 
 function mediaTypeOfImageBlock(block: import("../../types.js").ContentBlock): string | undefined {
   if (block.type === "image" && block.source?.type === "base64") {
     return block.source.media_type;
   }
+  return openAIDataUrlImageSource(block)?.media_type;
+}
+
+function openAIDataUrlImageSource(
+  block: import("../../types.js").ContentBlock,
+): { type: "base64"; media_type: string; data: string } | undefined {
   const maybeOpenAI = block as unknown as { type?: string; image_url?: { url?: string } };
-  const match = maybeOpenAI.image_url?.url?.match(/^data:(image\/[^;,]+);base64,/i);
-  return maybeOpenAI.type === "image_url" ? match?.[1] : undefined;
+  const match = maybeOpenAI.image_url?.url?.match(/^data:(image\/[^;,]+);base64,(.+)$/i);
+  if (maybeOpenAI.type !== "image_url" || !match?.[1] || !match[2]) return undefined;
+  return { type: "base64", media_type: match[1], data: match[2] };
 }

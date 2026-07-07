@@ -38,9 +38,26 @@ function makeDeps(
     toolName: call.toolName,
     result: "ok",
   }),
-): { deps: TurnLoopDeps; callArgs: Message[][] } {
+): {
+  deps: TurnLoopDeps;
+  callArgs: Message[][];
+  toolResultAppends: Array<{
+    toolCallId: string;
+    toolName: string;
+    result?: string;
+    error?: string;
+    contentBlocks?: ContentBlock[];
+  }>;
+} {
   let i = 0;
   const callArgs: Message[][] = [];
+  const toolResultAppends: Array<{
+    toolCallId: string;
+    toolName: string;
+    result?: string;
+    error?: string;
+    contentBlocks?: ContentBlock[];
+  }> = [];
   const call = async (_sys: string, messages: Message[]): Promise<LLMResponse> => {
     callArgs.push(JSON.parse(JSON.stringify(messages)) as Message[]);
     const response = responses[Math.min(i, responses.length - 1)]!;
@@ -83,7 +100,15 @@ function makeDeps(
 
   const transcript = {
     appendToolUse() {},
-    appendToolResult() {},
+    appendToolResult(
+      toolCallId: string,
+      toolName: string,
+      result?: string,
+      error?: string,
+      contentBlocks?: ContentBlock[],
+    ) {
+      toolResultAppends.push({ toolCallId, toolName, result, error, contentBlocks });
+    },
     appendTurnBoundary() {},
     appendTurnStopped() {},
     appendMessage() {},
@@ -116,6 +141,7 @@ function makeDeps(
       ctxOverheadStore: { get: () => 0, set: () => {} },
     },
     callArgs,
+    toolResultAppends,
   };
 }
 
@@ -144,7 +170,7 @@ describe("TurnLoop image-history first consumption", () => {
 
   it("preserves a tool-result image for its first model consumption, then downgrades it", async () => {
     const initial: Message = { role: "user", content: "please view the image" };
-    const { deps, callArgs } = makeDeps(
+    const { deps, callArgs, toolResultAppends } = makeDeps(
       [toolResp("view_image"), doneResp()],
       async (call) => ({
         id: call.id,
@@ -163,5 +189,6 @@ describe("TurnLoop image-history first consumption", () => {
     expect(JSON.stringify(callArgs[1])).toContain(toolImageBase64);
     expect(JSON.stringify(result.messages)).not.toContain(toolImageBase64);
     expect(JSON.stringify(result.messages)).toContain(placeholder);
+    expect(toolResultAppends[0]?.contentBlocks?.[0]?.source?.data).toBe(toolImageBase64);
   });
 });
