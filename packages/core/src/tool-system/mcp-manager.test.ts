@@ -1,4 +1,7 @@
 import { describe, test, expect } from "bun:test";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   MCPManager,
   buildRegisteredTool,
@@ -7,6 +10,7 @@ import {
   buildStdioEnv,
   buildHttpHeaders,
   inferTransportType,
+  spillMcpImage,
 } from "./mcp-manager.js";
 import { ToolRegistry } from "./registry.js";
 import { ToolExecutor } from "./executor.js";
@@ -199,6 +203,36 @@ describe("stripInternalToolArgs", () => {
   test("returns empty args for no-argument MCP tools", () => {
     const ac = new AbortController();
     expect(stripInternalToolArgs({ __signal: ac.signal })).toEqual({});
+  });
+});
+
+describe("spillMcpImage CODE_SHELL_HOME layout", () => {
+  test("uses CODE_SHELL_HOME as the final CodeShell home", async () => {
+    const home = mkdtempSync(join(tmpdir(), "mcp-spill-home-"));
+    const previous = process.env.CODE_SHELL_HOME;
+    process.env.CODE_SHELL_HOME = home;
+    try {
+      const note = await spillMcpImage(
+        "srv",
+        "shot",
+        Buffer.from("x").toString("base64"),
+        "image/png",
+        { now: () => 123 },
+      );
+      const expected = join(home, "mcp_images", "srv-shot-123.png");
+      const nested = join(home, ".code-shell", "mcp_images", "srv-shot-123.png");
+
+      expect(note).toContain(`saved=${expected}`);
+      expect(existsSync(expected)).toBe(true);
+      expect(existsSync(nested)).toBe(false);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.CODE_SHELL_HOME;
+      } else {
+        process.env.CODE_SHELL_HOME = previous;
+      }
+      rmSync(home, { recursive: true, force: true });
+    }
   });
 });
 

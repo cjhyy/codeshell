@@ -17,6 +17,7 @@ import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { diagnoseMcpStdioMissingCommand, previewPath } from "./mcp-stdio-diagnostics.js";
 import type { ToolContext } from "./context.js";
+import { codeShellHome } from "../session/session-manager.js";
 
 interface MCPConnection {
   client: Client;
@@ -173,10 +174,7 @@ export async function spillMcpImage(
   mimeType: string,
   opts?: { baseDir?: string; now?: () => number },
 ): Promise<string> {
-  const home = process.env.CODE_SHELL_HOME ?? process.env.HOME ?? "";
-  const baseDir =
-    opts?.baseDir ??
-    (home ? join(home, ".code-shell", "mcp_images") : join("/tmp", "code-shell-mcp-images"));
+  const baseDir = opts?.baseDir ?? join(codeShellHome(), "mcp_images");
   const now = opts?.now ?? Date.now;
 
   const decodedBytes = Math.floor((base64.length * 3) / 4);
