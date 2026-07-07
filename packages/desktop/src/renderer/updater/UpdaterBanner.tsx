@@ -156,10 +156,25 @@ export function SidebarUpdaterButton() {
 export function UpdaterSettingsRow() {
   const { t } = useT();
   const status = useUpdaterStatus();
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    void window.codeshell.getAppVersion().then((v) => {
+      if (mounted) setAppVersion(v);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <section className="flex flex-col gap-2">
       <h3 className="text-sm font-semibold">{t("misc.updater.autoUpdate")}</h3>
+      <div className="text-sm">
+        <span className="text-muted-foreground">{t("misc.updater.currentVersionLabel")}</span>
+        <span>{appVersion ?? "…"}</span>
+      </div>
       <div className="text-sm">
         <span className="text-muted-foreground">{t("misc.updater.statusLabel")}</span>
         <span>{describeStatus(status, t)}</span>

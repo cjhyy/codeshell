@@ -2152,6 +2152,7 @@ ipcMain.handle("updater:check", async () => checkForUpdate());
 ipcMain.handle("updater:download", async () => downloadUpdate());
 ipcMain.handle("updater:install", async () => quitAndInstall());
 ipcMain.handle("updater:status", async () => getLastStatus());
+ipcMain.handle("app:version", () => app.getVersion());
 
 // ── Mobile Web Remote ───────────────────────────────────────────────────────
 // In-flight mutex for mobileRemote:start. Without it, a concurrent second

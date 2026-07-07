@@ -1083,6 +1083,8 @@ export interface CodeshellApi {
   setBadgeCount(count: number): Promise<void>;
   onMenuEvent(cb: (event: string, payload?: unknown) => void): Unsubscribe;
   newWindow(): Promise<void>;
+  /** The running app version (from Electron `app.getVersion()`). */
+  getAppVersion(): Promise<string>;
   checkForUpdate(): Promise<void>;
   downloadUpdate(): Promise<void>;
   installUpdate(): Promise<void>;
