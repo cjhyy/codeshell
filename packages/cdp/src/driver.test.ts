@@ -235,6 +235,19 @@ describe("CdpActionsDriver.fetchImageData", () => {
     expect(ev?.params?.expression).toContain("image fetch timed out");
   });
 
+  test("sanitizes maxDim before interpolating it into page JavaScript", async () => {
+    const { send, calls } = fakeCdp({
+      "Runtime.evaluate": () => ({
+        result: { value: { ok: true, dataUrl: "data:image/jpeg;base64,QUJD" } },
+      }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+    await d.fetchImageData("img3", "1);window.__pwned=1;//" as unknown as number);
+    const ev = calls.find((c) => c.method === "Runtime.evaluate");
+    expect(ev?.params?.expression).not.toContain("__pwned");
+    expect(ev?.params?.expression).toContain('"img3", 1568, 15000');
+  });
+
   test("reports missing ref", async () => {
     const { send } = fakeCdp({
       "Runtime.evaluate": () => ({ result: { value: { ok: false, missing: true } } }),

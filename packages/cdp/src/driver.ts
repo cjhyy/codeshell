@@ -273,8 +273,9 @@ export class CdpActionsDriver {
         this.options.imageFetchTimeoutMs,
         DEFAULT_IMAGE_FETCH_TIMEOUT_MS,
       );
+      const safeMaxDim = positiveFinite(maxDim, MAX_IMAGE_DIM);
       const res = (await this.send("Runtime.evaluate", {
-        expression: `(${FETCH_IMAGE_BY_REF_FN})(${JSON.stringify(ref)}, ${maxDim}, ${timeoutMs})`,
+        expression: `(${FETCH_IMAGE_BY_REF_FN})(${JSON.stringify(ref)}, ${safeMaxDim}, ${timeoutMs})`,
         returnByValue: true,
         awaitPromise: true,
       })) as {
