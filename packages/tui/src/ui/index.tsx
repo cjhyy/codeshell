@@ -79,7 +79,7 @@ export async function startInkRepl(options: InkReplOptions): Promise<void> {
       stdout: process.stdout,
       stdin: process.stdin,
       stderr: process.stderr,
-      exitOnCtrlC: true,
+      exitOnCtrlC: false,
       patchConsole: false,
       onFrame: (event) => {
         const p = event.phases;
