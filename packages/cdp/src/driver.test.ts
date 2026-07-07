@@ -259,6 +259,7 @@ describe("CdpActionsDriver.fetchImageData", () => {
     const d = new CdpActionsDriver(send, () => ({ url: "u" }));
     const r = await d.fetchImageData("img9");
     expect(r.ok).toBe(false);
+    expect(r.staleRef).toBe(true);
     expect(r.detail).toContain("not found");
   });
 });

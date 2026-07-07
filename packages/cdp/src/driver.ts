@@ -283,7 +283,11 @@ export class CdpActionsDriver {
       };
       const v = res.result?.value;
       if (v?.missing)
-        return { ok: false, detail: `ref ${ref} not found — re-run browser_observe(extract)` };
+        return {
+          ok: false,
+          detail: `ref ${ref} not found — re-run browser_observe(extract)`,
+          staleRef: true,
+        };
       if (!v?.ok || !v.dataUrl)
         return { ok: false, detail: v?.detail ?? "could not read image pixels" };
       return { ...parseDataUrl(v.dataUrl), ref };
