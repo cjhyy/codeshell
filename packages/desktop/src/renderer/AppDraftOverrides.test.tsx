@@ -6,12 +6,17 @@ import { bucketKey } from "./transcripts";
 type SendFn = (
   text: string,
   sendOpts?: { bucket?: string; clientMessageId?: string },
-) => Promise<void>;
+) => Promise<void> | void;
 
-let chatProps: { onSend: SendFn } | null = null;
+interface ChatProps {
+  sendBucket?: string;
+  onSend: SendFn;
+}
+
+let chatProps: ChatProps | null = null;
 
 mock.module("./ChatView", () => ({
-  ChatView(props: { onSend: SendFn }) {
+  ChatView(props: ChatProps) {
     chatProps = props;
     return React.createElement("div");
   },
@@ -87,6 +92,7 @@ Object.defineProperty(globalThis, "window", {
 });
 
 const { App } = await import("./App");
+mock.restore();
 
 describe("App send draft overrides", () => {
   afterAll(() => {
@@ -99,6 +105,46 @@ describe("App send draft overrides", () => {
     chatProps = null;
     runCalls.length = 0;
     localStorageMock.clear();
+  });
+
+  test("passes the rendered session bucket to ChatView send callbacks", async () => {
+    const repoId = "repoA";
+    const sessionA = "session-a";
+    const sessionB = "session-b";
+    localStorageMock.setItem(
+      "codeshell.repos",
+      JSON.stringify([{ id: repoId, name: "Repo A", path: "/tmp/repo-a", addedAt: 1 }]),
+    );
+    localStorageMock.setItem("codeshell.activeRepoId", repoId);
+    localStorageMock.setItem(
+      "codeshell.view",
+      JSON.stringify({ viewMode: "chat", sidebarCollapsed: true, inspectorCollapsed: false }),
+    );
+    localStorageMock.setItem(
+      `codeshell.sessionIndex.${repoId}`,
+      JSON.stringify({
+        activeSessionId: sessionA,
+        sessions: [
+          { id: sessionA, title: "A", createdAt: 1, updatedAt: 2 },
+          { id: sessionB, title: "B", createdAt: 1, updatedAt: 1 },
+        ],
+      }),
+    );
+
+    renderToStaticMarkup(React.createElement(App));
+
+    expect(chatProps).not.toBeNull();
+    expect(chatProps!.sendBucket).toBe(bucketKey(repoId, sessionA));
+
+    await chatProps!.onSend("from A");
+
+    expect(runCalls).toHaveLength(1);
+    expect(runCalls[0]!.text).toBe("from A");
+    expect(runCalls[0]!.opts).toMatchObject({
+      cwd: "/tmp/repo-a",
+      sessionId: sessionA,
+    });
+    expect(runCalls[0]!.opts.sessionId).not.toBe(sessionB);
   });
 
   test("first send from a draft reads goal, permission, and model from the draft bucket", async () => {

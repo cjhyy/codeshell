@@ -1252,34 +1252,28 @@ function App() {
     );
     void (async () => {
       if (plan.cancelCronJobId) {
-        await window.codeshell
-          .cancelAutomationRun(plan.cancelCronJobId)
-          .catch((e) =>
-            window.codeshell.log("session.delete.cancel.failed", {
-              cronJobId: plan.cancelCronJobId,
-              error: String(e),
-            }),
-          );
-      }
-      await window.codeshell
-        .deleteSession(plan.deleteEngineId)
-        .catch((e) =>
-          window.codeshell.log("session.delete.session.failed", {
-            engineId: plan.deleteEngineId,
+        await window.codeshell.cancelAutomationRun(plan.cancelCronJobId).catch((e) =>
+          window.codeshell.log("session.delete.cancel.failed", {
+            cronJobId: plan.cancelCronJobId,
             error: String(e),
           }),
         );
+      }
+      await window.codeshell.deleteSession(plan.deleteEngineId).catch((e) =>
+        window.codeshell.log("session.delete.session.failed", {
+          engineId: plan.deleteEngineId,
+          error: String(e),
+        }),
+      );
       // deleteRun is a no-op for current jobs (which write sessions/, not
       // runs/), but still clears legacy RunManager-era run dirs.
       if (plan.deleteRunId) {
-        await window.codeshell
-          .deleteRun(plan.deleteRunId)
-          .catch((e) =>
-            window.codeshell.log("session.delete.run.failed", {
-              runId: plan.deleteRunId,
-              error: String(e),
-            }),
-          );
+        await window.codeshell.deleteRun(plan.deleteRunId).catch((e) =>
+          window.codeshell.log("session.delete.run.failed", {
+            runId: plan.deleteRunId,
+            error: String(e),
+          }),
+        );
       }
     })();
   };
@@ -2165,7 +2159,13 @@ function App() {
       // boundary. The item STAYS in the panel (visible + revocable) — it's only
       // removed when the engine's steer_injected event confirms it, at which
       // point it renders as a user bubble. Send each id exactly once.
-      const engineSessionId = resolveActiveEngineSessionId();
+      //
+      // Resolve the engine session from activeBucket (the bucket this effect
+      // operates on), NOT resolveActiveEngineSessionId() — the latter prefers
+      // runningBucketRef, which points at the LAST-started run. With two busy
+      // sessions (B started after A, user switches back to A and queues), that
+      // would steer A's text into B's engine session (cross-session串投).
+      const engineSessionId = resolveEngineSessionIdForBucket(activeBucket);
       if (!engineSessionId) return; // run starting up; re-fires once it resolves
       const bucket = activeBucket;
       for (const item of queued) {
@@ -2226,7 +2226,7 @@ function App() {
         n.delete(activeBucket);
         return n;
       });
-      if (text) send(text);
+      if (text) send(text, { bucket: activeBucket });
       return;
     }
     const { item, state: next } = dequeueQueuedInput(queuedInputs, activeBucket);
@@ -2242,7 +2242,9 @@ function App() {
     // send() is the single source. (cancel/turn-end does NOT clear the steer
     // queue — same seam as the relay path's revokeSteeredForRelay.)
     if (steeredIdsRef.current.has(item.id)) {
-      const engineSessionId = resolveActiveEngineSessionId();
+      // Same as the steer path above: resolve from activeBucket so we revoke the
+      // stale steer on THIS session's engine, not runningBucketRef's.
+      const engineSessionId = resolveEngineSessionIdForBucket(activeBucket);
       if (engineSessionId) void window.codeshell.unsteer(engineSessionId, item.id);
       steeredIdsRef.current.delete(item.id);
     }
@@ -2257,11 +2259,15 @@ function App() {
       ? crypto.randomUUID()
       : `q-${queuedSeqRef.current++}`;
 
-  const queueInput = (text: string): void => {
+  const queueInput = (
+    text: string,
+    queueOpts: { bucket?: string; clientMessageId?: string } = {},
+  ): void => {
     const id = newQueuedId();
-    const clientMessageId = newQueuedId();
+    const clientMessageId = queueOpts.clientMessageId ?? newQueuedId();
     const trimmed = text.trim();
     if (!trimmed) return;
+    const bucket = queueOpts.bucket ?? activeBucket;
     // No optimistic right-side bubble here. A queued draft lives ONLY in the
     // left waiting panel (enqueueQueuedInput) until the engine consumes it and
     // echoes steer_injected — the reducer then appends the real user bubble
@@ -2269,7 +2275,7 @@ function App() {
     // shown in the feed; shown only once actually injected). The optimistic
     // bubble was a workaround for TurnProcessGroupCard's missing user branch,
     // now fixed, so it's no longer needed.
-    setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, id, trimmed, clientMessageId));
+    setQueuedInputs((prev) => enqueueQueuedInput(prev, bucket, id, trimmed, clientMessageId));
   };
 
   // Before a relay (打断重发) aborts + re-sends the queue as a fresh run, revoke
@@ -2277,21 +2283,27 @@ function App() {
   // the leftover steer entries survive the abort and get consumed by the new
   // run → the same text lands twice (one relay re-send + one steer_injected).
   // This is the queue↔relay seam: cancel() does not clear steerQueueBySid.
-  const revokeSteeredForRelay = (): void => {
-    const engineSessionId = resolveActiveEngineSessionId();
+  const revokeSteeredForRelay = (bucket: string = activeBucket): void => {
+    const engineSessionId = resolveEngineSessionIdForBucket(bucket);
     if (!engineSessionId) return;
-    for (const item of queuedInputs[activeBucket] ?? []) {
+    for (const item of queuedInputs[bucket] ?? []) {
       if (!steeredIdsRef.current.has(item.id)) continue;
       void window.codeshell.unsteer(engineSessionId, item.id);
       steeredIdsRef.current.delete(item.id);
     }
   };
 
-  const forceSend = (text: string): void => {
-    revokeSteeredForRelay();
-    setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, newQueuedId(), text));
-    setRelayingBuckets((prev) => new Set(prev).add(activeBucket));
-    stop(activeBucket, { relay: true });
+  const forceSend = (
+    text: string,
+    forceOpts: { bucket?: string; clientMessageId?: string } = {},
+  ): void => {
+    const bucket = forceOpts.bucket ?? activeBucket;
+    revokeSteeredForRelay(bucket);
+    setQueuedInputs((prev) =>
+      enqueueQueuedInput(prev, bucket, newQueuedId(), text, forceOpts.clientMessageId),
+    );
+    setRelayingBuckets((prev) => new Set(prev).add(bucket));
+    stop(bucket, { relay: true });
   };
 
   const clearActiveQueuedInput = (): void => {
@@ -3412,9 +3424,16 @@ function App() {
                   turnEpoch={state.turnEpoch}
                   engineSessionId={state.sessionId}
                   liveTurnActive={liveTurnActive}
-                  onSend={send}
-                  onQueueInput={queueInput}
-                  onForceSend={forceSend}
+                  sendBucket={activeBucket}
+                  onSend={(text, opts) =>
+                    send(text, { ...opts, bucket: opts?.bucket ?? activeBucket })
+                  }
+                  onQueueInput={(text, opts) =>
+                    queueInput(text, { ...opts, bucket: opts?.bucket ?? activeBucket })
+                  }
+                  onForceSend={(text, opts) =>
+                    forceSend(text, { ...opts, bucket: opts?.bucket ?? activeBucket })
+                  }
                   onCompactCommand={compactActiveSession}
                   onStop={() => stop()}
                   busy={busy}
