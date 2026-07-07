@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, symlinkSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { safeSpawnShell } from "../../runtime/safe-spawn.js";
 import { buildSandboxEnv, defaultShellBinary, mergeShellEnv } from "../../runtime/spawn-common.js";
@@ -226,23 +226,62 @@ export function removeWorktree(
 }
 
 /**
- * Symlink large directories (node_modules, .venv, etc.) from main repo to worktree.
+ * Symlink large directories (node_modules, .venv, etc.) from main repo to
+ * worktree. Also links each monorepo workspace package's private
+ * `node_modules` (e.g. `packages/desktop/node_modules`, where bun keeps
+ * un-hoisted deps like electron) so a fresh worktree can build/run the whole
+ * workspace, not just the packages whose deps happen to be hoisted to the root.
  */
 function symlinkLargeDirectories(sourceRoot: string, worktreePath: string): void {
   const largeDirs = ["node_modules", ".venv", "vendor", ".pnpm-store"];
+  for (const dir of largeDirs) {
+    linkDir(join(sourceRoot, dir), join(worktreePath, dir));
+  }
 
+  // Monorepo workspace packages keep private node_modules that are NOT hoisted
+  // to the root. Link `<pkg>/node_modules` for each package under `packages/`.
+  const packagesDir = join(sourceRoot, "packages");
+  if (!dirExists(packagesDir)) return;
+  let pkgNames: string[];
+  try {
+    pkgNames = readdirSync(packagesDir);
+  } catch {
+    return;
+  }
+  for (const pkg of pkgNames) {
+    const source = join(packagesDir, pkg, "node_modules");
+    if (!dirExists(source)) continue;
+    const targetPkgDir = join(worktreePath, "packages", pkg);
+    // The worktree only has package dirs that exist in this branch's tree; a
+    // package present in the main repo but not checked out here is skipped.
+    if (!dirExists(targetPkgDir)) {
+      try {
+        mkdirSync(targetPkgDir, { recursive: true });
+      } catch {
+        continue;
+      }
+    }
+    linkDir(source, join(targetPkgDir, "node_modules"));
+  }
+}
+
+function dirExists(path: string): boolean {
+  try {
+    return lstatSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function linkDir(source: string, target: string): void {
   // Windows directory symlinks need admin/Developer Mode and throw EPERM for a
   // normal user; NTFS junctions don't and behave the same for our purpose.
   const linkType = process.platform === "win32" ? "junction" : "dir";
-  for (const dir of largeDirs) {
-    const source = join(sourceRoot, dir);
-    const target = join(worktreePath, dir);
-    if (existsSync(source) && lstatSync(source).isDirectory() && !existsSync(target)) {
-      try {
-        symlinkSync(source, target, linkType);
-      } catch {
-        // Symlink/junction might fail on some systems — non-fatal.
-      }
+  if (dirExists(source) && !existsSync(target)) {
+    try {
+      symlinkSync(source, target, linkType);
+    } catch {
+      // Symlink/junction might fail on some systems — non-fatal.
     }
   }
 }
