@@ -13,6 +13,43 @@ import { homedir } from "node:os";
 import { resolveApiKey } from "@cjhyy/code-shell-core";
 import { initCommand } from "./init/index.js";
 
+const REDACTED_SETTING_VALUE = "[REDACTED]";
+const SECRET_SETTING_KEYS = new Set([
+  "apikey",
+  "api_key",
+  "api-key",
+  "secret",
+  "token",
+  "password",
+  "authorization",
+]);
+
+function isSecretSettingKey(key: string): boolean {
+  return SECRET_SETTING_KEYS.has(key.toLowerCase());
+}
+
+export function redactSettingsSecrets(value: unknown, path: string[] = []): unknown {
+  const lastKey = path.at(-1);
+  if (lastKey && isSecretSettingKey(lastKey) && value !== undefined && value !== null) {
+    return REDACTED_SETTING_VALUE;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => redactSettingsSecrets(entry, [...path, String(index)]));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+        key,
+        redactSettingsSecrets(entry, [...path, key]),
+      ]),
+    );
+  }
+
+  return value;
+}
+
 export const coreCommands: SlashCommand[] = [
   // ─── Existing (migrated from App.tsx) ───────────────────────────
 
@@ -344,7 +381,8 @@ export const coreCommands: SlashCommand[] = [
             return;
           }
           const file = `${mm.getMemoryDir()}/${entry.fileName}`;
-          const editor = process.env.CODE_SHELL_EDITOR || process.env.EDITOR || process.env.VISUAL || "vi";
+          const editor =
+            process.env.CODE_SHELL_EDITOR || process.env.EDITOR || process.env.VISUAL || "vi";
           ctx.addStatus(`Edit memory "${name}":\n  ${editor} ${file}`);
         } else if (sub === "open") {
           const dir = mm.getMemoryDir();
@@ -706,7 +744,7 @@ export const coreCommands: SlashCommand[] = [
       try {
         if (sub === "show" || !arg.trim()) {
           const settings = sm.get();
-          ctx.addStatus(JSON.stringify(settings, null, 2));
+          ctx.addStatus(JSON.stringify(redactSettingsSecrets(settings), null, 2));
         } else if (sub === "get") {
           const key = parts[1];
           if (!key) {
@@ -714,8 +752,9 @@ export const coreCommands: SlashCommand[] = [
             return;
           }
           const settings = sm.get();
-          const val = key.split(".").reduce((o: any, k) => o?.[k], settings);
-          ctx.addStatus(`${key} = ${JSON.stringify(val)}`);
+          const keyPath = key.split(".");
+          const val = keyPath.reduce((o: any, k) => o?.[k], settings);
+          ctx.addStatus(`${key} = ${JSON.stringify(redactSettingsSecrets(val, keyPath))}`);
         } else if (sub === "set") {
           const key = parts[1];
           const value = parts.slice(2).join(" ");
@@ -735,7 +774,11 @@ export const coreCommands: SlashCommand[] = [
           if (key === "context.maxTokens" && typeof parsed === "number") {
             ctx.setMaxContextTokens?.(parsed);
           }
-          ctx.addStatus(`Set ${key} = ${JSON.stringify(parsed)} (applied to current session)`);
+          ctx.addStatus(
+            `Set ${key} = ${JSON.stringify(
+              redactSettingsSecrets(parsed, key.split(".")),
+            )} (applied to current session)`,
+          );
         } else {
           ctx.addStatus("Usage: /config [show | set <key> <value> | get <key>]");
         }
