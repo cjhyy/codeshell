@@ -4,7 +4,10 @@ import type { EngineRuntime } from "../engine/runtime.js";
 import type { EngineConfig } from "../engine/types.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
 import { clearAgentOutputFiles } from "../tool-system/builtin/agent-output-file.js";
+import { clearCredentialSessionAllow } from "../credentials/use-credential-tool.js";
+import { clearInjectCredentialSessionAllow } from "../credentials/inject-credential-tool.js";
 import { logger } from "../logging/logger.js";
+import { clearSessionPathApprovals } from "../tool-system/path-policy.js";
 
 export type EngineConfigSlice = Pick<
   EngineConfig,
@@ -95,6 +98,9 @@ export class ChatSessionManager {
     const s = this.sessions.get(sessionId);
     if (!s) return;
     s.cancel();
+    clearSessionPathApprovals(sessionId);
+    clearCredentialSessionAllow(sessionId);
+    clearInjectCredentialSessionAllow(sessionId);
     this.unregisterMcpOwner(s);
     this.sessions.delete(sessionId);
   }

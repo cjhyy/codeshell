@@ -169,3 +169,7 @@ function json(r: InjectResult): string {
 export function __resetInjectCredentialSessionAllowForTests(): void {
   injectSessionAllowByEngine.clear();
 }
+
+export function clearInjectCredentialSessionAllow(sessionId: string): void {
+  injectSessionAllowByEngine.delete(sessionId);
+}

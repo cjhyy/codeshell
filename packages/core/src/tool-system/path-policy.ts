@@ -173,6 +173,9 @@ interface PathGrant {
 /** sessionId → set of approved directory grants (prefix + operation). */
 const sessionPathGrants = new Map<string, Set<PathGrant>>();
 
+/** Per-session prompt chains for enforcePathPolicyWithApproval (see comment there). */
+const askChains = new Map<string, Promise<void>>();
+
 /** True if a grant for `grantOp` authorizes an operation of `wantOp`. */
 function grantCoversOp(grantOp: PathOperation, wantOp: PathOperation): boolean {
   // write ⊇ {read, write}; read ⊇ {read}.
@@ -353,6 +356,12 @@ function recordPathApproval(
 /** Test seam: clear the in-memory session grants. */
 export function _resetSessionPathGrants(): void {
   sessionPathGrants.clear();
+  askChains.clear();
+}
+
+export function clearSessionPathApprovals(sessionId: string): void {
+  sessionPathGrants.delete(sessionId);
+  askChains.delete(sessionId);
 }
 
 /**
@@ -600,7 +609,8 @@ export async function enforcePathPolicyWithApproval(
   const chainKey = ctx.sessionId ?? "__global__";
   const prevTurn = askChains.get(chainKey) ?? Promise.resolve();
   let release!: () => void;
-  askChains.set(chainKey, new Promise<void>((r) => (release = r)));
+  const currentTurn = new Promise<void>((r) => (release = r));
+  askChains.set(chainKey, currentTurn);
   try {
     await prevTurn;
     if (isPathPreApproved(c.resolvedPath, operation, ctx.cwd, ctx.sessionId)) return null;
@@ -611,6 +621,9 @@ export async function enforcePathPolicyWithApproval(
     );
   } finally {
     release();
+    if (askChains.get(chainKey) === currentTurn) {
+      askChains.delete(chainKey);
+    }
   }
 }
 
@@ -678,9 +691,6 @@ async function promptForPathApproval(
   }
   return `Error: path approval denied by user — ${c.reason}. Path: ${c.resolvedPath}`;
 }
-
-/** Per-session prompt chains for enforcePathPolicyWithApproval (see comment there). */
-const askChains = new Map<string, Promise<void>>();
 
 /**
  * Internal: reset the "disabled warning" latch. Tests flip the env var
