@@ -127,8 +127,7 @@ export class CdpActionsDriver {
   async clickNode(backendNodeId: number): Promise<CdpActionResult> {
     const c = await this.centerOf(backendNodeId);
     if (!c) {
-      // geometry failed — fall back to a JS .click() on the resolved node.
-      return this.jsClick(backendNodeId);
+      return { ok: false, detail: "element has no layout box", staleRef: true };
     }
     try {
       await this.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: c.x, y: c.y });
@@ -138,25 +137,6 @@ export class CdpActionsDriver {
       return { ok: true };
     } catch (e) {
       return { ok: false, detail: errMsg(e) };
-    }
-  }
-
-  /** JS .click() fallback when the element has no usable box (e.g. zero-size
-   *  but clickable, or occluded). Resolves the node to an objectId and calls it. */
-  private async jsClick(backendNodeId: number): Promise<CdpActionResult> {
-    try {
-      const { object } = (await this.send("DOM.resolveNode", { backendNodeId })) as {
-        object?: { objectId?: string };
-      };
-      if (!object?.objectId)
-        return { ok: false, detail: "element has no layout box", staleRef: true };
-      await this.send("Runtime.callFunctionOn", {
-        objectId: object.objectId,
-        functionDeclaration: "function(){ this.click(); }",
-      });
-      return { ok: true, detail: "clicked via JS fallback (no layout box)" };
-    } catch (e) {
-      return { ok: false, detail: errMsg(e), staleRef: true };
     }
   }
 

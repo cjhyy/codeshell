@@ -63,7 +63,7 @@ describe("CdpActionsDriver.clickNode", () => {
     expect(press?.params).toMatchObject({ x: 50, y: 20, button: "left", clickCount: 1 });
   });
 
-  test("falls back to JS .click() when the node has no layout box", async () => {
+  test("fails when the node has no layout box instead of using JS .click()", async () => {
     const { send, calls } = fakeCdp({
       "DOM.getBoxModel": () => ({ model: null }),
       "DOM.resolveNode": () => ({ object: { objectId: "obj-1" } }),
@@ -71,11 +71,10 @@ describe("CdpActionsDriver.clickNode", () => {
     const d = new CdpActionsDriver(send, () => ({ url: "u" }));
 
     const r = await d.clickNode(5);
-    expect(r.ok).toBe(true);
-    expect(r.detail).toContain("JS fallback");
+    expect(r).toMatchObject({ ok: false, staleRef: true });
     const methods = calls.map((c) => c.method);
-    expect(methods).toContain("DOM.resolveNode");
-    expect(methods).toContain("Runtime.callFunctionOn");
+    expect(methods).not.toContain("DOM.resolveNode");
+    expect(methods).not.toContain("Runtime.callFunctionOn");
   });
 });
 
