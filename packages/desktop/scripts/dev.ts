@@ -71,16 +71,26 @@ async function startMobileVite(): Promise<void> {
 
 let electronProc: ChildProcess | null = null;
 
+function electronLaunchEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  // Agent workers run the Electron binary as Node. A nested desktop dev launch
+  // must clear that sentinel or `electron .` imports the app as plain Node.
+  delete env.ELECTRON_RUN_AS_NODE;
+  delete env.CODESHELL_AGENT_STDIO;
+  return env;
+}
+
 function spawnElectron(): void {
   if (electronProc) {
     electronProc.removeAllListeners();
     electronProc.kill("SIGTERM");
   }
+  const env = electronLaunchEnv();
   electronProc = spawn("electron", ["."], {
     cwd: root,
     stdio: "inherit",
     env: {
-      ...process.env,
+      ...env,
       VITE_DEV_URL: VITE_URL,
       // RemoteHostManager proxies /mobile/* to the mobile vite dev server for
       // HMR; unset in prod where it reads static out/mobile.
