@@ -19,6 +19,8 @@ interface TextInputProps {
   /** Suffix rendered dim after the cursor — e.g. "on|off" arg hint for
    *  a slash command. Not part of `value`; not editable. */
   hint?: string;
+  /** Render the current value as bullets while preserving the editable value. */
+  mask?: boolean;
   /** Bumping this number snaps the cursor to value.length on the next
    *  render. Use when the parent rewrites `value` externally (e.g. tab
    *  completion) — the in-component cursor would otherwise stay at its
@@ -57,6 +59,7 @@ export default function TextInput({
   placeholder,
   focus = true,
   hint,
+  mask = false,
   cursorResetCounter,
 }: TextInputProps) {
   // Cursor is owned by this component. We previously had a `useEffect` that
@@ -83,6 +86,7 @@ export default function TextInput({
 
   const isMultiline = value.includes("\n");
   const lineCount = isMultiline ? value.split("\n").length : 0;
+  const displayValue = mask ? value.replace(/[^\n]/g, "•") : value;
 
   useInput((input, key) => {
     if (!focus) return;
@@ -221,7 +225,7 @@ export default function TextInput({
 
   // Multiline rendering — show each line with cursor
   if (isMultiline) {
-    const lines = value.split("\n");
+    const lines = displayValue.split("\n");
     let charsSoFar = 0;
 
     return (
@@ -260,9 +264,9 @@ export default function TextInput({
   }
 
   // Single-line rendering
-  const before = value.slice(0, cursorOffset);
-  const cursorChar = value[cursorOffset] ?? " ";
-  const after = value.slice(cursorOffset + 1);
+  const before = displayValue.slice(0, cursorOffset);
+  const cursorChar = displayValue[cursorOffset] ?? " ";
+  const after = displayValue.slice(cursorOffset + 1);
 
   // Show hint only when cursor is at the end and there's no text after it.
   // Mid-edit hints would visually collide with the rest of the input.
@@ -275,5 +279,5 @@ export default function TextInput({
       </Ansi>
     );
   }
-  return <Ansi>{value}</Ansi>;
+  return <Ansi>{displayValue}</Ansi>;
 }

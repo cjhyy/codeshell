@@ -737,6 +737,7 @@ export function ProviderModelFlow({
                       else setStep("fetch");
                     }}
                     placeholder="粘贴你的 API Key, Enter 确认"
+                    mask
                     focus
                   />
                   {apiKeyNotice && (
