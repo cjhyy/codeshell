@@ -235,10 +235,21 @@ export async function runWorktreeSetup(
   return { skipped: false, ok: result.exitCode === 0, output, exitCode: result.exitCode };
 }
 
+export interface RemoveWorktreeResult {
+  /** True once `git worktree remove` completed and the directory is gone. */
+  dirRemoved: boolean;
+  /** The branch targeted for deletion when removeBranch=true. */
+  branch?: string;
+  /** True when removeBranch=true and branch deletion completed. */
+  branchDeleted?: boolean;
+  /** Non-empty when the worktree directory is gone but branch deletion failed. */
+  branchError?: string;
+}
+
 /**
  * Remove a worktree and optionally its branch.
  */
-export function removeWorktree(worktreePath: string, removeBranch = false): void {
+export function removeWorktree(worktreePath: string, removeBranch = false): RemoveWorktreeResult {
   // The MAIN repo root, not the worktree's own toplevel. `git rev-parse
   // --show-toplevel` from inside a worktree returns the worktree path, which
   // is about to be deleted; the branch-delete must run from the main repo,
@@ -291,9 +302,17 @@ export function removeWorktree(worktreePath: string, removeBranch = false): void
     try {
       execFileSync(GIT_BIN, ["branch", "-D", branch], { cwd: mainRoot, timeout: 10000 });
     } catch (err) {
-      throw new Error(`failed to delete branch ${branch}: ${gitErrorMessage(err)}`);
+      return {
+        dirRemoved: true,
+        branch,
+        branchDeleted: false,
+        branchError: gitErrorMessage(err),
+      };
     }
   }
+  return removeBranch
+    ? { dirRemoved: true, branch, branchDeleted: true }
+    : { dirRemoved: true };
 }
 
 export function worktreeHasUncommittedChanges(worktreePath: string): boolean {

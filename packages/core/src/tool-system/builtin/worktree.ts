@@ -15,6 +15,7 @@ import {
   runWorktreeSetup,
   worktreeHasUncommittedOrAheadChanges,
   currentBranch,
+  type RemoveWorktreeResult,
   type WorktreeSession,
 } from "../../git/worktree.js";
 import type { SessionManager } from "../../session/session-manager.js";
@@ -194,10 +195,11 @@ export async function exitWorktreeTool(
   const mainRoot = sessionManager.readCwd(sessionId) ?? workspace.root;
   const currentTurnRoot = ctx?.cwd ?? workspace.root;
   try {
+    let removal: RemoveWorktreeResult | undefined;
     if (action === "discard") {
-      removeWorktree(workspace.worktree.path, true);
+      removal = removeWorktree(workspace.worktree.path, true);
     } else if (action === "detach") {
-      removeWorktree(workspace.worktree.path, false);
+      removal = removeWorktree(workspace.worktree.path, false);
     }
     const mainWorkspace: SessionWorkspace = { root: mainRoot, kind: "main" };
     persistSessionWorkspace(sessionManager, sessionId, mainWorkspace, ctx);
@@ -212,6 +214,16 @@ export async function exitWorktreeTool(
       );
     }
     if (action === "discard") {
+      if (removal?.branchDeleted === false) {
+        const branch = removal.branch ?? workspace.worktree.branch;
+        return (
+          `WARNING: worktree removed; branch ${branch} could not be deleted: ` +
+          `${removal.branchError ?? "unknown error"}\n` +
+          `Delete it manually with git branch -D ${branch}.\n` +
+          `Back to ${mainRoot} starting next turn.\n` +
+          nextTurnNotice(mainRoot, currentTurnRoot)
+        );
+      }
       return (
         `Worktree removed and branch ${workspace.worktree.branch} deleted. ` +
         `Back to ${mainRoot} starting next turn.\n` +
@@ -320,9 +332,15 @@ async function runSetupIfConfigured(
   const setupScripts = ctx?.engine?.readWorktreeSetupScripts(mainRoot);
   const script = selectPlatformScript(setupScripts);
   if (!script) return "";
+  const setupSandbox = ctx?.engine?.resolveWorktreeSetupSandbox
+    ? await ctx.engine.resolveWorktreeSetupSandbox(worktreePath)
+    : ctx?.sandbox;
+  const setupShellEnv = ctx?.engine?.readWorktreeSetupShellEnv
+    ? ctx.engine.readWorktreeSetupShellEnv(worktreePath)
+    : ctx?.shellEnv;
   const setup = await runWorktreeSetup(worktreePath, script, {
-    sandbox: ctx?.sandbox,
-    shellEnv: ctx?.shellEnv,
+    sandbox: setupSandbox,
+    shellEnv: setupShellEnv,
     signal: ctx?.signal,
   });
   if (setup.ok) {

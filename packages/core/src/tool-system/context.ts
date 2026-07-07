@@ -38,6 +38,10 @@ export interface ToolRuntimeHost {
   readWorktreeSetupScripts(
     cwd?: string,
   ): { default?: string; macos?: string; linux?: string; windows?: string } | undefined;
+  /** Resolve a setup-only sandbox for a newly-created worktree root. */
+  resolveWorktreeSetupSandbox?(cwd: string): Promise<SandboxBackend | undefined>;
+  /** Resolve setup-only shell env for a newly-created worktree root. */
+  readWorktreeSetupShellEnv?(cwd?: string): Record<string, string> | undefined;
   /** Session state store used by session-scoped tools such as worktree switching. */
   getSessionManager?(): SessionManager;
 }

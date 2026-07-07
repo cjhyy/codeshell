@@ -1277,27 +1277,7 @@ export class Engine {
       sessionExists: (sessionId: string) => this.sessionManager.exists(sessionId),
     };
 
-    // Priority: config.sandbox → project settings.sandbox → global → per-run
-    // default. Read UNMERGED per-scope (getForScope) so a project that wrote no
-    // sandbox genuinely follows global, rather than inheriting global's mode and
-    // looking like it set one. Fixes "项目级配了不生效" + the scope model.
-    let projectSandbox: SettingsSandbox | undefined;
-    let globalSandbox: SettingsSandbox | undefined;
-    try {
-      const sm = this.getSettingsManager();
-      if (this.config.isSubAgent !== true) {
-        projectSandbox = (sm.getForScope("project", cwd) as { sandbox?: SettingsSandbox }).sandbox;
-      }
-      globalSandbox = (sm.getForScope("user") as { sandbox?: SettingsSandbox }).sandbox;
-    } catch {
-      // settings unavailable → fall through to per-run default
-    }
-    const sandboxConfig = resolveSandboxConfig(
-      this.config.sandbox,
-      projectSandbox,
-      globalSandbox,
-      this.config.headless === true,
-    );
+    const sandboxConfig = this.resolveSandboxConfigForCwd(cwd);
     // A2: explicit sandbox modes (seatbelt, bwrap) must fail closed
     // per standard §S4. resolveSandboxBackend throws when an explicit
     // mode is unavailable on this host; we let it propagate. The
@@ -3293,6 +3273,30 @@ export class Engine {
     return cached;
   }
 
+  private resolveSandboxConfigForCwd(cwd: string): SandboxConfig {
+    // Priority: config.sandbox → project settings.sandbox → global → per-run
+    // default. Read UNMERGED per-scope (getForScope) so a project that wrote no
+    // sandbox genuinely follows global, rather than inheriting global's mode and
+    // looking like it set one. Fixes "项目级配了不生效" + the scope model.
+    let projectSandbox: SettingsSandbox | undefined;
+    let globalSandbox: SettingsSandbox | undefined;
+    try {
+      const sm = this.getSettingsManager();
+      if (this.config.isSubAgent !== true) {
+        projectSandbox = (sm.getForScope("project", cwd) as { sandbox?: SettingsSandbox }).sandbox;
+      }
+      globalSandbox = (sm.getForScope("user") as { sandbox?: SettingsSandbox }).sandbox;
+    } catch {
+      // settings unavailable → fall through to per-run default
+    }
+    return resolveSandboxConfig(
+      this.config.sandbox,
+      projectSandbox,
+      globalSandbox,
+      this.config.headless === true,
+    );
+  }
+
   /**
    * Build the shell env layered onto the Bash tool / background shells (see
    * mergeShellEnv). Three user-configured sources, merged lowest → highest:
@@ -3391,6 +3395,21 @@ export class Engine {
     } catch {
       return undefined;
     }
+  }
+
+  async resolveWorktreeSetupSandbox(cwd: string): Promise<SandboxBackend | undefined> {
+    if (!cwd) return undefined;
+    const sandboxConfig = this.resolveSandboxConfigForCwd(cwd);
+    const sandboxBackend = this.runtime
+      ? await this.runtime.resolveSandbox(sandboxConfig, cwd)
+      : await this.resolveSandboxWithoutRuntime(sandboxConfig, cwd);
+    return sandboxBackend.name === "off"
+      ? sandboxBackend
+      : { ...sandboxBackend, network: sandboxConfig.network };
+  }
+
+  readWorktreeSetupShellEnv(cwd?: string): Record<string, string> | undefined {
+    return this.readShellEnv(cwd);
   }
 
   buildToolContext(): ToolContext {

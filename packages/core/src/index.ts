@@ -152,6 +152,7 @@ export {
   worktreeHasUncommittedOrAheadChanges,
   worktreeHasUncommittedChanges,
   type ListWorktreesOptions,
+  type RemoveWorktreeResult,
   type WorktreeDiffSummary,
   type WorktreeInfo,
   type WorktreeWorkspaceOwner,

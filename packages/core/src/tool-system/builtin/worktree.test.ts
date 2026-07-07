@@ -1,11 +1,20 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { enterWorktreeTool, exitWorktreeTool } from "./worktree.js";
 import { removeWorktree } from "../../git/worktree.js";
 import { SessionManager } from "../../session/session-manager.js";
+import { createOffBackend } from "../sandbox/off.js";
 import type { ToolContext } from "../context.js";
 
 const ENV = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
@@ -220,5 +229,79 @@ describe("ExitWorktree cleanup actions", () => {
     expect(out.toLowerCase()).toContain("error");
     expect(existsSync(active.path)).toBe(true);
     expect(sm.getSessionWorkspace("rmfail123456")).toEqual(before);
+  });
+
+  test("discard branch-delete failure after directory removal switches to main with a warning", async () => {
+    const toolCtx = ctx("branchfail123456");
+    await enterWorktreeTool({ target: "branchfail" }, toolCtx);
+    const active = sm.getSessionWorkspace("branchfail123456")!.worktree!;
+    const lockPath = join(repo, ".git", "refs", "heads", `${active.branch}.lock`);
+    mkdirSync(join(repo, ".git", "refs", "heads", "worktree"), { recursive: true });
+    writeFileSync(lockPath, "locked\n");
+
+    const out = await exitWorktreeTool({ action: "discard" }, toolCtx);
+
+    expect(out.toLowerCase()).toContain("warning");
+    expect(out).toContain("could not be deleted");
+    expect(out).toContain(active.branch);
+    expect(out).toContain(`git branch -D ${active.branch}`);
+    expect(existsSync(active.path)).toBe(false);
+    expect(git(repo, ["branch", "--list", active.branch])).toContain(active.branch);
+    expect(sm.getSessionWorkspace("branchfail123456")).toEqual({ root: repo, kind: "main" });
+    rmSync(lockPath, { force: true });
+    execFileSync("git", ["branch", "-D", active.branch], { cwd: repo, env: ENV });
+  });
+
+  test("directory removal failure returns an error and keeps the worktree workspace", async () => {
+    const toolCtx = ctx("dirfail123456");
+    await enterWorktreeTool({ target: "dirfail" }, toolCtx);
+    const before = sm.getSessionWorkspace("dirfail123456")!;
+    const active = before.worktree!;
+    git(repo, ["worktree", "lock", "--reason", "test", active.path]);
+
+    const out = await exitWorktreeTool({ action: "detach" }, toolCtx);
+
+    expect(out.toLowerCase()).toContain("error");
+    expect(existsSync(active.path)).toBe(true);
+    expect(sm.getSessionWorkspace("dirfail123456")).toEqual(before);
+    git(repo, ["worktree", "unlock", active.path]);
+    removeWorktree(active.path, true);
+  });
+
+  test("newly-created worktree setup resolves sandbox and shell env for the new worktree", async () => {
+    const setupSandboxCwds: string[] = [];
+    const setupEnvCwds: string[] = [];
+    const oldSandbox = {
+      name: "seatbelt" as const,
+      wrap() {
+        throw new Error("old workspace sandbox should not run setup");
+      },
+    };
+    const toolCtx = ctx("setupscope123456");
+    toolCtx.sandbox = oldSandbox;
+    toolCtx.shellEnv = { SETUP_SCOPED_CWD: repo };
+    toolCtx.engine = {
+      ...toolCtx.engine,
+      readWorktreeSetupScripts: () => ({
+        default: "printf '%s' \"$SETUP_SCOPED_CWD\" > setup-cwd.txt",
+      }),
+      resolveWorktreeSetupSandbox: async (cwd: string) => {
+        setupSandboxCwds.push(cwd);
+        return createOffBackend();
+      },
+      readWorktreeSetupShellEnv: (cwd: string) => {
+        setupEnvCwds.push(cwd);
+        return { SETUP_SCOPED_CWD: cwd };
+      },
+    };
+
+    const out = await enterWorktreeTool({ target: "setupscope" }, toolCtx);
+    const workspace = sm.getSessionWorkspace("setupscope123456")!;
+
+    expect(out).toContain("Ran setup script");
+    expect(setupSandboxCwds).toEqual([workspace.root]);
+    expect(setupEnvCwds).toEqual([workspace.root]);
+    expect(readFileSync(join(workspace.root, "setup-cwd.txt"), "utf-8")).toBe(workspace.root);
+    removeWorktree(workspace.root, true);
   });
 });

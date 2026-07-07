@@ -143,6 +143,9 @@ export function cleanupSessionWorktreeForUi(
     );
   }
 
+  // A discard can remove the directory but leave branch deletion for manual
+  // cleanup. That still returns normally so the active session pointer below
+  // moves back to main instead of staying on a removed directory.
   removeWorktree(match.path, action === "discard");
   if (current.kind === "worktree" && resolve(current.root) === resolve(match.path)) {
     const mainWorkspace: SessionWorkspace = { root: mainRoot, kind: "main" };
