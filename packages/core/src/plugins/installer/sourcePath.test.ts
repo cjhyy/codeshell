@@ -26,7 +26,7 @@ describe("resolveContainedPluginSubpath", () => {
 
   test("rejects parent-directory traversal", () => {
     const resolved = resolveContainedPluginSubpath(root, "../outside", "plugin source path");
-    expect(resolved.ok).toBe(false);
+    if (resolved.ok) throw new Error("expected traversal to be rejected");
     expect(resolved.error).toMatch(/parent-directory/);
   });
 
@@ -34,7 +34,7 @@ describe("resolveContainedPluginSubpath", () => {
     const link = join(root, "link-out");
     symlinkSync(outside, link);
     const resolved = resolveContainedPluginSubpath(root, "link-out", "plugin source path");
-    expect(resolved.ok).toBe(false);
+    if (resolved.ok) throw new Error("expected symlink escape to be rejected");
     expect(resolved.error).toMatch(/escapes/);
   });
 });

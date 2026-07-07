@@ -51,7 +51,7 @@ describe("installPlugin marketplace source path containment", () => {
 
     const res = await installPlugin("p", "shop");
 
-    expect(res.ok).toBe(false);
+    if (res.ok) throw new Error("expected traversal source path to be rejected");
     expect(res.error).toMatch(/parent-directory|inside the source tree/);
   });
 
@@ -60,7 +60,7 @@ describe("installPlugin marketplace source path containment", () => {
 
     const res = await installPlugin("p", "shop");
 
-    expect(res.ok).toBe(false);
+    if (res.ok) throw new Error("expected absolute source path to be rejected");
     expect(res.error).toMatch(/relative/);
   });
 
@@ -69,7 +69,7 @@ describe("installPlugin marketplace source path containment", () => {
 
     const res = await installPlugin("p", "shop");
 
-    expect(res.ok).toBe(false);
+    if (res.ok) throw new Error("expected git-subdir traversal path to be rejected");
     expect(res.error).toMatch(/parent-directory/);
   });
 });
