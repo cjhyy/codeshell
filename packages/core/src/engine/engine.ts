@@ -233,7 +233,7 @@ export function resolveChildLlm(
  * Names in `disabledAgents` are filtered out so the LLM never sees them.
  */
 /**
- * Resolve the working directory for a run. Precedence:
+ * Resolve the working directory for a run. Precedence for legacy sessions:
  *   options.cwd  >  resumed session's state.cwd  >  config.cwd  >  process.cwd()
  *
  * The session-cwd tier is what stops a project-bound session from being
@@ -953,21 +953,52 @@ export class Engine {
       clientMessageId?: string;
     },
   ): Promise<EngineResult> {
-    // When the caller omits cwd but is resuming an existing session, recover
-    // that session's bound cwd from disk so a project-bound session keeps
-    // loading its own agents/settings/memory even if the host's UI repo
-    // selection has drifted to null. Only probe on omission — an explicit cwd
-    // always wins, and a fresh session has nothing to recover.
-    const sessionCwd =
-      options?.cwd === undefined && options?.sessionId
-        ? this.sessionManager.readCwd(options.sessionId)
+    const workspaceResume =
+      options?.sessionId && this.sessionManager.exists(options.sessionId)
+        ? this.sessionManager.resolveSessionWorkspaceForResume(options.sessionId)
         : undefined;
-    const cwd = resolveRunCwd({
-      optionCwd: options?.cwd,
-      sessionCwd,
-      configCwd: this.config.cwd,
-      processCwd: process.cwd(),
-    });
+    if (workspaceResume && !workspaceResume.ok) {
+      return {
+        text: `ERROR: ${workspaceResume.message}`,
+        reason: "completed",
+        sessionId: options!.sessionId!,
+        turnCount: 0,
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      };
+    }
+    if (
+      workspaceResume?.ok &&
+      workspaceResume.reason === "worktree_missing_branch_gone" &&
+      workspaceResume.message
+    ) {
+      return {
+        text: workspaceResume.message,
+        reason: "completed",
+        sessionId: options!.sessionId!,
+        turnCount: 0,
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      };
+    }
+
+    // Existing P1 sessions resolve cwd from SessionWorkspace, even if the host
+    // passes a stale cwd. Legacy sessions without workspace keep the historical
+    // explicit-cwd precedence for backward compatibility.
+    const workspaceCwd =
+      workspaceResume?.ok && workspaceResume.reason !== "legacy" ? workspaceResume.cwd : undefined;
+    const sessionCwd =
+      workspaceCwd === undefined && options?.cwd === undefined && options?.sessionId
+        ? workspaceResume?.ok
+          ? workspaceResume.cwd
+          : this.sessionManager.readCwd(options.sessionId)
+        : undefined;
+    const cwd =
+      workspaceCwd ??
+      resolveRunCwd({
+        optionCwd: options?.cwd,
+        sessionCwd,
+        configCwd: this.config.cwd,
+        processCwd: process.cwd(),
+      });
 
     // Wrap the caller's onStream so we can intercept `task_update`
     // events emitted by TodoWrite and keep an in-engine snapshot.
@@ -1246,27 +1277,7 @@ export class Engine {
       sessionExists: (sessionId: string) => this.sessionManager.exists(sessionId),
     };
 
-    // Priority: config.sandbox → project settings.sandbox → global → per-run
-    // default. Read UNMERGED per-scope (getForScope) so a project that wrote no
-    // sandbox genuinely follows global, rather than inheriting global's mode and
-    // looking like it set one. Fixes "项目级配了不生效" + the scope model.
-    let projectSandbox: SettingsSandbox | undefined;
-    let globalSandbox: SettingsSandbox | undefined;
-    try {
-      const sm = this.getSettingsManager();
-      if (this.config.isSubAgent !== true) {
-        projectSandbox = (sm.getForScope("project", cwd) as { sandbox?: SettingsSandbox }).sandbox;
-      }
-      globalSandbox = (sm.getForScope("user") as { sandbox?: SettingsSandbox }).sandbox;
-    } catch {
-      // settings unavailable → fall through to per-run default
-    }
-    const sandboxConfig = resolveSandboxConfig(
-      this.config.sandbox,
-      projectSandbox,
-      globalSandbox,
-      this.config.headless === true,
-    );
+    const sandboxConfig = this.resolveSandboxConfigForCwd(cwd);
     // A2: explicit sandbox modes (seatbelt, bwrap) must fail closed
     // per standard §S4. resolveSandboxBackend throws when an explicit
     // mode is unavailable on this host; we let it propagate. The
@@ -1310,12 +1321,16 @@ export class Engine {
           ? sandboxBackend
           : { ...sandboxBackend, network: sandboxConfig.network },
       cwd,
+      shellEnv: this.readShellEnv(cwd),
       // TodoWrite reads this to push task_update events independently
       // of its return value, so the UI's pinned task panel refreshes
       // immediately rather than after the LLM next surfaces the
       // snapshot. wrappedOnStream snoops the same channel to keep
       // latestTodos current for TaskGuard.
       streamCallback: options?.onStream,
+      setCwd(nextCwd: string) {
+        toolCtx.cwd = nextCwd;
+      },
     };
 
     logger.info("engine.run", {
@@ -1519,6 +1534,9 @@ export class Engine {
     // the first point we can set it. After this assignment treat the
     // field as immutable for the rest of the run.
     toolCtx.sessionId = session.state.sessionId;
+    toolCtx.setSessionWorkspace = (workspace) => {
+      session.state.workspace = workspace;
+    };
     return runWithSid(session.state.sessionId, async () => {
       recordSessionStart(session.state.sessionId, {
         // Strip <codeshell-image> base64 payloads before they reach
@@ -3258,6 +3276,30 @@ export class Engine {
     return cached;
   }
 
+  private resolveSandboxConfigForCwd(cwd: string): SandboxConfig {
+    // Priority: config.sandbox → project settings.sandbox → global → per-run
+    // default. Read UNMERGED per-scope (getForScope) so a project that wrote no
+    // sandbox genuinely follows global, rather than inheriting global's mode and
+    // looking like it set one. Fixes "项目级配了不生效" + the scope model.
+    let projectSandbox: SettingsSandbox | undefined;
+    let globalSandbox: SettingsSandbox | undefined;
+    try {
+      const sm = this.getSettingsManager();
+      if (this.config.isSubAgent !== true) {
+        projectSandbox = (sm.getForScope("project", cwd) as { sandbox?: SettingsSandbox }).sandbox;
+      }
+      globalSandbox = (sm.getForScope("user") as { sandbox?: SettingsSandbox }).sandbox;
+    } catch {
+      // settings unavailable → fall through to per-run default
+    }
+    return resolveSandboxConfig(
+      this.config.sandbox,
+      projectSandbox,
+      globalSandbox,
+      this.config.headless === true,
+    );
+  }
+
   /**
    * Build the shell env layered onto the Bash tool / background shells (see
    * mergeShellEnv). Three user-configured sources, merged lowest → highest:
@@ -3358,9 +3400,24 @@ export class Engine {
     }
   }
 
+  async resolveWorktreeSetupSandbox(cwd: string): Promise<SandboxBackend | undefined> {
+    if (!cwd) return undefined;
+    const sandboxConfig = this.resolveSandboxConfigForCwd(cwd);
+    const sandboxBackend = this.runtime
+      ? await this.runtime.resolveSandbox(sandboxConfig, cwd)
+      : await this.resolveSandboxWithoutRuntime(sandboxConfig, cwd);
+    return sandboxBackend.name === "off"
+      ? sandboxBackend
+      : { ...sandboxBackend, network: sandboxConfig.network };
+  }
+
+  readWorktreeSetupShellEnv(cwd?: string): Record<string, string> | undefined {
+    return this.readShellEnv(cwd);
+  }
+
   buildToolContext(): ToolContext {
     const { disabledSkills, disabledPlugins } = this.readDisabledLists();
-    return {
+    const ctx: ToolContext = {
       shellEnv: this.readShellEnv(this.config.cwd),
       cwd: this.config.cwd ?? process.cwd(),
       llmConfig: this.config.llm,
@@ -3389,6 +3446,10 @@ export class Engine {
       allowBackgroundShells:
         this.config.isSubAgent === true ? false : this.config.allowBackgroundShells !== false,
     };
+    ctx.setCwd = (cwd: string) => {
+      ctx.cwd = cwd;
+    };
+    return ctx;
   }
 
   /**

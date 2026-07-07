@@ -3,12 +3,15 @@ import { StatusDot } from "./ui/StatusDot";
 import { IconButton } from "./ui/IconButton";
 import { PanelLeft, PanelRight } from "./ui/icons";
 import { StatusPopover } from "./topbar/StatusPopover";
+import { WorkspaceIndicator } from "./topbar/WorkspaceIndicator";
 import type { LiveActivity } from "./topbar/liveActivity";
 import type { TaskListMessage } from "./types";
 import { useT } from "./i18n";
 
 interface Props {
   repoName: string | null;
+  repoPath?: string | null;
+  sessionId?: string | null;
   sessionTitle: string | null;
   busy: boolean;
   sidebarCollapsed: boolean;
@@ -50,6 +53,8 @@ interface Props {
  */
 function TopBarImpl({
   repoName,
+  repoPath,
+  sessionId,
   sessionTitle,
   busy,
   sidebarCollapsed,
@@ -89,6 +94,16 @@ function TopBarImpl({
         <span className="shrink-0 font-semibold">code-shell</span>
         {repoName && <span className="shrink-0 text-muted-foreground">/</span>}
         {repoName && <span className="shrink-0 text-foreground">{repoName}</span>}
+        {repoName && sessionId && repoPath && (
+          <span className="shrink-0" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+            <WorkspaceIndicator
+              sessionId={sessionId}
+              repoPath={repoPath}
+              repoName={repoName}
+              sessionBusy={busy}
+            />
+          </span>
+        )}
         {sessionTitle && <span className="shrink-0 text-muted-foreground">·</span>}
         {/* Only the title shrinks + ellipsizes. min-w-0 is required for
             truncate to work inside a flex row — without it the span keeps its
@@ -237,6 +252,8 @@ function StatusBadge({
 function topBarPropsEqual(a: Props, b: Props): boolean {
   return (
     a.repoName === b.repoName &&
+    a.repoPath === b.repoPath &&
+    a.sessionId === b.sessionId &&
     a.sessionTitle === b.sessionTitle &&
     a.busy === b.busy &&
     a.sidebarCollapsed === b.sidebarCollapsed &&

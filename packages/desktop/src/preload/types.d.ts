@@ -12,7 +12,10 @@ import type {
   CCAvailability,
   DiscoveredSession,
   QuotaResult,
+  SessionWorkspace,
 } from "@cjhyy/code-shell-core";
+
+export type { SessionWorkspace };
 
 /** One step in replaying a persisted transcript into renderer state. */
 export type FoldItem =
@@ -260,6 +263,27 @@ export interface WorktreeInfo {
   branch: string | null;
   head: string | null;
   current: boolean;
+}
+
+export interface SessionWorkspaceWorktreeInfo {
+  path: string;
+  branch: string;
+  head: string;
+  isMain?: boolean;
+  diff?: {
+    baseRef?: string;
+    changedFiles: number;
+    aheadCommits: number;
+    hasUncommittedChanges: boolean;
+  };
+  occupiedBySessionIds?: string[];
+  occupiedByOtherSession?: boolean;
+}
+
+export interface SessionWorkspaceList {
+  current: SessionWorkspace;
+  mainRoot: string;
+  worktrees: SessionWorkspaceWorktreeInfo[];
 }
 
 export interface CreatedWorktree {
@@ -516,6 +540,19 @@ export interface CodeshellApi {
   stashAndSwitchGitBranch(cwd: string, branch: string): Promise<GitBranches>;
   createWorktree(cwd: string, name: string, branchPrefix?: string): Promise<CreatedWorktree>;
   listWorktrees(cwd: string): Promise<WorktreeInfo[]>;
+  getSessionWorkspace(sessionId: string, cwd: string): Promise<SessionWorkspace>;
+  listSessionWorktrees(sessionId: string, cwd: string): Promise<SessionWorkspaceList>;
+  switchSessionWorkspace(
+    sessionId: string,
+    cwd: string,
+    target: string,
+  ): Promise<SessionWorkspaceList>;
+  cleanupSessionWorktree(
+    sessionId: string,
+    cwd: string,
+    worktreePath: string,
+    action: "detach" | "discard",
+  ): Promise<SessionWorkspaceList>;
   /**
    * Push Electron-local Git prefs (branch prefix, auto-cleanup) to
    * main. The renderer is the source of truth (localStorage); main

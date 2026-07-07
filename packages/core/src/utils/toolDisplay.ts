@@ -60,7 +60,7 @@ const TOOL_ARG_KEYS: Record<string, string[]> = {
   Agent: ["description"],
   TodoWrite: ["todos"],
   Sleep: ["seconds"],
-  EnterWorktree: ["slug"],
+  EnterWorktree: ["target", "slug"],
   CronCreate: ["name", "schedule"],
   LSP: ["action", "file_path"],
   NotebookEdit: ["action", "file_path"],

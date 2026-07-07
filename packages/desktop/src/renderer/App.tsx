@@ -3292,6 +3292,8 @@ function App() {
       <div className="shrink-0">
         <TopBar
           repoName={activeRepo?.name ?? null}
+          repoPath={activeRepo?.path ?? null}
+          sessionId={engineSessionIdForActive()}
           sessionTitle={sessionTitleForTop}
           busy={busy}
           sidebarCollapsed={view.sidebarCollapsed}

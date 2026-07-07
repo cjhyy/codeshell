@@ -231,6 +231,13 @@ import { probeSearch, type SearchProbeInput } from "./search-probe-service.js";
 import { probeImage, type ImageProbeInput } from "./image-probe-service.js";
 import { parseDataUrl, suggestImageFilename } from "./image-save.js";
 import { injectLoginShellPathAtStartup } from "./login-shell-path.js";
+import {
+  cleanupSessionWorktreeForUi,
+  getSessionWorkspaceForUi,
+  listSessionWorktreesForUi,
+  switchSessionWorkspaceForUi,
+  type WorkspaceCleanupAction,
+} from "./session-workspace-service.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -2650,6 +2657,60 @@ ipcMain.handle("git:listWorktrees", async (_e, cwd: string) => {
   knownGitRoots.add(cwd);
   return listGitWorktrees(cwd);
 });
+
+ipcMain.handle("workspace:current", async (_e, sessionId: string, cwd: string) => {
+  if (typeof sessionId !== "string" || !sessionId) {
+    throw new Error("workspace:current requires sessionId");
+  }
+  if (typeof cwd !== "string" || !cwd) throw new Error("workspace:current requires cwd");
+  knownGitRoots.add(cwd);
+  return getSessionWorkspaceForUi(sessionId, cwd);
+});
+
+ipcMain.handle("workspace:list", async (_e, sessionId: string, cwd: string) => {
+  if (typeof sessionId !== "string" || !sessionId) {
+    throw new Error("workspace:list requires sessionId");
+  }
+  if (typeof cwd !== "string" || !cwd) throw new Error("workspace:list requires cwd");
+  knownGitRoots.add(cwd);
+  return listSessionWorktreesForUi(sessionId, cwd);
+});
+
+ipcMain.handle("workspace:switch", async (_e, sessionId: string, cwd: string, target: string) => {
+  if (typeof sessionId !== "string" || !sessionId) {
+    throw new Error("workspace:switch requires sessionId");
+  }
+  if (typeof cwd !== "string" || !cwd) throw new Error("workspace:switch requires cwd");
+  if (typeof target !== "string" || !target.trim()) {
+    throw new Error("workspace:switch requires target");
+  }
+  knownGitRoots.add(cwd);
+  return switchSessionWorkspaceForUi(sessionId, cwd, target);
+});
+
+ipcMain.handle(
+  "workspace:cleanup",
+  async (
+    _e,
+    sessionId: string,
+    cwd: string,
+    worktreePath: string,
+    action: WorkspaceCleanupAction,
+  ) => {
+    if (typeof sessionId !== "string" || !sessionId) {
+      throw new Error("workspace:cleanup requires sessionId");
+    }
+    if (typeof cwd !== "string" || !cwd) throw new Error("workspace:cleanup requires cwd");
+    if (typeof worktreePath !== "string" || !worktreePath) {
+      throw new Error("workspace:cleanup requires worktreePath");
+    }
+    if (action !== "detach" && action !== "discard") {
+      throw new Error("workspace:cleanup requires action detach or discard");
+    }
+    knownGitRoots.add(cwd);
+    return cleanupSessionWorktreeForUi(sessionId, cwd, worktreePath, action);
+  },
+);
 
 ipcMain.handle(
   "git:diff",

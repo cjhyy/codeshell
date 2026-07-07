@@ -457,6 +457,18 @@ contextBridge.exposeInMainWorld("codeshell", {
   createWorktree: (cwd: string, name: string, branchPrefix?: string) =>
     ipcRenderer.invoke("git:createWorktree", cwd, name, branchPrefix),
   listWorktrees: (cwd: string) => ipcRenderer.invoke("git:listWorktrees", cwd),
+  getSessionWorkspace: (sessionId: string, cwd: string) =>
+    ipcRenderer.invoke("workspace:current", sessionId, cwd),
+  listSessionWorktrees: (sessionId: string, cwd: string) =>
+    ipcRenderer.invoke("workspace:list", sessionId, cwd),
+  switchSessionWorkspace: (sessionId: string, cwd: string, target: string) =>
+    ipcRenderer.invoke("workspace:switch", sessionId, cwd, target),
+  cleanupSessionWorktree: (
+    sessionId: string,
+    cwd: string,
+    worktreePath: string,
+    action: "detach" | "discard",
+  ) => ipcRenderer.invoke("workspace:cleanup", sessionId, cwd, worktreePath, action),
   setGitPrefs: (prefs: {
     branchPrefix: string;
     autoDeleteWorktrees: boolean;
