@@ -19,10 +19,6 @@ on:
   # artifacts only (no Release) so you can smoke-test a build mid-iteration.
   workflow_dispatch:
 
-# The Release-creating step needs write access to repo contents.
-permissions:
-  contents: write
-
 jobs:
   # Guard: on a tag push, every release package's version MUST equal the tag
   # (minus the leading `v`). electron-builder names artifacts and writes
@@ -35,8 +31,12 @@ jobs:
     name: verify tag matches package versions
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: assert version == tag
         shell: bash
         run: |
@@ -64,8 +64,12 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     needs: verify-version
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -115,6 +119,8 @@ jobs:
     # manual smoke-test builds still run, but block only a real FAILURE.
     needs: verify-version
     if: ${{ always() && needs.verify-version.result != 'failure' }}
+    permissions:
+      contents: read
     strategy:
       # Don't cancel the other OS builds if one fails — a red Windows build
       # shouldn't deprive you of the mac/linux artifacts.
@@ -130,6 +136,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -253,6 +261,8 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     needs: package
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: download all artifacts
         uses: actions/download-artifact@v4

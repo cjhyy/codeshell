@@ -29,4 +29,24 @@ describe("release workflow guards", () => {
     expect(verifyRun).toContain("packages/tui/package.json");
     expect(verifyRun).toContain("packages/desktop/package.json");
   });
+
+  test("release write permissions are isolated to the GitHub Release job", () => {
+    expect(releaseWorkflow.permissions?.contents).not.toBe("write");
+
+    expect(job("verify-version").permissions?.contents).toBe("read");
+    expect(job("package").permissions?.contents).toBe("read");
+    expect(job("npm-publish").permissions?.contents).toBe("read");
+    expect(job("release").permissions?.contents).toBe("write");
+
+    for (const jobName of ["verify-version", "package", "npm-publish"]) {
+      const checkoutSteps = job(jobName).steps.filter((step: any) =>
+        String(step.uses ?? "").startsWith("actions/checkout@"),
+      );
+
+      expect(checkoutSteps.length).toBeGreaterThan(0);
+      for (const step of checkoutSteps) {
+        expect(step.with?.["persist-credentials"]).toBe(false);
+      }
+    }
+  });
 });
