@@ -64,15 +64,39 @@ export function isProtectedSettingKey(key: string): boolean {
 
 const FORBIDDEN_SETTING_KEY_SEGMENTS = new Set(["__proto__", "prototype", "constructor"]);
 
+function isForbiddenSettingKeySegment(key: string): boolean {
+  return FORBIDDEN_SETTING_KEY_SEGMENTS.has(key);
+}
+
 function parseDottedSettingKey(key: string): string[] {
   const parts = key.split(".");
   if (
     parts.length === 0 ||
-    parts.some((seg) => seg.length === 0 || FORBIDDEN_SETTING_KEY_SEGMENTS.has(seg))
+    parts.some((seg) => seg.length === 0 || isForbiddenSettingKeySegment(seg))
   ) {
     throw new Error(`invalid setting key: ${key}`);
   }
   return parts;
+}
+
+function sanitizeSettingsValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => sanitizeSettingsValue(entry));
+  }
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    if (isForbiddenSettingKeySegment(key)) continue;
+    out[key] = sanitizeSettingsValue(child);
+  }
+  return out;
+}
+
+function sanitizeSettingsObject(data: Record<string, unknown>): Record<string, unknown> {
+  return sanitizeSettingsValue(data) as Record<string, unknown>;
 }
 
 function isOwnPlainObject(
@@ -228,7 +252,7 @@ export class SettingsManager {
 
     // 5. CLI flags (highest priority)
     if (flagOverrides && Object.keys(flagOverrides).length > 0) {
-      this.sources.push({ name: "flag", priority: 4, data: flagOverrides });
+      this.sources.push({ name: "flag", priority: 4, data: sanitizeSettingsObject(flagOverrides) });
     }
 
     // Sort by priority ascending (merge in order, later wins)
@@ -272,7 +296,9 @@ export class SettingsManager {
     const userPath = join(userHome(), ".code-shell", "settings.json");
     if (readUser && existsSync(userPath)) {
       try {
-        const userRaw = JSON.parse(readFileSync(userPath, "utf-8")) as Record<string, unknown>;
+        const userRaw = sanitizeSettingsObject(
+          JSON.parse(readFileSync(userPath, "utf-8")) as Record<string, unknown>,
+        );
         const result = migrateModels({
           providers: (userRaw.providers as never) ?? [],
           models: (userRaw.models as never) ?? [],
@@ -284,13 +310,14 @@ export class SettingsManager {
             providers: result.providers,
             models: result.models,
           };
+          const sanitized = sanitizeSettingsObject(migrated);
           // Atomic write (tmp+rename) — a concurrent load must not see a
           // half-written file. File exists here (existsSync guard above).
-          this.atomicWriteJson(userPath, migrated);
+          this.atomicWriteJson(userPath, sanitized);
           // Re-deep-merge with the migrated user data so the validate
           // call sees the new shape rather than the legacy one.
           const userSource = this.sources.find((s) => s.name === "user");
-          if (userSource) userSource.data = migrated;
+          if (userSource) userSource.data = sanitized;
           const remerged = this.deepMerge();
           this.merged = validateSettings(remerged);
           return this.merged;
@@ -318,7 +345,7 @@ export class SettingsManager {
     try {
       const parsed = JSON.parse(readFileSync(path, "utf-8")) as unknown;
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;
-      const raw = parsed as Record<string, unknown>;
+      const raw = sanitizeSettingsObject(parsed as Record<string, unknown>);
       const result = migrateConfig(raw);
       if (!result.changed) return;
       // Compare content with the version stamp normalized away — stamp-only
@@ -332,9 +359,10 @@ export class SettingsManager {
       // Atomic write (tmp+rename) so a concurrent load can't read a half-written
       // migrated file — matches the normal save path (atomicWriteJson). The file
       // exists here (existsSync guard above), so the recursive mkdir is a no-op.
-      this.atomicWriteJson(path, result.config as Record<string, unknown>);
+      const sanitized = sanitizeSettingsObject(result.config as Record<string, unknown>);
+      this.atomicWriteJson(path, sanitized);
       const source = this.sources.find((s) => s.name === sourceName);
-      if (source) source.data = result.config;
+      if (source) source.data = sanitized;
     } catch {
       // Best-effort — fall through to normal merge/validate.
     }
@@ -371,7 +399,7 @@ export class SettingsManager {
         const raw = readFileSync(path, "utf-8");
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-          current = parsed;
+          current = sanitizeSettingsObject(parsed);
         }
       } catch {
         // Corrupt file — overwrite rather than crash.
@@ -551,7 +579,7 @@ function parseConfigFile(path: string): Record<string, unknown> | null {
     const ext = extname(path).toLowerCase();
     const parsed = ext === ".yaml" || ext === ".yml" ? parseYaml(content) : JSON.parse(content);
     if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      return parsed as Record<string, unknown>;
+      return sanitizeSettingsObject(parsed as Record<string, unknown>);
     }
   } catch {
     // Corrupt file — skip rather than crash.
@@ -580,10 +608,17 @@ function merge(
   base: Record<string, unknown>,
   override: Record<string, unknown>,
 ): Record<string, unknown> {
-  const result = { ...base };
+  const result: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(base)) {
+    if (isForbiddenSettingKeySegment(key)) continue;
+    result[key] = value;
+  }
 
   for (const [key, value] of Object.entries(override)) {
-    if (value === null) {
+    if (isForbiddenSettingKeySegment(key)) {
+      continue;
+    } else if (value === null) {
       delete result[key];
     } else if (
       typeof value === "object" &&
