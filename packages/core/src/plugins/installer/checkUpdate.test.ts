@@ -51,7 +51,10 @@ describe("checkPluginUpdate", () => {
 
   test("not-remote (local source) → updateAvailable false, reason mentions remote", async () => {
     mkdirSync(join(src, ".codex-plugin"), { recursive: true });
-    writeFileSync(join(src, ".codex-plugin", "plugin.json"), JSON.stringify({ name: "loc", version: "1.0.0" }));
+    writeFileSync(
+      join(src, ".codex-plugin", "plugin.json"),
+      JSON.stringify({ name: "loc", version: "1.0.0" }),
+    );
     mkdirSync(join(src, "agents"), { recursive: true });
     writeFileSync(join(src, "agents", "a.toml"), 'name = "a"\ndescription = "d"');
     await installPluginFromPath(src, "loc", "t1");
@@ -64,7 +67,7 @@ describe("checkPluginUpdate", () => {
   test("remote + commit equal to remote HEAD → updateAvailable false", async () => {
     makeRepo();
     const raw = `file://${repo}`;
-    await installPluginFromSource(parseSource(raw), "rem", "t1");
+    await installPluginFromSource(parseSource(raw, { allowUnsafeTransport: true }), "rem", "t1");
 
     const r = await checkPluginUpdate("rem");
     expect(r.updateAvailable).toBe(false);
@@ -75,7 +78,7 @@ describe("checkPluginUpdate", () => {
   test("remote + commit differs (HEAD moved) → updateAvailable true, latestCommit is new HEAD", async () => {
     const { run } = makeRepo();
     const raw = `file://${repo}`;
-    await installPluginFromSource(parseSource(raw), "rem", "t1");
+    await installPluginFromSource(parseSource(raw, { allowUnsafeTransport: true }), "rem", "t1");
     const installed = headSha();
 
     // move HEAD in the source repo
@@ -93,7 +96,7 @@ describe("checkPluginUpdate", () => {
   test("remote + missing meta.commit → updateAvailable false, reason about no recorded commit", async () => {
     makeRepo();
     const raw = `file://${repo}`;
-    await installPluginFromSource(parseSource(raw), "rem", "t1");
+    await installPluginFromSource(parseSource(raw, { allowUnsafeTransport: true }), "rem", "t1");
 
     // strip the recorded commit to simulate an older install
     const mp = metaPath(home, "rem");

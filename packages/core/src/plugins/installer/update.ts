@@ -6,7 +6,12 @@ import { pluginInstallDir } from "./paths.js";
 import { installPluginFromPath } from "./install.js";
 import { installPluginFromSource } from "./installFromSource.js";
 import { parseSource } from "./parseSource.js";
-import { pluginInstallKey, readInstalledPlugins, removeInstallEntries, writeInstalledPlugins } from "../installedPlugins.js";
+import {
+  pluginInstallKey,
+  readInstalledPlugins,
+  removeInstallEntries,
+  writeInstalledPlugins,
+} from "../installedPlugins.js";
 import { CodexPluginManifest, CSMeta, PluginInstallError } from "./types.js";
 
 export interface UpdateResult {
@@ -92,7 +97,7 @@ export async function updatePluginByName(
   if (!existsSync(metaPath)) throw new PluginInstallError(`no plugin named '${name}'`);
   const meta = CSMeta.parse(JSON.parse(readFileSync(metaPath, "utf-8")));
 
-  const parsed = parseSource(meta.source);
+  const parsed = parseSource(meta.source, { allowUnsafeTransport: true });
 
   if (parsed.kind === "remote") {
     // No local version to diff against — always re-clone and reinstall.

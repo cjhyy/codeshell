@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import { githubRepoToCloneUrl } from "../gitOps.js";
+import { PluginInstallError } from "./types.js";
 
 /**
  * Result of classifying a `plugin install <source>` argument. Pure parse — no
@@ -20,6 +21,10 @@ export type ParsedSource =
       inferredName: string;
     };
 
+export interface ParseSourceOptions {
+  allowUnsafeTransport?: boolean;
+}
+
 /** SSH shorthand `git@host:org/repo.git` — has a `:` after the `git@host` part. */
 function isSshUrl(s: string): boolean {
   return /^[^/]+@[^/]+:/.test(s) && !s.includes("://");
@@ -36,6 +41,13 @@ function isRemote(s: string): boolean {
   );
 }
 
+function unsafeTransport(input: string): string | null {
+  if (input.startsWith("http://")) return "http://";
+  if (input.startsWith("git://")) return "git://";
+  if (input.startsWith("file://")) return "file://";
+  return null;
+}
+
 /** Last path segment of a repo url/path, with a trailing `.git` stripped. */
 function repoNameFromUrl(url: string): string {
   const noGit = url.replace(/\.git$/, "");
@@ -48,9 +60,16 @@ function lastSegment(p: string): string {
   return p.split("/").filter(Boolean).pop() ?? p;
 }
 
-export function parseSource(input: string): ParsedSource {
+export function parseSource(input: string, options: ParseSourceOptions = {}): ParsedSource {
   if (!isRemote(input)) {
     return { kind: "local", path: resolve(input) };
+  }
+
+  const unsafe = unsafeTransport(input);
+  if (unsafe && !options.allowUnsafeTransport) {
+    throw new PluginInstallError(
+      `unsafe plugin source transport '${unsafe}' is disabled by default; use https://, github:, SSH, or pass allowUnsafeTransport explicitly`,
+    );
   }
 
   const raw = input;

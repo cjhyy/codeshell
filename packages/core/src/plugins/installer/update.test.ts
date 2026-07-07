@@ -1,5 +1,13 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, rmSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  readdirSync,
+  existsSync,
+  rmSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
@@ -24,7 +32,10 @@ describe("updatePluginByName", () => {
     src = mkdtempSync(join(tmpdir(), "cs-up-src-"));
     process.env.HOME = home;
     mkdirSync(join(src, ".codex-plugin"), { recursive: true });
-    writeFileSync(join(src, ".codex-plugin", "plugin.json"), JSON.stringify({ name: "u", version: "1.0.0" }));
+    writeFileSync(
+      join(src, ".codex-plugin", "plugin.json"),
+      JSON.stringify({ name: "u", version: "1.0.0" }),
+    );
     mkdirSync(join(src, "agents"), { recursive: true });
     writeFileSync(join(src, "agents", "a.toml"), 'name = "a"\ndescription = "d"');
     await installPluginFromPath(src, "u", "t1");
@@ -41,10 +52,15 @@ describe("updatePluginByName", () => {
   });
 
   test("reinstalls when source version bumped", async () => {
-    writeFileSync(join(src, ".codex-plugin", "plugin.json"), JSON.stringify({ name: "u", version: "2.0.0" }));
+    writeFileSync(
+      join(src, ".codex-plugin", "plugin.json"),
+      JSON.stringify({ name: "u", version: "2.0.0" }),
+    );
     const r = await updatePluginByName("u", "t2", false);
     expect(r.updated).toBe(true);
-    const meta = JSON.parse(readFileSync(join(home, ".code-shell", "plugins", "u", ".cs-meta.json"), "utf-8"));
+    const meta = JSON.parse(
+      readFileSync(join(home, ".code-shell", "plugins", "u", ".cs-meta.json"), "utf-8"),
+    );
     expect(meta.version).toBe("2.0.0");
   });
 
@@ -77,10 +93,15 @@ describe("updatePluginByName", () => {
   });
 
   test("a successful reinstall leaves the new version and no .bak leftover", async () => {
-    writeFileSync(join(src, ".codex-plugin", "plugin.json"), JSON.stringify({ name: "u", version: "3.0.0" }));
+    writeFileSync(
+      join(src, ".codex-plugin", "plugin.json"),
+      JSON.stringify({ name: "u", version: "3.0.0" }),
+    );
     const r = await updatePluginByName("u", "t2", false);
     expect(r.updated).toBe(true);
-    const meta = JSON.parse(readFileSync(join(home, ".code-shell", "plugins", "u", ".cs-meta.json"), "utf-8"));
+    const meta = JSON.parse(
+      readFileSync(join(home, ".code-shell", "plugins", "u", ".cs-meta.json"), "utf-8"),
+    );
     expect(meta.version).toBe("3.0.0");
     expect(leftoverBaks(home).length).toBe(0);
   });
@@ -112,7 +133,7 @@ describe("updatePluginByName (remote source)", () => {
     run(["commit", "-q", "-m", "init"]);
 
     const raw = `file://${repo}`;
-    await installPluginFromSource(parseSource(raw), "rem", "t1");
+    await installPluginFromSource(parseSource(raw, { allowUnsafeTransport: true }), "rem", "t1");
 
     // bump the repo content + commit
     writeFileSync(join(repo, "skills", "s", "SKILL.md"), "---\nname: s\ndescription: d\n---\nv2");
@@ -121,10 +142,15 @@ describe("updatePluginByName (remote source)", () => {
 
     const r = await updatePluginByName("rem", "t2", false);
     expect(r.updated).toBe(true);
-    const body = readFileSync(join(home, ".code-shell", "plugins", "rem", "skills", "s", "SKILL.md"), "utf-8");
+    const body = readFileSync(
+      join(home, ".code-shell", "plugins", "rem", "skills", "s", "SKILL.md"),
+      "utf-8",
+    );
     expect(body).toContain("v2");
     // source string preserved across re-clone
-    const meta = JSON.parse(readFileSync(join(home, ".code-shell", "plugins", "rem", ".cs-meta.json"), "utf-8"));
+    const meta = JSON.parse(
+      readFileSync(join(home, ".code-shell", "plugins", "rem", ".cs-meta.json"), "utf-8"),
+    );
     expect(meta.source).toBe(raw);
     expect(existsSync(join(home, ".code-shell", "plugins", "rem"))).toBe(true);
   });
@@ -141,7 +167,7 @@ describe("updatePluginByName (remote source)", () => {
     run(["commit", "-q", "-m", "init"]);
 
     const raw = `file://${repo}`;
-    await installPluginFromSource(parseSource(raw), "rem", "t1");
+    await installPluginFromSource(parseSource(raw, { allowUnsafeTransport: true }), "rem", "t1");
     const installed = join(home, ".code-shell", "plugins", "rem");
     const skillBefore = readFileSync(join(installed, "skills", "s", "SKILL.md"), "utf-8");
 

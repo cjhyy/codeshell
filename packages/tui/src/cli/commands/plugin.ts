@@ -14,14 +14,22 @@ export function createPluginCommand(): Command {
 
   plugin
     .command("install")
-    .description("Install a plugin from a local directory or git source (github:org/repo, https, ssh; @ref #subdir)")
+    .description(
+      "Install a plugin from a local directory or git source (github:org/repo, https, ssh; @ref #subdir)",
+    )
     .argument("<source>", "Local directory path or git source")
     .option("--name <name>", "Override the installed plugin name")
-    .action(async (source: string, opts: { name?: string }) => {
-      const parsed = parseSource(source);
-      const name =
-        opts.name ?? (parsed.kind === "local" ? basenameOf(parsed.path) : parsed.inferredName);
+    .option(
+      "--allow-unsafe-transport",
+      "Allow http://, git://, or file:// plugin source transports",
+    )
+    .action(async (source: string, opts: { name?: string; allowUnsafeTransport?: boolean }) => {
       await runGuarded(`plugin install`, async () => {
+        const parsed = parseSource(source, {
+          allowUnsafeTransport: Boolean(opts.allowUnsafeTransport),
+        });
+        const name =
+          opts.name ?? (parsed.kind === "local" ? basenameOf(parsed.path) : parsed.inferredName);
         const ts = new Date().toISOString();
         const dir =
           parsed.kind === "local"

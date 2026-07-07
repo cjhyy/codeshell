@@ -25,7 +25,7 @@ export async function checkPluginUpdate(name: string): Promise<UpdateCheck> {
   if (!existsSync(metaPath)) throw new PluginInstallError(`no plugin named '${name}'`);
   const meta = CSMeta.parse(JSON.parse(readFileSync(metaPath, "utf-8")));
 
-  const parsed = parseSource(meta.source);
+  const parsed = parseSource(meta.source, { allowUnsafeTransport: true });
   if (parsed.kind !== "remote") {
     return { name, updateAvailable: false, reason: "not a remote source" };
   }
