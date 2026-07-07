@@ -517,71 +517,79 @@ export class MCPManager {
    * Discover tools from an MCP server and register them.
    */
   private async discoverTools(serverName: string, client: Client): Promise<void> {
-    const result = await client.listTools();
+    try {
+      const result = await client.listTools();
 
-    for (const tool of result.tools) {
-      const registered = buildRegisteredTool(serverName, tool);
+      for (const tool of result.tools) {
+        const registered = buildRegisteredTool(serverName, tool);
 
-      // Register with an executor that calls the MCP server
-      this.toolRegistry.registerTool(registered, async (args: Record<string, unknown>, ctx?: ToolContext) => {
-        const callResult = await client.callTool(
-          {
-            name: tool.name,
-            arguments: stripInternalToolArgs(args),
-          },
-          undefined,
-          ctx?.signal ? { signal: ctx.signal } : undefined,
-        );
+        // Register with an executor that calls the MCP server
+        this.toolRegistry.registerTool(
+          registered,
+          async (args: Record<string, unknown>, ctx?: ToolContext) => {
+            const callResult = await client.callTool(
+              {
+                name: tool.name,
+                arguments: stripInternalToolArgs(args),
+              },
+              undefined,
+              ctx?.signal ? { signal: ctx.signal } : undefined,
+            );
 
-        // Extract text + image content from the result. Image blobs
-        // are spilled to ~/.code-shell/mcp_images/ so they don't bloat
-        // the LLM message tree — same pattern as the GenerateImage
-        // tool — and the model sees a textual reference it can Read
-        // on a later turn if it needs the pixels. This sidesteps the
-        // "MCP returned a 5MB screenshot → token budget exploded"
-        // failure mode that bit Codex (issue #11845); we never put
-        // raw base64 image data in the result text. See
-        // TODO-week.md #9c + docs/research-cc-vs-codex-image-handling.md §B.
-        const parts: string[] = [];
-        if (Array.isArray(callResult.content)) {
-          for (const item of callResult.content) {
-            if (typeof item === "string") {
-              parts.push(item);
-              continue;
-            }
-            if (typeof item !== "object" || item === null) continue;
-            if ("text" in item) {
-              parts.push(String((item as { text: unknown }).text));
-              continue;
-            }
-            if ((item as { type?: string }).type === "image") {
-              const block = item as { data?: string; mimeType?: string };
-              if (typeof block.data === "string" && block.data.length > 0) {
-                const note = await spillMcpImage(
-                  serverName,
-                  tool.name,
-                  block.data,
-                  block.mimeType ?? "image/png",
-                );
-                parts.push(note);
+            // Extract text + image content from the result. Image blobs
+            // are spilled to ~/.code-shell/mcp_images/ so they don't bloat
+            // the LLM message tree — same pattern as the GenerateImage
+            // tool — and the model sees a textual reference it can Read
+            // on a later turn if it needs the pixels. This sidesteps the
+            // "MCP returned a 5MB screenshot → token budget exploded"
+            // failure mode that bit Codex (issue #11845); we never put
+            // raw base64 image data in the result text. See
+            // TODO-week.md #9c + docs/research-cc-vs-codex-image-handling.md §B.
+            const parts: string[] = [];
+            if (Array.isArray(callResult.content)) {
+              for (const item of callResult.content) {
+                if (typeof item === "string") {
+                  parts.push(item);
+                  continue;
+                }
+                if (typeof item !== "object" || item === null) continue;
+                if ("text" in item) {
+                  parts.push(String((item as { text: unknown }).text));
+                  continue;
+                }
+                if ((item as { type?: string }).type === "image") {
+                  const block = item as { data?: string; mimeType?: string };
+                  if (typeof block.data === "string" && block.data.length > 0) {
+                    const note = await spillMcpImage(
+                      serverName,
+                      tool.name,
+                      block.data,
+                      block.mimeType ?? "image/png",
+                    );
+                    parts.push(note);
+                  }
+                }
               }
             }
-          }
-        }
-        const body = parts.join("\n") || "(no output)";
-        // Trust boundary: MCP output is external content. Wrap it so the
-        // model sees an explicit reminder that the body comes from an
-        // untrusted server and any instructions inside are content, not
-        // commands. The marker is intentionally short so it doesn't bloat
-        // every tool result, but distinct enough that prompt-injected
-        // strings can't fake their way out.
-        return wrapMcpOutput(serverName, tool.name, body);
-      });
-      const set = this.registeredToolsByServer.get(serverName) ?? new Set<string>();
-      set.add(registered.name);
-      this.registeredToolsByServer.set(serverName, set);
+            const body = parts.join("\n") || "(no output)";
+            // Trust boundary: MCP output is external content. Wrap it so the
+            // model sees an explicit reminder that the body comes from an
+            // untrusted server and any instructions inside are content, not
+            // commands. The marker is intentionally short so it doesn't bloat
+            // every tool result, but distinct enough that prompt-injected
+            // strings can't fake their way out.
+            return wrapMcpOutput(serverName, tool.name, body);
+          },
+        );
+        const set = this.registeredToolsByServer.get(serverName) ?? new Set<string>();
+        set.add(registered.name);
+        this.registeredToolsByServer.set(serverName, set);
 
-      logger.info("mcp.tool_registered", { server: serverName, tool: registered.name });
+        logger.info("mcp.tool_registered", { server: serverName, tool: registered.name });
+      }
+    } catch (err) {
+      await this.disconnect(serverName);
+      throw err;
     }
   }
 

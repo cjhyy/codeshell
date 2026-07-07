@@ -203,6 +203,33 @@ describe("stripInternalToolArgs", () => {
 });
 
 describe("MCPManager discovered tool executors", () => {
+  test("cleans up a connected server when post-handshake discovery fails", async () => {
+    const registry = new ToolRegistry({ builtinTools: [] });
+    const manager = new MCPManager(registry);
+    let closed = false;
+    const client = {
+      listTools: async () => {
+        throw new Error("discovery failed");
+      },
+      close: async () => {
+        closed = true;
+      },
+    };
+    (manager as any).connections.set("srv", {
+      client,
+      serverName: "srv",
+      transport: { close: async () => {} },
+    });
+
+    expect(manager.listServers()).toEqual(["srv"]);
+    await expect((manager as any).discoverTools("srv", client)).rejects.toThrow(
+      "discovery failed",
+    );
+
+    expect(manager.listServers()).toEqual([]);
+    expect(closed).toBe(true);
+  });
+
   test("forward the tool execution abort signal to client.callTool", async () => {
     const registry = new ToolRegistry({ builtinTools: [] });
     const manager = new MCPManager(registry);
