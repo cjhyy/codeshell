@@ -2778,6 +2778,8 @@ function App() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
+      if (view.viewMode === "settings_page") return;
+
       const mod = e.metaKey || e.ctrlKey;
       // Is the user typing into an editable field? Panel-switch hotkeys
       // (esp. ⌃` and ⌘⇧E, which produce/consume printable chars) must not
@@ -2820,7 +2822,7 @@ function App() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [paletteOpen, searchOpen, sessionSearchOpen, sessionIndices, activeRepoId]);
+  }, [paletteOpen, searchOpen, sessionSearchOpen, sessionIndices, activeRepoId, view.viewMode]);
 
   // A chat "files changed" card asked to review its edited files: open the
   // review panel in the dock, focused on those files.
@@ -3276,368 +3278,370 @@ function App() {
     setGoalOverrides((prev) => ({ ...prev, [activeBucket]: false }));
   };
 
-  const platformClassEarly = isMac ? "platform-darwin" : "";
-
-  if (view.viewMode === "settings_page") {
-    return (
-      <div
-        className={`h-screen overflow-hidden bg-background text-foreground ${platformClassEarly}`.trim()}
-      >
-        <SettingsPage
-          activeRepoPath={activeRepo?.path ?? null}
-          repos={repos}
-          sessionIndices={sessionIndices}
-          onRestoreArchivedSession={(repoId, sessionId) => {
-            const next = archiveSession(repoId, sessionId, false);
-            setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
-          }}
-          onDeleteArchivedSession={handleDeleteSession}
-          isMac={isMac}
-          isFullscreen={isFullscreen}
-          onBack={() => setViewMode("chat")}
-        />
-      </div>
-    );
-  }
-
-  const platformClass = platformClassEarly;
+  const platformClass = isMac ? "platform-darwin" : "";
+  const isSettingsPage = view.viewMode === "settings_page";
   const isChatView = view.viewMode === "chat";
 
   return (
     <div
-      className={`flex h-screen flex-col overflow-hidden bg-background text-foreground ${platformClass}`.trim()}
+      className={`relative flex h-screen flex-col overflow-hidden bg-background text-foreground ${platformClass}`.trim()}
       data-sidebar={view.sidebarCollapsed ? "collapsed" : "open"}
       data-inspector="hidden"
     >
-      <div className="shrink-0">
-        <TopBar
-          repoName={activeRepo?.name ?? null}
-          repoPath={activeRepo?.path ?? null}
-          sessionId={engineSessionIdForActive()}
-          sessionTitle={sessionTitleForTop}
-          busy={busy}
-          sidebarCollapsed={view.sidebarCollapsed}
-          onToggleSidebar={toggleSidebar}
-          panelOpen={activePanelState.open}
-          onTogglePanel={togglePanel}
-          isMac={isMac}
-          isFullscreen={isFullscreen}
-          // Draft state (no active session yet) has no conversation/context to
-          // attach panels to — hide the dock toggle until a real session exists.
-          // The dock lives alongside chat only; other full-screen views
-          // (credentials / automation / …) reuse this render tree (incl. TopBar)
-          // but have no panel area, so also gate on the chat viewMode — otherwise
-          // the toggle wrongly shows on those pages whenever a session is active.
-          panelAvailable={activeSessionId !== null && isChatView}
-          activity={liveActivity}
-          tasks={latestTasks}
-          activeGoal={state.activeGoal}
-          onClearGoal={handleClearGoal}
-        />
-      </div>
+      <div
+        className={isSettingsPage ? "hidden" : "flex min-h-0 flex-1 flex-col"}
+        aria-hidden={isSettingsPage}
+      >
+        <div className="shrink-0">
+          <TopBar
+            repoName={activeRepo?.name ?? null}
+            repoPath={activeRepo?.path ?? null}
+            sessionId={engineSessionIdForActive()}
+            sessionTitle={sessionTitleForTop}
+            busy={busy}
+            sidebarCollapsed={view.sidebarCollapsed}
+            onToggleSidebar={toggleSidebar}
+            panelOpen={activePanelState.open}
+            onTogglePanel={togglePanel}
+            isMac={isMac}
+            isFullscreen={isFullscreen}
+            // Draft state (no active session yet) has no conversation/context to
+            // attach panels to — hide the dock toggle until a real session exists.
+            // The dock lives alongside chat only; other full-screen views
+            // (credentials / automation / …) reuse this render tree (incl. TopBar)
+            // but have no panel area, so also gate on the chat viewMode — otherwise
+            // the toggle wrongly shows on those pages whenever a session is active.
+            panelAvailable={activeSessionId !== null && isChatView}
+            activity={liveActivity}
+            tasks={latestTasks}
+            activeGoal={state.activeGoal}
+            onClearGoal={handleClearGoal}
+          />
+        </div>
 
-      <div className="flex min-h-0 flex-1">
-        {!view.sidebarCollapsed && (
-          <div className="flex shrink-0 overflow-hidden">
-            <Sidebar
-              repos={repos}
-              sessions={sessionIndices}
-              activeRepoId={activeRepoId}
-              activeSessionId={activeSessionId}
-              collapsedRepos={collapsedRepos}
-              sidebarCollapsed={view.sidebarCollapsed}
-              sessionStatuses={sessionStatusMap}
-              onSelectRepo={setActiveRepoId}
-              onSelectSession={handleSelectSession}
-              onToggleRepo={handleToggleRepo}
-              onAddRepo={() => {
-                void handleAddRepo();
-              }}
-              onRemoveRepo={handleRemoveRepo}
-              onPinRepo={handlePinRepo}
-              onRenameRepo={handleRenameRepo}
-              onArchiveAllSessions={handleArchiveAllSessions}
-              onNewConversationForRepo={handleNewConversationForRepo}
-              onNewConversation={handleNewConversation}
-              onOpenSearch={() => setSessionSearchOpen(true)}
-              onOpenAutomations={() => setViewMode("automation")}
-              onOpenCustomize={() => setViewMode("customize")}
-              onOpenCredentials={() => setViewMode("credentials")}
-              onOpenSettingsPage={() => setViewMode("settings_page")}
-              onRenameSession={handleRenameSession}
-              onArchiveSession={handleArchiveSession}
-              onDeleteSession={handleDeleteSession}
-              activeRepoPath={activeRepo?.path ?? null}
-              viewMode={view.viewMode}
-            />
-          </div>
-        )}
-
-        {/* Chat column + dock share a relative container so a maximized panel can
-          overlay the chat/composer (TODO 2.4) without covering the sidebar. */}
-        <div className="relative flex min-w-0 flex-1 overflow-hidden">
-          <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-            {lifecycle && (
-              <div className="border-b border-border bg-muted px-4 py-1.5 text-xs text-muted-foreground">
-                {lifecycle}
-              </div>
-            )}
-            {view.viewMode === "approvals" ? (
-              <ApprovalsView
-                queue={approvalQueue}
-                history={approvalHistory}
-                onDecide={decideEnvelope}
-              />
-            ) : view.viewMode === "logs" ? (
-              <LogsView />
-            ) : view.viewMode === "customize" ? (
-              <CustomizeView activeRepoPath={activeRepo?.path ?? null} />
-            ) : view.viewMode === "credentials" ? (
-              <CredentialsPage
-                activeRepoPath={activeRepo?.path ?? null}
-                activeBucket={activeSessionId !== null ? activeBucket : null}
-              />
-            ) : view.viewMode === "runs" ? (
-              <RunsView initialRunId={runsInitialRunId} />
-            ) : view.viewMode === "automation" ? (
-              <AutomationView
-                onCreateConversational={startConversationalAutomation}
-                onViewRun={(runId) => {
-                  setRunsInitialRunId(runId);
-                  setViewMode("runs");
-                }}
-                onOpenRunSession={(run) => {
-                  void handleOpenAutomationRunSession(run);
-                }}
-                onOpenDiskSession={(session) => {
-                  void handleOpenAutomationDiskSession(session);
-                }}
-                onOpenSession={handleSelectSession}
-                sessionIndices={sessionIndices}
+        <div className="flex min-h-0 flex-1">
+          {!view.sidebarCollapsed && (
+            <div className="flex shrink-0 overflow-hidden">
+              <Sidebar
                 repos={repos}
+                sessions={sessionIndices}
+                activeRepoId={activeRepoId}
+                activeSessionId={activeSessionId}
+                collapsedRepos={collapsedRepos}
+                sidebarCollapsed={view.sidebarCollapsed}
+                sessionStatuses={sessionStatusMap}
+                onSelectRepo={setActiveRepoId}
+                onSelectSession={handleSelectSession}
+                onToggleRepo={handleToggleRepo}
+                onAddRepo={() => {
+                  void handleAddRepo();
+                }}
+                onRemoveRepo={handleRemoveRepo}
+                onPinRepo={handlePinRepo}
+                onRenameRepo={handleRenameRepo}
+                onArchiveAllSessions={handleArchiveAllSessions}
+                onNewConversationForRepo={handleNewConversationForRepo}
+                onNewConversation={handleNewConversation}
+                onOpenSearch={() => setSessionSearchOpen(true)}
+                onOpenAutomations={() => setViewMode("automation")}
+                onOpenCustomize={() => setViewMode("customize")}
+                onOpenCredentials={() => setViewMode("credentials")}
+                onOpenSettingsPage={() => setViewMode("settings_page")}
+                onRenameSession={handleRenameSession}
+                onArchiveSession={handleArchiveSession}
+                onDeleteSession={handleDeleteSession}
+                activeRepoPath={activeRepo?.path ?? null}
+                viewMode={view.viewMode}
               />
-            ) : (
-              <>
-                <ChatView
-                  messages={state.messages}
-                  awaitingHydration={awaitingHydration}
-                  turnEpoch={state.turnEpoch}
-                  engineSessionId={state.sessionId}
-                  liveTurnActive={liveTurnActive}
-                  sendBucket={activeBucket}
-                  onSend={(text, opts) =>
-                    send(text, { ...opts, bucket: opts?.bucket ?? activeBucket })
-                  }
-                  onQueueInput={(text, opts) =>
-                    queueInput(text, { ...opts, bucket: opts?.bucket ?? activeBucket })
-                  }
-                  onForceSend={(text, opts) =>
-                    forceSend(text, { ...opts, bucket: opts?.bucket ?? activeBucket })
-                  }
-                  onCompactCommand={compactActiveSession}
-                  onStop={() => stop()}
-                  busy={busy}
-                  queuedInputCount={queuedInputs[activeBucket]?.length ?? 0}
-                  queuedInputItems={(queuedInputs[activeBucket] ?? []).map((i) => i.text)}
-                  onClearQueuedInput={clearActiveQueuedInput}
-                  onRemoveQueuedInput={removeActiveQueuedInputAt}
-                  onGuideQueuedInput={guideActiveQueuedInput}
-                  runningAgents={runningAgents}
-                  activeRepoId={activeRepoId}
-                  composerSeed={composerSeed}
-                  composerSeedNonce={composerSeedNonce}
-                  draft={composerDraft.text}
-                  onDraftChange={setComposerDraftText}
-                  attachments={composerDraft.attachments}
-                  onAttachmentsChange={setComposerDraftAttachments}
-                  anchors={anchors}
-                  onRemoveAnchor={removeAnchor}
-                  onClearAnchors={clearAnchors}
-                  onAskUserAnswer={handleAskUserAnswer}
-                  onExtendGoal={extendGoal}
-                  onAttachImagePath={(p) => void attachImageByPath(p)}
-                  imageDetail={imageDetail}
-                  pendingApproval={visibleApproval}
-                  onApprovalDecide={
-                    visibleApproval
-                      ? (decision, reason, scope, pathScope) =>
-                          decideEnvelope(visibleApproval, decision, reason, scope, pathScope)
-                      : undefined
-                  }
-                  permissionMode={permissionMode}
-                  onPermissionChange={onPermissionChange}
-                  goalEnabled={goalEnabled}
-                  onGoalToggle={onGoalToggle}
-                  modelOptions={modelOptions}
-                  activeModelKey={activeModelKey}
-                  onModelChange={onModelChange}
-                  contextTokens={state.promptTokens}
-                  contextMax={modelOptions.find((o) => o.key === activeModelKey)?.maxContextTokens}
-                  singleTurnPromptTokens={state.singleTurnPromptTokens}
-                  singleTurnCacheReadTokens={state.singleTurnCacheReadTokens}
-                  singleTurnCacheCreationTokens={state.singleTurnCacheCreationTokens}
-                  cumulativePromptTokens={state.cumulativePromptTokens}
-                  cumulativeCacheReadTokens={state.cumulativeCacheReadTokens}
-                  cumulativeCacheCreationTokens={state.cumulativeCacheCreationTokens}
-                  repos={repos}
-                  // Picking a project (or 不使用项目) from the composer's
-                  // ProjectPicker enters a fresh draft for that repo rather than a
-                  // bare setActiveRepoId — otherwise the chat snaps to whatever
-                  // session that bucket last had active (the top of its list),
-                  // which reads as an unexpected auto-jump. (The reload-time
-                  // auto-jump was fixed separately in transcripts.ts; this is the
-                  // interactive project-switch path, same symptom, different code.)
-                  onSelectRepo={handleNewConversationForRepo}
-                  onAddRepo={() => {
-                    void handleAddRepo();
-                  }}
-                  activeRepoPath={activeRepo?.path ?? null}
-                  // cwd used to RESOLVE message content (relative path links, inline
-                  // images) — distinct from activeRepoPath (git/STT/branch, which
-                  // must stay null for a no-repo chat). A no-repo session actually
-                  // runs under the sandbox cwd, so fall back to it; otherwise a
-                  // relative `docs/x.md` link can't resolve and renders as dead text.
-                  messageCwd={activeRepo?.path ?? noRepoCwdRef.current}
-                  repoClean={activeGitMeta.clean}
-                  welcomeNode={
-                    showWelcome ? (
-                      <div className="flex flex-col items-center gap-4 text-center">
-                        <img
-                          src={dogIcon}
-                          alt="CodeShell"
-                          draggable={false}
-                          className="h-32 w-32 select-none rounded-2xl object-contain"
-                        />
-                        <div className="text-3xl font-semibold tracking-tight text-foreground">
-                          {activeRepo
-                            ? t("misc.app.welcomeTitleRepo", { name: activeRepo.name })
-                            : t("misc.app.welcomeTitleNoRepo")}
-                        </div>
-                        {!activeRepo && (
-                          <div className="text-sm text-muted-foreground">
-                            {t("misc.app.welcomeHintNoRepo")}
-                          </div>
-                        )}
-                      </div>
-                    ) : null
-                  }
-                />
-              </>
-            )}
-            <SearchBar
-              open={searchOpen}
-              value={searchQuery}
-              onChange={setSearchQuery}
-              onClose={() => setSearchOpen(false)}
-              matchCount={matchCount}
-            />
-          </main>
+            </div>
+          )}
 
-          {/* PanelArea stays MOUNTED across close→reopen (hidden via display:none
+          {/* Chat column + dock share a relative container so a maximized panel can
+          overlay the chat/composer (TODO 2.4) without covering the sidebar. */}
+          <div className="relative flex min-w-0 flex-1 overflow-hidden">
+            <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+              {lifecycle && (
+                <div className="border-b border-border bg-muted px-4 py-1.5 text-xs text-muted-foreground">
+                  {lifecycle}
+                </div>
+              )}
+              {view.viewMode === "approvals" ? (
+                <ApprovalsView
+                  queue={approvalQueue}
+                  history={approvalHistory}
+                  onDecide={decideEnvelope}
+                />
+              ) : view.viewMode === "logs" ? (
+                <LogsView />
+              ) : view.viewMode === "customize" ? (
+                <CustomizeView activeRepoPath={activeRepo?.path ?? null} />
+              ) : view.viewMode === "credentials" ? (
+                <CredentialsPage
+                  activeRepoPath={activeRepo?.path ?? null}
+                  activeBucket={activeSessionId !== null ? activeBucket : null}
+                />
+              ) : view.viewMode === "runs" ? (
+                <RunsView initialRunId={runsInitialRunId} />
+              ) : view.viewMode === "automation" ? (
+                <AutomationView
+                  onCreateConversational={startConversationalAutomation}
+                  onViewRun={(runId) => {
+                    setRunsInitialRunId(runId);
+                    setViewMode("runs");
+                  }}
+                  onOpenRunSession={(run) => {
+                    void handleOpenAutomationRunSession(run);
+                  }}
+                  onOpenDiskSession={(session) => {
+                    void handleOpenAutomationDiskSession(session);
+                  }}
+                  onOpenSession={handleSelectSession}
+                  sessionIndices={sessionIndices}
+                  repos={repos}
+                />
+              ) : (
+                <>
+                  <ChatView
+                    messages={state.messages}
+                    awaitingHydration={awaitingHydration}
+                    turnEpoch={state.turnEpoch}
+                    engineSessionId={state.sessionId}
+                    liveTurnActive={liveTurnActive}
+                    sendBucket={activeBucket}
+                    onSend={(text, opts) =>
+                      send(text, { ...opts, bucket: opts?.bucket ?? activeBucket })
+                    }
+                    onQueueInput={(text, opts) =>
+                      queueInput(text, { ...opts, bucket: opts?.bucket ?? activeBucket })
+                    }
+                    onForceSend={(text, opts) =>
+                      forceSend(text, { ...opts, bucket: opts?.bucket ?? activeBucket })
+                    }
+                    onCompactCommand={compactActiveSession}
+                    onStop={() => stop()}
+                    busy={busy}
+                    queuedInputCount={queuedInputs[activeBucket]?.length ?? 0}
+                    queuedInputItems={(queuedInputs[activeBucket] ?? []).map((i) => i.text)}
+                    onClearQueuedInput={clearActiveQueuedInput}
+                    onRemoveQueuedInput={removeActiveQueuedInputAt}
+                    onGuideQueuedInput={guideActiveQueuedInput}
+                    runningAgents={runningAgents}
+                    activeRepoId={activeRepoId}
+                    composerSeed={composerSeed}
+                    composerSeedNonce={composerSeedNonce}
+                    draft={composerDraft.text}
+                    onDraftChange={setComposerDraftText}
+                    attachments={composerDraft.attachments}
+                    onAttachmentsChange={setComposerDraftAttachments}
+                    anchors={anchors}
+                    onRemoveAnchor={removeAnchor}
+                    onClearAnchors={clearAnchors}
+                    onAskUserAnswer={handleAskUserAnswer}
+                    onExtendGoal={extendGoal}
+                    onAttachImagePath={(p) => void attachImageByPath(p)}
+                    imageDetail={imageDetail}
+                    pendingApproval={visibleApproval}
+                    onApprovalDecide={
+                      visibleApproval
+                        ? (decision, reason, scope, pathScope) =>
+                            decideEnvelope(visibleApproval, decision, reason, scope, pathScope)
+                        : undefined
+                    }
+                    permissionMode={permissionMode}
+                    onPermissionChange={onPermissionChange}
+                    goalEnabled={goalEnabled}
+                    onGoalToggle={onGoalToggle}
+                    modelOptions={modelOptions}
+                    activeModelKey={activeModelKey}
+                    onModelChange={onModelChange}
+                    contextTokens={state.promptTokens}
+                    contextMax={
+                      modelOptions.find((o) => o.key === activeModelKey)?.maxContextTokens
+                    }
+                    singleTurnPromptTokens={state.singleTurnPromptTokens}
+                    singleTurnCacheReadTokens={state.singleTurnCacheReadTokens}
+                    singleTurnCacheCreationTokens={state.singleTurnCacheCreationTokens}
+                    cumulativePromptTokens={state.cumulativePromptTokens}
+                    cumulativeCacheReadTokens={state.cumulativeCacheReadTokens}
+                    cumulativeCacheCreationTokens={state.cumulativeCacheCreationTokens}
+                    repos={repos}
+                    // Picking a project (or 不使用项目) from the composer's
+                    // ProjectPicker enters a fresh draft for that repo rather than a
+                    // bare setActiveRepoId — otherwise the chat snaps to whatever
+                    // session that bucket last had active (the top of its list),
+                    // which reads as an unexpected auto-jump. (The reload-time
+                    // auto-jump was fixed separately in transcripts.ts; this is the
+                    // interactive project-switch path, same symptom, different code.)
+                    onSelectRepo={handleNewConversationForRepo}
+                    onAddRepo={() => {
+                      void handleAddRepo();
+                    }}
+                    activeRepoPath={activeRepo?.path ?? null}
+                    // cwd used to RESOLVE message content (relative path links, inline
+                    // images) — distinct from activeRepoPath (git/STT/branch, which
+                    // must stay null for a no-repo chat). A no-repo session actually
+                    // runs under the sandbox cwd, so fall back to it; otherwise a
+                    // relative `docs/x.md` link can't resolve and renders as dead text.
+                    messageCwd={activeRepo?.path ?? noRepoCwdRef.current}
+                    repoClean={activeGitMeta.clean}
+                    welcomeNode={
+                      showWelcome ? (
+                        <div className="flex flex-col items-center gap-4 text-center">
+                          <img
+                            src={dogIcon}
+                            alt="CodeShell"
+                            draggable={false}
+                            className="h-32 w-32 select-none rounded-2xl object-contain"
+                          />
+                          <div className="text-3xl font-semibold tracking-tight text-foreground">
+                            {activeRepo
+                              ? t("misc.app.welcomeTitleRepo", { name: activeRepo.name })
+                              : t("misc.app.welcomeTitleNoRepo")}
+                          </div>
+                          {!activeRepo && (
+                            <div className="text-sm text-muted-foreground">
+                              {t("misc.app.welcomeHintNoRepo")}
+                            </div>
+                          )}
+                        </div>
+                      ) : null
+                    }
+                  />
+                </>
+              )}
+              <SearchBar
+                open={searchOpen}
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onClose={() => setSearchOpen(false)}
+                matchCount={matchCount}
+              />
+            </main>
+
+            {/* PanelArea stays MOUNTED across close→reopen (hidden via display:none
           when !open) so the browser <webview> and terminal pty survive a dock
           close — reopening lands on the same live page instead of reloading
           from scratch (matches Codex). Closing only hides; the webview process
           is reclaimed by BrowserPanel's own idle-eviction after a few minutes.
           We still gate on having tabs so an empty dock doesn't mount stray
           panel bodies before the user has opened anything. */}
-          {panelBuckets.map((panelBucket) => {
-            const panelState = panelByBucket[panelBucket] ?? emptyPanelBucketState();
-            const isActivePanelBucket = panelBucket === activeBucket;
-            const { repoId: panelRepoId } = parsePanelBucket(panelBucket);
-            const panelRepo = panelRepoId
-              ? (repos.find((r) => r.id === panelRepoId) ?? null)
-              : null;
-            const hidden = !isActivePanelBucket || !isChatView || !panelState.open;
-            const keepActiveBodyLive = panelState.open && (!isActivePanelBucket || !isChatView);
+            {panelBuckets.map((panelBucket) => {
+              const panelState = panelByBucket[panelBucket] ?? emptyPanelBucketState();
+              const isActivePanelBucket = panelBucket === activeBucket;
+              const { repoId: panelRepoId } = parsePanelBucket(panelBucket);
+              const panelRepo = panelRepoId
+                ? (repos.find((r) => r.id === panelRepoId) ?? null)
+                : null;
+              const hidden = !isActivePanelBucket || !isChatView || !panelState.open;
+              const keepActiveBodyLive = panelState.open && (!isActivePanelBucket || !isChatView);
 
-            return (
-              <PanelArea
-                key={panelBucket}
-                // The dock is a chat-only surface. Hidden session-owned docks stay
-                // mounted under their own bucket so browser/files/terminal state
-                // cannot be rewritten by another session.
-                hidden={hidden}
-                keepActiveBodyLive={keepActiveBodyLive}
-                cwd={panelRepo?.path ?? null}
-                onClose={() =>
-                  updatePanelBucket(panelBucket, (state) => ({
-                    ...state,
-                    open: false,
-                    requestNonce: state.requestNonce + 1,
-                    requestKind: null,
-                    openUrl: undefined,
-                  }))
-                }
-                requestNonce={panelState.requestNonce}
-                requestKind={panelState.requestKind}
-                reviewFiles={panelState.reviewFiles}
-                reviewDiff={panelState.reviewDiff}
-                revealFile={panelState.revealFile}
-                onRevealConsumed={(nonce) => onRevealConsumed(panelBucket, nonce)}
-                openUrl={panelState.openUrl}
-                width={panelWidth}
-                onResizeStart={beginPanelResize}
-                onAttachImage={(p) => void attachImageByPath(p)}
-                browserAnchors={anchorsIn(anchorsByBucket, panelBucket)}
-                onRemoveBrowserAnchor={isActivePanelBucket ? removeAnchor : undefined}
-                onUpdateBrowserAnchor={isActivePanelBucket ? updateAnchorComment : undefined}
-                engineSessionId={resolveEngineSessionIdForBucket(panelBucket) ?? null}
-                tabs={panelState.tabs}
-                setTabs={(next) =>
-                  updatePanelBucket(panelBucket, (state) => {
-                    const tabs = typeof next === "function" ? next(state.tabs) : next;
-                    const activeId =
-                      state.activeId && tabs.some((tab) => tab.id === state.activeId)
-                        ? state.activeId
-                        : (tabs[0]?.id ?? null);
-                    return { ...state, tabs, activeId };
-                  })
-                }
-                activeId={panelState.activeId}
-                setActiveId={(next) =>
-                  updatePanelBucket(panelBucket, (state) => ({
-                    ...state,
-                    activeId: typeof next === "function" ? next(state.activeId) : next,
-                  }))
-                }
-                bucket={panelBucket}
-              />
-            );
-          })}
+              return (
+                <PanelArea
+                  key={panelBucket}
+                  // The dock is a chat-only surface. Hidden session-owned docks stay
+                  // mounted under their own bucket so browser/files/terminal state
+                  // cannot be rewritten by another session.
+                  hidden={hidden}
+                  keepActiveBodyLive={keepActiveBodyLive}
+                  cwd={panelRepo?.path ?? null}
+                  onClose={() =>
+                    updatePanelBucket(panelBucket, (state) => ({
+                      ...state,
+                      open: false,
+                      requestNonce: state.requestNonce + 1,
+                      requestKind: null,
+                      openUrl: undefined,
+                    }))
+                  }
+                  requestNonce={panelState.requestNonce}
+                  requestKind={panelState.requestKind}
+                  reviewFiles={panelState.reviewFiles}
+                  reviewDiff={panelState.reviewDiff}
+                  revealFile={panelState.revealFile}
+                  onRevealConsumed={(nonce) => onRevealConsumed(panelBucket, nonce)}
+                  openUrl={panelState.openUrl}
+                  width={panelWidth}
+                  onResizeStart={beginPanelResize}
+                  onAttachImage={(p) => void attachImageByPath(p)}
+                  browserAnchors={anchorsIn(anchorsByBucket, panelBucket)}
+                  onRemoveBrowserAnchor={isActivePanelBucket ? removeAnchor : undefined}
+                  onUpdateBrowserAnchor={isActivePanelBucket ? updateAnchorComment : undefined}
+                  engineSessionId={resolveEngineSessionIdForBucket(panelBucket) ?? null}
+                  tabs={panelState.tabs}
+                  setTabs={(next) =>
+                    updatePanelBucket(panelBucket, (state) => {
+                      const tabs = typeof next === "function" ? next(state.tabs) : next;
+                      const activeId =
+                        state.activeId && tabs.some((tab) => tab.id === state.activeId)
+                          ? state.activeId
+                          : (tabs[0]?.id ?? null);
+                      return { ...state, tabs, activeId };
+                    })
+                  }
+                  activeId={panelState.activeId}
+                  setActiveId={(next) =>
+                    updatePanelBucket(panelBucket, (state) => ({
+                      ...state,
+                      activeId: typeof next === "function" ? next(state.activeId) : next,
+                    }))
+                  }
+                  bucket={panelBucket}
+                />
+              );
+            })}
+          </div>
         </div>
+
+        <CommandPalette
+          open={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+          commands={buildCommands({
+            setViewMode,
+            openPanel,
+            toggleSidebar,
+            toggleInspector,
+            clearTranscript,
+            openSearch: () => setSearchOpen(true),
+          })}
+        />
+
+        <SessionSearchModal
+          open={sessionSearchOpen}
+          onClose={() => setSessionSearchOpen(false)}
+          repos={repos}
+          sessions={sessionIndices}
+          activeRepoId={activeRepoId}
+          onPick={(repoId, sid) => handleSelectSession(repoId, sid)}
+        />
+
+        <TrustGate
+          repoPath={activeRepo?.path ?? null}
+          onDecide={() => {
+            /* trust persisted in main */
+          }}
+        />
+
+        {/* Inspector panel removed — tool detail lives inline in each
+          tool card's expandable body. */}
       </div>
 
-      <CommandPalette
-        open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
-        commands={buildCommands({
-          setViewMode,
-          openPanel,
-          toggleSidebar,
-          toggleInspector,
-          clearTranscript,
-          openSearch: () => setSearchOpen(true),
-        })}
-      />
-
-      <SessionSearchModal
-        open={sessionSearchOpen}
-        onClose={() => setSessionSearchOpen(false)}
-        repos={repos}
-        sessions={sessionIndices}
-        activeRepoId={activeRepoId}
-        onPick={(repoId, sid) => handleSelectSession(repoId, sid)}
-      />
-
-      <TrustGate
-        repoPath={activeRepo?.path ?? null}
-        onDecide={() => {
-          /* trust persisted in main */
-        }}
-      />
-
-      {/* Inspector panel removed — tool detail lives inline in each
-          tool card's expandable body. */}
+      {isSettingsPage && (
+        <div className="absolute inset-0 z-50 overflow-hidden bg-background">
+          <SettingsPage
+            activeRepoPath={activeRepo?.path ?? null}
+            repos={repos}
+            sessionIndices={sessionIndices}
+            onRestoreArchivedSession={(repoId, sessionId) => {
+              const next = archiveSession(repoId, sessionId, false);
+              setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
+            }}
+            onDeleteArchivedSession={handleDeleteSession}
+            isMac={isMac}
+            isFullscreen={isFullscreen}
+            onBack={() => setViewMode("chat")}
+          />
+        </div>
+      )}
     </div>
   );
 }
