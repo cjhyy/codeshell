@@ -1,6 +1,6 @@
 /**
- * Built-in view_image tool — 把一个本地图片文件以 base64 image ContentBlock
- * 回传进上下文,让 vision 模型「看」它(对照 codex 的 view_image)。
+ * Built-in view_image tool — 把一个本地图片文件或历史图片以 base64 image
+ * ContentBlock 回传进上下文,让 vision 模型「看」它(对照 codex 的 view_image)。
  *
  * 典型用法:模型先写 SVG/Mermaid 并用 shell 转成 PNG,再调 view_image(png)
  * 检查图画对没有(标签是否重叠、文字是否溢出),不对就改源再重转。
@@ -19,6 +19,7 @@ import type { ToolContext } from "../context.js";
 import type { BuiltinToolResult } from "./index.js";
 import { capabilitiesFor } from "../../llm/capabilities/index.js";
 import type { ProviderKindName } from "../../llm/provider-kinds.js";
+import { collectBase64Images, findImageByNumber } from "../../context/compaction.js";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5MB —— vision 模型按 tile 计 token,大图无益且撑大请求
 
@@ -33,11 +34,11 @@ const MEDIA_TYPES: Record<string, string> = {
 export const viewImageToolDef: ToolDefinition = {
   name: "view_image",
   description:
-    "Load a local image file into the conversation so you can SEE it (vision). " +
-    "Use after generating or rendering an image (e.g. SVG/Mermaid → PNG) to verify it " +
-    "looks right — check for overlapping labels, clipped text, wrong layout — then fix the " +
-    "source and re-render if needed. Supports PNG/JPEG/GIF/WebP only; convert SVG/PDF to PNG " +
-    "first. Requires a vision-capable model; otherwise the image is skipped.",
+    "Load an image into the conversation so you can SEE it (vision). Pass path to view a " +
+    "workspace image file, or pass imageNumber to retrieve the original image behind an " +
+    "earlier [image #N, already provided] history placeholder. Use exactly one of path or " +
+    "imageNumber. File paths support PNG/JPEG/GIF/WebP only; convert SVG/PDF to PNG first. " +
+    "Requires a vision-capable model; otherwise the image is skipped.",
   inputSchema: {
     type: "object",
     properties: {
@@ -45,8 +46,12 @@ export const viewImageToolDef: ToolDefinition = {
         type: "string",
         description: "Path to the image file (absolute, or relative to the working directory).",
       },
+      imageNumber: {
+        type: "number",
+        description:
+          "Image history number N from an earlier [image #N, already provided] placeholder.",
+      },
     },
-    required: ["path"],
   },
 };
 
@@ -55,10 +60,28 @@ export async function viewImageTool(
   ctx?: ToolContext,
 ): Promise<BuiltinToolResult> {
   const rawPath = args.path;
-  if (typeof rawPath !== "string" || !rawPath.trim()) {
-    return "Error: path is required";
+  const rawImageNumber = args.imageNumber;
+  const hasPath = typeof rawPath === "string" && rawPath.trim().length > 0;
+  const hasImageNumber = rawImageNumber !== undefined && rawImageNumber !== null;
+
+  if (hasPath === hasImageNumber) {
+    return "Error: provide exactly one of path or imageNumber";
   }
 
+  if (hasImageNumber) {
+    if (
+      typeof rawImageNumber !== "number" ||
+      !Number.isSafeInteger(rawImageNumber) ||
+      rawImageNumber <= 0
+    ) {
+      return "Error: imageNumber must be a positive integer";
+    }
+    return viewHistoricalImage(rawImageNumber, ctx);
+  }
+
+  if (typeof rawPath !== "string" || !rawPath.trim()) {
+    return "Error: path must be a non-empty string";
+  }
   const cwd = ctx?.cwd ?? process.cwd();
   const abs = isAbsolute(rawPath) ? rawPath : resolve(cwd, rawPath);
 
@@ -66,12 +89,7 @@ export async function viewImageTool(
   // 缺 llmConfig 时按「非视觉」处理(fail closed),对齐 DEFAULT_CAPABILITY
   // 的保守姿态:运行时 ToolContext.llmConfig 必有,缺失只发生在测试 / 异常
   // 装配下,此时绝不把 base64 读进上下文。
-  const supportsVision = (() => {
-    if (!ctx?.llmConfig) return false;
-    const kind = (ctx.llmConfig.providerKind ?? ctx.llmConfig.provider) as ProviderKindName;
-    return capabilitiesFor(kind, ctx.llmConfig.model).supportsVision;
-  })();
-  if (!supportsVision) {
+  if (!supportsVision(ctx)) {
     return `[图片未加载: ${abs} —— 当前模型不支持视觉输入,已跳过。切换到 vision 模型后再 view_image。]`;
   }
 
@@ -104,9 +122,78 @@ export async function viewImageTool(
   const data = buf.toString("base64");
   const kb = Math.round(buf.length / 1024);
   return {
-    contentBlocks: [
-      { type: "image", source: { type: "base64", media_type: mediaType, data } },
-    ],
+    contentBlocks: [{ type: "image", source: { type: "base64", media_type: mediaType, data } }],
     result: `[已加载图片: ${abs} (${mediaType}, ${kb} KB)]`,
   };
+}
+
+function supportsVision(ctx?: ToolContext): boolean {
+  if (!ctx?.llmConfig) return false;
+  const kind = (ctx.llmConfig.providerKind ?? ctx.llmConfig.provider) as ProviderKindName;
+  return capabilitiesFor(kind, ctx.llmConfig.model).supportsVision;
+}
+
+async function viewHistoricalImage(
+  imageNumber: number,
+  ctx?: ToolContext,
+): Promise<BuiltinToolResult> {
+  if (!supportsVision(ctx)) {
+    return `[图片未取回: image #${imageNumber} —— 当前模型不支持视觉输入,已跳过。切换到 vision 模型后再 view_image。]`;
+  }
+
+  const sessionManager = ctx?.engine?.getSessionManager?.();
+  const sessionId = ctx?.sessionId;
+  if (!sessionManager || !sessionId) {
+    return `Error: 无法取回 image #${imageNumber}: 当前工具上下文没有可读取的 session 历史。`;
+  }
+
+  let messages;
+  try {
+    messages = sessionManager.resume(sessionId).transcript.toMessages();
+  } catch (err) {
+    return `Error: 无法读取 session 历史以取回 image #${imageNumber}: ${(err as Error).message}`;
+  }
+
+  const images = collectBase64Images(messages);
+  const found = findImageByNumber(messages, imageNumber);
+  if (!found) {
+    return `Error: 未找到 image #${imageNumber}; 当前 session 历史中共有 ${images.length} 张可取回图片。`;
+  }
+
+  const size = decodedImageBlockBytes(found.block);
+  if (size !== undefined && size > MAX_BYTES) {
+    const mb = (size / 1024 / 1024).toFixed(1);
+    return `[图片未取回: image #${imageNumber} —— 图片过大 (${mb} MB > 5 MB),请先压缩或缩放原图。]`;
+  }
+
+  const kb = size === undefined ? "unknown" : String(Math.round(size / 1024));
+  const mediaType = mediaTypeOfImageBlock(found.block) ?? "base64 image";
+  return {
+    contentBlocks: [found.block],
+    result: `[已取回 image #${imageNumber}: ${mediaType}, ${kb} KB]`,
+  };
+}
+
+function decodedImageBlockBytes(block: import("../../types.js").ContentBlock): number | undefined {
+  const data = base64DataOfImageBlock(block);
+  if (!data) return undefined;
+  return Buffer.byteLength(data, "base64");
+}
+
+function base64DataOfImageBlock(block: import("../../types.js").ContentBlock): string | undefined {
+  if (block.type === "image" && block.source?.type === "base64") {
+    return block.source.data;
+  }
+  const maybeOpenAI = block as unknown as { type?: string; image_url?: { url?: string } };
+  const match = maybeOpenAI.image_url?.url?.match(/^data:image\/[^;,]+;base64,(.+)$/i);
+  return maybeOpenAI.type === "image_url" ? match?.[1] : undefined;
+}
+
+function mediaTypeOfImageBlock(block: import("../../types.js").ContentBlock): string | undefined {
+  if (block.type === "image" && block.source?.type === "base64") {
+    return block.source.media_type;
+  }
+  const maybeOpenAI = block as unknown as { type?: string; image_url?: { url?: string } };
+  const match = maybeOpenAI.image_url?.url?.match(/^data:(image\/[^;,]+);base64,/i);
+  return maybeOpenAI.type === "image_url" ? match?.[1] : undefined;
 }

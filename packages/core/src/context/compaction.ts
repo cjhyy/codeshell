@@ -44,6 +44,49 @@ export interface DowngradeImageHistoryResult {
   replacedCount: number;
 }
 
+export interface Base64ImageHistoryEntry {
+  imageNumber: number;
+  block: ContentBlock;
+}
+
+export function collectBase64Images(messages: Message[]): Base64ImageHistoryEntry[] {
+  const entries: Base64ImageHistoryEntry[] = [];
+  let nextImageNumber = 1;
+
+  const visitBlocks = (blocks: ContentBlock[]) => {
+    for (const block of blocks) {
+      const placeholderNumber = imageHistoryPlaceholderNumber(block);
+      if (placeholderNumber !== undefined) {
+        nextImageNumber = Math.max(nextImageNumber, placeholderNumber + 1);
+        continue;
+      }
+
+      if (isBase64ImageBlock(block)) {
+        entries.push({ imageNumber: nextImageNumber++, block });
+        continue;
+      }
+
+      if (block.type === "tool_result" && Array.isArray(block.content)) {
+        visitBlocks(block.content);
+      }
+    }
+  };
+
+  for (const msg of messages) {
+    if (Array.isArray(msg.content)) visitBlocks(msg.content);
+  }
+
+  return entries;
+}
+
+export function findImageByNumber(
+  messages: Message[],
+  imageNumber: number,
+): Base64ImageHistoryEntry | undefined {
+  if (!Number.isSafeInteger(imageNumber) || imageNumber <= 0) return undefined;
+  return collectBase64Images(messages).find((entry) => entry.imageNumber === imageNumber);
+}
+
 /**
  * Replace already-consumed image payload blocks with compact text markers.
  *
@@ -57,9 +100,24 @@ export function downgradeImagePayloadsInHistory(
   messages: Message[],
   options: DowngradeImageHistoryOptions = {},
 ): DowngradeImageHistoryResult {
-  let nextImageNumber = 1;
   let replacedCount = 0;
   let changed = false;
+  const imageNumberQueues = new WeakMap<object, number[]>();
+
+  for (const entry of collectBase64Images(messages)) {
+    const key = entry.block as object;
+    const existing = imageNumberQueues.get(key);
+    if (existing) {
+      existing.push(entry.imageNumber);
+    } else {
+      imageNumberQueues.set(key, [entry.imageNumber]);
+    }
+  }
+
+  const takeImageNumber = (block: ContentBlock): number | undefined => {
+    const queue = imageNumberQueues.get(block as object);
+    return queue?.shift();
+  };
 
   const placeholderFor = (imageNumber: number): ContentBlock => ({
     type: "text",
@@ -74,12 +132,12 @@ export function downgradeImagePayloadsInHistory(
     const out = blocks.map((block) => {
       const placeholderNumber = imageHistoryPlaceholderNumber(block);
       if (placeholderNumber !== undefined) {
-        nextImageNumber = Math.max(nextImageNumber, placeholderNumber + 1);
         return block;
       }
 
       if (isBase64ImageBlock(block)) {
-        const imageNumber = nextImageNumber++;
+        const imageNumber = takeImageNumber(block);
+        if (imageNumber === undefined) return block;
         if (preserve) return block;
         replacedCount++;
         blocksChanged = true;
@@ -136,7 +194,7 @@ function imageHistoryPlaceholderNumber(block: ContentBlock): number | undefined 
   return Number.isSafeInteger(n) && n > 0 ? n : undefined;
 }
 
-function isBase64ImageBlock(block: ContentBlock): boolean {
+export function isBase64ImageBlock(block: ContentBlock): boolean {
   if (
     block.type === "image" &&
     block.source?.type === "base64" &&
