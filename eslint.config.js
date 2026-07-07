@@ -1,5 +1,84 @@
 import js from "@eslint/js";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import tseslint from "typescript-eslint";
+
+const repoRoot = path.dirname(fileURLToPath(import.meta.url));
+const toPosixPath = (value) => value.split(path.sep).join("/");
+const packageRoot = (...parts) => `${toPosixPath(path.join(repoRoot, ...parts))}/`;
+
+const coreSrcRoot = packageRoot("packages", "core", "src");
+const tuiRoot = packageRoot("packages", "tui");
+const desktopRendererRoot = packageRoot("packages", "desktop", "src", "renderer");
+const coreRoot = packageRoot("packages", "core");
+
+function isInsideRoot(filename, root) {
+  if (!filename || filename.startsWith("<")) return false;
+  const normalized = toPosixPath(path.resolve(filename));
+  return normalized === root.slice(0, -1) || normalized.startsWith(root);
+}
+
+function resolvesInsideRoot(filename, specifier, root) {
+  if (!specifier.startsWith(".")) return false;
+  const normalized = toPosixPath(path.resolve(path.dirname(filename), specifier));
+  return normalized === root.slice(0, -1) || normalized.startsWith(root);
+}
+
+function matchesPackage(specifier, packageNames) {
+  return packageNames.some((name) => specifier === name || specifier.startsWith(`${name}/`));
+}
+
+const codeshellBoundaryImportsRule = {
+  meta: {
+    type: "problem",
+    messages: {
+      coreToTui: "core must not import tui",
+      rendererToCodeshell:
+        "renderer must not import codeshell packages at runtime — talk to main via window.codeShell.* (type-only imports are allowed)",
+    },
+  },
+  create(context) {
+    const filename = context.filename ?? context.getFilename();
+
+    function check(node, specifier, isTypeOnly) {
+      if (typeof specifier !== "string") return;
+
+      if (isInsideRoot(filename, coreSrcRoot)) {
+        if (
+          matchesPackage(specifier, ["@cjhyy/code-shell-tui"]) ||
+          resolvesInsideRoot(filename, specifier, tuiRoot)
+        ) {
+          context.report({ node, messageId: "coreToTui" });
+        }
+        return;
+      }
+
+      if (isInsideRoot(filename, desktopRendererRoot)) {
+        if (isTypeOnly) return;
+        if (
+          matchesPackage(specifier, [
+            "@cjhyy/code-shell-core",
+            "@cjhyy/code-shell-tui",
+            "@cjhyy/code-shell",
+          ]) ||
+          resolvesInsideRoot(filename, specifier, coreRoot) ||
+          resolvesInsideRoot(filename, specifier, tuiRoot)
+        ) {
+          context.report({ node, messageId: "rendererToCodeshell" });
+        }
+      }
+    }
+
+    return {
+      ImportDeclaration(node) {
+        check(node, node.source?.value, node.importKind === "type");
+      },
+      ImportExpression(node) {
+        check(node, node.source?.value, false);
+      },
+    };
+  },
+};
 
 export default [
   {
@@ -28,6 +107,7 @@ export default [
           "no-process-exit": { create: () => ({}) },
           "no-process-cwd": { create: () => ({}) },
           "no-process-env-top-level": { create: () => ({}) },
+          "codeshell-boundary-imports": codeshellBoundaryImportsRule,
         },
       },
       "react-hooks": {
@@ -107,7 +187,8 @@ export default [
             message: "core must not import tui (relative path)"
           }
         ]
-      }]
+      }],
+      "custom-rules/codeshell-boundary-imports": "error"
     }
   },
   {
@@ -134,7 +215,8 @@ export default [
             message: "renderer must not import codeshell packages at runtime — talk to main via window.codeShell.* (type-only imports are allowed)"
           }
         ]
-      }]
+      }],
+      "custom-rules/codeshell-boundary-imports": "error"
     }
   }
 ];

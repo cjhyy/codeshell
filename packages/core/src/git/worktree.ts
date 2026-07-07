@@ -287,7 +287,9 @@ export function removeWorktree(worktreePath: string, removeBranch = false): Remo
     ).trim();
     mainRoot = dirname(commonDir); // <main>/.git → <main>
   } catch (err) {
-    throw new Error(`failed to inspect worktree ${worktreePath}: ${gitErrorMessage(err)}`);
+    throw new Error(`failed to inspect worktree ${worktreePath}: ${gitErrorMessage(err)}`, {
+      cause: err,
+    });
   }
 
   // Capture the worktree's branch BEFORE removing the worktree — afterwards
@@ -303,6 +305,7 @@ export function removeWorktree(worktreePath: string, removeBranch = false): Remo
     } catch (err) {
       throw new Error(
         `failed to determine branch for worktree ${worktreePath}: ${gitErrorMessage(err)}`,
+        { cause: err },
       );
     }
     if (!branch) {
@@ -319,7 +322,9 @@ export function removeWorktree(worktreePath: string, removeBranch = false): Remo
       timeout: 30000,
     });
   } catch (err) {
-    throw new Error(`failed to remove worktree ${worktreePath}: ${gitErrorMessage(err)}`);
+    throw new Error(`failed to remove worktree ${worktreePath}: ${gitErrorMessage(err)}`, {
+      cause: err,
+    });
   }
 
   if (removeBranch) {

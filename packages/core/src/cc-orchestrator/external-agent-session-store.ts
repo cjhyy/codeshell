@@ -116,7 +116,9 @@ export class ExternalAgentSessionStore {
         if (code !== "EEXIST") throw err;
         if (removeStaleLock(lockDir)) continue;
         if (Date.now() >= deadline) {
-          throw new Error(`timed out waiting for external agent session store lock: ${lockDir}`);
+          throw new Error(`timed out waiting for external agent session store lock: ${lockDir}`, {
+            cause: err,
+          });
         }
         sleepSync(LOCK_POLL_MS);
       }

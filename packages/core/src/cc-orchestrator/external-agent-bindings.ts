@@ -64,6 +64,7 @@ export class ExternalAgentBindingStore {
           `external agent bindings file is corrupt or unreadable: ${
             err instanceof Error ? err.message : String(err)
           }`,
+          { cause: err },
         );
       }
       return { bindings: {} };
