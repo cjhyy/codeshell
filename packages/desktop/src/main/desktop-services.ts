@@ -14,6 +14,10 @@ import { shell } from "electron";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import {
+  isManagedWorktreeBranch,
+  normalizeWorktreeBranchPrefix,
+} from "@cjhyy/code-shell-core";
+import {
   editorCandidates,
   splitTarget,
   buildEditorInvocation,
@@ -64,13 +68,13 @@ async function gitRun(cwd: string, args: string[]): Promise<string> {
 }
 
 export async function getGitStatus(cwd: string): Promise<GitStatus> {
-  let branch: string | null = null;
+  let branch: string | null;
   try {
     branch = (await gitRun(cwd, ["rev-parse", "--abbrev-ref", "HEAD"])).trim();
   } catch {
     branch = null;
   }
-  let raw = "";
+  let raw: string;
   try {
     raw = await gitRun(cwd, ["status", "--porcelain=v1"]);
   } catch {
@@ -97,7 +101,7 @@ export async function getGitNumstat(
   cwd: string,
 ): Promise<Record<string, { added: number; removed: number }>> {
   const out: Record<string, { added: number; removed: number }> = {};
-  let raw = "";
+  let raw: string;
   try {
     raw = await gitRun(cwd, ["diff", "--numstat", "HEAD"]);
   } catch {
@@ -191,7 +195,7 @@ export async function getGitBranches(cwd: string): Promise<GitBranches> {
     return { isRepo: false, current: null, branches: [] };
   }
 
-  let current: string | null = null;
+  let current: string | null;
   try {
     current = (await gitRun(cwd, ["rev-parse", "--abbrev-ref", "HEAD"])).trim();
   } catch {
@@ -199,7 +203,7 @@ export async function getGitBranches(cwd: string): Promise<GitBranches> {
     current = null;
   }
 
-  let raw = "";
+  let raw: string;
   try {
     raw = await gitRun(cwd, ["branch", "--format=%(refname:short)"]);
   } catch {
@@ -247,11 +251,11 @@ export async function createPermanentWorktree(
   const root = (await gitRun(cwd, ["rev-parse", "--show-toplevel"])).trim();
   const name = normalizeWorktreeName(requestedName);
   const suffix = Date.now().toString(36);
-  const prefix = normalizeBranchPrefixMain(branchPrefix);
+  const prefix = normalizeWorktreeBranchPrefix(branchPrefix);
   const branch = `${prefix}${name}-${suffix}`;
   const worktreePath = path.resolve(root, "..", ".worktrees", `${name}-${suffix}`);
 
-  let originalBranch: string | null = null;
+  let originalBranch: string | null;
   try {
     originalBranch = (await gitRun(root, ["rev-parse", "--abbrev-ref", "HEAD"])).trim();
   } catch {
@@ -271,7 +275,7 @@ export async function createPermanentWorktree(
 }
 
 export async function listGitWorktrees(cwd: string): Promise<WorktreeInfo[]> {
-  let root = cwd;
+  let root: string;
   try {
     root = (await gitRun(cwd, ["rev-parse", "--show-toplevel"])).trim();
   } catch {
@@ -303,20 +307,6 @@ export async function listGitWorktrees(cwd: string): Promise<WorktreeInfo[]> {
 }
 
 /**
- * Normalize a branch prefix. Allowed chars: [A-Za-z0-9._/-]. Always
- * ends in "/". Falls back to "codeshell/" when input is empty/invalid.
- * Duplicates renderer/gitPrefs.ts's normalizeBranchPrefix; kept here so
- * main never imports from the renderer bundle.
- */
-function normalizeBranchPrefixMain(input: string | undefined): string {
-  const raw = (input ?? "").trim();
-  if (!raw) return "codeshell/";
-  const cleaned = raw.replace(/[^a-zA-Z0-9._/-]/g, "");
-  if (!cleaned) return "codeshell/";
-  return cleaned.endsWith("/") ? cleaned : cleaned + "/";
-}
-
-/**
  * Remove all worktrees under <repo>/../.worktrees/ whose directory
  * mtime is older than `graceMinutes`. Removes both the worktree and
  * its `<prefix>...` local branch (best-effort).
@@ -328,6 +318,7 @@ function normalizeBranchPrefixMain(input: string | undefined): string {
 export async function cleanupStaleWorktrees(
   repoRoot: string,
   graceMinutes: number,
+  branchPrefix?: string,
 ): Promise<string[]> {
   if (!Number.isFinite(graceMinutes) || graceMinutes < 1) return [];
   let root: string;
@@ -346,6 +337,12 @@ export async function cleanupStaleWorktrees(
 
   const cutoff = Date.now() - graceMinutes * 60_000;
   const removed: string[] = [];
+  let rootBranch: string | null;
+  try {
+    rootBranch = (await gitRun(root, ["branch", "--show-current"])).trim() || null;
+  } catch {
+    rootBranch = null;
+  }
 
   for (const name of entries) {
     const wtPath = path.join(worktreesDir, name);
@@ -359,12 +356,17 @@ export async function cleanupStaleWorktrees(
     }
     if (mtime >= cutoff) continue;
 
-    // Capture branch before removing the worktree (so we can prune it after).
-    let branch: string | null = null;
+    // Capture and classify the branch before removing anything. Detached HEAD
+    // and external/non-managed worktrees are left completely untouched.
+    let branch: string;
     try {
-      branch = (await gitRun(wtPath, ["rev-parse", "--abbrev-ref", "HEAD"])).trim();
+      branch = (await gitRun(wtPath, ["branch", "--show-current"])).trim();
     } catch {
-      branch = null;
+      branch = "";
+    }
+    if (!branch || !isManagedWorktreeBranch(branch, branchPrefix)) continue;
+    if (rootBranch && branch === rootBranch) {
+      continue;
     }
 
     try {
@@ -382,12 +384,8 @@ export async function cleanupStaleWorktrees(
       }
     }
 
-    if (branch && branch !== "HEAD") {
-      // Only prune branches that look like ours: contain a "/" (so we
-      // don't nuke `main`) and aren't the repo's current HEAD.
-      if (branch.includes("/")) {
-        await gitRun(root, ["branch", "-D", branch]).catch(() => {});
-      }
+    if (!rootBranch || branch !== rootBranch) {
+      await gitRun(root, ["branch", "-D", branch]).catch(() => {});
     }
   }
 
@@ -648,7 +646,7 @@ export async function undoFiles(
       continue;
     }
     // Tracked? `git ls-files --error-unmatch -- <path>` exits 0 if so.
-    let tracked = false;
+    let tracked: boolean;
     try {
       await execFileAsync("git", ["ls-files", "--error-unmatch", "--", rel], {
         cwd,

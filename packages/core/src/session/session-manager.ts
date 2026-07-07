@@ -113,7 +113,7 @@ function isSessionWorkspace(value: unknown): value is SessionWorkspace {
   );
 }
 
-function validateResumeWorktreeRoot(root: string): string | null {
+async function validateResumeWorktreeRoot(root: string): Promise<string | null> {
   if (!existsSync(root)) return "no longer exists";
   let stat;
   try {
@@ -123,7 +123,7 @@ function validateResumeWorktreeRoot(root: string): string | null {
   }
   if (stat.isSymbolicLink()) return "is not a valid git worktree (symbolic link)";
   if (!stat.isDirectory()) return "is not a valid git worktree (not a directory)";
-  if (!isGitWorktreeRoot(root)) return "is not a valid git worktree";
+  if (!(await isGitWorktreeRoot(root))) return "is not a valid git worktree";
   return null;
 }
 
@@ -329,7 +329,9 @@ export class SessionManager {
    * if the branch is gone the workspace pointer is reset to main and a warning
    * message is returned for the host to surface before continuing.
    */
-  resolveSessionWorkspaceForResume(sessionId: string): SessionWorkspaceResumeResolution {
+  async resolveSessionWorkspaceForResume(
+    sessionId: string,
+  ): Promise<SessionWorkspaceResumeResolution> {
     assertSafeSessionId(sessionId);
     const stateFile = join(this.sessionsDir, sessionId, "state.json");
     if (!existsSync(stateFile)) {
@@ -362,7 +364,7 @@ export class SessionManager {
       };
     }
 
-    const invalidWorktreeReason = validateResumeWorktreeRoot(workspace.root);
+    const invalidWorktreeReason = await validateResumeWorktreeRoot(workspace.root);
     if (!invalidWorktreeReason) {
       return { ok: true, cwd: workspace.root, workspace, reason: "worktree" };
     }
@@ -370,7 +372,7 @@ export class SessionManager {
     const branch = workspace.worktree?.branch;
     const mainRoot =
       typeof state.cwd === "string" && state.cwd.length > 0 ? state.cwd : workspace.root;
-    if (branch && existsSync(mainRoot) && branchExists(mainRoot, branch)) {
+    if (branch && existsSync(mainRoot) && (await branchExists(mainRoot, branch))) {
       return {
         ok: false,
         cwd: mainRoot,
@@ -564,7 +566,7 @@ export class SessionManager {
       if (!existsSync(stateFile)) continue;
       const transcriptFile = join(this.sessionsDir, dir, "transcript.jsonl");
       let lastActiveAt: number;
-      let transcriptExists = false;
+      let transcriptExists: boolean;
       try {
         transcriptExists = existsSync(transcriptFile);
         if (transcriptExists) {

@@ -6,11 +6,8 @@ import type {
   ClientDefaults,
   Message,
   LLMConfig,
-  Settings,
-  SessionOrigin,
   StreamCallback,
   TaskInfo,
-  TerminalReason,
   TokenUsage,
 } from "../types.js";
 import { createLLMClient } from "../llm/client-factory.js";
@@ -44,7 +41,6 @@ import { backgroundShellManager } from "../runtime/background-shell.js";
 import {
   notificationQueue,
   buildNotificationMessage,
-  type NotificationItem,
 } from "../tool-system/builtin/agent-notifications.js";
 import {
   PermissionClassifier,
@@ -79,16 +75,14 @@ import {
 import { PLAN_MODE_ALLOWED_TOOLS } from "../tool-system/plan-mode-allowlist.js";
 import { PromptComposer } from "../prompt/composer.js";
 import { SessionManager, type SessionBundle } from "../session/session-manager.js";
-import { Transcript } from "../session/transcript.js";
 import { ModelFacade } from "./model-facade.js";
-import type { CostStateStore } from "./cost-store.js";
 import { logger, runWithSid, getCurrentSid } from "../logging/logger.js";
 import { recordSessionStart, recordSessionEnd } from "../logging/session-recorder.js";
 import { sanitizeContent, sanitizeTaskString } from "../logging/sanitize-messages.js";
-import { TurnLoop, type TurnLoopConfig } from "./turn-loop.js";
+import { TurnLoop } from "./turn-loop.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
-import { SettingsManager, userHome, noRepoDir, type SettingsScope } from "../settings/manager.js";
+import { SettingsManager, userHome } from "../settings/manager.js";
 import { CredentialStore } from "../credentials/store.js";
 import type { CapabilityOverride, CapabilityOverrides } from "../settings/schema.js";
 import {
@@ -100,16 +94,12 @@ import {
 import {
   effectiveDisabledList,
   effectiveBuiltinLists,
-  whitelistDisabledList,
 } from "../capability-control/overlay.js";
-import { scanSkills } from "../skills/scanner.js";
-import { readInstalledPlugins } from "../plugins/installedPlugins.js";
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
 import { FileHistory } from "../session/file-history.js";
 import { patchBackupTargets } from "../tool-system/builtin/apply-patch/backup-targets.js";
 import type { ToolContext, SubAgentSpawner } from "../tool-system/context.js";
 import {
-  defaultSandboxConfig,
   resolveSandboxBackend,
   type SandboxBackend,
   type SandboxConfig,
@@ -118,14 +108,13 @@ import {
   resolveAgentPreset,
   resolveBuiltinToolNames,
   type AgentPreset,
-  type AgentPresetName,
 } from "../preset/index.js";
 import { ModelPool, type ModelEntry } from "../llm/model-pool.js";
 import { AgentDefinitionRegistry } from "../agent/agent-definition-registry.js";
 import { defaultCacheDir } from "../llm/model-cache.js";
 import { detectProviderFromApiKey, buildModelPool } from "../onboarding.js";
 import { detectPastedNoise } from "../utils/task-sanitizer.js";
-import { parseTaskWithImages, ImageParseError, type ParsedTask } from "./parse-task.js";
+import { parseTaskWithImages, type ParsedTask } from "./parse-task.js";
 import {
   enforceImagePolicy,
   byteLengthFromBase64,
@@ -189,7 +178,7 @@ function sameLlmIdentity(a: LLMConfig, b: LLMConfig): boolean {
 // 3000-line implementation. Re-exported here for back-compat — existing
 // `import { EngineConfig } from ".../engine/engine.js"` keeps working.
 export type { EngineConfig, EngineHookConfig, EngineResult } from "./types.js";
-import type { EngineConfig, EngineHookConfig, EngineResult } from "./types.js";
+import type { EngineConfig, EngineResult } from "./types.js";
 
 export interface EnqueueSteerResult {
   accepted: boolean;
@@ -955,7 +944,7 @@ export class Engine {
   ): Promise<EngineResult> {
     const workspaceResume =
       options?.sessionId && this.sessionManager.exists(options.sessionId)
-        ? this.sessionManager.resolveSessionWorkspaceForResume(options.sessionId)
+        ? await this.sessionManager.resolveSessionWorkspaceForResume(options.sessionId)
         : undefined;
     if (workspaceResume && !workspaceResume.ok) {
       return {
@@ -2722,7 +2711,6 @@ export class Engine {
    */
   refreshRuntimeConfig(patch: Partial<EngineConfig>, version: number): void {
     if (version <= this.lastAppliedConfigVersion) return;
-    const prevServers = this.config.mcpServers ?? {};
     const prevPresetName = this.preset.name;
     this.config = { ...this.config, ...patch };
     // #2: re-resolve the prompt-affecting preset so the next-turn PromptComposer
@@ -2847,11 +2835,7 @@ export class Engine {
   async forceCompact(sessionId?: string): Promise<{
     before: number;
     after: number;
-    strategy:
-      | "none (no active session)"
-      | "no compaction needed"
-      | "compacted"
-      | CompactStrategy;
+    strategy: "none (no active session)" | "no compaction needed" | "compacted" | CompactStrategy;
   }> {
     const effectiveSessionId = sessionId ?? this.lastSessionId;
     if (!effectiveSessionId) {
@@ -3071,9 +3055,7 @@ export class Engine {
    * 运行中续轮/加预算). No-op (returns null) when no run is active. Lets a user
    * keep an unattended goal going past its original cap instead of restarting.
    */
-  extendGoalRun(
-    opts: GoalExtension,
-  ): {
+  extendGoalRun(opts: GoalExtension): {
     maxTurns: number;
     tokenBudget?: number;
     timeBudgetMs?: number;
@@ -3379,6 +3361,18 @@ export class Engine {
         };
       };
       return scoped.localEnvironment?.setupScripts;
+    } catch {
+      return undefined;
+    }
+  }
+
+  readWorktreeBranchPrefix(cwd?: string): string | undefined {
+    if (this.config.isSubAgent === true || !cwd) return undefined;
+    try {
+      const settings = this.getSettingsManager().get() as {
+        worktree?: { branchPrefix?: string };
+      };
+      return settings.worktree?.branchPrefix;
     } catch {
       return undefined;
     }

@@ -21,8 +21,8 @@ export interface GitPrefs {
 const KEY = "codeshell.gitPrefs";
 
 export const DEFAULT_GIT_PREFS: GitPrefs = {
-  branchPrefix: "codeshell/",
-  autoDeleteWorktrees: true,
+  branchPrefix: "worktree/",
+  autoDeleteWorktrees: false,
   autoDeleteWorktreesGraceMins: 60 * 24 * 7, // one week
 };
 
@@ -38,7 +38,7 @@ export function loadGitPrefs(): GitPrefs {
         typeof parsed.branchPrefix === "string" && parsed.branchPrefix.trim()
           ? parsed.branchPrefix
           : DEFAULT_GIT_PREFS.branchPrefix,
-      autoDeleteWorktrees: parsed.autoDeleteWorktrees !== false,
+      autoDeleteWorktrees: parsed.autoDeleteWorktrees === true,
       autoDeleteWorktreesGraceMins:
         Number.isFinite(grace) && grace > 0
           ? Math.floor(grace)
@@ -54,15 +54,9 @@ export function saveGitPrefs(prefs: GitPrefs): void {
   window.dispatchEvent(new Event("codeshell:git-prefs-changed"));
 }
 
-/**
- * Normalize a branch prefix: trim, allow only [a-zA-Z0-9._/-], ensure
- * trailing slash. Returns the default if the input is unusable.
- * Pure — safe to call from main or renderer.
- */
+/** Trim and ensure a trailing slash. Validation is enforced by core/main. */
 export function normalizeBranchPrefix(input: string | null | undefined): string {
   const raw = (input ?? "").trim();
   if (!raw) return DEFAULT_GIT_PREFS.branchPrefix;
-  const cleaned = raw.replace(/[^a-zA-Z0-9._/-]/g, "");
-  if (!cleaned) return DEFAULT_GIT_PREFS.branchPrefix;
-  return cleaned.endsWith("/") ? cleaned : cleaned + "/";
+  return raw.endsWith("/") ? raw : raw + "/";
 }

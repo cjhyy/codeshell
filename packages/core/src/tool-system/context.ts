@@ -38,6 +38,8 @@ export interface ToolRuntimeHost {
   readWorktreeSetupScripts(
     cwd?: string,
   ): { default?: string; macos?: string; linux?: string; windows?: string } | undefined;
+  /** Branch prefix used for CodeShell-managed worktree branches. */
+  readWorktreeBranchPrefix?(cwd?: string): string | undefined;
   /** Resolve a setup-only sandbox for a newly-created worktree root. */
   resolveWorktreeSetupSandbox?(cwd: string): Promise<SandboxBackend | undefined>;
   /** Resolve setup-only shell env for a newly-created worktree root. */

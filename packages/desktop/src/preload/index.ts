@@ -52,7 +52,10 @@ export type BackgroundWorkInfo =
 export type PtyStartResult = { ok: true; pid: number } | { ok: false; detail: string };
 
 let nextRpcId = 1;
-const pending = new Map<number, { resolve: (resp: unknown) => void; reject: (err: Error) => void }>();
+const pending = new Map<
+  number,
+  { resolve: (resp: unknown) => void; reject: (err: Error) => void }
+>();
 // Multi-session: callbacks receive `{ sessionId, event }` for stream events
 // and `{ sessionId, requestId, request }` for approval requests.
 const streamListeners: Array<(env: { sessionId: string; event: unknown }) => void> = [];
@@ -64,7 +67,13 @@ const lifecycleListeners: Array<(evt: unknown) => void> = [];
 // Live automation session announcements: `{ sessionId, cwd, title }`, fired
 // once when an in-main automation Engine emits session_started.
 const automationSessionListeners: Array<
-  (meta: { sessionId: string; cwd: string; title: string; prompt: string; cronJobId: string }) => void
+  (meta: {
+    sessionId: string;
+    cwd: string;
+    title: string;
+    prompt: string;
+    cronJobId: string;
+  }) => void
 > = [];
 const mobileSessionListeners: Array<
   (meta: { sessionId: string; cwd: string; title: string; prompt: string }) => void
@@ -233,7 +242,16 @@ contextBridge.exposeInMainWorld("codeshell", {
   /** Forward a renderer-side log line into ~/.code-shell/logs/desktop-*.log. */
   log: (msg: string, data?: Record<string, unknown>) =>
     ipcRenderer.send("desktop:log", { msg, data }),
-  run: (task: string, opts?: { cwd?: string; sessionId?: string; permissionMode?: string; planMode?: boolean; clientMessageId?: string } & Record<string, unknown>) =>
+  run: (
+    task: string,
+    opts?: {
+      cwd?: string;
+      sessionId?: string;
+      permissionMode?: string;
+      planMode?: boolean;
+      clientMessageId?: string;
+    } & Record<string, unknown>,
+  ) =>
     // No timeout: a run resolves only when the whole turn completes (can be
     // minutes). The Stop button (agent/cancel) is the abort path, not a clock.
     rpc("agent/run", { task, ...(opts ?? {}) }, 0),
@@ -263,18 +281,34 @@ contextBridge.exposeInMainWorld("codeshell", {
    */
   goalExtend: (
     sessionId: string,
-    opts: { addTurns?: number; addTokenBudget?: number; addTimeBudgetMs?: number; addStopBlocks?: number },
+    opts: {
+      addTurns?: number;
+      addTokenBudget?: number;
+      addTimeBudgetMs?: number;
+      addStopBlocks?: number;
+    },
   ) =>
     rpc("agent/goalExtend", { sessionId, ...opts }).then(rpcResult) as Promise<{
       ok: boolean;
-      limits: { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number; maxStopBlocks: number };
+      limits: {
+        maxTurns: number;
+        tokenBudget?: number;
+        timeBudgetMs?: number;
+        maxStopBlocks: number;
+      };
     }>,
   /** Clear a session's persisted active goal (CC /goal clear). */
   goalClear: (sessionId: string) =>
-    rpc("agent/goalClear", { sessionId }).then(rpcResult) as Promise<{ ok: boolean; cleared: boolean }>,
+    rpc("agent/goalClear", { sessionId }).then(rpcResult) as Promise<{
+      ok: boolean;
+      cleared: boolean;
+    }>,
   /** Read a session's persisted active goal objective (null when none). */
   goalGet: (sessionId: string) =>
-    rpc("agent/goalGet", { sessionId }).then(rpcResult) as Promise<{ ok: boolean; goal: string | null }>,
+    rpc("agent/goalGet", { sessionId }).then(rpcResult) as Promise<{
+      ok: boolean;
+      goal: string | null;
+    }>,
   /** List a session's background shells for the dock panel (TODO 3.2). */
   listBackgroundShells: (sessionId: string) =>
     rpc("agent/backgroundShells", { sessionId, action: "list" }).then(rpcResult) as Promise<{
@@ -282,13 +316,17 @@ contextBridge.exposeInMainWorld("codeshell", {
     }>,
   /** Read one background shell's full retained output. */
   backgroundShellOutput: (sessionId: string, shellId: string) =>
-    rpc("agent/backgroundShells", { sessionId, action: "output", shellId }).then(rpcResult) as Promise<{
+    rpc("agent/backgroundShells", { sessionId, action: "output", shellId }).then(
+      rpcResult,
+    ) as Promise<{
       header: string;
       text: string;
     }>,
   /** Terminate one background shell's process group. */
   killBackgroundShell: (sessionId: string, shellId: string) =>
-    rpc("agent/backgroundShells", { sessionId, action: "kill", shellId }).then(rpcResult) as Promise<{
+    rpc("agent/backgroundShells", { sessionId, action: "kill", shellId }).then(
+      rpcResult,
+    ) as Promise<{
       ok: boolean;
     }>,
   /** Unified background-work listing for the panel: shells + sub-agents + jobs. */
@@ -335,13 +373,13 @@ contextBridge.exposeInMainWorld("codeshell", {
       reason = decisionOrReason as string | undefined;
       answerText = reasonOrAnswer;
       scope = (answer as "once" | "session" | "project" | undefined) ?? scopeArg;
-      pathScope = scopeArg as "file" | "dir" | "tool" | undefined ?? pathScopeArg;
+      pathScope = (scopeArg as "file" | "dir" | "tool" | undefined) ?? pathScopeArg;
     }
     // Build the approve branch of ApprovalResult. `once` (or absent) is the
     // legacy payload — no always/scope — so the default path is unchanged; the
     // core InteractiveApprovalBackend reads always+scope(+pathScope) to remember
     // the grant.
-    let approveBranch: Record<string, unknown> = { approved: true };
+    const approveBranch: Record<string, unknown> = { approved: true };
     if (answerText !== undefined) approveBranch.answer = answerText;
     if (scope && scope !== "once") {
       approveBranch.always = true;
@@ -376,7 +414,13 @@ contextBridge.exposeInMainWorld("codeshell", {
     };
   },
   onAutomationSession: (
-    cb: (meta: { sessionId: string; cwd: string; title: string; prompt: string; cronJobId: string }) => void,
+    cb: (meta: {
+      sessionId: string;
+      cwd: string;
+      title: string;
+      prompt: string;
+      cronJobId: string;
+    }) => void,
   ): (() => void) => {
     automationSessionListeners.push(cb);
     return () => {
@@ -432,8 +476,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("dialog:pickDir"),
   pickSkillDir: (): Promise<{ path: string; name: string } | null> =>
     ipcRenderer.invoke("dialog:pickSkillDir"),
-  pickGitBinary: (): Promise<string | null> =>
-    ipcRenderer.invoke("dialog:pickGitBinary"),
+  pickGitBinary: (): Promise<string | null> => ipcRenderer.invoke("dialog:pickGitBinary"),
   getGitStatus: (cwd: string) => ipcRenderer.invoke("git:status", cwd),
   /** Per-file +/- line counts for the review tree (TODO 2.3a). */
   getGitNumstat: (cwd: string) =>
@@ -447,8 +490,7 @@ contextBridge.exposeInMainWorld("codeshell", {
       numstat: Record<string, { added: number; removed: number }>;
     }>,
   /** Base branch (main/master/upstream) to diff against for branch scope (TODO 2.3a). */
-  getGitBranchBase: (cwd: string) =>
-    ipcRenderer.invoke("git:branchBase", cwd) as Promise<string>,
+  getGitBranchBase: (cwd: string) => ipcRenderer.invoke("git:branchBase", cwd) as Promise<string>,
   getGitBranches: (cwd: string) => ipcRenderer.invoke("git:branches", cwd),
   switchGitBranch: (cwd: string, branch: string) =>
     ipcRenderer.invoke("git:switchBranch", cwd, branch),
@@ -461,6 +503,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("workspace:current", sessionId, cwd),
   listSessionWorktrees: (sessionId: string, cwd: string) =>
     ipcRenderer.invoke("workspace:list", sessionId, cwd),
+  getSessionWorktreeDiff: (sessionId: string, worktreePath: string) =>
+    ipcRenderer.invoke("workspace:diff", sessionId, worktreePath),
   switchSessionWorkspace: (sessionId: string, cwd: string, target: string) =>
     ipcRenderer.invoke("workspace:switch", sessionId, cwd, target),
   cleanupSessionWorktree: (
@@ -483,46 +527,37 @@ contextBridge.exposeInMainWorld("codeshell", {
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
   revealInFinder: (path: string, cwd?: string) =>
     ipcRenderer.invoke("shell:revealInFinder", path, cwd),
-  openPath: (path: string, cwd?: string) =>
-    ipcRenderer.invoke("shell:openPath", path, cwd),
+  openPath: (path: string, cwd?: string) => ipcRenderer.invoke("shell:openPath", path, cwd),
   /** Open a path in an external editor (Cursor/VS Code; CODE_SHELL_EDITOR override). */
   openInEditor: (path: string, cwd?: string) =>
     ipcRenderer.invoke("shell:openInEditor", path, cwd) as Promise<string>,
   /** Read an image file as a base64 data: URL (null on failure). */
-  readImageDataUrl: (absPath: string) =>
-    ipcRenderer.invoke("images:readDataUrl", absPath),
+  readImageDataUrl: (absPath: string) => ipcRenderer.invoke("images:readDataUrl", absPath),
   /**
    * Save an image (data: URL) to a user-chosen location via a save dialog.
    * Returns the saved path, or null if the user cancelled.
    */
   saveImage: (src: string, opts?: { name?: string; mime?: string }) =>
     ipcRenderer.invoke("images:save", src, opts) as Promise<string | null>,
-  undoFiles: (cwd: string, paths: string[]) =>
-    ipcRenderer.invoke("files:undo", cwd, paths),
-  turnUndoState: (sessionId: string) =>
-    ipcRenderer.invoke("files:turnUndoState", sessionId),
+  undoFiles: (cwd: string, paths: string[]) => ipcRenderer.invoke("files:undo", cwd, paths),
+  turnUndoState: (sessionId: string) => ipcRenderer.invoke("files:turnUndoState", sessionId),
   undoTurn: (sessionId: string) => ipcRenderer.invoke("files:undoTurn", sessionId),
   redoTurn: (sessionId: string) => ipcRenderer.invoke("files:redoTurn", sessionId),
   listMemory: (level: string, scope: string, cwd?: string) =>
     ipcRenderer.invoke("memory:list", level, scope, cwd),
   readMemory: (level: string, scope: string, name: string, cwd?: string) =>
     ipcRenderer.invoke("memory:read", level, scope, name, cwd),
-  saveMemory: (input: Record<string, unknown>) =>
-    ipcRenderer.invoke("memory:save", input),
+  saveMemory: (input: Record<string, unknown>) => ipcRenderer.invoke("memory:save", input),
   deleteMemory: (level: string, scope: string, name: string, cwd?: string) =>
     ipcRenderer.invoke("memory:delete", level, scope, name, cwd),
   // 审批门 (pending global memories)
   listPendingMemory: () => ipcRenderer.invoke("memory:pending:list"),
-  approvePendingMemory: (name: string) =>
-    ipcRenderer.invoke("memory:pending:approve", name),
-  demotePendingMemory: (name: string) =>
-    ipcRenderer.invoke("memory:pending:demote", name),
-  rejectPendingMemory: (name: string) =>
-    ipcRenderer.invoke("memory:pending:reject", name),
+  approvePendingMemory: (name: string) => ipcRenderer.invoke("memory:pending:approve", name),
+  demotePendingMemory: (name: string) => ipcRenderer.invoke("memory:pending:demote", name),
+  rejectPendingMemory: (name: string) => ipcRenderer.invoke("memory:pending:reject", name),
   promoteMemoryToGlobal: (cwd: string, name: string) =>
     ipcRenderer.invoke("memory:promote", cwd, name),
-  runDream: (level: string, cwd?: string) =>
-    ipcRenderer.invoke("memory:dream", level, cwd),
+  runDream: (level: string, cwd?: string) => ipcRenderer.invoke("memory:dream", level, cwd),
   /** Authoritative no-repo conversation cwd (~/.code-shell/no-repo) from main.
    *  Renderer must use this, never recompute homedir() itself. */
   noRepoCwd: (): Promise<string> => ipcRenderer.invoke("no-repo:cwd"),
@@ -533,14 +568,12 @@ contextBridge.exposeInMainWorld("codeshell", {
   listSessions: () => ipcRenderer.invoke("sessions:list"),
   deleteSession: (id: string) => ipcRenderer.invoke("sessions:delete", id),
   listSessionTitles: () => ipcRenderer.invoke("sessions:titles"),
-  renameSession: (id: string, title: string) =>
-    ipcRenderer.invoke("sessions:rename", id, title),
+  renameSession: (id: string, title: string) => ipcRenderer.invoke("sessions:rename", id, title),
   tailLog: (bucket: "ui-ink" | "engine" | "desktop", lines?: number) =>
     ipcRenderer.invoke("logs:tail", bucket, lines),
   listRuns: () => ipcRenderer.invoke("runs:list"),
   getRun: (runId: string) => ipcRenderer.invoke("runs:get", runId),
-  getSessionTranscript: (sessionId: string) =>
-    ipcRenderer.invoke("sessions:transcript", sessionId),
+  getSessionTranscript: (sessionId: string) => ipcRenderer.invoke("sessions:transcript", sessionId),
   listDiskSessions: (opts?: { limit?: number; cursor?: string }) =>
     ipcRenderer.invoke("sessions:listDisk", opts ?? {}),
   /**
@@ -586,13 +619,11 @@ contextBridge.exposeInMainWorld("codeshell", {
   cancelAutomationRun: (id: string) => ipcRenderer.invoke("automation:cancelRun", id),
   listSkills: (cwd: string, opts?: { includeDisabled?: boolean }) =>
     ipcRenderer.invoke("skills:list", cwd, opts),
-  searchFiles: (cwd: string, query: string) =>
-    ipcRenderer.invoke("files:search", cwd, query),
+  searchFiles: (cwd: string, query: string) => ipcRenderer.invoke("files:search", cwd, query),
   listPlugins: (cwd: string) => ipcRenderer.invoke("plugins:list", cwd),
   /** Full content inventory for one installed plugin (详情页). */
   getPluginDetail: (installKey: string) => ipcRenderer.invoke("plugins:detail", installKey),
-  listCapabilities: (cwd: string) =>
-    ipcRenderer.invoke("capabilities:list", cwd),
+  listCapabilities: (cwd: string) => ipcRenderer.invoke("capabilities:list", cwd),
   setCapabilityEnabled: (
     cwd: string,
     id: string,
@@ -603,8 +634,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("capabilities:setOverride", cwd, id, state),
   uninstallPlugin: (pluginName: string, marketplaceName: string) =>
     ipcRenderer.invoke("plugins:uninstall", pluginName, marketplaceName),
-  uninstallLocalPlugin: (name: string) =>
-    ipcRenderer.invoke("plugins:uninstallLocal", name),
+  uninstallLocalPlugin: (name: string) => ipcRenderer.invoke("plugins:uninstallLocal", name),
   updatePlugin: (name: string) => ipcRenderer.invoke("plugins:update", name),
   checkPluginUpdate: (name: string) => ipcRenderer.invoke("plugins:checkUpdate", name),
   checkGit: () => ipcRenderer.invoke("git:check"),
@@ -628,52 +658,42 @@ contextBridge.exposeInMainWorld("codeshell", {
     reusedCredentialId?: string;
     reusedCredentialCatalogId?: string;
   }> => ipcRenderer.invoke("stt:describe", cwd),
-  ensureMicAccess: (): Promise<{ granted: boolean }> =>
-    ipcRenderer.invoke("stt:ensureMicAccess"),
+  ensureMicAccess: (): Promise<{ granted: boolean }> => ipcRenderer.invoke("stt:ensureMicAccess"),
   listMarketplaces: () => ipcRenderer.invoke("marketplace:list"),
   loadMarketplace: (name: string) => ipcRenderer.invoke("marketplace:load", name),
-  listRecommendedMarketplaces: () =>
-    ipcRenderer.invoke("marketplace:recommended"),
+  listRecommendedMarketplaces: () => ipcRenderer.invoke("marketplace:recommended"),
   addMarketplace: (input: string) => ipcRenderer.invoke("marketplace:add", input),
-  addRecommendedMarketplace: (id: string) =>
-    ipcRenderer.invoke("marketplace:addRecommended", id),
+  addRecommendedMarketplace: (id: string) => ipcRenderer.invoke("marketplace:addRecommended", id),
   removeMarketplace: (name: string) => ipcRenderer.invoke("marketplace:remove", name),
   refreshMarketplace: (name: string): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke("marketplace:refresh", name),
   listPluginInstallJobs: () => ipcRenderer.invoke("plugins:installJobs"),
-  onPluginInstallJobsChanged: (
-    cb: (jobs: import("./types").PluginInstallJob[]) => void,
-  ) => {
+  onPluginInstallJobsChanged: (cb: (jobs: import("./types").PluginInstallJob[]) => void) => {
     const h = (_e: IpcRendererEvent, jobs: import("./types").PluginInstallJob[]) => cb(jobs);
     ipcRenderer.on("plugins:installJobsChanged", h);
     return () => ipcRenderer.removeListener("plugins:installJobsChanged", h);
   },
   installPlugin: (pluginName: string, marketplaceName: string) =>
     ipcRenderer.invoke("plugins:install", pluginName, marketplaceName),
-  retryPluginInstallJob: (id: string) =>
-    ipcRenderer.invoke("plugins:retryInstallJob", id),
+  retryPluginInstallJob: (id: string) => ipcRenderer.invoke("plugins:retryInstallJob", id),
   pickPluginSource: (
     kind: "dir" | "zip",
   ): Promise<{ kind: "dir" | "zip"; path: string; name: string } | null> =>
     ipcRenderer.invoke("dialog:pickPluginSource", kind),
-  installLocalPlugin: (
-    input: { kind: "dir" | "zip"; path: string; overwrite?: boolean },
-  ): Promise<
+  installLocalPlugin: (input: {
+    kind: "dir" | "zip";
+    path: string;
+    overwrite?: boolean;
+  }): Promise<
     | { ok: true; name: string }
     | { ok: false; alreadyInstalled: true; name: string }
     | { ok: false; error?: string }
   > => ipcRenderer.invoke("plugins:installLocal", input),
   readSkillBody: (filePath: string) => ipcRenderer.invoke("skills:read", filePath),
-  checkSkillUpdate: (filePath: string) =>
-    ipcRenderer.invoke("skills:checkUpdate", filePath),
-  updateSkill: (filePath: string) =>
-    ipcRenderer.invoke("skills:update", filePath),
-  installLocalSkill: (
-    sourceDir: string,
-    scope: "user" | "project",
-    cwd?: string,
-    name?: string,
-  ) => ipcRenderer.invoke("skills:installLocal", sourceDir, scope, cwd, name),
+  checkSkillUpdate: (filePath: string) => ipcRenderer.invoke("skills:checkUpdate", filePath),
+  updateSkill: (filePath: string) => ipcRenderer.invoke("skills:update", filePath),
+  installLocalSkill: (sourceDir: string, scope: "user" | "project", cwd?: string, name?: string) =>
+    ipcRenderer.invoke("skills:installLocal", sourceDir, scope, cwd, name),
   uninstallSkill: (filePath: string, source: "user" | "project" | "plugin") =>
     ipcRenderer.invoke("skills:uninstall", filePath, source),
   listAgents: (cwd: string) => ipcRenderer.invoke("agents:list", cwd),
@@ -686,16 +706,14 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("agents:delete", name, opts),
   inspectGithubSkill: (url: string, existingNames?: string[]) =>
     ipcRenderer.invoke("skills:inspectGithub", url, existingNames),
-  installFromGithub: (input: unknown) =>
-    ipcRenderer.invoke("skills:installFromGithub", input),
+  installFromGithub: (input: unknown) => ipcRenderer.invoke("skills:installFromGithub", input),
   probeMcpServers: (configs: unknown, force?: boolean) =>
     ipcRenderer.invoke("mcp:probe", configs, force),
   listMergedMcpServers: (base: unknown, disabledPlugins?: unknown, cwd?: string) =>
     ipcRenderer.invoke("mcp:listMerged", base, disabledPlugins, cwd),
   listPluginHooks: (disabledPlugins?: unknown) =>
     ipcRenderer.invoke("hooks:listPlugin", disabledPlugins),
-  invalidateMcpProbeCache: (name?: string) =>
-    ipcRenderer.invoke("mcp:invalidate", name),
+  invalidateMcpProbeCache: (name?: string) => ipcRenderer.invoke("mcp:invalidate", name),
   probeSearch: (input: unknown) => ipcRenderer.invoke("search:probe", input),
   probeImage: (input: unknown) => ipcRenderer.invoke("image:probe", input),
   getModelCatalog: () => ipcRenderer.invoke("catalog:list"),
@@ -728,11 +746,14 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer.invoke("projects:resolveRoot", path),
     add: (project: { path: string; name: string }): Promise<void> =>
       ipcRenderer.invoke("projects:add", project),
-    remove: (projectPath: string): Promise<void> => ipcRenderer.invoke("projects:remove", projectPath),
+    remove: (projectPath: string): Promise<void> =>
+      ipcRenderer.invoke("projects:remove", projectPath),
     setPinned: (projectPath: string, pinned: boolean): Promise<void> =>
       ipcRenderer.invoke("projects:setPinned", projectPath, pinned),
     onChanged: (
-      cb: (projects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>) => void,
+      cb: (
+        projects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>,
+      ) => void,
     ): (() => void) => {
       const h = (
         _e: IpcRendererEvent,
@@ -764,7 +785,15 @@ contextBridge.exposeInMainWorld("codeshell", {
   onMenuEvent: (cb: (event: string, payload?: unknown) => void): (() => void) => {
     const wrap = (channel: string) => (_e: IpcRendererEvent, payload?: unknown) =>
       cb(channel.replace(/^menu:/, ""), payload);
-    const channels = ["menu:add-project", "menu:open-recent", "menu:find", "menu:palette", "menu:toggle-sidebar", "menu:toggle-inspector", "menu:new-window"];
+    const channels = [
+      "menu:add-project",
+      "menu:open-recent",
+      "menu:find",
+      "menu:palette",
+      "menu:toggle-sidebar",
+      "menu:toggle-inspector",
+      "menu:new-window",
+    ];
     const handlers = channels.map((c) => {
       const h = wrap(c);
       ipcRenderer.on(c, h);
@@ -785,8 +814,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   windowToken: String(process.pid),
   ptyStart: (opts: { sessionId: string; cwd?: string; cols?: number; rows?: number }) =>
     ipcRenderer.invoke("pty:start", opts) as Promise<PtyStartResult>,
-  ptyWrite: (sessionId: string, data: string) =>
-    ipcRenderer.invoke("pty:write", sessionId, data),
+  ptyWrite: (sessionId: string, data: string) => ipcRenderer.invoke("pty:write", sessionId, data),
   ptyResize: (sessionId: string, cols: number, rows: number) =>
     ipcRenderer.invoke("pty:resize", sessionId, cols, rows),
   ptyKill: (sessionId: string) => ipcRenderer.invoke("pty:kill", sessionId),
@@ -798,8 +826,10 @@ contextBridge.exposeInMainWorld("codeshell", {
   onPtyExit: (
     cb: (msg: { sessionId: string; exitCode: number; signal?: number }) => void,
   ): (() => void) => {
-    const h = (_e: IpcRendererEvent, msg: { sessionId: string; exitCode: number; signal?: number }) =>
-      cb(msg);
+    const h = (
+      _e: IpcRendererEvent,
+      msg: { sessionId: string; exitCode: number; signal?: number },
+    ) => cb(msg);
     ipcRenderer.on("pty:exit", h);
     return () => ipcRenderer.removeListener("pty:exit", h);
   },
@@ -837,7 +867,10 @@ contextBridge.exposeInMainWorld("codeshell", {
     cookiePreview: (domain: string, bucket?: string): Promise<{ count: number }> =>
       ipcRenderer.invoke("credentials:cookiePreview", domain, bucket),
     /** 按域拓取 cookie jar(组装成 cookie 凭证用)。 */
-    captureCookieJar: (domain: string, bucket?: string): Promise<{ jar: unknown[]; count: number }> =>
+    captureCookieJar: (
+      domain: string,
+      bucket?: string,
+    ): Promise<{ jar: unknown[]; count: number }> =>
       ipcRenderer.invoke("credentials:captureCookieJar", domain, bucket),
     /** 全量拓取当前 chat session 浏览器分区所有 cookie(按域抓不全的站用)。 */
     captureAllCookies: (bucket?: string): Promise<{ jar: unknown[]; count: number }> =>
@@ -846,7 +879,11 @@ contextBridge.exposeInMainWorld("codeshell", {
     captureAllCookiesAllSessions: (): Promise<{ jar: unknown[]; count: number }> =>
       ipcRenderer.invoke("credentials:captureAllCookiesAllSessions"),
     /** 切换账号:把某 cookie 凭证导回浏览器覆盖当前登录态。 */
-    restoreCookieToBrowser: (cwd: string, id: string, bucket?: string): Promise<{ count: number }> =>
+    restoreCookieToBrowser: (
+      cwd: string,
+      id: string,
+      bucket?: string,
+    ): Promise<{ count: number }> =>
       ipcRenderer.invoke("credentials:restoreCookieToBrowser", cwd, id, bucket),
     /** 独立窗口登录抓 cookie(登 Google/YouTube 用)。 */
     loginCapture: (req: {
@@ -854,7 +891,13 @@ contextBridge.exposeInMainWorld("codeshell", {
       platform?: string;
       fullCapture?: boolean;
     }): Promise<
-      | { ok: true; jar: unknown[]; domain: string; suggestedLabel?: string; loginCheck: { ok: boolean; missing?: string[] } }
+      | {
+          ok: true;
+          jar: unknown[];
+          domain: string;
+          suggestedLabel?: string;
+          loginCheck: { ok: boolean; missing?: string[] };
+        }
       | { ok: false; cancelled?: boolean; error?: string }
     > => ipcRenderer.invoke("credentials:loginCapture", req),
   },
@@ -896,7 +939,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     return () => ipcRenderer.removeListener("browser:reload", h);
   },
   /** From a popout: ask the owner (main window) to remove an anchor by id. */
-  sendBrowserAnchorRemove: (anchorId: string) => ipcRenderer.send("browser:anchor-remove", anchorId),
+  sendBrowserAnchorRemove: (anchorId: string) =>
+    ipcRenderer.send("browser:anchor-remove", anchorId),
   /** From a popout: ask the owner to update an anchor's comment. */
   sendBrowserAnchorUpdate: (update: { id: string; comment: string }) =>
     ipcRenderer.send("browser:anchor-update", update),
@@ -915,8 +959,7 @@ contextBridge.exposeInMainWorld("codeshell", {
 
   // ── Mobile Web Remote (LAN phone controller; off by default) ──────────
   mobileRemote: {
-    start: (opts?: { mode?: "lan" | "tunnel" }) =>
-      ipcRenderer.invoke("mobileRemote:start", opts),
+    start: (opts?: { mode?: "lan" | "tunnel" }) => ipcRenderer.invoke("mobileRemote:start", opts),
     stop: () => ipcRenderer.invoke("mobileRemote:stop"),
     pairingUrl: () => ipcRenderer.invoke("mobileRemote:pairingUrl"),
     status: () => ipcRenderer.invoke("mobileRemote:status"),
@@ -940,23 +983,24 @@ contextBridge.exposeInMainWorld("codeshell", {
       return () => ipcRenderer.removeListener("mobileRemote:downloadProgress", h);
     },
     passcodeStatus: () => ipcRenderer.invoke("mobileRemote:passcodeStatus"),
-    setPasscode: (passcode: string) =>
-      ipcRenderer.invoke("mobileRemote:setPasscode", passcode),
+    setPasscode: (passcode: string) => ipcRenderer.invoke("mobileRemote:setPasscode", passcode),
     tunnelStatus: () => ipcRenderer.invoke("mobileRemote:tunnelStatus"),
-    onTunnelStatus: (
-      cb: (s: { status: string; detail?: unknown }) => void,
-    ): (() => void) => {
+    onTunnelStatus: (cb: (s: { status: string; detail?: unknown }) => void): (() => void) => {
       const h = (_e: IpcRendererEvent, payload: { status: string; detail?: unknown }) =>
         cb(payload);
       ipcRenderer.on("mobileRemote:tunnelStatus", h);
       return () => ipcRenderer.removeListener("mobileRemote:tunnelStatus", h);
     },
-    updateProjects: (projects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>) =>
-      ipcRenderer.invoke("mobileRemote:updateProjects", projects),
+    updateProjects: (
+      projects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>,
+    ) => ipcRenderer.invoke("mobileRemote:updateProjects", projects),
     updatePermissionModes: (entries: Array<{ sessionId: string; mode: string }>) =>
       ipcRenderer.invoke("mobileRemote:updatePermissionModes", entries),
-    notifyApprovalResolved: (input: { requestId: string; sessionId?: string; approved?: boolean }) =>
-      ipcRenderer.invoke("mobileRemote:approvalResolved", input),
+    notifyApprovalResolved: (input: {
+      requestId: string;
+      sessionId?: string;
+      approved?: boolean;
+    }) => ipcRenderer.invoke("mobileRemote:approvalResolved", input),
   },
 
   // ── Rooms (resident Claude Code sessions; dual-ended with the phone) ──
@@ -981,11 +1025,16 @@ contextBridge.exposeInMainWorld("codeshell", {
   ccRoom: {
     probe: (force?: boolean) => ipcRenderer.invoke("ccRoom:probe", force),
     codexProbe: (force?: boolean) => ipcRenderer.invoke("ccRoom:codexProbe", force),
-    listSessions: (cwd: string, all?: boolean) => ipcRenderer.invoke("ccRoom:listSessions", cwd, all),
+    listSessions: (cwd: string, all?: boolean) =>
+      ipcRenderer.invoke("ccRoom:listSessions", cwd, all),
     listCodexSessions: (cwd: string, all?: boolean) =>
       ipcRenderer.invoke("ccRoom:listCodexSessions", cwd, all),
-    openSession: (claudeSessionId: string, cwd: string, mode: string, kind?: "claude-code" | "codex") =>
-      ipcRenderer.invoke("ccRoom:openSession", claudeSessionId, cwd, mode, kind),
+    openSession: (
+      claudeSessionId: string,
+      cwd: string,
+      mode: string,
+      kind?: "claude-code" | "codex",
+    ) => ipcRenderer.invoke("ccRoom:openSession", claudeSessionId, cwd, mode, kind),
     send: (roomId: string, text: string) => ipcRenderer.invoke("ccRoom:send", roomId, text),
     respondApproval: (roomId: string, requestId: string, decision: unknown) =>
       ipcRenderer.invoke("ccRoom:respondApproval", roomId, requestId, decision),

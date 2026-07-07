@@ -13,7 +13,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { randomUUID } from "node:crypto";
-import { lock } from "@cjhyy/code-shell-core";
+import { lock, normalizeWorktreeBranchPrefix } from "@cjhyy/code-shell-core";
 
 export type SettingsScope = "user" | "project";
 
@@ -98,6 +98,7 @@ export async function writeSettings(
     try {
       const current = (await readSettings(scope, cwd)) ?? {};
       const merged = deepMerge(current, patch);
+      normalizeWorktreeBranchPrefixIfPatched(patch, merged);
       // Unique temp name so a concurrent writer for the same file can't clobber
       // our half-written temp and produce corrupt JSON after rename.
       const tmp = p + "." + randomUUID() + ".tmp";
@@ -141,4 +142,28 @@ function deepMerge(
     }
   }
   return out;
+}
+
+function normalizeWorktreeBranchPrefixIfPatched(
+  patch: Record<string, unknown>,
+  merged: Record<string, unknown>,
+): void {
+  const patchWorktree = recordOf(patch.worktree);
+  if (!patchWorktree || !Object.prototype.hasOwnProperty.call(patchWorktree, "branchPrefix")) {
+    return;
+  }
+
+  const nextWorktree = recordOf(merged.worktree);
+  const value = nextWorktree?.branchPrefix;
+  if (typeof value !== "string") {
+    throw new Error("worktree.branchPrefix must be a string");
+  }
+
+  nextWorktree.branchPrefix = normalizeWorktreeBranchPrefix(value);
+}
+
+function recordOf(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
 }

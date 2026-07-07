@@ -103,3 +103,4 @@ git/
 
 - barrel 重导出若遗漏某个符号，会 break 下游 import → 拆分后全量 `bun run typecheck` + 测试兜底。
 - prefix 可配置后，旧的硬编码 `worktree/` 分支在改前缀后会被判为「外部」而禁用清理 → 文档说明；判定可放宽为「prefix 或历史默认 `worktree/`」二者之一（实现计划中定）。
+- 拆分后 `createWorktree` / 查询类 API 走异步 git executor，compat barrel 保持异步导出；仓库内真实调用点已全部 `await`，没有发现依赖同步返回值的调用，因此不加同步 wrapper。

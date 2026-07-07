@@ -134,7 +134,7 @@ describe("Engine workspace cwd resolution", () => {
     });
     (engine as any).hooks.clear();
     const session = engine.getSessionManager().create(repo, model, provider, "resume-ws");
-    const wt = createWorktree(repo, "resume-ws", "resume-ws");
+    const wt = await createWorktree(repo, "resume-ws", "resume-ws");
     session.state.workspace = {
       root: wt.worktreePath,
       kind: "worktree",
@@ -211,7 +211,7 @@ describe("Engine workspace cwd resolution", () => {
     });
     (engine as any).hooks.clear();
     const session = engine.getSessionManager().create(repo, model, provider, "exitdiscard123");
-    const wt = createWorktree(repo, "discard-run", "exitdiscard123");
+    const wt = await createWorktree(repo, "discard-run", "exitdiscard123");
     session.state.workspace = {
       root: wt.worktreePath,
       kind: "worktree",

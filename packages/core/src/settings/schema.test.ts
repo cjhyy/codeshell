@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { SettingsSchema, validateSettings } from "./schema.js";
+import { SettingsSchema } from "./schema.js";
 
 describe("disabledAgents", () => {
   it("defaults to empty array", () => {
@@ -32,11 +32,31 @@ describe("capabilityOverrides", () => {
   });
 
   it("rejects unknown override value", () => {
-    expect(() => SettingsSchema.parse({ capabilityOverrides: { skills: { a: "maybe" } } })).toThrow();
+    expect(() =>
+      SettingsSchema.parse({ capabilityOverrides: { skills: { a: "maybe" } } }),
+    ).toThrow();
   });
 });
 
-describe("mcpServers name resilience (regression: settings died on {\"23\":{no name}})", () => {
+describe("worktree settings", () => {
+  it("defaults branchPrefix to the historical CodeShell prefix", () => {
+    const parsed = SettingsSchema.parse({});
+    expect(parsed.worktree.branchPrefix).toBe("worktree/");
+  });
+
+  it("normalizes a branchPrefix without a trailing slash", () => {
+    const parsed = SettingsSchema.parse({ worktree: { branchPrefix: "agent" } });
+    expect(parsed.worktree.branchPrefix).toBe("agent/");
+  });
+
+  it("rejects unsafe branch prefixes", () => {
+    expect(() => SettingsSchema.parse({ worktree: { branchPrefix: "" } })).toThrow();
+    expect(() => SettingsSchema.parse({ worktree: { branchPrefix: "../bad" } })).toThrow();
+    expect(() => SettingsSchema.parse({ worktree: { branchPrefix: "bad prefix/" } })).toThrow();
+  });
+});
+
+describe('mcpServers name resilience (regression: settings died on {"23":{no name}})', () => {
   it("backfills name from the record key when the value omits name", () => {
     // Reproduces the real corruption: desktop strips `name` and uses it as the
     // record key, but the schema previously required `name` and crashed on load.
@@ -70,7 +90,11 @@ describe("mcpServers name resilience (regression: settings died on {\"23\":{no n
   it("preserves credentialRef through validation (binding must survive round-trip)", () => {
     const parsed = SettingsSchema.parse({
       mcpServers: {
-        figma: { transport: "streamable-http", url: "https://x/mcp", credentialRef: "my-figma-token" },
+        figma: {
+          transport: "streamable-http",
+          url: "https://x/mcp",
+          credentialRef: "my-figma-token",
+        },
       },
     });
     expect(parsed.mcpServers.figma.credentialRef).toBe("my-figma-token");

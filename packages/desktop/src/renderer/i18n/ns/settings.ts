@@ -170,7 +170,8 @@ export const settingsNs = {
         compactDesc: "达到这个比例后开始压缩历史,先尝试更轻的摘要 / 裁剪策略。",
         summarizeTitle: "紧急压缩",
         summarizeDesc: "达到这个比例后使用更激进的窗口压缩,给下一轮留空间。",
-        orderHint: "保存时会保持 Microcompact 下限 ≤ 开始压缩 ≤ 紧急压缩。默认值为 70% / 85% / 92%。",
+        orderHint:
+          "保存时会保持 Microcompact 下限 ≤ 开始压缩 ≤ 紧急压缩。默认值为 70% / 85% / 92%。",
         save: "保存上下文设置",
         saving: "保存中…",
         reset: "恢复默认",
@@ -179,7 +180,8 @@ export const settingsNs = {
       },
       agents: {
         title: "子代理",
-        pickDesc: "选择要管理的子代理:全局子代理所有项目共享;或选择某个项目,在项目级覆盖某个子代理的启用 / 禁用。",
+        pickDesc:
+          "选择要管理的子代理:全局子代理所有项目共享;或选择某个项目,在项目级覆盖某个子代理的启用 / 禁用。",
         globalLabel: "全局子代理",
         globalHint: "所有项目共享 (~/.code-shell/agents)",
         backToList: "返回项目列表",
@@ -202,7 +204,8 @@ export const settingsNs = {
         noneSelected: "没有选中子代理",
         noneSelectedHint: "选择左侧一个子代理查看与编辑，或点「新增子代理」创建一个新的。",
         editorAgent: "子代理",
-        nameLockedHint: "内置子代理保留原名；保存时会在用户级生成同名覆盖文件，不会修改项目仓库里的原文件。",
+        nameLockedHint:
+          "内置子代理保留原名；保存时会在用户级生成同名覆盖文件，不会修改项目仓库里的原文件。",
         fieldName: "名称",
         fieldDescription: "描述（LLM 选择该角色时看到的一句话）",
         fieldModel: "模型",
@@ -228,8 +231,10 @@ export const settingsNs = {
         add: "添加",
         defaultModelLabel: "默认模型:",
         sttFallbackActive: "语音输入已可用(复用现有 OpenAI key)",
-        sttFallbackListHint: "语音输入当前正在使用下面这张隐式连接卡；添加正式语音连接后会自动替代它。",
-        sttFallbackDesc: "当前用 {model} 转写,复用 {cred} 凭证({key})。想换模型 / Groq / 自定义,下面添加一个语音连接即可。",
+        sttFallbackListHint:
+          "语音输入当前正在使用下面这张隐式连接卡；添加正式语音连接后会自动替代它。",
+        sttFallbackDesc:
+          "当前用 {model} 转写,复用 {cred} 凭证({key})。想换模型 / Groq / 自定义,下面添加一个语音连接即可。",
         auxLabel: "后台任务模型",
         auxHint: "记忆提取、自动标题等后台调用用此模型。",
         followCurrent: "跟随当前模型",
@@ -319,7 +324,8 @@ export const settingsNs = {
         groupVideo: "视频生成",
         groupVideoSub: "默认连接决定 GenerateVideo 用哪一个；key 存在凭证里，多连接可共用。",
         groupAudio: "语音转写(听写)",
-        groupAudioSub: "默认连接决定语音输入(麦克风听写)用哪一个;OpenAI 兼容 /audio/transcriptions(Whisper / gpt-4o-transcribe / Groq)。不配也会回退复用已有 OpenAI key。",
+        groupAudioSub:
+          "默认连接决定语音输入(麦克风听写)用哪一个;OpenAI 兼容 /audio/transcriptions(Whisper / gpt-4o-transcribe / Groq)。不配也会回退复用已有 OpenAI key。",
         descSerper: "Google 搜索结果代理，最常用。需要在 serper.dev 申请 API key。",
         descTavily: "针对 AI 工作流优化的搜索接口，免费额度较友好。",
         descSearxng: "开源元搜索引擎，自部署。提供 Base URL 即可，不需要 API key。",
@@ -369,7 +375,8 @@ export const settingsNs = {
         autoExtractTitle:
           "对话结束后用 LLM 自动提取 ≤2 条记忆存入 User scope;关掉后会话总结与 Dream 不受影响(全局生效)",
         cleanupAuto: "清理自动提取({count})",
-        cleanupTitle: "批量删除本 scope 下所有「自动提取且未固定」的记忆(移到 memory-trash/ 可恢复)",
+        cleanupTitle:
+          "批量删除本 scope 下所有「自动提取且未固定」的记忆(移到 memory-trash/ 可恢复)",
         confirmCleanupTitle: "清理自动提取的记忆",
         confirmCleanupMsg: "删除 {count} 条自动提取且未固定的记忆?",
         confirmCleanupDetail: "手动创建与已固定的不受影响;删除移到 memory-trash/,可手动恢复。",
@@ -425,7 +432,8 @@ export const settingsNs = {
         toggleGroupTitle: "启用 / 禁用整个插件（级联到下属 skill）",
         toggleSkillTitle: "启用 / 禁用",
         cannotUninstallPluginTitle: "无法卸载 plugin skill",
-        cannotUninstallPluginMsg: "「{name}」来自插件，无法在此处卸载。可以使用「禁用」隐藏它，或移除对应插件。",
+        cannotUninstallPluginMsg:
+          "「{name}」来自插件，无法在此处卸载。可以使用「禁用」隐藏它，或移除对应插件。",
         gotIt: "知道了",
         uninstallSkillTitle: "卸载 skill",
         uninstallSkillMsg: "确认卸载「{name}」？这会删除磁盘上的文件夹。",
@@ -463,10 +471,12 @@ export const settingsNs = {
         detectedPlugin: "检测到 plugin.json",
         noInstallableSkill: "没有可安装的 skill",
         installed: "已安装",
-        trustAckMsg: "我已确认信任 {repo}。远程仓库的内容会被复制到本地 skills 目录，但不会被自动执行。",
+        trustAckMsg:
+          "我已确认信任 {repo}。远程仓库的内容会被复制到本地 skills 目录，但不会被自动执行。",
         confirmTrustFirst: "请先确认信任来源",
         existSameNameTitle: "已存在同名 skill",
-        existSameNameMsg: "「{name}」似乎已经安装。重新安装会因目录冲突而失败，先卸载旧版本再继续。",
+        existSameNameMsg:
+          "「{name}」似乎已经安装。重新安装会因目录冲突而失败，先卸载旧版本再继续。",
         installingShort: "安装中…",
         installNamed: "安装「{name}」",
       },
@@ -482,9 +492,11 @@ export const settingsNs = {
         providedByPlugin: "🧩 {owner} 插件提供",
         pluginDisabledBadge: "插件已禁用 — 启用后生效",
         supplementCred: "补充凭证/环境变量",
-        supplementCredTitle: "为该插件服务器补充环境变量或凭证(不改动命令/URL，保存到全局覆盖层，插件更新后仍保留)",
+        supplementCredTitle:
+          "为该插件服务器补充环境变量或凭证(不改动命令/URL，保存到全局覆盖层，插件更新后仍保留)",
         overrideTitle: "补充凭证/环境变量 — {name}",
-        overrideNote: "命令/URL 由插件提供并保持只读。这里补充的环境变量与凭证保存到全局覆盖层(mcpServerOverrides)，插件更新后仍生效。",
+        overrideNote:
+          "命令/URL 由插件提供并保持只读。这里补充的环境变量与凭证保存到全局覆盖层(mcpServerOverrides)，插件更新后仍生效。",
         overrideBadge: "已补充",
         overrideBadgeTitle: "已为该插件服务器补充环境变量/凭证(全局覆盖层)",
         confirmRemoveTitle: "移除 MCP 服务器",
@@ -534,9 +546,11 @@ export const settingsNs = {
         authRequired: "需要认证",
         authConfigured: "已配认证",
         authNone: "无认证",
-        authRequiredTitle: "服务器返回了未认证/401。请配置 Bearer、API key Header，或完成该服务要求的登录流程。",
+        authRequiredTitle:
+          "服务器返回了未认证/401。请配置 Bearer、API key Header，或完成该服务要求的登录流程。",
         authConfiguredTitle: "此 HTTP MCP 已配置认证相关字段。",
-        authNoneTitle: "未配置认证。公开服务可以这样使用；需要登录或 API key 的服务请在编辑里配置。",
+        authNoneTitle:
+          "未配置认证。公开服务可以这样使用；需要登录或 API key 的服务请在编辑里配置。",
         authRequiredError:
           "需要认证：这个 HTTP MCP 返回了未认证/401。请在编辑里选择 Bearer token，或用「自定义认证 Header」把 API key 放进服务要求的 header。",
         httpAuthTitle: "HTTP 认证",
@@ -548,10 +562,12 @@ export const settingsNs = {
         forwardEnvVarsHint:
           "每行一个环境变量名,例如 GITHUB_TOKEN。只保存变量名,连接时从当前进程环境读取并注入给这个 stdio MCP。",
         headersLabel: "其他明文 Headers (Key: Value)",
-        headersHint: "会存进配置文件；不要把 token / API key 放在这里。敏感值请用上面的环境变量 Header。",
+        headersHint:
+          "会存进配置文件；不要把 token / API key 放在这里。敏感值请用上面的环境变量 Header。",
         useCredential: "Bearer 凭证（可选，优先于 Bearer 环境变量）",
         credNone: "（不使用）",
-        useCredentialHint: "仅适合服务要求 Authorization: Bearer 的 token / JWT。密文不进 MCP 配置。",
+        useCredentialHint:
+          "仅适合服务要求 Authorization: Bearer 的 token / JWT。密文不进 MCP 配置。",
         bearerEnvVarLabel: "Bearer Token 环境变量",
         bearerEnvVarHint:
           "填环境变量「名」（不是值）。连接时读取并作为 Authorization: Bearer 发送。",
@@ -636,9 +652,11 @@ export const settingsNs = {
           "未找到 Git。请安装 Git 后重启;Windows 上建议安装 Git for Windows,它会同时提供 Git Bash。若已安装,请填写 git.path 指向 git.exe。",
         gitDownload: "下载 Git",
         branchPrefixTitle: "分支前缀",
-        branchPrefixHelp: "在 codeshell 中创建工作树时使用的分支前缀（创建后会自动追加工作树名 + 短哈希）",
+        branchPrefixHelp:
+          "创建 CodeShell worktree 时使用的分支前缀（会自动追加 worktree 名 + 短会话 ID）",
         autoDeleteTitle: "自动清理过期工作树",
-        autoDeleteHelp: "启动 codeshell 时检查 .worktrees/ 目录，删除超过下方时长未修改的工作树（包含其本地分支）。",
+        autoDeleteHelp:
+          "启动 codeshell 时检查 .worktrees/ 目录，删除超过下方时长未修改的工作树（包含其本地分支）。",
         graceTitle: "清理阈值",
         graceHelp: "工作树空闲多久（按目录修改时间）后被自动清理。",
         minutes: "分钟",
@@ -781,7 +799,8 @@ export const settingsNs = {
       },
       projectPicker: {
         global: "Global",
-        empty: "No projects added yet. Add a project in the sidebar on the main screen and it will appear here.",
+        empty:
+          "No projects added yet. Add a project in the sidebar on the main screen and it will appear here.",
       },
       conn: {
         pasteApiKey: "Paste API key",
@@ -825,7 +844,8 @@ export const settingsNs = {
         networkAllow: "Allow network access",
         networkDeny: "Deny network access",
         writableRoots: "Writable paths",
-        writableRootsHint: "One per line, supports ${workspace}, ~. The range commands can write to.",
+        writableRootsHint:
+          "One per line, supports ${workspace}, ~. The range commands can write to.",
         deniedReads: "Denied-read paths",
         deniedReadsHint: "One per line; reading these paths is blocked by the sandbox.",
         saving: "Saving...",
@@ -898,12 +918,14 @@ export const settingsNs = {
         title: "Conversation capabilities",
         descPrefix: "These settings only affect ",
         descStrong: "project-less plain chat",
-        descSuffix: " (not bound to a code directory). Skills and plugins are all off by default; enable manually as needed. Takes effect for new conversations.",
+        descSuffix:
+          " (not bound to a code directory). Skills and plugins are all off by default; enable manually as needed. Takes effect for new conversations.",
         loading: "Loading…",
         enabledCount: "{count} skills / plugins enabled",
         closeAll: "Turn all off",
         confirmCloseAllTitle: "Turn all off",
-        confirmCloseAllMsg: "This turns off {count} enabled skills / plugins, returning plain chat to the all-off default.",
+        confirmCloseAllMsg:
+          "This turns off {count} enabled skills / plugins, returning plain chat to the all-off default.",
         closedToast: "All turned off; plain chat is back to the all-off default.",
         skills: "Skills",
         plugins: "Plugins",
@@ -911,7 +933,8 @@ export const settingsNs = {
         noSkills: "No skills installed yet.",
         noPlugins: "No plugins installed yet.",
         noBuiltins: "No built-in tools.",
-        builtinHint: "Built-in tools are on by default; turn off the ones you don't need. Tools that depend on a project directory are unavailable in plain chat.",
+        builtinHint:
+          "Built-in tools are on by default; turn off the ones you don't need. Tools that depend on a project directory are unavailable in plain chat.",
         cwdLocked: "No project directory in chat, unavailable",
         switchAria: "{name} toggle",
         unavailableAria: "{name} (unavailable)",
@@ -922,10 +945,13 @@ export const settingsNs = {
         microTitle: "Microcompact floor",
         microDesc: "Below this ratio, old tool output is kept to preserve the prompt-cache prefix.",
         compactTitle: "Start compaction",
-        compactDesc: "At this ratio, history compaction begins with lighter summary / snip strategies.",
+        compactDesc:
+          "At this ratio, history compaction begins with lighter summary / snip strategies.",
         summarizeTitle: "Emergency compaction",
-        summarizeDesc: "At this ratio, a more aggressive window compaction leaves room for the next turn.",
-        orderHint: "Save keeps Microcompact floor ≤ Start compaction ≤ Emergency compaction. Defaults are 70% / 85% / 92%.",
+        summarizeDesc:
+          "At this ratio, a more aggressive window compaction leaves room for the next turn.",
+        orderHint:
+          "Save keeps Microcompact floor ≤ Start compaction ≤ Emergency compaction. Defaults are 70% / 85% / 92%.",
         save: "Save context settings",
         saving: "Saving…",
         reset: "Reset defaults",
@@ -934,7 +960,8 @@ export const settingsNs = {
       },
       agents: {
         title: "Sub-agents",
-        pickDesc: "Choose which sub-agents to manage: global sub-agents are shared by all projects; or pick a project to override a sub-agent's enabled / disabled state at the project level.",
+        pickDesc:
+          "Choose which sub-agents to manage: global sub-agents are shared by all projects; or pick a project to override a sub-agent's enabled / disabled state at the project level.",
         globalLabel: "Global sub-agents",
         globalHint: "Shared by all projects (~/.code-shell/agents)",
         backToList: "Back to project list",
@@ -955,9 +982,11 @@ export const settingsNs = {
         noAgents: "No sub-agents.",
         disabledCount: "Disabled ({count})",
         noneSelected: "No sub-agent selected",
-        noneSelectedHint: "Select a sub-agent on the left to view and edit, or click \"New sub-agent\" to create one.",
+        noneSelectedHint:
+          'Select a sub-agent on the left to view and edit, or click "New sub-agent" to create one.',
         editorAgent: "Sub-agent",
-        nameLockedHint: "Built-in sub-agents keep their original name; saving creates a same-named override file at the user level without modifying the original file in the project repo.",
+        nameLockedHint:
+          "Built-in sub-agents keep their original name; saving creates a same-named override file at the user level without modifying the original file in the project repo.",
         fieldName: "Name",
         fieldDescription: "Description (the one-liner the LLM sees when choosing this role)",
         fieldModel: "Model",
@@ -971,7 +1000,8 @@ export const settingsNs = {
         delete: "Delete",
         save: "Save",
         confirmDeleteTitle: "Delete sub-agent {name}?",
-        confirmDeleteOverride: "This deletes your override file and restores the built-in definition.",
+        confirmDeleteOverride:
+          "This deletes your override file and restores the built-in definition.",
         confirmDeleteCustom: "This deletes the custom sub-agent.",
       },
       textConn: {
@@ -983,14 +1013,18 @@ export const settingsNs = {
         add: "Add",
         defaultModelLabel: "Default model:",
         sttFallbackActive: "Voice input is ready (reusing your existing OpenAI key)",
-        sttFallbackListHint: "Voice input is currently using the implicit connection card below; adding a dedicated voice connection will replace it.",
-        sttFallbackDesc: "Currently transcribing with {model}, reusing your {cred} credential ({key}). To switch model / Groq / custom, add a voice connection below.",
+        sttFallbackListHint:
+          "Voice input is currently using the implicit connection card below; adding a dedicated voice connection will replace it.",
+        sttFallbackDesc:
+          "Currently transcribing with {model}, reusing your {cred} credential ({key}). To switch model / Groq / custom, add a voice connection below.",
         auxLabel: "Background-task model",
         auxHint: "Used for background calls like memory extraction and auto titles.",
         followCurrent: "Follow current model",
         followCurrentDefault: "Follow current model (default)",
-        auxDesc: "Pick a cheap, fast model for background tasks; follows the current chat model by default.",
-        emptyHint: "No {heading} yet. Click \"Add model\" to pick a provider from a template, choose a model, and enter a key.",
+        auxDesc:
+          "Pick a cheap, fast model for background tasks; follows the current chat model by default.",
+        emptyHint:
+          'No {heading} yet. Click "Add model" to pick a provider from a template, choose a model, and enter a key.',
         current: "Current",
         setCurrent: "Set as current",
         setCurrentFailed: "Failed to set as current, reverted",
@@ -999,7 +1033,8 @@ export const settingsNs = {
         fieldModel: "Model",
         pickModel: "Choose model",
         fieldCredential: "Credential",
-        credentialHint: "Multiple connections can share one key; deleting a connection won't delete the credential.",
+        credentialHint:
+          "Multiple connections can share one key; deleting a connection won't delete the credential.",
         newKey: "Enter a new key…",
         pickCredential: "Choose credential",
         toastAuxSet: "Background-task model set to {id}",
@@ -1008,13 +1043,14 @@ export const settingsNs = {
         toastSaved: "Saved",
         toastRemoved: "Removed {id}",
         confirmRemoveMsg: "Delete connection #{id}?",
-        confirmRemoveDetail: "The credential (API key) won't be deleted — it's independent and other connections can still use it.",
+        confirmRemoveDetail:
+          "The credential (API key) won't be deleted — it's independent and other connections can still use it.",
       },
       catalog: {
         title: "Model templates",
         desc: "Edit the model catalog: one template per provider, defining its models and params. Built-in templates can be edited or reset.",
         addProvider: "New provider",
-        empty: "No templates yet. Click \"New provider\" to start from scratch.",
+        empty: 'No templates yet. Click "New provider" to start from scratch.',
         newProvider: "New provider",
         models: "{count} models",
         originBuiltin: "Built-in",
@@ -1068,16 +1104,22 @@ export const settingsNs = {
         title: "Connections",
         desc: "Built-in features that need a key (WebSearch, image generation, video generation…) are grouped by function here; each group folds.",
         groupWebSearch: "WebSearch providers",
-        groupWebSearchSub: "The default provider decides which one the agent uses when calling WebSearch.",
+        groupWebSearchSub:
+          "The default provider decides which one the agent uses when calling WebSearch.",
         groupImage: "Image generation",
-        groupImageSub: "The default connection decides which one GenerateImage uses; keys live in credentials and can be shared across connections.",
+        groupImageSub:
+          "The default connection decides which one GenerateImage uses; keys live in credentials and can be shared across connections.",
         groupVideo: "Video generation",
-        groupVideoSub: "The default connection decides which one GenerateVideo uses; keys live in credentials and can be shared across connections.",
+        groupVideoSub:
+          "The default connection decides which one GenerateVideo uses; keys live in credentials and can be shared across connections.",
         groupAudio: "Speech-to-text (dictation)",
-        groupAudioSub: "The default connection decides which one voice input (mic dictation) uses; OpenAI-compatible /audio/transcriptions (Whisper / gpt-4o-transcribe / Groq). Falls back to reusing an existing OpenAI key if none is set.",
-        descSerper: "Proxy for Google search results, the most commonly used. Requires an API key from serper.dev.",
+        groupAudioSub:
+          "The default connection decides which one voice input (mic dictation) uses; OpenAI-compatible /audio/transcriptions (Whisper / gpt-4o-transcribe / Groq). Falls back to reusing an existing OpenAI key if none is set.",
+        descSerper:
+          "Proxy for Google search results, the most commonly used. Requires an API key from serper.dev.",
         descTavily: "A search API optimized for AI workflows, with a friendly free tier.",
-        descSearxng: "Open-source meta search engine, self-hosted. Just provide a Base URL; no API key needed.",
+        descSearxng:
+          "Open-source meta search engine, self-hosted. Just provide a Base URL; no API key needed.",
         loading: "Loading…",
         statusTesting: "Testing…",
         statusOk: "Available",
@@ -1098,13 +1140,14 @@ export const settingsNs = {
         clear: "Clear",
         toastSaved: "Saved",
         toastSaveFailed: "Save failed, please retry",
-        confirmClearMsg: "Clear the credentials for \"{name}\"?",
+        confirmClearMsg: 'Clear the credentials for "{name}"?',
         confirmClearDetail: "The saved API key / Base URL will be removed.",
         toastClearFailed: "Clear failed, restored",
       },
       memory: {
         title: "Memory",
-        pickDesc: "Choose which memory to view: global memory is shared by all projects, or pick a project to view its own memory.",
+        pickDesc:
+          "Choose which memory to view: global memory is shared by all projects, or pick a project to view its own memory.",
         globalLabel: "Global memory",
         globalHint: "Shared by all projects (~/.code-shell/memory)",
         back: "Back",
@@ -1114,7 +1157,7 @@ export const settingsNs = {
         scopeDreamHelp: "Auto-organized workspace (clearable)",
         nameRequired: "name cannot be empty",
         confirmDeleteTitle: "Delete memory",
-        confirmDeleteMsg: "Delete memory \"{name}\"?",
+        confirmDeleteMsg: 'Delete memory "{name}"?',
         confirmDeleteDetail: "It will be moved to memory-trash/ and can be restored manually.",
         delete: "Delete",
         dreamDoneSummary: "Done: {summary}",
@@ -1124,10 +1167,12 @@ export const settingsNs = {
         autoExtractTitle:
           "After a conversation ends, an LLM auto-extracts ≤2 memory entries into the User scope; turning it off leaves session summaries and Dream unaffected (applies globally).",
         cleanupAuto: "Clean auto-extracted ({count})",
-        cleanupTitle: "Bulk-delete all \"auto-extracted and unpinned\" memories in this scope (moved to memory-trash/, restorable)",
+        cleanupTitle:
+          'Bulk-delete all "auto-extracted and unpinned" memories in this scope (moved to memory-trash/, restorable)',
         confirmCleanupTitle: "Clean auto-extracted memories",
         confirmCleanupMsg: "Delete {count} auto-extracted and unpinned memories?",
-        confirmCleanupDetail: "Manually created and pinned ones are unaffected; deletions move to memory-trash/ and can be restored manually.",
+        confirmCleanupDetail:
+          "Manually created and pinned ones are unaffected; deletions move to memory-trash/ and can be restored manually.",
         cleanup: "Clean",
         cleanupDone: "Cleaned {count} auto-extracted memories.",
         dreamTitle: "Run an LLM once to deduplicate / merge / clean dream memories",
@@ -1140,8 +1185,10 @@ export const settingsNs = {
         autoBadge: "Auto",
         autoBadgeTitle: "Auto-extracted when the conversation ends",
         recalledBadge: "used {{count}}×",
-        recalledTitle: "Times this memory was read (recalled) — frequently-recalled memories are never pruned by TTL",
-        pendingHeader: "Global memories awaiting approval ({{count}}) — only injected after you approve",
+        recalledTitle:
+          "Times this memory was read (recalled) — frequently-recalled memories are never pruned by TTL",
+        pendingHeader:
+          "Global memories awaiting approval ({{count}}) — only injected after you approve",
         pendingApprove: "Approve (move to global)",
         pendingDemote: "Demote (keep in source project)",
         pendingReject: "Reject (delete)",
@@ -1180,14 +1227,16 @@ export const settingsNs = {
         toggleGroupTitle: "Enable / disable the whole plugin (cascades to its skills)",
         toggleSkillTitle: "Enable / disable",
         cannotUninstallPluginTitle: "Cannot uninstall a plugin skill",
-        cannotUninstallPluginMsg: "\"{name}\" comes from a plugin and can't be uninstalled here. You can use \"Disable\" to hide it, or remove the corresponding plugin.",
+        cannotUninstallPluginMsg:
+          '"{name}" comes from a plugin and can\'t be uninstalled here. You can use "Disable" to hide it, or remove the corresponding plugin.',
         gotIt: "Got it",
         uninstallSkillTitle: "Uninstall skill",
-        uninstallSkillMsg: "Confirm uninstalling \"{name}\"? This deletes the folder on disk.",
+        uninstallSkillMsg: 'Confirm uninstalling "{name}"? This deletes the folder on disk.',
         uninstallConfirm: "Uninstall",
         uninstallFailed: "Uninstall failed",
         infoDesc: "About",
-        infoLocalDesc: "Local skills from the user / project scope. Enable or disable each in the middle column.",
+        infoLocalDesc:
+          "Local skills from the user / project scope. Enable or disable each in the middle column.",
         infoCount: "Count",
         infoDescription: "Description",
         infoSource: "Source",
@@ -1214,16 +1263,19 @@ export const settingsNs = {
         parsing: "Parsing…",
         parse: "Parse",
         ghHelp: "Supports a repo URL, or a subdirectory form",
-        ghHelpSuffix: ". The system reads the repo's directory tree and never auto-runs any script.",
+        ghHelpSuffix:
+          ". The system reads the repo's directory tree and never auto-runs any script.",
         detectedPlugin: "Detected plugin.json",
         noInstallableSkill: "No installable skill",
         installed: "Installed",
-        trustAckMsg: "I confirm I trust {repo}. The remote repo's contents will be copied into the local skills directory but won't be auto-executed.",
+        trustAckMsg:
+          "I confirm I trust {repo}. The remote repo's contents will be copied into the local skills directory but won't be auto-executed.",
         confirmTrustFirst: "Please confirm you trust the source first",
         existSameNameTitle: "A skill with the same name exists",
-        existSameNameMsg: "\"{name}\" appears to be already installed. Reinstalling would fail due to a directory conflict; uninstall the old version first.",
+        existSameNameMsg:
+          '"{name}" appears to be already installed. Reinstalling would fail due to a directory conflict; uninstall the old version first.',
         installingShort: "Installing…",
-        installNamed: "Install \"{name}\"",
+        installNamed: 'Install "{name}"',
       },
       mcp: {
         title: "MCP servers",
@@ -1232,23 +1284,28 @@ export const settingsNs = {
         testAll: "Test all",
         addServer: "Add server",
         emptyTitle: "No MCP servers yet",
-        emptyDesc: "MCP servers give the agent extra tools. Click \"Add server\" to start configuring.",
+        emptyDesc:
+          'MCP servers give the agent extra tools. Click "Add server" to start configuring.',
         defaultPluginName: "Plugin",
         providedByPlugin: "🧩 Provided by the {owner} plugin",
         pluginDisabledBadge: "Plugin disabled — takes effect once enabled",
         supplementCred: "Add credentials / env vars",
-        supplementCredTitle: "Supplement env vars or credentials for this plugin server (command/URL unchanged; saved to the global override layer and kept across plugin updates)",
+        supplementCredTitle:
+          "Supplement env vars or credentials for this plugin server (command/URL unchanged; saved to the global override layer and kept across plugin updates)",
         overrideTitle: "Add credentials / env vars — {name}",
-        overrideNote: "Command/URL are provided by the plugin and stay read-only. The env vars and credentials you add here are saved to the global override layer (mcpServerOverrides) and survive plugin updates.",
+        overrideNote:
+          "Command/URL are provided by the plugin and stay read-only. The env vars and credentials you add here are saved to the global override layer (mcpServerOverrides) and survive plugin updates.",
         overrideBadge: "Supplemented",
-        overrideBadgeTitle: "Env vars/credentials supplemented for this plugin server (global override layer)",
+        overrideBadgeTitle:
+          "Env vars/credentials supplemented for this plugin server (global override layer)",
         confirmRemoveTitle: "Remove MCP server",
-        confirmRemoveMsg: "Confirm removing \"{name}\"? Takes effect next time the engine starts; restoring requires re-adding.",
+        confirmRemoveMsg:
+          'Confirm removing "{name}"? Takes effect next time the engine starts; restoring requires re-adding.',
         remove: "Remove",
         disableThis: "Disable this server",
         enableThis: "Enable this server",
         pluginManagedNoToggle: "Managed by a plugin, can't be toggled here",
-        pluginProvidedReadonly: "Provided by the \"{owner}\" plugin, read-only",
+        pluginProvidedReadonly: 'Provided by the "{owner}" plugin, read-only',
         pluginInstalledReadonly: "Provided by a plugin install, read-only",
         pluginPrefix: "Plugin: {owner}",
         disabled: "Disabled",
@@ -1256,10 +1313,11 @@ export const settingsNs = {
         test: "Test",
         edit: "Edit",
         delete: "Delete",
-        pluginManagedHint: "Provided by the \"{owner}\" plugin; toggle the whole plugin on the plugins page",
+        pluginManagedHint:
+          'Provided by the "{owner}" plugin; toggle the whole plugin on the plugins page',
         pluginProvidedHint: "Provided by a plugin",
         readOnly: "Read-only",
-        readOnlyPluginManaged: "Read-only: managed by the \"{owner}\" plugin",
+        readOnlyPluginManaged: 'Read-only: managed by the "{owner}" plugin',
         readOnlyPlugin: "Read-only: managed by a plugin",
         viewDetail: "View details",
         lastTested: "Last tested: {time}",
@@ -1289,24 +1347,29 @@ export const settingsNs = {
         authRequired: "Auth required",
         authConfigured: "Auth set",
         authNone: "No auth",
-        authRequiredTitle: "The server returned unauthenticated/401. Configure Bearer, an API-key header, or complete the service's required login flow.",
+        authRequiredTitle:
+          "The server returned unauthenticated/401. Configure Bearer, an API-key header, or complete the service's required login flow.",
         authConfiguredTitle: "This HTTP MCP has authentication-related fields configured.",
-        authNoneTitle: "No auth is configured. Public servers can work this way; services that require login or an API key need auth in the editor.",
+        authNoneTitle:
+          "No auth is configured. Public servers can work this way; services that require login or an API key need auth in the editor.",
         authRequiredError:
           "Authentication required: this HTTP MCP returned unauthenticated/401. In Edit, choose a Bearer token or use Custom auth header to put the API key in the header the service expects.",
         httpAuthTitle: "HTTP authentication",
         httpAuthDesc:
           "Bearer tokens are sent as Authorization: Bearer. API keys are not always Bearer tokens; if the service asks for x-api-key, X-API-Key, or another header, use Custom auth header.",
         envVarsLabel: "Plain environment variables (KEY=VALUE)",
-        envVarsHint: "Stored directly in the config file. For sensitive tokens, prefer forwarding system env vars below.",
+        envVarsHint:
+          "Stored directly in the config file. For sensitive tokens, prefer forwarding system env vars below.",
         forwardEnvVarsLabel: "Forward system env vars",
         forwardEnvVarsHint:
           "One env var name per line, e.g. GITHUB_TOKEN. Only names are stored; values are read from the current process environment and injected into this stdio MCP at connect time.",
         headersLabel: "Other plaintext headers (Key: Value)",
-        headersHint: "Stored in the config file; do not put tokens or API keys here. Use env-var headers above for sensitive values.",
+        headersHint:
+          "Stored in the config file; do not put tokens or API keys here. Use env-var headers above for sensitive values.",
         useCredential: "Bearer credential (optional, takes priority over the Bearer env var)",
         credNone: "(none)",
-        useCredentialHint: "Only for services that expect Authorization: Bearer tokens/JWTs. The secret never goes into the MCP config.",
+        useCredentialHint:
+          "Only for services that expect Authorization: Bearer tokens/JWTs. The secret never goes into the MCP config.",
         bearerEnvVarLabel: "Bearer Token env var",
         bearerEnvVarHint:
           "Enter the env var NAME (not the value). Read at connect time and sent as Authorization: Bearer.",
@@ -1326,14 +1389,18 @@ export const settingsNs = {
       },
       adv: {
         personalizationTitle: "Custom instructions",
-        personalizationDesc: "Give CodeShell extra instructions and context, appended to the system prompt of every conversation.",
+        personalizationDesc:
+          "Give CodeShell extra instructions and context, appended to the system prompt of every conversation.",
         personalizationPlaceholder: "Add custom instructions…",
         responsePrefsTitle: "Personalization",
-        responsePrefsDesc: "Reply language and how to address you are injected as stable preferences into every conversation (both the main agent and sub-agents).",
+        responsePrefsDesc:
+          "Reply language and how to address you are injected as stable preferences into every conversation (both the main agent and sub-agents).",
         responseLangPlaceholder: "Reply language, e.g.: always use Simplified Chinese",
-        userProfilePlaceholder: "How to address you / profile, e.g.: call me maki, a backend engineer",
+        userProfilePlaceholder:
+          "How to address you / profile, e.g.: call me maki, a backend engineer",
         instrFilesTitle: "Instruction files",
-        instrFilesDesc: "CODESHELL.md is always read. Optionally also read other tools' instruction files for compatibility.",
+        instrFilesDesc:
+          "CODESHELL.md is always read. Optionally also read other tools' instruction files for compatibility.",
         compatClaude: "Claude compatibility (CLAUDE.md)",
         compatCodex: "Codex compatibility (AGENTS.md)",
         toggleSaveFailed: "Save failed, reverted",
@@ -1345,7 +1412,8 @@ export const settingsNs = {
         scSend: "Send message",
         scNewline: "Insert newline",
         hooksTitle: "Hooks",
-        hooksDesc: "Hooks have two layers: global hooks apply to all projects, project hooks only to that project; both layers run together.",
+        hooksDesc:
+          "Hooks have two layers: global hooks apply to all projects, project hooks only to that project; both layers run together.",
         backToList: "Back to list",
         globalAllProjects: "Global (applies to all projects)",
         hookEvtPreTool: "pre_tool_use (before tool runs)",
@@ -1364,23 +1432,23 @@ export const settingsNs = {
         globalHooksAlsoRun: "Global hooks (also run in this project)",
         globalBadge: "Global",
         globalDisabledBadge: "Global (disabled)",
-        editGlobalHooksHint: "Edit global hooks on the \"Global\" page.",
+        editGlobalHooksHint: 'Edit global hooks on the "Global" page.',
         addHook: "Add hook",
         hookCmdPlaceholder: "Shell command to run, e.g. echo '{}'",
         add: "Add",
         fillCommand: "Please enter a command",
         pluginProvidedHooks: "Plugin-provided hooks",
-        providedByPluginShort: "Provided by \"{plugin}\"",
+        providedByPluginShort: 'Provided by "{plugin}"',
         pluginDisabledSuffix: " (plugin disabled)",
         enablePluginHook: "Enable this plugin hook",
         disablePluginHook: "Disable this plugin hook",
         pluginHookGlobalHint:
-          "Plugin hooks are read-only here; open a project's hooks page to disable individual ones (only for that project), or disable the whole plugin on the \"Plugins\" page.",
+          'Plugin hooks are read-only here; open a project\'s hooks page to disable individual ones (only for that project), or disable the whole plugin on the "Plugins" page.',
         pluginHookProjectHint:
-          "Individual toggles only apply to this project and to new sessions; disable the whole plugin on the \"Plugins\" page (which disables all its hooks too).",
+          'Individual toggles only apply to this project and to new sessions; disable the whole plugin on the "Plugins" page (which disables all its hooks too).',
         gitPathTitle: "Git executable path",
         gitPathHelp:
-          "Leave blank to use git from the system PATH. Installing from the plugin marketplace needs git; on Windows, install Git for Windows because it also provides Git Bash. If the GUI didn't inherit PATH at launch (common on Windows), click \"Pick…\" to locate the git executable (e.g. C:\\Program Files\\Git\\cmd\\git.exe), or enter an absolute path.",
+          'Leave blank to use git from the system PATH. Installing from the plugin marketplace needs git; on Windows, install Git for Windows because it also provides Git Bash. If the GUI didn\'t inherit PATH at launch (common on Windows), click "Pick…" to locate the git executable (e.g. C:\\Program Files\\Git\\cmd\\git.exe), or enter an absolute path.',
         gitPathPlaceholder: "(use git from PATH)",
         pick: "Pick…",
         checking: "Checking…",
@@ -1391,11 +1459,14 @@ export const settingsNs = {
           "Git was not found. Install Git and restart; on Windows, install Git for Windows because it also provides Git Bash. If Git is already installed, set git.path to git.exe.",
         gitDownload: "Download Git",
         branchPrefixTitle: "Branch prefix",
-        branchPrefixHelp: "The branch prefix used when creating a worktree in codeshell (the worktree name + short hash are appended automatically after creation)",
+        branchPrefixHelp:
+          "Branch prefix for CodeShell-created worktrees. The worktree name + short session id are appended automatically.",
         autoDeleteTitle: "Auto-clean stale worktrees",
-        autoDeleteHelp: "On codeshell startup, check the .worktrees/ directory and delete worktrees not modified within the duration below (including their local branches).",
+        autoDeleteHelp:
+          "On codeshell startup, check the .worktrees/ directory and delete worktrees not modified within the duration below (including their local branches).",
         graceTitle: "Cleanup threshold",
-        graceHelp: "How long a worktree must be idle (by directory mtime) before it's auto-cleaned.",
+        graceHelp:
+          "How long a worktree must be idle (by directory mtime) before it's auto-cleaned.",
         minutes: "minutes",
         localEnvDefault: "Default",
         globalEnvTitle: "Global environment variables",
@@ -1418,14 +1489,16 @@ export const settingsNs = {
         varsAllProject: "Variables (whole project)",
         varsHint:
           "One KEY=VALUE per line. These variables are injected into the project's Bash tool and background shell environment (including worktree setup scripts). An MCP server's own env vars are still saved on the MCP server card and only injected into that server.",
-        sandboxMovedHint: "Sandbox (isolation/network) has moved to a dedicated \"Sandbox\" setting, configurable globally or per project.",
+        sandboxMovedHint:
+          'Sandbox (isolation/network) has moved to a dedicated "Sandbox" setting, configurable globally or per project.',
         saveLocalEnv: "Save local environment",
         enabled: "Enabled",
         disabled: "Disabled",
         imageClarityTitle: "Image clarity",
         imageClarityDescGlobal: "Global default, overridden by project settings.",
         imageClarityDescProject: "This project only.",
-        imageClarityDesc: "Applies to both OpenAI and Claude: determines image clarity before sending (lower saves more tokens).",
+        imageClarityDesc:
+          "Applies to both OpenAI and Claude: determines image clarity before sending (lower saves more tokens).",
         imgDefault: "Default",
         imgDefaultHelp: "Follow default (no downscale, keep original clarity)",
         imgLow: "Cheap",
@@ -1437,7 +1510,7 @@ export const settingsNs = {
         unknownProject: "Unknown project",
         noRepoConv: "Project-less conversation",
         confirmDeleteTitle: "Delete permanently",
-        confirmDeleteMsg: "Permanently delete \"{title}\"?",
+        confirmDeleteMsg: 'Permanently delete "{title}"?',
         irreversible: "This action cannot be undone.",
         confirmClearAllTitle: "Permanently clear archive",
         confirmClearAllMsg: "Permanently delete all {count} archived conversations?",
@@ -1452,9 +1525,11 @@ export const settingsNs = {
         hoursAgo: "{n}h ago",
         daysAgo: "{n}d ago",
         mobileTitle: "Mobile Remote",
-        mobileDesc: "Start a mobile web remote entry so a paired, trusted phone can control chat and permission approvals. Off by default.",
+        mobileDesc:
+          "Start a mobile web remote entry so a paired, trusted phone can control chat and permission approvals. Off by default.",
         genQrFailed: "Failed to generate pairing QR code",
-        tunnelDisconnectedToast: "Public tunnel disconnected; the address is no longer valid, please re-enable",
+        tunnelDisconnectedToast:
+          "Public tunnel disconnected; the address is no longer valid, please re-enable",
         startFailed: "Failed to start",
         passcodeMin: "The access passcode needs at least 4 characters",
         passcodeSaved: "Access passcode saved",
@@ -1462,7 +1537,8 @@ export const settingsNs = {
         cloudflaredDownloaded: "cloudflared downloaded",
         downloadFailed: "Download failed",
         deleteDeviceTitle: "Delete device",
-        deleteDeviceMsg: "After deleting \"{name}\", that phone must re-scan to pair and pass the passcode to connect again.",
+        deleteDeviceMsg:
+          'After deleting "{name}", that phone must re-scan to pair and pass the passcode to connect again.',
         deviceDeleted: "Device deleted",
         renameDeviceTitle: "Rename device",
         renameDeviceMsg: "Give this phone a recognizable name.",
@@ -1470,7 +1546,8 @@ export const settingsNs = {
         nameInvalid: "Invalid name",
         changePasscodeTitle: "Change access passcode",
         setPasscodeTitle: "Set access passcode",
-        changePasscodeMsg: "The passcode needs at least 4 characters. After changing it, every phone that remembered the passcode must re-enter it.",
+        changePasscodeMsg:
+          "The passcode needs at least 4 characters. After changing it, every phone that remembered the passcode must re-enter it.",
         newPasscodePlaceholder: "New access passcode",
         passcodeUpdated: "Access passcode updated",
         setPasscodeFailed: "Failed to set passcode",
@@ -1494,9 +1571,11 @@ export const settingsNs = {
         runningAt: "Running: {url}",
         stopped: "Stopped",
         tunnelConnected: "Tunnel connected",
-        tunnelDisconnected: "Tunnel disconnected — the address is no longer valid, please re-enable",
+        tunnelDisconnected:
+          "Tunnel disconnected — the address is no longer valid, please re-enable",
         regenQr: "Regenerate pairing QR code",
-        regenQrHint: "Already-connected trusted phones don't need the QR code, just open the URL; the QR code is only for pairing a new phone.",
+        regenQrHint:
+          "Already-connected trusted phones don't need the QR code, just open the URL; the QR code is only for pairing a new phone.",
         pairingQrLabel: "Pairing QR code (valid for 10 minutes, scan with your phone):",
         refresh: "Refresh",
         pairingQrAlt: "Pairing QR code",
