@@ -1969,9 +1969,17 @@ function App() {
     const bucket = bucketKey(targetRepoId, sid);
     const repoKey = repoKeyOf(targetRepoId);
     const targetRepo = repos.find((r) => r.id === targetRepoId) ?? null;
-    const sendPermissionMode = permissionOverrides[bucket] ?? defaultPermissionMode;
-    const sendGoalEnabled = goalOverrides[bucket] ?? false;
-    const sendModelKey = modelOverrides[bucket] ?? defaultActiveModelKey;
+    // A draft's pre-send toggles (permission/goal/model) were keyed under the
+    // SHARED draft bucket (<repo>::_none_), NOT the freshly-created real session
+    // bucket that `ensureActiveSession` just produced above. Read them from the
+    // draft bucket on first send, else the draft's Goal toggle is silently
+    // dropped (composer icon stays lit — it reads activeBucket = draft — while
+    // the send reads the empty real bucket → goal never set). The migration
+    // below then moves the override onto the real bucket for follow-ups.
+    const overrideBucket = wasDraft ? (sendOpts.bucket ?? activeBucket) : bucket;
+    const sendPermissionMode = permissionOverrides[overrideBucket] ?? defaultPermissionMode;
+    const sendGoalEnabled = goalOverrides[overrideBucket] ?? false;
+    const sendModelKey = modelOverrides[overrideBucket] ?? defaultActiveModelKey;
     const clientMessageId = sendOpts.clientMessageId ?? newQueuedId();
 
     // A draft has no sessionId, so its permission/goal overrides were keyed
