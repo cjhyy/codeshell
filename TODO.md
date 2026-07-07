@@ -37,8 +37,7 @@
 - **聊天软件接入（channel，参考 OpenClaw）**（`docs/todo/im-gateway-remote-orchestration.md`）：微信/Telegram 做成可插拔 channel 前端。core 保持 channel-agnostic，平台接入做外部插件；接入做成一类凭证进 CredentialStore；扫码微信号绑死为收发身份 + 必配 allowlist。未立项。
 - **工程质量 P7**：builtin tools 集成测试 / E2E / CI 覆盖率 >60% / 性能 / 文档。
   - **Electron e2e 设施**（playwright 现是孤儿依赖）：用 `_electron` API 驱动真机 app，沉淀 `verifier-electron` 基座。`launchApp()` 按 title/URL 抓主窗（**别用 `firstWindow()`，会抓 DevTools 窗**）；难点：webview 嵌套需 `frameLocator` / node-pty 按 Electron ABI 重编 + CI 需 `xvfb-run`。
-- **TUI 宽表截断**（`MessageContent.tsx:163` 列宽 cap 40 会截断宽表）——小修，非追求与 desktop 完全一致（终端环境本就不该强求富渲染一致，图片/折叠/点击链接在 TUI 无意义）。
-- **命名收口**：`repo`(renderer `activeRepoPath`) / `workspace`(core `session-manager.ts:36`) / `project`(scope 值+文案) / `cwd` 四词同义混用，跨 renderer↔core 边界收口（机械改名为主，量级 M，暂缓）。（`TextConnectionsPanel.tsx` 515→145 行拆分已完成 commit `cb354c58`。）
+- **命名收口**：`repo`(renderer `activeRepoPath`) / `workspace`(core `session-manager.ts:36`) / `project`(scope 值+文案) / `cwd` 四词同义混用，跨 renderer↔core 边界收口（机械改名为主，量级 M，暂缓）。
 - **其他未落地设计稿**（见 `docs/todo/`）：`roadmap.md`(Phase 0–6)、`prompt-cache-optimization.md`、`session-cumulative-cache-usage-plan.md`、`mcp-http-auth-oauth-link-tech-design.md`、`smoke-automation-mock-provider.md`、`worktree-session-isolation-research.md`。
 
 ---
