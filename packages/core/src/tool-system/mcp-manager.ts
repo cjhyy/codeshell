@@ -13,7 +13,7 @@ import { ToolRegistry } from "./registry.js";
 import { logger } from "../logging/logger.js";
 import { CredentialStore } from "../credentials/index.js";
 import { ENV_ALLOWLIST } from "../runtime/spawn-common.js";
-import { writeFile, mkdir } from "node:fs/promises";
+import { mkdir, readdir, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { diagnoseMcpStdioMissingCommand, previewPath } from "./mcp-stdio-diagnostics.js";
 import type { ToolContext } from "./context.js";
@@ -155,7 +155,34 @@ export function inferTransportType(
  * spill itself is bounded by the byte budget below; this cap is just
  * to keep ls(~/.code-shell/mcp_images) tractable.
  */
+const MAX_MCP_IMAGE_SPILLS_PER_TOOL = 50;
 const MAX_MCP_IMAGE_BYTES = 8 * 1024 * 1024;
+
+function spillTimestamp(filename: string, prefix: string): number {
+  const suffix = filename.slice(prefix.length);
+  const dot = suffix.lastIndexOf(".");
+  const raw = dot === -1 ? suffix : suffix.slice(0, dot);
+  const timestamp = Number(raw);
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+async function pruneMcpImageSpills(baseDir: string, prefix: string): Promise<void> {
+  const entries = await readdir(baseDir, { withFileTypes: true });
+  const spills = entries
+    .filter((entry) => entry.isFile() && entry.name.startsWith(prefix))
+    .map((entry) => ({
+      name: entry.name,
+      timestamp: spillTimestamp(entry.name, prefix),
+    }))
+    .sort((a, b) => a.timestamp - b.timestamp || a.name.localeCompare(b.name));
+
+  const excess = spills.length - MAX_MCP_IMAGE_SPILLS_PER_TOOL;
+  if (excess <= 0) return;
+
+  await Promise.all(
+    spills.slice(0, excess).map((entry) => unlink(join(baseDir, entry.name)).catch(() => {})),
+  );
+}
 
 /**
  * Persist an MCP-returned image to disk and return the textual
@@ -191,12 +218,14 @@ export async function spillMcpImage(
         : "png";
   const safeServer = serverName.replace(/[^\w.-]+/g, "_");
   const safeTool = toolName.replace(/[^\w.-]+/g, "_");
-  const filename = `${safeServer}-${safeTool}-${now()}.${ext}`;
+  const prefix = `${safeServer}-${safeTool}-`;
+  const filename = `${prefix}${now()}.${ext}`;
   const filePath = join(baseDir, filename);
 
   try {
     await mkdir(baseDir, { recursive: true });
     await writeFile(filePath, Buffer.from(base64, "base64"));
+    await pruneMcpImageSpills(baseDir, prefix);
   } catch (err) {
     logger.warn("mcp.image_spill_failed", {
       server: serverName,

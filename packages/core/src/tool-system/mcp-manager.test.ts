@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -232,6 +232,30 @@ describe("spillMcpImage CODE_SHELL_HOME layout", () => {
         process.env.CODE_SHELL_HOME = previous;
       }
       rmSync(home, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("spillMcpImage retention", () => {
+  test("deletes older spills after the per-server-tool retained-file cap", async () => {
+    const baseDir = mkdtempSync(join(tmpdir(), "mcp-spill-retention-"));
+    try {
+      const image = Buffer.from("x").toString("base64");
+      for (let i = 0; i < 52; i++) {
+        await spillMcpImage("srv", "shot", image, "image/png", {
+          baseDir,
+          now: () => i,
+        });
+      }
+
+      const files = readdirSync(baseDir).filter((name) => name.startsWith("srv-shot-"));
+
+      expect(files).toHaveLength(50);
+      expect(files).not.toContain("srv-shot-0.png");
+      expect(files).not.toContain("srv-shot-1.png");
+      expect(files).toContain("srv-shot-51.png");
+    } finally {
+      rmSync(baseDir, { recursive: true, force: true });
     }
   });
 });
