@@ -201,6 +201,38 @@ describe("stripInternalToolArgs", () => {
   });
 });
 
+describe("MCPManager discovered tool executors", () => {
+  test("forward the tool execution abort signal to client.callTool", async () => {
+    const registry = new ToolRegistry({ builtinTools: [] });
+    const manager = new MCPManager(registry);
+    let callOptions: { signal?: AbortSignal } | undefined;
+    const client = {
+      listTools: async () => ({
+        tools: [{ name: "doit", inputSchema: { type: "object", properties: {} } }],
+      }),
+      callTool: async (
+        _request: unknown,
+        _resultSchema?: unknown,
+        options?: { signal?: AbortSignal },
+      ) => {
+        callOptions = options;
+        return { content: [{ type: "text", text: "ok" }] };
+      },
+    };
+
+    await (manager as any).discoverTools("srv", client);
+    const parent = new AbortController();
+    const result = await registry.executeTool(
+      "mcp_srv_doit",
+      { value: 1 },
+      { signal: parent.signal, ctx: { cwd: "/tmp" } as any },
+    );
+
+    expect(result.result).toContain("ok");
+    expect(callOptions?.signal).toBeInstanceOf(AbortSignal);
+  });
+});
+
 /**
  * Codex-style env-secret handling: the MCP config stores the NAME of an env
  * var; the secret value is read from process.env at connect time so it never

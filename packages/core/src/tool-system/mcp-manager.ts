@@ -16,6 +16,7 @@ import { ENV_ALLOWLIST } from "../runtime/spawn-common.js";
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { diagnoseMcpStdioMissingCommand, previewPath } from "./mcp-stdio-diagnostics.js";
+import type { ToolContext } from "./context.js";
 
 interface MCPConnection {
   client: Client;
@@ -515,11 +516,15 @@ export class MCPManager {
       const registered = buildRegisteredTool(serverName, tool);
 
       // Register with an executor that calls the MCP server
-      this.toolRegistry.registerTool(registered, async (args: Record<string, unknown>) => {
-        const callResult = await client.callTool({
-          name: tool.name,
-          arguments: stripInternalToolArgs(args),
-        });
+      this.toolRegistry.registerTool(registered, async (args: Record<string, unknown>, ctx?: ToolContext) => {
+        const callResult = await client.callTool(
+          {
+            name: tool.name,
+            arguments: stripInternalToolArgs(args),
+          },
+          undefined,
+          ctx?.signal ? { signal: ctx.signal } : undefined,
+        );
 
         // Extract text + image content from the result. Image blobs
         // are spilled to ~/.code-shell/mcp_images/ so they don't bloat
