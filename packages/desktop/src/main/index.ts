@@ -63,7 +63,7 @@ import {
 } from "@cjhyy/code-shell-core";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
-import { registerGuest } from "./browser-driver/active-guest.js";
+import { listGuestSessions, registerGuest } from "./browser-driver/active-guest.js";
 import { buildDesktopAutomationRunner, makeCronRunnerWithResume } from "./automation-host.js";
 import type { CronRunResult } from "@cjhyy/code-shell-core";
 import {
@@ -87,8 +87,10 @@ import {
   getCookiesForDomain,
   captureCookieJar,
   captureAllCookies,
+  captureAllCookiesFromSessions,
   restoreCookiesToBrowser,
   sweepStaleLeases,
+  BROWSER_PARTITION,
   type ElectronCookieLike,
 } from "./credentials-service.js";
 import { loginAndCaptureCookies } from "./credentials-login/index.js";
@@ -1105,9 +1107,10 @@ function hardenWebviewGuests(win: BrowserWindow): void {
     // an arbitrary partition, e.g. the app's own default session); anything else
     // → the shared browser partition.
     const wantPartition = typeof params.partition === "string" ? params.partition : "";
-    params.partition = wantPartition.startsWith("persist:browser")
-      ? wantPartition
-      : "persist:browser";
+    params.partition =
+      wantPartition === BROWSER_PARTITION || wantPartition.startsWith(`${BROWSER_PARTITION}:`)
+        ? wantPartition
+        : BROWSER_PARTITION;
   });
   win.webContents.on("did-attach-webview", (_e, guest) => {
     // Register as the browser-automation target (most-recent guest = active tab).
@@ -1654,30 +1657,45 @@ ipcMain.handle(
     new CredentialStore(cwd || undefined).patch(scope, id, fields as never);
   },
 );
-ipcMain.handle("credentials:cookieDomains", async () => listCookieDomains());
-ipcMain.handle("credentials:cookiePreview", async (_e, domain: string) => {
+function browserPartitionForBucket(bucket: unknown): string | undefined {
+  if (typeof bucket !== "string" || !bucket) return undefined;
+  // MUST match PanelArea.tsx's partition exactly (no trim) — same cleaning
+  // regex, same input — or capture/restore would target a different partition
+  // than the one the panel's <webview> actually writes to.
+  const safeBucket = bucket.replace(/[^a-zA-Z0-9_:.@-]/g, "_");
+  return `${BROWSER_PARTITION}:${safeBucket}`;
+}
+
+ipcMain.handle("credentials:cookieDomains", async (_e, bucket?: string) =>
+  listCookieDomains(browserPartitionForBucket(bucket)),
+);
+ipcMain.handle("credentials:cookiePreview", async (_e, domain: string, bucket?: string) => {
   // Preview only: just count the cookies in the partition. No lease file is
   // materialized here — the actual cookies.txt is created on demand by the
   // (deferred) UseGate when a tool call is approved.
-  const cookies = await getCookiesForDomain(domain);
+  const cookies = await getCookiesForDomain(domain, browserPartitionForBucket(bucket));
   return { count: cookies.length };
 });
 // 第二期:按域拓取 cookie jar(renderer 拿去组装成 cookie 凭证存进 CredentialStore)。
-ipcMain.handle("credentials:captureCookieJar", async (_e, domain: string) => {
+ipcMain.handle("credentials:captureCookieJar", async (_e, domain: string, bucket?: string) => {
   if (typeof domain !== "string" || !domain.trim()) {
     throw new Error("credentials:captureCookieJar requires a domain");
   }
-  const jar = await captureCookieJar(domain.trim());
+  const jar = await captureCookieJar(domain.trim(), browserPartitionForBucket(bucket));
   return { jar, count: jar.length };
 });
-// 第二期+:全量拓取 persist:browser 分区所有 cookie(不按域过滤),用于按域抓不全的站。
-ipcMain.handle("credentials:captureAllCookies", async () => {
-  const jar = await captureAllCookies();
+// 第二期+:全量拓取当前 chat session 的浏览器分区所有 cookie(不按域过滤)。
+ipcMain.handle("credentials:captureAllCookies", async (_e, bucket?: string) => {
+  const jar = await captureAllCookies(browserPartitionForBucket(bucket));
   return { jar, count: jar.length };
 });
-// 第二期:切换账号 — 把某条 cookie 凭证的 jar 导回 persist:browser 覆盖当前登录态,
+// 第二期+:兜底拓取所有当前活着的浏览器面板 session,去重合并。
+ipcMain.handle("credentials:captureAllCookiesAllSessions", async () => {
+  return captureAllCookiesFromSessions(listGuestSessions());
+});
+// 第二期:切换账号 — 把某条 cookie 凭证的 jar 导回当前会话浏览器分区覆盖当前登录态,
 // 然后广播 browser:reload 让浏览器面板刷新成该账号身份。
-ipcMain.handle("credentials:restoreCookieToBrowser", async (_e, cwd: string, id: string) => {
+ipcMain.handle("credentials:restoreCookieToBrowser", async (_e, cwd: string, id: string, bucket?: string) => {
   if (typeof id !== "string" || !id) throw new Error("credentials:restoreCookieToBrowser requires id");
   const cred = new CredentialStore(cwd || undefined).resolve(id);
   if (!cred || cred.type !== "cookie") throw new Error(`无 cookie 凭证: "${id}"`);
@@ -1692,7 +1710,8 @@ ipcMain.handle("credentials:restoreCookieToBrowser", async (_e, cwd: string, id:
   } catch {
     throw new Error(`凭证「${cred.label}」的 cookie 数据损坏`);
   }
-  const { count } = await restoreCookiesToBrowser(jar, cred.meta?.switchMode === "merge" ? "merge" : "clear");
+  const mode = cred.meta?.switchMode === "clear" ? "clear" : "merge";
+  const { count } = await restoreCookiesToBrowser(jar, mode, browserPartitionForBucket(bucket));
   for (const w of BrowserWindow.getAllWindows()) {
     if (!w.isDestroyed()) w.webContents.send("browser:reload");
   }

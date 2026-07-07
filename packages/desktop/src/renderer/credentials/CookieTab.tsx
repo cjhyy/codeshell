@@ -46,13 +46,13 @@ function pushUrlHistory(url: string): string[] {
  *  1. 弹窗登录(主路径):开**全新隔离无痕窗**(非持久 login-<uuid>,登完即焚),用户现登 →
  *     抓该窗口**全量** cookie。因 session 干净,无需配域名/范围。只填登录地址(免 https,
  *     输过的地址以标签复用)。
- *  2. 从内置浏览器全量拓取:把你平时用的内置浏览器面板(persist:browser)里**所有**已登录
- *     cookie 整包存成一条凭证(适合已在面板登过的站)。
+ *  2. 从内置浏览器全量拓取:抓当前 chat session 的浏览器分区,或兜底抓所有活着的浏览器面板
+ *     session,把 cookie 整包存成一条凭证(适合已在面板登过的站)。
  *
  * 账号卡片:切换 / 编辑(重命名)/ 重新登录 / 删除;逐条「AI 可自动取用」「AI 可自动注入浏览器」
  * 开关 + 逐条「切换策略」(清空再注入 / 只覆盖同名)。
  */
-export function CookieTab({ cwd }: { cwd: string }) {
+export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: string | null }) {
   const { t } = useT();
   const toast = useToast();
   const confirm = useConfirm();
@@ -129,7 +129,7 @@ export function CookieTab({ cwd }: { cwd: string }) {
         secret: JSON.stringify(res.jar),
         autoUseByAI: opts.fixed?.autoUseByAI,
         autoInjectByAI: opts.fixed?.autoInjectByAI,
-        meta: { platform, domain: res.domain, scope: "all", switchMode: opts.fixed?.switchMode ?? "clear" },
+        meta: { platform, domain: res.domain, scope: "all", switchMode: opts.fixed?.switchMode ?? "merge" },
       });
       toast({
         message: t(opts.fixed ? "ext.cookie.repulledToast" : "ext.cookie.capturedAllToast", {
@@ -154,8 +154,10 @@ export function CookieTab({ cwd }: { cwd: string }) {
     }
   };
 
-  /** 从内置浏览器面板(persist:browser)全量拓取已登录 cookie，存成一条凭证。 */
-  const captureFromBrowser = async () => {
+  const saveBrowserCapture = async (opts: {
+    capture: () => Promise<{ jar: unknown[]; count: number }>;
+    emptyMessage: string;
+  }) => {
     const name = await prompt({
       title: t("ext.cookie.captureBrowserTitle"),
       message: t("ext.cookie.captureBrowserMessage"),
@@ -165,9 +167,9 @@ export function CookieTab({ cwd }: { cwd: string }) {
     const accountName = name.trim() || t("ext.cookie.defaultAccountName");
     setBusy(true);
     try {
-      const { jar, count } = await window.codeshell.credentials.captureAllCookies();
+      const { jar, count } = await opts.capture();
       if (count === 0) {
-        toast({ message: t("ext.cookie.noCookieAtAll"), variant: "error" });
+        toast({ message: opts.emptyMessage, variant: "error" });
         return;
       }
       await window.codeshell.credentials.save(cwd, "user", {
@@ -175,13 +177,33 @@ export function CookieTab({ cwd }: { cwd: string }) {
         type: "cookie",
         label: accountName,
         secret: JSON.stringify(jar),
-        meta: { platform: "browser", scope: "all", switchMode: "clear" },
+        meta: { platform: "browser", scope: "all", switchMode: "merge" },
       });
       toast({ message: t("ext.cookie.capturedAllToast", { label: accountName, count }) });
       load();
     } finally {
       setBusy(false);
     }
+  };
+
+  /** 抓打开凭证页的当前 chat session 浏览器分区。 */
+  const captureCurrentSessionFromBrowser = async () => {
+    if (!activeBucket) {
+      toast({ message: t("ext.cookie.noCookieCurrentSession"), variant: "error" });
+      return;
+    }
+    await saveBrowserCapture({
+      capture: () => window.codeshell.credentials.captureAllCookies(activeBucket),
+      emptyMessage: t("ext.cookie.noCookieCurrentSession"),
+    });
+  };
+
+  /** 抓所有当前活着的浏览器面板 session,去重合并。 */
+  const captureAllSessionsFromBrowser = async () => {
+    await saveBrowserCapture({
+      capture: () => window.codeshell.credentials.captureAllCookiesAllSessions(),
+      emptyMessage: t("ext.cookie.noCookieAllSessions"),
+    });
   };
 
   /** 卡片「重新登录」:用原凭证的域重新弹窗登录,刷新过期 cookie(沿用其策略/开关)。 */
@@ -204,7 +226,7 @@ export function CookieTab({ cwd }: { cwd: string }) {
   };
 
   const switchTo = async (c: MaskedCredentialView) => {
-    const merge = c.meta?.switchMode === "merge";
+    const merge = c.meta?.switchMode !== "clear";
     const ok = await confirm({
       title: t("ext.cookie.switchTitle"),
       message: t("ext.cookie.switchMessage", { label: c.label }),
@@ -214,7 +236,11 @@ export function CookieTab({ cwd }: { cwd: string }) {
     if (!ok) return;
     setBusy(true);
     try {
-      const { count } = await window.codeshell.credentials.restoreCookieToBrowser(cwd, c.id);
+      const { count } = await window.codeshell.credentials.restoreCookieToBrowser(
+        cwd,
+        c.id,
+        activeBucket ?? undefined,
+      );
       toast({ message: t("ext.cookie.switchedToast", { label: c.label, count }) });
     } catch (e) {
       toast({ message: t("ext.cookie.switchFailed", { error: String(e) }), variant: "error" });
@@ -335,13 +361,23 @@ export function CookieTab({ cwd }: { cwd: string }) {
             <p className="text-sm font-medium">{t("ext.cookie.browserSectionTitle")}</p>
             <p className="text-xs text-muted-foreground">{t("ext.cookie.captureFromBrowserTitle")}</p>
           </div>
-          <Button
-            variant="secondary"
-            disabled={busy}
-            onClick={() => void captureFromBrowser()}
-          >
-            {t("ext.cookie.captureFromBrowser")}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              disabled={busy}
+              onClick={() => void captureCurrentSessionFromBrowser()}
+            >
+              {t("ext.cookie.captureCurrentSession")}
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={busy}
+              onClick={() => void captureAllSessionsFromBrowser()}
+            >
+              {t("ext.cookie.captureAllSessions")}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">{t("ext.cookie.captureAllSessionsWarning")}</p>
         </div>
       </Card>
 
@@ -404,7 +440,7 @@ export function CookieTab({ cwd }: { cwd: string }) {
                   <label className="flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
                     {t("ext.cookie.switchModeLabel")}
                     <SimpleSelect
-                      value={c.meta?.switchMode === "merge" ? "merge" : "clear"}
+                      value={c.meta?.switchMode === "clear" ? "clear" : "merge"}
                       onChange={(v) => setSwitchMode(c, v as SwitchMode)}
                       options={[
                         { value: "clear", label: t("ext.cookie.switchModeClear") },

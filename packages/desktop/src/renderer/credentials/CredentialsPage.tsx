@@ -8,7 +8,13 @@ import { useT } from "../i18n/I18nProvider";
 type TabKey = "cookie" | "token" | "link";
 
 /** Full-screen 凭证 page: Cookie / Permission Token / Link (mirrors ManagePage tabs). */
-export function CredentialsPage({ activeRepoPath }: { activeRepoPath: string | null }) {
+export function CredentialsPage({
+  activeRepoPath,
+  activeBucket = null,
+}: {
+  activeRepoPath: string | null;
+  activeBucket?: string | null;
+}) {
   const { t } = useT();
   const [tab, setTab] = useState<TabKey>("cookie");
   const cwd = activeRepoPath ?? "";
@@ -33,15 +39,13 @@ export function CredentialsPage({ activeRepoPath }: { activeRepoPath: string | n
   return (
     <div className="h-full overflow-y-auto p-6">
       <h2 className="mb-1 text-lg font-semibold">{t("ext.credentials.pageTitle")}</h2>
-      <p className="mb-4 text-sm text-muted-foreground">
-        {t("ext.credentials.pageSubtitle")}
-      </p>
+      <p className="mb-4 text-sm text-muted-foreground">{t("ext.credentials.pageSubtitle")}</p>
       <div className="mb-4 flex items-center gap-1">
         {tabBtn("cookie", t("ext.credentials.tabCookie"), Cookie)}
         {tabBtn("token", t("ext.credentials.tabToken"), KeyRound)}
         {tabBtn("link", t("ext.credentials.tabLink"), Link2)}
       </div>
-      {tab === "cookie" && <CookieTab cwd={cwd} />}
+      {tab === "cookie" && <CookieTab cwd={cwd} activeBucket={activeBucket} />}
       {tab === "token" && <TokenTab cwd={cwd} kind="token" />}
       {tab === "link" && <LinkTab cwd={cwd} />}
     </div>

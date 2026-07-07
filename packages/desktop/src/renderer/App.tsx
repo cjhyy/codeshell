@@ -3373,7 +3373,10 @@ function App() {
             ) : view.viewMode === "customize" ? (
               <CustomizeView activeRepoPath={activeRepo?.path ?? null} />
             ) : view.viewMode === "credentials" ? (
-              <CredentialsPage activeRepoPath={activeRepo?.path ?? null} />
+              <CredentialsPage
+                activeRepoPath={activeRepo?.path ?? null}
+                activeBucket={activeSessionId !== null ? activeBucket : null}
+              />
             ) : view.viewMode === "runs" ? (
               <RunsView initialRunId={runsInitialRunId} />
             ) : view.viewMode === "automation" ? (

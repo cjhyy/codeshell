@@ -832,18 +832,22 @@ contextBridge.exposeInMainWorld("codeshell", {
         meta?: unknown;
       },
     ) => ipcRenderer.invoke("credentials:patchMeta", cwd, scope, id, fields),
-    cookieDomains: (): Promise<string[]> => ipcRenderer.invoke("credentials:cookieDomains"),
-    cookiePreview: (domain: string): Promise<{ count: number }> =>
-      ipcRenderer.invoke("credentials:cookiePreview", domain),
+    cookieDomains: (bucket?: string): Promise<string[]> =>
+      ipcRenderer.invoke("credentials:cookieDomains", bucket),
+    cookiePreview: (domain: string, bucket?: string): Promise<{ count: number }> =>
+      ipcRenderer.invoke("credentials:cookiePreview", domain, bucket),
     /** 按域拓取 cookie jar(组装成 cookie 凭证用)。 */
-    captureCookieJar: (domain: string): Promise<{ jar: unknown[]; count: number }> =>
-      ipcRenderer.invoke("credentials:captureCookieJar", domain),
-    /** 全量拓取 persist:browser 分区所有 cookie(按域抓不全的站用)。 */
-    captureAllCookies: (): Promise<{ jar: unknown[]; count: number }> =>
-      ipcRenderer.invoke("credentials:captureAllCookies"),
+    captureCookieJar: (domain: string, bucket?: string): Promise<{ jar: unknown[]; count: number }> =>
+      ipcRenderer.invoke("credentials:captureCookieJar", domain, bucket),
+    /** 全量拓取当前 chat session 浏览器分区所有 cookie(按域抓不全的站用)。 */
+    captureAllCookies: (bucket?: string): Promise<{ jar: unknown[]; count: number }> =>
+      ipcRenderer.invoke("credentials:captureAllCookies", bucket),
+    /** 全量拓取所有当前活着的内置浏览器面板 session,去重合并。 */
+    captureAllCookiesAllSessions: (): Promise<{ jar: unknown[]; count: number }> =>
+      ipcRenderer.invoke("credentials:captureAllCookiesAllSessions"),
     /** 切换账号:把某 cookie 凭证导回浏览器覆盖当前登录态。 */
-    restoreCookieToBrowser: (cwd: string, id: string): Promise<{ count: number }> =>
-      ipcRenderer.invoke("credentials:restoreCookieToBrowser", cwd, id),
+    restoreCookieToBrowser: (cwd: string, id: string, bucket?: string): Promise<{ count: number }> =>
+      ipcRenderer.invoke("credentials:restoreCookieToBrowser", cwd, id, bucket),
     /** 独立窗口登录抓 cookie(登 Google/YouTube 用)。 */
     loginCapture: (req: {
       url: string;

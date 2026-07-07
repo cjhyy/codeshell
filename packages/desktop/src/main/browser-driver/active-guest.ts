@@ -8,7 +8,7 @@
  * without pulling in window/panel code.
  */
 
-import type { WebContents } from "electron";
+import type { Session, WebContents } from "electron";
 
 let active: WebContents | null = null;
 const guests = new Set<WebContents>();
@@ -61,6 +61,20 @@ export function listGuests(): GuestTab[] {
       title: safe(() => g.getTitle()) ?? "",
       active: g === cur,
     });
+  }
+  return out;
+}
+
+/** List distinct Electron sessions backing live browser guests. */
+export function listGuestSessions(): Session[] {
+  const out: Session[] = [];
+  const seen = new Set<Session>();
+  for (const g of guests) {
+    if (g.isDestroyed()) continue;
+    const sess = safe(() => g.session);
+    if (!sess || seen.has(sess)) continue;
+    seen.add(sess);
+    out.push(sess);
   }
   return out;
 }

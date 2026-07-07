@@ -631,14 +631,16 @@ export interface CodeshellApi {
         };
       },
     ): Promise<void>;
-    cookieDomains(): Promise<string[]>;
-    cookiePreview(domain: string): Promise<{ count: number }>;
+    cookieDomains(bucket?: string): Promise<string[]>;
+    cookiePreview(domain: string, bucket?: string): Promise<{ count: number }>;
     /** 按域拓取 cookie jar(组装成 cookie 凭证存库用)。 */
-    captureCookieJar(domain: string): Promise<{ jar: unknown[]; count: number }>;
-    /** 全量拓取 persist:browser 分区所有 cookie(按域抓不全的站用)。 */
-    captureAllCookies(): Promise<{ jar: unknown[]; count: number }>;
+    captureCookieJar(domain: string, bucket?: string): Promise<{ jar: unknown[]; count: number }>;
+    /** 全量拓取当前 chat session 浏览器分区所有 cookie(按域抓不全的站用)。 */
+    captureAllCookies(bucket?: string): Promise<{ jar: unknown[]; count: number }>;
+    /** 全量拓取所有当前活着的内置浏览器面板 session,去重合并。 */
+    captureAllCookiesAllSessions(): Promise<{ jar: unknown[]; count: number }>;
     /** 切换账号:把某 cookie 凭证导回浏览器覆盖当前登录态。 */
-    restoreCookieToBrowser(cwd: string, id: string): Promise<{ count: number }>;
+    restoreCookieToBrowser(cwd: string, id: string, bucket?: string): Promise<{ count: number }>;
     /** 独立窗口登录抓 cookie(登 Google/YouTube 用)。fullCapture=全量模式。 */
     loginCapture(req: {
       url: string;
