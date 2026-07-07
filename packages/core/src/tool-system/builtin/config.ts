@@ -6,6 +6,8 @@ import type { ToolDefinition } from "../../types.js";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { setDottedSetting } from "../../settings/manager.js";
+import type { ToolContext } from "../context.js";
+import { enforcePathPolicyWithApproval } from "../path-policy.js";
 
 export const configToolDef: ToolDefinition = {
   name: "Config",
@@ -32,12 +34,17 @@ export const configToolDef: ToolDefinition = {
   },
 };
 
-export async function configTool(args: Record<string, unknown>): Promise<string> {
+export async function configTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
   const action = args.action as string;
-  const cwd = (args.__cwd as string) ?? process.cwd();
+  const cwd = ctx?.cwd ?? process.cwd();
   const configPath = join(cwd, ".code-shell", "settings.json");
 
   if (action === "read") {
+    const blocked = await enforcePathPolicyWithApproval(configPath, "read", ctx);
+    if (blocked) return blocked;
     if (!existsSync(configPath)) {
       return "No project settings found. Use /init to create one.";
     }
@@ -46,6 +53,8 @@ export async function configTool(args: Record<string, unknown>): Promise<string>
   }
 
   if (action === "write") {
+    const blocked = await enforcePathPolicyWithApproval(configPath, "write", ctx);
+    if (blocked) return blocked;
     const key = args.key as string;
     const value = args.value;
     if (!key) return "Error: 'key' is required for write action.";

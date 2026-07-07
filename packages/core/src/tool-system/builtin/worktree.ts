@@ -40,7 +40,7 @@ export const enterWorktreeToolDef: ToolDefinition = {
         description: "Deprecated alias for target. Prefer target.",
       },
     },
-    required: ["target"],
+    required: [],
   },
 };
 
@@ -51,12 +51,11 @@ export async function enterWorktreeTool(
   const target = stringArg(args.target) ?? stringArg(args.slug);
   if (!target) return "Error: target is required";
 
-  const resolved = sessionServices(args, ctx);
+  const resolved = sessionServices(ctx);
   if (!resolved.ok) return resolved.error;
   const { sessionId, sessionManager } = resolved;
 
-  const mainRoot =
-    sessionManager.readCwd(sessionId) ?? stringArg(args.__cwd) ?? ctx?.cwd ?? process.cwd();
+  const mainRoot = sessionManager.readCwd(sessionId) ?? ctx?.cwd ?? process.cwd();
   const fromWorkspace = sessionManager.getSessionWorkspace(sessionId) ?? {
     root: mainRoot,
     kind: "main" as const,
@@ -156,7 +155,7 @@ export async function exitWorktreeTool(
   args: Record<string, unknown>,
   ctx?: ToolContext,
 ): Promise<string> {
-  const resolved = sessionServices(args, ctx);
+  const resolved = sessionServices(ctx);
   if (!resolved.ok) return resolved.error;
   const { sessionId, sessionManager } = resolved;
 
@@ -196,6 +195,20 @@ export async function exitWorktreeTool(
   const currentTurnRoot = ctx?.cwd ?? workspace.root;
   try {
     let removal: RemoveWorktreeResult | undefined;
+    if (action === "discard" || action === "detach") {
+      const otherOwners = otherSessionOwnersForWorktree(
+        sessionManager,
+        sessionId,
+        mainRoot,
+        workspace.worktree.path,
+      );
+      if (otherOwners.length > 0) {
+        const mainWorkspace: SessionWorkspace = { root: mainRoot, kind: "main" };
+        persistSessionWorkspace(sessionManager, sessionId, mainWorkspace, ctx);
+        sessionManager.recordWorkspaceHandoff(sessionId, workspace, mainWorkspace);
+        return sharedWorktreeRemovalSkippedMessage(otherOwners, mainRoot, currentTurnRoot);
+      }
+    }
     if (action === "discard") {
       removal = removeWorktree(workspace.worktree.path, true);
     } else if (action === "detach") {
@@ -246,14 +259,44 @@ type SessionResolution =
   | { ok: true; sessionId: string; sessionManager: SessionManager }
   | { ok: false; error: string };
 
-function sessionServices(args: Record<string, unknown>, ctx?: ToolContext): SessionResolution {
-  const sessionId = stringArg(args.__sessionId) ?? ctx?.sessionId;
+function sessionServices(ctx?: ToolContext): SessionResolution {
+  const sessionId = ctx?.sessionId;
   if (!sessionId) return { ok: false, error: "Error: worktree tools require a sessionId." };
   const sessionManager = ctx?.engine?.getSessionManager?.();
   if (!sessionManager) {
     return { ok: false, error: "Error: worktree tools require a session manager." };
   }
   return { ok: true, sessionId, sessionManager };
+}
+
+function otherSessionOwnersForWorktree(
+  sessionManager: SessionManager,
+  sessionId: string,
+  mainRoot: string,
+  worktreePath: string,
+): string[] {
+  const workspaceOwners = sessionManager
+    .list(Number.MAX_SAFE_INTEGER)
+    .map((session) => ({ sessionId: session.sessionId, workspace: session.workspace }))
+    .filter((owner) => owner.workspace !== undefined);
+  const entry = listWorktrees(mainRoot, {
+    currentSessionId: sessionId,
+    workspaceOwners,
+  }).find((worktree) => resolve(worktree.path) === resolve(worktreePath));
+  return (entry?.occupiedBySessionIds ?? []).filter((owner) => owner !== sessionId);
+}
+
+function sharedWorktreeRemovalSkippedMessage(
+  otherOwners: string[],
+  mainRoot: string,
+  currentTurnRoot: string,
+): string {
+  return (
+    `Error: this worktree is also in use by session(s) ${otherOwners.join(", ")}; ` +
+    `switching to main, but removal has been skipped.\n` +
+    `Back to ${mainRoot} starting next turn.\n` +
+    nextTurnNotice(mainRoot, currentTurnRoot)
+  );
 }
 
 interface ResolvedTarget {

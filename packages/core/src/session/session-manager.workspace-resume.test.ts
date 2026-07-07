@@ -81,6 +81,31 @@ describe("SessionManager workspace resume resolution", () => {
     expect(sm.getSessionWorkspace("resume-recreate")!.kind).toBe("worktree");
   });
 
+  test("does not accept a regular file at the persisted worktree path", () => {
+    sm.create(repo, "m", "p", "resume-file");
+    const wt = createWorktree(repo, "resume-file", "resume-file");
+    sm.setSessionWorkspace("resume-file", {
+      root: wt.worktreePath,
+      kind: "worktree",
+      worktree: {
+        path: wt.worktreePath,
+        branch: wt.worktreeBranch,
+        baseRef: wt.originalBranch ?? "HEAD",
+        createdBy: "codeshell",
+      },
+    });
+    removeWorktree(wt.worktreePath, false);
+    writeFileSync(wt.worktreePath, "not a directory\n");
+
+    const resolved = sm.resolveSessionWorkspaceForResume("resume-file");
+
+    expect(resolved.ok).toBe(false);
+    expect(resolved.reason).toBe("worktree_missing_branch_exists");
+    expect(resolved.message).toContain("not a valid git worktree");
+    expect(resolved.message).toContain(wt.worktreePath);
+    expect(sm.getSessionWorkspace("resume-file")!.kind).toBe("worktree");
+  });
+
   test("falls back to main with a clear message when the worktree dir and branch are gone", () => {
     sm.create(repo, "m", "p", "resume-main");
     const wt = createWorktree(repo, "resume-main", "resume-main");

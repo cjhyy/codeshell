@@ -43,6 +43,25 @@ describe("RunApprovalBackend — fail-closed when hooks are missing (§5.6 #15)"
     expect((await p).approved).toBe(true);
   });
 
+  test("a fast approval resolver during onApprovalNeeded does not miss the pending slot", async () => {
+    const backend = new RunApprovalBackend();
+    backend.setTimeout(25);
+    let resolvedDuringHook = false;
+    const hooks: RunLifecycleHooks = {
+      onApprovalNeeded: async () => {
+        resolvedDuringHook = backend.resolveApproval({ approved: true });
+        return { approvalId: "fast" };
+      },
+      onInputNeeded: async () => {},
+    };
+    backend.setHooks(hooks);
+
+    const result = await backend.requestApproval(req);
+
+    expect(resolvedDuringHook).toBe(true);
+    expect(result.approved).toBe(true);
+  });
+
   test("a second pending approval supersedes the first instead of orphaning it", async () => {
     const backend = new RunApprovalBackend();
     const hooks: RunLifecycleHooks = {

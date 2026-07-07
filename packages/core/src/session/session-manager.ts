@@ -6,6 +6,7 @@ import {
   closeSync,
   existsSync,
   mkdirSync,
+  lstatSync,
   openSync,
   readFileSync,
   readSync,
@@ -21,7 +22,7 @@ import type { SessionState, SessionWorkspace } from "../types.js";
 import { Transcript } from "./transcript.js";
 import { SessionError } from "../exceptions.js";
 import { normalizeCumulativeUsageCounters } from "../engine/session-usage.js";
-import { branchExists } from "../git/worktree.js";
+import { branchExists, isGitWorktreeRoot } from "../git/worktree.js";
 
 export interface SessionBundle {
   state: SessionState;
@@ -110,6 +111,20 @@ function isSessionWorkspace(value: unknown): value is SessionWorkspace {
     wt.baseRef.length > 0 &&
     wt.createdBy === "codeshell"
   );
+}
+
+function validateResumeWorktreeRoot(root: string): string | null {
+  if (!existsSync(root)) return "no longer exists";
+  let stat;
+  try {
+    stat = lstatSync(root);
+  } catch {
+    return "no longer exists";
+  }
+  if (stat.isSymbolicLink()) return "is not a valid git worktree (symbolic link)";
+  if (!stat.isDirectory()) return "is not a valid git worktree (not a directory)";
+  if (!isGitWorktreeRoot(root)) return "is not a valid git worktree";
+  return null;
 }
 
 export class SessionManager {
@@ -347,7 +362,8 @@ export class SessionManager {
       };
     }
 
-    if (existsSync(workspace.root)) {
+    const invalidWorktreeReason = validateResumeWorktreeRoot(workspace.root);
+    if (!invalidWorktreeReason) {
       return { ok: true, cwd: workspace.root, workspace, reason: "worktree" };
     }
 
@@ -362,7 +378,7 @@ export class SessionManager {
         reason: "worktree_missing_branch_exists",
         message:
           `Session ${sessionId} is bound to worktree ${workspace.root}, but that directory ` +
-          `no longer exists. Branch ${branch} still exists; recreate the worktree at ` +
+          `${invalidWorktreeReason}. Branch ${branch} still exists; recreate the worktree at ` +
           `${workspace.worktree?.path ?? workspace.root} before resuming, or switch this session ` +
           `back to main explicitly.`,
       };
@@ -378,7 +394,7 @@ export class SessionManager {
       reason: "worktree_missing_branch_gone",
       message:
         `Session ${sessionId} was bound to worktree ${workspace.root}, but that directory ` +
-        `is gone${branch ? ` and branch ${branch} is gone` : ""}; fell back to main ` +
+        `${invalidWorktreeReason}${branch ? ` and branch ${branch} is gone` : ""}; fell back to main ` +
         `${mainRoot}. Re-run the request if you want to continue there.`,
     };
   }

@@ -9,10 +9,11 @@ function normPath(path: string): string {
   return process.platform === "win32" ? path.toLowerCase() : path;
 }
 
-function isStrictChild(child: string, parent: string): boolean {
+function isContainedOrRoot(child: string, parent: string): boolean {
   const c = normPath(child);
-  const p = normPath(parent.endsWith(sep) ? parent : parent + sep);
-  return c !== normPath(parent) && c.startsWith(p);
+  const parentPath = normPath(parent);
+  const parentPrefix = normPath(parent.endsWith(sep) ? parent : parent + sep);
+  return c === parentPath || c.startsWith(parentPrefix);
 }
 
 export function validateRelativePluginSubpath(subpath: string, label: string): string | null {
@@ -54,7 +55,7 @@ export function resolveContainedPluginSubpath(
     return { ok: false, error: `${label} not found in source tree: ${subpath}` };
   }
 
-  if (!isStrictChild(realCandidate, realRoot)) {
+  if (!isContainedOrRoot(realCandidate, realRoot)) {
     return { ok: false, error: `${label} escapes the source tree: ${subpath}` };
   }
   return { ok: true, path: realCandidate };

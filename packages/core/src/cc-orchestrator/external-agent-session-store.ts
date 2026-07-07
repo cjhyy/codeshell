@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { codeShellHome } from "../session/session-manager.js";
 import { logger } from "../logging/logger.js";
@@ -95,6 +103,8 @@ export class ExternalAgentSessionStore {
     const dir = dirname(this.file);
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 
+    // TODO: move this sync polling lock to an async write queue; callers can
+    // otherwise block the event loop for up to LOCK_WAIT_MS under contention.
     const lockDir = `${this.file}.lock`;
     const deadline = Date.now() + LOCK_WAIT_MS;
     while (true) {

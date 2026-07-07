@@ -109,6 +109,30 @@ export function branchExists(cwd: string, branch: string): boolean {
   }
 }
 
+export function isGitWorktreeRoot(cwd: string): boolean {
+  if (!existsSync(join(cwd, ".git"))) return false;
+  try {
+    const inside = execFileSync(GIT_BIN, ["rev-parse", "--is-inside-work-tree"], {
+      cwd,
+      encoding: "utf-8",
+      timeout: 5000,
+    }).trim();
+    if (inside !== "true") return false;
+    const topLevel = execFileSync(
+      GIT_BIN,
+      ["rev-parse", "--path-format=absolute", "--show-toplevel"],
+      {
+        cwd,
+        encoding: "utf-8",
+        timeout: 5000,
+      },
+    ).trim();
+    return resolve(topLevel) === resolve(cwd);
+  } catch {
+    return false;
+  }
+}
+
 export function currentBranch(cwd: string): string | undefined {
   try {
     const branch = execFileSync(GIT_BIN, ["branch", "--show-current"], {
@@ -310,9 +334,7 @@ export function removeWorktree(worktreePath: string, removeBranch = false): Remo
       };
     }
   }
-  return removeBranch
-    ? { dirRemoved: true, branch, branchDeleted: true }
-    : { dirRemoved: true };
+  return removeBranch ? { dirRemoved: true, branch, branchDeleted: true } : { dirRemoved: true };
 }
 
 export function worktreeHasUncommittedChanges(worktreePath: string): boolean {

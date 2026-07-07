@@ -280,8 +280,7 @@ export class AgentServer {
         // `injected` flag so a disk rebuild doesn't render it as a phantom user
         // bubble (the live UI shows only the woken assistant's reply).
         injected: true,
-        onStream: (event: StreamEvent) =>
-          this.notify(Methods.StreamEvent, { sessionId, event }),
+        onStream: (event: StreamEvent) => this.notify(Methods.StreamEvent, { sessionId, event }),
       })
       .catch((err) => {
         // A wakeup turn failing must not crash the bus fan-out. The drained
@@ -612,9 +611,7 @@ export class AgentServer {
       // just clear busy.
       const errName = (err as { name?: string }).name;
       const aborted =
-        runController.signal.aborted ||
-        errName === "AbortError" ||
-        errName === "APIUserAbortError";
+        runController.signal.aborted || errName === "AbortError" || errName === "APIUserAbortError";
       if (aborted) {
         const cancelledResult: RunResult = {
           text: "",
@@ -869,9 +866,7 @@ export class AgentServer {
       : (this.readActiveGoalFromDisk?.(params.sessionId) ??
         this.legacyEngine?.getGoal(params.sessionId) ??
         undefined);
-    this.transport.send(
-      createResponse(req.id, { ok: true, goal: goal ? goal.objective : null }),
-    );
+    this.transport.send(createResponse(req.id, { ok: true, goal: goal ? goal.objective : null }));
   }
 
   /**
@@ -998,7 +993,9 @@ export class AgentServer {
       }
       if (typeof params.planMode === "boolean") s.engine.setPlanMode(params.planMode);
       if (typeof params.permissionMode === "string") {
-        s.engine.setPermissionMode(params.permissionMode as NonNullable<EngineConfig["permissionMode"]>);
+        s.engine.setPermissionMode(
+          params.permissionMode as NonNullable<EngineConfig["permissionMode"]>,
+        );
       }
       if (params.clearModels) {
         this.chatManager.runtime.clearModels();
@@ -1186,7 +1183,11 @@ export class AgentServer {
       case "tools": {
         if (!engine) {
           this.transport.send(
-            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for tools query"),
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InternalError,
+              "No engine available for tools query",
+            ),
           );
           return;
         }
@@ -1229,7 +1230,11 @@ export class AgentServer {
       case "config": {
         if (!engine) {
           this.transport.send(
-            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for config query"),
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InternalError,
+              "No engine available for config query",
+            ),
           );
           return;
         }
@@ -1260,7 +1265,11 @@ export class AgentServer {
       case "session_detail": {
         if (!engine) {
           this.transport.send(
-            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for session_detail query"),
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InternalError,
+              "No engine available for session_detail query",
+            ),
           );
           return;
         }
@@ -1316,11 +1325,7 @@ export class AgentServer {
                 } as any);
               } catch (err: any) {
                 this.transport.send(
-                  createErrorResponse(
-                    req.id,
-                    err.code ?? ErrorCodes.InternalError,
-                    err.message,
-                  ),
+                  createErrorResponse(req.id, err.code ?? ErrorCodes.InternalError, err.message),
                 );
                 return;
               }
@@ -1371,7 +1376,11 @@ export class AgentServer {
       case "models": {
         if (!engine) {
           this.transport.send(
-            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for models query"),
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InternalError,
+              "No engine available for models query",
+            ),
           );
           return;
         }
@@ -1392,7 +1401,11 @@ export class AgentServer {
       case "providers": {
         if (!engine) {
           this.transport.send(
-            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for providers query"),
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InternalError,
+              "No engine available for providers query",
+            ),
           );
           return;
         }
@@ -1448,7 +1461,11 @@ export class AgentServer {
       case "config_set": {
         if (!engine) {
           this.transport.send(
-            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for config_set"),
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InternalError,
+              "No engine available for config_set",
+            ),
           );
           return;
         }
@@ -1471,7 +1488,9 @@ export class AgentServer {
           // a `config_set("llm.apiKey", "...")` confirmation doesn't ship
           // the new secret through the response/log path.
           const safeValue = maskSecretValue(key, value);
-          this.transport.send(createResponse(req.id, { type: "config_set", data: { key, value: safeValue } }));
+          this.transport.send(
+            createResponse(req.id, { type: "config_set", data: { key, value: safeValue } }),
+          );
         } catch (err) {
           this.transport.send(
             createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
@@ -1482,7 +1501,11 @@ export class AgentServer {
       case "config_get": {
         if (!engine) {
           this.transport.send(
-            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for config_get"),
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InternalError,
+              "No engine available for config_get",
+            ),
           );
           return;
         }
@@ -1492,7 +1515,9 @@ export class AgentServer {
           const value = engine.readSetting(key);
           // Mask secret-looking keys (apiKey/token/secret/…) at the boundary.
           const safeValue = maskSecretValue(key, value);
-          this.transport.send(createResponse(req.id, { type: "config_get", data: { key, value: safeValue } }));
+          this.transport.send(
+            createResponse(req.id, { type: "config_get", data: { key, value: safeValue } }),
+          );
         } catch (err) {
           this.transport.send(
             createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
@@ -1503,7 +1528,11 @@ export class AgentServer {
       case "permission_set": {
         if (!engine) {
           this.transport.send(
-            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for permission_set"),
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InternalError,
+              "No engine available for permission_set",
+            ),
           );
           return;
         }
@@ -1530,7 +1559,11 @@ export class AgentServer {
       case "provider_add": {
         if (!engine) {
           this.transport.send(
-            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for provider_add"),
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InternalError,
+              "No engine available for provider_add",
+            ),
           );
           return;
         }
@@ -1560,7 +1593,11 @@ export class AgentServer {
       case "provider_refresh": {
         if (!engine) {
           this.transport.send(
-            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for provider_refresh"),
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InternalError,
+              "No engine available for provider_refresh",
+            ),
           );
           return;
         }
@@ -1568,8 +1605,7 @@ export class AgentServer {
           const key = params.key;
           if (!key) throw new Error("provider_refresh: key required");
           const providers =
-            (engine.readSetting("providers") as Array<Record<string, unknown>> | undefined) ??
-            [];
+            (engine.readSetting("providers") as Array<Record<string, unknown>> | undefined) ?? [];
           const p = providers.find((x) => x.key === key);
           if (!p) throw new Error(`provider not found: ${key}`);
           const { fetchModelList } = await import("../llm/model-fetcher.js");
@@ -1599,7 +1635,11 @@ export class AgentServer {
       case "provider_delete": {
         if (!engine) {
           this.transport.send(
-            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for provider_delete"),
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InternalError,
+              "No engine available for provider_delete",
+            ),
           );
           return;
         }
@@ -1613,8 +1653,7 @@ export class AgentServer {
             throw new Error(`provider ${key} referenced by models: ${refs.join(", ")}`);
           }
           const providers =
-            (engine.readSetting("providers") as Array<Record<string, unknown>> | undefined) ??
-            [];
+            (engine.readSetting("providers") as Array<Record<string, unknown>> | undefined) ?? [];
           const next = providers.filter((p) => p.key !== key);
           engine.updateConfig("providers", next);
           this.transport.send(
@@ -1630,7 +1669,11 @@ export class AgentServer {
       case "model_add": {
         if (!engine) {
           this.transport.send(
-            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for model_add"),
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InternalError,
+              "No engine available for model_add",
+            ),
           );
           return;
         }
@@ -1655,7 +1698,11 @@ export class AgentServer {
       case "model_delete": {
         if (!engine) {
           this.transport.send(
-            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for model_delete"),
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InternalError,
+              "No engine available for model_delete",
+            ),
           );
           return;
         }
@@ -1666,9 +1713,7 @@ export class AgentServer {
             (engine.readSetting("models") as Array<Record<string, unknown>> | undefined) ?? [];
           const next = current.filter((m) => m.key !== key);
           engine.updateConfig("models", next);
-          this.transport.send(
-            createResponse(req.id, { type: "model_delete", data: { ok: true } }),
-          );
+          this.transport.send(createResponse(req.id, { type: "model_delete", data: { ok: true } }));
         } catch (err) {
           this.transport.send(
             createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
@@ -1748,7 +1793,11 @@ export class AgentServer {
       : this.legacyEngine;
     if (!engine) {
       this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.SessionClosed, `No such session: ${params.sessionId}`),
+        createErrorResponse(
+          req.id,
+          ErrorCodes.SessionClosed,
+          `No such session: ${params.sessionId}`,
+        ),
       );
       return;
     }
@@ -1780,7 +1829,11 @@ export class AgentServer {
       : this.legacyEngine;
     if (!engine) {
       this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.SessionClosed, `No such session: ${params.sessionId}`),
+        createErrorResponse(
+          req.id,
+          ErrorCodes.SessionClosed,
+          `No such session: ${params.sessionId}`,
+        ),
       );
       return;
     }
@@ -1805,8 +1858,7 @@ export class AgentServer {
     return new Promise((resolve) => {
       const requestId = nanoid(12);
       const sessionId = typeof request.sessionId === "string" ? request.sessionId : undefined;
-      const session =
-        this.chatManager && sessionId ? this.chatManager.get(sessionId) : undefined;
+      const session = this.chatManager && sessionId ? this.chatManager.get(sessionId) : undefined;
 
       if (this.chatManager && sessionId && !session) {
         resolve({ approved: false, reason: `session closed: ${sessionId}` });
@@ -1858,7 +1910,11 @@ export class AgentServer {
         this.clearApprovalTimer(requestId);
         const result = decision as ApprovalResult;
         if (result && typeof result === "object" && "approved" in result) {
-          resolve(result.approved ? (result.answer ?? "") : (result.reason ?? "(user declined to answer)"));
+          resolve(
+            result.approved
+              ? (result.answer ?? "")
+              : (result.reason ?? "(user declined to answer)"),
+          );
         } else {
           // chatManager approve handler resolves with the raw decision value.
           resolve(typeof decision === "string" ? decision : "");
@@ -1886,7 +1942,7 @@ export class AgentServer {
       // answer, and this ask channel otherwise has NO wall-clock timeout — so a
       // model that calls AskUserQuestion mid-goal would suspend the turn loop
       // forever (only a manual Stop could unblock it). When a goal is active,
-      // arm the shared 5-minute approval timeout: on expiry, drain the pending
+      // arm the shared 10-minute approval timeout: on expiry, drain the pending
       // ask and resolve with a nudge so the loop keeps making progress instead
       // of hanging. Plain interactive (no-goal) asks keep their intentional
       // no-timeout behavior — a human can take as long as they like.
@@ -1902,9 +1958,7 @@ export class AgentServer {
           if (resolveFn) {
             session.pendingApprovals.delete(requestId);
             this.approvalTimers.delete(requestId);
-            resolveFn(
-              "(用户未在限定时间内回答;目标运行中请自行做出合理假设并继续推进。)",
-            );
+            resolveFn("(用户未在限定时间内回答;目标运行中请自行做出合理假设并继续推进。)");
             // Tell every client the ask is resolved (nobody answered) so the
             // stale AskUserQuestion card is dismissed instead of lingering as
             // if still waiting. Reuses the same envelope shape the desktop main

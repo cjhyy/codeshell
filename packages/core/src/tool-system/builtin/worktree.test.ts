@@ -11,7 +11,8 @@ import {
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
-import { enterWorktreeTool, exitWorktreeTool } from "./worktree.js";
+import { validateToolArgs } from "../validation.js";
+import { enterWorktreeTool, enterWorktreeToolDef, exitWorktreeTool } from "./worktree.js";
 import { removeWorktree } from "../../git/worktree.js";
 import { SessionManager } from "../../session/session-manager.js";
 import { createOffBackend } from "../sandbox/off.js";
@@ -195,6 +196,59 @@ describe("ExitWorktree cleanup actions", () => {
     expect(sm.getSessionWorkspace("shared111111")!.root).toBe(shared.path);
     expect(sm.getSessionWorkspace("shared222222")!.root).toBe(shared.path);
     expect(sm.getSessionWorkspace("shared222222")!.worktree!.branch).toBe(shared.branch);
+    removeWorktree(shared.path, true);
+  });
+
+  test("model-supplied __sessionId cannot retarget another session's workspace", async () => {
+    const trusted = ctx("trusted123456");
+    const other = ctx("other123456");
+    await enterWorktreeTool({ target: "trusted" }, trusted);
+    await enterWorktreeTool({ target: "other" }, other);
+    const trustedWorktree = sm.getSessionWorkspace("trusted123456")!.worktree!;
+    const otherBefore = sm.getSessionWorkspace("other123456")!;
+
+    const out = await exitWorktreeTool({ action: "detach", __sessionId: "other123456" }, trusted);
+
+    expect(out).toContain("trusted");
+    expect(existsSync(trustedWorktree.path)).toBe(false);
+    expect(sm.getSessionWorkspace("trusted123456")).toEqual({ root: repo, kind: "main" });
+    expect(sm.getSessionWorkspace("other123456")).toEqual(otherBefore);
+    expect(existsSync(otherBefore.worktree!.path)).toBe(true);
+    removeWorktree(otherBefore.worktree!.path, true);
+  });
+
+  test("deprecated slug alias passes schema validation and enters a worktree", async () => {
+    const validation = validateToolArgs(
+      "EnterWorktree",
+      { slug: "legacy" },
+      enterWorktreeToolDef.inputSchema,
+    );
+    expect(validation).toBeNull();
+
+    const toolCtx = ctx("slug123456");
+    const out = await enterWorktreeTool({ slug: "legacy" }, toolCtx);
+    const active = sm.getSessionWorkspace("slug123456")!.worktree!;
+
+    expect(out).toContain("Worktree created and switched");
+    expect(active.branch).toContain("legacy");
+    removeWorktree(active.path, true);
+  });
+
+  test("detach refuses to remove a worktree still attached to another session", async () => {
+    const first = ctx("guard111111");
+    const second = ctx("guard222222");
+    await enterWorktreeTool({ target: "guard" }, first);
+    const shared = sm.getSessionWorkspace("guard111111")!.worktree!;
+    await enterWorktreeTool({ target: shared.path }, second);
+
+    const out = await exitWorktreeTool({ action: "detach" }, first);
+
+    expect(out.toLowerCase()).toContain("also in use");
+    expect(out).toContain("guard222222");
+    expect(out).toContain("removal has been skipped");
+    expect(existsSync(shared.path)).toBe(true);
+    expect(sm.getSessionWorkspace("guard111111")).toEqual({ root: repo, kind: "main" });
+    expect(sm.getSessionWorkspace("guard222222")!.root).toBe(shared.path);
     removeWorktree(shared.path, true);
   });
 

@@ -24,6 +24,11 @@ describe("resolveContainedPluginSubpath", () => {
     expect(resolved).toEqual({ ok: true, path: realpathSync(join(root, "plugins", "ok")) });
   });
 
+  test("accepts the source root itself for root-level plugin sources", () => {
+    const resolved = resolveContainedPluginSubpath(root, ".", "plugin source path");
+    expect(resolved).toEqual({ ok: true, path: realpathSync(root) });
+  });
+
   test("rejects parent-directory traversal", () => {
     const resolved = resolveContainedPluginSubpath(root, "../outside", "plugin source path");
     if (resolved.ok) throw new Error("expected traversal to be rejected");

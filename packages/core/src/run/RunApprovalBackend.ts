@@ -71,17 +71,6 @@ export class RunApprovalBackend implements ApprovalBackend {
 
     const requestSeq = ++this.approvalRequestSeq;
 
-    // Notify RunManager that approval is needed
-    await hooks.onApprovalNeeded(request);
-
-    if (requestSeq !== this.approvalRequestSeq) {
-      return {
-        approved: false,
-        reason: "superseded: a newer approval request replaced this one before it was answered",
-      };
-    }
-
-    // Suspend execution until resolved (with timeout safety net)
     return new Promise<ApprovalResult>((resolve) => {
       const timer = setTimeout(() => {
         if (this.pendingApproval?.resolve === resolve) {
@@ -94,6 +83,33 @@ export class RunApprovalBackend implements ApprovalBackend {
       }
       this.supersedePendingApproval();
       this.pendingApproval = { resolve, request, timer };
+      void Promise.resolve()
+        .then(() => hooks.onApprovalNeeded(request))
+        .then(
+          () => {
+            if (
+              requestSeq !== this.approvalRequestSeq &&
+              this.pendingApproval?.resolve === resolve
+            ) {
+              this.pendingApproval = null;
+              clearTimeout(timer);
+              resolve({
+                approved: false,
+                reason:
+                  "superseded: a newer approval request replaced this one before it was answered",
+              });
+            }
+          },
+          (err) => {
+            if (this.pendingApproval?.resolve !== resolve) return;
+            this.pendingApproval = null;
+            clearTimeout(timer);
+            resolve({
+              approved: false,
+              reason: `approval request failed: ${err instanceof Error ? err.message : String(err)}`,
+            });
+          },
+        );
     });
   }
 

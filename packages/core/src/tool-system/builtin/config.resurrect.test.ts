@@ -1,8 +1,9 @@
 import { describe, test, expect, afterEach } from "bun:test";
-import { mkdtempSync, rmSync, existsSync } from "node:fs";
+import { mkdtempSync, rmSync, existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { configTool } from "./config.js";
+import type { ToolContext } from "../context.js";
 
 // Regression: a `config write` whose cwd points at a DELETED project dir used
 // to recreate that dir as an empty shell (mkdirSync recursive of
@@ -24,12 +25,14 @@ describe("config tool — deleted project resurrection guard", () => {
     // cwd never existed (simulates a deleted project root).
     expect(existsSync(gone)).toBe(false);
 
-    const result = await configTool({
-      action: "write",
-      key: "model.temperature",
-      value: 0.5,
-      __cwd: gone,
-    });
+    const result = await configTool(
+      {
+        action: "write",
+        key: "model.temperature",
+        value: 0.5,
+      },
+      { cwd: gone } as ToolContext,
+    );
 
     expect(result).toMatch(/does not exist/i);
     expect(existsSync(gone)).toBe(false); // NOT resurrected
@@ -39,15 +42,40 @@ describe("config tool — deleted project resurrection guard", () => {
     const dir = mkdtempSync(join(tmpdir(), "cs-config-"));
     dirs.push(dir);
 
-    const result = await configTool({
-      action: "write",
-      key: "model.temperature",
-      value: 0.5,
-      __cwd: dir,
-    });
+    const result = await configTool(
+      {
+        action: "write",
+        key: "model.temperature",
+        value: 0.5,
+      },
+      { cwd: dir } as ToolContext,
+    );
 
     expect(result).toMatch(/Updated/);
     expect(existsSync(join(dir, ".code-shell", "settings.json"))).toBe(true);
+  });
+});
+
+describe("config tool — cwd trust boundary", () => {
+  test("ignores model-supplied __cwd and writes under trusted ctx.cwd", async () => {
+    const real = mkdtempSync(join(tmpdir(), "cs-config-real-"));
+    const evil = mkdtempSync(join(tmpdir(), "cs-config-evil-"));
+    dirs.push(real, evil);
+
+    const result = await configTool(
+      {
+        action: "write",
+        key: "model.temperature",
+        value: 0.25,
+        __cwd: evil,
+      },
+      { cwd: real } as ToolContext,
+    );
+
+    expect(result).toMatch(/Updated/);
+    expect(existsSync(join(real, ".code-shell", "settings.json"))).toBe(true);
+    expect(existsSync(join(evil, ".code-shell", "settings.json"))).toBe(false);
+    expect(readFileSync(join(real, ".code-shell", "settings.json"), "utf-8")).toContain("0.25");
   });
 });
 
@@ -56,12 +84,14 @@ describe("config tool — rejects unsafe dotted setting keys", () => {
     const dir = mkdtempSync(join(tmpdir(), "cs-config-"));
     dirs.push(dir);
 
-    const result = await configTool({
-      action: "write",
-      key: "__proto__.polluted",
-      value: "yes",
-      __cwd: dir,
-    });
+    const result = await configTool(
+      {
+        action: "write",
+        key: "__proto__.polluted",
+        value: "yes",
+      },
+      { cwd: dir } as ToolContext,
+    );
 
     expect(result).toMatch(/invalid setting key/i);
     expect((Object.prototype as Record<string, unknown>).polluted).toBeUndefined();
@@ -72,12 +102,14 @@ describe("config tool — rejects unsafe dotted setting keys", () => {
     const dir = mkdtempSync(join(tmpdir(), "cs-config-"));
     dirs.push(dir);
 
-    const result = await configTool({
-      action: "write",
-      key: "constructor.prototype.x",
-      value: "yes",
-      __cwd: dir,
-    });
+    const result = await configTool(
+      {
+        action: "write",
+        key: "constructor.prototype.x",
+        value: "yes",
+      },
+      { cwd: dir } as ToolContext,
+    );
 
     expect(result).toMatch(/invalid setting key/i);
     expect((Object.prototype as Record<string, unknown>).x).toBeUndefined();
@@ -88,12 +120,14 @@ describe("config tool — rejects unsafe dotted setting keys", () => {
     const dir = mkdtempSync(join(tmpdir(), "cs-config-"));
     dirs.push(dir);
 
-    const result = await configTool({
-      action: "write",
-      key: "model..temperature",
-      value: 0.5,
-      __cwd: dir,
-    });
+    const result = await configTool(
+      {
+        action: "write",
+        key: "model..temperature",
+        value: 0.5,
+      },
+      { cwd: dir } as ToolContext,
+    );
 
     expect(result).toMatch(/invalid setting key/i);
     expect(existsSync(join(dir, ".code-shell", "settings.json"))).toBe(false);
@@ -104,12 +138,14 @@ describe("config tool — rejects unsafe dotted setting keys", () => {
     dirs.push(dir);
     (Object.prototype as Record<string, unknown>).inheritedSettings = { existing: true };
 
-    const result = await configTool({
-      action: "write",
-      key: "inheritedSettings.y",
-      value: "yes",
-      __cwd: dir,
-    });
+    const result = await configTool(
+      {
+        action: "write",
+        key: "inheritedSettings.y",
+        value: "yes",
+      },
+      { cwd: dir } as ToolContext,
+    );
 
     expect(result).toMatch(/invalid setting key/i);
     expect(
