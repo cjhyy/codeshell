@@ -1,25 +1,18 @@
 # TODO
 
 > 已完成项一律删除（记录在 git 历史与记忆里）。本文件只保留**未完成**的待办。
-> 最近一次清理：2026-07-07（Docs/Config v2 审查核实后，删除已实现的 DriveAgent、goal schema gating、schema export 等条目）。
-
----
-
-# 🔴 未修 bug（有实证）
-
-- 🔴 **[压缩/token] 压缩用 `estimateTokensHybrid` 估算比真实 tokenizer 低 ~2.5×，压完仍远超真实上限且不再触发二次压缩** — 实测硬证据(session `s-mr908xtp-3a414dad`，同点无 confound)：`13:42:46 COMPACT before=239030 after=162940`(估)，`13:43:58` 压完首个真实请求 `msgs=190 promptTokens=409612`(真) → 压完估 162,940 vs 真实 409,612 = **2.5× 低估**；压缩前那侧估 ~239k vs 真实 ~694k ≈ 2.9× 低估。**现象**：压缩把 msgs 630→190、真实 ~694k→~409k(压缩本身有效)，但之后历史长回 190→234 条 / 真实 409k→**482k**，却再没触发第二次压缩 —— 因为估算以为只有 ~162k(41% of 400k，远低于 gate) = 用户看到的「压完还很满 / 一条就回弹」。
-  - **机制(代码确认 `packages/core/src/context/manager.ts`)**：① 所有压缩 gate 与 before/after 一律用 `estimateTokensHybrid()`(:338/:350-352/:445-459)，**从不用**引擎每轮已拿到的真实 `promptTokens`(尽管 `recordActualUsage` 已接线在 `turn-loop.ts:741`)；② `estimateTokensHybrid`(:148-159)只在 `lastActualAtMessageCount < messages.length` 时才用真实锚点，**一次 summary 压缩把消息 630→190 后该条件变 false → 丢弃真实锚点回退纯启发式** = 2.5× 偏低的 162,940。
-  - **修复方向(Codex 核实,effort M)**：(a) `manager.ts:139-158` `recordActualUsage`/`estimateTokensHybrid` 在缩容时按比例 rescale 真实锚点而非丢弃；(b) `turn-loop.ts:741` 调用改为把当前 `messages`(或其 `estimateTokens`)连同 `promptTokens` 一起传；(c) summary 压缩 after 值(`manager.ts:202-208`)也用修正后的 hybrid，别用纯 `estimateTokens(compacted)`。测试补 `manager-micro-escalation.test.ts` 或新建 `manager-hybrid.test.ts`，方法签名变了同步改 `turn-loop-usage-cache.test.ts`。**不加**每轮动态预算重请求(与 prompt cache 冲突,刻意不做)。
-  - **已排除**：图片驻留(已修，实测 cacheRead 紧跟 prompt 无大图重发)、「磁盘大=上下文大」、压缩空转。关联记忆 `codeshell-compaction-underestimates-tokens-2p5x-evidence`、`codeshell-tui-context-window-uses-global-default-not-model-maxContextTokens`(窗口用 200k 全局默认而非模型真实窗口，同源需一并核)。
+> 最近一次清理：2026-07-07（按 HEAD 7e4b0470 复核 TODO/bug-status，删除已修压缩 blocker，并更新 core/desktop/renderer/TUI 状态）。
 
 ---
 
 # 🟡 待改进 / 待优化
 
-- 🟡 **[记忆/dream · 不对称] 会自动打扫的区(dream)小，不能自动打扫的区(user)反而堆最多** — 现状：平时会话记的东西几乎都直接进 **user 区**(要转正、跨会话可靠)，但 user 区 **dream 永远碰不到**(`dream-consolidation.ts:184-190` 硬拒非 dream scope 写入，因为后台 dream 无交互式权限后端)，只能靠交互会话里逐条批准删。结果**最该被自动清理的完成态 changelog 恰恰落在永不自动清理的区**。**根治方向(二选一或都做)**：① 让 dream 能对 user 区**提议**清理(列候选清单，用户一次性批准)；② 把 changelog/过程类记忆改成默认存 **dream 区**(可自动归档)，user 区只留耐用事实(架构/根因/偏好)。另 `shouldAutoDream()` 缺 Codex 的 rate-limit 阈值跳过(配额低时别烧 token 跑 dream)，可一并考虑。
-- 🟢 **[会话] TodoWrite resume 恢复 — Codex 核实已修，仅缺测试**(`codeshell-todo-session-resume-empty-list`)：`readLastTodoSnapshot`(`task.ts:154-168`) + `engine.ts:1608-1613` resume 时重放最新 TodoWrite 为 `task_update`，模型也从 resumed transcript 看到旧 tool-use。除非无 TodoWrite 或末次全 completed(刻意清空)。剩：补 `task.test.ts`/`engine.todo-resume.test.ts`；`engine.ts:1605` 注释说容忍 legacy TaskCreate/Update 但 `readLastTodoSnapshot` 只认 TodoWrite(注释误导)。
-- 🟢 **[前端] panel 写放大 — Codex 核实已修**(`codeshell-panel-refactor-save-all-buckets-write-amplification`)：effect 仍 O(n) 遍历但缓存快照跳过未变 bucket(`App.tsx:2613-2622` 有 `continue`)，只写变更的(`transcripts.ts:297-307` 单 key 写)。写放大已消除。可选优化：`updatePanelBucket` 记 dirty bucket 免 O(n) 扫描。
-- 🟢 **[前端] 乐观气泡 — Codex 核实基本已修，仅剩 announce 边缘**(`codeshell-optimistic-input-bubble-overwritten-by-hydrate`)：正常 composer send + queued/steer send 都受保护(reducer 按 `steerId`/`clientMessageId` 跨 hydrate 保留本地 intent,`transcriptsReducer.ts:56-88` + 回归测试)。**仅剩缺口**：automation/mobile announce 气泡无 key 派发(`App.tsx:1670/1739`)，后续 hydrate 可覆盖。修法：给 announce 派发稳定 `clientMessageId`(如 `automation:${sid}:prompt`)。
+- 🟡 **[压缩/token] 无真实 usage anchor 时仍依赖启发式估算（blocker 已修）** — 原 2.5× 低估 blocker 已修：`recordActualUsage` 记录真实 anchor 估算值，缩容后按比例 rescale(`manager.ts:141-169`)，`turn-loop.ts` 已传入当前 messages(`turn-loop.ts:737-745`)，summary compact 后若仍超过 snip gate 会继续走 snip/window/emergency ladder(`manager.ts:482-528`)。剩余改进：没有真实 anchor 的初始估算仍落在启发式路径，`estimateTokens` 仍是 `estimateMessagesTokens()*4/3`(`compaction.ts:17-23`)。
+- 🟡 **[前端/CC 面板] Claude Code / 外部 agent 面板缺「当前 session 触发」标识** — 一屏里有多个 CC/Codex（DriveAgent 驱动的）面板时，看不出哪个是当前这个 session 触发/关联的。当前面板只按 `sessionId` 拉当前列表(`BackgroundShellPanel.tsx:45-53`)，但 header/row 只展示数量、状态、描述、变更文件等(`BackgroundShellPanel.tsx:208-224`, `:283-321`)，条目数据也不带来源 session(`background-work.ts:110-146`)。修法：给面板卡片打 tag/徽标标注来源 session（如 session 短 id/名称、或「本会话」高亮）。
+- 🟡 **[记忆/dream · 不对称] 会自动打扫的区(dream)小，不能自动打扫的区(user)反而堆最多** — 现状：平时会话记的东西几乎都直接进 **user 区**(要转正、跨会话可靠)，但 user 区 **dream 永远碰不到**：user memories 对 dream 只读(`memory.ts:10-16`)，dream consolidation 虽加载 user+dream 但写入循环硬拒非 dream scope(`dream-consolidation.ts:88-95`, `:180-190`)。结果**最该被自动清理的完成态 changelog 恰恰落在永不自动清理的区**。**根治方向(二选一或都做)**：① 让 dream 能对 user 区**提议**清理(列候选清单，用户一次性批准)；② 把 changelog/过程类记忆改成默认存 **dream 区**(可自动归档)，user 区只留耐用事实(架构/根因/偏好)。另 `shouldAutoDream()` 只看启用、session 数和时间窗口(`auto-dream.ts:58-72`)，缺 Codex rate-limit 阈值跳过。
+- 🟢 **[会话] TodoWrite resume 恢复 — Codex 核实已修，仅缺测试**(`codeshell-todo-session-resume-empty-list`)：`readLastTodoSnapshot` 扫最新 TodoWrite，末次全 completed 则刻意清空(`task.ts:154-170`)；resume 时重放为 `task_update`(`engine.ts:1613-1618`)，模型也从 resumed transcript 看到旧 tool-use。剩：补 `task.test.ts`/`engine.todo-resume.test.ts`；当前 `rg` 未见专门覆盖 `readLastTodoSnapshot`/resume `task_update` 的测试。
+- 🟢 **[前端] 乐观气泡 — Codex 核实基本已修，仅剩 announce 边缘**(`codeshell-optimistic-input-bubble-overwritten-by-hydrate`)：正常 composer send + queued/steer send 都受保护：reducer 按 `steerId`/`clientMessageId` 跨 hydrate 保留本地 intent(`transcriptsReducer.ts:56-88`)，send/queued steer 均写入或复用 `clientMessageId`(`App.tsx:1952-2026`, `:2168-2205`, `:2264-2280`)。**仅剩缺口**：automation/mobile announce 气泡无 key 派发(`App.tsx:1670-1672`, `:1737-1741`)，后续 hydrate 可覆盖。修法：给 announce 派发稳定 `clientMessageId`(如 `automation:${sid}:prompt`)。
+
 ---
 
 # 发布关键路径（beta1，必须用户亲自做）
@@ -31,9 +24,9 @@
 
 # beta1 延后（非 bug，记 release notes）
 
-- ⚪️ **browser-login 硬化**(effort M)：登录用持久分区 `persist:login-${uuid}`(`credentials-login/index.ts:207`)，登出 `destroyPartitionCookies` 只清 cookie(`browser-host/index.ts:146-153`)，账号切换 clear 模式也只清 cookie 且注释明说不碰 localStorage(`credentials-service.ts:84-95`)→ localStorage/IndexedDB/CacheStorage/SW 残留。修法：登录分区改非持久 `login-${uuid}`；`destroyPartitionCookies`→`clearStorageData()` 清全部站点存储。另 BrowserHost 仍只 `kind:"window"`(`:17-23`,拒 webview `:90-93`)，webview 硬化逻辑散在 `main/index.ts:1076-1102` 未抽共享 helper。
-- ⚪️ **内部浏览器 Network 可视化/请求复用 UX**：内置浏览器面板看不到 Network。方向：给浏览器面板提供 Network 观察能力(请求列表/过滤/查看 payload/response/copy as fetch 或转工具调用)。注意隐私与凭证边界，默认只对当前 session/browser partition 可见。
-- ⚪️ **i18n 收尾（增量）**：`"新对话"` 哨兵常量化；非 React helper 硬编码 localStorage key 应 import KEY；mobile(~149 处)单独接同套 i18n。
+- 🔶 **browser-login 硬化（部分已落，剩账号切换/webview 收口）**(effort M)：已落：登录窗口改用非持久 `login-${uuid}` 分区(`credentials-login/index.ts:207`)，关闭后 `destroyPartitionStorage` 用 `clearStorageData()` 清全部站点存储(`browser-host/index.ts:146-154`)。剩：账号切换 `restoreCookiesToBrowser(..., mode:"clear")` 仍只清 cookies，注释也标明不动 localStorage(`credentials-service.ts:148-160`)；BrowserHost 仍只支持 `kind:"window"`(`browser-host/index.ts:17-23`, `:90-93`)，browser-panel webview 硬化逻辑仍散在 `main/index.ts:1078-1113`。
+- ⚪️ **内部浏览器 Network 可视化/请求复用 UX** — 当前 BrowserPanel 仍是 webview + 地址栏 + tabs + localhost anchors(`BrowserPanel.tsx:94-104`)，未见 Network/request/response/header/payload/copy-as-fetch 面板实现。
+- 🔶 **i18n 收尾（增量）**：✅ `"新对话"` 哨兵已常量化为 `DEFAULT_SESSION_TITLE`(`transcripts.ts:34-40`)；剩：非 React helper 仍硬编码 `codeshell.uiLanguage` key(`messages/time.ts:22-28`, `messages/streamGroups.ts:32-38`)；mobile 仍单独大量硬编码中文（如 `mobile/App.tsx:130-147`, `mobile/components/SessionList.tsx:58-80`, `mobile/components/Composer.tsx:80-93`）。
 
 ---
 
@@ -41,7 +34,7 @@
 
 - **core 通用化 + 插件面板**（`docs/todo/core-harness-and-plugin-panels.md`）：① core=无 coding/git 预设的通用 harness——4 个内核 git 触点参数化 / harness-min preset + CI 纯度 smoke / coding pack 外移(git/lsp/review/worktree/cc-orchestrator/quota…)；② 插件={UI 面板+能力}——PanelRegistry / manifest `panels` / csplugin:// 沙箱 host / 按 permissions 过滤的 scoped bridge。**Phase A(工具元数据合一 + PanelRegistry)最小可先做**。与 `architecture-debt.md` P1-⑤⑥ 重叠处合并执行。
 - **架构债 P1/P2**（`docs/todo/architecture-debt.md`，P0 已并 main）：P1=拆 index、arena builtin 可选、拆 engine.ts、拆 App.tsx、真启用 safeStorage；P2=arena 移包/state 单例/cron 测试/文档措辞。
-  - ✅ **拆 engine.ts 的两个前置已完成**（2026-07-07 codex 核实）：`extractJSON` 已提取到 `utils/json.ts`（arena 三步第①步，arena/utils.ts re-export 保留旧面）；`EngineConfig`/`EngineHookConfig`/`EngineResult` 已在 `engine/types.ts`，类型级 `tool-system→engine` 循环已不存在，仅剩一条 test-only 的 `Engine` runtime import（`agent.send-input.llm.test.ts`，可移入 engine 测试区或 allowlist）。拆 engine.ts 本体仍待做。
+  - ✅ **拆 engine.ts 的两个前置已完成**（2026-07-07 codex 核实）：`extractJSON` 已提取到 `utils/json.ts`(`utils/json.ts:1-11`)，arena utils re-export 保留旧面(`arena/strategies/utils.ts:43-49`)；`EngineConfig`/`EngineHookConfig`/`EngineResult` 已在 `engine/types.ts`(`engine/types.ts:1-11`, `:26-70`, `:163-175`)，类型级 `tool-system→engine` 循环已不存在，仅剩一条 test-only 的 `Engine` runtime import（`agent.send-input.llm.test.ts:5`，可移入 engine 测试区或 allowlist）。拆 engine.ts 本体仍待做。
 - **Workspace / Profile / 数字人**（`docs/todo/workspace-profile-讨论稿.md` v0.5）：base preset + 主指令 + 可移植经验三层 / 可切换 / Team Board。P3。
 - **Workspace 数据源绑定**（P4）：资源模型 / link 外部源(Figma/issue/云盘)/ scope 分配。大子系统。
 - **聊天软件接入（channel，参考 OpenClaw）**（`docs/todo/im-gateway-remote-orchestration.md`）：微信/Telegram 做成可插拔 channel 前端。core 保持 channel-agnostic，平台接入做外部插件；接入做成一类凭证进 CredentialStore；扫码微信号绑死为收发身份 + 必配 allowlist。未立项。
