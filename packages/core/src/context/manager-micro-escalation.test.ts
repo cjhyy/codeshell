@@ -12,7 +12,63 @@ function textConversation(rounds: number): Message[] {
   return msgs;
 }
 
+function readPair(id: string, filePath: string, body: string): Message[] {
+  return [
+    {
+      role: "assistant",
+      content: [{ type: "tool_use", id, name: "Read", input: { file_path: filePath } }],
+    } as unknown as Message,
+    {
+      role: "user",
+      content: [{ type: "tool_result", tool_use_id: id, content: body }],
+    } as unknown as Message,
+  ];
+}
+
+function browserSnapshot(id: string, body: string): Message[] {
+  return [
+    {
+      role: "assistant",
+      content: [{ type: "tool_use", id, name: "browser_observe", input: {} }],
+    } as unknown as Message,
+    {
+      role: "user",
+      content: [{ type: "tool_result", tool_use_id: id, content: body }],
+    } as unknown as Message,
+  ];
+}
+
+function resultContent(messages: Message[], toolUseId: string): string | undefined {
+  for (const message of messages) {
+    if (!Array.isArray(message.content)) continue;
+    for (const block of message.content) {
+      if (block.type === "tool_result" && block.tool_use_id === toolUseId) {
+        return typeof block.content === "string" ? block.content : undefined;
+      }
+    }
+  }
+  return undefined;
+}
+
 describe("ContextManager.manageAsync micro no-op escalation", () => {
+  it("runs always-on cleanup before async compaction gates", async () => {
+    const mgr = new ContextManager({ maxTokens: 200_000 });
+    const messages: Message[] = [
+      ...readPair("r1", "/proj/a.ts", "old file body"),
+      ...readPair("r2", "/proj/a.ts", "new file body"),
+      ...browserSnapshot("s1", "[ref=e1] stale browser snapshot"),
+      ...browserSnapshot("s2", "[ref=e1] current browser snapshot"),
+    ];
+    expect(estimateTokens(messages)).toBeLessThan(200_000 * 0.7);
+
+    const result = await mgr.manageAsync(messages);
+
+    expect(resultContent(result, "r1")).toContain("superseded by a newer Read");
+    expect(resultContent(result, "r2")).toBe("new file body");
+    expect(resultContent(result, "s1")).toContain("collapsed");
+    expect(resultContent(result, "s2")).toBe("[ref=e1] current browser snapshot");
+  });
+
   it("summarizes a text-only conversation in the 0.7-0.85 spin band", async () => {
     const mgr = new ContextManager({ maxTokens: 200_000 });
     let summarizeCalls = 0;

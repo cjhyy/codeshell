@@ -416,6 +416,19 @@ export class ContextManager {
     // Tier 0c: Aggregate tool result budget (per-message)
     result = applyToolResultBudget(result);
 
+    // Tier 0d: same always-on waste-removal passes as manage().
+    const dedup = dedupeFileReads(result);
+    if (dedup.clearedCount > 0) {
+      result = dedup.messages;
+      logger.info("context.dedupe_file_reads", { cleared: dedup.clearedCount });
+    }
+
+    const masked = maskOldObservations(result);
+    if (masked.maskedCount > 0) {
+      result = masked.messages;
+      logger.info("context.mask_browser_snapshots", { masked: masked.maskedCount });
+    }
+
     // Tier 1: microcompact — see manage() for the rationale on the floor.
     const preTier1Tokens = this.estimateTokensHybrid(result);
     const microFloorGate = this.config.maxTokens * this.config.microcompactFloorRatio;
