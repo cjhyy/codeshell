@@ -92,12 +92,21 @@ export default function TextInput({
       return;
     }
 
-    if (key.backspace || key.delete) {
+    if (key.backspace) {
       if (cursorOffset > 0) {
         const before = value.slice(0, cursorOffset - 1);
         const after = value.slice(cursorOffset);
         onChange(before + after);
         setCursorOffset(cursorOffset - 1);
+      }
+      return;
+    }
+
+    if (key.delete) {
+      if (cursorOffset < value.length) {
+        const before = value.slice(0, cursorOffset);
+        const after = value.slice(cursorOffset + 1);
+        onChange(before + after);
       }
       return;
     }
@@ -245,7 +254,7 @@ export default function TextInput({
             </Box>
           );
         })}
-        <Text dim>  ({lineCount} lines)</Text>
+        <Text dim>{`  (${lineCount} lines)`}</Text>
       </Box>
     );
   }
