@@ -68,7 +68,7 @@ export function ApprovalCard({
         </span>
       </div>
       {showDescription && (
-        <p className="mb-2 text-xs text-muted-foreground">{approval.description}</p>
+        <p className="mb-2 break-words text-xs text-muted-foreground">{approval.description}</p>
       )}
       {isAsk ? (
         <div className="mb-3 rounded-lg border border-border/70 bg-muted/30 p-3">

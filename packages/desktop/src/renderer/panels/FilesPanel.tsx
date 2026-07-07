@@ -1,5 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, ChevronDown, File as FileIcon, Folder, MessageSquarePlus, PanelLeftClose, RefreshCw } from "lucide-react";
+import {
+  ChevronRight,
+  ChevronDown,
+  File as FileIcon,
+  Folder,
+  MessageSquarePlus,
+  PanelLeftClose,
+  RefreshCw,
+} from "lucide-react";
 import type { FsEntry, FileContent } from "../../preload/types";
 import { Input } from "@/components/ui/input";
 import { Markdown } from "../Markdown";
@@ -170,7 +178,17 @@ export function FilesPanel({ cwd, onAttachImage, revealFile, onRevealConsumed }:
             />
           </div>
           <div className="min-h-0 flex-1 overflow-auto py-1">
-            <DirNode root={cwd} dir={cwd} depth={0} selected={selected} onSelect={setSelected} filter={filter.trim().toLowerCase()} onAttachImage={onAttachImage} revealDirs={revealDirs} reloadNonce={reloadNonce} />
+            <DirNode
+              root={cwd}
+              dir={cwd}
+              depth={0}
+              selected={selected}
+              onSelect={setSelected}
+              filter={filter.trim().toLowerCase()}
+              onAttachImage={onAttachImage}
+              revealDirs={revealDirs}
+              reloadNonce={reloadNonce}
+            />
           </div>
         </div>
       )}
@@ -202,7 +220,9 @@ export function FilesPanel({ cwd, onAttachImage, revealFile, onRevealConsumed }:
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-1 text-muted-foreground">
               <Folder className="h-7 w-7" />
-              <div className="text-sm font-medium text-foreground">{t("panels.files.openFile")}</div>
+              <div className="text-sm font-medium text-foreground">
+                {t("panels.files.openFile")}
+              </div>
               <div className="text-xs">{t("panels.files.openFileHint")}</div>
             </div>
           )}
@@ -250,7 +270,11 @@ function DirNode({
       const next = new Set(prev);
       for (const d of revealDirs) {
         // Only open dirs that are direct children of THIS node's dir.
-        if (d.startsWith(`${dir}/`) && d.slice(dir.length + 1).indexOf("/") === -1 && !next.has(d)) {
+        if (
+          d.startsWith(`${dir}/`) &&
+          d.slice(dir.length + 1).indexOf("/") === -1 &&
+          !next.has(d)
+        ) {
           next.add(d);
           changed = true;
         }
@@ -274,15 +298,16 @@ function DirNode({
     };
   }, [root, dir, reloadNonce]);
 
-  if (!entries) return <div className="px-3 py-1 text-xs text-muted-foreground">{t("panels.common.loading")}</div>;
+  if (!entries)
+    return (
+      <div className="px-3 py-1 text-xs text-muted-foreground">{t("panels.common.loading")}</div>
+    );
 
   // When filtering, match by name on BOTH files and directories. We can't do
   // ancestor-aware filtering with lazy per-level loads, so a directory only
   // survives if its own name matches — this keeps the filter meaningful
   // instead of showing every directory regardless of the query.
-  const visible = filter
-    ? entries.filter((e) => e.name.toLowerCase().includes(filter))
-    : entries;
+  const visible = filter ? entries.filter((e) => e.name.toLowerCase().includes(filter)) : entries;
 
   return (
     <>
@@ -337,70 +362,117 @@ function DirNode({
             </div>
           );
         }
-        const fileExt = (e.name.split(".").pop() ?? "").toLowerCase();
-        const isImageFile = IMAGE_EXT.has(fileExt);
         const isSelected = selected === e.path;
         return (
-          <div key={e.path} className="group/file relative flex items-center">
-            <button
-              type="button"
-              // Scroll the row into view when it becomes selected from a chat
-              // path-link (the user can't see a deep file otherwise).
-              ref={isSelected ? (el) => el?.scrollIntoView({ block: "nearest" }) : undefined}
-              style={pad}
-              // Every file row is draggable onto the composer (TODO 2.1). The
-              // drag payload is the absolute path under a custom MIME so the
-              // composer can tell an internal file-panel drag from an OS file
-              // drop. The composer decides what to do: image → attach as image,
-              // any other file → insert an `@path` reference into the draft.
-              draggable={!!onAttachImage}
-              onDragStart={(ev) => {
-                ev.dataTransfer.setData(CODESHELL_PATH_DND_MIME, e.path);
-                ev.dataTransfer.effectAllowed = "copy";
-              }}
-              className={`flex w-full items-center gap-1 py-1 ${
-                isImageFile && onAttachImage ? "pr-12" : "pr-7"
-              } text-left text-sm hover:bg-accent ${
-                isSelected ? "bg-accent text-accent-foreground" : "text-foreground"
-              }`}
-              onClick={() => onSelect(e.path)}
-            >
-              <span className="w-3.5 shrink-0" />
-              <FileIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              <span className="truncate">{e.name}</span>
-            </button>
-            {/* Image files: one-click attach to the composer (TODO 2.1). Carries
-                the absolute path so the chip + wire payload reference the file. */}
-            {isImageFile && onAttachImage && (
-              <button
-                type="button"
-                title={t("panels.files.addToComposer")}
-                aria-label={t("panels.files.addToComposer")}
-                className="absolute right-7 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-background hover:text-foreground group-hover/file:opacity-100"
-                onClick={() => onAttachImage(e.path)}
-              >
-                <Paperclip className="h-3.5 w-3.5" />
-              </button>
-            )}
-            {/* e.path is absolute; cwd not needed but harmless. */}
-            <OpenWithMenu path={e.path} cwd={root} align="end">
-              <button
-                type="button"
-                title={t("panels.common.openWith")}
-                aria-label={t("panels.common.openWith")}
-                className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-background hover:text-foreground group-hover/file:opacity-100 data-[state=open]:opacity-100"
-              >
-                <MoreHorizontal className="h-3.5 w-3.5" />
-              </button>
-            </OpenWithMenu>
-          </div>
+          <FileRow
+            key={e.path}
+            entry={e}
+            root={root}
+            pad={pad}
+            isSelected={isSelected}
+            onSelect={onSelect}
+            onAttachImage={onAttachImage}
+            t={t}
+          />
         );
       })}
     </>
   );
 }
 
-function FileViewer({ root, path, reloadNonce }: { root: string; path: string; reloadNonce: number }) {
+/** A single file row. Scrolls itself into view only when it *becomes* selected
+ * (via useEffect keyed on isSelected) — an inline ref callback would re-run on
+ * every re-render (e.g. the periodic `reloadNonce` refresh), which caused the
+ * tree to keep snapping back to the selected file while the user scrolled. */
+function FileRow({
+  entry: e,
+  root,
+  pad,
+  isSelected,
+  onSelect,
+  onAttachImage,
+  t,
+}: {
+  entry: FsEntry;
+  root: string;
+  pad: React.CSSProperties;
+  isSelected: boolean;
+  onSelect: (path: string) => void;
+  onAttachImage?: (path: string) => void;
+  t: TFunction;
+}) {
+  const ref = useRef<HTMLButtonElement | null>(null);
+  const fileExt = (e.name.split(".").pop() ?? "").toLowerCase();
+  const isImageFile = IMAGE_EXT.has(fileExt);
+
+  useEffect(() => {
+    if (isSelected) ref.current?.scrollIntoView({ block: "nearest" });
+  }, [isSelected]);
+
+  return (
+    <div className="group/file relative flex items-center">
+      <button
+        type="button"
+        ref={ref}
+        style={pad}
+        // Every file row is draggable onto the composer (TODO 2.1). The
+        // drag payload is the absolute path under a custom MIME so the
+        // composer can tell an internal file-panel drag from an OS file
+        // drop. The composer decides what to do: image → attach as image,
+        // any other file → insert an `@path` reference into the draft.
+        draggable={!!onAttachImage}
+        onDragStart={(ev) => {
+          ev.dataTransfer.setData(CODESHELL_PATH_DND_MIME, e.path);
+          ev.dataTransfer.effectAllowed = "copy";
+        }}
+        className={`flex w-full items-center gap-1 py-1 ${
+          isImageFile && onAttachImage ? "pr-12" : "pr-7"
+        } text-left text-sm hover:bg-accent ${
+          isSelected ? "bg-accent text-accent-foreground" : "text-foreground"
+        }`}
+        onClick={() => onSelect(e.path)}
+      >
+        <span className="w-3.5 shrink-0" />
+        <FileIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        <span className="truncate">{e.name}</span>
+      </button>
+      {/* Image files: one-click attach to the composer (TODO 2.1). Carries
+                the absolute path so the chip + wire payload reference the file. */}
+      {isImageFile && onAttachImage && (
+        <button
+          type="button"
+          title={t("panels.files.addToComposer")}
+          aria-label={t("panels.files.addToComposer")}
+          className="absolute right-7 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-background hover:text-foreground group-hover/file:opacity-100"
+          onClick={() => onAttachImage(e.path)}
+        >
+          <Paperclip className="h-3.5 w-3.5" />
+        </button>
+      )}
+      {/* e.path is absolute; cwd not needed but harmless. */}
+      <OpenWithMenu path={e.path} cwd={root} align="end">
+        <button
+          type="button"
+          title={t("panels.common.openWith")}
+          aria-label={t("panels.common.openWith")}
+          className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-background hover:text-foreground group-hover/file:opacity-100 data-[state=open]:opacity-100"
+        >
+          <MoreHorizontal className="h-3.5 w-3.5" />
+        </button>
+      </OpenWithMenu>
+    </div>
+  );
+}
+
+function FileViewer({
+  root,
+  path,
+  reloadNonce,
+}: {
+  root: string;
+  path: string;
+  reloadNonce: number;
+}) {
   const { t } = useT();
   const ext = useMemo(() => (path.split(".").pop() ?? "").toLowerCase(), [path]);
   const name = useMemo(() => path.split("/").pop() ?? path, [path]);
@@ -423,7 +495,11 @@ function FileViewer({ root, path, reloadNonce }: { root: string; path: string; r
             type="button"
             className="shrink-0 rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-accent"
             onClick={() => setMdSource((v) => !v)}
-            title={mdSource ? t("panels.files.previewToggleToPreview") : t("panels.files.previewToggleToSource")}
+            title={
+              mdSource
+                ? t("panels.files.previewToggleToPreview")
+                : t("panels.files.previewToggleToSource")
+            }
           >
             {mdSource ? t("panels.files.preview") : t("panels.files.source")}
           </button>
@@ -435,7 +511,12 @@ function FileViewer({ root, path, reloadNonce }: { root: string; path: string; r
         ) : (
           // Markdown in preview mode renders rich; everything else (and md in
           // source mode) uses the line-numbered, per-line-commentable view.
-          <TextPreview root={root} path={path} markdown={isMarkdown && !mdSource} reloadNonce={reloadNonce} />
+          <TextPreview
+            root={root}
+            path={path}
+            markdown={isMarkdown && !mdSource}
+            reloadNonce={reloadNonce}
+          />
         )}
       </div>
     </div>
@@ -466,8 +547,14 @@ function ImagePreview({ path, reloadNonce }: { path: string; reloadNonce: number
     };
   }, [path, reloadNonce]);
 
-  if (failed) return <div className="p-4 text-sm text-muted-foreground">{t("panels.files.cannotPreviewImage")}</div>;
-  if (!src) return <div className="p-4 text-sm text-muted-foreground">{t("panels.common.loading")}</div>;
+  if (failed)
+    return (
+      <div className="p-4 text-sm text-muted-foreground">
+        {t("panels.files.cannotPreviewImage")}
+      </div>
+    );
+  if (!src)
+    return <div className="p-4 text-sm text-muted-foreground">{t("panels.common.loading")}</div>;
   return (
     <div className="flex h-full items-center justify-center p-4">
       {/* checkerboard-free neutral bg; image scaled to fit */}
@@ -488,7 +575,17 @@ function mdBaseDir(root: string, path: string): string {
   return slash > 0 ? abs.slice(0, slash) : abs;
 }
 
-function TextPreview({ root, path, markdown, reloadNonce }: { root: string; path: string; markdown: boolean; reloadNonce: number }) {
+function TextPreview({
+  root,
+  path,
+  markdown,
+  reloadNonce,
+}: {
+  root: string;
+  path: string;
+  markdown: boolean;
+  reloadNonce: number;
+}) {
   const { t } = useT();
   const [content, setContent] = useState<FileContent | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -515,8 +612,12 @@ function TextPreview({ root, path, markdown, reloadNonce }: { root: string; path
     };
   }, [root, path, reloadNonce]);
 
-  if (error) return <div className="p-4 text-sm text-status-err">{t("panels.files.readFailed", { error })}</div>;
-  if (!content) return <div className="p-4 text-sm text-muted-foreground">{t("panels.common.loading")}</div>;
+  if (error)
+    return (
+      <div className="p-4 text-sm text-status-err">{t("panels.files.readFailed", { error })}</div>
+    );
+  if (!content)
+    return <div className="p-4 text-sm text-muted-foreground">{t("panels.common.loading")}</div>;
   if (content.text === null) {
     return (
       <div className="p-4 text-sm text-muted-foreground">
@@ -575,8 +676,12 @@ function CodeWithComments({ path, text }: { path: string; text: string }) {
               >
                 <MessageSquarePlus size={11} />
               </button>
-              <span className="w-9 shrink-0 select-none pr-2 text-right text-muted-foreground">{no}</span>
-              <pre className="m-0 min-w-0 flex-1 whitespace-pre-wrap break-words text-foreground">{line || " "}</pre>
+              <span className="w-9 shrink-0 select-none pr-2 text-right text-muted-foreground">
+                {no}
+              </span>
+              <pre className="m-0 min-w-0 flex-1 whitespace-pre-wrap break-words text-foreground">
+                {line || " "}
+              </pre>
             </div>
             {commenting === no && (
               <div className="px-2">

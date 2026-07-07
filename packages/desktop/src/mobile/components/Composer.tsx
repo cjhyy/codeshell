@@ -80,15 +80,15 @@ export function Composer({
         placeholder={disabled ? "未连接" : "发消息…"}
         // text-base (16px) is REQUIRED: iOS auto-zooms when a focused input's
         // font-size is < 16px, which is the "屏幕内容变大要缩小" symptom.
-        className="mobile-compose-input max-h-40 min-h-[46px] flex-1 resize-none rounded-xl border px-3.5 py-2.5 text-base leading-6 text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-50"
+        className="mobile-compose-input max-h-40 min-h-[46px] min-w-0 flex-1 resize-none rounded-xl border px-3.5 py-2.5 text-base leading-6 text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-50"
       />
       {running ? (
-        <Button variant="outline" className="h-[46px] rounded-xl px-3" onClick={onStop}>
+        <Button variant="outline" className="h-[46px] shrink-0 rounded-xl px-3" onClick={onStop}>
           <Square />
           停止
         </Button>
       ) : (
-        <Button className="h-[46px] rounded-xl px-3" disabled={disabled || pending} onClick={submit}>
+        <Button className="h-[46px] shrink-0 rounded-xl px-3" disabled={disabled || pending} onClick={submit}>
           <SendHorizonal />
           发送
         </Button>
