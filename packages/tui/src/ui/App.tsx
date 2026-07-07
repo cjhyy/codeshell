@@ -713,7 +713,7 @@ export function App({
                 error: r.error,
                 agentId,
                 compact: looksLikeArenaRetry,
-              } as any),
+              }),
             ];
           });
           break;
@@ -2059,7 +2059,7 @@ export function App({
 
 // ─── Entry Renderer ──────────────────────────────────────────────
 
-function renderEntry(entry: ChatEntry, key: string, expanded = false) {
+export function renderEntry(entry: ChatEntry, key: string, expanded = false) {
   const nested = !!(entry as any).agentId;
 
   switch (entry.type) {
@@ -2105,6 +2105,7 @@ function renderEntry(entry: ChatEntry, key: string, expanded = false) {
           error={entry.error}
           nested={nested}
           expanded={expanded}
+          compact={entry.compact}
         />
       );
 
