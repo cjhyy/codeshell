@@ -22,7 +22,7 @@ import type { Message, ThinkingMessage, ToolMessage } from "../types";
 import type { AgentGroup } from "./agentGroup";
 import { describeActivity } from "../topbar/liveActivity";
 import { translate } from "../i18n/translate";
-import type { UILanguage } from "../uiLanguage";
+import { UI_LANGUAGE_STORAGE_KEY, type UILanguage } from "../uiLanguage";
 
 /**
  * Active UI language, read without `loadUILanguage` so the pure label helpers
@@ -31,7 +31,7 @@ import type { UILanguage } from "../uiLanguage";
  */
 function activeLang(): UILanguage {
   try {
-    const raw = globalThis.localStorage?.getItem("codeshell.uiLanguage");
+    const raw = globalThis.localStorage?.getItem(UI_LANGUAGE_STORAGE_KEY);
     return raw === "en" ? "en" : "zh";
   } catch {
     return "zh";

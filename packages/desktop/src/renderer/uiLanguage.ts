@@ -1,6 +1,6 @@
 export type UILanguage = "zh" | "en";
 
-const KEY = "codeshell.uiLanguage";
+export const UI_LANGUAGE_STORAGE_KEY = "codeshell.uiLanguage";
 
 /** Read the stored UI language preference. Defaults to Chinese.
  * Guards against environments with no localStorage (node tests, non-DOM
@@ -8,7 +8,7 @@ const KEY = "codeshell.uiLanguage";
  * bare localStorage access would throw "localStorage is not defined". */
 export function loadUILanguage(): UILanguage {
   try {
-    const raw = globalThis.localStorage?.getItem(KEY);
+    const raw = globalThis.localStorage?.getItem(UI_LANGUAGE_STORAGE_KEY);
     if (raw === "zh" || raw === "en") return raw;
   } catch {
     /* no localStorage (node/test) → fall through to default */
@@ -23,7 +23,7 @@ export function loadUILanguage(): UILanguage {
  */
 export function saveUILanguage(lang: UILanguage): void {
   try {
-    globalThis.localStorage?.setItem(KEY, lang);
+    globalThis.localStorage?.setItem(UI_LANGUAGE_STORAGE_KEY, lang);
     globalThis.dispatchEvent?.(new Event("codeshell:language-changed"));
   } catch {
     /* no localStorage/DOM (node/test) — preference just isn't persisted */

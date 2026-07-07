@@ -12,7 +12,7 @@
  */
 
 import { translate } from "../i18n/translate";
-import type { UILanguage } from "../uiLanguage";
+import { UI_LANGUAGE_STORAGE_KEY, type UILanguage } from "../uiLanguage";
 
 /**
  * Read the active UI language without importing loadUILanguage directly:
@@ -21,7 +21,7 @@ import type { UILanguage } from "../uiLanguage";
  */
 function activeLang(): UILanguage {
   try {
-    const raw = globalThis.localStorage?.getItem("codeshell.uiLanguage");
+    const raw = globalThis.localStorage?.getItem(UI_LANGUAGE_STORAGE_KEY);
     return raw === "en" ? "en" : "zh";
   } catch {
     return "zh";
