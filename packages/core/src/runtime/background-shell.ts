@@ -24,7 +24,6 @@
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import {
   mkdirSync,
@@ -42,6 +41,7 @@ import { cleanOutput } from "./output-clean.js";
 import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
 import { logger } from "../logging/logger.js";
 import type { SandboxBackend } from "../tool-system/sandbox/index.js";
+import { codeShellHome } from "../session/session-manager.js";
 
 export type BgShellStatus = "starting" | "running" | "exited" | "killed" | "orphaned";
 
@@ -137,8 +137,7 @@ function nextShellId(): string {
 }
 
 function bgShellsRoot(): string {
-  const base = process.env.CODE_SHELL_HOME ?? process.env.HOME ?? homedir();
-  return join(base, ".code-shell", "bg-shells");
+  return join(codeShellHome(), "bg-shells");
 }
 
 const PORT_REGEXES = [

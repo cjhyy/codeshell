@@ -33,6 +33,21 @@ async function until(pred: () => boolean, timeoutMs = 3000): Promise<void> {
 }
 
 describe("spawnBackground + readOutput + exit notification", () => {
+  test("stores artifacts under CODE_SHELL_HOME directly", async () => {
+    const r = mgr.spawnBackground({
+      command: "sleep 0.2",
+      cwd: home,
+      sessionId: "sessA",
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+
+    const expected = join(home, "bg-shells", "sessA", `${r.shellId}.json`);
+    const nested = join(home, ".code-shell", "bg-shells", "sessA", `${r.shellId}.json`);
+    expect(existsSync(expected)).toBe(true);
+    expect(existsSync(nested)).toBe(false);
+  });
+
   test("short command: returns shellId, captures output, exits with notification", async () => {
     const r = mgr.spawnBackground({
       command: "echo hi; sleep 0.1",
@@ -226,7 +241,7 @@ describe("pidfile lifecycle", () => {
   test("writes pidfile on spawn, removes on exit", async () => {
     const r = mgr.spawnBackground({ command: "sleep 100", cwd: home, sessionId: "sessA" });
     if (!r.ok) throw new Error("spawn failed");
-    const dir = join(home, ".code-shell", "bg-shells", "sessA");
+    const dir = join(home, "bg-shells", "sessA");
     const pidfile = `${r.shellId}.json`;
     await until(() => existsSync(dir) && readdirSync(dir).includes(pidfile));
     await mgr.kill(r.shellId);
@@ -253,7 +268,7 @@ describe("per-session shell cap", () => {
 describe("reapOrphansFromPidfiles (难点1)", () => {
   test("dead pid → pidfile deleted; alive pid → listed orphaned", async () => {
     const { mkdirSync, writeFileSync, existsSync: exists } = await import("node:fs");
-    const dir = join(home, ".code-shell", "bg-shells", "ghostS");
+    const dir = join(home, "bg-shells", "ghostS");
     mkdirSync(dir, { recursive: true });
     // A definitely-dead pid (very high, unlikely to exist).
     const deadFile = join(dir, "bg_dead.json");
