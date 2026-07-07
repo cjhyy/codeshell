@@ -8,6 +8,7 @@
 # 🟡 待改进 / 待优化
 
 - 🟡 **[压缩/token] 无真实 usage anchor 时仍依赖启发式估算（blocker 已修）** — 原 2.5× 低估 blocker 已修：`recordActualUsage` 记录真实 anchor 估算值，缩容后按比例 rescale(`manager.ts:141-169`)，`turn-loop.ts` 已传入当前 messages(`turn-loop.ts:737-745`)，summary compact 后若仍超过 snip gate 会继续走 snip/window/emergency ladder(`manager.ts:482-528`)。剩余改进：没有真实 anchor 的初始估算仍落在启发式路径，`estimateTokens` 仍是 `estimateMessagesTokens()*4/3`(`compaction.ts:17-23`)。
+- 🟡 **[前端/压缩] `/compact` 进行中无 UI 反馈、不禁用输入（有竞态）** — `compactActiveSession`(`App.tsx:2431-2469`) 只在触发前挡「会话正 busy」(`busyKeys.has(activeBucket)`)，压缩 Promise 飞行途中**没有任何 loading/spinner/「正在压缩…」提示，也不禁用输入**（渲染层无 `compacting`/`isCompact`/`compactPending` 状态，grep 仅命中 i18n 那句 running 拒绝文案）。summary 策略要调 LLM 摘要，可能耗时几秒，期间用户可继续打字发送 → 新消息进 engine 的同时压缩正改同一份 messages，存在竞态；且没有重复 `/compact` 防抖。修法：加 per-bucket `compactingBuckets` 状态，`compactActiveSession` 开始置位/`finally` 清除；composer 在该 bucket 压缩中时禁用输入并显示「正在压缩上下文…」；重复触发直接忽略。
 - 🟡 **[前端/CC 面板] Claude Code / 外部 agent 面板缺「当前 session 触发」标识** — 一屏里有多个 CC/Codex（DriveAgent 驱动的）面板时，看不出哪个是当前这个 session 触发/关联的。当前面板只按 `sessionId` 拉当前列表(`BackgroundShellPanel.tsx:45-53`)，但 header/row 只展示数量、状态、描述、变更文件等(`BackgroundShellPanel.tsx:208-224`, `:283-321`)，条目数据也不带来源 session(`background-work.ts:110-146`)。修法：给面板卡片打 tag/徽标标注来源 session（如 session 短 id/名称、或「本会话」高亮）。
 - 🟡 **[记忆/dream · 不对称] 会自动打扫的区(dream)小，不能自动打扫的区(user)反而堆最多** — 现状：平时会话记的东西几乎都直接进 **user 区**(要转正、跨会话可靠)，但 user 区 **dream 永远碰不到**：user memories 对 dream 只读(`memory.ts:10-16`)，dream consolidation 虽加载 user+dream 但写入循环硬拒非 dream scope(`dream-consolidation.ts:88-95`, `:180-190`)。结果**最该被自动清理的完成态 changelog 恰恰落在永不自动清理的区**。**根治方向(二选一或都做)**：① 让 dream 能对 user 区**提议**清理(列候选清单，用户一次性批准)；② 把 changelog/过程类记忆改成默认存 **dream 区**(可自动归档)，user 区只留耐用事实(架构/根因/偏好)。另 `shouldAutoDream()` 只看启用、session 数和时间窗口(`auto-dream.ts:58-72`)，缺 Codex rate-limit 阈值跳过。
 - 🟢 **[会话] TodoWrite resume 恢复 — Codex 核实已修，仅缺测试**(`codeshell-todo-session-resume-empty-list`)：`readLastTodoSnapshot` 扫最新 TodoWrite，末次全 completed 则刻意清空(`task.ts:154-170`)；resume 时重放为 `task_update`(`engine.ts:1613-1618`)，模型也从 resumed transcript 看到旧 tool-use。剩：补 `task.test.ts`/`engine.todo-resume.test.ts`；当前 `rg` 未见专门覆盖 `readLastTodoSnapshot`/resume `task_update` 的测试。
@@ -24,9 +25,6 @@
 
 # beta1 延后（非 bug，记 release notes）
 
-- 🔶 **browser-login 硬化（部分已落，剩账号切换/webview 收口）**(effort M)：已落：登录窗口改用非持久 `login-${uuid}` 分区(`credentials-login/index.ts:207`)，关闭后 `destroyPartitionStorage` 用 `clearStorageData()` 清全部站点存储(`browser-host/index.ts:146-154`)。剩：账号切换 `restoreCookiesToBrowser(..., mode:"clear")` 仍只清 cookies，注释也标明不动 localStorage(`credentials-service.ts:148-160`)；BrowserHost 仍只支持 `kind:"window"`(`browser-host/index.ts:17-23`, `:90-93`)，browser-panel webview 硬化逻辑仍散在 `main/index.ts:1078-1113`。
-- ⚪️ **内部浏览器 Network 可视化/请求复用 UX** — 当前 BrowserPanel 仍是 webview + 地址栏 + tabs + localhost anchors(`BrowserPanel.tsx:94-104`)，未见 Network/request/response/header/payload/copy-as-fetch 面板实现。
-- 🔶 **i18n 收尾（增量）**：✅ `"新对话"` 哨兵已常量化为 `DEFAULT_SESSION_TITLE`(`transcripts.ts:34-40`)；剩：非 React helper 仍硬编码 `codeshell.uiLanguage` key(`messages/time.ts:22-28`, `messages/streamGroups.ts:32-38`)；mobile 仍单独大量硬编码中文（如 `mobile/App.tsx:130-147`, `mobile/components/SessionList.tsx:58-80`, `mobile/components/Composer.tsx:80-93`）。
 
 ---
 
@@ -40,9 +38,9 @@
 - **聊天软件接入（channel，参考 OpenClaw）**（`docs/todo/im-gateway-remote-orchestration.md`）：微信/Telegram 做成可插拔 channel 前端。core 保持 channel-agnostic，平台接入做外部插件；接入做成一类凭证进 CredentialStore；扫码微信号绑死为收发身份 + 必配 allowlist。未立项。
 - **工程质量 P7**：builtin tools 集成测试 / E2E / CI 覆盖率 >60% / 性能 / 文档。
   - **Electron e2e 设施**（playwright 现是孤儿依赖）：用 `_electron` API 驱动真机 app，沉淀 `verifier-electron` 基座。`launchApp()` 按 title/URL 抓主窗（**别用 `firstWindow()`，会抓 DevTools 窗**）；难点：webview 嵌套需 `frameLocator` / node-pty 按 Electron ABI 重编 + CI 需 `xvfb-run`。
-- **Markdown 渲染一致性**（desktop/TUI）。
-- **view_image TUI inline**（iTerm/kitty graphics protocol）+ 历史图降级文字摘要省 token。
-- **设置/命名清理**：settings/repo/workspace 命名收口；ModelSection 1065 行深度重排。
+- **TUI 宽表截断**（`MessageContent.tsx:163` 列宽 cap 40 会截断宽表）——小修，非追求与 desktop 完全一致（终端环境本就不该强求富渲染一致，图片/折叠/点击链接在 TUI 无意义）。
+- ~~view_image TUI inline~~（**不做**：TUI 是终端，看图开桌面端即可；三套图形协议编码 L 级投入收益太低）；历史图降级文字摘要省 token **已完成**（`compaction.ts:99` downgradeImagePayloadsInHistory + `turn-loop.ts:378` 接线 + 测试）。
+- **设置/命名清理**：`repo`(renderer `activeRepoPath`) / `workspace`(core `session-manager.ts:36`) / `project`(scope 值+文案) / `cwd`(`TextConnectionsPanel.tsx:85`) 四词同义混用，跨 renderer↔core 边界收口；`TextConnectionsPanel.tsx`(515 行，catalog/CRUD/credentials/defaults/audio-STT fallback/quick-add 卡片全塞一个组件) 拆分。（注：原「ModelSection 深度重排」前提已过时——ModelSection 已被重构删除，替代物即此面板。）
 - **其他未落地设计稿**（见 `docs/todo/`）：`roadmap.md`(Phase 0–6)、`prompt-cache-optimization.md`、`session-cumulative-cache-usage-plan.md`、`mcp-http-auth-oauth-link-tech-design.md`、`smoke-automation-mock-provider.md`、`worktree-session-isolation-research.md`。
 
 ---
