@@ -19,7 +19,7 @@ import {
   type SessionCredentialAllow,
   type CredentialAskFn,
 } from "./use-gate.js";
-import { SettingsManager } from "../settings/manager.js";
+import { SettingsManager, type SettingsScope } from "../settings/manager.js";
 
 const TOOL_NAME = "InjectCredential";
 
@@ -78,9 +78,17 @@ function sessionAllowFor(ctx?: ToolContext): SessionCredentialAllow {
   return set;
 }
 
-function readAutoApprove(cwd: string): boolean {
+// CredentialStore only distinguishes full user+project from project-only.
+// Isolated engines must be at least as restrictive as project-scoped engines.
+function credentialScope(scope: SettingsScope | undefined): "full" | "project" {
+  return scope === "full" || scope === undefined ? "full" : "project";
+}
+
+function readAutoApprove(cwd: string, scope: "full" | "project"): boolean {
   try {
-    const s = new SettingsManager(cwd, "full").get() as { credentialUse?: { autoApprove?: boolean } };
+    const s = new SettingsManager(cwd, scope === "full" ? "full" : "project").get() as {
+      credentialUse?: { autoApprove?: boolean };
+    };
     return s.credentialUse?.autoApprove === true;
   } catch {
     return false;
@@ -88,9 +96,11 @@ function readAutoApprove(cwd: string): boolean {
 }
 
 /** 该工具仅在有 cookie 凭证 且 宿主接了注入回调时才可见(BUILTIN_TOOL_GUARDS)。 */
-export function isInjectCredentialAvailable(cwd: string): boolean {
+export function isInjectCredentialAvailable(cwd: string, settingsScope?: SettingsScope): boolean {
   try {
-    return new CredentialStore(cwd).listMasked().some((c) => c.type === "cookie");
+    return new CredentialStore(cwd)
+      .listMasked(credentialScope(settingsScope))
+      .some((c) => c.type === "cookie");
   } catch {
     return false;
   }
@@ -101,6 +111,7 @@ export async function injectCredentialTool(
   ctx?: ToolContext,
 ): Promise<string> {
   const cwd = ctx?.cwd ?? process.cwd();
+  const scope = credentialScope(ctx?.settingsScope);
   const id = typeof args.id === "string" ? args.id.trim() : "";
   const purpose = typeof args.purpose === "string" ? args.purpose : undefined;
 
@@ -115,7 +126,7 @@ export async function injectCredentialTool(
     });
   }
 
-  const cred = new CredentialStore(cwd).resolve(id);
+  const cred = new CredentialStore(cwd).resolve(id, scope);
   if (!cred) {
     return json({ kind: "error", error: `凭证不存在: "${id}"。调用 UseCredential(无参)可列出可用凭证。` });
   }
@@ -128,7 +139,7 @@ export async function injectCredentialTool(
   const decision = await credentialUseGate(
     { id: cred.id, label: cred.label, purpose },
     {
-      autoApprove: readAutoApprove(cwd),
+      autoApprove: readAutoApprove(cwd, scope),
       credentialAutoUse: cred.autoInjectByAI === true,
       sessionAllow: sessionAllowFor(ctx),
       ask,

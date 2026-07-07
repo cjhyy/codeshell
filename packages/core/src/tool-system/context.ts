@@ -181,6 +181,7 @@ export interface SubAgentSpawner {
 export interface ToolVisibilityContext {
   cwd: string;
   hasGoal: boolean;
+  settingsScope?: import("../settings/manager.js").SettingsScope;
 }
 
 export interface ToolContext {

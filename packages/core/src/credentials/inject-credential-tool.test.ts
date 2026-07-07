@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { CredentialStore } from "./store.js";
@@ -9,6 +9,7 @@ import {
   __resetInjectCredentialSessionAllowForTests,
 } from "./inject-credential-tool.js";
 import type { ToolContext } from "../tool-system/context.js";
+import type { SettingsScope } from "../settings/manager.js";
 
 /**
  * InjectCredential gates a cookie injection into the built-in browser behind a
@@ -22,13 +23,19 @@ type InjectArgs = { credentialToBrowser?: (id: string) => Promise<{ ok: boolean;
 
 function ctxWith(
   cwd: string,
-  opts: { askResult?: string; inject?: InjectArgs["credentialToBrowser"]; sessionId?: string } = {},
+  opts: {
+    askResult?: string;
+    inject?: InjectArgs["credentialToBrowser"];
+    sessionId?: string;
+    settingsScope?: SettingsScope;
+  } = {},
 ): ToolContext {
   return {
     cwd,
     sessionId: opts.sessionId ?? "test-session",
     askUser: opts.askResult !== undefined ? async () => opts.askResult! : undefined,
     injectCredentialToBrowser: opts.inject,
+    settingsScope: opts.settingsScope,
   } as unknown as ToolContext;
 }
 
@@ -36,8 +43,13 @@ function parse(s: string): Record<string, unknown> {
   return JSON.parse(s) as Record<string, unknown>;
 }
 
-function saveCookie(cwd: string, id: string, extra: Record<string, unknown> = {}): void {
-  new CredentialStore(cwd).save("user", {
+function saveCookie(
+  cwd: string,
+  id: string,
+  extra: Record<string, unknown> = {},
+  scope: "user" | "project" = "user",
+): void {
+  new CredentialStore(cwd).save(scope, {
     id,
     type: "cookie",
     label: id,
@@ -166,6 +178,52 @@ describe("InjectCredential tool", () => {
     expect(String(out.error)).toContain("session locked");
   });
 
+  test("project-scoped engine cannot inject a user-scope cookie", async () => {
+    saveCookie(cwd, "host-cookie");
+    let injected = false;
+    const out = parse(
+      await injectCredentialTool(
+        { id: "host-cookie" },
+        ctxWith(cwd, {
+          settingsScope: "project",
+          askResult: "允许本次",
+          inject: async () => {
+            injected = true;
+            return { ok: true };
+          },
+        }),
+      ),
+    );
+    expect(out.kind).toBe("error");
+    expect(String(out.error)).toContain("凭证不存在");
+    expect(injected).toBe(false);
+  });
+
+  test("project-scoped engine ignores user credential auto-approve", async () => {
+    mkdirSync(join(home, ".code-shell"), { recursive: true });
+    writeFileSync(
+      join(home, ".code-shell", "settings.json"),
+      JSON.stringify({ credentialUse: { autoApprove: true } }),
+    );
+    saveCookie(cwd, "project-cookie", {}, "project");
+    let injected = false;
+    const out = parse(
+      await injectCredentialTool(
+        { id: "project-cookie" },
+        ctxWith(cwd, {
+          settingsScope: "project",
+          inject: async () => {
+            injected = true;
+            return { ok: true };
+          },
+        }),
+      ),
+    );
+    expect(out.kind).toBe("error");
+    expect(String(out.error)).toContain("无审批 UI");
+    expect(injected).toBe(false);
+  });
+
   describe("isInjectCredentialAvailable", () => {
     test("false when no cookie credential exists", () => {
       new CredentialStore(cwd).save("user", { id: "tok", type: "token", label: "tok", secret: "s" });
@@ -174,6 +232,10 @@ describe("InjectCredential tool", () => {
     test("true once a cookie credential exists", () => {
       saveCookie(cwd, "yt");
       expect(isInjectCredentialAvailable(cwd)).toBe(true);
+    });
+    test("false for project scope when only a user cookie exists", () => {
+      saveCookie(cwd, "host-cookie");
+      expect(isInjectCredentialAvailable(cwd, "project")).toBe(false);
     });
   });
 });

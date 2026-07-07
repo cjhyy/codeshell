@@ -784,7 +784,7 @@ export const BUILTIN_TOOL_GUARDS: Map<string, BuiltinToolGuard> = new Map([
   [useCredentialToolDef.name, (ctx) => isUseCredentialAvailable(ctx.cwd)],
   // InjectCredential hidden until ≥1 cookie credential exists (browser injection
   // is cookie-only). Also degrades at call time if no browser bridge is wired.
-  [injectCredentialToolDef.name, (ctx) => isInjectCredentialAvailable(ctx.cwd)],
+  [injectCredentialToolDef.name, (ctx) => isInjectCredentialAvailable(ctx.cwd, ctx.settingsScope)],
   [completeGoalToolDef.name, (ctx) => ctx.hasGoal === true],
   [cancelGoalToolDef.name, (ctx) => ctx.hasGoal === true],
 ]);

@@ -1733,6 +1733,7 @@ export class Engine {
           (normalizeGoal(options?.goal) !== undefined ||
             session.state.activeGoal !== undefined ||
             normalizeGoal(this.config.goal) !== undefined),
+        settingsScope: this.config.settingsScope ?? "project",
       };
       toolCtx.toolVisibility = toolVisibility;
       // #7: per-turn project builtin override. The toolRegistry's builtin tool
