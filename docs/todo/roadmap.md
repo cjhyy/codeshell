@@ -32,12 +32,12 @@
 | ToolContext 依赖注入 | 高 | ServiceContainer 模式，优于模块级单例 |
 | Preset 系统 | 高 | `general` / `terminal-coding` 双预设，对齐 OpenCode Agent 概念 |
 | 权限决策引擎 | 高 | 对齐 Claude Code permission modes（allow/ask/deny/bypass） |
-| Sub-Agent 生成 | 中 | 树形委托，SendMessage 点对点通信 |
+| Sub-Agent 编排 | 中 | `Agent` 树形委托，`AgentSendInput` 续写/点对点输入 |
 | MCP 集成 | 中 | 支持 MCP client（tool/resource），三款标杆都支持 |
 | Protocol Client/Server | 中 | Client-Server 分离架构，对齐 OpenCode |
 | Ink/React TUI | 中 | 对齐 Claude Code TUI |
 | Streaming + Reactive Compaction | 高 | 对齐 Claude Code |
-| Git Worktree 隔离 | 中 | **差异化优势**，三款标杆未原生支持 |
+| Session Worktree 工作区切换 | 中 | `EnterWorktree`/`ExitWorktree` 会话级指针切换 + keep/detach/discard 清理语义；`.worktreeinclude`/自动隔离仍未做 |
 | Arena 多模型协作 | 中 | **差异化优势**，三款标杆无此能力 |
 | LSP Tool | 低 | 基础 goToDefinition/findReferences/hover，对齐 OpenCode 早期阶段 |
 | Hook Registry | 低 | 生命周期 hook 框架就绪，待更多 hook 点 |
@@ -233,7 +233,7 @@
 
 ### 4.1 Topology Agent Network
 
-**当前状态**：Sub-agent 树形结构，SendMessage 点对点通信。
+**当前状态**：Sub-agent 树形结构，`Agent` 委托 + `AgentSendInput` 续写/点对点输入。
 
 **目标**：DAG 拓扑 + 共享上下文池。
 
@@ -246,7 +246,7 @@
 
 ### 4.2 Checkpoint / Undo 系统
 
-**当前状态**：Worktree 提供了隔离分支，但无细粒度 undo。
+**当前状态**：已有 turn 级 undo，`EnterWorktree`/`ExitWorktree` 提供会话级 worktree 切换和隔离分支，但仍无每次 tool execution 的细粒度 checkpoint / 自动回滚。
 
 **目标**：
 
@@ -354,7 +354,7 @@ Q4  ──→ Phase 4（Topology Agent + Checkpoint/Undo）
 | Custom Agent/Preset | ✅ plugins | ✅ builtin agents | ❌ | ✅ Preset |
 | LSP 集成 | ✅ | ✅（event bus） | ✅ | ⚠️ 基础 |
 | Multi-model | ❌ | ❌ | ❌ | ✅ **Arena** |
-| Git Worktree | ❌ | ❌ | ❌ | ✅ |
+| Worktree Workspace | ❌ | ❌ | ❌ | ✅ `EnterWorktree`/`ExitWorktree` 会话级切换 |
 | Protocol SDK | ❌ | ✅ Stainless | ❌ | ⚠️ 内部 protocol |
 | Hook 系统 | ✅ | ✅ plugin | ❌ | ✅ |
 | Slash Commands | ✅ | ❌ | ❌ | ✅(tui slash 系统 + 自动补全) |

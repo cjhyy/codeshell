@@ -1,6 +1,6 @@
 # Worktree Session Workspace 设计
 
-> 状态：设计稿（待审）
+> 状态：设计稿（已部分落地；2026-07-07 按当前实现校正）
 > 日期：2026-07-07
 > 分支：dev/todo-iteration
 > 目标：把 CodeShell 的 worktree 能力从「进程级单锁的建/清工具」升级为「会话级、可自由切换、切换带会话工作区指针」的工作区模式，对齐 Claude Code 与 Codex 桌面 app，并补齐外部 agent（CC/Codex）的 resume 安全边界。
@@ -9,25 +9,24 @@
 
 ## 1. 问题与目标
 
-### 1.1 现状痛点（已核实代码）
+### 1.1 原始痛点与当前实现状态
 
-- `packages/core/src/tool-system/builtin/worktree.ts:18` 用**进程级全局变量** `_activeWorktree` 记录「当前 worktree」。
-- `worktree.ts:52-54`：已在一个 worktree 时，EnterWorktree **直接拒绝**再进第二个（"Already in a worktree… Exit it first"）。用户被锁死在一个里，无法在多个 worktree 间切换。
-- 调研稿 §6.1 确认：EnterWorktree 之后**主会话 cwd 并未真正切过去**，文件工具默认仍作用于原 workspace。这个「active 状态」除了那把拦路锁几乎空转。
-- `ExitWorktree keep`（`worktree.ts:143`）语义是「删目录、只留分支」——名字骗人，不是「保留工作区以便继续」。
-- DriveAgent 只把 `cwd` 透传给外部 CLI，不存 `sessionId→cwd/worktree` 绑定；外部 CC/Codex resume 时 cwd 若漂移会写错目录（Codex issue #4791 + 记忆 `codeshell-cc-codex-worktree-session-resume-cwd-mismatch`）。
-- 并发多 session / 后台 agent 共用一个进程全局变量，存在碰撞（记忆 `codeshell-multi-agent-collision-risk`）。
+- 旧版 `EnterWorktree` 用进程级 `_activeWorktree` 和单锁表达「当前 worktree」，不能在多个 worktree 间切换。当前实现已改为 session-scoped `SessionWorkspace`，由 `state.json.workspace` 持久化。
+- 旧版切换 worktree 后，主会话 cwd 不会从会话状态重新派生。当前实现从持久化的 workspace 指针恢复下一轮 cwd/sandbox/approval/shellEnv；轮中切换仍故意从下一轮生效。
+- 旧版 `ExitWorktree keep` 语义接近「删目录、只留分支」。当前实现已区分 `keep`（保留目录+分支）、`detach`（删目录留分支）、`discard`（删目录+分支）。
+- 旧版 DriveAgent 只透传 `cwd`。当前实现已持久化 `{ cli, sessionId, cwd }` 绑定，resume 时强制使用存储的 cwd；原 cwd 不存在时阻止 resume。
+- 并发同 cwd 后台 DriveAgent 仍不是自动隔离；当前实现已在 background job 中记录 cwd，并对同 cwd writable 任务发出碰撞警告。自动 `isolation:worktree` 是后续增量。
 
 ### 1.2 三家对标（全部核实）
 
 | 能力                  | Claude Code                           | Codex 桌面 app                                            | CodeShell 现状                            |
 | --------------------- | ------------------------------------- | --------------------------------------------------------- | ----------------------------------------- |
-| worktree 模式         | ✅ `claude --worktree`                | ✅ Local/Worktree/Cloud 三模式                            | ⚠️ 半成品                                 |
-| 切换到另一个 worktree | ✅ EnterWorktree(目标)，旧的留盘      | ✅ Handoff（Local↔Worktree）                              | ❌ 全局锁死一个                           |
-| 切换是否带上下文      | transcript relocate 到该目录          | **Handoff 带 thread 上下文+prompt 历史+未提交改动一起搬** | ❌                                        |
-| 清理策略              | 无改动自动清；有改动问 keep/remove    | 默认保留 15 个，旧的自动清                                | keep 语义错                               |
+| worktree 模式         | ✅ `claude --worktree`                | ✅ Local/Worktree/Cloud 三模式                            | ✅ session-scoped workspace 指针           |
+| 切换到另一个 worktree | ✅ EnterWorktree(目标)，旧的留盘      | ✅ Handoff（Local↔Worktree）                              | ✅ `EnterWorktree(target)` 切换指针，旧目录留盘 |
+| 切换是否带上下文      | worktree project storage 可 resume    | **Handoff 带 thread 上下文+prompt 历史+未提交改动一起搬** | ⚠️ `state.json.workspace` + `session_meta` breadcrumb；不搬 transcript 文件 |
+| 清理策略              | 无改动自动清；有改动问 keep/remove    | 默认保留 15 个，旧的自动清                                | ✅ `keep`/`detach`/`discard` 三态           |
 | gitignored 文件复制   | `.worktreeinclude`                    | `.worktreeinclude`                                        | ❌                                        |
-| resume 与 cwd         | v2.1.198 transcript relocate 后可找回 | Handoff 带上下文；同分支不可双 checkout                   | 会话存 cwd（`readCwd`），但中途切换未回写 |
+| resume 与 cwd         | worktree project storage 后可找回     | Handoff 带上下文；同分支不可双 checkout                   | ✅ `state.json.workspace` 恢复 cwd；DriveAgent 绑定外部 session cwd |
 
 ### 1.3 一个 git 硬约束（两家都受制）
 
@@ -50,6 +49,10 @@
 ### 1.5 非目标（YAGNI，本期不做）
 
 - `.worktreeinclude`（复制 gitignored env）、baseRef 选择（fresh/head/PR）、worktree lock、subagent 自动隔离、DriveAgent `isolation:worktree` 自动建树、Cloud 模式。这些是后续增量。
+
+### 1.6 已降级的设计意图
+
+原始对标目标参考 Handoff-style 「把上下文搬到目标工作区」。当前 CodeShell 实现降级为**持久化 session pointer + `session_meta` breadcrumb**：`state.json.workspace` 是权威工作区指针，transcript 仍留在原 session 存储目录，切换时只追加 breadcrumb。这样避免移动 `transcript.jsonl` 破坏现有 session 存储、resume、修复 orphaned tool-use 和桌面 transcript reader 的假设；代价是 breadcrumb 是审计线索，不等同于把完整 transcript 物理迁入目标项目目录。
 
 ---
 
@@ -97,8 +100,8 @@ EnterWorktree({ target })
 行为（会话工作区指针切换）：
 
 1. 解析/创建目标工作区（新建走 createWorktree；已存在直接用；main 直接回主 root）。
-2. **上下文 breadcrumb**：不移动 transcript 文件；在同一个 transcript 中追加 `session_meta`，记录 from/to workspace。未提交改动天然跟随目录（worktree 是独立 checkout，不需搬文件）。
-3. **回写 `state.json`**：`setSessionWorkspace(sessionId, 目标)` — 下一轮 run/resume 能回到这里。
+2. **持久化 session pointer**：`setSessionWorkspace(sessionId, 目标)` 回写 `state.json.workspace`，这是下一轮 run/resume 的权威 cwd 来源。
+3. **上下文 breadcrumb**：不移动 transcript 文件；在同一个 transcript 中追加 `session_meta`，记录 from/to workspace。未提交改动天然跟随目录（worktree 是独立 checkout，不需搬文件）。
 4. 首次创建时跑 setup 脚本（现有 `localEnvironment.setupScripts`，保留）。
 5. 返回：目标 path/branch/from + 「切换已持久化；从下一轮开始生效，本轮文件/shell/sandbox 工具仍使用旧 root」。
 
@@ -124,23 +127,21 @@ EnterWorktree({ target })
 持久化每次外部 run：
 
 ```ts
-interface ExternalAgentRunBinding {
+interface ExternalAgentSessionBinding {
   cli: "claude" | "codex";
-  externalSessionId: string;
-  codeShellSessionId: string;
+  sessionId: string;
   cwd: string;
   worktreePath?: string;
   worktreeBranch?: string;
-  createdAt: number;
-  lastUsedAt: number;
+  updatedAt: number;
 }
 ```
 
 resume 规则：
 
-- 用户未传 cwd → 用绑定里的原 cwd。
-- 传了不同 cwd → 默认拒绝或强警告（Codex 尤其：sandbox writable root 随 cwd 变）。
-- 原 cwd 不存在：分支还在 → 允许选择重建 worktree；分支没了 → 拒绝并提示「工作区已删除」。
+- 绑定存在时，以绑定里的原 cwd 为准。
+- 调用方传了不同 cwd → 强制使用绑定 cwd，并在工具结果里说明忽略了 requested cwd（Codex 尤其：sandbox writable root 随 cwd 变）。
+- 原 cwd 不存在或不再是目录 → 拒绝 resume 并提示存储 cwd 已失效；自动重建 worktree 尚未实现。
 
 ### 2.6 UI — desktop（TUI 状态栏同步）
 
@@ -158,8 +159,8 @@ resume 规则：
 ```
 用户点切换器某行 / 模型调 EnterWorktree(target)
   → 生命周期服务解析或创建目标 worktree（含同分支守卫）
-  → 当前 transcript 追加 session_meta breadcrumb（不移动 transcript 文件）
-  → setSessionWorkspace 回写 state.json
+  → setSessionWorkspace 回写 state.json.workspace（权威 session pointer）
+  → 当前 transcript 追加 session_meta breadcrumb（审计线索，不移动 transcript 文件）
   → 下一轮 run 开始时 ToolContext.cwd / sandbox / approval / shellEnv / agents 解析为新 root
   → 状态栏更新为新分支
 ```
@@ -177,8 +178,8 @@ resume(sessionId)
 
 ```
 DriveAgent resume(externalSessionId)
-  → 读 ExternalAgentRunBinding
-  → 校验 cwd（未传→用绑定原 cwd；不符→警告/拒绝；目录没了→按分支在否给选项）
+  → 读 ExternalAgentSessionBinding
+  → 校验 cwd（绑定存在→强制绑定原 cwd；目录没了→拒绝并提示）
   → spawn 外部 CLI，cwd 锁定为绑定值
 ```
 
@@ -201,7 +202,7 @@ DriveAgent resume(externalSessionId)
 - **cwd 真切**：EnterWorktree 后下一轮 ToolContext.cwd == 目标 root；本轮 Read/Bash 相对路径仍落在旧 root，并在工具结果中说明边界。
 - **同分支守卫**：两个 worktree 试图 checkout 同分支 → 第二个报错。
 - **自身 resume**：切到 worktree→模拟 resume→回到该 worktree；worktree 删除→resume 走守卫分支。
-- **外部绑定**：DriveAgent run 后 binding 落盘；resume 无 cwd→用绑定值；cwd 不符→拒绝/警告；目录没了→按分支在否给选项。
+- **外部绑定**：DriveAgent run 后 binding 落盘；resume cwd 不符→强制使用绑定值并说明；目录没了→拒绝。
 - **清理三态**：keep 保目录+分支；detach 删目录留分支；discard 全删。
 - **无改动自动清 vs 有改动提示**。
 - 全程 TDD：先写失败测试，再实现（superpowers:test-driven-development）。

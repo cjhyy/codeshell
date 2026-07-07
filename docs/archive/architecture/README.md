@@ -1,8 +1,10 @@
 # CodeShell Architecture Docs
 
+> 这些是历史归档文档，链接可能已失效。当前架构入口请看 [`../../architecture/00-overview.md`](../../architecture/00-overview.md)。
+
 > Originally generated on 2026-05-16; entry points refreshed after the 2026-05-22 monorepo split. Current review refreshed on 2026-05-25.
 
-This directory is the current architecture documentation set for CodeShell. It is organized as a reading path rather than one giant document, so each file can stay focused and easier to update when a subsystem moves.
+This directory is a historical architecture documentation set for CodeShell. It is organized as a reading path rather than one giant document, so each file can stay focused and easier to update when a subsystem moves.
 
 ## Reading Order
 

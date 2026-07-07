@@ -11,7 +11,7 @@ CodeShell is **one agent-orchestration engine with three product surfaces and on
 - a programmatic **SDK** - the root package still re-exports the core API for `import { Engine } from "@cjhyy/code-shell"` (`scripts/build-meta.ts:4`, `scripts/build-meta.ts:26`);
 - a standalone **CDP package** - a zero-dependency browser action driver used by hosts that can supply a Chrome DevTools Protocol sender (`packages/cdp/src/index.ts:1`, `packages/cdp/src/sender.ts:1`).
 
-The core is deliberately **domain-agnostic**: it carries the turn loop, context management, permissions, MCP, hooks, tools, protocol, sessions, runtime state, model plumbing, and memory mechanisms, while policy and catalog data are expected to live in data files, hosts, plugins, or optional packages (`packages/core/CONTRIBUTING.md:5`, `packages/core/CONTRIBUTING.md:26`). The package manifests are the canonical public package version (`0.6.0-rc.12` in this snapshot); the legacy core `VERSION` export currently lags the manifests and should not be treated as the release version (`packages/core/src/index.ts:7`).
+The core is deliberately **domain-agnostic**: it carries the turn loop, context management, permissions, MCP, hooks, tools, protocol, sessions, runtime state, model plumbing, and memory mechanisms, while policy and catalog data are expected to live in data files, hosts, plugins, or optional packages (`packages/core/CONTRIBUTING.md:5`, `packages/core/CONTRIBUTING.md:26`). The package manifests are the canonical public package version, and the core `VERSION` export is aligned with them at `0.6.0-rc.12` in this snapshot (`packages/core/src/index.ts:7`).
 
 ## The four packages
 
