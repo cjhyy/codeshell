@@ -18,9 +18,50 @@ import React, { memo, useEffect, useRef, useState, useSyncExternalStore } from "
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
-import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from "rehype-sanitize";
 import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github.css";
+
+type SanitizeAttribute = NonNullable<SanitizeSchema["attributes"]>[string][number];
+
+function stripClassNameAttributes(
+  attributes: SanitizeSchema["attributes"],
+): NonNullable<SanitizeSchema["attributes"]> {
+  return Object.fromEntries(
+    Object.entries(attributes ?? {}).map(([tag, attrs]) => [
+      tag,
+      attrs.filter(
+        (attr) => !(attr === "className" || (Array.isArray(attr) && attr[0] === "className")),
+      ),
+    ]),
+  ) as NonNullable<SanitizeSchema["attributes"]>;
+}
+
+const SANITIZE_ATTRIBUTES = stripClassNameAttributes(defaultSchema.attributes);
+const HIGHLIGHT_CODE_CLASS_NAMES: SanitizeAttribute = ["className", "hljs", /^language-[\w-]+$/];
+const HIGHLIGHT_SPAN_CLASS_NAMES: SanitizeAttribute = ["className", /^hljs-[\w-]+$/];
+
+type HastNode = {
+  type?: string;
+  properties?: Record<string, unknown>;
+  children?: HastNode[];
+};
+
+function rehypeDropEmptyClassNames() {
+  return (tree: HastNode) => {
+    dropEmptyClassNames(tree);
+  };
+}
+
+function dropEmptyClassNames(node: HastNode): void {
+  if (node.type === "element" && node.properties) {
+    const className = node.properties.className;
+    if (className === "" || (Array.isArray(className) && className.length === 0)) {
+      delete node.properties.className;
+    }
+  }
+  for (const child of node.children ?? []) dropEmptyClassNames(child);
+}
 
 /**
  * Sanitize schema for the raw HTML that rehype-raw now lets through. This is a
@@ -29,8 +70,11 @@ import "highlight.js/styles/github.css";
  * scrubbed of <script>, event handlers (onerror/onclick), <iframe>, etc. We
  * start from rehype's safe default and only widen it for the benign formatting
  * a README uses: <img> with width/height/align, and center alignment on
- * p/div/span. highlight.js className/style on code spans is also allowed so the
- * later rehype-highlight pass survives sanitization.
+ * p/div/span. highlight.js uses class names, not inline style, but arbitrary
+ * raw-HTML class names can trigger Tailwind utility classes (hidden/fixed/etc.).
+ * Strip className from the default schema and add back only the code/span class
+ * shapes needed by highlight.js. rehype-highlight runs after sanitization, so
+ * syntax highlighting generated from markdown code fences still survives.
  */
 const SANITIZE_SCHEMA = {
   ...defaultSchema,
@@ -44,17 +88,14 @@ const SANITIZE_SCHEMA = {
     src: [...(defaultSchema.protocols?.src ?? []), "codeshell-path"],
   },
   attributes: {
-    ...defaultSchema.attributes,
-    img: [...(defaultSchema.attributes?.img ?? []), "width", "height", "align"],
-    p: [...(defaultSchema.attributes?.p ?? []), "align"],
-    div: [...(defaultSchema.attributes?.div ?? []), "align"],
-    span: [...(defaultSchema.attributes?.span ?? []), ["className"], ["style"]],
-    code: [...(defaultSchema.attributes?.code ?? []), ["className"]],
-    // highlight.js wraps tokens in <span class="hljs-…"> — keep class globally
-    // on the elements it touches so syntax highlighting isn't stripped.
-    "*": [...(defaultSchema.attributes?.["*"] ?? []), "className"],
+    ...SANITIZE_ATTRIBUTES,
+    img: [...(SANITIZE_ATTRIBUTES.img ?? []), "width", "height", "align"],
+    p: [...(SANITIZE_ATTRIBUTES.p ?? []), "align"],
+    div: [...(SANITIZE_ATTRIBUTES.div ?? []), "align"],
+    span: [...(SANITIZE_ATTRIBUTES.span ?? []), HIGHLIGHT_SPAN_CLASS_NAMES],
+    code: [...(SANITIZE_ATTRIBUTES.code ?? []), HIGHLIGHT_CODE_CLASS_NAMES],
   },
-};
+} satisfies SanitizeSchema;
 import { Copy } from "./ui/icons";
 import {
   remarkPathLinks,
@@ -138,6 +179,7 @@ function MarkdownImpl({ text, cwd }: Props) {
         rehypePlugins={[
           rehypeRaw,
           [rehypeSanitize, SANITIZE_SCHEMA],
+          rehypeDropEmptyClassNames,
           [rehypeHighlight, { detect: true, ignoreMissing: true }],
         ]}
         urlTransform={(url) =>

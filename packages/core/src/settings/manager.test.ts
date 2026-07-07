@@ -320,6 +320,30 @@ describe("SettingsManager project writes", () => {
     expect(mode).toBe(0o600);
   });
 
+  test("saveUserSetting rejects prototype-polluting dotted keys", () => {
+    const sm = new SettingsManager(cwd, "full");
+
+    expect(() => sm.saveUserSetting("__proto__.polluted", true)).toThrow(/invalid setting key/);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(existsSync(join(home, ".code-shell", "settings.json"))).toBe(false);
+  });
+
+  test("saveProjectSetting rejects inherited-object descent", () => {
+    const sm = new SettingsManager(cwd, "project");
+    (Object.prototype as Record<string, unknown>).inheritedSettings = { x: "polluted" };
+    try {
+      expect(() => sm.saveProjectSetting("inheritedSettings.y", "safe", cwd)).toThrow(
+        /invalid setting key/,
+      );
+      expect(existsSync(join(cwd, ".code-shell", "settings.json"))).toBe(false);
+      expect(
+        ((Object.prototype as Record<string, unknown>).inheritedSettings as any).y,
+      ).toBeUndefined();
+    } finally {
+      delete (Object.prototype as Record<string, unknown>).inheritedSettings;
+    }
+  });
+
   test("deleteProjectSetting removes the leaf key (inherit)", () => {
     const sm = new SettingsManager(cwd, "project");
     sm.saveProjectSetting("capabilityOverrides.skills.a", "off", cwd);
@@ -328,6 +352,16 @@ describe("SettingsManager project writes", () => {
     const j = projectJson();
     expect(j.capabilityOverrides.skills.a).toBeUndefined();
     expect(j.capabilityOverrides.skills.b).toBe("on");
+  });
+
+  test("deleteProjectSetting rejects unsafe dotted-key segments", () => {
+    const sm = new SettingsManager(cwd, "project");
+    sm.saveProjectSetting("capabilityOverrides.skills.a", "off", cwd);
+
+    expect(() => sm.deleteProjectSetting("capabilityOverrides.__proto__.a", cwd)).toThrow(
+      /invalid setting key/,
+    );
+    expect(({} as Record<string, unknown>).a).toBeUndefined();
   });
 
   test("empty cwd throws (boundary guard)", () => {

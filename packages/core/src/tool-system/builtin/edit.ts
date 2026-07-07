@@ -4,6 +4,7 @@
 
 import { readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { isAbsolute, resolve } from "node:path";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { fileCache } from "./file-cache.js";
@@ -42,15 +43,17 @@ export async function editTool(
   args: Record<string, unknown>,
   ctx?: ToolContext,
 ): Promise<string> {
-  const filePath = args.file_path as string;
+  const rawPath = args.file_path as string;
   const oldString = args.old_string as string;
   const newString = args.new_string as string;
   const replaceAll = (args.replace_all as boolean) ?? false;
 
-  if (!filePath) return "Error: file_path is required";
+  if (!rawPath) return "Error: file_path is required";
   if (oldString === undefined) return "Error: old_string is required";
   if (newString === undefined) return "Error: new_string is required";
   if (oldString === newString) return "Error: old_string and new_string must be different";
+  const cwd = ctx?.cwd ?? process.cwd();
+  const filePath = isAbsolute(rawPath) ? rawPath : resolve(cwd, rawPath);
   if (!existsSync(filePath)) return `Error: File not found: ${filePath}`;
 
   try {

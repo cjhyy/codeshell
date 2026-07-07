@@ -11,8 +11,9 @@ function fakeGuest(opts: {
   url?: string;
   cdp?: Record<string, (p?: any) => any>;
   destroyed?: boolean;
+  debuggerState?: { attached: boolean; attaches: number; detaches: number };
 }): WebContents {
-  let attached = false;
+  const debuggerState = opts.debuggerState ?? { attached: false, attaches: 0, detaches: 0 };
   const cdp = opts.cdp ?? {};
   return {
     id: (opts as { id?: number }).id ?? 1,
@@ -21,12 +22,14 @@ function fakeGuest(opts: {
     getURL: () => opts.url ?? "https://www.xiaohongshu.com/explore",
     getTitle: () => "小红书",
     debugger: {
-      isAttached: () => attached,
+      isAttached: () => debuggerState.attached,
       attach: () => {
-        attached = true;
+        debuggerState.attached = true;
+        debuggerState.attaches++;
       },
       detach: () => {
-        attached = false;
+        debuggerState.attached = false;
+        debuggerState.detaches++;
       },
       sendCommand: async (method: string, params?: any) => (cdp[method] ? cdp[method](params) : {}),
     },
@@ -43,7 +46,8 @@ const BOX = { model: { content: [0, 0, 100, 0, 100, 40, 0, 40] } };
 
 function deps(over: Partial<AutomationDeps> = {}): AutomationDeps {
   return {
-    activeGuest: () => fakeGuest({ cdp: { "Accessibility.getFullAXTree": () => AX, "DOM.getBoxModel": () => BOX } }),
+    activeGuest: () =>
+      fakeGuest({ cdp: { "Accessibility.getFullAXTree": () => AX, "DOM.getBoxModel": () => BOX } }),
     policy: () => ({ allowedDomains: [] }),
     ...over,
   };
@@ -75,7 +79,10 @@ describe("handleBrowserAction tabs", () => {
 
 describe("handleBrowserAction", () => {
   test("no active guest, no openPanel → safe error", async () => {
-    const out = await handleBrowserAction({ action: "snapshot" }, deps({ activeGuest: () => null }));
+    const out = await handleBrowserAction(
+      { action: "snapshot" },
+      deps({ activeGuest: () => null }),
+    );
     expect(JSON.parse(out)).toMatchObject({ ok: false });
     expect(out).toContain("no active browser");
   });
@@ -124,6 +131,22 @@ describe("handleBrowserAction", () => {
     expect(r.elements[0].ref).toBe("e1");
   });
 
+  test("detaches the debugger after each action while keeping refs cached", async () => {
+    const debuggerState = { attached: false, attaches: 0, detaches: 0 };
+    const guest = fakeGuest({
+      debuggerState,
+      cdp: { "Accessibility.getFullAXTree": () => AX, "DOM.getBoxModel": () => BOX },
+    });
+    const d = deps({ activeGuest: () => guest });
+    const snap = JSON.parse(await handleBrowserAction({ action: "snapshot" }, d));
+    expect(snap.elements[1].ref).toBe("e2");
+    expect(debuggerState).toMatchObject({ attached: false, attaches: 1, detaches: 1 });
+
+    const out = await handleBrowserAction({ action: "click", ref: "e2" }, d);
+    expect(JSON.parse(out)).toMatchObject({ ok: true });
+    expect(debuggerState).toMatchObject({ attached: false, attaches: 2, detaches: 2 });
+  });
+
   test("click after snapshot reuses the cached driver → ref resolves (persistent ref map)", async () => {
     const d = deps();
     const snap = JSON.parse(await handleBrowserAction({ action: "snapshot" }, d));
@@ -165,7 +188,10 @@ describe("handleBrowserAction", () => {
 
   test("sensitive type (card number) requires approval; declined → refused", async () => {
     const d = deps({ approve: async () => false });
-    const out = await handleBrowserAction({ action: "type", ref: "e1", text: "4111111111111111" }, d);
+    const out = await handleBrowserAction(
+      { action: "type", ref: "e1", text: "4111111111111111" },
+      d,
+    );
     expect(JSON.parse(out)).toMatchObject({ ok: false });
     expect(out).toContain("declined");
   });

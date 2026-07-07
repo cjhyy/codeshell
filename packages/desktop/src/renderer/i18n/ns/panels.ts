@@ -60,6 +60,7 @@ export const panels = {
       terminal: {
         title: "终端",
         processExited: "[进程已退出 (code {code})]",
+        startFailed: "[终端启动失败: {detail}]",
       },
       files: {
         filterPlaceholder: "筛选文件…",
@@ -242,6 +243,7 @@ export const panels = {
       terminal: {
         title: "Terminal",
         processExited: "[Process exited (code {code})]",
+        startFailed: "[Terminal failed to start: {detail}]",
       },
       files: {
         filterPlaceholder: "Filter files…",

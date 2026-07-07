@@ -62,6 +62,62 @@ export function isProtectedSettingKey(key: string): boolean {
   return PROTECTED_SETTING_ROOTS.has(root);
 }
 
+const FORBIDDEN_SETTING_KEY_SEGMENTS = new Set(["__proto__", "prototype", "constructor"]);
+
+function parseDottedSettingKey(key: string): string[] {
+  const parts = key.split(".");
+  if (
+    parts.length === 0 ||
+    parts.some((seg) => seg.length === 0 || FORBIDDEN_SETTING_KEY_SEGMENTS.has(seg))
+  ) {
+    throw new Error(`invalid setting key: ${key}`);
+  }
+  return parts;
+}
+
+function isOwnPlainObject(
+  parent: Record<string, unknown>,
+  key: string,
+): parent is Record<string, Record<string, unknown>> {
+  if (!Object.prototype.hasOwnProperty.call(parent, key)) return false;
+  const value = parent[key];
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+function descendForSettingWrite(
+  target: Record<string, unknown>,
+  key: string,
+  fullKey: string,
+): Record<string, unknown> {
+  if (!Object.prototype.hasOwnProperty.call(target, key)) {
+    const inherited = target[key];
+    if (inherited && typeof inherited === "object") {
+      throw new Error(
+        `invalid setting key: ${fullKey} (refusing to descend through inherited object segment: ${key})`,
+      );
+    }
+    target[key] = {};
+  } else if (!isOwnPlainObject(target, key)) {
+    target[key] = {};
+  }
+  return target[key] as Record<string, unknown>;
+}
+
+export function setDottedSetting(
+  target: Record<string, unknown>,
+  key: string,
+  value: unknown,
+): void {
+  const parts = parseDottedSettingKey(key);
+  let current: Record<string, unknown> = target;
+  for (let i = 0; i < parts.length - 1; i++) {
+    current = descendForSettingWrite(current, parts[i]!, key);
+  }
+  current[parts[parts.length - 1]!] = value;
+}
+
 /**
  * The fixed cwd used for "no-repo" pure-chat conversations (a chat not bound to
  * any code project). Same location as desktop's `resolveNoRepoCwd`
@@ -322,17 +378,7 @@ export class SettingsManager {
       }
     }
 
-    const parts = key.split(".");
-    let target: Record<string, unknown> = current;
-    for (let i = 0; i < parts.length - 1; i++) {
-      const seg = parts[i]!;
-      const next = target[seg];
-      if (!next || typeof next !== "object" || Array.isArray(next)) {
-        target[seg] = {};
-      }
-      target = target[seg] as Record<string, unknown>;
-    }
-    target[parts[parts.length - 1]!] = value;
+    setDottedSetting(current, key, value);
 
     mkdirSync(dirname(path), { recursive: true });
     // Atomic write: stage to .tmp, then rename, so a concurrent read can't
@@ -361,17 +407,7 @@ export class SettingsManager {
     // — skip the write rather than recreate it.
     if (!existsSync(cwd)) return;
     const current = this.readJsonObject(path);
-    const parts = key.split(".");
-    let target: Record<string, unknown> = current;
-    for (let i = 0; i < parts.length - 1; i++) {
-      const seg = parts[i]!;
-      const next = target[seg];
-      if (!next || typeof next !== "object" || Array.isArray(next)) {
-        target[seg] = {};
-      }
-      target = target[seg] as Record<string, unknown>;
-    }
-    target[parts[parts.length - 1]!] = value;
+    setDottedSetting(current, key, value);
     this.atomicWriteJson(path, current);
     this.invalidate();
   }
@@ -391,12 +427,12 @@ export class SettingsManager {
     // format and wins over YAML, exactly as save does).
     if (!resolveConfigPath(path)) return;
     const current = this.readJsonObject(path);
-    const parts = key.split(".");
+    const parts = parseDottedSettingKey(key);
     let target: Record<string, unknown> | undefined = current;
     for (let i = 0; i < parts.length - 1; i++) {
-      const next = target?.[parts[i]!];
-      if (!next || typeof next !== "object" || Array.isArray(next)) return;
-      target = next as Record<string, unknown>;
+      const seg = parts[i]!;
+      if (!target || !isOwnPlainObject(target, seg)) return;
+      target = target[seg] as Record<string, unknown>;
     }
     if (target) delete target[parts[parts.length - 1]!];
     this.atomicWriteJson(path, current);

@@ -49,6 +49,8 @@ export type BackgroundWorkInfo =
     }
   | { kind: "job"; jobId: string; description: string };
 
+export type PtyStartResult = { ok: true; pid: number } | { ok: false; detail: string };
+
 let nextRpcId = 1;
 const pending = new Map<number, { resolve: (resp: unknown) => void; reject: (err: Error) => void }>();
 // Multi-session: callbacks receive `{ sessionId, event }` for stream events
@@ -770,7 +772,7 @@ contextBridge.exposeInMainWorld("codeshell", {
    */
   windowToken: String(process.pid),
   ptyStart: (opts: { sessionId: string; cwd?: string; cols?: number; rows?: number }) =>
-    ipcRenderer.invoke("pty:start", opts) as Promise<{ pid: number }>,
+    ipcRenderer.invoke("pty:start", opts) as Promise<PtyStartResult>,
   ptyWrite: (sessionId: string, data: string) =>
     ipcRenderer.invoke("pty:write", sessionId, data),
   ptyResize: (sessionId: string, cols: number, rows: number) =>

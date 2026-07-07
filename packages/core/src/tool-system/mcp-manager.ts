@@ -292,18 +292,15 @@ export class MCPManager {
    * Connect to all configured MCP servers and register their tools.
    */
   async connectAll(servers: Record<string, MCPServerConfig>, owner?: unknown): Promise<void> {
+    const enabledNames = this.enabledServerNames(servers);
     // Register this owner's desired set up front (see reconcile's shared-pool
     // note) so a later reconcile from ANOTHER session can't disconnect servers
     // this session connected at run start.
     if (owner !== undefined) {
-      this.desiredByOwner.set(
-        owner,
-        new Set(
-          Object.entries(servers)
-            .filter(([, c]) => c.enabled !== false)
-            .map(([n]) => n),
-        ),
-      );
+      this.desiredByOwner.set(owner, enabledNames);
+      this.desiredServerNames = this.unionDesired() ?? new Set<string>();
+    } else if (this.desiredByOwner.size === 0) {
+      this.desiredServerNames = enabledNames;
     }
     // Codex-style toggle: skip servers explicitly disabled in settings.
     // Only the literal `false` disables — absent / true / any other value
@@ -333,26 +330,43 @@ export class MCPManager {
   }
 
   async reconcile(servers: Record<string, MCPServerConfig>, owner?: unknown): Promise<void> {
-    const enabledNames = new Set(
-      Object.entries(servers)
-        .filter(([, config]) => config.enabled !== false)
-        .map(([name]) => name),
-    );
-    this.desiredServerNames = enabledNames;
+    const enabledNames = this.enabledServerNames(servers);
     // Shared-pool semantics: this ONE pool serves every session in the worker,
     // and sessions in different projects legitimately want DIFFERENT server
     // sets (per-project capabilityOverrides). Disconnect only servers that NO
     // registered owner wants — otherwise the per-session hot-reload patches
     // would thrash each other's connections (last reconcile wins, killing a
-    // server another project's session is using). Owners are engines; a
-    // closed session's desires linger (no engine-teardown hook), which merely
-    // over-RETAINS idle connections — per-session tool visibility keeps
-    // correctness regardless.
+    // server another project's session is using). Owners are engines; closed
+    // sessions call unregisterOwner() so their desired sets stop retaining idle
+    // connections.
     if (owner !== undefined) this.desiredByOwner.set(owner, enabledNames);
     const union = this.unionDesired() ?? enabledNames;
+    this.desiredServerNames = union;
     const stale = this.listServers().filter((name) => !union.has(name));
     await Promise.all(stale.map((name) => this.disconnect(name)));
     await this.connectAll(servers, owner);
+  }
+
+  /**
+   * Remove one owner from the shared desired-server pool and disconnect servers
+   * that no remaining owner wants. This is called when a session-owned Engine
+   * is closed; without it project-scoped MCP servers can stay connected until
+   * worker shutdown.
+   */
+  async unregisterOwner(owner: unknown): Promise<void> {
+    if (!this.desiredByOwner.delete(owner)) return;
+    const desired = this.unionDesired() ?? new Set<string>();
+    this.desiredServerNames = desired;
+    const stale = this.listServers().filter((name) => !desired.has(name));
+    await Promise.all(stale.map((name) => this.disconnect(name)));
+  }
+
+  private enabledServerNames(servers: Record<string, MCPServerConfig>): Set<string> {
+    return new Set(
+      Object.entries(servers)
+        .filter(([, config]) => config.enabled !== false)
+        .map(([name]) => name),
+    );
   }
 
   /** Union of every registered owner's desired set; null when none registered. */
@@ -564,6 +578,8 @@ export class MCPManager {
    */
   async disconnectAll(): Promise<void> {
     await Promise.all([...this.connections.keys()].map((name) => this.disconnect(name)));
+    this.desiredByOwner.clear();
+    this.desiredServerNames = null;
   }
 
   async disconnect(name: string): Promise<void> {

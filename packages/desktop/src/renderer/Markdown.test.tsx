@@ -86,6 +86,40 @@ describe("Markdown", () => {
     expect(html).not.toContain("<iframe");
   });
 
+  test("strips inline style from raw HTML spans (visual spoofing guard)", () => {
+    const html = renderToStaticMarkup(
+      <Markdown text={`safe <span style="display:none;color:transparent">hidden</span>`} />,
+    );
+
+    expect(html).toContain("hidden");
+    expect(html).not.toContain("style=");
+    expect(html).not.toContain("display:none");
+    expect(html).not.toContain("color:transparent");
+  });
+
+  test("strips layout and visibility utility classes from raw HTML", () => {
+    const html = renderToStaticMarkup(
+      <Markdown
+        text={`<div class="hidden fixed inset-0">cover</div><span class="text-transparent">ghost</span>`}
+      />,
+    );
+
+    expect(html).toContain("<div>cover</div>");
+    expect(html).toContain("<span>ghost</span>");
+    expect(html).not.toContain("hidden");
+    expect(html).not.toContain("fixed");
+    expect(html).not.toContain("inset-0");
+    expect(html).not.toContain("text-transparent");
+  });
+
+  test("keeps class-based syntax highlighting without inline styles", () => {
+    const html = renderToStaticMarkup(<Markdown text={"```ts\nconst answer = 42;\n```"} />);
+
+    expect(html).toContain("hljs");
+    expect(html).toContain("language-ts");
+    expect(html).not.toContain("style=");
+  });
+
   test("leaves an absolute http(s) <img> src as a plain image", () => {
     const html = renderToStaticMarkup(
       <Markdown text={`<img src="https://example.com/logo.png" alt="logo" />`} cwd="/repo" />,

@@ -2,7 +2,7 @@
  * Browser-automation security policy (pure, testable). Enforced by the
  * execution layer (main), NOT the LLM — per the research conclusion that web
  * prompt-injection can't be defended at the model layer. Two gates:
- *   1. Domain whitelist — navigate/act only on allowed hosts (or approve).
+ *   1. Domain whitelist — navigate/act only on allowed hosts; misses fail closed.
  *   2. Sensitive-action detection — payment/delete/credential surfaces require
  *      explicit user approval.
  *

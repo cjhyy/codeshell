@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { PICKER_SCRIPT } from "./pickerScript";
+import { PICKER_CLEANUP_SCRIPT, PICKER_SCRIPT } from "./pickerScript";
 
 // The picker runs inside the <webview> guest, so there's no DOM here to
 // execute it against (bun test has no document). These assertions pin the
@@ -22,6 +22,12 @@ describe("PICKER_SCRIPT selector strategy", () => {
 
   test("returns a readable labelHint separate from the stored selector", () => {
     expect(PICKER_SCRIPT).toContain("labelHint");
+  });
+
+  test("exposes a host-callable cleanup hook", () => {
+    expect(PICKER_SCRIPT).toContain("__codeshellElementPickerCleanup");
+    expect(PICKER_SCRIPT).toContain("window[CLEANUP_KEY] = abandon");
+    expect(PICKER_CLEANUP_SCRIPT).toContain("__codeshellElementPickerCleanup");
   });
 
   test("is a single expression resolving a Promise (executeJavaScript contract)", () => {

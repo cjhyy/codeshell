@@ -2664,28 +2664,51 @@ function App() {
     const saved = Number(localStorage.getItem("codeshell.panelWidth"));
     return Number.isFinite(saved) && saved >= PANEL_MIN ? saved : 480;
   });
+  const panelWidthRef = useRef(panelWidth);
+  const panelResizeCleanupRef = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    panelWidthRef.current = panelWidth;
+  }, [panelWidth]);
+  useEffect(
+    () => () => {
+      panelResizeCleanupRef.current?.();
+    },
+    [],
+  );
   const beginPanelResize = (startX: number, startWidth: number): void => {
+    panelResizeCleanupRef.current?.();
+    const prevUserSelect = document.body.style.userSelect;
+    const prevCursor = document.body.style.cursor;
+    let disposed = false;
     const onMove = (ev: MouseEvent): void => {
       // Dock is on the RIGHT, so dragging left (smaller clientX) widens it.
       const delta = startX - ev.clientX;
       const max = Math.max(PANEL_MIN, Math.floor(window.innerWidth * PANEL_MAX_FRAC));
       const next = Math.min(max, Math.max(PANEL_MIN, startWidth + delta));
+      panelWidthRef.current = next;
       setPanelWidth(next);
     };
-    const onUp = (): void => {
+    const cleanup = (persist: boolean): void => {
+      if (disposed) return;
+      disposed = true;
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
-      document.body.style.userSelect = "";
-      document.body.style.cursor = "";
-      setPanelWidth((w) => {
-        localStorage.setItem("codeshell.panelWidth", String(w));
-        return w;
-      });
+      window.removeEventListener("blur", onAbort);
+      window.removeEventListener("pointercancel", onAbort);
+      document.body.style.userSelect = prevUserSelect;
+      document.body.style.cursor = prevCursor;
+      panelResizeCleanupRef.current = null;
+      if (persist) localStorage.setItem("codeshell.panelWidth", String(panelWidthRef.current));
     };
+    const onUp = (): void => cleanup(true);
+    const onAbort = (): void => cleanup(true);
     document.body.style.userSelect = "none";
     document.body.style.cursor = "col-resize";
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
+    window.addEventListener("blur", onAbort);
+    window.addEventListener("pointercancel", onAbort);
+    panelResizeCleanupRef.current = () => cleanup(false);
   };
 
   // Conversational automation creation: seed the chat composer with a starter

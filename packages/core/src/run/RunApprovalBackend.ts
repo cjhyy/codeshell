@@ -20,6 +20,7 @@ import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 export interface PendingApproval {
   resolve: (result: ApprovalResult) => void;
   request: ApprovalRequest;
+  timer: ReturnType<typeof setTimeout>;
 }
 
 export interface PendingInput {
@@ -30,9 +31,7 @@ export interface PendingInput {
 // ─── Lifecycle hooks (called by backend, handled by RunManager) ──
 
 export interface RunLifecycleHooks {
-  onApprovalNeeded: (
-    request: ApprovalRequest,
-  ) => Promise<{ approvalId: string }>;
+  onApprovalNeeded: (request: ApprovalRequest) => Promise<{ approvalId: string }>;
   onInputNeeded: (question: string) => Promise<void>;
   onApprovalResolved?: (approvalId: string, result: ApprovalResult) => void;
   onInputResolved?: (answer: string) => void;
@@ -43,6 +42,7 @@ export interface RunLifecycleHooks {
 export class RunApprovalBackend implements ApprovalBackend {
   private pendingApproval: PendingApproval | null = null;
   private hooks: RunLifecycleHooks | null = null;
+  private approvalRequestSeq = 0;
 
   setHooks(hooks: RunLifecycleHooks): void {
     this.hooks = hooks;
@@ -56,7 +56,8 @@ export class RunApprovalBackend implements ApprovalBackend {
   }
 
   async requestApproval(request: ApprovalRequest): Promise<ApprovalResult> {
-    if (!this.hooks) {
+    const hooks = this.hooks;
+    if (!hooks) {
       // No hooks wired — fail CLOSED. This backend is the engine's approval
       // path for an interactive run; if a host forgot to setHooks() there is
       // no UI to ask, so auto-approving every tool (the old behavior) silently
@@ -68,12 +69,20 @@ export class RunApprovalBackend implements ApprovalBackend {
       };
     }
 
+    const requestSeq = ++this.approvalRequestSeq;
+
     // Notify RunManager that approval is needed
-    const { approvalId } = await this.hooks.onApprovalNeeded(request);
+    await hooks.onApprovalNeeded(request);
+
+    if (requestSeq !== this.approvalRequestSeq) {
+      return {
+        approved: false,
+        reason: "superseded: a newer approval request replaced this one before it was answered",
+      };
+    }
 
     // Suspend execution until resolved (with timeout safety net)
     return new Promise<ApprovalResult>((resolve) => {
-      this.pendingApproval = { resolve, request };
       const timer = setTimeout(() => {
         if (this.pendingApproval?.resolve === resolve) {
           this.pendingApproval = null;
@@ -83,6 +92,8 @@ export class RunApprovalBackend implements ApprovalBackend {
       if (typeof timer === "object" && "unref" in timer) {
         timer.unref();
       }
+      this.supersedePendingApproval();
+      this.pendingApproval = { resolve, request, timer };
     });
   }
 
@@ -91,14 +102,26 @@ export class RunApprovalBackend implements ApprovalBackend {
    */
   resolveApproval(result: ApprovalResult): boolean {
     if (!this.pendingApproval) return false;
-    const { resolve } = this.pendingApproval;
+    const { resolve, timer } = this.pendingApproval;
     this.pendingApproval = null;
+    clearTimeout(timer);
     resolve(result);
     return true;
   }
 
   hasPendingApproval(): boolean {
     return this.pendingApproval !== null;
+  }
+
+  private supersedePendingApproval(): void {
+    if (!this.pendingApproval) return;
+    const { resolve, timer } = this.pendingApproval;
+    this.pendingApproval = null;
+    clearTimeout(timer);
+    resolve({
+      approved: false,
+      reason: "superseded: a newer approval request replaced this one before it was answered",
+    });
   }
 }
 

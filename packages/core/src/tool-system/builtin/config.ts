@@ -5,6 +5,7 @@
 import type { ToolDefinition } from "../../types.js";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { setDottedSetting } from "../../settings/manager.js";
 
 export const configToolDef: ToolDefinition = {
   name: "Config",
@@ -56,16 +57,12 @@ export async function configTool(args: Record<string, unknown>): Promise<string>
       settings = JSON.parse(readFileSync(configPath, "utf-8"));
     }
 
-    // Set nested key
-    const parts = key.split(".");
-    let obj: any = settings;
-    for (let i = 0; i < parts.length - 1; i++) {
-      if (typeof obj[parts[i]] !== "object" || obj[parts[i]] === null) {
-        obj[parts[i]] = {};
-      }
-      obj = obj[parts[i]];
+    try {
+      setDottedSetting(settings, key, value);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return `Error: ${message}`;
     }
-    obj[parts[parts.length - 1]] = value;
 
     // Never resurrect a deleted project root: a recursive mkdir of
     // <cwd>/.code-shell would recreate `cwd` itself as an empty shell when the

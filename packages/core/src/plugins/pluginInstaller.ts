@@ -7,7 +7,7 @@
 
 import { existsSync, realpathSync, rmSync, rmdirSync } from "node:fs";
 import { cp, mkdir, mkdtemp, rm } from "node:fs/promises";
-import { dirname, isAbsolute, join, resolve, sep } from "node:path";
+import { dirname, join, sep } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import {
   gitClone,
@@ -27,6 +27,10 @@ import {
 import { rewritePluginVars } from "./varRewrite.js";
 import { assertSafePluginName } from "./installer/paths.js";
 import { pruneDisabledSettingsForPlugin } from "./installer/pruneDisabled.js";
+import {
+  resolveContainedPluginSubpath,
+  validateRelativePluginSubpath,
+} from "./installer/sourcePath.js";
 import type {
   PluginEntrySource,
   PluginInstallEntry,
@@ -115,12 +119,15 @@ async function materializePath(
   relativePath: string,
   cacheTarget: string,
 ): Promise<{ ok: true; sha: string | undefined } | { ok: false; error: string }> {
-  const src = isAbsolute(relativePath)
-    ? relativePath
-    : resolve(marketplaceInstallLocation, relativePath);
-  if (!existsSync(src)) {
-    return { ok: false, error: `plugin source path "${relativePath}" not found in marketplace` };
+  const contained = resolveContainedPluginSubpath(
+    marketplaceInstallLocation,
+    relativePath,
+    "plugin source path",
+  );
+  if (!contained.ok) {
+    return { ok: false, error: contained.error };
   }
+  const src = contained.path;
   await mkdir(dirname(cacheTarget), { recursive: true });
   if (existsSync(cacheTarget)) await rm(cacheTarget, { recursive: true, force: true });
   await cp(src, cacheTarget, { recursive: true });
@@ -147,20 +154,20 @@ async function materializeGitSubdir(
   ref: string | undefined,
   cacheTarget: string,
 ): Promise<{ ok: true; sha: string } | { ok: false; error: string }> {
+  const invalid = validateRelativePluginSubpath(subPath, "git-subdir path");
+  if (invalid) return { ok: false, error: invalid };
+
   // Clone to a tempdir, then copy the subdir over.
   const tmp = await mkdtemp(join(tmpdir(), "plugin-clone-"));
   try {
-    const clone = await gitClone(url, tmp + "/repo", { full: true, ...(ref ? { ref } : {}) });
+    const repoDir = join(tmp, "repo");
+    const clone = await gitClone(url, repoDir, { full: true, ...(ref ? { ref } : {}) });
     if (!clone.ok) return { ok: false, error: clone.error };
-    const head = await gitRevParseHead(tmp + "/repo");
+    const head = await gitRevParseHead(repoDir);
     if (!head.ok) return { ok: false, error: head.error };
-    const src = join(tmp, "repo", subPath);
-    if (!existsSync(src)) {
-      return {
-        ok: false,
-        error: `git-subdir path "${subPath}" not found in cloned repository`,
-      };
-    }
+    const contained = resolveContainedPluginSubpath(repoDir, subPath, "git-subdir path");
+    if (!contained.ok) return { ok: false, error: contained.error };
+    const src = contained.path;
     await mkdir(dirname(cacheTarget), { recursive: true });
     if (existsSync(cacheTarget)) await rm(cacheTarget, { recursive: true, force: true });
     await cp(src, cacheTarget, { recursive: true });
@@ -207,19 +214,19 @@ async function materialize(
   const placeholder = pluginCacheDir(marketplace, plugin, "_pending_");
 
   if (typeof source === "string") {
+    const invalid = validateRelativePluginSubpath(source, "plugin source path");
+    if (invalid) return { ok: false, error: invalid };
     // The marketplace was cloned sparse (only the manifest dirs are on disk),
     // so a local-path plugin's tree may not be checked out yet. Expand the
     // sparse-checkout to include it before reading. Best-effort: on a
     // non-sparse (full) clone this errors harmlessly and the files are already
     // present, so we ignore the result and let materializePath report a real
     // missing-path error if the subdir truly isn't there.
-    if (!isAbsolute(source)) {
-      // Strip a leading "./" — in non-cone sparse mode the literal "./" prefix
-      // doesn't match repo paths (which are stored without it), so the
-      // expand would silently no-op and the tree would stay un-materialized.
-      const sparseRel = source.replace(/^\.\//, "");
-      await gitSparseCheckoutAdd(marketplaceInstallLocation, sparseRel);
-    }
+    // Strip a leading "./" — in non-cone sparse mode the literal "./" prefix
+    // doesn't match repo paths (which are stored without it), so the
+    // expand would silently no-op and the tree would stay un-materialized.
+    const sparseRel = source.replace(/^\.\//, "");
+    await gitSparseCheckoutAdd(marketplaceInstallLocation, sparseRel);
     const r = await materializePath(marketplaceInstallLocation, source, placeholder);
     if (!r.ok) return r;
     const finalDir = pluginCacheDir(marketplace, plugin, "local");

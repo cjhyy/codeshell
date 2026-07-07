@@ -38,7 +38,7 @@ async function tick(): Promise<void> {
   await Promise.resolve();
 }
 
-function makeAskingEngine(sessionId: string) {
+function makeAskingEngine(sessionId: string, goal?: { objective: string }) {
   const state = {
     askUser: undefined as ((q: string) => Promise<string>) | undefined,
     answer: undefined as string | undefined,
@@ -51,6 +51,7 @@ function makeAskingEngine(sessionId: string) {
     setBrowserBridge() {},
     setInjectCredential() {},
     isHeadless: () => false,
+    getGoal: () => goal,
     async run(): Promise<EngineResult> {
       state.answer = await state.askUser!("continue?");
       return result(state.answer, sessionId);
@@ -122,6 +123,53 @@ describe("AgentServer AskUserQuestion timeout behavior", () => {
 
     expect(session.pendingApprovals.size).toBe(0);
     expect(state.answer).toBe("cancelled");
+  });
+
+  it("arms the approval timeout for chatManager askUser when a goal is active, and resolves with a continue-nudge on expiry", async () => {
+    const scheduled: Array<{ timeout: number | undefined; run: () => void }> = [];
+    const timeoutSpy = spyOn(globalThis, "setTimeout").mockImplementation(
+      ((handler: (...args: any[]) => void, timeout?: number, ...args: any[]) => {
+        scheduled.push({ timeout, run: () => handler(...args) });
+        return 1 as any;
+      }) as unknown as typeof setTimeout,
+    );
+
+    try {
+      const { engine, state } = makeAskingEngine("goal-sess", { objective: "ship it" });
+      const chatManager = new ChatSessionManager({
+        runtime: {} as never,
+        engineFactory: () => engine,
+      });
+      const t = makeTransport();
+      const server = new AgentServer({ transport: t.transport, chatManager });
+
+      t.deliver({
+        jsonrpc: "2.0",
+        id: 1,
+        method: Methods.Run,
+        params: { sessionId: "goal-sess", task: "ask" },
+      });
+      await tick();
+
+      const session = chatManager.get("goal-sess")!;
+      expect(session.pendingApprovals.size).toBe(1);
+      // Goal-active ask arms the shared 5-minute timeout.
+      const askTimer = scheduled.find((s) => s.timeout === APPROVAL_TIMEOUT_MS);
+      expect(askTimer).toBeDefined();
+      expect((server as any).approvalTimers.size).toBe(1);
+      expect(state.answer).toBeUndefined();
+
+      // Fire the timeout → the pending ask drains and resolves with a nudge so
+      // the goal loop keeps going instead of hanging forever.
+      askTimer!.run();
+      await tick();
+
+      expect(session.pendingApprovals.size).toBe(0);
+      expect((server as any).approvalTimers.size).toBe(0);
+      expect(state.answer).toContain("自行做出合理假设并继续");
+    } finally {
+      timeoutSpy.mockRestore();
+    }
   });
 
   it("keeps the approval timeout for real tool approvals", async () => {

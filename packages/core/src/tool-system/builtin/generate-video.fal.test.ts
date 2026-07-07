@@ -2,7 +2,11 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { __resolveVideoProviderForTests, __normalizeImagesForTests } from "./generate-video.js";
+import {
+  __resolveLocalImageInputForTests,
+  __resolveVideoProviderForTests,
+  __normalizeImagesForTests,
+} from "./generate-video.js";
 
 // Isolate HOME so SettingsManager("full") doesn't merge the developer's real
 // ~/.code-shell (which now has modelConnections that would trigger the unified
@@ -81,6 +85,17 @@ describe("resolveVideoProvider reads unified modelConnections + credentials", ()
 });
 
 describe("GenerateVideo image normalization", () => {
+  test("local image paths resolve against ctx.cwd before upload, URLs pass through", () => {
+    const cwd = "/tmp/video-workspace";
+
+    expect(__resolveLocalImageInputForTests("frame.png", cwd)).toBe(
+      join(cwd, "frame.png"),
+    );
+    expect(__resolveLocalImageInputForTests("https://example.test/frame.png", cwd)).toBe(
+      "https://example.test/frame.png",
+    );
+  });
+
   test("images[] wins; URLs pass through; >9 → error", async () => {
     const fakeUploader = { kind: "fal", toUrl: async (p: string) => ({ ok: true as const, url: p.startsWith("http") ? p : `https://fal/${p}` }) };
     const ok = await __normalizeImagesForTests(["https://x/a.png", "/local/b.png"], undefined, fakeUploader, { baseUrl: "x", apiKey: "k" });

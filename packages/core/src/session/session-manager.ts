@@ -105,7 +105,14 @@ export class SessionManager {
     if (explicitSessionId !== undefined) assertSafeSessionId(explicitSessionId);
     const sessionId = explicitSessionId ?? nanoid(16);
     const sessionDir = join(this.sessionsDir, sessionId);
-    mkdirSync(sessionDir, { recursive: true });
+    try {
+      mkdirSync(sessionDir);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === "EEXIST") {
+        throw new SessionError(`Session already exists: ${sessionId}`);
+      }
+      throw err;
+    }
 
     const state: SessionState = {
       sessionId,
@@ -481,7 +488,10 @@ function readLastUserMessage(transcriptFile: string): string | undefined {
  */
 function parseUserPreview(line: string | undefined): string | undefined {
   if (!line) return undefined;
-  let event: { type?: string; data?: { role?: string; content?: unknown } };
+  let event: {
+    type?: string;
+    data?: { role?: string; content?: unknown; injected?: boolean };
+  };
   try {
     event = JSON.parse(line);
   } catch {
@@ -489,6 +499,7 @@ function parseUserPreview(line: string | undefined): string | undefined {
   }
   if (event.type !== "message") return undefined;
   if (event.data?.role !== "user") return undefined;
+  if (event.data.injected === true) return undefined;
   const content = event.data.content;
   const text =
     typeof content === "string"

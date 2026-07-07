@@ -72,6 +72,8 @@ export type BackgroundWorkInfo =
       changedFiles?: string[];
     };
 
+export type PtyStartResult = { ok: true; pid: number } | { ok: false; detail: string };
+
 /** A plugin-provided hook surfaced to the settings 钩子 page. Mirrors
  *  core's PluginHookEntry (renderer can't import core). */
 export interface PluginHookEntry {
@@ -540,13 +542,13 @@ export interface CodeshellApi {
   // ── Terminal (pty) — interactive shell panel ──────────────────────────
   /** Token unique to this window's renderer process (for window-unique ids). */
   windowToken: string;
-  /** Start (or reattach) the pty for sessionId; returns the shell pid. */
+  /** Start (or reattach) the pty for sessionId. */
   ptyStart(opts: {
     sessionId: string;
     cwd?: string;
     cols?: number;
     rows?: number;
-  }): Promise<{ pid: number }>;
+  }): Promise<PtyStartResult>;
   /** Send user keystrokes to the shell. */
   ptyWrite(sessionId: string, data: string): Promise<void>;
   /** Tell the shell the viewport changed. */

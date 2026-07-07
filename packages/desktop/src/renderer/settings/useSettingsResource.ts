@@ -58,21 +58,30 @@ export function useSettingsResource<T>(
   // Keep the latest loader without making `reload` change identity every render.
   const loaderRef = useRef(loader);
   loaderRef.current = loader;
+  const requestRef = useRef<{ id: number; controller: AbortController } | null>(null);
+  const requestIdRef = useRef(0);
 
   const reload = useCallback(() => {
-    let cancelled = false;
+    requestRef.current?.controller.abort();
+    const controller = new AbortController();
+    const id = ++requestIdRef.current;
+    requestRef.current = { id, controller };
     void (async () => {
       try {
         const next = await loaderRef.current();
-        if (cancelled) return;
+        const active = requestRef.current;
+        if (!active || active.id !== id || active.controller.signal.aborted) return;
         setData(next);
         cacheSet(cacheKey, next);
       } catch {
         // best-effort — keep the last good (cached) value on failure
+      } finally {
+        if (requestRef.current?.id === id) requestRef.current = null;
       }
     })();
     return () => {
-      cancelled = true;
+      controller.abort();
+      if (requestRef.current?.id === id) requestRef.current = null;
     };
   }, [cacheKey]);
 
@@ -81,11 +90,15 @@ export function useSettingsResource<T>(
     // show that key's cached snapshot, not the previous key's, before reload.
     setData(seedValue(cacheKey, fallback));
     const cancel = reload();
-    const onChange = () => reload();
+    const onChange = () => {
+      reload();
+    };
     window.addEventListener("codeshell:files-changed", onChange);
     window.addEventListener("codeshell:settings-changed", onChange);
     return () => {
       cancel?.();
+      requestRef.current?.controller.abort();
+      requestRef.current = null;
       window.removeEventListener("codeshell:files-changed", onChange);
       window.removeEventListener("codeshell:settings-changed", onChange);
     };

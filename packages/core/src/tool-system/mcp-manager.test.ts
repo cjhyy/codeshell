@@ -394,6 +394,33 @@ describe("reconcile shared-pool union (per-session hot-reload must not thrash)",
     await pool.reconcile(cfg(["x"]));
     expect(pool.disconnected).toEqual(["y"]);
   });
+
+  test("unregisterOwner disconnects only servers no remaining owner wants", async () => {
+    const pool = new PoolSpy(new ToolRegistry());
+    const a = { id: "session-a" };
+    const b = { id: "session-b" };
+    await pool.connectAll(cfg(["x", "y"]), a);
+    await pool.connectAll(cfg(["y", "z"]), b);
+
+    await pool.unregisterOwner(a);
+
+    expect(pool.disconnected).toEqual(["x"]);
+    expect(pool.live.sort()).toEqual(["y", "z"]);
+  });
+
+  test("unregisterOwner disconnects all servers when the last owner closes", async () => {
+    const pool = new PoolSpy(new ToolRegistry());
+    const a = { id: "session-a" };
+    await pool.connectAll(cfg(["x", "y"]), a);
+
+    await pool.unregisterOwner(a);
+
+    expect(pool.disconnected.sort()).toEqual(["x", "y"]);
+    expect(pool.live).toEqual([]);
+
+    await pool.connectAll(cfg(["z"]));
+    expect([...(pool as any).desiredServerNames]).toEqual(["z"]);
+  });
 });
 
 describe("executor gate: MCP tool from a server this session didn't enable", () => {

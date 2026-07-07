@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import { lock, check, unlock } from "../utils/lockfile.js";
 import { logger } from "../logging/logger.js";
+import { assertSafeRunId } from "./ids.js";
 
 export interface RunLockConfig {
   /** Base directory for runs. Default: ~/.code-shell/runs */
@@ -159,6 +160,7 @@ export class RunLock {
   }
 
   private lockTarget(runId: string): string {
+    assertSafeRunId(runId);
     return join(this.runsDir, runId, "run.json");
   }
 }

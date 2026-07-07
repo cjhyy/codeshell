@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { extractJSONArray } from "./utils.js";
+import { extractJSONArray } from "../../utils/json.js";
 
 // Regression: extractJSONArray used a greedy /\[[\s\S]*\]/ that spanned from
 // the first '[' to the LAST ']', merging two arrays (or array + trailing

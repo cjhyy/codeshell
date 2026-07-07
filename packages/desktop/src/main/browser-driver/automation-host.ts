@@ -3,7 +3,7 @@
  * tool requests to the actual webview:
  *   worker tool → ctx.browser → AgentServer emits a __browser_action__ request
  *   → agent-bridge hands the action here → we drive the active webview guest
- *     via the browser-driver (withAttached + CdpBrowserDriver) → return JSON.
+ *     via the browser-driver (per-action attach + CdpBrowserDriver) → return JSON.
  *
  * Tracks the most-recently-attached browser-panel guest webContents as the
  * automation target (MVP: single active tab). Kept separate from agent-bridge
@@ -19,19 +19,18 @@ import { isDomainAllowed, isSensitiveAction, type BrowserAutomationPolicy } from
  * Per-guest driver cache. The CdpBrowserDriver holds the ref→backendNodeId map
  * from the latest snapshot, so click/type (separate worker calls) MUST reuse
  * the same driver instance that produced the snapshot — a fresh driver per
- * action would make every ref stale. Keyed by webContents.id; the debugger
- * stays attached across actions on the same guest and is detached when the
- * guest goes away (or via releaseGuest).
+ * action would make every ref stale. Keyed by webContents.id; debugger
+ * attachment is deliberately separate and only lasts for one action.
  */
 const drivers = new Map<number, CdpBrowserDriver>();
-const attachedGuests = new Map<number, WebContents>();
+const knownGuests = new Map<number, WebContents>();
+const automationAttachedGuests = new Set<number>();
 
 function driverForGuest(guest: WebContents): CdpBrowserDriver {
   const id = guest.id;
   let d = drivers.get(id);
   if (!d) {
-    attachDebugger(guest);
-    attachedGuests.set(id, guest);
+    knownGuests.set(id, guest);
     d = new CdpBrowserDriver(
       (method, params) => guest.debugger.sendCommand(method, params ?? {}),
       () => ({ url: safeUrl(guest) ?? "", title: safeTitle(guest) }),
@@ -45,9 +44,10 @@ function driverForGuest(guest: WebContents): CdpBrowserDriver {
 
 /** Detach + forget a guest's driver (on destroy, or when automation ends). */
 export function releaseGuest(id: number): void {
-  const guest = attachedGuests.get(id);
-  if (guest && !guest.isDestroyed()) detachDebugger(guest);
-  attachedGuests.delete(id);
+  const guest = knownGuests.get(id);
+  if (guest && !guest.isDestroyed() && automationAttachedGuests.has(id)) detachDebugger(guest);
+  automationAttachedGuests.delete(id);
+  knownGuests.delete(id);
   drivers.delete(id);
 }
 
@@ -170,7 +170,10 @@ export async function handleBrowserAction(
   // Reuse the per-guest driver so the snapshot's ref map survives into the
   // following click/type calls (each is a separate worker request).
   const driver = driverForGuest(guest);
+  let attachedForAction = false;
   try {
+    attachedForAction = attachDebugger(guest);
+    if (attachedForAction) automationAttachedGuests.add(guest.id);
     let result: unknown;
     switch (req.action) {
       case "snapshot":
@@ -218,6 +221,12 @@ export async function handleBrowserAction(
     return JSON.stringify(result);
   } catch (e) {
     return JSON.stringify({ ok: false, detail: e instanceof Error ? e.message : String(e) });
+  } finally {
+    if (attachedForAction) {
+      detachDebugger(guest);
+      automationAttachedGuests.delete(guest.id);
+      driver.resetDomains();
+    }
   }
 }
 

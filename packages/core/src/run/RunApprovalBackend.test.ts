@@ -10,6 +10,14 @@ const req: ApprovalRequest = {
   riskLevel: "high",
 };
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+}
+
 describe("RunApprovalBackend — fail-closed when hooks are missing (§5.6 #15)", () => {
   test("requestApproval DENIES when no lifecycle hooks were wired", async () => {
     const backend = new RunApprovalBackend();
@@ -33,6 +41,49 @@ describe("RunApprovalBackend — fail-closed when hooks are missing (§5.6 #15)"
     expect(backend.hasPendingApproval()).toBe(true);
     backend.resolveApproval({ approved: true });
     expect((await p).approved).toBe(true);
+  });
+
+  test("a second pending approval supersedes the first instead of orphaning it", async () => {
+    const backend = new RunApprovalBackend();
+    const hooks: RunLifecycleHooks = {
+      onApprovalNeeded: async () => ({ approvalId: "a1" }),
+      onInputNeeded: async () => {},
+    };
+    backend.setHooks(hooks);
+
+    const first = backend.requestApproval(req);
+    await new Promise((r) => setTimeout(r, 0));
+    const second = backend.requestApproval({ ...req, description: "second" });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect((await first).approved).toBe(false);
+    backend.resolveApproval({ approved: true });
+    expect((await second).approved).toBe(true);
+  });
+
+  test("late completion from an older hook cannot supersede a newer pending approval", async () => {
+    const backend = new RunApprovalBackend();
+    const approvals = [deferred<{ approvalId: string }>(), deferred<{ approvalId: string }>()];
+    let approvalCalls = 0;
+    const hooks: RunLifecycleHooks = {
+      onApprovalNeeded: async () => approvals[approvalCalls++]!.promise,
+      onInputNeeded: async () => {},
+    };
+    backend.setHooks(hooks);
+
+    const first = backend.requestApproval(req);
+    const second = backend.requestApproval({ ...req, description: "newer" });
+
+    approvals[1]!.resolve({ approvalId: "newer" });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(backend.hasPendingApproval()).toBe(true);
+
+    approvals[0]!.resolve({ approvalId: "older" });
+    expect((await first).approved).toBe(false);
+    expect(backend.hasPendingApproval()).toBe(true);
+
+    backend.resolveApproval({ approved: true });
+    expect((await second).approved).toBe(true);
   });
 });
 

@@ -22,7 +22,9 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { randomUUID } from "node:crypto";
 import type { RunStore } from "./RunStore.js";
+import { assertSafeRunFileId, assertSafeRunId } from "./ids.js";
 import type {
   RunSnapshot,
   RunEvent,
@@ -43,6 +45,7 @@ export class FileRunStore implements RunStore {
   // ─── Helpers ───────────────────────────────────────────────────
 
   private runDir(runId: string): string {
+    assertSafeRunId(runId);
     return join(this.runsDir, runId);
   }
 
@@ -56,7 +59,7 @@ export class FileRunStore implements RunStore {
   }
 
   private writeJson(filePath: string, data: unknown): void {
-    const tmp = filePath + ".tmp";
+    const tmp = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
     try {
       writeFileSync(tmp, JSON.stringify(data, null, 2), "utf-8");
       // Atomic rename — prevents partial writes on crash
@@ -193,6 +196,8 @@ export class FileRunStore implements RunStore {
   // ─── Checkpoints ───────────────────────────────────────────────
 
   async saveCheckpoint(cp: RunCheckpoint): Promise<void> {
+    assertSafeRunId(cp.runId);
+    assertSafeRunFileId(cp.checkpointId, "checkpoint id");
     const dir = this.runDir(cp.runId);
     this.writeJson(join(dir, "checkpoints", `${cp.checkpointId}.json`), cp);
   }
@@ -218,6 +223,8 @@ export class FileRunStore implements RunStore {
   // ─── Approvals ─────────────────────────────────────────────────
 
   async saveApproval(approval: RunApproval): Promise<void> {
+    assertSafeRunId(approval.runId);
+    assertSafeRunFileId(approval.approvalId, "approval id");
     const dir = this.runDir(approval.runId);
     this.writeJson(
       join(dir, "approvals", `${approval.approvalId}.json`),
@@ -226,6 +233,8 @@ export class FileRunStore implements RunStore {
   }
 
   async getApproval(runId: string, approvalId: string): Promise<RunApproval | null> {
+    assertSafeRunId(runId);
+    assertSafeRunFileId(approvalId, "approval id");
     return this.readJson<RunApproval>(
       join(this.runDir(runId), "approvals", `${approvalId}.json`),
     );

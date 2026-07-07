@@ -6,6 +6,7 @@ import { installPluginFromPath } from "./install.js";
 import { pluginMetaPath } from "./paths.js";
 import { PluginInstallError, type CSMeta } from "./types.js";
 import type { ParsedSource } from "./parseSource.js";
+import { resolveContainedPluginSubpath } from "./sourcePath.js";
 
 /**
  * Remote install orchestrator: a thin bridge over the existing pieces. Clone
@@ -34,7 +35,13 @@ export async function installPluginFromSource(
       throw new PluginInstallError(`clone failed: ${clone.error}`);
     }
 
-    const realSrc = parsed.subdir ? join(tmp, parsed.subdir) : tmp;
+    const realSrc = parsed.subdir
+      ? (() => {
+          const resolved = resolveContainedPluginSubpath(tmp, parsed.subdir, "subdir");
+          if (!resolved.ok) throw new PluginInstallError(resolved.error);
+          return resolved.path;
+        })()
+      : tmp;
     if (!existsSync(realSrc) || !statSync(realSrc).isDirectory()) {
       throw new PluginInstallError(`subdir not found in repo: ${parsed.subdir}`);
     }

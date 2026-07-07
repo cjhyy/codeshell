@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   _resetPtyGitBashCache,
   clampPtyDim,
+  resolvePtyCwd,
   resolveGitBashForPty,
   resolveShell,
   shellArgs,
@@ -118,5 +119,20 @@ describe("pty shell resolution", () => {
     expect(shellArgs("C:\\Program Files\\Git\\bin\\bash.exe")).toEqual(["--login", "-i"]);
     expect(shellArgs("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe")).toEqual([]);
     expect(shellArgs("C:\\Windows\\System32\\cmd.exe")).toEqual([]);
+  });
+});
+
+describe("resolvePtyCwd", () => {
+  test("accepts an existing directory", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "codeshell-pty-cwd-test-"));
+    expect(resolvePtyCwd(tempDir)).toEqual({ ok: true, cwd: tempDir });
+  });
+
+  test("rejects a file or missing path before node-pty.spawn", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "codeshell-pty-cwd-test-"));
+    const file = join(tempDir, "not-a-dir");
+    writeFileSync(file, "");
+    expect(resolvePtyCwd(file)).toMatchObject({ ok: false });
+    expect(resolvePtyCwd(join(tempDir, "missing"))).toMatchObject({ ok: false });
   });
 });

@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { CdpActionsDriver, buildExtractScript, cleanPageText } from "./driver.js";
+import {
+  CdpActionsDriver,
+  buildExtractScript,
+  cleanPageText,
+  validateNavigationUrl,
+} from "./driver.js";
 import type { CdpSender } from "./sender.js";
 
 /** A scriptable fake CDP endpoint: records calls, returns canned results. */
@@ -17,7 +22,9 @@ const BOX = { model: { content: [0, 0, 100, 0, 100, 40, 0, 40] } };
 
 describe("CdpActionsDriver.snapshot", () => {
   test("enables domains once and returns RAW nodes (no flattening)", async () => {
-    const nodes = [{ nodeId: "1", role: { value: "button" }, name: { value: "ok" }, backendDOMNodeId: 7 }];
+    const nodes = [
+      { nodeId: "1", role: { value: "button" }, name: { value: "ok" }, backendDOMNodeId: 7 },
+    ];
     const { send, calls } = fakeCdp({ "Accessibility.getFullAXTree": () => ({ nodes }) });
     const d = new CdpActionsDriver(send, () => ({ url: "https://x.com", title: "X" }));
 
@@ -43,6 +50,8 @@ describe("CdpActionsDriver.clickNode", () => {
     expect(r.ok).toBe(true);
     const seq = calls.map((c) => `${c.method}:${c.params?.type ?? ""}`);
     expect(seq).toEqual([
+      "DOM.enable:",
+      "Accessibility.enable:",
       "DOM.scrollIntoViewIfNeeded:",
       "DOM.getBoxModel:",
       "Input.dispatchMouseEvent:mouseMoved",
@@ -77,7 +86,9 @@ describe("CdpActionsDriver.typeNode", () => {
 
     const r = await d.typeNode(10, "hello");
     expect(r.ok).toBe(true);
-    expect(calls.some((c) => c.method === "Input.insertText" && c.params?.text === "hello")).toBe(true);
+    expect(calls.some((c) => c.method === "Input.insertText" && c.params?.text === "hello")).toBe(
+      true,
+    );
   });
 });
 
@@ -138,7 +149,9 @@ describe("CdpActionsDriver.selectOptionNode", () => {
   test("returns available options on no match", async () => {
     const { send } = fakeCdp({
       "DOM.resolveNode": () => ({ object: { objectId: "sel-1" } }),
-      "Runtime.callFunctionOn": () => ({ result: { value: { ok: false, options: ["中国", "美国"] } } }),
+      "Runtime.callFunctionOn": () => ({
+        result: { value: { ok: false, options: ["中国", "美国"] } },
+      }),
     });
     const d = new CdpActionsDriver(send, () => ({ url: "u" }));
     const r = await d.selectOptionNode(30, "火星");
@@ -154,7 +167,10 @@ describe("buildExtractScript", () => {
     expect(s).toContain("img[src]");
     expect(s).toContain("querySelectorAll('video')");
     expect(s).toContain("source[src]");
-    expect(s).toContain("data-cs-ref");
+    expect(s).toContain("data-codeshell-cdp-ref");
+    expect(s).toContain("data-codeshell-cdp-run");
+    expect(s).toContain("removeAttribute(REF_ATTR)");
+    expect(s).not.toContain("data-cs-ref");
     expect(s).toContain("var cap=50");
   });
 });
@@ -162,7 +178,9 @@ describe("buildExtractScript", () => {
 describe("CdpActionsDriver.fetchImageData", () => {
   test("runs in-page fetch+canvas and returns parsed base64", async () => {
     const { send, calls } = fakeCdp({
-      "Runtime.evaluate": () => ({ result: { value: { ok: true, dataUrl: "data:image/jpeg;base64,QUJD" } } }),
+      "Runtime.evaluate": () => ({
+        result: { value: { ok: true, dataUrl: "data:image/jpeg;base64,QUJD" } },
+      }),
     });
     const d = new CdpActionsDriver(send, () => ({ url: "u" }));
     const r = await d.fetchImageData("img3");
@@ -170,7 +188,22 @@ describe("CdpActionsDriver.fetchImageData", () => {
     // the in-page expression must reference the ref by data-cs-ref
     const ev = calls.find((c) => c.method === "Runtime.evaluate");
     expect(ev?.params?.expression).toContain("img3");
+    expect(ev?.params?.expression).toContain("AbortController");
+    expect(ev?.params?.expression).toContain("data-codeshell-cdp-ref");
     expect(ev?.params?.awaitPromise).toBe(true);
+  });
+
+  test("passes a finite timeout into the in-page image fetch", async () => {
+    const { send, calls } = fakeCdp({
+      "Runtime.evaluate": () => ({
+        result: { value: { ok: true, dataUrl: "data:image/jpeg;base64,QUJD" } },
+      }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }), { imageFetchTimeoutMs: 1234 });
+    await d.fetchImageData("img3");
+    const ev = calls.find((c) => c.method === "Runtime.evaluate");
+    expect(ev?.params?.expression).toContain(", 1234)");
+    expect(ev?.params?.expression).toContain("image fetch timed out");
   });
 
   test("reports missing ref", async () => {
@@ -212,6 +245,22 @@ describe("CdpActionsDriver.screenshot", () => {
     expect(shot?.params?.clip).toMatchObject({ x: 10, y: 20, width: 100, height: 50, scale: 1 });
   });
 
+  test("element box: scrolls then clamps the clip to the visible viewport", async () => {
+    const { send, calls } = fakeCdp({
+      "DOM.getBoxModel": () => ({ model: { content: [-10, 100, 50, 100, 50, 180, -10, 180] } }),
+      "Page.getLayoutMetrics": () => ({
+        layoutViewport: { pageX: 0, pageY: 120, clientWidth: 40, clientHeight: 40 },
+      }),
+      "Page.captureScreenshot": () => ({ data: "QUJD" }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+    await d.screenshot(42);
+    expect(calls.some((c) => c.method === "DOM.scrollIntoViewIfNeeded")).toBe(true);
+    const shot = calls.find((c) => c.method === "Page.captureScreenshot");
+    expect(shot?.params?.clip).toMatchObject({ x: 0, y: 120, width: 40, height: 40, scale: 1 });
+    expect(shot?.params?.captureBeyondViewport).toBe(false);
+  });
+
   test("element with no box → stale error", async () => {
     const { send } = fakeCdp({ "DOM.getBoxModel": () => ({ model: null }) });
     const d = new CdpActionsDriver(send, () => ({ url: "u" }));
@@ -221,11 +270,54 @@ describe("CdpActionsDriver.screenshot", () => {
   });
 });
 
+describe("CdpActionsDriver.navigate", () => {
+  test("normalizes and navigates allowed http(s) URLs", async () => {
+    const { send, calls } = fakeCdp();
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+    const r = await d.navigate("https://example.com/path");
+    expect(r.ok).toBe(true);
+    expect(calls.find((c) => c.method === "Page.navigate")?.params.url).toBe(
+      "https://example.com/path",
+    );
+  });
+
+  test("blocks unsafe schemes before Page.navigate", async () => {
+    const { send, calls } = fakeCdp();
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+    const r = await d.navigate("file:///etc/passwd");
+    expect(r.ok).toBe(false);
+    expect(r.detail).toContain("scheme");
+    expect(calls.some((c) => c.method === "Page.navigate")).toBe(false);
+  });
+
+  test("honors an optional host policy callback", async () => {
+    const { send, calls } = fakeCdp();
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }), { canNavigate: () => false });
+    const r = await d.navigate("https://example.com/");
+    expect(r).toMatchObject({ ok: false, detail: "navigation blocked by host policy" });
+    expect(calls.some((c) => c.method === "Page.navigate")).toBe(false);
+  });
+});
+
+describe("validateNavigationUrl", () => {
+  test("allows about:blank but not other about URLs", () => {
+    expect(validateNavigationUrl("about:blank")).toMatchObject({ ok: true, url: "about:blank" });
+    expect(validateNavigationUrl("about:srcdoc")).toMatchObject({ ok: false });
+  });
+
+  test("rejects relative URLs", () => {
+    expect(validateNavigationUrl("example.com")).toMatchObject({ ok: false });
+  });
+});
+
 describe("cleanPageText", () => {
   test("collapses whitespace and caps with truncation marker", () => {
     expect(cleanPageText("a\r\n\r\n\r\nb")).toEqual({ text: "a\n\nb", truncated: false });
     const long = "x".repeat(20);
-    expect(cleanPageText(long, 10)).toEqual({ text: "x".repeat(10) + "\n…(truncated)", truncated: true });
+    expect(cleanPageText(long, 10)).toEqual({
+      text: "x".repeat(10) + "\n…(truncated)",
+      truncated: true,
+    });
   });
 });
 
@@ -261,19 +353,15 @@ describe("waitForLoad NaN/negative timeout guard", () => {
   // guard makes it terminate at the default 10s deadline instead of spinning
   // forever. Necessarily ~10s of real polling — the only path that proves
   // termination of the never-completing case. (12s test budget.)
-  test(
-    "a never-completing page with NaN timeout terminates at the default deadline",
-    async () => {
-      const { send } = fakeCdp({ "Runtime.evaluate": () => ({ result: { value: "loading" } }) });
-      const d = new CdpActionsDriver(send, () => ({ url: "u" }));
-      const started = Date.now();
-      const r = await d.waitForLoad(Number.NaN);
-      expect(r.ok).toBe(true);
-      expect(r.detail).toMatch(/timed out/i);
-      expect(Date.now() - started).toBeLessThan(11_500); // ~10s default, NOT forever
-    },
-    12_000,
-  );
+  test("a never-completing page with NaN timeout terminates at the default deadline", async () => {
+    const { send } = fakeCdp({ "Runtime.evaluate": () => ({ result: { value: "loading" } }) });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+    const started = Date.now();
+    const r = await d.waitForLoad(Number.NaN);
+    expect(r.ok).toBe(true);
+    expect(r.detail).toMatch(/timed out/i);
+    expect(Date.now() - started).toBeLessThan(11_500); // ~10s default, NOT forever
+  }, 12_000);
 });
 
 describe("scroll NaN amount guard", () => {

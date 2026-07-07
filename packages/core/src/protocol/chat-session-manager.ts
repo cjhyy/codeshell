@@ -4,6 +4,7 @@ import type { EngineRuntime } from "../engine/runtime.js";
 import type { EngineConfig } from "../engine/types.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
 import { clearAgentOutputFiles } from "../tool-system/builtin/agent-output-file.js";
+import { logger } from "../logging/logger.js";
 
 export type EngineConfigSlice = Pick<
   EngineConfig,
@@ -94,6 +95,7 @@ export class ChatSessionManager {
     const s = this.sessions.get(sessionId);
     if (!s) return;
     s.cancel();
+    this.unregisterMcpOwner(s);
     this.sessions.delete(sessionId);
   }
 
@@ -146,5 +148,20 @@ export class ChatSessionManager {
   stopIdleSweeper(): void {
     if (this.sweeper) clearInterval(this.sweeper);
     this.sweeper = null;
+  }
+
+  private unregisterMcpOwner(session: ChatSession): void {
+    const mcpPool = (
+      this.runtime as {
+        mcpPool?: { unregisterOwner?: (owner: unknown) => Promise<void> };
+      }
+    ).mcpPool;
+    if (typeof mcpPool?.unregisterOwner !== "function") return;
+    void mcpPool.unregisterOwner(session.engine).catch((err) => {
+      logger.warn("chat_session.mcp_owner_unregister_failed", {
+        sessionId: session.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
   }
 }

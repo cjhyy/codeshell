@@ -8,7 +8,7 @@
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { WebContents } from "electron";
 import { dlog } from "./desktop-logger.js";
@@ -172,11 +172,29 @@ export interface PtyStartOpts {
   rows?: number;
 }
 
+export type PtyStartResult = { ok: true; pid: number } | { ok: false; detail: string };
+
+export function resolvePtyCwd(
+  cwd: string | undefined,
+): { ok: true; cwd: string } | { ok: false; detail: string } {
+  const resolved = cwd && cwd.length > 0 ? cwd : homedir();
+  try {
+    const st = statSync(resolved);
+    if (!st.isDirectory()) return { ok: false, detail: `pty cwd is not a directory: ${resolved}` };
+    return { ok: true, cwd: resolved };
+  } catch (e) {
+    return {
+      ok: false,
+      detail: `pty cwd is not accessible: ${resolved} (${e instanceof Error ? e.message : String(e)})`,
+    };
+  }
+}
+
 /**
  * Start (or reuse) a pty for sessionId, streaming output to `wc` via
- * `pty:data` / `pty:exit`. Returns the pid.
+ * `pty:data` / `pty:exit`.
  */
-export function ptyStart(wc: WebContents, opts: PtyStartOpts): { pid: number } {
+export function ptyStart(wc: WebContents, opts: PtyStartOpts): PtyStartResult {
   const { sessionId } = opts;
   const existing = sessions.get(sessionId);
   if (existing) {
@@ -186,19 +204,29 @@ export function ptyStart(wc: WebContents, opts: PtyStartOpts): { pid: number } {
     if (existing.buffer && !wc.isDestroyed()) {
       wc.send("pty:data", { sessionId, data: existing.buffer });
     }
-    return { pid: existing.pty.pid };
+    return { ok: true, pid: existing.pty.pid };
   }
   const shell = resolveShell();
   // Login + interactive so the user gets their normal prompt/aliases.
   const args = shellArgs(shell);
-  const cwd = opts.cwd && opts.cwd.length > 0 ? opts.cwd : homedir();
-  const pty = loadPty().spawn(shell, args, {
-    name: "xterm-256color",
-    cols: opts.cols ?? 80,
-    rows: opts.rows ?? 24,
-    cwd,
-    env: buildEnv(),
-  });
+  const cwdResult = resolvePtyCwd(opts.cwd);
+  if (!cwdResult.ok) return { ok: false, detail: cwdResult.detail };
+  const cwd = cwdResult.cwd;
+  let pty: IPty;
+  try {
+    pty = loadPty().spawn(shell, args, {
+      name: "xterm-256color",
+      cols: opts.cols ?? 80,
+      rows: opts.rows ?? 24,
+      cwd,
+      env: buildEnv(),
+    });
+  } catch (e) {
+    return {
+      ok: false,
+      detail: `failed to start pty: ${e instanceof Error ? e.message : String(e)}`,
+    };
+  }
   const session: Session = { pty, webContents: wc, buffer: "" };
   sessions.set(sessionId, session);
   dlog("main", "pty.start", { sessionId, shell, cwd, pid: pty.pid });
@@ -217,7 +245,7 @@ export function ptyStart(wc: WebContents, opts: PtyStartOpts): { pid: number } {
     sessions.delete(sessionId);
     dlog("main", "pty.exit", { sessionId, exitCode, signal });
   });
-  return { pid: pty.pid };
+  return { ok: true, pid: pty.pid };
 }
 
 export function ptyWrite(sessionId: string, data: string): void {

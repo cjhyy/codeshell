@@ -83,6 +83,16 @@ describe("installPluginFromSource", () => {
     expect(existsSync(join(home, ".code-shell", "plugins", "x"))).toBe(false);
   });
 
+  test("rejects a subdir that tries to escape the cloned repo", async () => {
+    mkdirSync(join(repo, "skills", "s"), { recursive: true });
+    writeFileSync(join(repo, "skills", "s", "SKILL.md"), "---\nname: s\ndescription: d\n---\nb");
+    gitInitCommit(repo);
+
+    const parsed = parseSource(`file://${repo}#../outside`);
+    await expect(installPluginFromSource(parsed, "x", STAMP)).rejects.toThrow(/parent-directory|escapes/);
+    expect(existsSync(join(home, ".code-shell", "plugins", "x"))).toBe(false);
+  });
+
   test("errors on clone failure, leaves nothing", async () => {
     const parsed = parseSource(`file://${repo}-does-not-exist`);
     await expect(installPluginFromSource(parsed, "x", STAMP)).rejects.toThrow();

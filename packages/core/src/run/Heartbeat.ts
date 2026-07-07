@@ -12,6 +12,7 @@
 import { existsSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { assertSafeRunId } from "./ids.js";
 
 export interface HeartbeatConfig {
   runsDir?: string;
@@ -39,6 +40,12 @@ export class Heartbeat {
    * Start heartbeat for a run. Writes immediately, then repeats on interval.
    */
   start(runId: string): void {
+    assertSafeRunId(runId);
+    const existing = this.timers.get(runId);
+    if (existing) {
+      clearInterval(existing);
+      this.timers.delete(runId);
+    }
     // Write first heartbeat immediately
     this.write(runId);
 
@@ -55,6 +62,7 @@ export class Heartbeat {
    * Stop heartbeat for a run and remove the heartbeat file.
    */
   stop(runId: string): void {
+    assertSafeRunId(runId);
     const timer = this.timers.get(runId);
     if (timer) {
       clearInterval(timer);
@@ -76,6 +84,7 @@ export class Heartbeat {
    * Read the last heartbeat for a run. Returns null if no heartbeat exists.
    */
   read(runId: string): HeartbeatData | null {
+    assertSafeRunId(runId);
     const filePath = this.filePath(runId);
     if (!existsSync(filePath)) return null;
     try {
@@ -90,6 +99,7 @@ export class Heartbeat {
    * Returns true if stale or missing, false if recent.
    */
   isStale(runId: string, thresholdMs?: number): boolean {
+    assertSafeRunId(runId);
     const threshold = thresholdMs ?? this.intervalMs * 3;
     const data = this.read(runId);
     if (!data) return true;
@@ -100,6 +110,7 @@ export class Heartbeat {
    * Check if the process that wrote the heartbeat is still alive.
    */
   isProcessAlive(runId: string): boolean {
+    assertSafeRunId(runId);
     const data = this.read(runId);
     if (!data) return false;
     try {
@@ -136,6 +147,7 @@ export class Heartbeat {
   }
 
   private filePath(runId: string): string {
+    assertSafeRunId(runId);
     return join(this.runsDir, runId, "heartbeat");
   }
 }

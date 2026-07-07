@@ -16,7 +16,7 @@
  */
 
 import { writeFile, mkdir } from "node:fs/promises";
-import { join } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { SettingsManager } from "../../settings/manager.js";
@@ -29,7 +29,7 @@ import {
   type VideoProvider,
   type VideoProviderCreds,
 } from "./video-providers.js";
-import { getImageUploader, type ImageUploader, type UploaderCreds } from "./image-uploader.js";
+import { getImageUploader, isHttpUrl, type ImageUploader, type UploaderCreds } from "./image-uploader.js";
 import { effectiveApiKey } from "./generate-image.js";
 import { getMergedCatalog, findCatalogEntry } from "../../model-catalog/index.js";
 import { genInstancesFromConnections } from "../../model-catalog/gen-connections.js";
@@ -46,6 +46,11 @@ interface VideoInstance {
 }
 
 const MAX_IMAGES = 9;
+
+export function __resolveLocalImageInputForTests(pathOrUrl: string, cwd: string): string {
+  if (isHttpUrl(pathOrUrl)) return pathOrUrl;
+  return isAbsolute(pathOrUrl) ? pathOrUrl : resolve(cwd, pathOrUrl);
+}
 
 /**
  * Normalize image inputs (URLs or local paths) into public URLs the provider
@@ -282,9 +287,13 @@ export async function generateVideoTool(
   const sessionId = ctx?.sessionId;
   const preferKind = typeof args.provider === "string" && args.provider ? args.provider : undefined;
   const overrideModel = typeof args.model === "string" && args.model ? args.model : undefined;
-  const image = typeof args.image === "string" && args.image ? args.image : undefined;
+  const image = typeof args.image === "string" && args.image
+    ? __resolveLocalImageInputForTests(args.image, cwd)
+    : undefined;
   const imagesArg = Array.isArray(args.images)
-    ? (args.images as unknown[]).filter((x): x is string => typeof x === "string")
+    ? (args.images as unknown[])
+        .filter((x): x is string => typeof x === "string")
+        .map((x) => __resolveLocalImageInputForTests(x, cwd))
     : undefined;
   // videos pass through verbatim to fal's video_urls (no upload) — http(s) only.
   const videosArg = Array.isArray(args.videos)

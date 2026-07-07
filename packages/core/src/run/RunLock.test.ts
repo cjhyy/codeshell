@@ -76,4 +76,11 @@ describe("RunLock.acquire", () => {
 
     expect(acquired).toMatchObject({ acquired: false, reason: "missing_target" });
   });
+
+  test("rejects path-shaped run ids before composing the lock target", async () => {
+    const lock = new RunLock({ runsDir });
+
+    await expect(lock.acquire("../escape")).rejects.toThrow(/invalid run id/);
+    await expect(lock.isLocked("a/b")).rejects.toThrow(/invalid run id/);
+  });
 });

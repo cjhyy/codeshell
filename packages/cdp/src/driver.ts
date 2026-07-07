@@ -18,7 +18,13 @@
  */
 
 import type { CdpSender, PageInfo } from "./sender.js";
-import type { RawSnapshot, CdpActionResult, CdpContentResult, CdpExtractResult, CdpImageData } from "./types.js";
+import type {
+  RawSnapshot,
+  CdpActionResult,
+  CdpContentResult,
+  CdpExtractResult,
+  CdpImageData,
+} from "./types.js";
 import { planKeySequence } from "./keymap.js";
 
 /** Default cap for extracted page text (chars). */
@@ -28,6 +34,45 @@ export const EXTRACT_LINK_CAP = 200;
 /** Max image dimension (px) we keep — Claude caps at 1568, downscaling past it
  *  is free token loss. Both image-fetch and screenshot downscale to this. */
 export const MAX_IMAGE_DIM = 1568;
+/** Default timeout for in-page image fetch/decode/canvas work. */
+export const DEFAULT_IMAGE_FETCH_TIMEOUT_MS = 15_000;
+/** Schemes the standalone driver will navigate to without host policy. */
+export const DEFAULT_NAVIGATION_SCHEMES = ["http:", "https:", "about:"] as const;
+
+export interface CdpActionsDriverOptions {
+  /** Optional host policy gate; false blocks before Page.navigate. */
+  canNavigate?: (url: URL) => boolean | Promise<boolean>;
+  /** Allowed URL schemes. Defaults to http(s) plus about:blank. */
+  allowedNavigationSchemes?: readonly string[];
+  /** Timeout for in-page image fetch/decode/canvas work. */
+  imageFetchTimeoutMs?: number;
+}
+
+export type NavigationUrlValidation =
+  | { ok: true; url: string; parsed: URL }
+  | { ok: false; detail: string };
+
+export function validateNavigationUrl(
+  raw: string,
+  allowedSchemes: readonly string[] = DEFAULT_NAVIGATION_SCHEMES,
+): NavigationUrlValidation {
+  const input = raw.trim();
+  if (!input) return { ok: false, detail: "navigation URL is empty" };
+  let parsed: URL;
+  try {
+    parsed = new URL(input);
+  } catch {
+    return { ok: false, detail: "navigation URL must be absolute" };
+  }
+  const allowed = new Set(allowedSchemes.map((s) => (s.endsWith(":") ? s : `${s}:`).toLowerCase()));
+  const scheme = parsed.protocol.toLowerCase();
+  if (!allowed.has(scheme))
+    return { ok: false, detail: `navigation scheme not allowed: ${scheme.replace(/:$/, "")}` };
+  if (scheme === "about:" && parsed.href !== "about:blank") {
+    return { ok: false, detail: "only about:blank is allowed for about: navigation" };
+  }
+  return { ok: true, url: parsed.href, parsed };
+}
 
 export class CdpActionsDriver {
   private enabled = false;
@@ -35,6 +80,7 @@ export class CdpActionsDriver {
   constructor(
     private readonly send: CdpSender,
     private readonly pageInfo: () => Promise<PageInfo> | PageInfo,
+    private readonly options: CdpActionsDriverOptions = {},
   ) {}
 
   /** Accessibility/DOM domains must be enabled once before tree/box queries. */
@@ -54,7 +100,9 @@ export class CdpActionsDriver {
   async snapshot(): Promise<RawSnapshot> {
     await this.ensureEnabled();
     const info = await this.pageInfo();
-    const { nodes } = (await this.send("Accessibility.getFullAXTree")) as { nodes: RawSnapshot["nodes"] };
+    const { nodes } = (await this.send("Accessibility.getFullAXTree")) as {
+      nodes: RawSnapshot["nodes"];
+    };
     return { url: info.url, title: info.title, nodes: nodes ?? [] };
   }
 
@@ -62,6 +110,7 @@ export class CdpActionsDriver {
    *  null if the node no longer has a box (DOM changed → stale). */
   async centerOf(backendNodeId: number): Promise<{ x: number; y: number } | null> {
     try {
+      await this.ensureEnabled();
       await this.send("DOM.scrollIntoViewIfNeeded", { backendNodeId }).catch(() => undefined);
       const { model } = (await this.send("DOM.getBoxModel", { backendNodeId })) as {
         model?: { content: number[] };
@@ -99,7 +148,8 @@ export class CdpActionsDriver {
       const { object } = (await this.send("DOM.resolveNode", { backendNodeId })) as {
         object?: { objectId?: string };
       };
-      if (!object?.objectId) return { ok: false, detail: "element has no layout box", staleRef: true };
+      if (!object?.objectId)
+        return { ok: false, detail: "element has no layout box", staleRef: true };
       await this.send("Runtime.callFunctionOn", {
         objectId: object.objectId,
         functionDeclaration: "function(){ this.click(); }",
@@ -114,8 +164,20 @@ export class CdpActionsDriver {
     const c = await this.centerOf(backendNodeId);
     if (!c) return { ok: false, detail: "element has no layout box", staleRef: true };
     try {
-      await this.send("Input.dispatchMouseEvent", { type: "mousePressed", x: c.x, y: c.y, button: "left", clickCount: 1 });
-      await this.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: c.x, y: c.y, button: "left", clickCount: 1 });
+      await this.send("Input.dispatchMouseEvent", {
+        type: "mousePressed",
+        x: c.x,
+        y: c.y,
+        button: "left",
+        clickCount: 1,
+      });
+      await this.send("Input.dispatchMouseEvent", {
+        type: "mouseReleased",
+        x: c.x,
+        y: c.y,
+        button: "left",
+        clickCount: 1,
+      });
       await this.send("Input.insertText", { text });
       return { ok: true };
     } catch (e) {
@@ -128,8 +190,20 @@ export class CdpActionsDriver {
     const c = await this.centerOf(backendNodeId);
     if (!c) return { ok: false, detail: "element has no layout box", staleRef: true };
     try {
-      await this.send("Input.dispatchMouseEvent", { type: "mousePressed", x: c.x, y: c.y, button: "left", clickCount: 1 });
-      await this.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: c.x, y: c.y, button: "left", clickCount: 1 });
+      await this.send("Input.dispatchMouseEvent", {
+        type: "mousePressed",
+        x: c.x,
+        y: c.y,
+        button: "left",
+        clickCount: 1,
+      });
+      await this.send("Input.dispatchMouseEvent", {
+        type: "mouseReleased",
+        x: c.x,
+        y: c.y,
+        button: "left",
+        clickCount: 1,
+      });
       return { ok: true };
     } catch (e) {
       return { ok: false, detail: errMsg(e) };
@@ -178,10 +252,12 @@ export class CdpActionsDriver {
    */
   async selectOptionNode(backendNodeId: number, value: string): Promise<CdpActionResult> {
     try {
+      await this.ensureEnabled();
       const { object } = (await this.send("DOM.resolveNode", { backendNodeId })) as {
         object?: { objectId?: string };
       };
-      if (!object?.objectId) return { ok: false, detail: "select element not resolvable", staleRef: true };
+      if (!object?.objectId)
+        return { ok: false, detail: "select element not resolvable", staleRef: true };
       const res = (await this.send("Runtime.callFunctionOn", {
         objectId: object.objectId,
         functionDeclaration: SELECT_OPTION_FN,
@@ -191,7 +267,10 @@ export class CdpActionsDriver {
       const v = res.result?.value;
       if (v?.ok) return { ok: true, detail: v.matched ? `selected "${v.matched}"` : undefined };
       const opts = (v?.options ?? []).slice(0, 50).join(" / ");
-      return { ok: false, detail: `no option matched "${value}". available: ${opts || "(none — not a native <select>?)"}` };
+      return {
+        ok: false,
+        detail: `no option matched "${value}". available: ${opts || "(none — not a native <select>?)"}`,
+      };
     } catch (e) {
       return { ok: false, detail: errMsg(e) };
     }
@@ -206,16 +285,24 @@ export class CdpActionsDriver {
    */
   async fetchImageData(ref: string, maxDim = MAX_IMAGE_DIM): Promise<CdpImageData> {
     try {
-      // Resolve the ref (img1/vid1…) tagged by the last extract via data-cs-ref,
-      // fetch+canvas IN PAGE (page cookies → beats hotlink protection).
+      // Resolve the ref (img1/vid1…) tagged by the last extract via namespaced
+      // attrs, fetch+canvas IN PAGE (page cookies → beats hotlink protection).
+      const timeoutMs = positiveFinite(
+        this.options.imageFetchTimeoutMs,
+        DEFAULT_IMAGE_FETCH_TIMEOUT_MS,
+      );
       const res = (await this.send("Runtime.evaluate", {
-        expression: `(${FETCH_IMAGE_BY_REF_FN})(${JSON.stringify(ref)}, ${maxDim})`,
+        expression: `(${FETCH_IMAGE_BY_REF_FN})(${JSON.stringify(ref)}, ${maxDim}, ${timeoutMs})`,
         returnByValue: true,
         awaitPromise: true,
-      })) as { result?: { value?: { ok?: boolean; dataUrl?: string; detail?: string; missing?: boolean } } };
+      })) as {
+        result?: { value?: { ok?: boolean; dataUrl?: string; detail?: string; missing?: boolean } };
+      };
       const v = res.result?.value;
-      if (v?.missing) return { ok: false, detail: `ref ${ref} not found — re-run browser_observe(extract)` };
-      if (!v?.ok || !v.dataUrl) return { ok: false, detail: v?.detail ?? "could not read image pixels" };
+      if (v?.missing)
+        return { ok: false, detail: `ref ${ref} not found — re-run browser_observe(extract)` };
+      if (!v?.ok || !v.dataUrl)
+        return { ok: false, detail: v?.detail ?? "could not read image pixels" };
       return { ...parseDataUrl(v.dataUrl), ref };
     } catch (e) {
       return { ok: false, detail: errMsg(e) };
@@ -236,32 +323,29 @@ export class CdpActionsDriver {
       // Region to capture (CSS px) + the native scale that fits it into maxDim.
       let region: { x: number; y: number; width: number; height: number };
       if (backendNodeId !== undefined) {
+        await this.ensureEnabled();
+        await this.send("DOM.scrollIntoViewIfNeeded", { backendNodeId }).catch(() => undefined);
         const { model } = (await this.send("DOM.getBoxModel", { backendNodeId })) as {
           model?: { content: number[] };
         };
         if (!model?.content || model.content.length < 8) {
           return { ok: false, detail: "element has no layout box", staleRef: true };
         }
-        const xs = [model.content[0]!, model.content[2]!, model.content[4]!, model.content[6]!];
-        const ys = [model.content[1]!, model.content[3]!, model.content[5]!, model.content[7]!];
-        const x = Math.min(...xs), y = Math.min(...ys);
-        region = { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y };
+        const viewport = await this.layoutViewportRect();
+        const box = rectFromQuad(model.content);
+        const visible = intersectRects(box, viewport);
+        if (!visible)
+          return { ok: false, detail: "element is outside the visible viewport after scrolling" };
+        region = visible;
       } else {
-        const { layoutViewport } = (await this.send("Page.getLayoutMetrics")) as {
-          layoutViewport?: { clientWidth?: number; clientHeight?: number };
-        };
-        region = {
-          x: 0,
-          y: 0,
-          width: layoutViewport?.clientWidth || 1280,
-          height: layoutViewport?.clientHeight || 800,
-        };
+        region = await this.layoutViewportRect();
       }
       if (region.width < 1 || region.height < 1) {
         return { ok: false, detail: "capture region is empty" };
       }
       // scale ≤ 1 so the larger dimension lands at ~maxDim — CDP does the resize.
-      const scale = Math.min(1, maxDim / Math.max(region.width, region.height));
+      const safeMaxDim = positiveFinite(maxDim, MAX_IMAGE_DIM);
+      const scale = Math.min(1, safeMaxDim / Math.max(region.width, region.height));
       const shot = (await this.send("Page.captureScreenshot", {
         format: "jpeg",
         quality: 80,
@@ -275,9 +359,36 @@ export class CdpActionsDriver {
     }
   }
 
+  private async layoutViewportRect(): Promise<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }> {
+    const { layoutViewport } = (await this.send("Page.getLayoutMetrics")) as {
+      layoutViewport?: {
+        pageX?: number;
+        pageY?: number;
+        clientWidth?: number;
+        clientHeight?: number;
+      };
+    };
+    return {
+      x: finiteOr(layoutViewport?.pageX, 0),
+      y: finiteOr(layoutViewport?.pageY, 0),
+      width: positiveFinite(layoutViewport?.clientWidth, 1280),
+      height: positiveFinite(layoutViewport?.clientHeight, 800),
+    };
+  }
+
   async navigate(url: string): Promise<CdpActionResult> {
     try {
-      await this.send("Page.navigate", { url });
+      const validated = validateNavigationUrl(url, this.options.allowedNavigationSchemes);
+      if (!validated.ok) return validated;
+      if (this.options.canNavigate && !(await this.options.canNavigate(validated.parsed))) {
+        return { ok: false, detail: "navigation blocked by host policy" };
+      }
+      await this.send("Page.navigate", { url: validated.url });
       this.enabled = false; // domains may need re-enabling after cross-doc nav
       return { ok: true };
     } catch (e) {
@@ -308,7 +419,12 @@ export class CdpActionsDriver {
         returnByValue: true,
       })) as {
         result?: {
-          value?: { links?: CdpExtractResult["links"]; images?: CdpExtractResult["images"]; videos?: CdpExtractResult["videos"]; truncated?: boolean };
+          value?: {
+            links?: CdpExtractResult["links"];
+            images?: CdpExtractResult["images"];
+            videos?: CdpExtractResult["videos"];
+            truncated?: boolean;
+          };
         };
       };
       const v = res.result?.value;
@@ -322,7 +438,15 @@ export class CdpActionsDriver {
         truncated: v?.truncated ?? false,
       };
     } catch (e) {
-      return { ok: false, url: info.url, title: info.title, links: [], images: [], videos: [], detail: errMsg(e) };
+      return {
+        ok: false,
+        url: info.url,
+        title: info.title,
+        links: [],
+        images: [],
+        videos: [],
+        detail: errMsg(e),
+      };
     }
   }
 
@@ -350,10 +474,17 @@ export class CdpActionsDriver {
 
   async scroll(dir: "up" | "down", amount?: number): Promise<CdpActionResult> {
     // Guard a non-finite amount (NaN/Infinity) → would send NaN deltaY to CDP.
-    const magnitude = typeof amount === "number" && Number.isFinite(amount) ? Math.abs(amount) : 600;
+    const magnitude =
+      typeof amount === "number" && Number.isFinite(amount) ? Math.abs(amount) : 600;
     const deltaY = (dir === "down" ? 1 : -1) * magnitude;
     try {
-      await this.send("Input.dispatchMouseEvent", { type: "mouseWheel", x: 0, y: 0, deltaX: 0, deltaY });
+      await this.send("Input.dispatchMouseEvent", {
+        type: "mouseWheel",
+        x: 0,
+        y: 0,
+        deltaX: 0,
+        deltaY,
+      });
       return { ok: true };
     } catch (e) {
       return { ok: false, detail: errMsg(e) };
@@ -363,6 +494,34 @@ export class CdpActionsDriver {
 
 function avg(ns: number[]): number {
   return ns.reduce((a, b) => a + b, 0) / ns.length;
+}
+
+function finiteOr(value: number | undefined, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function positiveFinite(value: number | undefined, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function rectFromQuad(quad: number[]): { x: number; y: number; width: number; height: number } {
+  const xs = [quad[0]!, quad[2]!, quad[4]!, quad[6]!];
+  const ys = [quad[1]!, quad[3]!, quad[5]!, quad[7]!];
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y };
+}
+
+function intersectRects(
+  a: { x: number; y: number; width: number; height: number },
+  b: { x: number; y: number; width: number; height: number },
+): { x: number; y: number; width: number; height: number } | null {
+  const x1 = Math.max(a.x, b.x);
+  const y1 = Math.max(a.y, b.y);
+  const x2 = Math.min(a.x + a.width, b.x + b.width);
+  const y2 = Math.min(a.y + a.height, b.y + b.height);
+  if (x2 <= x1 || y2 <= y1) return null;
+  return { x: x1, y: y1, width: x2 - x1, height: y2 - y1 };
 }
 
 function delay(ms: number): Promise<void> {
@@ -386,11 +545,37 @@ function parseDataUrl(dataUrl: string): CdpImageData {
  * downscaled to maxDim, return a JPEG dataURL. Async (awaitPromise). On a video
  * element, draws the current frame. Returns {ok:false, detail} on CORS taint.
  */
-const FETCH_IMAGE_BY_REF_FN = `async function(ref, maxDim){
+const FETCH_IMAGE_BY_REF_FN = `async function(ref, maxDim, timeoutMs){
   maxDim = maxDim || 1568;
-  try {
-    var el = document.querySelector('[data-cs-ref="' + ref + '"]');
-    if (!el) return { ok:false, missing:true };
+  timeoutMs = (Number.isFinite(timeoutMs) && timeoutMs > 0) ? timeoutMs : 15000;
+  var REF_ATTR = 'data-codeshell-cdp-ref';
+  var RUN_ATTR = 'data-codeshell-cdp-run';
+  var run = window.__codeshellCdpExtractRun || '';
+  var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  return await new Promise(function(resolve) {
+    var done = false;
+    function finish(value) {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve(value);
+    }
+    var timer = setTimeout(function() {
+      try { if (controller) controller.abort(); } catch (_) {}
+      finish({ ok:false, detail:'image fetch timed out' });
+    }, timeoutMs);
+    (async function(){
+      try {
+    var candidates = document.querySelectorAll('[' + REF_ATTR + ']');
+    var el = null;
+    for (var i=0;i<candidates.length;i++){
+      var candidate = candidates[i];
+      if (candidate.getAttribute(REF_ATTR) === ref && (!run || candidate.getAttribute(RUN_ATTR) === run)) {
+        el = candidate;
+        break;
+      }
+    }
+    if (!el) return finish({ ok:false, missing:true });
     var isVideo = el.tagName === 'VIDEO';
     var srcW = isVideo ? (el.videoWidth || el.clientWidth) : (el.naturalWidth || el.width);
     var srcH = isVideo ? (el.videoHeight || el.clientHeight) : (el.naturalHeight || el.height);
@@ -401,21 +586,25 @@ const FETCH_IMAGE_BY_REF_FN = `async function(ref, maxDim){
       // Re-fetch through the page so cross-origin-but-same-site cookies apply,
       // then decode to a bitmap the canvas can draw without tainting (the fetch
       // response is same-origin to the canvas once we hold the bytes as a blob).
-      var resp = await fetch(el.currentSrc || el.src, { credentials: 'include' });
-      if (!resp.ok) return { ok:false, detail: 'fetch ' + resp.status };
+      var fetchOpts = { credentials: 'include' };
+      if (controller) fetchOpts.signal = controller.signal;
+      var resp = await fetch(el.currentSrc || el.src, fetchOpts);
+      if (!resp.ok) return finish({ ok:false, detail: 'fetch ' + resp.status });
       var blob = await resp.blob();
       bmp = await createImageBitmap(blob);
       srcW = bmp.width; srcH = bmp.height;
     }
-    if (!srcW || !srcH) return { ok:false, detail: 'image has no dimensions' };
+    if (!srcW || !srcH) return finish({ ok:false, detail: 'image has no dimensions' });
     var scale = Math.min(1, maxDim / Math.max(srcW, srcH));
     var w = Math.max(1, Math.round(srcW * scale)), h = Math.max(1, Math.round(srcH * scale));
     var c = document.createElement('canvas'); c.width = w; c.height = h;
     var cx = c.getContext('2d'); cx.drawImage(bmp, 0, 0, w, h);
-    return { ok:true, dataUrl: c.toDataURL('image/jpeg', 0.85) };
+    finish({ ok:true, dataUrl: c.toDataURL('image/jpeg', 0.85) });
   } catch (e) {
-    return { ok:false, detail: (e && e.message) || String(e) };
+    finish({ ok:false, detail: (e && e.message) || String(e) });
   }
+    })();
+  });
 }`;
 
 /**
@@ -427,6 +616,13 @@ export function buildExtractScript(cap = EXTRACT_LINK_CAP): string {
   return `(function(){
     var cap=${cap};
     var links=[],images=[],videos=[],lt=false,it=false,vt=false,seenL={},seenI={},seenV={};
+    var REF_ATTR='data-codeshell-cdp-ref',RUN_ATTR='data-codeshell-cdp-run';
+    var run='run-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
+    try{
+      var old=document.querySelectorAll('['+REF_ATTR+'],['+RUN_ATTR+']');
+      for(var oi=0;oi<old.length;oi++){old[oi].removeAttribute(REF_ATTR);old[oi].removeAttribute(RUN_ATTR);}
+      window.__codeshellCdpExtractRun=run;
+    }catch(e){}
     var as=document.querySelectorAll('a[href]');
     for(var i=0;i<as.length;i++){
       var a=as[i],u=a.href;
@@ -443,7 +639,7 @@ export function buildExtractScript(cap = EXTRACT_LINK_CAP): string {
       if(seenI[s])continue;seenI[s]=1;
       if(images.length>=cap){it=true;break;}
       imgN++;var ref='img'+imgN;
-      try{im.setAttribute('data-cs-ref',ref);}catch(e){}
+      try{im.setAttribute(REF_ATTR,ref);im.setAttribute(RUN_ATTR,run);}catch(e){}
       var o={url:s,ref:ref};var alt=(im.getAttribute('alt')||'').trim();if(alt)o.alt=alt.slice(0,200);
       images.push(o);
     }
@@ -451,7 +647,7 @@ export function buildExtractScript(cap = EXTRACT_LINK_CAP): string {
     var vs=document.querySelectorAll('video'),vidN=0;
     for(var k=0;k<vs.length&&!vt;k++){
       var vd=vs[k];
-      vidN++;try{vd.setAttribute('data-cs-ref','vid'+vidN);}catch(e){}
+      vidN++;try{vd.setAttribute(REF_ATTR,'vid'+vidN);vd.setAttribute(RUN_ATTR,run);}catch(e){}
       if(vd.currentSrc)pushVid(vd.currentSrc);else if(vd.src)pushVid(vd.src);
       var srcs=vd.querySelectorAll('source[src]');
       for(var m=0;m<srcs.length&&!vt;m++)pushVid(srcs[m].src);
@@ -497,7 +693,10 @@ const SELECT_OPTION_FN = `function(arg){
 
 /** Pure: normalize raw extracted page text. Ported verbatim from core's
  *  cleanPageText so readContent behavior is byte-identical post-extraction. */
-export function cleanPageText(raw: string, cap: number = CONTENT_CHAR_CAP): { text: string; truncated: boolean } {
+export function cleanPageText(
+  raw: string,
+  cap: number = CONTENT_CHAR_CAP,
+): { text: string; truncated: boolean } {
   const normalized = raw
     .replace(/\r\n?/g, "\n")
     .replace(/[ \t\f\v]+/g, " ")

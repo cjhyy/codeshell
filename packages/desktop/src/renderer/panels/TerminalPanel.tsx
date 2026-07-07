@@ -77,8 +77,23 @@ export function TerminalPanel({ cwd, sessionId: baseId }: Props) {
     // Start the pty, then push the real viewport size once we know it.
     void window.codeshell
       .ptyStart({ sessionId, cwd: cwdRef.current ?? undefined, cols: term.cols, rows: term.rows })
-      .then(() => {
-        if (!disposed) void window.codeshell.ptyResize(sessionId, term.cols, term.rows);
+      .then((result) => {
+        if (disposed) return;
+        if (!result.ok) {
+          term.write(
+            `\r\n\x1b[31m${tRef.current("panels.terminal.startFailed", { detail: result.detail })}\x1b[0m\r\n`,
+          );
+          return;
+        }
+        void window.codeshell.ptyResize(sessionId, term.cols, term.rows);
+      })
+      .catch((e) => {
+        if (!disposed) {
+          const detail = e instanceof Error ? e.message : String(e);
+          term.write(
+            `\r\n\x1b[31m${tRef.current("panels.terminal.startFailed", { detail })}\x1b[0m\r\n`,
+          );
+        }
       });
 
     const ro = new ResizeObserver(() => {

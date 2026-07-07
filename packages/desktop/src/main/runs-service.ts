@@ -114,23 +114,36 @@ export async function listRuns(): Promise<RunSummary[]> {
   return out;
 }
 
-const SAFE_ID = /^[A-Za-z0-9_.-]+$/;
+function assertSafeRunId(runId: unknown): asserts runId is string {
+  if (typeof runId !== "string" || runId.length === 0) {
+    throw new Error("invalid run id: must be a non-empty string");
+  }
+  if (runId.includes("/") || runId.includes("\\")) {
+    throw new Error(`invalid run id: contains path separator: ${runId}`);
+  }
+  if (runId === "." || runId === ".." || runId.includes("..")) {
+    throw new Error(`invalid run id: contains parent-dir token: ${runId}`);
+  }
+  if (!/^[A-Za-z0-9_.-]+$/.test(runId)) {
+    throw new Error(`invalid run id: unexpected characters: ${runId}`);
+  }
+  if (runId.length > 128) {
+    throw new Error("invalid run id: too long (max 128 chars)");
+  }
+}
 
 /**
  * Remove a run's on-disk directory (~/.code-shell/runs/<runId>/).
- * `baseDir` overridable for tests; no-op for unsafe ids or missing dirs.
+ * `baseDir` overridable for tests; no-op for missing dirs.
  */
-export async function deleteRunDir(
-  runId: string,
-  baseDir: string = RUNS_DIR,
-): Promise<void> {
-  if (!SAFE_ID.test(runId) || runId === "." || runId === "..") return;
+export async function deleteRunDir(runId: string, baseDir: string = RUNS_DIR): Promise<void> {
+  assertSafeRunId(runId);
   await fs.rm(path.join(baseDir, runId), { recursive: true, force: true });
 }
 
 export async function getRun(runId: string): Promise<RunDetail | null> {
-  const clean = runId.replace(/[\\/]/g, "");
-  const snap = await readSnapshot(clean);
+  assertSafeRunId(runId);
+  const snap = await readSnapshot(runId);
   if (!snap || typeof snap !== "object") return null;
   const s = snap as Record<string, unknown>;
   const base = snapshotToSummary(s);
@@ -138,7 +151,7 @@ export async function getRun(runId: string): Promise<RunDetail | null> {
   // Events
   let events: RunDetail["events"] = [];
   try {
-    const raw = await fs.readFile(path.join(RUNS_DIR, clean, "events.jsonl"), "utf8");
+    const raw = await fs.readFile(path.join(RUNS_DIR, runId, "events.jsonl"), "utf8");
     events = raw
       .split("\n")
       .filter(Boolean)
@@ -158,7 +171,7 @@ export async function getRun(runId: string): Promise<RunDetail | null> {
   // Checkpoints
   let checkpoints: RunDetail["checkpoints"] = [];
   try {
-    const cpDir = path.join(RUNS_DIR, clean, "checkpoints");
+    const cpDir = path.join(RUNS_DIR, runId, "checkpoints");
     const cpEntries = await fs.readdir(cpDir);
     const items = await Promise.all(
       cpEntries
@@ -188,7 +201,7 @@ export async function getRun(runId: string): Promise<RunDetail | null> {
   // Artifacts (just filenames; data lives elsewhere)
   let artifacts: string[] = [];
   try {
-    const artDir = path.join(RUNS_DIR, clean, "artifacts");
+    const artDir = path.join(RUNS_DIR, runId, "artifacts");
     artifacts = (await fs.readdir(artDir)).filter((n) => !n.startsWith("."));
   } catch {
     // none

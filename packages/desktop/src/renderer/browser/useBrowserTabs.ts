@@ -7,6 +7,78 @@ import {
   type WebviewElement,
 } from "./types";
 
+export const OPEN_TAB_SENTINEL = "__CS_OPEN_TAB__";
+export const OPEN_TAB_RATE_WINDOW_MS = 1000;
+export const OPEN_TAB_MAX_PER_RATE_WINDOW = 6;
+export const OPEN_TAB_DEDUPE_WINDOW_MS = 750;
+
+export interface OpenTabConsoleGuardState {
+  windowStartedAt: number;
+  openedInWindow: number;
+  recentUrls: Map<string, number>;
+}
+
+export function createOpenTabConsoleGuardState(): OpenTabConsoleGuardState {
+  return { windowStartedAt: 0, openedInWindow: 0, recentUrls: new Map() };
+}
+
+function createOpenTabConsoleNonce(): string {
+  try {
+    return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+  } catch {
+    return `${Date.now()}-${Math.random()}`;
+  }
+}
+
+export function parseOpenTabConsoleMessage(message: string, expectedNonce: string): string | null {
+  if (!message.startsWith(OPEN_TAB_SENTINEL)) return null;
+
+  let payload: unknown;
+  try {
+    payload = JSON.parse(message.slice(OPEN_TAB_SENTINEL.length));
+  } catch {
+    return null;
+  }
+
+  if (!payload || typeof payload !== "object") return null;
+  const { nonce, url } = payload as { nonce?: unknown; url?: unknown };
+  if (nonce !== expectedNonce || typeof url !== "string") return null;
+
+  const trimmed = url.trim();
+  if (!/^https?:\/\//i.test(trimmed)) return null;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
+
+export function shouldAcceptOpenTabConsoleUrl(
+  state: OpenTabConsoleGuardState,
+  url: string,
+  now = Date.now(),
+): boolean {
+  if (now < state.windowStartedAt || now - state.windowStartedAt >= OPEN_TAB_RATE_WINDOW_MS) {
+    state.windowStartedAt = now;
+    state.openedInWindow = 0;
+  }
+
+  for (const [recentUrl, seenAt] of state.recentUrls) {
+    if (now < seenAt || now - seenAt >= OPEN_TAB_DEDUPE_WINDOW_MS) {
+      state.recentUrls.delete(recentUrl);
+    }
+  }
+
+  if (state.recentUrls.has(url)) return false;
+  if (state.openedInWindow >= OPEN_TAB_MAX_PER_RATE_WINDOW) return false;
+
+  state.recentUrls.set(url, now);
+  state.openedInWindow += 1;
+  return true;
+}
+
 /**
  * Tab management + webview lifecycle wiring for the browser panel. Owns the
  * tabs list, the active tab, the nav state (back/forward/loading), and the
@@ -31,6 +103,9 @@ export function useBrowserTabs(
   const [tabs, setTabs] = useState<Tab[]>(() => [freshTab(initialUrl)]);
   const [activeId, setActiveId] = useState<string>(() => tabs[0].id);
   const viewRef = useRef<WebviewElement | null>(null);
+  const openTabConsoleNonce = useRef<string | null>(null);
+  if (!openTabConsoleNonce.current) openTabConsoleNonce.current = createOpenTabConsoleNonce();
+  const openTabConsoleGuard = useRef(createOpenTabConsoleGuardState());
   const [nav, setNav] = useState({ canGoBack: false, canGoForward: false, loading: false });
 
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
@@ -115,7 +190,9 @@ export function useBrowserTabs(
     // via console.info with a sentinel; we parse it in onConsole below and open
     // an in-app tab. Same-tab links keep working through normal navigation.
     const INJECT = `(() => {
-      if (window.__cs_tab_hook) return; window.__cs_tab_hook = 1;
+      if (window.__cs_tab_hook_v2) return; window.__cs_tab_hook_v2 = 1;
+      const sentinel = ${JSON.stringify(OPEN_TAB_SENTINEL)};
+      const nonce = ${JSON.stringify(openTabConsoleNonce.current)};
       document.addEventListener('click', (e) => {
         const a = e.target && e.target.closest && e.target.closest('a[href]');
         if (!a) return;
@@ -124,7 +201,7 @@ export function useBrowserTabs(
         const wantsNew = a.target === '_blank' || e.metaKey || e.ctrlKey || e.button === 1;
         if (!wantsNew) return;
         e.preventDefault(); e.stopPropagation();
-        console.info('__CS_OPEN_TAB__' + href);
+        console.info(sentinel + JSON.stringify({ nonce, url: href }));
       }, true);
     })();`;
     const onDomReady = () => {
@@ -136,8 +213,10 @@ export function useBrowserTabs(
     };
     const onConsole = (e: Event) => {
       const msg = (e as unknown as { message?: string }).message ?? "";
-      const i = msg.indexOf("__CS_OPEN_TAB__");
-      if (i !== -1) openInNewTab(msg.slice(i + "__CS_OPEN_TAB__".length));
+      const url = parseOpenTabConsoleMessage(msg, openTabConsoleNonce.current ?? "");
+      if (!url) return;
+      if (!shouldAcceptOpenTabConsoleUrl(openTabConsoleGuard.current, url)) return;
+      openInNewTab(url);
     };
     view.addEventListener("did-start-loading", onStart);
     view.addEventListener("did-stop-loading", onStop);

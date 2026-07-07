@@ -23,6 +23,7 @@ import { RunLock } from "./RunLock.js";
 import { Heartbeat } from "./Heartbeat.js";
 import { NoopEvaluator, type Evaluator, type EvaluatorContext } from "./Evaluator.js";
 import type { RunLifecycleHooks } from "./RunApprovalBackend.js";
+import { assertSafeRunFileId, assertSafeRunId } from "./ids.js";
 import type {
   RunSnapshot,
   RunEvent,
@@ -38,6 +39,17 @@ import type {
   RunExecutionContext,
 } from "./types.js";
 import { VALID_TRANSITIONS } from "./types.js";
+
+function hasOwnString<T extends object, K extends PropertyKey>(
+  value: T | undefined,
+  key: K,
+): value is T & Record<K, string> {
+  return (
+    value !== undefined &&
+    Object.prototype.hasOwnProperty.call(value, key) &&
+    typeof (value as Record<K, unknown>)[key] === "string"
+  );
+}
 
 export interface RunManagerConfig {
   store: RunStore;
@@ -115,6 +127,9 @@ export class RunManager {
   async submit(input: SubmitRunInput): Promise<RunSnapshot> {
     const now = Date.now();
     const runId = nanoid(16);
+    if (input.parentRunId !== undefined && input.parentRunId !== null) {
+      assertSafeRunId(input.parentRunId);
+    }
 
     const snapshot: RunSnapshot = {
       runId,
@@ -165,6 +180,7 @@ export class RunManager {
   // ─── Resume ────────────────────────────────────────────────────
 
   async resume(runId: string, input?: ResumeRunInput): Promise<void> {
+    assertSafeRunId(runId);
     // Serialize resume/cancel decisions per run. Without this, two concurrent
     // resumes (or resume racing cancel) both pass the status check below —
     // status stays `waiting_*` until a later `await transition()` — and both
@@ -200,18 +216,15 @@ export class RunManager {
       if (run.status === "waiting_approval" && input?.approvalDecision) {
         const { approvalId, approved, reason } = input.approvalDecision;
 
-        // Persist the approval decision
-        const approval = await this.store.getApproval(runId, approvalId);
-        if (approval && approval.status === "pending") {
-          approval.status = approved ? "approved" : "rejected";
-          approval.resolvedAt = Date.now();
-          await this.store.saveApproval(approval);
-          await this.emitRunEvent(runId, "approval_resolved", {
-            approvalId,
-            approved,
-            reason,
-          });
-        }
+        const approval = await this.getPendingApprovalForResume(run, approvalId);
+        approval.status = approved ? "approved" : "rejected";
+        approval.resolvedAt = Date.now();
+        await this.store.saveApproval(approval);
+        await this.emitRunEvent(runId, "approval_resolved", {
+          approvalId,
+          approved,
+          reason,
+        });
 
         // Transition back to running and resolve the suspended Engine
         await this.transition(run, "queued");
@@ -221,7 +234,7 @@ export class RunManager {
         return;
       }
 
-      if (run.status === "waiting_input" && input?.userInput) {
+      if (run.status === "waiting_input" && hasOwnString(input, "userInput")) {
         await this.transition(run, "queued");
         await this.transition(run, "running");
         await this.emitRunEvent(runId, "run_resumed", { userInput: input.userInput });
@@ -244,17 +257,15 @@ export class RunManager {
     // Re-queue the run for a fresh execution attempt
     if (input?.approvalDecision) {
       const { approvalId, approved, reason } = input.approvalDecision;
-      const approval = await this.store.getApproval(runId, approvalId);
-      if (approval && approval.status === "pending") {
-        approval.status = approved ? "approved" : "rejected";
-        approval.resolvedAt = Date.now();
-        await this.store.saveApproval(approval);
-        await this.emitRunEvent(runId, "approval_resolved", {
-          approvalId,
-          approved,
-          reason,
-        });
-      }
+      const approval = await this.getPendingApprovalForResume(run, approvalId);
+      approval.status = approved ? "approved" : "rejected";
+      approval.resolvedAt = Date.now();
+      await this.store.saveApproval(approval);
+      await this.emitRunEvent(runId, "approval_resolved", {
+        approvalId,
+        approved,
+        reason,
+      });
     }
 
     await this.transition(run, "queued");
@@ -268,6 +279,19 @@ export class RunManager {
   // ─── Cancel ────────────────────────────────────────────────────
 
   async cancel(runId: string, reason?: string): Promise<void> {
+    assertSafeRunId(runId);
+    if (this.resolvingRuns.has(runId)) {
+      throw new Error(`Cannot cancel run ${runId}: another resume/cancel is already in progress`);
+    }
+    this.resolvingRuns.add(runId);
+    try {
+      await this.cancelInner(runId, reason);
+    } finally {
+      this.resolvingRuns.delete(runId);
+    }
+  }
+
+  private async cancelInner(runId: string, reason?: string): Promise<void> {
     const run = await this.getOrThrow(runId);
 
     if (run.status === "completed" || run.status === "failed" || run.status === "cancelled") {
@@ -303,6 +327,7 @@ export class RunManager {
   // ─── Query ─────────────────────────────────────────────────────
 
   async get(runId: string): Promise<RunSnapshot | null> {
+    assertSafeRunId(runId);
     return this.store.get(runId);
   }
 
@@ -311,12 +336,14 @@ export class RunManager {
   }
 
   async getEvents(runId: string): Promise<RunEvent[]> {
+    assertSafeRunId(runId);
     return this.store.listEvents(runId);
   }
 
   // ─── Attach (live stream) ──────────────────────────────────────
 
   attach(runId: string, cb: RunStreamCallback): DetachFn {
+    assertSafeRunId(runId);
     if (!this.subscribers.has(runId)) {
       this.subscribers.set(runId, new Set());
     }
@@ -420,6 +447,7 @@ export class RunManager {
   // ─── Internal: Execute a run ───────────────────────────────────
 
   private async executeRun(runId: string): Promise<void> {
+    assertSafeRunId(runId);
     const run = await this.getOrThrow(runId);
 
     // Acquire run lock — prevents concurrent execution by multiple workers
@@ -800,7 +828,33 @@ export class RunManager {
 
   // ─── Helpers ───────────────────────────────────────────────────
 
+  private async getPendingApprovalForResume(
+    run: RunSnapshot,
+    approvalId: string,
+  ): Promise<RunApproval> {
+    assertSafeRunFileId(approvalId, "approval id");
+    if (run.latestApprovalId !== approvalId) {
+      throw new Error(
+        `Cannot resume run ${run.runId}: approval ${approvalId} is not the latest pending approval`,
+      );
+    }
+    const approval = await this.store.getApproval(run.runId, approvalId);
+    if (!approval) {
+      throw new Error(`Cannot resume run ${run.runId}: approval ${approvalId} was not found`);
+    }
+    if (approval.runId !== run.runId || approval.approvalId !== approvalId) {
+      throw new Error(`Cannot resume run ${run.runId}: approval ${approvalId} does not match this run`);
+    }
+    if (approval.status !== "pending") {
+      throw new Error(
+        `Cannot resume run ${run.runId}: approval ${approvalId} is ${approval.status}, not pending`,
+      );
+    }
+    return approval;
+  }
+
   private async getOrThrow(runId: string): Promise<RunSnapshot> {
+    assertSafeRunId(runId);
     const run = await this.store.get(runId);
     if (!run) throw new Error(`Run not found: ${runId}`);
     return run;

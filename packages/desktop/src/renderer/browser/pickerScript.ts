@@ -39,13 +39,18 @@ export interface PickedElement {
 }
 
 // Runs as the completion value of executeJavaScript — one expression
-// evaluating to a Promise. Resolves null when the user presses Escape.
+// evaluating to a Promise. Resolves null when the user presses Escape or when
+// the host calls PICKER_CLEANUP_SCRIPT.
 export const PICKER_SCRIPT = `
 (() => new Promise((resolve) => {
   const OUTLINE = '2px solid #2563eb';
+  const CLEANUP_KEY = '__codeshellElementPickerCleanup';
+  const prevCleanup = window[CLEANUP_KEY];
+  if (typeof prevCleanup === 'function') { try { prevCleanup(); } catch (_) {} }
   let last = null;
   const restore = () => { if (last) { last.style.outline = lastOutline; last = null; } };
   let lastOutline = '';
+  let settled = false;
   const cssEsc = (s) => (window.CSS && CSS.escape)
     ? CSS.escape(s)
     : String(s).replace(/[^a-zA-Z0-9_-]/g, (m) => '\\\\' + m);
@@ -99,6 +104,18 @@ export const PICKER_SCRIPT = `
     document.removeEventListener('mousemove', onMove, true);
     document.removeEventListener('click', onClick, true);
     document.removeEventListener('keydown', onKey, true);
+    if (window[CLEANUP_KEY] === abandon) {
+      try { delete window[CLEANUP_KEY]; } catch (_) { window[CLEANUP_KEY] = undefined; }
+    }
+  }
+  function finish(value) {
+    if (settled) return;
+    settled = true;
+    cleanup();
+    resolve(value);
+  }
+  function abandon() {
+    finish(null);
   }
   function onClick(e) {
     e.preventDefault(); e.stopPropagation();
@@ -118,12 +135,26 @@ export const PICKER_SCRIPT = `
       url: location.href,
       pageTitle: document.title || undefined,
     };
-    cleanup();
-    resolve(info);
+    finish(info);
   }
-  function onKey(e) { if (e.key === 'Escape') { cleanup(); resolve(null); } }
+  function onKey(e) { if (e.key === 'Escape') abandon(); }
+  window[CLEANUP_KEY] = abandon;
   document.addEventListener('mousemove', onMove, true);
   document.addEventListener('click', onClick, true);
   document.addEventListener('keydown', onKey, true);
 }))()
+`;
+
+/** Host-injected best-effort cleanup for an in-flight guest picker. */
+export const PICKER_CLEANUP_SCRIPT = `
+(() => {
+  const cleanup = window.__codeshellElementPickerCleanup;
+  if (typeof cleanup !== 'function') return false;
+  try {
+    cleanup();
+    return true;
+  } catch (_) {
+    return false;
+  }
+})()
 `;

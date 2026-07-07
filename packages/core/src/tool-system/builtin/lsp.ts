@@ -6,6 +6,8 @@ import type { ToolDefinition } from "../../types.js";
 import { getLSPManager } from "../../lsp/manager.js";
 import { detectLSPServer } from "../../lsp/servers.js";
 import { pathToFileURL } from "node:url";
+import { isAbsolute, resolve } from "node:path";
+import type { ToolContext } from "../context.js";
 
 export const lspToolDef: ToolDefinition = {
   name: "LSP",
@@ -38,13 +40,15 @@ export const lspToolDef: ToolDefinition = {
   },
 };
 
-export async function lspTool(args: Record<string, unknown>): Promise<string> {
+export async function lspTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<string> {
   const action = args.action as string;
-  const filePath = args.file_path as string;
+  const rawPath = args.file_path as string;
   const line = (args.line as number) ?? 0;
   const character = (args.character as number) ?? 0;
 
-  if (!filePath) return "Error: file_path is required";
+  if (!rawPath) return "Error: file_path is required";
+  const cwd = ctx?.cwd ?? process.cwd();
+  const filePath = isAbsolute(rawPath) ? rawPath : resolve(cwd, rawPath);
 
   const manager = getLSPManager();
   if (!manager) return "Error: LSP is not initialized. Language servers are not available.";

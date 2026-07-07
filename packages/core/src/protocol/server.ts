@@ -1873,6 +1873,34 @@ export class AgentServer {
           riskLevel: "low" as const,
         },
       });
+
+      // Goal mode is an unattended, self-driving run: nobody may be watching to
+      // answer, and this ask channel otherwise has NO wall-clock timeout — so a
+      // model that calls AskUserQuestion mid-goal would suspend the turn loop
+      // forever (only a manual Stop could unblock it). When a goal is active,
+      // arm the shared 5-minute approval timeout: on expiry, drain the pending
+      // ask and resolve with a nudge so the loop keeps making progress instead
+      // of hanging. Plain interactive (no-goal) asks keep their intentional
+      // no-timeout behavior — a human can take as long as they like.
+      let goalActive = false;
+      try {
+        goalActive = !!session.getGoal();
+      } catch {
+        goalActive = false;
+      }
+      if (goalActive) {
+        const timer = setTimeout(() => {
+          const resolveFn = session.pendingApprovals.get(requestId);
+          if (resolveFn) {
+            session.pendingApprovals.delete(requestId);
+            this.approvalTimers.delete(requestId);
+            resolveFn(
+              "(用户未在限定时间内回答;目标运行中请自行做出合理假设并继续推进。)",
+            );
+          }
+        }, AgentServer.APPROVAL_TIMEOUT_MS);
+        this.approvalTimers.set(requestId, timer);
+      }
     });
   }
 

@@ -45,6 +45,10 @@ export class CdpBrowserDriver implements BrowserBridge {
     this.inner = new CdpActionsDriver(send, pageInfo);
   }
 
+  resetDomains(): void {
+    this.inner.resetDomains();
+  }
+
   async snapshot(): Promise<BrowserSnapshot> {
     const raw = await this.inner.snapshot();
     const { elements, refToBackendId } = flattenAxTree((raw.nodes ?? []) as AXNode[]);
@@ -117,12 +121,18 @@ export class CdpBrowserDriver implements BrowserBridge {
   }
 
   async fetchImages(refs: string[]): Promise<BrowserImageData[]> {
-    // image refs (img1/vid1…) come from the last extract's data-cs-ref tags, not
-    // the a11y refMap — the package resolves them in-page by that attribute.
+    // image refs (img1/vid1…) come from the last extract's namespaced tags, not
+    // the a11y refMap — the package resolves them in-page by those attributes.
     const out: BrowserImageData[] = [];
     for (const ref of refs) {
       const r = await this.inner.fetchImageData(ref);
-      out.push({ ok: r.ok, base64: r.base64, mediaType: r.mediaType, ref: r.ref ?? ref, detail: r.detail });
+      out.push({
+        ok: r.ok,
+        base64: r.base64,
+        mediaType: r.mediaType,
+        ref: r.ref ?? ref,
+        detail: r.detail,
+      });
     }
     return out;
   }

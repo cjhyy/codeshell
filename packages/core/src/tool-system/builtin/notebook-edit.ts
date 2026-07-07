@@ -5,6 +5,7 @@
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { isAbsolute, resolve } from "node:path";
 
 export const notebookEditToolDef: ToolDefinition = {
   name: "NotebookEdit",
@@ -61,10 +62,12 @@ export async function notebookEditTool(
   args: Record<string, unknown>,
   ctx?: ToolContext,
 ): Promise<string> {
-  const filePath = args.file_path as string;
+  const rawPath = args.file_path as string;
   const action = args.action as string;
 
-  if (!filePath) return "Error: file_path is required";
+  if (!rawPath) return "Error: file_path is required";
+  const cwd = ctx?.cwd ?? process.cwd();
+  const filePath = isAbsolute(rawPath) ? rawPath : resolve(cwd, rawPath);
   if (!filePath.endsWith(".ipynb")) return "Error: file must be a .ipynb file";
 
   if (action === "read") {
