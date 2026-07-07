@@ -8,7 +8,8 @@
  * - Streaming text shown as plain text with cursor
  */
 import { memo, useMemo, useRef, type ReactNode } from "react";
-import { Ansi, Box, Text } from "../../render/index.js";
+import { Ansi, Box, Text, useStdout } from "../../render/index.js";
+import { stringWidth } from "../../render/stringWidth.js";
 import chalk from "chalk";
 import { Marked, lexer as markedLexer } from "marked";
 import { markedTerminal } from "marked-terminal";
@@ -111,10 +112,17 @@ function renderMarkdown(text: string): string {
 const TABLE_RE = /^\|.+\|$/gm;
 const TABLE_SEP_RE = /^\|\s*[-:]+[-|\s:]*\|$/m;
 
-interface TableData {
+export interface TableData {
   headers: string[];
   rows: string[][];
 }
+
+const DEFAULT_TERMINAL_WIDTH = 80;
+const MESSAGE_CONTENT_MARGIN_LEFT = 1;
+const TABLE_MARGIN_LEFT = 1;
+const TABLE_COLUMN_PADDING = 2;
+const TABLE_MAX_COLUMN_WIDTH = 40;
+const TABLE_MIN_COLUMN_WIDTH = 6;
 
 function extractTable(text: string): { before: string; table: TableData; after: string } | null {
   const lines = text.split("\n");
@@ -154,14 +162,81 @@ function extractTable(text: string): { before: string; table: TableData; after: 
   };
 }
 
-function MarkdownTable({ data }: { data: TableData }) {
-  const colWidths = data.headers.map((h, i) => {
-    let max = h.length;
+function sumWidths(widths: number[]): number {
+  return widths.reduce((total, width) => total + width, 0);
+}
+
+export function calculateMarkdownTableColumnWidths(
+  data: TableData,
+  availableWidth: number,
+): number[] {
+  const columnCount = data.headers.length;
+  if (columnCount === 0) return [];
+
+  const widthBudget = Math.max(0, Math.floor(availableWidth));
+  if (widthBudget === 0) return data.headers.map(() => 0);
+
+  const preferredWidths = data.headers.map((header, columnIndex) => {
+    let max = stringWidth(header);
     for (const row of data.rows) {
-      if (row[i] && row[i].length > max) max = row[i].length;
+      max = Math.max(max, stringWidth(row[columnIndex] ?? ""));
     }
-    return Math.min(max + 2, 40);
+    return Math.max(1, Math.min(max + TABLE_COLUMN_PADDING, TABLE_MAX_COLUMN_WIDTH));
   });
+
+  const preferredTotal = sumWidths(preferredWidths);
+  if (preferredTotal <= widthBudget) return preferredWidths;
+
+  if (widthBudget < columnCount) {
+    return preferredWidths.map((_, index) => (index < widthBudget ? 1 : 0));
+  }
+
+  const minimumColumnWidth = Math.min(
+    TABLE_MIN_COLUMN_WIDTH,
+    Math.floor(widthBudget / columnCount),
+  );
+  const minimumWidths = preferredWidths.map((width) => Math.min(width, minimumColumnWidth));
+  const minimumTotal = sumWidths(minimumWidths);
+  if (minimumTotal >= widthBudget) return minimumWidths;
+
+  const remainingWidth = widthBudget - minimumTotal;
+  const expandableWidths = preferredWidths.map((width, index) => width - minimumWidths[index]!);
+  const expandableTotal = sumWidths(expandableWidths);
+  if (expandableTotal <= 0) return minimumWidths;
+
+  const rawExtras = expandableWidths.map((width) => (width / expandableTotal) * remainingWidth);
+  const extraWidths = rawExtras.map((width) => Math.floor(width));
+  const colWidths = minimumWidths.map((width, index) => width + extraWidths[index]!);
+
+  let remainder = widthBudget - sumWidths(colWidths);
+  const remainderOrder = rawExtras
+    .map((width, index) => ({
+      index,
+      fraction: width - extraWidths[index]!,
+      capacity: expandableWidths[index]!,
+    }))
+    .sort((a, b) => b.fraction - a.fraction || b.capacity - a.capacity || a.index - b.index);
+
+  for (const { index } of remainderOrder) {
+    if (remainder <= 0) break;
+    if (colWidths[index]! >= preferredWidths[index]!) continue;
+    colWidths[index]! += 1;
+    remainder -= 1;
+  }
+
+  return colWidths;
+}
+
+function MarkdownTable({ data }: { data: TableData }) {
+  const { stdout } = useStdout();
+  const availableWidth = Math.max(
+    1,
+    (stdout.columns ?? DEFAULT_TERMINAL_WIDTH) - MESSAGE_CONTENT_MARGIN_LEFT - TABLE_MARGIN_LEFT,
+  );
+  const colWidths = useMemo(
+    () => calculateMarkdownTableColumnWidths(data, availableWidth),
+    [data, availableWidth],
+  );
 
   return (
     <Box flexDirection="column" marginLeft={1} marginY={0}>
@@ -169,7 +244,11 @@ function MarkdownTable({ data }: { data: TableData }) {
       <Box>
         {data.headers.map((h, i) => (
           <Box key={i} width={colWidths[i]}>
-            <Text bold>{h}</Text>
+            {colWidths[i]! > 0 ? (
+              <Text bold wrap="wrap">
+                {h}
+              </Text>
+            ) : null}
           </Box>
         ))}
       </Box>
@@ -177,7 +256,7 @@ function MarkdownTable({ data }: { data: TableData }) {
       <Box>
         {colWidths.map((w, i) => (
           <Box key={i} width={w}>
-            <Text dim>{"─".repeat(Math.max(w - 1, 1))}</Text>
+            {w > 0 ? <Text dim>{"─".repeat(Math.max(w - 1, 1))}</Text> : null}
           </Box>
         ))}
       </Box>
@@ -186,7 +265,7 @@ function MarkdownTable({ data }: { data: TableData }) {
         <Box key={ri}>
           {data.headers.map((_, ci) => (
             <Box key={ci} width={colWidths[ci]}>
-              <Text>{row[ci] ?? ""}</Text>
+              {colWidths[ci]! > 0 ? <Text wrap="wrap">{row[ci] ?? ""}</Text> : null}
             </Box>
           ))}
         </Box>
