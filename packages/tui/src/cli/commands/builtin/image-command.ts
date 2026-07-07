@@ -35,6 +35,9 @@ const MIME_BY_EXT: Record<string, string> = {
   ".gif": "image/gif",
 };
 
+// Keep this aligned with core's IMAGE_LIMITS.maxBytesPerImage.
+const TUI_MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+
 function detectMime(path: string): string | null {
   const ext = extname(path).toLowerCase();
   return MIME_BY_EXT[ext] ?? null;
@@ -71,12 +74,25 @@ function readImageBlock(rawPath: string, cwd: string): string {
       `不支持的图片扩展名：${basename(path)}。请用 .png / .jpg / .jpeg / .webp / .gif。`,
     );
   }
-  let bytes: Buffer;
-  let size: number;
+  let size = 0;
   try {
     const st = statSync(path);
     if (!st.isFile()) throw new Error("不是文件");
     size = st.size;
+  } catch (err) {
+    throw new Error(`读取失败：${path}（${(err as Error).message}）`, { cause: err });
+  }
+
+  if (size > TUI_MAX_IMAGE_BYTES) {
+    throw new Error(
+      `图片「${basename(path)}」大小 ${fmtBytes(size)}，超过单图上限 ${fmtBytes(
+        TUI_MAX_IMAGE_BYTES,
+      )}。请先压缩或裁剪后再添加。`,
+    );
+  }
+
+  let bytes: Buffer;
+  try {
     bytes = readFileSync(path);
   } catch (err) {
     throw new Error(`读取失败：${path}（${(err as Error).message}）`, { cause: err });
@@ -102,9 +118,7 @@ export const imageCommand: SlashCommand = {
   execute: (arg, ctx) => {
     const queue = ctx.pendingImages;
     if (!queue) {
-      ctx.addStatus(
-        "图片功能在当前 TUI 版本未启用（CommandContext 缺少 pendingImages）。",
-      );
+      ctx.addStatus("图片功能在当前 TUI 版本未启用（CommandContext 缺少 pendingImages）。");
       return;
     }
     const trimmed = arg.trim();
