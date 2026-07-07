@@ -1,20 +1,34 @@
+import { useT } from "@/i18n";
 import type { ConnStatus } from "@mobile/hooks/useRemoteSocket";
 
 /** Full-screen state for everything before "online": connecting, authing,
  *  unpaired (needs QR), or offline (reconnecting). */
 export function ConnectionGate({ status }: { status: ConnStatus }) {
+  const { t } = useT();
   const copy: Record<
     Exclude<ConnStatus, "online">,
     { title: string; body: string; tone: string }
   > = {
-    connecting: { title: "正在连接…", body: "与 CodeShell 建立通道", tone: "text-status-running" },
-    authenticating: { title: "认证中…", body: "正在校验设备身份", tone: "text-status-running" },
+    connecting: {
+      title: t("mobile.connection.connectingTitle"),
+      body: t("mobile.connection.connectingBody"),
+      tone: "text-status-running",
+    },
+    authenticating: {
+      title: t("mobile.connection.authenticatingTitle"),
+      body: t("mobile.connection.authenticatingBody"),
+      tone: "text-status-running",
+    },
     unpaired: {
-      title: "未配对",
-      body: "请在 CodeShell 桌面端打开「设置 → 远程」,扫码或打开配对链接。",
+      title: t("mobile.connection.unpairedTitle"),
+      body: t("mobile.connection.unpairedBody"),
       tone: "text-status-warn",
     },
-    offline: { title: "连接断开", body: "正在自动重连…", tone: "text-status-err" },
+    offline: {
+      title: t("mobile.connection.offlineTitle"),
+      body: t("mobile.connection.offlineBody"),
+      tone: "text-status-err",
+    },
   };
   const c = copy[status as Exclude<ConnStatus, "online">] ?? copy.connecting;
   return (

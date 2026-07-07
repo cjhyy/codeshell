@@ -3,6 +3,9 @@
  * device identity. Keys keep the historical `cs.*` names so an already-paired
  * phone (paired against the old inline UI) keeps working after the rebuild.
  */
+import { translate } from "@/i18n/translate";
+import { loadUILanguage } from "@/uiLanguage";
+
 const K = {
   deviceId: "cs.deviceId",
   deviceSecret: "cs.deviceSecret",
@@ -45,9 +48,8 @@ export const deviceStore = {
   getOrCreateName: (): string => {
     let n = localStorage.getItem(K.deviceName);
     if (!n) {
-      const platform =
-        (typeof navigator !== "undefined" && navigator.platform) || "Phone";
-      n = `${platform} 浏览器`;
+      const platform = (typeof navigator !== "undefined" && navigator.platform) || "Phone";
+      n = translate(loadUILanguage(), "mobile.storage.browserDevice", { platform });
       safeSet(K.deviceName, n);
     }
     return n;

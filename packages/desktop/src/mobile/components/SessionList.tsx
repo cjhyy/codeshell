@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Loader2, Plus, RefreshCw, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@ui/button";
+import { useT } from "@/i18n";
 import type { MobileProjectMeta, MobileSessionMeta } from "@protocol";
 import { basename, relativeTime, groupByProject, projectForCwd } from "@mobile/lib/format";
 
@@ -37,12 +38,17 @@ export function SessionList({
   onRefresh: () => void;
   loading?: boolean;
 }) {
+  const { t, lang } = useT();
   const [creating, setCreating] = useState(false);
-  const allGroups = groupByProject(sessions, projects);
+  const allGroups = groupByProject(sessions, projects, lang);
   // When a project is selected, show only its group; otherwise show all (so the
   // screen is never empty on first load before a project is picked).
   const currentGroup = activeProjectCwd
-    ? allGroups.find((g) => sameCwd(g.cwd, activeProjectCwd) || sameCwd(projectForCwd(g.cwd, projects)?.path, activeProjectCwd))
+    ? allGroups.find(
+        (g) =>
+          sameCwd(g.cwd, activeProjectCwd) ||
+          sameCwd(projectForCwd(g.cwd, projects)?.path, activeProjectCwd),
+      )
     : undefined;
   const groups = currentGroup ? [currentGroup] : activeProjectCwd ? [] : allGroups;
   const currentProject = projectForCwd(currentCwd, projects);
@@ -55,12 +61,16 @@ export function SessionList({
     <div className="flex h-full min-h-0 flex-col">
       <div className="mobile-side-header flex items-center gap-2 px-3 py-3">
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-sm font-semibold leading-5">会话</h2>
-          <p className="text-[11px] text-muted-foreground">{sessions.length} 个可接管</p>
+          <h2 className="truncate text-sm font-semibold leading-5">
+            {t("mobile.sessionList.title")}
+          </h2>
+          <p className="text-[11px] text-muted-foreground">
+            {t("mobile.sessionList.takeoverCount", { count: sessions.length })}
+          </p>
         </div>
         <div className="ml-auto flex shrink-0 gap-1.5">
           <Button
-            aria-label="刷新会话"
+            aria-label={t("mobile.sessionList.refreshAria")}
             className="mobile-icon-button size-8"
             size="icon"
             variant="outline"
@@ -71,13 +81,15 @@ export function SessionList({
           </Button>
           <Button size="sm" onClick={() => setCreating((c) => !c)}>
             {creating ? <X /> : <Plus />}
-            {creating ? "取消" : "新建"}
+            {creating ? t("common.cancel") : t("mobile.sessionList.new")}
           </Button>
         </div>
       </div>
       {creating && (
         <div className="mobile-create-panel border-b border-border/70 bg-black/12 p-2">
-          <p className="mb-1.5 px-1 text-[11px] text-muted-foreground">新会话默认使用当前目录</p>
+          <p className="mb-1.5 px-1 text-[11px] text-muted-foreground">
+            {t("mobile.sessionList.createHint")}
+          </p>
           <div className="flex flex-col gap-1">
             <button
               type="button"
@@ -89,18 +101,25 @@ export function SessionList({
             >
               <span className="truncate font-medium text-foreground">
                 {currentProjectCwd
-                  ? `当前项目 · ${currentProject?.name ?? basename(currentProjectCwd)}`
+                  ? t("mobile.sessionList.currentProject", {
+                      name: currentProject?.name ?? basename(currentProjectCwd),
+                    })
                   : currentKnown
-                    ? "无项目对话"
-                    : "当前桌面目录"}
+                    ? t("mobile.sessionList.noProjectConversation")
+                    : t("mobile.sessionList.desktopCwd")}
               </span>
               <span className="min-w-0 truncate text-[11px] text-muted-foreground">
-                {currentProjectCwd || (currentKnown ? "不绑定 repo" : "跟随桌面当前 cwd")}
+                {currentProjectCwd ||
+                  (currentKnown
+                    ? t("mobile.sessionList.unboundRepo")
+                    : t("mobile.sessionList.followsDesktopCwd"))}
               </span>
             </button>
             {otherProjects.length > 0 && (
               <>
-                <p className="px-1 pt-2 text-[11px] text-muted-foreground">其他项目</p>
+                <p className="px-1 pt-2 text-[11px] text-muted-foreground">
+                  {t("mobile.sessionList.otherProjects")}
+                </p>
                 {otherProjects.map((p) => (
                   <button
                     key={p.path}
@@ -145,11 +164,11 @@ export function SessionList({
         {loading && sessions.length === 0 ? (
           <p className="mobile-glass flex items-center justify-center gap-2 rounded-lg px-3 py-6 text-center text-xs text-muted-foreground">
             <Loader2 className="size-3.5 animate-spin text-status-running" />
-            正在加载会话…
+            {t("mobile.sessionList.loading")}
           </p>
         ) : sessions.length === 0 ? (
           <p className="mobile-glass rounded-lg px-3 py-6 text-center text-xs text-muted-foreground">
-            还没有会话。点「新建」开一个,或在桌面端开始。
+            {t("mobile.sessionList.empty")}
           </p>
         ) : (
           groups.map((g) => (
@@ -184,13 +203,17 @@ export function SessionList({
                         </span>
                         {s.origin === "automation" && (
                           <span className="shrink-0 rounded-full border border-status-running/35 bg-status-running/10 px-1.5 text-[10px] text-status-running">
-                            自动
+                            {t("mobile.sessionList.automation")}
                           </span>
                         )}
                       </div>
                       <div className="flex w-full min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
-                        <span className="min-w-0 flex-1 truncate">{s.cwd || "无项目路径"}</span>
-                        <span className="ml-auto shrink-0">{relativeTime(s.updatedAt)}</span>
+                        <span className="min-w-0 flex-1 truncate">
+                          {s.cwd || t("mobile.sessionList.noProjectPath")}
+                        </span>
+                        <span className="ml-auto shrink-0">
+                          {relativeTime(s.updatedAt, Date.now(), lang)}
+                        </span>
                       </div>
                     </button>
                   </li>

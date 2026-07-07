@@ -1,10 +1,18 @@
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n";
 import type { PermissionMode } from "@protocol";
 
-const MODES: [PermissionMode, string][] = [
-  ["default", "默认"],
-  ["acceptEdits", "自动改"],
-  ["bypassPermissions", "全放行"],
+const MODES: [
+  PermissionMode,
+  (
+    | "mobile.permissionMode.default"
+    | "mobile.permissionMode.acceptEdits"
+    | "mobile.permissionMode.bypassPermissions"
+  ),
+][] = [
+  ["default", "mobile.permissionMode.default"],
+  ["acceptEdits", "mobile.permissionMode.acceptEdits"],
+  ["bypassPermissions", "mobile.permissionMode.bypassPermissions"],
 ];
 
 /** Compact permission-mode switch. bypassPermissions confirms first (it's the
@@ -16,15 +24,16 @@ export function PermissionModeControl({
   mode: PermissionMode;
   onChange: (m: PermissionMode) => void;
 }) {
+  const { t } = useT();
   const pick = (m: PermissionMode) => {
     if (m === "bypassPermissions" && mode !== "bypassPermissions") {
-      if (!window.confirm("全放行模式会跳过所有权限确认。确定吗?")) return;
+      if (!window.confirm(t("mobile.permissionMode.confirmBypass"))) return;
     }
     onChange(m);
   };
   return (
     <div className="mobile-tab-strip flex shrink-0 items-center gap-1 rounded-full p-0.5">
-      {MODES.map(([m, label]) => (
+      {MODES.map(([m, labelKey]) => (
         <button
           key={m}
           type="button"
@@ -38,7 +47,7 @@ export function PermissionModeControl({
               : "text-muted-foreground",
           )}
         >
-          {label}
+          {t(labelKey)}
         </button>
       ))}
     </div>

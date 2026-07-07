@@ -31,6 +31,7 @@ import { settingsNs } from "./ns/settings";
 import { extensions } from "./ns/extensions";
 import { automation } from "./ns/automation";
 import { misc } from "./ns/misc";
+import { mobile } from "./ns/mobile";
 
 export const messages = {
   zh: {
@@ -42,6 +43,7 @@ export const messages = {
     ...extensions.zh,
     ...automation.zh,
     ...misc.zh,
+    ...mobile.zh,
   },
   en: {
     ...core.en,
@@ -52,6 +54,7 @@ export const messages = {
     ...extensions.en,
     ...automation.en,
     ...misc.en,
+    ...mobile.en,
   },
 } as const;
 
@@ -61,9 +64,7 @@ export const messages = {
  */
 type Dict = Record<string, unknown>;
 type DottedKeys<T extends Dict, Prefix extends string = ""> = {
-  [K in keyof T & string]: T[K] extends Dict
-    ? DottedKeys<T[K], `${Prefix}${K}.`>
-    : `${Prefix}${K}`;
+  [K in keyof T & string]: T[K] extends Dict ? DottedKeys<T[K], `${Prefix}${K}.`> : `${Prefix}${K}`;
 }[keyof T & string];
 
 /** Type-safe union of every translation key, derived from the zh tree. */

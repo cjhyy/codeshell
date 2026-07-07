@@ -1,22 +1,23 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, TerminalSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n";
 import type { ChatItem } from "@/lib/streamReducer";
 
 type Tool = Extract<ChatItem, { kind: "tool" }>;
 
-function statusLabel(tool: Tool): string {
-  if (!tool.done) return "运行中";
-  return tool.error ? "失败" : "完成";
-}
-
 /** A compact tool card: header (name + status), optional args/result body that
  *  expands on tap. Mirrors the desktop tool card's information, phone-sized. */
 export function ToolCard({ tool }: { tool: Tool }) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const argStr = tool.args ? JSON.stringify(tool.args, null, 2) : "";
   const hasBody = Boolean(argStr) || Boolean(tool.result) || Boolean(tool.summary);
-  const status = statusLabel(tool);
+  const status = !tool.done
+    ? t("mobile.tool.running")
+    : tool.error
+      ? t("mobile.tool.failed")
+      : t("mobile.tool.completed");
   return (
     <div
       className={cn(
@@ -80,7 +81,7 @@ export function ToolCard({ tool }: { tool: Tool }) {
               )}
             >
               {tool.result.length > 4000
-                ? tool.result.slice(0, 4000) + "\n… (truncated)"
+                ? tool.result.slice(0, 4000) + "\n" + t("mobile.tool.truncated")
                 : tool.result}
             </pre>
           )}

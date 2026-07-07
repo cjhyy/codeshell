@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Bot, Brain, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n";
 import type { ChatItem, ChatState } from "@/lib/streamReducer";
 import { ToolCard } from "./ToolCard";
 import { Markdown } from "./Markdown";
 
 /** Assistant bubble with a collapsible reasoning section. */
 function AssistantBubble({ item }: { item: Extract<ChatItem, { kind: "assistant" }> }) {
+  const { t } = useT();
   const [showReasoning, setShowReasoning] = useState(false);
   return (
     <div className="flex flex-col gap-1.5">
@@ -18,7 +20,7 @@ function AssistantBubble({ item }: { item: Extract<ChatItem, { kind: "assistant"
             className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-muted/30 px-2 py-1 text-[11px] text-muted-foreground"
           >
             <Brain className="size-3" />
-            {showReasoning ? "隐藏思考" : "显示思考"}
+            {showReasoning ? t("mobile.stream.hideReasoning") : t("mobile.stream.showReasoning")}
           </button>
           {showReasoning && (
             <pre className="mt-2 whitespace-pre-wrap break-words rounded-lg border border-border/70 bg-muted/35 p-2.5 font-mono text-[11px] text-muted-foreground">
@@ -46,6 +48,7 @@ function AssistantBubble({ item }: { item: Extract<ChatItem, { kind: "assistant"
 }
 
 function Row({ item }: { item: ChatItem }) {
+  const { t } = useT();
   switch (item.kind) {
     case "user":
       return (
@@ -88,7 +91,7 @@ function Row({ item }: { item: ChatItem }) {
                   : "bg-status-ok",
             )}
           />
-          <span className="shrink-0 font-medium">子代理</span>
+          <span className="shrink-0 font-medium">{t("mobile.stream.subagent")}</span>
           <span className="min-w-0 flex-1 truncate">{item.label}</span>
         </div>
       );
@@ -106,12 +109,13 @@ function Row({ item }: { item: ChatItem }) {
 export function MessageStream({
   chat,
   loading,
-  loadingText = "正在加载…",
+  loadingText,
 }: {
   chat: ChatState;
   loading?: boolean;
   loadingText?: string;
 }) {
+  const { t } = useT();
   const endRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickRef = useRef(true);
@@ -127,6 +131,7 @@ export function MessageStream({
   };
 
   if (chat.items.length === 0) {
+    const effectiveLoadingText = loadingText ?? t("mobile.stream.loading");
     return (
       <div className="grid flex-1 place-items-center px-6 text-center">
         <div className="mobile-glass max-w-sm rounded-xl px-5 py-6">
@@ -136,11 +141,11 @@ export function MessageStream({
           {loading ? (
             <div className="flex items-center justify-center gap-2 text-sm leading-6 text-muted-foreground">
               <span className="size-2 rounded-full bg-status-running animate-pulse" />
-              {loadingText}
+              {effectiveLoadingText}
             </div>
           ) : (
             <p className="text-sm leading-6 text-muted-foreground">
-              发个任务试试,或在侧栏打开一个 Claude Code 会话。
+              {t("mobile.stream.emptyHint")}
             </p>
           )}
         </div>

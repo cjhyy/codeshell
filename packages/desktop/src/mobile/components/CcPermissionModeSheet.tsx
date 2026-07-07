@@ -1,22 +1,39 @@
 import type { PermissionMode } from "@protocol";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n";
 import { AlertTriangle, Pencil, Shield, type LucideIcon } from "lucide-react";
 
 /** Mode options mirroring the desktop CCRoomView picker. Each carries a short
  *  label + one-line description so the choice is self-explanatory on a phone. */
 const MODES: {
   mode: PermissionMode;
-  label: string;
-  desc: string;
+  labelKey:
+    | "mobile.permissionMode.default"
+    | "mobile.permissionMode.acceptEdits"
+    | "mobile.permissionMode.bypassPermissions";
+  descKey:
+    | "mobile.permissionMode.defaultDesc"
+    | "mobile.permissionMode.acceptEditsDesc"
+    | "mobile.permissionMode.bypassDesc";
   icon: LucideIcon;
   danger?: boolean;
 }[] = [
-  { mode: "default", label: "默认", desc: "每个工具调用都要你确认", icon: Shield },
-  { mode: "acceptEdits", label: "自动改", desc: "自动放行文件编辑,其余仍确认", icon: Pencil },
+  {
+    mode: "default",
+    labelKey: "mobile.permissionMode.default",
+    descKey: "mobile.permissionMode.defaultDesc",
+    icon: Shield,
+  },
+  {
+    mode: "acceptEdits",
+    labelKey: "mobile.permissionMode.acceptEdits",
+    descKey: "mobile.permissionMode.acceptEditsDesc",
+    icon: Pencil,
+  },
   {
     mode: "bypassPermissions",
-    label: "全放行",
-    desc: "跳过所有权限确认(危险)",
+    labelKey: "mobile.permissionMode.bypassPermissions",
+    descKey: "mobile.permissionMode.bypassDesc",
     icon: AlertTriangle,
     danger: true,
   },
@@ -37,16 +54,17 @@ export function CcPermissionModeSheet({
   onPick: (mode: PermissionMode) => void;
   onCancel: () => void;
 }) {
+  const { t } = useT();
   return (
     <div className="fixed inset-0 z-30 flex flex-col justify-end">
       <div className="flex-1 bg-black/55 backdrop-blur-[2px]" onClick={onCancel} />
       <div className="mobile-panel mobile-safe-bottom max-h-[85dvh] overflow-y-auto overscroll-contain rounded-t-2xl border-t border-border/70 p-4">
-        <div className="mb-1 text-sm font-semibold">选择权限模式</div>
+        <div className="mb-1 text-sm font-semibold">{t("mobile.permissionMode.title")}</div>
         <div className="mb-3 min-w-0 truncate text-[11px] text-muted-foreground">
           {sessionLabel}
         </div>
         <div className="flex flex-col gap-2">
-          {MODES.map(({ mode, label, desc, icon: Icon, danger }) => (
+          {MODES.map(({ mode, labelKey, descKey, icon: Icon, danger }) => (
             <button
               key={mode}
               type="button"
@@ -75,10 +93,10 @@ export function CcPermissionModeSheet({
                     danger ? "text-status-err" : "text-foreground",
                   )}
                 >
-                  {label}
+                  {t(labelKey)}
                 </span>
                 <span className="block whitespace-normal break-words text-[11px] leading-4 text-muted-foreground">
-                  {desc}
+                  {t(descKey)}
                 </span>
               </span>
             </button>
@@ -89,7 +107,7 @@ export function CcPermissionModeSheet({
           onClick={onCancel}
           className="mt-3 w-full rounded-lg py-2 text-center text-sm text-muted-foreground"
         >
-          取消
+          {t("common.cancel")}
         </button>
       </div>
     </div>
