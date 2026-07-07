@@ -43,7 +43,7 @@ import {
 import { ProviderModelFlow } from "./components/ProviderModelFlow.js";
 import { SessionPicker, type SessionPickerEntry } from "./components/SessionPicker.js";
 import type { OnboardingResult } from "@cjhyy/code-shell-core";
-import { CommandRegistry } from "../cli/commands/registry.js";
+import { CommandRegistry, type CommandContext } from "../cli/commands/registry.js";
 import type { RestoredChatEntry } from "../cli/commands/registry.js";
 import { QueryGuard } from "./query-guard.js";
 import { AgentDock, getVisibleAgents, MAX_VISIBLE } from "./components/AgentDock.js";
@@ -93,6 +93,25 @@ const HIGH_FREQUENCY_STREAM_EVENTS = new Set<StreamEvent["type"]>([
 
 function shouldTraceStreamEvent(type: StreamEvent["type"]): boolean {
   return STREAM_DIAG_ON || !HIGH_FREQUENCY_STREAM_EVENTS.has(type);
+}
+
+function formatCommandError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export function dispatchSlashCommandSafely(
+  registry: Pick<CommandRegistry, "dispatch">,
+  cmd: string,
+  cmdCtx: CommandContext,
+  addStatus: (status: string) => void,
+): void {
+  try {
+    void Promise.resolve(registry.dispatch(cmd, cmdCtx)).catch((error) => {
+      addStatus(`Command failed: ${formatCommandError(error)}`);
+    });
+  } catch (error) {
+    addStatus(`Command failed: ${formatCommandError(error)}`);
+  }
 }
 
 // ─── Global command registry ────────────────────────────────────
@@ -1588,7 +1607,7 @@ export function App({
           return cleared;
         },
       };
-      commandRegistry.dispatch(cmd, cmdCtx);
+      dispatchSlashCommandSafely(commandRegistry, cmd, cmdCtx, addStatus);
     },
     [
       client,
