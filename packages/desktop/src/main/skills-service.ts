@@ -17,7 +17,7 @@ import {
   invalidateSkillCache,
   type SkillDefinition,
 } from "@cjhyy/code-shell-core";
-import { assertCodeShellMarkdownPath } from "./safe-read.js";
+import { assertCodeShellMarkdownPath, rememberCodeShellMarkdownPath } from "./safe-read.js";
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -35,19 +35,13 @@ export interface InstalledSkill {
   filePath: string;
 }
 
-export function listSkills(
-  cwd: string,
-  opts?: { includeDisabled?: boolean },
-): SkillSummary[] {
+export function listSkills(cwd: string, opts?: { includeDisabled?: boolean }): SkillSummary[] {
   let defs: SkillDefinition[];
   try {
     if (opts?.includeDisabled) {
       defs = scanSkills(cwd);
     } else {
-      const disabled = computeEffectiveDisabledLists(
-        new SettingsManager(cwd, "full"),
-        cwd,
-      );
+      const disabled = computeEffectiveDisabledLists(new SettingsManager(cwd, "full"), cwd);
       defs = scanSkills(cwd, {
         disabledSkills: disabled.disabledSkills,
         disabledPlugins: disabled.disabledPlugins,
@@ -56,12 +50,15 @@ export function listSkills(
   } catch {
     return [];
   }
-  return defs.map((d) => ({
-    name: d.name,
-    description: d.description,
-    source: d.source,
-    filePath: d.filePath,
-  }));
+  return defs.map((d) => {
+    rememberCodeShellMarkdownPath(d.filePath);
+    return {
+      name: d.name,
+      description: d.description,
+      source: d.source,
+      filePath: d.filePath,
+    };
+  });
 }
 
 export async function readSkillBody(filePath: string): Promise<string> {
@@ -111,9 +108,8 @@ export async function installSkillFromDirectory(
   await fs.access(skillFile);
 
   const name = normalizeSkillName(requestedName || path.basename(source));
-  const root = scope === "user"
-    ? path.join(os.homedir(), ".code-shell", "skills")
-    : projectSkillRoot(cwd);
+  const root =
+    scope === "user" ? path.join(os.homedir(), ".code-shell", "skills") : projectSkillRoot(cwd);
   const targetDir = path.join(root, name);
 
   try {
@@ -133,10 +129,12 @@ export async function installSkillFromDirectory(
   // explicitly too so main's own listSkills() reflects the install immediately.
   invalidateSkillCache();
 
+  const filePath = path.join(targetDir, "SKILL.md");
+  rememberCodeShellMarkdownPath(filePath);
   return {
     name,
     targetDir,
-    filePath: path.join(targetDir, "SKILL.md"),
+    filePath,
   };
 }
 

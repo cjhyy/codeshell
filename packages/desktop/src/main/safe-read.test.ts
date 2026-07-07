@@ -1,7 +1,12 @@
-import { describe, test, expect } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { assertCodeShellMarkdownPath } from "./safe-read.js";
+import {
+  _resetCodeShellMarkdownPathAllowlistForTests,
+  assertCodeShellMarkdownPath,
+  rememberCodeShellMarkdownPath,
+} from "./safe-read.js";
 
 // Regression: readSkillBody/readAgentBody fs.readFile'd any path the renderer
 // sent, with no containment (review-2026-05-30, security). A crafted path like
@@ -9,14 +14,34 @@ import { assertCodeShellMarkdownPath } from "./safe-read.js";
 // reads to .md files living under a `.code-shell` directory.
 
 describe("assertCodeShellMarkdownPath", () => {
-  const userSkill = path.join(os.homedir(), ".code-shell", "skills", "s", "SKILL.md");
-  const projectAgent = path.join("/work/proj", ".code-shell", "agents", "a.md");
+  let root: string;
+
+  function seedFile(...parts: string[]): string {
+    const filePath = path.join(root, ...parts);
+    mkdirSync(path.dirname(filePath), { recursive: true });
+    writeFileSync(filePath, "# test\n", "utf-8");
+    return filePath;
+  }
+
+  beforeEach(() => {
+    root = mkdtempSync(path.join(os.tmpdir(), "safe-read-"));
+    _resetCodeShellMarkdownPathAllowlistForTests();
+  });
+
+  afterEach(() => {
+    _resetCodeShellMarkdownPathAllowlistForTests();
+    rmSync(root, { recursive: true, force: true });
+  });
 
   test("accepts a .md under a user .code-shell dir", () => {
+    const userSkill = seedFile("home", ".code-shell", "skills", "s", "SKILL.md");
+    rememberCodeShellMarkdownPath(userSkill);
     expect(() => assertCodeShellMarkdownPath(userSkill)).not.toThrow();
   });
 
   test("accepts a .md under a project .code-shell dir", () => {
+    const projectAgent = seedFile("work", "proj", ".code-shell", "agents", "a.md");
+    rememberCodeShellMarkdownPath(projectAgent);
     expect(() => assertCodeShellMarkdownPath(projectAgent)).not.toThrow();
   });
 
@@ -24,13 +49,28 @@ describe("assertCodeShellMarkdownPath", () => {
     expect(() => assertCodeShellMarkdownPath("/etc/passwd")).toThrow();
   });
 
+  test("rejects an unlisted markdown path under an arbitrary .code-shell dir", () => {
+    const forged = seedFile("evil", ".code-shell", "skills", "s", "SKILL.md");
+    expect(() => assertCodeShellMarkdownPath(forged)).toThrow();
+  });
+
   test("rejects traversal that escapes .code-shell", () => {
-    const evil = path.join(os.homedir(), ".code-shell", "skills", "..", "..", "..", "etc", "passwd");
+    const evil = path.join(
+      root,
+      "home",
+      ".code-shell",
+      "skills",
+      "..",
+      "..",
+      "..",
+      "etc",
+      "passwd",
+    );
     expect(() => assertCodeShellMarkdownPath(evil)).toThrow();
   });
 
   test("rejects a non-markdown file even under .code-shell", () => {
-    const p = path.join(os.homedir(), ".code-shell", "skills", "s", "secret.key");
+    const p = seedFile("home", ".code-shell", "skills", "s", "secret.key");
     expect(() => assertCodeShellMarkdownPath(p)).toThrow();
   });
 });

@@ -16,7 +16,7 @@ import {
   SettingsManager,
   type AgentDefinition,
 } from "@cjhyy/code-shell-core";
-import { assertCodeShellMarkdownPath } from "./safe-read.js";
+import { assertCodeShellMarkdownPath, rememberCodeShellMarkdownPath } from "./safe-read.js";
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -72,18 +72,21 @@ export function listAgents(cwd: string): AgentSummary[] {
     disabledPlugins = [];
   }
   const reg = loadAgentDefinitionsForCwd(cwd, [], disabledPlugins);
-  return reg.list().map((d) => ({
-    name: d.name,
-    description: d.description,
-    model: d.model,
-    maxTurns: d.maxTurns,
-    tools: d.tools,
-    systemPrompt: d.systemPrompt,
-    source: d.source ?? "project",
-    override: d.override === true,
-    shadowedSources: d.shadowedSources,
-    filePath: d.filePath ?? "",
-  }));
+  return reg.list().map((d) => {
+    if (d.filePath) rememberCodeShellMarkdownPath(d.filePath);
+    return {
+      name: d.name,
+      description: d.description,
+      model: d.model,
+      maxTurns: d.maxTurns,
+      tools: d.tools,
+      systemPrompt: d.systemPrompt,
+      source: d.source ?? "project",
+      override: d.override === true,
+      shadowedSources: d.shadowedSources,
+      filePath: d.filePath ?? "",
+    };
+  });
 }
 
 export async function readAgentBody(filePath: string): Promise<string> {
@@ -118,8 +121,7 @@ export async function saveAgent(
     description: def.description,
     model: def.model || undefined,
     maxTurns: typeof def.maxTurns === "number" ? def.maxTurns : undefined,
-    tools:
-      Array.isArray(def.tools) && def.tools.length > 0 ? def.tools : undefined,
+    tools: Array.isArray(def.tools) && def.tools.length > 0 ? def.tools : undefined,
     systemPrompt: def.systemPrompt ?? "",
   };
   const root = agentsRootFor(opts);
@@ -131,6 +133,7 @@ export async function saveAgent(
   const tmp = `${target}.tmp`;
   await fs.writeFile(tmp, serializeAgentDefinition(clean), "utf8");
   await fs.rename(tmp, target);
+  rememberCodeShellMarkdownPath(target);
   return {
     name,
     description: clean.description,
