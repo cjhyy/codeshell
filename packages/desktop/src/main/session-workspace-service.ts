@@ -50,6 +50,9 @@ function requireKnownSession(sm: SessionManager, sessionId: string): void {
   if (!sm.exists(sessionId)) {
     throw new Error(`unknown session: ${sessionId}`);
   }
+  if (sm.readCwd(sessionId) === undefined) {
+    throw new Error("session exists but has no valid state — cannot perform workspace operations");
+  }
 }
 
 export function getSessionWorkspaceForUi(sessionId: string, cwd: string): SessionWorkspace {

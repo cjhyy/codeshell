@@ -107,14 +107,17 @@ export function WorkspaceIndicator({
   const [open, setOpen] = useState(false);
   const [workspace, setWorkspace] = useState<SessionWorkspace | null>(null);
   const [list, setList] = useState<SessionWorkspaceList | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [currentLoading, setCurrentLoading] = useState(false);
+  const [listLoading, setListLoading] = useState(false);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [slug, setSlug] = useState("");
   const [confirm, setConfirm] = useState<CleanupConfirm | null>(null);
-  const refreshRequestId = useRef(0);
+  const currentRequestId = useRef(0);
+  const listRequestId = useRef(0);
 
   const canLoad = Boolean(sessionId && repoPath);
+  const isLoading = currentLoading || listLoading;
 
   const reportError = useCallback(
     (error: unknown) => {
@@ -129,45 +132,51 @@ export function WorkspaceIndicator({
   );
 
   const refreshCurrent = useCallback(async () => {
-    const requestId = ++refreshRequestId.current;
+    const requestId = ++currentRequestId.current;
     if (!sessionId || !repoPath) {
+      setCurrentLoading(false);
       setWorkspace(null);
       setList(null);
       return;
     }
+    setCurrentLoading(true);
     try {
       const next = await window.codeshell.getSessionWorkspace(sessionId, repoPath);
-      if (refreshRequestId.current !== requestId) return;
+      if (currentRequestId.current !== requestId) return;
       setWorkspace(next);
     } catch {
-      if (refreshRequestId.current !== requestId) return;
+      if (currentRequestId.current !== requestId) return;
       setWorkspace({ root: repoPath, kind: "main" });
+    } finally {
+      if (currentRequestId.current === requestId) setCurrentLoading(false);
     }
   }, [repoPath, sessionId]);
 
   const refreshList = useCallback(async () => {
-    const requestId = ++refreshRequestId.current;
+    const requestId = ++listRequestId.current;
     if (!sessionId || !repoPath) {
-      setLoading(false);
+      setList(null);
+      setListLoading(false);
       return;
     }
-    setLoading(true);
+    setListLoading(true);
     try {
       const next = await window.codeshell.listSessionWorktrees(sessionId, repoPath);
-      if (refreshRequestId.current !== requestId) return;
+      if (listRequestId.current !== requestId) return;
       setList(next);
       setWorkspace(next.current);
     } catch (error) {
-      if (refreshRequestId.current !== requestId) return;
+      if (listRequestId.current !== requestId) return;
       reportError(error);
     } finally {
-      if (refreshRequestId.current === requestId) setLoading(false);
+      if (listRequestId.current === requestId) setListLoading(false);
     }
   }, [repoPath, reportError, sessionId]);
 
   useEffect(() => {
     return () => {
-      refreshRequestId.current += 1;
+      currentRequestId.current += 1;
+      listRequestId.current += 1;
     };
   }, []);
 
@@ -243,6 +252,7 @@ export function WorkspaceIndicator({
             className="no-drag inline-flex h-7 max-w-[220px] items-center gap-1.5 rounded-sm px-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
             title={t("topbar.workspace.openSwitcher")}
+            aria-busy={isLoading}
           >
             <GitBranch className="h-3.5 w-3.5 shrink-0" />
             <span className="min-w-0 truncate">{label}</span>
@@ -254,7 +264,7 @@ export function WorkspaceIndicator({
               {t("topbar.workspace.switcherTitle")}
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-1">
-              {loading && !list ? (
+              {listLoading && !list ? (
                 <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   {t("topbar.workspace.loading")}

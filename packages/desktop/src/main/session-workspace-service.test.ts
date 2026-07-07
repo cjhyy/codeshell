@@ -108,6 +108,21 @@ describe("cleanupSessionWorktreeForUi", () => {
     expect(git(repo, ["branch", "--list", "worktree/unknownswitch-missing-"])).toBe("");
   });
 
+  test("rejects corrupt-session switch before creating a worktree or branch", () => {
+    const sessionId = "corruptsession";
+    const slug = "corruptswitch";
+    mkdirSync(join(home, "sessions", sessionId), { recursive: true });
+
+    expect(() => switchSessionWorkspaceForUi(sessionId, repo, slug)).toThrow(
+      /session exists but has no valid state/i,
+    );
+
+    expect(existsSync(join(repo, "..", ".worktrees", `${slug}-${sessionId.slice(0, 8)}`))).toBe(
+      false,
+    );
+    expect(git(repo, ["branch", "--list", `worktree/${slug}-${sessionId.slice(0, 8)}`])).toBe("");
+  });
+
   test("rejects unknown-session cleanup before removing a matched worktree", () => {
     const ownerSessionId = "desktopowner";
     const sm = new SessionManager();

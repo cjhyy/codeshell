@@ -1,12 +1,74 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, mock, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { TopBar } from "../TopBar";
 import { TooltipProvider } from "../components/ui/tooltip";
 import { translate, type TFunction } from "../i18n";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
-import {
+import type {
+  SessionWorkspace,
+  SessionWorkspaceList,
+  SessionWorkspaceWorktreeInfo,
+} from "../../preload/types";
+
+const PopoverTestContext = React.createContext<{
+  open: boolean;
+  onOpenChange?: (open: boolean) => void;
+}>({ open: false });
+
+mock.module("../components/ui/popover", () => ({
+  Popover({
+    open = false,
+    onOpenChange,
+    children,
+  }: {
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    children: React.ReactNode;
+  }) {
+    return (
+      <PopoverTestContext.Provider value={{ open, onOpenChange }}>
+        {children}
+      </PopoverTestContext.Provider>
+    );
+  },
+  PopoverTrigger({
+    asChild,
+    children,
+  }: {
+    asChild?: boolean;
+    children: React.ReactElement<Record<string, unknown>>;
+  }) {
+    const { open, onOpenChange } = React.useContext(PopoverTestContext);
+    const onClick = (event: unknown) => {
+      if (React.isValidElement(children) && typeof children.props.onClick === "function") {
+        children.props.onClick(event);
+      }
+      onOpenChange?.(!open);
+    };
+    if (asChild && React.isValidElement(children)) {
+      return React.cloneElement(children, { "aria-expanded": open, onClick });
+    }
+    return (
+      <button type="button" aria-expanded={open} onClick={onClick}>
+        {children}
+      </button>
+    );
+  },
+  PopoverContent: React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+    ({ children, ...props }, ref) => {
+      const { open } = React.useContext(PopoverTestContext);
+      if (!open) return null;
+      return (
+        <div ref={ref} {...props}>
+          {children}
+        </div>
+      );
+    },
+  ),
+}));
+
+const {
   WorkspaceIndicator,
   WorkspaceRow,
   formatWorkspaceDiffSummary,
@@ -14,8 +76,8 @@ import {
   workspaceCleanupDisabledReason,
   workspaceIndicatorText,
   workspaceRowDisabledReason,
-} from "./WorkspaceIndicator";
-import type { SessionWorkspace, SessionWorkspaceWorktreeInfo } from "../../preload/types";
+} = await import("./WorkspaceIndicator");
+const { TopBar } = await import("../TopBar");
 
 const t: TFunction = (key, params) => translate("en", key, params);
 
@@ -44,6 +106,39 @@ function textOf(node: unknown): string {
   const children = Array.from(current.childNodes ?? []);
   if (children.length === 0) return current.textContent ?? "";
   return children.map((child) => textOf(child)).join("");
+}
+
+function findElement(
+  node: unknown,
+  predicate: (node: { tagName?: string; childNodes?: unknown[] }) => boolean,
+): { tagName?: string; childNodes?: unknown[] } | null {
+  const current = node as { tagName?: string; childNodes?: unknown[] };
+  if (predicate(current)) return current;
+  for (const child of current.childNodes ?? []) {
+    const found = findElement(child, predicate);
+    if (found) return found;
+  }
+  return null;
+}
+
+function reactPropsOf(node: unknown): Record<string, any> {
+  const current = node as Record<string, any>;
+  const key = Object.keys(current).find((name) => name.startsWith("__reactProps$"));
+  return key ? current[key] : {};
+}
+
+function clickHostNode(node: unknown): void {
+  const props = reactPropsOf(node);
+  props.onClick?.({
+    type: "click",
+    defaultPrevented: false,
+    preventDefault() {
+      this.defaultPrevented = true;
+    },
+    stopPropagation() {},
+    target: node,
+    currentTarget: node,
+  });
 }
 
 let root: Root | null = null;
@@ -225,6 +320,110 @@ describe("WorkspaceIndicator", () => {
 
     expect(textOf(container)).toContain("worktree/new-session");
     expect(textOf(container)).not.toContain("worktree/old-session");
+  });
+
+  test("list loading clears when a current refresh starts during a list refresh", async () => {
+    ensureMiniDom();
+    const mainWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };
+    const currentWorkspace: SessionWorkspace = {
+      root: "/repo/.worktrees/current",
+      kind: "worktree",
+      worktree: {
+        path: "/repo/.worktrees/current",
+        branch: "worktree/current-session",
+        baseRef: "main",
+        createdBy: "codeshell",
+      },
+    };
+    const listResponse: SessionWorkspaceList = {
+      current: mainWorkspace,
+      mainRoot: "/repo",
+      worktrees: [
+        {
+          path: "/repo",
+          branch: "main",
+          head: "abc123",
+          isMain: true,
+        },
+        {
+          path: "/repo/.worktrees/feature",
+          branch: "worktree/feature-session",
+          head: "def456",
+          isMain: false,
+        },
+      ],
+    };
+    const currentResponses: Array<ReturnType<typeof deferred<SessionWorkspace>>> = [];
+    const listResponses: Array<ReturnType<typeof deferred<SessionWorkspaceList>>> = [];
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getSessionWorkspace: () => {
+        const next = deferred<SessionWorkspace>();
+        currentResponses.push(next);
+        return next.promise;
+      },
+      listSessionWorktrees: () => {
+        const next = deferred<SessionWorkspaceList>();
+        listResponses.push(next);
+        return next.promise;
+      },
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        <WorkspaceIndicator
+          sessionId="current-session"
+          repoPath="/repo"
+          repoName="repo"
+          sessionBusy={false}
+        />,
+      );
+      await flushMicrotasks();
+    });
+    expect(currentResponses).toHaveLength(1);
+
+    await act(async () => {
+      currentResponses[0].resolve(mainWorkspace);
+      await flushMicrotasks();
+    });
+
+    const trigger = findElement(container, (node) => node.tagName === "BUTTON");
+    expect(trigger).not.toBeNull();
+    await act(async () => {
+      clickHostNode(trigger);
+      await flushMicrotasks();
+    });
+    expect(listResponses).toHaveLength(1);
+    expect(textOf(container)).toContain(translate("zh", "topbar.workspace.loading"));
+
+    await act(async () => {
+      root?.render(
+        <WorkspaceIndicator
+          sessionId="current-session"
+          repoPath="/repo"
+          repoName="repo"
+          sessionBusy
+        />,
+      );
+      await flushMicrotasks();
+    });
+    expect(currentResponses).toHaveLength(2);
+
+    await act(async () => {
+      listResponses[0].resolve(listResponse);
+      await flushMicrotasks();
+    });
+
+    expect(textOf(container)).not.toContain(translate("zh", "topbar.workspace.loading"));
+    expect(textOf(container)).toContain("worktree/feature-session");
+
+    await act(async () => {
+      currentResponses[1].resolve(currentWorkspace);
+      await flushMicrotasks();
+    });
+
+    expect(textOf(container)).toContain("worktree/current-session");
   });
 });
 
