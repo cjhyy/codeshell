@@ -24,6 +24,13 @@ interface MCPConnection {
   transport: StdioClientTransport | StreamableHTTPClientTransport;
 }
 
+interface MCPResourceInfo {
+  uri: string;
+  name: string;
+  description?: string;
+  serverName: string;
+}
+
 /**
  * Read a required secret from `process.env` by NAME (Codex-style env-secret
  * handling — the value is never persisted in MCP config). A referenced env var
@@ -650,8 +657,11 @@ export class MCPManager {
   /**
    * List resources from MCP servers.
    */
-  async listResources(serverName?: string, signal?: AbortSignal): Promise<Array<{ uri: string; name: string; description?: string }>> {
-    const results: Array<{ uri: string; name: string; description?: string }> = [];
+  async listResources(
+    serverName?: string,
+    signal?: AbortSignal,
+  ): Promise<MCPResourceInfo[]> {
+    const results: MCPResourceInfo[] = [];
     const servers = serverName ? [serverName] : [...this.connections.keys()];
 
     for (const name of servers) {
@@ -667,6 +677,7 @@ export class MCPManager {
             uri: r.uri,
             name: r.name ?? r.uri,
             description: r.description,
+            serverName: name,
           });
         }
       } catch {

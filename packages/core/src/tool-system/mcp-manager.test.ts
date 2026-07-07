@@ -13,6 +13,7 @@ import { ToolExecutor } from "./executor.js";
 import { PermissionClassifier } from "./permission.js";
 import { HookRegistry } from "../hooks/registry.js";
 import type { MCPServerConfig } from "../types.js";
+import { listMcpResourcesTool } from "./builtin/mcp-tools.js";
 
 /**
  * connectAll's enabled-toggle filter. We don't spin up a real transport;
@@ -230,6 +231,37 @@ describe("MCPManager discovered tool executors", () => {
 
     expect(result.result).toContain("ok");
     expect(callOptions?.signal).toBeInstanceOf(AbortSignal);
+  });
+});
+
+describe("MCPManager resource ownership", () => {
+  test("ListMcpResources keeps resources from allowed connected servers", async () => {
+    const registry = new ToolRegistry({ builtinTools: [] });
+    const manager = new MCPManager(registry);
+    (manager as any).connections.set("mine:srv", {
+      client: {
+        listResources: async () => ({
+          resources: [{ uri: "res://mine", name: "Mine", description: "visible" }],
+        }),
+      },
+      serverName: "mine:srv",
+    });
+    (manager as any).connections.set("other:srv", {
+      client: {
+        listResources: async () => ({
+          resources: [{ uri: "res://other", name: "Other", description: "hidden" }],
+        }),
+      },
+      serverName: "other:srv",
+    });
+
+    const out = await listMcpResourcesTool({
+      __allowedMcpServers: new Set(["mine:srv"]),
+    });
+
+    expect(out).toContain("res://mine");
+    expect(out).toContain("visible");
+    expect(out).not.toContain("res://other");
   });
 });
 
