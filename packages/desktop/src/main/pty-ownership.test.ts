@@ -67,7 +67,10 @@ describe("PTY sender ownership", () => {
     const intruder = makeWebContents(2);
     _setPtyForTest({ spawn: () => pty });
 
-    expect(ptyStart(owner, { sessionId: "pty-session" })).toEqual({ ok: true, pid: 1234 });
+    expect(ptyStart(owner, { sessionId: "pty-session", cwd: process.cwd() })).toEqual({
+      ok: true,
+      pid: 1234,
+    });
 
     ptyWrite(intruder, "pty-session", "bad");
     ptyResize(intruder, "pty-session", 120, 40);
@@ -92,7 +95,10 @@ describe("PTY sender ownership", () => {
     const intruder = makeWebContents(2);
     _setPtyForTest({ spawn: () => pty });
 
-    expect(ptyStart(owner, { sessionId: "pty-session" })).toEqual({ ok: true, pid: 1234 });
+    expect(ptyStart(owner, { sessionId: "pty-session", cwd: process.cwd() })).toEqual({
+      ok: true,
+      pid: 1234,
+    });
     expect(ptyStart(intruder, { sessionId: "pty-session" })).toEqual({
       ok: false,
       detail: "pty session is owned by another webContents",
