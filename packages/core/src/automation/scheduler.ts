@@ -33,8 +33,8 @@ export type CronPermissionLevel = "read-only" | "workspace-write" | "full";
 export interface CronJob {
   id: string;
   name: string;
-  schedule: string;        // cron expression ("0 9 * * 1-5") or interval ("5m", "1h", "1500")
-  prompt: string;          // task prompt to run
+  schedule: string; // cron expression ("0 9 * * 1-5") or interval ("5m", "1h", "1500")
+  prompt: string; // task prompt to run
   enabled: boolean;
   lastRun?: number;
   nextRun?: number;
@@ -169,7 +169,8 @@ export class CronScheduler {
    * created/deleted/changed jobs through the same store. Reconciliation:
    *   - jobs on disk but not in memory  → added (and armed if enabled)
    *   - jobs in memory but not on disk  → removed + timer cleared
-   *   - jobs whose schedule/enabled differ → re-armed to match disk
+   *   - jobs whose schedule/enabled/timezone differ → re-armed to match disk
+   *   - unchanged enabled jobs with live timers → kept as-is, preserving nextRun
    *
    * Pass `{ arm: false }` in a host that must NOT execute jobs (the worker —
    * separate process from the one that owns execution); it still tracks +
@@ -196,24 +197,70 @@ export class CronScheduler {
     let maxId = 0;
     for (const job of persisted) {
       const prev = this.jobs.get(job.id);
-      this.jobs.set(job.id, job);
       const n = parseInt(job.id, 10);
       if (Number.isFinite(n) && n > maxId) maxId = n;
 
-      // (Re)arm when execution is on. arm() is idempotent (clears any prior
-      // timer first), so calling it for unchanged jobs is harmless; it also
-      // refreshes nextRun for display.
-      if (arm && job.enabled) {
-        this.arm(job);
+      if (!prev) {
+        this.jobs.set(job.id, job);
+        if (arm && job.enabled) {
+          this.arm(job);
+        } else {
+          this.refreshNextRunForDisplay(job);
+        }
+        continue;
+      }
+
+      const definitionChanged = this.jobDefinitionChanged(prev, job);
+      const hasTimer = this.timers.has(job.id);
+
+      if (!arm || !job.enabled) {
+        // Disabled (or arm suppressed): ensure no stale timer survives a prior
+        // enabled state. Keep the existing object identity so any in-flight
+        // executor bookkeeping still points at the scheduler-visible job.
+        this.mergeJobFromDisk(prev, job);
+        if (hasTimer) this.clearTimer(job.id);
+        this.refreshNextRunForDisplay(prev);
+      } else if (definitionChanged || !hasTimer) {
+        // New scheduling definition, or this process has no live timer (e.g.
+        // after stopAll or when taking over from an arm:false worker): reset the
+        // absolute phase from now and arm.
+        this.mergeJobFromDisk(prev, job);
+        this.arm(prev);
       } else {
-        // Disabled (or arm suppressed): ensure no stale timer survives a
-        // prior enabled state.
-        if (prev && this.timers.has(job.id)) this.clearTimer(job.id);
-        // Still refresh nextRun for display even when not arming.
-        if (!arm || !job.enabled) this.refreshNextRunForDisplay(job);
+        // Unchanged enabled job with a live timer: preserve the timer and the
+        // absolute nextRun. Merge user-editable fields into the same object so
+        // the existing timeout closure and scheduler.get(id) never diverge.
+        this.mergeJobFromDisk(prev, job, { preserveNextRun: true });
       }
     }
     this.nextId = Math.max(this.nextId, maxId + 1);
+  }
+
+  private jobDefinitionChanged(prev: CronJob, next: CronJob): boolean {
+    return (
+      prev.schedule !== next.schedule ||
+      prev.enabled !== next.enabled ||
+      prev.timezone !== next.timezone
+    );
+  }
+
+  private mergeJobFromDisk(
+    target: CronJob,
+    source: CronJob,
+    opts?: { preserveNextRun?: boolean },
+  ): void {
+    const preservedNextRun = target.nextRun;
+    for (const key of Object.keys(target)) {
+      if (!(key in source)) delete (target as any)[key];
+    }
+    Object.assign(target, source);
+    if (opts?.preserveNextRun) {
+      if (preservedNextRun === undefined) {
+        delete target.nextRun;
+      } else {
+        target.nextRun = preservedNextRun;
+      }
+    }
   }
 
   private nextPersistedId(jobs: CronJob[]): string {
@@ -228,7 +275,11 @@ export class CronScheduler {
   /** Recompute nextRun without arming a timer (for display in disabled/no-arm hosts). */
   private refreshNextRunForDisplay(job: CronJob): void {
     if (isCronExpression(job.schedule)) {
-      const next = nextCronTime(parseCronExpression(job.schedule), job.timezone ?? "UTC", Date.now());
+      const next = nextCronTime(
+        parseCronExpression(job.schedule),
+        job.timezone ?? "UTC",
+        Date.now(),
+      );
       job.nextRun = next ?? undefined;
     } else {
       try {
@@ -448,20 +499,22 @@ export class CronScheduler {
             validateSchedule(nextSchedule, nextTimezone);
           }
 
+          const scheduleChanged = patch.schedule !== undefined || patch.timezone !== undefined;
+
           if (patch.name !== undefined) job.name = patch.name;
           if (patch.prompt !== undefined) job.prompt = patch.prompt;
           if (patch.schedule !== undefined) job.schedule = patch.schedule;
           if (patch.timezone !== undefined) job.timezone = patch.timezone;
           if (patch.cwd !== undefined) job.cwd = patch.cwd;
           if (patch.permissionLevel !== undefined) job.permissionLevel = patch.permissionLevel;
-          this.refreshNextRunForDisplay(job);
+          if (scheduleChanged) this.refreshNextRunForDisplay(job);
           updated = job;
           return job;
         });
         return { jobs: next, result: updated };
       });
       this.reconcileJobs(tx.jobs);
-      return tx.result ? this.jobs.get(id) ?? tx.result : null;
+      return tx.result ? (this.jobs.get(id) ?? tx.result) : null;
     }
 
     const job = this.jobs.get(id);
@@ -474,6 +527,8 @@ export class CronScheduler {
       validateSchedule(nextSchedule, nextTimezone);
     }
 
+    const scheduleChanged = patch.schedule !== undefined || patch.timezone !== undefined;
+
     if (patch.name !== undefined) job.name = patch.name;
     if (patch.prompt !== undefined) job.prompt = patch.prompt;
     if (patch.schedule !== undefined) job.schedule = patch.schedule;
@@ -481,11 +536,11 @@ export class CronScheduler {
     if (patch.cwd !== undefined) job.cwd = patch.cwd;
     if (patch.permissionLevel !== undefined) job.permissionLevel = patch.permissionLevel;
 
-    // Re-arm so a schedule/timezone change drives execution now. arm() is
-    // idempotent and respects enabled + executionEnabled (paused → no timer,
-    // but nextRun still refreshed for display).
+    // Re-arm only when the schedule definition changed, or when an enabled job
+    // has no live timer to preserve. Ordinary field edits keep the absolute
+    // nextRun so they do not push an interval job back.
     if (job.enabled) {
-      this.arm(job);
+      if (scheduleChanged || !this.timers.has(id)) this.arm(job);
     } else {
       this.clearTimer(id);
       this.refreshNextRunForDisplay(job);
@@ -517,10 +572,10 @@ export class CronScheduler {
   }
 
   /**
-   * Arm a job's timer. Interval schedules ("5m") use setInterval; cron-
-   * expression schedules ("0 9 * * 1-5") compute the next trigger in the
-   * job's timezone and use setTimeout, re-arming after each fire. nextRun is
-   * updated to reflect the scheduled instant.
+   * Arm a job's timer from its current definition. This intentionally resets
+   * the absolute phase (interval: now+interval; cron: next matching wall-clock
+   * instant), so reconcileJobs preserves unchanged live timers instead of
+   * calling arm() repeatedly.
    */
   private arm(job: CronJob): void {
     this.clearTimer(job.id);
@@ -533,15 +588,39 @@ export class CronScheduler {
       this.armCron(job);
     } else {
       const intervalMs = parseSchedule(job.schedule);
-      job.nextRun = Date.now() + intervalMs;
+      const nextRun = Date.now() + intervalMs;
+      job.nextRun = nextRun;
       if (!this.executionEnabled) return;
-      const timer = setInterval(() => void this.fire(job, () => this.refreshIntervalNextRun(job, intervalMs)), intervalMs);
-      this.timers.set(job.id, timer);
+      this.armInterval(job, intervalMs, nextRun);
     }
   }
 
-  private refreshIntervalNextRun(job: CronJob, intervalMs: number): void {
-    job.nextRun = Date.now() + intervalMs;
+  private armInterval(job: CronJob, intervalMs: number, scheduledFor: number): void {
+    job.nextRun = scheduledFor;
+    const delay = Math.max(0, scheduledFor - Date.now());
+    const timer = setTimeout(() => {
+      this.timers.delete(job.id);
+      const rearm = () => {
+        if (!this.executionEnabled || !job.enabled || !this.jobs.has(job.id)) return;
+        this.armInterval(
+          job,
+          intervalMs,
+          this.nextIntervalRunAfter(scheduledFor, intervalMs, Date.now()),
+        );
+      };
+      void this.fire(job, rearm).then((ran) => {
+        if (!ran) rearm();
+      });
+    }, delay);
+    this.timers.set(job.id, timer);
+  }
+
+  private nextIntervalRunAfter(scheduledFor: number, intervalMs: number, now: number): number {
+    let next = scheduledFor + intervalMs;
+    if (next <= now) {
+      next += (Math.floor((now - next) / intervalMs) + 1) * intervalMs;
+    }
+    return next;
   }
 
   private armCron(job: CronJob): void {
@@ -557,6 +636,7 @@ export class CronScheduler {
     const scheduledFor = next;
     const delay = Math.max(0, next - Date.now());
     const timer = setTimeout(() => {
+      this.timers.delete(job.id);
       // Misfire guard for sleep/wake drift. A setTimeout pauses while the host
       // sleeps, then fires the instant the machine wakes — which can be hours
       // off the scheduled wall-clock (observed: a `0 9 * * *` job running at
@@ -568,11 +648,14 @@ export class CronScheduler {
         if (job.enabled) this.armCron(job);
         return;
       }
-      void this.fire(job, () => {
+      const rearm = () => {
         // Re-arm for the following occurrence — but only if the job still
         // exists. A one-shot (once) job deletes itself in fire()'s finally,
         // so this closure must not resurrect it via a stale reference.
         if (job.enabled && this.jobs.has(job.id)) this.armCron(job);
+      };
+      void this.fire(job, rearm).then((ran) => {
+        if (!ran) rearm();
       });
     }, delay);
     this.timers.set(job.id, timer);
@@ -589,14 +672,16 @@ export class CronScheduler {
   /**
    * Shared fire path for both schedule kinds. Re-entrancy guard, run-stat
    * bookkeeping, persistence, then the executor. `afterStats` updates nextRun
-   * for the next occurrence (interval: now+interval; cron: re-armed inside).
+   * for the next occurrence. Returns false when the run was skipped by enabled
+   * state or the re-entrancy guard, so one-shot timers can still schedule the
+   * next absolute slot without starting overlapping executions.
    */
-  private async fire(job: CronJob, afterStats: () => void, force = false): Promise<void> {
-    if (!job.enabled && !force) return;
+  private async fire(job: CronJob, afterStats: () => void, force = false): Promise<boolean> {
+    if (!job.enabled && !force) return false;
     // Re-entrancy guard: if this job's previous run is still in flight
     // (onExecute slower than the interval), skip rather than stacking
     // overlapping executions that double-count runCount.
-    if (this.running.has(job.id)) return;
+    if (this.running.has(job.id)) return false;
     this.running.add(job.id);
     // One in-flight entry per job. abort(jobId) trips `controller` (Engine.run
     // cooperates and resolves early) and awaits `done`, which we resolve in the
@@ -630,6 +715,7 @@ export class CronScheduler {
       // Unblock any abort() awaiting this run's teardown.
       resolveDone();
     }
+    return true;
   }
 }
 
@@ -663,10 +749,14 @@ export function parseSchedule(schedule: string): number {
     // path's `> 0` guard and the "throw on bad input" contract.
     if (value > 0) {
       switch (match[2]) {
-        case "s": return value * 1000;
-        case "m": return value * 60 * 1000;
-        case "h": return value * 60 * 60 * 1000;
-        case "d": return value * 24 * 60 * 60 * 1000;
+        case "s":
+          return value * 1000;
+        case "m":
+          return value * 60 * 1000;
+        case "h":
+          return value * 60 * 60 * 1000;
+        case "d":
+          return value * 24 * 60 * 60 * 1000;
       }
     }
   }
