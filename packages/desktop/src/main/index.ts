@@ -113,6 +113,7 @@ import {
 } from "./credentials-service.js";
 import { loginAndCaptureCookies } from "./credentials-login/index.js";
 import { RemoteHostManager } from "./mobile-remote/remote-host-manager.js";
+import { PendingMobileApprovals } from "./mobile-remote/pending-approvals.js";
 import { TrustedDeviceStore } from "./mobile-remote/trusted-device-store.js";
 import { CloudflaredBinary } from "./mobile-remote/cloudflared-binary.js";
 import { TunnelManager } from "./mobile-remote/tunnel-manager.js";
@@ -319,6 +320,7 @@ const mobileRemote = new RemoteHostManager({
     void handleMobileClientEvent(event as MobileClientEvent & { deviceId?: string });
   },
 });
+const pendingMobileApprovals = new PendingMobileApprovals();
 
 let mobileProjects: MobileProjectMeta[] = [];
 function normalizeMobileProjects(projects: unknown): MobileProjectMeta[] {
@@ -618,11 +620,19 @@ function broadcastDesktopPermissionMode(params: { sessionId: string; mode: Permi
   }
 }
 
+function replayPendingMobileApprovals(sessionId: string, deviceId?: string): void {
+  for (const line of pendingMobileApprovals.replayLines(sessionId)) {
+    if (deviceId) mobileRemote.sendRawToDevice(deviceId, line);
+    else mobileRemote.broadcastRaw(line);
+  }
+}
+
 function broadcastApprovalResolved(params: {
   requestId: string;
   sessionId?: string;
   approved?: boolean;
 }): void {
+  pendingMobileApprovals.resolve(params.requestId);
   const line = JSON.stringify({
     jsonrpc: "2.0",
     method: "agent/approvalResolved",
@@ -742,6 +752,7 @@ async function handleMobileClientEvent(
         mode: mobilePermissionModes.get(event.sessionId) ?? "default",
       });
     }
+    replayPendingMobileApprovals(event.sessionId, deviceId);
     return;
   }
   if (event.type === "session.create") {
@@ -895,6 +906,7 @@ async function handleMobileClientEvent(
       entries: snapshot.events,
       nextSeq: snapshot.nextSeq,
     });
+    replayPendingMobileApprovals(event.sessionId, deviceId);
     return;
   }
   if (event.type === "permission.setMode") {
@@ -1422,6 +1434,7 @@ async function createWindow(): Promise<BrowserWindow> {
     // Mirror every worker→renderer line onto any connected mobile clients, so
     // the phone sees the same stream (messages, tool summaries, approvals).
     bridge.subscribeOutbound((line, snapshotEntry) => {
+      pendingMobileApprovals.observeOutboundLine(line);
       if (snapshotEntry) {
         mobileRemote.broadcast({
           type: "session.stream",
@@ -3098,6 +3111,7 @@ ipcMain.handle("sessions:delete", async (_e, id: string) => {
   // Drop any in-memory snapshot for the deleted session so it can't be
   // replayed into a fresh tab that happens to reuse the id.
   bridge?.forgetSession(id);
+  pendingMobileApprovals.forgetSession(id);
 });
 
 /**

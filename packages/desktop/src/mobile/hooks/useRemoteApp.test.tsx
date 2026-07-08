@@ -280,3 +280,91 @@ describe("useRemoteApp session unread", () => {
     await hook.unmount();
   });
 });
+
+describe("useRemoteApp approval replay", () => {
+  test("replayed raw approval after selecting its session hydrates and resolves the card", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    const approvalLine = {
+      jsonrpc: "2.0",
+      method: "agent/approvalRequest",
+      params: {
+        sessionId: "s2",
+        requestId: "ask-1",
+        request: {
+          toolName: "AskUserQuestion",
+          description: "Pick deployment target",
+          args: {
+            options: ["Staging", "Production"],
+            optionsOnly: true,
+          },
+          riskLevel: "low",
+        },
+      },
+    };
+
+    await act(async () => {
+      ws.open();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      ws.message({
+        type: "session.list.ok",
+        activeSessionId: "s1",
+        sessions: [
+          { id: "s1", title: "Current", cwd: "/repo", updatedAt: 1, origin: "desktop" },
+          { id: "s2", title: "Pending approval", cwd: "/repo", updatedAt: 2, origin: "desktop" },
+        ],
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      hook.result.current.selectSession("s1");
+      await flushMicrotasks();
+    });
+
+    await act(async () => {
+      ws.message(approvalLine);
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.approvals).toEqual([]);
+
+    await act(async () => {
+      hook.result.current.selectSession("s2");
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      ws.message(approvalLine);
+      await flushMicrotasks();
+    });
+
+    expect(hook.result.current.approvals).toHaveLength(1);
+    expect(hook.result.current.approvals[0]).toMatchObject({
+      requestId: "ask-1",
+      sessionId: "s2",
+      toolName: "AskUserQuestion",
+      description: "Pick deployment target",
+      summary: "Pick deployment target",
+      risk: "low",
+      options: ["Staging", "Production"],
+      optionsOnly: true,
+    });
+
+    await act(async () => {
+      ws.message({
+        jsonrpc: "2.0",
+        method: "agent/approvalResolved",
+        params: { sessionId: "s2", requestId: "ask-1", approved: true },
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.approvals).toEqual([]);
+
+    await hook.unmount();
+  });
+});

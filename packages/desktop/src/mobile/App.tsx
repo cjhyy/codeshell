@@ -78,7 +78,7 @@ export function App() {
           </div>
         )}
 
-        <main className="mobile-main flex min-h-0 flex-1 flex-col">
+        <main className="mobile-main flex min-h-0 min-w-0 flex-1 flex-col">
           <ApprovalsArea app={app} />
           {app.chat.goal && (
             <div className="flex min-w-0 items-center gap-2 border-b border-border/70 bg-card/45 px-3 py-2 text-xs">
