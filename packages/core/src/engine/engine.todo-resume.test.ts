@@ -70,7 +70,7 @@ describe("Engine TodoWrite resume replay", () => {
       await engine.run("continue", {
         sessionId: "todo-resume-pending",
         cwd: dir,
-        onStream: (event) => events.push(event),
+        onStream: (event) => { events.push(event); },
       });
 
       const updates = taskUpdates(events);
@@ -102,7 +102,7 @@ describe("Engine TodoWrite resume replay", () => {
       await engine.run("continue", {
         sessionId: "todo-resume-completed",
         cwd: dir,
-        onStream: (event) => events.push(event),
+        onStream: (event) => { events.push(event); },
       });
 
       expect(taskUpdates(events)).toEqual([]);
@@ -129,7 +129,7 @@ describe("Engine TodoWrite resume replay", () => {
       await engine.run("continue", {
         sessionId: "todo-resume-latest",
         cwd: dir,
-        onStream: (event) => events.push(event),
+        onStream: (event) => { events.push(event); },
       });
 
       const updates = taskUpdates(events);

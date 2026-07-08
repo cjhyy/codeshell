@@ -170,7 +170,7 @@ describe("TurnLoop usage_update carries cache tokens", () => {
     const loop = new TurnLoop(deps, {
       maxTurns: 5,
       maxToolCallsPerTurn: 10,
-      onStream: (e) => events.push(e),
+      onStream: (e) => { events.push(e); },
     });
 
     (loop as any).emitCtxFromMessages([{ role: "user", content: "hi" }]);
@@ -189,7 +189,7 @@ describe("TurnLoop usage_update carries cache tokens", () => {
     const loop = new TurnLoop(deps, {
       maxTurns: 5,
       maxToolCallsPerTurn: 10,
-      onStream: (e) => events.push(e),
+      onStream: (e) => { events.push(e); },
     });
 
     (loop as any).emitCtxFromMessages([{ role: "user", content: "hi" }]);
