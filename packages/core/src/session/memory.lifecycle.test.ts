@@ -141,6 +141,57 @@ describe("lifecycle frontmatter (createdAt/lastUsedAt/useCount/updateCount)", ()
   });
 });
 
+describe("frontmatter safety", () => {
+  it("roundtrips special frontmatter values without letting them rewrite metadata", () => {
+    withBase((base) => {
+      const mm = new MemoryManager({ baseDir: base });
+      const name = "safe name\norigin: auto";
+      const description = "first line\nsecond: has colon\n---\nemoji 😄";
+
+      mm.save({
+        name,
+        description,
+        type: "project",
+        content: "body",
+        origin: "manual",
+      });
+
+      const entries = mm.loadAll();
+      expect(entries).toHaveLength(1);
+      expect(entries[0]!.name).toBe(name);
+      expect(entries[0]!.description).toBe(description);
+      expect(entries[0]!.origin).toBe("manual");
+      expect(entries[0]!.type).toBe("project");
+      expect(entries[0]!.content).toBe("body");
+    });
+  });
+
+  it("does not overwrite another id when two external ids sanitize to the same filename", () => {
+    withBase((base) => {
+      const mm = new MemoryManager({ baseDir: base });
+      const firstFile = mm.save({
+        id: "a/b",
+        name: "slash-id",
+        description: "first",
+        type: "project",
+        content: "first body",
+      });
+      const secondFile = mm.save({
+        id: "a_b",
+        name: "underscore-id",
+        description: "second",
+        type: "project",
+        content: "second body",
+      });
+
+      expect(secondFile).not.toBe(firstFile);
+      const byId = new Map(mm.loadAll().map((entry) => [entry.id, entry]));
+      expect(byId.get("a/b")?.content).toBe("first body");
+      expect(byId.get("a_b")?.content).toBe("second body");
+    });
+  });
+});
+
 describe("recordRecall", () => {
   it("bumps useCount and lastUsedAt without touching content or updateCount", () => {
     withBase((base) => {
@@ -250,16 +301,19 @@ describe("pruneByRecall (recall TTL)", () => {
 });
 
 describe("pending 审批门 三态 + originProject", () => {
-  it("approve moves pending → global user store", () => {
+  it("approve moves pending → global dream store", () => {
     withBase((base) => {
       const pend = new MemoryManager({ baseDir: base, scope: "pending" });
-      pend.save({ name: "g", description: "d", type: "feedback", content: "c", origin: "auto" });
+      pend.save({ name: "g", description: "d", type: "feedback", content: "c", origin: "dream" });
       expect(pend.approvePending("g")).toBeTruthy();
       expect(pend.loadAll().map((e) => e.name)).not.toContain("g");
-      const global = new MemoryManager({ baseDir: base, scope: "user" })
+      const globalDream = new MemoryManager({ baseDir: base, scope: "dream" }).loadAll();
+      expect(globalDream.map((e) => e.name)).toContain("g");
+      expect(globalDream.find((e) => e.name === "g")?.origin).toBe("dream");
+      const globalUser = new MemoryManager({ baseDir: base, scope: "user" })
         .loadAll()
         .map((e) => e.name);
-      expect(global).toContain("g");
+      expect(globalUser).not.toContain("g");
     });
   });
 
@@ -302,6 +356,42 @@ describe("pending 审批门 三态 + originProject", () => {
         .loadAll()
         .map((e) => e.name);
       expect(global).toContain("orphan");
+    });
+  });
+
+  it("reject marks the source project dream as rejected and removes the pending copy", () => {
+    withBase((base) => {
+      const projectDir = "/tmp/reject-origin-proj";
+      const dream = new MemoryManager({ baseDir: base, projectDir, scope: "dream" });
+      dream.save(
+        {
+          id: "mem_source_dream",
+          name: "candidate",
+          description: "d",
+          type: "feedback",
+          content: "c",
+          origin: "dream",
+        },
+        { forceOrigin: "dream" },
+      );
+      const pend = new MemoryManager({ baseDir: base, scope: "pending" });
+      pend.save(
+        {
+          name: "candidate",
+          description: "d",
+          type: "feedback",
+          content: "c",
+          origin: "dream",
+          originProject: projectDir,
+          promotionSourceId: "mem_source_dream",
+        },
+        { forceOrigin: "dream" },
+      );
+
+      expect(pend.rejectPending("candidate")).toBe(true);
+      expect(pend.loadAll().map((e) => e.name)).not.toContain("candidate");
+      const source = dream.findById("mem_source_dream")!;
+      expect(source.promotionStatus).toBe("rejected");
     });
   });
 

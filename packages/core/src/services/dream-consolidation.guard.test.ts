@@ -196,6 +196,50 @@ describe("dream consolidation origin guard", () => {
     }
   });
 
+  it("does not let dream save a new user memory with the same name as origin:manual", async () => {
+    const info = spyOn(logger, "info").mockImplementation(() => {});
+    const warn = spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      await withCodeShellHome(async (base) => {
+        const projectDir = "/tmp/dream-guard-user-name-shadow";
+        const user = new MemoryManager({ baseDir: base, projectDir, scope: "user" });
+        user.save({
+          id: "mem_manual_same_name",
+          name: "manual-same-name",
+          description: "manual description",
+          type: "project",
+          content: "manual content",
+          origin: "manual",
+        });
+
+        await runGuardedDream(projectDir, [
+          {
+            id: "tc_save",
+            toolName: "MemorySave",
+            args: {
+              scope: "user",
+              location: "project",
+              id: "mem_bogus_missing",
+              name: "manual-same-name",
+              description: "shadow",
+              type: "project",
+              content: "shadow content",
+            },
+          },
+        ]);
+
+        const entries = user.loadAll();
+        expect(entries).toHaveLength(1);
+        expect(entries[0]!.id).toBe("mem_manual_same_name");
+        expect(entries[0]!.origin).toBe("manual");
+        expect(entries[0]!.content).toBe("manual content");
+      });
+    } finally {
+      info.mockRestore();
+      warn.mockRestore();
+    }
+  });
+
   it("lets dream update origin:dream user memories by id and rename without adding a file", async () => {
     const info = spyOn(logger, "info").mockImplementation(() => {});
     const warn = spyOn(logger, "warn").mockImplementation(() => {});

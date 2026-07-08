@@ -1,5 +1,3 @@
-import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
 import { MemoryManager, resolveMemoryBaseDir, type MemoryEntry } from "../session/memory.js";
 import type { ExtractedMemory } from "./extract-memories.js";
 
@@ -12,24 +10,14 @@ export interface GlobalDreamPromotionInput {
 }
 
 export interface GlobalDreamPromotionResult {
-  promoted: boolean;
-  promotionKey: string;
+  /** No automatic write to global dream is performed; approval is required. */
+  promoted: false;
+  /** True when this call created a new pending approval item. */
+  pendingSuggested: boolean;
   originProjects: string[];
   evidenceCount: number;
   projectEvidenceSaved: boolean;
   promotionReason: string;
-}
-
-interface PromotionEvidence {
-  entry: MemoryEntry;
-  projectKey: string;
-  originProject: string;
-}
-
-export function promotionKeyForMemory(
-  memory: Pick<ExtractedMemory, "name" | "description">,
-): string {
-  return slugPromotionKey(memory.name) || slugPromotionKey(memory.description) || "memory";
 }
 
 export function detectUserDirectGlobalPreference(
@@ -57,61 +45,52 @@ export function applyGlobalDreamPromotionGate(
   const baseDir = resolveMemoryBaseDir(input.baseDir);
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
-  const promotionKey = promotionKeyForMemory(input.candidate);
+  const promotionReason = input.userDirectGlobal
+    ? "user-direct global preference suggested global dream approval"
+    : "candidate suggested global dream approval";
 
-  const projectEvidenceSaved = input.projectDir
-    ? saveProjectDreamEvidence({
+  const projectEvidence = input.projectDir
+    ? saveProjectDreamCandidate({
         baseDir,
         projectDir: input.projectDir,
         candidate: input.candidate,
-        promotionKey,
         nowIso,
+        promotionReason,
       })
-    : false;
+    : undefined;
 
-  const evidence = collectProjectDreamEvidence(baseDir, promotionKey);
-  const originProjects = unique(
-    evidence.flatMap(
-      (item) => item.entry.originProjects ?? [item.entry.originProject ?? item.originProject],
-    ),
-  );
-  const evidenceCount = originProjects.length;
-  const promotionReason = input.userDirectGlobal
-    ? "user-direct global preference"
-    : `cross-project evidence across ${evidenceCount} projects`;
-
-  const promoted =
-    input.userDirectGlobal === true || (input.candidate.scope === "global" && evidenceCount >= 2);
-  if (promoted) {
-    saveGlobalDreamStableEntry({
+  const originProjects =
+    projectEvidence?.originProjects ?? (input.projectDir ? [input.projectDir] : []);
+  const rejected = projectEvidence?.promotionStatus === "rejected";
+  const pendingSuggested =
+    !rejected &&
+    savePendingGlobalSuggestion({
       baseDir,
+      projectDir: input.projectDir,
       candidate: input.candidate,
-      promotionKey,
+      source: projectEvidence,
       originProjects,
-      evidenceCount,
-      promotionReason,
       nowIso,
-      evidence,
+      promotionReason,
     });
-  }
 
   return {
-    promoted,
-    promotionKey,
+    promoted: false,
+    pendingSuggested,
     originProjects,
-    evidenceCount,
-    projectEvidenceSaved,
+    evidenceCount: originProjects.length,
+    projectEvidenceSaved: Boolean(projectEvidence),
     promotionReason,
   };
 }
 
-function saveProjectDreamEvidence(input: {
+function saveProjectDreamCandidate(input: {
   baseDir: string;
   projectDir: string;
   candidate: ExtractedMemory;
-  promotionKey: string;
   nowIso: string;
-}): boolean {
+  promotionReason: string;
+}): MemoryEntry {
   const mm = new MemoryManager({
     baseDir: input.baseDir,
     projectDir: input.projectDir,
@@ -121,11 +100,12 @@ function saveProjectDreamEvidence(input: {
     .loadAll()
     .find(
       (entry) =>
-        (entry.promotionKey ?? promotionKeyForMemory(entry)) === input.promotionKey &&
+        entry.name === input.candidate.name &&
         (entry.origin === "auto" || entry.origin === "dream"),
     );
   const originProjects = unique([...(existing?.originProjects ?? []), input.projectDir]);
-  mm.save(
+  const promotionStatus = existing?.promotionStatus === "rejected" ? "rejected" : "pending";
+  const fileName = mm.save(
     {
       id: existing?.id,
       name: input.candidate.name,
@@ -139,124 +119,61 @@ function saveProjectDreamEvidence(input: {
       updateCount: existing?.updateCount,
       lastUsedAt: existing?.lastUsedAt,
       originProject: input.projectDir,
-      promotionKey: input.promotionKey,
       originProjects,
       evidenceCount: originProjects.length,
       firstSeenAt: existing?.firstSeenAt ?? existing?.createdAt ?? input.nowIso,
       lastSeenAt: input.nowIso,
-      promotionReason: "project evidence awaiting global dream promotion",
+      promotionReason: input.promotionReason,
+      promotionStatus,
     },
     { forceOrigin: existing?.origin ?? "auto" },
   );
-  return true;
+  return mm.find(fileName)!;
 }
 
-function saveGlobalDreamStableEntry(input: {
+function savePendingGlobalSuggestion(input: {
   baseDir: string;
+  projectDir?: string;
   candidate: ExtractedMemory;
-  promotionKey: string;
+  source?: MemoryEntry;
   originProjects: string[];
-  evidenceCount: number;
-  promotionReason: string;
   nowIso: string;
-  evidence: PromotionEvidence[];
-}): void {
+  promotionReason: string;
+}): boolean {
   const globalDream = new MemoryManager({ baseDir: input.baseDir, scope: "dream" });
-  const existing = globalDream
+  if (globalDream.loadAll().some((entry) => entry.name === input.candidate.name)) return false;
+
+  const pending = new MemoryManager({ baseDir: input.baseDir, scope: "pending" });
+  const duplicate = pending
     .loadAll()
-    .find(
+    .some(
       (entry) =>
-        entry.promotionKey === input.promotionKey ||
-        promotionKeyForMemory(entry) === input.promotionKey,
+        entry.name === input.candidate.name &&
+        (entry.originProject ?? "") === (input.projectDir ?? ""),
     );
-  if (existing && existing.origin === "manual") return;
+  if (duplicate) return false;
 
-  const firstSeenAt =
-    earliestIso(input.evidence.flatMap((item) => [item.entry.firstSeenAt, item.entry.createdAt])) ??
-    existing?.firstSeenAt ??
-    existing?.createdAt ??
-    input.nowIso;
-  const stableOriginProjects = unique([
-    ...(existing?.originProjects ?? []),
-    ...input.originProjects,
-  ]);
-
-  globalDream.save(
+  pending.save(
     {
-      id: existing?.id,
       name: input.candidate.name,
       description: input.candidate.description,
       type: input.candidate.type,
       content: input.candidate.content,
-      origin: existing?.origin ?? "auto",
-      pinned: existing?.pinned,
-      createdAt: existing?.createdAt,
-      useCount: existing?.useCount,
-      updateCount: existing?.updateCount,
-      lastUsedAt: existing?.lastUsedAt,
-      promotionKey: input.promotionKey,
-      originProjects: stableOriginProjects,
-      evidenceCount: stableOriginProjects.length,
-      firstSeenAt,
+      origin: "dream",
+      originProject: input.projectDir,
+      originProjects: input.originProjects,
+      evidenceCount: input.originProjects.length,
+      firstSeenAt: input.source?.firstSeenAt ?? input.source?.createdAt ?? input.nowIso,
       lastSeenAt: input.nowIso,
       promotionReason: input.promotionReason,
+      promotionStatus: "pending",
+      promotionSourceId: input.source?.id,
     },
-    { forceOrigin: existing?.origin ?? "auto" },
+    { forceOrigin: "dream" },
   );
-}
-
-function collectProjectDreamEvidence(baseDir: string, promotionKey: string): PromotionEvidence[] {
-  const projectsDir = join(baseDir, "projects");
-  if (!existsSync(projectsDir)) return [];
-  const evidence: PromotionEvidence[] = [];
-  for (const projectKey of readdirSync(projectsDir)) {
-    const dreamDir = join(projectsDir, projectKey, "memory", "dream");
-    if (!existsSync(dreamDir)) continue;
-    const entries = new MemoryManager({
-      baseDir,
-      projectDir: projectKey,
-      scope: "dream",
-    }).loadAll();
-    for (const entry of entries) {
-      if ((entry.promotionKey ?? promotionKeyForMemory(entry)) !== promotionKey) continue;
-      evidence.push({
-        entry,
-        projectKey,
-        originProject: entry.originProject ?? entry.originProjects?.[0] ?? projectKey,
-      });
-    }
-  }
-  return evidence;
-}
-
-function slugPromotionKey(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, " ")
-    .replace(/\b\d{8}\b/g, " ")
-    .replace(/\bv\d+\b/g, " ")
-    .replace(/\b(batch|fix-batch)-\d+\b/g, " ")
-    .replace(/\b(today|yesterday|tomorrow|本轮|今天|昨天|明天)\b/gu, " ")
-    .replace(/\b[a-f0-9]{7,}\b/g, " ")
-    .replace(/[^\p{L}\p{N}]+/gu, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/-{2,}/g, "-")
-    .slice(0, 96);
+  return true;
 }
 
 function unique(values: Array<string | undefined>): string[] {
   return [...new Set(values.filter((value): value is string => Boolean(value)))];
-}
-
-function earliestIso(values: Array<string | undefined>): string | undefined {
-  let best: string | undefined;
-  let bestMs = Number.POSITIVE_INFINITY;
-  for (const value of values) {
-    if (!value) continue;
-    const ms = new Date(value).getTime();
-    if (!Number.isFinite(ms) || ms >= bestMs) continue;
-    best = value;
-    bestMs = ms;
-  }
-  return best;
 }

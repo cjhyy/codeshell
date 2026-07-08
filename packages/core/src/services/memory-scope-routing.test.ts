@@ -25,7 +25,7 @@ describe("parseExtractionResponse scope", () => {
 });
 
 describe("MemoryOrchestrator scope routing (global vs project dream store)", () => {
-  it("keeps unpromoted automatic global candidates in project dream evidence and does not add pending/user entries", async () => {
+  it("keeps automatic global candidates in project dream evidence and adds a pending approval item", async () => {
     const base = mkdtempSync(join(tmpdir(), "cs-mem-route-"));
     const prevHome = process.env.CODE_SHELL_HOME;
     process.env.CODE_SHELL_HOME = base; // isolate all MemoryManager writes
@@ -60,11 +60,12 @@ describe("MemoryOrchestrator scope routing (global vs project dream store)", () 
       const result = await orchestrator.run([{ role: "user", content: "x" }], "s1");
       expect(result.extracted).toBe(2);
 
-      // P0: automatic extraction lands in dream, not pending/user.
+      // Automatic global extraction lands in project dream and waits for approval
+      // before it can become an injected global dream memory.
       const pendingNames = new MemoryManager({ baseDir: base, scope: "pending" })
         .loadAll()
         .map((e) => e.name);
-      expect(pendingNames).not.toContain("global-lesson");
+      expect(pendingNames).toContain("global-lesson");
 
       const globalUserNames = new MemoryManager({ baseDir: base, scope: "user" })
         .loadAll()
@@ -87,9 +88,7 @@ describe("MemoryOrchestrator scope routing (global vs project dream store)", () 
       }).loadAll();
       expect(projectDream.map((e) => e.name)).toContain("global-lesson");
       expect(projectDream.find((e) => e.name === "global-lesson")?.origin).toBe("auto");
-      expect(projectDream.find((e) => e.name === "global-lesson")?.promotionKey).toBe(
-        "global-lesson",
-      );
+      expect(projectDream.find((e) => e.name === "global-lesson")?.promotionStatus).toBe("pending");
       expect(projectDream.map((e) => e.name)).toContain("project-fact");
       expect(projectDream.find((e) => e.name === "project-fact")?.origin).toBe("auto");
 
@@ -100,7 +99,7 @@ describe("MemoryOrchestrator scope routing (global vs project dream store)", () 
       >;
       expect(ext?.globalDreamCount).toBe(0);
       expect(ext?.projectDreamCount).toBe(2);
-      expect(ext?.pendingGlobalCount).toBeUndefined();
+      expect(ext?.pendingGlobalCount).toBe(1);
     } finally {
       info.mockRestore();
       warn.mockRestore();

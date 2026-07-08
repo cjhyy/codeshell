@@ -646,6 +646,16 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
                   <span className="min-w-0 truncate text-xs text-muted-foreground">
                     {p.description}
                   </span>
+                  {p.promotionReason && (
+                    <span className="min-w-0 truncate text-xs text-muted-foreground">
+                      {p.promotionReason}
+                    </span>
+                  )}
+                  {p.originProject && (
+                    <span className="min-w-0 truncate text-xs text-muted-foreground">
+                      {p.originProject}
+                    </span>
+                  )}
                 </div>
                 <Button
                   type="button"

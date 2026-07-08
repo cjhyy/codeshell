@@ -219,17 +219,24 @@ function checkDreamWriteGuard(
 
   const id = typeof tc.args?.id === "string" ? tc.args.id : undefined;
   const name = typeof tc.args?.name === "string" ? tc.args.name : undefined;
-  const target = id ? mm.findById(id) : name ? mm.find(name) : undefined;
-  if (!target) return { ok: true };
-
-  if (target.origin === "manual" || !target.origin) {
+  const targetById = id ? mm.findById(id) : undefined;
+  const targetByName = name ? mm.find(name) : undefined;
+  const targets = [targetById, targetByName].filter(
+    (target, index, all): target is NonNullable<typeof target> =>
+      Boolean(target) && all.findIndex((item) => item?.id === target?.id) === index,
+  );
+  const protectedTarget = targets.find((target) => target.origin === "manual" || !target.origin);
+  if (protectedTarget) {
     return {
       ok: false,
       error:
-        `Error: dream loop cannot modify origin:manual memory "${target.name}" ` +
-        `(${location}/${scope}/${target.id ?? target.fileName}).`,
+        `Error: dream loop cannot modify origin:manual memory "${protectedTarget.name}" ` +
+        `(${location}/${scope}/${protectedTarget.id ?? protectedTarget.fileName}).`,
     };
   }
+  const target = targetById ?? targetByName;
+  if (!target) return { ok: true };
+
   if (target.origin !== "auto" && target.origin !== "dream") {
     return {
       ok: false,
