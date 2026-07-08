@@ -365,6 +365,7 @@ export interface ToolContext {
 /** Inject a cookie credential into the built-in browser (host-implemented). */
 export type InjectCredentialFn = (
   credentialId: string,
+  credentialScope?: "full" | "project",
 ) => Promise<{ ok: boolean; count?: number; error?: string }>;
 
 /**

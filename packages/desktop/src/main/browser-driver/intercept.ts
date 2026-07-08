@@ -53,7 +53,9 @@ export function parseBrowserActionLine(line: string): ParsedBrowserAction | null
       // automation-host's handler consumes them. Forward with light type guards.
       value: typeof a.value === "string" ? a.value : undefined,
       key: typeof a.key === "string" ? a.key : undefined,
-      refs: Array.isArray(a.refs) ? (a.refs.filter((x) => typeof x === "string") as string[]) : undefined,
+      refs: Array.isArray(a.refs)
+        ? (a.refs.filter((x) => typeof x === "string") as string[])
+        : undefined,
       tabId: typeof a.tabId === "string" ? a.tabId : undefined,
     },
   };
@@ -64,10 +66,7 @@ export function parseBrowserActionLine(line: string): ParsedBrowserAction | null
  * requestId with its JSON result string (wrapped in the ApprovalResult shape
  * the server's pendingApprovals handler expects: {approved:true, answer}).
  */
-export function buildBrowserActionReply(
-  parsed: ParsedBrowserAction,
-  resultJson: string,
-): string {
+export function buildBrowserActionReply(parsed: ParsedBrowserAction, resultJson: string): string {
   return JSON.stringify({
     jsonrpc: "2.0",
     id: replyId(),
@@ -100,6 +99,7 @@ export interface ParsedCredentialAction {
   /** Currently only "injectCookie". */
   action: string;
   credentialId: string;
+  credentialScope: "full" | "project";
 }
 
 /**
@@ -125,6 +125,7 @@ export function parseCredentialActionLine(line: string): ParsedCredentialAction 
     requestId: p.requestId,
     action: a.action,
     credentialId: a.credentialId,
+    credentialScope: a.credentialScope === "project" ? "project" : "full",
   };
 }
 

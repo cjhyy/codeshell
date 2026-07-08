@@ -469,8 +469,8 @@ export class AgentServer {
       session.engine.setBrowserBridge(this.makeBrowserBridge(session, sid));
       // Cookie→browser injection (InjectCredential tool): same cross-process
       // channel; main restores the cookie jar into the built-in browser.
-      session.engine.setInjectCredential((credentialId) =>
-        this.requestCredentialInjectForSession(session, sid, credentialId),
+      session.engine.setInjectCredential((credentialId, credentialScope) =>
+        this.requestCredentialInjectForSession(session, sid, credentialId, credentialScope),
       );
     }
     try {
@@ -2065,6 +2065,7 @@ export class AgentServer {
     session: import("./chat-session.js").ChatSession,
     sessionId: string,
     credentialId: string,
+    credentialScope: "full" | "project" = "full",
   ): Promise<{ ok: boolean; count?: number; error?: string }> {
     return new Promise((resolve) => {
       const requestId = nanoid(12);
@@ -2102,7 +2103,7 @@ export class AgentServer {
         requestId,
         request: {
           toolName: "__credential_action__",
-          args: { action: "injectCookie", credentialId },
+          args: { action: "injectCookie", credentialId, credentialScope },
           description: `credential:inject:${credentialId}`,
           riskLevel: "low" as const,
         },

@@ -19,18 +19,31 @@ describe("parseBrowserActionLine", () => {
     expect(p).toEqual({
       sessionId: "s1",
       requestId: "rq1",
-      request: { action: "click", ref: "e3", text: undefined, url: undefined, dir: undefined, amount: undefined },
+      request: {
+        action: "click",
+        ref: "e3",
+        text: undefined,
+        url: undefined,
+        dir: undefined,
+        amount: undefined,
+      },
     });
   });
 
   test("forwards value/key/refs/tabId (selectOption/pressKey/fetchImages/switchTab)", () => {
-    const sel = parseBrowserActionLine(browserActionLine({ action: "select", ref: "e1", value: "opt-2" }));
+    const sel = parseBrowserActionLine(
+      browserActionLine({ action: "select", ref: "e1", value: "opt-2" }),
+    );
     expect(sel?.request.value).toBe("opt-2");
 
-    const press = parseBrowserActionLine(browserActionLine({ action: "press_key", key: "Control+a" }));
+    const press = parseBrowserActionLine(
+      browserActionLine({ action: "press_key", key: "Control+a" }),
+    );
     expect(press?.request.key).toBe("Control+a");
 
-    const imgs = parseBrowserActionLine(browserActionLine({ action: "fetch_images", refs: ["img1", "img2"] }));
+    const imgs = parseBrowserActionLine(
+      browserActionLine({ action: "fetch_images", refs: ["img1", "img2"] }),
+    );
     expect(imgs?.request.refs).toEqual(["img1", "img2"]);
 
     const tab = parseBrowserActionLine(browserActionLine({ action: "switch_tab", tabId: "t3" }));
@@ -39,7 +52,13 @@ describe("parseBrowserActionLine", () => {
 
   test("drops non-string refs entries and mistyped value/key/tabId", () => {
     const p = parseBrowserActionLine(
-      browserActionLine({ action: "fetch_images", refs: ["ok", 42, null, "ok2"], value: 1, key: {}, tabId: [] }),
+      browserActionLine({
+        action: "fetch_images",
+        refs: ["ok", 42, null, "ok2"],
+        value: 1,
+        key: {},
+        tabId: [],
+      }),
     );
     expect(p?.request.refs).toEqual(["ok", "ok2"]);
     expect(p?.request.value).toBeUndefined();
@@ -56,7 +75,9 @@ describe("parseBrowserActionLine", () => {
   });
 
   test("returns null for stream events / other methods / malformed json", () => {
-    expect(parseBrowserActionLine(JSON.stringify({ method: "agent/streamEvent", params: {} }))).toBeNull();
+    expect(
+      parseBrowserActionLine(JSON.stringify({ method: "agent/streamEvent", params: {} })),
+    ).toBeNull();
     expect(parseBrowserActionLine("not json")).toBeNull();
     expect(parseBrowserActionLine(JSON.stringify({ method: "agent/approvalRequest" }))).toBeNull();
   });
@@ -99,13 +120,28 @@ describe("parseCredentialActionLine", () => {
       requestId: "rq2",
       action: "injectCookie",
       credentialId: "xiaohongshu__account",
+      credentialScope: "full",
     });
+  });
+
+  test("parses credentialScope for project-scoped injection", () => {
+    const p = parseCredentialActionLine(
+      credActionLine({
+        action: "injectCookie",
+        credentialId: "xiaohongshu__account",
+        credentialScope: "project",
+      }),
+    );
+    expect(p?.credentialScope).toBe("project");
   });
 
   test("returns null for a browser action (not credential)", () => {
     const line = JSON.stringify({
       method: "agent/approvalRequest",
-      params: { requestId: "x", request: { toolName: "__browser_action__", args: { action: "click" } } },
+      params: {
+        requestId: "x",
+        request: { toolName: "__browser_action__", args: { action: "click" } },
+      },
     });
     expect(parseCredentialActionLine(line)).toBeNull();
   });
@@ -119,7 +155,13 @@ describe("parseCredentialActionLine", () => {
 
 describe("buildCredentialActionReply", () => {
   test("wraps the result json in an agent/approve resolving the requestId", () => {
-    const parsed = { sessionId: "s2", requestId: "rq2", action: "injectCookie", credentialId: "id" };
+    const parsed = {
+      sessionId: "s2",
+      requestId: "rq2",
+      action: "injectCookie",
+      credentialId: "id",
+      credentialScope: "full" as const,
+    };
     const reply = JSON.parse(buildCredentialActionReply(parsed, '{"ok":true,"count":3}'));
     expect(reply.method).toBe("agent/approve");
     expect(reply.params.requestId).toBe("rq2");

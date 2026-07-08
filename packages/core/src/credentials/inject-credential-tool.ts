@@ -60,9 +60,7 @@ export const injectCredentialToolDef: ToolDefinition = {
   },
 };
 
-type InjectResult =
-  | { kind: "injected"; count: number }
-  | { kind: "error"; error: string };
+type InjectResult = { kind: "injected"; count: number } | { kind: "error"; error: string };
 
 /** 内存会话 allow 集(每 Engine 一份,与 UseCredential 分开:注入是独立动作)。 */
 const injectSessionAllowByEngine = new Map<string, SessionCredentialAllow>();
@@ -116,26 +114,35 @@ export async function injectCredentialTool(
   const purpose = typeof args.purpose === "string" ? args.purpose : undefined;
 
   if (!id) {
-    return json({ kind: "error", error: "缺少 id。先用 UseCredential(无参)列出凭证,再用 cookie 凭证的 id 调本工具。" });
+    return json({
+      kind: "error",
+      error: "缺少 id。先用 UseCredential(无参)列出凭证,再用 cookie 凭证的 id 调本工具。",
+    });
   }
 
   if (!ctx?.injectCredentialToBrowser) {
     return json({
       kind: "error",
-      error: "当前环境无内置浏览器(headless/无面板),无法注入。请改用 UseCredential 取 cookie 走 HTTP 请求。",
+      error:
+        "当前环境无内置浏览器(headless/无面板),无法注入。请改用 UseCredential 取 cookie 走 HTTP 请求。",
     });
   }
 
   const cred = new CredentialStore(cwd).resolve(id, scope);
   if (!cred) {
-    return json({ kind: "error", error: `凭证不存在: "${id}"。调用 UseCredential(无参)可列出可用凭证。` });
+    return json({
+      kind: "error",
+      error: `凭证不存在: "${id}"。调用 UseCredential(无参)可列出可用凭证。`,
+    });
   }
   if (cred.type !== "cookie") {
     return json({ kind: "error", error: `凭证「${cred.label}」不是 cookie 类型,不能注入浏览器。` });
   }
 
   // 过门:复用三档,但用该凭证的 autoInjectByAI(不是 autoUseByAI)。
-  const ask: CredentialAskFn | undefined = ctx.askUser ? (q, opts) => ctx.askUser!(q, opts) : undefined;
+  const ask: CredentialAskFn | undefined = ctx.askUser
+    ? (q, opts) => ctx.askUser!(q, opts)
+    : undefined;
   const decision = await credentialUseGate(
     { id: cred.id, label: cred.label, purpose },
     {
@@ -154,7 +161,7 @@ export async function injectCredentialTool(
   }
 
   // 跨进程触发宿主注入。
-  const res = await ctx.injectCredentialToBrowser(cred.id);
+  const res = await ctx.injectCredentialToBrowser(cred.id, scope);
   if (!res.ok) {
     return json({ kind: "error", error: res.error ?? "注入浏览器失败(宿主未返回成功)。" });
   }

@@ -33,8 +33,9 @@ import {
   buildCredentialActionReply,
 } from "./browser-driver/intercept.js";
 import { handleBrowserAction } from "./browser-driver/automation-host.js";
-import { CredentialStore, SessionManager } from "@cjhyy/code-shell-core";
+import { SessionManager } from "@cjhyy/code-shell-core";
 import { restoreCookiesToBrowser, type ElectronCookieLike } from "./credentials-service.js";
+import { resolveCookieCredentialForBrowser } from "./credential-action.js";
 import { activeGuest, listGuests, focusGuest } from "./browser-driver/active-guest.js";
 import { loadBrowserAutomationPolicy } from "./browser-driver/load-policy.js";
 import {
@@ -54,14 +55,16 @@ import { reloadAutomations } from "./automation-service.js";
  */
 export function resolveNoRepoCwd(): string {
   const dir = join(homedir(), ".code-shell", "no-repo");
-  try { mkdirSync(dir, { recursive: true }); } catch { /* best-effort */ }
+  try {
+    mkdirSync(dir, { recursive: true });
+  } catch {
+    /* best-effort */
+  }
   return dir;
 }
 
 const require = createRequire(import.meta.url);
-const agentEntry = require.resolve(
-  "@cjhyy/code-shell-core/bin/agent-server-stdio",
-);
+const agentEntry = require.resolve("@cjhyy/code-shell-core/bin/agent-server-stdio");
 
 const RESTART_WINDOW_MS = 60_000;
 const RESTART_LIMIT = 3;
@@ -184,7 +187,9 @@ export class AgentBridge {
         const m = JSON.parse(line) as { method?: string; id?: number };
         if (m.method) summary = { method: m.method, raw: previewLine(line) };
         else if (m.id !== undefined) summary = { responseId: m.id, raw: previewLine(line) };
-      } catch { /* keep raw */ }
+      } catch {
+        /* keep raw */
+      }
       // Mirror stream events into the per-session snapshot so a remounted
       // renderer can replay what it missed. Non-streamEvent lines yield null.
       const append = parseSnapshotAppend(line);
@@ -214,7 +219,9 @@ export class AgentBridge {
       dlog("bridge", "child.error", { error: String(err) });
       try {
         rl.close();
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       this.child = null;
       this.outbox = [];
       this.snapshots.onWorkerExit();
@@ -280,7 +287,11 @@ export class AgentBridge {
       // a fresh spawn. Other messages (agent/approve, agent/cancel) only
       // make sense if the worker is already alive.
       let parsed: ParsedRpc = {};
-      try { parsed = JSON.parse(line); } catch { /* fall through */ }
+      try {
+        parsed = JSON.parse(line);
+      } catch {
+        /* fall through */
+      }
 
       // Line forwarded to the worker. Only rewritten when we inject fields
       // (agent/run trust) — everything else is passed through verbatim so we
@@ -345,9 +356,12 @@ export class AgentBridge {
       this.child.stdin.write(outLine + "\n");
     });
 
-    ipcMain.on("desktop:log", (_event, payload: { msg: string; data?: Record<string, unknown> }) => {
-      dlog("renderer", payload.msg, payload.data);
-    });
+    ipcMain.on(
+      "desktop:log",
+      (_event, payload: { msg: string; data?: Record<string, unknown> }) => {
+        dlog("renderer", payload.msg, payload.data);
+      },
+    );
   }
 
   private safeSend(channel: string, payload: unknown): void {
@@ -389,7 +403,10 @@ export class AgentBridge {
           switchTab: focusGuest,
         });
       } catch (e) {
-        resultJson = JSON.stringify({ ok: false, detail: e instanceof Error ? e.message : String(e) });
+        resultJson = JSON.stringify({
+          ok: false,
+          detail: e instanceof Error ? e.message : String(e),
+        });
       }
       const reply = buildBrowserActionReply(parsed, resultJson);
       if (this.child?.stdin?.writable) {
@@ -411,7 +428,11 @@ export class AgentBridge {
    *  (consume, don't forward to renderer) when handled. */
   private maybeHandleCronChanged(line: string): boolean {
     let parsed: { method?: string };
-    try { parsed = JSON.parse(line); } catch { return false; }
+    try {
+      parsed = JSON.parse(line);
+    } catch {
+      return false;
+    }
     if (parsed.method !== "agent/cronChanged") return false;
     try {
       reloadAutomations();
@@ -436,38 +457,34 @@ export class AgentBridge {
           (parsed.sessionId ? this.sessionCwd.get(parsed.sessionId) : undefined) ??
           this.lastRunContext.cwd ??
           undefined;
-        const cred = new CredentialStore(sessionCwd).resolve(parsed.credentialId);
-        if (!cred || cred.type !== "cookie") {
-          resultJson = JSON.stringify({ ok: false, error: `无 cookie 凭证: "${parsed.credentialId}"` });
+        const resolved = resolveCookieCredentialForBrowser(
+          sessionCwd,
+          parsed.credentialId,
+          parsed.credentialScope,
+        );
+        if (!resolved.ok) {
+          resultJson = JSON.stringify({ ok: false, error: resolved.error });
         } else {
-          let jar: ElectronCookieLike[] = [];
-          try {
-            const arr = JSON.parse(cred.secret ?? "[]");
-            if (Array.isArray(arr)) jar = arr as ElectronCookieLike[];
-          } catch {
-            jar = [];
+          // Inject into the session of the guest the AI will actually drive
+          // (per-session partition), not the shared default. Electron's Session
+          // has no partition string, so pass the live session object directly.
+          // Fall back to the shared partition only when no live guest exists.
+          const targetSession = activeGuest()?.session ?? undefined;
+          const { count } = await restoreCookiesToBrowser(
+            resolved.jar as ElectronCookieLike[],
+            resolved.switchMode,
+            targetSession,
+          );
+          for (const w of BrowserWindow.getAllWindows()) {
+            if (!w.isDestroyed()) w.webContents.send("browser:reload");
           }
-          if (jar.length === 0) {
-            resultJson = JSON.stringify({ ok: false, error: `凭证「${cred.label}」cookie 为空或损坏` });
-          } else {
-            // Inject into the session of the guest the AI will actually drive
-            // (per-session partition), not the shared default. Electron's Session
-            // has no partition string, so pass the live session object directly.
-            // Fall back to the shared partition only when no live guest exists.
-            const targetSession = activeGuest()?.session ?? undefined;
-            const { count } = await restoreCookiesToBrowser(
-              jar,
-              cred.meta?.switchMode === "clear" ? "clear" : "merge",
-              targetSession,
-            );
-            for (const w of BrowserWindow.getAllWindows()) {
-              if (!w.isDestroyed()) w.webContents.send("browser:reload");
-            }
-            resultJson = JSON.stringify({ ok: true, count });
-          }
+          resultJson = JSON.stringify({ ok: true, count });
         }
       } catch (e) {
-        resultJson = JSON.stringify({ ok: false, error: e instanceof Error ? e.message : String(e) });
+        resultJson = JSON.stringify({
+          ok: false,
+          error: e instanceof Error ? e.message : String(e),
+        });
       }
       const reply = buildCredentialActionReply(parsed, resultJson);
       if (this.child?.stdin?.writable) {
@@ -536,10 +553,7 @@ export class AgentBridge {
         cwd: parsed.params?.cwd,
         sessionId: parsed.params?.sessionId,
       };
-      if (
-        typeof parsed.params?.sessionId === "string" &&
-        typeof parsed.params?.cwd === "string"
-      ) {
+      if (typeof parsed.params?.sessionId === "string" && typeof parsed.params?.cwd === "string") {
         this.sessionCwd.set(parsed.params.sessionId, parsed.params.cwd);
       }
     }
@@ -596,9 +610,14 @@ export class AgentBridge {
    *  identically for automation sessions. */
   ingestExternalEvent(sessionId: string, event: unknown): void {
     this.snapshots.append(sessionId, event);
-    this.safeSend("agent:msg", JSON.stringify({
-      jsonrpc: "2.0", method: "agent/streamEvent", params: { sessionId, event },
-    }));
+    this.safeSend(
+      "agent:msg",
+      JSON.stringify({
+        jsonrpc: "2.0",
+        method: "agent/streamEvent",
+        params: { sessionId, event },
+      }),
+    );
   }
 
   /**
@@ -607,10 +626,21 @@ export class AgentBridge {
    * Separate JSON-RPC method from `agent/streamEvent` so the shared core
    * StreamEvent shape stays untouched and the interactive path is unaffected.
    */
-  broadcastAutomationSession(meta: { sessionId: string; cwd: string; title: string; prompt: string; cronJobId: string }): void {
-    this.safeSend("agent:msg", JSON.stringify({
-      jsonrpc: "2.0", method: "agent/automationSession", params: meta,
-    }));
+  broadcastAutomationSession(meta: {
+    sessionId: string;
+    cwd: string;
+    title: string;
+    prompt: string;
+    cronJobId: string;
+  }): void {
+    this.safeSend(
+      "agent:msg",
+      JSON.stringify({
+        jsonrpc: "2.0",
+        method: "agent/automationSession",
+        params: meta,
+      }),
+    );
   }
 
   kill(): void {
