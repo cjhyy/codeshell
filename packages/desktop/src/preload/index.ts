@@ -73,7 +73,13 @@ export type WorktreeCleanupSkippedEvent = {
   skipped: Array<{
     path: string;
     branch: string;
-    reason: "dirty" | "unmerged_commits" | "base_unknown" | "inspect_failed" | "remove_failed";
+    reason:
+      | "dirty"
+      | "unmerged_commits"
+      | "base_unknown"
+      | "inspect_failed"
+      | "remove_failed"
+      | "branch_delete_failed";
     detail?: string;
   }>;
 };

@@ -165,4 +165,33 @@ describe("cleanupStaleWorktrees", () => {
     expect(existsSync(lockedPath)).toBe(true);
     expect(git(repo, ["branch", "--list", "agent/locked"])).toContain("agent/locked");
   });
+
+  test("removes a clean worktree but keeps its branch when branch -d fails", async () => {
+    const worktreesDir = resolve(repo, "..", ".worktrees");
+    const branchKeptPath = join(worktreesDir, "branch-kept");
+
+    git(repo, ["branch", "old-base"]);
+    writeFileSync(join(repo, "f.txt"), "updated\n");
+    git(repo, ["commit", "-am", "main update"]);
+    git(repo, ["worktree", "add", "-b", "agent/branch-kept", branchKeptPath]);
+    git(branchKeptPath, ["branch", "--set-upstream-to=old-base"]);
+    stale([branchKeptPath]);
+
+    const originalWarn = console.warn;
+    console.warn = () => undefined;
+    let result!: Awaited<ReturnType<typeof cleanupStaleWorktrees>>;
+    try {
+      result = await cleanupStaleWorktrees(repo, 1, "agent/");
+    } finally {
+      console.warn = originalWarn;
+    }
+
+    expect(result.removed.map((path) => basename(path))).toEqual(["branch-kept"]);
+    expect(result.skipped.map((item) => [basename(item.path), item.reason])).toEqual([
+      ["branch-kept", "branch_delete_failed"],
+    ]);
+    expect(result.skipped[0]?.detail).toContain("not fully merged");
+    expect(existsSync(branchKeptPath)).toBe(false);
+    expect(git(repo, ["branch", "--list", "agent/branch-kept"])).toContain("agent/branch-kept");
+  });
 });

@@ -63,7 +63,8 @@ export type StaleWorktreeSkipReason =
   | "unmerged_commits"
   | "base_unknown"
   | "inspect_failed"
-  | "remove_failed";
+  | "remove_failed"
+  | "branch_delete_failed";
 
 export interface StaleWorktreeCleanupSkipped {
   path: string;
@@ -480,7 +481,23 @@ export async function cleanupStaleWorktrees(
     }
 
     if (!rootBranch || branch !== rootBranch) {
-      await gitRun(root, ["branch", "-d", branch]).catch(() => {});
+      try {
+        await gitRun(root, ["branch", "-d", branch]);
+      } catch (error) {
+        const detail = errorDetail(error);
+        console.warn("[worktree-cleanup] branch delete failed", {
+          root,
+          path: wtPath,
+          branch,
+          detail,
+        });
+        result.skipped.push({
+          path: wtPath,
+          branch,
+          reason: "branch_delete_failed",
+          detail,
+        });
+      }
     }
   }
 
