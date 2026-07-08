@@ -136,6 +136,7 @@ export const mobile = {
         hideReasoning: "隐藏思考",
         subagent: "子代理",
         loading: "正在加载…",
+        generating: "正在生成回复",
         emptyHint: "发个任务试试,或在侧栏打开一个 Claude Code 会话。",
       },
       tool: {
@@ -284,6 +285,7 @@ export const mobile = {
         hideReasoning: "Hide reasoning",
         subagent: "Subagent",
         loading: "Loading…",
+        generating: "Generating response",
         emptyHint: "Send a task, or open a Claude Code session from the sidebar.",
       },
       tool: {

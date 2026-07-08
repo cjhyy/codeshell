@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Bot, Brain, UserRound } from "lucide-react";
+import { Bot, Brain, Loader2, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
 import type { ChatItem, ChatState } from "@/lib/streamReducer";
@@ -67,6 +67,15 @@ function AssistantBubble({ item }: { item: Extract<ChatItem, { kind: "assistant"
           </div>
         ) : (
           <div className="whitespace-pre-wrap break-words text-[15px] leading-6 text-foreground">
+            {!item.done && (
+              <span
+                role="status"
+                aria-label={t("mobile.stream.generating")}
+                className="mr-1.5 inline-flex align-[-0.125em] text-status-running"
+              >
+                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+              </span>
+            )}
             {item.text}
             {!item.done && <span className="ml-0.5 inline-block animate-pulse">▋</span>}
           </div>

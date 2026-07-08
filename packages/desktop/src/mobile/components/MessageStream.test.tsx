@@ -46,7 +46,20 @@ test("流式 assistant 显示光标", () => {
     />,
   );
   expect(html).toContain("Hel");
+  expect(html).toContain("正在生成回复");
+  expect(html).toContain("animate-spin");
   expect(html).toContain("▋");
+});
+
+test("完成的 assistant 不显示生成中 spinner", () => {
+  const html = renderToStaticMarkup(
+    <MessageStream
+      chat={withItems([{ kind: "assistant", id: "a1", text: "Done", reasoning: "", done: true }])}
+    />,
+  );
+  expect(html).toContain("Done");
+  expect(html).not.toContain("正在生成回复");
+  expect(html).not.toContain("animate-spin");
 });
 
 // Completed assistant prose renders as Markdown (lists/code/bold), not raw text.
