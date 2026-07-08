@@ -26,12 +26,7 @@ import {
   projectPlugins,
   projectAgents,
 } from "./project.js";
-import {
-  applyOverride,
-  bucketForKind,
-  overrideTokenForId,
-  overrideFor,
-} from "./overlay.js";
+import { applyOverride, bucketForKind, overrideTokenForId, overrideFor } from "./overlay.js";
 import type { CapabilityOverrides } from "../settings/schema.js";
 
 export interface CapabilityServiceDeps {
@@ -51,9 +46,11 @@ export interface CapabilityServiceDeps {
   readInstalledPlugins: () => InstalledPluginsV2;
   resolveBuiltinToolNames: (o?: {
     preset?: string;
+    host?: "desktop";
     enabledBuiltinTools?: string[];
     disabledBuiltinTools?: string[];
   }) => string[];
+  builtinToolHost?: "desktop";
 }
 
 export class CapabilityService {
@@ -70,13 +67,15 @@ export class CapabilityService {
     const agent = (s.agent ?? {}) as Record<string, any>;
     const tools = this.deps.registry.listToolsDetailed();
     const preset: string | undefined = agent.preset;
+    const host = this.deps.builtinToolHost;
 
     const base: CapabilityDescriptor[] = [
       ...projectBuiltin({
         tools: tools.filter((t) => t.source === "builtin"),
-        presetDefaults: this.deps.resolveBuiltinToolNames({ preset }),
+        presetDefaults: this.deps.resolveBuiltinToolNames({ preset, host }),
         effective: this.deps.resolveBuiltinToolNames({
           preset,
+          host,
           enabledBuiltinTools: agent.enabledBuiltinTools ?? [],
           disabledBuiltinTools: agent.disabledBuiltinTools ?? [],
         }),

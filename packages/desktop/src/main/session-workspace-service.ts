@@ -24,10 +24,54 @@ export interface SessionWorkspaceList {
   worktrees: WorktreeInfo[];
 }
 
+export interface ReleasedSessionWorkspace {
+  sessionId: string;
+  ok: true;
+  status: "released";
+  workspace: SessionWorkspace;
+}
+
+export interface MissingSessionWorkspaceRelease {
+  sessionId: string;
+  ok: true;
+  status: "missing";
+  reason: string;
+}
+
+export interface FailedSessionWorkspaceRelease {
+  sessionId: string;
+  ok: false;
+  status: "error";
+  error: string;
+}
+
+export type SessionWorkspaceReleaseResult =
+  | ReleasedSessionWorkspace
+  | MissingSessionWorkspaceRelease
+  | FailedSessionWorkspaceRelease;
+
+export interface SessionWorkspaceReleaseOptions {
+  /**
+   * Reset the live worker's in-memory session workspace before disk persistence.
+   * Main passes AgentBridge.releaseWorkspace here for active-worker sessions.
+   */
+  releaseLiveWorkspace?: (sessionId: string) => Promise<void>;
+}
+
 let sessionManagerSingleton: SessionManager | undefined;
 let sessionManagerHome: string | undefined;
+let sessionManagerForTests: SessionManager | undefined;
+
+export function __setSessionWorkspaceServiceSessionManagerForTests(
+  sm: SessionManager | undefined,
+): void {
+  sessionManagerForTests = sm;
+  sessionManagerSingleton = undefined;
+  sessionManagerHome = undefined;
+}
 
 function sessions(): SessionManager {
+  if (sessionManagerForTests) return sessionManagerForTests;
   const home = process.env.CODE_SHELL_HOME;
   if (!sessionManagerSingleton || sessionManagerHome !== home) {
     sessionManagerSingleton = new SessionManager();
@@ -97,6 +141,23 @@ function requireKnownSession(sm: SessionManager, sessionId: string): void {
   if (sm.readCwd(sessionId) === undefined) {
     throw new Error("session exists but has no valid state — cannot perform workspace operations");
   }
+}
+
+function missingReleaseReason(sm: SessionManager, sessionId: string): string | undefined {
+  if (!sm.exists(sessionId)) return `unknown session: ${sessionId}`;
+  if (sm.readCwd(sessionId) === undefined) {
+    return "session exists but has no valid state — workspace release is a no-op";
+  }
+  return undefined;
+}
+
+function releaseError(sessionId: string, err: unknown): FailedSessionWorkspaceRelease {
+  return {
+    sessionId,
+    ok: false,
+    status: "error",
+    error: err instanceof Error ? err.message : String(err),
+  };
 }
 
 export async function getSessionWorkspaceForUi(
@@ -188,6 +249,50 @@ export async function switchSessionWorkspaceForUi(
   sm.setSessionWorkspace(sessionId, next);
   sm.recordWorkspaceHandoff(sessionId, from, next);
   return await listSessionWorktreesForUi(sessionId, mainRoot);
+}
+
+export async function releaseSessionWorkspaceForUi(
+  sessionId: string,
+  opts: SessionWorkspaceReleaseOptions = {},
+): Promise<SessionWorkspaceReleaseResult> {
+  const sm = sessions();
+  if (opts.releaseLiveWorkspace) {
+    try {
+      await opts.releaseLiveWorkspace(sessionId);
+    } catch (err) {
+      return releaseError(sessionId, err);
+    }
+  }
+  const missing = missingReleaseReason(sm, sessionId);
+  if (missing) {
+    return { sessionId, ok: true, status: "missing", reason: missing };
+  }
+  try {
+    const sessionCwd = sm.readCwd(sessionId);
+    const mainRoot = await mainRootFor(sm, sessionId, sessionCwd ?? process.cwd());
+    const from = currentWorkspaceFor(sm, sessionId, mainRoot);
+    const next: SessionWorkspace = { root: mainRoot, kind: "main" };
+    if (from.kind === "main" && resolve(from.root) === resolve(mainRoot)) {
+      return { sessionId, ok: true, status: "released", workspace: next };
+    }
+    sm.setSessionWorkspace(sessionId, next);
+    sm.recordWorkspaceHandoff(sessionId, from, next);
+    return { sessionId, ok: true, status: "released", workspace: next };
+  } catch (err) {
+    return releaseError(sessionId, err);
+  }
+}
+
+export async function releaseManySessionWorkspacesForUi(
+  sessionIds: string[],
+  opts: SessionWorkspaceReleaseOptions = {},
+): Promise<SessionWorkspaceReleaseResult[]> {
+  const unique = [...new Set(sessionIds.filter((id) => typeof id === "string" && id.length > 0))];
+  const released: SessionWorkspaceReleaseResult[] = [];
+  for (const sessionId of unique) {
+    released.push(await releaseSessionWorkspaceForUi(sessionId, opts));
+  }
+  return released;
 }
 
 export async function cleanupSessionWorktreeForUi(

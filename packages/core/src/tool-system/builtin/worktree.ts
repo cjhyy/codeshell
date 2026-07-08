@@ -20,6 +20,59 @@ import {
 } from "../../git/worktree.js";
 import type { SessionManager } from "../../session/session-manager.js";
 
+export const switchSessionWorkspaceToolDef: ToolDefinition = {
+  name: "SwitchSessionWorkspace",
+  description:
+    "Switch this current conversation session into or out of a workspace through the host UI path. " +
+    "Use this when you need isolated or parallel work in a git worktree, when you need to move " +
+    "this conversation to an existing worktree path/branch, or when you are done and should return " +
+    "this current conversation to main. This is the correct way to move THIS conversation's session " +
+    "into or out of a worktree on desktop.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      target: {
+        type: "string",
+        description:
+          "Workspace target: 'main', a new slug, an existing worktree path, or an existing branch name.",
+      },
+    },
+    required: ["target"],
+  },
+};
+
+export async function switchSessionWorkspaceTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
+  const target = stringArg(args.target);
+  if (!target) return "Error: target is required";
+  const bridge = ctx?.workspace;
+  if (!bridge) {
+    return (
+      "SwitchSessionWorkspace is not available in this host. " +
+      "Use the host's supported workspace controls instead."
+    );
+  }
+  try {
+    const workspace = await bridge.switch(target);
+    ctx?.setSessionWorkspace?.(workspace);
+    const details =
+      workspace.kind === "worktree" && workspace.worktree
+        ? `\n  Branch: ${workspace.worktree.branch}`
+        : "";
+    return (
+      `Switched session workspace:\n` +
+      `  Path: ${workspace.root}` +
+      details +
+      `\n\n` +
+      nextTurnNotice(workspace.root, ctx?.cwd ?? workspace.root)
+    );
+  } catch (err) {
+    return `Error switching workspace: ${(err as Error).message}`;
+  }
+}
+
 export const enterWorktreeToolDef: ToolDefinition = {
   name: "EnterWorktree",
   description:

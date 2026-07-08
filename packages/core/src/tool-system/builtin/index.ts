@@ -6,9 +6,17 @@ import type { RegisteredTool } from "../../types.js";
 import type { ToolVisibilityContext } from "../context.js";
 import { readToolDef, readTool } from "./read.js";
 import { writeToolDef, writeTool } from "./write.js";
-import { generateImageToolDef, generateImageTool, isGenerateImageAvailable } from "./generate-image.js";
+import {
+  generateImageToolDef,
+  generateImageTool,
+  isGenerateImageAvailable,
+} from "./generate-image.js";
 import { editModelCatalogToolDef, editModelCatalogTool } from "./edit-model-catalog.js";
-import { generateVideoToolDef, generateVideoTool, isGenerateVideoAvailable } from "./generate-video.js";
+import {
+  generateVideoToolDef,
+  generateVideoTool,
+  isGenerateVideoAvailable,
+} from "./generate-video.js";
 import { viewImageToolDef, viewImageTool } from "./view-image.js";
 import { editToolDef, editTool } from "./edit.js";
 import { applyPatchToolDef, applyPatchTool } from "./apply-patch/index.js";
@@ -19,46 +27,92 @@ import { webSearchToolDef, webSearchTool, isWebSearchAvailable } from "./web-sea
 import { webFetchToolDef, webFetchTool } from "./web-fetch.js";
 import { askUserToolDef, askUserTool } from "./ask-user.js";
 import {
-  agentToolDef, agentTool,
-  agentStatusToolDef, agentStatusTool,
-  agentCancelToolDef, agentCancelTool,
-  agentSendInputToolDef, agentSendInputTool,
+  agentToolDef,
+  agentTool,
+  agentStatusToolDef,
+  agentStatusTool,
+  agentCancelToolDef,
+  agentCancelTool,
+  agentSendInputToolDef,
+  agentSendInputTool,
 } from "./agent.js";
-import { enterPlanModeToolDef, enterPlanModeTool, exitPlanModeToolDef, exitPlanModeTool } from "./plan.js";
+import {
+  enterPlanModeToolDef,
+  enterPlanModeTool,
+  exitPlanModeToolDef,
+  exitPlanModeTool,
+} from "./plan.js";
 import { toolSearchToolDef, toolSearchTool } from "./tool-search.js";
 import { todoWriteToolDef, todoWriteTool } from "./task.js";
-import { enterWorktreeToolDef, enterWorktreeTool, exitWorktreeToolDef, exitWorktreeTool } from "./worktree.js";
+import {
+  enterWorktreeToolDef,
+  enterWorktreeTool,
+  exitWorktreeToolDef,
+  exitWorktreeTool,
+  switchSessionWorkspaceToolDef,
+  switchSessionWorkspaceTool,
+} from "./worktree.js";
 import { sleepToolDef, sleepTool } from "./sleep.js";
 import { configToolDef, configTool } from "./config.js";
 import { notebookEditToolDef, notebookEditTool } from "./notebook-edit.js";
 import { lspToolDef, lspTool } from "./lsp.js";
-import { cronCreateToolDef, cronCreateTool, cronDeleteToolDef, cronDeleteTool, cronListToolDef, cronListTool } from "./cron.js";
-import { driveClaudeCodeToolDef, driveClaudeCodeTool, driveAgentToolDef, driveAgentTool, DRIVE_AGENT_TOOL_TIMEOUT_MS } from "./drive-claude-code.js";
+import {
+  cronCreateToolDef,
+  cronCreateTool,
+  cronDeleteToolDef,
+  cronDeleteTool,
+  cronListToolDef,
+  cronListTool,
+} from "./cron.js";
+import {
+  driveClaudeCodeToolDef,
+  driveClaudeCodeTool,
+  driveAgentToolDef,
+  driveAgentTool,
+  DRIVE_AGENT_TOOL_TIMEOUT_MS,
+} from "./drive-claude-code.js";
 import { checkQuotaToolDef, checkQuotaTool } from "./check-quota.js";
 import { skillToolDef, skillTool } from "./skill.js";
-import { mcpToolDef, mcpToolExecute, listMcpResourcesToolDef, listMcpResourcesTool, readMcpResourceToolDef, readMcpResourceTool } from "./mcp-tools.js";
+import {
+  mcpToolDef,
+  mcpToolExecute,
+  listMcpResourcesToolDef,
+  listMcpResourcesTool,
+  readMcpResourceToolDef,
+  readMcpResourceTool,
+} from "./mcp-tools.js";
 import { replToolDef, replTool } from "./repl.js";
 import { briefToolDef, briefTool } from "./brief.js";
 import { powershellToolDef, powershellTool } from "./powershell.js";
 import { arenaToolDef, arenaTool } from "./arena.js";
 import {
-  memoryListToolDef, memoryListTool,
-  memoryReadToolDef, memoryReadTool,
-  memorySaveToolDef, memorySaveTool,
-  memoryDeleteToolDef, memoryDeleteTool,
+  memoryListToolDef,
+  memoryListTool,
+  memoryReadToolDef,
+  memoryReadTool,
+  memorySaveToolDef,
+  memorySaveTool,
+  memoryDeleteToolDef,
+  memoryDeleteTool,
 } from "./memory.js";
 import { completeGoalToolDef, completeGoalTool } from "./complete-goal.js";
 import { cancelGoalToolDef, cancelGoalTool } from "./cancel-goal.js";
 import { addMarketplaceToolDef, addMarketplaceTool } from "./add-marketplace.js";
 import {
-  bashOutputToolDef, bashOutputTool,
-  killShellToolDef, killShellTool,
-  listShellsToolDef, listShellsTool,
+  bashOutputToolDef,
+  bashOutputTool,
+  killShellToolDef,
+  killShellTool,
+  listShellsToolDef,
+  listShellsTool,
 } from "./background-shell-tools.js";
 import {
-  browserObserveToolDef, browserObserveTool,
-  browserActToolDef, browserActTool,
-  browserNavigateToolDef, browserNavigateTool,
+  browserObserveToolDef,
+  browserObserveTool,
+  browserActToolDef,
+  browserActTool,
+  browserNavigateToolDef,
+  browserNavigateTool,
 } from "./browser-tools.js";
 import { useCredentialToolDef, useCredentialTool } from "../../credentials/use-credential-tool.js";
 import {
@@ -403,6 +457,16 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       isConcurrencySafe: false,
     },
     execute: exitWorktreeTool,
+  },
+  {
+    definition: {
+      ...switchSessionWorkspaceToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: switchSessionWorkspaceTool,
   },
   // ─── Phase 5: Utility Tools ────────────────────────────────────
   {

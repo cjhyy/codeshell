@@ -289,6 +289,11 @@ export interface SessionWorkspaceList {
   worktrees: SessionWorkspaceWorktreeInfo[];
 }
 
+export type WorkspaceReleaseResult =
+  | { sessionId: string; ok: true; status: "released"; workspace: SessionWorkspace }
+  | { sessionId: string; ok: true; status: "missing"; reason: string }
+  | { sessionId: string; ok: false; status: "error"; error: string };
+
 export interface CreatedWorktree {
   path: string;
   name: string;
@@ -570,6 +575,11 @@ export interface CodeshellApi {
     cwd: string,
     target: string,
   ): Promise<SessionWorkspaceList>;
+  releaseSessionWorkspace(sessionId: string): Promise<WorkspaceReleaseResult>;
+  releaseManySessionWorkspaces(sessionIds: string[]): Promise<WorkspaceReleaseResult[]>;
+  onWorkspaceChanged(
+    cb: (event: { sessionId: string; workspace?: SessionWorkspace; mainRoot?: string }) => void,
+  ): Unsubscribe;
   cleanupSessionWorktree(
     sessionId: string,
     cwd: string,

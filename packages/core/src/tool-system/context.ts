@@ -353,6 +353,13 @@ export interface ToolContext {
    */
   browser?: import("./browser-bridge.js").BrowserBridge;
   /**
+   * Host-backed workspace switch bridge. Desktop wires this to Electron main so
+   * the model's SwitchSessionWorkspace tool goes through the same path as the UI
+   * switcher. Undefined outside hosts that can switch this conversation's
+   * session workspace.
+   */
+  workspace?: import("./workspace-bridge.js").WorkspaceBridge;
+  /**
    * Inject a stored cookie credential into the built-in browser (restore its
    * login state so the AI can drive the page as that account). The host
    * (desktop main) implements it on top of `restoreCookiesToBrowser`. Undefined

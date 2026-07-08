@@ -186,7 +186,8 @@ export const BUILTIN_AGENT_PRESETS: Record<AgentPresetName, AgentPreset> = {
   general: {
     name: "general",
     label: "General Orchestrator",
-    description: "Domain-agnostic orchestration for research, operations, automation, and long-running tasks.",
+    description:
+      "Domain-agnostic orchestration for research, operations, automation, and long-running tasks.",
     promptSections: ["base", "orchestration", "browser", "tone"],
     injectGitStatus: false,
     builtinTools: [...GENERAL_BUILTIN_TOOLS],
@@ -319,6 +320,7 @@ export function buildPresetSystemPrompt(
 
 export function resolveBuiltinToolNames(options?: {
   preset?: string;
+  host?: "desktop";
   enabledBuiltinTools?: string[];
   disabledBuiltinTools?: string[];
 }): string[] {
@@ -327,6 +329,12 @@ export function resolveBuiltinToolNames(options?: {
 
   for (const name of options?.enabledBuiltinTools ?? []) {
     names.add(name);
+  }
+
+  if (options?.host === "desktop") {
+    names.delete("EnterWorktree");
+    names.delete("ExitWorktree");
+    names.add("SwitchSessionWorkspace");
   }
 
   for (const name of options?.disabledBuiltinTools ?? []) {

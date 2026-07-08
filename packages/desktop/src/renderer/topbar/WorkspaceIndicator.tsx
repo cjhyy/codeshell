@@ -264,6 +264,16 @@ export function WorkspaceIndicator({
     void refreshCurrent();
   }, [refreshCurrent, sessionBusy]);
 
+  useEffect(() => {
+    const subscribe = window.codeshell.onWorkspaceChanged;
+    if (typeof subscribe !== "function" || !sessionId) return;
+    return subscribe((event) => {
+      if (event.sessionId !== sessionId) return;
+      void refreshCurrent();
+      if (open) void refreshList();
+    });
+  }, [open, refreshCurrent, refreshList, sessionId]);
+
   const onOpenChange = (next: boolean) => {
     setOpen(next);
     if (next) void refreshList();

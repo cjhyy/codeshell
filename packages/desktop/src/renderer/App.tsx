@@ -16,7 +16,6 @@ import {
   INITIAL_STATE,
   type MessagesReducerState,
   type ApprovalState,
-  type ToolMessage,
   type AskUserOption,
   type TaskListMessage,
 } from "./types";
@@ -93,6 +92,10 @@ import { chooseHydrateBase } from "./automation/hydrateOrder";
 import { isCaseInsensitivePlatform } from "./automation/pathMatch";
 import { placeLiveAutomationSession } from "./automation/liveSession";
 import { planDiskRebuild, type DiskSessionMeta } from "./automation/rebuildFromDisk";
+import {
+  releaseWorkspaceForArchive,
+  releaseWorkspacesForArchiveMany,
+} from "./workspaceArchiveRelease";
 import {
   enqueueQueuedInput,
   dequeueQueuedInput,
@@ -958,7 +961,7 @@ function App() {
     window.codeshell.log("repo.added", { id: next.id, path: next.path });
   };
 
-  const handleRemoveRepo = (id: string): void => {
+  const handleRemoveRepo = async (id: string): Promise<void> => {
     const repo = repos.find((r) => r.id === id);
     if (repo) {
       markRepoPathRemoved(repo.path);
@@ -970,6 +973,10 @@ function App() {
     // 设置→高级→已归档 under their original project name. The project row still
     // leaves the sidebar (the sidebar iterates `repos`), but the conversations
     // survive instead of silently vanishing from localStorage.
+    const idx = sessionIndices[repoKeyOf(id)] ?? loadSessionIndex(id);
+    if (repo) {
+      await releaseWorkspacesForArchiveMany(idx.sessions, window.codeshell);
+    }
     const archived = repo ? archiveAllSessions(id, repoLabel(repo)) : undefined;
     setRepos((prev) => prev.filter((r) => r.id !== id));
     if (activeRepoId === id) setActiveRepoId(null);
@@ -1004,14 +1011,17 @@ function App() {
     setRepos((prev) => prev.map((r) => (r.id === id ? { ...r, displayName: name } : r)));
   };
 
-  const handleArchiveAllSessions = (id: string): void => {
+  const handleArchiveAllSessions = async (id: string): Promise<void> => {
+    const idx = sessionIndices[id];
+    if (!idx) return;
+    await releaseWorkspacesForArchiveMany(idx.sessions, window.codeshell);
     setSessionIndices((prev) => {
-      const idx = prev[id];
-      if (!idx) return prev;
+      const nextIdx = prev[id];
+      if (!nextIdx) return prev;
       // Mutate every session via archiveSession() so the localStorage
       // index stays consistent with state.
-      let working = idx;
-      for (const s of idx.sessions) {
+      let working = nextIdx;
+      for (const s of nextIdx.sessions) {
         if (!s.archived) working = archiveSession(id, s.id, true);
       }
       return { ...prev, [id]: working };
@@ -1213,11 +1223,13 @@ function App() {
     setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
   };
 
-  const handleArchiveSession = (
+  const handleArchiveSession = async (
     repoId: string | null,
     sessionId: string,
     archived: boolean,
-  ): void => {
+  ): Promise<void> => {
+    const summary = sessionIndices[repoKeyOf(repoId)]?.sessions.find((s) => s.id === sessionId);
+    await releaseWorkspaceForArchive(summary, archived, window.codeshell);
     const next = archiveSession(repoId, sessionId, archived);
     setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
   };
@@ -1252,34 +1264,28 @@ function App() {
     );
     void (async () => {
       if (plan.cancelCronJobId) {
-        await window.codeshell
-          .cancelAutomationRun(plan.cancelCronJobId)
-          .catch((e) =>
-            window.codeshell.log("session.delete.cancel.failed", {
-              cronJobId: plan.cancelCronJobId,
-              error: String(e),
-            }),
-          );
-      }
-      await window.codeshell
-        .deleteSession(plan.deleteEngineId)
-        .catch((e) =>
-          window.codeshell.log("session.delete.session.failed", {
-            engineId: plan.deleteEngineId,
+        await window.codeshell.cancelAutomationRun(plan.cancelCronJobId).catch((e) =>
+          window.codeshell.log("session.delete.cancel.failed", {
+            cronJobId: plan.cancelCronJobId,
             error: String(e),
           }),
         );
+      }
+      await window.codeshell.deleteSession(plan.deleteEngineId).catch((e) =>
+        window.codeshell.log("session.delete.session.failed", {
+          engineId: plan.deleteEngineId,
+          error: String(e),
+        }),
+      );
       // deleteRun is a no-op for current jobs (which write sessions/, not
       // runs/), but still clears legacy RunManager-era run dirs.
       if (plan.deleteRunId) {
-        await window.codeshell
-          .deleteRun(plan.deleteRunId)
-          .catch((e) =>
-            window.codeshell.log("session.delete.run.failed", {
-              runId: plan.deleteRunId,
-              error: String(e),
-            }),
-          );
+        await window.codeshell.deleteRun(plan.deleteRunId).catch((e) =>
+          window.codeshell.log("session.delete.run.failed", {
+            runId: plan.deleteRunId,
+            error: String(e),
+          }),
+        );
       }
     })();
   };
@@ -2772,7 +2778,7 @@ function App() {
       // fire while typing, or they'd swallow keystrokes. The app-global
       // ⌘K/⌘P/⌘F palette/search keys deliberately still work from inputs.
       const t = e.target as HTMLElement | null;
-      const typing =
+      const _typing =
         !!t &&
         (t.tagName === "INPUT" ||
           t.tagName === "TEXTAREA" ||

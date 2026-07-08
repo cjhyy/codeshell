@@ -91,10 +91,7 @@ import {
   type FeatureFlagName,
   type FeatureFlagOverrides,
 } from "../settings/feature-flags.js";
-import {
-  effectiveDisabledList,
-  effectiveBuiltinLists,
-} from "../capability-control/overlay.js";
+import { effectiveDisabledList, effectiveBuiltinLists } from "../capability-control/overlay.js";
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
 import { FileHistory } from "../session/file-history.js";
 import { patchBackupTargets } from "../tool-system/builtin/apply-patch/backup-targets.js";
@@ -104,11 +101,7 @@ import {
   type SandboxBackend,
   type SandboxConfig,
 } from "../tool-system/sandbox/index.js";
-import {
-  resolveAgentPreset,
-  resolveBuiltinToolNames,
-  type AgentPreset,
-} from "../preset/index.js";
+import { resolveAgentPreset, resolveBuiltinToolNames, type AgentPreset } from "../preset/index.js";
 import { ModelPool, type ModelEntry } from "../llm/model-pool.js";
 import { AgentDefinitionRegistry } from "../agent/agent-definition-registry.js";
 import { defaultCacheDir } from "../llm/model-cache.js";
@@ -591,6 +584,7 @@ export class Engine {
       new ToolRegistry({
         builtinTools: resolveBuiltinToolNames({
           preset: this.preset.name,
+          host: config.builtinToolHost,
           enabledBuiltinTools: builtinLists.enabledBuiltinTools,
           disabledBuiltinTools: builtinLists.disabledBuiltinTools,
         }),
@@ -801,6 +795,13 @@ export class Engine {
     bridge: import("../tool-system/browser-bridge.js").BrowserBridge | undefined,
   ): void {
     this.config.browserBridge = bridge;
+  }
+
+  /** Inject the host-backed workspace bridge after construction. */
+  setWorkspaceBridge(
+    bridge: import("../tool-system/workspace-bridge.js").WorkspaceBridge | undefined,
+  ): void {
+    this.config.workspaceBridge = bridge;
   }
 
   /**
@@ -1195,6 +1196,7 @@ export class Engine {
           preset: this.preset.name,
           enabledBuiltinTools: childEnabled,
           disabledBuiltinTools: childDisabled,
+          builtinToolHost: this.config.builtinToolHost,
           customSystemPrompt: this.config.customSystemPrompt,
           appendSystemPrompt:
             [this.config.appendSystemPrompt, req.appendSystemPrompt].filter(Boolean).join("\n\n") ||
@@ -2721,11 +2723,17 @@ export class Engine {
       // The builtin tool SET is ctor-frozen and may be shared via runtime — we
       // do NOT rebuild it here. If the new preset implies a different builtin
       // tool set, that part of the change only lands on session restart.
-      const prevTools = resolveBuiltinToolNames({ preset: prevPresetName })
+      const prevTools = resolveBuiltinToolNames({
+        preset: prevPresetName,
+        host: this.config.builtinToolHost,
+      })
         .slice()
         .sort()
         .join(",");
-      const nextTools = resolveBuiltinToolNames({ preset: nextPreset.name })
+      const nextTools = resolveBuiltinToolNames({
+        preset: nextPreset.name,
+        host: this.config.builtinToolHost,
+      })
         .slice()
         .sort()
         .join(",");
@@ -2813,6 +2821,40 @@ export class Engine {
       this.activeGoalHook = null;
     }
     return had;
+  }
+
+  /**
+   * Reset a session's workspace pointer back to its main root. If the session is
+   * actively running, mutate that live SessionBundle first so the run's next
+   * saveState cannot resurrect a stale worktree pointer.
+   */
+  releaseSessionWorkspace(sessionId: string): import("../types.js").SessionWorkspace | null {
+    if (!sessionId || !this.sessionManager.exists(sessionId)) return null;
+    const mainRoot =
+      this.sessionManager.readCwd(sessionId) ??
+      (this.activeRunSession?.state.sessionId === sessionId
+        ? this.activeRunSession.state.cwd
+        : undefined);
+    if (!mainRoot) return null;
+    const workspace: import("../types.js").SessionWorkspace = { root: mainRoot, kind: "main" };
+    if (this.activeRunSession?.state.sessionId === sessionId) {
+      this.activeRunSession.state.workspace = workspace;
+    }
+    try {
+      const bundle =
+        this.activeRunSession?.state.sessionId === sessionId
+          ? this.activeRunSession
+          : this.sessionManager.resume(sessionId);
+      bundle.state.workspace = workspace;
+      this.sessionManager.saveState(bundle.state);
+    } catch {
+      try {
+        this.sessionManager.setSessionWorkspace(sessionId, workspace);
+      } catch {
+        return null;
+      }
+    }
+    return workspace;
   }
 
   injectContext(sessionId: string, content: string): void {
@@ -3403,6 +3445,7 @@ export class Engine {
       toolRegistry: this.toolRegistry,
       askUser: this.config.askUser,
       browser: this.config.browserBridge,
+      workspace: this.config.workspaceBridge,
       injectCredentialToBrowser: this.config.injectCredentialToBrowser,
       isSubAgent: this.config.isSubAgent === true,
       // Credential tools narrow their disk reads to this scope: a project/

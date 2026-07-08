@@ -31,6 +31,8 @@ import {
   buildBrowserActionReply,
   parseCredentialActionLine,
   buildCredentialActionReply,
+  parseWorkspaceActionLine,
+  buildWorkspaceActionReply,
 } from "./browser-driver/intercept.js";
 import { handleBrowserAction } from "./browser-driver/automation-host.js";
 import { CredentialStore, SessionManager } from "@cjhyy/code-shell-core";
@@ -44,6 +46,7 @@ import {
 } from "./agent-bridge-fallback.js";
 import { getTrustCachedSync } from "./trust-store.js";
 import { reloadAutomations } from "./automation-service.js";
+import { switchSessionWorkspaceForUi } from "./session-workspace-service.js";
 
 /**
  * Neutral sandbox directory used when the user is in a "no project"
@@ -54,14 +57,16 @@ import { reloadAutomations } from "./automation-service.js";
  */
 export function resolveNoRepoCwd(): string {
   const dir = join(homedir(), ".code-shell", "no-repo");
-  try { mkdirSync(dir, { recursive: true }); } catch { /* best-effort */ }
+  try {
+    mkdirSync(dir, { recursive: true });
+  } catch {
+    /* best-effort */
+  }
   return dir;
 }
 
 const require = createRequire(import.meta.url);
-const agentEntry = require.resolve(
-  "@cjhyy/code-shell-core/bin/agent-server-stdio",
-);
+const agentEntry = require.resolve("@cjhyy/code-shell-core/bin/agent-server-stdio");
 
 const RESTART_WINDOW_MS = 60_000;
 const RESTART_LIMIT = 3;
@@ -176,6 +181,9 @@ export class AgentBridge {
       // InjectCredential: intercept __credential_action__ (restore a cookie
       // credential into the built-in browser) here; DON'T forward to renderer.
       if (this.maybeHandleCredentialAction(line)) return;
+      // Workspace switching: intercept __workspace_action__ so the worker uses
+      // the same main-process service path as the UI switcher.
+      if (this.maybeHandleWorkspaceAction(line)) return;
       // cron change: the worker created/deleted a cron job (agent/cronChanged);
       // reload main's scheduler so it arms immediately. DON'T forward to renderer.
       if (this.maybeHandleCronChanged(line)) return;
@@ -184,7 +192,9 @@ export class AgentBridge {
         const m = JSON.parse(line) as { method?: string; id?: number };
         if (m.method) summary = { method: m.method, raw: previewLine(line) };
         else if (m.id !== undefined) summary = { responseId: m.id, raw: previewLine(line) };
-      } catch { /* keep raw */ }
+      } catch {
+        /* keep raw */
+      }
       // Mirror stream events into the per-session snapshot so a remounted
       // renderer can replay what it missed. Non-streamEvent lines yield null.
       const append = parseSnapshotAppend(line);
@@ -214,7 +224,9 @@ export class AgentBridge {
       dlog("bridge", "child.error", { error: String(err) });
       try {
         rl.close();
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       this.child = null;
       this.outbox = [];
       this.snapshots.onWorkerExit();
@@ -280,7 +292,11 @@ export class AgentBridge {
       // a fresh spawn. Other messages (agent/approve, agent/cancel) only
       // make sense if the worker is already alive.
       let parsed: ParsedRpc = {};
-      try { parsed = JSON.parse(line); } catch { /* fall through */ }
+      try {
+        parsed = JSON.parse(line);
+      } catch {
+        /* fall through */
+      }
 
       // Line forwarded to the worker. Only rewritten when we inject fields
       // (agent/run trust) — everything else is passed through verbatim so we
@@ -345,9 +361,12 @@ export class AgentBridge {
       this.child.stdin.write(outLine + "\n");
     });
 
-    ipcMain.on("desktop:log", (_event, payload: { msg: string; data?: Record<string, unknown> }) => {
-      dlog("renderer", payload.msg, payload.data);
-    });
+    ipcMain.on(
+      "desktop:log",
+      (_event, payload: { msg: string; data?: Record<string, unknown> }) => {
+        dlog("renderer", payload.msg, payload.data);
+      },
+    );
   }
 
   private safeSend(channel: string, payload: unknown): void {
@@ -389,7 +408,10 @@ export class AgentBridge {
           switchTab: focusGuest,
         });
       } catch (e) {
-        resultJson = JSON.stringify({ ok: false, detail: e instanceof Error ? e.message : String(e) });
+        resultJson = JSON.stringify({
+          ok: false,
+          detail: e instanceof Error ? e.message : String(e),
+        });
       }
       const reply = buildBrowserActionReply(parsed, resultJson);
       if (this.child?.stdin?.writable) {
@@ -411,7 +433,11 @@ export class AgentBridge {
    *  (consume, don't forward to renderer) when handled. */
   private maybeHandleCronChanged(line: string): boolean {
     let parsed: { method?: string };
-    try { parsed = JSON.parse(line); } catch { return false; }
+    try {
+      parsed = JSON.parse(line);
+    } catch {
+      return false;
+    }
     if (parsed.method !== "agent/cronChanged") return false;
     try {
       reloadAutomations();
@@ -438,7 +464,10 @@ export class AgentBridge {
           undefined;
         const cred = new CredentialStore(sessionCwd).resolve(parsed.credentialId);
         if (!cred || cred.type !== "cookie") {
-          resultJson = JSON.stringify({ ok: false, error: `无 cookie 凭证: "${parsed.credentialId}"` });
+          resultJson = JSON.stringify({
+            ok: false,
+            error: `无 cookie 凭证: "${parsed.credentialId}"`,
+          });
         } else {
           let jar: ElectronCookieLike[] = [];
           try {
@@ -448,7 +477,10 @@ export class AgentBridge {
             jar = [];
           }
           if (jar.length === 0) {
-            resultJson = JSON.stringify({ ok: false, error: `凭证「${cred.label}」cookie 为空或损坏` });
+            resultJson = JSON.stringify({
+              ok: false,
+              error: `凭证「${cred.label}」cookie 为空或损坏`,
+            });
           } else {
             // Inject into the session of the guest the AI will actually drive
             // (per-session partition), not the shared default. Electron's Session
@@ -467,9 +499,44 @@ export class AgentBridge {
           }
         }
       } catch (e) {
-        resultJson = JSON.stringify({ ok: false, error: e instanceof Error ? e.message : String(e) });
+        resultJson = JSON.stringify({
+          ok: false,
+          error: e instanceof Error ? e.message : String(e),
+        });
       }
       const reply = buildCredentialActionReply(parsed, resultJson);
+      if (this.child?.stdin?.writable) {
+        this.child.stdin.write(reply + "\n");
+      }
+    })();
+    return true;
+  }
+
+  private maybeHandleWorkspaceAction(line: string): boolean {
+    const parsed = parseWorkspaceActionLine(line);
+    if (!parsed) return false;
+    void (async () => {
+      let resultJson: string;
+      try {
+        if (!parsed.sessionId) throw new Error("workspace action requires sessionId");
+        if (parsed.action !== "switch")
+          throw new Error(`unsupported workspace action: ${parsed.action}`);
+        const cwd =
+          this.sessionCwd.get(parsed.sessionId) ?? this.lastRunContext.cwd ?? process.cwd();
+        const list = await switchSessionWorkspaceForUi(parsed.sessionId, cwd, parsed.target);
+        this.safeSend("workspace:changed", {
+          sessionId: parsed.sessionId,
+          workspace: list.current,
+          mainRoot: list.mainRoot,
+        });
+        resultJson = JSON.stringify(list.current);
+      } catch (e) {
+        resultJson = JSON.stringify({
+          ok: false,
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
+      const reply = buildWorkspaceActionReply(parsed, resultJson);
       if (this.child?.stdin?.writable) {
         this.child.stdin.write(reply + "\n");
       }
@@ -515,6 +582,10 @@ export class AgentBridge {
     this.sessionCwd.delete(sessionId);
   }
 
+  hasKnownSession(sessionId: string): boolean {
+    return this.sessionCwd.has(sessionId);
+  }
+
   /**
    * Inject a JSON-RPC line into the worker exactly as the renderer would via
    * the "agent:msg" IPC channel. This is the reuse seam for alternate front
@@ -536,10 +607,7 @@ export class AgentBridge {
         cwd: parsed.params?.cwd,
         sessionId: parsed.params?.sessionId,
       };
-      if (
-        typeof parsed.params?.sessionId === "string" &&
-        typeof parsed.params?.cwd === "string"
-      ) {
+      if (typeof parsed.params?.sessionId === "string" && typeof parsed.params?.cwd === "string") {
         this.sessionCwd.set(parsed.params.sessionId, parsed.params.cwd);
       }
     }
@@ -591,14 +659,70 @@ export class AgentBridge {
     }
   }
 
+  releaseWorkspace(sessionId: string): Promise<void> {
+    if (!this.child?.stdin || this.child.stdin.destroyed) return Promise.resolve();
+    const id = `release-workspace-${sessionId}-${Date.now()}`;
+    const line = JSON.stringify({
+      jsonrpc: "2.0",
+      id,
+      method: "agent/releaseWorkspace",
+      params: { sessionId },
+    });
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = (err?: Error): void => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        unsubscribe();
+        if (err) reject(err);
+        else resolve();
+      };
+      const unsubscribe = this.subscribeOutbound((outLine) => {
+        try {
+          const msg = JSON.parse(outLine) as {
+            id?: string | number;
+            error?: { message?: string };
+            result?: { ok?: boolean; error?: string };
+          };
+          if (msg.id === id) {
+            const resultError =
+              msg.result && msg.result.ok === false
+                ? new Error(msg.result.error ?? "releaseWorkspace failed")
+                : undefined;
+            finish(
+              msg.error ? new Error(msg.error.message ?? "releaseWorkspace failed") : resultError,
+            );
+          }
+        } catch {
+          /* ignore non-json worker output */
+        }
+      });
+      const timer = setTimeout(
+        () => finish(new Error(`releaseWorkspace timed out for session ${sessionId}`)),
+        5000,
+      );
+      try {
+        this.child!.stdin!.write(line + "\n");
+      } catch (err) {
+        finish(err instanceof Error ? err : new Error(String(err)));
+      }
+    });
+  }
+
   /** Feed an event produced OUTSIDE the stdio worker (e.g. an in-main automation
    *  Engine) into the same snapshot + renderer stream, so renderer reconnect works
    *  identically for automation sessions. */
   ingestExternalEvent(sessionId: string, event: unknown): void {
     this.snapshots.append(sessionId, event);
-    this.safeSend("agent:msg", JSON.stringify({
-      jsonrpc: "2.0", method: "agent/streamEvent", params: { sessionId, event },
-    }));
+    this.safeSend(
+      "agent:msg",
+      JSON.stringify({
+        jsonrpc: "2.0",
+        method: "agent/streamEvent",
+        params: { sessionId, event },
+      }),
+    );
   }
 
   /**
@@ -607,10 +731,21 @@ export class AgentBridge {
    * Separate JSON-RPC method from `agent/streamEvent` so the shared core
    * StreamEvent shape stays untouched and the interactive path is unaffected.
    */
-  broadcastAutomationSession(meta: { sessionId: string; cwd: string; title: string; prompt: string; cronJobId: string }): void {
-    this.safeSend("agent:msg", JSON.stringify({
-      jsonrpc: "2.0", method: "agent/automationSession", params: meta,
-    }));
+  broadcastAutomationSession(meta: {
+    sessionId: string;
+    cwd: string;
+    title: string;
+    prompt: string;
+    cronJobId: string;
+  }): void {
+    this.safeSend(
+      "agent:msg",
+      JSON.stringify({
+        jsonrpc: "2.0",
+        method: "agent/automationSession",
+        params: meta,
+      }),
+    );
   }
 
   kill(): void {

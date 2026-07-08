@@ -742,6 +742,63 @@ describe("WorkspaceIndicator", () => {
     expect(textOf(container)).toContain("worktree/new-session");
     expect(textOf(container)).not.toContain("worktree/old-session");
   });
+
+  test("refreshes the current workspace when workspace:changed targets this session", async () => {
+    ensureMiniDom();
+    let changed: ((event: { sessionId: string }) => void) | undefined;
+    let currentCalls = 0;
+    const workspaces: SessionWorkspace[] = [
+      { root: "/repo", kind: "main" },
+      {
+        root: "/repo/.worktrees/feature",
+        kind: "worktree",
+        worktree: {
+          path: "/repo/.worktrees/feature",
+          branch: "worktree/feature",
+          baseRef: "main",
+          createdBy: "codeshell",
+        },
+      },
+    ];
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getSessionWorkspace: async () => workspaces[Math.min(currentCalls++, workspaces.length - 1)]!,
+      listSessionWorktrees: async () => ({
+        current: workspaces[Math.min(currentCalls, workspaces.length - 1)]!,
+        mainRoot: "/repo",
+        worktrees: [],
+      }),
+      getSessionWorktreeDiff: async () => undefined,
+      onWorkspaceChanged: (cb: (event: { sessionId: string }) => void) => {
+        changed = cb;
+        return () => {
+          changed = undefined;
+        };
+      },
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(<WorkspaceIndicator sessionId="session" repoPath="/repo" repoName="repo" />);
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain("main");
+    expect(currentCalls).toBe(1);
+
+    await act(async () => {
+      changed?.({ sessionId: "other-session" });
+      await flushMicrotasks();
+    });
+    expect(currentCalls).toBe(1);
+
+    await act(async () => {
+      changed?.({ sessionId: "session" });
+      await flushMicrotasks();
+    });
+
+    expect(currentCalls).toBe(2);
+    expect(textOf(container)).toContain("worktree/feature");
+  });
 });
 
 describe("TopBar workspace label", () => {

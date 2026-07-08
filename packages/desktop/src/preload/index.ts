@@ -507,6 +507,20 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("workspace:diff", sessionId, worktreePath),
   switchSessionWorkspace: (sessionId: string, cwd: string, target: string) =>
     ipcRenderer.invoke("workspace:switch", sessionId, cwd, target),
+  releaseSessionWorkspace: (sessionId: string) =>
+    ipcRenderer.invoke("workspace:release", sessionId),
+  releaseManySessionWorkspaces: (sessionIds: string[]) =>
+    ipcRenderer.invoke("workspace:releaseMany", sessionIds),
+  onWorkspaceChanged: (
+    cb: (event: { sessionId: string; workspace?: unknown; mainRoot?: string }) => void,
+  ): (() => void) => {
+    const h = (
+      _e: IpcRendererEvent,
+      event: { sessionId: string; workspace?: unknown; mainRoot?: string },
+    ) => cb(event);
+    ipcRenderer.on("workspace:changed", h);
+    return () => ipcRenderer.removeListener("workspace:changed", h);
+  },
   cleanupSessionWorktree: (
     sessionId: string,
     cwd: string,

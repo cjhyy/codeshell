@@ -258,6 +258,8 @@ import {
   getSessionWorktreeDiffForUi,
   getSessionWorkspaceForUi,
   listSessionWorktreesForUi,
+  releaseManySessionWorkspacesForUi,
+  releaseSessionWorkspaceForUi,
   switchSessionWorkspaceForUi,
   type WorkspaceCleanupAction,
 } from "./session-workspace-service.js";
@@ -283,6 +285,16 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
 let bridge: AgentBridge | null = null;
 let cspInstalled = false;
 let automationHandle: AutomationHandle | null = null;
+
+function broadcastWorkspaceChanged(payload: {
+  sessionId: string;
+  workspace?: unknown;
+  mainRoot?: string;
+}): void {
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w.isDestroyed()) w.webContents.send("workspace:changed", payload);
+  }
+}
 
 onPluginInstallJobsChanged((jobs) => {
   for (const w of BrowserWindow.getAllWindows()) {
@@ -2783,7 +2795,48 @@ ipcMain.handle("workspace:switch", async (_e, sessionId: string, cwd: string, ta
     throw new Error("workspace:switch requires target");
   }
   knownGitRoots.add(cwd);
-  return await switchSessionWorkspaceForUi(sessionId, cwd, target);
+  const list = await switchSessionWorkspaceForUi(sessionId, cwd, target);
+  broadcastWorkspaceChanged({ sessionId, workspace: list.current, mainRoot: list.mainRoot });
+  return list;
+});
+
+ipcMain.handle("workspace:release", async (_e, sessionId: string) => {
+  if (typeof sessionId !== "string" || !sessionId) {
+    throw new Error("workspace:release requires sessionId");
+  }
+  const currentBridge = bridge;
+  const released = await releaseSessionWorkspaceForUi(sessionId, {
+    releaseLiveWorkspace:
+      currentBridge && currentBridge.hasKnownSession(sessionId)
+        ? (id) => currentBridge.releaseWorkspace(id)
+        : undefined,
+  });
+  if (released.status === "released") {
+    broadcastWorkspaceChanged({ sessionId, workspace: released.workspace });
+  }
+  return released;
+});
+
+ipcMain.handle("workspace:releaseMany", async (_e, sessionIds: string[]) => {
+  if (!Array.isArray(sessionIds)) {
+    throw new Error("workspace:releaseMany requires sessionIds");
+  }
+  const ids = sessionIds.filter((id) => typeof id === "string" && id.length > 0);
+  const currentBridge = bridge;
+  const released = await releaseManySessionWorkspacesForUi(ids, {
+    releaseLiveWorkspace: currentBridge
+      ? async (id) => {
+          if (!currentBridge.hasKnownSession(id)) return;
+          await currentBridge.releaseWorkspace(id);
+        }
+      : undefined,
+  });
+  for (const item of released) {
+    if (item.status === "released") {
+      broadcastWorkspaceChanged({ sessionId: item.sessionId, workspace: item.workspace });
+    }
+  }
+  return released;
 });
 
 ipcMain.handle(
@@ -2806,7 +2859,9 @@ ipcMain.handle(
       throw new Error("workspace:cleanup requires action detach or discard");
     }
     knownGitRoots.add(cwd);
-    return await cleanupSessionWorktreeForUi(sessionId, cwd, worktreePath, action);
+    const list = await cleanupSessionWorktreeForUi(sessionId, cwd, worktreePath, action);
+    broadcastWorkspaceChanged({ sessionId, workspace: list.current, mainRoot: list.mainRoot });
+    return list;
   },
 );
 

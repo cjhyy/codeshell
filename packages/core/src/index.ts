@@ -833,3 +833,4 @@ export type {
   BrowserTab,
   AXNode,
 } from "./tool-system/browser-bridge.js";
+export type { WorkspaceBridge } from "./tool-system/workspace-bridge.js";

@@ -53,7 +53,9 @@ export function parseBrowserActionLine(line: string): ParsedBrowserAction | null
       // automation-host's handler consumes them. Forward with light type guards.
       value: typeof a.value === "string" ? a.value : undefined,
       key: typeof a.key === "string" ? a.key : undefined,
-      refs: Array.isArray(a.refs) ? (a.refs.filter((x) => typeof x === "string") as string[]) : undefined,
+      refs: Array.isArray(a.refs)
+        ? (a.refs.filter((x) => typeof x === "string") as string[])
+        : undefined,
       tabId: typeof a.tabId === "string" ? a.tabId : undefined,
     },
   };
@@ -64,10 +66,7 @@ export function parseBrowserActionLine(line: string): ParsedBrowserAction | null
  * requestId with its JSON result string (wrapped in the ApprovalResult shape
  * the server's pendingApprovals handler expects: {approved:true, answer}).
  */
-export function buildBrowserActionReply(
-  parsed: ParsedBrowserAction,
-  resultJson: string,
-): string {
+export function buildBrowserActionReply(parsed: ParsedBrowserAction, resultJson: string): string {
   return JSON.stringify({
     jsonrpc: "2.0",
     id: replyId(),
@@ -132,6 +131,56 @@ export function parseCredentialActionLine(line: string): ParsedCredentialAction 
  *  requestId with its JSON result string (same ApprovalResult shape). */
 export function buildCredentialActionReply(
   parsed: ParsedCredentialAction,
+  resultJson: string,
+): string {
+  return JSON.stringify({
+    jsonrpc: "2.0",
+    id: replyId(),
+    method: "agent/approve",
+    params: {
+      sessionId: parsed.sessionId,
+      requestId: parsed.requestId,
+      decision: { approved: true, answer: resultJson },
+    },
+  });
+}
+
+// ── __workspace_action__ (SwitchSessionWorkspace tool) ─────────────────────
+// Same worker→main approval-request channel. Main performs the switch through
+// session-workspace-service so the model path matches the UI path.
+
+export interface ParsedWorkspaceAction {
+  sessionId?: string;
+  requestId: string;
+  /** Currently only "switch". */
+  action: string;
+  target: string;
+}
+
+export function parseWorkspaceActionLine(line: string): ParsedWorkspaceAction | null {
+  let msg: any;
+  try {
+    msg = JSON.parse(line);
+  } catch {
+    return null;
+  }
+  if (!msg || msg.method !== "agent/approvalRequest") return null;
+  const p = msg.params;
+  if (!p || typeof p.requestId !== "string") return null;
+  const r = p.request;
+  if (!r || r.toolName !== "__workspace_action__" || !r.args) return null;
+  const a = r.args as Record<string, unknown>;
+  if (typeof a.action !== "string" || typeof a.target !== "string") return null;
+  return {
+    sessionId: typeof p.sessionId === "string" ? p.sessionId : undefined,
+    requestId: p.requestId,
+    action: a.action,
+    target: a.target,
+  };
+}
+
+export function buildWorkspaceActionReply(
+  parsed: ParsedWorkspaceAction,
   resultJson: string,
 ): string {
   return JSON.stringify({
