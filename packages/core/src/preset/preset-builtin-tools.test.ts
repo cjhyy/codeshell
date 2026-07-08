@@ -39,6 +39,11 @@ describe("preset builtin tool whitelist", () => {
     expect(general.builtinTools).toContain("EditModelCatalog");
   });
 
+  it("the general preset offers AddMarketplace for adding plugin sources", () => {
+    const general = BUILTIN_AGENT_PRESETS.general ?? Object.values(BUILTIN_AGENT_PRESETS)[0]!;
+    expect(general.builtinTools).toContain("AddMarketplace");
+  });
+
   it("the general preset offers DriveClaudeCode (no ScheduleRoomTask — 定时统一走 CronCreate)", () => {
     // Regression (用户实测「为什么驱动 cc 没作为工具」,同 BashOutput/UseCredential/
     // EditModelCatalog 第四次复发): DriveClaudeCode 在 BUILTIN_TOOLS 注册了、工具描述也

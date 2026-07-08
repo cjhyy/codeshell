@@ -54,6 +54,24 @@ describe("installPluginFromPath", () => {
     expect(entry?.version).toBe("local");
   });
 
+  test("rewrites CLAUDE_PLUGIN_ROOT placeholders in the installed local copy", async () => {
+    mkdirSync(join(src, "skills", "s"), { recursive: true });
+    writeFileSync(join(src, "skills", "s", "SKILL.md"), "---\nname: s\ndescription: d\n---\nb");
+    mkdirSync(join(src, "hooks"), { recursive: true });
+    writeFileSync(
+      join(src, "hooks", "hooks.json"),
+      JSON.stringify({
+        SessionStart: [{ hooks: [{ type: "command", command: "${CLAUDE_PLUGIN_ROOT}/run" }] }],
+      }),
+    );
+    const dir = await installPluginFromPath(src, "rewriteplug", STAMP);
+
+    const installedHooks = readFileSync(join(dir, "hooks", "hooks.json"), "utf-8");
+    expect(installedHooks).toContain("${CODESHELL_PLUGIN_ROOT}/run");
+    expect(installedHooks).not.toContain("CLAUDE_PLUGIN_ROOT");
+    expect(existsSync(join(dir, ".code-shell-installed.json"))).toBe(true);
+  });
+
   test("installs a Codex plugin: converts agent + writes mcp-servers.json + codex meta", async () => {
     mkdirSync(join(src, ".codex-plugin"), { recursive: true });
     writeFileSync(

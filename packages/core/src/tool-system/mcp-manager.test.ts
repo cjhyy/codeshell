@@ -1,4 +1,7 @@
 import { describe, test, expect } from "bun:test";
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   MCPManager,
   buildRegisteredTool,
@@ -7,12 +10,14 @@ import {
   buildStdioEnv,
   buildHttpHeaders,
   inferTransportType,
+  spillMcpImage,
 } from "./mcp-manager.js";
 import { ToolRegistry } from "./registry.js";
 import { ToolExecutor } from "./executor.js";
 import { PermissionClassifier } from "./permission.js";
 import { HookRegistry } from "../hooks/registry.js";
 import type { MCPServerConfig } from "../types.js";
+import { listMcpResourcesTool } from "./builtin/mcp-tools.js";
 
 /**
  * connectAll's enabled-toggle filter. We don't spin up a real transport;
@@ -198,6 +203,150 @@ describe("stripInternalToolArgs", () => {
   test("returns empty args for no-argument MCP tools", () => {
     const ac = new AbortController();
     expect(stripInternalToolArgs({ __signal: ac.signal })).toEqual({});
+  });
+});
+
+describe("spillMcpImage CODE_SHELL_HOME layout", () => {
+  test("uses CODE_SHELL_HOME as the final CodeShell home", async () => {
+    const home = mkdtempSync(join(tmpdir(), "mcp-spill-home-"));
+    const previous = process.env.CODE_SHELL_HOME;
+    process.env.CODE_SHELL_HOME = home;
+    try {
+      const note = await spillMcpImage(
+        "srv",
+        "shot",
+        Buffer.from("x").toString("base64"),
+        "image/png",
+        { now: () => 123 },
+      );
+      const expected = join(home, "mcp_images", "srv-shot-123.png");
+      const nested = join(home, ".code-shell", "mcp_images", "srv-shot-123.png");
+
+      expect(note).toContain(`saved=${expected}`);
+      expect(existsSync(expected)).toBe(true);
+      expect(existsSync(nested)).toBe(false);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.CODE_SHELL_HOME;
+      } else {
+        process.env.CODE_SHELL_HOME = previous;
+      }
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("spillMcpImage retention", () => {
+  test("deletes older spills after the per-server-tool retained-file cap", async () => {
+    const baseDir = mkdtempSync(join(tmpdir(), "mcp-spill-retention-"));
+    try {
+      const image = Buffer.from("x").toString("base64");
+      for (let i = 0; i < 52; i++) {
+        await spillMcpImage("srv", "shot", image, "image/png", {
+          baseDir,
+          now: () => i,
+        });
+      }
+
+      const files = readdirSync(baseDir).filter((name) => name.startsWith("srv-shot-"));
+
+      expect(files).toHaveLength(50);
+      expect(files).not.toContain("srv-shot-0.png");
+      expect(files).not.toContain("srv-shot-1.png");
+      expect(files).toContain("srv-shot-51.png");
+    } finally {
+      rmSync(baseDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("MCPManager discovered tool executors", () => {
+  test("cleans up a connected server when post-handshake discovery fails", async () => {
+    const registry = new ToolRegistry({ builtinTools: [] });
+    const manager = new MCPManager(registry);
+    let closed = false;
+    const client = {
+      listTools: async () => {
+        throw new Error("discovery failed");
+      },
+      close: async () => {
+        closed = true;
+      },
+    };
+    (manager as any).connections.set("srv", {
+      client,
+      serverName: "srv",
+      transport: { close: async () => {} },
+    });
+
+    expect(manager.listServers()).toEqual(["srv"]);
+    await expect((manager as any).discoverTools("srv", client)).rejects.toThrow(
+      "discovery failed",
+    );
+
+    expect(manager.listServers()).toEqual([]);
+    expect(closed).toBe(true);
+  });
+
+  test("forward the tool execution abort signal to client.callTool", async () => {
+    const registry = new ToolRegistry({ builtinTools: [] });
+    const manager = new MCPManager(registry);
+    let callOptions: { signal?: AbortSignal } | undefined;
+    const client = {
+      listTools: async () => ({
+        tools: [{ name: "doit", inputSchema: { type: "object", properties: {} } }],
+      }),
+      callTool: async (
+        _request: unknown,
+        _resultSchema?: unknown,
+        options?: { signal?: AbortSignal },
+      ) => {
+        callOptions = options;
+        return { content: [{ type: "text", text: "ok" }] };
+      },
+    };
+
+    await (manager as any).discoverTools("srv", client);
+    const parent = new AbortController();
+    const result = await registry.executeTool(
+      "mcp_srv_doit",
+      { value: 1 },
+      { signal: parent.signal, ctx: { cwd: "/tmp" } as any },
+    );
+
+    expect(result.result).toContain("ok");
+    expect(callOptions?.signal).toBeInstanceOf(AbortSignal);
+  });
+});
+
+describe("MCPManager resource ownership", () => {
+  test("ListMcpResources keeps resources from allowed connected servers", async () => {
+    const registry = new ToolRegistry({ builtinTools: [] });
+    const manager = new MCPManager(registry);
+    (manager as any).connections.set("mine:srv", {
+      client: {
+        listResources: async () => ({
+          resources: [{ uri: "res://mine", name: "Mine", description: "visible" }],
+        }),
+      },
+      serverName: "mine:srv",
+    });
+    (manager as any).connections.set("other:srv", {
+      client: {
+        listResources: async () => ({
+          resources: [{ uri: "res://other", name: "Other", description: "hidden" }],
+        }),
+      },
+      serverName: "other:srv",
+    });
+
+    const out = await listMcpResourcesTool({
+      __allowedMcpServers: new Set(["mine:srv"]),
+    });
+
+    expect(out).toContain("res://mine");
+    expect(out).toContain("visible");
+    expect(out).not.toContain("res://other");
   });
 });
 

@@ -116,9 +116,14 @@ export class CdpActionsDriver {
         model?: { content: number[] };
       };
       if (!model?.content || model.content.length < 8) return null;
-      const xs = [model.content[0]!, model.content[2]!, model.content[4]!, model.content[6]!];
-      const ys = [model.content[1]!, model.content[3]!, model.content[5]!, model.content[7]!];
-      return { x: avg(xs), y: avg(ys) };
+      const viewport = await this.layoutViewportRect();
+      const box = rectFromQuad(model.content);
+      const visible = intersectRects(box, viewport);
+      if (!visible) return null;
+      return {
+        x: visible.x + visible.width / 2 - viewport.x,
+        y: visible.y + visible.height / 2 - viewport.y,
+      };
     } catch {
       return null; // node detached / no box → treat as stale
     }
@@ -127,8 +132,7 @@ export class CdpActionsDriver {
   async clickNode(backendNodeId: number): Promise<CdpActionResult> {
     const c = await this.centerOf(backendNodeId);
     if (!c) {
-      // geometry failed — fall back to a JS .click() on the resolved node.
-      return this.jsClick(backendNodeId);
+      return { ok: false, detail: "element has no layout box", staleRef: true };
     }
     try {
       await this.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: c.x, y: c.y });
@@ -138,25 +142,6 @@ export class CdpActionsDriver {
       return { ok: true };
     } catch (e) {
       return { ok: false, detail: errMsg(e) };
-    }
-  }
-
-  /** JS .click() fallback when the element has no usable box (e.g. zero-size
-   *  but clickable, or occluded). Resolves the node to an objectId and calls it. */
-  private async jsClick(backendNodeId: number): Promise<CdpActionResult> {
-    try {
-      const { object } = (await this.send("DOM.resolveNode", { backendNodeId })) as {
-        object?: { objectId?: string };
-      };
-      if (!object?.objectId)
-        return { ok: false, detail: "element has no layout box", staleRef: true };
-      await this.send("Runtime.callFunctionOn", {
-        objectId: object.objectId,
-        functionDeclaration: "function(){ this.click(); }",
-      });
-      return { ok: true, detail: "clicked via JS fallback (no layout box)" };
-    } catch (e) {
-      return { ok: false, detail: errMsg(e), staleRef: true };
     }
   }
 
@@ -291,8 +276,9 @@ export class CdpActionsDriver {
         this.options.imageFetchTimeoutMs,
         DEFAULT_IMAGE_FETCH_TIMEOUT_MS,
       );
+      const safeMaxDim = positiveFinite(maxDim, MAX_IMAGE_DIM);
       const res = (await this.send("Runtime.evaluate", {
-        expression: `(${FETCH_IMAGE_BY_REF_FN})(${JSON.stringify(ref)}, ${maxDim}, ${timeoutMs})`,
+        expression: `(${FETCH_IMAGE_BY_REF_FN})(${JSON.stringify(ref)}, ${safeMaxDim}, ${timeoutMs})`,
         returnByValue: true,
         awaitPromise: true,
       })) as {
@@ -300,7 +286,11 @@ export class CdpActionsDriver {
       };
       const v = res.result?.value;
       if (v?.missing)
-        return { ok: false, detail: `ref ${ref} not found — re-run browser_observe(extract)` };
+        return {
+          ok: false,
+          detail: `ref ${ref} not found — re-run browser_observe(extract)`,
+          staleRef: true,
+        };
       if (!v?.ok || !v.dataUrl)
         return { ok: false, detail: v?.detail ?? "could not read image pixels" };
       return { ...parseDataUrl(v.dataUrl), ref };
@@ -492,10 +482,6 @@ export class CdpActionsDriver {
   }
 }
 
-function avg(ns: number[]): number {
-  return ns.reduce((a, b) => a + b, 0) / ns.length;
-}
-
 function finiteOr(value: number | undefined, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
@@ -643,14 +629,14 @@ export function buildExtractScript(cap = EXTRACT_LINK_CAP): string {
       var o={url:s,ref:ref};var alt=(im.getAttribute('alt')||'').trim();if(alt)o.alt=alt.slice(0,200);
       images.push(o);
     }
-    function pushVid(s){if(!s||s.indexOf('data:')===0||s.indexOf('blob:')===0)return;if(seenV[s])return;seenV[s]=1;if(videos.length>=cap){vt=true;return;}videos.push({url:s});}
+    function pushVid(s,ref){if(!s||s.indexOf('data:')===0||s.indexOf('blob:')===0)return;if(seenV[s])return;seenV[s]=1;if(videos.length>=cap){vt=true;return;}videos.push({url:s,ref:ref});}
     var vs=document.querySelectorAll('video'),vidN=0;
     for(var k=0;k<vs.length&&!vt;k++){
       var vd=vs[k];
-      vidN++;try{vd.setAttribute(REF_ATTR,'vid'+vidN);vd.setAttribute(RUN_ATTR,run);}catch(e){}
-      if(vd.currentSrc)pushVid(vd.currentSrc);else if(vd.src)pushVid(vd.src);
+      vidN++;var ref='vid'+vidN;try{vd.setAttribute(REF_ATTR,ref);vd.setAttribute(RUN_ATTR,run);}catch(e){}
+      if(vd.currentSrc)pushVid(vd.currentSrc,ref);else if(vd.src)pushVid(vd.src,ref);
       var srcs=vd.querySelectorAll('source[src]');
-      for(var m=0;m<srcs.length&&!vt;m++)pushVid(srcs[m].src);
+      for(var m=0;m<srcs.length&&!vt;m++)pushVid(srcs[m].src,ref);
     }
     return {links:links,images:images,videos:videos,truncated:lt||it||vt};
   })()`;

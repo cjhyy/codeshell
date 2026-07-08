@@ -59,9 +59,10 @@ interface Props {
   /** Engine session id — lets the Files-Changed card do turn-level undo/redo. */
   engineSessionId?: string | null;
   liveTurnActive?: boolean;
-  onSend: (text: string) => void;
-  onQueueInput?: (text: string) => void;
-  onForceSend?: (text: string) => void;
+  sendBucket?: string;
+  onSend: (text: string, opts?: { bucket?: string; clientMessageId?: string }) => void;
+  onQueueInput?: (text: string, opts?: { bucket?: string; clientMessageId?: string }) => void;
+  onForceSend?: (text: string, opts?: { bucket?: string; clientMessageId?: string }) => void;
   onCompactCommand?: () => void;
   onStop: () => void;
   busy: boolean;
@@ -174,6 +175,7 @@ export function ChatView({
   turnEpoch,
   engineSessionId,
   liveTurnActive,
+  sendBucket,
   onSend,
   onQueueInput,
   onForceSend,
@@ -586,8 +588,9 @@ export function ChatView({
     // so the model can pin each comment to its exact location.
     const withAnchors = encodeAnchorsForWire(text, anchors);
     const payload = encodeAttachmentsForWire(withAnchors, attachments);
-    if (busy) onQueueInput?.(payload);
-    else onSend(payload);
+    const routeOpts = sendBucket ? { bucket: sendBucket } : undefined;
+    if (busy) onQueueInput?.(payload, routeOpts);
+    else onSend(payload, routeOpts);
     // Snap the stream to the bottom + re-arm follow regardless of scroll pos.
     setSendEpoch((n) => n + 1);
     if (text) setHistory(pushHistory(activeRepoId, text));
@@ -851,7 +854,10 @@ export function ChatView({
 
   return (
     <div
-      className={"flex h-full min-w-0 max-w-full flex-col overflow-hidden" + (dragOver ? " ring-2 ring-inset ring-primary/40" : "")}
+      className={
+        "flex h-full min-w-0 max-w-full flex-col overflow-hidden" +
+        (dragOver ? " ring-2 ring-inset ring-primary/40" : "")
+      }
       data-mode={isNewChat ? "new" : "active"}
       onDragEnter={onChatDragEnter}
       onDragOver={onChatDragOver}
@@ -909,7 +915,11 @@ export function ChatView({
         at the bottom as a plain p-3 block.
       */}
       <div
-        className={isNewChat ? "flex min-w-0 max-w-full flex-1 flex-col items-center justify-center px-4" : "contents"}
+        className={
+          isNewChat
+            ? "flex min-w-0 max-w-full flex-1 flex-col items-center justify-center px-4"
+            : "contents"
+        }
       >
         {isNewChat && welcomeNode && (
           <div className="mb-4 flex flex-col items-center">{welcomeNode}</div>
@@ -920,7 +930,9 @@ export function ChatView({
             smaller on every re-layout (session switch with the dock open),
             collapsing the input row by row. Pinning shrink to 0 keeps it at its
             content height regardless of how tall the stream gets. */}
-        <div className={isNewChat ? "w-full min-w-0 max-w-2xl p-3" : "min-w-0 max-w-full shrink-0 p-3"}>
+        <div
+          className={isNewChat ? "w-full min-w-0 max-w-2xl p-3" : "min-w-0 max-w-full shrink-0 p-3"}
+        >
           {queuedInputItems.length > 0 && (
             <div className="mb-2 rounded-2xl border border-border/80 bg-background/80 px-3 py-2 shadow-sm">
               <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -1337,7 +1349,7 @@ export function ChatView({
                       className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
                       onClick={() => {
                         const payload = encodeAttachmentsForWire(draft.trim(), attachments);
-                        onForceSend(payload);
+                        onForceSend(payload, sendBucket ? { bucket: sendBucket } : undefined);
                         if (draft.trim()) setHistory(pushHistory(activeRepoId, draft.trim()));
                         setDraft("");
                         setAttachments([]);

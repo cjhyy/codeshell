@@ -17,15 +17,16 @@
 
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
-import { MemoryManager, type MemoryScope } from "../../session/memory.js";
+import { MemoryManager, type MemoryOrigin, type MemoryScope } from "../../session/memory.js";
 
 const VALID_SCOPES: readonly MemoryScope[] = ["user", "dream"] as const;
 const VALID_TYPES = ["user", "feedback", "project", "reference"] as const;
+const VALID_ORIGINS: readonly MemoryOrigin[] = ["auto", "manual", "dream"] as const;
 
 type MemoryLocation = "global" | "project";
 
 function parseScope(raw: unknown): MemoryScope | string {
-  if (typeof raw !== "string") return "Error: scope is required (\"user\" or \"dream\")";
+  if (typeof raw !== "string") return 'Error: scope is required ("user" or "dream")';
   if (!VALID_SCOPES.includes(raw as MemoryScope)) {
     return `Error: scope must be "user" or "dream", got "${raw}"`;
   }
@@ -36,6 +37,12 @@ function parseScope(raw: unknown): MemoryScope | string {
  *  (default, back-compat) → this repo's store. Anything else → "project". */
 function parseLocation(raw: unknown): MemoryLocation {
   return raw === "global" ? "global" : "project";
+}
+
+function parseOrigin(raw: unknown): MemoryOrigin | undefined {
+  return typeof raw === "string" && VALID_ORIGINS.includes(raw as MemoryOrigin)
+    ? (raw as MemoryOrigin)
+    : undefined;
 }
 
 function mmFor(
@@ -63,7 +70,7 @@ export const memoryListToolDef: ToolDefinition = {
   name: "MemoryList",
   description:
     "List persistent memory entries from one scope. " +
-    "Returns each entry's name, type, and short description (not the full content — use MemoryRead for that). " +
+    "Returns each entry's id, origin, counts, name, type, and short description (not the full content — use MemoryRead for that). " +
     "Use this before MemorySave/MemoryDelete to find the exact name to target. " +
     'Scopes: "user" (entries the user owns; you need permission to modify) or "dream" (auto-consolidation workspace; you may freely modify).',
   inputSchema: {
@@ -93,7 +100,12 @@ export async function memoryListTool(
     const entries = mm.loadAll();
     if (entries.length === 0) return `(no memories in scope "${scope}")`;
     return entries
-      .map((e) => `- [${e.type}] ${e.name} — ${e.description}`)
+      .map(
+        (e) =>
+          `- [${e.type}] ${e.name} ` +
+          `(id:${e.id ?? "(none)"}, origin:${e.origin ?? "manual"}, use:${e.useCount ?? 0}, updates:${e.updateCount ?? 0}) — ` +
+          e.description,
+      )
       .join("\n");
   } catch (err) {
     return `Error listing memories: ${(err as Error).message}`;
@@ -153,7 +165,12 @@ export async function memoryReadTool(
       if (cb) {
         // scope here is always "user"|"dream" (validated above); pending is
         // never tool-readable, so the narrower event type is correct.
-        void cb({ type: "memory_recalled", name: entry.name, scope: scope as "user" | "dream", location });
+        void cb({
+          type: "memory_recalled",
+          name: entry.name,
+          scope: scope as "user" | "dream",
+          location,
+        });
       }
     } catch {
       // ignore — the read result below is what matters
@@ -161,8 +178,12 @@ export async function memoryReadTool(
 
     return (
       `name: ${entry.name}\n` +
+      `id: ${entry.id ?? ""}\n` +
       `description: ${entry.description}\n` +
       `type: ${entry.type}\n` +
+      `origin: ${entry.origin ?? "manual"}\n` +
+      `useCount: ${entry.useCount ?? 0}\n` +
+      `updateCount: ${entry.updateCount ?? 0}\n` +
       `\n${entry.content}`
     );
   } catch (err) {
@@ -175,7 +196,7 @@ export async function memoryReadTool(
 export const memorySaveToolDef: ToolDefinition = {
   name: "MemorySave",
   description:
-    "Create or overwrite a memory entry. Same name → overwrite. " +
+    "Create or update a memory entry. Before saving, scan the injected memory index and/or call MemoryList; for the same durable topic, update the existing entry by id instead of creating date-stamped variants. " +
     'Saving to scope "user" requires user permission (you will see a confirmation prompt). ' +
     'Saving to scope "dream" is automatic — it is your auto-consolidation workspace. ' +
     "Pick `type` carefully: " +
@@ -184,7 +205,7 @@ export const memorySaveToolDef: ToolDefinition = {
     "project (non-obvious facts about ongoing work), " +
     "reference (pointers to external resources). " +
     "Pick `location`: global (a lesson/preference true in ANY project) vs project (this repo only). " +
-    "If a memory in the injected index is now stale or wrong, overwrite it (same name) or MemoryDelete it — keep the store correct rather than letting contradictions pile up. " +
+    "If a memory in the injected index is now stale or wrong, update it by id or MemoryDelete it — keep the store correct rather than letting contradictions pile up. " +
     "The `description` is a one-line summary shown in the index; the `content` is the full body.",
   inputSchema: {
     type: "object",
@@ -195,9 +216,14 @@ export const memorySaveToolDef: ToolDefinition = {
         description: "Which scope to save to",
       },
       location: LOCATION_SCHEMA,
+      id: {
+        type: "string",
+        description:
+          "Stable id from MemoryList/MemoryRead when updating an existing memory. Omit only for genuinely new topics.",
+      },
       name: {
         type: "string",
-        description: "Short kebab-case identifier (also becomes the filename slug)",
+        description: "Short stable topic identifier; avoid dates, versions, or batch suffixes",
       },
       description: {
         type: "string",
@@ -226,10 +252,12 @@ export async function memorySaveTool(
     return scope as string;
   }
   const name = args.name;
+  const id = args.id;
   const description = args.description;
   const type = args.type;
   const content = args.content;
   if (typeof name !== "string" || !name) return "Error: name is required";
+  if (id !== undefined && typeof id !== "string") return "Error: id must be a string";
   if (typeof description !== "string") return "Error: description is required";
   if (typeof content !== "string") return "Error: content is required";
   if (typeof type !== "string" || !VALID_TYPES.includes(type as (typeof VALID_TYPES)[number])) {
@@ -239,12 +267,23 @@ export async function memorySaveTool(
   try {
     const location = parseLocation(args.location);
     const mm = mmFor(ctx, scope as MemoryScope, location);
-    const fileName = mm.save({
-      name,
-      description,
-      type: type as (typeof VALID_TYPES)[number],
-      content,
-    });
+    const dreamLoop = (ctx as any)?.__dreamLoop === true;
+    const forcedOrigin: MemoryOrigin = dreamLoop
+      ? "dream"
+      : scope === "user"
+        ? "manual"
+        : (parseOrigin(args.origin) ?? "manual");
+    const fileName = mm.save(
+      {
+        id,
+        name,
+        description,
+        type: type as (typeof VALID_TYPES)[number],
+        content,
+        origin: forcedOrigin,
+      },
+      { forceOrigin: forcedOrigin },
+    );
     return `Saved memory "${name}" → ${location}/${scope}/${fileName}`;
   } catch (err) {
     return `Error saving memory: ${(err as Error).message}`;

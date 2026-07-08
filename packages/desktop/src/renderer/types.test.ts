@@ -706,6 +706,23 @@ describe("applyStreamEvent — message timestamps", () => {
     s = applyStreamEvent(s, turnComplete);
     expect((s.messages[0] as AssistantMessage).doneAt).toBe(first);
   });
+
+  test("agent_start and agent_end use the replay clock", () => {
+    let replayNow = 111;
+    let s = applyStreamEvent(INITIAL_STATE, startAgent("A"), () => replayNow);
+    let agent = findAgent(s, "A");
+    expect(agent.startedAt).toBe(111);
+    expect(s.activeAgents.A?.startedAt).toBe(111);
+
+    replayNow = 222;
+    s = applyStreamEvent(
+      s,
+      ev("agent_end", { agentId: "A", text: "done" } as any),
+      () => replayNow,
+    );
+    agent = findAgent(s, "A");
+    expect(agent.endedAt).toBe(222);
+  });
 });
 
 describe("applyStreamEvent — empty error is dropped", () => {

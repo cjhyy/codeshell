@@ -1,4 +1,6 @@
 /** Small display formatters shared by the session/room lists. */
+import { translate } from "@/i18n/translate";
+import { loadUILanguage, type UILanguage } from "@/uiLanguage";
 
 /** Last path segment of a cwd ("/Users/x/proj" → "proj"). Empty for ""/root. */
 export function basename(p: string): string {
@@ -43,6 +45,7 @@ export function projectForCwd<T extends { path: string; name: string }>(
 export function groupByProject<T extends { cwd: string; updatedAt: number }>(
   items: T[],
   projects: Array<{ path: string; name: string }> = [],
+  lang: UILanguage = loadUILanguage(),
 ): { cwd: string; name: string; items: T[]; updatedAt: number }[] {
   const map = new Map<string, T[]>();
   for (const it of items) {
@@ -54,7 +57,9 @@ export function groupByProject<T extends { cwd: string; updatedAt: number }>(
   const projectByPath = new Map(projects.map((p, i) => [p.path, { ...p, order: i }]));
   const groups = [...map.entries()].map(([cwd, list]) => ({
     cwd,
-    name: cwd ? projectByPath.get(cwd)?.name || basename(cwd) || cwd : "无项目",
+    name: cwd
+      ? projectByPath.get(cwd)?.name || basename(cwd) || cwd
+      : translate(lang, "mobile.format.noProject"),
     items: list,
     updatedAt: Math.max(...list.map((i) => i.updatedAt)),
   }));
@@ -73,17 +78,21 @@ export function groupByProject<T extends { cwd: string; updatedAt: number }>(
 
 /** Coarse relative time ("刚刚" / "5 分钟前" / "3 小时前" / "2 天前").
  *  `now` is injectable for deterministic tests. */
-export function relativeTime(ts: number, now: number = Date.now()): string {
+export function relativeTime(
+  ts: number,
+  now: number = Date.now(),
+  lang: UILanguage = loadUILanguage(),
+): string {
   const diff = Math.max(0, now - ts);
   const sec = Math.floor(diff / 1000);
-  if (sec < 60) return "刚刚";
+  if (sec < 60) return translate(lang, "mobile.format.justNow");
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min} 分钟前`;
+  if (min < 60) return translate(lang, "mobile.format.minutesAgo", { n: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} 小时前`;
+  if (hr < 24) return translate(lang, "mobile.format.hoursAgo", { n: hr });
   const day = Math.floor(hr / 24);
-  if (day < 30) return `${day} 天前`;
+  if (day < 30) return translate(lang, "mobile.format.daysAgo", { n: day });
   const mon = Math.floor(day / 30);
-  if (mon < 12) return `${mon} 个月前`;
-  return `${Math.floor(mon / 12)} 年前`;
+  if (mon < 12) return translate(lang, "mobile.format.monthsAgo", { n: mon });
+  return translate(lang, "mobile.format.yearsAgo", { n: Math.floor(mon / 12) });
 }

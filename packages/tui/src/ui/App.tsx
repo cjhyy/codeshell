@@ -43,7 +43,7 @@ import {
 import { ProviderModelFlow } from "./components/ProviderModelFlow.js";
 import { SessionPicker, type SessionPickerEntry } from "./components/SessionPicker.js";
 import type { OnboardingResult } from "@cjhyy/code-shell-core";
-import { CommandRegistry } from "../cli/commands/registry.js";
+import { CommandRegistry, type CommandContext } from "../cli/commands/registry.js";
 import type { RestoredChatEntry } from "../cli/commands/registry.js";
 import { QueryGuard } from "./query-guard.js";
 import { AgentDock, getVisibleAgents, MAX_VISIBLE } from "./components/AgentDock.js";
@@ -93,6 +93,44 @@ const HIGH_FREQUENCY_STREAM_EVENTS = new Set<StreamEvent["type"]>([
 
 function shouldTraceStreamEvent(type: StreamEvent["type"]): boolean {
   return STREAM_DIAG_ON || !HIGH_FREQUENCY_STREAM_EVENTS.has(type);
+}
+
+export function shouldAppendThinkingDeltaToMainFeed(agentId: string | undefined): boolean {
+  return agentId === undefined;
+}
+
+export function shouldDrainBackgroundNotifications(opts: {
+  notificationCount: number;
+  isQueryActive: boolean;
+  queryGuardBusy: boolean;
+  input: string;
+  overlayOpen: boolean;
+  sessionId: string | undefined;
+}): boolean {
+  if (opts.notificationCount === 0) return false;
+  if (opts.isQueryActive || opts.queryGuardBusy) return false;
+  if (opts.input.trim() !== "") return false;
+  if (opts.overlayOpen) return false;
+  return typeof opts.sessionId === "string" && opts.sessionId.length > 0;
+}
+
+function formatCommandError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export function dispatchSlashCommandSafely(
+  registry: Pick<CommandRegistry, "dispatch">,
+  cmd: string,
+  cmdCtx: CommandContext,
+  addStatus: (status: string) => void,
+): void {
+  try {
+    void Promise.resolve(registry.dispatch(cmd, cmdCtx)).catch((error) => {
+      addStatus(`Command failed: ${formatCommandError(error)}`);
+    });
+  } catch (error) {
+    addStatus(`Command failed: ${formatCommandError(error)}`);
+  }
 }
 
 // ─── Global command registry ────────────────────────────────────
@@ -313,7 +351,7 @@ export function App({
   // tracks `sessionId` for display and for re-passing on subsequent runs.
 
   // Unseen message divider tracking
-  const { dividerIndex, showPill, unseenCount, onScrollToBottom: clearUnseen } =
+  const { dividerIndex, showPill, unseenCount, onScrollAway, onScrollToBottom: clearUnseen } =
     useUnseenDivider(chatLog.length);
   // Imperative handle on VirtualMessageList so we can scroll the list to
   // the bottom when the user dismisses the "N new messages" pill or
@@ -574,6 +612,7 @@ export function App({
           break;
 
         case "thinking_delta":
+          if (!shouldAppendThinkingDeltaToMainFeed(agentId)) break;
           thinkingBufferRef.current += event.text;
           if (!thinkingFlushTimerRef.current) {
             thinkingFlushTimerRef.current = setTimeout(flushThinkingBuffer, 50);
@@ -713,7 +752,7 @@ export function App({
                 error: r.error,
                 agentId,
                 compact: looksLikeArenaRetry,
-              } as any),
+              }),
             ];
           });
           break;
@@ -1432,13 +1471,23 @@ export function App({
     getNotificationSnapshot,
   );
   useEffect(() => {
-    if (notificationSnapshot.length === 0) return;
-    if (isQueryActive) return;
-    if (input.trim() !== "") return;
-    if (overlayOpen) return;
-    if (!sessionId) return;
+    if (
+      !shouldDrainBackgroundNotifications({
+        notificationCount: notificationSnapshot.length,
+        isQueryActive,
+        queryGuardBusy: queryGuard.getSnapshot(),
+        input,
+        overlayOpen: Boolean(overlayOpen),
+        sessionId,
+      })
+    ) {
+      return;
+    }
 
-    const items = notificationQueue.drainAll(sessionId);
+    const notificationSessionId = sessionId;
+    if (!notificationSessionId) return;
+
+    const items = notificationQueue.drainAll(notificationSessionId);
     if (items.length === 0) return;
     const xml = buildNotificationMessage(items);
     const summary = buildNotificationSummary(items);
@@ -1588,7 +1637,7 @@ export function App({
           return cleared;
         },
       };
-      commandRegistry.dispatch(cmd, cmdCtx);
+      dispatchSlashCommandSafely(commandRegistry, cmd, cmdCtx, addStatus);
     },
     [
       client,
@@ -1690,6 +1739,7 @@ export function App({
         expanded={isTranscript}
         dividerIndex={dividerIndex}
         unseenCount={unseenCount}
+        onScrollAway={onScrollAway}
       />
 
       {/* Spinner with verb (when loading).
@@ -2059,7 +2109,7 @@ export function App({
 
 // ─── Entry Renderer ──────────────────────────────────────────────
 
-function renderEntry(entry: ChatEntry, key: string, expanded = false) {
+export function renderEntry(entry: ChatEntry, key: string, expanded = false) {
   const nested = !!(entry as any).agentId;
 
   switch (entry.type) {
@@ -2105,6 +2155,7 @@ function renderEntry(entry: ChatEntry, key: string, expanded = false) {
           error={entry.error}
           nested={nested}
           expanded={expanded}
+          compact={entry.compact}
         />
       );
 

@@ -199,6 +199,15 @@ export interface SessionWorkspace {
   };
 }
 
+export interface ContextUsageAnchor {
+  promptTokens: number;
+  messageCount: number;
+  estimateAtAnchor?: number;
+  recordedAt: number;
+  provider?: string;
+  model?: string;
+}
+
 export interface SessionState {
   sessionId: string;
   cwd: string;
@@ -212,6 +221,12 @@ export interface SessionState {
    * (for example model switches), so it must not drive whole-session metrics.
    */
   tokenUsage: TokenUsage;
+  /**
+   * Last provider-reported prompt-token count for the current context window.
+   * Separate from cumulative tokenUsage; used only to seed context-size estimates
+   * before the next provider response.
+   */
+  contextUsageAnchor?: ContextUsageAnchor;
   /**
    * Monotonic prompt-cache counters for the whole session. These only increase
    * from session start and are separate from the resettable tokenUsage window.

@@ -54,6 +54,7 @@ describe("CdpActionsDriver.clickNode", () => {
       "Accessibility.enable:",
       "DOM.scrollIntoViewIfNeeded:",
       "DOM.getBoxModel:",
+      "Page.getLayoutMetrics:",
       "Input.dispatchMouseEvent:mouseMoved",
       "Input.dispatchMouseEvent:mousePressed",
       "Input.dispatchMouseEvent:mouseReleased",
@@ -63,7 +64,7 @@ describe("CdpActionsDriver.clickNode", () => {
     expect(press?.params).toMatchObject({ x: 50, y: 20, button: "left", clickCount: 1 });
   });
 
-  test("falls back to JS .click() when the node has no layout box", async () => {
+  test("fails when the node has no layout box instead of using JS .click()", async () => {
     const { send, calls } = fakeCdp({
       "DOM.getBoxModel": () => ({ model: null }),
       "DOM.resolveNode": () => ({ object: { objectId: "obj-1" } }),
@@ -71,11 +72,56 @@ describe("CdpActionsDriver.clickNode", () => {
     const d = new CdpActionsDriver(send, () => ({ url: "u" }));
 
     const r = await d.clickNode(5);
-    expect(r.ok).toBe(true);
-    expect(r.detail).toContain("JS fallback");
+    expect(r).toMatchObject({ ok: false, staleRef: true });
     const methods = calls.map((c) => c.method);
-    expect(methods).toContain("DOM.resolveNode");
-    expect(methods).toContain("Runtime.callFunctionOn");
+    expect(methods).not.toContain("DOM.resolveNode");
+    expect(methods).not.toContain("Runtime.callFunctionOn");
+  });
+
+  test("clicks inside the visible viewport intersection", async () => {
+    const { send, calls } = fakeCdp({
+      "DOM.getBoxModel": () => ({
+        model: { content: [760, 10, 860, 10, 860, 50, 760, 50] },
+      }),
+      "Page.getLayoutMetrics": () => ({ layoutViewport: { clientWidth: 800, clientHeight: 600 } }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+
+    const r = await d.clickNode(20);
+    expect(r.ok).toBe(true);
+    const press = calls.find((c) => c.params?.type === "mousePressed");
+    expect(press?.params).toMatchObject({ x: 780, y: 30 });
+  });
+
+  test("dispatches viewport-relative coordinates after page scroll", async () => {
+    const { send, calls } = fakeCdp({
+      "DOM.getBoxModel": () => ({
+        model: { content: [20, 1000, 120, 1000, 120, 1040, 20, 1040] },
+      }),
+      "Page.getLayoutMetrics": () => ({
+        layoutViewport: { pageX: 0, pageY: 980, clientWidth: 800, clientHeight: 600 },
+      }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+
+    const r = await d.clickNode(20);
+    expect(r.ok).toBe(true);
+    const press = calls.find((c) => c.params?.type === "mousePressed");
+    expect(press?.params).toMatchObject({ x: 70, y: 40 });
+  });
+
+  test("fails when the node has no visible viewport intersection", async () => {
+    const { send, calls } = fakeCdp({
+      "DOM.getBoxModel": () => ({
+        model: { content: [900, 10, 1000, 10, 1000, 50, 900, 50] },
+      }),
+      "Page.getLayoutMetrics": () => ({ layoutViewport: { clientWidth: 800, clientHeight: 600 } }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+
+    const r = await d.clickNode(20);
+    expect(r.ok).toBe(false);
+    expect(calls.some((c) => c.method === "Input.dispatchMouseEvent")).toBe(false);
   });
 });
 
@@ -116,6 +162,31 @@ describe("CdpActionsDriver.hoverNode", () => {
 });
 
 describe("CdpActionsDriver.pressKey", () => {
+  test("sends text payloads for printable keys only", async () => {
+    const { send, calls } = fakeCdp();
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+
+    const printable = await d.pressKey("a");
+    expect(printable.ok).toBe(true);
+    const printableKeys = calls.filter((c) => c.method === "Input.dispatchKeyEvent");
+    expect(printableKeys[0]?.params).toMatchObject({
+      type: "keyDown",
+      key: "a",
+      text: "a",
+      unmodifiedText: "a",
+    });
+    expect(printableKeys[1]?.params).not.toHaveProperty("text");
+    expect(printableKeys[1]?.params).not.toHaveProperty("unmodifiedText");
+
+    calls.length = 0;
+    const control = await d.pressKey("Enter");
+    expect(control.ok).toBe(true);
+    const controlKeys = calls.filter((c) => c.method === "Input.dispatchKeyEvent");
+    expect(controlKeys[0]?.params).toMatchObject({ type: "keyDown", key: "Enter" });
+    expect(controlKeys[0]?.params).not.toHaveProperty("text");
+    expect(controlKeys[0]?.params).not.toHaveProperty("unmodifiedText");
+  });
+
   test("dispatches the planned sequence for a combination", async () => {
     const { send, calls } = fakeCdp();
     const d = new CdpActionsDriver(send, () => ({ url: "u" }));
@@ -172,6 +243,10 @@ describe("buildExtractScript", () => {
     expect(s).toContain("removeAttribute(REF_ATTR)");
     expect(s).not.toContain("data-cs-ref");
     expect(s).toContain("var cap=50");
+    expect(s).toContain("function pushVid(s,ref)");
+    expect(s).toContain("videos.push({url:s,ref:ref})");
+    expect(s).toContain("pushVid(vd.currentSrc,ref)");
+    expect(s).toContain("pushVid(srcs[m].src,ref)");
   });
 });
 
@@ -206,6 +281,19 @@ describe("CdpActionsDriver.fetchImageData", () => {
     expect(ev?.params?.expression).toContain("image fetch timed out");
   });
 
+  test("sanitizes maxDim before interpolating it into page JavaScript", async () => {
+    const { send, calls } = fakeCdp({
+      "Runtime.evaluate": () => ({
+        result: { value: { ok: true, dataUrl: "data:image/jpeg;base64,QUJD" } },
+      }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+    await d.fetchImageData("img3", "1);window.__pwned=1;//" as unknown as number);
+    const ev = calls.find((c) => c.method === "Runtime.evaluate");
+    expect(ev?.params?.expression).not.toContain("__pwned");
+    expect(ev?.params?.expression).toContain('"img3", 1568, 15000');
+  });
+
   test("reports missing ref", async () => {
     const { send } = fakeCdp({
       "Runtime.evaluate": () => ({ result: { value: { ok: false, missing: true } } }),
@@ -213,6 +301,7 @@ describe("CdpActionsDriver.fetchImageData", () => {
     const d = new CdpActionsDriver(send, () => ({ url: "u" }));
     const r = await d.fetchImageData("img9");
     expect(r.ok).toBe(false);
+    expect(r.staleRef).toBe(true);
     expect(r.detail).toContain("not found");
   });
 });

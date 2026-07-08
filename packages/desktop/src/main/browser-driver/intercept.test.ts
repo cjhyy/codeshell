@@ -122,7 +122,19 @@ describe("parseCredentialActionLine", () => {
       requestId: "rq2",
       action: "injectCookie",
       credentialId: "xiaohongshu__account",
+      credentialScope: "full",
     });
+  });
+
+  test("parses credentialScope for project-scoped injection", () => {
+    const p = parseCredentialActionLine(
+      credActionLine({
+        action: "injectCookie",
+        credentialId: "xiaohongshu__account",
+        credentialScope: "project",
+      }),
+    );
+    expect(p?.credentialScope).toBe("project");
   });
 
   test("returns null for a browser action (not credential)", () => {
@@ -150,6 +162,7 @@ describe("buildCredentialActionReply", () => {
       requestId: "rq2",
       action: "injectCookie",
       credentialId: "id",
+      credentialScope: "full" as const,
     };
     const reply = JSON.parse(buildCredentialActionReply(parsed, '{"ok":true,"count":3}'));
     expect(reply.method).toBe("agent/approve");

@@ -260,6 +260,26 @@ describe("SettingsManager project trust gating", () => {
     expect(s.env?.USER_KEY).toBe("u");
     expect(s.env?.PROJ_KEY).toBeUndefined();
   });
+
+  test("untrusted project cannot smuggle dangerous fields through __proto__", () => {
+    mkdirSync(join(cwd, ".code-shell"), { recursive: true });
+    writeFileSync(
+      join(cwd, ".code-shell", "settings.json"),
+      JSON.stringify({
+        context: { compactAtRatio: 0.9 },
+      }).replace(
+        "{",
+        `{"__proto__":{"mcpServers":{"evil":{"name":"evil","command":"node","transport":"stdio"}}},`,
+      ),
+      "utf-8",
+    );
+
+    const s = new SettingsManager(cwd, "project", false).get();
+
+    expect(s.context?.compactAtRatio).toBe(0.9);
+    expect(s.mcpServers ?? {}).toEqual({});
+    expect(({} as Record<string, unknown>).mcpServers).toBeUndefined();
+  });
 });
 
 describe("SettingsManager project writes", () => {
@@ -297,7 +317,11 @@ describe("SettingsManager project writes", () => {
 
   test("saveProjectSetting writes the file owner-only (0o600) — no plaintext key world-readable", () => {
     const sm = new SettingsManager(cwd, "project");
-    sm.saveProjectSetting("providers", [{ key: "p", kind: "openai", baseUrl: "x", apiKey: "sk-secret" }], cwd);
+    sm.saveProjectSetting(
+      "providers",
+      [{ key: "p", kind: "openai", baseUrl: "x", apiKey: "sk-secret" }],
+      cwd,
+    );
     const mode = statSync(join(cwd, ".code-shell", "settings.json")).mode & 0o777;
     expect(mode).toBe(0o600);
   });
@@ -310,12 +334,14 @@ describe("SettingsManager project writes", () => {
     chmodSync(f, 0o644);
     const sm = new SettingsManager(cwd, "project");
     sm.saveProjectSetting("capabilityOverrides.skills.helper", "on", cwd);
-    expect((statSync(f).mode & 0o777)).toBe(0o600);
+    expect(statSync(f).mode & 0o777).toBe(0o600);
   });
 
   test("saveUserSetting writes the user settings.json owner-only (0o600)", () => {
     const sm = new SettingsManager(cwd, "full");
-    sm.saveUserSetting("providers", [{ key: "p", kind: "openai", baseUrl: "x", apiKey: "sk-secret" }]);
+    sm.saveUserSetting("providers", [
+      { key: "p", kind: "openai", baseUrl: "x", apiKey: "sk-secret" },
+    ]);
     const mode = statSync(join(home, ".code-shell", "settings.json")).mode & 0o777;
     expect(mode).toBe(0o600);
   });
@@ -422,7 +448,12 @@ describe("SettingsManager config migration wiring", () => {
 
   test("legacy user-file gen provider gets catalogId backfilled + .bak + merged view", () => {
     seed(home, {
-      imageGen: { defaultProvider: "openai", providers: [{ id: "openai", kind: "openai", apiKey: "sk", baseUrl: "https://api.openai.com/v1" }] },
+      imageGen: {
+        defaultProvider: "openai",
+        providers: [
+          { id: "openai", kind: "openai", apiKey: "sk", baseUrl: "https://api.openai.com/v1" },
+        ],
+      },
     });
     const merged = new SettingsManager(cwd, "full").load() as any;
     expect(merged.imageGen.providers[0].catalogId).toBe("openai-images");
@@ -435,7 +466,11 @@ describe("SettingsManager config migration wiring", () => {
   });
 
   test("legacy project-file gen provider migrates too (project scope)", () => {
-    seed(cwd, { videoGen: { providers: [{ id: "fal", kind: "fal", apiKey: "f", baseUrl: "https://fal.run" }] } });
+    seed(cwd, {
+      videoGen: {
+        providers: [{ id: "fal", kind: "fal", apiKey: "f", baseUrl: "https://fal.run" }],
+      },
+    });
     const merged = new SettingsManager(cwd, "project").load() as any;
     expect(merged.videoGen.providers[0].catalogId).toBe("fal-video");
     const onDisk = JSON.parse(readFileSync(join(cwd, ".code-shell", "settings.json"), "utf-8"));
@@ -454,7 +489,17 @@ describe("SettingsManager config migration wiring", () => {
   test("already-migrated file is not rewritten again", () => {
     seed(home, {
       configVersion: 1,
-      imageGen: { providers: [{ id: "openai", kind: "openai", apiKey: "sk", baseUrl: "https://api.openai.com/v1", catalogId: "openai-images" }] },
+      imageGen: {
+        providers: [
+          {
+            id: "openai",
+            kind: "openai",
+            apiKey: "sk",
+            baseUrl: "https://api.openai.com/v1",
+            catalogId: "openai-images",
+          },
+        ],
+      },
     });
     const path = join(home, ".code-shell", "settings.json");
     const before = readFileSync(path, "utf-8");
@@ -500,10 +545,7 @@ describe("SettingsManager hooks cross-layer concat", () => {
       hooks: [{ event: "pre_tool_use", command: "echo project" }],
     });
     const merged = new SettingsManager(cwd, "full").load();
-    expect((merged.hooks ?? []).map((h) => h.command)).toEqual([
-      "echo global",
-      "echo project",
-    ]);
+    expect((merged.hooks ?? []).map((h) => h.command)).toEqual(["echo global", "echo project"]);
   });
 
   test("project-only hooks are unchanged (no user layer)", () => {
@@ -531,10 +573,7 @@ describe("SettingsManager hooks cross-layer concat", () => {
       hooks: [{ event: "notification", command: "echo local" }],
     });
     const merged = new SettingsManager(cwd, "full").load();
-    expect((merged.hooks ?? []).map((h) => h.command)).toEqual([
-      "echo project",
-      "echo local",
-    ]);
+    expect((merged.hooks ?? []).map((h) => h.command)).toEqual(["echo project", "echo local"]);
   });
 
   test("disabled flag survives validation (schema keeps it)", () => {

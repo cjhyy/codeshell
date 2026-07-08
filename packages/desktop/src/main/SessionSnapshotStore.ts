@@ -46,17 +46,19 @@ export class SessionSnapshotStore {
   }
 
   /** Record a forwarded event for a session, assigning it the next seq. */
-  append(sessionId: string, event: unknown): void {
+  append(sessionId: string, event: unknown): SnapshotEntry {
     let log = this.logs.get(sessionId);
     if (!log) {
       log = { events: [], nextSeq: 1 };
       this.logs.set(sessionId, log);
     }
-    log.events.push({ seq: log.nextSeq, event });
+    const entry = { seq: log.nextSeq, event };
+    log.events.push(entry);
     log.nextSeq += 1;
     if (log.events.length > this.maxPerSession) {
       log.events.splice(0, log.events.length - this.maxPerSession);
     }
+    return entry;
   }
 
   /**

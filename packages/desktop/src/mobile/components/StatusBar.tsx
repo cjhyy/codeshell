@@ -1,26 +1,42 @@
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n";
 import type { ConnStatus } from "@mobile/hooks/useRemoteSocket";
 import type { RunState } from "@/lib/streamReducer";
 
-const CONN_LABEL: Record<ConnStatus, string> = {
-  connecting: "连接中…",
-  authenticating: "认证中…",
-  unpaired: "未配对",
-  online: "在线",
-  offline: "已断开",
+const CONN_LABEL_KEY: Record<
+  ConnStatus,
+  | "mobile.status.conn.connecting"
+  | "mobile.status.conn.authenticating"
+  | "mobile.status.conn.unpaired"
+  | "mobile.status.conn.online"
+  | "mobile.status.conn.offline"
+> = {
+  connecting: "mobile.status.conn.connecting",
+  authenticating: "mobile.status.conn.authenticating",
+  unpaired: "mobile.status.conn.unpaired",
+  online: "mobile.status.conn.online",
+  offline: "mobile.status.conn.offline",
 };
 
-const RUN_LABEL: Record<RunState, string> = {
-  idle: "空闲",
-  running: "运行中",
-  waiting: "待审批",
-  completed: "已完成",
-  error: "出错",
+const RUN_LABEL_KEY: Record<
+  RunState,
+  | "mobile.status.run.idle"
+  | "mobile.status.run.running"
+  | "mobile.status.run.waiting"
+  | "mobile.status.run.completed"
+  | "mobile.status.run.error"
+> = {
+  idle: "mobile.status.run.idle",
+  running: "mobile.status.run.running",
+  waiting: "mobile.status.run.waiting",
+  completed: "mobile.status.run.completed",
+  error: "mobile.status.run.error",
 };
 
 /** A status pip + label. When online, shows the run state; otherwise the
  *  connection state. Colors come from the shared status tokens. */
 export function StatusBar({ conn, run }: { conn: ConnStatus; run: RunState }) {
+  const { t } = useT();
   const online = conn === "online";
   const tone = !online
     ? conn === "offline" || conn === "unpaired"
@@ -35,7 +51,7 @@ export function StatusBar({ conn, run }: { conn: ConnStatus; run: RunState }) {
           : run === "completed"
             ? "ok"
             : "idle";
-  const label = online ? RUN_LABEL[run] : CONN_LABEL[conn];
+  const label = online ? t(RUN_LABEL_KEY[run]) : t(CONN_LABEL_KEY[conn]);
   return (
     <span
       className={cn(

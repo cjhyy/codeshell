@@ -19,7 +19,7 @@ import {
   type SessionCredentialAllow,
   type CredentialAskFn,
 } from "./use-gate.js";
-import { SettingsManager } from "../settings/manager.js";
+import { SettingsManager, type SettingsScope } from "../settings/manager.js";
 
 const TOOL_NAME = "InjectCredential";
 
@@ -60,9 +60,7 @@ export const injectCredentialToolDef: ToolDefinition = {
   },
 };
 
-type InjectResult =
-  | { kind: "injected"; count: number }
-  | { kind: "error"; error: string };
+type InjectResult = { kind: "injected"; count: number } | { kind: "error"; error: string };
 
 /** 内存会话 allow 集(每 Engine 一份,与 UseCredential 分开:注入是独立动作)。 */
 const injectSessionAllowByEngine = new Map<string, SessionCredentialAllow>();
@@ -78,9 +76,17 @@ function sessionAllowFor(ctx?: ToolContext): SessionCredentialAllow {
   return set;
 }
 
-function readAutoApprove(cwd: string): boolean {
+// CredentialStore only distinguishes full user+project from project-only.
+// Isolated engines must be at least as restrictive as project-scoped engines.
+function credentialScope(scope: SettingsScope | undefined): "full" | "project" {
+  return scope === "full" || scope === undefined ? "full" : "project";
+}
+
+function readAutoApprove(cwd: string, scope: "full" | "project"): boolean {
   try {
-    const s = new SettingsManager(cwd, "full").get() as { credentialUse?: { autoApprove?: boolean } };
+    const s = new SettingsManager(cwd, scope === "full" ? "full" : "project").get() as {
+      credentialUse?: { autoApprove?: boolean };
+    };
     return s.credentialUse?.autoApprove === true;
   } catch {
     return false;
@@ -88,9 +94,11 @@ function readAutoApprove(cwd: string): boolean {
 }
 
 /** 该工具仅在有 cookie 凭证 且 宿主接了注入回调时才可见(BUILTIN_TOOL_GUARDS)。 */
-export function isInjectCredentialAvailable(cwd: string): boolean {
+export function isInjectCredentialAvailable(cwd: string, settingsScope?: SettingsScope): boolean {
   try {
-    return new CredentialStore(cwd).listMasked().some((c) => c.type === "cookie");
+    return new CredentialStore(cwd)
+      .listMasked(credentialScope(settingsScope))
+      .some((c) => c.type === "cookie");
   } catch {
     return false;
   }
@@ -101,34 +109,44 @@ export async function injectCredentialTool(
   ctx?: ToolContext,
 ): Promise<string> {
   const cwd = ctx?.cwd ?? process.cwd();
+  const scope = credentialScope(ctx?.settingsScope);
   const id = typeof args.id === "string" ? args.id.trim() : "";
   const purpose = typeof args.purpose === "string" ? args.purpose : undefined;
 
   if (!id) {
-    return json({ kind: "error", error: "缺少 id。先用 UseCredential(无参)列出凭证,再用 cookie 凭证的 id 调本工具。" });
+    return json({
+      kind: "error",
+      error: "缺少 id。先用 UseCredential(无参)列出凭证,再用 cookie 凭证的 id 调本工具。",
+    });
   }
 
   if (!ctx?.injectCredentialToBrowser) {
     return json({
       kind: "error",
-      error: "当前环境无内置浏览器(headless/无面板),无法注入。请改用 UseCredential 取 cookie 走 HTTP 请求。",
+      error:
+        "当前环境无内置浏览器(headless/无面板),无法注入。请改用 UseCredential 取 cookie 走 HTTP 请求。",
     });
   }
 
-  const cred = new CredentialStore(cwd).resolve(id);
+  const cred = new CredentialStore(cwd).resolve(id, scope);
   if (!cred) {
-    return json({ kind: "error", error: `凭证不存在: "${id}"。调用 UseCredential(无参)可列出可用凭证。` });
+    return json({
+      kind: "error",
+      error: `凭证不存在: "${id}"。调用 UseCredential(无参)可列出可用凭证。`,
+    });
   }
   if (cred.type !== "cookie") {
     return json({ kind: "error", error: `凭证「${cred.label}」不是 cookie 类型,不能注入浏览器。` });
   }
 
   // 过门:复用三档,但用该凭证的 autoInjectByAI(不是 autoUseByAI)。
-  const ask: CredentialAskFn | undefined = ctx.askUser ? (q, opts) => ctx.askUser!(q, opts) : undefined;
+  const ask: CredentialAskFn | undefined = ctx.askUser
+    ? (q, opts) => ctx.askUser!(q, opts)
+    : undefined;
   const decision = await credentialUseGate(
     { id: cred.id, label: cred.label, purpose },
     {
-      autoApprove: readAutoApprove(cwd),
+      autoApprove: readAutoApprove(cwd, scope),
       credentialAutoUse: cred.autoInjectByAI === true,
       sessionAllow: sessionAllowFor(ctx),
       ask,
@@ -143,7 +161,7 @@ export async function injectCredentialTool(
   }
 
   // 跨进程触发宿主注入。
-  const res = await ctx.injectCredentialToBrowser(cred.id);
+  const res = await ctx.injectCredentialToBrowser(cred.id, scope);
   if (!res.ok) {
     return json({ kind: "error", error: res.error ?? "注入浏览器失败(宿主未返回成功)。" });
   }
@@ -157,4 +175,8 @@ function json(r: InjectResult): string {
 /** 测试钩子:清空会话 allow 集。 */
 export function __resetInjectCredentialSessionAllowForTests(): void {
   injectSessionAllowByEngine.clear();
+}
+
+export function clearInjectCredentialSessionAllow(sessionId: string): void {
+  injectSessionAllowByEngine.delete(sessionId);
 }

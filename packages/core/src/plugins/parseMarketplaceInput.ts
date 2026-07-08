@@ -6,21 +6,25 @@
 
 import type { MarketplaceSource } from "./types.js";
 
+export interface ParseMarketplaceInputOptions {
+  allowUnsafeTransport?: boolean;
+}
+
 /**
  * Returns the parsed source, or null when the input does not match any
  * supported pattern. Callers should show a usage hint on null.
  */
-export function parseMarketplaceInput(input: string): MarketplaceSource | null {
+export function parseMarketplaceInput(
+  input: string,
+  options: ParseMarketplaceInputOptions = {},
+): MarketplaceSource | null {
   const trimmed = input.trim();
   if (trimmed === "") return null;
 
   // Absolute local path to a git repository (bare or with .git suffix).
   // Useful for dev workflows where the marketplace lives on disk rather
   // than at a remote URL. git clone itself accepts the same form.
-  if (
-    (trimmed.startsWith("/") || /^[a-zA-Z]:[\\/]/.test(trimmed)) &&
-    trimmed.endsWith(".git")
-  ) {
+  if ((trimmed.startsWith("/") || /^[a-zA-Z]:[\\/]/.test(trimmed)) && trimmed.endsWith(".git")) {
     return { source: "git", url: trimmed };
   }
 
@@ -33,6 +37,8 @@ export function parseMarketplaceInput(input: string): MarketplaceSource | null {
 
   // HTTPS
   if (trimmed.startsWith("https://") || trimmed.startsWith("http://")) {
+    if (trimmed.startsWith("http://") && !options.allowUnsafeTransport) return null;
+
     let parsed: URL;
     try {
       parsed = new URL(trimmed);
@@ -52,7 +58,9 @@ export function parseMarketplaceInput(input: string): MarketplaceSource | null {
   }
 
   // GitHub shorthand: owner/repo (single slash, no protocol, no spaces)
-  const shorthandMatch = trimmed.match(/^([A-Za-z0-9][A-Za-z0-9._-]*)\/([A-Za-z0-9._-]+?)(\.git)?$/);
+  const shorthandMatch = trimmed.match(
+    /^([A-Za-z0-9][A-Za-z0-9._-]*)\/([A-Za-z0-9._-]+?)(\.git)?$/,
+  );
   if (shorthandMatch) {
     const owner = shorthandMatch[1];
     const repo = shorthandMatch[2];

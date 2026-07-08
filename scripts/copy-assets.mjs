@@ -51,6 +51,10 @@ for (const src of srcs) {
       console.error(`copy-assets: source dir not found: ${dir}`);
       process.exit(1);
     }
+    if (files.length === 0) {
+      console.error(`copy-assets: glob matched no files: ${src}`);
+      process.exit(1);
+    }
     for (const f of files) cpSync(join(dir, f), join(destDir, f));
   }
 }

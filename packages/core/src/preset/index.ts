@@ -86,6 +86,7 @@ const GENERAL_BUILTIN_TOOLS = [
   // 编排时读 CC/Codex 剩余额度做规划(开几个/等重置/换 provider)。
   "CheckQuota",
   "Skill",
+  "AddMarketplace",
   "MCPTool",
   "ListMcpResources",
   "ReadMcpResource",

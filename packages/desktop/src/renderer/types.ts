@@ -699,7 +699,7 @@ export function applyStreamEvent(
     }
 
     case "agent_start": {
-      const startedAt = Date.now();
+      const startedAt = now() ?? 0;
       const newIndex = state.messages.length;
       return {
         ...state,
@@ -765,7 +765,7 @@ export function applyStreamEvent(
     }
 
     case "agent_end": {
-      const endedAt = Date.now();
+      const endedAt = now() ?? undefined;
       const { [event.agentId]: _omit, ...rest } = state.activeAgents;
       const idx = state.agentMessageIndex[event.agentId];
       const msgs = state.messages.slice();

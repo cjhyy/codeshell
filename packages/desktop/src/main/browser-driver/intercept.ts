@@ -99,6 +99,7 @@ export interface ParsedCredentialAction {
   /** Currently only "injectCookie". */
   action: string;
   credentialId: string;
+  credentialScope: "full" | "project";
 }
 
 /**
@@ -124,6 +125,7 @@ export function parseCredentialActionLine(line: string): ParsedCredentialAction 
     requestId: p.requestId,
     action: a.action,
     credentialId: a.credentialId,
+    credentialScope: a.credentialScope === "project" ? "project" : "full",
   };
 }
 

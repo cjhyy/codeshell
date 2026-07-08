@@ -3,6 +3,7 @@ import { Check, ShieldAlert, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@ui/button";
 import { Textarea } from "@ui/textarea";
+import { useT } from "@/i18n";
 import type { ApprovalScope, ApprovalPathScope } from "@protocol";
 import type { PendingApproval } from "@mobile/hooks/useRemoteApp";
 
@@ -19,12 +20,6 @@ const RISK_TONE: Record<PendingApproval["risk"], string> = {
   high: "border-status-err/60 text-status-err",
 };
 
-const RISK_LABEL: Record<PendingApproval["risk"], string> = {
-  low: "低风险",
-  medium: "中风险",
-  high: "高风险",
-};
-
 /** A pending permission request, with full desktop-parity controls:
  *  approve/deny, remembered scope (once/session/project), path scope
  *  (file/dir for path-scoped tools), and AskUser options / free-text answer. */
@@ -35,6 +30,7 @@ export function ApprovalCard({
   approval: PendingApproval;
   onRespond: (decision: "approve" | "reject", opts?: ApprovalResponse) => void;
 }) {
+  const { t } = useT();
   const isAsk = Boolean(approval.options?.length);
   const [scope, setScope] = useState<ApprovalScope>("once");
   const [pathScope, setPathScope] = useState<ApprovalPathScope>("tool");
@@ -64,15 +60,17 @@ export function ApprovalCard({
             RISK_TONE[approval.risk],
           )}
         >
-          {RISK_LABEL[approval.risk]}
+          {t(`mobile.approval.risk.${approval.risk}`)}
         </span>
       </div>
       {showDescription && (
-        <p className="mb-2 text-xs text-muted-foreground">{approval.description}</p>
+        <p className="mb-2 break-words text-xs text-muted-foreground">{approval.description}</p>
       )}
       {isAsk ? (
         <div className="mb-3 rounded-lg border border-border/70 bg-muted/30 p-3">
-          <div className="mb-1 text-[11px] font-medium text-muted-foreground">问题</div>
+          <div className="mb-1 text-[11px] font-medium text-muted-foreground">
+            {t("mobile.approval.question")}
+          </div>
           <div className="whitespace-pre-wrap break-words text-sm leading-6 text-foreground">
             {askQuestion}
           </div>
@@ -110,7 +108,7 @@ export function ApprovalCard({
                 rows={2}
                 value={freeText}
                 onChange={(e) => setFreeText(e.target.value)}
-                placeholder="或输入自定义回答…"
+                placeholder={t("mobile.approval.customPlaceholder")}
                 name="codeshell-answer"
                 autoComplete="off"
                 autoCapitalize="off"
@@ -128,7 +126,7 @@ export function ApprovalCard({
                 onClick={() => onRespond("approve", { answer: freeText.trim() })}
               >
                 <Check />
-                发送自定义回答
+                {t("mobile.approval.sendCustom")}
               </Button>
             </div>
           )}
@@ -138,31 +136,31 @@ export function ApprovalCard({
             className="rounded-lg"
             onClick={() => onRespond("reject")}
           >
-            取消
+            {t("common.cancel")}
           </Button>
         </div>
       ) : (
         <div className="flex flex-col gap-2.5">
           {/* Remembered scope */}
           <ScopeChips
-            label="记住范围"
+            label={t("mobile.approval.rememberScope")}
             value={scope}
             options={[
-              ["once", "仅本次"],
-              ["session", "本会话"],
-              ["project", "本项目"],
+              ["once", t("mobile.approval.scope.once")],
+              ["session", t("mobile.approval.scope.session")],
+              ["project", t("mobile.approval.scope.project")],
             ]}
             onChange={(v) => setScope(v as ApprovalScope)}
           />
           {/* Path breadth, only for path-scoped tools and only when remembering */}
           {approval.pathScoped && scope !== "once" && (
             <ScopeChips
-              label="路径范围"
+              label={t("mobile.approval.pathScopeLabel")}
               value={pathScope}
               options={[
-                ["file", "此文件"],
-                ["dir", "此目录"],
-                ["tool", "此工具"],
+                ["file", t("mobile.approval.pathScope.file")],
+                ["dir", t("mobile.approval.pathScope.dir")],
+                ["tool", t("mobile.approval.pathScope.tool")],
               ]}
               onChange={(v) => setPathScope(v as ApprovalPathScope)}
             />
@@ -178,7 +176,7 @@ export function ApprovalCard({
               }
             >
               <Check />
-              允许
+              {t("mobile.approval.allow")}
             </Button>
             <Button
               className="h-10 flex-1 rounded-lg"
@@ -186,7 +184,7 @@ export function ApprovalCard({
               onClick={() => onRespond("reject")}
             >
               <X />
-              拒绝
+              {t("mobile.approval.reject")}
             </Button>
           </div>
         </div>

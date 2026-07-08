@@ -183,6 +183,7 @@ export interface SubAgentSpawner {
 export interface ToolVisibilityContext {
   cwd: string;
   hasGoal: boolean;
+  settingsScope?: import("../settings/manager.js").SettingsScope;
 }
 
 export interface ToolContext {
@@ -373,6 +374,7 @@ export interface ToolContext {
 /** Inject a cookie credential into the built-in browser (host-implemented). */
 export type InjectCredentialFn = (
   credentialId: string,
+  credentialScope?: "full" | "project",
 ) => Promise<{ ok: boolean; count?: number; error?: string }>;
 
 /**

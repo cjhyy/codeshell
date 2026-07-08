@@ -6,7 +6,7 @@
  * Tier 3: window compact (sync, emergency) — aggressive truncation fallback
  */
 
-import type { Message, LLMResponse } from "../types.js";
+import type { Message, LLMResponse, ContextUsageAnchor } from "../types.js";
 import {
   estimateTokens,
   microcompact,
@@ -101,6 +101,10 @@ type SummaryCompactResult = {
   noProgress: boolean;
 };
 
+function positiveFinite(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
 export class ContextManager {
   private config: ContextManagerConfig;
   private summarizeFn: SummarizeFn | undefined;
@@ -114,6 +118,9 @@ export class ContextManager {
   private lastActualAtMessageCount: number | undefined;
   /** Heuristic token estimate for the same messages as lastActualTokens. */
   private lastActualAnchorEstimate: number | undefined;
+  private lastActualRecordedAt: number | undefined;
+  private lastActualProvider: string | undefined;
+  private lastActualModel: string | undefined;
   /** Path to session transcript — passed to summary compaction for on-demand access. */
   private transcriptPath: string | undefined;
   /** Notified whenever any compaction tier fires, including microcompact. */
@@ -138,10 +145,62 @@ export class ContextManager {
    * Record actual token usage from API response.
    * Used for hybrid estimation: actual + estimate for new messages.
    */
-  recordActualUsage(inputTokens: number, messageCount: number, messages?: Message[]): void {
-    this.lastActualTokens = inputTokens;
-    this.lastActualAtMessageCount = messageCount;
-    this.lastActualAnchorEstimate = messages ? estimateTokens(messages) : undefined;
+  recordActualUsage(
+    inputTokens: number,
+    messageCount: number,
+    messages?: Message[],
+  ): ContextUsageAnchor | undefined {
+    const estimateAtAnchor = messages ? estimateTokens(messages) : undefined;
+    return this.seedActualUsage({
+      promptTokens: inputTokens,
+      messageCount,
+      ...(estimateAtAnchor !== undefined ? { estimateAtAnchor } : {}),
+      recordedAt: Date.now(),
+    });
+  }
+
+  /**
+   * Seed actual prompt-token usage from persisted session state.
+   * Returns the normalized anchor when accepted; invalid legacy/tampered data is ignored.
+   */
+  seedActualUsage(anchor: ContextUsageAnchor | undefined): ContextUsageAnchor | undefined {
+    if (!anchor) return undefined;
+    if (!positiveFinite(anchor.promptTokens)) return undefined;
+    if (!Number.isSafeInteger(anchor.messageCount) || anchor.messageCount <= 0) {
+      return undefined;
+    }
+    if (anchor.estimateAtAnchor !== undefined && !positiveFinite(anchor.estimateAtAnchor)) {
+      return undefined;
+    }
+
+    this.lastActualTokens = anchor.promptTokens;
+    this.lastActualAtMessageCount = anchor.messageCount;
+    this.lastActualAnchorEstimate = anchor.estimateAtAnchor;
+    this.lastActualRecordedAt = positiveFinite(anchor.recordedAt) ? anchor.recordedAt : Date.now();
+    this.lastActualProvider = anchor.provider;
+    this.lastActualModel = anchor.model;
+
+    return this.getActualUsageAnchor();
+  }
+
+  getActualUsageAnchor(): ContextUsageAnchor | undefined {
+    if (
+      this.lastActualTokens === undefined ||
+      this.lastActualAtMessageCount === undefined ||
+      this.lastActualRecordedAt === undefined
+    ) {
+      return undefined;
+    }
+    return {
+      promptTokens: this.lastActualTokens,
+      messageCount: this.lastActualAtMessageCount,
+      ...(this.lastActualAnchorEstimate !== undefined
+        ? { estimateAtAnchor: this.lastActualAnchorEstimate }
+        : {}),
+      recordedAt: this.lastActualRecordedAt,
+      ...(this.lastActualProvider ? { provider: this.lastActualProvider } : {}),
+      ...(this.lastActualModel ? { model: this.lastActualModel } : {}),
+    };
   }
 
   /**
@@ -415,6 +474,19 @@ export class ContextManager {
 
     // Tier 0c: Aggregate tool result budget (per-message)
     result = applyToolResultBudget(result);
+
+    // Tier 0d: same always-on waste-removal passes as manage().
+    const dedup = dedupeFileReads(result);
+    if (dedup.clearedCount > 0) {
+      result = dedup.messages;
+      logger.info("context.dedupe_file_reads", { cleared: dedup.clearedCount });
+    }
+
+    const masked = maskOldObservations(result);
+    if (masked.maskedCount > 0) {
+      result = masked.messages;
+      logger.info("context.mask_browser_snapshots", { masked: masked.maskedCount });
+    }
 
     // Tier 1: microcompact — see manage() for the rationale on the floor.
     const preTier1Tokens = this.estimateTokensHybrid(result);

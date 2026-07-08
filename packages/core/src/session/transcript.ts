@@ -14,7 +14,9 @@ export class Transcript {
   private filePath: string;
   private currentTurn = 0;
 
-  getFilePath(): string { return this.filePath; }
+  getFilePath(): string {
+    return this.filePath;
+  }
 
   constructor(filePath: string) {
     this.filePath = filePath;
@@ -76,12 +78,28 @@ export class Transcript {
     return this.findMessageByClientId(clientMessageId) !== undefined;
   }
 
-  appendToolUse(toolName: string, toolCallId: string, args: Record<string, unknown>): TranscriptEvent {
+  appendToolUse(
+    toolName: string,
+    toolCallId: string,
+    args: Record<string, unknown>,
+  ): TranscriptEvent {
     return this.append("tool_use", { toolName, toolCallId, args });
   }
 
-  appendToolResult(toolCallId: string, toolName: string, result?: string, error?: string): TranscriptEvent {
-    return this.append("tool_result", { toolCallId, toolName, result, error });
+  appendToolResult(
+    toolCallId: string,
+    toolName: string,
+    result?: string,
+    error?: string,
+    contentBlocks?: ContentBlock[],
+  ): TranscriptEvent {
+    return this.append("tool_result", {
+      toolCallId,
+      toolName,
+      result,
+      error,
+      ...(contentBlocks && contentBlocks.length > 0 ? { contentBlocks } : {}),
+    });
   }
 
   /** Anchor for a spawned sub-agent (see TranscriptEventType "subagent").
@@ -138,7 +156,10 @@ export class Transcript {
     for (const event of this.events) {
       switch (event.type) {
         case "message": {
-          const { role, content } = event.data as { role: string; content: string | ContentBlock[] };
+          const { role, content } = event.data as {
+            role: string;
+            content: string | ContentBlock[];
+          };
           messages.push({ role: role as Message["role"], content });
           break;
         }
@@ -148,17 +169,22 @@ export class Transcript {
           break;
         }
         case "tool_result": {
-          const { toolCallId, result, error } = event.data as {
+          const { toolCallId, result, error, contentBlocks } = event.data as {
             toolCallId: string;
             result?: string;
             error?: string;
+            contentBlocks?: ContentBlock[];
           };
           // Find if there's already a user message with tool_results to append to
           const lastMsg = messages[messages.length - 1];
           const block: ContentBlock = {
             type: "tool_result",
             tool_use_id: toolCallId,
-            content: error ? `Error: ${error}` : result ?? "(no output)",
+            content: error
+              ? `Error: ${error}`
+              : Array.isArray(contentBlocks) && contentBlocks.length > 0
+                ? contentBlocks
+                : (result ?? "(no output)"),
           };
 
           if (lastMsg?.role === "user" && Array.isArray(lastMsg.content)) {

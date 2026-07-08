@@ -63,6 +63,8 @@ export interface CdpImage {
 export interface CdpVideo {
   /** Absolute video/source URL (src resolved against the page). */
   url: string;
+  /** Per-snapshot ref (vid1, vid2, …) so the agent can point at one to fetch. */
+  ref?: string;
 }
 
 export interface CdpExtractResult {

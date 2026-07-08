@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/i18n";
 import type { CcDiscoveredSession, PermissionMode } from "@protocol";
 import type { CcCliKind } from "@mobile/hooks/useRemoteApp";
 import { relativeTime } from "@mobile/lib/format";
@@ -34,6 +35,7 @@ export function CcSessionList({
   onCliKindChange: (kind: CcCliKind) => void;
   onOpen: (sessionId: string, cwd: string, mode: PermissionMode) => void;
 }) {
+  const { t, lang } = useT();
   const label = CLI_LABEL[cliKind];
   // Tapping a session opens the permission-mode picker first (mirrors the desktop
   // CCRoomView flow), then onOpen with the chosen mode — instead of silently
@@ -44,8 +46,10 @@ export function CcSessionList({
       <div className="mobile-side-header flex flex-col gap-2 px-3 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-sm font-semibold leading-5">CC 会话</h2>
-            <p className="text-[11px] text-muted-foreground">外部 {label} 会话</p>
+            <h2 className="truncate text-sm font-semibold leading-5">{t("mobile.cc.title")}</h2>
+            <p className="text-[11px] text-muted-foreground">
+              {t("mobile.cc.subtitle", { label })}
+            </p>
           </div>
         </div>
         <div className="flex min-w-0 gap-1.5">
@@ -65,25 +69,25 @@ export function CcSessionList({
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2">
         {!cwd ? (
           <p className="mobile-glass rounded-lg px-3 py-6 text-center text-xs text-muted-foreground">
-            先选择一个项目。
+            {t("mobile.cc.selectProjectFirst")}
           </p>
         ) : probe === null ? (
           <p className="mobile-glass flex items-center justify-center gap-2 rounded-lg px-3 py-6 text-center text-xs text-muted-foreground">
             <Loader2 className="size-3.5 animate-spin text-status-running" />
-            正在检测 {label} CLI…
+            {t("mobile.cc.probingCli", { label })}
           </p>
         ) : !probe.available ? (
           <p className="mobile-glass rounded-lg px-3 py-6 text-center text-xs text-muted-foreground">
-            未检测到 {label} CLI(需在桌面端机器的 PATH 中)。
+            {t("mobile.cc.cliMissing", { label })}
           </p>
         ) : loading && sessions.length === 0 ? (
           <p className="mobile-glass flex items-center justify-center gap-2 rounded-lg px-3 py-6 text-center text-xs text-muted-foreground">
             <Loader2 className="size-3.5 animate-spin text-status-running" />
-            正在加载 cc 会话…
+            {t("mobile.cc.loadingSessions")}
           </p>
         ) : sessions.length === 0 ? (
           <p className="mobile-glass rounded-lg px-3 py-6 text-center text-xs text-muted-foreground">
-            该项目下没有 {label} 会话。
+            {t("mobile.cc.empty", { label })}
           </p>
         ) : (
           <ul className="flex flex-col gap-1.5">
@@ -91,7 +95,9 @@ export function CcSessionList({
               <li key={s.sessionId}>
                 <button
                   type="button"
-                  onClick={() => setPicking({ sessionId: s.sessionId, label: s.firstMessage || s.sessionId })}
+                  onClick={() =>
+                    setPicking({ sessionId: s.sessionId, label: s.firstMessage || s.sessionId })
+                  }
                   className={cn(
                     "mobile-list-item flex w-full min-w-0 flex-col gap-1 rounded-lg px-3 py-2.5 text-left",
                   )}
@@ -100,8 +106,12 @@ export function CcSessionList({
                     {s.firstMessage || s.sessionId}
                   </span>
                   <div className="flex w-full min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
-                    <span className="min-w-0 flex-1 truncate">{s.messageCount} 条</span>
-                    <span className="ml-auto shrink-0">{relativeTime(s.lastModified)}</span>
+                    <span className="min-w-0 flex-1 truncate">
+                      {t("mobile.cc.messageCount", { count: s.messageCount })}
+                    </span>
+                    <span className="ml-auto shrink-0">
+                      {relativeTime(s.lastModified, Date.now(), lang)}
+                    </span>
                   </div>
                 </button>
               </li>

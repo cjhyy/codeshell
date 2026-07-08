@@ -1,5 +1,13 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, readdirSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  existsSync,
+  rmSync,
+  readdirSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
@@ -40,7 +48,7 @@ describe("installPluginFromSource", () => {
     gitInitCommit(repo);
 
     const raw = `file://${repo}`;
-    const parsed = parseSource(raw);
+    const parsed = parseSource(raw, { allowUnsafeTransport: true });
     const dir = await installPluginFromSource(parsed, "remoteplug", STAMP);
 
     expect(existsSync(join(dir, "skills", "s", "SKILL.md"))).toBe(true);
@@ -52,7 +60,9 @@ describe("installPluginFromSource", () => {
     expect(reg.plugins["remoteplug@local"]?.[0]?.installPath).toBe(dir);
 
     // no leftover temp clone dirs in plugins root
-    const leftovers = readdirSync(join(home, ".code-shell", "plugins")).filter((n) => n.startsWith(".tmp-clone"));
+    const leftovers = readdirSync(join(home, ".code-shell", "plugins")).filter((n) =>
+      n.startsWith(".tmp-clone"),
+    );
     expect(leftovers).toEqual([]);
   });
 
@@ -65,7 +75,7 @@ describe("installPluginFromSource", () => {
     gitInitCommit(repo);
 
     const raw = `file://${repo}#sub/myplugin`;
-    const parsed = parseSource(raw);
+    const parsed = parseSource(raw, { allowUnsafeTransport: true });
     const dir = await installPluginFromSource(parsed, "subplug", STAMP);
 
     expect(existsSync(join(dir, "skills", "s", "SKILL.md"))).toBe(true);
@@ -78,7 +88,7 @@ describe("installPluginFromSource", () => {
     writeFileSync(join(repo, "skills", "s", "SKILL.md"), "---\nname: s\ndescription: d\n---\nb");
     gitInitCommit(repo);
 
-    const parsed = parseSource(`file://${repo}#nope/here`);
+    const parsed = parseSource(`file://${repo}#nope/here`, { allowUnsafeTransport: true });
     await expect(installPluginFromSource(parsed, "x", STAMP)).rejects.toThrow(/subdir not found/);
     expect(existsSync(join(home, ".code-shell", "plugins", "x"))).toBe(false);
   });
@@ -88,13 +98,17 @@ describe("installPluginFromSource", () => {
     writeFileSync(join(repo, "skills", "s", "SKILL.md"), "---\nname: s\ndescription: d\n---\nb");
     gitInitCommit(repo);
 
-    const parsed = parseSource(`file://${repo}#../outside`);
-    await expect(installPluginFromSource(parsed, "x", STAMP)).rejects.toThrow(/parent-directory|escapes/);
+    const parsed = parseSource(`file://${repo}#../outside`, { allowUnsafeTransport: true });
+    await expect(installPluginFromSource(parsed, "x", STAMP)).rejects.toThrow(
+      /parent-directory|escapes/,
+    );
     expect(existsSync(join(home, ".code-shell", "plugins", "x"))).toBe(false);
   });
 
   test("errors on clone failure, leaves nothing", async () => {
-    const parsed = parseSource(`file://${repo}-does-not-exist`);
+    const parsed = parseSource(`file://${repo}-does-not-exist`, {
+      allowUnsafeTransport: true,
+    });
     await expect(installPluginFromSource(parsed, "x", STAMP)).rejects.toThrow();
     expect(existsSync(join(home, ".code-shell", "plugins", "x"))).toBe(false);
   });

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { DoorOpen, LogOut, Menu, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@ui/button";
+import { useT } from "@/i18n";
 import { useRemoteApp } from "@mobile/hooks/useRemoteApp";
 import { ConnectionGate } from "@mobile/components/ConnectionGate";
 import { StatusBar } from "@mobile/components/StatusBar";
@@ -11,11 +12,13 @@ import { Composer } from "@mobile/components/Composer";
 import { SessionList } from "@mobile/components/SessionList";
 import { CcSessionList } from "@mobile/components/CcSessionList";
 import { PermissionModeControl } from "@mobile/components/PermissionModeControl";
+import { MobileSessionSwitcher } from "@mobile/components/MobileSessionSwitcher";
 
 const WIDE = "(min-width: 820px)";
 
 export function App() {
   const app = useRemoteApp();
+  const { t } = useT();
   const [wide, setWide] = useState(() => window.matchMedia(WIDE).matches);
   // The side pane stacks the project's chat sessions + external CC sessions. On a
   // phone it's a drawer; this just tracks open/closed. (Rooms are no longer a
@@ -44,6 +47,11 @@ export function App() {
   }
 
   const sidePane = <SidePane app={app} onDone={() => setDrawerOpen(false)} />;
+  const conversationKey = app.activeRoom
+    ? `room:${app.activeRoom.id}`
+    : app.activeSessionId
+      ? `session:${app.activeSessionId}`
+      : "new";
 
   return (
     <div className="mobile-shell flex h-dvh flex-col text-foreground">
@@ -83,7 +91,7 @@ export function App() {
                     className="h-6"
                     onClick={() => app.extendGoal(app.activeSessionId!)}
                   >
-                    延长目标
+                    {t("mobile.app.extendGoal")}
                   </Button>
                   <Button
                     size="sm"
@@ -91,16 +99,19 @@ export function App() {
                     className="h-6"
                     onClick={() => app.clearGoal(app.activeSessionId!)}
                   >
-                    清除目标
+                    {t("mobile.app.clearGoal")}
                   </Button>
                 </div>
               )}
             </div>
           )}
           <MessageStream
+            conversationKey={conversationKey}
             chat={app.chat}
             loading={app.loading.sessionHistory || app.loading.roomHistory}
-            loadingText={app.activeRoom ? "正在加载 CC 会话…" : "正在加载会话…"}
+            loadingText={
+              app.activeRoom ? t("mobile.app.loadingCcSession") : t("mobile.app.loadingSession")
+            }
           />
           <Composer
             disabled={app.status !== "online"}
@@ -123,9 +134,12 @@ function TopBar({
   wide: boolean;
   onOpenDrawer: () => void;
 }) {
+  const { t } = useT();
   // A bound "room" here is always an external CC (Claude Code) session — the
   // room is internal transport, so it surfaces to the user as a CC 会话.
-  const title = app.activeRoom ? app.activeRoom.name : app.chat.title || "对话";
+  const title = app.activeRoom
+    ? app.activeRoom.name
+    : app.chat.title || t("mobile.app.conversationFallback");
   const activeSession = app.sessions.find((s) => s.id === app.activeSessionId);
   const subtitle = app.activeRoom
     ? app.activeRoom.cwd
@@ -133,9 +147,9 @@ function TopBar({
       ? app.activeCwd
       : activeSession?.cwd
         ? activeSession.cwd
-      : app.activeSessionId
-        ? "桌面会话"
-        : "新会话";
+        : app.activeSessionId
+          ? t("mobile.app.desktopSession")
+          : t("mobile.app.newSession");
   return (
     <header
       className="mobile-topbar flex items-center gap-2 px-3 py-2.5"
@@ -143,7 +157,7 @@ function TopBar({
     >
       {!wide && (
         <Button
-          aria-label="打开会话"
+          aria-label={t("mobile.app.openSessionsAria")}
           className="mobile-icon-button shrink-0"
           size="icon"
           variant="outline"
@@ -171,7 +185,7 @@ function TopBar({
       <div className="ml-auto flex shrink-0 items-center gap-2">
         {app.activeRoom && (
           <Button
-            aria-label="退出会话"
+            aria-label={t("mobile.app.leaveSessionAria")}
             className="mobile-icon-button"
             size="icon"
             variant="outline"
@@ -186,13 +200,8 @@ function TopBar({
   );
 }
 
-function SidePane({
-  app,
-  onDone,
-}: {
-  app: ReturnType<typeof useRemoteApp>;
-  onDone: () => void;
-}) {
+function SidePane({ app, onDone }: { app: ReturnType<typeof useRemoteApp>; onDone: () => void }) {
+  const { t } = useT();
   const sessions = (
     <SessionList
       sessions={app.sessions}
@@ -229,9 +238,11 @@ function SidePane({
   );
   const footer = (
     <div className="mobile-safe-bottom flex min-w-0 items-center gap-2 border-t border-border/70 px-3 pt-2 text-xs text-muted-foreground">
-      <span className="min-w-0 flex-1 truncate">{app.deviceName || "设备"}</span>
+      <span className="min-w-0 flex-1 truncate">
+        {app.deviceName || t("mobile.app.deviceFallback")}
+      </span>
       <Button
-        aria-label="退出登录"
+        aria-label={t("mobile.app.logoutAria")}
         size="icon"
         variant="ghost"
         className="ml-auto size-8 shrink-0"
@@ -242,18 +253,20 @@ function SidePane({
     </div>
   );
 
-  // Phone drawer and tablet pane are identical now: the project's own chat
-  // sessions on top, the external CC (Claude Code) sessions below. No rooms.
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="min-h-0 flex-1 overflow-hidden border-b border-border/70">{sessions}</div>
-      <div className="min-h-0 flex-1 overflow-hidden">{ccSessions}</div>
+      <MobileSessionSwitcher
+        activeRoom={app.activeRoom}
+        sessionsContent={sessions}
+        ccContent={ccSessions}
+      />
       {footer}
     </div>
   );
 }
 
 function ApprovalsArea({ app }: { app: ReturnType<typeof useRemoteApp> }) {
+  const { t } = useT();
   if (app.approvals.length === 0) {
     // Surface the permission-mode control in a thin strip when idle so it's
     // always reachable without an approval pending.
@@ -261,7 +274,7 @@ function ApprovalsArea({ app }: { app: ReturnType<typeof useRemoteApp> }) {
       <div className="flex min-w-0 items-center gap-2 border-b border-border/70 bg-black/10 px-3 py-2">
         <span className="inline-flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
           <Shield className="size-3" />
-          权限
+          {t("mobile.app.permission")}
         </span>
         <PermissionModeControl mode={app.permissionMode} onChange={app.setPermissionMode} />
       </div>
@@ -287,7 +300,11 @@ function ApprovalsArea({ app }: { app: ReturnType<typeof useRemoteApp> }) {
                 a.roomId,
                 a.requestId,
                 decision === "approve"
-                  ? { behavior: "allow", updatedInput: {}, ...(opts?.answer ? { answer: opts.answer } : {}) }
+                  ? {
+                      behavior: "allow",
+                      updatedInput: {},
+                      ...(opts?.answer ? { answer: opts.answer } : {}),
+                    }
                   : { behavior: "deny", message: opts?.reason || "denied by user" },
               );
             } else {

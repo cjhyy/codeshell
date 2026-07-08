@@ -1,7 +1,53 @@
-import { describe, it, expect } from "bun:test";
-import { resolveSessionAgentConfig, resolveSessionCwd } from "../agent-server-stdio.js";
+import { describe, it, expect, afterAll } from "bun:test";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { noRepoDir } from "../../settings/manager.js";
 import type { ValidatedSettings } from "../../settings/schema.js";
+
+const previousAgentCwd = process.env.AGENT_CWD;
+const previousHome = process.env.HOME;
+const fixtureCwd = mkdtempSync(join(tmpdir(), "agent-server-stdio-cwd-"));
+const fixtureHome = mkdtempSync(join(tmpdir(), "agent-server-stdio-home-"));
+
+mkdirSync(join(fixtureCwd, ".code-shell"), { recursive: true });
+writeFileSync(
+  join(fixtureCwd, ".code-shell", "settings.json"),
+  JSON.stringify({
+    credentials: [
+      {
+        id: "ds-key",
+        catalogId: "deepseek",
+        apiKey: "sk-test",
+        baseUrl: "https://api.deepseek.com/v1",
+      },
+    ],
+    modelConnections: [
+      {
+        id: "ds",
+        catalogId: "deepseek",
+        tag: "text",
+        model: "deepseek-v4-flash",
+        credentialId: "ds-key",
+      },
+    ],
+    defaults: { text: "ds" },
+  }),
+);
+
+process.env.AGENT_CWD = fixtureCwd;
+process.env.HOME = fixtureHome;
+
+const { resolveSessionAgentConfig, resolveSessionCwd } = await import("../agent-server-stdio.js");
+
+afterAll(() => {
+  if (previousAgentCwd === undefined) delete process.env.AGENT_CWD;
+  else process.env.AGENT_CWD = previousAgentCwd;
+  if (previousHome === undefined) delete process.env.HOME;
+  else process.env.HOME = previousHome;
+  rmSync(fixtureCwd, { recursive: true, force: true });
+  rmSync(fixtureHome, { recursive: true, force: true });
+});
 
 const baseSettings = {
   agent: {

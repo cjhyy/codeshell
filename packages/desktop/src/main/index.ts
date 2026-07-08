@@ -884,6 +884,19 @@ async function handleMobileClientEvent(
     }
     return;
   }
+  if (event.type === "session.sync") {
+    const snapshot = bridge.getSnapshot(
+      event.sessionId,
+      typeof event.sinceSeq === "number" ? event.sinceSeq : 0,
+    );
+    reply({
+      type: "session.snapshot",
+      sessionId: event.sessionId,
+      entries: snapshot.events,
+      nextSeq: snapshot.nextSeq,
+    });
+    return;
+  }
   if (event.type === "permission.setMode") {
     const sessionId = event.sessionId ?? st.selectedSessionId;
     if (sessionId) {
@@ -1408,8 +1421,17 @@ async function createWindow(): Promise<BrowserWindow> {
     bridge = new AgentBridge(win);
     // Mirror every worker→renderer line onto any connected mobile clients, so
     // the phone sees the same stream (messages, tool summaries, approvals).
-    bridge.subscribeOutbound((line) => {
-      mobileRemote.broadcastRaw(line);
+    bridge.subscribeOutbound((line, snapshotEntry) => {
+      if (snapshotEntry) {
+        mobileRemote.broadcast({
+          type: "session.stream",
+          sessionId: snapshotEntry.sessionId,
+          seq: snapshotEntry.seq,
+          event: snapshotEntry.event,
+        });
+      } else {
+        mobileRemote.broadcastRaw(line);
+      }
     });
   } else {
     bridge.attachWindow(win);
@@ -2214,6 +2236,7 @@ ipcMain.handle("updater:check", async () => checkForUpdate());
 ipcMain.handle("updater:download", async () => downloadUpdate());
 ipcMain.handle("updater:install", async () => quitAndInstall());
 ipcMain.handle("updater:status", async () => getLastStatus());
+ipcMain.handle("app:version", () => app.getVersion());
 
 // ── Mobile Web Remote ───────────────────────────────────────────────────────
 // In-flight mutex for mobileRemote:start. Without it, a concurrent second
@@ -2946,14 +2969,14 @@ ipcMain.handle(
     return ptyStart(e.sender, opts);
   },
 );
-ipcMain.handle("pty:write", (_e, sessionId: string, data: string) => {
-  ptyWrite(sessionId, data);
+ipcMain.handle("pty:write", (e, sessionId: string, data: string) => {
+  ptyWrite(e.sender, sessionId, data);
 });
-ipcMain.handle("pty:resize", (_e, sessionId: string, cols: number, rows: number) => {
-  ptyResize(sessionId, cols, rows);
+ipcMain.handle("pty:resize", (e, sessionId: string, cols: number, rows: number) => {
+  ptyResize(e.sender, sessionId, cols, rows);
 });
-ipcMain.handle("pty:kill", (_e, sessionId: string) => {
-  ptyKill(sessionId);
+ipcMain.handle("pty:kill", (e, sessionId: string) => {
+  ptyKill(e.sender, sessionId);
 });
 
 // ── Filesystem reads — file-browser panel ──────────────────────────────────

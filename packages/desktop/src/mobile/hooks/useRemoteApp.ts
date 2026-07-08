@@ -15,6 +15,7 @@ import {
   appendUserMessage,
   type ChatState,
 } from "@/lib/streamReducer";
+import { useT } from "@/i18n";
 import { summarizeApproval, type Risk } from "@mobile/lib/riskClassify";
 import {
   roomMsgToEvent,
@@ -24,6 +25,16 @@ import {
 } from "@/lib/messageMappers";
 import { projectForCwd } from "@mobile/lib/format";
 import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket";
+import {
+  filterNewRoomMessages,
+  markRoomSeqApplied,
+  maxRoomSeq,
+  rawApprovalResolvedRequestId,
+  removeResolvedApproval,
+  roomMessageSeq,
+  selectSessionReplayEntries,
+  type SessionReplayEntry,
+} from "./remoteAppSync";
 
 /** Which external coding-CLI the CC pane drives. Mirrors desktop CCRoomView. */
 export type CcCliKind = "claude-code" | "codex";
@@ -80,7 +91,12 @@ export interface RemoteApp {
   respondApproval: (
     requestId: string,
     decision: "approve" | "reject",
-    opts?: { reason?: string; answer?: string; scope?: ApprovalScope; pathScope?: ApprovalPathScope },
+    opts?: {
+      reason?: string;
+      answer?: string;
+      scope?: ApprovalScope;
+      pathScope?: ApprovalPathScope;
+    },
   ) => void;
   setPermissionMode: (mode: PermissionMode) => void;
   extendGoal: (sessionId: string) => void;
@@ -126,7 +142,8 @@ type ChatAction =
   | { kind: "raw"; raw: unknown }
   | { kind: "user"; text: string }
   | { kind: "reset" }
-  | { kind: "replay"; events: unknown[] };
+  | { kind: "replay"; events: unknown[] }
+  | { kind: "append"; events: unknown[] };
 
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.kind) {
@@ -138,10 +155,13 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return initialChatState();
     case "replay":
       return action.events.reduce(reduceStream, initialChatState());
+    case "append":
+      return action.events.reduce(reduceStream, state);
   }
 }
 
 export function useRemoteApp(): RemoteApp {
+  const { t } = useT();
   const [chat, dispatchChat] = useReducer(chatReducer, undefined, initialChatState);
   const [sessions, setSessions] = useState<MobileSessionMeta[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | undefined>();
@@ -149,6 +169,9 @@ export function useRemoteApp(): RemoteApp {
   const [rooms, setRooms] = useState<RoomPublic[]>([]);
   const [projects, setProjects] = useState<MobileProjectMeta[]>([]);
   const [activeRoomId, setActiveRoomId] = useState<string | undefined>();
+  // activeRoomId via ref so socket callbacks see the latest value.
+  const activeRoomIdRef = useRef<string | undefined>(undefined);
+  activeRoomIdRef.current = activeRoomId;
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const approvalsRef = useRef(approvals);
   approvalsRef.current = approvals;
@@ -180,11 +203,18 @@ export function useRemoteApp(): RemoteApp {
   }, []);
   /** Which session id the chat view is bound to (for filtering live stream). */
   const boundSessionRef = useRef<string | undefined>(undefined);
+  /** Highest mobile snapshot seq applied per desktop session. */
+  const appliedSeqRef = useRef<Map<string, number>>(new Map());
+  /** Highest room message seq seen per active room. Used as room.history cursor. */
+  const lastRoomSeqRef = useRef<Map<string, number>>(new Map());
+  /** Recent room seqs already folded into the reducer, for idempotent history/live merge. */
+  const appliedRoomSeqsRef = useRef<Map<string, Set<number>>>(new Map());
   /** The cc (external claude CLI) session id whose on-disk transcript is the
    *  backlog for the current room view. Set on ccRoom.opened, cleared whenever we
-   *  switch to a plain session/room — gates whether room.history is allowed to
-   *  replay (it must not clobber the cc backlog). */
+   *  switch to a plain session/room so late disk-history replies cannot replay
+   *  into a different conversation. */
   const ccHistorySessionRef = useRef<string | undefined>(undefined);
+  const ccBacklogLoadedRef = useRef(false);
   /** Which CLI the currently-open cc session belongs to — selects the on-disk
    *  history reader (claude vs codex rollout) for ccRoom.readHistory. Captured
    *  at open time so a later CLI switch can't misroute this session's backlog. */
@@ -203,225 +233,58 @@ export function useRemoteApp(): RemoteApp {
     setLoading((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }));
   }, []);
 
+  const clearApproval = useCallback((requestId: string) => {
+    approvalsRef.current = removeResolvedApproval(approvalsRef.current, requestId);
+    setApprovals((prev) => removeResolvedApproval(prev, requestId));
+  }, []);
+
+  const rememberRoomMessages = useCallback(
+    (roomId: string, messages: unknown[], latestSeq?: number) => {
+      const current = lastRoomSeqRef.current.get(roomId) ?? 0;
+      lastRoomSeqRef.current.set(roomId, maxRoomSeq(current, messages, latestSeq));
+      for (const msg of messages) {
+        const seq = roomMessageSeq(msg);
+        if (seq !== undefined) markRoomSeqApplied(appliedRoomSeqsRef.current, roomId, seq);
+      }
+    },
+    [],
+  );
+
+  const wrapSessionEvents = useCallback(
+    (sessionId: string, events: unknown[]) =>
+      events.map((event) => ({
+        method: "agent/streamEvent",
+        params: { sessionId, event },
+      })),
+    [],
+  );
+
+  const clearApprovalsIfTerminal = useCallback((events: unknown[]) => {
+    if (
+      events.some((event) => {
+        const type = (event as { type?: unknown } | null)?.type;
+        return type === "turn_complete" || type === "error";
+      })
+    ) {
+      approvalsRef.current = [];
+      setApprovals([]);
+    }
+  }, []);
+
+  const appendSessionEvents = useCallback(
+    (sessionId: string, events: unknown[]) => {
+      if (events.length === 0) return;
+      dispatchChat({ kind: "append", events: wrapSessionEvents(sessionId, events) });
+      clearApprovalsIfTerminal(events);
+    },
+    [clearApprovalsIfTerminal, wrapSessionEvents],
+  );
+
   const sessionCwdById = useMemo(() => {
     const out = new Map<string, string | null>();
     for (const s of sessions) out.set(s.id, s.cwd || null);
     return out;
   }, [sessions]);
-
-  const onServerEvent = useCallback((event: MobileServerEvent) => {
-    switch (event.type) {
-      case "auth.ok":
-        // Pull the world on connect.
-        break;
-      case "chat.accepted":
-        if (event.sessionId) {
-          setActiveSessionId(event.sessionId);
-          boundSessionRef.current = event.sessionId;
-        }
-        if ("cwd" in event) setActiveSessionCwd(event.cwd ?? null);
-        // A freshly minted session won't be on disk until its first turn, so
-        // pull the list now so the new conversation shows up as a row.
-        sendRef.current?.({ type: "session.list" });
-        break;
-      case "session.list.ok":
-        setSessions(event.sessions);
-        setLoadingKey("sessions", false);
-        if (event.activeSessionId) {
-          setActiveSessionId(event.activeSessionId);
-          const active = event.sessions.find((s) => s.id === event.activeSessionId);
-          if (active) setActiveSessionCwd(active.cwd || null);
-          else setActiveSessionCwd(undefined);
-        }
-        break;
-      case "session.history.ok":
-        // Only apply if it's the session we're currently viewing.
-        if (event.sessionId === boundSessionRef.current) {
-          dispatchChat({ kind: "replay", events: event.events });
-          setLoadingKey("sessionHistory", false);
-        }
-        break;
-      case "permission.mode":
-        if (!event.sessionId || !boundSessionRef.current || event.sessionId === boundSessionRef.current) {
-          setPermissionModeState(event.mode);
-        }
-        break;
-      case "approval.resolved":
-        approvalsRef.current = approvalsRef.current.filter((p) => p.requestId !== event.approvalId);
-        setApprovals((prev) => prev.filter((p) => p.requestId !== event.approvalId));
-        break;
-      case "room.list.ok":
-        setRooms(event.rooms);
-        setLoadingKey("rooms", false);
-        break;
-      case "room.projects.ok":
-        setProjects(event.projects);
-        setLoadingKey("projects", false);
-        break;
-      case "room.message":
-        if (event.roomId === activeRoomIdRef.current && event.msg) {
-          dispatchChat({ kind: "raw", raw: roomMsgToEvent(event.msg) });
-        }
-        break;
-      case "room.history.ok":
-        if (event.roomId === activeRoomIdRef.current) {
-          // For a cc-opened session, ccRoom.readHistory owns the backlog (the
-          // original Claude Code transcript). Both replays reset state, so the
-          // room.history replay would clobber the cc backlog — skip it; live
-          // turns still arrive via room.message and append. For a plain room
-          // (no cc session bound) room.history is the only backlog → replay it.
-          if (ccHistorySessionRef.current) break;
-          dispatchChat({
-            kind: "replay",
-            events: roomHistoryToEvents(event.messages),
-          });
-          setLoadingKey("roomHistory", false);
-        }
-        break;
-      case "room.opened":
-        // The room is internal CC-session transport; surface it as a 会话 to the
-        // user (no room concept in the UI).
-        if (event.status === "missing") {
-          setNotice("会话不存在或未就绪");
-          setActiveRoomId(undefined);
-          setLoadingKey("roomHistory", false);
-        }
-        break;
-      case "room.closed":
-        // Keep the internal room snapshot in sync (resolves activeRoom metadata).
-        setRooms((prev) => prev.map((r) => (r.id === event.roomId ? { ...r, open: false } : r)));
-        break;
-      case "room.error":
-        setNotice(event.message || "会话错误");
-        break;
-      case "error":
-        setNotice(event.message);
-        setLoading({
-          sessions: false,
-          sessionHistory: false,
-          rooms: false,
-          projects: false,
-          roomHistory: false,
-          ccSessions: false,
-        });
-        break;
-      case "goal.extended":
-        // Surface a real failure; success is silent (the run simply continues).
-        if (!event.ok) setNotice(event.message || "延长目标失败");
-        break;
-      case "model.current":
-        // The worker confirmed the model actually applied. (No model display in
-        // the phone UI yet; handled explicitly so it isn't a silent default.)
-        break;
-      case "approval.request": {
-        // Legacy server-shaped approval (kept for back-compat).
-        const { summary, risk } = summarizeApproval(undefined, event.risk);
-        addApproval({
-          requestId: event.approvalId,
-          toolName: event.title,
-          description: event.body,
-          summary: event.body || summary,
-          risk,
-          pathScoped: false,
-        });
-        break;
-      }
-      case "ccRoom.probe.ok":
-        // kind guard: ignore a probe reply for a CLI we've since switched away
-        // from (else a slow claude probe could overwrite a codex result).
-        if (event.kind === ccCliKindRef.current) {
-          setCcProbe({ available: event.available, reason: event.reason });
-        }
-        break;
-      case "ccRoom.listSessions.ok":
-        // cwd + kind echo guard: ignore a reply for a project/CLI we've left.
-        if (event.cwd === activeProjectCwdRef.current && event.kind === ccCliKindRef.current) {
-          setCcSessions(event.sessions);
-          setLoadingKey("ccSessions", false);
-        }
-        break;
-      case "ccRoom.opened":
-        if (event.status === "missing") {
-          setNotice("cc 会话无法打开");
-          break;
-        }
-        // An opened cc room behaves like room.open — bind the room feed. But the
-        // resident room only carries messages from open-time onward; the prior
-        // Claude Code transcript lives on disk, so pull it via ccRoom.readHistory
-        // FIRST (rendered as the conversation's backlog), then bind the live feed
-        // for new turns. Without this the detail view looks empty ("点进去没历史").
-        setActiveRoomId(event.roomId);
-        ccHistorySessionRef.current = event.sessionId;
-        boundSessionRef.current = undefined;
-        setApprovals([]);
-        setLoadingKey("roomHistory", true);
-        dispatchChat({ kind: "reset" });
-        if (activeProjectCwdRef.current) {
-          sendRef.current?.({
-            type: "ccRoom.readHistory",
-            cwd: activeProjectCwdRef.current,
-            sessionId: event.sessionId,
-            limit: 50,
-            kind: ccHistoryKindRef.current,
-          });
-        }
-        sendRef.current?.({ type: "room.history", roomId: event.roomId });
-        break;
-      case "ccRoom.readHistory.ok":
-        // Prior on-disk Claude Code transcript for the cc session we just opened.
-        // Replay it as the conversation backlog. Guard on the session ref so a
-        // late reply for a session we've since left can't clobber the feed.
-        if (event.sessionId === ccHistorySessionRef.current) {
-          dispatchChat({ kind: "replay", events: ccHistoryToEvents(event.messages) });
-          setLoadingKey("roomHistory", false);
-        }
-        break;
-      case "ccRoom.approvalRequest": {
-        // Only surface for the room this phone is viewing (rooms are shared, but
-        // an approval card for some other room would be confusing here).
-        if (event.roomId !== activeRoomIdRef.current) break;
-        const { summary, risk } = summarizeApproval(
-          event.req.input as Record<string, unknown> | undefined,
-          undefined,
-        );
-        // AskUserQuestion is parsed in main → `askUser` carries the question +
-        // option labels. Render a choice card; the chosen label is sent back as
-        // the decision's `answer` (main bakes it into the CLI's `answers`
-        // record). CC AskUser always allows a free-text "Other", so optionsOnly
-        // stays false.
-        const askUser = event.req.askUser;
-        setApprovals((prev) =>
-          prev.some((p) => p.requestId === event.req.requestId)
-            ? prev
-            : [
-                ...prev,
-                {
-                  requestId: event.req.requestId,
-                  roomId: event.roomId,
-                  toolName: event.req.displayName ?? event.req.toolName,
-                  description: askUser?.question ?? event.req.description ?? "",
-                  summary: askUser ? askUser.question : summary,
-                  risk,
-                  options: askUser?.options,
-                  optionsOnly: false,
-                  pathScoped: PATH_SCOPED.has(event.req.toolName),
-                },
-              ],
-        );
-        break;
-      }
-      case "ccRoom.approvalResolved":
-        approvalsRef.current = approvalsRef.current.filter((p) => p.requestId !== event.requestId);
-        setApprovals((prev) => prev.filter((p) => p.requestId !== event.requestId));
-        break;
-      default:
-        break;
-    }
-  }, [setLoadingKey, setNotice]);
-
-  // activeRoomId via ref so the message handler closure sees the latest value.
-  const activeRoomIdRef = useRef<string | undefined>(undefined);
-  activeRoomIdRef.current = activeRoomId;
 
   const addApproval = useCallback((a: PendingApproval) => {
     // Isolate to the bound session: an approval for some OTHER desktop session
@@ -439,6 +302,282 @@ export function useRemoteApp(): RemoteApp {
     setApprovals((prev) => (prev.some((p) => p.requestId === a.requestId) ? prev : [...prev, a]));
   }, []);
 
+  const onServerEvent = useCallback(
+    (event: MobileServerEvent) => {
+      switch (event.type) {
+        case "auth.ok":
+          // Pull the world on connect.
+          break;
+        case "chat.accepted":
+          if (event.sessionId) {
+            setActiveSessionId(event.sessionId);
+            boundSessionRef.current = event.sessionId;
+          }
+          if ("cwd" in event) setActiveSessionCwd(event.cwd ?? null);
+          // A freshly minted session won't be on disk until its first turn, so
+          // pull the list now so the new conversation shows up as a row.
+          sendRef.current?.({ type: "session.list" });
+          break;
+        case "session.list.ok":
+          setSessions(event.sessions);
+          setLoadingKey("sessions", false);
+          if (event.activeSessionId) {
+            setActiveSessionId(event.activeSessionId);
+            const active = event.sessions.find((s) => s.id === event.activeSessionId);
+            if (active) setActiveSessionCwd(active.cwd || null);
+            else setActiveSessionCwd(undefined);
+          }
+          break;
+        case "session.history.ok":
+          // Only apply if it's the session we're currently viewing.
+          if (event.sessionId === boundSessionRef.current) {
+            dispatchChat({ kind: "replay", events: event.events });
+            setLoadingKey("sessionHistory", false);
+          }
+          break;
+        case "session.snapshot": {
+          if (event.sessionId !== boundSessionRef.current || activeRoomIdRef.current) break;
+          const appliedSeq = appliedSeqRef.current.get(event.sessionId) ?? 0;
+          const { events, cursor } = selectSessionReplayEntries(
+            event.entries as SessionReplayEntry[],
+            appliedSeq,
+          );
+          if (cursor > appliedSeq) appliedSeqRef.current.set(event.sessionId, cursor);
+          appendSessionEvents(event.sessionId, events);
+          setLoadingKey("sessionHistory", false);
+          break;
+        }
+        case "session.stream": {
+          if (activeRoomIdRef.current) break;
+          if (boundSessionRef.current) {
+            if (event.sessionId !== boundSessionRef.current) break;
+          } else {
+            boundSessionRef.current = event.sessionId;
+            setActiveSessionId(event.sessionId);
+            setActiveSessionCwd(sessionCwdById.get(event.sessionId));
+          }
+          const appliedSeq = appliedSeqRef.current.get(event.sessionId) ?? 0;
+          if (event.seq <= appliedSeq) break;
+          appliedSeqRef.current.set(event.sessionId, event.seq);
+          appendSessionEvents(event.sessionId, [event.event]);
+          break;
+        }
+        case "permission.mode":
+          if (
+            !event.sessionId ||
+            !boundSessionRef.current ||
+            event.sessionId === boundSessionRef.current
+          ) {
+            setPermissionModeState(event.mode);
+          }
+          break;
+        case "approval.resolved":
+          clearApproval(event.approvalId);
+          break;
+        case "room.list.ok":
+          setRooms(event.rooms);
+          setLoadingKey("rooms", false);
+          break;
+        case "room.projects.ok":
+          setProjects(event.projects);
+          setLoadingKey("projects", false);
+          break;
+        case "room.message":
+          if (event.roomId === activeRoomIdRef.current && event.msg) {
+            // CC disk backlog is replayed with `replay` below. Folding live room
+            // messages before that replay would display them briefly and then
+            // wipe them while also advancing sinceSeq, so let room.history pull
+            // them after the backlog has landed.
+            if (ccHistorySessionRef.current && !ccBacklogLoadedRef.current) break;
+            const freshMessages = filterNewRoomMessages(
+              event.roomId,
+              [event.msg],
+              appliedRoomSeqsRef.current,
+            );
+            if (freshMessages.length === 0) break;
+            rememberRoomMessages(event.roomId, freshMessages);
+            dispatchChat({ kind: "raw", raw: roomMsgToEvent(freshMessages[0]) });
+          }
+          break;
+        case "room.history.ok":
+          if (event.roomId === activeRoomIdRef.current) {
+            const messages = Array.isArray(event.messages) ? event.messages : [];
+            const freshMessages = filterNewRoomMessages(
+              event.roomId,
+              messages,
+              appliedRoomSeqsRef.current,
+            );
+            rememberRoomMessages(event.roomId, freshMessages, event.latestSeq);
+            dispatchChat({ kind: "append", events: roomHistoryToEvents(freshMessages) });
+            setLoadingKey("roomHistory", false);
+          }
+          break;
+        case "room.opened":
+          // The room is internal CC-session transport; surface it as a 会话 to the
+          // user (no room concept in the UI).
+          if (event.status === "missing") {
+            setNotice(t("mobile.notice.roomMissing"));
+            setActiveRoomId(undefined);
+            setLoadingKey("roomHistory", false);
+          }
+          break;
+        case "room.closed":
+          // Keep the internal room snapshot in sync (resolves activeRoom metadata).
+          setRooms((prev) => prev.map((r) => (r.id === event.roomId ? { ...r, open: false } : r)));
+          break;
+        case "room.error":
+          setNotice(event.message || t("mobile.notice.roomError"));
+          break;
+        case "error":
+          setNotice(event.message);
+          setLoading({
+            sessions: false,
+            sessionHistory: false,
+            rooms: false,
+            projects: false,
+            roomHistory: false,
+            ccSessions: false,
+          });
+          break;
+        case "goal.extended":
+          // Surface a real failure; success is silent (the run simply continues).
+          if (!event.ok) setNotice(event.message || t("mobile.notice.goalExtendFailed"));
+          break;
+        case "model.current":
+          // The worker confirmed the model actually applied. (No model display in
+          // the phone UI yet; handled explicitly so it isn't a silent default.)
+          break;
+        case "approval.request": {
+          // Legacy server-shaped approval (kept for back-compat).
+          const { summary, risk } = summarizeApproval(undefined, event.risk);
+          addApproval({
+            requestId: event.approvalId,
+            toolName: event.title,
+            description: event.body,
+            summary: event.body || summary,
+            risk,
+            pathScoped: false,
+          });
+          break;
+        }
+        case "ccRoom.probe.ok":
+          // kind guard: ignore a probe reply for a CLI we've since switched away
+          // from (else a slow claude probe could overwrite a codex result).
+          if (event.kind === ccCliKindRef.current) {
+            setCcProbe({ available: event.available, reason: event.reason });
+          }
+          break;
+        case "ccRoom.listSessions.ok":
+          // cwd + kind echo guard: ignore a reply for a project/CLI we've left.
+          if (event.cwd === activeProjectCwdRef.current && event.kind === ccCliKindRef.current) {
+            setCcSessions(event.sessions);
+            setLoadingKey("ccSessions", false);
+          }
+          break;
+        case "ccRoom.opened":
+          if (event.status === "missing") {
+            setNotice(t("mobile.notice.ccRoomOpenFailed"));
+            break;
+          }
+          // An opened cc room behaves like room.open — bind the room feed. But the
+          // resident room only carries messages from open-time onward; the prior
+          // Claude Code transcript lives on disk, so pull it via ccRoom.readHistory
+          // FIRST (rendered as the conversation's backlog), then bind the live feed
+          // for new turns. Without this the detail view looks empty ("点进去没历史").
+          setActiveRoomId(event.roomId);
+          ccHistorySessionRef.current = event.sessionId;
+          ccBacklogLoadedRef.current = false;
+          boundSessionRef.current = undefined;
+          setApprovals([]);
+          setLoadingKey("roomHistory", true);
+          dispatchChat({ kind: "reset" });
+          lastRoomSeqRef.current.set(event.roomId, 0);
+          appliedRoomSeqsRef.current.delete(event.roomId);
+          if (activeProjectCwdRef.current) {
+            sendRef.current?.({
+              type: "ccRoom.readHistory",
+              cwd: activeProjectCwdRef.current,
+              sessionId: event.sessionId,
+              limit: 150,
+              kind: ccHistoryKindRef.current,
+            });
+          } else {
+            ccBacklogLoadedRef.current = true;
+            sendRef.current?.({ type: "room.history", roomId: event.roomId, sinceSeq: 0 });
+          }
+          break;
+        case "ccRoom.readHistory.ok":
+          // Prior on-disk Claude Code transcript for the cc session we just opened.
+          // Replay it as the conversation backlog. Guard on the session ref so a
+          // late reply for a session we've since left can't clobber the feed.
+          if (event.sessionId === ccHistorySessionRef.current) {
+            dispatchChat({ kind: "replay", events: ccHistoryToEvents(event.messages) });
+            setLoadingKey("roomHistory", false);
+            ccBacklogLoadedRef.current = true;
+            const roomId = activeRoomIdRef.current;
+            if (roomId) {
+              setLoadingKey("roomHistory", true);
+              sendRef.current?.({
+                type: "room.history",
+                roomId,
+                sinceSeq: lastRoomSeqRef.current.get(roomId) ?? 0,
+              });
+            }
+          }
+          break;
+        case "ccRoom.approvalRequest": {
+          // Only surface for the room this phone is viewing (rooms are shared, but
+          // an approval card for some other room would be confusing here).
+          if (event.roomId !== activeRoomIdRef.current) break;
+          const { summary, risk } = summarizeApproval(
+            event.req.input as Record<string, unknown> | undefined,
+            undefined,
+          );
+          // AskUserQuestion is parsed in main → `askUser` carries the question +
+          // option labels. Render a choice card; the chosen label is sent back as
+          // the decision's `answer` (main bakes it into the CLI's `answers`
+          // record). CC AskUser always allows a free-text "Other", so optionsOnly
+          // stays false.
+          const askUser = event.req.askUser;
+          setApprovals((prev) =>
+            prev.some((p) => p.requestId === event.req.requestId)
+              ? prev
+              : [
+                  ...prev,
+                  {
+                    requestId: event.req.requestId,
+                    roomId: event.roomId,
+                    toolName: event.req.displayName ?? event.req.toolName,
+                    description: askUser?.question ?? event.req.description ?? "",
+                    summary: askUser ? askUser.question : summary,
+                    risk,
+                    options: askUser?.options,
+                    optionsOnly: false,
+                    pathScoped: PATH_SCOPED.has(event.req.toolName),
+                  },
+                ],
+          );
+          break;
+        }
+        case "ccRoom.approvalResolved":
+          clearApproval(event.requestId);
+          break;
+        default:
+          break;
+      }
+    },
+    [
+      addApproval,
+      appendSessionEvents,
+      clearApproval,
+      rememberRoomMessages,
+      sessionCwdById,
+      setLoadingKey,
+      setNotice,
+      t,
+    ],
+  );
+
   const onRawLine = useCallback(
     (raw: unknown) => {
       const obj = raw as Record<string, unknown>;
@@ -446,7 +585,12 @@ export function useRemoteApp(): RemoteApp {
       if (obj.method === "agent/approvalRequest" && obj.params) {
         const params = obj.params as Record<string, unknown>;
         const rq = params.request as
-          | { toolName?: string; description?: string; args?: Record<string, unknown>; riskLevel?: string }
+          | {
+              toolName?: string;
+              description?: string;
+              args?: Record<string, unknown>;
+              riskLevel?: string;
+            }
           | undefined;
         if (rq) {
           const { summary, risk } = summarizeApproval(rq.args, rq.riskLevel);
@@ -454,15 +598,20 @@ export function useRemoteApp(): RemoteApp {
           addApproval({
             requestId: String(params.requestId),
             sessionId: typeof params.sessionId === "string" ? params.sessionId : undefined,
-            toolName: rq.toolName ?? "操作",
+            toolName: rq.toolName ?? t("mobile.tool.fallbackName"),
             description: rq.description ?? "",
-            summary: askOptions ? rq.description ?? summary : summary,
+            summary: askOptions ? (rq.description ?? summary) : summary,
             risk,
             options: askOptions?.options,
             optionsOnly: askOptions?.optionsOnly,
             pathScoped: PATH_SCOPED.has(rq.toolName ?? ""),
           });
         }
+        return;
+      }
+      const resolvedRequestId = rawApprovalResolvedRequestId(raw);
+      if (resolvedRequestId) {
+        clearApproval(resolvedRequestId);
         return;
       }
       // Everything else (agent/streamEvent) folds through the reducer, but it
@@ -496,14 +645,40 @@ export function useRemoteApp(): RemoteApp {
         if (ev === "turn_complete" || ev === "error") {
           // We only ever hold bound-session approvals, so the turn ending clears
           // them all (the request can no longer be answered).
+          approvalsRef.current = [];
           setApprovals([]);
         }
       }
     },
-    [addApproval, sessionCwdById],
+    [addApproval, clearApproval, sessionCwdById, t],
   );
 
-  const socket = useRemoteSocket({ onServerEvent, onRawLine });
+  const requestActiveResync = useCallback(() => {
+    const roomId = activeRoomIdRef.current;
+    if (roomId) {
+      if (ccHistorySessionRef.current && !ccBacklogLoadedRef.current) return;
+      setLoadingKey("roomHistory", true);
+      sendRef.current?.({
+        type: "room.history",
+        roomId,
+        sinceSeq: lastRoomSeqRef.current.get(roomId) ?? 0,
+      });
+      return;
+    }
+    const sessionId = boundSessionRef.current;
+    if (!sessionId) return;
+    sendRef.current?.({
+      type: "session.sync",
+      sessionId,
+      sinceSeq: appliedSeqRef.current.get(sessionId) ?? 0,
+    });
+  }, [setLoadingKey]);
+
+  const socket = useRemoteSocket({
+    onServerEvent,
+    onRawLine,
+    onResyncNeeded: requestActiveResync,
+  });
   sendRef.current = socket.send;
 
   // ── actions ────────────────────────────────────────────────────────────
@@ -542,6 +717,7 @@ export function useRemoteApp(): RemoteApp {
       setActiveSessionCwd(sessionCwdById.get(id) ?? null);
       boundSessionRef.current = id;
       ccHistorySessionRef.current = undefined;
+      ccBacklogLoadedRef.current = false;
       setActiveRoomId(undefined);
       setApprovals([]);
       setLoadingKey("sessionHistory", true);
@@ -581,7 +757,9 @@ export function useRemoteApp(): RemoteApp {
     (
       roomId: string,
       requestId: string,
-      decision: { behavior: "allow"; updatedInput?: unknown } | { behavior: "deny"; message: string },
+      decision:
+        | { behavior: "allow"; updatedInput?: unknown }
+        | { behavior: "deny"; message: string },
     ) => {
       const a = approvalsRef.current.find((p) => p.requestId === requestId);
       if (!a) return; // approve-once: already resolved
@@ -592,36 +770,45 @@ export function useRemoteApp(): RemoteApp {
     [socket],
   );
 
-  const newSession = useCallback((cwd?: string | null, name?: string) => {
-    const nextCwd = cwd === undefined ? activeCwdRef.current : cwd;
-    boundSessionRef.current = undefined;
-    ccHistorySessionRef.current = undefined;
-    // Enter a visible "fresh conversation" state immediately — clear the active
-    // session + chat so the user sees the new-conversation surface right away
-    // (the drawer closes after this; without it the screen looks unchanged and
-    // tapping 新建 feels like a no-op). The real id arrives via chat.accepted.
-    setActiveSessionId(undefined);
-    // The real id arrives via chat.accepted, which binds boundSessionRef. A
-    // chat.send sent before then carries sessionId:undefined, which the server
-    // resolves to this device's just-minted session (WS-ordered: session.create
-    // is processed before the following chat.send) — so no id race to guard.
-    setActiveRoomId(undefined);
-    setActiveSessionCwd(nextCwd === undefined ? undefined : nextCwd ?? null);
-    setApprovals([]);
-    setLoadingKey("sessionHistory", false);
-    dispatchChat({ kind: "reset" });
-    socket.send(
-      cwd === undefined
-        ? { type: "session.create", ...(name ? { name } : {}) }
-        : { type: "session.create", cwd, ...(name ? { name } : {}) },
-    );
-  }, [socket, setLoadingKey]);
+  const newSession = useCallback(
+    (cwd?: string | null, name?: string) => {
+      const nextCwd = cwd === undefined ? activeCwdRef.current : cwd;
+      boundSessionRef.current = undefined;
+      ccHistorySessionRef.current = undefined;
+      ccBacklogLoadedRef.current = false;
+      // Enter a visible "fresh conversation" state immediately — clear the active
+      // session + chat so the user sees the new-conversation surface right away
+      // (the drawer closes after this; without it the screen looks unchanged and
+      // tapping 新建 feels like a no-op). The real id arrives via chat.accepted.
+      setActiveSessionId(undefined);
+      // The real id arrives via chat.accepted, which binds boundSessionRef. A
+      // chat.send sent before then carries sessionId:undefined, which the server
+      // resolves to this device's just-minted session (WS-ordered: session.create
+      // is processed before the following chat.send) — so no id race to guard.
+      setActiveRoomId(undefined);
+      setActiveSessionCwd(nextCwd === undefined ? undefined : (nextCwd ?? null));
+      setApprovals([]);
+      setLoadingKey("sessionHistory", false);
+      dispatchChat({ kind: "reset" });
+      socket.send(
+        cwd === undefined
+          ? { type: "session.create", ...(name ? { name } : {}) }
+          : { type: "session.create", cwd, ...(name ? { name } : {}) },
+      );
+    },
+    [socket, setLoadingKey],
+  );
 
   const respondApproval = useCallback(
     (
       requestId: string,
       decision: "approve" | "reject",
-      opts?: { reason?: string; answer?: string; scope?: ApprovalScope; pathScope?: ApprovalPathScope },
+      opts?: {
+        reason?: string;
+        answer?: string;
+        scope?: ApprovalScope;
+        pathScope?: ApprovalPathScope;
+      },
     ) => {
       const a = approvalsRef.current.find((p) => p.requestId === requestId);
       // Dedup at the source: if this approval is already gone from the ref it was
@@ -669,6 +856,7 @@ export function useRemoteApp(): RemoteApp {
   const leaveRoom = useCallback(() => {
     setActiveRoomId(undefined);
     ccHistorySessionRef.current = undefined;
+    ccBacklogLoadedRef.current = false;
     setLoadingKey("roomHistory", false);
     dispatchChat({ kind: "reset" });
   }, [setLoadingKey]);
@@ -676,10 +864,7 @@ export function useRemoteApp(): RemoteApp {
   // activeRoom resolves the bound room's metadata (name/cwd) from the room.list
   // snapshot — used for the CC session's title/subtitle and the cc-history cwd.
   // There is no rendered room list; this lookup is internal.
-  const activeRoom = useMemo(
-    () => rooms.find((r) => r.id === activeRoomId),
-    [rooms, activeRoomId],
-  );
+  const activeRoom = useMemo(() => rooms.find((r) => r.id === activeRoomId), [rooms, activeRoomId]);
   const activeCwd = activeRoom?.cwd || activeSessionCwd;
   const activeContextCwd = projectContextCwd(activeCwd, projects);
   activeCwdRef.current = activeContextCwd;

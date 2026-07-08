@@ -30,6 +30,7 @@ import {
   bindCronToEngine,
   type CronRunResult,
 } from "@cjhyy/code-shell-core";
+import { resolveMaxContextTokens } from "./max-context-tokens.js";
 
 export type EffortLevel = "low" | "medium" | "high" | "max";
 
@@ -141,7 +142,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
   };
 
   const permissionMode = (options.permissionMode ?? "acceptEdits") as PermissionMode;
-  const maxContextTokens = llmConfig.maxContextTokens ?? settings.context.maxTokens ?? 200_000;
+  const maxContextTokens = resolveMaxContextTokens(llmConfig, settings.context.maxTokens);
 
   // ── Shared config passed into every session engine ─────────────
   const sharedCfg = {

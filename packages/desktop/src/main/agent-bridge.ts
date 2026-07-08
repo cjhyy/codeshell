@@ -24,7 +24,7 @@ import { join } from "node:path";
 import { mkdirSync } from "node:fs";
 import { BrowserWindow, ipcMain } from "electron";
 import { dlog } from "./desktop-logger.js";
-import { SessionSnapshotStore, type Snapshot } from "./SessionSnapshotStore.js";
+import { SessionSnapshotStore, type Snapshot, type SnapshotEntry } from "./SessionSnapshotStore.js";
 import { parseSnapshotAppend } from "./parseStreamLine.js";
 import {
   parseBrowserActionLine,
@@ -35,8 +35,9 @@ import {
   buildWorkspaceActionReply,
 } from "./browser-driver/intercept.js";
 import { handleBrowserAction } from "./browser-driver/automation-host.js";
-import { CredentialStore, SessionManager } from "@cjhyy/code-shell-core";
+import { SessionManager } from "@cjhyy/code-shell-core";
 import { restoreCookiesToBrowser, type ElectronCookieLike } from "./credentials-service.js";
+import { resolveCookieCredentialForBrowser } from "./credential-action.js";
 import { activeGuest, listGuests, focusGuest } from "./browser-driver/active-guest.js";
 import { loadBrowserAutomationPolicy } from "./browser-driver/load-policy.js";
 import {
@@ -108,7 +109,9 @@ export class AgentBridge {
    * they see the exact JSON-RPC lines the renderer sees, so the phone shares
    * the renderer's single run/permission path rather than a second runtime.
    */
-  private readonly outboundTaps = new Set<(line: string) => void>();
+  private readonly outboundTaps = new Set<
+    (line: string, snapshotEntry?: SnapshotEntry & { sessionId: string }) => void
+  >();
   /**
    * The cwd/sessionId of the most recent `agent/run` (from renderer OR mobile).
    * Used as the default context when a mobile client sends chat without an
@@ -198,12 +201,14 @@ export class AgentBridge {
       // Mirror stream events into the per-session snapshot so a remounted
       // renderer can replay what it missed. Non-streamEvent lines yield null.
       const append = parseSnapshotAppend(line);
-      if (append) this.snapshots.append(append.sessionId, append.event);
+      const snapshotEntry = append
+        ? { sessionId: append.sessionId, ...this.snapshots.append(append.sessionId, append.event) }
+        : undefined;
       dlog("bridge", "worker→renderer", summary);
       this.safeSend("agent:msg", line);
       for (const tap of this.outboundTaps) {
         try {
-          tap(line);
+          tap(line, snapshotEntry);
         } catch {
           /* a tap must never break worker streaming */
         }
@@ -421,13 +426,6 @@ export class AgentBridge {
     return true;
   }
 
-  /**
-   * If `line` is a __credential_action__ request (InjectCredential tool), restore
-   * the named cookie credential's jar into the built-in browser here (main) and
-   * reply to the worker. Returns true (caller must NOT forward to renderer).
-   * Never throws — a failure still replies so the worker tool unblocks.
-   * The AI-side approval gate already ran in the worker tool; this just executes.
-   */
   /** Intercept the worker's `agent/cronChanged` notification: reload main's
    *  cron scheduler so an AI-created/deleted job arms immediately. Returns true
    *  (consume, don't forward to renderer) when handled. */
@@ -447,6 +445,13 @@ export class AgentBridge {
     return true;
   }
 
+  /**
+   * If `line` is a __credential_action__ request (InjectCredential tool), restore
+   * the named cookie credential's jar into the built-in browser here (main) and
+   * reply to the worker. Returns true (caller must NOT forward to renderer).
+   * Never throws — a failure still replies so the worker tool unblocks.
+   * The AI-side approval gate already ran in the worker tool; this just executes.
+   */
   private maybeHandleCredentialAction(line: string): boolean {
     const parsed = parseCredentialActionLine(line);
     if (!parsed) return false;
@@ -462,41 +467,28 @@ export class AgentBridge {
           (parsed.sessionId ? this.sessionCwd.get(parsed.sessionId) : undefined) ??
           this.lastRunContext.cwd ??
           undefined;
-        const cred = new CredentialStore(sessionCwd).resolve(parsed.credentialId);
-        if (!cred || cred.type !== "cookie") {
-          resultJson = JSON.stringify({
-            ok: false,
-            error: `无 cookie 凭证: "${parsed.credentialId}"`,
-          });
+        const resolved = resolveCookieCredentialForBrowser(
+          sessionCwd,
+          parsed.credentialId,
+          parsed.credentialScope,
+        );
+        if (!resolved.ok) {
+          resultJson = JSON.stringify({ ok: false, error: resolved.error });
         } else {
-          let jar: ElectronCookieLike[] = [];
-          try {
-            const arr = JSON.parse(cred.secret ?? "[]");
-            if (Array.isArray(arr)) jar = arr as ElectronCookieLike[];
-          } catch {
-            jar = [];
+          // Inject into the session of the guest the AI will actually drive
+          // (per-session partition), not the shared default. Electron's Session
+          // has no partition string, so pass the live session object directly.
+          // Fall back to the shared partition only when no live guest exists.
+          const targetSession = activeGuest()?.session ?? undefined;
+          const { count } = await restoreCookiesToBrowser(
+            resolved.jar as ElectronCookieLike[],
+            resolved.switchMode,
+            targetSession,
+          );
+          for (const w of BrowserWindow.getAllWindows()) {
+            if (!w.isDestroyed()) w.webContents.send("browser:reload");
           }
-          if (jar.length === 0) {
-            resultJson = JSON.stringify({
-              ok: false,
-              error: `凭证「${cred.label}」cookie 为空或损坏`,
-            });
-          } else {
-            // Inject into the session of the guest the AI will actually drive
-            // (per-session partition), not the shared default. Electron's Session
-            // has no partition string, so pass the live session object directly.
-            // Fall back to the shared partition only when no live guest exists.
-            const targetSession = activeGuest()?.session ?? undefined;
-            const { count } = await restoreCookiesToBrowser(
-              jar,
-              cred.meta?.switchMode === "clear" ? "clear" : "merge",
-              targetSession,
-            );
-            for (const w of BrowserWindow.getAllWindows()) {
-              if (!w.isDestroyed()) w.webContents.send("browser:reload");
-            }
-            resultJson = JSON.stringify({ ok: true, count });
-          }
+          resultJson = JSON.stringify({ ok: true, count });
         }
       } catch (e) {
         resultJson = JSON.stringify({
@@ -627,7 +619,9 @@ export class AgentBridge {
    * Remote). Returns an unsubscribe. Taps are read-only and isolated: a
    * throwing tap never disrupts the renderer stream.
    */
-  subscribeOutbound(tap: (line: string) => void): () => void {
+  subscribeOutbound(
+    tap: (line: string, snapshotEntry?: SnapshotEntry & { sessionId: string }) => void,
+  ): () => void {
     this.outboundTaps.add(tap);
     return () => this.outboundTaps.delete(tap);
   }

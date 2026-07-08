@@ -15,10 +15,12 @@ import { SessionSnapshotStore } from "./SessionSnapshotStore";
 describe("SessionSnapshotStore", () => {
   it("appends events and returns them in order with a monotonic seq", () => {
     const store = new SessionSnapshotStore();
-    store.append("s1", { type: "text_delta", text: "a" });
-    store.append("s1", { type: "text_delta", text: "b" });
+    const first = store.append("s1", { type: "text_delta", text: "a" });
+    const second = store.append("s1", { type: "text_delta", text: "b" });
 
     const snap = store.get("s1");
+    expect(first).toEqual({ seq: 1, event: { type: "text_delta", text: "a" } });
+    expect(second).toEqual({ seq: 2, event: { type: "text_delta", text: "b" } });
     expect(snap.events.map((e) => e.event)).toEqual([
       { type: "text_delta", text: "a" },
       { type: "text_delta", text: "b" },

@@ -4,7 +4,7 @@
  * Public API exports.
  */
 
-export const VERSION = "0.6.0-rc.13";
+export const VERSION = "0.6.0-rc.14";
 
 // ─── Types ───────────────────────────────────────────────────────
 
@@ -19,6 +19,7 @@ export type {
   TranscriptEventType,
   SessionState,
   SessionWorkspace,
+  ContextUsageAnchor,
   SessionStatus,
   TokenUsage,
   CompiledInput,
@@ -162,7 +163,7 @@ export {
 } from "./session/undo-target.js";
 export { diffLines, renderDiffPreview, type DiffLine } from "./session/simple-diff.js";
 export { MemoryManager } from "./session/memory.js";
-export type { MemoryEntry, MemoryScope } from "./session/memory.js";
+export type { MemoryEntry, MemoryOrigin, MemoryScope } from "./session/memory.js";
 export {
   runDreamConsolidation,
   type DreamConsolidationInput,

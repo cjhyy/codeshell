@@ -51,7 +51,10 @@ describe("checkPluginUpdate", () => {
 
   test("not-remote (local source) → updateAvailable false, reason mentions remote", async () => {
     mkdirSync(join(src, ".codex-plugin"), { recursive: true });
-    writeFileSync(join(src, ".codex-plugin", "plugin.json"), JSON.stringify({ name: "loc", version: "1.0.0" }));
+    writeFileSync(
+      join(src, ".codex-plugin", "plugin.json"),
+      JSON.stringify({ name: "loc", version: "1.0.0" }),
+    );
     mkdirSync(join(src, "agents"), { recursive: true });
     writeFileSync(join(src, "agents", "a.toml"), 'name = "a"\ndescription = "d"');
     await installPluginFromPath(src, "loc", "t1");
@@ -64,9 +67,9 @@ describe("checkPluginUpdate", () => {
   test("remote + commit equal to remote HEAD → updateAvailable false", async () => {
     makeRepo();
     const raw = `file://${repo}`;
-    await installPluginFromSource(parseSource(raw), "rem", "t1");
+    await installPluginFromSource(parseSource(raw, { allowUnsafeTransport: true }), "rem", "t1");
 
-    const r = await checkPluginUpdate("rem");
+    const r = await checkPluginUpdate("rem", { allowUnsafeTransport: true });
     expect(r.updateAvailable).toBe(false);
     expect(r.currentCommit).toBe(headSha());
     expect(r.latestCommit).toBe(headSha());
@@ -75,7 +78,7 @@ describe("checkPluginUpdate", () => {
   test("remote + commit differs (HEAD moved) → updateAvailable true, latestCommit is new HEAD", async () => {
     const { run } = makeRepo();
     const raw = `file://${repo}`;
-    await installPluginFromSource(parseSource(raw), "rem", "t1");
+    await installPluginFromSource(parseSource(raw, { allowUnsafeTransport: true }), "rem", "t1");
     const installed = headSha();
 
     // move HEAD in the source repo
@@ -84,7 +87,7 @@ describe("checkPluginUpdate", () => {
     run(["commit", "-q", "-m", "bump"]);
     const moved = headSha();
 
-    const r = await checkPluginUpdate("rem");
+    const r = await checkPluginUpdate("rem", { allowUnsafeTransport: true });
     expect(r.updateAvailable).toBe(true);
     expect(r.currentCommit).toBe(installed);
     expect(r.latestCommit).toBe(moved);
@@ -93,7 +96,7 @@ describe("checkPluginUpdate", () => {
   test("remote + missing meta.commit → updateAvailable false, reason about no recorded commit", async () => {
     makeRepo();
     const raw = `file://${repo}`;
-    await installPluginFromSource(parseSource(raw), "rem", "t1");
+    await installPluginFromSource(parseSource(raw, { allowUnsafeTransport: true }), "rem", "t1");
 
     // strip the recorded commit to simulate an older install
     const mp = metaPath(home, "rem");
@@ -101,12 +104,22 @@ describe("checkPluginUpdate", () => {
     delete meta.commit;
     writeFileSync(mp, JSON.stringify(meta, null, 2));
 
-    const r = await checkPluginUpdate("rem");
+    const r = await checkPluginUpdate("rem", { allowUnsafeTransport: true });
     expect(r.updateAvailable).toBe(false);
     expect(r.reason).toMatch(/recorded commit/i);
   });
 
   test("missing plugin throws", async () => {
     await expect(checkPluginUpdate("nope")).rejects.toThrow(PluginInstallError);
+  });
+
+  test("rejects unsafe transports from installed metadata by default", async () => {
+    makeRepo();
+    const raw = `file://${repo}`;
+    await installPluginFromSource(parseSource(raw, { allowUnsafeTransport: true }), "rem", "t1");
+
+    await expect(checkPluginUpdate("rem")).rejects.toThrow(
+      /unsafe plugin source transport 'file:\/\/'/i,
+    );
   });
 });

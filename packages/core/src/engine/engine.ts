@@ -1568,6 +1568,29 @@ export class Engine {
         }
       }
 
+      const contextManager = new ContextManager({
+        maxTokens: this.resolveMaxContextTokens(),
+        // Drop undefined fields so they don't clobber ContextManager defaults
+        // (spread of `{x: undefined}` would override the default with undefined).
+        ...Object.fromEntries(
+          Object.entries(this.resolveContextRatios()).filter(([, v]) => v !== undefined),
+        ),
+      });
+      this.lastContextManager = contextManager;
+
+      const persistedContextAnchor = session.state.contextUsageAnchor;
+      const contextAnchorCompatible =
+        persistedContextAnchor !== undefined &&
+        (persistedContextAnchor.provider === undefined ||
+          persistedContextAnchor.provider === this.config.llm.provider) &&
+        (persistedContextAnchor.model === undefined ||
+          persistedContextAnchor.model === this.config.llm.model) &&
+        (persistedContextAnchor.messageCount <= messages.length ||
+          persistedContextAnchor.estimateAtAnchor !== undefined);
+      const seededContextAnchor = contextAnchorCompatible
+        ? contextManager.seedActualUsage(persistedContextAnchor)
+        : undefined;
+
       // Rough token estimate of the full prompt so the UI's ctx bar isn't 0%
       // before the first real usage_update arrives. The authoritative count
       // comes from `usage.promptTokens` after the first LLM response — this is
@@ -1579,10 +1602,12 @@ export class Engine {
       const sid = session.state.sessionId;
       const needsCtxSeed = !this.ctxSeedSent.has(sid);
       const roughPromptTokens = needsCtxSeed
-        ? messages.reduce((sum, m) => {
-            const text = typeof m.content === "string" ? m.content : JSON.stringify(m.content);
-            return sum + Math.ceil(text.length / 4);
-          }, 0)
+        ? seededContextAnchor
+          ? contextManager.checkLimits(messages).tokens
+          : messages.reduce((sum, m) => {
+              const text = typeof m.content === "string" ? m.content : JSON.stringify(m.content);
+              return sum + Math.ceil(text.length / 4);
+            }, 0)
         : 0;
       if (needsCtxSeed) this.ctxSeedSent.add(sid);
 
@@ -1650,16 +1675,6 @@ export class Engine {
       toolExecutor.setSignal(options?.signal);
       toolExecutor.setContext(toolCtx);
 
-      const contextManager = new ContextManager({
-        maxTokens: this.resolveMaxContextTokens(),
-        // Drop undefined fields so they don't clobber ContextManager defaults
-        // (spread of `{x: undefined}` would override the default with undefined).
-        ...Object.fromEntries(
-          Object.entries(this.resolveContextRatios()).filter(([, v]) => v !== undefined),
-        ),
-      });
-      this.lastContextManager = contextManager;
-
       const { disabledSkills, disabledPlugins } = this.readDisabledLists();
       const promptComposer = new PromptComposer({
         cwd,
@@ -1724,6 +1739,7 @@ export class Engine {
           (normalizeGoal(options?.goal) !== undefined ||
             session.state.activeGoal !== undefined ||
             normalizeGoal(this.config.goal) !== undefined),
+        settingsScope: this.config.settingsScope ?? "project",
       };
       toolCtx.toolVisibility = toolVisibility;
       // #7: per-turn project builtin override. The toolRegistry's builtin tool
@@ -2069,6 +2085,13 @@ export class Engine {
           claimClientMessageId: (clientMessageId, source) =>
             claimClientMessageId(session, clientMessageId, source),
           recordCumulativeUsage,
+          recordContextUsageAnchor: (anchor) => {
+            session.state.contextUsageAnchor = {
+              ...anchor,
+              provider: this.config.llm.provider,
+              model: this.config.llm.model,
+            };
+          },
           // Clear the persisted goal for a self-reported completion / confirmed
           // cancel. Clears the in-RAM session's activeGoal (so THIS run's later
           // turns don't re-arm) AND persists it, and drops the in-flight stop

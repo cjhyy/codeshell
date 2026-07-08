@@ -27,6 +27,8 @@ export interface InkReplOptions {
   maxContextTokens: number;
   sessionId?: string;
   prefill?: string;
+  /** @internal Test seam for render-root option assertions. */
+  renderForTesting?: typeof render;
   /**
    * Teardown run right before the process exits. The REPL terminates via
    * process.exit(0) below, so any cleanup the caller queued AFTER
@@ -62,7 +64,8 @@ export async function startInkRepl(options: InkReplOptions): Promise<void> {
   // especially after onboarding, which leaves no active handles.
   const keepAlive = setInterval(() => {}, 2_147_483_647);
 
-  const instance: Instance = await render(
+  const renderRepl = options.renderForTesting ?? render;
+  const instance: Instance = await renderRepl(
     <ThemeProvider>
       <App
         client={options.client}
@@ -79,7 +82,7 @@ export async function startInkRepl(options: InkReplOptions): Promise<void> {
       stdout: process.stdout,
       stdin: process.stdin,
       stderr: process.stderr,
-      exitOnCtrlC: true,
+      exitOnCtrlC: false,
       patchConsole: false,
       onFrame: (event) => {
         const p = event.phases;

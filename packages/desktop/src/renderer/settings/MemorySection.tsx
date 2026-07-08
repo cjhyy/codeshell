@@ -66,6 +66,112 @@ function memoryTypeClassName(type: MemoryType): string {
   );
 }
 
+type MemoryOrigin = NonNullable<RendererMemoryEntry["origin"]>;
+
+function memoryOrigin(origin: RendererMemoryEntry["origin"]): MemoryOrigin {
+  return origin ?? "manual";
+}
+
+function memoryUseCount(entry: RendererMemoryEntry): number {
+  return entry.useCount ?? entry.usageCount ?? 0;
+}
+
+function memoryUpdateCount(entry: RendererMemoryEntry): number {
+  return entry.updateCount ?? 0;
+}
+
+function memoryOriginLabelKey(origin: MemoryOrigin): TranslationKey {
+  if (origin === "auto") return "settingsX.memory.originAutoBadge";
+  if (origin === "dream") return "settingsX.memory.originDreamBadge";
+  return "settingsX.memory.originManualBadge";
+}
+
+function memoryOriginTitleKey(origin: MemoryOrigin): TranslationKey {
+  if (origin === "auto") return "settingsX.memory.originAutoTitle";
+  if (origin === "dream") return "settingsX.memory.originDreamTitle";
+  return "settingsX.memory.originManualTitle";
+}
+
+function memoryOriginClassName(origin: MemoryOrigin): string {
+  return cn(
+    "shrink-0 rounded px-1 text-[10px] tabular-nums",
+    origin === "manual" && "bg-muted text-muted-foreground",
+    origin === "auto" && "bg-status-warn/10 text-status-warn",
+    origin === "dream" && "bg-primary/10 text-primary",
+  );
+}
+
+export function MemoryEntryBadges({ entry }: { entry: RendererMemoryEntry }) {
+  const { t } = useT();
+  const origin = memoryOrigin(entry.origin);
+  return (
+    <>
+      <span className={memoryOriginClassName(origin)} title={t(memoryOriginTitleKey(origin))}>
+        {t(memoryOriginLabelKey(origin))}
+      </span>
+      <span
+        className="shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground tabular-nums"
+        title={t("settingsX.memory.useCountTitle")}
+      >
+        {t("settingsX.memory.useCountBadge", { count: memoryUseCount(entry) })}
+      </span>
+      <span
+        className="shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground tabular-nums"
+        title={t("settingsX.memory.updateCountTitle")}
+      >
+        {t("settingsX.memory.updateCountBadge", { count: memoryUpdateCount(entry) })}
+      </span>
+    </>
+  );
+}
+
+export function buildEditDraft(
+  selected: RendererMemoryEntryFull,
+  level: MemoryLevel,
+  scope: MemoryScope,
+  cwd?: string,
+): SaveMemoryInput {
+  return {
+    id: selected.id,
+    level,
+    scope,
+    name: selected.name,
+    description: selected.description,
+    type: selected.type,
+    content: selected.content,
+    cwd,
+    pinned: selected.pinned,
+    origin: scope === "user" ? "manual" : selected.origin,
+  };
+}
+
+export function buildPinSaveInput(
+  full: RendererMemoryEntryFull,
+  pinned: boolean,
+  level: MemoryLevel,
+  scope: MemoryScope,
+  cwd?: string,
+): SaveMemoryInput {
+  return {
+    id: full.id,
+    level,
+    scope,
+    name: full.name,
+    description: full.description,
+    type: full.type,
+    content: full.content,
+    cwd,
+    pinned,
+    origin: full.origin,
+  };
+}
+
+export function defaultCleanupSelection(entries: RendererMemoryEntry[]): Set<string> {
+  return new Set(
+    entries.filter((entry) => entry.origin === "auto" && !entry.pinned).map((e) => e.fileName),
+  );
+}
+
 /** Which memory store the user drilled into. */
 interface Target {
   level: MemoryLevel;
@@ -158,6 +264,8 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [dreaming, setDreaming] = useState(false);
+  const [cleanupReviewOpen, setCleanupReviewOpen] = useState(false);
+  const [cleanupSelected, setCleanupSelected] = useState<Set<string>>(() => new Set());
   // 审批门: global memories the extractor flagged as "global" wait here. Only
   // meaningful at the global (user) level — pending is global-only.
   const [pending, setPending] = useState<RendererMemoryEntryFull[]>([]);
@@ -191,6 +299,8 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
     setSelected(null);
     setDrafting(false);
     setNotice(null);
+    setCleanupReviewOpen(false);
+    setCleanupSelected(new Set());
   }, [refresh, refreshPending]);
 
   const approvePending = async (name: string): Promise<void> => {
@@ -259,18 +369,7 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
   const startEdit = (): void => {
     if (!selected) return;
     setDrafting(true);
-    setDraft({
-      level,
-      scope,
-      name: selected.name,
-      description: selected.description,
-      type: selected.type,
-      content: selected.content,
-      cwd,
-      // Editing must not silently unpin / relabel the entry.
-      pinned: selected.pinned,
-      origin: selected.origin,
-    });
+    setDraft(buildEditDraft(selected, level, scope, cwd));
   };
 
   const saveDraft = async (): Promise<void> => {
@@ -281,10 +380,17 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
     }
     setError(null);
     try {
-      await window.codeshell.saveMemory({ ...draft, level, scope, cwd });
+      const payload: SaveMemoryInput = {
+        ...draft,
+        level,
+        scope,
+        cwd,
+        origin: scope === "user" ? "manual" : draft.origin,
+      };
+      await window.codeshell.saveMemory(payload);
       await refresh();
       setDrafting(false);
-      await openEntry(draft.name);
+      await openEntry(payload.id ?? payload.name);
     } catch (e: unknown) {
       setError(String(e instanceof Error ? e.message : e));
     }
@@ -366,30 +472,28 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
     }
   };
 
-  /** 批量清理:删掉本 scope 下所有「自动提取且未固定」的条目(soft-delete)。 */
-  const autoEntries = useMemo(
-    () => entries.filter((e) => e.origin === "auto" && !e.pinned),
-    [entries],
-  );
+  /** User-reviewed cleanup: default-select only origin:auto && !pinned. */
+  const cleanupEntries = useMemo(() => entries.filter((e) => e.origin === "auto"), [entries]);
+  const defaultCleanupCount = useMemo(() => defaultCleanupSelection(entries).size, [entries]);
+  const openCleanupReview = (): void => {
+    setCleanupSelected(defaultCleanupSelection(entries));
+    setCleanupReviewOpen(true);
+    setNotice(null);
+  };
   const cleanupAuto = async (): Promise<void> => {
-    if (autoEntries.length === 0) return;
-    const ok = await confirm({
-      title: t("settingsX.memory.confirmCleanupTitle"),
-      message: t("settingsX.memory.confirmCleanupMsg", { count: autoEntries.length }),
-      detail: t("settingsX.memory.confirmCleanupDetail"),
-      confirmLabel: t("settingsX.memory.cleanup"),
-      destructive: true,
-    });
-    if (!ok) return;
+    const selectedEntries = cleanupEntries.filter((e) => cleanupSelected.has(e.fileName));
+    if (selectedEntries.length === 0) return;
     setLoading(true);
     setError(null);
     try {
-      for (const e of autoEntries) {
+      for (const e of selectedEntries) {
         await window.codeshell.deleteMemory(level, scope, e.name, cwd);
       }
       setSelected(null);
+      setCleanupReviewOpen(false);
+      setCleanupSelected(new Set());
       await refresh();
-      setNotice(t("settingsX.memory.cleanupDone", { count: autoEntries.length }));
+      setNotice(t("settingsX.memory.cleanupDone", { count: selectedEntries.length }));
     } catch (e: unknown) {
       setError(String(e instanceof Error ? e.message : e));
       await refresh();
@@ -404,17 +508,7 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
     try {
       const full = await window.codeshell.readMemory(level, scope, entry.name, cwd);
       if (!full) return;
-      await window.codeshell.saveMemory({
-        level,
-        scope,
-        name: full.name,
-        description: full.description,
-        type: full.type,
-        content: full.content,
-        cwd,
-        pinned: !entry.pinned,
-        origin: entry.origin, // keep provenance — pinning isn't authorship
-      });
+      await window.codeshell.saveMemory(buildPinSaveInput(full, !entry.pinned, level, scope, cwd));
       await refresh();
       if (selected?.name === entry.name) await openEntry(entry.name);
     } catch (e: unknown) {
@@ -450,18 +544,18 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
               <span>{t("settingsX.memory.autoExtract")}</span>
             </label>
           )}
-          {autoEntries.length > 0 && (
+          {cleanupEntries.length > 0 && (
             <Button
               type="button"
               variant="ghost"
               size="sm"
               className="h-8 gap-1 px-2 text-xs"
-              onClick={() => void cleanupAuto()}
+              onClick={openCleanupReview}
               disabled={loading || dreaming}
               title={t("settingsX.memory.cleanupTitle")}
             >
               <Eraser size={12} />
-              <span>{t("settingsX.memory.cleanupAuto", { count: autoEntries.length })}</span>
+              <span>{t("settingsX.memory.cleanupAuto", { count: defaultCleanupCount })}</span>
             </Button>
           )}
           {scope === "dream" && (
@@ -475,7 +569,9 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
               title={t("settingsX.memory.dreamTitle")}
             >
               {dreaming ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-              <span>{dreaming ? t("settingsX.memory.dreaming") : t("settingsX.memory.dreamBtn")}</span>
+              <span>
+                {dreaming ? t("settingsX.memory.dreaming") : t("settingsX.memory.dreamBtn")}
+              </span>
             </Button>
           )}
           <Button
@@ -503,8 +599,32 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
         </div>
       </div>
 
-      {notice && <div className="rounded-md bg-status-ok/10 p-2 text-sm text-status-ok">{notice}</div>}
-      {error && <div className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">{error}</div>}
+      {notice && (
+        <div className="rounded-md bg-status-ok/10 p-2 text-sm text-status-ok">{notice}</div>
+      )}
+      {error && (
+        <div className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">{error}</div>
+      )}
+      {cleanupReviewOpen && (
+        <CleanupReview
+          entries={cleanupEntries}
+          selected={cleanupSelected}
+          loading={loading}
+          onToggle={(fileName) =>
+            setCleanupSelected((prev) => {
+              const next = new Set(prev);
+              if (next.has(fileName)) next.delete(fileName);
+              else next.add(fileName);
+              return next;
+            })
+          }
+          onCancel={() => {
+            setCleanupReviewOpen(false);
+            setCleanupSelected(new Set());
+          }}
+          onConfirm={() => void cleanupAuto()}
+        />
+      )}
 
       {/* 审批门: pending global candidates — only at the global (user) level.
           Nothing auto-lands the injected global store; the user approves here. */}
@@ -519,9 +639,23 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <div className="flex min-w-0 items-center gap-1.5">
                     <span className={memoryTypeClassName(p.type)}>{p.type}</span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{p.name}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                      {p.name}
+                    </span>
                   </div>
-                  <span className="min-w-0 truncate text-xs text-muted-foreground">{p.description}</span>
+                  <span className="min-w-0 truncate text-xs text-muted-foreground">
+                    {p.description}
+                  </span>
+                  {p.promotionReason && (
+                    <span className="min-w-0 truncate text-xs text-muted-foreground">
+                      {p.promotionReason}
+                    </span>
+                  )}
+                  {p.originProject && (
+                    <span className="min-w-0 truncate text-xs text-muted-foreground">
+                      {p.originProject}
+                    </span>
+                  )}
                 </div>
                 <Button
                   type="button"
@@ -565,7 +699,10 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
       <div className="grid h-[min(60vh,560px)] min-h-[360px] grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,0.42fr)_1fr]">
         {/* min-h-0 + the bounded grid height above let this list scroll on its own
             instead of growing the whole panel (which left it without a scrollbar). */}
-        <ul className="flex min-h-0 flex-col gap-1 overflow-y-auto rounded-md border p-2" role="list">
+        <ul
+          className="flex min-h-0 flex-col gap-1 overflow-y-auto rounded-md border p-2"
+          role="list"
+        >
           {sortedEntries.length === 0 && !loading && (
             <li className="p-4 text-center text-sm text-muted-foreground">
               {t("settingsX.memory.emptyScope")}
@@ -595,27 +732,16 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
                     />
                   )}
                   <span className={memoryTypeClassName(e.type)}>{e.type}</span>
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{e.name}</span>
-                  {e.origin === "auto" && (
-                    <span
-                      className="shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground"
-                      title={t("settingsX.memory.autoBadgeTitle")}
-                    >
-                      {t("settingsX.memory.autoBadge")}
-                    </span>
-                  )}
-                  {typeof e.usageCount === "number" && e.usageCount > 0 && (
-                    <span
-                      className="shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground tabular-nums"
-                      title={t("settingsX.memory.recalledTitle")}
-                    >
-                      {t("settingsX.memory.recalledBadge", { count: e.usageCount })}
-                    </span>
-                  )}
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                    {e.name}
+                  </span>
+                  <MemoryEntryBadges entry={e} />
                 </span>
                 {/* Line 2: description, full row width, truncated */}
                 {e.description && (
-                  <span className="min-w-0 truncate text-xs text-muted-foreground">{e.description}</span>
+                  <span className="min-w-0 truncate text-xs text-muted-foreground">
+                    {e.description}
+                  </span>
                 )}
               </Button>
               <Button
@@ -679,6 +805,92 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
   );
 }
 
+function CleanupReview({
+  entries,
+  selected,
+  loading,
+  onToggle,
+  onCancel,
+  onConfirm,
+}: {
+  entries: RendererMemoryEntry[];
+  selected: Set<string>;
+  loading: boolean;
+  onToggle: (fileName: string) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const { t } = useT();
+  const unpinned = entries.filter((e) => !e.pinned);
+  const pinned = entries.filter((e) => e.pinned);
+  const renderRows = (rows: RendererMemoryEntry[]) =>
+    rows.map((entry) => (
+      <label
+        key={entry.fileName}
+        className="flex min-w-0 items-start gap-2 rounded px-1 py-1 text-xs"
+      >
+        <input
+          type="checkbox"
+          className="mt-0.5"
+          checked={selected.has(entry.fileName)}
+          onChange={() => onToggle(entry.fileName)}
+        />
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className={memoryTypeClassName(entry.type)}>{entry.type}</span>
+            {entry.pinned && <Pin size={11} className="shrink-0 text-primary" />}
+            <span className="truncate font-medium text-foreground">{entry.name}</span>
+          </span>
+          {entry.description && (
+            <span className="truncate text-muted-foreground">{entry.description}</span>
+          )}
+        </span>
+      </label>
+    ));
+
+  return (
+    <div className="rounded-md border border-status-warn/40 bg-status-warn/5 p-2">
+      <div className="mb-1 text-xs font-medium text-status-warn">
+        {t("settingsX.memory.cleanupReviewTitle")}
+      </div>
+      <div className="mb-2 text-xs text-muted-foreground">
+        {t("settingsX.memory.cleanupReviewDesc")}
+      </div>
+      {unpinned.length > 0 && (
+        <div className="mb-2">
+          <div className="mb-1 px-1 text-[10px] font-medium uppercase text-muted-foreground">
+            {t("settingsX.memory.cleanupGroupDefault", { count: unpinned.length })}
+          </div>
+          {renderRows(unpinned)}
+        </div>
+      )}
+      {pinned.length > 0 && (
+        <div className="mb-2">
+          <div className="mb-1 px-1 text-[10px] font-medium uppercase text-muted-foreground">
+            {t("settingsX.memory.cleanupGroupPinned", { count: pinned.length })}
+          </div>
+          {renderRows(pinned)}
+        </div>
+      )}
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={onCancel}>
+          {t("settingsX.memory.cancel")}
+        </Button>
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          className="h-7 text-xs"
+          onClick={onConfirm}
+          disabled={loading || selected.size === 0}
+        >
+          {t("settingsX.memory.cleanupSelected", { count: selected.size })}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function ViewEntry({
   entry,
   onEdit,
@@ -698,14 +910,16 @@ function ViewEntry({
             <Pin size={10} /> {t("settingsX.memory.pinned")}
           </span>
         )}
-        {entry.origin === "auto" && (
-          <span className="rounded bg-muted px-1 text-[10px] text-muted-foreground">
-            {t("settingsX.memory.autoBadge")}
-          </span>
-        )}
         <span className={memoryTypeClassName(entry.type)}>{entry.type}</span>
+        <MemoryEntryBadges entry={entry} />
         <div className="ml-auto flex items-center gap-1">
-          <Button type="button" variant="ghost" size="sm" className="h-8 gap-1 px-2 text-xs" onClick={onEdit}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1 px-2 text-xs"
+            onClick={onEdit}
+          >
             <Pencil size={12} />
             <span>{t("settingsX.memory.edit")}</span>
           </Button>
@@ -722,8 +936,35 @@ function ViewEntry({
         </div>
       </div>
       <div className="mb-3 text-sm text-muted-foreground">{entry.description}</div>
-      <pre className="max-h-[50vh] overflow-auto rounded-md bg-muted/40 p-3 font-mono text-xs whitespace-pre-wrap">{entry.content}</pre>
+      <MemoryEntryMeta entry={entry} />
+      <pre className="max-h-[50vh] overflow-auto rounded-md bg-muted/40 p-3 font-mono text-xs whitespace-pre-wrap">
+        {entry.content}
+      </pre>
     </div>
+  );
+}
+
+function MemoryEntryMeta({ entry }: { entry: RendererMemoryEntryFull }) {
+  const { t } = useT();
+  const origin = memoryOrigin(entry.origin);
+  const rows: Array<{ label: string; value?: string | number }> = [
+    { label: t("settingsX.memory.metaId"), value: entry.id },
+    { label: t("settingsX.memory.metaOrigin"), value: t(memoryOriginLabelKey(origin)) },
+    { label: t("settingsX.memory.metaCreatedAt"), value: entry.createdAt ?? entry.created },
+    { label: t("settingsX.memory.metaUpdatedAt"), value: entry.updatedAt },
+    { label: t("settingsX.memory.metaLastUsedAt"), value: entry.lastUsedAt ?? entry.lastUsed },
+    { label: t("settingsX.memory.metaUseCount"), value: memoryUseCount(entry) },
+    { label: t("settingsX.memory.metaUpdateCount"), value: memoryUpdateCount(entry) },
+  ];
+  return (
+    <dl className="mb-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-2 gap-y-1 text-xs">
+      {rows.map((row) => (
+        <React.Fragment key={row.label}>
+          <dt className="text-muted-foreground">{row.label}</dt>
+          <dd className="min-w-0 truncate font-mono text-foreground">{row.value ?? "-"}</dd>
+        </React.Fragment>
+      ))}
+    </dl>
   );
 }
 

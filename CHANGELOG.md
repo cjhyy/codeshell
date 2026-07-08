@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and while the project is pre-1.0 we treat any 0.x → 0.(x+1) bump as potentially
 breaking.
 
+## [0.6.0-rc.14]
+
+### Fixed
+
+- **Cross-session message misdelivery**: a message typed in one session could be
+  delivered to another if you sent it while switching sessions. Sends now pin the
+  source session's bucket at submit time; the queued-input steer path also
+  resolves the engine session from the active bucket instead of the last-started
+  run.
+- **Historical `view_image` by number**: image-bearing tool results are now
+  persisted to the transcript and restored on resume, so retrieving a past image
+  by number returns the correct image instead of a missing/misnumbered one.
+- **File tree auto-scroll**: the files panel no longer snaps back to the selected
+  file on every refresh — it scrolls into view only when a file becomes selected.
+- Mobile approval card / composer layout hardening.
+
+### Added
+
+- The update settings row now shows the current app version.
+
 ## [Unreleased]
 
 ### Added

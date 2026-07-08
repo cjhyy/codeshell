@@ -31,6 +31,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { createHash, randomUUID } from "node:crypto";
 
 /**
  * Memory scopes (storage subdirs under a memory root):
@@ -42,16 +43,21 @@ import { homedir } from "node:os";
  *            panel. Keeps the global layer curated — nothing auto-lands global.
  */
 export type MemoryScope = "user" | "dream" | "pending";
+export type MemoryOrigin = "auto" | "manual" | "dream";
 
 export interface MemoryEntry {
+  /** Stable identity. Legacy files without frontmatter id read as legacy:<scope>:<fileName>. */
+  id?: string;
   name: string;
   description: string;
   type: "user" | "feedback" | "project" | "reference";
   content: string;
   fileName: string;
   scope: MemoryScope;
+  /** Semantic last content update time from frontmatter. */
+  updatedAt?: string;
   /** File mtime in epoch ms — drives maxAge filtering (TODO 8.1). 0 if unknown. */
-  updatedAt?: number;
+  mtimeMs?: number;
   /**
    * 固定/置顶 (feedback#18 方案 A): a pinned memory is exempt from maxAge
    * injection filtering and sorts first in the injected context. UI surfaces
@@ -63,15 +69,20 @@ export interface MemoryEntry {
    * "manual" (or absent — legacy files) = written by the user/UI. Lets the
    * UI distinguish curated memories from extractor noise.
    */
-  origin?: "auto" | "manual";
+  origin?: MemoryOrigin;
   /**
-   * Recall lifecycle (召回 TTL). `usageCount` increments each time MemoryRead
-   * hits this entry; `lastUsed` is the ISO timestamp of that last hit; `created`
-   * is set on first save and preserved across UPDATE. Drives recall-based TTL:
+   * Recall lifecycle (召回 TTL). `useCount` increments each time MemoryRead
+   * hits this entry; `lastUsedAt` is the ISO timestamp of that last hit;
+   * `createdAt` is set on first save and preserved across UPDATE. Drives recall-based TTL:
    * a `project`-type memory not read for N days is pruned. Stored in frontmatter
-   * — no SQLite. Legacy files lacking these fields read back as
-   * {usageCount:0, lastUsed/created ← mtime}, never hidden.
+   * — no SQLite. Legacy `usageCount/lastUsed/created` fields are still read and
+   * exposed through their old aliases for compatibility.
    */
+  useCount?: number;
+  updateCount?: number;
+  lastUsedAt?: string;
+  createdAt?: string;
+  /** Legacy compatibility aliases. New writes use useCount/lastUsedAt/createdAt. */
   usageCount?: number;
   lastUsed?: string;
   created?: string;
@@ -81,6 +92,27 @@ export interface MemoryEntry {
    * user store (not the current one). Absent → fall back to no-repo / global.
    */
   originProject?: string;
+  /** Global dream promotion metadata (P1). */
+  promotionKey?: string;
+  originProjects?: string[];
+  evidenceCount?: number;
+  firstSeenAt?: string;
+  lastSeenAt?: string;
+  promotionReason?: string;
+  promotionStatus?: "pending" | "rejected";
+  promotionSourceId?: string;
+}
+
+function frontmatterLine(key: string, value: string | number | boolean | string[]): string {
+  return `${key}: ${JSON.stringify(value)}\n`;
+}
+
+function parseFrontmatterValue(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
 }
 
 /**
@@ -97,7 +129,17 @@ export function filterByAge(
   if (!maxAgeDays || maxAgeDays <= 0) return entries;
   const cutoff = now - maxAgeDays * 24 * 60 * 60 * 1000;
   // Pinned memories never age out of injection — that's the point of the pin.
-  return entries.filter((e) => e.pinned || !e.updatedAt || e.updatedAt >= cutoff);
+  return entries.filter((e) => {
+    const updatedMs = e.mtimeMs ?? (e.updatedAt ? new Date(e.updatedAt).getTime() : Number.NaN);
+    return e.pinned || !Number.isFinite(updatedMs) || updatedMs <= 0 || updatedMs >= cutoff;
+  });
+}
+
+export interface SaveMemoryOptions {
+  /** False for lifecycle-only writes such as recordRecall and pin/unpin. */
+  incrementUpdateCount?: boolean;
+  /** Force provenance regardless of model/tool args. Used by origin guards. */
+  forceOrigin?: MemoryOrigin;
 }
 
 export interface MemoryManagerOptions {
@@ -162,41 +204,83 @@ export class MemoryManager {
     this.migrateFlatLayout();
   }
 
-  getMemoryDir(): string { return this.memoryDir; }
-  getScope(): MemoryScope { return this.scope; }
+  getMemoryDir(): string {
+    return this.memoryDir;
+  }
+  getScope(): MemoryScope {
+    return this.scope;
+  }
 
   /**
-   * Save a memory entry. Creates the file and updates the index.
+   * Save a memory entry. New entries get a stable id and `<id>.md`; entries
+   * carrying an existing id update that file even when name changes.
    */
-  save(entry: Omit<MemoryEntry, "fileName" | "scope">): string {
-    const fileName = this.slugify(entry.name) + ".md";
+  save(entry: Omit<MemoryEntry, "fileName" | "scope">, opts: SaveMemoryOptions = {}): string {
+    const nowIso = new Date().toISOString();
+    const inputId = entry.id;
+    const syntheticLegacy = inputId ? this.parseSyntheticLegacyId(inputId) : null;
+    const existing =
+      inputId && !syntheticLegacy
+        ? (this.findById(inputId) ?? null)
+        : syntheticLegacy && syntheticLegacy.scope === this.scope
+          ? this.loadFile(syntheticLegacy.fileName)
+          : null;
+    const id = inputId && !syntheticLegacy ? inputId : this.generateId();
+    const fileName = existing?.fileName ?? this.availableFileNameForId(id);
     const filePath = join(this.memoryDir, fileName);
 
-    const nowIso = new Date().toISOString();
-    // Overwrite = UPDATE: preserve the original `created` and accumulated
-    // `usageCount` of the file being replaced (only `created` is load-bearing
-    // for TTL; carrying usageCount avoids resetting a popular memory's score).
-    // explicit entry fields win over the existing file (lets callers force a value).
-    const existing = existsSync(filePath) ? this.loadFile(fileName) : null;
-    const created = entry.created ?? existing?.created ?? nowIso;
-    const usageCount = entry.usageCount ?? existing?.usageCount ?? 0;
-    const lastUsed = entry.lastUsed ?? existing?.lastUsed ?? created;
+    const origin: MemoryOrigin = opts.forceOrigin ?? entry.origin ?? existing?.origin ?? "manual";
+    const pinned = entry.pinned ?? existing?.pinned;
+    const createdAt = entry.createdAt ?? entry.created ?? existing?.createdAt ?? nowIso;
+    const useCount = entry.useCount ?? entry.usageCount ?? existing?.useCount ?? 0;
+    const lastUsedAt = entry.lastUsedAt ?? entry.lastUsed ?? existing?.lastUsedAt ?? createdAt;
     const originProject = entry.originProject ?? existing?.originProject;
+    const promotionKey = entry.promotionKey ?? existing?.promotionKey;
+    const originProjects = entry.originProjects ?? existing?.originProjects;
+    const evidenceCount = entry.evidenceCount ?? existing?.evidenceCount;
+    const firstSeenAt = entry.firstSeenAt ?? existing?.firstSeenAt;
+    const lastSeenAt = entry.lastSeenAt ?? existing?.lastSeenAt;
+    const promotionReason = entry.promotionReason ?? existing?.promotionReason;
+    const promotionStatus = entry.promotionStatus ?? existing?.promotionStatus;
+    const promotionSourceId = entry.promotionSourceId ?? existing?.promotionSourceId;
 
-    // pinned/origin are written only when meaningful so legacy-shaped files
-    // stay byte-identical for unpinned manual saves. Lifecycle fields are
-    // always written now (created/lastUsed/usageCount) — they're how TTL works.
+    const contentChanged =
+      existing != null &&
+      (existing.name !== entry.name ||
+        existing.description !== entry.description ||
+        existing.type !== entry.type ||
+        existing.content !== entry.content);
+    const incrementUpdateCount = opts.incrementUpdateCount !== false && contentChanged;
+    const updateCount =
+      (entry.updateCount ?? existing?.updateCount ?? 0) + (incrementUpdateCount ? 1 : 0);
+    const updatedAt = incrementUpdateCount
+      ? nowIso
+      : (entry.updatedAt ?? existing?.updatedAt ?? nowIso);
+
     const content =
       `---\n` +
-      `name: ${entry.name}\n` +
-      `description: ${entry.description}\n` +
-      `type: ${entry.type}\n` +
-      (entry.pinned ? `pinned: true\n` : "") +
-      (entry.origin ? `origin: ${entry.origin}\n` : "") +
-      (originProject ? `originProject: ${originProject}\n` : "") +
-      `created: ${created}\n` +
-      `lastUsed: ${lastUsed}\n` +
-      `usageCount: ${usageCount}\n` +
+      frontmatterLine("id", id) +
+      frontmatterLine("name", entry.name) +
+      frontmatterLine("description", entry.description) +
+      frontmatterLine("type", entry.type) +
+      frontmatterLine("origin", origin) +
+      (pinned ? frontmatterLine("pinned", true) : "") +
+      (originProject ? frontmatterLine("originProject", originProject) : "") +
+      (promotionKey ? frontmatterLine("promotionKey", promotionKey) : "") +
+      (originProjects && originProjects.length > 0
+        ? frontmatterLine("originProjects", originProjects)
+        : "") +
+      (typeof evidenceCount === "number" ? frontmatterLine("evidenceCount", evidenceCount) : "") +
+      (firstSeenAt ? frontmatterLine("firstSeenAt", firstSeenAt) : "") +
+      (lastSeenAt ? frontmatterLine("lastSeenAt", lastSeenAt) : "") +
+      (promotionReason ? frontmatterLine("promotionReason", promotionReason) : "") +
+      (promotionStatus ? frontmatterLine("promotionStatus", promotionStatus) : "") +
+      (promotionSourceId ? frontmatterLine("promotionSourceId", promotionSourceId) : "") +
+      frontmatterLine("createdAt", createdAt) +
+      frontmatterLine("updatedAt", updatedAt) +
+      frontmatterLine("lastUsedAt", lastUsedAt) +
+      frontmatterLine("useCount", useCount) +
+      frontmatterLine("updateCount", updateCount) +
       `---\n\n` +
       `${entry.content}\n`;
 
@@ -217,9 +301,7 @@ export class MemoryManager {
   loadAll(): MemoryEntry[] {
     if (!existsSync(this.memoryDir)) return [];
 
-    const files = readdirSync(this.memoryDir).filter(
-      (f) => f.endsWith(".md") && f !== "MEMORY.md",
-    );
+    const files = readdirSync(this.memoryDir).filter((f) => f.endsWith(".md") && f !== "MEMORY.md");
 
     const entries: MemoryEntry[] = [];
     for (const file of files) {
@@ -227,6 +309,31 @@ export class MemoryManager {
       if (entry) entries.push(entry);
     }
     return entries;
+  }
+
+  findById(id: string): MemoryEntry | undefined {
+    return this.loadAll().find((e) => e.id === id);
+  }
+
+  find(nameOrFileOrId: string): MemoryEntry | undefined {
+    return this.loadAll().find(
+      (e) => e.id === nameOrFileOrId || e.name === nameOrFileOrId || e.fileName === nameOrFileOrId,
+    );
+  }
+
+  isOwnedBy(entry: MemoryEntry | undefined, allowedOrigins: readonly MemoryOrigin[]): boolean {
+    if (!entry) return false;
+    return allowedOrigins.includes(entry.origin ?? "manual");
+  }
+
+  deleteIfOwned(
+    nameOrFileOrId: string,
+    allowedOrigins: readonly MemoryOrigin[],
+  ): "deleted" | "not_found" | "protected" {
+    const entry = this.find(nameOrFileOrId);
+    if (!entry) return "not_found";
+    if (!this.isOwnedBy(entry, allowedOrigins)) return "protected";
+    return this.delete(entry.id ?? entry.fileName) ? "deleted" : "not_found";
   }
 
   /**
@@ -259,34 +366,129 @@ export class MemoryManager {
       const frontmatter = frontmatterMatch[1];
       const content = frontmatterMatch[2].trim();
 
-      const name = frontmatter.match(/name:\s*(.+)/)?.[1]?.trim() ?? fileName;
-      const description = frontmatter.match(/description:\s*(.+)/)?.[1]?.trim() ?? "";
-      const type = (frontmatter.match(/type:\s*(.+)/)?.[1]?.trim() ?? "project") as MemoryEntry["type"];
-      const pinned = frontmatter.match(/pinned:\s*(.+)/)?.[1]?.trim() === "true";
+      const readRaw = (key: string): string | undefined =>
+        frontmatter.match(new RegExp(`^${key}:\\s*(.*)$`, "m"))?.[1]?.trim();
+      const readValue = (key: string): unknown | undefined => {
+        const raw = readRaw(key);
+        return raw === undefined ? undefined : parseFrontmatterValue(raw);
+      };
+      const read = (key: string): string | undefined => {
+        const value = readValue(key);
+        if (value === undefined || value === null) return undefined;
+        if (Array.isArray(value)) return value.map(String).join(",");
+        return String(value);
+      };
+      const readList = (key: string): string[] | undefined => {
+        const raw = readRaw(key);
+        if (raw !== undefined && raw.length > 0) {
+          const value = parseFrontmatterValue(raw);
+          if (Array.isArray(value)) {
+            const values = value.map((item) => String(item)).filter(Boolean);
+            return values.length > 0 ? values : undefined;
+          }
+          if (typeof value === "string" && value.startsWith("[") && value.endsWith("]")) {
+            const values = value
+              .slice(1, -1)
+              .split(",")
+              .map((item) => item.trim().replace(/^["']|["']$/g, ""))
+              .filter(Boolean);
+            return values.length > 0 ? values : undefined;
+          }
+          return [String(value)];
+        }
+        const block = frontmatter.match(new RegExp(`^${key}:\\s*\\n((?:\\s+-\\s+.*\\n?)*)`, "m"));
+        if (block?.[1]) {
+          const values = block[1]
+            .split(/\n/)
+            .map((line) => line.match(/^\s+-\s+(.+)\s*$/)?.[1]?.trim())
+            .filter((value): value is string => Boolean(value));
+          return values.length > 0 ? values : undefined;
+        }
+        return undefined;
+      };
+      const readNumber = (key: string): number | undefined => {
+        const value = readValue(key);
+        if (value === undefined || value === null || value === "") return undefined;
+        if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
+        const parsed = parseInt(String(value), 10);
+        return Number.isFinite(parsed) ? parsed : undefined;
+      };
+      const readBoolean = (key: string): boolean => {
+        const value = readValue(key);
+        return value === true || value === "true";
+      };
+      const id = read("id") ?? `legacy:${scope}:${fileName}`;
+      const name = read("name") ?? fileName;
+      const description = read("description") ?? "";
+      const type = (read("type") ?? "project") as MemoryEntry["type"];
+      const pinned = readBoolean("pinned");
       // Anchor with ^…/m so `origin:` doesn't accidentally match the
       // `originProject:` line (and vice-versa).
-      const originRaw = frontmatter.match(/^origin:\s*(.+)/m)?.[1]?.trim();
-      const origin = originRaw === "auto" || originRaw === "manual" ? originRaw : undefined;
-      const originProject = frontmatter.match(/^originProject:\s*(.+)/m)?.[1]?.trim() || undefined;
+      const originRaw = read("origin");
+      const origin: MemoryOrigin =
+        originRaw === "auto" || originRaw === "manual" || originRaw === "dream"
+          ? originRaw
+          : "manual";
+      const originProject = read("originProject") || undefined;
 
-      let updatedAt = 0;
+      let mtimeMs = 0;
       try {
-        updatedAt = statSync(filePath).mtimeMs;
+        mtimeMs = statSync(filePath).mtimeMs;
       } catch {
         // mtime best-effort; 0 = unknown (never filtered out by maxAge).
       }
 
       // Lifecycle fields. Legacy files lack them → fall back to mtime so a TTL
       // sweep treats them as "last used = file age" rather than "never used".
-      const mtimeIso = updatedAt > 0 ? new Date(updatedAt).toISOString() : undefined;
-      const created = frontmatter.match(/created:\s*(.+)/)?.[1]?.trim() || mtimeIso;
-      const lastUsed = frontmatter.match(/lastUsed:\s*(.+)/)?.[1]?.trim() || created;
-      const usageRaw = frontmatter.match(/usageCount:\s*(\d+)/)?.[1];
-      const usageCount = usageRaw ? parseInt(usageRaw, 10) : 0;
+      const mtimeIso = mtimeMs > 0 ? new Date(mtimeMs).toISOString() : undefined;
+      const createdAt = read("createdAt") ?? read("created") ?? mtimeIso;
+      const updatedAt = read("updatedAt") ?? mtimeIso ?? createdAt;
+      const lastUsedAt = read("lastUsedAt") ?? read("lastUsed") ?? createdAt;
+      const useRaw = read("useCount") ?? read("usageCount");
+      const updateRaw = read("updateCount");
+      const useCount = useRaw ? parseInt(useRaw, 10) : 0;
+      const updateCount = updateRaw ? parseInt(updateRaw, 10) : 0;
+      const promotionKey = read("promotionKey");
+      const originProjects = readList("originProjects");
+      const evidenceCount = readNumber("evidenceCount");
+      const firstSeenAt = read("firstSeenAt");
+      const lastSeenAt = read("lastSeenAt");
+      const promotionReason = read("promotionReason");
+      const promotionStatusRaw = read("promotionStatus");
+      const promotionStatus =
+        promotionStatusRaw === "pending" || promotionStatusRaw === "rejected"
+          ? promotionStatusRaw
+          : undefined;
+      const promotionSourceId = read("promotionSourceId");
 
       return {
-        name, description, type, content, fileName, scope,
-        updatedAt, pinned, origin, usageCount, lastUsed, created, originProject,
+        id,
+        name,
+        description,
+        type,
+        content,
+        fileName,
+        scope,
+        updatedAt,
+        mtimeMs,
+        pinned,
+        origin,
+        useCount,
+        updateCount,
+        lastUsedAt,
+        createdAt,
+        usageCount: useCount,
+        lastUsed: lastUsedAt,
+        created: createdAt,
+        originProject,
+        promotionKey,
+        originProjects,
+        evidenceCount,
+        firstSeenAt,
+        lastSeenAt,
+        promotionReason,
+        promotionStatus,
+        promotionSourceId,
       };
     } catch {
       return null;
@@ -301,7 +503,7 @@ export class MemoryManager {
   delete(nameOrFile: string): boolean {
     const entries = this.loadAll();
     const entry = entries.find(
-      (e) => e.name === nameOrFile || e.fileName === nameOrFile,
+      (e) => e.id === nameOrFile || e.name === nameOrFile || e.fileName === nameOrFile,
     );
     if (!entry) return false;
 
@@ -327,21 +529,28 @@ export class MemoryManager {
    */
   recordRecall(nameOrFile: string, now: Date = new Date()): boolean {
     const entry = this.loadAll().find(
-      (e) => e.name === nameOrFile || e.fileName === nameOrFile,
+      (e) => e.id === nameOrFile || e.name === nameOrFile || e.fileName === nameOrFile,
     );
     if (!entry) return false;
     try {
-      this.save({
-        name: entry.name,
-        description: entry.description,
-        type: entry.type,
-        content: entry.content,
-        pinned: entry.pinned,
-        origin: entry.origin,
-        created: entry.created,
-        usageCount: (entry.usageCount ?? 0) + 1,
-        lastUsed: now.toISOString(),
-      });
+      this.save(
+        {
+          id: entry.id,
+          name: entry.name,
+          description: entry.description,
+          type: entry.type,
+          content: entry.content,
+          pinned: entry.pinned,
+          origin: entry.origin,
+          createdAt: entry.createdAt,
+          updatedAt: entry.updatedAt,
+          useCount: (entry.useCount ?? 0) + 1,
+          updateCount: entry.updateCount,
+          lastUsedAt: now.toISOString(),
+          originProject: entry.originProject,
+        },
+        { incrementUpdateCount: false },
+      );
       return true;
     } catch {
       return false;
@@ -361,7 +570,7 @@ export class MemoryManager {
     for (const e of this.loadAll()) {
       if (e.type !== "project") continue; // stable types are exempt
       if (e.pinned) continue; // pinned exempt
-      const lastUsedMs = e.lastUsed ? new Date(e.lastUsed).getTime() : NaN;
+      const lastUsedMs = e.lastUsedAt ? new Date(e.lastUsedAt).getTime() : NaN;
       // Unknown lastUsed (unparseable) → keep, never prune on missing data.
       if (!Number.isFinite(lastUsedMs)) continue;
       if (lastUsedMs < cutoff) {
@@ -372,13 +581,14 @@ export class MemoryManager {
   }
 
   /**
-   * Approve a pending memory: move it from the pending scope into the user scope
-   * of the SAME memory root (pending only ever exists at the global root — the
-   * approval门 only gates global writes). Must be called on a pending-scope
-   * manager. Returns the new user filename, or null if not found / wrong scope.
+   * Approve a pending memory: move it from the pending scope into the global
+   * dream scope of the SAME memory root. Pending only ever exists at the global
+   * root; approval gates whether a suggested global dream becomes injected.
+   * Must be called on a pending-scope manager. Returns the new global dream
+   * filename, or null if not found / wrong scope.
    *
-   * 审批门 (用户拍板): the only path that moves an auto-extracted memory into the
-   * curated, injected global user store.
+   * 审批门 (用户拍板): the only path that moves a suggested global dream into the
+   * injected global dream store.
    */
   approvePending(nameOrFile: string): string | null {
     return this.movePending(nameOrFile, "global");
@@ -392,28 +602,93 @@ export class MemoryManager {
     return this.movePending(nameOrFile, "project");
   }
 
-  /** Shared move for approve(→global user)/demote(→origin-project user). */
+  /**
+   * Reject a pending global-dream suggestion. The project dream entry stays in
+   * place, but is marked so the same source is not suggested again.
+   */
+  rejectPending(nameOrFile: string): boolean {
+    if (this.scope !== "pending") return false;
+    const entry = this.find(nameOrFile);
+    if (!entry) return false;
+
+    if (entry.originProject) {
+      const projectDream = new MemoryManager({
+        baseDir: this.baseDir,
+        projectDir: entry.originProject,
+        scope: "dream",
+      });
+      const source =
+        (entry.promotionSourceId ? projectDream.findById(entry.promotionSourceId) : undefined) ??
+        projectDream.loadAll().find((candidate) => candidate.name === entry.name);
+      if (source && source.origin !== "manual") {
+        projectDream.save(
+          {
+            id: source.id,
+            name: source.name,
+            description: source.description,
+            type: source.type,
+            content: source.content,
+            origin: source.origin ?? "dream",
+            pinned: source.pinned,
+            createdAt: source.createdAt,
+            updatedAt: source.updatedAt,
+            lastUsedAt: source.lastUsedAt,
+            useCount: source.useCount,
+            updateCount: source.updateCount,
+            originProject: source.originProject,
+            originProjects: source.originProjects,
+            evidenceCount: source.evidenceCount,
+            firstSeenAt: source.firstSeenAt,
+            lastSeenAt: source.lastSeenAt,
+            promotionReason: entry.promotionReason ?? source.promotionReason,
+            promotionStatus: "rejected",
+          },
+          { incrementUpdateCount: false, forceOrigin: source.origin ?? "dream" },
+        );
+      }
+    }
+
+    return this.delete(entry.id ?? entry.name);
+  }
+
+  /** Shared move for approve(→global dream)/demote(→origin-project user). */
   private movePending(nameOrFile: string, dest: "global" | "project"): string | null {
     if (this.scope !== "pending") return null;
-    const entry = this.loadAll().find(
-      (e) => e.name === nameOrFile || e.fileName === nameOrFile,
-    );
+    const entry = this.find(nameOrFile);
     if (!entry) return null;
     const targetMgr =
-      dest === "project" && entry.originProject
-        ? new MemoryManager({ baseDir: this.baseDir, projectDir: entry.originProject, scope: "user" })
-        : new MemoryManager({ baseDir: this.baseDir, scope: "user" }); // global, or fallback
-    const fileName = targetMgr.save({
-      name: entry.name,
-      description: entry.description,
-      type: entry.type,
-      content: entry.content,
-      origin: entry.origin ?? "auto",
-      created: entry.created,
-      lastUsed: entry.lastUsed,
-      usageCount: entry.usageCount,
-      // originProject is no longer needed once it has landed in a real store.
-    });
+      dest === "global"
+        ? new MemoryManager({ baseDir: this.baseDir, scope: "dream" })
+        : dest === "project" && entry.originProject
+          ? new MemoryManager({
+              baseDir: this.baseDir,
+              projectDir: entry.originProject,
+              scope: "user",
+            })
+          : new MemoryManager({ baseDir: this.baseDir, scope: "user" }); // demote fallback
+    const destinationOrigin: MemoryOrigin = dest === "global" ? "dream" : (entry.origin ?? "auto");
+    const fileName = targetMgr.save(
+      {
+        name: entry.name,
+        description: entry.description,
+        type: entry.type,
+        content: entry.content,
+        origin: destinationOrigin,
+        createdAt: entry.createdAt,
+        updatedAt: entry.updatedAt,
+        lastUsedAt: entry.lastUsedAt,
+        useCount: entry.useCount,
+        updateCount: entry.updateCount,
+        originProjects: entry.originProjects ?? (entry.originProject ? [entry.originProject] : []),
+        evidenceCount: entry.evidenceCount,
+        firstSeenAt: entry.firstSeenAt,
+        lastSeenAt: entry.lastSeenAt,
+        promotionReason: entry.promotionReason,
+        // originProject/promotionSourceId are no longer needed once it has landed
+        // in a real store.
+      },
+      { forceOrigin: destinationOrigin },
+    );
     this.delete(entry.name); // soft-delete the pending copy
     return fileName;
   }
@@ -425,9 +700,7 @@ export class MemoryManager {
    * global filename, or null if not found.
    */
   promoteToGlobal(nameOrFile: string): string | null {
-    const entry = this.loadAll().find(
-      (e) => e.name === nameOrFile || e.fileName === nameOrFile,
-    );
+    const entry = this.loadAll().find((e) => e.name === nameOrFile || e.fileName === nameOrFile);
     if (!entry) return null;
     const globalMgr = new MemoryManager({ baseDir: this.baseDir, scope: "user" });
     const fileName = globalMgr.save({
@@ -437,9 +710,11 @@ export class MemoryManager {
       content: entry.content,
       origin: entry.origin,
       pinned: entry.pinned,
-      created: entry.created,
-      lastUsed: entry.lastUsed,
-      usageCount: entry.usageCount,
+      createdAt: entry.createdAt,
+      updatedAt: entry.updatedAt,
+      lastUsedAt: entry.lastUsedAt,
+      useCount: entry.useCount,
+      updateCount: entry.updateCount,
     });
     this.delete(entry.name); // remove from the project store
     return fileName;
@@ -573,9 +848,7 @@ export class MemoryManager {
   loadScope(scope: MemoryScope): MemoryEntry[] {
     const dir = join(this.memoryRoot, scope);
     if (!existsSync(dir)) return [];
-    const files = readdirSync(dir).filter(
-      (f) => f.endsWith(".md") && f !== "MEMORY.md",
-    );
+    const files = readdirSync(dir).filter((f) => f.endsWith(".md") && f !== "MEMORY.md");
     const entries: MemoryEntry[] = [];
     for (const file of files) {
       const e = this.loadFileFromDir(dir, file, scope);
@@ -584,11 +857,7 @@ export class MemoryManager {
     return entries;
   }
 
-  private loadFileFromDir(
-    dir: string,
-    fileName: string,
-    scope: MemoryScope,
-  ): MemoryEntry | null {
+  private loadFileFromDir(dir: string, fileName: string, scope: MemoryScope): MemoryEntry | null {
     return this.parseMemoryFile(join(dir, fileName), fileName, scope);
   }
 
@@ -651,17 +920,44 @@ export class MemoryManager {
     for (const [fileName, meta] of cache) {
       lines.push(`- [${meta.name}](${fileName}) — ${meta.description}`);
     }
-    const content = lines.length > 0
-      ? lines.join("\n") + "\n"
-      : "(no memories stored)\n";
+    const content = lines.length > 0 ? lines.join("\n") + "\n" : "(no memories stored)\n";
     writeFileSync(this.indexPath, content, "utf-8");
   }
 
-  private slugify(text: string): string {
-    return text
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 60);
+  private generateId(): string {
+    return `mem_${randomUUID().replace(/-/g, "")}`;
+  }
+
+  private availableFileNameForId(id: string): string {
+    let attempt = 0;
+    while (attempt < 100) {
+      const fileName = this.fileNameForId(id, attempt);
+      const existing = this.loadFile(fileName);
+      if (!existing || existing.id === id) return fileName;
+      attempt++;
+    }
+    throw new Error(`Unable to allocate a memory filename for id "${id}"`);
+  }
+
+  private fileNameForId(id: string, collisionAttempt = 0): string {
+    if (collisionAttempt === 0 && /^[a-z0-9][a-z0-9_.-]*$/.test(id) && !id.includes("..")) {
+      return `${id}.md`;
+    }
+    const safeStem =
+      id
+        .toLowerCase()
+        .replace(/[^a-z0-9_.-]/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/^[._-]+|[._-]+$/g, "")
+        .slice(0, 80) || "memory";
+    const hashInput = collisionAttempt === 0 ? id : `${id}:${collisionAttempt}`;
+    const hash = createHash("sha256").update(hashInput).digest("hex").slice(0, 12);
+    return `${safeStem}-${hash}.md`;
+  }
+
+  private parseSyntheticLegacyId(id: string): { scope: MemoryScope; fileName: string } | null {
+    const match = id.match(/^legacy:(user|dream|pending):(.+)$/);
+    if (!match) return null;
+    return { scope: match[1] as MemoryScope, fileName: match[2] };
   }
 }

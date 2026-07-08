@@ -44,6 +44,10 @@ function loadPty(): NodePty {
   return nodePty;
 }
 
+export function _setPtyForTest(next: any): void {
+  nodePty = next as NodePty | null;
+}
+
 let gitBashCache: string | null | undefined;
 let powershellCache: string | null | undefined;
 
@@ -94,7 +98,9 @@ function resolvePowerShellForPty(): string | undefined {
 
   try {
     const out = execFileSync("where", ["powershell.exe"], { encoding: "utf8", timeout: 3000 });
-    const found = out.split(/\r?\n/).find((line) => line.trim().toLowerCase().endsWith("powershell.exe"));
+    const found = out
+      .split(/\r?\n/)
+      .find((line) => line.trim().toLowerCase().endsWith("powershell.exe"));
     if (found) return (powershellCache = found.trim());
   } catch {
     // Fall through to the standard Windows PowerShell location / executable name.
@@ -121,7 +127,12 @@ export function resolveShell(): string {
   // Without it, PowerShell is a more capable interactive fallback than cmd;
   // cmd remains the final always-present option.
   if (process.platform === "win32") {
-    return resolveGitBashForPty() ?? resolvePowerShellForPty() ?? process.env.COMSPEC?.trim() ?? "cmd.exe";
+    return (
+      resolveGitBashForPty() ??
+      resolvePowerShellForPty() ??
+      process.env.COMSPEC?.trim() ??
+      "cmd.exe"
+    );
   }
   const fromEnv = process.env.SHELL?.trim();
   if (fromEnv) return fromEnv;
@@ -165,6 +176,39 @@ function appendBuffer(s: Session, data: string): void {
   if (s.buffer.length > MAX_BUFFER) s.buffer = s.buffer.slice(s.buffer.length - MAX_BUFFER);
 }
 
+function webContentsId(wc: WebContents): number | undefined {
+  try {
+    return wc.id;
+  } catch {
+    return undefined;
+  }
+}
+
+function sessionForOwner(wc: WebContents, sessionId: string, action: string): Session | undefined {
+  const s = sessions.get(sessionId);
+  if (!s) return undefined;
+  if (s.webContents !== wc) {
+    dlog("main", `pty.${action}.denied`, {
+      sessionId,
+      ownerId: webContentsId(s.webContents),
+      senderId: webContentsId(wc),
+    });
+    return undefined;
+  }
+  return s;
+}
+
+function killSession(sessionId: string): void {
+  const s = sessions.get(sessionId);
+  if (!s) return;
+  try {
+    s.pty.kill();
+  } catch {
+    /* already gone */
+  }
+  sessions.delete(sessionId);
+}
+
 export interface PtyStartOpts {
   sessionId: string;
   cwd?: string;
@@ -198,7 +242,9 @@ export function ptyStart(wc: WebContents, opts: PtyStartOpts): PtyStartResult {
   const { sessionId } = opts;
   const existing = sessions.get(sessionId);
   if (existing) {
-    existing.webContents = wc; // re-attach after a renderer reload / panel re-mount
+    if (!sessionForOwner(wc, sessionId, "reattach")) {
+      return { ok: false, detail: "pty session is owned by another webContents" };
+    }
     // Replay scrollback so the freshly-mounted xterm isn't blank while the
     // shell keeps running behind it.
     if (existing.buffer && !wc.isDestroyed()) {
@@ -248,16 +294,16 @@ export function ptyStart(wc: WebContents, opts: PtyStartOpts): PtyStartResult {
   return { ok: true, pid: pty.pid };
 }
 
-export function ptyWrite(sessionId: string, data: string): void {
+export function ptyWrite(wc: WebContents, sessionId: string, data: string): void {
   // Renderer-supplied; a non-string reaching the native addon can crash main.
   if (typeof data !== "string") return;
-  sessions.get(sessionId)?.pty.write(data);
+  sessionForOwner(wc, sessionId, "write")?.pty.write(data);
 }
 
 /** Reap any session whose webContents has been destroyed (window closed). */
 export function ptyReapDestroyed(): void {
   for (const [id, s] of [...sessions.entries()]) {
-    if (s.webContents.isDestroyed()) ptyKill(id);
+    if (s.webContents.isDestroyed()) killSession(id);
   }
 }
 
@@ -268,8 +314,8 @@ export function clampPtyDim(n: number): number {
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
 }
 
-export function ptyResize(sessionId: string, cols: number, rows: number): void {
-  const s = sessions.get(sessionId);
+export function ptyResize(wc: WebContents, sessionId: string, cols: number, rows: number): void {
+  const s = sessionForOwner(wc, sessionId, "resize");
   if (!s) return;
   try {
     s.pty.resize(clampPtyDim(cols), clampPtyDim(rows));
@@ -278,18 +324,12 @@ export function ptyResize(sessionId: string, cols: number, rows: number): void {
   }
 }
 
-export function ptyKill(sessionId: string): void {
-  const s = sessions.get(sessionId);
-  if (!s) return;
-  try {
-    s.pty.kill();
-  } catch {
-    /* already gone */
-  }
-  sessions.delete(sessionId);
+export function ptyKill(wc: WebContents, sessionId: string): void {
+  if (!sessionForOwner(wc, sessionId, "kill")) return;
+  killSession(sessionId);
 }
 
 /** Kill every pty (called on app quit). */
 export function ptyKillAll(): void {
-  for (const id of [...sessions.keys()]) ptyKill(id);
+  for (const id of [...sessions.keys()]) killSession(id);
 }

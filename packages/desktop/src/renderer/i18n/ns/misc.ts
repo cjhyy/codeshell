@@ -19,6 +19,7 @@ export const misc = {
         errorCompact: "失败",
         available: "发现新版本 {version}。",
         autoUpdate: "自动更新",
+        currentVersionLabel: "当前版本：",
         statusLabel: "状态：",
         checkUpdate: "检查更新",
         feedHint:
@@ -120,6 +121,7 @@ export const misc = {
         errorCompact: "Failed",
         available: "Version {version} is available.",
         autoUpdate: "Auto-update",
+        currentVersionLabel: "Current version: ",
         statusLabel: "Status: ",
         checkUpdate: "Check for updates",
         feedHint:

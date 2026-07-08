@@ -234,3 +234,7 @@ function json(r: UseCredentialResult): string {
 export function __resetCredentialSessionAllowForTests(): void {
   sessionAllowByEngine.clear();
 }
+
+export function clearCredentialSessionAllow(sessionId: string): void {
+  sessionAllowByEngine.delete(sessionId);
+}

@@ -16,7 +16,14 @@ type ChatEntryData =
   | { type: "assistant_text"; text: string; streaming: boolean; agentId?: string }
   | { type: "tool_start"; toolName: string; args: Record<string, unknown>; toolCallId?: string; agentId?: string }
   | { type: "tool_running"; toolName: string; agentId?: string }
-  | { type: "tool_result"; toolName: string; result?: string; error?: string; agentId?: string }
+  | {
+      type: "tool_result";
+      toolName: string;
+      result?: string;
+      error?: string;
+      agentId?: string;
+      compact?: boolean;
+    }
   | { type: "thinking"; agentId?: string; content?: string }
   | { type: "error"; error: string; errorKind?: ErrorKind; agentId?: string }
   | { type: "status"; reason: string }

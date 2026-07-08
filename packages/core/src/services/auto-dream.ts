@@ -94,34 +94,34 @@ export function recordDreamComplete(): void {
 /**
  * System prompt for the auto-dream tool-call loop.
  *
- * Drives the LLM as a "memory consolidation assistant" that operates ONLY in
- * the dream scope via the MemorySave/MemoryDelete tools. The user scope is
- * read-only context — modifying it would need permission, which a background
- * dream pass cannot obtain (no UI on the call path).
+ * Drives the LLM as a "memory consolidation assistant" that operates in dream
+ * scope and may maintain dream-owned user memories. Manual user memories are
+ * read-only and protected by the dispatcher.
  */
 export function buildDreamSystemPrompt(): string {
   return [
     "You are a memory consolidation assistant for the CodeShell memory system.",
     "",
-    "Your job: clean up the `dream` scope by deduplicating, merging, removing stale, and improving descriptions.",
+    "Your job: clean up the `dream` scope by deduplicating, merging, removing stale, and improving descriptions, and promote only durable lessons into dream-owned `user` entries.",
     "",
     "Tools available (each takes `location`: 'global' = cross-project store, 'project' = this repo; default project):",
     "- MemoryList({ scope, location }): list memories in a scope/location",
     "- MemoryRead({ scope, location, name }): read full content of an entry",
-    "- MemorySave({ scope: 'dream', location, ... }): create or overwrite a dream entry (auto-approved)",
-    "- MemoryDelete({ scope: 'dream', location, name }): soft-delete a dream entry (auto-approved, recoverable from trash)",
+    "- MemorySave({ scope: 'dream'|'user', location, id?, ... }): create or update an entry by id",
+    "- MemoryDelete({ scope: 'dream'|'user', location, name }): soft-delete an owned entry (recoverable from trash)",
     "",
-    "Consolidate BOTH the project dream scope AND the global dream scope (pass location accordingly). Global holds cross-project lessons; keep it deduped too.",
+    "Consolidate BOTH the project dream workspace AND the global dream workspace (pass location accordingly). Global dream is a cross-project workspace, not a dumping ground for single-project progress.",
     "",
     "Rules — read carefully:",
-    "1. You may freely Save/Delete in the `dream` scope (any location). These operations DO NOT prompt the user.",
-    "2. You may NOT Save/Delete in the `user` scope from this loop — those operations require interactive permission which is not available here. Treat user-scope entries as read-only context.",
-    "3. If you find user-scope entries that look stale, surface them in your final summary text — don't try to delete them.",
-    "4. Prefer fewer, higher-quality merged entries over many similar fragments.",
-    "5. When an entry has versioned variants (e.g. `*-v1`, `*-v2`, `*-v3`), keep only the latest.",
-    "6. Be conservative: if uncertain whether two entries are truly duplicates, leave them alone.",
-    "7. Archive COMPLETED work: dream entries that only record a finished fix/task (\"已修\", \"已完成\", \"done\") and carry no reusable lesson should be deleted, or merged into one compact changelog-style entry — completed-state notes that only grow are the main source of clutter. Keep any durable lesson (root cause, pitfall, convention) by folding it into a topical entry first.",
-    "8. When you're done, stop calling tools and respond with a one-paragraph summary of what you changed.",
+    "1. You may Save/Delete dream-scope entries only when they are origin:auto or origin:dream. Never modify origin:manual; missing origin means manual.",
+    "2. You may Save user-scope entries only for durable conclusions you own. The dispatcher will force origin:dream. You may update existing user entries only when they are origin:dream or origin:auto. Never modify/delete origin:manual user entries.",
+    "3. Use MemoryList first. If the same topic already has an id, update that id instead of creating a date, version, batch, or progress variant.",
+    "4. Cluster duplicates without vectors: compare stable topic words after removing dates, versions, batch numbers, and progress/completed wording.",
+    "5. Time-sensitivity rule: entries with dates, today/yesterday, progress snapshots, completed fixes, review batches, or one-off task state should stay in dream, be merged, or be deleted. Do not promote them to user.",
+    "6. Durable lessons may be promoted to user only when they are reusable: user preferences, long-term project constraints, architecture decisions, root-cause lessons, non-obvious test/build traps, or stable references.",
+    '7. Archive COMPLETED work: dream entries that only record a finished fix/task ("已修", "已完成", "done") and carry no reusable lesson should be deleted, or merged into one compact topical entry. Keep any durable lesson by folding it into a date-free topic entry first.',
+    "8. Prefer fewer, higher-quality merged entries over many similar fragments. Be conservative: if uncertain whether two entries are truly duplicates, leave them alone.",
+    "9. When you're done, stop calling tools and respond with a one-paragraph summary of what you changed.",
   ].join("\n");
 }
 
@@ -131,26 +131,71 @@ export function buildDreamSystemPrompt(): string {
  * body. The LLM uses MemoryRead to fetch bodies for entries it wants to act on.
  */
 export function buildDreamUserPrompt(
-  userMemories: Array<{ name: string; type: string; description: string }>,
-  dreamMemories: Array<{ name: string; type: string; description: string }>,
-  globalMemories: Array<{ name: string; type: string; description: string }> = [],
+  userMemories: Array<{
+    id?: string;
+    name: string;
+    type: string;
+    description: string;
+    origin?: string;
+    useCount?: number;
+    updateCount?: number;
+  }>,
+  dreamMemories: Array<{
+    id?: string;
+    name: string;
+    type: string;
+    description: string;
+    origin?: string;
+    useCount?: number;
+    updateCount?: number;
+  }>,
+  globalMemories: Array<{
+    id?: string;
+    name: string;
+    type: string;
+    description: string;
+    origin?: string;
+    useCount?: number;
+    updateCount?: number;
+  }> = [],
 ): string {
-  const fmt = (m: { name: string; type: string; description: string }) =>
-    `  - [${m.type}] ${m.name}: ${m.description}`;
+  const fmt = (m: {
+    id?: string;
+    name: string;
+    type: string;
+    description: string;
+    origin?: string;
+    useCount?: number;
+    updateCount?: number;
+  }) =>
+    `  - [${m.type}] ${m.name} (id:${m.id ?? "(none)"}, origin:${m.origin ?? "manual"}, use:${m.useCount ?? 0}, updates:${m.updateCount ?? 0}): ${m.description}`;
   const listOrNone = (arr: typeof userMemories, noneMsg: string) =>
     arr.length === 0 ? noneMsg : arr.map(fmt).join("\n");
 
   const sections: string[] = [];
-  sections.push(`Project user-scope memories (READ-ONLY context, ${userMemories.length} entries):`);
+  sections.push(
+    `Project user-scope memories (manual is READ-ONLY; origin:dream/auto may be maintained by id, ${userMemories.length} entries):`,
+  );
   sections.push(listOrNone(userMemories, "  (none)"));
   sections.push("");
-  sections.push(`Project dream-scope memories (YOUR WORKSPACE — location:'project', ${dreamMemories.length} entries):`);
-  sections.push(listOrNone(dreamMemories, "  (none — you may consolidate from user-scope by re-saving curated entries into dream)"));
+  sections.push(
+    `Project dream-scope memories (YOUR WORKSPACE — location:'project', ${dreamMemories.length} entries):`,
+  );
+  sections.push(
+    listOrNone(
+      dreamMemories,
+      "  (none — you may consolidate from user-scope by re-saving curated entries into dream)",
+    ),
+  );
   sections.push("");
-  sections.push(`Global memories (cross-project — clean these too via location:'global', ${globalMemories.length} entries):`);
+  sections.push(
+    `Global dream workspace memories (cross-project dream — clean these too via location:'global', ${globalMemories.length} entries):`,
+  );
   sections.push(listOrNone(globalMemories, "  (none)"));
   sections.push("");
-  sections.push("Begin consolidation. Use MemoryRead to inspect any entries whose names suggest duplication or staleness, then MemorySave/MemoryDelete (with the right location) to clean up.");
+  sections.push(
+    "Begin consolidation. Use MemoryRead to inspect any entries whose names suggest duplication or staleness, then MemorySave/MemoryDelete (with the right id/location/scope) to clean up.",
+  );
 
   return sections.join("\n");
 }

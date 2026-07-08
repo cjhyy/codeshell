@@ -53,12 +53,12 @@ export function readRecentHistory(
     if (d.type === "user") {
       const t = textOf(d.message?.content).trim();
       if (!t || NOISE.some((n) => t.startsWith(n))) continue;
-      all.push({ role: "user", text: t.slice(0, 4000) });
+      all.push({ role: "user", text: t });
     } else if (d.type === "assistant") {
       const t = textOf(d.message?.content).trim();
       const tools = toolsOf(d.message?.content);
       if (!t && tools.length === 0) continue;
-      all.push({ role: "assistant", text: t.slice(0, 4000), tools: tools.length ? tools : undefined });
+      all.push({ role: "assistant", text: t, tools: tools.length ? tools : undefined });
     }
   }
   const lim = limit > 0 ? limit : 20;
