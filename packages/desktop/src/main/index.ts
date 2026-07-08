@@ -2813,14 +2813,14 @@ ipcMain.handle(
     return ptyStart(e.sender, opts);
   },
 );
-ipcMain.handle("pty:write", (_e, sessionId: string, data: string) => {
-  ptyWrite(sessionId, data);
+ipcMain.handle("pty:write", (e, sessionId: string, data: string) => {
+  ptyWrite(e.sender, sessionId, data);
 });
-ipcMain.handle("pty:resize", (_e, sessionId: string, cols: number, rows: number) => {
-  ptyResize(sessionId, cols, rows);
+ipcMain.handle("pty:resize", (e, sessionId: string, cols: number, rows: number) => {
+  ptyResize(e.sender, sessionId, cols, rows);
 });
-ipcMain.handle("pty:kill", (_e, sessionId: string) => {
-  ptyKill(sessionId);
+ipcMain.handle("pty:kill", (e, sessionId: string) => {
+  ptyKill(e.sender, sessionId);
 });
 
 // ── Filesystem reads — file-browser panel ──────────────────────────────────
