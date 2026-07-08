@@ -132,6 +132,11 @@ export function WorkspaceIndicator({
   const [newOpen, setNewOpen] = useState(false);
   const [slug, setSlug] = useState("");
   const [confirm, setConfirm] = useState<CleanupConfirm | null>(null);
+  // Whether repoPath is an actual git repo. null = not yet probed. The
+  // indicator is a git-worktree switcher, so on a non-git folder it must not
+  // render at all (worktrees don't exist there). Probed via getGitBranches,
+  // the same signal BranchPicker uses.
+  const [isGitRepo, setIsGitRepo] = useState<boolean | null>(null);
   const currentRequestId = useRef(0);
   const listRequestId = useRef(0);
   const diffRequestId = useRef(0);
@@ -264,6 +269,29 @@ export function WorkspaceIndicator({
     void refreshCurrent();
   }, [refreshCurrent, sessionBusy]);
 
+  // Probe whether repoPath is a git repo. Re-run when the path changes.
+  // Fail-closed: any error → treat as non-git so we don't show a broken
+  // worktree switcher.
+  useEffect(() => {
+    if (!repoPath) {
+      setIsGitRepo(null);
+      return;
+    }
+    let cancelled = false;
+    setIsGitRepo(null);
+    void window.codeshell
+      .getGitBranches(repoPath)
+      .then((res) => {
+        if (!cancelled) setIsGitRepo(res.isRepo === true);
+      })
+      .catch(() => {
+        if (!cancelled) setIsGitRepo(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [repoPath]);
+
   useEffect(() => {
     const subscribe = window.codeshell.onWorkspaceChanged;
     if (typeof subscribe !== "function" || !sessionId) return;
@@ -330,6 +358,9 @@ export function WorkspaceIndicator({
   );
 
   if (!canLoad) return null;
+  // Not a git repo (or still probing / probe failed) → hide entirely. A
+  // worktree switcher is meaningless outside a git repo.
+  if (isGitRepo !== true) return null;
 
   return (
     <TooltipProvider delayDuration={250}>

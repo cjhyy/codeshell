@@ -336,6 +336,7 @@ describe("WorkspaceIndicator", () => {
     };
     const responses: Array<ReturnType<typeof deferred<SessionWorkspace>>> = [];
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
       getSessionWorkspace: () => {
         const next = deferred<SessionWorkspace>();
         responses.push(next);
@@ -415,6 +416,7 @@ describe("WorkspaceIndicator", () => {
     const currentResponses: Array<ReturnType<typeof deferred<SessionWorkspace>>> = [];
     const listResponses: Array<ReturnType<typeof deferred<SessionWorkspaceList>>> = [];
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
       getSessionWorkspace: () => {
         const next = deferred<SessionWorkspace>();
         currentResponses.push(next);
@@ -503,6 +505,7 @@ describe("WorkspaceIndicator", () => {
     };
     const diffResponse = deferred<SessionWorkspaceWorktreeInfo["diff"]>();
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
       getSessionWorkspace: async () => mainWorkspace,
       listSessionWorktrees: async () => listResponse,
       getSessionWorktreeDiff: () => diffResponse.promise,
@@ -545,6 +548,7 @@ describe("WorkspaceIndicator", () => {
     const mainWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };
     const listResponse = deferred<SessionWorkspaceList>();
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
       getSessionWorkspace: async () => mainWorkspace,
       listSessionWorktrees: () => listResponse.promise,
     };
@@ -591,6 +595,7 @@ describe("WorkspaceIndicator", () => {
       ReturnType<typeof deferred<SessionWorkspaceList>> & { sessionId: string; cwd: string }
     > = [];
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
       getSessionWorkspace: async (_sessionId: string, cwd: string) => ({ root: cwd, kind: "main" }),
       listSessionWorktrees: (sessionId: string, cwd: string) => {
         const next = deferred<SessionWorkspaceList>();
@@ -665,6 +670,7 @@ describe("WorkspaceIndicator", () => {
       }
     > = [];
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
       getSessionWorkspace: async (_sessionId: string, cwd: string) => ({ root: cwd, kind: "main" }),
       listSessionWorktrees: (sessionId: string) => {
         if (sessionId === "old-session") {
@@ -761,6 +767,7 @@ describe("WorkspaceIndicator", () => {
       },
     ];
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
       getSessionWorkspace: async () => workspaces[Math.min(currentCalls++, workspaces.length - 1)]!,
       listSessionWorktrees: async () => ({
         current: workspaces[Math.min(currentCalls, workspaces.length - 1)]!,
@@ -803,6 +810,10 @@ describe("WorkspaceIndicator", () => {
 
 describe("TopBar workspace label", () => {
   test("does not repeat the repo name in the adjacent workspace chip", () => {
+    // The TopBar chip renders WorkspaceIndicator, which now hides itself until
+    // an async git-repo probe resolves — so static markup can't exercise the
+    // chip. The invariant under test is the label helper: on main it omits the
+    // repo name (the header already shows it), so no "main (codeshell)".
     const html = renderToStaticMarkup(
       <TopBar
         repoName="codeshell"
@@ -818,10 +829,13 @@ describe("TopBar workspace label", () => {
         isFullscreen={false}
       />,
     );
-
     expect(html).toContain("code-shell");
     expect(html).toContain("codeshell");
-    expect(html).toContain("main");
-    expect(html).not.toContain("main (codeshell)");
+
+    const label = workspaceIndicatorText({ root: "/repo/codeshell", kind: "main" }, "codeshell", {
+      includeRepoName: false,
+    });
+    expect(label).toBe("main");
+    expect(label).not.toContain("main (codeshell)");
   });
 });
