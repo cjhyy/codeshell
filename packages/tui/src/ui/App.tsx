@@ -336,7 +336,7 @@ export function App({
   // tracks `sessionId` for display and for re-passing on subsequent runs.
 
   // Unseen message divider tracking
-  const { dividerIndex, showPill, unseenCount, onScrollToBottom: clearUnseen } =
+  const { dividerIndex, showPill, unseenCount, onScrollAway, onScrollToBottom: clearUnseen } =
     useUnseenDivider(chatLog.length);
   // Imperative handle on VirtualMessageList so we can scroll the list to
   // the bottom when the user dismisses the "N new messages" pill or
@@ -1714,6 +1714,7 @@ export function App({
         expanded={isTranscript}
         dividerIndex={dividerIndex}
         unseenCount={unseenCount}
+        onScrollAway={onScrollAway}
       />
 
       {/* Spinner with verb (when loading).

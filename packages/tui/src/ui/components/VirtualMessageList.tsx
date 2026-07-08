@@ -16,7 +16,7 @@
  * stickiness; clicking the "N new messages" pill should call onJumpToNew
  * which ultimately invokes scrollToBottom (wired via the imperative handle).
  */
-import React, { forwardRef, useImperativeHandle, useMemo, useRef, type ReactNode } from "react";
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, type ReactNode } from "react";
 import {
   Box,
   Text,
@@ -44,6 +44,8 @@ interface VirtualMessageListProps {
   dividerIndex?: number | null;
   /** Count of unseen messages to show in divider. */
   unseenCount?: number;
+  /** Called when user scrolling breaks sticky-bottom mode. */
+  onScrollAway?: () => void;
 }
 
 export interface VirtualMessageListHandle {
@@ -84,6 +86,7 @@ export const VirtualMessageList = forwardRef<VirtualMessageListHandle, VirtualMe
       expanded = false,
       dividerIndex,
       unseenCount = 0,
+      onScrollAway,
     },
     ref,
   ) {
@@ -112,6 +115,15 @@ export const VirtualMessageList = forwardRef<VirtualMessageListHandle, VirtualMe
       measureRef,
       spacerRef,
     } = useVirtualScroll(scrollRef, keys, columns);
+
+    useEffect(() => {
+      if (!onScrollAway) return;
+      const scroll = scrollRef.current;
+      if (!scroll) return;
+      return scroll.subscribe(() => {
+        if (!scroll.isSticky()) onScrollAway();
+      });
+    }, [onScrollAway]);
 
     const { fullscreen } = useFullscreenMode();
 
