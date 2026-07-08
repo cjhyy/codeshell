@@ -19,6 +19,10 @@ export interface UpdateResult {
   reason: string;
 }
 
+export interface UpdatePluginOptions {
+  allowUnsafeTransport?: boolean;
+}
+
 /**
  * Reinstall a plugin atomically: a failed update leaves the OLD plugin intact.
  *
@@ -91,13 +95,16 @@ export async function updatePluginByName(
   name: string,
   installedAt: string,
   force: boolean,
+  options: UpdatePluginOptions = {},
 ): Promise<UpdateResult> {
   const dir = pluginInstallDir(name);
   const metaPath = join(dir, ".cs-meta.json");
   if (!existsSync(metaPath)) throw new PluginInstallError(`no plugin named '${name}'`);
   const meta = CSMeta.parse(JSON.parse(readFileSync(metaPath, "utf-8")));
 
-  const parsed = parseSource(meta.source, { allowUnsafeTransport: true });
+  const parsed = parseSource(meta.source, {
+    allowUnsafeTransport: options.allowUnsafeTransport === true,
+  });
 
   if (parsed.kind === "remote") {
     // No local version to diff against — always re-clone and reinstall.

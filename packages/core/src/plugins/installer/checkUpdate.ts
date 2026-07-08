@@ -12,6 +12,10 @@ export interface UpdateCheck {
   reason?: string; // why we couldn't determine (not-remote / no-base-commit / ls-remote failed)
 }
 
+export interface CheckPluginUpdateOptions {
+  allowUnsafeTransport?: boolean;
+}
+
 /**
  * Check whether a remote (git-sourced) plugin has a newer commit upstream,
  * WITHOUT cloning. Compares the recorded install commit (meta.commit) against
@@ -20,12 +24,17 @@ export interface UpdateCheck {
  * an explanatory `reason` rather than throwing — the only hard error is an
  * unknown plugin name.
  */
-export async function checkPluginUpdate(name: string): Promise<UpdateCheck> {
+export async function checkPluginUpdate(
+  name: string,
+  options: CheckPluginUpdateOptions = {},
+): Promise<UpdateCheck> {
   const metaPath = pluginMetaPath(name);
   if (!existsSync(metaPath)) throw new PluginInstallError(`no plugin named '${name}'`);
   const meta = CSMeta.parse(JSON.parse(readFileSync(metaPath, "utf-8")));
 
-  const parsed = parseSource(meta.source, { allowUnsafeTransport: true });
+  const parsed = parseSource(meta.source, {
+    allowUnsafeTransport: options.allowUnsafeTransport === true,
+  });
   if (parsed.kind !== "remote") {
     return { name, updateAvailable: false, reason: "not a remote source" };
   }

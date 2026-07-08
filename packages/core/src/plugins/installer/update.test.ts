@@ -140,7 +140,7 @@ describe("updatePluginByName (remote source)", () => {
     run(["add", "-A"]);
     run(["commit", "-q", "-m", "bump"]);
 
-    const r = await updatePluginByName("rem", "t2", false);
+    const r = await updatePluginByName("rem", "t2", false, { allowUnsafeTransport: true });
     expect(r.updated).toBe(true);
     const body = readFileSync(
       join(home, ".code-shell", "plugins", "rem", "skills", "s", "SKILL.md"),
@@ -174,12 +174,33 @@ describe("updatePluginByName (remote source)", () => {
     // Destroy the repo so the re-clone fails during the reinstall.
     rmSync(repo, { recursive: true, force: true });
 
-    await expect(updatePluginByName("rem", "t2", false)).rejects.toThrow(PluginInstallError);
+    await expect(
+      updatePluginByName("rem", "t2", false, { allowUnsafeTransport: true }),
+    ).rejects.toThrow(PluginInstallError);
     // OLD remote install must still be intact and unchanged.
     expect(existsSync(installed)).toBe(true);
     expect(existsSync(join(installed, ".cs-meta.json"))).toBe(true);
     expect(readFileSync(join(installed, "skills", "s", "SKILL.md"), "utf-8")).toBe(skillBefore);
     const root = join(home, ".code-shell", "plugins");
     expect(readdirSync(root).filter((n) => n.includes(".bak-")).length).toBe(0);
+  });
+
+  test("rejects unsafe transports from installed metadata by default", async () => {
+    mkdirSync(join(repo, "skills", "s"), { recursive: true });
+    writeFileSync(join(repo, "skills", "s", "SKILL.md"), "---\nname: s\ndescription: d\n---\nv1");
+    const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
+    const run = (args: string[]) => execFileSync("git", args, { cwd: repo, env, stdio: "pipe" });
+    run(["init", "-q"]);
+    run(["config", "user.email", "t@t.t"]);
+    run(["config", "user.name", "t"]);
+    run(["add", "-A"]);
+    run(["commit", "-q", "-m", "init"]);
+
+    const raw = `file://${repo}`;
+    await installPluginFromSource(parseSource(raw, { allowUnsafeTransport: true }), "rem", "t1");
+
+    await expect(updatePluginByName("rem", "t2", false)).rejects.toThrow(
+      /unsafe plugin source transport 'file:\/\/'/i,
+    );
   });
 });

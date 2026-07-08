@@ -31,21 +31,27 @@ function isSshUrl(s: string): boolean {
 }
 
 function isRemote(s: string): boolean {
-  return (
-    s.startsWith("github:") ||
-    s.startsWith("https://") ||
-    s.startsWith("http://") ||
-    s.startsWith("git://") ||
-    s.startsWith("file://") ||
-    isSshUrl(s)
-  );
+  const lower = s.toLowerCase();
+  return lower.startsWith("github:") || /^[a-z][a-z0-9+.-]*:\/\//i.test(s) || isSshUrl(s);
 }
 
 function unsafeTransport(input: string): string | null {
-  if (input.startsWith("http://")) return "http://";
-  if (input.startsWith("git://")) return "git://";
-  if (input.startsWith("file://")) return "file://";
-  return null;
+  const scheme = input.match(/^([a-z][a-z0-9+.-]*):\/\//i)?.[1]?.toLowerCase();
+  if (!scheme) return null;
+  if (scheme === "https") return null;
+  return `${scheme}://`;
+}
+
+function lowerUrlScheme(input: string): string {
+  return input.replace(/^([a-z][a-z0-9+.-]*):/i, (scheme) => scheme.toLowerCase());
+}
+
+function hasGithubScheme(input: string): boolean {
+  return input.slice(0, "github:".length).toLowerCase() === "github:";
+}
+
+function stripGithubScheme(input: string): string {
+  return input.slice("github:".length);
 }
 
 /** Last path segment of a repo url/path, with a trailing `.git` stripped. */
@@ -106,10 +112,10 @@ export function parseSource(input: string, options: ParseSourceOptions = {}): Pa
 
   // 3. Normalize url.
   let url: string;
-  if (base.startsWith("github:")) {
-    url = githubRepoToCloneUrl(base.slice("github:".length));
+  if (hasGithubScheme(base)) {
+    url = githubRepoToCloneUrl(stripGithubScheme(base));
   } else {
-    url = base;
+    url = lowerUrlScheme(base);
   }
 
   const inferredName = subdir ? lastSegment(subdir) : repoNameFromUrl(url);

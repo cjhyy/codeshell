@@ -102,6 +102,18 @@ describe("parseSource", () => {
     expect(() => parseSource("file:///tmp/repo")).toThrow(/unsafe plugin source transport/i);
   });
 
+  test("rejects unsafe URL schemes case-insensitively", () => {
+    expect(() => parseSource("HTTP://example.com/org/repo.git")).toThrow(
+      /unsafe plugin source transport 'http:\/\/'/i,
+    );
+    expect(() => parseSource("FILE:///tmp/repo")).toThrow(
+      /unsafe plugin source transport 'file:\/\/'/i,
+    );
+    expect(() => parseSource("Git+SSH://example.com/org/repo.git")).toThrow(
+      /unsafe plugin source transport 'git\+ssh:\/\/'/i,
+    );
+  });
+
   test("allows insecure remote transports only with explicit opt-in", () => {
     expect(parseSource("http://example.com/org/repo.git", { allowUnsafeTransport: true })).toEqual({
       kind: "remote",

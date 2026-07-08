@@ -69,7 +69,7 @@ describe("checkPluginUpdate", () => {
     const raw = `file://${repo}`;
     await installPluginFromSource(parseSource(raw, { allowUnsafeTransport: true }), "rem", "t1");
 
-    const r = await checkPluginUpdate("rem");
+    const r = await checkPluginUpdate("rem", { allowUnsafeTransport: true });
     expect(r.updateAvailable).toBe(false);
     expect(r.currentCommit).toBe(headSha());
     expect(r.latestCommit).toBe(headSha());
@@ -87,7 +87,7 @@ describe("checkPluginUpdate", () => {
     run(["commit", "-q", "-m", "bump"]);
     const moved = headSha();
 
-    const r = await checkPluginUpdate("rem");
+    const r = await checkPluginUpdate("rem", { allowUnsafeTransport: true });
     expect(r.updateAvailable).toBe(true);
     expect(r.currentCommit).toBe(installed);
     expect(r.latestCommit).toBe(moved);
@@ -104,12 +104,22 @@ describe("checkPluginUpdate", () => {
     delete meta.commit;
     writeFileSync(mp, JSON.stringify(meta, null, 2));
 
-    const r = await checkPluginUpdate("rem");
+    const r = await checkPluginUpdate("rem", { allowUnsafeTransport: true });
     expect(r.updateAvailable).toBe(false);
     expect(r.reason).toMatch(/recorded commit/i);
   });
 
   test("missing plugin throws", async () => {
     await expect(checkPluginUpdate("nope")).rejects.toThrow(PluginInstallError);
+  });
+
+  test("rejects unsafe transports from installed metadata by default", async () => {
+    makeRepo();
+    const raw = `file://${repo}`;
+    await installPluginFromSource(parseSource(raw, { allowUnsafeTransport: true }), "rem", "t1");
+
+    await expect(checkPluginUpdate("rem")).rejects.toThrow(
+      /unsafe plugin source transport 'file:\/\/'/i,
+    );
   });
 });
