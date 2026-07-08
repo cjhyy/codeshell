@@ -2,6 +2,18 @@
 
 日期：2026-07-08
 
+## 实施进度（2026-07-08 收尾）
+
+- ✅ **P0 止血 + 最小可用**（已 landed main，commit `50b4a886` → merge `14ff7ee6`）：无向量；自动提取一律进 dream（project/global）；稳定 `id`；写入决策层 ADD/UPDATE/NOOP/DELETE（归一化文本兜底）；三道 origin 守卫；`useCount`/`updateCount` 字段。33 针对性测试 + core 全绿。
+- ✅ **P1 可见 + 晋升 + 清理**（已 landed main，commit `8c6544f1` → merge `bc37da74`）：设置页显示 origin 三态徽标 + 「命中/更新」次数、详情 lifecycle；编辑 user 强制 origin:manual、pin 不增 updateCount；存量清理改分组 review + 用户批准软删。
+- ✅ **审查修复**（已 landed main，commit `85abccca` → merge `aab21d08`）：修 2 个数据安全 🔴（frontmatter 注入用 JSON 序列化根治、id→文件名碰撞加冲突探测）+ 加固 dream 守卫（Save 同时按 id+name 查、命中 manual fail-closed）；**global dream 晋升从不可靠的 slug/evidenceCount 自动写改为 pending 审批流**——候选未审批前作为 project dream 正常使用，批准才进 global，拒绝标 `promotionStatus:rejected`。
+- ⏸️ **P2（未做，按决策挂起）**：dream 背压 / rate-limit gate / 注入 cap。当前规模（~150 user + 个位数 dream，且 P0 已掐断重复源头）远未触发，等真出现 dream 过吵/token 上涨/后台烧配额时再做。
+- 🟡 **遗留轻微改进**（codex 审查列出，不急）：intra-batch dedup（同一批第 2 个候选看不到刚 ADD 的）、canonical fallback 方向性/否定词（"use bun not npm" vs "use npm not bun"）、baseDir 透传、extract description 类型校验。
+
+以下为原始设计正文（P0/P1 已按此实现）。
+
+---
+
 本文是记忆系统最终设计，不再重复评估。它收敛以下已确认材料：
 
 - `docs/todo/memory-redesign-eval.md`：自动提取进 `dream` 可行，但必须补去重上下文、global dream 加载、fresh-entry 保护和背压。
