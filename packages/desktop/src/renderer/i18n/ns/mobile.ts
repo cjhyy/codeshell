@@ -50,6 +50,10 @@ export const mobile = {
         empty: "该项目下没有 {label} 会话。",
         messageCount: "{count} 条",
       },
+      sidePane: {
+        localTab: "会话",
+        ccTab: "CC 会话",
+      },
       composer: {
         disconnected: "未连接",
         placeholder: "发消息…",
@@ -192,6 +196,10 @@ export const mobile = {
         loadingSessions: "Loading cc sessions…",
         empty: "No {label} sessions in this project.",
         messageCount: "{count} messages",
+      },
+      sidePane: {
+        localTab: "Sessions",
+        ccTab: "CC",
       },
       composer: {
         disconnected: "Disconnected",

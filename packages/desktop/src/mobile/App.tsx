@@ -12,6 +12,7 @@ import { Composer } from "@mobile/components/Composer";
 import { SessionList } from "@mobile/components/SessionList";
 import { CcSessionList } from "@mobile/components/CcSessionList";
 import { PermissionModeControl } from "@mobile/components/PermissionModeControl";
+import { MobileSessionSwitcher } from "@mobile/components/MobileSessionSwitcher";
 
 const WIDE = "(min-width: 820px)";
 
@@ -246,12 +247,13 @@ function SidePane({ app, onDone }: { app: ReturnType<typeof useRemoteApp>; onDon
     </div>
   );
 
-  // Phone drawer and tablet pane are identical now: the project's own chat
-  // sessions on top, the external CC (Claude Code) sessions below. No rooms.
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="min-h-0 flex-1 overflow-hidden border-b border-border/70">{sessions}</div>
-      <div className="min-h-0 flex-1 overflow-hidden">{ccSessions}</div>
+      <MobileSessionSwitcher
+        activeRoom={app.activeRoom}
+        sessionsContent={sessions}
+        ccContent={ccSessions}
+      />
       {footer}
     </div>
   );
