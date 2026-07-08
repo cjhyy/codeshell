@@ -256,3 +256,112 @@
 - `rawTranscript.ts` / `transcript-reader.ts` 是桌面 session history 共用能力；如果为 mobile 增强长断线 fallback，避免改变 `sessions:transcript` 当前折叠输出，优先新增 mobile 专用接口。
 
 总结：问题 A 的直接修复是 S；若要覆盖手机断线期间已 resolved 的卡片，需要 M 级 pending snapshot。问题 B 的止血是 S（重连 hydrate + 滚动保持 + 更长历史），真正不丢中间流需要 M（普通 session/room 按 cursor 增量续传），跨长断线和审批一致性的一体化方案是 L。需要编排者决策的是：B 是否先接受“回来后恢复最终内容但不保证完整 streaming 过程”的 S 方案，还是直接投入 M/L 做 cursor-based replay。
+
+## 2026-07-08 只读探查：mobile remote loading 圈与未读圆点
+
+### 1. 桌面端参照实现
+
+#### Loading 圈 / 运行中指示
+
+- 桌面端真正的“会话正在跑”spinner 在会话侧边栏行内：`packages/desktop/src/renderer/Sidebar.tsx:589-593` 对 `status === "running"` 渲染 `Loader2` + `animate-spin`，文案 aria 是 `sidebar.sessionRunning`。
+- 这个 `status` 来自 `Sidebar` 的 `sessionStatuses`：`packages/desktop/src/renderer/Sidebar.tsx:31-39` 声明 prop，项目会话行在 `Sidebar.tsx:268` 用 `bucketKey(repo.id, sid)` 查状态，无项目会话在 `Sidebar.tsx:290` 查状态。
+- `sessionStatuses` 由 `App` 计算：`packages/desktop/src/renderer/App.tsx:238` 是 `busyKeys`，`App.tsx:245` 是 interrupt relay 用的 `relayingBuckets`，`App.tsx:473-519` 把 asking / running / unread 解析成每个 bucket 的状态。状态优先级在 `packages/desktop/src/renderer/sessionStatus.ts:10-25`：`asking > running > unread`。
+- `busyKeys` 的主要置位/清除点：
+  - 用户发送时先插入 user bubble 并 `setBusyForKey(bucket, true)`：`packages/desktop/src/renderer/App.tsx:2020-2028`。
+  - 收到 `session_started` 时也置 busy，覆盖 core 主动唤醒或重挂载路由场景：`App.tsx:1498-1510`。
+  - 顶层 `turn_complete` / `error` 清 busy，子代理事件因有 `agentId` 不清：`App.tsx:1544-1553`。
+  - run promise 兜底清 busy：`App.tsx:2100-2108`；异常 reject 也清：`App.tsx:2130-2139`；手动 stop 清：`App.tsx:2398-2405`。
+  - automation/mobile session announce 也会先点亮 running：`App.tsx:1655-1664`、`App.tsx:1737-1740`。
+- 桌面端消息流内不是 spinner 圈，而是 live activity line：`packages/desktop/src/renderer/MessageStream.tsx:291` 在 `liveTurnActive` 时渲染 `LiveActivityLine`；`packages/desktop/src/renderer/messages/LiveActivityLine.tsx:4-9` 明确说明是“正在思考/正在读取”的脉冲文字，`LiveActivityLine.tsx:21-24` 只给文字加 `animate-pulse`，没有 spinner icon。
+- `liveTurnActive` 的驱动是 active bucket 的 `busy` + reducer streaming 状态：`packages/desktop/src/renderer/App.tsx:901-913`。其中 `state.streamingAssistantId` 在 reducer 里由 `stream_request_start` 设置：`packages/desktop/src/renderer/types.ts:282-289`、`:443-456`，由 `turn_complete` 清空：`types.ts:968-1033`，`error` 也清空：`types.ts:1036-1053`。桌面 assistant bubble 本身只渲染文本/Markdown：`packages/desktop/src/renderer/messages/AssistantMessageView.tsx:16-21`、`:46-49`。
+- 需要排除的非生成态 spinner：`packages/desktop/src/renderer/ChatView.tsx:872-878` 是历史 hydrate 的居中 spinner；`ChatView.tsx:1338-1342` 是语音转写 spinner。它们不是 assistant 生成中的参照。
+
+结论：桌面端“loading 圈”主要是会话级 running spinner；当前活跃消息流内对应的是 `LiveActivityLine` 的脉冲文字，不是圈形 spinner。
+
+#### 未读圆点
+
+- 桌面端未读是“会话级未读”，不是消息级未读。`App.tsx:246-249` 注释写明 `unreadBuckets` 是“bucket finished a turn while the user was viewing a different session”，不持久化，只是 live 提示。
+- 触发条件：顶层 `turn_complete` / `error` 到来后，如果事件所属 `target !== activeBucketRef.current`，就把 target 加入 `unreadBuckets`：`packages/desktop/src/renderer/App.tsx:1552-1573`。子代理 `agentId` 的 terminal 事件不会触发：`App.tsx:1544-1551`。
+- 清除条件：用户选择该 session 时清除对应 bucket：`packages/desktop/src/renderer/App.tsx:1050-1059`。没有看到按“滚到底”清除的消息级 unread 逻辑。
+- UI 落点：`unreadBuckets` 参与 `sessionStatusMap`：`App.tsx:457-519`；`SessionRow` 在 `status === "unread"` 时渲染一个静态圆点：`packages/desktop/src/renderer/Sidebar.tsx:600-605`。同一位置的 `asking` 是脉冲圆点：`Sidebar.tsx:594-599`，`running` 是 spinner：`Sidebar.tsx:589-593`。
+- 搜索 `unread/unseen/badge/dot/hasNew/newMessage` 未发现桌面消息流内“某条消息未读点”的实现；与本问题相关的是 sidebar 会话行状态点。
+
+### 2. 移动端现状与缺口
+
+#### Loading 圈
+
+- `packages/desktop/src/mobile/components/MessageStream.tsx:60-72` 已经在 streaming assistant bubble 里显示 `▋` 光标，`!item.done` 时 `animate-pulse`。这能表示“这个 assistant bubble 未完成”，但不等于桌面侧边栏的 `Loader2 animate-spin` running spinner，也不是“agent busy 但还没吐字”的整体 loading 圈。
+- mobile assistant 行左侧永远是 Bot 图标：`MessageStream.tsx:92-100`，不会根据 `item.done` 或 `chat.run` 换成 spinner。
+- mobile 只有空消息列表加载态：`MessageStream.tsx:198-210` 在 `chat.items.length === 0` 且 `loading` 时显示一个脉冲小点 + loading 文案；`App.tsx:108-115` 传入的是 `app.loading.sessionHistory || app.loading.roomHistory`。这只是历史/room 读取态，不是正在生成态。
+- 会话列表也有 loader，但只表示列表刷新或 CLI 探测：`packages/desktop/src/mobile/components/SessionList.tsx:72-81`、`:163-168`，`packages/desktop/src/mobile/components/CcSessionList.tsx:74-86`。
+- mobile 已有可用的运行状态：`ChatState.run` 定义在 `packages/desktop/src/renderer/lib/streamReducer.ts:25`、`:51-63`；`stream_request_start` 设置 `run: "running"`：`streamReducer.ts:143-161`，`text_delta` / `thinking_delta` 保持 running：`:164-226`，`tool_use_start` 设置 running：`:229-257`，CC/room 的 `assistant_text` 也设置 running：`:491-516`；顶层 `turn_complete` 把 run 设成 completed/idle/error：`:368-384`，`error` 设成 error：`:463-474`。
+- `App.tsx:116-120` 用 `app.chat.run === "running" || app.chat.run === "waiting"` 控制 Composer 的 Stop 按钮；`packages/desktop/src/mobile/components/StatusBar.tsx:45-67` 顶栏也把 running 显示为脉冲小点。缺口是 MessageStream 内没有桌面同类的 running spinner/活跃行。
+
+#### 未读圆点
+
+- `SessionList` 当前没有 unread/running/asking 状态点，列表行只显示标题、automation badge、cwd 和相对时间：`packages/desktop/src/mobile/components/SessionList.tsx:190-218`。
+- `MobileSessionSwitcher` 只有“会话 / CC”两个 tab，没有 tab badge 或圆点：`packages/desktop/src/mobile/components/MobileSessionSwitcher.tsx:50-77`。
+- `CcSessionList` 当前也没有 unread badge；每行只显示 firstMessage、messageCount、lastModified：`packages/desktop/src/mobile/components/CcSessionList.tsx:93-116`。`CcDiscoveredSession` 类型也只有 `sessionId/firstMessage/lastModified/messageCount`：`packages/desktop/src/main/mobile-remote/types.ts:29-35`。
+- 普通 session 的协议和数据层已经有增量 seq：client 可发 `session.sync`：`packages/desktop/src/main/mobile-remote/types.ts:82-85`，server 回 `session.snapshot` / live `session.stream`：`types.ts:145-150`。main 侧 `session.sync` 调 `bridge.getSnapshot`：`packages/desktop/src/main/index.ts:833-844`；live stream 广播带 `seq`：`main/index.ts:1345-1356`。mobile hook 已用 `appliedSeqRef` 去重并 append 当前绑定 session：`packages/desktop/src/mobile/hooks/useRemoteApp.ts:338-363`。
+- 但这些 seq 目前只用于“当前绑定会话”的补流/去重。`useRemoteApp.ts:350-363` 对非当前 session 的 `session.stream` 直接跳过，没有维护 per-session unread 集合；`MobileSessionMeta` 也没有 unread/running 字段：`packages/desktop/src/main/mobile-remote/types.ts:194-201`。
+- room/CC 侧也有 seq：client 可发 `room.history(sinceSeq)`：`types.ts:99-111`，RoomManager 消息带 `seq`：`packages/desktop/src/main/mobile-remote/room-manager.ts:111-130`，`getMessages(id, sinceSeq)` 支持增量：`room-manager.ts:313-327`。mobile hook 维护 `lastRoomSeqRef` / `appliedRoomSeqsRef`：`useRemoteApp.ts:208-211`、`:241-249`、`:402-412`、`:656-665`。但它同样只服务当前 `activeRoomId`，不会给 `CcSessionList` 的非当前 session 标 unread。
+- `useRemoteSocket` 已会在 auth online、visible、focus、pageshow 触发 resync：`packages/desktop/src/mobile/hooks/useRemoteSocket.ts:179-186`、`:224-244`；这能补当前会话内容，但不是未读状态本身。
+
+结论：mobile 目前没有桌面同款“会话级未读圆点”。普通 session 有足够的 live `session.stream seq` 能在 hook 内做会话级 unread；CC session 只有 active room 的 seq 和 discovery 的 `lastModified`，做精确 per-CC-session unread 需要额外映射/状态。
+
+### 3. 推荐修法
+
+#### Loading 圈
+
+- 对齐桌面端时，先做 MessageStream 内的 active-run 指示，而不是改会话列表。建议给 `MessageStream` 增加 `running?: boolean`，由 `App.tsx:116-120` 已经使用的同一条件传入：`app.chat.run === "running" || app.chat.run === "waiting"`。
+- UI 落点建议放在“正在生成的 assistant 气泡处”：
+  - 如果最后一个 assistant item 是 `done:false`，在 `MessageStream.tsx:92-100` 的 Bot 头像位置或 `AssistantBubble` 文本前加 `Loader2 size-3/3.5 animate-spin text-status-running`。
+  - 如果 `running === true` 但还没有 assistant item 或最后一条还是 user，可在 `MessageStream.tsx:224-227` 列表尾部渲染一个轻量 assistant placeholder（Bot + spinner + `mobile.stream.thinking`），避免用户发送后到 `stream_request_start` 之间没有反馈。
+- 保留现有 `▋` 光标：它表达“当前 bubble 正在流式补字”，spinner 表达“turn/agent busy”。二者语义不同。
+- 量级：S。主要改 `MessageStream.tsx` + `App.tsx` 传参 + `mobile.ts` 增加一条可选文案；如做更接近桌面的 live activity 文案（正在读文件/正在执行工具）再升到 M，因为要复用/移植 `topbar/liveActivity` 或 mobile mapper。
+
+#### 未读圆点
+
+- 先对齐桌面端为“会话级未读”，不要做消息级 unread。桌面触发/清除都是 session bucket 维度：完成于非当前会话时标记，选择该会话时清除。
+- 普通 session 推荐在 `useRemoteApp` 增加 `unreadSessionIds: Set<string>` 和可选 `runningSessionIds: Set<string>`：
+  - 在 `session.stream` 分支收到非当前 `event.sessionId` 时，不 reduce 到当前 chat，但可以检查 `event.event.type`。`stream_request_start` 标 running；顶层 `turn_complete` / `error` 清 running 并把该 session 加 unread；如果是当前 bound session，只更新当前 chat，不加 unread。
+  - `selectSession` 时清除该 id 的 unread：对应当前 `useRemoteApp.ts:714-727`。
+  - `session.list.ok` 可用来裁剪不存在的 unread id：`useRemoteApp.ts:321-330`。
+- UI 落点：
+  - `SessionList` 增加 `statusFor?: (id:string) => "running" | "unread" | undefined` 或 `unreadSessionIds/runningSessionIds` prop，在 `SessionList.tsx:200-209` 标题行右侧加 `Loader2 animate-spin` 或 `h-2 w-2 rounded-full bg-primary`，样式可直接模仿桌面 `Sidebar.tsx:589-605`。
+  - `MobileSessionSwitcher` 可加 tab 级小圆点/count：当 sessions tab 下存在 unread 普通会话，或未来 CC tab 下存在 unread CC 会话时，在 `MobileSessionSwitcher.tsx:56-71` 的 label 旁渲染小圆点。这个是可选，但手机抽屉关闭时更容易发现另一个 tab 有新内容。
+- CC session 的策略建议分两档：
+  - S/M 档先用 `CcDiscoveredSession.lastModified` 和本机 `lastSeenCcSessionAt` 做弱 unread：打开某 CC session 时记录 seen time；列表刷新后若 `lastModified > seenAt` 且不是当前 active room，则显示 unread。数据点在 `types.ts:29-35` 和 `CcSessionList.tsx:112-114` 已存在。
+  - 更精确的 M 档需要服务端把 CC discovered session 与 roomId/lastSeq 对齐，或让 `ccRoom.listSessions.ok` 带 per-session latest cursor；mobile 才能像普通 session 一样用 seq 判断 unread。现有 `lastRoomSeqRef` 只适用于当前 active room，不足以判断所有 `CcSessionList` 行。
+- 清除时机：与桌面对齐，选择/打开该会话即清除；如果后续要更像消息阅读器，可在当前会话内“滚到底”再清，但这会偏离桌面当前机制，建议不作为第一版。
+- 量级：普通 session 会话级 unread 是 M（hook 状态 + list UI + 测试）；只给 `SessionList` 加 dot 不碰 CC 是 S/M。CC 精确 unread 是 M；用 `lastModified > seenAt` 的弱提示是 S/M。
+
+### 4. 涉及文件清单
+
+- Mobile UI：`packages/desktop/src/mobile/components/MessageStream.tsx`、`packages/desktop/src/mobile/App.tsx`、`packages/desktop/src/mobile/components/SessionList.tsx`、`packages/desktop/src/mobile/components/MobileSessionSwitcher.tsx`、可选 `packages/desktop/src/mobile/components/CcSessionList.tsx`。
+- Mobile 状态：`packages/desktop/src/mobile/hooks/useRemoteApp.ts`、已有 helper/test 可扩展 `packages/desktop/src/mobile/hooks/remoteAppSync.ts`、`packages/desktop/src/mobile/hooks/remoteAppSync.test.ts`。
+- Mobile i18n：`packages/desktop/src/renderer/i18n/ns/mobile.ts`。它位于 renderer 目录但只 owns `mobile` namespace：`mobile.ts:1-18`、`:53-56`、`:98-114`、`:200-203`、`:246-262`。
+- 协议/主进程仅在做 CC 精确 unread 或 server-side session status 时需要：`packages/desktop/src/main/mobile-remote/types.ts`、`packages/desktop/src/main/index.ts`、`packages/desktop/src/main/mobile-remote/room-manager.ts`。
+
+### 5. 建议测试
+
+- `MessageStream` 组件测试：复用 `packages/desktop/src/mobile/components/MessageStream.test.tsx`，覆盖 `running=true` 且无 assistant item 时出现 placeholder/spinner；`done:false` assistant 出现 spinner + 保留 `▋`；`done:true` 不显示 spinner。
+- `useRemoteApp`/helper 测试：扩展 `packages/desktop/src/mobile/hooks/remoteAppSync.test.ts` 或新增 hook 测试，模拟非当前 session 的 `session.stream(stream_request_start)`、`session.stream(turn_complete)`，断言 running/unread 集合变化；模拟 `selectSession` 清除 unread。
+- `SessionList`/`MobileSessionSwitcher` 测试：扩展 `packages/desktop/src/mobile/components/Lists.test.tsx` 和 `MobileSessionSwitcher.test.tsx`，断言 session row dot、running spinner、tab badge/count 渲染，active/点击后状态清除由上层回调驱动。
+- 主进程集成测试（仅做 server-side unread/CC seq 时需要）：模拟 `session.stream` 广播和 `room.history(sinceSeq)`，断言 mobile 能收到足够 cursor 信息但不会重复 append。
+- 手工回归：手机打开 `/mobile/`，A 会话运行时切到 B 会话，A 完成后列表应显示未读圆点；点 A 后圆点消失。发送后到首 token 前应看到 spinner；流式中 spinner/`▋` 不互相遮挡；完成后 spinner 消失。
+
+### 6. 共用代码与误伤风险
+
+- 改 `packages/desktop/src/mobile/**` 基本是 mobile 专用，不会直接改桌面聊天 UI。
+- `packages/desktop/src/renderer/i18n/ns/mobile.ts` 虽在 renderer 下，但是 mobile namespace；只新增 `mobile.*` key 风险低，需要 zh/en 同步。
+- `packages/desktop/src/renderer/lib/streamReducer.ts`、`packages/desktop/src/renderer/lib/messageMappers.ts` 被 mobile 复用，也可能被桌面 renderer/lib 相关测试覆盖；本次 loading/unread 不建议改 reducer 语义，优先在 `useRemoteApp` 外围派生状态，避免影响消息折叠/完成态。
+- 如果为了更精确的 CC unread 改 `RoomManager` 或 mobile protocol，会碰到桌面 CC room 共用路径；需要回归 `packages/desktop/src/renderer/cc-room/CCConversationView.tsx`。
+- 如果改 `AgentBridge` snapshot/seq 语义，会影响桌面 renderer 的 `agent:subscribe` 恢复路径：`packages/desktop/src/main/index.ts:2975-2978`。
+
+### 7. 量级与编排者决策
+
+- Loading 圈：S。状态已在 `chat.run` 和 `done:false` assistant item 里，主要是 UI 补齐。
+- 普通 session 未读圆点：M。需要 `useRemoteApp` 增加 per-session 状态、`SessionList`/可能 `MobileSessionSwitcher` 增加 UI、补测试。
+- CC session 未读：S/M（弱 `lastModified > seenAt`）或 M（精确 latestSeq/cursor）。
+- 需要编排者决策：未读是否第一版只对齐桌面的“普通会话级未读”，CC 先用弱提示/暂不做；以及 mobile 是否要把 loading 指示做成“assistant 气泡 spinner”还是同时做“列表行 running spinner + tab badge”。建议先做普通会话级 unread + active MessageStream spinner，CC 精确 unread 延后。

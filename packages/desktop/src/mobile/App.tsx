@@ -210,6 +210,7 @@ function SidePane({ app, onDone }: { app: ReturnType<typeof useRemoteApp>; onDon
       currentCwd={app.activeCwd}
       activeProjectCwd={app.activeProjectCwd}
       loading={app.loading.sessions}
+      unreadSessionIds={app.unreadSessionIds}
       onSelect={(id) => {
         app.selectSession(id);
         onDone();

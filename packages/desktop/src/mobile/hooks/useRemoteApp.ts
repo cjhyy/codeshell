@@ -27,8 +27,12 @@ import { projectForCwd } from "@mobile/lib/format";
 import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket";
 import {
   filterNewRoomMessages,
+  clearUnreadSession,
+  markSessionUnread,
   markRoomSeqApplied,
   maxRoomSeq,
+  noteSessionSeq,
+  pruneUnreadSessions,
   rawApprovalResolvedRequestId,
   removeResolvedApproval,
   roomMessageSeq,
@@ -62,6 +66,7 @@ export interface RemoteApp {
   deviceName: string;
   chat: ChatState;
   sessions: MobileSessionMeta[];
+  unreadSessionIds: ReadonlySet<string>;
   activeSessionId?: string;
   activeCwd?: string | null;
   projects: MobileProjectMeta[];
@@ -164,6 +169,7 @@ export function useRemoteApp(): RemoteApp {
   const { t } = useT();
   const [chat, dispatchChat] = useReducer(chatReducer, undefined, initialChatState);
   const [sessions, setSessions] = useState<MobileSessionMeta[]>([]);
+  const [unreadSessionIds, setUnreadSessionIds] = useState<Set<string>>(() => new Set());
   const [activeSessionId, setActiveSessionId] = useState<string | undefined>();
   const [activeSessionCwd, setActiveSessionCwd] = useState<string | null | undefined>();
   const [rooms, setRooms] = useState<RoomPublic[]>([]);
@@ -205,6 +211,8 @@ export function useRemoteApp(): RemoteApp {
   const boundSessionRef = useRef<string | undefined>(undefined);
   /** Highest mobile snapshot seq applied per desktop session. */
   const appliedSeqRef = useRef<Map<string, number>>(new Map());
+  /** Highest live/snapshot seq observed per desktop session, including sessions not being viewed. */
+  const lastSessionSeqRef = useRef<Map<string, number>>(new Map());
   /** Highest room message seq seen per active room. Used as room.history cursor. */
   const lastRoomSeqRef = useRef<Map<string, number>>(new Map());
   /** Recent room seqs already folded into the reducer, for idempotent history/live merge. */
@@ -280,6 +288,10 @@ export function useRemoteApp(): RemoteApp {
     [clearApprovalsIfTerminal, wrapSessionEvents],
   );
 
+  const clearSessionUnread = useCallback((sessionId?: string) => {
+    setUnreadSessionIds((prev) => clearUnreadSession(prev, sessionId));
+  }, []);
+
   const sessionCwdById = useMemo(() => {
     const out = new Map<string, string | null>();
     for (const s of sessions) out.set(s.id, s.cwd || null);
@@ -312,6 +324,7 @@ export function useRemoteApp(): RemoteApp {
           if (event.sessionId) {
             setActiveSessionId(event.sessionId);
             boundSessionRef.current = event.sessionId;
+            clearSessionUnread(event.sessionId);
           }
           if ("cwd" in event) setActiveSessionCwd(event.cwd ?? null);
           // A freshly minted session won't be on disk until its first turn, so
@@ -320,6 +333,13 @@ export function useRemoteApp(): RemoteApp {
           break;
         case "session.list.ok":
           setSessions(event.sessions);
+          setUnreadSessionIds((prev) => {
+            const pruned = pruneUnreadSessions(
+              prev,
+              event.sessions.map((s) => s.id),
+            );
+            return clearUnreadSession(pruned, event.activeSessionId);
+          });
           setLoadingKey("sessions", false);
           if (event.activeSessionId) {
             setActiveSessionId(event.activeSessionId);
@@ -343,19 +363,30 @@ export function useRemoteApp(): RemoteApp {
             appliedSeq,
           );
           if (cursor > appliedSeq) appliedSeqRef.current.set(event.sessionId, cursor);
+          if (cursor > 0) noteSessionSeq(lastSessionSeqRef.current, event.sessionId, cursor);
           appendSessionEvents(event.sessionId, events);
           setLoadingKey("sessionHistory", false);
           break;
         }
         case "session.stream": {
-          if (activeRoomIdRef.current) break;
+          if (!noteSessionSeq(lastSessionSeqRef.current, event.sessionId, event.seq)) break;
+          if (activeRoomIdRef.current) {
+            setUnreadSessionIds((prev) => markSessionUnread(prev, event.sessionId));
+            break;
+          }
           if (boundSessionRef.current) {
-            if (event.sessionId !== boundSessionRef.current) break;
+            if (event.sessionId !== boundSessionRef.current) {
+              setUnreadSessionIds((prev) =>
+                markSessionUnread(prev, event.sessionId, boundSessionRef.current),
+              );
+              break;
+            }
           } else {
             boundSessionRef.current = event.sessionId;
             setActiveSessionId(event.sessionId);
             setActiveSessionCwd(sessionCwdById.get(event.sessionId));
           }
+          clearSessionUnread(event.sessionId);
           const appliedSeq = appliedSeqRef.current.get(event.sessionId) ?? 0;
           if (event.seq <= appliedSeq) break;
           appliedSeqRef.current.set(event.sessionId, event.seq);
@@ -570,6 +601,7 @@ export function useRemoteApp(): RemoteApp {
       addApproval,
       appendSessionEvents,
       clearApproval,
+      clearSessionUnread,
       rememberRoomMessages,
       sessionCwdById,
       setLoadingKey,
@@ -714,6 +746,7 @@ export function useRemoteApp(): RemoteApp {
   const selectSession = useCallback(
     (id: string) => {
       setActiveSessionId(id);
+      clearSessionUnread(id);
       setActiveSessionCwd(sessionCwdById.get(id) ?? null);
       boundSessionRef.current = id;
       ccHistorySessionRef.current = undefined;
@@ -725,7 +758,7 @@ export function useRemoteApp(): RemoteApp {
       socket.send({ type: "session.select", sessionId: id });
       socket.send({ type: "session.history", sessionId: id });
     },
-    [socket, sessionCwdById, setLoadingKey],
+    [clearSessionUnread, socket, sessionCwdById, setLoadingKey],
   );
 
   /** Select a project (like the desktop sidebar): set the one-true-source cwd and
@@ -902,6 +935,7 @@ export function useRemoteApp(): RemoteApp {
     deviceName: socket.deviceName,
     chat,
     sessions,
+    unreadSessionIds,
     activeSessionId,
     activeCwd,
     projects,

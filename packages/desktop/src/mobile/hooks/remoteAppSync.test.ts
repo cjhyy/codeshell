@@ -1,8 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import {
   filterNewRoomMessages,
+  clearUnreadSession,
+  markSessionUnread,
   markRoomSeqApplied,
   maxRoomSeq,
+  noteSessionSeq,
+  pruneUnreadSessions,
   rawApprovalResolvedRequestId,
   removeResolvedApproval,
   selectSessionReplayEntries,
@@ -72,5 +76,31 @@ describe("mobile remote app sync helpers", () => {
     expect(filterNewRoomMessages("room-1", [{ seq: 7, text: "duplicate live" }], applied)).toEqual(
       [],
     );
+  });
+
+  test("session unread state uses monotonically increasing seq and clears on open", () => {
+    const latestSeqs = new Map<string, number>();
+    let unread = new Set<string>();
+
+    if (noteSessionSeq(latestSeqs, "s2", 1)) {
+      unread = markSessionUnread(unread, "s2", "s1");
+    }
+
+    expect([...unread]).toEqual(["s2"]);
+    expect(noteSessionSeq(latestSeqs, "s2", 1)).toBe(false);
+    expect(noteSessionSeq(latestSeqs, "s2", 0)).toBe(false);
+
+    unread = clearUnreadSession(unread, "s2");
+    expect([...unread]).toEqual([]);
+  });
+
+  test("session unread state does not mark active sessions and prunes removed rows", () => {
+    let unread = new Set<string>(["s2", "stale"]);
+
+    unread = markSessionUnread(unread, "s1", "s1");
+    expect([...unread].sort()).toEqual(["s2", "stale"]);
+
+    unread = pruneUnreadSessions(unread, ["s1", "s2"]);
+    expect([...unread]).toEqual(["s2"]);
   });
 });

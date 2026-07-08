@@ -26,6 +26,7 @@ export function SessionList({
   onNew,
   onRefresh,
   loading,
+  unreadSessionIds,
 }: {
   sessions: MobileSessionMeta[];
   projects: MobileProjectMeta[];
@@ -37,6 +38,7 @@ export function SessionList({
   onNew: (cwd?: string | null, name?: string) => void;
   onRefresh: () => void;
   loading?: boolean;
+  unreadSessionIds?: ReadonlySet<string>;
 }) {
   const { t, lang } = useT();
   const [creating, setCreating] = useState(false);
@@ -187,37 +189,48 @@ export function SessionList({
                 </span>
               </div>
               <ul className="flex flex-col gap-1.5">
-                {g.items.map((s) => (
-                  <li key={s.id}>
-                    <button
-                      type="button"
-                      onClick={() => onSelect(s.id)}
-                      className={cn(
-                        "mobile-list-item flex w-full min-w-0 flex-col gap-1 rounded-lg px-3 py-2.5 text-left",
-                        s.id === activeSessionId && "active",
-                      )}
-                    >
-                      <div className="flex w-full min-w-0 items-center gap-2">
-                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-                          {s.title}
-                        </span>
-                        {s.origin === "automation" && (
-                          <span className="shrink-0 rounded-full border border-status-running/35 bg-status-running/10 px-1.5 text-[10px] text-status-running">
-                            {t("mobile.sessionList.automation")}
-                          </span>
+                {g.items.map((s) => {
+                  const unread = Boolean(unreadSessionIds?.has(s.id) && s.id !== activeSessionId);
+                  return (
+                    <li key={s.id}>
+                      <button
+                        type="button"
+                        onClick={() => onSelect(s.id)}
+                        className={cn(
+                          "mobile-list-item flex w-full min-w-0 flex-col gap-1 rounded-lg px-3 py-2.5 text-left",
+                          s.id === activeSessionId && "active",
                         )}
-                      </div>
-                      <div className="flex w-full min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
-                        <span className="min-w-0 flex-1 truncate">
-                          {s.cwd || t("mobile.sessionList.noProjectPath")}
-                        </span>
-                        <span className="ml-auto shrink-0">
-                          {relativeTime(s.updatedAt, Date.now(), lang)}
-                        </span>
-                      </div>
-                    </button>
-                  </li>
-                ))}
+                      >
+                        <div className="flex w-full min-w-0 items-center gap-2">
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                            {s.title}
+                          </span>
+                          {unread && (
+                            <span
+                              role="status"
+                              aria-label={t("mobile.sessionList.unreadAria")}
+                              title={t("mobile.sessionList.unreadAria")}
+                              className="size-2 shrink-0 rounded-full bg-primary"
+                            />
+                          )}
+                          {s.origin === "automation" && (
+                            <span className="shrink-0 rounded-full border border-status-running/35 bg-status-running/10 px-1.5 text-[10px] text-status-running">
+                              {t("mobile.sessionList.automation")}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex w-full min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
+                          <span className="min-w-0 flex-1 truncate">
+                            {s.cwd || t("mobile.sessionList.noProjectPath")}
+                          </span>
+                          <span className="ml-auto shrink-0">
+                            {relativeTime(s.updatedAt, Date.now(), lang)}
+                          </span>
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           ))

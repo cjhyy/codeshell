@@ -83,3 +83,55 @@ export function maxRoomSeq(current: number, messages: unknown[], latestSeq?: num
   }
   return next;
 }
+
+export function noteSessionSeq(
+  latestSeqs: Map<string, number>,
+  sessionId: string,
+  seq: number,
+): boolean {
+  if (!Number.isFinite(seq)) return false;
+  const current = latestSeqs.get(sessionId) ?? 0;
+  if (seq <= current) return false;
+  latestSeqs.set(sessionId, seq);
+  return true;
+}
+
+export function markSessionUnread(
+  unreadSessionIds: Set<string>,
+  sessionId: string,
+  activeSessionId?: string,
+): Set<string> {
+  if (!sessionId || sessionId === activeSessionId || unreadSessionIds.has(sessionId)) {
+    return unreadSessionIds;
+  }
+  const next = new Set(unreadSessionIds);
+  next.add(sessionId);
+  return next;
+}
+
+export function clearUnreadSession(unreadSessionIds: Set<string>, sessionId?: string): Set<string> {
+  if (!sessionId || !unreadSessionIds.has(sessionId)) return unreadSessionIds;
+  const next = new Set(unreadSessionIds);
+  next.delete(sessionId);
+  return next;
+}
+
+export function pruneUnreadSessions(
+  unreadSessionIds: Set<string>,
+  sessionIds: Iterable<string>,
+): Set<string> {
+  const known = new Set(sessionIds);
+  let changed = false;
+  for (const id of unreadSessionIds) {
+    if (!known.has(id)) {
+      changed = true;
+      break;
+    }
+  }
+  if (!changed) return unreadSessionIds;
+  const next = new Set<string>();
+  for (const id of unreadSessionIds) {
+    if (known.has(id)) next.add(id);
+  }
+  return next;
+}

@@ -111,6 +111,7 @@ export const mobile = {
         empty: "还没有会话。点「新建」开一个,或在桌面端开始。",
         automation: "自动",
         noProjectPath: "无项目路径",
+        unreadAria: "有新内容",
       },
       status: {
         conn: {
@@ -260,6 +261,7 @@ export const mobile = {
         empty: "No sessions yet. Tap “New” to start one, or start from desktop.",
         automation: "Automation",
         noProjectPath: "No project path",
+        unreadAria: "New content",
       },
       status: {
         conn: {
