@@ -5,6 +5,7 @@ export const chat = {
       loadingSession: "正在加载会话…",
       composer: {
         placeholderBusy: "要求后续变更",
+        placeholderCompacting: "正在压缩上下文…",
         placeholderIdle: "可向 agent 询问任何事。输入 @ 使用插件或提及文件",
         visionUnsupportedSend: "当前模型不支持图片输入。请切换到支持视觉的模型，或先移除图片。",
         visionUnsupportedTitle: "当前模型不支持图片",
@@ -31,11 +32,13 @@ export const chat = {
         stop: "停止",
         send: "发送",
         runningAgents: "后台 {count} 个子代理运行中…",
+        compacting: "正在压缩上下文…",
         cachedHint: "已排队 {count} 条，将在下一步插入当前轮",
         imagesPlaceholder: "[图片 ×{count}]",
       },
       compact: {
         running: "当前会话正在运行,请先停止或等这一轮结束后再压缩。",
+        inProgress: "上下文正在压缩，请稍候。",
         noSession: "当前还没有可压缩的会话。",
         done: "已压缩:{before} → {after} tokens(省 {percent}%),策略:{strategy}。",
         unchanged: "上下文已是最简,无需压缩(当前约 {tokens} tokens)。",
@@ -198,6 +201,7 @@ export const chat = {
       loadingSession: "Loading conversation…",
       composer: {
         placeholderBusy: "Request a follow-up change",
+        placeholderCompacting: "Compacting context…",
         placeholderIdle: "Ask the agent anything. Type @ to use a skill or mention a file",
         visionUnsupportedSend:
           "The current model does not accept image input. Switch to a vision-capable model, or remove the images first.",
@@ -229,6 +233,7 @@ export const chat = {
         stop: "Stop",
         send: "Send",
         runningAgents: "{count} sub-agent(s) running in the background…",
+        compacting: "Compacting context…",
         cachedHint:
           "{count} message(s) queued; will be inserted into the current turn at the next step",
         imagesPlaceholder: "[Images ×{count}]",
@@ -236,6 +241,7 @@ export const chat = {
       compact: {
         running:
           "This conversation is running. Stop or wait for this turn to finish before compacting.",
+        inProgress: "Context compaction is already in progress.",
         noSession: "There is no active conversation to compact yet.",
         done: "Context compacted: {before} → {after} tokens (saved {percent}%), strategy: {strategy}.",
         unchanged: "Context already minimal - nothing to compact (about {tokens} tokens).",

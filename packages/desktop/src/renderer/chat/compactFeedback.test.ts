@@ -4,6 +4,7 @@ import { translate } from "../i18n/translate";
 import {
   compactBoundaryDetail,
   compactOutcomeMessage,
+  compactPromptTokensWithBaseline,
   compactReductionPercent,
   compactStrategyLabel,
   compactWasNoop,
@@ -45,5 +46,29 @@ describe("compact feedback", () => {
     expect(compactStrategyLabel("window", t("en"))).toBe("window");
     expect(compactStrategyLabel("compacted", t("en"))).toBe("general compaction");
     expect(compactStrategyLabel("custom-tier", t("en"))).toBe("custom-tier");
+  });
+
+  test("keeps the fixed prompt baseline when computing post-compact ring tokens", () => {
+    expect(
+      compactPromptTokensWithBaseline(
+        { before: 45_000, after: 20_000, strategy: "summary" },
+        60_000,
+      ),
+    ).toBe(35_000);
+  });
+
+  test("does not invent a negative baseline when compact estimate exceeds current prompt tokens", () => {
+    expect(
+      compactPromptTokensWithBaseline(
+        { before: 45_000, after: 20_000, strategy: "summary" },
+        30_000,
+      ),
+    ).toBe(20_000);
+  });
+
+  test("clamps invalid prompt token inputs before adding the baseline", () => {
+    expect(
+      compactPromptTokensWithBaseline({ before: -1, after: Number.NaN, strategy: "summary" }, 10),
+    ).toBe(10);
   });
 });

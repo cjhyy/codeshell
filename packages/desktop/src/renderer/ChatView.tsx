@@ -66,6 +66,7 @@ interface Props {
   onCompactCommand?: () => void;
   onStop: () => void;
   busy: boolean;
+  compacting?: boolean;
   queuedInputCount?: number;
   queuedInputItems?: string[];
   onClearQueuedInput?: () => void;
@@ -182,6 +183,7 @@ export function ChatView({
   onCompactCommand,
   onStop,
   busy,
+  compacting = false,
   queuedInputCount = 0,
   queuedInputItems = [],
   onClearQueuedInput,
@@ -464,11 +466,15 @@ export function ChatView({
   }, [measureComposer]);
 
   // Busy no longer disables the textarea: Enter queues input for the next turn.
-  // It still disables side controls whose changes would be ambiguous mid-turn.
-  const controlsDisabled = busy;
-  const placeholder = busy
-    ? t("chat.composer.placeholderBusy")
-    : t("chat.composer.placeholderIdle");
+  // Manual compaction is the exception because it is an uncancellable RPC, not
+  // an agent turn, so we block composer edits/actions until it settles.
+  const controlsDisabled = busy || compacting;
+  const inputDisabled = compacting;
+  const placeholder = compacting
+    ? t("chat.composer.placeholderCompacting")
+    : busy
+      ? t("chat.composer.placeholderBusy")
+      : t("chat.composer.placeholderIdle");
 
   const closeMention = (): void => {
     setMention(null);
@@ -558,6 +564,7 @@ export function ChatView({
   };
 
   const executeSlashCommand = (item: SlashCommandItem): void => {
+    if (compacting) return;
     if (item.name === "/compact") {
       onCompactCommand?.();
       setDraft("");
@@ -569,6 +576,7 @@ export function ChatView({
   };
 
   const submit = (): void => {
+    if (compacting) return;
     const text = draft.trim();
     const hasImages = attachments.length > 0;
     const hasAnchors = anchors.length > 0;
@@ -603,6 +611,7 @@ export function ChatView({
   };
 
   const acceptFiles = async (files: File[]) => {
+    if (compacting) return;
     if (files.length === 0) return;
     setAttachmentError(null);
     const { accepted, errors } = await buildAttachments(files, attachments);
@@ -621,6 +630,7 @@ export function ChatView({
   };
 
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (compacting) return;
     const imageFiles = filesFromClipboard(e.clipboardData?.items ?? null);
     if (imageFiles.length === 0) return;
     e.preventDefault();
@@ -811,6 +821,7 @@ export function ChatView({
   // A drag is acceptable if it's an OS file drop OR an internal file-panel
   // image drag (carries our custom path MIME — TODO 2.1).
   const dragHasAcceptable = (dt: DataTransfer | null): boolean => {
+    if (compacting) return false;
     if (!dt) return false;
     if (Array.from(dt.items ?? []).some((it) => it.kind === "file")) return true;
     return Array.from(dt.types ?? []).includes(CODESHELL_PATH_DND_MIME);
@@ -835,6 +846,7 @@ export function ChatView({
   const onChatDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragOver(false);
+    if (compacting) return;
     // Internal file-panel drag. Image → attach as an image; any other file →
     // insert an `@path` reference into the draft (same convention as @mention),
     // so the user/model can refer to it.
@@ -1226,7 +1238,7 @@ export function ChatView({
                 onCompositionEnd={() => setIsComposing(false)}
                 onPaste={(e) => void handlePaste(e)}
                 placeholder={placeholder}
-                disabled={false}
+                disabled={inputDisabled}
                 rows={1}
                 className="max-h-[200px] min-h-[36px] w-full resize-none bg-transparent px-2 py-1.5 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-60"
               />
@@ -1254,6 +1266,12 @@ export function ChatView({
                 <span>{t("chat.composer.runningAgents", { count: runningAgents })}</span>
               </div>
             )}
+            {compacting && (
+              <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Loader2 size={12} className="animate-spin" />
+                <span>{t("chat.composer.compacting")}</span>
+              </div>
+            )}
 
             <div className="@container/composer-controls mt-1 min-h-8 w-full min-w-0">
               <div className="flex min-w-0 items-center justify-between gap-2">
@@ -1268,7 +1286,7 @@ export function ChatView({
                         : t("chat.composer.addImageDisabledTitle")
                     }
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={busy}
+                    disabled={controlsDisabled}
                   >
                     <Paperclip size={14} />
                   </button>
@@ -1300,7 +1318,7 @@ export function ChatView({
                     activeKey={activeModelKey}
                     options={modelOptions}
                     onSelect={onModelChange}
-                    disabled={busy}
+                    disabled={controlsDisabled}
                   />
                   {/* 语音输入(听写):点击录音 → 再点停止 → 转写填进输入框(不自动发)。
                     idle=Mic / recording=红色 Square 脉冲 / transcribing=spinner。 */}
@@ -1332,7 +1350,9 @@ export function ChatView({
                     // Disabled while transcribing, OR when no provider is configured
                     // (and not mid-recording — never block stopping an active take).
                     disabled={
-                      voiceState === "transcribing" || (!sttAvailable && voiceState === "idle")
+                      compacting ||
+                      voiceState === "transcribing" ||
+                      (!sttAvailable && voiceState === "idle")
                     }
                   >
                     {voiceState === "recording" ? (
@@ -1372,7 +1392,7 @@ export function ChatView({
                       <Square size={14} fill="currentColor" />
                     </button>
                   )}
-                  {!busy && (
+                  {!busy && !compacting && (
                     <button
                       type="button"
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary transition-all duration-150 hover:border-primary hover:bg-primary hover:text-primary-foreground active:scale-95 disabled:scale-100 disabled:border-border disabled:bg-muted disabled:text-muted-foreground/50 disabled:opacity-50"
@@ -1408,7 +1428,7 @@ export function ChatView({
                 activeRepoId={activeRepoId}
                 onSelect={onSelectRepo}
                 onAddRepo={onAddRepo}
-                disabled={busy}
+                disabled={controlsDisabled}
               />
               <span
                 className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground"
@@ -1417,7 +1437,7 @@ export function ChatView({
                 <Monitor size={12} />
                 <span>{t("chat.localMode")}</span>
               </span>
-              <BranchPicker cwd={activeRepoPath} clean={repoClean} disabled={busy} />
+              <BranchPicker cwd={activeRepoPath} clean={repoClean} disabled={controlsDisabled} />
             </div>
           )}
         </div>

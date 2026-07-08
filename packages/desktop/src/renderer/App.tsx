@@ -52,7 +52,11 @@ import {
 } from "./transcripts";
 import { planSessionDeletion } from "./sessionDeletionPlan";
 import { titleFromWire, buildPathAttachment, type ImageAttachment } from "./chat/attachments";
-import { compactOutcomeMessage, compactWasNoop } from "./chat/compactFeedback";
+import {
+  compactOutcomeMessage,
+  compactPromptTokensWithBaseline,
+  compactWasNoop,
+} from "./chat/compactFeedback";
 import { resolveBucket, findAskUserOrigin } from "./streamRouting";
 import { resolveStopBucket } from "./stopRouting";
 import { statusForBucket, type SessionStatus } from "./sessionStatus";
@@ -239,6 +243,8 @@ function App() {
   const [lifecycle, setLifecycle] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [busyKeys, setBusyKeys] = useState<Set<string>>(() => new Set());
+  const [compactingBuckets, setCompactingBuckets] = useState<Set<string>>(() => new Set());
+  const compactingBucketsRef = useRef<Set<string>>(new Set());
   const [queuedInputs, setQueuedInputs] = useState<QueuedInputState>({});
   // Buckets mid-引导打断: the turn was cancelled and a merged re-send is about
   // to fire on the next busy=false tick. State (not a ref) so `liveTurnActive`
@@ -333,6 +339,7 @@ function App() {
   const activeModelKey = modelOverrides[activeBucket] ?? defaultActiveModelKey;
   const goalEnabled = goalOverrides[activeBucket] ?? false;
   const busy = busyKeys.has(activeBucket);
+  const compacting = compactingBuckets.has(activeBucket);
   const platform = typeof window !== "undefined" ? window.codeshell?.platform : undefined;
   const isMac =
     platform === "darwin" ||
@@ -2452,9 +2459,23 @@ function App() {
   const resolveActiveEngineSessionId = (): string | undefined =>
     resolveEngineSessionIdForBucket(runningBucketRef.current ?? activeBucket);
 
+  const setCompactingForKey = (key: string, val: boolean): void => {
+    const had = compactingBucketsRef.current.has(key);
+    if (had === val) return;
+    const next = new Set(compactingBucketsRef.current);
+    if (val) next.add(key);
+    else next.delete(key);
+    compactingBucketsRef.current = next;
+    setCompactingBuckets(next);
+  };
+
   const compactActiveSession = (): void => {
     if (busyKeys.has(activeBucket)) {
       toast({ message: t("chat.compact.running"), variant: "error" });
+      return;
+    }
+    if (compactingBucketsRef.current.has(activeBucket)) {
+      toast({ message: t("chat.compact.inProgress") });
       return;
     }
     const bucket = activeBucket;
@@ -2463,24 +2484,27 @@ function App() {
       toast({ message: t("chat.compact.noSession"), variant: "error" });
       return;
     }
+    const promptTokensBefore = state.promptTokens;
+    setCompactingForKey(bucket, true);
     void window.codeshell
       .compactSession(engineSessionId)
       .then((result) => {
         const data = result.data;
-        dispatch({
-          type: "stream",
-          bucket,
-          event: {
-            type: "usage_update",
-            promptTokens: data.after,
-          } as StreamEvent,
-        });
         if (compactWasNoop(data)) {
           toast({
             message: compactOutcomeMessage(data, t, lang),
             variant: "success",
           });
+          return;
         }
+        dispatch({
+          type: "stream",
+          bucket,
+          event: {
+            type: "usage_update",
+            promptTokens: compactPromptTokensWithBaseline(data, promptTokensBefore),
+          } as StreamEvent,
+        });
       })
       .catch((e) => {
         toast({
@@ -2489,7 +2513,8 @@ function App() {
           }),
           variant: "error",
         });
-      });
+      })
+      .finally(() => setCompactingForKey(bucket, false));
   };
 
   // Extend the running goal (TODO 3.1). Fired by the "approaching limit" extend
@@ -3449,6 +3474,7 @@ function App() {
                     onCompactCommand={compactActiveSession}
                     onStop={() => stop()}
                     busy={busy}
+                    compacting={compacting}
                     queuedInputCount={queuedInputs[activeBucket]?.length ?? 0}
                     queuedInputItems={(queuedInputs[activeBucket] ?? []).map((i) => i.text)}
                     onClearQueuedInput={clearActiveQueuedInput}

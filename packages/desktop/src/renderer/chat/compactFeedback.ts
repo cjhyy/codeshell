@@ -35,8 +35,27 @@ export function compactWasNoop(result: CompactFeedbackInput): boolean {
   return result.after >= result.before;
 }
 
+function safeTokenCount(tokens: number): number {
+  return Number.isFinite(tokens) ? Math.max(0, Math.round(tokens)) : 0;
+}
+
+export function compactPromptTokensWithBaseline(
+  result: CompactFeedbackInput,
+  currentPromptTokens: number,
+): number {
+  // forceCompact() returns message-array estimates (`estimateTokens()`), which
+  // omit system prompt, tool schema, memory, and provider framing. Preserve the
+  // last displayed fixed baseline so the context ring does not drop to a pure
+  // message-body estimate after manual compaction.
+  const baseline = Math.max(
+    0,
+    safeTokenCount(currentPromptTokens) - safeTokenCount(result.before),
+  );
+  return safeTokenCount(result.after) + baseline;
+}
+
 function formatTokenCount(tokens: number, locale?: string): string {
-  const safe = Number.isFinite(tokens) ? Math.max(0, Math.round(tokens)) : 0;
+  const safe = safeTokenCount(tokens);
   return new Intl.NumberFormat(locale).format(safe);
 }
 
