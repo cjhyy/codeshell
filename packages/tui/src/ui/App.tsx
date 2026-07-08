@@ -95,6 +95,10 @@ function shouldTraceStreamEvent(type: StreamEvent["type"]): boolean {
   return STREAM_DIAG_ON || !HIGH_FREQUENCY_STREAM_EVENTS.has(type);
 }
 
+export function shouldAppendThinkingDeltaToMainFeed(agentId: string | undefined): boolean {
+  return agentId === undefined;
+}
+
 function formatCommandError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -593,6 +597,7 @@ export function App({
           break;
 
         case "thinking_delta":
+          if (!shouldAppendThinkingDeltaToMainFeed(agentId)) break;
           thinkingBufferRef.current += event.text;
           if (!thinkingFlushTimerRef.current) {
             thinkingFlushTimerRef.current = setTimeout(flushThinkingBuffer, 50);
