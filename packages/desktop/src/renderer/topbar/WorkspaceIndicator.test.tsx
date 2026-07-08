@@ -441,6 +441,12 @@ describe("WorkspaceIndicator", () => {
             occupiedBySessionIds: ["session"],
           },
           {
+            path: "/repo/.worktrees/detached",
+            branch: "",
+            head: "baddad",
+            isManaged: true,
+          },
+          {
             path: "/repo/.worktrees/external",
             branch: "external/branch",
             head: "fedcba",
@@ -477,6 +483,12 @@ describe("WorkspaceIndicator", () => {
     expect(text).toContain("worktree/feature-session");
     expect(text).toMatch(/本会话|This session/);
     expect(text).toContain("external/branch");
+    const detachedIndex = Math.max(text.indexOf("游离 HEAD"), text.indexOf("Detached HEAD"));
+    const externalGroupIndex = Math.max(
+      text.indexOf("外部 worktrees"),
+      text.indexOf("External worktrees"),
+    );
+    expect(detachedIndex).toBeGreaterThan(externalGroupIndex);
   });
 
   test("rapid session switching keeps the latest workspace state", async () => {

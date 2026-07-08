@@ -395,8 +395,8 @@ export function WorkspaceIndicator({
   );
   const rows = list?.worktrees ?? [];
   const mainRows = rows.filter((row) => row.isMain);
-  const managedRows = rows.filter((row) => !row.isMain && row.isManaged);
-  const externalRows = rows.filter((row) => !row.isMain && !row.isManaged);
+  const externalRows = rows.filter((row) => !row.isMain && workspaceIsExternal(row));
+  const managedRows = rows.filter((row) => !row.isMain && !workspaceIsExternal(row));
 
   if (!canLoad) return null;
   // Not a git repo (or still probing / probe failed) → hide entirely. A
