@@ -5,20 +5,6 @@
 
 ---
 
-## 小 feature / 主分支迭代
-
-- **`/compact` 进行中缺 UI 反馈和输入禁用**（体量 S-M）｜锚点：`packages/desktop/src/renderer/App.tsx:2443`、`packages/desktop/src/renderer/App.tsx:2454`｜现状：`compactActiveSession` 只在触发前挡 busy，Promise 飞行期间没有 per-bucket compacting 状态，输入仍可继续发送且可重复触发。修法：加 `compactingBuckets`，composer 禁用/展示「正在压缩」，重复 `/compact` 忽略或合并。
-- **CC/Codex/外部 agent 面板补「来源 session」徽标**（体量 S）｜锚点：`packages/desktop/src/renderer/panels/BackgroundShellPanel.tsx:24`、`packages/core/src/tool-system/builtin/background-work.ts:71`｜现状：面板只按当前 `sessionId` 拉列表，条目模型和 row UI 没有来源 session 短 id/标题。修法：background work entry 带 source session 元数据，面板对「本会话」高亮并显示来源徽标。
-- **automation/mobile announce 乐观气泡补稳定 `clientMessageId`**（体量 S）｜锚点：`packages/desktop/src/renderer/App.tsx:1682`、`packages/desktop/src/renderer/App.tsx:1751`、`packages/desktop/src/renderer/transcriptsReducer.ts:56`｜现状：普通 send/steer 已有 `clientMessageId`，但 automation/mobile announce 派发 `user_message` 时无 key，hydrate 仍可能覆盖本地 intent。修法：生成稳定 id（如 `automation:${sessionId}:${hash(prompt)}` / `mobile:${sessionId}:...`）并随 dispatch 传入。
-- **TodoWrite resume 恢复补 core 测试**（体量 S）｜锚点：`packages/core/src/tool-system/builtin/task.ts:154`、`packages/core/src/engine/engine.ts:1623`｜现状：`readLastTodoSnapshot` 和 resume 重发 `task_update` 已实现，但缺直接覆盖 pending 恢复、末次全 completed 清空/不 emit 的 engine/task 测试。修法：补 `task`/`engine.todo-resume` 用例。
-- **上下文占用环压缩后虚低（分子漏算基线）**（体量 S-M）｜锚点：`packages/desktop/src/renderer/App.tsx:2463`、`packages/desktop/src/renderer/App.tsx:3474`、`packages/desktop/src/renderer/chat/ContextRing.tsx:78`｜现状：`ContextRing.used = state.promptTokens`，压缩完成时被设为 `data.after`（仅压缩后**对话消息** token，如 20,144），**不含 system prompt + 工具 schema + 记忆注入等固定基线**，导致压缩后百分比虚低（如 2%）；下一轮真实 promptTokens 从 provider 回来才补上基线 → 数字突然跳大。修法：压缩后的 `used` 应叠加固定基线估算（system+tools+memory），或直接沿用最近一次真实 prompt usage 作 anchor 而非只用 `data.after`，让环反映真实将发送量。
-- **顶栏 worktree 切换器视觉/语义迷惑**（体量 S）｜锚点：`packages/desktop/src/renderer/topbar/WorkspaceIndicator.tsx:50`、`packages/desktop/src/renderer/topbar/WorkspaceIndicator.tsx:117`｜现状：切到某个 worktree 分支后，顶栏 `⑃ <branch>` 徽标 + 下拉的呈现让人分不清「当前在哪个 worktree / main」「点了会切到哪」「哪些是本会话拥有的」。修法：明确 active 态高亮、main vs worktree 分组、当前项标记，并让 label 直观区分"你正在这个 worktree"。（待用户补充截图里具体迷惑点后细化）
-- **压缩完成横幅 UI 粗糙**（体量 S）｜锚点：`packages/desktop/src/renderer/messages/ContextBoundaryView.tsx:9`、`packages/desktop/src/renderer/chat/compactFeedback.ts:65`｜现状：横幅是 `— 标题 —` 手写破折号 + 一行居中小灰字（`gap-x-2 py-2 text-xs text-muted-foreground`），无分隔线/图标/卡片容器，和普通消息混排显得随意；文案 `56,256 → 20,144 tokens(省 64%),策略:摘要` 逗号后无空格、无留白。修法：做成正式的居中系统事件条——细分隔线贯穿两侧、中间放压缩图标 + 「上下文已压缩」标题 + 结构化数字（前→后 · 省 N% · 策略），修 i18n 文案标点/空格。
-- **压缩 token 初始估算无真实 anchor 时仍偏启发式**（体量 S-M）｜锚点：`packages/core/src/context/compaction.ts:21`、`packages/core/src/context/manager.ts:210`、`packages/core/src/engine/engine.ts:1604`｜现状：真实 usage anchor 的主 blocker 已修，剩余是首轮/无 anchor 时仍用 `estimateMessagesTokens()*4/3` 或 char/4 近似。修法：引入 provider/model-aware tokenizer 或在首个真实 usage 回来前标注估算置信度并校准显示。
-- 🔴 **[worktree/数据安全] 自动清理会静默 `--force -D` 删掉未合并/未提交的 worktree**（体量 S-M）｜锚点：`packages/desktop/src/main/desktop-services.ts:357`、`packages/desktop/src/main/desktop-services.ts:373`、`packages/desktop/src/main/desktop-services.ts:388`｜现状：`cleanupStaleWorktrees` 只按「目录 mtime 早于阈值 + 分支是托管前缀且非当前 root 分支」判定就删，**完全不检查未提交改动、也不检查是否已合并到 main**；删除用 `git worktree remove --force`（丢未提交）+ `git branch -D`（强删未合并分支）。默认关闭 + 默认 7 天阈值窗口不大，但一旦命中（开了开关 + worktree 里有没提交/没合并的活 + 晾超阈值）就是**静默、不可逆**的数据丢失（未提交改动 reflog 也救不回）。修法：删除前对每个候选 worktree 做护栏——`git status --porcelain` 非空则跳过并记日志；分支相对 main 有未合并 commit（`git cherry`/`rev-list main..branch`）则跳过；仅对「干净且已合并」的才 `--force -D`，其余保留并在 UI 提示手动处理。
-
----
-
 ## 大功能升级
 
 - **core 通用化 + 插件面板**（体量 L）｜锚点：`packages/core/src/preset/index.ts:34`、`packages/desktop/src/renderer/panels/PanelArea.tsx:90`、`packages/core/src/plugins/installer/types.ts:4`｜现状：preset/builtin 仍硬编码 coding/git/browser/tool 包，PanelArea 固定内置 panel kind，plugin manifest schema 无 `panels`。修法：工具元数据派生 preset、PanelRegistry 收敛内置面板、manifest `panels` + `csplugin://` 沙箱 host + scoped bridge。
