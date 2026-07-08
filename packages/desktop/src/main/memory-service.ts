@@ -18,11 +18,7 @@
  * dedicated memory dir so we don't pollute the global one.
  */
 
-import {
-  MemoryManager,
-  type MemoryEntry,
-  type MemoryScope,
-} from "@cjhyy/code-shell-core";
+import { MemoryManager, type MemoryEntry, type MemoryScope } from "@cjhyy/code-shell-core";
 
 export type MemoryLevel = "user" | "project";
 
@@ -34,9 +30,15 @@ export interface RendererMemoryEntry {
   scope: MemoryScope;
   level: MemoryLevel;
   pinned?: boolean;
-  origin?: "auto" | "manual";
+  id?: string;
+  origin?: "auto" | "manual" | "dream";
   /** Recall lifecycle — surfaced in the settings panel so the user can see
    *  which memories are actually used and which are aging toward TTL pruning. */
+  useCount?: number;
+  updateCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  lastUsedAt?: string;
   usageCount?: number;
   lastUsed?: string;
   created?: string;
@@ -64,7 +66,13 @@ export function listMemory(
     scope: e.scope,
     level,
     pinned: e.pinned,
+    id: e.id,
     origin: e.origin,
+    useCount: e.useCount,
+    updateCount: e.updateCount,
+    createdAt: e.createdAt,
+    updatedAt: e.updatedAt,
+    lastUsedAt: e.lastUsedAt,
     usageCount: e.usageCount,
     lastUsed: e.lastUsed,
     created: e.created,
@@ -78,7 +86,7 @@ export function readMemory(
   cwd?: string,
 ): (RendererMemoryEntry & { content: string }) | null {
   const entries = mm(level, scope, cwd).loadAll();
-  const e = entries.find((x) => x.name === name || x.fileName === name);
+  const e = entries.find((x) => x.id === name || x.name === name || x.fileName === name);
   if (!e) return null;
   return {
     name: e.name,
@@ -89,7 +97,16 @@ export function readMemory(
     level,
     content: e.content,
     pinned: e.pinned,
+    id: e.id,
     origin: e.origin,
+    useCount: e.useCount,
+    updateCount: e.updateCount,
+    createdAt: e.createdAt,
+    updatedAt: e.updatedAt,
+    lastUsedAt: e.lastUsedAt,
+    usageCount: e.usageCount,
+    lastUsed: e.lastUsed,
+    created: e.created,
   };
 }
 
@@ -102,11 +119,13 @@ export interface SaveMemoryInput {
   content: string;
   cwd?: string;
   pinned?: boolean;
-  origin?: "auto" | "manual";
+  id?: string;
+  origin?: "auto" | "manual" | "dream";
 }
 
 export function saveMemory(input: SaveMemoryInput): string {
   return mm(input.level, input.scope, input.cwd).save({
+    id: input.id,
     name: input.name,
     description: input.description,
     type: input.type,
@@ -136,17 +155,27 @@ function pendingMm(): MemoryManager {
 /** List global memories awaiting approval (full content included — the panel
  *  shows it inline so the user can judge before approving). */
 export function listPendingMemory(): (RendererMemoryEntry & { content: string })[] {
-  return pendingMm().loadAll().map((e) => ({
-    name: e.name,
-    description: e.description,
-    type: e.type,
-    fileName: e.fileName,
-    scope: e.scope,
-    level: "user" as const,
-    content: e.content,
-    origin: e.origin,
-    created: e.created,
-  }));
+  return pendingMm()
+    .loadAll()
+    .map((e) => ({
+      name: e.name,
+      description: e.description,
+      type: e.type,
+      fileName: e.fileName,
+      scope: e.scope,
+      level: "user" as const,
+      content: e.content,
+      id: e.id,
+      origin: e.origin,
+      useCount: e.useCount,
+      updateCount: e.updateCount,
+      createdAt: e.createdAt,
+      updatedAt: e.updatedAt,
+      lastUsedAt: e.lastUsedAt,
+      usageCount: e.usageCount,
+      lastUsed: e.lastUsed,
+      created: e.created,
+    }));
 }
 
 /** Approve → moves the entry into the global user store (gets injected). */

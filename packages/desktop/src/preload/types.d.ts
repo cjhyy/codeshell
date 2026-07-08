@@ -201,10 +201,16 @@ export interface RendererMemoryEntry {
   level: MemoryLevel;
   /** 固定/置顶 — exempt from maxAge injection filtering, sorts first. */
   pinned?: boolean;
-  /** "auto" = end-of-session extractor wrote it; "manual"/absent = user. */
-  origin?: "auto" | "manual";
+  id?: string;
+  /** Provenance: "manual" user/UI, "auto" extractor, "dream" dream consolidation. */
+  origin?: "auto" | "manual" | "dream";
   /** Recall lifecycle — how many times read, when last read, when created.
    *  Surfaced in the settings panel; drives recall-based TTL in core. */
+  useCount?: number;
+  updateCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  lastUsedAt?: string;
   usageCount?: number;
   lastUsed?: string;
   created?: string;
@@ -223,7 +229,8 @@ export interface SaveMemoryInput {
   content: string;
   cwd?: string;
   pinned?: boolean;
-  origin?: "auto" | "manual";
+  id?: string;
+  origin?: "auto" | "manual" | "dream";
 }
 
 export type AgentLifecycleEvent =

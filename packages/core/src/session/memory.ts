@@ -92,6 +92,13 @@ export interface MemoryEntry {
    * user store (not the current one). Absent → fall back to no-repo / global.
    */
   originProject?: string;
+  /** Global dream promotion metadata (P1). */
+  promotionKey?: string;
+  originProjects?: string[];
+  evidenceCount?: number;
+  firstSeenAt?: string;
+  lastSeenAt?: string;
+  promotionReason?: string;
 }
 
 /**
@@ -213,6 +220,12 @@ export class MemoryManager {
     const useCount = entry.useCount ?? entry.usageCount ?? existing?.useCount ?? 0;
     const lastUsedAt = entry.lastUsedAt ?? entry.lastUsed ?? existing?.lastUsedAt ?? createdAt;
     const originProject = entry.originProject ?? existing?.originProject;
+    const promotionKey = entry.promotionKey ?? existing?.promotionKey;
+    const originProjects = entry.originProjects ?? existing?.originProjects;
+    const evidenceCount = entry.evidenceCount ?? existing?.evidenceCount;
+    const firstSeenAt = entry.firstSeenAt ?? existing?.firstSeenAt;
+    const lastSeenAt = entry.lastSeenAt ?? existing?.lastSeenAt;
+    const promotionReason = entry.promotionReason ?? existing?.promotionReason;
 
     const contentChanged =
       existing != null &&
@@ -236,6 +249,14 @@ export class MemoryManager {
       `origin: ${origin}\n` +
       (entry.pinned ? `pinned: true\n` : "") +
       (originProject ? `originProject: ${originProject}\n` : "") +
+      (promotionKey ? `promotionKey: ${promotionKey}\n` : "") +
+      (originProjects && originProjects.length > 0
+        ? `originProjects:\n${originProjects.map((p) => `  - ${p}\n`).join("")}`
+        : "") +
+      (typeof evidenceCount === "number" ? `evidenceCount: ${evidenceCount}\n` : "") +
+      (firstSeenAt ? `firstSeenAt: ${firstSeenAt}\n` : "") +
+      (lastSeenAt ? `lastSeenAt: ${lastSeenAt}\n` : "") +
+      (promotionReason ? `promotionReason: ${promotionReason}\n` : "") +
       `createdAt: ${createdAt}\n` +
       `updatedAt: ${updatedAt}\n` +
       `lastUsedAt: ${lastUsedAt}\n` +
@@ -328,6 +349,33 @@ export class MemoryManager {
 
       const read = (key: string): string | undefined =>
         frontmatter.match(new RegExp(`^${key}:\\s*(.+)`, "m"))?.[1]?.trim();
+      const readList = (key: string): string[] | undefined => {
+        const block = frontmatter.match(new RegExp(`^${key}:\\s*\\n((?:\\s+-\\s+.*\\n?)*)`, "m"));
+        if (block?.[1]) {
+          const values = block[1]
+            .split(/\n/)
+            .map((line) => line.match(/^\s+-\s+(.+)\s*$/)?.[1]?.trim())
+            .filter((value): value is string => Boolean(value));
+          return values.length > 0 ? values : undefined;
+        }
+        const inline = read(key);
+        if (!inline) return undefined;
+        if (inline.startsWith("[") && inline.endsWith("]")) {
+          const values = inline
+            .slice(1, -1)
+            .split(",")
+            .map((value) => value.trim().replace(/^["']|["']$/g, ""))
+            .filter(Boolean);
+          return values.length > 0 ? values : undefined;
+        }
+        return [inline];
+      };
+      const readNumber = (key: string): number | undefined => {
+        const raw = read(key);
+        if (!raw) return undefined;
+        const parsed = parseInt(raw, 10);
+        return Number.isFinite(parsed) ? parsed : undefined;
+      };
       const id = read("id") ?? `legacy:${scope}:${fileName}`;
       const name = read("name") ?? fileName;
       const description = read("description") ?? "";
@@ -359,6 +407,12 @@ export class MemoryManager {
       const updateRaw = read("updateCount");
       const useCount = useRaw ? parseInt(useRaw, 10) : 0;
       const updateCount = updateRaw ? parseInt(updateRaw, 10) : 0;
+      const promotionKey = read("promotionKey");
+      const originProjects = readList("originProjects");
+      const evidenceCount = readNumber("evidenceCount");
+      const firstSeenAt = read("firstSeenAt");
+      const lastSeenAt = read("lastSeenAt");
+      const promotionReason = read("promotionReason");
 
       return {
         id,
@@ -380,6 +434,12 @@ export class MemoryManager {
         lastUsed: lastUsedAt,
         created: createdAt,
         originProject,
+        promotionKey,
+        originProjects,
+        evidenceCount,
+        firstSeenAt,
+        lastSeenAt,
+        promotionReason,
       };
     } catch {
       return null;
