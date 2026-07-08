@@ -35,6 +35,10 @@ import {
   buildDreamSystemPrompt,
   buildDreamUserPrompt,
 } from "./auto-dream.js";
+import {
+  applyGlobalDreamPromotionGate,
+  detectUserDirectGlobalPreference,
+} from "./global-dream-promotion.js";
 import { logger } from "../logging/logger.js";
 
 export interface MemoryOrchestratorOptions {
@@ -161,6 +165,7 @@ export class MemoryOrchestrator {
         let noopCount = 0;
         let deleteCount = 0;
         let guardedManualCount = 0;
+        const userDirectGlobal = detectUserDirectGlobalPreference(transcript);
         for (const entry of entries) {
           const redactedEntry: ExtractedMemory = {
             ...entry,
@@ -172,11 +177,18 @@ export class MemoryOrchestrator {
           switch (decision.action) {
             case "ADD": {
               const isGlobal = redactedEntry.scope === "global";
-              const target = memoryManagerForDecision(
-                isGlobal ? "global" : "project",
-                "dream",
-                this.options.projectDir,
-              );
+              if (isGlobal) {
+                const promotion = applyGlobalDreamPromotionGate({
+                  projectDir: this.options.projectDir,
+                  candidate: redactedEntry,
+                  userDirectGlobal,
+                });
+                if (promotion.projectEvidenceSaved) projectDreamCount++;
+                if (promotion.promoted) globalDreamCount++;
+                addCount++;
+                break;
+              }
+              const target = memoryManagerForDecision("project", "dream", this.options.projectDir);
               target.save(
                 {
                   type: redactedEntry.type,

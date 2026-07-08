@@ -1,7 +1,11 @@
-import { afterEach, beforeAll, beforeEach, expect, test } from "bun:test";
+import { afterEach, beforeAll, beforeEach, expect, mock, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import * as coreModule from "../packages/core/src/index";
+
+mock.module("@cjhyy/code-shell-core", () => coreModule);
+const { MemoryManager } = coreModule;
 
 let listMemory: typeof import("../packages/desktop/src/main/memory-service").listMemory;
 let readMemory: typeof import("../packages/desktop/src/main/memory-service").readMemory;
@@ -134,4 +138,77 @@ test("project memory throws without cwd", () => {
 
 test("readMemory returns null when the entry doesn't exist", async () => {
   expect(await readMemory("user", "user", "nope")).toBeNull();
+});
+
+test("listMemory and readMemory surface lifecycle fields and dream origin", async () => {
+  const createdAt = "2026-07-08T01:00:00.000Z";
+  const updatedAt = "2026-07-08T02:00:00.000Z";
+  const lastUsedAt = "2026-07-08T03:00:00.000Z";
+  const mm = new MemoryManager({ scope: "dream" });
+  mm.save(
+    {
+      name: "dream-owned",
+      description: "dream provenance and counters",
+      type: "feedback",
+      content: "Dream owns this entry.",
+      origin: "dream",
+      createdAt,
+      updatedAt,
+      lastUsedAt,
+      useCount: 7,
+      updateCount: 3,
+    },
+    { forceOrigin: "dream", incrementUpdateCount: false },
+  );
+
+  const list = await listMemory("user", "dream");
+  expect(list).toHaveLength(1);
+  expect(list[0]!.id).toStartWith("mem_");
+  expect(list[0]!.origin).toBe("dream");
+  expect(list[0]!.useCount).toBe(7);
+  expect(list[0]!.updateCount).toBe(3);
+  expect(list[0]!.createdAt).toBe(createdAt);
+  expect(list[0]!.updatedAt).toBe(updatedAt);
+  expect(list[0]!.lastUsedAt).toBe(lastUsedAt);
+
+  const full = await readMemory("user", "dream", "dream-owned");
+  expect(full?.id).toBe(list[0]!.id);
+  expect(full?.origin).toBe("dream");
+  expect(full?.useCount).toBe(7);
+  expect(full?.updateCount).toBe(3);
+  expect(full?.createdAt).toBe(createdAt);
+  expect(full?.updatedAt).toBe(updatedAt);
+  expect(full?.lastUsedAt).toBe(lastUsedAt);
+});
+
+test("pin-style save keeps origin and does not increment updateCount", async () => {
+  const fileName = saveMemory({
+    level: "user",
+    scope: "user",
+    name: "pin-me",
+    description: "pin lifecycle",
+    type: "feedback",
+    content: "same content",
+    origin: "dream",
+  });
+  const full = await readMemory("user", "user", fileName);
+  expect(full?.origin).toBe("dream");
+  expect(full?.updateCount).toBe(0);
+
+  saveMemory({
+    level: "user",
+    scope: "user",
+    id: full!.id,
+    name: full!.name,
+    description: full!.description,
+    type: full!.type,
+    content: full!.content,
+    pinned: true,
+    origin: full!.origin,
+  });
+
+  const after = await readMemory("user", "user", "pin-me");
+  expect(after?.origin).toBe("dream");
+  expect(after?.pinned).toBe(true);
+  expect(after?.updateCount).toBe(0);
 });

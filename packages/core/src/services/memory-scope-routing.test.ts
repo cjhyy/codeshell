@@ -25,7 +25,7 @@ describe("parseExtractionResponse scope", () => {
 });
 
 describe("MemoryOrchestrator scope routing (global vs project dream store)", () => {
-  it("routes automatic global/project extractions to dream and does not add pending/user entries", async () => {
+  it("keeps unpromoted automatic global candidates in project dream evidence and does not add pending/user entries", async () => {
     const base = mkdtempSync(join(tmpdir(), "cs-mem-route-"));
     const prevHome = process.env.CODE_SHELL_HOME;
     process.env.CODE_SHELL_HOME = base; // isolate all MemoryManager writes
@@ -72,8 +72,7 @@ describe("MemoryOrchestrator scope routing (global vs project dream store)", () 
       expect(globalUserNames).not.toContain("global-lesson");
 
       const globalDream = new MemoryManager({ baseDir: base, scope: "dream" }).loadAll();
-      expect(globalDream.map((e) => e.name)).toContain("global-lesson");
-      expect(globalDream.find((e) => e.name === "global-lesson")?.origin).toBe("auto");
+      expect(globalDream.map((e) => e.name)).not.toContain("global-lesson");
 
       const projectNames = new MemoryManager({ baseDir: base, projectDir, scope: "user" })
         .loadAll()
@@ -86,6 +85,11 @@ describe("MemoryOrchestrator scope routing (global vs project dream store)", () 
         projectDir,
         scope: "dream",
       }).loadAll();
+      expect(projectDream.map((e) => e.name)).toContain("global-lesson");
+      expect(projectDream.find((e) => e.name === "global-lesson")?.origin).toBe("auto");
+      expect(projectDream.find((e) => e.name === "global-lesson")?.promotionKey).toBe(
+        "global-lesson",
+      );
       expect(projectDream.map((e) => e.name)).toContain("project-fact");
       expect(projectDream.find((e) => e.name === "project-fact")?.origin).toBe("auto");
 
@@ -94,8 +98,8 @@ describe("MemoryOrchestrator scope routing (global vs project dream store)", () 
         string,
         unknown
       >;
-      expect(ext?.globalDreamCount).toBe(1);
-      expect(ext?.projectDreamCount).toBe(1);
+      expect(ext?.globalDreamCount).toBe(0);
+      expect(ext?.projectDreamCount).toBe(2);
       expect(ext?.pendingGlobalCount).toBeUndefined();
     } finally {
       info.mockRestore();
