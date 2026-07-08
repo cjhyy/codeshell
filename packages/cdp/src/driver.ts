@@ -120,7 +120,10 @@ export class CdpActionsDriver {
       const box = rectFromQuad(model.content);
       const visible = intersectRects(box, viewport);
       if (!visible) return null;
-      return { x: visible.x + visible.width / 2, y: visible.y + visible.height / 2 };
+      return {
+        x: visible.x + visible.width / 2 - viewport.x,
+        y: visible.y + visible.height / 2 - viewport.y,
+      };
     } catch {
       return null; // node detached / no box → treat as stale
     }

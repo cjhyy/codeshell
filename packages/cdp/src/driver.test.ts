@@ -93,6 +93,23 @@ describe("CdpActionsDriver.clickNode", () => {
     expect(press?.params).toMatchObject({ x: 780, y: 30 });
   });
 
+  test("dispatches viewport-relative coordinates after page scroll", async () => {
+    const { send, calls } = fakeCdp({
+      "DOM.getBoxModel": () => ({
+        model: { content: [20, 1000, 120, 1000, 120, 1040, 20, 1040] },
+      }),
+      "Page.getLayoutMetrics": () => ({
+        layoutViewport: { pageX: 0, pageY: 980, clientWidth: 800, clientHeight: 600 },
+      }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+
+    const r = await d.clickNode(20);
+    expect(r.ok).toBe(true);
+    const press = calls.find((c) => c.params?.type === "mousePressed");
+    expect(press?.params).toMatchObject({ x: 70, y: 40 });
+  });
+
   test("fails when the node has no visible viewport intersection", async () => {
     const { send, calls } = fakeCdp({
       "DOM.getBoxModel": () => ({
