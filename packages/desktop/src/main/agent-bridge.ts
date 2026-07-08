@@ -731,6 +731,7 @@ export class AgentBridge {
     title: string;
     prompt: string;
     cronJobId: string;
+    clientMessageId?: string;
   }): void {
     this.safeSend(
       "agent:msg",

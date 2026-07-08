@@ -73,6 +73,7 @@ import {
   normalizeWorktreeBranchPrefix,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
+import { stablePromptHash } from "./client-message-id.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { listGuestSessions, registerGuest } from "./browser-driver/active-guest.js";
 import { buildDesktopAutomationRunner, makeCronRunnerWithResume } from "./automation-host.js";
@@ -383,6 +384,7 @@ function broadcastMobileSession(meta: {
   cwd: string;
   title: string;
   prompt: string;
+  clientMessageId?: string;
 }): void {
   const line = JSON.stringify({
     jsonrpc: "2.0",
@@ -786,23 +788,27 @@ async function handleMobileClientEvent(
       mobilePermissionModes.set(sessionId, st.permissionMode);
     }
     const permissionMode = mobilePermissionModes.get(sessionId);
+    const runId = `mobile-run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    const clientMessageId = `mobile:${sessionId}:${runId}:${stablePromptHash(event.text)}`;
     broadcastMobileSession({
       sessionId,
       cwd,
       title: event.text,
       prompt: event.text,
+      clientMessageId,
     });
     // Every phone chat turn is a normal CodeShell turn routed through the worker
     // run path. The device's permission-mode preset rides on the run.
     bridge.injectWorkerMessage(
       JSON.stringify({
         jsonrpc: "2.0",
-        id: `mobile-run-${Date.now()}`,
+        id: runId,
         method: "agent/run",
         params: {
           task: event.text,
           cwd,
           sessionId,
+          clientMessageId,
           ...(permissionMode ? { permissionMode } : {}),
         },
       }),

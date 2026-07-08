@@ -153,6 +153,15 @@ import { catalogModelOptions, type ModelInstance } from "./settings/textConnecti
 // can't drift from Sidebar's row lookup.
 const GLOBAL_KEY = NO_REPO_KEY;
 
+function stablePromptHash(text: string): string {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i += 1) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return `${(h >>> 0).toString(36)}-${text.length.toString(36)}`;
+}
+
 function toMobilePermissionMode(
   mode: PermissionMode | null | undefined,
 ): MobilePermissionMode | null {
@@ -1687,7 +1696,10 @@ function App() {
         // on first placement (re-announce hits the alreadyKnown early-return above),
         // so the bubble isn't duplicated.
         if (meta.prompt.trim()) {
-          dispatch({ type: "user_message", bucket, text: meta.prompt });
+          const clientMessageId =
+            meta.clientMessageId ??
+            `automation:${meta.sessionId}:${stablePromptHash(meta.prompt.trim())}`;
+          dispatch({ type: "user_message", bucket, text: meta.prompt, clientMessageId });
         }
         if (repoFactory.changed()) setRepos(reposAfterResolve.slice());
         setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: nextIdx }));
@@ -1756,7 +1768,12 @@ function App() {
       const bucket = bucketKey(repoId, sessionId);
       engineToBucketRef.current.set(meta.sessionId, bucket);
       setBusyForKey(bucket, true);
-      if (meta.prompt.trim()) dispatch({ type: "user_message", bucket, text: meta.prompt });
+      if (meta.prompt.trim()) {
+        const clientMessageId =
+          meta.clientMessageId ??
+          `mobile:${meta.sessionId}:${stablePromptHash(meta.prompt.trim())}`;
+        dispatch({ type: "user_message", bucket, text: meta.prompt, clientMessageId });
+      }
       setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: nextIdx }));
     });
     const offApproval = window.codeshell.onApprovalRequest((env: ApprovalRequestEnvelope) => {

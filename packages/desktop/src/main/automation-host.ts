@@ -31,6 +31,7 @@ import {
 } from "@cjhyy/code-shell-core";
 import { readAutomationMemory, appendAutomationMemory } from "./automationMemory.js";
 import { AUTOMATION_DISABLED_TOOLS } from "./automationToolset.js";
+import { stablePromptHash } from "./client-message-id.js";
 
 /**
  * Build a read-only RunManager for automation. Per-job cwd is passed at submit
@@ -38,7 +39,11 @@ import { AUTOMATION_DISABLED_TOOLS } from "./automationToolset.js";
  */
 export function buildDesktopRunManager(): RunManager {
   const settings = new SettingsManager(process.cwd(), "full").get();
-  const llm = resolveLLMConfigForTag(settings, "text", (settings as { defaults?: { text?: string } }).defaults?.text);
+  const llm = resolveLLMConfigForTag(
+    settings,
+    "text",
+    (settings as { defaults?: { text?: string } }).defaults?.text,
+  );
   if (!llm) throw new Error("自动化:没有可用的文本模型连接,请在「连接」页配置。");
   return createRunManager({
     llm,
@@ -68,6 +73,8 @@ export interface AutomationSessionMeta {
    *  path, so this is the only way the prompt reaches the live UI. The ORIGINAL
    *  prompt, not the memory-prepended one fed to the engine. */
   prompt: string;
+  /** Stable id shared by the live UI bubble and the transcript user message. */
+  clientMessageId?: string;
 }
 
 /**
@@ -91,7 +98,11 @@ export function buildDesktopAutomationRunner(
   return async (req): Promise<CronRunResult> => {
     const jobCwd = resolveProjectRoot(req.job.cwd ?? process.cwd());
     const settings = new SettingsManager(jobCwd, "full").get();
-    const llm = resolveLLMConfigForTag(settings, "text", (settings as { defaults?: { text?: string } }).defaults?.text);
+    const llm = resolveLLMConfigForTag(
+      settings,
+      "text",
+      (settings as { defaults?: { text?: string } }).defaults?.text,
+    );
     if (!llm) throw new Error("自动化任务:没有可用的文本模型连接。");
 
     // This runner is ONLY the isolated-automation path (a fresh headless session
@@ -145,6 +156,7 @@ export function buildDesktopAutomationRunner(
       appendAutomationMemory(req.job.id, summary),
     );
     engine.registerCustomTool(memoryTool.definition, memoryTool.execute);
+    const clientMessageId = `automation:${req.job.id}:${stablePromptHash(req.job.prompt)}`;
 
     // Key emitted events by the REAL engine sessionId (carried on the first
     // `session_started` event) so renderer routing/reconnect matches interactive
@@ -162,14 +174,26 @@ export function buildDesktopAutomationRunner(
               if (firstBind && onSession) {
                 const name = req.job.name?.trim() || req.job.id;
                 const date = new Date().toLocaleDateString();
-                onSession({ sessionId: sid, cwd: jobCwd, title: `${name} ${date}`, prompt: req.job.prompt, cronJobId: req.job.id });
+                onSession({
+                  sessionId: sid,
+                  cwd: jobCwd,
+                  title: `${name} ${date}`,
+                  prompt: req.job.prompt,
+                  cronJobId: req.job.id,
+                  clientMessageId,
+                });
               }
             }
             emit?.(sid ?? req.job.id, e);
           }
         : undefined;
     try {
-      const result = await engine.run(req.prompt, { cwd: jobCwd, onStream, signal: req.signal });
+      const result = await engine.run(req.prompt, {
+        cwd: jobCwd,
+        onStream,
+        signal: req.signal,
+        clientMessageId,
+      });
       return { text: result.text, reason: result.reason };
     } catch (err) {
       // engine.run normally emits its own terminal turn_complete/error, which

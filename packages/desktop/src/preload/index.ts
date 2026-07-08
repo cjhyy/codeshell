@@ -103,10 +103,17 @@ const automationSessionListeners: Array<
     title: string;
     prompt: string;
     cronJobId: string;
+    clientMessageId?: string;
   }) => void
 > = [];
 const mobileSessionListeners: Array<
-  (meta: { sessionId: string; cwd: string; title: string; prompt: string }) => void
+  (meta: {
+    sessionId: string;
+    cwd: string;
+    title: string;
+    prompt: string;
+    clientMessageId?: string;
+  }) => void
 > = [];
 
 // Browser automation may need to OPEN the panel before it can drive it (the
@@ -155,16 +162,24 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
     const title = (params?.title as string | undefined) ?? "";
     const prompt = (params?.prompt as string | undefined) ?? "";
     const cronJobId = (params?.cronJobId as string | undefined) ?? "";
+    const clientMessageId =
+      typeof params?.clientMessageId === "string" ? params.clientMessageId : undefined;
     if (sessionId) {
-      automationSessionListeners.forEach((cb) => cb({ sessionId, cwd, title, prompt, cronJobId }));
+      automationSessionListeners.forEach((cb) =>
+        cb({ sessionId, cwd, title, prompt, cronJobId, clientMessageId }),
+      );
     }
   } else if (method === "agent/mobileSession") {
     const sessionId = (params?.sessionId as string | undefined) ?? "";
     const cwd = (params?.cwd as string | undefined) ?? "";
     const title = (params?.title as string | undefined) ?? "";
     const prompt = (params?.prompt as string | undefined) ?? "";
+    const clientMessageId =
+      typeof params?.clientMessageId === "string" ? params.clientMessageId : undefined;
     if (sessionId) {
-      mobileSessionListeners.forEach((cb) => cb({ sessionId, cwd, title, prompt }));
+      mobileSessionListeners.forEach((cb) =>
+        cb({ sessionId, cwd, title, prompt, clientMessageId }),
+      );
     }
   } else if (method === "agent/approvalRequest") {
     // `{ sessionId, requestId, request }` envelope. requestId lets the
@@ -457,6 +472,7 @@ contextBridge.exposeInMainWorld("codeshell", {
       title: string;
       prompt: string;
       cronJobId: string;
+      clientMessageId?: string;
     }) => void,
   ): (() => void) => {
     automationSessionListeners.push(cb);
@@ -466,7 +482,13 @@ contextBridge.exposeInMainWorld("codeshell", {
     };
   },
   onMobileSession: (
-    cb: (meta: { sessionId: string; cwd: string; title: string; prompt: string }) => void,
+    cb: (meta: {
+      sessionId: string;
+      cwd: string;
+      title: string;
+      prompt: string;
+      clientMessageId?: string;
+    }) => void,
   ): (() => void) => {
     mobileSessionListeners.push(cb);
     return () => {

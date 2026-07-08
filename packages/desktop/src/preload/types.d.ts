@@ -561,6 +561,7 @@ export interface CodeshellApi {
       title: string;
       prompt: string;
       cronJobId: string;
+      clientMessageId?: string;
     }) => void,
   ): Unsubscribe;
   /**
@@ -569,7 +570,13 @@ export interface CodeshellApi {
    * correct project before stream events arrive.
    */
   onMobileSession(
-    cb: (meta: { sessionId: string; cwd: string; title: string; prompt: string }) => void,
+    cb: (meta: {
+      sessionId: string;
+      cwd: string;
+      title: string;
+      prompt: string;
+      clientMessageId?: string;
+    }) => void,
   ): Unsubscribe;
   onApprovalRequest(cb: (env: ApprovalRequestEnvelope) => void): Unsubscribe;
   onApprovalResolved(cb: (env: ApprovalResolvedEnvelope) => void): Unsubscribe;
