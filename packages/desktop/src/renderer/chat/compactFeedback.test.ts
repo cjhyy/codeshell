@@ -21,10 +21,10 @@ describe("compact feedback", () => {
 
     expect(compactWasNoop(result)).toBe(true);
     expect(compactOutcomeMessage(result, t("zh"), "en-US")).toBe(
-      "上下文已是最简,无需压缩(当前约 40,000 tokens)。",
+      "上下文已是最简，无需压缩（当前约 40,000 tokens）。",
     );
     expect(compactOutcomeMessage(result, t("en"), "en-US")).toBe(
-      "Context already minimal - nothing to compact (about 40,000 tokens).",
+      "Context is already minimal; nothing to compact (about 40,000 tokens).",
     );
   });
 
@@ -34,10 +34,10 @@ describe("compact feedback", () => {
     expect(compactWasNoop(result)).toBe(false);
     expect(compactReductionPercent(result.before, result.after)).toBe(64);
     expect(compactBoundaryDetail(result, t("zh"), "en-US")).toBe(
-      "128,000 → 46,000 tokens(省 64%),策略:摘要",
+      "128,000 → 46,000 tokens · 省 64% · 摘要",
     );
     expect(compactBoundaryDetail(result, t("en"), "en-US")).toBe(
-      "128,000 → 46,000 tokens (saved 64%), strategy: summary",
+      "128,000 → 46,000 tokens · saved 64% · summary",
     );
   });
 

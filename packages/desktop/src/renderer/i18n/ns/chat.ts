@@ -40,10 +40,10 @@ export const chat = {
         running: "当前会话正在运行,请先停止或等这一轮结束后再压缩。",
         inProgress: "上下文正在压缩，请稍候。",
         noSession: "当前还没有可压缩的会话。",
-        done: "已压缩:{before} → {after} tokens(省 {percent}%),策略:{strategy}。",
-        unchanged: "上下文已是最简,无需压缩(当前约 {tokens} tokens)。",
+        done: "已压缩：{before} → {after} tokens（省 {percent}%）· 策略：{strategy}",
+        unchanged: "上下文已是最简，无需压缩（当前约 {tokens} tokens）。",
         boundaryTitle: "上下文已压缩",
-        boundaryDetail: "{before} → {after} tokens(省 {percent}%),策略:{strategy}",
+        boundaryDetail: "{before} → {after} tokens · 省 {percent}% · {strategy}",
         strategy: {
           compacted: "综合压缩",
           summary: "摘要",
@@ -52,7 +52,7 @@ export const chat = {
           micro: "轻量清理",
           emergency: "紧急窗口",
         },
-        failed: "压缩失败:{error}",
+        failed: "压缩失败：{error}",
       },
       slash: {
         ariaLabel: "命令列表",
@@ -243,10 +243,11 @@ export const chat = {
           "This conversation is running. Stop or wait for this turn to finish before compacting.",
         inProgress: "Context compaction is already in progress.",
         noSession: "There is no active conversation to compact yet.",
-        done: "Context compacted: {before} → {after} tokens (saved {percent}%), strategy: {strategy}.",
-        unchanged: "Context already minimal - nothing to compact (about {tokens} tokens).",
+        done:
+          "Context compacted: {before} → {after} tokens · saved {percent}% · strategy: {strategy}.",
+        unchanged: "Context is already minimal; nothing to compact (about {tokens} tokens).",
         boundaryTitle: "Context compacted",
-        boundaryDetail: "{before} → {after} tokens (saved {percent}%), strategy: {strategy}",
+        boundaryDetail: "{before} → {after} tokens · saved {percent}% · {strategy}",
         strategy: {
           compacted: "general compaction",
           summary: "summary",
