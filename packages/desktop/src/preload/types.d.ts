@@ -281,14 +281,17 @@ export interface SessionWorkspaceWorktreeInfo {
   branch: string;
   head: string;
   isMain?: boolean;
-  diff?: {
-    baseRef?: string;
-    changedFiles: number;
-    aheadCommits: number;
-    hasUncommittedChanges: boolean;
-  };
+  isManaged?: boolean;
+  diff?: WorktreeDiffSummary;
   occupiedBySessionIds?: string[];
   occupiedByOtherSession?: boolean;
+}
+
+export interface WorktreeDiffSummary {
+  baseRef?: string;
+  changedFiles: number;
+  aheadCommits: number;
+  hasUncommittedChanges: boolean;
 }
 
 export interface SessionWorkspaceList {
@@ -296,6 +299,11 @@ export interface SessionWorkspaceList {
   mainRoot: string;
   worktrees: SessionWorkspaceWorktreeInfo[];
 }
+
+export type WorkspaceReleaseResult =
+  | { sessionId: string; ok: true; status: "released"; workspace: SessionWorkspace }
+  | { sessionId: string; ok: true; status: "missing"; reason: string }
+  | { sessionId: string; ok: false; status: "error"; error: string };
 
 export interface CreatedWorktree {
   path: string;
@@ -353,9 +361,7 @@ export interface MaskedCredentialView extends Omit<CredentialView, "secret"> {
   secretHint?: string;
 }
 
-export type MarketplaceSource =
-  | { source: "github"; repo: string }
-  | { source: "git"; url: string };
+export type MarketplaceSource = { source: "github"; repo: string } | { source: "git"; url: string };
 
 export type MarketplaceFormat = "claude-code" | "codex" | "universal";
 
@@ -424,7 +430,12 @@ export interface CodeshellApi {
    *  step (不打断, for 引导). `id` is a stable handle echoed back on the
    *  steer_injected event and used to revoke via unsteer. Waits for the next
    *  run if none is active. */
-  steer(sessionId: string, text: string, id?: string, clientMessageId?: string): Promise<RpcResponse>;
+  steer(
+    sessionId: string,
+    text: string,
+    id?: string,
+    clientMessageId?: string,
+  ): Promise<RpcResponse>;
   /** Revoke a still-pending steer entry by id (撤回). The response data carries
    *  `{ removed }` — false if the loop already consumed it. */
   unsteer(sessionId: string, id: string): Promise<RpcResponse>;
@@ -434,10 +445,20 @@ export interface CodeshellApi {
    */
   goalExtend(
     sessionId: string,
-    opts: { addTurns?: number; addTokenBudget?: number; addTimeBudgetMs?: number; addStopBlocks?: number },
+    opts: {
+      addTurns?: number;
+      addTokenBudget?: number;
+      addTimeBudgetMs?: number;
+      addStopBlocks?: number;
+    },
   ): Promise<{
     ok: boolean;
-    limits: { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number; maxStopBlocks: number };
+    limits: {
+      maxTurns: number;
+      tokenBudget?: number;
+      timeBudgetMs?: number;
+      maxStopBlocks: number;
+    };
   }>;
   /** Clear a session's persisted active goal (CC /goal clear). */
   goalClear(sessionId: string): Promise<{ ok: boolean; cleared: boolean }>;
@@ -512,7 +533,13 @@ export interface CodeshellApi {
    * correct project sidebar group (stream events carry no cwd).
    */
   onAutomationSession(
-    cb: (meta: { sessionId: string; cwd: string; title: string; prompt: string; cronJobId: string }) => void,
+    cb: (meta: {
+      sessionId: string;
+      cwd: string;
+      title: string;
+      prompt: string;
+      cronJobId: string;
+    }) => void,
   ): Unsubscribe;
   /**
    * Mobile remote session announcement. Fires when a paired phone starts a
@@ -553,11 +580,17 @@ export interface CodeshellApi {
   listWorktrees(cwd: string): Promise<WorktreeInfo[]>;
   getSessionWorkspace(sessionId: string, cwd: string): Promise<SessionWorkspace>;
   listSessionWorktrees(sessionId: string, cwd: string): Promise<SessionWorkspaceList>;
+  getSessionWorktreeDiff(sessionId: string, worktreePath: string): Promise<WorktreeDiffSummary>;
   switchSessionWorkspace(
     sessionId: string,
     cwd: string,
     target: string,
   ): Promise<SessionWorkspaceList>;
+  releaseSessionWorkspace(sessionId: string): Promise<WorkspaceReleaseResult>;
+  releaseManySessionWorkspaces(sessionIds: string[]): Promise<WorkspaceReleaseResult[]>;
+  onWorkspaceChanged(
+    cb: (event: { sessionId: string; workspace?: SessionWorkspace; mainRoot?: string }) => void,
+  ): Unsubscribe;
   cleanupSessionWorktree(
     sessionId: string,
     cwd: string,
@@ -653,11 +686,7 @@ export interface CodeshellApi {
     /** 切换账号:把某 cookie 凭证导回浏览器覆盖当前登录态。 */
     restoreCookieToBrowser(cwd: string, id: string, bucket?: string): Promise<{ count: number }>;
     /** 独立窗口登录抓 cookie(登 Google/YouTube 用)。fullCapture=全量模式。 */
-    loginCapture(req: {
-      url: string;
-      platform?: string;
-      fullCapture?: boolean;
-    }): Promise<
+    loginCapture(req: { url: string; platform?: string; fullCapture?: boolean }): Promise<
       | {
           ok: true;
           jar: unknown[];
@@ -727,10 +756,7 @@ export interface CodeshellApi {
    * dialog. Used by the Lightbox / attachment "download" action. Returns the
    * saved absolute path, or null if the user cancelled.
    */
-  saveImage(
-    src: string,
-    opts?: { name?: string; mime?: string },
-  ): Promise<string | null>;
+  saveImage(src: string, opts?: { name?: string; mime?: string }): Promise<string | null>;
   /**
    * Revert working-tree edits to the given relative paths. Tracked
    * files are restored from HEAD; untracked files are deleted from
@@ -752,11 +778,7 @@ export interface CodeshellApi {
    * level="user" returns entries from ~/.code-shell/memory/<scope>;
    * level="project" scopes under the given cwd's project memory dir.
    */
-  listMemory(
-    level: MemoryLevel,
-    scope: MemoryScope,
-    cwd?: string,
-  ): Promise<RendererMemoryEntry[]>;
+  listMemory(level: MemoryLevel, scope: MemoryScope, cwd?: string): Promise<RendererMemoryEntry[]>;
   /** Read one memory entry's full content. Returns null if not found. */
   readMemory(
     level: MemoryLevel,
@@ -793,10 +815,7 @@ export interface CodeshellApi {
    * promise resolves when consolidation finishes. `summary` is the LLM's
    * one-paragraph description of what it changed.
    */
-  runDream(
-    level: MemoryLevel,
-    cwd?: string,
-  ): Promise<{ ran: boolean; summary: string }>;
+  runDream(level: MemoryLevel, cwd?: string): Promise<{ ran: boolean; summary: string }>;
 
   // Phase 5 — settings / sessions / logs.
   /**
@@ -807,7 +826,11 @@ export interface CodeshellApi {
    */
   noRepoCwd(): Promise<string>;
   getSettings(scope: "user" | "project", cwd?: string): Promise<Record<string, unknown> | null>;
-  updateSettings(scope: "user" | "project", patch: Record<string, unknown>, cwd?: string): Promise<void>;
+  updateSettings(
+    scope: "user" | "project",
+    patch: Record<string, unknown>,
+    cwd?: string,
+  ): Promise<void>;
   listSessions(): Promise<DesktopSessionSummary[]>;
   deleteSession(id: string): Promise<void>;
   listSessionTitles(): Promise<Record<string, string>>;
@@ -817,7 +840,14 @@ export interface CodeshellApi {
   getRun(runId: string): Promise<RunDetail | null>;
   getSessionTranscript(sessionId: string): Promise<FoldItem[]>;
   listDiskSessions(opts?: { limit?: number; cursor?: string }): Promise<{
-    sessions: Array<{ id: string; engineSessionId: string; cwd: string; title: string; updatedAt: number; origin: "desktop" | "automation" }>;
+    sessions: Array<{
+      id: string;
+      engineSessionId: string;
+      cwd: string;
+      title: string;
+      updatedAt: number;
+      origin: "desktop" | "automation";
+    }>;
     nextCursor: string | null;
   }>;
   subscribeSession(sessionId: string, sinceSeq?: number): Promise<SessionSnapshot>;
@@ -858,11 +888,7 @@ export interface CodeshellApi {
    * Write a project tri-state override (继承/开/关). "inherit" deletes the
    * override key so the capability falls back to the global baseline.
    */
-  setCapabilityOverride(
-    cwd: string,
-    id: string,
-    state: "inherit" | "on" | "off",
-  ): Promise<void>;
+  setCapabilityOverride(cwd: string, id: string, state: "inherit" | "on" | "off"): Promise<void>;
   /** Force context compaction for a live engine session. */
   compactSession(
     sessionId: string,
@@ -960,7 +986,9 @@ export interface CodeshellApi {
     marketplaceName: string,
   ): Promise<{ ok: boolean; job?: PluginInstallJob; error?: string }>;
   /** Retry a failed marketplace plugin install job. */
-  retryPluginInstallJob(id: string): Promise<{ ok: boolean; job?: PluginInstallJob; error?: string }>;
+  retryPluginInstallJob(
+    id: string,
+  ): Promise<{ ok: boolean; job?: PluginInstallJob; error?: string }>;
   /** Open a native picker for a local plugin source (a directory or a .zip). */
   pickPluginSource(
     kind: "dir" | "zip",
@@ -971,9 +999,11 @@ export interface CodeshellApi {
    * carrying the AUTHORITATIVE plugin name (from the manifest) — the UI confirms
    * an overwrite and retries with `overwrite: true`.
    */
-  installLocalPlugin(
-    input: { kind: "dir" | "zip"; path: string; overwrite?: boolean },
-  ): Promise<
+  installLocalPlugin(input: {
+    kind: "dir" | "zip";
+    path: string;
+    overwrite?: boolean;
+  }): Promise<
     | { ok: true; name: string }
     | { ok: false; alreadyInstalled: true; name: string }
     | { ok: false; error?: string }
@@ -1014,36 +1044,46 @@ export interface CodeshellApi {
   deleteAgent(name: string, opts?: { scope?: "user" | "project"; cwd?: string }): Promise<void>;
   inspectGithubSkill(url: string, existingNames?: string[]): Promise<GithubRepoInspection>;
   installFromGithub(input: GithubSkillInstallInput): Promise<InstalledSkill>;
-  probeMcpServers(
-    configs: McpServerProbeInput[],
-    force?: boolean,
-  ): Promise<McpProbeResult[]>;
+  probeMcpServers(configs: McpServerProbeInput[], force?: boolean): Promise<McpProbeResult[]>;
   listMergedMcpServers(
     base: Record<string, unknown>,
     disabledPlugins?: string[],
     /** When set, main folds project capabilityOverrides for THIS cwd over the
      *  global list — pluginDisabled then reflects the effective state. */
     cwd?: string,
-  ): Promise<Record<string, McpServerProbeInput & { source?: "settings" | "plugin"; editable?: boolean }>>;
+  ): Promise<
+    Record<string, McpServerProbeInput & { source?: "settings" | "plugin"; editable?: boolean }>
+  >;
   /** Read-only list of plugin-provided hooks (for the settings 钩子 page). */
   listPluginHooks(disabledPlugins?: string[]): Promise<PluginHookEntry[]>;
   invalidateMcpProbeCache(name?: string): Promise<void>;
   probeSearch(input: SearchProbeInput): Promise<SearchProbeResult>;
   probeImage(input: ImageProbeInput): Promise<ImageProbeResult>;
   getModelCatalog(): Promise<CatalogEntry[]>;
-  saveCatalogEntry: (entry: unknown) => Promise<{ ok: boolean; action?: "added" | "updated"; error?: string; backup?: string }>;
-  deleteCatalogEntry: (id: string) => Promise<{ ok: boolean; removed: boolean; error?: string; backup?: string }>;
+  saveCatalogEntry: (
+    entry: unknown,
+  ) => Promise<{ ok: boolean; action?: "added" | "updated"; error?: string; backup?: string }>;
+  deleteCatalogEntry: (
+    id: string,
+  ) => Promise<{ ok: boolean; removed: boolean; error?: string; backup?: string }>;
   getCatalogOrigins: () => Promise<Record<string, "builtin" | "user" | "user-override-of-builtin">>;
   resolveModelMeta(
-    models: Array<{ key: string; model?: string; providerKey?: string; maxContextTokens?: number | null }>,
+    models: Array<{
+      key: string;
+      model?: string;
+      providerKey?: string;
+      maxContextTokens?: number | null;
+    }>,
     providers: Array<{ key?: string; kind?: string; baseUrl?: string; apiKey?: string }>,
-  ): Promise<Array<{
-    key: string;
-    maxContextTokens: number;
-    maxCompletionTokens?: number;
-    source: "settings" | "openrouter-api" | "hardcoded" | "fallback";
-    supportsVision: boolean;
-  }>>;
+  ): Promise<
+    Array<{
+      key: string;
+      maxContextTokens: number;
+      maxCompletionTokens?: number;
+      source: "settings" | "openrouter-api" | "hardcoded" | "fallback";
+      supportsVision: boolean;
+    }>
+  >;
   /**
    * Describe which reasoning/thinking control a (provider kind, model) pair
    * should render. Pure core lookup (reasoningControlFor) bridged via main —
@@ -1085,7 +1125,9 @@ export interface CodeshellApi {
     remove(projectPath: string): Promise<void>;
     setPinned(projectPath: string, pinned: boolean): Promise<void>;
     onChanged(
-      cb: (projects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>) => void,
+      cb: (
+        projects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>,
+      ) => void,
     ): () => void;
   };
   notify(opts: { title: string; body?: string; subtitle?: string }): Promise<void>;
@@ -1108,9 +1150,7 @@ export interface CodeshellApi {
    * a one-time pairing URL. No public relay (see mobile-remote design spec).
    */
   mobileRemote: {
-    start(opts?: {
-      mode?: "lan" | "tunnel";
-    }): Promise<{
+    start(opts?: { mode?: "lan" | "tunnel" }): Promise<{
       url: string;
       pairingUrl: string;
       expiresAt: number;
@@ -1126,7 +1166,13 @@ export interface CodeshellApi {
       tunnelConnected?: boolean;
     }>;
     listDevices(): Promise<
-      Array<{ id: string; name: string; createdAt: number; lastSeenAt?: number; revokedAt?: number }>
+      Array<{
+        id: string;
+        name: string;
+        createdAt: number;
+        lastSeenAt?: number;
+        revokedAt?: number;
+      }>
     >;
     revokeDevice(id: string): Promise<boolean>;
     removeDevice(id: string): Promise<boolean>;
@@ -1140,9 +1186,7 @@ export interface CodeshellApi {
     passcodeStatus(): Promise<{ isSet: boolean }>;
     setPasscode(passcode: string): Promise<boolean>;
     tunnelStatus(): Promise<{ running: boolean; connected: boolean }>;
-    onTunnelStatus(
-      cb: (s: { status: string; detail?: unknown }) => void,
-    ): Unsubscribe;
+    onTunnelStatus(cb: (s: { status: string; detail?: unknown }) => void): Unsubscribe;
     updateProjects(projects: MobileProjectMeta[]): Promise<boolean>;
     updatePermissionModes(entries: MobilePermissionModeSnapshotEntry[]): Promise<boolean>;
     notifyApprovalResolved(input: ApprovalResolvedEnvelope): Promise<boolean>;
@@ -1178,7 +1222,10 @@ export interface CodeshellApi {
     codexProbe(force?: boolean): Promise<CCAvailability>;
     /** Bounded by default (recent 2 weeks AND ≤20); pass all=true to fetch every
      *  session (the "load more" path). `total` is the full unbounded count. */
-    listSessions(cwd: string, all?: boolean): Promise<{ sessions: DiscoveredSession[]; total: number }>;
+    listSessions(
+      cwd: string,
+      all?: boolean,
+    ): Promise<{ sessions: DiscoveredSession[]; total: number }>;
     listCodexSessions(
       cwd: string,
       all?: boolean,
@@ -1197,7 +1244,11 @@ export interface CodeshellApi {
       sessionId: string,
       limit: number,
     ): Promise<{
-      messages: { role: "user" | "assistant"; text: string; tools?: { name: string; summary: string; args?: Record<string, unknown> }[] }[];
+      messages: {
+        role: "user" | "assistant";
+        text: string;
+        tools?: { name: string; summary: string; args?: Record<string, unknown> }[];
+      }[];
       hasMore: boolean;
       totalCount: number;
     }>;
@@ -1206,7 +1257,11 @@ export interface CodeshellApi {
       threadId: string,
       limit: number,
     ): Promise<{
-      messages: { role: "user" | "assistant"; text: string; tools?: { name: string; summary: string; args?: Record<string, unknown> }[] }[];
+      messages: {
+        role: "user" | "assistant";
+        text: string;
+        tools?: { name: string; summary: string; args?: Record<string, unknown> }[];
+      }[];
       hasMore: boolean;
       totalCount: number;
     }>;
@@ -1275,7 +1330,13 @@ export type UpdaterStatus =
   | { kind: "idle" }
   | { kind: "checking" }
   | { kind: "available"; version: string }
-  | { kind: "manual-required"; version: string; url: string; message: string; reason: "mac-signature" | "mac-readonly-volume" }
+  | {
+      kind: "manual-required";
+      version: string;
+      url: string;
+      message: string;
+      reason: "mac-signature" | "mac-readonly-volume";
+    }
   | { kind: "not-available"; version: string }
   | { kind: "downloading"; percent: number; transferred: number; total: number }
   | { kind: "downloaded"; version: string }
@@ -1561,7 +1622,12 @@ export interface RunDetail extends RunSummary {
   latestApprovalId: string | null;
   tags: string[];
   metadata: Record<string, unknown>;
-  events: Array<{ eventId: string; type: string; timestamp: number; data: Record<string, unknown> }>;
+  events: Array<{
+    eventId: string;
+    type: string;
+    timestamp: number;
+    data: Record<string, unknown>;
+  }>;
   checkpoints: Array<{
     checkpointId: string;
     createdAt: number;

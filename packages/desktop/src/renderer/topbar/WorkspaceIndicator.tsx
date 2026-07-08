@@ -58,11 +58,15 @@ export function formatWorkspaceDiffSummary(
   diff: SessionWorkspaceWorktreeInfo["diff"] | undefined,
   t: TFunction,
 ): string {
-  if (!diff) return t("topbar.workspace.diffUnknown");
+  if (!diff) return t("topbar.workspace.diffChecking");
   return t("topbar.workspace.diffSummary", {
     files: diff.changedFiles,
     commits: diff.aheadCommits,
   });
+}
+
+export function workspaceIsExternal(row: SessionWorkspaceWorktreeInfo): boolean {
+  return !row.isMain && (row.isManaged === false || !row.branch);
 }
 
 export function workspaceRowDisabledReason(
@@ -75,19 +79,34 @@ export function workspaceRowDisabledReason(
   return null;
 }
 
-export function workspaceCleanupDisabledReason(row: SessionWorkspaceWorktreeInfo): string | null {
+export function workspaceCleanupDisabledReason(
+  row: SessionWorkspaceWorktreeInfo,
+  t?: TFunction,
+): string | null {
+  if (workspaceIsExternal(row)) {
+    return (
+      t?.("topbar.workspace.externalCleanupDisabled") ??
+      "This worktree is not managed by CodeShell. Clean it up manually."
+    );
+  }
   if (row.occupiedByOtherSession) {
-    return "This worktree is owned by another session. Cleanup is disabled.";
+    return (
+      t?.("topbar.workspace.occupiedCleanupDisabled") ??
+      "This worktree is owned by another session. Cleanup is disabled."
+    );
   }
   return null;
 }
 
-export function workspaceCleanupActionState(row: SessionWorkspaceWorktreeInfo): {
+export function workspaceCleanupActionState(
+  row: SessionWorkspaceWorktreeInfo,
+  t?: TFunction,
+): {
   reason: string | null;
   detachDisabled: boolean;
   discardDisabled: boolean;
 } {
-  const reason = workspaceCleanupDisabledReason(row);
+  const reason = workspaceCleanupDisabledReason(row, t);
   return {
     reason,
     detachDisabled: row.diff?.hasUncommittedChanges === true || reason !== null,
@@ -115,6 +134,14 @@ export function WorkspaceIndicator({
   const [confirm, setConfirm] = useState<CleanupConfirm | null>(null);
   const currentRequestId = useRef(0);
   const listRequestId = useRef(0);
+  const diffRequestId = useRef(0);
+  const targetKey = `${sessionId ?? ""}\0${repoPath ?? ""}`;
+  const targetKeyRef = useRef(targetKey);
+  if (targetKeyRef.current !== targetKey) {
+    targetKeyRef.current = targetKey;
+    listRequestId.current += 1;
+    diffRequestId.current += 1;
+  }
 
   const canLoad = Boolean(sessionId && repoPath);
   const isLoading = currentLoading || listLoading;
@@ -152,8 +179,49 @@ export function WorkspaceIndicator({
     }
   }, [repoPath, sessionId]);
 
+  const hydrateDiffs = useCallback(
+    (next: SessionWorkspaceList) => {
+      const getDiff = window.codeshell.getSessionWorktreeDiff;
+      if (typeof getDiff !== "function" || !sessionId) return;
+      const requestId = ++diffRequestId.current;
+      const requestTargetKey = targetKeyRef.current;
+      for (const row of next.worktrees) {
+        void getDiff(sessionId, row.path)
+          .then((diff) => {
+            if (diffRequestId.current !== requestId) return;
+            if (targetKeyRef.current !== requestTargetKey) return;
+            setList((current) => {
+              if (!current || current.mainRoot !== next.mainRoot) return current;
+              let changed = false;
+              const worktrees = current.worktrees.map((existing) => {
+                if (existing.path !== row.path) return existing;
+                changed = true;
+                return { ...existing, diff };
+              });
+              return changed ? { ...current, worktrees } : current;
+            });
+          })
+          .catch(() => {
+            // Per-row diff is best-effort. Stale/cancelled requests are ignored
+            // by the requestId guard; real failures leave the row in checking.
+          });
+      }
+    },
+    [sessionId],
+  );
+
+  const applyWorkspaceList = useCallback(
+    (next: SessionWorkspaceList) => {
+      setList(next);
+      setWorkspace(next.current);
+      hydrateDiffs(next);
+    },
+    [hydrateDiffs],
+  );
+
   const refreshList = useCallback(async () => {
     const requestId = ++listRequestId.current;
+    const requestTargetKey = targetKeyRef.current;
     if (!sessionId || !repoPath) {
       setList(null);
       setListLoading(false);
@@ -163,26 +231,48 @@ export function WorkspaceIndicator({
     try {
       const next = await window.codeshell.listSessionWorktrees(sessionId, repoPath);
       if (listRequestId.current !== requestId) return;
-      setList(next);
-      setWorkspace(next.current);
+      if (targetKeyRef.current !== requestTargetKey) return;
+      applyWorkspaceList(next);
     } catch (error) {
       if (listRequestId.current !== requestId) return;
+      if (targetKeyRef.current !== requestTargetKey) return;
       reportError(error);
     } finally {
       if (listRequestId.current === requestId) setListLoading(false);
     }
-  }, [repoPath, reportError, sessionId]);
+  }, [applyWorkspaceList, repoPath, reportError, sessionId]);
 
   useEffect(() => {
     return () => {
       currentRequestId.current += 1;
       listRequestId.current += 1;
+      diffRequestId.current += 1;
     };
   }, []);
 
   useEffect(() => {
+    listRequestId.current += 1;
+    diffRequestId.current += 1;
+    setList(null);
+    setListLoading(false);
+    setBusyAction(null);
+    setConfirm(null);
+    if (open) void refreshList();
+  }, [targetKey]);
+
+  useEffect(() => {
     void refreshCurrent();
   }, [refreshCurrent, sessionBusy]);
+
+  useEffect(() => {
+    const subscribe = window.codeshell.onWorkspaceChanged;
+    if (typeof subscribe !== "function" || !sessionId) return;
+    return subscribe((event) => {
+      if (event.sessionId !== sessionId) return;
+      void refreshCurrent();
+      if (open) void refreshList();
+    });
+  }, [open, refreshCurrent, refreshList, sessionId]);
 
   const onOpenChange = (next: boolean) => {
     setOpen(next);
@@ -194,8 +284,7 @@ export function WorkspaceIndicator({
     setBusyAction(target);
     try {
       const next = await window.codeshell.switchSessionWorkspace(sessionId, repoPath, target);
-      setList(next);
-      setWorkspace(next.current);
+      applyWorkspaceList(next);
       setOpen(false);
       return true;
     } catch (error) {
@@ -226,8 +315,7 @@ export function WorkspaceIndicator({
         row.path,
         action,
       );
-      setList(next);
-      setWorkspace(next.current);
+      applyWorkspaceList(next);
       setConfirm(null);
     } catch (error) {
       reportError(error);
@@ -376,9 +464,12 @@ export function WorkspaceRow({
 }) {
   const { t } = useT();
   const disabledReason = workspaceRowDisabledReason(row, current, t);
-  const cleanupState = workspaceCleanupActionState(row);
+  const cleanupState = workspaceCleanupActionState(row, t);
   const cleanupDisabledReason = cleanupState.reason;
   const dirty = row.diff?.hasUncommittedChanges === true;
+  const changedFiles = row.diff?.changedFiles ?? 0;
+  const aheadCommits = row.diff?.aheadCommits ?? 0;
+  const external = workspaceIsExternal(row);
   const rowLabel = row.isMain
     ? t("topbar.workspace.main")
     : row.branch || t("topbar.workspace.detached");
@@ -428,9 +519,24 @@ export function WorkspaceRow({
               {t("topbar.workspace.occupied")}
             </span>
           )}
+          {external && (
+            <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              {t("topbar.workspace.external")}
+            </span>
+          )}
           {dirty && (
             <span className="shrink-0 rounded-sm bg-status-running/10 px-1.5 py-0.5 text-[10px] font-medium text-status-running">
               {t("topbar.workspace.dirty")}
+            </span>
+          )}
+          {row.diff && changedFiles > 0 && (
+            <span className="shrink-0 rounded-sm bg-accent px-1.5 py-0.5 text-[10px] font-medium text-accent-foreground">
+              {t("topbar.workspace.changedFilesBadge", { files: changedFiles })}
+            </span>
+          )}
+          {row.diff && aheadCommits > 0 && (
+            <span className="shrink-0 rounded-sm bg-accent px-1.5 py-0.5 text-[10px] font-medium text-accent-foreground">
+              {t("topbar.workspace.aheadBadge", { commits: aheadCommits })}
             </span>
           )}
         </span>

@@ -30,7 +30,7 @@ function makeService(cwd: string): CapabilityService {
   const settings = new SettingsManager(cwd, "full");
   const preset = (settings.get() as { agent?: { preset?: string } }).agent?.preset;
   const registry = new ToolRegistry({
-    builtinTools: resolveBuiltinToolNames({ preset }),
+    builtinTools: resolveBuiltinToolNames({ preset, host: "desktop" }),
   });
   return new CapabilityService({
     registry,
@@ -43,6 +43,7 @@ function makeService(cwd: string): CapabilityService {
     scanAgents: (c: string) => loadAgentDefinitionsForCwd(c, [], []).list(),
     readInstalledPlugins,
     resolveBuiltinToolNames,
+    builtinToolHost: "desktop",
   });
 }
 

@@ -6,11 +6,8 @@ import type {
   ClientDefaults,
   Message,
   LLMConfig,
-  Settings,
-  SessionOrigin,
   StreamCallback,
   TaskInfo,
-  TerminalReason,
   TokenUsage,
 } from "../types.js";
 import { createLLMClient } from "../llm/client-factory.js";
@@ -44,7 +41,6 @@ import { backgroundShellManager } from "../runtime/background-shell.js";
 import {
   notificationQueue,
   buildNotificationMessage,
-  type NotificationItem,
 } from "../tool-system/builtin/agent-notifications.js";
 import {
   PermissionClassifier,
@@ -79,16 +75,14 @@ import {
 import { PLAN_MODE_ALLOWED_TOOLS } from "../tool-system/plan-mode-allowlist.js";
 import { PromptComposer } from "../prompt/composer.js";
 import { SessionManager, type SessionBundle } from "../session/session-manager.js";
-import { Transcript } from "../session/transcript.js";
 import { ModelFacade } from "./model-facade.js";
-import type { CostStateStore } from "./cost-store.js";
 import { logger, runWithSid, getCurrentSid } from "../logging/logger.js";
 import { recordSessionStart, recordSessionEnd } from "../logging/session-recorder.js";
 import { sanitizeContent, sanitizeTaskString } from "../logging/sanitize-messages.js";
-import { TurnLoop, type TurnLoopConfig } from "./turn-loop.js";
+import { TurnLoop } from "./turn-loop.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
-import { SettingsManager, userHome, noRepoDir, type SettingsScope } from "../settings/manager.js";
+import { SettingsManager, userHome } from "../settings/manager.js";
 import { CredentialStore } from "../credentials/store.js";
 import type { CapabilityOverride, CapabilityOverrides } from "../settings/schema.js";
 import {
@@ -97,35 +91,23 @@ import {
   type FeatureFlagName,
   type FeatureFlagOverrides,
 } from "../settings/feature-flags.js";
-import {
-  effectiveDisabledList,
-  effectiveBuiltinLists,
-  whitelistDisabledList,
-} from "../capability-control/overlay.js";
-import { scanSkills } from "../skills/scanner.js";
-import { readInstalledPlugins } from "../plugins/installedPlugins.js";
+import { effectiveDisabledList, effectiveBuiltinLists } from "../capability-control/overlay.js";
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
 import { FileHistory } from "../session/file-history.js";
 import { patchBackupTargets } from "../tool-system/builtin/apply-patch/backup-targets.js";
 import type { ToolContext, SubAgentSpawner } from "../tool-system/context.js";
 import {
-  defaultSandboxConfig,
   resolveSandboxBackend,
   type SandboxBackend,
   type SandboxConfig,
 } from "../tool-system/sandbox/index.js";
-import {
-  resolveAgentPreset,
-  resolveBuiltinToolNames,
-  type AgentPreset,
-  type AgentPresetName,
-} from "../preset/index.js";
+import { resolveAgentPreset, resolveBuiltinToolNames, type AgentPreset } from "../preset/index.js";
 import { ModelPool, type ModelEntry } from "../llm/model-pool.js";
 import { AgentDefinitionRegistry } from "../agent/agent-definition-registry.js";
 import { defaultCacheDir } from "../llm/model-cache.js";
 import { detectProviderFromApiKey, buildModelPool } from "../onboarding.js";
 import { detectPastedNoise } from "../utils/task-sanitizer.js";
-import { parseTaskWithImages, ImageParseError, type ParsedTask } from "./parse-task.js";
+import { parseTaskWithImages, type ParsedTask } from "./parse-task.js";
 import {
   enforceImagePolicy,
   byteLengthFromBase64,
@@ -189,7 +171,7 @@ function sameLlmIdentity(a: LLMConfig, b: LLMConfig): boolean {
 // 3000-line implementation. Re-exported here for back-compat — existing
 // `import { EngineConfig } from ".../engine/engine.js"` keeps working.
 export type { EngineConfig, EngineHookConfig, EngineResult } from "./types.js";
-import type { EngineConfig, EngineHookConfig, EngineResult } from "./types.js";
+import type { EngineConfig, EngineResult } from "./types.js";
 
 export interface EnqueueSteerResult {
   accepted: boolean;
@@ -602,6 +584,7 @@ export class Engine {
       new ToolRegistry({
         builtinTools: resolveBuiltinToolNames({
           preset: this.preset.name,
+          host: config.builtinToolHost,
           enabledBuiltinTools: builtinLists.enabledBuiltinTools,
           disabledBuiltinTools: builtinLists.disabledBuiltinTools,
         }),
@@ -814,6 +797,13 @@ export class Engine {
     this.config.browserBridge = bridge;
   }
 
+  /** Inject the host-backed workspace bridge after construction. */
+  setWorkspaceBridge(
+    bridge: import("../tool-system/workspace-bridge.js").WorkspaceBridge | undefined,
+  ): void {
+    this.config.workspaceBridge = bridge;
+  }
+
   /**
    * Queue a user message to be spliced into the in-flight run for `sessionId`
    * at the next turn-loop step boundary — the 不打断 steering path (vs cancel +
@@ -955,7 +945,7 @@ export class Engine {
   ): Promise<EngineResult> {
     const workspaceResume =
       options?.sessionId && this.sessionManager.exists(options.sessionId)
-        ? this.sessionManager.resolveSessionWorkspaceForResume(options.sessionId)
+        ? await this.sessionManager.resolveSessionWorkspaceForResume(options.sessionId)
         : undefined;
     if (workspaceResume && !workspaceResume.ok) {
       return {
@@ -1206,6 +1196,7 @@ export class Engine {
           preset: this.preset.name,
           enabledBuiltinTools: childEnabled,
           disabledBuiltinTools: childDisabled,
+          builtinToolHost: this.config.builtinToolHost,
           customSystemPrompt: this.config.customSystemPrompt,
           appendSystemPrompt:
             [this.config.appendSystemPrompt, req.appendSystemPrompt].filter(Boolean).join("\n\n") ||
@@ -2745,7 +2736,6 @@ export class Engine {
    */
   refreshRuntimeConfig(patch: Partial<EngineConfig>, version: number): void {
     if (version <= this.lastAppliedConfigVersion) return;
-    const prevServers = this.config.mcpServers ?? {};
     const prevPresetName = this.preset.name;
     this.config = { ...this.config, ...patch };
     // #2: re-resolve the prompt-affecting preset so the next-turn PromptComposer
@@ -2756,11 +2746,17 @@ export class Engine {
       // The builtin tool SET is ctor-frozen and may be shared via runtime — we
       // do NOT rebuild it here. If the new preset implies a different builtin
       // tool set, that part of the change only lands on session restart.
-      const prevTools = resolveBuiltinToolNames({ preset: prevPresetName })
+      const prevTools = resolveBuiltinToolNames({
+        preset: prevPresetName,
+        host: this.config.builtinToolHost,
+      })
         .slice()
         .sort()
         .join(",");
-      const nextTools = resolveBuiltinToolNames({ preset: nextPreset.name })
+      const nextTools = resolveBuiltinToolNames({
+        preset: nextPreset.name,
+        host: this.config.builtinToolHost,
+      })
         .slice()
         .sort()
         .join(",");
@@ -2850,6 +2846,40 @@ export class Engine {
     return had;
   }
 
+  /**
+   * Reset a session's workspace pointer back to its main root. If the session is
+   * actively running, mutate that live SessionBundle first so the run's next
+   * saveState cannot resurrect a stale worktree pointer.
+   */
+  releaseSessionWorkspace(sessionId: string): import("../types.js").SessionWorkspace | null {
+    if (!sessionId || !this.sessionManager.exists(sessionId)) return null;
+    const mainRoot =
+      this.sessionManager.readCwd(sessionId) ??
+      (this.activeRunSession?.state.sessionId === sessionId
+        ? this.activeRunSession.state.cwd
+        : undefined);
+    if (!mainRoot) return null;
+    const workspace: import("../types.js").SessionWorkspace = { root: mainRoot, kind: "main" };
+    if (this.activeRunSession?.state.sessionId === sessionId) {
+      this.activeRunSession.state.workspace = workspace;
+    }
+    try {
+      const bundle =
+        this.activeRunSession?.state.sessionId === sessionId
+          ? this.activeRunSession
+          : this.sessionManager.resume(sessionId);
+      bundle.state.workspace = workspace;
+      this.sessionManager.saveState(bundle.state);
+    } catch {
+      try {
+        this.sessionManager.setSessionWorkspace(sessionId, workspace);
+      } catch {
+        return null;
+      }
+    }
+    return workspace;
+  }
+
   injectContext(sessionId: string, content: string): void {
     const session = this.sessionManager.resume(sessionId);
     session.transcript.appendMessage("assistant", content);
@@ -2870,11 +2900,7 @@ export class Engine {
   async forceCompact(sessionId?: string): Promise<{
     before: number;
     after: number;
-    strategy:
-      | "none (no active session)"
-      | "no compaction needed"
-      | "compacted"
-      | CompactStrategy;
+    strategy: "none (no active session)" | "no compaction needed" | "compacted" | CompactStrategy;
   }> {
     const effectiveSessionId = sessionId ?? this.lastSessionId;
     if (!effectiveSessionId) {
@@ -3094,9 +3120,7 @@ export class Engine {
    * 运行中续轮/加预算). No-op (returns null) when no run is active. Lets a user
    * keep an unattended goal going past its original cap instead of restarting.
    */
-  extendGoalRun(
-    opts: GoalExtension,
-  ): {
+  extendGoalRun(opts: GoalExtension): {
     maxTurns: number;
     tokenBudget?: number;
     timeBudgetMs?: number;
@@ -3407,6 +3431,18 @@ export class Engine {
     }
   }
 
+  readWorktreeBranchPrefix(cwd?: string): string | undefined {
+    if (this.config.isSubAgent === true || !cwd) return undefined;
+    try {
+      const settings = this.getSettingsManager().get() as {
+        worktree?: { branchPrefix?: string };
+      };
+      return settings.worktree?.branchPrefix;
+    } catch {
+      return undefined;
+    }
+  }
+
   async resolveWorktreeSetupSandbox(cwd: string): Promise<SandboxBackend | undefined> {
     if (!cwd) return undefined;
     const sandboxConfig = this.resolveSandboxConfigForCwd(cwd);
@@ -3432,6 +3468,7 @@ export class Engine {
       toolRegistry: this.toolRegistry,
       askUser: this.config.askUser,
       browser: this.config.browserBridge,
+      workspace: this.config.workspaceBridge,
       injectCredentialToBrowser: this.config.injectCredentialToBrowser,
       isSubAgent: this.config.isSubAgent === true,
       // Credential tools narrow their disk reads to this scope: a project/

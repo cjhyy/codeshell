@@ -31,6 +31,8 @@ import {
   buildBrowserActionReply,
   parseCredentialActionLine,
   buildCredentialActionReply,
+  parseWorkspaceActionLine,
+  buildWorkspaceActionReply,
 } from "./browser-driver/intercept.js";
 import { handleBrowserAction } from "./browser-driver/automation-host.js";
 import { SessionManager } from "@cjhyy/code-shell-core";
@@ -45,6 +47,7 @@ import {
 } from "./agent-bridge-fallback.js";
 import { getTrustCachedSync } from "./trust-store.js";
 import { reloadAutomations } from "./automation-service.js";
+import { switchSessionWorkspaceForUi } from "./session-workspace-service.js";
 
 /**
  * Neutral sandbox directory used when the user is in a "no project"
@@ -181,6 +184,9 @@ export class AgentBridge {
       // InjectCredential: intercept __credential_action__ (restore a cookie
       // credential into the built-in browser) here; DON'T forward to renderer.
       if (this.maybeHandleCredentialAction(line)) return;
+      // Workspace switching: intercept __workspace_action__ so the worker uses
+      // the same main-process service path as the UI switcher.
+      if (this.maybeHandleWorkspaceAction(line)) return;
       // cron change: the worker created/deleted a cron job (agent/cronChanged);
       // reload main's scheduler so it arms immediately. DON'T forward to renderer.
       if (this.maybeHandleCronChanged(line)) return;
@@ -420,13 +426,6 @@ export class AgentBridge {
     return true;
   }
 
-  /**
-   * If `line` is a __credential_action__ request (InjectCredential tool), restore
-   * the named cookie credential's jar into the built-in browser here (main) and
-   * reply to the worker. Returns true (caller must NOT forward to renderer).
-   * Never throws — a failure still replies so the worker tool unblocks.
-   * The AI-side approval gate already ran in the worker tool; this just executes.
-   */
   /** Intercept the worker's `agent/cronChanged` notification: reload main's
    *  cron scheduler so an AI-created/deleted job arms immediately. Returns true
    *  (consume, don't forward to renderer) when handled. */
@@ -446,6 +445,13 @@ export class AgentBridge {
     return true;
   }
 
+  /**
+   * If `line` is a __credential_action__ request (InjectCredential tool), restore
+   * the named cookie credential's jar into the built-in browser here (main) and
+   * reply to the worker. Returns true (caller must NOT forward to renderer).
+   * Never throws — a failure still replies so the worker tool unblocks.
+   * The AI-side approval gate already ran in the worker tool; this just executes.
+   */
   private maybeHandleCredentialAction(line: string): boolean {
     const parsed = parseCredentialActionLine(line);
     if (!parsed) return false;
@@ -498,6 +504,38 @@ export class AgentBridge {
     return true;
   }
 
+  private maybeHandleWorkspaceAction(line: string): boolean {
+    const parsed = parseWorkspaceActionLine(line);
+    if (!parsed) return false;
+    void (async () => {
+      let resultJson: string;
+      try {
+        if (!parsed.sessionId) throw new Error("workspace action requires sessionId");
+        if (parsed.action !== "switch")
+          throw new Error(`unsupported workspace action: ${parsed.action}`);
+        const cwd =
+          this.sessionCwd.get(parsed.sessionId) ?? this.lastRunContext.cwd ?? process.cwd();
+        const list = await switchSessionWorkspaceForUi(parsed.sessionId, cwd, parsed.target);
+        this.safeSend("workspace:changed", {
+          sessionId: parsed.sessionId,
+          workspace: list.current,
+          mainRoot: list.mainRoot,
+        });
+        resultJson = JSON.stringify(list.current);
+      } catch (e) {
+        resultJson = JSON.stringify({
+          ok: false,
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
+      const reply = buildWorkspaceActionReply(parsed, resultJson);
+      if (this.child?.stdin?.writable) {
+        this.child.stdin.write(reply + "\n");
+      }
+    })();
+    return true;
+  }
+
   /**
    * Open the in-app browser panel (and navigate to `url` if given) on behalf of
    * the agent when no panel/tab is open yet, then wait for the <webview> guest
@@ -534,6 +572,10 @@ export class AgentBridge {
   forgetSession(sessionId: string): void {
     this.snapshots.forget(sessionId);
     this.sessionCwd.delete(sessionId);
+  }
+
+  hasKnownSession(sessionId: string): boolean {
+    return this.sessionCwd.has(sessionId);
   }
 
   /**
@@ -609,6 +651,57 @@ export class AgentBridge {
     } catch {
       /* best-effort */
     }
+  }
+
+  releaseWorkspace(sessionId: string): Promise<void> {
+    if (!this.child?.stdin || this.child.stdin.destroyed) return Promise.resolve();
+    const id = `release-workspace-${sessionId}-${Date.now()}`;
+    const line = JSON.stringify({
+      jsonrpc: "2.0",
+      id,
+      method: "agent/releaseWorkspace",
+      params: { sessionId },
+    });
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = (err?: Error): void => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        unsubscribe();
+        if (err) reject(err);
+        else resolve();
+      };
+      const unsubscribe = this.subscribeOutbound((outLine) => {
+        try {
+          const msg = JSON.parse(outLine) as {
+            id?: string | number;
+            error?: { message?: string };
+            result?: { ok?: boolean; error?: string };
+          };
+          if (msg.id === id) {
+            const resultError =
+              msg.result && msg.result.ok === false
+                ? new Error(msg.result.error ?? "releaseWorkspace failed")
+                : undefined;
+            finish(
+              msg.error ? new Error(msg.error.message ?? "releaseWorkspace failed") : resultError,
+            );
+          }
+        } catch {
+          /* ignore non-json worker output */
+        }
+      });
+      const timer = setTimeout(
+        () => finish(new Error(`releaseWorkspace timed out for session ${sessionId}`)),
+        5000,
+      );
+      try {
+        this.child!.stdin!.write(line + "\n");
+      } catch (err) {
+        finish(err instanceof Error ? err : new Error(String(err)));
+      }
+    });
   }
 
   /** Feed an event produced OUTSIDE the stdio worker (e.g. an in-main automation

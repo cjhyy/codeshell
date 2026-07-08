@@ -4,7 +4,7 @@
  * Public API exports.
  */
 
-export const VERSION = "0.6.0-rc.13";
+export const VERSION = "0.6.0-rc.14";
 
 // ─── Types ───────────────────────────────────────────────────────
 
@@ -67,10 +67,7 @@ export {
   serializeAgentDefinition,
   type AgentDefinition,
 } from "./agent/agent-definition.js";
-export {
-  AgentDefinitionRegistry,
-  type AgentSourceDir,
-} from "./agent/agent-definition-registry.js";
+export { AgentDefinitionRegistry, type AgentSourceDir } from "./agent/agent-definition-registry.js";
 export type { CostStateStore, CostStateSnapshot } from "./engine/cost-store.js";
 export { EngineRuntime } from "./engine/runtime.js";
 export type { EngineRuntimeOptions } from "./engine/runtime.js";
@@ -90,7 +87,11 @@ export { modelEntriesFromConnections } from "./engine/model-connections-pool.js"
 
 export { ToolRegistry } from "./tool-system/registry.js";
 export { ToolExecutor } from "./tool-system/executor.js";
-export { PermissionClassifier, HeadlessApprovalBackend, AutoApprovalBackend } from "./tool-system/permission.js";
+export {
+  PermissionClassifier,
+  HeadlessApprovalBackend,
+  AutoApprovalBackend,
+} from "./tool-system/permission.js";
 export type { ApprovalBackend } from "./tool-system/permission.js";
 export { BUILTIN_TOOLS } from "./tool-system/builtin/index.js";
 export type { BuiltinTool, BuiltinToolFn } from "./tool-system/builtin/index.js";
@@ -112,16 +113,8 @@ export { wrapHookMessages } from "./hooks/inject.js";
 
 export { AgentServer, type AgentServerOptions } from "./protocol/server.js";
 export { AgentClient, type BackgroundAgentCompletedHandler } from "./protocol/client.js";
-export {
-  createInProcessTransport,
-  StdioTransport,
-  type Transport,
-} from "./protocol/transport.js";
-export {
-  SocketTransport,
-  listenTcp,
-  type TcpListenResult,
-} from "./protocol/tcp-transport.js";
+export { createInProcessTransport, StdioTransport, type Transport } from "./protocol/transport.js";
+export { SocketTransport, listenTcp, type TcpListenResult } from "./protocol/tcp-transport.js";
 // Recommended public factories — see protocol/factories.ts for the
 // stable construction contract referenced by standard §7.
 export {
@@ -131,12 +124,7 @@ export {
   type CreateClientOptions,
   type ServerHandle,
 } from "./protocol/factories.js";
-export {
-  Methods,
-  ErrorCodes,
-  type RpcMessage,
-  type RunResult,
-} from "./protocol/types.js";
+export { Methods, ErrorCodes, type RpcMessage, type RunResult } from "./protocol/types.js";
 
 // ─── Session ─────────────────────────────────────────────────────
 
@@ -146,14 +134,23 @@ export { FileHistory } from "./session/file-history.js";
 export {
   createWorktree,
   currentBranch,
+  DEFAULT_WORKTREE_BRANCH_PREFIX,
+  getWorktreeDiff,
+  isManagedWorktreeBranch,
+  isValidWorktreeBranchPrefix,
   findMainWorktreeRoot,
   listWorktrees,
+  listWorktreesFast,
+  normalizeWorktreeBranchPrefix,
   removeWorktree,
   validateWorktreeSlug,
   worktreeHasUncommittedOrAheadChanges,
   worktreeHasUncommittedChanges,
+  type CreateWorktreeOptions,
   type ListWorktreesOptions,
+  type ListWorktreesFastOptions,
   type RemoveWorktreeResult,
+  type RemoveWorktreeOptions,
   type WorktreeDiffSummary,
   type WorktreeInfo,
   type WorktreeWorkspaceOwner,
@@ -193,7 +190,12 @@ export {
   listPresetNames,
 } from "./preset/index.js";
 export type { AgentPreset, AgentPresetName } from "./preset/index.js";
-export { loadSection, loadSections, availableSections, registerSection } from "./prompt/section-loader.js";
+export {
+  loadSection,
+  loadSections,
+  availableSections,
+  registerSection,
+} from "./prompt/section-loader.js";
 
 // ─── Context ─────────────────────────────────────────────────────
 
@@ -261,11 +263,7 @@ export {
 } from "./plugins/installer/installFromArchive.js";
 export { parseSource, type ParsedSource } from "./plugins/installer/parseSource.js";
 export { detectPluginFormat } from "./plugins/installer/detectFormat.js";
-export {
-  CodexPluginManifest,
-  CSMeta,
-  PluginInstallError,
-} from "./plugins/installer/types.js";
+export { CodexPluginManifest, CSMeta, PluginInstallError } from "./plugins/installer/types.js";
 export { mergePluginMcpServers } from "./plugins/installer/loadPluginMcp.js";
 export { listPluginHooks, pluginHookKey, type PluginHookEntry } from "./plugins/loadPluginHooks.js";
 export { describePluginContent, type PluginContentInventory } from "./plugins/pluginContent.js";
@@ -286,14 +284,28 @@ export { Arena } from "./arena/arena.js";
 export { MODEL_PRESETS, getMaxOutputTokens } from "./arena/model-presets.js";
 export type { ModelPreset } from "./arena/model-presets.js";
 export { detectArenaMode } from "./arena/detect-mode.js";
-export { getStrategy, getStrategyForPlan, ReviewStrategy, DiscussionStrategy, PlanningStrategy } from "./arena/strategies/index.js";
+export {
+  getStrategy,
+  getStrategyForPlan,
+  ReviewStrategy,
+  DiscussionStrategy,
+  PlanningStrategy,
+} from "./arena/strategies/index.js";
 export { planArena } from "./arena/planner.js";
 export { collectEvidence } from "./arena/providers/index.js";
 export { selectTools, hasTools } from "./arena/tools/selector.js";
 export { ArenaLedger } from "./arena/ledger.js";
 export { registerClaims, selectClaimsForReview } from "./arena/phases/claim-registry.js";
 export { buildDigest, formatDigest } from "./arena/digest-builder.js";
-export { transitionClaim, resolveClaimStatus, markUnderReview, applyReviewResult, markUnresolved, isTerminal, validTransitions } from "./arena/transitions.js";
+export {
+  transitionClaim,
+  resolveClaimStatus,
+  markUnderReview,
+  applyReviewResult,
+  markUnresolved,
+  isTerminal,
+  validTransitions,
+} from "./arena/transitions.js";
 export type {
   ArenaConfig,
   ArenaMode,
@@ -554,12 +566,7 @@ export {
   type ClassifiedBashLine,
 } from "./tool-system/builtin/bash-output-style.js";
 export { formatDuration, formatTokens } from "./utils/format.js";
-export {
-  getTheme,
-  type Theme,
-  type ThemeName,
-  type ThemeSetting,
-} from "./utils/theme.js";
+export { getTheme, type Theme, type ThemeName, type ThemeSetting } from "./utils/theme.js";
 export { resolveThemeSetting, type SystemTheme } from "./utils/systemTheme.js";
 
 // ─── Logging (extended) ──────────────────────────────────────────
@@ -631,10 +638,7 @@ export {
  */
 
 export { getInteractiveApprovalBackend } from "./tool-system/permission.js";
-export {
-  defaultSandboxConfig,
-  type SandboxConfig,
-} from "./tool-system/sandbox/index.js";
+export { defaultSandboxConfig, type SandboxConfig } from "./tool-system/sandbox/index.js";
 export {
   buildNotificationMessage,
   buildNotificationSummary,
@@ -686,10 +690,7 @@ export * from "./cc-orchestrator/index.js";
 export { checkQuota, formatQuota } from "./quota/index.js";
 export { resolveQuotaCredentials } from "./quota/credentials.js";
 export type { QuotaResult, ProviderQuota, QuotaWindow, QuotaCredentials } from "./quota/types.js";
-export {
-  asyncAgentRegistry,
-  type AsyncAgentEntry,
-} from "./tool-system/builtin/agent-registry.js";
+export { asyncAgentRegistry, type AsyncAgentEntry } from "./tool-system/builtin/agent-registry.js";
 export {
   backgroundShellManager,
   BackgroundShellManager,
@@ -757,11 +758,7 @@ export { formatArenaResultForSession } from "./arena/render/session.js";
 
 // ─── Plugins ─────────────────────────────────────────────────────
 
-export {
-  installPlugin,
-  uninstallPlugin,
-  listInstalled,
-} from "./plugins/pluginInstaller.js";
+export { installPlugin, uninstallPlugin, listInstalled } from "./plugins/pluginInstaller.js";
 export {
   addMarketplace,
   refreshMarketplace,
@@ -769,64 +766,32 @@ export {
   listMarketplaces,
   loadMarketplace,
 } from "./plugins/marketplaceManager.js";
-export {
-  parseMarketplaceInput,
-  deriveMarketplaceName,
-} from "./plugins/parseMarketplaceInput.js";
-export {
-  scanPluginCommands,
-  type PluginCommand,
-} from "./plugins/pluginCommandsLoader.js";
+export { parseMarketplaceInput, deriveMarketplaceName } from "./plugins/parseMarketplaceInput.js";
+export { scanPluginCommands, type PluginCommand } from "./plugins/pluginCommandsLoader.js";
 
 // ─── LLM (extended for TUI) ─────────────────────────────────────
 /** @internal Extended LLM surface for the in-repo TUI/desktop hosts; not stable SDK surface. */
 
-export {
-  type CachedModel,
-  defaultCacheDir,
-} from "./llm/model-cache.js";
-export {
-  fetchModelList,
-  type FetchResult,
-} from "./llm/model-fetcher.js";
-export {
-  sanitizeApiKey,
-  hasNonAsciiPrintable,
-} from "./llm/api-key-sanitize.js";
-export {
-  PROVIDER_KINDS,
-  type ProviderKindName,
-} from "./llm/provider-kinds.js";
-export {
-  capabilitiesFor,
-  type Capability,
-} from "./llm/capabilities/index.js";
+export { type CachedModel, defaultCacheDir } from "./llm/model-cache.js";
+export { fetchModelList, type FetchResult } from "./llm/model-fetcher.js";
+export { sanitizeApiKey, hasNonAsciiPrintable } from "./llm/api-key-sanitize.js";
+export { PROVIDER_KINDS, type ProviderKindName } from "./llm/provider-kinds.js";
+export { capabilitiesFor, type Capability } from "./llm/capabilities/index.js";
 export {
   reasoningControlFor,
   type ReasoningControl,
 } from "./llm/capabilities/reasoning-control.js";
-export {
-  REASONING_EFFORTS,
-  type ReasoningSetting,
-} from "./llm/reasoning-setting.js";
+export { REASONING_EFFORTS, type ReasoningSetting } from "./llm/reasoning-setting.js";
 export { type ProviderConfig } from "./llm/provider-catalog.js";
 
 // ─── Data ────────────────────────────────────────────────────────
 
-export {
-  syncOpenRouterCatalog,
-  getOpenRouterSnapshot,
-} from "./data/openrouter-sync.js";
+export { syncOpenRouterCatalog, getOpenRouterSnapshot } from "./data/openrouter-sync.js";
 
 // ─── Types (extended for TUI) ────────────────────────────────────
 /** @internal Extended type surface for the in-repo TUI/desktop hosts; not stable SDK surface. */
 
-export type {
-  ApprovalRequest,
-  ApprovalResult,
-  ApprovalScope,
-  TaskInfo,
-} from "./types.js";
+export type { ApprovalRequest, ApprovalResult, ApprovalScope, TaskInfo } from "./types.js";
 
 // ─── External agent config (Mobile Web Remote Rooms) ─────────────
 // Resolves the externalAgents settings block (notably claudeCode.trustedWorkspaces),
@@ -869,3 +834,4 @@ export type {
   BrowserTab,
   AXNode,
 } from "./tool-system/browser-bridge.js";
+export type { WorkspaceBridge } from "./tool-system/workspace-bridge.js";

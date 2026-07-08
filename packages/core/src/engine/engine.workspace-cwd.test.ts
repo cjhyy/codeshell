@@ -134,7 +134,7 @@ describe("Engine workspace cwd resolution", () => {
     });
     (engine as any).hooks.clear();
     const session = engine.getSessionManager().create(repo, model, provider, "resume-ws");
-    const wt = createWorktree(repo, "resume-ws", "resume-ws");
+    const wt = await createWorktree(repo, "resume-ws", "resume-ws");
     session.state.workspace = {
       root: wt.worktreePath,
       kind: "worktree",
@@ -211,7 +211,7 @@ describe("Engine workspace cwd resolution", () => {
     });
     (engine as any).hooks.clear();
     const session = engine.getSessionManager().create(repo, model, provider, "exitdiscard123");
-    const wt = createWorktree(repo, "discard-run", "exitdiscard123");
+    const wt = await createWorktree(repo, "discard-run", "exitdiscard123");
     session.state.workspace = {
       root: wt.worktreePath,
       kind: "worktree",
@@ -302,6 +302,130 @@ describe("Engine workspace cwd resolution", () => {
     expect(runtime.sandboxCwds).toEqual([repo, expectedWorktree]);
 
     removeWorktree(expectedWorktree, true);
+    scenarios.delete(model);
+  });
+
+  test("SwitchSessionWorkspace bridge switch takes effect on the next turn", async () => {
+    const model = uniqueModel("bridge-next-turn");
+    scenarios.set(model, {
+      calls: 0,
+      responses: [
+        toolUse([
+          { id: "switch-1", toolName: "SwitchSessionWorkspace", args: { target: "bridge" } },
+          { id: "pwd-same-turn", toolName: "Bash", args: { command: "pwd" } },
+        ]),
+        stop(),
+        toolUse([{ id: "pwd-next-turn", toolName: "Bash", args: { command: "pwd" } }]),
+        stop(),
+      ],
+    });
+    const wt = await createWorktree(repo, "bridge", "bridge-session");
+    const runtime = new CapturingRuntime();
+    const engine = new Engine({
+      llm: { provider, model, apiKey: "test" } as never,
+      cwd: repo,
+      sessionStorageDir: sessions,
+      headless: true,
+      permissionMode: "bypassPermissions",
+      preset: "terminal-coding",
+      enabledBuiltinTools: ["SwitchSessionWorkspace"],
+      runtime,
+    });
+    engine.setWorkspaceBridge({
+      switch: async (target) => {
+        expect(target).toBe("bridge");
+        return {
+          root: wt.worktreePath,
+          kind: "worktree",
+          worktree: {
+            path: wt.worktreePath,
+            branch: wt.worktreeBranch,
+            baseRef: wt.originalBranch ?? "HEAD",
+            createdBy: "codeshell",
+          },
+        };
+      },
+    });
+    (engine as any).hooks.clear();
+    const firstRunResults: Array<{ toolName: string; result?: string }> = [];
+
+    await engine.run("switch through bridge then inspect cwd", {
+      sessionId: "bridge-session",
+      onStream: (event) => {
+        if (event.type === "tool_result") {
+          firstRunResults.push({
+            toolName: event.result.toolName,
+            result: event.result.result,
+          });
+        }
+      },
+    });
+
+    const switchResult =
+      firstRunResults.find((r) => r.toolName === "SwitchSessionWorkspace")?.result ?? "";
+    const sameTurnPwd = firstRunResults.find((r) => r.toolName === "Bash")?.result ?? "";
+    expect(switchResult).toContain("next turn");
+    expect(sameTurnPwd).toContain(repo);
+    expect(sameTurnPwd).not.toContain(wt.worktreePath);
+
+    const secondRunResults: Array<{ toolName: string; result?: string }> = [];
+    await engine.run("inspect bridge cwd next turn", {
+      sessionId: "bridge-session",
+      onStream: (event) => {
+        if (event.type === "tool_result") {
+          secondRunResults.push({
+            toolName: event.result.toolName,
+            result: event.result.result,
+          });
+        }
+      },
+    });
+
+    const nextTurnPwd = secondRunResults.find((r) => r.toolName === "Bash")?.result ?? "";
+    expect(nextTurnPwd).toContain(wt.worktreePath);
+    expect(runtime.sandboxCwds.at(-1)).toBe(wt.worktreePath);
+
+    removeWorktree(wt.worktreePath, true);
+    scenarios.delete(model);
+  });
+
+  test("releaseSessionWorkspace resets the active in-memory session bundle to main", async () => {
+    const model = uniqueModel("active-release");
+    scenarios.set(model, { calls: 0, responses: [stop()] });
+    const engine = new Engine({
+      llm: { provider, model, apiKey: "test" } as never,
+      cwd: repo,
+      sessionStorageDir: sessions,
+      headless: true,
+      permissionMode: "bypassPermissions",
+      preset: "terminal-coding",
+    });
+    (engine as any).hooks.clear();
+    const bundle = engine.getSessionManager().create(repo, model, provider, "active-release");
+    const wt = await createWorktree(repo, "active-release", "active-release");
+    bundle.state.workspace = {
+      root: wt.worktreePath,
+      kind: "worktree",
+      worktree: {
+        path: wt.worktreePath,
+        branch: wt.worktreeBranch,
+        baseRef: wt.originalBranch ?? "HEAD",
+        createdBy: "codeshell",
+      },
+    };
+    engine.getSessionManager().saveState(bundle.state);
+    (engine as any).activeRunSession = bundle;
+
+    const released = engine.releaseSessionWorkspace("active-release");
+
+    expect(released).toEqual({ root: repo, kind: "main" });
+    expect(bundle.state.workspace).toEqual({ root: repo, kind: "main" });
+    expect(engine.getSessionManager().getSessionWorkspace("active-release")).toEqual({
+      root: repo,
+      kind: "main",
+    });
+    (engine as any).activeRunSession = null;
+    removeWorktree(wt.worktreePath, true);
     scenarios.delete(model);
   });
 });

@@ -3,6 +3,11 @@
  */
 
 import { z } from "zod";
+import {
+  DEFAULT_WORKTREE_BRANCH_PREFIX,
+  isValidWorktreeBranchPrefix,
+  normalizeWorktreeBranchPrefix,
+} from "../git/worktree/slug.js";
 
 /**
  * Tri-state project capability overlay. Lives in PROJECT settings only and
@@ -35,6 +40,13 @@ export const CapabilityOverridesSchema = z
   })
   .optional();
 export type CapabilityOverrides = z.infer<typeof CapabilityOverridesSchema>;
+
+const WorktreeBranchPrefixSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .refine(isValidWorktreeBranchPrefix, "Invalid git branch prefix")
+  .transform((value) => normalizeWorktreeBranchPrefix(value));
 
 export const SettingsSchema = z
   .object({
@@ -229,7 +241,9 @@ export const SettingsSchema = z
           .min(0.1)
           .max(0.95)
           .default(0.7)
-          .describe("低于该比例不做 microcompact，保留早期工具输出、保住 prompt cache 前缀。默认 0.7。"),
+          .describe(
+            "低于该比例不做 microcompact，保留早期工具输出、保住 prompt cache 前缀。默认 0.7。",
+          ),
       })
       .default({}),
 
@@ -237,6 +251,12 @@ export const SettingsSchema = z
       .object({
         storageDir: z.string().optional(),
         maxHistory: z.number().default(100),
+      })
+      .default({}),
+
+    worktree: z
+      .object({
+        branchPrefix: WorktreeBranchPrefixSchema.default(DEFAULT_WORKTREE_BRANCH_PREFIX),
       })
       .default({}),
 
@@ -251,10 +271,7 @@ export const SettingsSchema = z
         (value) => {
           const entries: Array<[string, unknown]> = Array.isArray(value)
             ? value
-                .filter(
-                  (v): v is Record<string, unknown> =>
-                    !!v && typeof v === "object",
-                )
+                .filter((v): v is Record<string, unknown> => !!v && typeof v === "object")
                 .map((v, i) => [String(v.name ?? i), v])
             : value && typeof value === "object"
               ? Object.entries(value as Record<string, unknown>)

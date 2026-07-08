@@ -15,9 +15,6 @@ import type {
   ApprovalRequest,
   ApprovalResult,
   PermissionMode,
-  TaskInfo,
-  LLMConfig,
-  MCPServerConfig,
 } from "../types.js";
 
 // ─── Envelope ───────────────────────────────────────────────────────
@@ -74,7 +71,7 @@ export const ErrorCodes = {
 
 /** Start an agent run with a user task. */
 export interface RunParams {
-  sessionId: string;          // required, client-minted
+  sessionId: string; // required, client-minted
   task: string;
   /** Stable id for the user's submit intent; duplicate ids are idempotent. */
   clientMessageId?: string;
@@ -150,6 +147,11 @@ export interface CancelParams {
 
 /** Close (destroy) a session. */
 export interface CloseSessionParams {
+  sessionId: string;
+}
+
+/** Reset a live session's workspace binding back to main. */
+export interface ReleaseWorkspaceParams {
   sessionId: string;
 }
 
@@ -345,6 +347,8 @@ export const Methods = {
   Unsteer: "agent/unsteer",
   /** Close (destroy) a session. */
   CloseSession: "agent/closeSession",
+  /** Reset a session's workspace binding to main without closing it. */
+  ReleaseWorkspace: "agent/releaseWorkspace",
   /** Extend a running goal's turn/budget ceilings mid-run (TODO 3.1). */
   GoalExtend: "agent/goalExtend",
   /** Clear a session's persisted active goal (CC /goal clear). */

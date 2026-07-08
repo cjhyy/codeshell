@@ -4,6 +4,8 @@ import {
   buildBrowserActionReply,
   parseCredentialActionLine,
   buildCredentialActionReply,
+  parseWorkspaceActionLine,
+  buildWorkspaceActionReply,
 } from "./intercept";
 
 const browserActionLine = (args: Record<string, unknown>, requestId = "rq1", sessionId = "s1") =>
@@ -166,5 +168,45 @@ describe("buildCredentialActionReply", () => {
     expect(reply.method).toBe("agent/approve");
     expect(reply.params.requestId).toBe("rq2");
     expect(reply.params.decision).toEqual({ approved: true, answer: '{"ok":true,"count":3}' });
+  });
+});
+
+const workspaceActionLine = (args: Record<string, unknown>, requestId = "rq3", sessionId = "s3") =>
+  JSON.stringify({
+    jsonrpc: "2.0",
+    method: "agent/approvalRequest",
+    params: { sessionId, requestId, request: { toolName: "__workspace_action__", args } },
+  });
+
+describe("parseWorkspaceActionLine", () => {
+  test("parses a workspace switch action", () => {
+    const p = parseWorkspaceActionLine(workspaceActionLine({ action: "switch", target: "main" }));
+    expect(p).toEqual({
+      sessionId: "s3",
+      requestId: "rq3",
+      action: "switch",
+      target: "main",
+    });
+  });
+
+  test("returns null for other hidden actions or malformed payloads", () => {
+    expect(parseWorkspaceActionLine(browserActionLine({ action: "click" }))).toBeNull();
+    expect(parseWorkspaceActionLine(workspaceActionLine({ action: "switch" }))).toBeNull();
+    expect(parseWorkspaceActionLine(workspaceActionLine({ target: "main" }))).toBeNull();
+    expect(parseWorkspaceActionLine("not json")).toBeNull();
+  });
+});
+
+describe("buildWorkspaceActionReply", () => {
+  test("wraps the workspace json in an agent/approve resolving the requestId", () => {
+    const parsed = { sessionId: "s3", requestId: "rq3", action: "switch", target: "feature" };
+    const reply = JSON.parse(buildWorkspaceActionReply(parsed, '{"root":"/repo","kind":"main"}'));
+    expect(reply.method).toBe("agent/approve");
+    expect(reply.params.sessionId).toBe("s3");
+    expect(reply.params.requestId).toBe("rq3");
+    expect(reply.params.decision).toEqual({
+      approved: true,
+      answer: '{"root":"/repo","kind":"main"}',
+    });
   });
 });

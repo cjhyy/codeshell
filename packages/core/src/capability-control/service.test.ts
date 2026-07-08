@@ -73,8 +73,7 @@ describe("CapabilityService.setEnabled", () => {
       scanSkills: () => [],
       scanAgents: () => [],
       readInstalledPlugins: f.emptyPlugins as any,
-      resolveBuiltinToolNames: (o?: any) =>
-        o?.enabledBuiltinTools?.length ? ["REPL"] : [],
+      resolveBuiltinToolNames: (o?: any) => (o?.enabledBuiltinTools?.length ? ["REPL"] : []),
     });
     svc.setEnabled("builtin:REPL", true);
     expect(f.get().agent.enabledBuiltinTools).toEqual(["REPL"]);
@@ -110,9 +109,7 @@ describe("CapabilityService.setEnabled", () => {
       readInstalledPlugins: f.emptyPlugins as any,
       resolveBuiltinToolNames: () => [],
     });
-    expect(() => svc.setEnabled("skill:nope", true)).toThrow(
-      CapabilityNotFoundError,
-    );
+    expect(() => svc.setEnabled("skill:nope", true)).toThrow(CapabilityNotFoundError);
   });
 });
 
@@ -143,12 +140,61 @@ describe("CapabilityService.list", () => {
             source: "project",
           },
         ] as any,
-      scanAgents: () => [{ name: "researcher", description: "rd", systemPrompt: "", source: "project" }] as any,
+      scanAgents: () =>
+        [{ name: "researcher", description: "rd", systemPrompt: "", source: "project" }] as any,
       readInstalledPlugins: () => ({ version: 2, plugins: { "p@m": [] } }) as any,
       resolveBuiltinToolNames: () => ["Read"],
     });
     const kinds = new Set(svc.list().map((d) => d.kind));
     expect(kinds).toEqual(new Set(["builtin", "mcp", "skill", "plugin", "agent"]));
+  });
+
+  test("threads builtinToolHost into builtin defaults and effective resolution", () => {
+    const f = fakes({ agent: { preset: "terminal-coding" } });
+    const calls: any[] = [];
+    const svc = new CapabilityService({
+      registry: {
+        listToolsDetailed: () => [
+          {
+            name: "SwitchSessionWorkspace",
+            description: "",
+            inputSchema: {},
+            source: "builtin",
+            permissionDefault: "ask",
+          },
+        ],
+      } as any,
+      settings: f.settings as any,
+      cwd: "/x",
+      scanSkills: () => [],
+      scanAgents: () => [],
+      readInstalledPlugins: f.emptyPlugins as any,
+      resolveBuiltinToolNames: (opts?: any) => {
+        calls.push(opts);
+        return opts?.host === "desktop"
+          ? ["SwitchSessionWorkspace"]
+          : ["EnterWorktree", "ExitWorktree"];
+      },
+      builtinToolHost: "desktop",
+    });
+
+    const switchDescriptor = svc
+      .list()
+      .find((descriptor) => descriptor.id === "builtin:SwitchSessionWorkspace");
+
+    expect(switchDescriptor).toMatchObject({
+      enabled: true,
+      control: { mode: "denylist", token: "SwitchSessionWorkspace" },
+    });
+    expect(calls).toEqual([
+      { preset: "terminal-coding", host: "desktop" },
+      {
+        preset: "terminal-coding",
+        host: "desktop",
+        enabledBuiltinTools: [],
+        disabledBuiltinTools: [],
+      },
+    ]);
   });
 });
 
@@ -255,7 +301,9 @@ describe("CapabilityService project scope", () => {
       disabledSkills: ["a"],
       capabilityOverrides: { skills: { a: "on" } },
     });
-    const d = svcFor(f).list("/proj").find((c) => c.id === "skill:a")!;
+    const d = svcFor(f)
+      .list("/proj")
+      .find((c) => c.id === "skill:a")!;
     expect(d.globalEnabled).toBe(false);
     expect(d.projectOverride).toBe("on");
     expect(d.enabled).toBe(true);
@@ -264,7 +312,9 @@ describe("CapabilityService project scope", () => {
 
   test("list() with no cwd = user view: no projectOverride, enabled=global", () => {
     const f = fakesWithProject({ disabledSkills: ["a"] });
-    const d = svcFor(f).list().find((c) => c.id === "skill:a")!;
+    const d = svcFor(f)
+      .list()
+      .find((c) => c.id === "skill:a")!;
     expect(d.enabled).toBe(false);
     expect(d.projectOverride).toBeUndefined();
     expect(d.effectiveSource).toBe("user");
@@ -275,7 +325,9 @@ describe("CapabilityService project scope", () => {
       mcpServers: { playwright: { name: "playwright" } },
       capabilityOverrides: { mcp: { playwright: "off" } },
     });
-    const d = svcFor(f).list("/proj").find((c) => c.id === "mcp:playwright")!;
+    const d = svcFor(f)
+      .list("/proj")
+      .find((c) => c.id === "mcp:playwright")!;
     expect(d.globalEnabled).toBe(true);
     expect(d.enabled).toBe(false);
   });
@@ -285,7 +337,13 @@ describe("CapabilityService project scope", () => {
     const svc = new CapabilityService({
       registry: {
         listToolsDetailed: () => [
-          { name: "REPL", description: "", inputSchema: {}, source: "builtin", permissionDefault: "allow" },
+          {
+            name: "REPL",
+            description: "",
+            inputSchema: {},
+            source: "builtin",
+            permissionDefault: "allow",
+          },
         ],
       } as any,
       settings: f.settings as any,
@@ -307,7 +365,13 @@ describe("CapabilityService project scope", () => {
     const svc = new CapabilityService({
       registry: {
         listToolsDetailed: () => [
-          { name: "REPL", description: "", inputSchema: {}, source: "builtin", permissionDefault: "allow" },
+          {
+            name: "REPL",
+            description: "",
+            inputSchema: {},
+            source: "builtin",
+            permissionDefault: "allow",
+          },
         ],
       } as any,
       settings: f.settings as any,

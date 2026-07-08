@@ -12,7 +12,13 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { validateToolArgs } from "../validation.js";
-import { enterWorktreeTool, enterWorktreeToolDef, exitWorktreeTool } from "./worktree.js";
+import {
+  enterWorktreeTool,
+  enterWorktreeToolDef,
+  exitWorktreeTool,
+  switchSessionWorkspaceTool,
+  switchSessionWorkspaceToolDef,
+} from "./worktree.js";
 import { removeWorktree } from "../../git/worktree.js";
 import { SessionManager } from "../../session/session-manager.js";
 import { createOffBackend } from "../sandbox/off.js";
@@ -366,5 +372,57 @@ describe("ExitWorktree cleanup actions", () => {
     expect(setupEnvCwds).toEqual([workspace.root]);
     expect(readFileSync(join(workspace.root, "setup-cwd.txt"), "utf-8")).toBe(workspace.root);
     removeWorktree(workspace.root, true);
+  });
+});
+
+describe("SwitchSessionWorkspace bridge tool", () => {
+  test("requires a target", async () => {
+    const out = await switchSessionWorkspaceTool({}, {} as ToolContext);
+    expect(out).toContain("target is required");
+  });
+
+  test("degrades clearly when no workspace bridge is wired", async () => {
+    const out = await switchSessionWorkspaceTool({ target: "main" }, {} as ToolContext);
+    expect(out).toContain("not available");
+  });
+
+  test("switches through the workspace bridge and updates live session state", async () => {
+    const switched = {
+      root: "/repo/.worktrees/feature",
+      kind: "worktree" as const,
+      worktree: {
+        path: "/repo/.worktrees/feature",
+        branch: "worktree/feature",
+        baseRef: "main",
+        createdBy: "codeshell" as const,
+      },
+    };
+    let bridgeTarget = "";
+    let liveWorkspace: typeof switched | undefined;
+    const out = await switchSessionWorkspaceTool({ target: "feature" }, {
+      cwd: "/repo",
+      workspace: {
+        switch: async (target: string) => {
+          bridgeTarget = target;
+          return switched;
+        },
+      },
+      setSessionWorkspace: (workspace: typeof switched) => {
+        liveWorkspace = workspace;
+      },
+    } as unknown as ToolContext);
+
+    expect(bridgeTarget).toBe("feature");
+    expect(liveWorkspace).toEqual(switched);
+    expect(out).toContain("Switched session workspace");
+    expect(out).toContain("worktree/feature");
+    expect(out).toContain("next turn");
+  });
+
+  test("tool description tells the model when to use it", () => {
+    expect(switchSessionWorkspaceToolDef.description).toContain("isolated");
+    expect(switchSessionWorkspaceToolDef.description).toContain("parallel");
+    expect(switchSessionWorkspaceToolDef.description).toContain("current conversation");
+    expect(switchSessionWorkspaceToolDef.description).toContain("worktree");
   });
 });

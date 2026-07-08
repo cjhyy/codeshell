@@ -20,6 +20,59 @@ import {
 } from "../../git/worktree.js";
 import type { SessionManager } from "../../session/session-manager.js";
 
+export const switchSessionWorkspaceToolDef: ToolDefinition = {
+  name: "SwitchSessionWorkspace",
+  description:
+    "Switch this current conversation session into or out of a workspace through the host UI path. " +
+    "Use this when you need isolated or parallel work in a git worktree, when you need to move " +
+    "this conversation to an existing worktree path/branch, or when you are done and should return " +
+    "this current conversation to main. This is the correct way to move THIS conversation's session " +
+    "into or out of a worktree on desktop.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      target: {
+        type: "string",
+        description:
+          "Workspace target: 'main', a new slug, an existing worktree path, or an existing branch name.",
+      },
+    },
+    required: ["target"],
+  },
+};
+
+export async function switchSessionWorkspaceTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
+  const target = stringArg(args.target);
+  if (!target) return "Error: target is required";
+  const bridge = ctx?.workspace;
+  if (!bridge) {
+    return (
+      "SwitchSessionWorkspace is not available in this host. " +
+      "Use the host's supported workspace controls instead."
+    );
+  }
+  try {
+    const workspace = await bridge.switch(target);
+    ctx?.setSessionWorkspace?.(workspace);
+    const details =
+      workspace.kind === "worktree" && workspace.worktree
+        ? `\n  Branch: ${workspace.worktree.branch}`
+        : "";
+    return (
+      `Switched session workspace:\n` +
+      `  Path: ${workspace.root}` +
+      details +
+      `\n\n` +
+      nextTurnNotice(workspace.root, ctx?.cwd ?? workspace.root)
+    );
+  } catch (err) {
+    return `Error switching workspace: ${(err as Error).message}`;
+  }
+}
+
 export const enterWorktreeToolDef: ToolDefinition = {
   name: "EnterWorktree",
   description:
@@ -62,6 +115,7 @@ export async function enterWorktreeTool(
   };
   const fromRoot = fromWorkspace.root;
   const currentTurnRoot = ctx?.cwd ?? fromRoot;
+  const branchPrefix = ctx?.engine?.readWorktreeBranchPrefix?.(mainRoot);
 
   try {
     if (target === "main") {
@@ -76,12 +130,13 @@ export async function enterWorktreeTool(
       );
     }
 
-    const selected = resolveWorktreeTarget({
+    const selected = await resolveWorktreeTarget({
       target,
       cwd: ctx?.cwd ?? mainRoot,
       mainRoot,
       sessionId,
       currentWorkspace: fromWorkspace,
+      branchPrefix,
     });
 
     const workspace = toSessionWorkspace(selected, fromWorkspace);
@@ -176,7 +231,10 @@ export async function exitWorktreeTool(
 
   const hasPendingChanges =
     existsSync(workspace.worktree.path) &&
-    worktreeHasUncommittedOrAheadChanges(workspace.worktree.path, workspace.worktree.baseRef);
+    (await worktreeHasUncommittedOrAheadChanges(
+      workspace.worktree.path,
+      workspace.worktree.baseRef,
+    ));
   const action = requested ?? (hasPendingChanges ? undefined : "detach");
   if (!action) {
     return (
@@ -193,10 +251,11 @@ export async function exitWorktreeTool(
 
   const mainRoot = sessionManager.readCwd(sessionId) ?? workspace.root;
   const currentTurnRoot = ctx?.cwd ?? workspace.root;
+  const branchPrefix = ctx?.engine?.readWorktreeBranchPrefix?.(mainRoot);
   try {
     let removal: RemoveWorktreeResult | undefined;
     if (action === "discard" || action === "detach") {
-      const otherOwners = otherSessionOwnersForWorktree(
+      const otherOwners = await otherSessionOwnersForWorktree(
         sessionManager,
         sessionId,
         mainRoot,
@@ -210,7 +269,7 @@ export async function exitWorktreeTool(
       }
     }
     if (action === "discard") {
-      removal = removeWorktree(workspace.worktree.path, true);
+      removal = removeWorktree(workspace.worktree.path, true, { prefix: branchPrefix });
     } else if (action === "detach") {
       removal = removeWorktree(workspace.worktree.path, false);
     }
@@ -269,20 +328,22 @@ function sessionServices(ctx?: ToolContext): SessionResolution {
   return { ok: true, sessionId, sessionManager };
 }
 
-function otherSessionOwnersForWorktree(
+async function otherSessionOwnersForWorktree(
   sessionManager: SessionManager,
   sessionId: string,
   mainRoot: string,
   worktreePath: string,
-): string[] {
+): Promise<string[]> {
   const workspaceOwners = sessionManager
     .list(Number.MAX_SAFE_INTEGER)
     .map((session) => ({ sessionId: session.sessionId, workspace: session.workspace }))
     .filter((owner) => owner.workspace !== undefined);
-  const entry = listWorktrees(mainRoot, {
-    currentSessionId: sessionId,
-    workspaceOwners,
-  }).find((worktree) => resolve(worktree.path) === resolve(worktreePath));
+  const entry = (
+    await listWorktrees(mainRoot, {
+      currentSessionId: sessionId,
+      workspaceOwners,
+    })
+  ).find((worktree) => resolve(worktree.path) === resolve(worktreePath));
   return (entry?.occupiedBySessionIds ?? []).filter((owner) => owner !== sessionId);
 }
 
@@ -305,14 +366,15 @@ interface ResolvedTarget {
   from: string;
 }
 
-function resolveWorktreeTarget(opts: {
+async function resolveWorktreeTarget(opts: {
   target: string;
   cwd: string;
   mainRoot: string;
   sessionId: string;
   currentWorkspace: SessionWorkspace;
-}): ResolvedTarget {
-  const entries = listWorktrees(opts.mainRoot);
+  branchPrefix?: string;
+}): Promise<ResolvedTarget> {
+  const entries = await listWorktrees(opts.mainRoot);
   const pathTarget = pathLike(opts.target) ? resolvePathTarget(opts.target, opts.cwd) : undefined;
   const branchTarget = normalizeBranchName(opts.target);
   const match = entries.find((entry) => {
@@ -328,7 +390,7 @@ function resolveWorktreeTarget(opts: {
         worktreePath: match.path,
         worktreeName: match.path.split(/[\\/]/).pop() ?? match.branch,
         worktreeBranch: match.branch,
-        originalBranch: currentBranch(opts.mainRoot),
+        originalBranch: await currentBranch(opts.mainRoot),
         sessionId: opts.sessionId,
         createdAt: Date.now(),
       },
@@ -341,7 +403,9 @@ function resolveWorktreeTarget(opts: {
   }
 
   validateWorktreeSlug(opts.target);
-  const created = createWorktree(opts.mainRoot, opts.target, opts.sessionId);
+  const created = await createWorktree(opts.mainRoot, opts.target, opts.sessionId, {
+    prefix: opts.branchPrefix,
+  });
   return { created: true, session: created, from: created.originalBranch ?? "HEAD" };
 }
 

@@ -13,6 +13,7 @@ import { ConnectionsPanel } from "./SearchConnectionsPanel";
 import {
   DEFAULT_GIT_PREFS,
   loadGitPrefs,
+  normalizeBranchPrefix,
   saveGitPrefs,
   type GitPrefs,
 } from "../gitPrefs";
@@ -61,10 +62,7 @@ function saveMobileRemoteMode(mode: MobileRemoteMode): void {
  * The whole personalization tab auto-saves; no Save buttons (a Switch toggles
  * instantly, text persists on pause/blur).
  */
-function useDebouncedSave(
-  persist: (value: string) => Promise<void> | void,
-  delay = 600,
-) {
+function useDebouncedSave(persist: (value: string) => Promise<void> | void, delay = 600) {
   const persistRef = useRef(persist);
   persistRef.current = persist;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -126,7 +124,7 @@ export function PersonalizationSection({ scope, activeRepoPath }: ScopedProps) {
   const [instructions, setInstructions] = useState("");
   const { t } = useT();
 
-  const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
+  const cwd = scope === "project" ? (activeRepoPath ?? undefined) : undefined;
 
   const { schedule, flush } = useDebouncedSave((value) =>
     writeSettings(scope, { agent: { appendSystemPrompt: value } }, cwd),
@@ -138,7 +136,9 @@ export function PersonalizationSection({ scope, activeRepoPath }: ScopedProps) {
     setInstructions(stringOf(agent.appendSystemPrompt));
   };
 
-  useEffect(() => { void load(); }, [scope, activeRepoPath]);
+  useEffect(() => {
+    void load();
+  }, [scope, activeRepoPath]);
 
   return (
     <section className="flex flex-col gap-3">
@@ -152,7 +152,10 @@ export function PersonalizationSection({ scope, activeRepoPath }: ScopedProps) {
       </div>
       <Textarea
         value={instructions}
-        onChange={(e) => { setInstructions(e.target.value); schedule(e.target.value); }}
+        onChange={(e) => {
+          setInstructions(e.target.value);
+          schedule(e.target.value);
+        }}
         onBlur={flush}
         placeholder={t("settingsX.adv.personalizationPlaceholder")}
         className="min-h-[260px] resize-y leading-relaxed"
@@ -179,7 +182,7 @@ export function ResponsePrefsSection({ scope, activeRepoPath }: ScopedProps) {
   languageRef.current = language;
   profileRef.current = profile;
   const { t } = useT();
-  const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
+  const cwd = scope === "project" ? (activeRepoPath ?? undefined) : undefined;
 
   const { schedule, flush } = useDebouncedSave(() =>
     writeSettings(
@@ -195,7 +198,9 @@ export function ResponsePrefsSection({ scope, activeRepoPath }: ScopedProps) {
     setLanguage(stringOf(agent.responseLanguage));
     setProfile(stringOf(agent.userProfile));
   };
-  useEffect(() => { void load(); }, [scope, activeRepoPath]);
+  useEffect(() => {
+    void load();
+  }, [scope, activeRepoPath]);
 
   return (
     <section className="flex flex-col gap-3">
@@ -203,19 +208,23 @@ export function ResponsePrefsSection({ scope, activeRepoPath }: ScopedProps) {
         <h3 className="text-sm font-medium text-foreground">
           {t("settingsX.adv.responsePrefsTitle")}
         </h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {t("settingsX.adv.responsePrefsDesc")}
-        </p>
+        <p className="mt-1 text-xs text-muted-foreground">{t("settingsX.adv.responsePrefsDesc")}</p>
       </div>
       <Input
         value={language}
-        onChange={(e) => { setLanguage(e.target.value); schedule(e.target.value); }}
+        onChange={(e) => {
+          setLanguage(e.target.value);
+          schedule(e.target.value);
+        }}
         onBlur={flush}
         placeholder={t("settingsX.adv.responseLangPlaceholder")}
       />
       <Textarea
         value={profile}
-        onChange={(e) => { setProfile(e.target.value); schedule(e.target.value); }}
+        onChange={(e) => {
+          setProfile(e.target.value);
+          schedule(e.target.value);
+        }}
         onBlur={flush}
         placeholder={t("settingsX.adv.userProfilePlaceholder")}
         className="min-h-[120px] resize-y leading-relaxed"
@@ -236,7 +245,7 @@ export function InstructionFilesSection({ scope, activeRepoPath }: ScopedProps) 
   const [compatClaude, setCompatClaude] = useState(true);
   const [compatCodex, setCompatCodex] = useState(true);
   const { t } = useT();
-  const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
+  const cwd = scope === "project" ? (activeRepoPath ?? undefined) : undefined;
   // Mirror latest state so a toggle persists the up-to-date value of BOTH flags,
   // never a stale closure capture. writeChain serializes the fire-and-forget
   // writes so a slower earlier write can't land after — and clobber — a later one.
@@ -253,7 +262,9 @@ export function InstructionFilesSection({ scope, activeRepoPath }: ScopedProps) 
     setCompatClaude(claude);
     setCompatCodex(codex);
   };
-  useEffect(() => { void load(); }, [scope, activeRepoPath]);
+  useEffect(() => {
+    void load();
+  }, [scope, activeRepoPath]);
 
   // Switches persist instantly on toggle. `next` carries the full just-computed
   // pair (from pairRef, always current); writes are chained to enforce order.
@@ -261,28 +272,42 @@ export function InstructionFilesSection({ scope, activeRepoPath }: ScopedProps) 
     pairRef.current = { claude, codex };
     writeChain.current = writeChain.current
       .catch(() => {})
-      .then(() => writeSettings(scope, { agent: { instructions: { compatClaude: claude, compatCodex: codex } } }, cwd));
+      .then(() =>
+        writeSettings(
+          scope,
+          { agent: { instructions: { compatClaude: claude, compatCodex: codex } } },
+          cwd,
+        ),
+      );
     void writeChain.current;
   };
 
   return (
     <section className="flex flex-col gap-3">
       <div>
-        <h3 className="text-sm font-medium text-foreground">{t("settingsX.adv.instrFilesTitle")}</h3>
+        <h3 className="text-sm font-medium text-foreground">
+          {t("settingsX.adv.instrFilesTitle")}
+        </h3>
         <p className="mt-1 text-xs text-muted-foreground">{t("settingsX.adv.instrFilesDesc")}</p>
       </div>
       <label className="flex items-center justify-between gap-3 text-sm text-foreground">
         <span>{t("settingsX.adv.compatClaude")}</span>
         <Switch
           checked={compatClaude}
-          onCheckedChange={(v) => { setCompatClaude(v); persist(v, pairRef.current.codex); }}
+          onCheckedChange={(v) => {
+            setCompatClaude(v);
+            persist(v, pairRef.current.codex);
+          }}
         />
       </label>
       <label className="flex items-center justify-between gap-3 text-sm text-foreground">
         <span>{t("settingsX.adv.compatCodex")}</span>
         <Switch
           checked={compatCodex}
-          onCheckedChange={(v) => { setCompatCodex(v); persist(pairRef.current.claude, v); }}
+          onCheckedChange={(v) => {
+            setCompatCodex(v);
+            persist(pairRef.current.claude, v);
+          }}
         />
       </label>
     </section>
@@ -301,10 +326,15 @@ export function ShortcutsSection() {
   ];
   return (
     <section className="mb-6 flex flex-col gap-3">
-      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">{t("settingsX.adv.shortcutsTitle")}</h3>
+      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">
+        {t("settingsX.adv.shortcutsTitle")}
+      </h3>
       <div className="rounded-md border p-2">
         {rows.map(([key, label]) => (
-          <div className="grid grid-cols-[minmax(120px,0.35fr)_1fr] gap-3 border-b py-2 text-sm last:border-b-0" key={key}>
+          <div
+            className="grid grid-cols-[minmax(120px,0.35fr)_1fr] gap-3 border-b py-2 text-sm last:border-b-0"
+            key={key}
+          >
             <kbd>{key}</kbd>
             <span>{label}</span>
           </div>
@@ -415,8 +445,9 @@ function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
         : [];
       setPluginHooks(await window.codeshell.listPluginHooks(disabledPlugins));
       if (!isGlobal) {
-        const overrides = (s.capabilityOverrides as { pluginHooks?: Record<string, unknown> } | undefined)
-          ?.pluginHooks;
+        const overrides = (
+          s.capabilityOverrides as { pluginHooks?: Record<string, unknown> } | undefined
+        )?.pluginHooks;
         setHookOverrides(overrides && typeof overrides === "object" ? overrides : {});
         const u = (await window.codeshell.getSettings("user")) ?? {};
         setGlobalHooks(Array.isArray(u.hooks) ? (u.hooks as Array<Record<string, unknown>>) : []);
@@ -431,7 +462,9 @@ function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
       setHookOverrides({});
     }
   };
-  useEffect(() => { void load(); }, [cwd]);
+  useEffect(() => {
+    void load();
+  }, [cwd]);
 
   const persist = async (next: Array<Record<string, unknown>>) => {
     await writeSettings(scope, { hooks: next }, cwd ?? undefined);
@@ -511,7 +544,9 @@ function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
                   <Switch
                     checked={!off}
                     onCheckedChange={(checked) => toggleOwn(i, checked)}
-                    aria-label={off ? t("settingsX.adv.enableHook") : t("settingsX.adv.disableHook")}
+                    aria-label={
+                      off ? t("settingsX.adv.enableHook") : t("settingsX.adv.disableHook")
+                    }
                   />
                   <Button
                     variant="ghost"
@@ -650,6 +685,9 @@ export function ConnectionsSection(props: ScopedProps) {
 
 export function GitSection() {
   const [prefs, setPrefs] = useState<GitPrefs>(() => loadGitPrefs());
+  const lastPersistedBranchPrefix = useRef(prefs.branchPrefix);
+  const branchPrefixRequestId = useRef(0);
+  const [branchPrefixError, setBranchPrefixError] = useState<string | null>(null);
   // git.path: the user-configured git binary (machine-level, user scope). Lives
   // in settings.json (not the localStorage GitPrefs) because core reads it to
   // resolve git for marketplace clones / worktrees when a GUI launch didn't
@@ -660,13 +698,23 @@ export function GitSection() {
   const [checking, setChecking] = useState(false);
   const { t } = useT();
 
-  useEffect(() => { setPrefs(loadGitPrefs()); }, []);
+  useEffect(() => {
+    setPrefs(loadGitPrefs());
+  }, []);
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       const s = (await window.codeshell.getSettings("user")) ?? {};
       if (cancelled) return;
       const savedPath = stringOf(objectOf(s.git).path);
+      const savedWorktreePrefix = stringOf(objectOf(s.worktree).branchPrefix);
+      if (savedWorktreePrefix) {
+        const nextPrefs = { ...loadGitPrefs(), branchPrefix: savedWorktreePrefix };
+        lastPersistedBranchPrefix.current = savedWorktreePrefix;
+        setPrefs(nextPrefs);
+        saveGitPrefs(nextPrefs);
+        void window.codeshell.setGitPrefs?.(nextPrefs);
+      }
       setGitPath(savedPath);
       // Auto-probe git availability on mount so the result is shown right away
       // and survives leaving/returning to settings — `gitOk` is in-memory state
@@ -688,12 +736,16 @@ export function GitSection() {
         if (!cancelled) setChecking(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const { schedule: scheduleGitPath, flush: flushGitPath, cancel: cancelGitPath } = useDebouncedSave((value) =>
-    writeSettings("user", { git: { path: value } }),
-  );
+  const {
+    schedule: scheduleGitPath,
+    flush: flushGitPath,
+    cancel: cancelGitPath,
+  } = useDebouncedSave((value) => writeSettings("user", { git: { path: value } }));
 
   const applyDetectedGitPath = async (path: string | undefined): Promise<void> => {
     const detected = path?.trim();
@@ -730,12 +782,43 @@ export function GitSection() {
   };
 
   const update = <K extends keyof GitPrefs>(key: K, value: GitPrefs[K]) => {
+    if (key === "branchPrefix") {
+      updateBranchPrefix(String(value));
+      return;
+    }
     setPrefs((c) => {
       const next = { ...c, [key]: value };
-      saveGitPrefs(next);
-      void window.codeshell.setGitPrefs?.(next);
+      const persisted = { ...next, branchPrefix: lastPersistedBranchPrefix.current };
+      saveGitPrefs(persisted);
+      void window.codeshell.setGitPrefs?.(persisted);
       return next;
     });
+  };
+
+  const updateBranchPrefix = (value: string): void => {
+    const requestId = ++branchPrefixRequestId.current;
+    const normalized = normalizeBranchPrefix(value);
+    setPrefs((c) => ({ ...c, branchPrefix: value }));
+    setBranchPrefixError(null);
+    void (async () => {
+      try {
+        await writeSettings("user", {
+          worktree: { branchPrefix: normalized },
+        });
+        if (branchPrefixRequestId.current !== requestId) return;
+        lastPersistedBranchPrefix.current = normalized;
+        setPrefs((c) => {
+          const next = { ...c, branchPrefix: normalized };
+          saveGitPrefs(next);
+          void window.codeshell.setGitPrefs?.(next);
+          return next;
+        });
+        setBranchPrefixError(null);
+      } catch (error) {
+        if (branchPrefixRequestId.current !== requestId) return;
+        setBranchPrefixError(error instanceof Error ? error.message : String(error));
+      }
+    })();
   };
 
   return (
@@ -761,11 +844,20 @@ export function GitSection() {
                 <Button size="sm" variant="outline" onClick={() => void pickGit()}>
                   {t("settingsX.adv.pick")}
                 </Button>
-                <Button size="sm" variant="outline" disabled={checking} onClick={() => void checkGit()}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={checking}
+                  onClick={() => void checkGit()}
+                >
                   {checking ? t("settingsX.adv.checking") : t("settingsX.adv.check")}
                 </Button>
-                {gitOk === true && <span className="text-xs text-status-ok">{t("settingsX.adv.gitAvailable")}</span>}
-                {gitOk === false && <span className="text-xs text-status-err">{t("settingsX.adv.gitNotFound")}</span>}
+                {gitOk === true && (
+                  <span className="text-xs text-status-ok">{t("settingsX.adv.gitAvailable")}</span>
+                )}
+                {gitOk === false && (
+                  <span className="text-xs text-status-err">{t("settingsX.adv.gitNotFound")}</span>
+                )}
               </div>
               {gitOk === false && (
                 <span className="max-w-xl text-xs text-muted-foreground">
@@ -782,12 +874,20 @@ export function GitSection() {
           title={t("settingsX.adv.branchPrefixTitle")}
           help={t("settingsX.adv.branchPrefixHelp")}
           control={
-            <input
-              className="rounded-sm border bg-transparent px-2 py-1.5 text-sm"
-              value={prefs.branchPrefix}
-              placeholder={DEFAULT_GIT_PREFS.branchPrefix}
-              onChange={(e) => update("branchPrefix", e.target.value)}
-            />
+            <div className="flex flex-col gap-1">
+              <input
+                className="rounded-sm border bg-transparent px-2 py-1.5 text-sm"
+                value={prefs.branchPrefix}
+                placeholder={DEFAULT_GIT_PREFS.branchPrefix}
+                aria-invalid={branchPrefixError ? true : undefined}
+                onChange={(e) => update("branchPrefix", e.target.value)}
+              />
+              {branchPrefixError && (
+                <span className="max-w-64 text-xs text-status-err" role="alert">
+                  {branchPrefixError}
+                </span>
+              )}
+            </div>
           }
         />
         <GitRowShell
@@ -887,7 +987,9 @@ function GlobalEnvEditor() {
     const s = (await window.codeshell.getSettings("user")) ?? {};
     setEnvText(envTextOf(s.env));
   };
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+  }, []);
 
   const save = async () => {
     setSaving(true);
@@ -923,7 +1025,10 @@ function GlobalEnvEditor() {
         {savedAt && (
           <span className="text-sm text-status-ok">
             {t("settingsX.adv.savedAt", {
-              time: new Date(savedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
+              time: new Date(savedAt).toLocaleTimeString(undefined, {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
             })}
           </span>
         )}
@@ -981,7 +1086,8 @@ function ProjectEnvEditor({ cwd }: { cwd: string }) {
   const [setupTab, setSetupTab] = useState<LocalEnvPlatform>("default");
   // cleanupTab 暂时移除:清理脚本 UI 已隐藏(cleanup 未接)。恢复 UI 时一并恢复此行。
   const [setupScripts, setSetupScripts] = useState<Record<LocalEnvPlatform, string>>(EMPTY_SCRIPTS);
-  const [cleanupScripts, setCleanupScripts] = useState<Record<LocalEnvPlatform, string>>(EMPTY_SCRIPTS);
+  const [cleanupScripts, setCleanupScripts] =
+    useState<Record<LocalEnvPlatform, string>>(EMPTY_SCRIPTS);
   const [envText, setEnvText] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -995,7 +1101,9 @@ function ProjectEnvEditor({ cwd }: { cwd: string }) {
     setCleanupScripts(scriptMapOf(localEnvironment.cleanupScripts));
     setEnvText(envTextOf(localEnvironment.env));
   };
-  useEffect(() => { void load(); }, [cwd]);
+  useEffect(() => {
+    void load();
+  }, [cwd]);
 
   const save = async () => {
     setSaving(true);
@@ -1043,7 +1151,7 @@ function ProjectEnvEditor({ cwd }: { cwd: string }) {
         onTabChange={setSetupTab}
         scripts={setupScripts}
         onScriptChange={(tab, value) => setSetupScripts((prev) => ({ ...prev, [tab]: value }))}
-        placeholder={'pip install -r requirements.txt\nnpm install\n./run/setup.sh'}
+        placeholder={"pip install -r requirements.txt\nnpm install\n./run/setup.sh"}
       />
 
       {/* 清理脚本 UI 暂时隐藏:cleanup 当前不自动收尾运行(决策未接),展示出来会
@@ -1072,7 +1180,10 @@ function ProjectEnvEditor({ cwd }: { cwd: string }) {
         {savedAt && (
           <span className="text-sm text-status-ok">
             {t("settingsX.adv.savedAt", {
-              time: new Date(savedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
+              time: new Date(savedAt).toLocaleTimeString(undefined, {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
             })}
           </span>
         )}
@@ -1154,13 +1265,15 @@ export function ToggleCapabilitySection({
   const [saving, setSaving] = useState(false);
   const { t } = useT();
   const toast = useToast();
-  const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
+  const cwd = scope === "project" ? (activeRepoPath ?? undefined) : undefined;
 
   const load = async () => {
     const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
     setEnabled(objectOf(s[settingKey]).enabled === true);
   };
-  useEffect(() => { void load(); }, [scope, activeRepoPath, settingKey]);
+  useEffect(() => {
+    void load();
+  }, [scope, activeRepoPath, settingKey]);
 
   const save = async (next: boolean) => {
     const prev = enabled;
@@ -1172,7 +1285,10 @@ export function ToggleCapabilitySection({
       // Write failed — revert the optimistic flip and surface it, otherwise the
       // toggle reads "enabled" while disk stays unchanged (silent desync until remount).
       setEnabled(prev);
-      toast({ message: `${t("settingsX.adv.toggleSaveFailed")}: ${e instanceof Error ? e.message : String(e)}`, variant: "error" });
+      toast({
+        message: `${t("settingsX.adv.toggleSaveFailed")}: ${e instanceof Error ? e.message : String(e)}`,
+        variant: "error",
+      });
     } finally {
       setSaving(false);
     }
@@ -1202,7 +1318,7 @@ export function ToggleCapabilitySection({
  * per-call args.
  */
 export function ImageSettingsSection({ scope, activeRepoPath }: ScopedProps) {
-  const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
+  const cwd = scope === "project" ? (activeRepoPath ?? undefined) : undefined;
   const [detail, setDetail] = useState<"low" | "standard" | "high" | "">("");
   const [saving, setSaving] = useState(false);
   const { t } = useT();
@@ -1212,9 +1328,7 @@ export function ImageSettingsSection({ scope, activeRepoPath }: ScopedProps) {
     const images = objectOf(s.images);
     // Migrate legacy "original" → "high".
     const d = images.detail === "original" ? "high" : images.detail;
-    setDetail(
-      d === "low" || d === "standard" || d === "high" ? d : "",
-    );
+    setDetail(d === "low" || d === "standard" || d === "high" ? d : "");
   };
   useEffect(() => {
     void load();
@@ -1235,7 +1349,11 @@ export function ImageSettingsSection({ scope, activeRepoPath }: ScopedProps) {
   const options: Array<{ id: "low" | "standard" | "high" | ""; label: string; help: string }> = [
     { id: "", label: t("settingsX.adv.imgDefault"), help: t("settingsX.adv.imgDefaultHelp") },
     { id: "low", label: t("settingsX.adv.imgLow"), help: t("settingsX.adv.imgLowHelp") },
-    { id: "standard", label: t("settingsX.adv.imgStandard"), help: t("settingsX.adv.imgStandardHelp") },
+    {
+      id: "standard",
+      label: t("settingsX.adv.imgStandard"),
+      help: t("settingsX.adv.imgStandardHelp"),
+    },
     { id: "high", label: t("settingsX.adv.imgHigh"), help: t("settingsX.adv.imgHighHelp") },
   ];
 
@@ -1285,18 +1403,18 @@ export function ArchivedConversationsSection({
   const { t } = useT();
   const rows = useMemo(() => {
     const repoMap = new Map(repos.map((r) => [r.id, repoLabel(r)]));
-    return Object.entries(sessionIndices).flatMap(([key, idx]) => {
-      const repoId = key === NO_REPO_KEY ? null : key;
-      // A deleted project is gone from `repos`, so fall back to the label
-      // stamped at delete time (deletedProjectLabel) before giving up to
-      // "未知项目" — keeps archived sessions named after their original project.
-      const project = repoId
-        ? repoMap.get(repoId) ?? idx.deletedProjectLabel ?? t("settingsX.adv.unknownProject")
-        : t("settingsX.adv.noRepoConv");
-      return idx.sessions
-        .filter((s) => s.archived)
-        .map((s) => ({ repoId, project, session: s }));
-    }).sort((a, b) => b.session.updatedAt - a.session.updatedAt);
+    return Object.entries(sessionIndices)
+      .flatMap(([key, idx]) => {
+        const repoId = key === NO_REPO_KEY ? null : key;
+        // A deleted project is gone from `repos`, so fall back to the label
+        // stamped at delete time (deletedProjectLabel) before giving up to
+        // "未知项目" — keeps archived sessions named after their original project.
+        const project = repoId
+          ? (repoMap.get(repoId) ?? idx.deletedProjectLabel ?? t("settingsX.adv.unknownProject"))
+          : t("settingsX.adv.noRepoConv");
+        return idx.sessions.filter((s) => s.archived).map((s) => ({ repoId, project, session: s }));
+      })
+      .sort((a, b) => b.session.updatedAt - a.session.updatedAt);
   }, [repos, sessionIndices, t]);
 
   const confirm = useConfirm();
@@ -1347,9 +1465,14 @@ export function ArchivedConversationsSection({
       ) : (
         <ul className="flex flex-col gap-2">
           {rows.map(({ repoId, project, session }) => (
-            <li key={`${repoId ?? NO_REPO_KEY}:${session.id}`} className="flex items-center gap-3 rounded-md border p-3">
+            <li
+              key={`${repoId ?? NO_REPO_KEY}:${session.id}`}
+              className="flex items-center gap-3 rounded-md border p-3"
+            >
               <div className="min-w-0 flex flex-1 flex-col">
-                <span className="truncate text-sm font-medium text-foreground">{session.title}</span>
+                <span className="truncate text-sm font-medium text-foreground">
+                  {session.title}
+                </span>
                 <span className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                   <span className="tabular-nums">{formatArchivedTime(session.updatedAt)}</span>
                   <span className="text-muted-foreground">·</span>
@@ -1435,14 +1558,6 @@ function parseEnvText(text: string): Record<string, string> {
     env[trimmed.slice(0, idx).trim()] = trimmed.slice(idx + 1).trim();
   }
   return env;
-}
-
-function lines(text: string): string[] {
-  return text.split("\n").map((line) => line.trim()).filter(Boolean);
-}
-
-function arrayText(value: unknown): string {
-  return Array.isArray(value) ? value.filter((x): x is string => typeof x === "string").join("\n") : "";
 }
 
 type MobileDevice = {
@@ -1620,7 +1735,6 @@ export function MobileRemoteSection() {
     }
   }
 
-
   async function savePasscode() {
     if (passcodeInput.length < 4) {
       toast({ message: t("settingsX.adv.passcodeMin"), variant: "error" });
@@ -1689,7 +1803,9 @@ export function MobileRemoteSection() {
 
   async function changePasscode() {
     const next = await prompt({
-      title: passcodeSet ? t("settingsX.adv.changePasscodeTitle") : t("settingsX.adv.setPasscodeTitle"),
+      title: passcodeSet
+        ? t("settingsX.adv.changePasscodeTitle")
+        : t("settingsX.adv.setPasscodeTitle"),
       message: t("settingsX.adv.changePasscodeMsg"),
       placeholder: t("settingsX.adv.newPasscodePlaceholder"),
       confirmLabel: t("settingsX.adv.save"),
@@ -1709,7 +1825,9 @@ export function MobileRemoteSection() {
 
   return (
     <section className="mb-6 flex flex-col gap-3">
-      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">{t("settingsX.adv.mobileTitle")}</h3>
+      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">
+        {t("settingsX.adv.mobileTitle")}
+      </h3>
       <p className="text-sm text-muted-foreground">{t("settingsX.adv.mobileDesc")}</p>
 
       {/* 模式选择:局域网 / 公网(隧道) */}

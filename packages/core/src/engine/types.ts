@@ -11,7 +11,13 @@
  * `engine/types.js`.
  */
 
-import type { ClientDefaults, LLMConfig, SessionOrigin, TerminalReason, TokenUsage } from "../types.js";
+import type {
+  ClientDefaults,
+  LLMConfig,
+  SessionOrigin,
+  TerminalReason,
+  TokenUsage,
+} from "../types.js";
 import type { AgentPresetName } from "../preset/index.js";
 import type { GoalConfig } from "./goal.js";
 import type { ApprovalBackend } from "../tool-system/permission.js";
@@ -74,6 +80,8 @@ export interface EngineConfig {
   /** Browser automation bridge (browser_* tools). Wired by the host (desktop)
    *  after construction via setBrowserBridge. Undefined → tools degrade. */
   browserBridge?: import("../tool-system/browser-bridge.js").BrowserBridge;
+  /** Host-backed workspace switch bridge (desktop only). */
+  workspaceBridge?: import("../tool-system/workspace-bridge.js").WorkspaceBridge;
   /** Inject a cookie credential into the built-in browser (InjectCredential
    *  tool). Wired by the host after construction via setInjectCredential.
    *  Undefined → the tool degrades with a clear "no browser" error. */
@@ -126,6 +134,12 @@ export interface EngineConfig {
    * automation shown; tui hidden). Sub-agents override to "subagent".
    */
   origin?: SessionOrigin;
+  /**
+   * Host-specific builtin tool surface. Desktop replaces the legacy core
+   * worktree tools with SwitchSessionWorkspace because Electron main owns the
+   * authoritative workspace switch service and UI refresh path.
+   */
+  builtinToolHost?: "desktop";
   /**
    * Optional shared EngineRuntime providing pre-constructed shared resources
    * (modelPool, toolRegistry, etc.). When provided, Engine uses these instead

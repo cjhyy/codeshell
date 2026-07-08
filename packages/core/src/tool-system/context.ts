@@ -38,6 +38,8 @@ export interface ToolRuntimeHost {
   readWorktreeSetupScripts(
     cwd?: string,
   ): { default?: string; macos?: string; linux?: string; windows?: string } | undefined;
+  /** Branch prefix used for CodeShell-managed worktree branches. */
+  readWorktreeBranchPrefix?(cwd?: string): string | undefined;
   /** Resolve a setup-only sandbox for a newly-created worktree root. */
   resolveWorktreeSetupSandbox?(cwd: string): Promise<SandboxBackend | undefined>;
   /** Resolve setup-only shell env for a newly-created worktree root. */
@@ -351,6 +353,13 @@ export interface ToolContext {
    * docs/superpowers/specs/2026-06-16-browser-automation-mvp.md.
    */
   browser?: import("./browser-bridge.js").BrowserBridge;
+  /**
+   * Host-backed workspace switch bridge. Desktop wires this to Electron main so
+   * the model's SwitchSessionWorkspace tool goes through the same path as the UI
+   * switcher. Undefined outside hosts that can switch this conversation's
+   * session workspace.
+   */
+  workspace?: import("./workspace-bridge.js").WorkspaceBridge;
   /**
    * Inject a stored cookie credential into the built-in browser (restore its
    * login state so the AI can drive the page as that account). The host

@@ -105,6 +105,12 @@ export interface AgentServerOptions {
   readActiveGoalFromDisk?: (
     sessionId: string,
   ) => import("../engine/goal.js").GoalConfig | undefined;
+  /**
+   * Enable the desktop workspace bridge channel. Off by default so generic
+   * protocol hosts do not emit hidden workspace approval requests they cannot
+   * service.
+   */
+  workspaceBridge?: boolean;
 }
 
 export class AgentServer {
@@ -118,6 +124,7 @@ export class AgentServer {
   private readonly readActiveGoalFromDisk:
     | ((sessionId: string) => import("../engine/goal.js").GoalConfig | undefined)
     | null;
+  private readonly workspaceBridgeEnabled: boolean;
   /**
    * Monotonic config-reload version, bumped per reloadSettings request so each
    * Engine.refreshRuntimeConfig can drop out-of-order (stale) deliveries (Q5).
@@ -166,6 +173,7 @@ export class AgentServer {
     this.legacyEngine = options.engine ?? null;
     this.settingsReader = options.settingsReader ?? null;
     this.readActiveGoalFromDisk = options.readActiveGoalFromDisk ?? null;
+    this.workspaceBridgeEnabled = options.workspaceBridge === true;
 
     if (!this.chatManager && !this.legacyEngine) {
       throw new Error("AgentServer: either chatManager or engine must be supplied");
@@ -347,6 +355,9 @@ export class AgentServer {
       case Methods.CloseSession:
         this.handleCloseSession(req);
         break;
+      case Methods.ReleaseWorkspace:
+        this.handleReleaseWorkspace(req);
+        break;
       case Methods.GoalExtend:
         this.handleGoalExtend(req);
         break;
@@ -472,6 +483,9 @@ export class AgentServer {
       session.engine.setInjectCredential((credentialId, credentialScope) =>
         this.requestCredentialInjectForSession(session, sid, credentialId, credentialScope),
       );
+      if (this.workspaceBridgeEnabled && typeof session.engine.setWorkspaceBridge === "function") {
+        session.engine.setWorkspaceBridge(this.makeWorkspaceBridge(session, sid));
+      }
     }
     try {
       const result = await session.enqueueTurn(params.task, {
@@ -972,6 +986,42 @@ export class AgentServer {
     // are kept for the panel, so explicit teardown is where they're released.
     backgroundJobRegistry.dropForSession(params.sessionId);
     this.transport.send(createResponse(req.id, { ok: true }));
+  }
+
+  // ─── ReleaseWorkspace ──────────────────────────────────────────
+
+  private handleReleaseWorkspace(req: RpcRequest): void {
+    const params = (req.params ?? {}) as unknown as import("./types.js").ReleaseWorkspaceParams;
+    if (typeof params.sessionId !== "string" || params.sessionId.length === 0) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "sessionId is required"),
+      );
+      return;
+    }
+    if (this.chatManager) {
+      const session = this.chatManager.get(params.sessionId);
+      if (!session) {
+        this.transport.send(createResponse(req.id, { ok: true, workspace: null }));
+        return;
+      }
+      const engine = session.engine as Engine & {
+        releaseSessionWorkspace?: (
+          sessionId: string,
+        ) => import("../types.js").SessionWorkspace | null;
+      };
+      const workspace = engine.releaseSessionWorkspace?.(params.sessionId) ?? null;
+      this.transport.send(createResponse(req.id, { ok: true, workspace }));
+      return;
+    }
+    const engine = this.legacyEngine as
+      | (Engine & {
+          releaseSessionWorkspace?: (
+            sessionId: string,
+          ) => import("../types.js").SessionWorkspace | null;
+        })
+      | null;
+    const workspace = engine?.releaseSessionWorkspace?.(params.sessionId) ?? null;
+    this.transport.send(createResponse(req.id, { ok: true, workspace }));
   }
 
   // ─── Configure ──────────────────────────────────────────────────
@@ -1946,7 +1996,7 @@ export class AgentServer {
       // ask and resolve with a nudge so the loop keeps making progress instead
       // of hanging. Plain interactive (no-goal) asks keep their intentional
       // no-timeout behavior — a human can take as long as they like.
-      let goalActive = false;
+      let goalActive: boolean;
       try {
         goalActive = !!session.getGoal();
       } catch {
@@ -2105,6 +2155,71 @@ export class AgentServer {
           toolName: "__credential_action__",
           args: { action: "injectCookie", credentialId, credentialScope },
           description: `credential:inject:${credentialId}`,
+          riskLevel: "low" as const,
+        },
+      });
+    });
+  }
+
+  private makeWorkspaceBridge(
+    session: import("./chat-session.js").ChatSession,
+    sessionId: string,
+  ): import("../tool-system/workspace-bridge.js").WorkspaceBridge {
+    return {
+      switch: (target) => this.requestWorkspaceSwitchForSession(session, sessionId, target),
+    };
+  }
+
+  private requestWorkspaceSwitchForSession(
+    session: import("./chat-session.js").ChatSession,
+    sessionId: string,
+    target: string,
+  ): Promise<import("../types.js").SessionWorkspace> {
+    return new Promise((resolve, reject) => {
+      const requestId = nanoid(12);
+      session.pendingApprovals.set(requestId, (decision: unknown) => {
+        this.clearApprovalTimer(requestId);
+        let raw: string | undefined;
+        if (decision && typeof decision === "object" && "approved" in decision) {
+          const r = decision as ApprovalResult;
+          raw = r.approved ? r.answer : undefined;
+        } else if (typeof decision === "string") {
+          raw = decision;
+        }
+        if (raw === undefined) {
+          reject(new Error("workspace switch declined or unavailable"));
+          return;
+        }
+        try {
+          const parsed = JSON.parse(raw) as
+            | import("../types.js").SessionWorkspace
+            | { ok?: false; error?: string };
+          if ("ok" in parsed && parsed.ok === false) {
+            reject(new Error(parsed.error ?? "workspace switch failed"));
+            return;
+          }
+          resolve(parsed as import("../types.js").SessionWorkspace);
+        } catch {
+          reject(new Error("malformed workspace switch result"));
+        }
+      });
+
+      const timer = setTimeout(() => {
+        if (session.pendingApprovals.has(requestId)) {
+          session.pendingApprovals.delete(requestId);
+          this.approvalTimers.delete(requestId);
+          reject(new Error("workspace switch timed out"));
+        }
+      }, AgentServer.APPROVAL_TIMEOUT_MS);
+      this.approvalTimers.set(requestId, timer);
+
+      this.notify(Methods.ApprovalRequest, {
+        sessionId,
+        requestId,
+        request: {
+          toolName: "__workspace_action__",
+          args: { action: "switch", target },
+          description: `workspace:switch:${target}`,
           riskLevel: "low" as const,
         },
       });

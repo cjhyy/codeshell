@@ -1,19 +1,14 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import type { ReactNode } from "react";
-import type { RenderOptions } from "../render/root.js";
+import type { Instance, RenderOptions } from "../render/root.js";
 
 let capturedRenderOptions: RenderOptions | undefined;
 
 async function renderForTesting(
   _node: ReactNode,
-  options?: RenderOptions,
-): Promise<{
-  rerender: () => void;
-  unmount: () => void;
-  waitUntilExit: () => Promise<void>;
-  cleanup: () => void;
-}> {
-  capturedRenderOptions = options;
+  options?: NodeJS.WriteStream | RenderOptions,
+): Promise<Instance> {
+  capturedRenderOptions = options && "write" in options ? undefined : options;
   return {
     rerender: () => {},
     unmount: () => {},

@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { TooltipProvider } from "../components/ui/tooltip";
 import { translate, type TFunction } from "../i18n";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
+import { ToastProvider } from "../ui/ToastProvider";
 import type {
   SessionWorkspace,
   SessionWorkspaceList,
@@ -75,6 +76,7 @@ const {
   workspaceCleanupActionState,
   workspaceCleanupDisabledReason,
   workspaceIndicatorText,
+  workspaceIsExternal,
   workspaceRowDisabledReason,
 } = await import("./WorkspaceIndicator");
 const { TopBar } = await import("../TopBar");
@@ -172,6 +174,7 @@ describe("WorkspaceIndicator helpers", () => {
   });
 
   test("formats the diff summary", () => {
+    expect(formatWorkspaceDiffSummary(undefined, t)).toBe("checking…");
     expect(
       formatWorkspaceDiffSummary(
         { baseRef: "main", changedFiles: 4, aheadCommits: 2, hasUncommittedChanges: true },
@@ -210,6 +213,33 @@ describe("WorkspaceIndicator helpers", () => {
 
     expect(workspaceCleanupDisabledReason(occupiedRow)).toMatch(/another session/i);
   });
+
+  test("marks explicit non-managed and detached rows as external", () => {
+    expect(
+      workspaceIsExternal({
+        path: "/repo/.worktrees/external",
+        branch: "external/feature",
+        head: "abc123",
+        isManaged: false,
+      }),
+    ).toBe(true);
+    expect(
+      workspaceCleanupDisabledReason({
+        path: "/repo/.worktrees/external",
+        branch: "external/feature",
+        head: "abc123",
+        isManaged: false,
+      }),
+    ).toMatch(/not managed/i);
+    expect(
+      workspaceIsExternal({
+        path: "/repo/.worktrees/detached",
+        branch: "",
+        head: "abc123",
+        isManaged: true,
+      }),
+    ).toBe(true);
+  });
 });
 
 describe("WorkspaceRow", () => {
@@ -243,12 +273,41 @@ describe("WorkspaceRow", () => {
     const cleanupState = workspaceCleanupActionState(row);
 
     expect(html).toMatch(/占用中|Occupied/);
-    expect(html).toMatch(/another session/i);
+    expect(html).toMatch(/another session|另一个会话/i);
     expect(cleanupState).toEqual({
       reason: "This worktree is owned by another session. Cleanup is disabled.",
       detachDisabled: true,
       discardDisabled: true,
     });
+  });
+
+  test("renders external badge and disables cleanup actions", () => {
+    const row: SessionWorkspaceWorktreeInfo = {
+      path: "/repo/.worktrees/external",
+      branch: "external/feature",
+      head: "def456",
+      isManaged: false,
+    };
+
+    const html = renderToStaticMarkup(
+      <TooltipProvider>
+        <WorkspaceRow
+          row={row}
+          current={{ root: "/repo", kind: "main" }}
+          busy={null}
+          onSwitch={() => {}}
+          onCleanup={() => {}}
+          cleanupMenuOpen
+        />
+      </TooltipProvider>,
+    );
+
+    const cleanupState = workspaceCleanupActionState(row);
+
+    expect(html).toMatch(/外部|External/);
+    expect(html).toMatch(/Not managed by CodeShell|非 CodeShell 管理/);
+    expect(cleanupState.detachDisabled).toBe(true);
+    expect(cleanupState.discardDisabled).toBe(true);
   });
 });
 
@@ -424,6 +483,321 @@ describe("WorkspaceIndicator", () => {
     });
 
     expect(textOf(container)).toContain("worktree/current-session");
+  });
+
+  test("renders fast rows with checking placeholder and fills diff asynchronously", async () => {
+    ensureMiniDom();
+    const mainWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };
+    const listResponse: SessionWorkspaceList = {
+      current: mainWorkspace,
+      mainRoot: "/repo",
+      worktrees: [
+        {
+          path: "/repo/.worktrees/feature",
+          branch: "worktree/feature-session",
+          head: "def456",
+          isMain: false,
+          isManaged: true,
+        },
+      ],
+    };
+    const diffResponse = deferred<SessionWorkspaceWorktreeInfo["diff"]>();
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getSessionWorkspace: async () => mainWorkspace,
+      listSessionWorktrees: async () => listResponse,
+      getSessionWorktreeDiff: () => diffResponse.promise,
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(<WorkspaceIndicator sessionId="session" repoPath="/repo" repoName="repo" />);
+      await flushMicrotasks();
+    });
+    const trigger = findElement(container, (node) => node.tagName === "BUTTON");
+    expect(trigger).not.toBeNull();
+
+    await act(async () => {
+      clickHostNode(trigger);
+      await flushMicrotasks();
+    });
+
+    expect(textOf(container)).toContain("worktree/feature-session");
+    expect(textOf(container)).toContain("checking…");
+    expect(textOf(container)).not.toMatch(/Dirty|未提交/);
+
+    await act(async () => {
+      diffResponse.resolve({
+        changedFiles: 2,
+        aheadCommits: 1,
+        hasUncommittedChanges: true,
+      });
+      await flushMicrotasks();
+    });
+
+    expect(textOf(container)).toMatch(/Dirty|未提交/);
+    expect(textOf(container)).toMatch(/2 files|2 文件/);
+    expect(textOf(container)).toMatch(/ahead 1|领先 1/);
+  });
+
+  test("does not toast when an unmounted list request rejects", async () => {
+    ensureMiniDom();
+    const mainWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };
+    const listResponse = deferred<SessionWorkspaceList>();
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getSessionWorkspace: async () => mainWorkspace,
+      listSessionWorktrees: () => listResponse.promise,
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        <ToastProvider>
+          <WorkspaceIndicator sessionId="session" repoPath="/repo" repoName="repo" />
+        </ToastProvider>,
+      );
+      await flushMicrotasks();
+    });
+    const trigger = findElement(container, (node) => node.tagName === "BUTTON");
+    expect(trigger).not.toBeNull();
+
+    await act(async () => {
+      clickHostNode(trigger);
+      await flushMicrotasks();
+    });
+
+    await act(async () => {
+      root?.render(
+        <ToastProvider>
+          <div />
+        </ToastProvider>,
+      );
+      await flushMicrotasks();
+    });
+
+    await act(async () => {
+      listResponse.reject(new Error("cancelled by unmount"));
+      await flushMicrotasks();
+    });
+
+    expect(textOf(container)).not.toContain("Workspace action failed");
+    expect(textOf(container)).not.toContain("工作区操作失败");
+  });
+
+  test("ignores a stale list rejection after the session and repo change", async () => {
+    ensureMiniDom();
+    const listResponses: Array<
+      ReturnType<typeof deferred<SessionWorkspaceList>> & { sessionId: string; cwd: string }
+    > = [];
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getSessionWorkspace: async (_sessionId: string, cwd: string) => ({ root: cwd, kind: "main" }),
+      listSessionWorktrees: (sessionId: string, cwd: string) => {
+        const next = deferred<SessionWorkspaceList>();
+        listResponses.push({ ...next, sessionId, cwd });
+        return next.promise;
+      },
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        <ToastProvider>
+          <WorkspaceIndicator sessionId="old-session" repoPath="/repo-old" repoName="old" />
+        </ToastProvider>,
+      );
+      await flushMicrotasks();
+    });
+
+    const trigger = findElement(container, (node) => node.tagName === "BUTTON");
+    expect(trigger).not.toBeNull();
+    await act(async () => {
+      clickHostNode(trigger);
+      await flushMicrotasks();
+    });
+    expect(listResponses).toHaveLength(1);
+
+    await act(async () => {
+      root?.render(
+        <ToastProvider>
+          <WorkspaceIndicator sessionId="new-session" repoPath="/repo-new" repoName="new" />
+        </ToastProvider>,
+      );
+      await flushMicrotasks();
+    });
+    expect(listResponses).toHaveLength(2);
+
+    await act(async () => {
+      listResponses[0].reject(new Error("old list failed"));
+      await flushMicrotasks();
+    });
+
+    await act(async () => {
+      listResponses[1].resolve({
+        current: { root: "/repo-new", kind: "main" },
+        mainRoot: "/repo-new",
+        worktrees: [
+          {
+            path: "/repo-new/.worktrees/new",
+            branch: "worktree/new-session",
+            head: "def456",
+            isManaged: true,
+          },
+        ],
+      });
+      await flushMicrotasks();
+    });
+
+    expect(textOf(container)).toContain("worktree/new-session");
+    expect(textOf(container)).not.toContain("old list failed");
+    expect(textOf(container)).not.toContain("Workspace action failed");
+    expect(textOf(container)).not.toContain("工作区操作失败");
+  });
+
+  test("clears old rows and ignores stale diff after the session changes", async () => {
+    ensureMiniDom();
+    const newList = deferred<SessionWorkspaceList>();
+    const diffResponses: Array<
+      ReturnType<typeof deferred<SessionWorkspaceWorktreeInfo["diff"]>> & {
+        sessionId: string;
+        path: string;
+      }
+    > = [];
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getSessionWorkspace: async (_sessionId: string, cwd: string) => ({ root: cwd, kind: "main" }),
+      listSessionWorktrees: (sessionId: string) => {
+        if (sessionId === "old-session") {
+          return Promise.resolve({
+            current: { root: "/repo", kind: "main" },
+            mainRoot: "/repo",
+            worktrees: [
+              {
+                path: "/repo/.worktrees/shared",
+                branch: "worktree/old-session",
+                head: "abc123",
+                isManaged: true,
+              },
+            ],
+          } satisfies SessionWorkspaceList);
+        }
+        return newList.promise;
+      },
+      getSessionWorktreeDiff: (sessionId: string, path: string) => {
+        const next = deferred<SessionWorkspaceWorktreeInfo["diff"]>();
+        diffResponses.push({ ...next, sessionId, path });
+        return next.promise;
+      },
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(<WorkspaceIndicator sessionId="old-session" repoPath="/repo" repoName="repo" />);
+      await flushMicrotasks();
+    });
+    const trigger = findElement(container, (node) => node.tagName === "BUTTON");
+    expect(trigger).not.toBeNull();
+
+    await act(async () => {
+      clickHostNode(trigger);
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain("worktree/old-session");
+    expect(diffResponses).toHaveLength(1);
+
+    await act(async () => {
+      root?.render(<WorkspaceIndicator sessionId="new-session" repoPath="/repo" repoName="repo" />);
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).not.toContain("worktree/old-session");
+
+    await act(async () => {
+      diffResponses[0].resolve({
+        changedFiles: 9,
+        aheadCommits: 3,
+        hasUncommittedChanges: true,
+      });
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).not.toMatch(/Dirty|未提交/);
+    expect(textOf(container)).not.toMatch(/9 files|9 文件/);
+
+    await act(async () => {
+      newList.resolve({
+        current: { root: "/repo", kind: "main" },
+        mainRoot: "/repo",
+        worktrees: [
+          {
+            path: "/repo/.worktrees/shared",
+            branch: "worktree/new-session",
+            head: "def456",
+            isManaged: true,
+          },
+        ],
+      });
+      await flushMicrotasks();
+    });
+
+    expect(textOf(container)).toContain("worktree/new-session");
+    expect(textOf(container)).not.toContain("worktree/old-session");
+  });
+
+  test("refreshes the current workspace when workspace:changed targets this session", async () => {
+    ensureMiniDom();
+    let changed: ((event: { sessionId: string }) => void) | undefined;
+    let currentCalls = 0;
+    const workspaces: SessionWorkspace[] = [
+      { root: "/repo", kind: "main" },
+      {
+        root: "/repo/.worktrees/feature",
+        kind: "worktree",
+        worktree: {
+          path: "/repo/.worktrees/feature",
+          branch: "worktree/feature",
+          baseRef: "main",
+          createdBy: "codeshell",
+        },
+      },
+    ];
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getSessionWorkspace: async () => workspaces[Math.min(currentCalls++, workspaces.length - 1)]!,
+      listSessionWorktrees: async () => ({
+        current: workspaces[Math.min(currentCalls, workspaces.length - 1)]!,
+        mainRoot: "/repo",
+        worktrees: [],
+      }),
+      getSessionWorktreeDiff: async () => undefined,
+      onWorkspaceChanged: (cb: (event: { sessionId: string }) => void) => {
+        changed = cb;
+        return () => {
+          changed = undefined;
+        };
+      },
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(<WorkspaceIndicator sessionId="session" repoPath="/repo" repoName="repo" />);
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain("main");
+    expect(currentCalls).toBe(1);
+
+    await act(async () => {
+      changed?.({ sessionId: "other-session" });
+      await flushMicrotasks();
+    });
+    expect(currentCalls).toBe(1);
+
+    await act(async () => {
+      changed?.({ sessionId: "session" });
+      await flushMicrotasks();
+    });
+
+    expect(currentCalls).toBe(2);
+    expect(textOf(container)).toContain("worktree/feature");
   });
 });
 

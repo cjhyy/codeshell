@@ -3,7 +3,17 @@
  * agent worker subprocess (stdio JSON-RPC). See agent-bridge.ts.
  */
 
-import { app, BrowserWindow, dialog, ipcMain, session, shell, systemPreferences, webContents, Notification } from "electron";
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  session,
+  shell,
+  systemPreferences,
+  webContents,
+  Notification,
+} from "electron";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve, basename, extname, isAbsolute, join } from "node:path";
 import { readFile, lstat, writeFile } from "node:fs/promises";
@@ -60,6 +70,7 @@ import {
   resolveQuotaCredentials,
   type QuotaResult,
   ErrorCodes,
+  normalizeWorktreeBranchPrefix,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
@@ -81,7 +92,14 @@ import {
   type UpdateAutomationInput,
 } from "./automation-service.js";
 import { dlog } from "./desktop-logger.js";
-import { ptyStart, ptyWrite, ptyResize, ptyKill, ptyKillAll, ptyReapDestroyed } from "./pty-service.js";
+import {
+  ptyStart,
+  ptyWrite,
+  ptyResize,
+  ptyKill,
+  ptyKillAll,
+  ptyReapDestroyed,
+} from "./pty-service.js";
 import {
   listCookieDomains,
   getCookiesForDomain,
@@ -134,11 +152,7 @@ import {
   undoFiles,
   type UndoFilesResult,
 } from "./desktop-services.js";
-import {
-  turnUndoState,
-  undoTurn,
-  redoTurn,
-} from "./file-history-service.js";
+import { turnUndoState, undoTurn, redoTurn } from "./file-history-service.js";
 import { readSettings, writeSettings, type SettingsScope } from "./settings-service.js";
 import {
   listMemory,
@@ -155,7 +169,12 @@ import {
 } from "./memory-service.js";
 import { runDream } from "./dream-service.js";
 import type { MemoryScope } from "@cjhyy/code-shell-core";
-import { listSessions, deleteSession, getSessionTranscript, listDiskSessions } from "./sessions-service.js";
+import {
+  listSessions,
+  deleteSession,
+  getSessionTranscript,
+  listDiskSessions,
+} from "./sessions-service.js";
 import { probeLocalhostPorts } from "./port-probe.js";
 import { getSessionEvents } from "./rawTranscript.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
@@ -196,12 +215,7 @@ import {
   setCapabilityOverride,
 } from "./capabilities-service.js";
 import { searchFiles } from "./file-search-service.js";
-import {
-  listAgents,
-  readAgentBody,
-  saveAgent,
-  deleteAgent,
-} from "./agents-service.js";
+import { listAgents, readAgentBody, saveAgent, deleteAgent } from "./agents-service.js";
 import type { AgentDefinition } from "@cjhyy/code-shell-core";
 import {
   inspectRepo,
@@ -211,7 +225,13 @@ import {
 import { checkSkillUpdateEntry, updateSkillEntry } from "./skill-update-entry.js";
 import { resolveModelMeta } from "./model-meta-service.js";
 import { listRuns, getRun, deleteRunDir } from "./runs-service.js";
-import { initUpdater, checkForUpdate, downloadUpdate, quitAndInstall, getLastStatus } from "./updater.js";
+import {
+  initUpdater,
+  checkForUpdate,
+  downloadUpdate,
+  quitAndInstall,
+  getLastStatus,
+} from "./updater.js";
 import { loadRecents, pushRecent, loadProjects, setPinned, softDelete } from "./recents-store.js";
 import { loadWindowState, saveWindowState } from "./window-state-store.js";
 import {
@@ -235,8 +255,11 @@ import { parseDataUrl, suggestImageFilename } from "./image-save.js";
 import { injectLoginShellPathAtStartup } from "./login-shell-path.js";
 import {
   cleanupSessionWorktreeForUi,
+  getSessionWorktreeDiffForUi,
   getSessionWorkspaceForUi,
   listSessionWorktreesForUi,
+  releaseManySessionWorkspacesForUi,
+  releaseSessionWorkspaceForUi,
   switchSessionWorkspaceForUi,
   type WorkspaceCleanupAction,
 } from "./session-workspace-service.js";
@@ -262,6 +285,16 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
 let bridge: AgentBridge | null = null;
 let cspInstalled = false;
 let automationHandle: AutomationHandle | null = null;
+
+function broadcastWorkspaceChanged(payload: {
+  sessionId: string;
+  workspace?: unknown;
+  mainRoot?: string;
+}): void {
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w.isDestroyed()) w.webContents.send("workspace:changed", payload);
+  }
+}
 
 onPluginInstallJobsChanged((jobs) => {
   for (const w of BrowserWindow.getAllWindows()) {
@@ -312,12 +345,20 @@ async function mobileProjectList(): Promise<MobileProjectMeta[]> {
   // add/remove/pin is reflected on phones and survives restart.
   const projects = await loadProjects().catch(() => []);
   if (projects.length > 0) {
-    return projects.map((r) => ({ path: r.path, name: r.name, addedAt: r.lastOpenedAt, pinned: r.pinned }));
+    return projects.map((r) => ({
+      path: r.path,
+      name: r.name,
+      addedAt: r.lastOpenedAt,
+      pinned: r.pinned,
+    }));
   }
   return mobileProjects;
 }
 async function sendMobileProjectList(deviceId?: string): Promise<void> {
-  const event: MobileServerEvent = { type: "room.projects.ok", projects: await mobileProjectList() };
+  const event: MobileServerEvent = {
+    type: "room.projects.ok",
+    projects: await mobileProjectList(),
+  };
   if (deviceId) mobileRemote.sendToDevice(deviceId, event);
   else mobileRemote.broadcast(event);
 }
@@ -334,7 +375,12 @@ async function broadcastProjects(): Promise<void> {
     if (!w.isDestroyed()) w.webContents.send("projects:changed", projects);
   }
 }
-function broadcastMobileSession(meta: { sessionId: string; cwd: string; title: string; prompt: string }): void {
+function broadcastMobileSession(meta: {
+  sessionId: string;
+  cwd: string;
+  title: string;
+  prompt: string;
+}): void {
   const line = JSON.stringify({
     jsonrpc: "2.0",
     method: "agent/mobileSession",
@@ -394,7 +440,8 @@ const approvalBridge = new ApprovalBridge({
     // Mirror resolution to BOTH transports so every端 clears its stale card —
     // fixes "点了/超时后审批卡不消失" across desktop windows + phones.
     for (const w of BrowserWindow.getAllWindows()) {
-      if (!w.isDestroyed()) w.webContents.send("ccRoom:approvalResolved", { roomId, requestId, decision });
+      if (!w.isDestroyed())
+        w.webContents.send("ccRoom:approvalResolved", { roomId, requestId, decision });
     }
     mobileRemote.broadcast({ type: "ccRoom.approvalResolved", roomId, requestId, decision });
   },
@@ -501,7 +548,10 @@ async function lookupDiskSessionCwd(sessionId: string): Promise<string | null | 
   if (cached !== undefined) return cached;
   let cursor: string | undefined;
   for (let page = 0; page < 10; page++) {
-    const res = await listDiskSessions({ limit: 100, cursor }).catch(() => ({ sessions: [], nextCursor: null }));
+    const res = await listDiskSessions({ limit: 100, cursor }).catch(() => ({
+      sessions: [],
+      nextCursor: null,
+    }));
     for (const s of res.sessions) {
       mobileSessionCwds.set(s.id, s.cwd || null);
       if (s.id === sessionId || s.engineSessionId === sessionId) {
@@ -522,9 +572,7 @@ function effectiveMobileRunCwd(st: MobileDeviceState, ctxCwd?: string): string {
 }
 
 function normalizePermissionMode(raw: unknown): PermissionMode | null {
-  return raw === "default" || raw === "acceptEdits" || raw === "bypassPermissions"
-    ? raw
-    : null;
+  return raw === "default" || raw === "acceptEdits" || raw === "bypassPermissions" ? raw : null;
 }
 
 function normalizePermissionModeSnapshot(raw: unknown): MobilePermissionModeSnapshotEntry[] {
@@ -570,7 +618,11 @@ function broadcastDesktopPermissionMode(params: { sessionId: string; mode: Permi
   }
 }
 
-function broadcastApprovalResolved(params: { requestId: string; sessionId?: string; approved?: boolean }): void {
+function broadcastApprovalResolved(params: {
+  requestId: string;
+  sessionId?: string;
+  approved?: boolean;
+}): void {
   const line = JSON.stringify({
     jsonrpc: "2.0",
     method: "agent/approvalResolved",
@@ -648,7 +700,9 @@ function injectAndAwaitResult(
  * the renderer's preload rpc() would emit, so the core permission engine,
  * goal logic, and snapshots all apply unchanged.
  */
-async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: string }): Promise<void> {
+async function handleMobileClientEvent(
+  event: MobileClientEvent & { deviceId?: string },
+): Promise<void> {
   // ── CC Room (external claude CLI sessions) — checked first so "ccRoom.*"
   // never gets misrouted by the "room." prefix check below ───────────────
   if (event.type.startsWith("ccRoom.")) {
@@ -968,7 +1022,10 @@ async function resolveRoomPermissionMode(
 async function handleRoomEvent(event: MobileClientEvent & { deviceId?: string }): Promise<void> {
   try {
     if (event.type === "room.list") {
-      mobileRemote.broadcast({ type: "room.list.ok", rooms: roomManager.listRooms().map(roomToPublic) });
+      mobileRemote.broadcast({
+        type: "room.list.ok",
+        rooms: roomManager.listRooms().map(roomToPublic),
+      });
       return;
     }
     if (event.type === "room.projects") {
@@ -984,7 +1041,10 @@ async function handleRoomEvent(event: MobileClientEvent & { deviceId?: string })
         permissionMode,
       });
       const opened = roomManager.open(room.id);
-      mobileRemote.broadcast({ type: "room.list.ok", rooms: roomManager.listRooms().map(roomToPublic) });
+      mobileRemote.broadcast({
+        type: "room.list.ok",
+        rooms: roomManager.listRooms().map(roomToPublic),
+      });
       mobileRemote.broadcast({ type: "room.opened", roomId: room.id, status: opened.status });
       return;
     }
@@ -1000,17 +1060,32 @@ async function handleRoomEvent(event: MobileClientEvent & { deviceId?: string })
     }
     if (event.type === "room.history") {
       const messages = roomManager.getMessages(event.roomId, event.sinceSeq ?? 0);
-      const latestSeq = messages.length ? messages[messages.length - 1]!.seq : (event.sinceSeq ?? 0);
-      mobileRemote.broadcast({ type: "room.history.ok", roomId: event.roomId, messages, latestSeq });
+      const latestSeq = messages.length
+        ? messages[messages.length - 1]!.seq
+        : (event.sinceSeq ?? 0);
+      mobileRemote.broadcast({
+        type: "room.history.ok",
+        roomId: event.roomId,
+        messages,
+        latestSeq,
+      });
       return;
     }
     if (event.type === "room.send") {
       const ok = roomManager.send(event.roomId, event.text);
-      if (!ok) mobileRemote.broadcast({ type: "room.error", roomId: event.roomId, message: "房间未就绪或已关闭" });
+      if (!ok)
+        mobileRemote.broadcast({
+          type: "room.error",
+          roomId: event.roomId,
+          message: "房间未就绪或已关闭",
+        });
       return;
     }
   } catch (err) {
-    mobileRemote.broadcast({ type: "room.error", message: err instanceof Error ? err.message : String(err) });
+    mobileRemote.broadcast({
+      type: "room.error",
+      message: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 
@@ -1215,29 +1290,29 @@ async function createWindow(): Promise<BrowserWindow> {
           // we list blob: under script-src (worker-src falls back to it)
           // and add an explicit worker-src for clarity.
           "default-src 'self'; " +
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; " +
-          "worker-src 'self' blob:; " +
-          "style-src 'self' 'unsafe-inline'; " +
-          "img-src 'self' data: blob:; " +
-          "font-src 'self' data:; " +
-          "connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:*; " +
-          "object-src 'none'; " +
-          "base-uri 'none'; " +
-          "frame-ancestors 'none'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; " +
+            "worker-src 'self' blob:; " +
+            "style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data: blob:; " +
+            "font-src 'self' data:; " +
+            "connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:*; " +
+            "object-src 'none'; " +
+            "base-uri 'none'; " +
+            "frame-ancestors 'none'",
         ]
       : [
           "default-src 'self'; " +
-          "script-src 'self'; " +
-          "worker-src 'self'; " +
-          "style-src 'self' 'unsafe-inline'; " +
-          "img-src 'self' data:; " +
-          "font-src 'self' data:; " +
-          // localhost connect is needed by the browser panel's dev-server
-          // probe; without it the prod build can never detect local servers.
-          "connect-src 'self' http://localhost:* http://127.0.0.1:*; " +
-          "object-src 'none'; " +
-          "base-uri 'none'; " +
-          "frame-ancestors 'none'",
+            "script-src 'self'; " +
+            "worker-src 'self'; " +
+            "style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data:; " +
+            "font-src 'self' data:; " +
+            // localhost connect is needed by the browser panel's dev-server
+            // probe; without it the prod build can never detect local servers.
+            "connect-src 'self' http://localhost:* http://127.0.0.1:*; " +
+            "object-src 'none'; " +
+            "base-uri 'none'; " +
+            "frame-ancestors 'none'",
         ];
     // This CSP describes the *app's own* renderer (origin = the Vite dev URL
     // in dev, or file: in prod). The browser panel's <webview> guests live in
@@ -1522,7 +1597,10 @@ app.whenReady().then(async () => {
     // callback streams events to a live snapshot for renderer reconnect; the
     // announce callback fires once with cwd+title so the renderer can place
     // the live run in the right project sidebar group immediately.
-    const headlessAutomationRunner = buildDesktopAutomationRunner(emitAutomationEvent, announceAutomationSession);
+    const headlessAutomationRunner = buildDesktopAutomationRunner(
+      emitAutomationEvent,
+      announceAutomationSession,
+    );
     // "Continue this conversation" jobs (job.resumeSessionId) don't run a
     // headless Engine — they feed their prompt into the LIVE session as a new
     // user turn, exactly like a human typing at a scheduled time. agent/run with
@@ -1610,10 +1688,8 @@ app.whenReady().then(async () => {
   setInterval(() => void sweepStaleWorktrees("interval"), 60 * 60_000);
 });
 
-ipcMain.handle(
-  "skills:list",
-  async (_e, cwd: string, opts?: { includeDisabled?: boolean }) =>
-    listSkills(cwd, { includeDisabled: opts?.includeDisabled === true }),
+ipcMain.handle("skills:list", async (_e, cwd: string, opts?: { includeDisabled?: boolean }) =>
+  listSkills(cwd, { includeDisabled: opts?.includeDisabled === true }),
 );
 ipcMain.handle("capabilities:list", async (_e, cwd: string) => {
   if (typeof cwd !== "string") throw new Error("capabilities:list requires cwd");
@@ -1717,28 +1793,32 @@ ipcMain.handle("credentials:captureAllCookiesAllSessions", async () => {
 });
 // 第二期:切换账号 — 把某条 cookie 凭证的 jar 导回当前会话浏览器分区覆盖当前登录态,
 // 然后广播 browser:reload 让浏览器面板刷新成该账号身份。
-ipcMain.handle("credentials:restoreCookieToBrowser", async (_e, cwd: string, id: string, bucket?: string) => {
-  if (typeof id !== "string" || !id) throw new Error("credentials:restoreCookieToBrowser requires id");
-  const cred = new CredentialStore(cwd || undefined).resolve(id);
-  if (!cred || cred.type !== "cookie") throw new Error(`无 cookie 凭证: "${id}"`);
-  let jar: ElectronCookieLike[] = [];
-  try {
-    const parsed = JSON.parse(cred.secret ?? "[]");
-    // A non-array (valid JSON but wrong shape) is corrupt too: silently falling
-    // through to an empty jar would CLEAR the browser's cookies (clear mode) and
-    // restore nothing — i.e. log the user out with no error. Treat it as corrupt.
-    if (!Array.isArray(parsed)) throw new Error("not an array");
-    jar = parsed as ElectronCookieLike[];
-  } catch {
-    throw new Error(`凭证「${cred.label}」的 cookie 数据损坏`);
-  }
-  const mode = cred.meta?.switchMode === "clear" ? "clear" : "merge";
-  const { count } = await restoreCookiesToBrowser(jar, mode, browserPartitionForBucket(bucket));
-  for (const w of BrowserWindow.getAllWindows()) {
-    if (!w.isDestroyed()) w.webContents.send("browser:reload");
-  }
-  return { count };
-});
+ipcMain.handle(
+  "credentials:restoreCookieToBrowser",
+  async (_e, cwd: string, id: string, bucket?: string) => {
+    if (typeof id !== "string" || !id)
+      throw new Error("credentials:restoreCookieToBrowser requires id");
+    const cred = new CredentialStore(cwd || undefined).resolve(id);
+    if (!cred || cred.type !== "cookie") throw new Error(`无 cookie 凭证: "${id}"`);
+    let jar: ElectronCookieLike[];
+    try {
+      const parsed = JSON.parse(cred.secret ?? "[]");
+      // A non-array (valid JSON but wrong shape) is corrupt too: silently falling
+      // through to an empty jar would CLEAR the browser's cookies (clear mode) and
+      // restore nothing — i.e. log the user out with no error. Treat it as corrupt.
+      if (!Array.isArray(parsed)) throw new Error("not an array");
+      jar = parsed as ElectronCookieLike[];
+    } catch {
+      throw new Error(`凭证「${cred.label}」的 cookie 数据损坏`);
+    }
+    const mode = cred.meta?.switchMode === "clear" ? "clear" : "merge";
+    const { count } = await restoreCookiesToBrowser(jar, mode, browserPartitionForBucket(bucket));
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed()) w.webContents.send("browser:reload");
+    }
+    return { count };
+  },
+);
 // 第二期+:独立窗口登录抓 cookie(解决内置 webview 登不上 Google/YouTube)。
 // 开临时分区登录窗 → 用户点保存 → 读 cookie + 用户名 + 校验 → 关窗销毁分区。
 // 只产出 jar/建议名/校验,存凭证由渲染层走 credentials:save。
@@ -1761,12 +1841,9 @@ ipcMain.handle("plugins:detail", async (_e, installKey: string) => {
   }
   return getPluginDetail(installKey);
 });
-ipcMain.handle(
-  "plugins:uninstall",
-  async (_e, pluginName: string, marketplaceName: string) => {
-    return uninstallPluginEntry(pluginName, marketplaceName);
-  },
-);
+ipcMain.handle("plugins:uninstall", async (_e, pluginName: string, marketplaceName: string) => {
+  return uninstallPluginEntry(pluginName, marketplaceName);
+});
 ipcMain.handle("plugins:uninstallLocal", async (_e, name: string) => {
   return uninstallLocalPluginEntry(name);
 });
@@ -1782,7 +1859,7 @@ ipcMain.handle("plugins:checkUpdate", async (_e, name: string) => {
 ipcMain.handle("git:check", async () => {
   await applyGitPathFromSettings();
   const available = isGitAvailable();
-  const path = available ? resolveGitPath() ?? undefined : undefined;
+  const path = available ? (resolveGitPath() ?? undefined) : undefined;
   const installUrl = gitDownloadUrl();
   return {
     available,
@@ -1800,7 +1877,13 @@ ipcMain.handle(
   "stt:transcribe",
   async (
     _e,
-    payload: { cwd: string; audio: ArrayBuffer; mimeType?: string; provider?: string; language?: string },
+    payload: {
+      cwd: string;
+      audio: ArrayBuffer;
+      mimeType?: string;
+      provider?: string;
+      language?: string;
+    },
   ): Promise<{ ok: true; text: string } | { ok: false; error: string }> => {
     const { cwd, audio, mimeType, provider, language } = payload ?? {};
     if (typeof cwd !== "string" || !(audio instanceof ArrayBuffer)) {
@@ -1810,7 +1893,13 @@ ipcMain.handle(
     if (!resolved) return { ok: false, error: "no-audio-provider" };
     const mime = typeof mimeType === "string" && mimeType ? mimeType : "audio/webm";
     // Pick a filename extension matching the mime so picky servers accept it.
-    const ext = mime.includes("webm") ? "webm" : mime.includes("mp4") || mime.includes("m4a") ? "m4a" : mime.includes("wav") ? "wav" : "webm";
+    const ext = mime.includes("webm")
+      ? "webm"
+      : mime.includes("mp4") || mime.includes("m4a")
+        ? "m4a"
+        : mime.includes("wav")
+          ? "wav"
+          : "webm";
     return transcribe({
       audio: new Uint8Array(audio),
       mimeType: mime,
@@ -1845,45 +1934,27 @@ ipcMain.handle("stt:ensureMicAccess", async (): Promise<{ granted: boolean }> =>
   return { granted };
 });
 ipcMain.handle("marketplace:list", async () => listMarketplacesForUi());
-ipcMain.handle("marketplace:load", async (_e, name: string) =>
-  loadMarketplaceForUi(name),
-);
-ipcMain.handle("marketplace:recommended", async () =>
-  listRecommendedMarketplacesForUi(),
-);
-ipcMain.handle("marketplace:add", async (_e, input: string) =>
-  addMarketplaceFromInput(input),
-);
+ipcMain.handle("marketplace:load", async (_e, name: string) => loadMarketplaceForUi(name));
+ipcMain.handle("marketplace:recommended", async () => listRecommendedMarketplacesForUi());
+ipcMain.handle("marketplace:add", async (_e, input: string) => addMarketplaceFromInput(input));
 ipcMain.handle("marketplace:addRecommended", async (_e, id: string) =>
   addRecommendedMarketplaceForUi(id),
 );
-ipcMain.handle("marketplace:remove", async (_e, name: string) =>
-  removeMarketplaceForUi(name),
-);
-ipcMain.handle("marketplace:refresh", async (_e, name: string) =>
-  refreshMarketplaceForUi(name),
-);
+ipcMain.handle("marketplace:remove", async (_e, name: string) => removeMarketplaceForUi(name));
+ipcMain.handle("marketplace:refresh", async (_e, name: string) => refreshMarketplaceForUi(name));
 ipcMain.handle("plugins:installJobs", async () => listPluginInstallJobsForUi());
-ipcMain.handle(
-  "plugins:install",
-  async (_e, pluginName: string, marketplaceName: string) =>
-    installPluginForUi(pluginName, marketplaceName),
+ipcMain.handle("plugins:install", async (_e, pluginName: string, marketplaceName: string) =>
+  installPluginForUi(pluginName, marketplaceName),
 );
-ipcMain.handle("plugins:retryInstallJob", async (_e, id: string) =>
-  retryPluginInstallJobForUi(id),
-);
-ipcMain.handle(
-  "plugins:installLocal",
-  async (_e, input: { kind: "dir" | "zip"; path: string }) =>
-    installLocalPluginForUi(input),
+ipcMain.handle("plugins:retryInstallJob", async (_e, id: string) => retryPluginInstallJobForUi(id));
+ipcMain.handle("plugins:installLocal", async (_e, input: { kind: "dir" | "zip"; path: string }) =>
+  installLocalPluginForUi(input),
 );
 ipcMain.handle("skills:read", async (_e, filePath: string) => readSkillBody(filePath));
 ipcMain.handle("skills:checkUpdate", async (_e, filePath: string) =>
   checkSkillUpdateEntry(filePath),
 );
-ipcMain.handle("skills:update", async (_e, filePath: string) =>
-  updateSkillEntry(filePath),
-);
+ipcMain.handle("skills:update", async (_e, filePath: string) => updateSkillEntry(filePath));
 ipcMain.handle("files:search", async (_e, cwd: string, query: string) => {
   if (typeof cwd !== "string") throw new Error("files:search requires cwd");
   const q = typeof query === "string" ? query : "";
@@ -1948,11 +2019,7 @@ ipcMain.handle("images:readDataUrl", async (_e, absPath: string): Promise<string
 // saved path, or null if the user cancelled the dialog.
 ipcMain.handle(
   "images:save",
-  async (
-    e,
-    src: string,
-    opts?: { name?: string; mime?: string },
-  ): Promise<string | null> => {
+  async (e, src: string, opts?: { name?: string; mime?: string }): Promise<string | null> => {
     if (typeof src !== "string" || !src) throw new Error("images:save requires src");
     const parsed = parseDataUrl(src);
     if (!parsed) throw new Error("images:save: src is not a data URL");
@@ -1998,28 +2065,19 @@ ipcMain.handle("skills:inspectGithub", async (_e, url: string, existingNames?: u
   return inspectRepo(url, names);
 });
 
-ipcMain.handle(
-  "skills:installFromGithub",
-  async (_e, input: unknown) => {
-    if (!input || typeof input !== "object") {
-      throw new Error("skills:installFromGithub requires { inspection, selected, scope }");
-    }
-    const i = input as InstallFromGithubInput;
-    if (!i.inspection || !i.selected) throw new Error("missing inspection/selected");
-    if (i.scope !== "user" && i.scope !== "project") throw new Error("invalid scope");
-    return installFromGithub(i);
-  },
-);
+ipcMain.handle("skills:installFromGithub", async (_e, input: unknown) => {
+  if (!input || typeof input !== "object") {
+    throw new Error("skills:installFromGithub requires { inspection, selected, scope }");
+  }
+  const i = input as InstallFromGithubInput;
+  if (!i.inspection || !i.selected) throw new Error("missing inspection/selected");
+  if (i.scope !== "user" && i.scope !== "project") throw new Error("invalid scope");
+  return installFromGithub(i);
+});
 
 ipcMain.handle(
   "skills:installLocal",
-  async (
-    _e,
-    sourceDir: string,
-    scope: "user" | "project",
-    cwd?: string,
-    name?: string,
-  ) => {
+  async (_e, sourceDir: string, scope: "user" | "project", cwd?: string, name?: string) => {
     if (typeof sourceDir !== "string" || !sourceDir) {
       throw new Error("skills:installLocal requires sourceDir");
     }
@@ -2037,55 +2095,57 @@ ipcMain.handle("mcp:probe", async (_e, raw: unknown, force?: boolean) => {
   return probeMcpServers(configs, { force: Boolean(force) });
 });
 
-ipcMain.handle("mcp:listMerged", async (_e, rawBase: unknown, rawDisabledPlugins?: unknown, rawCwd?: unknown) => {
-  const base = rawBase && typeof rawBase === "object"
-    ? (rawBase as Record<string, McpServerConfig>)
-    : {};
-  const rawList = Array.isArray(rawDisabledPlugins)
-    ? rawDisabledPlugins.filter((x): x is string => typeof x === "string")
-    : [];
-  // Fold project capabilityOverrides over the renderer's raw global list when
-  // a cwd is known — the pluginDisabled flag must reflect the EFFECTIVE state
-  // (能力总览 project "on" overrides global off), matching the engine's merge.
-  const cwd = typeof rawCwd === "string" && rawCwd ? rawCwd : undefined;
-  const disabledPlugins = cwd
-    ? computeEffectiveDisabledLists(new SettingsManager(cwd, "full"), cwd).disabledPlugins
-    : rawList;
-  // Merge with ALL plugins (no disabled filter): an installed plugin's MCP
-  // should be VISIBLE in the settings page even while the plugin is disabled
-  // (feedback: 装了就该展示,而不是打开插件才出现). The engine's own connect
-  // path still filters disabledPlugins, so a disabled plugin's server is
-  // listed-but-inert; we mark it `pluginDisabled` for the UI.
-  const disabledSet = new Set(disabledPlugins);
-  // Plugin-MCP overrides live globally (user scope), independent of the active
-  // settings scope — read them here and let the merge layer them onto plugin
-  // servers so the listed env/credential reflects the EFFECTIVE connect config.
-  const userSettings = ((await readSettings("user").catch(() => null)) ?? {}) as {
-    mcpServerOverrides?: Record<string, McpServerConfig>;
-  };
-  const overrides = (userSettings.mcpServerOverrides ?? {}) as Record<string, McpServerConfig>;
-  const merged = mergePluginMcpServers(base, [], overrides);
-  return Object.fromEntries(
-    Object.entries(merged).map(([name, cfg]) => {
-      const fromSettings = Object.prototype.hasOwnProperty.call(base, name);
-      const colon = name.indexOf(":");
-      const owner = !fromSettings && colon > 0 ? name.slice(0, colon) : undefined;
-      return [
-        name,
-        {
-          ...cfg,
+ipcMain.handle(
+  "mcp:listMerged",
+  async (_e, rawBase: unknown, rawDisabledPlugins?: unknown, rawCwd?: unknown) => {
+    const base =
+      rawBase && typeof rawBase === "object" ? (rawBase as Record<string, McpServerConfig>) : {};
+    const rawList = Array.isArray(rawDisabledPlugins)
+      ? rawDisabledPlugins.filter((x): x is string => typeof x === "string")
+      : [];
+    // Fold project capabilityOverrides over the renderer's raw global list when
+    // a cwd is known — the pluginDisabled flag must reflect the EFFECTIVE state
+    // (能力总览 project "on" overrides global off), matching the engine's merge.
+    const cwd = typeof rawCwd === "string" && rawCwd ? rawCwd : undefined;
+    const disabledPlugins = cwd
+      ? computeEffectiveDisabledLists(new SettingsManager(cwd, "full"), cwd).disabledPlugins
+      : rawList;
+    // Merge with ALL plugins (no disabled filter): an installed plugin's MCP
+    // should be VISIBLE in the settings page even while the plugin is disabled
+    // (feedback: 装了就该展示,而不是打开插件才出现). The engine's own connect
+    // path still filters disabledPlugins, so a disabled plugin's server is
+    // listed-but-inert; we mark it `pluginDisabled` for the UI.
+    const disabledSet = new Set(disabledPlugins);
+    // Plugin-MCP overrides live globally (user scope), independent of the active
+    // settings scope — read them here and let the merge layer them onto plugin
+    // servers so the listed env/credential reflects the EFFECTIVE connect config.
+    const userSettings = ((await readSettings("user").catch(() => null)) ?? {}) as {
+      mcpServerOverrides?: Record<string, McpServerConfig>;
+    };
+    const overrides = (userSettings.mcpServerOverrides ?? {}) as Record<string, McpServerConfig>;
+    const merged = mergePluginMcpServers(base, [], overrides);
+    return Object.fromEntries(
+      Object.entries(merged).map(([name, cfg]) => {
+        const fromSettings = Object.prototype.hasOwnProperty.call(base, name);
+        const colon = name.indexOf(":");
+        const owner = !fromSettings && colon > 0 ? name.slice(0, colon) : undefined;
+        return [
           name,
-          source: fromSettings ? "settings" : "plugin",
-          editable: fromSettings,
-          pluginDisabled: owner !== undefined && disabledSet.has(owner),
-          // Flag a plugin server that currently carries a user override so the
-          // UI can badge it. (User-added servers never use the override layer.)
-          hasOverride: !fromSettings && Object.prototype.hasOwnProperty.call(overrides, name),
-        },
-      ];
-    }),
-  );
-});
+          {
+            ...cfg,
+            name,
+            source: fromSettings ? "settings" : "plugin",
+            editable: fromSettings,
+            pluginDisabled: owner !== undefined && disabledSet.has(owner),
+            // Flag a plugin server that currently carries a user override so the
+            // UI can badge it. (User-added servers never use the override layer.)
+            hasOverride: !fromSettings && Object.prototype.hasOwnProperty.call(overrides, name),
+          },
+        ];
+      }),
+    );
+  },
+);
 
 // Read-only list of plugin-provided hooks, for the settings 钩子 page to show
 // alongside hand-written hooks (labelled by owner plugin). Mirrors
@@ -2126,9 +2186,11 @@ ipcMain.handle("image:probe", async (_e, raw: unknown) => {
 ipcMain.handle("catalog:list", async () => getMergedCatalog());
 
 ipcMain.handle("catalog:save", async (_e, entry: unknown) =>
-  saveCatalogEntry(entry, { path: userCatalogPath(), stamp: String(Date.now()) }));
+  saveCatalogEntry(entry, { path: userCatalogPath(), stamp: String(Date.now()) }),
+);
 ipcMain.handle("catalog:delete", async (_e, id: string) =>
-  deleteUserCatalogEntry(id, { path: userCatalogPath(), stamp: String(Date.now()) }));
+  deleteUserCatalogEntry(id, { path: userCatalogPath(), stamp: String(Date.now()) }),
+);
 ipcMain.handle("catalog:origins", async () => catalogEntryOrigins());
 
 ipcMain.handle("models:resolve-meta", async (_e, models: unknown, providers: unknown) => {
@@ -2146,17 +2208,17 @@ ipcMain.handle("models:reasoning-control", async (_e, rawKind: unknown, rawModel
 });
 
 ipcMain.handle("models:list", async (_e, rawProvider: unknown, refresh?: boolean) => {
-  const provider = rawProvider && typeof rawProvider === "object"
-    ? rawProvider as Record<string, unknown>
-    : {};
+  const provider =
+    rawProvider && typeof rawProvider === "object" ? (rawProvider as Record<string, unknown>) : {};
   const rawKind = typeof provider.kind === "string" ? provider.kind : "custom";
   const kind = Object.prototype.hasOwnProperty.call(PROVIDER_KINDS, rawKind)
-    ? rawKind as ProviderKindName
+    ? (rawKind as ProviderKindName)
     : "custom";
   const meta = PROVIDER_KINDS[kind];
-  const rawBaseUrl = typeof provider.baseUrl === "string" && provider.baseUrl.trim()
-    ? provider.baseUrl.trim()
-    : meta.defaultBaseUrl;
+  const rawBaseUrl =
+    typeof provider.baseUrl === "string" && provider.baseUrl.trim()
+      ? provider.baseUrl.trim()
+      : meta.defaultBaseUrl;
   const baseUrl = kind === "ollama" ? rawBaseUrl.replace(/\/v1\/?$/, "") : rawBaseUrl;
   return fetchModelList(
     {
@@ -2190,66 +2252,62 @@ let mobileRemoteStartInFlight: Promise<{
   mode: "tunnel" | "lan";
 }> | null = null;
 
-ipcMain.handle(
-  "mobileRemote:start",
-  async (_e, opts?: { mode?: "lan" | "tunnel" }) => {
-    if (mobileRemoteStartInFlight) return mobileRemoteStartInFlight;
-    const run = (async () => {
-      const mode = opts?.mode ?? "lan";
-      if (mode === "tunnel") {
-        // Public tunnel: passcode MUST be set first (UI also disables the button).
-        if (!accessPasscode.isSet()) {
-          throw new Error("请先设置访问口令,再开启公网模式");
-        }
-        // Ensure cloudflared is present (no-op if already downloaded).
-        await cloudflaredBinary.ensureBinary();
-        // Bind loopback; cloudflared connects to 127.0.0.1.
-        const started = await mobileRemote.start({
-          mode: "tunnel",
-          host: "lan",
-          port: 0,
-          passcode: accessPasscode,
-        });
-        try {
-          const { url } = await tunnelManager.start(started.port);
-          mobileRemote.setPublicBaseUrl(url);
-          const pairing = mobileRemote.createPairingUrl();
-          return {
-            url,
-            pairingUrl: pairing.url,
-            expiresAt: pairing.expiresAt,
-            mode: "tunnel" as const,
-          };
-        } catch (err) {
-          // Tunnel failed (binary error / 15s URL timeout): tear everything down
-          // and surface a friendly error so the UI returns to the off state.
-          tunnelManager.stop();
-          await mobileRemote.stop();
-          throw new Error(
-            `公网隧道启动失败:${err instanceof Error ? err.message : String(err)}`,
-            { cause: err },
-          );
-        }
+ipcMain.handle("mobileRemote:start", async (_e, opts?: { mode?: "lan" | "tunnel" }) => {
+  if (mobileRemoteStartInFlight) return mobileRemoteStartInFlight;
+  const run = (async () => {
+    const mode = opts?.mode ?? "lan";
+    if (mode === "tunnel") {
+      // Public tunnel: passcode MUST be set first (UI also disables the button).
+      if (!accessPasscode.isSet()) {
+        throw new Error("请先设置访问口令,再开启公网模式");
       }
-      // LAN mode (unchanged): bind the Mac's real LAN IP so a phone on the same
-      // Wi-Fi can reach it (falls back to localhost). Never 0.0.0.0.
-      const started = await mobileRemote.start({ host: "lan", port: 0 });
-      const pairing = mobileRemote.createPairingUrl();
-      return {
-        url: started.url,
-        pairingUrl: pairing.url,
-        expiresAt: pairing.expiresAt,
-        mode: "lan" as const,
-      };
-    })();
-    mobileRemoteStartInFlight = run;
-    try {
-      return await run;
-    } finally {
-      if (mobileRemoteStartInFlight === run) mobileRemoteStartInFlight = null;
+      // Ensure cloudflared is present (no-op if already downloaded).
+      await cloudflaredBinary.ensureBinary();
+      // Bind loopback; cloudflared connects to 127.0.0.1.
+      const started = await mobileRemote.start({
+        mode: "tunnel",
+        host: "lan",
+        port: 0,
+        passcode: accessPasscode,
+      });
+      try {
+        const { url } = await tunnelManager.start(started.port);
+        mobileRemote.setPublicBaseUrl(url);
+        const pairing = mobileRemote.createPairingUrl();
+        return {
+          url,
+          pairingUrl: pairing.url,
+          expiresAt: pairing.expiresAt,
+          mode: "tunnel" as const,
+        };
+      } catch (err) {
+        // Tunnel failed (binary error / 15s URL timeout): tear everything down
+        // and surface a friendly error so the UI returns to the off state.
+        tunnelManager.stop();
+        await mobileRemote.stop();
+        throw new Error(`公网隧道启动失败:${err instanceof Error ? err.message : String(err)}`, {
+          cause: err,
+        });
+      }
     }
-  },
-);
+    // LAN mode (unchanged): bind the Mac's real LAN IP so a phone on the same
+    // Wi-Fi can reach it (falls back to localhost). Never 0.0.0.0.
+    const started = await mobileRemote.start({ host: "lan", port: 0 });
+    const pairing = mobileRemote.createPairingUrl();
+    return {
+      url: started.url,
+      pairingUrl: pairing.url,
+      expiresAt: pairing.expiresAt,
+      mode: "lan" as const,
+    };
+  })();
+  mobileRemoteStartInFlight = run;
+  try {
+    return await run;
+  } finally {
+    if (mobileRemoteStartInFlight === run) mobileRemoteStartInFlight = null;
+  }
+});
 ipcMain.handle("mobileRemote:stop", async () => {
   tunnelManager.stop();
   await mobileRemote.stop();
@@ -2279,9 +2337,7 @@ ipcMain.handle("mobileRemote:renameDevice", async (_e, id: string, name: string)
 );
 ipcMain.handle("mobileRemote:onlineDevices", async () => mobileRemote.onlineDeviceIds());
 // ── Tunnel-specific IPC ─────────────────────────────────────────────────────
-ipcMain.handle("mobileRemote:cloudflaredInstalled", async () =>
-  cloudflaredBinary.isInstalled(),
-);
+ipcMain.handle("mobileRemote:cloudflaredInstalled", async () => cloudflaredBinary.isInstalled());
 ipcMain.handle("mobileRemote:downloadCloudflared", async (e) => {
   const sender = e.sender;
   await cloudflaredBinary.ensureBinary((pct) => {
@@ -2356,10 +2412,20 @@ ipcMain.handle(
   "rooms:create",
   async (
     _e,
-    input: { name?: string; cwd: string; kind?: "claude-code" | "codex"; permissionMode?: "default" | "acceptEdits" | "bypassPermissions" },
+    input: {
+      name?: string;
+      cwd: string;
+      kind?: "claude-code" | "codex";
+      permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
+    },
   ) => {
     const permissionMode = await resolveRoomPermissionMode(input.cwd, input.permissionMode);
-    const room = roomManager.createRoom({ name: input.name, cwd: input.cwd, kind: input.kind, permissionMode });
+    const room = roomManager.createRoom({
+      name: input.name,
+      cwd: input.cwd,
+      kind: input.kind,
+      permissionMode,
+    });
     return roomToPublic(room);
   },
 );
@@ -2367,7 +2433,9 @@ ipcMain.handle("rooms:open", async (_e, roomId: string) => roomManager.open(room
 ipcMain.handle("rooms:close", async (_e, roomId: string) => {
   roomManager.close(roomId);
 });
-ipcMain.handle("rooms:send", async (_e, roomId: string, text: string) => roomManager.send(roomId, text));
+ipcMain.handle("rooms:send", async (_e, roomId: string, text: string) =>
+  roomManager.send(roomId, text),
+);
 ipcMain.handle("rooms:history", async (_e, roomId: string, sinceSeq?: number) =>
   roomManager.getMessages(roomId, sinceSeq ?? 0),
 );
@@ -2396,7 +2464,9 @@ ipcMain.handle(
     kind?: "claude-code" | "codex",
   ) => roomManager.openForSession(claudeSessionId, cwd, mode, kind ?? "claude-code"),
 );
-ipcMain.handle("ccRoom:send", async (_e, roomId: string, text: string) => roomManager.send(roomId, text));
+ipcMain.handle("ccRoom:send", async (_e, roomId: string, text: string) =>
+  roomManager.send(roomId, text),
+);
 ipcMain.handle(
   "ccRoom:respondApproval",
   async (
@@ -2414,8 +2484,10 @@ ipcMain.handle("ccRoom:roomHistory", async (_e, roomId: string, sinceSeq?: numbe
 ipcMain.handle("ccRoom:readHistory", async (_e, cwd: string, sessionId: string, limit: number) =>
   readRecentHistory(cwd, sessionId, limit),
 );
-ipcMain.handle("ccRoom:readCodexHistory", async (_e, cwd: string, threadId: string, limit: number) =>
-  readCodexRecentHistory(cwd, threadId, limit),
+ipcMain.handle(
+  "ccRoom:readCodexHistory",
+  async (_e, cwd: string, threadId: string, limit: number) =>
+    readCodexRecentHistory(cwd, threadId, limit),
 );
 ipcMain.handle("ccRoom:closeSession", async (_e, roomId: string) => roomManager.close(roomId));
 
@@ -2533,9 +2605,10 @@ const CANDIDATE_DEV_PORTS = [
   3000, 3001, 4000, 5000, 5173, 5174, 6006, 7000, 8000, 8080, 8888, 9000, 1420, 1313,
 ];
 ipcMain.handle("browser:probePorts", async (_e, ports?: unknown) => {
-  const candidates = Array.isArray(ports) && ports.every((p) => typeof p === "number")
-    ? (ports as number[])
-    : CANDIDATE_DEV_PORTS;
+  const candidates =
+    Array.isArray(ports) && ports.every((p) => typeof p === "number")
+      ? (ports as number[])
+      : CANDIDATE_DEV_PORTS;
   return probeLocalhostPorts(candidates);
 });
 
@@ -2545,7 +2618,8 @@ ipcMain.on("browser:anchor", (e, anchor: unknown) => {
   const parentId = popoutParents.get(e.sender.id);
   if (parentId === undefined) return;
   const parent = BrowserWindow.fromId(parentId);
-  if (parent && !parent.isDestroyed()) parent.webContents.send("browser:anchor-from-popout", anchor);
+  if (parent && !parent.isDestroyed())
+    parent.webContents.send("browser:anchor-from-popout", anchor);
 });
 
 // ── Browser-anchor hub(圈选统一架构,spec 2026-06-12)─────────────────────
@@ -2624,7 +2698,8 @@ ipcMain.handle("git:switchBranch", async (_e, cwd: string, branch: string) => {
 
 ipcMain.handle("git:stashAndSwitchBranch", async (_e, cwd: string, branch: string) => {
   if (typeof cwd !== "string" || !cwd) throw new Error("git:stashAndSwitchBranch requires cwd");
-  if (typeof branch !== "string" || !branch) throw new Error("git:stashAndSwitchBranch requires branch");
+  if (typeof branch !== "string" || !branch)
+    throw new Error("git:stashAndSwitchBranch requires branch");
   return stashAndSwitchGitBranch(cwd, branch);
 });
 
@@ -2632,7 +2707,8 @@ ipcMain.handle(
   "git:createWorktree",
   async (_e, cwd: string, name: string, branchPrefix?: string) => {
     if (typeof cwd !== "string" || !cwd) throw new Error("git:createWorktree requires cwd");
-    if (typeof name !== "string" || !name.trim()) throw new Error("git:createWorktree requires name");
+    if (typeof name !== "string" || !name.trim())
+      throw new Error("git:createWorktree requires name");
     const prefix =
       typeof branchPrefix === "string" && branchPrefix.trim()
         ? branchPrefix
@@ -2650,20 +2726,23 @@ interface MainGitPrefs {
 }
 
 let gitPrefsCache: MainGitPrefs = {
-  branchPrefix: "codeshell/",
-  autoDeleteWorktrees: true,
+  branchPrefix: "worktree/",
+  autoDeleteWorktrees: false,
   autoDeleteWorktreesGraceMins: 60 * 24 * 7,
 };
 
 ipcMain.handle("git:setPrefs", async (_e, prefs: MainGitPrefs) => {
   if (!prefs || typeof prefs !== "object") return;
   const grace = Number(prefs.autoDeleteWorktreesGraceMins);
+  let branchPrefix: string;
+  try {
+    branchPrefix = normalizeWorktreeBranchPrefix(prefs.branchPrefix);
+  } catch {
+    branchPrefix = "worktree/";
+  }
   gitPrefsCache = {
-    branchPrefix:
-      typeof prefs.branchPrefix === "string" && prefs.branchPrefix.trim()
-        ? prefs.branchPrefix
-        : "codeshell/",
-    autoDeleteWorktrees: prefs.autoDeleteWorktrees !== false,
+    branchPrefix,
+    autoDeleteWorktrees: prefs.autoDeleteWorktrees === true,
     autoDeleteWorktreesGraceMins:
       Number.isFinite(grace) && grace >= 1 ? Math.floor(grace) : 60 * 24 * 7,
   };
@@ -2682,9 +2761,10 @@ async function sweepStaleWorktrees(reason: string): Promise<void> {
   if (!gitPrefsCache.autoDeleteWorktrees) return;
   if (knownGitRoots.size === 0) return;
   const grace = gitPrefsCache.autoDeleteWorktreesGraceMins;
+  const branchPrefix = gitPrefsCache.branchPrefix;
   for (const root of knownGitRoots) {
     try {
-      const removed = await cleanupStaleWorktrees(root, grace);
+      const removed = await cleanupStaleWorktrees(root, grace, branchPrefix);
       if (removed.length > 0) {
         dlog("main", "git.worktree.cleanup", { reason, root, removed });
       }
@@ -2706,7 +2786,7 @@ ipcMain.handle("workspace:current", async (_e, sessionId: string, cwd: string) =
   }
   if (typeof cwd !== "string" || !cwd) throw new Error("workspace:current requires cwd");
   knownGitRoots.add(cwd);
-  return getSessionWorkspaceForUi(sessionId, cwd);
+  return await getSessionWorkspaceForUi(sessionId, cwd);
 });
 
 ipcMain.handle("workspace:list", async (_e, sessionId: string, cwd: string) => {
@@ -2715,7 +2795,18 @@ ipcMain.handle("workspace:list", async (_e, sessionId: string, cwd: string) => {
   }
   if (typeof cwd !== "string" || !cwd) throw new Error("workspace:list requires cwd");
   knownGitRoots.add(cwd);
-  return listSessionWorktreesForUi(sessionId, cwd);
+  return await listSessionWorktreesForUi(sessionId, cwd);
+});
+
+ipcMain.handle("workspace:diff", async (_e, sessionId: string, worktreePath: string) => {
+  if (typeof sessionId !== "string" || !sessionId) {
+    throw new Error("workspace:diff requires sessionId");
+  }
+  if (typeof worktreePath !== "string" || !worktreePath) {
+    throw new Error("workspace:diff requires worktreePath");
+  }
+  knownGitRoots.add(worktreePath);
+  return await getSessionWorktreeDiffForUi(sessionId, worktreePath);
 });
 
 ipcMain.handle("workspace:switch", async (_e, sessionId: string, cwd: string, target: string) => {
@@ -2727,7 +2818,48 @@ ipcMain.handle("workspace:switch", async (_e, sessionId: string, cwd: string, ta
     throw new Error("workspace:switch requires target");
   }
   knownGitRoots.add(cwd);
-  return switchSessionWorkspaceForUi(sessionId, cwd, target);
+  const list = await switchSessionWorkspaceForUi(sessionId, cwd, target);
+  broadcastWorkspaceChanged({ sessionId, workspace: list.current, mainRoot: list.mainRoot });
+  return list;
+});
+
+ipcMain.handle("workspace:release", async (_e, sessionId: string) => {
+  if (typeof sessionId !== "string" || !sessionId) {
+    throw new Error("workspace:release requires sessionId");
+  }
+  const currentBridge = bridge;
+  const released = await releaseSessionWorkspaceForUi(sessionId, {
+    releaseLiveWorkspace:
+      currentBridge && currentBridge.hasKnownSession(sessionId)
+        ? (id) => currentBridge.releaseWorkspace(id)
+        : undefined,
+  });
+  if (released.status === "released") {
+    broadcastWorkspaceChanged({ sessionId, workspace: released.workspace });
+  }
+  return released;
+});
+
+ipcMain.handle("workspace:releaseMany", async (_e, sessionIds: string[]) => {
+  if (!Array.isArray(sessionIds)) {
+    throw new Error("workspace:releaseMany requires sessionIds");
+  }
+  const ids = sessionIds.filter((id) => typeof id === "string" && id.length > 0);
+  const currentBridge = bridge;
+  const released = await releaseManySessionWorkspacesForUi(ids, {
+    releaseLiveWorkspace: currentBridge
+      ? async (id) => {
+          if (!currentBridge.hasKnownSession(id)) return;
+          await currentBridge.releaseWorkspace(id);
+        }
+      : undefined,
+  });
+  for (const item of released) {
+    if (item.status === "released") {
+      broadcastWorkspaceChanged({ sessionId: item.sessionId, workspace: item.workspace });
+    }
+  }
+  return released;
 });
 
 ipcMain.handle(
@@ -2750,7 +2882,9 @@ ipcMain.handle(
       throw new Error("workspace:cleanup requires action detach or discard");
     }
     knownGitRoots.add(cwd);
-    return cleanupSessionWorktreeForUi(sessionId, cwd, worktreePath, action);
+    const list = await cleanupSessionWorktreeForUi(sessionId, cwd, worktreePath, action);
+    broadcastWorkspaceChanged({ sessionId, workspace: list.current, mainRoot: list.mainRoot });
+    return list;
   },
 );
 
@@ -2871,13 +3005,16 @@ ipcMain.handle("settings:get", async (_e, scope: SettingsScope, cwd?: string) =>
   return readSettings(scope, cwd);
 });
 
-ipcMain.handle("settings:set", async (_e, scope: SettingsScope, patch: Record<string, unknown>, cwd?: string) => {
-  if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
-  if (!patch || typeof patch !== "object") throw new Error("patch must be object");
-  await writeSettings(scope, patch, cwd);
-  // git.path may have changed — re-apply to core's git resolver immediately.
-  if ("git" in patch) void applyGitPathFromSettings();
-});
+ipcMain.handle(
+  "settings:set",
+  async (_e, scope: SettingsScope, patch: Record<string, unknown>, cwd?: string) => {
+    if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
+    if (!patch || typeof patch !== "object") throw new Error("patch must be object");
+    await writeSettings(scope, patch, cwd);
+    // git.path may have changed — re-apply to core's git resolver immediately.
+    if ("git" in patch) void applyGitPathFromSettings();
+  },
+);
 
 const VALID_MEMORY_LEVELS = new Set<MemoryLevel>(["user", "project"]);
 const VALID_MEMORY_SCOPES = new Set<MemoryScope>(["user", "dream"]);
@@ -2895,13 +3032,10 @@ function validateMemoryArgs(
   return { level: level as MemoryLevel, scope: scope as MemoryScope };
 }
 
-ipcMain.handle(
-  "memory:list",
-  async (_e, level: unknown, scope: unknown, cwd?: string) => {
-    const v = validateMemoryArgs(level, scope);
-    return listMemory(v.level, v.scope, typeof cwd === "string" ? cwd : undefined);
-  },
-);
+ipcMain.handle("memory:list", async (_e, level: unknown, scope: unknown, cwd?: string) => {
+  const v = validateMemoryArgs(level, scope);
+  return listMemory(v.level, v.scope, typeof cwd === "string" ? cwd : undefined);
+});
 
 ipcMain.handle(
   "memory:read",
@@ -2974,8 +3108,12 @@ ipcMain.handle("sessions:delete", async (_e, id: string) => {
  */
 ipcMain.handle("agent:subscribe", async (_e, sessionId: string, sinceSeq?: number) => {
   if (typeof sessionId !== "string") throw new Error("sessionId required");
-  return bridge?.getSnapshot(sessionId, typeof sinceSeq === "number" ? sinceSeq : 0)
-    ?? { events: [], nextSeq: 1 };
+  return (
+    bridge?.getSnapshot(sessionId, typeof sinceSeq === "number" ? sinceSeq : 0) ?? {
+      events: [],
+      nextSeq: 1,
+    }
+  );
 });
 ipcMain.handle("sessions:titles", async () => listTitles());
 ipcMain.handle("sessions:rename", async (_e, id: string, title: string) => {
@@ -3002,7 +3140,10 @@ ipcMain.handle("sessions:transcript", async (_e, sessionId: string) => {
 });
 ipcMain.handle("sessions:listDisk", async (_e, opts: { limit?: number; cursor?: string }) => {
   const limit = typeof opts?.limit === "number" && opts.limit > 0 ? Math.min(opts.limit, 200) : 30;
-  return listDiskSessions({ limit, cursor: typeof opts?.cursor === "string" ? opts.cursor : undefined });
+  return listDiskSessions({
+    limit,
+    cursor: typeof opts?.cursor === "string" ? opts.cursor : undefined,
+  });
 });
 ipcMain.handle("sessions:rawEvents", async (_e, sessionId: string, sinceId?: string) => {
   if (typeof sessionId !== "string") throw new Error("sessionId required");
@@ -3020,7 +3161,12 @@ ipcMain.handle("automation:get", async (_e, id: string) => {
   return getAutomation(id);
 });
 ipcMain.handle("automation:create", async (_e, input: CreateAutomationInput) => {
-  if (!input || typeof input.name !== "string" || typeof input.schedule !== "string" || typeof input.prompt !== "string") {
+  if (
+    !input ||
+    typeof input.name !== "string" ||
+    typeof input.schedule !== "string" ||
+    typeof input.prompt !== "string"
+  ) {
     throw new Error("name, schedule and prompt are required");
   }
   const normalized = input.cwd ? { ...input, cwd: resolveProjectRoot(input.cwd) } : input;
@@ -3071,11 +3217,14 @@ ipcMain.handle("trust:risks", async (_e, p: string) => {
 
 ipcMain.handle("recents:list", async () => loadRecents());
 
-ipcMain.handle("notify:show", async (_e, opts: { title: string; body?: string; subtitle?: string }) => {
-  if (!opts || typeof opts.title !== "string") throw new Error("notify:show requires title");
-  if (!Notification.isSupported()) return;
-  new Notification(opts).show();
-});
+ipcMain.handle(
+  "notify:show",
+  async (_e, opts: { title: string; body?: string; subtitle?: string }) => {
+    if (!opts || typeof opts.title !== "string") throw new Error("notify:show requires title");
+    if (!Notification.isSupported()) return;
+    new Notification(opts).show();
+  },
+);
 
 ipcMain.handle("badge:set", async (_e, count: number) => {
   if (typeof count !== "number") throw new Error("badge:set requires number");

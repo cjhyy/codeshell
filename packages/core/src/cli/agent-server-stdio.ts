@@ -58,10 +58,7 @@ import { resolveLLMConfigForTag } from "../engine/resolve-llm-config.js";
  * back to disk settings.agent.*. Fixes the bug where settings.agent.* never
  * reached session engines (slice arrived with only permissionMode+cwd).
  */
-export function resolveSessionAgentConfig(
-  slice: EngineConfigSlice,
-  settings: ValidatedSettings,
-) {
+export function resolveSessionAgentConfig(slice: EngineConfigSlice, settings: ValidatedSettings) {
   return {
     preset: slice.preset ?? settings.agent.preset,
     customSystemPrompt: slice.customSystemPrompt ?? settings.agent.customSystemPrompt,
@@ -106,9 +103,7 @@ try {
   settings = settingsManager.get();
 } catch (err) {
   const reason = (err instanceof Error ? err.message : String(err)).slice(0, 2000);
-  console.error(
-    `[agent-server] settings.json 校验失败,已回退到默认配置(请修正后重启):\n${reason}`,
-  );
+  console.error(`[agent-server] settings.json 校验失败,已回退到默认配置(请修正后重启):\n${reason}`);
   settings = validateSettings({});
 }
 
@@ -125,8 +120,7 @@ if (!seedLlm) {
   console.error(
     `[agent-server] 没有可用的文本模型连接(defaults.text=${
       (settings as { defaults?: { text?: string } }).defaults?.text ?? "未设置"
-    })。` +
-    `请在「连接」页添加并填写凭证。`,
+    })。` + `请在「连接」页添加并填写凭证。`,
   );
   process.exit(1);
 }
@@ -137,6 +131,10 @@ const llmConfig = seedLlm;
 const seedEngine = new Engine({
   llm: llmConfig,
   cwd,
+  preset: settings.agent.preset,
+  enabledBuiltinTools: settings.agent.enabledBuiltinTools,
+  disabledBuiltinTools: settings.agent.disabledBuiltinTools,
+  builtinToolHost: "desktop",
   settingsScope: "full",
   // No runtime — Engine.populateModelPoolFromSettings() runs in ctor.
 });
@@ -233,10 +231,7 @@ const chatManager = new ChatSessionManager({
     // the MCP merge — a plugin force-enabled in 能力总览 (project "on") must
     // contribute its MCP servers even while globally disabled, and vice versa.
     // Raw `live.disabledPlugins` alone ignored the project layer.
-    const { disabledPlugins } = computeEffectiveDisabledLists(
-      sessionSettingsManager,
-      sessionCwd,
-    );
+    const { disabledPlugins } = computeEffectiveDisabledLists(sessionSettingsManager, sessionCwd);
     return new Engine({
       llm: runtime.modelPool.resolveLLMConfig() ?? resolvedLlmConfig,
       // Inherit the seed engine's resolved clientDefaults so every session
@@ -251,6 +246,7 @@ const chatManager = new ChatSessionManager({
       // This stdio worker exists only to serve the desktop app, so every
       // session it creates is a desktop-origin session.
       origin: "desktop",
+      builtinToolHost: "desktop",
       // Inherit full scope so spawned subagents read user config too.
       settingsScope: "full",
       // MCP servers from settings — the worker reads the full disk
@@ -330,6 +326,7 @@ const goalDiskReader = new SessionManager();
 const agentServer = new AgentServer({
   chatManager,
   transport: stdioTransport,
+  workspaceBridge: true,
   // Config hot-reload (layer 2) reads disk through the SAME closure the
   // engineFactory uses for new sessions, so a reloaded running session and a
   // newly-created session converge on identical disk config (no divergence).

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { BUILTIN_AGENT_PRESETS } from "./index.js";
+import { BUILTIN_AGENT_PRESETS, resolveBuiltinToolNames } from "./index.js";
 import { BUILTIN_TOOLS, BUILTIN_TOOL_GUARDS } from "../tool-system/builtin/index.js";
 
 // Regression: the background-shell companions (BashOutput / KillShell /
@@ -69,5 +69,22 @@ describe("preset builtin tool whitelist", () => {
         ListShells: tools.has("ListShells"),
       }).toEqual({ preset: preset.name, BashOutput: true, KillShell: true, ListShells: true });
     }
+  });
+
+  it("desktop terminal-coding exposes SwitchSessionWorkspace and hides legacy worktree tools", () => {
+    const tools = resolveBuiltinToolNames({
+      preset: "terminal-coding",
+      host: "desktop",
+    });
+    expect(tools).toContain("SwitchSessionWorkspace");
+    expect(tools).not.toContain("EnterWorktree");
+    expect(tools).not.toContain("ExitWorktree");
+  });
+
+  it("non-desktop terminal-coding keeps legacy worktree tools and does not add the bridge tool", () => {
+    const tools = resolveBuiltinToolNames({ preset: "terminal-coding" });
+    expect(tools).toContain("EnterWorktree");
+    expect(tools).toContain("ExitWorktree");
+    expect(tools).not.toContain("SwitchSessionWorkspace");
   });
 });

@@ -35,9 +35,9 @@ describe("SessionManager workspace resume resolution", () => {
     rmSync(sessions, { recursive: true, force: true });
   });
 
-  test("restores cwd to the persisted worktree when the directory exists", () => {
+  test("restores cwd to the persisted worktree when the directory exists", async () => {
     sm.create(repo, "m", "p", "resume-ok");
-    const wt = createWorktree(repo, "resume-ok", "resume-ok");
+    const wt = await createWorktree(repo, "resume-ok", "resume-ok");
     sm.setSessionWorkspace("resume-ok", {
       root: wt.worktreePath,
       kind: "worktree",
@@ -49,7 +49,7 @@ describe("SessionManager workspace resume resolution", () => {
       },
     });
 
-    const resolved = sm.resolveSessionWorkspaceForResume("resume-ok");
+    const resolved = await sm.resolveSessionWorkspaceForResume("resume-ok");
 
     expect(resolved.ok).toBe(true);
     if (!resolved.ok) throw new Error(resolved.message);
@@ -61,9 +61,9 @@ describe("SessionManager workspace resume resolution", () => {
     removeWorktree(wt.worktreePath, true);
   });
 
-  test("blocks resume with a recreate message when the worktree dir is gone but branch exists", () => {
+  test("blocks resume with a recreate message when the worktree dir is gone but branch exists", async () => {
     sm.create(repo, "m", "p", "resume-recreate");
-    const wt = createWorktree(repo, "resume-recreate", "resume-recreate");
+    const wt = await createWorktree(repo, "resume-recreate", "resume-recreate");
     sm.setSessionWorkspace("resume-recreate", {
       root: wt.worktreePath,
       kind: "worktree",
@@ -76,7 +76,7 @@ describe("SessionManager workspace resume resolution", () => {
     });
     removeWorktree(wt.worktreePath, false);
 
-    const resolved = sm.resolveSessionWorkspaceForResume("resume-recreate");
+    const resolved = await sm.resolveSessionWorkspaceForResume("resume-recreate");
 
     expect(resolved.ok).toBe(false);
     expect(resolved.reason).toBe("worktree_missing_branch_exists");
@@ -85,9 +85,9 @@ describe("SessionManager workspace resume resolution", () => {
     expect(sm.getSessionWorkspace("resume-recreate")!.kind).toBe("worktree");
   });
 
-  test("does not accept a regular file at the persisted worktree path", () => {
+  test("does not accept a regular file at the persisted worktree path", async () => {
     sm.create(repo, "m", "p", "resume-file");
-    const wt = createWorktree(repo, "resume-file", "resume-file");
+    const wt = await createWorktree(repo, "resume-file", "resume-file");
     sm.setSessionWorkspace("resume-file", {
       root: wt.worktreePath,
       kind: "worktree",
@@ -101,7 +101,7 @@ describe("SessionManager workspace resume resolution", () => {
     removeWorktree(wt.worktreePath, false);
     writeFileSync(wt.worktreePath, "not a directory\n");
 
-    const resolved = sm.resolveSessionWorkspaceForResume("resume-file");
+    const resolved = await sm.resolveSessionWorkspaceForResume("resume-file");
 
     expect(resolved.ok).toBe(false);
     expect(resolved.reason).toBe("worktree_missing_branch_exists");
@@ -110,9 +110,9 @@ describe("SessionManager workspace resume resolution", () => {
     expect(sm.getSessionWorkspace("resume-file")!.kind).toBe("worktree");
   });
 
-  test("falls back to main with a clear message when the worktree dir and branch are gone", () => {
+  test("falls back to main with a clear message when the worktree dir and branch are gone", async () => {
     sm.create(repo, "m", "p", "resume-main");
-    const wt = createWorktree(repo, "resume-main", "resume-main");
+    const wt = await createWorktree(repo, "resume-main", "resume-main");
     sm.setSessionWorkspace("resume-main", {
       root: wt.worktreePath,
       kind: "worktree",
@@ -125,7 +125,7 @@ describe("SessionManager workspace resume resolution", () => {
     });
     removeWorktree(wt.worktreePath, true);
 
-    const resolved = sm.resolveSessionWorkspaceForResume("resume-main");
+    const resolved = await sm.resolveSessionWorkspaceForResume("resume-main");
 
     expect(resolved.ok).toBe(true);
     if (!resolved.ok) throw new Error(resolved.message);

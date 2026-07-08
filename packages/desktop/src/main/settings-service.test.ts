@@ -88,4 +88,18 @@ describe("settings-service", () => {
       expect(() => JSON.parse(raw)).not.toThrow();
     });
   });
+
+  it("rejects an invalid worktree branchPrefix before writing settings", async () => {
+    await withCwd(async (cwd) => {
+      await expect(
+        writeSettings("project", { worktree: { branchPrefix: "../bad/" } }, cwd),
+      ).rejects.toThrow(/invalid worktree branch prefix/i);
+      expect(await readSettings("project", cwd)).toBeNull();
+
+      await writeSettings("project", { worktree: { branchPrefix: "agent" } }, cwd);
+      expect(await readSettings("project", cwd)).toEqual({
+        worktree: { branchPrefix: "agent/" },
+      });
+    });
+  });
 });
