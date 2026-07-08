@@ -9,7 +9,7 @@ function e(name: string, updatedAt?: number): MemoryEntry {
     content: "c",
     fileName: `${name}.md`,
     scope: "user",
-    updatedAt,
+    mtimeMs: updatedAt,
   };
 }
 
@@ -60,12 +60,25 @@ describe("pinned/origin frontmatter roundtrip + injection order", () => {
     try {
       const mm = new MemoryManager({ baseDir: base });
       mm.save({ name: "plain", description: "d1", type: "project", content: "c" });
-      mm.save({ name: "auto-noise", description: "d2", type: "project", content: "c", origin: "auto" });
-      mm.save({ name: "keeper", description: "d3", type: "user", content: "c", pinned: true, origin: "manual" });
+      mm.save({
+        name: "auto-noise",
+        description: "d2",
+        type: "project",
+        content: "c",
+        origin: "auto",
+      });
+      mm.save({
+        name: "keeper",
+        description: "d3",
+        type: "user",
+        content: "c",
+        pinned: true,
+        origin: "manual",
+      });
 
       const byName = new Map(mm.loadAll().map((x) => [x.name, x]));
       expect(byName.get("plain")!.pinned).toBe(false);
-      expect(byName.get("plain")!.origin).toBeUndefined();
+      expect(byName.get("plain")!.origin).toBe("manual");
       expect(byName.get("auto-noise")!.origin).toBe("auto");
       expect(byName.get("keeper")!.pinned).toBe(true);
       expect(byName.get("keeper")!.origin).toBe("manual");

@@ -13,9 +13,8 @@
  * The loop is intentionally small and offline:
  *   - No streaming, no UI events — it runs in the background.
  *   - No permission prompts — there is no interactive backend on this path, so
- *     we hard-reject any attempt to Save/Delete in the "user" scope before
- *     dispatching. The "dream" scope is the LLM's workspace and goes through
- *     freely.
+ *     Save/Delete goes through an origin guard before dispatching. Dream may
+ *     maintain origin:dream/auto entries but never touches origin:manual.
  *   - Capped at MAX_TURNS LLM round-trips and MAX_WRITES total mutations to
  *     bound damage on misbehavior.
  */
@@ -25,14 +24,12 @@ import type { ToolRegistry } from "../tool-system/registry.js";
 import type { ToolContext } from "../tool-system/context.js";
 import type { Message, ContentBlock, ToolCall } from "../types.js";
 import { MemoryManager } from "../session/memory.js";
-import {
-  buildDreamSystemPrompt,
-  buildDreamUserPrompt,
-} from "./auto-dream.js";
+import { buildDreamSystemPrompt, buildDreamUserPrompt } from "./auto-dream.js";
 import { logger } from "../logging/logger.js";
 
 const MAX_TURNS = 8;
 const MAX_WRITES = 10;
+const FRESH_ENTRY_GRACE_MS = 10 * 60 * 1000;
 const MEMORY_TOOL_NAMES = ["MemoryList", "MemoryRead", "MemorySave", "MemoryDelete"];
 
 export interface DreamConsolidationInput {
@@ -74,9 +71,9 @@ export async function runDreamConsolidation(
 ): Promise<DreamConsolidationResult> {
   const { llmClient, toolRegistry, projectDir, sessionId } = input;
 
-  const memoryTools = MEMORY_TOOL_NAMES
-    .map((n) => toolRegistry.getTool(n))
-    .filter((t): t is NonNullable<typeof t> => t != null);
+  const memoryTools = MEMORY_TOOL_NAMES.map((n) => toolRegistry.getTool(n)).filter(
+    (t): t is NonNullable<typeof t> => t != null,
+  );
   if (memoryTools.length < MEMORY_TOOL_NAMES.length) {
     logger.warn("memory.dream_missing_tools", {
       sessionId,
@@ -90,9 +87,10 @@ export async function runDreamConsolidation(
   const mm = new MemoryManager({ projectDir });
   const userMems = mm.loadScope("user");
   const dreamMems = mm.loadScope("dream");
+  const globalDreamMems = projectDir ? new MemoryManager({ scope: "dream" }).loadAll() : [];
 
   const systemPrompt = buildDreamSystemPrompt();
-  const userPrompt = buildDreamUserPrompt(userMems, dreamMems);
+  const userPrompt = buildDreamUserPrompt(userMems, dreamMems, globalDreamMems);
 
   // Strip RegisteredTool down to the shape createMessage expects.
   const toolDefs = memoryTools.map((t) => ({
@@ -166,8 +164,8 @@ export async function runDreamConsolidation(
  * Execute one memory tool call inside the dream loop. Enforces the two
  * dream-loop invariants the prompt also states:
  *   - Only the 4 memory tools are dispatchable.
- *   - Save/Delete in "user" scope is refused (returned as a tool error)
- *     because dream runs without an interactive permission backend.
+ *   - Save/Delete is allowed only for origin:auto/origin:dream owned entries.
+ *     Missing origin is manual, and manual is always protected.
  */
 async function dispatchDreamTool(
   tc: ToolCall,
@@ -182,12 +180,9 @@ async function dispatchDreamTool(
 
   const isWrite = tc.toolName === "MemorySave" || tc.toolName === "MemoryDelete";
   if (isWrite) {
-    const scope = tc.args?.scope;
-    if (scope !== "dream") {
-      return (
-        `Error: dream loop may only write to scope "dream", got "${scope}". ` +
-        `User-scope changes require interactive permission, which is not available here.`
-      );
+    const guard = checkDreamWriteGuard(tc, ctx);
+    if (!guard.ok) {
+      return guard.error;
     }
     if (!consumeWriteBudget()) {
       return "Error: dream write budget exhausted — stop calling write tools and summarize instead.";
@@ -195,10 +190,68 @@ async function dispatchDreamTool(
   }
 
   try {
-    const result = await toolRegistry.executeTool(tc.toolName, tc.args, { ctx });
+    const dreamCtx = { ...ctx, __dreamLoop: true } as ToolContext;
+    const result = await toolRegistry.executeTool(tc.toolName, tc.args, { ctx: dreamCtx });
     if (result.isError) return result.error ?? `Error executing ${tc.toolName}`;
     return result.result ?? "";
   } catch (err) {
     return `Error executing ${tc.toolName}: ${(err as Error).message}`;
   }
+}
+
+function checkDreamWriteGuard(
+  tc: ToolCall,
+  ctx: ToolContext,
+): { ok: true } | { ok: false; error: string } {
+  const scope = tc.args?.scope;
+  if (scope !== "dream" && scope !== "user") {
+    return {
+      ok: false,
+      error: `Error: dream loop may only write to scope "dream" or "user", got "${scope}".`,
+    };
+  }
+
+  const location = tc.args?.location === "global" ? "global" : "project";
+  const mm = new MemoryManager({
+    projectDir: location === "project" ? ctx.cwd : undefined,
+    scope,
+  });
+
+  const id = typeof tc.args?.id === "string" ? tc.args.id : undefined;
+  const name = typeof tc.args?.name === "string" ? tc.args.name : undefined;
+  const target = id ? mm.findById(id) : name ? mm.find(name) : undefined;
+  if (!target) return { ok: true };
+
+  if (target.origin === "manual" || !target.origin) {
+    return {
+      ok: false,
+      error:
+        `Error: dream loop cannot modify origin:manual memory "${target.name}" ` +
+        `(${location}/${scope}/${target.id ?? target.fileName}).`,
+    };
+  }
+  if (target.origin !== "auto" && target.origin !== "dream") {
+    return {
+      ok: false,
+      error:
+        `Error: dream loop can only modify origin:auto or origin:dream memories; ` +
+        `"${target.name}" has origin:${target.origin}.`,
+    };
+  }
+  if (tc.toolName === "MemoryDelete" && isFreshEntry(target.createdAt)) {
+    return {
+      ok: false,
+      error:
+        `Error: dream loop cannot delete freshly-created memory "${target.name}" yet; ` +
+        "leave it for the next consolidation pass.",
+    };
+  }
+
+  return { ok: true };
+}
+
+function isFreshEntry(createdAt: string | undefined): boolean {
+  if (!createdAt) return false;
+  const createdMs = new Date(createdAt).getTime();
+  return Number.isFinite(createdMs) && Date.now() - createdMs < FRESH_ENTRY_GRACE_MS;
 }

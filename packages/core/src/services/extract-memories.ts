@@ -20,20 +20,49 @@ export interface ExtractedMemory {
   content: string;
 }
 
+export interface ExistingMemorySummary {
+  id?: string;
+  name: string;
+  type: string;
+  description: string;
+  location?: "project" | "global";
+  memoryScope?: "user" | "dream";
+  origin?: "manual" | "auto" | "dream";
+  pinned?: boolean;
+  useCount?: number;
+  updateCount?: number;
+  updatedAt?: string;
+}
+
 /**
  * Build the prompt for extracting memories from a conversation.
  */
 export function buildExtractionPrompt(
   transcript: Array<{ role: string; content: string }>,
-  existingMemories: Array<{ name: string; type: string; description: string }>,
+  existingMemories: ExistingMemorySummary[],
 ): string {
   const conversationText = transcript
     .map((m) => `[${m.role}]: ${m.content.slice(0, 3000)}`)
     .join("\n\n");
 
-  const existingList = existingMemories.length > 0
-    ? existingMemories.map((m) => `  - [${m.type}] ${m.name}: ${m.description}`).join("\n")
-    : "  (none)";
+  const existingList =
+    existingMemories.length > 0
+      ? existingMemories
+          .map((m) => {
+            const meta = [
+              m.id ? `id:${m.id}` : null,
+              m.location ? `location:${m.location}` : null,
+              m.memoryScope ? `scope:${m.memoryScope}` : null,
+              m.origin ? `origin:${m.origin}` : null,
+              typeof m.useCount === "number" ? `use:${m.useCount}` : null,
+              typeof m.updateCount === "number" ? `updates:${m.updateCount}` : null,
+            ]
+              .filter(Boolean)
+              .join(", ");
+            return `  - [${m.type}] ${m.name}${meta ? ` (${meta})` : ""}: ${m.description}`;
+          })
+          .join("\n")
+      : "  (none)";
 
   return `Analyze the following conversation and extract any information worth remembering for future sessions.
 
@@ -44,7 +73,7 @@ ${existingList}
 ${conversationText.slice(0, 30000)}
 
 ## Instructions
-Identify NEW information that should be saved as persistent memories. Categories (type):
+Identify candidate information that may be saved as persistent memories. The extractor only proposes candidates; code will route automatic candidates into dream memory first, never directly into user memory. Categories (type):
 - **user**: Information about the user's role, preferences, or expertise
 - **feedback**: Guidance about how to approach work (corrections or confirmations)
 - **project**: Non-obvious facts about ongoing work, goals, or decisions
@@ -60,7 +89,10 @@ Rules:
 - Extract AT MOST 2 memories per session. Prefer 0 to a marginal one — most sessions are noise.
 - AT MOST 1 of the extracted memories may be "global". The global layer is injected every session, so keep it tiny and high-value. If two candidates both seem global, keep the single most universal one global and make the other "project".
 - Only extract information that would be useful in FUTURE conversations
-- Do not duplicate existing memories (re-read the "Existing Memories" list above carefully)
+- Do not duplicate existing memories (re-read the "Existing Memories" list above carefully).
+- If an existing auto/dream memory has the same durable topic, reuse that topic in the candidate instead of creating a date-stamped variant; the write decision layer will update the existing id.
+- Manual user memories are read-only curated memories. Do not re-extract the same topic just because the wording or date differs.
+- Avoid dates, version stamps, batch names, and progress-snapshot suffixes in names. Names should be stable topic identifiers, not "today" variants.
 - Do not extract code patterns, file structures, or git history (derivable from code)
 - Do not extract ephemeral task details, progress snapshots, or in-flight work state — those belong in the conversation, not memory
 - Do not extract one-off research products (news reports, AI industry summaries, slide deck content, daily progress dumps) — they're done and not "durable, reusable information"
@@ -85,10 +117,7 @@ export const MAX_MEMORIES_PER_EXTRACTION = 2;
  * caller can pass `settings.memories.maxCount` to tune it. Non-positive or
  * absent → the default.
  */
-export function parseExtractionResponse(
-  response: string,
-  maxCount?: number,
-): ExtractedMemory[] {
+export function parseExtractionResponse(response: string, maxCount?: number): ExtractedMemory[] {
   const cap =
     typeof maxCount === "number" && maxCount > 0
       ? Math.floor(maxCount)
@@ -113,13 +142,15 @@ export function parseExtractionResponse(
       )
       // Normalize scope: only "global" survives as global; everything else
       // (absent, "project", typos) → "project" — never promote to global by accident.
-      .map((m): ExtractedMemory => ({
-        type: m.type,
-        scope: m.scope === "global" ? "global" : "project",
-        name: m.name,
-        description: m.description,
-        content: m.content,
-      }));
+      .map(
+        (m): ExtractedMemory => ({
+          type: m.type,
+          scope: m.scope === "global" ? "global" : "project",
+          name: m.name,
+          description: m.description,
+          content: m.content,
+        }),
+      );
 
     // Hard cap (用户拍板 克制): at most 1 global per extraction. The prompt asks
     // for this, but the model may ignore it — enforce in code. Keep the first
