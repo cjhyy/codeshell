@@ -269,21 +269,61 @@ jobs:
         with:
           path: artifacts
 
+      # Publish via the gh CLI (not softprops/action-gh-release): the action
+      # create+upload in one pass and intermittently PATCH/DELETE a
+      # not-yet-registered asset id → `Not Found - update-a-release-asset`,
+      # marking the step red even though every asset uploaded. `gh release`
+      # separates create from an idempotent `upload --clobber`, so it never
+      # 404s and is safe to re-run on the same tag.
       - name: publish release
-        uses: softprops/action-gh-release@v2
-        with:
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
           # Any tag with a hyphen (rc, beta, alpha) → prerelease, never "Latest".
-          prerelease: ${{ contains(github.ref_name, '-') }}
-          name: ${{ github.ref_name }}
-          body: |
-            自动打包构建 — 用于在其他电脑(尤其 Windows)安装测试。
+          PRERELEASE=()
+          case "$TAG" in *-*) PRERELEASE=(--prerelease) ;; esac
 
-            **安装包签名说明**:
-            - Windows (.exe / nsis):SmartScreen 会拦,点「更多信息 → 仍要运行」。
-            - macOS 未配置 Developer ID 签名密钥时,产物会使用固定 requirement 的 ad-hoc 签名。
-            - 从旧 cdhash ad-hoc 版本升级到固定 requirement 版本时,需要下载 .dmg 手动覆盖安装一次;之后固定 requirement 版本之间可走应用内更新。
-            - macOS 如已配置 Developer ID + notarization secrets,会使用正式签名/公证,应用内自动更新可直接安装。
+          cat > /tmp/release-notes.md <<'NOTES'
+          自动打包构建 — 用于在其他电脑(尤其 Windows)安装测试。
 
-            产物按平台分目录上传。node-pty 已按各平台 Electron ABI 重编。
-          files: artifacts/**/*
-          fail_on_unmatched_files: false
+          **安装包签名说明**:
+          - Windows (.exe / nsis):SmartScreen 会拦,点「更多信息 → 仍要运行」。
+          - macOS 未配置 Developer ID 签名密钥时,产物会使用固定 requirement 的 ad-hoc 签名。
+          - 从旧 cdhash ad-hoc 版本升级到固定 requirement 版本时,需要下载 .dmg 手动覆盖安装一次;之后固定 requirement 版本之间可走应用内更新。
+          - macOS 如已配置 Developer ID + notarization secrets,会使用正式签名/公证,应用内自动更新可直接安装。
+
+          产物按平台分目录上传。node-pty 已按各平台 Electron ABI 重编。
+          NOTES
+
+          # Create the release if absent (idempotent across re-runs).
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              --title "$TAG" \
+              --notes-file /tmp/release-notes.md \
+              "${PRERELEASE[@]}"
+          fi
+
+          # Flatten per-platform artifact dirs, keeping ONLY real release assets.
+          # electron-builder also emits builder-debug.yml in every platform dir;
+          # uploading all *.yml would collide on that shared basename (gh upload
+          # names assets by basename; --clobber only dedups against the release,
+          # not within one command) → 422. So allowlist installer + update files.
+          mapfile -t ASSETS < <(find artifacts -type f \( \
+            -name '*.exe' -o -name '*.dmg' -o -name '*.zip' -o -name '*.AppImage' \
+            -o -name '*.blockmap' -o -name 'latest*.yml' \) | sort)
+          if [ ${#ASSETS[@]} -eq 0 ]; then
+            echo "no build artifacts found under artifacts/" >&2
+            exit 1
+          fi
+          # Guard: fail loudly if two platforms ever ship the same asset basename
+          # (would silently overwrite one another on upload).
+          dupes=$(printf '%s\n' "${ASSETS[@]}" | xargs -n1 basename | sort | uniq -d)
+          if [ -n "$dupes" ]; then
+            echo "duplicate asset basenames across platforms:" >&2
+            echo "$dupes" >&2
+            exit 1
+          fi
+          gh release upload "$TAG" "${ASSETS[@]}" --clobber
