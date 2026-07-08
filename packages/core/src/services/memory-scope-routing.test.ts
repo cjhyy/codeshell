@@ -24,8 +24,8 @@ describe("parseExtractionResponse scope", () => {
   });
 });
 
-describe("MemoryOrchestrator scope routing (global vs project store)", () => {
-  it("routes scope:global to the global PENDING store (审批门) and scope:project to the per-project store", async () => {
+describe("MemoryOrchestrator scope routing (global vs project dream store)", () => {
+  it("routes automatic global/project extractions to dream and does not add pending/user entries", async () => {
     const base = mkdtempSync(join(tmpdir(), "cs-mem-route-"));
     const prevHome = process.env.CODE_SHELL_HOME;
     process.env.CODE_SHELL_HOME = base; // isolate all MemoryManager writes
@@ -39,8 +39,20 @@ describe("MemoryOrchestrator scope routing (global vs project store)", () => {
         callLLM: async (sysPrompt) => {
           if (sysPrompt.includes("session summariser")) return "[]";
           return JSON.stringify([
-            { type: "feedback", scope: "global", name: "global-lesson", description: "d", content: "c" },
-            { type: "project", scope: "project", name: "project-fact", description: "d", content: "c" },
+            {
+              type: "feedback",
+              scope: "global",
+              name: "global-lesson",
+              description: "d",
+              content: "c",
+            },
+            {
+              type: "project",
+              scope: "project",
+              name: "project-fact",
+              description: "d",
+              content: "c",
+            },
           ]);
         },
       });
@@ -48,33 +60,43 @@ describe("MemoryOrchestrator scope routing (global vs project store)", () => {
       const result = await orchestrator.run([{ role: "user", content: "x" }], "s1");
       expect(result.extracted).toBe(2);
 
-      // 审批门: global-lesson must land in PENDING (NOT auto-injected global user store).
+      // P0: automatic extraction lands in dream, not pending/user.
       const pendingNames = new MemoryManager({ baseDir: base, scope: "pending" })
-        .loadAll().map((e) => e.name);
-      expect(pendingNames).toContain("global-lesson");
+        .loadAll()
+        .map((e) => e.name);
+      expect(pendingNames).not.toContain("global-lesson");
 
-      // It must NOT be in the global user store yet (awaiting approval).
       const globalUserNames = new MemoryManager({ baseDir: base, scope: "user" })
-        .loadAll().map((e) => e.name);
+        .loadAll()
+        .map((e) => e.name);
       expect(globalUserNames).not.toContain("global-lesson");
 
-      // Approving moves it into the global user store.
-      const pendingMgr = new MemoryManager({ baseDir: base, scope: "pending" });
-      expect(pendingMgr.approvePending("global-lesson")).toBeTruthy();
-      const afterApprove = new MemoryManager({ baseDir: base, scope: "user" })
-        .loadAll().map((e) => e.name);
-      expect(afterApprove).toContain("global-lesson");
+      const globalDream = new MemoryManager({ baseDir: base, scope: "dream" }).loadAll();
+      expect(globalDream.map((e) => e.name)).toContain("global-lesson");
+      expect(globalDream.find((e) => e.name === "global-lesson")?.origin).toBe("auto");
 
-      // project-fact must land in the PROJECT store (auto, no gate)
       const projectNames = new MemoryManager({ baseDir: base, projectDir, scope: "user" })
-        .loadAll().map((e) => e.name);
-      expect(projectNames).toContain("project-fact");
+        .loadAll()
+        .map((e) => e.name);
+      expect(projectNames).not.toContain("project-fact");
       expect(projectNames).not.toContain("global-lesson");
 
+      const projectDream = new MemoryManager({
+        baseDir: base,
+        projectDir,
+        scope: "dream",
+      }).loadAll();
+      expect(projectDream.map((e) => e.name)).toContain("project-fact");
+      expect(projectDream.find((e) => e.name === "project-fact")?.origin).toBe("auto");
+
       // telemetry split
-      const ext = info.mock.calls.find((c) => c[0] === "memory.extraction_done")?.[1] as Record<string, unknown>;
-      expect(ext?.pendingGlobalCount).toBe(1);
-      expect(ext?.projectCount).toBe(1);
+      const ext = info.mock.calls.find((c) => c[0] === "memory.extraction_done")?.[1] as Record<
+        string,
+        unknown
+      >;
+      expect(ext?.globalDreamCount).toBe(1);
+      expect(ext?.projectDreamCount).toBe(1);
+      expect(ext?.pendingGlobalCount).toBeUndefined();
     } finally {
       info.mockRestore();
       warn.mockRestore();
@@ -110,7 +132,8 @@ describe("MemoryOrchestrator scope routing (global vs project store)", () => {
       const result = await orchestrator.run([{ role: "user", content: "x" }], "s1");
       expect(result.pruned).toContain("ancient");
       const left = new MemoryManager({ baseDir: base, projectDir, scope: "user" })
-        .loadAll().map((e) => e.name);
+        .loadAll()
+        .map((e) => e.name);
       expect(left).not.toContain("ancient");
     } finally {
       info.mockRestore();

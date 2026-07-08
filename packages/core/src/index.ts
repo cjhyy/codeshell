@@ -166,7 +166,7 @@ export {
 } from "./session/undo-target.js";
 export { diffLines, renderDiffPreview, type DiffLine } from "./session/simple-diff.js";
 export { MemoryManager } from "./session/memory.js";
-export type { MemoryEntry, MemoryScope } from "./session/memory.js";
+export type { MemoryEntry, MemoryOrigin, MemoryScope } from "./session/memory.js";
 export {
   runDreamConsolidation,
   type DreamConsolidationInput,
