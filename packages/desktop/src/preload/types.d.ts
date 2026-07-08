@@ -189,7 +189,7 @@ export interface TurnUndoResult {
 }
 
 export type MemoryLevel = "user" | "project";
-export type MemoryScope = "user" | "dream";
+export type MemoryScope = "user" | "dream" | "pending";
 export type MemoryType = "user" | "feedback" | "project" | "reference";
 
 export interface RendererMemoryEntry {
@@ -214,6 +214,10 @@ export interface RendererMemoryEntry {
   usageCount?: number;
   lastUsed?: string;
   created?: string;
+  originProject?: string;
+  originProjects?: string[];
+  promotionReason?: string;
+  promotionStatus?: "pending" | "rejected";
 }
 
 export interface RendererMemoryEntryFull extends RendererMemoryEntry {
@@ -772,13 +776,13 @@ export interface CodeshellApi {
   /** 审批门: list global memories auto-extracted as "global" awaiting approval
    *  (full content included so the panel shows it inline). */
   listPendingMemory(): Promise<RendererMemoryEntryFull[]>;
-  /** Approve a pending memory → moves it into the global user store (injected).
+  /** Approve a pending memory → moves it into the global dream store (injected).
    *  Returns the new filename, or null if not found. */
   approvePendingMemory(name: string): Promise<string | null>;
   /** Demote a pending memory → falls back to its source project's user store
    *  (not promoted to global, but kept). Returns the new filename or null. */
   demotePendingMemory(name: string): Promise<string | null>;
-  /** Reject a pending memory → soft-delete (recoverable from trash). */
+  /** Reject a pending memory → mark source rejected, then soft-delete pending. */
   rejectPendingMemory(name: string): Promise<boolean>;
   /** Promote a project-level user memory to the global user store (manual ↑).
    *  Returns the new global filename, or null if not found. */

@@ -60,7 +60,7 @@ describe("MemoryOrchestrator extraction telemetry", () => {
       expect(data.noopCount).toBe(0);
       expect(data.deleteCount).toBe(0);
       expect(data.guardedManualCount).toBe(0);
-      expect(data.pendingGlobalCount).toBeUndefined();
+      expect(data.pendingGlobalCount).toBe(0);
       expect(data.elapsedMs).toBeNumber();
       expect(data.loadMs).toBeNumber();
       expect(data.promptMs).toBeNumber();

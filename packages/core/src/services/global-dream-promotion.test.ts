@@ -24,7 +24,7 @@ const candidate: ExtractedMemory = {
 };
 
 describe("global dream promotion gate", () => {
-  it("keeps a single-project automatic global candidate as project dream evidence only", () => {
+  it("keeps a global candidate as project dream evidence and creates a pending approval item", () => {
     withBase((baseDir) => {
       const projectDir = "/tmp/project-one";
 
@@ -36,20 +36,28 @@ describe("global dream promotion gate", () => {
       });
 
       expect(result.promoted).toBe(false);
+      expect(result.pendingSuggested).toBe(true);
       expect(result.evidenceCount).toBe(1);
 
       const projectDream = new MemoryManager({ baseDir, projectDir, scope: "dream" }).loadAll();
       expect(projectDream.map((m) => m.name)).toEqual(["prefer-rg-before-grep"]);
-      expect(projectDream[0]!.promotionKey).toBe("prefer-rg-before-grep");
       expect(projectDream[0]!.originProjects).toEqual([projectDir]);
       expect(projectDream[0]!.evidenceCount).toBe(1);
+      expect(projectDream[0]!.promotionStatus).toBe("pending");
 
       const globalDream = new MemoryManager({ baseDir, scope: "dream" }).loadAll();
       expect(globalDream).toHaveLength(0);
+
+      const pending = new MemoryManager({ baseDir, scope: "pending" }).loadAll();
+      expect(pending).toHaveLength(1);
+      expect(pending[0]!.name).toBe("prefer-rg-before-grep");
+      expect(pending[0]!.origin).toBe("dream");
+      expect(pending[0]!.originProject).toBe(projectDir);
+      expect(pending[0]!.promotionReason).toContain("suggested global dream");
     });
   });
 
-  it("promotes when the same promotionKey appears in two different project dreams", () => {
+  it("does not auto-promote even when a similar candidate exists in another project", () => {
     withBase((baseDir) => {
       const projectA = "/tmp/project-a";
       const projectB = "/tmp/project-b";
@@ -60,7 +68,6 @@ describe("global dream promotion gate", () => {
           type: "feedback",
           content: "Use rg first for code search.",
           origin: "auto",
-          promotionKey: "prefer-rg-before-grep",
           originProjects: [projectA],
           evidenceCount: 1,
         },
@@ -74,21 +81,20 @@ describe("global dream promotion gate", () => {
         userDirectGlobal: false,
       });
 
-      expect(result.promoted).toBe(true);
-      expect(result.evidenceCount).toBe(2);
-      expect(result.originProjects.sort()).toEqual([projectA, projectB].sort());
+      expect(result.promoted).toBe(false);
+      expect(result.pendingSuggested).toBe(true);
+      expect(result.evidenceCount).toBe(1);
+      expect(result.originProjects).toEqual([projectB]);
 
       const globalDream = new MemoryManager({ baseDir, scope: "dream" }).loadAll();
-      expect(globalDream).toHaveLength(1);
-      expect(globalDream[0]!.name).toBe("prefer-rg-before-grep");
-      expect(globalDream[0]!.promotionKey).toBe("prefer-rg-before-grep");
-      expect(globalDream[0]!.originProjects?.sort()).toEqual([projectA, projectB].sort());
-      expect(globalDream[0]!.evidenceCount).toBe(2);
-      expect(globalDream[0]!.promotionReason).toContain("cross-project");
+      expect(globalDream).toHaveLength(0);
+
+      const pending = new MemoryManager({ baseDir, scope: "pending" }).loadAll();
+      expect(pending.map((m) => m.name)).toEqual(["prefer-rg-before-grep"]);
     });
   });
 
-  it("allows a user-direct global preference to promote from one project", () => {
+  it("turns a user-direct global preference into a pending approval item", () => {
     withBase((baseDir) => {
       const projectDir = "/tmp/direct-project";
 
@@ -105,14 +111,45 @@ describe("global dream promotion gate", () => {
         userDirectGlobal: true,
       });
 
-      expect(result.promoted).toBe(true);
+      expect(result.promoted).toBe(false);
+      expect(result.pendingSuggested).toBe(true);
       expect(result.evidenceCount).toBe(1);
 
       const globalDream = new MemoryManager({ baseDir, scope: "dream" }).loadAll();
-      expect(globalDream).toHaveLength(1);
-      expect(globalDream[0]!.promotionKey).toBe("user-prefers-chinese");
-      expect(globalDream[0]!.originProjects).toEqual([projectDir]);
-      expect(globalDream[0]!.promotionReason).toContain("user-direct");
+      expect(globalDream).toHaveLength(0);
+
+      const pending = new MemoryManager({ baseDir, scope: "pending" }).loadAll();
+      expect(pending).toHaveLength(1);
+      expect(pending[0]!.name).toBe("user-prefers-chinese");
+      expect(pending[0]!.originProjects).toEqual([projectDir]);
+      expect(pending[0]!.promotionReason).toContain("user-direct");
+      expect(pending[0]!.content).toContain("Chinese");
+    });
+  });
+
+  it("does not suggest a pending item again after the source project dream was rejected", () => {
+    withBase((baseDir) => {
+      const projectDir = "/tmp/rejected-project";
+
+      const first = applyGlobalDreamPromotionGate({
+        baseDir,
+        projectDir,
+        candidate,
+        userDirectGlobal: false,
+      });
+      expect(first.pendingSuggested).toBe(true);
+      expect(new MemoryManager({ baseDir, scope: "pending" }).rejectPending(candidate.name)).toBe(
+        true,
+      );
+
+      const second = applyGlobalDreamPromotionGate({
+        baseDir,
+        projectDir,
+        candidate,
+        userDirectGlobal: false,
+      });
+      expect(second.pendingSuggested).toBe(false);
+      expect(new MemoryManager({ baseDir, scope: "pending" }).loadAll()).toHaveLength(0);
     });
   });
 });

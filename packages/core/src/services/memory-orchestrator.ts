@@ -159,6 +159,7 @@ export class MemoryOrchestrator {
         const parseMs = Date.now() - t;
         t = Date.now();
         let globalDreamCount = 0;
+        let pendingGlobalCount = 0;
         let projectDreamCount = 0;
         let addCount = 0;
         let updateCount = 0;
@@ -184,6 +185,7 @@ export class MemoryOrchestrator {
                   userDirectGlobal,
                 });
                 if (promotion.projectEvidenceSaved) projectDreamCount++;
+                if (promotion.pendingSuggested) pendingGlobalCount++;
                 if (promotion.promoted) globalDreamCount++;
                 addCount++;
                 break;
@@ -270,6 +272,7 @@ export class MemoryOrchestrator {
           sessionId,
           extracted,
           globalDreamCount,
+          pendingGlobalCount,
           projectDreamCount,
           addCount,
           updateCount,

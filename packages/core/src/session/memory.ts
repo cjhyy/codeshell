@@ -31,7 +31,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 /**
  * Memory scopes (storage subdirs under a memory root):
@@ -99,6 +99,20 @@ export interface MemoryEntry {
   firstSeenAt?: string;
   lastSeenAt?: string;
   promotionReason?: string;
+  promotionStatus?: "pending" | "rejected";
+  promotionSourceId?: string;
+}
+
+function frontmatterLine(key: string, value: string | number | boolean | string[]): string {
+  return `${key}: ${JSON.stringify(value)}\n`;
+}
+
+function parseFrontmatterValue(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
 }
 
 /**
@@ -212,10 +226,11 @@ export class MemoryManager {
           ? this.loadFile(syntheticLegacy.fileName)
           : null;
     const id = inputId && !syntheticLegacy ? inputId : this.generateId();
-    const fileName = existing?.fileName ?? this.fileNameForId(id);
+    const fileName = existing?.fileName ?? this.availableFileNameForId(id);
     const filePath = join(this.memoryDir, fileName);
 
     const origin: MemoryOrigin = opts.forceOrigin ?? entry.origin ?? existing?.origin ?? "manual";
+    const pinned = entry.pinned ?? existing?.pinned;
     const createdAt = entry.createdAt ?? entry.created ?? existing?.createdAt ?? nowIso;
     const useCount = entry.useCount ?? entry.usageCount ?? existing?.useCount ?? 0;
     const lastUsedAt = entry.lastUsedAt ?? entry.lastUsed ?? existing?.lastUsedAt ?? createdAt;
@@ -226,6 +241,8 @@ export class MemoryManager {
     const firstSeenAt = entry.firstSeenAt ?? existing?.firstSeenAt;
     const lastSeenAt = entry.lastSeenAt ?? existing?.lastSeenAt;
     const promotionReason = entry.promotionReason ?? existing?.promotionReason;
+    const promotionStatus = entry.promotionStatus ?? existing?.promotionStatus;
+    const promotionSourceId = entry.promotionSourceId ?? existing?.promotionSourceId;
 
     const contentChanged =
       existing != null &&
@@ -242,26 +259,28 @@ export class MemoryManager {
 
     const content =
       `---\n` +
-      `id: ${id}\n` +
-      `name: ${entry.name}\n` +
-      `description: ${entry.description}\n` +
-      `type: ${entry.type}\n` +
-      `origin: ${origin}\n` +
-      (entry.pinned ? `pinned: true\n` : "") +
-      (originProject ? `originProject: ${originProject}\n` : "") +
-      (promotionKey ? `promotionKey: ${promotionKey}\n` : "") +
+      frontmatterLine("id", id) +
+      frontmatterLine("name", entry.name) +
+      frontmatterLine("description", entry.description) +
+      frontmatterLine("type", entry.type) +
+      frontmatterLine("origin", origin) +
+      (pinned ? frontmatterLine("pinned", true) : "") +
+      (originProject ? frontmatterLine("originProject", originProject) : "") +
+      (promotionKey ? frontmatterLine("promotionKey", promotionKey) : "") +
       (originProjects && originProjects.length > 0
-        ? `originProjects:\n${originProjects.map((p) => `  - ${p}\n`).join("")}`
+        ? frontmatterLine("originProjects", originProjects)
         : "") +
-      (typeof evidenceCount === "number" ? `evidenceCount: ${evidenceCount}\n` : "") +
-      (firstSeenAt ? `firstSeenAt: ${firstSeenAt}\n` : "") +
-      (lastSeenAt ? `lastSeenAt: ${lastSeenAt}\n` : "") +
-      (promotionReason ? `promotionReason: ${promotionReason}\n` : "") +
-      `createdAt: ${createdAt}\n` +
-      `updatedAt: ${updatedAt}\n` +
-      `lastUsedAt: ${lastUsedAt}\n` +
-      `useCount: ${useCount}\n` +
-      `updateCount: ${updateCount}\n` +
+      (typeof evidenceCount === "number" ? frontmatterLine("evidenceCount", evidenceCount) : "") +
+      (firstSeenAt ? frontmatterLine("firstSeenAt", firstSeenAt) : "") +
+      (lastSeenAt ? frontmatterLine("lastSeenAt", lastSeenAt) : "") +
+      (promotionReason ? frontmatterLine("promotionReason", promotionReason) : "") +
+      (promotionStatus ? frontmatterLine("promotionStatus", promotionStatus) : "") +
+      (promotionSourceId ? frontmatterLine("promotionSourceId", promotionSourceId) : "") +
+      frontmatterLine("createdAt", createdAt) +
+      frontmatterLine("updatedAt", updatedAt) +
+      frontmatterLine("lastUsedAt", lastUsedAt) +
+      frontmatterLine("useCount", useCount) +
+      frontmatterLine("updateCount", updateCount) +
       `---\n\n` +
       `${entry.content}\n`;
 
@@ -347,9 +366,36 @@ export class MemoryManager {
       const frontmatter = frontmatterMatch[1];
       const content = frontmatterMatch[2].trim();
 
-      const read = (key: string): string | undefined =>
-        frontmatter.match(new RegExp(`^${key}:\\s*(.+)`, "m"))?.[1]?.trim();
+      const readRaw = (key: string): string | undefined =>
+        frontmatter.match(new RegExp(`^${key}:\\s*(.*)$`, "m"))?.[1]?.trim();
+      const readValue = (key: string): unknown | undefined => {
+        const raw = readRaw(key);
+        return raw === undefined ? undefined : parseFrontmatterValue(raw);
+      };
+      const read = (key: string): string | undefined => {
+        const value = readValue(key);
+        if (value === undefined || value === null) return undefined;
+        if (Array.isArray(value)) return value.map(String).join(",");
+        return String(value);
+      };
       const readList = (key: string): string[] | undefined => {
+        const raw = readRaw(key);
+        if (raw !== undefined && raw.length > 0) {
+          const value = parseFrontmatterValue(raw);
+          if (Array.isArray(value)) {
+            const values = value.map((item) => String(item)).filter(Boolean);
+            return values.length > 0 ? values : undefined;
+          }
+          if (typeof value === "string" && value.startsWith("[") && value.endsWith("]")) {
+            const values = value
+              .slice(1, -1)
+              .split(",")
+              .map((item) => item.trim().replace(/^["']|["']$/g, ""))
+              .filter(Boolean);
+            return values.length > 0 ? values : undefined;
+          }
+          return [String(value)];
+        }
         const block = frontmatter.match(new RegExp(`^${key}:\\s*\\n((?:\\s+-\\s+.*\\n?)*)`, "m"));
         if (block?.[1]) {
           const values = block[1]
@@ -358,29 +404,24 @@ export class MemoryManager {
             .filter((value): value is string => Boolean(value));
           return values.length > 0 ? values : undefined;
         }
-        const inline = read(key);
-        if (!inline) return undefined;
-        if (inline.startsWith("[") && inline.endsWith("]")) {
-          const values = inline
-            .slice(1, -1)
-            .split(",")
-            .map((value) => value.trim().replace(/^["']|["']$/g, ""))
-            .filter(Boolean);
-          return values.length > 0 ? values : undefined;
-        }
-        return [inline];
+        return undefined;
       };
       const readNumber = (key: string): number | undefined => {
-        const raw = read(key);
-        if (!raw) return undefined;
-        const parsed = parseInt(raw, 10);
+        const value = readValue(key);
+        if (value === undefined || value === null || value === "") return undefined;
+        if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
+        const parsed = parseInt(String(value), 10);
         return Number.isFinite(parsed) ? parsed : undefined;
+      };
+      const readBoolean = (key: string): boolean => {
+        const value = readValue(key);
+        return value === true || value === "true";
       };
       const id = read("id") ?? `legacy:${scope}:${fileName}`;
       const name = read("name") ?? fileName;
       const description = read("description") ?? "";
       const type = (read("type") ?? "project") as MemoryEntry["type"];
-      const pinned = read("pinned") === "true";
+      const pinned = readBoolean("pinned");
       // Anchor with ^…/m so `origin:` doesn't accidentally match the
       // `originProject:` line (and vice-versa).
       const originRaw = read("origin");
@@ -413,6 +454,12 @@ export class MemoryManager {
       const firstSeenAt = read("firstSeenAt");
       const lastSeenAt = read("lastSeenAt");
       const promotionReason = read("promotionReason");
+      const promotionStatusRaw = read("promotionStatus");
+      const promotionStatus =
+        promotionStatusRaw === "pending" || promotionStatusRaw === "rejected"
+          ? promotionStatusRaw
+          : undefined;
+      const promotionSourceId = read("promotionSourceId");
 
       return {
         id,
@@ -440,6 +487,8 @@ export class MemoryManager {
         firstSeenAt,
         lastSeenAt,
         promotionReason,
+        promotionStatus,
+        promotionSourceId,
       };
     } catch {
       return null;
@@ -532,13 +581,14 @@ export class MemoryManager {
   }
 
   /**
-   * Approve a pending memory: move it from the pending scope into the user scope
-   * of the SAME memory root (pending only ever exists at the global root — the
-   * approval门 only gates global writes). Must be called on a pending-scope
-   * manager. Returns the new user filename, or null if not found / wrong scope.
+   * Approve a pending memory: move it from the pending scope into the global
+   * dream scope of the SAME memory root. Pending only ever exists at the global
+   * root; approval gates whether a suggested global dream becomes injected.
+   * Must be called on a pending-scope manager. Returns the new global dream
+   * filename, or null if not found / wrong scope.
    *
-   * 审批门 (用户拍板): the only path that moves an auto-extracted memory into the
-   * curated, injected global user store.
+   * 审批门 (用户拍板): the only path that moves a suggested global dream into the
+   * injected global dream store.
    */
   approvePending(nameOrFile: string): string | null {
     return this.movePending(nameOrFile, "global");
@@ -552,32 +602,93 @@ export class MemoryManager {
     return this.movePending(nameOrFile, "project");
   }
 
-  /** Shared move for approve(→global user)/demote(→origin-project user). */
+  /**
+   * Reject a pending global-dream suggestion. The project dream entry stays in
+   * place, but is marked so the same source is not suggested again.
+   */
+  rejectPending(nameOrFile: string): boolean {
+    if (this.scope !== "pending") return false;
+    const entry = this.find(nameOrFile);
+    if (!entry) return false;
+
+    if (entry.originProject) {
+      const projectDream = new MemoryManager({
+        baseDir: this.baseDir,
+        projectDir: entry.originProject,
+        scope: "dream",
+      });
+      const source =
+        (entry.promotionSourceId ? projectDream.findById(entry.promotionSourceId) : undefined) ??
+        projectDream.loadAll().find((candidate) => candidate.name === entry.name);
+      if (source && source.origin !== "manual") {
+        projectDream.save(
+          {
+            id: source.id,
+            name: source.name,
+            description: source.description,
+            type: source.type,
+            content: source.content,
+            origin: source.origin ?? "dream",
+            pinned: source.pinned,
+            createdAt: source.createdAt,
+            updatedAt: source.updatedAt,
+            lastUsedAt: source.lastUsedAt,
+            useCount: source.useCount,
+            updateCount: source.updateCount,
+            originProject: source.originProject,
+            originProjects: source.originProjects,
+            evidenceCount: source.evidenceCount,
+            firstSeenAt: source.firstSeenAt,
+            lastSeenAt: source.lastSeenAt,
+            promotionReason: entry.promotionReason ?? source.promotionReason,
+            promotionStatus: "rejected",
+          },
+          { incrementUpdateCount: false, forceOrigin: source.origin ?? "dream" },
+        );
+      }
+    }
+
+    return this.delete(entry.id ?? entry.name);
+  }
+
+  /** Shared move for approve(→global dream)/demote(→origin-project user). */
   private movePending(nameOrFile: string, dest: "global" | "project"): string | null {
     if (this.scope !== "pending") return null;
-    const entry = this.loadAll().find((e) => e.name === nameOrFile || e.fileName === nameOrFile);
+    const entry = this.find(nameOrFile);
     if (!entry) return null;
     const targetMgr =
-      dest === "project" && entry.originProject
-        ? new MemoryManager({
-            baseDir: this.baseDir,
-            projectDir: entry.originProject,
-            scope: "user",
-          })
-        : new MemoryManager({ baseDir: this.baseDir, scope: "user" }); // global, or fallback
-    const fileName = targetMgr.save({
-      name: entry.name,
-      description: entry.description,
-      type: entry.type,
-      content: entry.content,
-      origin: entry.origin ?? "auto",
-      createdAt: entry.createdAt,
-      updatedAt: entry.updatedAt,
-      lastUsedAt: entry.lastUsedAt,
-      useCount: entry.useCount,
-      updateCount: entry.updateCount,
-      // originProject is no longer needed once it has landed in a real store.
-    });
+      dest === "global"
+        ? new MemoryManager({ baseDir: this.baseDir, scope: "dream" })
+        : dest === "project" && entry.originProject
+          ? new MemoryManager({
+              baseDir: this.baseDir,
+              projectDir: entry.originProject,
+              scope: "user",
+            })
+          : new MemoryManager({ baseDir: this.baseDir, scope: "user" }); // demote fallback
+    const destinationOrigin: MemoryOrigin = dest === "global" ? "dream" : (entry.origin ?? "auto");
+    const fileName = targetMgr.save(
+      {
+        name: entry.name,
+        description: entry.description,
+        type: entry.type,
+        content: entry.content,
+        origin: destinationOrigin,
+        createdAt: entry.createdAt,
+        updatedAt: entry.updatedAt,
+        lastUsedAt: entry.lastUsedAt,
+        useCount: entry.useCount,
+        updateCount: entry.updateCount,
+        originProjects: entry.originProjects ?? (entry.originProject ? [entry.originProject] : []),
+        evidenceCount: entry.evidenceCount,
+        firstSeenAt: entry.firstSeenAt,
+        lastSeenAt: entry.lastSeenAt,
+        promotionReason: entry.promotionReason,
+        // originProject/promotionSourceId are no longer needed once it has landed
+        // in a real store.
+      },
+      { forceOrigin: destinationOrigin },
+    );
     this.delete(entry.name); // soft-delete the pending copy
     return fileName;
   }
@@ -817,8 +928,31 @@ export class MemoryManager {
     return `mem_${randomUUID().replace(/-/g, "")}`;
   }
 
-  private fileNameForId(id: string): string {
-    return `${id.replace(/[^A-Za-z0-9_.-]/g, "_")}.md`;
+  private availableFileNameForId(id: string): string {
+    let attempt = 0;
+    while (attempt < 100) {
+      const fileName = this.fileNameForId(id, attempt);
+      const existing = this.loadFile(fileName);
+      if (!existing || existing.id === id) return fileName;
+      attempt++;
+    }
+    throw new Error(`Unable to allocate a memory filename for id "${id}"`);
+  }
+
+  private fileNameForId(id: string, collisionAttempt = 0): string {
+    if (collisionAttempt === 0 && /^[a-z0-9][a-z0-9_.-]*$/.test(id) && !id.includes("..")) {
+      return `${id}.md`;
+    }
+    const safeStem =
+      id
+        .toLowerCase()
+        .replace(/[^a-z0-9_.-]/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/^[._-]+|[._-]+$/g, "")
+        .slice(0, 80) || "memory";
+    const hashInput = collisionAttempt === 0 ? id : `${id}:${collisionAttempt}`;
+    const hash = createHash("sha256").update(hashInput).digest("hex").slice(0, 12);
+    return `${safeStem}-${hash}.md`;
   }
 
   private parseSyntheticLegacyId(id: string): { scope: MemoryScope; fileName: string } | null {
