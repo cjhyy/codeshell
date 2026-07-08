@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import React from "react";
 import { Text } from "../../render/index.js";
 import type { ChatEntry } from "../store.js";
+import { FullscreenModeContext } from "../fullscreen-mode.js";
 import { VirtualMessageList, type VirtualMessageListHandle } from "./VirtualMessageList.js";
 import { flush, mount } from "../../../../../tests/render-fixtures.js";
 
@@ -19,17 +20,21 @@ describe("VirtualMessageList scroll-away notifications", () => {
     let handle: VirtualMessageListHandle | null = null;
     let scrollAwayCalls = 0;
     const harness = mount(
-      <VirtualMessageList
-        ref={(r) => {
-          handle = r;
-        }}
-        entries={entries(40)}
-        renderEntry={(entry) => <Text>{entry.type}</Text>}
-        columns={80}
-        onScrollAway={() => {
-          scrollAwayCalls++;
-        }}
-      />,
+      <FullscreenModeContext.Provider
+        value={{ fullscreen: true, setFullscreen: () => {}, toggleFullscreen: () => {} }}
+      >
+        <VirtualMessageList
+          ref={(r) => {
+            handle = r;
+          }}
+          entries={entries(40)}
+          renderEntry={(entry) => <Text>{entry.type}</Text>}
+          columns={80}
+          onScrollAway={() => {
+            scrollAwayCalls++;
+          }}
+        />
+      </FullscreenModeContext.Provider>,
       { columns: 80, rows: 16 },
     );
 
