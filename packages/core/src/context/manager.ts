@@ -6,7 +6,13 @@
  * Tier 3: window compact (sync, emergency) — aggressive truncation fallback
  */
 
-import type { Message, LLMResponse, ContextUsageAnchor } from "../types.js";
+import type {
+  Message,
+  LLMResponse,
+  ContextUsageAnchor,
+  PromptTokenConfidence,
+  PromptTokenSource,
+} from "../types.js";
 import {
   estimateTokens,
   microcompact,
@@ -49,6 +55,12 @@ export interface ContextManagerConfig {
    */
   microcompactKeepRecent?: number;
 }
+
+type TokenEstimate = {
+  tokens: number;
+  source: PromptTokenSource;
+  confidence: PromptTokenConfidence;
+};
 
 const DEFAULT_CONFIG: ContextManagerConfig = {
   // 0.85 ≈ effectiveContextWindow − reserved-output buffer (CC's
@@ -207,7 +219,7 @@ export class ContextManager {
    * Best-effort token estimate: uses actual API usage as base if available,
    * plus estimation for messages added since the last API call.
    */
-  private estimateTokensHybrid(messages: Message[]): number {
+  private estimateTokensHybridInfo(messages: Message[]): TokenEstimate {
     const currentEstimate = estimateTokens(messages);
     if (
       this.lastActualTokens !== undefined &&
@@ -216,16 +228,28 @@ export class ContextManager {
       if (this.lastActualAtMessageCount < messages.length) {
         const newMessages = messages.slice(this.lastActualAtMessageCount);
         const newTokens = estimateTokens(newMessages);
-        return this.lastActualTokens + newTokens;
+        return {
+          tokens: this.lastActualTokens + newTokens,
+          source: "anchor_delta",
+          confidence: "medium",
+        };
       }
 
       if (this.lastActualAnchorEstimate !== undefined && this.lastActualAnchorEstimate > 0) {
-        return Math.round(
-          this.lastActualTokens * (currentEstimate / this.lastActualAnchorEstimate),
-        );
+        return {
+          tokens: Math.round(
+            this.lastActualTokens * (currentEstimate / this.lastActualAnchorEstimate),
+          ),
+          source: "anchor_rescale",
+          confidence: "medium",
+        };
       }
     }
-    return currentEstimate;
+    return { tokens: currentEstimate, source: "heuristic_estimate", confidence: "low" };
+  }
+
+  private estimateTokensHybrid(messages: Message[]): number {
+    return this.estimateTokensHybridInfo(messages).tokens;
   }
 
   /**
@@ -731,14 +755,19 @@ export class ContextManager {
     ratio: number;
     needsCompact: boolean;
     needsEmergency: boolean;
+    promptTokensSource: PromptTokenSource;
+    promptTokensConfidence: PromptTokenConfidence;
   } {
-    const tokens = this.estimateTokensHybrid(messages);
+    const estimate = this.estimateTokensHybridInfo(messages);
+    const tokens = estimate.tokens;
     const ratio = tokens / this.config.maxTokens;
     return {
       tokens,
       ratio,
       needsCompact: ratio >= this.config.compactAtRatio,
       needsEmergency: ratio >= this.config.summarizeAtRatio,
+      promptTokensSource: estimate.source,
+      promptTokensConfidence: estimate.confidence,
     };
   }
 

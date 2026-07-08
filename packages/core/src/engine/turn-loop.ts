@@ -454,7 +454,12 @@ export class TurnLoop {
     });
     if (ctx === this.lastCtxEmit) return;
     this.lastCtxEmit = ctx;
-    this.config.onStream({ type: "usage_update", promptTokens: ctx });
+    this.config.onStream({
+      type: "usage_update",
+      promptTokens: ctx,
+      promptTokensSource: overhead > 0 ? "calibrated_estimate" : "heuristic_estimate",
+      promptTokensConfidence: overhead > 0 ? "medium" : "low",
+    });
   }
 
   private recordResponseUsage(usage: NonNullable<LLMResponse["usage"]>): void {
@@ -493,6 +498,8 @@ export class TurnLoop {
     this.config.onStream({
       type: "usage_update",
       promptTokens,
+      promptTokensSource: "provider_usage",
+      promptTokensConfidence: "high",
       ...(usage.cacheReadTokens !== undefined ? { cacheReadTokens: usage.cacheReadTokens } : {}),
       ...(usage.cacheCreationTokens !== undefined
         ? { cacheCreationTokens: usage.cacheCreationTokens }

@@ -125,6 +125,43 @@ describe("Engine context usage anchor", () => {
           event.type === "session_started",
       );
       expect(started?.promptTokens).toBe(expectedPromptTokens);
+      expect(started?.promptTokensSource).toBe("anchor_delta");
+      expect(started?.promptTokensConfidence).toBe("medium");
+    } finally {
+      responses.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("labels a cold session-start estimate as heuristic low confidence", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-context-anchor-"));
+    const model = uniqueModel("cold");
+    const prompt = "cold seed";
+    const events: StreamEvent[] = [];
+    responses.set(model, {
+      text: "ok",
+      toolCalls: [],
+      stopReason: "stop",
+      usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+    });
+
+    try {
+      const engine = makeEngine(dir, model);
+      await engine.run(prompt, {
+        sessionId: "ctx-anchor-cold",
+        cwd: dir,
+        onStream: (event) => {
+          events.push(event);
+        },
+      });
+
+      const started = events.find(
+        (event): event is Extract<StreamEvent, { type: "session_started" }> =>
+          event.type === "session_started",
+      );
+      expect(started?.promptTokens).toBe(estimateTokens([{ role: "user", content: prompt }]));
+      expect(started?.promptTokensSource).toBe("heuristic_estimate");
+      expect(started?.promptTokensConfidence).toBe("low");
     } finally {
       responses.delete(model);
       rmSync(dir, { recursive: true, force: true });

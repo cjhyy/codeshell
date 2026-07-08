@@ -18,6 +18,7 @@ function makeDeps(
     messageCount: number,
     messages?: Message[],
   ) => void = () => {},
+  ctxOverhead = 0,
 ): {
   deps: TurnLoopDeps;
 } {
@@ -90,7 +91,7 @@ function makeDeps(
     systemPrompt: "sys",
     tools: [],
     sessionId: "test",
-    ctxOverheadStore: { get: () => 0, set: () => {} },
+    ctxOverheadStore: { get: () => ctxOverhead, set: () => {} },
     recordCumulativeUsage,
   };
 
@@ -163,6 +164,44 @@ async function runCapturingEventsWithCumulative(responses: LLMResponse[]): Promi
 }
 
 describe("TurnLoop usage_update carries cache tokens", () => {
+  it("labels message-estimate usage updates as heuristic low confidence", () => {
+    const { deps } = makeDeps([respNoCache()]);
+    const events: StreamEvent[] = [];
+    const loop = new TurnLoop(deps, {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+      onStream: (e) => events.push(e),
+    });
+
+    (loop as any).emitCtxFromMessages([{ role: "user", content: "hi" }]);
+
+    const usageUpdate = events.find((e) => e.type === "usage_update") as
+      | Extract<StreamEvent, { type: "usage_update" }>
+      | undefined;
+    expect(usageUpdate).toBeDefined();
+    expect(usageUpdate!.promptTokensSource).toBe("heuristic_estimate");
+    expect(usageUpdate!.promptTokensConfidence).toBe("low");
+  });
+
+  it("labels overhead-adjusted message estimates as calibrated medium confidence", () => {
+    const { deps } = makeDeps([respNoCache()], undefined, undefined, 500);
+    const events: StreamEvent[] = [];
+    const loop = new TurnLoop(deps, {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+      onStream: (e) => events.push(e),
+    });
+
+    (loop as any).emitCtxFromMessages([{ role: "user", content: "hi" }]);
+
+    const usageUpdate = events.find((e) => e.type === "usage_update") as
+      | Extract<StreamEvent, { type: "usage_update" }>
+      | undefined;
+    expect(usageUpdate).toBeDefined();
+    expect(usageUpdate!.promptTokensSource).toBe("calibrated_estimate");
+    expect(usageUpdate!.promptTokensConfidence).toBe("medium");
+  });
+
   it("records actual usage with the current messages for hybrid estimation", async () => {
     const calls: Array<{
       inputTokens: number;
@@ -196,6 +235,8 @@ describe("TurnLoop usage_update carries cache tokens", () => {
     expect(usageUpdate!.promptTokens).toBe(1000);
     expect(usageUpdate!.cacheReadTokens).toBe(800);
     expect(usageUpdate!.cacheCreationTokens).toBe(50);
+    expect(usageUpdate!.promptTokensSource).toBe("provider_usage");
+    expect(usageUpdate!.promptTokensConfidence).toBe("high");
     expect(usageUpdate!.singleTurnPromptTokens).toBe(1000);
     expect(usageUpdate!.singleTurnCacheReadTokens).toBe(800);
     expect(usageUpdate!.singleTurnCacheCreationTokens).toBe(50);

@@ -19,6 +19,31 @@ function textConversation(rounds: number): Message[] {
 }
 
 describe("ContextManager hybrid token estimation", () => {
+  it("labels no-anchor checkLimits estimates as heuristic low confidence", () => {
+    const mgr = new ContextManager({ maxTokens: 1_000_000 });
+    const messages = textConversation(2);
+
+    const checked = mgr.checkLimits(messages);
+
+    expect(checked.tokens).toBe(estimateTokens(messages));
+    expect(checked.promptTokensSource).toBe("heuristic_estimate");
+    expect(checked.promptTokensConfidence).toBe("low");
+  });
+
+  it("labels post-anchor appended messages as anchor-delta medium confidence", () => {
+    const mgr = new ContextManager({ maxTokens: 1_000_000 });
+    const anchored = textConversation(2);
+    const next: Message = { role: "user", content: "next message" };
+    const actualAnchorTokens = estimateTokens(anchored) * 2;
+
+    mgr.recordActualUsage(actualAnchorTokens, anchored.length, anchored);
+
+    const checked = mgr.checkLimits([...anchored, next]);
+    expect(checked.tokens).toBe(actualAnchorTokens + estimateTokens([next]));
+    expect(checked.promptTokensSource).toBe("anchor_delta");
+    expect(checked.promptTokensConfidence).toBe("medium");
+  });
+
   it("rescales the actual usage anchor after compaction shrinks the message array", () => {
     const mgr = new ContextManager({ maxTokens: 1_000_000 });
     const anchored = textConversation(20);
@@ -30,10 +55,13 @@ describe("ContextManager hybrid token estimation", () => {
 
     mgr.recordActualUsage(actualAnchorTokens, anchored.length, anchored);
 
-    const { tokens } = mgr.checkLimits(compacted);
+    const checked = mgr.checkLimits(compacted);
+    const { tokens } = checked;
 
     expect(tokens).toBeCloseTo(expected, 0);
     expect(tokens).toBeGreaterThan(compactedHeuristic * 2);
+    expect(checked.promptTokensSource).toBe("anchor_rescale");
+    expect(checked.promptTokensConfidence).toBe("medium");
   });
 
   it("seeds a persisted actual usage anchor for resumed sessions", () => {
@@ -52,9 +80,12 @@ describe("ContextManager hybrid token estimation", () => {
       recordedAt: Date.now(),
     });
 
-    const { tokens } = mgr.checkLimits(compacted);
+    const checked = mgr.checkLimits(compacted);
+    const { tokens } = checked;
 
     expect(tokens).toBeCloseTo(expected, 0);
+    expect(checked.promptTokensSource).toBe("anchor_rescale");
+    expect(checked.promptTokensConfidence).toBe("medium");
     expect(mgr.getActualUsageAnchor()).toMatchObject({
       promptTokens: actualAnchorTokens,
       messageCount: anchored.length,

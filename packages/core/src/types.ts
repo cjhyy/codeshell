@@ -416,11 +416,27 @@ export interface TaskInfo {
   status: "pending" | "in_progress" | "completed" | "stopped";
 }
 
+export type PromptTokenSource =
+  | "provider_usage"
+  | "anchor_delta"
+  | "anchor_rescale"
+  | "calibrated_estimate"
+  | "heuristic_estimate"
+  | "session_cumulative";
+
+export type PromptTokenConfidence = "high" | "medium" | "low";
+
 export type StreamEvent =
   // Emitted once per run() as soon as the Engine has resolved the session
   // id (resume vs. create). Lets the client know the authoritative sid
   // *before* run() resolves, which matters for mid-turn `/sid` lookups.
-  | { type: "session_started"; sessionId: string; promptTokens: number }
+  | {
+      type: "session_started";
+      sessionId: string;
+      promptTokens: number;
+      promptTokensSource?: PromptTokenSource;
+      promptTokensConfidence?: PromptTokenConfidence;
+    }
   // Emitted once, fire-and-forget, after the FIRST turn of a session
   // completes: an LLM-generated one-line title for the sidebar. Best-effort
   // — absent on failure / when aux model unavailable.
@@ -526,6 +542,8 @@ export type StreamEvent =
   | {
       type: "usage_update";
       promptTokens: number;
+      promptTokensSource?: PromptTokenSource;
+      promptTokensConfidence?: PromptTokenConfidence;
       /**
        * Provider-reported prompt-cache counts, forwarded so the UI can show a
        * cache hit rate in the context-ring tooltip. Present only when the LLM

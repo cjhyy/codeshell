@@ -1587,28 +1587,35 @@ export class Engine {
           persistedContextAnchor.model === this.config.llm.model) &&
         (persistedContextAnchor.messageCount <= messages.length ||
           persistedContextAnchor.estimateAtAnchor !== undefined);
-      const seededContextAnchor = contextAnchorCompatible
-        ? contextManager.seedActualUsage(persistedContextAnchor)
-        : undefined;
+      if (contextAnchorCompatible) {
+        contextManager.seedActualUsage(persistedContextAnchor);
+      }
 
-      // Rough token estimate of the full prompt so the UI's ctx bar isn't 0%
-      // before the first real usage_update arrives. The authoritative count
+      // Best-effort token estimate of the full prompt so the UI's ctx bar isn't
+      // 0% before the first real usage_update arrives. The authoritative count
       // comes from `usage.promptTokens` after the first LLM response — this is
-      // just a display-friendly approximation for the first frame.
+      // just a display-friendly approximation for the first frame, annotated
+      // with source/confidence so consumers don't treat heuristics as truth.
       //
       // Only seed once per (process, sid). On subsequent turns the UI already
-      // shows the previous turn's accurate ctx; overwriting it with this rough
-      // char/4 estimate would make the bar visibly drop on every submit.
+      // shows the previous turn's accurate ctx; overwriting it with a fresh
+      // best-effort estimate would make the bar visibly drop on every submit.
       const sid = session.state.sessionId;
       const needsCtxSeed = !this.ctxSeedSent.has(sid);
-      const roughPromptTokens = needsCtxSeed
-        ? seededContextAnchor
-          ? contextManager.checkLimits(messages).tokens
-          : messages.reduce((sum, m) => {
-              const text = typeof m.content === "string" ? m.content : JSON.stringify(m.content);
-              return sum + Math.ceil(text.length / 4);
-            }, 0)
-        : 0;
+      const ctxSeed = needsCtxSeed
+        ? (() => {
+            const checked = contextManager.checkLimits(messages);
+            return {
+              tokens: checked.tokens,
+              source: checked.promptTokensSource,
+              confidence: checked.promptTokensConfidence,
+            };
+          })()
+        : {
+            tokens: 0,
+            source: "heuristic_estimate" as const,
+            confidence: "low" as const,
+          };
       if (needsCtxSeed) this.ctxSeedSent.add(sid);
 
       // Tell the client the sid *now* instead of waiting for run() to resolve.
@@ -1617,7 +1624,9 @@ export class Engine {
       options?.onStream?.({
         type: "session_started",
         sessionId: sid,
-        promptTokens: roughPromptTokens,
+        promptTokens: ctxSeed.tokens,
+        promptTokensSource: ctxSeed.source,
+        promptTokensConfidence: ctxSeed.confidence,
       });
 
       // Replay the last TodoWrite snapshot on resume so the UI's pinned
@@ -2154,6 +2163,8 @@ export class Engine {
             options?.onStream?.({
               type: "usage_update",
               promptTokens: cumulative.cumulativePromptTokens,
+              promptTokensSource: "session_cumulative",
+              promptTokensConfidence: "high",
               cumulativePromptTokens: cumulative.cumulativePromptTokens,
               cumulativeCacheReadTokens: cumulative.cumulativeCacheReadTokens,
               cumulativeCacheCreationTokens: cumulative.cumulativeCacheCreationTokens,
