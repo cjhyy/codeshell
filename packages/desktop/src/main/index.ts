@@ -1611,6 +1611,7 @@ app.whenReady().then(async () => {
       title: string;
       prompt: string;
       cronJobId: string;
+      clientMessageId?: string;
     }) => bridge?.broadcastAutomationSession(meta);
     // Each fired job runs as a one-shot read-only headless Engine, which
     // auto-writes a full transcript.jsonl (like interactive chat). The emit

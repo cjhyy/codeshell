@@ -412,6 +412,9 @@ function App() {
   // Monotonic fallback counter for queued-draft ids when crypto.randomUUID is
   // unavailable (older webview). crypto path is the norm.
   const queuedSeqRef = useRef<number>(0);
+  // Compatibility path for old main/preload builds that announced a mobile
+  // turn without a generated clientMessageId.
+  const mobileAnnounceSeqRef = useRef<number>(0);
   const downgradeRunQueueRef = useRef<SerialTaskQueue>({ tail: Promise.resolve() });
   /**
    * Per-bucket timestamp of when the current turn went busy, so a manual Stop
@@ -1769,9 +1772,14 @@ function App() {
       engineToBucketRef.current.set(meta.sessionId, bucket);
       setBusyForKey(bucket, true);
       if (meta.prompt.trim()) {
-        const clientMessageId =
-          meta.clientMessageId ??
-          `mobile:${meta.sessionId}:${stablePromptHash(meta.prompt.trim())}`;
+        let clientMessageId = meta.clientMessageId;
+        if (!clientMessageId) {
+          mobileAnnounceSeqRef.current += 1;
+          const fallbackTurnId = `${Date.now().toString(36)}-${mobileAnnounceSeqRef.current.toString(36)}`;
+          clientMessageId = `mobile:${meta.sessionId}:fallback-${fallbackTurnId}:${stablePromptHash(
+            meta.prompt.trim(),
+          )}`;
+        }
         dispatch({ type: "user_message", bucket, text: meta.prompt, clientMessageId });
       }
       setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: nextIdx }));
