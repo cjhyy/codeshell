@@ -40,6 +40,17 @@ describe("readRecentHistory", () => {
     const a = r.messages.find((m) => m.role === "assistant");
     expect(a?.tools?.[0].name).toBe("Write");
   });
+  it("returns full long assistant text without the old 4000-character truncation", () => {
+    const longReply = "长回复".repeat(1600);
+    const lines = [
+      { type: "user", message: { role: "user", content: "tell me everything" } },
+      { type: "assistant", message: { content: [{ type: "text", text: longReply }] } },
+    ];
+    const { cwd, home, sid } = setup(lines);
+    const a = readRecentHistory(cwd, sid, 10, home).messages.find((m) => m.role === "assistant");
+    expect(a?.text).toBe(longReply);
+    expect(a?.text.length).toBeGreaterThan(4000);
+  });
   it("captures the FULL tool input as args (e.g. a sub-agent prompt not in the summary whitelist)", () => {
     const input = { description: "build X", prompt: "一大段子任务 prompt……", subagent_type: "general-purpose" };
     const lines = [

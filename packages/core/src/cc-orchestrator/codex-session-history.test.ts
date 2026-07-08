@@ -77,6 +77,21 @@ describe("readCodexRecentHistory", () => {
     });
   });
 
+  it("returns full long assistant text without the old 4000-character truncation", () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const cwd = "/tmp/proj";
+    const id = "id-long-assistant";
+    const longReply = "codex长回复".repeat(700);
+    writeRollout(home, "2026/06/24", `rollout-${id}.jsonl`, [
+      metaLine(id, cwd),
+      userItem("tell me everything"),
+      assistantItem(longReply),
+    ]);
+    const a = readCodexRecentHistory(cwd, id, 10, home).messages.find((m) => m.role === "assistant");
+    expect(a?.text).toBe(longReply);
+    expect(a?.text.length).toBeGreaterThan(4000);
+  });
+
   it("matches the rollout by threadId even across date dirs; ignores other cwds", () => {
     const home = mkdtempSync(join(tmpdir(), "codex-home-"));
     const cwd = "/tmp/wanted";

@@ -58,6 +58,31 @@ test("完成的 assistant 渲染 Markdown 结构", () => {
   expect(html).not.toContain("# 标题");
 });
 
+test("assistant 宽内容气泡可收缩,代码块和表格保留内部横向滚动", () => {
+  const md =
+    "https://example.com/" +
+    "very-long-unbroken-path-segment-".repeat(20) +
+    "\n\n```ts\n" +
+    "const veryLongLine = '" +
+    "x".repeat(220) +
+    "';\n```\n\n| " +
+    Array.from({ length: 8 }, (_, i) => `列${i}`).join(" | ") +
+    " |\n| " +
+    Array.from({ length: 8 }, () => "---").join(" | ") +
+    " |\n| " +
+    Array.from({ length: 8 }, (_, i) => `内容${i}`).join(" | ") +
+    " |";
+  const html = renderToStaticMarkup(
+    <MessageStream chat={withItems([{ kind: "assistant", id: "a1", text: md, reasoning: "", done: true }])} />,
+  );
+
+  expect(html).toContain("flex min-w-0 justify-start gap-2");
+  expect(html).toContain("mobile-message-assistant min-w-0 max-w-[92%]");
+  expect(html).toContain("min-w-0 break-words");
+  expect(html).toContain("min-w-0 max-w-full text-[15px]");
+  expect(html).toContain("overflow-x-auto");
+});
+
 test("流式中的 Markdown 仍按纯文本显示(避免抖动)", () => {
   const md = "# 还在打字";
   const html = renderToStaticMarkup(

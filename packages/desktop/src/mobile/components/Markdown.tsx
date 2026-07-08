@@ -20,7 +20,7 @@ import remarkGfm from "remark-gfm";
 import rehypeSanitize from "rehype-sanitize";
 
 const bodyClassName =
-  "text-[15px] leading-6 text-foreground " +
+  "min-w-0 max-w-full text-[15px] leading-6 text-foreground " +
   "[&_p]:my-1.5 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 " +
   "[&_h1]:mb-1.5 [&_h1]:mt-2 [&_h1]:text-lg [&_h1]:font-semibold " +
   "[&_h2]:mb-1.5 [&_h2]:mt-2 [&_h2]:text-base [&_h2]:font-semibold " +

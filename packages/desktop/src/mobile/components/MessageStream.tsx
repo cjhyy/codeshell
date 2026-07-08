@@ -34,7 +34,7 @@ function AssistantBubble({ item }: { item: Extract<ChatItem, { kind: "assistant"
           // Completed prose → render Markdown (lists/code/headings/tables). While
           // still streaming we keep plain text to avoid re-parsing half-formed
           // markdown on every token (jitter), matching the desktop renderer.
-          <div className="break-words">
+          <div className="min-w-0 break-words">
             <Markdown text={item.text} />
           </div>
         ) : (
@@ -52,8 +52,8 @@ function Row({ item }: { item: ChatItem }) {
   switch (item.kind) {
     case "user":
       return (
-        <div className="flex justify-end gap-2">
-          <div className="mobile-message-user max-w-[84%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md px-3.5 py-2.5 text-[15px] leading-6 text-white">
+        <div className="flex min-w-0 justify-end gap-2">
+          <div className="mobile-message-user min-w-0 max-w-[84%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md px-3.5 py-2.5 text-[15px] leading-6 text-white">
             {item.text}
           </div>
           <div className="mt-1 grid size-7 shrink-0 place-items-center rounded-full border border-primary/30 bg-primary/15 text-primary">
@@ -63,11 +63,11 @@ function Row({ item }: { item: ChatItem }) {
       );
     case "assistant":
       return (
-        <div className="flex justify-start gap-2">
+        <div className="flex min-w-0 justify-start gap-2">
           <div className="mt-1 grid size-7 shrink-0 place-items-center rounded-full border border-status-ok/25 bg-status-ok/10 text-status-ok">
             <Bot className="size-3.5" />
           </div>
-          <div className="mobile-message-assistant max-w-[92%] rounded-r-xl px-3 py-2">
+          <div className="mobile-message-assistant min-w-0 max-w-[92%] rounded-r-xl px-3 py-2">
             <AssistantBubble item={item} />
           </div>
         </div>
@@ -155,7 +155,7 @@ export function MessageStream({
 
   return (
     <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto px-3 py-4">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+      <div className="mx-auto flex min-w-0 w-full max-w-3xl flex-col gap-4">
         {chat.items.map((item) => (
           <Row key={item.id} item={item} />
         ))}

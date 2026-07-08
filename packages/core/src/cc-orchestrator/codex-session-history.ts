@@ -54,7 +54,7 @@ export function readCodexRecentHistory(
     if (p.type === "message" && (p.role === "user" || p.role === "assistant")) {
       const t = textOf(p.content).trim();
       if (!t || t.startsWith("<environment_context>")) continue;
-      all.push({ role: p.role, text: t.slice(0, 4000) });
+      all.push({ role: p.role, text: t });
     } else if (p.type === "function_call" || p.type === "custom_tool_call") {
       const tool = { name: typeof p.name === "string" ? p.name : "tool", summary: summaryOf(p), args: argsOf(p) };
       const last = all[all.length - 1];
