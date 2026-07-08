@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-core",
-  "version": "0.6.0-rc.15",
+  "version": "0.6.0-rc.16",
   "description": "Core engine for code-shell — agent orchestration, tool execution, hooks, protocol. UI-agnostic.",
   "type": "module",
   "main": "./dist/index.js",
