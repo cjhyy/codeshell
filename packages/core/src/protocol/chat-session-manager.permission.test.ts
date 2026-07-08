@@ -158,6 +158,56 @@ describe("ChatSessionManager.close approval cleanup", () => {
     expect(asks).toBe(2);
   });
 
+  it.each([
+    ["session", "本目录本会话允许"],
+    ["project", "本目录本项目允许"],
+  ] as const)(
+    "ignores an in-flight %s path approval that resolves after session close",
+    async (_scope, answer) => {
+      _resetSessionPathGrants();
+      const { mgr } = makeManager("default");
+      mgr.getOrCreate("s1", { permissionMode: "default" } as EngineConfigSlice);
+      const cwd = tempDir("cs-path-late-cwd-");
+      const outside = tempDir("cs-path-late-outside-");
+      let resolveAsk!: (answer: string) => void;
+      let asks = 0;
+      let markAskStarted!: () => void;
+      const askStarted = new Promise<void>((resolve) => {
+        markAskStarted = resolve;
+      });
+
+      const pendingCtx = {
+        cwd,
+        sessionId: "s1",
+        askUser: async () => {
+          asks += 1;
+          markAskStarted();
+          return await new Promise<string>((resolve) => {
+            resolveAsk = resolve;
+          });
+        },
+      } as unknown as ToolContext;
+
+      const pending = enforcePathPolicyWithApproval(join(outside, "a.txt"), "read", pendingCtx);
+      await askStarted;
+      mgr.close("s1");
+      resolveAsk(answer);
+      expect(await pending).toBeNull();
+
+      const denyCtx = {
+        cwd,
+        sessionId: "s1",
+        askUser: async () => {
+          asks += 1;
+          return "拒绝";
+        },
+      } as unknown as ToolContext;
+      const denied = await enforcePathPolicyWithApproval(join(outside, "b.txt"), "read", denyCtx);
+      expect(denied).toContain("approval denied");
+      expect(asks).toBe(2);
+    },
+  );
+
   it("clears session credential approvals for the closed session", async () => {
     previousHome = process.env.HOME;
     process.env.HOME = tempDir("cs-credential-cleanup-home-");

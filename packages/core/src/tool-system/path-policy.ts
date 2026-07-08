@@ -173,6 +173,9 @@ interface PathGrant {
 /** sessionId → set of approved directory grants (prefix + operation). */
 const sessionPathGrants = new Map<string, Set<PathGrant>>();
 
+/** Session ids explicitly closed by ChatSessionManager; late approvals must not recreate grants. */
+const closedPathApprovalSessions = new Set<string>();
+
 /** Per-session prompt chains for enforcePathPolicyWithApproval (see comment there). */
 const askChains = new Map<string, Promise<void>>();
 
@@ -290,6 +293,7 @@ function recordPathApproval(
   sessionId?: string,
 ): void {
   if (scope === "once") return;
+  if (sessionId && closedPathApprovalSessions.has(sessionId)) return;
   const prefix = dirPrefix(dirname(resolved));
   if (scope === "session") {
     if (!sessionId) return;
@@ -326,9 +330,7 @@ function recordPathApproval(
       }
     }
     if (!Array.isArray(settings.pathApprovals)) settings.pathApprovals = [];
-    const existing = settings.pathApprovals.find(
-      (g) => storedPrefix(g) === prefix,
-    );
+    const existing = settings.pathApprovals.find((g) => storedPrefix(g) === prefix);
     if (existing) {
       // Already covered (read-or-better matching the request)? Nothing to do.
       if (grantCoversOp(storedOp(existing), operation)) return;
@@ -356,11 +358,17 @@ function recordPathApproval(
 /** Test seam: clear the in-memory session grants. */
 export function _resetSessionPathGrants(): void {
   sessionPathGrants.clear();
+  closedPathApprovalSessions.clear();
   askChains.clear();
+}
+
+export function openSessionPathApprovals(sessionId: string): void {
+  closedPathApprovalSessions.delete(sessionId);
 }
 
 export function clearSessionPathApprovals(sessionId: string): void {
   sessionPathGrants.delete(sessionId);
+  closedPathApprovalSessions.add(sessionId);
   askChains.delete(sessionId);
 }
 
@@ -565,8 +573,10 @@ export function enforcePathPolicy(
   }
   // ask — MVP refuses with explanatory message until askUser plumbing
   // lands. The conservative bias matches the plan's leaning answer for Q1.
-  return `Error: path requires approval — ${c.reason}. Path: ${c.resolvedPath}. ` +
-    `Set CODESHELL_PATH_POLICY=off to disable enforcement during a rollback.`;
+  return (
+    `Error: path requires approval — ${c.reason}. Path: ${c.resolvedPath}. ` +
+    `Set CODESHELL_PATH_POLICY=off to disable enforcement during a rollback.`
+  );
 }
 
 export async function enforcePathPolicyWithApproval(
@@ -588,8 +598,10 @@ export async function enforcePathPolicyWithApproval(
     return `Error: blocked by path policy — ${c.reason}. Path: ${c.resolvedPath}`;
   }
   if (operation === "write" && ctx.planMode) {
-    return `Error: blocked by path policy — ${c.reason}. Path: ${c.resolvedPath}. ` +
-      `Plan mode does not allow file writes.`;
+    return (
+      `Error: blocked by path policy — ${c.reason}. Path: ${c.resolvedPath}. ` +
+      `Plan mode does not allow file writes.`
+    );
   }
   // Already approved this directory for this OPERATION (this session or
   // persisted for the project)? Proceed without re-prompting — this is the fix
@@ -597,8 +609,10 @@ export async function enforcePathPolicyWithApproval(
   // NOT cover a write; a write grant covers both.
   if (isPathPreApproved(c.resolvedPath, operation, ctx.cwd, ctx.sessionId)) return null;
   if (!ctx.askUser) {
-    return `Error: path requires approval — ${c.reason}. Path: ${c.resolvedPath}. ` +
-      `No interactive approval UI is available in this run.`;
+    return (
+      `Error: path requires approval — ${c.reason}. Path: ${c.resolvedPath}. ` +
+      `No interactive approval UI is available in this run.`
+    );
   }
 
   // Serialize concurrent asks (per session) and RE-CHECK grants when our turn
@@ -634,15 +648,12 @@ async function promptForPathApproval(
   operation: PathOperation,
   ctx: ToolContext & { askUser: NonNullable<ToolContext["askUser"]> },
 ): Promise<string | null> {
-
   // Title by the ACTUAL reason, not always "工作区外": a sensitive file
   // (e.g. ~/.ssh, .env) can sit INSIDE the workspace, so the old fixed
   // "工作区外路径" header was misleading for sensitive-path asks.
   const isSensitive = c.reason.startsWith("sensitive");
   const what = operation === "read" ? "读取" : "写入";
-  const title = isSensitive
-    ? `工具想${what}敏感文件`
-    : `工具想${what}工作区外路径`;
+  const title = isSensitive ? `工具想${what}敏感文件` : `工具想${what}工作区外路径`;
   const header = isSensitive ? "敏感文件权限" : "路径权限";
 
   // Scope options carry remembered grants for the directory of this path, so
@@ -654,30 +665,27 @@ async function promptForPathApproval(
   const ALLOW_SESSION = "本目录本会话允许";
   const ALLOW_PROJECT = "本目录本项目允许";
   const answer = (
-    await ctx.askUser(
-      `${title}：\n${c.resolvedPath}\n\n原因：${c.reason}\n是否允许本次操作？`,
-      {
-        header,
-        options: [
-          { label: ALLOW_ONCE, description: "仅允许当前这一次文件操作继续执行", tone: "ok" },
-          {
-            label: ALLOW_SESSION,
-            description: `本会话内不再询问 ${grantDir} 下的文件`,
-            tone: "ok",
-          },
-          {
-            label: ALLOW_PROJECT,
-            description: `永久允许 ${grantDir} 下的文件（写入 .code-shell/settings.local.json）`,
-            tone: "ok",
-          },
-          { label: "拒绝", description: "阻止当前文件操作", tone: "danger" },
-        ],
-        // Closed-set decision: no free-text "其它…" box. The answer is matched
-        // against the labels below by exact string, so a typed answer must not
-        // be allowed (it could never match and would silently deny).
-        optionsOnly: true,
-      },
-    )
+    await ctx.askUser(`${title}：\n${c.resolvedPath}\n\n原因：${c.reason}\n是否允许本次操作？`, {
+      header,
+      options: [
+        { label: ALLOW_ONCE, description: "仅允许当前这一次文件操作继续执行", tone: "ok" },
+        {
+          label: ALLOW_SESSION,
+          description: `本会话内不再询问 ${grantDir} 下的文件`,
+          tone: "ok",
+        },
+        {
+          label: ALLOW_PROJECT,
+          description: `永久允许 ${grantDir} 下的文件（写入 .code-shell/settings.local.json）`,
+          tone: "ok",
+        },
+        { label: "拒绝", description: "阻止当前文件操作", tone: "danger" },
+      ],
+      // Closed-set decision: no free-text "其它…" box. The answer is matched
+      // against the labels below by exact string, so a typed answer must not
+      // be allowed (it could never match and would silently deny).
+      optionsOnly: true,
+    })
   ).trim();
 
   if (answer === ALLOW_ONCE) return null;

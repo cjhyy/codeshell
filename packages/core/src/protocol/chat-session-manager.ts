@@ -7,7 +7,7 @@ import { clearAgentOutputFiles } from "../tool-system/builtin/agent-output-file.
 import { clearCredentialSessionAllow } from "../credentials/use-credential-tool.js";
 import { clearInjectCredentialSessionAllow } from "../credentials/inject-credential-tool.js";
 import { logger } from "../logging/logger.js";
-import { clearSessionPathApprovals } from "../tool-system/path-policy.js";
+import { clearSessionPathApprovals, openSessionPathApprovals } from "../tool-system/path-policy.js";
 
 export type EngineConfigSlice = Pick<
   EngineConfig,
@@ -31,8 +31,8 @@ export interface ChatSessionManagerOptions {
   runtime: EngineRuntime;
   /** Build an Engine. Tests inject a fake; production passes a runtime-backed Engine factory. */
   engineFactory: (slice: EngineConfigSlice) => Engine;
-  maxSessions?: number;   // default 16
-  idleTtlMs?: number;     // default 30 min
+  maxSessions?: number; // default 16
+  idleTtlMs?: number; // default 30 min
 }
 
 export class ChatSessionManager {
@@ -51,6 +51,7 @@ export class ChatSessionManager {
   }
 
   getOrCreate(sessionId: string, slice: EngineConfigSlice): ChatSession {
+    openSessionPathApprovals(sessionId);
     const existing = this.sessions.get(sessionId);
     if (existing) {
       existing.lastActivityAt = Date.now();
