@@ -74,7 +74,12 @@ class BackgroundJobRegistry {
   private listeners = new Set<Listener>();
 
   /** Register a running job. Invalid sessionId is ignored (cannot be waited on). */
-  start(jobId: string, sessionId: string, description = "", options?: BackgroundJobStartOptions): void {
+  start(
+    jobId: string,
+    sessionId: string,
+    description = "",
+    options?: BackgroundJobStartOptions,
+  ): void {
     if (!isValidSessionId(sessionId)) return;
     this.jobs.set(jobId, {
       jobId,
@@ -119,14 +124,17 @@ class BackgroundJobRegistry {
   /** Running jobs, across all sessions, that are operating in the same cwd. */
   listRunningByCwd(cwd: string): BackgroundJobEntry[] {
     const normalized = normalizeCwdPath(cwd);
-    return [...this.jobs.values()].filter(
-      (e) => e.status === "running" && e.cwd === normalized,
-    );
+    return [...this.jobs.values()].filter((e) => e.status === "running" && e.cwd === normalized);
   }
 
   /** All jobs (running + retained terminal) for `sessionId`. Feeds the panel. */
   listForSession(sessionId: string): BackgroundJobEntry[] {
     return [...this.jobs.values()].filter((e) => e.sessionId === sessionId);
+  }
+
+  /** All jobs (running + retained terminal) across sessions. Feeds all-scope UI. */
+  list(): BackgroundJobEntry[] {
+    return [...this.jobs.values()];
   }
 
   /** Drop every job of a session — called when the session is deleted/closed. */

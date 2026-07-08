@@ -948,7 +948,7 @@ export class AgentServer {
    * (by shellId); this just answers "what's running in the background right now".
    */
   private handleBackgroundWork(req: RpcRequest): void {
-    const params = (req.params ?? {}) as { sessionId?: string };
+    const params = (req.params ?? {}) as { sessionId?: string; scope?: "session" | "all" };
     const sessionId = params.sessionId;
     if (typeof sessionId !== "string" || !sessionId) {
       this.transport.send(
@@ -956,7 +956,8 @@ export class AgentServer {
       );
       return;
     }
-    const items = listBackgroundWorkForUI(sessionId);
+    const scope = params.scope === "all" ? "all" : "session";
+    const items = listBackgroundWorkForUI(sessionId, { scope });
     this.transport.send(createResponse(req.id, { items }));
   }
 

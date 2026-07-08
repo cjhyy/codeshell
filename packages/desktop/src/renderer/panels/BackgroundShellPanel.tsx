@@ -1,9 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bot, RefreshCw, Square, Terminal, Film, CheckCircle2, XCircle } from "lucide-react";
-import type { BackgroundShellInfo, BackgroundWorkInfo } from "../../preload/types";
+import type {
+  BackgroundShellInfo,
+  BackgroundWorkInfo,
+  BackgroundWorkSourceSession,
+} from "../../preload/types";
 import { useT, type TFunction } from "../i18n/I18nProvider";
 
 type AgentStatus = "running" | "completed" | "failed" | "cancelled";
+type ShellWorkItem = Extract<BackgroundWorkInfo, { kind: "shell" }>;
+
+function shellItemKey(item: ShellWorkItem): string {
+  return `${item.sourceSession.sessionId}:${item.shell.shellId}`;
+}
 
 /**
  * Unified background-work panel. Lists ALL of the current session's background
@@ -48,7 +57,7 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
       return;
     }
     try {
-      const res = await window.codeshell.listBackgroundWork(sessionId);
+      const res = await window.codeshell.listBackgroundWork(sessionId, { scope: "all" });
       const next = res?.items ?? [];
       setItems(next);
       // The selected shell may have vanished (worker recycled / shell reaped) —
@@ -57,7 +66,7 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
       // updater reads the LATEST selection without adding it to this callback's
       // deps (which would re-arm the poll interval on every selection change).
       setSelected((cur) => {
-        const vanished = !!cur && !next.some((i) => i.kind === "shell" && i.shell.shellId === cur);
+        const vanished = !!cur && !next.some((i) => i.kind === "shell" && shellItemKey(i) === cur);
         if (vanished) setOutput(null);
         return vanished ? null : cur;
       });
@@ -102,11 +111,11 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
   }, [refresh]);
 
   const fetchOutput = useCallback(
-    async (shellId: string, withSpinner: boolean) => {
-      if (!sessionId) return;
+    async (ownerSessionId: string, shellId: string, withSpinner: boolean) => {
+      if (!ownerSessionId) return;
       if (withSpinner) setLoading(true);
       try {
-        const res = await window.codeshell.backgroundShellOutput(sessionId, shellId);
+        const res = await window.codeshell.backgroundShellOutput(ownerSessionId, shellId);
         setOutput(res);
       } catch (e) {
         // Only surface the error if the user explicitly opened it; a silent
@@ -123,24 +132,25 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
         if (withSpinner) setLoading(false);
       }
     },
-    [sessionId, t],
+    [t],
   );
 
-  const viewOutput = (shellId: string) => {
-    setSelected(shellId);
-    void fetchOutput(shellId, true);
+  const viewOutput = (item: ShellWorkItem) => {
+    setSelected(shellItemKey(item));
+    void fetchOutput(item.sourceSession.sessionId, item.shell.shellId, true);
   };
 
   // Split into the three categories once per items change.
   const shells = useMemo(
     () =>
-      items
-        .filter((i): i is Extract<BackgroundWorkInfo, { kind: "shell" }> => i.kind === "shell")
-        .map((i) => i.shell),
+      items.filter((i): i is Extract<BackgroundWorkInfo, { kind: "shell" }> => i.kind === "shell"),
     [items],
   );
   const agents = useMemo(
-    () => items.filter((i): i is Extract<BackgroundWorkInfo, { kind: "subagent" }> => i.kind === "subagent"),
+    () =>
+      items.filter(
+        (i): i is Extract<BackgroundWorkInfo, { kind: "subagent" }> => i.kind === "subagent",
+      ),
     [items],
   );
   const jobs = useMemo(
@@ -149,7 +159,7 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
   );
 
   const anyRunning =
-    shells.some((s) => s.status === "running") ||
+    shells.some((s) => s.shell.status === "running") ||
     agents.some((a) => a.status === "running") ||
     jobs.some((j) => j.status === "running");
 
@@ -162,9 +172,15 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
   const shellsRef = useRef(shells);
   const refreshRef = useRef(refresh);
   const fetchOutputRef = useRef(fetchOutput);
-  useEffect(() => { shellsRef.current = shells; }, [shells]);
-  useEffect(() => { refreshRef.current = refresh; }, [refresh]);
-  useEffect(() => { fetchOutputRef.current = fetchOutput; }, [fetchOutput]);
+  useEffect(() => {
+    shellsRef.current = shells;
+  }, [shells]);
+  useEffect(() => {
+    refreshRef.current = refresh;
+  }, [refresh]);
+  useEffect(() => {
+    fetchOutputRef.current = fetchOutput;
+  }, [fetchOutput]);
 
   // Light 3s poll, but only while there's running work AND the tab is visible —
   // a finished list never changes, and a hidden tab (PanelArea keeps all tabs
@@ -177,18 +193,24 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
       if (document.visibilityState !== "visible") return;
       void refreshRef.current();
       const cur = selectedRef.current;
-      if (cur && shellsRef.current.some((s) => s.shellId === cur && s.status === "running")) {
-        void fetchOutputRef.current(cur, false);
+      const selectedShell = cur
+        ? shellsRef.current.find((s) => shellItemKey(s) === cur && s.shell.status === "running")
+        : undefined;
+      if (selectedShell) {
+        void fetchOutputRef.current(
+          selectedShell.sourceSession.sessionId,
+          selectedShell.shell.shellId,
+          false,
+        );
       }
     };
     const timer = setInterval(tick, 3000);
     return () => clearInterval(timer);
   }, [anyRunning]);
 
-  const kill = async (shellId: string) => {
-    if (!sessionId) return;
+  const kill = async (item: ShellWorkItem) => {
     try {
-      await window.codeshell.killBackgroundShell(sessionId, shellId);
+      await window.codeshell.killBackgroundShell(item.sourceSession.sessionId, item.shell.shellId);
       await refresh();
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
@@ -239,13 +261,14 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
               <ul className="m-0 list-none p-0">
                 {shells.map((s) => (
                   <ShellRow
-                    key={s.shellId}
-                    shell={s}
-                    selected={selected === s.shellId}
+                    key={shellItemKey(s)}
+                    shell={s.shell}
+                    source={s.sourceSession}
+                    selected={selected === shellItemKey(s)}
                     loading={loading}
                     output={output}
-                    onView={() => void viewOutput(s.shellId)}
-                    onKill={() => void kill(s.shellId)}
+                    onView={() => void viewOutput(s)}
+                    onKill={() => void kill(s)}
                     t={t}
                   />
                 ))}
@@ -262,7 +285,10 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
                     <div className="flex items-center gap-2 px-2 py-1.5 text-xs">
                       <AgentStatusDot status={a.status} />
                       <Bot className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                      <span className="min-w-0 flex-1 truncate text-foreground" title={a.description}>
+                      <span
+                        className="min-w-0 flex-1 truncate text-foreground"
+                        title={a.description}
+                      >
                         {a.description || a.name || a.agentType || a.agentId}
                       </span>
                       {a.agentType && (
@@ -270,6 +296,7 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
                           {a.agentType}
                         </span>
                       )}
+                      <SourceSessionBadge source={a.sourceSession} t={t} />
                       <span className="shrink-0 text-[10px] text-muted-foreground">
                         {agentStatusLabel(t, a.status)}
                       </span>
@@ -299,7 +326,9 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
                     <li key={j.jobId} className="border-b border-border/60">
                       <div
                         className={`flex items-center gap-2 px-2 py-1.5 text-xs ${expandable ? "cursor-pointer hover:bg-muted/40" : ""}`}
-                        onClick={expandable ? () => setExpandedJobId(isOpen ? null : j.jobId) : undefined}
+                        onClick={
+                          expandable ? () => setExpandedJobId(isOpen ? null : j.jobId) : undefined
+                        }
                       >
                         {j.status === "running" ? (
                           <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-status-running" />
@@ -309,7 +338,10 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
                           <XCircle className="h-3.5 w-3.5 shrink-0 text-status-err" />
                         )}
                         <Film className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        <span className="min-w-0 flex-1 truncate text-foreground" title={j.description}>
+                        <span
+                          className="min-w-0 flex-1 truncate text-foreground"
+                          title={j.description}
+                        >
                           {j.description}
                         </span>
                         {changed.length > 0 && (
@@ -317,7 +349,10 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
                             {t("panels.shells.jobChangedFiles", { count: changed.length })}
                           </span>
                         )}
-                        <span className="shrink-0 text-[10px] text-muted-foreground">{statusLabel}</span>
+                        <SourceSessionBadge source={j.sourceSession} t={t} />
+                        <span className="shrink-0 text-[10px] text-muted-foreground">
+                          {statusLabel}
+                        </span>
                       </div>
                       {isOpen && (
                         <div className="border-t border-border/60 bg-muted/30">
@@ -361,9 +396,24 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+function SourceSessionBadge({ source, t }: { source: BackgroundWorkSourceSession; t: TFunction }) {
+  const label = source.current
+    ? t("panels.shells.sourceCurrent")
+    : (source.title ?? source.shortId);
+  return (
+    <span
+      className="max-w-24 shrink-0 truncate rounded bg-muted px-1 text-[10px] text-muted-foreground"
+      title={t("panels.shells.sourceSession", { session: source.sessionId })}
+    >
+      {label}
+    </span>
+  );
+}
+
 /** One interactive shell row (click to view output, stop to kill). */
 function ShellRow({
   shell: s,
+  source,
   selected,
   loading,
   output,
@@ -372,6 +422,7 @@ function ShellRow({
   t,
 }: {
   shell: BackgroundShellInfo;
+  source: BackgroundWorkSourceSession;
   selected: boolean;
   loading: boolean;
   output: { header: string; text: string } | null;
@@ -408,6 +459,7 @@ function ShellRow({
             {formatBytes(s.totalBytes)}
           </span>
         )}
+        <SourceSessionBadge source={source} t={t} />
         <span className="shrink-0 text-[10px] text-muted-foreground">
           {s.status === "running"
             ? t("panels.shells.running")
@@ -430,11 +482,15 @@ function ShellRow({
       {selected && (
         <div className="bg-background px-2 py-1">
           {loading ? (
-            <div className="text-[11px] text-muted-foreground">{t("panels.shells.readingOutput")}</div>
+            <div className="text-[11px] text-muted-foreground">
+              {t("panels.shells.readingOutput")}
+            </div>
           ) : (
             <>
               {output?.header && (
-                <div className="mb-1 font-mono text-[10px] text-muted-foreground">{output.header}</div>
+                <div className="mb-1 font-mono text-[10px] text-muted-foreground">
+                  {output.header}
+                </div>
               )}
               <pre className="m-0 max-h-64 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] text-foreground">
                 {output?.text || t("panels.shells.noOutput")}

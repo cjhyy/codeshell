@@ -44,6 +44,8 @@ export const panels = {
         noOutput: "(无输出)",
         readOutputFailed: "读取输出失败：{error}",
         outputSize: "已产出输出量",
+        sourceCurrent: "本会话",
+        sourceSession: "来源会话：{session}",
         // Category section headers + per-kind labels for the unified panel.
         sectionShells: "后台命令",
         sectionAgents: "后台子代理",
@@ -217,7 +219,8 @@ export const panels = {
         maximizeTitle: "Maximize (overlay composer)",
       },
       shells: {
-        notStarted: "This session hasn't started yet (background work appears after you send a message)",
+        notStarted:
+          "This session hasn't started yet (background work appears after you send a message)",
         title: "Background Work ({count})",
         none: "No background work",
         noneHint: "Background commands, sub-agents, and video jobs show up here",
@@ -228,6 +231,8 @@ export const panels = {
         noOutput: "(no output)",
         readOutputFailed: "Failed to read output: {error}",
         outputSize: "Total output produced",
+        sourceCurrent: "Current",
+        sourceSession: "Source session: {session}",
         sectionShells: "Background commands",
         sectionAgents: "Background sub-agents",
         sectionJobs: "Background jobs",
@@ -320,7 +325,8 @@ export const panels = {
         connectionFailed: "Connection failed. Check the network or the address.",
         errorCode: "Error {code}",
         openWithSystemBrowser: "Open in system browser",
-        selectorMissed: "Element could not be re-located (the page changed); the box shows where it was when picked",
+        selectorMissed:
+          "Element could not be re-located (the page changed); the box shows where it was when picked",
         commentPlaceholder: "Comment…",
         local: "Local",
         noLocalServers: "No running local servers found",

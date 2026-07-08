@@ -25,17 +25,17 @@
 
 import { spawn, type ChildProcess } from "node:child_process";
 import { join } from "node:path";
-import {
-  mkdirSync,
-  writeFileSync,
-  rmSync,
-  existsSync,
-  readdirSync,
-  readFileSync,
-} from "node:fs";
+import { mkdirSync, writeFileSync, rmSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { StringDecoder } from "node:string_decoder";
 import { utf8SafeCutLength } from "./utf8-cut.js";
-import { resolveSpawnTarget, buildSandboxEnv, mergeShellEnv, killProcessGroup, groupAlive, defaultShellBinary } from "./spawn-common.js";
+import {
+  resolveSpawnTarget,
+  buildSandboxEnv,
+  mergeShellEnv,
+  killProcessGroup,
+  groupAlive,
+  defaultShellBinary,
+} from "./spawn-common.js";
 import { RingFile } from "./ring-file.js";
 import { cleanOutput } from "./output-clean.js";
 import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
@@ -103,13 +103,9 @@ export interface SpawnBackgroundOptions {
   shellEnv?: Record<string, string>;
 }
 
-export type SpawnResult =
-  | { ok: true; shellId: string }
-  | { ok: false; error: string };
+export type SpawnResult = { ok: true; shellId: string } | { ok: false; error: string };
 
-export type ReadResult =
-  | { ok: true; text: string; header: string }
-  | { ok: false; error: string };
+export type ReadResult = { ok: true; text: string; header: string } | { ok: false; error: string };
 
 export type KillResult =
   | { ok: true; alreadyExited?: boolean; status: BgShellStatus }
@@ -133,7 +129,7 @@ function nextShellId(): string {
   // Short, collision-resistant enough within a process: counter + base36 of
   // a monotonic-ish value. Avoids Date.now()/Math.random() (banned in some
   // contexts and unnecessary here).
-  return `bg_${shellCounter.toString(36)}${(shellCounter * 2654435761 % 0xffffff).toString(36)}`;
+  return `bg_${shellCounter.toString(36)}${((shellCounter * 2654435761) % 0xffffff).toString(36)}`;
 }
 
 function bgShellsRoot(): string {
@@ -168,7 +164,13 @@ export class BackgroundShellManager {
     // the bg-shells root — refuse rather than trust the caller. Mirrors
     // SessionManager.assertSafeSessionId without importing across the layer.
     const sid = opts.sessionId;
-    if (typeof sid !== "string" || sid.length === 0 || sid.includes("..") || sid.includes("/") || sid.includes("\\")) {
+    if (
+      typeof sid !== "string" ||
+      sid.length === 0 ||
+      sid.includes("..") ||
+      sid.includes("/") ||
+      sid.includes("\\")
+    ) {
       return { ok: false, error: `invalid sessionId for background shell` };
     }
     // Per-session soft cap (fork-bomb guard, §7).
@@ -321,9 +323,7 @@ export class BackgroundShellManager {
 
   private enqueueExitNotification(sh: InternalShell): void {
     const ok = sh.exitCode === 0;
-    const exitDesc = sh.signal
-      ? `signal ${sh.signal}`
-      : `exit ${sh.exitCode ?? "?"}`;
+    const exitDesc = sh.signal ? `signal ${sh.signal}` : `exit ${sh.exitCode ?? "?"}`;
     notificationQueue.enqueue(
       {
         agentId: sh.shellId,
@@ -336,7 +336,9 @@ export class BackgroundShellManager {
         status: ok ? "completed" : "failed",
         workKind: "shell",
         command: sh.command,
-        error: ok ? undefined : `Background shell ${sh.shellId} exited with ${exitDesc}. Use BashOutput("${sh.shellId}") to inspect.`,
+        error: ok
+          ? undefined
+          : `Background shell ${sh.shellId} exited with ${exitDesc}. Use BashOutput("${sh.shellId}") to inspect.`,
         enqueuedAt: Date.now(),
       },
       sh.sessionId,
@@ -373,6 +375,10 @@ export class BackgroundShellManager {
     return [...this.shells.values()]
       .filter((s) => s.sessionId === sessionId)
       .map((s) => this.toPublic(s));
+  }
+
+  list(): BgShell[] {
+    return [...this.shells.values()].map((s) => this.toPublic(s));
   }
 
   /**
@@ -487,7 +493,9 @@ export class BackgroundShellManager {
   /** Kill every background shell belonging to `sessionId`. */
   async killSession(sessionId: string): Promise<void> {
     const ids = [...this.shells.values()]
-      .filter((s) => s.sessionId === sessionId && (s.status === "running" || s.status === "starting"))
+      .filter(
+        (s) => s.sessionId === sessionId && (s.status === "running" || s.status === "starting"),
+      )
       .map((s) => s.shellId);
     await Promise.all(ids.map((id) => this.kill(id)));
   }
@@ -531,7 +539,11 @@ export class BackgroundShellManager {
         try {
           rec = JSON.parse(readFileSync(path, "utf8")) as PidfileRecord;
         } catch {
-          try { rmSync(path, { force: true }); } catch { /* ignore */ }
+          try {
+            rmSync(path, { force: true });
+          } catch {
+            /* ignore */
+          }
           continue;
         }
         // Skip ones we already track in-process (this worker's own).
@@ -540,7 +552,11 @@ export class BackgroundShellManager {
           orphans.push(rec);
           this.registerOrphan(rec, path);
         } else {
-          try { rmSync(path, { force: true }); } catch { /* ignore */ }
+          try {
+            rmSync(path, { force: true });
+          } catch {
+            /* ignore */
+          }
         }
       }
     }

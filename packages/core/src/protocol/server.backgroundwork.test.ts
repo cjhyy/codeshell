@@ -57,7 +57,12 @@ describe("AgentServer agent/backgroundWork", () => {
 
     const t = makeTransport();
     new AgentServer({ transport: t.transport, engine: makeEngine() });
-    t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/backgroundWork", params: { sessionId: "s-1" } });
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "agent/backgroundWork",
+      params: { sessionId: "s-1" },
+    });
 
     const items = lastResult(t.sent)?.items;
     expect(Array.isArray(items)).toBe(true);
@@ -78,12 +83,45 @@ describe("AgentServer agent/backgroundWork", () => {
 
     const t = makeTransport();
     new AgentServer({ transport: t.transport, engine: makeEngine() });
-    t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/backgroundWork", params: { sessionId: "s-1" } });
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "agent/backgroundWork",
+      params: { sessionId: "s-1" },
+    });
 
     const items = lastResult(t.sent)?.items ?? [];
     const jobIds = items.filter((i: any) => i.kind === "job").map((i: any) => i.jobId);
     expect(jobIds).toContain("job-mine");
     expect(jobIds).not.toContain("job-theirs");
+  });
+
+  it("can list all sessions with source-session metadata for the UI", () => {
+    backgroundJobRegistry.start("job-mine", "s-1", "mine");
+    backgroundJobRegistry.start("job-theirs", "s-2", "theirs");
+
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, engine: makeEngine() });
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "agent/backgroundWork",
+      params: { sessionId: "s-1", scope: "all" },
+    });
+
+    const items = lastResult(t.sent)?.items ?? [];
+    const mine = items.find((i: any) => i.kind === "job" && i.jobId === "job-mine");
+    const theirs = items.find((i: any) => i.kind === "job" && i.jobId === "job-theirs");
+    expect(mine?.sourceSession).toMatchObject({
+      sessionId: "s-1",
+      shortId: "s-1",
+      current: true,
+    });
+    expect(theirs?.sourceSession).toMatchObject({
+      sessionId: "s-2",
+      shortId: "s-2",
+      current: false,
+    });
   });
 
   it("keeps a just-finished sub-agent briefly (inside its fade window)", () => {
@@ -99,7 +137,12 @@ describe("AgentServer agent/backgroundWork", () => {
 
     const t = makeTransport();
     new AgentServer({ transport: t.transport, engine: makeEngine() });
-    t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/backgroundWork", params: { sessionId: "s-1" } });
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "agent/backgroundWork",
+      params: { sessionId: "s-1" },
+    });
 
     const items = lastResult(t.sent)?.items ?? [];
     const done = items.find((i: any) => i.kind === "subagent" && i.agentId === "a-done");

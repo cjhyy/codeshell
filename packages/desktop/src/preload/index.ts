@@ -25,19 +25,29 @@ export interface BackgroundShellInfo {
   sessionId: string;
   command: string;
   cwd: string;
-  status: "running" | "exited" | "killed";
+  status: "starting" | "running" | "exited" | "killed" | "orphaned";
   startedAt: number;
   exitedAt?: number;
   exitCode: number | null;
   signal: string | null;
   detectedPort?: number;
+  totalBytes?: number;
 }
+
+export interface BackgroundWorkSourceSession {
+  sessionId: string;
+  shortId: string;
+  title?: string;
+  current: boolean;
+}
+
+type BackgroundWorkWithSource<T> = T & { sourceSession: BackgroundWorkSourceSession };
 
 /** One unified background-work row for the background panel. Discriminated by
  *  `kind`; mirrors core BackgroundWorkEntry. Renderer-local (no core import). */
 export type BackgroundWorkInfo =
-  | { kind: "shell"; shell: BackgroundShellInfo }
-  | {
+  | BackgroundWorkWithSource<{ kind: "shell"; shell: BackgroundShellInfo }>
+  | BackgroundWorkWithSource<{
       kind: "subagent";
       agentId: string;
       name?: string;
@@ -46,20 +56,24 @@ export type BackgroundWorkInfo =
       status: "running" | "completed" | "failed" | "cancelled";
       startedAt: number;
       finishedAt?: number;
-    }
-  | { kind: "job"; jobId: string; description: string };
+    }>
+  | BackgroundWorkWithSource<{
+      kind: "job";
+      jobId: string;
+      description: string;
+      status: "running" | "completed" | "failed";
+      startedAt: number;
+      finishedAt?: number;
+      finalText?: string;
+      changedFiles?: string[];
+    }>;
 
 export type WorktreeCleanupSkippedEvent = {
   root: string;
   skipped: Array<{
     path: string;
     branch: string;
-    reason:
-      | "dirty"
-      | "unmerged_commits"
-      | "base_unknown"
-      | "inspect_failed"
-      | "remove_failed";
+    reason: "dirty" | "unmerged_commits" | "base_unknown" | "inspect_failed" | "remove_failed";
     detail?: string;
   }>;
 };
@@ -353,8 +367,8 @@ contextBridge.exposeInMainWorld("codeshell", {
       ok: boolean;
     }>,
   /** Unified background-work listing for the panel: shells + sub-agents + jobs. */
-  listBackgroundWork: (sessionId: string) =>
-    rpc("agent/backgroundWork", { sessionId }).then(rpcResult) as Promise<{
+  listBackgroundWork: (sessionId: string, opts?: { scope?: "session" | "all" }) =>
+    rpc("agent/backgroundWork", { sessionId, ...(opts ?? {}) }).then(rpcResult) as Promise<{
       items: BackgroundWorkInfo[];
     }>,
   approve: (

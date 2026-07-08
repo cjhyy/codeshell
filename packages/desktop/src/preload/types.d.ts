@@ -37,7 +37,7 @@ export interface BackgroundShellInfo {
   sessionId: string;
   command: string;
   cwd: string;
-  status: "running" | "exited" | "killed";
+  status: "starting" | "running" | "exited" | "killed" | "orphaned";
   startedAt: number;
   exitedAt?: number;
   exitCode: number | null;
@@ -48,11 +48,20 @@ export interface BackgroundShellInfo {
   totalBytes?: number;
 }
 
+export interface BackgroundWorkSourceSession {
+  sessionId: string;
+  shortId: string;
+  title?: string;
+  current: boolean;
+}
+
+type BackgroundWorkWithSource<T> = T & { sourceSession: BackgroundWorkSourceSession };
+
 /** One unified background-work row for the background panel. Discriminated by
  *  `kind`; mirrors core BackgroundWorkEntry (shells + sub-agents + jobs). */
 export type BackgroundWorkInfo =
-  | { kind: "shell"; shell: BackgroundShellInfo }
-  | {
+  | BackgroundWorkWithSource<{ kind: "shell"; shell: BackgroundShellInfo }>
+  | BackgroundWorkWithSource<{
       kind: "subagent";
       agentId: string;
       name?: string;
@@ -61,8 +70,8 @@ export type BackgroundWorkInfo =
       status: "running" | "completed" | "failed" | "cancelled";
       startedAt: number;
       finishedAt?: number;
-    }
-  | {
+    }>
+  | BackgroundWorkWithSource<{
       kind: "job";
       jobId: string;
       description: string;
@@ -73,19 +82,14 @@ export type BackgroundWorkInfo =
       finalText?: string;
       /** Files an external agent (DriveAgent) changed, parsed from its transcript. */
       changedFiles?: string[];
-    };
+    }>;
 
 export type WorktreeCleanupSkippedEvent = {
   root: string;
   skipped: Array<{
     path: string;
     branch: string;
-    reason:
-      | "dirty"
-      | "unmerged_commits"
-      | "base_unknown"
-      | "inspect_failed"
-      | "remove_failed";
+    reason: "dirty" | "unmerged_commits" | "base_unknown" | "inspect_failed" | "remove_failed";
     detail?: string;
   }>;
 };
@@ -492,7 +496,10 @@ export interface CodeshellApi {
   ): Promise<{ header: string; text: string }>;
   killBackgroundShell(sessionId: string, shellId: string): Promise<{ ok: boolean }>;
   /** Unified background-work listing for the panel: shells + sub-agents + jobs. */
-  listBackgroundWork(sessionId: string): Promise<{ items: BackgroundWorkInfo[] }>;
+  listBackgroundWork(
+    sessionId: string,
+    opts?: { scope?: "session" | "all" },
+  ): Promise<{ items: BackgroundWorkInfo[] }>;
   /**
    * Multi-session form. The dual-arg legacy form is also supported at runtime.
    * `scope` (once/session/project) on an approve threads to the engine's

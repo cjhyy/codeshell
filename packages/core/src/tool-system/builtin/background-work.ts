@@ -11,9 +11,12 @@
  * a boolean can't distinguish a finite download from a never-ending dev server,
  * but the judge — given each task's kind + command — can.
  */
+import { readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { asyncAgentRegistry, type AsyncAgentStatus } from "./agent-registry.js";
 import { backgroundJobRegistry, type BackgroundJobStatus } from "./background-jobs.js";
 import { backgroundShellManager, type BgShell } from "../../runtime/background-shell.js";
+import { codeShellHome } from "../../session/session-manager.js";
 
 export type BackgroundWorkKind = "subagent" | "job" | "shell";
 
@@ -69,14 +72,23 @@ export function listRunningBackgroundWork(sessionId: string): BackgroundWorkItem
 // This second listing serves that, leaving the judge contract untouched.
 
 /** One background-work row for the desktop panel, discriminated by `kind`. */
+export interface BackgroundWorkSourceSession {
+  sessionId: string;
+  shortId: string;
+  title?: string;
+  current: boolean;
+}
+
+type WithSource<T> = T & { sourceSession: BackgroundWorkSourceSession };
+
 export type BackgroundWorkEntry =
-  | {
+  | WithSource<{
       kind: "shell";
       /** Full shell snapshot — the panel already renders this shape (output/kill
        *  still go through the dedicated agent/backgroundShells RPC by shellId). */
       shell: BgShell;
-    }
-  | {
+    }>
+  | WithSource<{
       kind: "subagent";
       agentId: string;
       name?: string;
@@ -85,8 +97,8 @@ export type BackgroundWorkEntry =
       status: AsyncAgentStatus;
       startedAt: number;
       finishedAt?: number;
-    }
-  | {
+    }>
+  | WithSource<{
       kind: "job";
       jobId: string;
       description: string;
@@ -97,7 +109,50 @@ export type BackgroundWorkEntry =
       finalText?: string;
       /** Files an external agent (DriveAgent) changed, parsed from its transcript. */
       changedFiles?: string[];
+    }>;
+
+type SessionTitleCacheEntry = { mtimeMs: number; title?: string };
+
+const sessionTitleCache = new Map<string, SessionTitleCacheEntry>();
+
+function shortSessionId(sessionId: string): string {
+  return sessionId.length <= 10 ? sessionId : sessionId.slice(0, 10);
+}
+
+function readSessionTitle(sessionId: string): string | undefined {
+  try {
+    const statePath = join(codeShellHome(), "sessions", sessionId, "state.json");
+    const st = statSync(statePath);
+    const cached = sessionTitleCache.get(sessionId);
+    if (cached && cached.mtimeMs === st.mtimeMs) return cached.title;
+    const raw = JSON.parse(readFileSync(statePath, "utf8")) as {
+      title?: unknown;
+      summary?: unknown;
     };
+    const title =
+      typeof raw.title === "string" && raw.title.trim()
+        ? raw.title.trim()
+        : typeof raw.summary === "string" && raw.summary.trim()
+          ? raw.summary.trim()
+          : undefined;
+    sessionTitleCache.set(sessionId, { mtimeMs: st.mtimeMs, title });
+    return title;
+  } catch {
+    return undefined;
+  }
+}
+
+function sourceSession(
+  currentSessionId: string,
+  ownerSessionId: string,
+): BackgroundWorkSourceSession {
+  return {
+    sessionId: ownerSessionId,
+    shortId: shortSessionId(ownerSessionId),
+    title: readSessionTitle(ownerSessionId),
+    current: ownerSessionId === currentSessionId,
+  };
+}
 
 /**
  * Every background-work item spawned by `sessionId`, with per-kind detail, for
@@ -107,19 +162,30 @@ export type BackgroundWorkEntry =
  * keep them. Jobs are only ever present while running (the registry drops them
  * on finish).
  */
-export function listBackgroundWorkForUI(sessionId: string): BackgroundWorkEntry[] {
+export function listBackgroundWorkForUI(
+  sessionId: string,
+  opts: { scope?: "session" | "all" } = {},
+): BackgroundWorkEntry[] {
   const entries: BackgroundWorkEntry[] = [];
+  const scope = opts.scope ?? "session";
 
-  for (const s of backgroundShellManager.listForSession(sessionId)) {
-    entries.push({ kind: "shell", shell: s });
+  const shells =
+    scope === "all"
+      ? backgroundShellManager.list()
+      : backgroundShellManager.listForSession(sessionId);
+  for (const s of shells) {
+    entries.push({ kind: "shell", shell: s, sourceSession: sourceSession(sessionId, s.sessionId) });
   }
 
   const now = Date.now();
-  for (const a of asyncAgentRegistry.listForSession(sessionId)) {
+  const agents =
+    scope === "all" ? asyncAgentRegistry.list() : asyncAgentRegistry.listForSession(sessionId);
+  for (const a of agents) {
     // Keep running agents, plus finished ones still inside their fade window so
     // a completion is briefly visible. (finishedFadeAt = finishedAt + 30s.)
     const fresh = a.status === "running" || (a.finishedFadeAt != null && a.finishedFadeAt > now);
     if (!fresh) continue;
+    const ownerSessionId = a.sessionId ?? sessionId;
     entries.push({
       kind: "subagent",
       agentId: a.agentId,
@@ -129,10 +195,15 @@ export function listBackgroundWorkForUI(sessionId: string): BackgroundWorkEntry[
       status: a.status,
       startedAt: a.startedAt,
       finishedAt: a.finishedAt,
+      sourceSession: sourceSession(sessionId, ownerSessionId),
     });
   }
 
-  for (const j of backgroundJobRegistry.listForSession(sessionId)) {
+  const jobs =
+    scope === "all"
+      ? backgroundJobRegistry.list()
+      : backgroundJobRegistry.listForSession(sessionId);
+  for (const j of jobs) {
     entries.push({
       kind: "job",
       jobId: j.jobId,
@@ -142,6 +213,7 @@ export function listBackgroundWorkForUI(sessionId: string): BackgroundWorkEntry[
       ...(j.finishedAt != null ? { finishedAt: j.finishedAt } : {}),
       ...(j.finalText != null ? { finalText: j.finalText } : {}),
       ...(j.changedFiles && j.changedFiles.length ? { changedFiles: j.changedFiles } : {}),
+      sourceSession: sourceSession(sessionId, j.sessionId),
     });
   }
 
