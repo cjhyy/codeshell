@@ -75,6 +75,21 @@ export type BackgroundWorkInfo =
       changedFiles?: string[];
     };
 
+export type WorktreeCleanupSkippedEvent = {
+  root: string;
+  skipped: Array<{
+    path: string;
+    branch: string;
+    reason:
+      | "dirty"
+      | "unmerged_commits"
+      | "base_unknown"
+      | "inspect_failed"
+      | "remove_failed";
+    detail?: string;
+  }>;
+};
+
 export type PtyStartResult = { ok: true; pid: number } | { ok: false; detail: string };
 
 /** A plugin-provided hook surfaced to the settings 钩子 page. Mirrors
@@ -554,6 +569,7 @@ export interface CodeshellApi {
   onMobilePermissionMode(cb: (env: MobilePermissionModeEnvelope) => void): Unsubscribe;
   onStatus(cb: (evt: AgentStatusEvent) => void): Unsubscribe;
   onAgentLifecycle(cb: (evt: AgentLifecycleEvent) => void): Unsubscribe;
+  onWorktreeCleanupSkipped(cb: (evt: WorktreeCleanupSkippedEvent) => void): Unsubscribe;
   /** Show native folder picker. Resolves to null if user canceled. */
   pickDir(): Promise<{ path: string; name: string } | null>;
   pickSkillDir(): Promise<{ path: string; name: string } | null>;

@@ -58,6 +58,25 @@ export interface CreatedWorktree {
   originalBranch: string | null;
 }
 
+export type StaleWorktreeSkipReason =
+  | "dirty"
+  | "unmerged_commits"
+  | "base_unknown"
+  | "inspect_failed"
+  | "remove_failed";
+
+export interface StaleWorktreeCleanupSkipped {
+  path: string;
+  branch: string;
+  reason: StaleWorktreeSkipReason;
+  detail?: string;
+}
+
+export interface StaleWorktreeCleanupResult {
+  removed: string[];
+  skipped: StaleWorktreeCleanupSkipped[];
+}
+
 async function gitRun(cwd: string, args: string[]): Promise<string> {
   const { stdout } = await execFileAsync("git", args, {
     cwd,
@@ -306,37 +325,104 @@ export async function listGitWorktrees(cwd: string): Promise<WorktreeInfo[]> {
   return out;
 }
 
+function errorDetail(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function resolveCleanupBaseRef(root: string, rootBranch: string | null): Promise<string | null> {
+  const candidates = [
+    rootBranch,
+    "main",
+    "master",
+    "origin/main",
+    "origin/master",
+  ].filter((ref): ref is string => !!ref);
+  const seen = new Set<string>();
+  for (const ref of candidates) {
+    if (seen.has(ref)) continue;
+    seen.add(ref);
+    try {
+      await gitRun(root, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]);
+      return ref;
+    } catch {
+      // try next candidate
+    }
+  }
+  return null;
+}
+
+async function checkStaleWorktreeDeletion(
+  root: string,
+  wtPath: string,
+  branch: string,
+  rootBranch: string | null,
+): Promise<
+  | { ok: true }
+  | { ok: false; reason: StaleWorktreeSkipReason; detail?: string }
+> {
+  let status: string;
+  try {
+    status = await gitRun(wtPath, ["status", "--porcelain=v1", "--untracked-files=all"]);
+  } catch (error) {
+    return { ok: false, reason: "inspect_failed", detail: errorDetail(error) };
+  }
+  if (status.trim()) {
+    return { ok: false, reason: "dirty" };
+  }
+
+  const baseRef = await resolveCleanupBaseRef(root, rootBranch);
+  if (!baseRef) {
+    return { ok: false, reason: "base_unknown" };
+  }
+
+  let rawAhead: string;
+  try {
+    rawAhead = await gitRun(root, ["rev-list", "--count", `${baseRef}..${branch}`]);
+  } catch (error) {
+    return { ok: false, reason: "inspect_failed", detail: errorDetail(error) };
+  }
+  const ahead = Number.parseInt(rawAhead.trim() || "0", 10);
+  if (!Number.isFinite(ahead)) {
+    return { ok: false, reason: "inspect_failed", detail: `invalid ahead count: ${rawAhead}` };
+  }
+  if (ahead > 0) {
+    return { ok: false, reason: "unmerged_commits", detail: `${ahead} commit(s)` };
+  }
+
+  return { ok: true };
+}
+
 /**
  * Remove all worktrees under <repo>/../.worktrees/ whose directory
  * mtime is older than `graceMinutes`. Removes both the worktree and
  * its `<prefix>...` local branch (best-effort).
  *
- * Returns the list of removed paths so the caller can log them.
- * Errors on individual worktrees are swallowed — we always try the
- * rest. The caller decides scheduling (startup + periodic timer).
+ * Returns removed paths plus candidates kept for safety. Errors on
+ * individual worktrees are swallowed — we always try the rest. The caller
+ * decides scheduling (startup + periodic timer).
  */
 export async function cleanupStaleWorktrees(
   repoRoot: string,
   graceMinutes: number,
   branchPrefix?: string,
-): Promise<string[]> {
-  if (!Number.isFinite(graceMinutes) || graceMinutes < 1) return [];
+): Promise<StaleWorktreeCleanupResult> {
+  const result: StaleWorktreeCleanupResult = { removed: [], skipped: [] };
+  if (!Number.isFinite(graceMinutes) || graceMinutes < 1) return result;
   let root: string;
   try {
     root = (await gitRun(repoRoot, ["rev-parse", "--show-toplevel"])).trim();
   } catch {
-    return [];
+    return result;
   }
   const worktreesDir = path.resolve(root, "..", ".worktrees");
   let entries: string[];
   try {
     entries = await fs.readdir(worktreesDir);
   } catch {
-    return [];
+    return result;
   }
 
   const cutoff = Date.now() - graceMinutes * 60_000;
-  const removed: string[] = [];
   let rootBranch: string | null;
   try {
     rootBranch = (await gitRun(root, ["branch", "--show-current"])).trim() || null;
@@ -369,27 +455,36 @@ export async function cleanupStaleWorktrees(
       continue;
     }
 
+    const guard = await checkStaleWorktreeDeletion(root, wtPath, branch, rootBranch);
+    if (!guard.ok) {
+      result.skipped.push({
+        path: wtPath,
+        branch,
+        reason: guard.reason,
+        detail: guard.detail,
+      });
+      continue;
+    }
+
     try {
       await gitRun(root, ["worktree", "remove", "--force", wtPath]);
-      removed.push(wtPath);
-    } catch {
-      // Worktree may already be gone or locked — try a forceful rm so
-      // we don't keep tripping on the same stale entry every startup.
-      try {
-        await fs.rm(wtPath, { recursive: true, force: true });
-        await gitRun(root, ["worktree", "prune"]).catch(() => {});
-        removed.push(wtPath);
-      } catch {
-        continue;
-      }
+      result.removed.push(wtPath);
+    } catch (error) {
+      result.skipped.push({
+        path: wtPath,
+        branch,
+        reason: "remove_failed",
+        detail: errorDetail(error),
+      });
+      continue;
     }
 
     if (!rootBranch || branch !== rootBranch) {
-      await gitRun(root, ["branch", "-D", branch]).catch(() => {});
+      await gitRun(root, ["branch", "-d", branch]).catch(() => {});
     }
   }
 
-  return removed;
+  return result;
 }
 
 /**

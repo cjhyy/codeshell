@@ -49,6 +49,21 @@ export type BackgroundWorkInfo =
     }
   | { kind: "job"; jobId: string; description: string };
 
+export type WorktreeCleanupSkippedEvent = {
+  root: string;
+  skipped: Array<{
+    path: string;
+    branch: string;
+    reason:
+      | "dirty"
+      | "unmerged_commits"
+      | "base_unknown"
+      | "inspect_failed"
+      | "remove_failed";
+    detail?: string;
+  }>;
+};
+
 export type PtyStartResult = { ok: true; pid: number } | { ok: false; detail: string };
 
 let nextRpcId = 1;
@@ -64,6 +79,7 @@ const approvalResolvedListeners: Array<(env: unknown) => void> = [];
 const mobilePermissionModeListeners: Array<(env: unknown) => void> = [];
 const statusListeners: Array<(evt: unknown) => void> = [];
 const lifecycleListeners: Array<(evt: unknown) => void> = [];
+const worktreeCleanupSkippedListeners: Array<(evt: WorktreeCleanupSkippedEvent) => void> = [];
 // Live automation session announcements: `{ sessionId, cwd, title }`, fired
 // once when an in-main automation Engine emits session_started.
 const automationSessionListeners: Array<
@@ -167,6 +183,13 @@ ipcRenderer.on("agent:lifecycle", (_e: IpcRendererEvent, evt: unknown) => {
   }
   lifecycleListeners.forEach((cb) => cb(evt));
 });
+
+ipcRenderer.on(
+  "git:worktreeCleanupSkipped",
+  (_e: IpcRendererEvent, evt: WorktreeCleanupSkippedEvent) => {
+    worktreeCleanupSkippedListeners.forEach((cb) => cb(evt));
+  },
+);
 
 const RPC_TIMEOUT_MS = 30_000;
 
@@ -470,6 +493,13 @@ contextBridge.exposeInMainWorld("codeshell", {
     return () => {
       const i = lifecycleListeners.indexOf(cb);
       if (i >= 0) lifecycleListeners.splice(i, 1);
+    };
+  },
+  onWorktreeCleanupSkipped: (cb: (evt: WorktreeCleanupSkippedEvent) => void): (() => void) => {
+    worktreeCleanupSkippedListeners.push(cb);
+    return () => {
+      const i = worktreeCleanupSkippedListeners.indexOf(cb);
+      if (i >= 0) worktreeCleanupSkippedListeners.splice(i, 1);
     };
   },
   pickDir: (): Promise<{ path: string; name: string } | null> =>

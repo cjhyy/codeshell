@@ -1961,6 +1961,18 @@ function App() {
     // so listing it here does not re-register these long-lived IPC listeners.
   }, [toast]);
 
+  useEffect(() => {
+    const off = window.codeshell.onWorktreeCleanupSkipped((event) => {
+      const count = Array.isArray(event.skipped) ? event.skipped.length : 0;
+      if (count <= 0) return;
+      toast({
+        message: t("misc.worktree.cleanupSkipped", { count }),
+        variant: "error",
+      });
+    });
+    return off;
+  }, [toast, t]);
+
   const send = (
     text: string,
     sendOpts: { bucket?: string; clientMessageId?: string } = {},

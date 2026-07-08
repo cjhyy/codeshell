@@ -100,6 +100,10 @@ export const misc = {
         completed: "✓ {name}完成:{preview}",
         failed: "✗ {name}失败:{preview}",
       },
+      worktree: {
+        cleanupSkipped:
+          "已保留 {count} 个自动清理候选 worktree：存在未提交改动、未合并提交或无法确认安全。请在工作区切换器中手动处理。",
+      },
     },
   },
   en: {
@@ -201,6 +205,10 @@ export const misc = {
         shellName: "Background command",
         completed: "✓ {name} done: {preview}",
         failed: "✗ {name} failed: {preview}",
+      },
+      worktree: {
+        cleanupSkipped:
+          "Kept {count} stale worktree candidate(s): they have local changes, unmerged commits, or could not be verified. Review them manually in the workspace switcher.",
       },
     },
   },

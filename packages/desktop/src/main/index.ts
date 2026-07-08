@@ -152,6 +152,7 @@ import {
   openInEditor,
   undoFiles,
   type UndoFilesResult,
+  type StaleWorktreeCleanupSkipped,
 } from "./desktop-services.js";
 import { turnUndoState, undoTurn, redoTurn } from "./file-history-service.js";
 import { readSettings, writeSettings, type SettingsScope } from "./settings-service.js";
@@ -2764,6 +2765,18 @@ ipcMain.handle("git:setPrefs", async (_e, prefs: MainGitPrefs) => {
 
 const knownGitRoots = new Set<string>();
 
+function broadcastWorktreeCleanupSkipped(
+  root: string,
+  skipped: StaleWorktreeCleanupSkipped[],
+): void {
+  if (skipped.length === 0) return;
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w.isDestroyed()) {
+      w.webContents.send("git:worktreeCleanupSkipped", { root, skipped });
+    }
+  }
+}
+
 /**
  * Drives the worktree-cleanup sweep across every cwd the desktop has
  * touched this session (worktree create/list/diff/switch all funnel
@@ -2777,9 +2790,17 @@ async function sweepStaleWorktrees(reason: string): Promise<void> {
   const branchPrefix = gitPrefsCache.branchPrefix;
   for (const root of knownGitRoots) {
     try {
-      const removed = await cleanupStaleWorktrees(root, grace, branchPrefix);
-      if (removed.length > 0) {
-        dlog("main", "git.worktree.cleanup", { reason, root, removed });
+      const result = await cleanupStaleWorktrees(root, grace, branchPrefix);
+      if (result.removed.length > 0) {
+        dlog("main", "git.worktree.cleanup", { reason, root, removed: result.removed });
+      }
+      if (result.skipped.length > 0) {
+        dlog("main", "git.worktree.cleanup_skipped", {
+          reason,
+          root,
+          skipped: result.skipped,
+        });
+        broadcastWorktreeCleanupSkipped(root, result.skipped);
       }
     } catch (e) {
       dlog("main", "git.worktree.cleanup_error", { root, error: String(e) });
