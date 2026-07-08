@@ -56,30 +56,48 @@ class FakeWebSocket {
 }
 
 let visibilityState = "visible";
+let restoreBrowserGlobals: (() => void) | undefined;
+
+function defineTestProperty(
+  target: object,
+  key: PropertyKey,
+  descriptor: PropertyDescriptor,
+): () => void {
+  const previous = Object.getOwnPropertyDescriptor(target, key);
+  Object.defineProperty(target, key, { configurable: true, ...descriptor });
+  return () => {
+    if (previous) Object.defineProperty(target, key, previous);
+    else Reflect.deleteProperty(target, key);
+  };
+}
 
 function setupBrowser(): void {
   ensureMiniDom();
+  restoreBrowserGlobals?.();
   FakeWebSocket.instances = [];
   const storage = new MemoryStorage();
   storage.setItem("cs.deviceId", "device-1");
   storage.setItem("cs.deviceSecret", "secret-1");
   storage.setItem("cs.deviceName", "Phone");
 
-  Object.assign(globalThis, {
-    localStorage: storage,
-    WebSocket: FakeWebSocket,
-  });
-  Object.assign(window, {
-    location: { origin: "http://127.0.0.1:3000", search: "", pathname: "/mobile" },
-    history: { replaceState() {} },
-  });
-  Object.defineProperty(document, "visibilityState", {
-    configurable: true,
-    get: () => visibilityState,
-  });
+  const restores = [
+    defineTestProperty(globalThis, "localStorage", { value: storage, writable: true }),
+    defineTestProperty(globalThis, "WebSocket", { value: FakeWebSocket, writable: true }),
+    defineTestProperty(window, "location", {
+      value: { origin: "http://127.0.0.1:3000", search: "", pathname: "/mobile" },
+      writable: true,
+    }),
+    defineTestProperty(window, "history", { value: { replaceState() {} }, writable: true }),
+    defineTestProperty(document, "visibilityState", { get: () => visibilityState }),
+  ];
+  restoreBrowserGlobals = () => {
+    for (const restore of restores.reverse()) restore();
+  };
 }
 
 afterEach(() => {
+  restoreBrowserGlobals?.();
+  restoreBrowserGlobals = undefined;
   FakeWebSocket.instances = [];
   visibilityState = "visible";
 });
