@@ -99,6 +99,21 @@ export function shouldAppendThinkingDeltaToMainFeed(agentId: string | undefined)
   return agentId === undefined;
 }
 
+export function shouldDrainBackgroundNotifications(opts: {
+  notificationCount: number;
+  isQueryActive: boolean;
+  queryGuardBusy: boolean;
+  input: string;
+  overlayOpen: boolean;
+  sessionId: string | undefined;
+}): boolean {
+  if (opts.notificationCount === 0) return false;
+  if (opts.isQueryActive || opts.queryGuardBusy) return false;
+  if (opts.input.trim() !== "") return false;
+  if (opts.overlayOpen) return false;
+  return typeof opts.sessionId === "string" && opts.sessionId.length > 0;
+}
+
 function formatCommandError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -1456,13 +1471,23 @@ export function App({
     getNotificationSnapshot,
   );
   useEffect(() => {
-    if (notificationSnapshot.length === 0) return;
-    if (isQueryActive) return;
-    if (input.trim() !== "") return;
-    if (overlayOpen) return;
-    if (!sessionId) return;
+    if (
+      !shouldDrainBackgroundNotifications({
+        notificationCount: notificationSnapshot.length,
+        isQueryActive,
+        queryGuardBusy: queryGuard.getSnapshot(),
+        input,
+        overlayOpen: Boolean(overlayOpen),
+        sessionId,
+      })
+    ) {
+      return;
+    }
 
-    const items = notificationQueue.drainAll(sessionId);
+    const notificationSessionId = sessionId;
+    if (!notificationSessionId) return;
+
+    const items = notificationQueue.drainAll(notificationSessionId);
     if (items.length === 0) return;
     const xml = buildNotificationMessage(items);
     const summary = buildNotificationSummary(items);
