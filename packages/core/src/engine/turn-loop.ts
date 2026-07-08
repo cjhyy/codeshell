@@ -13,6 +13,7 @@ import type {
   ToolResult,
   LLMResponse,
   TokenUsage,
+  ContextUsageAnchor,
 } from "../types.js";
 import type { TurnState } from "./turn-state.js";
 import type { SteerItem } from "./steer-queue.js";
@@ -134,6 +135,8 @@ export interface TurnLoopDeps {
    * Returns the updated counters so usage_update can carry both metric scopes.
    */
   recordCumulativeUsage?: (usage: TokenUsage) => CumulativeUsageCounters;
+  /** Persist the latest context-estimation anchor derived from provider usage. */
+  recordContextUsageAnchor?: (anchor: ContextUsageAnchor) => void;
   /**
    * Reads/clears any user messages queued for THIS session via the steering
    * channel (Engine.enqueueSteer) while a run is in flight. Consumed at the top
@@ -738,11 +741,12 @@ export class TurnLoop {
         // compaction decisions use hybrid (actual + delta) estimation rather than
         // pure heuristics. Without this the manager falls back to char/4 estimates.
         if (response!.usage?.promptTokens !== undefined) {
-          this.deps.contextManager.recordActualUsage(
+          const anchor = this.deps.contextManager.recordActualUsage(
             response!.usage.promptTokens,
             messages.length,
             messages,
           );
+          if (anchor) this.deps.recordContextUsageAnchor?.(anchor);
         }
 
         messages = this.markPendingImagesConsumed(messages);

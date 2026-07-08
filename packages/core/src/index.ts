@@ -19,6 +19,7 @@ export type {
   TranscriptEventType,
   SessionState,
   SessionWorkspace,
+  ContextUsageAnchor,
   SessionStatus,
   TokenUsage,
   CompiledInput,
