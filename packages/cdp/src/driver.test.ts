@@ -145,6 +145,31 @@ describe("CdpActionsDriver.hoverNode", () => {
 });
 
 describe("CdpActionsDriver.pressKey", () => {
+  test("sends text payloads for printable keys only", async () => {
+    const { send, calls } = fakeCdp();
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+
+    const printable = await d.pressKey("a");
+    expect(printable.ok).toBe(true);
+    const printableKeys = calls.filter((c) => c.method === "Input.dispatchKeyEvent");
+    expect(printableKeys[0]?.params).toMatchObject({
+      type: "keyDown",
+      key: "a",
+      text: "a",
+      unmodifiedText: "a",
+    });
+    expect(printableKeys[1]?.params).not.toHaveProperty("text");
+    expect(printableKeys[1]?.params).not.toHaveProperty("unmodifiedText");
+
+    calls.length = 0;
+    const control = await d.pressKey("Enter");
+    expect(control.ok).toBe(true);
+    const controlKeys = calls.filter((c) => c.method === "Input.dispatchKeyEvent");
+    expect(controlKeys[0]?.params).toMatchObject({ type: "keyDown", key: "Enter" });
+    expect(controlKeys[0]?.params).not.toHaveProperty("text");
+    expect(controlKeys[0]?.params).not.toHaveProperty("unmodifiedText");
+  });
+
   test("dispatches the planned sequence for a combination", async () => {
     const { send, calls } = fakeCdp();
     const d = new CdpActionsDriver(send, () => ({ url: "u" }));

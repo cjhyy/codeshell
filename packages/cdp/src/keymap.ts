@@ -55,6 +55,7 @@ const KEY_MAP: Record<string, [string, number | null]> = {
   Numpad6: ["Numpad6", 102], Numpad7: ["Numpad7", 103], Numpad8: ["Numpad8", 104],
   Numpad9: ["Numpad9", 105],
   NumpadMultiply: ["NumpadMultiply", 106],
+  "*": ["NumpadMultiply", 106],
   NumpadAdd: ["NumpadAdd", 107],
   NumpadSubtract: ["NumpadSubtract", 109],
   NumpadDecimal: ["NumpadDecimal", 110],
@@ -72,6 +73,26 @@ const KEY_MAP: Record<string, [string, number | null]> = {
   Backslash: ["Backslash", 220], "\\": ["Backslash", 220],
   BracketRight: ["BracketRight", 221], "]": ["BracketRight", 221],
   Quote: ["Quote", 222], "'": ["Quote", 222],
+  "!": ["Digit1", 49],
+  "@": ["Digit2", 50],
+  "#": ["Digit3", 51],
+  "$": ["Digit4", 52],
+  "%": ["Digit5", 53],
+  "^": ["Digit6", 54],
+  "&": ["Digit7", 55],
+  "(": ["Digit9", 57],
+  ")": ["Digit0", 48],
+  _: ["Minus", 189],
+  "+": ["Equal", 187],
+  "{": ["BracketLeft", 219],
+  "|": ["Backslash", 220],
+  "}": ["BracketRight", 221],
+  ":": ["Semicolon", 186],
+  "\"": ["Quote", 222],
+  "<": ["Comma", 188],
+  ">": ["Period", 190],
+  "?": ["Slash", 191],
+  "~": ["Backquote", 192],
   Clear: ["Clear", 12],
   Pause: ["Pause", 19],
   ContextMenu: ["ContextMenu", 93],
@@ -110,6 +131,62 @@ const ALIASES: Record<string, string> = {
 /** Modifier name → CDP modifier bitmask value. */
 export const MODIFIER_BITS: Record<string, number> = { Alt: 1, Control: 2, Meta: 4, Shift: 8 };
 
+const TEXT_BLOCKING_MODIFIERS = MODIFIER_BITS.Alt | MODIFIER_BITS.Control | MODIFIER_BITS.Meta;
+
+const SHIFT_TEXT: Record<string, string> = {
+  "`": "~",
+  "1": "!",
+  "2": "@",
+  "3": "#",
+  "4": "$",
+  "5": "%",
+  "6": "^",
+  "7": "&",
+  "8": "*",
+  "9": "(",
+  "0": ")",
+  "-": "_",
+  "=": "+",
+  "[": "{",
+  "\\": "|",
+  "]": "}",
+  ";": ":",
+  "'": "\"",
+  ",": "<",
+  ".": ">",
+  "/": "?",
+};
+
+const NAMED_PRINTABLE_TEXT: Record<string, string> = {
+  Space: " ",
+  Numpad0: "0",
+  Numpad1: "1",
+  Numpad2: "2",
+  Numpad3: "3",
+  Numpad4: "4",
+  Numpad5: "5",
+  Numpad6: "6",
+  Numpad7: "7",
+  Numpad8: "8",
+  Numpad9: "9",
+  NumpadMultiply: "*",
+  NumpadAdd: "+",
+  NumpadSubtract: "-",
+  NumpadDecimal: ".",
+  NumpadDivide: "/",
+  Semicolon: ";",
+  Equal: "=",
+  Comma: ",",
+  Minus: "-",
+  Period: ".",
+  Slash: "/",
+  Backquote: "`",
+  BracketLeft: "[",
+  Backslash: "\\",
+  BracketRight: "]",
+  Quote: "'",
+};
+
 /** Resolve a single token (alias or canonical) to its canonical key name. */
 export function normalizeKey(token: string): string {
   const t = token.trim();
@@ -136,9 +213,24 @@ export interface KeyEvent {
   type: "keyDown" | "keyUp";
   key: string;
   code: string;
+  text?: string;
+  unmodifiedText?: string;
   windowsVirtualKeyCode?: number;
   nativeVirtualKeyCode?: number;
   modifiers?: number;
+}
+
+function printableText(key: string, modifiers = 0): string | null {
+  if (modifiers & TEXT_BLOCKING_MODIFIERS) return null;
+
+  const base = NAMED_PRINTABLE_TEXT[key] ?? (key.length === 1 ? key : null);
+  if (base === null) return null;
+  if (base.length !== 1 || base < " ") return null;
+
+  if (!(modifiers & MODIFIER_BITS.Shift)) return base;
+  if (/[a-z]/.test(base)) return base.toUpperCase();
+  if (/[A-Z]/.test(base)) return base;
+  return SHIFT_TEXT[base] ?? base;
 }
 
 /**
@@ -165,6 +257,11 @@ export function planKeySequence(spec: string): KeyEvent[] {
       e.nativeVirtualKeyCode = info.windowsVirtualKeyCode;
     }
     if (modifiers) e.modifiers = modifiers;
+    const text = type === "keyDown" ? printableText(key, modifiers) : null;
+    if (text !== null) {
+      e.text = text;
+      e.unmodifiedText = text;
+    }
     return e;
   };
 
