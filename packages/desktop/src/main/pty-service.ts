@@ -98,7 +98,9 @@ function resolvePowerShellForPty(): string | undefined {
 
   try {
     const out = execFileSync("where", ["powershell.exe"], { encoding: "utf8", timeout: 3000 });
-    const found = out.split(/\r?\n/).find((line) => line.trim().toLowerCase().endsWith("powershell.exe"));
+    const found = out
+      .split(/\r?\n/)
+      .find((line) => line.trim().toLowerCase().endsWith("powershell.exe"));
     if (found) return (powershellCache = found.trim());
   } catch {
     // Fall through to the standard Windows PowerShell location / executable name.
@@ -125,7 +127,12 @@ export function resolveShell(): string {
   // Without it, PowerShell is a more capable interactive fallback than cmd;
   // cmd remains the final always-present option.
   if (process.platform === "win32") {
-    return resolveGitBashForPty() ?? resolvePowerShellForPty() ?? process.env.COMSPEC?.trim() ?? "cmd.exe";
+    return (
+      resolveGitBashForPty() ??
+      resolvePowerShellForPty() ??
+      process.env.COMSPEC?.trim() ??
+      "cmd.exe"
+    );
   }
   const fromEnv = process.env.SHELL?.trim();
   if (fromEnv) return fromEnv;
@@ -235,7 +242,9 @@ export function ptyStart(wc: WebContents, opts: PtyStartOpts): PtyStartResult {
   const { sessionId } = opts;
   const existing = sessions.get(sessionId);
   if (existing) {
-    existing.webContents = wc; // re-attach after a renderer reload / panel re-mount
+    if (!sessionForOwner(wc, sessionId, "reattach")) {
+      return { ok: false, detail: "pty session is owned by another webContents" };
+    }
     // Replay scrollback so the freshly-mounted xterm isn't blank while the
     // shell keeps running behind it.
     if (existing.buffer && !wc.isDestroyed()) {

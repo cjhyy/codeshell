@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   _setPtyForTest,
   ptyKill,
@@ -50,6 +50,11 @@ function makeWebContents(id: number) {
   } as any;
 }
 
+beforeEach(() => {
+  ptyKillAll();
+  _setPtyForTest(null);
+});
+
 afterEach(() => {
   ptyKillAll();
   _setPtyForTest(null);
@@ -79,5 +84,24 @@ describe("PTY sender ownership", () => {
     expect(pty.writes).toEqual(["ok"]);
     expect(pty.resizes).toEqual([{ cols: 90, rows: 30 }]);
     expect(pty.kills).toBe(1);
+  });
+
+  test("reattach requires the starting webContents", () => {
+    const pty = makePty();
+    const owner = makeWebContents(1);
+    const intruder = makeWebContents(2);
+    _setPtyForTest({ spawn: () => pty });
+
+    expect(ptyStart(owner, { sessionId: "pty-session" })).toEqual({ ok: true, pid: 1234 });
+    expect(ptyStart(intruder, { sessionId: "pty-session" })).toEqual({
+      ok: false,
+      detail: "pty session is owned by another webContents",
+    });
+
+    ptyWrite(intruder, "pty-session", "bad");
+    expect(pty.writes).toEqual([]);
+
+    ptyWrite(owner, "pty-session", "ok");
+    expect(pty.writes).toEqual(["ok"]);
   });
 });
