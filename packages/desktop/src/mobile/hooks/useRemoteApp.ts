@@ -25,6 +25,7 @@ import {
 } from "@/lib/messageMappers";
 import { projectForCwd } from "@mobile/lib/format";
 import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket";
+import { rawApprovalResolvedRequestId, removeResolvedApproval } from "./remoteAppSync";
 
 /** Which external coding-CLI the CC pane drives. Mirrors desktop CCRoomView. */
 export type CcCliKind = "claude-code" | "codex";
@@ -210,6 +211,11 @@ export function useRemoteApp(): RemoteApp {
     setLoading((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }));
   }, []);
 
+  const clearApproval = useCallback((requestId: string) => {
+    approvalsRef.current = removeResolvedApproval(approvalsRef.current, requestId);
+    setApprovals((prev) => removeResolvedApproval(prev, requestId));
+  }, []);
+
   const sessionCwdById = useMemo(() => {
     const out = new Map<string, string | null>();
     for (const s of sessions) out.set(s.id, s.cwd || null);
@@ -259,10 +265,7 @@ export function useRemoteApp(): RemoteApp {
           }
           break;
         case "approval.resolved":
-          approvalsRef.current = approvalsRef.current.filter(
-            (p) => p.requestId !== event.approvalId,
-          );
-          setApprovals((prev) => prev.filter((p) => p.requestId !== event.approvalId));
+          clearApproval(event.approvalId);
           break;
         case "room.list.ok":
           setRooms(event.rooms);
@@ -425,16 +428,13 @@ export function useRemoteApp(): RemoteApp {
           break;
         }
         case "ccRoom.approvalResolved":
-          approvalsRef.current = approvalsRef.current.filter(
-            (p) => p.requestId !== event.requestId,
-          );
-          setApprovals((prev) => prev.filter((p) => p.requestId !== event.requestId));
+          clearApproval(event.requestId);
           break;
         default:
           break;
       }
     },
-    [setLoadingKey, setNotice, t],
+    [clearApproval, setLoadingKey, setNotice, t],
   );
 
   // activeRoomId via ref so the message handler closure sees the latest value.
@@ -488,6 +488,11 @@ export function useRemoteApp(): RemoteApp {
         }
         return;
       }
+      const resolvedRequestId = rawApprovalResolvedRequestId(raw);
+      if (resolvedRequestId) {
+        clearApproval(resolvedRequestId);
+        return;
+      }
       // Everything else (agent/streamEvent) folds through the reducer, but it
       // MUST be isolated to ONE session — otherwise concurrent desktop sessions
       // interleave their text_deltas into one garbled feed ("不是同一个会话推到
@@ -519,11 +524,12 @@ export function useRemoteApp(): RemoteApp {
         if (ev === "turn_complete" || ev === "error") {
           // We only ever hold bound-session approvals, so the turn ending clears
           // them all (the request can no longer be answered).
+          approvalsRef.current = [];
           setApprovals([]);
         }
       }
     },
-    [addApproval, sessionCwdById, t],
+    [addApproval, clearApproval, sessionCwdById, t],
   );
 
   const socket = useRemoteSocket({ onServerEvent, onRawLine });

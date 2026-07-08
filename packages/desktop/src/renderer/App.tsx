@@ -3108,6 +3108,11 @@ function App() {
     } else {
       void window.codeshell.approve(requestId, "approve", undefined, answer);
     }
+    void window.codeshell.mobileRemote.notifyApprovalResolved({
+      requestId,
+      sessionId: engineSessionId,
+      approved: true,
+    });
     dispatch({
       type: "ask_user_answered",
       // Mark answered in the bucket that actually holds the prompt (found above),
