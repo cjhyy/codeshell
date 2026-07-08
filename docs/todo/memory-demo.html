@@ -1,0 +1,1889 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>记忆系统快捷版演示</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f7fb;
+        --surface: #ffffff;
+        --surface-2: #f8fafc;
+        --ink: #17202a;
+        --muted: #667085;
+        --soft: #8a94a6;
+        --line: #dce3ee;
+        --line-strong: #c5cedc;
+        --user: #c77700;
+        --user-bg: #fff7e8;
+        --user-soft: #ffe4b8;
+        --dream: #0477a8;
+        --dream-bg: #ebf7ff;
+        --dream-soft: #c7eaff;
+        --add: #168a3a;
+        --add-bg: #e9f8ee;
+        --update: #2368d4;
+        --update-bg: #edf4ff;
+        --delete: #c72c35;
+        --delete-bg: #fff0f1;
+        --noop: #697386;
+        --noop-bg: #f1f3f7;
+        --focus: #7c4dff;
+        --shadow: 0 18px 50px rgba(20, 30, 45, 0.08);
+        --radius: 8px;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at top left, rgba(199, 119, 0, 0.08), transparent 30rem),
+          linear-gradient(180deg, #fbfcff 0%, var(--bg) 32rem);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        line-height: 1.5;
+      }
+
+      button,
+      textarea,
+      input {
+        font: inherit;
+      }
+
+      button {
+        border: 0;
+      }
+
+      button:focus-visible,
+      textarea:focus-visible {
+        outline: 3px solid rgba(124, 77, 255, 0.25);
+        outline-offset: 2px;
+      }
+
+      .app {
+        width: min(1500px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 48px;
+      }
+
+      .topbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 24px;
+        align-items: end;
+        margin-bottom: 20px;
+      }
+
+      .eyebrow {
+        margin: 0 0 7px;
+        color: var(--dream);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 8px;
+        font-size: clamp(30px, 4vw, 48px);
+        line-height: 1.05;
+        letter-spacing: 0;
+      }
+
+      .lead {
+        max-width: 780px;
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .system-pills {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+        max-width: 460px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 32px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.82);
+        padding: 6px 10px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--soft);
+      }
+
+      .dot.user {
+        background: var(--user);
+      }
+
+      .dot.dream {
+        background: var(--dream);
+      }
+
+      .dot.decision {
+        background: var(--focus);
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(310px, 0.82fr) minmax(460px, 1.18fr);
+        gap: 16px;
+        align-items: start;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: var(--shadow);
+      }
+
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+        border-bottom: 1px solid var(--line);
+        padding: 16px 18px 13px;
+      }
+
+      .panel-title {
+        margin: 0;
+        font-size: 17px;
+        line-height: 1.25;
+      }
+
+      .panel-note {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .panel-body {
+        padding: 16px 18px 18px;
+      }
+
+      .input-panel {
+        position: sticky;
+        top: 16px;
+      }
+
+      .preset-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        margin-bottom: 15px;
+      }
+
+      .preset-btn,
+      .primary-btn,
+      .ghost-btn,
+      .mini-btn {
+        cursor: pointer;
+        border-radius: 7px;
+        transition:
+          transform 0.16s ease,
+          box-shadow 0.16s ease,
+          border-color 0.16s ease,
+          background 0.16s ease;
+      }
+
+      .preset-btn {
+        display: flex;
+        min-height: 48px;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        padding: 10px 12px;
+        color: var(--ink);
+        text-align: left;
+      }
+
+      .preset-btn:hover,
+      .ghost-btn:hover,
+      .mini-btn:hover {
+        border-color: var(--line-strong);
+        transform: translateY(-1px);
+        box-shadow: 0 10px 22px rgba(20, 30, 45, 0.08);
+      }
+
+      .preset-main {
+        display: block;
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .preset-sub {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .mini-tag {
+        flex: 0 0 auto;
+        border-radius: 999px;
+        padding: 4px 8px;
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .mini-tag.user {
+        background: var(--user-bg);
+        color: var(--user);
+      }
+
+      .mini-tag.dream {
+        background: var(--dream-bg);
+        color: var(--dream);
+      }
+
+      .custom-box {
+        display: grid;
+        gap: 10px;
+      }
+
+      textarea {
+        min-height: 92px;
+        resize: vertical;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--surface);
+        padding: 12px;
+        color: var(--ink);
+      }
+
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .primary-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        background: var(--ink);
+        padding: 10px 14px;
+        color: #ffffff;
+        font-weight: 900;
+      }
+
+      .primary-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 24px rgba(20, 30, 45, 0.18);
+      }
+
+      .ghost-btn,
+      .mini-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        padding: 10px 12px;
+        color: var(--ink);
+        font-weight: 800;
+      }
+
+      .mini-btn {
+        min-height: 32px;
+        padding: 7px 10px;
+        font-size: 12px;
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .pipeline {
+        display: grid;
+        gap: 10px;
+      }
+
+      .step {
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr);
+        gap: 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+        padding: 12px;
+      }
+
+      .step-index {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border-radius: 999px;
+        background: var(--surface-2);
+        color: var(--muted);
+        font-weight: 900;
+      }
+
+      .step.is-running {
+        border-color: rgba(124, 77, 255, 0.5);
+        box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.1);
+      }
+
+      .step.is-running .step-index {
+        background: var(--focus);
+        color: #ffffff;
+      }
+
+      .step.is-done .step-index {
+        background: #142033;
+        color: #ffffff;
+      }
+
+      .step-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin: 0 0 4px;
+        font-size: 14px;
+      }
+
+      .step-body {
+        min-height: 22px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .flow-card {
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--surface-2);
+        padding: 10px;
+      }
+
+      .flow-card strong {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--ink);
+      }
+
+      .recall-list {
+        display: grid;
+        gap: 7px;
+      }
+
+      .recall-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 74px;
+        gap: 10px;
+        align-items: center;
+        border-radius: 7px;
+        background: var(--surface-2);
+        padding: 8px 10px;
+      }
+
+      .recall-row strong {
+        display: block;
+        overflow: hidden;
+        color: var(--ink);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .score-bar {
+        overflow: hidden;
+        height: 8px;
+        border-radius: 999px;
+        background: #e8edf5;
+      }
+
+      .score-fill {
+        height: 100%;
+        border-radius: inherit;
+        background: var(--focus);
+      }
+
+      .decision-line {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .decision-badge {
+        display: inline-flex;
+        min-width: 76px;
+        justify-content: center;
+        border-radius: 999px;
+        padding: 5px 10px;
+        color: #ffffff;
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .decision-badge.add {
+        background: var(--add);
+      }
+
+      .decision-badge.update {
+        background: var(--update);
+      }
+
+      .decision-badge.delete {
+        background: var(--delete);
+      }
+
+      .decision-badge.noop {
+        background: var(--noop);
+      }
+
+      .confidence {
+        border-radius: 999px;
+        background: var(--surface-2);
+        padding: 5px 9px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .memory-section {
+        grid-column: 1 / -1;
+      }
+
+      .memory-columns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      .zone {
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .zone.user-zone {
+        border-color: rgba(199, 119, 0, 0.28);
+      }
+
+      .zone.dream-zone {
+        border-color: rgba(4, 119, 168, 0.28);
+      }
+
+      .zone-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+        border-bottom: 1px solid var(--line);
+        padding: 15px 16px 12px;
+      }
+
+      .zone h2 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        font-size: 17px;
+      }
+
+      .zone-desc {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .count-badge {
+        flex: 0 0 auto;
+        border-radius: 999px;
+        background: var(--surface-2);
+        padding: 5px 9px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .memory-list {
+        display: grid;
+        min-height: 260px;
+        align-content: start;
+        gap: 10px;
+        padding: 14px;
+      }
+
+      .memory-card {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-left-width: 5px;
+        border-radius: var(--radius);
+        background: var(--surface);
+        padding: 12px;
+        transition:
+          border-color 0.18s ease,
+          box-shadow 0.18s ease,
+          transform 0.18s ease,
+          opacity 0.18s ease;
+      }
+
+      .memory-card.user {
+        border-left-color: var(--user);
+      }
+
+      .memory-card.dream {
+        border-left-color: var(--dream);
+      }
+
+      .memory-card.recall-hit {
+        border-color: rgba(124, 77, 255, 0.75);
+        box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.12);
+        transform: translateY(-1px);
+      }
+
+      .memory-card.pending {
+        background: var(--user-bg);
+      }
+
+      .memory-card h3 {
+        margin: 8px 0 6px;
+        font-size: 15px;
+        line-height: 1.3;
+      }
+
+      .memory-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .card-top,
+      .card-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+
+      .card-meta {
+        margin-top: 10px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        border-radius: 999px;
+        padding: 4px 8px;
+        background: var(--surface-2);
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .chip.user {
+        background: var(--user-bg);
+        color: var(--user);
+      }
+
+      .chip.dream {
+        background: var(--dream-bg);
+        color: var(--dream);
+      }
+
+      .chip.pending {
+        background: #fff0cf;
+        color: #9a5a00;
+      }
+
+      .approval-box {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 12px;
+        border: 1px dashed rgba(199, 119, 0, 0.48);
+        border-radius: 7px;
+        background: rgba(255, 255, 255, 0.66);
+        padding: 9px;
+      }
+
+      .approval-box span {
+        color: #7b4a00;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .approval-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      .empty-state {
+        display: grid;
+        min-height: 130px;
+        place-items: center;
+        border: 1px dashed var(--line-strong);
+        border-radius: var(--radius);
+        color: var(--soft);
+        text-align: center;
+        font-size: 13px;
+      }
+
+      .compare-section {
+        grid-column: 1 / -1;
+      }
+
+      .compare-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .compare-board {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+
+      .compare-lane {
+        display: grid;
+        align-content: start;
+        min-height: 330px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface-2);
+      }
+
+      .lane-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+        padding: 12px;
+      }
+
+      .lane-head h3 {
+        margin: 0;
+        font-size: 15px;
+      }
+
+      .lane-list {
+        display: grid;
+        align-content: start;
+        gap: 9px;
+        padding: 12px;
+      }
+
+      .small-card {
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--surface);
+        padding: 10px;
+      }
+
+      .small-card h4 {
+        margin: 0 0 5px;
+        font-size: 13px;
+      }
+
+      .small-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .old-card {
+        border-left: 5px solid #9aa3b2;
+      }
+
+      .new-card {
+        border-left: 5px solid var(--dream);
+      }
+
+      .compare-log {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 14px;
+      }
+
+      .log-chip {
+        border-radius: 999px;
+        background: var(--surface-2);
+        padding: 6px 9px;
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .log-chip.add {
+        background: var(--add-bg);
+        color: var(--add);
+      }
+
+      .log-chip.update {
+        background: var(--update-bg);
+        color: var(--update);
+      }
+
+      .log-chip.noop {
+        background: var(--noop-bg);
+        color: var(--noop);
+      }
+
+      .footer-note {
+        margin: 18px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        text-align: center;
+      }
+
+      .sr-only {
+        position: absolute;
+        overflow: hidden;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        border: 0;
+        margin: -1px;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+      }
+
+      @keyframes addFlash {
+        0% {
+          box-shadow: 0 0 0 0 rgba(22, 138, 58, 0.42);
+          transform: translateY(-2px);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(22, 138, 58, 0);
+        }
+        100% {
+          box-shadow: none;
+          transform: none;
+        }
+      }
+
+      @keyframes updateFlash {
+        0%,
+        100% {
+          background: var(--surface);
+        }
+        35% {
+          background: var(--update-bg);
+        }
+        65% {
+          background: #ffffff;
+        }
+      }
+
+      @keyframes deleteFade {
+        to {
+          opacity: 0;
+          transform: translateX(18px);
+        }
+      }
+
+      .memory-card.added {
+        animation: addFlash 1.2s ease;
+      }
+
+      .memory-card.updated {
+        animation: updateFlash 1.1s ease;
+      }
+
+      .memory-card.deleting {
+        animation: deleteFade 0.42s ease forwards;
+      }
+
+      @media (max-width: 1120px) {
+        .topbar,
+        .workspace,
+        .memory-columns,
+        .compare-board {
+          grid-template-columns: 1fr;
+        }
+
+        .system-pills {
+          justify-content: flex-start;
+        }
+
+        .input-panel {
+          position: static;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .app {
+          width: min(100% - 20px, 1500px);
+          padding-top: 18px;
+        }
+
+        .panel-header,
+        .zone-top,
+        .lane-head {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .button-row,
+        .compare-controls {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .primary-btn,
+        .ghost-btn,
+        .mini-btn {
+          width: 100%;
+        }
+
+        .step {
+          grid-template-columns: 1fr;
+        }
+
+        .step-index {
+          width: 30px;
+          height: 30px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Memory Architecture Quick Demo</p>
+          <h1>记忆系统快捷版演示</h1>
+          <p class="lead">
+            自动提取出的候选记忆不会直接 append；它会先召回相似旧记忆，再由写入决策层判定
+            ADD、UPDATE、DELETE 或 NOOP，最后按耐用程度落到 user/core 或 dream/archival。
+          </p>
+        </div>
+        <div class="system-pills" aria-label="架构要点">
+          <span class="pill"><span class="dot user"></span>user 区：core 精华库</span>
+          <span class="pill"><span class="dot dream"></span>dream 区：archival 工作台</span>
+          <span class="pill"><span class="dot decision"></span>写入前决策层</span>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="panel input-panel" aria-labelledby="input-title">
+          <div class="panel-header">
+            <div>
+              <h2 id="input-title" class="panel-title">输入区</h2>
+              <p class="panel-note">点一个预设，或输入一条候选记忆后点击提取。</p>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div id="presetGrid" class="preset-grid"></div>
+            <div class="custom-box">
+              <label class="sr-only" for="customMemory">自定义候选记忆</label>
+              <textarea
+                id="customMemory"
+                placeholder="例如：压缩 bug 已修复，验证日期 2026-07-10。"
+              ></textarea>
+              <div class="button-row">
+                <button id="extractCustom" class="primary-btn" type="button">提取候选</button>
+                <button id="resetDemo" class="ghost-btn" type="button">重置演示</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="pipeline-title">
+          <div class="panel-header">
+            <div>
+              <h2 id="pipeline-title" class="panel-title">写入决策流水线</h2>
+              <p class="panel-note">用 setTimeout 模拟异步召回、判断和落库，不连接真实后端或 LLM。</p>
+            </div>
+            <span id="runStatus" class="pill">等待输入</span>
+          </div>
+          <div class="panel-body">
+            <div class="pipeline" id="pipeline"></div>
+          </div>
+        </section>
+
+        <section class="memory-section" aria-labelledby="memory-title">
+          <div class="panel-header panel">
+            <div>
+              <h2 id="memory-title" class="panel-title">当前记忆区</h2>
+              <p class="panel-note">召回命中的旧记忆会高亮；ADD、UPDATE、DELETE 会触发对应动画。</p>
+            </div>
+          </div>
+          <div class="memory-columns" style="margin-top: 16px">
+            <section class="panel zone user-zone" aria-labelledby="user-zone-title">
+              <div class="zone-top">
+                <div>
+                  <h2 id="user-zone-title"><span class="dot user"></span>user 区</h2>
+                  <p class="zone-desc">core / 精华库。耐用事实少而准，改动需要用户批准。</p>
+                </div>
+                <span id="userCount" class="count-badge"></span>
+              </div>
+              <div id="userList" class="memory-list"></div>
+            </section>
+
+            <section class="panel zone dream-zone" aria-labelledby="dream-zone-title">
+              <div class="zone-top">
+                <div>
+                  <h2 id="dream-zone-title"><span class="dot dream"></span>dream 区</h2>
+                  <p class="zone-desc">archival / 工作台。自动提取先进入这里，可自动整理。</p>
+                </div>
+                <span id="dreamCount" class="count-badge"></span>
+              </div>
+              <div id="dreamList" class="memory-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="panel compare-section" aria-labelledby="compare-title">
+          <div class="panel-header">
+            <div>
+              <h2 id="compare-title" class="panel-title">旧做法 vs 新做法</h2>
+              <p class="panel-note">
+                同样连续保存 5 次“压缩 bug 已修复”日期戳变体：旧做法无脑 append，新做法保留一条合并记录。
+              </p>
+            </div>
+            <div class="compare-controls">
+              <button id="runCompareFive" class="primary-btn" type="button">连点 5 次</button>
+              <button id="runCompareOne" class="ghost-btn" type="button">单步保存一次</button>
+              <button id="resetCompare" class="ghost-btn" type="button">清空对比</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="compare-board">
+              <div class="compare-lane">
+                <div class="lane-head">
+                  <h3>旧做法：直接 append</h3>
+                  <span id="oldCompareCount" class="count-badge">0 条</span>
+                </div>
+                <div id="oldCompareList" class="lane-list"></div>
+              </div>
+              <div class="compare-lane">
+                <div class="lane-head">
+                  <h3>新做法：召回后决策</h3>
+                  <span id="newCompareCount" class="count-badge">0 条</span>
+                </div>
+                <div id="newCompareList" class="lane-list"></div>
+              </div>
+            </div>
+            <div id="compareLog" class="compare-log" aria-live="polite"></div>
+          </div>
+        </section>
+      </main>
+
+      <p class="footer-note">纯前端 mock，内置假数据，所有 CSS 和 JS 均内联。</p>
+    </div>
+
+    <script>
+      (() => {
+        "use strict";
+
+        const presets = [
+          {
+            label: "提取：压缩 bug 已修 (07-08)",
+            sub: "过程类事实，默认进入 dream 工作台",
+            zone: "dream",
+            text: "压缩 bug 已修复，验证日期 2026-07-08。",
+          },
+          {
+            label: "提取：压缩 bug 已修 (07-09)",
+            sub: "同主题更新，应该覆盖旧条目并保留位置",
+            zone: "dream",
+            text: "压缩 bug 已修复，验证日期 2026-07-09，补充说明：修复已通过回归检查。",
+          },
+          {
+            label: "提取：压缩 bug 记录失效",
+            sub: "与旧记忆冲突，演示 DELETE",
+            zone: "dream",
+            text: "压缩 bug 修复记录已失效，回滚后不再保留这条完成态记忆。",
+          },
+          {
+            label: "提取：用户叫卡密sama",
+            sub: "耐用事实，进入 user 前需要批准",
+            zone: "user",
+            text: "用户希望被称呼为卡密sama，这是长期偏好。",
+          },
+          {
+            label: "提取：某个全新事实",
+            sub: "无相似旧记忆，演示 ADD",
+            zone: "dream",
+            text: "桌面端流式 Markdown 自动滚动问题需要后续做一次可视化回归。",
+          },
+        ];
+
+        const pipelineSteps = [
+          ["candidate", "候选记忆", "等待新的候选记忆。"],
+          ["recall", "召回相似旧记忆", "从 user 与 dream 两个记忆区里找相似项。"],
+          ["decision", "写入决策层", "比较候选和旧记忆，输出 ADD / UPDATE / DELETE / NOOP。"],
+          ["write", "执行落库", "按决策结果写入 user/core 或 dream/archival。"],
+        ];
+
+        const initialUserMemories = [
+          {
+            id: "u-core-split",
+            zone: "user",
+            title: "架构决策：user 是 core 精华库",
+            body: "user 区只保存耐用事实，例如架构决策、根因、用户偏好；自动流程不能直接修改。",
+            type: "架构决策",
+            origin: "manual",
+            topic: "memory-architecture",
+            date: "",
+            pinned: true,
+            pending: false,
+          },
+          {
+            id: "u-report-style",
+            zone: "user",
+            title: "用户偏好：中文、简洁、先结论",
+            body: "报告使用中文，优先说明路径、验证方式和关键点，避免冗长背景。",
+            type: "用户偏好",
+            origin: "manual",
+            topic: "ui-language-pref",
+            date: "",
+            pinned: true,
+            pending: false,
+          },
+        ];
+
+        const initialDreamMemories = [
+          {
+            id: "d-workbench",
+            zone: "dream",
+            title: "dream 是自动提取工作台",
+            body: "自动提取的过程观察先进 dream，可被后台合并、去重或删除，再按需提出提升到 user 的建议。",
+            type: "工作台说明",
+            origin: "auto",
+            topic: "memory-architecture",
+            date: "",
+            pinned: false,
+            pending: false,
+          },
+        ];
+
+        const compareSequence = [
+          "压缩 bug 已修复，验证日期 2026-07-08。",
+          "压缩 bug 已修复，验证日期 2026-07-09。",
+          "压缩 bug 已修复，验证日期 2026-07-09。",
+          "压缩 bug 已修复，验证日期 2026-07-10。",
+          "压缩 bug 已修复，验证日期 2026-07-10。",
+        ];
+
+        const state = {
+          userMemories: [],
+          dreamMemories: [],
+          highlightIds: new Set(),
+          animated: new Map(),
+          deletingIds: new Set(),
+          running: false,
+          compareOld: [],
+          compareNew: null,
+          compareLog: [],
+          compareIndex: 0,
+          compareRunning: false,
+        };
+
+        const $ = (selector) => document.querySelector(selector);
+        const refs = {
+          presetGrid: $("#presetGrid"),
+          customMemory: $("#customMemory"),
+          extractCustom: $("#extractCustom"),
+          resetDemo: $("#resetDemo"),
+          pipeline: $("#pipeline"),
+          runStatus: $("#runStatus"),
+          userList: $("#userList"),
+          dreamList: $("#dreamList"),
+          userCount: $("#userCount"),
+          dreamCount: $("#dreamCount"),
+          runCompareFive: $("#runCompareFive"),
+          runCompareOne: $("#runCompareOne"),
+          resetCompare: $("#resetCompare"),
+          oldCompareList: $("#oldCompareList"),
+          newCompareList: $("#newCompareList"),
+          oldCompareCount: $("#oldCompareCount"),
+          newCompareCount: $("#newCompareCount"),
+          compareLog: $("#compareLog"),
+        };
+
+        const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+        const clone = (value) => JSON.parse(JSON.stringify(value));
+        const escapeHtml = (value) =>
+          String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+
+        function init() {
+          renderPresetButtons();
+          renderPipeline();
+          bindEvents();
+          resetAll();
+        }
+
+        function bindEvents() {
+          refs.presetGrid.addEventListener("click", (event) => {
+            const button = event.target.closest("button[data-preset]");
+            if (!button) return;
+            const preset = presets[Number(button.dataset.preset)];
+            runExtraction(preset.text);
+          });
+
+          refs.extractCustom.addEventListener("click", () => {
+            const text = refs.customMemory.value.trim();
+            if (!text) {
+              refs.customMemory.focus();
+              return;
+            }
+            runExtraction(text);
+          });
+
+          refs.resetDemo.addEventListener("click", resetAll);
+          refs.userList.addEventListener("click", handleApprovalClick);
+          refs.runCompareFive.addEventListener("click", runCompareFive);
+          refs.runCompareOne.addEventListener("click", runCompareStep);
+          refs.resetCompare.addEventListener("click", resetCompare);
+        }
+
+        function renderPresetButtons() {
+          refs.presetGrid.innerHTML = presets
+            .map(
+              (preset, index) => `
+                <button class="preset-btn" type="button" data-preset="${index}">
+                  <span>
+                    <span class="preset-main">${escapeHtml(preset.label)}</span>
+                    <span class="preset-sub">${escapeHtml(preset.sub)}</span>
+                  </span>
+                  <span class="mini-tag ${preset.zone}">${preset.zone}</span>
+                </button>
+              `,
+            )
+            .join("");
+        }
+
+        function renderPipeline() {
+          refs.pipeline.innerHTML = pipelineSteps
+            .map(
+              ([id, title, body], index) => `
+                <article class="step" id="step-${id}" data-step="${id}">
+                  <div class="step-index">${index + 1}</div>
+                  <div>
+                    <h3 class="step-title">
+                      <span>${escapeHtml(title)}</span>
+                      <span class="chip">待机</span>
+                    </h3>
+                    <div class="step-body">${escapeHtml(body)}</div>
+                  </div>
+                </article>
+              `,
+            )
+            .join("");
+        }
+
+        function resetAll() {
+          state.userMemories = clone(initialUserMemories);
+          state.dreamMemories = clone(initialDreamMemories);
+          state.highlightIds = new Set();
+          state.animated = new Map();
+          state.deletingIds = new Set();
+          state.running = false;
+          refs.customMemory.value = "";
+          resetPipelineState();
+          resetCompare();
+          renderMemories();
+          setControlsEnabled(true);
+        }
+
+        function resetPipelineState() {
+          refs.runStatus.textContent = "等待输入";
+          refs.runStatus.className = "pill";
+          pipelineSteps.forEach(([id, , body]) => {
+            setStep(id, "idle", body, "待机");
+          });
+        }
+
+        function setControlsEnabled(enabled) {
+          [
+            ...refs.presetGrid.querySelectorAll("button"),
+            refs.extractCustom,
+            refs.resetDemo,
+          ].forEach((button) => {
+            button.disabled = !enabled;
+          });
+        }
+
+        function setCompareControlsEnabled(enabled) {
+          [refs.runCompareFive, refs.runCompareOne, refs.resetCompare].forEach((button) => {
+            button.disabled = !enabled;
+          });
+        }
+
+        function setStep(id, status, html, label) {
+          const step = $(`#step-${id}`);
+          if (!step) return;
+          step.classList.remove("is-running", "is-done");
+          if (status === "running") step.classList.add("is-running");
+          if (status === "done") step.classList.add("is-done");
+          step.querySelector(".step-body").innerHTML = html;
+          step.querySelector(".chip").textContent = label;
+        }
+
+        async function runExtraction(rawText) {
+          if (state.running) return;
+          state.running = true;
+          setControlsEnabled(false);
+          state.highlightIds = new Set();
+          state.deletingIds = new Set();
+          renderMemories();
+          resetPipelineState();
+          refs.runStatus.textContent = "正在处理";
+
+          const candidate = buildCandidate(rawText);
+          setStep(
+            "candidate",
+            "running",
+            `
+              <div class="flow-card">
+                <strong>${escapeHtml(candidate.title)}</strong>
+                <span>${escapeHtml(candidate.body)}</span>
+              </div>
+            `,
+            "提取中",
+          );
+          await sleep(420);
+          setStep(
+            "candidate",
+            "done",
+            `
+              <div class="flow-card">
+                <strong>${escapeHtml(candidate.title)}</strong>
+                <span>${escapeHtml(candidate.body)}</span>
+              </div>
+            `,
+            "完成",
+          );
+
+          setStep("recall", "running", "正在从 user 和 dream 两区召回相似旧记忆。", "召回中");
+          await sleep(520);
+          const recalls = recallSimilar(candidate);
+          state.highlightIds = new Set(recalls.map((item) => item.memory.id));
+          renderMemories();
+          setStep("recall", "done", renderRecallList(recalls), "完成");
+
+          setStep("decision", "running", "决策层正在比较候选与召回结果。", "判断中");
+          await sleep(620);
+          const decision = decideMemoryAction(candidate, recalls);
+          setStep("decision", "done", renderDecision(decision), decision.action);
+
+          setStep("write", "running", "正在执行 mock 落库。", "执行中");
+          await sleep(520);
+          await applyDecision(candidate, decision);
+          setStep("write", "done", renderWriteResult(decision), "完成");
+          refs.runStatus.textContent = "处理完成";
+
+          await sleep(260);
+          state.running = false;
+          setControlsEnabled(true);
+        }
+
+        function buildCandidate(rawText) {
+          const text = rawText.trim().replace(/\s+/g, " ");
+          const topic = topicKey(text);
+          const durable = isDurableFact(text);
+          const conflict = isConflictFact(text);
+          const date = extractDate(text);
+          const zone = durable ? "user" : "dream";
+          return {
+            id: `c-${Date.now()}`,
+            raw: text,
+            title: deriveTitle(text, topic, conflict),
+            body: text,
+            topic,
+            date,
+            zone,
+            durable,
+            conflict,
+            type: durable ? deriveDurableType(text) : "过程观察",
+          };
+        }
+
+        function deriveTitle(text, topic, conflict) {
+          if (topic === "compression-bug" && conflict) return "压缩 bug 修复记录失效";
+          if (topic === "compression-bug") return "压缩 bug 已修复";
+          if (topic === "user-name") return "用户称呼：卡密sama";
+          if (topic === "ui-language-pref") return "用户偏好：中文界面";
+          if (topic === "memory-architecture") return "记忆架构相关事实";
+          return `候选记忆：${text.slice(0, 24)}${text.length > 24 ? "..." : ""}`;
+        }
+
+        function deriveDurableType(text) {
+          if (/称呼|叫|名字|卡密/i.test(text)) return "用户偏好";
+          if (/架构|决策|core|user 区|user区/i.test(text)) return "架构决策";
+          if (/根因|原因/i.test(text)) return "根因";
+          return "耐用事实";
+        }
+
+        function isDurableFact(text) {
+          return /用户.*(叫|称呼|名字|偏好)|卡密sama|架构决策|根因|耐用事实|user 区|user区|core/i.test(
+            text,
+          );
+        }
+
+        function isConflictFact(text) {
+          return /失效|回滚|撤销|删除|不再保留|未修复|冲突|作废/i.test(text);
+        }
+
+        function topicKey(text) {
+          const normalized = normalizeText(text);
+          if (/压缩.*bug|bug.*压缩|compaction/.test(normalized)) return "compression-bug";
+          if (/卡密sama|称呼|名字|用户叫/.test(normalized)) return "user-name";
+          if (/中文|简洁|报告|界面/.test(normalized)) return "ui-language-pref";
+          if (/memory|记忆|dream|user区|user 区|core|archival/.test(normalized)) {
+            return "memory-architecture";
+          }
+          const tokens = tokenize(normalized).slice(0, 4);
+          return tokens.length ? tokens.join("-") : "misc";
+        }
+
+        function normalizeText(text) {
+          return String(text)
+            .toLowerCase()
+            .replace(/２０２６/g, "2026")
+            .replace(/压缩\s*bug/g, "压缩bug")
+            .replace(/(\d{4})[年/.](\d{1,2})[月/.](\d{1,2})日?/g, "$1-$2-$3")
+            .replace(/[，。！？；：、（）()[\]{}"'`~!@#$%^&*_+=|\\/<>]/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+        }
+
+        function normalizeWithoutDates(text) {
+          return normalizeText(text)
+            .replace(/20\d{2}-\d{1,2}-\d{1,2}/g, "DATE")
+            .replace(/\b\d{1,2}-\d{1,2}\b/g, "DATE");
+        }
+
+        function tokenize(text) {
+          const normalized = normalizeWithoutDates(text);
+          const matches = normalized.match(/[a-z0-9]+|[\u4e00-\u9fa5]{2,}/g) || [];
+          const expanded = [];
+          for (const token of matches) {
+            expanded.push(token);
+            if (token.includes("压缩bug")) expanded.push("压缩", "bug", "修复");
+            if (token.includes("已修复")) expanded.push("修复");
+            if (token.includes("用户")) expanded.push("用户");
+            if (token.includes("记忆")) expanded.push("记忆");
+          }
+          return [...new Set(expanded.filter((token) => token.length > 1))];
+        }
+
+        function extractDate(text) {
+          const full = String(text).match(/(20\d{2})[-年/.](\d{1,2})[-月/.](\d{1,2})日?/);
+          if (full) return `${full[1]}-${pad2(full[2])}-${pad2(full[3])}`;
+          const short = String(text).match(/\b(\d{1,2})[-/.](\d{1,2})\b/);
+          if (short) return `2026-${pad2(short[1])}-${pad2(short[2])}`;
+          return "";
+        }
+
+        function pad2(value) {
+          return String(value).padStart(2, "0");
+        }
+
+        function recallSimilar(candidate) {
+          return allMemories()
+            .map((memory) => ({
+              memory,
+              score: scoreMemory(candidate, memory),
+            }))
+            .filter((item) => item.score >= 0.18 || item.memory.topic === candidate.topic)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 4);
+        }
+
+        function scoreMemory(candidate, memory) {
+          let score = 0;
+          if (candidate.topic === memory.topic) score += 0.48;
+          if (candidate.zone === memory.zone) score += 0.05;
+          if (candidate.date && candidate.date === memory.date) score += 0.12;
+          const candidateTokens = tokenize(`${candidate.title} ${candidate.body}`);
+          const memoryTokens = tokenize(`${memory.title} ${memory.body}`);
+          const shared = candidateTokens.filter((token) => memoryTokens.includes(token)).length;
+          const union = new Set([...candidateTokens, ...memoryTokens]).size || 1;
+          score += Math.min(0.45, shared / union);
+          if (normalizeWithoutDates(candidate.body) === normalizeWithoutDates(memory.body)) {
+            score += 0.12;
+          }
+          return Math.min(score, 0.98);
+        }
+
+        function allMemories() {
+          return [...state.userMemories, ...state.dreamMemories];
+        }
+
+        function decideMemoryAction(candidate, recalls) {
+          const best = recalls[0];
+          if (candidate.conflict && best && best.score >= 0.42) {
+            return {
+              action: "DELETE",
+              confidence: "高",
+              target: best.memory,
+              zone: best.memory.zone,
+              reason: `候选记忆明确表示旧结论失效，且召回到同主题旧记忆“${best.memory.title}”。自动执行只允许作用于 dream；若命中 user，会改为建议。`,
+            };
+          }
+
+          if (!best || best.score < 0.36) {
+            return {
+              action: "ADD",
+              confidence: candidate.durable ? "中" : "高",
+              target: null,
+              zone: candidate.zone,
+              reason:
+                candidate.zone === "user"
+                  ? "没有召回到等价核心事实；这是耐用偏好，进入 user 前标记为需用户批准。"
+                  : "没有召回到相似旧记忆，按新事实写入 dream 工作台。",
+            };
+          }
+
+          if (best.memory.zone === "user" && candidate.zone !== "user") {
+            return {
+              action: "NOOP",
+              confidence: "中",
+              target: best.memory,
+              zone: best.memory.zone,
+              reason: `相似事实已经由 user/core 覆盖，自动提取不再向 dream 追加重复条目。`,
+            };
+          }
+
+          const sameTopic = best.memory.topic === candidate.topic;
+          const sameDate = candidate.date && candidate.date === best.memory.date;
+          const equivalent =
+            normalizeWithoutDates(candidate.body) === normalizeWithoutDates(best.memory.body) ||
+            (sameTopic && sameDate);
+          const newerDate = candidate.date && best.memory.date && candidate.date > best.memory.date;
+          const richer = candidate.body.length > best.memory.body.length + 14;
+
+          if (equivalent) {
+            return {
+              action: "NOOP",
+              confidence: "高",
+              target: best.memory,
+              zone: best.memory.zone,
+              reason: `召回到等价记忆“${best.memory.title}”，候选没有提供新的事实增量。`,
+            };
+          }
+
+          if (sameTopic && (newerDate || richer || candidate.zone === "user")) {
+            return {
+              action: "UPDATE",
+              confidence: newerDate ? "高" : "中",
+              target: best.memory,
+              zone: best.memory.zone,
+              reason: newerDate
+                ? `同主题旧记忆已存在，候选日期 ${candidate.date} 更新；覆盖旧内容并保留原位置。`
+                : `同主题旧记忆已存在，候选内容更完整；用候选合并更新旧条目。`,
+            };
+          }
+
+          if (best.score >= 0.68) {
+            return {
+              action: "NOOP",
+              confidence: "中",
+              target: best.memory,
+              zone: best.memory.zone,
+              reason: `相似度较高，但候选没有明显更新点，因此跳过写入。`,
+            };
+          }
+
+          return {
+            action: "ADD",
+            confidence: "中",
+            target: null,
+            zone: candidate.zone,
+            reason: "召回到的旧记忆只是在词面上相近，不是同一事项；作为新条目写入。",
+          };
+        }
+
+        function renderRecallList(recalls) {
+          if (!recalls.length) {
+            return `<div class="empty-state">未召回到相似旧记忆，决策层会倾向 ADD。</div>`;
+          }
+          return `
+            <div class="recall-list">
+              ${recalls
+                .map((item) => {
+                  const percent = Math.round(item.score * 100);
+                  return `
+                    <div class="recall-row">
+                      <div>
+                        <strong>${escapeHtml(item.memory.title)}</strong>
+                        <span>${escapeHtml(item.memory.zone)} / ${escapeHtml(item.memory.type)} / 相似度 ${percent}%</span>
+                      </div>
+                      <div class="score-bar" aria-label="相似度 ${percent}%">
+                        <div class="score-fill" style="width: ${percent}%"></div>
+                      </div>
+                    </div>
+                  `;
+                })
+                .join("")}
+            </div>
+          `;
+        }
+
+        function renderDecision(decision) {
+          const action = decision.action.toLowerCase();
+          return `
+            <div class="flow-card">
+              <div class="decision-line">
+                <span class="decision-badge ${action}">${decision.action}</span>
+                <span class="confidence">置信度：${escapeHtml(decision.confidence)}</span>
+                <span class="confidence">目标：${escapeHtml(decision.zone)} 区</span>
+              </div>
+              <p style="margin-top: 10px">${escapeHtml(decision.reason)}</p>
+            </div>
+          `;
+        }
+
+        function renderWriteResult(decision) {
+          const action = decision.action;
+          if (action === "NOOP") {
+            return "跳过写入：列表保持不变。";
+          }
+          if (action === "DELETE") {
+            return "删除旧的 dream 工作台条目；user/core 命中时只会生成建议。";
+          }
+          if (action === "UPDATE") {
+            return "覆盖旧条目的内容，同时保留它在列表中的位置。";
+          }
+          if (decision.zone === "user") {
+            return "已生成 user/core 待批准卡片，用户批准后才算正式入库。";
+          }
+          return "已新增到 dream/archival 工作台。";
+        }
+
+        async function applyDecision(candidate, decision) {
+          const action = decision.action;
+          if (action === "NOOP") {
+            state.highlightIds = new Set(decision.target ? [decision.target.id] : []);
+            renderMemories();
+            return;
+          }
+
+          if (action === "DELETE" && decision.target) {
+            if (decision.target.zone === "user") {
+              markAnimated(decision.target.id, "updated");
+              return;
+            }
+            state.deletingIds.add(decision.target.id);
+            renderMemories();
+            await sleep(430);
+            state.dreamMemories = state.dreamMemories.filter((memory) => memory.id !== decision.target.id);
+            state.deletingIds.delete(decision.target.id);
+            state.highlightIds = new Set();
+            renderMemories();
+            return;
+          }
+
+          if (action === "UPDATE" && decision.target) {
+            const updated = {
+              ...decision.target,
+              title: candidate.title,
+              body: buildMergedBody(candidate, decision.target),
+              type: candidate.type || decision.target.type,
+              date: candidate.date || decision.target.date,
+              topic: candidate.topic,
+              pending: decision.target.zone === "user",
+              origin: decision.target.zone === "user" ? "approval-required" : "auto",
+            };
+            replaceMemory(updated);
+            markAnimated(updated.id, "updated");
+            state.highlightIds = new Set([updated.id]);
+            renderMemories();
+            return;
+          }
+
+          if (action === "ADD") {
+            const memory = {
+              id: `m-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              zone: candidate.zone,
+              title: candidate.title,
+              body:
+                candidate.zone === "user"
+                  ? `${candidate.body}（待用户批准后进入 core。）`
+                  : candidate.body,
+              type: candidate.type,
+              origin: candidate.zone === "user" ? "approval-required" : "auto",
+              topic: candidate.topic,
+              date: candidate.date,
+              pinned: false,
+              pending: candidate.zone === "user",
+            };
+            if (memory.zone === "user") {
+              state.userMemories.unshift(memory);
+            } else {
+              state.dreamMemories.unshift(memory);
+            }
+            state.highlightIds = new Set([memory.id]);
+            markAnimated(memory.id, "added");
+            renderMemories();
+          }
+        }
+
+        function buildMergedBody(candidate, existing) {
+          if (candidate.topic === "compression-bug" && candidate.date) {
+            return `压缩 bug 已修复，最新验证日期 ${candidate.date}。同主题日期戳变体被合并为一条 dream 工作台记录。`;
+          }
+          if (existing.zone === "user") {
+            return `${candidate.body}（待用户批准后覆盖旧 core 事实。）`;
+          }
+          return `${candidate.body}（由决策层从“${existing.title}”合并更新。）`;
+        }
+
+        function replaceMemory(memory) {
+          const list = memory.zone === "user" ? state.userMemories : state.dreamMemories;
+          const index = list.findIndex((item) => item.id === memory.id);
+          if (index >= 0) list[index] = memory;
+        }
+
+        function markAnimated(id, className) {
+          state.animated.set(id, className);
+          window.setTimeout(() => {
+            state.animated.delete(id);
+            renderMemories();
+          }, 1250);
+        }
+
+        function renderMemories() {
+          refs.userCount.textContent = `${state.userMemories.length} 条`;
+          refs.dreamCount.textContent = `${state.dreamMemories.length} 条`;
+          refs.userList.innerHTML = renderMemoryCards(state.userMemories, "user");
+          refs.dreamList.innerHTML = renderMemoryCards(state.dreamMemories, "dream");
+        }
+
+        function renderMemoryCards(memories, zone) {
+          if (!memories.length) {
+            return `<div class="empty-state">${zone === "user" ? "暂无 core 记忆" : "暂无 dream 工作台记忆"}</div>`;
+          }
+          return memories.map(renderMemoryCard).join("");
+        }
+
+        function renderMemoryCard(memory) {
+          const classes = [
+            "memory-card",
+            memory.zone,
+            state.highlightIds.has(memory.id) ? "recall-hit" : "",
+            state.animated.get(memory.id) || "",
+            state.deletingIds.has(memory.id) ? "deleting" : "",
+            memory.pending ? "pending" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+          return `
+            <article class="${classes}" data-memory-id="${escapeHtml(memory.id)}">
+              <div class="card-top">
+                <span class="chip ${memory.zone}">${memory.zone === "user" ? "core" : "archival"}</span>
+                <span class="chip">${escapeHtml(memory.type)}</span>
+                ${memory.pending ? '<span class="chip pending">需批准</span>' : ""}
+              </div>
+              <h3>${escapeHtml(memory.title)}</h3>
+              <p>${escapeHtml(memory.body)}</p>
+              <div class="card-meta">
+                <span class="chip">origin: ${escapeHtml(memory.origin)}</span>
+                ${memory.date ? `<span class="chip">${escapeHtml(memory.date)}</span>` : ""}
+                ${memory.pinned ? '<span class="chip">pinned</span>' : ""}
+              </div>
+              ${
+                memory.pending
+                  ? `
+                    <div class="approval-box">
+                      <span>user/core 改动等待用户批准</span>
+                      <div class="approval-actions">
+                        <button class="mini-btn" type="button" data-approve="${escapeHtml(memory.id)}">批准</button>
+                        <button class="mini-btn" type="button" data-reject="${escapeHtml(memory.id)}">拒绝</button>
+                      </div>
+                    </div>
+                  `
+                  : ""
+              }
+            </article>
+          `;
+        }
+
+        function handleApprovalClick(event) {
+          const approveId = event.target.dataset.approve;
+          const rejectId = event.target.dataset.reject;
+          if (approveId) {
+            const memory = state.userMemories.find((item) => item.id === approveId);
+            if (!memory) return;
+            memory.pending = false;
+            memory.origin = "manual-approved";
+            memory.body = memory.body.replace("（待用户批准后进入 core。）", "");
+            memory.body = memory.body.replace("（待用户批准后覆盖旧 core 事实。）", "");
+            markAnimated(memory.id, "updated");
+            renderMemories();
+          }
+          if (rejectId) {
+            state.userMemories = state.userMemories.filter((item) => item.id !== rejectId);
+            state.highlightIds.delete(rejectId);
+            renderMemories();
+          }
+        }
+
+        function resetCompare() {
+          state.compareOld = [];
+          state.compareNew = null;
+          state.compareLog = [];
+          state.compareIndex = 0;
+          state.compareRunning = false;
+          setCompareControlsEnabled(true);
+          renderCompare();
+        }
+
+        async function runCompareFive() {
+          if (state.compareRunning) return;
+          state.compareRunning = true;
+          setCompareControlsEnabled(false);
+          resetCompare();
+          state.compareRunning = true;
+          setCompareControlsEnabled(false);
+          for (let index = 0; index < compareSequence.length; index += 1) {
+            applyCompareCandidate(compareSequence[index]);
+            renderCompare();
+            await sleep(360);
+          }
+          state.compareIndex = compareSequence.length;
+          state.compareRunning = false;
+          setCompareControlsEnabled(true);
+        }
+
+        function runCompareStep() {
+          if (state.compareRunning) return;
+          const text = compareSequence[state.compareIndex % compareSequence.length];
+          applyCompareCandidate(text);
+          state.compareIndex += 1;
+          renderCompare();
+        }
+
+        function applyCompareCandidate(text) {
+          const date = extractDate(text);
+          state.compareOld.push({
+            id: `old-${state.compareOld.length + 1}`,
+            title: "压缩 bug 已修复",
+            body: text,
+            date,
+          });
+
+          let action = "ADD";
+          let reason = "无相似旧记忆";
+          if (!state.compareNew) {
+            state.compareNew = {
+              title: "压缩 bug 已修复",
+              body: `压缩 bug 已修复，最新验证日期 ${date}。`,
+              date,
+              updates: 0,
+            };
+          } else if (state.compareNew.date === date) {
+            action = "NOOP";
+            reason = "同日期等价记忆已存在";
+          } else {
+            action = "UPDATE";
+            reason = `同主题更新到 ${date}`;
+            state.compareNew.date = date;
+            state.compareNew.body = `压缩 bug 已修复，最新验证日期 ${date}。旧日期戳变体已被合并。`;
+            state.compareNew.updates += 1;
+          }
+
+          state.compareLog.push({
+            action,
+            text: `${state.compareLog.length + 1}. ${action} · ${reason}`,
+          });
+        }
+
+        function renderCompare() {
+          refs.oldCompareCount.textContent = `${state.compareOld.length} 条`;
+          refs.newCompareCount.textContent = `${state.compareNew ? 1 : 0} 条`;
+          refs.oldCompareList.innerHTML = state.compareOld.length
+            ? state.compareOld
+                .map(
+                  (memory) => `
+                    <article class="small-card old-card">
+                      <h4>${escapeHtml(memory.title)} <span class="chip">${escapeHtml(memory.date)}</span></h4>
+                      <p>${escapeHtml(memory.body)}</p>
+                    </article>
+                  `,
+                )
+                .join("")
+            : `<div class="empty-state">旧做法列表为空</div>`;
+
+          refs.newCompareList.innerHTML = state.compareNew
+            ? `
+                <article class="small-card new-card">
+                  <h4>${escapeHtml(state.compareNew.title)} <span class="chip dream">${escapeHtml(state.compareNew.date)}</span></h4>
+                  <p>${escapeHtml(state.compareNew.body)}</p>
+                  <div class="card-meta">
+                    <span class="chip">位置保持不变</span>
+                    <span class="chip">更新 ${state.compareNew.updates} 次</span>
+                  </div>
+                </article>
+              `
+            : `<div class="empty-state">新做法列表为空</div>`;
+
+          refs.compareLog.innerHTML = state.compareLog.length
+            ? state.compareLog
+                .map(
+                  (item) =>
+                    `<span class="log-chip ${item.action.toLowerCase()}">${escapeHtml(item.text)}</span>`,
+                )
+                .join("")
+            : `<span class="log-chip">等待对比操作</span>`;
+        }
+
+        init();
+      })();
+    </script>
+  </body>
+</html>
