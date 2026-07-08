@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { calculateMarkdownTableColumnWidths, type TableData } from "./MessageContent.js";
+import {
+  __renderMarkdownForTest,
+  __resetMarkdownRenderCacheForTest,
+  calculateMarkdownTableColumnWidths,
+  type TableData,
+} from "./MessageContent.js";
 
 function totalWidth(widths: number[]): number {
   return widths.reduce((total, width) => total + width, 0);
@@ -58,5 +63,23 @@ describe("calculateMarkdownTableColumnWidths", () => {
     const widths = calculateMarkdownTableColumnWidths(data, 3);
 
     expect(totalWidth(widths)).toBeLessThanOrEqual(3);
+  });
+});
+
+function stripAnsi(text: string): string {
+  return text.replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, "");
+}
+
+describe("markdown render cache width", () => {
+  test("renders the same markdown separately for different terminal widths", () => {
+    __resetMarkdownRenderCacheForTest();
+    const text =
+      "This paragraph has enough ordinary words to wrap differently when the terminal width changes during a session.";
+
+    const wide = stripAnsi(__renderMarkdownForTest(text, 80)).trim();
+    const narrow = stripAnsi(__renderMarkdownForTest(text, 24)).trim();
+
+    expect(narrow).not.toBe(wide);
+    expect(narrow.split("\n").length).toBeGreaterThan(wide.split("\n").length);
   });
 });

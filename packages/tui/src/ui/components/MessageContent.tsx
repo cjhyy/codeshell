@@ -21,6 +21,7 @@ const streamLog = logger.child({ cat: "stream-md" });
 
 const TOKEN_CACHE_MAX = 500;
 const renderCache = new Map<string, string>();
+const DEFAULT_MARKDOWN_WIDTH = 80;
 
 // Hit/miss counters surfaced via the streaming diag log. Reset by
 // StreamingMarkdown on each render so flush-aligned numbers show only
@@ -31,17 +32,34 @@ const cacheStats = { hits: 0, misses: 0, missMs: 0 };
 // sessions keep counters and parse timing off unless explicitly requested.
 const STREAM_DIAG_ON = process.env.CODESHELL_DEBUG_STREAM === "1";
 
-function cachedRender(text: string, renderFn: (t: string) => string): string {
-  const cached = renderCache.get(text);
+function normalizeMarkdownWidth(width: number | undefined): number {
+  const raw =
+    typeof width === "number" && Number.isFinite(width)
+      ? Math.floor(width)
+      : DEFAULT_MARKDOWN_WIDTH;
+  return Math.max(1, Math.min(raw, 100));
+}
+
+function cacheKey(text: string, width: number): string {
+  return `${width}\0${text}`;
+}
+
+function cachedRender(
+  text: string,
+  width: number,
+  renderFn: (t: string, width: number) => string,
+): string {
+  const key = cacheKey(text, width);
+  const cached = renderCache.get(key);
   if (cached !== undefined) {
     // MRU promotion: delete + re-insert moves to end
-    renderCache.delete(text);
-    renderCache.set(text, cached);
+    renderCache.delete(key);
+    renderCache.set(key, cached);
     if (STREAM_DIAG_ON) cacheStats.hits += 1;
     return cached;
   }
   const t0 = STREAM_DIAG_ON ? performance.now() : 0;
-  const result = renderFn(text);
+  const result = renderFn(text, width);
   if (STREAM_DIAG_ON) {
     cacheStats.misses += 1;
     cacheStats.missMs += performance.now() - t0;
@@ -51,7 +69,7 @@ function cachedRender(text: string, renderFn: (t: string) => string): string {
     const first = renderCache.keys().next().value;
     if (first !== undefined) renderCache.delete(first);
   }
-  renderCache.set(text, result);
+  renderCache.set(key, result);
   return result;
 }
 
@@ -72,32 +90,34 @@ if (!chalk.level) {
   chalk.level = 3; // truecolor — ensure ANSI output for marked-terminal
 }
 
-let markedInstance: Marked | null = null;
+const markedInstances = new Map<number, Marked>();
 let markedInitFailed = false;
 
-function getMarkedInstance(): Marked | null {
-  if (markedInstance) return markedInstance;
+function getMarkedInstance(width: number): Marked | null {
+  const markdownWidth = normalizeMarkdownWidth(width);
+  const existing = markedInstances.get(markdownWidth);
+  if (existing) return existing;
   if (markedInitFailed) return null;
   try {
-    const cols = process.stdout.columns || 80;
-    markedInstance = new Marked(
+    const instance = new Marked(
       markedTerminal({
         showSectionPrefix: false,
-        width: Math.min(cols, 100),
+        width: markdownWidth,
         reflowText: true,
         tab: 2,
         emoji: false,
       }) as any,
     );
-    return markedInstance;
+    markedInstances.set(markdownWidth, instance);
+    return instance;
   } catch {
     markedInitFailed = true;
     return null;
   }
 }
 
-function renderMarkdown(text: string): string {
-  const instance = getMarkedInstance();
+function renderMarkdown(text: string, width: number): string {
+  const instance = getMarkedInstance(width);
   if (!instance) return text;
   try {
     const result = instance.parse(text, { async: false }) as string;
@@ -105,6 +125,17 @@ function renderMarkdown(text: string): string {
   } catch {
     return text;
   }
+}
+
+export function __resetMarkdownRenderCacheForTest(): void {
+  renderCache.clear();
+  markedInstances.clear();
+  markedInitFailed = false;
+}
+
+export function __renderMarkdownForTest(text: string, width: number): string {
+  const markdownWidth = normalizeMarkdownWidth(width);
+  return cachedRender(text, markdownWidth, renderMarkdown);
 }
 
 // ─── Table extraction & rendering ───────────────────────────────
@@ -276,7 +307,7 @@ function MarkdownTable({ data }: { data: TableData }) {
 
 // ─── Hybrid render: tables as React, rest as ANSI ───────────────
 
-function renderHybrid(text: string): ReactNode[] {
+function renderHybrid(text: string, markdownWidth: number): ReactNode[] {
   const parts: ReactNode[] = [];
   let remaining = text;
   let partIdx = 0;
@@ -286,7 +317,7 @@ function renderHybrid(text: string): ReactNode[] {
     if (!tableResult) {
       // No more tables — render rest as ANSI markdown
       const rendered = hasMarkdownSyntax(remaining)
-        ? cachedRender(remaining, renderMarkdown)
+        ? cachedRender(remaining, markdownWidth, renderMarkdown)
         : remaining;
       const display = rendered.trim() ? rendered : remaining;
       parts.push(
@@ -300,7 +331,7 @@ function renderHybrid(text: string): ReactNode[] {
     // Render before-table text
     if (tableResult.before.trim()) {
       const rendered = hasMarkdownSyntax(tableResult.before)
-        ? cachedRender(tableResult.before, renderMarkdown)
+        ? cachedRender(tableResult.before, markdownWidth, renderMarkdown)
         : tableResult.before;
       parts.push(
         <Box key={partIdx++} flexDirection="column">
@@ -354,7 +385,13 @@ function renderHybrid(text: string): ReactNode[] {
  * chars=199 in a single batch).
  */
 let stableMissCount = 0;
-const StableBlockRenderer = memo(function StableBlockInner({ text }: { text: string }) {
+const StableBlockRenderer = memo(function StableBlockInner({
+  text,
+  markdownWidth,
+}: {
+  text: string;
+  markdownWidth: number;
+}) {
   if (STREAM_DIAG_ON) {
     stableMissCount += 1;
     streamLog.info("debug.md.stable_memo_miss", {
@@ -363,9 +400,9 @@ const StableBlockRenderer = memo(function StableBlockInner({ text }: { text: str
     });
   }
   const rendered = useMemo(() => {
-    if (!STREAM_DIAG_ON) return renderHybrid(text);
+    if (!STREAM_DIAG_ON) return renderHybrid(text, markdownWidth);
     const t0 = performance.now();
-    const out = renderHybrid(text);
+    const out = renderHybrid(text, markdownWidth);
     const dt = performance.now() - t0;
     if (dt > 5) {
       streamLog.info("debug.md.stable_parse", {
@@ -377,7 +414,7 @@ const StableBlockRenderer = memo(function StableBlockInner({ text }: { text: str
       });
     }
     return out;
-  }, [text]);
+  }, [text, markdownWidth]);
   return <>{rendered}</>;
 });
 
@@ -394,6 +431,8 @@ function resetCacheStats(): void {
 }
 
 function StreamingMarkdown({ text, nested }: { text: string; nested?: boolean }) {
+  const { stdout } = useStdout();
+  const markdownWidth = normalizeMarkdownWidth(stdout.columns);
   // Mutable ref persists across renders so we don't re-parse blocks that
   // already settled. Resets implicitly when the component unmounts (i.e.
   // when this assistant_text entry is removed from the chat list).
@@ -453,8 +492,8 @@ function StreamingMarkdown({ text, nested }: { text: string; nested?: boolean })
     if (!hasMarkdownSyntax(unstableText)) {
       return <Ansi>{unstableText}</Ansi>;
     }
-    return <Ansi>{cachedRender(unstableText, renderMarkdown)}</Ansi>;
-  }, [unstableText]);
+    return <Ansi>{cachedRender(unstableText, markdownWidth, renderMarkdown)}</Ansi>;
+  }, [unstableText, markdownWidth]);
 
   if (STREAM_DIAG_ON) {
     const now = performance.now();
@@ -485,7 +524,7 @@ function StreamingMarkdown({ text, nested }: { text: string; nested?: boolean })
 
   return (
     <Box flexDirection="column" marginLeft={1} marginTop={nested ? 0 : 1}>
-      {stableText && <StableBlockRenderer text={stableText} />}
+      {stableText && <StableBlockRenderer text={stableText} markdownWidth={markdownWidth} />}
       {unstableRendered ? <Box flexDirection="column">{unstableRendered}</Box> : null}
       <Text dim>{"▌"}</Text>
     </Box>
@@ -512,7 +551,9 @@ export function MessageContent({ text, streaming, nested }: MessageContentProps)
 }
 
 function FinalMarkdown({ text, nested }: { text: string; nested?: boolean }) {
-  const rendered = useMemo(() => renderHybrid(text), [text]);
+  const { stdout } = useStdout();
+  const markdownWidth = normalizeMarkdownWidth(stdout.columns);
+  const rendered = useMemo(() => renderHybrid(text, markdownWidth), [text, markdownWidth]);
   return (
     <Box flexDirection="column" marginLeft={1} marginTop={nested ? 0 : 1}>
       {rendered}
