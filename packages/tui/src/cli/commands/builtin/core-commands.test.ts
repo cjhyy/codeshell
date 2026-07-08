@@ -46,6 +46,21 @@ describe("/config command", () => {
         provider: "serper",
         apiKey: "search-secret",
       },
+      env: {
+        OPENAI_API_KEY: "sk-env-secret",
+        GITHUB_TOKEN: "ghp-secret",
+        keyboardShortcut: "ctrl+k",
+        keymap: "vim",
+      },
+      mcpServers: {
+        browser: {
+          headers: { "X-Api-Key": "header-secret" },
+          authToken: "auth-token-secret",
+          accessToken: "access-token-secret",
+          refreshToken: "refresh-token-secret",
+          clientSecret: "client-secret",
+        },
+      },
     });
     const { ctx, statuses } = makeCtx(cwd);
 
@@ -55,6 +70,15 @@ describe("/config command", () => {
     expect(output).not.toContain("sk-project-secret");
     expect(output).not.toContain("legacy-provider-secret");
     expect(output).not.toContain("search-secret");
+    expect(output).not.toContain("sk-env-secret");
+    expect(output).not.toContain("ghp-secret");
+    expect(output).not.toContain("header-secret");
+    expect(output).not.toContain("auth-token-secret");
+    expect(output).not.toContain("access-token-secret");
+    expect(output).not.toContain("refresh-token-secret");
+    expect(output).not.toContain("client-secret");
+    expect(output).toContain('"keyboardShortcut": "ctrl+k"');
+    expect(output).toContain('"keymap": "vim"');
     expect(output).toContain("[REDACTED]");
   });
 
@@ -67,5 +91,30 @@ describe("/config command", () => {
     await configCommand().execute("get credentials.0.apiKey", ctx);
 
     expect(statuses.join("\n")).toBe('credentials.0.apiKey = "[REDACTED]"');
+  });
+
+  test("redacts secret-shaped get keys", async () => {
+    const cwd = makeProjectSettings({
+      env: {
+        OPENAI_API_KEY: "sk-env-secret",
+      },
+      mcpServers: {
+        github: {
+          env: { GITHUB_TOKEN: "ghp-secret" },
+          headers: { Authorization: "Bearer secret" },
+        },
+      },
+    });
+    const { ctx, statuses } = makeCtx(cwd);
+
+    await configCommand().execute("get env.OPENAI_API_KEY", ctx);
+    await configCommand().execute("get mcpServers.github.env.GITHUB_TOKEN", ctx);
+    await configCommand().execute("get mcpServers.github.headers.Authorization", ctx);
+
+    expect(statuses).toEqual([
+      'env.OPENAI_API_KEY = "[REDACTED]"',
+      'mcpServers.github.env.GITHUB_TOKEN = "[REDACTED]"',
+      'mcpServers.github.headers.Authorization = "[REDACTED]"',
+    ]);
   });
 });

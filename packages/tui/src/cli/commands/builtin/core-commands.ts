@@ -14,18 +14,38 @@ import { resolveApiKey } from "@cjhyy/code-shell-core";
 import { initCommand } from "./init/index.js";
 
 const REDACTED_SETTING_VALUE = "[REDACTED]";
-const SECRET_SETTING_KEYS = new Set([
+const SECRET_SETTING_KEY_SUBSTRINGS = [
   "apikey",
   "api_key",
   "api-key",
-  "secret",
   "token",
+  "secret",
   "password",
   "authorization",
+];
+const KNOWN_SECRET_ENV_KEYS = new Set([
+  "anthropic_api_key",
+  "azure_openai_api_key",
+  "brave_api_key",
+  "cohere_api_key",
+  "deepseek_api_key",
+  "gemini_api_key",
+  "github_token",
+  "gitlab_token",
+  "google_api_key",
+  "mistral_api_key",
+  "openai_api_key",
+  "openrouter_api_key",
+  "serper_api_key",
+  "tavily_api_key",
 ]);
 
 function isSecretSettingKey(key: string): boolean {
-  return SECRET_SETTING_KEYS.has(key.toLowerCase());
+  const lower = key.toLowerCase();
+  if (KNOWN_SECRET_ENV_KEYS.has(lower)) return true;
+  if (SECRET_SETTING_KEY_SUBSTRINGS.some((marker) => lower.includes(marker))) return true;
+  if (/(^|[^a-z0-9])key([^a-z0-9]|$)/i.test(key)) return true;
+  return /[a-z0-9]Key$/.test(key);
 }
 
 export function redactSettingsSecrets(value: unknown, path: string[] = []): unknown {
