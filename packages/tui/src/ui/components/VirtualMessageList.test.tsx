@@ -15,6 +15,15 @@ function entries(count: number): ChatEntry[] {
   }));
 }
 
+async function waitForHandle(getHandle: () => VirtualMessageListHandle | null) {
+  for (let i = 0; i < 10; i++) {
+    await flush();
+    const handle = getHandle();
+    if (handle) return handle;
+  }
+  throw new Error("VirtualMessageList handle was not attached");
+}
+
 describe("VirtualMessageList scroll-away notifications", () => {
   test("notifies when user scrolling breaks sticky bottom", async () => {
     let handle: VirtualMessageListHandle | null = null;
@@ -39,10 +48,9 @@ describe("VirtualMessageList scroll-away notifications", () => {
     );
 
     try {
-      await flush();
-      expect(handle).not.toBeNull();
+      const list = await waitForHandle(() => handle);
 
-      handle!.scrollBy(-3);
+      list.scrollBy(-3);
       await flush();
 
       expect(scrollAwayCalls).toBe(1);
