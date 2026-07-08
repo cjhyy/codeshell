@@ -1,31 +1,26 @@
-import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import type { ReactNode } from "react";
 import type { RenderOptions } from "../render/root.js";
 
 let capturedRenderOptions: RenderOptions | undefined;
 
-mock.module("../render/root.js", () => ({
-  default: async (_node: ReactNode, options?: RenderOptions) => {
-    capturedRenderOptions = options;
-    return {
-      rerender: () => {},
-      unmount: () => {},
-      waitUntilExit: async () => {},
-      cleanup: () => {},
-    };
-  },
-  renderSync: () => ({
+async function renderForTesting(
+  _node: ReactNode,
+  options?: RenderOptions,
+): Promise<{
+  rerender: () => void;
+  unmount: () => void;
+  waitUntilExit: () => Promise<void>;
+  cleanup: () => void;
+}> {
+  capturedRenderOptions = options;
+  return {
     rerender: () => {},
     unmount: () => {},
     waitUntilExit: async () => {},
     cleanup: () => {},
-  }),
-  createRoot: async () => ({
-    render: () => {},
-    unmount: () => {},
-    waitUntilExit: async () => {},
-  }),
-}));
+  };
+}
 
 describe("startInkRepl", () => {
   afterEach(() => {
@@ -50,6 +45,7 @@ describe("startInkRepl", () => {
           cwd: process.cwd(),
           maxContextTokens: 1000,
           sessionId: "test-session",
+          renderForTesting,
         }),
       ).rejects.toThrow("process.exit(0)");
 
