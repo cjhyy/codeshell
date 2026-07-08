@@ -15,7 +15,12 @@ const listedMarkdownPaths = new Set<string>();
 function canonicalCodeShellMarkdownPath(filePath: string): string {
   const resolved = realpathSync(path.resolve(filePath));
   const segments = resolved.split(path.sep);
-  if (!segments.includes(".code-shell")) {
+  // `.agents/skills` is the canonical install location for `npx skills add`;
+  // .code-shell/skills/<name> is symlinked to it, so realpathSync resolves the
+  // physical path into `.agents`. Accept either root marker. The per-path
+  // allowlist below (assert…) is the real gate against arbitrary reads; this
+  // segment check only rejects paths that resolve nowhere near a skills dir.
+  if (!segments.includes(".code-shell") && !segments.includes(".agents")) {
     throw new Error(`refusing to read path outside .code-shell: ${filePath}`);
   }
   if (!resolved.toLowerCase().endsWith(".md")) {

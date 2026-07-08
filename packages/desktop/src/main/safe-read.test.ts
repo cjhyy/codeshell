@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import {
@@ -72,5 +72,30 @@ describe("assertCodeShellMarkdownPath", () => {
   test("rejects a non-markdown file even under .code-shell", () => {
     const p = seedFile("home", ".code-shell", "skills", "s", "secret.key");
     expect(() => assertCodeShellMarkdownPath(p)).toThrow();
+  });
+
+  test("accepts a .code-shell/skills symlink that resolves into .agents/skills (npx skills add)", () => {
+    // npx skills add installs to .agents/skills and symlinks .code-shell/skills/<name> → it.
+    const realDir = path.join(root, "proj", ".agents", "skills", "s");
+    mkdirSync(realDir, { recursive: true });
+    writeFileSync(path.join(realDir, "SKILL.md"), "# test\n", "utf-8");
+    const linkParent = path.join(root, "proj", ".code-shell", "skills");
+    mkdirSync(linkParent, { recursive: true });
+    symlinkSync(realDir, path.join(linkParent, "s"), "dir");
+    const linkedFile = path.join(linkParent, "s", "SKILL.md");
+    rememberCodeShellMarkdownPath(linkedFile);
+    expect(() => assertCodeShellMarkdownPath(linkedFile)).not.toThrow();
+  });
+
+  test("rejects a .code-shell symlink that resolves outside both roots", () => {
+    const outside = path.join(root, "outside");
+    mkdirSync(outside, { recursive: true });
+    writeFileSync(path.join(outside, "SKILL.md"), "# evil\n", "utf-8");
+    const linkParent = path.join(root, "home", ".code-shell", "skills");
+    mkdirSync(linkParent, { recursive: true });
+    symlinkSync(outside, path.join(linkParent, "s"), "dir");
+    expect(() =>
+      assertCodeShellMarkdownPath(path.join(linkParent, "s", "SKILL.md")),
+    ).toThrow();
   });
 });
