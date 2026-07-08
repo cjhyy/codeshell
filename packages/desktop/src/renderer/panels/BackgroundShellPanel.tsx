@@ -15,7 +15,7 @@ function shellItemKey(item: ShellWorkItem): string {
 }
 
 /**
- * Unified background-work panel. Lists ALL of the current session's background
+ * Unified background-work panel. Lists ALL background
  * work, grouped by kind: background shells (Bash run_in_background), background
  * sub-agents (Agent run_in_background / auto-handed-off), and background jobs
  * (video generation, drive-claude-code). Shells are interactive — select to
