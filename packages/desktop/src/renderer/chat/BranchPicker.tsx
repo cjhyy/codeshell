@@ -14,11 +14,19 @@ interface Props {
 
 type LoadState = "idle" | "loading" | "ready" | "unavailable" | "error";
 
+function notifyGitBranchesChanged(cwd: string): void {
+  window.dispatchEvent(new CustomEvent("codeshell:git-branches-changed", { detail: { cwd } }));
+}
+
 export function BranchPicker({ cwd, clean, disabled }: Props) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<LoadState>("idle");
-  const [branches, setBranches] = useState<GitBranches>({ isRepo: false, current: null, branches: [] });
+  const [branches, setBranches] = useState<GitBranches>({
+    isRepo: false,
+    current: null,
+    branches: [],
+  });
   const [error, setError] = useState<string | null>(null);
   const [pendingBranch, setPendingBranch] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -104,6 +112,7 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
       setState(next.isRepo && next.branches.length > 0 ? "ready" : "unavailable");
       setPendingBranch(null);
       setOpen(false);
+      notifyGitBranchesChanged(cwd);
     } catch (err) {
       setBranches(previous);
       setError(err instanceof Error ? err.message : t("chat.branch.switchFailed"));
@@ -122,6 +131,7 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
       setState(next.isRepo && next.branches.length > 0 ? "ready" : "unavailable");
       setPendingBranch(null);
       setOpen(false);
+      notifyGitBranchesChanged(cwd);
     } catch (err) {
       setBranches(previous);
       setError(err instanceof Error ? err.message : t("chat.branch.stashFailed"));
@@ -158,7 +168,9 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
         className="h-8 gap-1 px-2 text-xs disabled:opacity-50"
         disabled={!canOpen}
         onClick={() => setOpen((o) => !o)}
-        title={error ?? (clean === false ? t("chat.branch.dirtyTitle") : t("chat.branch.switchTitle"))}
+        title={
+          error ?? (clean === false ? t("chat.branch.dirtyTitle") : t("chat.branch.switchTitle"))
+        }
       >
         <GitBranch size={12} />
         <span className="max-w-32 truncate text-xs font-medium">{label}</span>
@@ -172,7 +184,9 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
           style={popoverStyle}
           className="w-72 rounded-md border bg-popover p-3 text-popover-foreground shadow-lg"
         >
-          {error && <div className="rounded bg-status-err/10 p-2 text-xs text-status-err">{error}</div>}
+          {error && (
+            <div className="rounded bg-status-err/10 p-2 text-xs text-status-err">{error}</div>
+          )}
           {pendingBranch ? (
             <div className="rounded-md border p-3">
               <div className="font-medium text-foreground">{t("chat.branch.dirtyHeading")}</div>
@@ -180,7 +194,12 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
                 {t("chat.branch.stashNeeded", { branch: pendingBranch })}
               </div>
               <div className="mt-3 flex justify-end gap-2">
-                <Button type="button" variant="ghost" size="sm" onClick={() => setPendingBranch(null)}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPendingBranch(null)}
+                >
                   {t("chat.branch.cancel")}
                 </Button>
                 <Button

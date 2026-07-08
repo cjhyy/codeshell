@@ -73,6 +73,7 @@ const {
   WorkspaceIndicator,
   WorkspaceRow,
   formatWorkspaceDiffSummary,
+  normalizeCurrentBranch,
   workspaceCleanupActionState,
   workspaceCleanupDisabledReason,
   workspaceIndicatorText,
@@ -169,8 +170,25 @@ describe("WorkspaceIndicator helpers", () => {
     };
 
     expect(workspaceIndicatorText(main, "codeshell")).toBe("main (codeshell)");
+    expect(workspaceIndicatorText(main, "codeshell", { mainBranch: "release/2026" })).toBe(
+      "⑃ release/2026 (codeshell)",
+    );
     expect(workspaceIndicatorText(main, "codeshell", { includeRepoName: false })).toBe("main");
-    expect(workspaceIndicatorText(worktree, "codeshell")).toBe("⑃ worktree/feature-session");
+    expect(
+      workspaceIndicatorText(main, "codeshell", {
+        includeRepoName: false,
+        mainBranch: "release/2026",
+      }),
+    ).toBe("⑃ release/2026");
+    expect(workspaceIndicatorText(worktree, "codeshell")).toBe(
+      "⑃ worktree/feature-session (codeshell)",
+    );
+  });
+
+  test("normalizes detached or missing current branches", () => {
+    expect(normalizeCurrentBranch("release/2026")).toBe("release/2026");
+    expect(normalizeCurrentBranch("HEAD")).toBeNull();
+    expect(normalizeCurrentBranch(null)).toBeNull();
   });
 
   test("formats the diff summary", () => {
@@ -243,6 +261,53 @@ describe("WorkspaceIndicator helpers", () => {
 });
 
 describe("WorkspaceRow", () => {
+  test("marks the active row and rows owned by this session", () => {
+    const activeMain: SessionWorkspaceWorktreeInfo = {
+      path: "/repo",
+      branch: "release/2026",
+      head: "abc123",
+      isMain: true,
+    };
+    const ownedWorktree: SessionWorkspaceWorktreeInfo = {
+      path: "/repo/.worktrees/feature",
+      branch: "worktree/feature-session",
+      head: "def456",
+      isManaged: true,
+      occupiedBySessionIds: ["session"],
+    };
+
+    const activeHtml = renderToStaticMarkup(
+      <TooltipProvider>
+        <WorkspaceRow
+          row={activeMain}
+          current={{ root: "/repo", kind: "main" }}
+          busy={null}
+          sessionId="session"
+          mainBranch="release/2026"
+          onSwitch={() => {}}
+          onCleanup={() => {}}
+        />
+      </TooltipProvider>,
+    );
+    const ownedHtml = renderToStaticMarkup(
+      <TooltipProvider>
+        <WorkspaceRow
+          row={ownedWorktree}
+          current={{ root: "/repo", kind: "main" }}
+          busy={null}
+          sessionId="session"
+          onSwitch={() => {}}
+          onCleanup={() => {}}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(activeHtml).toContain('aria-current="true"');
+    expect(activeHtml).toMatch(/⑃ release\/2026/);
+    expect(activeHtml).toMatch(/当前|Current/);
+    expect(ownedHtml).toMatch(/本会话|This session/);
+  });
+
   test("renders occupied cleanup actions disabled with an explanatory tooltip", () => {
     const row: SessionWorkspaceWorktreeInfo = {
       path: "/repo/.worktrees/feature",
@@ -312,6 +377,108 @@ describe("WorkspaceRow", () => {
 });
 
 describe("WorkspaceIndicator", () => {
+  test("uses the real main branch and refreshes after a branch-change event", async () => {
+    ensureMiniDom();
+    const mainWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };
+    let currentBranch = "release/2026";
+    let branchCalls = 0;
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getGitBranches: async () => {
+        branchCalls += 1;
+        return { isRepo: true, current: currentBranch, branches: [currentBranch] };
+      },
+      getSessionWorkspace: async () => mainWorkspace,
+      listSessionWorktrees: async () => ({
+        current: mainWorkspace,
+        mainRoot: "/repo",
+        worktrees: [],
+      }),
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(<WorkspaceIndicator sessionId="session" repoPath="/repo" repoName="repo" />);
+      await flushMicrotasks();
+    });
+
+    expect(textOf(container)).toContain("⑃ release/2026 (repo)");
+    expect(branchCalls).toBe(1);
+
+    currentBranch = "hotfix/branch-label";
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent("codeshell:git-branches-changed", { detail: { cwd: "/repo" } }),
+      );
+      await flushMicrotasks();
+    });
+
+    expect(textOf(container)).toContain("⑃ hotfix/branch-label (repo)");
+    expect(branchCalls).toBe(2);
+  });
+
+  test("groups main, managed, and external worktrees in the switcher", async () => {
+    ensureMiniDom();
+    const mainWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getGitBranches: async () => ({ isRepo: true, current: "release/main", branches: [] }),
+      getSessionWorkspace: async () => mainWorkspace,
+      listSessionWorktrees: async () => ({
+        current: mainWorkspace,
+        mainRoot: "/repo",
+        worktrees: [
+          {
+            path: "/repo",
+            branch: "release/main",
+            head: "abc123",
+            isMain: true,
+          },
+          {
+            path: "/repo/.worktrees/feature",
+            branch: "worktree/feature-session",
+            head: "def456",
+            isManaged: true,
+            occupiedBySessionIds: ["session"],
+          },
+          {
+            path: "/repo/.worktrees/external",
+            branch: "external/branch",
+            head: "fedcba",
+            isManaged: false,
+          },
+        ],
+      }),
+      getSessionWorktreeDiff: async () => ({
+        changedFiles: 0,
+        aheadCommits: 0,
+        hasUncommittedChanges: false,
+      }),
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(<WorkspaceIndicator sessionId="session" repoPath="/repo" repoName="repo" />);
+      await flushMicrotasks();
+    });
+    const trigger = findElement(container, (node) => node.tagName === "BUTTON");
+    expect(trigger).not.toBeNull();
+
+    await act(async () => {
+      clickHostNode(trigger);
+      await flushMicrotasks();
+    });
+
+    const text = textOf(container);
+    expect(text).toMatch(/主工作区|Main workspace/);
+    expect(text).toContain("CodeShell worktrees");
+    expect(text).toMatch(/外部 worktrees|External worktrees/);
+    expect(text).toContain("⑃ release/main");
+    expect(text).toContain("worktree/feature-session");
+    expect(text).toMatch(/本会话|This session/);
+    expect(text).toContain("external/branch");
+  });
+
   test("rapid session switching keeps the latest workspace state", async () => {
     ensureMiniDom();
     const oldWorkspace: SessionWorkspace = {

@@ -45,13 +45,20 @@ interface CleanupConfirm {
 export function workspaceIndicatorText(
   workspace: SessionWorkspace | null,
   repoName: string | null,
-  opts: { includeRepoName?: boolean } = {},
+  opts: { includeRepoName?: boolean; mainBranch?: string | null } = {},
 ): string {
-  if (workspace?.kind === "worktree" && workspace.worktree?.branch) {
-    return `⑃ ${workspace.worktree.branch}`;
-  }
-  if (opts.includeRepoName === false) return "main";
-  return repoName ? `main (${repoName})` : "main";
+  const branch =
+    workspace?.kind === "worktree" && workspace.worktree?.branch
+      ? workspace.worktree.branch
+      : opts.mainBranch;
+  const base = branch ? `⑃ ${branch}` : "main";
+  if (opts.includeRepoName === false) return base;
+  return repoName ? `${base} (${repoName})` : base;
+}
+
+export function normalizeCurrentBranch(current: string | null): string | null {
+  if (!current || current === "HEAD") return null;
+  return current;
 }
 
 export function formatWorkspaceDiffSummary(
@@ -137,15 +144,18 @@ export function WorkspaceIndicator({
   // render at all (worktrees don't exist there). Probed via getGitBranches,
   // the same signal BranchPicker uses.
   const [isGitRepo, setIsGitRepo] = useState<boolean | null>(null);
+  const [mainBranch, setMainBranch] = useState<string | null>(null);
   const currentRequestId = useRef(0);
   const listRequestId = useRef(0);
   const diffRequestId = useRef(0);
+  const gitProbeRequestId = useRef(0);
   const targetKey = `${sessionId ?? ""}\0${repoPath ?? ""}`;
   const targetKeyRef = useRef(targetKey);
   if (targetKeyRef.current !== targetKey) {
     targetKeyRef.current = targetKey;
     listRequestId.current += 1;
     diffRequestId.current += 1;
+    gitProbeRequestId.current += 1;
   }
 
   const canLoad = Boolean(sessionId && repoPath);
@@ -247,11 +257,31 @@ export function WorkspaceIndicator({
     }
   }, [applyWorkspaceList, repoPath, reportError, sessionId]);
 
+  const refreshGitProbe = useCallback(async () => {
+    const requestId = ++gitProbeRequestId.current;
+    if (!repoPath) {
+      setIsGitRepo(null);
+      setMainBranch(null);
+      return;
+    }
+    try {
+      const res = await window.codeshell.getGitBranches(repoPath);
+      if (gitProbeRequestId.current !== requestId) return;
+      setIsGitRepo(res.isRepo === true);
+      setMainBranch(res.isRepo === true ? normalizeCurrentBranch(res.current) : null);
+    } catch {
+      if (gitProbeRequestId.current !== requestId) return;
+      setIsGitRepo(false);
+      setMainBranch(null);
+    }
+  }, [repoPath]);
+
   useEffect(() => {
     return () => {
       currentRequestId.current += 1;
       listRequestId.current += 1;
       diffRequestId.current += 1;
+      gitProbeRequestId.current += 1;
     };
   }, []);
 
@@ -269,28 +299,28 @@ export function WorkspaceIndicator({
     void refreshCurrent();
   }, [refreshCurrent, sessionBusy]);
 
-  // Probe whether repoPath is a git repo. Re-run when the path changes.
-  // Fail-closed: any error → treat as non-git so we don't show a broken
-  // worktree switcher.
   useEffect(() => {
-    if (!repoPath) {
-      setIsGitRepo(null);
-      return;
-    }
-    let cancelled = false;
     setIsGitRepo(null);
-    void window.codeshell
-      .getGitBranches(repoPath)
-      .then((res) => {
-        if (!cancelled) setIsGitRepo(res.isRepo === true);
-      })
-      .catch(() => {
-        if (!cancelled) setIsGitRepo(false);
-      });
-    return () => {
-      cancelled = true;
+    setMainBranch(null);
+    void refreshGitProbe();
+  }, [refreshGitProbe]);
+
+  useEffect(() => {
+    if (!repoPath) return;
+    const onBranchesChanged = (event: Event) => {
+      const detail = (event as CustomEvent<{ cwd?: string }>).detail;
+      if (!detail?.cwd || samePath(detail.cwd, repoPath)) void refreshGitProbe();
     };
-  }, [repoPath]);
+    const onFilesChanged = () => {
+      void refreshGitProbe();
+    };
+    window.addEventListener("codeshell:git-branches-changed", onBranchesChanged);
+    window.addEventListener("codeshell:files-changed", onFilesChanged);
+    return () => {
+      window.removeEventListener("codeshell:git-branches-changed", onBranchesChanged);
+      window.removeEventListener("codeshell:files-changed", onFilesChanged);
+    };
+  }, [refreshGitProbe, repoPath]);
 
   useEffect(() => {
     const subscribe = window.codeshell.onWorkspaceChanged;
@@ -304,7 +334,10 @@ export function WorkspaceIndicator({
 
   const onOpenChange = (next: boolean) => {
     setOpen(next);
-    if (next) void refreshList();
+    if (next) {
+      void refreshGitProbe();
+      void refreshList();
+    }
   };
 
   const switchTo = async (target: string): Promise<boolean> => {
@@ -353,9 +386,17 @@ export function WorkspaceIndicator({
   };
 
   const label = useMemo(
-    () => workspaceIndicatorText(workspace, repoName, { includeRepoName: includeRepoNameInLabel }),
-    [includeRepoNameInLabel, repoName, workspace],
+    () =>
+      workspaceIndicatorText(workspace, repoName, {
+        includeRepoName: includeRepoNameInLabel,
+        mainBranch,
+      }),
+    [includeRepoNameInLabel, mainBranch, repoName, workspace],
   );
+  const rows = list?.worktrees ?? [];
+  const mainRows = rows.filter((row) => row.isMain);
+  const managedRows = rows.filter((row) => !row.isMain && row.isManaged);
+  const externalRows = rows.filter((row) => !row.isMain && !row.isManaged);
 
   if (!canLoad) return null;
   // Not a git repo (or still probing / probe failed) → hide entirely. A
@@ -389,16 +430,56 @@ export function WorkspaceIndicator({
                   {t("topbar.workspace.loading")}
                 </div>
               ) : (
-                (list?.worktrees ?? []).map((row) => (
-                  <WorkspaceRow
-                    key={row.path}
-                    row={row}
-                    current={workspace}
-                    busy={busyAction}
-                    onSwitch={switchTo}
-                    onCleanup={(action) => setConfirm({ row, action })}
-                  />
-                ))
+                <>
+                  {mainRows.length > 0 && (
+                    <WorkspaceGroup title={t("topbar.workspace.groupMain")}>
+                      {mainRows.map((row) => (
+                        <WorkspaceRow
+                          key={row.path}
+                          row={row}
+                          current={workspace}
+                          busy={busyAction}
+                          sessionId={sessionId}
+                          mainBranch={mainBranch}
+                          onSwitch={switchTo}
+                          onCleanup={(action) => setConfirm({ row, action })}
+                        />
+                      ))}
+                    </WorkspaceGroup>
+                  )}
+                  {managedRows.length > 0 && (
+                    <WorkspaceGroup title={t("topbar.workspace.groupWorktrees")}>
+                      {managedRows.map((row) => (
+                        <WorkspaceRow
+                          key={row.path}
+                          row={row}
+                          current={workspace}
+                          busy={busyAction}
+                          sessionId={sessionId}
+                          mainBranch={mainBranch}
+                          onSwitch={switchTo}
+                          onCleanup={(action) => setConfirm({ row, action })}
+                        />
+                      ))}
+                    </WorkspaceGroup>
+                  )}
+                  {externalRows.length > 0 && (
+                    <WorkspaceGroup title={t("topbar.workspace.groupExternal")}>
+                      {externalRows.map((row) => (
+                        <WorkspaceRow
+                          key={row.path}
+                          row={row}
+                          current={workspace}
+                          busy={busyAction}
+                          sessionId={sessionId}
+                          mainBranch={mainBranch}
+                          onSwitch={switchTo}
+                          onCleanup={(action) => setConfirm({ row, action })}
+                        />
+                      ))}
+                    </WorkspaceGroup>
+                  )}
+                </>
               )}
             </div>
             <div className="border-t border-border p-1">
@@ -482,6 +563,8 @@ export function WorkspaceRow({
   row,
   current,
   busy,
+  sessionId,
+  mainBranch,
   onSwitch,
   onCleanup,
   cleanupMenuOpen,
@@ -489,6 +572,8 @@ export function WorkspaceRow({
   row: SessionWorkspaceWorktreeInfo;
   current: SessionWorkspace | null;
   busy: string | null;
+  sessionId?: string | null;
+  mainBranch?: string | null;
   onSwitch: (target: string) => void;
   onCleanup: (action: CleanupAction) => void;
   cleanupMenuOpen?: boolean;
@@ -497,16 +582,23 @@ export function WorkspaceRow({
   const disabledReason = workspaceRowDisabledReason(row, current, t);
   const cleanupState = workspaceCleanupActionState(row, t);
   const cleanupDisabledReason = cleanupState.reason;
+  const active = current ? samePath(row.path, current.root) : false;
+  const ownedByCurrentSession =
+    !!sessionId && row.occupiedBySessionIds?.includes(sessionId) === true;
   const dirty = row.diff?.hasUncommittedChanges === true;
   const changedFiles = row.diff?.changedFiles ?? 0;
   const aheadCommits = row.diff?.aheadCommits ?? 0;
   const external = workspaceIsExternal(row);
   const rowLabel = row.isMain
-    ? t("topbar.workspace.main")
+    ? mainBranch
+      ? `⑃ ${mainBranch}`
+      : t("topbar.workspace.main")
     : row.branch || t("topbar.workspace.detached");
   const path = compactPath(row.path);
   const target = row.isMain ? "main" : row.path;
   const switching = busy === target;
+  const switchDisabled = disabledReason !== null || switching;
+  const visuallyMuted = switchDisabled && !active;
   const detachDisabled = cleanupState.detachDisabled;
   const discardDisabled = cleanupState.discardDisabled;
 
@@ -530,21 +622,41 @@ export function WorkspaceRow({
   const button = (
     <button
       type="button"
-      aria-disabled={disabledReason !== null || switching}
+      aria-current={active ? "true" : undefined}
+      aria-disabled={switchDisabled}
       onClick={() => {
         if (disabledReason || switching) return;
         onSwitch(target);
       }}
       className={cn(
         "grid min-h-14 w-full grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-sm px-2 py-2 text-left transition-colors",
-        disabledReason
+        active && "bg-accent text-accent-foreground ring-1 ring-border",
+        !active && !disabledReason && "hover:bg-accent",
+        visuallyMuted
           ? "cursor-default opacity-55"
-          : "hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25",
+          : "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25",
       )}
     >
       <span className="min-w-0">
         <span className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-sm font-medium text-foreground">{rowLabel}</span>
+          <span
+            className={cn(
+              "truncate text-sm font-medium",
+              active ? "text-accent-foreground" : "text-foreground",
+            )}
+          >
+            {rowLabel}
+          </span>
+          {active && (
+            <span className="shrink-0 rounded-sm bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+              {t("topbar.workspace.currentBadge")}
+            </span>
+          )}
+          {ownedByCurrentSession && !active && (
+            <span className="shrink-0 rounded-sm bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+              {t("topbar.workspace.thisSession")}
+            </span>
+          )}
           {row.occupiedByOtherSession && (
             <span className="shrink-0 rounded-sm bg-status-warn/10 px-1.5 py-0.5 text-[10px] font-medium text-status-warn">
               {t("topbar.workspace.occupied")}
@@ -571,11 +683,22 @@ export function WorkspaceRow({
             </span>
           )}
         </span>
-        <span className="mt-0.5 block truncate text-xs text-muted-foreground" title={row.path}>
+        <span
+          className={cn(
+            "mt-0.5 block truncate text-xs",
+            active ? "text-accent-foreground/80" : "text-muted-foreground",
+          )}
+          title={row.path}
+        >
           {path}
         </span>
       </span>
-      <span className="self-center whitespace-nowrap text-xs text-muted-foreground">
+      <span
+        className={cn(
+          "self-center whitespace-nowrap text-xs",
+          active ? "text-accent-foreground/80" : "text-muted-foreground",
+        )}
+      >
         {switching ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
@@ -643,6 +766,17 @@ export function WorkspaceRow({
         </DropdownMenu>
       )}
     </div>
+  );
+}
+
+function WorkspaceGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="py-1">
+      <div className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-normal text-muted-foreground">
+        {title}
+      </div>
+      <div className="space-y-1">{children}</div>
+    </section>
   );
 }
 
