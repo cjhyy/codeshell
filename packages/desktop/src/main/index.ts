@@ -830,6 +830,19 @@ async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: s
     }
     return;
   }
+  if (event.type === "session.sync") {
+    const snapshot = bridge.getSnapshot(
+      event.sessionId,
+      typeof event.sinceSeq === "number" ? event.sinceSeq : 0,
+    );
+    reply({
+      type: "session.snapshot",
+      sessionId: event.sessionId,
+      entries: snapshot.events,
+      nextSeq: snapshot.nextSeq,
+    });
+    return;
+  }
   if (event.type === "permission.setMode") {
     const sessionId = event.sessionId ?? st.selectedSessionId;
     if (sessionId) {
@@ -1333,8 +1346,17 @@ async function createWindow(): Promise<BrowserWindow> {
     bridge = new AgentBridge(win);
     // Mirror every worker→renderer line onto any connected mobile clients, so
     // the phone sees the same stream (messages, tool summaries, approvals).
-    bridge.subscribeOutbound((line) => {
-      mobileRemote.broadcastRaw(line);
+    bridge.subscribeOutbound((line, snapshotEntry) => {
+      if (snapshotEntry) {
+        mobileRemote.broadcast({
+          type: "session.stream",
+          sessionId: snapshotEntry.sessionId,
+          seq: snapshotEntry.seq,
+          event: snapshotEntry.event,
+        });
+      } else {
+        mobileRemote.broadcastRaw(line);
+      }
     });
   } else {
     bridge.attachWindow(win);

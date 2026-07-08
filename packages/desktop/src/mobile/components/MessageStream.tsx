@@ -6,6 +6,34 @@ import type { ChatItem, ChatState } from "@/lib/streamReducer";
 import { ToolCard } from "./ToolCard";
 import { Markdown } from "./Markdown";
 
+export interface ScrollAnchor {
+  scrollTop: number;
+  scrollHeight: number;
+  clientHeight: number;
+  stickToBottom: boolean;
+}
+
+interface ScrollMetrics {
+  scrollTop: number;
+  scrollHeight: number;
+  clientHeight: number;
+}
+
+export function captureScrollAnchor(el: ScrollMetrics, threshold = 80): ScrollAnchor {
+  return {
+    scrollTop: el.scrollTop,
+    scrollHeight: el.scrollHeight,
+    clientHeight: el.clientHeight,
+    stickToBottom: el.scrollHeight - el.scrollTop - el.clientHeight < threshold,
+  };
+}
+
+export function restoreScrollAnchor(el: ScrollMetrics, anchor: ScrollAnchor): number {
+  if (anchor.stickToBottom) return Math.max(0, el.scrollHeight - el.clientHeight);
+  const bottomOffset = Math.max(0, anchor.scrollHeight - anchor.scrollTop);
+  return Math.max(0, el.scrollHeight - bottomOffset);
+}
+
 /** Assistant bubble with a collapsible reasoning section. */
 function AssistantBubble({ item }: { item: Extract<ChatItem, { kind: "assistant" }> }) {
   const { t } = useT();
@@ -107,10 +135,12 @@ function Row({ item }: { item: ChatItem }) {
 /** The scrollable message feed. Auto-scrolls to bottom on new content unless
  *  the user has scrolled up. */
 export function MessageStream({
+  conversationKey = "default",
   chat,
   loading,
   loadingText,
 }: {
+  conversationKey?: string;
   chat: ChatState;
   loading?: boolean;
   loadingText?: string;
@@ -119,15 +149,50 @@ export function MessageStream({
   const endRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickRef = useRef(true);
+  const anchorsRef = useRef<Map<string, ScrollAnchor>>(new Map());
+
+  const saveAnchor = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const anchor = captureScrollAnchor(el);
+    anchorsRef.current.set(conversationKey, anchor);
+    stickRef.current = anchor.stickToBottom;
+  };
 
   useEffect(() => {
-    if (stickRef.current) endRef.current?.scrollIntoView({ block: "end" });
-  }, [chat.items]);
+    const anchor = anchorsRef.current.get(conversationKey);
+    stickRef.current = anchor?.stickToBottom ?? true;
+  }, [conversationKey]);
+
+  useEffect(() => {
+    const onHidden = () => {
+      if (document.visibilityState === "hidden") saveAnchor();
+    };
+    const onPageHide = () => saveAnchor();
+    document.addEventListener("visibilitychange", onHidden);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      document.removeEventListener("visibilitychange", onHidden);
+      window.removeEventListener("pagehide", onPageHide);
+    };
+  }, [conversationKey]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const anchor = anchorsRef.current.get(conversationKey);
+    if (stickRef.current || anchor?.stickToBottom) {
+      endRef.current?.scrollIntoView({ block: "end" });
+      return;
+    }
+    if (!anchor) return;
+    el.scrollTop = restoreScrollAnchor(el, anchor);
+  }, [chat.items, conversationKey]);
 
   const onScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
-    stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    saveAnchor();
   };
 
   if (chat.items.length === 0) {

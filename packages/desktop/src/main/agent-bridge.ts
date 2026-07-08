@@ -24,7 +24,7 @@ import { join } from "node:path";
 import { mkdirSync } from "node:fs";
 import { BrowserWindow, ipcMain } from "electron";
 import { dlog } from "./desktop-logger.js";
-import { SessionSnapshotStore, type Snapshot } from "./SessionSnapshotStore.js";
+import { SessionSnapshotStore, type Snapshot, type SnapshotEntry } from "./SessionSnapshotStore.js";
 import { parseSnapshotAppend } from "./parseStreamLine.js";
 import {
   parseBrowserActionLine,
@@ -106,7 +106,9 @@ export class AgentBridge {
    * they see the exact JSON-RPC lines the renderer sees, so the phone shares
    * the renderer's single run/permission path rather than a second runtime.
    */
-  private readonly outboundTaps = new Set<(line: string) => void>();
+  private readonly outboundTaps = new Set<
+    (line: string, snapshotEntry?: SnapshotEntry & { sessionId: string }) => void
+  >();
   /**
    * The cwd/sessionId of the most recent `agent/run` (from renderer OR mobile).
    * Used as the default context when a mobile client sends chat without an
@@ -193,12 +195,14 @@ export class AgentBridge {
       // Mirror stream events into the per-session snapshot so a remounted
       // renderer can replay what it missed. Non-streamEvent lines yield null.
       const append = parseSnapshotAppend(line);
-      if (append) this.snapshots.append(append.sessionId, append.event);
+      const snapshotEntry = append
+        ? { sessionId: append.sessionId, ...this.snapshots.append(append.sessionId, append.event) }
+        : undefined;
       dlog("bridge", "worker→renderer", summary);
       this.safeSend("agent:msg", line);
       for (const tap of this.outboundTaps) {
         try {
-          tap(line);
+          tap(line, snapshotEntry);
         } catch {
           /* a tap must never break worker streaming */
         }
@@ -573,7 +577,9 @@ export class AgentBridge {
    * Remote). Returns an unsubscribe. Taps are read-only and isolated: a
    * throwing tap never disrupts the renderer stream.
    */
-  subscribeOutbound(tap: (line: string) => void): () => void {
+  subscribeOutbound(
+    tap: (line: string, snapshotEntry?: SnapshotEntry & { sessionId: string }) => void,
+  ): () => void {
     this.outboundTaps.add(tap);
     return () => this.outboundTaps.delete(tap);
   }

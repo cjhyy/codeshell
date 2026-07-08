@@ -120,3 +120,139 @@
 - `packages/core/src/cc-orchestrator/session-history.ts` 和 `codex-session-history.ts` 被桌面 CC room IPC 同时使用：桌面端 `CCConversationView.tsx:109-115` 也通过 `readHistory/readCodexHistory(..., 50)` 回放同一批历史。因此修复 4000 字符截断会同时影响桌面 CC/Codex 历史显示；这是合理的共享修复，但要跑桌面 CC room 回归，确认长历史不会造成明显卡顿。
 
 总结：优化点 1 是 S（若只去掉/提高 CC/Codex 历史 4000 字符截断）或 M（若要做展开完整回复）；优化点 2 是 M（SidePane tab 化，不改数据层）。需要编排者再决策的只有优化点 1 是否接受更大历史 payload，还是走“截断标记 + 展开加载完整内容”的交互方案。
+
+## 2026-07-08 移动端远程控制：审批卡片和重连补流
+
+### 问题 A：AskUserQuestion 审批卡片不会自动消失
+
+#### 现状
+
+- 手机端卡片挂载点是 `packages/desktop/src/mobile/App.tsx:76-78` 的 `<ApprovalsArea app={app} />`。
+- `ApprovalsArea` 在 `packages/desktop/src/mobile/App.tsx:262-310` 渲染 `div.mobile-approval-stack`，逐个把 `app.approvals` 渲染成 `ApprovalCard`。
+- `ApprovalCard` 在 `packages/desktop/src/mobile/components/ApprovalCard.tsx:23-25` 注释说明同一张卡承载普通审批、记住范围、路径范围和 AskUser；`ApprovalCard.tsx:34` 用 `approval.options?.length` 判断 AskUser；`ApprovalCard.tsx:84-140` 渲染选项按钮、自定义回答和取消按钮。
+- 手机端审批状态在 `packages/desktop/src/mobile/hooks/useRemoteApp.ts:159-161`：`approvals` + `approvalsRef`。
+- 普通 desktop session 的 AskUser/审批来自 worker raw line：`useRemoteApp.ts:463-487` 处理 `agent/approvalRequest`，用 `extractAskUserOptions(rq.args)` 把 `__ask_user__` 的 `options/optionsOnly` 转成 `PendingApproval`。
+- 手机端也支持 typed 旧协议 `approval.request`：`useRemoteApp.ts:330-340`；对应协议类型在 `packages/desktop/src/main/mobile-remote/types.ts:127-138`。
+- CC room 的 AskUser/审批来自 typed `ccRoom.approvalRequest`：`useRemoteApp.ts:393-424`；对应协议类型在 `types.ts:157-173`。CC resolved 会在 `useRemoteApp.ts:427-431` 清卡。
+- 普通 session typed resolved 会在 `useRemoteApp.ts:261-266` 清卡；普通 live stream 的 `turn_complete` / `error` 也会在 `useRemoteApp.ts:515-523` 粗粒度清空当前卡。
+- 手机自己点卡时会乐观清卡：普通审批在 `useRemoteApp.ts:648-678`，CC room 审批在 `useRemoteApp.ts:603-617`。
+
+#### 根因
+
+- 用户标注的是 AskUserQuestion 选项卡，最像普通 desktop session 的 `__ask_user__` 路径，不是 CC room 路径。普通 AskUser 在手机端是从 raw `agent/approvalRequest` 建卡，但手机端 `onRawLine` 只处理 `agent/approvalRequest` 和 `agent/streamEvent`，没有处理 raw `agent/approvalResolved`：见 `useRemoteApp.ts:460-527`。
+- 桌面端普通 AskUser 被单独路由为聊天内联卡：`packages/desktop/src/renderer/App.tsx:1749-1808`。用户在桌面端回答时，`handleAskUserAnswer` 只调用 `window.codeshell.approve(...)` 并本地 `ask_user_answered`：`App.tsx:3084-3118`，没有像普通审批 `decideEnvelope` 那样调用 `window.codeshell.mobileRemote.notifyApprovalResolved(...)`。
+- 普通审批弹卡在桌面端做了手机通知：`App.tsx:2521-2525`。bypass 自动批准也会通知手机：`App.tsx:1836-1840`。AskUser 内联回答缺这一步，所以“桌面已处理，手机还挂着”成立。
+- core 的普通 approve handler 也不会在用户回答时主动发 resolved：`packages/core/src/protocol/server.ts:656-674` 只是删除 pending、清 timer、resolve，并返回 RPC ok。
+- goal-active AskUser 的 10 分钟超时会发 raw `agent/approvalResolved`：`server.ts:1941-1968`，桌面 preload 在 `packages/desktop/src/preload/index.ts:130-135` 分发给 renderer，renderer 在 `App.tsx:1847-1870` 把内联 AskUser 标记为超时并移除 pending approval。但手机端没有处理这个 raw method，因此即使收到同一条 worker line，也不会清 `approvals`。
+- 如果手机断线/后台挂起期间桌面已回答或 AskUser 已超时，当前 mobile 也没有 pending approvals hydrate/snapshot；重连后本地 `approvals` 不会按 server 当前 pending 状态对齐。
+
+#### 桌面端已有机制对照
+
+- core 工具审批默认 5 分钟：`packages/core/src/protocol/server.ts:145-146` 定义 `APPROVAL_TIMEOUT_MS`，`server.ts:1857-1884` 在 `requestApprovalFromClient` 里超时 resolve `{ approved:false, reason:"approval timed out" }`。
+- core 普通交互 AskUser 明确无 wall-clock timeout：`server.ts:1894-1900`；只有 goal-active AskUser 使用 10 分钟：`server.ts:147-154` 和 `server.ts:1941-1968`。
+- Stop/cancel 会 drain session pending approvals，但不广播 resolved：`server.ts:699-729` 调 `cancelSessionApprovals`，实现见 `server.ts:2228-2248`。
+- 桌面 renderer 的普通审批卡会在 `agent/approvalResolved` 时移出 queue：`packages/desktop/src/renderer/App.tsx:1847-1870`；AskUser 内联卡也在同一 handler 中标为 `msg.ask.timedOut`。
+- CC room 已经有完整 resolved 广播：`packages/desktop/src/main/cc-room/approval-bridge.ts:43-55` 超时 auto-deny，`:58-66` 用户响应 resolved；main 在 `packages/desktop/src/main/index.ts:384-400` 同时推桌面 IPC 和手机 WS；桌面 CC 在 `packages/desktop/src/renderer/cc-room/CCConversationView.tsx:132-135` 清 pending；手机在 `useRemoteApp.ts:427-431` 清 pending。这个路径相对完整。
+
+#### 推荐修法
+
+- 最小修法 S：在 `packages/desktop/src/renderer/App.tsx` 的 `handleAskUserAnswer` 中，`window.codeshell.approve(...)` 后补一条与普通审批一致的 `window.codeshell.mobileRemote.notifyApprovalResolved({ requestId, sessionId: engineSessionId, approved: true })`。这直接修复“桌面端已回答 AskUser，手机还挂着”。
+- 最小修法 S：在 `packages/desktop/src/mobile/hooks/useRemoteApp.ts` 的 `onRawLine` 增加 `obj.method === "agent/approvalResolved"` 分支，读取 `params.requestId` 后从 `approvals` 过滤掉。这样 goal AskUser 10 分钟超时的 raw resolved 即使没有 typed `approval.resolved`，手机也能清卡。
+- 可选 S：在 `packages/desktop/src/main/index.ts:1336-1338` 的 mobile raw tap 旁解析 `agent/approvalResolved`，复用 `broadcastApprovalResolved(...)` 推 typed `approval.resolved`。手机已有 typed handler，且重复清卡是幂等的。
+- 稍完整 M：main 侧维护 mobile pending approval registry。收到 `agent/approvalRequest` / `ccRoom.approvalRequest` 时登记，收到 `agent/approvalResolved`、`mobileRemote:approvalResolved`、`ccRoom.approvalResolved`、turn terminal、cancel/close 时删除；手机 auth/reconnect 后下发 `approval.snapshot`，`useRemoteApp` 用 server pending 列表替换/对齐本地 `approvals`。这能覆盖“手机后台断线期间已在别处应答/超时”的情况。
+- 不建议只给 `ApprovalCard` 自己加超时：普通交互 AskUser 在 core 里是刻意无超时的，UI 自行消失会制造“卡没了但 engine 仍在等回答”的假象；它也不能解决“桌面端已在别处应答”的跨端一致性。
+
+#### 涉及文件
+
+- `packages/desktop/src/renderer/App.tsx`
+- `packages/desktop/src/mobile/hooks/useRemoteApp.ts`
+- 可选：`packages/desktop/src/main/index.ts`
+- 如做 pending snapshot：`packages/desktop/src/main/mobile-remote/types.ts`、`packages/desktop/src/main/index.ts`、`packages/desktop/src/mobile/hooks/useRemoteApp.ts`
+
+#### 量级
+
+- S：补桌面 AskUser answer 的 mobile resolved 通知 + mobile raw `agent/approvalResolved` handler。
+- M：增加 pending approvals server snapshot/hydrate，解决断线期间 resolved 丢失。
+- 不建议做纯 UI timeout。
+
+#### 建议测试
+
+- renderer 单测或集成测试：触发 `handleAskUserAnswer` 后断言调用 `mobileRemote.notifyApprovalResolved({ requestId, sessionId, approved:true })`。
+- mobile hook 单测：先注入一个 AskUser `agent/approvalRequest`，再注入 raw `agent/approvalResolved`，断言 `approvals` 清空。
+- main/mobile WS 集成测试：模拟桌面普通审批、桌面 AskUser 回答、goal AskUser timeout、CC room timeout，断言手机都收到 resolved 或本地 pending 被清掉。
+- 回归：手机打开 `/mobile/`，桌面端回答 AskUser；手机卡应自动消失。再测手机后台 10 分钟 goal AskUser timeout，回来后不应还显示可回答卡。
+
+#### 桌面端影响
+
+- 改 `packages/desktop/src/mobile/**` 只影响 mobile。
+- 在 `packages/desktop/src/renderer/App.tsx` 给 AskUser answer 补 `mobileRemote.notifyApprovalResolved` 会影响桌面 renderer 的 AskUser 回答路径，但行为只是额外通知 mobile，不应改变桌面 UI。
+- 如果改 core 的 `server.ts` 让用户回答/取消/工具超时都发 `agent/approvalResolved`，会同时影响桌面 renderer，因为桌面已经订阅 `onApprovalResolved`；必须确认不会让已回答的内联 AskUser 被二次标成 timeout。
+- CC room 的 `ApprovalBridge` / `RoomManager` 是桌面 CC room 和 mobile 共用；改这里会同时影响桌面 `CCConversationView`。
+
+### 问题 B：手机端切走再回来只看到最新，中间内容丢失
+
+#### 现状：重连和 hydrate 数据流
+
+- `packages/desktop/src/mobile/hooks/useRemoteSocket.ts:196-204` 只监听 `online` 和 `visibilitychange`；没有 `pagehide/pageshow/focus`，也没有 heartbeat。
+- `reconnectNow` 在 `useRemoteSocket.ts:79-84` 如果 `ws.readyState === WebSocket.OPEN` 就直接返回。手机后台后 socket 可能看起来仍 open，但中间广播已经错过；切回可见时不会强制 resync。
+- socket 断开时只 `setStatus("offline")` 并 backoff：`useRemoteSocket.ts:178-184`；连接成功 auth 后只 `setStatus("online")`：`useRemoteSocket.ts:155-160`。
+- `App.tsx:36-43` 在 status online 时只 `refreshSessions()`；`useRemoteApp.ts:717-724` 在 online/activeCwd 变化时拉 `room.list` 和 `room.projects`。没有针对当前 active session / active room 的断点补流。
+- 手动选择普通 session 才会 reset 并拉历史：`useRemoteApp.ts:562-574`；`session.history.ok` 用 `dispatchChat({ kind:"replay", events })`：`useRemoteApp.ts:245-249`。
+- mobile chat reducer 的 `replay` 是全量覆盖：`useRemoteApp.ts:143-147` 从 `initialChatState()` reduce，而不是在现有状态后 append。
+- server 普通 session history 是磁盘 transcript 全量折叠：`packages/desktop/src/main/mobile-remote/mobile-history.ts:14-24`；main handler 在 `packages/desktop/src/main/index.ts:821-824` 返回 `{ type:"session.history.ok", events }`。协议没有 cursor。
+- 普通 live stream 只是 main 把 worker raw line 广播给手机：`packages/desktop/src/main/index.ts:1332-1338`；断线期间广播不会缓冲到设备。
+- main 已有普通 session in-memory snapshot：`packages/desktop/src/main/agent-bridge.ts:98-102` 保存，`agent-bridge.ts:193-196` 追加 stream event，`agent-bridge.ts:520-526` 可按 `sinceSeq` 读取。但它只通过桌面 IPC `agent:subscribe` 暴露：`packages/desktop/src/main/index.ts:2947-2956` 和 `packages/desktop/src/preload/index.ts:546-552`，mobile WS 协议没接上。
+- 桌面 renderer 已使用这套 snapshot 修复 remount/reconnect：`packages/desktop/src/renderer/App.tsx:794-810` 读取 `subscribeSession(engineId, 0)` 并 replay main-held snapshot。
+- room 协议已经有 `sinceSeq`：`packages/desktop/src/main/mobile-remote/types.ts:110`，server 在 `packages/desktop/src/main/index.ts:988-991` 用 `roomManager.getMessages(event.roomId, event.sinceSeq ?? 0)` 返回 `latestSeq`。
+- `RoomManager` 的消息有单调 seq：`packages/desktop/src/main/mobile-remote/room-manager.ts:111-129`，`getMessages` 在 `room-manager.ts:313-327` 支持 `sinceSeq`。
+- mobile 目前打开 CC room 时仍发送不带 since 的 `room.history`：`useRemoteApp.ts:382`；`room.history.ok` 对普通 room 是全量 replay reset：`useRemoteApp.ts:280-291`；对 CC session 因 `ccHistorySessionRef.current` 直接跳过，避免 clobber CC backlog：`useRemoteApp.ts:282-288`。
+- CC session 打开时 `ccRoom.readHistory` 只拉最近 50 条：`useRemoteApp.ts:373-380`；server 返回 `hasMore/totalCount` 但 mobile 不提供续拉：`packages/desktop/src/main/index.ts:1055-1066`；`ccRoom.readHistory.ok` 也是全量 replay reset：`useRemoteApp.ts:384-390`。
+- 手机消息流默认会贴底：`packages/desktop/src/mobile/components/MessageStream.tsx:121-125` 的 `stickRef` 初始 true 且 items 变化就 `scrollIntoView`；只有用户触发 scroll 后才按 `MessageStream.tsx:127-130` 更新是否贴底。全量 replay 后很容易跳到最新。
+
+#### 根因
+
+- mobile 当前是“在线时收 live broadcast，手动打开时拉 latest snapshot/full history”的模型；没有 per-device 事件缓冲，也没有 active view 的 reconnect resume。
+- 普通 session 的断点续传能力已经存在于 desktop IPC 的 `AgentBridge.SessionSnapshotStore`，但 mobile WS 协议没有 `session.snapshot/sync`，live raw event 也没有携带 main 分配的 seq，手机无法知道自己最后应用到哪个 seq。
+- room/CC live 消息本身有 seq 和 `sinceSeq`，但 mobile hook 没保存 `latestSeq`，重连也不主动请求 `room.history(sinceSeq)`；对 CC 还跳过了 `room.history.ok`，导致 room 侧断线期间消息无法补到当前 feed。
+- hydrate/replay 使用全量 reset，会把用户当前阅读位置和中间 streaming 过程替换成折叠后的最新状态；如果只拉最近 50 条 CC 历史，较早可见内容也会被裁掉。
+- 浏览器后台恢复时 `readyState === OPEN` 的半死 socket 不会触发 reconnect/resync；即使后续 close/reconnect，也只刷新列表，不补当前内容。
+
+#### 最小改法 vs 完整改法
+
+- 最小改法 S：在 `useRemoteApp` 里记录 socket 从 offline/authenticating 回到 online 或页面 visible/focus 后的“需要 resync”信号；如果 `activeSessionId` 存在，重新发 `session.history`；如果 `activeRoomId` 存在，发 `room.history`。这不能保留细粒度 streaming delta，但能至少用磁盘/room 日志恢复最终可见内容。
+- 最小改法 S：给 `MessageStream` 增加 active conversation key 和滚动锚点保存。`visibilitychange hidden/pagehide` 时记录 `scrollTop/scrollHeight` 或首个可见 message id；replay 后如果用户原本不在底部，按锚点恢复，而不是默认跳到最新。只有原本贴底时继续贴底。
+- 最小改法 S：CC `ccRoom.readHistory` 的 mobile limit 从 50 提到 150/200，或加“加载更早”入口；`hasMore/totalCount` 已有返回值但未用。这样降低“回来只剩最新几十条”的概率。
+- 最小改法 S/M：利用 room 现有 `sinceSeq`。mobile 保存每个 active room 的 `lastRoomSeq`，live `room.message` 和 `room.history.ok.latestSeq` 都更新它；重连后发 `room.history({ sinceSeq:lastRoomSeq })`，收到后 append，而不是全量 reset。CC session 不要无条件跳过 `room.history.ok`，应只把 `sinceSeq` 之后的 room live log append 到 CC backlog 后面。
+- 较完整改法 M：给 mobile WS 增加普通 session 的 `session.snapshot` / `session.sync`：server 调 `bridge.getSnapshot(sessionId, sinceSeq)`，返回 `{ entries:[{seq,event}], nextSeq }`；mobile 像桌面 `snapshotReplay.ts` 一样维护 `appliedSeq` 并增量 apply。为了让 live 和 snapshot 对齐，main 广播给 mobile 的 live event 需要携带同一个 seq，或新增 typed `session.stream` 事件替代纯 raw broadcast。
+- 较完整改法 M/L：增加长断线 fallback。main 已有 `rawTranscript.ts:1-8` 的 `sinceId` 设计和 `sessions:rawEvents` IPC：`packages/desktop/src/main/index.ts:2985-2988`，但 mobile 没协议。可以给 mobile 增加 `session.rawEvents` 或增强 `session.history` 支持 `sinceId`，在 snapshot 窗口被 2000 条上限淘汰后从磁盘 transcript 补齐。
+- 完整改法 L：为 mobile remote 做统一事件日志/ack。所有 mobile server events（普通 stream、approval request/resolved、room.message、room approval、session title）都有 monotonically increasing cursor；客户端 auth/reconnect 时带 last cursor，server 补发缺口。这样才能同时解决中间 stream、审批 resolved、room 消息和多设备一致性。
+
+#### 涉及文件
+
+- 最小：`packages/desktop/src/mobile/hooks/useRemoteSocket.ts`、`packages/desktop/src/mobile/hooks/useRemoteApp.ts`、`packages/desktop/src/mobile/components/MessageStream.tsx`
+- 普通 session 增量续传：`packages/desktop/src/main/mobile-remote/types.ts`、`packages/desktop/src/main/index.ts`、`packages/desktop/src/main/agent-bridge.ts` 或 `SessionSnapshotStore.ts`、`packages/desktop/src/mobile/hooks/useRemoteApp.ts`
+- room/CC 增量续传：`packages/desktop/src/main/mobile-remote/room-manager.ts`、`packages/desktop/src/main/index.ts`、`packages/desktop/src/mobile/hooks/useRemoteApp.ts`
+- 长断线 fallback：`packages/desktop/src/main/rawTranscript.ts`、`packages/desktop/src/main/mobile-remote/mobile-history.ts`、`packages/desktop/src/main/mobile-remote/types.ts`
+
+#### 量级
+
+- S：重连/可见时重新 hydrate 当前会话 + 保持滚动位置 + 提高 CC history limit。
+- M：room 利用已有 `sinceSeq` 做增量 append；普通 session 暴露 `AgentBridge` snapshot 给 mobile 并跟踪 `appliedSeq`。
+- L：统一 mobile event cursor/ack + durable replay，覆盖长断线和审批状态。
+
+#### 建议测试
+
+- `useRemoteSocket` 测试：模拟 `visibilitychange` / `online` / 半开 open socket，断言会触发 resync callback 或 force reconnect 策略。
+- `useRemoteApp` 测试：断线期间注入多条 stream/room message，重连后用 `session.snapshot` 或 `room.history(sinceSeq)` 补齐，断言 reducer append 不重置、不重复。
+- `MessageStream` DOM 测试：用户不在底部时 replay 后滚动位置保持；用户在底部时新消息继续贴底。
+- main WS 集成测试：普通 session snapshot `sinceSeq` 返回缺口；room `sinceSeq` 只返回增量；CC history limit/hasMore 行为可见。
+- 手工回归：手机切到后台 1-3 分钟，桌面持续输出多段流式内容；切回 `/mobile/` 后应看到中间内容，且阅读位置不被强制拉到底。
+
+#### 桌面端影响
+
+- `packages/desktop/src/mobile/**` 和 `packages/desktop/src/main/mobile-remote/types.ts` 的 mobile-only 协议扩展不会直接影响桌面 UI。
+- 如果复用/调整 `AgentBridge`、`SessionSnapshotStore`、`parseStreamLine`，会影响桌面 renderer 的 `agent:subscribe` 恢复路径；必须保持现有 IPC 返回 shape 和 seq 语义。
+- `RoomManager` 和 `ApprovalBridge` 同时服务桌面 CC room 与 mobile CC room；任何 room history/seq 或 approval resolve 语义变化都要回归 `packages/desktop/src/renderer/cc-room/CCConversationView.tsx`。
+- `rawTranscript.ts` / `transcript-reader.ts` 是桌面 session history 共用能力；如果为 mobile 增强长断线 fallback，避免改变 `sessions:transcript` 当前折叠输出，优先新增 mobile 专用接口。
+
+总结：问题 A 的直接修复是 S；若要覆盖手机断线期间已 resolved 的卡片，需要 M 级 pending snapshot。问题 B 的止血是 S（重连 hydrate + 滚动保持 + 更长历史），真正不丢中间流需要 M（普通 session/room 按 cursor 增量续传），跨长断线和审批一致性的一体化方案是 L。需要编排者决策的是：B 是否先接受“回来后恢复最终内容但不保证完整 streaming 过程”的 S 方案，还是直接投入 M/L 做 cursor-based replay。

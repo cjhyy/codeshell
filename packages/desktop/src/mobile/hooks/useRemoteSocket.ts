@@ -11,6 +11,8 @@ export type ConnStatus =
   | "online" // authenticated
   | "offline"; // socket closed, will retry
 
+export type ResyncReason = "online" | "visible" | "focus" | "pageshow";
+
 /** A parsed server event (typed) OR a raw worker→renderer JSON-RPC line that the
  *  caller folds through streamReducer. We surface both: typed events drive UI
  *  state; raw lines drive the chat reducer. */
@@ -28,6 +30,8 @@ export interface RemoteSocketHandlers {
   onServerEvent?: (event: MobileServerEvent) => void;
   /** Any raw line (used to fold agent/streamEvent through streamReducer). */
   onRawLine?: (raw: unknown) => void;
+  /** The transport is usable again, or the page returned from background. */
+  onResyncNeeded?: (reason: ResyncReason) => void;
 }
 
 const RECONNECT_BASE_MS = 800;
@@ -39,6 +43,8 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
   const wsRef = useRef<WebSocket | null>(null);
   const retryRef = useRef(0);
   const closedByUs = useRef(false);
+  const statusRef = useRef<ConnStatus>(status);
+  statusRef.current = status;
   // Keep latest handlers without retriggering the connect effect.
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
@@ -54,6 +60,7 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
     wsRef.current?.close();
     // Drop the pairing token from the URL and reload into the unpaired state.
     window.history.replaceState(null, "", window.location.pathname);
+    statusRef.current = "unpaired";
     setStatus("unpaired");
   }, []);
 
@@ -101,6 +108,7 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
       const wsUrl = window.location.origin.replace(/^http/, "ws") + "/ws";
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
+      statusRef.current = "connecting";
       setStatus("connecting");
       // Watchdog: a socket stuck in CONNECTING (dead network, captive portal)
       // never fires onclose. Force-close after 10s so backoff kicks in.
@@ -123,12 +131,28 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
         const name = deviceStore.getOrCreateName();
         setDeviceName(name);
         if (pairingToken) {
+          statusRef.current = "authenticating";
           setStatus("authenticating");
-          ws.send(JSON.stringify({ type: "pair.complete", token: pairingToken, name, secretHash: secret }));
+          ws.send(
+            JSON.stringify({
+              type: "pair.complete",
+              token: pairingToken,
+              name,
+              secretHash: secret,
+            }),
+          );
         } else if (deviceStore.getId()) {
+          statusRef.current = "authenticating";
           setStatus("authenticating");
-          ws.send(JSON.stringify({ type: "auth.device", deviceId: deviceStore.getId(), secretHash: secret }));
+          ws.send(
+            JSON.stringify({
+              type: "auth.device",
+              deviceId: deviceStore.getId(),
+              secretHash: secret,
+            }),
+          );
         } else {
+          statusRef.current = "unpaired";
           setStatus("unpaired");
         }
       };
@@ -155,12 +179,15 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
         if (obj.type === "auth.ok") {
           const device = obj.device as { name?: string } | undefined;
           if (device?.name) setDeviceName(device.name);
+          statusRef.current = "online";
           setStatus("online");
           handlersRef.current.onServerEvent?.(msg as MobileServerEvent);
+          handlersRef.current.onResyncNeeded?.("online");
           return;
         }
         if (obj.type === "auth.failed" || obj.type === "pair.failed") {
           if (obj.type === "auth.failed") deviceStore.clearId();
+          statusRef.current = "unpaired";
           setStatus("unpaired");
           handlersRef.current.onServerEvent?.(msg as MobileServerEvent);
           return;
@@ -179,6 +206,7 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
         if (openWatchdog) clearTimeout(openWatchdog);
         wsRef.current = null;
         if (closedByUs.current) return;
+        statusRef.current = "offline";
         setStatus("offline");
         scheduleReconnect();
       };
@@ -196,11 +224,23 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
     // Reconnect proactively when the OS reports the network is back or the tab
     // becomes visible again (phones suspend the socket in the background — the
     // close event often doesn't fire until the user returns).
-    const onOnline = () => reconnectNow();
-    const onVisible = () => {
-      if (document.visibilityState === "visible") reconnectNow();
+    const resyncOrReconnect = (reason: ResyncReason): void => {
+      const ws = wsRef.current;
+      if (ws && ws.readyState === WebSocket.OPEN && statusRef.current === "online") {
+        handlersRef.current.onResyncNeeded?.(reason);
+        return;
+      }
+      reconnectNow();
     };
+    const onOnline = () => resyncOrReconnect("online");
+    const onVisible = () => {
+      if (document.visibilityState === "visible") resyncOrReconnect("visible");
+    };
+    const onFocus = () => resyncOrReconnect("focus");
+    const onPageShow = () => resyncOrReconnect("pageshow");
     window.addEventListener("online", onOnline);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("pageshow", onPageShow);
     document.addEventListener("visibilitychange", onVisible);
 
     connect();
@@ -209,6 +249,8 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
       if (retryTimer) clearTimeout(retryTimer);
       if (openWatchdog) clearTimeout(openWatchdog);
       window.removeEventListener("online", onOnline);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("pageshow", onPageShow);
       document.removeEventListener("visibilitychange", onVisible);
       // Null ALL handlers before close: onmessage/onopen call setState without the
       // closedByUs guard the close/error paths have, so an event landing in the

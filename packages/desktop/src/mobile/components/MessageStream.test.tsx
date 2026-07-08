@@ -1,7 +1,7 @@
 import { test, expect } from "bun:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { MessageStream } from "./MessageStream";
+import { captureScrollAnchor, MessageStream, restoreScrollAnchor } from "./MessageStream";
 import { initialChatState, type ChatState, type ChatItem } from "@/lib/streamReducer";
 
 function withItems(items: ChatItem[]): ChatState {
@@ -19,7 +19,14 @@ test("渲染 user / assistant / tool / 子代理 / 错误", () => {
       chat={withItems([
         { kind: "user", id: "u1", text: "你好世界" },
         { kind: "assistant", id: "a1", text: "回答内容", reasoning: "", done: true },
-        { kind: "tool", id: "t1", name: "Read", args: { file_path: "x" }, done: true, result: "ok" },
+        {
+          kind: "tool",
+          id: "t1",
+          name: "Read",
+          args: { file_path: "x" },
+          done: true,
+          result: "ok",
+        },
         { kind: "subagent", id: "s1", agentId: "A", label: "任务 1/2", status: "running" },
         { kind: "system_error", id: "e1", text: "炸了" },
       ])}
@@ -34,7 +41,9 @@ test("渲染 user / assistant / tool / 子代理 / 错误", () => {
 
 test("流式 assistant 显示光标", () => {
   const html = renderToStaticMarkup(
-    <MessageStream chat={withItems([{ kind: "assistant", id: "a1", text: "Hel", reasoning: "", done: false }])} />,
+    <MessageStream
+      chat={withItems([{ kind: "assistant", id: "a1", text: "Hel", reasoning: "", done: false }])}
+    />,
   );
   expect(html).toContain("Hel");
   expect(html).toContain("▋");
@@ -47,7 +56,9 @@ test("流式 assistant 显示光标", () => {
 test("完成的 assistant 渲染 Markdown 结构", () => {
   const md = "# 标题\n\n- 一项\n- 二项\n\n`code` 和 **粗体**";
   const html = renderToStaticMarkup(
-    <MessageStream chat={withItems([{ kind: "assistant", id: "a1", text: md, reasoning: "", done: true }])} />,
+    <MessageStream
+      chat={withItems([{ kind: "assistant", id: "a1", text: md, reasoning: "", done: true }])}
+    />,
   );
   // Heading, list, inline code, bold → real tags, not the literal markdown chars.
   expect(html).toContain("<h1");
@@ -73,7 +84,9 @@ test("assistant 宽内容气泡可收缩,代码块和表格保留内部横向滚
     Array.from({ length: 8 }, (_, i) => `内容${i}`).join(" | ") +
     " |";
   const html = renderToStaticMarkup(
-    <MessageStream chat={withItems([{ kind: "assistant", id: "a1", text: md, reasoning: "", done: true }])} />,
+    <MessageStream
+      chat={withItems([{ kind: "assistant", id: "a1", text: md, reasoning: "", done: true }])}
+    />,
   );
 
   expect(html).toContain("flex min-w-0 justify-start gap-2");
@@ -86,7 +99,9 @@ test("assistant 宽内容气泡可收缩,代码块和表格保留内部横向滚
 test("流式中的 Markdown 仍按纯文本显示(避免抖动)", () => {
   const md = "# 还在打字";
   const html = renderToStaticMarkup(
-    <MessageStream chat={withItems([{ kind: "assistant", id: "a1", text: md, reasoning: "", done: false }])} />,
+    <MessageStream
+      chat={withItems([{ kind: "assistant", id: "a1", text: md, reasoning: "", done: false }])}
+    />,
   );
   // While streaming we keep the raw text (+ cursor), no heading parsing.
   expect(html).toContain("# 还在打字");
@@ -96,7 +111,25 @@ test("流式中的 Markdown 仍按纯文本显示(避免抖动)", () => {
 
 test("有 reasoning 时给出显示思考入口", () => {
   const html = renderToStaticMarkup(
-    <MessageStream chat={withItems([{ kind: "assistant", id: "a1", text: "答", reasoning: "想法", done: true }])} />,
+    <MessageStream
+      chat={withItems([{ kind: "assistant", id: "a1", text: "答", reasoning: "想法", done: true }])}
+    />,
   );
   expect(html).toContain("显示思考");
+});
+
+test("滚动锚点: 用户不在底部时 append 后保持阅读位置", () => {
+  const anchor = captureScrollAnchor({ scrollTop: 300, scrollHeight: 1000, clientHeight: 400 });
+  expect(anchor.stickToBottom).toBe(false);
+  expect(restoreScrollAnchor({ scrollTop: 0, scrollHeight: 1300, clientHeight: 400 }, anchor)).toBe(
+    600,
+  );
+});
+
+test("滚动锚点: 原本贴底时 append 后继续贴底", () => {
+  const anchor = captureScrollAnchor({ scrollTop: 590, scrollHeight: 1000, clientHeight: 400 });
+  expect(anchor.stickToBottom).toBe(true);
+  expect(restoreScrollAnchor({ scrollTop: 0, scrollHeight: 1300, clientHeight: 400 }, anchor)).toBe(
+    900,
+  );
 });

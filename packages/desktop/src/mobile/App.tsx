@@ -47,6 +47,11 @@ export function App() {
   }
 
   const sidePane = <SidePane app={app} onDone={() => setDrawerOpen(false)} />;
+  const conversationKey = app.activeRoom
+    ? `room:${app.activeRoom.id}`
+    : app.activeSessionId
+      ? `session:${app.activeSessionId}`
+      : "new";
 
   return (
     <div className="mobile-shell flex h-dvh flex-col text-foreground">
@@ -101,6 +106,7 @@ export function App() {
             </div>
           )}
           <MessageStream
+            conversationKey={conversationKey}
             chat={app.chat}
             loading={app.loading.sessionHistory || app.loading.roomHistory}
             loadingText={
