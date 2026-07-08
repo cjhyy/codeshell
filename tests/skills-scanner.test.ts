@@ -151,6 +151,22 @@ describe("scanSkills - directory layout", () => {
     expect(dep!.source).toBe("project");
   });
 
+  it("discovers <project>/.agents/skills/<name>/SKILL.md as a project skill", () => {
+    const agentsBase = join(projectRoot, ".agents", "skills");
+    makeSkillDir(
+      agentsBase,
+      "review",
+      "name: review\ndescription: review helper",
+      "review body",
+    );
+    const skills = scanSkills(projectRoot);
+    const review = skills.find((s) => s.name === "review");
+    expect(review).toBeDefined();
+    expect(review!.source).toBe("project");
+    expect(review!.description).toBe("review helper");
+    expect(review!.content).toBe("review body");
+  });
+
   it("project skill shadows user skill of the same name", () => {
     makeSkillDir(join(fakeHome, ".code-shell", "skills"), "shared", "description: from user", "user body");
     makeSkillDir(join(projectRoot, ".code-shell", "skills"), "shared", "description: from project", "project body");
@@ -159,6 +175,48 @@ describe("scanSkills - directory layout", () => {
     expect(matches).toHaveLength(1);
     expect(matches[0].source).toBe("project");
     expect(matches[0].description).toBe("from project");
+  });
+
+  it(".code-shell project skill shadows .agents project skill of the same name", () => {
+    makeSkillDir(
+      join(projectRoot, ".agents", "skills"),
+      "shared",
+      "description: from agents",
+      "agents body",
+    );
+    makeSkillDir(
+      join(projectRoot, ".code-shell", "skills"),
+      "shared",
+      "description: from code-shell",
+      "code-shell body",
+    );
+    const skills = scanSkills(projectRoot);
+    const matches = skills.filter((s) => s.name === "shared");
+    expect(matches).toHaveLength(1);
+    expect(matches[0].source).toBe("project");
+    expect(matches[0].description).toBe("from code-shell");
+    expect(matches[0].content).toBe("code-shell body");
+  });
+
+  it(".agents project skill shadows user skill of the same name", () => {
+    makeSkillDir(
+      join(fakeHome, ".code-shell", "skills"),
+      "shared",
+      "description: from user",
+      "user body",
+    );
+    makeSkillDir(
+      join(projectRoot, ".agents", "skills"),
+      "shared",
+      "description: from agents",
+      "agents body",
+    );
+    const skills = scanSkills(projectRoot);
+    const matches = skills.filter((s) => s.name === "shared");
+    expect(matches).toHaveLength(1);
+    expect(matches[0].source).toBe("project");
+    expect(matches[0].description).toBe("from agents");
+    expect(matches[0].content).toBe("agents body");
   });
 
   it("skips subdirectory missing SKILL.md", () => {
@@ -288,6 +346,22 @@ describe("scanSkills - memoization", () => {
     } finally {
       rmSync(altHome, { recursive: true, force: true });
     }
+  });
+
+  it("memoize invalidates when .agents/skills directory mtime changes", async () => {
+    const first = scanSkills(projectRoot);
+    expect(first.find((s) => s.name === "late-agent")).toBeUndefined();
+
+    await new Promise((resolve) => setTimeout(resolve, 15));
+    makeSkillDir(
+      join(projectRoot, ".agents", "skills"),
+      "late-agent",
+      "description: late",
+      "late body",
+    );
+
+    const second = scanSkills(projectRoot);
+    expect(second.find((s) => s.name === "late-agent")).toBeDefined();
   });
 });
 

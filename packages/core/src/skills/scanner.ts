@@ -1,6 +1,7 @@
 /**
- * Skill scanner — discovers <base>/<name>/SKILL.md files from project + user
- * directories AND from installed plugins. Mirrors Claude Code's
+ * Skill scanner — discovers <base>/<name>/SKILL.md files from project
+ * `.code-shell/skills`, project `.agents/skills`, user `.code-shell/skills`,
+ * and installed plugins. Mirrors Claude Code's
  * `loadSkillsFromSkillsDir` (skills/loadSkillsDir.ts:407) plus plugin
  * integration (utils/plugins/pluginLoader.ts).
  */
@@ -41,6 +42,7 @@ function userHome(): string {
 function bases(cwd: string): ScanBase[] {
   return [
     { dir: join(cwd, ".code-shell", "skills"), source: "project" },
+    { dir: join(cwd, ".agents", "skills"), source: "project" },
     { dir: join(userHome(), ".code-shell", "skills"), source: "user" },
   ];
 }
@@ -202,13 +204,14 @@ function installedPluginsMtime(): string {
 }
 
 /**
- * mtime of each local skills base dir (project + user). A directory's mtime
- * changes when a child entry is added/removed, so installing a new skill into
- * `<cwd>/.code-shell/skills` or `~/.code-shell/skills` busts the cache on the
- * next scan — the just-installed skill becomes visible to the running session
- * without a restart. (Editing an existing skill's *contents* does not bump the
- * dir mtime; install paths additionally call invalidateSkillCache() to cover
- * that, so this is the passive half of a two-part guard.)
+ * mtime of each local skills base dir (project .code-shell/.agents + user). A
+ * directory's mtime changes when a child entry is added/removed, so installing
+ * a new skill into `<cwd>/.code-shell/skills`, `<cwd>/.agents/skills`, or
+ * `~/.code-shell/skills` busts the cache on the next scan — the just-installed
+ * skill becomes visible to the running session without a restart. (Editing an
+ * existing skill's *contents* does not bump the dir mtime; install paths
+ * additionally call invalidateSkillCache() to cover that, so this is the
+ * passive half of a two-part guard.)
  */
 function skillsDirsMtime(cwd: string): string {
   return bases(cwd)
