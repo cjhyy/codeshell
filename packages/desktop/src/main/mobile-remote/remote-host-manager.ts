@@ -312,6 +312,18 @@ export class RemoteHostManager extends EventEmitter {
     }
   }
 
+  /** Send a raw JSON-RPC worker line to ONLY one authenticated device. */
+  sendRawToDevice(deviceId: string, payload: string): void {
+    for (const client of this.wss?.clients ?? []) {
+      if (
+        client.readyState === client.OPEN &&
+        this.authed.get(client) === deviceId
+      ) {
+        client.send(payload);
+      }
+    }
+  }
+
   /** Broadcast a raw line (e.g. a mirrored worker→renderer JSON-RPC line) to
    *  every authenticated mobile socket. Unauthenticated sockets are skipped so
    *  a half-paired client never sees session output. */

@@ -12,7 +12,11 @@
  *              auto-extracted entries (extract-memories output). LLM may
  *              only modify these through permission-gated tool calls.
  *   - dream/   The dream pipeline's workspace. The LLM is free to add /
- *              merge / delete entries here; user/ is read-only to dream.
+ *              merge / delete entries here. The dream loop may ALSO maintain
+ *              user/ entries whose origin is `auto` or `dream` (dedup/merge/
+ *              improve), but origin:`manual` user entries — things the user
+ *              explicitly asked to remember — are never touched by dream.
+ *              See dream-consolidation.ts (the origin guard at ~:240).
  *
  * MEMORY.md is the index file (one per scope).
  *
