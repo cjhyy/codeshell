@@ -17,7 +17,7 @@
   - 目标：给 DriveAgent job 增 list/inspect/cancel（复用 backgroundJobRegistry）；list/inspect 至少返回每 job 的 prompt 摘要 / cwd / 启动时间 / 预计改动范围；把并发防撞从「事后 warning」改为「派发前可查询」。
   - 验收：并发场景下编排方无需回头问用户就能判断是否冲突（看得见、判断得了）。不强制阻断/排队。
 
-- [ ] **A2. 拆 `engine.ts` 本体**（体量 M）
+- [x] **A2. 拆 `engine.ts` 本体（第一步）**（体量 M）— ✅ 抽出 run-image-input.ts（图片输入处理），engine.ts 3712→3534 行，纯 refactor 零行为变化，reviewer SHIP，297 pass 已合并。后续继续逐块抽
   - 锚点：`packages/core/src/engine/engine.ts:768`、`:2068`（现 3626 行）
   - 目标：一次抽一块到独立模块（图片策略 / sandbox / subagent / runtime config / run 装配），每块配 core 测试，保留 Engine 只做生命周期和装配。
   - 验收：本项**先只抽 1 块**（选边界最清晰的一块，如 image-policy 或 sandbox 装配），带测试、typecheck 新增 0 错、回归绿。避免一次动太大。
@@ -36,7 +36,7 @@
   - 目标：先定概念表和迁移边界，再机械改名 / 适配旧 localStorage 与 state.json。
   - 验收：本项**先只产出概念表 + 迁移方案文档**（写进 `docs/nightly-2026-07-10/naming-consolidation-plan.md`），机械改名作为后续。避免大范围改名夜里失控。
 
-- [ ] **A6. Prompt cache 深化：静态/动态分离、粘性锁定、破坏检测**（体量 M）
+- [x] **A6. Prompt cache 深化（第一步）**（体量 M）— ✅ 修 compaction 后 dynamicContext 残留（改用压缩输入侧剥离，覆盖 summary 路径）+ cache_read 暴跌诊断（LRU 上限）。3 轮 review：泄漏 Blocker→summary 漏剥 Blocker→anchor 记账 Blocker，逐一修复复审 SHIP，336 pass 已合并。prefix hash 分离/粘性锁定/OpenRouter 双 marker 留后续
   - 锚点：`docs/todo/prompt-cache-optimization.md:91`、`prompt/composer.ts:242`、`llm/providers/anthropic.ts:484`、`engine/engine.ts:2264`
   - 目标：系统分离 cacheable prefix、审计动态开关锁定、检测 cache_read 暴跌。**已知 bug**：`compactedMessagesBySession` 落缓存时只 `stripUserContextMessage` 没剥旧 dynamicContext（engine.ts:2264）→ 陈旧 skills/gitStatus/memory/goal 残留污染上下文并膨胀 prompt。
   - 验收：本项**先修 dynamicContext 残留 bug + 加 cache_read 暴跌诊断**（最小、可测），大改 prefix hash 作为后续专项。
@@ -122,6 +122,12 @@
 | A4 | task-mcp-oauth | 660f320d | SHIP-with-nits（凭证加密不泄漏） | 89 pass | ✅ 已合并、worktree 已清 |
 | A1 | task-driveagent-inspect | fb839656+eb439725 | BLOCK→修复→复审 SHIP | 437 pass | ✅ 已合并、worktree 已清 |
 | B3 | task-release-checklist | adc01e74 | 纯文档免审 | — | ✅ 已合并、worktree 已清 |
+| B2 | task-security-tests | 703537bd | 补测试直合 | 16 pass | ✅ 已合并、worktree 已清 |
+| B1 | task-release-harden | 5ba15a46 | SHIP-with-nits（无误阻断） | YAML/JS 有效 | ✅ 已合并、worktree 已清 |
+| A6 | task-prompt-cache | 13e0b826+f2caf918+b1bd98a3 | 3轮 BLOCK→复审 SHIP | 336 pass | ✅ 已合并、worktree 已清 |
+| A2 | task-split-engine | 39d7f218 | SHIP（零行为变化） | 297 pass | ✅ 已合并、worktree 已清 |
+
+**A 区 7 项 + B 区 3 项全部完成。** 下一阶段 C（codex 能力对标调研），需产出候选清单回卡密sama 圈定后才实现。
 
 ## 问题记录（遇到阻塞 / 非本任务引入的红测试记这里）
 
