@@ -285,6 +285,93 @@ describe("TunnelManager", () => {
     void mgr.stop();
   });
 
+  test("retry after a failed start awaits the failed child's exit before re-spawning", async () => {
+    // Startup failure (finishReject) tears the child down via beginTeardown and
+    // records pendingTeardown. A retried start() with no live child must still
+    // await that teardown, else it spawns into the port the dying child holds.
+    const first = new FakeChild({ autoExit: false });
+    let current: FakeChild = first;
+    const spawnArgs: string[][] = [];
+    const mgr = new TunnelManager({
+      binaryPath: () => "/fake/cloudflared",
+      spawn: (_cmd, args) => {
+        spawnArgs.push(args);
+        return current as unknown as import("node:child_process").ChildProcess;
+      },
+      timeoutMs: 20, // force a fast URL-timeout failure
+      checkReady: async () => true,
+      readyTimeoutMs: 60,
+      readyIntervalMs: 5,
+      healthCheckIntervalMs: 0,
+      killGraceMs: 1_000,
+      killHardTimeoutMs: 2_000,
+    });
+
+    // First start never gets a URL → rejects; finishReject SIGTERMs the child.
+    const p1 = mgr.start(12345);
+    await expect(p1).rejects.toThrow(/超时/);
+    await waitFor(() => first.killed);
+
+    // Immediate retry: no live child, but the failed child is still dying.
+    const second = new FakeChild();
+    current = second;
+    const p2 = mgr.start(12345);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(spawnArgs.length).toBe(1); // blocked on the failed child's teardown
+
+    first.exitNow();
+    await waitFor(() => spawnArgs.length === 2);
+    second.stderr.emit("data", Buffer.from("https://retry.trycloudflare.com\n"));
+    const res = await p2;
+    expect(res.url).toBe("https://retry.trycloudflare.com");
+
+    void mgr.stop();
+  });
+
+  test("a second stop() before exit does not drop the pending teardown", async () => {
+    // Duplicate mobileRemote:stop (or stop() after finishReject) re-enters
+    // beginTeardown with no live child. It must NOT clear pendingTeardown — a
+    // start() afterwards still has to wait for the original child to exit.
+    const first = new FakeChild({ autoExit: false });
+    let current: FakeChild = first;
+    const spawnArgs: string[][] = [];
+    const mgr = new TunnelManager({
+      binaryPath: () => "/fake/cloudflared",
+      spawn: (_cmd, args) => {
+        spawnArgs.push(args);
+        return current as unknown as import("node:child_process").ChildProcess;
+      },
+      timeoutMs: 50,
+      checkReady: async () => true,
+      readyTimeoutMs: 60,
+      readyIntervalMs: 5,
+      healthCheckIntervalMs: 0,
+      killGraceMs: 1_000,
+      killHardTimeoutMs: 2_000,
+    });
+
+    const p1 = mgr.start(12345);
+    first.stderr.emit("data", Buffer.from("https://old.trycloudflare.com\n"));
+    await p1;
+
+    void mgr.stop(); // records pendingTeardown (child still dying)
+    void mgr.stop(); // duplicate — must not clear the pending wait
+    await waitFor(() => first.killed);
+
+    const second = new FakeChild();
+    current = second;
+    const p2 = mgr.start(12345);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(spawnArgs.length).toBe(1); // still blocked despite the duplicate stop
+
+    first.exitNow();
+    await waitFor(() => spawnArgs.length === 2);
+    second.stderr.emit("data", Buffer.from("https://new.trycloudflare.com\n"));
+    await p2;
+
+    void mgr.stop();
+  });
+
   test("teardown escalates to SIGKILL when the child ignores SIGTERM", async () => {
     // cloudflared's SIGTERM is a graceful drain (~30s). If it doesn't exit within
     // killGraceMs we must SIGKILL so the port is freed promptly.
