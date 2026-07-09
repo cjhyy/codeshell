@@ -22,7 +22,7 @@
   - 目标：一次抽一块到独立模块（图片策略 / sandbox / subagent / runtime config / run 装配），每块配 core 测试，保留 Engine 只做生命周期和装配。
   - 验收：本项**先只抽 1 块**（选边界最清晰的一块，如 image-policy 或 sandbox 装配），带测试、typecheck 新增 0 错、回归绿。避免一次动太大。
 
-- [ ] **A3. 侧边栏快速聊天（btw / quick-chat）**（体量 M）
+- [x] **A3. 侧边栏快速聊天（btw / quick-chat）**（体量 M）— ✅ quickChat dock panel，独立 sessionId+bucket 隔离，reviewer SHIP-with-nits（隔离真严格），已合并
   - 锚点：`packages/desktop/src/renderer/view.ts:18`、`panels/PanelArea.tsx:90`
   - 目标：独立 sessionId、严格 bucket/session 隔离、可选只读主线程快照，面板生命周期复用现有 PanelArea 持久化规则。
   - 约束：**不做 Pi 式 parent 指针树状 session**；快聊用完即走，合并靠 fork/复制派生。
@@ -118,6 +118,7 @@
 |----|--------------|------------|------------|------|------|
 | A5 | task-naming-plan | bcb8b861 | 纯文档免审 | — | ✅ 已合并 25970519、worktree 已清 |
 | A7 | task-actions-node24 | ff809c46 | SHIP（版本真实性已核实） | YAML 有效 | ✅ 已合并、worktree 已清 |
+| A3 | task-quick-chat | 2e700c01 | SHIP-with-nits（隔离真严格） | 3 pass | ✅ 已合并、worktree 已清 |
 
 ## 问题记录（遇到阻塞 / 非本任务引入的红测试记这里）
 
