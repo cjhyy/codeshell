@@ -199,9 +199,11 @@ export class TunnelManager extends EventEmitter {
       child.stderr?.on("data", scan);
 
       child.on("error", (err) => {
-        // A superseded child (torn down by a restart) must not touch shared
-        // state — killAndWait owns its exit. Only the live child reports errors.
-        if (this.child !== child && settled) return;
+        // A superseded child (torn down by a restart / stop-during-start) must
+        // NOT touch shared state — killAndWait owns its lifecycle. Match the exit
+        // guard exactly: identity alone, regardless of whether this child's start
+        // promise ever settled (stop() can supersede an unsettled child).
+        if (this.child !== child) return;
         if (!settled) {
           settled = true;
           clearTimeout(timer);
@@ -330,8 +332,11 @@ export class TunnelManager extends EventEmitter {
     const child = this.child;
     this.child = undefined;
     if (!child) {
-      this.pendingTeardown = undefined;
-      return Promise.resolve();
+      // No live child, but a PRIOR teardown may still be draining (e.g.
+      // finishReject() started one, then a stop() re-enters here). Do NOT clear
+      // it — a retried start() must still await that exit before spawning, or it
+      // races the held metrics port. Return the in-flight wait (or resolved).
+      return this.pendingTeardown ?? Promise.resolve();
     }
     const wait = this.killAndWait(child).finally(() => {
       // Only clear if no newer teardown superseded this one.
@@ -344,18 +349,24 @@ export class TunnelManager extends EventEmitter {
   /**
    * SIGTERM the child, and if it hasn't exited within `killGraceMs`, escalate to
    * SIGKILL — cloudflared's SIGTERM is a graceful drain (default ~30s) that
-   * would otherwise keep the metrics port bound long past a re-open. Resolves
-   * only when the process actually exits (`killHardTimeoutMs` is a last-resort
-   * cap so we never hang forever if the OS never reports exit).
+   * would otherwise keep the metrics port bound long past a re-open. Normally
+   * resolves on the process's real `exit`; `killHardTimeoutMs` is a last-resort
+   * cap so a child that never reports exit can't hang teardown forever. That cap
+   * is reached only AFTER SIGKILL was already sent, so on macOS/Linux the port is
+   * in practice released by then — it is a safety valve, not the happy path.
    */
   private killAndWait(child: ChildProcess): Promise<void> {
     return new Promise<void>((resolve) => {
       let done = false;
+      // Declared before finish() so a synchronous exit (fake/edge case) or a
+      // throwing kill() can clear them without hitting the temporal dead zone.
+      let graceTimer: ReturnType<typeof setTimeout> | undefined;
+      let hardTimer: ReturnType<typeof setTimeout> | undefined;
       const finish = () => {
         if (done) return;
         done = true;
-        clearTimeout(graceTimer);
-        clearTimeout(hardTimer);
+        if (graceTimer) clearTimeout(graceTimer);
+        if (hardTimer) clearTimeout(hardTimer);
         resolve();
       };
       child.once("exit", finish);
@@ -365,14 +376,15 @@ export class TunnelManager extends EventEmitter {
         finish();
         return;
       }
-      const graceTimer = setTimeout(() => {
+      if (done) return; // exit fired synchronously during kill()
+      graceTimer = setTimeout(() => {
         try {
           child.kill("SIGKILL");
         } catch {
           /* already gone */
         }
       }, this.killGraceMs);
-      const hardTimer = setTimeout(finish, this.killHardTimeoutMs);
+      hardTimer = setTimeout(finish, this.killHardTimeoutMs);
       (graceTimer as { unref?: () => void }).unref?.();
       (hardTimer as { unref?: () => void }).unref?.();
     });
