@@ -41,7 +41,7 @@
   - 目标：系统分离 cacheable prefix、审计动态开关锁定、检测 cache_read 暴跌。**已知 bug**：`compactedMessagesBySession` 落缓存时只 `stripUserContextMessage` 没剥旧 dynamicContext（engine.ts:2264）→ 陈旧 skills/gitStatus/memory/goal 残留污染上下文并膨胀 prompt。
   - 验收：本项**先修 dynamicContext 残留 bug + 加 cache_read 暴跌诊断**（最小、可测），大改 prefix hash 作为后续专项。
 
-- [ ] **A7. [低优] 升级 GitHub Actions 到 Node 24**（体量 XS）
+- [x] **A7. [低优] 升级 GitHub Actions 到 Node 24**（体量 XS）— ✅ checkout@v7/setup-python@v6/upload-artifact@v7/download-artifact@v8，reviewer SHIP 已核实版本真实性，已合并
   - 锚点：`.github/workflows/release.yml`、`ci.yml`
   - 目标：checkout@v5 / setup-python@v6 / artifact 新版，消 Node 20 弃用 warning。纯 warning 不影响构建。
 
@@ -117,6 +117,7 @@
 | 项 | worktree/分支 | 实现 commit | review 结论 | 回归 | 状态 |
 |----|--------------|------------|------------|------|------|
 | A5 | task-naming-plan | bcb8b861 | 纯文档免审 | — | ✅ 已合并 25970519、worktree 已清 |
+| A7 | task-actions-node24 | ff809c46 | SHIP（版本真实性已核实） | YAML 有效 | ✅ 已合并、worktree 已清 |
 
 ## 问题记录（遇到阻塞 / 非本任务引入的红测试记这里）
 
