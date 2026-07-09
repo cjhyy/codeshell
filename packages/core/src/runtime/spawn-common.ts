@@ -176,6 +176,13 @@ export function resolveGitBash(): string | undefined {
   const override = process.env.CODE_SHELL_GIT_BASH_PATH;
   if (override && existsSync(override)) return (gitBashCache = override);
 
+  // Test-only hermetic switch: skip auto-discovery entirely. Clearing PATH is
+  // NOT enough on Windows — CreateProcess always searches System32, so `where`
+  // still spawns and a CI runner's preinstalled Git for Windows would resolve a
+  // real bash.exe and defeat the fallback tests. This env flag makes the
+  // "Git Bash absent" scenario reproducible on a real Windows host.
+  if (process.env.CODE_SHELL_NO_SHELL_DISCOVERY) return (gitBashCache = null) ?? undefined;
+
   const candidates: string[] = [];
   // (2) derive from `where git`. Git installs git.exe under either \cmd\ or
   // \bin\; bash.exe lives under the sibling \bin\. Walk up to the Git root.
@@ -211,6 +218,9 @@ export function resolvePowerShell(): string | undefined {
 
   const override = process.env.CODE_SHELL_POWERSHELL_PATH;
   if (override && existsSync(override)) return (powerShellCache = override);
+
+  // Test-only hermetic switch (see resolveGitBash for why PATH-clearing fails).
+  if (process.env.CODE_SHELL_NO_SHELL_DISCOVERY) return (powerShellCache = null) ?? undefined;
 
   const candidates: string[] = [];
   for (const exe of ["pwsh", "powershell"]) {

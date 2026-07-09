@@ -36,6 +36,12 @@ function fakeExistingPowerShellExe(): string {
   return powershell;
 }
 function disableGitBashDiscovery() {
+  // Hard-disable auto-discovery. Clearing PATH / bogus ProgramFiles is not
+  // enough on a real Windows CI runner: CreateProcess still finds System32's
+  // where.exe and the preinstalled Git for Windows resolves a real bash.exe,
+  // defeating these fallback assertions. The env flag short-circuits discovery
+  // in spawn-common so the "shell absent" scenario is hermetic everywhere.
+  process.env.CODE_SHELL_NO_SHELL_DISCOVERY = "1";
   process.env.PATH = "";
   process.env["ProgramFiles"] = "C:\\__no_such_root__";
   process.env["ProgramFiles(x86)"] = "C:\\__no_such_root_x86__";
@@ -46,6 +52,7 @@ afterEach(() => {
   delete process.env.SHELL;
   delete process.env.CODE_SHELL_GIT_BASH_PATH;
   delete process.env.CODE_SHELL_POWERSHELL_PATH;
+  delete process.env.CODE_SHELL_NO_SHELL_DISCOVERY;
   if (realPath === undefined) delete process.env.PATH;
   else process.env.PATH = realPath;
   if (realProgramFiles === undefined) delete process.env["ProgramFiles"];
