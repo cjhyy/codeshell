@@ -49,7 +49,9 @@ import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js
 import { listBackgroundWorkForUI } from "../tool-system/builtin/background-work.js";
 import { logger } from "../logging/logger.js";
 import { nanoid } from "nanoid";
-import type { ChatSessionManager } from "./chat-session-manager.js";
+import type { ChatSession } from "./chat-session.js";
+import type { ChatSessionManager, EngineConfigSlice } from "./chat-session-manager.js";
+import { SessionManager } from "../session/session-manager.js";
 import { redactLlmConfig, maskSecretValue } from "./redact.js";
 import { redactSecrets } from "../logging/sanitize-messages.js";
 
@@ -125,6 +127,14 @@ export class AgentServer {
     | ((sessionId: string) => import("../engine/goal.js").GoalConfig | undefined)
     | null;
   private readonly workspaceBridgeEnabled: boolean;
+  /**
+   * Last per-session EngineConfigSlice supplied by agent/run. Kept even after
+   * idle eviction so background-completion wakeups can rebuild the ChatSession
+   * with the same cwd/permission/trust inputs before draining the queue.
+   */
+  private readonly lastSliceBySession = new Map<string, EngineConfigSlice>();
+  /** Lazy disk reader for cold wakeup rehydrate when this process lacks a slice. */
+  private diskSessionReader: SessionManager | null = null;
   /**
    * Monotonic config-reload version, bumped per reloadSettings request so each
    * Engine.refreshRuntimeConfig can drop out-of-order (stale) deliveries (Q5).
@@ -267,7 +277,7 @@ export class AgentServer {
    */
   private maybeWakeIdleSession(sessionId: string): void {
     if (!this.chatManager) return;
-    const session = this.chatManager.get(sessionId);
+    const session = this.chatManager.get(sessionId) ?? this.rehydrateSessionForWake(sessionId);
     if (!session || session.isBusy()) return;
     // Headless / automation runs are one-shot: the caller takes result.text and
     // is gone, so there's no consumer for a woken continuation turn. Headless
@@ -322,6 +332,81 @@ export class AgentServer {
         // truly empty. Replaces the old engine for(;;) outer loop.
         this.maybeWakeIdleSession(sessionId);
       });
+  }
+
+  private rehydrateSessionForWake(sessionId: string): ChatSession | null {
+    if (!this.chatManager) return null;
+    try {
+      const pending = notificationQueue.getSnapshot(sessionId);
+      if (pending.length === 0) {
+        logger.debug("bg_wakeup.rehydrate_skipped_no_pending", { sessionId });
+        return null;
+      }
+
+      const slice = this.sliceForWakeRehydrate(sessionId);
+      if (!slice) {
+        logger.warn("bg_wakeup.rehydrate_skipped_missing_disk_session", {
+          sessionId,
+          pendingCount: pending.length,
+          reason: "state_json_cwd_missing",
+        });
+        return null;
+      }
+      if (!this.chatManager.sessionExistsOnDisk(sessionId, slice)) {
+        logger.warn("bg_wakeup.rehydrate_skipped_missing_disk_session", {
+          sessionId,
+          pendingCount: pending.length,
+        });
+        return null;
+      }
+
+      const session = this.chatManager.getOrCreate(sessionId, slice);
+      this.wireInteractiveSession(session, sessionId);
+      logger.debug("bg_wakeup.rehydrated_session", {
+        sessionId,
+        pendingCount: pending.length,
+        source: this.lastSliceBySession.has(sessionId) ? "last_slice" : "state_json",
+      });
+      return session;
+    } catch (err) {
+      logger.warn("bg_wakeup.rehydrate_failed", {
+        sessionId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return null;
+    }
+  }
+
+  private sliceForWakeRehydrate(sessionId: string): EngineConfigSlice | null {
+    const cached = this.lastSliceBySession.get(sessionId);
+    if (cached) return { ...cached };
+
+    if (!this.diskSessionReader) this.diskSessionReader = new SessionManager();
+    const cwd = this.diskSessionReader.readCwd(sessionId);
+    if (!cwd) return null;
+    return {
+      permissionMode: "default",
+      projectTrusted: false,
+      cwd,
+    };
+  }
+
+  private rememberSessionSlice(sessionId: string, slice: EngineConfigSlice): void {
+    this.lastSliceBySession.set(sessionId, { ...slice });
+  }
+
+  private wireInteractiveSession(session: ChatSession, sid: string): void {
+    if (session.engine.isHeadless()) return;
+    session.engine.setAskUser((question, opts) =>
+      this.requestAskUserForSession(session, sid, question, opts),
+    );
+    session.engine.setBrowserBridge(this.makeBrowserBridge(session, sid));
+    session.engine.setInjectCredential((credentialId, credentialScope) =>
+      this.requestCredentialInjectForSession(session, sid, credentialId, credentialScope),
+    );
+    if (this.workspaceBridgeEnabled && typeof session.engine.setWorkspaceBridge === "function") {
+      session.engine.setWorkspaceBridge(this.makeWorkspaceBridge(session, sid));
+    }
   }
 
   // ─── Request Dispatch ───────────────────────────────────────────
@@ -412,7 +497,11 @@ export class AgentServer {
       permissionMode: params.permissionMode,
       cwd: params.cwd,
       projectTrusted: params.projectTrusted,
-    } as any;
+      goal:
+        typeof params.goal === "string" || (params.goal != null && typeof params.goal === "object")
+          ? (params.goal as EngineConfigSlice["goal"])
+          : undefined,
+    } as EngineConfigSlice;
 
     if (params.requireExisting === true && !cm.get(params.sessionId)) {
       let existsOnDisk = false;
@@ -443,6 +532,7 @@ export class AgentServer {
       this.transport.send(createErrorResponse(req.id, code, err.message));
       return;
     }
+    this.rememberSessionSlice(params.sessionId, sessionConfig);
 
     if (params.model !== undefined) {
       if (typeof params.model !== "string" || params.model.length === 0) {
@@ -467,33 +557,10 @@ export class AgentServer {
 
     const sid = params.sessionId;
 
-    // Wire AskUserQuestion for this interactive session. The chatManager path
-    // builds a fresh per-session Engine via engineFactory, which (unlike the
-    // legacy single-engine path) never had askUser wired — so AskUserQuestion
-    // always fell into its "not available in headless mode" branch in normal
-    // chat (and in a resumed automation session). Route it to the client with
-    // this session's id so the renderer attributes the question to the right
-    // tab, resolving via the session's own pendingApprovals. Skip genuinely
-    // headless engines (no human to answer).
-    if (!session.engine.isHeadless()) {
-      session.engine.setAskUser((question, opts) =>
-        this.requestAskUserForSession(session, sid, question, opts),
-      );
-      // Browser automation bridge: each method routes a browser action to the
-      // client (Electron main drives the webview via CDP) over the SAME
-      // request/response channel as askUser (pendingApprovals + requestId).
-      // Browser actions still keep their own bounded timeout; AskUserQuestion
-      // waits for a real answer or Stop/cancel.
-      session.engine.setBrowserBridge(this.makeBrowserBridge(session, sid));
-      // Cookie→browser injection (InjectCredential tool): same cross-process
-      // channel; main restores the cookie jar into the built-in browser.
-      session.engine.setInjectCredential((credentialId, credentialScope) =>
-        this.requestCredentialInjectForSession(session, sid, credentialId, credentialScope),
-      );
-      if (this.workspaceBridgeEnabled && typeof session.engine.setWorkspaceBridge === "function") {
-        session.engine.setWorkspaceBridge(this.makeWorkspaceBridge(session, sid));
-      }
-    }
+    // Wire AskUserQuestion and host bridges for this interactive session. The
+    // chatManager path builds a fresh per-session Engine via engineFactory, so
+    // these host callbacks must be installed after every create/recreate.
+    this.wireInteractiveSession(session, sid);
     try {
       const result = await session.enqueueTurn(params.task, {
         cwd: params.cwd,

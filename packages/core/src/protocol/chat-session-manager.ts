@@ -4,6 +4,7 @@ import type { EngineRuntime } from "../engine/runtime.js";
 import type { EngineConfig } from "../engine/types.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
 import { clearAgentOutputFiles } from "../tool-system/builtin/agent-output-file.js";
+import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
 import { clearCredentialSessionAllow } from "../credentials/use-credential-tool.js";
 import { clearInjectCredentialSessionAllow } from "../credentials/inject-credential-tool.js";
 import { logger } from "../logging/logger.js";
@@ -154,7 +155,10 @@ export class ChatSessionManager {
   sweepIdle(): void {
     const cutoff = Date.now() - this.idleTtlMs;
     for (const [id, s] of [...this.sessions]) {
-      if (s.lastActivityAt < cutoff && !s.isBusy()) this.close(id);
+      if (s.lastActivityAt >= cutoff) continue;
+      if (s.isBusy()) continue;
+      if (backgroundJobRegistry.hasRunningForSession(id)) continue;
+      this.close(id);
     }
   }
 
