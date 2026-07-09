@@ -547,6 +547,11 @@ export class TurnLoop {
    * Run the multi-turn agent loop until completion.
    */
   async run(initialMessages: Message[]): Promise<TurnLoopResult> {
+    const result = await this.runUnredacted(initialMessages);
+    return { ...result, messages: this.redactConsumedSensitiveToolResults(result.messages) };
+  }
+
+  private async runUnredacted(initialMessages: Message[]): Promise<TurnLoopResult> {
     let messages = [...initialMessages];
     let finalText = "";
     const budgetTracker = createBudgetTracker();
@@ -1291,8 +1296,17 @@ export class TurnLoop {
     });
 
     this.consumeQueuedSteer(messages, "finalize_backfill");
+    const hasPendingSensitiveToolResults = this.sensitiveToolResultRedactions.size > 0;
     messages = this.prepareMessagesForModel(messages);
-    messages = this.deps.contextManager.manage(messages);
+    if (hasPendingSensitiveToolResults) {
+      logger.info("turn.sensitive_tool_result_context_management_skipped", {
+        cat: "turn",
+        count: this.sensitiveToolResultRedactions.size,
+        phase: "max_turns_summary",
+      });
+    } else {
+      messages = this.deps.contextManager.manage(messages);
+    }
     messages.push({
       role: "user",
       content:
@@ -1389,6 +1403,18 @@ export class TurnLoop {
       // LLM request" from withRetry and surfaces as a scary error on what was
       // really just a cancel. The signal is the authoritative cancel source.
       if (isAbortError(err) || this.config.signal?.aborted) throw err;
+
+      // Sensitive tool results are model-facing exactly once. A streaming
+      // fallback would re-send the same pending plaintext in a second request,
+      // so fail the turn and let the unified exit redact returned history.
+      if (this.sensitiveToolResultRedactions.size > 0) {
+        this.config.onStream?.({ type: "tombstone", messageId: assistantMessageId });
+        this.currentTurnLog.warn("turn.streaming_fallback_skipped_sensitive", {
+          cat: "turn",
+          error: (err as Error).message,
+        });
+        throw err;
+      }
 
       // Streaming might have partially emitted — send tombstone to revoke
       this.config.onStream?.({ type: "tombstone", messageId: assistantMessageId });

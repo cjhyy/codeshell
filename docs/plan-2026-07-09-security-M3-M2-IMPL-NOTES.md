@@ -108,10 +108,21 @@ Scope: `docs/plan-2026-07-09-security-M3-M2.md` Stage 0 -> 7, plus desktop M1/M4
 - m1: Added the requested negative security tests for sensitive UseCredential stream/transcript/history redaction, unreadable `enc:safeStorage:*` env/header fail-closed behavior, and forged browser guest/session metadata rejection.
 - n1: Updated the `UseCredential` file header to reflect desktop host credential-access IPC instead of the old "no cross-process" wording.
 
+## Refix round 2 (pre-beta-07)
+
+- B1 residual: `TurnLoop.run()` now has a public unified return exit. The loop body moved behind `runUnredacted()`, and every resolved `TurnLoopResult` is passed through `redactConsumedSensitiveToolResults()` before Engine can cache `result.messages`.
+- The existing in-loop post-model redaction remains in place, so consumed sensitive plaintext is still removed before later context management, hooks, or resumed history can see it.
+- The loop-top abort fast-path, confirmed `cancel_goal`, `complete_goal`, normal stop, max-turns, budget stop, prompt-too-long, abort, and model-error returns are all covered by the unified exit even when a branch forgets an inline redaction.
+- Max-turns final-summary handling now mirrors the normal pre-model guard: if a sensitive tool result is pending, it skips synchronous `contextManager.manage()` before the no-tools summary call, preventing compaction-summary prompts from receiving plaintext.
+- To preserve the one-consumption contract on error paths, streaming fallback is disabled while a sensitive tool result is pending. A streaming failure emits a tombstone and returns `model_error` instead of re-sending the same plaintext via `callWithoutStreaming()`.
+- Added terminal coverage in `packages/core/src/engine/turn-loop-sensitive-result.test.ts` for loop-top abort, confirmed `cancel_goal` with a same-batch sensitive result, max-turns final summary with pending sensitive history, multiple sensitive results keyed by tool id, and model-error after a sensitive result. Tests assert secret plaintext is absent from returned history and transcript inputs, and that max-turns skips context management while still allowing the final no-tools model call to be the single plaintext consumer.
+
 ## Verification
 
 Stage/focused:
 
+- `bun test packages/core/src/engine/turn-loop-sensitive-result.test.ts` -> 6 pass.
+- `bun test packages/core/src/engine/turn-loop*.test.ts` -> 46 pass.
 - `bun test packages/desktop/src/main/browser-driver` -> 60 pass.
 - `bun test packages/core/src/credentials` -> 62 pass.
 - `bun test packages/core/src/engine/engine.shell-env.test.ts` -> 17 pass.
@@ -123,7 +134,7 @@ Stage/focused:
 
 Final:
 
-- `bun test` -> 5186 pass, 6 skip, 0 fail.
+- `bun test` -> 5204 pass, 6 skip, 0 fail.
 - `bun run typecheck` -> pass.
 - `bun run --filter '@cjhyy/code-shell-desktop' typecheck` -> pass.
 - `bun run --filter '@cjhyy/code-shell-core' build` -> pass.
