@@ -37,6 +37,21 @@ export interface RegisterGuestInput {
   source?: "panel" | "popout";
 }
 
+export interface PendingAttachedGuestInput {
+  guest: WebContents;
+  windowId: number;
+  partition: BrowserPartition;
+}
+
+export interface RegisterAttachedGuestMetadataInput {
+  guestId: number;
+  windowId: number;
+  bucket: BrowserBucket;
+  partition: BrowserPartition;
+  engineSessionId?: string;
+  source?: "panel" | "popout";
+}
+
 export interface GuestTarget {
   guest: WebContents;
   bucket: BrowserBucket;
@@ -58,6 +73,16 @@ const activeGuestIdByBucket = new Map<BrowserBucket, number>();
 const bucketBySessionId = new Map<string, BrowserBucket>();
 const partitionByBucket = new Map<BrowserBucket, BrowserPartition>();
 const wiredGuestIds = new Set<number>();
+const pendingAttachedGuests = new Map<
+  number,
+  {
+    guest: WebContents;
+    guestId: number;
+    windowId: number;
+    partition: BrowserPartition;
+    attachedAt: number;
+  }
+>();
 
 export function sanitizeBrowserBucket(bucket: string): string {
   return bucket.replace(/[^a-zA-Z0-9_:.@-]/g, "_");
@@ -76,6 +101,72 @@ export function registerSessionBucket(
   assertExpectedPartition(bucket, partition);
   bucketBySessionId.set(sessionId, bucket);
   partitionByBucket.set(bucket, partition);
+}
+
+export function rememberAttachedGuest(input: PendingAttachedGuestInput): void {
+  if (!input.windowId || !input.partition) {
+    throw new Error("rememberAttachedGuest requires windowId and partition");
+  }
+  const guestId = input.guest.id;
+  pendingAttachedGuests.set(guestId, {
+    guest: input.guest,
+    guestId,
+    windowId: input.windowId,
+    partition: input.partition,
+    attachedAt: Date.now(),
+  });
+  input.guest.once("destroyed", () => {
+    pendingAttachedGuests.delete(guestId);
+  });
+}
+
+export function registerAttachedGuestMetadata(input: RegisterAttachedGuestMetadataInput): void {
+  if (!Number.isFinite(input.guestId) || !input.bucket || !input.partition || !input.windowId) {
+    throw new Error("registerAttachedGuestMetadata requires guestId/windowId/bucket/partition");
+  }
+  assertExpectedPartition(input.bucket, input.partition);
+
+  const pending = pendingAttachedGuests.get(input.guestId);
+  if (!pending) {
+    const existing = liveRecord(input.guestId);
+    if (
+      existing &&
+      existing.windowId === input.windowId &&
+      existing.bucket === input.bucket &&
+      existing.partition === input.partition
+    ) {
+      assertSessionMetadata(input.engineSessionId, input.bucket);
+      return;
+    }
+    throw new Error(`browser guest ${input.guestId} was not attached by this window`);
+  }
+  if (pending.windowId !== input.windowId) {
+    throw new Error(`browser guest ${input.guestId} belongs to a different window`);
+  }
+  if (pending.partition !== input.partition) {
+    throw new Error(
+      `browser guest ${input.guestId} partition mismatch: expected ${pending.partition}`,
+    );
+  }
+  if (safe(() => pending.guest.isDestroyed()) === true) {
+    pendingAttachedGuests.delete(input.guestId);
+    throw new Error(`browser guest ${input.guestId} is destroyed`);
+  }
+
+  assertSessionMetadata(input.engineSessionId, input.bucket);
+  const engineSessionId =
+    input.engineSessionId && bucketBySessionId.get(input.engineSessionId) === input.bucket
+      ? input.engineSessionId
+      : undefined;
+  registerGuest({
+    guest: pending.guest,
+    bucket: input.bucket,
+    partition: input.partition,
+    engineSessionId,
+    windowId: input.windowId,
+    source: input.source ?? "panel",
+  });
+  pendingAttachedGuests.delete(input.guestId);
 }
 
 /** Register a freshly-attached guest with renderer-provided bucket metadata. */
@@ -276,6 +367,16 @@ function assertExpectedPartition(bucket: string, partition: string): void {
   }
 }
 
+function assertSessionMetadata(sessionId: string | undefined, bucket: string): void {
+  if (!sessionId) return;
+  const existing = bucketBySessionId.get(sessionId);
+  if (existing !== undefined && existing !== bucket) {
+    throw new Error(
+      `browser session bucket mismatch for session "${sessionId}": expected ${existing}`,
+    );
+  }
+}
+
 function wireGuest(guest: WebContents): void {
   if (wiredGuestIds.has(guest.id)) return;
   wiredGuestIds.add(guest.id);
@@ -374,4 +475,5 @@ export function _resetGuests(): void {
   bucketBySessionId.clear();
   partitionByBucket.clear();
   wiredGuestIds.clear();
+  pendingAttachedGuests.clear();
 }

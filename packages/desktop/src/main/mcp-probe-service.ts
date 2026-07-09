@@ -13,7 +13,12 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { buildHttpHeaders, buildStdioEnv, CredentialStore } from "@cjhyy/code-shell-core";
+import {
+  buildHttpHeaders,
+  buildStdioEnv,
+  CredentialStore,
+  isCredentialSecretAvailable,
+} from "@cjhyy/code-shell-core";
 import { dlog } from "./desktop-logger.js";
 
 export interface McpServerConfig {
@@ -130,10 +135,7 @@ async function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise
     return await Promise.race<T>([
       p,
       new Promise<T>((_resolve, reject) => {
-        timeout = setTimeout(
-          () => reject(new Error(`${label} timed out after ${ms}ms`)),
-          ms,
-        );
+        timeout = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
       }),
     ]);
   } finally {
@@ -155,10 +157,7 @@ async function probeOne(cfg: McpServerConfig): Promise<McpProbeResult> {
   let mcpTransport: StdioClientTransport | StreamableHTTPClientTransport | undefined;
 
   try {
-    client = new Client(
-      { name: "code-shell-probe", version: "0.1.0" },
-      { capabilities: {} },
-    );
+    client = new Client({ name: "code-shell-probe", version: "0.1.0" }, { capabilities: {} });
 
     if (transport === "stdio") {
       if (!cfg.command) throw new Error("stdio 缺少 command 字段");
@@ -179,8 +178,7 @@ async function probeOne(cfg: McpServerConfig): Promise<McpProbeResult> {
       // Resolve credentialRef against the user-scope store (same surface as the
       // real connect in core's MCPManager) so testing a credential-bound server
       // actually sends its auth instead of a misleading 401.
-      const credStore = new CredentialStore(undefined);
-      const headers = buildHttpHeaders(cfg.name, cfg, (id) => credStore.resolve(id)?.secret);
+      const headers = buildProbeHttpHeaders(cfg);
       mcpTransport = new StreamableHTTPClientTransport(new URL(cfg.url), {
         requestInit: Object.keys(headers).length > 0 ? { headers } : undefined,
       });
@@ -202,7 +200,7 @@ async function probeOne(cfg: McpServerConfig): Promise<McpProbeResult> {
     };
   } catch (err) {
     const raw = err instanceof Error ? err.message : String(err);
-    const detail = err instanceof Error ? err.stack ?? raw : raw;
+    const detail = err instanceof Error ? (err.stack ?? raw) : raw;
     dlog("mcp-probe", "failed", { server: cfg.name, transport, error: raw });
     return {
       ...base,
@@ -227,6 +225,14 @@ async function probeOne(cfg: McpServerConfig): Promise<McpProbeResult> {
       }
     }
   }
+}
+
+export function buildProbeHttpHeaders(cfg: McpServerConfig): Record<string, string> {
+  const credStore = new CredentialStore(undefined);
+  return buildHttpHeaders(cfg.name, cfg, (id) => {
+    const cred = credStore.resolve(id);
+    return cred && isCredentialSecretAvailable(cred.secret) ? cred.secret : undefined;
+  });
 }
 
 /**

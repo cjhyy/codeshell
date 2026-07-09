@@ -51,7 +51,15 @@ export interface ToolCall {
 export interface ToolResult {
   id: string;
   toolName: string;
+  /**
+   * Sensitive tool results keep `result` as the model-facing value for the
+   * current model round only. Persisted/displayed/streamed observers must use
+   * `transcriptResult`/`displayResult` (or the standard placeholder) instead.
+   */
+  sensitive?: boolean;
   result?: string;
+  displayResult?: string;
+  transcriptResult?: string;
   /**
    * 结构化结果块(目前仅图片)。存在时优先于 `result` 用作发给 LLM 的
    * tool_result content —— view_image 用它把本地图片以 image ContentBlock

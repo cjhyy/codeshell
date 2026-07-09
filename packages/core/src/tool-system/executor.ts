@@ -28,6 +28,7 @@ import { parsePatch } from "./builtin/apply-patch/parser.js";
 import { BUILTIN_TOOL_GUARDS } from "./builtin/index.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "./builtin/complete-goal.js";
 import { CANCEL_GOAL_TOOL_NAME } from "./builtin/cancel-goal.js";
+import { toolResultDisplayText } from "./tool-result-redaction.js";
 
 type Logger = typeof rootLogger;
 
@@ -486,7 +487,8 @@ export class ToolExecutor {
     if (guardDecision?.prepend && !result.error && result.result) {
       result.result = `${guardDecision.prepend}\n${result.result}`;
     }
-    const payload = result.result ?? result.error ?? "";
+    const observerResult = toolResultDisplayText(result);
+    const payload = observerResult ?? result.error ?? "";
     span.end({
       ok: !result.error,
       chars: payload.length,
@@ -500,7 +502,7 @@ export class ToolExecutor {
       toolName: call.toolName,
       ok: !result.error,
       durationMs: Date.now() - toolStartedAt,
-      output: result.error ? undefined : result.result,
+      output: result.error ? undefined : observerResult,
       error: result.error,
     });
 
@@ -508,7 +510,7 @@ export class ToolExecutor {
     await this.hooks.emit("on_tool_end", {
       toolName: call.toolName,
       toolCallId: call.id,
-      result: result.result,
+      result: observerResult,
       error: result.error,
     });
 
@@ -516,7 +518,7 @@ export class ToolExecutor {
     const postHook = await this.hooks.emit("post_tool_use", {
       toolName: call.toolName,
       toolCallId: call.id,
-      result: result.result,
+      result: observerResult,
       error: result.error,
     });
     // Append handler-supplied context (linter output, type-check result,

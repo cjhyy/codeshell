@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -28,6 +28,18 @@ class FakeSafeCipher implements EncryptionCipher {
   }
   canDecrypt(stored: string): boolean {
     return !stored.startsWith("enc:") || stored.startsWith("enc:safeStorage:");
+  }
+}
+
+class UnavailableSafeCipher implements EncryptionCipher {
+  encrypt(plaintext: string): string {
+    return `enc:safeStorage:${Buffer.from(plaintext, "utf8").toString("base64")}`;
+  }
+  decrypt(_stored: string): string {
+    throw new Error("safeStorage unavailable");
+  }
+  canDecrypt(stored: string): boolean {
+    return !stored.startsWith("enc:");
   }
 }
 
@@ -94,5 +106,46 @@ describe("desktop credential access service", () => {
     expect(cookieText).toContain("cookie-secret");
     expect(cookieText).not.toContain("enc:safeStorage");
     rmSync(materialized.cookiesFile, { force: true });
+  });
+
+  test("snapshot env fail-closes for unreadable safeStorage ciphertext", () => {
+    setDefaultCredentialCipher(new UnavailableSafeCipher());
+    mkdirSync(join(home, ".code-shell"), { recursive: true });
+    writeFileSync(
+      join(home, ".code-shell", "credentials.json"),
+      JSON.stringify({
+        version: 1,
+        credentials: [
+          {
+            id: "figma",
+            type: "token",
+            label: "Figma",
+            secret: "enc:safeStorage:dG9rLTEyMw==",
+            exposeAsEnv: "FIGMA_TOKEN",
+          },
+        ],
+      }),
+    );
+
+    const snapshot = buildCredentialSnapshot([cwd], 8);
+    const entry = snapshot.entries.find((item) => item.cwd === cwd)!;
+    expect(entry.full).toEqual([
+      {
+        id: "figma",
+        type: "token",
+        label: "Figma",
+        exposeAsEnv: "FIGMA_TOKEN",
+        autoUseByAI: undefined,
+        autoInjectByAI: undefined,
+        meta: undefined,
+        hasSecret: false,
+        secretHint: undefined,
+      },
+    ]);
+    expect(entry.envFull).toEqual({});
+    expect(JSON.stringify(snapshot)).not.toContain("enc:safeStorage");
+    expect(() =>
+      resolveCredentialValueForWorker({ cwd, id: "figma", scope: "full", purpose: "use" }),
+    ).toThrow(/unavailable/);
   });
 });

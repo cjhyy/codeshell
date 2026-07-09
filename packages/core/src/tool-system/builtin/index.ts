@@ -114,7 +114,10 @@ import {
   browserNavigateToolDef,
   browserNavigateTool,
 } from "./browser-tools.js";
-import { useCredentialToolDef, useCredentialTool } from "../../credentials/use-credential-tool.js";
+import {
+  useCredentialToolDef,
+  useCredentialBuiltinTool,
+} from "../../credentials/use-credential-tool.js";
 import {
   injectCredentialToolDef,
   injectCredentialTool,
@@ -138,11 +141,19 @@ import { credentialAccessScope, getCredentialAccess } from "../../credentials/ac
  * registry 会把它放进 ToolResult.contentBlocks。可选的 `result` 字段是给
  * transcript / 摘要用的纯文本镜像。沙箱执行类工具(Bash 等)可返回
  * `{ result, sandbox }`,registry 把 sandbox 透传到 ToolResult.sandbox 供 UI 显示。
+ * 敏感结果可返回 `{ result, sensitive, displayResult, transcriptResult }`;
+ * `result` 仅供当前模型轮使用,显示/持久化路径必须使用占位字段。
  */
 export type BuiltinToolResult =
   | string
   | { contentBlocks: import("../../types.js").ContentBlock[]; result?: string }
-  | { result: string; sandbox: import("../../types.js").ToolResult["sandbox"] };
+  | {
+      result: string;
+      sandbox?: import("../../types.js").ToolResult["sandbox"];
+      sensitive?: boolean;
+      displayResult?: string;
+      transcriptResult?: string;
+    };
 
 export type BuiltinToolFn = (
   args: Record<string, unknown>,
@@ -816,7 +827,7 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       isReadOnly: true,
       isConcurrencySafe: true,
     },
-    execute: useCredentialTool,
+    execute: useCredentialBuiltinTool,
   },
   // InjectCredential:把 cookie 凭证注入内置浏览器(恢复登录态)。审批由工具内部
   // CredentialUseGate 负责(逐条 autoInjectByAI),permissionDefault:"allow" 仅作展示 hint。

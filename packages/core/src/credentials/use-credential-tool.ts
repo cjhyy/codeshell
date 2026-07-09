@@ -7,13 +7,15 @@
  *     - token/link → `{ kind: "value", value }`
  *     - cookie     → 就地写临时 cookies.txt(0600),返回 `{ kind: "cookie", cookiesFile, count }`
  *
- * 取值全部 core 直读 CredentialStore(cookie 值第二期已进库),无跨进程。
+ * desktop 下通过 host credential access IPC 按需解析 secret；headless/SDK
+ * 仍可使用本地 CredentialStore。
  * 集中在 core/src/credentials/ 下,只经 ToolDefinition 注册 + ToolContext.askUser 耦合 core,
  * 满足设计稿 §1「可整块外移」约束。
  */
 
 import type { ToolDefinition } from "../types.js";
 import type { ToolContext } from "../tool-system/context.js";
+import { SENSITIVE_TOOL_RESULT_PLACEHOLDER } from "../tool-system/tool-result-redaction.js";
 import {
   credentialUseGate,
   type SessionCredentialAllow,
@@ -225,8 +227,40 @@ export async function useCredentialTool(
   return json({ kind: "error", error: `未知凭证类型: ${cred.type}` });
 }
 
+export async function useCredentialBuiltinTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<
+  | string
+  | {
+      result: string;
+      sensitive: true;
+      displayResult: string;
+      transcriptResult: string;
+    }
+> {
+  const result = await useCredentialTool(args, ctx);
+  if (!isValueResult(result)) return result;
+  const redacted = json({ kind: "value", value: SENSITIVE_TOOL_RESULT_PLACEHOLDER });
+  return {
+    result,
+    sensitive: true,
+    displayResult: redacted,
+    transcriptResult: redacted,
+  };
+}
+
 function json(r: UseCredentialResult): string {
   return JSON.stringify(r);
+}
+
+function isValueResult(result: string): boolean {
+  try {
+    const parsed = JSON.parse(result) as { kind?: unknown; value?: unknown };
+    return parsed.kind === "value" && typeof parsed.value === "string";
+  } catch {
+    return false;
+  }
 }
 
 /** 测试钩子:清空会话 allow 集(避免跨用例污染)。 */

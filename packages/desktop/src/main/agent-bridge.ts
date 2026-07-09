@@ -55,8 +55,8 @@ import { loadBrowserAutomationPolicy } from "./browser-driver/load-policy.js";
 import {
   buildNoChildFallbackReply,
   compactQuerySessionId,
-  type ParsedRpc,
 } from "./agent-bridge-fallback.js";
+import { prepareAgentRunMetadata, resolveCredentialSessionCwd } from "./agent-run-metadata.js";
 import { getTrustCachedSync } from "./trust-store.js";
 import { reloadAutomations } from "./automation-service.js";
 import { switchSessionWorkspaceForUi } from "./session-workspace-service.js";
@@ -342,6 +342,34 @@ export class AgentBridge {
     return this.fallbackSessions;
   }
 
+  private handleAgentRunMetadata(prepared: ReturnType<typeof prepareAgentRunMetadata>): string {
+    this.spawnChild(prepared.cwd);
+    this.lastRunContext = {
+      cwd: prepared.cwd,
+      sessionId: prepared.sessionId,
+    };
+    if (prepared.sessionId && prepared.cwd) {
+      this.sessionCwd.set(prepared.sessionId, prepared.cwd);
+    }
+    if (prepared.sessionId && prepared.bucket) {
+      try {
+        registerSessionBucket(prepared.sessionId, prepared.bucket, prepared.browserPartition);
+      } catch (err) {
+        dlog("bridge", "browser.register_session_bucket_failed", { error: String(err) });
+      }
+    }
+    this.pushCredentialSnapshot(prepared.cwd);
+    return prepared.outLine;
+  }
+
+  private cwdForSessionOrThrow(sessionId: string): string {
+    const cwd = resolveCredentialSessionCwd(sessionId, this.sessionCwd, (sid) =>
+      this.sessionsForFallback().readCwd(sid),
+    );
+    this.sessionCwd.set(sessionId, cwd);
+    return cwd;
+  }
+
   private attachIpcListener(): void {
     if (this.ipcListenerAttached) return;
     this.ipcListenerAttached = true;
@@ -350,12 +378,11 @@ export class AgentBridge {
       // Inspect the message: an agent/run is the only one that can trigger
       // a fresh spawn. Other messages (agent/approve, agent/cancel) only
       // make sense if the worker is already alive.
-      let parsed: ParsedRpc = {};
-      try {
-        parsed = JSON.parse(line);
-      } catch {
-        /* fall through */
-      }
+      const prepared = prepareAgentRunMetadata(
+        line,
+        (cwd) => getTrustCachedSync(cwd) === "trusted",
+      );
+      const parsed = prepared.parsed;
 
       // Line forwarded to the worker. Only rewritten when we inject fields
       // (agent/run trust) — everything else is passed through verbatim so we
@@ -363,50 +390,7 @@ export class AgentBridge {
       let outLine = line;
 
       if (parsed.method === "agent/run") {
-        this.spawnChild(parsed.params?.cwd);
-        this.lastRunContext = {
-          cwd: parsed.params?.cwd,
-          sessionId: parsed.params?.sessionId,
-        };
-        if (
-          typeof parsed.params?.sessionId === "string" &&
-          typeof parsed.params?.cwd === "string"
-        ) {
-          this.sessionCwd.set(parsed.params.sessionId, parsed.params.cwd);
-        }
-        if (parsed.params && typeof parsed.params === "object") {
-          const paramsRecord = parsed.params as Record<string, unknown>;
-          const sessionId =
-            typeof paramsRecord.sessionId === "string" ? paramsRecord.sessionId : undefined;
-          const bucket = typeof paramsRecord.bucket === "string" ? paramsRecord.bucket : undefined;
-          const partition =
-            typeof paramsRecord.browserPartition === "string"
-              ? paramsRecord.browserPartition
-              : undefined;
-          if (sessionId && bucket) {
-            try {
-              registerSessionBucket(sessionId, bucket, partition);
-            } catch (err) {
-              dlog("bridge", "browser.register_session_bucket_failed", { error: String(err) });
-            }
-          }
-          delete paramsRecord.bucket;
-          delete paramsRecord.browserPartition;
-          outLine = JSON.stringify(parsed);
-        }
-        this.pushCredentialSnapshot(parsed.params?.cwd);
-        // Workspace trust is a main-process authority (trust-store), never the
-        // renderer's to assert — inject it here so a cloned malicious repo's
-        // .code-shell settings can't self-authorize. "unknown"/never-trusted →
-        // fail-closed (projectTrusted:false), which makes core strip the
-        // dangerous project settings fields. Synchronous cache read: this IPC
-        // handler can't await without reordering run vs approve/cancel.
-        if (parsed.params && typeof parsed.params === "object") {
-          const cwd = parsed.params.cwd;
-          const trusted = typeof cwd === "string" && getTrustCachedSync(cwd) === "trusted";
-          (parsed.params as Record<string, unknown>).projectTrusted = trusted;
-          outLine = JSON.stringify(parsed);
-        }
+        outLine = this.handleAgentRunMetadata(prepared);
       } else {
         const compactSessionId = compactQuerySessionId(parsed);
         if (compactSessionId) {
@@ -609,11 +593,10 @@ export class AgentBridge {
           throw new Error(`no browser bucket registered for session ${parsed.sessionId}`);
         }
         // Resolve the credential against the ORIGINATING session's cwd (from the
-        // parsed action's sessionId), NOT the global lastRunContext — otherwise
-        // a concurrent tab's run could have moved lastRunContext to another
-        // project and we'd inject the wrong account's cookie.
-        const sessionCwd =
-          this.sessionCwd.get(parsed.sessionId) ?? this.lastRunContext.cwd ?? undefined;
+        // parsed action's sessionId). If this process lost the in-memory map,
+        // recover from persisted state.json; never fall back to lastRunContext,
+        // which may belong to a different project/session.
+        const sessionCwd = this.cwdForSessionOrThrow(parsed.sessionId);
         const resolved = resolveCookieCredentialForBrowser(
           sessionCwd,
           parsed.credentialId,
@@ -761,21 +744,11 @@ export class AgentBridge {
    * responsible for building a well-formed line (see preload's rpc()).
    */
   injectWorkerMessage(line: string): void {
-    let parsed: { method?: string; params?: { cwd?: string; sessionId?: string } } = {};
-    try {
-      parsed = JSON.parse(line);
-    } catch {
-      /* fall through — a malformed line is dropped below */
-    }
+    const prepared = prepareAgentRunMetadata(line, (cwd) => getTrustCachedSync(cwd) === "trusted");
+    const parsed = prepared.parsed;
+    let outLine = line;
     if (parsed.method === "agent/run") {
-      this.spawnChild(parsed.params?.cwd);
-      this.lastRunContext = {
-        cwd: parsed.params?.cwd,
-        sessionId: parsed.params?.sessionId,
-      };
-      if (typeof parsed.params?.sessionId === "string" && typeof parsed.params?.cwd === "string") {
-        this.sessionCwd.set(parsed.params.sessionId, parsed.params.cwd);
-      }
+      outLine = this.handleAgentRunMetadata(prepared);
     }
     if (!this.child?.stdin || this.child.stdin.destroyed) {
       dlog("bridge", "inject.dropped", {
@@ -784,8 +757,8 @@ export class AgentBridge {
       });
       return;
     }
-    dlog("bridge", "inject→worker", { method: parsed.method, raw: previewLine(line) });
-    this.child.stdin.write(line + "\n");
+    dlog("bridge", "inject→worker", { method: parsed.method, raw: previewLine(outLine) });
+    this.child.stdin.write(outLine + "\n");
   }
 
   /**

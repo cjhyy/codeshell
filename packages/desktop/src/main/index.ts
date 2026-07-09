@@ -78,10 +78,12 @@ import { SafeStorageCipher } from "./credential-cipher.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
 import { readImageDataUrl } from "./image-read-service.js";
 import {
+  bucketForSession,
   browserPartitionForBucket as registryPartitionForBucket,
   guestRecordForId,
   listGuestSessions,
-  registerGuest,
+  rememberAttachedGuest,
+  registerAttachedGuestMetadata,
   registerSessionBucket,
 } from "./browser-driver/active-guest.js";
 import { buildDesktopAutomationRunner, makeCronRunnerWithResume } from "./automation-host.js";
@@ -1208,6 +1210,7 @@ async function handleCcRoomEvent(event: MobileClientEvent & { deviceId?: string 
  * Must run for EVERY window that hosts a BrowserPanel (main + browser popout).
  */
 function hardenWebviewGuests(win: BrowserWindow): void {
+  const pendingWebviewPartitions: string[] = [];
   win.webContents.on("will-attach-webview", (_e, webPreferences, params) => {
     delete (webPreferences as Record<string, unknown>).preload;
     webPreferences.nodeIntegration = false;
@@ -1234,8 +1237,11 @@ function hardenWebviewGuests(win: BrowserWindow): void {
       wantPartition === BROWSER_PARTITION || wantPartition.startsWith(`${BROWSER_PARTITION}:`)
         ? wantPartition
         : BROWSER_PARTITION;
+    pendingWebviewPartitions.push(String(params.partition));
   });
   win.webContents.on("did-attach-webview", (_e, guest) => {
+    const partition = pendingWebviewPartitions.shift() ?? BROWSER_PARTITION;
+    rememberAttachedGuest({ guest, windowId: win.id, partition });
     // A page link wanting a new window (target=_blank, window.open) used to be
     // DENIED outright (→ kicked to the OS browser, or silently nothing — the
     // "点了没反应"). Instead, route http(s) popups back to the renderer to open as
@@ -1835,6 +1841,19 @@ ipcMain.on(
       const bucket = typeof payload?.bucket === "string" ? payload.bucket : "";
       const partition = typeof payload?.partition === "string" ? payload.partition : undefined;
       if (!sessionId || !bucket) return;
+      const existingBucket = bucketForSession(sessionId);
+      if (!existingBucket) {
+        dlog("browser", "register_session_bucket_rejected", {
+          sessionId,
+          reason: "no main-owned mapping",
+        });
+        return;
+      }
+      if (existingBucket !== bucket) {
+        throw new Error(
+          `renderer attempted to rebind session ${sessionId} from ${existingBucket} to ${bucket}`,
+        );
+      }
       registerSessionBucket(sessionId, bucket, partition);
     } catch (err) {
       dlog("browser", "register_session_bucket_failed", { error: String(err) });
@@ -1859,16 +1878,15 @@ ipcMain.on(
       const bucket = typeof payload?.bucket === "string" ? payload.bucket : "";
       const partition = typeof payload?.partition === "string" ? payload.partition : "";
       if (!Number.isFinite(guestId) || !bucket || !partition) return;
-      const guest = webContents.fromId(guestId);
-      if (!guest || guest.isDestroyed()) return;
       const ownerWindow = BrowserWindow.fromWebContents(e.sender);
-      registerGuest({
-        guest,
+      if (!ownerWindow) return;
+      registerAttachedGuestMetadata({
+        guestId,
         bucket,
         partition,
         engineSessionId:
           typeof payload?.engineSessionId === "string" ? payload.engineSessionId : undefined,
-        windowId: ownerWindow?.id,
+        windowId: ownerWindow.id,
         source: "panel",
       });
     } catch (err) {

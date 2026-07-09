@@ -99,6 +99,15 @@ Scope: `docs/plan-2026-07-09-security-M3-M2.md` Stage 0 -> 7, plus desktop M1/M4
 - InjectCredential: worker sees metadata and sends id/scope/session only; main decrypts/restores cookie jar to target bucket/partition; covered by `packages/core/src/credentials/inject-credential-tool.test.ts` and `packages/desktop/src/main/credential-action.test.ts`.
 - Tool visibility guard/dynamic description: metadata snapshot controls visibility and does not leak secret; covered by `packages/core/src/tool-system/builtin/tool-guards.test.ts`, UseCredential, and InjectCredential tests.
 
+## Review fixes (pre-beta-06)
+
+- B1: Added sensitive `ToolResult` semantics (`sensitive`, `displayResult`, `transcriptResult`) plus shared redaction helpers. `UseCredential` token/link builtin results keep plaintext only in the model-facing `result`; transcript, stream events, renderer snapshots, tool summaries, dev recorder output, and hook payloads use the placeholder projection. TurnLoop skips context summarization while an unconsumed sensitive result is pending, sends plaintext to the next model call once, then redacts the in-memory history so resume only sees the placeholder. Covered by `packages/core/src/engine/turn-loop-sensitive-result.test.ts`, `packages/core/src/tool-system/executor-sensitive-result.test.ts`, and `packages/core/src/credentials/use-credential-tool.test.ts`.
+- M1: Desktop credential snapshots no longer call legacy `CredentialStore.envExposures()`; env maps are built with `isCredentialSecretAvailable()`. MCP probe credentialRef headers now use the same availability guard and fail closed for unreadable `enc:*` values. Covered by `packages/desktop/src/main/credential-access-service.test.ts` and `packages/desktop/src/main/mcp-probe-service.test.ts`.
+- M2: Browser guest registration is now pending-attach based. `did-attach-webview` records the owner window, guest id, and main-normalized partition; renderer metadata is accepted only when owner and partition match. Renderer `browser:register-session-bucket` can only confirm an existing main-owned `agent/run` mapping and cannot create or rebind `sessionId -> bucket`. Covered by `packages/desktop/src/main/browser-driver/active-guest.test.ts`.
+- M3: Shared `agent/run` metadata handling now strips main-only bucket/partition fields, registers session buckets, records `sessionCwd`, pushes credential snapshots, and injects main-owned trust for both renderer IPC and `injectWorkerMessage()`. InjectCredential cwd resolution now uses `sessionCwd` or persisted `SessionManager.readCwd(sessionId)` and fails closed without `lastRunContext` fallback. Covered by `packages/desktop/src/main/agent-run-metadata.test.ts`.
+- m1: Added the requested negative security tests for sensitive UseCredential stream/transcript/history redaction, unreadable `enc:safeStorage:*` env/header fail-closed behavior, and forged browser guest/session metadata rejection.
+- n1: Updated the `UseCredential` file header to reflect desktop host credential-access IPC instead of the old "no cross-process" wording.
+
 ## Verification
 
 Stage/focused:

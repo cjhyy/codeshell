@@ -67,9 +67,23 @@ function buildCredentialSnapshotEntry(cwd: string | undefined): CredentialSnapsh
     cwd,
     full: store.list("full").map(toMetadata),
     project: store.list("project").map(toMetadata),
-    envFull: store.envExposures("full"),
-    envProject: store.envExposures("project"),
+    envFull: envExposures(store, "full"),
+    envProject: envExposures(store, "project"),
   };
+}
+
+function envExposures(
+  store: CredentialStore,
+  scope: CredentialAccessScope,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const cred of store.list(scope)) {
+    const name = cred.exposeAsEnv?.trim();
+    if (name && isCredentialSecretAvailable(cred.secret)) {
+      out[name] = cred.secret;
+    }
+  }
+  return out;
 }
 
 function toMetadata(cred: Credential): CredentialMetadata {

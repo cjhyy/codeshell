@@ -1,5 +1,25 @@
-import { describe, test, expect } from "bun:test";
-import { humanizeError } from "./mcp-probe-service.js";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  PlaintextCipher,
+  setDefaultCredentialCipher,
+  type EncryptionCipher,
+} from "@cjhyy/code-shell-core";
+import { buildProbeHttpHeaders, humanizeError } from "./mcp-probe-service.js";
+
+class UnavailableSafeCipher implements EncryptionCipher {
+  encrypt(plaintext: string): string {
+    return `enc:safeStorage:${Buffer.from(plaintext, "utf8").toString("base64")}`;
+  }
+  decrypt(_stored: string): string {
+    throw new Error("safeStorage unavailable");
+  }
+  canDecrypt(stored: string): boolean {
+    return !stored.startsWith("enc:");
+  }
+}
 
 /**
  * Auth-error classification (feedback: MCP 鉴权失败报错不友好)。Three
@@ -50,12 +70,71 @@ describe("humanizeError auth classification", () => {
 
 describe("cold-start timeout hint (npx/uvx 首次下载)", () => {
   test("timeout + npx command → 提示首次下载稍后重试", () => {
-    const msg = humanizeError("connect timed out after 8000ms", "npx -y chrome-devtools-mcp@latest");
+    const msg = humanizeError(
+      "connect timed out after 8000ms",
+      "npx -y chrome-devtools-mcp@latest",
+    );
     expect(msg).toContain("首次运行需下载包");
   });
 
   test("timeout without a runner command → 普通超时文案", () => {
     expect(humanizeError("connect timed out after 8000ms", "node server.js")).toBe("连接超时");
     expect(humanizeError("connect timed out after 8000ms")).toBe("连接超时");
+  });
+});
+
+describe("buildProbeHttpHeaders credentialRef availability", () => {
+  let home: string;
+  let prevHome: string | undefined;
+
+  beforeEach(() => {
+    prevHome = process.env.HOME;
+    home = mkdtempSync(join(tmpdir(), "cs-mcp-probe-home-"));
+    process.env.HOME = home;
+    setDefaultCredentialCipher(new UnavailableSafeCipher());
+  });
+
+  afterEach(() => {
+    setDefaultCredentialCipher(new PlaintextCipher());
+    if (prevHome === undefined) delete process.env.HOME;
+    else process.env.HOME = prevHome;
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  test("unreadable safeStorage ciphertext is not used as Authorization", () => {
+    mkdirSync(join(home, ".code-shell"), { recursive: true });
+    writeFileSync(
+      join(home, ".code-shell", "credentials.json"),
+      JSON.stringify({
+        version: 1,
+        credentials: [
+          {
+            id: "figma",
+            type: "token",
+            label: "Figma",
+            secret: "enc:safeStorage:dG9rLTEyMw==",
+          },
+        ],
+      }),
+    );
+
+    expect(() =>
+      buildProbeHttpHeaders({
+        name: "figma",
+        transport: "streamable-http",
+        url: "https://example.com/mcp",
+        credentialRef: "figma",
+      }),
+    ).toThrow(/not found or empty/);
+    try {
+      buildProbeHttpHeaders({
+        name: "figma",
+        transport: "streamable-http",
+        url: "https://example.com/mcp",
+        credentialRef: "figma",
+      });
+    } catch (err) {
+      expect(String(err)).not.toContain("enc:safeStorage");
+    }
   });
 });

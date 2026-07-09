@@ -6,6 +6,7 @@ import { CredentialStore } from "./store.js";
 import { setDefaultCredentialAccess, type CredentialAccess } from "./access.js";
 import {
   useCredentialTool,
+  useCredentialBuiltinTool,
   useCredentialToolDef,
   useCredentialToolDefFor,
   __resetCredentialSessionAllowForTests,
@@ -63,6 +64,23 @@ describe("UseCredential tool", () => {
     });
     const out = parse(await useCredentialTool({ id: "figma" }, ctxWith(cwd, "允许本次")));
     expect(out).toEqual({ kind: "value", value: "tok-123" });
+  });
+
+  test("builtin token result is sensitive with redacted display/transcript projections", async () => {
+    new CredentialStore(cwd).save("user", {
+      id: "figma",
+      type: "token",
+      label: "Figma",
+      secret: "tok-123",
+    });
+    const out = await useCredentialBuiltinTool({ id: "figma" }, ctxWith(cwd, "允许本次"));
+    expect(typeof out).toBe("object");
+    expect(out).toMatchObject({
+      result: JSON.stringify({ kind: "value", value: "tok-123" }),
+      sensitive: true,
+      displayResult: JSON.stringify({ kind: "value", value: "[credential value withheld]" }),
+      transcriptResult: JSON.stringify({ kind: "value", value: "[credential value withheld]" }),
+    });
   });
 
   test("id → cookie writes a Netscape cookies.txt and returns its path", async () => {

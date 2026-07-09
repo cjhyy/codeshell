@@ -41,6 +41,12 @@ import { crossedReactiveThreshold } from "./reactive-threshold.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js";
 import { CANCEL_GOAL_TOOL_NAME } from "../tool-system/builtin/cancel-goal.js";
 import {
+  redactSensitiveToolResultsInMessages,
+  toolResultForDisplay,
+  toolResultTranscriptText,
+  toolResultsForDisplay,
+} from "../tool-system/tool-result-redaction.js";
+import {
   addTokenUsage,
   cacheHitRateFromUsage,
   cumulativeCacheHitRate,
@@ -208,6 +214,7 @@ export class TurnLoop {
     cacheCreationTokens: 0,
   };
   private currentCumulativeUsage: CumulativeUsageCounters | undefined;
+  private readonly sensitiveToolResultRedactions = new Map<string, string>();
   private readonly pendingImageMessages = new Set<Message>();
 
   /**
@@ -405,6 +412,16 @@ export class TurnLoop {
       });
     }
     return result.messages;
+  }
+
+  private redactConsumedSensitiveToolResults(messages: Message[]): Message[] {
+    if (this.sensitiveToolResultRedactions.size === 0) return messages;
+    const redacted = redactSensitiveToolResultsInMessages(
+      messages,
+      this.sensitiveToolResultRedactions,
+    );
+    this.sensitiveToolResultRedactions.clear();
+    return redacted;
   }
 
   private trackFreshImageMessage(message: Message): void {
@@ -651,18 +668,26 @@ export class TurnLoop {
         // Pre-check: downgrade image payloads that have already had their one
         // model-consumption turn, then run context management. Fresh images in
         // pendingImageMessages are preserved through this next model request.
+        const hasPendingSensitiveToolResults = this.sensitiveToolResultRedactions.size > 0;
         messages = this.prepareMessagesForModel(messages);
 
-        // Context management (async — may trigger LLM summarization)
-        messages = await this.deps.contextManager.manageAsync(messages);
+        if (hasPendingSensitiveToolResults) {
+          tlog.info("turn.sensitive_tool_result_context_management_skipped", {
+            cat: "turn",
+            count: this.sensitiveToolResultRedactions.size,
+          });
+        } else {
+          // Context management (async — may trigger LLM summarization)
+          messages = await this.deps.contextManager.manageAsync(messages);
 
-        // manageAsync can itself issue an LLM summarization call lasting several
-        // seconds; if the signal aborted during it, stop here rather than
-        // proceeding into the (expensive) main model call. Belt to the loop-top
-        // brace: this catches an abort that landed *inside* context management.
-        if (this.config.signal?.aborted) {
-          this.markStopped();
-          return { text: finalText, reason: "aborted_streaming", messages };
+          // manageAsync can itself issue an LLM summarization call lasting several
+          // seconds; if the signal aborted during it, stop here rather than
+          // proceeding into the (expensive) main model call. Belt to the loop-top
+          // brace: this catches an abort that landed *inside* context management.
+          if (this.config.signal?.aborted) {
+            this.markStopped();
+            return { text: finalText, reason: "aborted_streaming", messages };
+          }
         }
         // No pre-llm ctx emit here: the messages-only estimate would be ~16k
         // smaller than the real prompt (system + tools not included), making
@@ -677,7 +702,9 @@ export class TurnLoop {
         // call. Microcompact is lossless (just clearing redundant
         // tool_results) so we suppress hook emits for it to keep token
         // overhead down.
-        const pending = this.deps.consumePendingCompactInfo?.();
+        const pending = hasPendingSensitiveToolResults
+          ? null
+          : this.deps.consumePendingCompactInfo?.();
         if (pending && pending.strategy !== "micro") {
           const compactHook = await this.emitHook("post_compact", {
             strategy: pending.strategy,
@@ -714,6 +741,7 @@ export class TurnLoop {
               } catch (retryErr) {
                 if (!(retryErr instanceof ContextLimitError)) {
                   this.config.onStream?.({ type: "error", error: formatFriendlyError(retryErr) });
+                  messages = this.redactConsumedSensitiveToolResults(messages);
                   return { text: finalText, reason: "model_error", messages };
                 }
               }
@@ -724,6 +752,7 @@ export class TurnLoop {
                 type: "error",
                 error: "Context limit exceeded after 3 recovery attempts",
               });
+              messages = this.redactConsumedSensitiveToolResults(messages);
               return { text: finalText, reason: "prompt_too_long", messages };
             }
           } else if (isAbortError(err) || this.config.signal?.aborted) {
@@ -736,13 +765,17 @@ export class TurnLoop {
             // interrupted turn folds behind the process-card header on reload).
             this.patchOrphanedToolUses(messages);
             this.markStopped();
+            messages = this.redactConsumedSensitiveToolResults(messages);
             return { text: finalText, reason: "aborted_streaming", messages };
           } else {
             this.patchOrphanedToolUses(messages);
             this.config.onStream?.({ type: "error", error: formatFriendlyError(err) });
+            messages = this.redactConsumedSensitiveToolResults(messages);
             return { text: finalText, reason: "model_error", messages };
           }
         }
+
+        messages = this.redactConsumedSensitiveToolResults(messages);
 
         // Record the response once into current-turn and whole-session counters.
         if (response!.usage?.promptTokens !== undefined) {
@@ -983,6 +1016,7 @@ export class TurnLoop {
           if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
           }
+          messages = this.redactConsumedSensitiveToolResults(messages);
           return { text: finalText, reason: "completed", messages };
         }
 
@@ -1031,16 +1065,21 @@ export class TurnLoop {
         const resultBlocks: ContentBlock[] = [];
         for (const result of results) {
           resultBlocks.push(toolResultToBlock(result));
+          const streamResult = toolResultForDisplay(result);
+          const transcriptResult = toolResultTranscriptText(result);
+          if (result.sensitive && transcriptResult !== undefined) {
+            this.sensitiveToolResultRedactions.set(result.id, transcriptResult);
+          }
 
           this.deps.transcript.appendToolResult(
             result.id,
             result.toolName,
-            result.result,
+            transcriptResult,
             result.error,
-            result.contentBlocks,
+            result.sensitive ? undefined : result.contentBlocks,
           );
 
-          this.config.onStream?.({ type: "tool_result", result });
+          this.config.onStream?.({ type: "tool_result", result: streamResult });
         }
 
         // Fire-and-forget tool use summary (non-blocking). The whole chain is
@@ -1051,17 +1090,19 @@ export class TurnLoop {
           void import("./tool-summary.js")
             .then(({ generateToolUseSummary }) => {
               if (!this.deps.model.summarize) return;
-              return generateToolUseSummary(toolCalls, results, this.deps.model.summarize).then(
-                (summary) => {
-                  if (summary) {
-                    this.config.onStream?.({
-                      type: "tool_summary",
-                      summary,
-                      toolCallIds: toolCalls.map((toolCall) => toolCall.id),
-                    });
-                  }
-                },
-              );
+              return generateToolUseSummary(
+                toolCalls,
+                toolResultsForDisplay(results),
+                this.deps.model.summarize,
+              ).then((summary) => {
+                if (summary) {
+                  this.config.onStream?.({
+                    type: "tool_summary",
+                    summary,
+                    toolCallIds: toolCalls.map((toolCall) => toolCall.id),
+                  });
+                }
+              });
             })
             .catch((err) => {
               this.currentTurnLog.warn("tool_summary.dispatch_failed", {
@@ -1119,6 +1160,7 @@ export class TurnLoop {
           if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
           }
+          messages = this.redactConsumedSensitiveToolResults(messages);
           return { text: finalText, reason: "completed", messages };
         }
 
@@ -1162,6 +1204,7 @@ export class TurnLoop {
           if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
           }
+          messages = this.redactConsumedSensitiveToolResults(messages);
           return { text: finalText, reason: "completed", messages };
         }
         if (budgetDecision === "nudge") {
@@ -1227,6 +1270,7 @@ export class TurnLoop {
       // no error event, so the UI shows only the "你停止了本轮" line.
       if (isAbortError(err) || this.config.signal?.aborted) {
         this.markStopped();
+        messages = this.redactConsumedSensitiveToolResults(messages);
         return { text: finalText, reason: "aborted_streaming", messages };
       }
       this.currentTurnLog.error("turn.unhandled_error", {
@@ -1235,6 +1279,7 @@ export class TurnLoop {
         stack: (err as Error).stack?.split("\n").slice(0, 4).join("\n"),
       });
       this.config.onStream?.({ type: "error", error: formatFriendlyError(err) });
+      messages = this.redactConsumedSensitiveToolResults(messages);
       return { text: finalText, reason: "model_error", messages };
     }
 
@@ -1279,6 +1324,7 @@ export class TurnLoop {
       });
       messages.push({ role: "assistant", content: finalText });
     }
+    messages = this.redactConsumedSensitiveToolResults(messages);
     return { text: finalText, reason: "max_turns", messages };
   }
 

@@ -3,7 +3,12 @@
  */
 
 import type { RegisteredTool, ToolDefinition, ToolResult } from "../types.js";
-import { ConfigError, ToolNotFoundError, ToolExecutionError, ToolTimeoutError } from "../exceptions.js";
+import {
+  ConfigError,
+  ToolNotFoundError,
+  ToolExecutionError,
+  ToolTimeoutError,
+} from "../exceptions.js";
 import { BUILTIN_TOOLS, type BuiltinToolFn } from "./builtin/index.js";
 import type { ToolContext } from "./context.js";
 import { validateToolMetadata } from "./validate-tool-metadata.js";
@@ -34,10 +39,9 @@ export class ToolRegistry {
     if (selectedNames) {
       const unknown = [...selectedNames].filter((name) => !availableNames.has(name));
       if (unknown.length > 0) {
-        throw new ConfigError(
-          `Unknown built-in tool(s): ${unknown.join(", ")}`,
-          { unknownBuiltinTools: unknown },
-        );
+        throw new ConfigError(`Unknown built-in tool(s): ${unknown.join(", ")}`, {
+          unknownBuiltinTools: unknown,
+        });
       }
     }
 
@@ -116,9 +120,10 @@ export class ToolRegistry {
 
     // Create a child AbortController that aborts on timeout OR parent abort
     const childController = new AbortController();
-    const timerId = timeout > 0
-      ? setTimeout(() => childController.abort(new ToolTimeoutError(name, timeout)), timeout)
-      : undefined;
+    const timerId =
+      timeout > 0
+        ? setTimeout(() => childController.abort(new ToolTimeoutError(name, timeout)), timeout)
+        : undefined;
 
     // Cascade parent abort to child
     const onParentAbort = () => childController.abort(parentSignal?.reason);
@@ -136,10 +141,14 @@ export class ToolRegistry {
       const result = await Promise.race([
         executor(argsWithSignal, ctx),
         new Promise<never>((_, reject) => {
-          childController.signal.addEventListener("abort", () => {
-            const reason = childController.signal.reason;
-            reject(reason instanceof ToolTimeoutError ? reason : new Error("Tool aborted"));
-          }, { once: true });
+          childController.signal.addEventListener(
+            "abort",
+            () => {
+              const reason = childController.signal.reason;
+              reject(reason instanceof ToolTimeoutError ? reason : new Error("Tool aborted"));
+            },
+            { once: true },
+          );
         }),
       ]);
 
@@ -153,15 +162,20 @@ export class ToolRegistry {
       }
       // 结构化返回:图片块(view_image)或沙箱标记(Bash 等)。两者互斥,
       // 各取所有,缺的字段为 undefined。
-      const contentBlocks =
-        "contentBlocks" in result ? result.contentBlocks : undefined;
+      const contentBlocks = "contentBlocks" in result ? result.contentBlocks : undefined;
       const sandbox = "sandbox" in result ? result.sandbox : undefined;
+      const sensitive = "sensitive" in result ? result.sensitive : undefined;
+      const displayResult = "displayResult" in result ? result.displayResult : undefined;
+      const transcriptResult = "transcriptResult" in result ? result.transcriptResult : undefined;
       return {
         id,
         toolName: name,
         result: result.result ?? (contentBlocks ? "(image)" : ""),
         contentBlocks,
         sandbox,
+        sensitive,
+        displayResult,
+        transcriptResult,
       };
     } catch (err) {
       clearTimeout(timerId);
@@ -169,9 +183,7 @@ export class ToolRegistry {
 
       // Always return error as ToolResult, never throw
       let errorMsg: string;
-      const isAbort =
-        (err as Error)?.name === "AbortError" ||
-        parentSignal?.aborted === true;
+      const isAbort = (err as Error)?.name === "AbortError" || parentSignal?.aborted === true;
       if (err instanceof ToolTimeoutError) {
         errorMsg = `Tool timed out after ${timeout}ms: ${name}`;
       } else if (isAbort) {

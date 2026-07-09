@@ -9,7 +9,9 @@ import {
   registerGuest,
   registerSessionBucket,
   activeGuestForSession,
+  rememberAttachedGuest,
   partitionForSession,
+  registerAttachedGuestMetadata,
 } from "./active-guest.js";
 
 class FakeGuest extends EventEmitter {
@@ -134,5 +136,76 @@ describe("bucket-aware browser guest registry", () => {
       }),
     ).toThrow(/partition/i);
     expect(activeGuestForBucket("bucket-a")).toBeNull();
+  });
+
+  test("registers renderer metadata only after an authoritative attach from the same window", () => {
+    const a = guest(51, "https://a.example/", "A");
+    rememberAttachedGuest({
+      guest: a,
+      windowId: 7,
+      partition: "persist:browser:bucket-a",
+    });
+    registerAttachedGuestMetadata({
+      guestId: 51,
+      windowId: 7,
+      bucket: "bucket-a",
+      partition: "persist:browser:bucket-a",
+      source: "panel",
+    });
+
+    expect(activeGuestForBucket("bucket-a")?.guest).toBe(a);
+  });
+
+  test("rejects renderer-forged guest ids, owner windows, partitions, and session rebinds", () => {
+    const a = guest(61, "https://a.example/", "A");
+    expect(() =>
+      registerAttachedGuestMetadata({
+        guestId: 999,
+        windowId: 1,
+        bucket: "bucket-a",
+        partition: "persist:browser:bucket-a",
+      }),
+    ).toThrow(/not attached|different window/);
+
+    rememberAttachedGuest({
+      guest: a,
+      windowId: 1,
+      partition: "persist:browser:bucket-a",
+    });
+    expect(() =>
+      registerAttachedGuestMetadata({
+        guestId: 61,
+        windowId: 2,
+        bucket: "bucket-a",
+        partition: "persist:browser:bucket-a",
+      }),
+    ).toThrow(/different window/);
+    expect(() =>
+      registerAttachedGuestMetadata({
+        guestId: 61,
+        windowId: 1,
+        bucket: "bucket-a",
+        partition: "persist:browser:other",
+      }),
+    ).toThrow(/partition/i);
+
+    registerSessionBucket("session-a", "bucket-a", "persist:browser:bucket-a");
+    const b = guest(62, "https://b.example/", "B");
+    rememberAttachedGuest({
+      guest: b,
+      windowId: 1,
+      partition: "persist:browser:bucket-b",
+    });
+    expect(() =>
+      registerAttachedGuestMetadata({
+        guestId: 62,
+        windowId: 1,
+        bucket: "bucket-b",
+        partition: "persist:browser:bucket-b",
+        engineSessionId: "session-a",
+      }),
+    ).toThrow(/session bucket mismatch/);
+    expect(activeGuestForBucket("bucket-a")).toBeNull();
+    expect(activeGuestForBucket("bucket-b")).toBeNull();
   });
 });
