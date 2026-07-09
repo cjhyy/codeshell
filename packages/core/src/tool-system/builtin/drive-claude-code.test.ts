@@ -7,6 +7,8 @@ import {
   makeDriveClaudeCodeTool,
   driveAgentToolDef,
   makeDriveAgentTool,
+  driveAgentJobsToolDef,
+  driveAgentJobsTool,
 } from "./drive-claude-code.js";
 import { backgroundJobRegistry } from "./background-jobs.js";
 import { notificationQueue } from "./agent-notifications.js";
@@ -48,22 +50,25 @@ describe("DriveAgent tool", () => {
   it("registers DriveAgent and DriveClaudeCode with explicit long timeouts", () => {
     const drive = BUILTIN_TOOLS.find((t) => t.definition.name === "DriveAgent")?.definition;
     const alias = BUILTIN_TOOLS.find((t) => t.definition.name === "DriveClaudeCode")?.definition;
+    const jobs = BUILTIN_TOOLS.find((t) => t.definition.name === "DriveAgentJobs")?.definition;
     expect(drive?.timeoutMs).toBeGreaterThan(120_000);
     expect(alias?.timeoutMs).toBe(drive?.timeoutMs);
+    expect(jobs?.name).toBe("DriveAgentJobs");
   });
 
-  it("passes the ToolContext AbortSignal through to the runner", async () => {
+  it("propagates the ToolContext AbortSignal to the runner", async () => {
     const controller = new AbortController();
     let seen: AbortSignal | undefined;
     const tool = makeDriveAgentTool(async (o) => {
       seen = o.signal;
+      controller.abort();
       return { sessionId: "S", finalText: "", isError: false, exitCode: 0, lines: [] };
     });
     await tool(
       { prompt: "p", cwd: "/x", background: false } as any,
       { cwd: "/x", sessionId: "S-CTX", signal: controller.signal } as any,
     );
-    expect(seen).toBe(controller.signal);
+    expect(seen?.aborted).toBe(true);
   });
 
   it("appends attachment paths to the driven prompt and passes Codex image paths", async () => {
@@ -122,15 +127,16 @@ describe("DriveAgent tool", () => {
     }
   });
 
-  it("uses the registry-injected __signal when ToolContext is absent", async () => {
+  it("propagates the registry-injected __signal when ToolContext is absent", async () => {
     const controller = new AbortController();
     let seen: AbortSignal | undefined;
     const tool = makeDriveAgentTool(async (o) => {
       seen = o.signal;
+      controller.abort();
       return { sessionId: "S", finalText: "", isError: false, exitCode: 0, lines: [] };
     });
     await tool({ prompt: "p", cwd: "/x", background: false, __signal: controller.signal } as any);
-    expect(seen).toBe(controller.signal);
+    expect(seen?.aborted).toBe(true);
   });
 });
 
@@ -298,6 +304,8 @@ describe("DriveClaudeCode alias (back-compat)", () => {
       expect(first).not.toContain("Warning");
       expect(second).toContain("Warning");
       expect(second).toContain(realpathSync(tmp));
+      expect(second).toContain("DriveAgentJobs");
+      expect(second).toContain("first");
       expect(backgroundJobRegistry.listRunningForSession("S-CWD").map((j) => j.cwd)).toEqual([
         realpathSync(tmp),
         realpathSync(tmp),
@@ -502,6 +510,153 @@ describe("DriveClaudeCode alias (back-compat)", () => {
       expect(out).toContain(fileCwd);
       expect(ran).toBe(false);
     } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("DriveAgentJobs tool", () => {
+  it("has list/inspect/cancel actions", () => {
+    expect(driveAgentJobsToolDef.name).toBe("DriveAgentJobs");
+    expect((driveAgentJobsToolDef.inputSchema as any).properties.action.enum).toEqual([
+      "list",
+      "inspect",
+      "cancel",
+    ]);
+  });
+
+  it("lists running DriveAgent jobs in a cwd before dispatching another one", async () => {
+    backgroundJobRegistry.reset?.();
+    const tmp = mkdtempSync(join(tmpdir(), "drive-jobs-list-"));
+    try {
+      const never = () => new Promise<any>(() => {});
+      const tool = makeDriveAgentTool(never as any);
+
+      await tool(
+        {
+          prompt: "edit src/alpha.ts and keep tests focused",
+          cwd: tmp,
+          cli: "codex",
+        } as any,
+        { cwd: tmp, sessionId: "S-JOBS-LIST" } as any,
+      );
+
+      const job = backgroundJobRegistry.listRunningByCwd(tmp)[0];
+      expect(job).toBeDefined();
+      if (!job) throw new Error("expected running DriveAgent job");
+
+      const out = await driveAgentJobsTool(
+        { action: "list", cwd: tmp } as any,
+        { cwd: tmp, sessionId: "S-OTHER" } as any,
+      );
+
+      expect(out).toContain(job.jobId);
+      expect(out).toContain("status=running");
+      expect(out).toContain("cli=codex");
+      expect(out).toContain(`session=S-JOBS-LIST`);
+      expect(out).toContain(realpathSync(tmp));
+      expect(out).toContain("edit src/alpha.ts");
+      expect(out).toContain("changedFiles=unknown");
+    } finally {
+      backgroundJobRegistry.reset?.();
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("inspect returns DriveAgent prompt, cwd, cli, status, and known changed files", async () => {
+    backgroundJobRegistry.reset?.();
+    const tmp = mkdtempSync(join(tmpdir(), "drive-jobs-inspect-"));
+    try {
+      backgroundJobRegistry.start("cc-known", "S-INSPECT", "DriveAgent(claude): update docs", {
+        kind: "drive-agent",
+        cli: "claude",
+        cwd: tmp,
+        promptSummary: "update docs and tests",
+      });
+      backgroundJobRegistry.finish("cc-known", {
+        status: "completed",
+        finalText: "done",
+        changedFiles: ["docs/a.md", "packages/core/src/a.test.ts"],
+      });
+
+      const out = await driveAgentJobsTool(
+        { action: "inspect", jobId: "cc-known" } as any,
+        {
+          cwd: tmp,
+          sessionId: "S-INSPECT",
+        } as any,
+      );
+
+      expect(out).toContain("jobId: cc-known");
+      expect(out).toContain("status: completed");
+      expect(out).toContain("cli: claude");
+      expect(out).toContain(`cwd: ${realpathSync(tmp)}`);
+      expect(out).toContain("prompt: update docs and tests");
+      expect(out).toContain("changedFiles:");
+      expect(out).toContain("docs/a.md");
+      expect(out).toContain("packages/core/src/a.test.ts");
+    } finally {
+      backgroundJobRegistry.reset?.();
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("cancel aborts a running DriveAgent job, marks it cancelled, and emits exactly one cancel notification", async () => {
+    backgroundJobRegistry.reset?.();
+    notificationQueue.reset("S-CANCEL-CC");
+    const tmp = mkdtempSync(join(tmpdir(), "drive-jobs-cancel-"));
+    try {
+      let seenSignal: AbortSignal | undefined;
+      const runner = (opts: { signal?: AbortSignal }) =>
+        new Promise<any>((resolve) => {
+          seenSignal = opts.signal;
+          opts.signal?.addEventListener(
+            "abort",
+            () =>
+              resolve({
+                sessionId: "CC-CANCELLED",
+                finalText: "runner observed abort",
+                isError: true,
+                exitCode: null,
+                lines: [],
+              }),
+            { once: true },
+          );
+        });
+      const tool = makeDriveAgentTool(runner as any);
+
+      await tool(
+        { prompt: "long edit", cwd: tmp, cli: "claude" } as any,
+        { cwd: tmp, sessionId: "S-CANCEL-CC" } as any,
+      );
+      const job = backgroundJobRegistry.listRunningForSession("S-CANCEL-CC")[0];
+      expect(job).toBeDefined();
+      if (!job) throw new Error("expected running DriveAgent job");
+
+      const cancelOut = await driveAgentJobsTool(
+        { action: "cancel", jobId: job.jobId } as any,
+        { cwd: tmp, sessionId: "S-CANCEL-CC" } as any,
+      );
+
+      expect(cancelOut).toContain("cancelled");
+      expect(seenSignal?.aborted).toBe(true);
+      expect(backgroundJobRegistry.get(job.jobId)?.status).toBe("cancelled");
+
+      const firstDrain = notificationQueue.drainAll("S-CANCEL-CC");
+      expect(firstDrain).toHaveLength(1);
+      expect(firstDrain[0]).toMatchObject({
+        agentId: job.jobId,
+        status: "cancelled",
+        workKind: "cc",
+      });
+
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(backgroundJobRegistry.get(job.jobId)?.status).toBe("cancelled");
+      expect(notificationQueue.drainAll("S-CANCEL-CC")).toHaveLength(0);
+    } finally {
+      backgroundJobRegistry.reset?.();
+      notificationQueue.reset("S-CANCEL-CC");
       rmSync(tmp, { recursive: true, force: true });
     }
   });

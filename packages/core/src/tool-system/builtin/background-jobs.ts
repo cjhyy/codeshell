@@ -1,8 +1,8 @@
 /**
  * Registry of NON-agent background jobs (GenerateVideo poll loops, DriveAgent
  * external CLI runs). Mirrors the role `asyncAgentRegistry` plays for background
- * sub-agents, but a job is not an agent — it has no transcript, no abort(), and
- * must NOT show up in AgentStatus.
+ * sub-agents, but a job is not an agent — it has no transcript and must NOT
+ * show up in AgentStatus.
  *
  * The engine's wait-for-background loop parks the turn until a session has no
  * more RUNNING jobs, so the goal-stop-hook doesn't force the model to busy-loop
@@ -29,7 +29,8 @@ function isValidSessionId(sid: unknown): sid is string {
 
 type Listener = () => void;
 
-export type BackgroundJobStatus = "running" | "completed" | "failed";
+export type BackgroundJobStatus = "running" | "completed" | "failed" | "cancelled";
+export type BackgroundJobKind = "drive-agent" | "video" | "job";
 
 /** Generous per-session cap on retained terminal jobs — a leak backstop, not a
  *  UX limit; a human never spawns this many background jobs in one session. */
@@ -39,6 +40,8 @@ const MAX_TERMINAL_JOBS_PER_SESSION = 50;
 export interface BackgroundJobEntry {
   jobId: string;
   sessionId: string;
+  /** Machine-readable kind for tools that need to target a subset of jobs. */
+  kind?: BackgroundJobKind;
   /** Human description (e.g. "Generating video: <prompt>"). Shown to the goal
    *  judge (running) and in the background panel (all). */
   description: string;
@@ -55,18 +58,28 @@ export interface BackgroundJobEntry {
   changedFiles?: string[];
   /** Working directory for jobs that operate on the filesystem, e.g. DriveAgent. */
   cwd?: string;
+  /** DriveAgent prompt summary, separate from the UI-oriented description. */
+  promptSummary?: string;
+  /** External CLI kind for DriveAgent jobs. */
+  cli?: string;
+  /** Optional cancellation hook for jobs backed by a live process. */
+  abort?: () => void;
 }
 
 /** Outcome passed to finish() to record how a job ended. */
 export interface BackgroundJobOutcome {
-  status?: "completed" | "failed";
+  status?: "completed" | "failed" | "cancelled";
   finalText?: string;
   ccSessionId?: string;
   changedFiles?: string[];
 }
 
 export interface BackgroundJobStartOptions {
+  kind?: BackgroundJobKind;
   cwd?: string;
+  promptSummary?: string;
+  cli?: string;
+  abort?: () => void;
 }
 
 class BackgroundJobRegistry {
@@ -84,10 +97,14 @@ class BackgroundJobRegistry {
     this.jobs.set(jobId, {
       jobId,
       sessionId,
+      ...(options?.kind ? { kind: options.kind } : {}),
       description,
       status: "running",
       startedAt: Date.now(),
       ...(options?.cwd ? { cwd: normalizeCwdPath(options.cwd) } : {}),
+      ...(options?.promptSummary ? { promptSummary: options.promptSummary } : {}),
+      ...(options?.cli ? { cli: options.cli } : {}),
+      ...(options?.abort ? { abort: options.abort } : {}),
     });
     this.notify();
   }
@@ -97,6 +114,7 @@ class BackgroundJobRegistry {
   finish(jobId: string, outcome?: BackgroundJobOutcome): void {
     const entry = this.jobs.get(jobId);
     if (!entry) return;
+    if (entry.status !== "running") return;
     entry.status = outcome?.status ?? "completed";
     entry.finishedAt = Date.now();
     if (outcome?.finalText !== undefined) entry.finalText = outcome.finalText;
@@ -104,6 +122,29 @@ class BackgroundJobRegistry {
     if (outcome?.changedFiles !== undefined) entry.changedFiles = outcome.changedFiles;
     this.evictTerminalOverCap(entry.sessionId);
     this.notify();
+  }
+
+  get(jobId: string): BackgroundJobEntry | undefined {
+    return this.jobs.get(jobId);
+  }
+
+  cancel(jobId: string, outcome?: Omit<BackgroundJobOutcome, "status">): boolean {
+    const entry = this.jobs.get(jobId);
+    if (!entry) return false;
+    if (entry.status !== "running") return false;
+    try {
+      entry.abort?.();
+    } catch {
+      // ignore abort errors — we still mark cancelled
+    }
+    entry.status = "cancelled";
+    entry.finishedAt = Date.now();
+    if (outcome?.finalText !== undefined) entry.finalText = outcome.finalText;
+    if (outcome?.ccSessionId !== undefined) entry.ccSessionId = outcome.ccSessionId;
+    if (outcome?.changedFiles !== undefined) entry.changedFiles = outcome.changedFiles;
+    this.evictTerminalOverCap(entry.sessionId);
+    this.notify();
+    return true;
   }
 
   /** True while any RUNNING job spawned by `sessionId` remains. */
@@ -158,6 +199,15 @@ class BackgroundJobRegistry {
 
   /** Test helper: drop all tracked jobs. */
   reset(): void {
+    for (const e of this.jobs.values()) {
+      if (e.status === "running") {
+        try {
+          e.abort?.();
+        } catch {
+          // ignore
+        }
+      }
+    }
     this.jobs.clear();
   }
 

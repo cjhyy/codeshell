@@ -69,6 +69,8 @@ import {
   driveClaudeCodeTool,
   driveAgentToolDef,
   driveAgentTool,
+  driveAgentJobsToolDef,
+  driveAgentJobsTool,
   DRIVE_AGENT_TOOL_TIMEOUT_MS,
 } from "./drive-claude-code.js";
 import { checkQuotaToolDef, checkQuotaTool } from "./check-quota.js";
@@ -572,6 +574,16 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       pathPolicy: [{ kind: "arg", arg: "attachmentPaths", operation: "read" }],
     },
     execute: driveAgentTool,
+  },
+  {
+    definition: {
+      ...driveAgentJobsToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: driveAgentJobsTool,
   },
   // Back-compat alias: DriveClaudeCode = DriveAgent pinned to cli:claude. Kept
   // registered so old prompts/memories that name DriveClaudeCode still resolve.

@@ -2,7 +2,7 @@ import type { ToolDefinition } from "../../types.js";
 import { runAgentOnce } from "../../cc-orchestrator/external-agent-driver.js";
 import { claudeAdapter, codexAdapter } from "../../cc-orchestrator/agent-adapter.js";
 import type { AgentRunResult } from "../../cc-orchestrator/external-agent-driver.js";
-import { backgroundJobRegistry } from "./background-jobs.js";
+import { backgroundJobRegistry, type BackgroundJobEntry } from "./background-jobs.js";
 import { readExternalChangedFiles } from "../../cc-orchestrator/external-agent-changes.js";
 import { isExistingDirectory, normalizeCwdPath } from "../../cc-orchestrator/cwd-normalize.js";
 import { notificationQueue } from "./agent-notifications.js";
@@ -35,7 +35,11 @@ export const driveAgentToolDef: ToolDefinition = {
     "Runs in the BACKGROUND by default — these tasks are typically long (minutes to hours), so this " +
     "returns immediately and the result is delivered to you later via a completion notification " +
     "that wakes you. Do NOT sleep-poll for it; just continue or end your turn — you'll be woken " +
-    "with the result. For a quick task where you want the answer inline, pass background:false. " +
+    "with the result. " +
+    "Before launching writable work in a cwd, call DriveAgentJobs(action:'list', cwd) to see any " +
+    "already-running DriveAgent jobs there, their prompt summaries, owner sessions, CLI kind, and " +
+    "known changed files; use DriveAgentJobs(action:'cancel', jobId) if you must stop one. " +
+    "For a quick task where you want the answer inline, pass background:false. " +
     "It has NO time concept of its own: for 'in N minutes' / 'every N' / looping, use CronCreate " +
     "instead (never sleep). A scheduled CronCreate job runs one codeshell turn whose prompt can " +
     "instruct it to call DriveAgent; to continue a prior session across runs, have that turn pass " +
@@ -134,6 +138,45 @@ function newDriveJobId(): string {
   return `cc-${process.hrtime.bigint().toString(36)}`;
 }
 
+function summarizePrompt(prompt: string, max = 120): string {
+  const oneLine = prompt.replace(/\s+/g, " ").trim();
+  if (oneLine.length <= max) return oneLine;
+  return `${oneLine.slice(0, Math.max(0, max - 3))}...`;
+}
+
+function isDriveAgentJob(job: BackgroundJobEntry): boolean {
+  return job.kind === "drive-agent" || job.description.startsWith("DriveAgent(");
+}
+
+function changedFilesSummary(job: BackgroundJobEntry): string {
+  const files = job.changedFiles ?? [];
+  if (files.length === 0) return "unknown";
+  if (files.length <= 4) return files.join(",");
+  return `${files.slice(0, 4).join(",")} (+${files.length - 4} more)`;
+}
+
+function jobDurationSeconds(job: BackgroundJobEntry): string {
+  const end = job.finishedAt ?? Date.now();
+  return `${Math.max(0, (end - job.startedAt) / 1000).toFixed(1)}s`;
+}
+
+function formatDriveJobListLine(job: BackgroundJobEntry): string {
+  const prompt = job.promptSummary || job.description || "(no prompt summary)";
+  const cwd = job.cwd ?? "(unknown cwd)";
+  const cli = job.cli ?? "unknown";
+  return [
+    `${job.jobId}`,
+    `status=${job.status}`,
+    `cli=${cli}`,
+    `session=${job.sessionId}`,
+    `cwd=${cwd}`,
+    `startedAt=${new Date(job.startedAt).toISOString()}`,
+    `duration=${jobDurationSeconds(job)}`,
+    `changedFiles=${changedFilesSummary(job)}`,
+    `prompt="${prompt}"`,
+  ].join("  ");
+}
+
 function isValidSessionId(sessionId: unknown): sessionId is string {
   return typeof sessionId === "string" && sessionId.length > 0;
 }
@@ -210,10 +253,15 @@ function recordSuccessfulSession(
 
 function duplicateCwdWarning(cwd: string, writable: boolean): string | undefined {
   if (!writable) return undefined;
-  const running = backgroundJobRegistry.listRunningByCwd(cwd);
+  const running = backgroundJobRegistry.listRunningByCwd(cwd).filter(isDriveAgentJob);
   if (running.length === 0) return undefined;
-  const ids = running.map((j) => j.jobId).join(", ");
-  return `Warning: another DriveAgent job is already running in cwd ${cwd} (jobId ${ids}). Concurrent writable agents in the same directory can overwrite each other's work.`;
+  const jobs = running.map(formatDriveJobListLine).join("; ");
+  return (
+    `Warning: another DriveAgent job is already running in cwd ${cwd}. ` +
+    "Concurrent writable agents in the same directory can overwrite each other's work. " +
+    `Run DriveAgentJobs(action:"list", cwd:"${cwd}") before dispatching parallel work for details/cancellation. ` +
+    `Running: ${jobs}`
+  );
 }
 
 function attachDriveCompletion(params: {
@@ -228,6 +276,7 @@ function attachDriveCompletion(params: {
   const { jobId, sessionId, label, cli, cwd, run, sessionStore } = params;
   void run
     .then((r) => {
+      if (backgroundJobRegistry.get(jobId)?.status !== "running") return;
       recordSuccessfulSession(sessionStore, cli, cwd, r);
       // Deliver the result back so the woken agent actually sees the answer
       // (not just "a job finished"). Mirrors the video/sub-agent completion
@@ -268,6 +317,7 @@ function attachDriveCompletion(params: {
       });
     })
     .catch((err) => {
+      if (backgroundJobRegistry.get(jobId)?.status !== "running") return;
       const msg = (err as Error)?.message ?? String(err);
       notificationQueue.enqueue(
         {
@@ -289,14 +339,23 @@ function trackBackgroundRun(params: {
   label: string;
   cli: DriveCli;
   cwd: string;
-  run: Promise<AgentRunResult>;
+  promptSummary: string;
+  start: () => Promise<AgentRunResult>;
+  abort: () => void;
   sessionStore: SessionStore;
   writable: boolean;
 }): { jobId: string; warning?: string } {
   const warning = duplicateCwdWarning(params.cwd, params.writable);
   const jobId = newDriveJobId();
-  backgroundJobRegistry.start(jobId, params.sessionId, params.label, { cwd: params.cwd });
-  attachDriveCompletion({ ...params, jobId });
+  backgroundJobRegistry.start(jobId, params.sessionId, params.label, {
+    kind: "drive-agent",
+    cwd: params.cwd,
+    cli: params.cli,
+    promptSummary: params.promptSummary,
+    abort: params.abort,
+  });
+  const run = params.start();
+  attachDriveCompletion({ ...params, jobId, run });
   return { jobId, ...(warning ? { warning } : {}) };
 }
 
@@ -318,6 +377,17 @@ async function waitForForegroundOrHandoff(
   } finally {
     if (timer) clearTimeout(timer);
   }
+}
+
+function makeAbortController(parent?: AbortSignal, linkParent = false): AbortController {
+  const controller = new AbortController();
+  if (!parent) return controller;
+  if (parent.aborted) {
+    controller.abort(parent.reason);
+  } else if (linkParent) {
+    parent.addEventListener("abort", () => controller.abort(parent.reason), { once: true });
+  }
+  return controller;
 }
 
 /** Factory so tests can inject a fake runner. `fixedCli` (back-compat) forces a
@@ -389,13 +459,14 @@ export function makeDriveAgentTool(
         : [];
     const cliName = cli === "codex" ? "Codex" : "Claude Code";
     const label = `DriveAgent(${cli}): ${prompt.slice(0, 40)}`;
-    const runOpts = {
+    const promptSummary = summarizePrompt(prompt);
+    const callerSignal = ctx?.signal ?? argSignal(args);
+    const runOptsBase = {
       cli,
       prompt: promptWithAttachments,
       resumeSessionId,
       cwd,
       permissionMode,
-      signal: ctx?.signal ?? argSignal(args),
       imagePaths,
     };
     const foregroundHandoffMs = options.foregroundHandoffMs ?? DRIVE_AGENT_FOREGROUND_HANDOFF_MS;
@@ -412,12 +483,15 @@ export function makeDriveAgentTool(
       if (typeof sessionId !== "string" || sessionId.length === 0) {
         return `Error: cannot start a background ${cliName} job without a session — its result notification would be dropped. Retry with background:false, or ensure the tool runs inside a session.`;
       }
+      const abortController = makeAbortController(callerSignal, false);
       const tracked = trackBackgroundRun({
         sessionId,
         label,
         cli,
         cwd,
-        run: startRun(runner, runOpts),
+        promptSummary,
+        start: () => startRun(runner, { ...runOptsBase, signal: abortController.signal }),
+        abort: () => abortController.abort(),
         sessionStore,
         writable: isWritableRun,
       });
@@ -429,7 +503,8 @@ export function makeDriveAgentTool(
         .filter(Boolean)
         .join("\n");
     }
-    const run = startRun(runner, runOpts);
+    const foregroundAbort = makeAbortController(callerSignal, true);
+    const run = startRun(runner, { ...runOptsBase, signal: foregroundAbort.signal });
     const result = await waitForForegroundOrHandoff(run, foregroundHandoffMs);
     if (result.kind === "handoff" && isValidSessionId(ctx?.sessionId)) {
       const tracked = trackBackgroundRun({
@@ -437,7 +512,9 @@ export function makeDriveAgentTool(
         label,
         cli,
         cwd,
-        run,
+        promptSummary,
+        start: () => run,
+        abort: () => foregroundAbort.abort(),
         sessionStore,
         writable: isWritableRun,
       });
@@ -459,6 +536,143 @@ export function makeDriveAgentTool(
 }
 
 export const driveAgentTool = makeDriveAgentTool();
+
+export const driveAgentJobsToolDef: ToolDefinition = {
+  name: "DriveAgentJobs",
+  description:
+    "List, inspect, or cancel background DriveAgent jobs. Use action:'list' before launching " +
+    "writable DriveAgent work in a cwd to see already-running jobs there, including prompt " +
+    "summary, owner session, cwd, CLI kind, status, start time, and known changed files. " +
+    "Use action:'inspect' with jobId for full details, or action:'cancel' with jobId to abort " +
+    "a running DriveAgent external CLI process and deliver a cancellation notification.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      action: {
+        type: "string",
+        enum: ["list", "inspect", "cancel"],
+        description: "What to do. Defaults to list.",
+      },
+      jobId: {
+        type: "string",
+        description: "DriveAgent jobId for inspect or cancel.",
+      },
+      cwd: {
+        type: "string",
+        description:
+          "When listing, restrict to DriveAgent jobs in this cwd. This is cross-session so it can catch same-directory write conflicts before dispatch.",
+      },
+      status: {
+        type: "string",
+        enum: ["running", "all"],
+        description: "When listing: running (default) or all retained DriveAgent jobs.",
+      },
+      all: {
+        type: "boolean",
+        description:
+          "When listing without cwd: true lists DriveAgent jobs from every session; default lists only this session when session context exists.",
+      },
+    },
+  },
+};
+
+function jobIdArg(args: Record<string, unknown>): string | undefined {
+  const camel = typeof args.jobId === "string" ? args.jobId.trim() : "";
+  if (camel) return camel;
+  const snake = typeof args.job_id === "string" ? args.job_id.trim() : "";
+  return snake || undefined;
+}
+
+function listDriveAgentJobs(args: Record<string, unknown>, ctx?: ToolContext): string {
+  const rawCwd = typeof args.cwd === "string" && args.cwd.trim() ? args.cwd : undefined;
+  const cwd = rawCwd ? normalizeCwdPath(rawCwd) : undefined;
+  const sessionId = ctx?.sessionId;
+  const listAllSessions = args.all === true || !!cwd || !sessionId;
+  const status = args.status === "all" ? "all" : "running";
+  let jobs =
+    listAllSessions || !sessionId
+      ? backgroundJobRegistry.list()
+      : backgroundJobRegistry.listForSession(sessionId);
+  jobs = jobs.filter(isDriveAgentJob);
+  if (cwd) jobs = jobs.filter((job) => job.cwd === cwd);
+  if (status === "running") jobs = jobs.filter((job) => job.status === "running");
+
+  if (jobs.length === 0) {
+    if (cwd) return `No ${status} DriveAgent jobs in cwd ${cwd}.`;
+    if (listAllSessions) return `No ${status} DriveAgent jobs in this process.`;
+    return `No ${status} DriveAgent jobs in this session.`;
+  }
+  return jobs.map(formatDriveJobListLine).join("\n");
+}
+
+function inspectDriveAgentJob(jobId: string | undefined): string {
+  if (!jobId) return "Error: jobId is required.";
+  const job = backgroundJobRegistry.get(jobId);
+  if (!job || !isDriveAgentJob(job)) return `Error: DriveAgent jobId "${jobId}" not found.`;
+  const lines = [
+    `jobId: ${job.jobId}`,
+    `status: ${job.status}`,
+    `cli: ${job.cli ?? "unknown"}`,
+    `session: ${job.sessionId}`,
+    `cwd: ${job.cwd ?? "(unknown cwd)"}`,
+    `startedAt: ${new Date(job.startedAt).toISOString()}`,
+    `duration: ${jobDurationSeconds(job)}`,
+    `prompt: ${job.promptSummary || job.description || "(no prompt summary)"}`,
+    `description: ${job.description}`,
+  ];
+  if (job.finishedAt !== undefined)
+    lines.push(`finishedAt: ${new Date(job.finishedAt).toISOString()}`);
+  if (job.ccSessionId) lines.push(`ccSessionId: ${job.ccSessionId}`);
+  if (job.changedFiles && job.changedFiles.length > 0) {
+    lines.push("changedFiles:", ...job.changedFiles.map((file) => `- ${file}`));
+  } else {
+    lines.push("changedFiles: unknown");
+  }
+  if (job.finalText) lines.push("finalText:", job.finalText);
+  return lines.join("\n");
+}
+
+function cancelDriveAgentJob(jobId: string | undefined): string {
+  if (!jobId) return "Error: jobId is required.";
+  const job = backgroundJobRegistry.get(jobId);
+  if (!job || !isDriveAgentJob(job)) return `Error: DriveAgent jobId "${jobId}" not found.`;
+  if (job.status !== "running") {
+    return `DriveAgent job ${jobId} is already ${job.status}; nothing to cancel.`;
+  }
+  if (!job.abort) {
+    return `Error: DriveAgent job ${jobId} has no cancellation handle recorded.`;
+  }
+
+  const finalText = `DriveAgent job ${jobId} cancelled by DriveAgentJobs.`;
+  const ok = backgroundJobRegistry.cancel(jobId, { finalText });
+  if (!ok) return `Failed to cancel DriveAgent job ${jobId}.`;
+  notificationQueue.enqueue(
+    {
+      agentId: jobId,
+      description: job.description,
+      status: "cancelled",
+      workKind: "cc",
+      error: finalText,
+      ccSessionId: job.ccSessionId,
+      enqueuedAt: Date.now(),
+    },
+    job.sessionId,
+  );
+  return `DriveAgent job ${jobId} cancelled.`;
+}
+
+export async function driveAgentJobsTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
+  const action =
+    args.action === "inspect" || args.action === "cancel" || args.action === "list"
+      ? args.action
+      : "list";
+  if (action === "inspect") return inspectDriveAgentJob(jobIdArg(args));
+  if (action === "cancel") return cancelDriveAgentJob(jobIdArg(args));
+  return listDriveAgentJobs(args, ctx);
+}
 
 // ── Back-compat: DriveClaudeCode = DriveAgent pinned to cli:"claude" ──────────
 // Kept so old prompts / memories / call sites that reference DriveClaudeCode

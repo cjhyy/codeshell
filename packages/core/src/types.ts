@@ -599,18 +599,17 @@ export type StreamEvent =
       sessionPromptTokens?: number;
       agentId?: string;
     }
-  // B2.2 — background sub-agent finished (completed | failed). Mirrors the
+  // B2.2 — background sub-agent/job finished (completed | failed | cancelled). Mirrors the
   // shape of NotificationItem in tool-system/builtin/agent-notifications.ts
-  // so adapters between the two paths are trivial. Status "cancelled" is
-  // intentionally absent — the in-memory queue does not enqueue cancelled
-  // agents (user explicitly stopped, no follow-up turn needed), and this
-  // protocol event matches that policy.
+  // so adapters between the two paths are trivial. Sub-agent cancellation stays
+  // silent, but DriveAgent cancellation enqueues a cancelled event so the
+  // detached external CLI job does not leave a session waiting forever.
   | {
       type: "background_agent_completed";
       agentId: string;
       name?: string;
       description: string;
-      status: "completed" | "failed";
+      status: "completed" | "failed" | "cancelled";
       /**
        * What kind of background work this was. Lets UIs localize the
        * completion toast (e.g. a shell shows "命令完成" not the raw English
@@ -622,7 +621,7 @@ export type StreamEvent =
       command?: string;
       /** Final assistant text (status === "completed" only). */
       finalText?: string;
-      /** Error message (status === "failed" only). */
+      /** Error message (status === "failed" or "cancelled" only). */
       error?: string;
       /** When the bg agent finished (Date.now() value). */
       enqueuedAt: number;
