@@ -107,23 +107,12 @@ import { AgentDefinitionRegistry } from "../agent/agent-definition-registry.js";
 import { defaultCacheDir } from "../llm/model-cache.js";
 import { detectProviderFromApiKey, buildModelPool } from "../onboarding.js";
 import { detectPastedNoise } from "../utils/task-sanitizer.js";
-import { parseTaskWithImages, type ParsedTask } from "./parse-task.js";
-import { buildInputAttachmentContext } from "./input-attachments.js";
-import {
-  enforceImagePolicy,
-  byteLengthFromBase64,
-  dropOversizedImages,
-  collectAttachedImagePaths,
-} from "./image-policy.js";
-import { tryCompressImages } from "./image-compression.js";
 import { buildSessionTitle } from "./session-title.js";
-import { capabilitiesFor } from "../llm/capabilities/index.js";
-import type { ProviderKindName } from "../llm/provider-kinds.js";
-import type { ContentBlock } from "../types.js";
 import { MemoryOrchestrator } from "../services/memory-orchestrator.js";
 import { runDreamConsolidation } from "../services/dream-consolidation.js";
 import { EngineRuntime } from "./runtime.js";
-import { join, isAbsolute } from "node:path";
+import { buildRunUserMessageContent, prepareRunImageInput } from "./run-image-input.js";
+import { join } from "node:path";
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import type { InputAttachmentMeta } from "../protocol/types.js";
 
@@ -1027,143 +1016,15 @@ export class Engine {
     };
     if (options) options.onStream = wrappedOnStream;
 
-    // ── P2-6: image input ─────────────────────────────────────────────
-    // Parse `<codeshell-image>` blocks out of the raw task string before
-    // any other gate looks at it. Two concerns:
-    //   1. The noise detector below sees the raw base64 as gibberish and
-    //      would reject the whole turn — split images out first so it
-    //      only inspects the prose portion.
-    //   2. Models that don't accept vision must be refused immediately,
-    //      with the image bytes intact for the user to retry on another
-    //      model. Silent text-only fallback was the failure mode this
-    //      gate is here to prevent.
-    let parsedTask: ParsedTask;
-    try {
-      parsedTask = parseTaskWithImages(task);
-    } catch (err) {
-      const msg = (err as Error).message;
-      logger.warn("engine.run.image_parse_failed", { error: msg });
-      return {
-        text: `ERROR: image attachment is malformed (${msg}). Drop the image and try again, or re-attach it.`,
-        reason: "image_error",
-        sessionId: options?.sessionId ?? "image-parse-failed",
-        turnCount: 0,
-        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
-      };
-    }
-    const cap = capabilitiesFor(
-      (this.config.llm.providerKind ?? this.config.llm.provider) as ProviderKindName,
-      this.config.llm.model,
-    );
-    const attachmentContext = await buildInputAttachmentContext(options?.attachments, cwd, {
-      includeImageBytes: cap.supportsVision,
-      expectedSessionId: options?.sessionId,
+    const imageInput = await prepareRunImageInput({
+      task,
+      cwd,
+      llm: this.config.llm,
+      sessionId: options?.sessionId,
+      attachments: options?.attachments,
     });
-    if (attachmentContext.errors.length > 0) {
-      const detail = attachmentContext.errors.join("; ");
-      logger.warn("engine.run.input_attachment_failed", { error: detail });
-      return {
-        text: `ERROR: input attachment could not be read (${detail}). Re-attach it or choose a path inside the workspace.`,
-        reason: "image_error",
-        sessionId: options?.sessionId ?? "input-attachment-failed",
-        turnCount: 0,
-        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
-      };
-    }
-    if (attachmentContext.text || attachmentContext.hasStructuredImageAttachments) {
-      parsedTask = {
-        text: [parsedTask.text, attachmentContext.text].filter(Boolean).join("\n\n"),
-        images: [...parsedTask.images, ...attachmentContext.images],
-        hasImages:
-          parsedTask.hasImages ||
-          attachmentContext.images.length > 0 ||
-          attachmentContext.hasStructuredImageAttachments,
-      };
-    }
-    if (parsedTask.hasImages) {
-      if (!cap.supportsVision) {
-        logger.warn("engine.run.vision_not_supported", {
-          provider: this.config.llm.provider,
-          model: this.config.llm.model,
-          imageCount: parsedTask.images.length,
-        });
-        return {
-          text:
-            `ERROR: model "${this.config.llm.model}" does not accept image input. ` +
-            `Switch to a vision-capable model (e.g. gpt-4o, claude-sonnet, gemini-1.5-pro) and resend.`,
-          reason: "image_error",
-          sessionId: options?.sessionId ?? "vision-not-supported",
-          turnCount: 0,
-          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
-        };
-      }
-      // Size gate. Hosts (desktop renderer, TUI) are expected to
-      // pre-compress to IMAGE_TARGETS — if they didn't, we fail the turn
-      // fast with a clear message instead of letting the OpenAI client
-      // grind through three 16-second "Connection error" retries on a
-      // 4 MB body. See `image-policy.ts` for the rationale and limits.
-      let verdict = enforceImagePolicy(parsedTask.images);
-      if (!verdict.ok && verdict.code === "image_too_large") {
-        // One image blew the per-image cap. Try the engine-side
-        // compressor (jimp-backed when installed; no-op otherwise) so
-        // TUI / MCP paths that lack a host-side resize don't fail
-        // outright on a screenshot they could have rescaled. The
-        // re-check below is what decides whether we proceed.
-        const compressed = await tryCompressImages(parsedTask.images);
-        if (compressed.anyCompressed) {
-          parsedTask.images = compressed.images;
-          logger.info("engine.run.image_compressed", {
-            before: verdict.offender?.bytes,
-            after: compressed.images.reduce((s, i) => s + byteLengthFromBase64(i.base64), 0),
-          });
-          verdict = enforceImagePolicy(parsedTask.images);
-        }
-      }
-      // After compression, anything still over the per-image cap is
-      // dropped with a textual placeholder instead of failing the
-      // turn (TODO-week.md #9e). The "5MB brick session" failure
-      // mode from Claude Code (research doc §A) was the case where a
-      // poisoned image entered history and every subsequent request
-      // re-sent it; placeholders keep history clean while letting
-      // the rest of the turn run.
-      if (!verdict.ok && verdict.code === "image_too_large") {
-        const drop = dropOversizedImages(parsedTask.images);
-        if (drop.droppedCount > 0) {
-          parsedTask.images = drop.kept;
-          parsedTask.hasImages = drop.kept.length > 0;
-          parsedTask.text = drop.placeholder + "\n\n" + parsedTask.text;
-          logger.warn("engine.run.image_dropped", {
-            droppedCount: drop.droppedCount,
-            keptCount: drop.kept.length,
-          });
-          verdict = enforceImagePolicy(parsedTask.images);
-        }
-      }
-      if (!verdict.ok) {
-        // Cumulative / count caps can't be rescued by per-image
-        // dropping (well — too_many_images could trim by FIFO, but
-        // that's a bigger UX call than we want to make silently).
-        // Refuse the turn with the policy message.
-        logger.warn("engine.run.image_policy_failed", {
-          code: verdict.code,
-          imageCount: verdict.totals.imageCount,
-          totalBytes: verdict.totals.totalBytes,
-          offender: verdict.offender,
-        });
-        return {
-          text: `ERROR: ${verdict.message}`,
-          reason: "image_error",
-          sessionId: options?.sessionId ?? `image-policy-${verdict.code}`,
-          turnCount: 0,
-          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
-        };
-      }
-    }
-    // For downstream noise-detection + transcript persistence we want the
-    // *text* portion only — base64 bytes count as "noise" by the heuristic
-    // and would also bloat the transcript by megabytes per image. Image
-    // bytes ride in parsedTask.images and re-enter the message tree below.
-    const taskText = parsedTask.text;
+    if (!imageInput.ok) return imageInput.result;
+    const { parsedTask, taskText } = imageInput;
 
     const noise = detectPastedNoise(taskText);
     if (noise.isNoise) {
@@ -1367,46 +1228,7 @@ export class Engine {
       imageCount: parsedTask.images.length,
     });
 
-    // Compose the user-turn payload once so resume + cold paths agree on
-    // shape. With images, content becomes a ContentBlock[] holding one
-    // text block (when prose is present) followed by one image block per
-    // attachment — the provider-specific clients translate this to OpenAI
-    // `image_url` or Anthropic `{type:image, source:base64}` downstream.
-    // When an attached image came from a workspace FILE (the desktop composer's
-    // path-attach flow sets ParsedImage.name = the absolute path), surface that
-    // path to the model as text. The image bytes still ride along for vision,
-    // but tools that operate on files — GenerateImage(referenceImages),
-    // Read, etc. — need the on-disk path, not just the pixels. Without this the
-    // path the composer already knew was silently dropped, and the model would
-    // answer "图片没落到项目文件夹，找不到路径" (the seedance 图生图 dead-end).
-    // Only names that resolve to an existing file qualify; a pasted screenshot
-    // whose name is just "screenshot.png" is not a path and is left out.
-    const attachedPaths = collectAttachedImagePaths(
-      parsedTask.images,
-      (name) => (isAbsolute(name) ? name : join(cwd, name)),
-      existsSync,
-    );
-    const pathHint =
-      attachedPaths.length > 0
-        ? `\n\n<attached-image-paths>\n${attachedPaths.join("\n")}\n</attached-image-paths>\n` +
-          `(上面附带的图片在工作区的真实路径，如需把它们作为工具输入（例如 GenerateImage 的 referenceImages、图生图参考图），直接使用这些路径。)`
-        : "";
-
-    const userMessageContent: string | ContentBlock[] = parsedTask.hasImages
-      ? [
-          ...(parsedTask.text || pathHint
-            ? [{ type: "text" as const, text: `${parsedTask.text}${pathHint}` }]
-            : []),
-          ...parsedTask.images.map((img) => ({
-            type: "image" as const,
-            source: {
-              type: "base64" as const,
-              media_type: img.mime,
-              data: img.base64,
-            },
-          })),
-        ]
-      : taskText;
+    const userMessageContent = buildRunUserMessageContent(parsedTask, cwd, taskText);
 
     // Create or resume session.
     //
