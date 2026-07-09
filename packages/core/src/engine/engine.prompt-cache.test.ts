@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -21,6 +21,7 @@ type CapturedCall = {
 
 type Scenario = {
   primaryCalls: CapturedCall[];
+  summaryCalls: CapturedCall[];
   responses: LLMResponse[];
 };
 
@@ -38,7 +39,20 @@ class FakePromptCacheClient extends LLMClientBase {
     if (!scenario) throw new Error(`missing fake scenario: ${this.model}`);
     const isPrimaryCall = options.systemPrompt.includes("Working directory:");
     if (!isPrimaryCall) {
-      const response = stopResponse("auxiliary");
+      const isSummaryCall = options.systemPrompt.includes("conversation summarizer");
+      if (isSummaryCall) {
+        scenario.summaryCalls.push({
+          messages: cloneMessages(options.messages),
+          systemPrompt: options.systemPrompt,
+        });
+      }
+      const promptText = JSON.stringify(options.messages);
+      const dynamicMarker = promptText.match(/summary-dynamic-[^"\\\s<]+\.txt/)?.[0];
+      const response = stopResponse(
+        dynamicMarker
+          ? `SUMMARY: stale dynamic context leaked into summary: ${dynamicMarker}. ${"condensed ".repeat(12)}`
+          : `SUMMARY: clean prior conversation without volatile context. ${"condensed ".repeat(12)}`,
+      );
       this.recordUsage(response.usage!, options);
       return response;
     }
@@ -123,6 +137,7 @@ describe("Engine prompt-cache hygiene", () => {
 
     scenarios.set(model, {
       primaryCalls: [],
+      summaryCalls: [],
       responses: [stopResponse("first done"), stopResponse("second done")],
     });
 
@@ -167,6 +182,77 @@ describe("Engine prompt-cache hygiene", () => {
     }
   });
 
+  it("keeps dynamicContext out of real summary compaction anchored summaries", async () => {
+    const sessionId = "s-prompt-cache-summary-hygiene";
+    const model = `${provider}-summary-${Date.now()}-${Math.random()}`;
+    const firstDynamicMarker = `summary-dynamic-${Date.now()}.txt`;
+    const earlyAssistantPayload = "assistant payload ".repeat(200);
+    const recentAssistantPayload = "recent payload ".repeat(10);
+
+    writeFileSync(join(repo, "CODESHELL.md"), "project instructions\n");
+    mkdirSync(join(repo, ".code-shell"), { recursive: true });
+    writeFileSync(
+      join(repo, ".code-shell", "settings.json"),
+      JSON.stringify({
+        context: {
+          compactAtRatio: 0.28,
+          summarizeAtRatio: 0.99,
+          microcompactFloorRatio: 0.28,
+        },
+      }),
+    );
+    git(repo, ["add", "CODESHELL.md"]);
+    git(repo, ["commit", "-q", "-m", "init"]);
+    writeFileSync(join(repo, firstDynamicMarker), "summary dynamic context marker\n");
+
+    scenarios.set(model, {
+      primaryCalls: [],
+      summaryCalls: [],
+      responses: [
+        ...Array.from({ length: 10 }, (_, i) => {
+          const promptTokens = i < 9 ? 2000 : 5000;
+          const payload = i < 5 ? earlyAssistantPayload : recentAssistantPayload;
+          return {
+            text: `${payload}${i}`,
+            toolCalls: [{ id: `missing-${i}`, toolName: "MissingTool", args: {} }],
+            stopReason: "tool_use" as const,
+            usage: { promptTokens, completionTokens: 1, totalTokens: promptTokens + 1 },
+          };
+        }),
+        stopResponse("done after summary compaction"),
+      ],
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: repo,
+        sessionStorageDir: sessions,
+        enabledBuiltinTools: [],
+        preset: "terminal-coding",
+        headless: true,
+        maxContextTokens: 10_000,
+      });
+      (engine as any).hooks.clear();
+
+      await engine.run("force summary compaction", { sessionId, cwd: repo });
+
+      const scenario = scenarios.get(model)!;
+      expect(JSON.stringify(scenario.primaryCalls[0]!.messages)).toContain(firstDynamicMarker);
+      expect(scenario.summaryCalls.length).toBeGreaterThan(0);
+      expect(JSON.stringify(scenario.summaryCalls)).not.toContain(firstDynamicMarker);
+
+      const cachedHistory = (engine as any).compactedMessagesBySession.get(sessionId) as
+        | Message[]
+        | undefined;
+      const cachedText = JSON.stringify(cachedHistory ?? []);
+      expect(cachedText).toContain("<anchored-summary>");
+      expect(cachedText).not.toContain(firstDynamicMarker);
+    } finally {
+      scenarios.delete(model);
+    }
+  });
+
   it("warns when cache_read drops sharply for the same session", async () => {
     const sessionId = "s-cache-read-drop";
     const model = `${provider}-drop-${Date.now()}-${Math.random()}`;
@@ -178,6 +264,7 @@ describe("Engine prompt-cache hygiene", () => {
 
     scenarios.set(model, {
       primaryCalls: [],
+      summaryCalls: [],
       responses: [
         stopResponse("warm", {
           promptTokens: 2000,
@@ -222,5 +309,28 @@ describe("Engine prompt-cache hygiene", () => {
       warn.mockRestore();
       scenarios.delete(model);
     }
+  });
+
+  it("bounds cache_read diagnostic state across sessions", () => {
+    const model = `${provider}-cache-read-bound-${Date.now()}-${Math.random()}`;
+    const engine = new Engine({
+      llm: { provider, model, apiKey: "test" } as never,
+      cwd: repo,
+      sessionStorageDir: sessions,
+      enabledBuiltinTools: [],
+      preset: "terminal-coding",
+      headless: true,
+    });
+
+    for (let i = 0; i < 260; i++) {
+      (engine as any).recordCacheReadDiagnostics(`s-${i}`, {
+        cacheReadTokens: i + 1,
+      });
+    }
+
+    const diagnostics = (engine as any).lastCacheReadBySid as Map<string, number>;
+    expect(diagnostics.size).toBeLessThanOrEqual(256);
+    expect(diagnostics.has("s-0")).toBe(false);
+    expect(diagnostics.has("s-259")).toBe(true);
   });
 });

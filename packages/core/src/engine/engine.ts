@@ -130,6 +130,7 @@ import type { InputAttachmentMeta } from "../protocol/types.js";
 const CACHE_READ_DROP_MIN_PREVIOUS_TOKENS = 100;
 const CACHE_READ_DROP_MAX_CURRENT_TOKENS = 64;
 const CACHE_READ_DROP_RATIO = 0.1;
+const CACHE_READ_DIAGNOSTIC_MAX_SESSIONS = 256;
 
 /**
  * Build ScanOptions.compatFileNames from the user's instruction compat toggles.
@@ -2179,6 +2180,7 @@ export class Engine {
           onStream: options?.onStream,
           signal: options?.signal,
           freshImageMessages: freshImageMessage ? [freshImageMessage] : undefined,
+          volatileContextMessages: dynamicContextMsg ? [dynamicContextMsg] : undefined,
           // Goal mode: the active goal is surfaced to the on_stop handler via
           // ctx.data.goal; the GoalStopHook (registered above) judges it.
           goal: normalizedGoal,
@@ -3048,7 +3050,12 @@ export class Engine {
     if (current === undefined || !Number.isFinite(current)) return;
 
     const previous = this.lastCacheReadBySid.get(sessionId);
+    this.lastCacheReadBySid.delete(sessionId);
     this.lastCacheReadBySid.set(sessionId, current);
+    if (this.lastCacheReadBySid.size > CACHE_READ_DIAGNOSTIC_MAX_SESSIONS) {
+      const oldestSessionId = this.lastCacheReadBySid.keys().next().value;
+      if (oldestSessionId !== undefined) this.lastCacheReadBySid.delete(oldestSessionId);
+    }
     if (previous === undefined || previous < CACHE_READ_DROP_MIN_PREVIOUS_TOKENS) return;
 
     const dropRatio = previous > 0 ? current / previous : 1;

@@ -77,6 +77,11 @@ export interface TurnLoopConfig {
    */
   freshImageMessages?: Iterable<Message>;
   /**
+   * Per-run injected context that must be visible to the model but must not be
+   * summarized into durable history. Engine uses this for dynamicContext.
+   */
+  volatileContextMessages?: Iterable<Message>;
+  /**
    * Fired after each turn boundary is recorded. Lets the engine flush an
    * up-to-date snapshot to state.json mid-run, so a long run doesn't leave
    * the on-disk turnCount/status frozen at the last completion.
@@ -221,6 +226,7 @@ export class TurnLoop {
   private currentCumulativeUsage: CumulativeUsageCounters | undefined;
   private readonly sensitiveToolResultRedactions = new Map<string, string>();
   private readonly pendingImageMessages = new Set<Message>();
+  private readonly volatileContextMessages = new Set<Message>();
 
   /**
    * Consecutive on_stop blocks (Goal mode kept the agent going). Reset to 0
@@ -337,6 +343,9 @@ export class TurnLoop {
     for (const msg of this.config.freshImageMessages ?? []) {
       this.pendingImageMessages.add(msg);
     }
+    for (const msg of this.config.volatileContextMessages ?? []) {
+      this.volatileContextMessages.add(msg);
+    }
 
     // Wrap onStream so a single throwing handler can't silently break
     // the channel for the rest of the run. A 2026-05-25 incident saw a
@@ -402,6 +411,22 @@ export class TurnLoop {
       });
     }
     return result.messages;
+  }
+
+  private stripVolatileContextMessages(messages: Message[]): Message[] {
+    if (this.volatileContextMessages.size === 0) return messages;
+    let changed = false;
+    const stripped = messages.filter((message) => {
+      const keep = !this.volatileContextMessages.has(message);
+      if (!keep) changed = true;
+      return keep;
+    });
+    return changed ? stripped : messages;
+  }
+
+  private appendVolatileContextMessages(messages: Message[]): Message[] {
+    if (this.volatileContextMessages.size === 0) return messages;
+    return [...this.stripVolatileContextMessages(messages), ...this.volatileContextMessages];
   }
 
   private markPendingImagesConsumed(messages: Message[]): Message[] {
@@ -688,6 +713,7 @@ export class TurnLoop {
         // pendingImageMessages are preserved through this next model request.
         const hasPendingSensitiveToolResults = this.sensitiveToolResultRedactions.size > 0;
         messages = this.prepareMessagesForModel(messages);
+        messages = this.stripVolatileContextMessages(messages);
 
         if (hasPendingSensitiveToolResults) {
           tlog.info("turn.sensitive_tool_result_context_management_skipped", {
@@ -734,6 +760,7 @@ export class TurnLoop {
             messages.push(compactInjection);
           }
         }
+        messages = this.appendVolatileContextMessages(messages);
 
         // Model call (with streaming fallback and max_output_tokens continuation)
         // Track tool IDs streamed during this turn to avoid duplicate UI events
