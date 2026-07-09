@@ -1,15 +1,10 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-  renameSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import type { Credential, CredentialStoreFile } from "./types.js";
 import { type EncryptionCipher, getDefaultCredentialCipher } from "./cipher.js";
 import { logger } from "../logging/logger.js";
+import { summarizeOAuthCredentialSecret } from "./oauth.js";
 
 /** 测试可经 process.env.HOME 覆盖(镜像 settings/manager.ts userHome)。 */
 function userHome(): string {
@@ -22,6 +17,7 @@ export interface MaskedCredential extends Omit<Credential, "secret"> {
   hasSecret: boolean;
   /** 形如 `****abcd`,绝不含完整明文。 */
   secretHint?: string;
+  oauthStatus?: import("./types.js").OAuthCredentialPublicStatus;
 }
 
 const EMPTY: CredentialStoreFile = { version: 1, credentials: [] };
@@ -206,6 +202,7 @@ export class CredentialStore {
         // than 4, so those chars aren't the whole secret. `"ab".slice(-4)` is
         // "ab", so a short secret would otherwise leak in full through the hint.
         secretHint: secret ? (secret.length > 4 ? `****${secret.slice(-4)}` : "****") : undefined,
+        ...(c.type === "oauth" ? { oauthStatus: summarizeOAuthCredentialSecret(secret) } : {}),
       };
     });
   }

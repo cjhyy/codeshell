@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type { Credential, CredentialType } from "./types.js";
 import { CredentialStore } from "./store.js";
 import { formatNetscapeCookies, parseCookieJar } from "./cookie-jar.js";
+import { summarizeOAuthCredentialSecret } from "./oauth.js";
 import type { SettingsScope } from "../settings/manager.js";
 import type { RpcMessage } from "../protocol/types.js";
 import type { Transport } from "../protocol/transport.js";
@@ -21,6 +22,7 @@ export interface CredentialMetadata {
   meta?: Credential["meta"];
   hasSecret: boolean;
   secretHint?: string;
+  oauthStatus?: import("./types.js").OAuthCredentialPublicStatus;
 }
 
 export interface CredentialAccess {
@@ -185,6 +187,7 @@ function toMetadata(cred: Credential): CredentialMetadata {
     ...rest,
     hasSecret: available,
     secretHint: available ? (secret.length > 4 ? `****${secret.slice(-4)}` : "****") : undefined,
+    ...(cred.type === "oauth" ? { oauthStatus: summarizeOAuthCredentialSecret(secret) } : {}),
   };
 }
 

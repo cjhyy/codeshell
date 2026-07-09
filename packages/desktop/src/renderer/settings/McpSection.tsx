@@ -1,9 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRefreshOnSettingsChange } from "./useSettingsResource";
-import type {
-  McpProbeResult,
-  McpServerProbeInput,
-} from "../../preload/types";
+import type { McpProbeResult, McpServerProbeInput } from "../../preload/types";
 import { SimpleSelect as Select } from "@/components/ui/simple-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,9 +8,11 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useConfirm, truncateTitle } from "../ui/ConfirmDialog";
+import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
 import { translate } from "../i18n/translate";
 import { loadUILanguage } from "../uiLanguage";
+import type { MaskedCredentialView } from "../credentials/types";
 
 interface McpServer {
   name: string;
@@ -32,7 +31,7 @@ interface McpServer {
   bearerTokenEnvVar?: string;
   /** (HTTP) header-name → env-var-NAME map, values read at connect time. */
   envHeaders?: Record<string, string>;
-  /** (HTTP) id of a stored credential used as the Bearer token (wins over bearerTokenEnvVar). */
+  /** (HTTP) id of a stored token/link/oauth credential used as Bearer auth. */
   credentialRef?: string;
   /** Codex-style toggle. Absent/true = on; only false disables. */
   enabled?: boolean;
@@ -91,11 +90,31 @@ export function isHttpMcpAuthConfigured(s: {
   envHeaders?: Record<string, string>;
 }): boolean {
   return Boolean(
-    hasEntries(s.headers) ||
-      s.credentialRef ||
-      s.bearerTokenEnvVar ||
-      hasEntries(s.envHeaders),
+    hasEntries(s.headers) || s.credentialRef || s.bearerTokenEnvVar || hasEntries(s.envHeaders),
   );
+}
+
+type HttpAuthMode = "none" | "bearer" | "headers" | "oauth";
+
+function isOAuthCredential(c: Pick<MaskedCredentialView, "type">): boolean {
+  return c.type === "oauth";
+}
+
+export function inferHttpAuthMode(
+  s: {
+    headers?: Record<string, string>;
+    credentialRef?: string;
+    bearerTokenEnvVar?: string;
+    envHeaders?: Record<string, string>;
+  },
+  credentials: Array<Pick<MaskedCredentialView, "id" | "type">> = [],
+): HttpAuthMode {
+  if (!isHttpMcpAuthConfigured(s)) return "none";
+  const ref = s.credentialRef;
+  if (ref && credentials.some((c) => c.id === ref && isOAuthCredential(c))) return "oauth";
+  if (hasEntries(s.envHeaders) || hasEntries(s.headers)) return "headers";
+  if (ref || s.bearerTokenEnvVar) return "bearer";
+  return "none";
 }
 
 function isRemoteMcpTransport(s: McpServer): boolean {
@@ -145,7 +164,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
   const confirm = useConfirm();
   const { t } = useT();
 
-  const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
+  const cwd = scope === "project" ? (activeRepoPath ?? undefined) : undefined;
 
   const load = useCallback(async () => {
     setError(null);
@@ -255,9 +274,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
     // Persist just this server's full config with the flipped flag. We write
     // the whole entry (not a partial) because updateSettings merges records
     // key-by-key but replaces a server entry wholesale.
-    const updated = servers.map((x) =>
-      x.name === s.name ? { ...x, enabled: nextEnabled } : x,
-    );
+    const updated = servers.map((x) => (x.name === s.name ? { ...x, enabled: nextEnabled } : x));
     await window.codeshell.updateSettings(
       scope,
       { mcpServers: { [s.name]: stripNameFromServer({ ...s, enabled: nextEnabled }) } },
@@ -273,7 +290,10 @@ export function McpSection({ scope, activeRepoPath }: Props) {
         return rest;
       });
     } else {
-      void runProbe(updated.filter((x) => x.name === s.name), true);
+      void runProbe(
+        updated.filter((x) => x.name === s.name),
+        true,
+      );
     }
   };
 
@@ -319,7 +339,11 @@ export function McpSection({ scope, activeRepoPath }: Props) {
     }
     // No fields left → drop the whole override entry (null deletes the key).
     const value = any ? supplement : null;
-    await window.codeshell.updateSettings("user", { mcpServerOverrides: { [name]: value } }, undefined);
+    await window.codeshell.updateSettings(
+      "user",
+      { mcpServerOverrides: { [name]: value } },
+      undefined,
+    );
     await window.codeshell.invalidateMcpProbeCache(name);
     setEdit({ kind: "closed" });
     broadcastSettingsChanged();
@@ -377,16 +401,15 @@ export function McpSection({ scope, activeRepoPath }: Props) {
           >
             {loadingProbe.size > 0 ? t("settingsX.mcp.testing") : t("settingsX.mcp.testAll")}
           </Button>
-          <Button
-            variant="solid"
-            onClick={() => setEdit({ kind: "new" })}
-          >
+          <Button variant="solid" onClick={() => setEdit({ kind: "new" })}>
             {t("settingsX.mcp.addServer")}
           </Button>
         </div>
       </header>
 
-      {error && <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">{error}</div>}
+      {error && (
+        <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">{error}</div>
+      )}
 
       {servers.length === 0 && edit.kind === "closed" && (
         <div className="rounded-md border border-dashed p-4 text-sm">
@@ -450,7 +473,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
           existingNames={servers.map((s) => s.name)}
           initial={
             edit.kind === "edit" || edit.kind === "override"
-              ? servers.find((s) => s.name === edit.original) ?? null
+              ? (servers.find((s) => s.name === edit.original) ?? null)
               : null
           }
           mode={edit.kind === "override" ? "override" : "full"}
@@ -463,14 +486,9 @@ export function McpSection({ scope, activeRepoPath }: Props) {
         />
       )}
 
-      {toolsViewer && (
-        <ToolsViewer probe={toolsViewer} onClose={() => setToolsViewer(null)} />
-      )}
+      {toolsViewer && <ToolsViewer probe={toolsViewer} onClose={() => setToolsViewer(null)} />}
       {errorDetailFor && (
-        <ErrorDetailViewer
-          probe={errorDetailFor}
-          onClose={() => setErrorDetailFor(null)}
-        />
+        <ErrorDetailViewer probe={errorDetailFor} onClose={() => setErrorDetailFor(null)} />
       )}
     </section>
   );
@@ -511,7 +529,7 @@ function McpCard({
   const transport = server.transport ?? (server.url ? "streamable-http" : "stdio");
   const target = server.command
     ? [server.command, ...(server.args ?? [])].join(" ")
-    : server.url ?? "";
+    : (server.url ?? "");
   const enabled = isEnabled(server);
   const editable = isEditableMcpServer(server);
   const authIssue = isHttpAuthProbeError(server, probe);
@@ -592,7 +610,11 @@ function McpCard({
             <StatusPill probe={probe} loading={loading} authIssue={authIssue} />
           ) : (
             // 随插件禁用时组头已有「插件已禁用」徽标 — 卡片不再重复。
-            !server.pluginDisabled && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{t("settingsX.mcp.disabled")}</span>
+            !server.pluginDisabled && (
+              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                {t("settingsX.mcp.disabled")}
+              </span>
+            )
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -610,10 +632,23 @@ function McpCard({
           )}
           {editable ? (
             <>
-              <Button type="button" variant="ghost" size="sm" onClick={onEdit} title={t("settingsX.mcp.edit")}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onEdit}
+                title={t("settingsX.mcp.edit")}
+              >
                 {t("settingsX.mcp.edit")}
               </Button>
-              <Button type="button" variant="ghost" size="sm" className="text-status-err hover:text-status-err" onClick={onRemove} title={t("settingsX.mcp.delete")}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-status-err hover:text-status-err"
+                onClick={onRemove}
+                title={t("settingsX.mcp.delete")}
+              >
                 {t("settingsX.mcp.delete")}
               </Button>
             </>
@@ -654,14 +689,23 @@ function McpCard({
       </div>
 
       {target && (
-        <div className="mt-2 truncate rounded bg-muted/40 p-2 font-mono text-xs text-muted-foreground" title={target}>
+        <div
+          className="mt-2 truncate rounded bg-muted/40 p-2 font-mono text-xs text-muted-foreground"
+          title={target}
+        >
           <code>{target}</code>
         </div>
       )}
 
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         {probe?.status === "ok" && (
-          <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={onViewTools}>
+          <Button
+            type="button"
+            variant="link"
+            size="sm"
+            className="h-auto p-0 text-xs"
+            onClick={onViewTools}
+          >
             {probe.toolCount ?? 0} tools
           </Button>
         )}
@@ -671,7 +715,13 @@ function McpCard({
               {authIssue ? t("settingsX.mcp.authRequiredError") : probe.errorMessage}
             </span>
             {probe.errorDetail && (
-              <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={onShowErrorDetail}>
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-xs"
+                onClick={onShowErrorDetail}
+              >
                 {t("settingsX.mcp.viewDetail")}
               </Button>
             )}
@@ -697,11 +747,83 @@ function StatusPill({
   authIssue?: boolean;
 }) {
   const { t } = useT();
-  if (loading) return <span className="rounded bg-status-running/10 px-1.5 py-0.5 text-[10px] font-medium text-status-running">{t("settingsX.mcp.connecting")}</span>;
-  if (!probe) return <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{t("settingsX.mcp.untested")}</span>;
-  if (probe.status === "ok") return <span className="rounded bg-status-ok/10 px-1.5 py-0.5 text-[10px] font-medium text-status-ok">{t("settingsX.mcp.connected")}</span>;
-  if (probe.status === "error") return <span className="rounded bg-status-err/10 px-1.5 py-0.5 text-[10px] font-medium text-status-err">{authIssue ? t("settingsX.mcp.authRequired") : t("settingsX.mcp.connFailed")}</span>;
-  return <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{t("settingsX.mcp.unknown")}</span>;
+  if (loading)
+    return (
+      <span className="rounded bg-status-running/10 px-1.5 py-0.5 text-[10px] font-medium text-status-running">
+        {t("settingsX.mcp.connecting")}
+      </span>
+    );
+  if (!probe)
+    return (
+      <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+        {t("settingsX.mcp.untested")}
+      </span>
+    );
+  if (probe.status === "ok")
+    return (
+      <span className="rounded bg-status-ok/10 px-1.5 py-0.5 text-[10px] font-medium text-status-ok">
+        {t("settingsX.mcp.connected")}
+      </span>
+    );
+  if (probe.status === "error")
+    return (
+      <span className="rounded bg-status-err/10 px-1.5 py-0.5 text-[10px] font-medium text-status-err">
+        {authIssue ? t("settingsX.mcp.authRequired") : t("settingsX.mcp.connFailed")}
+      </span>
+    );
+  return (
+    <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+      {t("settingsX.mcp.unknown")}
+    </span>
+  );
+}
+
+function OAuthCredentialStatus({ credential }: { credential?: MaskedCredentialView }) {
+  const { t } = useT();
+  if (!credential) {
+    return (
+      <div className="mt-3 text-xs text-muted-foreground">
+        {t("settingsX.mcp.oauthNoCredential")}
+      </div>
+    );
+  }
+
+  const state = credential.oauthStatus?.state ?? (credential.hasSecret ? "valid" : "missing");
+  const label =
+    state === "valid"
+      ? t("settingsX.mcp.oauthStatusValid")
+      : state === "expired"
+        ? t("settingsX.mcp.oauthStatusExpired")
+        : state === "invalid"
+          ? t("settingsX.mcp.oauthStatusInvalid")
+          : t("settingsX.mcp.oauthStatusMissing");
+  const expiresAt = credential.oauthStatus?.expiresAt;
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      <span
+        className={cn(
+          "rounded px-1.5 py-0.5 text-[10px] font-medium",
+          state === "valid" ? "bg-status-ok/10 text-status-ok" : "bg-status-err/10 text-status-err",
+        )}
+      >
+        {label}
+      </span>
+      <span className="truncate">
+        {credential.label} ({credential.id})
+      </span>
+      {expiresAt && (
+        <span>
+          {t("settingsX.mcp.oauthExpiresAt", {
+            time: new Date(expiresAt).toLocaleString(),
+          })}
+        </span>
+      )}
+      {credential.oauthStatus?.hasRefreshToken && (
+        <span>{t("settingsX.mcp.oauthRefreshAvailable")}</span>
+      )}
+    </div>
+  );
 }
 
 function transportLabel(t: "stdio" | "streamable-http" | "sse"): string {
@@ -715,8 +837,10 @@ function formatRelativeTime(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   if (ms < 30_000) return translate(lang, "settingsX.mcp.justNow");
   if (ms < 60_000) return translate(lang, "settingsX.mcp.secondsAgo", { n: Math.floor(ms / 1000) });
-  if (ms < 3_600_000) return translate(lang, "settingsX.mcp.minutesAgo", { n: Math.floor(ms / 60_000) });
-  if (ms < 86_400_000) return translate(lang, "settingsX.mcp.hoursAgo", { n: Math.floor(ms / 3_600_000) });
+  if (ms < 3_600_000)
+    return translate(lang, "settingsX.mcp.minutesAgo", { n: Math.floor(ms / 60_000) });
+  if (ms < 86_400_000)
+    return translate(lang, "settingsX.mcp.hoursAgo", { n: Math.floor(ms / 3_600_000) });
   return new Date(iso).toLocaleString();
 }
 
@@ -732,6 +856,7 @@ interface EditorProps {
 
 function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: EditorProps) {
   const isOverride = mode === "override";
+  const toast = useToast();
   const [transport, setTransport] = useState<"stdio" | "streamable-http" | "sse">(
     initial?.transport ?? (initial?.url ? "streamable-http" : "stdio"),
   );
@@ -744,8 +869,12 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
   const [headersText, setHeadersText] = useState(envOrHeadersToText(initial?.headers, ": "));
   const [bearerEnvVar, setBearerEnvVar] = useState(initial?.bearerTokenEnvVar ?? "");
   const [credentialRef, setCredentialRef] = useState(initial?.credentialRef ?? "");
-  const [credOptions, setCredOptions] = useState<{ value: string; label: string }[]>([]);
-  const [envHeadersText, setEnvHeadersText] = useState(envOrHeadersToText(initial?.envHeaders, ": "));
+  const [credentials, setCredentials] = useState<MaskedCredentialView[]>([]);
+  const [envHeadersText, setEnvHeadersText] = useState(
+    envOrHeadersToText(initial?.envHeaders, ": "),
+  );
+  const [authMode, setAuthMode] = useState<HttpAuthMode>(() => inferHttpAuthMode(initial ?? {}));
+  const [authModeTouched, setAuthModeTouched] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(
     // Override mode IS the env/credential editor — always start expanded.
     isOverride ||
@@ -759,18 +888,80 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
   const [validationError, setValidationError] = useState<string | null>(null);
   const { t } = useT();
 
-  // Load token/link credentials (user scope) to offer as Bearer-token sources.
+  // Load credentials (user scope) to offer token/link Bearer and OAuth sources.
   useEffect(() => {
-    void window.codeshell.credentials.list("").then((all) =>
-      setCredOptions(all.map((c) => ({ value: c.id, label: `${c.label} (${c.id})` }))),
-    );
+    void window.codeshell.credentials.list("").then((all) => setCredentials(all));
   }, []);
 
   const isStdio = transport === "stdio";
+  const bearerCredOptions = useMemo(
+    () =>
+      credentials
+        .filter((c) => c.type === "token" || c.type === "link")
+        .map((c) => ({ value: c.id, label: `${c.label} (${c.id})` })),
+    [credentials],
+  );
+  const oauthCredentials = useMemo(
+    () => credentials.filter((c) => c.type === "oauth"),
+    [credentials],
+  );
+  const oauthCredOptions = useMemo(
+    () => oauthCredentials.map((c) => ({ value: c.id, label: `${c.label} (${c.id})` })),
+    [oauthCredentials],
+  );
+  const selectedOAuthCredential = useMemo(
+    () => oauthCredentials.find((c) => c.id === credentialRef),
+    [credentialRef, oauthCredentials],
+  );
+  useEffect(() => {
+    if (authModeTouched) return;
+    setAuthMode(inferHttpAuthMode(initial ?? {}, credentials));
+  }, [authModeTouched, credentials, initial]);
+
   const otherNames = useMemo(
     () => existingNames.filter((n) => n !== initial?.name),
     [existingNames, initial?.name],
   );
+
+  const setAuthModeFromUi = (next: HttpAuthMode) => {
+    setAuthModeTouched(true);
+    setAuthMode(next);
+    if (next === "none") {
+      setCredentialRef("");
+      setBearerEnvVar("");
+      setEnvHeadersText("");
+      setHeadersText("");
+      return;
+    }
+    if (next === "oauth") {
+      if (!selectedOAuthCredential) setCredentialRef(oauthCredentials[0]?.id ?? "");
+      setBearerEnvVar("");
+      return;
+    }
+    if (next === "bearer" && selectedOAuthCredential) {
+      setCredentialRef("");
+    }
+  };
+
+  const reloadCredentials = async () => {
+    setCredentials(await window.codeshell.credentials.list(""));
+  };
+
+  const onOAuthLogin = () => {
+    toast({ message: t("settingsX.mcp.oauthLoginPending") });
+  };
+
+  const onOAuthRefresh = () => {
+    toast({ message: t("settingsX.mcp.oauthRefreshPending") });
+  };
+
+  const onOAuthLogout = async () => {
+    if (!selectedOAuthCredential) return;
+    await window.codeshell.credentials.remove("", "user", selectedOAuthCredential.id);
+    setCredentialRef("");
+    await reloadCredentials();
+    toast({ message: t("settingsX.mcp.oauthLogoutDone") });
+  };
 
   const submit = () => {
     const trimmedName = name.trim();
@@ -806,6 +997,20 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
       );
     }
 
+    const includeAllAuthFields = !authModeTouched;
+    const includeBearerAuth = includeAllAuthFields || authMode === "bearer";
+    const includeHeaderAuth = includeAllAuthFields || authMode === "headers";
+    const includeOAuthAuth = includeAllAuthFields || authMode === "oauth";
+    const nextCredentialRef =
+      includeAllAuthFields || includeBearerAuth || includeOAuthAuth
+        ? credentialRef || undefined
+        : undefined;
+    const nextBearerEnvVar = includeBearerAuth ? bearerEnvVar.trim() || undefined : undefined;
+    const nextEnvHeaders =
+      includeHeaderAuth && envHeaders && Object.keys(envHeaders).length ? envHeaders : undefined;
+    const nextHeaders =
+      includeHeaderAuth && headers && Object.keys(headers).length ? headers : undefined;
+
     // Override mode emits ONLY the supplement fields — saveOverride writes them
     // to the global mcpServerOverrides layer; command/url stay owned by the
     // plugin. We still key by the (locked) original name + transport.
@@ -819,9 +1024,9 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
                 envVars: envVars && envVars.length ? envVars : undefined,
               }
             : {
-                credentialRef: credentialRef || undefined,
-                bearerTokenEnvVar: bearerEnvVar.trim() || undefined,
-                envHeaders: envHeaders && Object.keys(envHeaders).length ? envHeaders : undefined,
+                credentialRef: nextCredentialRef,
+                bearerTokenEnvVar: nextBearerEnvVar,
+                envHeaders: nextEnvHeaders,
               }),
         }
       : {
@@ -836,10 +1041,10 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
               }
             : {
                 url: url.trim(),
-                headers: headers && Object.keys(headers).length ? headers : undefined,
-                credentialRef: credentialRef || undefined,
-                bearerTokenEnvVar: bearerEnvVar.trim() || undefined,
-                envHeaders: envHeaders && Object.keys(envHeaders).length ? envHeaders : undefined,
+                headers: nextHeaders,
+                credentialRef: nextCredentialRef,
+                bearerTokenEnvVar: nextBearerEnvVar,
+                envHeaders: nextEnvHeaders,
               }),
         };
     onSave(next);
@@ -855,7 +1060,9 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
               ? t("settingsX.mcp.editTitle", { name: initial.name })
               : t("settingsX.mcp.addTitle")}
         </strong>
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>{t("settingsX.mcp.close")}</Button>
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+          {t("settingsX.mcp.close")}
+        </Button>
       </header>
 
       {isOverride && (
@@ -881,8 +1088,16 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
             onChange={(v) => setTransport(v)}
             disabled={isOverride}
             options={[
-              { value: "stdio", label: "stdio", description: t("settingsX.mcp.transportStdioDesc") },
-              { value: "streamable-http", label: "HTTP", description: t("settingsX.mcp.transportHttpDesc") },
+              {
+                value: "stdio",
+                label: "stdio",
+                description: t("settingsX.mcp.transportStdioDesc"),
+              },
+              {
+                value: "streamable-http",
+                label: "HTTP",
+                description: t("settingsX.mcp.transportHttpDesc"),
+              },
               { value: "sse", label: "SSE", description: t("settingsX.mcp.transportSseDesc") },
             ]}
           />
@@ -907,7 +1122,10 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
             </label>
           </>
         ) : (
-          <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5" style={{ gridColumn: "1 / -1" }}>
+          <label
+            className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5"
+            style={{ gridColumn: "1 / -1" }}
+          >
             <span>URL</span>
             <Input
               value={url}
@@ -967,60 +1185,131 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
                 </p>
               </div>
               <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground">
-                <span>{t("settingsX.mcp.useCredential")}</span>
-                <Select<string>
-                  value={credentialRef}
-                  onChange={(v) => setCredentialRef(v)}
-                  options={[{ value: "", label: t("settingsX.mcp.credNone") }, ...credOptions]}
+                <span>{t("settingsX.mcp.authMethodLabel")}</span>
+                <Select<HttpAuthMode>
+                  value={authMode}
+                  onChange={setAuthModeFromUi}
+                  options={[
+                    { value: "none", label: t("settingsX.mcp.authModeNone") },
+                    { value: "bearer", label: t("settingsX.mcp.authModeBearer") },
+                    { value: "headers", label: t("settingsX.mcp.authModeHeaders") },
+                    { value: "oauth", label: t("settingsX.mcp.authModeOAuth") },
+                  ]}
                 />
-                <span className="text-xs text-muted-foreground">
-                  {t("settingsX.mcp.useCredentialHint")}
-                </span>
               </label>
-              <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
-                <span>{t("settingsX.mcp.bearerEnvVarLabel")}</span>
-                <Input
-                  value={bearerEnvVar}
-                  onChange={(e) => setBearerEnvVar(e.target.value)}
-                  placeholder="MY_MCP_TOKEN"
-                />
-                <span className="text-xs text-muted-foreground">
-                  {t("settingsX.mcp.bearerEnvVarHint")}
-                </span>
-              </label>
-              <label className="flex flex-col gap-1.5 text-sm md:col-span-2 [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
-                <span>{t("settingsX.mcp.envHeadersLabel")}</span>
-                <Textarea
-                  value={envHeadersText}
-                  onChange={(e) => setEnvHeadersText(e.target.value)}
-                  placeholder={"x-api-key: MCP_API_KEY\nX-API-Key: OTHER_MCP_KEY"}
-                />
-                <span className="text-xs text-muted-foreground">
-                  {t("settingsX.mcp.envHeadersHint")}
-                </span>
-              </label>
-              {!isOverride && (
-                <label className="flex flex-col gap-1.5 text-sm md:col-span-2 [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
-                  <span>{t("settingsX.mcp.headersLabel")}</span>
-                  <Textarea
-                    value={headersText}
-                    onChange={(e) => setHeadersText(e.target.value)}
-                    placeholder={"Accept: application/json\nX-Client-Name: code-shell"}
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    {t("settingsX.mcp.headersHint")}
-                  </span>
-                </label>
+              {authMode === "bearer" && (
+                <>
+                  <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground">
+                    <span>{t("settingsX.mcp.useCredential")}</span>
+                    <Select<string>
+                      value={credentialRef}
+                      onChange={(v) => setCredentialRef(v)}
+                      options={[
+                        { value: "", label: t("settingsX.mcp.credNone") },
+                        ...bearerCredOptions,
+                      ]}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {t("settingsX.mcp.useCredentialHint")}
+                    </span>
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
+                    <span>{t("settingsX.mcp.bearerEnvVarLabel")}</span>
+                    <Input
+                      value={bearerEnvVar}
+                      onChange={(e) => setBearerEnvVar(e.target.value)}
+                      placeholder="MY_MCP_TOKEN"
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {t("settingsX.mcp.bearerEnvVarHint")}
+                    </span>
+                  </label>
+                </>
+              )}
+              {authMode === "headers" && (
+                <>
+                  <label className="flex flex-col gap-1.5 text-sm md:col-span-2 [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
+                    <span>{t("settingsX.mcp.envHeadersLabel")}</span>
+                    <Textarea
+                      value={envHeadersText}
+                      onChange={(e) => setEnvHeadersText(e.target.value)}
+                      placeholder={"x-api-key: MCP_API_KEY\nX-API-Key: OTHER_MCP_KEY"}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {t("settingsX.mcp.envHeadersHint")}
+                    </span>
+                  </label>
+                  {!isOverride && (
+                    <label className="flex flex-col gap-1.5 text-sm md:col-span-2 [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
+                      <span>{t("settingsX.mcp.headersLabel")}</span>
+                      <Textarea
+                        value={headersText}
+                        onChange={(e) => setHeadersText(e.target.value)}
+                        placeholder={"Accept: application/json\nX-Client-Name: code-shell"}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {t("settingsX.mcp.headersHint")}
+                      </span>
+                    </label>
+                  )}
+                </>
+              )}
+              {authMode === "oauth" && (
+                <div className="md:col-span-2 rounded-md border bg-muted/20 p-3">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto]">
+                    <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground">
+                      <span>{t("settingsX.mcp.oauthCredential")}</span>
+                      <Select<string>
+                        value={credentialRef}
+                        onChange={(v) => setCredentialRef(v)}
+                        options={[
+                          { value: "", label: t("settingsX.mcp.credNone") },
+                          ...oauthCredOptions,
+                        ]}
+                      />
+                    </label>
+                    <div className="flex items-end gap-2">
+                      <Button type="button" variant="default" size="sm" onClick={onOAuthLogin}>
+                        {t("settingsX.mcp.oauthLogin")}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        onClick={onOAuthRefresh}
+                        disabled={!selectedOAuthCredential}
+                      >
+                        {t("settingsX.mcp.oauthRefresh")}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => void onOAuthLogout()}
+                        disabled={!selectedOAuthCredential}
+                      >
+                        {t("settingsX.mcp.oauthLogout")}
+                      </Button>
+                    </div>
+                  </div>
+                  <OAuthCredentialStatus credential={selectedOAuthCredential} />
+                </div>
               )}
             </>
           )}
         </div>
       )}
 
-      {validationError && <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">{validationError}</div>}
+      {validationError && (
+        <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">
+          {validationError}
+        </div>
+      )}
 
       <div className="flex items-center gap-2">
-        <Button variant="default" onClick={onCancel}>{t("settingsX.mcp.cancel")}</Button>
+        <Button variant="default" onClick={onCancel}>
+          {t("settingsX.mcp.cancel")}
+        </Button>
         <Button variant="solid" onClick={submit}>
           {initial ? t("settingsX.mcp.save") : t("settingsX.mcp.add")}
         </Button>
@@ -1037,11 +1326,21 @@ interface ToolsViewerProps {
 function ToolsViewer({ probe, onClose }: ToolsViewerProps) {
   const { t } = useT();
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" onClick={onClose}>
-      <div className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-md border bg-popover p-4 text-popover-foreground shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-md border bg-popover p-4 text-popover-foreground shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="mb-3 flex items-center justify-between gap-3">
-          <strong>{t("settingsX.mcp.toolsHeader", { name: probe.name, count: probe.tools?.length ?? 0 })}</strong>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>{t("settingsX.mcp.close")}</Button>
+          <strong>
+            {t("settingsX.mcp.toolsHeader", { name: probe.name, count: probe.tools?.length ?? 0 })}
+          </strong>
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+            {t("settingsX.mcp.close")}
+          </Button>
         </header>
         {probe.tools && probe.tools.length > 0 ? (
           <ul className="flex flex-col gap-2">
@@ -1049,13 +1348,17 @@ function ToolsViewer({ probe, onClose }: ToolsViewerProps) {
               <li key={tool.name} className="rounded-md border p-2">
                 <code className="font-mono text-xs text-foreground">{tool.name}</code>
                 {tool.description && (
-                  <span className="mt-1 block text-xs text-muted-foreground">{tool.description}</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {tool.description}
+                  </span>
                 )}
               </li>
             ))}
           </ul>
         ) : (
-          <div className="p-4 text-center text-sm text-muted-foreground">{t("settingsX.mcp.noToolReturned")}</div>
+          <div className="p-4 text-center text-sm text-muted-foreground">
+            {t("settingsX.mcp.noToolReturned")}
+          </div>
         )}
       </div>
     </div>
@@ -1065,14 +1368,26 @@ function ToolsViewer({ probe, onClose }: ToolsViewerProps) {
 function ErrorDetailViewer({ probe, onClose }: { probe: McpProbeResult; onClose: () => void }) {
   const { t } = useT();
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" onClick={onClose}>
-      <div className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-md border bg-popover p-4 text-popover-foreground shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-md border bg-popover p-4 text-popover-foreground shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="mb-3 flex items-center justify-between gap-3">
           <strong>{t("settingsX.mcp.errorDetailHeader", { name: probe.name })}</strong>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>{t("settingsX.mcp.close")}</Button>
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+            {t("settingsX.mcp.close")}
+          </Button>
         </header>
-        <div className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">{probe.errorMessage}</div>
-        <pre className="mt-2 max-h-96 overflow-auto rounded-md bg-muted/40 p-3 font-mono text-xs">{probe.errorDetail}</pre>
+        <div className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">
+          {probe.errorMessage}
+        </div>
+        <pre className="mt-2 max-h-96 overflow-auto rounded-md bg-muted/40 p-3 font-mono text-xs">
+          {probe.errorDetail}
+        </pre>
       </div>
     </div>
   );
@@ -1083,7 +1398,8 @@ function ErrorDetailViewer({ probe, onClose }: { probe: McpProbeResult; onClose:
 export function mcpServersFromSettings(value: unknown): McpServer[] {
   if (Array.isArray(value)) {
     return value.filter(
-      (x): x is McpServer => !!x && typeof x === "object" && typeof (x as McpServer).name === "string",
+      (x): x is McpServer =>
+        !!x && typeof x === "object" && typeof (x as McpServer).name === "string",
     );
   }
   if (value && typeof value === "object") {
@@ -1104,7 +1420,10 @@ function settingsRecordOf(value: unknown): Record<string, unknown> {
   if (Array.isArray(value)) {
     return Object.fromEntries(
       value
-        .filter((x): x is McpServer => !!x && typeof x === "object" && typeof (x as McpServer).name === "string")
+        .filter(
+          (x): x is McpServer =>
+            !!x && typeof x === "object" && typeof (x as McpServer).name === "string",
+        )
         .map((s) => [s.name, stripNameFromServer(s)]),
     );
   }
@@ -1138,7 +1457,8 @@ function parseKeyValueLines(text: string): Record<string, string> {
     const colon = line.indexOf(":");
     const equals = line.indexOf("=");
     const idx = equals >= 0 && (colon < 0 || equals < colon) ? equals : colon;
-    if (idx < 0) throw new Error(translate(loadUILanguage(), "settingsX.mcp.parseFailedLine", { line }));
+    if (idx < 0)
+      throw new Error(translate(loadUILanguage(), "settingsX.mcp.parseFailedLine", { line }));
     const k = line.slice(0, idx).trim();
     const v = line.slice(idx + 1).trim();
     if (!k) throw new Error(translate(loadUILanguage(), "settingsX.mcp.emptyKeyLine", { line }));
@@ -1157,7 +1477,9 @@ function parseEnvNames(text: string): string[] {
       throw new Error(translate(loadUILanguage(), "settingsX.mcp.envNameOnlyLine", { line }));
     }
     if (/\s/.test(line)) {
-      throw new Error(translate(loadUILanguage(), "settingsX.mcp.envNameNoWhitespaceLine", { line }));
+      throw new Error(
+        translate(loadUILanguage(), "settingsX.mcp.envNameNoWhitespaceLine", { line }),
+      );
     }
     if (!seen.has(line)) {
       out.push(line);

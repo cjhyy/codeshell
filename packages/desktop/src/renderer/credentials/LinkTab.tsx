@@ -1,24 +1,54 @@
-import React from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
 import { LINK_CATALOG, type LinkIntegration } from "./link-catalog";
+import type { MaskedCredentialView } from "./types";
 
 /**
- * Link tab = 三方集成市场(Codex 风格)。按分类列出第三方应用卡片(品牌标 + 名字 +
- * 一句话描述 + 「添加」按钮)。
- *
- * Phase 1(本期):静态壳,目录写死在 link-catalog.ts,点「添加」只给「即将开放」提示。
- * 后续:每个集成接后台服务,配 skill + 官方 MCP 读写该三方的数据。
- *
- * 注:cwd 暂未用到(后端接入后用于按项目保存集成连接),保留入参签名不变。
+ * Link tab = 三方集成市场(Codex 风格)。目录写死在 link-catalog.ts;OAuth
+ * credential 已存在时展示登录状态。登录/刷新后台流程仍预留,退出会删除对应凭证。
  */
-export function LinkTab(_props: { cwd: string }) {
+export function LinkTab({ cwd }: { cwd: string }) {
   const { t } = useT();
   const toast = useToast();
+  const [credentials, setCredentials] = useState<MaskedCredentialView[]>([]);
 
-  const onAdd = (item: LinkIntegration) => {
-    toast({ message: t("ext.link.comingSoonToast", { name: item.name }) });
+  const load = useCallback(() => {
+    void window.codeshell.credentials
+      .list(cwd)
+      .then((all) => setCredentials(all.filter((c) => c.type === "oauth")));
+  }, [cwd]);
+
+  useEffect(load, [load]);
+
+  const byIntegration = useMemo(() => {
+    const map = new Map<string, MaskedCredentialView>();
+    for (const cred of credentials) {
+      const provider = cred.meta?.oauthProvider;
+      if (provider && !map.has(provider)) map.set(provider, cred);
+      const suffix = "-oauth";
+      if (cred.id.endsWith(suffix)) {
+        const id = cred.id.slice(0, -suffix.length);
+        if (id && !map.has(id)) map.set(id, cred);
+      }
+    }
+    return map;
+  }, [credentials]);
+
+  const onLogin = (item: LinkIntegration) => {
+    toast({ message: t("ext.link.oauthLoginPending", { name: item.name }) });
+  };
+
+  const onRefresh = (item: LinkIntegration) => {
+    toast({ message: t("ext.link.oauthRefreshPending", { name: item.name }) });
+  };
+
+  const onLogout = async (item: LinkIntegration, credential: MaskedCredentialView) => {
+    await window.codeshell.credentials.remove(cwd, "user", credential.id);
+    load();
+    toast({ message: t("ext.link.oauthLogoutDone", { name: item.name }) });
   };
 
   return (
@@ -30,38 +60,102 @@ export function LinkTab(_props: { cwd: string }) {
           <h3 className="text-sm font-semibold">{t(cat.titleKey)}</h3>
           <div className="space-y-1">
             {cat.items.map((item) => (
-              <div
+              <LinkIntegrationRow
                 key={item.id}
-                className="flex items-center gap-3 rounded-md p-2 transition-colors hover:bg-accent/50"
-              >
-                <div
-                  className={
-                    "flex size-9 shrink-0 items-center justify-center rounded-lg text-sm font-semibold text-white " +
-                    item.brandColor
-                  }
-                  aria-hidden
-                >
-                  {item.brandText}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium">{item.name}</div>
-                  <div className="truncate text-xs text-muted-foreground">
-                    {t(item.descKey)}
-                  </div>
-                </div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="shrink-0"
-                  onClick={() => onAdd(item)}
-                >
-                  {t("ext.link.add")}
-                </Button>
-              </div>
+                item={item}
+                credential={byIntegration.get(item.id)}
+                onLogin={() => onLogin(item)}
+                onRefresh={() => onRefresh(item)}
+                onLogout={(credential) => void onLogout(item, credential)}
+              />
             ))}
           </div>
         </section>
       ))}
+    </div>
+  );
+}
+
+function LinkIntegrationRow({
+  item,
+  credential,
+  onLogin,
+  onRefresh,
+  onLogout,
+}: {
+  item: LinkIntegration;
+  credential?: MaskedCredentialView;
+  onLogin: () => void;
+  onRefresh: () => void;
+  onLogout: (credential: MaskedCredentialView) => void;
+}) {
+  const { t } = useT();
+  const state = credential?.oauthStatus?.state ?? (credential ? "valid" : "missing");
+  const status =
+    state === "valid"
+      ? t("ext.link.oauthStatusValid")
+      : state === "expired"
+        ? t("ext.link.oauthStatusExpired")
+        : state === "invalid"
+          ? t("ext.link.oauthStatusInvalid")
+          : t("ext.link.oauthStatusMissing");
+
+  return (
+    <div className="flex items-center gap-3 rounded-md p-2 transition-colors hover:bg-accent/50">
+      <div
+        className={
+          "flex size-9 shrink-0 items-center justify-center rounded-lg text-sm font-semibold text-white " +
+          item.brandColor
+        }
+        aria-hidden
+      >
+        {item.brandText}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="text-sm font-medium">{item.name}</div>
+          <span
+            className={cn(
+              "rounded px-1.5 py-0.5 text-[10px] font-medium",
+              state === "valid"
+                ? "bg-status-ok/10 text-status-ok"
+                : state === "missing"
+                  ? "bg-muted text-muted-foreground"
+                  : "bg-status-err/10 text-status-err",
+            )}
+          >
+            {status}
+          </span>
+        </div>
+        <div className="truncate text-xs text-muted-foreground">
+          {credential ? (
+            <>
+              {credential.label} ({credential.id})
+              {credential.oauthStatus?.expiresAt
+                ? ` · ${new Date(credential.oauthStatus.expiresAt).toLocaleString()}`
+                : ""}
+            </>
+          ) : (
+            t(item.descKey)
+          )}
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        {credential ? (
+          <>
+            <Button variant="secondary" size="sm" onClick={onRefresh}>
+              {t("ext.link.oauthRefresh")}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => onLogout(credential)}>
+              {t("ext.link.oauthLogout")}
+            </Button>
+          </>
+        ) : (
+          <Button variant="secondary" size="sm" onClick={onLogin}>
+            {t("ext.link.oauthLogin")}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
   isEditableMcpServer,
   isHttpMcpAuthConfigured,
+  inferHttpAuthMode,
   mcpServersFromSettings,
   persistableMcpServers,
   ownerPluginOf,
@@ -10,7 +11,9 @@ import {
 describe("plugin MCP servers in settings UI", () => {
   it("marks plugin-provided servers as readonly", () => {
     expect(isEditableMcpServer({ name: "local", command: "npx", source: "settings" })).toBe(true);
-    expect(isEditableMcpServer({ name: "plug:server", command: "npx", source: "plugin" })).toBe(false);
+    expect(isEditableMcpServer({ name: "plug:server", command: "npx", source: "plugin" })).toBe(
+      false,
+    );
     expect(isEditableMcpServer({ name: "readonly", command: "npx", editable: false })).toBe(false);
   });
 
@@ -49,5 +52,17 @@ describe("plugin MCP servers in settings UI", () => {
     expect(isHttpMcpAuthConfigured({ bearerTokenEnvVar: "MCP_TOKEN" })).toBe(true);
     expect(isHttpMcpAuthConfigured({ envHeaders: { "x-api-key": "MCP_API_KEY" } })).toBe(true);
     expect(isHttpMcpAuthConfigured({ headers: { "X-Client-Name": "code-shell" } })).toBe(true);
+  });
+
+  it("infers the primary HTTP auth mode without changing old auth config", () => {
+    expect(inferHttpAuthMode({})).toBe("none");
+    expect(inferHttpAuthMode({ bearerTokenEnvVar: "MCP_TOKEN" })).toBe("bearer");
+    expect(inferHttpAuthMode({ envHeaders: { "x-api-key": "MCP_API_KEY" } })).toBe("headers");
+    expect(
+      inferHttpAuthMode({ credentialRef: "figma-oauth" }, [{ id: "figma-oauth", type: "oauth" }]),
+    ).toBe("oauth");
+    expect(
+      inferHttpAuthMode({ credentialRef: "plain-token" }, [{ id: "plain-token", type: "token" }]),
+    ).toBe("bearer");
   });
 });

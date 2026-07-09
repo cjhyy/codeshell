@@ -361,10 +361,10 @@ export interface FileContent {
   size: number;
 }
 
-/** A stored credential (token/link) as edited in the renderer. */
+/** A stored credential (token/link/oauth/cookie) as edited in the renderer. */
 export interface CredentialView {
   id: string;
-  type: "token" | "link" | "cookie";
+  type: "token" | "link" | "cookie" | "oauth";
   label: string;
   secret?: string;
   exposeAsEnv?: string;
@@ -372,19 +372,36 @@ export interface CredentialView {
   autoUseByAI?: boolean;
   /** 逐条「AI 可自动注入浏览器」开关(把 cookie 灌进内置浏览器,免审批门)。 */
   autoInjectByAI?: boolean;
-  /** link: appUrl;cookie: 拓取平台与主域 + 抓取范围(all=全量分区)+ 切换策略。 */
+  /** link: appUrl; oauth: provider/client hints; cookie: 拓取平台与主域 + 切换策略。 */
   meta?: {
     appUrl?: string;
     platform?: string;
     domain?: string;
     scope?: "domain" | "all";
     switchMode?: "clear" | "merge";
+    oauthProvider?: string;
+    authUrl?: string;
+    tokenEndpoint?: string;
+    clientId?: string;
+    scopes?: string[];
+    lastRefreshAt?: string;
   };
 }
 /** Masked credential returned to the renderer — never carries the secret value. */
 export interface MaskedCredentialView extends Omit<CredentialView, "secret"> {
   hasSecret: boolean;
   secretHint?: string;
+  oauthStatus?: {
+    state: "valid" | "expired" | "missing" | "invalid";
+    expiresAt?: string;
+    expiresInMs?: number;
+    hasRefreshToken?: boolean;
+    tokenEndpoint?: string;
+    clientId?: string;
+    scope?: string;
+    scopes?: string[];
+    error?: string;
+  };
 }
 
 export type MarketplaceSource = { source: "github"; repo: string } | { source: "git"; url: string };
@@ -752,6 +769,12 @@ export interface CodeshellApi {
           domain?: string;
           scope?: "domain" | "all";
           switchMode?: "clear" | "merge";
+          oauthProvider?: string;
+          authUrl?: string;
+          tokenEndpoint?: string;
+          clientId?: string;
+          scopes?: string[];
+          lastRefreshAt?: string;
         };
       },
     ): Promise<void>;
@@ -1591,7 +1614,7 @@ export interface McpServerProbeInput {
   bearerTokenEnvVar?: string;
   /** (HTTP) header-name → env-var-NAME map, values read at connect time. */
   envHeaders?: Record<string, string>;
-  /** (HTTP) id of a stored credential used as the Bearer token. */
+  /** (HTTP) id of a stored token/link/oauth credential used as Bearer auth. */
   credentialRef?: string;
 }
 

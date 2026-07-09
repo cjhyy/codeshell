@@ -1,6 +1,6 @@
 export interface CredentialView {
   id: string;
-  type: "token" | "link" | "cookie";
+  type: "token" | "link" | "cookie" | "oauth";
   label: string;
   secret?: string;
   exposeAsEnv?: string;
@@ -14,9 +14,26 @@ export interface CredentialView {
     domain?: string;
     scope?: "domain" | "all";
     switchMode?: "clear" | "merge";
+    oauthProvider?: string;
+    authUrl?: string;
+    tokenEndpoint?: string;
+    clientId?: string;
+    scopes?: string[];
+    lastRefreshAt?: string;
   };
 }
 export interface MaskedCredentialView extends Omit<CredentialView, "secret"> {
   hasSecret: boolean;
   secretHint?: string;
+  oauthStatus?: {
+    state: "valid" | "expired" | "missing" | "invalid";
+    expiresAt?: string;
+    expiresInMs?: number;
+    hasRefreshToken?: boolean;
+    tokenEndpoint?: string;
+    clientId?: string;
+    scope?: string;
+    scopes?: string[];
+    error?: string;
+  };
 }
