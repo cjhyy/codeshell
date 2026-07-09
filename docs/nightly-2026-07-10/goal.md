@@ -57,7 +57,7 @@
   - 锚点：`engine/input-attachments.test.ts`、`engine-structured-image-vision-gate.test.ts`、`model-facade-recorder-redaction.test.ts`
   - 目标：①目录内 symlink 指向外部文件的附件逃逸显式用例；②Engine「非视觉+非图片结构化附件仍调 LLM」回归；③non-streaming recorder redaction 直接单测。纯补测试无代码改动。
 
-- [ ] **B3. release-checklist-beta.md 文档纠偏**（体量 XS）
+- [x] **B3. release-checklist-beta.md 文档纠偏**（体量 XS）— ✅ core files=["dist","THIRD_PARTY_NOTICES.md"]、示例改 0.7.0-rc.1/0.7.0，纯文档已合并
   - 锚点：`docs/release-checklist-beta.md:48`、`:92-95`
   - 目标：core `files` 已含 THIRD_PARTY_NOTICES.md 需更新；发版示例从 `0.6.0-beta.1` 改为 rc/0.7.0。
 
@@ -121,6 +121,7 @@
 | A3 | task-quick-chat | 2e700c01 | SHIP-with-nits（隔离真严格） | 3 pass | ✅ 已合并、worktree 已清 |
 | A4 | task-mcp-oauth | 660f320d | SHIP-with-nits（凭证加密不泄漏） | 89 pass | ✅ 已合并、worktree 已清 |
 | A1 | task-driveagent-inspect | fb839656+eb439725 | BLOCK→修复→复审 SHIP | 437 pass | ✅ 已合并、worktree 已清 |
+| B3 | task-release-checklist | adc01e74 | 纯文档免审 | — | ✅ 已合并、worktree 已清 |
 
 ## 问题记录（遇到阻塞 / 非本任务引入的红测试记这里）
 
