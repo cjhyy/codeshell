@@ -41,9 +41,12 @@ function findSessionRecorderFile(root: string, sid: string): string | undefined 
 
 async function expectRecorderRedactionFor(method: "call" | "callWithoutStreaming"): Promise<void> {
   const sid = `recorder-redaction-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const secret = "credential-secret-that-must-not-hit-recorder";
-  const placeholder = "[credential value withheld]";
-  const redacted = JSON.stringify({ kind: "value", value: placeholder });
+  const apiKeySecret = "sk-recorder-redaction-secret";
+  const tokenSecret = "token-recorder-redaction-secret";
+  const secret = JSON.stringify({ apiKey: apiKeySecret, token: tokenSecret });
+  const apiKeyPlaceholder = "[api key withheld]";
+  const tokenPlaceholder = "[token withheld]";
+  const redacted = JSON.stringify({ apiKey: apiKeyPlaceholder, token: tokenPlaceholder });
   const invocation =
     method === "call"
       ? `
@@ -72,6 +75,8 @@ async function expectRecorderRedactionFor(method: "call" | "callWithoutStreaming
 
       const sid = ${JSON.stringify(sid)};
       const secret = ${JSON.stringify(secret)};
+      const apiKeySecret = ${JSON.stringify(apiKeySecret)};
+      const tokenSecret = ${JSON.stringify(tokenSecret)};
       let providerSawSecret = false;
       setCurrentSid(sid);
 
@@ -79,7 +84,9 @@ async function expectRecorderRedactionFor(method: "call" | "callWithoutStreaming
         provider: "stub",
         model: "stub-model",
         async createMessage(options) {
-          providerSawSecret = JSON.stringify(options.messages).includes(secret);
+          const serialized = JSON.stringify(options.messages);
+          providerSawSecret =
+            serialized.includes(apiKeySecret) && serialized.includes(tokenSecret);
           return {
             text: "ok",
             toolCalls: [],
@@ -139,16 +146,18 @@ async function expectRecorderRedactionFor(method: "call" | "callWithoutStreaming
   rmSync(recorderFile!, { force: true });
 
   expect(recorded).toContain('"type":"llm.request"');
-  expect(recorded).toContain(placeholder);
-  expect(recorded).not.toContain(secret);
+  expect(recorded).toContain(apiKeyPlaceholder);
+  expect(recorded).toContain(tokenPlaceholder);
+  expect(recorded).not.toContain(apiKeySecret);
+  expect(recorded).not.toContain(tokenSecret);
 }
 
 describe("ModelFacade recorder redaction", () => {
-  test("records sensitive tool_result placeholders for streaming calls while provider receives plaintext", async () => {
+  test("records sensitive tool_result key/token placeholders for streaming calls while provider receives plaintext", async () => {
     await expectRecorderRedactionFor("call");
   });
 
-  test("records sensitive tool_result placeholders for non-streaming calls while provider receives plaintext", async () => {
+  test("records sensitive tool_result key/token placeholders for non-streaming calls while provider receives plaintext", async () => {
     await expectRecorderRedactionFor("callWithoutStreaming");
   });
 });
