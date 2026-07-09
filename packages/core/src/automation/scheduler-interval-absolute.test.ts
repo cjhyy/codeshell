@@ -64,6 +64,73 @@ async function advance(ms: number): Promise<void> {
 }
 
 describe("CronScheduler interval absolute scheduling", () => {
+  test("in-memory update with unchanged schedule/timezone preserves interval nextRun", async () => {
+    const scheduler = new CronScheduler();
+    schedulers.push(scheduler);
+    let fired = 0;
+    scheduler.setExecutor(async () => {
+      fired++;
+    });
+
+    const job = scheduler.create("job", "10m", "prompt", { timezone: "UTC" });
+    const firstNextRun = job.nextRun;
+    expect(firstNextRun).toBe(START + 10 * 60 * 1000);
+    expect(jest.getTimerCount()).toBe(1);
+
+    await advance(2 * 60 * 1000);
+    const updated = scheduler.update(job.id, {
+      name: "renamed",
+      schedule: job.schedule,
+      timezone: job.timezone,
+    });
+
+    expect(updated?.name).toBe("renamed");
+    expect(updated?.nextRun).toBe(firstNextRun);
+    expect(jest.getTimerCount()).toBe(1);
+
+    await advance(8 * 60 * 1000 - 1);
+    expect(fired).toBe(0);
+    await advance(1);
+    expect(fired).toBe(1);
+    expect(scheduler.get(job.id)?.nextRun).toBe(START + 20 * 60 * 1000);
+
+    const changed = scheduler.update(job.id, { schedule: "20m", timezone: "UTC" });
+    expect(changed?.nextRun).toBe(START + 30 * 60 * 1000);
+  });
+
+  test("store-backed update with unchanged schedule/timezone preserves interval nextRun", async () => {
+    const scheduler = makeScheduler();
+    let fired = 0;
+    scheduler.setExecutor(async () => {
+      fired++;
+    });
+
+    const job = scheduler.create("job", "10m", "prompt", { timezone: "UTC" });
+    const firstNextRun = scheduler.get(job.id)?.nextRun;
+    expect(firstNextRun).toBe(START + 10 * 60 * 1000);
+    expect(jest.getTimerCount()).toBe(1);
+
+    await advance(2 * 60 * 1000);
+    const updated = scheduler.update(job.id, {
+      name: "renamed",
+      schedule: job.schedule,
+      timezone: job.timezone,
+    });
+
+    expect(updated?.name).toBe("renamed");
+    expect(updated?.nextRun).toBe(firstNextRun);
+    expect(jest.getTimerCount()).toBe(1);
+
+    await advance(8 * 60 * 1000 - 1);
+    expect(fired).toBe(0);
+    await advance(1);
+    expect(fired).toBe(1);
+    expect(scheduler.get(job.id)?.nextRun).toBe(START + 20 * 60 * 1000);
+
+    const changed = scheduler.update(job.id, { schedule: "20m", timezone: "UTC" });
+    expect(changed?.nextRun).toBe(START + 30 * 60 * 1000);
+  });
+
   test("repeated loadJobs keeps nextRun stable and does not delay the first fire", async () => {
     const job = seedJob("100");
     const scheduler = makeScheduler();

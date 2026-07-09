@@ -499,7 +499,9 @@ export class CronScheduler {
             validateSchedule(nextSchedule, nextTimezone);
           }
 
-          const scheduleChanged = patch.schedule !== undefined || patch.timezone !== undefined;
+          const scheduleChanged =
+            (patch.schedule !== undefined && patch.schedule !== job.schedule) ||
+            (patch.timezone !== undefined && patch.timezone !== job.timezone);
 
           if (patch.name !== undefined) job.name = patch.name;
           if (patch.prompt !== undefined) job.prompt = patch.prompt;
@@ -527,7 +529,9 @@ export class CronScheduler {
       validateSchedule(nextSchedule, nextTimezone);
     }
 
-    const scheduleChanged = patch.schedule !== undefined || patch.timezone !== undefined;
+    const scheduleChanged =
+      (patch.schedule !== undefined && patch.schedule !== job.schedule) ||
+      (patch.timezone !== undefined && patch.timezone !== job.timezone);
 
     if (patch.name !== undefined) job.name = patch.name;
     if (patch.prompt !== undefined) job.prompt = patch.prompt;
