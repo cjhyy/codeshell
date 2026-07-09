@@ -7,6 +7,8 @@ import type { ToolContext } from "../context.js";
 
 let dir: string;
 let n = 0;
+const PNG_B64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 const ctx = () => ({ cwd: dir }) as unknown as ToolContext;
 // Unique path per write so the module-level fileCache never serves a stale hit.
 const fresh = (content: string): string => {
@@ -28,9 +30,7 @@ describe("readTool", () => {
   });
 
   it("errors clearly when the file does not exist", async () => {
-    expect(await readTool({ file_path: join(dir, "nope.txt") }, ctx())).toContain(
-      "File not found",
-    );
+    expect(await readTool({ file_path: join(dir, "nope.txt") }, ctx())).toContain("File not found");
   });
 
   it("returns line-numbered content", async () => {
@@ -64,5 +64,37 @@ describe("readTool", () => {
     // "" splits to [""] → one (empty) line; the tool numbers it "1\t".
     const p = fresh("");
     expect(await readTool({ file_path: p }, ctx())).toBe("1\t");
+  });
+
+  it("returns image metadata and view_image guidance instead of binary text", async () => {
+    const p = join(dir, "shot.png");
+    writeFileSync(p, Buffer.from(PNG_B64, "base64"));
+    const out = await readTool({ file_path: "shot.png" }, ctx());
+    expect(out).toContain("Image file");
+    expect(out).toContain("Path: shot.png");
+    expect(out).toContain("MIME: image/png");
+    expect(out).toContain("SHA-256:");
+    expect(out).toContain('Use view_image({ path: "shot.png" }) to inspect pixels.');
+    expect(out).not.toContain("\u0000");
+  });
+
+  it("returns metadata for unknown binary files", async () => {
+    const p = join(dir, "blob.bin");
+    writeFileSync(p, Buffer.from([0, 1, 2, 3, 4, 5]));
+    const out = await readTool({ file_path: p }, ctx());
+    expect(out).toContain("Binary file");
+    expect(out).toContain("blob.bin");
+    expect(out).toContain("Size: 6 bytes");
+    expect(out).toContain("SHA-256:");
+    expect(out).not.toContain("view_image");
+  });
+
+  it("returns metadata for large binary files instead of the large-text error", async () => {
+    const p = join(dir, "large.bin");
+    writeFileSync(p, Buffer.alloc(6 * 1024 * 1024));
+    const out = await readTool({ file_path: p }, ctx());
+    expect(out).toContain("Binary file");
+    expect(out).toContain("Size: 6291456 bytes");
+    expect(out).not.toContain("File is too large");
   });
 });

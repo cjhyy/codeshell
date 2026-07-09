@@ -108,6 +108,7 @@ import { defaultCacheDir } from "../llm/model-cache.js";
 import { detectProviderFromApiKey, buildModelPool } from "../onboarding.js";
 import { detectPastedNoise } from "../utils/task-sanitizer.js";
 import { parseTaskWithImages, type ParsedTask } from "./parse-task.js";
+import { buildInputAttachmentContext } from "./input-attachments.js";
 import {
   enforceImagePolicy,
   byteLengthFromBase64,
@@ -124,6 +125,7 @@ import { runDreamConsolidation } from "../services/dream-consolidation.js";
 import { EngineRuntime } from "./runtime.js";
 import { join, isAbsolute } from "node:path";
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import type { InputAttachmentMeta } from "../protocol/types.js";
 
 /**
  * Build ScanOptions.compatFileNames from the user's instruction compat toggles.
@@ -941,6 +943,8 @@ export class Engine {
       injected?: boolean;
       /** Stable id for this user-intent, used to make duplicate submits idempotent. */
       clientMessageId?: string;
+      /** Structured input attachments. Legacy `<codeshell-image>` blocks remain supported. */
+      attachments?: InputAttachmentMeta[];
     },
   ): Promise<EngineResult> {
     const workspaceResume =
@@ -1041,11 +1045,38 @@ export class Engine {
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     }
+    const cap = capabilitiesFor(
+      (this.config.llm.providerKind ?? this.config.llm.provider) as ProviderKindName,
+      this.config.llm.model,
+    );
+    const attachmentContext = await buildInputAttachmentContext(options?.attachments, cwd, {
+      includeImageBytes: cap.supportsVision,
+    });
+    if (attachmentContext.errors.length > 0) {
+      const detail = attachmentContext.errors.join("; ");
+      logger.warn("engine.run.input_attachment_failed", { error: detail });
+      return {
+        text: `ERROR: input attachment could not be read (${detail}). Re-attach it or choose a path inside the workspace.`,
+        reason: "image_error",
+        sessionId: options?.sessionId ?? "input-attachment-failed",
+        turnCount: 0,
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      };
+    }
+    if (attachmentContext.text || attachmentContext.hasStructuredImageAttachments) {
+      parsedTask = {
+        text: [parsedTask.text, attachmentContext.text].filter(Boolean).join("\n\n"),
+        images:
+          attachmentContext.hasStructuredImageAttachments && attachmentContext.images.length > 0
+            ? attachmentContext.images
+            : parsedTask.images,
+        hasImages:
+          attachmentContext.hasStructuredImageAttachments && attachmentContext.images.length > 0
+            ? attachmentContext.images.length > 0
+            : parsedTask.hasImages,
+      };
+    }
     if (parsedTask.hasImages) {
-      const cap = capabilitiesFor(
-        (this.config.llm.providerKind ?? this.config.llm.provider) as ProviderKindName,
-        this.config.llm.model,
-      );
       if (!cap.supportsVision) {
         logger.warn("engine.run.vision_not_supported", {
           provider: this.config.llm.provider,

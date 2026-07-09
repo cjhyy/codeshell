@@ -8,13 +8,24 @@
  * Pure + side-effect-free. `id` is supplied by the caller (so this stays
  * deterministic and unit-testable — no clock/random inside).
  */
+import type { InputAttachmentMeta } from "../preload/types";
+
 export interface QueuedItem {
   id: string;
+  /** Engine/user-text payload. Does not include legacy attachment XML. */
   text: string;
+  /** Display payload for the queue preview and eventual user bubble/title. */
+  displayText?: string;
+  /** Structured run attachments that must accompany this queued draft. */
+  attachments?: InputAttachmentMeta[];
   clientMessageId: string;
 }
 
 export type QueuedInputState = Record<string, QueuedItem[]>;
+
+export function canSteerQueuedItem(item: QueuedItem): boolean {
+  return (item.attachments?.length ?? 0) === 0;
+}
 
 export interface SerialTaskQueue {
   tail: Promise<void>;
@@ -35,12 +46,18 @@ export function enqueueQueuedInput(
   id: string,
   text: string,
   clientMessageId = id,
+  payload: { displayText?: string; attachments?: InputAttachmentMeta[] } = {},
 ): QueuedInputState {
   const trimmed = text.trim();
-  if (!trimmed || !id) return state;
+  const displayText = (payload.displayText ?? text).trim();
+  const attachments = payload.attachments?.filter(Boolean) ?? [];
+  if (!id || (!trimmed && !displayText && attachments.length === 0)) return state;
+  const item: QueuedItem = { id, text: trimmed, clientMessageId };
+  if (displayText && displayText !== trimmed) item.displayText = displayText;
+  if (attachments.length > 0) item.attachments = [...attachments];
   return {
     ...state,
-    [bucket]: [...(state[bucket] ?? []), { id, text: trimmed, clientMessageId }],
+    [bucket]: [...(state[bucket] ?? []), item],
   };
 }
 
@@ -113,14 +130,34 @@ export function removeQueuedInputById(
 export function drainQueuedInput(
   state: QueuedInputState,
   bucket: string,
-): { text: string | null; ids: string[]; state: QueuedInputState } {
+): {
+  text: string | null;
+  displayText?: string;
+  attachments?: InputAttachmentMeta[];
+  ids: string[];
+  state: QueuedInputState;
+} {
   const list = state[bucket] ?? [];
   if (list.length === 0) return { text: null, ids: [], state };
-  const merged = list.map((item) => item.text).join("\n\n");
+  const merged = list
+    .map((item) => item.text)
+    .filter(Boolean)
+    .join("\n\n");
+  const displayText = list
+    .map((item) => item.displayText ?? item.text)
+    .filter(Boolean)
+    .join("\n\n");
+  const attachments = list.flatMap((item) => item.attachments ?? []);
   const ids = list.map((item) => item.id);
   const next = { ...state };
   delete next[bucket];
-  return { text: merged, ids, state: next };
+  return {
+    text: merged,
+    ...(displayText && displayText !== merged ? { displayText } : {}),
+    ...(attachments.length > 0 ? { attachments } : {}),
+    ids,
+    state: next,
+  };
 }
 
 export function promoteQueuedInputAt(

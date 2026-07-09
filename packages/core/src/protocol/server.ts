@@ -497,6 +497,7 @@ export class AgentServer {
     try {
       const result = await session.enqueueTurn(params.task, {
         cwd: params.cwd,
+        attachments: Array.isArray(params.attachments) ? params.attachments : undefined,
         goal:
           typeof params.goal === "string" ||
           (params.goal != null && typeof params.goal === "object")

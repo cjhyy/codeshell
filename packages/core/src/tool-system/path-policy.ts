@@ -457,6 +457,12 @@ function isSafeCodeShellDiagnosticRead(resolved: string): boolean {
   return false;
 }
 
+function isNoRepoAttachmentRead(resolved: string, operation: PathOperation): boolean {
+  if (operation !== "read") return false;
+  const root = join(homedir(), ".code-shell", "no-repo", ".code-shell", "attachments");
+  return isInsideDir(resolved, root);
+}
+
 /**
  * Classify a file path against the workspace + sensitive-path policy.
  *
@@ -503,6 +509,13 @@ export function classifyPath(rawPath: string, opts: ClassifyOptions): PathClassi
   // Sensitive: write is always denied, read always asks. Workspace placement
   // doesn't soften the rule — an `.env` in the project still asks on read.
   if (sensitiveLabel) {
+    if (isNoRepoAttachmentRead(resolved, opts.operation)) {
+      return {
+        decision: "allow",
+        reason: "no-repo attachment read",
+        resolvedPath: resolved,
+      };
+    }
     if (opts.operation === "read" && isSafeCodeShellDiagnosticRead(resolved)) {
       return {
         decision: "allow",

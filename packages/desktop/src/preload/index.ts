@@ -84,6 +84,45 @@ export type WorktreeCleanupSkippedEvent = {
   }>;
 };
 
+export type InputAttachmentKind = "image" | "file" | "directory";
+
+export type InputAttachmentOrigin =
+  | "paste"
+  | "os-drop"
+  | "file-panel"
+  | "picker"
+  | "mention"
+  | "generated"
+  | "tool";
+
+export interface InputAttachmentMeta {
+  id: string;
+  sessionId: string;
+  kind: InputAttachmentKind;
+  origin: InputAttachmentOrigin;
+  path: string;
+  absPath: string;
+  relPath?: string;
+  mime?: string;
+  size: number;
+  sha256: string;
+  originalName?: string;
+  createdAt: number;
+  sourcePath?: string;
+  width?: number;
+  height?: number;
+  vision?: {
+    include: boolean;
+    mediaPath?: string;
+    detail?: "low" | "standard" | "high";
+  };
+  directory?: {
+    treePath?: string;
+    truncated?: boolean;
+    entryCount?: number;
+  };
+}
+
 export type PtyStartResult = { ok: true; pid: number } | { ok: false; detail: string };
 
 let nextRpcId = 1;
@@ -308,6 +347,7 @@ contextBridge.exposeInMainWorld("codeshell", {
       permissionMode?: string;
       planMode?: boolean;
       clientMessageId?: string;
+      attachments?: InputAttachmentMeta[];
     } & Record<string, unknown>,
   ) =>
     // No timeout: a run resolves only when the whole turn completes (can be
@@ -619,6 +659,27 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("shell:openInEditor", path, cwd) as Promise<string>,
   /** Read an image file as a base64 data: URL (null on failure). */
   readImageDataUrl: (absPath: string) => ipcRenderer.invoke("images:readDataUrl", absPath),
+  stageAttachmentImageDataUrl: (payload: {
+    cwd: string;
+    sessionId: string;
+    name?: string;
+    mime?: string;
+    dataUrl: string;
+    origin: InputAttachmentOrigin;
+  }) =>
+    ipcRenderer.invoke("attachments:stageImageDataUrl", payload) as Promise<InputAttachmentMeta>,
+  cleanupAttachments: (payload: { cwd: string; sessionId?: string; now?: number }) =>
+    ipcRenderer.invoke("attachments:cleanup", payload) as Promise<{
+      removed: string[];
+      sessionsRemoved: string[];
+    }>,
+  inspectAttachments: (payload: { cwd: string; sessionId?: string }) =>
+    ipcRenderer.invoke("attachments:inspect", payload) as Promise<InputAttachmentMeta[]>,
+  markAttachmentsSent: (payload: {
+    cwd: string;
+    sessionId: string;
+    attachments: InputAttachmentMeta[];
+  }) => ipcRenderer.invoke("attachments:markSent", payload) as Promise<{ ok: true }>,
   /**
    * Save an image (data: URL) to a user-chosen location via a save dialog.
    * Returns the saved path, or null if the user cancelled.

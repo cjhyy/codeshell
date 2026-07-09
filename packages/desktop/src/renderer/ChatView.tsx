@@ -26,7 +26,7 @@ import { ApprovalCard } from "./approvals/ApprovalCard";
 import type { ApproveChoice, ApprovePathScope } from "./approvals/approvalDecision";
 import type { AskUserMessage } from "./types";
 import type { Repo } from "./repos";
-import type { ApprovalRequestEnvelope } from "../preload/types";
+import type { ApprovalRequestEnvelope, FileSearchHit, InputAttachmentMeta } from "../preload/types";
 import {
   buildAttachments,
   decodeWireForDisplay,
@@ -60,9 +60,33 @@ interface Props {
   engineSessionId?: string | null;
   liveTurnActive?: boolean;
   sendBucket?: string;
-  onSend: (text: string, opts?: { bucket?: string; clientMessageId?: string }) => void;
-  onQueueInput?: (text: string, opts?: { bucket?: string; clientMessageId?: string }) => void;
-  onForceSend?: (text: string, opts?: { bucket?: string; clientMessageId?: string }) => void;
+  onSend: (
+    text: string,
+    opts?: {
+      bucket?: string;
+      clientMessageId?: string;
+      attachments?: InputAttachmentMeta[];
+      displayText?: string;
+    },
+  ) => void;
+  onQueueInput?: (
+    text: string,
+    opts?: {
+      bucket?: string;
+      clientMessageId?: string;
+      attachments?: InputAttachmentMeta[];
+      displayText?: string;
+    },
+  ) => void;
+  onForceSend?: (
+    text: string,
+    opts?: {
+      bucket?: string;
+      clientMessageId?: string;
+      attachments?: InputAttachmentMeta[];
+      displayText?: string;
+    },
+  ) => void;
   onCompactCommand?: () => void;
   onStop: () => void;
   busy: boolean;
@@ -90,6 +114,8 @@ interface Props {
   }) => void;
   /** Attach an image to the composer by absolute path (file-panel drag — TODO 2.1). */
   onAttachImagePath?: (absPath: string) => void;
+  /** Ensure the current draft has a cwd/sessionId suitable for attachment staging. */
+  onPrepareAttachmentSession?: () => { cwd: string; sessionId: string } | null;
   /** Provider-agnostic image clarity; drives renderer-side downscale before send. */
   imageDetail?: ImageDetail;
   pendingApproval?: ApprovalRequestEnvelope | null;
@@ -170,6 +196,101 @@ function detectSlashCommand(value: string, caret: number): { query: string } | n
   return { query: beforeCaret.slice(1).toLowerCase() };
 }
 
+function toRunAttachments(images: ImageAttachment[]): InputAttachmentMeta[] {
+  return images
+    .filter((img) => !!img.path && !!img.absPath)
+    .map((img) => ({
+      id: img.id,
+      sessionId: img.sessionId ?? "",
+      kind: "image" as const,
+      origin: img.origin ?? "paste",
+      path: img.path!,
+      absPath: img.absPath!,
+      relPath: img.relPath,
+      mime: img.mime,
+      size: img.size,
+      sha256: img.sha256 ?? "",
+      originalName: img.name,
+      createdAt: img.createdAt ?? Date.now(),
+      sourcePath: img.sourcePath,
+      vision: { include: true },
+    }));
+}
+
+function referenceFromFileHit(
+  hit: FileSearchHit,
+  cwd: string | null | undefined,
+  sessionId: string | null | undefined,
+): InputAttachmentMeta | null {
+  if (!cwd) return null;
+  const absPath = joinCwdPath(cwd, hit.path);
+  return {
+    id: `ref_${hit.kind}_${hashKey(hit.path)}_${Date.now().toString(36)}`,
+    sessionId: sessionId || "mention",
+    kind: hit.kind === "dir" ? "directory" : "file",
+    origin: "mention",
+    path: hit.path,
+    absPath,
+    relPath: hit.path,
+    mime: hit.mime,
+    size: hit.size ?? 0,
+    sha256: "",
+    originalName: hit.name,
+    createdAt: Date.now(),
+  };
+}
+
+function referenceFromAbsPath(
+  absPath: string,
+  cwd: string | null | undefined,
+  sessionId: string | null | undefined,
+): InputAttachmentMeta {
+  const relPath = cwd ? relativeBrowserPath(cwd, absPath) : null;
+  return {
+    id: `ref_file_${hashKey(absPath)}_${Date.now().toString(36)}`,
+    sessionId: sessionId || "file-panel",
+    kind: "file",
+    origin: "file-panel",
+    path: relPath ?? absPath,
+    absPath,
+    relPath: relPath ?? undefined,
+    size: 0,
+    sha256: "",
+    originalName: absPath.split(/[\\/]/).pop() || absPath,
+    createdAt: Date.now(),
+  };
+}
+
+function joinCwdPath(cwd: string, relPath: string): string {
+  if (/^(?:[A-Za-z]:[\\/]|\/)/.test(relPath)) return relPath;
+  return `${cwd.replace(/[\\/]+$/, "")}/${relPath.replace(/^\/+/, "")}`;
+}
+
+function relativeBrowserPath(cwd: string, absPath: string): string | null {
+  const base = cwd.replace(/\\/g, "/").replace(/\/+$/, "");
+  const target = absPath.replace(/\\/g, "/");
+  if (!target.startsWith(`${base}/`)) return null;
+  return target.slice(base.length + 1);
+}
+
+function hashKey(value: string): string {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function appendReference(
+  refs: InputAttachmentMeta[],
+  ref: InputAttachmentMeta | null,
+): InputAttachmentMeta[] {
+  if (!ref) return refs;
+  if (refs.some((item) => item.kind === ref.kind && item.path === ref.path)) return refs;
+  return [...refs, ref];
+}
+
 export function ChatView({
   messages,
   awaitingHydration = false,
@@ -194,6 +315,7 @@ export function ChatView({
   onAskUserAnswer,
   onExtendGoal,
   onAttachImagePath,
+  onPrepareAttachmentSession,
   imageDetail,
   pendingApproval,
   onApprovalDecide,
@@ -243,6 +365,7 @@ export function ChatView({
   const [zoomed, setZoomed] = useState<{ items: LightboxItem[]; index: number } | null>(null);
   const setDraft = onDraftChange;
   const setAttachments = onAttachmentsChange;
+  const [inputReferences, setInputReferences] = useState<InputAttachmentMeta[]>([]);
   const toast = useToast();
 
   // ─── Voice input (听写) ───────────────────────────────────────────────
@@ -514,6 +637,9 @@ export function ChatView({
   // file — TODO 2.1). Appends at the caret, or at the end with a leading space
   // if the draft doesn't already end with whitespace.
   const insertPathReference = (absPath: string): void => {
+    setInputReferences((cur) =>
+      appendReference(cur, referenceFromAbsPath(absPath, messageCwd, engineSessionId)),
+    );
     const ta = textareaRef.current;
     const ref = `@${absPath} `;
     if (ta && ta.selectionStart != null) {
@@ -540,7 +666,19 @@ export function ChatView({
     const caret = ta?.selectionStart ?? draft.length;
     const before = draft.slice(0, mention.start);
     const after = draft.slice(caret);
-    const insertion = item.kind === "skill" ? `@${item.skill.name} ` : `@${item.file.path} `;
+    const insertion =
+      item.kind === "skill"
+        ? `@${item.skill.name} `
+        : item.kind === "recent"
+          ? `@${item.attachment.path} `
+          : `@${item.file.path} `;
+    if (item.kind === "file") {
+      setInputReferences((cur) =>
+        appendReference(cur, referenceFromFileHit(item.file, messageCwd, engineSessionId)),
+      );
+    } else if (item.kind === "recent") {
+      setInputReferences((cur) => appendReference(cur, item.attachment));
+    }
     const next = before + insertion + after;
     setDraft(next);
     closeMention();
@@ -568,6 +706,7 @@ export function ChatView({
     if (item.name === "/compact") {
       onCompactCommand?.();
       setDraft("");
+      setInputReferences([]);
       setAttachmentError(null);
       setHistoryCursor(-1);
       liveDraftStash.current = "";
@@ -592,25 +731,41 @@ export function ChatView({
       setAttachmentError(t("chat.composer.visionUnsupportedSend"));
       return;
     }
+    if (hasImages && attachments.some((img) => !img.path)) {
+      setAttachmentError(t("chat.attachment.missingPath"));
+      return;
+    }
     // Anchors (diff/browser/file comments) are prepended as a structured block
     // so the model can pin each comment to its exact location.
     const withAnchors = encodeAnchorsForWire(text, anchors);
-    const payload = encodeAttachmentsForWire(withAnchors, attachments);
+    const displayPayload = encodeAttachmentsForWire(withAnchors, attachments);
+    const runAttachments = [...toRunAttachments(attachments), ...inputReferences];
     const routeOpts = sendBucket ? { bucket: sendBucket } : undefined;
-    if (busy) onQueueInput?.(payload, routeOpts);
-    else onSend(payload, routeOpts);
+    if (busy)
+      onQueueInput?.(withAnchors, {
+        ...routeOpts,
+        attachments: runAttachments,
+        displayText: displayPayload,
+      });
+    else
+      onSend(withAnchors, {
+        ...routeOpts,
+        attachments: runAttachments,
+        displayText: displayPayload,
+      });
     // Snap the stream to the bottom + re-arm follow regardless of scroll pos.
     setSendEpoch((n) => n + 1);
     if (text) setHistory(pushHistory(activeRepoId, text));
     setDraft("");
     setAttachments([]);
+    setInputReferences([]);
     setAttachmentError(null);
     setHistoryCursor(-1);
     liveDraftStash.current = "";
     onClearAnchors?.();
   };
 
-  const acceptFiles = async (files: File[]) => {
+  const acceptFiles = async (files: File[], origin: "paste" | "os-drop") => {
     if (compacting) return;
     if (files.length === 0) return;
     setAttachmentError(null);
@@ -622,7 +777,49 @@ export function ChatView({
       // back to the original if encoding fails (engine policy still
       // gates oversize bytes downstream).
       const compressed = await compressBatch(accepted, imageDetail);
-      setAttachments((cur) => [...cur, ...compressed]);
+      const context = onPrepareAttachmentSession?.();
+      if (!context) {
+        errors.push({
+          kind: "staging-failed",
+          message: t("chat.attachment.stagingUnavailable"),
+        });
+      } else {
+        try {
+          const staged = await Promise.all(
+            compressed.map(async (att) => {
+              const meta = await window.codeshell.stageAttachmentImageDataUrl({
+                cwd: context.cwd,
+                sessionId: context.sessionId,
+                name: att.name,
+                mime: att.mime,
+                dataUrl: att.dataUrl,
+                origin,
+              });
+              return {
+                ...att,
+                id: meta.id,
+                path: meta.path,
+                relPath: meta.relPath,
+                absPath: meta.absPath,
+                sha256: meta.sha256,
+                origin: meta.origin,
+                sessionId: meta.sessionId,
+                createdAt: meta.createdAt,
+                size: meta.size,
+                mime: meta.mime ?? att.mime,
+              };
+            }),
+          );
+          setAttachments((cur) => [...cur, ...staged]);
+        } catch (e) {
+          errors.push({
+            kind: "staging-failed",
+            message: t("chat.attachment.stagingFailed", {
+              message: (e as Error).message,
+            }),
+          });
+        }
+      }
     }
     if (errors.length > 0) {
       setAttachmentError(errors.map((e) => e.message).join("；"));
@@ -634,7 +831,7 @@ export function ChatView({
     const imageFiles = filesFromClipboard(e.clipboardData?.items ?? null);
     if (imageFiles.length === 0) return;
     e.preventDefault();
-    await acceptFiles(imageFiles);
+    await acceptFiles(imageFiles, "paste");
   };
 
   const removeAttachment = (id: string) => {
@@ -861,7 +1058,7 @@ export function ChatView({
     }
     const imageFiles = imageFilesFromDrop(e.dataTransfer?.items ?? null);
     if (imageFiles.length === 0) return;
-    void acceptFiles(imageFiles);
+    void acceptFiles(imageFiles, "os-drop");
   };
 
   return (
@@ -1368,12 +1565,27 @@ export function ChatView({
                       type="button"
                       className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
                       onClick={() => {
-                        const payload = encodeAttachmentsForWire(draft.trim(), attachments);
-                        onForceSend(payload, sendBucket ? { bucket: sendBucket } : undefined);
+                        if (attachments.some((img) => !img.path)) {
+                          setAttachmentError(t("chat.attachment.missingPath"));
+                          return;
+                        }
+                        const withAnchors = encodeAnchorsForWire(draft.trim(), anchors);
+                        const displayPayload = encodeAttachmentsForWire(withAnchors, attachments);
+                        const runAttachments = [
+                          ...toRunAttachments(attachments),
+                          ...inputReferences,
+                        ];
+                        onForceSend(withAnchors, {
+                          ...(sendBucket ? { bucket: sendBucket } : {}),
+                          attachments: runAttachments,
+                          displayText: displayPayload,
+                        });
                         if (draft.trim()) setHistory(pushHistory(activeRepoId, draft.trim()));
                         setDraft("");
                         setAttachments([]);
+                        setInputReferences([]);
                         setAttachmentError(null);
+                        onClearAnchors?.();
                       }}
                       aria-label={t("chat.composer.guideAria")}
                       title={t("chat.composer.guideTitle")}

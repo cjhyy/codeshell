@@ -48,6 +48,8 @@ describe("buildPathAttachment (TODO 2.1)", () => {
     const { attachment } = buildPathAttachment("/repo/shot.png", PNG_URL, []);
     const wire = encodeAttachmentsForWire("", [attachment!]);
     expect(wire).toContain('name="/repo/shot.png"');
+    expect(wire).toContain('path="/repo/shot.png"');
+    expect(wire).toContain('origin="file-panel"');
   });
 });
 
@@ -87,10 +89,7 @@ describe("decodeWireForDisplay", () => {
   });
 
   test("preserves order of multiple images", () => {
-    const wire = encodeAttachmentsForWire("two", [
-      img({ name: "a.png" }),
-      img({ name: "b.png" }),
-    ]);
+    const wire = encodeAttachmentsForWire("two", [img({ name: "a.png" }), img({ name: "b.png" })]);
     const r = decodeWireForDisplay(wire);
     expect(r.images.map((i) => i.name)).toEqual(["a.png", "b.png"]);
   });
@@ -101,12 +100,42 @@ describe("decodeWireForDisplay", () => {
     expect(r.images[0]!.name).toBe('a&b"<c>.png');
   });
 
+  test("encodes path metadata attrs while old display decode still extracts the image", () => {
+    const wire = encodeAttachmentsForWire("look", [
+      img({
+        path: '.code-shell/attachments/sid/a&"b.png',
+        relPath: '.code-shell/attachments/sid/a&"b.png',
+        absPath: "/repo/.code-shell/attachments/sid/a.png",
+        sha256: "a".repeat(64),
+        origin: "paste",
+        sessionId: "sid-1",
+      }),
+    ]);
+    expect(wire).toContain('path=".code-shell/attachments/sid/a&amp;&quot;b.png"');
+    expect(wire).toContain(`hash="sha256:${"a".repeat(64)}"`);
+    expect(wire).toContain('size="10"');
+    expect(wire).toContain('origin="paste"');
+    expect(wire).toContain('sessionId="sid-1"');
+
+    const decoded = decodeWireForDisplay(wire);
+    expect(decoded.text).toBe("look");
+    expect(decoded.images).toHaveLength(1);
+    expect(decoded.images[0]!.name).toBe("shot.png");
+  });
+
+  test("no-path legacy attachments still encode and decode", () => {
+    const wire = encodeAttachmentsForWire("", [img()]);
+    expect(wire).not.toContain(" path=");
+    expect(wire).not.toContain(" hash=");
+    const decoded = decodeWireForDisplay(wire);
+    expect(decoded.images[0]!.dataUrl).toBe("data:image/png;base64,iVBORw0KGgoAAAA");
+  });
+
   // Regression: an empty image body (ephemeral screenshot deleted by encode
   // time) must be dropped, not surfaced as a blank <img src=""> that renders
   // as selectable-but-blank content.
   test("drops an image block with an empty body", () => {
-    const wire =
-      '<codeshell-image mime="image/png" name="截屏.png">\n\n</codeshell-image>';
+    const wire = '<codeshell-image mime="image/png" name="截屏.png">\n\n</codeshell-image>';
     const r = decodeWireForDisplay(wire);
     expect(r.images).toEqual([]);
     expect(r.text).toBe("");
@@ -114,7 +143,7 @@ describe("decodeWireForDisplay", () => {
 
   test("keeps valid images while dropping an empty sibling", () => {
     const wire =
-      'look\n\n' +
+      "look\n\n" +
       '<codeshell-image mime="image/png" name="dead.png">\n  \n</codeshell-image>\n' +
       encodeAttachmentsForWire("", [img({ name: "ok.png" })]);
     const r = decodeWireForDisplay(wire);

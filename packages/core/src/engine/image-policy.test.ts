@@ -178,26 +178,37 @@ describe("dropOversizedImages", () => {
 
 describe("collectAttachedImagePaths", () => {
   // resolve: absolute names pass through; bare names join to a fake cwd.
-  const resolve = (name: string) =>
-    name.startsWith("/") ? name : `/work/${name}`;
+  const resolve = (name: string) => (name.startsWith("/") ? name : `/work/${name}`);
 
   it("returns the path for a file-attached image whose name resolves to an existing file", () => {
     const exists = (p: string) => p === "/work/refs/chen.png";
+    const out = collectAttachedImagePaths([img(10, "/work/refs/chen.png")], resolve, exists);
+    expect(out).toEqual(["/work/refs/chen.png"]);
+  });
+
+  it("prefers path attr and returns the original cwd-relative path when it exists", () => {
+    const exists = (p: string) => p === "/work/.code-shell/attachments/sid/shot.png";
     const out = collectAttachedImagePaths(
-      [img(10, "/work/refs/chen.png")],
+      [Object.assign(img(10, "ignored.png"), { path: ".code-shell/attachments/sid/shot.png" })],
       resolve,
       exists,
     );
-    expect(out).toEqual(["/work/refs/chen.png"]);
+    expect(out).toEqual([".code-shell/attachments/sid/shot.png"]);
+  });
+
+  it("skips a missing path attr instead of falling back to name", () => {
+    const exists = (p: string) => p === "/work/ignored.png";
+    const out = collectAttachedImagePaths(
+      [Object.assign(img(10, "ignored.png"), { path: ".code-shell/attachments/sid/missing.png" })],
+      resolve,
+      exists,
+    );
+    expect(out).toEqual([]);
   });
 
   it("excludes a pasted screenshot whose name is a bare filename that doesn't exist", () => {
     const exists = (_p: string) => false; // nothing on disk
-    const out = collectAttachedImagePaths(
-      [img(10, "screenshot.png")],
-      resolve,
-      exists,
-    );
+    const out = collectAttachedImagePaths([img(10, "screenshot.png")], resolve, exists);
     expect(out).toEqual([]);
   });
 

@@ -71,6 +71,7 @@ export const chat = {
         removeItemAria: "删除第 {index} 条后续变更",
         removeItemTitle: "删除",
         removeItem: "删除",
+        attachmentsDeferred: "这条后续变更包含附件，将在当前轮结束后作为下一条消息发送。",
       },
       anchors: {
         diff: "审查",
@@ -114,6 +115,8 @@ export const chat = {
         ariaLabel: "@ 引用",
         skills: "插件",
         files: "文件",
+        folders: "文件夹",
+        recentAttachments: "最近附件",
         noMatch: "未找到匹配的插件或文件",
         selectProjectFirst: "请先选择一个项目",
       },
@@ -191,6 +194,9 @@ export const chat = {
         readFailedPath: "读取失败：{path}",
         wrongTypeSimple: "不支持的文件类型：{mime}",
         tooLargePath: "「{path}」超过 {mb} MB",
+        stagingUnavailable: "当前会话还没有可用的附件保存目录，请稍后重试。",
+        stagingFailed: "附件保存失败：{message}",
+        missingPath: "图片附件还没有保存到工作区，请移除后重新添加。",
         imagesTitle: "[图片 ×{count}]",
         imageTitle: "[图片]",
       },
@@ -243,8 +249,7 @@ export const chat = {
           "This conversation is running. Stop or wait for this turn to finish before compacting.",
         inProgress: "Context compaction is already in progress.",
         noSession: "There is no active conversation to compact yet.",
-        done:
-          "Context compacted: {before} → {after} tokens · saved {percent}% · strategy: {strategy}.",
+        done: "Context compacted: {before} → {after} tokens · saved {percent}% · strategy: {strategy}.",
         unchanged: "Context is already minimal; nothing to compact (about {tokens} tokens).",
         boundaryTitle: "Context compacted",
         boundaryDetail: "{before} → {after} tokens · saved {percent}% · {strategy}",
@@ -276,6 +281,8 @@ export const chat = {
         removeItemAria: "Delete follow-up change #{index}",
         removeItemTitle: "Delete",
         removeItem: "Delete",
+        attachmentsDeferred:
+          "This queued follow-up includes attachments and will be sent after the current turn.",
       },
       anchors: {
         diff: "Review",
@@ -320,6 +327,8 @@ export const chat = {
         ariaLabel: "@ reference",
         skills: "Skills",
         files: "Files",
+        folders: "Folders",
+        recentAttachments: "Recent attachments",
         noMatch: "No matching skills or files found",
         selectProjectFirst: "Please select a project first",
       },
@@ -398,6 +407,11 @@ export const chat = {
         readFailedPath: "Read failed: {path}",
         wrongTypeSimple: "Unsupported file type: {mime}",
         tooLargePath: "“{path}” exceeds {mb} MB",
+        stagingUnavailable:
+          "No attachment storage is available for this conversation yet. Try again.",
+        stagingFailed: "Attachment staging failed: {message}",
+        missingPath:
+          "An image attachment has not been saved to the workspace. Remove and add it again.",
         imagesTitle: "[Images ×{count}]",
         imageTitle: "[Image]",
       },

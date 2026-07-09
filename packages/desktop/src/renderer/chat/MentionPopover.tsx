@@ -15,15 +15,16 @@
  * cursor without owning render details.
  */
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Puzzle, FileText, Search } from "lucide-react";
-import type { SkillSummary, FileSearchHit } from "../../preload/types";
+import { Clock, FileText, Folder, Puzzle, Search } from "lucide-react";
+import type { SkillSummary, FileSearchHit, InputAttachmentMeta } from "../../preload/types";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
 import { filterMentionSkills } from "./mention";
 
 export type MentionItem =
   | { kind: "skill"; skill: SkillSummary }
-  | { kind: "file"; file: FileSearchHit };
+  | { kind: "file"; file: FileSearchHit }
+  | { kind: "recent"; attachment: InputAttachmentMeta };
 
 interface Props {
   /** Active repo cwd. When null the popover only shows skills (no files). */
@@ -38,43 +39,76 @@ interface Props {
   onItemsChange: (items: MentionItem[]) => void;
 }
 
-export function MentionPopover({
-  cwd,
-  query,
-  selected,
-  onPick,
-  onItemsChange,
-}: Props) {
+export function MentionPopover({ cwd, query, selected, onPick, onItemsChange }: Props) {
   const { t } = useT();
   const [skills, setSkills] = useState<SkillSummary[]>([]);
   const [files, setFiles] = useState<FileSearchHit[]>([]);
+  const [recent, setRecent] = useState<InputAttachmentMeta[]>([]);
   const activeOptionRef = useRef<HTMLLIElement | null>(null);
 
   // Skills list: loaded once per cwd. Stable across keystrokes; we
   // filter renderer-side so the @-prefix typing is instant.
   useEffect(() => {
     let cancelled = false;
-    if (!cwd) { setSkills([]); return; }
+    if (!cwd) {
+      setSkills([]);
+      return;
+    }
     void window.codeshell
       .listSkills(cwd)
-      .then((s) => { if (!cancelled) setSkills(s); })
-      .catch(() => { if (!cancelled) setSkills([]); });
-    return () => { cancelled = true; };
+      .then((s) => {
+        if (!cancelled) setSkills(s);
+      })
+      .catch(() => {
+        if (!cancelled) setSkills([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [cwd]);
 
   // File search: re-run whenever query changes, with a small debounce so
   // fast typing doesn't fire a search per character.
   useEffect(() => {
     let cancelled = false;
-    if (!cwd) { setFiles([]); return; }
+    if (!cwd) {
+      setFiles([]);
+      return;
+    }
     const handle = setTimeout(() => {
       void window.codeshell
         .searchFiles(cwd, query)
-        .then((hits) => { if (!cancelled) setFiles(hits); })
-        .catch(() => { if (!cancelled) setFiles([]); });
+        .then((hits) => {
+          if (!cancelled) setFiles(hits);
+        })
+        .catch(() => {
+          if (!cancelled) setFiles([]);
+        });
     }, 60);
-    return () => { cancelled = true; clearTimeout(handle); };
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
   }, [cwd, query]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!cwd) {
+      setRecent([]);
+      return;
+    }
+    void window.codeshell
+      .inspectAttachments({ cwd })
+      .then((items) => {
+        if (!cancelled) setRecent(items);
+      })
+      .catch(() => {
+        if (!cancelled) setRecent([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [cwd]);
 
   // Filter skills client-side by insertable identity, not description text.
   // Limit to the first 8 so long lists don't push files off-screen.
@@ -83,15 +117,27 @@ export function MentionPopover({
   }, [skills, query]);
 
   // Files: search service already capped + sorted; show top 12 here.
-  const visibleFiles = useMemo(() => files.slice(0, 12), [files]);
+  const visibleFolders = useMemo(() => files.filter((f) => f.kind === "dir").slice(0, 8), [files]);
+  const visibleFiles = useMemo(() => files.filter((f) => f.kind === "file").slice(0, 12), [files]);
+  const visibleRecent = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const filtered = q
+      ? recent.filter((item) =>
+          `${item.path} ${item.originalName ?? ""} ${item.mime ?? ""}`.toLowerCase().includes(q),
+        )
+      : recent;
+    return filtered.slice(0, 8);
+  }, [query, recent]);
 
   // Build the flat list (used for keyboard cursor + onPick lookups).
   const items: MentionItem[] = useMemo(
     () => [
       ...filteredSkills.map((s) => ({ kind: "skill" as const, skill: s })),
+      ...visibleFolders.map((f) => ({ kind: "file" as const, file: f })),
       ...visibleFiles.map((f) => ({ kind: "file" as const, file: f })),
+      ...visibleRecent.map((a) => ({ kind: "recent" as const, attachment: a })),
     ],
-    [filteredSkills, visibleFiles],
+    [filteredSkills, visibleFiles, visibleFolders, visibleRecent],
   );
 
   // Notify parent whenever the flat list changes so the cursor stays in range.
@@ -110,10 +156,16 @@ export function MentionPopover({
   const isEmpty = items.length === 0;
 
   return (
-    <div className="cs-popup-surface absolute bottom-full left-0 z-50 mb-2 max-h-[min(20rem,calc(100vh-120px))] w-80 max-w-[min(20rem,calc(100vw-24px))] overflow-y-auto rounded-md p-1" role="listbox" aria-label={t("chat.mention.ariaLabel")}>
+    <div
+      className="cs-popup-surface absolute bottom-full left-0 z-50 mb-2 max-h-[min(20rem,calc(100vh-120px))] w-80 max-w-[min(20rem,calc(100vw-24px))] overflow-y-auto rounded-md p-1"
+      role="listbox"
+      aria-label={t("chat.mention.ariaLabel")}
+    >
       {filteredSkills.length > 0 && (
         <div className="py-1">
-          <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t("chat.mention.skills")}</div>
+          <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {t("chat.mention.skills")}
+          </div>
           <ul className="space-y-0.5">
             {filteredSkills.map((s, idx) => {
               const flatIndex = idx;
@@ -136,7 +188,45 @@ export function MentionPopover({
                 >
                   <Puzzle size={14} className="mt-0.5 text-muted-foreground" />
                   <span className="min-w-0 truncate font-medium">{s.name}</span>
-                  <span className="col-start-2 min-w-0 truncate text-xs text-muted-foreground">{s.description}</span>
+                  <span className="col-start-2 min-w-0 truncate text-xs text-muted-foreground">
+                    {s.description}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      {visibleFolders.length > 0 && (
+        <div className="py-1">
+          <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {t("chat.mention.folders")}
+          </div>
+          <ul className="space-y-0.5">
+            {visibleFolders.map((f, idx) => {
+              const flatIndex = filteredSkills.length + idx;
+              const active = flatIndex === selected;
+              return (
+                <li
+                  key={f.path}
+                  ref={active ? activeOptionRef : undefined}
+                  className={cn(
+                    "grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm",
+                    active && "bg-accent text-accent-foreground",
+                  )}
+                  role="option"
+                  aria-selected={active}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onPick({ kind: "file", file: f });
+                  }}
+                >
+                  <Folder size={14} className="mt-0.5 text-muted-foreground" />
+                  <span className="min-w-0 truncate font-medium">{f.name}</span>
+                  <span className="col-start-2 min-w-0 truncate text-xs text-muted-foreground">
+                    {f.path}
+                  </span>
                 </li>
               );
             })}
@@ -146,10 +236,12 @@ export function MentionPopover({
 
       {visibleFiles.length > 0 && (
         <div className="py-1">
-          <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t("chat.mention.files")}</div>
+          <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {t("chat.mention.files")}
+          </div>
           <ul className="space-y-0.5">
             {visibleFiles.map((f, idx) => {
-              const flatIndex = filteredSkills.length + idx;
+              const flatIndex = filteredSkills.length + visibleFolders.length + idx;
               const active = flatIndex === selected;
               return (
                 <li
@@ -168,7 +260,48 @@ export function MentionPopover({
                 >
                   <FileText size={14} className="mt-0.5 text-muted-foreground" />
                   <span className="min-w-0 truncate font-medium">{f.name}</span>
-                  <span className="col-start-2 min-w-0 truncate text-xs text-muted-foreground">{f.path}</span>
+                  <span className="col-start-2 min-w-0 truncate text-xs text-muted-foreground">
+                    {f.path}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      {visibleRecent.length > 0 && (
+        <div className="py-1">
+          <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {t("chat.mention.recentAttachments")}
+          </div>
+          <ul className="space-y-0.5">
+            {visibleRecent.map((attachment, idx) => {
+              const flatIndex =
+                filteredSkills.length + visibleFolders.length + visibleFiles.length + idx;
+              const active = flatIndex === selected;
+              const name =
+                attachment.originalName || attachment.path.split("/").pop() || attachment.path;
+              return (
+                <li
+                  key={attachment.id}
+                  ref={active ? activeOptionRef : undefined}
+                  className={cn(
+                    "grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm",
+                    active && "bg-accent text-accent-foreground",
+                  )}
+                  role="option"
+                  aria-selected={active}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onPick({ kind: "recent", attachment });
+                  }}
+                >
+                  <Clock size={14} className="mt-0.5 text-muted-foreground" />
+                  <span className="min-w-0 truncate font-medium">{name}</span>
+                  <span className="col-start-2 min-w-0 truncate text-xs text-muted-foreground">
+                    {attachment.path}
+                  </span>
                 </li>
               );
             })}
@@ -179,9 +312,7 @@ export function MentionPopover({
       {isEmpty && (
         <div className="flex items-center gap-2 px-2 py-3 text-sm text-muted-foreground">
           <Search size={14} />
-          <span>
-            {cwd ? t("chat.mention.noMatch") : t("chat.mention.selectProjectFirst")}
-          </span>
+          <span>{cwd ? t("chat.mention.noMatch") : t("chat.mention.selectProjectFirst")}</span>
         </div>
       )}
     </div>

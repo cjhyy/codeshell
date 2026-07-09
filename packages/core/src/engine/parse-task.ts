@@ -30,6 +30,16 @@ export interface ParsedImage {
   dataUrl: string;
   /** Just the base64 payload, with the data-URL prefix stripped. */
   base64: string;
+  /** Stable on-disk path, usually cwd-relative for staged desktop attachments. */
+  path?: string;
+  /** Wire hash attr, usually `sha256:<hex>`. */
+  hash?: string;
+  /** Size in bytes from wire metadata. Core must still verify with stat when reading. */
+  size?: number;
+  /** Source channel that produced this attachment. */
+  origin?: string;
+  /** Session directory that owns the staged attachment. */
+  sessionId?: string;
 }
 
 export interface ParsedTask {
@@ -59,8 +69,7 @@ const IMAGE_BLOCK_MARKER = "<codeshell-image";
  * Anchored loosely — we tolerate whitespace inside the opening tag and
  * around the body, which is what the desktop encoder produces.
  */
-const IMAGE_BLOCK_RE =
-  /<codeshell-image\b([^>]*)>([\s\S]*?)<\/codeshell-image>/g;
+const IMAGE_BLOCK_RE = /<codeshell-image\b([^>]*)>([\s\S]*?)<\/codeshell-image>/g;
 
 const ATTR_RE = /(\w+)\s*=\s*"([^"]*)"/g;
 
@@ -140,22 +149,30 @@ export function parseTaskWithImages(task: string): ParsedTask {
 
   const images: ParsedImage[] = [];
   IMAGE_BLOCK_RE.lastIndex = 0;
-  const textWithoutImages = task.replace(IMAGE_BLOCK_RE, (_match, attrsRaw: string, body: string) => {
-    const attrs = parseAttrs(attrsRaw);
-    const { mime, base64 } = parseDataUrl(body);
-    const declaredMime = attrs.mime?.trim();
-    // Prefer the opening-tag attribute when it disagrees with the data URL's
-    // self-declared type — the attribute is what the desktop validator gated
-    // on, so it's the "source of truth" the rest of the pipeline expects.
-    const finalMime = declaredMime && declaredMime.length > 0 ? declaredMime : mime;
-    images.push({
-      mime: finalMime,
-      name: attrs.name ?? "",
-      dataUrl: `data:${finalMime};base64,${base64}`,
-      base64,
-    });
-    return "";
-  });
+  const textWithoutImages = task.replace(
+    IMAGE_BLOCK_RE,
+    (_match, attrsRaw: string, body: string) => {
+      const attrs = parseAttrs(attrsRaw);
+      const { mime, base64 } = parseDataUrl(body);
+      const declaredMime = attrs.mime?.trim();
+      // Prefer the opening-tag attribute when it disagrees with the data URL's
+      // self-declared type — the attribute is what the desktop validator gated
+      // on, so it's the "source of truth" the rest of the pipeline expects.
+      const finalMime = declaredMime && declaredMime.length > 0 ? declaredMime : mime;
+      images.push({
+        mime: finalMime,
+        name: attrs.name ?? "",
+        dataUrl: `data:${finalMime};base64,${base64}`,
+        base64,
+        ...(attrs.path ? { path: attrs.path } : {}),
+        ...(attrs.hash ? { hash: attrs.hash } : {}),
+        ...(attrs.size && Number.isFinite(Number(attrs.size)) ? { size: Number(attrs.size) } : {}),
+        ...(attrs.origin ? { origin: attrs.origin } : {}),
+        ...(attrs.sessionid ? { sessionId: attrs.sessionid } : {}),
+      });
+      return "";
+    },
+  );
 
   // Collapse the whitespace the removed blocks leave behind. Two passes:
   //   1. Multiple blank lines (3+ newlines) → exactly two newlines, so the

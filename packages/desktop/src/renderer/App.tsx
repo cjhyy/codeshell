@@ -51,7 +51,12 @@ import {
   type SessionSummary,
 } from "./transcripts";
 import { planSessionDeletion } from "./sessionDeletionPlan";
-import { titleFromWire, buildPathAttachment, type ImageAttachment } from "./chat/attachments";
+import {
+  titleFromWire,
+  buildPathAttachment,
+  sha256FromDataUrl,
+  type ImageAttachment,
+} from "./chat/attachments";
 import {
   compactOutcomeMessage,
   compactPromptTokensWithBaseline,
@@ -68,6 +73,7 @@ import type {
   AgentLifecycleEvent,
   ApprovalRequestEnvelope,
   ApprovalResolvedEnvelope,
+  InputAttachmentMeta,
   MobilePermissionMode,
   MobilePermissionModeEnvelope,
   MobilePermissionModeSnapshotEntry,
@@ -107,6 +113,7 @@ import {
   clearQueuedInput,
   removeQueuedInputById,
   enqueueSerialTask,
+  canSteerQueuedItem,
   type SerialTaskQueue,
   type QueuedInputState,
 } from "./queuedInput";
@@ -335,6 +342,8 @@ function App() {
    * back-to-back setSessionIndices calls clobbering each other.
    */
   const ensureActiveSession = (repoId: string | null): string => {
+    const active = loadSessionIndex(repoId).activeSessionId;
+    if (active) return active;
     const { sessionId } = createSession(repoId);
     return sessionId;
   };
@@ -354,26 +363,30 @@ function App() {
     platform === "darwin" ||
     (!platform && typeof navigator !== "undefined" && /Mac/.test(navigator.platform));
   const [composerDrafts, setComposerDrafts] = useState<ComposerDraftsMap>({});
+  const activeBucketRef = useRef(activeBucket);
+  activeBucketRef.current = activeBucket;
   const composerDraft = composerDrafts[activeBucket] ?? {
     text: "",
     attachments: EMPTY_ATTACHMENTS,
   };
   const setComposerDraftText: React.Dispatch<React.SetStateAction<string>> = (next) => {
     setComposerDrafts((prev) => {
-      const current = prev[activeBucket] ?? { text: "", attachments: EMPTY_ATTACHMENTS };
+      const targetBucket = activeBucketRef.current;
+      const current = prev[targetBucket] ?? { text: "", attachments: EMPTY_ATTACHMENTS };
       const text = typeof next === "function" ? next(current.text) : next;
       if (text === current.text) return prev;
-      return { ...prev, [activeBucket]: { ...current, text } };
+      return { ...prev, [targetBucket]: { ...current, text } };
     });
   };
   const setComposerDraftAttachments: React.Dispatch<React.SetStateAction<ImageAttachment[]>> = (
     next,
   ) => {
     setComposerDrafts((prev) => {
-      const current = prev[activeBucket] ?? { text: "", attachments: EMPTY_ATTACHMENTS };
+      const targetBucket = activeBucketRef.current;
+      const current = prev[targetBucket] ?? { text: "", attachments: EMPTY_ATTACHMENTS };
       const attachments = typeof next === "function" ? next(current.attachments) : next;
       if (attachments === current.attachments) return prev;
-      return { ...prev, [activeBucket]: { ...current, attachments } };
+      return { ...prev, [targetBucket]: { ...current, attachments } };
     });
   };
   // Attach an on-disk image to the composer by absolute path (file-panel add —
@@ -385,8 +398,18 @@ function App() {
       window.codeshell.log("attach.path.not_image", { path: absPath });
       return;
     }
+    const context = prepareAttachmentSession();
+    const sha256 = await sha256FromDataUrl(dataUrl).catch(() => undefined);
+    const modelPath = context ? pathForModel(absPath, context.cwd) : absPath;
     setComposerDraftAttachments((cur) => {
-      const { attachment } = buildPathAttachment(absPath, dataUrl, cur);
+      const { attachment } = buildPathAttachment(absPath, dataUrl, cur, {
+        path: modelPath,
+        relPath: modelPath === absPath ? undefined : modelPath,
+        absPath,
+        sha256,
+        origin: "file-panel",
+        sessionId: context?.sessionId,
+      });
       return attachment ? [...cur, attachment] : cur;
     });
   };
@@ -429,7 +452,6 @@ function App() {
    * concurrent runs route to the correct tab.
    */
   const engineToBucketRef = useRef<Map<string, string>>(new Map());
-  const activeBucketRef = useRef(activeBucket);
   const approvalBucketsRef = useRef<Map<string, string>>(new Map());
   // Live mirror of transcripts so long-lived event listeners (onApprovalResolved,
   // which is registered once with a [toast]-only dep) can find an ask_user card
@@ -471,6 +493,40 @@ function App() {
   const permissionForBucketRef = useRef<(bucket: string) => PermissionMode | null>(() => null);
   const defaultPermissionModeRef = useRef<PermissionMode | null>(null);
   const activeRepo = repos.find((r) => r.id === activeRepoId) ?? null;
+
+  function prepareAttachmentSession(): { cwd: string; sessionId: string } | null {
+    const cwd = activeRepo?.path ?? noRepoCwdRef.current;
+    if (!cwd) return null;
+    if (activeSessionId) return { cwd, sessionId: activeSessionId };
+
+    const repoId = activeRepoId;
+    const draftBucket = bucketKey(repoId, null);
+    const { index, sessionId } = createSession(repoId);
+    const nextBucket = bucketKey(repoId, sessionId);
+    activeBucketRef.current = nextBucket;
+    setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: index }));
+    setComposerDrafts((prev) => {
+      const current = prev[draftBucket];
+      if (!current) return prev;
+      const { [draftBucket]: _drop, ...rest } = prev;
+      return { ...rest, [nextBucket]: current };
+    });
+    setPermissionOverrides((prev) => migrateBucketOverride(prev, draftBucket, nextBucket));
+    setGoalOverrides((prev) => migrateBucketOverride(prev, draftBucket, nextBucket));
+    setModelOverrides((prev) => migrateBucketOverride(prev, draftBucket, nextBucket));
+    return { cwd, sessionId };
+  }
+
+  function pathForModel(absPath: string, cwd: string): string {
+    const normalizedPath = absPath.replace(/\\/g, "/");
+    const normalizedCwd = cwd.replace(/\\/g, "/").replace(/\/+$/, "");
+    if (normalizedPath === normalizedCwd) return ".";
+    if (normalizedPath.startsWith(`${normalizedCwd}/`)) {
+      return normalizedPath.slice(normalizedCwd.length + 1);
+    }
+    return absPath;
+  }
+
   const [activeGitMeta, setActiveGitMeta] = useState<{
     branch: string | null;
     clean: boolean | null;
@@ -2007,7 +2063,12 @@ function App() {
 
   const send = (
     text: string,
-    sendOpts: { bucket?: string; clientMessageId?: string } = {},
+    sendOpts: {
+      bucket?: string;
+      clientMessageId?: string;
+      attachments?: InputAttachmentMeta[];
+      displayText?: string;
+    } = {},
   ): Promise<void> => {
     // createSession persists to localStorage synchronously, so reading
     // it back via touchSession() right after sees the new entry.
@@ -2031,6 +2092,7 @@ function App() {
     const sendGoalEnabled = goalOverrides[overrideBucket] ?? false;
     const sendModelKey = modelOverrides[overrideBucket] ?? defaultActiveModelKey;
     const clientMessageId = sendOpts.clientMessageId ?? newQueuedId();
+    const displayText = sendOpts.displayText ?? text;
 
     // A draft has no sessionId, so its permission/goal overrides were keyed
     // under the SHARED per-repo "_none_" bucket (bucketKey collapses every
@@ -2076,7 +2138,7 @@ function App() {
     dispatch({
       type: "user_message",
       bucket,
-      text,
+      text: displayText,
       isGoal: sendGoalEnabled && !!text.trim(),
       clientMessageId,
     });
@@ -2091,7 +2153,7 @@ function App() {
     // and persist engineSessionId so future sends in this UI session
     // pass the same value (and the engine resumes the right convo).
     setSessionIndices((prev) => {
-      const touched = touchSession(targetRepoId, sid, titleFromWire(text));
+      const touched = touchSession(targetRepoId, sid, titleFromWire(displayText));
       const next = summary?.engineSessionId
         ? touched
         : bindEngineSession(targetRepoId, sid, engineSessionId);
@@ -2104,7 +2166,11 @@ function App() {
       permissionMode?: ReturnType<typeof toCorePermissionMode>;
       goal?: string;
       clientMessageId?: string;
+      attachments?: InputAttachmentMeta[];
     } = { sessionId: engineSessionId, clientMessageId };
+    if (sendOpts.attachments && sendOpts.attachments.length > 0) {
+      opts.attachments = sendOpts.attachments;
+    }
     if (sendPermissionMode !== null) {
       opts.permissionMode = toCorePermissionMode(sendPermissionMode);
     }
@@ -2126,6 +2192,20 @@ function App() {
     if (sendGoalEnabled && text.trim()) {
       opts.goal = text;
       setGoalOverrides((prev) => ({ ...prev, [bucket]: false }));
+    }
+    if (opts.cwd && opts.attachments && opts.attachments.length > 0) {
+      void window.codeshell
+        .markAttachmentsSent({
+          cwd: opts.cwd,
+          sessionId: engineSessionId,
+          attachments: opts.attachments,
+        })
+        .catch((err) => {
+          window.codeshell.log("attachments.mark_sent_failed", {
+            bucket,
+            error: String((err as Error)?.message ?? err),
+          });
+        });
     }
 
     // Pin this session's engine to its per-bucket model before the turn. The
@@ -2228,6 +2308,9 @@ function App() {
         if (injectedSteerIdsRef.current.has(item.id) || steeredIdsRef.current.has(item.id)) {
           continue;
         }
+        if (!canSteerQueuedItem(item)) {
+          break;
+        }
         steeredIdsRef.current.add(item.id);
         void window.codeshell
           .steer(engineSessionId, item.text, item.id, item.clientMessageId)
@@ -2247,7 +2330,12 @@ function App() {
                 steerId: item.id,
                 clientMessageId: item.clientMessageId,
               });
-              await send(item.text, { bucket, clientMessageId: item.clientMessageId });
+              await send(item.text, {
+                bucket,
+                clientMessageId: item.clientMessageId,
+                attachments: item.attachments,
+                displayText: item.displayText,
+              });
             });
           })
           .catch((err) => {
@@ -2269,7 +2357,13 @@ function App() {
     // item). Clear the relay marker once we fire.
     const isRelay = relayingBuckets.has(activeBucket);
     if (isRelay) {
-      const { text, ids, state: next } = drainQueuedInput(queuedInputs, activeBucket);
+      const {
+        text,
+        displayText,
+        attachments,
+        ids,
+        state: next,
+      } = drainQueuedInput(queuedInputs, activeBucket);
       ids.forEach((id) => {
         steeredIdsRef.current.delete(id);
         injectedSteerIdsRef.current.delete(id);
@@ -2282,7 +2376,7 @@ function App() {
         n.delete(activeBucket);
         return n;
       });
-      if (text) send(text, { bucket: activeBucket });
+      if (text !== null) send(text, { bucket: activeBucket, attachments, displayText });
       return;
     }
     const { item, state: next } = dequeueQueuedInput(queuedInputs, activeBucket);
@@ -2307,7 +2401,14 @@ function App() {
     injectedSteerIdsRef.current.delete(item.id);
     dispatch({ type: "remove_pending_steers", bucket: activeBucket, steerIds: [item.id] });
     setQueuedInputs(next);
-    if (item.text) send(item.text, { bucket: activeBucket, clientMessageId: item.clientMessageId });
+    if (item.text || (item.attachments?.length ?? 0) > 0) {
+      send(item.text, {
+        bucket: activeBucket,
+        clientMessageId: item.clientMessageId,
+        attachments: item.attachments,
+        displayText: item.displayText,
+      });
+    }
   }, [busy, activeBucket, activeSessionId, queuedInputs, relayingBuckets]);
 
   const newQueuedId = (): string =>
@@ -2317,12 +2418,19 @@ function App() {
 
   const queueInput = (
     text: string,
-    queueOpts: { bucket?: string; clientMessageId?: string } = {},
+    queueOpts: {
+      bucket?: string;
+      clientMessageId?: string;
+      attachments?: InputAttachmentMeta[];
+      displayText?: string;
+    } = {},
   ): void => {
     const id = newQueuedId();
     const clientMessageId = queueOpts.clientMessageId ?? newQueuedId();
     const trimmed = text.trim();
-    if (!trimmed) return;
+    const displayText = queueOpts.displayText?.trim();
+    const attachments = queueOpts.attachments?.filter(Boolean) ?? [];
+    if (!trimmed && !displayText && attachments.length === 0) return;
     const bucket = queueOpts.bucket ?? activeBucket;
     // No optimistic right-side bubble here. A queued draft lives ONLY in the
     // left waiting panel (enqueueQueuedInput) until the engine consumes it and
@@ -2331,7 +2439,15 @@ function App() {
     // shown in the feed; shown only once actually injected). The optimistic
     // bubble was a workaround for TurnProcessGroupCard's missing user branch,
     // now fixed, so it's no longer needed.
-    setQueuedInputs((prev) => enqueueQueuedInput(prev, bucket, id, trimmed, clientMessageId));
+    if (attachments.length > 0) {
+      toast({ message: t("chat.queue.attachmentsDeferred") });
+    }
+    setQueuedInputs((prev) =>
+      enqueueQueuedInput(prev, bucket, id, trimmed, clientMessageId, {
+        attachments,
+        displayText,
+      }),
+    );
   };
 
   // Before a relay (打断重发) aborts + re-sends the queue as a fresh run, revoke
@@ -2351,12 +2467,20 @@ function App() {
 
   const forceSend = (
     text: string,
-    forceOpts: { bucket?: string; clientMessageId?: string } = {},
+    forceOpts: {
+      bucket?: string;
+      clientMessageId?: string;
+      attachments?: InputAttachmentMeta[];
+      displayText?: string;
+    } = {},
   ): void => {
     const bucket = forceOpts.bucket ?? activeBucket;
     revokeSteeredForRelay(bucket);
     setQueuedInputs((prev) =>
-      enqueueQueuedInput(prev, bucket, newQueuedId(), text, forceOpts.clientMessageId),
+      enqueueQueuedInput(prev, bucket, newQueuedId(), text, forceOpts.clientMessageId, {
+        attachments: forceOpts.attachments,
+        displayText: forceOpts.displayText,
+      }),
     );
     setRelayingBuckets((prev) => new Set(prev).add(bucket));
     stop(bucket, { relay: true });
@@ -3501,7 +3625,9 @@ function App() {
                     busy={busy}
                     compacting={compacting}
                     queuedInputCount={queuedInputs[activeBucket]?.length ?? 0}
-                    queuedInputItems={(queuedInputs[activeBucket] ?? []).map((i) => i.text)}
+                    queuedInputItems={(queuedInputs[activeBucket] ?? []).map(
+                      (i) => i.displayText ?? i.text,
+                    )}
                     onClearQueuedInput={clearActiveQueuedInput}
                     onRemoveQueuedInput={removeActiveQueuedInputAt}
                     onGuideQueuedInput={guideActiveQueuedInput}
@@ -3519,6 +3645,7 @@ function App() {
                     onAskUserAnswer={handleAskUserAnswer}
                     onExtendGoal={extendGoal}
                     onAttachImagePath={(p) => void attachImageByPath(p)}
+                    onPrepareAttachmentSession={prepareAttachmentSession}
                     imageDetail={imageDetail}
                     pendingApproval={visibleApproval}
                     onApprovalDecide={

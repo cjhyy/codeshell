@@ -8,6 +8,7 @@ import {
   removeQueuedInputById,
   promoteQueuedInputAt,
   enqueueSerialTask,
+  canSteerQueuedItem,
 } from "./queuedInput";
 
 describe("queued input", () => {
@@ -118,6 +119,61 @@ describe("queued input", () => {
     expect(drained.state["repo:s1"]).toBeUndefined();
     expect(drained.state["repo:s2"]).toEqual([{ id: "k", text: "keep", clientMessageId: "ck" }]);
     expect(state["repo:s1"]).toHaveLength(3);
+  });
+
+  it("preserves display text and structured attachments through queue drain", () => {
+    const attachment = {
+      id: "att-1",
+      sessionId: "s1",
+      kind: "directory" as const,
+      origin: "mention" as const,
+      path: "src",
+      absPath: "/repo/src",
+      relPath: "src",
+      size: 0,
+      sha256: "",
+      createdAt: 1,
+    };
+    const state = enqueueQueuedInput({}, "repo:s1", "1", "inspect it", "client-1", {
+      displayText: "inspect @src",
+      attachments: [attachment],
+    });
+
+    const first = dequeueQueuedInput(state, "repo:s1");
+    expect(first.item?.text).toBe("inspect it");
+    expect(first.item?.displayText).toBe("inspect @src");
+    expect(first.item?.attachments).toEqual([attachment]);
+    expect(canSteerQueuedItem(first.item!)).toBe(false);
+
+    const drained = drainQueuedInput(state, "repo:s1");
+    expect(drained.text).toBe("inspect it");
+    expect(drained.displayText).toBe("inspect @src");
+    expect(drained.attachments).toEqual([attachment]);
+  });
+
+  it("keeps image-only queued drafts with display text and attachments", () => {
+    const attachment = {
+      id: "att-img",
+      sessionId: "s1",
+      kind: "image" as const,
+      origin: "paste" as const,
+      path: ".code-shell/attachments/s1/a.png",
+      absPath: "/repo/.code-shell/attachments/s1/a.png",
+      relPath: ".code-shell/attachments/s1/a.png",
+      mime: "image/png",
+      size: 1,
+      sha256: "0".repeat(64),
+      createdAt: 1,
+    };
+    const state = enqueueQueuedInput({}, "repo:s1", "1", "", "client-1", {
+      displayText: "<codeshell-image />",
+      attachments: [attachment],
+    });
+    const drained = drainQueuedInput(state, "repo:s1");
+
+    expect(drained.text).toBe("");
+    expect(drained.displayText).toBe("<codeshell-image />");
+    expect(drained.attachments).toEqual([attachment]);
   });
 
   it("drain on an empty bucket returns null without touching state", () => {

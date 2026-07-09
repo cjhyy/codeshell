@@ -19,6 +19,36 @@ describe("ChatSession", () => {
     expect(s.isBusy()).toBe(false);
   });
 
+  it("forwards structured attachments to Engine.run", async () => {
+    let seen: any;
+    const engine: any = {
+      run: async (_task: string, opts: any) => {
+        seen = opts.attachments;
+        return { text: "ok", reason: "completed", sessionId: "s1", turnCount: 1, usage: {} };
+      },
+      permissionMode: "default",
+      planMode: false,
+    };
+    const s = new ChatSession({ id: "s1", engine });
+    await s.enqueueTurn("hello", {
+      attachments: [
+        {
+          id: "att",
+          sessionId: "s1",
+          kind: "image",
+          origin: "paste",
+          path: ".code-shell/attachments/s1/a.png",
+          absPath: "/tmp/a.png",
+          size: 1,
+          sha256: "0".repeat(64),
+          createdAt: 1,
+        },
+      ],
+    });
+    expect(seen).toHaveLength(1);
+    expect(seen[0].id).toBe("att");
+  });
+
   it("serializes turns from the same session", async () => {
     const s = new ChatSession({ id: "s1", engine: fakeEngine });
     const order: string[] = [];

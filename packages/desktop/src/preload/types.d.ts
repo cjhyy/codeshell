@@ -424,6 +424,45 @@ export interface RecommendedMarketplaceList {
   items: RecommendedMarketplace[];
 }
 
+export type InputAttachmentKind = "image" | "file" | "directory";
+
+export type InputAttachmentOrigin =
+  | "paste"
+  | "os-drop"
+  | "file-panel"
+  | "picker"
+  | "mention"
+  | "generated"
+  | "tool";
+
+export interface InputAttachmentMeta {
+  id: string;
+  sessionId: string;
+  kind: InputAttachmentKind;
+  origin: InputAttachmentOrigin;
+  path: string;
+  absPath: string;
+  relPath?: string;
+  mime?: string;
+  size: number;
+  sha256: string;
+  originalName?: string;
+  createdAt: number;
+  sourcePath?: string;
+  width?: number;
+  height?: number;
+  vision?: {
+    include: boolean;
+    mediaPath?: string;
+    detail?: "low" | "standard" | "high";
+  };
+  directory?: {
+    treePath?: string;
+    truncated?: boolean;
+    entryCount?: number;
+  };
+}
+
 export interface CodeshellApi {
   /** Main-process platform (`process.platform`), used for window chrome layout. */
   platform: string;
@@ -439,6 +478,7 @@ export interface CodeshellApi {
       model?: string;
       /** Stable submit-intent id used for transcript/UI idempotency. */
       clientMessageId?: string;
+      attachments?: InputAttachmentMeta[];
       planMode?: boolean;
       /**
        * Goal mode: when set, the engine runs loop-until-done — on each
@@ -787,6 +827,25 @@ export interface CodeshellApi {
    * Returns null if the path isn't an absolute image file or read fails.
    */
   readImageDataUrl(absPath: string): Promise<string | null>;
+  stageAttachmentImageDataUrl(payload: {
+    cwd: string;
+    sessionId: string;
+    name?: string;
+    mime?: string;
+    dataUrl: string;
+    origin: InputAttachmentOrigin;
+  }): Promise<InputAttachmentMeta>;
+  cleanupAttachments(payload: {
+    cwd: string;
+    sessionId?: string;
+    now?: number;
+  }): Promise<{ removed: string[]; sessionsRemoved: string[] }>;
+  inspectAttachments(payload: { cwd: string; sessionId?: string }): Promise<InputAttachmentMeta[]>;
+  markAttachmentsSent(payload: {
+    cwd: string;
+    sessionId: string;
+    attachments: InputAttachmentMeta[];
+  }): Promise<{ ok: true }>;
   /**
    * Save an image (`data:` URL) to a user-chosen location via a native save
    * dialog. Used by the Lightbox / attachment "download" action. Returns the
@@ -1540,8 +1599,11 @@ export interface SkillSummary {
 export interface FileSearchHit {
   /** Path relative to cwd, forward-slash separated. */
   path: string;
-  /** Basename of the file. */
+  /** Basename of the file or directory. */
   name: string;
+  kind: "file" | "dir";
+  size?: number;
+  mime?: string;
 }
 
 export interface AgentSummary {

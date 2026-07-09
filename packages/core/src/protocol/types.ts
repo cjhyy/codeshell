@@ -69,10 +69,51 @@ export const ErrorCodes = {
 
 // ─── Client → Server Requests ───────────────────────────────────────
 
+export type InputAttachmentKind = "image" | "file" | "directory";
+
+export type InputAttachmentOrigin =
+  | "paste"
+  | "os-drop"
+  | "file-panel"
+  | "picker"
+  | "mention"
+  | "generated"
+  | "tool";
+
+export interface InputAttachmentMeta {
+  id: string;
+  sessionId: string;
+  kind: InputAttachmentKind;
+  origin: InputAttachmentOrigin;
+  path: string;
+  absPath: string;
+  relPath?: string;
+  mime?: string;
+  size: number;
+  sha256: string;
+  originalName?: string;
+  createdAt: number;
+  sourcePath?: string;
+  width?: number;
+  height?: number;
+  vision?: {
+    include: boolean;
+    mediaPath?: string;
+    detail?: "low" | "standard" | "high";
+  };
+  directory?: {
+    treePath?: string;
+    truncated?: boolean;
+    entryCount?: number;
+  };
+}
+
 /** Start an agent run with a user task. */
 export interface RunParams {
   sessionId: string; // required, client-minted
   task: string;
+  /** Structured input attachments. Legacy `<codeshell-image>` task blocks remain supported. */
+  attachments?: InputAttachmentMeta[];
   /** Stable id for the user's submit intent; duplicate ids are idempotent. */
   clientMessageId?: string;
   /**

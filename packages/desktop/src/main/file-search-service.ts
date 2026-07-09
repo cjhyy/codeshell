@@ -20,11 +20,19 @@ export interface FileSearchHit {
   path: string;
   /** Just the basename, for display weight. */
   name: string;
+  kind: "file" | "dir";
+  size?: number;
+  mime?: string;
 }
 
 interface CacheEntry {
-  files: string[];
+  entries: SearchEntry[];
   fetchedAt: number;
+}
+
+interface SearchEntry {
+  path: string;
+  kind: "file" | "dir";
 }
 
 const CACHE_TTL_MS = 15_000;
@@ -37,7 +45,7 @@ function normalize(p: string): string {
 
 const GIT_LS_TIMEOUT_MS = 5_000;
 
-async function listViaGit(cwd: string): Promise<string[] | null> {
+async function listViaGit(cwd: string): Promise<SearchEntry[] | null> {
   return new Promise((resolve) => {
     const proc = spawn("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
       cwd,
@@ -58,15 +66,39 @@ async function listViaGit(cwd: string): Promise<string[] | null> {
       proc.kill();
       done(null);
     }, GIT_LS_TIMEOUT_MS);
-    proc.stdout.on("data", (b: Buffer) => { out += b.toString("utf8"); });
-    proc.stderr.on("data", () => { /* drained to avoid backpressure */ });
+    proc.stdout.on("data", (b: Buffer) => {
+      out += b.toString("utf8");
+    });
+    proc.stderr.on("data", () => {
+      /* drained to avoid backpressure */
+    });
     proc.on("error", () => done(null));
     proc.on("close", (code) => {
-      if (code !== 0) { done(null); return; }
-      const lines = out.split("\n").map((l) => l.trim()).filter(Boolean);
-      done(lines);
+      if (code !== 0) {
+        done(null);
+        return;
+      }
+      const lines = out
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean);
+      done(entriesFromGitFiles(lines));
     });
   });
+}
+
+function entriesFromGitFiles(files: string[]): SearchEntry[] {
+  const out = new Map<string, SearchEntry>();
+  for (const file of files) {
+    const normalized = normalize(file);
+    out.set(normalized, { path: normalized, kind: "file" });
+    const parts = normalized.split("/");
+    for (let i = 1; i < parts.length; i++) {
+      const dir = parts.slice(0, i).join("/");
+      if (dir) out.set(dir, { path: dir, kind: "dir" });
+    }
+  }
+  return [...out.values()];
 }
 
 const IGNORE_DIRS = new Set([
@@ -82,12 +114,12 @@ const IGNORE_DIRS = new Set([
   ".vscode",
   ".idea",
 ]);
-const MAX_WALK_FILES = 20_000;
+const MAX_WALK_ENTRIES = 20_000;
 
-async function listViaWalk(cwd: string): Promise<string[]> {
-  const found: string[] = [];
+async function listViaWalk(cwd: string): Promise<SearchEntry[]> {
+  const found: SearchEntry[] = [];
   async function walk(dir: string): Promise<void> {
-    if (found.length >= MAX_WALK_FILES) return;
+    if (found.length >= MAX_WALK_ENTRIES) return;
     let entries: import("node:fs").Dirent[];
     try {
       entries = await readdir(dir, { withFileTypes: true });
@@ -95,7 +127,7 @@ async function listViaWalk(cwd: string): Promise<string[]> {
       return;
     }
     for (const entry of entries) {
-      if (found.length >= MAX_WALK_FILES) return;
+      if (found.length >= MAX_WALK_ENTRIES) return;
       if (entry.name.startsWith(".") && entry.name !== ".env") {
         // skip dotfiles/dirs except .env-style which users do mention
         if (entry.isDirectory()) continue;
@@ -103,9 +135,10 @@ async function listViaWalk(cwd: string): Promise<string[]> {
       if (IGNORE_DIRS.has(entry.name)) continue;
       const full = join(dir, entry.name);
       if (entry.isDirectory()) {
+        found.push({ path: normalize(relative(cwd, full)), kind: "dir" });
         await walk(full);
       } else if (entry.isFile()) {
-        found.push(normalize(relative(cwd, full)));
+        found.push({ path: normalize(relative(cwd, full)), kind: "file" });
       }
     }
   }
@@ -113,24 +146,24 @@ async function listViaWalk(cwd: string): Promise<string[]> {
   return found;
 }
 
-async function loadFileList(cwd: string): Promise<string[]> {
+async function loadFileList(cwd: string): Promise<SearchEntry[]> {
   const now = Date.now();
   const cached = cache.get(cwd);
-  if (cached && now - cached.fetchedAt < CACHE_TTL_MS) return cached.files;
+  if (cached && now - cached.fetchedAt < CACHE_TTL_MS) return cached.entries;
 
   // git ls-files is the fast path; both tracked and untracked-not-ignored.
-  let files = await listViaGit(cwd);
-  if (!files) {
+  let entries = await listViaGit(cwd);
+  if (!entries) {
     try {
       const st = await stat(cwd);
       if (!st.isDirectory()) return [];
     } catch {
       return [];
     }
-    files = await listViaWalk(cwd);
+    entries = await listViaWalk(cwd);
   }
-  cache.set(cwd, { files, fetchedAt: now });
-  return files;
+  cache.set(cwd, { entries, fetchedAt: now });
+  return entries;
 }
 
 /**
@@ -168,13 +201,17 @@ function fuzzyScore(query: string, candidate: string): number | null {
 
 export async function searchFiles(cwd: string, query: string): Promise<FileSearchHit[]> {
   if (!cwd || typeof cwd !== "string") return [];
-  const files = await loadFileList(cwd);
+  const entries = await loadFileList(cwd);
   const q = query.trim();
-  const scored: { path: string; score: number }[] = [];
-  for (const f of files) {
-    const s = fuzzyScore(q, f);
-    if (s !== null) scored.push({ path: f, score: s });
+  const scored: { entry: SearchEntry; score: number }[] = [];
+  for (const entry of entries) {
+    const s = fuzzyScore(q, entry.path);
+    if (s !== null) scored.push({ entry, score: s + (entry.kind === "dir" ? -0.05 : 0) });
   }
   scored.sort((a, b) => a.score - b.score);
-  return scored.slice(0, MAX_HITS).map((h) => ({ path: h.path, name: basename(h.path) }));
+  return scored.slice(0, MAX_HITS).map((h) => ({
+    path: h.entry.path,
+    name: basename(h.entry.path),
+    kind: h.entry.kind,
+  }));
 }

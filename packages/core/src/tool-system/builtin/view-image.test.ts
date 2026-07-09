@@ -61,6 +61,25 @@ describe("view_image", () => {
     expect((out as { contentBlocks: any[] }).contentBlocks[0].type).toBe("image");
   });
 
+  it("accepts an optional detail parameter", async () => {
+    const p = join(dir, "a.png");
+    await writeFile(p, Buffer.from(PNG_B64, "base64"));
+    const out = await viewImageTool(
+      { path: p, detail: "low" },
+      ctxWith("claude-sonnet-4-6", "anthropic", dir),
+    );
+    expect(typeof out).toBe("object");
+    expect((out as { contentBlocks: any[] }).contentBlocks[0].type).toBe("image");
+  });
+
+  it("rejects invalid detail values", async () => {
+    const out = await viewImageTool(
+      { path: "a.png", detail: "original" },
+      ctxWith("claude-sonnet-4-6", "anthropic", dir),
+    );
+    expect(out).toBe("Error: detail must be one of low, standard, high");
+  });
+
   it("rejects unsupported formats (svg) with text", async () => {
     const p = join(dir, "a.svg");
     await writeFile(p, "<svg/>");
@@ -72,12 +91,18 @@ describe("view_image", () => {
   it("resolves relative paths against ctx.cwd", async () => {
     const p = join(dir, "rel.png");
     await writeFile(p, Buffer.from(PNG_B64, "base64"));
-    const out = await viewImageTool({ path: "rel.png" }, ctxWith("claude-sonnet-4-6", "anthropic", dir));
+    const out = await viewImageTool(
+      { path: "rel.png" },
+      ctxWith("claude-sonnet-4-6", "anthropic", dir),
+    );
     expect(typeof out).toBe("object");
   });
 
   it("returns text error for missing file", async () => {
-    const out = await viewImageTool({ path: join(dir, "nope.png") }, ctxWith("claude-sonnet-4-6", "anthropic", dir));
+    const out = await viewImageTool(
+      { path: join(dir, "nope.png") },
+      ctxWith("claude-sonnet-4-6", "anthropic", dir),
+    );
     expect(typeof out).toBe("string");
     expect(out as string).toContain("无法读取");
   });

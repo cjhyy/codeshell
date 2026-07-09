@@ -218,6 +218,13 @@ import {
   setCapabilityOverride,
 } from "./capabilities-service.js";
 import { searchFiles } from "./file-search-service.js";
+import {
+  cleanupSessionAttachments,
+  cleanupAttachments,
+  listRecentAttachments,
+  markAttachmentsSent,
+  stageImageDataUrl,
+} from "./attachment-service.js";
 import { listAgents, readAgentBody, saveAgent, deleteAgent } from "./agents-service.js";
 import type { AgentDefinition } from "@cjhyy/code-shell-core";
 import {
@@ -1550,8 +1557,36 @@ function writeSettingsSchemaAtStartup(): void {
   }
 }
 
+async function knownAttachmentCwds(): Promise<string[]> {
+  const out = new Set<string>();
+  try {
+    for (const project of await loadProjects()) {
+      if (typeof project.path === "string" && project.path) out.add(project.path);
+    }
+  } catch {
+    // best effort
+  }
+  try {
+    out.add(resolveNoRepoCwd());
+  } catch {
+    // best effort
+  }
+  return [...out];
+}
+
+async function cleanupKnownAttachments(sessionId?: string): Promise<void> {
+  for (const cwd of await knownAttachmentCwds()) {
+    if (sessionId) {
+      await cleanupSessionAttachments(cwd, sessionId).catch(() => undefined);
+    } else {
+      await cleanupAttachments({ cwd }).catch(() => undefined);
+    }
+  }
+}
+
 app.whenReady().then(async () => {
   writeSettingsSchemaAtStartup();
+  void cleanupKnownAttachments();
 
   await injectLoginShellPathAtStartup({
     log: (event, data) => dlog("main", event, data),
@@ -1981,6 +2016,90 @@ ipcMain.handle("files:search", async (_e, cwd: string, query: string) => {
   const q = typeof query === "string" ? query : "";
   return searchFiles(cwd, q);
 });
+ipcMain.handle(
+  "attachments:stageImageDataUrl",
+  async (
+    _e,
+    payload: {
+      cwd?: string;
+      sessionId?: string;
+      name?: string;
+      mime?: string;
+      dataUrl?: string;
+      origin?: string;
+    },
+  ) => {
+    if (!payload || typeof payload !== "object") {
+      throw new Error("attachments:stageImageDataUrl requires payload");
+    }
+    if (typeof payload.cwd !== "string")
+      throw new Error("attachments:stageImageDataUrl requires cwd");
+    if (typeof payload.sessionId !== "string") {
+      throw new Error("attachments:stageImageDataUrl requires sessionId");
+    }
+    if (typeof payload.dataUrl !== "string") {
+      throw new Error("attachments:stageImageDataUrl requires dataUrl");
+    }
+    const origin =
+      payload.origin === "paste" ||
+      payload.origin === "os-drop" ||
+      payload.origin === "file-panel" ||
+      payload.origin === "picker" ||
+      payload.origin === "mention" ||
+      payload.origin === "generated" ||
+      payload.origin === "tool"
+        ? payload.origin
+        : "paste";
+    return stageImageDataUrl({
+      cwd: payload.cwd,
+      sessionId: payload.sessionId,
+      name: payload.name,
+      mime: payload.mime,
+      dataUrl: payload.dataUrl,
+      origin,
+    });
+  },
+);
+ipcMain.handle(
+  "attachments:cleanup",
+  async (_e, payload: { cwd?: string; sessionId?: string; now?: number }) => {
+    if (!payload || typeof payload.cwd !== "string") {
+      throw new Error("attachments:cleanup requires cwd");
+    }
+    return cleanupAttachments({
+      cwd: payload.cwd,
+      sessionId: typeof payload.sessionId === "string" ? payload.sessionId : undefined,
+      now: typeof payload.now === "number" ? payload.now : undefined,
+    });
+  },
+);
+ipcMain.handle("attachments:inspect", async (_e, payload: { cwd?: string; sessionId?: string }) => {
+  if (!payload || typeof payload.cwd !== "string") {
+    throw new Error("attachments:inspect requires cwd");
+  }
+  return listRecentAttachments({
+    cwd: payload.cwd,
+    sessionId: typeof payload.sessionId === "string" ? payload.sessionId : undefined,
+  });
+});
+ipcMain.handle(
+  "attachments:markSent",
+  async (
+    _e,
+    payload: {
+      cwd?: string;
+      sessionId?: string;
+      attachments?: Array<Parameters<typeof markAttachmentsSent>[2][number]>;
+    },
+  ) => {
+    if (!payload || typeof payload.cwd !== "string" || typeof payload.sessionId !== "string") {
+      throw new Error("attachments:markSent requires cwd and sessionId");
+    }
+    const attachments = Array.isArray(payload.attachments) ? payload.attachments : [];
+    await markAttachmentsSent(payload.cwd, payload.sessionId, attachments);
+    return { ok: true };
+  },
+);
 ipcMain.handle(
   "skills:uninstall",
   async (_e, filePath: string, source: "user" | "project" | "plugin") => {
@@ -3136,6 +3255,7 @@ ipcMain.handle("sessions:delete", async (_e, id: string) => {
   // explicit delete is the one tab-close path that DOES kill (core §6).
   bridge?.closeSession(id);
   await deleteSession(id);
+  await cleanupKnownAttachments(id);
   // Drop any in-memory snapshot for the deleted session so it can't be
   // replayed into a fresh tab that happens to reuse the id.
   bridge?.forgetSession(id);

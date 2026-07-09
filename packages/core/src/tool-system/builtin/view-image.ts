@@ -51,6 +51,12 @@ export const viewImageToolDef: ToolDefinition = {
         description:
           "Image history number N from an earlier [image #N, already provided] placeholder.",
       },
+      detail: {
+        type: "string",
+        enum: ["low", "standard", "high"],
+        description:
+          "Optional image detail preference. Accepted for compatibility; current providers use the runtime image detail default.",
+      },
     },
   },
 };
@@ -66,6 +72,10 @@ export async function viewImageTool(
 
   if (hasPath === hasImageNumber) {
     return "Error: provide exactly one of path or imageNumber";
+  }
+  const detail = args.detail;
+  if (detail !== undefined && detail !== "low" && detail !== "standard" && detail !== "high") {
+    return "Error: detail must be one of low, standard, high";
   }
 
   if (hasImageNumber) {

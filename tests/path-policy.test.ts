@@ -37,31 +37,38 @@ describe("classifyPath", () => {
   // ─── allow ────────────────────────────────────────────────────────
   test("in-workspace, normal file, write → allow", () => {
     const target = join(workspace, "src/foo.ts");
-    expect(classifyPath(target, { workspaceRoot: workspace, operation: "write" }).decision)
-      .toBe("allow");
+    expect(classifyPath(target, { workspaceRoot: workspace, operation: "write" }).decision).toBe(
+      "allow",
+    );
   });
 
   test("in-workspace, normal file, read → allow", () => {
     const target = join(workspace, "src/foo.ts");
-    expect(classifyPath(target, { workspaceRoot: workspace, operation: "read" }).decision)
-      .toBe("allow");
+    expect(classifyPath(target, { workspaceRoot: workspace, operation: "read" }).decision).toBe(
+      "allow",
+    );
   });
 
   test("deep nested in-workspace path is allowed", () => {
     const target = join(workspace, "a/b/c/d/e/f.ts");
-    expect(classifyPath(target, { workspaceRoot: workspace, operation: "write" }).decision)
-      .toBe("allow");
+    expect(classifyPath(target, { workspaceRoot: workspace, operation: "write" }).decision).toBe(
+      "allow",
+    );
   });
 
   // ─── ask: outside workspace ───────────────────────────────────────
   test("outside-workspace write → ask", () => {
-    expect(classifyPath(join(outside, "x.txt"), { workspaceRoot: workspace, operation: "write" })
-      .decision).toBe("ask");
+    expect(
+      classifyPath(join(outside, "x.txt"), { workspaceRoot: workspace, operation: "write" })
+        .decision,
+    ).toBe("ask");
   });
 
   test("outside-workspace read → ask", () => {
-    expect(classifyPath(join(outside, "x.txt"), { workspaceRoot: workspace, operation: "read" })
-      .decision).toBe("ask");
+    expect(
+      classifyPath(join(outside, "x.txt"), { workspaceRoot: workspace, operation: "read" })
+        .decision,
+    ).toBe("ask");
   });
 
   // ─── deny: sensitive write ────────────────────────────────────────
@@ -79,37 +86,47 @@ describe("classifyPath", () => {
   test("write to a .env file inside workspace → deny", () => {
     // Sensitive file pattern wins even inside the workspace.
     writeFileSync(join(workspace, ".env"), "SECRET=x\n");
-    expect(classifyPath(join(workspace, ".env"), { workspaceRoot: workspace, operation: "write" })
-      .decision).toBe("deny");
+    expect(
+      classifyPath(join(workspace, ".env"), { workspaceRoot: workspace, operation: "write" })
+        .decision,
+    ).toBe("deny");
   });
 
   test("write to a .env.production file → deny", () => {
-    expect(classifyPath(join(workspace, ".env.production"), {
-      workspaceRoot: workspace,
-      operation: "write",
-    }).decision).toBe("deny");
+    expect(
+      classifyPath(join(workspace, ".env.production"), {
+        workspaceRoot: workspace,
+        operation: "write",
+      }).decision,
+    ).toBe("deny");
   });
 
   test("write to an id_rsa file → deny", () => {
-    expect(classifyPath(join(workspace, "id_rsa"), {
-      workspaceRoot: workspace,
-      operation: "write",
-    }).decision).toBe("deny");
+    expect(
+      classifyPath(join(workspace, "id_rsa"), {
+        workspaceRoot: workspace,
+        operation: "write",
+      }).decision,
+    ).toBe("deny");
   });
 
   test("write to a .pem file → deny", () => {
-    expect(classifyPath(join(workspace, "server.pem"), {
-      workspaceRoot: workspace,
-      operation: "write",
-    }).decision).toBe("deny");
+    expect(
+      classifyPath(join(workspace, "server.pem"), {
+        workspaceRoot: workspace,
+        operation: "write",
+      }).decision,
+    ).toBe("deny");
   });
 
   // ─── ask: sensitive read ──────────────────────────────────────────
   test("read under ~/.ssh → ask", () => {
-    expect(classifyPath("~/.ssh/known_hosts", {
-      workspaceRoot: workspace,
-      operation: "read",
-    }).decision).toBe("ask");
+    expect(
+      classifyPath("~/.ssh/known_hosts", {
+        workspaceRoot: workspace,
+        operation: "read",
+      }).decision,
+    ).toBe("ask");
   });
 
   test("read current CodeShell session artifacts → allow", () => {
@@ -122,33 +139,59 @@ describe("classifyPath", () => {
   });
 
   test("read CodeShell desktop logs → allow", () => {
-    expect(classifyPath("~/.code-shell/logs/desktop-2026-05-31.log", {
-      workspaceRoot: workspace,
-      operation: "read",
-    }).decision).toBe("allow");
+    expect(
+      classifyPath("~/.code-shell/logs/desktop-2026-05-31.log", {
+        workspaceRoot: workspace,
+        operation: "read",
+      }).decision,
+    ).toBe("allow");
   });
 
   test("CodeShell auth/token material remains protected", () => {
-    expect(classifyPath("~/.code-shell/auth.json", {
-      workspaceRoot: workspace,
+    expect(
+      classifyPath("~/.code-shell/auth.json", {
+        workspaceRoot: workspace,
+        operation: "read",
+      }).decision,
+    ).toBe("ask");
+    expect(
+      classifyPath("~/.code-shell/sessions/s-abc123/token.txt", {
+        workspaceRoot: workspace,
+        operation: "read",
+      }).decision,
+    ).toBe("ask");
+    expect(
+      classifyPath("~/.code-shell/sessions/s-abc123/tool-results/call_1.txt", {
+        workspaceRoot: workspace,
+        operation: "write",
+      }).decision,
+    ).toBe("deny");
+  });
+
+  test("no-repo attachment reads are narrowly allowed under ~/.code-shell", () => {
+    const p = "~/.code-shell/no-repo/.code-shell/attachments/sid/shot.png";
+    const read = classifyPath(p, {
+      workspaceRoot: join(homedir(), ".code-shell", "no-repo"),
       operation: "read",
-    }).decision).toBe("ask");
-    expect(classifyPath("~/.code-shell/sessions/s-abc123/token.txt", {
-      workspaceRoot: workspace,
-      operation: "read",
-    }).decision).toBe("ask");
-    expect(classifyPath("~/.code-shell/sessions/s-abc123/tool-results/call_1.txt", {
-      workspaceRoot: workspace,
-      operation: "write",
-    }).decision).toBe("deny");
+    });
+    expect(read.decision).toBe("allow");
+    expect(read.reason).toContain("no-repo attachment");
+    expect(
+      classifyPath(p, {
+        workspaceRoot: join(homedir(), ".code-shell", "no-repo"),
+        operation: "write",
+      }).decision,
+    ).toBe("deny");
   });
 
   test("read of .env in workspace → ask", () => {
     writeFileSync(join(workspace, ".env"), "x\n");
-    expect(classifyPath(join(workspace, ".env"), {
-      workspaceRoot: workspace,
-      operation: "read",
-    }).decision).toBe("ask");
+    expect(
+      classifyPath(join(workspace, ".env"), {
+        workspaceRoot: workspace,
+        operation: "read",
+      }).decision,
+    ).toBe("ask");
   });
 
   // ─── symlink resolution ───────────────────────────────────────────
@@ -181,31 +224,36 @@ describe("classifyPath", () => {
   test("CODESHELL_PATH_POLICY=off makes every decision allow", () => {
     process.env.CODESHELL_PATH_POLICY = "off";
     __resetPathPolicyWarnLatchForTests();
-    expect(classifyPath("~/.ssh/id_rsa", {
-      workspaceRoot: workspace,
-      operation: "write",
-    }).decision).toBe("allow");
-    expect(classifyPath("/etc/passwd", {
-      workspaceRoot: workspace,
-      operation: "read",
-    }).decision).toBe("allow");
+    expect(
+      classifyPath("~/.ssh/id_rsa", {
+        workspaceRoot: workspace,
+        operation: "write",
+      }).decision,
+    ).toBe("allow");
+    expect(
+      classifyPath("/etc/passwd", {
+        workspaceRoot: workspace,
+        operation: "read",
+      }).decision,
+    ).toBe("allow");
   });
 
   test("CODESHELL_PATH_POLICY=0 and =false also disable", () => {
     process.env.CODESHELL_PATH_POLICY = "0";
     __resetPathPolicyWarnLatchForTests();
-    expect(classifyPath("/etc/passwd", { workspaceRoot: workspace, operation: "read" }).decision)
-      .toBe("allow");
+    expect(
+      classifyPath("/etc/passwd", { workspaceRoot: workspace, operation: "read" }).decision,
+    ).toBe("allow");
     process.env.CODESHELL_PATH_POLICY = "false";
     __resetPathPolicyWarnLatchForTests();
-    expect(classifyPath("/etc/passwd", { workspaceRoot: workspace, operation: "read" }).decision)
-      .toBe("allow");
+    expect(
+      classifyPath("/etc/passwd", { workspaceRoot: workspace, operation: "read" }).decision,
+    ).toBe("allow");
   });
 
   // ─── degenerate inputs ────────────────────────────────────────────
   test("empty path → deny", () => {
-    expect(classifyPath("", { workspaceRoot: workspace, operation: "read" }).decision)
-      .toBe("deny");
+    expect(classifyPath("", { workspaceRoot: workspace, operation: "read" }).decision).toBe("deny");
   });
 
   test("reason text is non-empty and informative", () => {

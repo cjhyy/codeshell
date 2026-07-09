@@ -7,6 +7,8 @@ import { readExternalChangedFiles } from "../../cc-orchestrator/external-agent-c
 import { isExistingDirectory, normalizeCwdPath } from "../../cc-orchestrator/cwd-normalize.js";
 import { notificationQueue } from "./agent-notifications.js";
 import type { ToolContext } from "../context.js";
+import { existsSync, realpathSync, statSync } from "node:fs";
+import { extname, isAbsolute, relative, resolve, sep } from "node:path";
 import {
   externalAgentSessionStore,
   type ExternalAgentSessionBinding,
@@ -53,19 +55,55 @@ export const driveAgentToolDef: ToolDefinition = {
   inputSchema: {
     type: "object",
     properties: {
-      prompt: { type: "string", description: "The task for the agent. Make it COMPLETE and self-contained: state the goal, a concrete definition of done, and (for open-ended work) an explicit scope bound so it finishes end-to-end and verifies its own work rather than sprawling or stopping half-way." },
-      cli: { type: "string", enum: ["claude", "codex"], description: "Which external CLI to drive. 'claude' = Claude Code (default), 'codex' = OpenAI Codex. resumeSessionId is only valid against the same cli that produced it." },
-      resumeSessionId: { type: "string", description: "Existing session id to resume (keeps context). Must come from a prior run of the SAME cli. Omit for a fresh session." },
+      prompt: {
+        type: "string",
+        description:
+          "The task for the agent. Make it COMPLETE and self-contained: state the goal, a concrete definition of done, and (for open-ended work) an explicit scope bound so it finishes end-to-end and verifies its own work rather than sprawling or stopping half-way.",
+      },
+      cli: {
+        type: "string",
+        enum: ["claude", "codex"],
+        description:
+          "Which external CLI to drive. 'claude' = Claude Code (default), 'codex' = OpenAI Codex. resumeSessionId is only valid against the same cli that produced it.",
+      },
+      resumeSessionId: {
+        type: "string",
+        description:
+          "Existing session id to resume (keeps context). Must come from a prior run of the SAME cli. Omit for a fresh session.",
+      },
       cwd: { type: "string", description: "Working directory the run operates in." },
-      permissionMode: { type: "string", enum: ["default", "acceptEdits", "bypassPermissions"], description: "Permission/sandbox level. Defaults to 'bypassPermissions' (full auto — needed so the agent's tools run unattended; there is no interactive approval loop here). For codex: default→read-only sandbox, acceptEdits→workspace-write, bypassPermissions→no sandbox. Pass 'default'/'acceptEdits' to gate." },
-      background: { type: "boolean", description: "Defaults to TRUE: run in the background and notify you on completion (right for long tasks). Pass false to run in the foreground and get the result inline (only for quick tasks)." },
+      attachmentPaths: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "Optional local file paths to hand to the driven agent. Paths must resolve inside cwd. Images are also passed to Codex with -i when the installed Codex CLI supports it; otherwise all paths are listed in the prompt.",
+      },
+      permissionMode: {
+        type: "string",
+        enum: ["default", "acceptEdits", "bypassPermissions"],
+        description:
+          "Permission/sandbox level. Defaults to 'bypassPermissions' (full auto — needed so the agent's tools run unattended; there is no interactive approval loop here). For codex: default→read-only sandbox, acceptEdits→workspace-write, bypassPermissions→no sandbox. Pass 'default'/'acceptEdits' to gate.",
+      },
+      background: {
+        type: "boolean",
+        description:
+          "Defaults to TRUE: run in the background and notify you on completion (right for long tasks). Pass false to run in the foreground and get the result inline (only for quick tasks).",
+      },
     },
     required: ["prompt", "cwd"],
   },
 };
 
 type PermMode = "default" | "acceptEdits" | "bypassPermissions";
-type Runner = (opts: { cli: DriveCli; prompt: string; resumeSessionId?: string; cwd: string; permissionMode?: PermMode; signal?: AbortSignal }) => Promise<AgentRunResult>;
+type Runner = (opts: {
+  cli: DriveCli;
+  prompt: string;
+  resumeSessionId?: string;
+  cwd: string;
+  permissionMode?: PermMode;
+  signal?: AbortSignal;
+  imagePaths?: string[];
+}) => Promise<AgentRunResult>;
 type SessionStore = {
   get(cli: DriveCli, sessionId: string): ExternalAgentSessionBinding | undefined;
   record(binding: ExternalAgentSessionRecord): void;
@@ -80,7 +118,14 @@ const defaultRunner: Runner = (opts) => {
   const { adapter, command } = CLI_ADAPTERS[opts.cli];
   return runAgentOnce(
     adapter,
-    { command, prompt: opts.prompt, resumeSessionId: opts.resumeSessionId, cwd: opts.cwd, permissionMode: opts.permissionMode ?? "default" },
+    {
+      command,
+      prompt: opts.prompt,
+      resumeSessionId: opts.resumeSessionId,
+      cwd: opts.cwd,
+      permissionMode: opts.permissionMode ?? "default",
+      imagePaths: opts.imagePaths,
+    },
     opts.signal,
   );
 };
@@ -99,7 +144,7 @@ function argSignal(args: Record<string, unknown>): AbortSignal | undefined {
     typeof signal === "object" &&
     typeof (signal as AbortSignal).aborted === "boolean" &&
     typeof (signal as AbortSignal).addEventListener === "function"
-    ? signal as AbortSignal
+    ? (signal as AbortSignal)
     : undefined;
 }
 
@@ -107,7 +152,48 @@ function startRun(runner: Runner, opts: Parameters<Runner>[0]): Promise<AgentRun
   return Promise.resolve().then(() => runner(opts));
 }
 
-function recordSuccessfulSession(store: SessionStore, cli: DriveCli, cwd: string, result: AgentRunResult): void {
+function resolveAttachmentPaths(raw: unknown, cwd: string): { paths: string[]; error?: string } {
+  if (raw === undefined) return { paths: [] };
+  if (!Array.isArray(raw))
+    return { paths: [], error: "attachmentPaths must be an array of strings" };
+  const cwdReal = realpathSync(cwd);
+  const paths: string[] = [];
+  for (const item of raw) {
+    if (typeof item !== "string" || !item.trim()) {
+      return { paths: [], error: "attachmentPaths must contain only non-empty strings" };
+    }
+    const candidate = isAbsolute(item) ? item : resolve(cwd, item);
+    if (!existsSync(candidate)) return { paths: [], error: `attachment path not found: ${item}` };
+    const real = realpathSync(candidate);
+    const rel = relative(cwdReal, real);
+    if (rel === "" || rel === ".." || rel.startsWith(`..${sep}`)) {
+      return { paths: [], error: `attachment path is outside cwd: ${item}` };
+    }
+    const info = statSync(real);
+    if (!info.isFile()) return { paths: [], error: `attachment path is not a file: ${item}` };
+    paths.push(real);
+  }
+  return { paths };
+}
+
+const DRIVE_IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp"]);
+
+function appendAttachmentPrompt(prompt: string, paths: string[]): string {
+  if (paths.length === 0) return prompt;
+  const lines = ["", "Attached files:"];
+  for (const path of paths) {
+    const kind = DRIVE_IMAGE_EXTS.has(extname(path).toLowerCase()) ? "image" : "file";
+    lines.push(`- ${path} (${kind})`);
+  }
+  return `${prompt}\n${lines.join("\n")}`;
+}
+
+function recordSuccessfulSession(
+  store: SessionStore,
+  cli: DriveCli,
+  cwd: string,
+  result: AgentRunResult,
+): void {
   if (result.isError || !result.sessionId) return;
   try {
     store.record({ cli, sessionId: result.sessionId, cwd });
@@ -148,16 +234,30 @@ function attachDriveCompletion(params: {
       // path — enqueue lands in the same notificationQueue the wakeup drains.
       notificationQueue.enqueue(
         r.isError
-          ? { agentId: jobId, description: label, status: "failed", workKind: "cc", error: r.finalText || "(no output)", ccSessionId: r.sessionId || undefined, enqueuedAt: Date.now() }
-          : { agentId: jobId, description: label, status: "completed", workKind: "cc", finalText: r.finalText, ccSessionId: r.sessionId || undefined, enqueuedAt: Date.now() },
+          ? {
+              agentId: jobId,
+              description: label,
+              status: "failed",
+              workKind: "cc",
+              error: r.finalText || "(no output)",
+              ccSessionId: r.sessionId || undefined,
+              enqueuedAt: Date.now(),
+            }
+          : {
+              agentId: jobId,
+              description: label,
+              status: "completed",
+              workKind: "cc",
+              finalText: r.finalText,
+              ccSessionId: r.sessionId || undefined,
+              enqueuedAt: Date.now(),
+            },
         sessionId,
       );
       // Attribute the files the external agent changed by parsing its own
       // transcript (#6) — those Edit/Write calls are invisible to the host's
       // in-session aggregator. Best-effort; [] on any failure.
-      const changedFiles = r.sessionId
-        ? readExternalChangedFiles(cli, cwd, r.sessionId)
-        : [];
+      const changedFiles = r.sessionId ? readExternalChangedFiles(cli, cwd, r.sessionId) : [];
       // Retain the job in the panel with its result + the external CLI
       // session id + changed files.
       backgroundJobRegistry.finish(jobId, {
@@ -170,7 +270,14 @@ function attachDriveCompletion(params: {
     .catch((err) => {
       const msg = (err as Error)?.message ?? String(err);
       notificationQueue.enqueue(
-        { agentId: jobId, description: label, status: "failed", workKind: "cc", error: msg, enqueuedAt: Date.now() },
+        {
+          agentId: jobId,
+          description: label,
+          status: "failed",
+          workKind: "cc",
+          error: msg,
+          enqueuedAt: Date.now(),
+        },
         sessionId,
       );
       backgroundJobRegistry.finish(jobId, { status: "failed", finalText: msg });
@@ -225,9 +332,17 @@ export function makeDriveAgentTool(
     const rawRequestedCwd = typeof args.cwd === "string" ? args.cwd : process.cwd();
     const requestedCwd = normalizeCwdPath(rawRequestedCwd);
     if (!prompt) return "Error: prompt is required";
-    const cli: DriveCli = fixedCli ?? (args.cli === "codex" ? "codex" : args.cli === "claude" || args.cli === undefined ? "claude" : ("invalid" as DriveCli));
-    if (cli === ("invalid" as DriveCli)) return `Error: unknown cli "${String(args.cli)}" (expected "claude" or "codex")`;
-    const resumeSessionId = typeof args.resumeSessionId === "string" ? args.resumeSessionId : undefined;
+    const cli: DriveCli =
+      fixedCli ??
+      (args.cli === "codex"
+        ? "codex"
+        : args.cli === "claude" || args.cli === undefined
+          ? "claude"
+          : ("invalid" as DriveCli));
+    if (cli === ("invalid" as DriveCli))
+      return `Error: unknown cli "${String(args.cli)}" (expected "claude" or "codex")`;
+    const resumeSessionId =
+      typeof args.resumeSessionId === "string" ? args.resumeSessionId : undefined;
     const sessionStore = options.sessionStore ?? externalAgentSessionStore;
     let cwd = requestedCwd;
     let resumeNote = "";
@@ -264,9 +379,25 @@ export function makeDriveAgentTool(
       args.permissionMode === "bypassPermissions"
         ? args.permissionMode
         : "bypassPermissions";
+    const resolvedAttachmentPaths = resolveAttachmentPaths(args.attachmentPaths, cwd);
+    if (resolvedAttachmentPaths.error) return `Error: ${resolvedAttachmentPaths.error}`;
+    const attachmentPaths = resolvedAttachmentPaths.paths;
+    const promptWithAttachments = appendAttachmentPrompt(prompt, attachmentPaths);
+    const imagePaths =
+      cli === "codex"
+        ? attachmentPaths.filter((path) => DRIVE_IMAGE_EXTS.has(extname(path).toLowerCase()))
+        : [];
     const cliName = cli === "codex" ? "Codex" : "Claude Code";
     const label = `DriveAgent(${cli}): ${prompt.slice(0, 40)}`;
-    const runOpts = { cli, prompt, resumeSessionId, cwd, permissionMode, signal: ctx?.signal ?? argSignal(args) };
+    const runOpts = {
+      cli,
+      prompt: promptWithAttachments,
+      resumeSessionId,
+      cwd,
+      permissionMode,
+      signal: ctx?.signal ?? argSignal(args),
+      imagePaths,
+    };
     const foregroundHandoffMs = options.foregroundHandoffMs ?? DRIVE_AGENT_FOREGROUND_HANDOFF_MS;
     const isWritableRun = permissionMode !== "default";
     // Background by default (these tasks are typically long). Only an explicit
@@ -294,7 +425,9 @@ export function makeDriveAgentTool(
         resumeNote,
         `已在后台启动 ${cliName}（jobId ${tracked.jobId}）。完成后会通知你结果，无需轮询。`,
         tracked.warning,
-      ].filter(Boolean).join("\n");
+      ]
+        .filter(Boolean)
+        .join("\n");
     }
     const run = startRun(runner, runOpts);
     const result = await waitForForegroundOrHandoff(run, foregroundHandoffMs);
@@ -312,12 +445,15 @@ export function makeDriveAgentTool(
         resumeNote,
         `${cliName} foreground run exceeded ${foregroundHandoffMs}ms; moved it to background (jobId ${tracked.jobId}). Completion will notify this session, so do not poll.`,
         tracked.warning,
-      ].filter(Boolean).join("\n");
+      ]
+        .filter(Boolean)
+        .join("\n");
     }
     const r = result.kind === "completed" ? result.result : await run;
     recordSuccessfulSession(sessionStore, cli, cwd, r);
     const prefix = resumeNote ? `${resumeNote}\n` : "";
-    if (r.isError) return `${prefix}${cliName} 运行出错（session ${r.sessionId}）：\n${r.finalText}`;
+    if (r.isError)
+      return `${prefix}${cliName} 运行出错（session ${r.sessionId}）：\n${r.finalText}`;
     return `${prefix}${cliName} 完成（session ${r.sessionId}）：\n${r.finalText}`;
   };
 }
@@ -333,14 +469,19 @@ export const driveClaudeCodeToolDef: ToolDefinition = {
   description:
     "(Alias of DriveAgent with cli:claude.) Delegate a task to the external Claude Code CLI " +
     "(drives `claude` for one turn). Prefer DriveAgent for new calls; this name is kept for " +
-    "compatibility. " + driveAgentToolDef.description,
+    "compatibility. " +
+    driveAgentToolDef.description,
   inputSchema: {
     type: "object",
     properties: {
       // intentionally omit `cli` — this alias is always claude
       prompt: (driveAgentToolDef.inputSchema as any).properties.prompt,
-      resumeSessionId: { type: "string", description: "Existing CC session id to resume (keeps context). Omit for a fresh session." },
+      resumeSessionId: {
+        type: "string",
+        description: "Existing CC session id to resume (keeps context). Omit for a fresh session.",
+      },
       cwd: (driveAgentToolDef.inputSchema as any).properties.cwd,
+      attachmentPaths: (driveAgentToolDef.inputSchema as any).properties.attachmentPaths,
       permissionMode: (driveAgentToolDef.inputSchema as any).properties.permissionMode,
       background: (driveAgentToolDef.inputSchema as any).properties.background,
     },
@@ -351,10 +492,17 @@ export const driveClaudeCodeToolDef: ToolDefinition = {
 /** Back-compat factory: a DriveAgent pinned to cli:"claude" with the `cli` arg
  *  hidden. The injected `runner` here keeps the old shape (no `cli` field); we
  *  adapt it to the generic Runner so existing tests' fakes still work. */
-type LegacyRunner = (opts: { prompt: string; resumeSessionId?: string; cwd: string; permissionMode?: PermMode; signal?: AbortSignal }) => Promise<AgentRunResult>;
+type LegacyRunner = (opts: {
+  prompt: string;
+  resumeSessionId?: string;
+  cwd: string;
+  permissionMode?: PermMode;
+  signal?: AbortSignal;
+}) => Promise<AgentRunResult>;
 export function makeDriveClaudeCodeTool(runner?: LegacyRunner, options?: DriveAgentToolOptions) {
   const generic: Runner | undefined = runner
-    ? ({ prompt, resumeSessionId, cwd, permissionMode, signal }) => runner({ prompt, resumeSessionId, cwd, permissionMode, signal })
+    ? ({ prompt, resumeSessionId, cwd, permissionMode, signal }) =>
+        runner({ prompt, resumeSessionId, cwd, permissionMode, signal })
     : undefined;
   return makeDriveAgentTool(generic ?? defaultRunner, "claude", options);
 }

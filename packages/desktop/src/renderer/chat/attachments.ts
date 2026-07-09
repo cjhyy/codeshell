@@ -1,9 +1,10 @@
 /**
  * Image attachment state used by the chat composer.
  *
- * Renderer-only: nothing here touches disk. Images live in-memory as
- * data URLs until the user sends, at which point the send wire-format
- * embeds them inline (engine-side support gated by model.supportsVision).
+ * Renderer state for composer images. New paste/drop images are staged by
+ * Electron main before they enter this state, so the UI keeps both the data URL
+ * needed for thumbnails/legacy vision wire and the stable path metadata needed
+ * by tools and sub-agents.
  */
 
 import { extractAnnotations } from "./anchors";
@@ -25,6 +26,22 @@ export interface ImageAttachment {
   dataUrl: string;
   /** Size in bytes (best-effort; useful for the "太大" warning). */
   size: number;
+  /** Path shown to the model; prefers cwd-relative paths. */
+  path?: string;
+  /** Absolute path for main/core/tool handoff; not shown unless needed. */
+  absPath?: string;
+  /** cwd-relative path when the attachment was copied into the workspace. */
+  relPath?: string;
+  /** Hex sha256 of the staged/sourced bytes, without a `sha256:` prefix. */
+  sha256?: string;
+  /** Where the user supplied this attachment from. */
+  origin?: "paste" | "os-drop" | "file-panel" | "picker" | "mention" | "generated" | "tool";
+  /** Session directory that owns staged attachments. */
+  sessionId?: string;
+  /** When this attachment was staged/selected. */
+  createdAt?: number;
+  /** Original source path when user explicitly selected a file. */
+  sourcePath?: string;
 }
 
 /**
@@ -39,17 +56,11 @@ export const ATTACHMENT_LIMITS = {
   maxBytesPerImage: 10 * 1024 * 1024,
   maxImagesPerMessage: 6,
   /** Anything outside this set is rejected before reading. */
-  allowedMimes: new Set([
-    "image/png",
-    "image/jpeg",
-    "image/jpg",
-    "image/webp",
-    "image/gif",
-  ]),
+  allowedMimes: new Set(["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"]),
 } as const;
 
 export interface AttachmentError {
-  kind: "too-large" | "wrong-type" | "too-many" | "read-failed";
+  kind: "too-large" | "wrong-type" | "too-many" | "read-failed" | "staging-failed";
   message: string;
 }
 
@@ -159,23 +170,38 @@ export function buildPathAttachment(
   absPath: string,
   dataUrl: string,
   existing: ImageAttachment[],
+  options: Partial<
+    Pick<ImageAttachment, "path" | "relPath" | "absPath" | "sha256" | "origin" | "sessionId">
+  > = {},
 ): { attachment?: ImageAttachment; error?: AttachmentError } {
   if (existing.length >= ATTACHMENT_LIMITS.maxImagesPerMessage) {
     return {
       error: {
         kind: "too-many",
-        message: tr("chat.attachment.tooManySimple", { max: ATTACHMENT_LIMITS.maxImagesPerMessage }),
+        message: tr("chat.attachment.tooManySimple", {
+          max: ATTACHMENT_LIMITS.maxImagesPerMessage,
+        }),
       },
     };
   }
-  const meta = parseDataUrlMeta(dataUrl);
-  if (!meta) {
-    return { error: { kind: "read-failed", message: tr("chat.attachment.readFailedPath", { path: absPath }) } };
+  const dataMeta = parseDataUrlMeta(dataUrl);
+  if (!dataMeta) {
+    return {
+      error: {
+        kind: "read-failed",
+        message: tr("chat.attachment.readFailedPath", { path: absPath }),
+      },
+    };
   }
-  if (!ATTACHMENT_LIMITS.allowedMimes.has(meta.mime)) {
-    return { error: { kind: "wrong-type", message: tr("chat.attachment.wrongTypeSimple", { mime: meta.mime }) } };
+  if (!ATTACHMENT_LIMITS.allowedMimes.has(dataMeta.mime)) {
+    return {
+      error: {
+        kind: "wrong-type",
+        message: tr("chat.attachment.wrongTypeSimple", { mime: dataMeta.mime }),
+      },
+    };
   }
-  if (meta.size > ATTACHMENT_LIMITS.maxBytesPerImage) {
+  if (dataMeta.size > ATTACHMENT_LIMITS.maxBytesPerImage) {
     return {
       error: {
         kind: "too-large",
@@ -187,7 +213,21 @@ export function buildPathAttachment(
     };
   }
   return {
-    attachment: { id: nextId(), name: absPath, mime: meta.mime, dataUrl, size: meta.size },
+    attachment: {
+      id: nextId(),
+      name: absPath,
+      mime: dataMeta.mime,
+      dataUrl,
+      size: dataMeta.size,
+      path: options.path ?? absPath,
+      absPath: options.absPath ?? absPath,
+      relPath: options.relPath,
+      sha256: options.sha256,
+      origin: options.origin ?? "file-panel",
+      sessionId: options.sessionId,
+      createdAt: Date.now(),
+      sourcePath: absPath,
+    },
   };
 }
 
@@ -199,18 +239,28 @@ export function buildPathAttachment(
  * keeps the boundary trivial — no protocol break — but the marker is
  * specific enough that nothing else would accidentally produce it.
  */
-export function encodeAttachmentsForWire(
-  text: string,
-  images: ImageAttachment[],
-): string {
+export function encodeAttachmentsForWire(text: string, images: ImageAttachment[]): string {
   if (images.length === 0) return text;
   const blocks = images
-    .map(
-      (img) =>
-        `<codeshell-image mime="${img.mime}" name="${escapeAttr(img.name)}">\n${img.dataUrl}\n</codeshell-image>`,
-    )
+    .map((img) => `<codeshell-image ${imageAttrs(img)}>\n${img.dataUrl}\n</codeshell-image>`)
     .join("\n");
   return text ? `${text}\n\n${blocks}` : blocks;
+}
+
+function imageAttrs(img: ImageAttachment): string {
+  const attrs: Array<[string, string | number | undefined]> = [
+    ["mime", img.mime],
+    ["name", img.name],
+    ["path", img.path],
+    ["hash", img.sha256 ? `sha256:${img.sha256.replace(/^sha256:/, "")}` : undefined],
+    ["size", Number.isFinite(img.size) ? img.size : undefined],
+    ["origin", img.origin],
+    ["sessionId", img.sessionId],
+  ];
+  return attrs
+    .filter((pair): pair is [string, string | number] => pair[1] !== undefined && pair[1] !== "")
+    .map(([key, value]) => `${key}="${escapeAttr(String(value))}"`)
+    .join(" ");
 }
 
 function escapeAttr(s: string): string {
@@ -236,8 +286,7 @@ export interface DecodedWire {
   images: { name: string; mime: string; dataUrl: string }[];
 }
 
-const WIRE_IMAGE_RE =
-  /<codeshell-image\b([^>]*)>([\s\S]*?)<\/codeshell-image>/g;
+const WIRE_IMAGE_RE = /<codeshell-image\b([^>]*)>([\s\S]*?)<\/codeshell-image>/g;
 
 /**
  * Derive a sidebar session title from a wire string. Image base64 must
@@ -321,4 +370,14 @@ export function imageFilesFromDrop(items: DataTransferItemList | null): File[] {
     }
   }
   return out;
+}
+
+export async function sha256FromDataUrl(dataUrl: string): Promise<string | undefined> {
+  const match = /^data:[^;,]+;base64,([\s\S]*)$/.exec(dataUrl);
+  if (!match) return undefined;
+  const raw = atob(match[1] ?? "");
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }

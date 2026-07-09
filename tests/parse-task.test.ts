@@ -1,8 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  parseTaskWithImages,
-  ImageParseError,
-} from "../packages/core/src/engine/parse-task.js";
+import { parseTaskWithImages, ImageParseError } from "../packages/core/src/engine/parse-task.js";
 
 // 1×1 transparent PNG, base64-encoded — short enough to inline.
 const PNG_BASE64 =
@@ -60,11 +57,7 @@ describe("parseTaskWithImages", () => {
 
   test("two images, mixed with text, preserve order", () => {
     const a = block("image/png", "a.png", PNG_DATAURL);
-    const b = block(
-      "image/jpeg",
-      "b.jpg",
-      `data:image/jpeg;base64,${PNG_BASE64}`,
-    );
+    const b = block("image/jpeg", "b.jpg", `data:image/jpeg;base64,${PNG_BASE64}`);
     const input = `first\n${a}\nmiddle\n${b}\nlast`;
     const out = parseTaskWithImages(input);
     expect(out.images.map((i) => i.name)).toEqual(["a.png", "b.jpg"]);
@@ -84,6 +77,31 @@ describe("parseTaskWithImages", () => {
     const input = block("image/png", escaped, PNG_DATAURL);
     const out = parseTaskWithImages(input);
     expect(out.images[0]!.name).toBe(fancyName);
+  });
+
+  test("parses staged attachment metadata attrs", () => {
+    const path = `.code-shell/attachments/sid/a&"b.png`;
+    const escapedPath = path.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+    const input =
+      `<codeshell-image mime="image/png" name="shot.png" path="${escapedPath}" ` +
+      `hash="sha256:${"a".repeat(64)}" size="123" origin="paste" sessionId="sid-1">\n` +
+      `${PNG_DATAURL}\n</codeshell-image>`;
+    const out = parseTaskWithImages(input);
+    expect(out.images[0]!.path).toBe(path);
+    expect(out.images[0]!.hash).toBe(`sha256:${"a".repeat(64)}`);
+    expect(out.images[0]!.size).toBe(123);
+    expect(out.images[0]!.origin).toBe("paste");
+    expect(out.images[0]!.sessionId).toBe("sid-1");
+  });
+
+  test("legacy image block without metadata attrs is unchanged", () => {
+    const input = block("image/png", "shot.png", PNG_DATAURL);
+    const out = parseTaskWithImages(input);
+    expect(out.images[0]!.path).toBeUndefined();
+    expect(out.images[0]!.hash).toBeUndefined();
+    expect(out.images[0]!.size).toBeUndefined();
+    expect(out.images[0]!.origin).toBeUndefined();
+    expect(out.images[0]!.sessionId).toBeUndefined();
   });
 
   test("malformed: opening tag with no closing tag throws", () => {

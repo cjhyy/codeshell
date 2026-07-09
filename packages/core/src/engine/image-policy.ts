@@ -108,10 +108,7 @@ export type ImagePolicyVerdict =
        * Stable string the engine surfaces as the run's terminal reason.
        * Distinct values so a future UI could pick different icons.
        */
-      code:
-        | "image_too_large"
-        | "images_total_too_large"
-        | "too_many_images";
+      code: "image_too_large" | "images_total_too_large" | "too_many_images";
       /** User-facing message — Chinese-friendly because both UIs are zh. */
       message: string;
       /** Optional fields the UI may use for finer-grained reporting. */
@@ -169,9 +166,7 @@ export interface DropOversizedResult {
   droppedCount: number;
 }
 
-export function dropOversizedImages(
-  images: readonly ParsedImage[],
-): DropOversizedResult {
+export function dropOversizedImages(images: readonly ParsedImage[]): DropOversizedResult {
   const kept: ParsedImage[] = [];
   const dropped: Array<{ name: string; bytes: number }> = [];
   for (const img of images) {
@@ -185,9 +180,7 @@ export function dropOversizedImages(
   if (dropped.length === 0) {
     return { kept, placeholder: "", droppedCount: 0 };
   }
-  const list = dropped
-    .map((d) => `「${d.name}」(~${fmtMB(d.bytes)})`)
-    .join("、");
+  const list = dropped.map((d) => `「${d.name}」(~${fmtMB(d.bytes)})`).join("、");
   const placeholder =
     `[已自动跳过 ${dropped.length} 张超大图片:${list};` +
     `单图上限 ${fmtMB(IMAGE_LIMITS.maxBytesPerImage)}。` +
@@ -195,8 +188,14 @@ export function dropOversizedImages(
   return { kept, placeholder, droppedCount: dropped.length };
 }
 
-export function enforceImagePolicy(
-  images: readonly ParsedImage[],
+export interface ImagePolicyByteInput {
+  name: string;
+  mime: string;
+  bytes: number;
+}
+
+export function enforceImageBytePolicy(
+  images: readonly ImagePolicyByteInput[],
 ): ImagePolicyVerdict {
   if (images.length === 0) return { ok: true };
 
@@ -209,14 +208,14 @@ export function enforceImagePolicy(
         `本次有 ${images.length} 张。请删掉一些再发。`,
       totals: {
         imageCount: images.length,
-        totalBytes: images.reduce((s, i) => s + byteLengthFromBase64(i.base64), 0),
+        totalBytes: images.reduce((s, i) => s + i.bytes, 0),
       },
     };
   }
 
   let totalBytes = 0;
   for (const img of images) {
-    const bytes = byteLengthFromBase64(img.base64);
+    const bytes = img.bytes;
     if (bytes > IMAGE_LIMITS.maxBytesPerImage) {
       return {
         ok: false,
@@ -252,6 +251,16 @@ export function enforceImagePolicy(
   return { ok: true };
 }
 
+export function enforceImagePolicy(images: readonly ParsedImage[]): ImagePolicyVerdict {
+  return enforceImageBytePolicy(
+    images.map((img) => ({
+      name: img.name,
+      mime: img.mime,
+      bytes: byteLengthFromBase64(img.base64),
+    })),
+  );
+}
+
 /**
  * Collect the workspace file paths of any attached images that came from a
  * real file (the desktop composer's path-attach flow sets ParsedImage.name to
@@ -271,6 +280,11 @@ export function collectAttachedImagePaths(
 ): string[] {
   const out: string[] = [];
   for (const img of images) {
+    const path = img.path?.trim();
+    if (path) {
+      if (exists(resolve(path))) out.push(path);
+      continue;
+    }
     const name = img.name?.trim();
     if (!name) continue;
     const abs = resolve(name);

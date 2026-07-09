@@ -5,6 +5,8 @@ export interface BuildArgsOpts {
   resumeSessionId?: string;
   permissionMode: PermissionMode;
   cwd: string;
+  imagePaths?: string[];
+  codexImageInputSupported?: boolean;
 }
 
 export interface ParsedResult {
@@ -68,7 +70,11 @@ export const claudeAdapter: AgentAdapter = {
       const t = line.trim();
       if (!t) continue;
       let d: any;
-      try { d = JSON.parse(t); } catch { continue; }
+      try {
+        d = JSON.parse(t);
+      } catch {
+        continue;
+      }
       if (typeof d.session_id === "string" && !sessionId) sessionId = d.session_id;
       if (d.type === "result") {
         if (typeof d.session_id === "string") sessionId = d.session_id;
@@ -102,7 +108,13 @@ export const codexAdapter: AgentAdapter = {
     if (opts.permissionMode === "bypassPermissions") {
       args.push("--dangerously-bypass-approvals-and-sandbox");
     } else {
-      args.push("--sandbox", opts.permissionMode === "acceptEdits" ? "workspace-write" : "read-only");
+      args.push(
+        "--sandbox",
+        opts.permissionMode === "acceptEdits" ? "workspace-write" : "read-only",
+      );
+    }
+    if (opts.codexImageInputSupported) {
+      for (const imagePath of opts.imagePaths ?? []) args.push("-i", imagePath);
     }
     // `resume <thread_id>` continues a prior codex session; the trailing `-`
     // tells codex exec to read the prompt from stdin (we feed it there).
@@ -119,9 +131,17 @@ export const codexAdapter: AgentAdapter = {
       const t = line.trim();
       if (!t) continue;
       let d: any;
-      try { d = JSON.parse(t); } catch { continue; }
+      try {
+        d = JSON.parse(t);
+      } catch {
+        continue;
+      }
       if (d.type === "thread.started" && typeof d.thread_id === "string") sessionId = d.thread_id;
-      else if (d.type === "item.completed" && d.item?.type === "agent_message" && typeof d.item.text === "string") {
+      else if (
+        d.type === "item.completed" &&
+        d.item?.type === "agent_message" &&
+        typeof d.item.text === "string"
+      ) {
         finalText = d.item.text; // keep the LAST agent_message
       } else if (d.type === "turn.failed") {
         isError = true;

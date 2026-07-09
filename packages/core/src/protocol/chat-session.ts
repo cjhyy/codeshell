@@ -2,6 +2,7 @@ import type { Engine, EngineResult } from "../engine/engine.js";
 import type { ModelEntry } from "../llm/model-pool.js";
 import type { StreamEvent } from "../types.js";
 import { isAbortError } from "../llm/client-base.js";
+import type { InputAttachmentMeta } from "./types.js";
 
 export interface ChatSessionOptions {
   id: string;
@@ -23,6 +24,8 @@ export interface TurnOpts {
   injected?: boolean;
   /** Stable id for this user-intent; forwarded to Engine.run for idempotency. */
   clientMessageId?: string;
+  /** Structured input attachments for this turn. */
+  attachments?: InputAttachmentMeta[];
 }
 
 interface QueuedTurn {
@@ -144,7 +147,12 @@ export class ChatSession {
     addTokenBudget?: number;
     addTimeBudgetMs?: number;
     addStopBlocks?: number;
-  }): { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number; maxStopBlocks: number } | null {
+  }): {
+    maxTurns: number;
+    tokenBudget?: number;
+    timeBudgetMs?: number;
+    maxStopBlocks: number;
+  } | null {
     return this.engine.extendGoalRun(opts);
   }
 
@@ -217,6 +225,7 @@ export class ChatSession {
         goal: next.opts.goal,
         injected: next.opts.injected,
         clientMessageId: next.opts.clientMessageId,
+        attachments: next.opts.attachments,
       });
       this.lastActivityAt = Date.now();
       next.resolve(result);

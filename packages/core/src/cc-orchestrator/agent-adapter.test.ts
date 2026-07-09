@@ -12,7 +12,11 @@ describe("claudeAdapter.buildArgs", () => {
     // Workflow fans out a fleet of agents — the real token sink. A single Task
     // (one sub-agent) is cheap, so it stays allowed. (Earlier we mistakenly
     // disallowed Task; corrected here.)
-    const args = claudeAdapter.buildArgs({ prompt: "hi", permissionMode: "bypassPermissions", cwd: "/x" });
+    const args = claudeAdapter.buildArgs({
+      prompt: "hi",
+      permissionMode: "bypassPermissions",
+      cwd: "/x",
+    });
     expect(args).toContain("--disallowedTools");
     expect(args[args.indexOf("--disallowedTools") + 1]).toBe("Workflow");
     expect(args).not.toContain("Task");
@@ -24,7 +28,12 @@ describe("claudeAdapter.buildArgs", () => {
     expect(injected.toLowerCase()).toContain("workflow");
   });
   it("adds --resume <id> when resumeSessionId present", () => {
-    const args = claudeAdapter.buildArgs({ prompt: "go", resumeSessionId: "S1", permissionMode: "bypassPermissions", cwd: "/x" });
+    const args = claudeAdapter.buildArgs({
+      prompt: "go",
+      resumeSessionId: "S1",
+      permissionMode: "bypassPermissions",
+      cwd: "/x",
+    });
     expect(args).toContain("--resume");
     expect(args[args.indexOf("--resume") + 1]).toBe("S1");
     expect(args).toContain("--verbose");
@@ -35,8 +44,18 @@ describe("claudeAdapter.parseResult", () => {
   it("extracts sessionId + finalText from the result line", () => {
     const lines = [
       JSON.stringify({ type: "system", subtype: "init", session_id: "S9" }),
-      JSON.stringify({ type: "assistant", session_id: "S9", message: { content: [{ type: "text", text: "PONG" }] } }),
-      JSON.stringify({ type: "result", subtype: "success", session_id: "S9", result: "PONG", is_error: false }),
+      JSON.stringify({
+        type: "assistant",
+        session_id: "S9",
+        message: { content: [{ type: "text", text: "PONG" }] },
+      }),
+      JSON.stringify({
+        type: "result",
+        subtype: "success",
+        session_id: "S9",
+        result: "PONG",
+        is_error: false,
+      }),
     ];
     const r = claudeAdapter.parseResult(lines);
     expect(r.sessionId).toBe("S9");
@@ -44,7 +63,9 @@ describe("claudeAdapter.parseResult", () => {
     expect(r.isError).toBe(false);
   });
   it("falls back to init session_id when no result line", () => {
-    const r = claudeAdapter.parseResult([JSON.stringify({ type: "system", subtype: "init", session_id: "S2" })]);
+    const r = claudeAdapter.parseResult([
+      JSON.stringify({ type: "system", subtype: "init", session_id: "S2" }),
+    ]);
     expect(r.sessionId).toBe("S2");
     expect(r.finalText).toBe("");
   });
@@ -67,12 +88,21 @@ describe("codexAdapter.buildArgs", () => {
     expect(args[args.indexOf("--sandbox") + 1]).toBe("workspace-write");
   });
   it("maps bypassPermissions → --dangerously-bypass-approvals-and-sandbox (no --sandbox)", () => {
-    const args = codexAdapter.buildArgs({ prompt: "hi", permissionMode: "bypassPermissions", cwd: "/x" });
+    const args = codexAdapter.buildArgs({
+      prompt: "hi",
+      permissionMode: "bypassPermissions",
+      cwd: "/x",
+    });
     expect(args).toContain("--dangerously-bypass-approvals-and-sandbox");
     expect(args).not.toContain("--sandbox");
   });
   it("adds `resume <id> -` when resumeSessionId present", () => {
-    const args = codexAdapter.buildArgs({ prompt: "go", resumeSessionId: "T1", permissionMode: "default", cwd: "/x" });
+    const args = codexAdapter.buildArgs({
+      prompt: "go",
+      resumeSessionId: "T1",
+      permissionMode: "default",
+      cwd: "/x",
+    });
     const i = args.indexOf("resume");
     expect(i).toBeGreaterThan(-1);
     expect(args[i + 1]).toBe("T1");
@@ -81,6 +111,40 @@ describe("codexAdapter.buildArgs", () => {
   it("declares promptViaStdin so the driver feeds the prompt over stdin", () => {
     expect(codexAdapter.promptViaStdin).toBe(true);
   });
+  it("adds -i image paths only when Codex image input is detected", () => {
+    const args = codexAdapter.buildArgs({
+      prompt: "go",
+      permissionMode: "default",
+      cwd: "/x",
+      imagePaths: ["/x/a.png", "/x/b.jpg"],
+      codexImageInputSupported: true,
+    });
+    expect(args).toContain("-i");
+    expect(args).toContain("/x/a.png");
+    expect(args).toContain("/x/b.jpg");
+  });
+  it("omits -i image paths when Codex image input is not detected", () => {
+    const args = codexAdapter.buildArgs({
+      prompt: "go",
+      permissionMode: "default",
+      cwd: "/x",
+      imagePaths: ["/x/a.png"],
+      codexImageInputSupported: false,
+    });
+    expect(args).not.toContain("-i");
+    expect(args).not.toContain("/x/a.png");
+  });
+  it("claude adapter ignores image paths rather than passing unknown flags", () => {
+    const args = claudeAdapter.buildArgs({
+      prompt: "go",
+      permissionMode: "default",
+      cwd: "/x",
+      imagePaths: ["/x/a.png"],
+      codexImageInputSupported: true,
+    });
+    expect(args).not.toContain("-i");
+    expect(args).not.toContain("/x/a.png");
+  });
 });
 
 describe("codexAdapter.parseResult", () => {
@@ -88,8 +152,14 @@ describe("codexAdapter.parseResult", () => {
     const lines = [
       JSON.stringify({ type: "thread.started", thread_id: "019f-abc" }),
       JSON.stringify({ type: "turn.started" }),
-      JSON.stringify({ type: "item.completed", item: { id: "i0", type: "command_execution", aggregated_output: "hi\n", exit_code: 0 } }),
-      JSON.stringify({ type: "item.completed", item: { id: "i1", type: "agent_message", text: "done" } }),
+      JSON.stringify({
+        type: "item.completed",
+        item: { id: "i0", type: "command_execution", aggregated_output: "hi\n", exit_code: 0 },
+      }),
+      JSON.stringify({
+        type: "item.completed",
+        item: { id: "i1", type: "agent_message", text: "done" },
+      }),
       JSON.stringify({ type: "turn.completed", usage: { input_tokens: 1 } }),
     ];
     const r = codexAdapter.parseResult(lines);
