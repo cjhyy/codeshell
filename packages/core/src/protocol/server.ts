@@ -408,32 +408,39 @@ export class AgentServer {
       return;
     }
 
+    const sessionConfig = {
+      permissionMode: params.permissionMode,
+      cwd: params.cwd,
+      projectTrusted: params.projectTrusted,
+    } as any;
+
+    if (params.requireExisting === true && !cm.get(params.sessionId)) {
+      let existsOnDisk = false;
+      try {
+        existsOnDisk = cm.sessionExistsOnDisk(params.sessionId, sessionConfig);
+      } catch (err: any) {
+        const code = err.code ?? ErrorCodes.InternalError;
+        this.transport.send(createErrorResponse(req.id, code, err.message));
+        return;
+      }
+      if (!existsOnDisk) {
+        this.transport.send(
+          createErrorResponse(
+            req.id,
+            ErrorCodes.SessionNotFound,
+            `session ${params.sessionId} does not exist`,
+          ),
+        );
+        return;
+      }
+    }
+
     let session;
     try {
-      session = cm.getOrCreate(params.sessionId, {
-        permissionMode: params.permissionMode,
-        cwd: params.cwd,
-        projectTrusted: params.projectTrusted,
-      } as any);
+      session = cm.getOrCreate(params.sessionId, sessionConfig);
     } catch (err: any) {
       const code = err.code ?? ErrorCodes.InternalError;
       this.transport.send(createErrorResponse(req.id, code, err.message));
-      return;
-    }
-
-    // `requireExisting`: reject if the target session isn't on disk rather than
-    // running the prompt against a freshly-created blank session. A cron
-    // "continue this conversation" job whose session the user deleted must fail
-    // loudly here (SessionNotFound) so the scheduler can auto-disable it,
-    // instead of silently executing with no transcript/goal/context.
-    if (params.requireExisting === true && !session.engine.sessionExistsOnDisk(params.sessionId)) {
-      this.transport.send(
-        createErrorResponse(
-          req.id,
-          ErrorCodes.SessionNotFound,
-          `session ${params.sessionId} does not exist`,
-        ),
-      );
       return;
     }
 
@@ -843,6 +850,12 @@ export class AgentServer {
       : params.sessionId
         ? (this.legacyEngine!.clearGoal(params.sessionId) ?? false)
         : false;
+    if (cleared && typeof params.sessionId === "string" && params.sessionId.length > 0) {
+      this.notify(Methods.StreamEvent, {
+        sessionId: params.sessionId,
+        event: { type: "goal_cleared" },
+      });
+    }
     this.transport.send(createResponse(req.id, { ok: true, cleared }));
   }
 

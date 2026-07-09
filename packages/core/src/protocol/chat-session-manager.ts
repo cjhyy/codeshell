@@ -90,6 +90,13 @@ export class ChatSessionManager {
     return this.sessions.get(sessionId);
   }
 
+  sessionExistsOnDisk(sessionId: string, slice: EngineConfigSlice): boolean {
+    const existing = this.sessions.get(sessionId);
+    if (existing) return true;
+    const probeEngine = this.factory(slice);
+    return probeEngine.sessionExistsOnDisk(sessionId);
+  }
+
   /**
    * Iterate every live session once. Public iterator so callers (e.g. the
    * protocol server's config hot-reload / sessions query) don't reach into

@@ -78,6 +78,34 @@ describe("agent/run requireExisting", () => {
     const err = lastError(t.sent);
     expect(err?.code).toBe(ErrorCodes.SessionNotFound);
     expect(state.runs).toBe(0); // never ran against a blank session
+    expect(chatManager.get("gone-sid")).toBeUndefined();
+  });
+
+  it("rejects absent requireExisting without consuming a maxSessions slot", async () => {
+    const missing = makeFakeEngine(false);
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => missing.engine,
+      maxSessions: 1,
+    });
+    chatManager.getOrCreate("live-sid", {} as never);
+
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager });
+
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 2,
+      method: "agent/run",
+      params: { sessionId: "gone-sid", task: "continue", requireExisting: true },
+    });
+    await new Promise((r) => setTimeout(r, 10));
+
+    const err = lastError(t.sent);
+    expect(err?.code).toBe(ErrorCodes.SessionNotFound);
+    expect(chatManager.get("gone-sid")).toBeUndefined();
+    expect(chatManager.sessionCount()).toBe(1);
+    expect(missing.state.runs).toBe(0);
   });
 
   it("runs normally when the session exists on disk", async () => {
