@@ -1,23 +1,23 @@
 # CodeShell Beta Release Checklist
 
-核实日期：2026-07-09。
+核实日期：2026-07-10。
 
-本清单只记录 beta 发布前的状态与待确认项；不要在未确认目标版本前改版本号。
+本清单记录 beta 发布轨道的状态与待确认项；不要在未确认目标版本前改版本号。
 
 ## Current State
 
-- [x] 五个 package 的 `version` 当前一致：`0.6.0-rc.17`。
+- [x] 五个 package 的 `version` 当前一致：`0.7.0-beta.1`。
   - `package.json`
   - `packages/core/package.json`
   - `packages/tui/package.json`
   - `packages/cdp/package.json`
   - `packages/desktop/package.json`
-- [x] `packages/core/src/index.ts` 的 `VERSION` 当前为 `0.6.0-rc.17`，与
+- [x] `packages/core/src/index.ts` 的 `VERSION` 当前为 `0.7.0-beta.1`，与
   `packages/core/package.json` 一致。
 - [x] 已有版本断言测试：
   `packages/core/src/version.test.ts` 校验 `VERSION === package.json.version`。
-- [x] `bun.lock` 已通过 `bun install --lockfile-only` 同步 workspace 版本到
-  `0.6.0-rc.17`，确认不再包含 `0.6.0-rc.12`。
+- [x] `bun.lock` 当前记录 workspace package 版本为 `0.7.0-beta.1`，与
+  package 版本一致。
 
 ## Release Workflow
 
@@ -45,7 +45,7 @@
 | Package | Publish state | Current status |
 | --- | --- | --- |
 | `@cjhyy/code-shell` | public npm meta package | OK: MIT, description, repository, homepage, bugs, `engines.node >=20.10`, `files`, `bin`, `publishConfig.access=public` all present. |
-| `@cjhyy/code-shell-core` | public npm package | OK: MIT, description, repository with `directory`, homepage, bugs, `engines.node >=20.10`, `files=["dist","THIRD_PARTY_NOTICES.md"]`, `publishConfig.access=public` present. |
+| `@cjhyy/code-shell-core` | public npm package | OK: MIT, description, repository with `directory`, homepage, bugs, `engines.node >=20.10`, exact `files=["dist","THIRD_PARTY_NOTICES.md"]`, `publishConfig.access=public` present. |
 | `@cjhyy/code-shell-tui` | public npm package | OK: MIT, description, repository with `directory`, homepage, `files`, `bin`, and `publishConfig.access=public` are present. |
 | `@cjhyy/code-shell-cdp` | private workspace package | OK for current private state: MIT, description, repository with `directory`, `engines.node >=20.10`, and `files` present. Homepage is missing; add `https://github.com/cjhyy/codeshell/tree/main/packages/cdp#readme` if this package becomes public. |
 | `@cjhyy/code-shell-desktop` | private Electron package | OK for beta installers: MIT, formal description, repository with `directory`, and root homepage are present. No npm `files` field is required while private; electron-builder uses `build.files`. |
@@ -55,13 +55,12 @@
 - [x] `scripts/release.ts` now uses one prerelease-aware version regex:
   `X.Y.Z`, `X.Y.Z-rc.N`, or `X.Y.Z-beta.N`.
 - [x] `--bump beta` and `--bump rc` share symmetric prerelease logic. Use `--bump rc`
-  for same-line rc increments; when moving from the rc line to the public beta line,
-  pass an explicit target such as `0.7.0-beta.1` so semver does not move backward.
+  for rc increments; when moving from prerelease to the public stable line,
+  pass an explicit target such as `0.7.0` so semver does not move backward.
 - [x] Release rewriting now includes `packages/core/src/index.ts` via an exact
   `export const VERSION = "..."` line replacement, and the final consistency
   check asserts core `VERSION === target`.
-- [x] `bun.lock` was regenerated with `bun install --lockfile-only`; diff only updates
-  workspace versions from `0.6.0-rc.12` to `0.6.0-rc.17`.
+- [x] `bun.lock` records workspace package versions as `0.7.0-beta.1`.
 - [x] `packages/tui/package.json` and `packages/desktop/package.json` now include
   repository/homepage metadata, and the desktop description no longer says `(POC)`.
 - [x] Verification run on 2026-07-09: `bun run typecheck` and
@@ -82,30 +81,32 @@
   package with MIT license. The badge will show the registry version until beta
   is published.
 
-## Beta Release Actions To Run Later
+## Release Actions To Run Later
 
-Do not run these until the target beta version is chosen. For the first public beta
-after `0.6.0-rc.18`, the target is `0.7.0-beta.1`.
+Do not run these until the target release version is chosen. Current packages are
+already at `0.7.0-beta.1`; for follow-up prereleases use the rc line, or finish
+with the stable `0.7.0` target.
 
-1. Pick the beta version: `0.7.0-beta.1`. Do not use `0.6.0-beta.1`; it sorts lower
-   than `0.6.0-rc.18`.
-2. Run the release helper with the explicit target:
-   `bun run scripts/release.ts 0.7.0-beta.1`. Use `--bump rc` for same-line rc
-   increments; use explicit `X.Y.0-beta.N` when crossing to a new beta line. The
+1. Pick the release version, e.g. `0.7.0-rc.1` for an rc or `0.7.0` for the
+   stable release. Do not go back to the `0.6.x` beta line; it sorts lower than
+   the current `0.7.0-beta.1`.
+2. Run the release helper with the explicit stable target:
+   `bun run scripts/release.ts 0.7.0`. Use `--bump rc` for same-line rc
+   increments; use explicit `X.Y.Z-rc.N` when crossing to a new rc line. The
    helper updates all five package versions, `packages/core/src/index.ts` `VERSION`,
    and `bun.lock`, then commits locally without pushing unless `--push` is passed.
 3. Review the local release commit before pushing.
 4. If anything was adjusted manually, sync `bun.lock` so workspace versions match the
-   beta version.
+   release version.
 5. Run the release preflight checks:
    `bun run typecheck`, `bun test`, and any desktop build/package smoke test
-   卡密sama wants before public beta.
+   卡密sama wants before public release.
 6. Ensure the version bump and release-prep docs are committed.
-7. Create an annotated tag `v<beta-version>`.
-8. Push `main` and the tag; the tag should trigger GitHub prerelease assets and
-   npm `next` publishing.
-9. After CI finishes, verify GitHub Release is marked prerelease and npm shows
-   the beta under the `next` dist-tag.
+7. Create an annotated tag `v<release-version>`.
+8. Push `main` and the tag; the tag should trigger GitHub release assets and
+   npm publishing.
+9. After CI finishes, verify GitHub Release prerelease state and npm dist-tag
+   are correct (`next` for prerelease, `latest` for `0.7.0`).
 
 ## Needs 卡密sama Decision
 
