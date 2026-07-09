@@ -24,8 +24,8 @@
 // signing/notarization; the first install from older cdhash-only builds remains
 // manual, and Developer ID is the proper long-term fix.
 //
-// No-op on non-macOS. Best-effort: a signing failure logs but does not abort
-// the build (an unsigned build is still better than no build).
+// No-op on non-macOS. Local builds remain best-effort, but CI release builds
+// must fail if signing or verification fails so broken mac artifacts are not uploaded.
 
 /* global require, exports */
 
@@ -64,6 +64,11 @@ exports.default = async function afterPack(context) {
     // eslint-disable-next-line no-console
     console.log(`[afterPack] ad-hoc signed ${appName} with stable requirement: ${STABLE_REQUIREMENT}`);
   } catch (err) {
+    if (process.env.CI || process.env.GITHUB_ACTIONS) {
+      // eslint-disable-next-line no-console
+      console.error(`[afterPack] ad-hoc sign failed in CI: ${err}`);
+      throw err;
+    }
     // eslint-disable-next-line no-console
     console.warn(`[afterPack] ad-hoc sign failed (shipping unsigned): ${err}`);
   }

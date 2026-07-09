@@ -25,7 +25,7 @@
 - [x] `verify-version` 会校验五个 package 的版本必须等于 tag 去掉前缀 `v`
   后的版本号；这覆盖 root、core、tui、cdp、desktop。
 - [x] GitHub Release 的 prerelease 判定是 `case "$TAG" in *-*)`；因此
-  `v0.6.0-beta.1` 这类带连字符的 tag 会创建 GitHub prerelease。
+  `v0.7.0-beta.1` 这类带连字符的 tag 会创建 GitHub prerelease。
 - [x] npm dist-tag 判定是 `if [[ "${{ github.ref_name }}" == *-* ]]`；因此
   beta tag 会用 `next`，普通 `vX.Y.Z` 才会用 `latest`。
 - [x] npm 发布顺序是 core -> tui -> meta；`packages/cdp` 和
@@ -45,7 +45,7 @@
 | Package | Publish state | Current status |
 | --- | --- | --- |
 | `@cjhyy/code-shell` | public npm meta package | OK: MIT, description, repository, homepage, bugs, `engines.node >=20.10`, `files`, `bin`, `publishConfig.access=public` all present. |
-| `@cjhyy/code-shell-core` | public npm package | OK: MIT, description, repository with `directory`, homepage, bugs, `engines.node >=20.10`, `files=["dist"]`, `publishConfig.access=public` present. |
+| `@cjhyy/code-shell-core` | public npm package | OK: MIT, description, repository with `directory`, homepage, bugs, `engines.node >=20.10`, `files=["dist","THIRD_PARTY_NOTICES.md"]`, `publishConfig.access=public` present. |
 | `@cjhyy/code-shell-tui` | public npm package | OK: MIT, description, repository with `directory`, homepage, `files`, `bin`, and `publishConfig.access=public` are present. |
 | `@cjhyy/code-shell-cdp` | private workspace package | OK for current private state: MIT, description, repository with `directory`, `engines.node >=20.10`, and `files` present. Homepage is missing; add `https://github.com/cjhyy/codeshell/tree/main/packages/cdp#readme` if this package becomes public. |
 | `@cjhyy/code-shell-desktop` | private Electron package | OK for beta installers: MIT, formal description, repository with `directory`, and root homepage are present. No npm `files` field is required while private; electron-builder uses `build.files`. |
@@ -54,12 +54,9 @@
 
 - [x] `scripts/release.ts` now uses one prerelease-aware version regex:
   `X.Y.Z`, `X.Y.Z-rc.N`, or `X.Y.Z-beta.N`.
-- [x] `--bump beta` and `--bump rc` share symmetric prerelease logic. Verified with an
-  inline `bun -e` check:
-  - `computeBump("0.6.0-rc.17", "beta")` -> `0.6.0-beta.1`
-  - `computeBump("0.6.0", "beta")` -> `0.6.0-beta.1`
-  - `computeBump("0.6.0-beta.1", "beta")` -> `0.6.0-beta.2`
-  - `0.6.0-beta.1` is accepted by the version regex.
+- [x] `--bump beta` and `--bump rc` share symmetric prerelease logic. Use `--bump rc`
+  for same-line rc increments; when moving from the rc line to the public beta line,
+  pass an explicit target such as `0.7.0-beta.1` so semver does not move backward.
 - [x] Release rewriting now includes `packages/core/src/index.ts` via an exact
   `export const VERSION = "..."` line replacement, and the final consistency
   check asserts core `VERSION === target`.
@@ -87,13 +84,16 @@
 
 ## Beta Release Actions To Run Later
 
-Do not run these until the target beta version is chosen.
+Do not run these until the target beta version is chosen. For the first public beta
+after `0.6.0-rc.18`, the target is `0.7.0-beta.1`.
 
-1. Pick the beta version, for example `0.6.0-beta.1`.
-2. Run the release helper, for example `bun run scripts/release.ts --bump beta` or
-   `bun run scripts/release.ts 0.6.0-beta.1`. It updates all five package versions,
-   `packages/core/src/index.ts` `VERSION`, and `bun.lock`, then commits locally
-   without pushing unless `--push` is passed.
+1. Pick the beta version: `0.7.0-beta.1`. Do not use `0.6.0-beta.1`; it sorts lower
+   than `0.6.0-rc.18`.
+2. Run the release helper with the explicit target:
+   `bun run scripts/release.ts 0.7.0-beta.1`. Use `--bump rc` for same-line rc
+   increments; use explicit `X.Y.0-beta.N` when crossing to a new beta line. The
+   helper updates all five package versions, `packages/core/src/index.ts` `VERSION`,
+   and `bun.lock`, then commits locally without pushing unless `--push` is passed.
 3. Review the local release commit before pushing.
 4. If anything was adjusted manually, sync `bun.lock` so workspace versions match the
    beta version.

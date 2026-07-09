@@ -39,13 +39,33 @@ function findSessionRecorderFile(root: string, sid: string): string | undefined 
   return undefined;
 }
 
-describe("ModelFacade recorder redaction", () => {
-  test("records sensitive tool_result placeholders while provider receives plaintext", async () => {
-    const sid = `recorder-redaction-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const secret = "credential-secret-that-must-not-hit-recorder";
-    const placeholder = "[credential value withheld]";
-    const redacted = JSON.stringify({ kind: "value", value: placeholder });
-    const script = `
+async function expectRecorderRedactionFor(method: "call" | "callWithoutStreaming"): Promise<void> {
+  const sid = `recorder-redaction-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const secret = "credential-secret-that-must-not-hit-recorder";
+  const placeholder = "[credential value withheld]";
+  const redacted = JSON.stringify({ kind: "value", value: placeholder });
+  const invocation =
+    method === "call"
+      ? `
+      await facade.call(
+        "system",
+        messages,
+        [],
+        undefined,
+        undefined,
+        recordingOptions,
+      );
+    `
+      : `
+      await facade.callWithoutStreaming(
+        "system",
+        messages,
+        [],
+        undefined,
+        recordingOptions,
+      );
+    `;
+  const script = `
       import { ModelFacade } from "./packages/core/src/engine/model-facade.ts";
       import { setCurrentSid } from "./packages/core/src/logging/logger.ts";
       import { getVerboseLogDir } from "./packages/core/src/logging/session-recorder.ts";
@@ -79,50 +99,56 @@ describe("ModelFacade recorder redaction", () => {
       };
       const transcript = { appendMessage() {} };
       const facade = new ModelFacade(client, transcript);
-      await facade.call(
-        "system",
-        [
-          { role: "assistant", content: [{ type: "tool_use", id: "cred", name: "UseCredential", input: {} }] },
-          { role: "user", content: [{ type: "tool_result", tool_use_id: "cred", content: secret }] },
-        ],
-        [],
-        undefined,
-        undefined,
-        { sensitiveToolResultRedactions: new Map([["cred", ${JSON.stringify(redacted)}]]) },
-      );
+      const messages = [
+        { role: "assistant", content: [{ type: "tool_use", id: "cred", name: "UseCredential", input: {} }] },
+        { role: "user", content: [{ type: "tool_result", tool_use_id: "cred", content: secret }] },
+      ];
+      const recordingOptions = {
+        sensitiveToolResultRedactions: new Map([["cred", ${JSON.stringify(redacted)}]]),
+      };
+      ${invocation}
       console.log(JSON.stringify({ sid, logDir: getVerboseLogDir(), providerSawSecret }));
     `;
 
-    const proc = Bun.spawn([process.execPath, "--eval", script], {
-      cwd: repoRoot(),
-      env: childEnv(),
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const [stdout, stderr, exitCode] = await Promise.all([
-      new Response(proc.stdout).text(),
-      new Response(proc.stderr).text(),
-      proc.exited,
-    ]);
+  const proc = Bun.spawn([process.execPath, "--eval", script], {
+    cwd: repoRoot(),
+    env: childEnv(),
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
 
-    expect(stderr).toBe("");
-    expect(exitCode).toBe(0);
-    const lastLine = stdout.trim().split(/\n/).filter(Boolean).at(-1);
-    expect(lastLine).toBeDefined();
-    const result = JSON.parse(lastLine!) as {
-      sid: string;
-      logDir: string;
-      providerSawSecret: boolean;
-    };
-    expect(result.providerSawSecret).toBe(true);
+  expect(stderr).toBe("");
+  expect(exitCode).toBe(0);
+  const lastLine = stdout.trim().split(/\n/).filter(Boolean).at(-1);
+  expect(lastLine).toBeDefined();
+  const result = JSON.parse(lastLine!) as {
+    sid: string;
+    logDir: string;
+    providerSawSecret: boolean;
+  };
+  expect(result.providerSawSecret).toBe(true);
 
-    const recorderFile = findSessionRecorderFile(result.logDir, result.sid);
-    expect(recorderFile).toBeDefined();
-    const recorded = readFileSync(recorderFile!, "utf8");
-    rmSync(recorderFile!, { force: true });
+  const recorderFile = findSessionRecorderFile(result.logDir, result.sid);
+  expect(recorderFile).toBeDefined();
+  const recorded = readFileSync(recorderFile!, "utf8");
+  rmSync(recorderFile!, { force: true });
 
-    expect(recorded).toContain('"type":"llm.request"');
-    expect(recorded).toContain(placeholder);
-    expect(recorded).not.toContain(secret);
+  expect(recorded).toContain('"type":"llm.request"');
+  expect(recorded).toContain(placeholder);
+  expect(recorded).not.toContain(secret);
+}
+
+describe("ModelFacade recorder redaction", () => {
+  test("records sensitive tool_result placeholders for streaming calls while provider receives plaintext", async () => {
+    await expectRecorderRedactionFor("call");
+  });
+
+  test("records sensitive tool_result placeholders for non-streaming calls while provider receives plaintext", async () => {
+    await expectRecorderRedactionFor("callWithoutStreaming");
   });
 });

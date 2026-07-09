@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, truncateSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, truncateSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { IMAGE_LIMITS } from "./image-policy.js";
@@ -201,5 +201,37 @@ describe("buildInputAttachmentContext", () => {
 
     expect(out.images).toEqual([]);
     expect(out.errors.join("\n")).toContain("staged path is outside .code-shell/attachments/sid");
+  });
+
+  test("rejects staged symlinks whose realpath escapes the workspace before reading bytes", async () => {
+    const outside = mkdtempSync(join(tmpdir(), "input-attachments-symlink-outside-"));
+    try {
+      const secret = join(outside, "secret.png");
+      const linkRel = ".code-shell/attachments/sid/link.png";
+      const linkAbs = join(cwd, linkRel);
+      mkdirSync(join(cwd, ".code-shell", "attachments", "sid"), { recursive: true });
+      writeFileSync(secret, Buffer.from(PNG_B64, "base64"));
+      symlinkSync(secret, linkAbs);
+
+      const out = await buildInputAttachmentContext(
+        [
+          meta({
+            id: "link_1",
+            path: linkRel,
+            absPath: linkAbs,
+            relPath: linkRel,
+          }),
+        ],
+        cwd,
+        { expectedSessionId: "sid" },
+      );
+
+      expect(out.images).toEqual([]);
+      expect(out.text).toBe("");
+      expect(out.errors.join("\n")).toContain("blocked by path policy");
+      expect(out.errors.join("\n")).toContain("outside workspace");
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
   });
 });

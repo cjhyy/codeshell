@@ -57,6 +57,98 @@ jobs:
               exit 1
             fi
           done
+          TAG="$TAG" node <<'NODE'
+          const fs = require("node:fs");
+
+          const tag = process.env.TAG;
+          const errors = [];
+          const fail = (message) => errors.push(`::error::${message}`);
+
+          const coreIndex = fs.readFileSync("packages/core/src/index.ts", "utf8");
+          const versionMatch = coreIndex.match(/export\s+const\s+VERSION\s*=\s*["']([^"']+)["']/);
+          if (!versionMatch) {
+            fail("packages/core/src/index.ts does not export a VERSION constant.");
+          } else {
+            const coreVersion = versionMatch[1];
+            console.log(`tag=${tag}  packages/core/src/index.ts VERSION=${coreVersion}`);
+            if (coreVersion !== tag) {
+              fail(`Tag v${tag} does not match packages/core/src/index.ts VERSION ${coreVersion}.`);
+            }
+          }
+
+          const lock = fs.readFileSync("bun.lock", "utf8");
+          const workspaceMatch = lock.match(
+            /^  "workspaces": \{[\s\S]*?^  \},\n  "(?:overrides|packages)":/m,
+          );
+          if (!workspaceMatch) {
+            fail("bun.lock workspaces block not found.");
+          } else {
+            const workspaceBlock = workspaceMatch[0];
+            const expectedWorkspaceVersions = [
+              { path: "packages/cdp", name: "@cjhyy/code-shell-cdp" },
+              { path: "packages/core", name: "@cjhyy/code-shell-core" },
+              { path: "packages/desktop", name: "@cjhyy/code-shell-desktop" },
+              { path: "packages/tui", name: "@cjhyy/code-shell-tui" },
+            ];
+            const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+            for (const workspace of expectedWorkspaceVersions) {
+              const entryMatch = workspaceBlock.match(
+                new RegExp(`^    "${escapeRegex(workspace.path)}": \\{([\\s\\S]*?)^    \\},`, "m"),
+              );
+              if (!entryMatch) {
+                fail(`bun.lock is missing workspace entry ${workspace.path}.`);
+                continue;
+              }
+              const entry = entryMatch[1];
+              const nameMatch = entry.match(/^\s{6}"name": "([^"]+)"/m);
+              const lockVersionMatch = entry.match(/^\s{6}"version": "([^"]+)"/m);
+              if (nameMatch?.[1] !== workspace.name) {
+                fail(
+                  `bun.lock workspace ${workspace.path} has name ${nameMatch?.[1] ?? "<missing>"}, expected ${workspace.name}.`,
+                );
+              }
+              if (!lockVersionMatch) {
+                fail(`bun.lock workspace ${workspace.path} is missing a version.`);
+                continue;
+              }
+              const lockVersion = lockVersionMatch[1];
+              console.log(`tag=${tag}  bun.lock ${workspace.path}=${lockVersion}`);
+              if (lockVersion !== tag) {
+                fail(`Tag v${tag} does not match bun.lock ${workspace.path} version ${lockVersion}.`);
+              }
+            }
+
+            const staleWorkspaceVersions = [
+              ...new Set(
+                [...workspaceBlock.matchAll(/^\s{6}"version": "([^"]+)"/gm)]
+                  .map((match) => match[1])
+                  .filter((version) => version !== tag),
+              ),
+            ];
+            if (staleWorkspaceVersions.length > 0) {
+              fail(
+                `bun.lock contains workspace version(s) that do not match ${tag}: ${staleWorkspaceVersions.join(", ")}.`,
+              );
+            }
+          }
+
+          const staleOwnPackageSpecs = [
+            ...new Set(
+              [...lock.matchAll(/@cjhyy\/code-shell(?:-[A-Za-z0-9-]+)?@([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)/g)]
+                .filter((match) => match[1] !== tag)
+                .map((match) => match[0]),
+            ),
+          ];
+          if (staleOwnPackageSpecs.length > 0) {
+            fail(`bun.lock contains stale CodeShell package specs: ${staleOwnPackageSpecs.join(", ")}.`);
+          }
+
+          if (errors.length > 0) {
+            for (const error of errors) console.error(error);
+            process.exit(1);
+          }
+          NODE
 
   npm-publish:
     name: publish npm packages
@@ -259,7 +351,7 @@ jobs:
     # Only when triggered by a tag push — workflow_dispatch runs leave artifacts
     # in the Actions tab without cutting a Release.
     if: startsWith(github.ref, 'refs/tags/')
-    needs: package
+    needs: [package, npm-publish]
     runs-on: ubuntu-latest
     permissions:
       contents: write

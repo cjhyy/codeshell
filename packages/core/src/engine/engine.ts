@@ -1157,7 +1157,7 @@ export class Engine {
     // *text* portion only — base64 bytes count as "noise" by the heuristic
     // and would also bloat the transcript by megabytes per image. Image
     // bytes ride in parsedTask.images and re-enter the message tree below.
-    const taskText = parsedTask.hasImages ? parsedTask.text : task;
+    const taskText = parsedTask.text;
 
     const noise = detectPastedNoise(taskText);
     if (noise.isNoise) {

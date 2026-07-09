@@ -2,7 +2,7 @@
 
 > 已完成项一律删除（记录在 git 历史与记忆里）。本文件只保留**未完成**的待办。
 > 分区规则：**小 feature = 体量 M 及以下（M/S/XS），可单会话直接着手**；**大功能升级 = 体量 L**，需先方案设计再分阶段落地。
-> 最近一次核对：2026-07-09（bg-completion 唤醒 bug 已修复+合并 main，merge 9c3b5866；review findings 8 条小功能已实现+审查+清空；统一输入接入总线特性见 commit 57a2dc57）。
+> 最近一次核对：2026-07-09（发 0.6.0-rc.18 供自测，tag v0.6.0-rc.18 已推、CI 触发；安全大改 M3 session 隔离 + M2 L 档凭证加密已落地并三轮复审 0 Blocker，见 commit 8441bade/f9d68129；发版遗留非阻塞项见下方「rc.18 发版遗留」）。
 
 ---
 
@@ -18,6 +18,16 @@
 
 ---
 
+## rc.18 发版遗留（非阻塞项，发 0.7.0 正式版前处理）
+
+> 来源：pre-beta final 三路 review（`docs/review-2026-07-09/pre-beta-final-0{1,2,3}` + `-refix-review`）。3 Blocker + 2 安全 Major 已修并复审通过（8441bade），以下是**当时判为不阻塞 rc、但发 0.7.0 公开正式版前应处理**的项。
+
+- **发版 workflow 加固（体量 S）**｜锚点：`.github/workflows/release.yml:45-59`（verify-version）、`:61-65`/`:257-263`（job 依赖）、`packages/desktop/scripts/after-pack-adhoc-sign.cjs:45-68`｜现状三项：①`verify-version` 只校验 5 个 package.json，不校验 `packages/core/src/index.ts` 的 VERSION 和 bun.lock（手动打 tag 绕过 release.ts 时会 desync）；②`npm-publish` 与 `release` job 依赖不足，npm 失败仍可发 GitHub Release（半发布）；③mac ad-hoc 签名失败只 `console.warn` 不 fail CI，可能上传签名有问题的 mac 产物。修法：verify-version 加断言 core VERSION==tag、bun.lock 无旧版本；release 依赖 `[package, npm-publish]`；CI 下签名/verify 失败直接 exit non-zero。发 0.7.0（正式版走 latest dist-tag）前建议先做。
+- **补几条安全回归测试（体量 XS）**｜锚点：`packages/core/src/engine/input-attachments.test.ts`、`engine-structured-image-vision-gate.test.ts`、`model-facade-recorder-redaction.test.ts`｜现状：pre-beta-final-refix 复审的 3 个 Nit——①补「目录内 symlink 指向外部文件」附件逃逸显式用例（realpath 已拦截，仅缺显式断言）；②补 Engine 层「非视觉 + 非图片结构化附件仍调 LLM」回归（防误判 image_error）；③补 non-streaming recorder redaction 直接单测（当前只覆盖 streaming）。都是补测试，无代码缺陷。
+- **release-checklist-beta.md 文档纠偏（体量 XS）**｜锚点：`docs/release-checklist-beta.md:48`、`:92-95`｜现状：`:48` 写 core `files=["dist"]` 已过期（实含 THIRD_PARTY_NOTICES.md）；`:92-95` 仍以 `0.6.0-beta.1` 为发版示例（semver 低于 rc，会倒退，误导后续）。修法：更新为当前实际（含 notice、用 rc/0.7.0 示例）。
+
+---
+
 ## 大功能升级（体量 L，需方案设计 + 分阶段落地）
 
 - **core 通用化 + 插件面板**（体量 L）｜锚点：`packages/core/src/preset/index.ts:34`、`packages/desktop/src/renderer/panels/PanelArea.tsx:90`、`packages/core/src/plugins/installer/types.ts:4`｜现状：preset/builtin 仍硬编码 coding/git/browser/tool 包，PanelArea 固定内置 panel kind，plugin manifest schema 无 `panels`。修法：工具元数据派生 preset、PanelRegistry 收敛内置面板、manifest `panels` + `csplugin://` 沙箱 host + scoped bridge。
@@ -26,7 +36,7 @@
 - **Workspace 数据源绑定**（体量 L）｜锚点：`packages/core/src/settings/schema.ts:25`、`packages/desktop/src/renderer/credentials/LinkTab.tsx:11`｜现状：settings 只有能力开关，Links 仍是静态壳；没有 workspace-scoped resource model、外部源 link、Figma/issue/云盘 scope 分配。修法：设计数据源 schema、权限/凭证绑定和按 workspace/profile 注入的读取面。
 - **worktree session 隔离深化（外部 agent 自动隔离）**（体量 L）｜锚点：`docs/todo/worktree-session-isolation-research.md:331`、`packages/core/src/tool-system/builtin/drive-claude-code.ts:225`、`packages/core/src/tool-system/builtin/worktree.ts:179`｜现状：主 session workspace pointer、下一轮 cwd、DriveAgent resume cwd 绑定已落地；剩余是 DriveAgent/subagent 并行时自动 per-run worktree、完成后保留/清理提示、`.worktreeinclude`/baseRef/cleanup。修法：给 DriveAgent 增 isolation 策略和生命周期 UI，再扩展 include/baseRef/lock。
 - **工程质量 P7：builtin tools 集成测试 / Electron e2e / CI 覆盖率**（体量 L）｜锚点：`package.json:17`、`.github/workflows/ci.yml:45`、`packages/desktop/package.json:144`、`packages/desktop/scripts/smoke-panels.mjs:1`｜现状：根脚本无 coverage/e2e/smoke；CI 仍跑 targeted tests；desktop 有 Playwright 依赖和一次性 smoke script，但未成稳定 e2e 基座。修法：mock provider smoke、Electron `_electron` harness、CI xvfb/e2e 分层，最后加覆盖率目标。
-- **架构债 P1/P2（不含上方拆 engine）**（体量 L）｜锚点：`docs/todo/architecture-debt.md:24`、`packages/core/src/index.ts:281`、`packages/core/src/tool-system/builtin/index.ts:667`、`packages/desktop/src/main/index.ts:1540`｜现状：index.ts 仍暴露大量 Arena 面，arena 仍默认 builtin，SafeStorageCipher 已实现但故意未启用，App.tsx 仍巨型；cron sleep/wake guard 已补，DST/闰等边界仍可加强。修法：拆 public/internal export、arena 可选注册/移包、main-mediated credential decrypt service、拆 renderer App、收敛 state 单例和文档措辞。
+- **架构债 P1/P2（不含上方拆 engine）**（体量 L）｜锚点：`docs/todo/architecture-debt.md:24`、`packages/core/src/index.ts:281`、`packages/core/src/tool-system/builtin/index.ts:667`、`packages/desktop/src/main/index.ts:1540`｜现状：index.ts 仍暴露大量 Arena 面，arena 仍默认 builtin，App.tsx 仍巨型；cron sleep/wake guard 已补，DST/闰等边界仍可加强。修法：拆 public/internal export、arena 可选注册/移包、main-mediated credential decrypt service、拆 renderer App、收敛 state 单例和文档措辞。
 
 ---
 

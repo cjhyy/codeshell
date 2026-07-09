@@ -54,6 +54,26 @@ function writeAttachment(cwd: string, sessionId = "sid"): InputAttachmentMeta {
   return attachment;
 }
 
+function writeFileAttachment(cwd: string, sessionId = "sid"): InputAttachmentMeta {
+  const relPath = "notes.txt";
+  const absPath = join(cwd, relPath);
+  const content = "plain structured attachment";
+  writeFileSync(absPath, content, "utf8");
+  return {
+    id: "file_1",
+    sessionId,
+    kind: "file",
+    origin: "mention",
+    path: relPath,
+    absPath,
+    relPath,
+    mime: "text/plain",
+    size: Buffer.byteLength(content),
+    sha256: "1".repeat(64),
+    createdAt: 1,
+  };
+}
+
 function makeEngine(cwd: string, model: string, providerKind?: "openai"): Engine {
   const engine = new Engine({
     llm: {
@@ -98,6 +118,45 @@ describe("Engine structured image attachment vision gate", () => {
       expect(result.reason).toBe("image_error");
       expect(result.text).toContain("does not accept image input");
       expect(scenario.calls).toHaveLength(0);
+    } finally {
+      scenarios.delete(model);
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("allows non-image structured attachments for non-vision models", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "engine-structured-file-gate-"));
+    const model = `${fakeProvider}-nonvision-file-${Date.now()}-${Math.random()}`;
+    const scenario = { calls: [] as Message[][] };
+    scenarios.set(model, scenario);
+
+    try {
+      const attachment = writeFileAttachment(cwd, "sid");
+      const engine = makeEngine(cwd, model);
+      const result = await engine.run("read the attached notes", {
+        sessionId: "sid",
+        cwd,
+        attachments: [attachment],
+      });
+
+      expect(result.reason).toBe("completed");
+      expect(scenario.calls.length).toBeGreaterThan(0);
+      expect(scenario.calls.flatMap((call) => imageBlocks(call))).toHaveLength(0);
+      const textMessages = scenario.calls
+        .flatMap((call) =>
+          call.flatMap((message) =>
+            typeof message.content === "string"
+              ? [message.content]
+              : message.content
+                  .map((block) => (block.type === "text" ? block.text : ""))
+                  .filter(Boolean),
+          ),
+        )
+        .join("\n");
+      expect(textMessages).toContain('<attached-file path="notes.txt">');
+      expect(textMessages).toContain("mime: text/plain");
+      expect(textMessages).toContain(`sha256: ${"1".repeat(64)}`);
+      expect(textMessages).not.toContain("does not accept image input");
     } finally {
       scenarios.delete(model);
       rmSync(cwd, { recursive: true, force: true });
