@@ -1,6 +1,8 @@
 import { describe, it, expect } from "bun:test";
 import { TurnLoop, type TurnLoopDeps, type TurnLoopConfig } from "./turn-loop.js";
 import type { LLMResponse, Message, StreamEvent, TokenUsage } from "../types.js";
+import { estimateTokens } from "../context/compaction.js";
+import { ContextManager } from "../context/manager.js";
 
 /**
  * Prompt-cache visibility in the UI: the usage_update event that feeds the
@@ -170,7 +172,9 @@ describe("TurnLoop usage_update carries cache tokens", () => {
     const loop = new TurnLoop(deps, {
       maxTurns: 5,
       maxToolCallsPerTurn: 10,
-      onStream: (e) => { events.push(e); },
+      onStream: (e) => {
+        events.push(e);
+      },
     });
 
     (loop as any).emitCtxFromMessages([{ role: "user", content: "hi" }]);
@@ -189,7 +193,9 @@ describe("TurnLoop usage_update carries cache tokens", () => {
     const loop = new TurnLoop(deps, {
       maxTurns: 5,
       maxToolCallsPerTurn: 10,
-      onStream: (e) => { events.push(e); },
+      onStream: (e) => {
+        events.push(e);
+      },
     });
 
     (loop as any).emitCtxFromMessages([{ role: "user", content: "hi" }]);
@@ -224,6 +230,56 @@ describe("TurnLoop usage_update carries cache tokens", () => {
     expect(calls[0]!.messages).toBeDefined();
     expect(calls[0]!.messageCount).toBe(calls[0]!.messages!.length);
     expect(calls[0]!.messages).toEqual([{ role: "user", content: "hi" }]);
+  });
+
+  it("records actual usage against the volatile-stripped manager history", async () => {
+    const userMessage: Message = { role: "user", content: "hi" };
+    const volatileMessage: Message = {
+      role: "user",
+      content: "<dynamicContext>volatile git status</dynamicContext>",
+    };
+    const assistantText = "assistant post-anchor payload ".repeat(20);
+    const actualPromptTokens = 1000;
+    const contextManager = new ContextManager({ maxTokens: 1_000_000 });
+    const anchors: ReturnType<ContextManager["recordActualUsage"]>[] = [];
+    const { deps } = makeDeps(
+      [
+        {
+          text: assistantText,
+          toolCalls: [],
+          stopReason: "stop",
+          usage: {
+            promptTokens: actualPromptTokens,
+            completionTokens: 20,
+            totalTokens: actualPromptTokens + 20,
+          },
+        },
+      ],
+      undefined,
+      (inputTokens, messageCount, messages) => {
+        anchors.push(contextManager.recordActualUsage(inputTokens, messageCount, messages));
+      },
+    );
+    const loop = new TurnLoop(deps, {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+      volatileContextMessages: [volatileMessage],
+    });
+
+    const result = await loop.run([userMessage, volatileMessage]);
+    const managerVisibleHistory = result.messages.filter((message) => message !== volatileMessage);
+    const assistantMessage = managerVisibleHistory[managerVisibleHistory.length - 1]!;
+    const checked = contextManager.checkLimits(managerVisibleHistory);
+
+    expect(anchors).toHaveLength(1);
+    expect(anchors[0]).toMatchObject({
+      promptTokens: actualPromptTokens,
+      messageCount: 1,
+      estimateAtAnchor: estimateTokens([userMessage]),
+    });
+    expect(assistantMessage).toEqual({ role: "assistant", content: assistantText });
+    expect(checked.tokens).toBe(actualPromptTokens + estimateTokens([assistantMessage]));
+    expect(checked.promptTokensSource).toBe("anchor_delta");
   });
 
   it("forwards cacheReadTokens and cacheCreationTokens from the response usage", async () => {
