@@ -27,7 +27,7 @@
   - 目标：独立 sessionId、严格 bucket/session 隔离、可选只读主线程快照，面板生命周期复用现有 PanelArea 持久化规则。
   - 约束：**不做 Pi 式 parent 指针树状 session**；快聊用完即走，合并靠 fork/复制派生。
 
-- [ ] **A4. MCP HTTP Auth / OAuth / Link 认证体验**（体量 M）
+- [x] **A4. MCP HTTP Auth / OAuth / Link 认证体验**（体量 M）— ✅ oauth credential 类型+SafeStorageCipher 加密存储+MCP Bearer 注入+设置 UI，reviewer SHIP-with-nits（凭证不泄漏、向后兼容 OK），已合并。真实授权码登录/自动 refresh 留后续
   - 锚点：`packages/core/src/credentials/types.ts:6`、`types.ts:718`、`tool-system/mcp-manager.ts:99`、`desktop/.../settings/McpSection.tsx:960`
   - 目标：加 OAuth credential 类型、登录状态/刷新/退出、认证方式选择 UI，保持 Codex 风格字段兼容。
 
@@ -119,7 +119,21 @@
 | A5 | task-naming-plan | bcb8b861 | 纯文档免审 | — | ✅ 已合并 25970519、worktree 已清 |
 | A7 | task-actions-node24 | ff809c46 | SHIP（版本真实性已核实） | YAML 有效 | ✅ 已合并、worktree 已清 |
 | A3 | task-quick-chat | 2e700c01 | SHIP-with-nits（隔离真严格） | 3 pass | ✅ 已合并、worktree 已清 |
+| A4 | task-mcp-oauth | 660f320d | SHIP-with-nits（凭证加密不泄漏） | 89 pass | ✅ 已合并、worktree 已清 |
 
 ## 问题记录（遇到阻塞 / 非本任务引入的红测试记这里）
 
-（暂无）
+- **[新 bug 候选] 带附件插入的消息卡住**（卡密sama 2026-07-10 报告，待补现象细节）
+  - 现象：带附件插入的消息发送后卡住。
+  - 待确认：附件类型（图片/其它）、卡在哪一步（气泡不出现/转圈不结束/LLM 未调用）、是主线程还是 quick-chat 面板、有无 console 报错。
+  - 处理：细节补齐后作为独立 bugfix 走 systematic-debugging → codex 流水线（可能与「输入附件管道统一」相关记忆有关）。
+
+- **[新 bug 候选] 每轮编辑文件数统计不对**（卡密sama 2026-07-10 报告）
+  - 现象：desktop 每轮（turn）显示的"编辑的文件"数量算得不对。
+  - 待确认：是多算/少算/去重问题；涉及 DriveAgent 外部改动归因（readExternalChangedFiles）还是 in-session 聚合器；主线程 turn 聚合逻辑锚点。
+  - 处理：走 systematic-debugging → codex 流水线定位聚合口径。
+
+- **[新 bug 候选] 过程卡片被通知回来后全折叠、看不到最新进行中过程**（卡密sama 2026-07-10 报告，本会话实测）
+  - 现象：后台 agent 完成通知回来时，消息流里正在跑/进行中的过程卡片被全部折叠起来；期望仍能看到最新的一些过程（进行中或最近的），而不是一律折叠。
+  - 待确认：折叠是 background_agent_completed 通知触发的重渲染/reducer 行为，还是 TurnProcessGroupCard 的默认折叠策略；期望行为=保留最新 N 条/进行中的展开。
+  - 处理：走 systematic-debugging → codex 流水线，定位折叠触发点（transcriptsReducer / TurnProcessGroupCard），改为"进行中/最新过程默认展开"。
