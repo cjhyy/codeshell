@@ -1,8 +1,8 @@
 # 我写了一个「奴隶主」，再也不用焦虑 Codex / CC 额度没用完了
 
-> 系列定位：不讲“怎么用某个 AI 工具”，而是把一个真实的、正在开发的通用 Agent 编排框架 **CodeShell** 拆开，讲清楚一个能被手机遥控、能在后台无人值守拿着鞭子抽 Codex / Claude Code 干活的 Agent，它的“运行壳”到底是怎么搭出来的。
+> 本文的主角 **CodeShell** 是一个开源的通用 AI Agent 编排框架：同一个 core，同时长出终端 CLI、headless 无头运行和一个完整的桌面 App。它自己就是一个能干活的 Agent——装 skill、读写文件、跑命令、开浏览器、扛长任务；也能反过来当「包工头」，调度外部的 Codex / Claude Code CLI 替它干活。仓库在 [github.com/cjhyy/codeshell](https://github.com/cjhyy/codeshell)（`npm i -g @cjhyy/code-shell`）。
 >
-> 本篇是引子：先用一个高共鸣场景（订阅额度总用不完）把整套系统的骨架摆出来，后面五篇再逐层深潜。
+> 这是它架构解析系列的开篇。别急着看架构图——先跟我从一个很具体的痛点进去。
 
 ![CodeShell 监工小狗抽 Codex / Claude 的鞭子](assets/v2/v2-00-overseer-puppy.png)
 
@@ -42,7 +42,7 @@ CodeShell 架构解析（通用 Agent Harness 视角）
 
 - [一、这个「包工头」到底要解决什么](#一这个包工头到底要解决什么)
 - [二、CodeShell 的解法：自己能干，也能带队](#二codeshell-的解法自己能干也能带队)
-- [三、一套 core，多张脸：手机只是入口之一](#三一套-core多张脸手机只是入口之一)
+- [三、一个 core，长出很多张脸](#三一个-core长出很多张脸)
 - [四、长任务无人值守：四块拼图与一条边界](#四长任务无人值守四块拼图与一条边界)
 - [五、这一切的本质：Agent Harness](#五这一切的本质agent-harness)
 - [六、本篇小结 & 系列阅读路线](#六本篇小结--系列阅读路线)
@@ -203,9 +203,7 @@ function onMobileMessage(msg) {
 }
 ```
 
-这段伪代码想表达的不是 API 细节，而是权威归属：手机端不新起 agent，不复制权限系统，不另存一份日志。它只是把用户事件塞进桌面 worker，后续 StreamEvent 再镜像回手机。
-
-⚠️ **一句话记住**：无论从桌面、TUI、SDK 还是手机发起，**始终只有一个 core run loop**。手机只是多种入口之一。
+这段伪代码想表达的不是 API 细节，而是权威归属：手机端不新起 agent，不复制权限系统，不另存一份日志。它只是把用户事件塞进桌面 worker，后续 StreamEvent 再镜像回手机——无论从桌面、TUI、SDK 还是手机发起，始终只有一个 core run loop。
 
 ![远程入口注入同一条后台 loop：手机只是发起方式之一，真正干活的是桌面 core worker](assets/v2/v2-00-mobile-codex-loop.png)
 
@@ -229,7 +227,7 @@ function onMobileMessage(msg) {
 
 ---
 
-## 三、一套 core，多张脸：手机只是入口之一
+## 三、一个 core，长出很多张脸
 
 做到手机遥控以后，我反而更确定一件事：这不该被写成“mobile feature”。手机、TUI、桌面、SDK，都只是 CodeShell Core 之上的接入方式。
 
