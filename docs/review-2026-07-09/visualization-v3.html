@@ -1,0 +1,2168 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CodeShell 桌面流可视化视频 v3</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #05070b;
+      --panel: #0b1118;
+      --panel-2: #101823;
+      --panel-3: #151e2b;
+      --line: #263241;
+      --line-soft: #1c2633;
+      --text: #e4eaf3;
+      --muted: #92a0b2;
+      --faint: #667386;
+      --cyan: #60c8ff;
+      --green: #4edb86;
+      --amber: #f0bd63;
+      --red: #ff6868;
+      --red-2: #ff3f56;
+      --violet: #b7a4ff;
+      --shadow: 0 22px 70px rgba(0, 0, 0, 0.42);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        linear-gradient(180deg, rgba(11, 17, 24, 0.98), rgba(5, 7, 11, 1) 420px),
+        var(--bg);
+      color: var(--text);
+      font-family:
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Monaco,
+        Consolas,
+        "Liberation Mono",
+        "Courier New",
+        monospace;
+      line-height: 1.45;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+      background-size: 48px 48px, 48px 48px;
+      mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.72), transparent 78%);
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      color: inherit;
+    }
+
+    .app {
+      width: min(1820px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 18px 0 24px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 460px);
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .hero-main,
+    .hero-stats,
+    .control-deck,
+    .stage-panel,
+    .side-panel,
+    .legend-panel {
+      border: 1px solid rgba(38, 50, 65, 0.92);
+      border-radius: var(--radius);
+      background: rgba(11, 17, 24, 0.94);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-main {
+      min-height: 128px;
+      padding: 18px 20px;
+    }
+
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin: 0 0 10px;
+      color: var(--green);
+      font-size: 12px;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .kicker::before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 18px rgba(78, 219, 134, 0.68);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 25px;
+      line-height: 1.18;
+      letter-spacing: 0;
+      font-weight: 760;
+    }
+
+    .hero-main p {
+      max-width: 980px;
+      margin: 9px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .hero-stats {
+      padding: 12px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      align-content: stretch;
+    }
+
+    .stat {
+      min-width: 0;
+      min-height: 76px;
+      border: 1px solid rgba(45, 59, 78, 0.9);
+      border-radius: 8px;
+      background: #081019;
+      padding: 9px 10px;
+      display: grid;
+      align-content: center;
+      gap: 4px;
+    }
+
+    .stat span:first-child {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .stat strong {
+      color: var(--text);
+      font-size: 21px;
+      line-height: 1;
+    }
+
+    .stat.bug {
+      border-color: rgba(255, 104, 104, 0.58);
+      background: rgba(102, 22, 32, 0.28);
+    }
+
+    .stat.bug strong {
+      color: #ffd9d9;
+    }
+
+    .control-deck {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      padding: 11px;
+      margin-bottom: 14px;
+      backdrop-filter: blur(12px);
+    }
+
+    .controls-row {
+      display: grid;
+      grid-template-columns: auto auto auto auto minmax(260px, 1fr) auto auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn,
+    .seg-btn {
+      height: 36px;
+      border: 1px solid rgba(54, 70, 92, 0.96);
+      border-radius: 7px;
+      background: #0d1520;
+      color: var(--text);
+      cursor: pointer;
+      padding: 0 12px;
+      white-space: nowrap;
+      transition:
+        border-color 150ms ease,
+        background 150ms ease,
+        transform 150ms ease,
+        box-shadow 150ms ease;
+    }
+
+    .btn:hover,
+    .seg-btn:hover {
+      border-color: rgba(96, 200, 255, 0.72);
+      background: #111c2b;
+    }
+
+    .btn:focus-visible,
+    .seg-btn:focus-visible,
+    input:focus-visible {
+      outline: 2px solid var(--cyan);
+      outline-offset: 2px;
+    }
+
+    .btn.primary {
+      min-width: 84px;
+      border-color: rgba(78, 219, 134, 0.68);
+      background: #0d2518;
+      color: #e3ffed;
+    }
+
+    .btn.warn {
+      border-color: rgba(255, 104, 104, 0.68);
+      background: rgba(98, 22, 31, 0.46);
+      color: #ffe0e0;
+    }
+
+    .btn:disabled {
+      opacity: 0.48;
+      cursor: not-allowed;
+    }
+
+    .timeline-box {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: minmax(160px, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .scrub-wrap {
+      position: relative;
+      min-width: 0;
+      height: 30px;
+      display: grid;
+      align-items: center;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--green);
+      cursor: pointer;
+    }
+
+    .markers {
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .marker {
+      position: absolute;
+      top: 2px;
+      width: 10px;
+      height: 26px;
+      transform: translateX(-50%);
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    .marker::before {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 3px;
+      width: 2px;
+      height: 22px;
+      border-radius: 999px;
+      background: var(--red);
+      box-shadow: 0 0 14px rgba(255, 104, 104, 0.72);
+    }
+
+    .marker span {
+      position: absolute;
+      top: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #ffd9d9;
+      font-size: 10px;
+      white-space: nowrap;
+    }
+
+    .frame-readout {
+      min-width: 106px;
+      color: var(--cyan);
+      font-size: 13px;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .segmented {
+      height: 36px;
+      display: inline-flex;
+      border: 1px solid rgba(54, 70, 92, 0.96);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #081019;
+    }
+
+    .seg-btn {
+      height: 34px;
+      min-width: 58px;
+      border: 0;
+      border-right: 1px solid rgba(38, 50, 65, 0.92);
+      border-radius: 0;
+      background: transparent;
+      color: var(--muted);
+      padding: 0 10px;
+    }
+
+    .seg-btn:last-child {
+      border-right: 0;
+    }
+
+    .seg-btn.active {
+      background: #17273a;
+      color: var(--cyan);
+      box-shadow: inset 0 0 0 1px rgba(96, 200, 255, 0.32);
+    }
+
+    .studio {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(360px, 430px);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .stage-panel {
+      overflow: hidden;
+    }
+
+    .stage-head,
+    .side-head,
+    .legend-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(38, 50, 65, 0.92);
+      background: rgba(16, 24, 35, 0.82);
+    }
+
+    .stage-head h2,
+    .side-head h2,
+    .legend-head h2 {
+      margin: 0;
+      font-size: 14px;
+      letter-spacing: 0;
+    }
+
+    .stage-head span,
+    .side-head span,
+    .legend-head span {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: right;
+    }
+
+    .stage-canvas {
+      position: relative;
+      min-height: 620px;
+      background:
+        linear-gradient(180deg, rgba(8, 14, 21, 0.8), rgba(5, 8, 13, 0.96)),
+        #060a10;
+      overflow: hidden;
+    }
+
+    .stage-canvas::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.03),
+        rgba(255, 255, 255, 0.03) 1px,
+        transparent 1px,
+        transparent 6px
+      );
+      opacity: 0.24;
+    }
+
+    .flow-svg {
+      position: relative;
+      z-index: 1;
+      display: block;
+      width: 100%;
+      min-height: 620px;
+      height: min(62vw, 760px);
+    }
+
+    .flow-path {
+      fill: none;
+      stroke: rgba(56, 74, 98, 0.74);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .flow-path.complete {
+      stroke: rgba(78, 219, 134, 0.72);
+    }
+
+    .flow-path.active {
+      stroke: rgba(96, 200, 255, 0.95);
+      filter: url(#glowCyan);
+    }
+
+    .node rect {
+      fill: #0a111a;
+      stroke: rgba(54, 70, 92, 0.92);
+      stroke-width: 1.4;
+      rx: 8;
+      transition:
+        fill 160ms ease,
+        stroke 160ms ease,
+        filter 160ms ease;
+    }
+
+    .node.complete rect {
+      fill: #0b1815;
+      stroke: rgba(78, 219, 134, 0.52);
+    }
+
+    .node.active rect {
+      fill: #102032;
+      stroke: rgba(96, 200, 255, 1);
+      filter: url(#glowCyanSoft);
+    }
+
+    .node.bug-hot rect {
+      stroke: rgba(255, 104, 104, 1);
+      filter: url(#glowRed);
+    }
+
+    .node .idx {
+      fill: var(--cyan);
+      font-size: 13px;
+      font-weight: 760;
+    }
+
+    .node .name {
+      fill: var(--text);
+      font-size: 12px;
+      font-weight: 720;
+    }
+
+    .node .file {
+      fill: var(--muted);
+      font-size: 9.8px;
+    }
+
+    .node .badge {
+      fill: #0e1722;
+      stroke: rgba(54, 70, 92, 0.92);
+      rx: 5;
+    }
+
+    .node .badgeText {
+      fill: var(--muted);
+      font-size: 9px;
+      font-weight: 720;
+    }
+
+    .node.pulse rect {
+      animation: node-pulse 720ms ease-out;
+    }
+
+    @keyframes node-pulse {
+      0% {
+        stroke-width: 1.4;
+      }
+      28% {
+        stroke-width: 3.2;
+      }
+      100% {
+        stroke-width: 1.4;
+      }
+    }
+
+    .packet-core {
+      filter: url(#packetGlow);
+    }
+
+    .packet-core circle:first-child {
+      fill: rgba(78, 219, 134, 0.18);
+      stroke: rgba(78, 219, 134, 0.38);
+      stroke-width: 1;
+    }
+
+    .packet-core circle:nth-child(2) {
+      fill: #dfffe9;
+      stroke: var(--green);
+      stroke-width: 2;
+    }
+
+    .packet-label {
+      fill: #dfffe9;
+      font-size: 11px;
+      font-weight: 720;
+      paint-order: stroke;
+      stroke: rgba(5, 8, 13, 0.84);
+      stroke-width: 4px;
+      stroke-linejoin: round;
+    }
+
+    .tool-rail,
+    .n03-rail {
+      opacity: 0.34;
+      transition: opacity 180ms ease;
+    }
+
+    .tool-rail.active,
+    .n03-rail.active {
+      opacity: 1;
+    }
+
+    .rail-box {
+      fill: rgba(13, 21, 32, 0.92);
+      stroke: rgba(54, 70, 92, 0.86);
+      stroke-width: 1;
+      rx: 8;
+    }
+
+    .rail-box.hot {
+      stroke: rgba(255, 104, 104, 0.96);
+      filter: url(#glowRedSoft);
+    }
+
+    .rail-title {
+      fill: var(--amber);
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    .rail-label {
+      fill: var(--muted);
+      font-size: 10px;
+    }
+
+    .rail-path {
+      fill: none;
+      stroke: rgba(240, 189, 99, 0.78);
+      stroke-width: 2;
+      stroke-dasharray: 5 6;
+      stroke-linecap: round;
+    }
+
+    .rail-path.red {
+      stroke: rgba(255, 104, 104, 0.9);
+    }
+
+    .bug-packet circle {
+      fill: #ffd0d0;
+      stroke: var(--red);
+      stroke-width: 2;
+      filter: url(#glowRed);
+    }
+
+    .bug-packet.hidden {
+      display: none;
+    }
+
+    .bug-packet.blocked circle {
+      fill: rgba(255, 104, 104, 0.18);
+      stroke: rgba(255, 104, 104, 0.45);
+      stroke-dasharray: 3 3;
+    }
+
+    .bug-card {
+      position: absolute;
+      right: 16px;
+      bottom: 16px;
+      z-index: 4;
+      width: min(560px, calc(100% - 32px));
+      border: 1px solid rgba(255, 104, 104, 0.76);
+      border-radius: 8px;
+      background: rgba(18, 9, 12, 0.94);
+      box-shadow: 0 20px 58px rgba(0, 0, 0, 0.46);
+      padding: 13px;
+      display: grid;
+      gap: 10px;
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition:
+        opacity 180ms ease,
+        transform 180ms ease;
+    }
+
+    .bug-card.active {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .bug-card h3 {
+      margin: 0;
+      color: #ffe0e0;
+      font-size: 14px;
+    }
+
+    .bug-card p {
+      margin: 0;
+      color: #ffd6d6;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .bug-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      border: 1px solid rgba(54, 70, 92, 0.92);
+      border-radius: 999px;
+      background: rgba(8, 16, 25, 0.72);
+      color: var(--muted);
+      padding: 2px 8px;
+      font-size: 11px;
+      overflow-wrap: anywhere;
+    }
+
+    .pill.p1 {
+      border-color: rgba(255, 104, 104, 0.7);
+      color: #ffdede;
+      background: rgba(255, 104, 104, 0.12);
+    }
+
+    .pill.p2 {
+      border-color: rgba(240, 189, 99, 0.66);
+      color: #ffe3a9;
+      background: rgba(240, 189, 99, 0.1);
+    }
+
+    .comparison {
+      display: grid;
+      gap: 6px;
+    }
+
+    .comp-lane {
+      position: relative;
+      height: 30px;
+      border: 1px solid rgba(54, 70, 92, 0.82);
+      border-radius: 7px;
+      background: rgba(5, 9, 15, 0.64);
+      overflow: hidden;
+    }
+
+    .comp-lane span {
+      position: absolute;
+      z-index: 1;
+      top: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .comp-lane span:first-child {
+      left: 9px;
+    }
+
+    .comp-lane span:nth-child(2) {
+      right: 9px;
+    }
+
+    .comp-dot {
+      position: absolute;
+      z-index: 2;
+      left: 28%;
+      top: 9px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ffd2d2;
+      border: 2px solid var(--red);
+      box-shadow: 0 0 18px rgba(255, 104, 104, 0.78);
+      transform: translateX(-50%);
+    }
+
+    .comp-lane.run .comp-dot {
+      animation: comp-run 1200ms ease-in-out infinite;
+    }
+
+    .comp-lane.blocked .comp-dot {
+      background: transparent;
+      opacity: 0.42;
+      border-style: dashed;
+      box-shadow: none;
+      animation: none;
+    }
+
+    @keyframes comp-run {
+      0% {
+        left: 26%;
+        opacity: 0.2;
+      }
+      18% {
+        opacity: 1;
+      }
+      82% {
+        opacity: 1;
+      }
+      100% {
+        left: 75%;
+        opacity: 0.2;
+      }
+    }
+
+    .stream-console {
+      border-top: 1px solid rgba(38, 50, 65, 0.92);
+      background: #050806;
+      padding: 12px 14px;
+      min-height: 126px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .console-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .console-head strong {
+      color: var(--green);
+    }
+
+    .stream-console pre {
+      margin: 0;
+      min-height: 68px;
+      color: #c9ffd8;
+      font-size: 12px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .caret {
+      display: inline-block;
+      width: 8px;
+      height: 14px;
+      margin-left: 2px;
+      background: var(--green);
+      vertical-align: -2px;
+      animation: blink 880ms steps(2, end) infinite;
+    }
+
+    @keyframes blink {
+      0%,
+      48% {
+        opacity: 1;
+      }
+      49%,
+      100% {
+        opacity: 0;
+      }
+    }
+
+    .side-panel {
+      position: sticky;
+      top: 74px;
+      max-height: calc(100vh - 92px);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .side-body {
+      overflow: auto;
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+
+    .section {
+      border: 1px solid rgba(38, 50, 65, 0.9);
+      border-radius: 8px;
+      background: rgba(8, 13, 20, 0.76);
+      padding: 11px;
+      display: grid;
+      gap: 7px;
+    }
+
+    .section h3 {
+      margin: 0;
+      color: var(--cyan);
+      font-size: 12px;
+    }
+
+    .section p {
+      margin: 0;
+      color: var(--text);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .detail-title {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.24;
+      overflow-wrap: anywhere;
+    }
+
+    .detail-file {
+      color: var(--muted);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .io-grid {
+      display: grid;
+      gap: 7px;
+    }
+
+    .io-box {
+      border: 1px solid rgba(54, 70, 92, 0.82);
+      border-radius: 7px;
+      background: #081019;
+      padding: 8px;
+    }
+
+    .io-label {
+      color: var(--muted);
+      font-size: 11px;
+      margin-bottom: 4px;
+    }
+
+    .io-value {
+      color: var(--amber);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .side-bug {
+      border-color: rgba(255, 104, 104, 0.72);
+      background: rgba(102, 22, 32, 0.2);
+    }
+
+    .side-bug h3 {
+      color: #ffdede;
+    }
+
+    .bug-list {
+      display: grid;
+      gap: 7px;
+    }
+
+    .mini-bug {
+      width: 100%;
+      border: 1px solid rgba(54, 70, 92, 0.82);
+      border-radius: 7px;
+      background: #081019;
+      color: var(--text);
+      text-align: left;
+      padding: 9px;
+      cursor: pointer;
+      display: grid;
+      gap: 5px;
+    }
+
+    .mini-bug.active {
+      border-color: rgba(255, 104, 104, 0.9);
+      background: rgba(102, 22, 32, 0.34);
+    }
+
+    .mini-bug strong {
+      color: #ffdede;
+      font-size: 12px;
+    }
+
+    .mini-bug span {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .legend-panel {
+      margin-top: 14px;
+      overflow: hidden;
+    }
+
+    .legend-body {
+      padding: 12px 14px;
+      display: grid;
+      grid-template-columns: repeat(17, minmax(70px, 1fr));
+      gap: 6px;
+    }
+
+    .finding-chip {
+      min-width: 0;
+      border: 1px solid rgba(54, 70, 92, 0.86);
+      border-radius: 7px;
+      background: #081019;
+      color: var(--muted);
+      padding: 6px 7px;
+      font-size: 11px;
+      cursor: pointer;
+      display: grid;
+      gap: 2px;
+      text-align: left;
+    }
+
+    .finding-chip strong {
+      color: var(--text);
+      font-size: 11px;
+    }
+
+    .finding-chip.p1 {
+      border-color: rgba(255, 104, 104, 0.72);
+      background: rgba(102, 22, 32, 0.2);
+    }
+
+    .finding-chip.p1 strong {
+      color: #ffe0e0;
+    }
+
+    .finding-chip.p2 {
+      border-color: rgba(240, 189, 99, 0.65);
+      background: rgba(240, 189, 99, 0.08);
+    }
+
+    .finding-chip.selected {
+      box-shadow: 0 0 0 2px rgba(96, 200, 255, 0.36);
+    }
+
+    @media (max-width: 1360px) {
+      .studio,
+      .hero {
+        grid-template-columns: 1fr;
+      }
+
+      .side-panel {
+        position: static;
+        max-height: none;
+      }
+
+      .legend-body {
+        grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+      }
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        width: min(100% - 18px, 1820px);
+        padding-top: 10px;
+      }
+
+      .hero-stats {
+        grid-template-columns: 1fr;
+      }
+
+      .controls-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .timeline-box,
+      .segmented {
+        grid-column: 1 / -1;
+      }
+
+      .btn,
+      .seg-btn {
+        min-width: 0;
+      }
+
+      .stage-canvas {
+        min-height: 500px;
+      }
+
+      .flow-svg {
+        min-height: 500px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="hero">
+      <section class="hero-main" aria-labelledby="page-title">
+        <p class="kicker">Desktop stream visual video v3</p>
+        <h1 id="page-title">桌面流可视化视频 v3：逐帧数据包 + 两个 P1 触发帧</h1>
+        <p>
+          单文件离线动画。绿色数据包沿 24 步桌面流边移动，节点到达时点亮；N-03 与 N-06 在时间轴上有精确触发帧、跳转按钮和说明卡。
+        </p>
+      </section>
+      <section class="hero-stats" aria-label="总览统计">
+        <div class="stat">
+          <span>主链路节点</span>
+          <strong>24</strong>
+        </div>
+        <div class="stat bug">
+          <span>已确证 P1 bug 帧</span>
+          <strong>2</strong>
+        </div>
+        <div class="stat">
+          <span>总账 findings</span>
+          <strong>17</strong>
+        </div>
+      </section>
+    </header>
+
+    <section class="control-deck" aria-label="播放控制">
+      <div class="controls-row">
+        <button class="btn primary" id="playPause" type="button">播放</button>
+        <button class="btn" id="frameBack" type="button">-1 帧</button>
+        <button class="btn" id="frameForward" type="button">+1 帧</button>
+        <button class="btn" id="prevStep" type="button">上一步</button>
+        <div class="timeline-box">
+          <div class="scrub-wrap">
+            <input id="scrubber" type="range" min="1" max="720" value="1" aria-label="视频进度" />
+            <div class="markers" id="timelineMarkers" aria-hidden="true"></div>
+          </div>
+          <div class="frame-readout" id="frameReadout">001 / 720</div>
+        </div>
+        <button class="btn" id="nextStep" type="button">下一步</button>
+        <div class="segmented" aria-label="播放速度">
+          <button class="seg-btn" type="button" data-speed="0.5">0.5x</button>
+          <button class="seg-btn active" type="button" data-speed="1">1x</button>
+          <button class="seg-btn" type="button" data-speed="2">2x</button>
+          <button class="seg-btn" type="button" data-speed="4">4x</button>
+        </div>
+      </div>
+      <div class="controls-row" style="margin-top: 9px; grid-template-columns: auto auto auto auto minmax(0, 1fr);">
+        <button class="btn warn" id="jumpN03" type="button">跳到 N-03</button>
+        <button class="btn warn" id="jumpN06" type="button">跳到 N-06</button>
+        <div class="segmented" aria-label="修复前后">
+          <button class="seg-btn active" type="button" data-mode="before">修复前</button>
+          <button class="seg-btn" type="button" data-mode="after">修复后</button>
+        </div>
+        <span class="pill" id="modeHint">N-03 修复前：两个 turn_complete 数据包都会出现</span>
+        <span class="pill" id="activeBugPill">当前：等待 bug 触发帧</span>
+      </div>
+    </section>
+
+    <section class="studio">
+      <section class="stage-panel">
+        <div class="stage-head">
+          <h2>电影时间轴舞台</h2>
+          <span id="stageStatus">StreamEvent packet 正在等待播放</span>
+        </div>
+        <div class="stage-canvas">
+          <svg class="flow-svg" id="flowSvg" viewBox="0 0 1320 760" role="img" aria-label="桌面流 24 步数据包动画">
+            <defs>
+              <filter id="packetGlow" x="-80%" y="-80%" width="260%" height="260%">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <filter id="glowCyan" x="-40%" y="-40%" width="180%" height="180%">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <filter id="glowCyanSoft" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <filter id="glowRed" x="-70%" y="-70%" width="240%" height="240%">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <filter id="glowRedSoft" x="-40%" y="-40%" width="180%" height="180%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            <g id="edgeLayer"></g>
+            <g id="railLayer"></g>
+            <g id="nodeLayer"></g>
+            <g class="packet-core" id="mainPacket">
+              <circle r="18"></circle>
+              <circle r="6"></circle>
+              <text class="packet-label" x="16" y="-12">StreamEvent</text>
+            </g>
+          </svg>
+
+          <aside class="bug-card" id="bugCard" aria-live="polite">
+            <h3 id="bugTitle">Bug trigger</h3>
+            <p id="bugBody"></p>
+            <div class="bug-meta" id="bugMeta"></div>
+            <div class="comparison" id="bugComparison"></div>
+          </aside>
+        </div>
+
+        <div class="stream-console" aria-label="流式文本预览">
+          <div class="console-head">
+            <strong id="consoleMode">stream delta</strong>
+            <span id="tokenCounter">token 0</span>
+          </div>
+          <pre id="streamPreview"></pre>
+        </div>
+      </section>
+
+      <aside class="side-panel">
+        <div class="side-head">
+          <h2>当前帧详情</h2>
+          <span id="stepFrameLabel">Frame 001</span>
+        </div>
+        <div class="side-body">
+          <section class="section">
+            <h3 id="stepKicker">Step 01</h3>
+            <h2 class="detail-title" id="detailTitle"></h2>
+            <div class="detail-file" id="detailFile"></div>
+          </section>
+
+          <section class="section">
+            <h3>做什么</h3>
+            <p id="detailDo"></p>
+          </section>
+
+          <section class="section">
+            <h3>为什么</h3>
+            <p id="detailWhy"></p>
+          </section>
+
+          <section class="section">
+            <h3>输入 / 输出</h3>
+            <div class="io-grid">
+              <div class="io-box">
+                <div class="io-label">输入</div>
+                <div class="io-value" id="detailInput"></div>
+              </div>
+              <div class="io-box">
+                <div class="io-label">输出</div>
+                <div class="io-value" id="detailOutput"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section side-bug">
+            <h3>Bug 触发帧</h3>
+            <div class="bug-list" id="bugList"></div>
+          </section>
+        </div>
+      </aside>
+    </section>
+
+    <section class="legend-panel">
+      <div class="legend-head">
+        <h2>Findings 迷你图例</h2>
+        <span>来自 13-findings-register.md；点击 P1 会跳到触发帧或相关节点</span>
+      </div>
+      <div class="legend-body" id="findingsLegend"></div>
+    </section>
+  </main>
+
+  <script>
+    const TOTAL_FRAMES = 720;
+    const SVG_NS = "http://www.w3.org/2000/svg";
+
+    const steps = [
+      {
+        index: 1,
+        short: "ProviderChunk",
+        node: "1 ProviderChunk -> StreamEvent",
+        file: "packages/core/src/engine/model-facade.ts:78",
+        input: "LLMChunk{text,tokens?}",
+        output: "StreamEvent{text_delta,text,tokens?}",
+        summary: "provider chunk 被归一成 core UI 无关事件。",
+        why: "provider chunk 不能直接流向 UI；core 先统一成 UI 无关的 StreamEvent 契约。",
+        duration: 1500,
+        streamText: "provider chunk: { type: \"text\", text: \"正在解释桌面流...\" }",
+      },
+      {
+        index: 2,
+        short: "Stream Guard",
+        node: "2 TurnLoop Stream Guard",
+        file: "packages/core/src/engine/turn-loop.ts:329",
+        input: "StreamCallback + turn messages",
+        output: "guarded StreamCallback + stream_request_start",
+        summary: "先发 turn 边界，并防止 stream handler 抛错切断后续事件。",
+        why: "stream handler 失败不应冻结整条流；TurnLoop 先发请求边界，再把 emit 包在防护层里。",
+        duration: 1350,
+        streamText: "emit: { type: \"stream_request_start\", turnNumber }",
+      },
+      {
+        index: 3,
+        short: "Wrapped Stream",
+        node: "3 Wrapped Model Stream",
+        file: "packages/core/src/engine/turn-loop.ts:1280",
+        input: "StreamEvent",
+        output: "StreamEvent",
+        summary: "跟踪 tool id 与 streaming token 估算后继续转发。",
+        why: "tool id 记录避免后续重复补发 tool card，token 估算用于流式阶段发现 context 压力。",
+        duration: 1800,
+        streamText: "wrappedStream(text_delta) -> record token estimate -> forward",
+      },
+      {
+        index: 4,
+        short: "Terminal Events",
+        node: "4 Turn Terminal Events",
+        file: "packages/core/src/engine/turn-loop.ts:879",
+        input: "LLMResponse + ToolResult[]",
+        output: "assistant_message/tool_use_start/tool_result/turn_complete",
+        summary: "补齐 UI 需要的消息封口、工具进度和 turn 边界。",
+        why: "renderer 需要终态事件把 streaming bubble 标为 done、清 busy，并让工具卡片进入结果态。",
+        duration: 3000,
+        streamText: "assistant_message -> tool_use_start -> tool_result -> turn_complete(max_turns)",
+      },
+      {
+        index: 5,
+        short: "Envelope",
+        node: "5 Protocol Envelope",
+        file: "packages/core/src/protocol/server.ts:498",
+        input: "StreamEvent",
+        output: "AgentStreamEventNotification{sessionId,event}",
+        summary: "给事件加 sessionId，支持多会话路由。",
+        why: "裸 StreamEvent 无法区分会话；protocol server 用 session envelope 防止多 tab 串流。",
+        duration: 1250,
+        streamText: "notify agent/streamEvent: { sessionId, event }",
+      },
+      {
+        index: 6,
+        short: "Stdio NDJSON",
+        node: "6 Stdio NDJSON",
+        file: "packages/core/src/protocol/transport.ts:98",
+        input: "RpcNotification",
+        output: "JSON line",
+        summary: "worker 通过 stdout 把协议消息送到 Electron main。",
+        why: "Electron main 只是 IPC broker，不直接 host engine；stdio NDJSON 是 worker 到 main 的传输面。",
+        duration: 1150,
+        streamText: "{\"method\":\"agent/streamEvent\",\"params\":{\"sessionId\":\"...\"}}",
+      },
+      {
+        index: 7,
+        short: "Parse Snapshot",
+        node: "7 Main Parse Snapshot Candidate",
+        file: "packages/desktop/src/main/parseStreamLine.ts:15",
+        input: "JSON line",
+        output: "SnapshotAppend | null",
+        summary: "只识别可重放的 agent/streamEvent 行。",
+        why: "只有 stream notification 值得进入 snapshot；坏 JSON、非 stream 行和会重复气泡的 steer_injected 都不能重放。",
+        duration: 1200,
+        streamText: "parseStreamLine(line) -> SnapshotAppend{ sessionId, event }",
+      },
+      {
+        index: 8,
+        short: "Snapshot + IPC",
+        node: "8 Main Snapshot + IPC Forward",
+        file: "packages/desktop/src/main/agent-bridge.ts:203",
+        input: "SnapshotAppend + JSON line",
+        output: "SnapshotEntry{seq,event} + agent:msg line",
+        summary: "main 保存可补偿快照，同时把原 line 发给 renderer。",
+        why: "renderer 的 route table 和 buffer 可能因刷新或 HMR 消失；main 持有 seq 快照可补缺口且避免重复。",
+        duration: 1300,
+        streamText: "snapshot.append(seq++) + webContents.send(\"agent:msg\", line)",
+      },
+      {
+        index: 9,
+        short: "Preload Fanout",
+        node: "9 Preload Fanout",
+        file: "packages/desktop/src/preload/index.ts:159",
+        input: "agent:msg JSON line",
+        output: "{sessionId,event}",
+        summary: "preload 解析 notification 并调用 renderer listener。",
+        why: "preload 是 main 与 renderer 的 typed boundary，renderer 不运行时 import core，只通过 window.codeshell 接流。",
+        duration: 1200,
+        streamText: "window.codeshell.onStreamEvent({ sessionId, event })",
+      },
+      {
+        index: 10,
+        short: "Bucket Route",
+        node: "10 Bucket Routing",
+        file: "packages/desktop/src/renderer/streamRouting.ts:30",
+        input: "{sessionId,event}",
+        output: "{bucket,event}",
+        summary: "按 engine sessionId 找到 UI session bucket。",
+        why: "多 session 同时流式输出；bucket 路由把 worker 事件落到正确的 repo/tab/session UI 状态。",
+        duration: 1250,
+        streamText: "resolveBucket(sessionId) -> repoKey::uiSessionId",
+      },
+      {
+        index: 11,
+        short: "Coalescer",
+        node: "11 Event Coalescer",
+        file: "packages/desktop/src/renderer/streamCoalescer.ts:102",
+        input: "StreamEvent",
+        output: "StreamEvent[] batch",
+        summary: "50ms 合并 noisy delta，并批量 dispatch。",
+        why: "高频 text/tool delta 不能每次都触发未虚拟化列表重渲染；50ms 合并降低 renderer load。",
+        duration: 2100,
+        streamText: "delta + delta + delta ... -> 50ms coalesced stream_batch",
+      },
+      {
+        index: 12,
+        short: "Batch Reducer",
+        node: "12 Desktop Batch Reducer",
+        file: "packages/desktop/src/renderer/transcriptsReducer.ts:128",
+        input: "stream_batch{bucket,events}",
+        output: "MessagesReducerState",
+        summary: "普通 desktop 主链路逐个 applyStreamEvent，非 mobile reducer。",
+        why: "batch 内循环只生成一次新 state；no-op 可返回同引用，减少一窗内的重复渲染。",
+        duration: 1450,
+        streamText: "for event of batch: state = applyStreamEvent(state, event)",
+      },
+      {
+        index: 13,
+        short: "Live Assistant",
+        node: "13 Live Assistant Accumulator",
+        file: "packages/desktop/src/renderer/types.ts:443",
+        input: "stream_request_start + text_delta",
+        output: "AssistantMessage{done:false,text}",
+        summary: "创建 live bubble，并把 token 追加进同一条消息。",
+        why: "UI 需要稳定的 live message 作为 token accumulator，避免每个 token 都变成新消息。",
+        duration: 2600,
+        streamText: "AssistantMessage.text += \"这里是模型逐 token 出来的回答，renderer 把它累积在同一个 live bubble。\"",
+      },
+      {
+        index: 14,
+        short: "Seal Turn",
+        node: "14 Seal Turn",
+        file: "packages/desktop/src/renderer/types.ts:932",
+        input: "assistant_message/turn_complete",
+        output: "done messages + turnEpoch",
+        summary: "终态事件把 streaming 内容封口，并驱动历史卡片折叠。",
+        why: "done 切换完整 Markdown 管线，clean turn_complete 推进 turnEpoch 让工具过程同步折叠。",
+        duration: 1500,
+        streamText: "turn_complete -> done:true -> clear streaming ids -> maybe turnEpoch++",
+      },
+      {
+        index: 15,
+        short: "Stick Bottom",
+        node: "15 Stick To Bottom",
+        file: "packages/desktop/src/renderer/chat/stickToBottom.ts:54",
+        input: "messages/liveTurnActive/sendEpoch",
+        output: "ref/showJump/scrollToBottom",
+        summary: "决定内容增长时是否自动贴底，用户上滑则暂停。",
+        why: "流式内容增长时应自动跟随，但用户主动上滑时必须保留阅读位置，并提供跳底恢复入口。",
+        duration: 1250,
+        streamText: "follow reducer: content grows -> stay stuck unless user scrolled away",
+      },
+      {
+        index: 16,
+        short: "Build Items",
+        node: "16 Build Stream Items",
+        file: "packages/desktop/src/renderer/messages/streamGroups.ts:183",
+        input: "Message[]",
+        output: "StreamItem[]",
+        summary: "把 raw transcript 变成可渲染的普通项和折叠项。",
+        why: "折叠规则集中在 streamGroups.ts，render 层只消费 StreamItem，不在组件里重复判断。",
+        duration: 1300,
+        streamText: "messages -> [message, ToolGroup, TurnProcessGroup]",
+      },
+      {
+        index: 17,
+        short: "ToolGroup",
+        node: "17 ToolGroup Fold",
+        file: "packages/desktop/src/renderer/messages/streamGroups.ts:344",
+        input: "adjacent ToolMessage[]",
+        output: "ToolGroup | ToolMessage",
+        summary: "相邻工具折成一组，透明 thinking 不打断工具 run。",
+        why: "工具密集输出需要压缩；thinking 是透明项不应视觉打断，assistant 文本则作为用户可见边界保留。",
+        duration: 1300,
+        streamText: "tool, thinking, tool -> ToolGroup{ items }",
+      },
+      {
+        index: 18,
+        short: "TurnProcess",
+        node: "18 TurnProcess Fold",
+        file: "packages/desktop/src/renderer/messages/streamGroups.ts:405",
+        input: "Message | ToolGroup items",
+        output: "TurnProcessGroup",
+        summary: "含工具的 user turn 折成一个 process card。",
+        why: "含工具的 user turn 需要收束成过程卡；live turn 扩到末尾，closed turn 只包到最后真实工具。",
+        duration: 1500,
+        streamText: "user turn with tools -> TurnProcessGroup{ isLive, toolCount, durationMs }",
+      },
+      {
+        index: 19,
+        short: "Reconcile",
+        node: "19 Reconcile Groups",
+        file: "packages/desktop/src/renderer/messages/streamGroups.ts:269",
+        input: "prev StreamItem[] + next StreamItem[]",
+        output: "reused StreamItem[]",
+        summary: "复用未变 group 对象，让 memo 卡片跳过 50ms 重渲染。",
+        why: "buildStreamItems 每次都会分配新 group；reconcile 保持引用稳定，避免 live-turn subtree 被频繁重渲染。",
+        duration: 1250,
+        streamText: "signature unchanged -> reuse previous group object",
+      },
+      {
+        index: 20,
+        short: "Dispatch",
+        node: "20 Component Dispatch",
+        file: "packages/desktop/src/renderer/MessageStream.tsx:157",
+        input: "StreamItem[]",
+        output: "React elements",
+        summary: "按 kind 渲染 AssistantMessageView 或 TurnProcessGroupCard 等组件。",
+        why: "render 层只按 kind 分派组件，折叠判断留在 streamGroups.ts；跳底按钮也在这一层接入。",
+        duration: 1250,
+        streamText: "kind === \"turn_process\" ? <TurnProcessGroupCard/> : <AssistantMessageView/>",
+      },
+      {
+        index: 21,
+        short: "Streaming MD",
+        node: "21 Streaming Markdown Paint",
+        file: "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:93",
+        input: "text + done:false",
+        output: "stable markdown chunks + active <pre>",
+        summary: "流式时富渲染稳定前缀，活跃尾部保持源码显示。",
+        why: "每 token 全量 Markdown 解析会卡顿和抖动；稳定前缀可解析，活跃尾部先用 pre 呈现。",
+        duration: 2600,
+        streamText: "稳定前缀被 Markdown 渲染，活跃尾部仍在 <pre> 里逐 token 亮起来。",
+      },
+      {
+        index: 22,
+        short: "Split MD",
+        node: "22 Split Streaming Markdown",
+        file: "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:81",
+        input: "markdown text buffer",
+        output: "{stablePrefix,activeTail}",
+        summary: "只在安全空行边界切分，并避开未闭合 fence。",
+        why: "切在半成品 Markdown 块里会导致结构回跳；未闭合 code fence 也会让解析和高亮抖动。",
+        duration: 1900,
+        streamText: "find last safe blank line; if code fence is open, keep everything in activeTail",
+      },
+      {
+        index: 23,
+        short: "Done MD",
+        node: "23 Done Markdown Pipeline",
+        file: "packages/desktop/src/renderer/Markdown.tsx:170",
+        input: "text + done:true",
+        output: "full ReactMarkdown DOM",
+        summary: "完成后启用完整 Markdown、安全清洗、高亮和路径/图片能力。",
+        why: "done 后内容稳定，才能启用 raw/sanitize/highlight/path/image 等重能力和安全边界。",
+        duration: 1400,
+        streamText: "done:true -> remark-gfm -> rehypeRaw -> sanitize -> highlight",
+      },
+      {
+        index: 24,
+        short: "Process Card",
+        node: "24 TurnProcessGroupCard",
+        file: "packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx:47",
+        input: "TurnProcessGroup",
+        output: "open live card | collapsed process header | flat stopped content",
+        summary: "live 展开显示进度，完成后按 turnEpoch 折叠历史过程。",
+        why: "当前 turn 要实时可见，历史工具过程需要折回摘要密度；中断 turn 没有完整结果则平铺展示。",
+        duration: 1700,
+        streamText: "TurnProcessGroupCard: live open -> clean boundary -> collapsed history",
+      },
+    ];
+
+    const findings = [
+      { id: "F-01", severity: "P1", module: "桌面流", title: "streaming fallback 的 tombstone / assistant_message 补偿契约在桌面链路不可用", steps: [4, 13, 14] },
+      { id: "F-02", severity: "P1", module: "桌面流", title: "stream_request_start 用脏 activeAgents 推断归属，可能压掉主回复槽", steps: [13, 14] },
+      { id: "F-03", severity: "P1", module: "桌面流", title: "coalescer 合并 delta 时没有在 hard boundary 上切段", steps: [11] },
+      { id: "F-04", severity: "P1", module: "桌面流", title: "snapshot 的 seq 游标只在 replay 内成立，live IPC 不带 seq", steps: [8, 9, 10] },
+      { id: "F-05", severity: "P2", module: "protocol", title: "requireExisting 失败前先创建 live empty ChatSession", steps: [] },
+      { id: "F-06", severity: "P1", module: "tool-system", title: "pre_tool_use: ask 用户批准后跳过 classifier deny / rules", steps: [] },
+      { id: "F-07", severity: "P2", module: "engine", title: "builtin off 可热生效，on 受构造期 frozen registry 限制", steps: [] },
+      { id: "F-08", severity: "P2", module: "tool-system", title: "tool_summary 缺少目标 tool id / agent 契约，只能猜挂载目标", steps: [4, 12] },
+      { id: "N-01", severity: "非问题", module: "engine", title: "TurnPhase / TurnState.phase 当前只是概念遗留，不驱动 runtime 状态机", steps: [] },
+      { id: "N-02", severity: "P2", module: "engine", title: "StreamingToolQueue 名称/注释像流式执行，但实际完整 LLMResponse 后才 enqueue", steps: [] },
+      { id: "N-03", severity: "P1", module: "engine", title: "max_turns 路径双发 turn_complete(max_turns)，且第一条早于 Engine epilogue", steps: [4, 14] },
+      { id: "N-04", severity: "P2", module: "protocol", title: "SDK AgentClient approval notification 丢 sessionId，且不处理 approvalResolved", steps: [] },
+      { id: "N-05", severity: "P2", module: "protocol", title: "goal_cleared 类型注释承诺 stream event，但 agent/goalClear server 只回 RPC response", steps: [5] },
+      { id: "N-06", severity: "P1", module: "tool-system", title: "InteractiveApprovalBackend session allow/deny cache 实际挂在 singleton 上，跨 session 泄漏", steps: [] },
+      { id: "N-07", severity: "P2", module: "tool-system", title: "RegisteredTool.permissionDefault 是声明性元数据，当前不参与 classifier 判定", steps: [] },
+      { id: "N-08", severity: "P2", module: "tool-system", title: "PowerShell 执行工具不走 sandbox，sandbox 覆盖面容易被误解", steps: [] },
+      { id: "N-09", severity: "P3", module: "tool-system", title: "ToolExecutor.resultsToMessages() 与当前 tool_result 契约漂移，但未被主链路调用", steps: [] },
+    ];
+
+    const bugEvents = [
+      {
+        id: "N-03",
+        stepIndex: 3,
+        phase: 0.58,
+        title: "N-03：max_turns 双发 turn_complete",
+        short: "TurnLoop S13 与 Engine S16 各发一次 terminal event",
+        bodyBefore: "触发在第 4 步 terminal producer：TurnLoop maxTurns summary 分支于 turn-loop.ts:1268 先发 turn_complete(max_turns)，Engine epilogue 于 engine.ts:2363 保存 state / end hook 后又发一次。同一个 caller onStream 收到两个终态包，第一条还早于 Engine 收尾。",
+        bodyAfter: "修复设计 08 的推荐方案是删除 TurnLoop 内部 maxTurns terminal emit，只由 Engine epilogue 统一发一次 turn_complete(max_turns)。此模式下画面只保留 Engine S16 那一个终态包。",
+        fileLines: [
+          "packages/core/src/engine/turn-loop.ts:1268",
+          "packages/core/src/engine/engine.ts:2363",
+        ],
+        fix: "08-N03-fix-design.md",
+        highlightSteps: [4, 14],
+      },
+      {
+        id: "N-06",
+        stepIndex: 3,
+        phase: 0.25,
+        title: "N-06：审批规则缓存跨 session 泄漏",
+        short: "ToolExecutor 权限判定旁路命中 singleton session cache",
+        bodyBefore: "触发在工具系统权限判定：ApprovalRequest 带 sessionId 到 backend，但 InteractiveApprovalBackend 的 sessionAllowRules/sessionDenyRules 是 singleton 实例数组，checkSessionRules 不读 req.sessionId。会话 A 的本会话允许/拒绝会让会话 B 的同 operation 免审批或被静默拒绝。",
+        bodyAfter: "修复设计 12 推荐在 backend 内按 sessionId 分桶 session state，并在 ChatSessionManager.close(sessionId) 清理 bucket；无 sessionId 时不记忆 session-scope 规则。",
+        fileLines: [
+          "packages/core/src/tool-system/permission.ts:142",
+          "packages/core/src/tool-system/permission.ts:143",
+          "packages/core/src/tool-system/permission.ts:219",
+          "packages/core/src/tool-system/permission.ts:244",
+        ],
+        fix: "12-N06-fix-design.md",
+        highlightSteps: [4],
+      },
+    ];
+
+    const state = {
+      playhead: 0,
+      playing: false,
+      speed: 1,
+      fixMode: "before",
+      selectedBugId: null,
+      lastTimestamp: null,
+      lastStepIndex: -1,
+      raf: 0,
+    };
+
+    const elements = {
+      flowSvg: document.getElementById("flowSvg"),
+      edgeLayer: document.getElementById("edgeLayer"),
+      railLayer: document.getElementById("railLayer"),
+      nodeLayer: document.getElementById("nodeLayer"),
+      mainPacket: document.getElementById("mainPacket"),
+      playPause: document.getElementById("playPause"),
+      frameBack: document.getElementById("frameBack"),
+      frameForward: document.getElementById("frameForward"),
+      prevStep: document.getElementById("prevStep"),
+      nextStep: document.getElementById("nextStep"),
+      scrubber: document.getElementById("scrubber"),
+      markers: document.getElementById("timelineMarkers"),
+      frameReadout: document.getElementById("frameReadout"),
+      stageStatus: document.getElementById("stageStatus"),
+      modeHint: document.getElementById("modeHint"),
+      activeBugPill: document.getElementById("activeBugPill"),
+      bugCard: document.getElementById("bugCard"),
+      bugTitle: document.getElementById("bugTitle"),
+      bugBody: document.getElementById("bugBody"),
+      bugMeta: document.getElementById("bugMeta"),
+      bugComparison: document.getElementById("bugComparison"),
+      streamPreview: document.getElementById("streamPreview"),
+      consoleMode: document.getElementById("consoleMode"),
+      tokenCounter: document.getElementById("tokenCounter"),
+      stepFrameLabel: document.getElementById("stepFrameLabel"),
+      stepKicker: document.getElementById("stepKicker"),
+      detailTitle: document.getElementById("detailTitle"),
+      detailFile: document.getElementById("detailFile"),
+      detailDo: document.getElementById("detailDo"),
+      detailWhy: document.getElementById("detailWhy"),
+      detailInput: document.getElementById("detailInput"),
+      detailOutput: document.getElementById("detailOutput"),
+      bugList: document.getElementById("bugList"),
+      findingsLegend: document.getElementById("findingsLegend"),
+      jumpN03: document.getElementById("jumpN03"),
+      jumpN06: document.getElementById("jumpN06"),
+    };
+
+    const timing = buildTiming();
+    const totalDuration = timing.totalDuration;
+    const nodes = [];
+    const edgePaths = [];
+    const rails = {};
+    const positions = computePositions();
+
+    function buildTiming() {
+      let cursor = 0;
+      const starts = [];
+      const ends = [];
+      for (const step of steps) {
+        starts.push(cursor);
+        cursor += step.duration;
+        ends.push(cursor);
+      }
+      return { starts, ends, totalDuration: cursor };
+    }
+
+    function computePositions() {
+      const xs = [110, 330, 550, 770, 990, 1210];
+      const ys = [110, 270, 430, 590];
+      return steps.map((_, index) => {
+        const row = Math.floor(index / 6);
+        const colInRow = index % 6;
+        const col = row % 2 === 0 ? colInRow : 5 - colInRow;
+        return { x: xs[col], y: ys[row] };
+      });
+    }
+
+    function escapeHTML(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function pad(value, len = 3) {
+      return String(value).padStart(len, "0");
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function easeInOut(t) {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    function cleanNodeName(step) {
+      return step.node.replace(/^\d+\s+/, "");
+    }
+
+    function severityClass(severity) {
+      if (severity === "P1") return "p1";
+      if (severity === "P2") return "p2";
+      return "low";
+    }
+
+    function stepAtTime(time) {
+      const t = clamp(time, 0, totalDuration - 1);
+      for (let i = 0; i < timing.ends.length; i += 1) {
+        if (t < timing.ends[i]) return i;
+      }
+      return steps.length - 1;
+    }
+
+    function localProgress(stepIndex) {
+      const start = timing.starts[stepIndex];
+      const end = timing.ends[stepIndex];
+      return clamp((state.playhead - start) / Math.max(1, end - start), 0, 1);
+    }
+
+    function timeToFrame(time) {
+      return clamp(Math.round((time / totalDuration) * (TOTAL_FRAMES - 1)) + 1, 1, TOTAL_FRAMES);
+    }
+
+    function frameToTime(frame) {
+      return clamp(((frame - 1) / (TOTAL_FRAMES - 1)) * totalDuration, 0, totalDuration);
+    }
+
+    function bugTriggerTime(bug) {
+      const start = timing.starts[bug.stepIndex];
+      const duration = steps[bug.stepIndex].duration;
+      return start + duration * bug.phase;
+    }
+
+    function activeBug() {
+      let best = null;
+      let bestDistance = Infinity;
+      for (const bug of bugEvents) {
+        const distance = Math.abs(state.playhead - bugTriggerTime(bug));
+        if (distance < 1250 && distance < bestDistance) {
+          best = bug;
+          bestDistance = distance;
+        }
+      }
+      return best;
+    }
+
+    function makeSvg(tag, attrs = {}) {
+      const node = document.createElementNS(SVG_NS, tag);
+      for (const [key, value] of Object.entries(attrs)) {
+        node.setAttribute(key, String(value));
+      }
+      return node;
+    }
+
+    function edgePathD(from, to) {
+      const sameColumn = Math.abs(from.x - to.x) < 2;
+      if (sameColumn) {
+        const midY = (from.y + to.y) / 2;
+        return `M ${from.x} ${from.y} C ${from.x} ${midY} ${to.x} ${midY} ${to.x} ${to.y}`;
+      }
+      const dx = to.x - from.x;
+      return `M ${from.x} ${from.y} C ${from.x + dx * 0.46} ${from.y} ${to.x - dx * 0.46} ${to.y} ${to.x} ${to.y}`;
+    }
+
+    function drawFlow() {
+      for (let i = 0; i < steps.length - 1; i += 1) {
+        const path = makeSvg("path", {
+          class: "flow-path",
+          d: edgePathD(positions[i], positions[i + 1]),
+          "data-edge": i,
+        });
+        elements.edgeLayer.appendChild(path);
+        edgePaths.push(path);
+      }
+
+      drawRails();
+
+      for (const [index, step] of steps.entries()) {
+        const p = positions[index];
+        const group = makeSvg("g", {
+          class: "node",
+          transform: `translate(${p.x - 86} ${p.y - 34})`,
+          "data-step": index,
+          tabindex: "0",
+          role: "button",
+        });
+        group.appendChild(makeSvg("rect", { width: 172, height: 68 }));
+        group.appendChild(makeSvg("text", { class: "idx", x: 12, y: 20 })).textContent = pad(step.index, 2);
+        group.appendChild(makeSvg("text", { class: "name", x: 12, y: 39 })).textContent = step.short;
+        group.appendChild(makeSvg("text", { class: "file", x: 12, y: 56 })).textContent = compactFile(step.file);
+        const badge = makeSvg("rect", { class: "badge", x: 124, y: 8, width: 38, height: 20 });
+        group.appendChild(badge);
+        group.appendChild(makeSvg("text", { class: "badgeText", x: 133, y: 22 })).textContent = moduleBadge(step.file);
+        group.addEventListener("click", () => {
+          pause();
+          setPlayhead(timing.starts[index]);
+        });
+        group.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            pause();
+            setPlayhead(timing.starts[index]);
+          }
+        });
+        elements.nodeLayer.appendChild(group);
+        nodes.push(group);
+      }
+    }
+
+    function compactFile(file) {
+      const parts = file.split("/");
+      return parts.slice(-2).join("/");
+    }
+
+    function moduleBadge(file) {
+      if (file.includes("/engine/")) return "core";
+      if (file.includes("/protocol/")) return "rpc";
+      if (file.includes("/main/")) return "main";
+      if (file.includes("/preload/")) return "pre";
+      if (file.includes("/renderer/")) return "ui";
+      return "mod";
+    }
+
+    function drawRails() {
+      const n03 = makeSvg("g", { class: "n03-rail", id: "n03Rail" });
+      n03.appendChild(makeSvg("rect", { class: "rail-box", x: 655, y: 174, width: 585, height: 74 }));
+      n03.appendChild(makeSvg("text", { class: "rail-title", x: 672, y: 198 })).textContent = "N-03 max_turns terminal producer";
+      n03.appendChild(makeSvg("path", { class: "rail-path red", id: "n03PathA", d: "M 700 225 C 790 205 890 205 980 225" }));
+      n03.appendChild(makeSvg("path", { class: "rail-path red", id: "n03PathB", d: "M 910 225 C 980 205 1070 205 1160 225" }));
+      n03.appendChild(makeSvg("text", { class: "rail-label", x: 672, y: 239 })).textContent = "TurnLoop S13";
+      n03.appendChild(makeSvg("text", { class: "rail-label", x: 892, y: 239 })).textContent = "Engine S16";
+      n03.appendChild(makeSvg("text", { class: "rail-label", x: 1072, y: 239 })).textContent = "onStream";
+      const bugA = makeSvg("g", { class: "bug-packet hidden", id: "n03PacketA" });
+      bugA.appendChild(makeSvg("circle", { r: 7 }));
+      const bugB = makeSvg("g", { class: "bug-packet hidden", id: "n03PacketB" });
+      bugB.appendChild(makeSvg("circle", { r: 7 }));
+      n03.appendChild(bugA);
+      n03.appendChild(bugB);
+      elements.railLayer.appendChild(n03);
+
+      const n06 = makeSvg("g", { class: "tool-rail", id: "n06Rail" });
+      n06.appendChild(makeSvg("rect", { class: "rail-box", x: 300, y: 668, width: 720, height: 64 }));
+      n06.appendChild(makeSvg("text", { class: "rail-title", x: 318, y: 692 })).textContent = "N-06 ToolExecutor permission gate";
+      n06.appendChild(makeSvg("path", { class: "rail-path", id: "n06Path", d: "M 510 712 C 595 690 730 690 830 712" }));
+      n06.appendChild(makeSvg("text", { class: "rail-label", x: 318, y: 721 })).textContent = "Session A: always allow";
+      n06.appendChild(makeSvg("text", { class: "rail-label", x: 618, y: 721 })).textContent = "singleton cache";
+      n06.appendChild(makeSvg("text", { class: "rail-label", x: 840, y: 721 })).textContent = "Session B: bypass";
+      const bug = makeSvg("g", { class: "bug-packet hidden", id: "n06Packet" });
+      bug.appendChild(makeSvg("circle", { r: 7 }));
+      n06.appendChild(bug);
+      elements.railLayer.appendChild(n06);
+
+      rails.n03 = n03;
+      rails.n03PathA = n03.querySelector("#n03PathA");
+      rails.n03PathB = n03.querySelector("#n03PathB");
+      rails.n03PacketA = n03.querySelector("#n03PacketA");
+      rails.n03PacketB = n03.querySelector("#n03PacketB");
+      rails.n06 = n06;
+      rails.n06Path = n06.querySelector("#n06Path");
+      rails.n06Packet = n06.querySelector("#n06Packet");
+    }
+
+    function updatePacket(stepIndex, local) {
+      let point = positions[stepIndex];
+      let label = steps[stepIndex].output;
+      const edge = edgePaths[stepIndex];
+      const travel = clamp((local - 0.28) / 0.72, 0, 1);
+      if (edge && travel > 0) {
+        const length = edge.getTotalLength();
+        point = edge.getPointAtLength(length * easeInOut(travel));
+      }
+      elements.mainPacket.setAttribute("transform", `translate(${point.x} ${point.y})`);
+      const labelNode = elements.mainPacket.querySelector(".packet-label");
+      labelNode.textContent = label.length > 34 ? `${label.slice(0, 33)}...` : label;
+    }
+
+    function updateBugRails(bug) {
+      const isN03 = bug?.id === "N-03";
+      const isN06 = bug?.id === "N-06";
+      rails.n03.classList.toggle("active", isN03);
+      rails.n06.classList.toggle("active", isN06);
+      rails.n03.querySelector(".rail-box").classList.toggle("hot", isN03);
+      rails.n06.querySelector(".rail-box").classList.toggle("hot", isN06);
+
+      rails.n03PacketA.classList.toggle("hidden", !isN03);
+      rails.n03PacketB.classList.toggle("hidden", !isN03);
+      rails.n06Packet.classList.toggle("hidden", !isN06);
+
+      if (isN03) {
+        const trigger = bugTriggerTime(bug);
+        const local = clamp((state.playhead - trigger + 900) / 1800, 0, 1);
+        moveAlongPath(rails.n03PacketA, rails.n03PathA, local);
+        moveAlongPath(rails.n03PacketB, rails.n03PathB, local);
+        const before = state.fixMode === "before";
+        rails.n03PacketA.classList.toggle("blocked", !before);
+        rails.n03PacketA.classList.toggle("hidden", false);
+        rails.n03PacketB.classList.toggle("hidden", false);
+      }
+
+      if (isN06) {
+        const trigger = bugTriggerTime(bug);
+        const local = clamp((state.playhead - trigger + 800) / 1600, 0, 1);
+        moveAlongPath(rails.n06Packet, rails.n06Path, local);
+        rails.n06Packet.classList.toggle("blocked", state.fixMode === "after");
+      }
+    }
+
+    function moveAlongPath(packet, path, t) {
+      const point = path.getPointAtLength(path.getTotalLength() * easeInOut(t));
+      packet.setAttribute("transform", `translate(${point.x} ${point.y})`);
+    }
+
+    function updateClasses(stepIndex, bug) {
+      const highlighted = new Set(bug?.highlightSteps ?? []);
+      for (const [index, node] of nodes.entries()) {
+        node.classList.toggle("complete", index < stepIndex);
+        node.classList.toggle("active", index === stepIndex);
+        node.classList.toggle("bug-hot", highlighted.has(index + 1));
+      }
+      for (const [index, path] of edgePaths.entries()) {
+        path.classList.toggle("complete", index < stepIndex);
+        path.classList.toggle("active", index === stepIndex && stepIndex < edgePaths.length);
+      }
+      if (state.lastStepIndex !== stepIndex) {
+        nodes.forEach((node) => node.classList.remove("pulse"));
+        nodes[stepIndex]?.classList.add("pulse");
+        window.setTimeout(() => nodes[stepIndex]?.classList.remove("pulse"), 760);
+        state.lastStepIndex = stepIndex;
+      }
+    }
+
+    function renderDetail(stepIndex, local, bug) {
+      const step = steps[stepIndex];
+      const frame = timeToFrame(state.playhead);
+      elements.frameReadout.textContent = `${pad(frame)} / ${TOTAL_FRAMES}`;
+      elements.scrubber.value = String(frame);
+      elements.stepFrameLabel.textContent = `Frame ${pad(frame)}`;
+      elements.stepKicker.textContent = `Step ${String(step.index).padStart(2, "0")}`;
+      elements.detailTitle.textContent = cleanNodeName(step);
+      elements.detailFile.textContent = step.file;
+      elements.detailDo.textContent = step.summary;
+      elements.detailWhy.textContent = step.why;
+      elements.detailInput.textContent = step.input;
+      elements.detailOutput.textContent = step.output;
+      elements.stageStatus.textContent = `${step.node} · ${Math.round(local * 100)}%`;
+      elements.playPause.textContent = state.playing ? "暂停" : "播放";
+      elements.prevStep.disabled = stepIndex === 0;
+      elements.nextStep.disabled = stepIndex === steps.length - 1;
+      elements.frameBack.disabled = frame <= 1;
+      elements.frameForward.disabled = frame >= TOTAL_FRAMES;
+
+      const preview = streamingPreview(step, local);
+      elements.consoleMode.textContent = preview.mode;
+      elements.tokenCounter.textContent = `token ${preview.count}`;
+      elements.streamPreview.innerHTML = `${escapeHTML(preview.text)}<span class="caret"></span>`;
+
+      elements.activeBugPill.textContent = bug ? `当前触发：${bug.id}` : "当前：等待 bug 触发帧";
+      elements.activeBugPill.classList.toggle("p1", Boolean(bug));
+      renderBugCard(bug);
+      renderBugButtons(bug);
+    }
+
+    function streamingPreview(step, local) {
+      const chars = Array.from(step.streamText);
+      const count = Math.max(1, Math.round(chars.length * clamp(local, 0.05, 1)));
+      const prefix = chars.slice(0, count).join("");
+      const eventName = step.index >= 13 && step.index <= 23 ? "renderer paint" : "StreamEvent delta";
+      return {
+        mode: eventName,
+        count,
+        text: [
+          `$ frame=${pad(timeToFrame(state.playhead))} step=${String(step.index).padStart(2, "0")}`,
+          `file: ${step.file}`,
+          `out : ${step.output}`,
+          "",
+          prefix,
+        ].join("\n"),
+      };
+    }
+
+    function renderBugCard(bug) {
+      elements.bugCard.classList.toggle("active", Boolean(bug));
+      if (!bug) return;
+      const body = state.fixMode === "before" ? bug.bodyBefore : bug.bodyAfter;
+      elements.bugTitle.textContent = bug.title;
+      elements.bugBody.textContent = body;
+      elements.bugMeta.innerHTML = [
+        `<span class="pill p1">${escapeHTML(bug.id)} · P1</span>`,
+        `<span class="pill">Frame ${pad(timeToFrame(bugTriggerTime(bug)))}</span>`,
+        `<span class="pill">修复设计：${escapeHTML(bug.fix)}</span>`,
+        ...bug.fileLines.map((line) => `<span class="pill">${escapeHTML(line)}</span>`),
+      ].join("");
+      elements.bugComparison.innerHTML =
+        bug.id === "N-03" ? renderN03Comparison() : renderN06Comparison();
+    }
+
+    function renderN03Comparison() {
+      const before = state.fixMode === "before";
+      const firstClass = before ? "comp-lane run" : "comp-lane blocked";
+      return `
+        <div class="${firstClass}">
+          <span>TurnLoop S13 · turn-loop.ts:1268</span>
+          <span>${before ? "terminal #1 发出" : "内部 emit 移除"}</span>
+          <i class="comp-dot"></i>
+        </div>
+        <div class="comp-lane run">
+          <span>Engine S16 · engine.ts:2363</span>
+          <span>terminal ${before ? "#2" : "#1"} 发出</span>
+          <i class="comp-dot"></i>
+        </div>
+      `;
+    }
+
+    function renderN06Comparison() {
+      const after = state.fixMode === "after";
+      return `
+        <div class="comp-lane run">
+          <span>Session A · always allow</span>
+          <span>${after ? "写入 bucket A" : "写入 singleton cache"}</span>
+          <i class="comp-dot"></i>
+        </div>
+        <div class="${after ? "comp-lane blocked" : "comp-lane run"}">
+          <span>Session B · same operation</span>
+          <span>${after ? "不能命中 A 的规则" : "免审批命中 A 的规则"}</span>
+          <i class="comp-dot"></i>
+        </div>
+      `;
+    }
+
+    function renderMarkers() {
+      elements.markers.innerHTML = bugEvents
+        .map((bug) => {
+          const left = (bugTriggerTime(bug) / totalDuration) * 100;
+          return `<button class="marker" type="button" style="left: ${left}%" data-bug="${bug.id}" title="${escapeHTML(bug.title)}"><span>${escapeHTML(bug.id)}</span></button>`;
+        })
+        .join("");
+      elements.markers.querySelectorAll(".marker").forEach((button) => {
+        button.addEventListener("click", () => jumpToBug(button.dataset.bug));
+      });
+    }
+
+    function renderBugList() {
+      elements.bugList.innerHTML = bugEvents
+        .map((bug) => `
+          <button class="mini-bug" type="button" data-bug="${escapeHTML(bug.id)}">
+            <strong>${escapeHTML(bug.id)} · Frame ${pad(timeToFrame(bugTriggerTime(bug)))}</strong>
+            <span>${escapeHTML(bug.short)}</span>
+          </button>
+        `)
+        .join("");
+      elements.bugList.querySelectorAll(".mini-bug").forEach((button) => {
+        button.addEventListener("click", () => jumpToBug(button.dataset.bug));
+      });
+    }
+
+    function renderBugButtons(bug) {
+      elements.bugList.querySelectorAll(".mini-bug").forEach((button) => {
+        button.classList.toggle("active", bug?.id === button.dataset.bug);
+      });
+    }
+
+    function renderFindingsLegend() {
+      elements.findingsLegend.innerHTML = findings
+        .map((finding) => `
+          <button class="finding-chip ${severityClass(finding.severity)}" type="button" data-finding="${escapeHTML(finding.id)}" title="${escapeHTML(finding.title)}">
+            <strong>${escapeHTML(finding.id)} · ${escapeHTML(finding.severity)}</strong>
+            <span>${escapeHTML(finding.module)}</span>
+          </button>
+        `)
+        .join("");
+      elements.findingsLegend.querySelectorAll(".finding-chip").forEach((button) => {
+        button.addEventListener("click", () => {
+          const id = button.dataset.finding;
+          if (id === "N-03" || id === "N-06") {
+            jumpToBug(id);
+            return;
+          }
+          const finding = findings.find((item) => item.id === id);
+          if (finding?.steps?.length) {
+            pause();
+            setPlayhead(timing.starts[finding.steps[0] - 1]);
+          }
+        });
+      });
+    }
+
+    function updateLegendSelection(bug) {
+      elements.findingsLegend.querySelectorAll(".finding-chip").forEach((button) => {
+        button.classList.toggle("selected", bug?.id === button.dataset.finding);
+      });
+    }
+
+    function setPlayhead(time) {
+      state.playhead = clamp(time, 0, totalDuration);
+      update();
+    }
+
+    function jumpToBug(id) {
+      const bug = bugEvents.find((item) => item.id === id);
+      if (!bug) return;
+      pause();
+      state.selectedBugId = id;
+      setPlayhead(bugTriggerTime(bug));
+    }
+
+    function play() {
+      if (state.playhead >= totalDuration - 8) {
+        state.playhead = 0;
+      }
+      state.playing = true;
+      state.lastTimestamp = null;
+      elements.playPause.textContent = "暂停";
+      state.raf = window.requestAnimationFrame(tick);
+    }
+
+    function pause() {
+      state.playing = false;
+      state.lastTimestamp = null;
+      if (state.raf) {
+        window.cancelAnimationFrame(state.raf);
+        state.raf = 0;
+      }
+      elements.playPause.textContent = "播放";
+    }
+
+    function tick(timestamp) {
+      if (!state.playing) return;
+      if (state.lastTimestamp == null) {
+        state.lastTimestamp = timestamp;
+      }
+      const delta = timestamp - state.lastTimestamp;
+      state.lastTimestamp = timestamp;
+      state.playhead = clamp(state.playhead + delta * state.speed, 0, totalDuration);
+      if (state.playhead >= totalDuration) {
+        state.playhead = totalDuration;
+        pause();
+      }
+      update();
+      if (state.playing) {
+        state.raf = window.requestAnimationFrame(tick);
+      }
+    }
+
+    function setSpeed(speed) {
+      state.speed = Number(speed);
+      document.querySelectorAll("[data-speed]").forEach((button) => {
+        button.classList.toggle("active", Number(button.dataset.speed) === state.speed);
+      });
+    }
+
+    function setMode(mode) {
+      state.fixMode = mode;
+      document.querySelectorAll("[data-mode]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.mode === mode);
+      });
+      elements.modeHint.textContent =
+        mode === "before"
+          ? "N-03 修复前：两个 turn_complete 数据包都会出现"
+          : "N-03 修复后：只保留 Engine epilogue 的一个 turn_complete";
+      update();
+    }
+
+    function update() {
+      const stepIndex = stepAtTime(state.playhead);
+      const local = localProgress(stepIndex);
+      const bug = activeBug();
+      updatePacket(stepIndex, local);
+      updateBugRails(bug);
+      updateClasses(stepIndex, bug);
+      renderDetail(stepIndex, local, bug);
+      updateLegendSelection(bug);
+    }
+
+    elements.playPause.addEventListener("click", () => {
+      if (state.playing) pause();
+      else play();
+    });
+
+    elements.frameBack.addEventListener("click", () => {
+      pause();
+      setPlayhead(frameToTime(timeToFrame(state.playhead) - 1));
+    });
+
+    elements.frameForward.addEventListener("click", () => {
+      pause();
+      setPlayhead(frameToTime(timeToFrame(state.playhead) + 1));
+    });
+
+    elements.prevStep.addEventListener("click", () => {
+      pause();
+      const stepIndex = stepAtTime(state.playhead);
+      setPlayhead(timing.starts[Math.max(0, stepIndex - 1)]);
+    });
+
+    elements.nextStep.addEventListener("click", () => {
+      pause();
+      const stepIndex = stepAtTime(state.playhead);
+      setPlayhead(timing.starts[Math.min(steps.length - 1, stepIndex + 1)]);
+    });
+
+    elements.scrubber.addEventListener("input", () => {
+      setPlayhead(frameToTime(Number(elements.scrubber.value)));
+    });
+
+    elements.jumpN03.addEventListener("click", () => jumpToBug("N-03"));
+    elements.jumpN06.addEventListener("click", () => jumpToBug("N-06"));
+
+    document.querySelectorAll("[data-speed]").forEach((button) => {
+      button.addEventListener("click", () => setSpeed(button.dataset.speed));
+    });
+
+    document.querySelectorAll("[data-mode]").forEach((button) => {
+      button.addEventListener("click", () => setMode(button.dataset.mode));
+    });
+
+    drawFlow();
+    renderMarkers();
+    renderBugList();
+    renderFindingsLegend();
+    update();
+  </script>
+</body>
+</html>

@@ -1,0 +1,2452 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CodeShell 桌面流数据流转可视化</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #090b0d;
+      --panel: #111417;
+      --panel-strong: #151a1e;
+      --line: #2a3137;
+      --line-soft: #20262b;
+      --text: #edf2f5;
+      --muted: #9aa6ae;
+      --quiet: #6f7b84;
+      --green: #7ee6b1;
+      --green-strong: #36d68b;
+      --cyan: #74d8f2;
+      --amber: #f2c46d;
+      --shadow: rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 12% 0%, rgba(116, 216, 242, 0.08), transparent 28rem),
+        linear-gradient(180deg, #0d1012 0%, var(--bg) 44%, #08090a 100%);
+      color: var(--text);
+      font-family:
+        Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "Microsoft YaHei", sans-serif;
+      letter-spacing: 0;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      color: inherit;
+    }
+
+    .app {
+      width: min(100% - 32px, 1660px);
+      margin: 0 auto;
+      padding: 22px 0 28px;
+    }
+
+    .masthead {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: stretch;
+      margin-bottom: 14px;
+    }
+
+    .hero-main,
+    .hero-stats,
+    .control-deck,
+    .stage-panel,
+    .side-panel {
+      border: 1px solid var(--line);
+      background: rgba(17, 20, 23, 0.9);
+      box-shadow: 0 18px 60px var(--shadow);
+    }
+
+    .hero-main {
+      min-height: 132px;
+      padding: 20px 24px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .kicker {
+      margin: 0 0 8px;
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(26px, 3vw, 42px);
+      line-height: 1.06;
+      font-weight: 780;
+      letter-spacing: 0;
+    }
+
+    .hero-main p:last-child {
+      max-width: 880px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .hero-stats {
+      min-width: 410px;
+      border-radius: 8px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      overflow: hidden;
+    }
+
+    .stat {
+      padding: 18px;
+      border-left: 1px solid var(--line-soft);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .stat:first-child {
+      border-left: 0;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .stat strong {
+      color: var(--text);
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 760;
+    }
+
+    .control-deck {
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+
+    .controls-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn,
+    .seg-btn {
+      min-height: 38px;
+      border-radius: 7px;
+      padding: 0 13px;
+      border: 1px solid #323a41;
+      background: #151a1f;
+      color: var(--text);
+      cursor: pointer;
+      transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        background 160ms ease,
+        color 160ms ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover,
+    .seg-btn:hover {
+      border-color: #4c5963;
+      background: #1b2228;
+    }
+
+    .btn:active,
+    .seg-btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    .btn.primary {
+      border-color: rgba(126, 230, 177, 0.68);
+      background: rgba(54, 214, 139, 0.14);
+      color: #dfffee;
+      min-width: 82px;
+    }
+
+    .segmented {
+      display: inline-flex;
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #0d1013;
+      gap: 3px;
+    }
+
+    .seg-btn {
+      min-height: 32px;
+      min-width: 52px;
+      border-color: transparent;
+      background: transparent;
+      color: var(--muted);
+      padding: 0 10px;
+    }
+
+    .seg-btn.active {
+      color: var(--text);
+      background: #20272d;
+      border-color: #3b4650;
+    }
+
+    .timeline-box {
+      flex: 1 1 360px;
+      min-width: 260px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .scrub-wrap {
+      position: relative;
+      height: 32px;
+      display: flex;
+      align-items: center;
+    }
+
+    .scrub-track {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 8px;
+      border-radius: 999px;
+      transform: translateY(-50%);
+      background: #1c2228;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .scrub-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--green), var(--cyan));
+    }
+
+    input[type="range"] {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      height: 32px;
+      margin: 0;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+      accent-color: var(--green);
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 8px;
+      background: transparent;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      margin-top: -5px;
+      border-radius: 50%;
+      border: 2px solid #092017;
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(126, 230, 177, 0.16);
+    }
+
+    input[type="range"]::-moz-range-track {
+      height: 8px;
+      background: transparent;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid #092017;
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(126, 230, 177, 0.16);
+    }
+
+    .frame-readout {
+      min-width: 92px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+
+    .studio {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 386px;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .stage-panel,
+    .side-panel {
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .stage-head,
+    .side-head,
+    .console-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .stage-head,
+    .side-head {
+      min-height: 64px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line-soft);
+      background: rgba(21, 26, 30, 0.92);
+    }
+
+    .stage-copy {
+      display: grid;
+      gap: 5px;
+    }
+
+    .stage-head h2,
+    .side-head h2 {
+      font-size: 15px;
+      font-weight: 740;
+    }
+
+    .stage-copy p {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .stage-head span,
+    .side-head span {
+      color: var(--muted);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+
+    .stage-canvas {
+      position: relative;
+      min-height: 860px;
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        #0c0f12;
+      background-size: 32px 32px;
+    }
+
+    .flow-svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      min-height: 860px;
+    }
+
+    .module-frame {
+      stroke-width: 1.4;
+      rx: 8;
+      transition:
+        stroke 180ms ease,
+        stroke-width 180ms ease,
+        filter 180ms ease;
+    }
+
+    .module-frame.active {
+      stroke: rgba(126, 230, 177, 0.72);
+      stroke-width: 2.2;
+      filter: url("#softGlow");
+    }
+
+    .module-title {
+      fill: var(--text);
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .module-subtitle {
+      fill: var(--muted);
+      font-size: 12px;
+      font-weight: 660;
+      letter-spacing: 0;
+    }
+
+    .module-count-text {
+      fill: var(--muted);
+      font-size: 12px;
+      font-weight: 760;
+      text-anchor: end;
+    }
+
+    .module-flow-arrow {
+      fill: none;
+      stroke: rgba(126, 230, 177, 0.34);
+      stroke-width: 7;
+      stroke-linecap: round;
+      filter: url("#softGlow");
+    }
+
+    .screen-line {
+      stroke: rgba(242, 196, 109, 0.52);
+      stroke-width: 1.4;
+      stroke-linecap: round;
+    }
+
+    .screen-label {
+      fill: #f6d99a;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .flow-path {
+      fill: none;
+      stroke: #2d363d;
+      stroke-width: 2.4;
+      stroke-linecap: round;
+    }
+
+    .flow-path.internal {
+      stroke: #303941;
+      stroke-width: 1.35;
+      opacity: 0.72;
+    }
+
+    .flow-path.handoff {
+      stroke: #45525b;
+      stroke-width: 7;
+      opacity: 0.76;
+    }
+
+    .flow-progress {
+      fill: none;
+      stroke: url("#flowStroke");
+      stroke-width: 3.6;
+      stroke-linecap: round;
+      filter: url("#softGlow");
+      opacity: 0.92;
+    }
+
+    .flow-progress.internal {
+      stroke-width: 2.45;
+    }
+
+    .flow-progress.handoff {
+      stroke-width: 6.4;
+      opacity: 0.98;
+    }
+
+    .node {
+      cursor: pointer;
+      outline: none;
+    }
+
+    .node .row-separator {
+      stroke: rgba(255, 255, 255, 0.085);
+      stroke-width: 1;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .node .indicator {
+      stroke: transparent;
+      stroke-width: 4;
+      stroke-linecap: round;
+      transition:
+        stroke 180ms ease,
+        filter 180ms ease;
+    }
+
+    .node .halo {
+      fill: rgba(126, 230, 177, 0.18);
+      opacity: 0;
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+
+    .node .dot {
+      fill: #27313a;
+      stroke: #52606a;
+      stroke-width: 1.6;
+      transition:
+        fill 180ms ease,
+        stroke 180ms ease,
+        filter 180ms ease;
+    }
+
+    .node .idx {
+      fill: var(--quiet);
+      font-size: 12px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .node .name {
+      fill: var(--text);
+      font-size: 14px;
+      font-weight: 760;
+      transition: fill 180ms ease;
+    }
+
+    .node .subtitle {
+      fill: var(--muted);
+      font-size: 11px;
+      font-weight: 650;
+      transition: fill 180ms ease;
+    }
+
+    .node .branch-chip {
+      fill: rgba(242, 196, 109, 0.1);
+      stroke: rgba(242, 196, 109, 0.32);
+      stroke-width: 1;
+      rx: 6;
+    }
+
+    .node .branch-text {
+      fill: #f6d99a;
+      font-size: 10px;
+      font-weight: 780;
+      text-anchor: middle;
+    }
+
+    .node.complete .dot {
+      fill: rgba(126, 230, 177, 0.72);
+      stroke: rgba(126, 230, 177, 0.96);
+    }
+
+    .node.complete .idx,
+    .node.complete .name {
+      fill: rgba(223, 255, 238, 0.76);
+    }
+
+    .node.active .indicator {
+      stroke: var(--green);
+      filter: url("#softGlow");
+    }
+
+    .node.active .dot {
+      fill: #eafff4;
+      stroke: var(--green);
+      filter: url("#softGlow");
+    }
+
+    .node.active .idx,
+    .node.active .name {
+      fill: var(--green);
+    }
+
+    .node.active .subtitle {
+      fill: #dfffee;
+    }
+
+    .node.active .halo {
+      opacity: 1;
+      animation: nodeBreath 1600ms ease-in-out infinite;
+    }
+
+    .node.pulse .halo {
+      animation: arrivalPulse 860ms ease-out 1;
+    }
+
+    .node:focus-visible .indicator {
+      stroke: var(--amber);
+    }
+
+    .node:focus-visible .dot {
+      stroke: var(--amber);
+    }
+
+    .packet-core {
+      filter: url("#packetGlow");
+      pointer-events: none;
+    }
+
+    .packet-core circle:first-child {
+      fill: rgba(126, 230, 177, 0.24);
+      stroke: var(--green);
+      stroke-width: 2;
+    }
+
+    .packet-core circle:nth-child(2) {
+      fill: #eafff4;
+    }
+
+    .packet-label {
+      fill: #d7fff0;
+      font-size: 12px;
+      font-weight: 720;
+      paint-order: stroke;
+      stroke: rgba(7, 9, 10, 0.8);
+      stroke-width: 4;
+      stroke-linejoin: round;
+    }
+
+    .stream-console {
+      border-top: 1px solid var(--line-soft);
+      background: #0e1114;
+    }
+
+    .console-head {
+      min-height: 42px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line-soft);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .console-head strong {
+      color: var(--green);
+      font-size: 12px;
+    }
+
+    .stream-console pre {
+      min-height: 132px;
+      margin: 0;
+      padding: 16px 18px 18px;
+      overflow: auto;
+      color: #dbe7df;
+      font:
+        12px/1.65 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+        monospace;
+      white-space: pre-wrap;
+    }
+
+    .caret {
+      display: inline-block;
+      width: 7px;
+      height: 1.2em;
+      margin-left: 2px;
+      vertical-align: -0.2em;
+      background: var(--green);
+      animation: blink 900ms steps(2, end) infinite;
+    }
+
+    .side-panel {
+      position: sticky;
+      top: 14px;
+      max-height: calc(100vh - 28px);
+      overflow: auto;
+    }
+
+    .side-body {
+      padding: 18px;
+    }
+
+    .section {
+      padding: 0 0 18px;
+      margin-bottom: 18px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .section:last-child {
+      margin-bottom: 0;
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .section h3 {
+      margin: 0 0 9px;
+      color: var(--quiet);
+      font-size: 12px;
+      font-weight: 760;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .detail-title {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.18;
+      font-weight: 780;
+      letter-spacing: 0;
+    }
+
+    .detail-file {
+      margin-top: 10px;
+      color: var(--cyan);
+      font:
+        12px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+        monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .section p {
+      color: #d5dde2;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .io-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .io-box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #0d1114;
+      padding: 12px;
+    }
+
+    .io-label {
+      margin-bottom: 7px;
+      color: var(--quiet);
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    .io-value {
+      color: var(--text);
+      font:
+        12px/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+        monospace;
+      overflow-wrap: anywhere;
+    }
+
+    @keyframes nodeBreath {
+      0%,
+      100% {
+        transform: scale(0.94);
+        opacity: 0.18;
+      }
+      50% {
+        transform: scale(1.08);
+        opacity: 0.36;
+      }
+    }
+
+    @keyframes arrivalPulse {
+      0% {
+        transform: scale(0.72);
+        opacity: 0.7;
+      }
+      100% {
+        transform: scale(1.22);
+        opacity: 0;
+      }
+    }
+
+    @keyframes blink {
+      50% {
+        opacity: 0;
+      }
+    }
+
+    @media (max-width: 1260px) {
+      .masthead,
+      .studio {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-stats {
+        min-width: 0;
+      }
+
+      .side-panel {
+        position: static;
+        max-height: none;
+      }
+    }
+
+    @media (max-width: 780px) {
+      .app {
+        width: min(100% - 18px, 1660px);
+        padding-top: 10px;
+      }
+
+      .hero-stats {
+        grid-template-columns: 1fr;
+      }
+
+      .stat {
+        border-left: 0;
+        border-top: 1px solid var(--line-soft);
+      }
+
+      .stat:first-child {
+        border-top: 0;
+      }
+
+      .timeline-box {
+        flex-basis: 100%;
+        grid-template-columns: 1fr;
+      }
+
+      .frame-readout {
+        text-align: left;
+      }
+
+      .stage-canvas,
+      .flow-svg {
+        min-height: 720px;
+      }
+
+      .btn {
+        flex: 1 1 auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="masthead">
+      <section class="hero-main" aria-labelledby="page-title">
+        <p class="kicker">桌面流数据链路</p>
+        <h1 id="page-title">CodeShell 完整端到端数据流转</h1>
+        <p>
+          完整端到端：用户输入→goal→turn→工具→权限→执行→模型产出→渲染，一路追踪到屏幕卡片。
+        </p>
+      </section>
+      <section class="hero-stats" aria-label="数据流总览">
+        <div class="stat">
+          <span>主链路节点</span>
+          <strong id="statSteps">51</strong>
+        </div>
+        <div class="stat">
+          <span>当前帧</span>
+          <strong id="statFrame">001</strong>
+        </div>
+        <div class="stat">
+          <span>当前步骤</span>
+          <strong id="statStep">01</strong>
+        </div>
+      </section>
+    </header>
+
+    <section class="control-deck" aria-label="播放控制">
+      <div class="controls-row">
+        <button class="btn primary" id="playPause" type="button">播放</button>
+        <button class="btn" id="frameBack" type="button">-1 帧</button>
+        <button class="btn" id="frameForward" type="button">+1 帧</button>
+        <button class="btn" id="prevStep" type="button">上一步</button>
+        <div class="timeline-box">
+          <div class="scrub-wrap">
+            <div class="scrub-track" aria-hidden="true"><div class="scrub-fill" id="scrubFill"></div></div>
+            <input id="scrubber" type="range" min="1" max="720" value="1" aria-label="播放进度" />
+          </div>
+          <div class="frame-readout" id="frameReadout">001 / 720</div>
+        </div>
+        <button class="btn" id="nextStep" type="button">下一步</button>
+        <div class="segmented" aria-label="播放速度">
+          <button class="seg-btn" type="button" data-speed="0.5">0.5x</button>
+          <button class="seg-btn active" type="button" data-speed="1">1x</button>
+          <button class="seg-btn" type="button" data-speed="2">2x</button>
+          <button class="seg-btn" type="button" data-speed="4">4x</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="studio">
+      <section class="stage-panel">
+        <div class="stage-head">
+          <div class="stage-copy">
+            <h2>数据流舞台</h2>
+            <p>图例：亮行=当前步骤，绿色连线=已流经，光点=端到端数据包</p>
+          </div>
+          <span id="stageStatus">端到端数据包等待播放</span>
+        </div>
+        <div class="stage-canvas">
+          <svg class="flow-svg" id="flowSvg" viewBox="0 0 1320 1260" preserveAspectRatio="xMidYMin meet" role="img" aria-label="完整端到端 51 步数据包动画">
+            <defs>
+              <linearGradient id="flowStroke" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#7ee6b1" />
+                <stop offset="100%" stop-color="#74d8f2" />
+              </linearGradient>
+              <marker id="arrowMuted" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+                <path d="M 1 1 L 11 6 L 1 11 Z" fill="#3f4a52" />
+              </marker>
+              <marker id="arrowHandoff" markerWidth="13" markerHeight="13" refX="11" refY="6.5" orient="auto" markerUnits="strokeWidth">
+                <path d="M 1 1 L 12 6.5 L 1 12 Z" fill="#7ee6b1" opacity="0.78" />
+              </marker>
+              <marker id="moduleArrow" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto" markerUnits="strokeWidth">
+                <path d="M 1 1 L 13 7 L 1 13 Z" fill="#7ee6b1" opacity="0.72" />
+              </marker>
+              <filter id="packetGlow" x="-80%" y="-80%" width="260%" height="260%">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            <g id="chromeLayer"></g>
+            <g id="edgeLayer"></g>
+            <g class="packet-core" id="mainPacket">
+              <circle r="18"></circle>
+              <circle r="6"></circle>
+              <text class="packet-label" x="17" y="-13">用户输入</text>
+            </g>
+            <g id="nodeLayer"></g>
+          </svg>
+        </div>
+
+        <div class="stream-console" aria-label="流式文本预览">
+          <div class="console-head">
+            <strong id="consoleMode">端到端数据包</strong>
+            <span id="tokenCounter">字符 0</span>
+          </div>
+          <pre id="streamPreview"></pre>
+        </div>
+      </section>
+
+      <aside class="side-panel">
+        <div class="side-head">
+          <h2>当前步骤详情</h2>
+          <span id="stepFrameLabel">帧 001</span>
+        </div>
+        <div class="side-body">
+          <section class="section">
+            <h3 id="stepKicker">步骤 01</h3>
+            <h2 class="detail-title" id="detailTitle"></h2>
+            <div class="detail-file" id="detailFile"></div>
+          </section>
+
+          <section class="section">
+            <h3>一句话说明</h3>
+            <p id="detailSummary"></p>
+          </section>
+
+          <section class="section">
+            <h3>输入 / 输出</h3>
+            <div class="io-grid">
+              <div class="io-box">
+                <div class="io-label">输入</div>
+                <div class="io-value" id="detailInput"></div>
+              </div>
+              <div class="io-box">
+                <div class="io-label">输出</div>
+                <div class="io-value" id="detailOutput"></div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const TOTAL_FRAMES = 720;
+    const SVG_NS = ["ht", "tp://www.w3.org/2000/svg"].join("");
+    const CANVAS_WIDTH = 1320;
+    let CANVAS_HEIGHT = 1260;
+    const MODULE_X = 44;
+    const MODULE_TOP = 28;
+    const MODULE_WIDTH = CANVAS_WIDTH - MODULE_X * 2;
+    const MODULE_GAP = 28;
+    const MODULE_HEADER_HEIGHT = 58;
+    const STEP_ROW_HEIGHT = 42;
+    const STEP_ROW_HALF_HEIGHT = STEP_ROW_HEIGHT / 2;
+    const STEP_ROW_GAP_Y = 8;
+    const STEP_COLUMN_GAP = 54;
+    const STEP_DOT_X = 18;
+    const STEP_CONNECTOR_OFFSET = 13;
+    const STEP_INNER_PAD_X = 38;
+    const HALO_RADIUS = 18;
+
+    const steps = [
+      {
+        index: 1,
+        module: "user-input",
+        short: "Composer Submit",
+        node: "1 Composer Submit",
+        cnLabel: "提交用户输入",
+        file: "packages/desktop/src/renderer/ChatView.tsx:578",
+        input: "draft + attachments + anchors + busy state",
+        output: "payload + routeOpts -> onSend/onQueueInput",
+        summary: "聊天输入框校验文本、图片和锚点，把可发送内容编码成 payload。",
+        why: "这是用户意图进入系统的第一个边界；忙碌时进入队列，空闲时直接发送。",
+        duration: 1050,
+        streamText: "submit() -> encodeAnchorsForWire -> encodeAttachmentsForWire -> onSend(payload)",
+      },
+      {
+        index: 2,
+        module: "user-input",
+        short: "Renderer Send",
+        node: "2 Renderer Send",
+        cnLabel: "组装 run 参数",
+        file: "packages/desktop/src/renderer/App.tsx:2008",
+        input: "payload + bucket + permission/model/goal overrides",
+        output: "optimistic user_message + RunParams{sessionId,cwd,goal,permissionMode}",
+        summary: "renderer 创建或定位会话，落一条本地 user message，并准备发给 core 的 run 参数。",
+        why: "UI 先显示用户消息并同步 session 路由，后续 worker 流才能回到正确 bucket。",
+        duration: 1350,
+        streamText: "dispatch(user_message) + opts={ sessionId, cwd, permissionMode, goal, clientMessageId }",
+      },
+      {
+        index: 3,
+        module: "user-input",
+        short: "Run RPC",
+        node: "3 Preload/Main Run RPC",
+        cnLabel: "发送 agent/run",
+        file: "packages/desktop/src/preload/index.ts:303; packages/desktop/src/main/agent-bridge.ts:311",
+        input: "task + RunParams",
+        output: "agent/run JSON-RPC line on worker stdin",
+        summary: "preload 发起无超时 run RPC；main 遇到 agent/run 时启动 worker 并注入项目 trust。",
+        why: "renderer 不直接持有 Engine；main 是 worker 生命周期和项目信任信息的边界。",
+        duration: 1250,
+        streamText: "window.codeshell.run(task, opts) -> ipc agent:msg -> child.stdin.write(agent/run)",
+      },
+      {
+        index: 4,
+        module: "user-input",
+        short: "Protocol Run",
+        node: "4 AgentServer handleRunMulti",
+        cnLabel: "协议入口校验",
+        file: "packages/core/src/protocol/server.ts:394",
+        input: "RpcRequest{method:\"agent/run\", params:RunParams}",
+        output: "ChatSession + per-session bridges + onStream envelope",
+        summary: "protocol server 校验 sessionId/task，获取或创建 ChatSession，并把 stream 包成 session 事件。",
+        why: "多会话路径必须在协议层先绑定 session，审批、askUser、browser bridge 都依赖这个归属。",
+        duration: 1350,
+        streamText: "handleRunMulti(req) -> cm.getOrCreate(sessionId) -> session.enqueueTurn(task, opts)",
+      },
+      {
+        index: 5,
+        module: "user-input",
+        short: "Session FIFO",
+        node: "5 ChatSession FIFO Pump",
+        cnLabel: "会话队列排 turn",
+        file: "packages/core/src/protocol/chat-session.ts:88; packages/core/src/protocol/chat-session.ts:203",
+        input: "task + TurnOpts{cwd,onStream,goal,clientMessageId}",
+        output: "engine.run(task,{sessionId,signal,onStream,goal})",
+        summary: "一个 UI tab 对应一个 ChatSession，快速二次发送会排队而不是打断当前 turn。",
+        why: "FIFO 保证同一会话只有一个 active Engine.run，Stop/cancel 也能按 session 精确中止。",
+        duration: 1200,
+        streamText: "queue.push(turn) -> pump() -> engine.run(task, { signal, sessionId, goal })",
+      },
+      {
+        index: 6,
+        module: "user-input",
+        short: "Session Messages",
+        node: "6 Engine Session/User Message",
+        cnLabel: "写入用户消息",
+        file: "packages/core/src/engine/engine.ts:1415; packages/core/src/engine/engine.ts:1472",
+        input: "task + optional existing sessionId",
+        output: "Message[]{user} + transcript user event + session state",
+        summary: "Engine 恢复或创建 session，把本次用户输入写入 messages 和 transcript。",
+        why: "后续 TurnLoop 只消费 Message[]；transcript 则让恢复、重放和 UI 历史有同一来源。",
+        duration: 1450,
+        streamText: "resume/create session -> messages.push(userMsg) -> transcript.appendMessage(\"user\", ...)",
+      },
+      {
+        index: 7,
+        module: "user-input",
+        short: "Run Deps",
+        node: "7 Permission/Executor Setup",
+        cnLabel: "装配 run 依赖",
+        file: "packages/core/src/engine/engine.ts:1649; packages/core/src/engine/engine.ts:1675",
+        input: "cwd + permissionMode + ToolContext",
+        output: "PermissionClassifier + ToolExecutor + PromptComposer",
+        summary: "Engine 基于本次 cwd/mode 构建权限分类器，并把 ToolExecutor 连接到 ToolContext。",
+        why: "工具可见性和执行期 gate 都依赖 run 边界的 cwd、sessionId、planMode 与审批后端。",
+        duration: 1300,
+        streamText: "buildPermissionConfig(mode,cwd) -> new PermissionClassifier -> new ToolExecutor",
+      },
+      {
+        index: 8,
+        module: "goal",
+        short: "Normalize Goal",
+        node: "8 Normalize GoalConfig",
+        cnLabel: "归一化 goal",
+        file: "packages/core/src/engine/goal.ts:105",
+        input: "options.goal | session.state.activeGoal | config.goal",
+        output: "GoalConfig | undefined",
+        summary: "goal.ts 把字符串或对象归一成内部 GoalConfig，空目标和非正预算会被丢弃。",
+        why: "Goal 向内只用一个结构，turn、预算和 stop hook 不需要再区分调用入口。",
+        duration: 1050,
+        streamText: "normalizeGoal(raw) -> { objective, tokenBudget?, timeBudgetMs?, maxTurns? }",
+      },
+      {
+        index: 9,
+        module: "goal",
+        short: "Persist Goal",
+        node: "9 Persist Active Goal",
+        cnLabel: "持久化目标",
+        file: "packages/core/src/engine/engine.ts:2020; packages/core/src/engine/engine.ts:2033",
+        input: "explicitGoal + storedGoal",
+        output: "session.state.activeGoal + StreamEvent{goal_set}",
+        summary: "显式 goal 会替换或延续 session 的 activeGoal，并向 UI 发 goal_set。",
+        why: "持久 goal 允许后续裸 send 继续同一目标，也让 UI 能显示当前目标状态。",
+        duration: 1250,
+        streamText: "explicitGoal -> session.state.activeGoal -> onStream({ type:\"goal_set\" })",
+      },
+      {
+        index: 10,
+        module: "goal",
+        short: "Goal Hook",
+        node: "10 Goal Stop Hook",
+        cnLabel: "注册续跑判断",
+        file: "packages/core/src/engine/engine.ts:2041; packages/core/src/engine/engine.ts:2132",
+        input: "normalizedGoal + auxSummaryClient",
+        output: "on_stop goal hook + maxTurns/maxStopBlocks",
+        summary: "Engine 为本次 run 注册 GoalStopHook，并把 goal 上限传给 TurnLoop。",
+        why: "模型想停时由 on_stop judge 判断目标是否完成；真正兜底是 turn、stop-block 和预算上限。",
+        duration: 1350,
+        streamText: "createGoalStopHook(goal) + resolveMaxTurns/resolveMaxStopBlocks -> TurnLoop config",
+      },
+      {
+        index: 11,
+        module: "turn-loop",
+        short: "TurnLoop Create",
+        node: "11 Create TurnLoop",
+        cnLabel: "创建 TurnLoop",
+        file: "packages/core/src/engine/engine.ts:2079",
+        input: "modelFacade + toolExecutor + contextManager + tools + hooks",
+        output: "TurnLoop(deps, config)",
+        summary: "Engine 把模型、工具执行器、上下文管理、hook 和流回调交给 TurnLoop。",
+        why: "TurnLoop 是一次 run 内多轮模型/工具循环的执行状态机。",
+        duration: 1200,
+        streamText: "new TurnLoop({ model, toolExecutor, contextManager, tools }, { onStream, goal })",
+      },
+      {
+        index: 12,
+        module: "turn-loop",
+        short: "Run Init",
+        node: "12 TurnLoop Run Init",
+        cnLabel: "初始化循环状态",
+        file: "packages/core/src/engine/turn-loop.ts:532",
+        input: "initialMessages",
+        output: "mutable messages + budgetTracker + goalTracker",
+        summary: "TurnLoop 复制初始消息，创建普通 token budget 和 run-scoped goal budget tracker。",
+        why: "goal 的 token/time 预算跨 turn 累计，不能用普通单 turn 输出预算代替。",
+        duration: 1200,
+        streamText: "run(initialMessages) -> messages=[...] + createBudgetTracker() + createGoalBudgetTracker()",
+      },
+      {
+        index: 13,
+        module: "turn-loop",
+        short: "Turn Top",
+        node: "13 Turn Top Boundary",
+        cnLabel: "turn 起手边界",
+        file: "packages/core/src/engine/turn-loop.ts:556; packages/core/src/engine/turn-loop.ts:605",
+        input: "messages + queued steer + turn counters",
+        output: "turnNumber + stream_request_start + hook injections",
+        summary: "每轮递增 turnCount、消费步间 steer、设置工具日志上下文并发出 stream_request_start。",
+        why: "这是模型请求前的同步边界，后续 UI 和工具日志都依赖这个 turn 归属。",
+        duration: 1350,
+        streamText: "turnCount++ -> consumeQueuedSteer() -> onStream({ type:\"stream_request_start\" })",
+      },
+      {
+        index: 14,
+        module: "turn-loop",
+        short: "Context Ready",
+        node: "14 Context Management",
+        cnLabel: "准备模型上下文",
+        file: "packages/core/src/engine/turn-loop.ts:649; packages/core/src/engine/turn-loop.ts:652",
+        input: "messages before model",
+        output: "model-ready messages",
+        summary: "模型调用前降级已消费图片、执行异步上下文管理，并可注入 post_compact 提醒。",
+        why: "模型请求必须拿到满足上下文预算且保持 API 消息不变量的 messages。",
+        duration: 1450,
+        streamText: "prepareMessagesForModel(messages) -> contextManager.manageAsync(messages)",
+      },
+      {
+        index: 15,
+        module: "model-stream",
+        short: "ProviderChunk",
+        node: "15 ProviderChunk -> StreamEvent",
+        cnLabel: "归一为 StreamEvent",
+        file: "packages/core/src/engine/model-facade.ts:78",
+        input: "LLMChunk{text,tokens?}",
+        output: "StreamEvent{text_delta,text,tokens?}",
+        summary: "provider chunk 被归一成 core UI 无关事件。",
+        why: "provider chunk 不能直接流向 UI；core 先统一成 UI 无关的 StreamEvent 契约。",
+        duration: 1500,
+        streamText: "provider chunk: { type: \"text\", text: \"正在解释桌面流...\" }",
+      },
+      {
+        index: 16,
+        module: "model-stream",
+        short: "Stream Guard",
+        node: "16 TurnLoop Stream Guard",
+        cnLabel: "发边界并防断流",
+        file: "packages/core/src/engine/turn-loop.ts:329",
+        input: "StreamCallback + turn messages",
+        output: "guarded StreamCallback + stream_request_start",
+        summary: "先发 turn 边界，并防止 stream handler 抛错切断后续事件。",
+        why: "stream handler 失败不应冻结整条流；TurnLoop 先发请求边界，再把 emit 包在防护层里。",
+        duration: 1350,
+        streamText: "emit: { type: \"stream_request_start\", turnNumber }",
+      },
+      {
+        index: 17,
+        module: "model-stream",
+        short: "Wrapped Stream",
+        node: "17 Wrapped Model Stream",
+        cnLabel: "跟踪 token 后转发",
+        file: "packages/core/src/engine/turn-loop.ts:1280",
+        input: "StreamEvent",
+        output: "StreamEvent",
+        summary: "跟踪 tool id 与 streaming token 估算后继续转发。",
+        why: "tool id 记录避免后续重复补发 tool card，token 估算用于流式阶段发现 context 压力。",
+        duration: 1800,
+        streamText: "wrappedStream(text_delta) -> record token estimate -> forward",
+      },
+      {
+        index: 18,
+        module: "tool-permission",
+        short: "Tool Branch",
+        node: "18 Tool Calls Branch",
+        cnLabel: "判定是否调工具",
+        file: "packages/core/src/engine/turn-loop.ts:876; packages/core/src/engine/turn-loop.ts:980",
+        input: "LLMResponse{text,toolCalls,stopReason}",
+        output: "no-tool final answer | tool execution phase",
+        summary: "模型响应回来后，TurnLoop 按 response.toolCalls.length 分流到最终回答或工具阶段。",
+        why: "工具调用不是 renderer 猜出来的；它由 TurnLoop 在完整 LLMResponse 上做执行分支。",
+        duration: 1250,
+        streamText: "response.toolCalls.length === 0 ? assistant_message : enter tool execution phase",
+      },
+      {
+        index: 19,
+        module: "tool-permission",
+        short: "ToolUse Blocks",
+        node: "19 Materialize ToolUse",
+        cnLabel: "物化 tool_use",
+        file: "packages/core/src/engine/turn-loop.ts:998",
+        input: "response.toolCalls.slice(0,maxToolCallsPerTurn)",
+        output: "assistant tool_use blocks + tool_use_start + transcript tool_use",
+        summary: "TurnLoop 把 tool call 变成 assistant tool_use block，并补发未流式出现的 tool_use_start。",
+        why: "模型下一轮需要合法 tool_use/tool_result 对，UI 也需要 start 事件创建运行中的工具卡。",
+        duration: 1300,
+        streamText: "assistantBlocks.push({ type:\"tool_use\", id, name, input }) -> onStream(tool_use_start)",
+      },
+      {
+        index: 20,
+        module: "tool-permission",
+        short: "Queue Dispatch",
+        node: "20 StreamingToolQueue",
+        cnLabel: "分发工具队列",
+        file: "packages/core/src/engine/streaming-tool-queue.ts:33",
+        input: "ToolCall[]",
+        output: "concurrency-safe promises + unsafe sequential queue",
+        summary: "StreamingToolQueue 记录调用顺序，并让可并发工具立即开始、非安全工具串行 drain。",
+        why: "并发读类工具可以提前跑，但结果仍必须按原 tool call 顺序回填。",
+        duration: 1250,
+        streamText: "queue.enqueue(tc) -> safe tools executeSingle now; unsafe tools wait for drain()",
+      },
+      {
+        index: 21,
+        module: "tool-permission",
+        short: "Executor Gates",
+        node: "21 ToolExecutor Gates",
+        cnLabel: "执行前门禁",
+        file: "packages/core/src/tool-system/executor.ts:119",
+        input: "ToolCall{id,toolName,args}",
+        output: "early error ToolResult | permission/path checked call",
+        summary: "Executor 先过 abort、builtin/MCP/goal 可见性、plan mode、schema 和 pre_tool_use。",
+        why: "模型看到的工具集合只是展示层；执行期必须再用同一上下文收紧一次。",
+        duration: 1500,
+        streamText: "executeSingle(call) -> abort/capability/plan/schema/pre_tool_use gates",
+      },
+      {
+        index: 22,
+        module: "tool-permission",
+        short: "Path Policy",
+        node: "22 Path Policy Decision",
+        cnLabel: "路径策略三态",
+        file: "packages/core/src/tool-system/path-policy.ts:474",
+        input: "declared path targets + operation + workspaceRoot",
+        output: "allow | ask | deny",
+        summary: "path-policy 对敏感路径、工作区内外和读写操作独立判定 allow/ask/deny。",
+        why: "文件路径风险和工具权限不同；敏感写入即使在 workspace 内也不能静默通过。",
+        duration: 1500,
+        streamText: "classifyPath(path,{workspaceRoot,operation}) -> allow / ask / deny",
+        branches: ["allow", "ask", "deny"],
+      },
+      {
+        index: 23,
+        module: "tool-permission",
+        short: "Permission",
+        node: "23 Permission Classifier",
+        cnLabel: "工具权限三态",
+        file: "packages/core/src/tool-system/permission.ts:1037",
+        input: "toolName + args + rules + permissionMode",
+        output: "allow | ask | deny",
+        summary: "PermissionClassifier 按 bypass、显式规则、Bash 分类和 mode fallback 得出三态决策。",
+        why: "这是工具是否能执行的关键岔口：allow 继续，ask 进入审批，deny 回填错误结果。",
+        duration: 1550,
+        streamText: "classify(toolName,args) -> allow / ask / deny",
+        branches: ["allow", "ask", "deny"],
+      },
+      {
+        index: 24,
+        module: "tool-permission",
+        short: "Approval Ask",
+        node: "24 Approval Request",
+        cnLabel: "ask 分支审批",
+        file: "packages/core/src/protocol/server.ts:1950; packages/desktop/src/renderer/approvals/ApprovalCard.tsx:63",
+        input: "ApprovalRequest{sessionId,requestId,toolName,args,riskLevel}",
+        output: "ApprovalResult{approved,scope?}",
+        summary: "ask 决策会发 approvalRequest，renderer 用 ApprovalCard 展示并把决定发回同一 session。",
+        why: "用户审批必须按 sessionId+requestId 回到原 pending approval，不能解开别的会话。",
+        duration: 1600,
+        streamText: "notify(agent/approvalRequest) -> <ApprovalCard/> -> approve(sessionId, requestId, decision)",
+        branches: ["approve", "deny"],
+      },
+      {
+        index: 25,
+        module: "tool-execution",
+        short: "Registry Execute",
+        node: "25 ToolRegistry Execute",
+        cnLabel: "调用工具实现",
+        file: "packages/core/src/tool-system/executor.ts:456; packages/core/src/tool-system/registry.ts:85",
+        input: "approved ToolCall + ToolContext + AbortSignal",
+        output: "raw handler result | ToolResult error",
+        summary: "通过权限后，Executor 调 Registry；Registry 查工具、设置 timeout/child signal 并运行 handler。",
+        why: "Registry 是 builtin 和 MCP 的统一执行目录，TurnLoop 不直接调用具体工具实现。",
+        duration: 1450,
+        streamText: "registry.executeTool(name,args,{ signal, ctx }) -> executor(argsWithSignal, ctx)",
+      },
+      {
+        index: 26,
+        module: "tool-execution",
+        short: "Sandbox",
+        node: "26 Sandbox Wrapper",
+        cnLabel: "命令沙箱包裹",
+        file: "packages/core/src/tool-system/builtin/bash.ts:121; packages/core/src/tool-system/sandbox/index.ts:51",
+        input: "Bash command + ctx.sandbox",
+        output: "safeSpawnShell result + sandbox mark",
+        summary: "Bash 类命令从 ToolContext 读取 sandbox backend，再由 safeSpawnShell 包裹执行。",
+        why: "沙箱只包 spawned shell，不沙箱化 Engine；文件工具仍走应用层权限和 path-policy。",
+        duration: 1350,
+        streamText: "safeSpawnShell(command,{ cwd, env, sandbox: backend, signal })",
+      },
+      {
+        index: 27,
+        module: "tool-execution",
+        short: "Normalize Result",
+        node: "27 Normalize ToolResult",
+        cnLabel: "归一化工具结果",
+        file: "packages/core/src/tool-system/registry.ts:151",
+        input: "string | {result,contentBlocks?,sandbox?} | thrown error",
+        output: "ToolResult{result,error?,contentBlocks?,sandbox?,isError?}",
+        summary: "Registry 把字符串、图片块、沙箱标记、timeout/abort/error 都规整成 ToolResult。",
+        why: "TurnLoop 后续只处理 ToolResult 数组，单个工具失败也不会丢掉同批其它结果。",
+        duration: 1350,
+        streamText: "handler result -> { id, toolName, result, contentBlocks?, sandbox? }",
+      },
+      {
+        index: 28,
+        module: "tool-execution",
+        short: "Result Backfill",
+        node: "28 ToolResult Backfill",
+        cnLabel: "结果回填 turn",
+        file: "packages/core/src/engine/turn-loop.ts:1021",
+        input: "ToolResult[]",
+        output: "ContentBlock.tool_result[] + transcript tool_result + StreamEvent.tool_result",
+        summary: "TurnLoop 把工具结果转成 tool_result block，写 transcript，并逐个发 tool_result StreamEvent。",
+        why: "模型下一轮上下文和桌面工具卡都依赖同一个 ToolResult 回填点。",
+        duration: 1500,
+        streamText: "toolResultToBlock(result) -> transcript.appendToolResult -> onStream({ type:\"tool_result\" })",
+      },
+      {
+        index: 29,
+        module: "core-terminal",
+        short: "Terminal Events",
+        node: "29 Turn Terminal Events",
+        cnLabel: "补齐终态事件",
+        file: "packages/core/src/engine/turn-loop.ts:879",
+        input: "LLMResponse + ToolResult[]",
+        output: "assistant_message/tool_use_start/tool_result/turn_complete",
+        summary: "补齐 UI 需要的消息封口、工具进度和 turn 边界。",
+        why: "renderer 需要终态事件把 streaming bubble 标为 done、清 busy，并让工具卡片进入结果态。",
+        duration: 3000,
+        streamText: "assistant_message -> tool_use_start -> tool_result -> turn_complete(reason)",
+      },
+      {
+        index: 30,
+        module: "core-protocol",
+        short: "Envelope",
+        node: "30 Protocol Envelope",
+        cnLabel: "加会话信封",
+        file: "packages/core/src/protocol/server.ts:498",
+        input: "StreamEvent",
+        output: "AgentStreamEventNotification{sessionId,event}",
+        summary: "给事件加 sessionId，支持多会话路由。",
+        why: "裸 StreamEvent 无法区分会话；protocol server 用 session envelope 防止多 tab 串流。",
+        duration: 1250,
+        streamText: "notify agent/streamEvent: { sessionId, event }",
+      },
+      {
+        index: 31,
+        module: "core-protocol",
+        short: "Stdio NDJSON",
+        node: "31 Stdio NDJSON",
+        cnLabel: "stdout 送到 main",
+        file: "packages/core/src/protocol/transport.ts:98",
+        input: "RpcNotification",
+        output: "JSON line",
+        summary: "worker 通过 stdout 把协议消息送到 Electron main。",
+        why: "Electron main 只是 IPC broker，不直接 host engine；stdio NDJSON 是 worker 到 main 的传输面。",
+        duration: 1150,
+        streamText: "{\"method\":\"agent/streamEvent\",\"params\":{\"sessionId\":\"...\"}}",
+      },
+      {
+        index: 32,
+        module: "desktop-main",
+        short: "Parse Snapshot",
+        node: "32 Main Parse Snapshot Candidate",
+        cnLabel: "识别可重放行",
+        file: "packages/desktop/src/main/parseStreamLine.ts:15",
+        input: "JSON line",
+        output: "SnapshotAppend | null",
+        summary: "只识别可重放的 agent/streamEvent 行。",
+        why: "只有 stream notification 值得进入 snapshot；坏 JSON、非 stream 行和会重复气泡的 steer_injected 都不能重放。",
+        duration: 1200,
+        streamText: "parseStreamLine(line) -> SnapshotAppend{ sessionId, event }",
+      },
+      {
+        index: 33,
+        module: "desktop-main",
+        short: "Snapshot + IPC",
+        node: "33 Main Snapshot + IPC Forward",
+        cnLabel: "快照保存并转发",
+        file: "packages/desktop/src/main/agent-bridge.ts:203",
+        input: "SnapshotAppend + JSON line",
+        output: "SnapshotEntry{seq,event} + agent:msg line",
+        summary: "main 保存可补偿快照，同时把原 line 发给 renderer。",
+        why: "renderer 的 route table 和 buffer 可能因刷新或 HMR 消失；main 持有 seq 快照可补缺口且避免重复。",
+        duration: 1300,
+        streamText: "snapshot.append(seq++) + webContents.send(\"agent:msg\", line)",
+      },
+      {
+        index: 34,
+        module: "desktop-preload",
+        short: "Preload Fanout",
+        node: "34 Preload Fanout",
+        cnLabel: "预加载解析分发",
+        file: "packages/desktop/src/preload/index.ts:159",
+        input: "agent:msg JSON line",
+        output: "{sessionId,event}",
+        summary: "preload 解析 notification 并调用 renderer listener。",
+        why: "preload 是 main 与 renderer 的 typed boundary，renderer 不运行时 import core，只通过 window.codeshell 接流。",
+        duration: 1200,
+        streamText: "window.codeshell.onStreamEvent({ sessionId, event })",
+      },
+      {
+        index: 35,
+        module: "renderer-state",
+        short: "Bucket Route",
+        node: "35 Bucket Routing",
+        cnLabel: "按会话路由桶",
+        file: "packages/desktop/src/renderer/streamRouting.ts:30",
+        input: "{sessionId,event}",
+        output: "{bucket,event}",
+        summary: "按 engine sessionId 找到 UI session bucket。",
+        why: "多 session 同时流式输出；bucket 路由把 worker 事件落到正确的 repo/tab/session UI 状态。",
+        duration: 1250,
+        streamText: "resolveBucket(sessionId) -> repoKey::uiSessionId",
+      },
+      {
+        index: 36,
+        module: "renderer-state",
+        short: "Coalescer",
+        node: "36 Event Coalescer",
+        cnLabel: "50ms 合并事件",
+        file: "packages/desktop/src/renderer/streamCoalescer.ts:102",
+        input: "StreamEvent",
+        output: "StreamEvent[] batch",
+        summary: "50ms 合并 noisy delta，并批量 dispatch。",
+        why: "高频 text/tool delta 不能每次都触发未虚拟化列表重渲染；50ms 合并降低 renderer load。",
+        duration: 2100,
+        streamText: "delta + delta + delta ... -> 50ms coalesced stream_batch",
+      },
+      {
+        index: 37,
+        module: "renderer-state",
+        short: "Batch Reducer",
+        node: "37 Desktop Batch Reducer",
+        cnLabel: "批量应用事件",
+        file: "packages/desktop/src/renderer/transcriptsReducer.ts:128",
+        input: "stream_batch{bucket,events}",
+        output: "MessagesReducerState",
+        summary: "普通 desktop 主链路逐个 applyStreamEvent，非 mobile reducer。",
+        why: "batch 内循环只生成一次新 state；no-op 可返回同引用，减少一窗内的重复渲染。",
+        duration: 1450,
+        streamText: "for event of batch: state = applyStreamEvent(state, event)",
+      },
+      {
+        index: 38,
+        module: "renderer-state",
+        short: "Tool Messages",
+        node: "38 Tool Event Reducer",
+        cnLabel: "生成工具消息",
+        file: "packages/desktop/src/renderer/types.ts:536; packages/desktop/src/renderer/types.ts:601",
+        input: "tool_use_start/tool_use_args_delta/tool_result",
+        output: "ToolMessage{running|succeeded|failed,args,result,sandbox,images}",
+        summary: "renderer reducer 用 tool_use_start 创建运行中工具消息，用 tool_result 补结果和状态。",
+        why: "工具卡片不是直接读 core transcript；它从 StreamEvent 归约出的 ToolMessage 渲染。",
+        duration: 1450,
+        streamText: "tool_use_start -> ToolMessage{status:\"running\"}; tool_result -> status succeeded/failed",
+      },
+      {
+        index: 39,
+        module: "renderer-state",
+        short: "Live Assistant",
+        node: "39 Live Assistant Accumulator",
+        cnLabel: "累积实时回复",
+        file: "packages/desktop/src/renderer/types.ts:443",
+        input: "stream_request_start + text_delta",
+        output: "AssistantMessage{done:false,text}",
+        summary: "创建 live bubble，并把 token 追加进同一条消息。",
+        why: "UI 需要稳定的 live message 作为 token accumulator，避免每个 token 都变成新消息。",
+        duration: 2600,
+        streamText: "AssistantMessage.text += \"这里是模型逐 token 出来的回答，renderer 把它累积在同一个 live bubble。\"",
+      },
+      {
+        index: 40,
+        module: "renderer-state",
+        short: "Seal Turn",
+        node: "40 Seal Turn",
+        cnLabel: "封口当前 turn",
+        file: "packages/desktop/src/renderer/types.ts:932",
+        input: "assistant_message/turn_complete",
+        output: "done messages + turnEpoch",
+        summary: "终态事件把 streaming 内容封口，并驱动历史卡片折叠。",
+        why: "done 切换完整 Markdown 管线，clean turn_complete 推进 turnEpoch 让工具过程同步折叠。",
+        duration: 1500,
+        streamText: "turn_complete -> done:true -> clear streaming ids -> maybe turnEpoch++",
+      },
+      {
+        index: 41,
+        module: "renderer-cards",
+        short: "Stick Bottom",
+        node: "41 Stick To Bottom",
+        cnLabel: "自动贴底控制",
+        file: "packages/desktop/src/renderer/chat/stickToBottom.ts:54",
+        input: "messages/liveTurnActive/sendEpoch",
+        output: "ref/showJump/scrollToBottom",
+        summary: "决定内容增长时是否自动贴底，用户上滑则暂停。",
+        why: "流式内容增长时应自动跟随，但用户主动上滑时必须保留阅读位置，并提供跳底恢复入口。",
+        duration: 1250,
+        streamText: "follow reducer: content grows -> stay stuck unless user scrolled away",
+      },
+      {
+        index: 42,
+        module: "renderer-cards",
+        short: "Build Items",
+        node: "42 Build Stream Items",
+        cnLabel: "构建可渲染项",
+        file: "packages/desktop/src/renderer/messages/streamGroups.ts:183",
+        input: "Message[]",
+        output: "StreamItem[]",
+        summary: "把 raw transcript 变成可渲染的普通项和折叠项。",
+        why: "折叠规则集中在 streamGroups.ts，render 层只消费 StreamItem，不在组件里重复判断。",
+        duration: 1300,
+        streamText: "messages -> [message, ToolGroup, TurnProcessGroup]",
+      },
+      {
+        index: 43,
+        module: "renderer-cards",
+        short: "ToolGroup",
+        node: "43 ToolGroup Fold",
+        cnLabel: "折叠相邻工具",
+        file: "packages/desktop/src/renderer/messages/streamGroups.ts:344",
+        input: "adjacent ToolMessage[]",
+        output: "ToolGroup | ToolMessage",
+        summary: "相邻工具折成一组，透明 thinking 不打断工具 run。",
+        why: "工具密集输出需要压缩；thinking 是透明项不应视觉打断，assistant 文本则作为用户可见边界保留。",
+        duration: 1300,
+        streamText: "tool, thinking, tool -> ToolGroup{ items }",
+      },
+      {
+        index: 44,
+        module: "renderer-cards",
+        short: "TurnProcess",
+        node: "44 TurnProcess Fold",
+        cnLabel: "折叠工具过程",
+        file: "packages/desktop/src/renderer/messages/streamGroups.ts:405",
+        input: "Message | ToolGroup items",
+        output: "TurnProcessGroup",
+        summary: "含工具的 user turn 折成一个 process card。",
+        why: "含工具的 user turn 需要收束成过程卡；live turn 扩到末尾，closed turn 只包到最后真实工具。",
+        duration: 1500,
+        streamText: "user turn with tools -> TurnProcessGroup{ isLive, toolCount, durationMs }",
+      },
+      {
+        index: 45,
+        module: "renderer-cards",
+        short: "Reconcile",
+        node: "45 Reconcile Groups",
+        cnLabel: "复用稳定分组",
+        file: "packages/desktop/src/renderer/messages/streamGroups.ts:269",
+        input: "prev StreamItem[] + next StreamItem[]",
+        output: "reused StreamItem[]",
+        summary: "复用未变 group 对象，让 memo 卡片跳过 50ms 重渲染。",
+        why: "buildStreamItems 每次都会分配新 group；reconcile 保持引用稳定，避免 live-turn subtree 被频繁重渲染。",
+        duration: 1250,
+        streamText: "signature unchanged -> reuse previous group object",
+      },
+      {
+        index: 46,
+        module: "renderer-cards",
+        short: "Dispatch",
+        node: "46 Component Dispatch",
+        cnLabel: "按类型分派组件",
+        file: "packages/desktop/src/renderer/MessageStream.tsx:157",
+        input: "StreamItem[]",
+        output: "React elements",
+        summary: "按 kind 渲染 AssistantMessageView 或 TurnProcessGroupCard 等组件。",
+        why: "render 层只按 kind 分派组件，折叠判断留在 streamGroups.ts；跳底按钮也在这一层接入。",
+        duration: 1250,
+        streamText: "kind === \"turn_process\" ? <TurnProcessGroupCard/> : <AssistantMessageView/>",
+      },
+      {
+        index: 47,
+        module: "renderer-cards",
+        short: "Tool Cards",
+        node: "47 Specialized Tool Cards",
+        cnLabel: "渲染各类工具卡",
+        file: "packages/desktop/src/renderer/tool-cards/index.tsx:30",
+        input: "ToolMessage{toolName,status,args,result}",
+        output: "BashToolCard | FileToolCard | SearchToolCard | WebToolCard | AgentToolCard | GenericToolCard",
+        summary: "ToolCardImpl 按 toolName 分派到 Bash、文件、搜索、Web、Agent 或 Generic 卡片。",
+        why: "不同工具有不同摘要、详情、附件和 sandbox badge；统一 shell 只处理折叠和状态。",
+        duration: 1500,
+        streamText: "toolName.toLowerCase() -> Bash/File/Search/Web/Agent/Generic card",
+      },
+      {
+        index: 48,
+        module: "renderer-cards",
+        short: "Streaming MD",
+        node: "48 Streaming Markdown Paint",
+        cnLabel: "流式渲染 Markdown",
+        file: "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:93",
+        input: "text + done:false",
+        output: "stable markdown chunks + active <pre>",
+        summary: "流式时富渲染稳定前缀，活跃尾部保持源码显示。",
+        why: "每 token 全量 Markdown 解析会卡顿和抖动；稳定前缀可解析，活跃尾部先用 pre 呈现。",
+        duration: 2600,
+        streamText: "稳定前缀被 Markdown 渲染，活跃尾部仍在 <pre> 里逐 token 亮起来。",
+      },
+      {
+        index: 49,
+        module: "renderer-cards",
+        short: "Split MD",
+        node: "49 Split Streaming Markdown",
+        cnLabel: "安全切分 Markdown",
+        file: "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:81",
+        input: "markdown text buffer",
+        output: "{stablePrefix,activeTail}",
+        summary: "只在安全空行边界切分，并避开未闭合 fence。",
+        why: "切在半成品 Markdown 块里会导致结构回跳；未闭合 code fence 也会让解析和高亮抖动。",
+        duration: 1900,
+        streamText: "find last safe blank line; if code fence is open, keep everything in activeTail",
+      },
+      {
+        index: 50,
+        module: "renderer-cards",
+        short: "Done MD",
+        node: "50 Done Markdown Pipeline",
+        cnLabel: "完成后完整渲染",
+        file: "packages/desktop/src/renderer/Markdown.tsx:170",
+        input: "text + done:true",
+        output: "full ReactMarkdown DOM",
+        summary: "完成后启用完整 Markdown、安全清洗、高亮和路径/图片能力。",
+        why: "done 后内容稳定，才能启用 raw/sanitize/highlight/path/image 等重能力和安全边界。",
+        duration: 1400,
+        streamText: "done:true -> remark-gfm -> rehypeRaw -> sanitize -> highlight",
+      },
+      {
+        index: 51,
+        module: "renderer-cards",
+        short: "Process Card",
+        node: "51 TurnProcessGroupCard",
+        cnLabel: "过程卡展开折叠",
+        file: "packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx:47",
+        input: "TurnProcessGroup",
+        output: "open live card | collapsed process header | flat stopped content",
+        summary: "live 展开显示进度，完成后按 turnEpoch 折叠历史过程。",
+        why: "当前 turn 要实时可见，历史工具过程需要折回摘要密度；中断 turn 没有完整结果则平铺展示。",
+        duration: 1700,
+        streamText: "TurnProcessGroupCard: live open -> clean boundary -> collapsed history",
+      },
+    ];
+
+    const state = {
+      playhead: 0,
+      playing: false,
+      speed: 1,
+      lastTimestamp: null,
+      lastStepIndex: -1,
+      raf: 0,
+    };
+
+    const elements = {
+      flowSvg: document.getElementById("flowSvg"),
+      chromeLayer: document.getElementById("chromeLayer"),
+      edgeLayer: document.getElementById("edgeLayer"),
+      nodeLayer: document.getElementById("nodeLayer"),
+      mainPacket: document.getElementById("mainPacket"),
+      playPause: document.getElementById("playPause"),
+      frameBack: document.getElementById("frameBack"),
+      frameForward: document.getElementById("frameForward"),
+      prevStep: document.getElementById("prevStep"),
+      nextStep: document.getElementById("nextStep"),
+      scrubber: document.getElementById("scrubber"),
+      scrubFill: document.getElementById("scrubFill"),
+      frameReadout: document.getElementById("frameReadout"),
+      statSteps: document.getElementById("statSteps"),
+      statFrame: document.getElementById("statFrame"),
+      statStep: document.getElementById("statStep"),
+      stageStatus: document.getElementById("stageStatus"),
+      streamPreview: document.getElementById("streamPreview"),
+      consoleMode: document.getElementById("consoleMode"),
+      tokenCounter: document.getElementById("tokenCounter"),
+      stepFrameLabel: document.getElementById("stepFrameLabel"),
+      stepKicker: document.getElementById("stepKicker"),
+      detailTitle: document.getElementById("detailTitle"),
+      detailFile: document.getElementById("detailFile"),
+      detailSummary: document.getElementById("detailSummary"),
+      detailInput: document.getElementById("detailInput"),
+      detailOutput: document.getElementById("detailOutput"),
+    };
+
+    function buildTiming() {
+      let cursor = 0;
+      const starts = [];
+      const ends = [];
+      for (const step of steps) {
+        starts.push(cursor);
+        cursor += step.duration;
+        ends.push(cursor);
+      }
+      return { starts, ends, totalDuration: cursor };
+    }
+
+    const MODULE_DEFS = {
+      "user-input": {
+        label: "用户输入",
+        prefix: "desktop renderer/preload/main + core protocol",
+        description: "提交、路由、排队进入 Engine",
+        fill: "rgba(116, 216, 242, 0.052)",
+        stroke: "rgba(116, 216, 242, 0.3)",
+      },
+      goal: {
+        label: "Goal 处理",
+        prefix: "packages/core/src/engine/goal.ts + engine.ts",
+        description: "目标归一、持久化、预算与续跑 hook",
+        fill: "rgba(242, 196, 109, 0.052)",
+        stroke: "rgba(242, 196, 109, 0.3)",
+      },
+      "turn-loop": {
+        label: "Turn 循环",
+        prefix: "packages/core/src/engine/turn-loop.ts",
+        description: "组装消息、上下文管理、进入模型请求",
+        fill: "rgba(126, 230, 177, 0.055)",
+        stroke: "rgba(126, 230, 177, 0.32)",
+      },
+      "model-stream": {
+        label: "模型产出",
+        prefix: "packages/core/src/engine/model-facade.ts + turn-loop.ts",
+        description: "provider chunk 归一为 StreamEvent",
+        fill: "rgba(126, 230, 177, 0.055)",
+        stroke: "rgba(126, 230, 177, 0.32)",
+      },
+      "tool-permission": {
+        label: "工具调用与权限",
+        prefix: "packages/core/src/tool-system/*",
+        description: "工具分发、path-policy、allow/ask/deny",
+        fill: "rgba(242, 196, 109, 0.055)",
+        stroke: "rgba(242, 196, 109, 0.32)",
+      },
+      "tool-execution": {
+        label: "工具执行与回填",
+        prefix: "packages/core/src/tool-system/* + engine/turn-loop.ts",
+        description: "Registry、sandbox、ToolResult 回到 turn",
+        fill: "rgba(236, 159, 104, 0.052)",
+        stroke: "rgba(236, 159, 104, 0.3)",
+      },
+      "core-terminal": {
+        label: "Core 终态事件",
+        prefix: "packages/core/src/engine/*",
+        description: "assistant/tool/turn 终态事件补齐",
+        fill: "rgba(126, 230, 177, 0.055)",
+        stroke: "rgba(126, 230, 177, 0.32)",
+      },
+      "core-protocol": {
+        label: "协议层",
+        prefix: "packages/core/src/protocol/*",
+        description: "session envelope 与 NDJSON 传输",
+        fill: "rgba(116, 216, 242, 0.055)",
+        stroke: "rgba(116, 216, 242, 0.3)",
+      },
+      "desktop-main": {
+        label: "桌面主进程",
+        prefix: "packages/desktop/src/main/*",
+        description: "解析、快照与 IPC 转发",
+        fill: "rgba(242, 196, 109, 0.055)",
+        stroke: "rgba(242, 196, 109, 0.28)",
+      },
+      "desktop-preload": {
+        label: "预加载桥接",
+        prefix: "packages/desktop/src/preload/*",
+        description: "主进程到渲染层的类型边界",
+        fill: "rgba(236, 159, 104, 0.052)",
+        stroke: "rgba(236, 159, 104, 0.28)",
+      },
+      "renderer-state": {
+        label: "渲染状态",
+        prefix: "packages/desktop/src/renderer/*",
+        description: "路由、合并、归约为 message state",
+        fill: "rgba(164, 146, 255, 0.052)",
+        stroke: "rgba(164, 146, 255, 0.28)",
+      },
+      "renderer-cards": {
+        label: "卡片与屏幕",
+        prefix: "packages/desktop/src/renderer/messages + tool-cards",
+        description: "工具卡、过程卡、Markdown 与屏幕呈现",
+        fill: "rgba(164, 146, 255, 0.052)",
+        stroke: "rgba(164, 146, 255, 0.28)",
+      },
+    };
+
+    const flowModules = buildModules();
+    const layout = computeLayout(flowModules);
+    CANVAS_HEIGHT = layout.canvasHeight;
+    elements.flowSvg.setAttribute("viewBox", `0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`);
+    elements.flowSvg.setAttribute("aria-label", `完整端到端 ${steps.length} 步数据包动画`);
+    const timing = buildTiming();
+    const totalDuration = timing.totalDuration;
+    const positions = layout.positions;
+    const moduleLayouts = layout.modules;
+    const nodes = [];
+    const edgePaths = [];
+    const moduleFrames = new Map();
+
+    function moduleMeta(step) {
+      const explicit = MODULE_DEFS[step.module];
+      if (explicit) {
+        return { key: step.module, columns: 1, ...explicit };
+      }
+      const file = step.file;
+      return {
+        key: "other",
+        label: "其他模块",
+        prefix: file.split(":")[0] || "unknown",
+        description: "按真实 file 前缀聚类",
+        columns: 1,
+        fill: "rgba(255, 255, 255, 0.04)",
+        stroke: "rgba(255, 255, 255, 0.18)",
+      };
+    }
+
+    function circledNumber(value) {
+      const numbers = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩", "⑪", "⑫"];
+      return numbers[value - 1] || String(value);
+    }
+
+    function buildModules() {
+      const modules = [];
+      const byKey = new Map();
+      for (const step of steps) {
+        const meta = moduleMeta(step);
+        let flowModule = byKey.get(meta.key);
+        if (!flowModule) {
+          flowModule = { ...meta, steps: [] };
+          byKey.set(meta.key, flowModule);
+          modules.push(flowModule);
+        }
+        flowModule.steps.push(step);
+      }
+      return modules.map((flowModule, index) => ({
+        ...flowModule,
+        title: `${circledNumber(index + 1)} ${flowModule.label}`,
+      }));
+    }
+
+    function computeLayout(modules) {
+      const positions = new Array(steps.length);
+      let cursorY = MODULE_TOP;
+      const moduleLayouts = [];
+
+      for (const flowModule of modules) {
+        const count = flowModule.steps.length;
+        const columns = Math.max(1, Math.min(flowModule.columns, count));
+        const rows = Math.ceil(count / columns);
+        const rowBlockHeight = rows * STEP_ROW_HEIGHT + (rows - 1) * STEP_ROW_GAP_Y;
+        const bottomPad = flowModule.key === "desktop-renderer" ? 48 : 28;
+        const height = Math.max(128, MODULE_HEADER_HEIGHT + rowBlockHeight + bottomPad);
+        const layoutModule = {
+          ...flowModule,
+          x: MODULE_X,
+          y: cursorY,
+          width: MODULE_WIDTH,
+          height,
+          columns,
+          rows,
+        };
+        moduleLayouts.push(layoutModule);
+
+        const availableWidth = layoutModule.width - STEP_INNER_PAD_X * 2;
+        const rawRowWidth = (availableWidth - (columns - 1) * STEP_COLUMN_GAP) / columns;
+        const maxRowWidth = columns === 1 ? 700 : columns === 2 ? 520 : 350;
+        const rowWidth = Math.min(rawRowWidth, maxRowWidth);
+        const gridWidth = columns * rowWidth + (columns - 1) * STEP_COLUMN_GAP;
+        const startX = layoutModule.x + (layoutModule.width - gridWidth) / 2;
+        const innerHeight = height - MODULE_HEADER_HEIGHT - bottomPad;
+        const startY = layoutModule.y + MODULE_HEADER_HEIGHT + (innerHeight - rowBlockHeight) / 2;
+
+        flowModule.steps.forEach((step, localIndex) => {
+          const col = Math.floor(localIndex / rows);
+          const row = localIndex % rows;
+          const columnLength = Math.min(rows, count - col * rows);
+          const itemX = startX + col * (rowWidth + STEP_COLUMN_GAP);
+          const itemY = startY + row * (STEP_ROW_HEIGHT + STEP_ROW_GAP_Y);
+          positions[step.index - 1] = {
+            x: itemX + STEP_DOT_X,
+            y: itemY + STEP_ROW_HALF_HEIGHT,
+            itemX,
+            itemY,
+            itemWidth: rowWidth,
+            itemHeight: STEP_ROW_HEIGHT,
+            moduleKey: flowModule.key,
+            moduleTitle: layoutModule.title,
+            row,
+            col,
+            rows,
+            columnLength,
+            localIndex,
+          };
+        });
+
+        cursorY += height + MODULE_GAP;
+      }
+
+      return { positions, modules: moduleLayouts, canvasHeight: cursorY + 92 };
+    }
+
+    function makeSvg(tag, attrs = {}) {
+      const node = document.createElementNS(SVG_NS, tag);
+      for (const [key, value] of Object.entries(attrs)) {
+        node.setAttribute(key, String(value));
+      }
+      return node;
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function pad(value, len = 3) {
+      return String(value).padStart(len, "0");
+    }
+
+    function easeInOut(t) {
+      const x = clamp(t, 0, 1);
+      return x * x * x * (x * (x * 6 - 15) + 10);
+    }
+
+    function escapeHTML(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function truncateText(value, maxChars) {
+      const text = String(value);
+      return text.length > maxChars ? `${text.slice(0, Math.max(0, maxChars - 1))}…` : text;
+    }
+
+    function drawBranchChips(group, step, width) {
+      if (!step.branches?.length) return;
+      const chipWidth = 44;
+      const gap = 6;
+      const totalWidth = step.branches.length * chipWidth + (step.branches.length - 1) * gap;
+      let x = width - totalWidth - 8;
+      for (const label of step.branches) {
+        group.appendChild(makeSvg("rect", {
+          class: "branch-chip",
+          x,
+          y: 10,
+          width: chipWidth,
+          height: 20,
+        }));
+        group.appendChild(makeSvg("text", {
+          class: "branch-text",
+          x: x + chipWidth / 2,
+          y: 24,
+        })).textContent = label;
+        x += chipWidth + gap;
+      }
+    }
+
+    function stepAtTime(time) {
+      const t = clamp(time, 0, Math.max(0, totalDuration - 1));
+      for (let i = 0; i < timing.ends.length; i += 1) {
+        if (t < timing.ends[i]) return i;
+      }
+      return steps.length - 1;
+    }
+
+    function localProgress(stepIndex) {
+      const start = timing.starts[stepIndex];
+      const end = timing.ends[stepIndex];
+      return clamp((state.playhead - start) / Math.max(1, end - start), 0, 1);
+    }
+
+    function timeToFrame(time) {
+      return clamp(Math.round((time / totalDuration) * (TOTAL_FRAMES - 1)) + 1, 1, TOTAL_FRAMES);
+    }
+
+    function frameToTime(frame) {
+      return clamp(((frame - 1) / (TOTAL_FRAMES - 1)) * totalDuration, 0, totalDuration);
+    }
+
+    function edgeAnchors(from, to) {
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const isHandoff = from.moduleKey !== to.moduleKey;
+
+      if (!isHandoff && Math.abs(dx) < 4) {
+        const direction = Math.sign(dy) || 1;
+        return {
+          start: { x: from.x, y: from.y + direction * STEP_CONNECTOR_OFFSET },
+          end: { x: to.x, y: to.y - direction * STEP_CONNECTOR_OFFSET },
+        };
+      }
+
+      if (!isHandoff && Math.abs(dy) < 4) {
+        const direction = Math.sign(dx) || 1;
+        return {
+          start: { x: from.x + direction * STEP_CONNECTOR_OFFSET, y: from.y },
+          end: { x: to.x - direction * STEP_CONNECTOR_OFFSET, y: to.y },
+        };
+      }
+
+      if (!isHandoff) {
+        const direction = Math.sign(dx) || 1;
+        return {
+          start: { x: from.x + direction * STEP_CONNECTOR_OFFSET, y: from.y },
+          end: { x: to.x - direction * STEP_CONNECTOR_OFFSET, y: to.y },
+        };
+      }
+
+      const direction = Math.sign(dy) || 1;
+      return {
+        start: { x: from.x, y: from.y + direction * STEP_CONNECTOR_OFFSET },
+        end: { x: to.x, y: to.y - direction * STEP_CONNECTOR_OFFSET },
+      };
+    }
+
+    function edgePathD(from, to) {
+      const anchors = edgeAnchors(from, to);
+      const { start, end } = anchors;
+      const isHandoff = from.moduleKey !== to.moduleKey;
+
+      if (isHandoff || Math.abs(start.x - end.x) < 2) {
+        const midY = (start.y + end.y) / 2;
+        return `M ${start.x} ${start.y} C ${start.x} ${midY} ${end.x} ${midY} ${end.x} ${end.y}`;
+      }
+
+      const dx = end.x - start.x;
+      return `M ${start.x} ${start.y} C ${start.x + dx * 0.42} ${start.y} ${end.x - dx * 0.42} ${end.y} ${end.x} ${end.y}`;
+    }
+
+    function drawChrome() {
+      for (const flowModule of moduleLayouts) {
+        const frame = makeSvg("rect", {
+          class: "module-frame",
+          x: flowModule.x,
+          y: flowModule.y,
+          width: flowModule.width,
+          height: flowModule.height,
+          fill: flowModule.fill,
+          stroke: flowModule.stroke,
+          "data-module": flowModule.key,
+        });
+        elements.chromeLayer.appendChild(frame);
+        moduleFrames.set(flowModule.key, frame);
+        elements.chromeLayer.appendChild(makeSvg("text", {
+          class: "module-title",
+          x: flowModule.x + 24,
+          y: flowModule.y + 29,
+        })).textContent = flowModule.title;
+        elements.chromeLayer.appendChild(makeSvg("text", {
+          class: "module-subtitle",
+          x: flowModule.x + 24,
+          y: flowModule.y + 46,
+        })).textContent = `${flowModule.prefix} · ${flowModule.description}`;
+        elements.chromeLayer.appendChild(makeSvg("text", {
+          class: "module-count-text",
+          x: flowModule.x + flowModule.width - 24,
+          y: flowModule.y + 33,
+        })).textContent = `${flowModule.steps.length} 步`;
+      }
+
+      for (let i = 0; i < moduleLayouts.length - 1; i += 1) {
+        const from = moduleLayouts[i];
+        const to = moduleLayouts[i + 1];
+        const x = CANVAS_WIDTH / 2;
+        const y1 = from.y + from.height + 7;
+        const y2 = to.y - 8;
+        if (y2 > y1) {
+          elements.chromeLayer.appendChild(makeSvg("path", {
+            class: "module-flow-arrow",
+            d: `M ${x} ${y1} L ${x} ${y2}`,
+            "marker-end": "url(#moduleArrow)",
+          }));
+        }
+      }
+
+      const finalPoint = positions[positions.length - 1];
+      elements.chromeLayer.appendChild(makeSvg("line", {
+        class: "screen-line",
+        x1: finalPoint.x,
+        y1: finalPoint.y + 24,
+        x2: finalPoint.x,
+        y2: finalPoint.y + 46,
+      }));
+      elements.chromeLayer.appendChild(makeSvg("text", {
+        class: "screen-label",
+        x: finalPoint.x + 16,
+        y: finalPoint.y + 53,
+      })).textContent = "屏幕呈现：实时卡片 / Markdown";
+    }
+
+    function drawFlow() {
+      drawChrome();
+
+      for (let i = 0; i < steps.length - 1; i += 1) {
+        const d = edgePathD(positions[i], positions[i + 1]);
+        const isHandoff = positions[i].moduleKey !== positions[i + 1].moduleKey;
+        const pathClass = isHandoff ? "flow-path handoff" : "flow-path internal";
+        const progressClass = isHandoff ? "flow-progress handoff" : "flow-progress internal";
+        const base = makeSvg("path", {
+          class: pathClass,
+          d,
+          "data-edge": i,
+          "marker-end": isHandoff ? "url(#arrowHandoff)" : "url(#arrowMuted)",
+        });
+        const progress = makeSvg("path", {
+          class: progressClass,
+          d,
+          "data-edge-progress": i,
+        });
+        elements.edgeLayer.appendChild(base);
+        elements.edgeLayer.appendChild(progress);
+        edgePaths.push({ base, progress });
+      }
+
+      for (const [index, step] of steps.entries()) {
+        const p = positions[index];
+        const group = makeSvg("g", {
+          class: "node",
+          transform: `translate(${p.itemX} ${p.itemY})`,
+          "data-step": index,
+          tabindex: "0",
+          role: "button",
+          "aria-label": `跳转到第 ${step.index} 步：${step.cnLabel}，${step.short}`,
+        });
+        group.appendChild(makeSvg("title")).textContent =
+          `第 ${step.index} 步：${step.cnLabel}\n${step.summary}`;
+        if (p.row < p.columnLength - 1) {
+          group.appendChild(makeSvg("line", {
+            class: "row-separator",
+            x1: STEP_DOT_X + 22,
+            y1: STEP_ROW_HEIGHT + 0.5,
+            x2: p.itemWidth,
+            y2: STEP_ROW_HEIGHT + 0.5,
+          }));
+        }
+        group.appendChild(makeSvg("line", {
+          class: "indicator",
+          x1: 0,
+          y1: 8,
+          x2: 0,
+          y2: STEP_ROW_HEIGHT - 8,
+        }));
+        group.appendChild(makeSvg("circle", {
+          class: "halo",
+          cx: STEP_DOT_X,
+          cy: STEP_ROW_HALF_HEIGHT,
+          r: HALO_RADIUS,
+        }));
+        group.appendChild(makeSvg("circle", {
+          class: "dot",
+          cx: STEP_DOT_X,
+          cy: STEP_ROW_HALF_HEIGHT,
+          r: 5,
+        }));
+        group.appendChild(makeSvg("text", { class: "idx", x: 38, y: 17 })).textContent = pad(step.index, 2);
+        group.appendChild(makeSvg("text", { class: "name", x: 68, y: 17 })).textContent =
+          truncateText(step.cnLabel, step.branches ? 17 : 24);
+        group.appendChild(makeSvg("text", { class: "subtitle", x: 68, y: 34 })).textContent =
+          truncateText(step.short, 42);
+        drawBranchChips(group, step, p.itemWidth);
+        group.addEventListener("click", () => {
+          pause();
+          setPlayhead(timing.starts[index]);
+        });
+        group.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            pause();
+            setPlayhead(timing.starts[index]);
+          }
+        });
+        elements.nodeLayer.appendChild(group);
+        nodes.push(group);
+      }
+
+      for (const edge of edgePaths) {
+        setPathProgress(edge.progress, 0);
+      }
+    }
+
+    function setPathProgress(path, progress) {
+      const length = path.getTotalLength();
+      path.style.strokeDasharray = `${length}`;
+      path.style.strokeDashoffset = `${length * (1 - clamp(progress, 0, 1))}`;
+    }
+
+    function movePacket(stepIndex, local) {
+      let point = positions[stepIndex];
+      const edge = edgePaths[stepIndex]?.progress;
+      const travel = clamp((local - 0.22) / 0.78, 0, 1);
+      if (edge && travel > 0) {
+        const length = edge.getTotalLength();
+        point = edge.getPointAtLength(length * easeInOut(travel));
+      }
+      elements.mainPacket.setAttribute("transform", `translate(${point.x} ${point.y})`);
+      const label = steps[stepIndex].output;
+      elements.mainPacket.querySelector(".packet-label").textContent =
+        label.length > 34 ? `${label.slice(0, 33)}...` : label;
+    }
+
+    function updateClasses(stepIndex, local) {
+      const travel = clamp((local - 0.22) / 0.78, 0, 1);
+      const activeModuleKey = positions[stepIndex].moduleKey;
+      for (const flowModule of moduleLayouts) {
+        const frame = moduleFrames.get(flowModule.key);
+        if (frame) {
+          frame.classList.toggle("active", flowModule.key === activeModuleKey);
+        }
+      }
+      for (const [index, node] of nodes.entries()) {
+        node.classList.toggle("complete", index < stepIndex);
+        node.classList.toggle("active", index === stepIndex);
+      }
+      for (const [index, edge] of edgePaths.entries()) {
+        const isComplete = index < stepIndex;
+        const isActive = index === stepIndex && stepIndex < edgePaths.length;
+        edge.progress.classList.toggle("complete", isComplete);
+        edge.progress.classList.toggle("active", isActive);
+        if (isComplete) {
+          setPathProgress(edge.progress, 1);
+        } else if (isActive) {
+          setPathProgress(edge.progress, easeInOut(travel));
+        } else {
+          setPathProgress(edge.progress, 0);
+        }
+      }
+
+      if (state.lastStepIndex !== stepIndex) {
+        nodes.forEach((node) => node.classList.remove("pulse"));
+        nodes[stepIndex]?.classList.add("pulse");
+        window.setTimeout(() => nodes[stepIndex]?.classList.remove("pulse"), 900);
+        state.lastStepIndex = stepIndex;
+      }
+    }
+
+    function streamingPreview(step, local) {
+      const chars = Array.from(step.streamText);
+      const count = Math.max(1, Math.round(chars.length * clamp(local, 0.05, 1)));
+      const prefix = chars.slice(0, count).join("");
+      const mode = step.module?.startsWith("renderer")
+        ? "渲染器绘制"
+        : step.module === "model-stream" || step.module === "core-terminal" || step.module === "core-protocol"
+          ? "StreamEvent 增量"
+          : step.module?.startsWith("tool")
+            ? "工具执行链"
+            : "端到端数据包";
+      return {
+        mode,
+        count,
+        text: [
+          `$ 帧=${pad(timeToFrame(state.playhead))} 步骤=${String(step.index).padStart(2, "0")}`,
+          `文件：${step.file}`,
+          `输出：${step.output}`,
+          "",
+          prefix,
+        ].join("\n"),
+      };
+    }
+
+    function renderDetail(stepIndex, local) {
+      const step = steps[stepIndex];
+      const frame = timeToFrame(state.playhead);
+      const progress = ((frame - 1) / (TOTAL_FRAMES - 1)) * 100;
+
+      elements.statSteps.textContent = String(steps.length);
+      elements.statFrame.textContent = pad(frame);
+      elements.statStep.textContent = String(step.index).padStart(2, "0");
+      elements.frameReadout.textContent = `${pad(frame)} / ${TOTAL_FRAMES}`;
+      elements.scrubber.value = String(frame);
+      elements.scrubFill.style.width = `${progress}%`;
+      elements.stepFrameLabel.textContent = `帧 ${pad(frame)}`;
+      elements.stepKicker.textContent = `步骤 ${String(step.index).padStart(2, "0")}`;
+      elements.detailTitle.textContent = step.cnLabel;
+      elements.detailFile.textContent = step.file;
+      elements.detailSummary.textContent = step.summary;
+      elements.detailInput.textContent = step.input;
+      elements.detailOutput.textContent = step.output;
+      elements.stageStatus.textContent = `${step.cnLabel} · ${Math.round(local * 100)}%`;
+      elements.playPause.textContent = state.playing ? "暂停" : "播放";
+      elements.prevStep.disabled = stepIndex === 0;
+      elements.nextStep.disabled = stepIndex === steps.length - 1;
+      elements.frameBack.disabled = frame <= 1;
+      elements.frameForward.disabled = frame >= TOTAL_FRAMES;
+
+      const preview = streamingPreview(step, local);
+      elements.consoleMode.textContent = preview.mode;
+      elements.tokenCounter.textContent = `字符 ${preview.count}`;
+      elements.streamPreview.innerHTML = `${escapeHTML(preview.text)}<span class="caret"></span>`;
+    }
+
+    function setPlayhead(time) {
+      state.playhead = clamp(time, 0, totalDuration);
+      update();
+    }
+
+    function play() {
+      if (state.playhead >= totalDuration - 8) {
+        state.playhead = 0;
+      }
+      state.playing = true;
+      state.lastTimestamp = null;
+      elements.playPause.textContent = "暂停";
+      state.raf = window.requestAnimationFrame(tick);
+    }
+
+    function pause() {
+      state.playing = false;
+      state.lastTimestamp = null;
+      if (state.raf) {
+        window.cancelAnimationFrame(state.raf);
+        state.raf = 0;
+      }
+      elements.playPause.textContent = "播放";
+    }
+
+    function tick(timestamp) {
+      if (!state.playing) return;
+      if (state.lastTimestamp == null) {
+        state.lastTimestamp = timestamp;
+      }
+      const delta = timestamp - state.lastTimestamp;
+      state.lastTimestamp = timestamp;
+      state.playhead = clamp(state.playhead + delta * state.speed, 0, totalDuration);
+      if (state.playhead >= totalDuration) {
+        state.playhead = totalDuration;
+        pause();
+      }
+      update();
+      if (state.playing) {
+        state.raf = window.requestAnimationFrame(tick);
+      }
+    }
+
+    function setSpeed(speed) {
+      state.speed = Number(speed);
+      document.querySelectorAll("[data-speed]").forEach((button) => {
+        button.classList.toggle("active", Number(button.dataset.speed) === state.speed);
+      });
+    }
+
+    function update() {
+      const stepIndex = stepAtTime(state.playhead);
+      const local = localProgress(stepIndex);
+      movePacket(stepIndex, local);
+      updateClasses(stepIndex, local);
+      renderDetail(stepIndex, local);
+    }
+
+    elements.playPause.addEventListener("click", () => {
+      if (state.playing) pause();
+      else play();
+    });
+
+    elements.frameBack.addEventListener("click", () => {
+      pause();
+      setPlayhead(frameToTime(timeToFrame(state.playhead) - 1));
+    });
+
+    elements.frameForward.addEventListener("click", () => {
+      pause();
+      setPlayhead(frameToTime(timeToFrame(state.playhead) + 1));
+    });
+
+    elements.prevStep.addEventListener("click", () => {
+      pause();
+      const stepIndex = stepAtTime(state.playhead);
+      setPlayhead(timing.starts[Math.max(0, stepIndex - 1)]);
+    });
+
+    elements.nextStep.addEventListener("click", () => {
+      pause();
+      const stepIndex = stepAtTime(state.playhead);
+      setPlayhead(timing.starts[Math.min(steps.length - 1, stepIndex + 1)]);
+    });
+
+    elements.scrubber.addEventListener("input", () => {
+      pause();
+      setPlayhead(frameToTime(Number(elements.scrubber.value)));
+    });
+
+    document.querySelectorAll("[data-speed]").forEach((button) => {
+      button.addEventListener("click", () => setSpeed(button.dataset.speed));
+    });
+
+    drawFlow();
+    update();
+  </script>
+</body>
+</html>
