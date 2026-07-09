@@ -183,7 +183,7 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     definition: {
       ...editModelCatalogToolDef,
       source: "builtin",
-      permissionDefault: "ask", // writes user config — confirm before each write
+      permissionDefault: "ask", // UI hint; default classifier fallback confirms writes.
       isReadOnly: false,
       isConcurrencySafe: false, // serializes writes to the single catalog file
     },
@@ -766,7 +766,7 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
   },
   // Browser automation — 3 semantic tools driving the in-app webview via the
   // BrowserBridge (CDP). All serial on one webview (isConcurrencySafe:false).
-  // browser_observe is read-only. browser_act is permissionDefault "allow"; its
+  // browser_observe is read-only. browser_act declares a UI hint of allow; its
   // sensitive actions (click/type/select) are escalated to "ask" by a preset
   // PermissionRule keyed on argsPattern { action } (see preset/index.ts §4.6) —
   // so one tool carries per-action gating. Sensitive-action + domain-whitelist
@@ -787,7 +787,7 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     definition: {
       ...browserActToolDef,
       source: "builtin",
-      permissionDefault: "allow", // per-action gating via preset rule (argsPattern.action)
+      permissionDefault: "allow", // UI hint; per-action execution gating is the preset rule.
       isReadOnly: false,
       isConcurrencySafe: false,
       timeoutMs: 30_000, // the wait action internally bounds; give RPC headroom
@@ -805,8 +805,8 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     execute: browserNavigateTool,
   },
   // ─── Credentials: AI 取用已存凭证(token/link/cookie) ──────────
-  // permissionDefault:"allow" —— 取用审批由工具内部的 CredentialUseGate 负责
-  // (默认问/本会话记住/全自动),不走工具级权限层,避免双重弹窗。
+  // permissionDefault:"allow" 是展示/声明 hint；取用审批由工具内部的
+  // CredentialUseGate 负责(默认问/本会话记住/全自动),避免双重弹窗。
   // 读取凭证库本身不写文件(cookie 物化成临时 cookies.txt 是用完即弃的副产物)。
   {
     definition: {
@@ -819,7 +819,7 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     execute: useCredentialTool,
   },
   // InjectCredential:把 cookie 凭证注入内置浏览器(恢复登录态)。审批由工具内部
-  // CredentialUseGate 负责(逐条 autoInjectByAI),故 permissionDefault:"allow"。
+  // CredentialUseGate 负责(逐条 autoInjectByAI),permissionDefault:"allow" 仅作展示 hint。
   // 改浏览器登录态有副作用 → 非 read-only。
   {
     definition: {

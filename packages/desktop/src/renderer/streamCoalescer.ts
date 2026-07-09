@@ -51,6 +51,25 @@ export function createEventCoalescer(onFlushBatch: FlushBatch, intervalMs = 50) 
   const textBuf = new Map<string, PendingText>();
   const argsBuf = new Map<string, PendingArgs>();
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let segment = 0;
+
+  function isHardBoundary(event: StreamEvent): boolean {
+    switch (event.type) {
+      case "stream_request_start":
+      case "assistant_message":
+      case "turn_complete":
+      case "tool_use_start":
+      case "tool_result":
+      case "agent_start":
+      case "agent_end":
+      case "agent_backgrounded":
+      case "background_agent_completed":
+      case "tombstone":
+        return true;
+      default:
+        return false;
+    }
+  }
 
   function drainToBatch(): StreamEvent[] {
     const out: StreamEvent[] = [];
@@ -103,7 +122,7 @@ export function createEventCoalescer(onFlushBatch: FlushBatch, intervalMs = 50) 
     const t = event.type;
     if (t === "text_delta") {
       const agentId = (event as any).agentId as string | undefined;
-      const key = `text|${agentId ?? ""}`;
+      const key = `text|${segment}|${agentId ?? ""}`;
       const prev = textBuf.get(key);
       if (prev) {
         prev.text += (event as any).text;
@@ -120,7 +139,7 @@ export function createEventCoalescer(onFlushBatch: FlushBatch, intervalMs = 50) 
     if (t === "tool_use_args_delta") {
       const agentId = (event as any).agentId as string | undefined;
       const toolCallId = (event as any).toolCallId as string;
-      const key = `args|${agentId ?? ""}|${toolCallId}`;
+      const key = `args|${segment}|${agentId ?? ""}|${toolCallId}`;
       const prev = argsBuf.get(key);
       if (prev) {
         Object.assign(prev.args, (event as any).args);
@@ -142,10 +161,14 @@ export function createEventCoalescer(onFlushBatch: FlushBatch, intervalMs = 50) 
       onFlushBatch([event]);
       return;
     }
-    // All other events (tool_use_start, tool_result, turn_complete, agent_*,
-    // session_started, usage_update, …) join the ordered batch. They are no
-    // longer dispatched one-render-each: a 50ms window of them flushes once.
+    // Boundary events still join the ordered batch, but they also advance the
+    // delta segment so later text/args cannot merge back across the boundary.
+    // Non-boundary passthrough events (session_started, usage_update, ...) do
+    // not split segments.
     order.push({ kind: "passthrough", event });
+    if (isHardBoundary(event)) {
+      segment += 1;
+    }
     scheduleFlush();
   }
 

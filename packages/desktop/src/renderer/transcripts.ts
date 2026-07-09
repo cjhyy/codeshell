@@ -455,6 +455,7 @@ export function loadTranscript(repoId: string | null, sessionId: string): Messag
       sessionPromptTokens: parsed.cumulativePromptTokens ?? parsed.sessionPromptTokens ?? 0,
       activeAgents: parsed.activeAgents ?? {},
       agentMessageIndex: parsed.agentMessageIndex ?? {},
+      snapshotSeq: parsed.snapshotSeq ?? 0,
       turnEpoch: parsed.turnEpoch ?? 0,
       // Persisted so the active-goal marker + popover survive a refresh /
       // localStorage reload (core also persists it in session state, but the

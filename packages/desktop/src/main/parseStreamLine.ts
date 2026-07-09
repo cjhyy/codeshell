@@ -12,6 +12,12 @@ export interface SnapshotAppend {
   event: unknown;
 }
 
+export interface LiveStreamEnvelope {
+  sessionId: string;
+  event: unknown;
+  seq?: number;
+}
+
 export function parseSnapshotAppend(line: string): SnapshotAppend | null {
   let m: { method?: string; params?: { sessionId?: unknown; event?: unknown } };
   try {
@@ -33,4 +39,24 @@ export function parseSnapshotAppend(line: string): SnapshotAppend | null {
   const evType = (m.params.event as { type?: unknown } | null)?.type;
   if (evType === "steer_injected") return null;
   return { sessionId, event: m.params.event };
+}
+
+export function parseLiveStreamEnvelope(
+  line: string,
+  snapshotEntry?: { seq: number },
+): LiveStreamEnvelope | null {
+  let m: { method?: string; params?: { sessionId?: unknown; event?: unknown } };
+  try {
+    m = JSON.parse(line);
+  } catch {
+    return null;
+  }
+  if (m.method !== "agent/streamEvent") return null;
+  if (m.params?.event === undefined) return null;
+  const sessionId = typeof m.params.sessionId === "string" ? m.params.sessionId : "";
+  return {
+    sessionId,
+    event: m.params.event,
+    ...(snapshotEntry ? { seq: snapshotEntry.seq } : {}),
+  };
 }

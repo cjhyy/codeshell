@@ -6,6 +6,37 @@ import { foldTranscript } from "./automation/foldTranscript";
 import type { FoldItem } from "../preload/types";
 
 describe("transcriptsReducer pending steer bubbles", () => {
+  it("advances snapshotSeq after applying a stream batch", () => {
+    let map: TranscriptsMap = {};
+    map = transcriptsReducer(map, {
+      type: "stream_batch",
+      bucket: "b",
+      maxSeq: 12,
+      events: [
+        { type: "stream_request_start", turnNumber: 1 } as StreamEvent,
+        { type: "text_delta", text: "hello" } as StreamEvent,
+      ],
+    });
+
+    expect(map.b.snapshotSeq).toBe(12);
+    const assistant = map.b.messages.find((m) => m.kind === "assistant");
+    expect(assistant).toMatchObject({ kind: "assistant", text: "hello" });
+  });
+
+  it("does not move snapshotSeq backwards for an older stream batch", () => {
+    let map: TranscriptsMap = {
+      b: { ...INITIAL_STATE, snapshotSeq: 12 },
+    };
+    map = transcriptsReducer(map, {
+      type: "stream_batch",
+      bucket: "b",
+      maxSeq: 10,
+      events: [{ type: "usage_update", promptTokens: 5 } as StreamEvent],
+    });
+
+    expect(map.b.snapshotSeq).toBe(12);
+  });
+
   it("removes optimistic pending steer bubbles by steer id", () => {
     let map: TranscriptsMap = {};
     map = transcriptsReducer(map, {
@@ -192,9 +223,7 @@ describe("transcriptsReducer pending steer bubbles", () => {
       bucket: "b",
       state: {
         ...INITIAL_STATE,
-        messages: [
-          { kind: "user", id: "srv-1", text: "confirmed", clientMessageId: "client-1" },
-        ],
+        messages: [{ kind: "user", id: "srv-1", text: "confirmed", clientMessageId: "client-1" }],
       },
     });
 

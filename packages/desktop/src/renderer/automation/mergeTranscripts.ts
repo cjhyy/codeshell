@@ -42,9 +42,7 @@ function signature(m: Message): string {
       // re-open. Key on content (per-file add/remove totals) so the two folds
       // collapse to one. sessionDiffs are derived from the same edits, so the
       // file totals are a sufficient identity for a single turn's card.
-      return `files_changed|${m.files
-        .map((f) => `${f.path}:${f.added}:${f.removed}`)
-        .join(",")}`;
+      return `files_changed|${m.files.map((f) => `${f.path}:${f.added}:${f.removed}`).join(",")}`;
     case "context_boundary":
       // Same story: context_compact -> context_boundary is re-folded with a
       // fresh id each open. Key on its compaction shape instead.
@@ -68,8 +66,11 @@ export function mergeTranscripts(
   disk: MessagesReducerState,
   live: MessagesReducerState,
 ): MessagesReducerState {
-  if (disk.messages.length === 0) return live;
-  if (live.messages.length === 0) return disk;
+  // Even when one side has no messages, keep the highest snapshotSeq so the
+  // subscribe cursor never regresses and replays already-applied events.
+  const mergedSnapshotSeq = Math.max(disk.snapshotSeq, live.snapshotSeq);
+  if (disk.messages.length === 0) return { ...live, snapshotSeq: mergedSnapshotSeq };
+  if (live.messages.length === 0) return { ...disk, snapshotSeq: mergedSnapshotSeq };
 
   // Find the live "continuation point": the index just after the LAST live
   // message that disk also has. Everything in live up to there is part of a
@@ -116,6 +117,7 @@ export function mergeTranscripts(
     // session_started / usage_update), falling back to disk when live is unset.
     sessionId: live.sessionId ?? disk.sessionId,
     promptTokens: live.promptTokens || disk.promptTokens,
+    snapshotSeq: Math.max(disk.snapshotSeq, live.snapshotSeq),
     // Streaming pointers belong to the live turn (if any is mid-flight).
     streamingAssistantId: live.streamingAssistantId,
     streamingThinkingId: live.streamingThinkingId,

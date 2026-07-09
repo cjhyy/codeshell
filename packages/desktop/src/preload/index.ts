@@ -130,9 +130,10 @@ const pending = new Map<
   number,
   { resolve: (resp: unknown) => void; reject: (err: Error) => void }
 >();
-// Multi-session: callbacks receive `{ sessionId, event }` for stream events
+// Multi-session: callbacks receive `{ sessionId, event, seq? }` for stream events
 // and `{ sessionId, requestId, request }` for approval requests.
-const streamListeners: Array<(env: { sessionId: string; event: unknown }) => void> = [];
+const streamListeners: Array<(env: { sessionId: string; event: unknown; seq?: number }) => void> =
+  [];
 const approvalListeners: Array<(env: unknown) => void> = [];
 const approvalResolvedListeners: Array<(env: unknown) => void> = [];
 const mobilePermissionModeListeners: Array<(env: unknown) => void> = [];
@@ -171,6 +172,20 @@ ipcRenderer.on("browser:open-url", (_e: IpcRendererEvent, payload: { url?: strin
   window.dispatchEvent(new CustomEvent("codeshell:open-url", { detail: { url: payload?.url } }));
 });
 
+ipcRenderer.on(
+  "agent:streamEvent",
+  (_e: IpcRendererEvent, env: { sessionId?: string; event?: unknown; seq?: number }) => {
+    if (env?.event === undefined) return;
+    streamListeners.forEach((cb) =>
+      cb({
+        sessionId: env.sessionId ?? "",
+        event: env.event,
+        ...(typeof env.seq === "number" ? { seq: env.seq } : {}),
+      }),
+    );
+  },
+);
+
 ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
   let msg: Record<string, unknown>;
   try {
@@ -200,7 +215,9 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
     // renderer routes by sessionId; legacy callers can ignore it.
     const sessionId = (params?.sessionId as string | undefined) ?? "";
     const event = params?.event;
-    streamListeners.forEach((cb) => cb({ sessionId, event }));
+    if (event !== undefined) {
+      streamListeners.forEach((cb) => cb({ sessionId, event }));
+    }
   } else if (method === "agent/automationSession") {
     const sessionId = (params?.sessionId as string | undefined) ?? "";
     const cwd = (params?.cwd as string | undefined) ?? "";

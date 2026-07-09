@@ -594,6 +594,7 @@ export class TurnLoop {
         // returns; instead, each return-causing branch logs its own terminal
         // event (model_error, completed, etc.).
         const turnId = newTurnId();
+        const assistantMessageId = `assistant_${turnId}`;
         const tlog = logger.child({ turn: this.turnCount, turnId });
         this.currentTurnLog = tlog;
 
@@ -602,7 +603,11 @@ export class TurnLoop {
 
         // Tag downstream tool-exec / permission lines with this turn's IDs.
         this.deps.toolExecutor.setLogger(tlog);
-        this.config.onStream?.({ type: "stream_request_start", turnNumber: this.turnCount });
+        this.config.onStream?.({
+          type: "stream_request_start",
+          turnNumber: this.turnCount,
+          messageId: assistantMessageId,
+        });
         const turnStartHook = await this.emitHook("on_turn_start", {
           turnNumber: this.turnCount,
         });
@@ -688,11 +693,12 @@ export class TurnLoop {
         // Model call (with streaming fallback and max_output_tokens continuation)
         // Track tool IDs streamed during this turn to avoid duplicate UI events
         this.streamedToolIds.clear();
-        // Streaming tool queue: start concurrency-safe tools during streaming
+        // Tool queue is created before the call, but enqueue happens only after
+        // the complete LLMResponse is available below.
         const streamingQueue = new StreamingToolQueue(this.deps.toolExecutor);
         let response;
         try {
-          response = await this.callModelWithFallback(messages);
+          response = await this.callModelWithFallback(messages, assistantMessageId);
         } catch (err) {
           if (err instanceof ContextLimitError) {
             // Progressive recovery: drop oldest API rounds, up to 3 retries
@@ -702,7 +708,7 @@ export class TurnLoop {
               tlog.warn("turn.ptl_recovery", { cat: "turn", retry, roundsToDrop: retry });
               messages = dropOldestRounds(messages, retry);
               try {
-                response = await this.callModelWithFallback(messages);
+                response = await this.callModelWithFallback(messages, assistantMessageId);
                 recovered = true;
                 break;
               } catch (retryErr) {
@@ -865,6 +871,7 @@ export class TurnLoop {
           });
           this.config.onStream?.({
             type: "assistant_message",
+            messageId: assistantMessageId,
             message: {
               role: "assistant",
               content: "（Goal 预算已耗尽，强制停止。）",
@@ -878,6 +885,7 @@ export class TurnLoop {
           // No tool use — final answer
           this.config.onStream?.({
             type: "assistant_message",
+            messageId: assistantMessageId,
             message: { role: "assistant", content: finalText },
           });
           await this.emitHook("on_turn_end", {
@@ -956,6 +964,7 @@ export class TurnLoop {
             });
             this.config.onStream?.({
               type: "assistant_message",
+              messageId: assistantMessageId,
               message: {
                 role: "assistant",
                 content: `（Goal 续跑已达 ${maxStopBlocks} 次上限，先停下。）`,
@@ -1146,6 +1155,7 @@ export class TurnLoop {
           });
           this.config.onStream?.({
             type: "assistant_message",
+            messageId: assistantMessageId,
             message: { role: "assistant", content: finalText },
           });
           messages.push({ role: "assistant", content: finalText });
@@ -1276,7 +1286,7 @@ export class TurnLoop {
    * Call model with streaming fallback.
    * If streaming fails, emit tombstone and retry non-streaming.
    */
-  private async callModelWithFallback(messages: Message[]) {
+  private async callModelWithFallback(messages: Message[], assistantMessageId: string) {
     // Wrap stream callback to track tool_use_start events and reactive compaction
     let streamingResponseTokens = 0;
     let reactiveBucket = -1;
@@ -1335,7 +1345,7 @@ export class TurnLoop {
       if (isAbortError(err) || this.config.signal?.aborted) throw err;
 
       // Streaming might have partially emitted — send tombstone to revoke
-      this.config.onStream?.({ type: "tombstone", messageId: `turn_${this.turnCount}` });
+      this.config.onStream?.({ type: "tombstone", messageId: assistantMessageId });
       this.currentTurnLog.warn("turn.streaming_fallback", {
         cat: "turn",
         error: (err as Error).message,

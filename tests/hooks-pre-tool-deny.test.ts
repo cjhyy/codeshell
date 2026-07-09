@@ -13,9 +13,7 @@ describe("pre_tool_use deny short-circuits the executor", () => {
     const registry = new ToolRegistry({ builtinTools: ["Read"] });
     // "allow" rule so the deny under test is unambiguously coming from the
     // hook, not the permission classifier.
-    const permission = new PermissionClassifier([
-      { tool: "Read", decision: "allow" },
-    ]);
+    const permission = new PermissionClassifier([{ tool: "Read", decision: "allow" }]);
     const hooks = new HookRegistry();
     const executor = new ToolExecutor(registry, permission, hooks);
     return { executor, hooks };
@@ -145,7 +143,7 @@ describe("pre_tool_use deny short-circuits the executor", () => {
     expect(askReason).toContain("sandbox boundary");
   });
 
-  it("decision:'ask' rejected by user returns isError with rejection message", async () => {
+  it("decision:'ask' rejected by user returns the unified permission denial", async () => {
     let toolRan = false;
     const registry = new ToolRegistry({ builtinTools: ["Read"] });
     registry.registerTool(
@@ -155,11 +153,9 @@ describe("pre_tool_use deny short-circuits the executor", () => {
         return { id: "ok", toolName: "Read", content: "ran" };
       },
     );
-    const permission = new PermissionClassifier(
-      [{ tool: "Read", decision: "allow" }],
-      "default",
-      { requestApproval: async () => ({ approved: false, reason: "nope" }) },
-    );
+    const permission = new PermissionClassifier([{ tool: "Read", decision: "allow" }], "default", {
+      requestApproval: async () => ({ approved: false, reason: "nope" }),
+    });
     const hooks = new HookRegistry();
     const exec = new ToolExecutor(registry, permission, hooks);
     hooks.register("pre_tool_use", () => ({ decision: "ask" }));
@@ -172,6 +168,6 @@ describe("pre_tool_use deny short-circuits the executor", () => {
 
     expect(toolRan).toBe(false);
     expect(result.isError).toBe(true);
-    expect(result.error).toContain("pre_tool_use ask");
+    expect(result.error).toContain("Permission denied by user for tool: Read");
   });
 });

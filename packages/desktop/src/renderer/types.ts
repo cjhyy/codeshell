@@ -314,6 +314,8 @@ export interface MessagesReducerState {
    * Cleared on saveTranscript truncation because slice() invalidates them.
    */
   agentMessageIndex: Record<string, number>;
+  /** Highest main-process session snapshot seq applied to this projection. */
+  snapshotSeq: number;
   /**
    * Monotonic counter incremented on each turn_complete. ToolCard /
    * ToolGroupCard subscribe via prop and force their open state back
@@ -347,6 +349,7 @@ export const INITIAL_STATE: MessagesReducerState = {
   sessionPromptTokens: 0,
   activeAgents: {},
   agentMessageIndex: {},
+  snapshotSeq: 0,
   turnEpoch: 0,
   activeGoal: null,
 };
@@ -355,6 +358,25 @@ let _counter = 0;
 function freshId(prefix: string): string {
   _counter += 1;
   return `${prefix}-${Date.now()}-${_counter}`;
+}
+
+function assistantMessageToText(content: unknown): string | undefined {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return undefined;
+  const text = content
+    .map((block) => {
+      if (
+        block &&
+        typeof block === "object" &&
+        (block as { type?: unknown }).type === "text" &&
+        typeof (block as { text?: unknown }).text === "string"
+      ) {
+        return (block as { text: string }).text;
+      }
+      return "";
+    })
+    .join("");
+  return text.length > 0 ? text : undefined;
 }
 
 /**
@@ -441,11 +463,12 @@ export function applyStreamEvent(
     }
 
     case "stream_request_start": {
-      // If a subagent is active, this request_start belongs to it (the
-      // event itself doesn't carry agentId). Don't open a new main
-      // assistant message — that would create a phantom card in the feed.
-      if (Object.keys(state.activeAgents).length > 0) return state;
-      const id = freshId("assistant");
+      // Sub-agent request starts carry agentId via the engine wrapper and do
+      // not open a main assistant slot. Top-level starts have no agentId and
+      // must not be routed based on the activeAgents table, which can contain
+      // stale/orphan cleanup state during replay and background handoffs.
+      if (event.agentId) return state;
+      const id = event.messageId ?? freshId("assistant");
       return {
         ...state,
         messages: [
@@ -692,16 +715,42 @@ export function applyStreamEvent(
     }
 
     case "assistant_message": {
-      // Finalize whichever assistant message is currently streaming;
-      // engine sends this when it's emitted a complete assistant turn.
-      if (!state.streamingAssistantId) return state;
+      // Sub-agent final assistant messages are represented by agent_end/text
+      // card state, not by the main assistant feed.
+      if (event.agentId) return state;
+      const finalText = assistantMessageToText(event.message.content);
+      const targetId = event.messageId ?? state.streamingAssistantId;
+      if (!targetId) return state;
+      let found = false;
+      const messages = state.messages.map((m) => {
+        if (m.kind !== "assistant" || m.id !== targetId) return m;
+        found = true;
+        return {
+          ...m,
+          text: finalText ?? m.text,
+          done: true,
+          doneAt: m.doneAt ?? now(),
+        };
+      });
+      if (!found && event.messageId && finalText !== undefined) {
+        return {
+          ...state,
+          messages: [
+            ...state.messages,
+            {
+              kind: "assistant",
+              id: event.messageId,
+              text: finalText,
+              done: true,
+              createdAt: now(),
+              doneAt: now(),
+            },
+          ],
+        };
+      }
       return {
         ...state,
-        messages: state.messages.map((m) =>
-          m.kind === "assistant" && m.id === state.streamingAssistantId
-            ? { ...m, done: true, doneAt: m.doneAt ?? now() }
-            : m,
-        ),
+        messages,
       };
     }
 
@@ -956,7 +1005,13 @@ export function applyStreamEvent(
         if (removed.kind === "agent" && agentId === removed.id) continue;
         agentMessageIndex[agentId] = idx > removedIdx ? idx - 1 : idx;
       }
-      return { ...state, messages, agentMessageIndex };
+      return {
+        ...state,
+        messages,
+        agentMessageIndex,
+        streamingAssistantId:
+          state.streamingAssistantId === event.messageId ? null : state.streamingAssistantId,
+      };
     }
 
     case "turn_complete": {
@@ -971,11 +1026,18 @@ export function applyStreamEvent(
       //    agent reports separately via background_agent_completed.
       const cleanSweep = event.reason === "completed";
       const msgs = state.messages.slice();
+      const nextActiveAgents = { ...state.activeAgents };
       for (const agentId of Object.keys(state.activeAgents)) {
         const idx = state.agentMessageIndex[agentId];
-        if (idx === undefined) continue;
+        if (idx === undefined) {
+          if (cleanSweep) delete nextActiveAgents[agentId];
+          continue;
+        }
         const m = msgs[idx];
-        if (!m || m.kind !== "agent") continue;
+        if (!m || m.kind !== "agent") {
+          if (cleanSweep) delete nextActiveAgents[agentId];
+          continue;
+        }
         const flushedText = m.textBuffer.length > 0 ? (m.text ?? "") + m.textBuffer : m.text;
         if (cleanSweep && !m.done && !m.backgrounded) {
           // Sweep only true ORPHANS (agent_start, no agent_end, agent_end
@@ -990,6 +1052,9 @@ export function applyStreamEvent(
             done: true,
             endedAt: m.endedAt ?? now(),
           };
+          delete nextActiveAgents[agentId];
+        } else if (cleanSweep && !m.backgrounded) {
+          delete nextActiveAgents[agentId];
         } else if (m.textBuffer.length > 0) {
           msgs[idx] = { ...m, text: flushedText, textBuffer: "" };
         }
@@ -1058,6 +1123,7 @@ export function applyStreamEvent(
         ...state,
         streamingAssistantId: null,
         streamingThinkingId: null,
+        activeAgents: nextActiveAgents,
         messages: finalized,
         turnEpoch: cleanlyCompleted ? state.turnEpoch + 1 : state.turnEpoch,
       };
@@ -1092,7 +1158,10 @@ export function applyStreamEvent(
       // reliable place to close the card. Carries agentId → locate the card.
       const msgs = state.messages.slice();
       const agentId = (event as { agentId?: string }).agentId;
+      let activeAgents = state.activeAgents;
       if (agentId) {
+        const { [agentId]: _omit, ...restActiveAgents } = state.activeAgents;
+        activeAgents = restActiveAgents;
         const idx = state.agentMessageIndex[agentId];
         if (idx !== undefined) {
           const m = msgs[idx];
@@ -1111,6 +1180,7 @@ export function applyStreamEvent(
       }
       return {
         ...state,
+        activeAgents,
         messages: [
           ...msgs,
           { kind: "system", id: freshId("bg-done"), text: bgCompletionText(event) },

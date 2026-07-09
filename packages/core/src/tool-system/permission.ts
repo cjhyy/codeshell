@@ -1116,9 +1116,7 @@ export class PermissionClassifier {
     let result: ApprovalResult;
     try {
       const baseDescription = this.describeToolCall(toolName, args);
-      const description = reason
-        ? `${baseDescription}\n\nReason (from pre_tool_use hook): ${reason}`
-        : baseDescription;
+      const description = reason ? `${baseDescription}\n\nReason:\n${reason}` : baseDescription;
       result = await this.approvalBackend.requestApproval({
         ...(opts?.sessionId ? { sessionId: opts.sessionId } : {}),
         toolName,

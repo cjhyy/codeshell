@@ -149,6 +149,7 @@ export interface MobilePermissionModeSnapshotEntry {
 export interface StreamEventEnvelope {
   sessionId: string;
   event: StreamEvent;
+  seq?: number;
 }
 
 /** One entry in a main-held session snapshot: a forwarded event + its seq. */

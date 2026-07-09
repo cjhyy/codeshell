@@ -3068,10 +3068,10 @@ export class Engine {
     const rules: import("../types.js").PermissionRule[] = [...this.preset.defaultPermissionRules];
 
     // Memory tools: dream scope is the LLM's own workspace, so save/delete
-    // there go through without prompting. user-scope save/delete fall through
-    // to the tool's permissionDefault ("ask"), forcing the user to confirm
-    // any modification of memories they own. Read tools are listed in the
-    // tool definition as permissionDefault: "allow" — no rule needed here.
+    // there go through without prompting. user-scope save/delete have no
+    // explicit allow rule here, so default-mode classifier fallback asks the
+    // user to confirm modifications. RegisteredTool.permissionDefault is only
+    // UI/metadata and is not read by the classifier.
     rules.push({
       tool: "MemorySave",
       argsPattern: { scope: "^dream$" },

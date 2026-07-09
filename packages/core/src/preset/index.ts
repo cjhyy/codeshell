@@ -96,9 +96,9 @@ const GENERAL_BUILTIN_TOOLS = [
   // what lets the LLM list/read/save/delete memories during a normal session,
   // AND what makes the end-of-session auto-dream consolidation work — its
   // tool-call loop pulls these from the registry, so without them every dream
-  // run bailed with "missing memory tools". Save/Delete in the user scope stay
-  // permission-gated (the tools declare permissionDefault: "ask"); dream-scope
-  // writes go through freely.
+  // run bailed with "missing memory tools". Save/Delete in the user scope have
+  // no explicit allow rule, so the default-mode classifier fallback asks;
+  // dream-scope writes go through freely.
   "MemoryList",
   "MemoryRead",
   "MemorySave",
@@ -114,7 +114,7 @@ const GENERAL_BUILTIN_TOOLS = [
   // AI 增/改模型 catalog(写 ~/.code-shell/model-catalog.user.json)。同 BashOutput/
   // UseCredential 一样的 whitelist 要求:registerBuiltins 按 preset 集过滤 BUILTIN_TOOLS,
   // 名单里没有它 → 即使工具已注册,AI 列表里也没有 → 用户实测「找不到这个工具」。
-  // permissionDefault: "ask",列入只是让 AI 看得到,调用仍走审批,无条件列入安全。
+  // 列入只是让 AI 看得到；执行期没有显式 allow rule，默认 classifier fallback 会审批。
   "EditModelCatalog",
   // Goal-mode control tools. Same whitelist requirement as the rest:
   // registerBuiltins filters BUILTIN_TOOLS by the preset set, so a goal tool
@@ -158,18 +158,19 @@ const GENERAL_PERMISSION_RULES: PermissionRule[] = [
   { tool: "Skill", decision: "allow" },
   // ListMcpResources only enumerates resource names (and the executor filters
   // the list to this session's enabled servers). ReadMcpResource pulls actual
-  // content and is intentionally NOT auto-allowed here — it falls back to its
-  // tool-level "ask" default so a default-mode session confirms the read.
+  // content and is intentionally NOT auto-allowed here — with no explicit rule,
+  // default-mode classifier fallback asks the user. The tool's
+  // permissionDefault is only UI/metadata, not classifier input.
   { tool: "ListMcpResources", decision: "allow" },
   // Reading memory is always safe; writes (MemorySave/MemoryDelete) stay gated
-  // by the tools' own permissionDefault so the user confirms each change.
+  // by explicit rules below plus default-mode ask fallback.
   { tool: "MemoryList", decision: "allow" },
   { tool: "MemoryRead", decision: "allow" },
   // Browser automation (3 semantic tools). Rules are first-match-wins, ordered
   // by specificity — so the action-gating rule for browser_act MUST come first:
   // click/type/select mutate the page/form → "ask"; all other actions (hover/
-  // scroll/wait/press_key/list_tabs/switch_tab) fall through to browser_act's
-  // tool-level "allow". observe (read-only) and navigate auto-allow.
+  // scroll/wait/press_key/list_tabs/switch_tab) fall through to the default
+  // allow rule below. observe (read-only) and navigate auto-allow.
   // (Main-side sensitive-action + domain-whitelist enforcement also applies.)
   {
     tool: "browser_act",

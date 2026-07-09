@@ -474,6 +474,8 @@ function App() {
   const sessionIndicesRef = useRef(sessionIndices);
   /** Per-bucket event coalescers — buffer rapid text_delta / tool_use_args_delta. */
   const coalescersRef = useRef<Map<string, ReturnType<typeof createEventCoalescer>>>(new Map());
+  /** Max snapshot seq currently buffered inside each bucket's coalescer window. */
+  const coalescerSeqRef = useRef<Map<string, number>>(new Map());
   const permissionModeRef = useRef<PermissionMode | null>(permissionMode);
   /**
    * Repo keys already probed for a disk rebuild this session. Guards against an
@@ -869,23 +871,22 @@ function App() {
           // disk read failed — fall back to the localStorage projection.
         }
       }
-      // Reconnect to the main-held snapshot. The main process doesn't remount
-      // with the renderer, so it still has events the worker streamed while the
-      // renderer was gone (or after the last debounced persist). When the
-      // localStorage projection is empty — the remount / fresh-view case where
-      // the missing tail is exactly the bug — replay the snapshot to rebuild it.
-      // (A non-empty projection already reflects persisted history; we don't
-      // overlay there to avoid double-applying the worker-life overlap.)
+      // Reconnect to the main-held snapshot. The persisted snapshotSeq lets us
+      // safely replay the tail even when localStorage already has messages:
+      // only entries past the projection cursor are folded.
       let state = base;
-      if (engineId && base.messages.length === 0) {
+      if (engineId) {
         try {
-          const snapshot = await window.codeshell.subscribeSession(engineId, 0);
-          const { events, cursor } = selectReplayEvents(snapshot, 0);
+          const sinceSeq = base.snapshotSeq ?? 0;
+          const snapshot = await window.codeshell.subscribeSession(engineId, sinceSeq);
+          const { events, cursor } = selectReplayEvents(snapshot, sinceSeq);
           if (events.length > 0) {
             appliedSeqRef.current.set(bucket, cursor);
             let acc = base;
             for (const ev of events) acc = applyStreamEvent(acc, ev as StreamEvent);
-            state = acc;
+            state = { ...acc, snapshotSeq: Math.max(acc.snapshotSeq, cursor) };
+          } else {
+            appliedSeqRef.current.set(bucket, sinceSeq);
           }
         } catch {
           // Snapshot unavailable (no bridge / unknown session) — use base.
@@ -1370,6 +1371,7 @@ function App() {
     return () => {
       for (const c of coalescers.values()) c.dispose();
       coalescers.clear();
+      coalescerSeqRef.current.clear();
     };
   }, []);
 
@@ -1507,7 +1509,15 @@ function App() {
   function getCoalescer(bucket: string) {
     let c = coalescersRef.current.get(bucket);
     if (!c) {
-      c = createEventCoalescer((events) => dispatch({ type: "stream_batch", bucket, events }));
+      c = createEventCoalescer((events) => {
+        const maxSeq = coalescerSeqRef.current.get(bucket);
+        coalescerSeqRef.current.delete(bucket);
+        if (maxSeq !== undefined) {
+          const prev = appliedSeqRef.current.get(bucket) ?? 0;
+          appliedSeqRef.current.set(bucket, Math.max(prev, maxSeq));
+        }
+        dispatch({ type: "stream_batch", bucket, events, maxSeq });
+      });
       coalescersRef.current.set(bucket, c);
     }
     return c;
@@ -1579,6 +1589,10 @@ function App() {
           bucket: target,
           engineSessionId: env.sessionId || null,
         });
+      }
+      if (typeof env.seq === "number") {
+        const prev = coalescerSeqRef.current.get(target) ?? 0;
+        coalescerSeqRef.current.set(target, Math.max(prev, env.seq));
       }
       getCoalescer(target).push(event);
 

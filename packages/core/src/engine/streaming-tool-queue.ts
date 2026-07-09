@@ -1,13 +1,16 @@
 /**
- * Streaming tool queue — enqueues tools for execution during streaming,
- * starts concurrency-safe tools immediately, queues unsafe tools for
- * sequential execution.
+ * Tool execution queue for a completed model response.
+ *
+ * Despite the historical name, TurnLoop currently enqueues tool calls only
+ * after `callModelWithFallback()` returns a complete LLMResponse. The queue's
+ * job is concurrency policy inside that post-response batch: start
+ * concurrency-safe tools as soon as they are enqueued, keep unsafe tools
+ * sequential, and return results in original tool-call order.
  *
  * Usage:
  *   const queue = new StreamingToolQueue(executor);
- *   // During streaming, as tool_use blocks arrive:
+ *   // After the full LLMResponse is available:
  *   queue.enqueue(toolCall);
- *   // After streaming completes:
  *   const results = await queue.drain();
  */
 
@@ -27,8 +30,9 @@ export class StreamingToolQueue {
   }
 
   /**
-   * Enqueue a tool for execution. Concurrency-safe tools start immediately;
-   * unsafe tools are queued for sequential execution during drain().
+   * Enqueue a tool from the completed response. Concurrency-safe tools start
+   * immediately within this post-response phase; unsafe tools are queued for
+   * sequential execution during drain().
    */
   enqueue(call: ToolCall): void {
     this.callOrder.push(call.id);
@@ -94,7 +98,11 @@ export class StreamingToolQueue {
   }
 
   /** Await a tool promise, converting a rejection into an error ToolResult. */
-  private async toResult(id: string, toolName: string, p: Promise<ToolResult>): Promise<ToolResult> {
+  private async toResult(
+    id: string,
+    toolName: string,
+    p: Promise<ToolResult>,
+  ): Promise<ToolResult> {
     try {
       return await p;
     } catch (err) {

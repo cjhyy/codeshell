@@ -114,6 +114,12 @@ export interface RegisteredTool {
   inputSchema: Record<string, unknown>;
   source: ToolSource;
   serverName?: string;
+  /**
+   * Declarative UI/metadata hint for hosts, docs, and capability listings.
+   * It is not an execution-policy input: PermissionClassifier does not read
+   * RegisteredTool and runtime decisions come from explicit rules, permission
+   * mode, approval backend, and tool-specific gates.
+   */
   permissionDefault: PermissionDecision;
   isConcurrencySafe?: boolean;
   isReadOnly?: boolean;
@@ -441,7 +447,7 @@ export type StreamEvent =
   // completes: an LLM-generated one-line title for the sidebar. Best-effort
   // — absent on failure / when aux model unavailable.
   | { type: "session_title"; sessionId: string; title: string }
-  | { type: "stream_request_start"; turnNumber: number; agentId?: string }
+  | { type: "stream_request_start"; turnNumber: number; messageId?: string; agentId?: string }
   // A host-queued user message was spliced into the running turn at the
   // turn-loop step boundary (Engine.enqueueSteer / 引导不打断注入). The client
   // uses this to flip a queued "待注入" chip to "已注入". `id` echoes the host's
@@ -458,7 +464,7 @@ export type StreamEvent =
       agentId?: string;
     }
   | { type: "tool_result"; result: ToolResult; agentId?: string }
-  | { type: "assistant_message"; message: Message; agentId?: string }
+  | { type: "assistant_message"; message: Message; messageId?: string; agentId?: string }
   | { type: "turn_complete"; reason: TerminalReason; agentId?: string }
   // Goal mode visibility: emitted each time the goal judge re-prompts the
   // model ("not_met", carries the judge's `gaps` + the running round count),
@@ -487,7 +493,7 @@ export type StreamEvent =
   | { type: "goal_set"; objective: string; replaced: boolean }
   | { type: "goal_cleared" }
   | { type: "error"; error: string; agentId?: string }
-  | { type: "tombstone"; messageId: string }
+  | { type: "tombstone"; messageId: string; agentId?: string }
   | { type: "task_update"; tasks: TaskInfo[]; agentId?: string }
   // 记忆被召回(用户拍板可见性):MemoryRead 命中一条记忆时发出,渲染端显示
   // 「📖 读取了记忆 X」,让用户肉眼看到持久记忆真的被用上了。usageCount 记账

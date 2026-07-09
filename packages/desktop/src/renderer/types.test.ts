@@ -29,15 +29,7 @@ describe("steer_injected → user bubble (引导不打断注入)", () => {
   });
 
   test("confirms an optimistic pending steer bubble instead of appending a duplicate", () => {
-    const pending = appendUserMessage(
-      INITIAL_STATE,
-      "queued draft",
-      100,
-      false,
-      true,
-      "q-1",
-      true,
-    );
+    const pending = appendUserMessage(INITIAL_STATE, "queued draft", 100, false, true, "q-1", true);
     const s = applyStreamEvent(pending, {
       type: "steer_injected",
       id: "q-1",
@@ -98,14 +90,10 @@ describe("appendTurnEndMessage (TODO 2.8)", () => {
     expect(s.streamingAssistantId).toBeNull();
     expect(s.streamingThinkingId).toBeNull();
   });
-
 });
 
 // ── helpers ─────────────────────────────────────────────────────────
-function dispatch(
-  state: MessagesReducerState,
-  events: StreamEvent[],
-): MessagesReducerState {
+function dispatch(state: MessagesReducerState, events: StreamEvent[]): MessagesReducerState {
   return events.reduce((s, e) => applyStreamEvent(s, e), state);
 }
 
@@ -148,7 +136,12 @@ describe("goal_progress approaching_limit (TODO 3.1)", () => {
     // The goal is still working and may still be nearing the cap, so the "再续"
     // button must survive a not_met that lands in the same window.
     const s = dispatch(INITIAL_STATE, [
-      ev("goal_progress", { status: "approaching_limit", round: 0, stopBlocksRemaining: 2, nearest: "stopBlocks" } as never),
+      ev("goal_progress", {
+        status: "approaching_limit",
+        round: 0,
+        stopBlocksRemaining: 2,
+        nearest: "stopBlocks",
+      } as never),
       ev("goal_progress", { status: "not_met", round: 1, gaps: "still going" } as never),
     ]);
     expect(goalCount(s, "approaching_limit")).toBe(1);
@@ -163,15 +156,9 @@ function ev<T extends StreamEvent["type"]>(
   return { type, ...rest } as StreamEvent;
 }
 
-const mainTurn = (): StreamEvent[] => [
-  ev("stream_request_start", { turnNumber: 1 } as any),
-];
+const mainTurn = (): StreamEvent[] => [ev("stream_request_start", { turnNumber: 1 } as any)];
 
-const startAgent = (
-  agentId: string,
-  name = "Sub",
-  description = "doing work",
-): StreamEvent =>
+const startAgent = (agentId: string, name = "Sub", description = "doing work"): StreamEvent =>
   ev("agent_start", { agentId, name, description } as any);
 
 const findAgent = (state: MessagesReducerState, agentId: string): AgentMessage => {
@@ -416,6 +403,7 @@ describe("applyStreamEvent — subagent isolation", () => {
     expect(agent.text).toBe("partial");
     expect(agent.textBuffer).toBe("");
     expect(agent.endedAt).toBeDefined();
+    expect(s.activeAgents.A).toBeUndefined();
   });
 
   test("4c. ABNORMAL turn_complete does NOT sweep (only flushes) — turn may resume", () => {
@@ -455,6 +443,7 @@ describe("applyStreamEvent — subagent isolation", () => {
     const agent = findAgent(s, "A");
     expect(agent.done).toBe(false); // backgrounded ≠ orphan; not swept
     expect(agent.backgrounded).toBe(true);
+    expect(s.activeAgents.A).toBeDefined();
   });
 
   test("4f. agent_end on a backgrounded agent resolves it to done (clears backgrounded)", () => {
@@ -491,9 +480,17 @@ describe("applyStreamEvent — subagent isolation", () => {
       } as any),
     ]);
     const agent = findAgent(s, "A");
-    expect(agent.done).toBe(true);       // card closed
+    expect(agent.done).toBe(true); // card closed
     expect(agent.backgrounded).toBe(false); // → isBackgrounded false → no "可能失联"
     expect(agent.text).toBe("done result");
+    expect(s.activeAgents.A).toBeUndefined();
+
+    const next = dispatch(s, [
+      ev("stream_request_start", { turnNumber: 2 } as any),
+      ev("text_delta", { text: "main after bg" } as any),
+    ]);
+    const assistants = next.messages.filter((m) => m.kind === "assistant") as AssistantMessage[];
+    expect(assistants[assistants.length - 1]!.text).toBe("main after bg");
   });
 
   test("5. text_delta for unknown agentId is dropped (state unchanged)", () => {
@@ -505,22 +502,49 @@ describe("applyStreamEvent — subagent isolation", () => {
     expect(after).toBe(before); // strict reference equality
   });
 
-  test("6. stream_request_start while an agent is active does not open a new main assistant", () => {
+  test("6a. stream_request_start with agentId does not open a new main assistant", () => {
     const s = dispatch(INITIAL_STATE, [...mainTurn(), startAgent("A")]);
     const before = s;
-    const after = applyStreamEvent(before, ev("stream_request_start", {} as any));
+    const after = applyStreamEvent(
+      before,
+      ev("stream_request_start", { agentId: "A", turnNumber: 1 } as any),
+    );
     expect(after.streamingAssistantId).toBe(before.streamingAssistantId);
     expect(after.messages.length).toBe(before.messages.length);
+  });
+
+  test("6b. top-level stream_request_start opens a main slot even if activeAgents is dirty", () => {
+    const dirty: MessagesReducerState = {
+      ...INITIAL_STATE,
+      activeAgents: {
+        A: { agentId: "A", name: "Sub", description: "stale", startedAt: 1 },
+      },
+    };
+    const after = applyStreamEvent(dirty, ev("stream_request_start", { turnNumber: 2 } as any));
+    expect(after.streamingAssistantId).toBeTruthy();
+    expect(after.messages).toHaveLength(1);
+    expect(after.messages[0]!.kind).toBe("assistant");
+  });
+
+  test("6c. orphan cleanup lets the next top-level text stream into a main assistant", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      startAgent("A"),
+      ev("text_delta", { agentId: "A", text: "partial" } as any),
+      turnComplete,
+      ev("stream_request_start", { turnNumber: 2 } as any),
+      ev("text_delta", { text: "main" } as any),
+    ]);
+    expect(s.activeAgents.A).toBeUndefined();
+    const assistants = s.messages.filter((m) => m.kind === "assistant") as AssistantMessage[];
+    expect(assistants[assistants.length - 1]!.text).toBe("main");
   });
 
   test("7. 10000 subagent deltas: main assistant reference is stable", () => {
     let s = dispatch(INITIAL_STATE, [...mainTurn(), startAgent("A")]);
     const mainAssistantBefore = findMainAssistant(s);
     for (let i = 0; i < 10000; i++) {
-      s = applyStreamEvent(
-        s,
-        ev("text_delta", { agentId: "A", text: "x" } as any),
-      );
+      s = applyStreamEvent(s, ev("text_delta", { agentId: "A", text: "x" } as any));
     }
     const mainAssistantAfter = findMainAssistant(s);
     expect(mainAssistantAfter).toBe(mainAssistantBefore); // same ref
@@ -589,10 +613,7 @@ describe("applyStreamEvent — subagent isolation", () => {
   });
 
   test("12. task_update with agentId is dropped (state unchanged)", () => {
-    const before = dispatch(INITIAL_STATE, [
-      ...mainTurn(),
-      startAgent("A"),
-    ]);
+    const before = dispatch(INITIAL_STATE, [...mainTurn(), startAgent("A")]);
     const after = applyStreamEvent(
       before,
       ev("task_update", {
@@ -775,7 +796,10 @@ describe("applyStreamEvent — message timestamps", () => {
 
   test("assistant_message stamps doneAt and does not overwrite an existing one", () => {
     let s = applyStreamEvent(INITIAL_STATE, mainTurn()[0]);
-    s = applyStreamEvent(s, { type: "assistant_message" } as StreamEvent);
+    s = applyStreamEvent(s, {
+      type: "assistant_message",
+      message: { role: "assistant", content: "" },
+    } as StreamEvent);
     const first = (s.messages[0] as AssistantMessage).doneAt;
     expect(first).toBeGreaterThan(0);
     // A later turn_complete must not clobber the already-recorded doneAt.
@@ -798,6 +822,67 @@ describe("applyStreamEvent — message timestamps", () => {
     );
     agent = findAgent(s, "A");
     expect(agent.endedAt).toBe(222);
+  });
+});
+
+describe("applyStreamEvent — streaming fallback compensation", () => {
+  test("tombstone removes the partial streaming assistant and clears the pointer", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ev("stream_request_start", { turnNumber: 1, messageId: "m1" } as any),
+      ev("text_delta", { text: "partial" } as any),
+      ev("tombstone", { messageId: "m1" } as any),
+    ]);
+
+    expect(s.messages.find((m) => m.kind === "assistant" && m.id === "m1")).toBeUndefined();
+    expect(s.streamingAssistantId).toBeNull();
+  });
+
+  test("assistant_message appends final text after fallback tombstone deleted the slot", () => {
+    let s = dispatch(INITIAL_STATE, [
+      ev("stream_request_start", { turnNumber: 1, messageId: "m1" } as any),
+      ev("text_delta", { text: "partial" } as any),
+      ev("tombstone", { messageId: "m1" } as any),
+    ]);
+    s = applyStreamEvent(s, {
+      type: "assistant_message",
+      messageId: "m1",
+      message: { role: "assistant", content: "final" },
+    } as StreamEvent);
+
+    const assistant = s.messages.find((m) => m.kind === "assistant" && m.id === "m1");
+    expect(assistant).toMatchObject({ kind: "assistant", text: "final", done: true });
+    expect((assistant as AssistantMessage).doneAt).toBeDefined();
+  });
+
+  test("assistant_message overwrites accumulated streaming text with canonical final text", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ev("stream_request_start", { turnNumber: 1, messageId: "m2" } as any),
+      ev("text_delta", { text: "fin" } as any),
+      {
+        type: "assistant_message",
+        messageId: "m2",
+        message: { role: "assistant", content: "final" },
+      } as StreamEvent,
+    ]);
+
+    const assistant = s.messages.find((m) => m.kind === "assistant" && m.id === "m2");
+    expect(assistant).toMatchObject({ kind: "assistant", text: "final", done: true });
+  });
+
+  test("assistant_message with agentId does not write the main assistant slot", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ev("stream_request_start", { turnNumber: 1, messageId: "m3" } as any),
+      ev("text_delta", { text: "main partial" } as any),
+      {
+        type: "assistant_message",
+        agentId: "A",
+        messageId: "m3",
+        message: { role: "assistant", content: "child final" },
+      } as StreamEvent,
+    ]);
+
+    const assistant = s.messages.find((m) => m.kind === "assistant" && m.id === "m3");
+    expect(assistant).toMatchObject({ kind: "assistant", text: "main partial", done: false });
   });
 });
 
@@ -834,7 +919,9 @@ describe("applyStreamEvent — goal_progress markers", () => {
     const markers = s.messages.filter((m) => m.kind === "goal_progress");
     expect(markers).toHaveLength(3);
     // not_met count tells the user how many re-prompt rounds happened.
-    expect(markers.filter((m) => m.kind === "goal_progress" && m.status === "not_met")).toHaveLength(2);
+    expect(
+      markers.filter((m) => m.kind === "goal_progress" && m.status === "not_met"),
+    ).toHaveLength(2);
     const met = markers.find((m) => m.kind === "goal_progress" && m.status === "met");
     expect(met).toMatchObject({ status: "met", round: 3 });
   });
@@ -865,7 +952,9 @@ describe("applyStreamEvent — background_agent_completed", () => {
     const last = s.messages[s.messages.length - 1];
     expect(last.kind).toBe("system");
     expect((last as { text: string }).text).toContain("video generation");
-    expect((last as { text: string }).text).toContain("Video saved to /p/.code-shell/generated_videos/1.mp4");
+    expect((last as { text: string }).text).toContain(
+      "Video saved to /p/.code-shell/generated_videos/1.mp4",
+    );
   });
 
   test("failed → appends a system message with the error", () => {

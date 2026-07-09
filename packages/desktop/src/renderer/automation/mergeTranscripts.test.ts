@@ -92,6 +92,18 @@ describe("mergeTranscripts", () => {
     expect(merged.messages).toEqual(live.messages);
   });
 
+  it("keeps the highest snapshotSeq even when one side has no messages", () => {
+    // empty disk, disk carries a higher cursor from a prior applied snapshot
+    const disk = stateOf([], { snapshotSeq: 42 });
+    const live = stateOf([user("l-u1", "hi")], { snapshotSeq: 7 });
+    expect(mergeTranscripts(disk, live).snapshotSeq).toBe(42);
+
+    // empty live, live carries a higher cursor
+    const disk2 = stateOf([user("d-u1", "hi")], { snapshotSeq: 5 });
+    const live2 = stateOf([], { snapshotSeq: 99 });
+    expect(mergeTranscripts(disk2, live2).snapshotSeq).toBe(99);
+  });
+
   it("uses disk alone when live is empty", () => {
     const disk = stateOf([user("d-u1", "hi"), assistant("d-a1", "hello")], { sessionId: "s1" });
     const merged = mergeTranscripts(disk, INITIAL_STATE);

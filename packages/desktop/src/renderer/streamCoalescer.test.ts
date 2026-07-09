@@ -15,7 +15,13 @@ function collector() {
     batches += 1;
     out.push(...events);
   };
-  return { out, onFlush, get batches() { return batches; } };
+  return {
+    out,
+    onFlush,
+    get batches() {
+      return batches;
+    },
+  };
 }
 
 describe("createEventCoalescer", () => {
@@ -25,9 +31,7 @@ describe("createEventCoalescer", () => {
     c.push({ type: "text_delta", text: "hello ", agentId: "A" } as any);
     c.push({ type: "text_delta", text: "world", agentId: "A" } as any);
     await delay(50);
-    expect(c1.out).toEqual([
-      { type: "text_delta", text: "hello world", agentId: "A" } as any,
-    ]);
+    expect(c1.out).toEqual([{ type: "text_delta", text: "hello world", agentId: "A" } as any]);
     c.dispose();
   });
 
@@ -35,7 +39,12 @@ describe("createEventCoalescer", () => {
     const c1 = collector();
     const c = createEventCoalescer(c1.onFlush, 30);
     c.push({ type: "tool_use_args_delta", toolCallId: "t1", args: { a: 1 }, agentId: "A" } as any);
-    c.push({ type: "tool_use_args_delta", toolCallId: "t1", args: { b: 2, a: 99 }, agentId: "A" } as any);
+    c.push({
+      type: "tool_use_args_delta",
+      toolCallId: "t1",
+      args: { b: 2, a: 99 },
+      agentId: "A",
+    } as any);
     await delay(50);
     expect(c1.out).toEqual([
       { type: "tool_use_args_delta", toolCallId: "t1", args: { a: 99, b: 2 }, agentId: "A" } as any,
@@ -47,12 +56,76 @@ describe("createEventCoalescer", () => {
     const c1 = collector();
     const c = createEventCoalescer(c1.onFlush, 30);
     c.push({ type: "text_delta", text: "hi", agentId: "A" } as any);
-    c.push({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Read", args: {} }, agentId: "A" } as any);
+    c.push({
+      type: "tool_use_start",
+      toolCall: { id: "t1", toolName: "Read", args: {} },
+      agentId: "A",
+    } as any);
     await delay(50);
     expect(c1.out.length).toBe(2);
     expect(c1.out[0]!.type).toBe("text_delta");
     expect((c1.out[0] as any).text).toBe("hi");
     expect(c1.out[1]!.type).toBe("tool_use_start");
+    c.dispose();
+  });
+
+  test("15b. turn boundary splits text_delta segments within one batch", async () => {
+    const c1 = collector();
+    const c = createEventCoalescer(c1.onFlush, 30);
+    c.push({ type: "text_delta", text: "old" } as any);
+    c.push({ type: "turn_complete", status: "completed" } as any);
+    c.push({ type: "stream_request_start", turnNumber: 2 } as any);
+    c.push({ type: "text_delta", text: "new" } as any);
+    await delay(50);
+    expect(c1.batches).toBe(1);
+    expect(c1.out.map((e) => e.type)).toEqual([
+      "text_delta",
+      "turn_complete",
+      "stream_request_start",
+      "text_delta",
+    ]);
+    expect((c1.out[0] as any).text).toBe("old");
+    expect((c1.out[3] as any).text).toBe("new");
+    c.dispose();
+  });
+
+  test("15c. tool boundary keeps later text_delta after the tool_use_start", async () => {
+    const c1 = collector();
+    const c = createEventCoalescer(c1.onFlush, 30);
+    c.push({ type: "text_delta", text: "before", agentId: "A" } as any);
+    c.push({
+      type: "tool_use_start",
+      toolCall: { id: "t1", toolName: "Read", args: {} },
+      agentId: "A",
+    } as any);
+    c.push({ type: "text_delta", text: "after", agentId: "A" } as any);
+    await delay(50);
+    expect(c1.batches).toBe(1);
+    expect(c1.out.map((e) => e.type)).toEqual(["text_delta", "tool_use_start", "text_delta"]);
+    expect((c1.out[0] as any).text).toBe("before");
+    expect((c1.out[2] as any).text).toBe("after");
+    c.dispose();
+  });
+
+  test("15d. tool_result boundary splits args deltas for the same toolCallId", async () => {
+    const c1 = collector();
+    const c = createEventCoalescer(c1.onFlush, 30);
+    c.push({ type: "tool_use_args_delta", toolCallId: "t1", args: { a: 1 }, agentId: "A" } as any);
+    c.push({
+      type: "tool_result",
+      result: { id: "t1", toolName: "Read", result: "ok" },
+      agentId: "A",
+    } as any);
+    c.push({ type: "tool_use_args_delta", toolCallId: "t1", args: { b: 2 }, agentId: "A" } as any);
+    await delay(50);
+    expect(c1.batches).toBe(1);
+    expect(c1.out.map((e) => e.type)).toEqual([
+      "tool_use_args_delta",
+      "tool_result",
+      "tool_use_args_delta",
+    ]);
+    expect((c1.out[0] as any).args).toEqual({ a: 1 });
+    expect((c1.out[2] as any).args).toEqual({ b: 2 });
     c.dispose();
   });
 
@@ -84,8 +157,14 @@ describe("createEventCoalescer", () => {
     const c = createEventCoalescer(c1.onFlush, 30);
     // Simulate a tool-heavy sub-agent: many start/result pairs in one window.
     for (let i = 0; i < 10; i++) {
-      c.push({ type: "tool_use_start", toolCall: { id: `t${i}`, toolName: "Read", args: {} } } as any);
-      c.push({ type: "tool_result", result: { id: `t${i}`, toolName: "Read", result: "ok" } } as any);
+      c.push({
+        type: "tool_use_start",
+        toolCall: { id: `t${i}`, toolName: "Read", args: {} },
+      } as any);
+      c.push({
+        type: "tool_result",
+        result: { id: `t${i}`, toolName: "Read", result: "ok" },
+      } as any);
     }
     await delay(50);
     // 20 events, but ONE dispatch — the whole point of the perf fix.

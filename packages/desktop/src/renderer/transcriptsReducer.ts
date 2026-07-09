@@ -26,7 +26,7 @@ export type TranscriptsAction =
       pending?: boolean;
     }
   | { type: "stream"; bucket: string; event: StreamEvent }
-  | { type: "stream_batch"; bucket: string; events: StreamEvent[] }
+  | { type: "stream_batch"; bucket: string; events: StreamEvent[]; maxSeq?: number }
   | { type: "hydrate"; bucket: string; state: MessagesReducerState }
   | { type: "remove_pending_steers"; bucket: string; steerIds: string[] }
   | {
@@ -49,10 +49,7 @@ export type TranscriptsAction =
       detail?: string;
     };
 
-export function transcriptsReducer(
-  map: TranscriptsMap,
-  action: TranscriptsAction,
-): TranscriptsMap {
+export function transcriptsReducer(map: TranscriptsMap, action: TranscriptsAction): TranscriptsMap {
   if (action.type === "hydrate") {
     const current = map[action.bucket];
     // Protect ALL local steer bubbles (not just still-pending ones) from a
@@ -82,9 +79,10 @@ export function transcriptsReducer(
     });
     return {
       ...map,
-      [action.bucket]: missing.length === 0
-        ? action.state
-        : { ...action.state, messages: [...action.state.messages, ...missing] },
+      [action.bucket]:
+        missing.length === 0
+          ? action.state
+          : { ...action.state, messages: [...action.state.messages, ...missing] },
     };
   }
   const current = map[action.bucket] ?? INITIAL_STATE;
@@ -135,6 +133,9 @@ export function transcriptsReducer(
         () => {
           let acc = current;
           for (const ev of action.events) acc = applyStreamEvent(acc, ev);
+          if (action.maxSeq !== undefined && action.maxSeq > acc.snapshotSeq) {
+            acc = { ...acc, snapshotSeq: action.maxSeq };
+          }
           return acc;
         },
         () => ({ events: action.events.length, msgs: current.messages.length }),

@@ -123,6 +123,97 @@ describe("ToolExecutor permission hook hardening", () => {
     expect(result.error).toContain(`Permission denied by user for tool: ${PROBE_TOOL}`);
   });
 
+  it("does not let pre_tool_use ask bypass a classifier deny rule", async () => {
+    let approvalRequests = 0;
+    const { executor, hooks, didRun } = makeExecutor({
+      rules: [rule("deny")],
+      approvalBackend: backendWith({ approved: true }, () => {
+        approvalRequests++;
+      }),
+    });
+    hooks.register("pre_tool_use", () => ({
+      decision: "ask",
+      messages: ["extra confirmation"],
+    }));
+
+    const result = await runProbe(executor);
+
+    expect(approvalRequests).toBe(0);
+    expect(didRun()).toBe(false);
+    expect(result.isError).toBe(true);
+    expect(result.error).toContain(`Permission denied for tool: ${PROBE_TOOL}`);
+  });
+
+  it("lets pre_tool_use ask downgrade classifier allow to one user approval", async () => {
+    let approvalRequests = 0;
+    let description = "";
+    const { executor, hooks, didRun } = makeExecutor({
+      rules: [rule("allow")],
+      approvalBackend: backendWith({ approved: true }, (request) => {
+        approvalRequests++;
+        description = request.description;
+      }),
+    });
+    hooks.register("pre_tool_use", () => ({
+      decision: "ask",
+      messages: ["extra confirmation"],
+    }));
+
+    const result = await runProbe(executor);
+
+    expect(approvalRequests).toBe(1);
+    expect(description).toContain("pre_tool_use");
+    expect(description).toContain("extra confirmation");
+    expect(didRun()).toBe(true);
+    expect(result.isError).toBeFalsy();
+    expect(result.result).toBe("ran");
+  });
+
+  it("denies when user rejects a pre_tool_use ask downgrade from classifier allow", async () => {
+    let approvalRequests = 0;
+    const { executor, hooks, didRun } = makeExecutor({
+      rules: [rule("allow")],
+      approvalBackend: backendWith({ approved: false, reason: "user denied" }, () => {
+        approvalRequests++;
+      }),
+    });
+    hooks.register("pre_tool_use", () => ({
+      decision: "ask",
+      messages: ["extra confirmation"],
+    }));
+
+    const result = await runProbe(executor);
+
+    expect(approvalRequests).toBe(1);
+    expect(didRun()).toBe(false);
+    expect(result.isError).toBe(true);
+    expect(result.error).toContain(`Permission denied by user for tool: ${PROBE_TOOL}`);
+  });
+
+  it("merges classifier ask with pre_tool_use ask into a single prompt", async () => {
+    let approvalRequests = 0;
+    let description = "";
+    const { executor, hooks, didRun } = makeExecutor({
+      rules: [rule("ask")],
+      approvalBackend: backendWith({ approved: true }, (request) => {
+        approvalRequests++;
+        description = request.description;
+      }),
+    });
+    hooks.register("pre_tool_use", () => ({
+      decision: "ask",
+      messages: ["extra confirmation"],
+    }));
+
+    const result = await runProbe(executor);
+
+    expect(approvalRequests).toBe(1);
+    expect(description).toContain("pre_tool_use");
+    expect(description).toContain("extra confirmation");
+    expect(didRun()).toBe(true);
+    expect(result.isError).toBeFalsy();
+  });
+
   it("runs path policy after pre_tool_use allow, before any handler execution", async () => {
     let pathPrompts = 0;
     const { executor, hooks, didRun } = makeExecutor({
@@ -158,6 +249,27 @@ describe("ToolExecutor permission hook hardening", () => {
     const result = await runProbe(executor);
 
     expect(seenClassifierDecision).toBe("deny");
+    expect(didRun()).toBe(false);
+    expect(result.isError).toBe(true);
+    expect(result.error).toContain(`Permission denied for tool: ${PROBE_TOOL}`);
+  });
+
+  it("does not let on_permission_check ask relax a classifier deny rule", async () => {
+    let approvalRequests = 0;
+    const { executor, hooks, didRun } = makeExecutor({
+      rules: [rule("deny")],
+      approvalBackend: backendWith({ approved: true }, () => {
+        approvalRequests++;
+      }),
+    });
+    hooks.register("on_permission_check", () => ({
+      decision: "ask",
+      messages: ["audit wants user confirmation"],
+    }));
+
+    const result = await runProbe(executor);
+
+    expect(approvalRequests).toBe(0);
     expect(didRun()).toBe(false);
     expect(result.isError).toBe(true);
     expect(result.error).toContain(`Permission denied for tool: ${PROBE_TOOL}`);

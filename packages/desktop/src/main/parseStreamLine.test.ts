@@ -7,7 +7,7 @@
  * not snapshotted.
  */
 import { describe, it, expect } from "bun:test";
-import { parseSnapshotAppend } from "./parseStreamLine";
+import { parseLiveStreamEnvelope, parseSnapshotAppend } from "./parseStreamLine";
 
 const line = (obj: unknown): string => JSON.stringify(obj);
 
@@ -65,5 +65,40 @@ describe("parseSnapshotAppend", () => {
         }),
       ),
     ).toBeNull();
+  });
+});
+
+describe("parseLiveStreamEnvelope", () => {
+  it("attaches snapshot seq to a live agent/streamEvent envelope", () => {
+    const result = parseLiveStreamEnvelope(
+      line({
+        jsonrpc: "2.0",
+        method: "agent/streamEvent",
+        params: { sessionId: "s1", event: { type: "text_delta", text: "hi" } },
+      }),
+      { seq: 7 },
+    );
+    expect(result).toEqual({
+      sessionId: "s1",
+      event: { type: "text_delta", text: "hi" },
+      seq: 7,
+    });
+  });
+
+  it("keeps live-only stream events even when no snapshot seq exists", () => {
+    const result = parseLiveStreamEnvelope(
+      line({
+        method: "agent/streamEvent",
+        params: { sessionId: "s1", event: { type: "steer_injected", text: "go" } },
+      }),
+    );
+    expect(result).toEqual({
+      sessionId: "s1",
+      event: { type: "steer_injected", text: "go" },
+    });
+  });
+
+  it("returns null for non-stream lines", () => {
+    expect(parseLiveStreamEnvelope(line({ jsonrpc: "2.0", id: 7, result: {} }))).toBeNull();
   });
 });

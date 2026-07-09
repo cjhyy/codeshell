@@ -25,7 +25,7 @@ import { mkdirSync } from "node:fs";
 import { BrowserWindow, ipcMain } from "electron";
 import { dlog } from "./desktop-logger.js";
 import { SessionSnapshotStore, type Snapshot, type SnapshotEntry } from "./SessionSnapshotStore.js";
-import { parseSnapshotAppend } from "./parseStreamLine.js";
+import { parseLiveStreamEnvelope, parseSnapshotAppend } from "./parseStreamLine.js";
 import {
   parseBrowserActionLine,
   buildBrowserActionReply,
@@ -204,8 +204,13 @@ export class AgentBridge {
       const snapshotEntry = append
         ? { sessionId: append.sessionId, ...this.snapshots.append(append.sessionId, append.event) }
         : undefined;
+      const liveStreamEnvelope = parseLiveStreamEnvelope(line, snapshotEntry);
       dlog("bridge", "worker→renderer", summary);
-      this.safeSend("agent:msg", line);
+      if (liveStreamEnvelope) {
+        this.safeSend("agent:streamEvent", liveStreamEnvelope);
+      } else {
+        this.safeSend("agent:msg", line);
+      }
       for (const tap of this.outboundTaps) {
         try {
           tap(line, snapshotEntry);
@@ -399,11 +404,11 @@ export class AgentBridge {
         resultJson = await handleBrowserAction(parsed.request, {
           activeGuest,
           policy: loadBrowserAutomationPolicy,
-          // The click/type TOOLS already carry permissionDefault:"ask", so a
-          // sensitive page action is gated at the tool-permission layer BEFORE
-          // it reaches here — a second hard-decline at the bridge would just
-          // dead-block legit flows the user already approved. So we allow at the
-          // bridge level. The one bridge-only gate that still hard-enforces is
+          // Sensitive browser page actions are gated by the preset permission
+          // rules before they reach here; permissionDefault is only UI metadata.
+          // A second hard-decline at the bridge would just dead-block legit
+          // flows the user already approved. So we allow at the bridge level.
+          // The one bridge-only gate that still hard-enforces is
           // the DOMAIN WHITELIST: it's opt-in (empty list = allow all), and when
           // the user did set one, blocking an off-list host is the intended
           // behavior. An interactive per-action approval dialog is a follow-up.
@@ -708,15 +713,8 @@ export class AgentBridge {
    *  Engine) into the same snapshot + renderer stream, so renderer reconnect works
    *  identically for automation sessions. */
   ingestExternalEvent(sessionId: string, event: unknown): void {
-    this.snapshots.append(sessionId, event);
-    this.safeSend(
-      "agent:msg",
-      JSON.stringify({
-        jsonrpc: "2.0",
-        method: "agent/streamEvent",
-        params: { sessionId, event },
-      }),
-    );
+    const entry = this.snapshots.append(sessionId, event);
+    this.safeSend("agent:streamEvent", { sessionId, event, seq: entry.seq });
   }
 
   /**

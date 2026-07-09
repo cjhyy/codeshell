@@ -7,8 +7,6 @@ import { resolve as resolvePath, isAbsolute as isAbsolutePath } from "node:path"
 import type {
   ToolCall,
   ToolResult,
-  Message,
-  ContentBlock,
   PermissionDecision,
   RegisteredTool,
   ToolPathPolicy,
@@ -33,23 +31,38 @@ import { CANCEL_GOAL_TOOL_NAME } from "./builtin/cancel-goal.js";
 
 type Logger = typeof rootLogger;
 
-// A1 hardening: hooks must never promote a non-`allow` classifier
-// decision to `allow`. They may otherwise adjust the decision freely
-// (e.g. tighten `allow` to `deny`/`ask`, or relax `deny` to `ask` to
-// request interactive confirmation — both legitimate audit patterns).
-// The user remains the only source of `allow` when the classifier
-// said `ask`/`deny`.
-//
-// See standard §S4 and spec docs/superpowers/specs/2026-05-26-a1-permission-hardening-design.md.
+const PERMISSION_DECISION_RANK: Record<PermissionDecision, number> = {
+  allow: 0,
+  ask: 1,
+  deny: 2,
+};
+
+// Permission hooks may only keep or tighten the current decision. The merge
+// order is deny > ask > allow, so classifier deny/rules stay hard-deny even if
+// a hook asks the user for confirmation.
 function clampHookDecision(
   classifier: PermissionDecision,
   hook: PermissionDecision | undefined,
 ): { decision: PermissionDecision; rejectedUpgrade: boolean } {
   if (!hook) return { decision: classifier, rejectedUpgrade: false };
-  if (hook === "allow" && classifier !== "allow") {
+  if (PERMISSION_DECISION_RANK[hook] < PERMISSION_DECISION_RANK[classifier]) {
     return { decision: classifier, rejectedUpgrade: true };
   }
   return { decision: hook, rejectedUpgrade: false };
+}
+
+function permissionAskReason(
+  preHookMessages: string[] | undefined,
+  permissionHookMessages: string[] | undefined,
+): string | undefined {
+  const parts: string[] = [];
+  if (preHookMessages?.length) {
+    parts.push(`pre_tool_use:\n${preHookMessages.join("\n")}`);
+  }
+  if (permissionHookMessages?.length) {
+    parts.push(`on_permission_check:\n${permissionHookMessages.join("\n")}`);
+  }
+  return parts.length > 0 ? parts.join("\n\n") : undefined;
 }
 
 export class ToolExecutor {
@@ -162,7 +175,11 @@ export class ToolExecutor {
       };
     }
     const visibilityGuard = BUILTIN_TOOL_GUARDS.get(call.toolName);
-    if (visibilityGuard && this.toolCtx?.toolVisibility && !visibilityGuard(this.toolCtx.toolVisibility)) {
+    if (
+      visibilityGuard &&
+      this.toolCtx?.toolVisibility &&
+      !visibilityGuard(this.toolCtx.toolVisibility)
+    ) {
       return {
         id: call.id,
         toolName: call.toolName,
@@ -175,9 +192,10 @@ export class ToolExecutor {
     // them from this session's tool list; this rejects a direct call anyway.
     if (this.toolCtx?.allowedMcpServers) {
       const allowed = this.toolCtx.allowedMcpServers;
-      const reg = this.registry.getTool(call.toolName) as
-        | { source?: string; serverName?: string }
-        | null;
+      const reg = this.registry.getTool(call.toolName) as {
+        source?: string;
+        serverName?: string;
+      } | null;
       if (reg?.source === "mcp" && !allowed.has(reg.serverName ?? "")) {
         return {
           id: call.id,
@@ -313,48 +331,16 @@ export class ToolExecutor {
       };
     }
 
-    // A1 hardening: pre_tool_use can no longer pre-approve a tool via
-    // `decision === "allow"`. Hooks may relax `allow` and may force
-    // `ask`/`deny`, but they cannot promote a `deny`/`ask` decision to
-    // `allow`. The only paths to `allow` are the classifier (rules,
-    // safe-read, allowlist) and the user (interactive approval).
-    if (hookResult.decision === "allow") {
-      this.log.info("permission.hook_upgrade_rejected", {
-        cat: "permission",
-        tool: call.toolName,
-        site: "pre_tool_use",
-      });
-    }
-
-    // pre_tool_use can request interactive confirmation via
-    // decision: "ask". We invoke the same handleAsk path the classifier
-    // uses, but feed the hook's messages so the user sees the handler's
-    // reasoning. If the user approves, we skip the classifier below —
-    // the hook and the user together have decided.
-    if (hookResult.decision === "ask") {
-      const reason = hookResult.messages?.join("\n") ?? undefined;
-      const approved = await this.permission.handleAsk(
-        call.toolName,
-        call.args,
-        reason,
-        { sessionId: this.toolCtx?.sessionId },
-      );
-      if (!approved) {
-        return {
-          id: call.id,
-          toolName: call.toolName,
-          error: `Tool call denied by user (pre_tool_use ask).`,
-          isError: true,
-        };
-      }
-    }
-
     // 0.7. Investigation guard — block redundant reads and tag soft reminders
     // onto results. See investigation-guard.ts for the rules; they enforce the
     // soft prompt guidance in coding.md ("never re-read", "3-call budget").
     const guardDecision = this.guard?.preToolCheck(call);
     if (guardDecision?.block) {
-      this.log.info("guard.block", { cat: "guard", tool: call.toolName, reason: guardDecision.block.slice(0, 200) });
+      this.log.info("guard.block", {
+        cat: "guard",
+        tool: call.toolName,
+        reason: guardDecision.block.slice(0, 200),
+      });
       return {
         id: call.id,
         toolName: call.toolName,
@@ -363,70 +349,84 @@ export class ToolExecutor {
       };
     }
 
-    // 1. Permission check — skipped only when pre_tool_use issued an
-    // `ask` that the user just approved (we don't double-prompt).
-    if (hookResult.decision !== "ask") {
-      const classifierDecision = this.permission.classify(call.toolName, call.args);
-      this.log.info("permission.classify", {
+    // 1. Permission check. `pre_tool_use: ask` only adds a stricter ask
+    // requirement; user approval for that ask cannot bypass classifier deny
+    // rules. Final merge order is deny > ask > allow, and at most one prompt
+    // is shown for the merged ask decision.
+    const classifierDecision = this.permission.classify(call.toolName, call.args);
+    this.log.info("permission.classify", {
+      cat: "permission",
+      tool: call.toolName,
+      decision: classifierDecision,
+      mode: this.permission.getMode(),
+    });
+
+    // on_permission_check hook: lets handlers audit and tighten the decision
+    // (e.g. `allow → ask/deny`). Attempts to relax classifier/pre-hook deny or
+    // ask are rejected by clampHookDecision.
+    const permHook = await this.hooks.emit("on_permission_check", {
+      toolName: call.toolName,
+      args: call.args,
+      toolCallId: call.id,
+      classifierDecision,
+    });
+
+    const preClamped = clampHookDecision(classifierDecision, hookResult.decision);
+    let decision = preClamped.decision;
+    if (preClamped.rejectedUpgrade) {
+      this.log.info("permission.hook_upgrade_rejected", {
         cat: "permission",
         tool: call.toolName,
-        decision: classifierDecision,
-        mode: this.permission.getMode(),
+        site: "pre_tool_use",
+        attempted: hookResult.decision,
+        classifier: classifierDecision,
       });
+    }
 
-      // on_permission_check hook: lets handlers audit and *downgrade*
-      // the classifier decision (e.g. `allow → ask/deny`, `deny →
-      // ask`). Promotion to `allow` is rejected by clampHookDecision
-      // — only the classifier and the user can grant `allow`.
-      const permHook = await this.hooks.emit("on_permission_check", {
+    const permClamped = clampHookDecision(decision, permHook.decision);
+    decision = permClamped.decision;
+    if (permClamped.rejectedUpgrade) {
+      this.log.info("permission.hook_upgrade_rejected", {
+        cat: "permission",
+        tool: call.toolName,
+        site: "on_permission_check",
+        attempted: permHook.decision,
+        classifier: classifierDecision,
+      });
+    }
+    if (decision !== classifierDecision) {
+      this.log.info("permission.hook_override", {
+        cat: "permission",
+        tool: call.toolName,
+        from: classifierDecision,
+        to: decision,
+      });
+    }
+
+    if (decision === "deny") {
+      return {
+        id: call.id,
         toolName: call.toolName,
-        args: call.args,
-        toolCallId: call.id,
-        classifierDecision,
-      });
-      // A1 hardening: clamp hook decision to downgrades only.
-      const clamped = clampHookDecision(classifierDecision, permHook.decision);
-      const decision = clamped.decision;
-      if (clamped.rejectedUpgrade) {
-        this.log.info("permission.hook_upgrade_rejected", {
-          cat: "permission",
-          tool: call.toolName,
-          site: "on_permission_check",
-          attempted: permHook.decision,
-          classifier: classifierDecision,
-        });
-      }
-      if (decision !== classifierDecision) {
-        this.log.info("permission.hook_override", {
-          cat: "permission",
-          tool: call.toolName,
-          from: classifierDecision,
-          to: decision,
-        });
-      }
+        error: `Permission denied for tool: ${call.toolName}`,
+        isError: true,
+      };
+    }
 
-      if (decision === "deny") {
+    if (decision === "ask") {
+      const reason = permissionAskReason(
+        hookResult.decision === "ask" ? hookResult.messages : undefined,
+        permHook.decision === "ask" ? permHook.messages : undefined,
+      );
+      const approved = await this.permission.handleAsk(call.toolName, call.args, reason, {
+        sessionId: this.toolCtx?.sessionId,
+      });
+      if (!approved) {
         return {
           id: call.id,
           toolName: call.toolName,
-          error: `Permission denied for tool: ${call.toolName}`,
+          error: `Permission denied by user for tool: ${call.toolName}`,
           isError: true,
         };
-      }
-
-      if (decision === "ask") {
-        const reason = permHook.messages?.join("\n");
-        const approved = await this.permission.handleAsk(call.toolName, call.args, reason, {
-          sessionId: this.toolCtx?.sessionId,
-        });
-        if (!approved) {
-          return {
-            id: call.id,
-            toolName: call.toolName,
-            error: `Permission denied by user for tool: ${call.toolName}`,
-            isError: true,
-          };
-        }
       }
     }
 
@@ -464,7 +464,7 @@ export class ToolExecutor {
         toolName: call.toolName,
         ok: false,
         durationMs: Date.now() - toolStartedAt,
-        error: err instanceof Error ? err.stack ?? err.message : String(err),
+        error: err instanceof Error ? (err.stack ?? err.message) : String(err),
       });
       // A model calling a tool that isn't in the registry (hallucinated name,
       // or a builtin missing from the active preset's whitelist) must not kill
@@ -630,27 +630,5 @@ export class ToolExecutor {
     } catch (err) {
       return `Error: ${(err as Error).message}`;
     }
-  }
-
-  /**
-   * Convert tool results into Message entries for the transcript.
-   */
-  resultsToMessages(toolCalls: ToolCall[], results: ToolResult[]): Message[] {
-    const blocks: ContentBlock[] = [];
-
-    for (const result of results) {
-      blocks.push({
-        type: "tool_result",
-        tool_use_id: result.id,
-        content: result.error ? `Error: ${result.error}` : (result.result ?? "(no output)"),
-      });
-    }
-
-    return [
-      {
-        role: "user",
-        content: blocks,
-      },
-    ];
   }
 }

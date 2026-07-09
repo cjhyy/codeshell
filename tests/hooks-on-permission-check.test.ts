@@ -104,7 +104,7 @@ describe("on_permission_check hook", () => {
     expect(result.isError).toBeFalsy();
   });
 
-  it("handler can downgrade 'deny' to 'ask' and thread messages to the prompt", async () => {
+  it("handler cannot relax classifier 'deny' to 'ask'", async () => {
     const registry = new ToolRegistry({ builtinTools: ["Read"] });
     let toolRan = false;
     registry.registerTool(
@@ -115,16 +115,12 @@ describe("on_permission_check hook", () => {
       },
     );
     let approvalReason: string | undefined;
-    const permission = new PermissionClassifier(
-      [{ tool: "Read", decision: "deny" }],
-      "default",
-      {
-        requestApproval: async (req) => {
-          approvalReason = req.description;
-          return { approved: true };
-        },
+    const permission = new PermissionClassifier([{ tool: "Read", decision: "deny" }], "default", {
+      requestApproval: async (req) => {
+        approvalReason = req.description;
+        return { approved: true };
       },
-    );
+    });
     const hooks = new HookRegistry();
     const exec = new ToolExecutor(registry, permission, hooks);
     hooks.register("on_permission_check", () => ({
@@ -138,8 +134,9 @@ describe("on_permission_check hook", () => {
       args: { file_path: "/secrets/x" },
     });
 
-    expect(toolRan).toBe(true);
-    expect(result.isError).toBeFalsy();
-    expect(approvalReason).toContain("audit policy");
+    expect(toolRan).toBe(false);
+    expect(result.isError).toBe(true);
+    expect(result.error).toContain("Permission denied for tool: Read");
+    expect(approvalReason).toBeUndefined();
   });
 });

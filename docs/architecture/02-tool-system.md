@@ -8,21 +8,21 @@ Every LLM-facing capability — reading a file, running a shell command, spawnin
 
 ![Tool execution pipeline](images/tool-execution-pipeline.png)
 
-| File | Role | ~LOC |
-|------|------|------|
-| `registry.ts` | `ToolRegistry` — builtin selection, metadata validation, timeout/cancellation wrapper, result normalization | ~194 |
-| `executor.ts` | `ToolExecutor` — per-call lifecycle: visibility, plan mode, hooks, path policy, permission, execution, result hooks | ~656 |
-| `permission.ts` | `PermissionClassifier` + approval backends, operation-scoped grants, Bash safety scanner, denial tracker | ~1,095 |
-| `path-policy.ts` | Sensitive-path/workspace classifier, path approval cache, path prompt flow, `bypassPermissions` escape hatch | ~692 |
-| `plan-mode-allowlist.ts` | Single source of truth for read-only tools in plan mode and low-risk read-only tools | ~66 |
-| `validation.ts` | Cheap top-level input-schema validation before handlers run | ~60 |
-| `validate-tool-metadata.ts` | Registration-time guard that `pathPolicy.arg` still exists in the tool schema | ~79 |
-| `mcp-manager.ts` | Shared MCP connection pool, transport/header/env setup, discovery, registration, untrusted-output wrapping | ~662 |
-| `sandbox/index.ts` | OS shell sandbox resolver and default sandbox config | ~291 |
-| `browser-bridge.ts` | Driver-agnostic browser automation contract for the three browser tools | ~342 |
-| `context.ts` | `ToolContext` — per-engine services and visibility state injected into every tool | ~373 |
-| `builtin/index.ts` | `BUILTIN_TOOLS` registration table (57 tools) and runtime availability guards | ~795 |
-| `../preset/index.ts` | Builtin preset tool whitelists, default permission rules, browser prompt-section gating | ~337 |
+| File                        | Role                                                                                                                | ~LOC   |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------ |
+| `registry.ts`               | `ToolRegistry` — builtin selection, metadata validation, timeout/cancellation wrapper, result normalization         | ~194   |
+| `executor.ts`               | `ToolExecutor` — per-call lifecycle: visibility, plan mode, hooks, path policy, permission, execution, result hooks | ~656   |
+| `permission.ts`             | `PermissionClassifier` + approval backends, operation-scoped grants, Bash safety scanner, denial tracker            | ~1,095 |
+| `path-policy.ts`            | Sensitive-path/workspace classifier, path approval cache, path prompt flow, `bypassPermissions` escape hatch        | ~692   |
+| `plan-mode-allowlist.ts`    | Single source of truth for read-only tools in plan mode and low-risk read-only tools                                | ~66    |
+| `validation.ts`             | Cheap top-level input-schema validation before handlers run                                                         | ~60    |
+| `validate-tool-metadata.ts` | Registration-time guard that `pathPolicy.arg` still exists in the tool schema                                       | ~79    |
+| `mcp-manager.ts`            | Shared MCP connection pool, transport/header/env setup, discovery, registration, untrusted-output wrapping          | ~662   |
+| `sandbox/index.ts`          | OS shell sandbox resolver and default sandbox config                                                                | ~291   |
+| `browser-bridge.ts`         | Driver-agnostic browser automation contract for the three browser tools                                             | ~342   |
+| `context.ts`                | `ToolContext` — per-engine services and visibility state injected into every tool                                   | ~373   |
+| `builtin/index.ts`          | `BUILTIN_TOOLS` registration table (57 tools) and runtime availability guards                                       | ~795   |
+| `../preset/index.ts`        | Builtin preset tool whitelists, default permission rules, browser prompt-section gating                             | ~337   |
 
 ## 2. The end-to-end path
 
@@ -46,7 +46,7 @@ ToolExecutor.executeSingle(call)                 executor.ts:119
    ├─ on_tool_end / post_tool_use hooks          executor.ts:507 / executor.ts:516
    └─ file_changed hook for Write/Edit           executor.ts:540
    │
-returns ToolResult → resultsToMessages(...)      executor.ts:638
+returns ToolResult → TurnLoop toolResultToBlock(...)  turn-loop.ts
 ```
 
 Inside `ToolRegistry.executeTool` (`registry.ts:85`): missing tool definitions throw `ToolNotFoundError` before the handler path (`registry.ts:90`), missing executors throw `ToolExecutionError` (`registry.ts:95`), and timeout precedence is per-call override > tool declaration > `DEFAULT_TOOL_TIMEOUT_MS` 120 s (`registry.ts:100`). The registry creates a child `AbortController` (`registry.ts:117`), cascades parent aborts (`registry.ts:123`), injects `__signal` into args (`registry.ts:127`), and races the handler against the abort promise (`registry.ts:136`). Handler results normalize to string, image/content blocks, or sandbox metadata (`registry.ts:151`); handler exceptions and timeouts are returned as `ToolResult` errors (`registry.ts:166`).
