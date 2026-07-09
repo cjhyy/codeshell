@@ -42,7 +42,9 @@ describe("buildInputAttachmentContext", () => {
     mkdirSync(join(cwd, ".code-shell", "attachments", "sid"), { recursive: true });
     writeFileSync(abs, Buffer.from(PNG_B64, "base64"));
 
-    const out = await buildInputAttachmentContext([meta({ absPath: abs })], cwd);
+    const out = await buildInputAttachmentContext([meta({ absPath: abs })], cwd, {
+      expectedSessionId: "sid",
+    });
     expect(out.errors).toEqual([]);
     expect(out.hasStructuredImageAttachments).toBe(true);
     expect(out.images).toHaveLength(1);
@@ -70,6 +72,7 @@ describe("buildInputAttachmentContext", () => {
         }),
       ],
       cwd,
+      { expectedSessionId: "sid" },
     );
     expect(out.errors).toEqual([]);
     expect(out.images).toEqual([]);
@@ -86,6 +89,7 @@ describe("buildInputAttachmentContext", () => {
       const out = await buildInputAttachmentContext(
         [meta({ path: secret, absPath: secret, relPath: undefined })],
         cwd,
+        { expectedSessionId: "sid" },
       );
       expect(out.images).toEqual([]);
       expect(out.errors.join("\n")).toContain("blocked by path policy");
@@ -98,6 +102,7 @@ describe("buildInputAttachmentContext", () => {
     const out = await buildInputAttachmentContext(
       [meta({ path: "missing.png", absPath: join(cwd, "missing.png"), relPath: "missing.png" })],
       cwd,
+      { expectedSessionId: "sid" },
     );
     expect(out.images).toEqual([]);
     expect(out.errors.join("\n")).toContain("stat failed");
@@ -117,6 +122,7 @@ describe("buildInputAttachmentContext", () => {
         }),
       ],
       cwd,
+      { expectedSessionId: "sid" },
     );
 
     expect(out.images).toEqual([]);
@@ -130,13 +136,15 @@ describe("buildInputAttachmentContext", () => {
     writeFileSync(abs, "");
     truncateSync(abs, IMAGE_LIMITS.maxBytesPerImage + 1);
 
-    const out = await buildInputAttachmentContext([meta({ path: abs, absPath: abs })], cwd);
+    const out = await buildInputAttachmentContext([meta({ path: abs, absPath: abs })], cwd, {
+      expectedSessionId: "sid",
+    });
 
     expect(out.images).toEqual([]);
     expect(out.errors.join("\n")).toContain("image attachment size policy failed");
   });
 
-  test("non-vision callers receive image metadata without reading bytes", async () => {
+  test("image bytes disabled still exposes structured-image signal for engine gate", async () => {
     const abs = join(cwd, ".code-shell", "attachments", "sid", "huge.png");
     mkdirSync(join(cwd, ".code-shell", "attachments", "sid"), { recursive: true });
     writeFileSync(abs, "");
@@ -144,6 +152,7 @@ describe("buildInputAttachmentContext", () => {
 
     const out = await buildInputAttachmentContext([meta({ path: abs, absPath: abs })], cwd, {
       includeImageBytes: false,
+      expectedSessionId: "sid",
     });
 
     expect(out.errors).toEqual([]);
@@ -151,5 +160,46 @@ describe("buildInputAttachmentContext", () => {
     expect(out.hasStructuredImageAttachments).toBe(true);
     expect(out.text).toContain('<attached-file path="');
     expect(out.text).toContain(`size: ${IMAGE_LIMITS.maxBytesPerImage + 1}`);
+  });
+
+  test("rejects cross-session attachment metadata before touching the path", async () => {
+    const out = await buildInputAttachmentContext(
+      [
+        meta({
+          sessionId: "other",
+          path: "missing.png",
+          absPath: join(cwd, "missing.png"),
+          relPath: "missing.png",
+        }),
+      ],
+      cwd,
+      { expectedSessionId: "sid" },
+    );
+
+    expect(out.images).toEqual([]);
+    expect(out.errors.join("\n")).toContain("session mismatch");
+    expect(out.errors.join("\n")).not.toContain("stat failed");
+  });
+
+  test("rejects staged attachments whose realpath is outside the expected session dir", async () => {
+    const otherAbs = join(cwd, ".code-shell", "attachments", "other", "shot.png");
+    mkdirSync(join(cwd, ".code-shell", "attachments", "other"), { recursive: true });
+    mkdirSync(join(cwd, ".code-shell", "attachments", "sid"), { recursive: true });
+    writeFileSync(otherAbs, Buffer.from(PNG_B64, "base64"));
+
+    const out = await buildInputAttachmentContext(
+      [
+        meta({
+          path: ".code-shell/attachments/other/shot.png",
+          absPath: otherAbs,
+          relPath: ".code-shell/attachments/other/shot.png",
+        }),
+      ],
+      cwd,
+      { expectedSessionId: "sid" },
+    );
+
+    expect(out.images).toEqual([]);
+    expect(out.errors.join("\n")).toContain("staged path is outside .code-shell/attachments/sid");
   });
 });

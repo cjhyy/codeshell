@@ -41,6 +41,15 @@ interface SanitizedImageUrlPart {
   image_url: { url: string; omitted: true; bytes: number };
 }
 
+export interface SanitizeMessagesOptions {
+  /**
+   * Tool-result IDs whose model-facing plaintext must be replaced before the
+   * request is written to any recorder/log sink. The original messages still
+   * go to the provider; this option is only for diagnostic copies.
+   */
+  sensitiveToolResultRedactions?: ReadonlyMap<string, string>;
+}
+
 /**
  * Returns true iff this content block carries a real image payload that we
  * should redact. Inline text/tool_use/tool_result blocks pass through.
@@ -60,9 +69,7 @@ function isImageBlock(block: unknown): block is ContentBlock & {
  * Returns true if this is the OpenAI-compat `image_url` part with a data
  * URL embedded inline.
  */
-function isImageUrlPart(
-  part: unknown,
-): part is { type: "image_url"; image_url: { url: string } } {
+function isImageUrlPart(part: unknown): part is { type: "image_url"; image_url: { url: string } } {
   if (!part || typeof part !== "object") return false;
   const p = part as Record<string, unknown>;
   if (p.type !== "image_url") return false;
@@ -98,14 +105,23 @@ function sanitizeImageUrlPart(part: {
     image_url: {
       // Keep the data-URL header so reviewers can see the MIME, but strip
       // the payload. "data:image/png;base64,<omitted, 12345 bytes>"
-      url:
-        comma === -1
-          ? url
-          : `${url.slice(0, comma + 1)}<omitted, ${payloadLen} bytes>`,
+      url: comma === -1 ? url : `${url.slice(0, comma + 1)}<omitted, ${payloadLen} bytes>`,
       omitted: true,
       bytes: payloadLen,
     },
   };
+}
+
+function getSensitiveToolResultReplacement(
+  block: unknown,
+  options?: SanitizeMessagesOptions,
+): string | undefined {
+  const redactions = options?.sensitiveToolResultRedactions;
+  if (!redactions || redactions.size === 0) return undefined;
+  if (!block || typeof block !== "object") return undefined;
+  const b = block as Record<string, unknown>;
+  if (b.type !== "tool_result" || typeof b.tool_use_id !== "string") return undefined;
+  return redactions.get(b.tool_use_id);
 }
 
 /**
@@ -114,6 +130,7 @@ function sanitizeImageUrlPart(part: {
  */
 export function sanitizeContent(
   content: Message["content"],
+  options?: SanitizeMessagesOptions,
 ): Message["content"] {
   if (typeof content === "string") return content;
   if (!Array.isArray(content)) return content;
@@ -121,6 +138,12 @@ export function sanitizeContent(
   let touched = false;
   const out: unknown[] = [];
   for (const block of content) {
+    const sensitiveReplacement = getSensitiveToolResultReplacement(block, options);
+    if (sensitiveReplacement !== undefined) {
+      out.push({ ...block, content: sensitiveReplacement });
+      touched = true;
+      continue;
+    }
     if (isImageBlock(block)) {
       out.push(sanitizeImageBlock(block));
       touched = true;
@@ -141,11 +164,14 @@ export function sanitizeContent(
  * Returns the *same* array reference when no message held an image (fast
  * path for the overwhelmingly common pure-text case).
  */
-export function sanitizeMessages(messages: readonly Message[]): Message[] {
+export function sanitizeMessages(
+  messages: readonly Message[],
+  options?: SanitizeMessagesOptions,
+): Message[] {
   let touched = false;
   const out: Message[] = [];
   for (const m of messages) {
-    const sanitized = sanitizeContent(m.content);
+    const sanitized = sanitizeContent(m.content, options);
     if (sanitized !== m.content) {
       touched = true;
       out.push({ ...m, content: sanitized });
@@ -190,7 +216,8 @@ const BEARER_RE = /\bBearer\s+[A-Za-z0-9._\-+/=~]{8,}/g;
 
 // URL query parameters that look like credentials. Conservative — only
 // trigger on a small named set so a normal `?id=…&q=…` URL passes through.
-const URL_SECRET_QS_RE = /([?&](?:key|api_key|apikey|access_token|token|auth|sig|signature)=)[^&#\s]+/gi;
+const URL_SECRET_QS_RE =
+  /([?&](?:key|api_key|apikey|access_token|token|auth|sig|signature)=)[^&#\s]+/gi;
 
 const REDACTED = "[redacted]";
 const MAX_DEPTH = 10;

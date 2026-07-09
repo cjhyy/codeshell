@@ -51,6 +51,10 @@
     ],
     "extraResources": [
       {
+        "from": "THIRD_PARTY_NOTICES.md",
+        "to": "THIRD_PARTY_NOTICES.md"
+      },
+      {
         "from": "resources/agents",
         "to": "packages/desktop/resources/agents"
       },

@@ -1051,6 +1051,7 @@ export class Engine {
     );
     const attachmentContext = await buildInputAttachmentContext(options?.attachments, cwd, {
       includeImageBytes: cap.supportsVision,
+      expectedSessionId: options?.sessionId,
     });
     if (attachmentContext.errors.length > 0) {
       const detail = attachmentContext.errors.join("; ");
@@ -1066,14 +1067,11 @@ export class Engine {
     if (attachmentContext.text || attachmentContext.hasStructuredImageAttachments) {
       parsedTask = {
         text: [parsedTask.text, attachmentContext.text].filter(Boolean).join("\n\n"),
-        images:
-          attachmentContext.hasStructuredImageAttachments && attachmentContext.images.length > 0
-            ? attachmentContext.images
-            : parsedTask.images,
+        images: [...parsedTask.images, ...attachmentContext.images],
         hasImages:
-          attachmentContext.hasStructuredImageAttachments && attachmentContext.images.length > 0
-            ? attachmentContext.images.length > 0
-            : parsedTask.hasImages,
+          parsedTask.hasImages ||
+          attachmentContext.images.length > 0 ||
+          attachmentContext.hasStructuredImageAttachments,
       };
     }
     if (parsedTask.hasImages) {

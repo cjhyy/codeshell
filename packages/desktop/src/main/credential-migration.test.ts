@@ -3,11 +3,13 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  CredentialStore,
   PlaintextCipher,
   setDefaultCredentialCipher,
   type EncryptionCipher,
 } from "@cjhyy/code-shell-core";
 import { migrateCredentialStore } from "./credential-migration.js";
+import { buildCredentialSnapshot } from "./credential-access-service.js";
 
 class FakeSafeCipher implements EncryptionCipher {
   encrypt(plaintext: string): string {
@@ -52,7 +54,7 @@ describe("credential migration", () => {
     rmSync(cwd, { recursive: true, force: true });
   });
 
-  test("rewrites legacy bare/plain secrets through the active safeStorage cipher", () => {
+  test("rewrites legacy bare/plain secrets through the active safeStorage cipher", async () => {
     setDefaultCredentialCipher(new FakeSafeCipher());
     mkdirSync(join(home, ".code-shell"), { recursive: true });
     writeFileSync(
@@ -66,7 +68,7 @@ describe("credential migration", () => {
       }),
     );
 
-    migrateCredentialStore(cwd);
+    await migrateCredentialStore(cwd);
 
     const raw = readFileSync(join(home, ".code-shell", "credentials.json"), "utf8");
     expect(raw).toContain("enc:safeStorage:");
@@ -74,7 +76,7 @@ describe("credential migration", () => {
     expect(raw).not.toContain("plain-secret");
   });
 
-  test("safeStorage unavailable fallback writes plain tagged secrets without failing", () => {
+  test("safeStorage unavailable fallback writes plain tagged secrets without failing", async () => {
     setDefaultCredentialCipher(new FallbackPlainCipher());
     mkdirSync(join(home, ".code-shell"), { recursive: true });
     writeFileSync(
@@ -85,9 +87,76 @@ describe("credential migration", () => {
       }),
     );
 
-    migrateCredentialStore(cwd);
+    await migrateCredentialStore(cwd);
 
     const raw = readFileSync(join(home, ".code-shell", "credentials.json"), "utf8");
     expect(raw).toContain("plain:bare-secret");
+  });
+
+  test("does not rewrite already safeStorage-encrypted entries or during snapshot", async () => {
+    setDefaultCredentialCipher(new FakeSafeCipher());
+    mkdirSync(join(home, ".code-shell"), { recursive: true });
+    const credentialsPath = join(home, ".code-shell", "credentials.json");
+    writeFileSync(
+      credentialsPath,
+      JSON.stringify(
+        {
+          version: 1,
+          credentials: [
+            {
+              id: "encrypted",
+              type: "token",
+              label: "Encrypted",
+              secret: "enc:safeStorage:YWxyZWFkeS1lbmNyeXB0ZWQ=",
+            },
+          ],
+        },
+        null,
+        2,
+      ),
+    );
+    const beforeSnapshot = readFileSync(credentialsPath, "utf8");
+
+    buildCredentialSnapshot([cwd], 1);
+    expect(readFileSync(credentialsPath, "utf8")).toBe(beforeSnapshot);
+
+    const result = await migrateCredentialStore(cwd);
+    expect(result.credentials).toBe(0);
+    expect(readFileSync(credentialsPath, "utf8")).toBe(beforeSnapshot);
+  });
+
+  test("serializes concurrent migrations without corrupting the credentials file", async () => {
+    setDefaultCredentialCipher(new FakeSafeCipher());
+    mkdirSync(join(home, ".code-shell"), { recursive: true });
+    writeFileSync(
+      join(home, ".code-shell", "credentials.json"),
+      JSON.stringify({
+        version: 1,
+        credentials: [
+          { id: "a", type: "token", label: "A", secret: "secret-a" },
+          { id: "b", type: "token", label: "B", secret: "plain:secret-b" },
+        ],
+      }),
+    );
+
+    const runs = Array.from({ length: 8 }, () => migrateCredentialStore(cwd));
+    const snapshot = buildCredentialSnapshot([cwd], 2);
+    expect(snapshot.revision).toBe(2);
+    const results = await Promise.all(runs);
+
+    expect(results.reduce((sum, item) => sum + item.credentials, 0)).toBe(2);
+    const raw = readFileSync(join(home, ".code-shell", "credentials.json"), "utf8");
+    const parsed = JSON.parse(raw) as { credentials: Array<{ id: string; secret: string }> };
+    expect(parsed.credentials.map((cred) => cred.id)).toEqual(["a", "b"]);
+    expect(parsed.credentials.every((cred) => cred.secret.startsWith("enc:safeStorage:"))).toBe(
+      true,
+    );
+    expect(raw).not.toContain("secret-a");
+    expect(raw).not.toContain("secret-b");
+    const listed = new CredentialStore(cwd).list("full");
+    expect(listed.map((cred) => ({ id: cred.id, secret: cred.secret }))).toEqual([
+      { id: "a", secret: "secret-a" },
+      { id: "b", secret: "secret-b" },
+    ]);
   });
 });

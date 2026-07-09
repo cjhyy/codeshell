@@ -8,7 +8,6 @@ import {
   type CredentialSnapshot,
   type CredentialSnapshotEntry,
 } from "@cjhyy/code-shell-core";
-import { migrateCredentialStore } from "./credential-migration.js";
 
 export interface CredentialResolveRequest {
   cwd?: string;
@@ -61,7 +60,6 @@ export function materializeCredentialCookieForWorker(req: CredentialMaterializeC
 }
 
 function buildCredentialSnapshotEntry(cwd: string | undefined): CredentialSnapshotEntry {
-  migrateCredentialStore(cwd);
   const store = new CredentialStore(cwd);
   return {
     cwd,

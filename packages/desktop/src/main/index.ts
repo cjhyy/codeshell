@@ -1788,7 +1788,7 @@ ipcMain.handle("plugins:list", async (_e, cwd: string) => {
 // ── Credentials (token/link store + cookie capture) ──────────────────
 // cwd may be "" for no-repo contexts; project scope no-ops without a cwd.
 ipcMain.handle("credentials:list", async (_e, cwd: string) => {
-  migrateCredentialStore(cwd || undefined);
+  await migrateCredentialStore(cwd || undefined);
   return new CredentialStore(cwd || undefined).listMasked();
 });
 ipcMain.handle(
@@ -1931,7 +1931,7 @@ ipcMain.handle(
       throw new Error("credentials:restoreCookieToBrowser requires id");
     const partition = browserPartitionForBucket(bucket);
     if (!partition) throw new Error("credentials:restoreCookieToBrowser requires bucket");
-    migrateCredentialStore(cwd || undefined);
+    await migrateCredentialStore(cwd || undefined);
     const cred = new CredentialStore(cwd || undefined).resolve(id);
     if (!cred || cred.type !== "cookie") throw new Error(`无 cookie 凭证: "${id}"`);
     let jar: ElectronCookieLike[];

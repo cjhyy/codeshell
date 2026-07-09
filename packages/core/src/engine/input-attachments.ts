@@ -26,6 +26,7 @@ const MAX_DIRECTORY_TREE_DEPTH = 2;
 
 export interface BuildInputAttachmentContextOptions {
   includeImageBytes?: boolean;
+  expectedSessionId?: string;
 }
 
 interface PendingImageAttachment {
@@ -47,17 +48,41 @@ export async function buildInputAttachmentContext(
 
   const cwdReal = await realpath(cwd);
   const includeImageBytes = options.includeImageBytes ?? true;
+  const expectedSessionId = options.expectedSessionId;
   const textBlocks: string[] = [];
   const images: ParsedImage[] = [];
   const errors: string[] = [];
   const pendingImages: PendingImageAttachment[] = [];
   let hasStructuredImageAttachments = false;
 
+  if (!expectedSessionId) {
+    return {
+      text: "",
+      images: [],
+      errors: ["input attachments require an expected sessionId"],
+      hasStructuredImageAttachments: false,
+    };
+  }
+  if (!isSafeSessionPathSegment(expectedSessionId)) {
+    return {
+      text: "",
+      images: [],
+      errors: [`expected sessionId "${expectedSessionId}" is not a safe path segment`],
+      hasStructuredImageAttachments: false,
+    };
+  }
+
   for (const attachment of attachments) {
     if (!attachment || typeof attachment !== "object") continue;
     const displayPath = attachment.path || attachment.relPath || attachment.absPath;
     if (!displayPath) {
       errors.push(`attachment ${attachment.id || "(unknown)"} has no path`);
+      continue;
+    }
+    if (attachment.sessionId !== expectedSessionId) {
+      errors.push(
+        `attachment ${attachment.id || displayPath} session mismatch: expected ${expectedSessionId}, got ${attachment.sessionId}`,
+      );
       continue;
     }
 
@@ -80,6 +105,17 @@ export async function buildInputAttachmentContext(
       continue;
     }
     const realPath = policy.resolvedPath;
+    const stagedPathError = await validateStagedAttachmentPath(
+      attachment,
+      realPath,
+      cwdReal,
+      expectedSessionId,
+      displayPath,
+    );
+    if (stagedPathError) {
+      errors.push(stagedPathError);
+      continue;
+    }
 
     if (attachment.kind === "directory" || info.isDirectory()) {
       const tree = await directoryTree(realPath, cwdReal).catch((err) => ({
@@ -178,6 +214,69 @@ function resolveAttachmentPath(attachment: InputAttachmentMeta, cwd: string): st
     attachment.vision?.mediaPath || attachment.absPath || attachment.relPath || attachment.path;
   if (isAbsolute(candidate)) return candidate;
   return resolve(cwd, candidate);
+}
+
+async function validateStagedAttachmentPath(
+  attachment: InputAttachmentMeta,
+  realPath: string,
+  cwdReal: string,
+  expectedSessionId: string,
+  displayPath: string,
+): Promise<string | undefined> {
+  if (!isStagedAttachmentReference(attachment, realPath, cwdReal)) return undefined;
+  const expectedDir = resolve(cwdReal, ".code-shell", "attachments", expectedSessionId);
+  let expectedDirReal: string;
+  try {
+    expectedDirReal = await realpath(expectedDir);
+  } catch (err) {
+    return `attachment ${attachment.id || displayPath} staged session directory is unavailable: ${
+      (err as Error).message
+    }`;
+  }
+  if (isPathInside(realPath, expectedDirReal)) return undefined;
+  return `attachment ${
+    attachment.id || displayPath
+  } staged path is outside .code-shell/attachments/${expectedSessionId}`;
+}
+
+function isStagedAttachmentReference(
+  attachment: InputAttachmentMeta,
+  realPath: string,
+  cwdReal: string,
+): boolean {
+  const fields = [
+    attachment.path,
+    attachment.absPath,
+    attachment.relPath,
+    attachment.vision?.mediaPath,
+  ].filter((value): value is string => typeof value === "string" && value.length > 0);
+  if (fields.some((value) => looksLikeStagedAttachmentPath(value))) return true;
+  return isPathInside(realPath, resolve(cwdReal, ".code-shell", "attachments"));
+}
+
+function looksLikeStagedAttachmentPath(value: string): boolean {
+  const normalized = normalizePath(value);
+  return (
+    normalized === ".code-shell/attachments" ||
+    normalized.startsWith(".code-shell/attachments/") ||
+    normalized.includes("/.code-shell/attachments/")
+  );
+}
+
+function isPathInside(child: string, parent: string): boolean {
+  const rel = relative(parent, child);
+  return rel === "" || (!!rel && !rel.startsWith("..") && !isAbsolute(rel));
+}
+
+function isSafeSessionPathSegment(sessionId: string): boolean {
+  if (!sessionId) return false;
+  return (
+    !sessionId.includes("/") && !sessionId.includes("\\") && sessionId !== "." && sessionId !== ".."
+  );
+}
+
+function normalizePath(value: string): string {
+  return value.replace(/\\/g, "/");
 }
 
 function formatFileMetadata(

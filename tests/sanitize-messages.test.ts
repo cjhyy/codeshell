@@ -104,6 +104,27 @@ describe("sanitizeMessages", () => {
     expect(out[0]).toBe(msgs[0]); // first one untouched (reference equality)
     expect(JSON.stringify(out)).not.toContain(BIG_BASE64);
   });
+
+  test("redacts mapped tool_result content while preserving provider-facing source", () => {
+    const secret = "credential-secret-value";
+    const msgs: Message[] = [
+      {
+        role: "user",
+        content: [
+          { type: "tool_result", tool_use_id: "safe", content: "ordinary output" },
+          { type: "tool_result", tool_use_id: "cred", content: secret },
+        ],
+      },
+    ];
+    const out = sanitizeMessages(msgs, {
+      sensitiveToolResultRedactions: new Map([["cred", "[credential value withheld]"]]),
+    });
+
+    expect(out).not.toBe(msgs);
+    expect(JSON.stringify(out)).not.toContain(secret);
+    expect(JSON.stringify(out)).toContain("[credential value withheld]");
+    expect(JSON.stringify(msgs)).toContain(secret);
+  });
 });
 
 describe("sanitizeTaskString", () => {

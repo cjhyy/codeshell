@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { CANCEL_GOAL_TOOL_NAME } from "../tool-system/builtin/cancel-goal.js";
 import { SENSITIVE_TOOL_RESULT_PLACEHOLDER } from "../tool-system/tool-result-redaction.js";
 import type { LLMResponse, Message, ToolCall, ToolResult } from "../types.js";
+import type { ModelCallRecordingOptions } from "./model-facade.js";
 import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js";
 
 const SECRET = "tok-secret-123";
@@ -94,6 +95,7 @@ function makeHarness(options: HarnessOptions = {}) {
   const responses = options.responses ?? [toolResp(), doneResp()];
   let modelCallCount = 0;
   const modelInputs: Message[][] = [];
+  const modelRecordingOptions: Array<ModelCallRecordingOptions | undefined> = [];
   const transcriptResults: Array<{
     toolCallId: string;
     toolName: string;
@@ -106,17 +108,41 @@ function makeHarness(options: HarnessOptions = {}) {
   const summarizePrompts: string[] = [];
   const events: unknown[] = [];
 
-  const call = async (_systemPrompt: string, messages: Message[]): Promise<LLMResponse> => {
+  const call = async (
+    _systemPrompt: string,
+    messages: Message[],
+    _tools?: unknown,
+    _onStream?: unknown,
+    _signal?: unknown,
+    recordingOptions?: ModelCallRecordingOptions,
+  ): Promise<LLMResponse> => {
     modelInputs.push(structuredClone(messages));
+    modelRecordingOptions.push(
+      recordingOptions?.sensitiveToolResultRedactions
+        ? {
+            sensitiveToolResultRedactions: new Map(recordingOptions.sensitiveToolResultRedactions),
+          }
+        : undefined,
+    );
     const response = responses[Math.min(modelCallCount, responses.length - 1)]!;
     modelCallCount++;
     if (response instanceof Error) throw response;
     return response;
   };
 
+  const callWithoutStreaming = async (
+    systemPrompt: string,
+    messages: Message[],
+    tools?: unknown,
+    signal?: unknown,
+    recordingOptions?: ModelCallRecordingOptions,
+  ): Promise<LLMResponse> => {
+    return call(systemPrompt, messages, tools, undefined, signal, recordingOptions);
+  };
+
   const model = {
     call,
-    callWithoutStreaming: call,
+    callWithoutStreaming,
     getUsage: () => ({
       records: [],
       totalPromptTokens: 0,
@@ -220,6 +246,7 @@ function makeHarness(options: HarnessOptions = {}) {
     manageSyncInputs,
     modelCallCount: () => modelCallCount,
     modelInputs,
+    modelRecordingOptions,
     summarizePrompts,
     transcriptResults,
   };
@@ -235,6 +262,9 @@ describe("TurnLoop sensitive ToolResult handling", () => {
     expect(result.reason).toBe("completed");
     expect(harness.modelInputs.length).toBe(2);
     expect(containsSecret(harness.modelInputs[1])).toBe(true);
+    expect(harness.modelRecordingOptions[1]?.sensitiveToolResultRedactions?.get("cred-call")).toBe(
+      REDACTED,
+    );
     expect(containsSecret(result.messages)).toBe(false);
     expect(containsRedacted(result.messages)).toBe(true);
     expect(harness.transcriptResults).toEqual([

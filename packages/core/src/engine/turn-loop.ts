@@ -18,7 +18,7 @@ import type {
 import type { TurnState } from "./turn-state.js";
 import type { SteerItem } from "./steer-queue.js";
 import { initialTurnState, newTurnId } from "./turn-state.js";
-import { ModelFacade } from "./model-facade.js";
+import { ModelFacade, type ModelCallRecordingOptions } from "./model-facade.js";
 import { formatFriendlyError } from "./friendly-error.js";
 import { ToolExecutor } from "../tool-system/executor.js";
 import { ContextManager } from "../context/manager.js";
@@ -422,6 +422,13 @@ export class TurnLoop {
     );
     this.sensitiveToolResultRedactions.clear();
     return redacted;
+  }
+
+  private modelCallRecordingOptions(): ModelCallRecordingOptions | undefined {
+    if (this.sensitiveToolResultRedactions.size === 0) return undefined;
+    return {
+      sensitiveToolResultRedactions: new Map(this.sensitiveToolResultRedactions),
+    };
   }
 
   private trackFreshImageMessage(message: Message): void {
@@ -1321,6 +1328,7 @@ export class TurnLoop {
         [], // No tools available for summary turn
         this.config.onStream,
         this.config.signal,
+        this.modelCallRecordingOptions(),
       );
       messages = this.markPendingImagesConsumed(messages);
       if (summaryResponse.text) {
@@ -1385,6 +1393,7 @@ export class TurnLoop {
         this.deps.tools,
         wrappedStream,
         this.config.signal,
+        this.modelCallRecordingOptions(),
       );
     } catch (err) {
       // If it's a context or rate limit error, don't fallback — propagate
@@ -1429,6 +1438,7 @@ export class TurnLoop {
         messages,
         this.deps.tools,
         this.config.signal,
+        this.modelCallRecordingOptions(),
       );
     }
   }

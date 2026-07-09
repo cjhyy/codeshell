@@ -15,6 +15,10 @@ import { sanitizeMessages } from "../logging/sanitize-messages.js";
 import { addAPIDuration, addToModelUsage, addInputTokens, addOutputTokens } from "../state.js";
 import { cacheHitRateFromUsage } from "./session-usage.js";
 
+export interface ModelCallRecordingOptions {
+  sensitiveToolResultRedactions?: ReadonlyMap<string, string>;
+}
+
 let _reqSeq = 0;
 function nextReqId(): string {
   _reqSeq += 1;
@@ -46,6 +50,7 @@ export class ModelFacade {
     tools: ToolDefinition[],
     onStream?: StreamCallback,
     signal?: AbortSignal,
+    recordingOptions?: ModelCallRecordingOptions,
   ): Promise<LLMResponse> {
     const startMs = Date.now();
     const msgCount = messages.length;
@@ -61,7 +66,7 @@ export class ModelFacade {
         // Image base64 payloads stay out of recorded prompts — see
         // logging/sanitize-messages.ts. Transcripts keep the full bytes
         // (needed for replay); logs do not.
-        messages: sanitizeMessages(messages),
+        messages: sanitizeMessages(messages, recordingOptions),
         tools,
         systemPrompt,
       },
@@ -141,6 +146,7 @@ export class ModelFacade {
     messages: Message[],
     tools: ToolDefinition[],
     signal?: AbortSignal,
+    recordingOptions?: ModelCallRecordingOptions,
   ): Promise<LLMResponse> {
     const startMs = Date.now();
     const msgCount = messages.length;
@@ -155,7 +161,7 @@ export class ModelFacade {
         stream: false,
         // Image base64 payloads stay out of recorded prompts — same rule
         // as the streaming path above.
-        messages: sanitizeMessages(messages),
+        messages: sanitizeMessages(messages, recordingOptions),
         tools,
         systemPrompt,
       },
