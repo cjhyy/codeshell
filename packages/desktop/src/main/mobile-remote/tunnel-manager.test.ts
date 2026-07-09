@@ -173,6 +173,56 @@ describe("TunnelManager", () => {
     expect(statuses).not.toContain("disconnected");
   });
 
+  test("restart after a soft disconnect kills the stale child and re-spawns (no restart required)", async () => {
+    // Soft disconnect (edge /ready lost) keeps the cloudflared child ALIVE so it
+    // can auto-recover. Re-opening the tunnel must not throw "隧道已在运行" nor
+    // spawn before the old child frees the fixed metrics port — it must tear the
+    // stale child down first. This is the bug that forced an app restart.
+    const first = new FakeChild();
+    let ready = true;
+    let current: FakeChild = first;
+    const spawnArgs: string[][] = [];
+    const mgr = new TunnelManager({
+      binaryPath: () => "/fake/cloudflared",
+      spawn: (_cmd, args) => {
+        spawnArgs.push(args);
+        return current as unknown as import("node:child_process").ChildProcess;
+      },
+      timeoutMs: 50,
+      checkReady: async () => ready,
+      readyTimeoutMs: 60,
+      readyIntervalMs: 5,
+      healthCheckIntervalMs: 5,
+      healthFailureThreshold: 2,
+    });
+
+    const p1 = mgr.start(12345);
+    first.stderr.emit("data", Buffer.from("https://old-tunnel.trycloudflare.com\n"));
+    await p1;
+
+    // Soft disconnect: readiness lost, but the child is intentionally kept alive.
+    ready = false;
+    await waitFor(() => !mgr.isConnected());
+    expect(first.killed).toBe(false); // still alive — this is the recover-in-place path
+
+    // Now the user re-opens. start() must succeed, killing the stale child first.
+    ready = true;
+    const second = new FakeChild();
+    current = second;
+    const p2 = mgr.start(12345);
+    expect(first.killed).toBe(true); // stale child was torn down
+    // start() awaits the stale child's exit before re-spawning, so wait for the
+    // second spawn to land before feeding it the URL (else the scanner isn't up).
+    await waitFor(() => spawnArgs.length === 2);
+    second.stderr.emit("data", Buffer.from("https://new-tunnel.trycloudflare.com\n"));
+    const res = await p2;
+    expect(res.url).toBe("https://new-tunnel.trycloudflare.com");
+    expect(spawnArgs.length).toBe(2);
+    expect(mgr.isConnected()).toBe(true);
+
+    mgr.stop();
+  });
+
   test("emits error on spawn failure", async () => {
     const child = new FakeChild();
     const mgr = makeManager(child);

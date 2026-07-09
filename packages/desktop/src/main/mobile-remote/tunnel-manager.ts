@@ -98,9 +98,17 @@ export class TunnelManager extends EventEmitter {
     );
   }
 
-  start(port: number): Promise<{ url: string }> {
+  async start(port: number): Promise<{ url: string }> {
+    // A previous cloudflared may still be around: a *soft* disconnect (edge
+    // /ready lost) deliberately keeps the child alive so it can auto-recover,
+    // so `this.child` can be set here even though the UI shows "disconnected".
+    // Blindly throwing "隧道已在运行" (or spawning immediately) is exactly the
+    // bug that forced a full app restart: the old process still holds the fixed
+    // metrics port, so the fresh cloudflared can't bind it and exits code=1.
+    // Tear the stale child down and WAIT for it to actually exit (freeing the
+    // port) before starting fresh, so re-opening always works.
     if (this.child) {
-      throw new Error("隧道已在运行");
+      await this.teardownExistingChild();
     }
     this.stopping = false;
     this.connected = false;
@@ -278,6 +286,37 @@ export class TunnelManager extends EventEmitter {
         this.healthCheckInFlight = false;
       }
     }
+  }
+
+  /**
+   * Kill a lingering cloudflared child and wait for it to actually exit before
+   * returning, so the fixed metrics port is released before we spawn a new one.
+   * Used by start() to recover from a soft disconnect (edge lost, child kept
+   * alive) without requiring an app restart. Resolves on the child's `exit`, or
+   * after a short timeout as a safety net (we then proceed regardless).
+   */
+  private teardownExistingChild(): Promise<void> {
+    const child = this.child;
+    this.stopping = true;
+    this.connected = false;
+    this.currentUrl = undefined;
+    this.stopHealthMonitor();
+    this.child = undefined;
+    if (!child) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+      const timer = setTimeout(done, 3_000);
+      (timer as { unref?: () => void }).unref?.();
+      child.once("exit", done);
+      try {
+        child.kill("SIGTERM");
+      } catch {
+        done();
+      }
+    });
   }
 
   /** Kill the cloudflared child (SIGTERM) and suppress the disconnect event. */
