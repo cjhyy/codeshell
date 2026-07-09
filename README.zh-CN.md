@@ -13,6 +13,14 @@
 </p>
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/%40cjhyy%2Fcode-shell"><img src="https://img.shields.io/npm/v/%40cjhyy%2Fcode-shell" alt="npm version" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license" /></a>
+  <a href="package.json"><img src="https://img.shields.io/badge/node-%3E%3D20.10-339933" alt="Node.js >=20.10" /></a>
+  <a href="tsconfig.json"><img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&amp;logoColor=white" alt="TypeScript" /></a>
+  <a href=".github/workflows/release.yml"><img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-555" alt="macOS、Windows 和 Linux" /></a>
+</p>
+
+<p align="center">
   <img src="assets/codeshell-promo.png" alt="CodeShell 桌面端 AI agent 编排宣传图" width="860" />
 </p>
 
@@ -24,7 +32,7 @@ CodeShell 是同一个编排引擎的三种形态：
 
 核心引擎保持**领域无关**。turn loop、上下文管理、权限、MCP 集成、hooks、tasks、cron、sub-agents、sessions 和 memory 都是通用机制；“写代码助手”只是叠在引擎上的一个 preset，而不是写死在核心里。
 
-> 状态：**0.6.0-rc.12**，正在准备 beta。桌面应用是当前主产品；CLI 和 SDK 共享同一个核心引擎。
+> 状态：**0.6.x，进入 beta 阶段**。桌面应用是当前主产品；CLI 和 SDK 共享同一个核心引擎。
 
 ---
 

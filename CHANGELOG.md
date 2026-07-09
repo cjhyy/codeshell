@@ -6,29 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and while the project is pre-1.0 we treat any 0.x → 0.(x+1) bump as potentially
 breaking.
 
-## [0.6.0-rc.14]
-
-### Fixed
-
-- **Cross-session message misdelivery**: a message typed in one session could be
-  delivered to another if you sent it while switching sessions. Sends now pin the
-  source session's bucket at submit time; the queued-input steer path also
-  resolves the engine session from the active bucket instead of the last-started
-  run.
-- **Historical `view_image` by number**: image-bearing tool results are now
-  persisted to the transcript and restored on resume, so retrieving a past image
-  by number returns the correct image instead of a missing/misnumbered one.
-- **File tree auto-scroll**: the files panel no longer snaps back to the selected
-  file on every refresh — it scrolls into view only when a file becomes selected.
-- Mobile approval card / composer layout hardening.
-
-### Added
-
-- The update settings row now shows the current app version.
-
 ## [Unreleased]
 
 ### Added
+
+#### Unified input attachments
+
+- The desktop composer now uses one attachment pipeline for paste, drag/drop,
+  file and directory mentions, and local image inputs, so files and screenshots
+  reach the agent consistently across entry points.
+- Local image attachments can flow through the same request path as other
+  inputs for vision-capable model runs.
 
 #### Reusable sub-agent roles (`.code-shell/agents`)
 
@@ -135,6 +123,10 @@ breaking.
 
 ### Fixed
 
+- Addressed the latest core/desktop architecture review findings around stream
+  routing, permission/session scoping, and event coalescing, reducing
+  wrong-session routing, duplicated events, and hard-to-cancel operations in
+  multi-session desktop use.
 - **Cookie credentials now target the browser panel's per-session partition.**
   The credential service was hardcoded to the shared `persist:browser`
   partition while browser tabs run under per-session `persist:browser:<bucket>`
@@ -179,6 +171,33 @@ breaking.
 - The phone remote no longer white-screens if the host sends a `room.history`
   payload whose `messages` is not an array — the history replay guards the
   shape before mapping.
+
+### Changed
+
+- Refreshed beta-release documentation and repository hygiene: README badges and
+  status copy now reflect the public beta track, obsolete handoff notes are
+  archived under `docs/archive/`, and generated build artifacts are covered by
+  `.gitignore`.
+
+## [0.6.0-rc.14]
+
+### Fixed
+
+- **Cross-session message misdelivery**: a message typed in one session could be
+  delivered to another if you sent it while switching sessions. Sends now pin the
+  source session's bucket at submit time; the queued-input steer path also
+  resolves the engine session from the active bucket instead of the last-started
+  run.
+- **Historical `view_image` by number**: image-bearing tool results are now
+  persisted to the transcript and restored on resume, so retrieving a past image
+  by number returns the correct image instead of a missing/misnumbered one.
+- **File tree auto-scroll**: the files panel no longer snaps back to the selected
+  file on every refresh — it scrolls into view only when a file becomes selected.
+- Mobile approval card / composer layout hardening.
+
+### Added
+
+- The update settings row now shows the current app version.
 
 ## [0.5.0-rc.0] - 2026-05-23
 
