@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { TurnLoop, type TurnLoopDeps, type TurnLoopConfig } from "./turn-loop.js";
-import type { LLMResponse, Message, ToolCall, ToolResult } from "../types.js";
+import type { LLMResponse, Message, StreamEvent, ToolCall, ToolResult } from "../types.js";
 
 /**
  * §4.3 coverage gap: the maxTurns ceiling. Existing turn-loop tests cover the
@@ -8,7 +8,7 @@ import type { LLMResponse, Message, ToolCall, ToolResult } from "../types.js";
  * where a model keeps requesting tools until the turn limit bites. This pins:
  *   - the loop stops after exactly maxTurns model turns,
  *   - it makes one final no-tools summary call after the ceiling,
- *   - it returns reason "max_turns" and emits a matching turn_complete event,
+ *   - it returns reason "max_turns"; Engine epilogue owns turn_complete,
  *   - the turns-remaining warning reminders (2 / 1 left) are injected.
  */
 function makeDeps(responses: LLMResponse[]): {
@@ -166,5 +166,27 @@ describe("TurnLoop maxTurns ceiling (§4.3)", () => {
     expect(result.reason).toBe("completed");
     // Exactly one model call — no ceiling, no extra summary turn.
     expect(modelCalls()).toBe(1);
+  });
+
+  it("does not emit turn_complete from TurnLoop when maxTurns is reached", async () => {
+    const events: StreamEvent[] = [];
+    const config: TurnLoopConfig = {
+      maxTurns: 1,
+      maxToolCallsPerTurn: 10,
+      onStream: (event) => {
+        events.push(event);
+      },
+    };
+    const { deps } = makeDeps([toolResp(), summaryResp()]);
+    const loop = new TurnLoop(deps, config);
+    const result = await loop.run([{ role: "user", content: "go" }]);
+    const terminalEvents = events.filter((event) => event.type === "turn_complete");
+    const summaryMessages = events.filter(
+      (event) => event.type === "assistant_message" && event.message.content === "final summary",
+    );
+
+    expect(result.reason).toBe("max_turns");
+    expect(terminalEvents).toHaveLength(0);
+    expect(summaryMessages).toHaveLength(1);
   });
 });

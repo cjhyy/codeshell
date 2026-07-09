@@ -1265,7 +1265,6 @@ export class TurnLoop {
       });
       messages.push({ role: "assistant", content: finalText });
     }
-    this.config.onStream?.({ type: "turn_complete", reason: "max_turns" });
     return { text: finalText, reason: "max_turns", messages };
   }
 
