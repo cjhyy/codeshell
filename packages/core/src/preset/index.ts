@@ -82,6 +82,7 @@ const GENERAL_BUILTIN_TOOLS = [
   // DriveAgent 是通用驱动(cli: claude|codex);DriveClaudeCode 保留为 cli:claude 的
   // 别名(老 prompt/记忆兼容)。两个都要在白名单里,否则 registerBuiltins 滤掉。
   "DriveAgent",
+  "DriveAgentJobs",
   "DriveClaudeCode",
   // 编排时读 CC/Codex 剩余额度做规划(开几个/等重置/换 provider)。
   "CheckQuota",

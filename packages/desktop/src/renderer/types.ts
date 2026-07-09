@@ -412,7 +412,7 @@ function previewLine(text: string, max = BG_COMPLETION_PREVIEW_CHARS): string {
 export function bgCompletionText(event: {
   name?: string;
   description: string;
-  status: "completed" | "failed";
+  status: "completed" | "failed" | "cancelled";
   workKind?: "agent" | "shell" | "video" | "cc";
   command?: string;
   finalText?: string;
@@ -436,6 +436,12 @@ export function bgCompletionText(event: {
     return translate(lang, "misc.bgTask.completed", {
       name: who,
       preview: completedPreview,
+    });
+  }
+  if (event.status === "cancelled") {
+    return translate(lang, "misc.bgTask.cancelled", {
+      name: who,
+      preview: failedPreview,
     });
   }
   return translate(lang, "misc.bgTask.failed", {

@@ -1650,7 +1650,12 @@ function App() {
       if (event.type === "background_agent_completed") {
         toast({
           message: bgCompletionText(event),
-          variant: event.status === "completed" ? "success" : "error",
+          variant:
+            event.status === "completed"
+              ? "success"
+              : event.status === "cancelled"
+                ? undefined
+                : "error",
         });
         // fall through: the reducer still appends the system message below.
       }

@@ -55,6 +55,11 @@ describe("preset builtin tool whitelist", () => {
     expect(general.builtinTools).not.toContain("ScheduleRoomTask");
   });
 
+  it("the general preset offers DriveAgentJobs before launching DriveAgent work", () => {
+    const general = BUILTIN_AGENT_PRESETS.general ?? Object.values(BUILTIN_AGENT_PRESETS)[0]!;
+    expect(general.builtinTools).toContain("DriveAgentJobs");
+  });
+
   it("any preset offering Bash also offers its background-shell companions", () => {
     // If Bash(run_in_background=true) is available, BashOutput/KillShell/ListShells
     // must be too — otherwise the model can launch a background shell it can never

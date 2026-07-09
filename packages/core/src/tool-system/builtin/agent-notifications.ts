@@ -8,8 +8,9 @@ import { logger } from "../../logging/logger.js";
  * background sub-agent that finishes (completed | failed) enqueues an item
  * here; the UI layer subscribes and, when the main agent is idle, drains
  * the queue and submits the formatted XML as a new user turn so the LLM
- * sees the result. Cancellation does NOT enqueue (user explicitly stopped
- * the agent; no follow-up needed).
+ * sees the result. Sub-agent cancellation does NOT enqueue (user explicitly
+ * stopped the agent; no follow-up needed). DriveAgent cancellation does enqueue
+ * so a detached external CLI job never leaves the waiting session hanging.
  *
  * The result text lives only in this queue + the eventual user message —
  * not in `asyncAgentRegistry`. Registry stays metadata-only.
@@ -32,7 +33,7 @@ export type NotificationItem = {
   agentId: string;
   name?: string;
   description: string;
-  status: "completed" | "failed";
+  status: "completed" | "failed" | "cancelled";
   /** What kind of background work this was (lets UIs localize the toast). */
   workKind?: "agent" | "shell" | "video" | "cc";
   /** For workKind === "shell": the command that ran. */
@@ -44,7 +45,7 @@ export type NotificationItem = {
    *  if this notification is lost, and the user sees a real session id (not just
    *  an opaque background jobId). */
   ccSessionId?: string;
-  /** Error message (failed only). */
+  /** Error message (failed/cancelled only). */
   error?: string;
   enqueuedAt: number;
 };
@@ -220,10 +221,7 @@ export function notificationItemToStreamEvent(
  * values get the quote escape too; element bodies don't need it.
  */
 function escapeXmlText(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function escapeXmlAttr(s: string): string {
@@ -249,7 +247,9 @@ export function buildNotificationMessage(items: readonly NotificationItem[]): st
       const body =
         item.status === "completed"
           ? `    <result>\n${escapeXmlText(item.finalText ?? "")}\n    </result>`
-          : `    <error>${escapeXmlText(item.error ?? "")}</error>`;
+          : item.status === "cancelled"
+            ? `    <cancelled>${escapeXmlText(item.error ?? "cancelled")}</cancelled>`
+            : `    <error>${escapeXmlText(item.error ?? "")}</error>`;
       return [opening, desc, body, "  </agent>"].join("\n");
     })
     .join("\n");
@@ -272,9 +272,15 @@ export function buildNotificationMessage(items: readonly NotificationItem[]): st
 export function buildNotificationSummary(items: readonly NotificationItem[]): string {
   const header = "📨 background agents completed";
   const rows = items.map((item) => {
-    const badge = item.status === "completed" ? "✓" : "✗";
+    const badge =
+      item.status === "completed" ? "✓" : item.status === "cancelled" ? "cancelled" : "✗";
     const namePart = item.name ? `${item.name}  ·  ` : "";
-    const statusPart = item.status === "failed" ? `  ·  failed: ${item.error ?? "unknown"}` : "";
+    const statusPart =
+      item.status === "failed"
+        ? `  ·  failed: ${item.error ?? "unknown"}`
+        : item.status === "cancelled"
+          ? `  ·  cancelled`
+          : "";
     return `  └─ ${namePart}${item.description}  ·  ${badge}${statusPart}`;
   });
   return [header, ...rows].join("\n");

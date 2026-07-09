@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { detectCodexImageInput, runWithLines } from "./external-agent-driver.js";
@@ -69,6 +69,61 @@ describe("runAgentOnce promptViaStdin（用 cat 做可移植子进程,不依赖 
       cwd: process.cwd(),
     });
     expect(r.finalText).toContain("ECHO_ME_123");
+  }, 15_000);
+
+  it("does not spawn the main codex CLI when aborted during image support probing", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "codex-image-abort-"));
+    try {
+      const script = join(dir, "fake-codex");
+      const probeStarted = join(dir, "probe-started");
+      const releaseProbe = join(dir, "release-probe");
+      const mainSpawned = join(dir, "main-spawned");
+      writeFileSync(
+        script,
+        [
+          "#!/bin/sh",
+          'if [ "$1" = "exec" ] && [ "$2" = "--help" ]; then',
+          `  touch "${probeStarted}"`,
+          `  while [ ! -f "${releaseProbe}" ]; do sleep 0.05; done`,
+          "  echo 'Usage: codex exec -i, --image <path>'",
+          "  exit 0",
+          "fi",
+          `touch "${mainSpawned}"`,
+          'echo \'{"type":"thread.started","thread_id":"T"}\'',
+          'echo \'{"type":"item.completed","item":{"type":"agent_message","text":"done"}}\'',
+          "exit 0",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      chmodSync(script, 0o755);
+      writeFileSync(join(dir, "image.png"), "png", "utf-8");
+
+      const controller = new AbortController();
+      const run = runAgentOnce(
+        codexAdapter,
+        {
+          command: script,
+          prompt: "inspect image",
+          cwd: dir,
+          imagePaths: [join(dir, "image.png")],
+        },
+        controller.signal,
+      );
+
+      for (let i = 0; i < 40 && !existsSync(probeStarted); i++) {
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      expect(existsSync(probeStarted)).toBe(true);
+
+      controller.abort();
+      writeFileSync(releaseProbe, "1", "utf-8");
+
+      await expect(run).rejects.toThrow(/abort/i);
+      expect(existsSync(mainSpawned)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   }, 15_000);
 });
 

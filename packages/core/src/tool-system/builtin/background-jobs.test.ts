@@ -1,4 +1,7 @@
 import { describe, it, expect, beforeEach } from "bun:test";
+import { mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { backgroundJobRegistry } from "./background-jobs.js";
 
 describe("backgroundJobRegistry", () => {
@@ -122,5 +125,50 @@ describe("backgroundJobRegistry", () => {
     // The oldest terminal jobs (t0, t1, …) are the ones dropped.
     expect(jobs.some((j) => j.jobId === "t0")).toBe(false);
     expect(jobs.some((j) => j.jobId === `t${N - 1}`)).toBe(true);
+  });
+
+  it("records DriveAgent metadata and cancels through the stored abort handle", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "drive-job-registry-"));
+    try {
+      let aborts = 0;
+      backgroundJobRegistry.start("cc-1", "s1", "DriveAgent(claude): inspect repo", {
+        kind: "drive-agent",
+        cli: "claude",
+        cwd: tmp,
+        promptSummary: "inspect repo and report likely edits",
+        abort: () => {
+          aborts++;
+        },
+      });
+
+      const running = backgroundJobRegistry.get("cc-1");
+      expect(running).toMatchObject({
+        jobId: "cc-1",
+        sessionId: "s1",
+        kind: "drive-agent",
+        cli: "claude",
+        cwd: realpathSync(tmp),
+        promptSummary: "inspect repo and report likely edits",
+        status: "running",
+      });
+
+      expect(
+        backgroundJobRegistry.cancel("cc-1", {
+          finalText: "Cancelled by DriveAgentJobs.",
+        }),
+      ).toBe(true);
+      expect(aborts).toBe(1);
+
+      const cancelled = backgroundJobRegistry.get("cc-1");
+      expect(cancelled?.status).toBe("cancelled");
+      expect(cancelled?.finalText).toBe("Cancelled by DriveAgentJobs.");
+      expect(cancelled?.finishedAt).toBeGreaterThan(0);
+      expect(backgroundJobRegistry.hasRunningForSession("s1")).toBe(false);
+
+      expect(backgroundJobRegistry.cancel("cc-1")).toBe(false);
+      expect(aborts).toBe(1);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
   });
 });

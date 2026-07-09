@@ -99,6 +99,7 @@ export const misc = {
         shellName: "后台命令",
         completed: "✓ {name}完成:{preview}",
         failed: "✗ {name}失败:{preview}",
+        cancelled: "{name}已取消:{preview}",
       },
       worktree: {
         cleanupSkipped:
@@ -205,6 +206,7 @@ export const misc = {
         shellName: "Background command",
         completed: "✓ {name} done: {preview}",
         failed: "✗ {name} failed: {preview}",
+        cancelled: "{name} cancelled: {preview}",
       },
       worktree: {
         cleanupSkipped:
