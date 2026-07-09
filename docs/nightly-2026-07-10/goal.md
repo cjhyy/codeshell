@@ -142,11 +142,13 @@
   - 现象：desktop 每轮（turn）显示的"编辑的文件"数量算得不对。
   - 待确认：是多算/少算/去重问题；涉及 DriveAgent 外部改动归因（readExternalChangedFiles）还是 in-session 聚合器；主线程 turn 聚合逻辑锚点。
   - 处理：走 systematic-debugging → codex 流水线定位聚合口径。
+  - **📝 静态排查note（本会话主 agent，2026-07-10）**：`FilesChangedCard.tsx` 只是显示 `files.length`（如 :146 editedCount），**不是**计数源；真正聚合口径在上游（core 的 changedFiles 归因 readExternalChangedFiles + renderer 侧把多次 tool/turn 的改动合并的 reducer）。跨 core+renderer 两处，静态一次定位不到确切去重点，**需 codex 动态排查**：加日志看单个 turn 内 files 数组是"多次 Edit 同文件未去重"还是"跨 turn 累加/漏减"。不硬猜，留给 codex 实跑。
 
 - **[新 bug 候选] 过程卡片被通知回来后全折叠、看不到最新进行中过程**（卡密sama 2026-07-10 报告，本会话实测）
   - 现象：后台 agent 完成通知回来时，消息流里正在跑/进行中的过程卡片被全部折叠起来；期望仍能看到最新的一些过程（进行中或最近的），而不是一律折叠。
   - 待确认：折叠是 background_agent_completed 通知触发的重渲染/reducer 行为，还是 TurnProcessGroupCard 的默认折叠策略；期望行为=保留最新 N 条/进行中的展开。
   - 处理：走 systematic-debugging → codex 流水线，定位折叠触发点（transcriptsReducer / TurnProcessGroupCard），改为"进行中/最新过程默认展开"。
+  - **🔍 根因已锁定（本会话主 agent 静态定位，2026-07-10）**：`packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx:53-55` 的 force-collapse effect：`useEffect(() => { if (turnEpoch !== undefined && !group.isLive && !group.stopped) setOpen(false); }, [turnEpoch, group.isLive, group.stopped])`。`turnEpoch` 每次新 turn 边界（含 background_agent_completed 唤醒触发的新 turn）就变 → 该 effect 对**所有历史非 live 非 stopped group** 无差别 `setOpen(false)`，把用户手动展开的也强制折叠。**修法**：force-collapse 只应作用于「刚结束的那个 turn」，不应在每个 turnEpoch 变化时重折叠所有旧 group；且应保留用户手动展开态（区分"用户显式 open"与"默认态"，只折叠从未被用户交互过的、或只折叠最近刚 live→closed 的那个）。**验收**：通知回来后，用户之前展开的历史过程卡片保持展开，仅新结束 turn 按默认折叠。
 
 - **[新 bug 候选 · 较严重] steer 带附件 → 完全没有 LLM 回应**（卡密sama 2026-07-10 报告，订正）
   - 现象：运行中 steer（插入消息）时**若带附件，整个 turn 完全没有 LLM 回应**（不是附件不生效，而是根本不回复——疑似 turn 卡死/静默中断）。不带附件的 steer 正常。
