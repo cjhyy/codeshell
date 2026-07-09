@@ -129,6 +129,8 @@
 
 **A 区 7 项 + B 区 3 项全部完成。** 下一阶段 C（codex 能力对标调研），需产出候选清单回卡密sama 圈定后才实现。
 
+> ⚠️ **2026-07-10 编排暂停**：codex CLI 登录态失效（CheckQuota: no Codex token / DriveAgent 报 "logged out or signed in to another account, please sign in again"）。C1 能力清单调研因此中断（空文件已清）。**在此之前 A+B 全部 10 项已完成合并，无损失。** 恢复方法：终端跑 `codex login` 重新登录，之后即可继续 C1→C2→…。当前领先 origin/main 32 commits，未 push。
+
 ## 问题记录（遇到阻塞 / 非本任务引入的红测试记这里）
 
 - **[新 bug 候选] 带附件插入的消息卡住**（卡密sama 2026-07-10 报告，待补现象细节）
