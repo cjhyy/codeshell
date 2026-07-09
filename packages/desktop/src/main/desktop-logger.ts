@@ -67,7 +67,14 @@ function streamFor(filePath: string): WriteStream | null {
   }
 }
 
-export type LogSource = "main" | "bridge" | "renderer" | "agent" | "mcp-probe";
+export type LogSource =
+  | "main"
+  | "bridge"
+  | "renderer"
+  | "agent"
+  | "mcp-probe"
+  | "browser"
+  | "credentials";
 
 /** YYYY-MM-DD stamp for a date (local time). */
 export function dayStamp(d: Date): string {

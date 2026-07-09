@@ -38,7 +38,19 @@ import { handleBrowserAction } from "./browser-driver/automation-host.js";
 import { SessionManager } from "@cjhyy/code-shell-core";
 import { restoreCookiesToBrowser, type ElectronCookieLike } from "./credentials-service.js";
 import { resolveCookieCredentialForBrowser } from "./credential-action.js";
-import { activeGuest, listGuests, focusGuest } from "./browser-driver/active-guest.js";
+import {
+  buildCredentialSnapshot,
+  materializeCredentialCookieForWorker,
+  resolveCredentialValueForWorker,
+} from "./credential-access-service.js";
+import {
+  activeGuestForSession,
+  bucketForSession,
+  focusGuestForSession,
+  listGuestsForSession,
+  partitionForSession,
+  registerSessionBucket,
+} from "./browser-driver/active-guest.js";
 import { loadBrowserAutomationPolicy } from "./browser-driver/load-policy.js";
 import {
   buildNoChildFallbackReply,
@@ -74,6 +86,38 @@ const RESTART_LIMIT = 3;
 
 function previewLine(s: string, max = 200): string {
   return s.length > max ? s.slice(0, max) + `…(+${s.length - max} more)` : s;
+}
+
+function normalizeCredentialResolveParams(params: Record<string, unknown> | undefined): {
+  cwd?: string;
+  id: string;
+  scope: "full" | "project";
+  purpose: "use" | "mcp";
+} {
+  const id = typeof params?.id === "string" ? params.id : "";
+  if (!id) throw new Error("credentialResolve requires id");
+  const scope = params?.scope === "project" ? "project" : "full";
+  const purpose = params?.purpose === "mcp" ? "mcp" : "use";
+  return {
+    cwd: typeof params?.cwd === "string" ? params.cwd : undefined,
+    id,
+    scope,
+    purpose,
+  };
+}
+
+function normalizeCredentialMaterializeParams(params: Record<string, unknown> | undefined): {
+  cwd?: string;
+  id: string;
+  scope: "full" | "project";
+} {
+  const id = typeof params?.id === "string" ? params.id : "";
+  if (!id) throw new Error("credentialMaterializeCookie requires id");
+  return {
+    cwd: typeof params?.cwd === "string" ? params.cwd : undefined,
+    id,
+    scope: params?.scope === "project" ? "project" : "full",
+  };
 }
 
 export class AgentBridge {
@@ -127,6 +171,8 @@ export class AgentBridge {
    * credentialId). Keyed by sessionId; cleared in forgetSession.
    */
   private sessionCwd = new Map<string, string>();
+  private credentialSnapshotRevision = 0;
+  private readonly credentialSnapshotCwds = new Set<string>();
 
   constructor(window: BrowserWindow) {
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
@@ -178,6 +224,9 @@ export class AgentBridge {
     const rl = createInterface({ input: this.child.stdout });
     rl.on("line", (line) => {
       if (!line.trim()) return;
+      // Internal credential access: worker asks main to resolve/materialize
+      // secrets. Consumed here; never forwarded to renderer/transcript.
+      if (this.maybeHandleCredentialAccessMessage(line)) return;
       // Browser automation: intercept __browser_action__ requests here (drive the
       // webview in main, reply to the worker) and DON'T forward to the renderer.
       if (this.maybeHandleBrowserAction(line)) return;
@@ -325,6 +374,27 @@ export class AgentBridge {
         ) {
           this.sessionCwd.set(parsed.params.sessionId, parsed.params.cwd);
         }
+        if (parsed.params && typeof parsed.params === "object") {
+          const paramsRecord = parsed.params as Record<string, unknown>;
+          const sessionId =
+            typeof paramsRecord.sessionId === "string" ? paramsRecord.sessionId : undefined;
+          const bucket = typeof paramsRecord.bucket === "string" ? paramsRecord.bucket : undefined;
+          const partition =
+            typeof paramsRecord.browserPartition === "string"
+              ? paramsRecord.browserPartition
+              : undefined;
+          if (sessionId && bucket) {
+            try {
+              registerSessionBucket(sessionId, bucket, partition);
+            } catch (err) {
+              dlog("bridge", "browser.register_session_bucket_failed", { error: String(err) });
+            }
+          }
+          delete paramsRecord.bucket;
+          delete paramsRecord.browserPartition;
+          outLine = JSON.stringify(parsed);
+        }
+        this.pushCredentialSnapshot(parsed.params?.cwd);
         // Workspace trust is a main-process authority (trust-store), never the
         // renderer's to assert — inject it here so a cloned malicious repo's
         // .code-shell settings can't self-authorize. "unknown"/never-trusted →
@@ -401,22 +471,34 @@ export class AgentBridge {
     void (async () => {
       let resultJson: string;
       try {
-        resultJson = await handleBrowserAction(parsed.request, {
-          activeGuest,
-          policy: loadBrowserAutomationPolicy,
-          // Sensitive browser page actions are gated by the preset permission
-          // rules before they reach here; permissionDefault is only UI metadata.
-          // A second hard-decline at the bridge would just dead-block legit
-          // flows the user already approved. So we allow at the bridge level.
-          // The one bridge-only gate that still hard-enforces is
-          // the DOMAIN WHITELIST: it's opt-in (empty list = allow all), and when
-          // the user did set one, blocking an off-list host is the intended
-          // behavior. An interactive per-action approval dialog is a follow-up.
-          approve: async () => true,
-          openPanel: (url) => this.openBrowserPanel(url),
-          listTabs: listGuests,
-          switchTab: focusGuest,
-        });
+        if (!parsed.sessionId) {
+          resultJson = JSON.stringify({
+            ok: false,
+            detail: "browser action missing sessionId",
+          });
+        } else if (!bucketForSession(parsed.sessionId)) {
+          resultJson = JSON.stringify({
+            ok: false,
+            detail: `no browser bucket registered for session ${parsed.sessionId}`,
+          });
+        } else {
+          resultJson = await handleBrowserAction(parsed.request, {
+            activeGuest: () => activeGuestForSession(parsed.sessionId)?.guest ?? null,
+            policy: loadBrowserAutomationPolicy,
+            // Sensitive browser page actions are gated by the preset permission
+            // rules before they reach here; permissionDefault is only UI metadata.
+            // A second hard-decline at the bridge would just dead-block legit
+            // flows the user already approved. So we allow at the bridge level.
+            // The one bridge-only gate that still hard-enforces is
+            // the DOMAIN WHITELIST: it's opt-in (empty list = allow all), and when
+            // the user did set one, blocking an off-list host is the intended
+            // behavior. An interactive per-action approval dialog is a follow-up.
+            approve: async () => true,
+            openPanel: (url) => this.openBrowserPanelForSession(parsed.sessionId, url),
+            listTabs: () => listGuestsForSession(parsed.sessionId),
+            switchTab: (tabId) => focusGuestForSession(parsed.sessionId, tabId),
+          });
+        }
       } catch (e) {
         resultJson = JSON.stringify({
           ok: false,
@@ -450,6 +532,59 @@ export class AgentBridge {
     return true;
   }
 
+  private maybeHandleCredentialAccessMessage(line: string): boolean {
+    let parsed: {
+      id?: string | number;
+      method?: string;
+      params?: Record<string, unknown>;
+    };
+    try {
+      parsed = JSON.parse(line);
+    } catch {
+      return false;
+    }
+    if (
+      parsed.method !== "desktop/credentialResolve" &&
+      parsed.method !== "desktop/credentialMaterializeCookie"
+    ) {
+      return false;
+    }
+    const id = parsed.id;
+    if (id === undefined) return true;
+    void (async () => {
+      let reply: Record<string, unknown>;
+      try {
+        if (parsed.method === "desktop/credentialResolve") {
+          reply = {
+            jsonrpc: "2.0",
+            id,
+            result: resolveCredentialValueForWorker(
+              normalizeCredentialResolveParams(parsed.params),
+            ),
+          };
+        } else {
+          reply = {
+            jsonrpc: "2.0",
+            id,
+            result: materializeCredentialCookieForWorker(
+              normalizeCredentialMaterializeParams(parsed.params),
+            ),
+          };
+        }
+      } catch (err) {
+        reply = {
+          jsonrpc: "2.0",
+          id,
+          error: { code: -32603, message: err instanceof Error ? err.message : String(err) },
+        };
+      }
+      if (this.child?.stdin?.writable) {
+        this.child.stdin.write(JSON.stringify(reply) + "\n");
+      }
+    })();
+    return true;
+  }
+
   /**
    * If `line` is a __credential_action__ request (InjectCredential tool), restore
    * the named cookie credential's jar into the built-in browser here (main) and
@@ -463,15 +598,22 @@ export class AgentBridge {
     void (async () => {
       let resultJson: string;
       try {
+        if (parsed.action !== "injectCookie") {
+          throw new Error(`unsupported credential action: ${parsed.action}`);
+        }
+        if (!parsed.sessionId) {
+          throw new Error("credential inject missing sessionId");
+        }
+        const bucket = bucketForSession(parsed.sessionId);
+        if (!bucket) {
+          throw new Error(`no browser bucket registered for session ${parsed.sessionId}`);
+        }
         // Resolve the credential against the ORIGINATING session's cwd (from the
         // parsed action's sessionId), NOT the global lastRunContext — otherwise
         // a concurrent tab's run could have moved lastRunContext to another
-        // project and we'd inject the wrong account's cookie. Fall back to the
-        // global cwd only when the action carries no sessionId.
+        // project and we'd inject the wrong account's cookie.
         const sessionCwd =
-          (parsed.sessionId ? this.sessionCwd.get(parsed.sessionId) : undefined) ??
-          this.lastRunContext.cwd ??
-          undefined;
+          this.sessionCwd.get(parsed.sessionId) ?? this.lastRunContext.cwd ?? undefined;
         const resolved = resolveCookieCredentialForBrowser(
           sessionCwd,
           parsed.credentialId,
@@ -480,18 +622,22 @@ export class AgentBridge {
         if (!resolved.ok) {
           resultJson = JSON.stringify({ ok: false, error: resolved.error });
         } else {
-          // Inject into the session of the guest the AI will actually drive
-          // (per-session partition), not the shared default. Electron's Session
-          // has no partition string, so pass the live session object directly.
-          // Fall back to the shared partition only when no live guest exists.
-          const targetSession = activeGuest()?.session ?? undefined;
+          // Inject into the exact bucket this engine session owns. If no live
+          // guest is mounted, write the persistent partition directly so the
+          // next panel open / app restart still sees the restored login state.
+          const target = activeGuestForSession(parsed.sessionId);
+          const targetPartition = partitionForSession(parsed.sessionId);
+          if (!target?.guest && !targetPartition) {
+            throw new Error(`no browser partition registered for session ${parsed.sessionId}`);
+          }
+          const targetSession = target?.guest.session ?? targetPartition ?? undefined;
           const { count } = await restoreCookiesToBrowser(
             resolved.jar as ElectronCookieLike[],
             resolved.switchMode,
             targetSession,
           );
           for (const w of BrowserWindow.getAllWindows()) {
-            if (!w.isDestroyed()) w.webContents.send("browser:reload");
+            if (!w.isDestroyed()) w.webContents.send("browser:reload", { bucket });
           }
           resultJson = JSON.stringify({ ok: true, count });
         }
@@ -542,26 +688,49 @@ export class AgentBridge {
   }
 
   /**
-   * Open the in-app browser panel (and navigate to `url` if given) on behalf of
-   * the agent when no panel/tab is open yet, then wait for the <webview> guest
-   * to attach. Sends `browser:open-url` to the first live window (the renderer
-   * re-dispatches it as the same `codeshell:open-url` event a clicked chat link
-   * uses → opens dock + browser panel + navigates). Polls activeGuest() until a
-   * guest registers (did-attach-webview) or a ~6s timeout. Returns whether a
-   * guest became available.
+   * Open the in-app browser panel for the originating session bucket, then wait
+   * for that bucket's <webview> guest to attach. Never falls back to a globally
+   * focused guest: a missing session->bucket mapping is a fail-closed error.
    */
-  private async openBrowserPanel(url?: string): Promise<boolean> {
+  private async openBrowserPanelForSession(
+    sessionId: string | undefined,
+    url?: string,
+  ): Promise<boolean> {
+    if (!sessionId) return false;
+    const bucket = bucketForSession(sessionId);
+    if (!bucket) return false;
     const win = [...this.windows].find((w) => !w.isDestroyed());
     if (!win) return false;
     // A blank panel needs *some* URL to attach a <webview>; default to about:blank.
-    win.webContents.send("browser:open-url", { url: url ?? "about:blank" });
+    win.webContents.send("browser:open-url", {
+      sessionId,
+      bucket,
+      url: url ?? "about:blank",
+    });
     const deadline = Date.now() + 6000;
     while (Date.now() < deadline) {
-      const g = activeGuest();
-      if (g && !g.isDestroyed()) return true;
+      const target = activeGuestForSession(sessionId);
+      if (target?.guest && !target.guest.isDestroyed()) return true;
       await new Promise((r) => setTimeout(r, 150));
     }
-    return !!activeGuest();
+    return !!activeGuestForSession(sessionId);
+  }
+
+  pushCredentialSnapshot(cwd?: string): void {
+    if (typeof cwd === "string" && cwd) this.credentialSnapshotCwds.add(cwd);
+    if (!this.child?.stdin?.writable) return;
+    this.credentialSnapshotRevision += 1;
+    const snapshot = buildCredentialSnapshot(
+      [...this.credentialSnapshotCwds],
+      this.credentialSnapshotRevision,
+    );
+    this.child.stdin.write(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        method: "desktop/credentialSnapshot",
+        params: snapshot,
+      }) + "\n",
+    );
   }
 
   /**

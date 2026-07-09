@@ -120,7 +120,7 @@ import {
   injectCredentialTool,
   isInjectCredentialAvailable,
 } from "../../credentials/inject-credential-tool.js";
-import { CredentialStore } from "../../credentials/store.js";
+import { credentialAccessScope, getCredentialAccess } from "../../credentials/access.js";
 
 /**
  * Tool executor signature.
@@ -847,7 +847,7 @@ export const BUILTIN_TOOL_GUARDS: Map<string, BuiltinToolGuard> = new Map([
   // of the tool list (and the context) for the common no-credentials case,
   // matching the spec's "quiet when empty" intent (true ToolSearch-deferral for
   // builtins isn't wired in the engine).
-  [useCredentialToolDef.name, (ctx) => isUseCredentialAvailable(ctx.cwd)],
+  [useCredentialToolDef.name, (ctx) => isUseCredentialAvailable(ctx.cwd, ctx.settingsScope)],
   // InjectCredential hidden until ≥1 cookie credential exists (browser injection
   // is cookie-only). Also degrades at call time if no browser bridge is wired.
   [injectCredentialToolDef.name, (ctx) => isInjectCredentialAvailable(ctx.cwd, ctx.settingsScope)],
@@ -855,10 +855,13 @@ export const BUILTIN_TOOL_GUARDS: Map<string, BuiltinToolGuard> = new Map([
   [cancelGoalToolDef.name, (ctx) => ctx.hasGoal === true],
 ]);
 
-/** UseCredential is available when the cwd's CredentialStore has ≥1 credential. */
-export function isUseCredentialAvailable(cwd: string): boolean {
+/** UseCredential is available when the cwd's credential metadata has ≥1 entry. */
+export function isUseCredentialAvailable(
+  cwd: string,
+  settingsScope?: import("../../settings/manager.js").SettingsScope,
+): boolean {
   try {
-    return new CredentialStore(cwd).listMasked().length > 0;
+    return getCredentialAccess().listMasked(cwd, credentialAccessScope(settingsScope)).length > 0;
   } catch {
     return false;
   }

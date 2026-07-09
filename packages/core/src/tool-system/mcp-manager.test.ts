@@ -9,6 +9,7 @@ import {
   readRequiredEnv,
   buildStdioEnv,
   buildHttpHeaders,
+  buildHttpHeadersWithCredentialAccess,
   inferTransportType,
   spillMcpImage,
 } from "./mcp-manager.js";
@@ -280,9 +281,7 @@ describe("MCPManager discovered tool executors", () => {
     });
 
     expect(manager.listServers()).toEqual(["srv"]);
-    await expect((manager as any).discoverTools("srv", client)).rejects.toThrow(
-      "discovery failed",
-    );
+    await expect((manager as any).discoverTools("srv", client)).rejects.toThrow("discovery failed");
 
     expect(manager.listServers()).toEqual([]);
     expect(closed).toBe(true);
@@ -477,6 +476,33 @@ describe("buildHttpHeaders", () => {
   });
 });
 
+describe("buildHttpHeadersWithCredentialAccess", () => {
+  test("resolves credentialRef through the async credential access layer", async () => {
+    const headers = await buildHttpHeadersWithCredentialAccess(
+      "srv",
+      {
+        name: "srv",
+        transport: "streamable-http",
+        url: "https://example.com",
+        credentialRef: "figma",
+      },
+      {
+        async resolveValue(req) {
+          expect(req).toEqual({
+            cwd: undefined,
+            id: "figma",
+            scope: "full",
+            purpose: "mcp",
+          });
+          return "figd_secret";
+        },
+      },
+    );
+
+    expect(headers.Authorization).toBe("Bearer figd_secret");
+  });
+});
+
 describe("inferTransportType (url-only configs are HTTP, not stdio)", () => {
   test("url-only (plugin .mcp.json convention) → streamable-http", () => {
     expect(inferTransportType({ name: "s", url: "https://mcp.synta.io/mcp" })).toBe(
@@ -484,9 +510,7 @@ describe("inferTransportType (url-only configs are HTTP, not stdio)", () => {
     );
   });
   test("explicit transport always wins", () => {
-    expect(
-      inferTransportType({ name: "s", url: "https://x/mcp", transport: "sse" }),
-    ).toBe("sse");
+    expect(inferTransportType({ name: "s", url: "https://x/mcp", transport: "sse" })).toBe("sse");
   });
   test("command-only / command+url / neither → stdio", () => {
     expect(inferTransportType({ name: "s", command: "npx" })).toBe("stdio");
@@ -589,7 +613,11 @@ describe("executor gate: MCP tool from a server this session didn't enable", () 
       new HookRegistry(),
     );
     executor.setContext({ allowedMcpServers: new Set(["mine:srv"]) } as never);
-    const result = await executor.executeSingle({ id: "c1", toolName: "mcp_other_srv_doit", args: {} } as never);
+    const result = await executor.executeSingle({
+      id: "c1",
+      toolName: "mcp_other_srv_doit",
+      args: {},
+    } as never);
     expect(result.isError).toBe(true);
     expect(String(result.error)).toContain("not enabled for this project");
   });

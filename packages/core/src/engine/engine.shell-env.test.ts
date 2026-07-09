@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Engine } from "./engine.js";
 import { CredentialStore } from "../credentials/store.js";
+import { setDefaultCredentialAccess } from "../credentials/access.js";
 
 const baseLlm = { provider: "openai", model: "gpt-5", apiKey: "test-key" } as any;
 
@@ -32,6 +33,7 @@ describe("Engine shellEnv (localEnvironment.env wiring)", () => {
   });
 
   afterEach(() => {
+    setDefaultCredentialAccess(null);
     delete process.env.CODE_SHELL_HOME;
     if (prevHome === undefined) delete process.env.HOME;
     else process.env.HOME = prevHome;
@@ -223,5 +225,38 @@ describe("Engine shellEnv (localEnvironment.env wiring)", () => {
     });
     const engine = new Engine({ llm: baseLlm, cwd: proj, isSubAgent: true, ...full } as any);
     expect(engine.buildToolContext().shellEnv).toEqual({ FIGMA_TOKEN: "s-mquq0f4p" });
+  });
+
+  it("does not surface foreign safeStorage ciphertext as an exposed env value", () => {
+    mkdirSync(join(home, ".code-shell"), { recursive: true });
+    writeFileSync(
+      join(home, ".code-shell", "credentials.json"),
+      JSON.stringify({
+        version: 1,
+        credentials: [
+          {
+            id: "figma",
+            type: "token",
+            label: "Figma",
+            secret: "enc:safeStorage:cy1tcXVxMGY0cA==",
+            exposeAsEnv: "FIGMA_TOKEN",
+          },
+        ],
+      }),
+    );
+    const engine = new Engine({ llm: baseLlm, cwd: proj, ...full } as any);
+    expect(engine.buildToolContext().shellEnv).toBeUndefined();
+  });
+
+  it("uses credential access envExposures and still lets settings.env override them", () => {
+    setDefaultCredentialAccess({
+      listMasked: () => [],
+      resolveMeta: () => undefined,
+      envExposures: (_cwd, scope): Record<string, string> =>
+        scope === "full" ? { FIGMA_TOKEN: "from-provider" } : {},
+    });
+    writeGlobalSettings({ env: { FIGMA_TOKEN: "from-settings" } });
+    const engine = new Engine({ llm: baseLlm, cwd: proj, ...full } as any);
+    expect(engine.buildToolContext().shellEnv).toEqual({ FIGMA_TOKEN: "from-settings" });
   });
 });

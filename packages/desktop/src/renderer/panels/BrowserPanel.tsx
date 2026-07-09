@@ -89,6 +89,10 @@ interface Props {
    * page. Defaults to the shared partition for the popout / legacy callers.
    */
   partition?: string;
+  /** UI session bucket that owns this browser panel. Undefined for legacy/popout. */
+  bucket?: string;
+  /** Engine session id that should route automation to this bucket. */
+  engineSessionId?: string | null;
 }
 
 /**
@@ -96,12 +100,34 @@ interface Props {
  * persistent partition) with a self-drawn address bar, tabs, and a
  * localhost bookmark list discovered by port-probing common dev ports.
  */
-export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveAnchor, onUpdateAnchor, showPopout = true, visible = true, partition }: Props) {
+export function BrowserPanel({
+  initialUrl,
+  openUrl,
+  anchors,
+  onAnchor,
+  onRemoveAnchor,
+  onUpdateAnchor,
+  showPopout = true,
+  visible = true,
+  partition,
+  bucket,
+  engineSessionId,
+}: Props) {
   const { t } = useT();
   const emitAnchor = onAnchor ?? addAnchor;
 
-  const { tabs, activeId, active, nav, viewRef, setActiveId, patchTab, closeTab, openInNewTab, navigate } =
-    useBrowserTabs(initialUrl, openUrl);
+  const {
+    tabs,
+    activeId,
+    active,
+    nav,
+    viewRef,
+    setActiveId,
+    patchTab,
+    closeTab,
+    openInNewTab,
+    navigate,
+  } = useBrowserTabs(initialUrl, openUrl, bucket);
 
   // Idle-eviction: true once the panel has been hidden past IDLE_EVICT_MS. While
   // evicted the <webview> is unmounted (its renderer process freed); becoming
@@ -109,7 +135,11 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
   const evicted = useIdleEvict(visible);
 
   // Element-picking ("圈选").
-  const { selecting, picked, setPicked, startPicking } = useElementPicking(viewRef, active.url, activeId);
+  const { selecting, picked, setPicked, startPicking } = useElementPicking(
+    viewRef,
+    active.url,
+    activeId,
+  );
 
   // Which marker is open for editing (anchor id), if any. Pure UI state — the
   // markers themselves are derived from the `anchors` prop (single source).
@@ -145,12 +175,21 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
             <div
               key={tab.id}
               className={`group flex w-[180px] shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs ${
-                tab.id === activeId ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50"
+                tab.id === activeId
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent/50"
               }`}
             >
-              <Button type="button" variant="ghost" className="h-auto min-w-0 flex-1 justify-start gap-1 p-0 hover:bg-transparent" onClick={() => setActiveId(tab.id)}>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-auto min-w-0 flex-1 justify-start gap-1 p-0 hover:bg-transparent"
+                onClick={() => setActiveId(tab.id)}
+              >
                 <Globe className="h-3 w-3 shrink-0" />
-                <span className="truncate">{tab.title === NEW_TAB_TITLE ? t("panels.browser.newTab") : tab.title}</span>
+                <span className="truncate">
+                  {tab.title === NEW_TAB_TITLE ? t("panels.browser.newTab") : tab.title}
+                </span>
               </Button>
               <Button
                 type="button"
@@ -179,10 +218,18 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
 
       {/* Address bar */}
       <div className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1.5">
-        <IconBtn disabled={!nav.canGoBack} onClick={() => viewRef.current?.goBack()} label={t("panels.browser.back")}>
+        <IconBtn
+          disabled={!nav.canGoBack}
+          onClick={() => viewRef.current?.goBack()}
+          label={t("panels.browser.back")}
+        >
           <ArrowLeft className="h-4 w-4" />
         </IconBtn>
-        <IconBtn disabled={!nav.canGoForward} onClick={() => viewRef.current?.goForward()} label={t("panels.browser.forward")}>
+        <IconBtn
+          disabled={!nav.canGoForward}
+          onClick={() => viewRef.current?.goForward()}
+          label={t("panels.browser.forward")}
+        >
           <ArrowRight className="h-4 w-4" />
         </IconBtn>
         <IconBtn onClick={() => viewRef.current?.reload()} label={t("panels.browser.refresh")}>
@@ -213,7 +260,10 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
                 variant="ghost"
                 size="sm"
                 className="relative h-8 gap-1 px-1.5 text-muted-foreground"
-                title={t("panels.browser.markers", { total: markers.length, visible: visibleMarkers.length })}
+                title={t("panels.browser.markers", {
+                  total: markers.length,
+                  visible: visibleMarkers.length,
+                })}
               >
                 <MapPin className="h-4 w-4" />
                 <span className="text-xs tabular-nums">{markers.length}</span>
@@ -252,7 +302,11 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
         )}
         {showPopout && (
           <IconBtn
-            onClick={() => void window.codeshell.openBrowserPopout(active.url === NEW_TAB ? undefined : active.url)}
+            onClick={() =>
+              void window.codeshell.openBrowserPopout(
+                active.url === NEW_TAB ? undefined : active.url,
+              )
+            }
             label={t("panels.browser.popout")}
           >
             <PictureInPicture2 className="h-4 w-4" />
@@ -295,6 +349,8 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
             ref={viewRef}
             initialUrl={active.url}
             partition={partition}
+            bucket={bucket}
+            engineSessionId={engineSessionId}
           />
         )}
 
@@ -304,13 +360,19 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
         {active.url !== NEW_TAB && active.error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background px-6 text-center">
             <Globe className="h-10 w-10 text-muted-foreground/50" />
-            <div className="text-sm font-medium text-foreground">{t("panels.browser.cannotAccess")}</div>
-            <div className="max-w-md break-all text-xs text-muted-foreground">{active.error.url}</div>
+            <div className="text-sm font-medium text-foreground">
+              {t("panels.browser.cannotAccess")}
+            </div>
+            <div className="max-w-md break-all text-xs text-muted-foreground">
+              {active.error.url}
+            </div>
             <div className="text-xs text-muted-foreground">
               {/^https?:\/\/(localhost|127\.0\.0\.1)/i.test(active.error.url)
                 ? t("panels.browser.localhostDown")
                 : t("panels.browser.connectionFailed")}
-              <span className="ml-1 opacity-60">({active.error.desc || t("panels.browser.errorCode", { code: active.error.code })})</span>
+              <span className="ml-1 opacity-60">
+                ({active.error.desc || t("panels.browser.errorCode", { code: active.error.code })})
+              </span>
             </div>
             <div className="mt-1 flex items-center gap-2">
               <Button
@@ -331,7 +393,8 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
                 variant="ghost"
                 onClick={() => void window.codeshell.openExternal(active.error?.url ?? active.url)}
               >
-                <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> {t("panels.browser.openWithSystemBrowser")}
+                <ExternalLink className="mr-1.5 h-3.5 w-3.5" />{" "}
+                {t("panels.browser.openWithSystemBrowser")}
               </Button>
             </div>
           </div>
@@ -382,7 +445,8 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
                   browser: {
                     url: picked.url,
                     pageTitle:
-                      picked.pageTitle ?? (active.title !== NEW_TAB_TITLE ? active.title : undefined),
+                      picked.pageTitle ??
+                      (active.title !== NEW_TAB_TITLE ? active.title : undefined),
                     selector: picked.selector,
                     rect: picked.rect,
                   },

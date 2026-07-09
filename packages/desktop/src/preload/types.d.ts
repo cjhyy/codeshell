@@ -474,6 +474,9 @@ export interface CodeshellApi {
     opts?: {
       cwd?: string;
       sessionId?: string;
+      /** Main-only browser routing metadata; AgentBridge strips before worker. */
+      bucket?: string;
+      browserPartition?: string;
       permissionMode?: "plan" | "default" | "acceptEdits" | "auto" | "bypassPermissions";
       /** Model pool key to apply before this turn starts. */
       model?: string;
@@ -791,9 +794,20 @@ export interface CodeshellApi {
   /** Popout: subscribe to the broadcast anchor state. Returns unsubscribe. */
   onBrowserAnchorsState(cb: (anchors: unknown[]) => void): () => void;
   /** A page link wanted a new window; main routes it here to open as a new tab. */
-  onBrowserOpenTab(cb: (payload: { url: string }) => void): () => void;
+  onBrowserOpenTab(cb: (payload: { url: string; bucket?: string }) => void): () => void;
   /** Cookie 账号切换后,main 广播此事件让浏览器面板重载当前 tab。 */
-  onBrowserReload(cb: () => void): () => void;
+  onBrowserReload(cb: (payload: { bucket?: string }) => void): () => void;
+  registerBrowserSessionBucket(payload: {
+    sessionId: string;
+    bucket: string;
+    partition?: string;
+  }): void;
+  registerBrowserGuest(payload: {
+    guestId: number;
+    bucket: string;
+    partition: string;
+    engineSessionId?: string | null;
+  }): void;
   /** From a popout: ask the owner (main window) to remove an anchor by id. */
   sendBrowserAnchorRemove(anchorId: string): void;
   /** From a popout: ask the owner to update an anchor's comment. */
@@ -827,7 +841,10 @@ export interface CodeshellApi {
    * renderer can display it without `file://` (blocked by webSecurity/CSP).
    * Returns null if the path isn't an absolute image file or read fails.
    */
-  readImageDataUrl(absPath: string): Promise<string | null>;
+  readImageDataUrl(
+    absPath: string,
+    context?: { cwd?: string; sessionId?: string },
+  ): Promise<string | null>;
   stageAttachmentImageDataUrl(payload: {
     cwd: string;
     sessionId: string;
@@ -1113,7 +1130,11 @@ export interface CodeshellApi {
     cwd?: string,
     name?: string,
   ): Promise<InstalledSkill>;
-  uninstallSkill(filePath: string, source: "user" | "project" | "plugin"): Promise<void>;
+  uninstallSkill(input: {
+    scope: "user" | "project";
+    cwd?: string;
+    skillName: string;
+  }): Promise<void>;
   /**
    * Check if a GitHub-sourced skill has a newer commit upstream (network;
    * never throws). Locally-installed skills resolve to updateAvailable:false.

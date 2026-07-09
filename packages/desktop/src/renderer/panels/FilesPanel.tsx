@@ -507,7 +507,7 @@ function FileViewer({
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         {isImage ? (
-          <ImagePreview path={path} reloadNonce={reloadNonce} />
+          <ImagePreview root={root} path={path} reloadNonce={reloadNonce} />
         ) : (
           // Markdown in preview mode renders rich; everything else (and md in
           // source mode) uses the line-numbered, per-line-commentable view.
@@ -524,7 +524,15 @@ function FileViewer({
 }
 
 /** Render an image file by reading it as a data URL through main. */
-function ImagePreview({ path, reloadNonce }: { path: string; reloadNonce: number }) {
+function ImagePreview({
+  root,
+  path,
+  reloadNonce,
+}: {
+  root: string;
+  path: string;
+  reloadNonce: number;
+}) {
   const { t } = useT();
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -533,7 +541,7 @@ function ImagePreview({ path, reloadNonce }: { path: string; reloadNonce: number
     setSrc(null);
     setFailed(false);
     void window.codeshell
-      .readImageDataUrl(path)
+      .readImageDataUrl(path, { cwd: root })
       .then((url) => {
         if (cancelled) return;
         if (url) setSrc(url);

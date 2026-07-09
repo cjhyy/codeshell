@@ -3,6 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { CredentialStore } from "./store.js";
+import { setDefaultCredentialAccess, type CredentialAccess } from "./access.js";
 import {
   injectCredentialTool,
   isInjectCredentialAvailable,
@@ -19,7 +20,12 @@ import type { SettingsScope } from "../settings/manager.js";
  * tool's own contract (approval / refusals / availability).
  */
 
-type InjectArgs = { credentialToBrowser?: (id: string) => Promise<{ ok: boolean; count?: number; error?: string }> };
+type InjectArgs = {
+  credentialToBrowser?: (
+    id: string,
+    scope?: "full" | "project",
+  ) => Promise<{ ok: boolean; count?: number; error?: string }>;
+};
 
 function ctxWith(
   cwd: string,
@@ -71,20 +77,25 @@ describe("InjectCredential tool", () => {
     __resetInjectCredentialSessionAllowForTests();
   });
   afterEach(() => {
+    setDefaultCredentialAccess(null);
     process.env.HOME = prevHome;
     rmSync(home, { recursive: true, force: true });
     rmSync(cwd, { recursive: true, force: true });
   });
 
   test("missing id → error", async () => {
-    const out = parse(await injectCredentialTool({}, ctxWith(cwd, { inject: async () => ({ ok: true }) })));
+    const out = parse(
+      await injectCredentialTool({}, ctxWith(cwd, { inject: async () => ({ ok: true }) })),
+    );
     expect(out.kind).toBe("error");
     expect(String(out.error)).toContain("id");
   });
 
   test("no host inject callback (headless) → error, never resolves the store", async () => {
     saveCookie(cwd, "yt");
-    const out = parse(await injectCredentialTool({ id: "yt" }, ctxWith(cwd, { askResult: "允许本次" })));
+    const out = parse(
+      await injectCredentialTool({ id: "yt" }, ctxWith(cwd, { askResult: "允许本次" })),
+    );
     expect(out.kind).toBe("error");
     expect(String(out.error)).toContain("无内置浏览器");
   });
@@ -95,7 +106,13 @@ describe("InjectCredential tool", () => {
     const out = parse(
       await injectCredentialTool(
         { id: "tok" },
-        ctxWith(cwd, { askResult: "允许本次", inject: async () => { injected = true; return { ok: true }; } }),
+        ctxWith(cwd, {
+          askResult: "允许本次",
+          inject: async () => {
+            injected = true;
+            return { ok: true };
+          },
+        }),
       ),
     );
     expect(out.kind).toBe("error");
@@ -105,7 +122,10 @@ describe("InjectCredential tool", () => {
 
   test("unknown id → error", async () => {
     const out = parse(
-      await injectCredentialTool({ id: "ghost" }, ctxWith(cwd, { inject: async () => ({ ok: true }) })),
+      await injectCredentialTool(
+        { id: "ghost" },
+        ctxWith(cwd, { inject: async () => ({ ok: true }) }),
+      ),
     );
     expect(out.kind).toBe("error");
     expect(String(out.error)).toContain("凭证不存在");
@@ -117,7 +137,13 @@ describe("InjectCredential tool", () => {
     const out = parse(
       await injectCredentialTool(
         { id: "yt", purpose: "resume login" },
-        ctxWith(cwd, { askResult: "允许本次", inject: async (id) => { askedFor = id; return { ok: true, count: 7 }; } }),
+        ctxWith(cwd, {
+          askResult: "允许本次",
+          inject: async (id) => {
+            askedFor = id;
+            return { ok: true, count: 7 };
+          },
+        }),
       ),
     );
     expect(out).toEqual({ kind: "injected", count: 7 });
@@ -130,7 +156,13 @@ describe("InjectCredential tool", () => {
     const out = parse(
       await injectCredentialTool(
         { id: "yt" },
-        ctxWith(cwd, { askResult: "拒绝", inject: async () => { injected = true; return { ok: true }; } }),
+        ctxWith(cwd, {
+          askResult: "拒绝",
+          inject: async () => {
+            injected = true;
+            return { ok: true };
+          },
+        }),
       ),
     );
     expect(out.kind).toBe("error");
@@ -145,7 +177,12 @@ describe("InjectCredential tool", () => {
     const out = parse(
       await injectCredentialTool(
         { id: "yt" },
-        ctxWith(cwd, { inject: async () => { injected = true; return { ok: true, count: 3 }; } }),
+        ctxWith(cwd, {
+          inject: async () => {
+            injected = true;
+            return { ok: true, count: 3 };
+          },
+        }),
       ),
     );
     expect(out).toEqual({ kind: "injected", count: 3 });
@@ -158,7 +195,12 @@ describe("InjectCredential tool", () => {
     const out = parse(
       await injectCredentialTool(
         { id: "yt" },
-        ctxWith(cwd, { inject: async () => { injected = true; return { ok: true }; } }),
+        ctxWith(cwd, {
+          inject: async () => {
+            injected = true;
+            return { ok: true };
+          },
+        }),
       ),
     );
     expect(out.kind).toBe("error");
@@ -171,7 +213,10 @@ describe("InjectCredential tool", () => {
     const out = parse(
       await injectCredentialTool(
         { id: "yt" },
-        ctxWith(cwd, { askResult: "允许本次", inject: async () => ({ ok: false, error: "session locked" }) }),
+        ctxWith(cwd, {
+          askResult: "允许本次",
+          inject: async () => ({ ok: false, error: "session locked" }),
+        }),
       ),
     );
     expect(out.kind).toBe("error");
@@ -224,9 +269,57 @@ describe("InjectCredential tool", () => {
     expect(injected).toBe(false);
   });
 
+  test("availability and execution use host metadata without reading disk secret", async () => {
+    const access: CredentialAccess = {
+      listMasked: (_cwd, scope) =>
+        scope === "full"
+          ? [
+              {
+                id: "cookie-host",
+                type: "cookie",
+                label: "Cookie Host",
+                autoInjectByAI: true,
+                hasSecret: true,
+              },
+            ]
+          : [],
+      resolveMeta: () => ({
+        id: "cookie-host",
+        type: "cookie",
+        label: "Cookie Host",
+        autoInjectByAI: true,
+        hasSecret: true,
+      }),
+      envExposures: () => ({}),
+    };
+    setDefaultCredentialAccess(access);
+
+    expect(isInjectCredentialAvailable(cwd, "full")).toBe(true);
+    expect(isInjectCredentialAvailable(cwd, "project")).toBe(false);
+    const injected: Array<{ id: string; scope?: "full" | "project" }> = [];
+    const out = parse(
+      await injectCredentialTool(
+        { id: "cookie-host" },
+        ctxWith(cwd, {
+          inject: async (id, scope) => {
+            injected.push({ id, scope });
+            return { ok: true, count: 4 };
+          },
+        }),
+      ),
+    );
+    expect(out).toEqual({ kind: "injected", count: 4 });
+    expect(injected).toEqual([{ id: "cookie-host", scope: "full" }]);
+  });
+
   describe("isInjectCredentialAvailable", () => {
     test("false when no cookie credential exists", () => {
-      new CredentialStore(cwd).save("user", { id: "tok", type: "token", label: "tok", secret: "s" });
+      new CredentialStore(cwd).save("user", {
+        id: "tok",
+        type: "token",
+        label: "tok",
+        secret: "s",
+      });
       expect(isInjectCredentialAvailable(cwd)).toBe(false);
     });
     test("true once a cookie credential exists", () => {

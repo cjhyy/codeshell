@@ -166,6 +166,7 @@ function installCodeshellStub(): void {
     },
     noRepoCwd: async () => "/tmp",
     configure: async () => undefined,
+    registerBrowserSessionBucket: () => undefined,
     setGitPrefs: async () => undefined,
     getGitStatus: async () => ({ branch: "main", entries: [], clean: true }),
     getGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),

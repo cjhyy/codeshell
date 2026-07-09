@@ -6,6 +6,20 @@ export {
   setDefaultCredentialCipher,
   getDefaultCredentialCipher,
 } from "./cipher.js";
+export {
+  getCredentialAccess,
+  setDefaultCredentialAccess,
+  createIpcCredentialAccess,
+  localCredentialAccess,
+  credentialAccessScope,
+  isCredentialSecretAvailable,
+  materializeCookieSecret,
+  type CredentialAccess,
+  type CredentialAccessScope,
+  type CredentialMetadata,
+  type CredentialSnapshot,
+  type CredentialSnapshotEntry,
+} from "./access.js";
 export type { Credential, CredentialType, CredentialStoreFile } from "./types.js";
 export { formatNetscapeCookies, parseCookieJar, type CookieLike } from "./cookie-jar.js";
 export {

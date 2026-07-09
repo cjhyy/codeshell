@@ -1,11 +1,5 @@
 import React, { memo, useEffect, useState } from "react";
-import {
-  FileText,
-  FileCode2,
-  ImageIcon,
-  File as FileIcon,
-  MoreHorizontal,
-} from "lucide-react";
+import { FileText, FileCode2, ImageIcon, File as FileIcon, MoreHorizontal } from "lucide-react";
 import { truncate } from "./utils";
 import type { Attachment } from "./attachments";
 import { OpenWithMenu } from "../chat/OpenWithMenu";
@@ -63,7 +57,9 @@ function AttachmentCardImpl({ attachment, cwd }: Props) {
           </span>
         )}
         <span className="flex min-w-0 flex-col">
-          <span className="truncate text-xs font-medium text-foreground">{truncate(filename, 48)}</span>
+          <span className="truncate text-xs font-medium text-foreground">
+            {truncate(filename, 48)}
+          </span>
           <span className="text-[10px] uppercase tracking-wide text-muted-foreground">.{ext}</span>
         </span>
       </Button>
@@ -105,13 +101,7 @@ function iconFor(kind: Attachment["kind"]) {
  * application's webSecurity-relaxed context. If the path is relative
  * we don't have cwd → just fall back to the icon variant.
  */
-function ImageThumb({
-  path,
-  cwd,
-}: {
-  path: string;
-  cwd?: string | null;
-}) {
+function ImageThumb({ path, cwd }: { path: string; cwd?: string | null }) {
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -130,7 +120,7 @@ function ImageThumb({
     // Load via the images:readDataUrl IPC, not `file://` — the renderer can't
     // load file:// (webSecurity + CSP block it); main returns a base64 data:
     // URL the CSP's `img-src ... data:` allows.
-    void window.codeshell.readImageDataUrl(abs).then((dataUrl) => {
+    void window.codeshell.readImageDataUrl(abs, { cwd: cwd ?? undefined }).then((dataUrl) => {
       if (cancelled) return;
       if (dataUrl) setSrc(dataUrl);
       else setFailed(true);

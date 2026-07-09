@@ -13,13 +13,13 @@
 
 import type { ToolDefinition } from "../types.js";
 import type { ToolContext } from "../tool-system/context.js";
-import { CredentialStore } from "./store.js";
 import {
   credentialUseGate,
   type SessionCredentialAllow,
   type CredentialAskFn,
 } from "./use-gate.js";
 import { SettingsManager, type SettingsScope } from "../settings/manager.js";
+import { credentialAccessScope, getCredentialAccess } from "./access.js";
 
 const TOOL_NAME = "InjectCredential";
 
@@ -79,7 +79,7 @@ function sessionAllowFor(ctx?: ToolContext): SessionCredentialAllow {
 // CredentialStore only distinguishes full user+project from project-only.
 // Isolated engines must be at least as restrictive as project-scoped engines.
 function credentialScope(scope: SettingsScope | undefined): "full" | "project" {
-  return scope === "full" || scope === undefined ? "full" : "project";
+  return credentialAccessScope(scope);
 }
 
 function readAutoApprove(cwd: string, scope: "full" | "project"): boolean {
@@ -96,8 +96,8 @@ function readAutoApprove(cwd: string, scope: "full" | "project"): boolean {
 /** 该工具仅在有 cookie 凭证 且 宿主接了注入回调时才可见(BUILTIN_TOOL_GUARDS)。 */
 export function isInjectCredentialAvailable(cwd: string, settingsScope?: SettingsScope): boolean {
   try {
-    return new CredentialStore(cwd)
-      .listMasked(credentialScope(settingsScope))
+    return getCredentialAccess()
+      .listMasked(cwd, credentialScope(settingsScope))
       .some((c) => c.type === "cookie");
   } catch {
     return false;
@@ -128,7 +128,7 @@ export async function injectCredentialTool(
     });
   }
 
-  const cred = new CredentialStore(cwd).resolve(id, scope);
+  const cred = getCredentialAccess().resolveMeta(cwd, id, scope);
   if (!cred) {
     return json({
       kind: "error",

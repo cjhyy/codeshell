@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useEffect, useImperativeHandle, useRef } from "react";
 import type { WebviewElement } from "./types";
 
 /**
@@ -17,17 +17,52 @@ import type { WebviewElement } from "./types";
  */
 export const WebviewHost = React.forwardRef<
   WebviewElement,
-  { initialUrl: string; partition?: string }
->(function WebviewHost({ initialUrl, partition = "persist:browser" }, ref) {
+  { initialUrl: string; partition?: string; bucket?: string; engineSessionId?: string | null }
+>(function WebviewHost(
+  { initialUrl, partition = "persist:browser", bucket, engineSessionId },
+  ref,
+) {
+  const viewRef = useRef<WebviewElement | null>(null);
+  useImperativeHandle(ref, () => viewRef.current as WebviewElement, []);
   const frozenSrc = useRef(initialUrl).current;
   // Freeze the partition too (like src): a webview's partition can't change
   // after attach, and it identifies the isolated storage/session the guest runs
   // in. Per-session partitions keep one chat session's browsing (cookies, logged-
   // in state, and the live page) from bleeding into another's.
   const frozenPartition = useRef(partition).current;
+
+  useEffect(() => {
+    if (!bucket) return;
+    if (engineSessionId) {
+      window.codeshell.registerBrowserSessionBucket({
+        sessionId: engineSessionId,
+        bucket,
+        partition: frozenPartition,
+      });
+    }
+    const view = viewRef.current;
+    if (!view) return;
+    const registerGuest = () => {
+      const guestId = view.getWebContentsId?.();
+      if (typeof guestId !== "number" || !Number.isFinite(guestId)) return;
+      window.codeshell.registerBrowserGuest({
+        guestId,
+        bucket,
+        partition: frozenPartition,
+        engineSessionId,
+      });
+    };
+    const timer = window.setTimeout(registerGuest, 0);
+    view.addEventListener("dom-ready", registerGuest);
+    return () => {
+      window.clearTimeout(timer);
+      view.removeEventListener("dom-ready", registerGuest);
+    };
+  }, [bucket, engineSessionId, frozenPartition]);
+
   return (
     <webview
-      ref={ref as unknown as React.Ref<HTMLElement>}
+      ref={viewRef as unknown as React.Ref<HTMLElement>}
       src={frozenSrc}
       partition={frozenPartition}
       style={{ width: "100%", height: "100%", display: "flex" }}

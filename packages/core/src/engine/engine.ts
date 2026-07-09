@@ -83,7 +83,7 @@ import { TurnLoop } from "./turn-loop.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
 import { SettingsManager, userHome } from "../settings/manager.js";
-import { CredentialStore } from "../credentials/store.js";
+import { getCredentialAccess } from "../credentials/access.js";
 import type { CapabilityOverride, CapabilityOverrides } from "../settings/schema.js";
 import {
   isFeatureEnabled,
@@ -3432,7 +3432,7 @@ export class Engine {
       // the host user's credentials (same isolation contract as top-level env).
       // Placed below settings.env so an explicit `env` entry can still override.
       const credScope = (this.config.settingsScope ?? "project") === "full" ? "full" : "project";
-      layer(new CredentialStore(cwd).envExposures(credScope));
+      layer(getCredentialAccess().envExposures(cwd, credScope));
       layer(settings.env); // top-level env (global ⊕ project) wins
     } catch {
       return undefined;

@@ -765,7 +765,7 @@ export function ChatView({
     onClearAnchors?.();
   };
 
-  const acceptFiles = async (files: File[], origin: "paste" | "os-drop") => {
+  const acceptFiles = async (files: File[], origin: "paste" | "os-drop" | "picker") => {
     if (compacting) return;
     if (files.length === 0) return;
     setAttachmentError(null);
@@ -1450,7 +1450,7 @@ export function ChatView({
               onChange={(e) => {
                 const files = Array.from(e.target.files ?? []);
                 if (e.target) e.target.value = "";
-                void acceptFiles(files);
+                void acceptFiles(files, "picker");
               }}
             />
 

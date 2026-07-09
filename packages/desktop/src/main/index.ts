@@ -15,8 +15,8 @@ import {
   Notification,
 } from "electron";
 import { fileURLToPath } from "node:url";
-import { dirname, resolve, basename, extname, isAbsolute, join } from "node:path";
-import { readFile, lstat, writeFile } from "node:fs/promises";
+import { dirname, resolve, basename, extname, join } from "node:path";
+import { writeFile } from "node:fs/promises";
 import {
   defaultCacheDir,
   fetchModelList,
@@ -75,7 +75,15 @@ import {
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { stablePromptHash } from "./client-message-id.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
-import { listGuestSessions, registerGuest } from "./browser-driver/active-guest.js";
+import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
+import { readImageDataUrl } from "./image-read-service.js";
+import {
+  browserPartitionForBucket as registryPartitionForBucket,
+  guestRecordForId,
+  listGuestSessions,
+  registerGuest,
+  registerSessionBucket,
+} from "./browser-driver/active-guest.js";
 import { buildDesktopAutomationRunner, makeCronRunnerWithResume } from "./automation-host.js";
 import type { CronRunResult } from "@cjhyy/code-shell-core";
 import {
@@ -187,6 +195,7 @@ import {
   listSkills,
   readSkillBody,
   uninstallSkill,
+  uninstallListedSkill,
 } from "./skills-service.js";
 import {
   listPlugins,
@@ -1227,8 +1236,6 @@ function hardenWebviewGuests(win: BrowserWindow): void {
         : BROWSER_PARTITION;
   });
   win.webContents.on("did-attach-webview", (_e, guest) => {
-    // Register as the browser-automation target (most-recent guest = active tab).
-    registerGuest(guest);
     // A page link wanting a new window (target=_blank, window.open) used to be
     // DENIED outright (→ kicked to the OS browser, or silently nothing — the
     // "点了没反应"). Instead, route http(s) popups back to the renderer to open as
@@ -1241,7 +1248,8 @@ function hardenWebviewGuests(win: BrowserWindow): void {
     // reach it, and still deny the native popup either way.
     guest.setWindowOpenHandler(({ url }) => {
       if (/^https?:/i.test(url) && !win.isDestroyed()) {
-        win.webContents.send("browser:open-tab", { url });
+        const bucket = guestRecordForId(guest.id)?.bucket;
+        win.webContents.send("browser:open-tab", { url, bucket: bucket ?? undefined });
       }
       return { action: "deny" };
     });
@@ -1592,17 +1600,14 @@ app.whenReady().then(async () => {
     log: (event, data) => dlog("main", event, data),
   });
 
-  // Credential encryption boundary (EncryptionCipher) is now in place, but we
-  // intentionally do NOT install SafeStorageCipher yet: the agent runs in a
-  // separate worker process that has no safeStorage key, so if main wrote
-  // `enc:safeStorage:…` the worker (which reads credentials for UseCredential /
-  // env exposure) could not decrypt them — a regression. Encryption is enabled
-  // only once the cipher is handed across the stdio boundary to the worker
-  // (P1). Until then the process default stays PlaintextCipher (0o600), i.e.
-  // identical to pre-boundary behavior. SafeStorageCipher is implemented and
-  // ready in ./credential-cipher.ts; wire it together with the worker.
-  void setDefaultCredentialCipher; // referenced; see note above
-  void SafeStorageCipher;
+  // Main owns Electron safeStorage. Worker gets metadata snapshots and asks
+  // main to resolve/materialize secrets on demand; if safeStorage is unavailable
+  // SafeStorageCipher intentionally falls back to `plain:` owner-only storage.
+  setDefaultCredentialCipher(new SafeStorageCipher());
+  void knownAttachmentCwds()
+    .then((cwds) => migrateKnownCredentialStores(cwds))
+    .then((result) => dlog("credentials", "migration.done", { ...result }))
+    .catch((err) => dlog("credentials", "migration.failed", { error: String(err) }));
 
   if (process.platform === "darwin" && app.dock) {
     try {
@@ -1777,18 +1782,21 @@ ipcMain.handle("plugins:list", async (_e, cwd: string) => {
 // ── Credentials (token/link store + cookie capture) ──────────────────
 // cwd may be "" for no-repo contexts; project scope no-ops without a cwd.
 ipcMain.handle("credentials:list", async (_e, cwd: string) => {
+  migrateCredentialStore(cwd || undefined);
   return new CredentialStore(cwd || undefined).listMasked();
 });
 ipcMain.handle(
   "credentials:save",
   async (_e, cwd: string, scope: CredentialScope, cred: Credential) => {
     new CredentialStore(cwd || undefined).save(scope, cred);
+    bridge?.pushCredentialSnapshot(cwd || undefined);
   },
 );
 ipcMain.handle(
   "credentials:remove",
   async (_e, cwd: string, scope: CredentialScope, id: string) => {
     new CredentialStore(cwd || undefined).remove(scope, id);
+    bridge?.pushCredentialSnapshot(cwd || undefined);
   },
 );
 // 只改元数据(label/autoUseByAI/meta),保留 secret —— UI 的编辑/AI 开关用,避免清空 jar。
@@ -1809,16 +1817,65 @@ ipcMain.handle(
   ) => {
     if (typeof id !== "string" || !id) throw new Error("credentials:patchMeta requires id");
     new CredentialStore(cwd || undefined).patch(scope, id, fields as never);
+    bridge?.pushCredentialSnapshot(cwd || undefined);
   },
 );
 function browserPartitionForBucket(bucket: unknown): string | undefined {
   if (typeof bucket !== "string" || !bucket) return undefined;
-  // MUST match PanelArea.tsx's partition exactly (no trim) — same cleaning
-  // regex, same input — or capture/restore would target a different partition
-  // than the one the panel's <webview> actually writes to.
-  const safeBucket = bucket.replace(/[^a-zA-Z0-9_:.@-]/g, "_");
-  return `${BROWSER_PARTITION}:${safeBucket}`;
+  // MUST match PanelArea/WebviewHost's partition exactly (no trim), or
+  // capture/restore would target a different partition than the panel writes.
+  return registryPartitionForBucket(bucket);
 }
+
+ipcMain.on(
+  "browser:register-session-bucket",
+  (_e, payload: { sessionId?: unknown; bucket?: unknown; partition?: unknown }) => {
+    try {
+      const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
+      const bucket = typeof payload?.bucket === "string" ? payload.bucket : "";
+      const partition = typeof payload?.partition === "string" ? payload.partition : undefined;
+      if (!sessionId || !bucket) return;
+      registerSessionBucket(sessionId, bucket, partition);
+    } catch (err) {
+      dlog("browser", "register_session_bucket_failed", { error: String(err) });
+    }
+  },
+);
+
+ipcMain.on(
+  "browser:guest-attached",
+  (
+    e,
+    payload: {
+      guestId?: unknown;
+      bucket?: unknown;
+      partition?: unknown;
+      engineSessionId?: unknown;
+    },
+  ) => {
+    try {
+      const guestId =
+        typeof payload?.guestId === "number" ? payload.guestId : Number(payload?.guestId);
+      const bucket = typeof payload?.bucket === "string" ? payload.bucket : "";
+      const partition = typeof payload?.partition === "string" ? payload.partition : "";
+      if (!Number.isFinite(guestId) || !bucket || !partition) return;
+      const guest = webContents.fromId(guestId);
+      if (!guest || guest.isDestroyed()) return;
+      const ownerWindow = BrowserWindow.fromWebContents(e.sender);
+      registerGuest({
+        guest,
+        bucket,
+        partition,
+        engineSessionId:
+          typeof payload?.engineSessionId === "string" ? payload.engineSessionId : undefined,
+        windowId: ownerWindow?.id,
+        source: "panel",
+      });
+    } catch (err) {
+      dlog("browser", "guest_attached_failed", { error: String(err) });
+    }
+  },
+);
 
 ipcMain.handle("credentials:cookieDomains", async (_e, bucket?: string) =>
   listCookieDomains(browserPartitionForBucket(bucket)),
@@ -1854,6 +1911,9 @@ ipcMain.handle(
   async (_e, cwd: string, id: string, bucket?: string) => {
     if (typeof id !== "string" || !id)
       throw new Error("credentials:restoreCookieToBrowser requires id");
+    const partition = browserPartitionForBucket(bucket);
+    if (!partition) throw new Error("credentials:restoreCookieToBrowser requires bucket");
+    migrateCredentialStore(cwd || undefined);
     const cred = new CredentialStore(cwd || undefined).resolve(id);
     if (!cred || cred.type !== "cookie") throw new Error(`无 cookie 凭证: "${id}"`);
     let jar: ElectronCookieLike[];
@@ -1868,9 +1928,9 @@ ipcMain.handle(
       throw new Error(`凭证「${cred.label}」的 cookie 数据损坏`);
     }
     const mode = cred.meta?.switchMode === "clear" ? "clear" : "merge";
-    const { count } = await restoreCookiesToBrowser(jar, mode, browserPartitionForBucket(bucket));
+    const { count } = await restoreCookiesToBrowser(jar, mode, partition);
     for (const w of BrowserWindow.getAllWindows()) {
-      if (!w.isDestroyed()) w.webContents.send("browser:reload");
+      if (!w.isDestroyed()) w.webContents.send("browser:reload", { bucket });
     }
     return { count };
   },
@@ -2102,11 +2162,31 @@ ipcMain.handle(
 );
 ipcMain.handle(
   "skills:uninstall",
-  async (_e, filePath: string, source: "user" | "project" | "plugin") => {
-    if (typeof filePath !== "string") throw new Error("skills:uninstall requires filePath");
-    if (source !== "user" && source !== "project" && source !== "plugin")
-      throw new Error("invalid source");
-    return uninstallSkill(filePath, source);
+  async (
+    _e,
+    input: { scope?: unknown; cwd?: unknown; skillName?: unknown } | string,
+    source?: "user" | "project" | "plugin",
+    cwd?: string,
+  ) => {
+    if (typeof input === "string") {
+      if (source !== "user" && source !== "project" && source !== "plugin") {
+        throw new Error("invalid source");
+      }
+      return uninstallListedSkill(input, source, typeof cwd === "string" ? cwd : undefined);
+    }
+    if (!input || typeof input !== "object") {
+      throw new Error("skills:uninstall requires { scope, cwd, skillName }");
+    }
+    const scope = input.scope === "user" || input.scope === "project" ? input.scope : null;
+    if (!scope) throw new Error("invalid scope");
+    if (typeof input.skillName !== "string") {
+      throw new Error("skills:uninstall requires skillName");
+    }
+    return uninstallSkill({
+      scope,
+      cwd: typeof input.cwd === "string" ? input.cwd : undefined,
+      skillName: input.skillName,
+    });
   },
 );
 
@@ -2119,39 +2199,18 @@ ipcMain.handle("agents:read", async (_e, filePath: string) => {
   return readAgentBody(filePath);
 });
 
-// Read an image file and return it as a base64 data: URL. The renderer can't
-// load `file://` (default webSecurity blocks it, and the CSP only allows
-// `img-src 'self' data:`), so inline image thumbnails (GenerateImage output,
-// screenshots, generated SVGs surfaced from answer text) come through here
-// instead. Returns null on any failure so the caller degrades to a link.
-//
-// We use lstat (not stat) and reject symlinks: a symlink with an image
-// extension could otherwise point at a non-image file, a device/FIFO, or a
-// secret outside the workspace, defeating the extension+size guards.
-const IMG_MIME: Record<string, string> = {
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".gif": "image/gif",
-  ".webp": "image/webp",
-  ".svg": "image/svg+xml",
-  ".bmp": "image/bmp",
-  ".avif": "image/avif",
-};
-const MAX_IMAGE_BYTES = 25 * 1024 * 1024; // 25MB — guard against huge data URLs
-ipcMain.handle("images:readDataUrl", async (_e, absPath: string): Promise<string | null> => {
-  try {
-    if (typeof absPath !== "string" || !isAbsolute(absPath)) return null;
-    const mime = IMG_MIME[extname(absPath).toLowerCase()];
-    if (!mime) return null; // not an image extension
-    const info = await lstat(absPath); // lstat: don't follow symlinks
-    if (!info.isFile() || info.size > MAX_IMAGE_BYTES) return null;
-    const buf = await readFile(absPath);
-    return `data:${mime};base64,${buf.toString("base64")}`;
-  } catch {
-    return null;
-  }
-});
+ipcMain.handle(
+  "images:readDataUrl",
+  async (
+    _e,
+    payload: { absPath?: unknown; cwd?: unknown; sessionId?: unknown },
+  ): Promise<string | null> => {
+    return readImageDataUrl(typeof payload?.absPath === "string" ? payload.absPath : "", {
+      cwd: typeof payload?.cwd === "string" ? payload.cwd : undefined,
+      sessionId: typeof payload?.sessionId === "string" ? payload.sessionId : undefined,
+    });
+  },
+);
 
 // Save an image to a user-chosen location (Lightbox / attachment "download").
 // Accepts the data URL the renderer already holds (works for generated images,

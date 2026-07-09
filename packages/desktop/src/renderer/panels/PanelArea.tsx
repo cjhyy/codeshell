@@ -1,5 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
-import { FolderTree, Globe, GitCompare, SquareTerminal, X, Plus, Maximize2, Minimize2, ServerCog, Bot } from "lucide-react";
+import {
+  FolderTree,
+  Globe,
+  GitCompare,
+  SquareTerminal,
+  X,
+  Plus,
+  Maximize2,
+  Minimize2,
+  ServerCog,
+  Bot,
+} from "lucide-react";
 import type { PanelTab } from "../view";
 import { cn } from "@/lib/utils";
 import {
@@ -163,12 +174,14 @@ export function PanelArea({
 
   // Dedup defensively: persisted state from older builds can carry duplicate ids.
   const seenTabIds = new Set<string>();
-  const activeTabs = tabs.filter((tb) => (seenTabIds.has(tb.id) ? false : (seenTabIds.add(tb.id), true)));
+  const activeTabs = tabs.filter((tb) =>
+    seenTabIds.has(tb.id) ? false : (seenTabIds.add(tb.id), true),
+  );
   const candidateActiveId = activeId;
   const visibleActiveId =
     candidateActiveId && activeTabs.some((tb) => tb.id === candidateActiveId)
       ? candidateActiveId
-      : activeTabs[0]?.id ?? null;
+      : (activeTabs[0]?.id ?? null);
 
   // Maximized = overlay the chat column (incl. composer) for more room (TODO
   // 2.4). Resets each open (local) — chat/composer state lives in App.
@@ -230,7 +243,15 @@ export function PanelArea({
     ? keepActiveBodyLive
       ? maximized
         ? { opacity: 0, pointerEvents: "none" }
-        : { position: "absolute", top: 0, right: 0, bottom: 0, width, opacity: 0, pointerEvents: "none" }
+        : {
+            position: "absolute",
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width,
+            opacity: 0,
+            pointerEvents: "none",
+          }
       : { display: "none" }
     : maximized
       ? undefined
@@ -240,9 +261,7 @@ export function PanelArea({
     <div
       className={cn(
         "relative flex min-h-0 flex-col bg-background",
-        maximized
-          ? "absolute inset-0 z-30 shrink"
-          : "shrink-0 border-l border-border",
+        maximized ? "absolute inset-0 z-30 shrink" : "shrink-0 border-l border-border",
       )}
       // Closed docks use display:none so BrowserPanel may idle-evict. Temporary
       // full-page views keep the dock invisible but laid out enough for webview
@@ -274,10 +293,17 @@ export function PanelArea({
               key={tab.id}
               className={cn(
                 "group flex shrink-0 items-center gap-1.5 rounded-md py-1 pl-2.5 pr-1.5 text-xs font-medium transition-colors",
-                active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50",
+                active
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent/50",
               )}
             >
-              <Button type="button" variant="ghost" className="h-auto gap-1.5 p-0 hover:bg-transparent" onClick={() => setActiveId(tab.id)}>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-auto gap-1.5 p-0 hover:bg-transparent"
+                onClick={() => setActiveId(tab.id)}
+              >
                 <Icon className="h-3.5 w-3.5" />
                 {label}
               </Button>
@@ -420,13 +446,32 @@ function PanelBody({
 }) {
   switch (tab.kind) {
     case "files":
-      return <FilesPanel cwd={cwd} onAttachImage={onAttachImage} revealFile={revealFile} onRevealConsumed={onRevealConsumed} />;
+      return (
+        <FilesPanel
+          cwd={cwd}
+          onAttachImage={onAttachImage}
+          revealFile={revealFile}
+          onRevealConsumed={onRevealConsumed}
+        />
+      );
     case "browser":
       // Per-bucket partition so each chat session's browser is storage/page
       // isolated (bucket = `${repoKey}::${sessionId}`). Sanitize to the chars
       // Electron allows in a partition name (the bucket has `::`, which is fine,
       // but be defensive about anything exotic).
-      return <BrowserPanel cwd={cwd} visible={visible} openUrl={openUrl} anchors={browserAnchors} onRemoveAnchor={onRemoveBrowserAnchor} onUpdateAnchor={onUpdateBrowserAnchor} partition={`persist:browser:${bucket.replace(/[^a-zA-Z0-9_:.@-]/g, "_")}`} />;
+      return (
+        <BrowserPanel
+          cwd={cwd}
+          visible={visible}
+          openUrl={openUrl}
+          anchors={browserAnchors}
+          onRemoveAnchor={onRemoveBrowserAnchor}
+          onUpdateAnchor={onUpdateBrowserAnchor}
+          bucket={bucket}
+          engineSessionId={engineSessionId}
+          partition={`persist:browser:${bucket.replace(/[^a-zA-Z0-9_:.@-]/g, "_")}`}
+        />
+      );
     case "review":
       return <ReviewPanel cwd={cwd} files={reviewFiles} turnDiff={reviewDiff} />;
     case "terminal":

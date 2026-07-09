@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync, mkdirSync
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { CredentialStore } from "./store.js";
+import { setDefaultCredentialAccess, type CredentialAccess } from "./access.js";
 import {
   useCredentialTool,
   useCredentialToolDef,
@@ -37,6 +38,7 @@ describe("UseCredential tool", () => {
     __resetCredentialSessionAllowForTests();
   });
   afterEach(() => {
+    setDefaultCredentialAccess(null);
     process.env.HOME = prevHome;
     rmSync(home, { recursive: true, force: true });
     rmSync(cwd, { recursive: true, force: true });
@@ -53,7 +55,12 @@ describe("UseCredential tool", () => {
   });
 
   test("id → token returns value (after approval)", async () => {
-    new CredentialStore(cwd).save("user", { id: "figma", type: "token", label: "Figma", secret: "tok-123" });
+    new CredentialStore(cwd).save("user", {
+      id: "figma",
+      type: "token",
+      label: "Figma",
+      secret: "tok-123",
+    });
     const out = parse(await useCredentialTool({ id: "figma" }, ctxWith(cwd, "允许本次")));
     expect(out).toEqual({ kind: "value", value: "tok-123" });
   });
@@ -69,7 +76,9 @@ describe("UseCredential tool", () => {
       secret: jar,
       meta: { platform: "xiaohongshu", domain: "xiaohongshu.com" },
     });
-    const out = parse(await useCredentialTool({ id: "xiaohongshu__accountA" }, ctxWith(cwd, "允许本次")));
+    const out = parse(
+      await useCredentialTool({ id: "xiaohongshu__accountA" }, ctxWith(cwd, "允许本次")),
+    );
     expect(out.kind).toBe("cookie");
     expect(out.count).toBe(1);
     const file = out.cookiesFile as string;
@@ -82,14 +91,24 @@ describe("UseCredential tool", () => {
   });
 
   test("denied approval → error result, no value leaked", async () => {
-    new CredentialStore(cwd).save("user", { id: "figma", type: "token", label: "Figma", secret: "tok-123" });
+    new CredentialStore(cwd).save("user", {
+      id: "figma",
+      type: "token",
+      label: "Figma",
+      secret: "tok-123",
+    });
     const out = parse(await useCredentialTool({ id: "figma" }, ctxWith(cwd, "拒绝")));
     expect(out.kind).toBe("error");
     expect(JSON.stringify(out)).not.toContain("tok-123");
   });
 
   test("headless (no askUser) and no autoApprove → no-ui error", async () => {
-    new CredentialStore(cwd).save("user", { id: "figma", type: "token", label: "Figma", secret: "tok-123" });
+    new CredentialStore(cwd).save("user", {
+      id: "figma",
+      type: "token",
+      label: "Figma",
+      secret: "tok-123",
+    });
     const out = parse(await useCredentialTool({ id: "figma" }, ctxWith(cwd))); // no ask
     expect(out.kind).toBe("error");
     expect(String(out.error)).toContain("headless");
@@ -101,9 +120,90 @@ describe("UseCredential tool", () => {
       join(cwd, ".code-shell", "settings.json"),
       JSON.stringify({ credentialUse: { autoApprove: true } }),
     );
-    new CredentialStore(cwd).save("user", { id: "figma", type: "token", label: "Figma", secret: "tok-123" });
+    new CredentialStore(cwd).save("user", {
+      id: "figma",
+      type: "token",
+      label: "Figma",
+      secret: "tok-123",
+    });
     const out = parse(await useCredentialTool({ id: "figma" }, ctxWith(cwd))); // no ask
     expect(out).toEqual({ kind: "value", value: "tok-123" });
+  });
+
+  test("foreign safeStorage ciphertext is unavailable, never returned as a token", async () => {
+    mkdirSync(join(cwd, ".code-shell"), { recursive: true });
+    writeFileSync(
+      join(cwd, ".code-shell", "settings.json"),
+      JSON.stringify({ credentialUse: { autoApprove: true } }),
+    );
+    mkdirSync(join(home, ".code-shell"), { recursive: true });
+    writeFileSync(
+      join(home, ".code-shell", "credentials.json"),
+      JSON.stringify({
+        version: 1,
+        credentials: [
+          {
+            id: "figma",
+            type: "token",
+            label: "Figma",
+            secret: "enc:safeStorage:dG9rLTEyMw==",
+            autoUseByAI: true,
+          },
+        ],
+      }),
+    );
+
+    const out = parse(await useCredentialTool({ id: "figma" }, ctxWith(cwd)));
+    expect(out.kind).toBe("error");
+    expect(JSON.stringify(out)).not.toContain("enc:safeStorage");
+  });
+
+  test("host credential access resolves token plaintext without reading disk", async () => {
+    const access: CredentialAccess = {
+      listMasked: () => [
+        { id: "figma", type: "token", label: "Figma", autoUseByAI: true, hasSecret: true },
+      ],
+      resolveMeta: () => ({
+        id: "figma",
+        type: "token",
+        label: "Figma",
+        autoUseByAI: true,
+        hasSecret: true,
+      }),
+      envExposures: () => ({}),
+      async resolveValue(req) {
+        expect(req).toMatchObject({ cwd, id: "figma", scope: "full", purpose: "use" });
+        return "tok-from-host";
+      },
+    };
+    setDefaultCredentialAccess(access);
+
+    const out = parse(await useCredentialTool({ id: "figma" }, ctxWith(cwd)));
+    expect(out).toEqual({ kind: "value", value: "tok-from-host" });
+  });
+
+  test("host credential access materializes cookie without exposing jar secret to worker tool", async () => {
+    const access: CredentialAccess = {
+      listMasked: () => [
+        { id: "xhs", type: "cookie", label: "XHS", autoUseByAI: true, hasSecret: true },
+      ],
+      resolveMeta: () => ({
+        id: "xhs",
+        type: "cookie",
+        label: "XHS",
+        autoUseByAI: true,
+        hasSecret: true,
+      }),
+      envExposures: () => ({}),
+      async materializeCookie(req) {
+        expect(req).toMatchObject({ cwd, id: "xhs", scope: "full" });
+        return { cookiesFile: "/tmp/host-cookies.txt", count: 2 };
+      },
+    };
+    setDefaultCredentialAccess(access);
+
+    const out = parse(await useCredentialTool({ id: "xhs" }, ctxWith(cwd)));
+    expect(out).toEqual({ kind: "cookie", cookiesFile: "/tmp/host-cookies.txt", count: 2 });
   });
 
   test("missing id → friendly error", async () => {
@@ -127,7 +227,12 @@ describe("UseCredential tool", () => {
 
   test("dynamic def lists available credentials; base when empty", () => {
     expect(useCredentialToolDefFor(cwd).description).toBe(useCredentialToolDef.description);
-    new CredentialStore(cwd).save("user", { id: "figma", type: "token", label: "Figma", secret: "s" });
+    new CredentialStore(cwd).save("user", {
+      id: "figma",
+      type: "token",
+      label: "Figma",
+      secret: "s",
+    });
     const d = useCredentialToolDefFor(cwd).description;
     expect(d).toContain("figma (token)");
   });
@@ -169,6 +274,7 @@ describe("UseCredential session-allow isolation (no sessionId must not share)", 
     __resetCredentialSessionAllowForTests();
   });
   afterEach(() => {
+    setDefaultCredentialAccess(null);
     process.env.HOME = prevHome;
     rmSync(home, { recursive: true, force: true });
     rmSync(cwd, { recursive: true, force: true });
@@ -187,7 +293,12 @@ describe("UseCredential session-allow isolation (no sessionId must not share)", 
   }
 
   test("session-remember in one no-session context does NOT auto-approve a later no-session context", async () => {
-    new CredentialStore(cwd).save("user", { id: "figma", type: "token", label: "Figma", secret: "tok-123" });
+    new CredentialStore(cwd).save("user", {
+      id: "figma",
+      type: "token",
+      label: "Figma",
+      secret: "tok-123",
+    });
 
     const asks = { n: 0 };
     // First no-session call: user picks "本会话都允许".

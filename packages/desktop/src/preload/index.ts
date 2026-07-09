@@ -168,9 +168,16 @@ const mobileSessionListeners: Array<
 // window event, which opens the dock + browser panel and navigates to the URL —
 // the same path a clicked chat link uses. did-attach-webview then registers the
 // guest so the automation host has a target.
-ipcRenderer.on("browser:open-url", (_e: IpcRendererEvent, payload: { url?: string }) => {
-  window.dispatchEvent(new CustomEvent("codeshell:open-url", { detail: { url: payload?.url } }));
-});
+ipcRenderer.on(
+  "browser:open-url",
+  (_e: IpcRendererEvent, payload: { sessionId?: string; bucket?: string; url?: string }) => {
+    window.dispatchEvent(
+      new CustomEvent("codeshell:open-url", {
+        detail: { sessionId: payload?.sessionId, bucket: payload?.bucket, url: payload?.url },
+      }),
+    );
+  },
+);
 
 ipcRenderer.on(
   "agent:streamEvent",
@@ -361,6 +368,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     opts?: {
       cwd?: string;
       sessionId?: string;
+      bucket?: string;
+      browserPartition?: string;
       permissionMode?: string;
       planMode?: boolean;
       clientMessageId?: string;
@@ -675,7 +684,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   openInEditor: (path: string, cwd?: string) =>
     ipcRenderer.invoke("shell:openInEditor", path, cwd) as Promise<string>,
   /** Read an image file as a base64 data: URL (null on failure). */
-  readImageDataUrl: (absPath: string) => ipcRenderer.invoke("images:readDataUrl", absPath),
+  readImageDataUrl: (absPath: string, context?: { cwd?: string; sessionId?: string }) =>
+    ipcRenderer.invoke("images:readDataUrl", { absPath, ...context }),
   stageAttachmentImageDataUrl: (payload: {
     cwd: string;
     sessionId: string;
@@ -858,8 +868,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   updateSkill: (filePath: string) => ipcRenderer.invoke("skills:update", filePath),
   installLocalSkill: (sourceDir: string, scope: "user" | "project", cwd?: string, name?: string) =>
     ipcRenderer.invoke("skills:installLocal", sourceDir, scope, cwd, name),
-  uninstallSkill: (filePath: string, source: "user" | "project" | "plugin") =>
-    ipcRenderer.invoke("skills:uninstall", filePath, source),
+  uninstallSkill: (input: { scope: "user" | "project"; cwd?: string; skillName: string }) =>
+    ipcRenderer.invoke("skills:uninstall", input),
   listAgents: (cwd: string) => ipcRenderer.invoke("agents:list", cwd),
   readAgentBody: (filePath: string) => ipcRenderer.invoke("agents:read", filePath),
   saveAgent: (
@@ -1092,17 +1102,28 @@ contextBridge.exposeInMainWorld("codeshell", {
   },
   /** A page link wanted a new window (target=_blank / window.open); main routes
    *  it here so the browser panel opens it as a new tab. Returns unsubscribe. */
-  onBrowserOpenTab: (cb: (payload: { url: string }) => void): (() => void) => {
-    const h = (_e: IpcRendererEvent, payload: { url: string }) => cb(payload);
+  onBrowserOpenTab: (cb: (payload: { url: string; bucket?: string }) => void): (() => void) => {
+    const h = (_e: IpcRendererEvent, payload: { url: string; bucket?: string }) => cb(payload);
     ipcRenderer.on("browser:open-tab", h);
     return () => ipcRenderer.removeListener("browser:open-tab", h);
   },
   /** Cookie 账号切换后,main 广播此事件让浏览器面板重载当前 tab。Returns unsubscribe. */
-  onBrowserReload: (cb: () => void): (() => void) => {
-    const h = () => cb();
+  onBrowserReload: (cb: (payload: { bucket?: string }) => void): (() => void) => {
+    const h = (_e: IpcRendererEvent, payload: { bucket?: string } = {}) => cb(payload);
     ipcRenderer.on("browser:reload", h);
     return () => ipcRenderer.removeListener("browser:reload", h);
   },
+  registerBrowserSessionBucket: (payload: {
+    sessionId: string;
+    bucket: string;
+    partition?: string;
+  }) => ipcRenderer.send("browser:register-session-bucket", payload),
+  registerBrowserGuest: (payload: {
+    guestId: number;
+    bucket: string;
+    partition: string;
+    engineSessionId?: string | null;
+  }) => ipcRenderer.send("browser:guest-attached", payload),
   /** From a popout: ask the owner (main window) to remove an anchor by id. */
   sendBrowserAnchorRemove: (anchorId: string) =>
     ipcRenderer.send("browser:anchor-remove", anchorId),

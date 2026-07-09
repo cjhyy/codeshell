@@ -12,14 +12,8 @@
  * 满足设计稿 §1「可整块外移」约束。
  */
 
-import { writeFileSync, existsSync, readdirSync, statSync, rmSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
-import { randomUUID } from "node:crypto";
 import type { ToolDefinition } from "../types.js";
 import type { ToolContext } from "../tool-system/context.js";
-import { CredentialStore } from "./store.js";
-import { formatNetscapeCookies, parseCookieJar } from "./cookie-jar.js";
 import {
   credentialUseGate,
   type SessionCredentialAllow,
@@ -27,10 +21,14 @@ import {
 } from "./use-gate.js";
 import { SettingsManager, type SettingsScope } from "../settings/manager.js";
 import { logger } from "../logging/logger.js";
+import {
+  credentialAccessScope,
+  getCredentialAccess,
+  materializeCookieSecret,
+  sweepStaleCredentialCookieFiles,
+} from "./access.js";
 
 const TOOL_NAME = "UseCredential";
-const COOKIE_FILE_PREFIX = "codeshell-cred-cookie-";
-const COOKIE_FILE_MAX_AGE_MS = 30 * 60 * 1000; // 30min 启动 sweep 上限
 
 const BASE_DESCRIPTION =
   "Use a stored credential (token / API key / login cookie) to run a command. " +
@@ -64,7 +62,7 @@ export const useCredentialToolDef: ToolDefinition = {
  */
 export function useCredentialToolDefFor(cwd: string): ToolDefinition {
   try {
-    const list = new CredentialStore(cwd).listMasked();
+    const list = getCredentialAccess().listMasked(cwd, "full");
     if (list.length === 0) return useCredentialToolDef;
     const names = list.map((c) => `${c.id} (${c.type})`).join(", ");
     return {
@@ -88,21 +86,7 @@ type UseCredentialResult =
  * 不引入 lease 对象/定时器 —— 文件用完靠进程退出 + 这个轻量 sweep。
  */
 export function sweepStaleCredentialCookies(now = Date.now()): void {
-  const dir = tmpdir();
-  try {
-    if (!existsSync(dir)) return;
-    for (const f of readdirSync(dir)) {
-      if (!f.startsWith(COOKIE_FILE_PREFIX)) continue;
-      const p = join(dir, f);
-      try {
-        if (now - statSync(p).mtimeMs > COOKIE_FILE_MAX_AGE_MS) rmSync(p, { force: true });
-      } catch {
-        /* skip */
-      }
-    }
-  } catch {
-    /* best-effort */
-  }
+  sweepStaleCredentialCookieFiles(now);
 }
 
 /** 内存会话 allow 集:每个 Engine 一份(从 ctx.sessionId 键)。纯内存,关进程即忘。 */
@@ -126,7 +110,7 @@ function sessionAllowFor(ctx?: ToolContext): SessionCredentialAllow {
 // (project-only). An "isolated" engine is at least as restrictive as project,
 // so it maps to "project" — it must never read the host user's ~/.code-shell.
 function credentialScope(scope: SettingsScope | undefined): "full" | "project" {
-  return scope === "full" || scope === undefined ? "full" : "project";
+  return credentialAccessScope(scope);
 }
 
 function readAutoApprove(cwd: string, scope: "full" | "project"): boolean {
@@ -148,7 +132,7 @@ export async function useCredentialTool(
   ctx?: ToolContext,
 ): Promise<string> {
   const cwd = ctx?.cwd ?? process.cwd();
-  const store = new CredentialStore(cwd);
+  const access = getCredentialAccess();
   const scope = credentialScope(ctx?.settingsScope);
   const id = typeof args.id === "string" ? args.id.trim() : "";
   const purpose = typeof args.purpose === "string" ? args.purpose : undefined;
@@ -156,13 +140,13 @@ export async function useCredentialTool(
   // 无 id → 清单(脱敏,权威实时源)。按 engine scope 过滤:project/isolated
   // 引擎不得列出宿主 user 层凭证。
   if (!id) {
-    const credentials = store
-      .listMasked(scope)
+    const credentials = access
+      .listMasked(cwd, scope)
       .map((c) => ({ id: c.id, label: c.label, type: c.type }));
     return json({ kind: "list", credentials });
   }
 
-  const cred = store.resolve(id, scope);
+  const cred = access.resolveMeta(cwd, id, scope);
   if (!cred) {
     return json({ kind: "error", error: `凭证不存在: "${id}"。调用本工具(无参)可列出可用凭证。` });
   }
@@ -190,14 +174,20 @@ export async function useCredentialTool(
 
   // token/link → 直接返回值
   if (cred.type === "token" || cred.type === "link") {
-    if (!cred.secret) return json({ kind: "error", error: `凭证「${cred.label}」没有可用的值。` });
-    return json({ kind: "value", value: cred.secret });
+    if (!cred.hasSecret || !access.resolveValue) {
+      return json({ kind: "error", error: `凭证「${cred.label}」没有可用的值。` });
+    }
+    try {
+      const value = await access.resolveValue({ cwd, id: cred.id, scope, purpose: "use" });
+      return json({ kind: "value", value });
+    } catch {
+      return json({ kind: "error", error: `凭证「${cred.label}」没有可用的值。` });
+    }
   }
 
   // cookie → 就地写临时 cookies.txt
   if (cred.type === "cookie") {
-    const jar = parseCookieJar(cred.secret);
-    if (jar.length === 0) {
+    if (!cred.hasSecret) {
       return json({
         kind: "error",
         error: `凭证「${cred.label}」的 cookie 为空或已失效,请在凭证页对该账号点「重拓」(重新登录后重新拓取)。`,
@@ -208,22 +198,31 @@ export async function useCredentialTool(
     // same process — the second write would clobber the first and a caller could
     // read another account's cookies. A random component makes each file distinct.
     // Prefix is unchanged so the 30-min startup sweep still matches & cleans them.
-    const file = join(tmpdir(), `${COOKIE_FILE_PREFIX}${safe(cred.id)}-${process.pid}-${randomUUID()}.txt`);
     try {
-      writeFileSync(file, formatNetscapeCookies(jar), { mode: 0o600 });
+      const materialized = access.materializeCookie
+        ? await access.materializeCookie({ cwd, id: cred.id, scope })
+        : materializeCookieSecret(
+            cred.id,
+            await access.resolveValue!({ cwd, id: cred.id, scope, purpose: "use" }),
+          );
+      return json({
+        kind: "cookie",
+        cookiesFile: materialized.cookiesFile,
+        count: materialized.count,
+      });
     } catch (e) {
+      if (String(e).includes("cookie jar is empty or invalid")) {
+        return json({
+          kind: "error",
+          error: `凭证「${cred.label}」的 cookie 为空或已失效,请在凭证页对该账号点「重拓」(重新登录后重新拓取)。`,
+        });
+      }
       logger.warn(`UseCredential: failed to write cookies.txt: ${String(e)}`);
       return json({ kind: "error", error: `写临时 cookie 文件失败: ${String(e)}` });
     }
-    return json({ kind: "cookie", cookiesFile: file, count: jar.length });
   }
 
   return json({ kind: "error", error: `未知凭证类型: ${cred.type}` });
-}
-
-/** 文件名安全化(凭证 id 用了 `__`,这里只挡路径分隔符/控制字符)。 */
-function safe(s: string): string {
-  return s.replace(/[^a-zA-Z0-9_.-]/g, "_");
 }
 
 function json(r: UseCredentialResult): string {

@@ -53,7 +53,7 @@ async function listViaGit(cwd: string): Promise<SearchEntry[] | null> {
     });
     let out = "";
     let settled = false;
-    const done = (value: string[] | null) => {
+    const done = (value: SearchEntry[] | null) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);

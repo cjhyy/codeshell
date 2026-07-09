@@ -431,15 +431,7 @@ function PathLink({
  * Until the data URL resolves (and if it fails — relative path with no cwd,
  * deleted file, non-image), it shows a clickable filename link instead.
  */
-function InlineImageLink({
-  path,
-  cwd,
-  alt,
-}: {
-  path: string;
-  cwd?: string | null;
-  alt?: string;
-}) {
+function InlineImageLink({ path, cwd, alt }: { path: string; cwd?: string | null; alt?: string }) {
   const [failed, setFailed] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const [src, setSrc] = useState<string | null>(null);
@@ -466,7 +458,7 @@ function InlineImageLink({
       return;
     }
     setLoading(true);
-    void window.codeshell.readImageDataUrl(abs).then((dataUrl) => {
+    void window.codeshell.readImageDataUrl(abs, { cwd: cwd ?? undefined }).then((dataUrl) => {
       if (cancelled) return;
       setLoading(false);
       if (dataUrl) setSrc(dataUrl);
@@ -571,9 +563,7 @@ function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) 
 
   // Line count drives the collapse affordance. Derived from the raw text so it
   // doesn't depend on layout/measurement (works in tests + on first paint).
-  const codeText = typeof child?.props === "object"
-    ? extractText(child)
-    : "";
+  const codeText = typeof child?.props === "object" ? extractText(child) : "";
   const lineCount = codeText ? codeText.replace(/\n$/, "").split("\n").length : 0;
   const collapsible = lineCount > CODE_COLLAPSE_LINES;
   const collapsed = collapsible && !expanded;
@@ -590,8 +580,18 @@ function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) 
   return (
     <div className="my-2 overflow-hidden rounded-md border bg-muted/30">
       <div className="flex min-h-8 items-center justify-between gap-2 border-b bg-muted/50 px-2 py-1">
-        {lang && <span className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">{lang}</span>}
-        <Button variant="ghost" size="sm" className="ml-auto h-6 gap-1 px-2 text-xs" onClick={onCopy} aria-label={t("msg.markdown.copyCodeAria")}>
+        {lang && (
+          <span className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
+            {lang}
+          </span>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="ml-auto h-6 gap-1 px-2 text-xs"
+          onClick={onCopy}
+          aria-label={t("msg.markdown.copyCodeAria")}
+        >
           <Copy size={11} /> {copied ? t("msg.markdown.copied") : t("msg.markdown.copy")}
         </Button>
       </div>
@@ -610,7 +610,9 @@ function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) 
           className="h-7 w-full rounded-none border-t text-xs text-muted-foreground"
           onClick={() => setExpanded((v) => !v)}
         >
-          {collapsed ? t("msg.markdown.expandAll", { count: lineCount }) : t("msg.markdown.collapse")}
+          {collapsed
+            ? t("msg.markdown.expandAll", { count: lineCount })
+            : t("msg.markdown.collapse")}
         </Button>
       )}
     </div>

@@ -17,6 +17,7 @@ export interface WebviewElement extends HTMLElement {
   loadURL(url: string): Promise<void>;
   getURL(): string;
   getTitle?(): string;
+  getWebContentsId?(): number;
   executeJavaScript(code: string, userGesture?: boolean): Promise<unknown>;
   insertCSS(css: string): Promise<string>;
   capturePage(rect?: Rect): Promise<{ toDataURL(): string }>;

@@ -40,7 +40,10 @@ function skillSourceBadgeClass(source: string): string {
     source === "plugin" && "border-status-warn/40 text-status-warn",
     source === "project" && "border-primary/40 text-primary",
     source === "user" && "border-status-running/40 text-status-running",
-    source !== "plugin" && source !== "project" && source !== "user" && "border-border text-muted-foreground",
+    source !== "plugin" &&
+      source !== "project" &&
+      source !== "user" &&
+      "border-border text-muted-foreground",
   );
 }
 
@@ -88,10 +91,7 @@ interface PluginRow {
   summary?: PluginSummary;
 }
 
-function buildPluginRows(
-  skills: SkillSummary[],
-  plugins: PluginSummary[],
-): PluginRow[] {
+function buildPluginRows(skills: SkillSummary[], plugins: PluginSummary[]): PluginRow[] {
   const rows: PluginRow[] = [];
 
   // Real plugins first — alphabetical by display name.
@@ -121,14 +121,9 @@ function buildPluginRows(
   return rows;
 }
 
-function skillsForPlugin(
-  skills: SkillSummary[],
-  pluginKey: string,
-): SkillSummary[] {
+function skillsForPlugin(skills: SkillSummary[], pluginKey: string): SkillSummary[] {
   if (pluginKey === STANDALONE_NAMESPACE) {
-    return skills
-      .filter((s) => s.source !== "plugin")
-      .sort((a, b) => a.name.localeCompare(b.name));
+    return skills.filter((s) => s.source !== "plugin").sort((a, b) => a.name.localeCompare(b.name));
   }
   return skills
     .filter((s) => namespaceOf(s) === pluginKey)
@@ -209,10 +204,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
     void refresh();
   }, [activeRepoPath]);
 
-  const pluginRows = useMemo(
-    () => buildPluginRows(skills ?? [], plugins),
-    [skills, plugins],
-  );
+  const pluginRows = useMemo(() => buildPluginRows(skills ?? [], plugins), [skills, plugins]);
 
   const skillsByName = useMemo(() => {
     const m = new Map<string, SkillSummary>();
@@ -240,8 +232,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
       const needle = filter.toLowerCase();
       list = list.filter(
         (s) =>
-          s.name.toLowerCase().includes(needle) ||
-          s.description.toLowerCase().includes(needle),
+          s.name.toLowerCase().includes(needle) || s.description.toLowerCase().includes(needle),
       );
     }
     return list;
@@ -271,7 +262,9 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
         }
       } catch (e) {
         if (!cancelled) {
-          setSkillBody(`# ${t("settingsX.plugins.readFailed")}\n\n${String(e instanceof Error ? e.message : e)}`);
+          setSkillBody(
+            `# ${t("settingsX.plugins.readFailed")}\n\n${String(e instanceof Error ? e.message : e)}`,
+          );
           skillBodyForRef.current = s.filePath;
         }
       }
@@ -281,9 +274,12 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
     };
   }, [selection, skillsByName, t]);
 
-  if (error) return <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">{error}</div>;
+  if (error)
+    return <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">{error}</div>;
   if (!skills)
-    return <div className="p-4 text-sm text-muted-foreground">{t("settingsX.plugins.loading")}</div>;
+    return (
+      <div className="p-4 text-sm text-muted-foreground">{t("settingsX.plugins.loading")}</div>
+    );
 
   const toggleSkillDisabled = async (name: string, shouldDisable: boolean) => {
     const next = new Set(disabledSet);
@@ -306,10 +302,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
    * exactly what loadPluginHooks / scanSkills match against. The synthetic
    * 本地 bucket has no plugin-level toggle, so it never calls this.
    */
-  const togglePluginGroup = async (
-    pluginKey: string,
-    shouldDisableGroup: boolean,
-  ) => {
+  const togglePluginGroup = async (pluginKey: string, shouldDisableGroup: boolean) => {
     if (!skills || pluginKey === STANDALONE_NAMESPACE) return;
     const groupSkills = skillsForPlugin(skills, pluginKey);
     const next = new Set(disabledSet);
@@ -362,7 +355,11 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
     });
     if (!ok) return;
     try {
-      await window.codeshell.uninstallSkill(s.filePath, s.source);
+      await window.codeshell.uninstallSkill({
+        scope: s.source,
+        cwd,
+        skillName: s.name,
+      });
       // If the uninstalled skill was selected, drop the selection.
       if (selection.kind === "skill" && selection.skillName === s.name) {
         setSelection({ kind: "empty" });
@@ -376,10 +373,8 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
     }
   };
 
-  const onSelectPlugin = (row: PluginRow) =>
-    setSelection({ kind: "plugin", pluginKey: row.key });
-  const onSelectSkill = (s: SkillSummary) =>
-    setSelection({ kind: "skill", skillName: s.name });
+  const onSelectPlugin = (row: PluginRow) => setSelection({ kind: "plugin", pluginKey: row.key });
+  const onSelectSkill = (s: SkillSummary) => setSelection({ kind: "skill", skillName: s.name });
   const onSelectAddPanel = () => setSelection({ kind: "addPanel" });
 
   const isAddPanelActive = selection.kind === "addPanel";
@@ -392,8 +387,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
           {pluginRows.map((row) => {
             const isSelected =
               (selection.kind === "plugin" && selection.pluginKey === row.key) ||
-              (selection.kind === "skill" &&
-                selectedPluginRow?.key === row.key);
+              (selection.kind === "skill" && selectedPluginRow?.key === row.key);
             const groupState = pluginGroupState(row.key);
             return (
               <li
@@ -405,10 +399,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
                 onClick={() => onSelectPlugin(row)}
               >
                 {!row.synthetic ? (
-                  <label
-                    className="shrink-0"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <label className="shrink-0" onClick={(e) => e.stopPropagation()}>
                     <Switch
                       checked={groupState === "all"}
                       onCheckedChange={() =>
@@ -421,11 +412,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
                     />
                   </label>
                 ) : (
-                  <span
-                    className="shrink-0"
-                    aria-hidden
-                    style={{ width: 16 }}
-                  />
+                  <span className="shrink-0" aria-hidden style={{ width: 16 }} />
                 )}
                 <div className="min-w-0 flex flex-1 flex-col">
                   <span className="truncate text-sm font-medium text-foreground">
@@ -475,16 +462,13 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
         {selectedPluginRow ? (
           middleSkills.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
-              {filter
-                ? t("settingsX.plugins.noMatch")
-                : t("settingsX.plugins.noSkillInPlugin")}
+              {filter ? t("settingsX.plugins.noMatch") : t("settingsX.plugins.noSkillInPlugin")}
             </div>
           ) : (
             <ul className="flex min-h-0 flex-col gap-1 overflow-y-auto">
               {middleSkills.map((s) => {
                 const isDisabled = disabledSet.has(s.name);
-                const isSelected =
-                  selection.kind === "skill" && selection.skillName === s.name;
+                const isSelected = selection.kind === "skill" && selection.skillName === s.name;
                 return (
                   <li
                     key={s.filePath}
@@ -501,9 +485,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
                     >
                       <Switch
                         checked={!isDisabled}
-                        onCheckedChange={() =>
-                          void toggleSkillDisabled(s.name, !isDisabled)
-                        }
+                        onCheckedChange={() => void toggleSkillDisabled(s.name, !isDisabled)}
                       />
                     </label>
                     <div className="min-w-0 flex flex-1 flex-col">
@@ -570,10 +552,10 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
             return (
               <>
                 <header className="mb-3 flex flex-wrap items-center gap-2">
-                  <span className="min-w-0 truncate text-sm font-semibold text-foreground">{s.name}</span>
-                  <span className={skillSourceBadgeClass(s.source)}>
-                    {s.source}
+                  <span className="min-w-0 truncate text-sm font-semibold text-foreground">
+                    {s.name}
                   </span>
+                  <span className={skillSourceBadgeClass(s.source)}>{s.source}</span>
                   <div className="ml-auto flex items-center gap-1">
                     <Button
                       type="button"
@@ -610,7 +592,9 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
                       </Button>
                     )}
                   </div>
-                  <span className="w-full truncate rounded bg-muted/40 px-2 py-1 font-mono text-xs text-muted-foreground">{s.filePath}</span>
+                  <span className="w-full truncate rounded bg-muted/40 px-2 py-1 font-mono text-xs text-muted-foreground">
+                    {s.filePath}
+                  </span>
                 </header>
                 <div className="min-h-0 overflow-y-auto">
                   {skillBody === null ? (
@@ -775,7 +759,7 @@ function LocalAddPanel({
       await window.codeshell.installLocalSkill(
         source.path,
         scope,
-        scope === "project" ? activeRepoPath ?? undefined : undefined,
+        scope === "project" ? (activeRepoPath ?? undefined) : undefined,
         name.trim() || undefined,
       );
       onInstalled();
@@ -789,7 +773,12 @@ function LocalAddPanel({
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
-        <Button type="button" variant="outline" className="h-auto flex-col items-start gap-1 p-3 text-left" onClick={() => void choose()}>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-auto flex-col items-start gap-1 p-3 text-left"
+          onClick={() => void choose()}
+        >
           <span className="text-sm font-medium text-foreground">
             {t("settingsX.plugins.pickLocalFolder")}
           </span>
@@ -834,7 +823,9 @@ function LocalAddPanel({
         </label>
       </div>
 
-      {error && <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">{error}</div>}
+      {error && (
+        <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">{error}</div>
+      )}
       <Button
         variant="solid"
         className="w-fit"
@@ -921,7 +912,7 @@ function GithubAddPanel({
         inspection,
         selected,
         scope,
-        cwd: scope === "project" ? activeRepoPath ?? undefined : undefined,
+        cwd: scope === "project" ? (activeRepoPath ?? undefined) : undefined,
         installName: installName.trim() || selected.name,
       });
       onInstalled();
@@ -947,11 +938,7 @@ function GithubAddPanel({
             if (e.key === "Enter" && url.trim() && !inspecting) void inspect();
           }}
         />
-        <Button
-          variant="solid"
-          disabled={!url.trim() || inspecting}
-          onClick={() => void inspect()}
-        >
+        <Button variant="solid" disabled={!url.trim() || inspecting} onClick={() => void inspect()}>
           {inspecting ? t("settingsX.plugins.parsing") : t("settingsX.plugins.parse")}
         </Button>
       </div>
@@ -960,7 +947,9 @@ function GithubAddPanel({
         {t("settingsX.plugins.ghHelpSuffix")}
       </p>
 
-      {error && <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">{error}</div>}
+      {error && (
+        <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">{error}</div>
+      )}
 
       {inspection && (
         <div className="rounded-md border p-3">
@@ -972,16 +961,22 @@ function GithubAddPanel({
               {inspection.url.ref ?? inspection.defaultBranch}
             </span>
             {inspection.isPlugin && (
-              <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">{t("settingsX.plugins.detectedPlugin")}</span>
+              <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
+                {t("settingsX.plugins.detectedPlugin")}
+              </span>
             )}
           </div>
 
           {inspection.warning && (
-            <div className="rounded-md bg-status-warn/10 p-2 text-sm text-status-warn">{inspection.warning}</div>
+            <div className="rounded-md bg-status-warn/10 p-2 text-sm text-status-warn">
+              {inspection.warning}
+            </div>
           )}
 
           {inspection.skills.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">{t("settingsX.plugins.noInstallableSkill")}</div>
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              {t("settingsX.plugins.noInstallableSkill")}
+            </div>
           ) : (
             <div className="grid gap-2">
               {inspection.skills.map((s) => {
@@ -1003,13 +998,17 @@ function GithubAddPanel({
                     <div className="flex items-center gap-2">
                       <strong>{s.name}</strong>
                       {s.alreadyInstalled && (
-                        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{t("settingsX.plugins.installed")}</span>
+                        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                          {t("settingsX.plugins.installed")}
+                        </span>
                       )}
                     </div>
                     {s.description && (
                       <div className="mt-1 text-xs text-muted-foreground">{s.description}</div>
                     )}
-                    <div className="mt-1 font-mono text-xs text-muted-foreground">{s.dirInRepo}</div>
+                    <div className="mt-1 font-mono text-xs text-muted-foreground">
+                      {s.dirInRepo}
+                    </div>
                   </Button>
                 );
               })}
@@ -1047,10 +1046,7 @@ function GithubAddPanel({
 
               <div className="mt-3">
                 <label className="flex items-start gap-2 text-sm text-muted-foreground">
-                  <Switch
-                    checked={trustAck}
-                    onCheckedChange={setTrustAck}
-                  />
+                  <Switch checked={trustAck} onCheckedChange={setTrustAck} />
                   <span>
                     {t("settingsX.plugins.trustAckMsg", {
                       repo: `${inspection.url.owner}/${inspection.url.repo}`,

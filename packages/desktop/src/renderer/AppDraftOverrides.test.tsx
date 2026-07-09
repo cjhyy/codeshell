@@ -85,6 +85,7 @@ Object.defineProperty(globalThis, "window", {
         runCalls.push({ text, opts });
         return { ok: true };
       },
+      registerBrowserSessionBucket: () => undefined,
     },
   },
   configurable: true,

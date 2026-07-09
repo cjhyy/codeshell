@@ -52,6 +52,7 @@ import { logger } from "../logging/logger.js";
 import { cronScheduler } from "../automation/scheduler.js";
 import { CronStore, defaultCronStorePath } from "../automation/store.js";
 import { resolveLLMConfigForTag } from "../engine/resolve-llm-config.js";
+import { createIpcCredentialAccess, setDefaultCredentialAccess } from "../credentials/access.js";
 
 /**
  * Resolve per-session agent config: protocol slice overrides win, else fall
@@ -307,6 +308,7 @@ cronScheduler.loadJobs();
 // ─── Step 5: AgentServer over stdio ──────────────────────────────
 
 const stdioTransport = new StdioTransport(process.stdin, process.stdout);
+setDefaultCredentialAccess(createIpcCredentialAccess(stdioTransport));
 
 // Cron jobs are persisted by this worker but only main arms/executes their
 // timers (this worker keeps setExecutionEnabled(false) above). When an AI tool

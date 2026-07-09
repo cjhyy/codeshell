@@ -11,7 +11,7 @@ import type { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
 import type { MCPServerConfig, RegisteredTool } from "../types.js";
 import { ToolRegistry } from "./registry.js";
 import { logger } from "../logging/logger.js";
-import { CredentialStore } from "../credentials/index.js";
+import { getCredentialAccess, type CredentialAccess } from "../credentials/access.js";
 import { ENV_ALLOWLIST } from "../runtime/spawn-common.js";
 import { mkdir, readdir, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -121,6 +121,28 @@ export function buildHttpHeaders(
     headers[hName] = readRequiredEnv(serverName, "envHeaders", envName);
   }
   return headers;
+}
+
+export async function buildHttpHeadersWithCredentialAccess(
+  serverName: string,
+  config: MCPServerConfig,
+  access: Pick<CredentialAccess, "resolveValue"> = getCredentialAccess(),
+): Promise<Record<string, string>> {
+  if (!config.credentialRef) return buildHttpHeaders(serverName, config);
+  if (!access.resolveValue) {
+    throw new Error(
+      `MCP server "${serverName}": credential "${config.credentialRef}" not found or empty`,
+    );
+  }
+  const secret = await access.resolveValue({
+    cwd: undefined,
+    id: config.credentialRef,
+    scope: "full",
+    purpose: "mcp",
+  });
+  return buildHttpHeaders(serverName, config, (id) =>
+    id === config.credentialRef ? secret : undefined,
+  );
 }
 
 /**
@@ -283,7 +305,10 @@ export function buildRegisteredTool(serverName: string, tool: McpTool): Register
   return {
     name: toOpenAIToolName(`mcp_${serverName}_${tool.name}`),
     description: `[${serverName}] ${tool.description ?? tool.name}`,
-    inputSchema: (tool.inputSchema as Record<string, unknown>) ?? { type: "object", properties: {} },
+    inputSchema: (tool.inputSchema as Record<string, unknown>) ?? {
+      type: "object",
+      properties: {},
+    },
     source: "mcp",
     serverName,
     permissionDefault: "ask",
@@ -452,10 +477,7 @@ export class MCPManager {
 
     logger.info("mcp.connecting", { server: name, transport: transportType });
 
-    const client = new Client(
-      { name: "code-shell", version: "0.1.0" },
-      { capabilities: {} },
-    );
+    const client = new Client({ name: "code-shell", version: "0.1.0" }, { capabilities: {} });
 
     let transport: StdioClientTransport | StreamableHTTPClientTransport;
 
@@ -472,12 +494,10 @@ export class MCPManager {
       if (!config.url) {
         throw new Error(`MCP server "${name}": url is required for ${transportType} transport`);
       }
-      // credentialRef resolves against the user-scope CredentialStore. The
-      // shared MCPManager pool has no per-session cwd (see desiredByOwner note),
-      // and MCP-referenced credentials (e.g. a Figma token) are user-global by
-      // nature, so user scope is the right resolution surface here.
-      const credStore = new CredentialStore(undefined);
-      const headers = buildHttpHeaders(name, config, (id) => credStore.resolve(id)?.secret);
+      // credentialRef resolves against user-scope credential access. The shared
+      // MCPManager pool has no per-session cwd, and MCP-referenced credentials
+      // (e.g. a Figma token) remain user-global by design.
+      const headers = await buildHttpHeadersWithCredentialAccess(name, config);
       transport = new StreamableHTTPClientTransport(new URL(config.url), {
         requestInit: Object.keys(headers).length ? { headers } : undefined,
       });
@@ -692,10 +712,7 @@ export class MCPManager {
   /**
    * List resources from MCP servers.
    */
-  async listResources(
-    serverName?: string,
-    signal?: AbortSignal,
-  ): Promise<MCPResourceInfo[]> {
+  async listResources(serverName?: string, signal?: AbortSignal): Promise<MCPResourceInfo[]> {
     const results: MCPResourceInfo[] = [];
     const servers = serverName ? [serverName] : [...this.connections.keys()];
 

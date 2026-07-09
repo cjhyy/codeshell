@@ -249,6 +249,10 @@ function parsePanelBucket(bucket: string): {
   };
 }
 
+function browserPartitionForBucket(bucket: string): string {
+  return `persist:browser:${bucket.replace(/[^a-zA-Z0-9_:.@-]/g, "_")}`;
+}
+
 function App() {
   const toast = useToast();
   const { t, lang } = useT();
@@ -365,6 +369,14 @@ function App() {
   const [composerDrafts, setComposerDrafts] = useState<ComposerDraftsMap>({});
   const activeBucketRef = useRef(activeBucket);
   activeBucketRef.current = activeBucket;
+  useEffect(() => {
+    if (!activeSessionId) return;
+    window.codeshell.registerBrowserSessionBucket({
+      sessionId: activeSessionId,
+      bucket: activeBucket,
+      partition: browserPartitionForBucket(activeBucket),
+    });
+  }, [activeBucket, activeSessionId]);
   const composerDraft = composerDrafts[activeBucket] ?? {
     text: "",
     attachments: EMPTY_ATTACHMENTS,
@@ -393,7 +405,9 @@ function App() {
   // TODO 2.1). The staged attachment keeps the real path as its name so the
   // chip shows it and the wire payload carries it. Reads bytes via IPC.
   const attachImageByPath = async (absPath: string): Promise<void> => {
-    const dataUrl = await window.codeshell.readImageDataUrl(absPath);
+    const dataUrl = await window.codeshell.readImageDataUrl(absPath, {
+      cwd: activeRepo?.path ?? undefined,
+    });
     if (!dataUrl) {
       window.codeshell.log("attach.path.not_image", { path: absPath });
       return;
@@ -2177,11 +2191,23 @@ function App() {
     const opts: {
       cwd?: string;
       sessionId?: string;
+      bucket?: string;
+      browserPartition?: string;
       permissionMode?: ReturnType<typeof toCorePermissionMode>;
       goal?: string;
       clientMessageId?: string;
       attachments?: InputAttachmentMeta[];
-    } = { sessionId: engineSessionId, clientMessageId };
+    } = {
+      sessionId: engineSessionId,
+      bucket,
+      browserPartition: browserPartitionForBucket(bucket),
+      clientMessageId,
+    };
+    window.codeshell.registerBrowserSessionBucket({
+      sessionId: engineSessionId,
+      bucket,
+      partition: browserPartitionForBucket(bucket),
+    });
     if (sendOpts.attachments && sendOpts.attachments.length > 0) {
       opts.attachments = sendOpts.attachments;
     }
@@ -3060,13 +3086,15 @@ function App() {
   // open the URL in a new tab; here we just surface the dock + browser panel.
   useEffect(() => {
     const onOpenUrl = (e: Event): void => {
-      const url = (e as CustomEvent<{ url?: string }>).detail?.url;
+      const detail = (e as CustomEvent<{ url?: string; bucket?: string }>).detail;
+      const url = detail?.url;
       if (!url) return;
+      const targetBucket = detail?.bucket || activeBucketRef.current;
       // Carry the URL down on the target bucket BEFORE surfacing the panel, so
       // a freshly-mounted BrowserPanel navigates to it immediately.
       const nonce = (openUrlNonceRef.current ?? 0) + 1;
       openUrlNonceRef.current = nonce;
-      updatePanelBucket(activeBucketRef.current, (state) => ({
+      updatePanelBucket(targetBucket, (state) => ({
         ...state,
         open: true,
         openUrl: { url, nonce },

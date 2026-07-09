@@ -91,6 +91,20 @@ describe("parseBrowserActionLine", () => {
     });
     expect(parseBrowserActionLine(line)).toBeNull();
   });
+
+  test("keeps a missing sessionId as undefined so the bridge can fail closed", () => {
+    const line = JSON.stringify({
+      jsonrpc: "2.0",
+      method: "agent/approvalRequest",
+      params: {
+        requestId: "rq-no-session",
+        request: { toolName: "__browser_action__", args: { action: "snapshot" } },
+      },
+    });
+    const parsed = parseBrowserActionLine(line);
+    expect(parsed?.sessionId).toBeUndefined();
+    expect(parsed?.requestId).toBe("rq-no-session");
+  });
 });
 
 describe("buildBrowserActionReply", () => {
@@ -152,6 +166,23 @@ describe("parseCredentialActionLine", () => {
     expect(parseCredentialActionLine(credActionLine({ action: "injectCookie" }))).toBeNull();
     expect(parseCredentialActionLine(credActionLine({ credentialId: "id" }))).toBeNull();
     expect(parseCredentialActionLine("not json")).toBeNull();
+  });
+
+  test("keeps a missing sessionId as undefined so inject can fail closed", () => {
+    const line = JSON.stringify({
+      jsonrpc: "2.0",
+      method: "agent/approvalRequest",
+      params: {
+        requestId: "rq-no-session",
+        request: {
+          toolName: "__credential_action__",
+          args: { action: "injectCookie", credentialId: "cookie" },
+        },
+      },
+    });
+    const parsed = parseCredentialActionLine(line);
+    expect(parsed?.sessionId).toBeUndefined();
+    expect(parsed?.credentialId).toBe("cookie");
   });
 });
 

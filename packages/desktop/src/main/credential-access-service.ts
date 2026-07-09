@@ -1,0 +1,90 @@
+import {
+  CredentialStore,
+  isCredentialSecretAvailable,
+  materializeCookieSecret,
+  type CredentialAccessScope,
+  type Credential,
+  type CredentialMetadata,
+  type CredentialSnapshot,
+  type CredentialSnapshotEntry,
+} from "@cjhyy/code-shell-core";
+import { migrateCredentialStore } from "./credential-migration.js";
+
+export interface CredentialResolveRequest {
+  cwd?: string;
+  id: string;
+  scope: CredentialAccessScope;
+  purpose: "use" | "mcp";
+}
+
+export interface CredentialMaterializeCookieRequest {
+  cwd?: string;
+  id: string;
+  scope: CredentialAccessScope;
+}
+
+export function buildCredentialSnapshot(
+  cwds: Array<string | undefined>,
+  revision: number,
+): CredentialSnapshot {
+  const entries: CredentialSnapshotEntry[] = [];
+  const seen = new Set<string>();
+  for (const cwd of [undefined, ...cwds]) {
+    const key = cwd ?? "";
+    if (seen.has(key)) continue;
+    seen.add(key);
+    entries.push(buildCredentialSnapshotEntry(cwd));
+  }
+  return { revision, entries };
+}
+
+export function resolveCredentialValueForWorker(req: CredentialResolveRequest): { value: string } {
+  const cred = new CredentialStore(req.cwd).resolve(req.id, req.scope);
+  if (!cred || !isCredentialSecretAvailable(cred.secret)) {
+    throw new Error(`credential "${req.id}" is unavailable`);
+  }
+  if (cred.type !== "token" && cred.type !== "link") {
+    throw new Error(`credential "${req.id}" is not a token/link credential`);
+  }
+  return { value: cred.secret };
+}
+
+export function materializeCredentialCookieForWorker(req: CredentialMaterializeCookieRequest): {
+  cookiesFile: string;
+  count: number;
+} {
+  const cred = new CredentialStore(req.cwd).resolve(req.id, req.scope);
+  if (!cred || cred.type !== "cookie" || !isCredentialSecretAvailable(cred.secret)) {
+    throw new Error(`cookie credential "${req.id}" is unavailable`);
+  }
+  return materializeCookieSecret(cred.id, cred.secret);
+}
+
+function buildCredentialSnapshotEntry(cwd: string | undefined): CredentialSnapshotEntry {
+  migrateCredentialStore(cwd);
+  const store = new CredentialStore(cwd);
+  return {
+    cwd,
+    full: store.list("full").map(toMetadata),
+    project: store.list("project").map(toMetadata),
+    envFull: store.envExposures("full"),
+    envProject: store.envExposures("project"),
+  };
+}
+
+function toMetadata(cred: Credential): CredentialMetadata {
+  const { id, type, label, autoUseByAI, autoInjectByAI, exposeAsEnv, meta } = cred;
+  const secret = cred.secret;
+  const hasSecret = isCredentialSecretAvailable(secret);
+  return {
+    id,
+    type,
+    label,
+    autoUseByAI,
+    autoInjectByAI,
+    exposeAsEnv,
+    meta,
+    hasSecret,
+    secretHint: hasSecret ? (secret.length > 4 ? `****${secret.slice(-4)}` : "****") : undefined,
+  };
+}

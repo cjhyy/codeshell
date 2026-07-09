@@ -15,11 +15,11 @@ import {
   computeEffectiveDisabledLists,
   scanSkills,
   invalidateSkillCache,
+  userHome,
   type SkillDefinition,
 } from "@cjhyy/code-shell-core";
 import { assertCodeShellMarkdownPath, rememberCodeShellMarkdownPath } from "./safe-read.js";
 import { promises as fs } from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
 
 export interface SkillSummary {
@@ -33,6 +33,12 @@ export interface InstalledSkill {
   name: string;
   targetDir: string;
   filePath: string;
+}
+
+export interface UninstallSkillInput {
+  scope: "user" | "project";
+  cwd?: string;
+  skillName: string;
 }
 
 export function listSkills(cwd: string, opts?: { includeDisabled?: boolean }): SkillSummary[] {
@@ -72,29 +78,113 @@ export async function readSkillBody(filePath: string): Promise<string> {
  * grow back on next plugin sync, so deleting them silently would be a
  * lie. Plugin skills should be disabled via `disabledSkills` instead.
  */
-export async function uninstallSkill(
+export async function uninstallSkill(input: UninstallSkillInput): Promise<void> {
+  const skillName = assertSafeSkillName(input.skillName);
+  if (input.scope === "project" && !input.cwd) {
+    throw new Error("project scope requires cwd");
+  }
+  const listed = findListedSkill(input.scope, skillName, input.cwd);
+  if (!listed) {
+    throw new Error(`skill not found: ${skillName}`);
+  }
+  const skillDir = await safeListedSkillDir(listed.filePath, input.scope, input.cwd);
+  await fs.rm(skillDir, { recursive: true, force: true });
+  invalidateSkillCache();
+}
+
+export async function uninstallListedSkill(
   filePath: string,
   source: "user" | "project" | "plugin",
+  cwd?: string,
 ): Promise<void> {
   if (source === "plugin") {
     throw new Error("plugin skill 不能在此处卸载，请使用「禁用」或移除对应插件");
   }
-  if (!filePath || !filePath.endsWith("SKILL.md")) {
-    throw new Error(`invalid skill filePath: ${filePath}`);
+  const localSource = source;
+  if (!cwd) {
+    throw new Error("skills:uninstall legacy path form requires cwd");
   }
-  const skillDir = path.dirname(filePath);
-  const userRoot = path.join(os.homedir(), ".code-shell", "skills");
-  const looksUserOwned =
-    skillDir.startsWith(userRoot + path.sep) ||
-    skillDir.includes(`${path.sep}.code-shell${path.sep}skills${path.sep}`);
-  if (!looksUserOwned) {
-    throw new Error(`refuse to delete: ${skillDir} is outside known skill roots`);
+  const listed = listSkills(cwd, { includeDisabled: true }).find(
+    (skill) =>
+      skill.source === localSource && path.resolve(skill.filePath) === path.resolve(filePath),
+  );
+  if (!listed) {
+    throw new Error(`refuse to delete unlisted skill: ${filePath}`);
   }
-  // Walk-up guard: never let `..` escape its root.
-  if (skillDir.includes("..")) {
-    throw new Error(`refuse to delete: suspicious path ${skillDir}`);
-  }
+  const skillDir = await safeListedSkillDir(listed.filePath, localSource, cwd);
   await fs.rm(skillDir, { recursive: true, force: true });
+  invalidateSkillCache();
+}
+
+function findListedSkill(
+  scope: "user" | "project",
+  skillName: string,
+  cwd?: string,
+): SkillSummary | null {
+  if (!cwd && scope === "user") {
+    return {
+      name: skillName,
+      description: "",
+      source: "user",
+      filePath: path.join(userSkillRoot(), skillName, "SKILL.md"),
+    };
+  }
+  if (!cwd) return null;
+  return (
+    listSkills(cwd, { includeDisabled: true }).find(
+      (skill) => skill.source === scope && skill.name === skillName,
+    ) ?? null
+  );
+}
+
+async function safeListedSkillDir(
+  skillFile: string,
+  source: "user" | "project",
+  cwd?: string,
+): Promise<string> {
+  if (!skillFile || path.basename(skillFile) !== "SKILL.md") {
+    throw new Error(`invalid skill filePath: ${skillFile}`);
+  }
+  const fileInfo = await fs.lstat(skillFile);
+  if (fileInfo.isSymbolicLink() || !fileInfo.isFile()) {
+    throw new Error(`refuse to delete skill with unsafe SKILL.md: ${skillFile}`);
+  }
+  const skillDir = path.dirname(skillFile);
+  const dirInfo = await fs.lstat(skillDir);
+  if (dirInfo.isSymbolicLink() || !dirInfo.isDirectory()) {
+    throw new Error(`refuse to delete unsafe skill directory: ${skillDir}`);
+  }
+  const dirReal = await fs.realpath(skillDir);
+  const roots = source === "user" ? [userSkillRoot()] : projectSkillRoots(cwd);
+  for (const root of roots) {
+    const rootReal = await fs.realpath(root).catch(() => null);
+    if (!rootReal) continue;
+    const rel = path.relative(rootReal, dirReal);
+    if (rel && !rel.startsWith("..") && !path.isAbsolute(rel) && !rel.includes(path.sep)) {
+      const fileReal = await fs.realpath(skillFile);
+      if (path.dirname(fileReal) === dirReal) return dirReal;
+    }
+  }
+  throw new Error(`refuse to delete: ${skillDir} is outside known skill roots`);
+}
+
+function assertSafeSkillName(skillName: string): string {
+  if (typeof skillName !== "string") throw new Error("skillName must be a string");
+  const name = skillName.trim();
+  if (!name || name === "." || name === "..") throw new Error("skillName must be non-empty");
+  if (name.includes("/") || name.includes("\\") || name.includes("\0") || name.includes("..")) {
+    throw new Error(`invalid skillName: ${skillName}`);
+  }
+  return name;
+}
+
+function userSkillRoot(): string {
+  return path.join(userHome(), ".code-shell", "skills");
+}
+
+function projectSkillRoots(cwd?: string): string[] {
+  if (!cwd) throw new Error("project scope requires cwd");
+  return [path.join(cwd, ".code-shell", "skills"), path.join(cwd, ".agents", "skills")];
 }
 
 export async function installSkillFromDirectory(
@@ -108,8 +198,7 @@ export async function installSkillFromDirectory(
   await fs.access(skillFile);
 
   const name = normalizeSkillName(requestedName || path.basename(source));
-  const root =
-    scope === "user" ? path.join(os.homedir(), ".code-shell", "skills") : projectSkillRoot(cwd);
+  const root = scope === "user" ? userSkillRoot() : projectSkillRoot(cwd);
   const targetDir = path.join(root, name);
 
   try {

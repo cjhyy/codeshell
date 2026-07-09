@@ -101,6 +101,7 @@ export function buildOpenTabBridgeScript(nonce: string | null): string {
 export function useBrowserTabs(
   initialUrl: string | undefined,
   openUrl: { url: string; nonce: number } | undefined,
+  bucket?: string,
 ): {
   tabs: Tab[];
   activeId: string;
@@ -278,17 +279,21 @@ export function useBrowserTabs(
   // Main denies the native popup and routes the URL here; open it as a new tab so
   // in-page links behave like a real browser instead of doing nothing ("点了没反应").
   useEffect(() => {
-    const off = window.codeshell.onBrowserOpenTab?.(({ url }) => {
+    const off = window.codeshell.onBrowserOpenTab?.(({ url, bucket: eventBucket }) => {
+      if (eventBucket && bucket && eventBucket !== bucket) return;
       if (url) openInNewTab(url);
     });
     return () => off?.();
-  }, [openInNewTab]);
+  }, [bucket, openInNewTab]);
 
   // Cookie 账号切换:main 导回 cookie 后广播 browser:reload,重载当前 tab 让登录态生效。
   useEffect(() => {
-    const off = window.codeshell.onBrowserReload?.(() => viewRef.current?.reload());
+    const off = window.codeshell.onBrowserReload?.(({ bucket: eventBucket } = {}) => {
+      if (eventBucket && bucket && eventBucket !== bucket) return;
+      viewRef.current?.reload();
+    });
     return () => off?.();
-  }, []);
+  }, [bucket]);
 
   // A chat answer link (http/https) was clicked: App surfaces this panel and
   // hands the URL down via the `openUrl` prop (NOT a window event — that would

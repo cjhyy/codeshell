@@ -51,7 +51,9 @@ export async function readSettings(
     // file once for post-mortem.
     try {
       await fs.rename(p, p + ".corrupt-" + Date.now());
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
     return null;
   }
 }
@@ -90,24 +92,26 @@ export async function writeSettings(
   // Serialize per file. Tail off the previous write (ignoring its rejection so
   // one failure doesn't poison the chain) before doing our read-modify-write.
   const prev = writeChains.get(p) ?? Promise.resolve();
-  const next = prev.catch(() => {}).then(async () => {
-    const dir = path.dirname(p);
-    await fs.mkdir(dir, { recursive: true });
-    // Cross-process lock around the whole RMW. Lock the dir, not the file.
-    const release = await lock(dir, { stale: LOCK_STALE_MS, retries: LOCK_RETRIES });
-    try {
-      const current = (await readSettings(scope, cwd)) ?? {};
-      const merged = deepMerge(current, patch);
-      normalizeWorktreeBranchPrefixIfPatched(patch, merged);
-      // Unique temp name so a concurrent writer for the same file can't clobber
-      // our half-written temp and produce corrupt JSON after rename.
-      const tmp = p + "." + randomUUID() + ".tmp";
-      await fs.writeFile(tmp, JSON.stringify(merged, null, 2) + "\n", "utf8");
-      await fs.rename(tmp, p);
-    } finally {
-      await release();
-    }
-  });
+  const next = prev
+    .catch(() => {})
+    .then(async () => {
+      const dir = path.dirname(p);
+      await fs.mkdir(dir, { recursive: true });
+      // Cross-process lock around the whole RMW. Lock the dir, not the file.
+      const release = await lock(dir, { stale: LOCK_STALE_MS, retries: LOCK_RETRIES });
+      try {
+        const current = (await readSettings(scope, cwd)) ?? {};
+        const merged = deepMerge(current, patch);
+        normalizeWorktreeBranchPrefixIfPatched(patch, merged);
+        // Unique temp name so a concurrent writer for the same file can't clobber
+        // our half-written temp and produce corrupt JSON after rename.
+        const tmp = p + "." + randomUUID() + ".tmp";
+        await fs.writeFile(tmp, JSON.stringify(merged, null, 2) + "\n", "utf8");
+        await fs.rename(tmp, p);
+      } finally {
+        await release();
+      }
+    });
   writeChains.set(p, next);
   try {
     await next;
@@ -133,10 +137,7 @@ function deepMerge(
       out[k] !== null &&
       !Array.isArray(out[k])
     ) {
-      out[k] = deepMerge(
-        out[k] as Record<string, unknown>,
-        v as Record<string, unknown>,
-      );
+      out[k] = deepMerge(out[k] as Record<string, unknown>, v as Record<string, unknown>);
     } else {
       out[k] = v;
     }
@@ -157,6 +158,9 @@ function normalizeWorktreeBranchPrefixIfPatched(
   const value = nextWorktree?.branchPrefix;
   if (typeof value !== "string") {
     throw new Error("worktree.branchPrefix must be a string");
+  }
+  if (!nextWorktree) {
+    throw new Error("worktree must be an object");
   }
 
   nextWorktree.branchPrefix = normalizeWorktreeBranchPrefix(value);
