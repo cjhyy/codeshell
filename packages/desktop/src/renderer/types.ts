@@ -959,9 +959,12 @@ export function applyStreamEvent(
       // reading. Only adopt event.promptTokens when it's a real reading, i.e.
       // not a heartbeat that lacks any single-turn signal.
       const isCumulativeHeartbeat = hasCumulative && !hasSingleTurn;
+      const hasLivePromptReading = Number.isFinite(event.promptTokens) && event.promptTokens > 0;
       return {
         ...state,
-        ...(isCumulativeHeartbeat ? {} : { promptTokens: event.promptTokens }),
+        ...(isCumulativeHeartbeat || !hasLivePromptReading
+          ? {}
+          : { promptTokens: event.promptTokens }),
         ...(hasSingleTurn
           ? {
               singleTurnPromptTokens: event.singleTurnPromptTokens ?? event.promptTokens,

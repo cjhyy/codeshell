@@ -92,6 +92,37 @@ describe("appendTurnEndMessage (TODO 2.8)", () => {
   });
 });
 
+describe("applyStreamEvent — usage_update promptTokens", () => {
+  test("does not clear the known context reading on abort-time zero usage", () => {
+    const withUsage: MessagesReducerState = { ...INITIAL_STATE, promptTokens: 123_456 };
+
+    const afterUsage = applyStreamEvent(withUsage, {
+      type: "usage_update",
+      promptTokens: 0,
+      singleTurnPromptTokens: 0,
+      singleTurnCacheReadTokens: 0,
+      singleTurnCacheCreationTokens: 0,
+    } as StreamEvent);
+    const afterAbort = applyStreamEvent(afterUsage, {
+      type: "turn_complete",
+      reason: "aborted_streaming",
+    } as StreamEvent);
+
+    expect(afterUsage.promptTokens).toBe(123_456);
+    expect(afterAbort.promptTokens).toBe(123_456);
+  });
+
+  test("does not clear the known context reading when runtime usage lacks promptTokens", () => {
+    const withUsage: MessagesReducerState = { ...INITIAL_STATE, promptTokens: 77_000 };
+    const after = applyStreamEvent(withUsage, {
+      type: "usage_update",
+      singleTurnPromptTokens: 0,
+    } as unknown as StreamEvent);
+
+    expect(after.promptTokens).toBe(77_000);
+  });
+});
+
 // ── helpers ─────────────────────────────────────────────────────────
 function dispatch(state: MessagesReducerState, events: StreamEvent[]): MessagesReducerState {
   return events.reduce((s, e) => applyStreamEvent(s, e), state);
