@@ -12,12 +12,27 @@ class FakeChild extends EventEmitter {
   stderr = new EventEmitter();
   killed = false;
   killSignal?: string;
+  /** Every signal delivered, in order (proves SIGTERM→SIGKILL escalation). */
+  signals: string[] = [];
+  /** When false, kill() does NOT auto-exit — the test drives exit via
+   *  exitNow(), proving start() truly waits for the old process to die. */
+  autoExit: boolean;
+  constructor(opts: { autoExit?: boolean } = {}) {
+    super();
+    this.autoExit = opts.autoExit ?? true;
+  }
   kill(signal?: string): boolean {
     this.killed = true;
     this.killSignal = signal;
-    // emulate the process actually exiting after a kill
-    queueMicrotask(() => this.emit("exit", null, signal ?? "SIGTERM"));
+    this.signals.push(signal ?? "SIGTERM");
+    if (this.autoExit) {
+      queueMicrotask(() => this.emit("exit", null, signal ?? "SIGTERM"));
+    }
     return true;
+  }
+  /** Manually emulate the OS reporting the process exit. */
+  exitNow(signal: string = "SIGTERM"): void {
+    this.emit("exit", null, signal);
   }
 }
 
@@ -173,12 +188,12 @@ describe("TunnelManager", () => {
     expect(statuses).not.toContain("disconnected");
   });
 
-  test("restart after a soft disconnect kills the stale child and re-spawns (no restart required)", async () => {
+  test("restart after a soft disconnect waits for the stale child to exit before re-spawning", async () => {
     // Soft disconnect (edge /ready lost) keeps the cloudflared child ALIVE so it
-    // can auto-recover. Re-opening the tunnel must not throw "隧道已在运行" nor
-    // spawn before the old child frees the fixed metrics port — it must tear the
-    // stale child down first. This is the bug that forced an app restart.
-    const first = new FakeChild();
+    // can auto-recover. Re-opening must tear the stale child down AND wait for it
+    // to actually exit (freeing the fixed metrics port) before spawning — else
+    // the new cloudflared can't bind 20741 and exits code=1 (the app-restart bug).
+    const first = new FakeChild({ autoExit: false }); // we drive its exit manually
     let ready = true;
     let current: FakeChild = first;
     const spawnArgs: string[][] = [];
@@ -194,6 +209,8 @@ describe("TunnelManager", () => {
       readyIntervalMs: 5,
       healthCheckIntervalMs: 5,
       healthFailureThreshold: 2,
+      killGraceMs: 1_000,
+      killHardTimeoutMs: 2_000,
     });
 
     const p1 = mgr.start(12345);
@@ -203,24 +220,108 @@ describe("TunnelManager", () => {
     // Soft disconnect: readiness lost, but the child is intentionally kept alive.
     ready = false;
     await waitFor(() => !mgr.isConnected());
-    expect(first.killed).toBe(false); // still alive — this is the recover-in-place path
+    expect(first.killed).toBe(false); // still alive — recover-in-place path
 
-    // Now the user re-opens. start() must succeed, killing the stale child first.
+    // Re-open. start() must SIGTERM the stale child but NOT spawn the new one
+    // until that child has actually exited.
     ready = true;
     const second = new FakeChild();
     current = second;
     const p2 = mgr.start(12345);
-    expect(first.killed).toBe(true); // stale child was torn down
-    // start() awaits the stale child's exit before re-spawning, so wait for the
-    // second spawn to land before feeding it the URL (else the scanner isn't up).
-    await waitFor(() => spawnArgs.length === 2);
+    await waitFor(() => first.killed); // stale child got SIGTERM
+    await new Promise((r) => setTimeout(r, 20));
+    expect(spawnArgs.length).toBe(1); // still ONE — new spawn is blocked on exit
+
+    first.exitNow(); // now the old process finally dies, releasing the port
+    await waitFor(() => spawnArgs.length === 2); // only now do we re-spawn
     second.stderr.emit("data", Buffer.from("https://new-tunnel.trycloudflare.com\n"));
     const res = await p2;
     expect(res.url).toBe("https://new-tunnel.trycloudflare.com");
-    expect(spawnArgs.length).toBe(2);
     expect(mgr.isConnected()).toBe(true);
 
-    mgr.stop();
+    void mgr.stop();
+  });
+
+  test("stop() then immediate start() waits for the old child before re-spawning", async () => {
+    // stop() clears this.child synchronously; the old process is still dying.
+    // A start() right after must await stop()'s teardown so it doesn't spawn
+    // into the still-held metrics port.
+    const first = new FakeChild({ autoExit: false });
+    let current: FakeChild = first;
+    const spawnArgs: string[][] = [];
+    const mgr = new TunnelManager({
+      binaryPath: () => "/fake/cloudflared",
+      spawn: (_cmd, args) => {
+        spawnArgs.push(args);
+        return current as unknown as import("node:child_process").ChildProcess;
+      },
+      timeoutMs: 50,
+      checkReady: async () => true,
+      readyTimeoutMs: 60,
+      readyIntervalMs: 5,
+      healthCheckIntervalMs: 0,
+      killGraceMs: 1_000,
+      killHardTimeoutMs: 2_000,
+    });
+
+    const p1 = mgr.start(12345);
+    first.stderr.emit("data", Buffer.from("https://old.trycloudflare.com\n"));
+    await p1;
+
+    void mgr.stop(); // fire-and-forget, old child not yet exited
+    const second = new FakeChild();
+    current = second;
+    const p2 = mgr.start(12345);
+    await waitFor(() => first.killed);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(spawnArgs.length).toBe(1); // blocked on the pending teardown
+
+    first.exitNow();
+    await waitFor(() => spawnArgs.length === 2);
+    second.stderr.emit("data", Buffer.from("https://new.trycloudflare.com\n"));
+    const res = await p2;
+    expect(res.url).toBe("https://new.trycloudflare.com");
+
+    void mgr.stop();
+  });
+
+  test("teardown escalates to SIGKILL when the child ignores SIGTERM", async () => {
+    // cloudflared's SIGTERM is a graceful drain (~30s). If it doesn't exit within
+    // killGraceMs we must SIGKILL so the port is freed promptly.
+    const first = new FakeChild({ autoExit: false });
+    let current: FakeChild = first;
+    const spawnArgs: string[][] = [];
+    const mgr = new TunnelManager({
+      binaryPath: () => "/fake/cloudflared",
+      spawn: (_cmd, args) => {
+        spawnArgs.push(args);
+        return current as unknown as import("node:child_process").ChildProcess;
+      },
+      timeoutMs: 50,
+      checkReady: async () => true,
+      readyTimeoutMs: 60,
+      readyIntervalMs: 5,
+      healthCheckIntervalMs: 0,
+      killGraceMs: 15, // escalate fast in the test
+      killHardTimeoutMs: 200,
+    });
+
+    const p1 = mgr.start(12345);
+    first.stderr.emit("data", Buffer.from("https://old.trycloudflare.com\n"));
+    await p1;
+
+    const second = new FakeChild();
+    current = second;
+    const p2 = mgr.start(12345);
+    // SIGTERM first, then SIGKILL after the grace window (child ignores SIGTERM).
+    await waitFor(() => first.signals.includes("SIGKILL"));
+    expect(first.signals[0]).toBe("SIGTERM");
+    first.exitNow("SIGKILL");
+    await waitFor(() => spawnArgs.length === 2);
+    second.stderr.emit("data", Buffer.from("https://new.trycloudflare.com\n"));
+    await p2;
+
+    void mgr.stop();
   });
 
   test("emits error on spawn failure", async () => {

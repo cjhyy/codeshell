@@ -8,6 +8,12 @@ const DEFAULT_READY_INTERVAL_MS = 500;
 const DEFAULT_METRICS_PORT = 20741;
 const DEFAULT_HEALTH_CHECK_INTERVAL_MS = 5_000;
 const DEFAULT_HEALTH_FAILURE_THRESHOLD = 3;
+// cloudflared handles SIGTERM but does NOT exit promptly (graceful drain,
+// default ~30s per cloudflared docs). Give it a short grace, then SIGKILL so
+// the fixed metrics port is released before we re-spawn — otherwise the new
+// process can't bind 127.0.0.1:20741 and exits code=1.
+const DEFAULT_KILL_GRACE_MS = 2_000;
+const DEFAULT_KILL_HARD_TIMEOUT_MS = 3_000;
 
 export type TunnelStatus = "connected" | "disconnected" | "error";
 
@@ -52,6 +58,10 @@ export interface TunnelManagerOptions {
   healthCheckIntervalMs?: number;
   /** Consecutive failed readiness probes before reporting a disconnect. */
   healthFailureThreshold?: number;
+  /** Grace after SIGTERM before escalating to SIGKILL when tearing a child down. */
+  killGraceMs?: number;
+  /** Absolute cap on waiting for a killed child to exit (SIGKILL already sent). */
+  killHardTimeoutMs?: number;
 }
 
 /**
@@ -73,7 +83,12 @@ export class TunnelManager extends EventEmitter {
   private readonly readyIntervalMs: number;
   private readonly healthCheckIntervalMs: number;
   private readonly healthFailureThreshold: number;
+  private readonly killGraceMs: number;
+  private readonly killHardTimeoutMs: number;
   private child?: ChildProcess;
+  /** In-flight teardown of a previous child. Any start() awaits this first so a
+   *  new cloudflared never spawns while the old one still owns the metrics port. */
+  private pendingTeardown?: Promise<void>;
   private stopping = false;
   private connected = false;
   private currentUrl?: string;
@@ -96,6 +111,8 @@ export class TunnelManager extends EventEmitter {
       1,
       opts.healthFailureThreshold ?? DEFAULT_HEALTH_FAILURE_THRESHOLD,
     );
+    this.killGraceMs = opts.killGraceMs ?? DEFAULT_KILL_GRACE_MS;
+    this.killHardTimeoutMs = opts.killHardTimeoutMs ?? DEFAULT_KILL_HARD_TIMEOUT_MS;
   }
 
   async start(port: number): Promise<{ url: string }> {
@@ -107,8 +124,14 @@ export class TunnelManager extends EventEmitter {
     // metrics port, so the fresh cloudflared can't bind it and exits code=1.
     // Tear the stale child down and WAIT for it to actually exit (freeing the
     // port) before starting fresh, so re-opening always works.
+    // Tear down a still-live child (soft disconnect keeps it alive) AND await
+    // any teardown already in flight from a prior stop()/failure — the old
+    // cloudflared must fully exit and release 127.0.0.1:20741 before we spawn,
+    // or the new one fails to bind and exits code=1 (the app-restart bug).
     if (this.child) {
-      await this.teardownExistingChild();
+      await this.beginTeardown();
+    } else if (this.pendingTeardown) {
+      await this.pendingTeardown;
     }
     this.stopping = false;
     this.connected = false;
@@ -138,12 +161,9 @@ export class TunnelManager extends EventEmitter {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
-        this.stopping = true;
-        child.kill("SIGTERM");
-        this.child = undefined;
-        this.connected = false;
-        this.currentUrl = undefined;
-        this.stopHealthMonitor();
+        // Route through the shared teardown so a retried start() awaits this
+        // child's real exit (releasing the metrics port) before re-spawning.
+        void this.beginTeardown();
         reject(err);
       };
 
@@ -179,6 +199,9 @@ export class TunnelManager extends EventEmitter {
       child.stderr?.on("data", scan);
 
       child.on("error", (err) => {
+        // A superseded child (torn down by a restart) must not touch shared
+        // state — killAndWait owns its exit. Only the live child reports errors.
+        if (this.child !== child && settled) return;
         if (!settled) {
           settled = true;
           clearTimeout(timer);
@@ -194,6 +217,10 @@ export class TunnelManager extends EventEmitter {
       });
 
       child.on("exit", (code, signal) => {
+        // A superseded child (torn down by stop()/restart) exiting must NOT
+        // clear this.child / connected / health — those now belong to the new
+        // tunnel. killAndWait already awaits this exit; ignore it here.
+        if (this.child !== child) return;
         const wasConnected = this.connected;
         this.child = undefined;
         this.connected = false;
@@ -289,45 +316,76 @@ export class TunnelManager extends EventEmitter {
   }
 
   /**
-   * Kill a lingering cloudflared child and wait for it to actually exit before
-   * returning, so the fixed metrics port is released before we spawn a new one.
-   * Used by start() to recover from a soft disconnect (edge lost, child kept
-   * alive) without requiring an app restart. Resolves on the child's `exit`, or
-   * after a short timeout as a safety net (we then proceed regardless).
+   * Tear the current child down and remember the wait as `pendingTeardown` so a
+   * subsequent start() blocks until the process has really exited (freeing the
+   * metrics port). Shared by stop(), startup-failure, and restart so there is a
+   * single teardown path — the missing shared wait was the stop()→start() race.
+   * Idempotent: with no live child it resolves immediately.
    */
-  private teardownExistingChild(): Promise<void> {
-    const child = this.child;
+  private beginTeardown(): Promise<void> {
     this.stopping = true;
     this.connected = false;
     this.currentUrl = undefined;
     this.stopHealthMonitor();
+    const child = this.child;
     this.child = undefined;
-    if (!child) return Promise.resolve();
+    if (!child) {
+      this.pendingTeardown = undefined;
+      return Promise.resolve();
+    }
+    const wait = this.killAndWait(child).finally(() => {
+      // Only clear if no newer teardown superseded this one.
+      if (this.pendingTeardown === wait) this.pendingTeardown = undefined;
+    });
+    this.pendingTeardown = wait;
+    return wait;
+  }
+
+  /**
+   * SIGTERM the child, and if it hasn't exited within `killGraceMs`, escalate to
+   * SIGKILL — cloudflared's SIGTERM is a graceful drain (default ~30s) that
+   * would otherwise keep the metrics port bound long past a re-open. Resolves
+   * only when the process actually exits (`killHardTimeoutMs` is a last-resort
+   * cap so we never hang forever if the OS never reports exit).
+   */
+  private killAndWait(child: ChildProcess): Promise<void> {
     return new Promise<void>((resolve) => {
-      const done = () => {
-        clearTimeout(timer);
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        clearTimeout(graceTimer);
+        clearTimeout(hardTimer);
         resolve();
       };
-      const timer = setTimeout(done, 3_000);
-      (timer as { unref?: () => void }).unref?.();
-      child.once("exit", done);
+      child.once("exit", finish);
       try {
         child.kill("SIGTERM");
       } catch {
-        done();
+        finish();
+        return;
       }
+      const graceTimer = setTimeout(() => {
+        try {
+          child.kill("SIGKILL");
+        } catch {
+          /* already gone */
+        }
+      }, this.killGraceMs);
+      const hardTimer = setTimeout(finish, this.killHardTimeoutMs);
+      (graceTimer as { unref?: () => void }).unref?.();
+      (hardTimer as { unref?: () => void }).unref?.();
     });
   }
 
-  /** Kill the cloudflared child (SIGTERM) and suppress the disconnect event. */
-  stop(): void {
-    this.stopping = true;
-    this.connected = false;
-    this.currentUrl = undefined;
-    this.stopHealthMonitor();
-    const child = this.child;
-    this.child = undefined;
-    child?.kill("SIGTERM");
+  /**
+   * Kill the cloudflared child and suppress the disconnect event. Returns a
+   * promise that resolves once the process has actually exited so callers that
+   * immediately restart don't race the port. Fire-and-forget callers may ignore
+   * it (kept sync-compatible: existing `tunnelManager.stop()` sites work).
+   */
+  stop(): Promise<void> {
+    return this.beginTeardown();
   }
 
   isRunning(): boolean {
