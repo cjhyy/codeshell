@@ -2,6 +2,7 @@
   "name": "@cjhyy/code-shell-tui",
   "version": "0.6.0-rc.17",
   "description": "Terminal UI for code-shell — Ink-based REPL on top of @cjhyy/code-shell-core.",
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
