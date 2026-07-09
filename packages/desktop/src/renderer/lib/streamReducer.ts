@@ -332,11 +332,45 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
     }
 
     case "tool_summary": {
-      // tool_summary carries no id; attach to the last tool item.
       const summary = (event.summary as string) ?? "";
+      const ids = Array.isArray(event.toolCallIds)
+        ? event.toolCallIds.filter((id): id is string => typeof id === "string")
+        : [];
+      const hasTargetIds = ids.length > 0;
+      const targetToolId = hasTargetIds ? ids[ids.length - 1] : undefined;
+      const agentId = event.agentId as string | undefined;
+
+      if (targetToolId) {
+        let found = false;
+        const items = s.items.map((i) => {
+          if (i.kind !== "tool" || i.id !== targetToolId || i.agentId !== agentId) return i;
+          found = true;
+          return { ...i, summary };
+        });
+        return found ? { ...s, items } : s;
+      }
+
+      if (agentId) {
+        let idx = -1;
+        for (let i = s.items.length - 1; i >= 0; i--) {
+          const item = s.items[i];
+          if (item.kind === "tool" && item.agentId === agentId) {
+            idx = i;
+            break;
+          }
+        }
+        if (idx === -1) return s;
+        const items = s.items.slice();
+        items[idx] = { ...(items[idx] as Extract<ChatItem, { kind: "tool" }>), summary };
+        return { ...s, items };
+      }
+
+      // Legacy worker/snapshot compatibility: old tool_summary events carried
+      // no ids, so keep attaching them to the most recent top-level tool.
       let idx = -1;
       for (let i = s.items.length - 1; i >= 0; i--) {
-        if (s.items[i].kind === "tool") {
+        const item = s.items[i];
+        if (item.kind === "tool" && item.agentId === undefined) {
           idx = i;
           break;
         }

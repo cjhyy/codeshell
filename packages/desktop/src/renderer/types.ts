@@ -648,8 +648,38 @@ export function applyStreamEvent(
     }
 
     case "tool_summary": {
-      // tool_summary has no agentId in the StreamEvent type; attach to the
-      // most recent top-level tool message (existing behavior preserved).
+      const targetIds = event.toolCallIds ?? [];
+      const targetToolId = targetIds.length > 0 ? targetIds[targetIds.length - 1] : undefined;
+
+      if (event.agentId) {
+        const idx = state.agentMessageIndex[event.agentId];
+        if (idx === undefined) return state;
+        const msgs = state.messages.slice();
+        const m = msgs[idx];
+        if (!m || m.kind !== "agent") return state;
+        const targetIndex = targetToolId
+          ? m.toolCalls.findIndex((t) => t.id === targetToolId)
+          : m.toolCalls.length - 1;
+        if (targetIndex < 0) return state;
+        const toolCalls = m.toolCalls.map((t, i) =>
+          i === targetIndex ? { ...t, summary: event.summary } : t,
+        );
+        msgs[idx] = { ...m, toolCalls };
+        return { ...state, messages: msgs };
+      }
+
+      if (targetToolId) {
+        let found = false;
+        const messages = state.messages.map((m) => {
+          if (m.kind !== "tool" || m.id !== targetToolId) return m;
+          found = true;
+          return { ...m, summary: event.summary };
+        });
+        return found ? { ...state, messages } : state;
+      }
+
+      // Legacy worker/snapshot compatibility: old tool_summary events carried
+      // no ids, so keep attaching them to the most recent top-level tool.
       const msgs = state.messages.slice();
       for (let i = msgs.length - 1; i >= 0; i--) {
         const m = msgs[i];

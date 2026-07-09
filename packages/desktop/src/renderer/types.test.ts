@@ -266,6 +266,82 @@ describe("applyStreamEvent — tool_use_start idempotency", () => {
   });
 });
 
+describe("applyStreamEvent — tool_summary routing", () => {
+  test("routes top-level summaries by toolCallIds instead of latest tool", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      ev("tool_use_start", {
+        toolCall: { id: "t1", toolName: "Read", args: { file: "a.ts" } },
+      } as any),
+      ev("tool_result", { result: { id: "t1", toolName: "Read", result: "ok" } } as any),
+      ev("tool_use_start", {
+        toolCall: { id: "t2", toolName: "Bash", args: { command: "pwd" } },
+      } as any),
+      ev("tool_summary", { toolCallIds: ["t1"], summary: "read a.ts" } as any),
+    ]);
+
+    const t1 = s.messages.find((m) => m.kind === "tool" && m.id === "t1");
+    const t2 = s.messages.find((m) => m.kind === "tool" && m.id === "t2");
+    expect(t1 && t1.kind === "tool" && t1.summary).toBe("read a.ts");
+    expect(t2 && t2.kind === "tool" && t2.summary).toBeUndefined();
+  });
+
+  test("routes agent summaries to that agent toolCall only", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      ev("tool_use_start", {
+        toolCall: { id: "main1", toolName: "Read", args: { file: "main.ts" } },
+      } as any),
+      ev("tool_result", { result: { id: "main1", toolName: "Read", result: "ok" } } as any),
+      startAgent("A"),
+      ev("tool_use_start", {
+        agentId: "A",
+        toolCall: { id: "a1", toolName: "Read", args: { file: "child.ts" } },
+      } as any),
+      ev("tool_result", {
+        agentId: "A",
+        result: { id: "a1", toolName: "Read", result: "ok" },
+      } as any),
+      ev("tool_summary", {
+        agentId: "A",
+        toolCallIds: ["a1"],
+        summary: "child read",
+      } as any),
+    ]);
+
+    const main = s.messages.find((m) => m.kind === "tool" && m.id === "main1");
+    const agent = findAgent(s, "A");
+    expect(main && main.kind === "tool" && main.summary).toBeUndefined();
+    expect(agent.toolCalls[0]!.summary).toBe("child read");
+  });
+
+  test("does not fallback to latest top-level tool when toolCallIds miss", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      ev("tool_use_start", {
+        toolCall: { id: "main1", toolName: "Read", args: { file: "main.ts" } },
+      } as any),
+      ev("tool_summary", { toolCallIds: ["missing"], summary: "wrong target" } as any),
+    ]);
+
+    const main = s.messages.find((m) => m.kind === "tool" && m.id === "main1");
+    expect(main && main.kind === "tool" && main.summary).toBeUndefined();
+  });
+
+  test("preserves legacy no-id summary fallback to the latest top-level tool", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      ev("tool_use_start", {
+        toolCall: { id: "main1", toolName: "Read", args: { file: "main.ts" } },
+      } as any),
+      ev("tool_summary", { summary: "legacy summary" } as any),
+    ]);
+
+    const main = s.messages.find((m) => m.kind === "tool" && m.id === "main1");
+    expect(main && main.kind === "tool" && main.summary).toBe("legacy summary");
+  });
+});
+
 describe("applyStreamEvent — subagent isolation", () => {
   test("1. text_delta with agentId does not touch main assistant", () => {
     const s = dispatch(INITIAL_STATE, [

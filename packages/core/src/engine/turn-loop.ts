@@ -1045,7 +1045,11 @@ export class TurnLoop {
               return generateToolUseSummary(toolCalls, results, this.deps.model.summarize).then(
                 (summary) => {
                   if (summary) {
-                    this.config.onStream?.({ type: "tool_summary", summary });
+                    this.config.onStream?.({
+                      type: "tool_summary",
+                      summary,
+                      toolCallIds: toolCalls.map((toolCall) => toolCall.id),
+                    });
                   }
                 },
               );

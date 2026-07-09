@@ -103,6 +103,47 @@ test("tool_summary 挂到最后一个 tool", () => {
   expect(tool(s).summary).toBe("读了 package.json");
 });
 
+test("tool_summary 优先按 toolCallIds 挂到目标 tool", () => {
+  const s = feed([
+    ev({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Read", args: {} } }),
+    ev({ type: "tool_use_start", toolCall: { id: "t2", toolName: "Bash", args: {} } }),
+    ev({ type: "tool_summary", toolCallIds: ["t1"], summary: "读了 package.json" }),
+  ]);
+  const t1 = s.items.find((i) => i.kind === "tool" && i.id === "t1");
+  const t2 = s.items.find((i) => i.kind === "tool" && i.id === "t2");
+  expect(t1 && t1.kind === "tool" && t1.summary).toBe("读了 package.json");
+  expect(t2 && t2.kind === "tool" && t2.summary).toBeUndefined();
+});
+
+test("tool_summary 带 agentId 时只更新同一 agent 的 tool", () => {
+  const s = feed([
+    ev({ type: "tool_use_start", toolCall: { id: "main", toolName: "Read", args: {} } }),
+    ev({
+      type: "tool_use_start",
+      agentId: "sub-A",
+      toolCall: { id: "child", toolName: "Read", args: {} },
+    }),
+    ev({
+      type: "tool_summary",
+      agentId: "sub-A",
+      toolCallIds: ["child"],
+      summary: "子代理读取",
+    }),
+  ]);
+  const main = s.items.find((i) => i.kind === "tool" && i.id === "main");
+  const child = s.items.find((i) => i.kind === "tool" && i.id === "child");
+  expect(main && main.kind === "tool" && main.summary).toBeUndefined();
+  expect(child && child.kind === "tool" && child.summary).toBe("子代理读取");
+});
+
+test("tool_summary 有 target id 但 miss 时不 fallback 到最新 tool", () => {
+  const s = feed([
+    ev({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Read", args: {} } }),
+    ev({ type: "tool_summary", toolCallIds: ["missing"], summary: "不应出现" }),
+  ]);
+  expect(tool(s).summary).toBeUndefined();
+});
+
 test("turn_complete completed → run completed,封口 assistant", () => {
   const s = feed([
     ev({ type: "stream_request_start", turnNumber: 1 }),

@@ -531,7 +531,7 @@ export type StreamEvent =
       agentIds: string[];
       ts: number;
     }
-  | { type: "tool_summary"; summary: string }
+  | { type: "tool_summary"; summary: string; toolCallIds?: string[]; agentId?: string }
   | {
       type: "context_compact";
       strategy: "micro" | "summary" | "window" | "snip" | "emergency" | "compacted";
