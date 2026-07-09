@@ -31,7 +31,7 @@ breaking.
   synchronous sub-agents have a wall-clock timeout (default 5 minutes).
 - Sub-agent spawns emit `subagent_start` / `subagent_finish` / `subagent_error`
   lifecycle events through the existing `notification` hook.
-- Ships sample roles under `examples/agents/`: `researcher` and `explorer`
+- Ships sample roles under `packages/desktop/resources/agents/`: `researcher` and `explorer`
   (read-only), `planner` (read-only planning), and `general-purpose` (full
   tools). Their `model` is left unset so they reuse the parent model — set
   `model:` in the frontmatter to route a role to a specific pool key.
@@ -42,7 +42,7 @@ breaking.
   vendor, parameters declared in the catalog drive both the UI controls and the
   tool description). Built-in entries ship in core; user entries live in
   `~/.code-shell/model-catalog.user.json`. The connections page supports
-  multiple instances and credential reuse (`apiKeyRef`) with a per-tag default.
+  multiple instances and credential reuse (`credentialId`) with a per-tag default.
 - New `EditModelCatalog` builtin tool lets the agent add/update a user catalog
   entry and echoes a structured summary (every param's options/default) so you
   can verify it against the provider's official docs.

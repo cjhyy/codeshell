@@ -37,6 +37,7 @@ code-shell run "summarize the changes in this repo and list follow-ups"
 | `run` | Execute a single task (headless). Reads the task from stdin if omitted and piped. |
 | `repl` | Interactive REPL mode (the default when no subcommand is given). |
 | `sessions` | List recent sessions. |
+| `runs` | List and inspect long-running automation runs. |
 | `arena` | Multi-model review arena — the agent gathers context, then multiple models discuss (a differentiator: review/compare across models). |
 | `plugin` | Manage installed plugins: `install`, `list`, `update`, and `uninstall`. |
 

@@ -127,7 +127,7 @@ Presets select the system prompt, the built-in tool set, and permission defaults
 
 ### Built-in tools
 
-The default `general` preset whitelists 47 built-ins. The CLI defaults to
+The default `general` preset whitelists 48 built-ins. The CLI defaults to
 `terminal-coding`, which adds coding extras. Runtime guards may hide tools that
 need unavailable providers, credentials, cookies, or an active goal.
 
@@ -135,7 +135,7 @@ need unavailable providers, credentials, cookies, or an active goal.
 - **Shell / execution**: `Bash`, `BashOutput`, `KillShell`, `ListShells`, `PowerShell`, `REPL`, `Sleep`
 - **Web / media / browser**: `browser_observe`, `browser_act`, `browser_navigate`, `WebSearch`, `WebFetch`, `GenerateImage`, `GenerateVideo`
 - **Planning / orchestration**: `AskUserQuestion`, `EnterPlanMode`, `ExitPlanMode`, `ToolSearch`, `TodoWrite`, `Agent`, `AgentCancel`, `DriveAgent`, `DriveClaudeCode`, `CheckQuota`
-- **Automation / integration**: `CronCreate`, `CronDelete`, `CronList`, `Config`, `Skill`, `MCPTool`, `ListMcpResources`, `ReadMcpResource`, `EditModelCatalog`
+- **Automation / integration**: `CronCreate`, `CronDelete`, `CronList`, `Config`, `Skill`, `AddMarketplace`, `MCPTool`, `ListMcpResources`, `ReadMcpResource`, `EditModelCatalog`
 - **Memory / credentials / goals**: `MemoryList`, `MemoryRead`, `MemorySave`, `MemoryDelete`, `UseCredential`, `InjectCredential`, `complete_goal`, `cancel_goal`
 - **Terminal-coding preset extras**: `EnterWorktree`, `ExitWorktree`, `NotebookEdit`, `LSP`, `Brief`, `Arena`
 

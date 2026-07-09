@@ -4,13 +4,10 @@ Environment-agnostic **Chrome DevTools Protocol (CDP) browser-action layer** for
 
 Drives a browser target — `click` / `type` / `select` / `press_key` / `hover` / `scroll` plus raw page observation — through an **injected CDP sender** you provide. No Playwright, no browser launcher, no agent loop, **zero runtime dependencies**. You bring the transport (an Electron `webContents.debugger`, a raw CDP WebSocket, a test stub, …); this package turns high-level actions into the right CDP commands.
 
-## Install
+## Package status
 
-```bash
-npm install @cjhyy/code-shell-cdp
-# or
-bun add @cjhyy/code-shell-cdp
-```
+This workspace package is internal/private and is not published to npm. Use it
+through the monorepo workspace or the desktop app integration.
 
 Requires Node ≥ 20.10 and an ESM-capable runtime.
 

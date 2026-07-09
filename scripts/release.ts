@@ -102,7 +102,8 @@ const argv = process.argv.slice(2);
 const push = argv.includes("--push");
 const allowDirty = argv.includes("--allow-dirty");
 const bumpIdx = argv.indexOf("--bump");
-const positional = argv.filter((a, i) => !a.startsWith("--") && i !== bumpIdx + 1);
+const bumpValueIdx = bumpIdx === -1 ? -1 : bumpIdx + 1;
+const positional = argv.filter((a, i) => !a.startsWith("--") && i !== bumpValueIdx);
 
 const current = readVersion("package.json");
 let target: string;
