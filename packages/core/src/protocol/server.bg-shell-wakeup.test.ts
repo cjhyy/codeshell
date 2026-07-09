@@ -1,6 +1,10 @@
 import { describe, it, expect, afterEach } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { AgentServer } from "./server.js";
-import { ChatSessionManager } from "./chat-session-manager.js";
+import { ChatSessionManager, type EngineConfigSlice } from "./chat-session-manager.js";
+import { SessionManager } from "../session/session-manager.js";
 import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
 import type { Engine, EngineResult } from "../engine/engine.js";
 
@@ -56,6 +60,39 @@ function makeFakeEngine() {
     },
   } as unknown as Engine;
   return { engine, runs };
+}
+
+function makeRehydratableEngineFactory(
+  existsOnDisk: boolean | ((sessionId: string) => boolean),
+  resultSessionId = "sess-1",
+) {
+  const runs: Array<{ engineId: number; task: string; cwd?: string; injected?: boolean }> = [];
+  const slices: EngineConfigSlice[] = [];
+  let nextEngineId = 0;
+  const engineFactory = (slice: EngineConfigSlice) => {
+    const engineId = ++nextEngineId;
+    slices.push(slice);
+    return {
+      setAskUser() {},
+      setBrowserBridge() {},
+      setInjectCredential() {},
+      setPlanMode() {},
+      isHeadless: () => false,
+      sessionExistsOnDisk: (sessionId: string) =>
+        typeof existsOnDisk === "function" ? existsOnDisk(sessionId) : existsOnDisk,
+      async run(task: string, opts?: { cwd?: string; injected?: boolean }): Promise<EngineResult> {
+        runs.push({ engineId, task, cwd: opts?.cwd, injected: opts?.injected });
+        return {
+          text: "ok",
+          reason: "completed",
+          sessionId: resultSessionId,
+          turnCount: 1,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        };
+      },
+    } as unknown as Engine;
+  };
+  return { engineFactory, runs, slices };
 }
 
 function enqueueShellExit(sid: string, agentId = "bg_abc123") {
@@ -234,5 +271,101 @@ describe("AgentServer — background shell completion wakes an idle session", ()
     enqueueShellExit("unknown-session");
     await new Promise((r) => setTimeout(r, 20));
     expect(runs.length).toBe(0);
+  });
+
+  it("rehydrates an evicted disk-backed session and wakes it with the pending notification", async () => {
+    const sid = "bg-wake-rehydrate-s1";
+    const { engineFactory, runs, slices } = makeRehydratableEngineFactory(
+      (sessionId) => sessionId === sid,
+      sid,
+    );
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory,
+    });
+    const t = makeTransport();
+    servers.push(new AgentServer({ transport: t.transport, chatManager }));
+
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "agent/run",
+      params: {
+        sessionId: sid,
+        task: "initial user turn",
+        cwd: "/tmp/project-a",
+        permissionMode: "bypassPermissions",
+        projectTrusted: false,
+      },
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(runs.map((r) => r.task)).toEqual(["initial user turn"]);
+    expect(chatManager.get(sid)).toBeDefined();
+
+    chatManager.close(sid);
+    expect(chatManager.get(sid)).toBeUndefined();
+
+    enqueueShellExit(sid);
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(runs).toHaveLength(2);
+    expect(runs[1].task).toContain("Background shell exited");
+    expect(runs[1].injected).toBe(true);
+    expect(chatManager.get(sid)).toBeDefined();
+    expect(notificationQueue.getSnapshot(sid)).toHaveLength(0);
+    expect(slices[slices.length - 1]).toMatchObject({
+      cwd: "/tmp/project-a",
+      permissionMode: "bypassPermissions",
+      projectTrusted: false,
+    });
+  });
+
+  it("does not rehydrate or drain when an evicted session is absent from disk", async () => {
+    const { engineFactory, runs } = makeRehydratableEngineFactory(false);
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory,
+    });
+    const t = makeTransport();
+    servers.push(new AgentServer({ transport: t.transport, chatManager }));
+
+    enqueueShellExit("missing-session");
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(runs).toHaveLength(0);
+    expect(chatManager.get("missing-session")).toBeUndefined();
+    expect(notificationQueue.getSnapshot("missing-session")).toHaveLength(1);
+  });
+
+  it("can rehydrate from persisted state.json cwd when the run-slice cache is cold", async () => {
+    const sid = "bg-wake-state-s1";
+    const home = mkdtempSync(join(tmpdir(), "cs-bg-wake-home-"));
+    const previousHome = process.env.CODE_SHELL_HOME;
+    process.env.CODE_SHELL_HOME = home;
+    try {
+      new SessionManager().create("/tmp/project-from-state", "model-a", "provider-a", sid);
+      const { engineFactory, runs, slices } = makeRehydratableEngineFactory(
+        (sessionId) => sessionId === sid,
+        sid,
+      );
+      const chatManager = new ChatSessionManager({
+        runtime: {} as never,
+        engineFactory,
+      });
+      const t = makeTransport();
+      servers.push(new AgentServer({ transport: t.transport, chatManager }));
+
+      enqueueShellExit(sid);
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(runs).toHaveLength(1);
+      expect(runs[0].task).toContain("Background shell exited");
+      expect(slices[slices.length - 1]).toMatchObject({ cwd: "/tmp/project-from-state" });
+      expect(notificationQueue.getSnapshot(sid)).toHaveLength(0);
+    } finally {
+      if (previousHome === undefined) delete process.env.CODE_SHELL_HOME;
+      else process.env.CODE_SHELL_HOME = previousHome;
+      rmSync(home, { recursive: true, force: true });
+    }
   });
 });
