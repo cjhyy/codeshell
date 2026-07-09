@@ -49,11 +49,11 @@
 
 ## B. rc.18 发版遗留（附加区，A 区做完后继续；发 0.7.0 正式版前应处理）
 
-- [ ] **B1. 发版 workflow 加固**（体量 S）
+- [x] **B1. 发版 workflow 加固**（体量 S）— ✅ verify-version 加 core VERSION 正则断言+bun.lock 校验、release needs [package,npm-publish]、CI 签名失败 throw，reviewer SHIP-with-nits（正常发版无误阻断），已合并。nit：本地 CI="false" 字符串被 Boolean 判 true，留后续
   - 锚点：`.github/workflows/release.yml:45-59`（verify-version）、`:61-65`/`:257-263`、`packages/desktop/scripts/after-pack-adhoc-sign.cjs:45-68`
   - 目标：verify-version 加断言 core VERSION==tag、bun.lock 无旧版本；release 依赖 `[package, npm-publish]`；CI 下签名/verify 失败 exit non-zero。
 
-- [ ] **B2. 补几条安全回归测试**（体量 XS）
+- [x] **B2. 补几条安全回归测试**（体量 XS）— ✅ symlink 逃逸/非视觉结构化附件仍调LLM/non-streaming redaction 三条，16 pass，纯测试已合并
   - 锚点：`engine/input-attachments.test.ts`、`engine-structured-image-vision-gate.test.ts`、`model-facade-recorder-redaction.test.ts`
   - 目标：①目录内 symlink 指向外部文件的附件逃逸显式用例；②Engine「非视觉+非图片结构化附件仍调 LLM」回归；③non-streaming recorder redaction 直接单测。纯补测试无代码改动。
 
