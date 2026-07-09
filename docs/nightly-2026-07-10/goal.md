@@ -12,7 +12,7 @@
 
 ## A. 小 feature（本区全部要做，按下列顺序串行推进）
 
-- [ ] **A1. DriveAgent 后台任务可查询/可取消 + 并发警告可用化**（体量 M）
+- [x] **A1. DriveAgent 后台任务可查询/可取消 + 并发警告可用化**（体量 M）— ✅ DriveAgentJobs(list/inspect/cancel)，reviewer 首轮 BLOCK（cancel pre-spawn 竞态）→ 修复 eb439725 → 复审 SHIP，回归 437 pass，已合并。Low(权限拆分)记后续
   - 锚点：`packages/core/src/tool-system/builtin/drive-claude-code.ts`、`background-jobs.ts`、`background-work.ts`
   - 目标：给 DriveAgent job 增 list/inspect/cancel（复用 backgroundJobRegistry）；list/inspect 至少返回每 job 的 prompt 摘要 / cwd / 启动时间 / 预计改动范围；把并发防撞从「事后 warning」改为「派发前可查询」。
   - 验收：并发场景下编排方无需回头问用户就能判断是否冲突（看得见、判断得了）。不强制阻断/排队。
@@ -120,6 +120,7 @@
 | A7 | task-actions-node24 | ff809c46 | SHIP（版本真实性已核实） | YAML 有效 | ✅ 已合并、worktree 已清 |
 | A3 | task-quick-chat | 2e700c01 | SHIP-with-nits（隔离真严格） | 3 pass | ✅ 已合并、worktree 已清 |
 | A4 | task-mcp-oauth | 660f320d | SHIP-with-nits（凭证加密不泄漏） | 89 pass | ✅ 已合并、worktree 已清 |
+| A1 | task-driveagent-inspect | fb839656+eb439725 | BLOCK→修复→复审 SHIP | 437 pass | ✅ 已合并、worktree 已清 |
 
 ## 问题记录（遇到阻塞 / 非本任务引入的红测试记这里）
 
@@ -137,3 +138,8 @@
   - 现象：后台 agent 完成通知回来时，消息流里正在跑/进行中的过程卡片被全部折叠起来；期望仍能看到最新的一些过程（进行中或最近的），而不是一律折叠。
   - 待确认：折叠是 background_agent_completed 通知触发的重渲染/reducer 行为，还是 TurnProcessGroupCard 的默认折叠策略；期望行为=保留最新 N 条/进行中的展开。
   - 处理：走 systematic-debugging → codex 流水线，定位折叠触发点（transcriptsReducer / TurnProcessGroupCard），改为"进行中/最新过程默认展开"。
+
+- **[新 bug 候选 · 较严重] steer 带附件 → 完全没有 LLM 回应**（卡密sama 2026-07-10 报告，订正）
+  - 现象：运行中 steer（插入消息）时**若带附件，整个 turn 完全没有 LLM 回应**（不是附件不生效，而是根本不回复——疑似 turn 卡死/静默中断）。不带附件的 steer 正常。
+  - 待确认：带附件的 steer 入队后，turn-loop 装配该 message 时是否抛错被吞/生成了非法 message 结构导致请求未发或静默失败；backfill（turn-loop-steer-backfill）把 steer 并入历史时 attachments 是否破坏了 message；有无 console/后端报错。
+  - 处理：走 systematic-debugging → codex 流水线。**优先级较高**（steer+附件直接断回复）。先加日志复现：steer 带附件时 turn-loop 是否进入 LLM 调用、请求体是否合法、有无异常被 catch 吞掉。可能与「输入附件管道统一」同底层。
