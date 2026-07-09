@@ -141,6 +141,11 @@ export interface TurnLoopDeps {
    * Returns the updated counters so usage_update can carry both metric scopes.
    */
   recordCumulativeUsage?: (usage: TokenUsage) => CumulativeUsageCounters;
+  /**
+   * Lightweight per-session prompt-cache diagnostic, owned by Engine because it
+   * needs memory across TurnLoop instances.
+   */
+  recordCacheReadDiagnostics?: (usage: TokenUsage) => void;
   /** Persist the latest context-estimation anchor derived from provider usage. */
   recordContextUsageAnchor?: (anchor: ContextUsageAnchor) => void;
   /**
@@ -489,6 +494,7 @@ export class TurnLoop {
   private recordResponseUsage(usage: NonNullable<LLMResponse["usage"]>): void {
     this.currentTurnUsage = addTokenUsage(this.currentTurnUsage, usage);
     this.currentCumulativeUsage = this.deps.recordCumulativeUsage?.(usage);
+    this.deps.recordCacheReadDiagnostics?.(usage);
   }
 
   private emitCtxFromUsage(usage: NonNullable<LLMResponse["usage"]>, messages: Message[]): void {
