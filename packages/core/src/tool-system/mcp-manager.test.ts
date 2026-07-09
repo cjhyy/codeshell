@@ -474,6 +474,56 @@ describe("buildHttpHeaders", () => {
       buildHttpHeaders("srv", httpCfg("srv", { envHeaders: { "X-Api-Key": "MCP_MISSING" } })),
     ).toThrow('MCP server "srv": env var "MCP_MISSING" (from envHeaders) is not set');
   });
+
+  test("legacy credentialRef string remains a bearer token", () => {
+    const headers = buildHttpHeaders(
+      "srv",
+      httpCfg("srv", { credentialRef: "plain-token" }),
+      () => "tok-legacy",
+    );
+
+    expect(headers.Authorization).toBe("Bearer tok-legacy");
+  });
+
+  test("oauth credentialRef injects its access token", () => {
+    const headers = buildHttpHeaders(
+      "srv",
+      httpCfg("srv", { credentialRef: "oauth-account" }),
+      () => ({
+        type: "oauth",
+        secret: JSON.stringify({
+          accessToken: "oauth-access",
+          refreshToken: "oauth-refresh",
+          expiresAt: "2030-01-01T00:00:00.000Z",
+          tokenEndpoint: "https://auth.example.com/token",
+          clientId: "client-id",
+        }),
+      }),
+      { now: () => Date.UTC(2026, 0, 1) },
+    );
+
+    expect(headers.Authorization).toBe("Bearer oauth-access");
+  });
+
+  test("expired oauth credentialRef fails before connecting", () => {
+    expect(() =>
+      buildHttpHeaders(
+        "srv",
+        httpCfg("srv", { credentialRef: "oauth-account" }),
+        () => ({
+          type: "oauth",
+          secret: JSON.stringify({
+            accessToken: "oauth-access",
+            refreshToken: "oauth-refresh",
+            expiresAt: "2020-01-01T00:00:00.000Z",
+            tokenEndpoint: "https://auth.example.com/token",
+            clientId: "client-id",
+          }),
+        }),
+        { now: () => Date.UTC(2026, 0, 1) },
+      ),
+    ).toThrow(/oauth credential "oauth-account" access token expired/);
+  });
 });
 
 describe("buildHttpHeadersWithCredentialAccess", () => {
@@ -500,6 +550,39 @@ describe("buildHttpHeadersWithCredentialAccess", () => {
     );
 
     expect(headers.Authorization).toBe("Bearer figd_secret");
+  });
+
+  test("uses credential metadata to parse oauth secrets", async () => {
+    const headers = await buildHttpHeadersWithCredentialAccess(
+      "srv",
+      {
+        name: "srv",
+        transport: "streamable-http",
+        url: "https://example.com",
+        credentialRef: "oauth-account",
+      },
+      {
+        resolveMeta(_cwd, id) {
+          return {
+            id,
+            type: "oauth",
+            label: "OAuth Account",
+            hasSecret: true,
+          };
+        },
+        async resolveValue(req) {
+          expect(req.purpose).toBe("mcp");
+          return JSON.stringify({
+            accessToken: "oauth-access",
+            refreshToken: "oauth-refresh",
+            expiresAt: "2030-01-01T00:00:00.000Z",
+          });
+        },
+      },
+      { now: () => Date.UTC(2026, 0, 1) },
+    );
+
+    expect(headers.Authorization).toBe("Bearer oauth-access");
   });
 });
 

@@ -1017,7 +1017,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("fs:exists", root, path),
 
   // ── Browser popout window ─────────────────────────────────────────────
-  /** Credentials module: token/link store CRUD + cookie capture. */
+  /** Credentials module: token/link/oauth store CRUD + cookie capture. */
   credentials: {
     list: (cwd: string) => ipcRenderer.invoke("credentials:list", cwd),
     save: (cwd: string, scope: "user" | "project", cred: unknown) =>

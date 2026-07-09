@@ -772,9 +772,10 @@ export interface MCPServerConfig {
    */
   envHeaders?: Record<string, string>;
   /**
-   * (HTTP) id of a stored credential (CredentialStore) to use as the Bearer
-   * token. Resolved at connect time via a resolver passed to buildHttpHeaders;
-   * the secret is never stored in the MCP config. Wins over bearerTokenEnvVar.
+   * (HTTP) id of a stored credential (token/link/oauth) to use as Bearer auth.
+   * OAuth credentials inject their current access token. Resolved at connect
+   * time via CredentialStore; the secret is never stored in MCP config. Wins
+   * over bearerTokenEnvVar.
    */
   credentialRef?: string;
   /**
@@ -798,6 +799,7 @@ export interface MCPServerConfig {
 export interface MCPServerOverride {
   env?: Record<string, string>;
   envVars?: string[];
+  /** (HTTP) id of a stored token/link/oauth credential used as Bearer auth. */
   credentialRef?: string;
   bearerTokenEnvVar?: string;
   envHeaders?: Record<string, string>;

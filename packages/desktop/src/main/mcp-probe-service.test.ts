@@ -66,6 +66,15 @@ describe("humanizeError auth classification", () => {
     const msg = humanizeError("server exited with code 14013");
     expect(msg).toBe("server exited with code 14013");
   });
+
+  test("expired OAuth credential points at refresh/login actions", () => {
+    const msg = humanizeError(
+      'MCP server "figma": oauth credential "figma-oauth" access token expired; refresh data is present, but automatic OAuth refresh is reserved and not wired yet',
+    );
+    expect(msg).toContain("OAuth");
+    expect(msg).toContain("刷新");
+    expect(msg).toContain("重新登录");
+  });
 });
 
 describe("cold-start timeout hint (npx/uvx 首次下载)", () => {
@@ -136,5 +145,36 @@ describe("buildProbeHttpHeaders credentialRef availability", () => {
     } catch (err) {
       expect(String(err)).not.toContain("enc:safeStorage");
     }
+  });
+
+  test("oauth credentialRef uses the stored access token", () => {
+    mkdirSync(join(home, ".code-shell"), { recursive: true });
+    writeFileSync(
+      join(home, ".code-shell", "credentials.json"),
+      JSON.stringify({
+        version: 1,
+        credentials: [
+          {
+            id: "figma-oauth",
+            type: "oauth",
+            label: "Figma OAuth",
+            secret: JSON.stringify({
+              accessToken: "oauth-access",
+              refreshToken: "oauth-refresh",
+              expiresAt: "2030-01-01T00:00:00.000Z",
+            }),
+          },
+        ],
+      }),
+    );
+
+    const headers = buildProbeHttpHeaders({
+      name: "figma",
+      transport: "streamable-http",
+      url: "https://example.com/mcp",
+      credentialRef: "figma-oauth",
+    });
+
+    expect(headers.Authorization).toBe("Bearer oauth-access");
   });
 });
