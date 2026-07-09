@@ -127,6 +127,11 @@ import { join, isAbsolute } from "node:path";
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import type { InputAttachmentMeta } from "../protocol/types.js";
 
+const CACHE_READ_DROP_MIN_PREVIOUS_TOKENS = 100;
+const CACHE_READ_DROP_MAX_CURRENT_TOKENS = 64;
+const CACHE_READ_DROP_RATIO = 0.1;
+const CACHE_READ_DIAGNOSTIC_MAX_SESSIONS = 256;
+
 /**
  * Build ScanOptions.compatFileNames from the user's instruction compat toggles.
  * Primary file name stays hard-wired to CODESHELL.md (not exposed). Turning a
@@ -382,6 +387,7 @@ export class Engine {
    * LLM response arrives.
    */
   private ctxOverheadBySid = new Map<string, number>();
+  private lastCacheReadBySid = new Map<string, number>();
   /**
    * Step-gap steering queue (per sessionId, in-memory). Host pushes user
    * messages here via enqueueSteer while a run is in flight; the turn loop
@@ -2125,6 +2131,9 @@ export class Engine {
           claimClientMessageId: (clientMessageId, source) =>
             claimClientMessageId(session, clientMessageId, source),
           recordCumulativeUsage,
+          recordCacheReadDiagnostics: (usage) => {
+            this.recordCacheReadDiagnostics(sid, usage);
+          },
           recordContextUsageAnchor: (anchor) => {
             session.state.contextUsageAnchor = {
               ...anchor,
@@ -2171,6 +2180,7 @@ export class Engine {
           onStream: options?.onStream,
           signal: options?.signal,
           freshImageMessages: freshImageMessage ? [freshImageMessage] : undefined,
+          volatileContextMessages: dynamicContextMsg ? [dynamicContextMsg] : undefined,
           // Goal mode: the active goal is surfaced to the on_stop handler via
           // ctx.data.goal; the GoalStopHook (registered above) judges it.
           goal: normalizedGoal,
@@ -2301,10 +2311,12 @@ export class Engine {
         this.hooks.unregister("on_tool_start", fileHistoryHandler);
       }
       this.lastMessages = result.messages;
-      this.compactedMessagesBySession.set(
-        session.state.sessionId,
-        this.stripUserContextMessage(result.messages, userContextMsg),
+      const cachedMessages = this.stripInjectedContextMessages(
+        result.messages,
+        userContextMsg,
+        dynamicContextMsg,
       );
+      this.compactedMessagesBySession.set(session.state.sessionId, cachedMessages);
 
       logger.info("engine.done", {
         sessionId: session.state.sessionId,
@@ -3019,11 +3031,43 @@ export class Engine {
     };
   }
 
-  private stripUserContextMessage(messages: Message[], userContextMsg: Message | null): Message[] {
+  private stripInjectedContextMessages(
+    messages: Message[],
+    userContextMsg: Message | null,
+    dynamicContextMsg: Message | null,
+  ): Message[] {
+    const withoutDynamicContext = dynamicContextMsg
+      ? messages.filter((msg) => msg !== dynamicContextMsg)
+      : [...messages];
     if (!userContextMsg || messages[0] !== userContextMsg) {
-      return [...messages];
+      return withoutDynamicContext;
     }
-    return messages.slice(1);
+    return withoutDynamicContext.slice(1);
+  }
+
+  private recordCacheReadDiagnostics(sessionId: string, usage: TokenUsage): void {
+    const current = usage.cacheReadTokens;
+    if (current === undefined || !Number.isFinite(current)) return;
+
+    const previous = this.lastCacheReadBySid.get(sessionId);
+    this.lastCacheReadBySid.delete(sessionId);
+    this.lastCacheReadBySid.set(sessionId, current);
+    if (this.lastCacheReadBySid.size > CACHE_READ_DIAGNOSTIC_MAX_SESSIONS) {
+      const oldestSessionId = this.lastCacheReadBySid.keys().next().value;
+      if (oldestSessionId !== undefined) this.lastCacheReadBySid.delete(oldestSessionId);
+    }
+    if (previous === undefined || previous < CACHE_READ_DROP_MIN_PREVIOUS_TOKENS) return;
+
+    const dropRatio = previous > 0 ? current / previous : 1;
+    if (current <= CACHE_READ_DROP_MAX_CURRENT_TOKENS && dropRatio <= CACHE_READ_DROP_RATIO) {
+      logger.warn("engine.cache_read_drop", {
+        sessionId,
+        previousCacheReadTokens: previous,
+        currentCacheReadTokens: current,
+        dropRatio,
+        hint: "Prompt cache read tokens dropped sharply. Check for changed cacheable prefix, stale dynamic context in history, tool/schema changes, or provider cache eviction.",
+      });
+    }
   }
 
   private getSettingsManager(): SettingsManager {
