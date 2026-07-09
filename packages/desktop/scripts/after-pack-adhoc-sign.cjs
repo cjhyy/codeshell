@@ -41,6 +41,7 @@ exports.default = async function afterPack(context) {
 
   const appName = `${context.packager.appInfo.productFilename}.app`;
   const appPath = join(context.appOutDir, appName);
+  const failOnSignError = Boolean(process.env.CI);
 
   try {
     // --deep: recurse into nested bundles/frameworks/helpers.
@@ -54,7 +55,7 @@ exports.default = async function afterPack(context) {
     execFileSync("codesign", ["--force", "-s", "-", `-r=${STABLE_REQUIREMENT}`, appPath], {
       stdio: "inherit",
     });
-    // Verify the seal actually covers resources now; log (don't throw) on drift.
+    // Verify the seal actually covers resources now; CI turns any drift into a build failure.
     execFileSync("codesign", ["--verify", "--deep", "--strict", appPath], {
       stdio: "inherit",
     });
@@ -64,7 +65,7 @@ exports.default = async function afterPack(context) {
     // eslint-disable-next-line no-console
     console.log(`[afterPack] ad-hoc signed ${appName} with stable requirement: ${STABLE_REQUIREMENT}`);
   } catch (err) {
-    if (process.env.CI || process.env.GITHUB_ACTIONS) {
+    if (failOnSignError) {
       // eslint-disable-next-line no-console
       console.error(`[afterPack] ad-hoc sign failed in CI: ${err}`);
       throw err;

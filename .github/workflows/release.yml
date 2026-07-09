@@ -65,7 +65,9 @@ jobs:
           const fail = (message) => errors.push(`::error::${message}`);
 
           const coreIndex = fs.readFileSync("packages/core/src/index.ts", "utf8");
-          const versionMatch = coreIndex.match(/export\s+const\s+VERSION\s*=\s*["']([^"']+)["']/);
+          const versionMatch = coreIndex.match(
+            /^\s*export\s+const\s+VERSION(?:\s*:\s*[^\n=]+)?\s*=\s*["']([^"']+)["'](?:\s+as\s+const)?\s*;?/m,
+          );
           if (!versionMatch) {
             fail("packages/core/src/index.ts does not export a VERSION constant.");
           } else {
