@@ -3,6 +3,12 @@
   "version": "0.6.0-rc.17",
   "description": "Terminal UI for code-shell — Ink-based REPL on top of @cjhyy/code-shell-core.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cjhyy/codeshell.git",
+    "directory": "packages/tui"
+  },
+  "homepage": "https://github.com/cjhyy/codeshell/tree/main/packages/tui#readme",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

@@ -7,7 +7,8 @@
  * Why this exists
  * ---------------
  * The release depends on package.json's `version` in FIVE places
- * (root + cdp/core/tui/desktop) plus the four `bun.lock` references.
+ * (root + cdp/core/tui/desktop), the public core `VERSION` export, and the
+ * workspace version references in `bun.lock`.
  * electron-builder names its artifacts and writes latest-*.yml from
  * package.json's version — NOT the git tag. Two real incidents came from doing
  * this by hand:
@@ -20,6 +21,8 @@
  *
  * Usage
  * -----
+ *   bun run scripts/release.ts 0.6.0-beta.1        # explicit beta version
+ *   bun run scripts/release.ts --bump beta         # auto-increment beta number
  *   bun run scripts/release.ts 0.6.0-rc.11          # bump + commit (dry: no push)
  *   bun run scripts/release.ts --bump rc            # auto-increment the rc number
  *   bun run scripts/release.ts 0.6.0-rc.11 --push   # also push main + tag → CI
@@ -27,7 +30,8 @@
  * Flags:
  *   --push        after committing, push main and push an annotated tag v<version>.
  *   --bump <part> compute the next version instead of passing it explicitly.
- *                 part ∈ { rc, patch, minor, major }. `rc` bumps/appends -rc.N.
+ *                 part ∈ { beta, rc, patch, minor, major }.
+ *                 `beta`/`rc` bump or append -beta.N/-rc.N.
  *   --allow-dirty skip the clean-tree check (default: refuse if other changes exist).
  *
  * Safe by default: without --push it only edits files + commits locally, so you
@@ -47,6 +51,10 @@ const PKG_FILES = [
   "packages/desktop/package.json",
 ] as const;
 const LOCKFILE = "bun.lock";
+const CORE_VERSION_FILE = "packages/core/src/index.ts";
+const VERSION_RE = /^(\d+)\.(\d+)\.(\d+)(?:-(rc|beta)\.(\d+))?$/;
+const CORE_VERSION_RE = /^export const VERSION = "([^"]+)";$/m;
+const VERSION_FORMAT = "X.Y.Z, X.Y.Z-rc.N, or X.Y.Z-beta.N";
 
 function die(msg: string): never {
   console.error(`\x1b[31m✗ ${msg}\x1b[0m`);
@@ -57,28 +65,35 @@ function readVersion(rel: string): string {
   return JSON.parse(readFileSync(resolve(ROOT, rel), "utf8")).version;
 }
 
+function readCoreVersion(): string {
+  const text = readFileSync(resolve(ROOT, CORE_VERSION_FILE), "utf8");
+  const match = text.match(CORE_VERSION_RE);
+  if (!match) die(`could not find VERSION export in ${CORE_VERSION_FILE}`);
+  return match[1];
+}
+
 /** Compute the next version from the current one for `--bump <part>`. */
 function computeBump(current: string, part: string): string {
-  const rcMatch = current.match(/^(\d+)\.(\d+)\.(\d+)-rc\.(\d+)$/);
-  const relMatch = current.match(/^(\d+)\.(\d+)\.(\d+)$/);
-  if (part === "rc") {
-    if (rcMatch) {
-      const [, a, b, c, n] = rcMatch;
-      return `${a}.${b}.${c}-rc.${Number(n) + 1}`;
+  const match = current.match(VERSION_RE);
+  if (!match) die(`can't --bump ${part} from non-standard version "${current}"`);
+
+  const [, major, minor, patch, prereleaseKind, prereleaseNumber] = match;
+  const base = `${major}.${minor}.${patch}`;
+
+  if (part === "beta" || part === "rc") {
+    if (prereleaseKind === part && prereleaseNumber) {
+      return `${base}-${part}.${Number(prereleaseNumber) + 1}`;
     }
-    if (relMatch) {
-      const [, a, b, c] = relMatch;
-      return `${a}.${b}.${c}-rc.1`;
-    }
-    die(`can't --bump rc from non-standard version "${current}"`);
+    return `${base}-${part}.1`;
   }
-  const base = rcMatch ?? relMatch;
-  if (!base) die(`can't --bump ${part} from non-standard version "${current}"`);
-  let [, a, b, c] = base.map(Number) as unknown as [string, number, number, number];
+
+  let a = Number(major);
+  let b = Number(minor);
+  let c = Number(patch);
   if (part === "patch") c += 1;
-  else if (part === "minor") (b += 1), (c = 0);
-  else if (part === "major") (a += 1), (b = 0), (c = 0);
-  else die(`unknown --bump part "${part}" (use rc|patch|minor|major)`);
+  else if (part === "minor") ((b += 1), (c = 0));
+  else if (part === "major") ((a += 1), (b = 0), (c = 0));
+  else die(`unknown --bump part "${part}" (use beta|rc|patch|minor|major)`);
   return `${a}.${b}.${c}`;
 }
 
@@ -93,16 +108,16 @@ const current = readVersion("package.json");
 let target: string;
 if (bumpIdx !== -1) {
   const part = argv[bumpIdx + 1];
-  if (!part) die("--bump needs a part: rc|patch|minor|major");
+  if (!part) die("--bump needs a part: beta|rc|patch|minor|major");
   target = computeBump(current, part);
 } else if (positional[0]) {
   target = positional[0];
 } else {
-  die("give a version (e.g. 0.6.0-rc.11) or --bump rc");
+  die("give a version (e.g. 0.6.0-beta.1) or --bump beta");
 }
 
-if (!/^\d+\.\d+\.\d+(-rc\.\d+)?$/.test(target)) {
-  die(`version "${target}" is not X.Y.Z or X.Y.Z-rc.N`);
+if (!VERSION_RE.test(target)) {
+  die(`version "${target}" is not ${VERSION_FORMAT}`);
 }
 if (target === current) die(`version is already ${target} — nothing to bump`);
 
@@ -115,23 +130,38 @@ if (status && !allowDirty) {
 }
 
 // ── rewrite versions ────────────────────────────────────────────────────────
-const esc = current.replace(/[.]/g, "\\.");
-const files = [...PKG_FILES, LOCKFILE];
-for (const rel of files) {
+const files = [...PKG_FILES, LOCKFILE, CORE_VERSION_FILE];
+const coreVersionPath = resolve(ROOT, CORE_VERSION_FILE);
+const coreBefore = readFileSync(coreVersionPath, "utf8");
+const coreVersion = coreBefore.match(CORE_VERSION_RE)?.[1];
+if (!coreVersion) die(`could not find VERSION export in ${CORE_VERSION_FILE}`);
+if (coreVersion !== current) {
+  die(
+    `${CORE_VERSION_FILE} VERSION is ${coreVersion}, expected current package version ${current}`,
+  );
+}
+
+for (const rel of [...PKG_FILES, LOCKFILE]) {
   const p = resolve(ROOT, rel);
   const before = readFileSync(p, "utf8");
   // package.json: the version only appears as the top-level "version" field and
   // as workspace dep refs — all are the exact current version string. bun.lock:
-  // same literal. A global literal replace is correct because rc.X only ever
-  // appears as this project's own version in these files.
+  // same literal. A global literal replace is correct because prerelease strings
+  // only ever appear as this project's own version in these files.
   const after = before.replaceAll(current, target);
   if (after !== before) writeFileSync(p, after);
 }
 
+const coreAfter = coreBefore.replace(CORE_VERSION_RE, `export const VERSION = "${target}";`);
+if (coreAfter !== coreBefore) writeFileSync(coreVersionPath, coreAfter);
+
 // ── verify consistency (the whole point) ────────────────────────────────────
 const bad = PKG_FILES.filter((f) => readVersion(f) !== target);
 if (bad.length) die(`version rewrite failed for: ${bad.join(", ")}`);
-console.log(`\x1b[32m✓ all ${PKG_FILES.length} package.json + bun.lock now ${target}\x1b[0m`);
+if (readCoreVersion() !== target) die(`${CORE_VERSION_FILE} VERSION rewrite failed`);
+console.log(
+  `\x1b[32m✓ all ${PKG_FILES.length} package.json + bun.lock + core VERSION now ${target}\x1b[0m`,
+);
 
 // ── commit ──────────────────────────────────────────────────────────────────
 await $`git add ${files}`.cwd(ROOT);

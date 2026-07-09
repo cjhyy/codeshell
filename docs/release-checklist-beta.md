@@ -16,9 +16,8 @@
   `packages/core/package.json` 一致。
 - [x] 已有版本断言测试：
   `packages/core/src/version.test.ts` 校验 `VERSION === package.json.version`。
-- [ ] `bun.lock` 仍包含 workspace 版本 `0.6.0-rc.12`（cdp/core/desktop/tui）。
-  beta 版本提交前需要同步或重新生成 lockfile，否则 `bun install --frozen-lockfile`
-  在 CI 中可能暴露版本不一致。
+- [x] `bun.lock` 已通过 `bun install --lockfile-only` 同步 workspace 版本到
+  `0.6.0-rc.17`，确认不再包含 `0.6.0-rc.12`。
 
 ## Release Workflow
 
@@ -31,9 +30,8 @@
   beta tag 会用 `next`，普通 `vX.Y.Z` 才会用 `latest`。
 - [x] npm 发布顺序是 core -> tui -> meta；`packages/cdp` 和
   `packages/desktop` 当前为 `private: true`，不会发布到 npm，但仍参与版本校验。
-- [ ] `scripts/release.ts` 当前只接受 `X.Y.Z` 或 `X.Y.Z-rc.N`，不接受
-  `X.Y.Z-beta.N`；它也不会同步 `packages/core/src/index.ts` 的 `VERSION`。
-  发 beta 前需决定：扩展 release helper，或按下方手动动作同步。
+- [x] `scripts/release.ts` 已接受 `X.Y.Z-beta.N`，`--bump beta` 可用，并会同步
+  `packages/core/src/index.ts` 的 `VERSION`。
 
 ## Ignored Build Artifacts
 
@@ -48,9 +46,29 @@
 | --- | --- | --- |
 | `@cjhyy/code-shell` | public npm meta package | OK: MIT, description, repository, homepage, bugs, `engines.node >=20.10`, `files`, `bin`, `publishConfig.access=public` all present. |
 | `@cjhyy/code-shell-core` | public npm package | OK: MIT, description, repository with `directory`, homepage, bugs, `engines.node >=20.10`, `files=["dist"]`, `publishConfig.access=public` present. |
-| `@cjhyy/code-shell-tui` | public npm package | Needs metadata polish: MIT, description, `files`, `bin`, and `publishConfig` are present, but `repository` and `homepage` are missing. Suggested repository: `{"type":"git","url":"git+https://github.com/cjhyy/codeshell.git","directory":"packages/tui"}`. Suggested homepage: `https://github.com/cjhyy/codeshell/tree/main/packages/tui#readme`. |
+| `@cjhyy/code-shell-tui` | public npm package | OK: MIT, description, repository with `directory`, homepage, `files`, `bin`, and `publishConfig.access=public` are present. |
 | `@cjhyy/code-shell-cdp` | private workspace package | OK for current private state: MIT, description, repository with `directory`, `engines.node >=20.10`, and `files` present. Homepage is missing; add `https://github.com/cjhyy/codeshell/tree/main/packages/cdp#readme` if this package becomes public. |
-| `@cjhyy/code-shell-desktop` | private Electron package | Needs public-facing polish before beta installers: MIT and description are present, but description still says `(POC)`, and `repository`/`homepage` are missing. Suggested repository: `{"type":"git","url":"git+https://github.com/cjhyy/codeshell.git","directory":"packages/desktop"}`. Suggested homepage can be the root README (`https://github.com/cjhyy/codeshell#readme`) unless a desktop-specific README is added. No npm `files` field is required while private; electron-builder uses `build.files`. |
+| `@cjhyy/code-shell-desktop` | private Electron package | OK for beta installers: MIT, formal description, repository with `directory`, and root homepage are present. No npm `files` field is required while private; electron-builder uses `build.files`. |
+
+## Release-script & metadata fixes
+
+- [x] `scripts/release.ts` now uses one prerelease-aware version regex:
+  `X.Y.Z`, `X.Y.Z-rc.N`, or `X.Y.Z-beta.N`.
+- [x] `--bump beta` and `--bump rc` share symmetric prerelease logic. Verified with an
+  inline `bun -e` check:
+  - `computeBump("0.6.0-rc.17", "beta")` -> `0.6.0-beta.1`
+  - `computeBump("0.6.0", "beta")` -> `0.6.0-beta.1`
+  - `computeBump("0.6.0-beta.1", "beta")` -> `0.6.0-beta.2`
+  - `0.6.0-beta.1` is accepted by the version regex.
+- [x] Release rewriting now includes `packages/core/src/index.ts` via an exact
+  `export const VERSION = "..."` line replacement, and the final consistency
+  check asserts core `VERSION === target`.
+- [x] `bun.lock` was regenerated with `bun install --lockfile-only`; diff only updates
+  workspace versions from `0.6.0-rc.12` to `0.6.0-rc.17`.
+- [x] `packages/tui/package.json` and `packages/desktop/package.json` now include
+  repository/homepage metadata, and the desktop description no longer says `(POC)`.
+- [x] Verification run on 2026-07-09: `bun run typecheck` and
+  `bun test packages/core/src/version.test.ts` both passed.
 
 ## Docs And Badges
 
@@ -72,15 +90,17 @@
 Do not run these until the target beta version is chosen.
 
 1. Pick the beta version, for example `0.6.0-beta.1`.
-2. Update all five package versions to that exact beta version:
-   `package.json`, `packages/core/package.json`, `packages/tui/package.json`,
-   `packages/cdp/package.json`, and `packages/desktop/package.json`.
-3. Update `packages/core/src/index.ts` `VERSION` to the same beta version.
-4. Sync `bun.lock` so workspace versions match the beta version.
+2. Run the release helper, for example `bun run scripts/release.ts --bump beta` or
+   `bun run scripts/release.ts 0.6.0-beta.1`. It updates all five package versions,
+   `packages/core/src/index.ts` `VERSION`, and `bun.lock`, then commits locally
+   without pushing unless `--push` is passed.
+3. Review the local release commit before pushing.
+4. If anything was adjusted manually, sync `bun.lock` so workspace versions match the
+   beta version.
 5. Run the release preflight checks:
    `bun run typecheck`, `bun test`, and any desktop build/package smoke test
    卡密sama wants before public beta.
-6. Commit the version bump and release-prep docs.
+6. Ensure the version bump and release-prep docs are committed.
 7. Create an annotated tag `v<beta-version>`.
 8. Push `main` and the tag; the tag should trigger GitHub prerelease assets and
    npm `next` publishing.
@@ -89,11 +109,5 @@ Do not run these until the target beta version is chosen.
 
 ## Needs 卡密sama Decision
 
-- Whether to update `scripts/release.ts` for beta tags and `VERSION` syncing, or
-  do the beta bump manually.
-- Whether `packages/desktop/package.json` should drop `(POC)` from its
-  description before beta.
-- Whether to add repository/homepage metadata to `packages/tui` and
-  `packages/desktop` before the public beta commit.
 - Whether `packages/cdp` should remain private for beta; if not, it needs final
   public package metadata and npm publish workflow updates.

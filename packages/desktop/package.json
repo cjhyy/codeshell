@@ -3,7 +3,13 @@
   "version": "0.6.0-rc.17",
   "private": true,
   "license": "MIT",
-  "description": "Electron desktop client for code-shell (POC).",
+  "description": "Electron desktop client for CodeShell — the full desktop agent app.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cjhyy/codeshell.git",
+    "directory": "packages/desktop"
+  },
+  "homepage": "https://github.com/cjhyy/codeshell#readme",
   "type": "module",
   "main": "./out/main/index.mjs",
   "scripts": {
