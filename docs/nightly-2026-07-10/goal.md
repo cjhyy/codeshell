@@ -31,7 +31,7 @@
   - 锚点：`packages/core/src/credentials/types.ts:6`、`types.ts:718`、`tool-system/mcp-manager.ts:99`、`desktop/.../settings/McpSection.tsx:960`
   - 目标：加 OAuth credential 类型、登录状态/刷新/退出、认证方式选择 UI，保持 Codex 风格字段兼容。
 
-- [ ] **A5. 命名收口 repo / workspace / project / cwd**（体量 M）
+- [x] **A5. 命名收口 repo / workspace / project / cwd**（体量 M）— ✅ 方案文档已产出并合并（naming-consolidation-plan.md，merge 25970519），机械改名留后续
   - 锚点：`packages/desktop/src/renderer/repos.ts:14`、`core/src/types.ts:248`、`settings/schema.ts:361`
   - 目标：先定概念表和迁移边界，再机械改名 / 适配旧 localStorage 与 state.json。
   - 验收：本项**先只产出概念表 + 迁移方案文档**（写进 `docs/nightly-2026-07-10/naming-consolidation-plan.md`），机械改名作为后续。避免大范围改名夜里失控。
@@ -116,7 +116,7 @@
 
 | 项 | worktree/分支 | 实现 commit | review 结论 | 回归 | 状态 |
 |----|--------------|------------|------------|------|------|
-| —  | —            | —          | —          | —    | 待开始 |
+| A5 | task-naming-plan | bcb8b861 | 纯文档免审 | — | ✅ 已合并 25970519、worktree 已清 |
 
 ## 问题记录（遇到阻塞 / 非本任务引入的红测试记这里）
 
