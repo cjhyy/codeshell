@@ -1004,6 +1004,28 @@ describe("applyStreamEvent — background_agent_completed", () => {
     expect((last as { text: string }).text).toContain("content policy");
   });
 
+  test("cancelled → appends a neutral cancelled system message, not a failure", () => {
+    const ev = {
+      type: "background_agent_completed",
+      agentId: "cc-1",
+      name: "DriveAgent",
+      description: "DriveAgent(codex): long edit",
+      status: "cancelled",
+      error: "DriveAgent job cc-1 cancelled by DriveAgentJobs.",
+      enqueuedAt: 1,
+    } as unknown as StreamEvent;
+    const s = applyStreamEvent(INITIAL_STATE, ev);
+    const last = s.messages[s.messages.length - 1];
+    expect(last.kind).toBe("system");
+    expect((last as { text: string }).text).toContain("DriveAgent");
+    expect((last as { text: string }).text).toContain("已取消");
+    expect((last as { text: string }).text).not.toContain("失败");
+
+    const toastLine = bgCompletionText(ev as any);
+    expect(toastLine).toContain("已取消");
+    expect(toastLine).not.toContain("失败");
+  });
+
   test("long finalText is clipped to a one-line preview (#2 flood)", () => {
     // A subagent that returns a multi-paragraph report must not dump the whole
     // thing into the stream line — the full text lives in its own agent card.

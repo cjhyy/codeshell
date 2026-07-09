@@ -61,7 +61,7 @@ export type BackgroundWorkInfo =
       kind: "job";
       jobId: string;
       description: string;
-      status: "running" | "completed" | "failed";
+      status: "running" | "completed" | "failed" | "cancelled";
       startedAt: number;
       finishedAt?: number;
       finalText?: string;

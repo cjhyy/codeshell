@@ -1736,8 +1736,9 @@ app.whenReady().then(async () => {
         if (event.type !== "background_agent_completed") return;
         if (BrowserWindow.getFocusedWindow()) return; // user is watching; skip
         const ok = event.status === "completed";
+        const cancelled = event.status === "cancelled";
         new Notification({
-          title: ok ? "自动化任务完成" : "自动化任务失败",
+          title: ok ? "自动化任务完成" : cancelled ? "自动化任务已取消" : "自动化任务失败",
           body: event.description?.slice(0, 120) ?? "",
         }).show();
       } catch {

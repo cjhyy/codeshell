@@ -57,6 +57,7 @@ export const panels = {
         jobRunning: "进行中",
         jobCompleted: "已完成",
         jobFailed: "失败",
+        jobCancelled: "已取消",
         jobChangedFiles: "编辑了 {{count}} 个文件",
       },
       terminal: {
@@ -243,6 +244,7 @@ export const panels = {
         jobRunning: "in progress",
         jobCompleted: "completed",
         jobFailed: "failed",
+        jobCancelled: "cancelled",
         jobChangedFiles: "edited {{count}} file(s)",
       },
       terminal: {
