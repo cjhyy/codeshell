@@ -8,6 +8,10 @@ import { clearCredentialSessionAllow } from "../credentials/use-credential-tool.
 import { clearInjectCredentialSessionAllow } from "../credentials/inject-credential-tool.js";
 import { logger } from "../logging/logger.js";
 import { clearSessionPathApprovals, openSessionPathApprovals } from "../tool-system/path-policy.js";
+import {
+  clearInteractiveApprovalSession,
+  openInteractiveApprovalSession,
+} from "../tool-system/permission.js";
 
 export type EngineConfigSlice = Pick<
   EngineConfig,
@@ -52,6 +56,7 @@ export class ChatSessionManager {
 
   getOrCreate(sessionId: string, slice: EngineConfigSlice): ChatSession {
     openSessionPathApprovals(sessionId);
+    openInteractiveApprovalSession(sessionId);
     const existing = this.sessions.get(sessionId);
     if (existing) {
       existing.lastActivityAt = Date.now();
@@ -100,6 +105,7 @@ export class ChatSessionManager {
     if (!s) return;
     s.cancel();
     clearSessionPathApprovals(sessionId);
+    clearInteractiveApprovalSession(sessionId);
     clearCredentialSessionAllow(sessionId);
     clearInjectCredentialSessionAllow(sessionId);
     this.unregisterMcpOwner(s);

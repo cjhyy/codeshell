@@ -10,13 +10,7 @@ import type {
   ApprovalResult,
 } from "../types.js";
 import { resolve as resolvePath, dirname } from "node:path";
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-  renameSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { logger as rootPermLogger } from "../logging/logger.js";
 import { READ_ONLY_TOOLS } from "./plan-mode-allowlist.js";
@@ -121,6 +115,32 @@ export class AutoApprovalBackend implements ApprovalBackend {
   }
 }
 
+interface InteractiveApprovalSessionState {
+  allowRules: PermissionRule[];
+  denyRules: PermissionRule[];
+  promptTurn: Promise<void>;
+  cwd: string | null;
+  savedProjectRules: PermissionRule[];
+  onProjectRules: ((rules: PermissionRule[]) => void) | null;
+}
+
+type InteractiveApprovalContextState = Pick<
+  InteractiveApprovalSessionState,
+  "cwd" | "savedProjectRules" | "onProjectRules"
+>;
+
+/**
+ * Closed-session tombstones are a bounded replay guard. A prompt that started
+ * before close is still protected by the state-object identity check in
+ * isActiveSessionState(): clearSession deletes the captured state, so the late
+ * result cannot write into a new bucket even if an old tombstone has aged out.
+ * The tombstone only blocks fresh post-close calls carrying a recently closed
+ * sessionId from creating an empty bucket. 4096 is 256x the default
+ * ChatSessionManager.maxSessions (16), which covers normal late-result bursts
+ * while keeping long-lived processes from retaining every historical id.
+ */
+export const CLOSED_SESSION_TOMBSTONE_LIMIT = 4096;
+
 /**
  * Interactive approval backend — prompts the user via a callback.
  *
@@ -134,29 +154,21 @@ export class AutoApprovalBackend implements ApprovalBackend {
  * the next time the user opens the project.
  */
 export class InteractiveApprovalBackend implements ApprovalBackend {
-  // Session-scoped grants, keyed on the OPERATION (tool + narrowed argsPattern
-  // via buildProjectRule), NOT just the tool name. Approving `git status` for
-  // the session must not auto-allow `rm -rf /` (both are "Bash"). Allow and
-  // deny are tracked separately so a one-off deny of `curl evil` never blocks
-  // an unrelated `git status`. (TODO 5.1 会话级权限缓存.)
-  private sessionAllowRules: PermissionRule[] = [];
-  private sessionDenyRules: PermissionRule[] = [];
+  // Session-scoped grants are bucketed by ApprovalRequest.sessionId and then
+  // keyed on the OPERATION (tool + narrowed argsPattern via buildProjectRule),
+  // NOT just the tool name. Approving `git status` for one session must not
+  // auto-allow either `rm -rf /` in that same session or `git ...` in another.
+  // Allow and deny are tracked separately so a one-off deny of `curl evil`
+  // never blocks an unrelated `git status`.
+  private sessionStateById = new Map<string, InteractiveApprovalSessionState>();
+  private closedSessionIds = new Set<string>();
   private promptFn: ((request: ApprovalRequest) => Promise<ApprovalResult>) | null = null;
-  private cwd: string | null = null;
-  // Project rules saved during this session. Kept in-memory (not re-read from
-  // settings.local.json) so a stream of approvals all stay applied — the
-  // previous version passed only the freshly-added rule to the classifier,
-  // which silently dropped earlier approvals from the live classifier within
-  // the same session. We accumulate here and hand the full list to the callback.
-  private savedProjectRules: PermissionRule[] = [];
-  private onProjectRules: ((rules: PermissionRule[]) => void) | null = null;
-  // Serialize prompts so a burst of parallel tool calls doesn't queue N
-  // identical cards: while one ask is outstanding, later requests wait here
-  // and RE-CHECK the session rules when their turn comes — the first
-  // "本会话一直允许" answer then silently absorbs the queued duplicates.
-  // (All callers were already serialized at the UI anyway — the renderer
-  // shows one approval card at a time.)
-  private promptTurn: Promise<void> = Promise.resolve();
+  private legacyPromptTurn: Promise<void> = Promise.resolve();
+  private legacyContext: InteractiveApprovalContextState = {
+    cwd: null,
+    savedProjectRules: [],
+    onProjectRules: null,
+  };
 
   setPromptFn(fn: (request: ApprovalRequest) => Promise<ApprovalResult>): void {
     this.promptFn = fn;
@@ -175,7 +187,7 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
 
   /** Inject the project root so persistence writes to the right settings file. */
   setCwd(cwd: string): void {
-    this.cwd = cwd;
+    this.legacyContext.cwd = cwd;
   }
 
   /**
@@ -185,12 +197,81 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
    * earlier approvals.
    */
   setOnProjectRules(fn: (rules: PermissionRule[]) => void): void {
-    this.onProjectRules = fn;
+    this.legacyContext.onProjectRules = fn;
+  }
+
+  setSessionContext(
+    sessionId: string,
+    context: { cwd: string; onProjectRules: (rules: PermissionRule[]) => void },
+  ): void {
+    const state = this.getSessionState(sessionId, true);
+    if (!state) return;
+    state.cwd = context.cwd;
+    state.onProjectRules = context.onProjectRules;
+  }
+
+  openSession(sessionId: string): void {
+    if (!sessionId) return;
+    this.closedSessionIds.delete(sessionId);
+  }
+
+  clearSession(sessionId: string): void {
+    if (!sessionId) return;
+    this.sessionStateById.delete(sessionId);
+    this.rememberClosedSession(sessionId);
+  }
+
+  private rememberClosedSession(sessionId: string): void {
+    this.closedSessionIds.delete(sessionId);
+    this.closedSessionIds.add(sessionId);
+    while (this.closedSessionIds.size > CLOSED_SESSION_TOMBSTONE_LIMIT) {
+      const oldest = this.closedSessionIds.values().next().value;
+      if (oldest === undefined) break;
+      this.closedSessionIds.delete(oldest);
+    }
+  }
+
+  private makeSessionState(): InteractiveApprovalSessionState {
+    return {
+      allowRules: [],
+      denyRules: [],
+      promptTurn: Promise.resolve(),
+      cwd: null,
+      savedProjectRules: [],
+      onProjectRules: null,
+    };
+  }
+
+  private getSessionState(
+    sessionId: string | undefined,
+    create: boolean,
+  ): InteractiveApprovalSessionState | null {
+    if (!sessionId) return null;
+    if (this.closedSessionIds.has(sessionId)) return null;
+    const existing = this.sessionStateById.get(sessionId);
+    if (existing || !create) return existing ?? null;
+    const next = this.makeSessionState();
+    this.sessionStateById.set(sessionId, next);
+    return next;
+  }
+
+  private isActiveSessionState(
+    sessionId: string | undefined,
+    state: InteractiveApprovalSessionState | null,
+  ): state is InteractiveApprovalSessionState {
+    return (
+      !!sessionId &&
+      !!state &&
+      !this.closedSessionIds.has(sessionId) &&
+      this.sessionStateById.get(sessionId) === state
+    );
   }
 
   async requestApproval(req: ApprovalRequest): Promise<ApprovalResult> {
+    const state = this.getSessionState(req.sessionId, true);
+
     // Fast path: the operation may already be covered by a session rule.
-    const cached = this.checkSessionRules(req);
+    const cached = state ? this.checkSessionRules(req, state) : null;
     if (cached) return cached;
 
     if (!this.promptFn) {
@@ -201,53 +282,75 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
     // field doc): a burst of parallel tool calls all passes the fast path
     // before the first decision lands; without the re-check the user had to
     // answer one card per duplicate.
-    const prevTurn = this.promptTurn;
+    const prevTurn = state ? state.promptTurn : this.legacyPromptTurn;
     let release!: () => void;
-    this.promptTurn = new Promise<void>((r) => (release = r));
+    const currentTurn = new Promise<void>((r) => (release = r));
+    if (state) {
+      state.promptTurn = currentTurn;
+    } else {
+      this.legacyPromptTurn = currentTurn;
+    }
     try {
       await prevTurn;
-      const nowCached = this.checkSessionRules(req);
+      const activeState = this.isActiveSessionState(req.sessionId, state) ? state : null;
+      const nowCached = activeState ? this.checkSessionRules(req, activeState) : null;
       if (nowCached) return nowCached;
-      return await this.promptAndRecord(req);
+      return await this.promptAndRecord(req, activeState);
     } finally {
       release();
     }
   }
 
-  /** Session-rule lookup — operation-scoped (see sessionAllowRules doc). Deny
+  /** Session-rule lookup — operation-scoped (see sessionStateById doc). Deny
    *  wins over allow if both somehow match (conservative). Null = no rule. */
-  private checkSessionRules(req: ApprovalRequest): ApprovalResult | null {
-    if (this.sessionDenyRules.some((r) => ruleMatches(r, req.toolName, req.args))) {
+  private checkSessionRules(
+    req: ApprovalRequest,
+    state: InteractiveApprovalSessionState,
+  ): ApprovalResult | null {
+    if (state.denyRules.some((r) => ruleMatches(r, req.toolName, req.args))) {
       return { approved: false };
     }
-    if (this.sessionAllowRules.some((r) => ruleMatches(r, req.toolName, req.args))) {
+    if (state.allowRules.some((r) => ruleMatches(r, req.toolName, req.args))) {
       return { approved: true };
     }
     return null;
   }
 
   /** The actual interactive ask + rule recording (runs inside the prompt turn). */
-  private async promptAndRecord(req: ApprovalRequest): Promise<ApprovalResult> {
+  private async promptAndRecord(
+    req: ApprovalRequest,
+    state: InteractiveApprovalSessionState | null,
+  ): Promise<ApprovalResult> {
     if (!this.promptFn) {
       return { approved: false, reason: "interactive approval backend has no prompt function" };
     }
     const result = await this.promptFn(req);
     const scope = result.scope ?? (result.always ? "session" : "once");
+    const activeState = this.isActiveSessionState(req.sessionId, state) ? state : null;
+    const context = activeState ?? (!req.sessionId ? this.legacyContext : null);
 
     // Path narrowing only rides on an APPROVE: a path-scoped deny is confusing
     // (deny stays tool-wide). pathScope is ignored by buildProjectRule for
     // non-file tools / when absent.
     const ruleOpts = result.approved
-      ? { pathScope: result.pathScope, cwd: this.cwd ?? undefined }
+      ? { pathScope: result.pathScope, cwd: context?.cwd ?? undefined }
       : undefined;
 
     if (scope === "session" && result.always) {
+      if (!activeState) {
+        rootPermLogger.warn("permission.session_remember_ignored", {
+          cat: "permission",
+          tool: req.toolName,
+          reason: req.sessionId ? "session_closed" : "missing_session_id",
+        });
+        return result;
+      }
       // Narrow to the operation (Bash → head command, file tools → path scope)
       // so the session grant is scoped, not tool-wide. A rule with no
       // argsPattern keeps the prior tool-granularity behavior.
       const rule = buildProjectRule(req.toolName, req.args, ruleOpts);
       if (rule) {
-        const target = result.approved ? this.sessionAllowRules : this.sessionDenyRules;
+        const target = result.approved ? activeState.allowRules : activeState.denyRules;
         const dup = target.some(
           (r) =>
             r.tool === rule.tool &&
@@ -263,25 +366,25 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
       // We only persist allow rules — denies stay session-only because a
       // persisted deny is harder to recover from than a session deny.
       const rule = buildProjectRule(req.toolName, req.args, ruleOpts);
-      if (rule && this.cwd) {
+      if (rule && context?.cwd) {
         try {
-          persistProjectRule(this.cwd, rule);
+          persistProjectRule(context.cwd, rule);
           // Dedup against the in-memory list using the same equality used by
           // persistProjectRule so re-prompts on the same tool/argsPattern
           // don't bloat the live rule set.
-          const dup = this.savedProjectRules.some(
+          const dup = context.savedProjectRules.some(
             (r) =>
               r.tool === rule.tool &&
               r.decision === rule.decision &&
               JSON.stringify(r.argsPattern) === JSON.stringify(rule.argsPattern),
           );
-          if (!dup) this.savedProjectRules.push(rule);
-          this.onProjectRules?.(this.savedProjectRules);
+          if (!dup) context.savedProjectRules.push(rule);
+          context.onProjectRules?.(context.savedProjectRules);
           rootPermLogger.info("permission.persist", {
             cat: "permission",
             tool: rule.tool,
             decision: rule.decision,
-            totalProjectRules: this.savedProjectRules.length,
+            totalProjectRules: context.savedProjectRules.length,
             duplicate: dup,
           });
         } catch (err) {
@@ -297,13 +400,13 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
       // Also seed the session allow list (operation-scoped) so the rest of
       // this REPL session benefits even if the classifier path doesn't pick
       // the rule up immediately.
-      if (rule) {
-        const dup = this.sessionAllowRules.some(
+      if (rule && activeState) {
+        const dup = activeState.allowRules.some(
           (r) =>
             r.tool === rule.tool &&
             JSON.stringify(r.argsPattern) === JSON.stringify(rule.argsPattern),
         );
-        if (!dup) this.sessionAllowRules.push(rule);
+        if (!dup) activeState.allowRules.push(rule);
       }
     }
 
@@ -504,6 +607,14 @@ export function getInteractiveApprovalBackend(): InteractiveApprovalBackend {
     _interactiveBackend = new InteractiveApprovalBackend();
   }
   return _interactiveBackend;
+}
+
+export function openInteractiveApprovalSession(sessionId: string): void {
+  getInteractiveApprovalBackend().openSession(sessionId);
+}
+
+export function clearInteractiveApprovalSession(sessionId: string): void {
+  getInteractiveApprovalBackend().clearSession(sessionId);
 }
 
 export function setInteractiveApprovalFn(

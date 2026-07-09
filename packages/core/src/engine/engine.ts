@@ -1661,12 +1661,14 @@ export class Engine {
       // in this same session don't re-prompt. Headless/auto backends skip
       // this — they don't prompt, so there are no project rules to persist.
       if (approvalBackend instanceof InteractiveApprovalBackend) {
-        approvalBackend.setCwd(cwd);
-        approvalBackend.setOnProjectRules((rules) => {
-          // Prepend the *full* accumulated list of session-saved project rules
-          // so user approvals win over defaults and earlier approvals aren't
-          // dropped when later ones come in.
-          permission.reconfigure(mode, approvalBackend, [...rules, ...defaultRules]);
+        approvalBackend.setSessionContext(session.state.sessionId, {
+          cwd,
+          onProjectRules: (rules) => {
+            // Prepend the *full* accumulated list of session-saved project rules
+            // so user approvals win over defaults and earlier approvals aren't
+            // dropped when later ones come in.
+            permission.reconfigure(mode, approvalBackend, [...rules, ...defaultRules]);
+          },
         });
       }
 

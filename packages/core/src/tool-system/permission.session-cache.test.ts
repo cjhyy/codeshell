@@ -8,7 +8,13 @@
  * buildProjectRule: Bash → head command; other tools → tool granularity.
  */
 import { describe, test, expect } from "bun:test";
-import { InteractiveApprovalBackend } from "./permission.js";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  CLOSED_SESSION_TOMBSTONE_LIMIT,
+  InteractiveApprovalBackend,
+} from "./permission.js";
 import type { ApprovalRequest, ApprovalResult } from "../types.js";
 
 function backendWithAnswer(answer: ApprovalResult) {
@@ -22,11 +28,186 @@ function backendWithAnswer(answer: ApprovalResult) {
 }
 
 describe("session cache keys on the operation, not the tool", () => {
+  const sameSessionId = "session-cache-same-session";
+
+  test("session allow rules are isolated by ApprovalRequest.sessionId", async () => {
+    const b = new InteractiveApprovalBackend();
+    const seen: string[] = [];
+    b.setPromptFn(async (req) => {
+      seen.push(req.sessionId ?? "");
+      if (req.sessionId === "sess-a") {
+        return { approved: true, always: true, scope: "session" } as ApprovalResult;
+      }
+      return { approved: false } as ApprovalResult;
+    });
+
+    const a = await b.requestApproval({
+      sessionId: "sess-a",
+      toolName: "Bash",
+      args: { command: "curl https://a.example" },
+      description: "",
+      riskLevel: "medium",
+    });
+    expect(a.approved).toBe(true);
+
+    const bResult = await b.requestApproval({
+      sessionId: "sess-b",
+      toolName: "Bash",
+      args: { command: "curl https://b.example" },
+      description: "",
+      riskLevel: "medium",
+    });
+
+    expect(seen).toEqual(["sess-a", "sess-b"]);
+    expect(bResult.approved).toBe(false);
+  });
+
+  test("session deny rules are isolated by ApprovalRequest.sessionId", async () => {
+    const b = new InteractiveApprovalBackend();
+    const seen: string[] = [];
+    b.setPromptFn(async (req) => {
+      seen.push(req.sessionId ?? "");
+      if (req.sessionId === "sess-a") {
+        return { approved: false, always: true, scope: "session" } as ApprovalResult;
+      }
+      return { approved: true } as ApprovalResult;
+    });
+
+    const a = await b.requestApproval({
+      sessionId: "sess-a",
+      toolName: "Bash",
+      args: { command: "curl https://a.example" },
+      description: "",
+      riskLevel: "medium",
+    });
+    expect(a.approved).toBe(false);
+
+    const bResult = await b.requestApproval({
+      sessionId: "sess-b",
+      toolName: "Bash",
+      args: { command: "curl https://b.example" },
+      description: "",
+      riskLevel: "medium",
+    });
+
+    expect(seen).toEqual(["sess-a", "sess-b"]);
+    expect(bResult.approved).toBe(true);
+  });
+
+  test("session remember is ignored when ApprovalRequest.sessionId is absent", async () => {
+    const b = new InteractiveApprovalBackend();
+    let prompts = 0;
+    b.setPromptFn(async () => {
+      prompts += 1;
+      return prompts === 1
+        ? ({ approved: true, always: true, scope: "session" } as ApprovalResult)
+        : ({ approved: false } as ApprovalResult);
+    });
+
+    const first = await b.requestApproval({
+      toolName: "Bash",
+      args: { command: "curl https://legacy.example" },
+      description: "",
+      riskLevel: "medium",
+    });
+    expect(first.approved).toBe(true);
+
+    const second = await b.requestApproval({
+      toolName: "Bash",
+      args: { command: "curl https://legacy.example/again" },
+      description: "",
+      riskLevel: "medium",
+    });
+    expect(second.approved).toBe(false);
+    expect(prompts).toBe(2);
+  });
+
+  test("session remember still applies within the same ApprovalRequest.sessionId", async () => {
+    const b = new InteractiveApprovalBackend();
+    let prompts = 0;
+    b.setPromptFn(async () => {
+      prompts += 1;
+      return { approved: true, always: true, scope: "session" } as ApprovalResult;
+    });
+
+    const first = await b.requestApproval({
+      sessionId: "sess-same",
+      toolName: "Bash",
+      args: { command: "curl https://same.example/a" },
+      description: "",
+      riskLevel: "medium",
+    });
+    expect(first.approved).toBe(true);
+
+    const second = await b.requestApproval({
+      sessionId: "sess-same",
+      toolName: "Bash",
+      args: { command: "curl https://same.example/b" },
+      description: "",
+      riskLevel: "medium",
+    });
+    expect(second.approved).toBe(true);
+    expect(prompts).toBe(1);
+  });
+
+  test("project-scope session seed is isolated to the approving sessionId", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "permission-project-seed-"));
+    try {
+      const b = new InteractiveApprovalBackend();
+      b.setSessionContext("sess-a", { cwd, onProjectRules: () => {} });
+      b.setSessionContext("sess-b", { cwd, onProjectRules: () => {} });
+      const seen: string[] = [];
+      b.setPromptFn(async (req) => {
+        seen.push(req.sessionId ?? "");
+        if (req.sessionId === "sess-a") {
+          return { approved: true, scope: "project" } as ApprovalResult;
+        }
+        return { approved: false } as ApprovalResult;
+      });
+
+      const first = await b.requestApproval({
+        sessionId: "sess-a",
+        toolName: "Bash",
+        args: { command: "curl https://project-seed.example/a" },
+        description: "",
+        riskLevel: "medium",
+      });
+      expect(first.approved).toBe(true);
+
+      const sameSessionSeed = await b.requestApproval({
+        sessionId: "sess-a",
+        toolName: "Bash",
+        args: { command: "curl https://project-seed.example/again" },
+        description: "",
+        riskLevel: "medium",
+      });
+      expect(sameSessionSeed.approved).toBe(true);
+      expect(seen).toEqual(["sess-a"]);
+
+      const otherSession = await b.requestApproval({
+        sessionId: "sess-b",
+        toolName: "Bash",
+        args: { command: "curl https://project-seed.example/b" },
+        description: "",
+        riskLevel: "medium",
+      });
+      expect(otherSession.approved).toBe(false);
+      expect(seen).toEqual(["sess-a", "sess-b"]);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
   test("approving `git status` for the session does NOT auto-allow `rm -rf /`", async () => {
-    const { b } = backendWithAnswer({ approved: true, always: true, scope: "session" } as ApprovalResult);
+    const { b } = backendWithAnswer({
+      approved: true,
+      always: true,
+      scope: "session",
+    } as ApprovalResult);
 
     // First: approve `git status` for the session.
     const r1 = await b.requestApproval({
+      sessionId: sameSessionId,
       toolName: "Bash",
       args: { command: "git status" },
       description: "",
@@ -41,6 +222,7 @@ describe("session cache keys on the operation, not the tool", () => {
       return { approved: false } as ApprovalResult;
     });
     const r2 = await b.requestApproval({
+      sessionId: sameSessionId,
       toolName: "Bash",
       args: { command: "git status -s" },
       description: "",
@@ -57,6 +239,7 @@ describe("session cache keys on the operation, not the tool", () => {
       return { approved: false } as ApprovalResult;
     });
     const r3 = await b.requestApproval({
+      sessionId: sameSessionId,
       toolName: "Bash",
       args: { command: "rm -rf /" },
       description: "",
@@ -71,8 +254,13 @@ describe("session cache keys on the operation, not the tool", () => {
     // smuggle a dangerous tail past it: the cached allow rule `^git(\s|$)` would
     // regex-match the whole "git status && rm -rf /" string. The session cache
     // must re-prompt when the command chains beyond the approved head.
-    const { b } = backendWithAnswer({ approved: true, always: true, scope: "session" } as ApprovalResult);
+    const { b } = backendWithAnswer({
+      approved: true,
+      always: true,
+      scope: "session",
+    } as ApprovalResult);
     const r1 = await b.requestApproval({
+      sessionId: sameSessionId,
       toolName: "Bash",
       args: { command: "git status" },
       description: "",
@@ -86,6 +274,7 @@ describe("session cache keys on the operation, not the tool", () => {
       return { approved: false } as ApprovalResult;
     });
     const r2 = await b.requestApproval({
+      sessionId: sameSessionId,
       toolName: "Bash",
       args: { command: "git status && rm -rf /" },
       description: "",
@@ -108,14 +297,30 @@ describe("session cache keys on the operation, not the tool", () => {
       "git status > /etc/hosts", // redirect to a sensitive path
     ];
     for (const command of smuggles) {
-      const { b } = backendWithAnswer({ approved: true, always: true, scope: "session" } as ApprovalResult);
-      await b.requestApproval({ toolName: "Bash", args: { command: "git status" }, description: "", riskLevel: "low" });
+      const { b } = backendWithAnswer({
+        approved: true,
+        always: true,
+        scope: "session",
+      } as ApprovalResult);
+      await b.requestApproval({
+        sessionId: sameSessionId,
+        toolName: "Bash",
+        args: { command: "git status" },
+        description: "",
+        riskLevel: "low",
+      });
       let prompted = false;
       b.setPromptFn(async () => {
         prompted = true;
         return { approved: false } as ApprovalResult;
       });
-      const r = await b.requestApproval({ toolName: "Bash", args: { command }, description: "", riskLevel: "high" });
+      const r = await b.requestApproval({
+        sessionId: sameSessionId,
+        toolName: "Bash",
+        args: { command },
+        description: "",
+        riskLevel: "high",
+      });
       expect(prompted, `must re-prompt for: ${command}`).toBe(true);
       expect(r.approved, `must NOT auto-allow: ${command}`).toBe(false);
     }
@@ -124,14 +329,25 @@ describe("session cache keys on the operation, not the tool", () => {
   test("a benign single command with the same head still rides the grant (no over-blocking)", async () => {
     // The fix must not break the legitimate session-cache win: another simple
     // `git ...` (flags only, no chaining) stays auto-allowed.
-    const { b } = backendWithAnswer({ approved: true, always: true, scope: "session" } as ApprovalResult);
-    await b.requestApproval({ toolName: "Bash", args: { command: "git status" }, description: "", riskLevel: "low" });
+    const { b } = backendWithAnswer({
+      approved: true,
+      always: true,
+      scope: "session",
+    } as ApprovalResult);
+    await b.requestApproval({
+      sessionId: sameSessionId,
+      toolName: "Bash",
+      args: { command: "git status" },
+      description: "",
+      riskLevel: "low",
+    });
     let prompted = false;
     b.setPromptFn(async () => {
       prompted = true;
       return { approved: false } as ApprovalResult;
     });
     const r = await b.requestApproval({
+      sessionId: sameSessionId,
       toolName: "Bash",
       args: { command: "git diff --stat HEAD~1" },
       description: "",
@@ -142,8 +358,13 @@ describe("session cache keys on the operation, not the tool", () => {
   });
 
   test("non-Bash tools still cache at tool granularity for the session", async () => {
-    const { b } = backendWithAnswer({ approved: true, always: true, scope: "session" } as ApprovalResult);
+    const { b } = backendWithAnswer({
+      approved: true,
+      always: true,
+      scope: "session",
+    } as ApprovalResult);
     const r1 = await b.requestApproval({
+      sessionId: sameSessionId,
       toolName: "Write",
       args: { file_path: "/a.txt" },
       description: "",
@@ -157,6 +378,7 @@ describe("session cache keys on the operation, not the tool", () => {
       return { approved: false } as ApprovalResult;
     });
     const r2 = await b.requestApproval({
+      sessionId: sameSessionId,
       toolName: "Write",
       args: { file_path: "/b.txt" },
       description: "",
@@ -167,8 +389,13 @@ describe("session cache keys on the operation, not the tool", () => {
   });
 
   test("a session DENY for one command does not block a different command", async () => {
-    const { b } = backendWithAnswer({ approved: false, always: true, scope: "session" } as ApprovalResult);
+    const { b } = backendWithAnswer({
+      approved: false,
+      always: true,
+      scope: "session",
+    } as ApprovalResult);
     const r1 = await b.requestApproval({
+      sessionId: sameSessionId,
       toolName: "Bash",
       args: { command: "curl evil.com" },
       description: "",
@@ -183,6 +410,7 @@ describe("session cache keys on the operation, not the tool", () => {
       return { approved: true } as ApprovalResult;
     });
     const r2 = await b.requestApproval({
+      sessionId: sameSessionId,
       toolName: "Bash",
       args: { command: "git status" },
       description: "",
@@ -190,6 +418,61 @@ describe("session cache keys on the operation, not the tool", () => {
     });
     expect(prompted).toBe(true);
     expect(r2.approved).toBe(true);
+  });
+});
+
+describe("closed-session tombstones", () => {
+  test("caps old tombstones while preserving late-approval protection for recent sessions", async () => {
+    const b = new InteractiveApprovalBackend();
+    const closedSessionIds = (b as any).closedSessionIds as Set<string>;
+    for (let i = 0; i < CLOSED_SESSION_TOMBSTONE_LIMIT; i += 1) {
+      b.clearSession(`closed-old-${i}`);
+    }
+
+    let resolvePrompt!: (r: ApprovalResult) => void;
+    let prompts = 0;
+    const promptStarted = new Promise<void>((resolve) => {
+      b.setPromptFn(() => {
+        prompts += 1;
+        resolve();
+        return new Promise<ApprovalResult>((r) => {
+          resolvePrompt = r;
+        });
+      });
+    });
+
+    const sessionId = "closed-recent";
+    const pending = b.requestApproval({
+      sessionId,
+      toolName: "Bash",
+      args: { command: "curl https://late-recent.example/a" },
+      description: "",
+      riskLevel: "medium",
+    });
+    await promptStarted;
+    b.clearSession(sessionId);
+
+    expect(closedSessionIds.size).toBeLessThanOrEqual(CLOSED_SESSION_TOMBSTONE_LIMIT);
+    expect(closedSessionIds.has("closed-old-0")).toBe(false);
+    expect(closedSessionIds.has(sessionId)).toBe(true);
+
+    resolvePrompt({ approved: true, always: true, scope: "session" } as ApprovalResult);
+    expect((await pending).approved).toBe(true);
+
+    b.setPromptFn(async () => {
+      prompts += 1;
+      return { approved: false } as ApprovalResult;
+    });
+    const afterClose = await b.requestApproval({
+      sessionId,
+      toolName: "Bash",
+      args: { command: "curl https://late-recent.example/b" },
+      description: "",
+      riskLevel: "medium",
+    });
+
+    expect(afterClose.approved).toBe(false);
+    expect(prompts).toBe(2);
   });
 });
 
@@ -203,6 +486,7 @@ describe("并发审批串行化(burst dedupe)", () => {
       return new Promise<ApprovalResult>((r) => (resolvePrompt = r));
     });
     const req = {
+      sessionId: "burst-same-session",
       toolName: "Bash",
       args: { command: "lsof -p 1" },
       description: "",
@@ -230,6 +514,7 @@ describe("并发审批串行化(burst dedupe)", () => {
       return new Promise<ApprovalResult>((r) => resolvers.push(r));
     });
     const req = {
+      sessionId: "burst-once-session",
       toolName: "Bash",
       args: { command: "lsof -p 2" },
       description: "",

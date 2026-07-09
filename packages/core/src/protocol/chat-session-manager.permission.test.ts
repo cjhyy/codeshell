@@ -18,11 +18,12 @@ import { join } from "node:path";
 import { ChatSessionManager, type EngineConfigSlice } from "./chat-session-manager.js";
 import type { Engine } from "../engine/engine.js";
 import type { EngineRuntime } from "../engine/runtime.js";
-import type { PermissionMode } from "../types.js";
+import type { ApprovalRequest, ApprovalResult, PermissionMode } from "../types.js";
 import {
   enforcePathPolicyWithApproval,
   _resetSessionPathGrants,
 } from "../tool-system/path-policy.js";
+import { getInteractiveApprovalBackend } from "../tool-system/permission.js";
 import type { ToolContext } from "../tool-system/context.js";
 import { CredentialStore } from "../credentials/store.js";
 import {
@@ -69,6 +70,16 @@ function tempDir(prefix: string): string {
 
 function parseToolResult(raw: string): Record<string, unknown> {
   return JSON.parse(raw) as Record<string, unknown>;
+}
+
+function interactiveRequest(sessionId: string, command: string): ApprovalRequest {
+  return {
+    sessionId,
+    toolName: "Bash",
+    args: { command },
+    description: "",
+    riskLevel: "medium",
+  };
 }
 
 afterEach(() => {
@@ -122,6 +133,77 @@ describe("ChatSessionManager.getOrCreate re-applies permissionMode (#11)", () =>
 });
 
 describe("ChatSessionManager.close approval cleanup", () => {
+  it("clears interactive approval session rules for the closed session", async () => {
+    const sessionId = "interactive-cleanup-s1";
+    const { mgr } = makeManager("default");
+    mgr.getOrCreate(sessionId, { permissionMode: "default" } as EngineConfigSlice);
+    const backend = getInteractiveApprovalBackend();
+    let prompts = 0;
+    backend.setPromptFn(async () => {
+      prompts += 1;
+      return prompts === 1
+        ? ({ approved: true, always: true, scope: "session" } as ApprovalResult)
+        : ({ approved: false } as ApprovalResult);
+    });
+
+    const first = await backend.requestApproval(
+      interactiveRequest(sessionId, "curl https://cleanup.example/a"),
+    );
+    expect(first.approved).toBe(true);
+
+    const remembered = await backend.requestApproval(
+      interactiveRequest(sessionId, "curl https://cleanup.example/b"),
+    );
+    expect(remembered.approved).toBe(true);
+    expect(prompts).toBe(1);
+
+    mgr.close(sessionId);
+
+    const afterClose = await backend.requestApproval(
+      interactiveRequest(sessionId, "curl https://cleanup.example/c"),
+    );
+    expect(afterClose.approved).toBe(false);
+    expect(prompts).toBe(2);
+  });
+
+  it("ignores a late interactive approval that resolves after session close", async () => {
+    const sessionId = "interactive-late-s1";
+    const { mgr } = makeManager("default");
+    mgr.getOrCreate(sessionId, { permissionMode: "default" } as EngineConfigSlice);
+    const backend = getInteractiveApprovalBackend();
+    let resolvePrompt!: (r: ApprovalResult) => void;
+    let prompts = 0;
+    let markPromptStarted!: () => void;
+    const promptStarted = new Promise<void>((resolve) => {
+      markPromptStarted = resolve;
+    });
+    backend.setPromptFn(() => {
+      prompts += 1;
+      markPromptStarted();
+      return new Promise<ApprovalResult>((resolve) => {
+        resolvePrompt = resolve;
+      });
+    });
+
+    const pending = backend.requestApproval(
+      interactiveRequest(sessionId, "curl https://late.example/a"),
+    );
+    await promptStarted;
+    mgr.close(sessionId);
+    resolvePrompt({ approved: true, always: true, scope: "session" } as ApprovalResult);
+    expect((await pending).approved).toBe(true);
+
+    backend.setPromptFn(async () => {
+      prompts += 1;
+      return { approved: false } as ApprovalResult;
+    });
+    const afterClose = await backend.requestApproval(
+      interactiveRequest(sessionId, "curl https://late.example/b"),
+    );
+    expect(afterClose.approved).toBe(false);
+    expect(prompts).toBe(2);
+  });
+
   it("clears session path approvals for the closed session", async () => {
     _resetSessionPathGrants();
     const { mgr } = makeManager("default");
