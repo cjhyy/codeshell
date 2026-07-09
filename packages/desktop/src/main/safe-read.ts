@@ -20,7 +20,10 @@ function canonicalCodeShellMarkdownPath(filePath: string): string {
   // physical path into `.agents`. Accept either root marker. The per-path
   // allowlist below (assert…) is the real gate against arbitrary reads; this
   // segment check only rejects paths that resolve nowhere near a skills dir.
-  if (!segments.includes(".code-shell") && !segments.includes(".agents")) {
+  const hasAgentsSkillsRoot = segments.some(
+    (segment, index) => segment === ".agents" && segments[index + 1] === "skills",
+  );
+  if (!segments.includes(".code-shell") && !hasAgentsSkillsRoot) {
     throw new Error(`refusing to read path outside .code-shell: ${filePath}`);
   }
   if (!resolved.toLowerCase().endsWith(".md")) {

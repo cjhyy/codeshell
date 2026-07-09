@@ -45,6 +45,12 @@ describe("assertCodeShellMarkdownPath", () => {
     expect(() => assertCodeShellMarkdownPath(projectAgent)).not.toThrow();
   });
 
+  test("accepts a listed .md under a canonical .agents/skills dir", () => {
+    const agentSkill = seedFile("home", ".agents", "skills", "s", "SKILL.md");
+    rememberCodeShellMarkdownPath(agentSkill);
+    expect(() => assertCodeShellMarkdownPath(agentSkill)).not.toThrow();
+  });
+
   test("rejects a path outside any .code-shell dir", () => {
     expect(() => assertCodeShellMarkdownPath("/etc/passwd")).toThrow();
   });
@@ -72,6 +78,23 @@ describe("assertCodeShellMarkdownPath", () => {
   test("rejects a non-markdown file even under .code-shell", () => {
     const p = seedFile("home", ".code-shell", "skills", "s", "secret.key");
     expect(() => assertCodeShellMarkdownPath(p)).toThrow();
+  });
+
+  test("rejects a .code-shell symlink resolving into .agents without skills", () => {
+    const realDir = path.join(root, "outside", ".agents", "evil");
+    mkdirSync(realDir, { recursive: true });
+    writeFileSync(path.join(realDir, "SKILL.md"), "# evil\n", "utf-8");
+    const linkParent = path.join(root, "proj", ".code-shell", "skills");
+    mkdirSync(linkParent, { recursive: true });
+    symlinkSync(realDir, path.join(linkParent, "s"), "dir");
+    const linkedFile = path.join(linkParent, "s", "SKILL.md");
+
+    expect(() => rememberCodeShellMarkdownPath(linkedFile)).toThrow(
+      "refusing to read path outside .code-shell",
+    );
+    expect(() => assertCodeShellMarkdownPath(linkedFile)).toThrow(
+      "refusing to read path outside .code-shell",
+    );
   });
 
   test("accepts a .code-shell/skills symlink that resolves into .agents/skills (npx skills add)", () => {
