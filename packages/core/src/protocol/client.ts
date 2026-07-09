@@ -25,6 +25,8 @@ import {
   createRequest,
   isResponse,
   isNotification,
+  type ApprovalRequestNotification,
+  type ApprovalResolvedNotification,
 } from "./types.js";
 import type {
   StreamEvent,
@@ -38,10 +40,18 @@ import { logger } from "../logging/logger.js";
 
 // ─── Event Types ────────────────────────────────────────────────────
 
+export type ApprovalRequestMeta = Pick<ApprovalRequestNotification, "sessionId">;
+export type ApprovalResolvedEvent = ApprovalResolvedNotification;
+
 export interface AgentClientEvents {
   /** Multi-session envelope: carries sessionId + event. */
   stream: (envelope: AgentStreamEventNotification) => void;
-  approvalRequest: (requestId: string, request: ApprovalRequest) => void;
+  approvalRequest: (
+    requestId: string,
+    request: ApprovalRequest,
+    meta?: ApprovalRequestMeta,
+  ) => void;
+  approvalResolved: (event: ApprovalResolvedEvent) => void;
   status: (status: string, message?: string) => void;
 }
 
@@ -179,9 +189,10 @@ export class AgentClient {
    * a goal was actually cleared (false = there was none).
    */
   async goalClear(sessionId?: string): Promise<boolean> {
-    const res = (await this.request(Methods.GoalClear, { sessionId } as Record<string, unknown>)) as
-      | { cleared?: boolean }
-      | undefined;
+    const res = (await this.request(Methods.GoalClear, { sessionId } as Record<
+      string,
+      unknown
+    >)) as { cleared?: boolean } | undefined;
     return res?.cleared === true;
   }
 
@@ -227,9 +238,10 @@ export class AgentClient {
    * arrive as a normal user bubble).
    */
   async unsteer(sessionId: string, id: string): Promise<boolean> {
-    const res = (await this.request(Methods.Unsteer, { sessionId, id } as Record<string, unknown>)) as
-      | { removed?: boolean }
-      | undefined;
+    const res = (await this.request(Methods.Unsteer, { sessionId, id } as Record<
+      string,
+      unknown
+    >)) as { removed?: boolean } | undefined;
     return res?.removed === true;
   }
 
@@ -304,12 +316,24 @@ export class AgentClient {
     this.emitter.off("stream", handler);
   }
 
-  onApprovalRequest(handler: (requestId: string, request: ApprovalRequest) => void): void {
+  onApprovalRequest(
+    handler: (requestId: string, request: ApprovalRequest, meta?: ApprovalRequestMeta) => void,
+  ): void {
     this.emitter.on("approvalRequest", handler);
   }
 
-  offApprovalRequest(handler: (requestId: string, request: ApprovalRequest) => void): void {
+  offApprovalRequest(
+    handler: (requestId: string, request: ApprovalRequest, meta?: ApprovalRequestMeta) => void,
+  ): void {
     this.emitter.off("approvalRequest", handler);
+  }
+
+  onApprovalResolved(handler: (event: ApprovalResolvedEvent) => void): void {
+    this.emitter.on("approvalResolved", handler);
+  }
+
+  offApprovalResolved(handler: (event: ApprovalResolvedEvent) => void): void {
+    this.emitter.off("approvalResolved", handler);
   }
 
   onStatus(handler: (status: string, message?: string) => void): void {
@@ -389,7 +413,21 @@ export class AgentClient {
         const requestId = params.requestId as string | undefined;
         const request = params.request as ApprovalRequest | undefined;
         if (requestId && request) {
-          this.emitter.emit("approvalRequest", requestId, request);
+          const sessionId =
+            typeof params.sessionId === "string" ? (params.sessionId as string) : undefined;
+          const meta: ApprovalRequestMeta = sessionId === undefined ? {} : { sessionId };
+          this.emitter.emit("approvalRequest", requestId, request, meta);
+        }
+        break;
+      }
+      case Methods.ApprovalResolved: {
+        const requestId = params.requestId as string | undefined;
+        if (requestId) {
+          const sessionId =
+            typeof params.sessionId === "string" ? (params.sessionId as string) : undefined;
+          const event: ApprovalResolvedEvent =
+            sessionId === undefined ? { requestId } : { sessionId, requestId };
+          this.emitter.emit("approvalResolved", event);
         }
         break;
       }

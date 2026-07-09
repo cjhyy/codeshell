@@ -324,6 +324,13 @@ export interface ApprovalRequestNotification {
   request: ApprovalRequest;
 }
 
+/** Server tells clients a pending approval/ask has been resolved elsewhere. */
+export interface ApprovalResolvedNotification {
+  /** Originating engine session when known. */
+  sessionId?: string;
+  requestId: string;
+}
+
 /** Server status changed. */
 export interface StatusNotification {
   status: "ready" | "running" | "error" | "shutdown";
