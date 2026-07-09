@@ -140,6 +140,7 @@ describe("Engine structured image attachment vision gate", () => {
       });
 
       expect(result.reason).toBe("completed");
+      expect(result.text).toBe("ok");
       expect(scenario.calls.length).toBeGreaterThan(0);
       expect(scenario.calls.flatMap((call) => imageBlocks(call))).toHaveLength(0);
       const textMessages = scenario.calls
