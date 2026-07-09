@@ -125,6 +125,7 @@ export function buildCommands(opts: {
     { id: "go.browser", label: tt("panels.palette.openBrowser"), hint: "Cmd+T", run: () => openPanel("browser") },
     { id: "go.review", label: tt("panels.palette.openReview"), hint: "Ctrl+Shift+G", run: () => openPanel("review") },
     { id: "go.terminal", label: tt("panels.palette.openTerminal"), hint: "Ctrl+`", run: () => openPanel("terminal") },
+    { id: "go.quickChat", label: tt("panels.palette.openQuickChat"), run: () => openPanel("quickChat") },
     { id: "go.sessions", label: tt("panels.palette.openSessions"), run: () => setViewMode("sessions") },
     { id: "go.approvals", label: tt("panels.palette.openApprovals"), run: () => setViewMode("approvals") },
     { id: "go.runs", label: tt("panels.palette.openRuns"), run: () => setViewMode("runs") },

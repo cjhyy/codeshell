@@ -10,6 +10,7 @@ import {
   Minimize2,
   ServerCog,
   Bot,
+  MessageCircle,
 } from "lucide-react";
 import type { PanelTab } from "../view";
 import { cn } from "@/lib/utils";
@@ -96,6 +97,12 @@ interface Props {
   onRemoveBrowserAnchor?: (anchorId: string) => void;
   /** Update a browser anchor's comment by id. */
   onUpdateBrowserAnchor?: (anchorId: string, comment: string) => void;
+  /** Render an isolated quick-chat tab body owned by this panel bucket. */
+  renderQuickChatPanel?: (args: {
+    ownerBucket: string;
+    tabId: string;
+    cwd: string | null;
+  }) => React.ReactNode;
 }
 
 const KINDS: { kind: PanelTab; Icon: typeof FolderTree }[] = [
@@ -105,6 +112,7 @@ const KINDS: { kind: PanelTab; Icon: typeof FolderTree }[] = [
   { kind: "terminal", Icon: SquareTerminal },
   { kind: "shells", Icon: ServerCog },
   { kind: "ccRoom", Icon: Bot },
+  { kind: "quickChat", Icon: MessageCircle },
 ];
 
 const META: Record<PanelTab, { Icon: typeof FolderTree }> = {
@@ -114,6 +122,7 @@ const META: Record<PanelTab, { Icon: typeof FolderTree }> = {
   terminal: { Icon: SquareTerminal },
   shells: { Icon: ServerCog },
   ccRoom: { Icon: Bot },
+  quickChat: { Icon: MessageCircle },
 };
 
 /** Translated label for a panel kind. */
@@ -149,6 +158,7 @@ export function PanelArea({
   browserAnchors,
   onRemoveBrowserAnchor,
   onUpdateBrowserAnchor,
+  renderQuickChatPanel,
   tabs,
   setTabs,
   activeId,
@@ -382,6 +392,7 @@ export function PanelArea({
               onAttachImage={onAttachImage}
               onRemoveBrowserAnchor={onRemoveBrowserAnchor}
               onUpdateBrowserAnchor={onUpdateBrowserAnchor}
+              renderQuickChatPanel={renderQuickChatPanel}
             />
           </Slot>
         ))}
@@ -428,6 +439,7 @@ function PanelBody({
   browserAnchors,
   onRemoveBrowserAnchor,
   onUpdateBrowserAnchor,
+  renderQuickChatPanel,
 }: {
   tab: OpenTab;
   bucket: string;
@@ -443,6 +455,11 @@ function PanelBody({
   browserAnchors?: Anchor[];
   onRemoveBrowserAnchor?: (anchorId: string) => void;
   onUpdateBrowserAnchor?: (anchorId: string, comment: string) => void;
+  renderQuickChatPanel?: (args: {
+    ownerBucket: string;
+    tabId: string;
+    cwd: string | null;
+  }) => React.ReactNode;
 }) {
   switch (tab.kind) {
     case "files":
@@ -481,6 +498,8 @@ function PanelBody({
       return <BackgroundShellPanel sessionId={engineSessionId ?? null} />;
     case "ccRoom":
       return <CCRoomView cwd={cwd} />;
+    case "quickChat":
+      return renderQuickChatPanel?.({ ownerBucket: bucket, tabId: tab.id, cwd }) ?? null;
   }
 }
 
