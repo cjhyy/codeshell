@@ -23,6 +23,7 @@ export const panels = {
         terminal: "终端",
         shells: "后台",
         ccRoom: "Claude Code / Codex",
+        quickChat: "快聊",
       },
       area: {
         resizeWidth: "调整面板宽度",
@@ -63,6 +64,14 @@ export const panels = {
         title: "终端",
         processExited: "[进程已退出 (code {code})]",
         startFailed: "[终端启动失败: {detail}]",
+      },
+      quickChat: {
+        title: "快聊",
+        empty: "新的临时对话",
+        placeholder: "输入消息…",
+        send: "发送",
+        stop: "停止",
+        loading: "准备中…",
       },
       files: {
         filterPlaceholder: "筛选文件…",
@@ -152,6 +161,7 @@ export const panels = {
         openBrowser: "打开 浏览器",
         openReview: "打开 审查",
         openTerminal: "打开 终端",
+        openQuickChat: "打开 快聊",
         openSessions: "打开 会话",
         openApprovals: "打开 审批",
         openRuns: "打开 运行",
@@ -209,6 +219,7 @@ export const panels = {
         terminal: "Terminal",
         shells: "Background",
         ccRoom: "Claude Code / Codex",
+        quickChat: "Quick Chat",
       },
       area: {
         resizeWidth: "Resize panel width",
@@ -249,6 +260,14 @@ export const panels = {
         title: "Terminal",
         processExited: "[Process exited (code {code})]",
         startFailed: "[Terminal failed to start: {detail}]",
+      },
+      quickChat: {
+        title: "Quick Chat",
+        empty: "New temporary chat",
+        placeholder: "Type a message…",
+        send: "Send",
+        stop: "Stop",
+        loading: "Preparing…",
       },
       files: {
         filterPlaceholder: "Filter files…",
@@ -339,6 +358,7 @@ export const panels = {
         openBrowser: "Open Browser",
         openReview: "Open Review",
         openTerminal: "Open Terminal",
+        openQuickChat: "Open Quick Chat",
         openSessions: "Open Sessions",
         openApprovals: "Open Approvals",
         openRuns: "Open Runs",
