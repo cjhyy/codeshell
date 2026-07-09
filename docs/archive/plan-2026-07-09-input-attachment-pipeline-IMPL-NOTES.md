@@ -3,7 +3,7 @@
 Date: 2026-07-09
 
 This file records the implementation status for
-`docs/plan-2026-07-09-input-attachment-pipeline.md`. The plan document itself was not edited.
+`docs/archive/plan-2026-07-09-input-attachment-pipeline.md`. The plan document itself was not edited.
 
 ## Stage status
 

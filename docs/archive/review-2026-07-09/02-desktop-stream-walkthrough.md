@@ -94,7 +94,7 @@
 - 文件：`packages/desktop/src/renderer/App.tsx:3483`、`packages/desktop/src/renderer/MessageStream.tsx:88`、`packages/desktop/src/renderer/MessageStream.tsx:112`、`packages/desktop/src/renderer/chat/stickToBottom.ts:45`
 - 输入：`messages`、`turnEpoch`、`engineSessionId`、`liveTurnActive`、`sendEpoch`。
 - 输出：滚动容器 ref、`showJump`、`scrollToBottom`，并在发送、session 切换、stream 内容增长时决定是否贴底。
-- 为什么需要：todo 背景记录了两个交互目标：流式时自动跟随，用户上滑时暂停，回到底部/点跳底/发新消息恢复（`docs/todo/desktop-streaming-markdown-autoscroll-plan.md:9`）。当前实现用纯 follow reducer 处理 programmatic scroll race，原因是 renderer 测试没有 jsdom，滚动状态机必须能单测（`packages/desktop/src/renderer/chat/followState.ts:1`、`docs/todo/desktop-streaming-markdown-autoscroll-plan.md:645`）。
+- 为什么需要：todo 背景记录了两个交互目标：流式时自动跟随，用户上滑时暂停，回到底部/点跳底/发新消息恢复（`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:9`）。当前实现用纯 follow reducer 处理 programmatic scroll race，原因是 renderer 测试没有 jsdom，滚动状态机必须能单测（`packages/desktop/src/renderer/chat/followState.ts:1`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:645`）。
 
 ### 16. `MessageStream` 把 raw messages 折成 render items
 - 文件：`packages/desktop/src/renderer/MessageStream.tsx:127`、`packages/desktop/src/renderer/MessageStream.tsx:144`、`packages/desktop/src/renderer/messages/streamGroups.ts:172`、`packages/desktop/src/renderer/messages/streamGroups.ts:183`
@@ -130,13 +130,13 @@
 - 文件：`packages/desktop/src/renderer/messages/AssistantMessageView.tsx:46`、`packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx:102`、`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:34`、`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:93`
 - 输入：`AssistantMessage.text` 或 process card 内 assistant item 的 `text`，且 `done:false`。
 - 输出：`StreamingMarkdownBody`：稳定前缀走窄 Markdown，活跃尾部走 `<pre>`。
-- 为什么需要：流式 Markdown 的 todo 背景是“先显示原文，done 后突变”的体验问题，但不能每 token 全量重解析导致卡顿/抖动（`docs/todo/desktop-streaming-markdown-autoscroll-plan.md:9`、`docs/todo/desktop-streaming-markdown-autoscroll-plan.md:608`）。当前实现用 120ms throttle、按空行切 chunk、memo chunk，只让最新 chunk 重解析（`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:52`、`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:82`）。
+- 为什么需要：流式 Markdown 的 todo 背景是“先显示原文，done 后突变”的体验问题，但不能每 token 全量重解析导致卡顿/抖动（`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:9`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:608`）。当前实现用 120ms throttle、按空行切 chunk、memo chunk，只让最新 chunk 重解析（`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:52`、`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:82`）。
 
 ### 22. `splitStreamingMarkdown` 把半成品留在 active tail
 - 文件：`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:1`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:8`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:81`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:121`
 - 输入：正在增长的 Markdown text buffer。
 - 输出：`{ stablePrefix, activeTail }`。
-- 为什么需要：切点只取最后一个空行边界，且不能切在未闭合 fenced code block 中；不确定时宁可推入 tail。这样避免 setext/list/paragraph 等 Markdown 块因下一行到来回头改结构，也避免未闭合 code fence 被丢给解析/高亮造成抖动（`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:8`、`docs/todo/desktop-streaming-markdown-autoscroll-plan.md:615`）。
+- 为什么需要：切点只取最后一个空行边界，且不能切在未闭合 fenced code block 中；不确定时宁可推入 tail。这样避免 setext/list/paragraph 等 Markdown 块因下一行到来回头改结构，也避免未闭合 code fence 被丢给解析/高亮造成抖动（`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:8`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:615`）。
 
 ### 23. done 后切完整 Markdown 管线
 - 文件：`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:40`、`packages/desktop/src/renderer/Markdown.tsx:160`、`packages/desktop/src/renderer/Markdown.tsx:170`、`packages/desktop/src/renderer/Markdown.tsx:179`

@@ -2,7 +2,7 @@
 
 本文档只覆盖 P0：把自动提取器写出的记忆从 `user` 区改到 `dream` 区，并同时补齐去重上下文、global dream 加载、同 pipeline fresh-entry 保护、pending legacy 保留。P0 不做存量清理 UI、dream raw/consolidated 分层、rate-limit gate。
 
-依据：`docs/todo/memory-redesign-eval.md:3` 到 `:5` 已确认方向可行但不能只改路由；`docs/todo/memory-redesign-eval.md:224` 到 `:230` 明确 P0 内容；`docs/todo/plan-todo-batch-2026-07.md:179` 到 `:182` 是记忆项的原始现状记录。下面所有行号均为当前代码的预修改锚点。
+依据：`docs/todo/memory-redesign-eval.md:3` 到 `:5` 已确认方向可行但不能只改路由；`docs/todo/memory-redesign-eval.md:224` 到 `:230` 明确 P0 内容；`docs/archive/todo/plan-todo-batch-2026-07.md:179` 到 `:182` 是记忆项的原始现状记录。下面所有行号均为当前代码的预修改锚点。
 
 ## P0 决策
 

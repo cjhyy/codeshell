@@ -5,7 +5,13 @@
 node_modules
 node_modules/
 dist/
+.turbo/
+.vite/
 *.tsbuildinfo
+*.tmp
+*.bak
+*.orig
+*~
 .env
 .env.local
 # npm auth token — never commit. CI passes the token via NPM_CONFIG_TOKEN env,

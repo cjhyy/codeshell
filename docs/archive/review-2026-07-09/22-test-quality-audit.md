@@ -6,7 +6,7 @@
 
 方法：
 
-- 读取主仓 `CODESHELL.md`，并对照 `docs/review-2026-07-09/08-N03-fix-design.md`、`12-N06-fix-design.md`、`15-p2-fix-checklist.md`、`17-fix-execution-plan.md`、`21-test-coverage-gaps.md` 的目标契约。
+- 读取主仓 `CODESHELL.md`，并对照 `docs/archive/review-2026-07-09/08-N03-fix-design.md`、`12-N06-fix-design.md`、`15-p2-fix-checklist.md`、`17-fix-execution-plan.md`、`21-test-coverage-gaps.md` 的目标契约。
 - 对每个测试文件阅读 diff 和断言逻辑，再读取对应实现路径，判断 mock 边界是否保留目标语义。
 - 对关键测试逐项做反事实推理：如果删除对应实现、恢复旧 bug、或改坏目标行为，测试是否会红。
 - 只读抽跑所有列出的目标测试文件，未修改测试/源码，未 commit。

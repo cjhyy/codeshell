@@ -60,7 +60,7 @@ bun run bench:render   # render benchmarks (tail / streaming / spinner / wheel)
 ## Where to put things
 
 - **Roadmap TODOs** → root `TODO.md` (has P0-P7 priority sections). There is no `todo/` directory for roadmap items.
-- **In-progress design drafts** → `docs/todo/*.md` (e.g. `desktop-streaming-markdown-autoscroll-plan.md`).
+- **In-progress design drafts** → `docs/todo/*.md` (e.g. `session-cumulative-cache-usage-plan.md`).
 - **Test files** → `tests/` and `packages/*/src/**/*.test.ts`.
 - **Prompt sections** → `packages/core/src/prompt/sections/*.md` (copied to `dist/prompt/sections/` at build via `scripts/copy-assets.mjs`).
 

@@ -535,4 +535,4 @@ bun test tests/skills-scanner.test.ts packages/core/src/skills/scanner.allowlist
 
 本次调研和方案编写实际只写入：
 
-- `docs/todo/plan-group-a-core.md`
+- `docs/archive/todo/plan-group-a-core.md`

@@ -1,7 +1,7 @@
 # N-03 `max_turns` 双发 `turn_complete` 修复设计
 
 本文只做修复设计，不改 `packages/**` 源码，不跑构建/测试。结论基于
-`docs/review-2026-07-09/07-new-observations-verification.md` 中已确证的 N-03，
+`docs/archive/review-2026-07-09/07-new-observations-verification.md` 中已确证的 N-03，
 并回读当前源码行号。
 
 ## 0. 结论摘要

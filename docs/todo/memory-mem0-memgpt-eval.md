@@ -200,7 +200,7 @@ Dream consolidation 也硬拒非 dream 写入：`packages/core/src/services/drea
 
 - `docs/todo/memory-redesign-eval.md:3` 到 `:5`：方向正确，但不能只改路由。
 - `docs/todo/memory-redesign-p0-plan.md:7` 到 `:12`：自动 extractor 写 project/global dream，existing context 包含 user/dream/global dream。
-- `docs/todo/plan-todo-batch-2026-07.md:168` 到 `:183`：user/dream 不对称和自动提取写 user 的问题已有记录。
+- `docs/archive/todo/plan-todo-batch-2026-07.md:168` 到 `:183`：user/dream 不对称和自动提取写 user 的问题已有记录。
 
 这个方向和 MemGPT/Letta 的分层非常一致；但它仍缺 Mem0 旧算法里最关键的写入决策层。
 

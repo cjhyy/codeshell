@@ -6,11 +6,11 @@
 
 ## 1. 范围与依据
 
-- N-03：`max_turns` 双发 `turn_complete` 已确证，推荐删除 TurnLoop 内部 maxTurns terminal emit，由 Engine epilogue 统一发 terminal，见 `docs/review-2026-07-09/13-findings-register.md:31`、`docs/review-2026-07-09/13-findings-register.md:33`、`docs/review-2026-07-09/08-N03-fix-design.md:294` 到 `docs/review-2026-07-09/08-N03-fix-design.md:337`。
-- N-06：Interactive approval session rule cache 跨 session 泄漏已确证，推荐 backend 内按 `sessionId` 分桶并在 `ChatSessionManager.close(sessionId)` 清理，见 `docs/review-2026-07-09/13-findings-register.md:35` 到 `docs/review-2026-07-09/13-findings-register.md:38`、`docs/review-2026-07-09/12-N06-fix-design.md:101` 到 `docs/review-2026-07-09/12-N06-fix-design.md:117`。
-- P2 现在做：F-05、F-08、N-04、N-05、N-08 在 15 号清单分别标为“值得”，见 `docs/review-2026-07-09/15-p2-fix-checklist.md:5` 到 `docs/review-2026-07-09/15-p2-fix-checklist.md:12`、`docs/review-2026-07-09/15-p2-fix-checklist.md:23` 到 `docs/review-2026-07-09/15-p2-fix-checklist.md:30`、`docs/review-2026-07-09/15-p2-fix-checklist.md:41` 到 `docs/review-2026-07-09/15-p2-fix-checklist.md:48`、`docs/review-2026-07-09/15-p2-fix-checklist.md:50` 到 `docs/review-2026-07-09/15-p2-fix-checklist.md:57`、`docs/review-2026-07-09/15-p2-fix-checklist.md:68` 到 `docs/review-2026-07-09/15-p2-fix-checklist.md:75`。
-- 合并/拆分规则以 15 号批量建议为准：N-02 可随 N-03；F-08 可在 N-03 后同分支后续提交或独立 PR；N-04 与 N-06 协调但不阻塞；F-05 与 N-05 合并为 protocol 小批次；N-07 不与 N-06 同 PR，见 `docs/review-2026-07-09/15-p2-fix-checklist.md:86` 到 `docs/review-2026-07-09/15-p2-fix-checklist.md:92`。
-- F-01/F-02/F-03/F-04/F-06 已有 04 号 P1 深挖设计，但不纳入本文当前执行窗口；若后续要推进，应另开执行计划。尤其 F-06 也在 permission area，安全语义需审慎，不应和 N-06 混成一个大 PR，见 `docs/review-2026-07-09/04-p1-deep-dive-and-fix-design.md:287` 到 `docs/review-2026-07-09/04-p1-deep-dive-and-fix-design.md:370`。
+- N-03：`max_turns` 双发 `turn_complete` 已确证，推荐删除 TurnLoop 内部 maxTurns terminal emit，由 Engine epilogue 统一发 terminal，见 `docs/review-2026-07-09/13-findings-register.md:31`、`docs/review-2026-07-09/13-findings-register.md:33`、`docs/archive/review-2026-07-09/08-N03-fix-design.md:294` 到 `docs/archive/review-2026-07-09/08-N03-fix-design.md:337`。
+- N-06：Interactive approval session rule cache 跨 session 泄漏已确证，推荐 backend 内按 `sessionId` 分桶并在 `ChatSessionManager.close(sessionId)` 清理，见 `docs/review-2026-07-09/13-findings-register.md:35` 到 `docs/review-2026-07-09/13-findings-register.md:38`、`docs/archive/review-2026-07-09/12-N06-fix-design.md:101` 到 `docs/archive/review-2026-07-09/12-N06-fix-design.md:117`。
+- P2 现在做：F-05、F-08、N-04、N-05、N-08 在 15 号清单分别标为“值得”，见 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:5` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:12`、`docs/archive/review-2026-07-09/15-p2-fix-checklist.md:23` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:30`、`docs/archive/review-2026-07-09/15-p2-fix-checklist.md:41` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:48`、`docs/archive/review-2026-07-09/15-p2-fix-checklist.md:50` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:57`、`docs/archive/review-2026-07-09/15-p2-fix-checklist.md:68` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:75`。
+- 合并/拆分规则以 15 号批量建议为准：N-02 可随 N-03；F-08 可在 N-03 后同分支后续提交或独立 PR；N-04 与 N-06 协调但不阻塞；F-05 与 N-05 合并为 protocol 小批次；N-07 不与 N-06 同 PR，见 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:86` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:92`。
+- F-01/F-02/F-03/F-04/F-06 已有 04 号 P1 深挖设计，但不纳入本文当前执行窗口；若后续要推进，应另开执行计划。尤其 F-06 也在 permission area，安全语义需审慎，不应和 N-06 混成一个大 PR，见 `docs/archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md:287` 到 `docs/archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md:370`。
 
 ## 2. 落地批次划分
 
@@ -23,7 +23,7 @@
 | B5 | F-08 `tool_summary` 路由契约 | `packages/core/src/types.ts`、`packages/core/src/engine/turn-loop.ts`、`packages/core/src/engine/engine.ts`、`packages/desktop/src/renderer/types.ts`、新增/扩展 tool summary 与 desktop reducer 测试 | 可与 B2/B3/B4/B6 并行；必须与 B1 串行或同分支后续提交，避免同时改 `turn-loop.ts` | 建议 B1 后；若 B1 未做 N-02，B5 不应顺带做真流式工具执行 |
 | B6 | N-08 sandbox 可见性小批次 | `packages/core/src/tool-system/builtin/powershell.ts`、`packages/core/src/tool-system/builtin/bash.ts`（仅回归对照）、`packages/core/src/types.ts`（如需扩展 `ToolResult.sandbox`）、相关 UI/文案文件需确认 | 可与 B1-B5 并行；不要顺手改权限审批或 sandbox backend wrapper | 无。只做短期“未隔离/覆盖面”可见性，不做中期 wrapper 重构 |
 
-延后项：F-07 core 热启用重构、N-07 `permissionDefault` 执行语义、N-09 维护债均不进入本轮批次。F-07 提示和 N-08 可同属“可见性”主题，但 15 号清单明确 F-07 不建议近期改 core，见 `docs/review-2026-07-09/15-p2-fix-checklist.md:14` 到 `docs/review-2026-07-09/15-p2-fix-checklist.md:21`。
+延后项：F-07 core 热启用重构、N-07 `permissionDefault` 执行语义、N-09 维护债均不进入本轮批次。F-07 提示和 N-08 可同属“可见性”主题，但 15 号清单明确 F-07 不建议近期改 core，见 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:14` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:21`。
 
 ## 3. 每批执行卡
 
@@ -33,21 +33,21 @@
 
 TDD 顺序：
 
-1. 先新增失败测试 `packages/core/src/engine/engine.max-turns-stream.test.ts`：fake provider 让第一轮返回 tool call，maxTurns summary 返回 `"final summary"`；断言 `result.reason === "max_turns"`、`result.text === "final summary"`、`turn_complete(max_turns)` 只有 1 条。测试设计见 `docs/review-2026-07-09/08-N03-fix-design.md:300` 到 `docs/review-2026-07-09/08-N03-fix-design.md:310`、`docs/review-2026-07-09/08-N03-fix-design.md:341` 到 `docs/review-2026-07-09/08-N03-fix-design.md:369`。
+1. 先新增失败测试 `packages/core/src/engine/engine.max-turns-stream.test.ts`：fake provider 让第一轮返回 tool call，maxTurns summary 返回 `"final summary"`；断言 `result.reason === "max_turns"`、`result.text === "final summary"`、`turn_complete(max_turns)` 只有 1 条。测试设计见 `docs/archive/review-2026-07-09/08-N03-fix-design.md:300` 到 `docs/archive/review-2026-07-09/08-N03-fix-design.md:310`、`docs/archive/review-2026-07-09/08-N03-fix-design.md:341` 到 `docs/archive/review-2026-07-09/08-N03-fix-design.md:369`。
 2. 扩展既有 `packages/core/src/engine/turn-loop-max-turns.test.ts`：文件头目前仍写“emits a matching turn_complete event”，见 `packages/core/src/engine/turn-loop-max-turns.test.ts:5` 到 `packages/core/src/engine/turn-loop-max-turns.test.ts:12`；改成 Engine epilogue owns terminal，并追加 TurnLoop 级断言：`onStream` 收集到的 `turn_complete` 数量为 0，`assistant_message` summary 仍存在。
-3. 实现：删除 `packages/core/src/engine/turn-loop.ts` maxTurns 收口里的 `this.config.onStream?.({ type: "turn_complete", reason: "max_turns" })`，保留 summary `assistant_message` 和 `return { reason: "max_turns" }`。设计定位见 `docs/review-2026-07-09/08-N03-fix-design.md:311` 到 `docs/review-2026-07-09/08-N03-fix-design.md:318`。
-4. 不改 protocol producer，不在 `server.ts` 合成 terminal；`ChatSession` / `AgentServer` 仍只转发 Engine stream event，见 `docs/review-2026-07-09/08-N03-fix-design.md:328` 到 `docs/review-2026-07-09/08-N03-fix-design.md:337`。
+3. 实现：删除 `packages/core/src/engine/turn-loop.ts` maxTurns 收口里的 `this.config.onStream?.({ type: "turn_complete", reason: "max_turns" })`，保留 summary `assistant_message` 和 `return { reason: "max_turns" }`。设计定位见 `docs/archive/review-2026-07-09/08-N03-fix-design.md:311` 到 `docs/archive/review-2026-07-09/08-N03-fix-design.md:318`。
+4. 不改 protocol producer，不在 `server.ts` 合成 terminal；`ChatSession` / `AgentServer` 仍只转发 Engine stream event，见 `docs/archive/review-2026-07-09/08-N03-fix-design.md:328` 到 `docs/archive/review-2026-07-09/08-N03-fix-design.md:337`。
 5. 跑 B1 测试集并自查事件顺序：summary `assistant_message` 不丢，`turn_complete(max_turns)` 不双发。
 
 验收标准：
 
 - `bun test packages/core/src/engine/engine.max-turns-stream.test.ts` 绿。
 - `bun test packages/core/src/engine/turn-loop-max-turns.test.ts` 绿。
-- `bun test packages/core/src/engine/turn-loop*.test.ts` 绿，至少包含 `turn-loop-steer-backfill.test.ts`、`turn-loop-abort.test.ts`、`turn-loop-error-safety.test.ts`、`turn-loop-summary-safety.test.ts`、`turn-loop-continuation.test.ts`，这些是 08 号建议回归面，见 `docs/review-2026-07-09/08-N03-fix-design.md:399` 到 `docs/review-2026-07-09/08-N03-fix-design.md:417`。
-- 协议 smoke：`server.bg-shell-wakeup.test.ts`、`server.backgroundwork.test.ts`、`server.run-model.test.ts`、`transport.inprocess.test.ts` 绿，见 `docs/review-2026-07-09/08-N03-fix-design.md:389` 到 `docs/review-2026-07-09/08-N03-fix-design.md:442`。
-- Desktop stream/fold 护栏绿：`types.test.ts`、`streamReducer.test.ts`、`streamGroups.test.ts`、`streamCoalescer.test.ts`、`messageMappers.test.ts`、`transcript-reader.test.ts`、`foldTranscript.test.ts`，见 `docs/review-2026-07-09/08-N03-fix-design.md:444` 到 `docs/review-2026-07-09/08-N03-fix-design.md:474`。
+- `bun test packages/core/src/engine/turn-loop*.test.ts` 绿，至少包含 `turn-loop-steer-backfill.test.ts`、`turn-loop-abort.test.ts`、`turn-loop-error-safety.test.ts`、`turn-loop-summary-safety.test.ts`、`turn-loop-continuation.test.ts`，这些是 08 号建议回归面，见 `docs/archive/review-2026-07-09/08-N03-fix-design.md:399` 到 `docs/archive/review-2026-07-09/08-N03-fix-design.md:417`。
+- 协议 smoke：`server.bg-shell-wakeup.test.ts`、`server.backgroundwork.test.ts`、`server.run-model.test.ts`、`transport.inprocess.test.ts` 绿，见 `docs/archive/review-2026-07-09/08-N03-fix-design.md:389` 到 `docs/archive/review-2026-07-09/08-N03-fix-design.md:442`。
+- Desktop stream/fold 护栏绿：`types.test.ts`、`streamReducer.test.ts`、`streamGroups.test.ts`、`streamCoalescer.test.ts`、`messageMappers.test.ts`、`transcript-reader.test.ts`、`foldTranscript.test.ts`，见 `docs/archive/review-2026-07-09/08-N03-fix-design.md:444` 到 `docs/archive/review-2026-07-09/08-N03-fix-design.md:474`。
 
-预计改动半径：小。核心实现一处 emit 删除；测试新增/扩展中等。若同批做 N-02，只允许注释/命名/测试护栏，不做执行模型变化，见 `docs/review-2026-07-09/15-p2-fix-checklist.md:32` 到 `docs/review-2026-07-09/15-p2-fix-checklist.md:39`。
+预计改动半径：小。核心实现一处 emit 删除；测试新增/扩展中等。若同批做 N-02，只允许注释/命名/测试护栏，不做执行模型变化，见 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:32` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:39`。
 
 ### B2：N-06 interactive approval session cache 隔离
 
@@ -55,12 +55,12 @@ TDD 顺序：
 
 TDD 顺序：
 
-1. 先扩展 `packages/core/src/tool-system/permission.session-cache.test.ts`，新增 allow 隔离失败测试：同一 backend 中 session A 对 `curl ...` session allow，session B 同 head command 必须再次 prompt 并可 deny。当前测试已有 operation 粒度和 burst dedupe 覆盖，但没有跨 `sessionId` 断言，见 `packages/core/src/tool-system/permission.session-cache.test.ts:24` 到 `packages/core/src/tool-system/permission.session-cache.test.ts:194`、`packages/core/src/tool-system/permission.session-cache.test.ts:196` 到 `packages/core/src/tool-system/permission.session-cache.test.ts:250`；设计要求见 `docs/review-2026-07-09/12-N06-fix-design.md:217` 到 `docs/review-2026-07-09/12-N06-fix-design.md:241`、`docs/review-2026-07-09/12-N06-fix-design.md:348` 到 `docs/review-2026-07-09/12-N06-fix-design.md:371`。
+1. 先扩展 `packages/core/src/tool-system/permission.session-cache.test.ts`，新增 allow 隔离失败测试：同一 backend 中 session A 对 `curl ...` session allow，session B 同 head command 必须再次 prompt 并可 deny。当前测试已有 operation 粒度和 burst dedupe 覆盖，但没有跨 `sessionId` 断言，见 `packages/core/src/tool-system/permission.session-cache.test.ts:24` 到 `packages/core/src/tool-system/permission.session-cache.test.ts:194`、`packages/core/src/tool-system/permission.session-cache.test.ts:196` 到 `packages/core/src/tool-system/permission.session-cache.test.ts:250`；设计要求见 `docs/archive/review-2026-07-09/12-N06-fix-design.md:217` 到 `docs/archive/review-2026-07-09/12-N06-fix-design.md:241`、`docs/archive/review-2026-07-09/12-N06-fix-design.md:348` 到 `docs/archive/review-2026-07-09/12-N06-fix-design.md:371`。
 2. 补 deny 对称测试、无 `sessionId` 不记忆测试、同 session burst dedupe 仍只 prompt 一次、不同 session 并发不互相吸收。
 3. 扩展 `packages/core/src/protocol/chat-session-manager.permission.test.ts`：参考已有 path approval cleanup 与 late approval 测试结构，见 `packages/core/src/protocol/chat-session-manager.permission.test.ts:124` 到 `packages/core/src/protocol/chat-session-manager.permission.test.ts:209`；新增 `ChatSessionManager.close clears interactive approval session rules` 和 `late interactive approval after close does not recreate session bucket`。
-4. 实现 `InteractiveApprovalSessionState`：将 allow/deny rules、`promptTurn`、`cwd`、`savedProjectRules`、`onProjectRules` 移入 per-session state；新增 `getSessionState(sessionId, create)` 和 closed-session guard。设计见 `docs/review-2026-07-09/12-N06-fix-design.md:242` 到 `docs/review-2026-07-09/12-N06-fix-design.md:297`。
-5. 替换 Engine session context 注入：用当前 `session.state.sessionId` 调 `setSessionContext(...)`，旧 `setCwd()` / `setOnProjectRules()` 只保留 legacy wrapper，不作为修复路径依赖。设计见 `docs/review-2026-07-09/12-N06-fix-design.md:298` 到 `docs/review-2026-07-09/12-N06-fix-design.md:314`。
-6. 在 `ChatSessionManager.getOrCreate()` / `close()` 接入 `openInteractiveApprovalSession(sessionId)` / `clearInteractiveApprovalSession(sessionId)`，与 path-policy session lifecycle 对齐，见 `docs/review-2026-07-09/12-N06-fix-design.md:315` 到 `docs/review-2026-07-09/12-N06-fix-design.md:347`。
+4. 实现 `InteractiveApprovalSessionState`：将 allow/deny rules、`promptTurn`、`cwd`、`savedProjectRules`、`onProjectRules` 移入 per-session state；新增 `getSessionState(sessionId, create)` 和 closed-session guard。设计见 `docs/archive/review-2026-07-09/12-N06-fix-design.md:242` 到 `docs/archive/review-2026-07-09/12-N06-fix-design.md:297`。
+5. 替换 Engine session context 注入：用当前 `session.state.sessionId` 调 `setSessionContext(...)`，旧 `setCwd()` / `setOnProjectRules()` 只保留 legacy wrapper，不作为修复路径依赖。设计见 `docs/archive/review-2026-07-09/12-N06-fix-design.md:298` 到 `docs/archive/review-2026-07-09/12-N06-fix-design.md:314`。
+6. 在 `ChatSessionManager.getOrCreate()` / `close()` 接入 `openInteractiveApprovalSession(sessionId)` / `clearInteractiveApprovalSession(sessionId)`，与 path-policy session lifecycle 对齐，见 `docs/archive/review-2026-07-09/12-N06-fix-design.md:315` 到 `docs/archive/review-2026-07-09/12-N06-fix-design.md:347`。
 7. 跑 B2 测试集并自查无 sessionId、project seed、subagent/headless 路径。
 
 验收标准：
@@ -69,7 +69,7 @@ TDD 顺序：
 - `bun test packages/core/src/protocol/chat-session-manager.permission.test.ts` 绿，close cleanup 和 late approval 不重建 bucket 通过。
 - `bun test packages/core/src/protocol/server.askuser-session-isolation.test.ts` 绿；该文件现有 `(sessionId, requestId)` 隔离范式见 `packages/core/src/protocol/server.askuser-session-isolation.test.ts:69` 到 `packages/core/src/protocol/server.askuser-session-isolation.test.ts:162`。
 - `bun test packages/core/src/protocol/server.askuser-chatmanager.test.ts packages/core/src/protocol/server.askuser-timeout.test.ts packages/core/src/protocol/server.askuser-headless.test.ts` 绿。
-- `bun test packages/core/src/tool-system/path-policy-approval.test.ts packages/core/src/credentials/use-credential-tool.test.ts packages/core/src/credentials/inject-credential-tool.test.ts packages/core/src/tool-system/builtin/agent.send-input.llm.test.ts packages/core/src/automation/runner.permission.test.ts` 绿；这些是 12 号列出的 session lifecycle / automation 护栏，见 `docs/review-2026-07-09/12-N06-fix-design.md:373` 到 `docs/review-2026-07-09/12-N06-fix-design.md:399`。
+- `bun test packages/core/src/tool-system/path-policy-approval.test.ts packages/core/src/credentials/use-credential-tool.test.ts packages/core/src/credentials/inject-credential-tool.test.ts packages/core/src/tool-system/builtin/agent.send-input.llm.test.ts packages/core/src/automation/runner.permission.test.ts` 绿；这些是 12 号列出的 session lifecycle / automation 护栏，见 `docs/archive/review-2026-07-09/12-N06-fix-design.md:373` 到 `docs/archive/review-2026-07-09/12-N06-fix-design.md:399`。
 
 预计改动半径：中。核心在 permission backend 和 session lifecycle，安全语义强；不要同时夹带 N-07 或 F-06。
 
@@ -79,10 +79,10 @@ TDD 顺序：
 
 TDD 顺序：
 
-1. 先扩展 `packages/core/src/protocol/server.require-existing.test.ts`：现有测试已断言 absent session 不 run、disk exists 时正常 run、无 `requireExisting` 时可新建，见 `packages/core/src/protocol/server.require-existing.test.ts:60` 到 `packages/core/src/protocol/server.require-existing.test.ts:124`；新增断言 `chatManager.get("gone-sid") === undefined`，并覆盖 `maxSessions` 不被空 session 占用。F-05 方向见 `docs/review-2026-07-09/15-p2-fix-checklist.md:5` 到 `docs/review-2026-07-09/15-p2-fix-checklist.md:12`。
+1. 先扩展 `packages/core/src/protocol/server.require-existing.test.ts`：现有测试已断言 absent session 不 run、disk exists 时正常 run、无 `requireExisting` 时可新建，见 `packages/core/src/protocol/server.require-existing.test.ts:60` 到 `packages/core/src/protocol/server.require-existing.test.ts:124`；新增断言 `chatManager.get("gone-sid") === undefined`，并覆盖 `maxSessions` 不被空 session 占用。F-05 方向见 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:5` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:12`。
 2. 实现 `AgentServer.handleRunMulti()` preflight：在 `cm.getOrCreate()` 前检查 live map / disk probe；不存在则直接 `SessionNotFound` return；磁盘存在保留 `getOrCreate()` 路径。
 3. 为 N-05 新增 `packages/core/src/protocol/server.goalclear.test.ts` 或扩展相邻 goal server 测试文件（具体文件名实现时确认）：成功 clear 且有 `sessionId` 时，server 发送 `Methods.StreamEvent`，payload 为 `{ sessionId, event: { type: "goal_cleared" } }`。已有 goal 相关 server 测试可参考 `packages/core/src/protocol/server.goalget.test.ts:43` 到 `packages/core/src/protocol/server.goalget.test.ts:110`。
-4. 实现 `AgentServer.handleGoalClear()` notify；desktop 本地 optimistic dispatch 先保留，依赖 reducer 幂等。N-05 方向见 `docs/review-2026-07-09/15-p2-fix-checklist.md:50` 到 `docs/review-2026-07-09/15-p2-fix-checklist.md:57`。
+4. 实现 `AgentServer.handleGoalClear()` notify；desktop 本地 optimistic dispatch 先保留，依赖 reducer 幂等。N-05 方向见 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:50` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:57`。
 5. 跑 protocol 相关回归。
 
 验收标准：
@@ -101,7 +101,7 @@ TDD 顺序：
 
 1. 新增 `packages/core/src/protocol/client.approval-events.test.ts`：用 in-process transport 模拟 `Methods.ApprovalRequest` notification，断言 SDK listener 能拿到 `sessionId`。`AgentClient` 现有协议测试模式可参考 `packages/core/src/protocol/client.steer.test.ts:13` 到 `packages/core/src/protocol/client.steer.test.ts:55`。
 2. 同文件新增 `approvalResolved` 测试：收到 `Methods.ApprovalResolved` 时 emit `{ sessionId?, requestId }`。
-3. 实现 `AgentClientEvents` 和 `handleNotification()`：可给 `approvalRequest` 增加第三个可选 meta 参数，或新增 envelope event；若改旧事件签名，必须兼容旧 listener。N-04 方向见 `docs/review-2026-07-09/15-p2-fix-checklist.md:41` 到 `docs/review-2026-07-09/15-p2-fix-checklist.md:48`。
+3. 实现 `AgentClientEvents` 和 `handleNotification()`：可给 `approvalRequest` 增加第三个可选 meta 参数，或新增 envelope event；若改旧事件签名，必须兼容旧 listener。N-04 方向见 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:41` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:48`。
 4. 跑 client/protocol approval 回归，确认 B2 的 backend 隔离语义与 SDK surface 一致。
 
 验收标准：
@@ -118,7 +118,7 @@ TDD 顺序：
 
 TDD 顺序：
 
-1. 新增 core 测试 `packages/core/src/engine/turn-loop-tool-summary.test.ts`（文件名可实现时确认）：TurnLoop emit `tool_summary` 时带 `toolCallIds: toolCalls.map(t => t.id)`；子代理 `agentId` 仍由 parent wrapper 补。F-08 方向见 `docs/review-2026-07-09/15-p2-fix-checklist.md:23` 到 `docs/review-2026-07-09/15-p2-fix-checklist.md:30`。
+1. 新增 core 测试 `packages/core/src/engine/turn-loop-tool-summary.test.ts`（文件名可实现时确认）：TurnLoop emit `tool_summary` 时带 `toolCallIds: toolCalls.map(t => t.id)`；子代理 `agentId` 仍由 parent wrapper 补。F-08 方向见 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:23` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:30`。
 2. 扩展 `packages/desktop/src/renderer/types.test.ts`：有 `toolCallIds` 时按 id 找顶层 tool；有 `agentId` 时只写对应 agent card 的 toolCall；找不到 agent/tool 时不要 fallback 到顶层。该文件已有 subagent isolation 护栏，见 `packages/desktop/src/renderer/types.test.ts:269` 到 `packages/desktop/src/renderer/types.test.ts:303`。
 3. 实现 core 类型：扩展 `StreamEvent.tool_summary` 为 `{ summary; toolCallIds?: string[]; agentId?: string }`，保持 optional 兼容旧 snapshot。
 4. 实现 `TurnLoop` payload 和 desktop reducer 路由；不与 N-03 的 terminal producer 逻辑混改。
@@ -148,7 +148,7 @@ TDD 顺序：
 
 - `bun test packages/core/src/tool-system/builtin/powershell.sandbox-status.test.ts` 绿，或扩展文件对应用例绿。
 - `bun test packages/core/src/tool-system/builtin/bash.shell-env.test.ts packages/core/src/tool-system/sandbox/sandbox.test.ts packages/core/src/tool-system/sandbox/sandbox-win32.test.ts packages/core/src/engine/sandbox-config.test.ts packages/core/src/runtime/spawn-common.test.ts` 绿。
-- 文案/返回字段不让用户误以为 PowerShell 已受当前 sandbox backend 保护。N-08 方向见 `docs/review-2026-07-09/15-p2-fix-checklist.md:68` 到 `docs/review-2026-07-09/15-p2-fix-checklist.md:75`。
+- 文案/返回字段不让用户误以为 PowerShell 已受当前 sandbox backend 保护。N-08 方向见 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:68` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:75`。
 
 预计改动半径：小到中。只做可见性时较小；一旦接入 wrapper 就变成中等设计，不应混入此批。
 
@@ -243,15 +243,15 @@ TDD 顺序：
 
 这些点在设计文档里被标为需运行时验证或实现期验证，不能只靠静态审查收口：
 
-1. N-03 headless drain 复入：即使 TurnLoop 不再发 terminal，也要实际验证 headless drain 是否产生额外 summary model call、额外 `assistant_message`、或改变最终 transcript 形状，见 `docs/review-2026-07-09/08-N03-fix-design.md:476` 到 `docs/review-2026-07-09/08-N03-fix-design.md:500`。
-2. N-03 standalone `query()` 行为：删除 TurnLoop terminal emit 后，`query()` 的 maxTurns 不再有这条特例 terminal；08 号建议不要在本 P1 patch 顺手修 `query()`，除非另加 query 专属测试，见 `docs/review-2026-07-09/08-N03-fix-design.md:220` 到 `docs/review-2026-07-09/08-N03-fix-design.md:228`、`docs/review-2026-07-09/08-N03-fix-design.md:332` 到 `docs/review-2026-07-09/08-N03-fix-design.md:337`。
-3. N-06 subagent/headless/automation sessionId：child Engine 正常应有 child sessionId；headless/auto 不应走 interactive session cache；显式 delegate 到 interactive backend 时必须带 `sessionId` 才能记忆，见 `docs/review-2026-07-09/12-N06-fix-design.md:132` 到 `docs/review-2026-07-09/12-N06-fix-design.md:138`、`docs/review-2026-07-09/12-N06-fix-design.md:375` 到 `docs/review-2026-07-09/12-N06-fix-design.md:383`。
-4. N-06 no-session 行为：`ApprovalRequest.sessionId` 缺失时，session-scope remember 必须按一次性审批处理或 fail-closed 地不记忆；不得使用 `"__global__"` / `"__nosession__"` 共享桶，见 `docs/review-2026-07-09/12-N06-fix-design.md:261` 到 `docs/review-2026-07-09/12-N06-fix-design.md:266`。
-5. N-06 session close / late approval：`ChatSessionManager.close(sessionId)` 后应清理 interactive approval bucket；late approval resolve 不得重建 bucket，见 `docs/review-2026-07-09/12-N06-fix-design.md:333` 到 `docs/review-2026-07-09/12-N06-fix-design.md:347`。
-6. N-06 project-scope seed：project approve 仍应持久化到当前 session cwd，但 seed session allow list 只能写当前 `sessionId` bucket；无 state/cwd 时不应写 global allow，见 `docs/review-2026-07-09/12-N06-fix-design.md:292` 到 `docs/review-2026-07-09/12-N06-fix-design.md:297`。
-7. N-04 SDK compatibility：`approvalRequest` 旧 listener 是否仍可工作、是否需要新增 envelope event，需要实现时用 client tests 和 changelog/PR 描述确认，见 `docs/review-2026-07-09/15-p2-fix-checklist.md:41` 到 `docs/review-2026-07-09/15-p2-fix-checklist.md:48`。
-8. F-08 old snapshot compatibility：旧 `tool_summary` 没有 `toolCallIds` 时必须保留 legacy fallback；但有 `agentId` 或 id miss 时不得错挂到顶层，见 `docs/review-2026-07-09/15-p2-fix-checklist.md:23` 到 `docs/review-2026-07-09/15-p2-fix-checklist.md:30`。
-9. N-08 UI/结果字段语义：PowerShell 的“未隔离”标记必须能被 UI 正确展示，不得让用户误以为 PowerShell 已被 Bash/background/worktree 的 sandbox 覆盖，见 `docs/review-2026-07-09/15-p2-fix-checklist.md:68` 到 `docs/review-2026-07-09/15-p2-fix-checklist.md:75`。
+1. N-03 headless drain 复入：即使 TurnLoop 不再发 terminal，也要实际验证 headless drain 是否产生额外 summary model call、额外 `assistant_message`、或改变最终 transcript 形状，见 `docs/archive/review-2026-07-09/08-N03-fix-design.md:476` 到 `docs/archive/review-2026-07-09/08-N03-fix-design.md:500`。
+2. N-03 standalone `query()` 行为：删除 TurnLoop terminal emit 后，`query()` 的 maxTurns 不再有这条特例 terminal；08 号建议不要在本 P1 patch 顺手修 `query()`，除非另加 query 专属测试，见 `docs/archive/review-2026-07-09/08-N03-fix-design.md:220` 到 `docs/archive/review-2026-07-09/08-N03-fix-design.md:228`、`docs/archive/review-2026-07-09/08-N03-fix-design.md:332` 到 `docs/archive/review-2026-07-09/08-N03-fix-design.md:337`。
+3. N-06 subagent/headless/automation sessionId：child Engine 正常应有 child sessionId；headless/auto 不应走 interactive session cache；显式 delegate 到 interactive backend 时必须带 `sessionId` 才能记忆，见 `docs/archive/review-2026-07-09/12-N06-fix-design.md:132` 到 `docs/archive/review-2026-07-09/12-N06-fix-design.md:138`、`docs/archive/review-2026-07-09/12-N06-fix-design.md:375` 到 `docs/archive/review-2026-07-09/12-N06-fix-design.md:383`。
+4. N-06 no-session 行为：`ApprovalRequest.sessionId` 缺失时，session-scope remember 必须按一次性审批处理或 fail-closed 地不记忆；不得使用 `"__global__"` / `"__nosession__"` 共享桶，见 `docs/archive/review-2026-07-09/12-N06-fix-design.md:261` 到 `docs/archive/review-2026-07-09/12-N06-fix-design.md:266`。
+5. N-06 session close / late approval：`ChatSessionManager.close(sessionId)` 后应清理 interactive approval bucket；late approval resolve 不得重建 bucket，见 `docs/archive/review-2026-07-09/12-N06-fix-design.md:333` 到 `docs/archive/review-2026-07-09/12-N06-fix-design.md:347`。
+6. N-06 project-scope seed：project approve 仍应持久化到当前 session cwd，但 seed session allow list 只能写当前 `sessionId` bucket；无 state/cwd 时不应写 global allow，见 `docs/archive/review-2026-07-09/12-N06-fix-design.md:292` 到 `docs/archive/review-2026-07-09/12-N06-fix-design.md:297`。
+7. N-04 SDK compatibility：`approvalRequest` 旧 listener 是否仍可工作、是否需要新增 envelope event，需要实现时用 client tests 和 changelog/PR 描述确认，见 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:41` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:48`。
+8. F-08 old snapshot compatibility：旧 `tool_summary` 没有 `toolCallIds` 时必须保留 legacy fallback；但有 `agentId` 或 id miss 时不得错挂到顶层，见 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:23` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:30`。
+9. N-08 UI/结果字段语义：PowerShell 的“未隔离”标记必须能被 UI 正确展示，不得让用户误以为 PowerShell 已被 Bash/background/worktree 的 sandbox 覆盖，见 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:68` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:75`。
 
 ## 8. 完成前自查
 

@@ -561,4 +561,4 @@ S。约 20-45 行改动，主要是组件 JSX 和文案。建议更新 `compactF
 
 本次调研/写方案实际只写入：
 
-- `docs/todo/plan-group-b-compaction-ui.md`
+- `docs/archive/todo/plan-group-b-compaction-ui.md`

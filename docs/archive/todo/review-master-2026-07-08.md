@@ -2,10 +2,10 @@
 
 Verification pass over:
 
-- `docs/todo/review-core-2026-07-08.md`
-- `docs/todo/review-desktop-2026-07-08.md`
-- `docs/todo/review-tui-cdp-2026-07-08.md`
-- `docs/todo/review-infra-2026-07-08.md`
+- `docs/archive/todo/review-core-2026-07-08.md`
+- `docs/archive/todo/review-desktop-2026-07-08.md`
+- `docs/archive/todo/review-tui-cdp-2026-07-08.md`
+- `docs/archive/todo/review-infra-2026-07-08.md`
 
 ## Summary
 

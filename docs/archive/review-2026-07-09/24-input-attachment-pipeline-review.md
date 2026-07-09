@@ -2,7 +2,7 @@
 
 > 审查对象：统一输入接入总线特性的未提交工作树改动（基线 HEAD `c93bea6a`）。
 > 审查方式：codex 独立只读会话（sandbox），本文件由主编排 agent 代为落盘（审查 agent 因只读沙箱无法写盘）。
-> 落地记录见 `docs/plan-2026-07-09-input-attachment-pipeline-IMPL-NOTES.md`，权威方案见 `docs/plan-2026-07-09-input-attachment-pipeline.md`。
+> 落地记录见 `docs/archive/plan-2026-07-09-input-attachment-pipeline-IMPL-NOTES.md`，权威方案见 `docs/archive/plan-2026-07-09-input-attachment-pipeline.md`。
 
 ## 总体结论：REQUEST-CHANGES
 

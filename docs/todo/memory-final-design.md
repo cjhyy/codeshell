@@ -20,7 +20,7 @@
 - `docs/todo/memory-redesign-p0-plan.md`：P0 的止血范围和当前代码落点。
 - `docs/todo/memory-mem0-memgpt-eval.md`：借 Mem0 旧算法的写入决策层；借 MemGPT/Letta 的 core/user 与 archival/dream 分层；不借向量库、图谱、ADD-only。
 - `docs/todo/memory-simple-plan-eval.md`：用户简化方案成立；需要 `origin:dream` ownership、无向量去重、global dream 混合闸门。
-- `docs/todo/plan-todo-batch-2026-07.md` 项4：早期方向是 dream 提建议、用户批准；最终决策已收敛为 dream 可维护 `origin:dream`/`origin:auto`，但绝不碰 `origin:manual`。
+- `docs/archive/todo/plan-todo-batch-2026-07.md` 项4：早期方向是 dream 提建议、用户批准；最终决策已收敛为 dream 可维护 `origin:dream`/`origin:auto`，但绝不碰 `origin:manual`。
 
 ## 最终原则
 

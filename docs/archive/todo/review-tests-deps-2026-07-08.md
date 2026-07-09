@@ -37,7 +37,7 @@ Under-tested high-risk areas:
 - Subsystem: production turn-loop context management and compaction.
 - What is untested: `ContextManager.manage()` runs `dedupeFileReads` and `maskOldObservations` before microcompaction (`packages/core/src/context/manager.ts:295-314`), but `manageAsync()` jumps from tool-result budgeting directly to microcompaction (`packages/core/src/context/manager.ts:406-430`). Existing tests cover the pure helper behavior for dedupe/masking and cover many turn-loop behaviors, but they do not assert that the async production path applies the always-on cleanup passes.
 - Risk: a fix to async compaction could regress silently and reintroduce stale repeated file reads or old browser snapshots into the model context. This is especially risky because `manageAsync()` is the production path used between turns when LLM summarization is available.
-- Master-file bug shielded: "Async context management skips always-on cleanup" (`docs/todo/review-master-2026-07-08.md:39`).
+- Master-file bug shielded: "Async context management skips always-on cleanup" (`docs/archive/todo/review-master-2026-07-08.md:39`).
 - Evidence: `tests/hooks-post-compact.test.ts` explicitly says full turn-loop wiring is pending coverage once integration lands (`tests/hooks-post-compact.test.ts:5-11`).
 - Recommended regression tests: add a `ContextManager.manageAsync` test with duplicate `Read` results and multiple browser observations under the microcompact floor, and add a turn-loop-level test proving the async-managed messages sent to the next model call have old reads/snapshots masked.
 
@@ -50,7 +50,7 @@ Under-tested high-risk areas:
   - `ListMcpResources` gating expects resource owner metadata (`serverName` or `server`) and drops unknown-owner resources (`packages/core/src/tool-system/builtin/mcp-tools.ts:67-90`). Existing gate coverage only asserts that the allowlist set is injected, not that real resources are tagged and survive filtering (`packages/core/src/tool-system/mcp-manager.test.ts:514-520`).
   - `spillMcpImage` caps one image by size but has no retained-file cap and uses `CODE_SHELL_HOME` as a parent of `.code-shell` (`packages/core/src/tool-system/mcp-manager.ts:168-204`). Tests cover write, extension, filename sanitization, and oversized single images, but not retention or shared home layout (`tests/mcp-image-spill.test.ts:19-74`).
 - Risk: Stop can hang on direct discovered MCP tools, failed discovery can leave stale connections/tools that block reconnect, allowed sessions can see no resources because owner metadata is missing, and repeated MCP screenshots can fill disk silently.
-- Master-file bugs shielded: discovered MCP tools drop abort signal, failed MCP discovery leaves half-connected server, `ListMcpResources` filters out allowed resources, MCP image spills have no retained-file cap, and MCP image spills ignore `CODE_SHELL_HOME` layout (`docs/todo/review-master-2026-07-08.md:36-40`, `docs/todo/review-master-2026-07-08.md:62`).
+- Master-file bugs shielded: discovered MCP tools drop abort signal, failed MCP discovery leaves half-connected server, `ListMcpResources` filters out allowed resources, MCP image spills have no retained-file cap, and MCP image spills ignore `CODE_SHELL_HOME` layout (`docs/archive/todo/review-master-2026-07-08.md:36-40`, `docs/archive/todo/review-master-2026-07-08.md:62`).
 - Recommended regression tests: fake MCP client whose `callTool` observes an abort signal; fake client whose `listTools` rejects and then assert maps/registrations are cleaned; multi-server `listResources` test asserting `serverName` is attached; spill retention/home-layout tests using `CODE_SHELL_HOME`.
 
 ### A3. Plugin install and executable trust: composed install paths are under-tested
@@ -61,7 +61,7 @@ Under-tested high-risk areas:
   - Plugin command hooks run `spawn(spec.command, [], { shell: true })` with plugin environment variables but no explicit trust gate (`packages/core/src/plugins/pluginCommandHook.ts:91-115`). There is no test suite asserting remote/local plugin executable code remains disabled until trusted.
   - Direct plugin source parsing accepts `http://`, `git://`, and `file://` as remote installs (`packages/core/src/plugins/installer/parseSource.ts:28-36`). Existing parser tests cover paths, GitHub shorthand, HTTPS, and SSH, but not rejecting or warning on insecure transports (`packages/core/src/plugins/installer/parseSource.test.ts:18-93`).
 - Risk: fixes to marketplace-only variable rewriting, per-plugin trust, or transport policy can regress silently on local/zip/direct-git paths. This is a supply-chain boundary because installed plugins can provide shell hooks and MCP stdio commands.
-- Master-file bugs shielded: plugin executable surfaces lack trust gate, local/zip/direct-git plugin installs skip var rewrite, and insecure plugin transports are allowed silently (`docs/todo/review-master-2026-07-08.md:34`, `docs/todo/review-master-2026-07-08.md:59`, `docs/todo/review-master-2026-07-08.md:75`).
+- Master-file bugs shielded: plugin executable surfaces lack trust gate, local/zip/direct-git plugin installs skip var rewrite, and insecure plugin transports are allowed silently (`docs/archive/todo/review-master-2026-07-08.md:34`, `docs/archive/todo/review-master-2026-07-08.md:59`, `docs/archive/todo/review-master-2026-07-08.md:75`).
 - Recommended regression tests: parameterized install tests for local dir, zip, and direct git/cache paths containing `CLAUDE_PLUGIN_ROOT`; hook/MCP load tests requiring an explicit trust flag; parse-source policy tests rejecting cleartext transports unless an unsafe option is passed.
 
 ### A4. Credentials: plaintext egress, scope partition, and browser ownership are under-tested
@@ -72,7 +72,7 @@ Under-tested high-risk areas:
   - Store-level scope partition is covered (`packages/core/src/credentials/store.test.ts:55-70`), but `InjectCredential` reads full-scope settings and resolves without scope (`packages/core/src/credentials/inject-credential-tool.ts:81-88`, `packages/core/src/credentials/inject-credential-tool.ts:118-123`). Injection tests cover prompt/denial/auto-inject/availability, not `settingsScope: "project"` behavior (`packages/core/src/credentials/inject-credential-tool.test.ts:115-178`).
   - Browser automation targets a process-global active guest (`packages/desktop/src/main/browser-driver/active-guest.ts:13-36`). Credential cookie capture/restore tests cover explicit Electron partitions, but no test proves AI injection/browser automation routes by originating session/bucket/partition.
 - Risk: secret-redaction fixes can regress at the transcript boundary, project-isolated SDK embeddings can regain access to host credentials through injection, and one session can inject cookies or drive automation into another session's active webview.
-- Master-file bugs shielded: credential values persisted as tool output, `InjectCredential` ignores settings scope, browser automation targets global active guest, and desktop credentials remain plaintext at rest (`docs/todo/review-master-2026-07-08.md:31`, `docs/todo/review-master-2026-07-08.md:35`, `docs/todo/review-master-2026-07-08.md:41`, `docs/todo/review-master-2026-07-08.md:44`).
+- Master-file bugs shielded: credential values persisted as tool output, `InjectCredential` ignores settings scope, browser automation targets global active guest, and desktop credentials remain plaintext at rest (`docs/archive/todo/review-master-2026-07-08.md:31`, `docs/archive/todo/review-master-2026-07-08.md:35`, `docs/archive/todo/review-master-2026-07-08.md:41`, `docs/archive/todo/review-master-2026-07-08.md:44`).
 - Recommended regression tests: end-to-end tool-result transcript redaction; `InjectCredential` project-scope list/resolve/auto-approve denial; multi-session webview ownership tests where a background session cannot target the foreground session's partition.
 
 ### A5. Protocol server session isolation is strong, but teardown/global-cache cleanup is not covered
@@ -81,7 +81,7 @@ Under-tested high-risk areas:
 - What is covered: ask-user approvals are scoped to matching session/request and leave the legacy server-level approval map empty (`packages/core/src/protocol/server.askuser-session-isolation.test.ts:103-129`). Chat sessions cover concurrent starts and cancel isolation (`tests/chat-session-isolation.test.ts:60-130`).
 - What is untested: process-global approval/path/credential allow maps are not exercised through session close/teardown. The strong protocol tests do not prove grants are pruned when a session ends.
 - Risk: stale approval grants can survive after a session is closed and affect a later session, even though request routing itself is isolated.
-- Master-file bug shielded: session approval caches are not pruned (`docs/todo/review-master-2026-07-08.md:63`).
+- Master-file bug shielded: session approval caches are not pruned (`docs/archive/todo/review-master-2026-07-08.md:63`).
 - Recommended regression tests: close a protocol session after granting a path/tool/credential permission, then create a new session and assert no grant is inherited.
 
 ### A6. Safe-spawn/process-group cleanup is covered, but host-sensitive tests reduce confidence
@@ -90,7 +90,7 @@ Under-tested high-risk areas:
 - What is covered: abort/timeout/grandchild hang tests exist (`tests/safe-spawn.test.ts:77-132`); POSIX process-group kill covers child reaping, idempotence, and bogus pgid guards (`packages/core/src/runtime/spawn-common.test.ts:213-266`); Windows branches are simulated to prove no negative-pid signaling (`packages/core/src/runtime/kill-win32.test.ts:1-48`).
 - What is untested: the background-shell home resolver has the same nested `CODE_SHELL_HOME/.code-shell` layout pattern (`packages/core/src/runtime/background-shell.ts:139-142`) but no home-layout regression test equivalent to the missing MCP spill home-layout test.
 - Risk: process-tree cleanup itself has reasonable coverage, but path/home artifacts for background shells can keep regressing without detection.
-- Master-file bug shielded: background shell artifacts use nested home (`docs/todo/review-master-2026-07-08.md:64`).
+- Master-file bug shielded: background shell artifacts use nested home (`docs/archive/todo/review-master-2026-07-08.md:64`).
 - Recommended regression tests: add a `CODE_SHELL_HOME` fixture test for background shell log/pid root and keep existing process-group tests targeted rather than broadening them into slow integration coverage.
 
 ### A7. Steer/system-reminder injection: mechanics are covered, prompt spoofing is not
@@ -99,7 +99,7 @@ Under-tested high-risk areas:
 - What is covered: steer queued during a tool batch is consumed before the next model call without splitting tool adjacency (`packages/core/src/engine/turn-loop-steer-backfill.test.ts:107-170`), with additional tests in the same file for shutdown, max-turn accounting, and duplicate client IDs.
 - What is untested: the base prompt tells the model that tool results and user messages may include `<system-reminder>` and that tags contain system information (`packages/core/src/prompt/sections/base.md:7-11`). There is no prompt-composition or adversarial content regression proving embedded untrusted tags are distinguished from runtime-injected reminders.
 - Risk: a wording fix can regress silently, and tool/user content that contains fake `<system-reminder>` tags may be over-trusted by the model.
-- Master-file bug shielded: `<system-reminder>` wording is spoofable (`docs/todo/review-master-2026-07-08.md:60`).
+- Master-file bug shielded: `<system-reminder>` wording is spoofable (`docs/archive/todo/review-master-2026-07-08.md:60`).
 - Recommended regression tests: add prompt snapshot tests with untrusted user/tool content containing `<system-reminder>` and assert the system prompt names runtime-injected reminders as a separate, authenticated channel.
 
 ### Test-quality issues
@@ -121,7 +121,7 @@ These are not application bugs; they are tests whose design is host- or timing-s
 - Dependency/path: `packages/desktop/scripts/predist.ts` materializes `@cjhyy/code-shell-core` and then runs a fresh production install.
 - Concern: release CI installs the workspace with `bun install --frozen-lockfile` (`.github/workflows/release.yml:90-95`), but the predist step writes a minimal package manifest and runs `bun install --production --linker=hoisted` inside the materialized core directory (`packages/desktop/scripts/predist.ts:120-139`). That second install is not shown using the committed root `bun.lock`, frozen mode, offline mode, or a precomputed production closure.
 - Risk: the packaged Electron app can ship dependencies resolved at packaging time rather than the audited lockfile graph.
-- Master-file context: "Electron predist resolves deps outside lockfile" (`docs/todo/review-master-2026-07-08.md:33`).
+- Master-file context: "Electron predist resolves deps outside lockfile" (`docs/archive/todo/review-master-2026-07-08.md:33`).
 - Fix: materialize the core runtime closure from the root frozen lockfile, or run a lockfile-controlled production install with the committed lock present and `--frozen-lockfile`/offline constraints. Add CI verification that the packaged app dependency tree matches the lockfile-derived SBOM.
 
 #### B2. npm publish lacks provenance/trusted publishing and uses a long-lived token
@@ -129,7 +129,7 @@ These are not application bugs; they are tests whose design is host- or timing-s
 - Dependency/path: `.github/workflows/release.yml` `npm-publish` job.
 - Concern: the job has no `needs: verify-version`, installs/builds, and publishes with `NPM_CONFIG_TOKEN` from `secrets.NPM_TOKEN` (`.github/workflows/release.yml:190-237`). It does not request `id-token: write`, does not use npm trusted publishing, and does not pass a provenance-producing publish flow.
 - Risk: consumers get no registry provenance attestation tying packages to the GitHub workflow, and a long-lived npm token is exposed to the whole publish step environment. The workflow-level `contents: write` permission also applies broadly (`.github/workflows/release.yml:22-24`), matching the existing infra review concern.
-- Master-file context: npm publish not gated by version check and release jobs inherit `contents: write` (`docs/todo/review-master-2026-07-08.md:32`, `docs/todo/review-master-2026-07-08.md:57`).
+- Master-file context: npm publish not gated by version check and release jobs inherit `contents: write` (`docs/archive/todo/review-master-2026-07-08.md:32`, `docs/archive/todo/review-master-2026-07-08.md:57`).
 - Fix: make `npm-publish` depend on version verification for tag pushes, verify every publishable package version, move permissions to job scope, add `id-token: write`, use npm trusted publishing or `npm publish --provenance` after building with Bun, and remove/restrict the long-lived npm automation token.
 - External references: npm provenance docs explain provenance statements identify where and how a package was built (https://docs.npmjs.com/generating-provenance-statements/). npm trusted publishers use OIDC and avoid long-lived tokens (https://docs.npmjs.com/trusted-publishers/).
 
@@ -191,7 +191,7 @@ These are not application bugs; they are tests whose design is host- or timing-s
 - Dependency/path: plugin installer source parser.
 - Concern: `parseSource` treats `http://`, `git://`, and `file://` as remote sources (`packages/core/src/plugins/installer/parseSource.ts:28-36`). Existing parser tests do not enforce policy rejection/warning for cleartext or local-file transports (`packages/core/src/plugins/installer/parseSource.test.ts:18-93`).
 - Risk: plugin install is a supply-chain ingestion point; cleartext Git/HTTP and arbitrary file URLs weaken provenance and replay resistance.
-- Master-file context: insecure plugin transports allowed silently (`docs/todo/review-master-2026-07-08.md:75`).
+- Master-file context: insecure plugin transports allowed silently (`docs/archive/todo/review-master-2026-07-08.md:75`).
 - Fix: default to HTTPS/SSH, require an explicit unsafe flag for `http://`, `git://`, and `file://`, and prefer pinned immutable refs or commit SHAs.
 
 #### B11. `bun.lock` workspace metadata is stale relative to manifests
@@ -211,7 +211,7 @@ These are not application bugs; they are tests whose design is host- or timing-s
 ## Verification notes
 
 - Read repository instructions: `AGENTS.md` points to `CODESHELL.md`, and `CODESHELL.md` was read before auditing.
-- Read the master bug index: `docs/todo/review-master-2026-07-08.md:30-76`.
+- Read the master bug index: `docs/archive/todo/review-master-2026-07-08.md:30-76`.
 - Surveyed tests under `tests/` and `packages/*/src/**/*.test.ts` using `rg` and targeted file reads. No full test suite was run.
 - Inspected manifests: `package.json`, `packages/core/package.json`, `packages/tui/package.json`, `packages/desktop/package.json`, and `packages/cdp/package.json`.
 - Inspected release and packaging flow: `.github/workflows/release.yml`, `packages/desktop/scripts/predist.ts`, `packages/desktop/scripts/rebuild-native.ts`, and relevant lockfile entries in `bun.lock`.

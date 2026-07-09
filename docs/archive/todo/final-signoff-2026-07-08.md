@@ -57,9 +57,9 @@ the current working tree.
 - ESLint guardrails: no runtime core import of `@cjhyy/code-shell-tui`; the only core hit is the guard test constant in `packages/core/src/automation/no-host-deps.test.ts:10`. Renderer CodeShell package imports found by scan are type-only imports, and `bun run lint` reported no boundary errors.
 - No `debugger` or `.only` test markers found. Console logging hits are existing CLI/script/test output paths, not a follow-up blocker.
 - `git diff --check origin/main..HEAD` reports trailing whitespace in doc-only memory notes (`docs/todo/memory-final-design.md` and `docs/todo/memory-simple-plan-eval.md`). I do not classify this as a push blocker because it is confined to documentation and no requested gate fails on it.
-- `e14cd42a` is docs-only: it adds only `docs/todo/memory-demo.html` plus `docs/todo/*.md` memory design notes. `memory-demo.html` is a 58,790-byte self-contained static demo with inline script; scan found no remote script/fetch/localStorage/credential handling.
+- `e14cd42a` is docs-only: it adds only `docs/archive/todo/memory-demo.html` plus `docs/todo/*.md` memory design notes. `memory-demo.html` is a 58,790-byte self-contained static demo with inline script; scan found no remote script/fetch/localStorage/credential handling.
 - No committed binary files were reported by `git diff --numstat origin/main..HEAD`.
-- No unintended large committed files found. The largest changed blobs are existing source files; the largest new docs artifact is `docs/todo/memory-demo.html` at 58,790 bytes.
+- No unintended large committed files found. The largest changed blobs are existing source files; the largest new docs artifact is `docs/archive/todo/memory-demo.html` at 58,790 bytes.
 - Secret scan of the committed diff found only placeholders/test fixtures, documentation wording, and GitHub Actions `${{ secrets.NPM_TOKEN }}` usage. No literal private keys, tokens, or credentials found.
 
 ## Command Results

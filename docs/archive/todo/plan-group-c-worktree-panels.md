@@ -643,4 +643,4 @@ S-M。核心 guard 是 S；加 skipped UI event、i18n、测试矩阵后接近 M
 - `packages/desktop/src/main/desktop-services.worktree-cleanup.test.ts`
 - `packages/desktop/src/renderer/i18n/ns/misc.ts`
 
-本次调研实际只写入本文档：`docs/todo/plan-group-c-worktree-panels.md`。
+本次调研实际只写入本文档：`docs/archive/todo/plan-group-c-worktree-panels.md`。

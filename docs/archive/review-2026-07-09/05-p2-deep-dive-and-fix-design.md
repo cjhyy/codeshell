@@ -14,7 +14,7 @@
 4. `ChatSessionManager.getOrCreate()` 的不存在分支会打开 session path approvals、创建 Engine、创建 `ChatSession`，并写入 `sessions` map，见 `packages/core/src/protocol/chat-session-manager.ts:53`、`packages/core/src/protocol/chat-session-manager.ts:54`、`packages/core/src/protocol/chat-session-manager.ts:78`、`packages/core/src/protocol/chat-session-manager.ts:80`。
 5. `requireExisting` 检查发生在 session 已创建之后；失败时 server 只发送 `SessionNotFound` 并 return，没有 `cm.close(params.sessionId)` 或其它清理，见 `packages/core/src/protocol/server.ts:424`、`packages/core/src/protocol/server.ts:429`、`packages/core/src/protocol/server.ts:430`、`packages/core/src/protocol/server.ts:437`。
 6. 因此当前实现已经做到“不 run”，但没有做到“不创建 live 空 session”。现有测试只断言错误码和 `state.runs === 0`，没有断言 `chatManager.get("gone-sid") === undefined`，见 `packages/core/src/protocol/server.require-existing.test.ts:61`、`packages/core/src/protocol/server.require-existing.test.ts:78`、`packages/core/src/protocol/server.require-existing.test.ts:80`。
-7. 这会占用 `maxSessions` 名额，因为 manager 在创建前才检查 `sessions.size >= maxSessions`，见 `packages/core/src/protocol/chat-session-manager.ts:73`、`packages/core/src/protocol/chat-session-manager.ts:76`。03 已将该问题定性为“protocol 能做到不 run，但仍可能把一个空 ChatSession 留在 manager 里”，见 `docs/review-2026-07-09/03-optimization-findings.md:56`、`docs/review-2026-07-09/03-optimization-findings.md:58`、`docs/review-2026-07-09/03-optimization-findings.md:59`。
+7. 这会占用 `maxSessions` 名额，因为 manager 在创建前才检查 `sessions.size >= maxSessions`，见 `packages/core/src/protocol/chat-session-manager.ts:73`、`packages/core/src/protocol/chat-session-manager.ts:76`。03 已将该问题定性为“protocol 能做到不 run，但仍可能把一个空 ChatSession 留在 manager 里”，见 `docs/archive/review-2026-07-09/03-optimization-findings.md:56`、`docs/archive/review-2026-07-09/03-optimization-findings.md:58`、`docs/archive/review-2026-07-09/03-optimization-findings.md:59`。
 
 ### 2. 复现/触发路径
 
@@ -64,7 +64,7 @@
 1. `anyEngine()` 可能创建 `globalQueryEngine`，见 `packages/core/src/protocol/server.ts:2284`、`packages/core/src/protocol/server.ts:2290`。这比创建 chat session 半径小，但仍是 Engine 实例化；测试 fake factory 要覆盖该路径。
 2. 不能破坏 live session 的 `permissionMode` 重应用；这曾是明确修复点，见 `packages/core/src/protocol/chat-session-manager.ts:58`、`packages/core/src/protocol/chat-session-manager.ts:63`、`packages/core/src/protocol/chat-session-manager.permission.test.ts:115`、`packages/core/src/protocol/chat-session-manager.permission.test.ts:119`。
 3. 不能把“不存在”误判为“可新建”：`requireExisting:false` 仍必须保持 resume-or-create 行为，现有测试见 `packages/core/src/protocol/server.require-existing.test.ts:104`、`packages/core/src/protocol/server.require-existing.test.ts:117`、`packages/core/src/protocol/server.require-existing.test.ts:121`。
-4. 如果后续把 probe 封装到 `ChatSessionManager`，要避免 manager 直接依赖 `Engine.sessionExistsOnDisk()` 之外的更大 Engine 表面；A1 已记录 manager/Engine 边界，见 `docs/review-2026-07-09/01-core-engine-structure.md:225`、`docs/review-2026-07-09/01-core-engine-structure.md:235`。
+4. 如果后续把 probe 封装到 `ChatSessionManager`，要避免 manager 直接依赖 `Engine.sessionExistsOnDisk()` 之外的更大 Engine 表面；A1 已记录 manager/Engine 边界，见 `docs/archive/review-2026-07-09/01-core-engine-structure.md:225`、`docs/archive/review-2026-07-09/01-core-engine-structure.md:235`。
 
 ## F-07 builtin capability 的 `off` 可热生效，`on` 受构造期 frozen registry 限制
 
@@ -78,7 +78,7 @@
 6. 每 turn 的动态路径只做过滤：`applyBuiltinOverrideVisibility()` 对 `off` 过滤工具，对 `on` / `inherit` 只是 keep；注释同样写明“can't re-add a tool the ctor-frozen registry omitted”，见 `packages/core/src/engine/engine.ts:267`、`packages/core/src/engine/engine.ts:270`、`packages/core/src/engine/engine.ts:271`、`packages/core/src/engine/engine.ts:280`。
 7. `run()` 每 turn 重新读取 override，并把 `off` 同时转成 executor 执行期 gate；但 `allToolDefs` 的来源仍是当前 registry，所以缺失工具不能被 `on` 加回，见 `packages/core/src/engine/engine.ts:1754`、`packages/core/src/engine/engine.ts:1761`、`packages/core/src/engine/engine.ts:1771`、`packages/core/src/engine/engine.ts:1808`。
 8. `ToolRegistry` 的 builtin 注册只在 constructor 里调用 `registerBuiltins()`；后续 `getToolDefinitions()` 只是返回 map 里已有工具，见 `packages/core/src/tool-system/registry.ts:26`、`packages/core/src/tool-system/registry.ts:27`、`packages/core/src/tool-system/registry.ts:69`、`packages/core/src/tool-system/registry.ts:74`。
-9. 因此这条不是隐藏的实现 bug，而是代码注释承认的折中。03 把它归为 P2，理由是设置语义不对称、排障成本增加，见 `docs/review-2026-07-09/03-optimization-findings.md:74`、`docs/review-2026-07-09/03-optimization-findings.md:76`、`docs/review-2026-07-09/03-optimization-findings.md:77`。
+9. 因此这条不是隐藏的实现 bug，而是代码注释承认的折中。03 把它归为 P2，理由是设置语义不对称、排障成本增加，见 `docs/archive/review-2026-07-09/03-optimization-findings.md:74`、`docs/archive/review-2026-07-09/03-optimization-findings.md:76`、`docs/archive/review-2026-07-09/03-optimization-findings.md:77`。
 
 ### 2. 复现/触发路径
 
@@ -146,7 +146,7 @@
 5. 子 Engine 的 stream events 会经 parent wrapper 转发。同步子代理没有 `streamOverride` 时会 fall back 到 parent UI onStream；wrapper 对未过滤事件统一 spread `agentId: req.agentId`，见 `packages/core/src/engine/engine.ts:1219`、`packages/core/src/engine/engine.ts:1224`、`packages/core/src/engine/engine.ts:1226`、`packages/core/src/engine/engine.ts:1246`。
 6. 但类型没有声明 `tool_summary.agentId`，desktop reducer 的注释也写着“tool_summary has no agentId in the StreamEvent type”，于是只从末尾找最近的顶层 `ToolMessage` 并写 `summary`，见 `packages/desktop/src/renderer/types.ts:650`、`packages/desktop/src/renderer/types.ts:651`、`packages/desktop/src/renderer/types.ts:654`、`packages/desktop/src/renderer/types.ts:657`。
 7. 同一个 reducer 对 `tool_result.agentId` 已能路由到 agent card 内部 `toolCalls`，见 `packages/desktop/src/renderer/types.ts:630`、`packages/desktop/src/renderer/types.ts:637`、`packages/desktop/src/renderer/types.ts:639`；现有测试也覆盖 agent tool start/result 不产生顶层 tool message，见 `packages/desktop/src/renderer/types.test.ts:281`、`packages/desktop/src/renderer/types.test.ts:295`、`packages/desktop/src/renderer/types.test.ts:300`。
-8. 结果是 `tool_summary` 与其它工具事件契约不一致。03 已记录：子代理 summary 可能误挂到主 feed 最近工具，或无顶层工具时丢失，见 `docs/review-2026-07-09/03-optimization-findings.md:83`、`docs/review-2026-07-09/03-optimization-findings.md:85`、`docs/review-2026-07-09/03-optimization-findings.md:86`。
+8. 结果是 `tool_summary` 与其它工具事件契约不一致。03 已记录：子代理 summary 可能误挂到主 feed 最近工具，或无顶层工具时丢失，见 `docs/archive/review-2026-07-09/03-optimization-findings.md:83`、`docs/archive/review-2026-07-09/03-optimization-findings.md:85`、`docs/archive/review-2026-07-09/03-optimization-findings.md:86`。
 
 ### 2. 复现/触发路径
 
@@ -159,7 +159,7 @@
 
 ### 3. 影响边界
 
-1. 直接影响普通 desktop renderer 的工具卡 summary；主链路归约位置是 `packages/desktop/src/renderer/types.ts`，A2 已校正普通 desktop 不走 `lib/streamReducer.ts`，见 `docs/review-2026-07-09/02-desktop-stream-walkthrough.md:75`、`docs/review-2026-07-09/02-desktop-stream-walkthrough.md:78`。
+1. 直接影响普通 desktop renderer 的工具卡 summary；主链路归约位置是 `packages/desktop/src/renderer/types.ts`，A2 已校正普通 desktop 不走 `lib/streamReducer.ts`，见 `docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:75`、`docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:78`。
 2. 影响子代理 inline card 的工具摘要。`AgentMessage.toolCalls` 是 agent card 内部工具列表，见 `packages/desktop/src/renderer/types.ts:100`、`packages/desktop/src/renderer/types.ts:122`、`packages/desktop/src/renderer/types.ts:123`；当前 `tool_summary` 没有写入这一路。
 3. 不影响工具执行结果本身：`tool_result` 已有 id 和 agent route，见 `packages/core/src/types.ts:460`、`packages/desktop/src/renderer/types.ts:630`。这也是本条保持 P2 的原因。
 4. `tool_summary` 是 best-effort observability；TurnLoop 注释明确该链路不应阻塞或导致 fatal rejection，见 `packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop.ts:1039`、`packages/core/src/engine/turn-loop.ts:1053`。修复不能把它改成 turn 关键路径。
@@ -202,7 +202,7 @@
 
 1. `StreamEvent` 类型扩展需要兼容旧 snapshot / 老 worker：`toolCallIds` 和 `agentId` 应保持可选；无 id 时保留 legacy fallback。
 2. 子代理事件的 `agentId` 目前来自 parent wrapper 的 spread 和 type cast，见 `packages/core/src/engine/engine.ts:1246`。给 `tool_summary` 类型补 `agentId` 是收敛事实，但要确认其它 consumer 不把它当顶层事件。
-3. batch summary 写到最后一个 tool 是 UI 最小改动，不是完美语义。若要真正 group-level summary，需要改 `ToolGroup` / `TurnProcessGroup` 数据结构；A2 说明分组逻辑集中在 `streamGroups.ts`，见 `docs/review-2026-07-09/02-desktop-stream-walkthrough.md:99`、`docs/review-2026-07-09/02-desktop-stream-walkthrough.md:103`、`docs/review-2026-07-09/02-desktop-stream-walkthrough.md:111`、`docs/review-2026-07-09/02-desktop-stream-walkthrough.md:115`。
+3. batch summary 写到最后一个 tool 是 UI 最小改动，不是完美语义。若要真正 group-level summary，需要改 `ToolGroup` / `TurnProcessGroup` 数据结构；A2 说明分组逻辑集中在 `streamGroups.ts`，见 `docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:99`、`docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:103`、`docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:111`、`docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:115`。
 4. summary 仍可能在 `turn_complete` 后到达；reducer 按 id 更新已有 message 应能处理，但测试要覆盖“summary 晚到仍更新目标 tool”。不能因为它晚到而 bump `turnEpoch` 或改变折叠边界。
 5. 不要让 summary 失败影响工具结果或 turn 完成；当前 catch 明确吞掉失败并打 warning，见 `packages/core/src/engine/turn-loop.ts:1052`、`packages/core/src/engine/turn-loop.ts:1054`。
 

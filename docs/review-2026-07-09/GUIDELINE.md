@@ -85,12 +85,12 @@
 
 **任务 A1 — Core 引擎结构说明**
 - 读：`docs/architecture/01-engine-and-turn-loop.md`、`docs/architecture/02-tool-system.md`、`docs/architecture/03-llm-and-model-layer.md`、`docs/architecture/04-protocol-and-sessions.md`、`docs/core-deep-dive/v2-02/03/05`、以及 §2A 的源码锚点。
-- 写：`docs/review-2026-07-09/01-core-engine-structure.md`
+- 写：`docs/archive/review-2026-07-09/01-core-engine-structure.md`
 - 内容：按 engine / tool-system / protocol 三大块，每块给出 §1 的三层（结构 / 设计 / 为什么）。每个子模块配真实 `文件路径:行号` 锚点。Why 无据处标「推测」。
 
 **任务 A2 — 桌面流端到端步骤说明**
-- 读：`docs/architecture/10-desktop-and-mobile.md`、`docs/todo/desktop-streaming-markdown-autoscroll-plan.md`、§2B 的源码锚点。
-- 写：`docs/review-2026-07-09/02-desktop-stream-walkthrough.md`
+- 读：`docs/architecture/10-desktop-and-mobile.md`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md`、§2B 的源码锚点。
+- 写：`docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md`
 - 内容：**一条有编号的端到端步骤链**，从「turn-loop.ts 产出一个 token/StreamEvent」到「屏幕上出现并最终折叠进 TurnProcessGroupCard」，每一步标注：这一步在哪个文件做、输入是什么、输出是什么、为什么需要这一步（例如为什么要 coalesce、为什么要 snapshot store、折叠判定的规则）。这份文档同时是 §5 可视化视频的**分镜脚本源**。
 
 > 阶段一两篇写完，卡密sama 先读一遍确认「架构讲对了」，再放行阶段二。
@@ -100,7 +100,7 @@
 **任务 B1 — 优化点清单**
 - 前置：A1 + A2 已被确认。
 - 读：A1/A2 两篇 + `CODESHELL.md`「Known Architecture Debt」+ `docs/todo/architecture-debt.md` + `docs/todo/engine-split-plan.md`。
-- 写：`docs/review-2026-07-09/03-optimization-findings.md`
+- 写：`docs/archive/review-2026-07-09/03-optimization-findings.md`
 - 内容：**只挑本轮范围内（core 引擎 + 桌面流）的不合理点**。每条 finding 用统一结构：
 
 ```
@@ -130,7 +130,7 @@
 
 ## 5. 可视化视频 HTML —— 规格（本轮不实现）
 
-> 目的：做一个能「像视频一样逐帧播放桌面流每一步」的可视化，让人直观看到一个 token 如何从 core 走到屏幕。后续用 **rednote / mimi-video skill + codex** 单独实现，本轮只定规格。分镜脚本直接取自 `02-desktop-stream-walkthrough.md` 的编号步骤。
+> 目的：做一个能「像视频一样逐帧播放桌面流每一步」的可视化，让人直观看到一个 token 如何从 core 走到屏幕。后续用 **rednote / mimi-video skill + codex** 单独实现，本轮只定规格。分镜脚本直接取自 `../archive/review-2026-07-09/02-desktop-stream-walkthrough.md` 的编号步骤。
 
 **形态**：单文件 `visualization-flow.html`（内联 CSS/JS，可离线双击打开），纯数据流端到端 51 步；或轻量 canvas/SVG 动画。不引重框架。
 
@@ -141,9 +141,9 @@
 
 **交互**：点节点看该步详情；可切「快放 / 单步」两种节奏，模拟真实 streaming 逐 token 的观感。
 
-**数据源**：动画脚本（steps 数组）由 `02-desktop-stream-walkthrough.md` 生成，保证可视化与文字说明单源一致。
+**数据源**：动画脚本（steps 数组）由 `../archive/review-2026-07-09/02-desktop-stream-walkthrough.md` 生成，保证可视化与文字说明单源一致。
 
-**后续落地方式**：卡密sama 另起会话，用 mimi-video 相关 skill 编排 + DriveAgent(cli:codex) 实现；codex 读本节 §5 + `02-desktop-stream-walkthrough.md` 即可动工。
+**后续落地方式**：卡密sama 另起会话，用 mimi-video 相关 skill 编排 + DriveAgent(cli:codex) 实现；codex 读本节 §5 + `../archive/review-2026-07-09/02-desktop-stream-walkthrough.md` 即可动工。
 
 ---
 
@@ -152,9 +152,9 @@
 | 文件 | 阶段 | 内容 |
 |---|---|---|
 | `docs/review-2026-07-09/GUIDELINE.md` | — | 本文件（任务契约） |
-| `docs/review-2026-07-09/01-core-engine-structure.md` | A1 | core 引擎结构/设计/为什么 |
-| `docs/review-2026-07-09/02-desktop-stream-walkthrough.md` | A2 | 桌面流端到端编号步骤 + 视频分镜源 |
-| `docs/review-2026-07-09/03-optimization-findings.md` | B1 | 范围内优化点清单（P0/P1/P2） |
+| `docs/archive/review-2026-07-09/01-core-engine-structure.md` | A1 | core 引擎结构/设计/为什么 |
+| `docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md` | A2 | 桌面流端到端编号步骤 + 视频分镜源 |
+| `docs/archive/review-2026-07-09/03-optimization-findings.md` | B1 | 范围内优化点清单（P0/P1/P2） |
 | `docs/review-2026-07-09/visualization-flow.html` | 后续 | 纯数据流端到端 51 步可视化 |
 
 ---
@@ -162,10 +162,10 @@
 ## 7. 给 codex 的一句话派活模板（卡密sama 直接用）
 
 阶段一 A1：
-> 读 `docs/review-2026-07-09/GUIDELINE.md`，执行其中「任务 A1」，只做 A1，产出 `01-core-engine-structure.md`。严格遵守 §1 三层结构和 §4 护栏，Why 无据标「推测」，只写文档不改源码。完成后自查每个子模块是否都有 file:line 锚点，再返回。
+> 读 `docs/review-2026-07-09/GUIDELINE.md`，执行其中「任务 A1」，只做 A1，产出 `../archive/review-2026-07-09/01-core-engine-structure.md`。严格遵守 §1 三层结构和 §4 护栏，Why 无据标「推测」，只写文档不改源码。完成后自查每个子模块是否都有 file:line 锚点，再返回。
 
 阶段一 A2：
-> 读 GUIDELINE + 已完成的 01。执行「任务 A2」，产出 `02-desktop-stream-walkthrough.md`，一条编号端到端步骤链，每步标文件/输入/输出/为什么。只写文档不改源码。
+> 读 GUIDELINE + 已完成的 01。执行「任务 A2」，产出 `../archive/review-2026-07-09/02-desktop-stream-walkthrough.md`，一条编号端到端步骤链，每步标文件/输入/输出/为什么。只写文档不改源码。
 
 阶段二 B1（A1/A2 确认后）：
-> 读 GUIDELINE + 01 + 02。执行「任务 B1」，产出 `03-optimization-findings.md`，按 §3-B1 的 finding 结构，只挑 core 引擎 + 桌面流范围内的具体不合理点，带严重度和证据，只写文档不改源码。
+> 读 GUIDELINE + 01 + 02。执行「任务 B1」，产出 `../archive/review-2026-07-09/03-optimization-findings.md`，按 §3-B1 的 finding 结构，只挑 core 引擎 + 桌面流范围内的具体不合理点，带严重度和证据，只写文档不改源码。

@@ -13,7 +13,7 @@
 3. desktop reducer 收到 `stream_request_start` 时自己生成 `freshId("assistant")` 作为 UI message id，见 `packages/desktop/src/renderer/types.ts:443`、`packages/desktop/src/renderer/types.ts:448`、`packages/desktop/src/renderer/types.ts:453`、`packages/desktop/src/renderer/types.ts:455`。这个 id 与 core 发出的 `turn_N` 不在同一命名空间。
 4. desktop 的 `tombstone` 按 `state.messages.findIndex((m) => m.id === event.messageId)` 精确删除，找不到就 no-op，见 `packages/desktop/src/renderer/types.ts:916`、`packages/desktop/src/renderer/types.ts:918`、`packages/desktop/src/renderer/types.ts:919`。因此 `turn_N` 无法删除 `assistant-时间戳-counter`。
 5. fallback 的 non-streaming 响应最终会走普通无工具终态：`assistant_message` 携带 `message.content = finalText`，见 `packages/core/src/engine/turn-loop.ts:879`、`packages/core/src/engine/turn-loop.ts:880`、`packages/core/src/engine/turn-loop.ts:881`。但 desktop 的 `assistant_message` 分支只把当前 streaming assistant 标记 `done`，没有读取或写回 `event.message.content`，见 `packages/desktop/src/renderer/types.ts:664`、`packages/desktop/src/renderer/types.ts:667`、`packages/desktop/src/renderer/types.ts:670`、`packages/desktop/src/renderer/types.ts:672`。
-6. 结果是：partial delta 留在 UI 里，tombstone 撤不掉；最终 non-streaming 文本在事件里存在，但 reducer 不消费。03 已把这个总结为 producer/consumer 契约不一致，见 `docs/review-2026-07-09/03-optimization-findings.md:20`、`docs/review-2026-07-09/03-optimization-findings.md:22`、`docs/review-2026-07-09/03-optimization-findings.md:23`。
+6. 结果是：partial delta 留在 UI 里，tombstone 撤不掉；最终 non-streaming 文本在事件里存在，但 reducer 不消费。03 已把这个总结为 producer/consumer 契约不一致，见 `docs/archive/review-2026-07-09/03-optimization-findings.md:20`、`docs/archive/review-2026-07-09/03-optimization-findings.md:22`、`docs/archive/review-2026-07-09/03-optimization-findings.md:23`。
 
 ### 2. 复现/触发路径
 
@@ -25,7 +25,7 @@
 
 ### 3. 影响边界
 
-1. 直接影响普通 desktop `MessageStream` 的主 assistant bubble；A2 说明主 desktop 链路是 `transcriptsReducer` 调 `types.ts` 的 `applyStreamEvent`，不是 mobile/CC Room 的 `lib/streamReducer.ts`，见 `docs/review-2026-07-09/02-desktop-stream-walkthrough.md:75`、`docs/review-2026-07-09/02-desktop-stream-walkthrough.md:78`。
+1. 直接影响普通 desktop `MessageStream` 的主 assistant bubble；A2 说明主 desktop 链路是 `transcriptsReducer` 调 `types.ts` 的 `applyStreamEvent`，不是 mobile/CC Room 的 `lib/streamReducer.ts`，见 `docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:75`、`docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:78`。
 2. core 侧需要改 `StreamEvent` 契约与 `TurnLoop` emit 方式，位置集中在 `packages/core/src/types.ts:444`、`packages/core/src/types.ts:461`、`packages/core/src/types.ts:490`、`packages/core/src/engine/turn-loop.ts:605`、`packages/core/src/engine/turn-loop.ts:1335`。
 3. desktop 侧需要改 `MessagesReducerState` 的 streaming id 使用、`stream_request_start`、`assistant_message`、`tombstone` 三个 reducer 分支，位置集中在 `packages/desktop/src/renderer/types.ts:282`、`packages/desktop/src/renderer/types.ts:443`、`packages/desktop/src/renderer/types.ts:664`、`packages/desktop/src/renderer/types.ts:916`。
 4. 协议层只转发裸 `StreamEvent` 加 `sessionId` envelope，见 `packages/core/src/protocol/server.ts:498`、`packages/core/src/protocol/server.ts:499`；如果只扩展 `StreamEvent` 字段，不需要让 renderer runtime-import core。
@@ -80,7 +80,7 @@
 4. `activeAgents` 在 `agent_start` 时写入，见 `packages/desktop/src/renderer/types.ts:701`、`packages/desktop/src/renderer/types.ts:706`、`packages/desktop/src/renderer/types.ts:708`；正常 `agent_end` 会删除，见 `packages/desktop/src/renderer/types.ts:767`、`packages/desktop/src/renderer/types.ts:769`、`packages/desktop/src/renderer/types.ts:796`。
 5. 但 `turn_complete` 的 orphan sweep 只遍历 `state.activeAgents`、刷新/标记 agent message，没有从 `activeAgents` 删除被 clean sweep 的 orphan；return 里也没有写 `activeAgents`，见 `packages/desktop/src/renderer/types.ts:932`、`packages/desktop/src/renderer/types.ts:944`、`packages/desktop/src/renderer/types.ts:950`、`packages/desktop/src/renderer/types.ts:956`、`packages/desktop/src/renderer/types.ts:1027`、`packages/desktop/src/renderer/types.ts:1033`。
 6. `background_agent_completed` 分支同样只按 `agentId` 关 card 并追加 system message，没有清 `activeAgents`，见 `packages/desktop/src/renderer/types.ts:1056`、`packages/desktop/src/renderer/types.ts:1064`、`packages/desktop/src/renderer/types.ts:1071`、`packages/desktop/src/renderer/types.ts:1082`、`packages/desktop/src/renderer/types.ts:1088`。
-7. 结果是 `activeAgents` 成了会脏的运行态；后续一个无 `agentId` 的顶层 `stream_request_start` 会被压掉，后续 `text_delta` 又因没有 `streamingAssistantId` 被忽略，见 `packages/desktop/src/renderer/types.ts:447`、`packages/desktop/src/renderer/types.ts:500`。03 已记录这条链路，见 `docs/review-2026-07-09/03-optimization-findings.md:29`、`docs/review-2026-07-09/03-optimization-findings.md:31`、`docs/review-2026-07-09/03-optimization-findings.md:32`。
+7. 结果是 `activeAgents` 成了会脏的运行态；后续一个无 `agentId` 的顶层 `stream_request_start` 会被压掉，后续 `text_delta` 又因没有 `streamingAssistantId` 被忽略，见 `packages/desktop/src/renderer/types.ts:447`、`packages/desktop/src/renderer/types.ts:500`。03 已记录这条链路，见 `docs/archive/review-2026-07-09/03-optimization-findings.md:29`、`docs/archive/review-2026-07-09/03-optimization-findings.md:31`、`docs/archive/review-2026-07-09/03-optimization-findings.md:32`。
 
 ### 2. 复现/触发路径
 
@@ -94,7 +94,7 @@
 
 1. 直接影响 desktop 多代理、后台代理之后的普通顶层 streaming 回复；用户可见表现是下一轮没有 assistant bubble 或 token 不显示。
 2. 改动主要在 `packages/desktop/src/renderer/types.ts` 和 `packages/desktop/src/renderer/types.test.ts`，core 侧已有 `agentId` 类型与 wrapper，不必让 core import desktop。
-3. 需要留意 transcript/disk replay：A2 说明普通 desktop disk fold 后仍会进同一个 `applyStreamEvent`，见 `docs/review-2026-07-09/02-desktop-stream-walkthrough.md:75`、`docs/review-2026-07-09/02-desktop-stream-walkthrough.md:78`。改动后 replay 的 active agent cleanup 也应一致。
+3. 需要留意 transcript/disk replay：A2 说明普通 desktop disk fold 后仍会进同一个 `applyStreamEvent`，见 `docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:75`、`docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:78`。改动后 replay 的 active agent cleanup 也应一致。
 
 ### 4. 修复方案
 
@@ -112,7 +112,7 @@
    - 如果 payload 有 `agentId`，无论是否找到 card，都从 `activeAgents` 删除该 id。
    - 保留当前 card resolve 与 system message 行为，见 `packages/desktop/src/renderer/types.ts:1063`、`packages/desktop/src/renderer/types.ts:1071`、`packages/desktop/src/renderer/types.ts:1084`。
 4. 保留 `agent_end` 的现有删除逻辑，见 `packages/desktop/src/renderer/types.ts:769`、`packages/desktop/src/renderer/types.ts:796`，避免双删问题；对象 rest 删除是幂等的。
-5. 不建议在顶层 `text_delta` 无 slot 时自动创建 assistant slot来掩盖问题。主链路设计是 `stream_request_start` 创建 stable accumulator，A2 已说明该职责，见 `docs/review-2026-07-09/02-desktop-stream-walkthrough.md:81`、`docs/review-2026-07-09/02-desktop-stream-walkthrough.md:84`、`docs/review-2026-07-09/02-desktop-stream-walkthrough.md:85`。
+5. 不建议在顶层 `text_delta` 无 slot 时自动创建 assistant slot来掩盖问题。主链路设计是 `stream_request_start` 创建 stable accumulator，A2 已说明该职责，见 `docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:81`、`docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:84`、`docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:85`。
 
 ### 5. TDD 测试点
 
@@ -144,17 +144,17 @@
 4. `stream_request_start`、`assistant_message`、`turn_complete`、`tool_use_start`、`tool_result` 等边界事件都走 passthrough；当前逻辑只 append 并 schedule，不 flush、不换 delta key，见 `packages/desktop/src/renderer/streamCoalescer.ts:145`、`packages/desktop/src/renderer/streamCoalescer.ts:148`、`packages/desktop/src/renderer/streamCoalescer.ts:149`。
 5. reducer 会按 batch 内数组顺序逐个 `applyStreamEvent`，见 `packages/desktop/src/renderer/transcriptsReducer.ts:128`、`packages/desktop/src/renderer/transcriptsReducer.ts:136`、`packages/desktop/src/renderer/transcriptsReducer.ts:137`。因此 coalescer 重新排列出来的顺序就是状态机看到的真实顺序。
 6. core/protocol 允许下一 turn 很快跟上：`ChatSession.pump()` 在 finally 中如果队列非空就立即 `void this.pump()`，见 `packages/core/src/protocol/chat-session.ts:240`、`packages/core/src/protocol/chat-session.ts:251`、`packages/core/src/protocol/chat-session.ts:252`。Engine 在 run 收尾发 `turn_complete`，下一 run 的 TurnLoop 顶部发 `stream_request_start`，见 `packages/core/src/engine/engine.ts:2362`、`packages/core/src/engine/engine.ts:2363`、`packages/core/src/engine/turn-loop.ts:605`。
-7. 所以同一 50ms 窗口内可能出现 `text_delta(old)` → `turn_complete` → `stream_request_start` → `text_delta(new)`；第二个 text 因 key 相同被 merge 回第一个 slot，最终 batch 变成 `text_delta(old+new)` → `turn_complete` → `stream_request_start`。03 已记录这会破坏 A2 依赖的状态机边界，见 `docs/review-2026-07-09/03-optimization-findings.md:38`、`docs/review-2026-07-09/03-optimization-findings.md:40`、`docs/review-2026-07-09/03-optimization-findings.md:41`。
+7. 所以同一 50ms 窗口内可能出现 `text_delta(old)` → `turn_complete` → `stream_request_start` → `text_delta(new)`；第二个 text 因 key 相同被 merge 回第一个 slot，最终 batch 变成 `text_delta(old+new)` → `turn_complete` → `stream_request_start`。03 已记录这会破坏 A2 依赖的状态机边界，见 `docs/archive/review-2026-07-09/03-optimization-findings.md:38`、`docs/archive/review-2026-07-09/03-optimization-findings.md:40`、`docs/archive/review-2026-07-09/03-optimization-findings.md:41`。
 
 ### 2. 复现/触发路径
 
 1. fast second send：第一 turn 最后一个 token 到达后，50ms flush 还没发生；紧接着 `turn_complete` 到达，queue drain 立即启动第二 turn 并发 `stream_request_start`，第二 turn 第一个 token 也落在同一窗口。触发条件由 coalescer 50ms 窗口和 `ChatSession` immediate pump 共同构成，见 `packages/desktop/src/renderer/streamCoalescer.ts:96`、`packages/core/src/protocol/chat-session.ts:251`。
 2. 工具边界：`text_delta` lead-in 后马上 `tool_use_start`，再有模型/子代理 text delta 落在同一窗口。因为 `tool_use_start` 是 passthrough 且不切 key，后续同 agent text 仍可能合并回工具前，见 `packages/desktop/src/renderer/streamCoalescer.ts:104`、`packages/desktop/src/renderer/streamCoalescer.ts:145`。
-3. 子代理密集事件：A2 说明 coalescer 是为工具密集子代理降低 renderer load，见 `docs/review-2026-07-09/02-desktop-stream-walkthrough.md:69`、`docs/review-2026-07-09/02-desktop-stream-walkthrough.md:72`。这种高频路径更容易让不同状态机阶段落入一个 50ms batch。
+3. 子代理密集事件：A2 说明 coalescer 是为工具密集子代理降低 renderer load，见 `docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:69`、`docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:72`。这种高频路径更容易让不同状态机阶段落入一个 50ms batch。
 
 ### 3. 影响边界
 
-1. 直接影响 desktop renderer 的事件顺序，不需要改 core。A2 已把 coalescer 定位在 main/preload 之后、reducer 之前，见 `docs/review-2026-07-09/02-desktop-stream-walkthrough.md:69`、`docs/review-2026-07-09/02-desktop-stream-walkthrough.md:75`。
+1. 直接影响 desktop renderer 的事件顺序，不需要改 core。A2 已把 coalescer 定位在 main/preload 之后、reducer 之前，见 `docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:69`、`docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:75`。
 2. 改动集中在 `packages/desktop/src/renderer/streamCoalescer.ts` 与 `packages/desktop/src/renderer/streamCoalescer.test.ts`。
 3. 不能简单取消 batching；现有测试明确把“20 个 tool start/result 一窗一次 dispatch”作为性能契约，见 `packages/desktop/src/renderer/streamCoalescer.test.ts:82`、`packages/desktop/src/renderer/streamCoalescer.test.ts:91`、`packages/desktop/src/renderer/streamCoalescer.test.ts:92`。
 
@@ -220,10 +220,10 @@
 ### 2. 复现/触发路径
 
 1. renderer 正常消费 live events，main snapshot 也持续 append seq，见 `packages/desktop/src/main/agent-bridge.ts:203`、`packages/desktop/src/main/SessionSnapshotStore.ts:49`。
-2. renderer 刷新/HMR/crash recovery，React memory 中的 route table、coalescer、`appliedSeqRef` 清空；A2 说明 main 不 remount，snapshot 留在 main，见 `docs/review-2026-07-09/02-desktop-stream-walkthrough.md:51`、`docs/review-2026-07-09/02-desktop-stream-walkthrough.md:55`。
+2. renderer 刷新/HMR/crash recovery，React memory 中的 route table、coalescer、`appliedSeqRef` 清空；A2 说明 main 不 remount，snapshot 留在 main，见 `docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:51`、`docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:55`。
 3. 如果 localStorage/disk projection 非空但漏了刷新前最后一段 live tail，hydrate 分支不会 replay snapshot，因为代码只在 `base.messages.length === 0` 时 `subscribeSession(engineId, 0)`，见 `packages/desktop/src/renderer/App.tsx:816`、`packages/desktop/src/renderer/App.tsx:820`、`packages/desktop/src/renderer/App.tsx:823`、`packages/desktop/src/renderer/App.tsx:824`。
 4. 如果改成非空也 `sinceSeq=0`，又会因为 StreamEvent 没有稳定 id 而重复 apply 已有消息；`selectReplayEvents()` 只能按 seq 去重，见 `packages/desktop/src/renderer/snapshotReplay.ts:19`、`packages/desktop/src/renderer/snapshotReplay.ts:23`、`packages/desktop/src/renderer/snapshotReplay.ts:24`。
-5. 触发结果：非空 projection 后的 missed tail 无法安全补回。03 已把这总结为“cursor 只在 snapshot replay 内部成立，live 消费无法和 main snapshot seq 对齐”，见 `docs/review-2026-07-09/03-optimization-findings.md:47`、`docs/review-2026-07-09/03-optimization-findings.md:49`、`docs/review-2026-07-09/03-optimization-findings.md:50`。
+5. 触发结果：非空 projection 后的 missed tail 无法安全补回。03 已把这总结为“cursor 只在 snapshot replay 内部成立，live 消费无法和 main snapshot seq 对齐”，见 `docs/archive/review-2026-07-09/03-optimization-findings.md:47`、`docs/archive/review-2026-07-09/03-optimization-findings.md:49`、`docs/archive/review-2026-07-09/03-optimization-findings.md:50`。
 
 ### 3. 影响边界
 
@@ -296,7 +296,7 @@
 6. `handleAsk()` 本身不是 classifier。它处理 `dontAsk` fast-fail、`bypassPermissions` fast-allow、denial tracker、risk description 和 approval backend，见 `packages/core/src/tool-system/permission.ts:966`、`packages/core/src/tool-system/permission.ts:972`、`packages/core/src/tool-system/permission.ts:980`、`packages/core/src/tool-system/permission.ts:989`、`packages/core/src/tool-system/permission.ts:999`、`packages/core/src/tool-system/permission.ts:1011`。这里没有 explicit rule 匹配。
 7. 现有 `clampHookDecision()` 只用于 `on_permission_check` hook，且发生在 classifier 已执行之后，见 `packages/core/src/tool-system/executor.ts:44`、`packages/core/src/tool-system/executor.ts:377`、`packages/core/src/tool-system/executor.ts:381`、`packages/core/src/tool-system/executor.ts:388`。它保护不了前置 `pre_tool_use ask` 跳过 classifier 的路径。
 8. HookRegistry 自身按 deny > ask > allow 聚合 hook 链，见 `packages/core/src/hooks/registry.ts:10`、`packages/core/src/hooks/registry.ts:12`、`packages/core/src/hooks/registry.ts:95`、`packages/core/src/hooks/registry.ts:99`；但这个聚合只发生在 hook 内部，不能替代 classifier 与 user 的最终权限合并。
-9. 03 已将问题定性为“hook 的 ask 分支发生在 permission classify 前，批准后不再执行 classifier”，见 `docs/review-2026-07-09/03-optimization-findings.md:65`、`docs/review-2026-07-09/03-optimization-findings.md:67`、`docs/review-2026-07-09/03-optimization-findings.md:68`。
+9. 03 已将问题定性为“hook 的 ask 分支发生在 permission classify 前，批准后不再执行 classifier”，见 `docs/archive/review-2026-07-09/03-optimization-findings.md:65`、`docs/archive/review-2026-07-09/03-optimization-findings.md:67`、`docs/archive/review-2026-07-09/03-optimization-findings.md:68`。
 
 ### 2. 复现/触发路径
 
@@ -324,7 +324,7 @@
    - classifier `ask` 保持 ask；hook `allow` 不能升级为 allow。
    - classifier `allow` 时，hook `ask` 可以降级为 ask，hook `deny` 可以降级为 deny。
    - 任一 hook `deny` 都可以 deny。
-   这个策略与 03 的建议一致，见 `docs/review-2026-07-09/03-optimization-findings.md:70`。
+   这个策略与 03 的建议一致，见 `docs/archive/review-2026-07-09/03-optimization-findings.md:70`。
 4. `on_permission_check` hook 仍在 classifier 后执行，但现有 `clampHookDecision()` 注释和行为需要收紧：
    - 当前注释允许“relax deny to ask”，见 `packages/core/src/tool-system/executor.ts:36`、`packages/core/src/tool-system/executor.ts:38`、`packages/core/src/tool-system/executor.ts:39`。修复后应改成“hooks may only keep or tighten classifier decision”。
    - 如果保留 helper 名称，语义要改为 deny > ask > allow，不能让 classifier deny 变 ask。

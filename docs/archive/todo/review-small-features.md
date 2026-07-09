@@ -1,6 +1,6 @@
 # 小 feature 批次代码审查报告
 
-审查范围：`2dc55764..17e186a9` 共 9 个 commit。审查依据为 `docs/todo/plan-overall-small-features.md`、`plan-group-a-core.md`、`plan-group-b-compaction-ui.md`、`plan-group-c-worktree-panels.md`。
+审查范围：`2dc55764..17e186a9` 共 9 个 commit。审查依据为 `docs/archive/todo/plan-overall-small-features.md`、`plan-group-a-core.md`、`plan-group-b-compaction-ui.md`、`plan-group-c-worktree-panels.md`。
 
 ## 1. 总体结论
 

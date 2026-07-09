@@ -1,6 +1,6 @@
 # 小 feature 批次 Round 2 代码审查报告
 
-审查范围：上一轮报告 `docs/todo/review-small-features.md` 之后的 6 个修复 commit：
+审查范围：上一轮报告 `docs/archive/todo/review-small-features.md` 之后的 6 个修复 commit：
 
 - `bb7e99f9` `test(core): fix onStream callback return type in new tests`
 - `9374e3c5` `fix(desktop): report cleanup branch delete failures`

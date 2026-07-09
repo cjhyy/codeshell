@@ -1,6 +1,6 @@
 # 新观察证据级验证
 
-本文只做源码阅读和 grep 复核，不改 `packages/**` 源码，不跑构建/测试。范围以 `docs/review-2026-07-09/06-turn-loop-state-machine.md` 的 N-01 / N-02 / N-03 为主，必要时回读 01/02/03 里对 core/desktop stream 链路和历史 finding 的描述。
+本文只做源码阅读和 grep 复核，不改 `packages/**` 源码，不跑构建/测试。范围以 `docs/archive/review-2026-07-09/06-turn-loop-state-machine.md` 的 N-01 / N-02 / N-03 为主，必要时回读 01/02/03 里对 core/desktop stream 链路和历史 finding 的描述。
 
 结论摘要：
 
