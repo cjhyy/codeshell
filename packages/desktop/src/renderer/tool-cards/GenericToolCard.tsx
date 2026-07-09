@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import type { ToolMessage } from "../types";
 import { ToolCardShell } from "./ToolCardShell";
+import { SandboxBadge } from "./SandboxBadge";
 import { parsedArgs, truncate } from "./utils";
 import { detectAttachments } from "./attachments";
 import { AttachmentCard } from "./AttachmentCard";
@@ -97,6 +98,7 @@ export function GenericToolCard({ message, onSelect, selected, turnEpoch, cwd }:
         message={message}
         summary={summary}
         details={details}
+        headerBadge={message.sandbox && <SandboxBadge sandbox={message.sandbox} />}
         onSelect={onSelect}
         selected={selected}
         turnEpoch={turnEpoch}

@@ -5,8 +5,8 @@ import { useT } from "../i18n/I18nProvider";
 
 /**
  * Small header chip showing whether THIS tool call ran under an OS-level
- * sandbox. Surfaced for shell-executing tools (Bash / background shell /
- * worktree) — file/search tools don't go through the sandbox and pass no
+ * sandbox. Surfaced for command-executing tools with sandbox visibility (Bash /
+ * background shell / worktree / PowerShell) — file/search tools pass no
  * `sandbox`, so no badge renders.
  *
  *   backend "off"               → ⚠ 未隔离 (muted/warn) — explicit so the user

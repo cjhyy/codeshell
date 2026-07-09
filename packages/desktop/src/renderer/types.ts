@@ -81,9 +81,9 @@ export interface ToolMessage {
   /** Optional natural-language summary emitted via `tool_summary`. */
   summary?: string;
   /**
-   * Sandbox info for tools that executed under it (Bash / background shell /
-   * worktree). `backend: "off"` is set explicitly so the card shows「未隔离」
-   * rather than nothing. Undefined for tools that don't touch the sandbox.
+   * Sandbox info for tools with sandbox visibility (Bash / background shell /
+   * worktree / PowerShell). `backend: "off"` is set explicitly so the card
+   * shows「未隔离」rather than nothing. Undefined for tools that don't expose it.
    */
   sandbox?: {
     backend: "off" | "seatbelt" | "bwrap";
