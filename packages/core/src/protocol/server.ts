@@ -17,6 +17,7 @@
 import type { Transport } from "./transport.js";
 import {
   type RpcRequest,
+  type InputAttachmentMeta,
   type RunParams,
   type RunResult,
   type ApproveParams,
@@ -56,6 +57,34 @@ import { redactLlmConfig, maskSecretValue } from "./redact.js";
 import { redactSecrets } from "../logging/sanitize-messages.js";
 
 type ContextCompactStreamEvent = Extract<StreamEvent, { type: "context_compact" }>;
+
+function isValidRunAttachment(value: unknown): value is InputAttachmentMeta {
+  if (!value || typeof value !== "object") return false;
+  const attachment = value as Partial<InputAttachmentMeta>;
+  const hasPath = [attachment.path, attachment.relPath, attachment.absPath].some(
+    (path) => typeof path === "string" && path.trim().length > 0,
+  );
+  return (
+    typeof attachment.id === "string" &&
+    attachment.id.length > 0 &&
+    typeof attachment.sessionId === "string" &&
+    attachment.sessionId.length > 0 &&
+    (attachment.kind === "image" ||
+      attachment.kind === "file" ||
+      attachment.kind === "directory") &&
+    hasPath
+  );
+}
+
+function runInputError(params: RunParams): string | null {
+  if (typeof params.task !== "string") return "task must be a string";
+  const hasAttachment =
+    Array.isArray(params.attachments) && params.attachments.some(isValidRunAttachment);
+  if (params.task.trim().length === 0 && !hasAttachment) {
+    return "task or a valid attachment is required";
+  }
+  return null;
+}
 
 const COMPACT_STREAM_STRATEGIES = new Set<ContextCompactStreamEvent["strategy"]>([
   "micro",
@@ -595,10 +624,9 @@ export class AgentServer {
       );
       return;
     }
-    if (!params.task) {
-      this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.InvalidParams, "task is required"),
-      );
+    const inputError = runInputError(params);
+    if (inputError) {
+      this.transport.send(createErrorResponse(req.id, ErrorCodes.InvalidParams, inputError));
       return;
     }
 
@@ -671,7 +699,7 @@ export class AgentServer {
     // these host callbacks must be installed after every create/recreate.
     this.wireInteractiveSession(session, sid);
     try {
-      const result = await session.enqueueTurn(params.task, {
+      const run = session.enqueueTurn(params.task, {
         cwd: params.cwd,
         attachments: Array.isArray(params.attachments) ? params.attachments : undefined,
         goal:
@@ -684,6 +712,8 @@ export class AgentServer {
         clientMessageId:
           typeof params.clientMessageId === "string" ? params.clientMessageId : undefined,
       });
+      this.notify(Methods.RunAccepted, { requestId: req.id, sessionId: sid });
+      const result = await run;
 
       const runResult: RunResult = {
         text: result.text,
@@ -718,10 +748,9 @@ export class AgentServer {
     }
 
     const params = (req.params ?? {}) as unknown as RunParams;
-    if (!params.task) {
-      this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.InvalidParams, "task is required"),
-      );
+    const inputError = runInputError(params);
+    if (inputError) {
+      this.transport.send(createErrorResponse(req.id, ErrorCodes.InvalidParams, inputError));
       return;
     }
     if (params.cwd !== undefined && (typeof params.cwd !== "string" || params.cwd.length === 0)) {
@@ -778,6 +807,10 @@ export class AgentServer {
     // `signal.aborted` below it's already gone.
     const runController = this.abortController!;
     try {
+      this.notify(Methods.RunAccepted, {
+        requestId: req.id,
+        sessionId: params.sessionId ?? "",
+      });
       const result = await this.legacyEngine!.run(params.task, {
         cwd: params.cwd,
         sessionId: params.sessionId,
@@ -785,6 +818,7 @@ export class AgentServer {
         onStream: streamToClient,
         clientMessageId:
           typeof params.clientMessageId === "string" ? params.clientMessageId : undefined,
+        attachments: Array.isArray(params.attachments) ? params.attachments : undefined,
         goal:
           typeof params.goal === "string" ||
           (params.goal != null && typeof params.goal === "object")

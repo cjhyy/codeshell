@@ -136,6 +136,7 @@ import { TunnelManager } from "./mobile-remote/tunnel-manager.js";
 import { AccessPasscode } from "./mobile-remote/access-passcode.js";
 import { MobileUploadService } from "./mobile-remote/mobile-upload-service.js";
 import { materializeMobileAttachments } from "./mobile-remote/mobile-attachments.js";
+import { injectMobileRunAndAwaitAcceptance } from "./mobile-remote/mobile-run-dispatch.js";
 import type {
   MobileClientEvent,
   MobilePermissionModeSnapshotEntry,
@@ -942,21 +943,21 @@ async function handleMobileClientEvent(event: AuthenticatedMobileClientEvent): P
     });
     // Every phone chat turn is a normal CodeShell turn routed through the worker
     // run path. The device's permission-mode preset rides on the run.
-    bridge.injectWorkerMessage(
-      JSON.stringify({
-        jsonrpc: "2.0",
-        id: runId,
-        method: "agent/run",
-        params: {
-          task: text,
-          cwd,
-          sessionId,
-          clientMessageId,
-          attachments: materialized.metas,
-          ...(permissionMode ? { permissionMode } : {}),
-        },
-      }),
-    );
+    const acceptance = await injectMobileRunAndAwaitAcceptance(bridge, {
+      id: runId,
+      params: {
+        task: text,
+        cwd,
+        sessionId,
+        clientMessageId,
+        attachments: materialized.metas,
+        ...(permissionMode ? { permissionMode } : {}),
+      },
+    });
+    if (!acceptance.ok) {
+      reply({ type: "error", message: acceptance.message });
+      return;
+    }
     await markAttachmentsSent(cwd, sessionId, materialized.metas);
     for (const uploadId of materialized.uploadIds) {
       await mobileUploads.consume(deviceId ?? "", uploadId);

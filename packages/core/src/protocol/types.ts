@@ -402,6 +402,12 @@ export interface StatusNotification {
   message?: string;
 }
 
+/** Server accepted and queued an agent/run request after synchronous validation. */
+export interface RunAcceptedNotification {
+  requestId: string | number;
+  sessionId: string;
+}
+
 // ─── Method Names ───────────────────────────────────────────────────
 
 export const Methods = {
@@ -436,6 +442,7 @@ export const Methods = {
   BackgroundWork: "agent/backgroundWork",
 
   // Server → Client (notifications, no id)
+  RunAccepted: "agent/runAccepted",
   StreamEvent: "agent/streamEvent",
   ApprovalRequest: "agent/approvalRequest",
   /** Server-initiated resolution of a pending approval/ask (e.g. a goal-mode
