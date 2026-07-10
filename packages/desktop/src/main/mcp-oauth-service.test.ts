@@ -44,6 +44,7 @@ describe("McpOAuthService", () => {
       fetch?: typeof fetch;
       now?: () => number;
       changed?: () => void;
+      revocationTimeoutMs?: number;
     } = {},
   ) {
     const store = new CredentialStore(undefined, new TestCipher());
@@ -60,6 +61,7 @@ describe("McpOAuthService", () => {
       fetch: options.fetch,
       now: options.now,
       onCredentialsChanged: options.changed,
+      revocationTimeoutMs: options.revocationTimeoutMs,
     });
     return { service, store };
   }
@@ -370,5 +372,46 @@ describe("McpOAuthService", () => {
     expect(changed).toBe(2);
     await Promise.resolve();
     expect(store.resolve("example-oauth")).toBeUndefined();
+  });
+
+  test("revocation timeout cannot block local deletion or cache invalidation", async () => {
+    let changed = 0;
+    let revokeSignal: AbortSignal | undefined;
+    const { service, store } = makeService({
+      changed: () => changed++,
+      revocationTimeoutMs: 20,
+      fetch: (async (input: string | URL | Request, init?: RequestInit) => {
+        const request = new Request(input, init);
+        revokeSignal = request.signal;
+        return new Promise<Response>(() => {});
+      }) as typeof fetch,
+    });
+    await service.login({
+      source: "mcp",
+      serverName: "Example",
+      serverUrl: "https://mcp.example/rpc",
+      clientId: "client",
+      authorizationEndpoint: "https://auth.example/authorize",
+      tokenEndpoint: "https://auth.example/token",
+    });
+    const cred = store.resolve("example-oauth")!;
+    const secret = parseOAuthCredentialSecret(cred.secret!);
+    store.save("user", {
+      ...cred,
+      secret: JSON.stringify({ ...secret, revocationEndpoint: "https://auth.example/revoke" }),
+    });
+
+    const outcome = await Promise.race([
+      service.logout("example-oauth"),
+      new Promise<"test-timeout">((resolve) => setTimeout(() => resolve("test-timeout"), 200)),
+    ]);
+
+    expect(outcome).toEqual({ removed: true, remoteRevoked: false });
+    expect(store.resolve("example-oauth")).toBeUndefined();
+    expect(changed).toBe(2);
+    expect(revokeSignal?.aborted).toBe(true);
+    const disk = readFileSync(join(home, ".code-shell", "credentials.json"), "utf8");
+    expect(disk).not.toContain("example-oauth");
+    expect(disk).not.toContain("enc:test:");
   });
 });

@@ -53,6 +53,7 @@ interface McpOAuthServiceOptions {
   profiles?: Readonly<Record<string, McpOAuthProfile>>;
   now?: () => number;
   onCredentialsChanged?: () => void;
+  revocationTimeoutMs?: number;
 }
 
 interface LoginSpec {
@@ -203,6 +204,7 @@ export class McpOAuthService {
   private readonly authorizeFn: typeof authorize;
   private readonly profiles: Readonly<Record<string, McpOAuthProfile>>;
   private readonly now: () => number;
+  private readonly revocationTimeoutMs: number;
   private readonly refreshes = new Map<
     string,
     Promise<{ accessToken: string; expiresAt?: string }>
@@ -217,6 +219,7 @@ export class McpOAuthService {
     this.authorizeFn = options.authorizeFn ?? authorize;
     this.profiles = options.profiles ?? MCP_OAUTH_PROFILES;
     this.now = options.now ?? Date.now;
+    this.revocationTimeoutMs = Math.max(1, Math.min(30_000, options.revocationTimeoutMs ?? 5_000));
   }
 
   async login(input: McpOAuthLoginInput): Promise<McpOAuthActionResult> {
@@ -320,7 +323,7 @@ export class McpOAuthService {
           params.set("token_type_hint", secret.refreshToken ? "refresh_token" : "access_token");
           if (secret.clientId) params.set("client_id", secret.clientId);
           if (secret.clientSecret) params.set("client_secret", secret.clientSecret);
-          const response = await this.fetchFn(secret.revocationEndpoint, {
+          const response = await this.fetchRevocation(secret.revocationEndpoint, {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: params.toString(),
@@ -643,6 +646,25 @@ export class McpOAuthService {
 
   private generationOf(id: string): number {
     return this.generations.get(id) ?? 0;
+  }
+
+  private async fetchRevocation(url: string, init: RequestInit): Promise<Response> {
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        this.fetchFn(url, { ...init, signal: controller.signal }),
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => {
+            controller.abort();
+            reject(new Error("OAuth revocation timed out"));
+          }, this.revocationTimeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+      controller.abort();
+    }
   }
 
   private isCurrentGeneration(id: string, generation: number): boolean {
