@@ -38,6 +38,21 @@ describe("claudeAdapter.buildArgs", () => {
     expect(args[args.indexOf("--resume") + 1]).toBe("S1");
     expect(args).toContain("--verbose");
   });
+  it("adds --model only when a model override is provided", () => {
+    const withModel = claudeAdapter.buildArgs({
+      prompt: "go",
+      model: "claude-x",
+      permissionMode: "default",
+      cwd: "/x",
+    });
+    expect(withModel.slice(withModel.indexOf("--model"), withModel.indexOf("--model") + 2)).toEqual([
+      "--model",
+      "claude-x",
+    ]);
+    expect(
+      claudeAdapter.buildArgs({ prompt: "go", permissionMode: "default", cwd: "/x" }),
+    ).not.toContain("--model");
+  });
 });
 
 describe("claudeAdapter.parseResult", () => {
@@ -107,6 +122,23 @@ describe("codexAdapter.buildArgs", () => {
     expect(i).toBeGreaterThan(-1);
     expect(args[i + 1]).toBe("T1");
     expect(args[i + 2]).toBe("-");
+  });
+  it("places --model before resume and the stdin marker when provided", () => {
+    const args = codexAdapter.buildArgs({
+      prompt: "go",
+      model: "codex-x",
+      resumeSessionId: "T1",
+      permissionMode: "default",
+      cwd: "/x",
+    });
+    const modelIndex = args.indexOf("--model");
+    const resumeIndex = args.indexOf("resume");
+    expect(modelIndex).toBeGreaterThan(-1);
+    expect(args[modelIndex + 1]).toBe("codex-x");
+    expect(modelIndex).toBeLessThan(resumeIndex);
+    expect(
+      codexAdapter.buildArgs({ prompt: "go", permissionMode: "default", cwd: "/x" }),
+    ).not.toContain("--model");
   });
   it("declares promptViaStdin so the driver feeds the prompt over stdin", () => {
     expect(codexAdapter.promptViaStdin).toBe(true);
