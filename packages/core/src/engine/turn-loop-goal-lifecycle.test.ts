@@ -489,7 +489,201 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     expect(judgeCalls).toBe(1);
   });
 
-  it("forces a stop when the stop hook reaches maxStopBlocks, bounding continuations", async () => {
+  it("does not exhaust stop blocks when tool-use turns with failure strings separate blocks", async () => {
+    const events: StreamEvent[] = [];
+    let stopHookCalls = 0;
+    const responses: LLMResponse[] = [];
+    for (let round = 1; round <= 3; round++) {
+      responses.push(
+        stopResponse(`blocked ${round}`),
+        toolResponse({ id: `tool-${round}`, toolName: "ProgressTool", args: { round } }),
+      );
+    }
+    responses.push(stopResponse("goal complete"));
+
+    const { deps, calls, executedTools } = makeTurnLoopDeps(responses, {
+      execute: async (call) => ({
+        id: call.id,
+        toolName: call.toolName,
+        result: `Error: simulated WebFetch failure in round ${call.args.round}`,
+      }),
+      hook: (event) => {
+        if (event !== "on_stop") return {};
+        stopHookCalls++;
+        if (stopHookCalls <= 3) {
+          return {
+            continueSession: true,
+            messages: [`continue ${stopHookCalls}`],
+            data: { goalVerdict: { met: false, gaps: "still incomplete" } },
+          };
+        }
+        return { data: { goalVerdict: { met: true, gaps: "" } } };
+      },
+    });
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 10,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "make steady progress" },
+      maxStopBlocks: 2,
+      onStream: (event) => {
+        events.push(event);
+      },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(result.goalTermination).toBeUndefined();
+    expect(stopHookCalls).toBe(4);
+    expect(calls).toHaveLength(7);
+    expect(executedTools).toHaveLength(3);
+    expect(
+      events.some((event) => event.type === "goal_progress" && event.status === "exhausted"),
+    ).toBe(false);
+  });
+
+  it("uses tool_use itself to reset the streak regardless of ToolResult error fields", async () => {
+    let stopHookCalls = 0;
+    const { deps, calls, executedTools } = makeTurnLoopDeps(
+      [
+        stopResponse("not done"),
+        toolResponse({ id: "failed-tool-1", toolName: "Bash", args: {} }),
+        stopResponse("still not done"),
+        toolResponse({ id: "failed-tool-2", toolName: "Bash", args: {} }),
+        stopResponse("done"),
+      ],
+      {
+        execute: async (call) => ({
+          id: call.id,
+          toolName: call.toolName,
+          result: "Error: command failed",
+          error: "command failed",
+          isError: true,
+        }),
+        hook: (event) => {
+          if (event !== "on_stop") return {};
+          stopHookCalls++;
+          return stopHookCalls <= 2
+            ? {
+                continueSession: true,
+                messages: ["continue after the tool attempt"],
+                data: { goalVerdict: { met: false, gaps: "try the next step" } },
+              }
+            : { data: { goalVerdict: { met: true, gaps: "" } } };
+        },
+      },
+    );
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "continue after a tool attempt" },
+      maxStopBlocks: 1,
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(result.goalTermination).toBeUndefined();
+    expect(stopHookCalls).toBe(3);
+    expect(calls).toHaveLength(5);
+    expect(executedTools).toHaveLength(2);
+  });
+
+  it("resets the stop-block streak before a truncated tool_use response continues", async () => {
+    let stopHookCalls = 0;
+    const { deps, calls, executedTools } = makeTurnLoopDeps(
+      [
+        stopResponse("not done"),
+        {
+          text: "",
+          toolCalls: [{ id: "truncated-tool", toolName: "Write", args: {} }],
+          stopReason: "length",
+          usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+        },
+        stopResponse("still not done"),
+        stopResponse("done"),
+      ],
+      {
+        hook: (event) => {
+          if (event !== "on_stop") return {};
+          stopHookCalls++;
+          return stopHookCalls <= 2
+            ? {
+                continueSession: true,
+                messages: ["continue after the truncated tool attempt"],
+                data: { goalVerdict: { met: false, gaps: "retry remains" } },
+              }
+            : { data: { goalVerdict: { met: true, gaps: "" } } };
+        },
+      },
+    );
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 6,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "recover from a truncated tool call" },
+      maxStopBlocks: 1,
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(result.goalTermination).toBeUndefined();
+    expect(stopHookCalls).toBe(3);
+    expect(calls).toHaveLength(4);
+    expect(executedTools).toHaveLength(0);
+  });
+
+  it("resets the stop-block streak before a budget-stop queued steer continues", async () => {
+    let stopHookCalls = 0;
+    let toolExecutions = 0;
+    let steerConsumed = false;
+    const { deps, calls, executedTools } = makeTurnLoopDeps(
+      [
+        toolResponse({ id: "budget-nudge-tool", toolName: "Read", args: {} }),
+        stopResponse("not done"),
+        toolResponse({ id: "budget-stop-tool", toolName: "Read", args: {} }),
+        stopResponse("still not done"),
+        stopResponse("done"),
+      ],
+      {
+        execute: async (call) => {
+          toolExecutions++;
+          return { id: call.id, toolName: call.toolName, result: "ok" };
+        },
+        hook: (event) => {
+          if (event !== "on_stop") return {};
+          stopHookCalls++;
+          return stopHookCalls <= 2
+            ? {
+                continueSession: true,
+                messages: ["continue after the tool turn"],
+                data: { goalVerdict: { met: false, gaps: "one step remains" } },
+              }
+            : { data: { goalVerdict: { met: true, gaps: "" } } };
+        },
+      },
+    );
+    deps.model.getOutputTokens = () => 9;
+    deps.consumeSteer = (source) => {
+      if (source !== "finalize_backfill" || toolExecutions < 2 || steerConsumed) return [];
+      steerConsumed = true;
+      return [{ id: "budget-stop-steer", text: "continue with this queued guidance" }];
+    };
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 7,
+      maxToolCallsPerTurn: 10,
+      tokenBudget: 10,
+      goal: { objective: "honor queued guidance after the budget stop" },
+      maxStopBlocks: 1,
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(result.goalTermination).toBeUndefined();
+    expect(stopHookCalls).toBe(3);
+    expect(calls).toHaveLength(5);
+    expect(executedTools).toHaveLength(2);
+    expect(steerConsumed).toBe(true);
+  });
+
+  it("forces a stop after maxStopBlocks consecutive blocks, bounding continuations", async () => {
     const events: StreamEvent[] = [];
     let stopHookCalls = 0;
     const { deps, calls } = makeTurnLoopDeps([stopResponse("round")], {
@@ -535,6 +729,84 @@ describe("TurnLoop goal lifecycle guardrails", () => {
           event.message.content.includes("Goal 续跑已达 2 次上限"),
       ),
     ).toBe(true);
+  });
+
+  it("preserves normal recovery after a single stop block", async () => {
+    const events: StreamEvent[] = [];
+    let stopHookCalls = 0;
+    const { deps, calls, executedTools } = makeTurnLoopDeps(
+      [
+        stopResponse("not done"),
+        toolResponse({ id: "recovery-tool", toolName: "ProgressTool", args: {} }),
+        stopResponse("done"),
+      ],
+      {
+        hook: (event) => {
+          if (event !== "on_stop") return {};
+          stopHookCalls++;
+          return stopHookCalls === 1
+            ? {
+                continueSession: true,
+                messages: ["continue once"],
+                data: { goalVerdict: { met: false, gaps: "one step remains" } },
+              }
+            : { data: { goalVerdict: { met: true, gaps: "" } } };
+        },
+      },
+    );
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "recover after one block" },
+      maxStopBlocks: 1,
+      onStream: (event) => {
+        events.push(event);
+      },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(result.goalTermination).toBeUndefined();
+    expect(stopHookCalls).toBe(2);
+    expect(calls).toHaveLength(3);
+    expect(executedTools).toHaveLength(1);
+    expect(
+      events.filter((event) => event.type === "goal_progress" && event.status === "not_met"),
+    ).toHaveLength(1);
+    expect(
+      events.some((event) => event.type === "goal_progress" && event.status === "exhausted"),
+    ).toBe(false);
+  });
+
+  it("bounds repeated ineffective tool-use turns with maxTurns instead of stop blocks", async () => {
+    let stopHookCalls = 0;
+    const responses = Array.from({ length: 3 }, (_, index) =>
+      toolResponse({ id: `ineffective-${index + 1}`, toolName: "Bash", args: {} }),
+    );
+    const { deps, calls, executedTools } = makeTurnLoopDeps(responses, {
+      execute: async (call) => ({
+        id: call.id,
+        toolName: call.toolName,
+        result: "Error: command failed again",
+      }),
+      hook: (event) => {
+        if (event === "on_stop") stopHookCalls++;
+        return {};
+      },
+    });
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "eventually stop the ineffective loop" },
+      maxStopBlocks: 1,
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("max_turns");
+    expect(result.goalTermination).toBe("max_turns_exhausted");
+    expect(stopHookCalls).toBe(0);
+    expect(executedTools).toHaveLength(3);
+    expect(calls).toHaveLength(4);
   });
 
   it("reuses a verdict across two real stop rounds when only runtime counters advance", async () => {
