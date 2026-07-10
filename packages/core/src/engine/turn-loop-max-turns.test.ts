@@ -11,19 +11,26 @@ import type { LLMResponse, Message, StreamEvent, ToolCall, ToolResult } from "..
  *   - it returns reason "max_turns"; Engine epilogue owns turn_complete,
  *   - the turns-remaining warning reminders (2 / 1 left) are injected.
  */
-function makeDeps(responses: LLMResponse[]): {
+function makeDeps(
+  responses: Array<LLMResponse | Error>,
+  options: { onCall?: (callNumber: number) => void } = {},
+): {
   deps: TurnLoopDeps;
   callArgs: Message[][];
   modelCalls: () => number;
+  stoppedMarkers: () => number;
 } {
   let i = 0;
   let calls = 0;
+  let stopped = 0;
   const callArgs: Message[][] = [];
   const call = async (_sys: string, messages: Message[]): Promise<LLMResponse> => {
     calls++;
     callArgs.push(messages.map((m) => ({ ...m })));
     const r = responses[Math.min(i, responses.length - 1)]!;
     i++;
+    options.onCall?.(calls);
+    if (r instanceof Error) throw r;
     return r;
   };
   const model = {
@@ -64,6 +71,9 @@ function makeDeps(responses: LLMResponse[]): {
     appendToolResult() {},
     appendTurnBoundary() {},
     appendMessage() {},
+    appendTurnStopped() {
+      stopped++;
+    },
   } as unknown as TurnLoopDeps["transcript"];
 
   const toolExecutor = {
@@ -98,6 +108,7 @@ function makeDeps(responses: LLMResponse[]): {
     deps,
     callArgs,
     modelCalls: () => calls,
+    stoppedMarkers: () => stopped,
   };
 }
 
@@ -139,6 +150,45 @@ describe("TurnLoop maxTurns ceiling (§4.3)", () => {
       .map((m) => (typeof m.content === "string" ? m.content : ""))
       .find((c) => c.includes("Turn limit reached"));
     expect(finalReminder).toBeDefined();
+  });
+
+  it("stops cleanly when the final maxTurns summary is aborted", async () => {
+    const controller = new AbortController();
+    const summaryFailure = new Error("wrapped summary abort");
+    const { deps, stoppedMarkers } = makeDeps([toolResp(), summaryFailure], {
+      onCall: (callNumber) => {
+        if (callNumber === 2) controller.abort();
+      },
+    });
+    const loop = new TurnLoop(deps, {
+      maxTurns: 1,
+      maxToolCallsPerTurn: 10,
+      signal: controller.signal,
+    });
+
+    const result = await loop.run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("aborted_streaming");
+    expect(stoppedMarkers()).toBe(1);
+    expect(result.reason).not.toBe("max_turns");
+  });
+
+  it("keeps the prior text and max_turns reason when the final summary fails normally", async () => {
+    const priorTextResponse: LLMResponse = {
+      ...toolResp(),
+      text: "work completed before summary",
+    };
+    const { deps, stoppedMarkers } = makeDeps([
+      priorTextResponse,
+      new Error("summary service unavailable"),
+    ]);
+    const loop = new TurnLoop(deps, { maxTurns: 1, maxToolCallsPerTurn: 10 });
+
+    const result = await loop.run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("max_turns");
+    expect(result.text).toBe("work completed before summary");
+    expect(stoppedMarkers()).toBe(0);
   });
 
   it("injects the turns-remaining warning reminders (2 and 1 left)", async () => {

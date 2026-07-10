@@ -6,17 +6,22 @@ import type { LLMResponse, Message } from "../types.js";
  * Build minimal fake deps for TurnLoop. Only the methods exercised by the
  * max-output continuation path are implemented; the rest are no-ops/getters.
  */
-function makeDeps(responses: LLMResponse[]): {
+function makeDeps(responses: Array<LLMResponse | Error>): {
   deps: TurnLoopDeps;
   calls: () => number;
   callArgs: Message[][];
+  stopHookCalls: () => number;
+  stoppedMarkers: () => number;
 } {
   let i = 0;
+  let stopHooks = 0;
+  let stopped = 0;
   const callArgs: Message[][] = [];
   const call = async (_sys: string, messages: Message[]): Promise<LLMResponse> => {
     callArgs.push(messages);
     const r = responses[Math.min(i, responses.length - 1)];
     i++;
+    if (r instanceof Error) throw r;
     return r;
   };
   const model = {
@@ -47,7 +52,8 @@ function makeDeps(responses: LLMResponse[]): {
   } as unknown as TurnLoopDeps["contextManager"];
 
   const hooks = {
-    async emit() {
+    async emit(event: string) {
+      if (event === "on_stop") stopHooks++;
       return {};
     },
   } as unknown as TurnLoopDeps["hooks"];
@@ -57,6 +63,9 @@ function makeDeps(responses: LLMResponse[]): {
     appendToolResult() {},
     appendTurnBoundary() {},
     appendMessage() {},
+    appendTurnStopped() {
+      stopped++;
+    },
   } as unknown as TurnLoopDeps["transcript"];
 
   const toolExecutor = {
@@ -84,7 +93,13 @@ function makeDeps(responses: LLMResponse[]): {
     ctxOverheadStore: { get: () => 0, set: () => {} },
   };
 
-  return { deps, calls: () => i, callArgs };
+  return {
+    deps,
+    calls: () => i,
+    callArgs,
+    stopHookCalls: () => stopHooks,
+    stoppedMarkers: () => stopped,
+  };
 }
 
 const config: TurnLoopConfig = { maxTurns: 5, maxToolCallsPerTurn: 10 };
@@ -99,7 +114,10 @@ const resp = (text: string, stopReason: string): LLMResponse => ({
 describe("TurnLoop max-output continuation", () => {
   it("continues when an OpenAI stream stops with 'length' (output cap)", async () => {
     // First response truncated ("length"); continuation finishes clean.
-    const { deps, calls } = makeDeps([resp("part one ", "length"), resp("part two", "stop")]);
+    const { deps, calls, stopHookCalls } = makeDeps([
+      resp("part one ", "length"),
+      resp("part two", "stop"),
+    ]);
     const loop = new TurnLoop(deps, config);
     const result = await loop.run([{ role: "user", content: "go" }]);
 
@@ -108,6 +126,40 @@ describe("TurnLoop max-output continuation", () => {
     // Combined text from both halves.
     expect(result.text).toBe("part one part two");
     expect(result.reason).toBe("completed");
+    expect(stopHookCalls()).toBe(1);
+  });
+
+  it("returns model_error when a text continuation request fails", async () => {
+    const { deps, stopHookCalls } = makeDeps([
+      resp("truncated draft", "length"),
+      new Error("continuation network failure"),
+    ]);
+    const loop = new TurnLoop(deps, config);
+
+    const result = await loop.run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("model_error");
+    expect(stopHookCalls()).toBe(0);
+    expect(result.messages).not.toContainEqual({
+      role: "assistant",
+      content: "truncated draft",
+    });
+  });
+
+  it("stops cleanly when a text continuation request is aborted", async () => {
+    const abortError = new Error("continuation aborted");
+    abortError.name = "AbortError";
+    const { deps, stopHookCalls, stoppedMarkers } = makeDeps([
+      resp("truncated draft", "length"),
+      abortError,
+    ]);
+    const loop = new TurnLoop(deps, config);
+
+    const result = await loop.run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("aborted_streaming");
+    expect(stopHookCalls()).toBe(0);
+    expect(stoppedMarkers()).toBe(1);
   });
 
   it("does not continue on a clean 'stop'", async () => {
