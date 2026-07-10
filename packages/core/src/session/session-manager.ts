@@ -22,6 +22,7 @@ import type { SessionState, SessionWorkspace } from "../types.js";
 import { Transcript } from "./transcript.js";
 import { SessionError } from "../exceptions.js";
 import { normalizeCumulativeUsageCounters } from "../engine/session-usage.js";
+import { isSameGoalInstance, type GoalTerminal } from "../engine/goal.js";
 import { branchExists, isGitWorktreeRoot } from "../git/worktree.js";
 
 export interface SessionBundle {
@@ -422,7 +423,9 @@ export class SessionManager {
     if (!existsSync(stateFile)) return undefined;
     try {
       const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
-      return state.activeGoal;
+      return isSameGoalInstance(state.activeGoal, state.goalTerminal)
+        ? undefined
+        : state.activeGoal;
     } catch {
       return undefined;
     }
@@ -505,6 +508,25 @@ export class SessionManager {
     // Atomic write: stage to .tmp, then rename. Protects against two processes
     // clobbering each other's state.json mid-write.
     const target = join(sessionDir, "state.json");
+    // Preserve the newest goal tombstone across whole-state writers. If an old
+    // detached bundle still carries the tombstoned goal, drop it before write;
+    // when disk already contains a newer replacement goal, retain that goal as
+    // well instead of letting the stale bundle erase it.
+    let persisted: SessionState | undefined;
+    if (existsSync(target)) {
+      try {
+        persisted = JSON.parse(readFileSync(target, "utf-8")) as SessionState;
+      } catch {
+        // The atomic writer should make this rare. Preserve the existing
+        // behavior and overwrite malformed state with the caller's snapshot.
+      }
+    }
+    const terminal = newestGoalTerminal(state.goalTerminal, persisted?.goalTerminal);
+    if (terminal) state.goalTerminal = terminal;
+    if (terminal && isSameGoalInstance(state.activeGoal, terminal)) {
+      const diskGoal = persisted?.activeGoal;
+      state.activeGoal = diskGoal && !isSameGoalInstance(diskGoal, terminal) ? diskGoal : undefined;
+    }
     const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
     writeFileSync(tmp, JSON.stringify(state, null, 2), "utf-8");
     renameSync(tmp, target);
@@ -598,6 +620,17 @@ export class SessionManager {
 
     return sessions;
   }
+}
+
+function newestGoalTerminal(
+  incoming: GoalTerminal | undefined,
+  persisted: GoalTerminal | undefined,
+): GoalTerminal | undefined {
+  if (!incoming) return persisted;
+  if (!persisted) return incoming;
+  const incomingAt = incoming.terminatedAtMs ?? Number.NEGATIVE_INFINITY;
+  const persistedAt = persisted.terminatedAtMs ?? Number.NEGATIVE_INFINITY;
+  return incomingAt > persistedAt ? incoming : persisted;
 }
 
 export type SessionListEntry = SessionState & {

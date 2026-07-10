@@ -56,9 +56,10 @@ import {
   type GoalConfig,
   type GoalBudgetTracker,
   type GoalExtension,
+  type GoalTerminationReason,
   createGoalBudgetTracker,
   recordGoalUsage,
-  goalBudgetExceeded,
+  goalBudgetTerminationReason,
   applyGoalExtension,
   limitProximity,
   GOAL_DEFAULT_MAX_STOP_BLOCKS,
@@ -191,6 +192,8 @@ export interface TurnLoopResult {
   text: string;
   reason: TerminalReason;
   messages: Message[];
+  /** Goal-specific forced terminal outcome; public TerminalReason stays stable. */
+  goalTermination?: GoalTerminationReason;
 }
 
 /**
@@ -949,7 +952,10 @@ export class TurnLoop {
         // is force-stopped regardless of what the model wants to do next (stop OR
         // continue with tool calls). This is the unattended-safety backstop, so
         // it sits BEFORE the "tool calls?" branch — both paths pass the gate.
-        if (goalTracker && goalBudgetExceeded(goalTracker, Date.now())) {
+        const budgetTermination = goalTracker
+          ? goalBudgetTerminationReason(goalTracker, Date.now())
+          : undefined;
+        if (goalTracker && budgetTermination) {
           tlog.info("turn.goal_budget_exhausted", {
             cat: "goal",
             tokensUsed: goalTracker.tokensUsed,
@@ -964,7 +970,12 @@ export class TurnLoop {
               content: "（Goal 预算已耗尽，强制停止。）",
             },
           });
-          return { text: finalText, reason: "goal_budget_exhausted", messages };
+          return {
+            text: finalText,
+            reason: "goal_budget_exhausted",
+            messages,
+            goalTermination: budgetTermination,
+          };
         }
 
         // Post-check: tool calls?
@@ -1036,6 +1047,7 @@ export class TurnLoop {
             });
             continue;
           }
+          let goalTermination: GoalTerminationReason | undefined;
           if (stopHook.continueSession && this.stopBlockCount >= maxStopBlocks) {
             // Cap hit: stop anyway, but tell the user why we're not looping
             // forever on an unsatisfiable goal.
@@ -1049,6 +1061,7 @@ export class TurnLoop {
               status: "exhausted",
               round: this.stopBlockCount,
             });
+            goalTermination = "stop_blocks_exhausted";
             this.config.onStream?.({
               type: "assistant_message",
               messageId: assistantMessageId,
@@ -1071,7 +1084,7 @@ export class TurnLoop {
             continue;
           }
           messages = this.redactConsumedSensitiveToolResults(messages);
-          return { text: finalText, reason: "completed", messages };
+          return { text: finalText, reason: "completed", messages, goalTermination };
         }
 
         // Tool execution phase
@@ -1389,7 +1402,12 @@ export class TurnLoop {
       messages.push({ role: "assistant", content: finalText });
     }
     messages = this.redactConsumedSensitiveToolResults(messages);
-    return { text: finalText, reason: "max_turns", messages };
+    return {
+      text: finalText,
+      reason: "max_turns",
+      messages,
+      ...(this.config.goal ? { goalTermination: "max_turns_exhausted" as const } : {}),
+    };
   }
 
   /**
