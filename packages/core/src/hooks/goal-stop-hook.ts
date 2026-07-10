@@ -938,9 +938,12 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
         : [];
     const backgroundTasks = renderBackgroundTasks(runningWork);
 
-    const finalText = typeof ctx.data.finalText === "string" ? ctx.data.finalText : "";
     const boundedFinalText = truncateHeadTail(
-      scrubSecrets(normalizeControlCharacters(finalText)),
+      scrubSecrets(
+        normalizeControlCharacters(
+          typeof ctx.data.finalText === "string" ? ctx.data.finalText : "",
+        ),
+      ),
       MAX_JUDGE_FINAL_TEXT_CHARS,
     );
     let judgeContext: GoalJudgeRuntimeContext | undefined;
@@ -991,6 +994,8 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     const buildCacheKey = (): string =>
       JSON.stringify([
         goal,
+        // Match the exact projection sent to the judge: ignored middle text
+        // must not create cache misses or consume this evidence window's quota.
         boundedFinalText,
         backgroundTasks,
         toolEvidence,

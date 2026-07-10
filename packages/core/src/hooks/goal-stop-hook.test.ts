@@ -1611,14 +1611,52 @@ describe("createGoalStopHook — three-state judge", () => {
     expect(logs.some((entry) => entry.msg === "goal_stop.context_missing")).toBe(true);
   });
 
-  it("verdict cache: identical (goal, finalText, tasks) reuses the verdict, no second LLM call", async () => {
+  it("F6 regression: normal verdict storage and lookup still reuse an identical projection", async () => {
     const judge = fakeJudge('{"met": false, "waiting": false, "gaps": "more work"}');
     const hook = createGoalStopHook({ goal: "ship it", llm: judge, log: noopLog });
     const data = { sessionId: SID, finalText: "same output" };
     const first = await hook({ eventName: "on_stop", data });
+    expect(judge.calls).toBe(1);
     const second = await hook({ eventName: "on_stop", data: { ...data } });
     expect(judge.calls).toBe(1); // second served from cache
     expect(second).toEqual(first);
+  });
+
+  it("F6: reuses the verdict when finalText differs only outside its bounded projection", async () => {
+    const judge = fakeJudge('{"met": false, "waiting": false, "gaps": "more work"}');
+    const hook = createGoalStopHook({ goal: "ship it", llm: judge, log: noopLog });
+    const head = "H".repeat(3_000);
+    const tail = "T".repeat(2_000);
+
+    const first = await hook({
+      eventName: "on_stop",
+      data: { sessionId: SID, finalText: `${head}${"A".repeat(5_000)}${tail}` },
+    });
+    const second = await hook({
+      eventName: "on_stop",
+      data: { sessionId: SID, finalText: `${head}${"B".repeat(5_000)}${tail}` },
+    });
+
+    expect(judge.calls).toBe(1);
+    expect(second).toEqual(first);
+  });
+
+  it("F6: re-judges when the bounded finalText projection changes", async () => {
+    const judge = fakeJudge('{"met": false, "waiting": false, "gaps": "more work"}');
+    const hook = createGoalStopHook({ goal: "ship it", llm: judge, log: noopLog });
+    const middle = "M".repeat(5_000);
+    const tail = "T".repeat(2_000);
+
+    await hook({
+      eventName: "on_stop",
+      data: { sessionId: SID, finalText: `${"A".repeat(3_000)}${middle}${tail}` },
+    });
+    await hook({
+      eventName: "on_stop",
+      data: { sessionId: SID, finalText: `${"B".repeat(3_000)}${middle}${tail}` },
+    });
+
+    expect(judge.calls).toBe(2);
   });
 
   it("verdict cache misses when finalText changes", async () => {
