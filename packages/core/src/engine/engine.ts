@@ -1771,6 +1771,11 @@ export class Engine {
       //    These are tiny throwaway outputs ("Wrote design doc") fired every turn;
       //    that high-frequency, low-stakes chore is exactly what aux is for.
       const auxSummaryClient = await this.resolveAuxClient(llmClient);
+      // Auto-compaction runs inside TurnLoop.manageAsync(), after the loop has
+      // initialized its run-scoped Goal tracker. The closure is wired before
+      // construction but cannot execute until turnLoop.run() starts.
+      let turnLoop!: TurnLoop;
+      let autoCompactionGoalTermination: ReturnType<TurnLoop["recordGoalJudgeUsage"]>;
       Object.assign(
         session.state,
         normalizeCumulativeUsageCounters(session.state, session.state.tokenUsage),
@@ -1780,10 +1785,31 @@ export class Engine {
         Object.assign(session.state, next);
         return next;
       };
-      contextManager.setSummarizeFn(this.buildSummarizeFn(llmClient, recordCumulativeUsage));
+      contextManager.setSummarizeFn(
+        this.buildSummarizeFn(llmClient, (usage) => {
+          const cumulative = recordCumulativeUsage(usage);
+          autoCompactionGoalTermination = turnLoop.recordGoalJudgeUsage(usage);
+          return cumulative;
+        }),
+      );
 
       // Create components (requires resolved llmClient).
       const modelFacade = new ModelFacade(llmClient, session.transcript);
+      const callPrimaryModel = modelFacade.call.bind(modelFacade);
+      modelFacade.call = async (...args: Parameters<ModelFacade["call"]>) => {
+        // A primary-model summary may itself exhaust the Goal budget. Do not
+        // issue the main turn request after that billed sub-call; return control
+        // to TurnLoop, whose existing post-response guard emits and persists the
+        // canonical goal_budget_exhausted termination.
+        if (autoCompactionGoalTermination) {
+          return {
+            text: "",
+            toolCalls: [],
+            stopReason: "stop",
+          };
+        }
+        return callPrimaryModel(...args);
+      };
 
       // Session-cumulative usage baseline: the LLM client is recreated per run
       // (its getUsage() counts only THIS run), so to accumulate across runs we
@@ -1939,7 +1965,6 @@ export class Engine {
           : undefined;
       let goalHookHandler: ReturnType<typeof createGoalStopHook> | null = null;
       let goalJudgeContext: GoalJudgeRuntimeContext | undefined;
-      let turnLoop!: TurnLoop;
       if (normalizedGoal && this.config.isSubAgent !== true) {
         goalHookHandler = createGoalStopHook({
           goal: normalizedGoal,
