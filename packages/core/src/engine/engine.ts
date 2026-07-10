@@ -2169,8 +2169,10 @@ export class Engine {
       };
 
       let result: Awaited<ReturnType<typeof turnLoop.run>>;
+      let firstGoalTermination: GoalTerminationReason | undefined;
       try {
         result = await turnLoop.run(messages);
+        firstGoalTermination = result.goalTermination;
         applyGoalTermination(result.goalTermination);
 
         // ── Headless: drain background sub-agents before resolving ───────
@@ -2223,14 +2225,18 @@ export class Engine {
               role: "user",
               content: `<system-reminder>\n${buildNotificationMessage(pending)}\n</system-reminder>`,
             };
-            if (aborted) {
+            if (aborted || firstGoalTermination) {
               // Mark injected: a synthetic notification, not the user's own input —
               // the disk reader drops it on replay so no phantom user bubble.
+              // A goal termination is also a hard boundary: retain the notification
+              // for recovery, but never re-enter TurnLoop (which would reset its
+              // run-scoped goal budget tracker and could overwrite the first reason).
               session.transcript.appendMessage(injected.role, injected.content, { injected: true });
               result = { ...result, messages: [...result.messages, injected] };
               break;
             }
             result = await turnLoop.run([...result.messages, injected]);
+            firstGoalTermination ??= result.goalTermination;
             applyGoalTermination(result.goalTermination);
           }
         }
@@ -2343,7 +2349,7 @@ export class Engine {
       return {
         text: result.text,
         reason: result.reason,
-        goalTermination: result.goalTermination,
+        goalTermination: firstGoalTermination,
         sessionId: session.state.sessionId,
         turnCount: turnLoop.currentTurn,
         usage: {
