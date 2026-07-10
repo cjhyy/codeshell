@@ -7,6 +7,7 @@ import type { ApproveChoice, ApprovePathScope } from "../approvals/approvalDecis
 import { ApprovalCard } from "../approvals/ApprovalCard";
 import { useT } from "../i18n/I18nProvider";
 import { MessageSquare, Send, Square } from "../ui/icons";
+import type { QuickChatContextMode, QuickChatCreationStatus } from "../quickChatSession";
 
 interface Props {
   sessionId: string;
@@ -15,10 +16,16 @@ interface Props {
   liveTurnActive?: boolean;
   cwd?: string | null;
   busy: boolean;
+  creationStatus: QuickChatCreationStatus;
+  creationError?: string;
+  contextMode: QuickChatContextMode;
+  sourceTitle?: string;
   draft: string;
   onDraftChange: (text: string) => void;
   onSend: (text: string) => void;
   onStop: () => void;
+  onRetry: () => void;
+  onUseBlank: () => void;
   onAskUserAnswer?: (requestId: string, answer: string) => void;
   pendingApproval?: ApprovalRequestEnvelope | null;
   onApprovalDecide?: (
@@ -36,10 +43,16 @@ export function QuickChatPanel({
   liveTurnActive,
   cwd,
   busy,
+  creationStatus,
+  creationError,
+  contextMode,
+  sourceTitle,
   draft,
   onDraftChange,
   onSend,
   onStop,
+  onRetry,
+  onUseBlank,
   onAskUserAnswer,
   pendingApproval,
   onApprovalDecide,
@@ -47,7 +60,7 @@ export function QuickChatPanel({
   const { t } = useT();
   const [sendEpoch, setSendEpoch] = useState(0);
   const trimmed = draft.trim();
-  const canSend = trimmed.length > 0 && !busy;
+  const canSend = trimmed.length > 0 && !busy && creationStatus === "ready";
 
   const submit = (): void => {
     if (!canSend) return;
@@ -64,14 +77,44 @@ export function QuickChatPanel({
           <div className="truncate text-sm font-medium text-foreground">
             {t("panels.quickChat.title")}
           </div>
-          <div className="truncate text-[11px] text-muted-foreground">{sessionId}</div>
+          <div className="truncate text-[11px] text-muted-foreground">
+            {contextMode === "full" && sourceTitle
+              ? t("panels.quickChat.fromSource", { title: sourceTitle })
+              : sessionId}
+            {contextMode === "full" ? ` · ${t("panels.quickChat.sharedWorkspace")}` : ""}
+          </div>
         </div>
-        {busy && (
+        {(busy || creationStatus === "creating") && (
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />
         )}
       </div>
 
-      {messages.length === 0 ? (
+      {creationStatus === "error" ? (
+        <div className="flex min-h-0 flex-1 items-center justify-center px-4 text-center">
+          <div className="space-y-3 text-sm">
+            <p className="text-status-err">{creationError ?? t("panels.quickChat.forkFailed")}</p>
+            <div className="flex justify-center gap-2">
+              <button type="button" className="rounded-md border px-3 py-1.5" onClick={onRetry}>
+                {t("panels.quickChat.retryFork")}
+              </button>
+              <button type="button" className="rounded-md border px-3 py-1.5" onClick={onUseBlank}>
+                {t("panels.quickChat.useBlank")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : creationStatus === "creating" ? (
+        <div className="flex min-h-0 flex-1 items-center justify-center px-4 text-center">
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p>{t("panels.quickChat.forking")}</p>
+            {contextMode === "full" && (
+              <button type="button" className="rounded-md border px-3 py-1.5" onClick={onUseBlank}>
+                {t("panels.quickChat.useBlank")}
+              </button>
+            )}
+          </div>
+        </div>
+      ) : messages.length === 0 ? (
         <div className="flex min-h-0 flex-1 items-center justify-center px-4 text-center">
           <div className="text-sm text-muted-foreground">{t("panels.quickChat.empty")}</div>
         </div>
@@ -97,6 +140,7 @@ export function QuickChatPanel({
         <div className="rounded-xl border bg-card p-2 shadow-sm">
           <Textarea
             value={draft}
+            disabled={creationStatus !== "ready"}
             placeholder={t("panels.quickChat.placeholder")}
             onChange={(e) => onDraftChange(e.target.value)}
             onKeyDown={(e) => {

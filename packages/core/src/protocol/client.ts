@@ -17,6 +17,8 @@ import {
   type RpcNotification,
   type RunParams,
   type RunResult,
+  type ForkSessionParams,
+  type ForkSessionResult,
   type AgentStreamEventNotification,
   type ConfigureParams,
   type QueryParams,
@@ -182,6 +184,13 @@ export class AgentClient {
    */
   async cancel(sessionId?: string, reason?: string): Promise<void> {
     await this.request(Methods.Cancel, { sessionId, reason } as Record<string, unknown>);
+  }
+
+  async forkSession(params: ForkSessionParams): Promise<ForkSessionResult> {
+    return this.request(
+      Methods.ForkSession,
+      params as unknown as Record<string, unknown>,
+    ) as Promise<ForkSessionResult>;
   }
 
   /**

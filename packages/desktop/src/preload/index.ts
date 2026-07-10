@@ -529,6 +529,12 @@ contextBridge.exposeInMainWorld("codeshell", {
     });
   },
   closeSession: (sessionId: string) => rpc("agent/closeSession", { sessionId }),
+  forkSession: (params: {
+    sourceSessionId: string;
+    targetSessionId?: string;
+    mode: "full";
+    throughEventId?: string;
+  }) => rpc("agent/forkSession", params).then(rpcResult),
   compactSession: (sessionId: string) =>
     rpc("agent/query", { type: "compact", sessionId }).then(rpcResult) as Promise<{
       type: "compact";

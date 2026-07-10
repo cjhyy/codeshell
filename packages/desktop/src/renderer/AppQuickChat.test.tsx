@@ -9,10 +9,15 @@ interface QuickChatPanelProps {
   sessionId: string;
   messages: Message[];
   busy: boolean;
+  creationStatus: "creating" | "ready" | "error";
+  contextMode: "full" | "blank";
+  sourceTitle?: string;
   draft: string;
   onDraftChange: (text: string) => void;
   onSend: (text: string) => void;
   onStop: () => void;
+  onRetry: () => void;
+  onUseBlank: () => void;
   onAskUserAnswer?: (requestId: string, answer: string) => void;
   pendingApproval?: ApprovalRequestEnvelope | null;
   onApprovalDecide?: (decision: "approve" | "deny", reason?: string) => void;
@@ -156,6 +161,7 @@ let cleanupQuickChatSessionCalls: string[] = [];
 let claimQuickChatSessionCalls: string[] = [];
 let cancelCalls: Array<string | undefined> = [];
 let approveCalls: unknown[][] = [];
+let forkSessionCalls: Array<Record<string, unknown>> = [];
 
 function restoreGlobalProperty(
   key: "localStorage" | "window",
@@ -210,7 +216,10 @@ function seedApp(options: {
   return bucket;
 }
 
-function installCodeshellStub(listDiskSessions: () => Promise<any>): void {
+function installCodeshellStub(
+  listDiskSessions: () => Promise<any>,
+  forkSession: (params: Record<string, unknown>) => Promise<any>,
+): void {
   const unsubscribe = () => undefined;
   const project = { path: "/tmp/repo-a", name: "Repo A", addedAt: 1 };
   (window as unknown as { innerWidth: number }).innerWidth = 1200;
@@ -260,6 +269,10 @@ function installCodeshellStub(listDiskSessions: () => Promise<any>): void {
     },
     claimQuickChatSession: async (sessionId: string) => {
       claimQuickChatSessionCalls.push(sessionId);
+    },
+    forkSession: async (params: Record<string, unknown>) => {
+      forkSessionCalls.push(params);
+      return forkSession(params);
     },
     cleanupQuickChatSession: async (sessionId: string) => {
       cleanupQuickChatSessionCalls.push(sessionId);
@@ -313,6 +326,7 @@ async function mountApp(options: {
   withNormalSession: boolean;
   panelTabs: Array<{ id: string; kind: string }>;
   listDiskSessions?: () => Promise<any>;
+  forkSession?: (params: Record<string, unknown>) => Promise<any>;
 }): Promise<string> {
   ensureMiniDom();
   Object.defineProperty(globalThis, "localStorage", {
@@ -328,6 +342,19 @@ async function mountApp(options: {
   const bucket = seedApp(options);
   installCodeshellStub(
     options.listDiskSessions ?? (async () => ({ sessions: [], nextCursor: null })),
+    options.forkSession ??
+      (async (params) => ({
+        sessionId: params.targetSessionId,
+        mode: "full",
+        forkedFrom: {
+          sessionId: params.sourceSessionId,
+          mode: "full",
+          sourceEventCount: 0,
+          createdAt: 1,
+        },
+        workspace: { root: "/tmp/repo-a", kind: "main" },
+        copiedEventCount: 0,
+      })),
   );
   container = document.createElement("div");
   root = createRoot(container);
@@ -393,6 +420,7 @@ afterEach(async () => {
   claimQuickChatSessionCalls = [];
   cancelCalls = [];
   approveCalls = [];
+  forkSessionCalls = [];
   chatProps = null;
   quickChatProps.clear();
   panelAreaProps.clear();
@@ -402,6 +430,87 @@ afterEach(async () => {
 });
 
 describe("App quick-chat integration", () => {
+  test("defaults to a full fork of the owner engine session before becoming ready", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-context", kind: "quickChat" }],
+    });
+    const [panel] = currentQuickPanels();
+    if (!panel) throw new Error("quick chat session was not created");
+    expect(forkSessionCalls).toEqual([
+      {
+        sourceSessionId: "engine-a",
+        targetSessionId: panel.sessionId,
+        mode: "full",
+      },
+    ]);
+    expect(panel.creationStatus).toBe("ready");
+    expect(panel.contextMode).toBe("full");
+    expect(panel.sourceTitle).toBe("Session A");
+    expect(claimQuickChatSessionCalls[0]).toBe(panel.sessionId);
+  });
+
+  test("a failed fork can explicitly fall back to a blank quick chat", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-failure", kind: "quickChat" }],
+      forkSession: async () => {
+        throw new Error("source session is still producing");
+      },
+    });
+    const [failed] = currentQuickPanels();
+    if (!failed) throw new Error("failed quick chat was not rendered");
+    expect(failed.creationStatus).toBe("error");
+
+    await act(async () => {
+      failed.onUseBlank();
+      await flushMicrotasks();
+    });
+    await flushApp();
+    const [blank] = currentQuickPanels();
+    expect(blank?.creationStatus).toBe("ready");
+    expect(blank?.contextMode).toBe("blank");
+    expect(blank?.sessionId).not.toBe(failed.sessionId);
+    expect(forkSessionCalls).toHaveLength(1);
+  });
+
+  test("switching to blank while a fork is pending ignores and cleans the late fork", async () => {
+    const pendingFork = deferred<any>();
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-pending", kind: "quickChat" }],
+      forkSession: () => pendingFork.promise,
+    });
+    const [creating] = currentQuickPanels();
+    if (!creating) throw new Error("creating quick chat was not rendered");
+    expect(creating.creationStatus).toBe("creating");
+
+    await act(async () => {
+      creating.onUseBlank();
+      await flushMicrotasks();
+    });
+    await flushApp();
+    const [blank] = currentQuickPanels();
+    expect(blank.contextMode).toBe("blank");
+    expect(blank.creationStatus).toBe("ready");
+
+    pendingFork.resolve({
+      sessionId: creating.sessionId,
+      mode: "full",
+      forkedFrom: {
+        sessionId: "engine-a",
+        mode: "full",
+        sourceEventCount: 1,
+        createdAt: 1,
+      },
+      workspace: { root: "/tmp/repo-a", kind: "main" },
+      copiedEventCount: 1,
+    });
+    await flushApp();
+    expect(cleanupQuickChatSessionCalls).toContain(creating.sessionId);
+    expect(currentQuickPanels()[0]?.sessionId).toBe(blank.sessionId);
+  });
+
   test("a delayed disk rebuild deletes stale qchat sessions but preserves one opened mid-scan", async () => {
     const diskScan = deferred<any>();
     const ownerBucket = await mountApp({

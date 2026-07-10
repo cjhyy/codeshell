@@ -15,6 +15,8 @@ import type {
   ApprovalRequest,
   ApprovalResult,
   PermissionMode,
+  SessionForkLineage,
+  SessionWorkspace,
 } from "../types.js";
 
 // ─── Envelope ───────────────────────────────────────────────────────
@@ -171,6 +173,23 @@ export interface RunResult {
   sessionId: string;
   turnCount: number;
   usage: TokenUsage;
+}
+
+export interface ForkSessionParams {
+  sourceSessionId: string;
+  targetSessionId?: string;
+  mode: "full";
+  /** Inclusive source event cursor; omitted freezes the current tail. */
+  throughEventId?: string;
+}
+
+export interface ForkSessionResult {
+  sessionId: string;
+  mode: "full";
+  forkedFrom: SessionForkLineage;
+  workspace: SessionWorkspace;
+  copiedEventCount: number;
+  titleSuggestion?: string;
 }
 
 /** Respond to an approval request from the server. */
@@ -385,6 +404,7 @@ export interface StatusNotification {
 export const Methods = {
   // Client → Server
   Run: "agent/run",
+  ForkSession: "agent/forkSession",
   Approve: "agent/approve",
   Cancel: "agent/cancel",
   Configure: "agent/configure",

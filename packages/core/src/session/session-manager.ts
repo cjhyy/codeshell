@@ -12,13 +12,20 @@ import {
   readSync,
   readdirSync,
   renameSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { nanoid } from "nanoid";
-import type { SessionState, SessionWorkspace } from "../types.js";
+import type {
+  SessionForkLineage,
+  SessionState,
+  SessionWorkspace,
+  TranscriptEvent,
+  TranscriptEventType,
+} from "../types.js";
 import { Transcript } from "./transcript.js";
 import { SessionError } from "../exceptions.js";
 import { normalizeCumulativeUsageCounters } from "../engine/session-usage.js";
@@ -29,6 +36,42 @@ export interface SessionBundle {
   state: SessionState;
   transcript: Transcript;
 }
+
+export interface ForkSessionOptions {
+  targetSessionId?: string;
+  /** Inclusive source event cursor; omitted means the frozen transcript tail. */
+  throughEventId?: string;
+}
+
+export interface ForkSessionResult {
+  bundle: SessionBundle;
+  lineage: SessionForkLineage;
+  copiedEventCount: number;
+}
+
+interface FrozenForkSnapshot {
+  sourceState: SessionState;
+  copiedEvents: TranscriptEvent[];
+}
+
+const FORK_COPY_EVENT_TYPES: ReadonlySet<TranscriptEventType> = new Set([
+  "message",
+  "tool_use",
+  "tool_result",
+  "summary",
+  "content_replace",
+  "subagent",
+  "external_file_changes",
+  "goal_progress",
+  "turn_boundary",
+  "turn_stopped",
+  "error",
+]);
+const FORK_SKIP_EVENT_TYPES: ReadonlySet<TranscriptEventType> = new Set([
+  "session_meta",
+  "file_history",
+  "plan_operation",
+]);
 
 export type SessionWorkspaceResumeResolution =
   | {
@@ -532,42 +575,110 @@ export class SessionManager {
     renameSync(tmp, target);
   }
 
-  /**
-   * Fork a session from a specific point.
-   * Creates a new session that shares events up to the given turn,
-   * then diverges independently.
-   */
-  fork(sourceSessionId: string, forkAtTurn?: number): SessionBundle {
-    const source = this.resume(sourceSessionId);
-    const events = source.transcript.getEvents();
+  /** Create an independent, top-level session from a frozen event cursor. */
+  fork(sourceSessionId: string, options: ForkSessionOptions = {}): ForkSessionResult {
+    assertSafeSessionId(sourceSessionId);
+    if (options.targetSessionId !== undefined) assertSafeSessionId(options.targetSessionId);
+    const snapshot = this.readForkSnapshot(sourceSessionId, options.throughEventId);
+    const targetSessionId = options.targetSessionId ?? nanoid(16);
+    const createdAt = Date.now();
+    const lineage: SessionForkLineage = {
+      sessionId: sourceSessionId,
+      mode: "full",
+      fromEventId: snapshot.copiedEvents[0]?.id,
+      throughEventId: snapshot.copiedEvents[snapshot.copiedEvents.length - 1]?.id,
+      sourceEventCount: snapshot.copiedEvents.length,
+      createdAt,
+    };
+    const state = buildForkState(snapshot.sourceState, targetSessionId, lineage, createdAt);
+    const events = buildForkTranscript(snapshot.copiedEvents, state);
+    const bundle = this.publishSessionAtomically(targetSessionId, state, events);
+    return { bundle, lineage, copiedEventCount: snapshot.copiedEvents.length };
+  }
 
-    // Determine fork point
-    const forkTurn = forkAtTurn ?? source.state.turnCount;
-
-    // Create new session
-    const newBundle = this.create(source.state.cwd, source.state.model, source.state.provider);
-    newBundle.state.parentSessionId = sourceSessionId;
-
-    // Copy events up to the fork point
-    for (const event of events) {
-      if (
-        event.type === "turn_boundary" &&
-        ((event.data.turnNumber as number | undefined) ?? -1) > forkTurn
-      ) {
-        break;
+  private readForkSnapshot(sourceSessionId: string, throughEventId?: string): FrozenForkSnapshot {
+    const sessionDir = join(this.sessionsDir, sourceSessionId);
+    const stateFile = join(sessionDir, "state.json");
+    const transcriptFile = join(sessionDir, "transcript.jsonl");
+    if (!existsSync(stateFile)) throw new SessionError(`Session not found: ${sourceSessionId}`);
+    let sourceState: SessionState;
+    try {
+      sourceState = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
+    } catch (err) {
+      throw new SessionError(
+        `Session state is corrupt for ${sourceSessionId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    const parsed = Transcript.readEvents(transcriptFile);
+    if (parsed.malformedLineCount > 0) {
+      throw new SessionError(
+        `Session transcript is malformed for ${sourceSessionId}: ${parsed.malformedLineCount} invalid line(s)`,
+      );
+    }
+    const sourceEvents = structuredClone(parsed.events);
+    let frozen = sourceEvents;
+    if (throughEventId !== undefined) {
+      const matches = sourceEvents
+        .map((event, index) => (event.id === throughEventId ? index : -1))
+        .filter((index) => index >= 0);
+      if (matches.length !== 1) {
+        throw new SessionError(`Fork cursor must identify exactly one source event`);
       }
-      newBundle.transcript.append(event.type, event.data);
+      const cursor = sourceEvents[matches[0]];
+      if (cursor.type === "session_meta") {
+        throw new SessionError(`Fork cursor cannot point at session metadata`);
+      }
+      frozen = sourceEvents.slice(0, matches[0] + 1);
     }
 
-    this.saveState(newBundle.state);
-    return newBundle;
+    const copiedEvents: TranscriptEvent[] = [];
+    for (const event of frozen) {
+      if (FORK_SKIP_EVENT_TYPES.has(event.type)) continue;
+      if (!FORK_COPY_EVENT_TYPES.has(event.type)) {
+        throw new SessionError(`Unsupported transcript event in fork: ${String(event.type)}`);
+      }
+      copiedEvents.push(structuredClone(event));
+    }
+    validateForkToolPairs(copiedEvents);
+    return { sourceState: structuredClone(sourceState), copiedEvents };
+  }
+
+  private publishSessionAtomically(
+    targetSessionId: string,
+    state: SessionState,
+    events: readonly TranscriptEvent[],
+  ): SessionBundle {
+    const targetDir = join(this.sessionsDir, targetSessionId);
+    if (existsSync(targetDir)) throw new SessionError(`Session already exists: ${targetSessionId}`);
+    const stagingDir = join(this.sessionsDir, `.pending-fork-${targetSessionId}-${nanoid(8)}`);
+    let published = false;
+    try {
+      mkdirSync(stagingDir);
+      writeFileSync(join(stagingDir, "state.json"), JSON.stringify(state, null, 2), {
+        encoding: "utf-8",
+        mode: 0o600,
+      });
+      const jsonl = events.map((event) => JSON.stringify(event)).join("\n") + "\n";
+      writeFileSync(join(stagingDir, "transcript.jsonl"), jsonl, {
+        encoding: "utf-8",
+        mode: 0o600,
+      });
+      if (existsSync(targetDir)) {
+        throw new SessionError(`Session already exists: ${targetSessionId}`);
+      }
+      renameSync(stagingDir, targetDir);
+      published = true;
+      return this.resume(targetSessionId);
+    } finally {
+      if (!published) rmSync(stagingDir, { recursive: true, force: true });
+    }
   }
 
   list(limit = 20): SessionListEntry[] {
     if (!existsSync(this.sessionsDir)) return [];
 
     const dirs = readdirSync(this.sessionsDir, { withFileTypes: true })
-      .filter((d) => d.isDirectory())
+      .filter((d) => d.isDirectory() && !d.name.startsWith(".pending-"))
       .map((d) => d.name);
 
     // Two-pass scan. Pass 1: cheap stat to find each session's
@@ -619,6 +730,89 @@ export class SessionManager {
     }
 
     return sessions;
+  }
+}
+
+export function buildForkState(
+  source: SessionState,
+  targetSessionId: string,
+  lineage: SessionForkLineage,
+  startedAt = Date.now(),
+): SessionState {
+  const workspace = isSessionWorkspace(source.workspace)
+    ? structuredClone(source.workspace)
+    : { root: source.cwd, kind: "main" as const };
+  return {
+    sessionId: targetSessionId,
+    cwd: source.cwd,
+    workspace,
+    startedAt,
+    model: source.model,
+    provider: source.provider,
+    tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    cumulativePromptTokens: 0,
+    cumulativeCacheReadTokens: 0,
+    cumulativeCacheCreationTokens: 0,
+    turnCount: 0,
+    turnSeq: 0,
+    invokedSkills: [],
+    parentSessionId: null,
+    forkedFrom: structuredClone(lineage),
+    ...(source.origin ? { origin: source.origin } : {}),
+    status: "active",
+  };
+}
+
+export function buildForkTranscript(
+  sourceEvents: readonly TranscriptEvent[],
+  state: SessionState,
+): TranscriptEvent[] {
+  const meta: TranscriptEvent = {
+    id: nanoid(12),
+    type: "session_meta",
+    timestamp: state.startedAt,
+    turnNumber: 0,
+    data: {
+      sessionId: state.sessionId,
+      cwd: state.cwd,
+      workspace: structuredClone(state.workspace),
+      model: state.model,
+      provider: state.provider,
+      startedAt: state.startedAt,
+      forkedFrom: structuredClone(state.forkedFrom),
+    },
+  };
+  return [
+    meta,
+    ...sourceEvents.map((source) => ({
+      ...structuredClone(source),
+      id: nanoid(12),
+    })),
+  ];
+}
+
+function validateForkToolPairs(events: readonly TranscriptEvent[]): void {
+  const uses = new Set<string>();
+  const results = new Set<string>();
+  for (const event of events) {
+    if (event.type !== "tool_use" && event.type !== "tool_result") continue;
+    const id = event.data.toolCallId;
+    if (typeof id !== "string" || !id) {
+      throw new SessionError(`Fork snapshot contains a tool event without toolCallId`);
+    }
+    const own = event.type === "tool_use" ? uses : results;
+    if (own.has(id)) throw new SessionError(`Fork snapshot contains duplicate tool event ${id}`);
+    own.add(id);
+  }
+  for (const id of uses) {
+    if (!results.has(id)) {
+      throw new SessionError(`Fork cursor splits an unfinished tool round (${id})`);
+    }
+  }
+  for (const id of results) {
+    if (!uses.has(id)) {
+      throw new SessionError(`Fork snapshot contains an orphaned tool result (${id})`);
+    }
   }
 }
 

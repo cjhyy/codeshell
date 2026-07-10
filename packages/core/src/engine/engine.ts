@@ -76,7 +76,12 @@ import {
 } from "../context/compaction.js";
 import { PLAN_MODE_ALLOWED_TOOLS } from "../tool-system/plan-mode-allowlist.js";
 import { PromptComposer } from "../prompt/composer.js";
-import { SessionManager, type SessionBundle } from "../session/session-manager.js";
+import {
+  SessionManager,
+  type ForkSessionOptions,
+  type ForkSessionResult,
+  type SessionBundle,
+} from "../session/session-manager.js";
 import { ModelFacade } from "./model-facade.js";
 import { logger, runWithSid, getCurrentSid } from "../logging/logger.js";
 import { recordSessionStart, recordSessionEnd } from "../logging/session-recorder.js";
@@ -920,6 +925,10 @@ export class Engine {
    */
   sessionExistsOnDisk(sessionId: string): boolean {
     return this.sessionManager.exists(sessionId);
+  }
+
+  forkSession(sourceSessionId: string, options?: ForkSessionOptions): ForkSessionResult {
+    return this.sessionManager.fork(sourceSessionId, options);
   }
 
   /**

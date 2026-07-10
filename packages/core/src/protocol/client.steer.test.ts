@@ -23,6 +23,21 @@ describe("AgentClient.steer / unsteer", () => {
       } else if (m.method === Methods.Unsteer) {
         const id = (m.params as { id?: string }).id;
         serverSide.send(createResponse(m.id, { ok: true, removed: id === "live" }));
+      } else if (m.method === Methods.ForkSession) {
+        serverSide.send(
+          createResponse(m.id, {
+            sessionId: "target",
+            mode: "full",
+            forkedFrom: {
+              sessionId: "source",
+              mode: "full",
+              sourceEventCount: 2,
+              createdAt: 1,
+            },
+            workspace: { root: "/project", kind: "main" },
+            copiedEventCount: 2,
+          }),
+        );
       }
     });
     const client = new AgentClient({ transport: clientSide });
@@ -51,5 +66,21 @@ describe("AgentClient.steer / unsteer", () => {
   it("unsteer() returns false when the loop already consumed the entry", async () => {
     const { client } = setup();
     expect(await client.unsteer("s1", "consumed")).toBe(false);
+  });
+
+  it("forkSession() sends the typed full-fork request", async () => {
+    const { client, seen } = setup();
+    const result = await client.forkSession({
+      sourceSessionId: "source",
+      targetSessionId: "target",
+      mode: "full",
+    });
+    expect(seen[0]?.method).toBe(Methods.ForkSession);
+    expect(seen[0]?.params).toEqual({
+      sourceSessionId: "source",
+      targetSessionId: "target",
+      mode: "full",
+    });
+    expect(result.sessionId).toBe("target");
   });
 });

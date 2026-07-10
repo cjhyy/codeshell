@@ -51,7 +51,7 @@ import { logger } from "../logging/logger.js";
 import { nanoid } from "nanoid";
 import type { ChatSession } from "./chat-session.js";
 import type { ChatSessionManager, EngineConfigSlice } from "./chat-session-manager.js";
-import { SessionManager } from "../session/session-manager.js";
+import { assertSafeSessionId, SessionManager } from "../session/session-manager.js";
 import { redactLlmConfig, maskSecretValue } from "./redact.js";
 import { redactSecrets } from "../logging/sanitize-messages.js";
 
@@ -416,6 +416,9 @@ export class AgentServer {
       case Methods.Run:
         await this.handleRun(req);
         break;
+      case Methods.ForkSession:
+        this.handleForkSession(req);
+        break;
       case Methods.Approve:
         this.handleApprove(req);
         break;
@@ -466,6 +469,112 @@ export class AgentServer {
   }
 
   // ─── Run ────────────────────────────────────────────────────────
+
+  private handleForkSession(req: RpcRequest): void {
+    const params = req.params ?? {};
+    const sourceSessionId =
+      typeof params.sourceSessionId === "string" ? params.sourceSessionId : "";
+    const targetSessionId =
+      typeof params.targetSessionId === "string" ? params.targetSessionId : undefined;
+    const throughEventId =
+      typeof params.throughEventId === "string" ? params.throughEventId : undefined;
+    if (!sourceSessionId || params.mode !== "full") {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InvalidParams,
+          "forkSession requires sourceSessionId and mode=full",
+        ),
+      );
+      return;
+    }
+    if (params.targetSessionId !== undefined && typeof params.targetSessionId !== "string") {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "targetSessionId must be a string"),
+      );
+      return;
+    }
+    if (params.throughEventId !== undefined && typeof params.throughEventId !== "string") {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "throughEventId must be a string"),
+      );
+      return;
+    }
+    try {
+      assertSafeSessionId(sourceSessionId);
+      if (targetSessionId) assertSafeSessionId(targetSessionId);
+    } catch (err) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InvalidParams,
+          err instanceof Error ? err.message : String(err),
+        ),
+      );
+      return;
+    }
+
+    let source;
+    try {
+      source = this.chatManager?.getIdle(sourceSessionId);
+    } catch (err) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.Overloaded,
+          err instanceof Error ? err.message : String(err),
+        ),
+      );
+      return;
+    }
+    const engine = source?.engine ?? this.legacyEngine ?? this.anyEngine();
+    if (!engine || !engine.sessionExistsOnDisk(sourceSessionId)) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.SessionNotFound,
+          `Session not found: ${sourceSessionId}`,
+        ),
+      );
+      return;
+    }
+    if (targetSessionId && engine.sessionExistsOnDisk(targetSessionId)) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InvalidParams,
+          `Session already exists: ${targetSessionId}`,
+        ),
+      );
+      return;
+    }
+    try {
+      const result = engine.forkSession(sourceSessionId, { targetSessionId, throughEventId });
+      const workspace = result.bundle.state.workspace ?? {
+        root: result.bundle.state.cwd,
+        kind: "main" as const,
+      };
+      this.transport.send(
+        createResponse(req.id, {
+          sessionId: result.bundle.state.sessionId,
+          mode: "full",
+          forkedFrom: result.lineage,
+          workspace,
+          copiedEventCount: result.copiedEventCount,
+        }),
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const code = /not found/i.test(message)
+        ? ErrorCodes.SessionNotFound
+        : /already exists|invalid|cursor|metadata|unfinished|orphaned|unsupported|malformed/i.test(
+              message,
+            )
+          ? ErrorCodes.InvalidParams
+          : ErrorCodes.InternalError;
+      this.transport.send(createErrorResponse(req.id, code, message));
+    }
+  }
 
   private async handleRun(req: RpcRequest): Promise<void> {
     // ── ChatSessionManager path (multi-session) ──────────────────

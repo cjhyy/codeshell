@@ -16,12 +16,17 @@ import { SessionManager } from "@cjhyy/code-shell-core";
 import {
   buildNoChildFallbackReply,
   compactQuerySessionId,
+  forkSourceSessionId,
 } from "./agent-bridge-fallback.js";
 
 describe("buildNoChildFallbackReply — no live worker", () => {
   let dir: string;
-  beforeEach(() => { dir = mkdtempSync(join(tmpdir(), "bridge-")); });
-  afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "bridge-"));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
 
   function sm(): SessionManager {
     return new SessionManager(dir);
@@ -117,5 +122,20 @@ describe("buildNoChildFallbackReply — no live worker", () => {
 
     expect(compactQuerySessionId(parsed)).toBe("s-compact");
     expect(buildNoChildFallbackReply(parsed, sm())).toBeNull();
+  });
+});
+
+describe("forkSourceSessionId", () => {
+  test("extracts only agent/forkSession source ids for cold-start routing", () => {
+    expect(
+      forkSourceSessionId({
+        method: "agent/forkSession",
+        params: { sourceSessionId: "source-session" },
+      }),
+    ).toBe("source-session");
+    expect(
+      forkSourceSessionId({ method: "agent/run", params: { sourceSessionId: "source-session" } }),
+    ).toBeNull();
+    expect(forkSourceSessionId({ method: "agent/forkSession", params: {} })).toBeNull();
   });
 });

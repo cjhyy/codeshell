@@ -10,7 +10,16 @@ import type { SessionManager } from "@cjhyy/code-shell-core";
 export interface ParsedRpc {
   id?: number | string;
   method?: string;
-  params?: { cwd?: string; sessionId?: string; type?: string };
+  params?: { cwd?: string; sessionId?: string; sourceSessionId?: string; type?: string };
+}
+
+export function forkSourceSessionId(parsed: ParsedRpc): string | null {
+  const sourceSessionId = parsed.params?.sourceSessionId;
+  return parsed.method === "agent/forkSession" &&
+    typeof sourceSessionId === "string" &&
+    sourceSessionId.length > 0
+    ? sourceSessionId
+    : null;
 }
 
 export function compactQuerySessionId(parsed: ParsedRpc): string | null {
@@ -50,8 +59,7 @@ export function buildNoChildFallbackReply(
 ): string | null {
   const { id, method } = parsed;
   if (id === undefined) return null;
-  const respond = (result: unknown): string =>
-    JSON.stringify({ jsonrpc: "2.0", id, result });
+  const respond = (result: unknown): string => JSON.stringify({ jsonrpc: "2.0", id, result });
 
   switch (method) {
     case "agent/backgroundShells":

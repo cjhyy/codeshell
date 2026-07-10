@@ -157,10 +157,12 @@ import { catalogModelOptions, type ModelInstance } from "./settings/textConnecti
 import {
   isQuickChatBucket,
   isQuickChatSessionId,
+  makeQuickChatCreationNonce,
   makeQuickChatSessionId,
   quickChatBucket,
   quickChatSessionIdFromBucket,
   quickChatTabKey,
+  type QuickChatContextMode,
   type QuickChatSessionRef,
 } from "./quickChatSession";
 
@@ -278,6 +280,8 @@ interface QuickChatPanelHostProps {
   busy: boolean;
   draft: string;
   onEnsureSession: (ownerBucket: string, tabId: string, cwd: string | null) => void;
+  onRetry: (session: QuickChatSessionRef) => void;
+  onUseBlank: (session: QuickChatSessionRef) => void;
   onDraftChange: (bucket: string, text: string) => void;
   onSend: (session: QuickChatSessionRef, text: string) => void;
   onStop: (bucket: string) => void;
@@ -300,6 +304,8 @@ function QuickChatPanelHost({
   busy,
   draft,
   onEnsureSession,
+  onRetry,
+  onUseBlank,
   onDraftChange,
   onSend,
   onStop,
@@ -330,10 +336,16 @@ function QuickChatPanelHost({
       liveTurnActive={quickChatLiveTurnActive(state, busy)}
       cwd={effectiveCwd}
       busy={busy}
+      creationStatus={session.status}
+      creationError={session.error?.message}
+      contextMode={session.contextMode}
+      sourceTitle={session.sourceTitle}
       draft={draft}
       onDraftChange={(text) => onDraftChange(session.bucket, text)}
       onSend={(text) => onSend(session, text)}
       onStop={() => onStop(session.bucket)}
+      onRetry={() => onRetry(session)}
+      onUseBlank={() => onUseBlank(session)}
       onAskUserAnswer={onAskUserAnswer}
       pendingApproval={pendingApproval}
       onApprovalDecide={onApprovalDecide}
@@ -463,16 +475,6 @@ function App() {
   const activeBucketRef = useRef(activeBucket);
   activeBucketRef.current = activeBucket;
   quickChatSessionsRef.current = quickChatSessions;
-  useEffect(() => {
-    for (const session of Object.values(quickChatSessions)) {
-      void window.codeshell.claimQuickChatSession(session.sessionId).catch((e) =>
-        window.codeshell.log("quick_chat.claim_session_failed", {
-          sessionId: session.sessionId,
-          error: String(e),
-        }),
-      );
-    }
-  }, [quickChatSessions]);
   useEffect(() => {
     if (!activeSessionId) return;
     window.codeshell.registerBrowserSessionBucket({
@@ -2460,7 +2462,7 @@ function App() {
 
   const sendQuickChat = (session: QuickChatSessionRef, text: string): void => {
     const prompt = text.trim();
-    if (!prompt) return;
+    if (!prompt || session.status !== "ready") return;
 
     const bucket = session.bucket;
     const engineSessionId = session.sessionId;
@@ -2859,16 +2861,19 @@ function App() {
     void window.codeshell.cancel(engineSessionId);
   };
 
-  const resolveEngineSessionIdForBucket = (bucket: string): string | undefined => {
-    const quickChatSessionId = quickChatSessionIdFromBucket(bucket);
-    if (quickChatSessionId) return quickChatSessionId;
-    const { repoKey, repoId, sessionId: uiSessionId } = parsePanelBucket(bucket);
-    const summary = uiSessionId
-      ? (sessionIndices[repoKey]?.sessions.find((s) => s.id === uiSessionId) ??
-        loadSessionIndex(repoId).sessions.find((s) => s.id === uiSessionId))
-      : undefined;
-    return summary?.engineSessionId ?? uiSessionId ?? undefined;
-  };
+  const resolveEngineSessionIdForBucket = useCallback(
+    (bucket: string): string | undefined => {
+      const quickChatSessionId = quickChatSessionIdFromBucket(bucket);
+      if (quickChatSessionId) return quickChatSessionId;
+      const { repoKey, repoId, sessionId: uiSessionId } = parsePanelBucket(bucket);
+      const summary = uiSessionId
+        ? (sessionIndices[repoKey]?.sessions.find((s) => s.id === uiSessionId) ??
+          loadSessionIndex(repoId).sessions.find((s) => s.id === uiSessionId))
+        : undefined;
+      return summary?.engineSessionId ?? uiSessionId ?? undefined;
+    },
+    [sessionIndices],
+  );
 
   // Resolve the engine sessionId for the currently-running bucket (same logic
   // stop() uses). Returns undefined when nothing maps.
@@ -3091,28 +3096,149 @@ function App() {
     [updatePanelBucket],
   );
 
+  const updateQuickChatCreation = useCallback(
+    (
+      key: string,
+      nonce: string,
+      updater: (session: QuickChatSessionRef) => QuickChatSessionRef,
+    ): boolean => {
+      const current = quickChatSessionsRef.current[key];
+      if (!current || current.creationNonce !== nonce) return false;
+      const nextSession = updater(current);
+      const next = { ...quickChatSessionsRef.current, [key]: nextSession };
+      quickChatSessionsRef.current = next;
+      setQuickChatSessions(next);
+      return true;
+    },
+    [],
+  );
+
+  const startQuickChatCreation = useCallback(
+    async (session: QuickChatSessionRef): Promise<void> => {
+      const { key, creationNonce: nonce, sessionId, bucket } = session;
+      try {
+        await window.codeshell.claimQuickChatSession(sessionId);
+        if (session.contextMode === "blank" || !session.sourceSessionId) {
+          if (
+            !quickChatSessionsRef.current[key] ||
+            quickChatSessionsRef.current[key].creationNonce !== nonce
+          ) {
+            await window.codeshell.cleanupQuickChatSession(sessionId);
+            return;
+          }
+          engineToBucketRef.current.set(sessionId, bucket);
+          setModelOverrides((current) =>
+            current[session.ownerBucket] === undefined
+              ? current
+              : { ...current, [bucket]: current[session.ownerBucket] },
+          );
+          setPermissionOverrides((current) =>
+            current[session.ownerBucket] === undefined
+              ? current
+              : { ...current, [bucket]: current[session.ownerBucket] },
+          );
+          updateQuickChatCreation(key, nonce, (current) => ({ ...current, status: "ready" }));
+          return;
+        }
+
+        const result = await window.codeshell.forkSession({
+          sourceSessionId: session.sourceSessionId,
+          targetSessionId: sessionId,
+          mode: "full",
+        });
+        const state = foldTranscript(await window.codeshell.getSessionTranscript(result.sessionId));
+        if (
+          !quickChatSessionsRef.current[key] ||
+          quickChatSessionsRef.current[key].creationNonce !== nonce
+        ) {
+          await window.codeshell.cleanupQuickChatSession(result.sessionId);
+          return;
+        }
+        dispatch({ type: "hydrate", bucket, state });
+        engineToBucketRef.current.set(result.sessionId, bucket);
+        setModelOverrides((current) =>
+          current[session.ownerBucket] === undefined
+            ? current
+            : { ...current, [bucket]: current[session.ownerBucket] },
+        );
+        setPermissionOverrides((current) =>
+          current[session.ownerBucket] === undefined
+            ? current
+            : { ...current, [bucket]: current[session.ownerBucket] },
+        );
+        updateQuickChatCreation(key, nonce, (current) => ({
+          ...current,
+          cwd: result.workspace.root,
+          status: "ready",
+          error: undefined,
+        }));
+      } catch (err) {
+        await window.codeshell.cleanupQuickChatSession(sessionId).catch(() => undefined);
+        const error = err as Error & { code?: number };
+        updateQuickChatCreation(key, nonce, (current) => ({
+          ...current,
+          status: "error",
+          error: { code: error.code, message: error.message || String(err) },
+        }));
+      }
+    },
+    [updateQuickChatCreation],
+  );
+
   const ensureQuickChatSession = useCallback(
     (ownerBucket: string, tabId: string, cwd: string | null) => {
       const key = quickChatTabKey(ownerBucket, tabId);
-      setQuickChatSessions((prev) => {
-        if (prev[key]) return prev;
-        const sessionId = makeQuickChatSessionId();
-        const bucket = quickChatBucket(sessionId);
-        engineToBucketRef.current.set(sessionId, bucket);
-        return {
-          ...prev,
-          [key]: {
-            key,
-            ownerBucket,
-            tabId,
-            sessionId,
-            bucket,
-            cwd,
-          },
-        };
-      });
+      if (quickChatSessionsRef.current[key]) return;
+      const sessionId = makeQuickChatSessionId();
+      const bucket = quickChatBucket(sessionId);
+      const sourceSessionId = resolveEngineSessionIdForBucket(ownerBucket) ?? null;
+      const { repoKey, repoId, sessionId: ownerUiSessionId } = parsePanelBucket(ownerBucket);
+      const sourceTitle = ownerUiSessionId
+        ? (sessionIndices[repoKey]?.sessions.find((item) => item.id === ownerUiSessionId)?.title ??
+          loadSessionIndex(repoId).sessions.find((item) => item.id === ownerUiSessionId)?.title)
+        : undefined;
+      const contextMode: QuickChatContextMode = sourceSessionId ? "full" : "blank";
+      const session: QuickChatSessionRef = {
+        key,
+        ownerBucket,
+        tabId,
+        sessionId,
+        bucket,
+        cwd,
+        sourceSessionId,
+        sourceTitle,
+        contextMode,
+        status: "creating",
+        creationNonce: makeQuickChatCreationNonce(),
+      };
+      quickChatSessionsRef.current = { ...quickChatSessionsRef.current, [key]: session };
+      setQuickChatSessions(quickChatSessionsRef.current);
+      void startQuickChatCreation(session);
     },
-    [],
+    [resolveEngineSessionIdForBucket, sessionIndices, startQuickChatCreation],
+  );
+
+  const restartQuickChatSession = useCallback(
+    (session: QuickChatSessionRef, contextMode: QuickChatContextMode) => {
+      const sessionId = makeQuickChatSessionId();
+      const bucket = quickChatBucket(sessionId);
+      const next: QuickChatSessionRef = {
+        ...session,
+        sessionId,
+        bucket,
+        contextMode,
+        status: "creating",
+        error: undefined,
+        creationNonce: makeQuickChatCreationNonce(),
+      };
+      quickChatSessionsRef.current = { ...quickChatSessionsRef.current, [session.key]: next };
+      setQuickChatSessions(quickChatSessionsRef.current);
+      engineToBucketRef.current.delete(session.sessionId);
+      dispatch({ type: "evict", bucket: session.bucket });
+      void window.codeshell.cleanupQuickChatSession(session.sessionId).catch(() => undefined);
+      void startQuickChatCreation(next);
+    },
+    [startQuickChatCreation],
   );
 
   const setQuickChatDraft = useCallback((bucket: string, text: string) => {
@@ -4198,6 +4324,8 @@ function App() {
                         busy={quickBusy}
                         draft={quickSession ? (quickChatDrafts[quickSession.bucket] ?? "") : ""}
                         onEnsureSession={ensureQuickChatSession}
+                        onRetry={(session) => restartQuickChatSession(session, "full")}
+                        onUseBlank={(session) => restartQuickChatSession(session, "blank")}
                         onDraftChange={setQuickChatDraft}
                         onSend={sendQuickChat}
                         onStop={stop}

@@ -19,6 +19,7 @@ export type {
   TranscriptEventType,
   SessionState,
   SessionWorkspace,
+  SessionForkLineage,
   ContextUsageAnchor,
   SessionStatus,
   TokenUsage,
@@ -124,12 +125,26 @@ export {
   type CreateClientOptions,
   type ServerHandle,
 } from "./protocol/factories.js";
-export { Methods, ErrorCodes, type RpcMessage, type RunResult } from "./protocol/types.js";
+export {
+  Methods,
+  ErrorCodes,
+  type RpcMessage,
+  type RunResult,
+  type ForkSessionParams,
+  type ForkSessionResult as ProtocolForkSessionResult,
+} from "./protocol/types.js";
 
 // ─── Session ─────────────────────────────────────────────────────
 
-export { Transcript } from "./session/transcript.js";
-export { SessionManager } from "./session/session-manager.js";
+export { Transcript, eventsToMessages } from "./session/transcript.js";
+export type { ReadTranscriptResult, ImportTranscriptOptions } from "./session/transcript.js";
+export {
+  SessionManager,
+  buildForkState,
+  buildForkTranscript,
+  type ForkSessionOptions,
+  type ForkSessionResult,
+} from "./session/session-manager.js";
 export { FileHistory } from "./session/file-history.js";
 export {
   createWorktree,

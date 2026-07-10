@@ -9,6 +9,69 @@ import { nanoid } from "nanoid";
 import type { TranscriptEvent, TranscriptEventType, Message, ContentBlock } from "../types.js";
 import { logger } from "../logging/logger.js";
 
+export interface ReadTranscriptResult {
+  events: TranscriptEvent[];
+  malformedLineCount: number;
+}
+
+export interface ImportTranscriptOptions {
+  regenerateIds: true;
+  skipTypes?: ReadonlySet<TranscriptEventType>;
+}
+
+export function eventsToMessages(events: readonly TranscriptEvent[]): Message[] {
+  const messages: Message[] = [];
+  for (const event of events) {
+    switch (event.type) {
+      case "message": {
+        const { role, content } = event.data as {
+          role: string;
+          content: string | ContentBlock[];
+        };
+        messages.push({ role: role as Message["role"], content: structuredClone(content) });
+        break;
+      }
+      case "tool_result": {
+        const { toolCallId, result, error, contentBlocks } = event.data as {
+          toolCallId: string;
+          result?: string;
+          error?: string;
+          contentBlocks?: ContentBlock[];
+        };
+        const lastMsg = messages[messages.length - 1];
+        const block: ContentBlock = {
+          type: "tool_result",
+          tool_use_id: toolCallId,
+          content: error
+            ? `Error: ${error}`
+            : Array.isArray(contentBlocks) && contentBlocks.length > 0
+              ? structuredClone(contentBlocks)
+              : (result ?? "(no output)"),
+        };
+        if (lastMsg?.role === "user" && Array.isArray(lastMsg.content)) {
+          (lastMsg.content as ContentBlock[]).push(block);
+        } else {
+          messages.push({ role: "user", content: [block] });
+        }
+        break;
+      }
+      case "summary": {
+        const { summary } = event.data as { summary: string };
+        messages.push({
+          role: "user",
+          content: `<system-reminder>Previous conversation was summarized:\n${summary}</system-reminder>`,
+        });
+        break;
+      }
+      // tool_use is already embedded in the assistant message. All other
+      // event types are replay/control metadata, not provider messages.
+      default:
+        break;
+    }
+  }
+  return messages;
+}
+
 export class Transcript {
   private events: TranscriptEvent[] = [];
   private filePath: string;
@@ -151,64 +214,34 @@ export class Transcript {
    * This is the critical boundary: the LLM never sees the event log directly.
    */
   toMessages(): Message[] {
-    const messages: Message[] = [];
+    return eventsToMessages(this.events);
+  }
 
-    for (const event of this.events) {
-      switch (event.type) {
-        case "message": {
-          const { role, content } = event.data as {
-            role: string;
-            content: string | ContentBlock[];
-          };
-          messages.push({ role: role as Message["role"], content });
-          break;
-        }
-        case "tool_use": {
-          // Tool use is part of assistant message content blocks
-          // Already included via the assistant message event
-          break;
-        }
-        case "tool_result": {
-          const { toolCallId, result, error, contentBlocks } = event.data as {
-            toolCallId: string;
-            result?: string;
-            error?: string;
-            contentBlocks?: ContentBlock[];
-          };
-          // Find if there's already a user message with tool_results to append to
-          const lastMsg = messages[messages.length - 1];
-          const block: ContentBlock = {
-            type: "tool_result",
-            tool_use_id: toolCallId,
-            content: error
-              ? `Error: ${error}`
-              : Array.isArray(contentBlocks) && contentBlocks.length > 0
-                ? contentBlocks
-                : (result ?? "(no output)"),
-          };
-
-          if (lastMsg?.role === "user" && Array.isArray(lastMsg.content)) {
-            (lastMsg.content as ContentBlock[]).push(block);
-          } else {
-            messages.push({ role: "user", content: [block] });
-          }
-          break;
-        }
-        case "summary": {
-          // Content replacement: inject summary as system-reminder
-          const { summary } = event.data as { summary: string };
-          messages.push({
-            role: "user",
-            content: `<system-reminder>Previous conversation was summarized:\n${summary}</system-reminder>`,
-          });
-          break;
-        }
-        // turn_boundary, session_meta, file_history, plan_operation, error
-        // are not included in LLM messages
-      }
+  importEvents(
+    events: readonly TranscriptEvent[],
+    options: ImportTranscriptOptions,
+  ): { imported: number; sourceToTargetIds: Map<string, string> } {
+    const sourceToTargetIds = new Map<string, string>();
+    let imported = 0;
+    for (const source of events) {
+      if (options.skipTypes?.has(source.type)) continue;
+      const event: TranscriptEvent = {
+        ...structuredClone(source),
+        id: nanoid(12),
+      };
+      this.events.push(event);
+      this.flush(event);
+      sourceToTargetIds.set(source.id, event.id);
+      imported++;
+      this.currentTurn = Math.max(
+        this.currentTurn,
+        event.turnNumber,
+        event.type === "turn_boundary" && typeof event.data.turnNumber === "number"
+          ? event.data.turnNumber
+          : 0,
+      );
     }
-
-    return messages;
+    return { imported, sourceToTargetIds };
   }
 
   getEvents(type?: TranscriptEventType): TranscriptEvent[] {
@@ -281,26 +314,38 @@ export class Transcript {
 
   static loadFromFile(filePath: string): Transcript {
     const transcript = new Transcript(filePath);
-    if (!existsSync(filePath)) return transcript;
-
-    const content = readFileSync(filePath, "utf-8");
-    const lines = content.split("\n").filter((l) => l.trim());
-
-    for (const line of lines) {
-      try {
-        const event = JSON.parse(line) as TranscriptEvent;
-        transcript.events.push(event);
-        if (event.type === "turn_boundary") {
-          transcript.currentTurn = (event.data.turnNumber as number) ?? transcript.currentTurn + 1;
-        }
-      } catch {
-        // Skip malformed lines
-      }
+    const { events } = Transcript.readEvents(filePath);
+    transcript.events = events;
+    for (const event of events) {
+      transcript.currentTurn = Math.max(
+        transcript.currentTurn,
+        event.turnNumber,
+        event.type === "turn_boundary" && typeof event.data.turnNumber === "number"
+          ? event.data.turnNumber
+          : 0,
+      );
     }
 
     // Repair pairing on load
     transcript.repairToolResultPairs();
 
     return transcript;
+  }
+
+  /** Parse a frozen transcript without constructing/writing/repairing it. */
+  static readEvents(filePath: string): ReadTranscriptResult {
+    if (!existsSync(filePath)) return { events: [], malformedLineCount: 0 };
+    const events: TranscriptEvent[] = [];
+    let malformedLineCount = 0;
+    for (const line of readFileSync(filePath, "utf-8").split("\n")) {
+      if (!line.trim()) continue;
+      try {
+        const event = JSON.parse(line) as TranscriptEvent;
+        events.push(event);
+      } catch {
+        malformedLineCount++;
+      }
+    }
+    return { events, malformedLineCount };
   }
 }

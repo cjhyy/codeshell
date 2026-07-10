@@ -230,6 +230,16 @@ export interface ContextUsageAnchor {
   model?: string;
 }
 
+/** Provenance for a user-visible session fork. Optional on legacy sessions. */
+export interface SessionForkLineage {
+  sessionId: string;
+  mode: "full" | "summary";
+  fromEventId?: string;
+  throughEventId?: string;
+  sourceEventCount: number;
+  createdAt: number;
+}
+
 export interface SessionState {
   sessionId: string;
   cwd: string;
@@ -274,6 +284,8 @@ export interface SessionState {
    * "key present && null" to tell a new top-level session apart from legacy.
    */
   parentSessionId?: string | null;
+  /** User-fork lineage; deliberately separate from sub-agent ownership. */
+  forkedFrom?: SessionForkLineage;
   /**
    * Which host/context created this session. Desktop disk-rebuild shows only
    * `desktop` + `automation`. Absent on legacy sessions.

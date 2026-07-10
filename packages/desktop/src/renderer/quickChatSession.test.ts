@@ -3,6 +3,7 @@ import {
   isQuickChatBucket,
   isQuickChatSessionId,
   makeQuickChatSessionId,
+  makeQuickChatCreationNonce,
   quickChatBucket,
   quickChatSessionIdFromBucket,
   quickChatTabKey,
@@ -32,5 +33,9 @@ describe("quickChatSession", () => {
 
   test("keys quick chat tabs by owner bucket and tab id", () => {
     expect(quickChatTabKey("r-1::s-main", "quickChat-7")).toBe("r-1::s-main@@quickChat-7");
+  });
+
+  test("creation nonces distinguish late async completions", () => {
+    expect(makeQuickChatCreationNonce()).not.toBe(makeQuickChatCreationNonce());
   });
 });

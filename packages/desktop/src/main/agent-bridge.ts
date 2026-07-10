@@ -55,6 +55,7 @@ import { loadBrowserAutomationPolicy } from "./browser-driver/load-policy.js";
 import {
   buildNoChildFallbackReply,
   compactQuerySessionId,
+  forkSourceSessionId,
 } from "./agent-bridge-fallback.js";
 import { prepareAgentRunMetadata, resolveCredentialSessionCwd } from "./agent-run-metadata.js";
 import { getTrustCachedSync } from "./trust-store.js";
@@ -392,6 +393,10 @@ export class AgentBridge {
       if (parsed.method === "agent/run") {
         outLine = this.handleAgentRunMetadata(prepared);
       } else {
+        const forkSourceId = forkSourceSessionId(parsed);
+        if (forkSourceId) {
+          this.spawnChild(this.sessionsForFallback().readCwd(forkSourceId));
+        }
         const compactSessionId = compactQuerySessionId(parsed);
         if (compactSessionId) {
           this.spawnChild(

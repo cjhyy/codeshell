@@ -13,9 +13,26 @@ import type {
   DiscoveredSession,
   QuotaResult,
   SessionWorkspace,
+  SessionForkLineage,
 } from "@cjhyy/code-shell-core";
 
-export type { SessionWorkspace };
+export type { SessionWorkspace, SessionForkLineage };
+
+export interface ForkSessionParams {
+  sourceSessionId: string;
+  targetSessionId?: string;
+  mode: "full";
+  throughEventId?: string;
+}
+
+export interface ForkSessionResult {
+  sessionId: string;
+  mode: "full";
+  forkedFrom: SessionForkLineage;
+  workspace: SessionWorkspace;
+  copiedEventCount: number;
+  titleSuggestion?: string;
+}
 
 /** One step in replaying a persisted transcript into renderer state. */
 export type FoldItem =
@@ -972,6 +989,7 @@ export interface CodeshellApi {
   deleteSession(id: string): Promise<void>;
   claimQuickChatSession(id: string): Promise<void>;
   cleanupQuickChatSession(id: string): Promise<{ deleted: boolean }>;
+  forkSession(params: ForkSessionParams): Promise<ForkSessionResult>;
   listSessionTitles(): Promise<Record<string, string>>;
   renameSession(id: string, title: string): Promise<void>;
   tailLog(bucket: "ui-ink" | "engine" | "desktop", lines?: number): Promise<string[]>;

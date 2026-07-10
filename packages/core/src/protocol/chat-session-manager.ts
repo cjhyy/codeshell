@@ -91,6 +91,17 @@ export class ChatSessionManager {
     return this.sessions.get(sessionId);
   }
 
+  /** Return a live source only when its transcript is at a stable idle point. */
+  getIdle(sessionId: string): ChatSession | undefined {
+    const session = this.sessions.get(sessionId);
+    if (session && (session.isBusy() || session.queueDepth() > 0)) {
+      const err = new Error("source session is still producing or has queued turns");
+      (err as Error & { code?: number }).code = -32001;
+      throw err;
+    }
+    return session;
+  }
+
   sessionExistsOnDisk(sessionId: string, slice: EngineConfigSlice): boolean {
     const existing = this.sessions.get(sessionId);
     if (existing) return true;
