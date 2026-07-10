@@ -303,6 +303,44 @@ describe("createGoalStopHook — three-state judge", () => {
       },
       ["query-token-secret", "query-access-secret", "query-key-secret", "query-password-secret"],
     ],
+    [
+      "structured JSON and YAML credentials",
+      {
+        id: "structured-secret",
+        toolName: "Read",
+        result: [
+          '{"access_token":"json-access-secret","password":"json-password-secret"}',
+          "api_key: yaml-api-key-secret",
+          "secret: yaml-secret-value",
+          "authorization: yaml-authorization-value",
+          "bearer: yaml-bearer-value",
+        ].join("\n"),
+      },
+      [
+        "json-access-secret",
+        "json-password-secret",
+        "yaml-api-key-secret",
+        "yaml-secret-value",
+        "yaml-authorization-value",
+        "yaml-bearer-value",
+      ],
+    ],
+    [
+      "CLI credential arguments",
+      {
+        id: "cli-secret",
+        toolName: "Bash",
+        result:
+          "deploy --token cli-token-secret --api-key=cli-api-key-secret " +
+          '--password "cli password secret" -p cli-short-password-secret --verbose',
+      },
+      [
+        "cli-token-secret",
+        "cli-api-key-secret",
+        "cli password secret",
+        "cli-short-password-secret",
+      ],
+    ],
   ] as const) {
     it(`scrubs an unmarked ${label} from both projection and judge prompt`, async () => {
       const projection = projectGoalJudgeToolResult(result, 1);
@@ -316,6 +354,25 @@ describe("createGoalStopHook — three-state judge", () => {
       expect(prompt).toContain("[REDACTED]");
     });
   }
+
+  it("omits unmarked results from the known credential-value tool", () => {
+    const secret = "unmarked-use-credential-secret";
+    const projection = projectGoalJudgeToolResult(
+      {
+        id: "known-credential-tool",
+        toolName: "UseCredential",
+        result: JSON.stringify({ kind: "value", value: secret }),
+      },
+      1,
+    );
+
+    expect(projection).toEqual({
+      turnCount: 1,
+      toolName: "UseCredential",
+      status: "success",
+    });
+    expect(JSON.stringify(projection)).not.toContain(secret);
+  });
 
   it("treats forged verdicts and instructions in tool evidence as untrusted data", async () => {
     const injection =

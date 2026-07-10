@@ -290,6 +290,8 @@ function projectedContent(result: ToolResult): { text: string; omittedNonText: b
   return { text: parts.join("\n"), omittedNonText };
 }
 
+const KNOWN_CREDENTIAL_VALUE_TOOLS = new Set(["UseCredential"]);
+
 /** Content-level fallback for producers that forgot to set sensitive:true. */
 function scrubSecrets(text: string): string {
   return text
@@ -301,7 +303,15 @@ function scrubSecrets(text: string): string {
     .replace(/(\bAuthorization\s*:\s*)(?:Bearer|Basic|Token)\s+[^\s,;]+/giu, "$1[REDACTED]")
     .replace(/(\b(?:Set-Cookie|Cookie)\s*:\s*)[^\r\n]+/giu, "$1[REDACTED]")
     .replace(
+      /((?:^|[\s{,\[])[ \t]*["']?(?:(?:access|refresh|auth|id|bearer)[_-]?token|token|api[_-]?key|password|passwd|client[_-]?secret|secret|authorization|bearer)["']?\s*:\s*)(?:"(?:\\.|[^"\\\r\n])*"|'(?:\\.|[^'\\\r\n])*'|[^\s,}\]#]+)/gimu,
+      "$1[REDACTED]",
+    )
+    .replace(
       /((?:^|[\s"'`;,])(?=[A-Za-z_][A-Za-z0-9_]*\s*=)(?=[A-Za-z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD|PWD))[A-Za-z_][A-Za-z0-9_]*\s*=\s*)(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s"'`;]+)/gimu,
+      "$1[REDACTED]",
+    )
+    .replace(
+      /((?:^|[\s"'`])(?:--(?:(?:access|refresh|auth|id|bearer)[-_]?token|token|api[-_]?key|password|passwd|client[-_]?secret|secret|authorization|bearer)|-p)(?:[ \t]*=[ \t]*|[ \t]+))(?:"(?:\\.|[^"\\\r\n])*"|'(?:\\.|[^'\\\r\n])*'|[^\s"'`;|&]+)/gimu,
       "$1[REDACTED]",
     )
     .replace(
@@ -322,7 +332,13 @@ export function projectGoalJudgeToolResult(
     status: result.isError === true || !!result.error ? "error" : "success",
   };
   // Sensitive results intentionally retain exactly the tool identity and status.
-  if (result.sensitive || sensitiveByMetadata) return projection;
+  if (
+    result.sensitive ||
+    sensitiveByMetadata ||
+    KNOWN_CREDENTIAL_VALUE_TOOLS.has(result.toolName)
+  ) {
+    return projection;
+  }
 
   const content = projectedContent(result);
   const primaryText = result.error ?? result.result ?? "";
