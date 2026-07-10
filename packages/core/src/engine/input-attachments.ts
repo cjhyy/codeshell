@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile, realpath, stat } from "node:fs/promises";
 import { extname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { logger } from "../logging/logger.js";
 import type { InputAttachmentMeta } from "../protocol/types.js";
 import { classifyPath } from "../tool-system/path-policy.js";
 import { enforceImageBytePolicy } from "./image-policy.js";
@@ -35,6 +36,16 @@ interface PendingImageAttachment {
   realPath: string;
   mime: string;
   size: number;
+  diagnostic: AttachmentDiagnostic;
+}
+
+interface AttachmentDiagnostic {
+  index: number;
+  id: string;
+  kind: string;
+  path: string | null;
+  mime: string | null;
+  stage: string;
 }
 
 export async function buildInputAttachmentContext(
@@ -53,9 +64,20 @@ export async function buildInputAttachmentContext(
   const images: ParsedImage[] = [];
   const errors: string[] = [];
   const pendingImages: PendingImageAttachment[] = [];
+  const diagnostics: AttachmentDiagnostic[] = [];
   let hasStructuredImageAttachments = false;
 
+  logger.info("engine.run.input_attachments.start", {
+    attachmentCount: attachments.length,
+    expectedSessionId: expectedSessionId ?? null,
+    includeImageBytes,
+  });
+
   if (!expectedSessionId) {
+    logger.warn("engine.run.input_attachments.invalid_session", {
+      attachmentCount: attachments.length,
+      reason: "missing_expected_session_id",
+    });
     return {
       text: "",
       images: [],
@@ -64,6 +86,10 @@ export async function buildInputAttachmentContext(
     };
   }
   if (!isSafeSessionPathSegment(expectedSessionId)) {
+    logger.warn("engine.run.input_attachments.invalid_session", {
+      attachmentCount: attachments.length,
+      reason: "unsafe_expected_session_id",
+    });
     return {
       text: "",
       images: [],
@@ -72,36 +98,82 @@ export async function buildInputAttachmentContext(
     };
   }
 
-  for (const attachment of attachments) {
-    if (!attachment || typeof attachment !== "object") continue;
-    const displayPath = attachment.path || attachment.relPath || attachment.absPath;
+  for (const [index, attachment] of attachments.entries()) {
+    if (!attachment || typeof attachment !== "object") {
+      errors.push(`attachment at index ${index} is not an object`);
+      diagnostics.push({
+        index,
+        id: "(unknown)",
+        kind: typeof attachment,
+        path: null,
+        mime: null,
+        stage: "invalid_metadata",
+      });
+      continue;
+    }
+    const id = stringField(attachment.id) ?? "(unknown)";
+    const kind = stringField(attachment.kind) ?? "(unknown)";
+    const declaredMime = stringField(attachment.mime);
+    const displayPath = firstString(attachment.path, attachment.relPath, attachment.absPath);
     if (!displayPath) {
-      errors.push(`attachment ${attachment.id || "(unknown)"} has no path`);
+      errors.push(`attachment ${id} has no valid path`);
+      diagnostics.push({
+        index,
+        id,
+        kind,
+        path: null,
+        mime: declaredMime ?? null,
+        stage: "invalid_path_metadata",
+      });
       continue;
     }
     if (attachment.sessionId !== expectedSessionId) {
       errors.push(
-        `attachment ${attachment.id || displayPath} session mismatch: expected ${expectedSessionId}, got ${attachment.sessionId}`,
+        `attachment ${id === "(unknown)" ? displayPath : id} session mismatch: expected ${expectedSessionId}, got ${attachment.sessionId}`,
       );
+      diagnostics.push({
+        index,
+        id,
+        kind,
+        path: displayPath,
+        mime: declaredMime ?? null,
+        stage: "session_mismatch",
+      });
       continue;
     }
 
-    const resolved = resolveAttachmentPath(attachment, cwd);
+    const resolved = resolveAttachmentPath(attachment, cwd, displayPath);
     let info;
     try {
       info = await stat(resolved);
     } catch (err) {
       errors.push(
-        `attachment ${attachment.id || displayPath} stat failed: ${(err as Error).message}`,
+        `attachment ${id === "(unknown)" ? displayPath : id} stat failed: ${(err as Error).message}`,
       );
+      diagnostics.push({
+        index,
+        id,
+        kind,
+        path: displayPath,
+        mime: declaredMime ?? null,
+        stage: "stat_failed",
+      });
       continue;
     }
 
     const policy = classifyPath(resolved, { workspaceRoot: cwdReal, operation: "read" });
     if (policy.decision !== "allow") {
       errors.push(
-        `attachment ${attachment.id || displayPath} blocked by path policy: ${policy.reason}`,
+        `attachment ${id === "(unknown)" ? displayPath : id} blocked by path policy: ${policy.reason}`,
       );
+      diagnostics.push({
+        index,
+        id,
+        kind,
+        path: displayPath,
+        mime: declaredMime ?? null,
+        stage: "path_policy_blocked",
+      });
       continue;
     }
     const realPath = policy.resolvedPath;
@@ -114,6 +186,14 @@ export async function buildInputAttachmentContext(
     );
     if (stagedPathError) {
       errors.push(stagedPathError);
+      diagnostics.push({
+        index,
+        id,
+        kind,
+        path: displayPath,
+        mime: declaredMime ?? null,
+        stage: "staged_path_blocked",
+      });
       continue;
     }
 
@@ -130,19 +210,45 @@ export async function buildInputAttachmentContext(
           `</attached-directory>`,
         ].join("\n"),
       );
+      diagnostics.push({
+        index,
+        id,
+        kind: "directory",
+        path: displayPath,
+        mime: declaredMime ?? null,
+        stage: tree.truncated ? "directory_metadata_truncated" : "directory_metadata",
+      });
       continue;
     }
 
     if (!info.isFile()) {
-      errors.push(`attachment ${attachment.id || displayPath} is not a regular file or directory`);
+      errors.push(
+        `attachment ${id === "(unknown)" ? displayPath : id} is not a regular file or directory`,
+      );
+      diagnostics.push({
+        index,
+        id,
+        kind,
+        path: displayPath,
+        mime: declaredMime ?? null,
+        stage: "unsupported_filesystem_entry",
+      });
       continue;
     }
 
-    const mime = attachment.mime || IMAGE_MIME_BY_EXT[extname(realPath).toLowerCase()];
+    const mime = declaredMime || IMAGE_MIME_BY_EXT[extname(realPath).toLowerCase()];
     if (attachment.kind === "image") {
       hasStructuredImageAttachments = true;
       if (!includeImageBytes || attachment.vision?.include === false) {
         textBlocks.push(formatFileMetadata(attachment, displayPath, realPath, info.size, mime));
+        diagnostics.push({
+          index,
+          id,
+          kind,
+          path: displayPath,
+          mime: mime ?? null,
+          stage: "image_metadata_only",
+        });
         continue;
       }
       if (
@@ -150,20 +256,48 @@ export async function buildInputAttachmentContext(
         !mime.startsWith("image/") ||
         !IMAGE_MIME_BY_EXT[extname(realPath).toLowerCase()]
       ) {
-        errors.push(`image attachment ${attachment.id || displayPath} has unsupported image type`);
+        errors.push(
+          `image attachment ${id === "(unknown)" ? displayPath : id} has unsupported image type`,
+        );
+        diagnostics.push({
+          index,
+          id,
+          kind,
+          path: displayPath,
+          mime: mime ?? null,
+          stage: "unsupported_image_type",
+        });
         continue;
       }
+      const diagnostic: AttachmentDiagnostic = {
+        index,
+        id,
+        kind,
+        path: displayPath,
+        mime,
+        stage: "image_pending_bytes",
+      };
       pendingImages.push({
         attachment,
         displayPath,
         realPath,
         mime,
         size: info.size,
+        diagnostic,
       });
+      diagnostics.push(diagnostic);
       continue;
     }
 
     textBlocks.push(formatFileMetadata(attachment, displayPath, realPath, info.size, mime));
+    diagnostics.push({
+      index,
+      id,
+      kind,
+      path: displayPath,
+      mime: mime ?? null,
+      stage: "file_metadata",
+    });
   }
 
   if (errors.length === 0 && includeImageBytes && pendingImages.length > 0) {
@@ -176,6 +310,11 @@ export async function buildInputAttachmentContext(
     );
     if (!verdict.ok) {
       errors.push(`image attachment size policy failed: ${verdict.message}`);
+      for (const diagnostic of diagnostics) {
+        if (diagnostic.stage === "image_pending_bytes") {
+          diagnostic.stage = "image_size_policy_failed";
+        }
+      }
     } else {
       for (const image of pendingImages) {
         let bytes: Buffer;
@@ -187,6 +326,7 @@ export async function buildInputAttachmentContext(
               image.attachment.id || image.displayPath
             } read failed: ${(err as Error).message}`,
           );
+          image.diagnostic.stage = "image_read_failed";
           continue;
         }
         const sha256 = createHash("sha256").update(bytes).digest("hex");
@@ -202,18 +342,45 @@ export async function buildInputAttachmentContext(
           origin: image.attachment.origin,
           sessionId: image.attachment.sessionId,
         });
+        image.diagnostic.stage = "image_bytes_loaded";
       }
     }
   }
 
+  logger.info("engine.run.input_attachments.complete", {
+    attachmentCount: attachments.length,
+    textBlockCount: textBlocks.length,
+    imageCount: images.length,
+    errorCount: errors.length,
+    attachments: diagnostics,
+  });
+
   return { text: textBlocks.join("\n\n"), images, errors, hasStructuredImageAttachments };
 }
 
-function resolveAttachmentPath(attachment: InputAttachmentMeta, cwd: string): string {
+function resolveAttachmentPath(
+  attachment: InputAttachmentMeta,
+  cwd: string,
+  displayPath: string,
+): string {
+  const visionPath =
+    attachment.vision && typeof attachment.vision === "object"
+      ? stringField(attachment.vision.mediaPath)
+      : undefined;
   const candidate =
-    attachment.vision?.mediaPath || attachment.absPath || attachment.relPath || attachment.path;
+    visionPath ??
+    firstString(attachment.absPath, attachment.relPath, attachment.path) ??
+    displayPath;
   if (isAbsolute(candidate)) return candidate;
   return resolve(cwd, candidate);
+}
+
+function firstString(...values: unknown[]): string | undefined {
+  return values.find((value): value is string => typeof value === "string" && value.length > 0);
+}
+
+function stringField(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
 async function validateStagedAttachmentPath(
