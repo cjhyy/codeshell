@@ -99,6 +99,105 @@ interface Props {
   engineSessionId?: string | null;
 }
 
+interface BrowserAddressRuntime {
+  openExternal: (url: string) => Promise<void>;
+  copyText: (value: string) => Promise<boolean>;
+  toast: ReturnType<typeof useToast>;
+}
+
+interface BrowserAddressFieldProps {
+  url: string;
+  draft: string;
+  onDraftChange: (draft: string) => void;
+  onNavigate: (url: string) => void;
+  /** Side-effect seam used by focused component tests; production uses Electron/clipboard/toast. */
+  runtime?: BrowserAddressRuntime;
+}
+
+/**
+ * BrowserPanel's address interaction boundary. It deliberately reads actions
+ * from the committed `url`, while typing only mutates `draft`.
+ */
+export function BrowserAddressField({
+  url,
+  draft,
+  onDraftChange,
+  onNavigate,
+  runtime,
+}: BrowserAddressFieldProps) {
+  const { t } = useT();
+  const contextToast = useToast();
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const toast = runtime?.toast ?? contextToast;
+
+  useEffect(() => setMenu(null), [url]);
+
+  const openExternally = useCallback(async (): Promise<void> => {
+    if (!isExternalHttpUrl(url)) return;
+    try {
+      await (runtime?.openExternal ?? window.codeshell.openExternal)(url);
+    } catch {
+      toast({ message: t("panels.browser.openExternalFailed"), variant: "error" });
+    }
+  }, [runtime, t, toast, url]);
+
+  const copyCurrentAddress = useCallback(async (): Promise<void> => {
+    if (url === NEW_TAB) return;
+    const copied = await (runtime?.copyText ?? copyText)(url);
+    toast({
+      message: t(copied ? "panels.browser.addressCopied" : "panels.browser.copyAddressFailed"),
+      variant: copied ? "success" : "error",
+    });
+  }, [runtime, t, toast, url]);
+
+  return (
+    <>
+      <Input
+        value={draft}
+        onChange={(e) => onDraftChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") onNavigate(draft);
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          if (e.metaKey || e.ctrlKey) return;
+          setMenu({ x: e.clientX, y: e.clientY });
+        }}
+        onMouseDown={(e) => {
+          if ((e.metaKey || e.ctrlKey) && isExternalHttpUrl(url)) e.preventDefault();
+        }}
+        onClick={(e) => {
+          if (!e.metaKey && !e.ctrlKey) return;
+          if (!isExternalHttpUrl(url)) return;
+          e.preventDefault();
+          void openExternally();
+        }}
+        placeholder={t("panels.browser.addressPlaceholder")}
+        className="h-8 flex-1"
+      />
+      {menu && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          onClose={() => setMenu(null)}
+          items={[
+            {
+              label: t("panels.browser.copyAddress"),
+              disabled: url === NEW_TAB,
+              onClick: () => void copyCurrentAddress(),
+            },
+            {
+              label: t("panels.browser.openAddressExternally"),
+              disabled: !isExternalHttpUrl(url),
+              onClick: () => void openExternally(),
+            },
+          ]}
+        />
+      )}
+    </>
+  );
+}
+
 /**
  * Built-in browser, modeled on Codex: Electron <webview> (own process +
  * persistent partition) with a self-drawn address bar, tabs, and a
@@ -149,7 +248,6 @@ export function BrowserPanel({
   // Which marker is open for editing (anchor id), if any. Pure UI state — the
   // markers themselves are derived from the `anchors` prop (single source).
   const [editingMarker, setEditingMarker] = useState<string | null>(null);
-  const [addressMenu, setAddressMenu] = useState<{ x: number; y: number } | null>(null);
 
   const markers = useMemo(() => browserMarkersFrom(anchors ?? []), [anchors]);
   // Markers belong to a page; hide them when not on that URL.
@@ -166,8 +264,6 @@ export function BrowserPanel({
     }
   }, [editingMarker, markers]);
 
-  useEffect(() => setAddressMenu(null), [activeId, active.url]);
-
   const openExternally = useCallback(
     async (url: string): Promise<void> => {
       if (!isExternalHttpUrl(url)) return;
@@ -179,15 +275,6 @@ export function BrowserPanel({
     },
     [t, toast],
   );
-
-  const copyCurrentAddress = useCallback(async (): Promise<void> => {
-    if (active.url === NEW_TAB) return;
-    const copied = await copyText(active.url);
-    toast({
-      message: t(copied ? "panels.browser.addressCopied" : "panels.browser.copyAddressFailed"),
-      variant: copied ? "success" : "error",
-    });
-  }, [active.url, t, toast]);
 
   // Shared echo engine: edit-time outline + dom-ready replay + miss reporting.
   const { selectorMissFor } = useMarkerEcho(viewRef, visibleMarkers, editingMarker);
@@ -264,28 +351,11 @@ export function BrowserPanel({
         <IconBtn onClick={() => viewRef.current?.reload()} label={t("panels.browser.refresh")}>
           <RotateCw className={`h-4 w-4 ${nav.loading ? "animate-spin" : ""}`} />
         </IconBtn>
-        <Input
-          value={active.draft}
-          onChange={(e) => patchTab(activeId, { draft: e.target.value })}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") navigate(active.draft);
-          }}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            if (e.metaKey || e.ctrlKey) return;
-            setAddressMenu({ x: e.clientX, y: e.clientY });
-          }}
-          onMouseDown={(e) => {
-            if ((e.metaKey || e.ctrlKey) && isExternalHttpUrl(active.url)) e.preventDefault();
-          }}
-          onClick={(e) => {
-            if (!e.metaKey && !e.ctrlKey) return;
-            if (!isExternalHttpUrl(active.url)) return;
-            e.preventDefault();
-            void openExternally(active.url);
-          }}
-          placeholder={t("panels.browser.addressPlaceholder")}
-          className="h-8 flex-1"
+        <BrowserAddressField
+          url={active.url}
+          draft={active.draft}
+          onDraftChange={(draft) => patchTab(activeId, { draft })}
+          onNavigate={navigate}
         />
         <IconBtn
           onClick={() => void startPicking()}
@@ -500,26 +570,6 @@ export function BrowserPanel({
           </FloatingAt>
         )}
       </div>
-
-      {addressMenu && (
-        <ContextMenu
-          x={addressMenu.x}
-          y={addressMenu.y}
-          onClose={() => setAddressMenu(null)}
-          items={[
-            {
-              label: t("panels.browser.copyAddress"),
-              disabled: active.url === NEW_TAB,
-              onClick: () => void copyCurrentAddress(),
-            },
-            {
-              label: t("panels.browser.openAddressExternally"),
-              disabled: !isExternalHttpUrl(active.url),
-              onClick: () => void openExternally(active.url),
-            },
-          ]}
-        />
-      )}
     </div>
   );
 }

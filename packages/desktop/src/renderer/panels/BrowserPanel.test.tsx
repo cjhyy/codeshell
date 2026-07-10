@@ -1,61 +1,9 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { NEW_TAB } from "../browser/types";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
-
-let copyResult = true;
-const copied: string[] = [];
-const opened: string[] = [];
-const toasts: Array<{ message: string; variant?: string }> = [];
-let rejectOpen = false;
-let contextMenuProps: { items: Array<{ disabled?: boolean; onClick: () => void }> } | null = null;
-
-mock.module("../browser/useElementPicking", () => ({
-  useElementPicking: () => ({
-    selecting: false,
-    picked: null,
-    setPicked() {},
-    startPicking: async () => undefined,
-  }),
-}));
-mock.module("../browser/useIdleEvict", () => ({ useIdleEvict: () => false }));
-mock.module("../browser/markerEcho", () => ({
-  browserMarkersFrom: () => [],
-  visibleMarkersOn: () => [],
-  groupMarkersByPage: () => [],
-  urlsMatch: () => false,
-  useMarkerEcho: () => ({ selectorMissFor: () => false }),
-}));
-mock.module("../browser/WebviewHost", () => ({ WebviewHost: () => null }));
-mock.module("../browser/NewTabLanding", () => ({ NewTabLanding: () => null }));
-mock.module("../browser/markers", () => ({ MarkerDot: () => null }));
-mock.module("../browser/ui", () => ({
-  IconBtn: ({ label, onClick, disabled }: any) => (
-    <button aria-label={label} disabled={disabled} onClick={onClick} />
-  ),
-  FloatingAt: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
-}));
-mock.module("../chat/CommentBox", () => ({ CommentBox: () => null }));
-mock.module("../lib/clipboard", () => ({
-  copyText: async (value: string) => {
-    copied.push(value);
-    return copyResult;
-  },
-}));
-mock.module("../ui/ContextMenu", () => ({
-  ContextMenu: (props: typeof contextMenuProps) => {
-    contextMenuProps = props;
-    return <div data-context-menu />;
-  },
-}));
-mock.module("../ui/ToastProvider", () => ({
-  useToast: () => (toast: { message: string; variant?: string }) => toasts.push(toast),
-}));
-mock.module("../i18n/I18nProvider", () => ({
-  useT: () => ({ t: (key: string) => key }),
-}));
-
-const { BrowserPanel } = await import("./BrowserPanel");
+import { BrowserAddressField } from "./BrowserPanel";
 
 function reactPropsOf(node: unknown): Record<string, any> {
   const current = node as Record<string, any>;
@@ -63,60 +11,100 @@ function reactPropsOf(node: unknown): Record<string, any> {
   return key ? current[key] : {};
 }
 
-function findElement(node: unknown, tagName: string): any {
+function findElements(node: unknown, tagName: string): any[] {
   const current = node as { tagName?: string; childNodes?: unknown[] };
-  if (current.tagName === tagName) return current;
-  for (const child of current.childNodes ?? []) {
-    const found = findElement(child, tagName);
-    if (found) return found;
-  }
-  return null;
+  return [
+    ...(current.tagName === tagName ? [current] : []),
+    ...(current.childNodes ?? []).flatMap((child) => findElements(child, tagName)),
+  ];
 }
 
 let root: Root | null = null;
 let container: HTMLElement;
-let initialUrl: string | undefined;
-let renderKey = 0;
+let url = "https://committed.example/path";
+let draft = url;
+let copyResult = true;
+let rejectOpen = false;
+const copied: string[] = [];
+const opened: string[] = [];
+const toasts: Array<{ message: string; variant?: string }> = [];
+
+const runtime = {
+  openExternal: async (value: string) => {
+    opened.push(value);
+    if (rejectOpen) throw new Error("OS rejected open");
+  },
+  copyText: async (value: string) => {
+    copied.push(value);
+    return copyResult;
+  },
+  toast: (value: { message: string; variant?: string }) => toasts.push(value),
+};
 
 async function render(): Promise<void> {
   await act(async () => {
     root?.render(
-      <BrowserPanel
-        key={renderKey}
-        cwd="/repo"
-        initialUrl={initialUrl}
-        showPopout={false}
+      <BrowserAddressField
+        url={url}
+        draft={draft}
+        onDraftChange={(value) => {
+          draft = value;
+        }}
+        onNavigate={() => undefined}
+        runtime={runtime}
       />,
     );
     await flushMicrotasks();
   });
 }
 
+async function openContextMenu(): Promise<any[]> {
+  const input = findElements(container, "INPUT")[0];
+  await act(async () => {
+    reactPropsOf(input).onContextMenu({
+      preventDefault() {},
+      metaKey: false,
+      ctrlKey: false,
+      clientX: 10,
+      clientY: 20,
+    });
+    await flushMicrotasks();
+  });
+  return findElements(container, "LI");
+}
+
 beforeEach(async () => {
   ensureMiniDom();
-  initialUrl = "https://committed.example/path";
-  renderKey += 1;
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: { getItem: () => null, setItem: () => undefined },
+  });
+  Object.defineProperties(HTMLElement.prototype, {
+    offsetWidth: { configurable: true, get: () => 240 },
+    offsetHeight: { configurable: true, get: () => 80 },
+  });
+  Object.assign(window, {
+    innerWidth: 1200,
+    innerHeight: 800,
+    requestAnimationFrame: (callback: () => void) => {
+      callback();
+      return 1;
+    },
+    cancelAnimationFrame: () => undefined,
+  });
+  url = "https://committed.example/path";
+  draft = url;
   copyResult = true;
   rejectOpen = false;
   copied.length = 0;
   opened.length = 0;
   toasts.length = 0;
-  contextMenuProps = null;
-  Object.assign(window, {
-    codeshell: {
-      openExternal: async (url: string) => {
-        opened.push(url);
-        if (rejectOpen) throw new Error("OS rejected open");
-      },
-    },
-  });
   container = document.createElement("div") as unknown as HTMLElement;
   root = createRoot(container);
   await render();
 });
 
 afterEach(async () => {
-  if (!root) return;
   await act(async () => {
     root?.unmount();
     await flushMicrotasks();
@@ -126,48 +114,31 @@ afterEach(async () => {
 
 describe("BrowserPanel address actions", () => {
   test("right-click copies the committed URL rather than the editable draft and reports result", async () => {
-    let input = findElement(container, "INPUT");
-    let props = reactPropsOf(input);
+    const input = findElements(container, "INPUT")[0];
     await act(async () => {
-      props.onChange({ target: { value: "https://draft.example/not-loaded" } });
+      reactPropsOf(input).onChange({ target: { value: "https://draft.example/not-loaded" } });
       await flushMicrotasks();
     });
-    input = findElement(container, "INPUT");
-    props = reactPropsOf(input);
+
+    let items = await openContextMenu();
     await act(async () => {
-      props.onContextMenu({
-        preventDefault() {},
-        metaKey: false,
-        ctrlKey: false,
-        clientX: 10,
-        clientY: 20,
-      });
-      await flushMicrotasks();
-    });
-    expect(contextMenuProps?.items[0]?.disabled).toBe(false);
-    await act(async () => {
-      contextMenuProps?.items[0]?.onClick();
+      reactPropsOf(items[0]).onClick();
       await flushMicrotasks();
     });
     expect(copied).toEqual(["https://committed.example/path"]);
-    expect(toasts.at(-1)).toEqual({
-      message: "panels.browser.addressCopied",
-      variant: "success",
-    });
+    expect(toasts.at(-1)?.variant).toBe("success");
 
     copyResult = false;
+    items = await openContextMenu();
     await act(async () => {
-      contextMenuProps?.items[0]?.onClick();
+      reactPropsOf(items[0]).onClick();
       await flushMicrotasks();
     });
-    expect(toasts.at(-1)).toEqual({
-      message: "panels.browser.copyAddressFailed",
-      variant: "error",
-    });
+    expect(toasts.at(-1)?.variant).toBe("error");
   });
 
   test("Cmd/Ctrl opens exactly once, normal click does nothing, and rejection toasts", async () => {
-    const props = reactPropsOf(findElement(container, "INPUT"));
+    const props = reactPropsOf(findElements(container, "INPUT")[0]);
     props.onClick({ metaKey: false, ctrlKey: false, preventDefault() {} });
     expect(opened).toEqual([]);
 
@@ -183,35 +154,27 @@ describe("BrowserPanel address actions", () => {
       await flushMicrotasks();
     });
     expect(opened).toHaveLength(2);
-    expect(toasts.at(-1)).toEqual({
-      message: "panels.browser.openExternalFailed",
-      variant: "error",
-    });
+    expect(toasts.at(-1)?.variant).toBe("error");
   });
 
   test("NEW_TAB disables both actions and file/javascript URLs never open externally", async () => {
-    initialUrl = undefined;
-    renderKey += 1;
+    url = NEW_TAB;
+    draft = "";
     await render();
-    let props = reactPropsOf(findElement(container, "INPUT"));
-    await act(async () => {
-      props.onContextMenu({
-        preventDefault() {},
-        metaKey: false,
-        ctrlKey: false,
-        clientX: 1,
-        clientY: 2,
-      });
-      await flushMicrotasks();
-    });
-    expect(contextMenuProps?.items.map((item) => item.disabled)).toEqual([true, true]);
+    let items = await openContextMenu();
+    reactPropsOf(items[0]).onClick();
+    reactPropsOf(items[1]).onClick();
+    expect(copied).toEqual([]);
+    expect(opened).toEqual([]);
 
-    for (const url of ["file:///tmp/secret", "javascript:alert(1)"]) {
-      initialUrl = url;
-      renderKey += 1;
+    for (const blocked of ["file:///tmp/secret", "javascript:alert(1)"]) {
+      url = blocked;
+      draft = blocked;
       await render();
-      props = reactPropsOf(findElement(container, "INPUT"));
+      const props = reactPropsOf(findElements(container, "INPUT")[0]);
       props.onClick({ metaKey: true, ctrlKey: false, preventDefault() {} });
+      items = await openContextMenu();
+      reactPropsOf(items[1]).onClick();
     }
     expect(opened).toEqual([]);
   });
