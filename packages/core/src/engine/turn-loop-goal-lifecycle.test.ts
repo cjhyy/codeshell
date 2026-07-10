@@ -223,6 +223,47 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     ]);
   });
 
+  it("honors tool registration metadata that declares sensitive results", async () => {
+    const snapshots: any[] = [];
+    const secret = "METADATA_DECLARED_RESULT_SECRET";
+    const { deps } = makeTurnLoopDeps(
+      [
+        toolResponse({ id: "metadata-secret-1", toolName: "CredentialLookup", args: {} }),
+        stopResponse("credential checked"),
+      ],
+      {
+        execute: async (call) => ({
+          id: call.id,
+          toolName: call.toolName,
+          result: secret,
+        }),
+        hook: (event) =>
+          event === "on_stop" ? { data: { goalVerdict: { met: true, gaps: "" } } } : {},
+        updateGoalJudgeContext: (context) => snapshots.push(context),
+      },
+    );
+    deps.tools = [
+      {
+        name: "CredentialLookup",
+        description: "returns credentials",
+        inputSchema: { type: "object" },
+        sensitiveResult: true,
+      },
+    ];
+
+    await new TurnLoop(deps, {
+      maxTurns: 4,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "check credential state" },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(snapshots).toHaveLength(1);
+    expect(JSON.stringify(snapshots[0])).not.toContain(secret);
+    expect(snapshots[0].toolResults).toEqual([
+      { turnCount: 1, toolName: "CredentialLookup", status: "success" },
+    ]);
+  });
+
   it("retains all 25 results from one legal tool batch for the judge", async () => {
     const snapshots: any[] = [];
     const toolCalls = Array.from({ length: 25 }, (_, index) => ({

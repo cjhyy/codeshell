@@ -75,6 +75,7 @@ export class ToolRegistry {
       name: t.name,
       description: t.description,
       inputSchema: t.inputSchema,
+      sensitiveResult: t.sensitiveResult,
     }));
   }
 

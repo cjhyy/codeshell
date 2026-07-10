@@ -263,10 +263,27 @@ function projectedContent(result: ToolResult): { text: string; omittedNonText: b
   return { text: parts.join("\n"), omittedNonText };
 }
 
+/** Content-level fallback for producers that forgot to set sensitive:true. */
+function scrubSecrets(text: string): string {
+  return text
+    .replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s/@:]+:[^\s/@]+@/giu, "$1[REDACTED]@")
+    .replace(/(\bAuthorization\s*:\s*)(?:Bearer|Basic|Token)\s+[^\s,;]+/giu, "$1[REDACTED]")
+    .replace(/(\b(?:Set-Cookie|Cookie)\s*:\s*)[^\r\n]+/giu, "$1[REDACTED]")
+    .replace(
+      /((?:^|[\s"'`;,])(?:[A-Za-z_][A-Za-z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD|PWD))\s*=\s*)(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s"'`;]+)/gimu,
+      "$1[REDACTED]",
+    )
+    .replace(
+      /\b(?:sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16})\b/gu,
+      "[REDACTED]",
+    );
+}
+
 /** Build the bounded, irreversible value retained beyond the current model round. */
 export function projectGoalJudgeToolResult(
   result: ToolResult,
   turnCount: number,
+  sensitiveByMetadata = false,
 ): GoalJudgeToolResult {
   const projection: GoalJudgeToolResult = {
     turnCount,
@@ -274,14 +291,14 @@ export function projectGoalJudgeToolResult(
     status: result.isError === true || !!result.error ? "error" : "success",
   };
   // Sensitive results intentionally retain exactly the tool identity and status.
-  if (result.sensitive) return projection;
+  if (result.sensitive || sensitiveByMetadata) return projection;
 
   const content = projectedContent(result);
   const primaryText = result.error ?? result.result ?? "";
   const text = [primaryText, content.text && content.text !== primaryText ? content.text : ""]
     .filter(Boolean)
     .join("\n");
-  if (text) projection.text = truncateHeadTail(text, MAX_TOOL_RESULT_CHARS);
+  if (text) projection.text = truncateHeadTail(scrubSecrets(text), MAX_TOOL_RESULT_CHARS);
   if (content.omittedNonText) projection.omittedNonText = true;
   return projection;
 }

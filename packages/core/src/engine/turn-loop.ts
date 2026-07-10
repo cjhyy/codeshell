@@ -637,6 +637,9 @@ export class TurnLoop {
     // window only after irreversible sensitive-data removal, non-text omission,
     // and per-item truncation at the current-round ToolResult boundary.
     const goalToolResults: GoalJudgeRuntimeContext["toolResults"] = [];
+    const sensitiveGoalResultTools = new Set(
+      this.deps.tools.filter((tool) => tool.sensitiveResult).map((tool) => tool.name),
+    );
 
     // Goal-mode run-scoped budget tracker (P0). Null when no goal. Stamps a
     // wall-clock start now and accumulates prompt+completion tokens across
@@ -1213,7 +1216,13 @@ export class TurnLoop {
         const resultBlocks: ContentBlock[] = [];
         for (const result of results) {
           if (goalTracker) {
-            goalToolResults.push(projectGoalJudgeToolResult(result, this.turnCount));
+            goalToolResults.push(
+              projectGoalJudgeToolResult(
+                result,
+                this.turnCount,
+                sensitiveGoalResultTools.has(result.toolName),
+              ),
+            );
             // Never evict the front of one legal batch: the default executor may
             // return 25 results in a turn. Keep at least maxToolCallsPerTurn so
             // the judge renderer can preserve metadata for the entire newest batch.
