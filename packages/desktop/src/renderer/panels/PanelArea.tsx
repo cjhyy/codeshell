@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import type { Anchor } from "../chat/anchors";
 import { useT } from "../i18n/I18nProvider";
+import { resolvePanelVisibility } from "./panelVisibility";
 import {
   getEnabledPanelEntries,
   getPanelEntry,
@@ -346,27 +347,32 @@ export function PanelArea({
           during a session switch. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
         {activeTabs.length === 0 && <PanelLanding entries={enabledPanels} onPick={addTab} />}
-        {activeTabs.map((t) => (
-          <Slot key={t.id} active={t.id === visibleActiveId}>
-            <PanelBody
-              tab={t}
-              bucket={bucket}
-              visible={(!hidden || keepActiveBodyLive) && t.id === visibleActiveId}
-              cwd={cwd}
-              reviewFiles={reviewFiles}
-              reviewDiff={reviewDiff}
-              engineSessionId={engineSessionId}
-              browserAnchors={browserAnchors}
-              revealFile={revealFile}
-              onRevealConsumed={onRevealConsumed}
-              openUrl={openUrl}
-              onAttachImage={onAttachImage}
-              onRemoveBrowserAnchor={onRemoveBrowserAnchor}
-              onUpdateBrowserAnchor={onUpdateBrowserAnchor}
-              renderQuickChatPanel={renderQuickChatPanel}
-            />
-          </Slot>
-        ))}
+        {activeTabs.map((t) => {
+          const activeTab = t.id === visibleActiveId;
+          const visibility = resolvePanelVisibility({ hidden, keepActiveBodyLive, activeTab });
+          return (
+            <Slot key={t.id} active={activeTab}>
+              <PanelBody
+                tab={t}
+                bucket={bucket}
+                visible={visibility.lifecycleVisible}
+                foregroundVisible={visibility.foregroundVisible}
+                cwd={cwd}
+                reviewFiles={reviewFiles}
+                reviewDiff={reviewDiff}
+                engineSessionId={engineSessionId}
+                browserAnchors={browserAnchors}
+                revealFile={revealFile}
+                onRevealConsumed={onRevealConsumed}
+                openUrl={openUrl}
+                onAttachImage={onAttachImage}
+                onRemoveBrowserAnchor={onRemoveBrowserAnchor}
+                onUpdateBrowserAnchor={onUpdateBrowserAnchor}
+                renderQuickChatPanel={renderQuickChatPanel}
+              />
+            </Slot>
+          );
+        })}
       </div>
     </div>
   );
@@ -408,6 +414,7 @@ function PanelBody({
   tab,
   bucket,
   visible,
+  foregroundVisible,
   cwd,
   reviewFiles,
   reviewDiff,
@@ -424,6 +431,7 @@ function PanelBody({
   tab: OpenTab;
   bucket: string;
   visible: boolean;
+  foregroundVisible: boolean;
   cwd: string | null;
   reviewFiles?: string[];
   reviewDiff?: string;
@@ -445,6 +453,7 @@ function PanelBody({
     tabId: tab.id,
     bucket,
     visible,
+    foregroundVisible,
     cwd,
     reviewFiles,
     reviewDiff,

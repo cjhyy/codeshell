@@ -26,7 +26,10 @@ export interface PanelAvailabilityContext {
 export interface PanelRenderContext extends PanelAvailabilityContext {
   tabId: string;
   bucket: string;
+  /** Active for mounted-panel lifecycle work such as keeping a webview warm. */
   visible: boolean;
+  /** Actually visible to the user; hidden session buckets must not own subscriptions. */
+  foregroundVisible: boolean;
   reviewFiles?: string[];
   reviewDiff?: string;
   revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
@@ -130,7 +133,8 @@ const PANEL_ENTRIES = {
     label: "panels.kinds.ccRoom",
     icon: Bot,
     enabled: alwaysEnabled,
-    render: ({ cwd, visible }) => createElement(CCRoomView, { cwd, active: visible }),
+    render: ({ cwd, foregroundVisible }) =>
+      createElement(CCRoomView, { cwd, active: foregroundVisible }),
   },
   quickChat: {
     key: "quickChat",
