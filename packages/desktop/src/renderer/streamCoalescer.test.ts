@@ -152,6 +152,16 @@ describe("createEventCoalescer", () => {
     expect((c1.out[0] as any).text).toBe("pending");
   });
 
+  test("17b. discard() drops pending content and cancels its scheduled flush", async () => {
+    const c1 = collector();
+    const c = createEventCoalescer(c1.onFlush, 30);
+    c.push({ type: "text_delta", text: "orphan", agentId: "A" } as any);
+    c.discard();
+    await delay(50);
+    expect(c1.out).toEqual([]);
+    expect(c1.batches).toBe(0);
+  });
+
   test("18. a burst of boundary events in one window flushes as ONE batch", async () => {
     const c1 = collector();
     const c = createEventCoalescer(c1.onFlush, 30);

@@ -176,5 +176,13 @@ export function createEventCoalescer(onFlushBatch: FlushBatch, intervalMs = 50) 
     flush();
   }
 
-  return { push, flush, dispose };
+  function discard(): void {
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    drainToBatch();
+  }
+
+  return { push, flush, dispose, discard };
 }

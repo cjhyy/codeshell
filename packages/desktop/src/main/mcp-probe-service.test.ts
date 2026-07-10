@@ -177,4 +177,31 @@ describe("buildProbeHttpHeaders credentialRef availability", () => {
 
     expect(headers.Authorization).toBe("Bearer oauth-access");
   });
+
+  test("link credentialRef remains available to the main-process probe", () => {
+    mkdirSync(join(home, ".code-shell"), { recursive: true });
+    writeFileSync(
+      join(home, ".code-shell", "credentials.json"),
+      JSON.stringify({
+        version: 1,
+        credentials: [
+          {
+            id: "saved-link",
+            type: "link",
+            label: "Saved link",
+            secret: "bearer-from-link",
+          },
+        ],
+      }),
+    );
+
+    const headers = buildProbeHttpHeaders({
+      name: "link-mcp",
+      transport: "streamable-http",
+      url: "https://example.com/mcp",
+      credentialRef: "saved-link",
+    });
+
+    expect(headers.Authorization).toBe("Bearer bearer-from-link");
+  });
 });

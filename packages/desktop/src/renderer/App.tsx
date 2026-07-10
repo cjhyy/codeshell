@@ -2509,6 +2509,13 @@ function App() {
       run: window.codeshell.run,
     })
       .then((r) => {
+        if (
+          !Object.values(quickChatSessionsRef.current).some(
+            (liveSession) => liveSession.sessionId === engineSessionId,
+          )
+        ) {
+          return;
+        }
         setBusyForKey(bucket, false);
         if (runningBucketRef.current === bucket) {
           runningBucketRef.current = null;
@@ -3172,6 +3179,7 @@ function App() {
     });
     for (const [, session] of stale) {
       setBusyForKey(session.bucket, false);
+      if (runningBucketRef.current === session.bucket) runningBucketRef.current = null;
       engineToBucketRef.current.delete(session.sessionId);
       void window.codeshell.cleanupQuickChatSession(session.sessionId).catch((e) =>
         window.codeshell.log("quick_chat.delete_session_failed", {
@@ -3179,6 +3187,12 @@ function App() {
           error: String(e),
         }),
       );
+      const coalescer = coalescersRef.current.get(session.bucket);
+      coalescersRef.current.delete(session.bucket);
+      coalescer?.discard();
+      coalescerSeqRef.current.delete(session.bucket);
+      appliedSeqRef.current.delete(session.bucket);
+      dispatch({ type: "evict", bucket: session.bucket });
     }
   }, [panelByBucket, quickChatSessions]);
 

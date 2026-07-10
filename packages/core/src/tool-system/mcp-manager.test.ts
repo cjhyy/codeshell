@@ -485,6 +485,22 @@ describe("buildHttpHeaders", () => {
     expect(headers.Authorization).toBe("Bearer tok-legacy");
   });
 
+  test("link credentialRef remains a non-OAuth bearer token", () => {
+    const config = httpCfg("srv", { credentialRef: "saved-link" });
+    const headers = buildHttpHeaders("srv", config, () => ({
+      type: "link",
+      secret: "bearer-from-link",
+    }));
+
+    expect(headers.Authorization).toBe("Bearer bearer-from-link");
+    expect(() =>
+      buildHttpHeaders("srv", config, () => ({
+        type: "link",
+        secret: JSON.stringify({ accessToken: "oauth-must-not-be-injected" }),
+      })),
+    ).toThrow(/structured.*secret.*metadata/);
+  });
+
   test("oauth credentialRef injects its access token", () => {
     const headers = buildHttpHeaders(
       "srv",
@@ -553,6 +569,34 @@ describe("buildHttpHeadersWithCredentialAccess", () => {
     );
 
     expect(headers.Authorization).toBe("Bearer figd_secret");
+  });
+
+  test("resolves link credentialRef through the async credential access layer", async () => {
+    const headers = await buildHttpHeadersWithCredentialAccess(
+      "srv",
+      {
+        name: "srv",
+        transport: "streamable-http",
+        url: "https://example.com",
+        credentialRef: "saved-link",
+      },
+      {
+        resolveMeta(_cwd, id) {
+          return { id, type: "link", label: "Saved link", hasSecret: true };
+        },
+        async resolveValue(req) {
+          expect(req).toEqual({
+            cwd: undefined,
+            id: "saved-link",
+            scope: "full",
+            purpose: "mcp",
+          });
+          return "bearer-from-link";
+        },
+      },
+    );
+
+    expect(headers.Authorization).toBe("Bearer bearer-from-link");
   });
 
   test("uses credential metadata to parse oauth secrets", async () => {

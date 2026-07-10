@@ -55,6 +55,12 @@ mock.module("./ChatView", () => ({
 mock.module("./panels/QuickChatPanel", () => ({
   QuickChatPanel(props: QuickChatPanelProps) {
     quickChatProps.set(props.sessionId, props);
+    React.useEffect(
+      () => () => {
+        quickChatProps.delete(props.sessionId);
+      },
+      [props.sessionId],
+    );
     return <div data-session-id={props.sessionId} />;
   },
 }));
@@ -519,6 +525,88 @@ describe("App quick-chat integration", () => {
     expect(quickChatProps.get(quickOne.sessionId)?.busy).toBe(false);
     expect(quickChatProps.get(quickTwo.sessionId)?.busy).toBe(true);
     expect(chatProps?.busy).toBe(true);
+  });
+
+  test("closing a quick-chat tab immediately evicts its buffered transcript state", async () => {
+    const ownerBucket = await mountApp({
+      withNormalSession: true,
+      panelTabs: [
+        { id: "quickChat-one", kind: "quickChat" },
+        { id: "quickChat-two", kind: "quickChat" },
+      ],
+    });
+    const [quickOne, quickTwo] = currentQuickPanels();
+    const panel = panelAreaProps.get(ownerBucket);
+    if (!quickOne || !quickTwo || !chatProps || !panel) {
+      throw new Error("quick-chat close test surfaces were not ready");
+    }
+
+    await act(async () => {
+      for (const [sessionId, text] of [
+        [quickOne.sessionId, "one-kept-until-close"],
+        [quickTwo.sessionId, "two-must-survive"],
+        ["engine-a", "normal-must-survive"],
+      ]) {
+        emitStream(sessionId, { type: "stream_request_start", messageId: `msg-${sessionId}` });
+        emitStream(sessionId, { type: "text_delta", text });
+      }
+    });
+    await flushApp(70);
+
+    // Leave one more event buffered inside quickOne's 50ms coalescer window.
+    await act(async () => {
+      emitStream(quickOne.sessionId, { type: "text_delta", text: "orphan-buffer" });
+    });
+
+    const cleanup = deferred<{ deleted: boolean }>();
+    (window.codeshell as any).cleanupQuickChatSession = async (sessionId: string) => {
+      cleanupQuickChatSessionCalls.push(sessionId);
+      return cleanup.promise;
+    };
+    await act(async () => {
+      panel.setTabs((tabs) => tabs.filter((tab) => tab.id !== "quickChat-one"));
+      await flushMicrotasks();
+    });
+    await flushApp();
+
+    expect(cleanupQuickChatSessionCalls).toEqual([quickOne.sessionId]);
+    expect(quickChatProps.has(quickOne.sessionId)).toBe(false);
+
+    // Neither the buffered event nor a later event from the deleted engine may
+    // revive the old bucket while main-side deletion is still pending.
+    await act(async () => {
+      emitStream(quickOne.sessionId, { type: "text_delta", text: "late-orphan" });
+    });
+    await flushApp(70);
+    expect(quickChatProps.has(quickOne.sessionId)).toBe(false);
+    expect(
+      quickChatProps
+        .get(quickTwo.sessionId)
+        ?.messages.some(
+          (message) => message.kind === "assistant" && message.text === "two-must-survive",
+        ),
+    ).toBe(true);
+    expect(
+      chatProps.messages.some(
+        (message) => message.kind === "assistant" && message.text === "normal-must-survive",
+      ),
+    ).toBe(true);
+
+    // Reusing the same panel tab id must allocate a fresh, empty transcript.
+    await act(async () => {
+      panel.setTabs((tabs) => [...tabs, { id: "quickChat-one", kind: "quickChat" }]);
+      await flushMicrotasks();
+    });
+    await flushApp();
+    const replacement = currentQuickPanels().find(
+      (candidate) => candidate.sessionId !== quickTwo.sessionId,
+    );
+    if (!replacement) throw new Error("replacement quick chat was not created");
+    expect(replacement.sessionId).not.toBe(quickOne.sessionId);
+    expect(replacement.messages).toEqual([]);
+
+    cleanup.resolve({ deleted: true });
+    await flushApp();
   });
 
   test("tool approvals stay on their owning quick or normal session", async () => {

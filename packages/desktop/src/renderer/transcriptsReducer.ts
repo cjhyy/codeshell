@@ -28,6 +28,7 @@ export type TranscriptsAction =
   | { type: "stream"; bucket: string; event: StreamEvent }
   | { type: "stream_batch"; bucket: string; events: StreamEvent[]; maxSeq?: number }
   | { type: "hydrate"; bucket: string; state: MessagesReducerState }
+  | { type: "evict"; bucket: string }
   | { type: "remove_pending_steers"; bucket: string; steerIds: string[] }
   | {
       type: "ask_user";
@@ -50,6 +51,12 @@ export type TranscriptsAction =
     };
 
 export function transcriptsReducer(map: TranscriptsMap, action: TranscriptsAction): TranscriptsMap {
+  if (action.type === "evict") {
+    if (!(action.bucket in map)) return map;
+    const next = { ...map };
+    delete next[action.bucket];
+    return next;
+  }
   if (action.type === "hydrate") {
     const current = map[action.bucket];
     // Protect ALL local steer bubbles (not just still-pending ones) from a
