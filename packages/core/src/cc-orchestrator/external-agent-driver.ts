@@ -1,7 +1,8 @@
-import { spawn } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import type { AgentAdapter, BuildArgsOpts, PermissionMode } from "./agent-adapter.js";
 import { pathWithCommonBins } from "./cc-capability.js";
+import { killProcessGroup } from "../runtime/spawn-common.js";
 
 export interface AgentRunResult {
   sessionId: string;
@@ -28,6 +29,107 @@ export interface DriverRunOpts extends Omit<BuildArgsOpts, "permissionMode"> {
 const codexImageFlagCache = new Map<string, Promise<boolean>>();
 const CODEX_IMAGE_PROBE_TIMEOUT_MS = 5_000;
 const AGENT_TERMINATE_GRACE_MS = 500;
+
+function listPosixProcessTree(rootPid: number): Promise<number[]> {
+  return new Promise((resolve) => {
+    execFile("ps", ["-axo", "pid=,ppid="], { encoding: "utf8" }, (err, stdout) => {
+      if (err) {
+        resolve([rootPid]);
+        return;
+      }
+      const childrenByParent = new Map<number, number[]>();
+      for (const line of stdout.split("\n")) {
+        const [pidText, parentText] = line.trim().split(/\s+/, 2);
+        const pid = Number(pidText);
+        const parentPid = Number(parentText);
+        if (!Number.isInteger(pid) || !Number.isInteger(parentPid)) continue;
+        const children = childrenByParent.get(parentPid) ?? [];
+        children.push(pid);
+        childrenByParent.set(parentPid, children);
+      }
+      const pids: number[] = [];
+      const visit = (pid: number) => {
+        if (pids.includes(pid)) return;
+        pids.push(pid);
+        for (const childPid of childrenByParent.get(pid) ?? []) visit(childPid);
+      };
+      visit(rootPid);
+      resolve(pids);
+    });
+  });
+}
+
+function isPidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForPidsToExit(pids: Set<number>, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while ([...pids].some(isPidAlive)) {
+    if (Date.now() >= deadline) return false;
+    await delay(25);
+  }
+  return true;
+}
+
+function signalPids(pids: Set<number>, killSignal: NodeJS.Signals): void {
+  for (const pid of pids) {
+    try {
+      process.kill(pid, killSignal);
+    } catch {
+      // already gone
+    }
+  }
+}
+
+async function terminateAttachedProcessTree(child: {
+  pid?: number;
+  kill: (signal?: NodeJS.Signals) => boolean;
+}): Promise<void> {
+  const pid = child.pid;
+  if (!pid) {
+    try {
+      child.kill("SIGKILL");
+    } catch {
+      // already gone
+    }
+    return;
+  }
+  if (process.platform === "win32") {
+    // Windows has no POSIX SIGTERM semantics or negative-pid groups. Reap the
+    // tree via taskkill, then use positive-pid process.kill as the fallback the
+    // platform supports when taskkill is unavailable/races.
+    await killProcessGroup(pid, { graceMs: AGENT_TERMINATE_GRACE_MS });
+    if (isPidAlive(pid)) {
+      try {
+        process.kill(pid);
+      } catch {
+        // already gone
+      }
+    }
+    return;
+  }
+
+  const trackedPids = new Set(await listPosixProcessTree(pid));
+  signalPids(trackedPids, "SIGTERM");
+  if (await waitForPidsToExit(trackedPids, AGENT_TERMINATE_GRACE_MS)) return;
+
+  // Capture descendants created during the grace window while the leader is
+  // still addressable, but retain the first snapshot so reparented stubborn
+  // descendants cannot disappear from the escalation set.
+  for (const treePid of await listPosixProcessTree(pid)) trackedPids.add(treePid);
+  signalPids(trackedPids, "SIGKILL");
+  await waitForPidsToExit(trackedPids, 1_000);
+}
 
 function abortError(): Error {
   const err = new Error("Agent run aborted");
@@ -57,6 +159,7 @@ function createCodexImageProbe(
     });
     let out = "";
     let settled = false;
+    let terminating = false;
     const cleanup = () => {
       clearTimeout(timer);
       signal?.removeEventListener("abort", onAbort);
@@ -73,20 +176,17 @@ function createCodexImageProbe(
       cleanup();
       reject(err);
     };
-    const killProbe = () => {
-      try {
-        child.kill("SIGTERM");
-      } catch {
-        // already gone
-      }
-    };
     const onAbort = () => {
-      killProbe();
-      fail(abortError());
+      if (settled || terminating) return;
+      terminating = true;
+      cleanup();
+      void terminateAttachedProcessTree(child).then(() => fail(abortError()));
     };
     const timer = setTimeout(() => {
-      killProbe();
-      done(false);
+      if (settled || terminating) return;
+      terminating = true;
+      cleanup();
+      void terminateAttachedProcessTree(child).then(() => done(false));
     }, CODEX_IMAGE_PROBE_TIMEOUT_MS);
     signal?.addEventListener("abort", onAbort, { once: true });
     if (signal?.aborted) onAbort();
@@ -96,8 +196,12 @@ function createCodexImageProbe(
     child.stderr?.on("data", (chunk: Buffer) => {
       out += chunk.toString("utf8");
     });
-    child.on("error", () => done(false));
-    child.on("exit", () => done(/(?:^|\s)-i(?:,|\s)|--image\b/.test(out)));
+    child.on("error", () => {
+      if (!terminating) done(false);
+    });
+    child.on("exit", () => {
+      if (!terminating) done(/(?:^|\s)-i(?:,|\s)|--image\b/.test(out));
+    });
   });
 }
 
@@ -147,47 +251,25 @@ export function runAgentOnce(
       // (argv ends with `-`), so adapters that set promptViaStdin get a piped
       // stdin we write the prompt to.
       const viaStdin = adapter.promptViaStdin === true;
-      const useProcessGroup = process.platform !== "win32";
       const child = spawn(opts.command, args, {
         cwd: opts.cwd,
         env: { ...process.env, PATH: pathWithCommonBins() },
-        // POSIX detached children lead a fresh process group. We keep their
-        // stdio attached and their ChildProcess referenced, but can terminate
-        // the whole CLI tree on cancel instead of leaving helper processes that
-        // continue editing after the DriveAgent job is marked cancelled.
-        detached: useProcessGroup,
+        // Keep the agent in the owning worker/app process group. If that owner
+        // is force-terminated, the CLI and its descendants must not escape into
+        // a detached group that can keep editing the workspace unseen.
+        detached: false,
         stdio: [viaStdin ? "pipe" : "ignore", "pipe", "pipe"],
       });
       let settled = false;
       let abortRequested = false;
-      let killTimer: ReturnType<typeof setTimeout> | undefined;
-      const killTree = (killSignal: NodeJS.Signals) => {
-        if (useProcessGroup && child.pid) {
-          try {
-            process.kill(-child.pid, killSignal);
-            return;
-          } catch {
-            // The group may already be gone or unavailable; fall back to the
-            // direct child handle so Windows-like/runtime edge cases still stop.
-          }
-        }
-        try {
-          child.kill(killSignal);
-        } catch {
-          // already gone
-        }
-      };
+      let termination: Promise<void> | undefined;
       const cleanup = () => {
         signal?.removeEventListener("abort", onAbort);
-        // After abort, retain the escalation timer even if the group leader
-        // exits first: a stubborn descendant may still own the process group.
-        if (!abortRequested && killTimer) clearTimeout(killTimer);
       };
       const onAbort = () => {
         if (abortRequested) return;
         abortRequested = true;
-        killTree("SIGTERM");
-        killTimer = setTimeout(() => killTree("SIGKILL"), AGENT_TERMINATE_GRACE_MS);
+        termination = terminateAttachedProcessTree(child);
       };
       signal?.addEventListener("abort", onAbort, { once: true });
       if (signal?.aborted) onAbort();
@@ -220,7 +302,9 @@ export function runAgentOnce(
         if (settled) return;
         settled = true;
         cleanup();
-        resolve(runWithLines(adapter, lines, code));
+        void (termination ?? Promise.resolve()).then(() => {
+          resolve(runWithLines(adapter, lines, code));
+        });
       });
     })().catch(reject);
   });

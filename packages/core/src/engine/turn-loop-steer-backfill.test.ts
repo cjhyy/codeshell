@@ -400,6 +400,7 @@ describe("TurnLoop steer finalize backfill", () => {
     const { deps, appended } = makeDeps([stop("answer already produced")], item);
     let queued: SteerItem[] = [];
     let claimed = false;
+    let released = false;
     deps.buildSteerUserMessageContent = async () => {
       throw new Error("attachment no longer exists");
     };
@@ -409,6 +410,9 @@ describe("TurnLoop steer finalize backfill", () => {
     deps.claimClientMessageId = () => {
       claimed = true;
       return true;
+    };
+    deps.releaseClientMessageId = () => {
+      released = true;
     };
     const loop = new TurnLoop(deps, {
       maxTurns: 3,
@@ -423,10 +427,82 @@ describe("TurnLoop steer finalize backfill", () => {
     expect(result.reason).toBe("completed");
     expect(result.text).toBe("answer already produced");
     expect(queued).toEqual([item]);
-    expect(claimed).toBe(false);
+    expect(claimed).toBe(true);
+    expect(released).toBe(true);
     expect(appended).toEqual([]);
     expect(events.some((event: any) => event.type === "error")).toBe(false);
     expect(events.some((event: any) => event.type === "steer_injected")).toBe(false);
+  });
+
+  it("requeues a failed steer with its untouched suffix so later intent cannot overtake it", async () => {
+    const first: SteerItem = {
+      id: "steer-first",
+      text: "inspect the missing attachment first",
+      clientMessageId: "client-first",
+    };
+    const second: SteerItem = {
+      id: "steer-second",
+      text: "then apply the follow-up",
+      clientMessageId: "client-second",
+    };
+    const events: unknown[] = [];
+    const { deps, appended } = makeDeps([stop("answer already produced")], [first, second]);
+    const prepared: string[] = [];
+    const restored: SteerItem[][] = [];
+    deps.buildSteerUserMessageContent = async (item) => {
+      prepared.push(item.id);
+      if (item.id === first.id) throw new Error("attachment no longer exists");
+      return item.text;
+    };
+    deps.restoreSteer = (items) => {
+      restored.push(items);
+    };
+    deps.claimClientMessageId = () => true;
+    const loop = new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+      onStream: (event) => {
+        events.push(event);
+      },
+    });
+
+    const result = await loop.run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(prepared).toEqual([first.id]);
+    expect(restored).toEqual([[first, second]]);
+    expect(appended).toEqual([]);
+    expect(events.some((event: any) => event.type === "steer_injected")).toBe(false);
+  });
+
+  it("drops a duplicate steer before attempting attachment preparation", async () => {
+    const duplicate: SteerItem = {
+      id: "steer-duplicate-missing-attachment",
+      text: "duplicate with a deleted attachment",
+      clientMessageId: "client-duplicate",
+    };
+    const { deps, appended } = makeDeps([stop("answer already produced")], duplicate);
+    let prepareCalls = 0;
+    const restored: SteerItem[][] = [];
+    deps.claimClientMessageId = () => false;
+    deps.buildSteerUserMessageContent = async () => {
+      prepareCalls++;
+      throw new Error("attachment no longer exists");
+    };
+    deps.restoreSteer = (items) => {
+      restored.push(items);
+    };
+    const loop = new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+    });
+
+    const result = await loop.run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(prepareCalls).toBe(0);
+    expect(restored).toEqual([]);
+    expect(appended).toEqual([]);
   });
 
   it("counts the finalize backfill continuation against maxTurns", async () => {

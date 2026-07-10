@@ -686,6 +686,162 @@ describe("DriveAgentJobs tool", () => {
     }
   });
 
+  it("does not return or publish cancelled until the runner has exited", async () => {
+    backgroundJobRegistry.reset?.();
+    notificationQueue.reset("S-CANCEL-WAIT");
+    const tmp = mkdtempSync(join(tmpdir(), "drive-jobs-cancel-wait-"));
+    let resolveRun!: (result: any) => void;
+    let abortObserved = false;
+    try {
+      const runner = (opts: { signal?: AbortSignal }) =>
+        new Promise<any>((resolve) => {
+          resolveRun = resolve;
+          opts.signal?.addEventListener(
+            "abort",
+            () => {
+              abortObserved = true;
+            },
+            { once: true },
+          );
+        });
+      const tool = makeDriveAgentTool(runner as any);
+      await tool(
+        { prompt: "stubborn edit", cwd: tmp, cli: "codex" } as any,
+        { cwd: tmp, sessionId: "S-CANCEL-WAIT" } as any,
+      );
+      const job = backgroundJobRegistry.listRunningForSession("S-CANCEL-WAIT")[0];
+      expect(job).toBeDefined();
+      if (!job) throw new Error("expected running DriveAgent job");
+
+      let cancelReturned = false;
+      const cancel = driveAgentJobsTool(
+        { action: "cancel", jobId: job.jobId } as any,
+        { cwd: tmp, sessionId: "S-CANCEL-WAIT" } as any,
+      ).then((value) => {
+        cancelReturned = true;
+        return value;
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(abortObserved).toBe(true);
+      expect(cancelReturned).toBe(false);
+      expect(backgroundJobRegistry.get(job.jobId)?.status).toBe("cancelling");
+      expect(backgroundJobRegistry.listRunningByCwd(tmp).map((entry) => entry.jobId)).toEqual([
+        job.jobId,
+      ]);
+      expect(notificationQueue.drainAll("S-CANCEL-WAIT")).toEqual([]);
+
+      resolveRun({
+        sessionId: "CODEX-CANCEL-WAIT",
+        finalText: "runner exited after abort",
+        isError: true,
+        exitCode: null,
+        lines: [],
+      });
+      await expect(cancel).resolves.toContain("cancelled");
+      expect(backgroundJobRegistry.get(job.jobId)?.status).toBe("cancelled");
+      expect(notificationQueue.drainAll("S-CANCEL-WAIT")).toHaveLength(1);
+    } finally {
+      resolveRun?.({
+        sessionId: "",
+        finalText: "cleanup",
+        isError: true,
+        exitCode: null,
+        lines: [],
+      });
+      backgroundJobRegistry.reset?.();
+      notificationQueue.reset("S-CANCEL-WAIT");
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("flushes an aborted runner session id and partial changed files into cancellation", async () => {
+    backgroundJobRegistry.reset?.();
+    notificationQueue.reset("S-CANCEL-ARTIFACTS");
+    const tmp = mkdtempSync(join(tmpdir(), "drive-jobs-cancel-artifacts-"));
+    const store = new ExternalAgentSessionStore(join(tmp, "sessions.json"));
+    let attributed: Record<string, unknown> | undefined;
+    let streamed: Record<string, unknown> | undefined;
+    const unsubscribe = agentNotificationBus.subscribe((sessionId, event) => {
+      if (sessionId === "S-CANCEL-ARTIFACTS") streamed = event as Record<string, unknown>;
+    });
+    try {
+      const runner = (opts: { signal?: AbortSignal }) =>
+        new Promise<any>((resolve) => {
+          opts.signal?.addEventListener(
+            "abort",
+            () =>
+              resolve({
+                sessionId: "CC-CANCEL-PARTIAL",
+                finalText: "aborted after a partial edit",
+                isError: true,
+                exitCode: null,
+                lines: [],
+              }),
+            { once: true },
+          );
+        });
+      const tool = makeDriveAgentTool(runner as any, undefined, {
+        sessionStore: store,
+        readChangedFiles: () => [join(realpathSync(tmp), "src", "partial.ts")],
+      });
+      await tool(
+        { prompt: "partially edit one file", cwd: tmp, cli: "claude" } as any,
+        {
+          cwd: tmp,
+          sessionId: "S-CANCEL-ARTIFACTS",
+          originClientMessageId: "client-cancel-artifacts",
+          recordExternalFileChanges: (event: Record<string, unknown>) => {
+            attributed = event;
+          },
+        } as any,
+      );
+      const job = backgroundJobRegistry.listRunningForSession("S-CANCEL-ARTIFACTS")[0];
+      expect(job).toBeDefined();
+      if (!job) throw new Error("expected running DriveAgent job");
+
+      await driveAgentJobsTool(
+        { action: "cancel", jobId: job.jobId } as any,
+        { cwd: tmp, sessionId: "S-CANCEL-ARTIFACTS" } as any,
+      );
+
+      const cancelled = backgroundJobRegistry.get(job.jobId);
+      expect(cancelled).toMatchObject({
+        status: "cancelled",
+        ccSessionId: "CC-CANCEL-PARTIAL",
+        changedFiles: ["src/partial.ts"],
+      });
+      const notifications = notificationQueue.drainAll("S-CANCEL-ARTIFACTS");
+      expect(notifications).toHaveLength(1);
+      expect(notifications[0]).toMatchObject({
+        status: "cancelled",
+        ccSessionId: "CC-CANCEL-PARTIAL",
+        changedFiles: ["src/partial.ts"],
+        cwd: realpathSync(tmp),
+        originClientMessageId: "client-cancel-artifacts",
+      });
+      expect(streamed).toMatchObject({
+        type: "background_agent_completed",
+        status: "cancelled",
+        ccSessionId: "CC-CANCEL-PARTIAL",
+        changedFiles: ["src/partial.ts"],
+        cwd: realpathSync(tmp),
+        originClientMessageId: "client-cancel-artifacts",
+      });
+      expect(store.get("claude", "CC-CANCEL-PARTIAL")?.cwd).toBe(realpathSync(tmp));
+      expect(attributed).toMatchObject({
+        status: "cancelled",
+        changedFiles: ["src/partial.ts"],
+        originClientMessageId: "client-cancel-artifacts",
+      });
+    } finally {
+      unsubscribe();
+      backgroundJobRegistry.reset?.();
+      notificationQueue.reset("S-CANCEL-ARTIFACTS");
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
   it("session teardown aborts a running DriveAgent and suppresses its late completion", async () => {
     backgroundJobRegistry.reset?.();
     notificationQueue.reset("S-CLOSE-CC");

@@ -49,6 +49,33 @@ export interface GoalConfig {
   setAtMs?: number;
 }
 
+/** A forced terminal outcome for one concrete persisted goal instance. */
+export type GoalTerminationReason =
+  | "stop_blocks_exhausted"
+  | "token_budget_exhausted"
+  | "time_budget_exhausted"
+  | "max_turns_exhausted";
+
+/**
+ * Persisted terminal marker used to prevent a stale whole-state writer from
+ * making an exhausted goal armable again. `objective + setAtMs` is the goal
+ * instance identity; `terminatedAtMs` only orders competing tombstones.
+ */
+export interface GoalTerminal {
+  objective: string;
+  setAtMs?: number;
+  reason: GoalTerminationReason;
+  terminatedAtMs?: number;
+}
+
+/** True only when both values identify the same concrete goal instance. */
+export function isSameGoalInstance(
+  left: Pick<GoalConfig, "objective" | "setAtMs"> | undefined,
+  right: Pick<GoalConfig, "objective" | "setAtMs"> | undefined,
+): boolean {
+  return !!left && !!right && left.objective === right.objective && left.setAtMs === right.setAtMs;
+}
+
 /**
  * Default consecutive-stop-block cap for goal runs. The real safety net for an
  * unattended goal is the token/time budget + maxTurns; this cap only stops a
@@ -109,7 +136,8 @@ export function normalizeGoal(raw: string | GoalConfig | undefined): GoalConfig 
   if (!objective) return undefined;
   const out: GoalConfig = { objective };
   if (typeof obj.tokenBudget === "number" && obj.tokenBudget > 0) out.tokenBudget = obj.tokenBudget;
-  if (typeof obj.timeBudgetMs === "number" && obj.timeBudgetMs > 0) out.timeBudgetMs = obj.timeBudgetMs;
+  if (typeof obj.timeBudgetMs === "number" && obj.timeBudgetMs > 0)
+    out.timeBudgetMs = obj.timeBudgetMs;
   if (typeof obj.maxTurns === "number" && obj.maxTurns > 0) out.maxTurns = Math.floor(obj.maxTurns);
   if (typeof obj.maxStopBlocks === "number" && obj.maxStopBlocks > 0) {
     out.maxStopBlocks = Math.floor(obj.maxStopBlocks);
@@ -138,7 +166,7 @@ export function resolveGoalSetAt(
   nowMs: number,
 ): number {
   const sameGoalContinues = !!stored && stored.objective === explicitObjective;
-  return sameGoalContinues ? stored!.setAtMs ?? nowMs : nowMs;
+  return sameGoalContinues ? (stored!.setAtMs ?? nowMs) : nowMs;
 }
 
 /** Interactive (no-goal) turn ceiling — a single prompt rarely needs more. */
@@ -283,8 +311,20 @@ export function recordGoalUsage(tracker: GoalBudgetTracker, turnTokens: number):
  * pass the current clock (and tests pass a fixed value).
  */
 export function goalBudgetExceeded(tracker: GoalBudgetTracker, nowMs: number): boolean {
+  return goalBudgetTerminationReason(tracker, nowMs) !== undefined;
+}
+
+/** Identify which goal budget forced termination, preserving token-first precedence. */
+export function goalBudgetTerminationReason(
+  tracker: GoalBudgetTracker,
+  nowMs: number,
+): Extract<GoalTerminationReason, "token_budget_exhausted" | "time_budget_exhausted"> | undefined {
   const { tokenBudget, timeBudgetMs } = tracker.goal;
-  if (typeof tokenBudget === "number" && tracker.tokensUsed > tokenBudget) return true;
-  if (typeof timeBudgetMs === "number" && nowMs - tracker.startedAtMs > timeBudgetMs) return true;
-  return false;
+  if (typeof tokenBudget === "number" && tracker.tokensUsed > tokenBudget) {
+    return "token_budget_exhausted";
+  }
+  if (typeof timeBudgetMs === "number" && nowMs - tracker.startedAtMs > timeBudgetMs) {
+    return "time_budget_exhausted";
+  }
+  return undefined;
 }

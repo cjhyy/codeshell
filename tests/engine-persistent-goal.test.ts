@@ -17,12 +17,13 @@ import {
 import { LLMClientBase } from "../packages/core/src/llm/client-base.js";
 import type { LLMResponse } from "../packages/core/src/types.js";
 import type { CreateMessageOptions } from "../packages/core/src/llm/types.js";
+import { backgroundJobRegistry } from "../packages/core/src/tool-system/builtin/background-jobs.js";
 
 // Engine constructs a fresh LLM client per run via the factory, so per-instance
 // counters reset between runs. Track judge state at MODULE scope so it's stable
 // across runs in the same test.
 let judgeCalls = 0;
-let judgeVerdict: "met" | "not_met" = "not_met";
+let judgeVerdict: "met" | "not_met" | "waiting" = "not_met";
 
 // Plain client: every turn returns a no-tool answer (each run ends in one
 // turn). The goal JUDGE reuses the same client (engine wires llmClient as the
@@ -35,7 +36,11 @@ class Client extends LLMClientBase {
       judgeCalls += 1;
       const met = judgeVerdict === "met";
       return {
-        text: JSON.stringify({ met, gaps: met ? "" : "还没完成" }),
+        text: JSON.stringify({
+          met,
+          waiting: judgeVerdict === "waiting",
+          gaps: met ? "" : "还没完成",
+        }),
         toolCalls: [],
         stopReason: "stop",
         usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
@@ -57,9 +62,11 @@ beforeEach(() => {
   PROVIDER_REGISTRY.clear();
   judgeCalls = 0;
   judgeVerdict = "not_met";
+  backgroundJobRegistry.reset();
   registerProvider("openai", Client);
 });
 afterEach(() => {
+  backgroundJobRegistry.reset();
   PROVIDER_REGISTRY.clear();
   for (const [k, v] of savedProviders) PROVIDER_REGISTRY.set(k, v);
 });
@@ -94,7 +101,13 @@ describe("persistent goal lifecycle", () => {
     return engine.getSessionManager().resume(sid).state.activeGoal?.objective;
   }
 
+  function waitOnFiniteBackgroundWork(): void {
+    judgeVerdict = "waiting";
+    backgroundJobRegistry.start("finite-persistent-goal", sid, "finite test work");
+  }
+
   it("stores the goal on the session when a send sets one", async () => {
+    waitOnFiniteBackgroundWork();
     await engine.run("做第一步", { sessionId: sid, goal: "完成全部任务" });
     expect(activeGoal()).toBe("完成全部任务");
     // The judge ran (goal mode active).
@@ -102,6 +115,7 @@ describe("persistent goal lifecycle", () => {
   });
 
   it("a later BARE send (no goal) inherits the stored goal — judge still runs", async () => {
+    waitOnFiniteBackgroundWork();
     await engine.run("做第一步", { sessionId: sid, goal: "完成全部任务" });
     const judgeBefore = judgeCalls;
     await engine.run("继续做", { sessionId: sid }); // no goal passed
@@ -111,14 +125,17 @@ describe("persistent goal lifecycle", () => {
   });
 
   it("clears the stored goal once the judge returns met", async () => {
+    waitOnFiniteBackgroundWork();
     await engine.run("做第一步", { sessionId: sid, goal: "完成全部任务" });
     expect(activeGoal()).toBe("完成全部任务");
+    backgroundJobRegistry.finish("finite-persistent-goal");
     judgeVerdict = "met";
     await engine.run("收尾", { sessionId: sid });
     expect(activeGoal()).toBeUndefined();
   });
 
   it("a new goal REPLACES the stored one", async () => {
+    waitOnFiniteBackgroundWork();
     await engine.run("a", { sessionId: sid, goal: "目标一" });
     expect(activeGoal()).toBe("目标一");
     await engine.run("b", { sessionId: sid, goal: "目标二" });
@@ -126,11 +143,13 @@ describe("persistent goal lifecycle", () => {
   });
 
   it("clearGoal() wipes the active goal and a later bare send does NOT judge", async () => {
+    waitOnFiniteBackgroundWork();
     await engine.run("a", { sessionId: sid, goal: "目标一" });
     expect(activeGoal()).toBe("目标一");
     const cleared = engine.clearGoal(sid);
     expect(cleared).toBe(true);
     expect(activeGoal()).toBeUndefined();
+    backgroundJobRegistry.finish("finite-persistent-goal");
     const judgeBefore = judgeCalls;
     await engine.run("普通消息", { sessionId: sid });
     // No active goal → no judge call this run.

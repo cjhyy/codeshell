@@ -218,6 +218,7 @@ export function notificationItemToStreamEvent(
   if (item.command !== undefined) event.command = item.command;
   if (item.finalText !== undefined) event.finalText = item.finalText;
   if (item.error !== undefined) event.error = item.error;
+  if (item.ccSessionId !== undefined) event.ccSessionId = item.ccSessionId;
   if (item.changedFiles !== undefined) event.changedFiles = item.changedFiles;
   if (item.cwd !== undefined) event.cwd = item.cwd;
   if (item.originClientMessageId !== undefined) {

@@ -537,6 +537,9 @@ describe("buildHttpHeadersWithCredentialAccess", () => {
         credentialRef: "figma",
       },
       {
+        resolveMeta(_cwd, id) {
+          return { id, type: "token", label: "Figma token", hasSecret: true };
+        },
         async resolveValue(req) {
           expect(req).toEqual({
             cwd: undefined,
@@ -583,6 +586,73 @@ describe("buildHttpHeadersWithCredentialAccess", () => {
     );
 
     expect(headers.Authorization).toBe("Bearer oauth-access");
+  });
+
+  test("fails closed when credential metadata is unavailable for a structured oauth secret", async () => {
+    const secret = JSON.stringify({
+      accessToken: "oauth-access-missing-meta",
+      refreshToken: "refresh-must-not-leak",
+      clientSecret: "client-secret-must-not-leak",
+    });
+    let error: Error | undefined;
+
+    try {
+      await buildHttpHeadersWithCredentialAccess(
+        "srv",
+        {
+          name: "srv",
+          transport: "streamable-http",
+          url: "https://example.com",
+          credentialRef: "oauth-missing-meta",
+        },
+        {
+          async resolveValue() {
+            return secret;
+          },
+        },
+      );
+    } catch (err) {
+      error = err as Error;
+    }
+
+    expect(error?.message).toMatch(/metadata.*unavailable|metadata.*missing/i);
+    expect(error?.message).not.toContain("refresh-must-not-leak");
+    expect(error?.message).not.toContain("client-secret-must-not-leak");
+  });
+
+  test("rejects stale token metadata when the resolved secret is structured JSON", async () => {
+    const secret = JSON.stringify({
+      accessToken: "oauth-access-stale-meta",
+      refreshToken: "stale-refresh-must-not-leak",
+      clientSecret: "stale-client-secret-must-not-leak",
+    });
+    let error: Error | undefined;
+
+    try {
+      await buildHttpHeadersWithCredentialAccess(
+        "srv",
+        {
+          name: "srv",
+          transport: "streamable-http",
+          url: "https://example.com",
+          credentialRef: "oauth-stale-meta",
+        },
+        {
+          resolveMeta(_cwd, id) {
+            return { id, type: "token", label: "stale metadata", hasSecret: true };
+          },
+          async resolveValue() {
+            return secret;
+          },
+        },
+      );
+    } catch (err) {
+      error = err as Error;
+    }
+
+    expect(error?.message).toMatch(/structured.*secret|metadata.*mismatch/i);
+    expect(error?.message).not.toContain("stale-refresh-must-not-leak");
+    expect(error?.message).not.toContain("stale-client-secret-must-not-leak");
   });
 });
 

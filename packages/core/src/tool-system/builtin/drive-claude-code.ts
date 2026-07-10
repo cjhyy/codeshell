@@ -265,8 +265,9 @@ function recordSuccessfulSession(
   cli: DriveCli,
   cwd: string,
   result: AgentRunResult,
+  includeErroredSession = false,
 ): void {
-  if (result.isError || !result.sessionId) return;
+  if ((!includeErroredSession && result.isError) || !result.sessionId) return;
   try {
     store.record({ cli, sessionId: result.sessionId, cwd });
   } catch (err) {
@@ -319,8 +320,10 @@ function attachDriveCompletion(params: {
   } = params;
   void run
     .then((r) => {
-      if (backgroundJobRegistry.get(jobId)?.status !== "running") return;
-      recordSuccessfulSession(sessionStore, cli, cwd, r);
+      const jobStatus = backgroundJobRegistry.get(jobId)?.status;
+      if (jobStatus !== "running" && jobStatus !== "cancelling") return;
+      const cancelling = jobStatus === "cancelling";
+      recordSuccessfulSession(sessionStore, cli, cwd, r, cancelling);
       // Attribute external changes BEFORE publishing completion. Previously the
       // notification event was emitted first and carried no files; changedFiles
       // only reached the background-work registry/panel, so the chat turn card
@@ -333,7 +336,7 @@ function attachDriveCompletion(params: {
           description: label,
           cli,
           cwd,
-          status: r.isError ? "failed" : "completed",
+          status: cancelling ? "cancelled" : r.isError ? "failed" : "completed",
           changedFiles,
           ...(originClientMessageId ? { originClientMessageId } : {}),
         });
@@ -350,6 +353,13 @@ function attachDriveCompletion(params: {
         size: changedFiles.length,
         files: changedFiles,
       });
+      if (cancelling) {
+        backgroundJobRegistry.recordArtifacts(jobId, {
+          ccSessionId: r.sessionId || undefined,
+          changedFiles,
+        });
+        return;
+      }
       // Deliver the result back so the woken agent actually sees the answer
       // (not just "a job finished"). Mirrors the video/sub-agent completion
       // path — enqueue lands in the same notificationQueue the wakeup drains.
@@ -422,14 +432,18 @@ function trackBackgroundRun(params: {
 }): { jobId: string; warning?: string } {
   const warning = duplicateCwdWarning(params.cwd, params.writable);
   const jobId = newDriveJobId();
+  const run = params.start();
   backgroundJobRegistry.start(jobId, params.sessionId, params.label, {
     kind: "drive-agent",
     cwd: params.cwd,
     cli: params.cli,
     promptSummary: params.promptSummary,
-    abort: params.abort,
+    originClientMessageId: params.originClientMessageId,
+    abort: async () => {
+      params.abort();
+      await run.catch(() => undefined);
+    },
   });
-  const run = params.start();
   attachDriveCompletion({ ...params, jobId, run });
   return { jobId, ...(warning ? { warning } : {}) };
 }
@@ -678,7 +692,9 @@ function listDriveAgentJobs(args: Record<string, unknown>, ctx?: ToolContext): s
       : backgroundJobRegistry.listForSession(sessionId);
   jobs = jobs.filter(isDriveAgentJob);
   if (cwd) jobs = jobs.filter((job) => job.cwd === cwd);
-  if (status === "running") jobs = jobs.filter((job) => job.status === "running");
+  if (status === "running") {
+    jobs = jobs.filter((job) => job.status === "running" || job.status === "cancelling");
+  }
 
   if (jobs.length === 0) {
     if (cwd) return `No ${status} DriveAgent jobs in cwd ${cwd}.`;
@@ -715,7 +731,7 @@ function inspectDriveAgentJob(jobId: string | undefined): string {
   return lines.join("\n");
 }
 
-function cancelDriveAgentJob(jobId: string | undefined): string {
+async function cancelDriveAgentJob(jobId: string | undefined): Promise<string> {
   if (!jobId) return "Error: jobId is required.";
   const job = backgroundJobRegistry.get(jobId);
   if (!job || !isDriveAgentJob(job)) return `Error: DriveAgent jobId "${jobId}" not found.`;
@@ -727,7 +743,7 @@ function cancelDriveAgentJob(jobId: string | undefined): string {
   }
 
   const finalText = `DriveAgent job ${jobId} cancelled by DriveAgentJobs.`;
-  const ok = backgroundJobRegistry.cancel(jobId, { finalText });
+  const ok = await backgroundJobRegistry.cancel(jobId, { finalText });
   if (!ok) return `Failed to cancel DriveAgent job ${jobId}.`;
   notificationQueue.enqueue(
     {
@@ -737,6 +753,8 @@ function cancelDriveAgentJob(jobId: string | undefined): string {
       workKind: "cc",
       error: finalText,
       ccSessionId: job.ccSessionId,
+      ...(job.changedFiles?.length ? { changedFiles: job.changedFiles, cwd: job.cwd } : {}),
+      ...(job.originClientMessageId ? { originClientMessageId: job.originClientMessageId } : {}),
       enqueuedAt: Date.now(),
     },
     job.sessionId,
@@ -753,7 +771,7 @@ export async function driveAgentJobsTool(
       ? args.action
       : "list";
   if (action === "inspect") return inspectDriveAgentJob(jobIdArg(args));
-  if (action === "cancel") return cancelDriveAgentJob(jobIdArg(args));
+  if (action === "cancel") return await cancelDriveAgentJob(jobIdArg(args));
   return listDriveAgentJobs(args, ctx);
 }
 

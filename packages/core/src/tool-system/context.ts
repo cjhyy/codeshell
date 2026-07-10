@@ -191,7 +191,7 @@ export interface ExternalFileChangesRecord {
   description: string;
   cli: "claude" | "codex";
   cwd: string;
-  status: "completed" | "failed";
+  status: "completed" | "failed" | "cancelled";
   changedFiles: string[];
   originClientMessageId?: string;
 }

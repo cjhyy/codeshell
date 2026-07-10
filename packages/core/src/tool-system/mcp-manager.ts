@@ -162,7 +162,26 @@ export function bearerTokenFromMcpCredential(
   credential: ResolvedMcpCredential,
   options: BuildHttpHeadersOptions = {},
 ): string {
-  if (credential.type !== "oauth") return credential.secret;
+  if (credential.type === undefined) return credential.secret;
+  if (credential.type !== "oauth") {
+    if (credential.type !== "token") {
+      throw new Error(
+        `MCP server "${serverName}": credential "${credentialId}" type "${credential.type}" cannot be used as a bearer token`,
+      );
+    }
+    try {
+      const parsed = JSON.parse(credential.secret);
+      if (parsed !== null && typeof parsed === "object") {
+        throw new Error(
+          `MCP server "${serverName}": credential "${credentialId}" resolved to a structured secret that does not match token metadata; refusing bearer injection`,
+        );
+      }
+    } catch (err) {
+      if (err instanceof SyntaxError) return credential.secret;
+      throw err;
+    }
+    return credential.secret;
+  }
 
   const secret = parseOAuthCredentialSecret(credential.secret);
   const status = oauthCredentialStatus(secret, {
@@ -196,6 +215,16 @@ export async function buildHttpHeadersWithCredentialAccess(
     );
   }
   const meta = access.resolveMeta?.(undefined, config.credentialRef, "full");
+  if (!meta) {
+    throw new Error(
+      `MCP server "${serverName}": credential "${config.credentialRef}" metadata is unavailable; refusing bearer injection`,
+    );
+  }
+  if (meta.type !== "token" && meta.type !== "oauth") {
+    throw new Error(
+      `MCP server "${serverName}": credential "${config.credentialRef}" type "${meta.type}" cannot be used as a bearer token`,
+    );
+  }
   const secret = await access.resolveValue({
     cwd: undefined,
     id: config.credentialRef,

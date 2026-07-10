@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect, spyOn } from "bun:test";
 import {
   chmodSync,
   existsSync,
@@ -10,11 +10,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  detectCodexImageInput,
-  runAgentOnce,
-  runWithLines,
-} from "./external-agent-driver.js";
+import { spawn } from "node:child_process";
+import { detectCodexImageInput, runAgentOnce, runWithLines } from "./external-agent-driver.js";
 import { claudeAdapter, claudeAdapter as adp, codexAdapter } from "./agent-adapter.js";
 import type { AgentAdapter } from "./agent-adapter.js";
 import { probeCli } from "./cc-capability.js";
@@ -60,6 +57,98 @@ describe.serial("external agent driver", () => {
         rmSync(dir, { recursive: true, force: true });
       }
     });
+
+    const itPosix = process.platform === "win32" ? it.skip : it.serial;
+    itPosix(
+      "waits for an aborted image probe and its stubborn descendant to stop",
+      async () => {
+        const dir = mkdtempSync(join(tmpdir(), "codex-image-probe-tree-"));
+        const script = join(dir, "fake-codex");
+        const descendantScript = join(dir, "probe-descendant.mjs");
+        const probePidFile = join(dir, "probe.pid");
+        const descendantPidFile = join(dir, "descendant.pid");
+        const probeMarker = join(dir, "probe.marker");
+        const descendantMarker = join(dir, "descendant.marker");
+        const controller = new AbortController();
+        let probePid = 0;
+        let descendantPid = 0;
+        const isAlive = (pid: number): boolean => {
+          if (!pid) return false;
+          try {
+            process.kill(pid, 0);
+            return true;
+          } catch {
+            return false;
+          }
+        };
+        try {
+          writeFileSync(
+            descendantScript,
+            [
+              'import { appendFileSync, writeFileSync } from "node:fs";',
+              `writeFileSync(${JSON.stringify(descendantPidFile)}, String(process.pid));`,
+              'process.on("SIGTERM", () => {});',
+              `setInterval(() => appendFileSync(${JSON.stringify(descendantMarker)}, "x"), 20);`,
+            ].join("\n"),
+            "utf-8",
+          );
+          writeFileSync(
+            script,
+            [
+              "#!/usr/bin/env node",
+              'const { appendFileSync, writeFileSync } = require("node:fs");',
+              'const { spawn } = require("node:child_process");',
+              `writeFileSync(${JSON.stringify(probePidFile)}, String(process.pid));`,
+              `spawn(process.execPath, [${JSON.stringify(descendantScript)}], { stdio: "ignore" });`,
+              'process.on("SIGTERM", () => {});',
+              `setInterval(() => appendFileSync(${JSON.stringify(probeMarker)}, "x"), 20);`,
+            ].join("\n"),
+            "utf-8",
+          );
+          chmodSync(script, 0o755);
+
+          const probe = detectCodexImageInput(script, dir, controller.signal);
+          for (
+            let i = 0;
+            i < 250 && (!existsSync(probeMarker) || !existsSync(descendantMarker));
+            i++
+          ) {
+            await new Promise((resolve) => setTimeout(resolve, 20));
+          }
+          expect(existsSync(probeMarker)).toBe(true);
+          expect(existsSync(descendantMarker)).toBe(true);
+          probePid = Number(readFileSync(probePidFile, "utf-8"));
+          descendantPid = Number(readFileSync(descendantPidFile, "utf-8"));
+
+          controller.abort();
+          await expect(probe).rejects.toThrow(/abort/i);
+          const sizes = [statSync(probeMarker).size, statSync(descendantMarker).size];
+          await new Promise((resolve) => setTimeout(resolve, 150));
+
+          expect(isAlive(probePid)).toBe(false);
+          expect(isAlive(descendantPid)).toBe(false);
+          expect([statSync(probeMarker).size, statSync(descendantMarker).size]).toEqual(sizes);
+        } finally {
+          controller.abort();
+          if (!probePid && existsSync(probePidFile)) {
+            probePid = Number(readFileSync(probePidFile, "utf-8"));
+          }
+          if (!descendantPid && existsSync(descendantPidFile)) {
+            descendantPid = Number(readFileSync(descendantPidFile, "utf-8"));
+          }
+          for (const pid of [probePid, descendantPid]) {
+            if (!isAlive(pid)) continue;
+            try {
+              process.kill(pid, "SIGKILL");
+            } catch {
+              // already exited
+            }
+          }
+          rmSync(dir, { recursive: true, force: true });
+        }
+      },
+      15_000,
+    );
   });
 
   describe("runAgentOnce promptViaStdin（用 cat 做可移植子进程,不依赖 claude/codex）", () => {
@@ -84,6 +173,28 @@ describe.serial("external agent driver", () => {
       },
       15_000,
     );
+
+    it.serial("passes the explicit model override into adapter.buildArgs", async () => {
+      let receivedModel: string | undefined;
+      const catAdapter: AgentAdapter = {
+        kind: "cat",
+        promptViaStdin: true,
+        buildArgs: (opts) => {
+          receivedModel = opts.model;
+          return [];
+        },
+        parseResult: (lines) => ({ sessionId: "", finalText: lines.join("\n"), isError: false }),
+      };
+
+      await runAgentOnce(catAdapter, {
+        command: "cat",
+        prompt: "model wiring",
+        model: "review-model-override",
+        cwd: process.cwd(),
+      });
+
+      expect(receivedModel).toBe("review-model-override");
+    });
 
     it.serial(
       "does not spawn the main codex CLI when aborted during image support probing",
@@ -148,15 +259,193 @@ describe.serial("external agent driver", () => {
       15_000,
     );
 
+    it.serial("uses a positive-pid process.kill fallback on Windows cancellation", async () => {
+      const dir = mkdtempSync(join(tmpdir(), "agent-win32-cancel-"));
+      const script = join(dir, "stubborn-win32.mjs");
+      const marker = join(dir, "started.marker");
+      const realPlatform = process.platform;
+      const realKill = process.kill.bind(process);
+      const controller = new AbortController();
+      const calls: Array<{ pid: number; signal: string | number | undefined }> = [];
+      let killSpy: ReturnType<typeof spyOn> | undefined;
+      try {
+        writeFileSync(
+          script,
+          [
+            'import { appendFileSync } from "node:fs";',
+            'process.on("SIGTERM", () => {});',
+            `setInterval(() => appendFileSync(${JSON.stringify(marker)}, "x"), 20);`,
+          ].join("\n"),
+          "utf-8",
+        );
+        const adapter: AgentAdapter = {
+          kind: "win32-stubborn",
+          buildArgs: () => [script],
+          parseResult: () => ({ sessionId: "", finalText: "", isError: false }),
+        };
+        const run = runAgentOnce(
+          adapter,
+          { command: process.execPath, prompt: "", cwd: dir },
+          controller.signal,
+        );
+        for (let i = 0; i < 250 && !existsSync(marker); i++) {
+          await new Promise((resolve) => setTimeout(resolve, 20));
+        }
+        expect(existsSync(marker)).toBe(true);
+
+        Object.defineProperty(process, "platform", { value: "win32", configurable: true });
+        killSpy = spyOn(process, "kill").mockImplementation((pid, signal?) => {
+          calls.push({ pid, signal });
+          if (signal === undefined) return realKill(pid, "SIGKILL");
+          return realKill(pid, signal);
+        });
+        controller.abort();
+        await run;
+
+        expect(calls.some((call) => call.pid > 0 && call.signal === undefined)).toBe(true);
+        expect(calls.some((call) => call.pid < 0 || call.signal === "SIGTERM")).toBe(false);
+      } finally {
+        killSpy?.mockRestore();
+        Object.defineProperty(process, "platform", { value: realPlatform, configurable: true });
+        controller.abort();
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
     const itPosix = process.platform === "win32" ? it.skip : it.serial;
     itPosix(
-      "kills a stubborn agent process group with SIGKILL after abort grace expires",
+      "keeps the agent in its owning parent process group so parent shutdown cannot orphan it",
+      async () => {
+        const dir = mkdtempSync(join(tmpdir(), "agent-parent-ownership-"));
+        const driverPath = join(import.meta.dir, "external-agent-driver.ts");
+        const harnessScript = join(dir, "driver-parent.ts");
+        const agentScript = join(dir, "agent-parent.mjs");
+        const descendantScript = join(dir, "agent-descendant.mjs");
+        const agentPidFile = join(dir, "agent.pid");
+        const descendantPidFile = join(dir, "descendant.pid");
+        const agentMarker = join(dir, "agent.marker");
+        const descendantMarker = join(dir, "descendant.marker");
+        let harnessPid = 0;
+        let agentPid = 0;
+        let descendantPid = 0;
+        const isAlive = (pid: number): boolean => {
+          if (!pid) return false;
+          try {
+            process.kill(pid, 0);
+            return true;
+          } catch {
+            return false;
+          }
+        };
+        try {
+          writeFileSync(
+            descendantScript,
+            [
+              'import { appendFileSync, writeFileSync } from "node:fs";',
+              `writeFileSync(${JSON.stringify(descendantPidFile)}, String(process.pid));`,
+              `setInterval(() => appendFileSync(${JSON.stringify(descendantMarker)}, "x"), 20);`,
+            ].join("\n"),
+            "utf-8",
+          );
+          writeFileSync(
+            agentScript,
+            [
+              'import { appendFileSync, writeFileSync } from "node:fs";',
+              'import { spawn } from "node:child_process";',
+              `writeFileSync(${JSON.stringify(agentPidFile)}, String(process.pid));`,
+              `spawn(process.execPath, [${JSON.stringify(descendantScript)}], { stdio: "ignore" });`,
+              `setInterval(() => appendFileSync(${JSON.stringify(agentMarker)}, "x"), 20);`,
+            ].join("\n"),
+            "utf-8",
+          );
+          writeFileSync(
+            harnessScript,
+            [
+              `import { runAgentOnce } from ${JSON.stringify(driverPath)};`,
+              "const adapter = {",
+              '  kind: "ownership",',
+              `  buildArgs: () => [${JSON.stringify(agentScript)}],`,
+              '  parseResult: () => ({ sessionId: "", finalText: "", isError: false }),',
+              "};",
+              `await runAgentOnce(adapter, { command: process.execPath, prompt: "", cwd: ${JSON.stringify(dir)} });`,
+            ].join("\n"),
+            "utf-8",
+          );
+
+          const harness = spawn(process.execPath, [harnessScript], {
+            cwd: dir,
+            detached: true,
+            stdio: "ignore",
+          });
+          harnessPid = harness.pid ?? 0;
+          expect(harnessPid).toBeGreaterThan(1);
+          for (
+            let i = 0;
+            i < 250 && (!existsSync(agentMarker) || !existsSync(descendantMarker));
+            i++
+          ) {
+            await new Promise((resolve) => setTimeout(resolve, 20));
+          }
+          expect(existsSync(agentMarker)).toBe(true);
+          expect(existsSync(descendantMarker)).toBe(true);
+          agentPid = Number(readFileSync(agentPidFile, "utf-8"));
+          descendantPid = Number(readFileSync(descendantPidFile, "utf-8"));
+
+          process.kill(-harnessPid, "SIGKILL");
+          for (let i = 0; i < 100 && (isAlive(agentPid) || isAlive(descendantPid)); i++) {
+            await new Promise((resolve) => setTimeout(resolve, 20));
+          }
+          const sizes = [statSync(agentMarker).size, statSync(descendantMarker).size];
+          await new Promise((resolve) => setTimeout(resolve, 150));
+
+          expect(isAlive(agentPid)).toBe(false);
+          expect(isAlive(descendantPid)).toBe(false);
+          expect([statSync(agentMarker).size, statSync(descendantMarker).size]).toEqual(sizes);
+        } finally {
+          if (harnessPid) {
+            try {
+              process.kill(-harnessPid, "SIGKILL");
+            } catch {
+              // owning group already exited
+            }
+          }
+          if (!agentPid && existsSync(agentPidFile)) {
+            agentPid = Number(readFileSync(agentPidFile, "utf-8"));
+          }
+          if (!descendantPid && existsSync(descendantPidFile)) {
+            descendantPid = Number(readFileSync(descendantPidFile, "utf-8"));
+          }
+          if (agentPid) {
+            try {
+              process.kill(-agentPid, "SIGKILL");
+            } catch {
+              // detached group may not exist after the fix
+            }
+          }
+          for (const pid of [agentPid, descendantPid]) {
+            if (!isAlive(pid)) continue;
+            try {
+              process.kill(pid, "SIGKILL");
+            } catch {
+              // already exited
+            }
+          }
+          rmSync(dir, { recursive: true, force: true });
+        }
+      },
+      15_000,
+    );
+
+    itPosix(
+      "kills a stubborn attached agent tree with SIGKILL after abort grace expires",
       async () => {
         const dir = mkdtempSync(join(tmpdir(), "agent-stubborn-cancel-"));
         const parentPidFile = join(dir, "parent.pid");
         const childPidFile = join(dir, "child.pid");
         const parentMarker = join(dir, "parent.marker");
         const childMarker = join(dir, "child.marker");
+        const parentTermMarker = join(dir, "parent.term");
+        const childTermMarker = join(dir, "child.term");
         const childScript = join(dir, "child.mjs");
         const parentScript = join(dir, "parent.mjs");
         let parentPid = 0;
@@ -178,7 +467,7 @@ describe.serial("external agent driver", () => {
             [
               'import { appendFileSync, writeFileSync } from "node:fs";',
               `writeFileSync(${JSON.stringify(childPidFile)}, String(process.pid));`,
-              'process.on("SIGTERM", () => {});',
+              `process.on("SIGTERM", () => writeFileSync(${JSON.stringify(childTermMarker)}, "term"));`,
               `setInterval(() => appendFileSync(${JSON.stringify(childMarker)}, "x"), 20);`,
             ].join("\n"),
             "utf-8",
@@ -191,7 +480,7 @@ describe.serial("external agent driver", () => {
               `writeFileSync(${JSON.stringify(parentPidFile)}, String(process.pid));`,
               `const child = spawn("node", [${JSON.stringify(childScript)}], { stdio: "ignore" });`,
               `writeFileSync(${JSON.stringify(childPidFile)}, String(child.pid));`,
-              'process.on("SIGTERM", () => {});',
+              `process.on("SIGTERM", () => writeFileSync(${JSON.stringify(parentTermMarker)}, "term"));`,
               `setInterval(() => appendFileSync(${JSON.stringify(parentMarker)}, "x"), 20);`,
             ].join("\n"),
             "utf-8",
@@ -217,6 +506,18 @@ describe.serial("external agent driver", () => {
           childPid = Number(readFileSync(childPidFile, "utf-8"));
 
           controller.abort();
+          for (
+            let i = 0;
+            i < 20 && (!existsSync(parentTermMarker) || !existsSync(childTermMarker));
+            i++
+          ) {
+            await new Promise((resolve) => setTimeout(resolve, 20));
+          }
+          expect(existsSync(parentTermMarker)).toBe(true);
+          expect(existsSync(childTermMarker)).toBe(true);
+          expect(isAlive(parentPid)).toBe(true);
+          expect(isAlive(childPid)).toBe(true);
+
           const outcome = await Promise.race([
             run.then(() => "exited" as const),
             new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), 2_000)),
@@ -235,7 +536,7 @@ describe.serial("external agent driver", () => {
           if (run) {
             await Promise.race([
               run.catch(() => undefined),
-                new Promise((resolve) => setTimeout(resolve, 750)),
+              new Promise((resolve) => setTimeout(resolve, 750)),
             ]);
           }
           if (!parentPid && existsSync(parentPidFile)) {
