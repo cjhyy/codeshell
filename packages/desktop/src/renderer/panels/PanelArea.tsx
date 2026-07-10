@@ -17,7 +17,11 @@ import {
   getPanelEntry,
   type PanelAvailabilityContext,
 } from "./PanelRegistry";
-import { usePanelWorkspaceRoot } from "./usePanelWorkspaceRoot";
+import {
+  PanelWorkspaceRootConsumer,
+  panelWorkspaceBodyReady,
+} from "./PanelWorkspaceRootConsumer";
+import type { PanelWorkspaceState } from "./usePanelWorkspaceRoot";
 import type { OpenCliSessionRequest } from "../cc-room/types";
 
 export interface OpenTab {
@@ -109,7 +113,18 @@ interface Props {
  * All tabs stay MOUNTED (shown/hidden via CSS) so switching never tears down a
  * terminal's xterm or reloads a browser's <webview>.
  */
-export function PanelArea({
+export function PanelArea(props: Props) {
+  return (
+    <PanelWorkspaceRootConsumer
+      engineSessionId={props.engineSessionId ?? null}
+      repoPath={props.repoPath}
+    >
+      {(workspace) => <ResolvedPanelArea {...props} workspace={workspace} />}
+    </PanelWorkspaceRootConsumer>
+  );
+}
+
+function ResolvedPanelArea({
   repoPath,
   hidden = false,
   keepActiveBodyLive = false,
@@ -136,9 +151,9 @@ export function PanelArea({
   activeId,
   setActiveId,
   bucket,
-}: Props) {
+  workspace,
+}: Props & { workspace: PanelWorkspaceState }) {
   const { t } = useT();
-  const workspace = usePanelWorkspaceRoot(engineSessionId ?? null, repoPath);
   const cwd = workspace.root;
   const panelAvailability: PanelAvailabilityContext = {
     cwd,
@@ -363,7 +378,7 @@ export function PanelArea({
           const visibility = resolvePanelVisibility({ hidden, keepActiveBodyLive, activeTab });
           return (
             <Slot key={panelTab.id} active={activeTab}>
-              {!workspace.ready && !cwd ? (
+              {!panelWorkspaceBodyReady(workspace) ? (
                 <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-muted-foreground">
                   {t("panels.common.loading")}
                 </div>

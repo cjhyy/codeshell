@@ -29,8 +29,9 @@ async function render(): Promise<void> {
 
 beforeEach(async () => {
   ensureMiniDom();
-  Object.assign(globalThis, {
-    localStorage: {
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
       getItem: () => null,
       setItem: () => undefined,
     },

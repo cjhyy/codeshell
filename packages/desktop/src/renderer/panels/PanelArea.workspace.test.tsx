@@ -3,7 +3,10 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { SessionWorkspace } from "../../preload/types";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
-import { PanelArea } from "./PanelArea";
+import {
+  PanelWorkspaceRootConsumer,
+  panelWorkspaceBodyReady,
+} from "./PanelWorkspaceRootConsumer";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -14,22 +17,19 @@ function deferred<T>() {
 }
 
 let root: Root | null = null;
-let container: HTMLElement;
 let workspaceListener: ((event: { sessionId: string }) => void) | null = null;
 let requests: Array<ReturnType<typeof deferred<SessionWorkspace>>>;
+let requestCount = 0;
 const quickChatRoots: Array<string | null> = [];
 
 beforeEach(() => {
   ensureMiniDom();
-  Object.assign(globalThis, {
-    localStorage: { getItem: () => null, setItem: () => undefined },
-  });
   requests = [deferred<SessionWorkspace>(), deferred<SessionWorkspace>()];
+  requestCount = 0;
   quickChatRoots.length = 0;
-  let requestIndex = 0;
   Object.assign(window, {
     codeshell: {
-      getSessionWorkspace: () => requests[requestIndex++]!.promise,
+      getSessionWorkspace: () => requests[requestCount++]!.promise,
       onWorkspaceChanged: (listener: (event: { sessionId: string }) => void) => {
         workspaceListener = listener;
         return () => {
@@ -38,7 +38,7 @@ beforeEach(() => {
       },
     },
   });
-  container = document.createElement("div") as unknown as HTMLElement;
+  const container = document.createElement("div") as unknown as HTMLElement;
   root = createRoot(container);
 });
 
@@ -51,27 +51,16 @@ afterEach(async () => {
 });
 
 describe("PanelArea workspace consumers", () => {
-  test("gates panel bodies until resolution and updates quick chat from the matching workspace event", async () => {
+  test("gates bodies until resolution and updates quick chat from the matching workspace event", async () => {
     await act(async () => {
       root?.render(
-        <PanelArea
-          repoPath="/repo"
-          onClose={() => undefined}
-          tabs={[{ id: "quickChat-1", kind: "quickChat" }]}
-          setTabs={() => undefined}
-          activeId="quickChat-1"
-          setActiveId={() => undefined}
-          bucket="repo::engine-1"
-          requestNonce={0}
-          requestKind={null}
-          engineSessionId="engine-1"
-          width={480}
-          onResizeStart={() => undefined}
-          renderQuickChatPanel={({ cwd }) => {
-            quickChatRoots.push(cwd);
-            return <div data-quick-chat-root={cwd ?? "null"} />;
+        <PanelWorkspaceRootConsumer engineSessionId="engine-1" repoPath="/repo">
+          {(workspace) => {
+            if (!panelWorkspaceBodyReady(workspace)) return <div data-loading />;
+            quickChatRoots.push(workspace.root);
+            return <div data-quick-chat-root={workspace.root ?? "null"} />;
           }}
-        />,
+        </PanelWorkspaceRootConsumer>,
       );
       await flushMicrotasks();
     });
@@ -87,7 +76,7 @@ describe("PanelArea workspace consumers", () => {
       workspaceListener?.({ sessionId: "other" });
       await flushMicrotasks();
     });
-    expect(requests).toHaveLength(2);
+    expect(requestCount).toBe(1);
 
     await act(async () => {
       workspaceListener?.({ sessionId: "engine-1" });

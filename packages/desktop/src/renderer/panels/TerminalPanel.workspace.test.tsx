@@ -31,8 +31,11 @@ const starts: Array<{ sessionId: string; cwd?: string; cols: number; rows: numbe
 
 beforeEach(() => {
   ensureMiniDom();
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: { getItem: () => null, setItem: () => undefined },
+  });
   Object.assign(globalThis, {
-    localStorage: { getItem: () => null, setItem: () => undefined },
     ResizeObserver: class {
       observe() {}
       disconnect() {}

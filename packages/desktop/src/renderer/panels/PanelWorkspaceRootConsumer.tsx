@@ -1,0 +1,23 @@
+import React from "react";
+import {
+  usePanelWorkspaceRoot,
+  type PanelWorkspaceState,
+} from "./usePanelWorkspaceRoot";
+
+export function panelWorkspaceBodyReady(workspace: PanelWorkspaceState): boolean {
+  return workspace.ready || workspace.root !== null;
+}
+
+/** Production boundary between PanelArea and its session-owned workspace resolver. */
+export function PanelWorkspaceRootConsumer({
+  engineSessionId,
+  repoPath,
+  children,
+}: {
+  engineSessionId: string | null;
+  repoPath: string | null;
+  children: (workspace: PanelWorkspaceState) => React.ReactNode;
+}) {
+  const workspace = usePanelWorkspaceRoot(engineSessionId, repoPath);
+  return <>{children(workspace)}</>;
+}
