@@ -80,6 +80,8 @@ interface LoginSpec {
   serverName?: string;
   serverUrl: string;
   clientId?: string;
+  clientSecret?: string;
+  clientRegistration?: OAuthCredentialSecret["clientRegistration"];
   authorizationEndpoint?: string;
   tokenEndpoint?: string;
   revocationEndpoint?: string;
@@ -314,7 +316,7 @@ export class McpOAuthService {
   async login(input: McpOAuthLoginInput): Promise<McpOAuthActionResult> {
     let stage: OAuthFailureStage = "validation";
     try {
-      const spec = this.loginSpec(input);
+      const spec = this.withStoredLoginMetadata(this.loginSpec(input));
       validateOAuthEndpoint(spec.serverUrl, "MCP server URL");
       if (spec.authorizationEndpoint)
         validateOAuthEndpoint(spec.authorizationEndpoint, "authorization endpoint");
@@ -458,6 +460,7 @@ export class McpOAuthService {
     }
     const serverName = input.serverName.trim();
     if (!serverName) throw new Error("MCP OAuth login requires a server name");
+    const scopes = input.scopes?.map((scope) => scope.trim()).filter(Boolean);
     return {
       credentialId: safeCredentialId(input.credentialId ?? generatedCredentialId(serverName)),
       label: `${serverName} OAuth`,
@@ -466,8 +469,43 @@ export class McpOAuthService {
       clientId: input.clientId?.trim() || undefined,
       authorizationEndpoint: input.authorizationEndpoint?.trim() || undefined,
       tokenEndpoint: input.tokenEndpoint?.trim() || undefined,
-      scopes: input.scopes?.map((scope) => scope.trim()).filter(Boolean),
+      scopes: scopes?.length ? scopes : undefined,
     };
+  }
+
+  private withStoredLoginMetadata(spec: LoginSpec): LoginSpec {
+    const prior = this.store.resolve(spec.credentialId, "full");
+    if (
+      !prior ||
+      prior.type !== "oauth" ||
+      !prior.secret ||
+      prior.meta?.mcpServerUrl !== spec.serverUrl
+    ) {
+      return spec;
+    }
+    try {
+      const secret = parseOAuthCredentialSecret(prior.secret);
+      const storedClientId = secret.clientRegistration?.clientId ?? secret.clientId;
+      const clientId = spec.clientId ?? storedClientId ?? prior.meta.clientId;
+      const sameRegistration = Boolean(clientId && storedClientId && clientId === storedClientId);
+      return {
+        ...spec,
+        clientId,
+        clientSecret: sameRegistration
+          ? (secret.clientSecret ?? secret.clientRegistration?.clientSecret)
+          : undefined,
+        clientRegistration: sameRegistration ? secret.clientRegistration : undefined,
+        authorizationEndpoint: spec.authorizationEndpoint ?? prior.meta.authUrl,
+        tokenEndpoint: spec.tokenEndpoint ?? secret.tokenEndpoint ?? prior.meta.tokenEndpoint,
+        revocationEndpoint:
+          spec.revocationEndpoint ?? secret.revocationEndpoint ?? prior.meta.revocationEndpoint,
+        scopes: spec.scopes?.length
+          ? spec.scopes
+          : (secret.scopes ?? prior.meta.scopes ?? undefined),
+      };
+    } catch {
+      return spec;
+    }
   }
 
   private async explicitLogin(spec: LoginSpec): Promise<{
@@ -479,6 +517,7 @@ export class McpOAuthService {
       tokens = await this.authorizeFn(
         {
           clientId: spec.clientId!,
+          clientSecret: spec.clientSecret,
           authorizationEndpoint: spec.authorizationEndpoint!,
           tokenEndpoint: spec.tokenEndpoint!,
           scopes: spec.scopes,
@@ -492,6 +531,8 @@ export class McpOAuthService {
     return {
       secret: this.secretFromTokens(tokens, {
         clientId: spec.clientId,
+        clientSecret: spec.clientSecret,
+        clientRegistration: spec.clientRegistration,
         tokenEndpoint: spec.tokenEndpoint,
         revocationEndpoint: spec.revocationEndpoint,
         resource: spec.serverUrl,

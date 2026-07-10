@@ -47,13 +47,21 @@ describe("McpOAuthService", () => {
       revocationTimeoutMs?: number;
       authorizeError?: Error;
       logWarning?: (event: string, fields: Record<string, unknown>) => void;
+      onAuthorizeConfig?: (config: {
+        clientId: string;
+        clientSecret?: string;
+        authorizationEndpoint: string;
+        tokenEndpoint: string;
+        scopes?: string[];
+      }) => void;
     } = {},
   ) {
     const store = new CredentialStore(undefined, new TestCipher());
     const service = new McpOAuthService({
       store,
       openExternal: () => {},
-      authorizeFn: async () => {
+      authorizeFn: async (config) => {
+        options.onAuthorizeConfig?.(config);
         if (options.authorizeError) throw options.authorizeError;
         return (
           options.authorizeTokens ?? {
@@ -492,5 +500,149 @@ describe("McpOAuthService", () => {
       },
     ]);
     expect(store.list()).toEqual([]);
+  });
+
+  test("relogin reuses same-server explicit metadata after invalid_grant without discovery", async () => {
+    const now = Date.UTC(2026, 0, 1);
+    const authorizeConfigs: Array<{
+      clientId: string;
+      clientSecret?: string;
+      authorizationEndpoint: string;
+      tokenEndpoint: string;
+      scopes?: string[];
+    }> = [];
+    let authorizeCount = 0;
+    let discoveryOrRefreshCalls = 0;
+    const store = new CredentialStore(undefined, new TestCipher());
+    const service = new McpOAuthService({
+      store,
+      now: () => now,
+      openExternal: () => {},
+      authorizeFn: async (config) => {
+        authorizeConfigs.push(config);
+        authorizeCount++;
+        return {
+          accessToken: `access-${authorizeCount}`,
+          refreshToken: `refresh-${authorizeCount}`,
+          expiresAt: now - 1,
+          tokenType: "Bearer",
+        };
+      },
+      fetch: (async () => {
+        discoveryOrRefreshCalls++;
+        return Response.json({ error: "invalid_grant" }, { status: 400 });
+      }) as typeof fetch,
+      logWarning: () => {},
+    });
+    await service.login({
+      source: "mcp",
+      serverName: "Explicit Only",
+      serverUrl: "https://mcp.example/rpc",
+      clientId: "registered-client",
+      authorizationEndpoint: "https://auth.example/authorize",
+      tokenEndpoint: "https://auth.example/token",
+      scopes: ["read", "write"],
+    });
+    const first = store.resolve("explicit-only-oauth")!;
+    const firstSecret = parseOAuthCredentialSecret(first.secret!);
+    store.save("user", {
+      ...first,
+      secret: JSON.stringify({
+        ...firstSecret,
+        clientSecret: "stored-private-client-secret",
+        clientRegistration: {
+          clientId: "registered-client",
+          clientSecret: "stored-private-client-secret",
+        },
+      }),
+    });
+
+    await expect(service.refresh("explicit-only-oauth")).rejects.toThrow(/requires login/);
+    expect(store.resolve("explicit-only-oauth")?.meta?.lastRefreshErrorCode).toBe("invalid_grant");
+
+    await expect(
+      service.login({
+        source: "mcp",
+        serverName: "Explicit Only",
+        serverUrl: "https://mcp.example/rpc",
+        credentialId: "explicit-only-oauth",
+      }),
+    ).resolves.toMatchObject({ credential: { id: "explicit-only-oauth" } });
+
+    expect(discoveryOrRefreshCalls).toBe(1);
+    expect(authorizeConfigs).toEqual([
+      {
+        clientId: "registered-client",
+        clientSecret: undefined,
+        authorizationEndpoint: "https://auth.example/authorize",
+        tokenEndpoint: "https://auth.example/token",
+        scopes: ["read", "write"],
+        resource: "https://mcp.example/rpc",
+      },
+      {
+        clientId: "registered-client",
+        clientSecret: "stored-private-client-secret",
+        authorizationEndpoint: "https://auth.example/authorize",
+        tokenEndpoint: "https://auth.example/token",
+        scopes: ["read", "write"],
+        resource: "https://mcp.example/rpc",
+      },
+    ]);
+    expect(parseOAuthCredentialSecret(store.resolve("explicit-only-oauth")!.secret!)).toMatchObject(
+      {
+        accessToken: "access-2",
+        refreshToken: "refresh-2",
+        clientId: "registered-client",
+        clientSecret: "stored-private-client-secret",
+        tokenEndpoint: "https://auth.example/token",
+      },
+    );
+  });
+
+  test("relogin never reuses private registration for a different MCP server URL", async () => {
+    let authorizeCalls = 0;
+    const store = new CredentialStore(undefined, new TestCipher());
+    const service = new McpOAuthService({
+      store,
+      openExternal: () => {},
+      authorizeFn: async () => {
+        authorizeCalls++;
+        return {
+          accessToken: "access",
+          refreshToken: "refresh",
+          tokenType: "Bearer",
+        };
+      },
+      fetch: (async () => new Response(null, { status: 503 })) as typeof fetch,
+      logWarning: () => {},
+    });
+    await service.login({
+      source: "mcp",
+      serverName: "Original",
+      serverUrl: "https://mcp.example/rpc",
+      clientId: "registered-client",
+      authorizationEndpoint: "https://auth.example/authorize",
+      tokenEndpoint: "https://auth.example/token",
+    });
+    const original = store.resolve("original-oauth")!;
+    const originalSecret = parseOAuthCredentialSecret(original.secret!);
+    store.save("user", {
+      ...original,
+      secret: JSON.stringify({ ...originalSecret, clientSecret: "private-registration" }),
+    });
+
+    await expect(
+      service.login({
+        source: "mcp",
+        serverName: "Other",
+        serverUrl: "https://other-mcp.example/rpc",
+        credentialId: "original-oauth",
+      }),
+    ).rejects.toThrow(/MCP_OAUTH_SERVER_ERROR/);
+    expect(authorizeCalls).toBe(1);
+    expect(parseOAuthCredentialSecret(store.resolve("original-oauth")!.secret!)).toMatchObject({
+      clientSecret: "private-registration",
+      accessToken: "access",
+    });
   });
 });
