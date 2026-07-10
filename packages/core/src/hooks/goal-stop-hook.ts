@@ -396,7 +396,7 @@ function indentedContinuationEnd(
     const line = text.slice(nextLineStart, nextEnd);
     const indent = line.match(/^[ \t]*/u)?.[0].length ?? 0;
     if (line.trim() !== "") {
-      if (/^[ \t]*[\w.-]+[ \t]*:/u.test(line)) break;
+      if (/^[ \t]*[\w.-]+[ \t]*:(?:\s|$)/u.test(line)) break;
       if (!allowSequenceItems && /^[ \t]*-[ \t]+/u.test(line)) break;
       if (indent <= keyIndent) break;
       sawIndentedContent = true;

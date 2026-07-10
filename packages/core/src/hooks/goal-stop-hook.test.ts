@@ -477,6 +477,21 @@ describe("createGoalStopHook — three-state judge", () => {
       ].join("\n"),
     ],
     [
+      "URL and URN scalar continuations after a secret",
+      [
+        "password: first-secret",
+        "  https://vault.example/private/opaque-second-secret",
+        "  urn:opaque-third-secret",
+        "safe: visible",
+      ].join("\n"),
+      ["password: [REDACTED]", "safe: visible"].join("\n"),
+    ],
+    [
+      "colon-space sibling fields after a secret",
+      ["password: mapping-secret", "  status: healthy", "safe: visible"].join("\n"),
+      ["password: [REDACTED]", "  status: healthy", "safe: visible"].join("\n"),
+    ],
+    [
       "argv array credential pairs",
       '["deploy","--token","argv-secret","--API-key", "argv-key-secret","--verbose"]',
       '["deploy","--token","[REDACTED]","--API-key", "[REDACTED]","--verbose"]',
