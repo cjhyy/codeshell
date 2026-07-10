@@ -162,6 +162,10 @@ export interface TurnLoopDeps {
    * tests (turn loop tolerates undefined).
    */
   consumeSteer?: (source?: "normal_step" | "finalize_backfill") => SteerItem[];
+  /** Build model-facing content for a queued steer item, including attachments. */
+  buildSteerUserMessageContent?: (
+    item: SteerItem,
+  ) => string | ContentBlock[] | Promise<string | ContentBlock[]>;
   /**
    * Execution-level idempotency guard for host-supplied user/steer intents.
    * Returns false only when a present clientMessageId has already entered this
@@ -643,7 +647,7 @@ export class TurnLoop {
         // they join THIS step's request — no abort, no lost in-flight work. Same
         // loop-top user-push pattern as turnStartInjection / turn-limit warnings
         // below. Push to transcript too so they persist + survive resume.
-        this.consumeQueuedSteer(messages, "normal_step");
+        await this.consumeQueuedSteer(messages, "normal_step");
 
         const state = initialTurnState(this.turnCount);
 
@@ -972,7 +976,7 @@ export class TurnLoop {
             hasToolUse: false,
           });
           messages.push({ role: "assistant", content: finalText });
-          if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+          if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
           }
 
@@ -1059,7 +1063,7 @@ export class TurnLoop {
             });
           }
           this.stopBlockCount = 0;
-          if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+          if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
           }
           messages = this.redactConsumedSensitiveToolResults(messages);
@@ -1203,7 +1207,7 @@ export class TurnLoop {
           tlog.info("turn.goal_self_reported_complete", { cat: "goal" });
           this.stopBlockCount = 0;
           this.deps.clearPersistedGoal?.();
-          if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+          if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
           }
           messages = this.redactConsumedSensitiveToolResults(messages);
@@ -1222,7 +1226,7 @@ export class TurnLoop {
           tlog.info("turn.goal_user_cancelled", { cat: "goal" });
           this.stopBlockCount = 0;
           this.deps.clearPersistedGoal?.();
-          if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+          if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
           }
           return { text: finalText, reason: "completed", messages };
@@ -1247,7 +1251,7 @@ export class TurnLoop {
             message: { role: "assistant", content: finalText },
           });
           messages.push({ role: "assistant", content: finalText });
-          if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+          if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
           }
           messages = this.redactConsumedSensitiveToolResults(messages);
@@ -1336,7 +1340,7 @@ export class TurnLoop {
       turnCount: this.turnCount,
     });
 
-    this.consumeQueuedSteer(messages, "finalize_backfill");
+    await this.consumeQueuedSteer(messages, "finalize_backfill");
     const hasPendingSensitiveToolResults = this.sensitiveToolResultRedactions.size > 0;
     messages = this.prepareMessagesForModel(messages);
     if (hasPendingSensitiveToolResults) {
@@ -1481,13 +1485,14 @@ export class TurnLoop {
     return this.turnCount;
   }
 
-  private consumeQueuedSteer(
+  private async consumeQueuedSteer(
     messages: Message[],
     source: "normal_step" | "finalize_backfill",
-  ): boolean {
+  ): Promise<boolean> {
     const steered = this.deps.consumeSteer?.(source) ?? [];
     let consumed = false;
-    for (const { id, text, clientMessageId } of steered) {
+    for (const item of steered) {
+      const { id, text, clientMessageId } = item;
       if (!text) continue;
       if (clientMessageId && this.deps.claimClientMessageId?.(clientMessageId, "steer") === false) {
         logger.info("steer.submit.duplicate_ignored", {
@@ -1499,8 +1504,13 @@ export class TurnLoop {
         continue;
       }
       consumed = true;
-      messages.push({ role: "user", content: text });
-      this.deps.transcript.appendMessage("user", text, { steerId: id, clientMessageId });
+      const content = this.deps.buildSteerUserMessageContent
+        ? await this.deps.buildSteerUserMessageContent(item)
+        : text;
+      const message: Message = { role: "user", content };
+      messages.push(message);
+      this.trackFreshImageMessage(message);
+      this.deps.transcript.appendMessage("user", content, { steerId: id, clientMessageId });
       this.config.onStream?.({ type: "steer_injected", text, id });
     }
     return consumed;

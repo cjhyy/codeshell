@@ -1,4 +1,5 @@
 import { describe, test, expect } from "bun:test";
+import type { InputAttachmentMeta } from "../protocol/types.js";
 import type { StreamEvent } from "../types.js";
 import {
   enqueueSteerItem,
@@ -35,6 +36,21 @@ describe("steer-injection wiring contract", () => {
 });
 
 describe("steer-queue helpers (id-keyed, revocable)", () => {
+  const attachment: InputAttachmentMeta = {
+    id: "att-1",
+    sessionId: "s1",
+    kind: "image",
+    origin: "paste",
+    path: ".code-shell/attachments/s1/shot.png",
+    absPath: "/tmp/work/.code-shell/attachments/s1/shot.png",
+    relPath: ".code-shell/attachments/s1/shot.png",
+    mime: "image/png",
+    size: 12,
+    sha256: "0".repeat(64),
+    originalName: "shot.png",
+    createdAt: 1,
+  };
+
   test("enqueue appends with id + trimmed text", () => {
     let q: SteerItem[] = [];
     q = enqueueSteerItem(q, "a", "  hi  ", "client-a");
@@ -43,6 +59,19 @@ describe("steer-queue helpers (id-keyed, revocable)", () => {
       { id: "a", text: "hi", clientMessageId: "client-a" },
       { id: "b", text: "there" },
     ]);
+  });
+
+  test("enqueue serializes and consumes structured attachments with the steer item", () => {
+    let q: SteerItem[] = [];
+    q = enqueueSteerItem(q, "a", "  inspect this  ", "client-a", [attachment]);
+
+    const serialized = JSON.parse(JSON.stringify(q)) as SteerItem[];
+    const { drained, rest } = consumeSteerItems(serialized);
+
+    expect(drained).toEqual([
+      { id: "a", text: "inspect this", clientMessageId: "client-a", attachments: [attachment] },
+    ]);
+    expect(rest).toEqual([]);
   });
 
   test("enqueue drops blank text and missing id", () => {

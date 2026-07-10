@@ -391,8 +391,20 @@ contextBridge.exposeInMainWorld("codeshell", {
    * guidance mid-run). No-op-ish if the session has no active run (message waits
    * for its next run).
    */
-  steer: (sessionId: string, text: string, id?: string, clientMessageId?: string) =>
-    rpc("agent/steer", { sessionId, text, id, clientMessageId }),
+  steer: (
+    sessionId: string,
+    text: string,
+    id?: string,
+    clientMessageId?: string,
+    attachments?: InputAttachmentMeta[],
+  ) =>
+    rpc("agent/steer", {
+      sessionId,
+      text,
+      id,
+      clientMessageId,
+      ...(attachments && attachments.length > 0 ? { attachments } : {}),
+    }),
   /**
    * Revoke a still-pending steer entry by id (撤回). Returns { removed } —
    * false means the turn loop already consumed it (can't take it back; it will

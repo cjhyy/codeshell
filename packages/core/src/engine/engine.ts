@@ -819,6 +819,7 @@ export class Engine {
     text: string,
     id = "",
     clientMessageId?: string,
+    attachments?: InputAttachmentMeta[],
   ): EnqueueSteerResult {
     const q = this.steerQueueBySid.get(sessionId) ?? [];
     const entryId = id || `steer-${q.length}`;
@@ -830,18 +831,20 @@ export class Engine {
         sessionId,
         id: entryId,
         clientMessageId,
+        attachmentCount: attachments?.length ?? 0,
         activeRunSessionId: activeRunSessionId ?? null,
         queueLength: q.length,
       });
       return { accepted: false, id: entryId };
     }
-    const next = enqueueSteerItem(q, entryId, text, clientMessageId);
+    const next = enqueueSteerItem(q, entryId, text, clientMessageId, attachments);
     if (next === q) return { accepted: false, id: entryId }; // blank text dropped
     this.steerQueueBySid.set(sessionId, next);
     logger.info("steer.enqueue.accepted", {
       sessionId,
       id: entryId,
       clientMessageId,
+      attachmentCount: attachments?.length ?? 0,
       activeRunSessionId,
       queueLength: next.length,
     });
@@ -1950,6 +1953,23 @@ export class Engine {
             return info;
           },
           consumeSteer: (source) => this.consumeSteer(sid, source),
+          buildSteerUserMessageContent: async (item) => {
+            const steerImageInput = await prepareRunImageInput({
+              task: item.text,
+              cwd,
+              llm: this.config.llm,
+              sessionId: sid,
+              attachments: item.attachments,
+            });
+            if (!steerImageInput.ok) {
+              throw new Error(steerImageInput.result.text);
+            }
+            return buildRunUserMessageContent(
+              steerImageInput.parsedTask,
+              cwd,
+              steerImageInput.taskText,
+            );
+          },
           claimClientMessageId: (clientMessageId, source) =>
             claimClientMessageId(session, clientMessageId, source),
           recordCumulativeUsage,

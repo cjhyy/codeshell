@@ -143,7 +143,7 @@ describe("queued input", () => {
     expect(first.item?.text).toBe("inspect it");
     expect(first.item?.displayText).toBe("inspect @src");
     expect(first.item?.attachments).toEqual([attachment]);
-    expect(canSteerQueuedItem(first.item!)).toBe(false);
+    expect(canSteerQueuedItem(first.item!)).toBe(true);
 
     const drained = drainQueuedInput(state, "repo:s1");
     expect(drained.text).toBe("inspect it");
@@ -174,6 +174,7 @@ describe("queued input", () => {
     expect(drained.text).toBe("");
     expect(drained.displayText).toBe("<codeshell-image />");
     expect(drained.attachments).toEqual([attachment]);
+    expect(canSteerQueuedItem(dequeueQueuedInput(state, "repo:s1").item!)).toBe(false);
   });
 
   it("drain on an empty bucket returns null without touching state", () => {

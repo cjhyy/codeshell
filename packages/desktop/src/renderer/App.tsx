@@ -2549,7 +2549,7 @@ function App() {
         }
         steeredIdsRef.current.add(item.id);
         void window.codeshell
-          .steer(engineSessionId, item.text, item.id, item.clientMessageId)
+          .steer(engineSessionId, item.text, item.id, item.clientMessageId, item.attachments)
           .then((res) => {
             const accepted = (res as { result?: { accepted?: boolean } })?.result?.accepted;
             if (accepted !== false) return;

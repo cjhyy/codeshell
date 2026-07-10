@@ -521,6 +521,7 @@ export interface CodeshellApi {
     text: string,
     id?: string,
     clientMessageId?: string,
+    attachments?: InputAttachmentMeta[],
   ): Promise<RpcResponse>;
   /** Revoke a still-pending steer entry by id (撤回). The response data carries
    *  `{ removed }` — false if the loop already consumed it. */

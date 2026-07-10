@@ -1939,6 +1939,7 @@ export class AgentServer {
         params.text,
         params.id,
         params.clientMessageId,
+        params.attachments,
       );
       this.transport.send(createResponse(req.id, { ok: true, ...result }));
     } catch (err) {
