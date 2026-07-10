@@ -1,6 +1,8 @@
 import { describe, it, expect } from "bun:test";
 import { BUILTIN_AGENT_PRESETS, resolveBuiltinToolNames } from "./index.js";
 import { BUILTIN_TOOLS, BUILTIN_TOOL_GUARDS } from "../tool-system/builtin/index.js";
+import { cronListToolDef } from "../tool-system/builtin/cron-list.definition.js";
+import { sleepToolDef } from "../tool-system/builtin/sleep.definition.js";
 
 // Regression: the background-shell companions (BashOutput / KillShell /
 // ListShells) were registered in BUILTIN_TOOLS and described to the model, but
@@ -10,6 +12,16 @@ import { BUILTIN_TOOLS, BUILTIN_TOOL_GUARDS } from "../tool-system/builtin/index
 // "Tool not found: BashOutput" and the whole turn died with model_error.
 describe("preset builtin tool whitelist", () => {
   const registeredNames = new Set(BUILTIN_TOOLS.map((t) => t.definition.name));
+
+  it.each([sleepToolDef, cronListToolDef])(
+    "$name registration consumes metadata from its definition source",
+    (toolDef) => {
+      const registered = BUILTIN_TOOLS.find((tool) => tool.definition.name === toolDef.name);
+
+      expect(registered?.definition.description).toBe(toolDef.description);
+      expect(registered?.definition.inputSchema).toBe(toolDef.inputSchema);
+    },
+  );
 
   it("every preset only lists tools that actually exist in BUILTIN_TOOLS", () => {
     for (const preset of Object.values(BUILTIN_AGENT_PRESETS)) {

@@ -10,6 +10,8 @@
 
 import type { PermissionRule } from "../types.js";
 import { loadSections } from "../prompt/section-loader.js";
+import { cronListToolDef } from "../tool-system/builtin/cron-list.definition.js";
+import { sleepToolDef } from "../tool-system/builtin/sleep.definition.js";
 
 export const AGENT_PRESET_NAMES = ["general", "terminal-coding"] as const;
 /** Built-in preset names. Custom presets use arbitrary strings via registerPreset(). */
@@ -68,11 +70,11 @@ const GENERAL_BUILTIN_TOOLS = [
   "ExitPlanMode",
   "ToolSearch",
   "TodoWrite",
-  "Sleep",
+  sleepToolDef.name,
   "Config",
   "CronCreate",
   "CronDelete",
-  "CronList",
+  cronListToolDef.name,
   // cc-orchestrator:驱动外部 claude CLI 跑一轮。同 BashOutput/UseCredential/
   // EditModelCatalog 的 whitelist 要求:已在 BUILTIN_TOOLS 注册,但 registerBuiltins
   // 按 preset 集过滤 → 名单里没有它,agent 就没有「指挥 Claude Code」的工具,只能幻觉
@@ -153,8 +155,8 @@ const GENERAL_PERMISSION_RULES: PermissionRule[] = [
   { tool: "ExitPlanMode", decision: "allow" },
   { tool: "ToolSearch", decision: "allow" },
   { tool: "TodoWrite", decision: "allow" },
-  { tool: "Sleep", decision: "allow" },
-  { tool: "CronList", decision: "allow" },
+  { tool: sleepToolDef.name, decision: "allow" },
+  { tool: cronListToolDef.name, decision: "allow" },
   { tool: "CheckQuota", decision: "allow" },
   { tool: "Skill", decision: "allow" },
   // ListMcpResources only enumerates resource names (and the executor filters
