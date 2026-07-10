@@ -1398,6 +1398,74 @@ describe("createGoalStopHook — three-state judge", () => {
     expect(result.data?.goalVerdict).toEqual({ met: false, gaps: "run tests" });
   });
 
+  it("F7: bounds a long objective before building the judge prompt", async () => {
+    const objective = `OBJECTIVE-HEAD-${"x".repeat(30_000)}-OBJECTIVE-TAIL`;
+    const judge = fakeJudge('{"met":false,"waiting":false,"gaps":"run tests"}');
+    const hook = createGoalStopHook({ goal: objective, llm: judge, log: noopLog });
+
+    const result = await hook({
+      eventName: "on_stop",
+      data: { sessionId: SID, finalText: "implementation complete" },
+    });
+
+    const payload = JSON.parse(judge.lastUserContent ?? "{}") as { 目标?: string };
+    expect(judge.calls).toBe(1);
+    expect(judge.lastUserContent?.length).toBeLessThanOrEqual(20_000);
+    expect(payload.目标).toStartWith("OBJECTIVE-HEAD-");
+    expect(payload.目标).toEndWith("-OBJECTIVE-TAIL");
+    expect(payload.目标).toContain("已截断");
+    expect(Array.from(payload.目标 ?? "").length).toBeLessThan(Array.from(objective).length);
+    expect(result.continueSession).toBe(true);
+    expect(result.data?.goalVerdict).toEqual({ met: false, gaps: "run tests" });
+  });
+
+  it("F7: terminates explicitly when the bounded judge prompt is still too large", async () => {
+    const judge = fakeJudge('{"met":false,"waiting":false,"gaps":"more work"}');
+    const hook = createGoalStopHook({
+      goal: `OBJECTIVE-HEAD-${"g".repeat(30_000)}-OBJECTIVE-TAIL`,
+      llm: judge,
+      log: noopLog,
+    });
+
+    try {
+      for (let index = 0; index < 16; index++) {
+        backgroundJobRegistry.start(
+          `f7-fixed-overflow-${index}`,
+          SID,
+          `BACKGROUND-${index}-${String(index % 10).repeat(2_000)}`,
+        );
+      }
+
+      const result = await hook({
+        eventName: "on_stop",
+        data: { sessionId: SID, finalText: "implementation complete" },
+      });
+
+      expect(judge.calls).toBe(0);
+      expect(result.continueSession).toBeUndefined();
+      expect(result.messages).toBeUndefined();
+      expect(result.data?.goalBudgetTermination).toBe("judge_prompt_too_large");
+    } finally {
+      backgroundJobRegistry.reset();
+    }
+  });
+
+  it("F7 regression: preserves a normal objective and judge verdict", async () => {
+    const judge = fakeJudge('{"met":true,"waiting":false,"gaps":""}');
+    const hook = createGoalStopHook({ goal: "ship the normal release", llm: judge, log: noopLog });
+
+    const result = await hook({
+      eventName: "on_stop",
+      data: { sessionId: SID, finalText: "release shipped" },
+    });
+
+    const payload = JSON.parse(judge.lastUserContent ?? "{}") as { 目标?: string };
+    expect(judge.calls).toBe(1);
+    expect(payload.目标).toBe("ship the normal release");
+    expect(result.continueSession).toBeUndefined();
+    expect(result.data?.goalVerdict).toEqual({ met: true, gaps: "" });
+  });
+
   it("uses a dedicated timeout shorter than the parent model request timeout", async () => {
     let observedSignal: AbortSignal | undefined;
     const parent = new AbortController();

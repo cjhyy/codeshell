@@ -183,6 +183,7 @@ interface JudgeVerdict {
 /** V1 evidence budget: bounded deterministic projection, no extra LLM summary. */
 const MAX_TOOL_RESULT_CHARS = 1_600;
 const MAX_TOOL_EVIDENCE_CHARS = 8_000;
+const MAX_JUDGE_OBJECTIVE_CHARS = 4_000;
 const MAX_JUDGE_FINAL_TEXT_CHARS = 4_000;
 const MAX_JUDGE_USER_MESSAGE_CHARS = 20_000;
 const MAX_JUDGE_REQUESTS_PER_EVIDENCE_WINDOW = 3;
@@ -907,7 +908,12 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     const g = normalizeGoal(opts.goal ?? (ctx.data.goal as string | GoalConfig | undefined));
     // No goal → not Goal mode → allow stop.
     if (!g) return {};
-    const goal = g.objective;
+    // The persisted objective is intentionally immutable for the life of a
+    // Goal, so context compaction can never make an oversized objective fit a
+    // later judge request. Bound the judge's projection on first use while
+    // preserving both ends (deadlines/acceptance criteria often live at the
+    // tail); the original persisted Goal remains untouched.
+    const goal = truncateHeadTail(g.objective, MAX_JUDGE_OBJECTIVE_CHARS);
 
     const sessionId = ctx.data.sessionId;
 
@@ -1074,10 +1080,12 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
         chars: judgeUserContent.length,
         maxChars: MAX_JUDGE_USER_MESSAGE_CHARS,
       });
-      return {
-        continueSession: true,
-        messages: ["继续 —— 目标裁判输入超过安全上限,请继续推进并缩小待判定上下文。"],
-      };
+      // The objective is already bounded above. Any remaining overflow comes
+      // from fixed/bounded prompt sections and cannot be repaired by asking the
+      // main loop to compact and try the same frozen input again. Reuse F4's
+      // explicit hook-to-loop termination channel so TurnLoop stops immediately
+      // instead of burning every stop-block on an unrecoverable judge request.
+      return { data: { goalBudgetTermination: "judge_prompt_too_large" } };
     }
 
     const parentSignal = ctx.data.signal as AbortSignal | undefined;
