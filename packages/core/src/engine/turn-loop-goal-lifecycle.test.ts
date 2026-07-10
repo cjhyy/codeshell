@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { LLMClientBase } from "../llm/client-base.js";
 import { registerProvider } from "../llm/client-factory.js";
-import type { CreateMessageOptions } from "../llm/types.js";
+import type { CreateMessageOptions, LLMUsageTracker } from "../llm/types.js";
 import type { HookResult } from "../hooks/events.js";
 import {
   createGoalStopHook,
@@ -16,6 +16,7 @@ import type { LLMResponse, Message, StreamEvent, ToolCall, ToolResult } from "..
 import { CANCEL_GOAL_TOOL_NAME } from "../tool-system/builtin/cancel-goal.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
+import { ToolRegistry } from "../tool-system/registry.js";
 import { Engine } from "./engine.js";
 import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js";
 
@@ -32,6 +33,15 @@ function toolResponse(toolCall: ToolCall): LLMResponse {
   return {
     text: "",
     toolCalls: [toolCall],
+    stopReason: "tool_use",
+    usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+  };
+}
+
+function toolBatchResponse(toolCalls: ToolCall[]): LLMResponse {
+  return {
+    text: "",
+    toolCalls,
     stopReason: "tool_use",
     usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
   };
@@ -129,6 +139,35 @@ function makeTurnLoopDeps(
 }
 
 describe("TurnLoop goal lifecycle guardrails", () => {
+  it("does not scan sensitive-result tool metadata for a non-goal run", async () => {
+    const { deps } = makeTurnLoopDeps([stopResponse("plain completion")]);
+    let filterReads = 0;
+    deps.tools = new Proxy(
+      [
+        {
+          name: "OrdinaryTool",
+          description: "ordinary",
+          inputSchema: { type: "object" },
+          sensitiveResult: true,
+        },
+      ],
+      {
+        get(target, property, receiver) {
+          if (property === "filter") filterReads += 1;
+          return Reflect.get(target, property, receiver);
+        },
+      },
+    );
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 2,
+      maxToolCallsPerTurn: 10,
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(filterReads).toBe(0);
+  });
+
   it("projects recent tool results and goal progress into the private judge context", async () => {
     const snapshots: any[] = [];
     let publicStopData: Record<string, unknown> | undefined;
@@ -214,6 +253,161 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     ]);
   });
 
+  it("scrubs bare env and URL query credentials from the runtime judge snapshot", async () => {
+    const snapshots: any[] = [];
+    const outputs: Record<string, string> = {
+      BareToken: "TOKEN=runtime-bare-token-secret",
+      BarePassword: "PASSWORD=runtime-bare-password-secret",
+      QueryCredential:
+        "https://example.com/path?token=runtime-query-token&api_key=runtime-query-key&password=runtime-query-password",
+    };
+    const secrets = [
+      "runtime-bare-token-secret",
+      "runtime-bare-password-secret",
+      "runtime-query-token",
+      "runtime-query-key",
+      "runtime-query-password",
+    ];
+    const toolCalls = Object.keys(outputs).map((toolName, index) => ({
+      id: `scrub-${index}`,
+      toolName,
+      args: {},
+    }));
+    const { deps } = makeTurnLoopDeps([toolBatchResponse(toolCalls), stopResponse("scrubbed")], {
+      execute: async (call) => ({
+        id: call.id,
+        toolName: call.toolName,
+        result: outputs[call.toolName],
+      }),
+      hook: (event) =>
+        event === "on_stop" ? { data: { goalVerdict: { met: true, gaps: "" } } } : {},
+      updateGoalJudgeContext: (context) => snapshots.push(context),
+    });
+
+    await new TurnLoop(deps, {
+      maxTurns: 4,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "verify scrubbed credentials" },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(snapshots).toHaveLength(1);
+    const serialized = JSON.stringify(snapshots[0]);
+    for (const secret of secrets) expect(serialized).not.toContain(secret);
+    expect(serialized).toContain("[REDACTED]");
+  });
+
+  it("honors tool registration metadata that declares sensitive results", async () => {
+    const snapshots: any[] = [];
+    const secret = "METADATA_DECLARED_RESULT_SECRET";
+    const { deps } = makeTurnLoopDeps(
+      [
+        toolResponse({ id: "metadata-secret-1", toolName: "CredentialLookup", args: {} }),
+        stopResponse("credential checked"),
+      ],
+      {
+        execute: async (call) => ({
+          id: call.id,
+          toolName: call.toolName,
+          result: secret,
+        }),
+        hook: (event) =>
+          event === "on_stop" ? { data: { goalVerdict: { met: true, gaps: "" } } } : {},
+        updateGoalJudgeContext: (context) => snapshots.push(context),
+      },
+    );
+    deps.tools = [
+      {
+        name: "CredentialLookup",
+        description: "returns credentials",
+        inputSchema: { type: "object" },
+        sensitiveResult: true,
+      },
+    ];
+
+    await new TurnLoop(deps, {
+      maxTurns: 4,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "check credential state" },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(snapshots).toHaveLength(1);
+    expect(JSON.stringify(snapshots[0])).not.toContain(secret);
+    expect(snapshots[0].toolResults).toEqual([
+      { turnCount: 1, toolName: "CredentialLookup", status: "success" },
+    ]);
+  });
+
+  it("carries sensitiveResult from ToolRegistry definitions into TurnLoop", async () => {
+    const snapshots: any[] = [];
+    const secret = "REGISTRY_TO_TURN_LOOP_SECRET";
+    const registry = new ToolRegistry({ builtinTools: [] });
+    registry.registerTool({
+      name: "RegistryCredentialLookup",
+      description: "returns credentials",
+      inputSchema: { type: "object", properties: {} },
+      source: "builtin",
+      permissionDefault: "allow",
+      sensitiveResult: true,
+    });
+    const { deps } = makeTurnLoopDeps(
+      [
+        toolResponse({ id: "registry-secret-1", toolName: "RegistryCredentialLookup", args: {} }),
+        stopResponse("credential checked"),
+      ],
+      {
+        execute: async (call) => ({ id: call.id, toolName: call.toolName, result: secret }),
+        hook: (event) =>
+          event === "on_stop" ? { data: { goalVerdict: { met: true, gaps: "" } } } : {},
+        updateGoalJudgeContext: (context) => snapshots.push(context),
+      },
+    );
+    deps.tools = registry.getToolDefinitions();
+
+    await new TurnLoop(deps, {
+      maxTurns: 4,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "check registry credential state" },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(deps.tools[0]?.sensitiveResult).toBe(true);
+    expect(snapshots).toHaveLength(1);
+    expect(JSON.stringify(snapshots[0])).not.toContain(secret);
+    expect(snapshots[0].toolResults).toEqual([
+      { turnCount: 1, toolName: "RegistryCredentialLookup", status: "success" },
+    ]);
+  });
+
+  it("retains all 25 results from one legal tool batch for the judge", async () => {
+    const snapshots: any[] = [];
+    const toolCalls = Array.from({ length: 25 }, (_, index) => ({
+      id: `batch-${index + 1}`,
+      toolName: `BatchTool${index + 1}`,
+      args: {},
+    }));
+    const { deps } = makeTurnLoopDeps([toolBatchResponse(toolCalls), stopResponse("batch done")], {
+      execute: async (call) => ({
+        id: call.id,
+        toolName: call.toolName,
+        result: `evidence for ${call.toolName}`,
+      }),
+      hook: (event) =>
+        event === "on_stop" ? { data: { goalVerdict: { met: true, gaps: "" } } } : {},
+      updateGoalJudgeContext: (context) => snapshots.push(context),
+    });
+
+    await new TurnLoop(deps, {
+      maxTurns: 4,
+      maxToolCallsPerTurn: 25,
+      goal: { objective: "inspect the complete batch" },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(snapshots).toHaveLength(1);
+    expect(snapshots[0].toolResults).toHaveLength(25);
+    expect(snapshots[0].toolResults[0].text).toContain("BatchTool1");
+    expect(snapshots[0].toolResults[12].text).toContain("BatchTool13");
+    expect(snapshots[0].toolResults[24].text).toContain("BatchTool25");
+  });
+
   it("stops with goal_budget_exhausted before executing tool calls", async () => {
     const events: StreamEvent[] = [];
     const { deps, calls, executedTools } = makeTurnLoopDeps([
@@ -247,6 +441,51 @@ describe("TurnLoop goal lifecycle guardrails", () => {
           event.message.content.includes("Goal 预算已耗尽"),
       ),
     ).toBe(true);
+  });
+
+  it("charges judge usage to the Goal budget before deciding to continue", async () => {
+    let judgeContext: GoalJudgeRuntimeContext | undefined;
+    let judgeCalls = 0;
+    let loop!: TurnLoop;
+    const judge: GoalJudgeLLM = {
+      async createMessage(): Promise<LLMResponse> {
+        judgeCalls += 1;
+        return {
+          text: '{"met":false,"waiting":false,"gaps":"still incomplete"}',
+          toolCalls: [],
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        };
+      },
+    };
+    const goalHook = createGoalStopHook({
+      goal: "finish within budget",
+      llm: judge,
+      log: { info() {}, warn() {}, error() {} },
+      getJudgeContext: () => judgeContext,
+      onJudgeUsage: (usage) => loop.recordGoalJudgeUsage(usage),
+    });
+    const { deps, calls } = makeTurnLoopDeps([stopResponse("not done")], {
+      hook: (event, data) =>
+        event === "on_stop"
+          ? goalHook({ eventName: "on_stop", data: { ...data, sessionId: "goal-loop-test" } })
+          : {},
+      updateGoalJudgeContext: (context) => {
+        judgeContext = context as GoalJudgeRuntimeContext;
+      },
+    });
+    loop = new TurnLoop(deps, {
+      maxTurns: 4,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "finish within budget", tokenBudget: 16 },
+      maxStopBlocks: 3,
+    });
+
+    const result = await loop.run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("goal_budget_exhausted");
+    expect(result.goalTermination).toBe("token_budget_exhausted");
+    expect(calls).toHaveLength(1);
+    expect(judgeCalls).toBe(1);
   });
 
   it("forces a stop when the stop hook reaches maxStopBlocks, bounding continuations", async () => {
@@ -352,8 +591,10 @@ const engineScenarios = new Map<
   {
     mainResponses: LLMResponse[];
     mainCalls: number;
+    judgeCalls?: number;
     judgeResponse?: string;
     systemPrompts?: string[];
+    lastUsage?: LLMUsageTracker;
   }
 >();
 
@@ -368,12 +609,16 @@ class GoalLifecycleClient extends LLMClientBase {
 
     const isMainTurn = (options.tools?.length ?? 0) > 0;
     if (!isMainTurn) {
-      return {
+      const response: LLMResponse = {
         text: scenario.judgeResponse ?? "aux",
         toolCalls: [],
         stopReason: "stop",
         usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
       };
+      scenario.judgeCalls = (scenario.judgeCalls ?? 0) + 1;
+      this.recordUsage(response.usage!, options);
+      scenario.lastUsage = this.getUsage();
+      return response;
     }
 
     const response =
@@ -383,6 +628,7 @@ class GoalLifecycleClient extends LLMClientBase {
       response.usage ?? { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
       options,
     );
+    scenario.lastUsage = this.getUsage();
     return response;
   }
 }
@@ -403,6 +649,7 @@ function persistedState(
 ): {
   activeGoal?: { objective: string; setAtMs?: number };
   goalTerminal?: { objective: string; setAtMs?: number; reason: string };
+  tokenUsage?: { promptTokens: number; completionTokens: number; totalTokens: number };
 } {
   const raw = readFileSync(join(dir, "sessions", sessionId, "state.json"), "utf8");
   return JSON.parse(raw);
@@ -467,6 +714,17 @@ describe("Engine persisted goal lifecycle", () => {
           .get(auxModel)
           ?.systemPrompts?.some((prompt) => prompt.includes("目标完成度裁判")),
       ).toBe(false);
+      expect(engineScenarios.get(primaryModel)?.lastUsage).toMatchObject({
+        totalPromptTokens: 11,
+        totalCompletionTokens: 6,
+        totalTokens: 17,
+        requestCount: 2,
+      });
+      expect(persistedState(dir, sessionId).tokenUsage).toMatchObject({
+        promptTokens: 11,
+        completionTokens: 6,
+        totalTokens: 17,
+      });
     } finally {
       engineScenarios.delete(primaryModel);
       engineScenarios.delete(auxModel);
@@ -624,6 +882,51 @@ describe("Engine persisted goal lifecycle", () => {
       });
       expect(engineScenarios.get(model)?.mainCalls).toBe(2);
       expect(bareEvents.some((event) => event.type === "goal_progress")).toBe(false);
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("met:true judge crossing the token budget writes a tombstone instead of clearing as met", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-met-budget-exhausted-"));
+    const model = uniqueModel("met-budget-exhausted");
+    const sessionId = "goal-met-budget-exhausted-tombstone";
+    engineScenarios.set(model, {
+      mainResponses: [stopResponse("looks complete")],
+      mainCalls: 0,
+      judgeResponse: '{"met":true,"waiting":false,"gaps":""}',
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const result = await engine.run("bounded completion", {
+        sessionId,
+        cwd: dir,
+        goal: { objective: "finish within sixteen tokens", tokenBudget: 16 },
+      });
+
+      expect(result.reason).toBe("goal_budget_exhausted");
+      expect(engineScenarios.get(model)?.mainCalls).toBe(1);
+      expect(
+        engineScenarios
+          .get(model)
+          ?.systemPrompts?.filter((prompt) => prompt.includes("目标完成度裁判")),
+      ).toHaveLength(1);
+      expect(engine.getGoal(sessionId)).toBeUndefined();
+      expect(persistedState(dir, sessionId).activeGoal).toBeUndefined();
+      expect(persistedState(dir, sessionId).goalTerminal).toMatchObject({
+        objective: "finish within sixteen tokens",
+        reason: "token_budget_exhausted",
+      });
     } finally {
       engineScenarios.delete(model);
       rmSync(dir, { recursive: true, force: true });

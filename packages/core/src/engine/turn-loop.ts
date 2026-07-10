@@ -333,6 +333,24 @@ export class TurnLoop {
   }
 
   /**
+   * Private Goal-judge accounting seam. Judge calls bypass ModelFacade, so the
+   * Engine forwards their provider usage here while the run-scoped tracker is
+   * live. The returned reason lets the hook suppress verdict side effects when
+   * this very request crossed a hard token/time budget.
+   */
+  recordGoalJudgeUsage(
+    usage: TokenUsage | undefined,
+  ):
+    | Extract<GoalTerminationReason, "token_budget_exhausted" | "time_budget_exhausted">
+    | undefined {
+    if (!this.goalTracker) return undefined;
+    if (usage) {
+      recordGoalUsage(this.goalTracker, (usage.promptTokens ?? 0) + (usage.completionTokens ?? 0));
+    }
+    return goalBudgetTerminationReason(this.goalTracker, Date.now());
+  }
+
+  /**
    * Goal mode only: if the run is nearing EITHER stop ceiling (maxTurns or
    * maxStopBlocks) and we haven't announced it yet, emit one approaching_limit
    * marker so the UI can offer a "再续" button while the run is still live.
@@ -619,6 +637,9 @@ export class TurnLoop {
     // window only after irreversible sensitive-data removal, non-text omission,
     // and per-item truncation at the current-round ToolResult boundary.
     const goalToolResults: GoalJudgeRuntimeContext["toolResults"] = [];
+    const sensitiveGoalResultTools = this.config.goal
+      ? new Set(this.deps.tools.filter((tool) => tool.sensitiveResult).map((tool) => tool.name))
+      : undefined;
 
     // Goal-mode run-scoped budget tracker (P0). Null when no goal. Stamps a
     // wall-clock start now and accumulates prompt+completion tokens across
@@ -1038,6 +1059,37 @@ export class TurnLoop {
             finalText,
             turnCount: this.turnCount,
           });
+          // The primary-model judge is a real billed request. Its hook forwards
+          // usage through recordGoalJudgeUsage above; re-check immediately so an
+          // over-budget verdict cannot authorize another main-model turn.
+          const postJudgeBudgetTermination = goalTracker
+            ? ((stopHook.data?.goalBudgetTermination as
+                | Extract<GoalTerminationReason, "token_budget_exhausted" | "time_budget_exhausted">
+                | undefined) ?? goalBudgetTerminationReason(goalTracker, Date.now()))
+            : undefined;
+          if (goalTracker && postJudgeBudgetTermination) {
+            tlog.info("turn.goal_budget_exhausted_after_judge", {
+              cat: "goal",
+              reason: postJudgeBudgetTermination,
+              tokensUsed: goalTracker.tokensUsed,
+              tokenBudget: goalTracker.goal.tokenBudget,
+              timeBudgetMs: goalTracker.goal.timeBudgetMs,
+            });
+            this.config.onStream?.({
+              type: "assistant_message",
+              messageId: assistantMessageId,
+              message: {
+                role: "assistant",
+                content: "（Goal 预算已耗尽，强制停止。）",
+              },
+            });
+            return {
+              text: finalText,
+              reason: "goal_budget_exhausted",
+              messages,
+              goalTermination: postJudgeBudgetTermination,
+            };
+          }
           // The judge's structured verdict (set by GoalStopHook in result.data)
           // rides back here so we can show goal progress WITHOUT a second LLM
           // call — `gaps` is whatever the judge already computed.
@@ -1164,10 +1216,20 @@ export class TurnLoop {
         const resultBlocks: ContentBlock[] = [];
         for (const result of results) {
           if (goalTracker) {
-            goalToolResults.push(projectGoalJudgeToolResult(result, this.turnCount));
-            // The prompt renderer keeps at most 12, but retaining a few extra
-            // bounded projections lets its total-char budget choose the newest useful subset.
-            if (goalToolResults.length > 20) goalToolResults.splice(0, goalToolResults.length - 20);
+            goalToolResults.push(
+              projectGoalJudgeToolResult(
+                result,
+                this.turnCount,
+                sensitiveGoalResultTools?.has(result.toolName) === true,
+              ),
+            );
+            // Never evict the front of one legal batch: the default executor may
+            // return 25 results in a turn. Keep at least maxToolCallsPerTurn so
+            // the judge renderer can preserve metadata for the entire newest batch.
+            const residencyLimit = Math.max(20, this.config.maxToolCallsPerTurn);
+            if (goalToolResults.length > residencyLimit) {
+              goalToolResults.splice(0, goalToolResults.length - residencyLimit);
+            }
           }
           resultBlocks.push(toolResultToBlock(result));
           const streamResult = toolResultForDisplay(result);

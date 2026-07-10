@@ -22,12 +22,14 @@
  */
 import type { HookContext, HookResult } from "./events.js";
 import type { HookHandler } from "./registry.js";
-import type { LLMResponse, ToolResult } from "../types.js";
+import type { LLMResponse, TokenUsage, ToolResult } from "../types.js";
 import { normalizeGoal, type GoalConfig } from "../engine/goal.js";
 import { listRunningBackgroundWork } from "../tool-system/builtin/background-work.js";
 
 /** Narrow LLM surface the judge needs — just a one-shot completion. */
 export interface GoalJudgeLLM {
+  /** Main-generation request timeout; the judge derives a shorter ceiling. */
+  readonly timeout?: number;
   createMessage(options: {
     systemPrompt: string;
     messages: { role: "user" | "assistant" | "system"; content: string }[];
@@ -82,7 +84,16 @@ export interface GoalStopHookOptions {
    * It deliberately lives on this closure rather than HookContext.data so
    * third-party/public stop hooks do not gain access to tool output.
    */
-  getJudgeContext?: () => GoalJudgeRuntimeContext | undefined;
+  getJudgeContext: () => GoalJudgeRuntimeContext | undefined;
+  /** Dedicated judge deadline. Defaults to 15s and never exceeds the main timeout. */
+  judgeTimeoutMs?: number;
+  /**
+   * Private usage seam into TurnLoop's Goal ledger. Returning a termination
+   * reason prevents verdict side effects and lets the loop stop immediately.
+   */
+  onJudgeUsage?: (
+    usage: TokenUsage | undefined,
+  ) => "token_budget_exhausted" | "time_budget_exhausted" | undefined;
 }
 
 export interface GoalJudgeRuntimeContext {
@@ -169,9 +180,34 @@ interface JudgeVerdict {
 }
 
 /** V1 evidence budget: bounded deterministic projection, no extra LLM summary. */
-const MAX_TOOL_EVIDENCE_ITEMS = 12;
 const MAX_TOOL_RESULT_CHARS = 1_600;
 const MAX_TOOL_EVIDENCE_CHARS = 8_000;
+const MAX_JUDGE_FINAL_TEXT_CHARS = 4_000;
+const MAX_JUDGE_USER_MESSAGE_CHARS = 20_000;
+const MAX_JUDGE_REQUESTS_PER_RUN = 3;
+const DEFAULT_JUDGE_TIMEOUT_MS = 15_000;
+
+function createJudgeAbortSignal(
+  parent: AbortSignal | undefined,
+  timeoutMs: number,
+): { signal: AbortSignal; dispose: () => void } {
+  const controller = new AbortController();
+  const abortFromParent = () => controller.abort(parent?.reason);
+  if (parent?.aborted) abortFromParent();
+  else parent?.addEventListener("abort", abortFromParent, { once: true });
+
+  const timer = setTimeout(() => {
+    controller.abort(new DOMException(`Goal judge timed out after ${timeoutMs}ms`, "TimeoutError"));
+  }, timeoutMs);
+
+  return {
+    signal: controller.signal,
+    dispose: () => {
+      clearTimeout(timer);
+      parent?.removeEventListener("abort", abortFromParent);
+    },
+  };
+}
 
 function codePointLength(text: string): number {
   let count = 0;
@@ -213,6 +249,32 @@ function truncateHeadTail(text: string, maxChars: number): string {
   return `${text.slice(0, headEnd)}${marker}${text.slice(tailStart)}`;
 }
 
+function normalizeControlCharacters(text: string): string {
+  return text.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/gu, "�");
+}
+
+function serializedStringLength(text: string): number {
+  return JSON.stringify(text).length;
+}
+
+function truncateToSerializedLength(text: string, maxSerializedChars: number): string {
+  if (serializedStringLength(text) <= maxSerializedChars) return text;
+  let low = 0;
+  let high = codePointLength(text);
+  let best = "";
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const candidate = truncateHeadTail(text, mid);
+    if (serializedStringLength(candidate) <= maxSerializedChars) {
+      best = candidate;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+  return best;
+}
+
 function projectedContent(result: ToolResult): { text: string; omittedNonText: boolean } {
   const parts: string[] = [];
   let omittedNonText = false;
@@ -228,10 +290,31 @@ function projectedContent(result: ToolResult): { text: string; omittedNonText: b
   return { text: parts.join("\n"), omittedNonText };
 }
 
+/** Content-level fallback for producers that forgot to set sensitive:true. */
+function scrubSecrets(text: string): string {
+  return text
+    .replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s/@:]+:[^\s/@]+@/giu, "$1[REDACTED]@")
+    .replace(
+      /([?&](?:(?:access|refresh|auth|id)[_-]?token|token|api[_-]?key|password|passwd|client[_-]?secret|secret)=)[^&#\s]*/giu,
+      "$1[REDACTED]",
+    )
+    .replace(/(\bAuthorization\s*:\s*)(?:Bearer|Basic|Token)\s+[^\s,;]+/giu, "$1[REDACTED]")
+    .replace(/(\b(?:Set-Cookie|Cookie)\s*:\s*)[^\r\n]+/giu, "$1[REDACTED]")
+    .replace(
+      /((?:^|[\s"'`;,])(?=[A-Za-z_][A-Za-z0-9_]*\s*=)(?=[A-Za-z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD|PWD))[A-Za-z_][A-Za-z0-9_]*\s*=\s*)(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s"'`;]+)/gimu,
+      "$1[REDACTED]",
+    )
+    .replace(
+      /\b(?:sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16})\b/gu,
+      "[REDACTED]",
+    );
+}
+
 /** Build the bounded, irreversible value retained beyond the current model round. */
 export function projectGoalJudgeToolResult(
   result: ToolResult,
   turnCount: number,
+  sensitiveByMetadata = false,
 ): GoalJudgeToolResult {
   const projection: GoalJudgeToolResult = {
     turnCount,
@@ -239,55 +322,112 @@ export function projectGoalJudgeToolResult(
     status: result.isError === true || !!result.error ? "error" : "success",
   };
   // Sensitive results intentionally retain exactly the tool identity and status.
-  if (result.sensitive) return projection;
+  if (result.sensitive || sensitiveByMetadata) return projection;
 
   const content = projectedContent(result);
   const primaryText = result.error ?? result.result ?? "";
   const text = [primaryText, content.text && content.text !== primaryText ? content.text : ""]
     .filter(Boolean)
     .join("\n");
-  if (text) projection.text = truncateHeadTail(text, MAX_TOOL_RESULT_CHARS);
+  if (text) {
+    projection.text = truncateHeadTail(
+      scrubSecrets(normalizeControlCharacters(text)),
+      MAX_TOOL_RESULT_CHARS,
+    );
+  }
   if (content.omittedNonText) projection.omittedNonText = true;
   return projection;
 }
 
-function renderOneToolResult(item: GoalJudgeToolResult): string {
-  const details: string[] = [];
-  if (item.text) details.push(truncateHeadTail(item.text, MAX_TOOL_RESULT_CHARS));
-  if (item.omittedNonText) details.push("[非文本/二进制内容已省略]");
-  if (details.length === 0) {
-    return `- turn ${item.turnCount} [${item.toolName}] ${item.status}`;
-  }
-  return `- turn ${item.turnCount} [${item.toolName}] ${item.status}\n${details.join("\n")}`;
+interface RenderedToolEntry {
+  item: GoalJudgeToolResult;
+  body?: string;
+}
+
+function renderToolEntry(entry: RenderedToolEntry): string {
+  const { item, body } = entry;
+  const flags: string[] = [];
+  if (item.text && body === undefined) flags.push("[文本已省略]");
+  if (item.omittedNonText) flags.push("[非文本/二进制内容已省略]");
+  const toolName = truncateHeadTail(item.toolName, 120);
+  const header = `- turn ${item.turnCount} [${toolName}] ${item.status}${
+    flags.length > 0 ? ` ${flags.join(" ")}` : ""
+  }`;
+  return body ? `${header}\n${body}` : header;
+}
+
+function renderToolEntries(entries: RenderedToolEntry[]): string {
+  return entries.map(renderToolEntry).join("\n\n");
+}
+
+function serializedToolEntriesLength(entries: RenderedToolEntry[]): number {
+  return serializedStringLength(renderToolEntries(entries));
+}
+
+const ACCEPTANCE_TOOL_PATTERN =
+  /(?:test|check|verify|validate|assert|lint|build|status|query|inspect|health|quota)/i;
+
+function evidencePriority(item: GoalJudgeToolResult, goal: string, index: number): number {
+  let priority = index;
+  if (item.status === "error") priority += 3_000_000;
+  if (ACCEPTANCE_TOOL_PATTERN.test(item.toolName)) priority += 2_000_000;
+
+  const goalTerms = goal
+    .toLocaleLowerCase()
+    .split(/[^\p{L}\p{N}_]+/u)
+    .filter((term) => term.length >= 3);
+  const evidence = `${item.toolName}\n${item.text ?? ""}`.toLocaleLowerCase();
+  if (goalTerms.some((term) => evidence.includes(term))) priority += 1_000_000;
+  return priority;
 }
 
 /**
- * Keep the newest 12 results, cap each result at 1,600 chars, then cap the
- * whole evidence section at 8,000 chars. Large text keeps both head and tail
- * because command summaries and exit/test totals commonly live at opposite ends.
+ * Preserve metadata for every resident result (and therefore every result in
+ * the newest legal tool batch), then spend the remaining budget on bodies.
+ * Errors and goal-acceptance evidence win before recency; an oversized body is
+ * skipped so smaller earlier facts can still fit. One final omitted body may
+ * receive a bounded head+tail excerpt with the leftover space.
  */
-function renderToolEvidence(items: GoalJudgeRuntimeContext["toolResults"] | undefined): string {
+function renderToolEvidence(
+  items: GoalJudgeRuntimeContext["toolResults"] | undefined,
+  goal: string,
+): string {
   if (!items?.length) return "(本次 run 尚无工具执行结果)";
-  const newest = items.slice(-MAX_TOOL_EVIDENCE_ITEMS).map(renderOneToolResult);
-  const selected: string[] = [];
-  let remaining = MAX_TOOL_EVIDENCE_CHARS;
-  for (let i = newest.length - 1; i >= 0 && remaining > 0; i--) {
-    const block = newest[i]!;
-    const separatorCost = selected.length > 0 ? 2 : 0;
-    const blockChars = codePointLength(block);
-    if (blockChars + separatorCost <= remaining) {
-      selected.unshift(block);
-      remaining -= blockChars + separatorCost;
-      continue;
+  const entries: RenderedToolEntry[] = items.map((item) => ({ item }));
+  const candidates = items
+    .map((item, index) => ({ item, index, priority: evidencePriority(item, goal, index) }))
+    .filter(({ item }) => !!item.text)
+    .sort((a, b) => b.priority - a.priority);
+
+  for (const { item, index } of candidates) {
+    entries[index]!.body = truncateHeadTail(item.text!, MAX_TOOL_RESULT_CHARS);
+    if (serializedToolEntriesLength(entries) > MAX_TOOL_EVIDENCE_CHARS) {
+      entries[index]!.body = undefined;
     }
-    if (selected.length === 0) {
-      selected.unshift(truncateHeadTail(block, remaining));
-    }
-    break;
   }
-  const omitted = items.length - selected.length;
-  const rendered = `${omitted > 0 ? `(已省略 ${omitted} 条较旧结果)\n` : ""}${selected.join("\n\n")}`;
-  return truncateHeadTail(rendered, MAX_TOOL_EVIDENCE_CHARS);
+
+  // A large block that did not fit must not prevent later/smaller candidates.
+  // After that full-body pass, use any final slack for one head+tail excerpt.
+  for (const { item, index } of candidates) {
+    if (entries[index]!.body !== undefined) continue;
+    let low = 0;
+    let high = Math.min(MAX_TOOL_RESULT_CHARS, codePointLength(item.text!));
+    let best: string | undefined;
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2);
+      entries[index]!.body = truncateHeadTail(item.text!, mid);
+      if (serializedToolEntriesLength(entries) <= MAX_TOOL_EVIDENCE_CHARS) {
+        best = entries[index]!.body;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+    entries[index]!.body = best && codePointLength(best) >= 40 ? best : undefined;
+    if (entries[index]!.body) break;
+  }
+
+  return truncateToSerializedLength(renderToolEntries(entries), MAX_TOOL_EVIDENCE_CHARS);
 }
 
 function renderProgress(
@@ -316,23 +456,129 @@ function renderProgress(
   ].join("\n");
 }
 
-/** Pull the first balanced JSON object out of possibly-prose text. */
-function extractJson(text: string): JudgeVerdict | null {
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start === -1 || end === -1 || end <= start) return null;
-  const slice = text.slice(start, end + 1);
+/** Collect every balanced object while ignoring braces inside JSON strings. */
+function balancedObjectSlices(text: string): string[] {
+  const slices: string[] = [];
+  let start = -1;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = 0; index < text.length; index++) {
+    const ch = text[index]!;
+    if (start < 0) {
+      if (ch === "{") {
+        start = index;
+        depth = 1;
+        inString = false;
+        escaped = false;
+      }
+      continue;
+    }
+
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        slices.push(text.slice(start, index + 1));
+        start = -1;
+      }
+    }
+  }
+  return slices;
+}
+
+/** Decode top-level object keys, preserving duplicates for strict validation. */
+function topLevelObjectKeys(slice: string): string[] | null {
+  const keys: string[] = [];
+  let depth = 0;
+  let stringStart = -1;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = 0; index < slice.length; index++) {
+    const ch = slice[index]!;
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (ch === "\\") {
+        escaped = true;
+        continue;
+      }
+      if (ch !== '"') continue;
+
+      inString = false;
+      if (depth !== 1) continue;
+      let next = index + 1;
+      while (/\s/u.test(slice[next] ?? "")) next++;
+      if (slice[next] !== ":") continue;
+      try {
+        const key = JSON.parse(slice.slice(stringStart, index + 1)) as unknown;
+        if (typeof key !== "string") return null;
+        keys.push(key);
+      } catch {
+        return null;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+      stringStart = index;
+    } else if (ch === "{" || ch === "[") {
+      depth++;
+    } else if (ch === "}" || ch === "]") {
+      depth--;
+    }
+  }
+  return keys;
+}
+
+function parseVerdictCandidate(slice: string): JudgeVerdict | null {
   try {
     const parsed = JSON.parse(slice) as unknown;
-    if (!parsed || typeof parsed !== "object") return null;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const keys = topLevelObjectKeys(slice);
+    const requiredKeys = ["met", "waiting", "gaps"];
+    if (
+      !keys ||
+      keys.length !== requiredKeys.length ||
+      new Set(keys).size !== requiredKeys.length ||
+      requiredKeys.some((key) => !keys.includes(key))
+    ) {
+      return null;
+    }
     const p = parsed as Record<string, unknown>;
-    if (typeof p.met !== "boolean") return null;
-    const gaps = typeof p.gaps === "string" ? p.gaps : "";
-    const waiting = typeof p.waiting === "boolean" ? p.waiting : false;
-    return { met: p.met, waiting, gaps };
+    if (
+      typeof p.met !== "boolean" ||
+      typeof p.waiting !== "boolean" ||
+      typeof p.gaps !== "string" ||
+      (p.met && p.waiting) ||
+      (p.met && p.gaps.trim() !== "")
+    ) {
+      return null;
+    }
+    return { met: p.met, waiting: p.waiting, gaps: p.gaps };
   } catch {
     return null;
   }
+}
+
+/** Accept exactly one strict verdict candidate from the complete model output. */
+function extractJson(text: string): JudgeVerdict | null {
+  const candidates = balancedObjectSlices(text)
+    .map(parseVerdictCandidate)
+    .filter((candidate): candidate is JudgeVerdict => candidate !== null);
+  return candidates.length === 1 ? candidates[0]! : null;
 }
 
 /** Render the running background tasks for the judge prompt. */
@@ -369,6 +615,16 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
   let lastResult: HookResult | null = null;
   let previousVerdict: "not_met" | "waiting" | undefined;
   let previousGaps = "";
+  // Independent per-run judge ledger. Request count enforces a hard spend cap;
+  // token totals are logged separately from main-turn accounting for diagnosis.
+  let judgeRequestCount = 0;
+  const judgeUsage: TokenUsage = {
+    promptTokens: 0,
+    completionTokens: 0,
+    totalTokens: 0,
+    cacheReadTokens: 0,
+    cacheCreationTokens: 0,
+  };
   return async (ctx: HookContext): Promise<HookResult> => {
     // Accept string or GoalConfig from either the override or ctx.data.goal.
     const g = normalizeGoal(opts.goal ?? (ctx.data.goal as string | GoalConfig | undefined));
@@ -406,9 +662,27 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     const backgroundTasks = renderBackgroundTasks(runningWork);
 
     const finalText = typeof ctx.data.finalText === "string" ? ctx.data.finalText : "";
-    const judgeContext = opts.getJudgeContext?.();
-    const toolEvidence = renderToolEvidence(judgeContext?.toolResults);
-    const progress = renderProgress(judgeContext?.progress, ctx.data.turnCount);
+    let judgeContext: GoalJudgeRuntimeContext | undefined;
+    let contextError: string | undefined;
+    try {
+      // Optional chaining is deliberate runtime defense: the TypeScript seam is
+      // required, but an older JS caller or wiring regression can still omit it.
+      judgeContext = opts.getJudgeContext?.();
+    } catch (err) {
+      contextError = (err as Error).message;
+    }
+    if (!judgeContext) {
+      log.warn("goal_stop.context_missing", {
+        cat: "goal",
+        ...(contextError ? { error: contextError } : {}),
+      });
+      return {
+        continueSession: true,
+        messages: ["继续 —— 目标裁判运行上下文缺失,为避免盲判请继续推进并恢复上下文接线。"],
+      };
+    }
+    const toolEvidence = renderToolEvidence(judgeContext.toolResults, goal);
+    const progress = renderProgress(judgeContext.progress, ctx.data.turnCount);
 
     const renderPreviousVerdict = (): string =>
       previousVerdict
@@ -434,18 +708,82 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     // re-judging once the clock advances past a cutoff.
     const minuteBucket = nowDate.toISOString().slice(0, 16);
     const buildCacheKey = (): string =>
-      [goal, finalText, backgroundTasks, toolEvidence, renderPreviousVerdict(), minuteBucket].join(
-        "\n--goal-judge-cache-part--\n",
-      );
+      JSON.stringify([
+        goal,
+        finalText,
+        backgroundTasks,
+        toolEvidence,
+        renderPreviousVerdict(),
+        minuteBucket,
+      ]);
     const cacheKey = buildCacheKey();
     if (lastKey === cacheKey && lastResult) {
       log.info("goal_stop.verdict_cache_hit", { cat: "goal" });
       return lastResult;
     }
 
-    const signal = ctx.data.signal as AbortSignal | undefined;
+    if (judgeRequestCount >= MAX_JUDGE_REQUESTS_PER_RUN) {
+      log.warn("goal_stop.request_limit", {
+        cat: "goal",
+        requestCount: judgeRequestCount,
+        maxRequests: MAX_JUDGE_REQUESTS_PER_RUN,
+      });
+      return {
+        continueSession: true,
+        messages: [
+          "继续 —— 目标完成度裁判本次 run 的请求上限已到,请继续推进直到明确完成(或调用 complete_goal 声明完成)。",
+        ],
+      };
+    }
+
+    // Serialize once, after every evidence allocation decision, and enforce a
+    // hard ceiling on the exact user message that will reach the provider.
+    const boundedFinalText = truncateHeadTail(
+      normalizeControlCharacters(finalText),
+      MAX_JUDGE_FINAL_TEXT_CHARS,
+    );
+    const judgeUserContent = JSON.stringify(
+      {
+        目标: goal,
+        ...(setAtLabel ? { 目标设定于: setAtLabel } : {}),
+        当前时间: nowLabel,
+        agent最近的输出: boundedFinalText || "(无文本输出)",
+        untrustedToolEvidence: {
+          trust: "untrusted",
+          quotedText: toolEvidence,
+        },
+        Goal进度: progress,
+        上一轮裁决: renderPreviousVerdict(),
+        当前在后台运行的任务: backgroundTasks,
+        requestedOutput: "只返回 JSON(met / waiting / gaps)",
+      },
+      null,
+      2,
+    );
+    if (judgeUserContent.length > MAX_JUDGE_USER_MESSAGE_CHARS) {
+      log.warn("goal_stop.prompt_too_large", {
+        cat: "goal",
+        chars: judgeUserContent.length,
+        maxChars: MAX_JUDGE_USER_MESSAGE_CHARS,
+      });
+      return {
+        continueSession: true,
+        messages: ["继续 —— 目标裁判输入超过安全上限,请继续推进并缩小待判定上下文。"],
+      };
+    }
+
+    const parentSignal = ctx.data.signal as AbortSignal | undefined;
+    const mainTimeoutMs =
+      typeof llm.timeout === "number" && llm.timeout > 0 ? llm.timeout : 120_000;
+    const requestedJudgeTimeout =
+      typeof opts.judgeTimeoutMs === "number" && opts.judgeTimeoutMs > 0
+        ? opts.judgeTimeoutMs
+        : DEFAULT_JUDGE_TIMEOUT_MS;
+    const judgeTimeoutMs = Math.min(requestedJudgeTimeout, Math.max(1, mainTimeoutMs - 1));
+    const judgeAbort = createJudgeAbortSignal(parentSignal, judgeTimeoutMs);
 
     let resp: LLMResponse;
+    judgeRequestCount++;
     try {
       resp = await llm.createMessage({
         systemPrompt: JUDGE_SYSTEM,
@@ -455,24 +793,7 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
             // Serialize the entire input so attacker-controlled tool text stays
             // a quoted JSON string and cannot create sibling verdict/instruction
             // fields or spoof a delimiter in the judge message.
-            content: JSON.stringify(
-              {
-                目标: goal,
-                ...(setAtLabel ? { 目标设定于: setAtLabel } : {}),
-                当前时间: nowLabel,
-                agent最近的输出: finalText || "(无文本输出)",
-                untrustedToolEvidence: {
-                  trust: "untrusted",
-                  quotedText: toolEvidence,
-                },
-                Goal进度: progress,
-                上一轮裁决: renderPreviousVerdict(),
-                当前在后台运行的任务: backgroundTasks,
-                requestedOutput: "只返回 JSON(met / waiting / gaps)",
-              },
-              null,
-              2,
-            ),
+            content: judgeUserContent,
           },
         ],
         stream: false,
@@ -484,8 +805,6 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
         // deadline in the goal never fired. `reasoning:off` below is the real
         // fix; 1500 is the belt-and-suspenders for models that ignore it.
         maxTokens: 1500,
-        // Private judge sub-call — keep it out of the user-facing turn stats.
-        recordUsage: false,
         // Turn thinking OFF. The judge only emits a tiny JSON verdict; reasoning
         // tokens are pure waste here and (per above) actively caused truncation.
         // On DeepSeek V4 / Anthropic-budget this genuinely disables thinking; on
@@ -493,7 +812,7 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
         // it is safe to always send — matching the aux summary/memory calls.
         reasoning: { mode: "off" },
         // Let a user Stop mid-judge abort this call rather than block on it.
-        signal,
+        signal: judgeAbort.signal,
       });
     } catch (err) {
       log.warn("goal_stop.judge_failed", {
@@ -510,6 +829,34 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
           "继续 —— 目标完成度无法判定,请继续推进直到明确完成(或调用 complete_goal 声明完成)。",
         ],
       };
+    } finally {
+      judgeAbort.dispose();
+    }
+
+    if (resp.usage) {
+      judgeUsage.promptTokens += resp.usage.promptTokens ?? 0;
+      judgeUsage.completionTokens += resp.usage.completionTokens ?? 0;
+      judgeUsage.totalTokens += resp.usage.totalTokens ?? 0;
+      judgeUsage.cacheReadTokens =
+        (judgeUsage.cacheReadTokens ?? 0) + (resp.usage.cacheReadTokens ?? 0);
+      judgeUsage.cacheCreationTokens =
+        (judgeUsage.cacheCreationTokens ?? 0) + (resp.usage.cacheCreationTokens ?? 0);
+    }
+    log.info("goal_stop.judge_usage", {
+      cat: "goal",
+      requestCount: judgeRequestCount,
+      promptTokens: judgeUsage.promptTokens,
+      completionTokens: judgeUsage.completionTokens,
+      totalTokens: judgeUsage.totalTokens,
+    });
+
+    const judgeBudgetTermination = opts.onJudgeUsage?.(resp.usage);
+    if (judgeBudgetTermination) {
+      log.info("goal_stop.judge_budget_exhausted", {
+        cat: "goal",
+        reason: judgeBudgetTermination,
+      });
+      return { data: { goalBudgetTermination: judgeBudgetTermination } };
     }
 
     const respText = resp.text ?? "";

@@ -39,6 +39,8 @@ export interface ToolDefinition {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  /** Omit this tool's result body from retained Goal-judge evidence. */
+  sensitiveResult?: boolean;
 }
 
 export interface ToolCall {
@@ -131,6 +133,8 @@ export interface RegisteredTool {
   permissionDefault: PermissionDecision;
   isConcurrencySafe?: boolean;
   isReadOnly?: boolean;
+  /** Declaratively marks result bodies as sensitive for retained Goal evidence. */
+  sensitiveResult?: boolean;
   /**
    * Declarative file-path safety metadata. ToolExecutor enforces this before
    * dispatching the tool, so file access cannot depend on each tool handler
