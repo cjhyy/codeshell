@@ -85,7 +85,7 @@ export interface GoalStopHookOptions {
    * It deliberately lives on this closure rather than HookContext.data so
    * third-party/public stop hooks do not gain access to tool output.
    */
-  getJudgeContext?: () => GoalJudgeRuntimeContext | undefined;
+  getJudgeContext: () => GoalJudgeRuntimeContext | undefined;
   /** Dedicated judge deadline. Defaults to 15s and never exceeds the main timeout. */
   judgeTimeoutMs?: number;
   /**
@@ -537,9 +537,27 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     const backgroundTasks = renderBackgroundTasks(runningWork);
 
     const finalText = typeof ctx.data.finalText === "string" ? ctx.data.finalText : "";
-    const judgeContext = opts.getJudgeContext?.();
-    const toolEvidence = renderToolEvidence(judgeContext?.toolResults, goal);
-    const progress = renderProgress(judgeContext?.progress, ctx.data.turnCount);
+    let judgeContext: GoalJudgeRuntimeContext | undefined;
+    let contextError: string | undefined;
+    try {
+      // Optional chaining is deliberate runtime defense: the TypeScript seam is
+      // required, but an older JS caller or wiring regression can still omit it.
+      judgeContext = opts.getJudgeContext?.();
+    } catch (err) {
+      contextError = (err as Error).message;
+    }
+    if (!judgeContext) {
+      log.warn("goal_stop.context_missing", {
+        cat: "goal",
+        ...(contextError ? { error: contextError } : {}),
+      });
+      return {
+        continueSession: true,
+        messages: ["继续 —— 目标裁判运行上下文缺失,为避免盲判请继续推进并恢复上下文接线。"],
+      };
+    }
+    const toolEvidence = renderToolEvidence(judgeContext.toolResults, goal);
+    const progress = renderProgress(judgeContext.progress, ctx.data.turnCount);
 
     const renderPreviousVerdict = (): string =>
       previousVerdict

@@ -1,8 +1,9 @@
 import { describe, it, expect } from "bun:test";
 import {
-  createGoalStopHook,
+  createGoalStopHook as createGoalStopHookImpl,
   projectGoalJudgeToolResult,
   type GoalJudgeLLM,
+  type GoalStopHookOptions,
   type GoalJudgeToolResult,
 } from "./goal-stop-hook.js";
 import type { LLMResponse, ToolResult } from "../types.js";
@@ -24,6 +25,21 @@ const noopLog = {
   warn: () => {},
   error: () => {},
 };
+
+function emptyJudgeContext() {
+  return {
+    toolResults: [],
+    progress: { turnCount: 1, stopRound: 1, elapsedMs: 0, tokensUsed: 0 },
+  };
+}
+
+/** Every ordinary hook test supplies a present runtime seam, even when empty. */
+function createGoalStopHook(
+  opts: Omit<GoalStopHookOptions, "getJudgeContext"> &
+    Partial<Pick<GoalStopHookOptions, "getJudgeContext">>,
+) {
+  return createGoalStopHookImpl({ getJudgeContext: emptyJudgeContext, ...opts });
+}
 
 /** A judge LLM that returns a fixed text and records how it was called. */
 function fakeJudge(text: string): GoalJudgeLLM & {
@@ -788,6 +804,29 @@ describe("createGoalStopHook — three-state judge", () => {
     const res = await hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "x" } });
     expect(res).toEqual({});
     expect(judge.calls).toBe(0);
+  });
+
+  it("valid goal with missing runtime context fails closed without a blind judge call", async () => {
+    const logs: { msg: string; data?: Record<string, unknown> }[] = [];
+    const judge = fakeJudge('{"met":true,"waiting":false,"gaps":""}');
+    const hook = createGoalStopHookImpl({
+      goal: "ship it",
+      llm: judge,
+      log: {
+        info: () => {},
+        warn: (msg, data) => logs.push({ msg, data }),
+        error: () => {},
+      },
+    } as GoalStopHookOptions);
+
+    const res = await hook({
+      eventName: "on_stop",
+      data: { sessionId: SID, finalText: "done" },
+    });
+
+    expect(res.continueSession).toBe(true);
+    expect(judge.calls).toBe(0);
+    expect(logs.some((entry) => entry.msg === "goal_stop.context_missing")).toBe(true);
   });
 
   it("verdict cache: identical (goal, finalText, tasks) reuses the verdict, no second LLM call", async () => {
