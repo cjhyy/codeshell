@@ -348,6 +348,61 @@ describe("TurnLoop steer finalize backfill", () => {
     });
   });
 
+  it("requeues a steer when attachment preparation fails without changing a completed run to model_error", async () => {
+    const events: unknown[] = [];
+    const item: SteerItem = {
+      id: "steer-missing-attachment",
+      text: "inspect the deleted attachment",
+      clientMessageId: "client-missing-attachment",
+      attachments: [
+        {
+          id: "att-missing",
+          sessionId: "s1",
+          kind: "file",
+          origin: "picker",
+          path: ".code-shell/attachments/s1/deleted.txt",
+          absPath: "/tmp/work/.code-shell/attachments/s1/deleted.txt",
+          relPath: ".code-shell/attachments/s1/deleted.txt",
+          mime: "text/plain",
+          size: 12,
+          sha256: "0".repeat(64),
+          originalName: "deleted.txt",
+          createdAt: 1,
+        },
+      ],
+    };
+    const { deps, appended } = makeDeps([stop("answer already produced")], item);
+    let queued: SteerItem[] = [];
+    let claimed = false;
+    deps.buildSteerUserMessageContent = async () => {
+      throw new Error("attachment no longer exists");
+    };
+    deps.restoreSteer = (items) => {
+      queued = [...items, ...queued];
+    };
+    deps.claimClientMessageId = () => {
+      claimed = true;
+      return true;
+    };
+    const loop = new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+      onStream: (event) => {
+        events.push(event);
+      },
+    });
+
+    const result = await loop.run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(result.text).toBe("answer already produced");
+    expect(queued).toEqual([item]);
+    expect(claimed).toBe(false);
+    expect(appended).toEqual([]);
+    expect(events.some((event: any) => event.type === "error")).toBe(false);
+    expect(events.some((event: any) => event.type === "steer_injected")).toBe(false);
+  });
+
   it("counts the finalize backfill continuation against maxTurns", async () => {
     const events: unknown[] = [];
     const { deps, modelMessages } = makeDeps([stop("done"), stop("limit summary")], {

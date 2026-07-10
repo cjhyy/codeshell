@@ -886,6 +886,13 @@ export class Engine {
     return drained;
   }
 
+  /** Put failed steer preparation back ahead of messages queued while it was being prepared. */
+  private restoreSteer(sessionId: string, items: SteerItem[]): void {
+    if (items.length === 0) return;
+    const queued = this.steerQueueBySid.get(sessionId) ?? [];
+    this.steerQueueBySid.set(sessionId, [...items, ...queued]);
+  }
+
   /** Wire the cookie→browser injection callback (InjectCredential tool). Same
    *  post-construction injection model as setBrowserBridge. */
   setInjectCredential(
@@ -1957,6 +1964,7 @@ export class Engine {
             return info;
           },
           consumeSteer: (source) => this.consumeSteer(sid, source),
+          restoreSteer: (items) => this.restoreSteer(sid, items),
           buildSteerUserMessageContent: async (item) => {
             const steerImageInput = await prepareRunImageInput({
               task: item.text,
