@@ -1214,9 +1214,13 @@ export class TurnLoop {
         for (const result of results) {
           if (goalTracker) {
             goalToolResults.push(projectGoalJudgeToolResult(result, this.turnCount));
-            // The prompt renderer keeps at most 12, but retaining a few extra
-            // bounded projections lets its total-char budget choose the newest useful subset.
-            if (goalToolResults.length > 20) goalToolResults.splice(0, goalToolResults.length - 20);
+            // Never evict the front of one legal batch: the default executor may
+            // return 25 results in a turn. Keep at least maxToolCallsPerTurn so
+            // the judge renderer can preserve metadata for the entire newest batch.
+            const residencyLimit = Math.max(20, this.config.maxToolCallsPerTurn);
+            if (goalToolResults.length > residencyLimit) {
+              goalToolResults.splice(0, goalToolResults.length - residencyLimit);
+            }
           }
           resultBlocks.push(toolResultToBlock(result));
           const streamResult = toolResultForDisplay(result);

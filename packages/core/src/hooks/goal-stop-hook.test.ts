@@ -3,6 +3,7 @@ import {
   createGoalStopHook,
   projectGoalJudgeToolResult,
   type GoalJudgeLLM,
+  type GoalJudgeToolResult,
 } from "./goal-stop-hook.js";
 import type { LLMResponse, ToolResult } from "../types.js";
 
@@ -70,6 +71,28 @@ async function renderProjectedToolResult(result: ToolResult): Promise<string> {
   });
   await hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "checked" } });
   return judge.lastUserContent ?? "";
+}
+
+async function renderToolEvidence(
+  toolResults: GoalJudgeToolResult[],
+  goal = "verify the release",
+): Promise<string> {
+  const judge = fakeJudge('{"met":false,"waiting":false,"gaps":"more work"}');
+  const hook = createGoalStopHook({
+    goal,
+    llm: judge,
+    log: noopLog,
+    getJudgeContext: () => ({
+      toolResults,
+      progress: { turnCount: 2, stopRound: 1, elapsedMs: 10, tokensUsed: 10 },
+    }),
+  });
+  await hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "checked" } });
+  return (
+    JSON.parse(judge.lastUserContent ?? "{}") as {
+      untrustedToolEvidence: { quotedText: string };
+    }
+  ).untrustedToolEvidence.quotedText;
 }
 
 function hasUnpairedSurrogate(text: string): boolean {
@@ -358,6 +381,94 @@ describe("createGoalStopHook — three-state judge", () => {
     expect(evidence).toContain("已截断");
     expect(Array.from(evidence).length).toBeLessThanOrEqual(8_000);
     expect(hasUnpairedSurrogate(evidence)).toBe(false);
+  });
+
+  for (const batchSize of [13, 20, 25]) {
+    it(`keeps metadata and first/middle/last evidence for a ${batchSize}-result batch`, async () => {
+      const middle = Math.floor(batchSize / 2);
+      const evidence = await renderToolEvidence(
+        Array.from({ length: batchSize }, (_, index) => ({
+          turnCount: 1,
+          toolName: `BatchTool${index + 1}`,
+          status: "success" as const,
+          text:
+            index === 0
+              ? "CRITICAL-FIRST"
+              : index === middle
+                ? "CRITICAL-MIDDLE"
+                : index === batchSize - 1
+                  ? "CRITICAL-LAST"
+                  : `small result ${index + 1}`,
+        })),
+      );
+
+      for (let index = 0; index < batchSize; index++) {
+        expect(evidence).toContain(`[BatchTool${index + 1}] success`);
+      }
+      expect(evidence).toContain("CRITICAL-FIRST");
+      expect(evidence).toContain("CRITICAL-MIDDLE");
+      expect(evidence).toContain("CRITICAL-LAST");
+    });
+  }
+
+  it("prioritizes error result text while retaining every result's metadata", async () => {
+    const evidence = await renderToolEvidence(
+      Array.from({ length: 8 }, (_, index) => ({
+        turnCount: 1,
+        toolName: `Tool${index + 1}`,
+        status: index === 0 ? ("error" as const) : ("success" as const),
+        text:
+          index === 0
+            ? `ERROR-ROOT-CAUSE ${"E".repeat(1_500)}`
+            : `SUCCESS-BODY-${index + 1} ${String(index + 1).repeat(1_500)}`,
+      })),
+    );
+
+    expect(evidence).toContain("ERROR-ROOT-CAUSE");
+    for (let index = 0; index < 8; index++) {
+      expect(evidence).toContain(`[Tool${index + 1}] ${index === 0 ? "error" : "success"}`);
+    }
+    expect(evidence).toContain("[文本已省略]");
+  });
+
+  it("prioritizes goal-acceptance result text over generic successful output", async () => {
+    const evidence = await renderToolEvidence(
+      Array.from({ length: 8 }, (_, index) => ({
+        turnCount: 1,
+        toolName: index === 0 ? "RunAcceptanceTests" : `GenericTool${index + 1}`,
+        status: "success" as const,
+        text:
+          index === 0
+            ? `ACCEPTANCE-SUITE-PASSED ${"A".repeat(1_500)}`
+            : `GENERIC-BODY-${index + 1} ${String(index + 1).repeat(1_500)}`,
+      })),
+      "verify all acceptance tests pass before release",
+    );
+
+    expect(evidence).toContain("ACCEPTANCE-SUITE-PASSED");
+    expect(evidence).toContain("[RunAcceptanceTests] success");
+    expect(evidence).toContain("[文本已省略]");
+  });
+
+  it("skips an oversized block and still selects an earlier small block", async () => {
+    const evidence = await renderToolEvidence([
+      { turnCount: 1, toolName: "EarlyStatus", status: "success", text: "EARLY-SMALL-FACT" },
+      {
+        turnCount: 1,
+        toolName: "LargeMiddle",
+        status: "success",
+        text: `LARGE-MIDDLE ${"M".repeat(1_500)}`,
+      },
+      ...Array.from({ length: 5 }, (_, index) => ({
+        turnCount: 1,
+        toolName: `NewerLarge${index + 1}`,
+        status: "success" as const,
+        text: `NEWER-${index + 1} ${String(index + 1).repeat(1_500)}`,
+      })),
+    ]);
+
+    expect(evidence).toContain("[EarlyStatus] success");
+    expect(evidence).toContain("EARLY-SMALL-FACT");
   });
 
   it("met:true → allows stop, no continueSession, surfaces met verdict", async () => {

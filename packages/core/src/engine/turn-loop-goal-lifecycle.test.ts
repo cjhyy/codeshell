@@ -37,6 +37,15 @@ function toolResponse(toolCall: ToolCall): LLMResponse {
   };
 }
 
+function toolBatchResponse(toolCalls: ToolCall[]): LLMResponse {
+  return {
+    text: "",
+    toolCalls,
+    stopReason: "tool_use",
+    usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+  };
+}
+
 function makeTurnLoopDeps(
   responses: LLMResponse[],
   options: {
@@ -212,6 +221,37 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     expect(snapshots[0].toolResults).toEqual([
       { turnCount: 1, toolName: "QueryUsage", status: "success" },
     ]);
+  });
+
+  it("retains all 25 results from one legal tool batch for the judge", async () => {
+    const snapshots: any[] = [];
+    const toolCalls = Array.from({ length: 25 }, (_, index) => ({
+      id: `batch-${index + 1}`,
+      toolName: `BatchTool${index + 1}`,
+      args: {},
+    }));
+    const { deps } = makeTurnLoopDeps([toolBatchResponse(toolCalls), stopResponse("batch done")], {
+      execute: async (call) => ({
+        id: call.id,
+        toolName: call.toolName,
+        result: `evidence for ${call.toolName}`,
+      }),
+      hook: (event) =>
+        event === "on_stop" ? { data: { goalVerdict: { met: true, gaps: "" } } } : {},
+      updateGoalJudgeContext: (context) => snapshots.push(context),
+    });
+
+    await new TurnLoop(deps, {
+      maxTurns: 4,
+      maxToolCallsPerTurn: 25,
+      goal: { objective: "inspect the complete batch" },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(snapshots).toHaveLength(1);
+    expect(snapshots[0].toolResults).toHaveLength(25);
+    expect(snapshots[0].toolResults[0].text).toContain("BatchTool1");
+    expect(snapshots[0].toolResults[12].text).toContain("BatchTool13");
+    expect(snapshots[0].toolResults[24].text).toContain("BatchTool25");
   });
 
   it("stops with goal_budget_exhausted before executing tool calls", async () => {

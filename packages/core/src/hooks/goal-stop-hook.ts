@@ -181,7 +181,6 @@ interface JudgeVerdict {
 }
 
 /** V1 evidence budget: bounded deterministic projection, no extra LLM summary. */
-const MAX_TOOL_EVIDENCE_ITEMS = 12;
 const MAX_TOOL_RESULT_CHARS = 1_600;
 const MAX_TOOL_EVIDENCE_CHARS = 8_000;
 const MAX_JUDGE_REQUESTS_PER_RUN = 3;
@@ -287,43 +286,91 @@ export function projectGoalJudgeToolResult(
   return projection;
 }
 
-function renderOneToolResult(item: GoalJudgeToolResult): string {
-  const details: string[] = [];
-  if (item.text) details.push(truncateHeadTail(item.text, MAX_TOOL_RESULT_CHARS));
-  if (item.omittedNonText) details.push("[非文本/二进制内容已省略]");
-  if (details.length === 0) {
-    return `- turn ${item.turnCount} [${item.toolName}] ${item.status}`;
-  }
-  return `- turn ${item.turnCount} [${item.toolName}] ${item.status}\n${details.join("\n")}`;
+interface RenderedToolEntry {
+  item: GoalJudgeToolResult;
+  body?: string;
+}
+
+function renderToolEntry(entry: RenderedToolEntry): string {
+  const { item, body } = entry;
+  const flags: string[] = [];
+  if (item.text && body === undefined) flags.push("[文本已省略]");
+  if (item.omittedNonText) flags.push("[非文本/二进制内容已省略]");
+  const toolName = truncateHeadTail(item.toolName, 120);
+  const header = `- turn ${item.turnCount} [${toolName}] ${item.status}${
+    flags.length > 0 ? ` ${flags.join(" ")}` : ""
+  }`;
+  return body ? `${header}\n${body}` : header;
+}
+
+function renderToolEntries(entries: RenderedToolEntry[]): string {
+  return entries.map(renderToolEntry).join("\n\n");
+}
+
+const ACCEPTANCE_TOOL_PATTERN =
+  /(?:test|check|verify|validate|assert|lint|build|status|query|inspect|health|quota)/i;
+
+function evidencePriority(item: GoalJudgeToolResult, goal: string, index: number): number {
+  let priority = index;
+  if (item.status === "error") priority += 3_000_000;
+  if (ACCEPTANCE_TOOL_PATTERN.test(item.toolName)) priority += 2_000_000;
+
+  const goalTerms = goal
+    .toLocaleLowerCase()
+    .split(/[^\p{L}\p{N}_]+/u)
+    .filter((term) => term.length >= 3);
+  const evidence = `${item.toolName}\n${item.text ?? ""}`.toLocaleLowerCase();
+  if (goalTerms.some((term) => evidence.includes(term))) priority += 1_000_000;
+  return priority;
 }
 
 /**
- * Keep the newest 12 results, cap each result at 1,600 chars, then cap the
- * whole evidence section at 8,000 chars. Large text keeps both head and tail
- * because command summaries and exit/test totals commonly live at opposite ends.
+ * Preserve metadata for every resident result (and therefore every result in
+ * the newest legal tool batch), then spend the remaining budget on bodies.
+ * Errors and goal-acceptance evidence win before recency; an oversized body is
+ * skipped so smaller earlier facts can still fit. One final omitted body may
+ * receive a bounded head+tail excerpt with the leftover space.
  */
-function renderToolEvidence(items: GoalJudgeRuntimeContext["toolResults"] | undefined): string {
+function renderToolEvidence(
+  items: GoalJudgeRuntimeContext["toolResults"] | undefined,
+  goal: string,
+): string {
   if (!items?.length) return "(本次 run 尚无工具执行结果)";
-  const newest = items.slice(-MAX_TOOL_EVIDENCE_ITEMS).map(renderOneToolResult);
-  const selected: string[] = [];
-  let remaining = MAX_TOOL_EVIDENCE_CHARS;
-  for (let i = newest.length - 1; i >= 0 && remaining > 0; i--) {
-    const block = newest[i]!;
-    const separatorCost = selected.length > 0 ? 2 : 0;
-    const blockChars = codePointLength(block);
-    if (blockChars + separatorCost <= remaining) {
-      selected.unshift(block);
-      remaining -= blockChars + separatorCost;
-      continue;
+  const entries: RenderedToolEntry[] = items.map((item) => ({ item }));
+  const candidates = items
+    .map((item, index) => ({ item, index, priority: evidencePriority(item, goal, index) }))
+    .filter(({ item }) => !!item.text)
+    .sort((a, b) => b.priority - a.priority);
+
+  for (const { item, index } of candidates) {
+    entries[index]!.body = truncateHeadTail(item.text!, MAX_TOOL_RESULT_CHARS);
+    if (codePointLength(renderToolEntries(entries)) > MAX_TOOL_EVIDENCE_CHARS) {
+      entries[index]!.body = undefined;
     }
-    if (selected.length === 0) {
-      selected.unshift(truncateHeadTail(block, remaining));
-    }
-    break;
   }
-  const omitted = items.length - selected.length;
-  const rendered = `${omitted > 0 ? `(已省略 ${omitted} 条较旧结果)\n` : ""}${selected.join("\n\n")}`;
-  return truncateHeadTail(rendered, MAX_TOOL_EVIDENCE_CHARS);
+
+  // A large block that did not fit must not prevent later/smaller candidates.
+  // After that full-body pass, use any final slack for one head+tail excerpt.
+  for (const { item, index } of candidates) {
+    if (entries[index]!.body !== undefined) continue;
+    let low = 0;
+    let high = Math.min(MAX_TOOL_RESULT_CHARS, codePointLength(item.text!));
+    let best: string | undefined;
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2);
+      entries[index]!.body = truncateHeadTail(item.text!, mid);
+      if (codePointLength(renderToolEntries(entries)) <= MAX_TOOL_EVIDENCE_CHARS) {
+        best = entries[index]!.body;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+    entries[index]!.body = best && codePointLength(best) >= 40 ? best : undefined;
+    if (entries[index]!.body) break;
+  }
+
+  return truncateHeadTail(renderToolEntries(entries), MAX_TOOL_EVIDENCE_CHARS);
 }
 
 function renderProgress(
@@ -474,7 +521,7 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
 
     const finalText = typeof ctx.data.finalText === "string" ? ctx.data.finalText : "";
     const judgeContext = opts.getJudgeContext?.();
-    const toolEvidence = renderToolEvidence(judgeContext?.toolResults);
+    const toolEvidence = renderToolEvidence(judgeContext?.toolResults, goal);
     const progress = renderProgress(judgeContext?.progress, ctx.data.turnCount);
 
     const renderPreviousVerdict = (): string =>
