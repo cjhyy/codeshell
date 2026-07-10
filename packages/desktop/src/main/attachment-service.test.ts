@@ -23,7 +23,20 @@ import {
   stageImageDataUrl,
 } from "./attachment-service.js";
 
-const PNG_URL = "data:image/png;base64,iVBORw0KGgo=";
+export const IMAGE_FIXTURES = {
+  "image/png": Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+    "base64",
+  ),
+  "image/jpeg": Buffer.from(
+    "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABBQJ//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAwEBPwF//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAgEBPwF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQAGPwJ//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPyF//9oADAMBAAIAAwAAABD/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAEDAQE/EB//xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAECAQE/EB//xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAE/EB//2Q==",
+    "base64",
+  ),
+  "image/gif": Buffer.from("R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==", "base64"),
+  "image/webp": Buffer.from("UklGRhoAAABXRUJQVlA4TA4AAAAvAAAAAAcQEf0PRET/Aw==", "base64"),
+} as const;
+
+const PNG_URL = `data:image/png;base64,${IMAGE_FIXTURES["image/png"].toString("base64")}`;
 
 describe("attachment-service", () => {
   let cwd: string;
@@ -109,6 +122,69 @@ describe("attachment-service", () => {
     expect(fromFile.sha256).toBe(createHash("sha256").update(bytes).digest("hex"));
     expect(fromFile.relPath).toStartWith(".code-shell/attachments/sid-mobile/");
     expect(existsSync(spool)).toBe(true);
+  });
+
+  test("accepts structurally valid PNG, JPEG, GIF, and WebP bytes", async () => {
+    for (const [mime, bytes] of Object.entries(IMAGE_FIXTURES)) {
+      const meta = await stageImageBytes({
+        cwd,
+        sessionId: `valid-${mime.slice(mime.indexOf("/") + 1)}`,
+        name: `fixture.${mime.slice(mime.indexOf("/") + 1)}`,
+        mime,
+        bytes,
+        origin: "mobile",
+      });
+      expect(meta.mime).toBe(mime);
+      expect(meta.size).toBe(bytes.length);
+    }
+  });
+
+  test("rejects truncated or malformed image structures for every allowed MIME", async () => {
+    for (const [mime, bytes] of Object.entries(IMAGE_FIXTURES)) {
+      await expect(
+        stageImageBytes({
+          cwd,
+          sessionId: "truncated",
+          name: "truncated.bin",
+          mime,
+          bytes: bytes.subarray(0, Math.max(1, Math.floor(bytes.length / 2))),
+          origin: "mobile",
+        }),
+      ).rejects.toThrow(/invalid|truncated|structure/i);
+    }
+    await expect(
+      stageImageBytes({
+        cwd,
+        sessionId: "malformed",
+        name: "magic-only.png",
+        mime: "image/png",
+        bytes: Buffer.from("89504e470d0a1a0a", "hex"),
+        origin: "mobile",
+      }),
+    ).rejects.toThrow(/invalid|truncated|structure/i);
+  });
+
+  test("rejects declared MIME that does not match the actual image bytes", async () => {
+    await expect(
+      stageImageBytes({
+        cwd,
+        sessionId: "confused",
+        name: "not-a-jpeg.jpg",
+        mime: "image/jpeg",
+        bytes: IMAGE_FIXTURES["image/png"],
+        origin: "mobile",
+      }),
+    ).rejects.toThrow(/MIME|signature/i);
+    await expect(
+      stageImageDataUrl({
+        cwd,
+        sessionId: "confused-inline",
+        name: "not-a-png.png",
+        mime: "image/png",
+        dataUrl: `data:image/png;base64,${IMAGE_FIXTURES["image/gif"].toString("base64")}`,
+        origin: "mobile",
+      }),
+    ).rejects.toThrow(/MIME|signature/i);
   });
 
   test("rejects unsafe session ids", async () => {
@@ -214,7 +290,7 @@ describe("attachment-service", () => {
     try {
       const sessionDir = join(cwd, ".code-shell", "attachments", "sid-1");
       mkdirSync(sessionDir, { recursive: true });
-      const bytes = Buffer.from("iVBORw0KGgo=", "base64");
+      const bytes = IMAGE_FIXTURES["image/png"];
       const sha16 = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
       const outsideFile = join(outside, "secret.png");
       writeFileSync(outsideFile, "keep", "utf-8");
@@ -282,7 +358,7 @@ describe("attachment-service", () => {
       sessionId: "sid-sent",
       name: "b.png",
       mime: "image/png",
-      dataUrl: "data:image/png;base64,QUFBQQ==",
+      dataUrl: PNG_URL,
       origin: "paste",
     });
     await markAttachmentsSent(cwd, "sid-sent", [sent]);
@@ -323,7 +399,7 @@ describe("attachment-service", () => {
       sessionId: "two",
       name: "b.png",
       mime: "image/png",
-      dataUrl: "data:image/png;base64,QUFBQQ==",
+      dataUrl: PNG_URL,
       origin: "paste",
     });
 

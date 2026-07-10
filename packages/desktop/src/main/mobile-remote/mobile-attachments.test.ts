@@ -4,7 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { MAX_MOBILE_ATTACHMENTS, materializeMobileAttachments } from "./mobile-attachments.js";
 
-const PNG_URL = "data:image/png;base64,iVBORw0KGgo=";
+const PNG_BYTES = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+  "base64",
+);
+const PNG_URL = `data:image/png;base64,${PNG_BYTES.toString("base64")}`;
 const roots: string[] = [];
 
 afterEach(() => {
@@ -21,7 +25,7 @@ describe("materializeMobileAttachments", () => {
   test("stages ordered inline and uploaded descriptors as mobile attachments", async () => {
     const cwd = makeCwd();
     const inlineBytes = Buffer.from(PNG_URL.slice(PNG_URL.indexOf(",") + 1), "base64");
-    const uploadedBytes = Buffer.from([9, 8, 7, 6]);
+    const uploadedBytes = PNG_BYTES;
     const spool = join(cwd, "spool.upload");
     writeFileSync(spool, uploadedBytes);
     const uploads = {
@@ -119,7 +123,7 @@ describe("materializeMobileAttachments", () => {
   test("atomically prevents concurrent chat/room materialization from replaying one upload", async () => {
     const cwd = makeCwd();
     const spool = join(cwd, "replay.upload");
-    writeFileSync(spool, Buffer.from([1, 2, 3, 4]));
+    writeFileSync(spool, PNG_BYTES);
     let activeClaim: string | undefined;
     const uploads = {
       claim(_deviceId: string, uploadId: string) {
@@ -131,7 +135,7 @@ describe("materializeMobileAttachments", () => {
           clientId: "replay",
           name: "photo.png",
           mime: "image/png" as const,
-          size: 4,
+          size: PNG_BYTES.length,
           path: spool,
           sha256: "a".repeat(64),
         };
@@ -146,7 +150,7 @@ describe("materializeMobileAttachments", () => {
       clientId: "replay",
       name: "photo.png",
       mime: "image/png" as const,
-      size: 4,
+      size: PNG_BYTES.length,
     };
 
     const results = await Promise.allSettled([

@@ -12,6 +12,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { basename, extname, join, relative, resolve, sep } from "node:path";
+import { probeImageBytes } from "./image-byte-probe.js";
 
 export type InputAttachmentKind = "image" | "file" | "directory";
 
@@ -176,6 +177,7 @@ async function stageImageBuffer(
   if (buffer.byteLength > MAX_STAGED_IMAGE_BYTES) {
     throw new Error(`image attachment exceeds size limit (${formatBytes(MAX_STAGED_IMAGE_BYTES)})`);
   }
+  const image = probeImageBytes(mime, buffer);
 
   const attachmentsRoot = await ensureAttachmentsRoot(cwd);
   const sessionDir = await ensureSessionDir(attachmentsRoot, input.sessionId);
@@ -218,6 +220,8 @@ async function stageImageBuffer(
     sha256,
     ...(input.name ? { originalName: input.name } : {}),
     createdAt,
+    width: image.width,
+    height: image.height,
     vision: { include: true },
   };
   await appendManifest(sessionDir, { event: "staged", status: "draft", ...meta });
