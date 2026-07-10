@@ -1369,6 +1369,10 @@ export class Engine {
     // the first point we can set it. After this assignment treat the
     // field as immutable for the rest of the run.
     toolCtx.sessionId = session.state.sessionId;
+    toolCtx.originClientMessageId = options?.clientMessageId;
+    toolCtx.recordExternalFileChanges = (record) => {
+      session.transcript.append("external_file_changes", { ...record });
+    };
     toolCtx.setSessionWorkspace = (workspace) => {
       session.state.workspace = workspace;
     };

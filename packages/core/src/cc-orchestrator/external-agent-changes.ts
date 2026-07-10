@@ -2,6 +2,7 @@ import { readFileSync, existsSync, readdirSync, statSync, openSync, readSync, cl
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { encodeCwd } from "./session-discovery.js";
+import { logger } from "../logging/logger.js";
 
 /**
  * #6 — attribute file changes made by a background external agent (DriveAgent
@@ -149,9 +150,27 @@ export function readExternalChangedFiles(
   sessionId: string,
 ): string[] {
   try {
-    if (cli === "codex") return readCodexChangedFiles(cwd, sessionId);
-    return readClaudeChangedFiles(cwd, sessionId);
-  } catch {
+    const files =
+      cli === "codex"
+        ? readCodexChangedFiles(cwd, sessionId)
+        : readClaudeChangedFiles(cwd, sessionId);
+    logger.debug("changed_files.external.extracted", {
+      cat: "changed_files",
+      cli,
+      cwd,
+      externalSessionId: sessionId,
+      size: files.length,
+      files,
+    });
+    return files;
+  } catch (err) {
+    logger.debug("changed_files.external.extract_failed", {
+      cat: "changed_files",
+      cli,
+      cwd,
+      externalSessionId: sessionId,
+      error: err instanceof Error ? err.message : String(err),
+    });
     return [];
   }
 }

@@ -969,6 +969,95 @@ describe("applyStreamEvent — goal_progress markers", () => {
 });
 
 describe("applyStreamEvent — background_agent_completed", () => {
+  test("DriveAgent changedFiles join the current turn and dedupe against in-session edits", () => {
+    const messages: Message[] = [
+      { kind: "user", id: "u1", text: "edit the feature" },
+      {
+        kind: "tool",
+        id: "t1",
+        toolName: "Edit",
+        args: JSON.stringify({
+          file_path: "src/a.ts",
+          old_string: "before",
+          new_string: "after",
+        }),
+        status: "succeeded",
+        startedAt: 0,
+      },
+    ];
+    let s = withMessages(messages);
+    s = applyStreamEvent(s, {
+      type: "background_agent_completed",
+      agentId: "cc-files",
+      description: "DriveAgent(claude): edit the feature",
+      status: "completed",
+      workKind: "cc",
+      finalText: "done",
+      changedFiles: ["/repo/src/a.ts", "/repo/src/b.ts", "/repo/src/b.ts"],
+      cwd: "/repo",
+      enqueuedAt: 1,
+    } as StreamEvent);
+    s = applyStreamEvent(s, turnComplete);
+
+    const cards = s.messages.filter((m) => m.kind === "files_changed");
+    expect(cards).toHaveLength(1);
+    if (cards[0]?.kind === "files_changed") {
+      expect(cards[0].files).toEqual([
+        { path: "src/a.ts", added: 1, removed: 1, count: 2 },
+        { path: "src/b.ts", added: 0, removed: 0, count: 1 },
+      ]);
+    }
+  });
+
+  test("late DriveAgent completion stays with its launching user turn", () => {
+    let s = withMessages([
+      { kind: "user", id: "u1", text: "launch DriveAgent", clientMessageId: "client-1" },
+      {
+        kind: "tool",
+        id: "drive-1",
+        toolName: "DriveAgent",
+        args: JSON.stringify({ prompt: "edit old.ts", cwd: "/repo" }),
+        result: "started cc-files",
+        status: "succeeded",
+        startedAt: 0,
+      },
+    ]);
+    s = applyStreamEvent(s, turnComplete);
+    s = {
+      ...s,
+      messages: [
+        ...s.messages,
+        { kind: "user", id: "u2", text: "unrelated next turn", clientMessageId: "client-2" },
+      ],
+    };
+    s = applyStreamEvent(s, {
+      type: "background_agent_completed",
+      agentId: "cc-files",
+      description: "DriveAgent(claude): edit old.ts",
+      status: "completed",
+      workKind: "cc",
+      finalText: "done",
+      changedFiles: ["old.ts"],
+      cwd: "/repo",
+      originClientMessageId: "client-1",
+      enqueuedAt: 1,
+    } as StreamEvent);
+    s = applyStreamEvent(s, turnComplete);
+
+    const user2Index = s.messages.findIndex(
+      (m) => m.kind === "user" && m.clientMessageId === "client-2",
+    );
+    const cards = s.messages
+      .map((message, index) => ({ message, index }))
+      .filter(({ message }) => message.kind === "files_changed");
+    expect(cards).toHaveLength(1);
+    expect(cards[0]!.index).toBeLessThan(user2Index);
+    expect(cards[0]!.message).toMatchObject({
+      kind: "files_changed",
+      files: [{ path: "old.ts", added: 0, removed: 0, count: 1 }],
+    });
+  });
+
   test("completed → appends a system message with the saved path", () => {
     const ev = {
       type: "background_agent_completed",

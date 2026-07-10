@@ -169,6 +169,10 @@ export type TranscriptEventType =
   // data = { agentId, name, description }; agentId === the sub-agent's session
   // id (agent_id===childSid), the key to fetch that session's state + result.
   | "subagent"
+  // Files attributed to a completed external DriveAgent run. Persisted in the
+  // parent transcript so desktop replay rebuilds the same per-user-turn file
+  // summary as the live background_agent_completed stream event.
+  | "external_file_changes"
   | "turn_boundary"
   | "goal_progress"
   // User interrupted the in-flight turn (pressed Stop). Persisted so a resume
@@ -623,6 +627,12 @@ export type StreamEvent =
       finalText?: string;
       /** Error message (status === "failed" or "cancelled" only). */
       error?: string;
+      /** Files attributed to an external DriveAgent transcript. */
+      changedFiles?: string[];
+      /** Working directory used to canonicalize relative/absolute path aliases. */
+      cwd?: string;
+      /** Client id of the real user turn that launched this background work. */
+      originClientMessageId?: string;
       /** When the bg agent finished (Date.now() value). */
       enqueuedAt: number;
     };
