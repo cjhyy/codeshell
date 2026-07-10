@@ -383,12 +383,12 @@ function blockScalarEnd(
 function indentedContinuationEnd(
   text: string,
   currentLineEnd: number,
-  keyLineStart: number,
+  keyIndent: number,
+  allowSequenceItems: boolean,
 ): { end: number; replacement: string } | undefined {
   const newline = text.indexOf("\n", currentLineEnd);
   if (newline < 0) return undefined;
 
-  const keyIndent = text.slice(keyLineStart).match(/^[ \t]*/u)?.[0].length ?? 0;
   let nextLineStart = newline + 1;
   let sawIndentedContent = false;
   while (nextLineStart < text.length) {
@@ -396,6 +396,8 @@ function indentedContinuationEnd(
     const line = text.slice(nextLineStart, nextEnd);
     const indent = line.match(/^[ \t]*/u)?.[0].length ?? 0;
     if (line.trim() !== "") {
+      if (/^[ \t]*[\w.-]+[ \t]*:/u.test(line)) break;
+      if (!allowSequenceItems && /^[ \t]*-[ \t]+/u.test(line)) break;
       if (indent <= keyIndent) break;
       sawIndentedContent = true;
     }
@@ -451,7 +453,12 @@ function redactStructuredSecrets(text: string): string {
 
       const continuation = isFlowValue
         ? undefined
-        : indentedContinuationEnd(text, endOfLine, keyLineStart);
+        : indentedContinuationEnd(
+            text,
+            endOfLine,
+            match.index + match[1]!.length + match[2]!.length - keyLineStart,
+            valueStart === endOfLine,
+          );
       if (continuation) {
         valueEnd = continuation.end;
         replacement = continuation.replacement;

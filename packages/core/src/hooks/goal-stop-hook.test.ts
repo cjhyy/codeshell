@@ -443,6 +443,40 @@ describe("createGoalStopHook — three-state judge", () => {
       ["token: [REDACTED]", "safe: visible", "password: [REDACTED]", "next: keep"].join("\n"),
     ],
     [
+      "sequence-mapping sibling fields after a secret",
+      [
+        "items:",
+        "  - password: sequence-secret",
+        "    status: healthy",
+        "    result: passed",
+        "  - name: visible",
+      ].join("\n"),
+      [
+        "items:",
+        "  - password: [REDACTED]",
+        "    status: healthy",
+        "    result: passed",
+        "  - name: visible",
+      ].join("\n"),
+    ],
+    [
+      "mapping sibling fields after a secret",
+      [
+        "credentials:",
+        "  password: mapping-secret",
+        "  status: healthy",
+        "  result: passed",
+        "visible: yes",
+      ].join("\n"),
+      [
+        "credentials:",
+        "  password: [REDACTED]",
+        "  status: healthy",
+        "  result: passed",
+        "visible: yes",
+      ].join("\n"),
+    ],
+    [
       "argv array credential pairs",
       '["deploy","--token","argv-secret","--API-key", "argv-key-secret","--verbose"]',
       '["deploy","--token","[REDACTED]","--API-key", "[REDACTED]","--verbose"]',
