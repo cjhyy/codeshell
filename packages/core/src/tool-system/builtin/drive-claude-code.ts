@@ -71,6 +71,11 @@ export const driveAgentToolDef: ToolDefinition = {
         description:
           "Existing session id to resume (keeps context). Must come from a prior run of the SAME cli. Omit for a fresh session.",
       },
+      model: {
+        type: "string",
+        description:
+          "Optional model override, passed through to `claude --model` / `codex exec --model`. Omit to use the CLI default; only pass when the user explicitly requests a model.",
+      },
       cwd: { type: "string", description: "Working directory the run operates in." },
       attachmentPaths: {
         type: "array",
@@ -99,6 +104,7 @@ type Runner = (opts: {
   cli: DriveCli;
   prompt: string;
   resumeSessionId?: string;
+  model?: string;
   cwd: string;
   permissionMode?: PermMode;
   signal?: AbortSignal;
@@ -122,6 +128,7 @@ const defaultRunner: Runner = (opts) => {
       command,
       prompt: opts.prompt,
       resumeSessionId: opts.resumeSessionId,
+      model: opts.model,
       cwd: opts.cwd,
       permissionMode: opts.permissionMode ?? "default",
       imagePaths: opts.imagePaths,
@@ -343,6 +350,7 @@ export function makeDriveAgentTool(
       return `Error: unknown cli "${String(args.cli)}" (expected "claude" or "codex")`;
     const resumeSessionId =
       typeof args.resumeSessionId === "string" ? args.resumeSessionId : undefined;
+    const model = typeof args.model === "string" && args.model.trim() ? args.model : undefined;
     const sessionStore = options.sessionStore ?? externalAgentSessionStore;
     let cwd = requestedCwd;
     let resumeNote = "";
@@ -393,6 +401,7 @@ export function makeDriveAgentTool(
       cli,
       prompt: promptWithAttachments,
       resumeSessionId,
+      model,
       cwd,
       permissionMode,
       signal: ctx?.signal ?? argSignal(args),
@@ -480,6 +489,7 @@ export const driveClaudeCodeToolDef: ToolDefinition = {
         type: "string",
         description: "Existing CC session id to resume (keeps context). Omit for a fresh session.",
       },
+      model: (driveAgentToolDef.inputSchema as any).properties.model,
       cwd: (driveAgentToolDef.inputSchema as any).properties.cwd,
       attachmentPaths: (driveAgentToolDef.inputSchema as any).properties.attachmentPaths,
       permissionMode: (driveAgentToolDef.inputSchema as any).properties.permissionMode,
@@ -495,14 +505,15 @@ export const driveClaudeCodeToolDef: ToolDefinition = {
 type LegacyRunner = (opts: {
   prompt: string;
   resumeSessionId?: string;
+  model?: string;
   cwd: string;
   permissionMode?: PermMode;
   signal?: AbortSignal;
 }) => Promise<AgentRunResult>;
 export function makeDriveClaudeCodeTool(runner?: LegacyRunner, options?: DriveAgentToolOptions) {
   const generic: Runner | undefined = runner
-    ? ({ prompt, resumeSessionId, cwd, permissionMode, signal }) =>
-        runner({ prompt, resumeSessionId, cwd, permissionMode, signal })
+    ? ({ prompt, resumeSessionId, model, cwd, permissionMode, signal }) =>
+        runner({ prompt, resumeSessionId, model, cwd, permissionMode, signal })
     : undefined;
   return makeDriveAgentTool(generic ?? defaultRunner, "claude", options);
 }

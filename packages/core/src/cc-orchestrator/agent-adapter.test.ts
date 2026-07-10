@@ -38,6 +38,21 @@ describe("claudeAdapter.buildArgs", () => {
     expect(args[args.indexOf("--resume") + 1]).toBe("S1");
     expect(args).toContain("--verbose");
   });
+  it("adds --model <model> when model is explicitly provided", () => {
+    const args = claudeAdapter.buildArgs({
+      prompt: "go",
+      model: "claude-x",
+      permissionMode: "default",
+      cwd: "/x",
+    });
+    const i = args.indexOf("--model");
+    expect(i).toBeGreaterThan(-1);
+    expect(args[i + 1]).toBe("claude-x");
+  });
+  it("omits --model when model is not provided", () => {
+    const args = claudeAdapter.buildArgs({ prompt: "go", permissionMode: "default", cwd: "/x" });
+    expect(args).not.toContain("--model");
+  });
 });
 
 describe("claudeAdapter.parseResult", () => {
@@ -107,6 +122,36 @@ describe("codexAdapter.buildArgs", () => {
     expect(i).toBeGreaterThan(-1);
     expect(args[i + 1]).toBe("T1");
     expect(args[i + 2]).toBe("-");
+  });
+  it("adds --model <model> before the trailing stdin marker when model is provided", () => {
+    const args = codexAdapter.buildArgs({
+      prompt: "go",
+      model: "codex-x",
+      permissionMode: "default",
+      cwd: "/x",
+    });
+    const i = args.indexOf("--model");
+    expect(i).toBeGreaterThan(-1);
+    expect(args[i + 1]).toBe("codex-x");
+    expect(i).toBeLessThan(args.indexOf("-"));
+  });
+  it("omits --model when model is not provided", () => {
+    const args = codexAdapter.buildArgs({ prompt: "go", permissionMode: "default", cwd: "/x" });
+    expect(args).not.toContain("--model");
+  });
+  it("places --model before resume when both are provided", () => {
+    const args = codexAdapter.buildArgs({
+      prompt: "go",
+      model: "codex-x",
+      resumeSessionId: "T1",
+      permissionMode: "default",
+      cwd: "/x",
+    });
+    const modelIndex = args.indexOf("--model");
+    const resumeIndex = args.indexOf("resume");
+    expect(modelIndex).toBeGreaterThan(-1);
+    expect(args[modelIndex + 1]).toBe("codex-x");
+    expect(modelIndex).toBeLessThan(resumeIndex);
   });
   it("declares promptViaStdin so the driver feeds the prompt over stdin", () => {
     expect(codexAdapter.promptViaStdin).toBe(true);

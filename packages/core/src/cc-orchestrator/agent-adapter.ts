@@ -3,6 +3,8 @@ export type PermissionMode = "default" | "acceptEdits" | "bypassPermissions";
 export interface BuildArgsOpts {
   prompt: string;
   resumeSessionId?: string;
+  /** Optional caller-specified model override. Passed through without validation; the CLI reports unknown models. */
+  model?: string;
   permissionMode: PermissionMode;
   cwd: string;
   imagePaths?: string[];
@@ -48,6 +50,7 @@ export const claudeAdapter: AgentAdapter = {
   buildArgs(opts) {
     // -p (print/headless) + stream-json REQUIRES --verbose (verified).
     const args = ["-p", opts.prompt, "--output-format", "stream-json", "--verbose"];
+    if (opts.model) args.push("--model", opts.model);
     if (opts.resumeSessionId) args.push("--resume", opts.resumeSessionId);
     // Hard-disallow Workflow: driving CC unattended (esp. bypassPermissions),
     // CC's Workflow tool fans out a FLEET of agents — the real token-burn culprit
@@ -113,6 +116,7 @@ export const codexAdapter: AgentAdapter = {
         opts.permissionMode === "acceptEdits" ? "workspace-write" : "read-only",
       );
     }
+    if (opts.model) args.push("--model", opts.model);
     if (opts.codexImageInputSupported) {
       for (const imagePath of opts.imagePaths ?? []) args.push("-i", imagePath);
     }

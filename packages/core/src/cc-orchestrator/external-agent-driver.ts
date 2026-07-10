@@ -82,6 +82,7 @@ export function runAgentOnce(
       const args = adapter.buildArgs({
         prompt: opts.prompt,
         resumeSessionId: opts.resumeSessionId,
+        model: opts.model,
         permissionMode: opts.permissionMode ?? "default",
         cwd: opts.cwd,
         imagePaths: opts.imagePaths,
