@@ -2,7 +2,7 @@
  * Core type definitions for the code-shell orchestration framework.
  */
 
-import type { GoalConfig } from "./engine/goal.js";
+import type { GoalConfig, GoalTerminal } from "./engine/goal.js";
 
 // ─── Content & Messages ───────────────────────────────────────────
 
@@ -293,6 +293,12 @@ export interface SessionState {
    * baselines reset (matching CC). See engine.run goal-resolution.
    */
   activeGoal?: GoalConfig;
+  /**
+   * Last force-terminated goal instance. Kept separately from activeGoal so an
+   * old whole-state writer cannot make that same exhausted goal armable again.
+   * Optional for backward compatibility with pre-tombstone state.json files.
+   */
+  goalTerminal?: GoalTerminal;
 }
 
 export interface TokenUsage {

@@ -1,5 +1,5 @@
-import { describe, expect, it } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { afterEach, describe, expect, it } from "bun:test";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -10,6 +10,7 @@ import type { HookResult } from "../hooks/events.js";
 import type { LLMResponse, Message, StreamEvent, ToolCall, ToolResult } from "../types.js";
 import { CANCEL_GOAL_TOOL_NAME } from "../tool-system/builtin/cancel-goal.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js";
+import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
 import { Engine } from "./engine.js";
 import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js";
 
@@ -143,6 +144,7 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     const result = await new TurnLoop(deps, config).run([{ role: "user", content: "go" }]);
 
     expect(result.reason).toBe("goal_budget_exhausted");
+    expect(result.goalTermination).toBe("token_budget_exhausted");
     expect(calls).toHaveLength(1);
     expect(executedTools).toHaveLength(0);
     expect(
@@ -181,9 +183,10 @@ describe("TurnLoop goal lifecycle guardrails", () => {
 
     const result = await new TurnLoop(deps, config).run([{ role: "user", content: "go" }]);
 
-    // Code-current terminal reason is "completed"; the safety contract is that
-    // continuation is bounded and surfaced as goal_progress: exhausted.
+    // Keep the public terminal reason stable while returning structured goal
+    // lifecycle metadata for Engine-owned persistence cleanup.
     expect(result.reason).toBe("completed");
+    expect(result.goalTermination).toBe("stop_blocks_exhausted");
     expect(stopHookCalls).toBe(3);
     expect(calls).toHaveLength(3);
     expect(
@@ -204,7 +207,14 @@ describe("TurnLoop goal lifecycle guardrails", () => {
 });
 
 const provider = "fake-goal-lifecycle";
-const engineScenarios = new Map<string, { mainResponses: LLMResponse[]; mainCalls: number }>();
+const engineScenarios = new Map<
+  string,
+  {
+    mainResponses: LLMResponse[];
+    mainCalls: number;
+    judgeResponse?: string;
+  }
+>();
 
 class GoalLifecycleClient extends LLMClientBase {
   protected initClient(): void {}
@@ -216,7 +226,7 @@ class GoalLifecycleClient extends LLMClientBase {
     const isMainTurn = (options.tools?.length ?? 0) > 0;
     if (!isMainTurn) {
       return {
-        text: "aux",
+        text: scenario.judgeResponse ?? "aux",
         toolCalls: [],
         stopReason: "stop",
         usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
@@ -241,11 +251,288 @@ function uniqueModel(name: string): string {
 }
 
 function activeGoalFromState(dir: string, sessionId: string): unknown {
-  const raw = readFileSync(join(dir, "sessions", sessionId, "state.json"), "utf8");
-  return (JSON.parse(raw) as { activeGoal?: unknown }).activeGoal;
+  return persistedState(dir, sessionId).activeGoal;
 }
 
+function persistedState(
+  dir: string,
+  sessionId: string,
+): {
+  activeGoal?: { objective: string; setAtMs?: number };
+  goalTerminal?: { objective: string; setAtMs?: number; reason: string };
+} {
+  const raw = readFileSync(join(dir, "sessions", sessionId, "state.json"), "utf8");
+  return JSON.parse(raw);
+}
+
+afterEach(() => {
+  backgroundJobRegistry.reset();
+});
+
 describe("Engine persisted goal lifecycle", () => {
+  it("refuses to arm a stale activeGoal that matches its terminal tombstone", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-terminal-guard-"));
+    const model = uniqueModel("terminal-guard");
+    const sessionId = "goal-terminal-guard";
+    engineScenarios.set(model, {
+      mainResponses: [stopResponse("plain response")],
+      mainCalls: 0,
+      judgeResponse: '{"met":false,"waiting":false,"gaps":"must not run"}',
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+      const { state } = (engine as any).sessionManager.create(dir, model, provider, sessionId);
+      const staleGoal = { objective: "already exhausted", setAtMs: 42_000 };
+      state.status = "completed";
+      state.activeGoal = staleGoal;
+      state.goalTerminal = {
+        ...staleGoal,
+        reason: "stop_blocks_exhausted",
+        terminatedAtMs: 43_000,
+      };
+      // Reproduce a historical/foreign whole-state write without passing
+      // through SessionManager.saveState's tombstone reconciliation.
+      writeFileSync(
+        join(dir, "sessions", sessionId, "state.json"),
+        JSON.stringify(state, null, 2),
+        "utf8",
+      );
+
+      const events: StreamEvent[] = [];
+      const result = await engine.run("bare follow-up", {
+        sessionId,
+        cwd: dir,
+        onStream: (event) => events.push(event),
+      });
+
+      expect(result.reason).toBe("completed");
+      expect(engineScenarios.get(model)?.mainCalls).toBe(1);
+      expect(events.some((event) => event.type === "goal_progress")).toBe(false);
+      expect(persistedState(dir, sessionId).activeGoal).toBeUndefined();
+      expect(persistedState(dir, sessionId).goalTerminal?.objective).toBe("already exhausted");
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("clears a stop-block-exhausted goal and does not re-arm it on a bare send", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-stop-exhausted-"));
+    const model = uniqueModel("stop-exhausted");
+    const sessionId = "goal-stop-exhausted-clears";
+    engineScenarios.set(model, {
+      mainResponses: [stopResponse("still working")],
+      mainCalls: 0,
+      judgeResponse: '{"met":false,"waiting":false,"gaps":"unfinished"}',
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const firstEvents: StreamEvent[] = [];
+      const first = await engine.run("keep going", {
+        sessionId,
+        cwd: dir,
+        goal: { objective: "finish the goal", maxStopBlocks: 1 },
+        onStream: (event) => firstEvents.push(event),
+      });
+
+      expect(first.reason).toBe("completed");
+      expect(
+        firstEvents.some((event) => event.type === "goal_progress" && event.status === "exhausted"),
+      ).toBe(true);
+      expect(engine.getGoal(sessionId)).toBeUndefined();
+      expect(persistedState(dir, sessionId).activeGoal).toBeUndefined();
+      expect(persistedState(dir, sessionId).goalTerminal?.reason).toBe("stop_blocks_exhausted");
+
+      const bareEvents: StreamEvent[] = [];
+      await engine.run("plain follow-up", {
+        sessionId,
+        cwd: dir,
+        onStream: (event) => bareEvents.push(event),
+      });
+
+      expect(engineScenarios.get(model)?.mainCalls).toBe(3);
+      expect(bareEvents.some((event) => event.type === "goal_progress")).toBe(false);
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("clears a token-budget-exhausted goal so a bare send stays out of goal mode", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-budget-exhausted-"));
+    const model = uniqueModel("budget-exhausted");
+    const sessionId = "goal-budget-exhausted-clears";
+    engineScenarios.set(model, {
+      mainResponses: [stopResponse("over budget")],
+      mainCalls: 0,
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const first = await engine.run("bounded work", {
+        sessionId,
+        cwd: dir,
+        goal: { objective: "finish cheaply", tokenBudget: 10 },
+      });
+
+      expect(first.reason).toBe("goal_budget_exhausted");
+      expect(engine.getGoal(sessionId)).toBeUndefined();
+      expect(persistedState(dir, sessionId).goalTerminal?.reason).toBe("token_budget_exhausted");
+
+      const bareEvents: StreamEvent[] = [];
+      await engine.run("plain follow-up", {
+        sessionId,
+        cwd: dir,
+        onStream: (event) => bareEvents.push(event),
+      });
+      expect(engineScenarios.get(model)?.mainCalls).toBe(2);
+      expect(bareEvents.some((event) => event.type === "goal_progress")).toBe(false);
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("clears a goal-mode max-turns termination", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-max-turns-"));
+    const model = uniqueModel("max-turns");
+    const sessionId = "goal-max-turns-clears";
+    engineScenarios.set(model, {
+      mainResponses: [toolResponse({ id: "unknown-1", toolName: "UnknownTool", args: {} })],
+      mainCalls: 0,
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+        maxTurns: 1,
+      });
+      (engine as any).hooks.clear();
+
+      const result = await engine.run("one turn only", {
+        sessionId,
+        cwd: dir,
+        goal: "finish within one turn",
+      });
+
+      expect(result.reason).toBe("max_turns");
+      expect(engine.getGoal(sessionId)).toBeUndefined();
+      expect(persistedState(dir, sessionId).goalTerminal?.reason).toBe("max_turns_exhausted");
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the active goal when waiting on finite background work", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-waiting-"));
+    const model = uniqueModel("waiting");
+    const sessionId = "goal-waiting-retained";
+    backgroundJobRegistry.start("finite-job", sessionId, "finite download");
+    engineScenarios.set(model, {
+      mainResponses: [stopResponse("download started")],
+      mainCalls: 0,
+      judgeResponse: '{"met":false,"waiting":true,"gaps":"waiting for download"}',
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: false,
+      });
+      (engine as any).hooks.clear();
+
+      const result = await engine.run("start the download", {
+        sessionId,
+        cwd: dir,
+        goal: "finish after the download",
+      });
+
+      expect(result.reason).toBe("completed");
+      expect(engine.getGoal(sessionId)?.objective).toBe("finish after the download");
+      expect(persistedState(dir, sessionId).goalTerminal).toBeUndefined();
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not clear replacement goal B when run goal A terminates", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-replaced-during-run-"));
+    const model = uniqueModel("replaced-during-run");
+    const sessionId = "goal-a-termination-keeps-b";
+    let engine!: Engine;
+    engineScenarios.set(model, {
+      mainResponses: [stopResponse("A is unfinished")],
+      mainCalls: 0,
+      judgeResponse: '{"met":false,"waiting":false,"gaps":"A remains"}',
+    });
+
+    try {
+      engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const result = await engine.run("work on A", {
+        sessionId,
+        cwd: dir,
+        goal: { objective: "goal A", maxStopBlocks: 1 },
+        onStream: (event) => {
+          if (event.type !== "goal_progress" || event.status !== "exhausted") return;
+          const live = (engine as any).activeRunSession;
+          live.state.activeGoal = { objective: "goal B", setAtMs: 9_999_999 };
+          (engine as any).sessionManager.saveState(live.state);
+        },
+      });
+      const state = persistedState(dir, sessionId);
+
+      expect(result.reason).toBe("completed");
+      expect(state.activeGoal).toEqual({ objective: "goal B", setAtMs: 9_999_999 });
+      expect(state.goalTerminal?.objective).toBe("goal A");
+      expect(state.goalTerminal?.reason).toBe("stop_blocks_exhausted");
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("complete_goal clears state.activeGoal so the next bare send cannot inherit it", async () => {
     const dir = mkdtempSync(join(tmpdir(), "engine-goal-complete-"));
     const model = uniqueModel("complete");

@@ -60,8 +60,10 @@ import {
   resolveGoalSetAt,
   resolveMaxTurns,
   resolveMaxStopBlocks,
+  isSameGoalInstance,
   type GoalConfig,
   type GoalExtension,
+  type GoalTerminationReason,
 } from "./goal.js";
 import { loadPluginHooks } from "../plugins/loadPluginHooks.js";
 import { pluginAgentDirs } from "../plugins/installer/loadPluginAgents.js";
@@ -2047,7 +2049,15 @@ export class Engine {
       // bare send with no options.goal inherits the stored active goal so the
       // model keeps working toward it — that's what makes it persistent.
       const explicitGoal = normalizeGoal(options?.goal);
-      const storedGoal = this.config.isSubAgent !== true ? session.state.activeGoal : undefined;
+      let storedGoal = this.config.isSubAgent !== true ? session.state.activeGoal : undefined;
+      // Defense in depth: a stale whole-state writer may have restored the
+      // activeGoal field after this exact goal instance was force-terminated.
+      // Refuse to arm it and converge the live bundle before hook registration.
+      if (storedGoal && isSameGoalInstance(storedGoal, session.state.goalTerminal)) {
+        session.state.activeGoal = undefined;
+        storedGoal = undefined;
+        this.sessionManager.saveState(session.state);
+      }
       if (explicitGoal && this.config.isSubAgent !== true) {
         const replaced = !!storedGoal && storedGoal.objective !== explicitGoal.objective;
         // Stamp WHEN this goal was set so the judge can anchor relative deadlines
@@ -2056,7 +2066,14 @@ export class Engine {
         // or changed objective gets a fresh stamp; re-sending the SAME objective
         // keeps the original anchor (the goal continues, the user didn't restate a
         // new deadline). User input never carries setAtMs, so we set it here.
-        explicitGoal.setAtMs = resolveGoalSetAt(explicitGoal.objective, storedGoal, Date.now());
+        const resolvedSetAt = resolveGoalSetAt(explicitGoal.objective, storedGoal, Date.now());
+        // A user explicitly re-starting the same objective creates a new goal
+        // instance. Avoid a same-millisecond collision with its old tombstone.
+        explicitGoal.setAtMs =
+          session.state.goalTerminal?.objective === explicitGoal.objective &&
+          session.state.goalTerminal.setAtMs === resolvedSetAt
+            ? resolvedSetAt + 1
+            : resolvedSetAt;
         session.state.activeGoal = explicitGoal;
         this.sessionManager.saveState(session.state);
         options?.onStream?.({
@@ -2066,6 +2083,13 @@ export class Engine {
         });
       }
       const normalizedGoal = explicitGoal ?? storedGoal ?? normalizeGoal(this.config.goal);
+      // Snapshot the persisted goal identity owned by THIS run. Terminal
+      // cleanup compares against this immutable copy so an old run cannot
+      // delete a replacement goal installed while it was finishing.
+      const persistedRunGoal =
+        normalizedGoal && isSameGoalInstance(session.state.activeGoal, normalizedGoal)
+          ? { ...normalizedGoal }
+          : undefined;
       let goalHookHandler: ReturnType<typeof createGoalStopHook> | null = null;
       if (normalizedGoal && this.config.isSubAgent !== true) {
         goalHookHandler = createGoalStopHook({
@@ -2077,7 +2101,10 @@ export class Engine {
           // calls this from inside its met branch (single source of truth for
           // "goal achieved"); engine owns the persistence side-effect.
           onMet: () => {
-            if (session.state.activeGoal) {
+            if (
+              persistedRunGoal &&
+              isSameGoalInstance(session.state.activeGoal, persistedRunGoal)
+            ) {
               session.state.activeGoal = undefined;
               this.sessionManager.saveState(session.state);
             }
@@ -2087,7 +2114,8 @@ export class Engine {
           // in-RAM session are untouched) actually stops the judge. Reads disk
           // via readActiveGoal — authoritative and independent of which session
           // instance the run closure holds.
-          isGoalActive: (sid) => this.sessionManager.readActiveGoal(sid) !== undefined,
+          isGoalActive: (sid) =>
+            isSameGoalInstance(this.sessionManager.readActiveGoal(sid), normalizedGoal),
         });
         this.hooks.register("on_stop", goalHookHandler, 0, "goal-stop");
         // Expose for clearGoal() mid-run. Already guarded by isSubAgent above.
@@ -2137,7 +2165,10 @@ export class Engine {
           // turns don't re-arm) AND persists it, and drops the in-flight stop
           // hook so nothing re-blocks the stop we're about to return.
           clearPersistedGoal: () => {
-            if (session.state.activeGoal !== undefined) {
+            if (
+              persistedRunGoal &&
+              isSameGoalInstance(session.state.activeGoal, persistedRunGoal)
+            ) {
               session.state.activeGoal = undefined;
               this.sessionManager.saveState(session.state);
             }
@@ -2225,9 +2256,30 @@ export class Engine {
       // only — sub-agents don't carry user-clearable persistent goals.
       if (this.config.isSubAgent !== true) this.activeRunSession = session;
 
+      const applyGoalTermination = (termination: GoalTerminationReason | undefined): void => {
+        if (!termination || !persistedRunGoal) return;
+        // Record the terminal identity even when a newer goal has already
+        // replaced it. Only clear activeGoal when it is still the run's goal.
+        session.state.goalTerminal = {
+          objective: persistedRunGoal.objective,
+          setAtMs: persistedRunGoal.setAtMs,
+          reason: termination,
+          terminatedAtMs: Date.now(),
+        };
+        if (isSameGoalInstance(session.state.activeGoal, persistedRunGoal)) {
+          session.state.activeGoal = undefined;
+        }
+        this.sessionManager.saveState(session.state);
+        if (goalHookHandler) {
+          this.hooks.unregister("on_stop", goalHookHandler);
+          if (this.activeGoalHook === goalHookHandler) this.activeGoalHook = null;
+        }
+      };
+
       let result: Awaited<ReturnType<typeof turnLoop.run>>;
       try {
         result = await turnLoop.run(messages);
+        applyGoalTermination(result.goalTermination);
 
         // ── Headless: drain background sub-agents before resolving ───────
         // Unified background-work model (2026-06-17): the engine NO LONGER parks
@@ -2287,6 +2339,7 @@ export class Engine {
               break;
             }
             result = await turnLoop.run([...result.messages, injected]);
+            applyGoalTermination(result.goalTermination);
           }
         }
       } finally {

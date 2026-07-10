@@ -73,4 +73,31 @@ describe("clear goal vs a live run's stale-bundle write-back", () => {
     sm.saveState(liveState);
     expect(sm.readActiveGoal("s-run")).toBeUndefined();
   });
+
+  test("terminal tombstone defeats a detached writer carrying the terminated goal", () => {
+    const sm = new SessionManager(dir);
+    const goal = { objective: OBJ, setAtMs: 123_456 };
+    const { state: liveState } = sm.create("/Users/me/proj", "m", "p", "s-terminal");
+    liveState.activeGoal = goal;
+    sm.saveState(liveState);
+
+    // Detached writer captured goal A before its run was force-terminated.
+    const staleState = sm.resume("s-terminal").state;
+
+    // Engine terminates A on the live bundle and records an identity-bound
+    // tombstone before its final whole-state writeback.
+    liveState.activeGoal = undefined;
+    liveState.goalTerminal = {
+      objective: goal.objective,
+      setAtMs: goal.setAtMs,
+      reason: "stop_blocks_exhausted",
+    };
+    sm.saveState(liveState);
+    expect(sm.readActiveGoal("s-terminal")).toBeUndefined();
+
+    // A stale whole-state writer must not resurrect the tombstoned goal.
+    sm.saveState(staleState);
+    expect(sm.readActiveGoal("s-terminal")).toBeUndefined();
+    expect(sm.resume("s-terminal").state.goalTerminal).toEqual(liveState.goalTerminal);
+  });
 });
