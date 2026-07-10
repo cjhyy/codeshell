@@ -4,61 +4,74 @@ import {
   OPEN_TAB_MAX_PER_RATE_WINDOW,
   OPEN_TAB_RATE_WINDOW_MS,
   OPEN_TAB_SENTINEL,
-  buildOpenTabBridgeScript,
+  buildGuestLinkBridgeScript,
   createOpenTabConsoleGuardState,
-  parseOpenTabConsoleMessage,
-  shouldAcceptOpenTabConsoleUrl,
+  parseGuestLinkConsoleMessage,
+  shouldAcceptGuestLinkConsoleRequest,
+  type GuestLinkDisposition,
 } from "./useBrowserTabs";
 
 const nonce = "nonce-for-test";
 
-function msg(url: string, extra?: Record<string, unknown>): string {
-  return `${OPEN_TAB_SENTINEL}${JSON.stringify({ nonce, url, ...extra })}`;
+function msg(
+  url: string,
+  disposition: GuestLinkDisposition = "internal-tab",
+  extra?: Record<string, unknown>,
+): string {
+  return `${OPEN_TAB_SENTINEL}${JSON.stringify({ nonce, url, disposition, ...extra })}`;
 }
 
-describe("parseOpenTabConsoleMessage", () => {
+describe("parseGuestLinkConsoleMessage", () => {
   test("requires the sentinel at the start of the message", () => {
-    expect(parseOpenTabConsoleMessage(`guest log ${msg("https://example.com")}`, nonce)).toBeNull();
-  });
-
-  test("parses a structured http(s) target", () => {
-    expect(parseOpenTabConsoleMessage(msg("https://example.com/path?q=1#section"), nonce)).toBe(
-      "https://example.com/path?q=1#section",
-    );
-    expect(parseOpenTabConsoleMessage(msg("http://localhost:3000/"), nonce)).toBe(
-      "http://localhost:3000/",
-    );
-  });
-
-  test("rejects wrong nonce, unstructured payloads, and non-http targets", () => {
     expect(
-      parseOpenTabConsoleMessage(msg("https://example.com", { nonce: "wrong" }), nonce),
+      parseGuestLinkConsoleMessage(`guest log ${msg("https://example.com")}`, nonce),
     ).toBeNull();
-    expect(parseOpenTabConsoleMessage(`${OPEN_TAB_SENTINEL}https://example.com`, nonce)).toBeNull();
-    expect(parseOpenTabConsoleMessage(msg("example.com"), nonce)).toBeNull();
-    expect(parseOpenTabConsoleMessage(msg("javascript:alert(1)"), nonce)).toBeNull();
-    expect(parseOpenTabConsoleMessage(msg("file:///etc/passwd"), nonce)).toBeNull();
+  });
+
+  test("parses both structured http(s) dispositions", () => {
+    expect(
+      parseGuestLinkConsoleMessage(msg("https://example.com/path?q=1#section", "external"), nonce),
+    ).toEqual({ url: "https://example.com/path?q=1#section", disposition: "external" });
+    expect(
+      parseGuestLinkConsoleMessage(msg("http://localhost:3000/", "internal-tab"), nonce),
+    ).toEqual({ url: "http://localhost:3000/", disposition: "internal-tab" });
+  });
+
+  test("rejects wrong nonce, unknown disposition, unstructured payloads, and non-http targets", () => {
+    expect(
+      parseGuestLinkConsoleMessage(
+        msg("https://example.com", "external", { nonce: "wrong" }),
+        nonce,
+      ),
+    ).toBeNull();
+    expect(
+      parseGuestLinkConsoleMessage(
+        msg("https://example.com", "external", { disposition: "popup" }),
+        nonce,
+      ),
+    ).toBeNull();
+    expect(
+      parseGuestLinkConsoleMessage(`${OPEN_TAB_SENTINEL}https://example.com`, nonce),
+    ).toBeNull();
+    expect(parseGuestLinkConsoleMessage(msg("example.com"), nonce)).toBeNull();
+    expect(parseGuestLinkConsoleMessage(msg("javascript:alert(1)"), nonce)).toBeNull();
+    expect(parseGuestLinkConsoleMessage(msg("file:///etc/passwd"), nonce)).toBeNull();
   });
 });
 
-describe("shouldAcceptOpenTabConsoleUrl", () => {
-  test("dedupes repeated URLs within the duplicate window", () => {
+describe("shouldAcceptGuestLinkConsoleRequest", () => {
+  test("dedupes disposition + URL while allowing a different disposition", () => {
     const state = createOpenTabConsoleGuardState();
+    const internal = { url: "https://example.com/", disposition: "internal-tab" } as const;
+    const external = { url: "https://example.com/", disposition: "external" } as const;
 
-    expect(shouldAcceptOpenTabConsoleUrl(state, "https://example.com/", 1000)).toBe(true);
+    expect(shouldAcceptGuestLinkConsoleRequest(state, internal, 1000)).toBe(true);
+    expect(shouldAcceptGuestLinkConsoleRequest(state, external, 1001)).toBe(true);
     expect(
-      shouldAcceptOpenTabConsoleUrl(
-        state,
-        "https://example.com/",
-        1000 + OPEN_TAB_DEDUPE_WINDOW_MS - 1,
-      ),
+      shouldAcceptGuestLinkConsoleRequest(state, internal, 1000 + OPEN_TAB_DEDUPE_WINDOW_MS - 1),
     ).toBe(false);
     expect(
-      shouldAcceptOpenTabConsoleUrl(
-        state,
-        "https://example.com/",
-        1000 + OPEN_TAB_DEDUPE_WINDOW_MS,
-      ),
+      shouldAcceptGuestLinkConsoleRequest(state, internal, 1000 + OPEN_TAB_DEDUPE_WINDOW_MS),
     ).toBe(true);
   });
 
@@ -66,21 +79,33 @@ describe("shouldAcceptOpenTabConsoleUrl", () => {
     const state = createOpenTabConsoleGuardState();
 
     for (let i = 0; i < OPEN_TAB_MAX_PER_RATE_WINDOW; i += 1) {
-      expect(shouldAcceptOpenTabConsoleUrl(state, `https://example.com/${i}`, 2000)).toBe(true);
+      expect(
+        shouldAcceptGuestLinkConsoleRequest(
+          state,
+          { url: `https://example.com/${i}`, disposition: "external" },
+          2000,
+        ),
+      ).toBe(true);
     }
-    expect(shouldAcceptOpenTabConsoleUrl(state, "https://example.com/overflow", 2000)).toBe(false);
     expect(
-      shouldAcceptOpenTabConsoleUrl(
+      shouldAcceptGuestLinkConsoleRequest(
         state,
-        "https://example.com/after-window",
+        { url: "https://example.com/overflow", disposition: "external" },
+        2000,
+      ),
+    ).toBe(false);
+    expect(
+      shouldAcceptGuestLinkConsoleRequest(
+        state,
+        { url: "https://example.com/after-window", disposition: "external" },
         2000 + OPEN_TAB_RATE_WINDOW_MS,
       ),
     ).toBe(true);
   });
 });
 
-describe("target-blank bridge script", () => {
-  test("ignores synthetic clicks and processes trusted new-tab clicks", () => {
+describe("guest link bridge script", () => {
+  test("classifies modifier clicks as external and blank/middle clicks as internal tabs", () => {
     let clickListener: ((event: Record<string, unknown>) => void) | null = null;
     const messages: string[] = [];
     const previousWindow = globalThis.window;
@@ -103,7 +128,7 @@ describe("target-blank bridge script", () => {
     });
 
     try {
-      Function(buildOpenTabBridgeScript(nonce))();
+      Function(buildGuestLinkBridgeScript(nonce))();
       if (!clickListener) throw new Error("click listener was not installed");
       const anchor = {
         href: "https://example.com/docs",
@@ -112,22 +137,38 @@ describe("target-blank bridge script", () => {
       const target = {
         closest: () => anchor,
       };
-      const event = (isTrusted: boolean) => ({
-        isTrusted,
+      const event = (overrides: Record<string, unknown> = {}) => ({
+        isTrusted: true,
         target,
         metaKey: false,
         ctrlKey: false,
         button: 0,
         preventDefault() {},
         stopPropagation() {},
+        ...overrides,
       });
 
-      clickListener(event(false));
+      clickListener(event({ isTrusted: false }));
       expect(messages).toHaveLength(0);
 
-      clickListener(event(true));
+      anchor.target = "";
+      clickListener(event());
+      expect(messages).toHaveLength(0);
+
+      clickListener(event({ metaKey: true }));
       expect(messages).toHaveLength(1);
-      expect(parseOpenTabConsoleMessage(messages[0], nonce)).toBe("https://example.com/docs");
+      expect(parseGuestLinkConsoleMessage(messages[0], nonce)).toEqual({
+        url: "https://example.com/docs",
+        disposition: "external",
+      });
+
+      anchor.target = "_blank";
+      clickListener(event());
+      expect(parseGuestLinkConsoleMessage(messages[1], nonce)?.disposition).toBe("internal-tab");
+
+      anchor.target = "";
+      clickListener(event({ button: 1 }));
+      expect(parseGuestLinkConsoleMessage(messages[2], nonce)?.disposition).toBe("internal-tab");
     } finally {
       Object.assign(globalThis, {
         window: previousWindow,

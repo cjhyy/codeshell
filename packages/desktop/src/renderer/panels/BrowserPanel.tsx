@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -40,6 +40,10 @@ import { NewTabLanding } from "../browser/NewTabLanding";
 import { useBrowserTabs } from "../browser/useBrowserTabs";
 import { useElementPicking } from "../browser/useElementPicking";
 import { useIdleEvict } from "../browser/useIdleEvict";
+import { isExternalHttpUrl } from "../browser/externalUrl";
+import { ContextMenu } from "../ui/ContextMenu";
+import { copyText } from "../lib/clipboard";
+import { useToast } from "../ui/ToastProvider";
 
 interface Props {
   /** Workspace root — reserved for future "open file in browser" wiring. */
@@ -114,6 +118,7 @@ export function BrowserPanel({
   engineSessionId,
 }: Props) {
   const { t } = useT();
+  const toast = useToast();
   const emitAnchor = onAnchor ?? addAnchor;
 
   const {
@@ -144,6 +149,7 @@ export function BrowserPanel({
   // Which marker is open for editing (anchor id), if any. Pure UI state — the
   // markers themselves are derived from the `anchors` prop (single source).
   const [editingMarker, setEditingMarker] = useState<string | null>(null);
+  const [addressMenu, setAddressMenu] = useState<{ x: number; y: number } | null>(null);
 
   const markers = useMemo(() => browserMarkersFrom(anchors ?? []), [anchors]);
   // Markers belong to a page; hide them when not on that URL.
@@ -159,6 +165,29 @@ export function BrowserPanel({
       setEditingMarker(null);
     }
   }, [editingMarker, markers]);
+
+  useEffect(() => setAddressMenu(null), [activeId, active.url]);
+
+  const openExternally = useCallback(
+    async (url: string): Promise<void> => {
+      if (!isExternalHttpUrl(url)) return;
+      try {
+        await window.codeshell.openExternal(url);
+      } catch {
+        toast({ message: t("panels.browser.openExternalFailed"), variant: "error" });
+      }
+    },
+    [t, toast],
+  );
+
+  const copyCurrentAddress = useCallback(async (): Promise<void> => {
+    if (active.url === NEW_TAB) return;
+    const copied = await copyText(active.url);
+    toast({
+      message: t(copied ? "panels.browser.addressCopied" : "panels.browser.copyAddressFailed"),
+      variant: copied ? "success" : "error",
+    });
+  }, [active.url, t, toast]);
 
   // Shared echo engine: edit-time outline + dom-ready replay + miss reporting.
   const { selectorMissFor } = useMarkerEcho(viewRef, visibleMarkers, editingMarker);
@@ -241,6 +270,20 @@ export function BrowserPanel({
           onKeyDown={(e) => {
             if (e.key === "Enter") navigate(active.draft);
           }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            if (e.metaKey || e.ctrlKey) return;
+            setAddressMenu({ x: e.clientX, y: e.clientY });
+          }}
+          onMouseDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && isExternalHttpUrl(active.url)) e.preventDefault();
+          }}
+          onClick={(e) => {
+            if (!e.metaKey && !e.ctrlKey) return;
+            if (!isExternalHttpUrl(active.url)) return;
+            e.preventDefault();
+            void openExternally(active.url);
+          }}
           placeholder={t("panels.browser.addressPlaceholder")}
           className="h-8 flex-1"
         />
@@ -313,7 +356,7 @@ export function BrowserPanel({
           </IconBtn>
         )}
         <IconBtn
-          onClick={() => active.url !== NEW_TAB && void window.codeshell.openExternal(active.url)}
+          onClick={() => void openExternally(active.url)}
           label={t("panels.browser.openExternal")}
         >
           <ExternalLink className="h-4 w-4" />
@@ -391,7 +434,7 @@ export function BrowserPanel({
                 type="button"
                 size="sm"
                 variant="ghost"
-                onClick={() => void window.codeshell.openExternal(active.error?.url ?? active.url)}
+                onClick={() => void openExternally(active.error?.url ?? active.url)}
               >
                 <ExternalLink className="mr-1.5 h-3.5 w-3.5" />{" "}
                 {t("panels.browser.openWithSystemBrowser")}
@@ -457,6 +500,26 @@ export function BrowserPanel({
           </FloatingAt>
         )}
       </div>
+
+      {addressMenu && (
+        <ContextMenu
+          x={addressMenu.x}
+          y={addressMenu.y}
+          onClose={() => setAddressMenu(null)}
+          items={[
+            {
+              label: t("panels.browser.copyAddress"),
+              disabled: active.url === NEW_TAB,
+              onClick: () => void copyCurrentAddress(),
+            },
+            {
+              label: t("panels.browser.openAddressExternally"),
+              disabled: !isExternalHttpUrl(active.url),
+              onClick: () => void openExternally(active.url),
+            },
+          ]}
+        />
+      )}
     </div>
   );
 }

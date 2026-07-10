@@ -6,6 +6,13 @@ export const OPEN_TAB_RATE_WINDOW_MS = 1000;
 export const OPEN_TAB_MAX_PER_RATE_WINDOW = 6;
 export const OPEN_TAB_DEDUPE_WINDOW_MS = 750;
 
+export type GuestLinkDisposition = "internal-tab" | "external";
+
+export interface GuestLinkRequest {
+  url: string;
+  disposition: GuestLinkDisposition;
+}
+
 export interface OpenTabConsoleGuardState {
   windowStartedAt: number;
   openedInWindow: number;
@@ -24,7 +31,10 @@ function createOpenTabConsoleNonce(): string {
   }
 }
 
-export function parseOpenTabConsoleMessage(message: string, expectedNonce: string): string | null {
+export function parseGuestLinkConsoleMessage(
+  message: string,
+  expectedNonce: string,
+): GuestLinkRequest | null {
   if (!message.startsWith(OPEN_TAB_SENTINEL)) return null;
 
   let payload: unknown;
@@ -35,23 +45,28 @@ export function parseOpenTabConsoleMessage(message: string, expectedNonce: strin
   }
 
   if (!payload || typeof payload !== "object") return null;
-  const { nonce, url } = payload as { nonce?: unknown; url?: unknown };
+  const { nonce, url, disposition } = payload as {
+    nonce?: unknown;
+    url?: unknown;
+    disposition?: unknown;
+  };
   if (nonce !== expectedNonce || typeof url !== "string") return null;
+  if (disposition !== "internal-tab" && disposition !== "external") return null;
 
   const trimmed = url.trim();
   if (!/^https?:\/\//i.test(trimmed)) return null;
   try {
     const parsed = new URL(trimmed);
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
-    return parsed.href;
+    return { url: parsed.href, disposition };
   } catch {
     return null;
   }
 }
 
-export function shouldAcceptOpenTabConsoleUrl(
+export function shouldAcceptGuestLinkConsoleRequest(
   state: OpenTabConsoleGuardState,
-  url: string,
+  request: GuestLinkRequest,
   now = Date.now(),
 ): boolean {
   if (now < state.windowStartedAt || now - state.windowStartedAt >= OPEN_TAB_RATE_WINDOW_MS) {
@@ -65,30 +80,37 @@ export function shouldAcceptOpenTabConsoleUrl(
     }
   }
 
-  if (state.recentUrls.has(url)) return false;
+  const requestKey = `${request.disposition}\0${request.url}`;
+  if (state.recentUrls.has(requestKey)) return false;
   if (state.openedInWindow >= OPEN_TAB_MAX_PER_RATE_WINDOW) return false;
 
-  state.recentUrls.set(url, now);
+  state.recentUrls.set(requestKey, now);
   state.openedInWindow += 1;
   return true;
 }
 
-export function buildOpenTabBridgeScript(nonce: string | null): string {
+export function buildGuestLinkBridgeScript(nonce: string | null): string {
   return `(() => {
-      if (window.__cs_tab_hook_v2) return; window.__cs_tab_hook_v2 = 1;
+      if (window.__cs_tab_hook_v3) return; window.__cs_tab_hook_v3 = 1;
       const sentinel = ${JSON.stringify(OPEN_TAB_SENTINEL)};
       const nonce = ${JSON.stringify(nonce)};
-      document.addEventListener('click', (e) => {
+      const onLinkClick = (e) => {
         if (!e.isTrusted) return;
         const a = e.target && e.target.closest && e.target.closest('a[href]');
         if (!a) return;
         const href = a.href;
         if (!/^https?:/i.test(href)) return;
-        const wantsNew = a.target === '_blank' || e.metaKey || e.ctrlKey || e.button === 1;
-        if (!wantsNew) return;
+        const disposition = e.metaKey || e.ctrlKey
+          ? 'external'
+          : a.target === '_blank' || e.button === 1
+            ? 'internal-tab'
+            : null;
+        if (!disposition) return;
         e.preventDefault(); e.stopPropagation();
-        console.info(sentinel + JSON.stringify({ nonce, url: href }));
-      }, true);
+        console.info(sentinel + JSON.stringify({ nonce, url: href, disposition }));
+      };
+      document.addEventListener('click', onLinkClick, true);
+      document.addEventListener('auxclick', onLinkClick, true);
     })();`;
 }
 
@@ -203,7 +225,7 @@ export function useBrowserTabs(
     // new window (target=_blank, or ⌘/Ctrl/middle-click) and signals the URL out
     // via console.info with a sentinel; we parse it in onConsole below and open
     // an in-app tab. Same-tab links keep working through normal navigation.
-    const inject = buildOpenTabBridgeScript(openTabConsoleNonce.current);
+    const inject = buildGuestLinkBridgeScript(openTabConsoleNonce.current);
     const onDomReady = () => {
       try {
         void view.executeJavaScript(inject, true).catch(() => undefined);
@@ -213,10 +235,14 @@ export function useBrowserTabs(
     };
     const onConsole = (e: Event) => {
       const msg = (e as unknown as { message?: string }).message ?? "";
-      const url = parseOpenTabConsoleMessage(msg, openTabConsoleNonce.current ?? "");
-      if (!url) return;
-      if (!shouldAcceptOpenTabConsoleUrl(openTabConsoleGuard.current, url)) return;
-      openInNewTab(url);
+      const request = parseGuestLinkConsoleMessage(msg, openTabConsoleNonce.current ?? "");
+      if (!request) return;
+      if (!shouldAcceptGuestLinkConsoleRequest(openTabConsoleGuard.current, request)) return;
+      if (request.disposition === "external") {
+        void window.codeshell.openExternal(request.url).catch(() => undefined);
+      } else {
+        openInNewTab(request.url);
+      }
     };
     view.addEventListener("did-start-loading", onStart);
     view.addEventListener("did-stop-loading", onStop);
