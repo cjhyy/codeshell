@@ -72,6 +72,9 @@ const FORK_SKIP_EVENT_TYPES: ReadonlySet<TranscriptEventType> = new Set([
   "file_history",
   "plan_operation",
 ]);
+const FORK_STAGING_NAME = /^\.pending-fork-[A-Za-z0-9_.-]+-[A-Za-z0-9_-]{8}$/;
+const FORK_STAGING_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const FORK_STAGING_CLEANUP_LIMIT = 32;
 
 export type SessionWorkspaceResumeResolution =
   | {
@@ -177,6 +180,30 @@ export class SessionManager {
   constructor(storageDir?: string) {
     this.sessionsDir = storageDir ?? join(codeShellHome(), "sessions");
     mkdirSync(this.sessionsDir, { recursive: true });
+    this.cleanupStaleForkStaging();
+  }
+
+  private cleanupStaleForkStaging(): void {
+    let removed = 0;
+    let entries;
+    try {
+      entries = readdirSync(this.sessionsDir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (removed >= FORK_STAGING_CLEANUP_LIMIT) return;
+      if (!entry.isDirectory() || !FORK_STAGING_NAME.test(entry.name)) continue;
+      const path = join(this.sessionsDir, entry.name);
+      try {
+        if (Date.now() - statSync(path).mtimeMs <= FORK_STAGING_MAX_AGE_MS) continue;
+        rmSync(path, { recursive: true, force: true });
+        removed++;
+      } catch {
+        // Startup cleanup is best effort; a live/unreadable staging directory
+        // must never prevent the SessionManager from serving normal sessions.
+      }
+    }
   }
 
   /**

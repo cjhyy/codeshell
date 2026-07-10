@@ -5,10 +5,12 @@ import { MemoryManager } from "../packages/core/src/session/memory.js";
 import {
   appendFileSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
@@ -197,6 +199,25 @@ describe("SessionManager", () => {
     const existing = sm.create("/tmp", "other", "provider", "target");
     expect(() => sm.fork("source", { targetSessionId: "target" })).toThrow(/already exists/);
     expect(sm.resume("target").state.model).toBe(existing.state.model);
+  });
+
+  it("removes only stale fork staging directories older than 24 hours", () => {
+    const stale = join(tmpDir, ".pending-fork-target-ABCDEFGH");
+    const fresh = join(tmpDir, ".pending-fork-fresh-12345678");
+    const ordinary = join(tmpDir, "ordinary-session");
+    const nearMiss = join(tmpDir, ".pending-fork-not-a-valid-staging-dir");
+    for (const path of [stale, fresh, ordinary, nearMiss]) mkdirSync(path);
+    const old = new Date(Date.now() - 25 * 60 * 60 * 1000);
+    utimesSync(stale, old, old);
+    utimesSync(ordinary, old, old);
+    utimesSync(nearMiss, old, old);
+
+    new SessionManager(tmpDir);
+
+    expect(existsSync(stale)).toBe(false);
+    expect(existsSync(fresh)).toBe(true);
+    expect(existsSync(ordinary)).toBe(true);
+    expect(existsSync(nearMiss)).toBe(true);
   });
 
   it("throws on resume of nonexistent session", () => {
