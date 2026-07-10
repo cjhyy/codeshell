@@ -211,6 +211,34 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
         }
         break;
       }
+      case "external_file_changes": {
+        const changedFiles = Array.isArray(d.changedFiles)
+          ? d.changedFiles.filter(
+              (file): file is string => typeof file === "string" && file.length > 0,
+            )
+          : [];
+        const cwd = typeof d.cwd === "string" ? d.cwd : "";
+        if (changedFiles.length === 0 || !cwd) break;
+        const status = d.status === "failed" ? "failed" : "completed";
+        items.push({
+          kind: "stream",
+          event: {
+            type: "background_agent_completed",
+            agentId: String(d.jobId ?? "external-file-changes"),
+            description: String(d.description ?? "DriveAgent file changes"),
+            status,
+            workKind: "cc",
+            changedFiles,
+            cwd,
+            ...(typeof d.originClientMessageId === "string"
+              ? { originClientMessageId: d.originClientMessageId }
+              : {}),
+            enqueuedAt: ts ?? 0,
+          },
+          timestamp: ts,
+        });
+        break;
+      }
       case "turn_boundary":
         items.push({ kind: "stream", event: { type: "turn_complete", reason: "completed" }, timestamp: ts });
         break;

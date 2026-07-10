@@ -11,7 +11,7 @@ import {
   driveAgentJobsTool,
 } from "./drive-claude-code.js";
 import { backgroundJobRegistry } from "./background-jobs.js";
-import { notificationQueue } from "./agent-notifications.js";
+import { agentNotificationBus, notificationQueue } from "./agent-notifications.js";
 import { makeDriveClaudeCodeTool as mkBg } from "./drive-claude-code.js";
 import { ExternalAgentSessionStore } from "../../cc-orchestrator/external-agent-session-store.js";
 import { BUILTIN_TOOLS } from "./index.js";
@@ -663,6 +663,66 @@ describe("DriveAgentJobs tool", () => {
 });
 
 describe("DriveClaudeCode background completion delivery", () => {
+  it("publishes and persists deduped changed files with the completion", async () => {
+    backgroundJobRegistry.reset?.();
+    notificationQueue.drainAll("S-CHANGED");
+    let resolveRun!: (r: any) => void;
+    let persisted: Record<string, unknown> | undefined;
+    let streamed: { sessionId: string; event: Record<string, unknown> } | undefined;
+    const unsubscribe = agentNotificationBus.subscribe((sessionId, event) => {
+      if (sessionId === "S-CHANGED") streamed = { sessionId, event };
+    });
+    const runner = () =>
+      new Promise<any>((res) => {
+        resolveRun = res;
+      });
+    const tool = mkBg(
+      runner as any,
+      {
+        readChangedFiles: () => ["/repo/src/a.ts", "/repo/src/a.ts", "/repo/src/b.ts"],
+      } as any,
+    );
+
+    await tool({ prompt: "edit two files", cwd: "/repo" }, {
+      cwd: "/repo",
+      sessionId: "S-CHANGED",
+      originClientMessageId: "client-turn-1",
+      recordExternalFileChanges: (event: Record<string, unknown>) => {
+        persisted = event;
+      },
+    } as any);
+    resolveRun({
+      sessionId: "CC-CHANGED",
+      finalText: "done",
+      isError: false,
+      exitCode: 0,
+      lines: [],
+    });
+    await new Promise((r) => setTimeout(r, 20));
+
+    const items = notificationQueue.drainAll("S-CHANGED");
+    expect(items).toHaveLength(1);
+    expect(items[0]?.changedFiles).toEqual(["src/a.ts", "src/b.ts"]);
+    expect(items[0]?.cwd).toBe("/repo");
+    expect(items[0]?.originClientMessageId).toBe("client-turn-1");
+    expect(streamed).toMatchObject({
+      sessionId: "S-CHANGED",
+      event: {
+        type: "background_agent_completed",
+        changedFiles: ["src/a.ts", "src/b.ts"],
+        cwd: "/repo",
+        originClientMessageId: "client-turn-1",
+      },
+    });
+    expect(persisted).toMatchObject({
+      cli: "claude",
+      cwd: "/repo",
+      changedFiles: ["src/a.ts", "src/b.ts"],
+      originClientMessageId: "client-turn-1",
+    });
+    unsubscribe();
+  });
+
   it("enqueues a completion notification carrying cc's finalText so the woken agent sees the answer", async () => {
     backgroundJobRegistry.reset?.();
     notificationQueue.drainAll("S-NOTIFY"); // clear bucket

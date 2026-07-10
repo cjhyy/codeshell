@@ -47,6 +47,12 @@ export type NotificationItem = {
   ccSessionId?: string;
   /** Error message (failed/cancelled only). */
   error?: string;
+  /** Files attributed to an external DriveAgent transcript. */
+  changedFiles?: string[];
+  /** DriveAgent cwd used to canonicalize path aliases in clients. */
+  cwd?: string;
+  /** Client id of the real user turn that launched this background work. */
+  originClientMessageId?: string;
   enqueuedAt: number;
 };
 
@@ -212,6 +218,11 @@ export function notificationItemToStreamEvent(
   if (item.command !== undefined) event.command = item.command;
   if (item.finalText !== undefined) event.finalText = item.finalText;
   if (item.error !== undefined) event.error = item.error;
+  if (item.changedFiles !== undefined) event.changedFiles = item.changedFiles;
+  if (item.cwd !== undefined) event.cwd = item.cwd;
+  if (item.originClientMessageId !== undefined) {
+    event.originClientMessageId = item.originClientMessageId;
+  }
   return event;
 }
 

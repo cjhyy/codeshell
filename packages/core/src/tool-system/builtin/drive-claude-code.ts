@@ -116,6 +116,8 @@ type SessionStore = {
 export interface DriveAgentToolOptions {
   foregroundHandoffMs?: number;
   sessionStore?: SessionStore;
+  /** Test seam for external transcript attribution. */
+  readChangedFiles?: typeof readExternalChangedFiles;
 }
 
 const defaultRunner: Runner = (opts) => {
@@ -153,6 +155,26 @@ function changedFilesSummary(job: BackgroundJobEntry): string {
   if (files.length === 0) return "unknown";
   if (files.length <= 4) return files.join(",");
   return `${files.slice(0, 4).join(",")} (+${files.length - 4} more)`;
+}
+
+/**
+ * Canonicalize external transcript paths against the DriveAgent cwd. Claude
+ * normally records absolute paths while Codex apply_patch normally records
+ * relative paths; returning a cwd-relative display path for in-workspace files
+ * gives the renderer one stable identity and removes duplicate transcript hits.
+ */
+function normalizeChangedFiles(cwd: string, files: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const file of files) {
+    if (typeof file !== "string" || !file.trim()) continue;
+    const absolute = resolve(cwd, file.trim());
+    if (seen.has(absolute)) continue;
+    seen.add(absolute);
+    const rel = relative(cwd, absolute);
+    out.push(rel && rel !== ".." && !rel.startsWith(`..${sep}`) ? rel : absolute);
+  }
+  return out;
 }
 
 function jobDurationSeconds(job: BackgroundJobEntry): string {
@@ -272,12 +294,55 @@ function attachDriveCompletion(params: {
   cwd: string;
   run: Promise<AgentRunResult>;
   sessionStore: SessionStore;
+  readChangedFiles: typeof readExternalChangedFiles;
+  recordExternalFileChanges?: ToolContext["recordExternalFileChanges"];
+  originClientMessageId?: string;
 }): void {
-  const { jobId, sessionId, label, cli, cwd, run, sessionStore } = params;
+  const {
+    jobId,
+    sessionId,
+    label,
+    cli,
+    cwd,
+    run,
+    sessionStore,
+    readChangedFiles,
+    recordExternalFileChanges,
+    originClientMessageId,
+  } = params;
   void run
     .then((r) => {
       if (backgroundJobRegistry.get(jobId)?.status !== "running") return;
       recordSuccessfulSession(sessionStore, cli, cwd, r);
+      // Attribute external changes BEFORE publishing completion. Previously the
+      // notification event was emitted first and carried no files; changedFiles
+      // only reached the background-work registry/panel, so the chat turn card
+      // could never count DriveAgent edits.
+      const rawChangedFiles = r.sessionId ? readChangedFiles(cli, cwd, r.sessionId) : [];
+      const changedFiles = normalizeChangedFiles(cwd, rawChangedFiles);
+      if (changedFiles.length > 0) {
+        recordExternalFileChanges?.({
+          jobId,
+          description: label,
+          cli,
+          cwd,
+          status: r.isError ? "failed" : "completed",
+          changedFiles,
+          ...(originClientMessageId ? { originClientMessageId } : {}),
+        });
+      }
+      logger.debug("changed_files.drive_completion", {
+        cat: "changed_files",
+        jobId,
+        sessionId,
+        externalSessionId: r.sessionId || undefined,
+        cli,
+        cwd,
+        originClientMessageId,
+        rawSize: rawChangedFiles.length,
+        size: changedFiles.length,
+        files: changedFiles,
+      });
       // Deliver the result back so the woken agent actually sees the answer
       // (not just "a job finished"). Mirrors the video/sub-agent completion
       // path — enqueue lands in the same notificationQueue the wakeup drains.
@@ -290,6 +355,8 @@ function attachDriveCompletion(params: {
               workKind: "cc",
               error: r.finalText || "(no output)",
               ccSessionId: r.sessionId || undefined,
+              ...(changedFiles.length ? { changedFiles, cwd } : {}),
+              ...(originClientMessageId ? { originClientMessageId } : {}),
               enqueuedAt: Date.now(),
             }
           : {
@@ -299,14 +366,12 @@ function attachDriveCompletion(params: {
               workKind: "cc",
               finalText: r.finalText,
               ccSessionId: r.sessionId || undefined,
+              ...(changedFiles.length ? { changedFiles, cwd } : {}),
+              ...(originClientMessageId ? { originClientMessageId } : {}),
               enqueuedAt: Date.now(),
             },
         sessionId,
       );
-      // Attribute the files the external agent changed by parsing its own
-      // transcript (#6) — those Edit/Write calls are invisible to the host's
-      // in-session aggregator. Best-effort; [] on any failure.
-      const changedFiles = r.sessionId ? readExternalChangedFiles(cli, cwd, r.sessionId) : [];
       // Retain the job in the panel with its result + the external CLI
       // session id + changed files.
       backgroundJobRegistry.finish(jobId, {
@@ -344,6 +409,9 @@ function trackBackgroundRun(params: {
   abort: () => void;
   sessionStore: SessionStore;
   writable: boolean;
+  readChangedFiles: typeof readExternalChangedFiles;
+  recordExternalFileChanges?: ToolContext["recordExternalFileChanges"];
+  originClientMessageId?: string;
 }): { jobId: string; warning?: string } {
   const warning = duplicateCwdWarning(params.cwd, params.writable);
   const jobId = newDriveJobId();
@@ -494,6 +562,9 @@ export function makeDriveAgentTool(
         abort: () => abortController.abort(),
         sessionStore,
         writable: isWritableRun,
+        readChangedFiles: options.readChangedFiles ?? readExternalChangedFiles,
+        recordExternalFileChanges: ctx?.recordExternalFileChanges,
+        originClientMessageId: ctx?.originClientMessageId,
       });
       return [
         resumeNote,
@@ -517,6 +588,9 @@ export function makeDriveAgentTool(
         abort: () => foregroundAbort.abort(),
         sessionStore,
         writable: isWritableRun,
+        readChangedFiles: options.readChangedFiles ?? readExternalChangedFiles,
+        recordExternalFileChanges: ctx?.recordExternalFileChanges,
+        originClientMessageId: ctx?.originClientMessageId,
       });
       return [
         resumeNote,
