@@ -970,6 +970,8 @@ export interface CodeshellApi {
   ): Promise<void>;
   listSessions(): Promise<DesktopSessionSummary[]>;
   deleteSession(id: string): Promise<void>;
+  claimQuickChatSession(id: string): Promise<void>;
+  cleanupQuickChatSession(id: string): Promise<{ deleted: boolean }>;
   listSessionTitles(): Promise<Record<string, string>>;
   renameSession(id: string, title: string): Promise<void>;
   tailLog(bucket: "ui-ink" | "engine" | "desktop", lines?: number): Promise<string[]>;

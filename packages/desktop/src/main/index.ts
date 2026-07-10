@@ -142,6 +142,7 @@ import { ResidentAgentProcess } from "./mobile-remote/resident-agent.js";
 import { CodexRoomAgent } from "./mobile-remote/codex-room-agent.js";
 import { ApprovalBridge } from "./cc-room/approval-bridge.js";
 import { TranscriptSubscriptionManager } from "./cc-room/transcript-subscriptions.js";
+import { QuickChatOwnershipRegistry } from "./quick-chat-ownership.js";
 import { buildSessionHistory } from "./mobile-remote/mobile-history.js";
 import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } from "./fs-service.js";
 import {
@@ -307,6 +308,8 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
 let bridge: AgentBridge | null = null;
 let cspInstalled = false;
 let automationHandle: AutomationHandle | null = null;
+const quickChatOwnership = new QuickChatOwnershipRegistry();
+const quickChatOwnerCleanupRegistered = new Set<number>();
 
 function broadcastWorkspaceChanged(payload: {
   sessionId: string;
@@ -3418,8 +3421,7 @@ ipcMain.handle("memory:dream", async (_e, level: unknown, cwd?: string) => {
 });
 
 ipcMain.handle("sessions:list", async () => listSessions());
-ipcMain.handle("sessions:delete", async (_e, id: string) => {
-  if (typeof id !== "string") throw new Error("session id required");
+async function deleteDesktopSession(id: string): Promise<void> {
   // Reap the session's background shells (if any) before dropping it —
   // explicit delete is the one tab-close path that DOES kill (core §6).
   bridge?.closeSession(id);
@@ -3429,6 +3431,31 @@ ipcMain.handle("sessions:delete", async (_e, id: string) => {
   // replayed into a fresh tab that happens to reuse the id.
   bridge?.forgetSession(id);
   pendingMobileApprovals.forgetSession(id);
+}
+
+ipcMain.handle("sessions:delete", async (_e, id: string) => {
+  if (typeof id !== "string") throw new Error("session id required");
+  await deleteDesktopSession(id);
+});
+ipcMain.handle("quickChat:claimSession", async (event, id: string) => {
+  if (typeof id !== "string" || !/^qchat-[A-Za-z0-9.-]+$/.test(id)) {
+    throw new Error("quick-chat session id required");
+  }
+  const ownerId = event.sender.id;
+  quickChatOwnership.claim(id, ownerId);
+  if (!quickChatOwnerCleanupRegistered.has(ownerId)) {
+    quickChatOwnerCleanupRegistered.add(ownerId);
+    event.sender.once("destroyed", () => {
+      quickChatOwnerCleanupRegistered.delete(ownerId);
+      quickChatOwnership.releaseOwner(ownerId);
+    });
+  }
+});
+ipcMain.handle("quickChat:cleanupSession", async (event, id: string) => {
+  if (typeof id !== "string" || !/^qchat-[A-Za-z0-9.-]+$/.test(id)) {
+    throw new Error("quick-chat session id required");
+  }
+  return quickChatOwnership.cleanup(id, event.sender.id, () => deleteDesktopSession(id));
 });
 
 /**

@@ -146,6 +146,8 @@ let streamListener: ((env: any) => void) | null = null;
 let approvalListener: ((env: ApprovalRequestEnvelope) => void) | null = null;
 let listDiskSessionsCalls = 0;
 let deleteSessionCalls: string[] = [];
+let cleanupQuickChatSessionCalls: string[] = [];
+let claimQuickChatSessionCalls: string[] = [];
 let cancelCalls: Array<string | undefined> = [];
 let approveCalls: unknown[][] = [];
 
@@ -249,6 +251,13 @@ function installCodeshellStub(listDiskSessions: () => Promise<any>): void {
     },
     deleteSession: async (sessionId: string) => {
       deleteSessionCalls.push(sessionId);
+    },
+    claimQuickChatSession: async (sessionId: string) => {
+      claimQuickChatSessionCalls.push(sessionId);
+    },
+    cleanupQuickChatSession: async (sessionId: string) => {
+      cleanupQuickChatSessionCalls.push(sessionId);
+      return { deleted: true };
     },
     cancel: async (sessionId?: string) => {
       cancelCalls.push(sessionId);
@@ -374,6 +383,8 @@ afterEach(async () => {
   approvalListener = null;
   listDiskSessionsCalls = 0;
   deleteSessionCalls = [];
+  cleanupQuickChatSessionCalls = [];
+  claimQuickChatSessionCalls = [];
   cancelCalls = [];
   approveCalls = [];
   chatProps = null;
@@ -431,7 +442,8 @@ describe("App quick-chat integration", () => {
     });
     await flushApp();
 
-    expect(deleteSessionCalls).toEqual([staleSessionId]);
+    expect(claimQuickChatSessionCalls).toContain(livePanel.sessionId);
+    expect(cleanupQuickChatSessionCalls).toEqual([staleSessionId]);
   });
 
   test("two quick chats and a normal chat isolate drafts, text, tools, busy state, and stop", async () => {

@@ -753,6 +753,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("settings:set", scope, patch, cwd),
   listSessions: () => ipcRenderer.invoke("sessions:list"),
   deleteSession: (id: string) => ipcRenderer.invoke("sessions:delete", id),
+  claimQuickChatSession: (id: string) => ipcRenderer.invoke("quickChat:claimSession", id),
+  cleanupQuickChatSession: (id: string) => ipcRenderer.invoke("quickChat:cleanupSession", id),
   listSessionTitles: () => ipcRenderer.invoke("sessions:titles"),
   renameSession: (id: string, title: string) => ipcRenderer.invoke("sessions:rename", id, title),
   tailLog: (bucket: "ui-ink" | "engine" | "desktop", lines?: number) =>
