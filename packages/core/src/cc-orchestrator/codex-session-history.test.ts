@@ -2,10 +2,15 @@ import { describe, it, expect } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readCodexRecentHistory } from "./codex-session-history.js";
+import { parseCodexTranscriptLine, readCodexRecentHistory } from "./codex-session-history.js";
 
 /** Build one codex rollout JSONL file under <home>/sessions/YYYY/MM/DD/. */
-function writeRollout(codexHome: string, datePath: string, fileName: string, lines: unknown[]): void {
+function writeRollout(
+  codexHome: string,
+  datePath: string,
+  fileName: string,
+  lines: unknown[],
+): void {
   const dir = join(codexHome, "sessions", datePath);
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, fileName), lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
@@ -71,7 +76,10 @@ describe("readCodexRecentHistory", () => {
     expect(names).toContain("apply_patch");
     // function_call `arguments` (JSON string) is parsed into structured args;
     // custom_tool_call `input` (raw string) is preserved under {input}.
-    expect(tools.find((t) => t.name === "exec_command")?.args).toEqual({ cmd: "ls -la", workdir: "/tmp/proj" });
+    expect(tools.find((t) => t.name === "exec_command")?.args).toEqual({
+      cmd: "ls -la",
+      workdir: "/tmp/proj",
+    });
     expect(tools.find((t) => t.name === "apply_patch")?.args).toEqual({
       input: "*** Begin Patch\n*** Update File: /tmp/proj/a.txt",
     });
@@ -87,7 +95,9 @@ describe("readCodexRecentHistory", () => {
       userItem("tell me everything"),
       assistantItem(longReply),
     ]);
-    const a = readCodexRecentHistory(cwd, id, 10, home).messages.find((m) => m.role === "assistant");
+    const a = readCodexRecentHistory(cwd, id, 10, home).messages.find(
+      (m) => m.role === "assistant",
+    );
     expect(a?.text).toBe(longReply);
     expect(a?.text.length).toBeGreaterThan(4000);
   });
@@ -100,10 +110,7 @@ describe("readCodexRecentHistory", () => {
       metaLine("id-other", "/tmp/other"),
       userItem("nope"),
     ]);
-    writeRollout(home, "2026/06/24", `rollout-${id}.jsonl`, [
-      metaLine(id, cwd),
-      userItem("yes"),
-    ]);
+    writeRollout(home, "2026/06/24", `rollout-${id}.jsonl`, [metaLine(id, cwd), userItem("yes")]);
     const r = readCodexRecentHistory(cwd, id, 10, home);
     expect(r.messages.map((m) => m.text)).toEqual(["yes"]);
   });
@@ -120,5 +127,37 @@ describe("readCodexRecentHistory", () => {
       hasMore: false,
       totalCount: 0,
     });
+  });
+});
+
+describe("parseCodexTranscriptLine", () => {
+  it("maps appended rollout messages, tools, results and turn completion", () => {
+    expect(parseCodexTranscriptLine(JSON.stringify(assistantItem("live output")))).toEqual([
+      { type: "assistant", text: "live output" },
+    ]);
+    expect(
+      parseCodexTranscriptLine(JSON.stringify(functionCall("exec_command", { cmd: "pwd" }))),
+    ).toEqual([
+      {
+        type: "tool",
+        id: "c1",
+        name: "exec_command",
+        summary: "pwd",
+        args: { cmd: "pwd" },
+      },
+    ]);
+    expect(
+      parseCodexTranscriptLine(
+        JSON.stringify({
+          type: "response_item",
+          payload: { type: "function_call_output", call_id: "c1", output: "ok" },
+        }),
+      ),
+    ).toEqual([{ type: "tool_result", id: "c1", result: "ok", isError: false }]);
+    expect(
+      parseCodexTranscriptLine(
+        JSON.stringify({ type: "event_msg", payload: { type: "task_complete" } }),
+      ),
+    ).toEqual([{ type: "turn_end", reason: "completed" }]);
   });
 });

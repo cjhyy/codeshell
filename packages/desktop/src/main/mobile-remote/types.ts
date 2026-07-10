@@ -114,9 +114,35 @@ export type MobileClientEvent =
   //   "claude-code" when absent, so older phone clients keep working).
   | { type: "ccRoom.probe"; force?: boolean; kind?: "claude-code" | "codex" }
   | { type: "ccRoom.listSessions"; cwd: string; kind?: "claude-code" | "codex" }
-  | { type: "ccRoom.openSession"; sessionId: string; cwd: string; mode: PermissionMode; kind?: "claude-code" | "codex" }
-  | { type: "ccRoom.readHistory"; cwd: string; sessionId: string; limit: number; kind?: "claude-code" | "codex" }
-  | { type: "ccRoom.respondApproval"; roomId: string; requestId: string; decision: CcApprovalDecision };
+  | {
+      type: "ccRoom.openSession";
+      sessionId: string;
+      cwd: string;
+      mode: PermissionMode;
+      kind?: "claude-code" | "codex";
+    }
+  | {
+      type: "ccRoom.subscribeTranscript";
+      roomId: string;
+      sessionId: string;
+      cwd: string;
+      limit: number;
+      kind?: "claude-code" | "codex";
+    }
+  | { type: "ccRoom.unsubscribeTranscript"; roomId: string }
+  | {
+      type: "ccRoom.readHistory";
+      cwd: string;
+      sessionId: string;
+      limit: number;
+      kind?: "claude-code" | "codex";
+    }
+  | {
+      type: "ccRoom.respondApproval";
+      roomId: string;
+      requestId: string;
+      decision: CcApprovalDecision;
+    };
 
 export type MobileServerEvent =
   | { type: "auth.ok"; device: TrustedDevicePublic }
@@ -174,11 +200,44 @@ export type MobileServerEvent =
         askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
       };
     }
-  | { type: "ccRoom.probe.ok"; available: boolean; command?: string; version?: string; reason?: "not-found" | "not-executable"; kind: "claude-code" | "codex" }
-  | { type: "ccRoom.listSessions.ok"; cwd: string; sessions: CcDiscoveredSession[]; kind: "claude-code" | "codex" }
+  | {
+      type: "ccRoom.probe.ok";
+      available: boolean;
+      command?: string;
+      version?: string;
+      reason?: "not-found" | "not-executable";
+      kind: "claude-code" | "codex";
+    }
+  | {
+      type: "ccRoom.listSessions.ok";
+      cwd: string;
+      sessions: CcDiscoveredSession[];
+      kind: "claude-code" | "codex";
+    }
   | { type: "ccRoom.opened"; roomId: string; sessionId: string; status: "running" | "missing" }
-  | { type: "ccRoom.readHistory.ok"; sessionId: string; messages: CcHistoryMessage[]; hasMore: boolean; totalCount: number }
-  | { type: "ccRoom.approvalResolved"; roomId: string; requestId: string; decision: CcApprovalDecision };
+  | {
+      type: "ccRoom.transcriptSubscribed";
+      roomId: string;
+      sessionId: string;
+      active: boolean;
+      messages: CcHistoryMessage[];
+      hasMore: boolean;
+      totalCount: number;
+      roomCursor: number;
+    }
+  | {
+      type: "ccRoom.readHistory.ok";
+      sessionId: string;
+      messages: CcHistoryMessage[];
+      hasMore: boolean;
+      totalCount: number;
+    }
+  | {
+      type: "ccRoom.approvalResolved";
+      roomId: string;
+      requestId: string;
+      decision: CcApprovalDecision;
+    };
 
 export interface RoomPublic {
   id: string;

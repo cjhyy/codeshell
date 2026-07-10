@@ -33,9 +33,7 @@ export function resolveLanHost(): string | undefined {
   }
   // Prefer private LAN ranges (192.168.x, 10.x, 172.16-31.x) over anything else.
   const isPrivate = (ip: string) =>
-    ip.startsWith("192.168.") ||
-    ip.startsWith("10.") ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(ip);
+    ip.startsWith("192.168.") || ip.startsWith("10.") || /^172\.(1[6-9]|2\d|3[01])\./.test(ip);
   return candidates.find(isPrivate) ?? candidates[0];
 }
 
@@ -121,6 +119,7 @@ export class RemoteHostManager extends EventEmitter {
     if (prev <= 1) {
       if (this.onlineCounts.delete(deviceId)) {
         this.emit("online-change", this.onlineDeviceIds());
+        this.emit("device-offline", deviceId);
       }
     } else {
       this.onlineCounts.set(deviceId, prev - 1);
@@ -171,7 +170,14 @@ export class RemoteHostManager extends EventEmitter {
           socket.destroy();
           return;
         }
-        if (!gate.allows(req as unknown as { url?: string; headers: Record<string, string | string[] | undefined> })) {
+        if (
+          !gate.allows(
+            req as unknown as {
+              url?: string;
+              headers: Record<string, string | string[] | undefined>;
+            },
+          )
+        ) {
           socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
           socket.destroy();
           return;
@@ -303,10 +309,7 @@ export class RemoteHostManager extends EventEmitter {
   sendToDevice(deviceId: string, event: MobileServerEvent): void {
     const payload = JSON.stringify(event);
     for (const client of this.wss?.clients ?? []) {
-      if (
-        client.readyState === client.OPEN &&
-        this.authed.get(client) === deviceId
-      ) {
+      if (client.readyState === client.OPEN && this.authed.get(client) === deviceId) {
         client.send(payload);
       }
     }
@@ -315,10 +318,7 @@ export class RemoteHostManager extends EventEmitter {
   /** Send a raw JSON-RPC worker line to ONLY one authenticated device. */
   sendRawToDevice(deviceId: string, payload: string): void {
     for (const client of this.wss?.clients ?? []) {
-      if (
-        client.readyState === client.OPEN &&
-        this.authed.get(client) === deviceId
-      ) {
+      if (client.readyState === client.OPEN && this.authed.get(client) === deviceId) {
         client.send(payload);
       }
     }
@@ -349,8 +349,11 @@ export class RemoteHostManager extends EventEmitter {
     this.started = undefined;
     this.publicBaseUrl = undefined;
     this.passcode = undefined;
-    // Drop online bookkeeping directly (no per-device offline events — the whole
-    // host is going away). authed is a WeakMap and clears with its sockets.
+    // Drop online bookkeeping directly (no user-facing online-change churn —
+    // the whole host is going away). Resource owners still need the terminal
+    // per-device signal (for example transcript followers), so emit only
+    // device-offline. authed clears with its sockets.
+    for (const deviceId of this.onlineCounts.keys()) this.emit("device-offline", deviceId);
     this.onlineCounts.clear();
     if (!server) return;
     // server.close() only stops accepting new connections and waits for live

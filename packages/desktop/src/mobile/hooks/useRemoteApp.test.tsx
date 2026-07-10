@@ -368,3 +368,89 @@ describe("useRemoteApp approval replay", () => {
     await hook.unmount();
   });
 });
+
+describe("useRemoteApp cc transcript streaming", () => {
+  test("subscribes after opening, applies snapshot+seq catchup, and unsubscribes on leave", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      ws.message({
+        type: "room.projects.ok",
+        projects: [{ path: "/repo", name: "repo" }],
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      hook.result.current.selectProject("/repo");
+      hook.result.current.openCcSession("thread-1", "/repo", "default");
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      ws.message({
+        type: "ccRoom.opened",
+        roomId: "room-1",
+        sessionId: "thread-1",
+        status: "running",
+      });
+      await flushMicrotasks();
+    });
+
+    const sentAfterOpen = ws.sent.map((payload) => JSON.parse(payload));
+    expect(sentAfterOpen).toContainEqual({
+      type: "ccRoom.subscribeTranscript",
+      roomId: "room-1",
+      cwd: "/repo",
+      sessionId: "thread-1",
+      limit: 150,
+      kind: "claude-code",
+    });
+
+    await act(async () => {
+      ws.message({
+        type: "ccRoom.transcriptSubscribed",
+        roomId: "room-1",
+        sessionId: "thread-1",
+        active: true,
+        messages: [{ role: "user", text: "initial" }],
+        hasMore: false,
+        totalCount: 1,
+        roomCursor: 5,
+      });
+      await flushMicrotasks();
+    });
+    expect(ws.sent.map((payload) => JSON.parse(payload))).toContainEqual({
+      type: "room.history",
+      roomId: "room-1",
+      sinceSeq: 5,
+    });
+
+    await act(async () => {
+      ws.message({
+        type: "room.history.ok",
+        roomId: "room-1",
+        messages: [{ seq: 6, from: "agent", type: "text", text: "streamed on phone" }],
+        latestSeq: 6,
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.chat.items).toMatchObject([
+      { kind: "user", text: "initial" },
+      { kind: "assistant", text: "streamed on phone", done: true },
+    ]);
+
+    await act(async () => {
+      hook.result.current.leaveRoom();
+      await flushMicrotasks();
+    });
+    expect(ws.sent.map((payload) => JSON.parse(payload))).toContainEqual({
+      type: "ccRoom.unsubscribeTranscript",
+      roomId: "room-1",
+    });
+
+    await hook.unmount();
+  });
+});

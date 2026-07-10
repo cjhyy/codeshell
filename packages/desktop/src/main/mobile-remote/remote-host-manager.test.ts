@@ -14,7 +14,8 @@ afterEach(() => {
 });
 
 /** A stand-in built mobile app (out/mobile) for the static server to serve. */
-const MOBILE_HTML = '<!doctype html><html><head><title>CodeShell Remote</title></head><body><div id="app"></div></body></html>';
+const MOBILE_HTML =
+  '<!doctype html><html><head><title>CodeShell Remote</title></head><body><div id="app"></div></body></html>';
 function mobileFixture(base: string): string {
   const root = join(base, "mobile-app");
   mkdirSync(join(root, "assets"), { recursive: true });
@@ -151,7 +152,9 @@ describe("RemoteHostManager", () => {
       onClientEvent: () => {},
     });
     const events: string[][] = [];
+    const offline: string[] = [];
     host.on("online-change", (ids: string[]) => events.push([...ids].sort()));
+    host.on("device-offline", (id: string) => offline.push(id));
 
     expect(host.onlineDeviceIds()).toEqual([]);
     host.markOnline("dev1");
@@ -162,8 +165,10 @@ describe("RemoteHostManager", () => {
     host.markOnline("dev2");
     host.markOffline("dev1"); // still one socket left → dev1 stays online
     expect(host.onlineDeviceIds().sort()).toEqual(["dev1", "dev2"]);
+    expect(offline).toEqual([]);
     host.markOffline("dev1"); // last socket gone → dev1 offline
     expect(host.onlineDeviceIds()).toEqual(["dev2"]);
+    expect(offline).toEqual(["dev1"]);
 
     // dev1 appears then disappears; dev2 appears → at least these transitions
     expect(events.some((e) => e.includes("dev1"))).toBe(true);

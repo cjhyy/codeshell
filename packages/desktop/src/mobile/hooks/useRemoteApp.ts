@@ -512,9 +512,15 @@ export function useRemoteApp(): RemoteApp {
           }
           // An opened cc room behaves like room.open — bind the room feed. But the
           // resident room only carries messages from open-time onward; the prior
-          // Claude Code transcript lives on disk, so pull it via ccRoom.readHistory
-          // FIRST (rendered as the conversation's backlog), then bind the live feed
-          // for new turns. Without this the detail view looks empty ("点进去没历史").
+          // external-CLI transcript lives on disk, so subscribeTranscript returns
+          // its atomic backlog first, then keeps appending new lines through the
+          // room feed. Without the snapshot the detail view looks empty.
+          if (activeRoomIdRef.current && activeRoomIdRef.current !== event.roomId) {
+            sendRef.current?.({
+              type: "ccRoom.unsubscribeTranscript",
+              roomId: activeRoomIdRef.current,
+            });
+          }
           setActiveRoomId(event.roomId);
           ccHistorySessionRef.current = event.sessionId;
           ccBacklogLoadedRef.current = false;
@@ -526,7 +532,8 @@ export function useRemoteApp(): RemoteApp {
           appliedRoomSeqsRef.current.delete(event.roomId);
           if (activeProjectCwdRef.current) {
             sendRef.current?.({
-              type: "ccRoom.readHistory",
+              type: "ccRoom.subscribeTranscript",
+              roomId: event.roomId,
               cwd: activeProjectCwdRef.current,
               sessionId: event.sessionId,
               limit: 150,
@@ -535,6 +542,28 @@ export function useRemoteApp(): RemoteApp {
           } else {
             ccBacklogLoadedRef.current = true;
             sendRef.current?.({ type: "room.history", roomId: event.roomId, sinceSeq: 0 });
+          }
+          break;
+        case "ccRoom.transcriptSubscribed":
+          // Atomic snapshot + live subscription. roomCursor identifies exactly
+          // where the snapshot ended in the shared room log; the incremental
+          // history request closes response-delivery races and uses the same seq
+          // dedupe as reconnect recovery.
+          if (
+            event.roomId === activeRoomIdRef.current &&
+            event.sessionId === ccHistorySessionRef.current
+          ) {
+            dispatchChat({ kind: "replay", events: ccHistoryToEvents(event.messages) });
+            setLoadingKey("roomHistory", false);
+            ccBacklogLoadedRef.current = true;
+            lastRoomSeqRef.current.set(event.roomId, event.roomCursor);
+            appliedRoomSeqsRef.current.delete(event.roomId);
+            setLoadingKey("roomHistory", true);
+            sendRef.current?.({
+              type: "room.history",
+              roomId: event.roomId,
+              sinceSeq: event.roomCursor,
+            });
           }
           break;
         case "ccRoom.readHistory.ok":
@@ -745,6 +774,12 @@ export function useRemoteApp(): RemoteApp {
 
   const selectSession = useCallback(
     (id: string) => {
+      if (activeRoomIdRef.current) {
+        socket.send({
+          type: "ccRoom.unsubscribeTranscript",
+          roomId: activeRoomIdRef.current,
+        });
+      }
       setActiveSessionId(id);
       clearSessionUnread(id);
       setActiveSessionCwd(sessionCwdById.get(id) ?? null);
@@ -805,6 +840,12 @@ export function useRemoteApp(): RemoteApp {
 
   const newSession = useCallback(
     (cwd?: string | null, name?: string) => {
+      if (activeRoomIdRef.current) {
+        socket.send({
+          type: "ccRoom.unsubscribeTranscript",
+          roomId: activeRoomIdRef.current,
+        });
+      }
       const nextCwd = cwd === undefined ? activeCwdRef.current : cwd;
       boundSessionRef.current = undefined;
       ccHistorySessionRef.current = undefined;
@@ -887,12 +928,18 @@ export function useRemoteApp(): RemoteApp {
   // is no user-facing room create/open/close — CC sessions are opened via
   // openCcSession; the room is internal transport.)
   const leaveRoom = useCallback(() => {
+    if (activeRoomIdRef.current) {
+      socket.send({
+        type: "ccRoom.unsubscribeTranscript",
+        roomId: activeRoomIdRef.current,
+      });
+    }
     setActiveRoomId(undefined);
     ccHistorySessionRef.current = undefined;
     ccBacklogLoadedRef.current = false;
     setLoadingKey("roomHistory", false);
     dispatchChat({ kind: "reset" });
-  }, [setLoadingKey]);
+  }, [setLoadingKey, socket]);
 
   // activeRoom resolves the bound room's metadata (name/cwd) from the room.list
   // snapshot — used for the CC session's title/subtitle and the cc-history cwd.
