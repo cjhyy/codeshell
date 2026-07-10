@@ -157,6 +157,28 @@ describe("CredentialStore", () => {
       });
       expect(store.envExposures("full")).toEqual({ TOK: "local" });
     });
+
+    test("save and patch strip env exposure from structured credentials", () => {
+      const store = new CredentialStore(cwd);
+      for (const [id, type] of [
+        ["oauth", "oauth"],
+        ["cookie", "cookie"],
+        ["link", "link"],
+      ] as const) {
+        store.save("user", {
+          id,
+          type,
+          label: id,
+          secret: `structured-${id}-secret`,
+          exposeAsEnv: `${id.toUpperCase()}_SECRET`,
+        });
+        expect(store.resolve(id)?.exposeAsEnv).toBeUndefined();
+        store.patch("user", id, { exposeAsEnv: `${id.toUpperCase()}_PATCHED` });
+        expect(store.resolve(id)?.exposeAsEnv).toBeUndefined();
+      }
+
+      expect(store.envExposures("full")).toEqual({});
+    });
   });
 
   test("mask hides secret value", () => {

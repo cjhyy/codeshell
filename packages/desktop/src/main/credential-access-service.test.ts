@@ -179,4 +179,65 @@ describe("desktop credential access service", () => {
       }),
     ).toThrow(/token\/link credential/);
   });
+
+  test("legacy structured env exposure is filtered from metadata and worker env", () => {
+    const sentinelRefresh = "sentinel-refresh-token";
+    const sentinelClientSecret = "sentinel-client-secret";
+    mkdirSync(join(home, ".code-shell"), { recursive: true });
+    writeFileSync(
+      join(home, ".code-shell", "credentials.json"),
+      JSON.stringify({
+        version: 1,
+        credentials: [
+          {
+            id: "legacy-oauth",
+            type: "oauth",
+            label: "Legacy OAuth",
+            exposeAsEnv: "OAUTH_SECRET_JSON",
+            secret: JSON.stringify({
+              accessToken: "sentinel-access-token",
+              refreshToken: sentinelRefresh,
+              clientSecret: sentinelClientSecret,
+            }),
+          },
+          {
+            id: "legacy-cookie",
+            type: "cookie",
+            label: "Legacy Cookie",
+            exposeAsEnv: "COOKIE_JSON",
+            secret: JSON.stringify([{ name: "sid", value: "sentinel-cookie" }]),
+          },
+        ],
+      }),
+    );
+
+    const snapshot = buildCredentialSnapshot([cwd], 9);
+    const entry = snapshot.entries.find((item) => item.cwd === cwd)!;
+    const serialized = JSON.stringify(snapshot);
+
+    expect(entry.envFull).toEqual({});
+    expect(entry.full.map((cred) => cred.exposeAsEnv)).toEqual([undefined, undefined]);
+    expect(serialized).not.toContain(sentinelRefresh);
+    expect(serialized).not.toContain(sentinelClientSecret);
+    expect(serialized).not.toContain("sentinel-cookie");
+    expect(() =>
+      resolveCredentialValueForWorker({
+        cwd,
+        id: "legacy-oauth",
+        scope: "full",
+        purpose: "mcp",
+      }),
+    ).toThrow("host access resolver");
+    try {
+      resolveCredentialValueForWorker({
+        cwd,
+        id: "legacy-oauth",
+        scope: "full",
+        purpose: "mcp",
+      });
+    } catch (error) {
+      expect(String(error)).not.toContain(sentinelRefresh);
+      expect(String(error)).not.toContain(sentinelClientSecret);
+    }
+  });
 });

@@ -525,6 +525,7 @@ export {
   createIpcCredentialAccess,
   localCredentialAccess,
   credentialAccessScope,
+  credentialAllowsEnvExposure,
   isCredentialSecretAvailable,
   materializeCookieSecret,
   type CredentialAccess,

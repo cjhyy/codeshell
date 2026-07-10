@@ -2,7 +2,7 @@ import { existsSync, readdirSync, rmSync, statSync, writeFileSync } from "node:f
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Credential, CredentialType } from "./types.js";
+import { credentialAllowsEnvExposure, type Credential, type CredentialType } from "./types.js";
 import { CredentialStore } from "./store.js";
 import { formatNetscapeCookies, parseCookieJar } from "./cookie-jar.js";
 import {
@@ -209,6 +209,7 @@ function toMetadata(cred: Credential): CredentialMetadata {
   const { secret: _secret, ...rest } = cred;
   return {
     ...rest,
+    ...(credentialAllowsEnvExposure(cred.type) ? {} : { exposeAsEnv: undefined }),
     hasSecret: available,
     secretHint: available ? (secret.length > 4 ? `****${secret.slice(-4)}` : "****") : undefined,
     ...(cred.type === "oauth" ? { oauthStatus: summarizeOAuthCredentialSecret(secret) } : {}),
@@ -235,6 +236,7 @@ export const localCredentialAccess: CredentialAccess = {
     const out: Record<string, string> = {};
     const creds = storeFor(cwd).list(scope);
     for (const cred of creds) {
+      if (!credentialAllowsEnvExposure(cred.type)) continue;
       const name = cred.exposeAsEnv?.trim();
       if (name && isCredentialSecretAvailable(cred.secret)) out[name] = cred.secret;
     }

@@ -1,5 +1,6 @@
 import {
   CredentialStore,
+  credentialAllowsEnvExposure,
   isCredentialSecretAvailable,
   materializeCookieSecret,
   summarizeOAuthCredentialSecret,
@@ -85,6 +86,7 @@ function envExposures(
 ): Record<string, string> {
   const out: Record<string, string> = {};
   for (const cred of store.list(scope)) {
+    if (!credentialAllowsEnvExposure(cred.type)) continue;
     const name = cred.exposeAsEnv?.trim();
     if (name && isCredentialSecretAvailable(cred.secret)) {
       out[name] = cred.secret;
@@ -94,7 +96,7 @@ function envExposures(
 }
 
 function toMetadata(cred: Credential): CredentialMetadata {
-  const { id, type, label, autoUseByAI, autoInjectByAI, exposeAsEnv, meta } = cred;
+  const { id, type, label, autoUseByAI, autoInjectByAI, meta } = cred;
   const secret = cred.secret;
   const hasSecret = isCredentialSecretAvailable(secret);
   return {
@@ -103,7 +105,7 @@ function toMetadata(cred: Credential): CredentialMetadata {
     label,
     autoUseByAI,
     autoInjectByAI,
-    exposeAsEnv,
+    exposeAsEnv: credentialAllowsEnvExposure(type) ? cred.exposeAsEnv : undefined,
     meta,
     hasSecret,
     secretHint: hasSecret ? (secret.length > 4 ? `****${secret.slice(-4)}` : "****") : undefined,

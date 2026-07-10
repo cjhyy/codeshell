@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
-import type { Credential, CredentialStoreFile } from "./types.js";
+import { credentialAllowsEnvExposure, type Credential, type CredentialStoreFile } from "./types.js";
 import { type EncryptionCipher, getDefaultCredentialCipher } from "./cipher.js";
 import { logger } from "../logging/logger.js";
 import { summarizeOAuthCredentialSecret } from "./oauth.js";
@@ -108,9 +108,12 @@ export class CredentialStore {
   /** Upsert by id within a scope. */
   save(scope: CredentialScope, cred: Credential): void {
     const file = this.read(scope);
+    const safeCredential = credentialAllowsEnvExposure(cred.type)
+      ? cred
+      : { ...cred, exposeAsEnv: undefined };
     const idx = file.credentials.findIndex((c) => c.id === cred.id);
-    if (idx >= 0) file.credentials[idx] = cred;
-    else file.credentials.push(cred);
+    if (idx >= 0) file.credentials[idx] = safeCredential;
+    else file.credentials.push(safeCredential);
     this.write(scope, file);
   }
 
@@ -129,7 +132,12 @@ export class CredentialStore {
     const file = this.read(scope);
     const idx = file.credentials.findIndex((c) => c.id === id);
     if (idx < 0) return;
-    file.credentials[idx] = { ...file.credentials[idx], ...fields };
+    const current = file.credentials[idx];
+    file.credentials[idx] = {
+      ...current,
+      ...fields,
+      ...(credentialAllowsEnvExposure(current.type) ? {} : { exposeAsEnv: undefined }),
+    };
     this.write(scope, file);
   }
 
@@ -183,6 +191,7 @@ export class CredentialStore {
         : [this.read("user").credentials, this.read("project").credentials];
     for (const layer of layers) {
       for (const c of layer) {
+        if (!credentialAllowsEnvExposure(c.type)) continue;
         const name = c.exposeAsEnv?.trim();
         if (name && typeof c.secret === "string" && c.secret.length > 0) {
           out[name] = c.secret;
@@ -197,6 +206,7 @@ export class CredentialStore {
       const { secret, ...rest } = c;
       return {
         ...rest,
+        ...(credentialAllowsEnvExposure(c.type) ? {} : { exposeAsEnv: undefined }),
         hasSecret: typeof secret === "string" && secret.length > 0,
         // Reveal at most the last 4 chars — and ONLY when the secret is longer
         // than 4, so those chars aren't the whole secret. `"ab".slice(-4)` is

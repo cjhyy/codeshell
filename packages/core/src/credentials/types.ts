@@ -5,6 +5,15 @@
  */
 export type CredentialType = "token" | "link" | "cookie" | "oauth";
 
+/**
+ * Only an opaque token may be copied into a process environment. Structured
+ * credentials can contain refresh tokens, client secrets, or whole cookie
+ * jars and must remain behind the credential resolver boundary.
+ */
+export function credentialAllowsEnvExposure(type: CredentialType): boolean {
+  return type === "token";
+}
+
 export interface OAuthCredentialSecret {
   /** Schema version for the JSON stored in Credential.secret. */
   version?: 1;
