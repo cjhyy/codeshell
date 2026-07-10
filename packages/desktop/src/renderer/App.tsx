@@ -3216,6 +3216,19 @@ function App() {
     [updateQuickChatCreation],
   );
 
+  const onOpenCliSessionConsumed = useCallback(
+    (targetBucket: string, nonce: number) => {
+      updatePanelBucket(targetBucket, (state) => {
+        if (!state.openCliSession || state.openCliSession.nonce !== nonce) return state;
+        return {
+          ...state,
+          openCliSession: { ...state.openCliSession, consumed: true },
+        };
+      });
+    },
+    [updatePanelBucket],
+  );
+
   const ensureQuickChatSession = useCallback(
     (ownerBucket: string, tabId: string, cwd: string | null) => {
       const key = quickChatTabKey(ownerBucket, tabId);
@@ -3624,8 +3637,15 @@ function App() {
       const targetBucket = resolveOpenCliSessionBucket(
         detail.sourceSessionId,
         engineToBucketRef.current,
-        activeBucketRef.current,
+        sessionIndicesRef.current,
       );
+      if (!targetBucket) {
+        toast({
+          message: t("panels.room.ownerSessionUnavailable"),
+          variant: "error",
+        });
+        return;
+      }
       const nonce = openCliSessionNonceRef.current + 1;
       openCliSessionNonceRef.current = nonce;
       updatePanelBucket(targetBucket, (state) => ({
@@ -3643,7 +3663,7 @@ function App() {
     };
     window.addEventListener("codeshell:open-cli-session", onOpenCliSession);
     return () => window.removeEventListener("codeshell:open-cli-session", onOpenCliSession);
-  }, [updatePanelBucket]);
+  }, [t, toast, updatePanelBucket]);
 
   // A chat answer's file path link was clicked: open it in the in-app Files
   // panel. FilesPanel listens for the same event to select + reveal the file;
@@ -4351,6 +4371,7 @@ function App() {
                   onRevealConsumed={(nonce) => onRevealConsumed(panelBucket, nonce)}
                   openUrl={panelState.openUrl}
                   openCliSession={panelState.openCliSession}
+                  onOpenCliSessionConsumed={(nonce) => onOpenCliSessionConsumed(panelBucket, nonce)}
                   width={panelWidth}
                   onResizeStart={beginPanelResize}
                   onAttachImage={(p) => void attachImageByPath(p)}

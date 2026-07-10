@@ -54,18 +54,26 @@ export function CCRoomView({
   cwd,
   active = true,
   openRequest,
+  onOpenRequestConsumed,
 }: {
   cwd: string | null;
   active?: boolean;
   openRequest?: OpenCliSessionRequest;
+  onOpenRequestConsumed?: (nonce: number) => void;
 }) {
   const { t } = useT();
   const toast = useToast();
   const tRef = useRef(t);
   const toastRef = useRef(toast);
+  const consumeRef = useRef(onOpenRequestConsumed);
   tRef.current = t;
   toastRef.current = toast;
+  consumeRef.current = onOpenRequestConsumed;
   const [cliKind, setCliKind] = useState<CliKind>("claude-code");
+  const cliKindRef = useRef<CliKind>(cliKind);
+  const cwdRef = useRef(cwd);
+  cliKindRef.current = cliKind;
+  cwdRef.current = cwd;
   const [avail, setAvail] = useState<Availability | null>(null);
   const [sessions, setSessions] = useState<DiscoveredSession[]>([]);
   // Total session count (unbounded) vs the bounded default we show. When total >
@@ -81,6 +89,11 @@ export function CCRoomView({
   } | null>(null);
   const [picking, setPicking] = useState<{ sessionId: string } | null>(null);
   const lastOpenRequestNonceRef = useRef(-1);
+  const pendingOpenRequestRef = useRef<OpenCliSessionRequest | null>(null);
+  const probeSequenceRef = useRef(0);
+  const probeForceRef = useRef(false);
+  const [probeRevision, setProbeRevision] = useState(0);
+  const listSequenceRef = useRef(0);
 
   const probeFor = useCallback(
     (kind: CliKind, force = false) =>
@@ -91,17 +104,41 @@ export function CCRoomView({
   );
 
   useEffect(() => {
-    if (!openRequest || lastOpenRequestNonceRef.current === openRequest.nonce) return;
-    lastOpenRequestNonceRef.current = openRequest.nonce;
+    const isFreshRequest =
+      !!openRequest &&
+      !openRequest.consumed &&
+      lastOpenRequestNonceRef.current !== openRequest.nonce;
+    if (isFreshRequest) {
+      lastOpenRequestNonceRef.current = openRequest.nonce;
+      pendingOpenRequestRef.current = openRequest;
+      consumeRef.current?.(openRequest.nonce);
+      setPicking(null);
+      if (cliKind !== openRequest.cliKind) {
+        setAvail(null);
+        setCliKind(openRequest.cliKind);
+        return;
+      }
+    }
+
+    const linkedRequest =
+      pendingOpenRequestRef.current?.cliKind === cliKind ? pendingOpenRequestRef.current : null;
+    const sequence = probeSequenceRef.current + 1;
+    probeSequenceRef.current = sequence;
+    const force = probeForceRef.current;
+    probeForceRef.current = false;
     let cancelled = false;
-    setCliKind(openRequest.cliKind);
     setAvail(null);
-    setPicking(null);
-    void probeFor(openRequest.cliKind)
+    setSessions([]);
+    setExpanded(false);
+    void probeFor(cliKind, force)
       .then(async (availability) => {
-        if (cancelled) return;
+        if (cancelled || probeSequenceRef.current !== sequence) return;
         setAvail(availability);
+        if (!linkedRequest) return;
         if (!availability.available) {
+          if (pendingOpenRequestRef.current?.nonce === linkedRequest.nonce) {
+            pendingOpenRequestRef.current = null;
+          }
           toastRef.current({
             message: tRef.current("panels.room.cliUnavailable"),
             variant: "error",
@@ -109,17 +146,24 @@ export function CCRoomView({
           return;
         }
         const linked = await window.codeshell.ccRoom.openLinkedSession(
-          openRequest.externalSessionId,
-          openRequest.cwd,
-          openRequest.cliKind,
+          linkedRequest.externalSessionId,
+          linkedRequest.cwd,
+          linkedRequest.cliKind,
         );
-        if (cancelled) return;
+        if (
+          cancelled ||
+          probeSequenceRef.current !== sequence ||
+          pendingOpenRequestRef.current?.nonce !== linkedRequest.nonce
+        ) {
+          return;
+        }
+        pendingOpenRequestRef.current = null;
         setConv({
           roomId: linked.roomId,
-          sessionId: openRequest.externalSessionId,
+          sessionId: linkedRequest.externalSessionId,
           mode: linked.mode,
-          cwd: openRequest.cwd,
-          cliKind: openRequest.cliKind,
+          cwd: linkedRequest.cwd,
+          cliKind: linkedRequest.cliKind,
         });
       })
       .catch((error) => {
@@ -134,7 +178,12 @@ export function CCRoomView({
     return () => {
       cancelled = true;
     };
-  }, [openRequest, probeFor]);
+  }, [cliKind, openRequest?.nonce, probeFor, probeRevision]);
+
+  const requestProbe = useCallback((force = false) => {
+    probeForceRef.current = force;
+    setProbeRevision((revision) => revision + 1);
+  }, []);
 
   const openWithMode = useCallback(
     async (mode: "default" | "acceptEdits" | "bypassPermissions") => {
@@ -162,22 +211,24 @@ export function CCRoomView({
         cliKind === "codex"
           ? window.codeshell.ccRoom.listCodexSessions(cwd, all)
           : window.codeshell.ccRoom.listSessions(cwd, all);
+      const sequence = listSequenceRef.current + 1;
+      listSequenceRef.current = sequence;
+      const requestKind = cliKind;
+      const requestCwd = cwd;
       void list.then((res) => {
+        if (
+          listSequenceRef.current !== sequence ||
+          requestKind !== cliKindRef.current ||
+          requestCwd !== cwdRef.current
+        ) {
+          return;
+        }
         setSessions(res.sessions);
         setTotal(res.total);
       });
     },
     [cwd, cliKind],
   );
-
-  // Re-probe whenever the selected CLI changes. setAvail(null) shows the loading
-  // state and avoids briefly listing the other CLI's sessions under the new kind.
-  useEffect(() => {
-    setAvail(null);
-    setSessions([]);
-    setExpanded(false);
-    void probeFor(cliKind).then(setAvail);
-  }, [cliKind, probeFor]);
 
   useEffect(() => {
     if (avail?.available) refresh();
@@ -192,13 +243,33 @@ export function CCRoomView({
           key={k}
           size="sm"
           variant={cliKind === k ? "default" : "outline"}
-          onClick={() => setCliKind(k)}
+          onClick={() => {
+            pendingOpenRequestRef.current = null;
+            setCliKind(k);
+          }}
         >
           {CLI_LABEL[k]}
         </Button>
       ))}
     </div>
   );
+
+  // A successfully established conversation is authoritative. Availability
+  // replies from any older probe must never cover it with a stale gate.
+  if (conv) {
+    return (
+      <CCConversationView
+        roomId={conv.roomId}
+        cwd={conv.cwd}
+        sessionId={conv.sessionId}
+        mode={conv.mode}
+        cliKind={conv.cliKind}
+        cliLabel={CLI_LABEL[conv.cliKind]}
+        active={active}
+        onBack={() => setConv(null)}
+      />
+    );
+  }
 
   // Loading (probe in flight).
   if (avail === null) {
@@ -223,32 +294,12 @@ export function CCRoomView({
             并确保它在 PATH 中。
           </p>
           <div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void probeFor(cliKind, true).then(setAvail)}
-            >
+            <Button variant="outline" size="sm" onClick={() => requestProbe(true)}>
               重新检测
             </Button>
           </div>
         </div>
       </div>
-    );
-  }
-
-  // A conversation is open — render it in place of the list.
-  if (conv) {
-    return (
-      <CCConversationView
-        roomId={conv.roomId}
-        cwd={conv.cwd}
-        sessionId={conv.sessionId}
-        mode={conv.mode}
-        cliKind={conv.cliKind}
-        cliLabel={CLI_LABEL[conv.cliKind]}
-        active={active}
-        onBack={() => setConv(null)}
-      />
     );
   }
 

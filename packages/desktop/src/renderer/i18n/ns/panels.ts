@@ -72,6 +72,7 @@ export const panels = {
       room: {
         cliUnavailable: "未检测到对应的 Claude Code / Codex CLI",
         openLinkedFailed: "无法打开外部会话：{error}",
+        ownerSessionUnavailable: "无法定位此任务所属的会话",
       },
       quickChat: {
         title: "快聊",
@@ -288,6 +289,7 @@ export const panels = {
       room: {
         cliUnavailable: "The corresponding Claude Code / Codex CLI is unavailable",
         openLinkedFailed: "Could not open the external session: {error}",
+        ownerSessionUnavailable: "The session that owns this task could not be located",
       },
       quickChat: {
         title: "Quick Chat",

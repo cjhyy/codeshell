@@ -76,6 +76,8 @@ interface Props {
   openUrl?: { url: string; nonce: number };
   /** DriveAgent external CLI conversation to open directly. */
   openCliSession?: OpenCliSessionRequest;
+  /** Parent-owned one-shot consumption for DriveAgent deep-link requests. */
+  onOpenCliSessionConsumed?: (nonce: number) => void;
   /** Active engine sessionId — the background-shell panel queries shells by it (TODO 3.2). */
   engineSessionId?: string | null;
   /** Controlled dock width (px). The divider on the left edge resizes it. */
@@ -120,6 +122,7 @@ export function PanelArea({
   onRevealConsumed,
   openUrl,
   openCliSession,
+  onOpenCliSessionConsumed,
   engineSessionId,
   width,
   onResizeStart,
@@ -379,6 +382,7 @@ export function PanelArea({
                   onRevealConsumed={onRevealConsumed}
                   openUrl={openUrl}
                   openCliSession={openCliSession}
+                  onOpenCliSessionConsumed={onOpenCliSessionConsumed}
                   onAttachImage={onAttachImage}
                   onRemoveBrowserAnchor={onRemoveBrowserAnchor}
                   onUpdateBrowserAnchor={onUpdateBrowserAnchor}
@@ -437,6 +441,7 @@ function PanelBody({
   onRevealConsumed,
   openUrl,
   openCliSession,
+  onOpenCliSessionConsumed,
   engineSessionId,
   onAttachImage,
   browserAnchors,
@@ -455,6 +460,7 @@ function PanelBody({
   onRevealConsumed?: (nonce: number) => void;
   openUrl?: { url: string; nonce: number };
   openCliSession?: OpenCliSessionRequest;
+  onOpenCliSessionConsumed?: (nonce: number) => void;
   engineSessionId?: string | null;
   onAttachImage?: (absPath: string) => void;
   browserAnchors?: Anchor[];
@@ -478,6 +484,7 @@ function PanelBody({
     onRevealConsumed,
     openUrl,
     openCliSession,
+    onOpenCliSessionConsumed,
     engineSessionId: engineSessionId ?? null,
     onAttachImage,
     browserAnchors,

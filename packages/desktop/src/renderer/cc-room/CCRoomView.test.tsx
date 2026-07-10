@@ -59,7 +59,16 @@ describe("CCRoomView DriveAgent deep links", () => {
     };
     const render = async () => {
       await act(async () => {
-        root?.render(<CCRoomView cwd="/repo/main" active openRequest={request} />);
+        root?.render(
+          <CCRoomView
+            cwd="/repo/main"
+            active
+            openRequest={request}
+            onOpenRequestConsumed={(nonce) => {
+              if (request.nonce === nonce) request = { ...request, consumed: true };
+            }}
+          />,
+        );
         await flushMicrotasks();
         await flushMicrotasks();
       });
@@ -78,8 +87,125 @@ describe("CCRoomView DriveAgent deep links", () => {
     await render();
     expect(opened).toHaveLength(1);
 
-    request = { ...request, nonce: 2 };
+    request = { ...request, nonce: 2, consumed: false };
     await render();
     expect(opened).toHaveLength(2);
+  });
+
+  test("a parent-consumed request is not replayed after the ccRoom tab remounts", async () => {
+    ensureMiniDom();
+    const opened: string[] = [];
+    Object.assign(window, {
+      codeshell: {
+        ccRoom: {
+          probe: async () => ({ available: true }),
+          codexProbe: async () => ({ available: true }),
+          listSessions: async () => ({ sessions: [], total: 0 }),
+          listCodexSessions: async () => ({ sessions: [], total: 0 }),
+          openLinkedSession: async (sessionId: string) => {
+            opened.push(sessionId);
+            return { roomId: "room_1_abcdef", status: "running", mode: "default" };
+          },
+        },
+      },
+    });
+    let request: OpenCliSessionRequest = {
+      nonce: 7,
+      externalSessionId: "thread-remount",
+      cliKind: "claude-code",
+      cwd: "/repo",
+    };
+    const mount = async () => {
+      const container = document.createElement("div");
+      root = createRoot(container);
+      await act(async () => {
+        root?.render(
+          <CCRoomView
+            cwd="/repo"
+            openRequest={request}
+            onOpenRequestConsumed={(nonce) => {
+              if (nonce === request.nonce) request = { ...request, consumed: true };
+            }}
+          />,
+        );
+        await flushMicrotasks();
+        await flushMicrotasks();
+      });
+    };
+
+    await mount();
+    expect(opened).toEqual(["thread-remount"]);
+    await act(async () => root?.unmount());
+    root = null;
+    await mount();
+    expect(opened).toEqual(["thread-remount"]);
+  });
+
+  test("ignores a late Claude probe after a Codex deep link opens", async () => {
+    ensureMiniDom();
+    let resolveClaude!: (value: { available: boolean }) => void;
+    let resolveCodex!: (value: { available: boolean }) => void;
+    const claudeProbe = new Promise<{ available: boolean }>((resolve) => {
+      resolveClaude = resolve;
+    });
+    const codexProbe = new Promise<{ available: boolean }>((resolve) => {
+      resolveCodex = resolve;
+    });
+    let claudeCalls = 0;
+    let codexCalls = 0;
+    const opened: string[] = [];
+    Object.assign(window, {
+      codeshell: {
+        ccRoom: {
+          probe: () => {
+            claudeCalls += 1;
+            return claudeProbe;
+          },
+          codexProbe: () => {
+            codexCalls += 1;
+            return codexProbe;
+          },
+          listSessions: async () => ({ sessions: [], total: 0 }),
+          listCodexSessions: async () => ({ sessions: [], total: 0 }),
+          openLinkedSession: async (sessionId: string) => {
+            opened.push(sessionId);
+            return { roomId: "room_codex", status: "running", mode: "default" };
+          },
+        },
+      },
+    });
+    const container = document.createElement("div");
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(<CCRoomView cwd="/repo" />);
+      await flushMicrotasks();
+    });
+    const request: OpenCliSessionRequest = {
+      nonce: 9,
+      externalSessionId: "codex-thread",
+      cliKind: "codex",
+      cwd: "/repo",
+    };
+    await act(async () => {
+      root?.render(
+        <CCRoomView cwd="/repo" openRequest={request} onOpenRequestConsumed={() => undefined} />,
+      );
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      resolveCodex({ available: true });
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expect(opened).toEqual(["codex-thread"]);
+    expect(conversationProps).toMatchObject({ roomId: "room_codex", cliKind: "codex" });
+
+    await act(async () => {
+      resolveClaude({ available: false });
+      await flushMicrotasks();
+    });
+    expect(conversationProps).toMatchObject({ roomId: "room_codex", cliKind: "codex" });
+    expect(claudeCalls).toBe(1);
+    expect(codexCalls).toBe(1);
   });
 });

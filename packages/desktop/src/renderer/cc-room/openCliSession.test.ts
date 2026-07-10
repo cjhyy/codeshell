@@ -4,12 +4,21 @@ import { resolveOpenCliSessionBucket } from "./openCliSession";
 describe("resolveOpenCliSessionBucket", () => {
   test("routes all-session background jobs to their owner bucket", () => {
     const routes = new Map([["engine-b", "repo-b::ui-b"]]);
-    expect(resolveOpenCliSessionBucket("engine-b", routes, "repo-a::ui-a")).toBe("repo-b::ui-b");
+    expect(resolveOpenCliSessionBucket("engine-b", routes, {})).toBe("repo-b::ui-b");
   });
 
-  test("falls back to the active bucket when an old session has no route", () => {
-    expect(resolveOpenCliSessionBucket("old-engine", new Map(), "repo-a::ui-a")).toBe(
-      "repo-a::ui-a",
-    );
+  test("recovers an owner bucket from persisted session indices", () => {
+    expect(
+      resolveOpenCliSessionBucket("old-engine", new Map(), {
+        "repo-b": {
+          activeSessionId: "ui-b",
+          sessions: [{ id: "ui-b", engineSessionId: "old-engine" }],
+        },
+      }),
+    ).toBe("repo-b::ui-b");
+  });
+
+  test("returns null instead of contaminating the active bucket when owner is unknown", () => {
+    expect(resolveOpenCliSessionBucket("missing-engine", new Map(), {})).toBeNull();
   });
 });

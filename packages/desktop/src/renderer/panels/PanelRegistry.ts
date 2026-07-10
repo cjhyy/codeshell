@@ -37,6 +37,7 @@ export interface PanelRenderContext extends PanelAvailabilityContext {
   onRevealConsumed?: (nonce: number) => void;
   openUrl?: { url: string; nonce: number };
   openCliSession?: OpenCliSessionRequest;
+  onOpenCliSessionConsumed?: (nonce: number) => void;
   onAttachImage?: (absPath: string) => void;
   browserAnchors?: Anchor[];
   onRemoveBrowserAnchor?: (anchorId: string) => void;
@@ -135,11 +136,12 @@ const PANEL_ENTRIES = {
     label: "panels.kinds.ccRoom",
     icon: Bot,
     enabled: alwaysEnabled,
-    render: ({ cwd, foregroundVisible, openCliSession }) =>
+    render: ({ cwd, foregroundVisible, openCliSession, onOpenCliSessionConsumed }) =>
       createElement(CCRoomView, {
         cwd,
         active: foregroundVisible,
         openRequest: openCliSession,
+        onOpenRequestConsumed: onOpenCliSessionConsumed,
       }),
   },
   quickChat: {
