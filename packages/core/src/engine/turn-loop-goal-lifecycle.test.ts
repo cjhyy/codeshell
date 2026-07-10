@@ -60,14 +60,20 @@ function makeTurnLoopDeps(
   deps: TurnLoopDeps;
   calls: Message[][];
   executedTools: ToolCall[];
+  boundaryTurns: number[];
+  assistantTranscriptTurns: number[];
 } {
   let responseIndex = 0;
+  let transcriptTurn = 0;
   const calls: Message[][] = [];
   const executedTools: ToolCall[] = [];
+  const boundaryTurns: number[] = [];
+  const assistantTranscriptTurns: number[] = [];
   const call = async (_systemPrompt: string, messages: Message[]): Promise<LLMResponse> => {
     calls.push(messages.map((message) => ({ ...message })));
     const response = responses[Math.min(responseIndex, responses.length - 1)]!;
     responseIndex++;
+    assistantTranscriptTurns.push(transcriptTurn);
     return response;
   };
 
@@ -125,7 +131,10 @@ function makeTurnLoopDeps(
     transcript: {
       appendToolUse() {},
       appendToolResult() {},
-      appendTurnBoundary() {},
+      appendTurnBoundary() {
+        transcriptTurn++;
+        boundaryTurns.push(transcriptTurn);
+      },
       appendMessage() {},
     } as unknown as TurnLoopDeps["transcript"],
     systemPrompt: "system",
@@ -136,10 +145,138 @@ function makeTurnLoopDeps(
     ctxOverheadStore: { get: () => 0, set: () => {} },
   };
 
-  return { deps, calls, executedTools };
+  return { deps, calls, executedTools, boundaryTurns, assistantTranscriptTurns };
 }
 
 describe("TurnLoop goal lifecycle guardrails", () => {
+  it("finalizes a stop-hook-blocked no-tool turn before continuing", async () => {
+    let stopHookCalls = 0;
+    const heartbeatTurns: number[] = [];
+    const { deps, boundaryTurns, assistantTranscriptTurns } = makeTurnLoopDeps(
+      [stopResponse("blocked"), stopResponse("done")],
+      {
+        hook: (event) => {
+          if (event !== "on_stop") return {};
+          stopHookCalls++;
+          return stopHookCalls === 1 ? { continueSession: true, messages: ["keep going"] } : {};
+        },
+      },
+    );
+
+    await new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "finish after one block" },
+      onTurnBoundary: (turnCount) => {
+        heartbeatTurns.push(turnCount);
+      },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(assistantTranscriptTurns).toEqual([0, 1]);
+    expect(boundaryTurns).toEqual([1, 2]);
+    expect(heartbeatTurns).toEqual([1, 2]);
+  });
+
+  it("finalizes a no-tool turn before finalize-backfill steering continues", async () => {
+    let steerConsumed = false;
+    const heartbeatTurns: number[] = [];
+    const { deps, boundaryTurns, assistantTranscriptTurns } = makeTurnLoopDeps([
+      stopResponse("first answer"),
+      stopResponse("answer after steer"),
+    ]);
+    deps.consumeSteer = (source) => {
+      if (source !== "finalize_backfill" || steerConsumed) return [];
+      steerConsumed = true;
+      return [{ id: "late-steer", text: "incorporate this" }];
+    };
+
+    await new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+      onTurnBoundary: (turnCount) => {
+        heartbeatTurns.push(turnCount);
+      },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(assistantTranscriptTurns).toEqual([0, 1]);
+    expect(boundaryTurns).toEqual([1, 2]);
+    expect(heartbeatTurns).toEqual([1, 2]);
+  });
+
+  it("persists advancing heartbeat state and separate transcript turns across repeated blocks", async () => {
+    let stopHookCalls = 0;
+    let heartbeat = 0;
+    const persistedSnapshots: Array<{ turnCount: number; heartbeat: number }> = [];
+    const { deps, boundaryTurns, assistantTranscriptTurns } = makeTurnLoopDeps(
+      [stopResponse("blocked 1"), stopResponse("blocked 2"), stopResponse("done")],
+      {
+        hook: (event) => {
+          if (event !== "on_stop") return {};
+          stopHookCalls++;
+          return stopHookCalls <= 2
+            ? { continueSession: true, messages: [`continue ${stopHookCalls}`] }
+            : {};
+        },
+      },
+    );
+
+    await new TurnLoop(deps, {
+      maxTurns: 4,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "finish after repeated blocks" },
+      onTurnBoundary: (turnCount) => {
+        persistedSnapshots.push({ turnCount, heartbeat: ++heartbeat });
+      },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(assistantTranscriptTurns).toEqual([0, 1, 2]);
+    expect(boundaryTurns).toEqual([1, 2, 3]);
+    expect(persistedSnapshots).toEqual([
+      { turnCount: 1, heartbeat: 1 },
+      { turnCount: 2, heartbeat: 2 },
+      { turnCount: 3, heartbeat: 3 },
+    ]);
+  });
+
+  it("records exactly one boundary for a normal tool turn and the final no-tool turn", async () => {
+    const heartbeatTurns: number[] = [];
+    const { deps, boundaryTurns, assistantTranscriptTurns } = makeTurnLoopDeps([
+      toolResponse({ id: "read-1", toolName: "Read", args: {} }),
+      stopResponse("done"),
+    ]);
+
+    await new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+      onTurnBoundary: (turnCount) => {
+        heartbeatTurns.push(turnCount);
+      },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(assistantTranscriptTurns).toEqual([0, 1]);
+    expect(boundaryTurns).toEqual([1, 2]);
+    expect(heartbeatTurns).toEqual([1, 2]);
+  });
+
+  it("records exactly one boundary for a normal final answer", async () => {
+    const heartbeatTurns: number[] = [];
+    const { deps, boundaryTurns, assistantTranscriptTurns } = makeTurnLoopDeps([
+      stopResponse("done"),
+    ]);
+
+    await new TurnLoop(deps, {
+      maxTurns: 2,
+      maxToolCallsPerTurn: 10,
+      onTurnBoundary: (turnCount) => {
+        heartbeatTurns.push(turnCount);
+      },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(assistantTranscriptTurns).toEqual([0]);
+    expect(boundaryTurns).toEqual([1]);
+    expect(heartbeatTurns).toEqual([1]);
+  });
+
   it("does not scan sensitive-result tool metadata for a non-goal run", async () => {
     const { deps } = makeTurnLoopDeps([stopResponse("plain completion")]);
     let filterReads = 0;
