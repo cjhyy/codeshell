@@ -164,7 +164,7 @@ export function bearerTokenFromMcpCredential(
 ): string {
   if (credential.type === undefined) return credential.secret;
   if (credential.type !== "oauth") {
-    if (credential.type !== "token") {
+    if (credential.type !== "token" && credential.type !== "link") {
       throw new Error(
         `MCP server "${serverName}": credential "${credentialId}" type "${credential.type}" cannot be used as a bearer token`,
       );
@@ -220,7 +220,7 @@ export async function buildHttpHeadersWithCredentialAccess(
       `MCP server "${serverName}": credential "${config.credentialRef}" metadata is unavailable; refusing bearer injection`,
     );
   }
-  if (meta.type !== "token" && meta.type !== "oauth") {
+  if (meta.type !== "token" && meta.type !== "link" && meta.type !== "oauth") {
     throw new Error(
       `MCP server "${serverName}": credential "${config.credentialRef}" type "${meta.type}" cannot be used as a bearer token`,
     );
