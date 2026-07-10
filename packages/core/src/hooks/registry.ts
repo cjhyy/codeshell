@@ -117,6 +117,9 @@ export class HookRegistry {
         if (result.continueSession) {
           aggregated.continueSession = true;
         }
+        if (result.goalTermination !== undefined) {
+          aggregated.goalTermination = result.goalTermination;
+        }
         if (result.stop) {
           aggregated.stop = true;
           break;

@@ -2146,6 +2146,10 @@ export class Engine {
 
       const applyGoalTermination = (termination: GoalTerminationReason | undefined): void => {
         if (!termination || !persistedRunGoal) return;
+        // Judge prompt overflow ends only this run. The objective is unfinished
+        // and may be resumed after the user reduces fixed judge context, so it
+        // must not get a terminal tombstone or be cleared from activeGoal.
+        if (termination === "judge_prompt_too_large") return;
         // Record the terminal identity even when a newer goal has already
         // replaced it. Only clear activeGoal when it is still the run's goal.
         session.state.goalTerminal = {
@@ -2339,6 +2343,7 @@ export class Engine {
       return {
         text: result.text,
         reason: result.reason,
+        goalTermination: result.goalTermination,
         sessionId: session.state.sessionId,
         turnCount: turnLoop.currentTurn,
         usage: {
