@@ -249,6 +249,10 @@ export class TurnLoop {
   private readonly sensitiveToolResultRedactions = new Map<string, string>();
   private readonly pendingImageMessages = new Set<Message>();
   private readonly volatileContextMessages = new Set<Message>();
+  /** Last outer-loop turn for which the model returned a complete response. */
+  private lastCompletedModelTurn = 0;
+  /** Last model turn whose transcript/persistence boundary was finalized. */
+  private lastFinalizedTurn = 0;
 
   /**
    * Consecutive on_stop blocks (Goal mode kept the agent going). Reset to 0
@@ -437,6 +441,24 @@ export class TurnLoop {
   private markStopped(): void {
     if (this.deps.isSubAgent === true) return;
     this.deps.transcript.appendTurnStopped();
+  }
+
+  /**
+   * Close one completed model turn exactly once. The transcript boundary must
+   * be durable before the Engine flushes usage, heartbeat, and turnCount via
+   * onTurnBoundary, so crash recovery never folds two assistant responses into
+   * the same transcript turn or observes state ahead of the transcript.
+   */
+  private finalizeModelTurn(): void {
+    if (
+      this.lastCompletedModelTurn !== this.turnCount ||
+      this.lastFinalizedTurn === this.turnCount
+    ) {
+      return;
+    }
+    this.lastFinalizedTurn = this.turnCount;
+    this.deps.transcript.appendTurnBoundary();
+    this.config.onTurnBoundary?.(this.turnCount);
   }
 
   private prepareMessagesForModel(messages: Message[]): Message[] {
@@ -867,6 +889,7 @@ export class TurnLoop {
           }
         }
 
+        this.lastCompletedModelTurn = this.turnCount;
         messages = this.redactConsumedSensitiveToolResults(messages);
 
         // Record the response once into current-turn and whole-session counters.
@@ -934,6 +957,7 @@ export class TurnLoop {
             content:
               "<system-reminder>Your previous response was truncated by the max output token limit before the tool call finished, so its arguments are incomplete. Do not assume it ran. Either retry with a smaller/more focused tool call (e.g. write the file in sections via Edit), or raise this model's maxOutputTokens.</system-reminder>",
           });
+          this.finalizeModelTurn();
           continue;
         }
 
@@ -1006,9 +1030,11 @@ export class TurnLoop {
             } catch (err) {
               if (isAbortError(err) || this.config.signal?.aborted) {
                 this.markStopped();
+                this.finalizeModelTurn();
                 return { text: finalText, reason: "aborted_streaming", messages };
               }
               this.config.onStream?.({ type: "error", error: formatFriendlyError(err) });
+              this.finalizeModelTurn();
               return { text: finalText, reason: "model_error", messages };
             }
           }
@@ -1021,6 +1047,7 @@ export class TurnLoop {
         // Aborted?
         if (this.config.signal?.aborted) {
           this.markStopped();
+          this.finalizeModelTurn();
           return { text: finalText, reason: "aborted_streaming", messages };
         }
 
@@ -1051,6 +1078,7 @@ export class TurnLoop {
               content: "（Goal 预算已耗尽，强制停止。）",
             },
           });
+          this.finalizeModelTurn();
           return {
             text: finalText,
             reason: "goal_budget_exhausted",
@@ -1072,6 +1100,7 @@ export class TurnLoop {
             hasToolUse: false,
           });
           messages.push({ role: "assistant", content: finalText });
+          this.finalizeModelTurn();
           if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
           }
@@ -1390,6 +1419,7 @@ export class TurnLoop {
           tlog.info("turn.goal_self_reported_complete", { cat: "goal" });
           this.stopBlockCount = 0;
           this.deps.clearPersistedGoal?.();
+          this.finalizeModelTurn();
           if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
           }
@@ -1409,6 +1439,7 @@ export class TurnLoop {
           tlog.info("turn.goal_user_cancelled", { cat: "goal" });
           this.stopBlockCount = 0;
           this.deps.clearPersistedGoal?.();
+          this.finalizeModelTurn();
           if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
           }
@@ -1434,6 +1465,7 @@ export class TurnLoop {
             message: { role: "assistant", content: finalText },
           });
           messages.push({ role: "assistant", content: finalText });
+          this.finalizeModelTurn();
           if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
           }
@@ -1481,9 +1513,7 @@ export class TurnLoop {
           toolCallCount: toolCalls.length,
         });
 
-        // Record turn boundary
-        this.deps.transcript.appendTurnBoundary();
-        this.config.onTurnBoundary?.(this.turnCount);
+        this.finalizeModelTurn();
 
         tlog.info("turn.end", {
           cat: "turn",
@@ -1498,6 +1528,9 @@ export class TurnLoop {
       // engine's post-run saveState records model_error instead of leaving
       // the session stuck at "active".
       this.patchOrphanedToolUses(messages);
+      // If the model already returned, this is still a completed model turn.
+      // The idempotent helper is a no-op when its normal branch finalized first.
+      this.finalizeModelTurn();
       // A user-initiated Stop also bubbles here (an AbortError thrown from the
       // per-turn scaffolding). Treat it as a clean abort, not a model_error —
       // no error event, so the UI shows only the "你停止了本轮" line.
