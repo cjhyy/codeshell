@@ -57,8 +57,8 @@ import {
   compactQuerySessionId,
   forkSourceSessionId,
   quickChatForkRequest,
-  type QuickChatForkRequest,
 } from "./agent-bridge-fallback.js";
+import { QuickChatForkRouter, type QuickChatForkLifecycle } from "./quick-chat-fork-router.js";
 import { prepareAgentRunMetadata, resolveCredentialSessionCwd } from "./agent-run-metadata.js";
 import { getTrustCachedSync } from "./trust-store.js";
 import { reloadAutomations } from "./automation-service.js";
@@ -81,10 +81,7 @@ export function resolveNoRepoCwd(): string {
   return dir;
 }
 
-export interface QuickChatForkLifecycle {
-  begin(request: QuickChatForkRequest): boolean;
-  settle(request: QuickChatForkRequest & { succeeded: boolean }): Promise<void> | void;
-}
+export type { QuickChatForkLifecycle } from "./quick-chat-fork-router.js";
 
 const require = createRequire(import.meta.url);
 const agentEntry = require.resolve("@cjhyy/code-shell-core/bin/agent-server-stdio");
@@ -181,7 +178,7 @@ export class AgentBridge {
   private sessionCwd = new Map<string, string>();
   private credentialSnapshotRevision = 0;
   private readonly credentialSnapshotCwds = new Set<string>();
-  private readonly pendingQuickChatForks = new Map<string, QuickChatForkRequest>();
+  private readonly quickChatForkRouter: QuickChatForkRouter | null;
 
   constructor(
     window: BrowserWindow,
@@ -189,6 +186,9 @@ export class AgentBridge {
   ) {
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
     this.windows.add(window);
+    this.quickChatForkRouter = quickChatForkLifecycle
+      ? new QuickChatForkRouter(quickChatForkLifecycle)
+      : null;
     window.on("closed", () => this.windows.delete(window));
     this.attachIpcListener();
   }
@@ -251,7 +251,7 @@ export class AgentBridge {
       // cron change: the worker created/deleted a cron job (agent/cronChanged);
       // reload main's scheduler so it arms immediately. DON'T forward to renderer.
       if (this.maybeHandleCronChanged(line)) return;
-      this.settleQuickChatForkFromWorker(line);
+      const quickChatForkSettlement = this.quickChatForkRouter?.routeWorkerResponse(line) ?? null;
       let summary: Record<string, unknown> = { raw: previewLine(line) };
       try {
         const m = JSON.parse(line) as { method?: string; id?: number };
@@ -270,14 +270,19 @@ export class AgentBridge {
       dlog("bridge", "worker→renderer", summary);
       if (liveStreamEnvelope) {
         this.safeSend("agent:streamEvent", liveStreamEnvelope);
-      } else {
+      } else if (!quickChatForkSettlement) {
         this.safeSend("agent:msg", line);
       }
-      for (const tap of this.outboundTaps) {
-        try {
-          tap(line, snapshotEntry);
-        } catch {
-          /* a tap must never break worker streaming */
+      void quickChatForkSettlement?.catch((error) =>
+        dlog("bridge", "quick_chat.fork_settle_failed", { error: String(error) }),
+      );
+      if (!quickChatForkSettlement) {
+        for (const tap of this.outboundTaps) {
+          try {
+            tap(line, snapshotEntry);
+          } catch {
+            /* a tap must never break worker streaming */
+          }
         }
       }
     });
@@ -398,26 +403,18 @@ export class AgentBridge {
         (cwd) => getTrustCachedSync(cwd) === "trusted",
       );
       const parsed = prepared.parsed;
-      const quickChatFork = quickChatForkRequest(parsed, event.sender.id);
-      if (quickChatFork && this.quickChatForkLifecycle) {
-        if (!this.quickChatForkLifecycle.begin(quickChatFork)) {
-          this.safeSend(
-            "agent:msg",
-            JSON.stringify({
-              jsonrpc: "2.0",
-              id: quickChatFork.requestId,
-              error: { code: -32602, message: "quick-chat claim is no longer active" },
-            }),
-          );
-          return;
-        }
-        this.pendingQuickChatForks.set(String(quickChatFork.requestId), quickChatFork);
-      }
-
       // Line forwarded to the worker. Only rewritten when we inject fields
       // (agent/run trust) — everything else is passed through verbatim so we
       // don't re-serialize on the hot path.
       let outLine = line;
+      const quickChatFork = quickChatForkRequest(parsed, event.sender.id);
+      let quickChatForkWireId: string | undefined;
+      if (quickChatFork && this.quickChatForkRouter) {
+        const started = this.quickChatForkRouter.start(quickChatFork, event.sender, line);
+        if (!started) return;
+        outLine = started.line;
+        quickChatForkWireId = started.wireId;
+      }
 
       if (parsed.method === "agent/run") {
         outLine = this.handleAgentRunMetadata(prepared);
@@ -453,7 +450,13 @@ export class AgentBridge {
           method: parsed.method,
           answered: fallback !== null,
         });
-        if (quickChatFork) this.settleQuickChatFork(quickChatFork, false);
+        if (quickChatForkWireId) {
+          void this.quickChatForkRouter
+            ?.fail(quickChatForkWireId)
+            .catch((error) =>
+              dlog("bridge", "quick_chat.fork_settle_failed", { error: String(error) }),
+            );
+        }
         return;
       }
       dlog("bridge", "renderer→worker", { method: parsed.method, raw: previewLine(outLine) });
@@ -468,38 +471,10 @@ export class AgentBridge {
     );
   }
 
-  private settleQuickChatForkFromWorker(line: string): void {
-    if (!this.quickChatForkLifecycle || this.pendingQuickChatForks.size === 0) return;
-    try {
-      const response = JSON.parse(line) as {
-        id?: number | string;
-        result?: { sessionId?: unknown };
-        error?: unknown;
-      };
-      if (response.id === undefined) return;
-      const request = this.pendingQuickChatForks.get(String(response.id));
-      if (!request) return;
-      const succeeded = !response.error && response.result?.sessionId === request.sessionId;
-      this.settleQuickChatFork(request, succeeded);
-    } catch {
-      // Non-JSON worker output is handled by the normal bridge path.
-    }
-  }
-
-  private settleQuickChatFork(request: QuickChatForkRequest, succeeded: boolean): void {
-    this.pendingQuickChatForks.delete(String(request.requestId));
-    Promise.resolve(this.quickChatForkLifecycle?.settle({ ...request, succeeded })).catch((error) =>
-      dlog("bridge", "quick_chat.fork_settle_failed", {
-        sessionId: request.sessionId,
-        error: String(error),
-      }),
-    );
-  }
-
   private failPendingQuickChatForks(): void {
-    for (const request of [...this.pendingQuickChatForks.values()]) {
-      this.settleQuickChatFork(request, false);
-    }
+    void this.quickChatForkRouter
+      ?.failAll()
+      .catch((error) => dlog("bridge", "quick_chat.fork_settle_failed", { error: String(error) }));
   }
 
   private safeSend(channel: string, payload: unknown): void {

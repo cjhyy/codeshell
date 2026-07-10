@@ -45,13 +45,16 @@ export class QuickChatOwnershipRegistry {
     sessionId: string,
     ownerId: number,
     claimId: string,
-    succeeded: boolean,
+    _succeeded: boolean,
     deleteSession: () => Promise<void>,
   ): Promise<{ active: boolean; deleted: boolean }> {
     const claim = this.claimsBySession.get(sessionId)?.get(ownerId);
     if (claim && claim.claimId === claimId) claim.forkInFlight = false;
     const active = this.isClaimActive(sessionId, ownerId, claimId);
-    if (!succeeded || active || this.hasActiveOwner(sessionId)) {
+    // A failed/missing worker reply does not prove the atomic publish never
+    // happened. Once every owner is tombstoned, deleting the target is the
+    // only fail-closed outcome and is safe when the directory is absent.
+    if (active || this.hasActiveOwner(sessionId)) {
       return { active, deleted: false };
     }
     await this.deleteOnce(sessionId, async () => deleteSession());
