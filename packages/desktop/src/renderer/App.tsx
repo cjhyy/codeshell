@@ -4278,6 +4278,7 @@ function App() {
               const panelRepo = panelRepoId
                 ? (repos.find((r) => r.id === panelRepoId) ?? null)
                 : null;
+              const panelEngineSessionId = resolveEngineSessionIdForBucket(panelBucket) ?? null;
               const hidden = !isActivePanelBucket || !isChatView || !panelState.open;
               const keepActiveBodyLive = panelState.open && (!isActivePanelBucket || !isChatView);
 
@@ -4289,7 +4290,7 @@ function App() {
                   // cannot be rewritten by another session.
                   hidden={hidden}
                   keepActiveBodyLive={keepActiveBodyLive}
-                  cwd={panelRepo?.path ?? null}
+                  repoPath={panelRepo?.path ?? null}
                   onClose={() =>
                     updatePanelBucket(panelBucket, (state) => ({
                       ...state,
@@ -4312,7 +4313,7 @@ function App() {
                   browserAnchors={anchorsIn(anchorsByBucket, panelBucket)}
                   onRemoveBrowserAnchor={isActivePanelBucket ? removeAnchor : undefined}
                   onUpdateBrowserAnchor={isActivePanelBucket ? updateAnchorComment : undefined}
-                  engineSessionId={resolveEngineSessionIdForBucket(panelBucket) ?? null}
+                  engineSessionId={panelEngineSessionId}
                   tabs={panelState.tabs}
                   setTabs={(next) =>
                     updatePanelBucket(panelBucket, (state) => {

@@ -71,6 +71,15 @@ export function ReviewPanel({ cwd, files, turnDiff }: Props) {
   // Recent commits for the 提交 submenu, loaded lazily when it opens.
   const [commits, setCommits] = useState<GitCommit[] | null>(null);
 
+  // Git-derived selections belong to one workspace. A session switching from
+  // main to a worktree must not retain commits/ranges/stats from the old root.
+  useEffect(() => {
+    setCommits(null);
+    setSelectedCommit(null);
+    setRange(null);
+    setStats(null);
+  }, [cwd]);
+
   // Resolve the diff range when in a committed/branch scope: "提交" diffs the
   // picked commit (<hash>^..<hash>) or, with none picked, the most recent
   // (HEAD~1..HEAD); "分支 vs base" diffs against the base branch (main/master/

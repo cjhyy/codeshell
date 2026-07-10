@@ -31,8 +31,8 @@ export function TerminalPanel({ cwd, sessionId: baseId }: Props) {
   // Capture cwd once for the initial spawn; later cwd changes must NOT rebuild
   // the terminal (that would destroy xterm while the pty keeps running, losing
   // all scrollback). The session id already changes when the repo changes.
-  const cwdRef = useRef(cwd);
-  cwdRef.current = cwd;
+  const spawnCwdRef = useRef(cwd);
+  const spawnCwd = spawnCwdRef.current;
 
   useEffect(() => {
     const host = hostRef.current;
@@ -57,7 +57,7 @@ export function TerminalPanel({ cwd, sessionId: baseId }: Props) {
     // buffer row, which ranges are links; findTerminalLinks does the matching
     // (unit-tested in terminalLinks.test.ts). Paths open in the editor relative
     // to the shell's cwd; URLs open in the OS browser.
-    const offLinks = registerTerminalLinks(term, () => cwdRef.current ?? undefined);
+    const offLinks = registerTerminalLinks(term, () => spawnCwdRef.current ?? undefined);
 
     // Renderer → shell.
     const offInput = term.onData((data) => {
@@ -70,13 +70,20 @@ export function TerminalPanel({ cwd, sessionId: baseId }: Props) {
     });
     const offExit = window.codeshell.onPtyExit((msg) => {
       if (msg.sessionId === sessionId) {
-        term.write(`\r\n\x1b[2m${tRef.current("panels.terminal.processExited", { code: msg.exitCode })}\x1b[0m\r\n`);
+        term.write(
+          `\r\n\x1b[2m${tRef.current("panels.terminal.processExited", { code: msg.exitCode })}\x1b[0m\r\n`,
+        );
       }
     });
 
     // Start the pty, then push the real viewport size once we know it.
     void window.codeshell
-      .ptyStart({ sessionId, cwd: cwdRef.current ?? undefined, cols: term.cols, rows: term.rows })
+      .ptyStart({
+        sessionId,
+        cwd: spawnCwdRef.current ?? undefined,
+        cols: term.cols,
+        rows: term.rows,
+      })
       .then((result) => {
         if (disposed) return;
         if (!result.ok) {
@@ -126,8 +133,13 @@ export function TerminalPanel({ cwd, sessionId: baseId }: Props) {
     <div className="flex min-h-0 flex-1 flex-col bg-background">
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
         <span className="text-sm font-medium text-foreground">{t("panels.terminal.title")}</span>
-        <span className="truncate text-xs text-muted-foreground">{cwd ?? "~"}</span>
+        <span className="truncate text-xs text-muted-foreground">{spawnCwd ?? "~"}</span>
       </div>
+      {cwd !== spawnCwd && (
+        <div className="shrink-0 border-b border-status-warn/30 bg-status-warn/10 px-3 py-1.5 text-xs text-status-warn">
+          {t("panels.terminal.workspaceChanged")}
+        </div>
+      )}
       <div ref={hostRef} className="min-h-0 flex-1 overflow-hidden p-2" />
     </div>
   );

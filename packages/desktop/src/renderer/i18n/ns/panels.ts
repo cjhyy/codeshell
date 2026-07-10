@@ -65,6 +65,7 @@ export const panels = {
         title: "终端",
         processExited: "[进程已退出 (code {code})]",
         startFailed: "[终端启动失败: {detail}]",
+        workspaceChanged: "工作区已切换；此终端仍在旧目录。新建终端以使用新工作区。",
       },
       quickChat: {
         title: "快聊",
@@ -268,6 +269,8 @@ export const panels = {
         title: "Terminal",
         processExited: "[Process exited (code {code})]",
         startFailed: "[Terminal failed to start: {detail}]",
+        workspaceChanged:
+          "The workspace changed; this terminal remains in its original directory. Open a new terminal to use the new workspace.",
       },
       quickChat: {
         title: "Quick Chat",

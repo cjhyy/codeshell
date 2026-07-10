@@ -55,6 +55,8 @@ export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath, mode, 
         cancelled = true;
       };
     }
+    setError(null);
+    setDiff(null);
     const fetchDiff = range
       ? window.codeshell.getGitRangeDiff(cwd, range, file)
       : window.codeshell.getGitDiff(cwd, file, mode);
@@ -65,6 +67,7 @@ export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath, mode, 
       })
       .catch((e: unknown) => {
         if (cancelled) return;
+        setDiff(null);
         setError(String(e instanceof Error ? e.message : e));
       });
     return () => {

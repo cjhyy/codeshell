@@ -17,6 +17,7 @@ import {
   getPanelEntry,
   type PanelAvailabilityContext,
 } from "./PanelRegistry";
+import { usePanelWorkspaceRoot } from "./usePanelWorkspaceRoot";
 
 export interface OpenTab {
   id: string;
@@ -27,7 +28,8 @@ export interface OpenTab {
 let panelTabSeq = 0;
 
 interface Props {
-  cwd: string | null;
+  /** Registered repository root used only as the main-workspace fallback. */
+  repoPath: string | null;
   /**
    * When true the whole dock is visually hidden. Normal close uses display:none
    * so the dock occupies no width; keepActiveBodyLive uses an invisible absolute
@@ -103,7 +105,7 @@ interface Props {
  * terminal's xterm or reloads a browser's <webview>.
  */
 export function PanelArea({
-  cwd,
+  repoPath,
   hidden = false,
   keepActiveBodyLive = false,
   onClose,
@@ -129,6 +131,8 @@ export function PanelArea({
   bucket,
 }: Props) {
   const { t } = useT();
+  const workspace = usePanelWorkspaceRoot(engineSessionId ?? null, repoPath);
+  const cwd = workspace.root;
   const panelAvailability: PanelAvailabilityContext = {
     cwd,
     engineSessionId: engineSessionId ?? null,
@@ -347,29 +351,35 @@ export function PanelArea({
           during a session switch. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
         {activeTabs.length === 0 && <PanelLanding entries={enabledPanels} onPick={addTab} />}
-        {activeTabs.map((t) => {
-          const activeTab = t.id === visibleActiveId;
+        {activeTabs.map((panelTab) => {
+          const activeTab = panelTab.id === visibleActiveId;
           const visibility = resolvePanelVisibility({ hidden, keepActiveBodyLive, activeTab });
           return (
-            <Slot key={t.id} active={activeTab}>
-              <PanelBody
-                tab={t}
-                bucket={bucket}
-                visible={visibility.lifecycleVisible}
-                foregroundVisible={visibility.foregroundVisible}
-                cwd={cwd}
-                reviewFiles={reviewFiles}
-                reviewDiff={reviewDiff}
-                engineSessionId={engineSessionId}
-                browserAnchors={browserAnchors}
-                revealFile={revealFile}
-                onRevealConsumed={onRevealConsumed}
-                openUrl={openUrl}
-                onAttachImage={onAttachImage}
-                onRemoveBrowserAnchor={onRemoveBrowserAnchor}
-                onUpdateBrowserAnchor={onUpdateBrowserAnchor}
-                renderQuickChatPanel={renderQuickChatPanel}
-              />
+            <Slot key={panelTab.id} active={activeTab}>
+              {!workspace.ready && !cwd ? (
+                <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-muted-foreground">
+                  {t("panels.common.loading")}
+                </div>
+              ) : (
+                <PanelBody
+                  tab={panelTab}
+                  bucket={bucket}
+                  visible={visibility.lifecycleVisible}
+                  foregroundVisible={visibility.foregroundVisible}
+                  cwd={cwd}
+                  reviewFiles={reviewFiles}
+                  reviewDiff={reviewDiff}
+                  engineSessionId={engineSessionId}
+                  browserAnchors={browserAnchors}
+                  revealFile={revealFile}
+                  onRevealConsumed={onRevealConsumed}
+                  openUrl={openUrl}
+                  onAttachImage={onAttachImage}
+                  onRemoveBrowserAnchor={onRemoveBrowserAnchor}
+                  onUpdateBrowserAnchor={onUpdateBrowserAnchor}
+                  renderQuickChatPanel={renderQuickChatPanel}
+                />
+              )}
             </Slot>
           );
         })}

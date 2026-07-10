@@ -117,6 +117,15 @@ export function FilesPanel({ cwd, onAttachImage, revealFile, onRevealConsumed }:
   // manual refresh button and by `codeshell:files-changed` (fired when an AI
   // turn completes), so an edit to the open file shows without re-selecting.
   const [reloadNonce, setReloadNonce] = useState(0);
+  const previousRootRef = useRef(cwd);
+
+  useEffect(() => {
+    if (previousRootRef.current === cwd) return;
+    previousRootRef.current = cwd;
+    setSelected((current) => (current && cwd && resolveUnderRoot(cwd, current) ? current : null));
+    setRevealDirs(new Set());
+    setReloadNonce((n) => n + 1);
+  }, [cwd]);
 
   useEffect(() => {
     const onChanged = (): void => setReloadNonce((n) => n + 1);
