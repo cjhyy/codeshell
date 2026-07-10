@@ -901,6 +901,16 @@ export class TurnLoop {
 
         messages = this.markPendingImagesConsumed(messages);
 
+        // stopBlockCount guards only the no-tool final-answer loop evaluated by
+        // on_stop (text -> block -> text -> block). A response that structurally
+        // contains tool_use has left that streak, regardless of whether the call
+        // will execute successfully. Reset here, before truncated-tool and later
+        // queued-steer paths can continue the outer loop. Repeated ineffective
+        // tool_use turns still consume turns and are bounded by maxTurns.
+        if (response.toolCalls.length > 0) {
+          this.stopBlockCount = 0;
+        }
+
         // Truncation that cut off a TOOL CALL: the model overflowed
         // max_output_tokens mid tool-call, so the arg JSON is incomplete (e.g. a
         // Write whose `content` was clipped, leaving file_path unset). Executing
@@ -966,6 +976,11 @@ export class TurnLoop {
                 this.config.onStream,
                 this.config.signal,
               );
+              // Continuations are separate provider responses, so preserve the
+              // same structural tool_use invariant before processing this one.
+              if (contResponse.toolCalls.length > 0) {
+                this.stopBlockCount = 0;
+              }
               if (contResponse.usage?.promptTokens !== undefined) {
                 this.recordResponseUsage(contResponse.usage);
                 continuedResponse = true;
