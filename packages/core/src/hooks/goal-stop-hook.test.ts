@@ -1182,7 +1182,7 @@ describe("createGoalStopHook — three-state judge", () => {
     expect(metCalls).toBe(0);
   });
 
-  it("caps repeated unparseable judge requests for one run", async () => {
+  it("caps repeated unparseable judge requests for one evidence window", async () => {
     const judge = fakeJudge("not JSON");
     const hook = createGoalStopHook({ goal: "ship it", llm: judge, log: noopLog });
 
@@ -1195,6 +1195,139 @@ describe("createGoalStopHook — three-state judge", () => {
     }
 
     expect(judge.calls).toBe(3);
+  });
+
+  it("F4: retries the judge after three transient failures when new evidence arrives", async () => {
+    let calls = 0;
+    let stopRound = 1;
+    let toolResults: GoalJudgeToolResult[] = [];
+    const judge: GoalJudgeLLM = {
+      async createMessage(): Promise<LLMResponse> {
+        calls += 1;
+        if (calls <= 3) throw new DOMException("judge timed out", "TimeoutError");
+        return {
+          text: '{"met":true,"waiting":false,"gaps":""}',
+          toolCalls: [],
+        };
+      },
+    };
+    const hook = createGoalStopHook({
+      goal: "ship it",
+      llm: judge,
+      log: noopLog,
+      getJudgeContext: () => ({
+        toolResults,
+        progress: { turnCount: stopRound, stopRound, elapsedMs: 0, tokensUsed: 0 },
+      }),
+    });
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const result = await hook({
+        eventName: "on_stop",
+        data: { sessionId: SID, finalText: "still waiting for evidence" },
+      });
+      expect(result.continueSession).toBe(true);
+    }
+
+    stopRound = 2;
+    toolResults = [
+      {
+        turnCount: 2,
+        toolName: "Bash",
+        status: "success",
+        text: "release verification passed",
+      },
+    ];
+    const recovered = await hook({
+      eventName: "on_stop",
+      data: { sessionId: SID, finalText: "verification finished" },
+    });
+
+    expect(calls).toBe(4);
+    expect(recovered.continueSession).toBeUndefined();
+    expect(recovered.data?.goalVerdict).toEqual({ met: true, gaps: "" });
+  });
+
+  it("F4: returns an explicit termination when judge usage exhausts the Goal budget", async () => {
+    const judge: GoalJudgeLLM = {
+      async createMessage(): Promise<LLMResponse> {
+        return {
+          text: '{"met":false,"waiting":false,"gaps":"more work"}',
+          toolCalls: [],
+          usage: { promptTokens: 90, completionTokens: 11, totalTokens: 101 },
+        };
+      },
+    };
+    let usageCalls = 0;
+    const hook = createGoalStopHook({
+      goal: { objective: "ship it", tokenBudget: 100 },
+      llm: judge,
+      log: noopLog,
+      onJudgeUsage: (usage) => {
+        usageCalls += 1;
+        expect(usage).toEqual({ promptTokens: 90, completionTokens: 11, totalTokens: 101 });
+        return "token_budget_exhausted";
+      },
+    });
+
+    const result = await hook({
+      eventName: "on_stop",
+      data: { sessionId: SID, finalText: "not done" },
+    });
+
+    expect(usageCalls).toBe(1);
+    expect(result.continueSession).toBeUndefined();
+    expect(result.data?.goalBudgetTermination).toBe("token_budget_exhausted");
+    expect(result.data?.goalVerdict).toBeUndefined();
+  });
+
+  it("F4: does not hide an exhausted Goal budget behind the evidence-window limit", async () => {
+    const judge: GoalJudgeLLM = {
+      async createMessage(): Promise<LLMResponse> {
+        throw new DOMException("judge timed out", "TimeoutError");
+      },
+    };
+    let budgetChecks = 0;
+    const hook = createGoalStopHook({
+      goal: { objective: "ship it", tokenBudget: 100 },
+      llm: judge,
+      log: noopLog,
+      onJudgeUsage: (usage) => {
+        expect(usage).toBeUndefined();
+        budgetChecks += 1;
+        return "token_budget_exhausted";
+      },
+    });
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const result = await hook({
+        eventName: "on_stop",
+        data: { sessionId: SID, finalText: "same evidence" },
+      });
+      expect(result.continueSession).toBe(true);
+    }
+    const exhausted = await hook({
+      eventName: "on_stop",
+      data: { sessionId: SID, finalText: "same evidence" },
+    });
+
+    expect(budgetChecks).toBe(1);
+    expect(exhausted.continueSession).toBeUndefined();
+    expect(exhausted.data?.goalBudgetTermination).toBe("token_budget_exhausted");
+  });
+
+  it("F4: preserves the normal single-request verdict path", async () => {
+    const judge = fakeJudge('{"met":false,"waiting":false,"gaps":"run tests"}');
+    const hook = createGoalStopHook({ goal: "ship it", llm: judge, log: noopLog });
+
+    const result = await hook({
+      eventName: "on_stop",
+      data: { sessionId: SID, finalText: "implementation complete" },
+    });
+
+    expect(judge.calls).toBe(1);
+    expect(result.continueSession).toBe(true);
+    expect(result.data?.goalVerdict).toEqual({ met: false, gaps: "run tests" });
   });
 
   it("uses a dedicated timeout shorter than the parent model request timeout", async () => {

@@ -185,7 +185,7 @@ const MAX_TOOL_RESULT_CHARS = 1_600;
 const MAX_TOOL_EVIDENCE_CHARS = 8_000;
 const MAX_JUDGE_FINAL_TEXT_CHARS = 4_000;
 const MAX_JUDGE_USER_MESSAGE_CHARS = 20_000;
-const MAX_JUDGE_REQUESTS_PER_RUN = 3;
+const MAX_JUDGE_REQUESTS_PER_EVIDENCE_WINDOW = 3;
 const DEFAULT_JUDGE_TIMEOUT_MS = 15_000;
 
 function createJudgeAbortSignal(
@@ -783,9 +783,14 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
   let lastResult: HookResult | null = null;
   let previousVerdict: "not_met" | "waiting" | undefined;
   let previousGaps = "";
-  // Independent per-run judge ledger. Request count enforces a hard spend cap;
-  // token totals are logged separately from main-turn accounting for diagnosis.
+  // Independent per-run judge ledger. The total request count and token totals
+  // are retained for diagnosis; a separate evidence-window count prevents a
+  // transiently failing projection from spending without bound while allowing
+  // a later stop round / tool result to be judged instead of going permanently
+  // blind. The Goal token/time budgets remain the run-wide hard spend cap.
   let judgeRequestCount = 0;
+  let judgeRequestWindowKey: string | null = null;
+  let judgeRequestWindowCount = 0;
   const judgeUsage: TokenUsage = {
     promptTokens: 0,
     completionTokens: 0,
@@ -894,16 +899,37 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
       return lastResult;
     }
 
-    if (judgeRequestCount >= MAX_JUDGE_REQUESTS_PER_RUN) {
+    // This limiter is deliberately independent from the verdict cache key.
+    // A new natural-stop round or newly projected tool evidence opens a fresh,
+    // still-bounded retry window without changing F6 cache-key semantics.
+    const requestWindowKey = JSON.stringify([judgeContext.progress.stopRound, toolEvidence]);
+    if (judgeRequestWindowKey !== requestWindowKey) {
+      judgeRequestWindowKey = requestWindowKey;
+      judgeRequestWindowCount = 0;
+    }
+
+    if (judgeRequestWindowCount >= MAX_JUDGE_REQUESTS_PER_EVIDENCE_WINDOW) {
+      // The TurnLoop normally catches this before on_stop. Re-check through the
+      // private seam so a true Goal budget exhaustion is never disguised as a
+      // request-limit continuation for older/direct callers.
+      const budgetTermination = opts.onJudgeUsage?.(undefined);
+      if (budgetTermination) {
+        log.info("goal_stop.judge_budget_exhausted", {
+          cat: "goal",
+          reason: budgetTermination,
+        });
+        return { data: { goalBudgetTermination: budgetTermination } };
+      }
       log.warn("goal_stop.request_limit", {
         cat: "goal",
         requestCount: judgeRequestCount,
-        maxRequests: MAX_JUDGE_REQUESTS_PER_RUN,
+        windowRequestCount: judgeRequestWindowCount,
+        maxRequests: MAX_JUDGE_REQUESTS_PER_EVIDENCE_WINDOW,
       });
       return {
         continueSession: true,
         messages: [
-          "继续 —— 目标完成度裁判本次 run 的请求上限已到,请继续推进直到明确完成(或调用 complete_goal 声明完成)。",
+          "继续 —— 目标完成度裁判对当前证据的请求上限已到,请继续推进并提供新证据(或调用 complete_goal 声明完成)。",
         ],
       };
     }
@@ -957,6 +983,7 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
 
     let resp: LLMResponse;
     judgeRequestCount++;
+    judgeRequestWindowCount++;
     try {
       resp = await llm.createMessage({
         systemPrompt: JUDGE_SYSTEM,
