@@ -441,6 +441,42 @@ describe("createGoalStopHook — three-state judge", () => {
     expect(hasUnpairedSurrogate(evidence)).toBe(false);
   });
 
+  it("bounds control-character-dense evidence after JSON serialization", async () => {
+    let judgeInput = "";
+    const dense = `"\\\u0000\u0001\n`.repeat(500);
+    const hook = createGoalStopHook({
+      goal: "inspect serialized evidence size",
+      log: noopLog,
+      llm: {
+        async createMessage(opts): Promise<LLMResponse> {
+          judgeInput = opts.messages[0]?.content ?? "";
+          return {
+            text: '{"met":false,"waiting":false,"gaps":"more work"}',
+            toolCalls: [],
+          };
+        },
+      },
+      getJudgeContext: () => ({
+        toolResults: Array.from({ length: 25 }, (_, index) =>
+          projectGoalJudgeToolResult(
+            { id: `dense-${index}`, toolName: `DenseTool${index}`, result: dense },
+            1,
+          ),
+        ),
+        progress: { turnCount: 2, stopRound: 1, elapsedMs: 10, tokensUsed: 10 },
+      }),
+    });
+
+    await hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "checked" } });
+
+    const evidence = (JSON.parse(judgeInput) as { untrustedToolEvidence: { quotedText: string } })
+      .untrustedToolEvidence.quotedText;
+    expect(evidence).not.toContain("\u0000");
+    expect(evidence).not.toContain("\u0001");
+    expect(JSON.stringify(evidence).length).toBeLessThanOrEqual(8_000);
+    expect(judgeInput.length).toBeLessThanOrEqual(20_000);
+  });
+
   for (const batchSize of [13, 20, 25]) {
     it(`keeps metadata and first/middle/last evidence for a ${batchSize}-result batch`, async () => {
       const middle = Math.floor(batchSize / 2);

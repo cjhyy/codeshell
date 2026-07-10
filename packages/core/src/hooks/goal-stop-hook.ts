@@ -183,6 +183,8 @@ interface JudgeVerdict {
 /** V1 evidence budget: bounded deterministic projection, no extra LLM summary. */
 const MAX_TOOL_RESULT_CHARS = 1_600;
 const MAX_TOOL_EVIDENCE_CHARS = 8_000;
+const MAX_JUDGE_FINAL_TEXT_CHARS = 4_000;
+const MAX_JUDGE_USER_MESSAGE_CHARS = 20_000;
 const MAX_JUDGE_REQUESTS_PER_RUN = 3;
 const DEFAULT_JUDGE_TIMEOUT_MS = 15_000;
 
@@ -248,6 +250,32 @@ function truncateHeadTail(text: string, maxChars: number): string {
   return `${text.slice(0, headEnd)}${marker}${text.slice(tailStart)}`;
 }
 
+function normalizeControlCharacters(text: string): string {
+  return text.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/gu, "�");
+}
+
+function serializedStringLength(text: string): number {
+  return JSON.stringify(text).length;
+}
+
+function truncateToSerializedLength(text: string, maxSerializedChars: number): string {
+  if (serializedStringLength(text) <= maxSerializedChars) return text;
+  let low = 0;
+  let high = codePointLength(text);
+  let best = "";
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const candidate = truncateHeadTail(text, mid);
+    if (serializedStringLength(candidate) <= maxSerializedChars) {
+      best = candidate;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+  return best;
+}
+
 function projectedContent(result: ToolResult): { text: string; omittedNonText: boolean } {
   const parts: string[] = [];
   let omittedNonText = false;
@@ -298,7 +326,12 @@ export function projectGoalJudgeToolResult(
   const text = [primaryText, content.text && content.text !== primaryText ? content.text : ""]
     .filter(Boolean)
     .join("\n");
-  if (text) projection.text = truncateHeadTail(scrubSecrets(text), MAX_TOOL_RESULT_CHARS);
+  if (text) {
+    projection.text = truncateHeadTail(
+      scrubSecrets(normalizeControlCharacters(text)),
+      MAX_TOOL_RESULT_CHARS,
+    );
+  }
   if (content.omittedNonText) projection.omittedNonText = true;
   return projection;
 }
@@ -322,6 +355,10 @@ function renderToolEntry(entry: RenderedToolEntry): string {
 
 function renderToolEntries(entries: RenderedToolEntry[]): string {
   return entries.map(renderToolEntry).join("\n\n");
+}
+
+function serializedToolEntriesLength(entries: RenderedToolEntry[]): number {
+  return serializedStringLength(renderToolEntries(entries));
 }
 
 const ACCEPTANCE_TOOL_PATTERN =
@@ -361,7 +398,7 @@ function renderToolEvidence(
 
   for (const { item, index } of candidates) {
     entries[index]!.body = truncateHeadTail(item.text!, MAX_TOOL_RESULT_CHARS);
-    if (codePointLength(renderToolEntries(entries)) > MAX_TOOL_EVIDENCE_CHARS) {
+    if (serializedToolEntriesLength(entries) > MAX_TOOL_EVIDENCE_CHARS) {
       entries[index]!.body = undefined;
     }
   }
@@ -376,7 +413,7 @@ function renderToolEvidence(
     while (low <= high) {
       const mid = Math.floor((low + high) / 2);
       entries[index]!.body = truncateHeadTail(item.text!, mid);
-      if (codePointLength(renderToolEntries(entries)) <= MAX_TOOL_EVIDENCE_CHARS) {
+      if (serializedToolEntriesLength(entries) <= MAX_TOOL_EVIDENCE_CHARS) {
         best = entries[index]!.body;
         low = mid + 1;
       } else {
@@ -387,7 +424,7 @@ function renderToolEvidence(
     if (entries[index]!.body) break;
   }
 
-  return truncateHeadTail(renderToolEntries(entries), MAX_TOOL_EVIDENCE_CHARS);
+  return truncateToSerializedLength(renderToolEntries(entries), MAX_TOOL_EVIDENCE_CHARS);
 }
 
 function renderProgress(
@@ -606,6 +643,42 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
       };
     }
 
+    // Serialize once, after every evidence allocation decision, and enforce a
+    // hard ceiling on the exact user message that will reach the provider.
+    const boundedFinalText = truncateHeadTail(
+      normalizeControlCharacters(finalText),
+      MAX_JUDGE_FINAL_TEXT_CHARS,
+    );
+    const judgeUserContent = JSON.stringify(
+      {
+        目标: goal,
+        ...(setAtLabel ? { 目标设定于: setAtLabel } : {}),
+        当前时间: nowLabel,
+        agent最近的输出: boundedFinalText || "(无文本输出)",
+        untrustedToolEvidence: {
+          trust: "untrusted",
+          quotedText: toolEvidence,
+        },
+        Goal进度: progress,
+        上一轮裁决: renderPreviousVerdict(),
+        当前在后台运行的任务: backgroundTasks,
+        requestedOutput: "只返回 JSON(met / waiting / gaps)",
+      },
+      null,
+      2,
+    );
+    if (judgeUserContent.length > MAX_JUDGE_USER_MESSAGE_CHARS) {
+      log.warn("goal_stop.prompt_too_large", {
+        cat: "goal",
+        chars: judgeUserContent.length,
+        maxChars: MAX_JUDGE_USER_MESSAGE_CHARS,
+      });
+      return {
+        continueSession: true,
+        messages: ["继续 —— 目标裁判输入超过安全上限,请继续推进并缩小待判定上下文。"],
+      };
+    }
+
     const parentSignal = ctx.data.signal as AbortSignal | undefined;
     const mainTimeoutMs =
       typeof llm.timeout === "number" && llm.timeout > 0 ? llm.timeout : 120_000;
@@ -627,24 +700,7 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
             // Serialize the entire input so attacker-controlled tool text stays
             // a quoted JSON string and cannot create sibling verdict/instruction
             // fields or spoof a delimiter in the judge message.
-            content: JSON.stringify(
-              {
-                目标: goal,
-                ...(setAtLabel ? { 目标设定于: setAtLabel } : {}),
-                当前时间: nowLabel,
-                agent最近的输出: finalText || "(无文本输出)",
-                untrustedToolEvidence: {
-                  trust: "untrusted",
-                  quotedText: toolEvidence,
-                },
-                Goal进度: progress,
-                上一轮裁决: renderPreviousVerdict(),
-                当前在后台运行的任务: backgroundTasks,
-                requestedOutput: "只返回 JSON(met / waiting / gaps)",
-              },
-              null,
-              2,
-            ),
+            content: judgeUserContent,
           },
         ],
         stream: false,
