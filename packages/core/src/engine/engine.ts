@@ -2323,6 +2323,7 @@ export class Engine {
         const userMsgCount = userMsgEvents.length;
         const onStream = options?.onStream;
         if (userMsgCount === 1 && onStream && result.text) {
+          const sessionId = session.state.sessionId;
           const rawContent = (userMsgEvents[0]?.data as { content?: unknown })?.content;
           const firstUserText =
             typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent ?? "");
@@ -2331,13 +2332,13 @@ export class Engine {
               if (title) {
                 // Persist the title so it survives a localStorage wipe / disk
                 // rebuild — it used to live only in the renderer's localStorage
-                // index. This .then resolves AFTER the saveState below (:1892), so
-                // it must save again itself rather than rely on that write.
-                session.state.title = title;
-                this.sessionManager.saveState(session.state);
+                // index. Read the latest persisted state at callback time and
+                // merge only title; the completed run's session.state snapshot
+                // may already be stale after later serial session updates.
+                this.sessionManager.updateSessionState(sessionId, { title });
                 onStream({
                   type: "session_title",
-                  sessionId: session.state.sessionId,
+                  sessionId,
                   title,
                 });
               }

@@ -499,14 +499,47 @@ export class SessionManager {
     return { state, transcript };
   }
 
+  /**
+   * Merge a field-level state update into the latest persisted snapshot.
+   *
+   * Unlike saveState(), callers do not supply a potentially stale whole-state
+   * object. The read, shallow merge, and atomic write are synchronous, so no
+   * other callback on this process's event loop can interleave between them.
+   * This is deliberately not a cross-process/Worker lock and does not serialize
+   * overlapping Engine.run whole-state writers; both require session-wide run
+   * coordination and belong to G6.
+   */
+  updateSessionState(
+    sessionId: string,
+    partial: Readonly<Partial<Omit<SessionState, "sessionId">>>,
+  ): void {
+    assertSafeSessionId(sessionId);
+    const stateFile = join(this.sessionsDir, sessionId, "state.json");
+    if (!existsSync(stateFile)) {
+      throw new SessionError(`Session state file not found: ${sessionId}`);
+    }
+    let state: SessionState;
+    try {
+      state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
+    } catch (err) {
+      throw new SessionError(
+        `Session state is corrupt for ${sessionId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    Object.assign(state, partial);
+    state.sessionId = sessionId;
+    this.saveState(state);
+  }
+
   saveState(state: SessionState): void {
     // state.sessionId could come from a deserialized state.json that was
     // tampered with on disk. Validate before joining.
     assertSafeSessionId(state.sessionId);
     const sessionDir = join(this.sessionsDir, state.sessionId);
     mkdirSync(sessionDir, { recursive: true });
-    // Atomic write: stage to .tmp, then rename. Protects against two processes
-    // clobbering each other's state.json mid-write.
+    // Atomic file replacement: stage to .tmp, then rename, preventing a torn
+    // state.json. It does NOT serialize cross-process/Worker writes or concurrent
+    // Engine.run whole-state snapshots; that session-wide coordination is G6.
     const target = join(sessionDir, "state.json");
     // Preserve the newest goal tombstone across whole-state writers. If an old
     // detached bundle still carries the tombstoned goal, drop it before write;
@@ -520,6 +553,13 @@ export class SessionManager {
         // The atomic writer should make this rare. Preserve the existing
         // behavior and overwrite malformed state with the caller's snapshot.
       }
+    }
+    // A title is generated after the first run and may be merged while the
+    // next run still owns a state object loaded before that title existed.
+    // Preserve the newly persisted title when such a stale whole-state writer
+    // saves later; assigning title = undefined explicitly still clears it.
+    if (persisted?.title !== undefined && !("title" in state)) {
+      state.title = persisted.title;
     }
     const terminal = newestGoalTerminal(state.goalTerminal, persisted?.goalTerminal);
     if (terminal) state.goalTerminal = terminal;
