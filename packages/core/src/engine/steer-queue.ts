@@ -6,10 +6,13 @@
  * it. Pure + side-effect-free so it unit-tests without the Engine/TurnLoop
  * harness (same rationale as the renderer's queuedInput.ts).
  */
+import type { InputAttachmentMeta } from "../protocol/types.js";
+
 export interface SteerItem {
   id: string;
   text: string;
   clientMessageId?: string;
+  attachments?: InputAttachmentMeta[];
 }
 
 /** Append a steer entry. Blank text is dropped (returns the list unchanged). */
@@ -18,10 +21,19 @@ export function enqueueSteerItem(
   id: string,
   text: string,
   clientMessageId?: string,
+  attachments?: InputAttachmentMeta[],
 ): SteerItem[] {
   const t = text?.trim();
   if (!id || !t) return list;
-  return [...list, { id, text: t, ...(clientMessageId ? { clientMessageId } : {}) }];
+  return [
+    ...list,
+    {
+      id,
+      text: t,
+      ...(clientMessageId ? { clientMessageId } : {}),
+      ...(attachments && attachments.length > 0 ? { attachments: [...attachments] } : {}),
+    },
+  ];
 }
 
 /**

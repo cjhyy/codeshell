@@ -206,6 +206,8 @@ export interface InjectParams {
 export interface SteerParams {
   sessionId: string;
   text: string;
+  /** Structured input attachments that should ride with this queued steer. */
+  attachments?: InputAttachmentMeta[];
   /** Stable host-side id for this queued draft. Rides through to the
    *  steer_injected event and is the handle Unsteer uses to revoke it. */
   id?: string;

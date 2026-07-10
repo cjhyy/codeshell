@@ -24,7 +24,7 @@ export interface QueuedItem {
 export type QueuedInputState = Record<string, QueuedItem[]>;
 
 export function canSteerQueuedItem(item: QueuedItem): boolean {
-  return (item.attachments?.length ?? 0) === 0;
+  return item.text.trim().length > 0;
 }
 
 export interface SerialTaskQueue {
