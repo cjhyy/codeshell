@@ -21,7 +21,20 @@ describe("DriveAgent tool", () => {
     expect(driveAgentToolDef.name).toBe("DriveAgent");
     expect((driveAgentToolDef.inputSchema as any).properties.prompt).toBeDefined();
     expect((driveAgentToolDef.inputSchema as any).properties.background).toBeDefined();
+    expect((driveAgentToolDef.inputSchema as any).properties.model).toBeDefined();
     expect((driveAgentToolDef.inputSchema as any).properties.cli.enum).toEqual(["claude", "codex"]);
+  });
+
+  it("passes only an explicitly provided non-empty model to the runner", async () => {
+    const seen: Array<string | undefined> = [];
+    const tool = makeDriveAgentTool(async (o) => {
+      seen.push(o.model);
+      return { sessionId: "S", finalText: "", isError: false, exitCode: 0, lines: [] };
+    });
+    await tool({ prompt: "p", cwd: "/x", background: false, model: "codex-x" } as any);
+    await tool({ prompt: "p", cwd: "/x", background: false } as any);
+    await tool({ prompt: "p", cwd: "/x", background: false, model: "   " } as any);
+    expect(seen).toEqual(["codex-x", undefined, undefined]);
   });
 
   it("routes cli:'codex' to the codex runner, defaults (omitted) to claude", async () => {
@@ -145,6 +158,18 @@ describe("DriveClaudeCode alias (back-compat)", () => {
     expect(driveClaudeCodeToolDef.name).toBe("DriveClaudeCode");
     expect((driveClaudeCodeToolDef.inputSchema as any).properties.prompt).toBeDefined();
     expect((driveClaudeCodeToolDef.inputSchema as any).properties.background).toBeDefined();
+    expect((driveClaudeCodeToolDef.inputSchema as any).properties.model).toBeDefined();
+    expect((driveClaudeCodeToolDef.inputSchema as any).properties.cli).toBeUndefined();
+  });
+
+  it("passes model through the legacy claude runner adapter", async () => {
+    let seen: string | undefined;
+    const tool = makeDriveClaudeCodeTool(async (o) => {
+      seen = o.model;
+      return { sessionId: "S", finalText: "", isError: false, exitCode: 0, lines: [] };
+    });
+    await tool({ prompt: "p", cwd: "/x", background: false, model: "claude-x" } as any);
+    expect(seen).toBe("claude-x");
   });
 
   // CC tasks are typically long (minutes → hours), so the tool runs in the
@@ -657,6 +682,47 @@ describe("DriveAgentJobs tool", () => {
     } finally {
       backgroundJobRegistry.reset?.();
       notificationQueue.reset("S-CANCEL-CC");
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("session teardown aborts a running DriveAgent and suppresses its late completion", async () => {
+    backgroundJobRegistry.reset?.();
+    notificationQueue.reset("S-CLOSE-CC");
+    const tmp = mkdtempSync(join(tmpdir(), "drive-jobs-close-"));
+    try {
+      let seenSignal: AbortSignal | undefined;
+      const runner = (opts: { signal?: AbortSignal }) =>
+        new Promise<any>((resolve) => {
+          seenSignal = opts.signal;
+          opts.signal?.addEventListener(
+            "abort",
+            () =>
+              resolve({
+                sessionId: "CC-CLOSED",
+                finalText: "late result after close",
+                isError: false,
+                exitCode: null,
+                lines: [],
+              }),
+            { once: true },
+          );
+        });
+      const tool = makeDriveAgentTool(runner as any);
+      await tool(
+        { prompt: "long edit", cwd: tmp, cli: "claude" } as any,
+        { cwd: tmp, sessionId: "S-CLOSE-CC" } as any,
+      );
+
+      backgroundJobRegistry.dropForSession("S-CLOSE-CC");
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(seenSignal?.aborted).toBe(true);
+      expect(backgroundJobRegistry.listForSession("S-CLOSE-CC")).toEqual([]);
+      expect(notificationQueue.drainAll("S-CLOSE-CC")).toEqual([]);
+    } finally {
+      backgroundJobRegistry.reset?.();
+      notificationQueue.reset("S-CLOSE-CC");
       rmSync(tmp, { recursive: true, force: true });
     }
   });

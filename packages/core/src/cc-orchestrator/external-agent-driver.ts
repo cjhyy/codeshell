@@ -26,6 +26,8 @@ export interface DriverRunOpts extends Omit<BuildArgsOpts, "permissionMode"> {
 }
 
 const codexImageFlagCache = new Map<string, Promise<boolean>>();
+const CODEX_IMAGE_PROBE_TIMEOUT_MS = 5_000;
+const AGENT_TERMINATE_GRACE_MS = 500;
 
 function abortError(): Error {
   const err = new Error("Agent run aborted");
@@ -85,7 +87,7 @@ function createCodexImageProbe(
     const timer = setTimeout(() => {
       killProbe();
       done(false);
-    }, 2_000);
+    }, CODEX_IMAGE_PROBE_TIMEOUT_MS);
     signal?.addEventListener("abort", onAbort, { once: true });
     if (signal?.aborted) onAbort();
     child.stdout?.on("data", (chunk: Buffer) => {
@@ -133,6 +135,7 @@ export function runAgentOnce(
       const args = adapter.buildArgs({
         prompt: opts.prompt,
         resumeSessionId: opts.resumeSessionId,
+        model: opts.model,
         permissionMode: opts.permissionMode ?? "default",
         cwd: opts.cwd,
         imagePaths: opts.imagePaths,
@@ -144,26 +147,47 @@ export function runAgentOnce(
       // (argv ends with `-`), so adapters that set promptViaStdin get a piped
       // stdin we write the prompt to.
       const viaStdin = adapter.promptViaStdin === true;
+      const useProcessGroup = process.platform !== "win32";
       const child = spawn(opts.command, args, {
         cwd: opts.cwd,
         env: { ...process.env, PATH: pathWithCommonBins() },
-        // NOT detached: this child is owned by the (long-lived) worker that reads
-        // its stdout. Detaching orphaned it across a worker/app restart — the
-        // reader promise then never resolved and the completion notification never
-        // fired (the "后台任务没返回" bug). Bound to the worker, it lives or dies
-        // with the process that's actually listening for its result.
-        detached: false,
+        // POSIX detached children lead a fresh process group. We keep their
+        // stdio attached and their ChildProcess referenced, but can terminate
+        // the whole CLI tree on cancel instead of leaving helper processes that
+        // continue editing after the DriveAgent job is marked cancelled.
+        detached: useProcessGroup,
         stdio: [viaStdin ? "pipe" : "ignore", "pipe", "pipe"],
       });
-      // Not detached → no own process group, so kill the child directly (a
-      // negative-pid group kill would target the worker's group). claude has no
-      // long-lived child tree of its own here, so a direct SIGTERM is sufficient.
-      const onAbort = () => {
-        try {
-          child.kill("SIGTERM");
-        } catch {
-          /* already gone */
+      let settled = false;
+      let abortRequested = false;
+      let killTimer: ReturnType<typeof setTimeout> | undefined;
+      const killTree = (killSignal: NodeJS.Signals) => {
+        if (useProcessGroup && child.pid) {
+          try {
+            process.kill(-child.pid, killSignal);
+            return;
+          } catch {
+            // The group may already be gone or unavailable; fall back to the
+            // direct child handle so Windows-like/runtime edge cases still stop.
+          }
         }
+        try {
+          child.kill(killSignal);
+        } catch {
+          // already gone
+        }
+      };
+      const cleanup = () => {
+        signal?.removeEventListener("abort", onAbort);
+        // After abort, retain the escalation timer even if the group leader
+        // exits first: a stubborn descendant may still own the process group.
+        if (!abortRequested && killTimer) clearTimeout(killTimer);
+      };
+      const onAbort = () => {
+        if (abortRequested) return;
+        abortRequested = true;
+        killTree("SIGTERM");
+        killTimer = setTimeout(() => killTree("SIGKILL"), AGENT_TERMINATE_GRACE_MS);
       };
       signal?.addEventListener("abort", onAbort, { once: true });
       if (signal?.aborted) onAbort();
@@ -176,7 +200,9 @@ export function runAgentOnce(
         rl.on("line", (line) => lines.push(line));
       }
       child.on("error", (err) => {
-        signal?.removeEventListener("abort", onAbort);
+        if (settled) return;
+        settled = true;
+        cleanup();
         // A missing binary is the most common failure (user hasn't installed the
         // CLI, or GUI-launched Electron's PATH misses it). Turn the cryptic
         // "spawn codex ENOENT" into something actionable that names the command.
@@ -191,7 +217,9 @@ export function runAgentOnce(
         reject(err);
       });
       child.on("exit", (code) => {
-        signal?.removeEventListener("abort", onAbort);
+        if (settled) return;
+        settled = true;
+        cleanup();
         resolve(runWithLines(adapter, lines, code));
       });
     })().catch(reject);

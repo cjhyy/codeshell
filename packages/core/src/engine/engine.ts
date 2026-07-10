@@ -886,6 +886,13 @@ export class Engine {
     return drained;
   }
 
+  /** Put failed steer preparation back ahead of messages queued while it was being prepared. */
+  private restoreSteer(sessionId: string, items: SteerItem[]): void {
+    if (items.length === 0) return;
+    const queued = this.steerQueueBySid.get(sessionId) ?? [];
+    this.steerQueueBySid.set(sessionId, [...items, ...queued]);
+  }
+
   /** Wire the cookie→browser injection callback (InjectCredential tool). Same
    *  post-construction injection model as setBrowserBridge. */
   setInjectCredential(
@@ -1367,7 +1374,9 @@ export class Engine {
     // notifications) attribute to the right session. toolCtx is created
     // before the session bundle is resolved (see ~line 635), so this is
     // the first point we can set it. After this assignment treat the
-    // field as immutable for the rest of the run.
+    // field follows the latest successfully injected user intent for the rest
+    // of the run, so tools launched after a steer attribute their side effects
+    // to that steer rather than this original submit.
     toolCtx.sessionId = session.state.sessionId;
     toolCtx.originClientMessageId = options?.clientMessageId;
     toolCtx.recordExternalFileChanges = (record) => {
@@ -1957,6 +1966,7 @@ export class Engine {
             return info;
           },
           consumeSteer: (source) => this.consumeSteer(sid, source),
+          restoreSteer: (items) => this.restoreSteer(sid, items),
           buildSteerUserMessageContent: async (item) => {
             const steerImageInput = await prepareRunImageInput({
               task: item.text,
@@ -1976,6 +1986,9 @@ export class Engine {
           },
           claimClientMessageId: (clientMessageId, source) =>
             claimClientMessageId(session, clientMessageId, source),
+          setOriginClientMessageId: (clientMessageId) => {
+            toolCtx.originClientMessageId = clientMessageId;
+          },
           recordCumulativeUsage,
           recordCacheReadDiagnostics: (usage) => {
             this.recordCacheReadDiagnostics(sid, usage);

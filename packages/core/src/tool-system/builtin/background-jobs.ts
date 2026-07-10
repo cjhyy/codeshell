@@ -132,16 +132,19 @@ class BackgroundJobRegistry {
     const entry = this.jobs.get(jobId);
     if (!entry) return false;
     if (entry.status !== "running") return false;
-    try {
-      entry.abort?.();
-    } catch {
-      // ignore abort errors — we still mark cancelled
-    }
+    // Publish the terminal guard before invoking external code. An abort hook
+    // may synchronously settle its underlying Promise and re-enter finish(); it
+    // must observe cancelled instead of briefly publishing completed/failed.
     entry.status = "cancelled";
     entry.finishedAt = Date.now();
     if (outcome?.finalText !== undefined) entry.finalText = outcome.finalText;
     if (outcome?.ccSessionId !== undefined) entry.ccSessionId = outcome.ccSessionId;
     if (outcome?.changedFiles !== undefined) entry.changedFiles = outcome.changedFiles;
+    try {
+      entry.abort?.();
+    } catch {
+      // ignore abort errors — we still mark cancelled
+    }
     this.evictTerminalOverCap(entry.sessionId);
     this.notify();
     return true;
@@ -181,10 +184,22 @@ class BackgroundJobRegistry {
   /** Drop every job of a session — called when the session is deleted/closed. */
   dropForSession(sessionId: string): void {
     let removed = false;
+    const aborts: Array<() => void> = [];
     for (const [id, e] of this.jobs) {
       if (e.sessionId === sessionId) {
+        // Delete first so a synchronous/queued completion caused by abort sees
+        // no live registry entry and cannot publish a late result for a closed
+        // session. Terminal jobs have nothing left to stop.
         this.jobs.delete(id);
+        if (e.status === "running" && e.abort) aborts.push(e.abort);
         removed = true;
+      }
+    }
+    for (const abort of aborts) {
+      try {
+        abort();
+      } catch {
+        // teardown is best-effort across jobs; continue reaping the rest
       }
     }
     if (removed) this.notify();
@@ -199,16 +214,17 @@ class BackgroundJobRegistry {
 
   /** Test helper: drop all tracked jobs. */
   reset(): void {
-    for (const e of this.jobs.values()) {
-      if (e.status === "running") {
-        try {
-          e.abort?.();
-        } catch {
-          // ignore
-        }
+    const aborts = [...this.jobs.values()].flatMap((entry) =>
+      entry.status === "running" && entry.abort ? [entry.abort] : [],
+    );
+    this.jobs.clear();
+    for (const abort of aborts) {
+      try {
+        abort();
+      } catch {
+        // ignore
       }
     }
-    this.jobs.clear();
   }
 
   /** Backstop: keep at most MAX_TERMINAL_JOBS_PER_SESSION terminal jobs per

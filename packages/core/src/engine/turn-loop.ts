@@ -162,6 +162,8 @@ export interface TurnLoopDeps {
    * tests (turn loop tolerates undefined).
    */
   consumeSteer?: (source?: "normal_step" | "finalize_backfill") => SteerItem[];
+  /** Restore steer items whose model-facing content could not be prepared. */
+  restoreSteer?: (items: SteerItem[]) => void;
   /** Build model-facing content for a queued steer item, including attachments. */
   buildSteerUserMessageContent?: (
     item: SteerItem,
@@ -172,6 +174,8 @@ export interface TurnLoopDeps {
    * run or the persisted transcript. Messages without an id bypass this guard.
    */
   claimClientMessageId?: (clientMessageId: string, source: "steer") => boolean;
+  /** Make tools launched after an injected steer attribute side effects to that steer. */
+  setOriginClientMessageId?: (clientMessageId: string | undefined) => void;
   /**
    * Clear this session's PERSISTED goal (state.activeGoal) and drop the
    * in-flight goal-stop hook, so a user-initiated cancel_goal both stops the
@@ -1494,6 +1498,22 @@ export class TurnLoop {
     for (const item of steered) {
       const { id, text, clientMessageId } = item;
       if (!text) continue;
+      let content: string | ContentBlock[];
+      try {
+        content = this.deps.buildSteerUserMessageContent
+          ? await this.deps.buildSteerUserMessageContent(item)
+          : text;
+      } catch (err) {
+        this.deps.restoreSteer?.([item]);
+        logger.warn("steer.prepare.failed_requeued", {
+          clientMessageId,
+          steerId: id,
+          sessionId: this.deps.sessionId,
+          source,
+          error: (err as Error).message,
+        });
+        continue;
+      }
       if (clientMessageId && this.deps.claimClientMessageId?.(clientMessageId, "steer") === false) {
         logger.info("steer.submit.duplicate_ignored", {
           clientMessageId,
@@ -1504,9 +1524,7 @@ export class TurnLoop {
         continue;
       }
       consumed = true;
-      const content = this.deps.buildSteerUserMessageContent
-        ? await this.deps.buildSteerUserMessageContent(item)
-        : text;
+      this.deps.setOriginClientMessageId?.(clientMessageId);
       const message: Message = { role: "user", content };
       messages.push(message);
       this.trackFreshImageMessage(message);
