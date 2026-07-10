@@ -1242,6 +1242,15 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer.invoke("ccRoom:readHistory", cwd, sessionId, limit),
     readCodexHistory: (cwd: string, threadId: string, limit: number) =>
       ipcRenderer.invoke("ccRoom:readCodexHistory", cwd, threadId, limit),
+    subscribeTranscript: (
+      roomId: string,
+      cwd: string,
+      sessionId: string,
+      kind: "claude-code" | "codex",
+      limit: number,
+    ) => ipcRenderer.invoke("ccRoom:subscribeTranscript", roomId, cwd, sessionId, kind, limit),
+    unsubscribeTranscript: (roomId: string) =>
+      ipcRenderer.invoke("ccRoom:unsubscribeTranscript", roomId),
     closeSession: (roomId: string) => ipcRenderer.invoke("ccRoom:closeSession", roomId),
     onRoomMessage: (cb: (env: { roomId: string; msg: unknown }) => void): (() => void) => {
       const h = (_e: IpcRendererEvent, env: { roomId: string; msg: unknown }) => cb(env);

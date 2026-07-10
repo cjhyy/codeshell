@@ -497,7 +497,7 @@ function PanelBody({
     case "shells":
       return <BackgroundShellPanel sessionId={engineSessionId ?? null} />;
     case "ccRoom":
-      return <CCRoomView cwd={cwd} />;
+      return <CCRoomView cwd={cwd} active={visible} />;
     case "quickChat":
       return renderQuickChatPanel?.({ ownerBucket: bucket, tabId: tab.id, cwd }) ?? null;
   }

@@ -2,7 +2,7 @@ import { describe, it, expect } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readRecentHistory } from "./session-history.js";
+import { parseClaudeTranscriptLine, readRecentHistory } from "./session-history.js";
 import { encodeCwd } from "./session-discovery.js";
 
 function setup(lines: object[]): { cwd: string; home: string; sid: string } {
@@ -33,7 +33,10 @@ describe("readRecentHistory", () => {
   it("captures assistant tool_use as a tool summary", () => {
     const lines = [
       { type: "user", message: { role: "user", content: "do" } },
-      { type: "assistant", message: { content: [{ type: "tool_use", name: "Write", input: { file_path: "/a.txt" } }] } },
+      {
+        type: "assistant",
+        message: { content: [{ type: "tool_use", name: "Write", input: { file_path: "/a.txt" } }] },
+      },
     ];
     const { cwd, home, sid } = setup(lines);
     const r = readRecentHistory(cwd, sid, 10, home);
@@ -52,7 +55,11 @@ describe("readRecentHistory", () => {
     expect(a?.text.length).toBeGreaterThan(4000);
   });
   it("captures the FULL tool input as args (e.g. a sub-agent prompt not in the summary whitelist)", () => {
-    const input = { description: "build X", prompt: "一大段子任务 prompt……", subagent_type: "general-purpose" };
+    const input = {
+      description: "build X",
+      prompt: "一大段子任务 prompt……",
+      subagent_type: "general-purpose",
+    };
     const lines = [
       { type: "user", message: { role: "user", content: "go" } },
       { type: "assistant", message: { content: [{ type: "tool_use", name: "Agent", input }] } },
@@ -65,6 +72,58 @@ describe("readRecentHistory", () => {
     expect(a?.tools?.[0].args).toEqual(input);
   });
   it("skips caveat noise; returns empty when session absent", () => {
-    expect(readRecentHistory("/tmp/none", "nope", 10, mkdtempSync(join(tmpdir(), "h-"))).messages).toEqual([]);
+    expect(
+      readRecentHistory("/tmp/none", "nope", 10, mkdtempSync(join(tmpdir(), "h-"))).messages,
+    ).toEqual([]);
+  });
+});
+
+describe("parseClaudeTranscriptLine", () => {
+  it("maps appended user, assistant, tool and result lines", () => {
+    expect(
+      parseClaudeTranscriptLine(
+        JSON.stringify({ type: "user", message: { content: "keep going" } }),
+      ),
+    ).toEqual([{ type: "user", text: "keep going" }]);
+    expect(
+      parseClaudeTranscriptLine(
+        JSON.stringify({
+          type: "assistant",
+          message: {
+            content: [
+              { type: "text", text: "working" },
+              { type: "tool_use", id: "tool-1", name: "Read", input: { file_path: "/a" } },
+            ],
+            stop_reason: "tool_use",
+          },
+        }),
+      ),
+    ).toEqual([
+      { type: "assistant", text: "working" },
+      {
+        type: "tool",
+        id: "tool-1",
+        name: "Read",
+        summary: "/a",
+        args: { file_path: "/a" },
+      },
+    ]);
+    expect(
+      parseClaudeTranscriptLine(
+        JSON.stringify({
+          type: "user",
+          message: {
+            content: [
+              {
+                type: "tool_result",
+                tool_use_id: "tool-1",
+                content: "done",
+                is_error: false,
+              },
+            ],
+          },
+        }),
+      ),
+    ).toEqual([{ type: "tool_result", id: "tool-1", result: "done", isError: false }]);
   });
 });

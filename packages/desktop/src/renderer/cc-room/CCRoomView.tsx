@@ -47,7 +47,7 @@ interface Availability {
   reason?: "not-found" | "not-executable";
 }
 
-export function CCRoomView({ cwd }: { cwd: string | null }) {
+export function CCRoomView({ cwd, active = true }: { cwd: string | null; active?: boolean }) {
   const [cliKind, setCliKind] = useState<CliKind>("claude-code");
   const [avail, setAvail] = useState<Availability | null>(null);
   const [sessions, setSessions] = useState<DiscoveredSession[]>([]);
@@ -178,6 +178,7 @@ export function CCRoomView({ cwd }: { cwd: string | null }) {
         mode={conv.mode}
         cliKind={cliKind}
         cliLabel={CLI_LABEL[cliKind]}
+        active={active}
         onBack={() => setConv(null)}
       />
     );
@@ -223,7 +224,9 @@ export function CCRoomView({ cwd }: { cwd: string | null }) {
                   {new Date(s.lastModified).toLocaleString()}
                 </div>
               </div>
-              <code className="shrink-0 text-xs text-muted-foreground">{s.sessionId.slice(0, 8)}</code>
+              <code className="shrink-0 text-xs text-muted-foreground">
+                {s.sessionId.slice(0, 8)}
+              </code>
             </Card>
           ))
         )}

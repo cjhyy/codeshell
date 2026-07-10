@@ -1406,6 +1406,26 @@ export interface CodeshellApi {
       hasMore: boolean;
       totalCount: number;
     }>;
+    /** Atomically load the initial external-CLI transcript snapshot and start
+     * tailing new JSONL lines into the room.message push stream. */
+    subscribeTranscript(
+      roomId: string,
+      cwd: string,
+      sessionId: string,
+      kind: "claude-code" | "codex",
+      limit: number,
+    ): Promise<{
+      active: boolean;
+      messages: {
+        role: "user" | "assistant";
+        text: string;
+        tools?: { name: string; summary: string; args?: Record<string, unknown> }[];
+      }[];
+      hasMore: boolean;
+      totalCount: number;
+      roomCursor: number;
+    }>;
+    unsubscribeTranscript(roomId: string): Promise<void>;
     closeSession(roomId: string): Promise<void>;
     onRoomMessage(cb: (env: { roomId: string; msg: unknown }) => void): () => void;
     onApprovalRequest(

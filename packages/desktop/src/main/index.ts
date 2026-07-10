@@ -141,6 +141,7 @@ import { RoomManager } from "./mobile-remote/room-manager.js";
 import { ResidentAgentProcess } from "./mobile-remote/resident-agent.js";
 import { CodexRoomAgent } from "./mobile-remote/codex-room-agent.js";
 import { ApprovalBridge } from "./cc-room/approval-bridge.js";
+import { TranscriptSubscriptionManager } from "./cc-room/transcript-subscriptions.js";
 import { buildSessionHistory } from "./mobile-remote/mobile-history.js";
 import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } from "./fs-service.js";
 import {
@@ -508,6 +509,32 @@ const roomManager = new RoomManager({
       })
       .then((decision) => roomManager.respondApproval(roomId, ev.requestId, decision));
   },
+  onRoomEnded: (roomId) => transcriptSubscriptions.endRoom(roomId),
+});
+const transcriptSubscriptions = new TranscriptSubscriptionManager({
+  onStart: (roomId) => roomManager.beginTranscriptFollow(roomId),
+  onStop: (roomId) => roomManager.endTranscriptFollow(roomId),
+  roomCursor: (roomId) => roomManager.latestSeq(roomId),
+  onMessages: (roomId, messages) => roomManager.ingestTranscriptMessages(roomId, messages),
+});
+
+function roomMatchesTranscript(
+  roomId: string,
+  cwd: string,
+  sessionId: string,
+  kind: "claude-code" | "codex",
+): boolean {
+  const room = roomManager.getRoom(roomId);
+  return Boolean(
+    room && room.cwd === cwd && room.claudeSessionId === sessionId && room.kind === kind,
+  );
+}
+
+// An abruptly closed phone socket has no chance to send unsubscribe. The
+// device-offline transition fires only after its LAST authenticated socket is
+// gone, so a second tab on the same phone keeps the shared subscription alive.
+mobileRemote.on("device-offline", (deviceId: string) => {
+  transcriptSubscriptions?.unsubscribeSubscriber(`mobile:${deviceId}`);
 });
 
 // Idle-based room GC: rooms untouched for longer than this are reaped at
@@ -1175,6 +1202,31 @@ async function handleCcRoomEvent(event: MobileClientEvent & { deviceId?: string 
         event.kind ?? "claude-code",
       );
       reply({ type: "ccRoom.opened", roomId, sessionId: event.sessionId, status });
+      return;
+    }
+    if (event.type === "ccRoom.subscribeTranscript") {
+      const kind = event.kind ?? "claude-code";
+      if (!roomMatchesTranscript(event.roomId, event.cwd, event.sessionId, kind)) {
+        throw new Error("cc-room transcript subscription does not match the opened room");
+      }
+      const snapshot = transcriptSubscriptions!.subscribe({
+        subscriberId: `mobile:${deviceId ?? "anonymous"}`,
+        roomId: event.roomId,
+        cwd: event.cwd,
+        sessionId: event.sessionId,
+        kind,
+        limit: event.limit,
+      });
+      reply({
+        type: "ccRoom.transcriptSubscribed",
+        roomId: event.roomId,
+        sessionId: event.sessionId,
+        ...snapshot,
+      });
+      return;
+    }
+    if (event.type === "ccRoom.unsubscribeTranscript") {
+      transcriptSubscriptions!.unsubscribe(`mobile:${deviceId ?? "anonymous"}`, event.roomId);
       return;
     }
     if (event.type === "ccRoom.readHistory") {
@@ -2682,6 +2734,42 @@ ipcMain.handle(
     kind?: "claude-code" | "codex",
   ) => roomManager.openForSession(claudeSessionId, cwd, mode, kind ?? "claude-code"),
 );
+const transcriptCleanupSenders = new Set<number>();
+ipcMain.handle(
+  "ccRoom:subscribeTranscript",
+  async (
+    event,
+    roomId: string,
+    cwd: string,
+    sessionId: string,
+    kind: "claude-code" | "codex",
+    limit: number,
+  ) => {
+    if (!roomMatchesTranscript(roomId, cwd, sessionId, kind)) {
+      throw new Error("cc-room transcript subscription does not match the opened room");
+    }
+    const senderId = event.sender.id;
+    const subscriberId = `desktop:${senderId}`;
+    if (!transcriptCleanupSenders.has(senderId)) {
+      transcriptCleanupSenders.add(senderId);
+      event.sender.once("destroyed", () => {
+        transcriptCleanupSenders.delete(senderId);
+        transcriptSubscriptions?.unsubscribeSubscriber(subscriberId);
+      });
+    }
+    return transcriptSubscriptions!.subscribe({
+      subscriberId,
+      roomId,
+      cwd,
+      sessionId,
+      kind,
+      limit,
+    });
+  },
+);
+ipcMain.handle("ccRoom:unsubscribeTranscript", async (event, roomId: string) => {
+  transcriptSubscriptions!.unsubscribe(`desktop:${event.sender.id}`, roomId);
+});
 ipcMain.handle("ccRoom:send", async (_e, roomId: string, text: string) =>
   roomManager.send(roomId, text),
 );
@@ -2707,7 +2795,10 @@ ipcMain.handle(
   async (_e, cwd: string, threadId: string, limit: number) =>
     readCodexRecentHistory(cwd, threadId, limit),
 );
-ipcMain.handle("ccRoom:closeSession", async (_e, roomId: string) => roomManager.close(roomId));
+ipcMain.handle("ccRoom:closeSession", async (_e, roomId: string) => {
+  transcriptSubscriptions?.endRoom(roomId);
+  roomManager.close(roomId);
+});
 
 // Remaining CC/Codex subscription quota. Reads tokens from Keychain / ~/.codex
 // then hits each vendor's usage source. `provider` restricts the lookup
@@ -3484,6 +3575,7 @@ app.on("before-quit", () => {
   automationHandle?.stop();
   automationHandle = null;
   ptyKillAll();
+  transcriptSubscriptions?.closeAll();
   roomManager.closeAll();
   tunnelManager.stop();
   void mobileRemote.stop();

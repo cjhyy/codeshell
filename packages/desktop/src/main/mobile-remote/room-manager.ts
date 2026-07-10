@@ -168,6 +168,9 @@ export interface RoomManagerOptions {
       askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
     },
   ) => void;
+  /** Called after a room's resident process exits or the room is explicitly
+   * closed. Live transcript followers use it as their natural terminal hook. */
+  onRoomEnded?: (roomId: string) => void;
   now?: () => number;
 }
 
@@ -179,6 +182,10 @@ export interface RoomManagerOptions {
  */
 export class RoomManager {
   private agents = new Map<string, RoomAgent>();
+  /** Rooms whose visible output is currently sourced from the external CLI's
+   * transcript tail. While present, the resident agent's stdout mirror is
+   * suppressed so the same CLI output is not pushed twice. */
+  private transcriptFollowedRooms = new Set<string>();
   /** Pending AskUserQuestion control requests, keyed by `${roomId}:${requestId}`.
    *  Holds the raw tool input so respondApproval can bake the user's answer into
    *  the `answers` record the CLI expects. Cleared on response. */
@@ -299,7 +306,11 @@ export class RoomManager {
   private touchLastActive(id: string, ts: number): void {
     const meta = this.getRoom(id);
     if (!meta) return;
-    writeFileSync(this.metaPath(id), JSON.stringify({ ...meta, lastActiveAt: ts }, null, 2), "utf-8");
+    writeFileSync(
+      this.metaPath(id),
+      JSON.stringify({ ...meta, lastActiveAt: ts }, null, 2),
+      "utf-8",
+    );
   }
 
   /** Persist the room's resume id (claude session_id / codex thread_id) so the
@@ -307,7 +318,11 @@ export class RoomManager {
   setRoomSessionId(id: string, sessionId: string): void {
     const meta = this.getRoom(id);
     if (!meta || meta.claudeSessionId === sessionId) return;
-    writeFileSync(this.metaPath(id), JSON.stringify({ ...meta, claudeSessionId: sessionId }, null, 2), "utf-8");
+    writeFileSync(
+      this.metaPath(id),
+      JSON.stringify({ ...meta, claudeSessionId: sessionId }, null, 2),
+      "utf-8",
+    );
   }
 
   getMessages(id: string, sinceSeq = 0): RoomMessage[] {
@@ -325,6 +340,25 @@ export class RoomManager {
       }
     }
     return out;
+  }
+
+  latestSeq(id: string): number {
+    return this.getMessages(id).at(-1)?.seq ?? 0;
+  }
+
+  beginTranscriptFollow(id: string): void {
+    if (this.getRoom(id)) this.transcriptFollowedRooms.add(id);
+  }
+
+  endTranscriptFollow(id: string): void {
+    this.transcriptFollowedRooms.delete(id);
+  }
+
+  /** Persist normalized transcript-tail messages through the same seq/history/
+   * broadcast path as resident-agent output. */
+  ingestTranscriptMessages(id: string, messages: Omit<RoomMessage, "seq" | "ts">[]): void {
+    if (!this.transcriptFollowedRooms.has(id) || !this.getRoom(id)) return;
+    for (const message of messages) this.append(id, message);
   }
 
   /**
@@ -345,14 +379,23 @@ export class RoomManager {
       : undefined;
     const meta =
       existing ??
-      this.createRoom({ cwd, kind, permissionMode: mode, claudeSessionId: claudeSessionId || undefined });
+      this.createRoom({
+        cwd,
+        kind,
+        permissionMode: mode,
+        claudeSessionId: claudeSessionId || undefined,
+      });
     // permissionMode is a spawn-time CLI arg (--permission-mode), so it can't be
     // changed on a live process. If the caller reopens an existing room under a
     // DIFFERENT mode, persist the new mode and restart the resident agent;
     // otherwise reopening keeps the running process and the picked mode would be
     // silently ignored (the "bypassPermissions still prompts" bug).
     if (existing && existing.permissionMode !== mode) {
-      writeFileSync(this.metaPath(meta.id), JSON.stringify({ ...meta, permissionMode: mode }, null, 2), "utf-8");
+      writeFileSync(
+        this.metaPath(meta.id),
+        JSON.stringify({ ...meta, permissionMode: mode }, null, 2),
+        "utf-8",
+      );
       this.close(meta.id); // stop the old-mode process so open() respawns fresh
     }
     const { status } = this.open(meta.id);
@@ -419,12 +462,28 @@ export class RoomManager {
   }
 
   private onAgentEvent(id: string, event: ResidentAgentEvent): void {
+    if (
+      this.transcriptFollowedRooms.has(id) &&
+      (event.type === "text" ||
+        event.type === "tool" ||
+        event.type === "tool_result" ||
+        event.type === "turn_end")
+    ) {
+      return;
+    }
     switch (event.type) {
       case "text":
         this.append(id, { from: "agent", type: "text", text: event.text });
         break;
       case "tool":
-        this.append(id, { from: "agent", type: "tool", tool: event.tool, summary: event.summary, toolId: event.id, args: event.input });
+        this.append(id, {
+          from: "agent",
+          type: "tool",
+          tool: event.tool,
+          summary: event.summary,
+          toolId: event.id,
+          args: event.input,
+        });
         break;
       case "tool_result":
         this.append(id, {
@@ -447,7 +506,9 @@ export class RoomManager {
         // auto-allow it, echoing the input back, rather than show a dead-end
         // card.
         if (AUTO_ALLOW_TOOLS.has(event.toolName)) {
-          this.agents.get(id)?.respondControl?.(event.requestId, { behavior: "allow", updatedInput: event.input });
+          this.agents
+            .get(id)
+            ?.respondControl?.(event.requestId, { behavior: "allow", updatedInput: event.input });
           break;
         }
         // AskUserQuestion is NOT a permission gate — it needs the user's actual
@@ -459,23 +520,44 @@ export class RoomManager {
           const askUser = askUserPrompt(event.input);
           if (askUser) {
             this.pendingAskUser.set(`${id}:${event.requestId}`, event.input);
-            this.append(id, { from: "agent", type: "approval", tool: event.toolName, summary: askUser.question });
+            this.append(id, {
+              from: "agent",
+              type: "approval",
+              tool: event.toolName,
+              summary: askUser.question,
+            });
             this.opts.onApprovalRequest?.(id, { ...event, askUser });
             break;
           }
           // Malformed AskUser (no questions) → auto-allow so the turn isn't
           // wedged forever waiting on an answer that can't be collected.
-          this.agents.get(id)?.respondControl?.(event.requestId, { behavior: "allow", updatedInput: event.input });
+          this.agents
+            .get(id)
+            ?.respondControl?.(event.requestId, { behavior: "allow", updatedInput: event.input });
           break;
         }
-        this.append(id, { from: "agent", type: "approval", tool: event.toolName, summary: event.description ?? "" });
+        this.append(id, {
+          from: "agent",
+          type: "approval",
+          tool: event.toolName,
+          summary: event.description ?? "",
+        });
         this.opts.onApprovalRequest?.(id, event);
         break;
       }
       case "exit":
         this.agents.delete(id);
         this.clearPendingAskUser(id);
-        this.append(id, { from: "system", type: "agent_exit", reason: String(event.code ?? event.signal ?? "") });
+        // Let the transcript follower synchronously drain final file bytes
+        // before appending the terminal marker. Otherwise an exit that beats
+        // watchFile's poll can drop the last assistant line or place it after
+        // agent_exit in the room stream.
+        this.opts.onRoomEnded?.(id);
+        this.append(id, {
+          from: "system",
+          type: "agent_exit",
+          reason: String(event.code ?? event.signal ?? ""),
+        });
         break;
     }
   }
@@ -485,7 +567,12 @@ export class RoomManager {
     const meta = this.getRoom(id);
     if (!meta) return false;
     this.open(id);
-    this.append(id, { from: "user", type: "text", text });
+    // A transcript-followed room will observe this same user turn in the CLI's
+    // JSONL. Let that single source append it, otherwise the UI gets two user
+    // bubbles (immediate room echo + transcript tail).
+    if (!this.transcriptFollowedRooms.has(id)) {
+      this.append(id, { from: "user", type: "text", text });
+    }
     return this.agents.get(id)?.send(text) ?? false;
   }
 
@@ -493,12 +580,16 @@ export class RoomManager {
     this.agents.get(id)?.stop();
     this.agents.delete(id);
     this.clearPendingAskUser(id);
+    this.opts.onRoomEnded?.(id);
   }
 
   closeAll(): void {
+    const ids = new Set([...this.agents.keys(), ...this.transcriptFollowedRooms]);
     for (const agent of this.agents.values()) agent.stop();
     this.agents.clear();
     this.pendingAskUser.clear();
+    for (const id of ids) this.opts.onRoomEnded?.(id);
+    this.transcriptFollowedRooms.clear();
   }
 
   isOpen(id: string): boolean {

@@ -17,7 +17,12 @@ describe("askUserPrompt", () => {
   test("parses the first question's prompt/header/options/multiSelect", () => {
     const input = {
       questions: [
-        { question: "用哪个?", header: "方案", options: [{ label: "甲", description: "x" }, { label: "乙" }], multiSelect: true },
+        {
+          question: "用哪个?",
+          header: "方案",
+          options: [{ label: "甲", description: "x" }, { label: "乙" }],
+          multiSelect: true,
+        },
         { question: "第二问", options: [{ label: "丙" }] },
       ],
     };
@@ -35,10 +40,11 @@ describe("askUserPrompt", () => {
     expect(askUserPrompt({ questions: [{ options: [{ label: "甲" }] }] })).toBeUndefined(); // no question text
   });
   test("drops non-string option labels", () => {
-    expect(askUserPrompt({ questions: [{ question: "q", options: [{ label: "A" }, { x: 1 }, { label: "B" }] }] })?.options).toEqual([
-      "A",
-      "B",
-    ]);
+    expect(
+      askUserPrompt({
+        questions: [{ question: "q", options: [{ label: "A" }, { x: 1 }, { label: "B" }] }],
+      })?.options,
+    ).toEqual(["A", "B"]);
   });
 });
 
@@ -134,6 +140,35 @@ describe("RoomManager", () => {
     expect(msgs[2]!.text).toBe("reply to: hello");
     // every persisted message was pushed to the phone (incl. the audit anchor)
     expect(pushed.filter((p) => p.roomId === room.id)).toHaveLength(4);
+  });
+
+  test("transcript-followed rooms use the tail as the single visible output source", () => {
+    const { mgr, agents } = makeManager();
+    const room = mgr.createRoom({ cwd: "/repo" });
+    mgr.beginTranscriptFollow(room.id);
+
+    // send still reaches the resident process, but its immediate user echo and
+    // stdout events are suppressed while the transcript follower owns output.
+    expect(mgr.send(room.id, "hello")).toBe(true);
+    expect(agents[0]?.sent).toEqual(["hello"]);
+    expect(mgr.getMessages(room.id).map((message) => message.type)).toEqual(["room_created"]);
+
+    mgr.ingestTranscriptMessages(room.id, [
+      { from: "user", type: "text", text: "hello" },
+      { from: "agent", type: "text", text: "reply to: hello" },
+      { from: "agent", type: "turn_end", reason: "success" },
+    ]);
+    expect(mgr.getMessages(room.id).map((message) => `${message.from}:${message.type}`)).toEqual([
+      "system:room_created",
+      "user:text",
+      "agent:text",
+      "agent:turn_end",
+    ]);
+    expect(mgr.latestSeq(room.id)).toBe(4);
+
+    mgr.endTranscriptFollow(room.id);
+    mgr.send(room.id, "after unsubscribe");
+    expect(mgr.getMessages(room.id).filter((message) => message.type === "text")).toHaveLength(4);
   });
 
   test("getMessages(sinceSeq) returns only newer", () => {
@@ -283,10 +318,21 @@ describe("RoomManager", () => {
     });
     const room = mgr.createRoom({ cwd: "/repo" });
     mgr.open(room.id);
-    emit({ type: "approval_request", requestId: "req-1", toolName: "Bash", input: { command: "ls" }, description: "run ls" });
+    emit({
+      type: "approval_request",
+      requestId: "req-1",
+      toolName: "Bash",
+      input: { command: "ls" },
+      description: "run ls",
+    });
     const msgs = mgr.getMessages(room.id, 0).filter((m) => m.type === "approval");
     expect(msgs).toHaveLength(1);
-    expect(msgs[0]).toMatchObject({ from: "agent", type: "approval", tool: "Bash", summary: "run ls" });
+    expect(msgs[0]).toMatchObject({
+      from: "agent",
+      type: "approval",
+      tool: "Bash",
+      summary: "run ls",
+    });
     expect(forwarded).toEqual([{ roomId: room.id, requestId: "req-1" }]);
   });
 
@@ -297,11 +343,17 @@ describe("RoomManager", () => {
     const controls: { requestId: string; decision: unknown }[] = [];
     const mgr = new RoomManager({
       rootDir: dir,
-      now: (() => { let c = 1; return () => c++; })(),
+      now: (() => {
+        let c = 1;
+        return () => c++;
+      })(),
       createAgent: (_r, onEvent) => {
         emit = onEvent;
         return {
-          start() {}, send: () => true, isRunning: () => true, stop() {},
+          start() {},
+          send: () => true,
+          isRunning: () => true,
+          stop() {},
           respondControl: (requestId, decision) => controls.push({ requestId, decision }),
         };
       },
@@ -310,12 +362,20 @@ describe("RoomManager", () => {
     });
     const room = mgr.createRoom({ cwd: "/repo" });
     mgr.open(room.id);
-    emit({ type: "approval_request", requestId: "skill-1", toolName: "Skill", input: { name: "x" }, description: "" });
+    emit({
+      type: "approval_request",
+      requestId: "skill-1",
+      toolName: "Skill",
+      input: { name: "x" },
+      description: "",
+    });
     // NOT forwarded to the approval UI (no allow/deny card)…
     expect(forwarded).toEqual([]);
     // …and auto-allowed via respondControl so claude proceeds. updatedInput
     // echoes the original input.
-    expect(controls).toEqual([{ requestId: "skill-1", decision: { behavior: "allow", updatedInput: { name: "x" } } }]);
+    expect(controls).toEqual([
+      { requestId: "skill-1", decision: { behavior: "allow", updatedInput: { name: "x" } } },
+    ]);
   });
 
   test("AskUserQuestion does NOT auto-allow — it surfaces an approval w/ parsed askUser, then bakes the answer", () => {
@@ -325,26 +385,49 @@ describe("RoomManager", () => {
     const controls: { requestId: string; decision: unknown }[] = [];
     const mgr = new RoomManager({
       rootDir: dir,
-      now: (() => { let c = 1; return () => c++; })(),
+      now: (() => {
+        let c = 1;
+        return () => c++;
+      })(),
       createAgent: (_r, onEvent) => {
         emit = onEvent;
         return {
-          start() {}, send: () => true, isRunning: () => true, stop() {},
+          start() {},
+          send: () => true,
+          isRunning: () => true,
+          stop() {},
           respondControl: (requestId, decision) => controls.push({ requestId, decision }),
         };
       },
       onMessage: () => {},
-      onApprovalRequest: (_roomId, req) => forwarded.push({ requestId: req.requestId, askUser: req.askUser }),
+      onApprovalRequest: (_roomId, req) =>
+        forwarded.push({ requestId: req.requestId, askUser: req.askUser }),
     });
     const room = mgr.createRoom({ cwd: "/repo" });
     mgr.open(room.id);
     const input = {
-      questions: [{ question: "选哪个?", header: "方案", options: [{ label: "甲" }, { label: "乙" }], multiSelect: false }],
+      questions: [
+        {
+          question: "选哪个?",
+          header: "方案",
+          options: [{ label: "甲" }, { label: "乙" }],
+          multiSelect: false,
+        },
+      ],
     };
-    emit({ type: "approval_request", requestId: "ask-1", toolName: "AskUserQuestion", input, description: "" });
+    emit({
+      type: "approval_request",
+      requestId: "ask-1",
+      toolName: "AskUserQuestion",
+      input,
+      description: "",
+    });
     // Forwarded to the UI WITH parsed askUser options (main does the parsing)…
     expect(forwarded).toEqual([
-      { requestId: "ask-1", askUser: { question: "选哪个?", header: "方案", options: ["甲", "乙"], multiSelect: false } },
+      {
+        requestId: "ask-1",
+        askUser: { question: "选哪个?", header: "方案", options: ["甲", "乙"], multiSelect: false },
+      },
     ]);
     // …and NOT auto-allowed (the user must answer).
     expect(controls).toEqual([]);
@@ -366,11 +449,17 @@ describe("RoomManager", () => {
     const controls: { requestId: string; decision: unknown }[] = [];
     const mgr = new RoomManager({
       rootDir: dir,
-      now: (() => { let c = 1; return () => c++; })(),
+      now: (() => {
+        let c = 1;
+        return () => c++;
+      })(),
       createAgent: (_r, onEvent) => {
         emit = onEvent;
         return {
-          start() {}, send: () => true, isRunning: () => true, stop() {},
+          start() {},
+          send: () => true,
+          isRunning: () => true,
+          stop() {},
           respondControl: (requestId, decision) => controls.push({ requestId, decision }),
         };
       },
@@ -379,9 +468,17 @@ describe("RoomManager", () => {
     });
     const room = mgr.createRoom({ cwd: "/repo" });
     mgr.open(room.id);
-    emit({ type: "approval_request", requestId: "ask-bad", toolName: "AskUserQuestion", input: {}, description: "" });
+    emit({
+      type: "approval_request",
+      requestId: "ask-bad",
+      toolName: "AskUserQuestion",
+      input: {},
+      description: "",
+    });
     expect(forwarded).toEqual([]); // no card (nothing to render)
-    expect(controls).toEqual([{ requestId: "ask-bad", decision: { behavior: "allow", updatedInput: {} } }]);
+    expect(controls).toEqual([
+      { requestId: "ask-bad", decision: { behavior: "allow", updatedInput: {} } },
+    ]);
   });
 
   test("respondApproval routes the decision to the room's agent.respondControl", () => {
@@ -432,7 +529,12 @@ describe("RoomManager", () => {
     // index 0 is the room_created audit anchor; agent events follow.
     const msgs = mgr.getMessages(room.id, 0).filter((m) => m.type !== "room_created");
     expect(msgs[0]).toMatchObject({ from: "agent", type: "tool", tool: "Bash", summary: "ls" });
-    expect(msgs[1]).toMatchObject({ from: "agent", type: "tool_result", summary: "out", isError: false });
+    expect(msgs[1]).toMatchObject({
+      from: "agent",
+      type: "tool_result",
+      summary: "out",
+      isError: false,
+    });
   });
 
   test("tool 事件持久化完整 args(prompt 等不再只剩 summary)", () => {
@@ -452,10 +554,20 @@ describe("RoomManager", () => {
     });
     const room = mgr.createRoom({ cwd: "/repo" });
     mgr.open(room.id);
-    const input = { description: "build X", prompt: "一大段子任务 prompt……", subagent_type: "general-purpose" };
+    const input = {
+      description: "build X",
+      prompt: "一大段子任务 prompt……",
+      subagent_type: "general-purpose",
+    };
     emit({ type: "tool", tool: "Agent", summary: "", input, id: "t1" });
     const msgs = mgr.getMessages(room.id, 0).filter((m) => m.type !== "room_created");
-    expect(msgs[0]).toMatchObject({ from: "agent", type: "tool", tool: "Agent", toolId: "t1", args: input });
+    expect(msgs[0]).toMatchObject({
+      from: "agent",
+      type: "tool",
+      tool: "Agent",
+      toolId: "t1",
+      args: input,
+    });
   });
 });
 
