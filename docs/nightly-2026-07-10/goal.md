@@ -129,8 +129,6 @@
 
 **A 区 7 项 + B 区 3 项全部完成。** 下一阶段 C（codex 能力对标调研），需产出候选清单回卡密sama 圈定后才实现。
 
-> ⚠️ **2026-07-10 编排暂停**：codex CLI 登录态失效（CheckQuota: no Codex token / DriveAgent 报 "logged out or signed in to another account, please sign in again"）。C1 能力清单调研因此中断（空文件已清）。**在此之前 A+B 全部 10 项已完成合并，无损失。** 恢复方法：终端跑 `codex login` 重新登录，之后即可继续 C1→C2→…。当前领先 origin/main 32 commits，未 push。
-
 ## 问题记录（遇到阻塞 / 非本任务引入的红测试记这里）
 
 - **[新 bug 候选] 带附件插入的消息卡住**（卡密sama 2026-07-10 报告，待补现象细节）
@@ -152,4 +150,8 @@
 
 - **[已修复 · b0cb9782] steer 带附件 → 完全没有 LLM 回应**（根因：steer 链路无 attachments 通道。修法：SteerItem+enqueueSteer 加 attachments 字段，turn-loop 复用 buildRunUserMessageContent 装配。protocol/desktop 也已透传。30 pass 已合并）
 
-- **[待修] 带附件插入的消息卡住**
+- **[新 feature 候选] 切到 CC/Codex 房间时自动更新内容**（卡密sama 2026-07-10 提出）
+  - 需求：桌面端侧边栏切到某个 Claude Code / Codex 的 cc-room / 外部 agent session 面板时，自动刷新拉取该 session 的最新 transcript/内容，不需要手动刷新。
+  - 涉：cc-room 面板生命周期（CCRoomView / 相关 tab 切换逻辑），切换 tab 时触发 session history 重新加载。
+  - 体量评估：S～M（可能只需在 tab 切换/activate 事件上加一个 reload/refresh 调用）
+  - 处理：待排入实现队列
