@@ -148,7 +148,7 @@
   - 现象：后台 agent 完成通知回来时，消息流里正在跑/进行中的过程卡片被全部折叠起来；期望仍能看到最新的一些过程（进行中或最近的），而不是一律折叠。
   - 待确认：折叠是 background_agent_completed 通知触发的重渲染/reducer 行为，还是 TurnProcessGroupCard 的默认折叠策略；期望行为=保留最新 N 条/进行中的展开。
   - 处理：走 systematic-debugging → codex 流水线，定位折叠触发点（transcriptsReducer / TurnProcessGroupCard），改为"进行中/最新过程默认展开"。
-  - **🔍 根因已锁定（本会话主 agent 静态定位，2026-07-10）**：`packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx:53-55` 的 force-collapse effect：`useEffect(() => { if (turnEpoch !== undefined && !group.isLive && !group.stopped) setOpen(false); }, [turnEpoch, group.isLive, group.stopped])`。`turnEpoch` 每次新 turn 边界（含 background_agent_completed 唤醒触发的新 turn）就变 → 该 effect 对**所有历史非 live 非 stopped group** 无差别 `setOpen(false)`，把用户手动展开的也强制折叠。**修法**：force-collapse 只应作用于「刚结束的那个 turn」，不应在每个 turnEpoch 变化时重折叠所有旧 group；且应保留用户手动展开态（区分"用户显式 open"与"默认态"，只折叠从未被用户交互过的、或只折叠最近刚 live→closed 的那个）。**验收**：通知回来后，用户之前展开的历史过程卡片保持展开，仅新结束 turn 按默认折叠。
+  - **已修复（d81e7d4b）**：force-collapse 改为仅作用于 live→closed transition + turnEpoch 变化的 group，历史已关闭卡片不再被重折叠，108 pass 已合并。
 
 - **[新 bug 候选 · 较严重] steer 带附件 → 完全没有 LLM 回应**（卡密sama 2026-07-10 报告，订正）
   - 现象：运行中 steer（插入消息）时**若带附件，整个 turn 完全没有 LLM 回应**（不是附件不生效，而是根本不回复——疑似 turn 卡死/静默中断）。不带附件的 steer 正常。
