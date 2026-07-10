@@ -24,6 +24,10 @@ import { ToolExecutor } from "../tool-system/executor.js";
 import { ContextManager } from "../context/manager.js";
 import { HookRegistry } from "../hooks/registry.js";
 import type { HookEventName, HookResult } from "../hooks/events.js";
+import {
+  projectGoalJudgeToolResult,
+  type GoalJudgeRuntimeContext,
+} from "../hooks/goal-stop-hook.js";
 import { wrapHookMessages } from "../hooks/inject.js";
 import { Transcript } from "../session/transcript.js";
 import { ContextLimitError } from "../exceptions.js";
@@ -188,6 +192,11 @@ export interface TurnLoopDeps {
    * goalTracker short-circuit still stops the run).
    */
   clearPersistedGoal?: () => void;
+  /**
+   * Private Goal-judge evidence seam. Engine stores this snapshot in the
+   * built-in judge closure; it is never added to the public on_stop context.
+   */
+  updateGoalJudgeContext?: (context: GoalJudgeRuntimeContext) => void;
 }
 
 export interface TurnLoopResult {
@@ -606,6 +615,10 @@ export class TurnLoop {
     let messages = [...initialMessages];
     let finalText = "";
     const budgetTracker = createBudgetTracker();
+    // Recent execution evidence for the built-in Goal judge. Values enter this
+    // window only after irreversible sensitive-data removal, non-text omission,
+    // and per-item truncation at the current-round ToolResult boundary.
+    const goalToolResults: GoalJudgeRuntimeContext["toolResults"] = [];
 
     // Goal-mode run-scoped budget tracker (P0). Null when no goal. Stamps a
     // wall-clock start now and accumulates prompt+completion tokens across
@@ -1003,6 +1016,23 @@ export class TurnLoop {
           // we run another turn instead of returning. Bounded by
           // maxStopBlocks (consecutive) and the outer maxTurns ceiling.
           const maxStopBlocks = this.config.maxStopBlocks ?? GOAL_DEFAULT_MAX_STOP_BLOCKS;
+          if (goalTracker) {
+            this.deps.updateGoalJudgeContext?.({
+              toolResults: goalToolResults.map((item) => ({
+                ...item,
+              })),
+              progress: {
+                turnCount: this.turnCount,
+                stopRound: this.stopBlockCount + 1,
+                elapsedMs: Math.max(0, Date.now() - goalTracker.startedAtMs),
+                tokensUsed: goalTracker.tokensUsed,
+                tokenBudget: goalTracker.goal.tokenBudget,
+                timeBudgetMs: goalTracker.goal.timeBudgetMs,
+                maxTurns: this.config.maxTurns,
+                maxStopBlocks,
+              },
+            });
+          }
           const stopHook = await this.emitHook("on_stop", {
             goal: this.config.goal,
             finalText,
@@ -1133,6 +1163,12 @@ export class TurnLoop {
         // Record results in transcript and stream
         const resultBlocks: ContentBlock[] = [];
         for (const result of results) {
+          if (goalTracker) {
+            goalToolResults.push(projectGoalJudgeToolResult(result, this.turnCount));
+            // The prompt renderer keeps at most 12, but retaining a few extra
+            // bounded projections lets its total-char budget choose the newest useful subset.
+            if (goalToolResults.length > 20) goalToolResults.splice(0, goalToolResults.length - 20);
+          }
           resultBlocks.push(toolResultToBlock(result));
           const streamResult = toolResultForDisplay(result);
           const transcriptResult = toolResultTranscriptText(result);

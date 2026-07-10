@@ -54,7 +54,7 @@ import { HookRegistry } from "../hooks/registry.js";
 import type { HookEventName, HookResult } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
 import { wrapHookMessages } from "../hooks/inject.js";
-import { createGoalStopHook } from "../hooks/goal-stop-hook.js";
+import { createGoalStopHook, type GoalJudgeRuntimeContext } from "../hooks/goal-stop-hook.js";
 import {
   normalizeGoal,
   resolveGoalSetAt,
@@ -1874,17 +1874,20 @@ export class Engine {
       // Goal mode: register a GoalStopHook for the lifetime of THIS run so the
       // turn loop keeps going until the session model judges the goal met.
       // Registered per-run (and cleared in `finally`) so a later goal-less
-      // send doesn't inherit a stale goal. The judge runs on `auxSummaryClient`
-      // — the same cheap aux model used for summarize/compaction — not the
-      // (potentially expensive) session model: "is this goal met?" is a classic
-      // aux-tier task, and a goal run can invoke the judge up to maxStopBlocks
-      // times.
+      // send doesn't inherit a stale goal. The judge runs on the primary
+      // session client; auxSummaryClient remains dedicated to low-consequence
+      // summaries/titles and retains defaults.auxText routing/fallback behavior.
       // Normalize the raw goal (string | GoalConfig) once at the run boundary;
       // everything inward uses the GoalConfig. normalizeGoal() returns undefined
       // when there's effectively no goal (empty objective).
       //
       // PERSISTENT GOAL (CC /goal style): a goal set on one send survives across
-      // later sends and manual interrupts until met or cleared. Resolution:
+      // later sends and manual interrupts until met or cleared. Goal completion
+      // is a high-consequence decision, so V1 routes it to the primary session
+      // client, which is the model expected to interpret the supplied execution
+      // evidence. defaults.auxText remains in force for summaries, titles and
+      // other auxiliary work through auxSummaryClient.
+      // Resolution:
       //   1. options.goal — this send explicitly sets/replaces the goal.
       //   2. session.state.activeGoal — a goal set on an earlier send.
       //   3. config.goal — engine-level default (rare; e.g. headless).
@@ -1935,11 +1938,13 @@ export class Engine {
           ? { ...normalizedGoal }
           : undefined;
       let goalHookHandler: ReturnType<typeof createGoalStopHook> | null = null;
+      let goalJudgeContext: GoalJudgeRuntimeContext | undefined;
       if (normalizedGoal && this.config.isSubAgent !== true) {
         goalHookHandler = createGoalStopHook({
           goal: normalizedGoal,
-          llm: auxSummaryClient,
+          llm: llmClient,
           log: logger,
+          getJudgeContext: () => goalJudgeContext,
           // Clear the persisted active goal the moment the judge says it's met,
           // so a later bare send doesn't re-inherit a satisfied goal. The hook
           // calls this from inside its met branch (single source of truth for
@@ -2047,6 +2052,9 @@ export class Engine {
               this.hooks.unregister("on_stop", goalHookHandler);
               if (this.activeGoalHook === goalHookHandler) this.activeGoalHook = null;
             }
+          },
+          updateGoalJudgeContext: (context) => {
+            goalJudgeContext = context;
           },
           ctxOverheadStore: {
             get: (s) => this.ctxOverheadBySid.get(s) ?? 0,
