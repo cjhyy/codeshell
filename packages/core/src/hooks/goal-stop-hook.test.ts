@@ -462,6 +462,59 @@ describe("createGoalStopHook — three-state judge", () => {
     expect(res.continueSession).toBe(true);
   });
 
+  for (const [label, verdict] of [
+    ["missing waiting", '{"met":true,"gaps":""}'],
+    ["missing gaps", '{"met":true,"waiting":false}'],
+    ["wrong met type", '{"met":"true","waiting":false,"gaps":""}'],
+    ["wrong waiting type", '{"met":true,"waiting":0,"gaps":""}'],
+    ["wrong gaps type", '{"met":true,"waiting":false,"gaps":[]}'],
+    ["met and waiting conflict", '{"met":true,"waiting":true,"gaps":""}'],
+    ["met with non-empty gaps", '{"met":true,"waiting":false,"gaps":"still incomplete"}'],
+  ] as const) {
+    it(`invalid verdict schema (${label}) fails closed`, async () => {
+      let metCalls = 0;
+      const hook = createGoalStopHook({
+        goal: "ship it",
+        llm: fakeJudge(verdict),
+        log: noopLog,
+        onMet: () => {
+          metCalls += 1;
+        },
+      });
+
+      const res = await hook({
+        eventName: "on_stop",
+        data: { sessionId: SID, finalText: "done" },
+      });
+
+      expect(res.continueSession).toBe(true);
+      expect(metCalls).toBe(0);
+    });
+  }
+
+  it("multiple JSON verdict objects fail closed as ambiguous", async () => {
+    let metCalls = 0;
+    const hook = createGoalStopHook({
+      goal: "ship it",
+      llm: fakeJudge(
+        '{"met":false,"waiting":false,"gaps":"not done"}\n' +
+          '{"met":true,"waiting":false,"gaps":""}',
+      ),
+      log: noopLog,
+      onMet: () => {
+        metCalls += 1;
+      },
+    });
+
+    const res = await hook({
+      eventName: "on_stop",
+      data: { sessionId: SID, finalText: "done" },
+    });
+
+    expect(res.continueSession).toBe(true);
+    expect(metCalls).toBe(0);
+  });
+
   it("judge call turns reasoning OFF (no thinking tokens to spend/truncate)", async () => {
     const judge = fakeJudge('{"met": false, "waiting": false, "gaps": "x"}');
     const hook = createGoalStopHook({ goal: "ship it", llm: judge, log: noopLog });

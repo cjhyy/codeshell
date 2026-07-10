@@ -25,6 +25,7 @@ import type { HookHandler } from "./registry.js";
 import type { LLMResponse, ToolResult } from "../types.js";
 import { normalizeGoal, type GoalConfig } from "../engine/goal.js";
 import { listRunningBackgroundWork } from "../tool-system/builtin/background-work.js";
+import { extractJSON } from "../utils/json.js";
 
 /** Narrow LLM surface the judge needs — just a one-shot completion. */
 export interface GoalJudgeLLM {
@@ -318,18 +319,39 @@ function renderProgress(
 
 /** Pull the first balanced JSON object out of possibly-prose text. */
 function extractJson(text: string): JudgeVerdict | null {
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start === -1 || end === -1 || end <= start) return null;
-  const slice = text.slice(start, end + 1);
+  const slice = extractJSON(text).trim();
+  if (!slice.startsWith("{") || !slice.endsWith("}")) return null;
   try {
     const parsed = JSON.parse(slice) as unknown;
-    if (!parsed || typeof parsed !== "object") return null;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+
+    // A second parseable object makes the provider output ambiguous. Do not
+    // guess which verdict was intended; keep Goal mode fail-closed instead.
+    const sliceStart = text.indexOf(slice);
+    if (sliceStart >= 0) {
+      const remainder = `${text.slice(0, sliceStart)}${text.slice(sliceStart + slice.length)}`;
+      const secondSlice = extractJSON(remainder).trim();
+      if (secondSlice.startsWith("{") && secondSlice.endsWith("}")) {
+        try {
+          const second = JSON.parse(secondSlice) as unknown;
+          if (second && typeof second === "object" && !Array.isArray(second)) return null;
+        } catch {
+          // Non-JSON prose containing braces is not a second verdict object.
+        }
+      }
+    }
+
     const p = parsed as Record<string, unknown>;
-    if (typeof p.met !== "boolean") return null;
-    const gaps = typeof p.gaps === "string" ? p.gaps : "";
-    const waiting = typeof p.waiting === "boolean" ? p.waiting : false;
-    return { met: p.met, waiting, gaps };
+    if (
+      typeof p.met !== "boolean" ||
+      typeof p.waiting !== "boolean" ||
+      typeof p.gaps !== "string" ||
+      (p.met && p.waiting) ||
+      (p.met && p.gaps.trim() !== "")
+    ) {
+      return null;
+    }
+    return { met: p.met, waiting: p.waiting, gaps: p.gaps };
   } catch {
     return null;
   }
