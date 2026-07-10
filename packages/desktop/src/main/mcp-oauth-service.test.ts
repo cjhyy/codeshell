@@ -322,4 +322,53 @@ describe("McpOAuthService", () => {
     expect(calls[0].url).toBe("https://auth.example/revoke");
     expect(calls.some((call) => call.url.includes("attacker.example"))).toBe(false);
   });
+
+  test("concurrent logout tombstones an in-flight refresh and the credential never revives", async () => {
+    const now = Date.UTC(2026, 0, 1);
+    let changed = 0;
+    let refreshStarted!: () => void;
+    const didStartRefresh = new Promise<void>((resolve) => {
+      refreshStarted = resolve;
+    });
+    let finishRefresh!: (response: Response) => void;
+    const deferredRefresh = new Promise<Response>((resolve) => {
+      finishRefresh = resolve;
+    });
+    const { service, store } = makeService({
+      authorizeTokens: {
+        accessToken: "old-access",
+        refreshToken: "old-refresh",
+        expiresAt: now - 1,
+        tokenType: "Bearer",
+      },
+      now: () => now,
+      changed: () => changed++,
+      fetch: (async () => {
+        refreshStarted();
+        return deferredRefresh;
+      }) as typeof fetch,
+    });
+    await service.login({
+      source: "mcp",
+      serverName: "Example",
+      serverUrl: "https://mcp.example/rpc",
+      clientId: "client",
+      authorizationEndpoint: "https://auth.example/authorize",
+      tokenEndpoint: "https://auth.example/token",
+    });
+
+    const refreshing = service.refresh("example-oauth");
+    await didStartRefresh;
+    const loggingOut = service.logout("example-oauth");
+
+    await expect(service.resolveAccessToken("example-oauth")).rejects.toThrow(/unavailable/);
+    finishRefresh(Response.json({ access_token: "late-access", refresh_token: "late-refresh" }));
+
+    await expect(refreshing).rejects.toThrow(/unavailable/);
+    await expect(loggingOut).resolves.toEqual({ removed: true, remoteRevoked: true });
+    expect(store.resolve("example-oauth")).toBeUndefined();
+    expect(changed).toBe(2);
+    await Promise.resolve();
+    expect(store.resolve("example-oauth")).toBeUndefined();
+  });
 });
