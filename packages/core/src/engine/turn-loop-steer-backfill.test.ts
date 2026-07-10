@@ -271,6 +271,32 @@ describe("TurnLoop steer finalize backfill", () => {
     });
   });
 
+  it("switches external file-change attribution from the original submit to the consumed steer", async () => {
+    const { deps } = makeDeps([stop("first answer"), toolUse(), stop("continued")], {
+      id: "steer-origin",
+      text: "now edit the file",
+      clientMessageId: "client-steer",
+    });
+    let activeOrigin: string | undefined = "client-submit";
+    const originsSeenByTools: Array<string | undefined> = [];
+    deps.setOriginClientMessageId = (clientMessageId) => {
+      activeOrigin = clientMessageId;
+    };
+    deps.toolExecutor.executeSingle = async (call: ToolCall) => {
+      originsSeenByTools.push(activeOrigin);
+      return { id: call.id, toolName: call.toolName, result: "edited" };
+    };
+    const loop = new TurnLoop(deps, {
+      maxTurns: 4,
+      maxToolCallsPerTurn: 10,
+    });
+
+    const result = await loop.run([{ role: "user", content: "original submit" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(originsSeenByTools).toEqual(["client-steer"]);
+  });
+
   it("builds steer attachments into structured user message content before backfill continuation", async () => {
     const events: unknown[] = [];
     const attachment: InputAttachmentMeta = {

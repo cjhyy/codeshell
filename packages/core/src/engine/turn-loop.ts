@@ -174,6 +174,8 @@ export interface TurnLoopDeps {
    * run or the persisted transcript. Messages without an id bypass this guard.
    */
   claimClientMessageId?: (clientMessageId: string, source: "steer") => boolean;
+  /** Make tools launched after an injected steer attribute side effects to that steer. */
+  setOriginClientMessageId?: (clientMessageId: string | undefined) => void;
   /**
    * Clear this session's PERSISTED goal (state.activeGoal) and drop the
    * in-flight goal-stop hook, so a user-initiated cancel_goal both stops the
@@ -1522,6 +1524,7 @@ export class TurnLoop {
         continue;
       }
       consumed = true;
+      this.deps.setOriginClientMessageId?.(clientMessageId);
       const message: Message = { role: "user", content };
       messages.push(message);
       this.trackFreshImageMessage(message);

@@ -1374,7 +1374,9 @@ export class Engine {
     // notifications) attribute to the right session. toolCtx is created
     // before the session bundle is resolved (see ~line 635), so this is
     // the first point we can set it. After this assignment treat the
-    // field as immutable for the rest of the run.
+    // field follows the latest successfully injected user intent for the rest
+    // of the run, so tools launched after a steer attribute their side effects
+    // to that steer rather than this original submit.
     toolCtx.sessionId = session.state.sessionId;
     toolCtx.originClientMessageId = options?.clientMessageId;
     toolCtx.recordExternalFileChanges = (record) => {
@@ -1984,6 +1986,9 @@ export class Engine {
           },
           claimClientMessageId: (clientMessageId, source) =>
             claimClientMessageId(session, clientMessageId, source),
+          setOriginClientMessageId: (clientMessageId) => {
+            toolCtx.originClientMessageId = clientMessageId;
+          },
           recordCumulativeUsage,
           recordCacheReadDiagnostics: (usage) => {
             this.recordCacheReadDiagnostics(sid, usage);
