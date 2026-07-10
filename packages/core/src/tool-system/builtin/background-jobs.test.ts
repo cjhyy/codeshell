@@ -107,6 +107,28 @@ describe("backgroundJobRegistry", () => {
     expect(backgroundJobRegistry.listForSession("s2")).toHaveLength(1);
   });
 
+  it("dropForSession aborts running jobs but only removes terminal jobs", () => {
+    let runningAborts = 0;
+    let terminalAborts = 0;
+    backgroundJobRegistry.start("running", "s1", "running", {
+      abort: () => {
+        runningAborts++;
+      },
+    });
+    backgroundJobRegistry.start("terminal", "s1", "terminal", {
+      abort: () => {
+        terminalAborts++;
+      },
+    });
+    backgroundJobRegistry.finish("terminal", { status: "completed" });
+
+    backgroundJobRegistry.dropForSession("s1");
+
+    expect(runningAborts).toBe(1);
+    expect(terminalAborts).toBe(0);
+    expect(backgroundJobRegistry.listForSession("s1")).toEqual([]);
+  });
+
   it("caps retained TERMINAL jobs per session, evicting the oldest (running kept)", () => {
     // Start a running job that must survive the cap.
     backgroundJobRegistry.start("run-keep", "s1");
@@ -170,5 +192,28 @@ describe("backgroundJobRegistry", () => {
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
+  });
+
+  it("publishes only cancelled when abort synchronously tries to finish the same job", () => {
+    backgroundJobRegistry.start("cc-reentrant", "s1", "DriveAgent(claude): edit", {
+      kind: "drive-agent",
+      abort: () => {
+        backgroundJobRegistry.finish("cc-reentrant", {
+          status: "completed",
+          finalText: "late completion",
+        });
+      },
+    });
+    const observed: string[] = [];
+    const unsubscribe = backgroundJobRegistry.subscribe(() => {
+      const status = backgroundJobRegistry.get("cc-reentrant")?.status;
+      if (status) observed.push(status);
+    });
+
+    expect(backgroundJobRegistry.cancel("cc-reentrant")).toBe(true);
+    unsubscribe();
+
+    expect(observed).toEqual(["cancelled"]);
+    expect(backgroundJobRegistry.get("cc-reentrant")?.status).toBe("cancelled");
   });
 });

@@ -685,6 +685,47 @@ describe("DriveAgentJobs tool", () => {
       rmSync(tmp, { recursive: true, force: true });
     }
   });
+
+  it("session teardown aborts a running DriveAgent and suppresses its late completion", async () => {
+    backgroundJobRegistry.reset?.();
+    notificationQueue.reset("S-CLOSE-CC");
+    const tmp = mkdtempSync(join(tmpdir(), "drive-jobs-close-"));
+    try {
+      let seenSignal: AbortSignal | undefined;
+      const runner = (opts: { signal?: AbortSignal }) =>
+        new Promise<any>((resolve) => {
+          seenSignal = opts.signal;
+          opts.signal?.addEventListener(
+            "abort",
+            () =>
+              resolve({
+                sessionId: "CC-CLOSED",
+                finalText: "late result after close",
+                isError: false,
+                exitCode: null,
+                lines: [],
+              }),
+            { once: true },
+          );
+        });
+      const tool = makeDriveAgentTool(runner as any);
+      await tool(
+        { prompt: "long edit", cwd: tmp, cli: "claude" } as any,
+        { cwd: tmp, sessionId: "S-CLOSE-CC" } as any,
+      );
+
+      backgroundJobRegistry.dropForSession("S-CLOSE-CC");
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(seenSignal?.aborted).toBe(true);
+      expect(backgroundJobRegistry.listForSession("S-CLOSE-CC")).toEqual([]);
+      expect(notificationQueue.drainAll("S-CLOSE-CC")).toEqual([]);
+    } finally {
+      backgroundJobRegistry.reset?.();
+      notificationQueue.reset("S-CLOSE-CC");
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("DriveClaudeCode background completion delivery", () => {
