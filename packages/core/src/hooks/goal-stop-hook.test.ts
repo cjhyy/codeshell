@@ -8,6 +8,7 @@ import {
 } from "./goal-stop-hook.js";
 import type { LLMResponse, ToolResult } from "../types.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
+import { backgroundShellManager } from "../runtime/background-shell.js";
 
 /**
  * GoalStopHook three-state judge. Covers the branches the review flagged as
@@ -957,6 +958,63 @@ describe("createGoalStopHook — three-state judge", () => {
       expect(judge.lastUserContent).not.toContain(structuredSecret);
     } finally {
       backgroundJobRegistry.reset();
+    }
+  });
+
+  it("scrubs a multiline YAML secret after a preceding line in a background description", async () => {
+    const secret = "LEAK_F2_DESCRIPTION_7c91";
+    const judge = fakeJudge('{"met":false,"waiting":false,"gaps":"more work"}');
+    const hook = createGoalStopHook({ goal: "deploy safely", llm: judge, log: noopLog });
+
+    try {
+      backgroundJobRegistry.start(
+        "f2-multiline-yaml-description",
+        SID,
+        `deploy config\nclient_secret: ${secret}\nsafe: ok`,
+      );
+
+      await hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "deploying" } });
+
+      const quotedText = (
+        JSON.parse(judge.lastUserContent ?? "{}") as {
+          untrustedBackgroundTasks: { quotedText: string };
+        }
+      ).untrustedBackgroundTasks.quotedText;
+      expect(quotedText).not.toContain(secret);
+      expect(quotedText).toContain("client_secret: [REDACTED]");
+      expect(quotedText).toContain("safe: ok");
+    } finally {
+      backgroundJobRegistry.reset();
+    }
+  });
+
+  it("scrubs a multiline YAML secret after a preceding line in a background shell command", async () => {
+    const secret = "LEAK_F2_COMMAND_7c91";
+    const judge = fakeJudge('{"met":false,"waiting":false,"gaps":"more work"}');
+    const hook = createGoalStopHook({ goal: "deploy safely", llm: judge, log: noopLog });
+    const spawned = backgroundShellManager.spawnBackground({
+      command: `sleep 100\ndeploy config\nclient_secret: ${secret}\nsafe: ok`,
+      cwd: process.cwd(),
+      sessionId: SID,
+    });
+
+    try {
+      expect(spawned.ok).toBe(true);
+      if (!spawned.ok) return;
+
+      await hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "deploying" } });
+
+      const quotedText = (
+        JSON.parse(judge.lastUserContent ?? "{}") as {
+          untrustedBackgroundTasks: { quotedText: string };
+        }
+      ).untrustedBackgroundTasks.quotedText;
+      expect(quotedText).not.toContain(secret);
+      expect(quotedText).toContain("client_secret: [REDACTED]");
+      expect(quotedText).toContain("safe: ok");
+    } finally {
+      await backgroundShellManager.killAll();
+      backgroundShellManager._clear();
     }
   });
 

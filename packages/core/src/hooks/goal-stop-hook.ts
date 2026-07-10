@@ -794,8 +794,9 @@ function renderBackgroundTasks(
   return items
     .map((i) => {
       const description = truncateHeadTail(
-        scrubSecrets(
-          normalizeControlCharacters(i.description).replace(/[\t\r\n\u2028\u2029]+/gu, " "),
+        scrubSecrets(normalizeControlCharacters(i.description)).replace(
+          /[\t\r\n\u2028\u2029]+/gu,
+          " ",
         ),
         MAX_TOOL_RESULT_CHARS,
       );
