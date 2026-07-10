@@ -505,9 +505,11 @@ export class SessionManager {
    * Unlike saveState(), callers do not supply a potentially stale whole-state
    * object. The read, shallow merge, and atomic write are synchronous, so no
    * other callback on this process's event loop can interleave between them.
-   * This is deliberately not a cross-process/Worker lock and does not serialize
-   * overlapping Engine.run whole-state writers; both require session-wide run
-   * coordination and belong to G6.
+   * This is deliberately not a session-level lock and does not serialize
+   * overlapping Engine.run whole-state writers. Engine.run rejects re-entry on
+   * the same Engine instance (G6), but different Engine instances sharing a
+   * sessionId, Workers, and processes remain an unresolved separate finding
+   * requiring session-level locking/CAS.
    */
   updateSessionState(
     sessionId: string,
@@ -538,8 +540,10 @@ export class SessionManager {
     const sessionDir = join(this.sessionsDir, state.sessionId);
     mkdirSync(sessionDir, { recursive: true });
     // Atomic file replacement: stage to .tmp, then rename, preventing a torn
-    // state.json. It does NOT serialize cross-process/Worker writes or concurrent
-    // Engine.run whole-state snapshots; that session-wide coordination is G6.
+    // state.json. Same-Engine run re-entry is rejected by Engine.run (G6), but
+    // this does NOT serialize whole-state snapshots from different Engine
+    // instances sharing a sessionId, Workers, or processes. Session-level
+    // locking/CAS for those writers remains a separate finding.
     const target = join(sessionDir, "state.json");
     // Preserve the newest goal tombstone across whole-state writers. If an old
     // detached bundle still carries the tombstoned goal, drop it before write;

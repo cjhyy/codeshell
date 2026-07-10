@@ -176,6 +176,33 @@ export interface EnqueueSteerResult {
   id: string;
 }
 
+interface EngineRunOptions {
+  cwd?: string;
+  onStream?: StreamCallback;
+  signal?: AbortSignal;
+  sessionId?: string;
+  /**
+   * Goal mode for this run: the engine registers a GoalStopHook so the
+   * turn loop runs until the session model judges this goal met. Falls
+   * back to config.goal. Orthogonal to permissionMode. Accepts a raw
+   * string or a full GoalConfig; normalized once at the run boundary.
+   */
+  goal?: string | GoalConfig;
+  /**
+   * Marks this turn's task as a SYNTHETIC system-reminder injection (e.g. a
+   * background-job completion notification the server re-injects to wake an
+   * idle session) rather than the user's own input. The task is still sent
+   * to the model as a `role:"user"` message, but it is persisted with an
+   * `injected` flag so the disk reader skips rendering it as a user bubble
+   * on replay (matching the live UI, which shows only the assistant reply).
+   */
+  injected?: boolean;
+  /** Stable id for this user-intent, used to make duplicate submits idempotent. */
+  clientMessageId?: string;
+  /** Structured input attachments. Legacy `<codeshell-image>` blocks remain supported. */
+  attachments?: InputAttachmentMeta[];
+}
+
 // Re-export the config hot-reload patch builder from here so the protocol
 // server (and tests) can import it alongside Engine without reaching into the
 // settings/ subtree directly. The implementation lives in settings/ to keep
@@ -412,6 +439,15 @@ export class Engine {
    * Null when idle; set at run start, cleared in run's finally.
    */
   private activeRunSession: SessionBundle | null = null;
+  /**
+   * Same-instance run guard. Engine owns single-valued live controls and one
+   * HookRegistry, so a second run must not enter until the first has completed
+   * all state persistence and end hooks. This prevents handle contamination and
+   * whole-state saveState overlap only within this Engine instance. It does not
+   * coordinate different Engine instances sharing a sessionId, Workers, or
+   * processes; session-level locking/CAS for those cases is a separate finding.
+   */
+  private runInProgress = false;
 
   /** Public accessor so UI/clients can read the resolved per-model window. */
   get maxContextTokens(): number {
@@ -923,37 +959,23 @@ export class Engine {
   }
 
   /**
-   * Run a task from start to finish.
+   * Run a task from start to finish. Rejects immediately when this Engine
+   * instance already has a run in progress; hosts that want queueing own that
+   * policy (for example ChatSession's FIFO queue).
    */
-  async run(
-    task: string,
-    options?: {
-      cwd?: string;
-      onStream?: StreamCallback;
-      signal?: AbortSignal;
-      sessionId?: string;
-      /**
-       * Goal mode for this run: the engine registers a GoalStopHook so the
-       * turn loop runs until the session model judges this goal met. Falls
-       * back to config.goal. Orthogonal to permissionMode. Accepts a raw
-       * string or a full GoalConfig; normalized once at the run boundary.
-       */
-      goal?: string | GoalConfig;
-      /**
-       * Marks this turn's task as a SYNTHETIC system-reminder injection (e.g. a
-       * background-job completion notification the server re-injects to wake an
-       * idle session) rather than the user's own input. The task is still sent
-       * to the model as a `role:"user"` message, but it is persisted with an
-       * `injected` flag so the disk reader skips rendering it as a user bubble
-       * on replay (matching the live UI, which shows only the assistant reply).
-       */
-      injected?: boolean;
-      /** Stable id for this user-intent, used to make duplicate submits idempotent. */
-      clientMessageId?: string;
-      /** Structured input attachments. Legacy `<codeshell-image>` blocks remain supported. */
-      attachments?: InputAttachmentMeta[];
-    },
-  ): Promise<EngineResult> {
+  async run(task: string, options?: EngineRunOptions): Promise<EngineResult> {
+    if (this.runInProgress) {
+      throw new Error("Engine.run() cannot start while another run is in progress");
+    }
+    this.runInProgress = true;
+    try {
+      return await this.runExclusive(task, options);
+    } finally {
+      this.runInProgress = false;
+    }
+  }
+
+  private async runExclusive(task: string, options?: EngineRunOptions): Promise<EngineResult> {
     const workspaceResume =
       options?.sessionId && this.sessionManager.exists(options.sessionId)
         ? await this.sessionManager.resolveSessionWorkspaceForResume(options.sessionId)
@@ -2360,6 +2382,10 @@ export class Engine {
       if (this.config.costStore) {
         session.state.costState = this.config.costStore.serialize() as Record<string, unknown>;
       }
+      // runInProgress excludes another whole-state writer only on this Engine
+      // instance. A different Engine using the same sessionId can still race
+      // this saveState (including an old run's abort cleanup vs a replacement
+      // Engine); cross-instance/process session serialization is a separate finding.
       this.sessionManager.saveState(session.state);
 
       // Hook: agent end
