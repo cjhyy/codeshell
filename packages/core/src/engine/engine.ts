@@ -1939,12 +1939,20 @@ export class Engine {
           : undefined;
       let goalHookHandler: ReturnType<typeof createGoalStopHook> | null = null;
       let goalJudgeContext: GoalJudgeRuntimeContext | undefined;
+      let turnLoop!: TurnLoop;
       if (normalizedGoal && this.config.isSubAgent !== true) {
         goalHookHandler = createGoalStopHook({
           goal: normalizedGoal,
           llm: llmClient,
           log: logger,
           getJudgeContext: () => goalJudgeContext,
+          onJudgeUsage: (usage) => {
+            // The provider records this request into llmClient.getUsage() and the
+            // process-wide CostTracker. This separate callback feeds the session
+            // cumulative cache counters and the live Goal hard-budget tracker.
+            if (usage) recordCumulativeUsage(usage);
+            return turnLoop.recordGoalJudgeUsage(usage);
+          },
           // Clear the persisted active goal the moment the judge says it's met,
           // so a later bare send doesn't re-inherit a satisfied goal. The hook
           // calls this from inside its met branch (single source of truth for
@@ -1982,7 +1990,7 @@ export class Engine {
       });
 
       // Run turn loop
-      const turnLoop = new TurnLoop(
+      turnLoop = new TurnLoop(
         {
           model: modelFacade,
           toolExecutor,

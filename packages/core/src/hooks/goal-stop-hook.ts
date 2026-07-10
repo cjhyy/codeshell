@@ -22,13 +22,15 @@
  */
 import type { HookContext, HookResult } from "./events.js";
 import type { HookHandler } from "./registry.js";
-import type { LLMResponse, ToolResult } from "../types.js";
+import type { LLMResponse, TokenUsage, ToolResult } from "../types.js";
 import { normalizeGoal, type GoalConfig } from "../engine/goal.js";
 import { listRunningBackgroundWork } from "../tool-system/builtin/background-work.js";
 import { extractJSON } from "../utils/json.js";
 
 /** Narrow LLM surface the judge needs — just a one-shot completion. */
 export interface GoalJudgeLLM {
+  /** Main-generation request timeout; the judge derives a shorter ceiling. */
+  readonly timeout?: number;
   createMessage(options: {
     systemPrompt: string;
     messages: { role: "user" | "assistant" | "system"; content: string }[];
@@ -84,6 +86,15 @@ export interface GoalStopHookOptions {
    * third-party/public stop hooks do not gain access to tool output.
    */
   getJudgeContext?: () => GoalJudgeRuntimeContext | undefined;
+  /** Dedicated judge deadline. Defaults to 15s and never exceeds the main timeout. */
+  judgeTimeoutMs?: number;
+  /**
+   * Private usage seam into TurnLoop's Goal ledger. Returning a termination
+   * reason prevents verdict side effects and lets the loop stop immediately.
+   */
+  onJudgeUsage?: (
+    usage: TokenUsage | undefined,
+  ) => "token_budget_exhausted" | "time_budget_exhausted" | undefined;
 }
 
 export interface GoalJudgeRuntimeContext {
@@ -173,6 +184,30 @@ interface JudgeVerdict {
 const MAX_TOOL_EVIDENCE_ITEMS = 12;
 const MAX_TOOL_RESULT_CHARS = 1_600;
 const MAX_TOOL_EVIDENCE_CHARS = 8_000;
+const MAX_JUDGE_REQUESTS_PER_RUN = 3;
+const DEFAULT_JUDGE_TIMEOUT_MS = 15_000;
+
+function createJudgeAbortSignal(
+  parent: AbortSignal | undefined,
+  timeoutMs: number,
+): { signal: AbortSignal; dispose: () => void } {
+  const controller = new AbortController();
+  const abortFromParent = () => controller.abort(parent?.reason);
+  if (parent?.aborted) abortFromParent();
+  else parent?.addEventListener("abort", abortFromParent, { once: true });
+
+  const timer = setTimeout(() => {
+    controller.abort(new DOMException(`Goal judge timed out after ${timeoutMs}ms`, "TimeoutError"));
+  }, timeoutMs);
+
+  return {
+    signal: controller.signal,
+    dispose: () => {
+      clearTimeout(timer);
+      parent?.removeEventListener("abort", abortFromParent);
+    },
+  };
+}
 
 function codePointLength(text: string): number {
   let count = 0;
@@ -391,6 +426,16 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
   let lastResult: HookResult | null = null;
   let previousVerdict: "not_met" | "waiting" | undefined;
   let previousGaps = "";
+  // Independent per-run judge ledger. Request count enforces a hard spend cap;
+  // token totals are logged separately from main-turn accounting for diagnosis.
+  let judgeRequestCount = 0;
+  const judgeUsage: TokenUsage = {
+    promptTokens: 0,
+    completionTokens: 0,
+    totalTokens: 0,
+    cacheReadTokens: 0,
+    cacheCreationTokens: 0,
+  };
   return async (ctx: HookContext): Promise<HookResult> => {
     // Accept string or GoalConfig from either the override or ctx.data.goal.
     const g = normalizeGoal(opts.goal ?? (ctx.data.goal as string | GoalConfig | undefined));
@@ -465,9 +510,32 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
       return lastResult;
     }
 
-    const signal = ctx.data.signal as AbortSignal | undefined;
+    if (judgeRequestCount >= MAX_JUDGE_REQUESTS_PER_RUN) {
+      log.warn("goal_stop.request_limit", {
+        cat: "goal",
+        requestCount: judgeRequestCount,
+        maxRequests: MAX_JUDGE_REQUESTS_PER_RUN,
+      });
+      return {
+        continueSession: true,
+        messages: [
+          "继续 —— 目标完成度裁判本次 run 的请求上限已到,请继续推进直到明确完成(或调用 complete_goal 声明完成)。",
+        ],
+      };
+    }
+
+    const parentSignal = ctx.data.signal as AbortSignal | undefined;
+    const mainTimeoutMs =
+      typeof llm.timeout === "number" && llm.timeout > 0 ? llm.timeout : 120_000;
+    const requestedJudgeTimeout =
+      typeof opts.judgeTimeoutMs === "number" && opts.judgeTimeoutMs > 0
+        ? opts.judgeTimeoutMs
+        : DEFAULT_JUDGE_TIMEOUT_MS;
+    const judgeTimeoutMs = Math.min(requestedJudgeTimeout, Math.max(1, mainTimeoutMs - 1));
+    const judgeAbort = createJudgeAbortSignal(parentSignal, judgeTimeoutMs);
 
     let resp: LLMResponse;
+    judgeRequestCount++;
     try {
       resp = await llm.createMessage({
         systemPrompt: JUDGE_SYSTEM,
@@ -506,8 +574,6 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
         // deadline in the goal never fired. `reasoning:off` below is the real
         // fix; 1500 is the belt-and-suspenders for models that ignore it.
         maxTokens: 1500,
-        // Private judge sub-call — keep it out of the user-facing turn stats.
-        recordUsage: false,
         // Turn thinking OFF. The judge only emits a tiny JSON verdict; reasoning
         // tokens are pure waste here and (per above) actively caused truncation.
         // On DeepSeek V4 / Anthropic-budget this genuinely disables thinking; on
@@ -515,7 +581,7 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
         // it is safe to always send — matching the aux summary/memory calls.
         reasoning: { mode: "off" },
         // Let a user Stop mid-judge abort this call rather than block on it.
-        signal,
+        signal: judgeAbort.signal,
       });
     } catch (err) {
       log.warn("goal_stop.judge_failed", {
@@ -532,6 +598,34 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
           "继续 —— 目标完成度无法判定,请继续推进直到明确完成(或调用 complete_goal 声明完成)。",
         ],
       };
+    } finally {
+      judgeAbort.dispose();
+    }
+
+    if (resp.usage) {
+      judgeUsage.promptTokens += resp.usage.promptTokens ?? 0;
+      judgeUsage.completionTokens += resp.usage.completionTokens ?? 0;
+      judgeUsage.totalTokens += resp.usage.totalTokens ?? 0;
+      judgeUsage.cacheReadTokens =
+        (judgeUsage.cacheReadTokens ?? 0) + (resp.usage.cacheReadTokens ?? 0);
+      judgeUsage.cacheCreationTokens =
+        (judgeUsage.cacheCreationTokens ?? 0) + (resp.usage.cacheCreationTokens ?? 0);
+    }
+    log.info("goal_stop.judge_usage", {
+      cat: "goal",
+      requestCount: judgeRequestCount,
+      promptTokens: judgeUsage.promptTokens,
+      completionTokens: judgeUsage.completionTokens,
+      totalTokens: judgeUsage.totalTokens,
+    });
+
+    const judgeBudgetTermination = opts.onJudgeUsage?.(resp.usage);
+    if (judgeBudgetTermination) {
+      log.info("goal_stop.judge_budget_exhausted", {
+        cat: "goal",
+        reason: judgeBudgetTermination,
+      });
+      return { data: { goalBudgetTermination: judgeBudgetTermination } };
     }
 
     const respText = resp.text ?? "";

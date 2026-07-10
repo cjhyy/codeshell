@@ -333,6 +333,24 @@ export class TurnLoop {
   }
 
   /**
+   * Private Goal-judge accounting seam. Judge calls bypass ModelFacade, so the
+   * Engine forwards their provider usage here while the run-scoped tracker is
+   * live. The returned reason lets the hook suppress verdict side effects when
+   * this very request crossed a hard token/time budget.
+   */
+  recordGoalJudgeUsage(
+    usage: TokenUsage | undefined,
+  ):
+    | Extract<GoalTerminationReason, "token_budget_exhausted" | "time_budget_exhausted">
+    | undefined {
+    if (!this.goalTracker) return undefined;
+    if (usage) {
+      recordGoalUsage(this.goalTracker, (usage.promptTokens ?? 0) + (usage.completionTokens ?? 0));
+    }
+    return goalBudgetTerminationReason(this.goalTracker, Date.now());
+  }
+
+  /**
    * Goal mode only: if the run is nearing EITHER stop ceiling (maxTurns or
    * maxStopBlocks) and we haven't announced it yet, emit one approaching_limit
    * marker so the UI can offer a "再续" button while the run is still live.
@@ -1038,6 +1056,37 @@ export class TurnLoop {
             finalText,
             turnCount: this.turnCount,
           });
+          // The primary-model judge is a real billed request. Its hook forwards
+          // usage through recordGoalJudgeUsage above; re-check immediately so an
+          // over-budget verdict cannot authorize another main-model turn.
+          const postJudgeBudgetTermination = goalTracker
+            ? ((stopHook.data?.goalBudgetTermination as
+                | Extract<GoalTerminationReason, "token_budget_exhausted" | "time_budget_exhausted">
+                | undefined) ?? goalBudgetTerminationReason(goalTracker, Date.now()))
+            : undefined;
+          if (goalTracker && postJudgeBudgetTermination) {
+            tlog.info("turn.goal_budget_exhausted_after_judge", {
+              cat: "goal",
+              reason: postJudgeBudgetTermination,
+              tokensUsed: goalTracker.tokensUsed,
+              tokenBudget: goalTracker.goal.tokenBudget,
+              timeBudgetMs: goalTracker.goal.timeBudgetMs,
+            });
+            this.config.onStream?.({
+              type: "assistant_message",
+              messageId: assistantMessageId,
+              message: {
+                role: "assistant",
+                content: "（Goal 预算已耗尽，强制停止。）",
+              },
+            });
+            return {
+              text: finalText,
+              reason: "goal_budget_exhausted",
+              messages,
+              goalTermination: postJudgeBudgetTermination,
+            };
+          }
           // The judge's structured verdict (set by GoalStopHook in result.data)
           // rides back here so we can show goal progress WITHOUT a second LLM
           // call — `gaps` is whatever the judge already computed.

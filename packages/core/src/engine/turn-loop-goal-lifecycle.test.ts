@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { LLMClientBase } from "../llm/client-base.js";
 import { registerProvider } from "../llm/client-factory.js";
-import type { CreateMessageOptions } from "../llm/types.js";
+import type { CreateMessageOptions, LLMUsageTracker } from "../llm/types.js";
 import type { HookResult } from "../hooks/events.js";
 import {
   createGoalStopHook,
@@ -249,6 +249,51 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     ).toBe(true);
   });
 
+  it("charges judge usage to the Goal budget before deciding to continue", async () => {
+    let judgeContext: GoalJudgeRuntimeContext | undefined;
+    let judgeCalls = 0;
+    let loop!: TurnLoop;
+    const judge: GoalJudgeLLM = {
+      async createMessage(): Promise<LLMResponse> {
+        judgeCalls += 1;
+        return {
+          text: '{"met":false,"waiting":false,"gaps":"still incomplete"}',
+          toolCalls: [],
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        };
+      },
+    };
+    const goalHook = createGoalStopHook({
+      goal: "finish within budget",
+      llm: judge,
+      log: { info() {}, warn() {}, error() {} },
+      getJudgeContext: () => judgeContext,
+      onJudgeUsage: (usage) => loop.recordGoalJudgeUsage(usage),
+    });
+    const { deps, calls } = makeTurnLoopDeps([stopResponse("not done")], {
+      hook: (event, data) =>
+        event === "on_stop"
+          ? goalHook({ eventName: "on_stop", data: { ...data, sessionId: "goal-loop-test" } })
+          : {},
+      updateGoalJudgeContext: (context) => {
+        judgeContext = context as GoalJudgeRuntimeContext;
+      },
+    });
+    loop = new TurnLoop(deps, {
+      maxTurns: 4,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "finish within budget", tokenBudget: 16 },
+      maxStopBlocks: 3,
+    });
+
+    const result = await loop.run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("goal_budget_exhausted");
+    expect(result.goalTermination).toBe("token_budget_exhausted");
+    expect(calls).toHaveLength(1);
+    expect(judgeCalls).toBe(1);
+  });
+
   it("forces a stop when the stop hook reaches maxStopBlocks, bounding continuations", async () => {
     const events: StreamEvent[] = [];
     let stopHookCalls = 0;
@@ -352,8 +397,10 @@ const engineScenarios = new Map<
   {
     mainResponses: LLMResponse[];
     mainCalls: number;
+    judgeCalls?: number;
     judgeResponse?: string;
     systemPrompts?: string[];
+    lastUsage?: LLMUsageTracker;
   }
 >();
 
@@ -368,12 +415,16 @@ class GoalLifecycleClient extends LLMClientBase {
 
     const isMainTurn = (options.tools?.length ?? 0) > 0;
     if (!isMainTurn) {
-      return {
+      const response: LLMResponse = {
         text: scenario.judgeResponse ?? "aux",
         toolCalls: [],
         stopReason: "stop",
         usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
       };
+      scenario.judgeCalls = (scenario.judgeCalls ?? 0) + 1;
+      this.recordUsage(response.usage!, options);
+      scenario.lastUsage = this.getUsage();
+      return response;
     }
 
     const response =
@@ -383,6 +434,7 @@ class GoalLifecycleClient extends LLMClientBase {
       response.usage ?? { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
       options,
     );
+    scenario.lastUsage = this.getUsage();
     return response;
   }
 }
@@ -403,6 +455,7 @@ function persistedState(
 ): {
   activeGoal?: { objective: string; setAtMs?: number };
   goalTerminal?: { objective: string; setAtMs?: number; reason: string };
+  tokenUsage?: { promptTokens: number; completionTokens: number; totalTokens: number };
 } {
   const raw = readFileSync(join(dir, "sessions", sessionId, "state.json"), "utf8");
   return JSON.parse(raw);
@@ -467,6 +520,17 @@ describe("Engine persisted goal lifecycle", () => {
           .get(auxModel)
           ?.systemPrompts?.some((prompt) => prompt.includes("目标完成度裁判")),
       ).toBe(false);
+      expect(engineScenarios.get(primaryModel)?.lastUsage).toMatchObject({
+        totalPromptTokens: 11,
+        totalCompletionTokens: 6,
+        totalTokens: 17,
+        requestCount: 2,
+      });
+      expect(persistedState(dir, sessionId).tokenUsage).toMatchObject({
+        promptTokens: 11,
+        completionTokens: 6,
+        totalTokens: 17,
+      });
     } finally {
       engineScenarios.delete(primaryModel);
       engineScenarios.delete(auxModel);

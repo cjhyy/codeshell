@@ -462,6 +462,59 @@ describe("createGoalStopHook — three-state judge", () => {
     expect(res.continueSession).toBe(true);
   });
 
+  it("caps repeated unparseable judge requests for one run", async () => {
+    const judge = fakeJudge("not JSON");
+    const hook = createGoalStopHook({ goal: "ship it", llm: judge, log: noopLog });
+
+    for (let round = 0; round < 6; round++) {
+      const res = await hook({
+        eventName: "on_stop",
+        data: { sessionId: SID, finalText: `still ambiguous ${round}` },
+      });
+      expect(res.continueSession).toBe(true);
+    }
+
+    expect(judge.calls).toBe(3);
+  });
+
+  it("uses a dedicated timeout shorter than the parent model request timeout", async () => {
+    let observedSignal: AbortSignal | undefined;
+    const parent = new AbortController();
+    const parentTimer = setTimeout(() => parent.abort(new Error("parent timeout")), 200);
+    const judge: GoalJudgeLLM = {
+      timeout: 120_000,
+      async createMessage(opts): Promise<LLMResponse> {
+        observedSignal = opts.signal;
+        return await new Promise<LLMResponse>((_resolve, reject) => {
+          const rejectForAbort = () => reject(opts.signal?.reason ?? new Error("aborted"));
+          if (opts.signal?.aborted) rejectForAbort();
+          else opts.signal?.addEventListener("abort", rejectForAbort, { once: true });
+        });
+      },
+    };
+    const hook = createGoalStopHook({
+      goal: "ship it",
+      llm: judge,
+      log: noopLog,
+      judgeTimeoutMs: 10,
+    });
+    const startedAt = Date.now();
+
+    try {
+      const res = await hook({
+        eventName: "on_stop",
+        data: { sessionId: SID, finalText: "x", signal: parent.signal },
+      });
+
+      expect(res.continueSession).toBe(true);
+      expect(observedSignal?.aborted).toBe(true);
+      expect(Date.now() - startedAt).toBeLessThan(100);
+      expect(parent.signal.aborted).toBe(false);
+    } finally {
+      clearTimeout(parentTimer);
+    }
+  });
+
   for (const [label, verdict] of [
     ["missing waiting", '{"met":true,"gaps":""}'],
     ["missing gaps", '{"met":true,"waiting":false}'],
@@ -602,15 +655,17 @@ describe("createGoalStopHook — three-state judge", () => {
     expect(judge.calls).toBe(2);
   });
 
-  it("passes the run's abort signal through to the judge call", async () => {
+  it("composes the run's abort signal into the judge call", async () => {
     const judge = fakeJudge('{"met": false, "waiting": false, "gaps": "x"}');
     const hook = createGoalStopHook({ goal: "ship it", llm: judge, log: noopLog });
     const ac = new AbortController();
+    ac.abort(new Error("user stopped"));
     await hook({
       eventName: "on_stop",
       data: { sessionId: SID, finalText: "x", signal: ac.signal },
     });
-    expect(judge.lastSignal).toBe(ac.signal);
+    expect(judge.lastSignal?.aborted).toBe(true);
+    expect(judge.lastSignal?.reason).toBe(ac.signal.reason);
   });
 
   it("feeds the current time (injected `now`) into the judge prompt", async () => {
