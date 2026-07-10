@@ -8,6 +8,7 @@ import type {
   ApprovalScope,
   ApprovalPathScope,
   CcDiscoveredSession,
+  MobileImageBase,
 } from "@protocol";
 import {
   reduceStream,
@@ -25,6 +26,11 @@ import {
 } from "@/lib/messageMappers";
 import { projectForCwd } from "@mobile/lib/format";
 import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket";
+import {
+  prepareMobileAttachments,
+  type MobileComposerAttachment,
+  type MobileUploadTicket,
+} from "@mobile/lib/mobileAttachments";
 import {
   filterNewRoomMessages,
   clearUnreadSession,
@@ -88,7 +94,7 @@ export interface RemoteApp {
   notice?: string;
   logout: () => void;
   // actions
-  sendChat: (text: string) => void;
+  sendChat: (input: { text: string; attachments: MobileComposerAttachment[] }) => Promise<boolean>;
   stopRun: () => void;
   selectSession: (id: string) => void;
   newSession: (cwd?: string | null, name?: string) => void;
@@ -145,7 +151,11 @@ function projectContextCwd(
 
 type ChatAction =
   | { kind: "raw"; raw: unknown }
-  | { kind: "user"; text: string }
+  | {
+      kind: "user";
+      text: string;
+      attachments?: Array<{ name: string; mime?: string; size: number }>;
+    }
   | { kind: "reset" }
   | { kind: "replay"; events: unknown[] }
   | { kind: "append"; events: unknown[] };
@@ -155,7 +165,7 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case "raw":
       return reduceStream(state, action.raw);
     case "user":
-      return appendUserMessage(state, action.text);
+      return appendUserMessage(state, action.text, action.attachments);
     case "reset":
       return initialChatState();
     case "replay":
@@ -198,6 +208,16 @@ export function useRemoteApp(): RemoteApp {
   /** socket.send via ref — onServerEvent is created BEFORE the socket (it's the
    *  socket's callback), so it can't close over `socket` directly. */
   const sendRef = useRef<((e: import("@protocol").MobileClientEvent) => void) | null>(null);
+  const uploadWaitersRef = useRef(
+    new Map<
+      string,
+      {
+        resolve: (ticket: MobileUploadTicket) => void;
+        reject: (error: Error) => void;
+        timer: ReturnType<typeof setTimeout>;
+      }
+    >(),
+  );
   const [permissionMode, setPermissionModeState] = useState<PermissionMode>("default");
   /** Transient banner message (errors, room-missing, …). Auto-clears. */
   const [notice, setNoticeState] = useState<string | undefined>();
@@ -207,6 +227,39 @@ export function useRemoteApp(): RemoteApp {
     if (noticeTimer.current) clearTimeout(noticeTimer.current);
     noticeTimer.current = setTimeout(() => setNoticeState(undefined), 5000);
   }, []);
+  const beginMobileUpload = useCallback(
+    (metadata: MobileImageBase): Promise<MobileUploadTicket> => {
+      return new Promise((resolve, reject) => {
+        if (!sendRef.current) {
+          reject(new Error("Remote connection is unavailable"));
+          return;
+        }
+        const previous = uploadWaitersRef.current.get(metadata.clientId);
+        if (previous) {
+          clearTimeout(previous.timer);
+          previous.reject(new Error("Attachment upload was replaced"));
+        }
+        const timer = setTimeout(() => {
+          uploadWaitersRef.current.delete(metadata.clientId);
+          reject(new Error("Attachment upload ticket timed out"));
+        }, 10_000);
+        uploadWaitersRef.current.set(metadata.clientId, { resolve, reject, timer });
+        sendRef.current({ type: "attachment.upload.begin", ...metadata });
+      });
+    },
+    [],
+  );
+
+  useEffect(
+    () => () => {
+      for (const waiter of uploadWaitersRef.current.values()) {
+        clearTimeout(waiter.timer);
+        waiter.reject(new Error("Remote app closed"));
+      }
+      uploadWaitersRef.current.clear();
+    },
+    [],
+  );
   /** Which session id the chat view is bound to (for filtering live stream). */
   const boundSessionRef = useRef<string | undefined>(undefined);
   /** Highest mobile snapshot seq applied per desktop session. */
@@ -338,6 +391,22 @@ export function useRemoteApp(): RemoteApp {
           // pull the list now so the new conversation shows up as a row.
           sendRef.current?.({ type: "session.list" });
           break;
+        case "attachment.upload.ready": {
+          const waiter = uploadWaitersRef.current.get(event.clientId);
+          if (!waiter) break;
+          uploadWaitersRef.current.delete(event.clientId);
+          clearTimeout(waiter.timer);
+          waiter.resolve(event);
+          break;
+        }
+        case "attachment.upload.failed": {
+          const waiter = uploadWaitersRef.current.get(event.clientId);
+          if (!waiter) break;
+          uploadWaitersRef.current.delete(event.clientId);
+          clearTimeout(waiter.timer);
+          waiter.reject(new Error(event.message));
+          break;
+        }
         case "session.list.ok":
           setSessions(event.sessions);
           setUnreadSessionIds((prev) => {
@@ -771,23 +840,50 @@ export function useRemoteApp(): RemoteApp {
 
   // ── actions ────────────────────────────────────────────────────────────
   const sendChat = useCallback(
-    (text: string) => {
-      const t = text.trim();
-      if (!t) return;
+    async (input: { text: string; attachments: MobileComposerAttachment[] }): Promise<boolean> => {
+      const text = input.text.trim();
+      if (!text && input.attachments.length === 0) return false;
+      if (socket.status !== "online") return false;
+      let attachments;
+      try {
+        attachments = await prepareMobileAttachments(input.attachments, {
+          beginUpload: beginMobileUpload,
+          fetch: window.fetch.bind(window),
+        });
+      } catch (error) {
+        setNotice(
+          t("mobile.notice.attachmentSendFailed", {
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        );
+        return false;
+      }
+      const summaries = attachments.map(({ name, mime, size }) => ({ name, mime, size }));
       if (activeRoomIdRef.current) {
         // NO optimistic echo for rooms: RoomManager persists the user line and
         // broadcasts it back to every client (incl. us) as a `room.message`,
         // which the reducer renders. Echoing locally too would double the
         // bubble. The broadcast round-trips over loopback/LAN ~instantly.
-        socket.send({ type: "room.send", roomId: activeRoomIdRef.current, text: t });
+        socket.send({
+          type: "room.send",
+          roomId: activeRoomIdRef.current,
+          text,
+          attachments,
+        });
       } else {
         // Sessions don't echo the user turn back over the stream (it only
         // resurfaces on history replay), so the local echo is required here.
-        dispatchChat({ kind: "user", text: t });
-        socket.send({ type: "chat.send", text: t, sessionId: boundSessionRef.current });
+        dispatchChat({ kind: "user", text, attachments: summaries });
+        socket.send({
+          type: "chat.send",
+          text,
+          sessionId: boundSessionRef.current,
+          attachments,
+        });
       }
+      return true;
     },
-    [socket],
+    [beginMobileUpload, setNotice, socket, t],
   );
 
   const stopRun = useCallback(() => {

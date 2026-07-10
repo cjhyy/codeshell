@@ -35,7 +35,15 @@ export interface ImageAttachment {
   /** Hex sha256 of the staged/sourced bytes, without a `sha256:` prefix. */
   sha256?: string;
   /** Where the user supplied this attachment from. */
-  origin?: "paste" | "os-drop" | "file-panel" | "picker" | "mention" | "generated" | "tool";
+  origin?:
+    | "paste"
+    | "os-drop"
+    | "file-panel"
+    | "picker"
+    | "mention"
+    | "generated"
+    | "mobile"
+    | "tool";
   /** Session directory that owns staged attachments. */
   sessionId?: string;
   /** When this attachment was staged/selected. */

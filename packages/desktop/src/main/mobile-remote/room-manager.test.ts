@@ -8,10 +8,12 @@ import {
   askUserPrompt,
   buildAskUserUpdatedInput,
   isValidRoomId,
+  roomTurnText,
   type RoomAgent,
   type RoomMessage,
 } from "./room-manager.js";
 import type { ResidentAgentEvent } from "./resident-agent.js";
+import type { InputAttachmentMeta } from "../attachment-service.js";
 
 describe("askUserPrompt", () => {
   test("parses the first question's prompt/header/options/multiSelect", () => {
@@ -140,6 +142,42 @@ describe("RoomManager", () => {
     expect(msgs[2]!.text).toBe("reply to: hello");
     // every persisted message was pushed to the phone (incl. the audit anchor)
     expect(pushed.filter((p) => p.roomId === room.id)).toHaveLength(4);
+  });
+
+  test("image-only send stores a safe summary and gives the agent relative paths", () => {
+    const { mgr, agents } = makeManager();
+    const room = mgr.createRoom({ cwd: "/repo" });
+    const attachment: InputAttachmentMeta = {
+      id: "att-1",
+      sessionId: room.id,
+      kind: "image",
+      origin: "mobile",
+      path: ".code-shell/attachments/room/image.png",
+      relPath: ".code-shell/attachments/room/image.png",
+      absPath: "/repo/.code-shell/attachments/room/image.png",
+      mime: "image/png",
+      size: 4,
+      sha256: "a".repeat(64),
+      originalName: "phone.png",
+      createdAt: 1,
+    };
+
+    expect(mgr.send(room.id, "", [attachment])).toBe(true);
+    const user = mgr.getMessages(room.id).find((message) => message.from === "user");
+    expect(user).toMatchObject({
+      text: "",
+      attachments: [
+        {
+          name: "phone.png",
+          mime: "image/png",
+          size: 4,
+          path: ".code-shell/attachments/room/image.png",
+        },
+      ],
+    });
+    expect(agents[0]?.sent[0]).toContain(".code-shell/attachments/room/image.png");
+    expect(agents[0]?.sent[0]).not.toContain(attachment.absPath);
+    expect(roomTurnText("look", [attachment])).toStartWith("look\n<codeshell-image-attachments>");
   });
 
   test("transcript-followed rooms use the tail as the single visible output source", () => {

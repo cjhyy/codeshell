@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import { join, resolve } from "node:path";
 import type { ResidentAgentEvent } from "./resident-agent.js";
+import type { InputAttachmentMeta } from "../attachment-service.js";
 
 /**
  * The exact shape createRoom() generates: `room_<base36>_<base36>`. Anything
@@ -127,6 +128,48 @@ export interface RoomMessage {
    *  card expands to so the real parameters are visible. Absent on legacy
    *  messages that predate args persistence. */
   args?: Record<string, unknown>;
+  attachments?: Array<{ name: string; mime?: string; size: number; path: string }>;
+}
+
+const ROOM_ATTACHMENT_START = "<codeshell-image-attachments>";
+const ROOM_ATTACHMENT_END = "</codeshell-image-attachments>";
+
+function roomAttachmentSummary(
+  attachments: InputAttachmentMeta[],
+): NonNullable<RoomMessage["attachments"]> {
+  return attachments.map((attachment) => ({
+    name: attachment.originalName ?? attachment.relPath ?? attachment.path,
+    mime: attachment.mime,
+    size: attachment.size,
+    path: attachment.relPath ?? attachment.path,
+  }));
+}
+
+export function roomTurnText(text: string, attachments: InputAttachmentMeta[]): string {
+  if (attachments.length === 0) return text;
+  const paths = attachments.map(
+    (attachment) => `- ${attachment.relPath ?? attachment.path} (${attachment.mime ?? "image"})`,
+  );
+  return [
+    text.trim(),
+    ROOM_ATTACHMENT_START,
+    "The following images are available as workspace-relative files:",
+    ...paths,
+    ROOM_ATTACHMENT_END,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+export function stripRoomAttachmentBlock(text: string): string {
+  const start = text.indexOf(ROOM_ATTACHMENT_START);
+  if (start < 0) return text;
+  const end = text.indexOf(ROOM_ATTACHMENT_END, start);
+  return (
+    end < 0
+      ? text.slice(0, start)
+      : `${text.slice(0, start)}${text.slice(end + ROOM_ATTACHMENT_END.length)}`
+  ).trim();
 }
 
 /**
@@ -190,6 +233,10 @@ export class RoomManager {
    *  Holds the raw tool input so respondApproval can bake the user's answer into
    *  the `answers` record the CLI expects. Cleared on response. */
   private pendingAskUser = new Map<string, unknown>();
+  private pendingTranscriptAttachments = new Map<
+    string,
+    Array<{ text: string; attachments: NonNullable<RoomMessage["attachments"]> }>
+  >();
   private now: () => number;
 
   /** Drop all pending AskUser entries for a room. Called when its agent goes
@@ -358,7 +405,21 @@ export class RoomManager {
    * broadcast path as resident-agent output. */
   ingestTranscriptMessages(id: string, messages: Omit<RoomMessage, "seq" | "ts">[]): void {
     if (!this.transcriptFollowedRooms.has(id) || !this.getRoom(id)) return;
-    for (const message of messages) this.append(id, message);
+    for (const message of messages) {
+      if (message.from === "user" && typeof message.text === "string") {
+        const text = stripRoomAttachmentBlock(message.text);
+        const pending = this.pendingTranscriptAttachments.get(id);
+        const matched = pending?.[0]?.text === text ? pending.shift() : undefined;
+        if (pending?.length === 0) this.pendingTranscriptAttachments.delete(id);
+        this.append(id, {
+          ...message,
+          text,
+          ...(matched ? { attachments: matched.attachments } : {}),
+        });
+      } else {
+        this.append(id, message);
+      }
+    }
   }
 
   /**
@@ -598,23 +659,37 @@ export class RoomManager {
   }
 
   /** Post a user message: persist it, ensure agent running, feed it. */
-  send(id: string, text: string): boolean {
+  send(id: string, text: string, attachments: InputAttachmentMeta[] = []): boolean {
     const meta = this.getRoom(id);
     if (!meta) return false;
+    const displayText = text.trim();
+    if (!displayText && attachments.length === 0) return false;
     this.open(id);
+    const summaries = roomAttachmentSummary(attachments);
+    const agentText = roomTurnText(displayText, attachments);
     // A transcript-followed room will observe this same user turn in the CLI's
     // JSONL. Let that single source append it, otherwise the UI gets two user
     // bubbles (immediate room echo + transcript tail).
     if (!this.transcriptFollowedRooms.has(id)) {
-      this.append(id, { from: "user", type: "text", text });
+      this.append(id, {
+        from: "user",
+        type: "text",
+        text: displayText,
+        ...(summaries.length ? { attachments: summaries } : {}),
+      });
+    } else if (summaries.length) {
+      const pending = this.pendingTranscriptAttachments.get(id) ?? [];
+      pending.push({ text: displayText, attachments: summaries });
+      this.pendingTranscriptAttachments.set(id, pending);
     }
-    return this.agents.get(id)?.send(text) ?? false;
+    return this.agents.get(id)?.send(agentText) ?? false;
   }
 
   close(id: string): void {
     this.agents.get(id)?.stop();
     this.agents.delete(id);
     this.clearPendingAskUser(id);
+    this.pendingTranscriptAttachments.delete(id);
     this.opts.onRoomEnded?.(id);
   }
 
@@ -623,6 +698,7 @@ export class RoomManager {
     for (const agent of this.agents.values()) agent.stop();
     this.agents.clear();
     this.pendingAskUser.clear();
+    this.pendingTranscriptAttachments.clear();
     for (const id of ids) this.opts.onRoomEnded?.(id);
     this.transcriptFollowedRooms.clear();
   }

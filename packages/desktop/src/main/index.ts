@@ -134,6 +134,8 @@ import { TrustedDeviceStore } from "./mobile-remote/trusted-device-store.js";
 import { CloudflaredBinary } from "./mobile-remote/cloudflared-binary.js";
 import { TunnelManager } from "./mobile-remote/tunnel-manager.js";
 import { AccessPasscode } from "./mobile-remote/access-passcode.js";
+import { MobileUploadService } from "./mobile-remote/mobile-upload-service.js";
+import { materializeMobileAttachments } from "./mobile-remote/mobile-attachments.js";
 import type {
   MobileClientEvent,
   MobilePermissionModeSnapshotEntry,
@@ -383,8 +385,12 @@ onPluginInstallJobsChanged((jobs) => {
 const mobileDevices = new TrustedDeviceStore(
   resolve(app.getPath("userData"), "mobile-remote", "devices.json"),
 );
+const mobileUploads = new MobileUploadService({
+  rootDir: resolve(app.getPath("userData"), "mobile-remote", "uploads"),
+});
 const mobileRemote = new RemoteHostManager({
   devices: mobileDevices,
+  uploads: mobileUploads,
   onClientEvent: (event) => {
     // The remote host tags authenticated events with both the device id and a
     // per-socket viewer id. Device state/replies remain shared per phone, while
@@ -810,6 +816,26 @@ function injectAndAwaitResult(
  * goal logic, and snapshots all apply unchanged.
  */
 async function handleMobileClientEvent(event: AuthenticatedMobileClientEvent): Promise<void> {
+  if (event.type === "attachment.upload.begin") {
+    const deviceId = event.deviceId;
+    if (!deviceId) return;
+    try {
+      const ticket = mobileUploads.begin(deviceId, {
+        clientId: event.clientId,
+        name: event.name,
+        mime: event.mime,
+        size: event.size,
+      });
+      mobileRemote.sendToDevice(deviceId, { type: "attachment.upload.ready", ...ticket });
+    } catch (error) {
+      mobileRemote.sendToDevice(deviceId, {
+        type: "attachment.upload.failed",
+        clientId: event.clientId,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+    return;
+  }
   // ── CC Room (external claude CLI sessions) — checked first so "ccRoom.*"
   // never gets misrouted by the "room." prefix check below ───────────────
   if (event.type.startsWith("ccRoom.")) {
@@ -876,19 +902,42 @@ async function handleMobileClientEvent(event: AuthenticatedMobileClientEvent): P
   }
   if (event.type === "chat.send") {
     const sessionId = resolveSessionId(event.sessionId);
-    const cwd = effectiveMobileRunCwd(st, ctx.cwd);
-    mobileSessionCwds.set(sessionId, st.selectedCwd ?? cwd);
+    const fallbackCwd = effectiveMobileRunCwd(st, ctx.cwd);
+    const cwd = await getSessionWorkspaceForUi(sessionId, fallbackCwd)
+      .then((workspace) => workspace.root)
+      .catch(() => fallbackCwd);
+    mobileSessionCwds.set(sessionId, cwd);
     if (st.permissionMode && !mobilePermissionModes.has(sessionId)) {
       mobilePermissionModes.set(sessionId, st.permissionMode);
     }
     const permissionMode = mobilePermissionModes.get(sessionId);
+    const text = typeof event.text === "string" ? event.text.trim() : "";
+    let materialized;
+    try {
+      materialized = await materializeMobileAttachments({
+        deviceId: deviceId ?? "",
+        cwd,
+        sessionId,
+        attachments: event.attachments,
+        uploads: mobileUploads,
+      });
+    } catch (error) {
+      reply({ type: "error", message: error instanceof Error ? error.message : String(error) });
+      return;
+    }
+    if (!text && materialized.metas.length === 0) {
+      reply({ type: "error", message: "消息必须包含文字或图片" });
+      return;
+    }
     const runId = `mobile-run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-    const clientMessageId = `mobile:${sessionId}:${runId}:${stablePromptHash(event.text)}`;
+    const attachmentHash = materialized.metas.map((meta) => meta.sha256).join(":");
+    const clientMessageId = `mobile:${sessionId}:${runId}:${stablePromptHash(`${text}\0${attachmentHash}`)}`;
+    const title = text || `图片 ${materialized.metas.length} 张`;
     broadcastMobileSession({
       sessionId,
       cwd,
-      title: event.text,
-      prompt: event.text,
+      title,
+      prompt: text,
       clientMessageId,
     });
     // Every phone chat turn is a normal CodeShell turn routed through the worker
@@ -899,16 +948,26 @@ async function handleMobileClientEvent(event: AuthenticatedMobileClientEvent): P
         id: runId,
         method: "agent/run",
         params: {
-          task: event.text,
+          task: text,
           cwd,
           sessionId,
           clientMessageId,
+          attachments: materialized.metas,
           ...(permissionMode ? { permissionMode } : {}),
         },
       }),
     );
+    await markAttachmentsSent(cwd, sessionId, materialized.metas);
+    for (const uploadId of materialized.uploadIds) {
+      await mobileUploads.consume(deviceId ?? "", uploadId);
+    }
     // Tell THIS device which session its turn landed in.
-    reply({ type: "chat.accepted", sessionId, cwd });
+    reply({
+      type: "chat.accepted",
+      sessionId,
+      cwd,
+      attachments: materialized.summaries,
+    });
     return;
   }
   if (event.type === "approval.respond") {
@@ -1138,6 +1197,10 @@ type AuthenticatedMobileClientEvent = MobileClientEvent & {
 };
 
 async function handleRoomEvent(event: AuthenticatedMobileClientEvent): Promise<void> {
+  const reply = (serverEvent: MobileServerEvent): void => {
+    if (event.deviceId) mobileRemote.sendToDevice(event.deviceId, serverEvent);
+    else mobileRemote.broadcast(serverEvent);
+  };
   try {
     if (event.type === "room.list") {
       mobileRemote.broadcast({
@@ -1190,17 +1253,36 @@ async function handleRoomEvent(event: AuthenticatedMobileClientEvent): Promise<v
       return;
     }
     if (event.type === "room.send") {
-      const ok = roomManager.send(event.roomId, event.text);
-      if (!ok)
-        mobileRemote.broadcast({
+      const room = roomManager.getRoom(event.roomId);
+      if (!room) {
+        reply({ type: "room.error", roomId: event.roomId, message: "房间不存在" });
+        return;
+      }
+      const text = typeof event.text === "string" ? event.text.trim() : "";
+      const materialized = await materializeMobileAttachments({
+        deviceId: event.deviceId ?? "",
+        cwd: room.cwd,
+        sessionId: room.id,
+        attachments: event.attachments,
+        uploads: mobileUploads,
+      });
+      const ok = roomManager.send(event.roomId, text, materialized.metas);
+      if (!ok) {
+        reply({
           type: "room.error",
           roomId: event.roomId,
           message: "房间未就绪或已关闭",
         });
+        return;
+      }
+      await markAttachmentsSent(room.cwd, room.id, materialized.metas);
+      for (const uploadId of materialized.uploadIds) {
+        await mobileUploads.consume(event.deviceId ?? "", uploadId);
+      }
       return;
     }
   } catch (err) {
-    mobileRemote.broadcast({
+    reply({
       type: "room.error",
       message: err instanceof Error ? err.message : String(err),
     });
@@ -3717,6 +3799,7 @@ app.on("before-quit", () => {
   transcriptSubscriptions?.closeAll();
   roomManager.closeAll();
   tunnelManager.stop();
+  mobileUploads.dispose();
   void mobileRemote.stop();
 });
 

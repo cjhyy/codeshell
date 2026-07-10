@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Bot, Brain, Loader2, UserRound } from "lucide-react";
+import { Bot, Brain, ImageIcon, Loader2, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
 import type { ChatItem, ChatState } from "@/lib/streamReducer";
@@ -91,7 +91,20 @@ function Row({ item }: { item: ChatItem }) {
       return (
         <div className="flex min-w-0 justify-end gap-2">
           <div className="mobile-message-user min-w-0 max-w-[84%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md px-3.5 py-2.5 text-[15px] leading-6 text-white">
-            {item.text}
+            {item.text && <div>{item.text}</div>}
+            {item.attachments && item.attachments.length > 0 && (
+              <div className="mt-1.5 flex flex-col gap-1 text-xs text-white/85">
+                {item.attachments.map((attachment, index) => (
+                  <div
+                    key={`${attachment.name}-${index}`}
+                    className="flex min-w-0 items-center gap-1.5"
+                  >
+                    <ImageIcon className="size-3.5 shrink-0" />
+                    <span className="truncate">{attachment.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <div className="mt-1 grid size-7 shrink-0 place-items-center rounded-full border border-primary/30 bg-primary/15 text-primary">
             <UserRound className="size-3.5" />

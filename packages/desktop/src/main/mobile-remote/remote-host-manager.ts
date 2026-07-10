@@ -10,6 +10,7 @@ import type { AccessPasscode } from "./access-passcode.js";
 import type { TrustedDeviceStore } from "./trusted-device-store.js";
 import type { MobileClientEvent, MobileServerEvent } from "./types.js";
 import type { MobileViewerIdentity } from "./viewer-identity.js";
+import type { MobileUploadService } from "./mobile-upload-service.js";
 
 /**
  * Pick the Mac's real LAN IPv4 so a phone on the same Wi-Fi can reach the
@@ -71,6 +72,8 @@ export interface RemoteHostManagerOptions {
    * proxied to the mobile vite dev server for HMR instead of read from disk.
    */
   mobileDevUrl?: string;
+  /** One-time upload tickets. The route remains behind the tunnel passcode gate. */
+  uploads?: Pick<MobileUploadService, "acceptPut">;
 }
 
 export class RemoteHostManager extends EventEmitter {
@@ -144,6 +147,15 @@ export class RemoteHostManager extends EventEmitter {
         res.end(JSON.stringify({ ok: true }));
         return;
       }
+      const uploadPath = req.url
+        ? new URL(req.url, "http://localhost").pathname.match(
+            /^\/api\/mobile\/uploads\/([A-Za-z0-9_-]+)$/,
+          )
+        : null;
+      if (uploadPath && this.opts.uploads) {
+        void this.opts.uploads.acceptPut(uploadPath[1]!, req, res);
+        return;
+      }
       // The mobile app is built/served with vite base "/mobile/", so ALL of its
       // assets — and in dev, vite's HMR/module URLs — live under the /mobile
       // prefix. A single prefix route serves prod (static out/mobile) and dev
@@ -166,8 +178,8 @@ export class RemoteHostManager extends EventEmitter {
     // the passcode check during the HTTP `upgrade` event before completing the
     // handshake; in lan mode behaviour is unchanged (the same path/server bind).
     this.wss = gate
-      ? new WebSocketServer({ noServer: true })
-      : new WebSocketServer({ server, path: "/ws" });
+      ? new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 })
+      : new WebSocketServer({ server, path: "/ws", maxPayload: 1024 * 1024 });
     if (gate) {
       server.on("upgrade", (req, socket, head) => {
         if (!req.url?.startsWith("/ws")) {

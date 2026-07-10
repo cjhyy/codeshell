@@ -19,6 +19,7 @@ import {
   cleanupAttachments,
   listRecentAttachments,
   markAttachmentsSent,
+  stageImageBytes,
   stageImageDataUrl,
 } from "./attachment-service.js";
 
@@ -80,6 +81,34 @@ describe("attachment-service", () => {
     expect(second.absPath).toBe(first.absPath);
     expect(second.relPath).toBe(first.relPath);
     expect(second.id).not.toBe(first.id);
+  });
+
+  test("stages mobile raw bytes and source files through the canonical attachment path", async () => {
+    const bytes = Buffer.from(PNG_URL.slice(PNG_URL.indexOf(",") + 1), "base64");
+    const spool = join(cwd, "mobile-upload.bin");
+    writeFileSync(spool, bytes);
+    const fromBytes = await stageImageBytes({
+      cwd,
+      sessionId: "sid-mobile",
+      name: "phone.png",
+      mime: "image/png",
+      bytes,
+      origin: "mobile",
+    });
+    const fromFile = await stageImageBytes({
+      cwd,
+      sessionId: "sid-mobile",
+      name: "phone-copy.png",
+      mime: "image/png",
+      sourceFile: spool,
+      origin: "mobile",
+    });
+
+    expect(fromBytes.origin).toBe("mobile");
+    expect(fromFile.absPath).toBe(fromBytes.absPath);
+    expect(fromFile.sha256).toBe(createHash("sha256").update(bytes).digest("hex"));
+    expect(fromFile.relPath).toStartWith(".code-shell/attachments/sid-mobile/");
+    expect(existsSync(spool)).toBe(true);
   });
 
   test("rejects unsafe session ids", async () => {

@@ -60,10 +60,37 @@ export interface MobileProjectMeta {
   pinned?: boolean;
 }
 
+export type MobileImageMime = "image/png" | "image/jpeg" | "image/webp" | "image/gif";
+
+export interface MobileImageBase {
+  clientId: string;
+  name: string;
+  mime: MobileImageMime;
+  size: number;
+}
+
+export type MobileImageAttachment =
+  | (MobileImageBase & { transport: "inline"; dataUrl: string })
+  | (MobileImageBase & { transport: "upload"; uploadId: string });
+
+export type MobileAttachmentSummary = MobileImageBase;
+
 export type MobileClientEvent =
   | { type: "auth.device"; deviceId: string; secretHash: string }
   | { type: "pair.complete"; token: string; name: string; secretHash: string }
-  | { type: "chat.send"; text: string; sessionId?: string }
+  | {
+      type: "chat.send";
+      text: string;
+      sessionId?: string;
+      attachments?: MobileImageAttachment[];
+    }
+  | {
+      type: "attachment.upload.begin";
+      clientId: string;
+      name: string;
+      mime: string;
+      size: number;
+    }
   | { type: "session.select"; sessionId: string }
   | { type: "session.create"; cwd?: string | null; name?: string }
   | { type: "run.stop"; sessionId?: string }
@@ -107,7 +134,7 @@ export type MobileClientEvent =
     }
   | { type: "room.open"; roomId: string }
   | { type: "room.close"; roomId: string }
-  | { type: "room.send"; roomId: string; text: string }
+  | { type: "room.send"; roomId: string; text: string; attachments?: MobileImageAttachment[] }
   | { type: "room.history"; roomId: string; sinceSeq?: number }
   // ── CC Room (external claude CLI / codex sessions, per-project) ───────
   //   `kind` selects which CLI to probe/list/open/read (defaults to
@@ -149,7 +176,20 @@ export type MobileServerEvent =
   | { type: "auth.failed"; message: string }
   | { type: "pair.ok"; device: TrustedDevicePublic }
   | { type: "pair.failed"; message: string }
-  | { type: "chat.accepted"; sessionId?: string; cwd?: string | null }
+  | {
+      type: "chat.accepted";
+      sessionId?: string;
+      cwd?: string | null;
+      attachments?: MobileAttachmentSummary[];
+    }
+  | {
+      type: "attachment.upload.ready";
+      clientId: string;
+      uploadId: string;
+      putUrl: string;
+      expiresAt: number;
+    }
+  | { type: "attachment.upload.failed"; clientId: string; message: string }
   | {
       type: "approval.request";
       approvalId: string;

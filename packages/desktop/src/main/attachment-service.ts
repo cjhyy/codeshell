@@ -22,6 +22,7 @@ export type InputAttachmentOrigin =
   | "picker"
   | "mention"
   | "generated"
+  | "mobile"
   | "tool";
 
 export interface InputAttachmentMeta {
@@ -58,6 +59,16 @@ export interface StageImageDataUrlInput {
   name?: string;
   mime?: string;
   dataUrl: string;
+  origin: InputAttachmentOrigin;
+}
+
+export interface StageImageBytesInput {
+  cwd: string;
+  sessionId: string;
+  name?: string;
+  mime: string;
+  bytes?: Uint8Array;
+  sourceFile?: string;
   origin: InputAttachmentOrigin;
 }
 
@@ -115,8 +126,6 @@ let idCounter = 0;
 export async function stageImageDataUrl(
   input: StageImageDataUrlInput,
 ): Promise<InputAttachmentMeta> {
-  const cwd = await resolveExistingDirectory(input.cwd, "cwd");
-  assertSafeSessionId(input.sessionId);
   const parsed = parseDataUrl(input.dataUrl);
   if (!parsed || !ALLOWED_IMAGE_MIMES.has(parsed.mime)) {
     throw new Error(`unsupported image data URL MIME`);
@@ -124,12 +133,55 @@ export async function stageImageDataUrl(
   if (input.mime && normalizeMime(input.mime) !== parsed.mime) {
     throw new Error(`data URL MIME ${parsed.mime} does not match declared MIME ${input.mime}`);
   }
+  return stageImageBuffer(input, parsed.mime, parsed.buffer);
+}
+
+/** Stage already-transferred bytes without expanding them back through base64. */
+export async function stageImageBytes(input: StageImageBytesInput): Promise<InputAttachmentMeta> {
+  const mime = normalizeMime(input.mime);
+  if (!ALLOWED_IMAGE_MIMES.has(mime)) throw new Error(`unsupported image MIME ${input.mime}`);
+  if ((input.bytes === undefined) === (input.sourceFile === undefined)) {
+    throw new Error("exactly one of bytes or sourceFile is required");
+  }
+  let buffer: Buffer;
+  if (input.sourceFile !== undefined) {
+    const source = await lstat(input.sourceFile);
+    if (!source.isFile() || source.isSymbolicLink()) {
+      throw new Error("image source must be a regular file");
+    }
+    if (source.size > MAX_STAGED_IMAGE_BYTES) {
+      throw new Error(
+        `image attachment exceeds size limit (${formatBytes(MAX_STAGED_IMAGE_BYTES)})`,
+      );
+    }
+    buffer = await readFile(input.sourceFile);
+  } else {
+    buffer = Buffer.from(input.bytes!);
+  }
+  return stageImageBuffer(input, mime, buffer);
+}
+
+async function stageImageBuffer(
+  input: {
+    cwd: string;
+    sessionId: string;
+    name?: string;
+    origin: InputAttachmentOrigin;
+  },
+  mime: string,
+  buffer: Buffer,
+): Promise<InputAttachmentMeta> {
+  const cwd = await resolveExistingDirectory(input.cwd, "cwd");
+  assertSafeSessionId(input.sessionId);
+  if (buffer.byteLength > MAX_STAGED_IMAGE_BYTES) {
+    throw new Error(`image attachment exceeds size limit (${formatBytes(MAX_STAGED_IMAGE_BYTES)})`);
+  }
 
   const attachmentsRoot = await ensureAttachmentsRoot(cwd);
   const sessionDir = await ensureSessionDir(attachmentsRoot, input.sessionId);
-  const sha256 = createHash("sha256").update(parsed.buffer).digest("hex");
+  const sha256 = createHash("sha256").update(buffer).digest("hex");
   const sha16 = sha256.slice(0, 16);
-  const ext = IMAGE_MIME_EXT[parsed.mime] ?? ".bin";
+  const ext = IMAGE_MIME_EXT[mime] ?? ".bin";
   const safeBase = safeSlug(input.name, "image");
   const existing = await findExistingSessionFile(sessionDir, sha16);
   const filename = existing ?? `${sha16}-${safeBase}${ext}`;
@@ -141,7 +193,7 @@ export async function stageImageDataUrl(
       `.${filename}.${process.pid}.${Date.now()}.tmp`,
       sessionDir,
     );
-    await writeFile(tmpPath, parsed.buffer, { flag: "wx" });
+    await writeFile(tmpPath, buffer, { flag: "wx" });
     try {
       await rename(tmpPath, absPath);
     } catch (error) {
@@ -161,8 +213,8 @@ export async function stageImageDataUrl(
     path: relPath,
     absPath,
     relPath,
-    mime: parsed.mime,
-    size: parsed.buffer.byteLength,
+    mime,
+    size: buffer.byteLength,
     sha256,
     ...(input.name ? { originalName: input.name } : {}),
     createdAt,

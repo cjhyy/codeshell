@@ -19,7 +19,13 @@ export function roomMsgToEvent(msg: unknown): unknown {
   const from = m.from as string;
   const type = m.type as string;
   // A user line: the agent's resident transcript records the prompt verbatim.
-  if (from === "user") return { type: "user_message", text: m.text };
+  if (from === "user") {
+    return {
+      type: "user_message",
+      text: m.text,
+      ...(Array.isArray(m.attachments) ? { attachments: m.attachments } : {}),
+    };
+  }
   // RoomManager writes agent prose as type:"text" — each line is a COMPLETE
   // chunk claude emitted between tool calls, not a token delta. Map to
   // `assistant_text` (its own finished bubble) so consecutive chunks render as

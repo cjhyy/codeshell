@@ -97,6 +97,7 @@ export type InputAttachmentOrigin =
   | "picker"
   | "mention"
   | "generated"
+  | "mobile"
   | "tool";
 
 export interface InputAttachmentMeta {

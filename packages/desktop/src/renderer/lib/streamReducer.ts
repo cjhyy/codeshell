@@ -24,8 +24,14 @@ function stripSystemReminders(s: string): string {
 
 export type RunState = "idle" | "running" | "waiting" | "completed" | "error";
 
+export interface UserAttachmentSummary {
+  name: string;
+  mime?: string;
+  size: number;
+}
+
 export type ChatItem =
-  | { kind: "user"; id: string; text: string }
+  | { kind: "user"; id: string; text: string; attachments?: UserAttachmentSummary[] }
   | {
       kind: "assistant";
       id: string;
@@ -516,9 +522,25 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       // same reducer rebuilds the full conversation (the live path uses
       // appendUserMessage instead, since the phone echoes locally).
       const [id, s2] = freshId("u");
+      const attachments = Array.isArray(event.attachments)
+        ? event.attachments
+            .map((item) => item as Partial<UserAttachmentSummary>)
+            .filter(
+              (item): item is UserAttachmentSummary =>
+                typeof item.name === "string" && typeof item.size === "number",
+            )
+        : undefined;
       return {
         ...s2,
-        items: [...s2.items, { kind: "user", id, text: (event.text as string) ?? "" }],
+        items: [
+          ...s2.items,
+          {
+            kind: "user",
+            id,
+            text: (event.text as string) ?? "",
+            ...(attachments?.length ? { attachments } : {}),
+          },
+        ],
       };
     }
 
@@ -558,11 +580,18 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
 }
 
 /** Append a local user echo (the phone shows its own message immediately). */
-export function appendUserMessage(state: ChatState, text: string): ChatState {
+export function appendUserMessage(
+  state: ChatState,
+  text: string,
+  attachments?: UserAttachmentSummary[],
+): ChatState {
   const id = `u-${state.seq + 1}`;
   return {
     ...state,
     seq: state.seq + 1,
-    items: [...state.items, { kind: "user", id, text }],
+    items: [
+      ...state.items,
+      { kind: "user", id, text, ...(attachments?.length ? { attachments } : {}) },
+    ],
   };
 }

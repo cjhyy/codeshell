@@ -5,6 +5,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { RemoteHostManager, resolveLanHost } from "./remote-host-manager.js";
 import { TrustedDeviceStore } from "./trusted-device-store.js";
 import { AccessPasscode } from "./access-passcode.js";
+import { MobileUploadService } from "./mobile-upload-service.js";
 
 let dir: string | undefined;
 
@@ -79,6 +80,35 @@ describe("RemoteHostManager", () => {
     expect(res.status).toBe(308);
     expect(res.headers.get("location")).toBe("/mobile/?pairing=tok");
     await host.stop();
+  });
+
+  test("routes upload PUTs to the ticket service", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const uploads = new MobileUploadService({
+      rootDir: join(dir, "uploads"),
+      cleanupIntervalMs: 0,
+    });
+    const ticket = uploads.begin("device-1", {
+      clientId: "client-1",
+      name: "photo.png",
+      mime: "image/png",
+      size: 4,
+    });
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: () => {},
+      uploads,
+    });
+    const started = await host.start({ host: "127.0.0.1", port: 0 });
+    const response = await fetch(`${started.url}${ticket.putUrl}`, {
+      method: "PUT",
+      headers: { "content-type": "image/png" },
+      body: new Uint8Array(4),
+    });
+    expect(response.status).toBe(201);
+    expect(uploads.resolve("device-1", ticket.uploadId).size).toBe(4);
+    await host.stop();
+    uploads.dispose();
   });
 
   test("creates pairing URL", async () => {
@@ -346,6 +376,37 @@ describe("RemoteHostManager", () => {
     const res = await fetch(`${started.url}/mobile`);
     expect(res.status).toBe(401);
     await host.stop();
+  });
+
+  test("tunnel mode gates upload PUTs before the upload service", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const passcode = new AccessPasscode({ filePath: join(dir, "access.json") });
+    passcode.set("correct");
+    const uploads = new MobileUploadService({
+      rootDir: join(dir, "uploads"),
+      cleanupIntervalMs: 0,
+    });
+    const ticket = uploads.begin("device-1", {
+      clientId: "client-1",
+      name: "photo.png",
+      mime: "image/png",
+      size: 4,
+    });
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: () => {},
+      uploads,
+    });
+    const started = await host.start({ mode: "tunnel", host: "lan", port: 0, passcode });
+    const response = await fetch(`${started.url}${ticket.putUrl}`, {
+      method: "PUT",
+      headers: { "content-type": "image/png" },
+      body: new Uint8Array(4),
+    });
+    expect(response.status).toBe(401);
+    expect(() => uploads.resolve("device-1", ticket.uploadId)).toThrow(/not ready/i);
+    await host.stop();
+    uploads.dispose();
   });
 
   test("tunnel mode: correct passcode query passes the gate and serves HTML", async () => {

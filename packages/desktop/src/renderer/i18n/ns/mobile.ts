@@ -59,6 +59,13 @@ export const mobile = {
         placeholder: "发消息…",
         stop: "停止",
         send: "发送",
+        chooseImages: "从相册选择图片",
+        takePhoto: "拍照",
+        removeImage: "移除图片",
+        uploading: "上传中…",
+        tooManyImages: "每条消息最多发送 4 张图片",
+        unsupportedImage: "不支持此图片格式",
+        sendFailed: "图片发送失败，请重试",
       },
       connection: {
         connectingTitle: "正在连接…",
@@ -84,6 +91,7 @@ export const mobile = {
         roomError: "会话错误",
         goalExtendFailed: "延长目标失败",
         ccRoomOpenFailed: "cc 会话无法打开",
+        attachmentSendFailed: "图片发送失败：{error}",
       },
       permissionMode: {
         default: "默认",
@@ -208,6 +216,13 @@ export const mobile = {
         placeholder: "Message…",
         stop: "Stop",
         send: "Send",
+        chooseImages: "Choose images",
+        takePhoto: "Take photo",
+        removeImage: "Remove image",
+        uploading: "Uploading…",
+        tooManyImages: "Up to 4 images can be sent per message",
+        unsupportedImage: "This image format is not supported",
+        sendFailed: "Could not send images; try again",
       },
       connection: {
         connectingTitle: "Connecting…",
@@ -234,6 +249,7 @@ export const mobile = {
         roomError: "Session error",
         goalExtendFailed: "Failed to extend goal",
         ccRoomOpenFailed: "Could not open cc session",
+        attachmentSendFailed: "Could not send images: {error}",
       },
       permissionMode: {
         default: "Default",

@@ -281,6 +281,86 @@ describe("useRemoteApp session unread", () => {
   });
 });
 
+describe("useRemoteApp mobile image sends", () => {
+  test("waits for a large-image ticket + PUT, then sends one image-only chat turn", async () => {
+    setupBrowser();
+    const puts: Array<{ url: string; size: number }> = [];
+    const restoreFetch = defineTestProperty(window, "fetch", {
+      value: async (url: string, init?: RequestInit) => {
+        puts.push({ url, size: (init?.body as Blob).size });
+        return new Response(null, { status: 201 });
+      },
+      writable: true,
+    });
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      await flushMicrotasks();
+    });
+
+    const file = new File([new Uint8Array(256 * 1024 + 1)], "large.png", {
+      type: "image/png",
+    });
+    let sent!: Promise<boolean>;
+    await act(async () => {
+      sent = hook.result.current.sendChat({
+        text: "",
+        attachments: [{ clientId: "img-1", file }],
+      });
+      await flushMicrotasks();
+    });
+    const begin = ws.sent
+      .map((payload) => JSON.parse(payload))
+      .find((event) => event.type === "attachment.upload.begin");
+    expect(begin).toMatchObject({
+      clientId: "img-1",
+      name: "large.png",
+      mime: "image/png",
+      size: 256 * 1024 + 1,
+    });
+
+    await act(async () => {
+      ws.message({
+        type: "attachment.upload.ready",
+        clientId: "img-1",
+        uploadId: "upload-1",
+        putUrl: "/api/mobile/uploads/ticket-1",
+        expiresAt: Date.now() + 10_000,
+      });
+      expect(await sent).toBe(true);
+      await flushMicrotasks();
+    });
+
+    expect(puts).toEqual([{ url: "/api/mobile/uploads/ticket-1", size: 256 * 1024 + 1 }]);
+    const chatSend = ws.sent
+      .map((payload) => JSON.parse(payload))
+      .find((event) => event.type === "chat.send");
+    expect(chatSend).toMatchObject({
+      text: "",
+      attachments: [
+        {
+          transport: "upload",
+          clientId: "img-1",
+          uploadId: "upload-1",
+          name: "large.png",
+          mime: "image/png",
+        },
+      ],
+    });
+    expect(hook.result.current.chat.items.at(-1)).toMatchObject({
+      kind: "user",
+      text: "",
+      attachments: [{ name: "large.png", mime: "image/png" }],
+    });
+
+    await hook.unmount();
+    restoreFetch();
+  });
+});
+
 describe("useRemoteApp approval replay", () => {
   test("replayed raw approval after selecting its session hydrates and resolves the card", async () => {
     setupBrowser();
