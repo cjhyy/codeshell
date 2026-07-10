@@ -1,6 +1,6 @@
 import { stageImageBytes, type InputAttachmentMeta } from "../attachment-service.js";
 import type { MobileAttachmentSummary, MobileImageAttachment, MobileImageMime } from "./types.js";
-import type { MobileUploadService, ReadyMobileUpload } from "./mobile-upload-service.js";
+import type { ClaimedMobileUpload, MobileUploadService } from "./mobile-upload-service.js";
 
 export const MAX_MOBILE_ATTACHMENTS = 4;
 export const MAX_MOBILE_INLINE_IMAGE_BYTES = 256 * 1024;
@@ -19,7 +19,7 @@ interface MaterializeInput {
   cwd: string;
   sessionId: string;
   attachments?: MobileImageAttachment[];
-  uploads: Pick<MobileUploadService, "resolve">;
+  uploads: Pick<MobileUploadService, "claim" | "release">;
 }
 
 interface PreparedInline {
@@ -29,7 +29,7 @@ interface PreparedInline {
 
 interface PreparedUpload {
   descriptor: MobileImageAttachment & { transport: "upload" };
-  upload: ReadyMobileUpload;
+  upload: ClaimedMobileUpload;
 }
 
 function decodeInline(descriptor: MobileImageAttachment & { transport: "inline" }): Buffer {
@@ -63,7 +63,7 @@ function assertBaseFields(descriptor: MobileImageAttachment): void {
 /** Validate phone descriptors, resolve spools, and stage canonical attachment metadata. */
 export async function materializeMobileAttachments(input: MaterializeInput): Promise<{
   metas: InputAttachmentMeta[];
-  uploadIds: string[];
+  claims: ClaimedMobileUpload[];
   summaries: MobileAttachmentSummary[];
 }> {
   const descriptors = input.attachments ?? [];
@@ -72,67 +72,74 @@ export async function materializeMobileAttachments(input: MaterializeInput): Pro
   }
   const seen = new Set<string>();
   const prepared: Array<PreparedInline | PreparedUpload> = [];
+  const claims: ClaimedMobileUpload[] = [];
   let inlineTotal = 0;
   let total = 0;
 
-  for (const descriptor of descriptors) {
-    assertBaseFields(descriptor);
-    if (seen.has(descriptor.clientId)) throw new Error("duplicate attachment clientId");
-    seen.add(descriptor.clientId);
-    if (descriptor.transport === "inline") {
-      const bytes = decodeInline(descriptor);
-      inlineTotal += bytes.byteLength;
-      total += bytes.byteLength;
-      prepared.push({ descriptor, bytes });
-    } else if (descriptor.transport === "upload") {
-      if (!descriptor.uploadId?.trim()) throw new Error("uploadId is required");
-      const upload = input.uploads.resolve(input.deviceId, descriptor.uploadId);
-      if (
-        upload.clientId !== descriptor.clientId ||
-        upload.name !== descriptor.name ||
-        upload.mime !== descriptor.mime ||
-        upload.size !== descriptor.size
-      ) {
-        throw new Error("uploaded image metadata does not match its descriptor");
+  try {
+    for (const descriptor of descriptors) {
+      assertBaseFields(descriptor);
+      if (seen.has(descriptor.clientId)) throw new Error("duplicate attachment clientId");
+      seen.add(descriptor.clientId);
+      if (descriptor.transport === "inline") {
+        const bytes = decodeInline(descriptor);
+        inlineTotal += bytes.byteLength;
+        total += bytes.byteLength;
+        prepared.push({ descriptor, bytes });
+      } else if (descriptor.transport === "upload") {
+        if (!descriptor.uploadId?.trim()) throw new Error("uploadId is required");
+        const upload = input.uploads.claim(input.deviceId, descriptor.uploadId);
+        claims.push(upload);
+        if (
+          upload.clientId !== descriptor.clientId ||
+          upload.name !== descriptor.name ||
+          upload.mime !== descriptor.mime ||
+          upload.size !== descriptor.size
+        ) {
+          throw new Error("uploaded image metadata does not match its descriptor");
+        }
+        total += upload.size;
+        prepared.push({ descriptor, upload });
+      } else {
+        throw new Error("unsupported attachment transport");
       }
-      total += upload.size;
-      prepared.push({ descriptor, upload });
-    } else {
-      throw new Error("unsupported attachment transport");
     }
-  }
-  if (inlineTotal > MAX_MOBILE_INLINE_TOTAL_BYTES) {
-    throw new Error("inline image total exceeds the message limit");
-  }
-  if (total > MAX_MOBILE_ATTACHMENT_TOTAL_BYTES) {
-    throw new Error("image attachment total exceeds the message limit");
-  }
+    if (inlineTotal > MAX_MOBILE_INLINE_TOTAL_BYTES) {
+      throw new Error("inline image total exceeds the message limit");
+    }
+    if (total > MAX_MOBILE_ATTACHMENT_TOTAL_BYTES) {
+      throw new Error("image attachment total exceeds the message limit");
+    }
 
-  const metas: InputAttachmentMeta[] = [];
-  const uploadIds: string[] = [];
-  for (const item of prepared) {
-    const common = {
-      cwd: input.cwd,
-      sessionId: input.sessionId,
-      name: item.descriptor.name,
-      mime: item.descriptor.mime,
-      origin: "mobile" as const,
-    };
-    if ("bytes" in item) {
-      metas.push(await stageImageBytes({ ...common, bytes: item.bytes }));
-    } else {
-      metas.push(await stageImageBytes({ ...common, sourceFile: item.upload.path }));
-      uploadIds.push(item.descriptor.uploadId);
+    const metas: InputAttachmentMeta[] = [];
+    for (const item of prepared) {
+      const common = {
+        cwd: input.cwd,
+        sessionId: input.sessionId,
+        name: item.descriptor.name,
+        mime: item.descriptor.mime,
+        origin: "mobile" as const,
+      };
+      if ("bytes" in item) {
+        metas.push(await stageImageBytes({ ...common, bytes: item.bytes }));
+      } else {
+        metas.push(await stageImageBytes({ ...common, sourceFile: item.upload.path }));
+      }
     }
+    return {
+      metas,
+      claims,
+      summaries: descriptors.map(({ clientId, name, mime, size }) => ({
+        clientId,
+        name,
+        mime,
+        size,
+      })),
+    };
+  } catch (error) {
+    await Promise.allSettled(
+      claims.map((claim) => input.uploads.release(input.deviceId, claim.uploadId, claim.claimId)),
+    );
+    throw error;
   }
-  return {
-    metas,
-    uploadIds,
-    summaries: descriptors.map(({ clientId, name, mime, size }) => ({
-      clientId,
-      name,
-      mime,
-      size,
-    })),
-  };
 }

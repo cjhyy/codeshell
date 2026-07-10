@@ -25,10 +25,12 @@ describe("materializeMobileAttachments", () => {
     const spool = join(cwd, "spool.upload");
     writeFileSync(spool, uploadedBytes);
     const uploads = {
-      resolve: (deviceId: string, uploadId: string) => {
+      claim: (deviceId: string, uploadId: string) => {
         expect(deviceId).toBe("device-1");
         expect(uploadId).toBe("upload-1");
         return {
+          uploadId,
+          claimId: "claim-1",
           clientId: "b",
           name: "large.png",
           mime: "image/png" as const,
@@ -37,6 +39,7 @@ describe("materializeMobileAttachments", () => {
           sha256: "ignored",
         };
       },
+      release: async () => undefined,
     };
 
     const result = await materializeMobileAttachments({
@@ -66,7 +69,7 @@ describe("materializeMobileAttachments", () => {
 
     expect(result.metas.map((meta) => meta.originalName)).toEqual(["small.png", "large.png"]);
     expect(result.metas.every((meta) => meta.origin === "mobile")).toBe(true);
-    expect(result.uploadIds).toEqual(["upload-1"]);
+    expect(result.claims.map((claim) => claim.uploadId)).toEqual(["upload-1"]);
     expect(result.summaries.map((summary) => summary.clientId)).toEqual(["a", "b"]);
   });
 
@@ -86,9 +89,10 @@ describe("materializeMobileAttachments", () => {
       cwd,
       sessionId: "session-1",
       uploads: {
-        resolve() {
+        claim() {
           throw new Error("unused");
         },
+        release: async () => undefined,
       },
     };
 
@@ -110,5 +114,59 @@ describe("materializeMobileAttachments", () => {
         })),
       }),
     ).rejects.toThrow(/at most/i);
+  });
+
+  test("atomically prevents concurrent chat/room materialization from replaying one upload", async () => {
+    const cwd = makeCwd();
+    const spool = join(cwd, "replay.upload");
+    writeFileSync(spool, Buffer.from([1, 2, 3, 4]));
+    let activeClaim: string | undefined;
+    const uploads = {
+      claim(_deviceId: string, uploadId: string) {
+        if (activeClaim) throw new Error("upload is already claimed");
+        activeClaim = `${uploadId}-claim`;
+        return {
+          claimId: activeClaim,
+          uploadId,
+          clientId: "replay",
+          name: "photo.png",
+          mime: "image/png" as const,
+          size: 4,
+          path: spool,
+          sha256: "a".repeat(64),
+        };
+      },
+      async release(_deviceId: string, _uploadId: string, claimId: string) {
+        if (claimId === activeClaim) activeClaim = undefined;
+      },
+    };
+    const descriptor = {
+      transport: "upload" as const,
+      uploadId: "ticket-1",
+      clientId: "replay",
+      name: "photo.png",
+      mime: "image/png" as const,
+      size: 4,
+    };
+
+    const results = await Promise.allSettled([
+      materializeMobileAttachments({
+        deviceId: "device-1",
+        cwd,
+        sessionId: "chat-session",
+        attachments: [descriptor],
+        uploads,
+      }),
+      materializeMobileAttachments({
+        deviceId: "device-1",
+        cwd,
+        sessionId: "room-session",
+        attachments: [descriptor],
+        uploads,
+      }),
+    ]);
+
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
   });
 });

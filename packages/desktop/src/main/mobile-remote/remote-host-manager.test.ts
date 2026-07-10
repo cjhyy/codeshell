@@ -106,7 +106,9 @@ describe("RemoteHostManager", () => {
       body: new Uint8Array(4),
     });
     expect(response.status).toBe(201);
-    expect(uploads.resolve("device-1", ticket.uploadId).size).toBe(4);
+    const claim = uploads.claim("device-1", ticket.uploadId);
+    expect(claim.size).toBe(4);
+    await uploads.release("device-1", ticket.uploadId, claim.claimId);
     await host.stop();
     uploads.dispose();
   });
@@ -404,7 +406,7 @@ describe("RemoteHostManager", () => {
       body: new Uint8Array(4),
     });
     expect(response.status).toBe(401);
-    expect(() => uploads.resolve("device-1", ticket.uploadId)).toThrow(/not ready/i);
+    expect(() => uploads.claim("device-1", ticket.uploadId)).toThrow(/not ready/i);
     await host.stop();
     uploads.dispose();
   });

@@ -134,7 +134,10 @@ import { TrustedDeviceStore } from "./mobile-remote/trusted-device-store.js";
 import { CloudflaredBinary } from "./mobile-remote/cloudflared-binary.js";
 import { TunnelManager } from "./mobile-remote/tunnel-manager.js";
 import { AccessPasscode } from "./mobile-remote/access-passcode.js";
-import { MobileUploadService } from "./mobile-remote/mobile-upload-service.js";
+import {
+  MobileUploadService,
+  type ClaimedMobileUpload,
+} from "./mobile-remote/mobile-upload-service.js";
 import { materializeMobileAttachments } from "./mobile-remote/mobile-attachments.js";
 import { injectMobileRunAndAwaitAcceptance } from "./mobile-remote/mobile-run-dispatch.js";
 import type {
@@ -955,13 +958,14 @@ async function handleMobileClientEvent(event: AuthenticatedMobileClientEvent): P
       },
     });
     if (!acceptance.ok) {
+      await settleMobileUploadClaims(deviceId ?? "", materialized.claims, "release");
       reply({ type: "error", message: acceptance.message });
       return;
     }
-    await markAttachmentsSent(cwd, sessionId, materialized.metas);
-    for (const uploadId of materialized.uploadIds) {
-      await mobileUploads.consume(deviceId ?? "", uploadId);
-    }
+    await markAttachmentsSent(cwd, sessionId, materialized.metas).catch((error) =>
+      dlog("main", "mobile.attachment.mark_sent_failed", { error: String(error), sessionId }),
+    );
+    await settleMobileUploadClaims(deviceId ?? "", materialized.claims, "finalize");
     // Tell THIS device which session its turn landed in.
     reply({
       type: "chat.accepted",
@@ -1267,8 +1271,15 @@ async function handleRoomEvent(event: AuthenticatedMobileClientEvent): Promise<v
         attachments: event.attachments,
         uploads: mobileUploads,
       });
-      const ok = roomManager.send(event.roomId, text, materialized.metas);
+      let ok: boolean;
+      try {
+        ok = roomManager.send(event.roomId, text, materialized.metas);
+      } catch (error) {
+        await settleMobileUploadClaims(event.deviceId ?? "", materialized.claims, "release");
+        throw error;
+      }
       if (!ok) {
+        await settleMobileUploadClaims(event.deviceId ?? "", materialized.claims, "release");
         reply({
           type: "room.error",
           roomId: event.roomId,
@@ -1276,16 +1287,36 @@ async function handleRoomEvent(event: AuthenticatedMobileClientEvent): Promise<v
         });
         return;
       }
-      await markAttachmentsSent(room.cwd, room.id, materialized.metas);
-      for (const uploadId of materialized.uploadIds) {
-        await mobileUploads.consume(event.deviceId ?? "", uploadId);
-      }
+      await markAttachmentsSent(room.cwd, room.id, materialized.metas).catch((error) =>
+        dlog("main", "mobile.room_attachment.mark_sent_failed", {
+          error: String(error),
+          roomId: room.id,
+        }),
+      );
+      await settleMobileUploadClaims(event.deviceId ?? "", materialized.claims, "finalize");
       return;
     }
   } catch (err) {
     reply({
       type: "room.error",
       message: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+async function settleMobileUploadClaims(
+  deviceId: string,
+  claims: ClaimedMobileUpload[],
+  action: "release" | "finalize",
+): Promise<void> {
+  const results = await Promise.allSettled(
+    claims.map((claim) => mobileUploads[action](deviceId, claim.uploadId, claim.claimId)),
+  );
+  const failures = results.filter((result) => result.status === "rejected");
+  if (failures.length > 0) {
+    dlog("main", `mobile.attachment_claim.${action}_failed`, {
+      count: failures.length,
+      errors: failures.map((result) => String(result.reason)),
     });
   }
 }

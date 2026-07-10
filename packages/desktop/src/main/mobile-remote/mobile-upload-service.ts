@@ -10,6 +10,7 @@ import type { MobileImageBase, MobileImageMime } from "./types.js";
 export const MAX_MOBILE_IMAGE_BYTES = 10 * 1024 * 1024;
 export const MOBILE_UPLOAD_TTL_MS = 5 * 60 * 1000;
 export const MAX_MOBILE_UPLOAD_TICKETS_PER_DEVICE = 16;
+export const MAX_MOBILE_UPLOAD_CLAIM_ATTEMPTS = 3;
 
 const IMAGE_MIMES = new Set<MobileImageMime>([
   "image/png",
@@ -18,7 +19,7 @@ const IMAGE_MIMES = new Set<MobileImageMime>([
   "image/gif",
 ]);
 
-type UploadStatus = "pending" | "uploading" | "ready";
+type UploadStatus = "pending" | "uploading" | "ready" | "claimed";
 
 interface UploadRecord extends MobileImageBase {
   uploadId: string;
@@ -27,6 +28,8 @@ interface UploadRecord extends MobileImageBase {
   status: UploadStatus;
   path?: string;
   sha256?: string;
+  claimId?: string;
+  claimAttempts: number;
 }
 
 export interface MobileUploadServiceOptions {
@@ -35,7 +38,9 @@ export interface MobileUploadServiceOptions {
   cleanupIntervalMs?: number;
 }
 
-export interface ReadyMobileUpload extends MobileImageBase {
+export interface ClaimedMobileUpload extends MobileImageBase {
+  uploadId: string;
+  claimId: string;
   path: string;
   sha256: string;
 }
@@ -106,6 +111,7 @@ export class MobileUploadService {
       deviceId,
       expiresAt,
       status: "pending",
+      claimAttempts: 0,
     });
     return {
       clientId: metadata.clientId,
@@ -185,13 +191,25 @@ export class MobileUploadService {
     }
   }
 
-  resolve(deviceId: string, uploadId: string): ReadyMobileUpload {
+  /** Atomically move a ready upload into a request-owned lease. */
+  claim(deviceId: string, uploadId: string): ClaimedMobileUpload {
     const record = this.uploads.get(uploadId);
-    if (!record || record.expiresAt < this.now() || record.status !== "ready") {
+    if (!record || record.expiresAt < this.now()) {
       throw new Error("upload is not ready or no longer exists");
     }
     if (record.deviceId !== deviceId) throw new Error("upload belongs to another device");
+    if (record.status !== "ready") throw new Error("upload is already claimed or not ready");
+    if (record.claimAttempts >= MAX_MOBILE_UPLOAD_CLAIM_ATTEMPTS) {
+      this.expire(uploadId, record);
+      throw new Error("upload claim retry limit exceeded");
+    }
+    const claimId = randomBytes(18).toString("base64url");
+    record.status = "claimed";
+    record.claimId = claimId;
+    record.claimAttempts += 1;
     return {
+      uploadId,
+      claimId,
       clientId: record.clientId,
       name: record.name,
       mime: record.mime,
@@ -201,10 +219,21 @@ export class MobileUploadService {
     };
   }
 
-  async consume(deviceId: string, uploadId: string): Promise<void> {
-    const record = this.uploads.get(uploadId);
-    if (!record) return;
-    if (record.deviceId !== deviceId) throw new Error("upload belongs to another device");
+  /** Release a failed staging/dispatch attempt for a bounded retry. */
+  async release(deviceId: string, uploadId: string, claimId: string): Promise<void> {
+    const record = this.assertClaimOwner(deviceId, uploadId, claimId);
+    delete record.claimId;
+    if (record.claimAttempts >= MAX_MOBILE_UPLOAD_CLAIM_ATTEMPTS) {
+      this.uploads.delete(uploadId);
+      if (record.path) await rm(record.path, { force: true }).catch(() => undefined);
+      return;
+    }
+    record.status = "ready";
+  }
+
+  /** Finalize a successful turn; only the active claim owner may consume it. */
+  async finalize(deviceId: string, uploadId: string, claimId: string): Promise<void> {
+    const record = this.assertClaimOwner(deviceId, uploadId, claimId);
     this.uploads.delete(uploadId);
     if (record.path) await rm(record.path, { force: true }).catch(() => undefined);
   }
@@ -225,5 +254,15 @@ export class MobileUploadService {
     this.uploads.delete(uploadId);
     if (record.path) void rm(record.path, { force: true }).catch(() => undefined);
     void rm(join(this.opts.rootDir, `${uploadId}.part`), { force: true }).catch(() => undefined);
+  }
+
+  private assertClaimOwner(deviceId: string, uploadId: string, claimId: string): UploadRecord {
+    const record = this.uploads.get(uploadId);
+    if (!record) throw new Error("upload claim no longer exists");
+    if (record.deviceId !== deviceId) throw new Error("upload belongs to another device");
+    if (record.status !== "claimed" || record.claimId !== claimId) {
+      throw new Error("upload claim owner does not match");
+    }
+    return record;
   }
 }

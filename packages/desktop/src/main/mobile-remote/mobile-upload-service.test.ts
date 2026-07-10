@@ -37,7 +37,7 @@ function makeService(now = () => Date.now()): MobileUploadService {
 }
 
 describe("MobileUploadService", () => {
-  test("streams a ticket upload, binds it to the device, and consumes the spool", async () => {
+  test("atomically claims a ticket, binds the claim to its owner, and finalizes the spool", async () => {
     const service = makeService();
     const bytes = new Uint8Array([1, 2, 3, 4]);
     const ticket = service.begin("device-a", {
@@ -54,15 +54,19 @@ describe("MobileUploadService", () => {
     });
     expect(response.status).toBe(201);
 
-    expect(() => service.resolve("device-b", ticket.uploadId)).toThrow(/device/i);
-    const ready = service.resolve("device-a", ticket.uploadId);
-    expect(ready.size).toBe(bytes.byteLength);
-    expect(ready.sha256).toMatch(/^[a-f0-9]{64}$/);
-    expect(existsSync(ready.path)).toBe(true);
+    expect(() => service.claim("device-b", ticket.uploadId)).toThrow(/device/i);
+    const claimed = service.claim("device-a", ticket.uploadId);
+    expect(claimed.size).toBe(bytes.byteLength);
+    expect(claimed.sha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(existsSync(claimed.path)).toBe(true);
+    expect(() => service.claim("device-a", ticket.uploadId)).toThrow(/claimed|ready/i);
+    await expect(service.finalize("device-a", ticket.uploadId, "wrong-owner")).rejects.toThrow(
+      /claim/i,
+    );
 
-    await service.consume("device-a", ticket.uploadId);
-    expect(existsSync(ready.path)).toBe(false);
-    expect(() => service.resolve("device-a", ticket.uploadId)).toThrow(/upload/i);
+    await service.finalize("device-a", ticket.uploadId, claimed.claimId);
+    expect(existsSync(claimed.path)).toBe(false);
+    expect(() => service.claim("device-a", ticket.uploadId)).toThrow(/upload/i);
   });
 
   test("rejects MIME/size mismatches, oversized declarations, and expired tickets", async () => {
@@ -93,7 +97,37 @@ describe("MobileUploadService", () => {
 
     now = ticket.expiresAt + 1;
     service.cleanupExpired();
-    expect(() => service.resolve("device-a", ticket.uploadId)).toThrow(/upload/i);
+    expect(() => service.claim("device-a", ticket.uploadId)).toThrow(/upload/i);
+  });
+
+  test("release permits bounded retry but one ticket cannot be claimed concurrently", async () => {
+    const service = makeService();
+    const ticket = service.begin("device-a", {
+      clientId: "client-replay",
+      name: "photo.png",
+      mime: "image/png",
+      size: 4,
+    });
+    const base = await serveUpload(service, ticket.uploadId);
+    expect(
+      (
+        await fetch(`${base}${ticket.putUrl}`, {
+          method: "PUT",
+          headers: { "content-type": "image/png" },
+          body: new Uint8Array(4),
+        })
+      ).status,
+    ).toBe(201);
+
+    const first = service.claim("device-a", ticket.uploadId);
+    expect(() => service.claim("device-a", ticket.uploadId)).toThrow(/claimed|ready/i);
+    await service.release("device-a", ticket.uploadId, first.claimId);
+    const second = service.claim("device-a", ticket.uploadId);
+    expect(second.claimId).not.toBe(first.claimId);
+    await service.release("device-a", ticket.uploadId, second.claimId);
+    const third = service.claim("device-a", ticket.uploadId);
+    await service.release("device-a", ticket.uploadId, third.claimId);
+    expect(() => service.claim("device-a", ticket.uploadId)).toThrow(/retry|upload/i);
   });
 
   test("caps outstanding tickets per authenticated device", () => {
