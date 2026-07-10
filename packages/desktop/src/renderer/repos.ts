@@ -11,6 +11,7 @@
 
 import { isCaseInsensitivePlatform, normalizeCwd } from "./automation/pathMatch";
 
+/** @deprecated Project semantics; use TrackedProject from projects.ts. */
 export interface Repo {
   id: string;
   /** Default name derived from path basename when first added. */
@@ -28,6 +29,7 @@ const REPOS_KEY = "codeshell.repos";
 const ACTIVE_KEY = "codeshell.activeRepoId";
 const REMOVED_PATHS_KEY = "codeshell.removedRepoPaths";
 
+/** @deprecated Project semantics; use loadProjects from projects.ts. */
 export function loadRepos(): Repo[] {
   try {
     const raw = localStorage.getItem(REPOS_KEY);
@@ -46,6 +48,7 @@ export function loadRepos(): Repo[] {
   }
 }
 
+/** @deprecated Project semantics; use saveProjects from projects.ts. */
 export function saveRepos(repos: Repo[]): void {
   try {
     localStorage.setItem(REPOS_KEY, JSON.stringify(repos));
@@ -54,6 +57,7 @@ export function saveRepos(repos: Repo[]): void {
   }
 }
 
+/** @deprecated Project semantics; use loadActiveProjectId from projects.ts. */
 export function loadActiveRepoId(): string | null {
   try {
     return localStorage.getItem(ACTIVE_KEY);
@@ -62,6 +66,7 @@ export function loadActiveRepoId(): string | null {
   }
 }
 
+/** @deprecated Project semantics; use saveActiveProjectId from projects.ts. */
 export function saveActiveRepoId(id: string | null): void {
   try {
     if (id === null) localStorage.removeItem(ACTIVE_KEY);
@@ -86,6 +91,7 @@ function normalizeRepoPath(path: string): string {
   return normalizeCwd(trimmed, isCaseInsensitivePlatform());
 }
 
+/** @deprecated Project semantics; use loadRemovedProjectPaths from projects.ts. */
 export function loadRemovedRepoPaths(): string[] {
   try {
     const raw = localStorage.getItem(REMOVED_PATHS_KEY);
@@ -107,6 +113,7 @@ export function loadRemovedRepoPaths(): string[] {
   }
 }
 
+/** @deprecated Project semantics; use saveRemovedProjectPaths from projects.ts. */
 export function saveRemovedRepoPaths(paths: string[]): void {
   try {
     const normalized = paths.map(normalizeRepoPath).filter(Boolean);
@@ -116,17 +123,20 @@ export function saveRemovedRepoPaths(paths: string[]): void {
   }
 }
 
+/** @deprecated Project semantics; use isProjectPathRemoved from projects.ts. */
 export function isRepoPathRemoved(path: string): boolean {
   const normalized = normalizeRepoPath(path);
   return loadRemovedRepoPaths().includes(normalized);
 }
 
+/** @deprecated Project semantics; use markProjectPathRemoved from projects.ts. */
 export function markRepoPathRemoved(path: string): void {
   const normalized = normalizeRepoPath(path);
   if (!normalized) return;
   saveRemovedRepoPaths([...loadRemovedRepoPaths(), normalized]);
 }
 
+/** @deprecated Project semantics; use unmarkProjectPathRemoved from projects.ts. */
 export function unmarkRepoPathRemoved(path: string): void {
   const normalized = normalizeRepoPath(path);
   if (!normalized) return;
@@ -134,6 +144,7 @@ export function unmarkRepoPathRemoved(path: string): void {
 }
 
 /** Reasonably-unique id without pulling in nanoid. */
+/** @deprecated Project semantics; use makeProjectId from projects.ts. */
 export function makeRepoId(): string {
   return `r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -149,6 +160,7 @@ export function makeRepoId(): string {
  * removed (returns null → the helper drops that session). `changed()` reports
  * whether any repo was added, so the caller knows to refresh React state.
  */
+/** @deprecated Project semantics; use makeCreateProjectForCwd from projects.ts. */
 export function makeCreateRepoForCwd(repoList: Repo[]): {
   createRepoForCwd: (cwd: string) => string | null;
   changed: () => boolean;
@@ -175,6 +187,7 @@ export function makeCreateRepoForCwd(repoList: Repo[]): {
   };
 }
 
+/** @deprecated Project semantics; use ReconciledProjects from projects.ts. */
 export interface ReconciledRepos {
   repos: Repo[];
   repoIdRemap: Record<string, string>;
@@ -191,6 +204,7 @@ export interface ReconciledRepos {
  * was removed/soft-deleted elsewhere). User renames (displayName) are preserved
  * from the cache since they're device-local and not synced to disk.
  */
+/** @deprecated Project semantics; use reconcileProjectsFromDisk from projects.ts. */
 export function reconcileReposFromDisk(
   diskProjects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>,
   cached: Repo[],
@@ -198,6 +212,7 @@ export function reconcileReposFromDisk(
   return reconcileReposFromDiskWithRemap(diskProjects, cached).repos;
 }
 
+/** @deprecated Project semantics; use reconcileProjectsFromDiskWithRemap from projects.ts. */
 export function reconcileReposFromDiskWithRemap(
   diskProjects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>,
   cached: Repo[],
@@ -224,6 +239,7 @@ export function reconcileReposFromDiskWithRemap(
 }
 
 /** Display label for a repo — user rename wins over default basename. */
+/** @deprecated Project semantics; use projectLabel from projects.ts. */
 export function repoLabel(repo: Repo): string {
   return repo.displayName?.trim() || repo.name;
 }
@@ -234,6 +250,7 @@ export function repoLabel(repo: Repo): string {
  * derived from session updatedAt). Stable for the default case where
  * nothing changed.
  */
+/** @deprecated Project semantics; use sortProjects from projects.ts. */
 export function sortRepos(repos: Repo[]): Repo[] {
   return [...repos].sort((a, b) => {
     const ap = a.pinned ? 1 : 0;

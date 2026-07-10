@@ -9,6 +9,15 @@ import {
   unmarkRepoPathRemoved,
   type Repo,
 } from "./repos";
+import {
+  loadActiveProjectId,
+  loadProjects,
+  loadRemovedProjectPaths,
+  saveActiveProjectId,
+  saveProjects,
+  saveRemovedProjectPaths,
+  type TrackedProject,
+} from "./projects";
 
 class MemoryStorage {
   private data = new Map<string, string>();
@@ -29,6 +38,69 @@ class MemoryStorage {
     this.data.clear();
   }
 }
+
+describe("canonical project persistence compatibility", () => {
+  beforeEach(() => {
+    Object.defineProperty(globalThis, "localStorage", {
+      value: new MemoryStorage(),
+      configurable: true,
+    });
+  });
+
+  it("reads every project field from the legacy storage contracts", () => {
+    const projects: TrackedProject[] = [
+      {
+        id: "stable-project-id",
+        name: "code-shell",
+        path: "/work/code-shell",
+        addedAt: 123,
+        displayName: "CodeShell",
+        pinned: true,
+      },
+    ];
+    localStorage.setItem("codeshell.repos", JSON.stringify(projects));
+    localStorage.setItem("codeshell.activeRepoId", "stable-project-id");
+    localStorage.setItem("codeshell.removedRepoPaths", JSON.stringify(["/work/removed/"]));
+
+    expect(loadProjects()).toEqual(projects);
+    expect(loadActiveProjectId()).toBe("stable-project-id");
+    expect(loadRemovedProjectPaths()).toEqual(["/work/removed"]);
+  });
+
+  it("writes only legacy keys with the unchanged JSON shape", () => {
+    const projects: TrackedProject[] = [
+      {
+        id: "stable-project-id",
+        name: "code-shell",
+        path: "/work/code-shell",
+        addedAt: 123,
+        displayName: "CodeShell",
+        pinned: true,
+      },
+    ];
+
+    saveProjects(projects);
+    saveActiveProjectId("stable-project-id");
+    saveRemovedProjectPaths(["/work/removed/"]);
+
+    expect(localStorage.getItem("codeshell.repos")).toBe(JSON.stringify(projects));
+    expect(localStorage.getItem("codeshell.activeRepoId")).toBe("stable-project-id");
+    expect(localStorage.getItem("codeshell.removedRepoPaths")).toBe(
+      JSON.stringify(["/work/removed"]),
+    );
+    expect(localStorage.getItem("codeshell.projects")).toBeNull();
+    expect(localStorage.getItem("codeshell.activeProjectId")).toBeNull();
+    expect(localStorage.getItem("codeshell.removedProjectPaths")).toBeNull();
+  });
+
+  it("removes the legacy active-project key when the canonical API receives null", () => {
+    localStorage.setItem("codeshell.activeRepoId", "stable-project-id");
+
+    saveActiveProjectId(null);
+
+    expect(localStorage.getItem("codeshell.activeRepoId")).toBeNull();
+  });
+});
 
 describe("removed repo paths", () => {
   beforeEach(() => {
