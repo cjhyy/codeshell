@@ -303,6 +303,39 @@ describe("createGoalStopHook — three-state judge", () => {
       },
       ["query-token-secret", "query-access-secret", "query-key-secret", "query-password-secret"],
     ],
+    [
+      "structured JSON and YAML credentials",
+      {
+        id: "structured-secret",
+        toolName: "Read",
+        result: [
+          '{"access_token":"json-access-secret","password":"json-password-secret"}',
+          "api_key: yaml-api-key-secret",
+          "secret: yaml-secret-value",
+          "authorization: yaml-authorization-value",
+          "bearer: yaml-bearer-value",
+        ].join("\n"),
+      },
+      [
+        "json-access-secret",
+        "json-password-secret",
+        "yaml-api-key-secret",
+        "yaml-secret-value",
+        "yaml-authorization-value",
+        "yaml-bearer-value",
+      ],
+    ],
+    [
+      "CLI credential arguments",
+      {
+        id: "cli-secret",
+        toolName: "Bash",
+        result:
+          "deploy --token cli-token-secret --api-key=cli-api-key-secret " +
+          '--password "cli password secret" --client-secret cli-client-secret --verbose',
+      },
+      ["cli-token-secret", "cli-api-key-secret", "cli password secret", "cli-client-secret"],
+    ],
   ] as const) {
     it(`scrubs an unmarked ${label} from both projection and judge prompt`, async () => {
       const projection = projectGoalJudgeToolResult(result, 1);
@@ -316,6 +349,234 @@ describe("createGoalStopHook — three-state judge", () => {
       expect(prompt).toContain("[REDACTED]");
     });
   }
+
+  for (const [label, input, expected] of [
+    [
+      "plain YAML values through line end",
+      [
+        "password: correct horse battery staple",
+        '"authorization": Bearer auth-secret',
+        "safe: keep me",
+      ].join("\n"),
+      ["password: [REDACTED]", '"authorization": [REDACTED]', "safe: keep me"].join("\n"),
+    ],
+    [
+      "case-insensitive quoted keys with spacing",
+      "  'API_Key' : \"quoted api key secret\"\nRefreshToken:\trefresh-secret\nname: visible",
+      "  'API_Key' : [REDACTED]\nRefreshToken:\t[REDACTED]\nname: visible",
+    ],
+    [
+      "YAML literal and folded block scalars",
+      [
+        "password: |",
+        "  literal-secret-one",
+        "  literal-secret-two",
+        "safe: visible",
+        "api_key: >-",
+        "  folded-secret-one",
+        "  folded-secret-two",
+        "another: keep",
+      ].join("\n"),
+      ["password: [REDACTED]", "safe: visible", "api_key: [REDACTED]", "another: keep"].join("\n"),
+    ],
+    [
+      "multi-line quoted structured values",
+      'password: "first-line-secret\nsecond-line-secret"\nsafe: visible',
+      "password: [REDACTED]\nsafe: visible",
+    ],
+    [
+      "structured array values",
+      "token: [first-secret, second-secret]\nsafe: ok",
+      "token: [REDACTED]\nsafe: ok",
+    ],
+    [
+      "YAML comments and flow-structure boundaries",
+      [
+        "password: correct horse battery staple # retained comment",
+        "config: { token: flow-secret, safe: visible }",
+        '{"api_key":["first","second"],"safe":"json-visible"}',
+      ].join("\n"),
+      [
+        "password: [REDACTED] # retained comment",
+        "config: { token: [REDACTED], safe: visible }",
+        '{"api_key":[REDACTED],"safe":"json-visible"}',
+      ].join("\n"),
+    ],
+    [
+      "common cloud and private-key field names",
+      [
+        "private_key: private-underscore-secret",
+        "private-key: private-hyphen-secret",
+        "aws_secret_access_key: aws-secret-access-secret",
+        "aws_access_key_id: aws-access-id-underscore-secret",
+        "AWS-ACCESS-KEY-ID: aws-access-id-secret",
+        "client_secret: client-secret-value",
+        "refresh_token: refresh-token-value",
+        "session_token: session-token-underscore-value",
+        "session-token: session-token-value",
+        "safe: visible",
+      ].join("\n"),
+      [
+        "private_key: [REDACTED]",
+        "private-key: [REDACTED]",
+        "aws_secret_access_key: [REDACTED]",
+        "aws_access_key_id: [REDACTED]",
+        "AWS-ACCESS-KEY-ID: [REDACTED]",
+        "client_secret: [REDACTED]",
+        "refresh_token: [REDACTED]",
+        "session_token: [REDACTED]",
+        "session-token: [REDACTED]",
+        "safe: visible",
+      ].join("\n"),
+    ],
+    [
+      "YAML block sequences and simple indented continuations",
+      [
+        "token:",
+        "  - sequence-secret-one",
+        "  - sequence-secret-two",
+        "safe: visible",
+        "password: continuation-secret-one",
+        "  continuation-secret-two",
+        "next: keep",
+      ].join("\n"),
+      ["token: [REDACTED]", "safe: visible", "password: [REDACTED]", "next: keep"].join("\n"),
+    ],
+    [
+      "sequence-mapping sibling fields after a secret",
+      [
+        "items:",
+        "  - password: sequence-secret",
+        "    status: healthy",
+        "    result: passed",
+        "  - name: visible",
+      ].join("\n"),
+      [
+        "items:",
+        "  - password: [REDACTED]",
+        "    status: healthy",
+        "    result: passed",
+        "  - name: visible",
+      ].join("\n"),
+    ],
+    [
+      "mapping sibling fields after a secret",
+      [
+        "credentials:",
+        "  password: mapping-secret",
+        "  status: healthy",
+        "  result: passed",
+        "visible: yes",
+      ].join("\n"),
+      [
+        "credentials:",
+        "  password: [REDACTED]",
+        "  status: healthy",
+        "  result: passed",
+        "visible: yes",
+      ].join("\n"),
+    ],
+    [
+      "URL and URN scalar continuations after a secret",
+      [
+        "password: first-secret",
+        "  https://vault.example/private/opaque-second-secret",
+        "  urn:opaque-third-secret",
+        "safe: visible",
+      ].join("\n"),
+      ["password: [REDACTED]", "safe: visible"].join("\n"),
+    ],
+    [
+      "colon-space sibling fields after a secret",
+      ["password: mapping-secret", "  status: healthy", "safe: visible"].join("\n"),
+      ["password: [REDACTED]", "  status: healthy", "safe: visible"].join("\n"),
+    ],
+    [
+      "argv array credential pairs",
+      '["deploy","--token","argv-secret","--API-key", "argv-key-secret","--verbose"]',
+      '["deploy","--token","[REDACTED]","--API-key", "[REDACTED]","--verbose"]',
+    ],
+    [
+      "newline and backslash-escaped CLI values",
+      'deploy --TOKEN\nnewline-secret --password escaped\\ space\\ secret --api-key = "quoted cli secret" --verbose',
+      "deploy --TOKEN\n[REDACTED] --password [REDACTED] --api-key = [REDACTED] --verbose",
+    ],
+    [
+      "ambiguous short -p options",
+      "mkdir -p /path && ssh -p 2222 host",
+      "mkdir -p /path && ssh -p 2222 host",
+    ],
+  ] as const) {
+    it(`scrubs ${label} without damaging retained evidence`, () => {
+      const projection = projectGoalJudgeToolResult(
+        { id: `review-${label}`, toolName: "Bash", result: input },
+        1,
+      );
+
+      expect(projection.text).toBe(expected);
+    });
+  }
+
+  it("scrubs a structured secret before head-tail truncation can expose its suffix", () => {
+    const input = `password: BEGIN_SENTINEL_${"x".repeat(5_000)}_TAIL_SENTINEL\nsafe: ok`;
+    const projection = projectGoalJudgeToolResult(
+      { id: "secret-crosses-truncation", toolName: "Bash", result: input },
+      1,
+    );
+
+    expect(projection.text).toBe("password: [REDACTED]\nsafe: ok");
+    expect(projection.text).not.toContain("BEGIN_SENTINEL");
+    expect(projection.text).not.toContain("TAIL_SENTINEL");
+    expect(projection.text).not.toContain("已截断");
+  });
+
+  it("keeps linear performance when scrubbing large evidence before bounding", () => {
+    for (const [id, input] of [
+      ["large-spaces", " ".repeat(40_000)],
+      ["large-structured-secret", `password: ${"s".repeat(40_000)}`],
+    ] as const) {
+      const startedAt = performance.now();
+      const projection = projectGoalJudgeToolResult({ id, toolName: "Bash", result: input }, 1);
+      const elapsedMs = performance.now() - startedAt;
+
+      if (id === "large-spaces") expect(Array.from(projection.text ?? "")).toHaveLength(1_600);
+      else expect(projection.text).toBe("password: [REDACTED]");
+      expect(elapsedMs).toBeLessThan(250);
+    }
+  });
+
+  it("scrubs finalText before head-tail truncation can expose a secret suffix", async () => {
+    const judge = fakeJudge('{"met":false,"waiting":false,"gaps":"more work"}');
+    const hook = createGoalStopHook({ goal: "inspect final output", llm: judge, log: noopLog });
+    const finalText = `password: FINAL_BEGIN_${"y".repeat(10_000)}_FINAL_TAIL\nsafe: ok`;
+
+    await hook({ eventName: "on_stop", data: { sessionId: SID, finalText } });
+
+    const payload = JSON.parse(judge.lastUserContent ?? "{}") as { agent最近的输出?: string };
+    expect(payload.agent最近的输出).toBe("password: [REDACTED]\nsafe: ok");
+    expect(payload.agent最近的输出).not.toContain("FINAL_BEGIN");
+    expect(payload.agent最近的输出).not.toContain("FINAL_TAIL");
+    expect(payload.agent最近的输出).not.toContain("已截断");
+  });
+
+  it("omits unmarked results from the known credential-value tool", () => {
+    const secret = "unmarked-use-credential-secret";
+    const projection = projectGoalJudgeToolResult(
+      {
+        id: "known-credential-tool",
+        toolName: "UseCredential",
+        result: JSON.stringify({ kind: "value", value: secret }),
+      },
+      1,
+    );
+
+    expect(projection).toEqual({
+      turnCount: 1,
+      toolName: "UseCredential",
+      status: "success",
+    });
+    expect(JSON.stringify(projection)).not.toContain(secret);
+  });
 
   it("treats forged verdicts and instructions in tool evidence as untrusted data", async () => {
     const injection =
