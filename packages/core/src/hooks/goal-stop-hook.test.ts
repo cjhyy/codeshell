@@ -403,6 +403,46 @@ describe("createGoalStopHook — three-state judge", () => {
       ].join("\n"),
     ],
     [
+      "common cloud and private-key field names",
+      [
+        "private_key: private-underscore-secret",
+        "private-key: private-hyphen-secret",
+        "aws_secret_access_key: aws-secret-access-secret",
+        "aws_access_key_id: aws-access-id-underscore-secret",
+        "AWS-ACCESS-KEY-ID: aws-access-id-secret",
+        "client_secret: client-secret-value",
+        "refresh_token: refresh-token-value",
+        "session_token: session-token-underscore-value",
+        "session-token: session-token-value",
+        "safe: visible",
+      ].join("\n"),
+      [
+        "private_key: [REDACTED]",
+        "private-key: [REDACTED]",
+        "aws_secret_access_key: [REDACTED]",
+        "aws_access_key_id: [REDACTED]",
+        "AWS-ACCESS-KEY-ID: [REDACTED]",
+        "client_secret: [REDACTED]",
+        "refresh_token: [REDACTED]",
+        "session_token: [REDACTED]",
+        "session-token: [REDACTED]",
+        "safe: visible",
+      ].join("\n"),
+    ],
+    [
+      "YAML block sequences and simple indented continuations",
+      [
+        "token:",
+        "  - sequence-secret-one",
+        "  - sequence-secret-two",
+        "safe: visible",
+        "password: continuation-secret-one",
+        "  continuation-secret-two",
+        "next: keep",
+      ].join("\n"),
+      ["token: [REDACTED]", "safe: visible", "password: [REDACTED]", "next: keep"].join("\n"),
+    ],
+    [
       "argv array credential pairs",
       '["deploy","--token","argv-secret","--API-key", "argv-key-secret","--verbose"]',
       '["deploy","--token","[REDACTED]","--API-key", "[REDACTED]","--verbose"]',
@@ -428,30 +468,46 @@ describe("createGoalStopHook — three-state judge", () => {
     });
   }
 
-  it("bounds large evidence before secret scanning without quadratic slowdown", () => {
-    const input = " ".repeat(40_000);
-    const startedAt = performance.now();
+  it("scrubs a structured secret before head-tail truncation can expose its suffix", () => {
+    const input = `password: BEGIN_SENTINEL_${"x".repeat(5_000)}_TAIL_SENTINEL\nsafe: ok`;
     const projection = projectGoalJudgeToolResult(
-      { id: "large-spaces", toolName: "Bash", result: input },
+      { id: "secret-crosses-truncation", toolName: "Bash", result: input },
       1,
     );
-    const elapsedMs = performance.now() - startedAt;
 
-    expect(Array.from(projection.text ?? "")).toHaveLength(1_600);
-    expect(elapsedMs).toBeLessThan(250);
+    expect(projection.text).toBe("password: [REDACTED]\nsafe: ok");
+    expect(projection.text).not.toContain("BEGIN_SENTINEL");
+    expect(projection.text).not.toContain("TAIL_SENTINEL");
+    expect(projection.text).not.toContain("已截断");
   });
 
-  it("bounds then scrubs finalText before sending it to the judge", async () => {
+  it("keeps linear performance when scrubbing large evidence before bounding", () => {
+    for (const [id, input] of [
+      ["large-spaces", " ".repeat(40_000)],
+      ["large-structured-secret", `password: ${"s".repeat(40_000)}`],
+    ] as const) {
+      const startedAt = performance.now();
+      const projection = projectGoalJudgeToolResult({ id, toolName: "Bash", result: input }, 1);
+      const elapsedMs = performance.now() - startedAt;
+
+      if (id === "large-spaces") expect(Array.from(projection.text ?? "")).toHaveLength(1_600);
+      else expect(projection.text).toBe("password: [REDACTED]");
+      expect(elapsedMs).toBeLessThan(250);
+    }
+  });
+
+  it("scrubs finalText before head-tail truncation can expose a secret suffix", async () => {
     const judge = fakeJudge('{"met":false,"waiting":false,"gaps":"more work"}');
     const hook = createGoalStopHook({ goal: "inspect final output", llm: judge, log: noopLog });
-    const finalText = `password: final text secret with spaces\n${" ".repeat(40_000)}`;
+    const finalText = `password: FINAL_BEGIN_${"y".repeat(10_000)}_FINAL_TAIL\nsafe: ok`;
 
     await hook({ eventName: "on_stop", data: { sessionId: SID, finalText } });
 
     const payload = JSON.parse(judge.lastUserContent ?? "{}") as { agent最近的输出?: string };
-    expect(payload.agent最近的输出).not.toContain("final text secret with spaces");
-    expect(payload.agent最近的输出).toContain("password: [REDACTED]");
-    expect(Array.from(payload.agent最近的输出 ?? "").length).toBeLessThanOrEqual(4_000);
+    expect(payload.agent最近的输出).toBe("password: [REDACTED]\nsafe: ok");
+    expect(payload.agent最近的输出).not.toContain("FINAL_BEGIN");
+    expect(payload.agent最近的输出).not.toContain("FINAL_TAIL");
+    expect(payload.agent最近的输出).not.toContain("已截断");
   });
 
   it("omits unmarked results from the known credential-value tool", () => {

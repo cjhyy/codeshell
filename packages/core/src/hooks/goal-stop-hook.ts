@@ -292,7 +292,7 @@ function projectedContent(result: ToolResult): { text: string; omittedNonText: b
 
 const KNOWN_CREDENTIAL_VALUE_TOOLS = new Set(["UseCredential"]);
 const SECRET_KEY_SOURCE =
-  "(?:(?:access|refresh|auth|id|bearer)[_-]?token|token|api[_-]?key|password|passwd|client[_-]?secret|secret|authorization|bearer)";
+  "(?:(?:access|refresh|auth|id|bearer|session)[_-]?token|token|api[_-]?key|password|passwd|client[_-]?secret|secret|private[_-]?key|aws[_-]?secret[_-]?access[_-]?key|aws[_-]?access[_-]?key[_-]?id|authorization|bearer)";
 const STRUCTURED_SECRET_RE = new RegExp(
   `(^|[{,\\[])([ \\t]*(?:-[ \\t]+)?)(["']?)(${SECRET_KEY_SOURCE})\\3([ \\t]*:[ \\t]*)`,
   "gimu",
@@ -380,6 +380,45 @@ function blockScalarEnd(
   };
 }
 
+function indentedContinuationEnd(
+  text: string,
+  currentLineEnd: number,
+  keyLineStart: number,
+): { end: number; replacement: string } | undefined {
+  const newline = text.indexOf("\n", currentLineEnd);
+  if (newline < 0) return undefined;
+
+  const keyIndent = text.slice(keyLineStart).match(/^[ \t]*/u)?.[0].length ?? 0;
+  let nextLineStart = newline + 1;
+  let sawIndentedContent = false;
+  while (nextLineStart < text.length) {
+    const nextEnd = lineEnd(text, nextLineStart);
+    const line = text.slice(nextLineStart, nextEnd);
+    const indent = line.match(/^[ \t]*/u)?.[0].length ?? 0;
+    if (line.trim() !== "") {
+      if (indent <= keyIndent) break;
+      sawIndentedContent = true;
+    }
+    const nextNewline = text.indexOf("\n", nextEnd);
+    if (nextNewline < 0) {
+      nextLineStart = text.length;
+      break;
+    }
+    nextLineStart = nextNewline + 1;
+  }
+
+  if (!sawIndentedContent) return undefined;
+  return {
+    end: nextLineStart,
+    replacement: nextLineStart < text.length ? "[REDACTED]\n" : "[REDACTED]",
+  };
+}
+
+/**
+ * Best-effort defense in depth for common JSON/YAML-shaped tool output, not a
+ * complete YAML parser. The primary defenses remain explicit `sensitive` /
+ * `sensitiveResult` marking plus this deliberately bounded credential-key list.
+ */
 function redactStructuredSecrets(text: string): string {
   STRUCTURED_SECRET_RE.lastIndex = 0;
   let output = "";
@@ -409,6 +448,17 @@ function redactStructuredSecrets(text: string): string {
       if (flowBoundary >= 0) valueEnd = valueStart + flowBoundary;
       if (comment >= 0) valueEnd = Math.min(valueEnd, valueStart + comment);
       while (valueEnd > valueStart && /[ \t]/u.test(text[valueEnd - 1]!)) valueEnd -= 1;
+
+      const continuation = isFlowValue
+        ? undefined
+        : indentedContinuationEnd(text, endOfLine, keyLineStart);
+      if (continuation) {
+        valueEnd = continuation.end;
+        replacement = continuation.replacement;
+        if (valueStart === endOfLine && !/[ \t]$/u.test(match[0])) {
+          replacement = ` ${replacement}`;
+        }
+      }
     }
 
     output += text.slice(copiedThrough, valueStart) + replacement;
@@ -472,8 +522,9 @@ export function projectGoalJudgeToolResult(
     .filter(Boolean)
     .join("\n");
   if (text) {
-    projection.text = scrubSecrets(
-      normalizeControlCharacters(truncateHeadTail(text, MAX_TOOL_RESULT_CHARS)),
+    projection.text = truncateHeadTail(
+      scrubSecrets(normalizeControlCharacters(text)),
+      MAX_TOOL_RESULT_CHARS,
     );
   }
   if (content.omittedNonText) projection.omittedNonText = true;
@@ -803,8 +854,9 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     const backgroundTasks = renderBackgroundTasks(runningWork);
 
     const finalText = typeof ctx.data.finalText === "string" ? ctx.data.finalText : "";
-    const boundedFinalText = scrubSecrets(
-      normalizeControlCharacters(truncateHeadTail(finalText, MAX_JUDGE_FINAL_TEXT_CHARS)),
+    const boundedFinalText = truncateHeadTail(
+      scrubSecrets(normalizeControlCharacters(finalText)),
+      MAX_JUDGE_FINAL_TEXT_CHARS,
     );
     let judgeContext: GoalJudgeRuntimeContext | undefined;
     let contextError: string | undefined;
