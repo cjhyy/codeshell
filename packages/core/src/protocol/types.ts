@@ -181,6 +181,8 @@ export interface ForkSessionParams {
   mode: "full";
   /** Inclusive source event cursor; omitted freezes the current tail. */
   throughEventId?: string;
+  /** Desktop host ownership generation; ignored by protocol-only hosts. */
+  quickChatClaimId?: string;
 }
 
 export interface ForkSessionResult {

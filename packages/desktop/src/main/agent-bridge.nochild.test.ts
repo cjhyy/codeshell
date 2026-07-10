@@ -17,6 +17,7 @@ import {
   buildNoChildFallbackReply,
   compactQuerySessionId,
   forkSourceSessionId,
+  quickChatForkRequest,
 } from "./agent-bridge-fallback.js";
 
 describe("buildNoChildFallbackReply — no live worker", () => {
@@ -137,5 +138,43 @@ describe("forkSourceSessionId", () => {
       forkSourceSessionId({ method: "agent/run", params: { sourceSessionId: "source-session" } }),
     ).toBeNull();
     expect(forkSourceSessionId({ method: "agent/forkSession", params: {} })).toBeNull();
+  });
+
+  test("extracts a quick-chat claim generation only from a tracked fork request", () => {
+    expect(
+      quickChatForkRequest(
+        {
+          id: 42,
+          method: "agent/forkSession",
+          params: {
+            sourceSessionId: "source-session",
+            targetSessionId: "qchat-target-1",
+            quickChatClaimId: "generation-1",
+          },
+        },
+        101,
+      ),
+    ).toEqual({
+      requestId: 42,
+      sessionId: "qchat-target-1",
+      ownerId: 101,
+      claimId: "generation-1",
+    });
+    expect(
+      quickChatForkRequest(
+        {
+          id: 43,
+          method: "agent/forkSession",
+          params: { targetSessionId: "normal-session", quickChatClaimId: "generation-1" },
+        },
+        101,
+      ),
+    ).toBeNull();
+    expect(
+      quickChatForkRequest(
+        { id: 44, method: "agent/forkSession", params: { targetSessionId: "qchat-target-2" } },
+        101,
+      ),
+    ).toBeNull();
   });
 });

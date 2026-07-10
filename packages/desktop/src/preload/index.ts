@@ -534,6 +534,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     targetSessionId?: string;
     mode: "full";
     throughEventId?: string;
+    quickChatClaimId?: string;
   }) => rpc("agent/forkSession", params).then(rpcResult),
   compactSession: (sessionId: string) =>
     rpc("agent/query", { type: "compact", sessionId }).then(rpcResult) as Promise<{
@@ -759,8 +760,12 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("settings:set", scope, patch, cwd),
   listSessions: () => ipcRenderer.invoke("sessions:list"),
   deleteSession: (id: string) => ipcRenderer.invoke("sessions:delete", id),
-  claimQuickChatSession: (id: string) => ipcRenderer.invoke("quickChat:claimSession", id),
-  cleanupQuickChatSession: (id: string) => ipcRenderer.invoke("quickChat:cleanupSession", id),
+  claimQuickChatSession: (id: string, claimId: string) =>
+    ipcRenderer.invoke("quickChat:claimSession", id, claimId),
+  isQuickChatClaimActive: (id: string, claimId: string) =>
+    ipcRenderer.invoke("quickChat:isClaimActive", id, claimId),
+  cleanupQuickChatSession: (id: string, claimId: string) =>
+    ipcRenderer.invoke("quickChat:cleanupSession", id, claimId),
   listSessionTitles: () => ipcRenderer.invoke("sessions:titles"),
   renameSession: (id: string, title: string) => ipcRenderer.invoke("sessions:rename", id, title),
   tailLog: (bucket: "ui-ink" | "engine" | "desktop", lines?: number) =>

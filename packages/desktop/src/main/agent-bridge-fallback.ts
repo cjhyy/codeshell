@@ -10,7 +10,39 @@ import type { SessionManager } from "@cjhyy/code-shell-core";
 export interface ParsedRpc {
   id?: number | string;
   method?: string;
-  params?: { cwd?: string; sessionId?: string; sourceSessionId?: string; type?: string };
+  params?: {
+    cwd?: string;
+    sessionId?: string;
+    sourceSessionId?: string;
+    targetSessionId?: string;
+    quickChatClaimId?: string;
+    type?: string;
+  };
+}
+
+export interface QuickChatForkRequest {
+  requestId: number | string;
+  sessionId: string;
+  ownerId: number;
+  claimId: string;
+}
+
+export function quickChatForkRequest(
+  parsed: ParsedRpc,
+  ownerId: number,
+): QuickChatForkRequest | null {
+  const { targetSessionId, quickChatClaimId } = parsed.params ?? {};
+  if (
+    parsed.method !== "agent/forkSession" ||
+    parsed.id === undefined ||
+    typeof targetSessionId !== "string" ||
+    !/^qchat-[A-Za-z0-9.-]+$/.test(targetSessionId) ||
+    typeof quickChatClaimId !== "string" ||
+    !quickChatClaimId
+  ) {
+    return null;
+  }
+  return { requestId: parsed.id, sessionId: targetSessionId, ownerId, claimId: quickChatClaimId };
 }
 
 export function forkSourceSessionId(parsed: ParsedRpc): string | null {

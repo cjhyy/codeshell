@@ -23,6 +23,7 @@ export interface ForkSessionParams {
   targetSessionId?: string;
   mode: "full";
   throughEventId?: string;
+  quickChatClaimId?: string;
 }
 
 export interface ForkSessionResult {
@@ -987,8 +988,12 @@ export interface CodeshellApi {
   ): Promise<void>;
   listSessions(): Promise<DesktopSessionSummary[]>;
   deleteSession(id: string): Promise<void>;
-  claimQuickChatSession(id: string): Promise<void>;
-  cleanupQuickChatSession(id: string): Promise<{ deleted: boolean }>;
+  claimQuickChatSession(id: string, claimId: string): Promise<void>;
+  isQuickChatClaimActive(id: string, claimId: string): Promise<boolean>;
+  cleanupQuickChatSession(
+    id: string,
+    claimId: string,
+  ): Promise<{ deleted: boolean; deferred?: boolean }>;
   forkSession(params: ForkSessionParams): Promise<ForkSessionResult>;
   listSessionTitles(): Promise<Record<string, string>>;
   renameSession(id: string, title: string): Promise<void>;

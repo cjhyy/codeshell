@@ -159,6 +159,7 @@ let listDiskSessionsCalls = 0;
 let deleteSessionCalls: string[] = [];
 let cleanupQuickChatSessionCalls: string[] = [];
 let claimQuickChatSessionCalls: string[] = [];
+let activeQuickChatClaims = new Map<string, string>();
 let cancelCalls: Array<string | undefined> = [];
 let approveCalls: unknown[][] = [];
 let forkSessionCalls: Array<Record<string, unknown>> = [];
@@ -267,15 +268,22 @@ function installCodeshellStub(
     deleteSession: async (sessionId: string) => {
       deleteSessionCalls.push(sessionId);
     },
-    claimQuickChatSession: async (sessionId: string) => {
+    claimQuickChatSession: async (sessionId: string, claimId: string) => {
       claimQuickChatSessionCalls.push(sessionId);
+      activeQuickChatClaims.set(sessionId, claimId);
+    },
+    isQuickChatClaimActive: async (sessionId: string, claimId: string) => {
+      return activeQuickChatClaims.get(sessionId) === claimId;
     },
     forkSession: async (params: Record<string, unknown>) => {
       forkSessionCalls.push(params);
       return forkSession(params);
     },
-    cleanupQuickChatSession: async (sessionId: string) => {
+    cleanupQuickChatSession: async (sessionId: string, claimId: string) => {
       cleanupQuickChatSessionCalls.push(sessionId);
+      if (activeQuickChatClaims.get(sessionId) === claimId) {
+        activeQuickChatClaims.delete(sessionId);
+      }
       return { deleted: true };
     },
     cancel: async (sessionId?: string) => {
@@ -418,6 +426,7 @@ afterEach(async () => {
   deleteSessionCalls = [];
   cleanupQuickChatSessionCalls = [];
   claimQuickChatSessionCalls = [];
+  activeQuickChatClaims = new Map();
   cancelCalls = [];
   approveCalls = [];
   forkSessionCalls = [];
@@ -438,11 +447,12 @@ describe("App quick-chat integration", () => {
     const [panel] = currentQuickPanels();
     if (!panel) throw new Error("quick chat session was not created");
     expect(forkSessionCalls).toEqual([
-      {
+      expect.objectContaining({
         sourceSessionId: "engine-a",
         targetSessionId: panel.sessionId,
         mode: "full",
-      },
+        quickChatClaimId: expect.any(String),
+      }),
     ]);
     expect(panel.creationStatus).toBe("ready");
     expect(panel.contextMode).toBe("full");
@@ -509,6 +519,71 @@ describe("App quick-chat integration", () => {
     await flushApp();
     expect(cleanupQuickChatSessionCalls).toContain(creating.sessionId);
     expect(currentQuickPanels()[0]?.sessionId).toBe(blank.sessionId);
+  });
+
+  test("closing a tab while fork is deferred prevents late hydrate and cleans the claim", async () => {
+    const pendingFork = deferred<any>();
+    const ownerBucket = await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-close-pending", kind: "quickChat" }],
+      forkSession: () => pendingFork.promise,
+    });
+    const [creating] = currentQuickPanels();
+    const panel = panelAreaProps.get(ownerBucket);
+    if (!creating || !panel) throw new Error("pending quick chat was not rendered");
+
+    await act(async () => {
+      panel.setTabs([]);
+      panel.setActiveId(null);
+      await flushMicrotasks();
+    });
+    await flushApp();
+    expect(currentQuickPanels()).toEqual([]);
+    expect(activeQuickChatClaims.has(creating.sessionId)).toBe(false);
+
+    pendingFork.resolve({
+      sessionId: creating.sessionId,
+      mode: "full",
+      forkedFrom: { sessionId: "engine-a", mode: "full", sourceEventCount: 1, createdAt: 1 },
+      workspace: { root: "/tmp/repo-a", kind: "main" },
+      copiedEventCount: 1,
+    });
+    await flushApp();
+
+    expect(currentQuickPanels()).toEqual([]);
+    expect(cleanupQuickChatSessionCalls).toContain(creating.sessionId);
+  });
+
+  test("unmount while fork is deferred prevents late hydrate and cleans the claim", async () => {
+    const pendingFork = deferred<any>();
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-unmount-pending", kind: "quickChat" }],
+      forkSession: () => pendingFork.promise,
+    });
+    const [creating] = currentQuickPanels();
+    if (!creating) throw new Error("pending quick chat was not rendered");
+
+    await act(async () => {
+      root?.unmount();
+      await flushMicrotasks();
+    });
+    root = null;
+    expect(activeQuickChatClaims.has(creating.sessionId)).toBe(false);
+
+    pendingFork.resolve({
+      sessionId: creating.sessionId,
+      mode: "full",
+      forkedFrom: { sessionId: "engine-a", mode: "full", sourceEventCount: 1, createdAt: 1 },
+      workspace: { root: "/tmp/repo-a", kind: "main" },
+      copiedEventCount: 1,
+    });
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(currentQuickPanels()).toEqual([]);
+    expect(cleanupQuickChatSessionCalls).toContain(creating.sessionId);
   });
 
   test("a delayed disk rebuild deletes stale qchat sessions but preserves one opened mid-scan", async () => {
@@ -668,8 +743,14 @@ describe("App quick-chat integration", () => {
     });
 
     const cleanup = deferred<{ deleted: boolean }>();
-    (window.codeshell as any).cleanupQuickChatSession = async (sessionId: string) => {
+    (window.codeshell as any).cleanupQuickChatSession = async (
+      sessionId: string,
+      claimId: string,
+    ) => {
       cleanupQuickChatSessionCalls.push(sessionId);
+      if (activeQuickChatClaims.get(sessionId) === claimId) {
+        activeQuickChatClaims.delete(sessionId);
+      }
       return cleanup.promise;
     };
     await act(async () => {

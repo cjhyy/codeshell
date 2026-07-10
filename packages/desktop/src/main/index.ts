@@ -1523,7 +1523,15 @@ async function createWindow(): Promise<BrowserWindow> {
   });
 
   if (!bridge) {
-    bridge = new AgentBridge(win);
+    bridge = new AgentBridge(win, {
+      begin: ({ sessionId, ownerId, claimId }) =>
+        quickChatOwnership.beginFork(sessionId, ownerId, claimId),
+      settle: async ({ sessionId, ownerId, claimId, succeeded }) => {
+        await quickChatOwnership.settleFork(sessionId, ownerId, claimId, succeeded, () =>
+          deleteDesktopSession(sessionId),
+        );
+      },
+    });
     // Mirror every worker→renderer line onto any connected mobile clients, so
     // the phone sees the same stream (messages, tool summaries, approvals).
     bridge.subscribeOutbound((line, snapshotEntry) => {
@@ -3447,25 +3455,40 @@ ipcMain.handle("sessions:delete", async (_e, id: string) => {
   if (typeof id !== "string") throw new Error("session id required");
   await deleteDesktopSession(id);
 });
-ipcMain.handle("quickChat:claimSession", async (event, id: string) => {
+function assertQuickChatClaim(id: unknown, claimId: unknown): asserts id is string {
   if (typeof id !== "string" || !/^qchat-[A-Za-z0-9.-]+$/.test(id)) {
     throw new Error("quick-chat session id required");
   }
+  if (typeof claimId !== "string" || !/^[A-Za-z0-9.-]{1,128}$/.test(claimId)) {
+    throw new Error("quick-chat claim id required");
+  }
+}
+
+ipcMain.handle("quickChat:claimSession", async (event, id: unknown, claimId: unknown) => {
+  assertQuickChatClaim(id, claimId);
   const ownerId = event.sender.id;
-  quickChatOwnership.claim(id, ownerId);
+  quickChatOwnership.claim(id, ownerId, claimId as string);
   if (!quickChatOwnerCleanupRegistered.has(ownerId)) {
     quickChatOwnerCleanupRegistered.add(ownerId);
     event.sender.once("destroyed", () => {
       quickChatOwnerCleanupRegistered.delete(ownerId);
-      quickChatOwnership.releaseOwner(ownerId);
+      void quickChatOwnership
+        .releaseOwner(ownerId, deleteDesktopSession)
+        .catch((error) =>
+          dlog("main", "quick_chat.owner_cleanup_failed", { ownerId, error: String(error) }),
+        );
     });
   }
 });
-ipcMain.handle("quickChat:cleanupSession", async (event, id: string) => {
-  if (typeof id !== "string" || !/^qchat-[A-Za-z0-9.-]+$/.test(id)) {
-    throw new Error("quick-chat session id required");
-  }
-  return quickChatOwnership.cleanup(id, event.sender.id, () => deleteDesktopSession(id));
+ipcMain.handle("quickChat:isClaimActive", async (event, id: unknown, claimId: unknown) => {
+  assertQuickChatClaim(id, claimId);
+  return quickChatOwnership.isClaimActive(id, event.sender.id, claimId as string);
+});
+ipcMain.handle("quickChat:cleanupSession", async (event, id: unknown, claimId: unknown) => {
+  assertQuickChatClaim(id, claimId);
+  return quickChatOwnership.cleanup(id, event.sender.id, claimId as string, () =>
+    deleteDesktopSession(id),
+  );
 });
 
 /**

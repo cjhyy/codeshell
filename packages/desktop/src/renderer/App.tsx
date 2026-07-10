@@ -1606,7 +1606,7 @@ function App() {
             (session) => session.sessionId === sessionId,
           );
           if (isLive) continue;
-          void window.codeshell.cleanupQuickChatSession(sessionId).catch((e) =>
+          void window.codeshell.cleanupQuickChatSession(sessionId, "stale-disk").catch((e) =>
             window.codeshell.log("quick_chat.cleanup_stale_session_failed", {
               sessionId,
               error: String(e),
@@ -3117,13 +3117,22 @@ function App() {
     async (session: QuickChatSessionRef): Promise<void> => {
       const { key, creationNonce: nonce, sessionId, bucket } = session;
       try {
-        await window.codeshell.claimQuickChatSession(sessionId);
+        await window.codeshell.claimQuickChatSession(sessionId, nonce);
+        const claimStillActive = await window.codeshell.isQuickChatClaimActive(sessionId, nonce);
+        if (
+          !claimStillActive ||
+          !quickChatSessionsRef.current[key] ||
+          quickChatSessionsRef.current[key].creationNonce !== nonce
+        ) {
+          await window.codeshell.cleanupQuickChatSession(sessionId, nonce);
+          return;
+        }
         if (session.contextMode === "blank" || !session.sourceSessionId) {
           if (
             !quickChatSessionsRef.current[key] ||
             quickChatSessionsRef.current[key].creationNonce !== nonce
           ) {
-            await window.codeshell.cleanupQuickChatSession(sessionId);
+            await window.codeshell.cleanupQuickChatSession(sessionId, nonce);
             return;
           }
           engineToBucketRef.current.set(sessionId, bucket);
@@ -3145,13 +3154,31 @@ function App() {
           sourceSessionId: session.sourceSessionId,
           targetSessionId: sessionId,
           mode: "full",
+          quickChatClaimId: nonce,
         });
-        const state = foldTranscript(await window.codeshell.getSessionTranscript(result.sessionId));
+        const mainClaimStillActive = await window.codeshell.isQuickChatClaimActive(
+          result.sessionId,
+          nonce,
+        );
         if (
+          !mainClaimStillActive ||
           !quickChatSessionsRef.current[key] ||
           quickChatSessionsRef.current[key].creationNonce !== nonce
         ) {
-          await window.codeshell.cleanupQuickChatSession(result.sessionId);
+          await window.codeshell.cleanupQuickChatSession(result.sessionId, nonce);
+          return;
+        }
+        const state = foldTranscript(await window.codeshell.getSessionTranscript(result.sessionId));
+        const claimActiveAfterHydrate = await window.codeshell.isQuickChatClaimActive(
+          result.sessionId,
+          nonce,
+        );
+        if (
+          !claimActiveAfterHydrate ||
+          !quickChatSessionsRef.current[key] ||
+          quickChatSessionsRef.current[key].creationNonce !== nonce
+        ) {
+          await window.codeshell.cleanupQuickChatSession(result.sessionId, nonce);
           return;
         }
         dispatch({ type: "hydrate", bucket, state });
@@ -3173,7 +3200,7 @@ function App() {
           error: undefined,
         }));
       } catch (err) {
-        await window.codeshell.cleanupQuickChatSession(sessionId).catch(() => undefined);
+        await window.codeshell.cleanupQuickChatSession(sessionId, nonce).catch(() => undefined);
         const error = err as Error & { code?: number };
         updateQuickChatCreation(key, nonce, (current) => ({
           ...current,
@@ -3235,7 +3262,9 @@ function App() {
       setQuickChatSessions(quickChatSessionsRef.current);
       engineToBucketRef.current.delete(session.sessionId);
       dispatch({ type: "evict", bucket: session.bucket });
-      void window.codeshell.cleanupQuickChatSession(session.sessionId).catch(() => undefined);
+      void window.codeshell
+        .cleanupQuickChatSession(session.sessionId, session.creationNonce)
+        .catch(() => undefined);
       void startQuickChatCreation(next);
     },
     [startQuickChatCreation],
@@ -3281,17 +3310,10 @@ function App() {
       for (const requestId of staleApprovalIds) approvalBucketsRef.current.delete(requestId);
     }
 
-    setQuickChatSessions((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      for (const [key] of stale) {
-        if (key in next) {
-          delete next[key];
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
+    const nextQuickChatSessions = { ...quickChatSessionsRef.current };
+    for (const [key] of stale) delete nextQuickChatSessions[key];
+    quickChatSessionsRef.current = nextQuickChatSessions;
+    setQuickChatSessions(nextQuickChatSessions);
     setQuickChatDrafts((prev) => {
       let changed = false;
       const next = { ...prev };
@@ -3307,12 +3329,14 @@ function App() {
       setBusyForKey(session.bucket, false);
       if (runningBucketRef.current === session.bucket) runningBucketRef.current = null;
       engineToBucketRef.current.delete(session.sessionId);
-      void window.codeshell.cleanupQuickChatSession(session.sessionId).catch((e) =>
-        window.codeshell.log("quick_chat.delete_session_failed", {
-          sessionId: session.sessionId,
-          error: String(e),
-        }),
-      );
+      void window.codeshell
+        .cleanupQuickChatSession(session.sessionId, session.creationNonce)
+        .catch((e) =>
+          window.codeshell.log("quick_chat.delete_session_failed", {
+            sessionId: session.sessionId,
+            error: String(e),
+          }),
+        );
       const coalescer = coalescersRef.current.get(session.bucket);
       coalescersRef.current.delete(session.bucket);
       coalescer?.discard();
@@ -3324,8 +3348,12 @@ function App() {
 
   useEffect(
     () => () => {
-      for (const session of Object.values(quickChatSessionsRef.current)) {
-        void window.codeshell.cleanupQuickChatSession(session.sessionId).catch(() => undefined);
+      const sessions = Object.values(quickChatSessionsRef.current);
+      quickChatSessionsRef.current = {};
+      for (const session of sessions) {
+        void window.codeshell
+          .cleanupQuickChatSession(session.sessionId, session.creationNonce)
+          .catch(() => undefined);
       }
     },
     [],

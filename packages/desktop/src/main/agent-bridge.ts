@@ -56,6 +56,8 @@ import {
   buildNoChildFallbackReply,
   compactQuerySessionId,
   forkSourceSessionId,
+  quickChatForkRequest,
+  type QuickChatForkRequest,
 } from "./agent-bridge-fallback.js";
 import { prepareAgentRunMetadata, resolveCredentialSessionCwd } from "./agent-run-metadata.js";
 import { getTrustCachedSync } from "./trust-store.js";
@@ -77,6 +79,11 @@ export function resolveNoRepoCwd(): string {
     /* best-effort */
   }
   return dir;
+}
+
+export interface QuickChatForkLifecycle {
+  begin(request: QuickChatForkRequest): boolean;
+  settle(request: QuickChatForkRequest & { succeeded: boolean }): Promise<void> | void;
 }
 
 const require = createRequire(import.meta.url);
@@ -174,8 +181,12 @@ export class AgentBridge {
   private sessionCwd = new Map<string, string>();
   private credentialSnapshotRevision = 0;
   private readonly credentialSnapshotCwds = new Set<string>();
+  private readonly pendingQuickChatForks = new Map<string, QuickChatForkRequest>();
 
-  constructor(window: BrowserWindow) {
+  constructor(
+    window: BrowserWindow,
+    private readonly quickChatForkLifecycle?: QuickChatForkLifecycle,
+  ) {
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
     this.windows.add(window);
     window.on("closed", () => this.windows.delete(window));
@@ -240,6 +251,7 @@ export class AgentBridge {
       // cron change: the worker created/deleted a cron job (agent/cronChanged);
       // reload main's scheduler so it arms immediately. DON'T forward to renderer.
       if (this.maybeHandleCronChanged(line)) return;
+      this.settleQuickChatForkFromWorker(line);
       let summary: Record<string, unknown> = { raw: previewLine(line) };
       try {
         const m = JSON.parse(line) as { method?: string; id?: number };
@@ -289,6 +301,7 @@ export class AgentBridge {
       }
       this.child = null;
       this.outbox = [];
+      this.failPendingQuickChatForks();
       this.snapshots.onWorkerExit();
       this.safeSend("agent:lifecycle", { type: "gave_up" });
     });
@@ -299,6 +312,7 @@ export class AgentBridge {
       dlog("bridge", "child.exit", { code, signal, pid: this.child?.pid });
       this.child = null;
       this.outbox = []; // any queued messages were for the dead child; drop
+      this.failPendingQuickChatForks();
       // Snapshots intentionally survive worker exit — a respawn may resume the
       // same session, and a remounted renderer still needs to replay them.
       this.snapshots.onWorkerExit();
@@ -375,7 +389,7 @@ export class AgentBridge {
     if (this.ipcListenerAttached) return;
     this.ipcListenerAttached = true;
 
-    ipcMain.on("agent:msg", (_event, line: string) => {
+    ipcMain.on("agent:msg", (event, line: string) => {
       // Inspect the message: an agent/run is the only one that can trigger
       // a fresh spawn. Other messages (agent/approve, agent/cancel) only
       // make sense if the worker is already alive.
@@ -384,6 +398,21 @@ export class AgentBridge {
         (cwd) => getTrustCachedSync(cwd) === "trusted",
       );
       const parsed = prepared.parsed;
+      const quickChatFork = quickChatForkRequest(parsed, event.sender.id);
+      if (quickChatFork && this.quickChatForkLifecycle) {
+        if (!this.quickChatForkLifecycle.begin(quickChatFork)) {
+          this.safeSend(
+            "agent:msg",
+            JSON.stringify({
+              jsonrpc: "2.0",
+              id: quickChatFork.requestId,
+              error: { code: -32602, message: "quick-chat claim is no longer active" },
+            }),
+          );
+          return;
+        }
+        this.pendingQuickChatForks.set(String(quickChatFork.requestId), quickChatFork);
+      }
 
       // Line forwarded to the worker. Only rewritten when we inject fields
       // (agent/run trust) — everything else is passed through verbatim so we
@@ -424,6 +453,7 @@ export class AgentBridge {
           method: parsed.method,
           answered: fallback !== null,
         });
+        if (quickChatFork) this.settleQuickChatFork(quickChatFork, false);
         return;
       }
       dlog("bridge", "renderer→worker", { method: parsed.method, raw: previewLine(outLine) });
@@ -436,6 +466,40 @@ export class AgentBridge {
         dlog("renderer", payload.msg, payload.data);
       },
     );
+  }
+
+  private settleQuickChatForkFromWorker(line: string): void {
+    if (!this.quickChatForkLifecycle || this.pendingQuickChatForks.size === 0) return;
+    try {
+      const response = JSON.parse(line) as {
+        id?: number | string;
+        result?: { sessionId?: unknown };
+        error?: unknown;
+      };
+      if (response.id === undefined) return;
+      const request = this.pendingQuickChatForks.get(String(response.id));
+      if (!request) return;
+      const succeeded = !response.error && response.result?.sessionId === request.sessionId;
+      this.settleQuickChatFork(request, succeeded);
+    } catch {
+      // Non-JSON worker output is handled by the normal bridge path.
+    }
+  }
+
+  private settleQuickChatFork(request: QuickChatForkRequest, succeeded: boolean): void {
+    this.pendingQuickChatForks.delete(String(request.requestId));
+    Promise.resolve(this.quickChatForkLifecycle?.settle({ ...request, succeeded })).catch((error) =>
+      dlog("bridge", "quick_chat.fork_settle_failed", {
+        sessionId: request.sessionId,
+        error: String(error),
+      }),
+    );
+  }
+
+  private failPendingQuickChatForks(): void {
+    for (const request of [...this.pendingQuickChatForks.values()]) {
+      this.settleQuickChatFork(request, false);
+    }
   }
 
   private safeSend(channel: string, payload: unknown): void {
