@@ -1003,8 +1003,13 @@ export class TurnLoop {
                 response = { ...contResponse, text: combinedText };
                 break;
               }
-            } catch {
-              break;
+            } catch (err) {
+              if (isAbortError(err) || this.config.signal?.aborted) {
+                this.markStopped();
+                return { text: finalText, reason: "aborted_streaming", messages };
+              }
+              this.config.onStream?.({ type: "error", error: formatFriendlyError(err) });
+              return { text: finalText, reason: "model_error", messages };
             }
           }
           response = { ...response, text: combinedText };
@@ -1546,11 +1551,21 @@ export class TurnLoop {
         this.config.signal,
         this.modelCallRecordingOptions(),
       );
+      if (this.config.signal?.aborted) {
+        this.markStopped();
+        messages = this.redactConsumedSensitiveToolResults(messages);
+        return { text: finalText, reason: "aborted_streaming", messages };
+      }
       messages = this.markPendingImagesConsumed(messages);
       if (summaryResponse.text) {
         finalText = summaryResponse.text;
       }
-    } catch {
+    } catch (err) {
+      if (isAbortError(err) || this.config.signal?.aborted) {
+        this.markStopped();
+        messages = this.redactConsumedSensitiveToolResults(messages);
+        return { text: finalText, reason: "aborted_streaming", messages };
+      }
       // If even summary fails, just return what we have
       this.currentTurnLog.warn("turn.summary_failed", { cat: "turn" });
     }
