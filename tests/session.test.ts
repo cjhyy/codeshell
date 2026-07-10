@@ -124,6 +124,9 @@ describe("SessionManager", () => {
   it("uses an inclusive event cursor and rejects an unfinished tool round", () => {
     const source = sm.create("/tmp", "model", "provider", "source");
     source.transcript.appendMessage("user", "before tool");
+    source.transcript.appendMessage("assistant", [
+      { type: "tool_use", id: "call-1", name: "Read", input: { path: "a" } },
+    ]);
     const use = source.transcript.appendToolUse("Read", "call-1", { path: "a" });
     const result = source.transcript.appendToolResult("call-1", "Read", "ok");
     source.transcript.appendMessage("assistant", "after tool");
@@ -135,8 +138,49 @@ describe("SessionManager", () => {
       targetSessionId: "through-result",
       throughEventId: result.id,
     });
-    expect(forked.copiedEventCount).toBe(3);
+    expect(forked.copiedEventCount).toBe(4);
     expect(forked.bundle.transcript.getEvents().at(-1)?.type).toBe("tool_result");
+  });
+
+  it("fails closed when provider tool history and redundant events disagree", () => {
+    const mismatch = sm.create("/tmp", "model", "provider", "mismatch");
+    mismatch.transcript.appendMessage("assistant", [
+      { type: "tool_use", id: "provider-id", name: "Read", input: {} },
+    ]);
+    mismatch.transcript.appendToolUse("Read", "event-id", {});
+    mismatch.transcript.appendToolResult("event-id", "Read", "ok");
+
+    expect(() => sm.fork("mismatch", { targetSessionId: "mismatch-target" })).toThrow(
+      /provider history|metadata/i,
+    );
+    expect(existsSync(join(tmpDir, "mismatch-target"))).toBe(false);
+
+    const duplicate = sm.create("/tmp", "model", "provider", "duplicate");
+    duplicate.transcript.appendMessage("assistant", [
+      { type: "tool_use", id: "duplicate-id", name: "Read", input: {} },
+      { type: "tool_use", id: "duplicate-id", name: "Read", input: {} },
+    ]);
+    duplicate.transcript.appendToolUse("Read", "duplicate-id", {});
+    duplicate.transcript.appendToolResult("duplicate-id", "Read", "ok");
+
+    expect(() => sm.fork("duplicate", { targetSessionId: "duplicate-target" })).toThrow(
+      /duplicate/i,
+    );
+    expect(existsSync(join(tmpDir, "duplicate-target"))).toBe(false);
+  });
+
+  it("rejects result-before-use provider history even when event id sets match", () => {
+    const source = sm.create("/tmp", "model", "provider", "out-of-order");
+    source.transcript.appendToolResult("call-1", "Read", "too early");
+    source.transcript.appendMessage("assistant", [
+      { type: "tool_use", id: "call-1", name: "Read", input: {} },
+    ]);
+    source.transcript.appendToolUse("Read", "call-1", {});
+
+    expect(() => sm.fork("out-of-order", { targetSessionId: "order-target" })).toThrow(
+      /orphaned|before|order/i,
+    );
+    expect(existsSync(join(tmpDir, "order-target"))).toBe(false);
   });
 
   it("rejects malformed/unknown transcripts and never leaves a published target", () => {

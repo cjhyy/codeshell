@@ -26,7 +26,7 @@ import type {
   TranscriptEvent,
   TranscriptEventType,
 } from "../types.js";
-import { Transcript } from "./transcript.js";
+import { Transcript, eventsToMessages } from "./transcript.js";
 import { SessionError } from "../exceptions.js";
 import { normalizeCumulativeUsageCounters } from "../engine/session-usage.js";
 import { isSameGoalInstance, type GoalTerminal } from "../engine/goal.js";
@@ -792,27 +792,115 @@ export function buildForkTranscript(
 }
 
 function validateForkToolPairs(events: readonly TranscriptEvent[]): void {
-  const uses = new Set<string>();
-  const results = new Set<string>();
+  const projectedUses: string[] = [];
+  const projectedResults: string[] = [];
+  const seenProjectedUses = new Set<string>();
+  const seenProjectedResults = new Set<string>();
+  const projectedPending: string[] = [];
+
+  for (const message of eventsToMessages(events)) {
+    const blocks = Array.isArray(message.content) ? message.content : [];
+    const uses = blocks.filter((block) => block.type === "tool_use");
+    const results = blocks.filter((block) => block.type === "tool_result");
+
+    if (projectedPending.length > 0) {
+      if (message.role !== "user" || results.length !== blocks.length || results.length === 0) {
+        throw new SessionError(
+          `Fork provider history inserts a message before pending tool results`,
+        );
+      }
+    } else if (results.length > 0) {
+      throw new SessionError(`Fork provider history contains an orphaned tool result`);
+    }
+
+    if (uses.length > 0) {
+      if (message.role !== "assistant" || results.length > 0) {
+        throw new SessionError(`Fork provider history contains tool use blocks in an invalid role`);
+      }
+      for (const block of uses) {
+        const id = block.id;
+        if (typeof id !== "string" || !id) {
+          throw new SessionError(`Fork provider history contains a tool use without id`);
+        }
+        if (seenProjectedUses.has(id)) {
+          throw new SessionError(`Fork provider history contains duplicate tool use ${id}`);
+        }
+        seenProjectedUses.add(id);
+        projectedUses.push(id);
+        projectedPending.push(id);
+      }
+    }
+
+    for (const block of results) {
+      const id = block.tool_use_id;
+      if (typeof id !== "string" || !id) {
+        throw new SessionError(`Fork provider history contains a tool result without id`);
+      }
+      if (seenProjectedResults.has(id)) {
+        throw new SessionError(`Fork provider history contains duplicate tool result ${id}`);
+      }
+      const expected = projectedPending.shift();
+      if (!expected) {
+        throw new SessionError(`Fork provider history contains an orphaned tool result (${id})`);
+      }
+      if (expected !== id) {
+        throw new SessionError(
+          `Fork provider history tool result order mismatch: expected ${expected}, received ${id}`,
+        );
+      }
+      seenProjectedResults.add(id);
+      projectedResults.push(id);
+    }
+  }
+  if (projectedPending.length > 0) {
+    throw new SessionError(
+      `Fork cursor splits an unfinished tool round in provider history (${projectedPending[0]})`,
+    );
+  }
+
+  const metadataUses: string[] = [];
+  const metadataResults: string[] = [];
+  const seenMetadataUses = new Set<string>();
+  const seenMetadataResults = new Set<string>();
+  const metadataPending: string[] = [];
   for (const event of events) {
     if (event.type !== "tool_use" && event.type !== "tool_result") continue;
     const id = event.data.toolCallId;
     if (typeof id !== "string" || !id) {
       throw new SessionError(`Fork snapshot contains a tool event without toolCallId`);
     }
-    const own = event.type === "tool_use" ? uses : results;
-    if (own.has(id)) throw new SessionError(`Fork snapshot contains duplicate tool event ${id}`);
-    own.add(id);
-  }
-  for (const id of uses) {
-    if (!results.has(id)) {
-      throw new SessionError(`Fork cursor splits an unfinished tool round (${id})`);
+    if (event.type === "tool_use") {
+      if (seenMetadataUses.has(id)) {
+        throw new SessionError(`Fork snapshot contains duplicate tool use metadata ${id}`);
+      }
+      seenMetadataUses.add(id);
+      metadataUses.push(id);
+      metadataPending.push(id);
+      continue;
     }
-  }
-  for (const id of results) {
-    if (!uses.has(id)) {
-      throw new SessionError(`Fork snapshot contains an orphaned tool result (${id})`);
+    if (seenMetadataResults.has(id)) {
+      throw new SessionError(`Fork snapshot contains duplicate tool result metadata ${id}`);
     }
+    const expected = metadataPending.shift();
+    if (!expected) {
+      throw new SessionError(`Fork snapshot contains tool result metadata before use (${id})`);
+    }
+    if (expected !== id) {
+      throw new SessionError(
+        `Fork snapshot tool metadata order mismatch: expected ${expected}, received ${id}`,
+      );
+    }
+    seenMetadataResults.add(id);
+    metadataResults.push(id);
+  }
+  if (metadataPending.length > 0) {
+    throw new SessionError(`Fork cursor splits unfinished tool metadata (${metadataPending[0]})`);
+  }
+
+  const sameIds = (left: readonly string[], right: readonly string[]) =>
+    left.length === right.length && left.every((id, index) => id === right[index]);
+  if (!sameIds(projectedUses, metadataUses) || !sameIds(projectedResults, metadataResults)) {
+    throw new SessionError(`Fork tool metadata does not match provider history`);
   }
 }
 
