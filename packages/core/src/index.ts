@@ -193,10 +193,12 @@ export {
   authorize,
   refreshToken,
   generatePKCE,
+  createHardenedOAuthFetch,
   type OAuthConfig,
   type OAuthTokens,
   type OAuthAuthorizeOptions,
   type OAuthRefreshOptions,
+  type HardenedOAuthFetchOptions,
 } from "./services/oauth.js";
 export type { FileSnapshot, RedoRecord } from "./session/file-history.js";
 

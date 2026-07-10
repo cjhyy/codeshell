@@ -13,6 +13,7 @@ import type {
 import {
   CredentialStore,
   authorize,
+  createHardenedOAuthFetch,
   mergeOAuthTokenResponse,
   parseOAuthCredentialSecret,
   shouldRefreshOAuthCredential,
@@ -207,7 +208,7 @@ export class McpOAuthService {
 
   constructor(private readonly options: McpOAuthServiceOptions) {
     this.store = options.store ?? new CredentialStore(undefined);
-    this.fetchFn = options.fetch ?? fetch;
+    this.fetchFn = createHardenedOAuthFetch(options.fetch ?? fetch);
     this.authorizeFn = options.authorizeFn ?? authorize;
     this.profiles = options.profiles ?? MCP_OAUTH_PROFILES;
     this.now = options.now ?? Date.now;

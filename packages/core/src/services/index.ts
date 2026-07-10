@@ -13,10 +13,12 @@ export {
   authorize,
   refreshToken,
   generatePKCE,
+  createHardenedOAuthFetch,
   type OAuthConfig,
   type OAuthTokens,
   type OAuthAuthorizeOptions,
   type OAuthRefreshOptions,
+  type HardenedOAuthFetchOptions,
 } from "./oauth.js";
 export { notify, notifyComplete, notifyError } from "./notifier.js";
 export { diagnostics } from "./diagnostics.js";

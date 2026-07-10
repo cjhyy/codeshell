@@ -166,7 +166,7 @@ describe("McpOAuthService", () => {
 
   test("proactive refresh may use a still-live token while a forced refresh fails closed", async () => {
     const now = Date.UTC(2026, 0, 1);
-    const { service } = makeService({
+    const { service, store } = makeService({
       authorizeTokens: {
         accessToken: "still-live",
         refreshToken: "refresh",
@@ -231,5 +231,95 @@ describe("McpOAuthService", () => {
       }),
     ).rejects.toThrow(/HTTPS/);
     expect(store.list()).toHaveLength(0);
+  });
+
+  test("refresh never forwards refresh/client secrets across an origin redirect", async () => {
+    const now = Date.UTC(2026, 0, 1);
+    const calls: Array<{ url: string; body: string }> = [];
+    const { service, store } = makeService({
+      authorizeTokens: {
+        accessToken: "old-access",
+        refreshToken: "sentinel-refresh",
+        expiresAt: now - 1,
+        tokenType: "Bearer",
+      },
+      now: () => now,
+      fetch: (async (input: string | URL | Request, init?: RequestInit) => {
+        const request = new Request(input, init);
+        const body = await request.text();
+        calls.push({ url: request.url, body });
+        if (request.redirect !== "manual") {
+          calls.push({ url: "https://attacker.example/collect", body });
+          return Response.json({ access_token: "attacker-accepted-secret", expires_in: 3600 });
+        }
+        return new Response(null, {
+          status: 307,
+          headers: { Location: "https://attacker.example/collect" },
+        });
+      }) as typeof fetch,
+    });
+    await service.login({
+      source: "mcp",
+      serverName: "Example",
+      serverUrl: "https://mcp.example/rpc",
+      clientId: "client",
+      authorizationEndpoint: "https://auth.example/authorize",
+      tokenEndpoint: "https://auth.example/token",
+    });
+    const cred = store.resolve("example-oauth")!;
+    const secret = parseOAuthCredentialSecret(cred.secret!);
+    store.save("user", {
+      ...cred,
+      secret: JSON.stringify({ ...secret, clientSecret: "sentinel-client-secret" }),
+    });
+
+    await expect(service.refresh("example-oauth")).rejects.toThrow(/refresh failed/);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe("https://auth.example/token");
+    expect(calls.some((call) => call.url.includes("attacker.example"))).toBe(false);
+  });
+
+  test("revoke never forwards a token across an origin redirect", async () => {
+    const calls: Array<{ url: string; body: string }> = [];
+    const { service, store } = makeService({
+      fetch: (async (input: string | URL | Request, init?: RequestInit) => {
+        const request = new Request(input, init);
+        const body = await request.text();
+        calls.push({ url: request.url, body });
+        if (request.redirect !== "manual") {
+          calls.push({ url: "https://attacker.example/revoke", body });
+          return new Response(null, { status: 200 });
+        }
+        return new Response(null, {
+          status: 308,
+          headers: { Location: "https://attacker.example/revoke" },
+        });
+      }) as typeof fetch,
+    });
+    await service.login({
+      source: "mcp",
+      serverName: "Example",
+      serverUrl: "https://mcp.example/rpc",
+      clientId: "client",
+      authorizationEndpoint: "https://auth.example/authorize",
+      tokenEndpoint: "https://auth.example/token",
+    });
+    const cred = store.resolve("example-oauth")!;
+    const secret = parseOAuthCredentialSecret(cred.secret!);
+    store.save("user", {
+      ...cred,
+      secret: JSON.stringify({
+        ...secret,
+        revocationEndpoint: "https://auth.example/revoke",
+      }),
+    });
+
+    expect(await service.logout("example-oauth")).toEqual({
+      removed: true,
+      remoteRevoked: false,
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe("https://auth.example/revoke");
+    expect(calls.some((call) => call.url.includes("attacker.example"))).toBe(false);
   });
 });

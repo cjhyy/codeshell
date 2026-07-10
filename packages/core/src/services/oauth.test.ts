@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { authorize } from "./oauth.js";
+import { authorize, createHardenedOAuthFetch } from "./oauth.js";
 
 async function callbackFromAuthorizationUrl(
   authorizationUrl: string,
@@ -31,8 +31,8 @@ describe("OAuth authorization code flow", () => {
           opened = url;
           await callbackFromAuthorizationUrl(url, { code: "auth-code" });
         },
-        fetch: (async (_url, init) => {
-          exchangeBody = String(init?.body);
+        fetch: (async (input, init) => {
+          exchangeBody = await new Request(input, init).text();
           return Response.json({
             access_token: "access-token",
             refresh_token: "refresh-token",
@@ -113,5 +113,113 @@ describe("OAuth authorization code flow", () => {
       { openExternal: () => controller.abort(), signal: controller.signal },
     );
     await expect(pending).rejects.toThrow(/aborted/);
+  });
+});
+
+describe("hardened OAuth fetch redirects", () => {
+  for (const status of [302, 307, 308]) {
+    test(`does not forward a secret-bearing POST across origins after ${status}`, async () => {
+      const calls: Array<{ url: string; body: string }> = [];
+      const baseFetch = (async (input: string | URL | Request, init?: RequestInit) => {
+        const request = new Request(input, init);
+        calls.push({ url: request.url, body: await request.text() });
+        if (request.url === "https://auth.example/token") {
+          return new Response(null, {
+            status,
+            headers: { Location: "https://attacker.example/collect" },
+          });
+        }
+        return new Response("unexpected", { status: 500 });
+      }) as typeof fetch;
+      const hardened = createHardenedOAuthFetch(baseFetch);
+
+      await expect(
+        hardened("https://auth.example/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: "refresh_token=sentinel-refresh&client_secret=sentinel-client-secret",
+        }),
+      ).rejects.toThrow(/cross-origin redirect/);
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0].url).toBe("https://auth.example/token");
+      expect(calls.some((call) => call.url.includes("attacker.example"))).toBe(false);
+    });
+  }
+
+  test("rejects redirects to HTTP, loopback, and private network targets before fetching them", async () => {
+    for (const target of [
+      "http://attacker.example/metadata",
+      "https://127.0.0.1/private",
+      "https://10.0.0.8/private",
+    ]) {
+      const calls: string[] = [];
+      const hardened = createHardenedOAuthFetch((async (
+        input: string | URL | Request,
+        init?: RequestInit,
+      ) => {
+        const request = new Request(input, init);
+        calls.push(request.url);
+        return new Response(null, { status: 302, headers: { Location: target } });
+      }) as typeof fetch);
+
+      await expect(hardened("https://auth.example/.well-known/oauth")).rejects.toThrow();
+      expect(calls).toEqual(["https://auth.example/.well-known/oauth"]);
+    }
+  });
+
+  test("follows a bounded same-origin redirect while preserving a POST body", async () => {
+    const calls: Array<{ url: string; body: string; redirect: RequestRedirect }> = [];
+    const hardened = createHardenedOAuthFetch((async (
+      input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      const request = new Request(input, init);
+      calls.push({ url: request.url, body: await request.text(), redirect: request.redirect });
+      if (new URL(request.url).pathname === "/token") {
+        return new Response(null, { status: 308, headers: { Location: "/oauth/token" } });
+      }
+      return Response.json({ access_token: "ok" });
+    }) as typeof fetch);
+
+    const response = await hardened("https://auth.example/token", {
+      method: "POST",
+      body: "code=sentinel-code",
+    });
+
+    expect(response.ok).toBe(true);
+    expect(calls).toEqual([
+      {
+        url: "https://auth.example/token",
+        body: "code=sentinel-code",
+        redirect: "manual",
+      },
+      {
+        url: "https://auth.example/oauth/token",
+        body: "code=sentinel-code",
+        redirect: "manual",
+      },
+    ]);
+  });
+
+  test("stops after the configured redirect limit", async () => {
+    const calls: string[] = [];
+    const hardened = createHardenedOAuthFetch(
+      (async (input: string | URL | Request, init?: RequestInit) => {
+        const request = new Request(input, init);
+        calls.push(request.url);
+        const step = Number(new URL(request.url).searchParams.get("step") ?? "0");
+        return new Response(null, {
+          status: 302,
+          headers: { Location: `https://auth.example/discovery?step=${step + 1}` },
+        });
+      }) as typeof fetch,
+      { maxRedirects: 1 },
+    );
+
+    await expect(hardened("https://auth.example/discovery?step=0")).rejects.toThrow(
+      /redirect limit/,
+    );
+    expect(calls).toHaveLength(2);
   });
 });

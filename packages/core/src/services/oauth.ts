@@ -37,6 +37,125 @@ export interface OAuthRefreshOptions {
   now?: number;
 }
 
+export interface HardenedOAuthFetchOptions {
+  /** Maximum redirects followed after the initial request. */
+  maxRedirects?: number;
+}
+
+const OAUTH_REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+
+function normalizedHostname(hostname: string): string {
+  return hostname
+    .replace(/^\[|\]$/g, "")
+    .replace(/\.$/, "")
+    .toLowerCase();
+}
+
+function ipv4Octets(hostname: string): number[] | undefined {
+  const parts = normalizedHostname(hostname).split(".");
+  if (parts.length !== 4 || parts.some((part) => !/^\d{1,3}$/.test(part))) return undefined;
+  const octets = parts.map(Number);
+  return octets.every((part) => part >= 0 && part <= 255) ? octets : undefined;
+}
+
+function isLoopbackHostname(hostname: string): boolean {
+  const host = normalizedHostname(hostname);
+  const octets = ipv4Octets(host);
+  return host === "localhost" || host === "::1" || Boolean(octets && octets[0] === 127);
+}
+
+function isPrivateNetworkHostname(hostname: string): boolean {
+  const host = normalizedHostname(hostname);
+  const octets = ipv4Octets(host);
+  if (octets) {
+    const [a, b] = octets;
+    return (
+      a === 0 ||
+      a === 10 ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 198 && (b === 18 || b === 19))
+    );
+  }
+  if (!host.includes(":")) return false;
+  return host === "::" || host.startsWith("fc") || host.startsWith("fd") || /^fe[89ab]/.test(host);
+}
+
+function validateOAuthRequestUrl(url: URL): void {
+  if (url.username || url.password) throw new Error("OAuth endpoint must not include credentials");
+  const loopback = isLoopbackHostname(url.hostname);
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) {
+    throw new Error("OAuth endpoint must use HTTPS (HTTP is allowed only for localhost)");
+  }
+  if (!loopback && isPrivateNetworkHostname(url.hostname)) {
+    throw new Error("OAuth endpoint must not target a private network address");
+  }
+}
+
+/**
+ * Wrap fetch with OAuth-specific redirect handling. Every hop is validated;
+ * POST/Authorization requests never cross origins, so authorization codes,
+ * verifiers, refresh tokens, client secrets, and revocation tokens cannot be
+ * forwarded by an upstream 30x response.
+ */
+export function createHardenedOAuthFetch(
+  baseFetch: typeof fetch = fetch,
+  options: HardenedOAuthFetchOptions = {},
+): typeof fetch {
+  const maxRedirects = Math.max(0, Math.min(10, options.maxRedirects ?? 5));
+  return (async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+    const initial = new Request(input, init);
+    let currentUrl = new URL(initial.url);
+    const initialLoopback = isLoopbackHostname(currentUrl.hostname);
+    let method = initial.method.toUpperCase();
+    let headers = new Headers(initial.headers);
+    let body =
+      method === "GET" || method === "HEAD"
+        ? undefined
+        : new Uint8Array(await initial.clone().arrayBuffer());
+    const secretBearing = (method !== "GET" && method !== "HEAD") || headers.has("authorization");
+
+    for (let redirectCount = 0; ; redirectCount++) {
+      validateOAuthRequestUrl(currentUrl);
+      const request = new Request(currentUrl, {
+        method,
+        headers,
+        body: body ? body.slice() : undefined,
+        redirect: "manual",
+        signal: initial.signal,
+      });
+      const response = await baseFetch(request);
+      if (!OAUTH_REDIRECT_STATUSES.has(response.status)) return response;
+      const location = response.headers.get("location");
+      if (!location) return response;
+      if (redirectCount >= maxRedirects) throw new Error("OAuth redirect limit exceeded");
+
+      const nextUrl = new URL(location, currentUrl);
+      validateOAuthRequestUrl(nextUrl);
+      if (!initialLoopback && isLoopbackHostname(nextUrl.hostname)) {
+        throw new Error("OAuth redirect to a local network target is not allowed");
+      }
+      if (secretBearing && nextUrl.origin !== currentUrl.origin) {
+        throw new Error("OAuth secret-bearing request refused a cross-origin redirect");
+      }
+
+      if (
+        response.status === 303 ||
+        ((response.status === 301 || response.status === 302) && method === "POST")
+      ) {
+        method = "GET";
+        body = undefined;
+        headers = new Headers(headers);
+        headers.delete("content-type");
+        headers.delete("content-length");
+      }
+      currentUrl = nextUrl;
+    }
+  }) as typeof fetch;
+}
+
 export function generatePKCE(): { verifier: string; challenge: string } {
   const verifier = randomBytes(32).toString("base64url");
   const challenge = createHash("sha256").update(verifier).digest("base64url");
@@ -89,7 +208,7 @@ export async function authorize(
   const callback = callbackSettings(config, options);
   const { verifier, challenge } = generatePKCE();
   const state = randomBytes(16).toString("hex");
-  const fetchFn = options.fetch ?? fetch;
+  const fetchFn = createHardenedOAuthFetch(options.fetch ?? fetch);
   const openExternal = options.openExternal;
   if (!openExternal) throw new Error("OAuth authorize requires an openExternal host callback");
 
@@ -223,7 +342,7 @@ export async function refreshToken(
   if (config.scopes?.length) params.set("scope", config.scopes.join(" "));
   if (config.resource) params.set("resource", config.resource);
 
-  const res = await (options.fetch ?? fetch)(config.tokenEndpoint, {
+  const res = await createHardenedOAuthFetch(options.fetch ?? fetch)(config.tokenEndpoint, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: params.toString(),
