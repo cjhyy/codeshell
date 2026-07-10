@@ -5,49 +5,42 @@ import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 
 type SharedElectronMockState = {
-  sessions: Map<
+  sessions?: Map<
     string,
-    {
-      session: Electron.Session;
-      onFromPartition?: (partition: string) => void;
-    }
+    { session: Electron.Session; onFromPartition?: (partition: string) => void }
   >;
+  openExternal?: (...args: unknown[]) => Promise<void>;
+  openPath?: (...args: unknown[]) => Promise<string>;
+  showItemInFolder?: (...args: unknown[]) => void;
 };
 
 const electronMockGlobal = globalThis as typeof globalThis & {
   __codeshellElectronMockState?: SharedElectronMockState;
 };
 
-// Bun keeps the first mock.module("electron") result in its process-wide
-// module cache. Keep this early mock compatible with the partition-aware tests
-// that may run later in the same `bun test packages/desktop` process.
+// Bun keeps the first module mock registered by the full test suite. Keep this
+// early mock compatible with the shared proxy used by the later Electron tests.
 mock.module("electron", () => ({
-  app: { isPackaged: false },
-  safeStorage: {
-    isEncryptionAvailable: () => false,
-    encryptString: (value: string) => Buffer.from(value),
-    decryptString: (value: Buffer) => value.toString("utf-8"),
-  },
   session: {
     fromPartition(partition: string) {
-      const entry = electronMockGlobal.__codeshellElectronMockState?.sessions.get(partition);
+      const entry = electronMockGlobal.__codeshellElectronMockState?.sessions?.get(partition);
       entry?.onFromPartition?.(partition);
       return (
         entry?.session ??
         ({
-          cookies: {
-            get: async () => [],
-            set: async () => undefined,
-          },
+          cookies: { get: async () => [], set: async () => undefined },
           clearStorageData: async () => undefined,
         } as Electron.Session)
       );
     },
   },
   shell: {
-    openExternal: async () => {},
-    showItemInFolder: () => {},
-    openPath: async () => "",
+    openExternal: (...args: unknown[]) =>
+      electronMockGlobal.__codeshellElectronMockState?.openExternal?.(...args) ?? Promise.resolve(),
+    showItemInFolder: (...args: unknown[]) =>
+      electronMockGlobal.__codeshellElectronMockState?.showItemInFolder?.(...args),
+    openPath: (...args: unknown[]) =>
+      electronMockGlobal.__codeshellElectronMockState?.openPath?.(...args) ?? Promise.resolve(""),
   },
 }));
 
