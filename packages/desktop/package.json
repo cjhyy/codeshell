@@ -18,7 +18,7 @@
     "dev": "bun run scripts/dev.ts",
     "build": "bun run scripts/build.ts",
     "build:main": "esbuild src/main/index.ts --bundle --platform=node --format=esm --outfile=out/main/index.mjs --external:electron --external:@cjhyy/code-shell-core --loader:.md=text --banner:js=\"import { createRequire as __ccr } from 'node:module'; const require = __ccr(import.meta.url);\"",
-    "build:preload": "esbuild src/preload/index.ts --bundle --platform=node --format=cjs --outfile=out/preload/index.cjs --external:electron",
+    "build:preload": "esbuild src/preload/index.ts src/preload/browser-guest.ts --bundle --platform=node --format=cjs --outdir=out/preload --out-extension:.js=.cjs --external:electron",
     "build:renderer": "vite build",
     "build:mobile": "vite build -c vite.mobile.config.ts",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.mobile.json --noEmit",

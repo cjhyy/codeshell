@@ -1,71 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { parseBrowserGuestLinkIpcMessage, type GuestLinkRequest } from "../../browser-guest-link";
 import { NEW_TAB, freshTab, normalizeUrl, type Tab, type WebviewElement } from "./types";
 
-export const OPEN_TAB_SENTINEL = "__CS_OPEN_TAB__";
 export const OPEN_TAB_RATE_WINDOW_MS = 1000;
 export const OPEN_TAB_MAX_PER_RATE_WINDOW = 6;
 export const OPEN_TAB_DEDUPE_WINDOW_MS = 750;
 
-export type GuestLinkDisposition = "internal-tab" | "external";
-
-export interface GuestLinkRequest {
-  url: string;
-  disposition: GuestLinkDisposition;
-}
-
-export interface OpenTabConsoleGuardState {
+export interface GuestLinkGuardState {
   windowStartedAt: number;
   openedInWindow: number;
   recentUrls: Map<string, number>;
 }
 
-export function createOpenTabConsoleGuardState(): OpenTabConsoleGuardState {
+export function createGuestLinkGuardState(): GuestLinkGuardState {
   return { windowStartedAt: 0, openedInWindow: 0, recentUrls: new Map() };
 }
 
-function createOpenTabConsoleNonce(): string {
-  try {
-    return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
-  } catch {
-    return `${Date.now()}-${Math.random()}`;
-  }
-}
-
-export function parseGuestLinkConsoleMessage(
-  message: string,
-  expectedNonce: string,
-): GuestLinkRequest | null {
-  if (!message.startsWith(OPEN_TAB_SENTINEL)) return null;
-
-  let payload: unknown;
-  try {
-    payload = JSON.parse(message.slice(OPEN_TAB_SENTINEL.length));
-  } catch {
-    return null;
-  }
-
-  if (!payload || typeof payload !== "object") return null;
-  const { nonce, url, disposition } = payload as {
-    nonce?: unknown;
-    url?: unknown;
-    disposition?: unknown;
-  };
-  if (nonce !== expectedNonce || typeof url !== "string") return null;
-  if (disposition !== "internal-tab" && disposition !== "external") return null;
-
-  const trimmed = url.trim();
-  if (!/^https?:\/\//i.test(trimmed)) return null;
-  try {
-    const parsed = new URL(trimmed);
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
-    return { url: parsed.href, disposition };
-  } catch {
-    return null;
-  }
-}
-
-export function shouldAcceptGuestLinkConsoleRequest(
-  state: OpenTabConsoleGuardState,
+export function shouldAcceptGuestLinkRequest(
+  state: GuestLinkGuardState,
   request: GuestLinkRequest,
   now = Date.now(),
 ): boolean {
@@ -87,31 +39,6 @@ export function shouldAcceptGuestLinkConsoleRequest(
   state.recentUrls.set(requestKey, now);
   state.openedInWindow += 1;
   return true;
-}
-
-export function buildGuestLinkBridgeScript(nonce: string | null): string {
-  return `(() => {
-      if (window.__cs_tab_hook_v3) return; window.__cs_tab_hook_v3 = 1;
-      const sentinel = ${JSON.stringify(OPEN_TAB_SENTINEL)};
-      const nonce = ${JSON.stringify(nonce)};
-      const onLinkClick = (e) => {
-        if (!e.isTrusted) return;
-        const a = e.target && e.target.closest && e.target.closest('a[href]');
-        if (!a) return;
-        const href = a.href;
-        if (!/^https?:/i.test(href)) return;
-        const disposition = e.metaKey || e.ctrlKey
-          ? 'external'
-          : a.target === '_blank' || e.button === 1
-            ? 'internal-tab'
-            : null;
-        if (!disposition) return;
-        e.preventDefault(); e.stopPropagation();
-        console.info(sentinel + JSON.stringify({ nonce, url: href, disposition }));
-      };
-      document.addEventListener('click', onLinkClick, true);
-      document.addEventListener('auxclick', onLinkClick, true);
-    })();`;
 }
 
 /**
@@ -139,9 +66,7 @@ export function useBrowserTabs(
   const [tabs, setTabs] = useState<Tab[]>(() => [freshTab(initialUrl)]);
   const [activeId, setActiveId] = useState<string>(() => tabs[0].id);
   const viewRef = useRef<WebviewElement | null>(null);
-  const openTabConsoleNonce = useRef<string | null>(null);
-  if (!openTabConsoleNonce.current) openTabConsoleNonce.current = createOpenTabConsoleNonce();
-  const openTabConsoleGuard = useRef(createOpenTabConsoleGuardState());
+  const guestLinkGuard = useRef(createGuestLinkGuardState());
   const [nav, setNav] = useState({ canGoBack: false, canGoForward: false, loading: false });
 
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
@@ -220,24 +145,15 @@ export function useBrowserTabs(
     // Electron <webview> has a long-standing bug where clicking a
     // `target="_blank"` link (or window.open) fires NOTHING — no will-navigate,
     // no setWindowOpenHandler, no navigation at all (electron/electron#30886).
-    // So we can't catch new-tab links in main. Instead inject a capturing click
-    // listener into the guest on every load: it intercepts clicks that WANT a
-    // new window (target=_blank, or ⌘/Ctrl/middle-click) and signals the URL out
-    // via console.info with a sentinel; we parse it in onConsole below and open
-    // an in-app tab. Same-tab links keep working through normal navigation.
-    const inject = buildGuestLinkBridgeScript(openTabConsoleNonce.current);
-    const onDomReady = () => {
-      try {
-        void view.executeJavaScript(inject, true).catch(() => undefined);
-      } catch {
-        /* guest torn down */
-      }
-    };
-    const onConsole = (e: Event) => {
-      const msg = (e as unknown as { message?: string }).message ?? "";
-      const request = parseGuestLinkConsoleMessage(msg, openTabConsoleNonce.current ?? "");
+    // The main process forces a context-isolated document-start preload onto
+    // every guest. It forwards only trusted link gestures via sendToHost; page
+    // scripts cannot read or forge this host-only Electron event channel.
+    const onGuestIpc = (e: Event) => {
+      const request = parseBrowserGuestLinkIpcMessage(
+        e as unknown as { channel?: unknown; args?: unknown },
+      );
       if (!request) return;
-      if (!shouldAcceptGuestLinkConsoleRequest(openTabConsoleGuard.current, request)) return;
+      if (!shouldAcceptGuestLinkRequest(guestLinkGuard.current, request)) return;
       if (request.disposition === "external") {
         void window.codeshell.openExternal(request.url).catch(() => undefined);
       } else {
@@ -250,8 +166,7 @@ export function useBrowserTabs(
     view.addEventListener("did-navigate", onNavigate as EventListener);
     view.addEventListener("did-navigate-in-page", onNavigate as EventListener);
     view.addEventListener("did-fail-load", onFail as EventListener);
-    view.addEventListener("dom-ready", onDomReady);
-    view.addEventListener("console-message", onConsole as EventListener);
+    view.addEventListener("ipc-message", onGuestIpc as EventListener);
     // Late attach (see hasGuest above): the guest may have already navigated /
     // titled itself before we got listeners on — sync once from the live guest
     // so the address bar and tab title catch up.
@@ -272,8 +187,7 @@ export function useBrowserTabs(
       view.removeEventListener("did-navigate", onNavigate as EventListener);
       view.removeEventListener("did-navigate-in-page", onNavigate as EventListener);
       view.removeEventListener("did-fail-load", onFail as EventListener);
-      view.removeEventListener("dom-ready", onDomReady);
-      view.removeEventListener("console-message", onConsole as EventListener);
+      view.removeEventListener("ipc-message", onGuestIpc as EventListener);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, hasGuest, patchTab, openInNewTab]);

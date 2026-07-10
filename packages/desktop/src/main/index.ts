@@ -1437,7 +1437,10 @@ async function handleCcRoomEvent(event: AuthenticatedMobileClientEvent): Promise
 function hardenWebviewGuests(win: BrowserWindow): void {
   const pendingWebviewPartitions: string[] = [];
   win.webContents.on("will-attach-webview", (_e, webPreferences, params) => {
-    delete (webPreferences as Record<string, unknown>).preload;
+    // Ignore any renderer/page-supplied preload and pin the audited minimal
+    // guest bridge. It runs in Electron's isolated preload world and exposes
+    // nothing to page JavaScript; only trusted clicks can sendToHost.
+    webPreferences.preload = resolve(__dirname, "..", "preload", "browser-guest.cjs");
     webPreferences.nodeIntegration = false;
     webPreferences.nodeIntegrationInSubFrames = false;
     webPreferences.contextIsolation = true;

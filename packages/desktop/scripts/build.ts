@@ -31,11 +31,15 @@ async function buildMain(): Promise<void> {
 
 async function buildPreload(): Promise<void> {
   await esbuild.build({
-    entryPoints: [resolve(root, "src/preload/index.ts")],
+    entryPoints: {
+      index: resolve(root, "src/preload/index.ts"),
+      "browser-guest": resolve(root, "src/preload/browser-guest.ts"),
+    },
     bundle: true,
     platform: "node",
     format: "cjs",
-    outfile: resolve(root, "out/preload/index.cjs"),
+    outdir: resolve(root, "out/preload"),
+    outExtension: { ".js": ".cjs" },
     external: ["electron"],
     minify: false,
     logLevel: "info",
