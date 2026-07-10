@@ -131,10 +131,7 @@
 
 ## 问题记录（遇到阻塞 / 非本任务引入的红测试记这里）
 
-- **[新 bug 候选] 带附件插入的消息卡住**（卡密sama 2026-07-10 报告，待补现象细节）
-  - 现象：带附件插入的消息发送后卡住。
-  - 待确认：附件类型（图片/其它）、卡在哪一步（气泡不出现/转圈不结束/LLM 未调用）、是主线程还是 quick-chat 面板、有无 console 报错。
-  - 处理：细节补齐后作为独立 bugfix 走 systematic-debugging → codex 流水线（可能与「输入附件管道统一」相关记忆有关）。
+- **[已修复 · 922ab8dd] 带附件插入的消息卡住**（根因：UI sessionId 与 engineSessionId 不匹配，附件按旧 UI ID 暂存被 core 拒绝 → LLM 不被调用。还顺带修了协议传入畸形 path 抛异常绕过 image_error 的问题。302 pass 已合并）
 
 - **[新 bug 候选] 每轮编辑文件数统计不对**（卡密sama 2026-07-10 报告）
   - 现象：desktop 每轮（turn）显示的"编辑的文件"数量算得不对。
@@ -150,8 +147,8 @@
 
 - **[已修复 · b0cb9782] steer 带附件 → 完全没有 LLM 回应**（根因：steer 链路无 attachments 通道。修法：SteerItem+enqueueSteer 加 attachments 字段，turn-loop 复用 buildRunUserMessageContent 装配。protocol/desktop 也已透传。30 pass 已合并）
 
-- **[新 feature 候选] 切到 CC/Codex 房间时自动更新内容**（卡密sama 2026-07-10 提出）
-  - 需求：桌面端侧边栏切到某个 Claude Code / Codex 的 cc-room / 外部 agent session 面板时，自动刷新拉取该 session 的最新 transcript/内容，不需要手动刷新。
-  - 涉：cc-room 面板生命周期（CCRoomView / 相关 tab 切换逻辑），切换 tab 时触发 session history 重新加载。
-  - 体量评估：S～M（可能只需在 tab 切换/activate 事件上加一个 reload/refresh 调用）
+- **[新 feature 候选] 切到 CC/Codex 房间时持续实时更新流式内容**（卡密sama 2026-07-10 提出，订正）
+  - 真实需求：进入某个正在运行的 CC/Codex session 房间后，看到的 transcript 内容冻在进入那一刻——**codex 后续新输出不会自动流进来，需要手动刷新才能看到新内容**。期望是进入房间后持续实时更新（类似 `tail -f`），而不是一次性快照。
+  - 涉：cc-room 面板（CCRoomView / transcript 流订阅）、**手机端同理需要**。核心是房间 tab activate 时建立**持续流订阅**而非拉一次快照。
+  - 体量评估：M（需要改流订阅模型：从"进入时 load snapshot → 手动 refresh"改为"进入时 subscribe → 持续 push 新行"）
   - 处理：待排入实现队列
