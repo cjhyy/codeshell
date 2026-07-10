@@ -15,6 +15,7 @@ import {
 import type { LLMResponse, Message, StreamEvent, ToolCall, ToolResult } from "../types.js";
 import { CANCEL_GOAL_TOOL_NAME } from "../tool-system/builtin/cancel-goal.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js";
+import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { Engine } from "./engine.js";
@@ -595,6 +596,8 @@ const engineScenarios = new Map<
     judgeResponse?: string;
     systemPrompts?: string[];
     lastUsage?: LLMUsageTracker;
+    mainMessages?: Message[][];
+    afterMainCall?: (callNumber: number) => void;
   }
 >();
 
@@ -624,6 +627,9 @@ class GoalLifecycleClient extends LLMClientBase {
     const response =
       scenario.mainResponses[Math.min(scenario.mainCalls, scenario.mainResponses.length - 1)]!;
     scenario.mainCalls++;
+    scenario.mainMessages ??= [];
+    scenario.mainMessages.push(options.messages.map((message) => ({ ...message })));
+    scenario.afterMainCall?.(scenario.mainCalls);
     this.recordUsage(
       response.usage ?? { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
       options,
@@ -657,9 +663,187 @@ function persistedState(
 
 afterEach(() => {
   backgroundJobRegistry.reset();
+  notificationQueue.reset();
 });
 
 describe("Engine persisted goal lifecycle", () => {
+  it("G1: does not re-enter headless TurnLoop after the first goal termination", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-headless-terminal-"));
+    const model = uniqueModel("headless-terminal");
+    const sessionId = "goal-headless-terminal";
+    const events: StreamEvent[] = [];
+    notificationQueue.enqueue(
+      {
+        agentId: "already-finished-agent",
+        description: "already finished background check",
+        status: "completed",
+        finalText: "background result waiting to be delivered",
+        enqueuedAt: Date.now(),
+      },
+      sessionId,
+    );
+    engineScenarios.set(model, {
+      mainResponses: [
+        stopResponse("budget is exhausted"),
+        {
+          text: "must not run",
+          toolCalls: [{ id: "must-not-run", toolName: "UnknownTool", args: {} }],
+          stopReason: "tool_use",
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        },
+        {
+          text: "would overwrite the terminal result",
+          toolCalls: [],
+          stopReason: "stop",
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        },
+      ],
+      mainCalls: 0,
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const result = await engine.run("bounded headless work", {
+        sessionId,
+        cwd: dir,
+        goal: { objective: "finish within budget", tokenBudget: 10 },
+        onStream: (event) => {
+          events.push(event);
+        },
+      });
+
+      expect(engineScenarios.get(model)?.mainCalls).toBe(1);
+      expect(events.filter((event) => event.type === "tool_use_start")).toHaveLength(0);
+      expect(result.reason).toBe("goal_budget_exhausted");
+      expect(result.goalTermination).toBe("token_budget_exhausted");
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("G1: persists a later background notification without restarting after termination", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-terminal-notification-"));
+    const model = uniqueModel("terminal-notification");
+    const sessionId = "goal-terminal-notification";
+    engineScenarios.set(model, {
+      mainResponses: [
+        stopResponse("budget is exhausted"),
+        {
+          text: "must not summarize after termination",
+          toolCalls: [],
+          stopReason: "stop",
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        },
+      ],
+      mainCalls: 0,
+      afterMainCall: (callNumber) => {
+        if (callNumber !== 1) return;
+        notificationQueue.enqueue(
+          {
+            agentId: "just-finished-agent",
+            description: "post-termination background check",
+            status: "completed",
+            finalText: "post-termination background result",
+            enqueuedAt: Date.now(),
+          },
+          sessionId,
+        );
+      },
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const result = await engine.run("bounded headless work", {
+        sessionId,
+        cwd: dir,
+        goal: { objective: "finish within budget", tokenBudget: 10 },
+      });
+      const transcript = readFileSync(join(dir, "sessions", sessionId, "transcript.jsonl"), "utf8");
+
+      expect(engineScenarios.get(model)?.mainCalls).toBe(1);
+      expect(notificationQueue.getSnapshot(sessionId)).toHaveLength(0);
+      expect(transcript).toContain("post-termination background result");
+      expect(transcript).toContain('"injected":true');
+      expect(result.reason).toBe("goal_budget_exhausted");
+      expect(result.goalTermination).toBe("token_budget_exhausted");
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("G1 regression: keeps normal headless background continuation without goal termination", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-headless-normal-continuation-"));
+    const model = uniqueModel("normal-continuation");
+    const sessionId = "headless-normal-continuation";
+    engineScenarios.set(model, {
+      mainResponses: [
+        stopResponse("background work started"),
+        stopResponse("background result summarized"),
+      ],
+      mainCalls: 0,
+      afterMainCall: (callNumber) => {
+        if (callNumber !== 1) return;
+        notificationQueue.enqueue(
+          {
+            agentId: "normal-finished-agent",
+            description: "normal background check",
+            status: "completed",
+            finalText: "normal background result",
+            enqueuedAt: Date.now(),
+          },
+          sessionId,
+        );
+      },
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const result = await engine.run("continue normally", { sessionId, cwd: dir });
+      const continuationMessages = engineScenarios.get(model)?.mainMessages?.[1] ?? [];
+
+      expect(engineScenarios.get(model)?.mainCalls).toBe(2);
+      expect(
+        continuationMessages.some(
+          (message) =>
+            message.role === "user" &&
+            typeof message.content === "string" &&
+            message.content.includes("normal background result"),
+        ),
+      ).toBe(true);
+      expect(result.text).toBe("background result summarized");
+      expect(result.goalTermination).toBeUndefined();
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("F7: stops immediately on unrecoverable judge overflow but preserves the active goal", async () => {
     const dir = mkdtempSync(join(tmpdir(), "engine-goal-judge-overflow-"));
     const model = uniqueModel("judge-overflow");
