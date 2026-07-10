@@ -633,6 +633,8 @@ export type StreamEvent =
       finalText?: string;
       /** Error message (status === "failed" or "cancelled" only). */
       error?: string;
+      /** External Claude/Codex session id, when workKind === "cc". */
+      ccSessionId?: string;
       /** Files attributed to an external DriveAgent transcript. */
       changedFiles?: string[];
       /** Working directory used to canonicalize relative/absolute path aliases. */

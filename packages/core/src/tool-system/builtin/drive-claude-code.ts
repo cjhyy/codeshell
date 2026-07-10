@@ -265,8 +265,9 @@ function recordSuccessfulSession(
   cli: DriveCli,
   cwd: string,
   result: AgentRunResult,
+  includeErroredSession = false,
 ): void {
-  if (result.isError || !result.sessionId) return;
+  if ((!includeErroredSession && result.isError) || !result.sessionId) return;
   try {
     store.record({ cli, sessionId: result.sessionId, cwd });
   } catch (err) {
@@ -319,8 +320,10 @@ function attachDriveCompletion(params: {
   } = params;
   void run
     .then((r) => {
-      if (backgroundJobRegistry.get(jobId)?.status !== "running") return;
-      recordSuccessfulSession(sessionStore, cli, cwd, r);
+      const jobStatus = backgroundJobRegistry.get(jobId)?.status;
+      if (jobStatus !== "running" && jobStatus !== "cancelling") return;
+      const cancelling = jobStatus === "cancelling";
+      recordSuccessfulSession(sessionStore, cli, cwd, r, cancelling);
       // Attribute external changes BEFORE publishing completion. Previously the
       // notification event was emitted first and carried no files; changedFiles
       // only reached the background-work registry/panel, so the chat turn card
@@ -333,7 +336,7 @@ function attachDriveCompletion(params: {
           description: label,
           cli,
           cwd,
-          status: r.isError ? "failed" : "completed",
+          status: cancelling ? "cancelled" : r.isError ? "failed" : "completed",
           changedFiles,
           ...(originClientMessageId ? { originClientMessageId } : {}),
         });
@@ -350,6 +353,13 @@ function attachDriveCompletion(params: {
         size: changedFiles.length,
         files: changedFiles,
       });
+      if (cancelling) {
+        backgroundJobRegistry.recordArtifacts(jobId, {
+          ccSessionId: r.sessionId || undefined,
+          changedFiles,
+        });
+        return;
+      }
       // Deliver the result back so the woken agent actually sees the answer
       // (not just "a job finished"). Mirrors the video/sub-agent completion
       // path — enqueue lands in the same notificationQueue the wakeup drains.
@@ -428,6 +438,7 @@ function trackBackgroundRun(params: {
     cwd: params.cwd,
     cli: params.cli,
     promptSummary: params.promptSummary,
+    originClientMessageId: params.originClientMessageId,
     abort: async () => {
       params.abort();
       await run.catch(() => undefined);
@@ -742,6 +753,8 @@ async function cancelDriveAgentJob(jobId: string | undefined): Promise<string> {
       workKind: "cc",
       error: finalText,
       ccSessionId: job.ccSessionId,
+      ...(job.changedFiles?.length ? { changedFiles: job.changedFiles, cwd: job.cwd } : {}),
+      ...(job.originClientMessageId ? { originClientMessageId: job.originClientMessageId } : {}),
       enqueuedAt: Date.now(),
     },
     job.sessionId,

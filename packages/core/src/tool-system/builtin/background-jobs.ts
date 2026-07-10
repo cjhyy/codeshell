@@ -62,6 +62,8 @@ export interface BackgroundJobEntry {
   promptSummary?: string;
   /** External CLI kind for DriveAgent jobs. */
   cli?: string;
+  /** Client message that launched this external job. */
+  originClientMessageId?: string;
   /** Optional cancellation hook for jobs backed by a live process. */
   abort?: () => void | Promise<void>;
 }
@@ -79,6 +81,7 @@ export interface BackgroundJobStartOptions {
   cwd?: string;
   promptSummary?: string;
   cli?: string;
+  originClientMessageId?: string;
   abort?: () => void | Promise<void>;
 }
 
@@ -127,6 +130,9 @@ class BackgroundJobRegistry {
       ...(options?.cwd ? { cwd: normalizeCwdPath(options.cwd) } : {}),
       ...(options?.promptSummary ? { promptSummary: options.promptSummary } : {}),
       ...(options?.cli ? { cli: options.cli } : {}),
+      ...(options?.originClientMessageId
+        ? { originClientMessageId: options.originClientMessageId }
+        : {}),
       ...(options?.abort ? { abort: options.abort } : {}),
     });
     this.notify();
@@ -149,6 +155,17 @@ class BackgroundJobRegistry {
 
   get(jobId: string): BackgroundJobEntry | undefined {
     return this.jobs.get(jobId);
+  }
+
+  /** Persist artifacts discovered while a running job is winding down. */
+  recordArtifacts(
+    jobId: string,
+    artifacts: Pick<BackgroundJobOutcome, "ccSessionId" | "changedFiles">,
+  ): void {
+    const entry = this.jobs.get(jobId);
+    if (!entry || !isActiveStatus(entry.status)) return;
+    if (artifacts.ccSessionId !== undefined) entry.ccSessionId = artifacts.ccSessionId;
+    if (artifacts.changedFiles !== undefined) entry.changedFiles = artifacts.changedFiles;
   }
 
   async cancel(jobId: string, outcome?: Omit<BackgroundJobOutcome, "status">): Promise<boolean> {
