@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { RefreshCw, ChevronDown, Check } from "lucide-react";
 import { UnifiedDiffViewer } from "../diff/UnifiedDiffViewer";
 import { parseUnifiedDiff } from "../diff/parseUnifiedDiff";
@@ -70,6 +70,14 @@ export function ReviewPanel({ cwd, files, turnDiff }: Props) {
   const [selectedCommit, setSelectedCommit] = useState<GitCommit | null>(null);
   // Recent commits for the 提交 submenu, loaded lazily when it opens.
   const [commits, setCommits] = useState<GitCommit[] | null>(null);
+  const commitsRequestSeq = useRef(0);
+  const commitsTargetCwd = useRef(cwd);
+  // Invalidate during render, not only in the [cwd] effect: an old promise may
+  // settle between the new-root render and that effect being flushed.
+  if (commitsTargetCwd.current !== cwd) {
+    commitsTargetCwd.current = cwd;
+    commitsRequestSeq.current += 1;
+  }
 
   // Git-derived selections belong to one workspace. A session switching from
   // main to a worktree must not retain commits/ranges/stats from the old root.
@@ -106,10 +114,26 @@ export function ReviewPanel({ cwd, files, turnDiff }: Props) {
   // Lazy-load recent commits the first time the 提交 submenu is opened.
   const loadCommits = (): void => {
     if (commits !== null || !cwd) return;
+    const requestCwd = cwd;
+    const requestSeq = ++commitsRequestSeq.current;
     void window.codeshell
-      .getGitRecentCommits(cwd, 20)
-      .then((cs) => setCommits(cs))
-      .catch(() => setCommits([]));
+      .getGitRecentCommits(requestCwd, 20)
+      .then((cs) => {
+        if (
+          commitsRequestSeq.current === requestSeq &&
+          commitsTargetCwd.current === requestCwd
+        ) {
+          setCommits(cs);
+        }
+      })
+      .catch(() => {
+        if (
+          commitsRequestSeq.current === requestSeq &&
+          commitsTargetCwd.current === requestCwd
+        ) {
+          setCommits([]);
+        }
+      });
   };
 
   // When the caller hands us a focus set (e.g. from a "files changed" card),
