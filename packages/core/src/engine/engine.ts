@@ -109,6 +109,7 @@ import { AgentDefinitionRegistry } from "../agent/agent-definition-registry.js";
 import { defaultCacheDir } from "../llm/model-cache.js";
 import { detectProviderFromApiKey, buildModelPool } from "../onboarding.js";
 import { detectPastedNoise } from "../utils/task-sanitizer.js";
+import { formatFriendlyError } from "./friendly-error.js";
 import { buildSessionTitle } from "./session-title.js";
 import { MemoryOrchestrator } from "../services/memory-orchestrator.js";
 import { runDreamConsolidation } from "../services/dream-consolidation.js";
@@ -1409,7 +1410,7 @@ export class Engine {
     toolCtx.setSessionWorkspace = (workspace) => {
       session.state.workspace = workspace;
     };
-    return runWithSid(session.state.sessionId, async () => {
+    const sessionRun = runWithSid(session.state.sessionId, async () => {
       recordSessionStart(session.state.sessionId, {
         // Strip <codeshell-image> base64 payloads before they reach
         // <repo>/log/. Reader still sees the marker + byte count, just
@@ -1542,6 +1543,11 @@ export class Engine {
 
       // Kick off LLM client creation early (network handshake)
       const llmClientPromise = createLLMClient(this.config.llm, this.config.clientDefaults);
+      // MCP connection below may keep us from awaiting this promise for a while.
+      // Observe rejection immediately so a fast client-init failure cannot become
+      // an unhandledRejection during that gap; Promise.all still receives the
+      // original promise and routes the same error through the lifecycle catch.
+      void llmClientPromise.catch(() => {});
 
       const mode = this.config.permissionMode ?? "acceptEdits";
       const { rules: defaultRules, backend: approvalBackend } = this.buildPermissionConfig(
@@ -2408,6 +2414,38 @@ export class Engine {
           promptTokens: usage.totalPromptTokens,
           completionTokens: usage.totalCompletionTokens,
           totalTokens: usage.totalTokens,
+        },
+      };
+    });
+    return Promise.resolve(sessionRun).catch((err): EngineResult => {
+      // The session is already persisted as active before runWithSid starts.
+      // Initialization failures (client creation, MCP connection, prompt/hooks)
+      // therefore need the same terminal lifecycle treatment as turn-loop errors.
+      const error = formatFriendlyError(err);
+      session.state.status = "model_error";
+      this.sessionManager.saveState(session.state);
+      session.transcript.appendError(error, { phase: "initialization" });
+      logger.error("engine.run_lifecycle_failed", {
+        sessionId: session.state.sessionId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      recordSessionEnd(session.state.sessionId, {
+        reason: "model_error",
+        turns: session.state.turnCount,
+      });
+      options?.onStream?.({ type: "error", error });
+      options?.onStream?.({ type: "turn_complete", reason: "model_error" });
+
+      const usage = session.state.tokenUsage;
+      return {
+        text: `ERROR: ${error}`,
+        reason: "model_error",
+        sessionId: session.state.sessionId,
+        turnCount: session.state.turnCount,
+        usage: {
+          promptTokens: usage.promptTokens ?? 0,
+          completionTokens: usage.completionTokens ?? 0,
+          totalTokens: usage.totalTokens ?? 0,
         },
       };
     });
