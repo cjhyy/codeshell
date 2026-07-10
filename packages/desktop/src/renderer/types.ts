@@ -461,8 +461,19 @@ function attachExternalChangesToOriginTurn(
   const existingCardIndex = messages.findIndex(
     (message, index) => index > start && index < end && message.kind === "files_changed",
   );
+  // Earlier late completions were appended after the next real user turn, so
+  // they sit outside this origin turn's slice. Pull matching markers back into
+  // the logical turn before rebuilding its single cumulative file card.
+  const priorLateMarkers = messages
+    .slice(end)
+    .filter(
+      (message): message is SystemMessage =>
+        message.kind === "system" &&
+        message.externalFileChanges?.originClientMessageId === originClientMessageId,
+    );
   const logicalTurn = [
     ...messages.slice(start, end).filter((message) => message.kind !== "files_changed"),
+    ...priorLateMarkers,
     marker,
   ];
   const aggregate = aggregateFileChangeSummary(logicalTurn);

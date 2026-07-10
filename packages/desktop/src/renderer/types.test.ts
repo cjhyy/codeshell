@@ -1058,6 +1058,49 @@ describe("applyStreamEvent — background_agent_completed", () => {
     });
   });
 
+  test("multiple late DriveAgent completions accumulate on the launching turn", () => {
+    let s = withMessages([
+      { kind: "user", id: "u1", text: "launch two DriveAgents", clientMessageId: "client-1" },
+      { kind: "user", id: "u2", text: "unrelated next turn", clientMessageId: "client-2" },
+    ]);
+
+    for (const completion of [
+      { agentId: "cc-one", changedFiles: ["one.ts", "shared.ts"] },
+      { agentId: "cc-two", changedFiles: ["two.ts", "shared.ts"] },
+    ]) {
+      s = applyStreamEvent(s, {
+        type: "background_agent_completed",
+        agentId: completion.agentId,
+        description: `DriveAgent(codex): ${completion.agentId}`,
+        status: "completed",
+        workKind: "cc",
+        finalText: "done",
+        changedFiles: completion.changedFiles,
+        cwd: "/repo",
+        originClientMessageId: "client-1",
+        enqueuedAt: 1,
+      } as StreamEvent);
+    }
+
+    const user2Index = s.messages.findIndex(
+      (m) => m.kind === "user" && m.clientMessageId === "client-2",
+    );
+    const cards = s.messages
+      .map((message, index) => ({ message, index }))
+      .filter(({ message }) => message.kind === "files_changed");
+
+    expect(cards).toHaveLength(1);
+    expect(cards[0]!.index).toBeLessThan(user2Index);
+    expect(cards[0]!.message).toMatchObject({
+      kind: "files_changed",
+      files: [
+        { path: "one.ts", added: 0, removed: 0, count: 1 },
+        { path: "shared.ts", added: 0, removed: 0, count: 2 },
+        { path: "two.ts", added: 0, removed: 0, count: 1 },
+      ],
+    });
+  });
+
   test("completed → appends a system message with the saved path", () => {
     const ev = {
       type: "background_agent_completed",

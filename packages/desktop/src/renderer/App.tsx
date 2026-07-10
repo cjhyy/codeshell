@@ -1588,10 +1588,15 @@ function App() {
           page.sessions.map(async (s) => ({ ...s, cwd: await resolveProjectCwd(s.cwd) })),
         );
         for (const s of resolvedSessions) {
-          if (!isQuickChatSessionId(s.engineSessionId || s.id)) continue;
-          void window.codeshell.deleteSession(s.engineSessionId || s.id).catch((e) =>
+          const sessionId = s.engineSessionId || s.id;
+          if (!isQuickChatSessionId(sessionId)) continue;
+          const isLive = Object.values(quickChatSessionsRef.current).some(
+            (session) => session.sessionId === sessionId,
+          );
+          if (isLive) continue;
+          void window.codeshell.deleteSession(sessionId).catch((e) =>
             window.codeshell.log("quick_chat.cleanup_stale_session_failed", {
-              sessionId: s.engineSessionId || s.id,
+              sessionId,
               error: String(e),
             }),
           );
