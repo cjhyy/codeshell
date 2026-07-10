@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell",
-  "version": "0.7.0-beta.1",
+  "version": "0.7.0",
   "description": "Code Shell — meta package. Installs @cjhyy/code-shell-core and @cjhyy/code-shell-tui.",
   "type": "module",
   "main": "./dist/index.js",

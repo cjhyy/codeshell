@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-cdp",
-  "version": "0.7.0-beta.1",
+  "version": "0.7.0",
   "private": true,
   "description": "Environment-agnostic CDP browser action layer — drive a browser target (click/type/select/press_key/hover/scroll + raw observe) through an injected CDP sender. No Playwright, no launcher, no agent loop. Zero runtime dependencies.",
   "type": "module",

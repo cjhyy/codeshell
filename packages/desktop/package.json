@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-desktop",
-  "version": "0.7.0-beta.1",
+  "version": "0.7.0",
   "private": true,
   "license": "MIT",
   "description": "Electron desktop client for CodeShell — the full desktop agent app.",
