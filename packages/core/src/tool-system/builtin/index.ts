@@ -52,7 +52,8 @@ import {
   switchSessionWorkspaceToolDef,
   switchSessionWorkspaceTool,
 } from "./worktree.js";
-import { sleepToolDef, sleepTool } from "./sleep.js";
+import { sleepToolDef } from "./sleep.definition.js";
+import { sleepTool } from "./sleep.js";
 import { configToolDef, configTool } from "./config.js";
 import { notebookEditToolDef, notebookEditTool } from "./notebook-edit.js";
 import { lspToolDef, lspTool } from "./lsp.js";
@@ -61,9 +62,9 @@ import {
   cronCreateTool,
   cronDeleteToolDef,
   cronDeleteTool,
-  cronListToolDef,
   cronListTool,
 } from "./cron.js";
+import { cronListToolDef } from "./cron-list.definition.js";
 import {
   driveClaudeCodeToolDef,
   driveClaudeCodeTool,
