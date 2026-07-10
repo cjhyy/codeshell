@@ -1,17 +1,49 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { execFileSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  rmSync,
-  utimesSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 
+type SharedElectronMockState = {
+  sessions: Map<
+    string,
+    {
+      session: Electron.Session;
+      onFromPartition?: (partition: string) => void;
+    }
+  >;
+};
+
+const electronMockGlobal = globalThis as typeof globalThis & {
+  __codeshellElectronMockState?: SharedElectronMockState;
+};
+
+// Bun keeps the first mock.module("electron") result in its process-wide
+// module cache. Keep this early mock compatible with the partition-aware tests
+// that may run later in the same `bun test packages/desktop` process.
 mock.module("electron", () => ({
+  app: { isPackaged: false },
+  safeStorage: {
+    isEncryptionAvailable: () => false,
+    encryptString: (value: string) => Buffer.from(value),
+    decryptString: (value: Buffer) => value.toString("utf-8"),
+  },
+  session: {
+    fromPartition(partition: string) {
+      const entry = electronMockGlobal.__codeshellElectronMockState?.sessions.get(partition);
+      entry?.onFromPartition?.(partition);
+      return (
+        entry?.session ??
+        ({
+          cookies: {
+            get: async () => [],
+            set: async () => undefined,
+          },
+          clearStorageData: async () => undefined,
+        } as Electron.Session)
+      );
+    },
+  },
   shell: {
     openExternal: async () => {},
     showItemInFolder: () => {},
