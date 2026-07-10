@@ -222,6 +222,13 @@ export function useRemoteApp(): RemoteApp {
    *  switch to a plain session/room so late disk-history replies cannot replay
    *  into a different conversation. */
   const ccHistorySessionRef = useRef<string | undefined>(undefined);
+  /** Cwd bound to the currently-open CC room. Project selection may change
+   * independently while this room stays open, so reconnect must not derive the
+   * subscription cwd from activeProjectCwd. */
+  const ccHistoryCwdRef = useRef<string | undefined>(undefined);
+  /** openSession replies do not echo cwd. Keep it keyed by the requested
+   * session until ccRoom.opened confirms which room acquired it. */
+  const pendingCcOpenCwdsRef = useRef<Map<string, string>>(new Map());
   const ccBacklogLoadedRef = useRef(false);
   /** Which CLI the currently-open cc session belongs to — selects the on-disk
    *  history reader (claude vs codex rollout) for ccRoom.readHistory. Captured
@@ -507,6 +514,7 @@ export function useRemoteApp(): RemoteApp {
           break;
         case "ccRoom.opened":
           if (event.status === "missing") {
+            pendingCcOpenCwdsRef.current.delete(event.sessionId);
             setNotice(t("mobile.notice.ccRoomOpenFailed"));
             break;
           }
@@ -523,6 +531,11 @@ export function useRemoteApp(): RemoteApp {
           }
           setActiveRoomId(event.roomId);
           ccHistorySessionRef.current = event.sessionId;
+          ccHistoryCwdRef.current =
+            pendingCcOpenCwdsRef.current.get(event.sessionId) ??
+            activeProjectCwdRef.current ??
+            undefined;
+          pendingCcOpenCwdsRef.current.delete(event.sessionId);
           ccBacklogLoadedRef.current = false;
           boundSessionRef.current = undefined;
           setApprovals([]);
@@ -530,11 +543,11 @@ export function useRemoteApp(): RemoteApp {
           dispatchChat({ kind: "reset" });
           lastRoomSeqRef.current.set(event.roomId, 0);
           appliedRoomSeqsRef.current.delete(event.roomId);
-          if (activeProjectCwdRef.current) {
+          if (ccHistoryCwdRef.current) {
             sendRef.current?.({
               type: "ccRoom.subscribeTranscript",
               roomId: event.roomId,
-              cwd: activeProjectCwdRef.current,
+              cwd: ccHistoryCwdRef.current,
               sessionId: event.sessionId,
               limit: 150,
               kind: ccHistoryKindRef.current,
@@ -718,7 +731,7 @@ export function useRemoteApp(): RemoteApp {
     const roomId = activeRoomIdRef.current;
     if (roomId) {
       const ccSessionId = ccHistorySessionRef.current;
-      const ccCwd = activeProjectCwdRef.current;
+      const ccCwd = ccHistoryCwdRef.current;
       if (ccSessionId && ccCwd) {
         setLoadingKey("roomHistory", true);
         sendRef.current?.({
@@ -799,6 +812,7 @@ export function useRemoteApp(): RemoteApp {
       setActiveSessionCwd(sessionCwdById.get(id) ?? null);
       boundSessionRef.current = id;
       ccHistorySessionRef.current = undefined;
+      ccHistoryCwdRef.current = undefined;
       ccBacklogLoadedRef.current = false;
       setActiveRoomId(undefined);
       setApprovals([]);
@@ -830,6 +844,7 @@ export function useRemoteApp(): RemoteApp {
       // Pin the CLI this session belongs to so its on-disk backlog is read with
       // the right reader even if the user switches the pane's CLI afterward.
       ccHistoryKindRef.current = ccCliKindRef.current;
+      pendingCcOpenCwdsRef.current.set(sessionId, cwd);
       socket.send({ type: "ccRoom.openSession", sessionId, cwd, mode, kind: ccCliKindRef.current });
     },
     [socket],
@@ -863,6 +878,7 @@ export function useRemoteApp(): RemoteApp {
       const nextCwd = cwd === undefined ? activeCwdRef.current : cwd;
       boundSessionRef.current = undefined;
       ccHistorySessionRef.current = undefined;
+      ccHistoryCwdRef.current = undefined;
       ccBacklogLoadedRef.current = false;
       // Enter a visible "fresh conversation" state immediately — clear the active
       // session + chat so the user sees the new-conversation surface right away
@@ -950,6 +966,7 @@ export function useRemoteApp(): RemoteApp {
     }
     setActiveRoomId(undefined);
     ccHistorySessionRef.current = undefined;
+    ccHistoryCwdRef.current = undefined;
     ccBacklogLoadedRef.current = false;
     setLoadingKey("roomHistory", false);
     dispatchChat({ kind: "reset" });
