@@ -258,24 +258,6 @@ function serializedStringLength(text: string): number {
   return JSON.stringify(text).length;
 }
 
-function truncateToSerializedLength(text: string, maxSerializedChars: number): string {
-  if (serializedStringLength(text) <= maxSerializedChars) return text;
-  let low = 0;
-  let high = codePointLength(text);
-  let best = "";
-  while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
-    const candidate = truncateHeadTail(text, mid);
-    if (serializedStringLength(candidate) <= maxSerializedChars) {
-      best = candidate;
-      low = mid + 1;
-    } else {
-      high = mid - 1;
-    }
-  }
-  return best;
-}
-
 function projectedContent(result: ToolResult): { text: string; omittedNonText: boolean } {
   const parts: string[] = [];
   let omittedNonText = false;
@@ -541,10 +523,18 @@ export function projectGoalJudgeToolResult(
 
 interface RenderedToolEntry {
   item: GoalJudgeToolResult;
+  index: number;
   body?: string;
+  rendered: string;
+  serializedLength: number;
+  omittedRendered: string;
+  omittedSerializedLength: number;
+  fullBody?: string;
+  fullRendered?: string;
+  fullSerializedLength?: number;
 }
 
-function renderToolEntry(entry: RenderedToolEntry): string {
+function renderToolEntry(entry: Pick<RenderedToolEntry, "item" | "body">): string {
   const { item, body } = entry;
   const flags: string[] = [];
   if (item.text && body === undefined) flags.push("[文本已省略]");
@@ -556,78 +546,192 @@ function renderToolEntry(entry: RenderedToolEntry): string {
   return body ? `${header}\n${body}` : header;
 }
 
-function renderToolEntries(entries: RenderedToolEntry[]): string {
-  return entries.map(renderToolEntry).join("\n\n");
+const SERIALIZED_TOOL_ENTRY_SEPARATOR_LENGTH = serializedStringLength("\n\n") - 2;
+
+function serializedContentLength(text: string): number {
+  return serializedStringLength(text) - 2;
 }
 
 function serializedToolEntriesLength(entries: RenderedToolEntry[]): number {
-  return serializedStringLength(renderToolEntries(entries));
+  return (
+    2 +
+    entries.reduce((total, entry) => total + entry.serializedLength, 0) +
+    Math.max(0, entries.length - 1) * SERIALIZED_TOOL_ENTRY_SEPARATOR_LENGTH
+  );
+}
+
+function prepareToolEntry(item: GoalJudgeToolResult, index: number): RenderedToolEntry {
+  const omittedRendered = renderToolEntry({ item });
+  const omittedSerializedLength = serializedContentLength(omittedRendered);
+  const fullBody = item.text ? truncateHeadTail(item.text, MAX_TOOL_RESULT_CHARS) : undefined;
+  const fullRendered = fullBody ? renderToolEntry({ item, body: fullBody }) : undefined;
+  return {
+    item,
+    index,
+    rendered: omittedRendered,
+    serializedLength: omittedSerializedLength,
+    omittedRendered,
+    omittedSerializedLength,
+    fullBody,
+    fullRendered,
+    fullSerializedLength: fullRendered ? serializedContentLength(fullRendered) : undefined,
+  };
+}
+
+function setRenderedBody(entry: RenderedToolEntry, body?: string): void {
+  if (body === undefined) {
+    entry.body = undefined;
+    entry.rendered = entry.omittedRendered;
+    entry.serializedLength = entry.omittedSerializedLength;
+    return;
+  }
+  if (body === entry.fullBody && entry.fullRendered && entry.fullSerializedLength !== undefined) {
+    entry.body = body;
+    entry.rendered = entry.fullRendered;
+    entry.serializedLength = entry.fullSerializedLength;
+    return;
+  }
+  const rendered = renderToolEntry({ ...entry, body });
+  entry.body = body;
+  entry.rendered = rendered;
+  entry.serializedLength = serializedContentLength(rendered);
 }
 
 const ACCEPTANCE_TOOL_PATTERN =
   /(?:test|check|verify|validate|assert|lint|build|status|query|inspect|health|quota)/i;
 
-function evidencePriority(item: GoalJudgeToolResult, goal: string, index: number): number {
+function evidencePriority(item: GoalJudgeToolResult, goalTerms: string[], index: number): number {
   let priority = index;
   if (item.status === "error") priority += 3_000_000;
   if (ACCEPTANCE_TOOL_PATTERN.test(item.toolName)) priority += 2_000_000;
 
-  const goalTerms = goal
-    .toLocaleLowerCase()
-    .split(/[^\p{L}\p{N}_]+/u)
-    .filter((term) => term.length >= 3);
   const evidence = `${item.toolName}\n${item.text ?? ""}`.toLocaleLowerCase();
   if (goalTerms.some((term) => evidence.includes(term))) priority += 1_000_000;
   return priority;
 }
 
+function selectEntriesForMetadataOverflow(
+  entries: RenderedToolEntry[],
+  rankedEntries: RenderedToolEntry[],
+  protectedEntry: RenderedToolEntry | undefined,
+): RenderedToolEntry[] {
+  const selected: RenderedToolEntry[] = [];
+  const selectedSet = new Set<RenderedToolEntry>();
+  let selectedLength = 2;
+  for (const entry of [protectedEntry, ...rankedEntries, ...entries].filter(
+    (candidate): candidate is RenderedToolEntry => !!candidate,
+  )) {
+    if (selectedSet.has(entry)) continue;
+    const useProtectedBody = entry === protectedEntry && entry.fullBody !== undefined;
+    const entryLength = useProtectedBody
+      ? entry.fullSerializedLength!
+      : entry.omittedSerializedLength;
+    const separatorLength = selected.length > 0 ? SERIALIZED_TOOL_ENTRY_SEPARATOR_LENGTH : 0;
+    if (selectedLength + separatorLength + entryLength > MAX_TOOL_EVIDENCE_CHARS) continue;
+    if (useProtectedBody) setRenderedBody(entry, entry.fullBody);
+    selected.push(entry);
+    selectedSet.add(entry);
+    selectedLength += separatorLength + entryLength;
+  }
+  return selected.sort((a, b) => a.index - b.index);
+}
+
 /**
- * Preserve metadata for every resident result (and therefore every result in
- * the newest legal tool batch), then spend the remaining budget on bodies.
- * Errors and goal-acceptance evidence win before recency; an oversized body is
- * skipped so smaller earlier facts can still fit. One final omitted body may
- * receive a bounded head+tail excerpt with the leftover space.
+ * Preserve metadata for every normally sized resident result, reserve the
+ * newest successful verification body, then spend the remaining budget on
+ * errors, other goal-acceptance evidence, and recency. If metadata alone is
+ * oversized, keep the protected result and fill the remaining metadata budget
+ * by priority. Every full entry is rendered and measured once; allocation then
+ * updates one cached length instead of repeatedly serializing all entries.
  */
 function renderToolEvidence(
   items: GoalJudgeRuntimeContext["toolResults"] | undefined,
   goal: string,
 ): string {
   if (!items?.length) return "(本次 run 尚无工具执行结果)";
-  const entries: RenderedToolEntry[] = items.map((item) => ({ item }));
-  const candidates = items
-    .map((item, index) => ({ item, index, priority: evidencePriority(item, goal, index) }))
-    .filter(({ item }) => !!item.text)
+  const goalTerms = goal
+    .toLocaleLowerCase()
+    .split(/[^\p{L}\p{N}_]+/u)
+    .filter((term) => term.length >= 3);
+  let entries = items.map(prepareToolEntry);
+  const candidates = entries
+    .filter((entry) => !!entry.fullBody)
+    .map((entry) => ({
+      entry,
+      priority: evidencePriority(entry.item, goalTerms, entry.index),
+    }))
     .sort((a, b) => b.priority - a.priority);
-
-  for (const { item, index } of candidates) {
-    entries[index]!.body = truncateHeadTail(item.text!, MAX_TOOL_RESULT_CHARS);
-    if (serializedToolEntriesLength(entries) > MAX_TOOL_EVIDENCE_CHARS) {
-      entries[index]!.body = undefined;
+  let newestSuccessfulEntry: RenderedToolEntry | undefined;
+  let protectedEntry: RenderedToolEntry | undefined;
+  for (let index = entries.length - 1; index >= 0; index--) {
+    const entry = entries[index]!;
+    if (!entry.fullBody || entry.item.status !== "success") continue;
+    newestSuccessfulEntry ??= entry;
+    if (ACCEPTANCE_TOOL_PATTERN.test(entry.item.toolName)) {
+      protectedEntry = entry;
+      break;
     }
+  }
+  protectedEntry ??= newestSuccessfulEntry;
+
+  let currentLength = serializedToolEntriesLength(entries);
+  const protectedDelta = protectedEntry
+    ? protectedEntry.fullSerializedLength! - protectedEntry.omittedSerializedLength
+    : 0;
+  if (currentLength + protectedDelta > MAX_TOOL_EVIDENCE_CHARS) {
+    entries = selectEntriesForMetadataOverflow(
+      entries,
+      candidates.map(({ entry }) => entry),
+      protectedEntry,
+    );
+    currentLength = serializedToolEntriesLength(entries);
+  }
+
+  const residentEntries = new Set(entries);
+  const allocationOrder = [
+    ...(protectedEntry ? [protectedEntry] : []),
+    ...candidates.map(({ entry }) => entry).filter((entry) => entry !== protectedEntry),
+  ].filter((entry) => residentEntries.has(entry));
+
+  for (const entry of allocationOrder) {
+    if (entry.body !== undefined) continue;
+    const nextLength = currentLength + entry.fullSerializedLength! - entry.omittedSerializedLength;
+    if (nextLength > MAX_TOOL_EVIDENCE_CHARS) continue;
+    setRenderedBody(entry, entry.fullBody);
+    currentLength = nextLength;
   }
 
   // A large block that did not fit must not prevent later/smaller candidates.
   // After that full-body pass, use any final slack for one head+tail excerpt.
-  for (const { item, index } of candidates) {
-    if (entries[index]!.body !== undefined) continue;
+  for (const entry of allocationOrder) {
+    if (entry.body !== undefined) continue;
     let low = 0;
-    let high = Math.min(MAX_TOOL_RESULT_CHARS, codePointLength(item.text!));
-    let best: string | undefined;
+    let high = Math.min(MAX_TOOL_RESULT_CHARS, codePointLength(entry.item.text!));
+    let best: { body: string; rendered: string; serializedLength: number } | undefined;
     while (low <= high) {
       const mid = Math.floor((low + high) / 2);
-      entries[index]!.body = truncateHeadTail(item.text!, mid);
-      if (serializedToolEntriesLength(entries) <= MAX_TOOL_EVIDENCE_CHARS) {
-        best = entries[index]!.body;
+      const body = truncateHeadTail(entry.item.text!, mid);
+      const rendered = renderToolEntry({ ...entry, body });
+      const serializedLength = serializedContentLength(rendered);
+      if (
+        currentLength + serializedLength - entry.omittedSerializedLength <=
+        MAX_TOOL_EVIDENCE_CHARS
+      ) {
+        best = { body, rendered, serializedLength };
         low = mid + 1;
       } else {
         high = mid - 1;
       }
     }
-    entries[index]!.body = best && codePointLength(best) >= 40 ? best : undefined;
-    if (entries[index]!.body) break;
+    if (best && codePointLength(best.body) >= 40) {
+      entry.body = best.body;
+      entry.rendered = best.rendered;
+      entry.serializedLength = best.serializedLength;
+      break;
+    }
   }
 
-  return truncateToSerializedLength(renderToolEntries(entries), MAX_TOOL_EVIDENCE_CHARS);
+  return entries.map((entry) => entry.rendered).join("\n\n");
 }
 
 function renderProgress(
