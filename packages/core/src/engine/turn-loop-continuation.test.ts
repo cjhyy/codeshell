@@ -140,4 +140,67 @@ describe("TurnLoop max-output continuation", () => {
     const blob = JSON.stringify(retryMessages);
     expect(blob).toMatch(/truncat|output token|max.?output/i);
   });
+
+  it("charges a truncated tool-call response to the Goal budget before retrying", async () => {
+    const truncatedWithTool: LLMResponse = {
+      text: "",
+      toolCalls: [{ id: "c1", toolName: "Write", args: {} }],
+      stopReason: "length",
+      usage: { promptTokens: 10, completionTokens: 8192, totalTokens: 8202 },
+    };
+    const { deps, calls } = makeDeps([truncatedWithTool, resp("should not run", "stop")]);
+    const loop = new TurnLoop(deps, {
+      ...config,
+      goal: { objective: "write a long doc", tokenBudget: 100 },
+    });
+
+    const result = await loop.run([{ role: "user", content: "write a long doc" }]);
+
+    expect(result.reason).toBe("goal_budget_exhausted");
+    expect(result.goalTermination).toBe("token_budget_exhausted");
+    expect(calls()).toBe(1);
+  });
+
+  it("charges every text continuation and stops before the next request when over budget", async () => {
+    const truncated = (text: string): LLMResponse => ({
+      text,
+      toolCalls: [],
+      stopReason: "length",
+      usage: { promptTokens: 6, completionTokens: 4, totalTokens: 10 },
+    });
+    const { deps, calls } = makeDeps([
+      truncated("one "),
+      truncated("two "),
+      truncated("three "),
+      resp("should not run", "stop"),
+    ]);
+    const loop = new TurnLoop(deps, {
+      ...config,
+      goal: { objective: "continue within budget", tokenBudget: 25 },
+    });
+
+    const result = await loop.run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("goal_budget_exhausted");
+    expect(result.goalTermination).toBe("token_budget_exhausted");
+    expect(calls()).toBe(3);
+  });
+
+  it("keeps normal non-truncated Goal usage accounting unchanged", async () => {
+    let tokensUsed: number | undefined;
+    const { deps, calls } = makeDeps([resp("all done", "stop")]);
+    deps.updateGoalJudgeContext = (context) => {
+      tokensUsed = context.progress.tokensUsed;
+    };
+    const loop = new TurnLoop(deps, {
+      ...config,
+      goal: { objective: "finish normally", tokenBudget: 100 },
+    });
+
+    const result = await loop.run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(calls()).toBe(1);
+    expect(tokensUsed).toBe(15);
+  });
 });

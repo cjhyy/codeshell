@@ -875,6 +875,17 @@ export class TurnLoop {
           this.emitCtxFromUsage(response!.usage, messages);
         }
 
+        // Charge every provider response to the run-scoped Goal budget before
+        // any truncation path can retry or continue the outer turn loop.
+        if (goalTracker && response!.usage) {
+          const used =
+            (response!.usage.promptTokens ?? 0) + (response!.usage.completionTokens ?? 0);
+          recordGoalUsage(goalTracker, used);
+        }
+        let budgetTermination = goalTracker
+          ? goalBudgetTerminationReason(goalTracker, Date.now())
+          : undefined;
+
         // Feed actual token usage back to the context manager so subsequent
         // compaction decisions use hybrid (actual + delta) estimation rather than
         // pure heuristics. Without this the manager falls back to char/4 estimates.
@@ -896,7 +907,11 @@ export class TurnLoop {
         // it raised a misleading "Missing required parameter: file_path". Instead,
         // tell the model its output was truncated and let the next turn retry —
         // bounded by the outer maxTurns loop.
-        if (isTruncatedStop(response.stopReason) && response.toolCalls.length > 0) {
+        if (
+          !budgetTermination &&
+          isTruncatedStop(response.stopReason) &&
+          response.toolCalls.length > 0
+        ) {
           tlog.info("turn.truncated_tool_call", {
             cat: "turn",
             toolCount: response.toolCalls.length,
@@ -917,6 +932,7 @@ export class TurnLoop {
         // (OpenAI) or stop_reason "max_tokens" (Anthropic) — isTruncatedStop
         // accepts both, so the OpenAI streaming path triggers continuation too.
         if (
+          !budgetTermination &&
           isTruncatedStop(response.stopReason) &&
           response.toolCalls.length === 0 &&
           response.text
@@ -928,6 +944,10 @@ export class TurnLoop {
             // this an abort during a truncated response could still issue up to 3
             // more model calls, emitting text after Stop.
             if (this.config.signal?.aborted) break;
+            budgetTermination = goalTracker
+              ? goalBudgetTerminationReason(goalTracker, Date.now())
+              : undefined;
+            if (budgetTermination) break;
             tlog.info("turn.max_tokens_continuation", { cat: "turn", retry: retry + 1 });
             const contMessages = [
               ...messages,
@@ -950,8 +970,21 @@ export class TurnLoop {
                 this.recordResponseUsage(contResponse.usage);
                 continuedResponse = true;
               }
+              if (goalTracker && contResponse.usage) {
+                const used =
+                  (contResponse.usage.promptTokens ?? 0) +
+                  (contResponse.usage.completionTokens ?? 0);
+                recordGoalUsage(goalTracker, used);
+              }
+              budgetTermination = goalTracker
+                ? goalBudgetTerminationReason(goalTracker, Date.now())
+                : undefined;
               combinedText += contResponse.text;
-              if (!isTruncatedStop(contResponse.stopReason) || contResponse.toolCalls.length > 0) {
+              if (
+                budgetTermination ||
+                !isTruncatedStop(contResponse.stopReason) ||
+                contResponse.toolCalls.length > 0
+              ) {
                 response = { ...contResponse, text: combinedText };
                 break;
               }
@@ -963,14 +996,6 @@ export class TurnLoop {
           if (continuedResponse && response.usage?.promptTokens !== undefined) {
             this.emitCtxFromUsage(response.usage, messages);
           }
-        }
-
-        // Goal-mode run-scoped accounting: add this turn's total token usage
-        // (prompt + completion) to the running total. Done after continuation so
-        // continued output is counted against the budget.
-        if (goalTracker && response.usage) {
-          const used = (response.usage.promptTokens ?? 0) + (response.usage.completionTokens ?? 0);
-          recordGoalUsage(goalTracker, used);
         }
 
         // Aborted?
@@ -988,8 +1013,8 @@ export class TurnLoop {
         // is force-stopped regardless of what the model wants to do next (stop OR
         // continue with tool calls). This is the unattended-safety backstop, so
         // it sits BEFORE the "tool calls?" branch — both paths pass the gate.
-        const budgetTermination = goalTracker
-          ? goalBudgetTerminationReason(goalTracker, Date.now())
+        budgetTermination = goalTracker
+          ? (budgetTermination ?? goalBudgetTerminationReason(goalTracker, Date.now()))
           : undefined;
         if (goalTracker && budgetTermination) {
           tlog.info("turn.goal_budget_exhausted", {
