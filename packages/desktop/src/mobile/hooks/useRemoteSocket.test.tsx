@@ -103,6 +103,45 @@ afterEach(() => {
 });
 
 describe("useRemoteSocket resync", () => {
+  test("send reports failure unless the same authenticated connection generation is open", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteSocket({}));
+    const first = FakeWebSocket.instances[0]!;
+
+    expect(hook.result.current.send({ type: "session.list" })).toBe(false);
+    await act(async () => {
+      first.open();
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.send({ type: "session.list" })).toBe(false);
+    await act(async () => {
+      first.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      await flushMicrotasks();
+    });
+    const firstGeneration = hook.result.current.connectionGeneration;
+    expect(firstGeneration).toBeGreaterThan(0);
+    expect(hook.result.current.send({ type: "session.list" }, firstGeneration)).toBe(true);
+
+    await act(async () => {
+      first.close();
+      window.dispatchEvent(new Event("focus"));
+      await flushMicrotasks();
+    });
+    const second = FakeWebSocket.instances[1]!;
+    await act(async () => {
+      second.open();
+      second.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      await flushMicrotasks();
+    });
+
+    expect(hook.result.current.connectionGeneration).toBeGreaterThan(firstGeneration);
+    expect(hook.result.current.send({ type: "session.list" }, firstGeneration)).toBe(false);
+    expect(
+      hook.result.current.send({ type: "session.list" }, hook.result.current.connectionGeneration),
+    ).toBe(true);
+    await hook.unmount();
+  });
+
   test("visible/focus/pageshow resync an already-open authenticated socket", async () => {
     setupBrowser();
     const resyncs: ResyncReason[] = [];

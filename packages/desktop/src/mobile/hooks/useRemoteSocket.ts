@@ -19,8 +19,10 @@ export type ResyncReason = "online" | "visible" | "focus" | "pageshow";
 export interface RemoteSocket {
   status: ConnStatus;
   deviceName: string;
-  /** Send a typed client event (no-op until the socket is open). */
-  send: (event: MobileClientEvent) => void;
+  /** Monotonic id of the currently authenticated socket. */
+  connectionGeneration: number;
+  /** Send only on an authenticated socket, optionally requiring the captured generation. */
+  send: (event: MobileClientEvent, expectedGeneration?: number) => boolean;
   /** Manually drop credentials and return to the pairing screen. */
   logout: () => void;
 }
@@ -40,7 +42,9 @@ const RECONNECT_MAX_MS = 8000;
 export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
   const [status, setStatus] = useState<ConnStatus>("connecting");
   const [deviceName, setDeviceName] = useState<string>("");
+  const [connectionGeneration, setConnectionGeneration] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
+  const connectionGenerationRef = useRef(0);
   const retryRef = useRef(0);
   const closedByUs = useRef(false);
   const statusRef = useRef<ConnStatus>(status);
@@ -49,9 +53,22 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
 
-  const send = useCallback((event: MobileClientEvent) => {
+  const send = useCallback((event: MobileClientEvent, expectedGeneration?: number): boolean => {
     const ws = wsRef.current;
-    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(event));
+    if (
+      !ws ||
+      ws.readyState !== WebSocket.OPEN ||
+      statusRef.current !== "online" ||
+      (expectedGeneration !== undefined && expectedGeneration !== connectionGenerationRef.current)
+    ) {
+      return false;
+    }
+    try {
+      ws.send(JSON.stringify(event));
+      return true;
+    } catch {
+      return false;
+    }
   }, []);
 
   const logout = useCallback(() => {
@@ -158,6 +175,7 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
       };
 
       ws.onmessage = (e) => {
+        if (wsRef.current !== ws) return;
         let msg: unknown;
         try {
           msg = JSON.parse(String(e.data));
@@ -181,6 +199,8 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
           if (device?.name) setDeviceName(device.name);
           statusRef.current = "online";
           setStatus("online");
+          connectionGenerationRef.current += 1;
+          setConnectionGeneration(connectionGenerationRef.current);
           handlersRef.current.onServerEvent?.(msg as MobileServerEvent);
           handlersRef.current.onResyncNeeded?.("online");
           return;
@@ -204,6 +224,7 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
 
       ws.onclose = () => {
         if (openWatchdog) clearTimeout(openWatchdog);
+        if (wsRef.current !== ws) return;
         wsRef.current = null;
         if (closedByUs.current) return;
         statusRef.current = "offline";
@@ -272,5 +293,5 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
     };
   }, []);
 
-  return { status, deviceName, send, logout };
+  return { status, deviceName, connectionGeneration, send, logout };
 }

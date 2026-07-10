@@ -330,7 +330,6 @@ describe("useRemoteApp mobile image sends", () => {
         putUrl: "/api/mobile/uploads/ticket-1",
         expiresAt: Date.now() + 10_000,
       });
-      expect(await sent).toBe(true);
       await flushMicrotasks();
     });
 
@@ -350,12 +349,78 @@ describe("useRemoteApp mobile image sends", () => {
         },
       ],
     });
+    expect(typeof chatSend.clientMessageId).toBe("string");
+    let settled = false;
+    void sent.then(() => {
+      settled = true;
+    });
+    await flushMicrotasks();
+    expect(settled).toBe(false);
+    await act(async () => {
+      ws.message({
+        type: "chat.accepted",
+        clientMessageId: chatSend.clientMessageId,
+        sessionId: "session-1",
+        cwd: "/repo",
+      });
+      expect(await sent).toBe(true);
+      await flushMicrotasks();
+    });
     expect(hook.result.current.chat.items.at(-1)).toMatchObject({
       kind: "user",
       text: "",
       attachments: [{ name: "large.png", mime: "image/png" }],
     });
 
+    await hook.unmount();
+    restoreFetch();
+  });
+
+  test("keeps the draft result false when the socket drops during a large-image PUT", async () => {
+    setupBrowser();
+    let ws!: FakeWebSocket;
+    const restoreFetch = defineTestProperty(window, "fetch", {
+      value: async () => {
+        ws.close();
+        return new Response(null, { status: 201 });
+      },
+      writable: true,
+    });
+    const hook = await renderHook(() => useRemoteApp());
+    ws = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      await flushMicrotasks();
+    });
+
+    const file = new File([new Uint8Array(256 * 1024 + 1)], "large.png", {
+      type: "image/png",
+    });
+    let sent!: Promise<boolean>;
+    await act(async () => {
+      sent = hook.result.current.sendChat({
+        text: "keep me",
+        attachments: [{ clientId: "img-drop", file }],
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      ws.message({
+        type: "attachment.upload.ready",
+        clientId: "img-drop",
+        uploadId: "upload-drop",
+        putUrl: "/api/mobile/uploads/drop",
+        expiresAt: Date.now() + 10_000,
+      });
+      expect(await sent).toBe(false);
+      await flushMicrotasks();
+    });
+
+    expect(
+      ws.sent.map((payload) => JSON.parse(payload)).some((event) => event.type === "chat.send"),
+    ).toBe(false);
+    expect(hook.result.current.chat.items.some((item) => item.kind === "user")).toBe(false);
     await hook.unmount();
     restoreFetch();
   });

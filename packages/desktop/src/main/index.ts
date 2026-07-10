@@ -918,6 +918,7 @@ async function handleMobileClientEvent(event: AuthenticatedMobileClientEvent): P
       fallbackCwd,
       text,
       attachments: event.attachments,
+      clientMessageId: event.clientMessageId,
       permissionMode,
       runId,
       bridge,
@@ -928,7 +929,11 @@ async function handleMobileClientEvent(event: AuthenticatedMobileClientEvent): P
           .catch(() => fallback),
     });
     if (!dispatched.ok) {
-      reply({ type: "error", message: dispatched.message });
+      reply({
+        type: "error",
+        message: dispatched.message,
+        ...(event.clientMessageId ? { clientMessageId: event.clientMessageId } : {}),
+      });
       return;
     }
     mobileSessionCwds.set(sessionId, dispatched.cwd);
@@ -945,6 +950,7 @@ async function handleMobileClientEvent(event: AuthenticatedMobileClientEvent): P
       type: "chat.accepted",
       sessionId,
       cwd: dispatched.cwd,
+      clientMessageId: dispatched.clientMessageId,
       attachments: dispatched.summaries,
     });
     return;
@@ -1232,9 +1238,26 @@ async function handleRoomEvent(event: AuthenticatedMobileClientEvent): Promise<v
       return;
     }
     if (event.type === "room.send") {
+      const clientMessageId =
+        event.clientMessageId?.trim() ||
+        `room:${event.roomId}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 10)}`;
+      if (clientMessageId.length > 200) {
+        reply({
+          type: "room.error",
+          roomId: event.roomId,
+          clientMessageId,
+          message: "clientMessageId is too long",
+        });
+        return;
+      }
       const room = roomManager.getRoom(event.roomId);
       if (!room) {
-        reply({ type: "room.error", roomId: event.roomId, message: "房间不存在" });
+        reply({
+          type: "room.error",
+          roomId: event.roomId,
+          clientMessageId,
+          message: "房间不存在",
+        });
         return;
       }
       const text = typeof event.text === "string" ? event.text.trim() : "";
@@ -1257,6 +1280,7 @@ async function handleRoomEvent(event: AuthenticatedMobileClientEvent): Promise<v
         reply({
           type: "room.error",
           roomId: event.roomId,
+          clientMessageId,
           message: "房间未就绪或已关闭",
         });
         return;
@@ -1268,12 +1292,16 @@ async function handleRoomEvent(event: AuthenticatedMobileClientEvent): Promise<v
         }),
       );
       await settleMobileUploadClaims(event.deviceId ?? "", materialized.claims, "finalize");
+      reply({ type: "room.accepted", roomId: event.roomId, clientMessageId });
       return;
     }
   } catch (err) {
     reply({
       type: "room.error",
       message: err instanceof Error ? err.message : String(err),
+      ...("clientMessageId" in event && typeof event.clientMessageId === "string"
+        ? { clientMessageId: event.clientMessageId }
+        : {}),
     });
   }
 }

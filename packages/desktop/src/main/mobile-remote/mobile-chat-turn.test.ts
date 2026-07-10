@@ -74,6 +74,7 @@ describe("dispatchMobileChatTurn", () => {
           size: PNG.length,
         },
       ],
+      clientMessageId: "phone-message-1",
       runId: "mobile-run-test",
       resolveWorkspace: async (sessionId, fallback) => {
         order.push("resolve-worktree");
@@ -126,6 +127,7 @@ describe("dispatchMobileChatTurn", () => {
       task: "",
       cwd: worktree,
       sessionId: "safe-session",
+      clientMessageId: "phone-message-1",
       attachments: [{ origin: "mobile", sessionId: "safe-session", mime: "image/png" }],
     });
     const meta = injected.params.attachments[0];

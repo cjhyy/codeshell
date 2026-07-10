@@ -82,6 +82,7 @@ export type MobileClientEvent =
       type: "chat.send";
       text: string;
       sessionId?: string;
+      clientMessageId?: string;
       attachments?: MobileImageAttachment[];
     }
   | {
@@ -134,7 +135,13 @@ export type MobileClientEvent =
     }
   | { type: "room.open"; roomId: string }
   | { type: "room.close"; roomId: string }
-  | { type: "room.send"; roomId: string; text: string; attachments?: MobileImageAttachment[] }
+  | {
+      type: "room.send";
+      roomId: string;
+      text: string;
+      clientMessageId?: string;
+      attachments?: MobileImageAttachment[];
+    }
   | { type: "room.history"; roomId: string; sinceSeq?: number }
   // ── CC Room (external claude CLI / codex sessions, per-project) ───────
   //   `kind` selects which CLI to probe/list/open/read (defaults to
@@ -180,8 +187,10 @@ export type MobileServerEvent =
       type: "chat.accepted";
       sessionId?: string;
       cwd?: string | null;
+      clientMessageId?: string;
       attachments?: MobileAttachmentSummary[];
     }
+  | { type: "room.accepted"; roomId: string; clientMessageId: string }
   | {
       type: "attachment.upload.ready";
       clientId: string;
@@ -203,7 +212,7 @@ export type MobileServerEvent =
       sessionId?: string;
       approved?: boolean;
     }
-  | { type: "error"; message: string }
+  | { type: "error"; message: string; clientMessageId?: string }
   // ── Sessions ──────────────────────────────────────────────────────────
   | { type: "session.list.ok"; sessions: MobileSessionMeta[]; activeSessionId?: string }
   | { type: "session.history.ok"; sessionId: string; events: unknown[] }
@@ -226,7 +235,7 @@ export type MobileServerEvent =
   | { type: "room.message"; roomId: string; msg: unknown }
   | { type: "room.history.ok"; roomId: string; messages: unknown[]; latestSeq: number }
   | { type: "room.closed"; roomId: string }
-  | { type: "room.error"; roomId?: string; message: string }
+  | { type: "room.error"; roomId?: string; message: string; clientMessageId?: string }
   | {
       type: "ccRoom.approvalRequest";
       roomId: string;

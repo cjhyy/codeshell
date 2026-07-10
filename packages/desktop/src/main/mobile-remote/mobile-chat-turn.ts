@@ -13,6 +13,7 @@ export interface DispatchMobileChatTurnInput {
   fallbackCwd: string;
   text: string;
   attachments?: MobileImageAttachment[];
+  clientMessageId?: string;
   permissionMode?: PermissionMode;
   runId: string;
   bridge: MobileRunBridge;
@@ -72,7 +73,14 @@ export async function dispatchMobileChatTurn(
   }
 
   const attachmentHash = materialized.metas.map((meta) => meta.sha256).join(":");
-  const clientMessageId = `mobile:${input.sessionId}:${input.runId}:${stablePromptHash(`${text}\0${attachmentHash}`)}`;
+  const suppliedClientMessageId = input.clientMessageId?.trim();
+  if (suppliedClientMessageId && suppliedClientMessageId.length > 200) {
+    await settleClaims(input.uploads, input.deviceId, materialized.claims, "release");
+    return { ok: false, message: "clientMessageId is too long" };
+  }
+  const clientMessageId =
+    suppliedClientMessageId ||
+    `mobile:${input.sessionId}:${input.runId}:${stablePromptHash(`${text}\0${attachmentHash}`)}`;
   const acceptance = await injectMobileRunAndAwaitAcceptance(input.bridge, {
     id: input.runId,
     params: {
