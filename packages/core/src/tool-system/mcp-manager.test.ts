@@ -806,6 +806,61 @@ describe("createMcpAuthenticatedFetch", () => {
     );
     expect((await tokenFetch("https://mcp.example/rpc")).status).toBe(401);
   });
+
+  test("does not refresh or replay a 401 after the request is aborted", async () => {
+    const resolved: boolean[] = [];
+    let sends = 0;
+    const controller = new AbortController();
+    const authenticatedFetch = createMcpAuthenticatedFetch(
+      "srv",
+      oauthConfig,
+      access(async (force) => {
+        resolved.push(force);
+        return "access";
+      }),
+      (async () => {
+        sends++;
+        controller.abort();
+        return new Response("", { status: 401 });
+      }) as typeof fetch,
+    );
+
+    expect(
+      (await authenticatedFetch("https://mcp.example/rpc", { signal: controller.signal })).status,
+    ).toBe(401);
+    expect(resolved).toEqual([false]);
+    expect(sends).toBe(1);
+  });
+
+  test("does not refresh or replay when the request cannot be cloned", async () => {
+    const resolved: boolean[] = [];
+    let sends = 0;
+    const originalClone = Request.prototype.clone;
+    Request.prototype.clone = function cloneWithUnreplayableFixture(): Request {
+      if (this.url.includes("unreplayable")) throw new TypeError("body is not replayable");
+      return originalClone.call(this);
+    };
+    try {
+      const authenticatedFetch = createMcpAuthenticatedFetch(
+        "srv",
+        oauthConfig,
+        access(async (force) => {
+          resolved.push(force);
+          return "access";
+        }),
+        (async () => {
+          sends++;
+          return new Response("", { status: 401 });
+        }) as typeof fetch,
+      );
+
+      expect((await authenticatedFetch("https://mcp.example/unreplayable")).status).toBe(401);
+      expect(resolved).toEqual([false]);
+      expect(sends).toBe(1);
+    } finally {
+      Request.prototype.clone = originalClone;
+    }
+  });
 });
 
 describe("inferTransportType (url-only configs are HTTP, not stdio)", () => {

@@ -235,15 +235,27 @@ async function startLoopbackCallback(expectedState: string): Promise<{
     reject = rejectPromise;
   });
   let done = false;
+  let closing = false;
+  const closeServer = () => {
+    if (closing || !server.listening) return;
+    closing = true;
+    server.close();
+  };
   const server = createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     if (url.pathname !== "/callback") {
       res.writeHead(404).end("Not found");
       return;
     }
+    if (done) {
+      res.writeHead(410, { "Content-Type": "text/html; charset=utf-8" });
+      res.end("<h1>OAuth callback already consumed</h1><p>You can close this window.</p>");
+      return;
+    }
     const finish = (err?: Error, authorizationCode?: string) => {
       if (done) return;
       done = true;
+      closeServer();
       if (err) reject(err);
       else settle(authorizationCode!);
     };
@@ -283,7 +295,7 @@ async function startLoopbackCallback(expectedState: string): Promise<{
   return {
     redirectUrl: `http://127.0.0.1:${address.port}/callback`,
     code,
-    close: () => server.close(),
+    close: closeServer,
   };
 }
 
