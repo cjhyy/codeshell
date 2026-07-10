@@ -686,6 +686,75 @@ describe("DriveAgentJobs tool", () => {
     }
   });
 
+  it("does not return or publish cancelled until the runner has exited", async () => {
+    backgroundJobRegistry.reset?.();
+    notificationQueue.reset("S-CANCEL-WAIT");
+    const tmp = mkdtempSync(join(tmpdir(), "drive-jobs-cancel-wait-"));
+    let resolveRun!: (result: any) => void;
+    let abortObserved = false;
+    try {
+      const runner = (opts: { signal?: AbortSignal }) =>
+        new Promise<any>((resolve) => {
+          resolveRun = resolve;
+          opts.signal?.addEventListener(
+            "abort",
+            () => {
+              abortObserved = true;
+            },
+            { once: true },
+          );
+        });
+      const tool = makeDriveAgentTool(runner as any);
+      await tool(
+        { prompt: "stubborn edit", cwd: tmp, cli: "codex" } as any,
+        { cwd: tmp, sessionId: "S-CANCEL-WAIT" } as any,
+      );
+      const job = backgroundJobRegistry.listRunningForSession("S-CANCEL-WAIT")[0];
+      expect(job).toBeDefined();
+      if (!job) throw new Error("expected running DriveAgent job");
+
+      let cancelReturned = false;
+      const cancel = driveAgentJobsTool(
+        { action: "cancel", jobId: job.jobId } as any,
+        { cwd: tmp, sessionId: "S-CANCEL-WAIT" } as any,
+      ).then((value) => {
+        cancelReturned = true;
+        return value;
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(abortObserved).toBe(true);
+      expect(cancelReturned).toBe(false);
+      expect(backgroundJobRegistry.get(job.jobId)?.status).toBe("cancelling");
+      expect(backgroundJobRegistry.listRunningByCwd(tmp).map((entry) => entry.jobId)).toEqual([
+        job.jobId,
+      ]);
+      expect(notificationQueue.drainAll("S-CANCEL-WAIT")).toEqual([]);
+
+      resolveRun({
+        sessionId: "CODEX-CANCEL-WAIT",
+        finalText: "runner exited after abort",
+        isError: true,
+        exitCode: null,
+        lines: [],
+      });
+      await expect(cancel).resolves.toContain("cancelled");
+      expect(backgroundJobRegistry.get(job.jobId)?.status).toBe("cancelled");
+      expect(notificationQueue.drainAll("S-CANCEL-WAIT")).toHaveLength(1);
+    } finally {
+      resolveRun?.({
+        sessionId: "",
+        finalText: "cleanup",
+        isError: true,
+        exitCode: null,
+        lines: [],
+      });
+      backgroundJobRegistry.reset?.();
+      notificationQueue.reset("S-CANCEL-WAIT");
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
   it("session teardown aborts a running DriveAgent and suppresses its late completion", async () => {
     backgroundJobRegistry.reset?.();
     notificationQueue.reset("S-CLOSE-CC");

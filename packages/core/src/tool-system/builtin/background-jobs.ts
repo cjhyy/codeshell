@@ -29,7 +29,7 @@ function isValidSessionId(sid: unknown): sid is string {
 
 type Listener = () => void;
 
-export type BackgroundJobStatus = "running" | "completed" | "failed" | "cancelled";
+export type BackgroundJobStatus = "running" | "cancelling" | "completed" | "failed" | "cancelled";
 export type BackgroundJobKind = "drive-agent" | "video" | "job";
 
 /** Generous per-session cap on retained terminal jobs — a leak backstop, not a
@@ -63,7 +63,7 @@ export interface BackgroundJobEntry {
   /** External CLI kind for DriveAgent jobs. */
   cli?: string;
   /** Optional cancellation hook for jobs backed by a live process. */
-  abort?: () => void;
+  abort?: () => void | Promise<void>;
 }
 
 /** Outcome passed to finish() to record how a job ended. */
@@ -79,7 +79,30 @@ export interface BackgroundJobStartOptions {
   cwd?: string;
   promptSummary?: string;
   cli?: string;
-  abort?: () => void;
+  abort?: () => void | Promise<void>;
+}
+
+const CANCEL_WAIT_TIMEOUT_MS = 5_000;
+
+function isActiveStatus(status: BackgroundJobStatus): boolean {
+  return status === "running" || status === "cancelling";
+}
+
+async function waitForAbort(abort: () => void | Promise<void>): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      Promise.resolve().then(abort),
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, CANCEL_WAIT_TIMEOUT_MS);
+      }),
+    ]);
+  } catch {
+    // Cancellation is best-effort; the terminal state still closes after the
+    // abort hook settles or the hard deadline expires.
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 class BackgroundJobRegistry {
@@ -128,32 +151,35 @@ class BackgroundJobRegistry {
     return this.jobs.get(jobId);
   }
 
-  cancel(jobId: string, outcome?: Omit<BackgroundJobOutcome, "status">): boolean {
+  async cancel(jobId: string, outcome?: Omit<BackgroundJobOutcome, "status">): Promise<boolean> {
     const entry = this.jobs.get(jobId);
     if (!entry) return false;
     if (entry.status !== "running") return false;
-    // Publish the terminal guard before invoking external code. An abort hook
-    // may synchronously settle its underlying Promise and re-enter finish(); it
-    // must observe cancelled instead of briefly publishing completed/failed.
+    // Publish a non-terminal guard before invoking external code. A completion
+    // callback may synchronously re-enter finish(); it must not publish
+    // completed/failed, while cwd/session conflict checks must still see the
+    // process as active until the abort hook confirms exit.
+    entry.status = "cancelling";
+    this.notify();
+    if (entry.abort) await waitForAbort(entry.abort);
+
+    // Session teardown/reset may have removed the entry while termination was
+    // in flight. Do not resurrect or notify for a closed session.
+    if (this.jobs.get(jobId) !== entry || entry.status !== "cancelling") return false;
     entry.status = "cancelled";
     entry.finishedAt = Date.now();
     if (outcome?.finalText !== undefined) entry.finalText = outcome.finalText;
     if (outcome?.ccSessionId !== undefined) entry.ccSessionId = outcome.ccSessionId;
     if (outcome?.changedFiles !== undefined) entry.changedFiles = outcome.changedFiles;
-    try {
-      entry.abort?.();
-    } catch {
-      // ignore abort errors — we still mark cancelled
-    }
     this.evictTerminalOverCap(entry.sessionId);
     this.notify();
     return true;
   }
 
-  /** True while any RUNNING job spawned by `sessionId` remains. */
+  /** True while any running/cancelling job spawned by `sessionId` remains. */
   hasRunningForSession(sessionId: string): boolean {
     for (const e of this.jobs.values()) {
-      if (e.sessionId === sessionId && e.status === "running") return true;
+      if (e.sessionId === sessionId && isActiveStatus(e.status)) return true;
     }
     return false;
   }
@@ -161,14 +187,14 @@ class BackgroundJobRegistry {
   /** Running jobs spawned by `sessionId`. Feeds the goal judge's task list. */
   listRunningForSession(sessionId: string): BackgroundJobEntry[] {
     return [...this.jobs.values()].filter(
-      (e) => e.sessionId === sessionId && e.status === "running",
+      (e) => e.sessionId === sessionId && isActiveStatus(e.status),
     );
   }
 
   /** Running jobs, across all sessions, that are operating in the same cwd. */
   listRunningByCwd(cwd: string): BackgroundJobEntry[] {
     const normalized = normalizeCwdPath(cwd);
-    return [...this.jobs.values()].filter((e) => e.status === "running" && e.cwd === normalized);
+    return [...this.jobs.values()].filter((e) => isActiveStatus(e.status) && e.cwd === normalized);
   }
 
   /** All jobs (running + retained terminal) for `sessionId`. Feeds the panel. */
@@ -184,20 +210,20 @@ class BackgroundJobRegistry {
   /** Drop every job of a session — called when the session is deleted/closed. */
   dropForSession(sessionId: string): void {
     let removed = false;
-    const aborts: Array<() => void> = [];
+    const aborts: Array<() => void | Promise<void>> = [];
     for (const [id, e] of this.jobs) {
       if (e.sessionId === sessionId) {
         // Delete first so a synchronous/queued completion caused by abort sees
         // no live registry entry and cannot publish a late result for a closed
         // session. Terminal jobs have nothing left to stop.
         this.jobs.delete(id);
-        if (e.status === "running" && e.abort) aborts.push(e.abort);
+        if (isActiveStatus(e.status) && e.abort) aborts.push(e.abort);
         removed = true;
       }
     }
     for (const abort of aborts) {
       try {
-        abort();
+        void Promise.resolve(abort()).catch(() => undefined);
       } catch {
         // teardown is best-effort across jobs; continue reaping the rest
       }
@@ -215,12 +241,12 @@ class BackgroundJobRegistry {
   /** Test helper: drop all tracked jobs. */
   reset(): void {
     const aborts = [...this.jobs.values()].flatMap((entry) =>
-      entry.status === "running" && entry.abort ? [entry.abort] : [],
+      isActiveStatus(entry.status) && entry.abort ? [entry.abort] : [],
     );
     this.jobs.clear();
     for (const abort of aborts) {
       try {
-        abort();
+        void Promise.resolve(abort()).catch(() => undefined);
       } catch {
         // ignore
       }
@@ -231,7 +257,7 @@ class BackgroundJobRegistry {
    *  session, evicting the oldest (insertion order). Running jobs never evicted. */
   private evictTerminalOverCap(sessionId: string): void {
     const terminal = [...this.jobs.values()].filter(
-      (e) => e.sessionId === sessionId && e.status !== "running",
+      (e) => e.sessionId === sessionId && !isActiveStatus(e.status),
     );
     const over = terminal.length - MAX_TERMINAL_JOBS_PER_SESSION;
     if (over <= 0) return;

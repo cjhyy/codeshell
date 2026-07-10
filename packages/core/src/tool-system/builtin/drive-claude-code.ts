@@ -422,14 +422,17 @@ function trackBackgroundRun(params: {
 }): { jobId: string; warning?: string } {
   const warning = duplicateCwdWarning(params.cwd, params.writable);
   const jobId = newDriveJobId();
+  const run = params.start();
   backgroundJobRegistry.start(jobId, params.sessionId, params.label, {
     kind: "drive-agent",
     cwd: params.cwd,
     cli: params.cli,
     promptSummary: params.promptSummary,
-    abort: params.abort,
+    abort: async () => {
+      params.abort();
+      await run.catch(() => undefined);
+    },
   });
-  const run = params.start();
   attachDriveCompletion({ ...params, jobId, run });
   return { jobId, ...(warning ? { warning } : {}) };
 }
@@ -678,7 +681,9 @@ function listDriveAgentJobs(args: Record<string, unknown>, ctx?: ToolContext): s
       : backgroundJobRegistry.listForSession(sessionId);
   jobs = jobs.filter(isDriveAgentJob);
   if (cwd) jobs = jobs.filter((job) => job.cwd === cwd);
-  if (status === "running") jobs = jobs.filter((job) => job.status === "running");
+  if (status === "running") {
+    jobs = jobs.filter((job) => job.status === "running" || job.status === "cancelling");
+  }
 
   if (jobs.length === 0) {
     if (cwd) return `No ${status} DriveAgent jobs in cwd ${cwd}.`;
@@ -715,7 +720,7 @@ function inspectDriveAgentJob(jobId: string | undefined): string {
   return lines.join("\n");
 }
 
-function cancelDriveAgentJob(jobId: string | undefined): string {
+async function cancelDriveAgentJob(jobId: string | undefined): Promise<string> {
   if (!jobId) return "Error: jobId is required.";
   const job = backgroundJobRegistry.get(jobId);
   if (!job || !isDriveAgentJob(job)) return `Error: DriveAgent jobId "${jobId}" not found.`;
@@ -727,7 +732,7 @@ function cancelDriveAgentJob(jobId: string | undefined): string {
   }
 
   const finalText = `DriveAgent job ${jobId} cancelled by DriveAgentJobs.`;
-  const ok = backgroundJobRegistry.cancel(jobId, { finalText });
+  const ok = await backgroundJobRegistry.cancel(jobId, { finalText });
   if (!ok) return `Failed to cancel DriveAgent job ${jobId}.`;
   notificationQueue.enqueue(
     {
@@ -753,7 +758,7 @@ export async function driveAgentJobsTool(
       ? args.action
       : "list";
   if (action === "inspect") return inspectDriveAgentJob(jobIdArg(args));
-  if (action === "cancel") return cancelDriveAgentJob(jobIdArg(args));
+  if (action === "cancel") return await cancelDriveAgentJob(jobIdArg(args));
   return listDriveAgentJobs(args, ctx);
 }
 

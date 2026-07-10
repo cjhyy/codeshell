@@ -149,7 +149,7 @@ describe("backgroundJobRegistry", () => {
     expect(jobs.some((j) => j.jobId === `t${N - 1}`)).toBe(true);
   });
 
-  it("records DriveAgent metadata and cancels through the stored abort handle", () => {
+  it("records DriveAgent metadata and cancels through the stored abort handle", async () => {
     const tmp = mkdtempSync(join(tmpdir(), "drive-job-registry-"));
     try {
       let aborts = 0;
@@ -174,11 +174,11 @@ describe("backgroundJobRegistry", () => {
         status: "running",
       });
 
-      expect(
+      await expect(
         backgroundJobRegistry.cancel("cc-1", {
           finalText: "Cancelled by DriveAgentJobs.",
         }),
-      ).toBe(true);
+      ).resolves.toBe(true);
       expect(aborts).toBe(1);
 
       const cancelled = backgroundJobRegistry.get("cc-1");
@@ -187,14 +187,14 @@ describe("backgroundJobRegistry", () => {
       expect(cancelled?.finishedAt).toBeGreaterThan(0);
       expect(backgroundJobRegistry.hasRunningForSession("s1")).toBe(false);
 
-      expect(backgroundJobRegistry.cancel("cc-1")).toBe(false);
+      await expect(backgroundJobRegistry.cancel("cc-1")).resolves.toBe(false);
       expect(aborts).toBe(1);
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
   });
 
-  it("publishes only cancelled when abort synchronously tries to finish the same job", () => {
+  it("publishes cancelling then cancelled when abort synchronously tries to finish", async () => {
     backgroundJobRegistry.start("cc-reentrant", "s1", "DriveAgent(claude): edit", {
       kind: "drive-agent",
       abort: () => {
@@ -210,10 +210,42 @@ describe("backgroundJobRegistry", () => {
       if (status) observed.push(status);
     });
 
-    expect(backgroundJobRegistry.cancel("cc-reentrant")).toBe(true);
+    await expect(backgroundJobRegistry.cancel("cc-reentrant")).resolves.toBe(true);
     unsubscribe();
 
-    expect(observed).toEqual(["cancelled"]);
+    expect(observed).toEqual(["cancelling", "cancelled"]);
     expect(backgroundJobRegistry.get("cc-reentrant")?.status).toBe("cancelled");
+  });
+
+  it("keeps a cancelling job active until its async terminator confirms exit", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "drive-job-cancelling-"));
+    let releaseTermination!: () => void;
+    const termination = new Promise<void>((resolve) => {
+      releaseTermination = resolve;
+    });
+    try {
+      backgroundJobRegistry.start("cc-cancelling", "s1", "DriveAgent(codex): edit", {
+        kind: "drive-agent",
+        cwd: tmp,
+        abort: () => termination,
+      });
+
+      const cancel = backgroundJobRegistry.cancel("cc-cancelling");
+      await Promise.resolve();
+
+      expect(backgroundJobRegistry.get("cc-cancelling")?.status).toBe("cancelling");
+      expect(backgroundJobRegistry.hasRunningForSession("s1")).toBe(true);
+      expect(backgroundJobRegistry.listRunningByCwd(tmp).map((job) => job.jobId)).toEqual([
+        "cc-cancelling",
+      ]);
+
+      releaseTermination();
+      await expect(cancel).resolves.toBe(true);
+      expect(backgroundJobRegistry.get("cc-cancelling")?.status).toBe("cancelled");
+      expect(backgroundJobRegistry.hasRunningForSession("s1")).toBe(false);
+    } finally {
+      releaseTermination?.();
+      rmSync(tmp, { recursive: true, force: true });
+    }
   });
 });

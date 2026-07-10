@@ -2,6 +2,7 @@ import { execFile, spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import type { AgentAdapter, BuildArgsOpts, PermissionMode } from "./agent-adapter.js";
 import { pathWithCommonBins } from "./cc-capability.js";
+import { killProcessGroup } from "../runtime/spawn-common.js";
 
 export interface AgentRunResult {
   sessionId: string;
@@ -58,27 +59,76 @@ function listPosixProcessTree(rootPid: number): Promise<number[]> {
   });
 }
 
-async function signalAttachedProcessTree(
-  child: { pid?: number; kill: (signal?: NodeJS.Signals) => boolean },
-  killSignal: NodeJS.Signals,
-  trackedPids: Set<number>,
-): Promise<void> {
-  if (process.platform === "win32" || !child.pid) {
-    try {
-      child.kill(killSignal);
-    } catch {
-      // already gone
-    }
-    return;
+function isPidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
   }
-  for (const pid of await listPosixProcessTree(child.pid)) trackedPids.add(pid);
-  for (const pid of trackedPids) {
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForPidsToExit(pids: Set<number>, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while ([...pids].some(isPidAlive)) {
+    if (Date.now() >= deadline) return false;
+    await delay(25);
+  }
+  return true;
+}
+
+function signalPids(pids: Set<number>, killSignal: NodeJS.Signals): void {
+  for (const pid of pids) {
     try {
       process.kill(pid, killSignal);
     } catch {
       // already gone
     }
   }
+}
+
+async function terminateAttachedProcessTree(child: {
+  pid?: number;
+  kill: (signal?: NodeJS.Signals) => boolean;
+}): Promise<void> {
+  const pid = child.pid;
+  if (!pid) {
+    try {
+      child.kill("SIGKILL");
+    } catch {
+      // already gone
+    }
+    return;
+  }
+  if (process.platform === "win32") {
+    // Windows has no POSIX SIGTERM semantics or negative-pid groups. Reap the
+    // tree via taskkill, then use positive-pid process.kill as the fallback the
+    // platform supports when taskkill is unavailable/races.
+    await killProcessGroup(pid, { graceMs: AGENT_TERMINATE_GRACE_MS });
+    if (isPidAlive(pid)) {
+      try {
+        process.kill(pid);
+      } catch {
+        // already gone
+      }
+    }
+    return;
+  }
+
+  const trackedPids = new Set(await listPosixProcessTree(pid));
+  signalPids(trackedPids, "SIGTERM");
+  if (await waitForPidsToExit(trackedPids, AGENT_TERMINATE_GRACE_MS)) return;
+
+  // Capture descendants created during the grace window while the leader is
+  // still addressable, but retain the first snapshot so reparented stubborn
+  // descendants cannot disappear from the escalation set.
+  for (const treePid of await listPosixProcessTree(pid)) trackedPids.add(treePid);
+  signalPids(trackedPids, "SIGKILL");
+  await waitForPidsToExit(trackedPids, 1_000);
 }
 
 function abortError(): Error {
@@ -109,6 +159,7 @@ function createCodexImageProbe(
     });
     let out = "";
     let settled = false;
+    let terminating = false;
     const cleanup = () => {
       clearTimeout(timer);
       signal?.removeEventListener("abort", onAbort);
@@ -125,20 +176,17 @@ function createCodexImageProbe(
       cleanup();
       reject(err);
     };
-    const killProbe = () => {
-      try {
-        child.kill("SIGTERM");
-      } catch {
-        // already gone
-      }
-    };
     const onAbort = () => {
-      killProbe();
-      fail(abortError());
+      if (settled || terminating) return;
+      terminating = true;
+      cleanup();
+      void terminateAttachedProcessTree(child).then(() => fail(abortError()));
     };
     const timer = setTimeout(() => {
-      killProbe();
-      done(false);
+      if (settled || terminating) return;
+      terminating = true;
+      cleanup();
+      void terminateAttachedProcessTree(child).then(() => done(false));
     }, CODEX_IMAGE_PROBE_TIMEOUT_MS);
     signal?.addEventListener("abort", onAbort, { once: true });
     if (signal?.aborted) onAbort();
@@ -148,8 +196,12 @@ function createCodexImageProbe(
     child.stderr?.on("data", (chunk: Buffer) => {
       out += chunk.toString("utf8");
     });
-    child.on("error", () => done(false));
-    child.on("exit", () => done(/(?:^|\s)-i(?:,|\s)|--image\b/.test(out)));
+    child.on("error", () => {
+      if (!terminating) done(false);
+    });
+    child.on("exit", () => {
+      if (!terminating) done(/(?:^|\s)-i(?:,|\s)|--image\b/.test(out));
+    });
   });
 }
 
@@ -210,23 +262,14 @@ export function runAgentOnce(
       });
       let settled = false;
       let abortRequested = false;
-      let killTimer: ReturnType<typeof setTimeout> | undefined;
-      const trackedPids = new Set<number>();
+      let termination: Promise<void> | undefined;
       const cleanup = () => {
         signal?.removeEventListener("abort", onAbort);
-        // After abort, retain the escalation timer even if the group leader
-        // exits first: a stubborn descendant may still own the process group.
-        if (!abortRequested && killTimer) clearTimeout(killTimer);
       };
       const onAbort = () => {
         if (abortRequested) return;
         abortRequested = true;
-        void signalAttachedProcessTree(child, "SIGTERM", trackedPids).finally(() => {
-          killTimer = setTimeout(
-            () => void signalAttachedProcessTree(child, "SIGKILL", trackedPids),
-            AGENT_TERMINATE_GRACE_MS,
-          );
-        });
+        termination = terminateAttachedProcessTree(child);
       };
       signal?.addEventListener("abort", onAbort, { once: true });
       if (signal?.aborted) onAbort();
@@ -259,7 +302,9 @@ export function runAgentOnce(
         if (settled) return;
         settled = true;
         cleanup();
-        resolve(runWithLines(adapter, lines, code));
+        void (termination ?? Promise.resolve()).then(() => {
+          resolve(runWithLines(adapter, lines, code));
+        });
       });
     })().catch(reject);
   });
