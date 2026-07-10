@@ -73,7 +73,6 @@ import {
   normalizeWorktreeBranchPrefix,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
-import { stablePromptHash } from "./client-message-id.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
@@ -139,7 +138,7 @@ import {
   type ClaimedMobileUpload,
 } from "./mobile-remote/mobile-upload-service.js";
 import { materializeMobileAttachments } from "./mobile-remote/mobile-attachments.js";
-import { injectMobileRunAndAwaitAcceptance } from "./mobile-remote/mobile-run-dispatch.js";
+import { dispatchMobileChatTurn } from "./mobile-remote/mobile-chat-turn.js";
 import type {
   MobileClientEvent,
   MobilePermissionModeSnapshotEntry,
@@ -907,71 +906,46 @@ async function handleMobileClientEvent(event: AuthenticatedMobileClientEvent): P
   if (event.type === "chat.send") {
     const sessionId = resolveSessionId(event.sessionId);
     const fallbackCwd = effectiveMobileRunCwd(st, ctx.cwd);
-    const cwd = await getSessionWorkspaceForUi(sessionId, fallbackCwd)
-      .then((workspace) => workspace.root)
-      .catch(() => fallbackCwd);
-    mobileSessionCwds.set(sessionId, cwd);
     if (st.permissionMode && !mobilePermissionModes.has(sessionId)) {
       mobilePermissionModes.set(sessionId, st.permissionMode);
     }
     const permissionMode = mobilePermissionModes.get(sessionId);
     const text = typeof event.text === "string" ? event.text.trim() : "";
-    let materialized;
-    try {
-      materialized = await materializeMobileAttachments({
-        deviceId: deviceId ?? "",
-        cwd,
-        sessionId,
-        attachments: event.attachments,
-        uploads: mobileUploads,
-      });
-    } catch (error) {
-      reply({ type: "error", message: error instanceof Error ? error.message : String(error) });
-      return;
-    }
-    if (!text && materialized.metas.length === 0) {
-      reply({ type: "error", message: "消息必须包含文字或图片" });
-      return;
-    }
     const runId = `mobile-run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-    const attachmentHash = materialized.metas.map((meta) => meta.sha256).join(":");
-    const clientMessageId = `mobile:${sessionId}:${runId}:${stablePromptHash(`${text}\0${attachmentHash}`)}`;
-    const title = text || `图片 ${materialized.metas.length} 张`;
+    const dispatched = await dispatchMobileChatTurn({
+      deviceId: deviceId ?? "",
+      sessionId,
+      fallbackCwd,
+      text,
+      attachments: event.attachments,
+      permissionMode,
+      runId,
+      bridge,
+      uploads: mobileUploads,
+      resolveWorkspace: (targetSessionId, fallback) =>
+        getSessionWorkspaceForUi(targetSessionId, fallback)
+          .then((workspace) => workspace.root)
+          .catch(() => fallback),
+    });
+    if (!dispatched.ok) {
+      reply({ type: "error", message: dispatched.message });
+      return;
+    }
+    mobileSessionCwds.set(sessionId, dispatched.cwd);
+    const title = text || `图片 ${dispatched.metas.length} 张`;
     broadcastMobileSession({
       sessionId,
-      cwd,
+      cwd: dispatched.cwd,
       title,
       prompt: text,
-      clientMessageId,
+      clientMessageId: dispatched.clientMessageId,
     });
-    // Every phone chat turn is a normal CodeShell turn routed through the worker
-    // run path. The device's permission-mode preset rides on the run.
-    const acceptance = await injectMobileRunAndAwaitAcceptance(bridge, {
-      id: runId,
-      params: {
-        task: text,
-        cwd,
-        sessionId,
-        clientMessageId,
-        attachments: materialized.metas,
-        ...(permissionMode ? { permissionMode } : {}),
-      },
-    });
-    if (!acceptance.ok) {
-      await settleMobileUploadClaims(deviceId ?? "", materialized.claims, "release");
-      reply({ type: "error", message: acceptance.message });
-      return;
-    }
-    await markAttachmentsSent(cwd, sessionId, materialized.metas).catch((error) =>
-      dlog("main", "mobile.attachment.mark_sent_failed", { error: String(error), sessionId }),
-    );
-    await settleMobileUploadClaims(deviceId ?? "", materialized.claims, "finalize");
     // Tell THIS device which session its turn landed in.
     reply({
       type: "chat.accepted",
       sessionId,
-      cwd,
-      attachments: materialized.summaries,
+      cwd: dispatched.cwd,
+      attachments: dispatched.summaries,
     });
     return;
   }
@@ -3823,16 +3797,24 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 
-app.on("before-quit", () => {
+let quitCleanupPromise: Promise<void> | undefined;
+let quitCleanupDone = false;
+app.on("before-quit", (event) => {
+  if (quitCleanupDone) return;
+  event.preventDefault();
+  if (quitCleanupPromise) return;
   bridge?.kill();
   automationHandle?.stop();
   automationHandle = null;
   ptyKillAll();
   transcriptSubscriptions?.closeAll();
   roomManager.closeAll();
-  tunnelManager.stop();
-  mobileUploads.dispose();
-  void mobileRemote.stop();
+  quitCleanupPromise = (async () => {
+    await Promise.allSettled([tunnelManager.stop(), mobileRemote.stop()]);
+    await mobileUploads.dispose();
+    quitCleanupDone = true;
+    app.quit();
+  })();
 });
 
 app.on("activate", () => {

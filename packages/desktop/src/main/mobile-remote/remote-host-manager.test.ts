@@ -110,7 +110,7 @@ describe("RemoteHostManager", () => {
     expect(claim.size).toBe(4);
     await uploads.release("device-1", ticket.uploadId, claim.claimId);
     await host.stop();
-    uploads.dispose();
+    await uploads.dispose();
   });
 
   test("creates pairing URL", async () => {
@@ -151,6 +151,37 @@ describe("RemoteHostManager", () => {
       secretHash: "h1",
     });
     expect(authed?.type).toBe("auth.ok");
+    await host.stop();
+  });
+
+  test("does not dispatch upload ticket requests from an unauthenticated WebSocket", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const seen: unknown[] = [];
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: (event) => seen.push(event),
+    });
+    const started = await host.start({ host: "127.0.0.1", port: 0 });
+    const { WebSocket: WS } = await import("ws");
+    const socket = new WS(`${started.url.replace(/^http/, "ws")}/ws`);
+    const response = await new Promise<{ type?: string; message?: string }>((resolve) => {
+      socket.on("open", () =>
+        socket.send(
+          JSON.stringify({
+            type: "attachment.upload.begin",
+            clientId: "unauthenticated",
+            name: "photo.png",
+            mime: "image/png",
+            size: 68,
+          }),
+        ),
+      );
+      socket.on("message", (raw) => resolve(JSON.parse(String(raw))));
+    });
+
+    expect(response).toMatchObject({ type: "auth.failed" });
+    expect(seen).toEqual([]);
+    socket.close();
     await host.stop();
   });
 
@@ -408,7 +439,7 @@ describe("RemoteHostManager", () => {
     expect(response.status).toBe(401);
     expect(() => uploads.claim("device-1", ticket.uploadId)).toThrow(/not ready/i);
     await host.stop();
-    uploads.dispose();
+    await uploads.dispose();
   });
 
   test("tunnel mode: correct passcode query passes the gate and serves HTML", async () => {

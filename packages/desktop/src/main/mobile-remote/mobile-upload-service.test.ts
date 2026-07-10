@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createServer, type Server } from "node:http";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { PassThrough } from "node:stream";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   MAX_MOBILE_IMAGE_BYTES,
   MAX_MOBILE_UPLOAD_TICKETS_PER_DEVICE,
@@ -11,6 +13,11 @@ import {
 
 const roots: string[] = [];
 const servers: Server[] = [];
+const services: MobileUploadService[] = [];
+const PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+  "base64",
+);
 
 afterEach(async () => {
   await Promise.all(
@@ -18,6 +25,7 @@ afterEach(async () => {
       .splice(0)
       .map((server) => new Promise<void>((resolve) => server.close(() => resolve()))),
   );
+  await Promise.allSettled(services.splice(0).map((service) => service.dispose()));
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
@@ -33,13 +41,53 @@ async function serveUpload(service: MobileUploadService, uploadId: string): Prom
 function makeService(now = () => Date.now()): MobileUploadService {
   const rootDir = mkdtempSync(join(tmpdir(), "cs-mobile-upload-"));
   roots.push(rootDir);
-  return new MobileUploadService({ rootDir, now, cleanupIntervalMs: 0 });
+  const service = new MobileUploadService({ rootDir, now, cleanupIntervalMs: 0 });
+  services.push(service);
+  return service;
+}
+
+function fakePut(
+  service: MobileUploadService,
+  uploadId: string,
+  mime = "image/png",
+  contentLength?: number,
+): {
+  request: IncomingMessage;
+  response: { status?: number; body?: string };
+  done: Promise<void>;
+} {
+  const request = new PassThrough() as unknown as IncomingMessage;
+  request.method = "PUT";
+  request.headers = {
+    "content-type": mime,
+    ...(contentLength === undefined ? {} : { "content-length": String(contentLength) }),
+  };
+  const responseState: { status?: number; body?: string } = {};
+  const response = {
+    headersSent: false,
+    writableEnded: false,
+    writeHead(status: number) {
+      responseState.status = status;
+      this.headersSent = true;
+      return this;
+    },
+    end(body?: string) {
+      responseState.body = body;
+      this.writableEnded = true;
+      return this;
+    },
+  } as unknown as ServerResponse;
+  return {
+    request,
+    response: responseState,
+    done: service.acceptPut(uploadId, request, response),
+  };
 }
 
 describe("MobileUploadService", () => {
   test("atomically claims a ticket, binds the claim to its owner, and finalizes the spool", async () => {
     const service = makeService();
-    const bytes = new Uint8Array([1, 2, 3, 4]);
+    const bytes = PNG;
     const ticket = service.begin("device-a", {
       clientId: "client-1",
       name: "photo.png",
@@ -156,5 +204,104 @@ describe("MobileUploadService", () => {
         size: 4,
       }),
     ).not.toThrow();
+  });
+
+  test("startup removes expired orphan .part/.upload files and dispose awaits recent cleanup", async () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "cs-mobile-upload-recovery-"));
+    roots.push(rootDir);
+    const oldPart = join(rootDir, "old-ticket.part");
+    const oldUpload = join(rootDir, "old-ticket.upload");
+    const recentUpload = join(rootDir, "recent-ticket.upload");
+    writeFileSync(oldPart, "partial");
+    writeFileSync(oldUpload, "ready");
+    writeFileSync(recentUpload, "recent");
+    const old = new Date(Date.now() - 10 * 60 * 1000);
+    utimesSync(oldPart, old, old);
+    utimesSync(oldUpload, old, old);
+
+    const service = new MobileUploadService({ rootDir, cleanupIntervalMs: 0 });
+    services.push(service);
+    await service.ready();
+    expect(existsSync(oldPart)).toBe(false);
+    expect(existsSync(oldUpload)).toBe(false);
+    expect(existsSync(recentUpload)).toBe(true);
+
+    await service.dispose();
+    expect(existsSync(recentUpload)).toBe(false);
+  });
+
+  test("rejects chunked actual-size overflow/mismatch and removes interrupted parts", async () => {
+    const service = makeService();
+    const rootDir = roots.at(-1)!;
+    const mismatchTicket = service.begin("device-a", {
+      clientId: "mismatch",
+      name: "photo.png",
+      mime: "image/png",
+      size: 4,
+    });
+    const mismatch = fakePut(service, mismatchTicket.uploadId);
+    mismatch.request.end(new Uint8Array(5));
+    await mismatch.done;
+    expect(mismatch.response.status).toBe(400);
+
+    const largeTicket = service.begin("device-a", {
+      clientId: "large",
+      name: "photo.png",
+      mime: "image/png",
+      size: MAX_MOBILE_IMAGE_BYTES,
+    });
+    const large = fakePut(service, largeTicket.uploadId);
+    large.request.end(new Uint8Array(MAX_MOBILE_IMAGE_BYTES + 1));
+    await large.done;
+    expect(large.response.status).toBe(413);
+
+    const interruptedTicket = service.begin("device-a", {
+      clientId: "interrupted",
+      name: "photo.png",
+      mime: "image/png",
+      size: 1024,
+    });
+    const interrupted = fakePut(service, interruptedTicket.uploadId);
+    interrupted.request.write(new Uint8Array(8));
+    interrupted.request.destroy();
+    await interrupted.done;
+    expect(readdirSync(rootDir).some((name) => name.endsWith(".part"))).toBe(false);
+  });
+
+  test("expires an upload during its pipeline and dispose waits for active unlink", async () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "cs-mobile-upload-deadline-"));
+    roots.push(rootDir);
+    const service = new MobileUploadService({
+      rootDir,
+      cleanupIntervalMs: 0,
+      uploadTtlMs: 25,
+    });
+    services.push(service);
+    const ticket = service.begin("device-a", {
+      clientId: "slow",
+      name: "photo.png",
+      mime: "image/png",
+      size: 1024,
+    });
+    const slow = fakePut(service, ticket.uploadId);
+    slow.request.write(new Uint8Array(8));
+    await Bun.sleep(50);
+    await slow.done;
+    expect(slow.response.status).toBe(408);
+    expect(() => service.claim("device-a", ticket.uploadId)).toThrow(/upload|expired/i);
+    expect(readdirSync(rootDir).some((name) => name.endsWith(".part"))).toBe(false);
+
+    const second = service.begin("device-a", {
+      clientId: "dispose",
+      name: "photo.png",
+      mime: "image/png",
+      size: 1024,
+    });
+    const active = fakePut(service, second.uploadId);
+    active.request.write(new Uint8Array(8));
+    await Bun.sleep(5);
+    await service.dispose();
+    await active.done;
+    expect(readdirSync(rootDir).filter((name) => /\.(part|upload)$/.test(name))).toEqual([]);
   });
 });

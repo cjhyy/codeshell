@@ -73,7 +73,7 @@ export interface RemoteHostManagerOptions {
    */
   mobileDevUrl?: string;
   /** One-time upload tickets. The route remains behind the tunnel passcode gate. */
-  uploads?: Pick<MobileUploadService, "acceptPut">;
+  uploads?: Pick<MobileUploadService, "acceptPut" | "cancelActiveTransfers">;
 }
 
 export class RemoteHostManager extends EventEmitter {
@@ -387,6 +387,7 @@ export class RemoteHostManager extends EventEmitter {
     // manually injected bookkeeping (tests / future non-WS transports).
     for (const deviceId of this.onlineCounts.keys()) this.emit("device-offline", deviceId);
     this.onlineCounts.clear();
+    await this.opts.uploads?.cancelActiveTransfers();
     if (!server) return;
     // server.close() only stops accepting new connections and waits for live
     // ones to end — a lingering upgraded/keep-alive socket keeps its callback
