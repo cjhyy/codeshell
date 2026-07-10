@@ -7,6 +7,11 @@ import { LLMClientBase } from "../llm/client-base.js";
 import { registerProvider } from "../llm/client-factory.js";
 import type { CreateMessageOptions } from "../llm/types.js";
 import type { HookResult } from "../hooks/events.js";
+import {
+  createGoalStopHook,
+  type GoalJudgeLLM,
+  type GoalJudgeRuntimeContext,
+} from "../hooks/goal-stop-hook.js";
 import type { LLMResponse, Message, StreamEvent, ToolCall, ToolResult } from "../types.js";
 import { CANCEL_GOAL_TOOL_NAME } from "../tool-system/builtin/cancel-goal.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js";
@@ -35,9 +40,10 @@ function toolResponse(toolCall: ToolCall): LLMResponse {
 function makeTurnLoopDeps(
   responses: LLMResponse[],
   options: {
-    hook?: (event: string) => Promise<HookResult> | HookResult;
+    hook?: (event: string, data?: Record<string, unknown>) => Promise<HookResult> | HookResult;
     execute?: (call: ToolCall) => Promise<ToolResult>;
     clearPersistedGoal?: () => void;
+    updateGoalJudgeContext?: (context: unknown) => void;
   } = {},
 ): {
   deps: TurnLoopDeps;
@@ -101,8 +107,8 @@ function makeTurnLoopDeps(
       },
     } as unknown as TurnLoopDeps["contextManager"],
     hooks: {
-      async emit(event: string) {
-        return options.hook ? options.hook(event) : {};
+      async emit(event: string, ctx?: { data?: Record<string, unknown> }) {
+        return options.hook ? options.hook(event, ctx?.data) : {};
       },
     } as unknown as TurnLoopDeps["hooks"],
     transcript: {
@@ -115,6 +121,7 @@ function makeTurnLoopDeps(
     tools: [],
     sessionId: "goal-loop-test",
     clearPersistedGoal: options.clearPersistedGoal,
+    updateGoalJudgeContext: options.updateGoalJudgeContext,
     ctxOverheadStore: { get: () => 0, set: () => {} },
   };
 
@@ -122,6 +129,91 @@ function makeTurnLoopDeps(
 }
 
 describe("TurnLoop goal lifecycle guardrails", () => {
+  it("projects recent tool results and goal progress into the private judge context", async () => {
+    const snapshots: any[] = [];
+    let publicStopData: Record<string, unknown> | undefined;
+    const { deps } = makeTurnLoopDeps(
+      [
+        toolResponse({ id: "quota-1", toolName: "Bash", args: { command: "quota --7d" } }),
+        stopResponse("quota checked"),
+      ],
+      {
+        execute: async (call) => ({
+          id: call.id,
+          toolName: call.toolName,
+          result: "7d quota: 91%",
+        }),
+        hook: (event, data) => {
+          if (event !== "on_stop") return {};
+          publicStopData = data;
+          return { data: { goalVerdict: { met: true, gaps: "" } } };
+        },
+        updateGoalJudgeContext: (context) => snapshots.push(context),
+      },
+    );
+    const config: TurnLoopConfig = {
+      maxTurns: 8,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "reach 90%", tokenBudget: 2_000, timeBudgetMs: 60_000 },
+      maxStopBlocks: 3,
+    };
+
+    await new TurnLoop(deps, config).run([{ role: "user", content: "go" }]);
+
+    expect(snapshots).toHaveLength(1);
+    expect(snapshots[0].toolResults[0].text).toContain("91%");
+    expect(snapshots[0].toolResults[0].turnCount).toBe(1);
+    expect(snapshots[0].progress).toMatchObject({
+      turnCount: 2,
+      stopRound: 1,
+      tokensUsed: 30,
+      tokenBudget: 2_000,
+      timeBudgetMs: 60_000,
+      maxTurns: 8,
+      maxStopBlocks: 3,
+    });
+    expect(publicStopData).not.toHaveProperty("toolResults");
+    expect(publicStopData).not.toHaveProperty("progress");
+    expect(publicStopData).not.toHaveProperty("goalJudgeContext");
+  });
+
+  it("removes sensitive payloads before publishing the private judge snapshot", async () => {
+    const snapshots: any[] = [];
+    const secret = "GOAL_JUDGE_MUST_NOT_RETAIN_THIS_SECRET";
+    const { deps } = makeTurnLoopDeps(
+      [
+        toolResponse({ id: "secret-1", toolName: "QueryUsage", args: {} }),
+        stopResponse("usage checked"),
+      ],
+      {
+        execute: async (call) => ({
+          id: call.id,
+          toolName: call.toolName,
+          sensitive: true,
+          result: `${secret}:result`,
+          displayResult: `${secret}:display`,
+          transcriptResult: `${secret}:transcript`,
+          contentBlocks: [{ type: "text", text: `${secret}:content-block` }],
+        }),
+        hook: (event) =>
+          event === "on_stop" ? { data: { goalVerdict: { met: true, gaps: "" } } } : {},
+        updateGoalJudgeContext: (context) => snapshots.push(context),
+      },
+    );
+
+    await new TurnLoop(deps, {
+      maxTurns: 4,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "check usage" },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(snapshots).toHaveLength(1);
+    expect(JSON.stringify(snapshots[0])).not.toContain(secret);
+    expect(snapshots[0].toolResults).toEqual([
+      { turnCount: 1, toolName: "QueryUsage", status: "success" },
+    ]);
+  });
+
   it("stops with goal_budget_exhausted before executing tool calls", async () => {
     const events: StreamEvent[] = [];
     const { deps, calls, executedTools } = makeTurnLoopDeps([
@@ -204,6 +296,54 @@ describe("TurnLoop goal lifecycle guardrails", () => {
       ),
     ).toBe(true);
   });
+
+  it("reuses a verdict across two real stop rounds when only runtime counters advance", async () => {
+    let judgeContext: GoalJudgeRuntimeContext | undefined;
+    let judgeCalls = 0;
+    const observedProgress: GoalJudgeRuntimeContext["progress"][] = [];
+    const judge: GoalJudgeLLM = {
+      async createMessage(): Promise<LLMResponse> {
+        judgeCalls += 1;
+        return {
+          text: '{"met":false,"waiting":false,"gaps":"still incomplete"}',
+          toolCalls: [],
+        };
+      },
+    };
+    const goalHook = createGoalStopHook({
+      goal: "finish the unchanged work",
+      llm: judge,
+      log: { info() {}, warn() {}, error() {} },
+      now: () => new Date("2026-07-10T10:00:10.000Z"),
+      getJudgeContext: () => judgeContext,
+    });
+    const { deps } = makeTurnLoopDeps(
+      [stopResponse("same stalled output"), stopResponse("same stalled output")],
+      {
+        hook: (event, data) =>
+          event === "on_stop"
+            ? goalHook({ eventName: "on_stop", data: { ...data, sessionId: "goal-loop-test" } })
+            : {},
+        updateGoalJudgeContext: (context) => {
+          judgeContext = context as GoalJudgeRuntimeContext;
+          observedProgress.push(judgeContext.progress);
+        },
+      },
+    );
+
+    await new TurnLoop(deps, {
+      maxTurns: 4,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "finish the unchanged work" },
+      maxStopBlocks: 1,
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(observedProgress).toHaveLength(2);
+    expect(observedProgress[1]!.turnCount).toBeGreaterThan(observedProgress[0]!.turnCount);
+    expect(observedProgress[1]!.tokensUsed).toBeGreaterThan(observedProgress[0]!.tokensUsed);
+    expect(observedProgress[1]!.stopRound).toBeGreaterThan(observedProgress[0]!.stopRound);
+    expect(judgeCalls).toBe(1);
+  });
 });
 
 const provider = "fake-goal-lifecycle";
@@ -213,6 +353,7 @@ const engineScenarios = new Map<
     mainResponses: LLMResponse[];
     mainCalls: number;
     judgeResponse?: string;
+    systemPrompts?: string[];
   }
 >();
 
@@ -222,6 +363,8 @@ class GoalLifecycleClient extends LLMClientBase {
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
     const scenario = engineScenarios.get(this.model);
     if (!scenario) throw new Error(`missing fake goal lifecycle scenario: ${this.model}`);
+    scenario.systemPrompts ??= [];
+    scenario.systemPrompts.push(options.systemPrompt);
 
     const isMainTurn = (options.tools?.length ?? 0) > 0;
     if (!isMainTurn) {
@@ -270,6 +413,67 @@ afterEach(() => {
 });
 
 describe("Engine persisted goal lifecycle", () => {
+  it("routes goal judgment to primary even when a distinct auxText model is configured", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-primary-judge-"));
+    const primaryModel = uniqueModel("primary-judge");
+    const auxModel = uniqueModel("aux-judge");
+    const auxKey = "configured-aux";
+    const sessionId = "goal-primary-judge";
+    engineScenarios.set(primaryModel, {
+      mainResponses: [stopResponse("quota checked")],
+      mainCalls: 0,
+      judgeResponse: '{"met":true,"waiting":false,"gaps":""}',
+    });
+    engineScenarios.set(auxModel, {
+      mainResponses: [stopResponse("unused")],
+      mainCalls: 0,
+      judgeResponse: '{"met":false,"waiting":false,"gaps":"aux must not judge"}',
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model: primaryModel, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+      (engine as any).modelPool.register({
+        key: auxKey,
+        provider,
+        model: auxModel,
+        apiKey: "test",
+      });
+      (engine as any).getSettingsManager = () => ({
+        invalidate() {},
+        get: () => ({ defaults: { auxText: auxKey } }),
+      });
+
+      const result = await engine.run("check quota", {
+        sessionId,
+        cwd: dir,
+        goal: { objective: "finish after quota check", maxStopBlocks: 1 },
+      });
+
+      expect(result.reason).toBe("completed");
+      expect(
+        engineScenarios
+          .get(primaryModel)
+          ?.systemPrompts?.some((prompt) => prompt.includes("目标完成度裁判")),
+      ).toBe(true);
+      expect(
+        engineScenarios
+          .get(auxModel)
+          ?.systemPrompts?.some((prompt) => prompt.includes("目标完成度裁判")),
+      ).toBe(false);
+    } finally {
+      engineScenarios.delete(primaryModel);
+      engineScenarios.delete(auxModel);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("refuses to arm a stale activeGoal that matches its terminal tombstone", async () => {
     const dir = mkdtempSync(join(tmpdir(), "engine-goal-terminal-guard-"));
     const model = uniqueModel("terminal-guard");
