@@ -55,3 +55,6 @@ packages/desktop/.preview/
 # Renderer source 'logs/' view dir is NOT a runtime-logs dir — keep it tracked
 !packages/desktop/src/renderer/logs/
 !packages/desktop/src/renderer/logs/**
+
+# nightly loop bookkeeping (untracked)
+.loop/
