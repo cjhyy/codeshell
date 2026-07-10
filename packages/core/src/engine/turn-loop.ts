@@ -175,6 +175,8 @@ export interface TurnLoopDeps {
    * run or the persisted transcript. Messages without an id bypass this guard.
    */
   claimClientMessageId?: (clientMessageId: string, source: "steer") => boolean;
+  /** Release a steer id reservation when preparation fails before persistence. */
+  releaseClientMessageId?: (clientMessageId: string) => void;
   /** Make tools launched after an injected steer attribute side effects to that steer. */
   setOriginClientMessageId?: (clientMessageId: string | undefined) => void;
   /**
@@ -1513,25 +1515,10 @@ export class TurnLoop {
   ): Promise<boolean> {
     const steered = this.deps.consumeSteer?.(source) ?? [];
     let consumed = false;
-    for (const item of steered) {
+    for (let index = 0; index < steered.length; index++) {
+      const item = steered[index]!;
       const { id, text, clientMessageId } = item;
       if (!text) continue;
-      let content: string | ContentBlock[];
-      try {
-        content = this.deps.buildSteerUserMessageContent
-          ? await this.deps.buildSteerUserMessageContent(item)
-          : text;
-      } catch (err) {
-        this.deps.restoreSteer?.([item]);
-        logger.warn("steer.prepare.failed_requeued", {
-          clientMessageId,
-          steerId: id,
-          sessionId: this.deps.sessionId,
-          source,
-          error: (err as Error).message,
-        });
-        continue;
-      }
       if (clientMessageId && this.deps.claimClientMessageId?.(clientMessageId, "steer") === false) {
         logger.info("steer.submit.duplicate_ignored", {
           clientMessageId,
@@ -1540,6 +1527,25 @@ export class TurnLoop {
           source,
         });
         continue;
+      }
+      let content: string | ContentBlock[];
+      try {
+        content = this.deps.buildSteerUserMessageContent
+          ? await this.deps.buildSteerUserMessageContent(item)
+          : text;
+      } catch (err) {
+        if (clientMessageId) this.deps.releaseClientMessageId?.(clientMessageId);
+        const pendingSuffix = steered.slice(index);
+        this.deps.restoreSteer?.(pendingSuffix);
+        logger.warn("steer.prepare.failed_requeued", {
+          clientMessageId,
+          steerId: id,
+          sessionId: this.deps.sessionId,
+          source,
+          restoredCount: pendingSuffix.length,
+          error: (err as Error).message,
+        });
+        break;
       }
       consumed = true;
       this.deps.setOriginClientMessageId?.(clientMessageId);

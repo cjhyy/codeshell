@@ -2014,6 +2014,9 @@ export class Engine {
           },
           claimClientMessageId: (clientMessageId, source) =>
             claimClientMessageId(session, clientMessageId, source),
+          releaseClientMessageId: (clientMessageId) => {
+            claimedClientMessageIds.delete(clientMessageId);
+          },
           setOriginClientMessageId: (clientMessageId) => {
             toolCtx.originClientMessageId = clientMessageId;
           },
