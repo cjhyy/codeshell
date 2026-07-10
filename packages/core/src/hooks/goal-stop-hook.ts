@@ -656,45 +656,6 @@ function renderProgress(
   ].join("\n");
 }
 
-/** Collect every balanced object while ignoring braces inside JSON strings. */
-function balancedObjectSlices(text: string): string[] {
-  const slices: string[] = [];
-  let start = -1;
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-
-  for (let index = 0; index < text.length; index++) {
-    const ch = text[index]!;
-    if (start < 0) {
-      if (ch === "{") {
-        start = index;
-        depth = 1;
-        inString = false;
-        escaped = false;
-      }
-      continue;
-    }
-
-    if (inString) {
-      if (escaped) escaped = false;
-      else if (ch === "\\") escaped = true;
-      else if (ch === '"') inString = false;
-      continue;
-    }
-    if (ch === '"') inString = true;
-    else if (ch === "{") depth++;
-    else if (ch === "}") {
-      depth--;
-      if (depth === 0) {
-        slices.push(text.slice(start, index + 1));
-        start = -1;
-      }
-    }
-  }
-  return slices;
-}
-
 /** Decode top-level object keys, preserving duplicates for strict validation. */
 function topLevelObjectKeys(slice: string): string[] | null {
   const keys: string[] = [];
@@ -773,12 +734,12 @@ function parseVerdictCandidate(slice: string): JudgeVerdict | null {
   }
 }
 
-/** Accept exactly one strict verdict candidate from the complete model output. */
+/** Accept exactly one strict verdict object from the complete model output. */
 function extractJson(text: string): JudgeVerdict | null {
-  const candidates = balancedObjectSlices(text)
-    .map(parseVerdictCandidate)
-    .filter((candidate): candidate is JudgeVerdict => candidate !== null);
-  return candidates.length === 1 ? candidates[0]! : null;
+  const trimmed = text.trim();
+  const fenced = /^```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/iu.exec(trimmed);
+  const candidate = (fenced?.[1] ?? trimmed).trim();
+  return parseVerdictCandidate(candidate);
 }
 
 /** Render the running background tasks for the judge prompt. */

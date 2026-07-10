@@ -1095,6 +1095,93 @@ describe("createGoalStopHook — three-state judge", () => {
     expect(res.continueSession).toBe(true);
   });
 
+  it("F3: one valid verdict object is parsed and handled by its met value", async () => {
+    let metCalls = 0;
+    const hook = createGoalStopHook({
+      goal: "ship it",
+      llm: fakeJudge('```json\n{"met":true,"waiting":false,"gaps":""}\n```'),
+      log: noopLog,
+      onMet: () => {
+        metCalls += 1;
+      },
+    });
+
+    const res = await hook({
+      eventName: "on_stop",
+      data: { sessionId: SID, finalText: "done" },
+    });
+
+    expect(res.continueSession).toBeUndefined();
+    expect(res.data?.goalVerdict).toEqual({ met: true, gaps: "" });
+    expect(metCalls).toBe(1);
+  });
+
+  it("F3: valid met:true followed by a malformed opposite object fails closed", async () => {
+    let metCalls = 0;
+    const hook = createGoalStopHook({
+      goal: "ship it",
+      llm: fakeJudge(
+        '{"met":true,"waiting":false,"gaps":""}\n' +
+          '{"met":false,"note":"opposite but missing required fields"}',
+      ),
+      log: noopLog,
+      onMet: () => {
+        metCalls += 1;
+      },
+    });
+
+    const res = await hook({
+      eventName: "on_stop",
+      data: { sessionId: SID, finalText: "done" },
+    });
+
+    expect(res.continueSession).toBe(true);
+    expect(res.data?.goalVerdict).toBeUndefined();
+    expect(metCalls).toBe(0);
+  });
+
+  it("F3: substantive text outside a verdict object fails closed", async () => {
+    let metCalls = 0;
+    const hook = createGoalStopHook({
+      goal: "ship it",
+      llm: fakeJudge('Goal complete.\n{"met":true,"waiting":false,"gaps":""}'),
+      log: noopLog,
+      onMet: () => {
+        metCalls += 1;
+      },
+    });
+
+    const res = await hook({
+      eventName: "on_stop",
+      data: { sessionId: SID, finalText: "done" },
+    });
+
+    expect(res.continueSession).toBe(true);
+    expect(res.data?.goalVerdict).toBeUndefined();
+    expect(metCalls).toBe(0);
+  });
+
+  it("F3: output with no valid JSON verdict fails closed", async () => {
+    let metCalls = 0;
+    const hook = createGoalStopHook({
+      goal: "ship it",
+      llm: fakeJudge("```json\nnot JSON\n```"),
+      log: noopLog,
+      onMet: () => {
+        metCalls += 1;
+      },
+    });
+
+    const res = await hook({
+      eventName: "on_stop",
+      data: { sessionId: SID, finalText: "done" },
+    });
+
+    expect(res.continueSession).toBe(true);
+    expect(res.data?.goalVerdict).toBeUndefined();
+    expect(metCalls).toBe(0);
+  });
+
   it("caps repeated unparseable judge requests for one run", async () => {
     const judge = fakeJudge("not JSON");
     const hook = createGoalStopHook({ goal: "ship it", llm: judge, log: noopLog });
