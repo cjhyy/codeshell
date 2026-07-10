@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { TurnLoop, type TurnLoopDeps, type TurnLoopConfig } from "./turn-loop.js";
-import type { LLMResponse, Message } from "../types.js";
+import type { LLMResponse, Message, StreamEvent } from "../types.js";
 
 /**
  * Build minimal fake deps for TurnLoop. Only the methods exercised by the
@@ -130,16 +130,21 @@ describe("TurnLoop max-output continuation", () => {
   });
 
   it("returns model_error when a text continuation request fails", async () => {
+    const events: StreamEvent[] = [];
     const { deps, stopHookCalls } = makeDeps([
       resp("truncated draft", "length"),
       new Error("continuation network failure"),
     ]);
-    const loop = new TurnLoop(deps, config);
+    const loop = new TurnLoop(deps, {
+      ...config,
+      onStream: (event) => events.push(event),
+    });
 
     const result = await loop.run([{ role: "user", content: "go" }]);
 
     expect(result.reason).toBe("model_error");
     expect(stopHookCalls()).toBe(0);
+    expect(events.filter((event) => event.type === "error")).toHaveLength(1);
     expect(result.messages).not.toContainEqual({
       role: "assistant",
       content: "truncated draft",

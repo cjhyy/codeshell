@@ -152,10 +152,9 @@ describe("TurnLoop maxTurns ceiling (§4.3)", () => {
     expect(finalReminder).toBeDefined();
   });
 
-  it("stops cleanly when the final maxTurns summary is aborted", async () => {
+  it("stops cleanly when the final maxTurns summary resolves after the signal aborts", async () => {
     const controller = new AbortController();
-    const summaryFailure = new Error("wrapped summary abort");
-    const { deps, stoppedMarkers } = makeDeps([toolResp(), summaryFailure], {
+    const { deps, stoppedMarkers } = makeDeps([toolResp(), summaryResp()], {
       onCall: (callNumber) => {
         if (callNumber === 2) controller.abort();
       },
@@ -171,6 +170,21 @@ describe("TurnLoop maxTurns ceiling (§4.3)", () => {
     expect(result.reason).toBe("aborted_streaming");
     expect(stoppedMarkers()).toBe(1);
     expect(result.reason).not.toBe("max_turns");
+  });
+
+  it("stops cleanly when the final maxTurns summary rejects with AbortError", async () => {
+    const abortError = new Error("summary aborted");
+    abortError.name = "AbortError";
+    const { deps, stoppedMarkers } = makeDeps([toolResp(), abortError]);
+    const loop = new TurnLoop(deps, {
+      maxTurns: 1,
+      maxToolCallsPerTurn: 10,
+    });
+
+    const result = await loop.run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("aborted_streaming");
+    expect(stoppedMarkers()).toBe(1);
   });
 
   it("keeps the prior text and max_turns reason when the final summary fails normally", async () => {

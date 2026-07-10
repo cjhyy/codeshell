@@ -1551,6 +1551,11 @@ export class TurnLoop {
         this.config.signal,
         this.modelCallRecordingOptions(),
       );
+      if (this.config.signal?.aborted) {
+        this.markStopped();
+        messages = this.redactConsumedSensitiveToolResults(messages);
+        return { text: finalText, reason: "aborted_streaming", messages };
+      }
       messages = this.markPendingImagesConsumed(messages);
       if (summaryResponse.text) {
         finalText = summaryResponse.text;
