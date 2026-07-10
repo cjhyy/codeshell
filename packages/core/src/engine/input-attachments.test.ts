@@ -147,6 +147,23 @@ describe("buildInputAttachmentContext", () => {
     expect(out.errors.join("\n")).toContain("stat failed");
   });
 
+  test("reports malformed runtime path metadata instead of throwing", async () => {
+    const malformed = {
+      ...meta({}),
+      path: 42,
+      absPath: undefined,
+      relPath: undefined,
+      vision: { include: true, mediaPath: null },
+    } as unknown as InputAttachmentMeta;
+
+    const out = await buildInputAttachmentContext([malformed], cwd, {
+      expectedSessionId: "sid",
+    });
+
+    expect(out.images).toEqual([]);
+    expect(out.errors.join("\n")).toContain("has no valid path");
+  });
+
   test("rejects sensitive paths through path-policy before reading image bytes", async () => {
     const abs = join(cwd, ".env");
     writeFileSync(abs, Buffer.from(PNG_B64, "base64"));

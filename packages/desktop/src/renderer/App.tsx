@@ -51,6 +51,7 @@ import {
   type SessionSummary,
 } from "./transcripts";
 import { planSessionDeletion } from "./sessionDeletionPlan";
+import { resolveAttachmentSessionId } from "./attachmentSession";
 import {
   titleFromWire,
   buildPathAttachment,
@@ -606,7 +607,13 @@ function App() {
   function prepareAttachmentSession(): { cwd: string; sessionId: string } | null {
     const cwd = activeRepo?.path ?? noRepoCwdRef.current;
     if (!cwd) return null;
-    if (activeSessionId) return { cwd, sessionId: activeSessionId };
+    if (activeSessionId) {
+      const sessionId = resolveAttachmentSessionId(
+        activeSessionId,
+        sessionIndices[activeRepoKey]?.sessions ?? [],
+      );
+      if (sessionId) return { cwd, sessionId };
+    }
 
     const repoId = activeRepoId;
     const draftBucket = bucketKey(repoId, null);
@@ -3957,7 +3964,7 @@ function App() {
                     messages={state.messages}
                     awaitingHydration={awaitingHydration}
                     turnEpoch={state.turnEpoch}
-                    engineSessionId={state.sessionId}
+                    engineSessionId={state.sessionId ?? engineSessionIdForActive()}
                     liveTurnActive={liveTurnActive}
                     sendBucket={activeBucket}
                     onSend={(text, opts) =>

@@ -12,7 +12,7 @@ import {
   dropOversizedImages,
   enforceImagePolicy,
 } from "./image-policy.js";
-import { buildInputAttachmentContext } from "./input-attachments.js";
+import { buildInputAttachmentContext, type InputAttachmentContext } from "./input-attachments.js";
 import { parseTaskWithImages, type ParsedTask } from "./parse-task.js";
 import type { EngineResult } from "./types.js";
 
@@ -59,10 +59,30 @@ export async function prepareRunImageInput(args: {
   }
 
   const cap = capabilitiesFor((llm.providerKind ?? llm.provider) as ProviderKindName, llm.model);
-  const attachmentContext = await buildInputAttachmentContext(args.attachments, cwd, {
-    includeImageBytes: cap.supportsVision,
-    expectedSessionId: sessionId,
-  });
+  let attachmentContext: InputAttachmentContext;
+  try {
+    attachmentContext = await buildInputAttachmentContext(args.attachments, cwd, {
+      includeImageBytes: cap.supportsVision,
+      expectedSessionId: sessionId,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error("engine.run.input_attachment_exception", {
+      stage: "build_input_attachment_context",
+      attachmentCount: args.attachments?.length ?? 0,
+      error: message,
+    });
+    return {
+      ok: false,
+      result: {
+        text: `ERROR: input attachment could not be prepared (${message}). Re-attach it or choose a path inside the workspace.`,
+        reason: "image_error",
+        sessionId: sessionId ?? "input-attachment-exception",
+        turnCount: 0,
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      },
+    };
+  }
   if (attachmentContext.errors.length > 0) {
     const detail = attachmentContext.errors.join("; ");
     logger.warn("engine.run.input_attachment_failed", { error: detail });
@@ -202,5 +222,18 @@ export function buildRunUserMessageContent(
         })),
       ]
     : taskText;
+  logger.info("engine.run.user_message_content_built", {
+    contentShape: Array.isArray(userMessageContent) ? "content_blocks" : "text",
+    textBlockCount: Array.isArray(userMessageContent)
+      ? userMessageContent.filter((block) => block.type === "text").length
+      : userMessageContent
+        ? 1
+        : 0,
+    imageBlockCount: Array.isArray(userMessageContent)
+      ? userMessageContent.filter((block) => block.type === "image").length
+      : 0,
+    attachedPathCount: attachedPaths.length,
+    textLength: taskText.length,
+  });
   return userMessageContent;
 }

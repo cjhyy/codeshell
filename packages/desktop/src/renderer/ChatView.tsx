@@ -637,8 +637,16 @@ export function ChatView({
   // file — TODO 2.1). Appends at the caret, or at the end with a leading space
   // if the draft doesn't already end with whitespace.
   const insertPathReference = (absPath: string): void => {
+    const attachmentContext = onPrepareAttachmentSession?.();
     setInputReferences((cur) =>
-      appendReference(cur, referenceFromAbsPath(absPath, messageCwd, engineSessionId)),
+      appendReference(
+        cur,
+        referenceFromAbsPath(
+          absPath,
+          attachmentContext?.cwd ?? messageCwd,
+          attachmentContext?.sessionId ?? engineSessionId,
+        ),
+      ),
     );
     const ta = textareaRef.current;
     const ref = `@${absPath} `;
@@ -673,8 +681,16 @@ export function ChatView({
           ? `@${item.attachment.path} `
           : `@${item.file.path} `;
     if (item.kind === "file") {
+      const attachmentContext = onPrepareAttachmentSession?.();
       setInputReferences((cur) =>
-        appendReference(cur, referenceFromFileHit(item.file, messageCwd, engineSessionId)),
+        appendReference(
+          cur,
+          referenceFromFileHit(
+            item.file,
+            attachmentContext?.cwd ?? messageCwd,
+            attachmentContext?.sessionId ?? engineSessionId,
+          ),
+        ),
       );
     } else if (item.kind === "recent") {
       setInputReferences((cur) => appendReference(cur, item.attachment));
