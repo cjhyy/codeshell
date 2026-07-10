@@ -637,9 +637,9 @@ export class TurnLoop {
     // window only after irreversible sensitive-data removal, non-text omission,
     // and per-item truncation at the current-round ToolResult boundary.
     const goalToolResults: GoalJudgeRuntimeContext["toolResults"] = [];
-    const sensitiveGoalResultTools = new Set(
-      this.deps.tools.filter((tool) => tool.sensitiveResult).map((tool) => tool.name),
-    );
+    const sensitiveGoalResultTools = this.config.goal
+      ? new Set(this.deps.tools.filter((tool) => tool.sensitiveResult).map((tool) => tool.name))
+      : undefined;
 
     // Goal-mode run-scoped budget tracker (P0). Null when no goal. Stamps a
     // wall-clock start now and accumulates prompt+completion tokens across
@@ -1220,7 +1220,7 @@ export class TurnLoop {
               projectGoalJudgeToolResult(
                 result,
                 this.turnCount,
-                sensitiveGoalResultTools.has(result.toolName),
+                sensitiveGoalResultTools?.has(result.toolName) === true,
               ),
             );
             // Never evict the front of one legal batch: the default executor may

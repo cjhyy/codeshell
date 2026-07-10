@@ -139,6 +139,35 @@ function makeTurnLoopDeps(
 }
 
 describe("TurnLoop goal lifecycle guardrails", () => {
+  it("does not scan sensitive-result tool metadata for a non-goal run", async () => {
+    const { deps } = makeTurnLoopDeps([stopResponse("plain completion")]);
+    let filterReads = 0;
+    deps.tools = new Proxy(
+      [
+        {
+          name: "OrdinaryTool",
+          description: "ordinary",
+          inputSchema: { type: "object" },
+          sensitiveResult: true,
+        },
+      ],
+      {
+        get(target, property, receiver) {
+          if (property === "filter") filterReads += 1;
+          return Reflect.get(target, property, receiver);
+        },
+      },
+    );
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 2,
+      maxToolCallsPerTurn: 10,
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(filterReads).toBe(0);
+  });
+
   it("projects recent tool results and goal progress into the private judge context", async () => {
     const snapshots: any[] = [];
     let publicStopData: Record<string, unknown> | undefined;
