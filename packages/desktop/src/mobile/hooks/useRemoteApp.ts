@@ -717,6 +717,20 @@ export function useRemoteApp(): RemoteApp {
   const requestActiveResync = useCallback(() => {
     const roomId = activeRoomIdRef.current;
     if (roomId) {
+      const ccSessionId = ccHistorySessionRef.current;
+      const ccCwd = activeProjectCwdRef.current;
+      if (ccSessionId && ccCwd) {
+        setLoadingKey("roomHistory", true);
+        sendRef.current?.({
+          type: "ccRoom.subscribeTranscript",
+          roomId,
+          cwd: ccCwd,
+          sessionId: ccSessionId,
+          limit: 150,
+          kind: ccHistoryKindRef.current,
+        });
+        return;
+      }
       if (ccHistorySessionRef.current && !ccBacklogLoadedRef.current) return;
       setLoadingKey("roomHistory", true);
       sendRef.current?.({

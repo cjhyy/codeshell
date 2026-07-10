@@ -453,4 +453,72 @@ describe("useRemoteApp cc transcript streaming", () => {
 
     await hook.unmount();
   });
+
+  test("re-subscribes the active transcript after the phone socket reconnects", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const firstSocket = FakeWebSocket.instances[0]!;
+
+    await act(async () => {
+      firstSocket.open();
+      firstSocket.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      firstSocket.message({
+        type: "room.projects.ok",
+        projects: [{ path: "/repo", name: "repo" }],
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      hook.result.current.selectProject("/repo");
+      hook.result.current.openCcSession("thread-1", "/repo", "default");
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      firstSocket.message({
+        type: "ccRoom.opened",
+        roomId: "room-1",
+        sessionId: "thread-1",
+        status: "running",
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      firstSocket.message({
+        type: "ccRoom.transcriptSubscribed",
+        roomId: "room-1",
+        sessionId: "thread-1",
+        active: true,
+        messages: [],
+        hasMore: false,
+        totalCount: 0,
+        roomCursor: 5,
+      });
+      await flushMicrotasks();
+    });
+
+    await act(async () => {
+      firstSocket.close();
+      window.dispatchEvent(new Event("online"));
+      await flushMicrotasks();
+    });
+    const reconnectedSocket = FakeWebSocket.instances[1]!;
+    expect(reconnectedSocket).toBeDefined();
+
+    await act(async () => {
+      reconnectedSocket.open();
+      reconnectedSocket.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      await flushMicrotasks();
+    });
+
+    expect(reconnectedSocket.sent.map((payload) => JSON.parse(payload))).toContainEqual({
+      type: "ccRoom.subscribeTranscript",
+      roomId: "room-1",
+      cwd: "/repo",
+      sessionId: "thread-1",
+      limit: 150,
+      kind: "claude-code",
+    });
+
+    await hook.unmount();
+  });
 });
