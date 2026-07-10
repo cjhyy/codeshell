@@ -118,11 +118,18 @@ export function FilesPanel({ cwd, onAttachImage, revealFile, onRevealConsumed }:
   // turn completes), so an edit to the open file shows without re-selecting.
   const [reloadNonce, setReloadNonce] = useState(0);
   const previousRootRef = useRef(cwd);
+  // `selected` is only meaningful for the exact workspace identity in which
+  // it was chosen. A nested worktree path is also lexically contained by its
+  // main repository, so a path-prefix check cannot distinguish the two.
+  const selectedRootRef = useRef(cwd);
+  const selectedForCurrentRoot = selectedRootRef.current === cwd ? selected : null;
+  const revealDirsForCurrentRoot = previousRootRef.current === cwd ? revealDirs : new Set<string>();
 
   useEffect(() => {
     if (previousRootRef.current === cwd) return;
     previousRootRef.current = cwd;
-    setSelected((current) => (current && cwd && resolveUnderRoot(cwd, current) ? current : null));
+    selectedRootRef.current = cwd;
+    setSelected(null);
     setRevealDirs(new Set());
     setReloadNonce((n) => n + 1);
   }, [cwd]);
@@ -148,6 +155,7 @@ export function FilesPanel({ cwd, onAttachImage, revealFile, onRevealConsumed }:
     if (!revealFile || revealFile.consumed || !cwd) return;
     const abs = resolveUnderRoot(cwd, revealFile.path);
     if (!abs) return;
+    selectedRootRef.current = cwd;
     setSelected(abs);
     setRevealDirs(ancestorDirs(cwd, abs));
     // Tell the parent we handled this nonce. Consuming AFTER the reveal (rather
@@ -159,12 +167,12 @@ export function FilesPanel({ cwd, onAttachImage, revealFile, onRevealConsumed }:
   }, [revealFile?.nonce, revealFile?.consumed, cwd, onRevealConsumed]);
 
   useEffect(() => {
-    if (!treeOpen || !selected || !cwd) return;
-    const abs = resolveUnderRoot(cwd, selected);
+    if (!treeOpen || !selectedForCurrentRoot || !cwd) return;
+    const abs = resolveUnderRoot(cwd, selectedForCurrentRoot);
     if (!abs) return;
     const dirs = ancestorDirs(cwd, abs);
     setRevealDirs((prev) => (sameStringSet(prev, dirs) ? prev : dirs));
-  }, [cwd, selected, treeOpen]);
+  }, [cwd, selectedForCurrentRoot, treeOpen]);
 
   if (!cwd) {
     return (
@@ -191,11 +199,14 @@ export function FilesPanel({ cwd, onAttachImage, revealFile, onRevealConsumed }:
               root={cwd}
               dir={cwd}
               depth={0}
-              selected={selected}
-              onSelect={setSelected}
+              selected={selectedForCurrentRoot}
+              onSelect={(path) => {
+                selectedRootRef.current = cwd;
+                setSelected(path);
+              }}
               filter={filter.trim().toLowerCase()}
               onAttachImage={onAttachImage}
-              revealDirs={revealDirs}
+              revealDirs={revealDirsForCurrentRoot}
               reloadNonce={reloadNonce}
             />
           </div>
@@ -224,8 +235,8 @@ export function FilesPanel({ cwd, onAttachImage, revealFile, onRevealConsumed }:
           </button>
         </div>
         <div className="min-h-0 flex-1 overflow-hidden">
-          {selected ? (
-            <FileViewer root={cwd} path={selected} reloadNonce={reloadNonce} />
+          {selectedForCurrentRoot ? (
+            <FileViewer root={cwd} path={selectedForCurrentRoot} reloadNonce={reloadNonce} />
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-1 text-muted-foreground">
               <Folder className="h-7 w-7" />
