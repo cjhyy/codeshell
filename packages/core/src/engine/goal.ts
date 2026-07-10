@@ -49,12 +49,19 @@ export interface GoalConfig {
   setAtMs?: number;
 }
 
-/** A forced terminal outcome for one concrete persisted goal instance. */
+/** A forced stop outcome for a Goal run. Some outcomes intentionally preserve the Goal. */
 export type GoalTerminationReason =
   | "stop_blocks_exhausted"
   | "token_budget_exhausted"
   | "time_budget_exhausted"
-  | "max_turns_exhausted";
+  | "max_turns_exhausted"
+  | "judge_prompt_too_large";
+
+/** Outcomes that permanently close one concrete persisted Goal instance. */
+export type PersistedGoalTerminationReason = Exclude<
+  GoalTerminationReason,
+  "judge_prompt_too_large"
+>;
 
 /**
  * Persisted terminal marker used to prevent a stale whole-state writer from
@@ -64,7 +71,7 @@ export type GoalTerminationReason =
 export interface GoalTerminal {
   objective: string;
   setAtMs?: number;
-  reason: GoalTerminationReason;
+  reason: PersistedGoalTerminationReason;
   terminatedAtMs?: number;
 }
 

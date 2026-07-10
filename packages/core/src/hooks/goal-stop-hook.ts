@@ -1033,7 +1033,7 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
           cat: "goal",
           reason: budgetTermination,
         });
-        return { data: { goalBudgetTermination: budgetTermination } };
+        return { goalTermination: budgetTermination };
       }
       log.warn("goal_stop.request_limit", {
         cat: "goal",
@@ -1085,7 +1085,7 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
       // main loop to compact and try the same frozen input again. Reuse F4's
       // explicit hook-to-loop termination channel so TurnLoop stops immediately
       // instead of burning every stop-block on an unrecoverable judge request.
-      return { data: { goalBudgetTermination: "judge_prompt_too_large" } };
+      return { goalTermination: "judge_prompt_too_large" };
     }
 
     const parentSignal = ctx.data.signal as AbortSignal | undefined;
@@ -1173,7 +1173,7 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
         cat: "goal",
         reason: judgeBudgetTermination,
       });
-      return { data: { goalBudgetTermination: judgeBudgetTermination } };
+      return { goalTermination: judgeBudgetTermination };
     }
 
     const respText = resp.text ?? "";

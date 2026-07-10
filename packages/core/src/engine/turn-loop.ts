@@ -1062,10 +1062,14 @@ export class TurnLoop {
           // The primary-model judge is a real billed request. Its hook forwards
           // usage through recordGoalJudgeUsage above; re-check immediately so an
           // over-budget verdict cannot authorize another main-model turn.
+          const hookGoalTermination = stopHook.goalTermination;
+          const hookBudgetTermination =
+            hookGoalTermination === "token_budget_exhausted" ||
+            hookGoalTermination === "time_budget_exhausted"
+              ? hookGoalTermination
+              : undefined;
           const postJudgeBudgetTermination = goalTracker
-            ? ((stopHook.data?.goalBudgetTermination as
-                | Extract<GoalTerminationReason, "token_budget_exhausted" | "time_budget_exhausted">
-                | undefined) ?? goalBudgetTerminationReason(goalTracker, Date.now()))
+            ? (hookBudgetTermination ?? goalBudgetTerminationReason(goalTracker, Date.now()))
             : undefined;
           if (goalTracker && postJudgeBudgetTermination) {
             tlog.info("turn.goal_budget_exhausted_after_judge", {
@@ -1088,6 +1092,23 @@ export class TurnLoop {
               reason: "goal_budget_exhausted",
               messages,
               goalTermination: postJudgeBudgetTermination,
+            };
+          }
+          if (goalTracker && hookGoalTermination === "judge_prompt_too_large") {
+            tlog.warn("turn.goal_judge_prompt_too_large", { cat: "goal" });
+            this.config.onStream?.({
+              type: "assistant_message",
+              messageId: assistantMessageId,
+              message: {
+                role: "assistant",
+                content: "（Goal 裁判输入超过安全上限，无法判定；本次已停止，目标已保留。）",
+              },
+            });
+            return {
+              text: finalText,
+              reason: "completed",
+              messages,
+              goalTermination: hookGoalTermination,
             };
           }
           // The judge's structured verdict (set by GoalStopHook in result.data)

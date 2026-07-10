@@ -660,6 +660,153 @@ afterEach(() => {
 });
 
 describe("Engine persisted goal lifecycle", () => {
+  it("F7: stops immediately on unrecoverable judge overflow but preserves the active goal", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-judge-overflow-"));
+    const model = uniqueModel("judge-overflow");
+    const sessionId = "goal-judge-overflow-preserves";
+    const objective = `OBJECTIVE-HEAD-${"g".repeat(30_000)}-OBJECTIVE-TAIL`;
+    engineScenarios.set(model, {
+      mainResponses: [stopResponse("cannot judge this prompt")],
+      mainCalls: 0,
+      judgeResponse: '{"met":true,"waiting":false,"gaps":""}',
+    });
+
+    try {
+      for (let index = 0; index < 16; index++) {
+        backgroundJobRegistry.start(
+          `f7-engine-fixed-overflow-${index}`,
+          sessionId,
+          `BACKGROUND-${index}-${String(index % 10).repeat(2_000)}`,
+        );
+      }
+      const events: StreamEvent[] = [];
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const result = await engine.run("start the large goal", {
+        sessionId,
+        cwd: dir,
+        goal: { objective, maxStopBlocks: 3 },
+        onStream: (event) => {
+          events.push(event);
+        },
+      });
+
+      expect(result.reason).toBe("completed");
+      expect(result.goalTermination).toBe("judge_prompt_too_large");
+      expect(engineScenarios.get(model)?.mainCalls).toBe(1);
+      expect(
+        engineScenarios
+          .get(model)
+          ?.systemPrompts?.filter((prompt) => prompt.includes("目标完成度裁判")),
+      ).toHaveLength(0);
+      expect(engine.getGoal(sessionId)?.objective).toBe(objective);
+      expect(persistedState(dir, sessionId).activeGoal?.objective).toBe(objective);
+      expect(persistedState(dir, sessionId).goalTerminal).toBeUndefined();
+      expect(events.some((event) => event.type === "goal_progress" && event.status === "met")).toBe(
+        false,
+      );
+      expect(
+        events.some(
+          (event) =>
+            event.type === "assistant_message" &&
+            typeof event.message.content === "string" &&
+            event.message.content.includes("目标已保留"),
+        ),
+      ).toBe(true);
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("F7: a bounded long objective still reaches the judge through Engine", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-bounded-objective-"));
+    const model = uniqueModel("bounded-objective");
+    const sessionId = "goal-bounded-objective-judges";
+    const objective = `OBJECTIVE-HEAD-${"x".repeat(30_000)}-OBJECTIVE-TAIL`;
+    engineScenarios.set(model, {
+      mainResponses: [stopResponse("large goal is complete")],
+      mainCalls: 0,
+      judgeResponse: '{"met":true,"waiting":false,"gaps":""}',
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const result = await engine.run("finish the large goal", {
+        sessionId,
+        cwd: dir,
+        goal: { objective },
+      });
+
+      expect(result.reason).toBe("completed");
+      expect(result.goalTermination).toBeUndefined();
+      expect(engineScenarios.get(model)?.mainCalls).toBe(1);
+      expect(
+        engineScenarios
+          .get(model)
+          ?.systemPrompts?.filter((prompt) => prompt.includes("目标完成度裁判")),
+      ).toHaveLength(1);
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("F7 regression: a normal objective still reaches the judge through Engine", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-normal-objective-"));
+    const model = uniqueModel("normal-objective");
+    const sessionId = "goal-normal-objective-judges";
+    engineScenarios.set(model, {
+      mainResponses: [stopResponse("normal goal is complete")],
+      mainCalls: 0,
+      judgeResponse: '{"met":true,"waiting":false,"gaps":""}',
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const result = await engine.run("finish the normal goal", {
+        sessionId,
+        cwd: dir,
+        goal: { objective: "ship the normal release" },
+      });
+
+      expect(result.reason).toBe("completed");
+      expect(result.goalTermination).toBeUndefined();
+      expect(engineScenarios.get(model)?.mainCalls).toBe(1);
+      expect(
+        engineScenarios
+          .get(model)
+          ?.systemPrompts?.filter((prompt) => prompt.includes("目标完成度裁判")),
+      ).toHaveLength(1);
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("routes goal judgment to primary even when a distinct auxText model is configured", async () => {
     const dir = mkdtempSync(join(tmpdir(), "engine-goal-primary-judge-"));
     const primaryModel = uniqueModel("primary-judge");

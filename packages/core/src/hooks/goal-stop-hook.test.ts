@@ -1345,7 +1345,7 @@ describe("createGoalStopHook — three-state judge", () => {
 
     expect(usageCalls).toBe(1);
     expect(result.continueSession).toBeUndefined();
-    expect(result.data?.goalBudgetTermination).toBe("token_budget_exhausted");
+    expect(result.goalTermination).toBe("token_budget_exhausted");
     expect(result.data?.goalVerdict).toBeUndefined();
   });
 
@@ -1381,7 +1381,7 @@ describe("createGoalStopHook — three-state judge", () => {
 
     expect(budgetChecks).toBe(1);
     expect(exhausted.continueSession).toBeUndefined();
-    expect(exhausted.data?.goalBudgetTermination).toBe("token_budget_exhausted");
+    expect(exhausted.goalTermination).toBe("token_budget_exhausted");
   });
 
   it("F4: preserves the normal single-request verdict path", async () => {
@@ -1444,7 +1444,7 @@ describe("createGoalStopHook — three-state judge", () => {
       expect(judge.calls).toBe(0);
       expect(result.continueSession).toBeUndefined();
       expect(result.messages).toBeUndefined();
-      expect(result.data?.goalBudgetTermination).toBe("judge_prompt_too_large");
+      expect(result.goalTermination).toBe("judge_prompt_too_large");
     } finally {
       backgroundJobRegistry.reset();
     }

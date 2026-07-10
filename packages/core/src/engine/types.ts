@@ -19,7 +19,7 @@ import type {
   TokenUsage,
 } from "../types.js";
 import type { AgentPresetName } from "../preset/index.js";
-import type { GoalConfig } from "./goal.js";
+import type { GoalConfig, GoalTerminationReason } from "./goal.js";
 import type { ApprovalBackend } from "../tool-system/permission.js";
 import type { SandboxConfig } from "../tool-system/sandbox/index.js";
 import type { CostStateStore } from "./cost-store.js";
@@ -184,6 +184,8 @@ export interface EngineHookConfig {
 export interface EngineResult {
   text: string;
   reason: TerminalReason;
+  /** Goal-specific stop outcome; omitted for ordinary completion/met verdicts. */
+  goalTermination?: GoalTerminationReason;
   sessionId: string;
   turnCount: number;
   usage: TokenUsage;
