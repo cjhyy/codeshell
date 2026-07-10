@@ -620,9 +620,14 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     // re-judging once the clock advances past a cutoff.
     const minuteBucket = nowDate.toISOString().slice(0, 16);
     const buildCacheKey = (): string =>
-      [goal, finalText, backgroundTasks, toolEvidence, renderPreviousVerdict(), minuteBucket].join(
-        "\n--goal-judge-cache-part--\n",
-      );
+      JSON.stringify([
+        goal,
+        finalText,
+        backgroundTasks,
+        toolEvidence,
+        renderPreviousVerdict(),
+        minuteBucket,
+      ]);
     const cacheKey = buildCacheKey();
     if (lastKey === cacheKey && lastResult) {
       log.info("goal_stop.verdict_cache_hit", { cat: "goal" });

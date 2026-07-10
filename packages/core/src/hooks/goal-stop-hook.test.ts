@@ -7,6 +7,7 @@ import {
   type GoalJudgeToolResult,
 } from "./goal-stop-hook.js";
 import type { LLMResponse, ToolResult } from "../types.js";
+import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
 
 /**
  * GoalStopHook three-state judge. Covers the branches the review flagged as
@@ -881,6 +882,37 @@ describe("createGoalStopHook — three-state judge", () => {
     await hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "output A" } });
     await hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "output B" } });
     expect(judge.calls).toBe(2);
+  });
+
+  it("verdict cache key cannot collide across field boundaries", async () => {
+    const delimiter = "\n--goal-judge-cache-part--\n";
+    const backgroundPrefix = "- [后台任务] ";
+    const judge = fakeJudge('{"met":false,"waiting":false,"gaps":"more work"}');
+    const hook = createGoalStopHook({
+      goal: "ship it",
+      llm: judge,
+      log: noopLog,
+      now: () => new Date("2026-07-10T10:00:10.000Z"),
+    });
+
+    try {
+      backgroundJobRegistry.start("cache-boundary-a", SID, "C");
+      await hook({
+        eventName: "on_stop",
+        data: { sessionId: SID, finalText: `A${delimiter}${backgroundPrefix}X` },
+      });
+
+      backgroundJobRegistry.reset();
+      backgroundJobRegistry.start("cache-boundary-b", SID, `X${delimiter}${backgroundPrefix}C`);
+      await hook({
+        eventName: "on_stop",
+        data: { sessionId: SID, finalText: "A" },
+      });
+
+      expect(judge.calls).toBe(2);
+    } finally {
+      backgroundJobRegistry.reset();
+    }
   });
 
   it("composes the run's abort signal into the judge call", async () => {
