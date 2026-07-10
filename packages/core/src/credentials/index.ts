@@ -26,12 +26,15 @@ export type {
   CredentialStoreFile,
   OAuthCredentialPublicStatus,
   OAuthCredentialSecret,
+  OAuthTokenResponse,
 } from "./types.js";
 export {
   buildOAuthRefreshRequest,
   isOAuthAccessTokenExpired,
   oauthCredentialStatus,
   parseOAuthCredentialSecret,
+  mergeOAuthTokenResponse,
+  shouldRefreshOAuthCredential,
   summarizeOAuthCredentialSecret,
   type OAuthClockOptions,
   type OAuthRefreshHandler,

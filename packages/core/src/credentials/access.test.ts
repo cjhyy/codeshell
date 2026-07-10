@@ -40,6 +40,13 @@ describe("createIpcCredentialAccess", () => {
           id: msg.id,
           result: { cookiesFile: "/tmp/cookies.txt", count: 3 },
         });
+      } else if (msg.method === "desktop/oauthAccessResolve") {
+        expect(msg.params).toEqual({ id: "oauth", scope: "full", forceRefresh: true });
+        main.send({
+          jsonrpc: "2.0",
+          id: msg.id,
+          result: { accessToken: "access-only", expiresAt: "2030-01-01T00:00:00.000Z" },
+        });
       }
     });
 
@@ -49,9 +56,16 @@ describe("createIpcCredentialAccess", () => {
     await expect(
       access.materializeCookie?.({ cwd: "/repo", id: "xhs", scope: "full" }),
     ).resolves.toEqual({ cookiesFile: "/tmp/cookies.txt", count: 3 });
+    await expect(
+      access.resolveOAuthAccess?.({ id: "oauth", scope: "full", forceRefresh: true }),
+    ).resolves.toEqual({
+      accessToken: "access-only",
+      expiresAt: "2030-01-01T00:00:00.000Z",
+    });
     expect(seenMethods).toEqual([
       "desktop/credentialResolve",
       "desktop/credentialMaterializeCookie",
+      "desktop/oauthAccessResolve",
     ]);
   });
 });

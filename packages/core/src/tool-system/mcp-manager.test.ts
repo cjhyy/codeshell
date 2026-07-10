@@ -10,6 +10,7 @@ import {
   buildStdioEnv,
   buildHttpHeaders,
   buildHttpHeadersWithCredentialAccess,
+  createMcpAuthenticatedFetch,
   inferTransportType,
   spillMcpImage,
 } from "./mcp-manager.js";
@@ -697,6 +698,113 @@ describe("buildHttpHeadersWithCredentialAccess", () => {
     expect(error?.message).toMatch(/structured.*secret|metadata.*mismatch/i);
     expect(error?.message).not.toContain("stale-refresh-must-not-leak");
     expect(error?.message).not.toContain("stale-client-secret-must-not-leak");
+  });
+});
+
+describe("createMcpAuthenticatedFetch", () => {
+  const oauthConfig: MCPServerConfig = {
+    name: "srv",
+    transport: "streamable-http",
+    url: "https://mcp.example/rpc",
+    credentialRef: "oauth-account",
+    headers: { "X-Client": "codeshell" },
+  };
+
+  function access(resolveOAuthAccess: (force: boolean) => Promise<string>) {
+    return {
+      listMasked: () => [],
+      resolveMeta: () => ({
+        id: "oauth-account",
+        type: "oauth" as const,
+        label: "OAuth",
+        hasSecret: true,
+      }),
+      envExposures: () => ({}),
+      resolveOAuthAccess: async (req: { forceRefresh?: boolean }) => ({
+        accessToken: await resolveOAuthAccess(Boolean(req.forceRefresh)),
+      }),
+    };
+  }
+
+  test("resolves OAuth before each request without exposing the stored secret", async () => {
+    const resolved: boolean[] = [];
+    const authorizations: string[] = [];
+    const authenticatedFetch = createMcpAuthenticatedFetch(
+      "srv",
+      oauthConfig,
+      access(async (force) => {
+        resolved.push(force);
+        return "access-one";
+      }),
+      (async (request: Request) => {
+        authorizations.push(request.headers.get("Authorization") ?? "");
+        expect(request.headers.get("X-Client")).toBe("codeshell");
+        return new Response("ok", { status: 200 });
+      }) as typeof fetch,
+    );
+
+    await authenticatedFetch("https://mcp.example/rpc", { method: "POST", body: "{}" });
+    await authenticatedFetch("https://mcp.example/rpc", { method: "POST", body: "{}" });
+    expect(resolved).toEqual([false, false]);
+    expect(authorizations).toEqual(["Bearer access-one", "Bearer access-one"]);
+  });
+
+  test("force refreshes and replays exactly once after a 401", async () => {
+    const resolved: boolean[] = [];
+    const authorizations: string[] = [];
+    const authenticatedFetch = createMcpAuthenticatedFetch(
+      "srv",
+      oauthConfig,
+      access(async (force) => {
+        resolved.push(force);
+        return force ? "access-two" : "access-one";
+      }),
+      (async (request: Request) => {
+        authorizations.push(request.headers.get("Authorization") ?? "");
+        return new Response("", { status: 401 });
+      }) as typeof fetch,
+    );
+
+    const response = await authenticatedFetch("https://mcp.example/rpc", { method: "POST" });
+    expect(response.status).toBe(401);
+    expect(resolved).toEqual([false, true]);
+    expect(authorizations).toEqual(["Bearer access-one", "Bearer access-two"]);
+  });
+
+  test("does not refresh on 403 or for a non-OAuth credential", async () => {
+    let refreshes = 0;
+    const oauthFetch = createMcpAuthenticatedFetch(
+      "srv",
+      oauthConfig,
+      access(async () => {
+        refreshes++;
+        return "access";
+      }),
+      (async () => new Response("", { status: 403 })) as typeof fetch,
+    );
+    expect((await oauthFetch("https://mcp.example/rpc")).status).toBe(403);
+    expect(refreshes).toBe(1);
+
+    const tokenFetch = createMcpAuthenticatedFetch(
+      "srv",
+      { ...oauthConfig, credentialRef: "token-account" },
+      {
+        listMasked: () => [],
+        resolveMeta: () => ({
+          id: "token-account",
+          type: "token",
+          label: "Token",
+          hasSecret: true,
+        }),
+        envExposures: () => ({}),
+        resolveValue: async () => "plain-token",
+      },
+      (async (request: Request) => {
+        expect(request.headers.get("Authorization")).toBe("Bearer plain-token");
+        return new Response("", { status: 401 });
+      }) as typeof fetch,
+    );
+    expect((await tokenFetch("https://mcp.example/rpc")).status).toBe(401);
   });
 });
 

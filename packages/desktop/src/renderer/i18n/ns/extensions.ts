@@ -276,8 +276,7 @@ export const extensions = {
         switchModeMerge: "只覆盖同名",
       },
       link: {
-        intro:
-          "把第三方应用接进来,让 AI 通过对应的 skill + 官方 MCP 读写它的数据。点「登录」连接一个集成(后台服务即将开放)。",
+        intro: "把第三方应用接进来，让 AI 通过对应的 skill + 官方 MCP 读写它的数据。",
         add: "添加",
         comingSoon: "即将开放",
         comingSoonToast: "「{name}」集成的后台服务即将开放,敬请期待。",
@@ -291,6 +290,8 @@ export const extensions = {
         oauthLoginPending: "「{name}」OAuth 登录入口已预留,后台流程即将开放。",
         oauthRefreshPending: "「{name}」OAuth 刷新接口已预留,当前版本只显示状态。",
         oauthLogoutDone: "已退出「{name}」",
+        oauthLogoutWarning: "已从本机退出「{name}」，但远端撤销失败。",
+        oauthUnsupported: "尚未支持 OAuth",
         moreLink: "查看 {names} 和另外 {count} 个",
         catCommunication: "沟通协作",
         catDesign: "设计",
@@ -580,7 +581,7 @@ export const extensions = {
       },
       link: {
         intro:
-          "Connect third-party apps so the AI can read and write their data through the matching skill + official MCP. Click \"Sign in\" to connect an integration (backend service coming soon).",
+          "Connect third-party apps so the AI can read and write their data through the matching skill + official MCP.",
         add: "Add",
         comingSoon: "Coming soon",
         comingSoonToast: "The backend service for the \"{name}\" integration is coming soon.",
@@ -595,6 +596,8 @@ export const extensions = {
         oauthRefreshPending:
           "OAuth refresh for \"{name}\" is reserved; this version only shows status.",
         oauthLogoutDone: "Signed out of \"{name}\"",
+        oauthLogoutWarning: "Signed out of \"{name}\" locally, but remote revocation failed.",
+        oauthUnsupported: "OAuth not supported yet",
         moreLink: "See {names} and {count} more",
         catCommunication: "Communication",
         catDesign: "Design",

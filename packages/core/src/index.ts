@@ -97,7 +97,12 @@ export type { ApprovalBackend } from "./tool-system/permission.js";
 export { BUILTIN_TOOLS } from "./tool-system/builtin/index.js";
 export type { BuiltinTool, BuiltinToolFn } from "./tool-system/builtin/index.js";
 export { makeUpdateAutomationMemoryTool } from "./tool-system/builtin/update-automation-memory.js";
-export { MCPManager, buildHttpHeaders, buildStdioEnv } from "./tool-system/mcp-manager.js";
+export {
+  MCPManager,
+  buildHttpHeaders,
+  buildStdioEnv,
+  createMcpAuthenticatedFetch,
+} from "./tool-system/mcp-manager.js";
 export type { AskUserFn } from "./tool-system/builtin/ask-user.js";
 // taskManager singleton removed in the TodoWrite refactor; task state
 // lives in the transcript now. Type re-exports stay for SDK consumers
@@ -184,6 +189,15 @@ export {
   type DreamConsolidationInput,
   type DreamConsolidationResult,
 } from "./services/dream-consolidation.js";
+export {
+  authorize,
+  refreshToken,
+  generatePKCE,
+  type OAuthConfig,
+  type OAuthTokens,
+  type OAuthAuthorizeOptions,
+  type OAuthRefreshOptions,
+} from "./services/oauth.js";
 export type { FileSnapshot, RedoRecord } from "./session/file-history.js";
 
 // ─── Prompt ──────────────────────────────────────────────────────
@@ -489,10 +503,13 @@ export {
   type CredentialStoreFile,
   type OAuthCredentialPublicStatus,
   type OAuthCredentialSecret,
+  type OAuthTokenResponse,
   buildOAuthRefreshRequest,
   isOAuthAccessTokenExpired,
   oauthCredentialStatus,
   parseOAuthCredentialSecret,
+  mergeOAuthTokenResponse,
+  shouldRefreshOAuthCredential,
   summarizeOAuthCredentialSecret,
   type OAuthClockOptions,
   type OAuthRefreshHandler,

@@ -182,6 +182,11 @@ export class AgentBridge {
 
   constructor(
     window: BrowserWindow,
+    private readonly oauthAccessResolver?: (req: {
+      id: string;
+      scope: "full";
+      forceRefresh?: boolean;
+    }) => Promise<{ accessToken: string; expiresAt?: string }>,
     private readonly quickChatForkLifecycle?: QuickChatForkLifecycle,
   ) {
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
@@ -573,7 +578,8 @@ export class AgentBridge {
     }
     if (
       parsed.method !== "desktop/credentialResolve" &&
-      parsed.method !== "desktop/credentialMaterializeCookie"
+      parsed.method !== "desktop/credentialMaterializeCookie" &&
+      parsed.method !== "desktop/oauthAccessResolve"
     ) {
       return false;
     }
@@ -590,13 +596,26 @@ export class AgentBridge {
               normalizeCredentialResolveParams(parsed.params),
             ),
           };
-        } else {
+        } else if (parsed.method === "desktop/credentialMaterializeCookie") {
           reply = {
             jsonrpc: "2.0",
             id,
             result: materializeCredentialCookieForWorker(
               normalizeCredentialMaterializeParams(parsed.params),
             ),
+          };
+        } else {
+          if (!this.oauthAccessResolver) throw new Error("OAuth access resolver is unavailable");
+          const credentialId = typeof parsed.params?.id === "string" ? parsed.params.id : "";
+          if (!credentialId) throw new Error("oauthAccessResolve requires id");
+          reply = {
+            jsonrpc: "2.0",
+            id,
+            result: await this.oauthAccessResolver({
+              id: credentialId,
+              scope: "full",
+              forceRefresh: parsed.params?.forceRefresh === true,
+            }),
           };
         }
       } catch (err) {

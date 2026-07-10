@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
   isOAuthAccessTokenExpired,
+  mergeOAuthTokenResponse,
   oauthCredentialStatus,
   parseOAuthCredentialSecret,
+  shouldRefreshOAuthCredential,
 } from "./oauth.js";
 
 describe("OAuth credential secret schema", () => {
@@ -65,5 +67,79 @@ describe("OAuth credential secret schema", () => {
       expiresAt: undefined,
       expiresInMs: undefined,
     });
+  });
+
+  test("merges rotation responses and preserves an omitted refresh token", () => {
+    const previous = {
+      accessToken: "old-access",
+      refreshToken: "old-refresh",
+      tokenEndpoint: "https://auth.example/token",
+      clientId: "client",
+      scope: "read",
+    };
+    expect(
+      mergeOAuthTokenResponse(
+        previous,
+        { access_token: "new-access", expires_in: 120, token_type: "Bearer" },
+        { now: 1_000 },
+      ),
+    ).toMatchObject({
+      accessToken: "new-access",
+      refreshToken: "old-refresh",
+      expiresAt: "1970-01-01T00:02:01.000Z",
+      tokenEndpoint: "https://auth.example/token",
+      clientId: "client",
+      scope: "read",
+    });
+    expect(
+      mergeOAuthTokenResponse(previous, {
+        access_token: "rotated-access",
+        refresh_token: "rotated-refresh",
+        scope: "read write",
+      }),
+    ).toMatchObject({
+      refreshToken: "rotated-refresh",
+      scope: "read write",
+      scopes: ["read", "write"],
+      expiresAt: undefined,
+    });
+  });
+
+  test("rejects invalid token responses and unsupported token types", () => {
+    expect(() => mergeOAuthTokenResponse(undefined, { access_token: "" })).toThrow(/access_token/);
+    expect(() =>
+      mergeOAuthTokenResponse(undefined, { access_token: "a", expires_in: Number.NaN }),
+    ).toThrow(/expires_in/);
+    expect(() => mergeOAuthTokenResponse(undefined, { access_token: "a", expires_in: -1 })).toThrow(
+      /expires_in/,
+    );
+    expect(() =>
+      mergeOAuthTokenResponse(undefined, { access_token: "a", token_type: "MAC" }),
+    ).toThrow(/Bearer/);
+    expect(() =>
+      parseOAuthCredentialSecret(JSON.stringify({ accessToken: "a", tokenType: "MAC" })),
+    ).toThrow(/Bearer/);
+  });
+
+  test("classifies the exact refresh-skew boundary and login-required state", () => {
+    const now = Date.UTC(2026, 0, 1, 12, 0, 0);
+    expect(
+      shouldRefreshOAuthCredential(
+        {
+          accessToken: "a",
+          refreshToken: "r",
+          tokenEndpoint: "https://auth.example/token",
+          expiresAt: "2026-01-01T12:01:00.000Z",
+        },
+        { now },
+      ),
+    ).toBe("refresh");
+    expect(
+      shouldRefreshOAuthCredential(
+        { accessToken: "a", expiresAt: "2026-01-01T11:59:59.000Z" },
+        { now },
+      ),
+    ).toBe("login_required");
+    expect(shouldRefreshOAuthCredential({ accessToken: "a" }, { now })).toBe("no");
   });
 });

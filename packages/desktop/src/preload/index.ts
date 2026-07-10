@@ -1043,6 +1043,11 @@ contextBridge.exposeInMainWorld("codeshell", {
 
   // ── Browser popout window ─────────────────────────────────────────────
   /** Credentials module: token/link/oauth store CRUD + cookie capture. */
+  mcpOAuth: {
+    login: (input: unknown) => ipcRenderer.invoke("mcpOAuth:login", input),
+    refresh: (credentialId: string) => ipcRenderer.invoke("mcpOAuth:refresh", credentialId),
+    logout: (credentialId: string) => ipcRenderer.invoke("mcpOAuth:logout", credentialId),
+  },
   credentials: {
     list: (cwd: string) => ipcRenderer.invoke("credentials:list", cwd),
     save: (cwd: string, scope: "user" | "project", cred: unknown) =>

@@ -1,20 +1,17 @@
-/**
- * OAuth service — OAuth 2.0 authorization code flow with PKCE.
- *
- * Supports browser-based login flow for API authentication.
- */
+/** OAuth 2.0 authorization-code + PKCE primitives for host applications. */
 
+import { createHash, randomBytes } from "node:crypto";
 import { createServer, type Server } from "node:http";
-import { randomBytes, createHash } from "node:crypto";
-import { execFile } from "node:child_process";
-import { browserOpenCommand } from "./browser-open.js";
+import { mergeOAuthTokenResponse } from "../credentials/oauth.js";
 
 export interface OAuthConfig {
   clientId: string;
+  clientSecret?: string;
   authorizationEndpoint: string;
   tokenEndpoint: string;
   redirectUri?: string;
   scopes?: string[];
+  resource?: string;
 }
 
 export interface OAuthTokens {
@@ -22,89 +19,134 @@ export interface OAuthTokens {
   refreshToken?: string;
   expiresAt?: number;
   tokenType: string;
+  scope?: string;
 }
 
-/**
- * Generate PKCE code verifier and challenge.
- */
-function generatePKCE(): { verifier: string; challenge: string } {
+export interface OAuthAuthorizeOptions {
+  signal?: AbortSignal;
+  timeoutMs?: number;
+  openExternal?: (url: string) => Promise<void> | void;
+  fetch?: typeof fetch;
+  callbackHost?: "127.0.0.1";
+  /** Zero asks the OS for an ephemeral port. */
+  callbackPort?: number;
+}
+
+export interface OAuthRefreshOptions {
+  fetch?: typeof fetch;
+  now?: number;
+}
+
+export function generatePKCE(): { verifier: string; challenge: string } {
   const verifier = randomBytes(32).toString("base64url");
   const challenge = createHash("sha256").update(verifier).digest("base64url");
   return { verifier, challenge };
 }
 
-/**
- * Open a URL in the system browser.
- */
-function openBrowser(url: string): void {
-  // execFile with an argv array — no shell, so the URL can't be interpreted.
-  const { cmd, args } = browserOpenCommand(process.platform, url);
-  execFile(cmd, args, () => {});
+function tokensFromSecret(secret: ReturnType<typeof mergeOAuthTokenResponse>): OAuthTokens {
+  return {
+    accessToken: secret.accessToken,
+    refreshToken: secret.refreshToken,
+    expiresAt: secret.expiresAt ? Date.parse(secret.expiresAt) : undefined,
+    tokenType: secret.tokenType ?? "Bearer",
+    scope: secret.scope,
+  };
+}
+
+function callbackSettings(
+  config: OAuthConfig,
+  options: OAuthAuthorizeOptions,
+): { host: "127.0.0.1"; port: number; path: string; fixedRedirect?: string } {
+  const host = options.callbackHost ?? "127.0.0.1";
+  if (!config.redirectUri) {
+    return { host, port: options.callbackPort ?? 0, path: "/callback" };
+  }
+  const redirect = new URL(config.redirectUri);
+  if (
+    redirect.protocol !== "http:" ||
+    (redirect.hostname !== "127.0.0.1" && redirect.hostname !== "localhost")
+  ) {
+    throw new Error("OAuth redirectUri must be an HTTP loopback URL");
+  }
+  const port = options.callbackPort ?? Number(redirect.port || "80");
+  return {
+    host,
+    port,
+    path: redirect.pathname || "/callback",
+    fixedRedirect: options.callbackPort === undefined ? redirect.toString() : undefined,
+  };
 }
 
 /**
- * Run the OAuth authorization code flow.
- * Opens a browser for user login and waits for the callback.
+ * Run an OAuth authorization-code flow. The host owns browser launching and
+ * injects `openExternal`; core only listens on an ephemeral loopback port.
  */
-export async function authorize(config: OAuthConfig): Promise<OAuthTokens> {
+export async function authorize(
+  config: OAuthConfig,
+  options: OAuthAuthorizeOptions = {},
+): Promise<OAuthTokens> {
+  if (options.signal?.aborted) throw new Error("OAuth authorization aborted");
+  const callback = callbackSettings(config, options);
   const { verifier, challenge } = generatePKCE();
   const state = randomBytes(16).toString("hex");
-  const port = 18910 + Math.floor(Math.random() * 100);
-  const redirectUri = config.redirectUri ?? `http://localhost:${port}/callback`;
-
-  // Build authorization URL
-  const params = new URLSearchParams({
-    response_type: "code",
-    client_id: config.clientId,
-    redirect_uri: redirectUri,
-    state,
-    code_challenge: challenge,
-    code_challenge_method: "S256",
-  });
-
-  if (config.scopes?.length) {
-    params.set("scope", config.scopes.join(" "));
-  }
-
-  const authUrl = `${config.authorizationEndpoint}?${params.toString()}`;
+  const fetchFn = options.fetch ?? fetch;
+  const openExternal = options.openExternal;
+  if (!openExternal) throw new Error("OAuth authorize requires an openExternal host callback");
 
   return new Promise<OAuthTokens>((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      server.close();
-      reject(new Error("OAuth authorization timed out (120s)"));
-    }, 120_000);
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let redirectUri = "";
+
+    const cleanup = () => {
+      if (timer) clearTimeout(timer);
+      options.signal?.removeEventListener("abort", onAbort);
+      if (server.listening) server.close();
+    };
+    const fail = (err: unknown) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(err instanceof Error ? err : new Error(String(err)));
+    };
+    const succeed = (tokens: OAuthTokens) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(tokens);
+    };
+    const onAbort = () => fail(new Error("OAuth authorization aborted"));
 
     const server: Server = createServer(async (req, res) => {
-      if (!req.url?.startsWith("/callback")) {
+      const requestUrl = new URL(req.url ?? "/", redirectUri || "http://127.0.0.1");
+      if (requestUrl.pathname !== callback.path) {
         res.writeHead(404);
         res.end("Not found");
         return;
       }
 
-      const url = new URL(req.url, `http://localhost:${port}`);
-      const code = url.searchParams.get("code");
-      const returnedState = url.searchParams.get("state");
-      const error = url.searchParams.get("error");
-
-      clearTimeout(timeout);
-
-      if (error) {
-        res.writeHead(200, { "Content-Type": "text/html" });
-        res.end("<html><body><h1>Authorization failed</h1><p>You can close this window.</p></body></html>");
-        server.close();
-        reject(new Error(`OAuth error: ${error}`));
+      const returnedState = requestUrl.searchParams.get("state");
+      const code = requestUrl.searchParams.get("code");
+      const oauthError = requestUrl.searchParams.get("error");
+      if (returnedState !== state) {
+        res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" });
+        res.end("<h1>Invalid OAuth callback</h1><p>You can close this window.</p>");
+        fail(new Error("Invalid OAuth callback: state mismatch"));
+        return;
+      }
+      if (oauthError) {
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        res.end("<h1>Authorization was not completed</h1><p>You can close this window.</p>");
+        fail(new Error(oauthError === "access_denied" ? "OAuth access denied" : "OAuth failed"));
+        return;
+      }
+      if (!code) {
+        res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" });
+        res.end("<h1>Invalid OAuth callback</h1><p>You can close this window.</p>");
+        fail(new Error("Invalid OAuth callback: missing code"));
         return;
       }
 
-      if (!code || returnedState !== state) {
-        res.writeHead(400, { "Content-Type": "text/html" });
-        res.end("<html><body><h1>Invalid callback</h1></body></html>");
-        server.close();
-        reject(new Error("Invalid OAuth callback: missing code or state mismatch"));
-        return;
-      }
-
-      // Exchange code for tokens
       try {
         const tokenParams = new URLSearchParams({
           grant_type: "authorization_code",
@@ -113,82 +155,84 @@ export async function authorize(config: OAuthConfig): Promise<OAuthTokens> {
           client_id: config.clientId,
           code_verifier: verifier,
         });
-
-        const tokenRes = await fetch(config.tokenEndpoint, {
+        if (config.clientSecret) tokenParams.set("client_secret", config.clientSecret);
+        if (config.resource) tokenParams.set("resource", config.resource);
+        const tokenRes = await fetchFn(config.tokenEndpoint, {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: tokenParams.toString(),
+          signal: options.signal,
         });
-
         if (!tokenRes.ok) {
-          throw new Error(`Token exchange failed: ${tokenRes.status} ${await tokenRes.text()}`);
+          throw new Error(`OAuth token exchange failed (${tokenRes.status})`);
         }
-
-        const data = (await tokenRes.json()) as Record<string, unknown>;
-
-        const tokens: OAuthTokens = {
-          accessToken: data.access_token as string,
-          refreshToken: data.refresh_token as string | undefined,
-          expiresAt: data.expires_in
-            ? Date.now() + (data.expires_in as number) * 1000
-            : undefined,
-          tokenType: (data.token_type as string) ?? "Bearer",
-        };
-
-        res.writeHead(200, { "Content-Type": "text/html" });
-        res.end("<html><body><h1>Authorization successful!</h1><p>You can close this window.</p></body></html>");
-        server.close();
-        resolve(tokens);
+        const secret = mergeOAuthTokenResponse(
+          undefined,
+          (await tokenRes.json()) as Parameters<typeof mergeOAuthTokenResponse>[1],
+        );
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        res.end("<h1>Authorization successful</h1><p>You can close this window.</p>");
+        succeed(tokensFromSecret(secret));
       } catch (err) {
-        res.writeHead(500, { "Content-Type": "text/html" });
-        res.end("<html><body><h1>Token exchange failed</h1></body></html>");
-        server.close();
-        reject(err);
+        res.writeHead(500, { "Content-Type": "text/html; charset=utf-8" });
+        res.end("<h1>Token exchange failed</h1><p>You can close this window.</p>");
+        fail(err);
       }
     });
 
-    server.listen(port, () => {
-      openBrowser(authUrl);
-    });
+    options.signal?.addEventListener("abort", onAbort, { once: true });
+    server.once("error", (err) => fail(new Error(`OAuth callback server failed: ${err.message}`)));
+    server.listen(callback.port, callback.host, () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        fail(new Error("OAuth callback server did not expose a loopback port"));
+        return;
+      }
+      redirectUri =
+        callback.fixedRedirect ?? `http://${callback.host}:${address.port}${callback.path}`;
+      const authUrl = new URL(config.authorizationEndpoint);
+      authUrl.searchParams.set("response_type", "code");
+      authUrl.searchParams.set("client_id", config.clientId);
+      authUrl.searchParams.set("redirect_uri", redirectUri);
+      authUrl.searchParams.set("state", state);
+      authUrl.searchParams.set("code_challenge", challenge);
+      authUrl.searchParams.set("code_challenge_method", "S256");
+      if (config.scopes?.length) authUrl.searchParams.set("scope", config.scopes.join(" "));
+      if (config.resource) authUrl.searchParams.set("resource", config.resource);
 
-    server.on("error", (err) => {
-      clearTimeout(timeout);
-      reject(new Error(`OAuth server error: ${err.message}`));
+      timer = setTimeout(
+        () => fail(new Error("OAuth authorization timed out")),
+        options.timeoutMs ?? 120_000,
+      );
+      Promise.resolve(openExternal(authUrl.toString())).catch(fail);
     });
   });
 }
 
-/**
- * Refresh an access token using a refresh token.
- */
 export async function refreshToken(
   config: OAuthConfig,
   refreshTokenValue: string,
+  options: OAuthRefreshOptions = {},
 ): Promise<OAuthTokens> {
   const params = new URLSearchParams({
     grant_type: "refresh_token",
     client_id: config.clientId,
     refresh_token: refreshTokenValue,
   });
+  if (config.clientSecret) params.set("client_secret", config.clientSecret);
+  if (config.scopes?.length) params.set("scope", config.scopes.join(" "));
+  if (config.resource) params.set("resource", config.resource);
 
-  const res = await fetch(config.tokenEndpoint, {
+  const res = await (options.fetch ?? fetch)(config.tokenEndpoint, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: params.toString(),
   });
-
-  if (!res.ok) {
-    throw new Error(`Token refresh failed: ${res.status}`);
-  }
-
-  const data = (await res.json()) as Record<string, unknown>;
-
-  return {
-    accessToken: data.access_token as string,
-    refreshToken: (data.refresh_token as string) ?? refreshTokenValue,
-    expiresAt: data.expires_in
-      ? Date.now() + (data.expires_in as number) * 1000
-      : undefined,
-    tokenType: (data.token_type as string) ?? "Bearer",
-  };
+  if (!res.ok) throw new Error(`OAuth token refresh failed (${res.status})`);
+  const secret = mergeOAuthTokenResponse(
+    { accessToken: "replaced", refreshToken: refreshTokenValue },
+    (await res.json()) as Parameters<typeof mergeOAuthTokenResponse>[1],
+    { now: options.now },
+  );
+  return tokensFromSecret(secret);
 }

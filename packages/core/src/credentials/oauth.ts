@@ -1,4 +1,8 @@
-import type { OAuthCredentialPublicStatus, OAuthCredentialSecret } from "./types.js";
+import type {
+  OAuthCredentialPublicStatus,
+  OAuthCredentialSecret,
+  OAuthTokenResponse,
+} from "./types.js";
 
 const DEFAULT_OAUTH_REFRESH_SKEW_MS = 60_000;
 
@@ -35,6 +39,17 @@ function optionalStringArray(value: unknown): string[] | undefined {
   return out.length > 0 ? out : undefined;
 }
 
+function optionalFiniteNumber(value: unknown): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error("OAuth token response expires_in must be a finite non-negative number");
+  }
+  if (value < 0) {
+    throw new Error("OAuth token response expires_in must be a finite non-negative number");
+  }
+  return value;
+}
+
 function parseExpiresAt(value: string | undefined): number | undefined {
   if (!value) return undefined;
   const ms = Date.parse(value);
@@ -68,19 +83,86 @@ export function parseOAuthCredentialSecret(secret: string): OAuthCredentialSecre
 
   const expiresAt = optionalString(raw.expiresAt);
   parseExpiresAt(expiresAt);
+  const tokenType = optionalString(raw.tokenType);
+  if (tokenType && tokenType.toLowerCase() !== "bearer") {
+    throw new Error("OAuth credential tokenType must be Bearer");
+  }
 
   return {
     version: raw.version === 1 ? 1 : undefined,
     accessToken,
     refreshToken: optionalString(raw.refreshToken),
     expiresAt,
-    tokenType: optionalString(raw.tokenType),
+    tokenType,
     scope: optionalString(raw.scope),
     scopes: optionalStringArray(raw.scopes),
     tokenEndpoint: optionalString(raw.tokenEndpoint),
     clientId: optionalString(raw.clientId),
     clientSecret: optionalString(raw.clientSecret),
+    issuer: optionalString(raw.issuer),
+    resource: optionalString(raw.resource),
+    revocationEndpoint: optionalString(raw.revocationEndpoint),
+    clientRegistration:
+      raw.clientRegistration &&
+      typeof raw.clientRegistration === "object" &&
+      !Array.isArray(raw.clientRegistration) &&
+      optionalString((raw.clientRegistration as Record<string, unknown>).clientId)
+        ? {
+            clientId: optionalString((raw.clientRegistration as Record<string, unknown>).clientId)!,
+            clientSecret: optionalString(
+              (raw.clientRegistration as Record<string, unknown>).clientSecret,
+            ),
+            clientIdIssuedAt:
+              typeof (raw.clientRegistration as Record<string, unknown>).clientIdIssuedAt ===
+              "number"
+                ? ((raw.clientRegistration as Record<string, unknown>).clientIdIssuedAt as number)
+                : undefined,
+            clientSecretExpiresAt:
+              typeof (raw.clientRegistration as Record<string, unknown>).clientSecretExpiresAt ===
+              "number"
+                ? ((raw.clientRegistration as Record<string, unknown>)
+                    .clientSecretExpiresAt as number)
+                : undefined,
+          }
+        : undefined,
   };
+}
+
+/** Merge and validate an OAuth token endpoint response without losing rotation state. */
+export function mergeOAuthTokenResponse(
+  previous: OAuthCredentialSecret | undefined,
+  response: OAuthTokenResponse,
+  opts: { now?: number } = {},
+): OAuthCredentialSecret {
+  const accessToken = optionalString(response.access_token);
+  if (!accessToken) throw new Error("OAuth token response must include access_token");
+  const tokenType = optionalString(response.token_type) ?? "Bearer";
+  if (tokenType.toLowerCase() !== "bearer") {
+    throw new Error(`OAuth token response token_type must be Bearer`);
+  }
+  const expiresIn = optionalFiniteNumber(response.expires_in);
+  const now = opts.now ?? Date.now();
+  const responseScope = optionalString(response.scope);
+  const refreshToken = optionalString(response.refresh_token) ?? previous?.refreshToken;
+
+  return {
+    ...previous,
+    version: 1,
+    accessToken,
+    refreshToken,
+    expiresAt: expiresIn === undefined ? undefined : new Date(now + expiresIn * 1000).toISOString(),
+    tokenType: "Bearer",
+    scope: responseScope ?? previous?.scope,
+    scopes: responseScope ? responseScope.split(/\s+/).filter(Boolean) : previous?.scopes,
+  };
+}
+
+export function shouldRefreshOAuthCredential(
+  secret: OAuthCredentialSecret,
+  opts: OAuthClockOptions = {},
+): "no" | "refresh" | "login_required" {
+  if (!isOAuthAccessTokenExpired(secret, opts)) return "no";
+  return secret.refreshToken && secret.tokenEndpoint ? "refresh" : "login_required";
 }
 
 export function isOAuthAccessTokenExpired(

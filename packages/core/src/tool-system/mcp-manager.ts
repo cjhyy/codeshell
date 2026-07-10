@@ -241,6 +241,63 @@ export async function buildHttpHeadersWithCredentialAccess(
 }
 
 /**
+ * Fetch adapter for long-lived HTTP MCP transports. OAuth access tokens are
+ * resolved for every request, refreshed by the host inside the skew window,
+ * and force-refreshed once after a replayable 401.
+ */
+export function createMcpAuthenticatedFetch(
+  serverName: string,
+  config: MCPServerConfig,
+  access: CredentialAccess = getCredentialAccess(),
+  baseFetch: typeof fetch = fetch,
+): typeof fetch {
+  return (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+    const credentialId = config.credentialRef;
+    const meta = credentialId ? access.resolveMeta(undefined, credentialId, "full") : undefined;
+    const isOAuth = meta?.type === "oauth";
+
+    const headers = isOAuth
+      ? buildHttpHeaders(serverName, { ...config, credentialRef: undefined })
+      : await buildHttpHeadersWithCredentialAccess(serverName, config, access);
+    let token: string | undefined;
+    if (isOAuth) {
+      if (!access.resolveOAuthAccess) {
+        throw new Error(
+          `MCP server "${serverName}": oauth credential "${credentialId}" requires host OAuth access`,
+        );
+      }
+      token = (await access.resolveOAuthAccess({ id: credentialId!, scope: "full" })).accessToken;
+    }
+
+    const source = new Request(input, init);
+    let replayable = true;
+    try {
+      source.clone();
+    } catch {
+      replayable = false;
+    }
+    const send = async (accessToken?: string): Promise<Response> => {
+      const request = replayable ? source.clone() : source;
+      const requestHeaders = new Headers(request.headers);
+      for (const [name, value] of Object.entries(headers)) requestHeaders.set(name, value);
+      if (accessToken) requestHeaders.set("Authorization", `Bearer ${accessToken}`);
+      return baseFetch(new Request(request, { headers: requestHeaders }));
+    };
+
+    const first = await send(token);
+    if (first.status !== 401 || !isOAuth || !credentialId || !replayable || source.signal.aborted) {
+      return first;
+    }
+    const refreshed = await access.resolveOAuthAccess!({
+      id: credentialId,
+      scope: "full",
+      forceRefresh: true,
+    });
+    return send(refreshed.accessToken);
+  }) as typeof fetch;
+}
+
+/**
  * Infer the transport when the config doesn't name one: a url-only entry is
  * HTTP, everything else stdio. This is the CC `.mcp.json` convention —
  * plugin-bundled servers commonly write just `{ "url": "..." }`, and the old
@@ -592,9 +649,11 @@ export class MCPManager {
       // credentialRef resolves against user-scope credential access. The shared
       // MCPManager pool has no per-session cwd, and MCP-referenced credentials
       // (e.g. a Figma token) remain user-global by design.
-      const headers = await buildHttpHeadersWithCredentialAccess(name, config);
+      const access = getCredentialAccess();
+      const headers = buildHttpHeaders(name, { ...config, credentialRef: undefined });
       transport = new StreamableHTTPClientTransport(new URL(config.url), {
         requestInit: Object.keys(headers).length ? { headers } : undefined,
+        fetch: createMcpAuthenticatedFetch(name, config, access) as never,
       });
     } else {
       throw new Error(`MCP server "${name}": unsupported transport "${transportType}"`);

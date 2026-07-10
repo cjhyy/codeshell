@@ -149,7 +149,7 @@ describe("desktop credential access service", () => {
     ).toThrow(/unavailable/);
   });
 
-  test("oauth credentials are available to MCP but not generic credential use", () => {
+  test("oauth credentials never expose their full secret to the worker", () => {
     const secret = JSON.stringify({
       accessToken: "oauth-access",
       refreshToken: "oauth-refresh",
@@ -162,14 +162,14 @@ describe("desktop credential access service", () => {
       secret,
     });
 
-    expect(
+    expect(() =>
       resolveCredentialValueForWorker({
         cwd,
         id: "figma-oauth",
         scope: "full",
         purpose: "mcp",
       }),
-    ).toEqual({ value: secret });
+    ).toThrow(/host access resolver/);
     expect(() =>
       resolveCredentialValueForWorker({
         cwd,

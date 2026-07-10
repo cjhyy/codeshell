@@ -75,6 +75,7 @@ import {
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { stablePromptHash } from "./client-message-id.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
+import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
 import { readImageDataUrl } from "./image-read-service.js";
 import {
@@ -310,10 +311,53 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
  * same worker" — not "extra concurrent agents".
  */
 let bridge: AgentBridge | null = null;
+let mcpOAuthService: McpOAuthService | null = null;
 let cspInstalled = false;
 let automationHandle: AutomationHandle | null = null;
 const quickChatOwnership = new QuickChatOwnershipRegistry();
 const quickChatOwnerCleanupRegistered = new Set<number>();
+
+function getMcpOAuthService(): McpOAuthService {
+  if (!mcpOAuthService) {
+    mcpOAuthService = new McpOAuthService({
+      openExternal: (url) => shell.openExternal(url),
+      onCredentialsChanged: () => {
+        bridge?.pushCredentialSnapshot(undefined);
+        invalidateMcpProbeCache();
+      },
+    });
+  }
+  return mcpOAuthService;
+}
+
+function normalizeMcpOAuthLoginInput(raw: unknown): McpOAuthLoginInput {
+  if (!raw || typeof raw !== "object") throw new Error("mcpOAuth:login requires an input");
+  const input = raw as Record<string, unknown>;
+  const optionalString = (value: unknown): string | undefined =>
+    typeof value === "string" && value.trim() ? value.trim() : undefined;
+  if (input.source === "catalog") {
+    const profileId = optionalString(input.profileId);
+    if (!profileId) throw new Error("mcpOAuth:login requires profileId");
+    return { source: "catalog", profileId, credentialId: optionalString(input.credentialId) };
+  }
+  if (input.source !== "mcp") throw new Error("mcpOAuth:login source must be catalog or mcp");
+  const serverName = optionalString(input.serverName);
+  const serverUrl = optionalString(input.serverUrl);
+  if (!serverName || !serverUrl)
+    throw new Error("mcpOAuth:login requires serverName and serverUrl");
+  return {
+    source: "mcp",
+    serverName,
+    serverUrl,
+    credentialId: optionalString(input.credentialId),
+    clientId: optionalString(input.clientId),
+    authorizationEndpoint: optionalString(input.authorizationEndpoint),
+    tokenEndpoint: optionalString(input.tokenEndpoint),
+    scopes: Array.isArray(input.scopes)
+      ? input.scopes.filter((scope): scope is string => typeof scope === "string")
+      : undefined,
+  };
+}
 
 function broadcastWorkspaceChanged(payload: {
   sessionId: string;
@@ -1523,15 +1567,19 @@ async function createWindow(): Promise<BrowserWindow> {
   });
 
   if (!bridge) {
-    bridge = new AgentBridge(win, {
-      begin: ({ sessionId, ownerId, claimId }) =>
-        quickChatOwnership.beginFork(sessionId, ownerId, claimId),
-      settle: async ({ sessionId, ownerId, claimId, succeeded }) => {
-        await quickChatOwnership.settleFork(sessionId, ownerId, claimId, succeeded, () =>
-          deleteDesktopSession(sessionId),
-        );
+    bridge = new AgentBridge(
+      win,
+      (req) => getMcpOAuthService().resolveAccessToken(req.id, { forceRefresh: req.forceRefresh }),
+      {
+        begin: ({ sessionId, ownerId, claimId }) =>
+          quickChatOwnership.beginFork(sessionId, ownerId, claimId),
+        settle: async ({ sessionId, ownerId, claimId, succeeded }) => {
+          await quickChatOwnership.settleFork(sessionId, ownerId, claimId, succeeded, () =>
+            deleteDesktopSession(sessionId),
+          );
+        },
       },
-    });
+    );
     // Mirror every worker→renderer line onto any connected mobile clients, so
     // the phone sees the same stream (messages, tool summaries, approvals).
     bridge.subscribeOutbound((line, snapshotEntry) => {
@@ -1900,6 +1948,21 @@ ipcMain.handle(
     bridge?.pushCredentialSnapshot(cwd || undefined);
   },
 );
+ipcMain.handle("mcpOAuth:login", (_e, raw: unknown) =>
+  getMcpOAuthService().login(normalizeMcpOAuthLoginInput(raw)),
+);
+ipcMain.handle("mcpOAuth:refresh", (_e, credentialId: unknown) => {
+  if (typeof credentialId !== "string" || !credentialId) {
+    throw new Error("mcpOAuth:refresh requires credentialId");
+  }
+  return getMcpOAuthService().refresh(credentialId);
+});
+ipcMain.handle("mcpOAuth:logout", (_e, credentialId: unknown) => {
+  if (typeof credentialId !== "string" || !credentialId) {
+    throw new Error("mcpOAuth:logout requires credentialId");
+  }
+  return getMcpOAuthService().logout(credentialId);
+});
 function browserPartitionForBucket(bucket: unknown): string | undefined {
   if (typeof bucket !== "string" || !bucket) return undefined;
   // MUST match PanelArea/WebviewHost's partition exactly (no trim), or
@@ -2383,7 +2446,10 @@ ipcMain.handle("mcp:probe", async (_e, raw: unknown, force?: boolean) => {
     (x): x is McpServerConfig =>
       !!x && typeof x === "object" && typeof (x as McpServerConfig).name === "string",
   );
-  return probeMcpServers(configs, { force: Boolean(force) });
+  return probeMcpServers(configs, {
+    force: Boolean(force),
+    oauthService: getMcpOAuthService(),
+  });
 });
 
 ipcMain.handle(

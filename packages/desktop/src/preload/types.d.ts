@@ -398,11 +398,18 @@ export interface CredentialView {
     scope?: "domain" | "all";
     switchMode?: "clear" | "merge";
     oauthProvider?: string;
+    mcpServerName?: string;
+    mcpServerUrl?: string;
+    issuer?: string;
+    resource?: string;
     authUrl?: string;
     tokenEndpoint?: string;
     clientId?: string;
     scopes?: string[];
     lastRefreshAt?: string;
+    revocationEndpoint?: string;
+    lastRefreshFailedAt?: string;
+    lastRefreshErrorCode?: "invalid_grant" | "network" | "server_error" | "invalid_response";
   };
 }
 /** Masked credential returned to the renderer — never carries the secret value. */
@@ -420,6 +427,24 @@ export interface MaskedCredentialView extends Omit<CredentialView, "secret"> {
     scopes?: string[];
     error?: string;
   };
+}
+
+export type McpOAuthLoginInput =
+  | { source: "catalog"; profileId: string; credentialId?: string }
+  | {
+      source: "mcp";
+      serverName: string;
+      serverUrl: string;
+      credentialId?: string;
+      clientId?: string;
+      authorizationEndpoint?: string;
+      tokenEndpoint?: string;
+      scopes?: string[];
+    };
+
+export interface McpOAuthActionResult {
+  credential: MaskedCredentialView;
+  warning?: "remote_revoke_failed";
 }
 
 export type MarketplaceSource = { source: "github"; repo: string } | { source: "git"; url: string };
@@ -768,6 +793,11 @@ export interface CodeshellApi {
   fileExists(root: string, path: string): Promise<boolean>;
 
   // ── Credentials module ────────────────────────────────────────────────
+  mcpOAuth: {
+    login(input: McpOAuthLoginInput): Promise<McpOAuthActionResult>;
+    refresh(credentialId: string): Promise<McpOAuthActionResult>;
+    logout(credentialId: string): Promise<{ removed: true; remoteRevoked: boolean }>;
+  };
   credentials: {
     list(cwd: string): Promise<MaskedCredentialView[]>;
     save(cwd: string, scope: "user" | "project", cred: CredentialView): Promise<void>;
@@ -789,11 +819,18 @@ export interface CodeshellApi {
           scope?: "domain" | "all";
           switchMode?: "clear" | "merge";
           oauthProvider?: string;
+          mcpServerName?: string;
+          mcpServerUrl?: string;
+          issuer?: string;
+          resource?: string;
           authUrl?: string;
           tokenEndpoint?: string;
           clientId?: string;
           scopes?: string[];
           lastRefreshAt?: string;
+          revocationEndpoint?: string;
+          lastRefreshFailedAt?: string;
+          lastRefreshErrorCode?: "invalid_grant" | "network" | "server_error" | "invalid_response";
         };
       },
     ): Promise<void>;

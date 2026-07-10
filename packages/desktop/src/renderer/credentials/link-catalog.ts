@@ -21,6 +21,8 @@ export interface LinkIntegration {
   brandText: string;
   /** 占位品牌标底色(Tailwind 类) */
   brandColor: string;
+  /** Audited main-process OAuth profile. Missing means status-only/unsupported. */
+  oauthProfileId?: string;
 }
 
 export interface LinkCategory {

@@ -1,0 +1,235 @@
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  CredentialStore,
+  parseOAuthCredentialSecret,
+  type EncryptionCipher,
+  type OAuthTokens,
+} from "@cjhyy/code-shell-core";
+import { McpOAuthService } from "./mcp-oauth-service.js";
+
+class TestCipher implements EncryptionCipher {
+  encrypt(plaintext: string): string {
+    return `enc:test:${Buffer.from(plaintext).toString("base64")}`;
+  }
+  decrypt(stored: string): string {
+    return Buffer.from(stored.slice("enc:test:".length), "base64").toString();
+  }
+  canDecrypt(stored: string): boolean {
+    return stored.startsWith("enc:test:");
+  }
+}
+
+describe("McpOAuthService", () => {
+  let home: string;
+  let previousHome: string | undefined;
+
+  beforeEach(() => {
+    previousHome = process.env.HOME;
+    home = mkdtempSync(join(tmpdir(), "codeshell-oauth-"));
+    process.env.HOME = home;
+  });
+
+  afterEach(() => {
+    if (previousHome === undefined) delete process.env.HOME;
+    else process.env.HOME = previousHome;
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  function makeService(
+    options: {
+      authorizeTokens?: OAuthTokens;
+      fetch?: typeof fetch;
+      now?: () => number;
+      changed?: () => void;
+    } = {},
+  ) {
+    const store = new CredentialStore(undefined, new TestCipher());
+    const service = new McpOAuthService({
+      store,
+      openExternal: () => {},
+      authorizeFn: async () =>
+        options.authorizeTokens ?? {
+          accessToken: "access-login",
+          refreshToken: "refresh-login",
+          expiresAt: Date.UTC(2030, 0, 1),
+          tokenType: "Bearer",
+        },
+      fetch: options.fetch,
+      now: options.now,
+      onCredentialsChanged: options.changed,
+    });
+    return { service, store };
+  }
+
+  test("logs in through explicit PKCE metadata and atomically stores an encrypted secret", async () => {
+    let changed = 0;
+    const { service, store } = makeService({ changed: () => changed++ });
+    const result = await service.login({
+      source: "mcp",
+      serverName: "Example MCP",
+      serverUrl: "https://mcp.example/rpc",
+      clientId: "client-id",
+      authorizationEndpoint: "https://auth.example/authorize",
+      tokenEndpoint: "https://auth.example/token",
+      scopes: ["read", "write"],
+    });
+
+    expect(result.credential.id).toBe("example-mcp-oauth");
+    expect(result.credential.hasSecret).toBe(true);
+    expect((result.credential as { secret?: string }).secret).toBeUndefined();
+    const stored = store.resolve("example-mcp-oauth")!;
+    expect(parseOAuthCredentialSecret(stored.secret!)).toMatchObject({
+      accessToken: "access-login",
+      refreshToken: "refresh-login",
+      clientId: "client-id",
+      tokenEndpoint: "https://auth.example/token",
+      resource: "https://mcp.example/rpc",
+    });
+    const diskPath = join(home, ".code-shell", "credentials.json");
+    const disk = readFileSync(diskPath, "utf8");
+    expect(disk).toContain("enc:test:");
+    expect(disk).not.toContain("access-login");
+    expect(disk).not.toContain("refresh-login");
+    expect(statSync(diskPath).mode & 0o777).toBe(0o600);
+    expect(changed).toBe(1);
+  });
+
+  test("singleflights refresh, rotates tokens and preserves an omitted refresh token", async () => {
+    const now = Date.UTC(2026, 0, 1);
+    let calls = 0;
+    const { service, store } = makeService({
+      authorizeTokens: {
+        accessToken: "old-access",
+        refreshToken: "old-refresh",
+        expiresAt: now + 10_000,
+        tokenType: "Bearer",
+      },
+      now: () => now,
+      fetch: (async () => {
+        calls++;
+        await Promise.resolve();
+        return Response.json({ access_token: "new-access", expires_in: 3600 });
+      }) as typeof fetch,
+    });
+    await service.login({
+      source: "mcp",
+      serverName: "Example",
+      serverUrl: "https://mcp.example/rpc",
+      clientId: "client",
+      authorizationEndpoint: "https://auth.example/authorize",
+      tokenEndpoint: "https://auth.example/token",
+    });
+
+    const [first, second] = await Promise.all([
+      service.resolveAccessToken("example-oauth"),
+      service.resolveAccessToken("example-oauth"),
+    ]);
+    expect(first.accessToken).toBe("new-access");
+    expect(second.accessToken).toBe("new-access");
+    expect(calls).toBe(1);
+    expect(parseOAuthCredentialSecret(store.resolve("example-oauth")!.secret!)).toMatchObject({
+      accessToken: "new-access",
+      refreshToken: "old-refresh",
+      expiresAt: "2026-01-01T01:00:00.000Z",
+    });
+  });
+
+  test("invalid_grant requires login but retains the credential for UI recovery", async () => {
+    const now = Date.UTC(2026, 0, 1);
+    const { service, store } = makeService({
+      authorizeTokens: {
+        accessToken: "old-access",
+        refreshToken: "old-refresh",
+        expiresAt: now - 1,
+        tokenType: "Bearer",
+      },
+      now: () => now,
+      fetch: (async () =>
+        Response.json({ error: "invalid_grant" }, { status: 400 })) as typeof fetch,
+    });
+    await service.login({
+      source: "mcp",
+      serverName: "Example",
+      serverUrl: "https://mcp.example/rpc",
+      clientId: "client",
+      authorizationEndpoint: "https://auth.example/authorize",
+      tokenEndpoint: "https://auth.example/token",
+    });
+
+    await expect(service.refresh("example-oauth")).rejects.toThrow(/requires login/);
+    expect(store.resolve("example-oauth")).toBeDefined();
+    expect(store.resolve("example-oauth")?.meta?.lastRefreshErrorCode).toBe("invalid_grant");
+  });
+
+  test("proactive refresh may use a still-live token while a forced refresh fails closed", async () => {
+    const now = Date.UTC(2026, 0, 1);
+    const { service } = makeService({
+      authorizeTokens: {
+        accessToken: "still-live",
+        refreshToken: "refresh",
+        expiresAt: now + 30_000,
+        tokenType: "Bearer",
+      },
+      now: () => now,
+      fetch: (async () => {
+        throw new Error("network unavailable");
+      }) as typeof fetch,
+    });
+    await service.login({
+      source: "mcp",
+      serverName: "Example",
+      serverUrl: "https://mcp.example/rpc",
+      clientId: "client",
+      authorizationEndpoint: "https://auth.example/authorize",
+      tokenEndpoint: "https://auth.example/token",
+    });
+
+    await expect(service.resolveAccessToken("example-oauth")).resolves.toMatchObject({
+      accessToken: "still-live",
+    });
+    await expect(
+      service.resolveAccessToken("example-oauth", { forceRefresh: true }),
+    ).rejects.toThrow(/refresh failed/);
+  });
+
+  test("removes the local credential even when remote revocation fails", async () => {
+    const { service, store } = makeService({
+      fetch: (async () => new Response("", { status: 503 })) as typeof fetch,
+    });
+    await service.login({
+      source: "mcp",
+      serverName: "Example",
+      serverUrl: "https://mcp.example/rpc",
+      clientId: "client",
+      authorizationEndpoint: "https://auth.example/authorize",
+      tokenEndpoint: "https://auth.example/token",
+    });
+    const cred = store.resolve("example-oauth")!;
+    const secret = parseOAuthCredentialSecret(cred.secret!);
+    store.save("user", {
+      ...cred,
+      secret: JSON.stringify({ ...secret, revocationEndpoint: "https://auth.example/revoke" }),
+    });
+
+    expect(await service.logout("example-oauth")).toEqual({ removed: true, remoteRevoked: false });
+    expect(store.resolve("example-oauth")).toBeUndefined();
+  });
+
+  test("rejects insecure non-local endpoints before opening a browser", async () => {
+    const { service, store } = makeService();
+    await expect(
+      service.login({
+        source: "mcp",
+        serverName: "Unsafe",
+        serverUrl: "http://remote.example/rpc",
+        clientId: "client",
+        authorizationEndpoint: "https://auth.example/authorize",
+        tokenEndpoint: "https://auth.example/token",
+      }),
+    ).rejects.toThrow(/HTTPS/);
+    expect(store.list()).toHaveLength(0);
+  });
+});

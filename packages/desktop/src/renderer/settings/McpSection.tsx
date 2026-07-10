@@ -886,6 +886,12 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
       Boolean(initial?.envHeaders && Object.keys(initial.envHeaders).length),
   );
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [oauthBusy, setOAuthBusy] = useState(false);
+  const [oauthError, setOAuthError] = useState<string | null>(null);
+  const [oauthClientId, setOAuthClientId] = useState("");
+  const [oauthAuthorizationEndpoint, setOAuthAuthorizationEndpoint] = useState("");
+  const [oauthTokenEndpoint, setOAuthTokenEndpoint] = useState("");
+  const [oauthScopes, setOAuthScopes] = useState("");
   const { t } = useT();
 
   // Load credentials (user scope) to offer token/link Bearer and OAuth sources.
@@ -947,20 +953,69 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
     setCredentials(await window.codeshell.credentials.list(""));
   };
 
+  const runOAuthAction = async (action: () => Promise<void>) => {
+    if (oauthBusy) return;
+    setOAuthBusy(true);
+    setOAuthError(null);
+    try {
+      await action();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setOAuthError(message);
+      toast({ message });
+    } finally {
+      setOAuthBusy(false);
+    }
+  };
+
   const onOAuthLogin = () => {
-    toast({ message: t("settingsX.mcp.oauthLoginPending") });
+    void runOAuthAction(async () => {
+      const serverName = name.trim();
+      const serverUrl = url.trim();
+      if (!serverName) throw new Error(t("settingsX.mcp.nameEmpty"));
+      if (isStdio || !serverUrl) throw new Error(t("settingsX.mcp.oauthNeedsHttpUrl"));
+      try {
+        new URL(serverUrl);
+      } catch {
+        throw new Error(t("settingsX.mcp.urlInvalid"));
+      }
+      const result = await window.codeshell.mcpOAuth.login({
+        source: "mcp",
+        serverName,
+        serverUrl,
+        credentialId: selectedOAuthCredential?.id,
+        clientId: oauthClientId.trim() || undefined,
+        authorizationEndpoint: oauthAuthorizationEndpoint.trim() || undefined,
+        tokenEndpoint: oauthTokenEndpoint.trim() || undefined,
+        scopes: oauthScopes.split(/[\s,]+/).filter(Boolean),
+      });
+      await reloadCredentials();
+      setCredentialRef(result.credential.id);
+      setAuthMode("oauth");
+      setAuthModeTouched(true);
+    });
   };
 
   const onOAuthRefresh = () => {
-    toast({ message: t("settingsX.mcp.oauthRefreshPending") });
+    if (!selectedOAuthCredential) return;
+    void runOAuthAction(async () => {
+      await window.codeshell.mcpOAuth.refresh(selectedOAuthCredential.id);
+      await reloadCredentials();
+    });
   };
 
-  const onOAuthLogout = async () => {
+  const onOAuthLogout = () => {
     if (!selectedOAuthCredential) return;
-    await window.codeshell.credentials.remove("", "user", selectedOAuthCredential.id);
-    setCredentialRef("");
-    await reloadCredentials();
-    toast({ message: t("settingsX.mcp.oauthLogoutDone") });
+    void runOAuthAction(async () => {
+      const result = await window.codeshell.mcpOAuth.logout(selectedOAuthCredential.id);
+      setCredentialRef("");
+      await reloadCredentials();
+      toast({
+        message: result.remoteRevoked
+          ? t("settingsX.mcp.oauthLogoutDone")
+          : t("settingsX.mcp.oauthLogoutWarning"),
+      });
+    });
   };
 
   const submit = () => {
@@ -1269,15 +1324,23 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
                       />
                     </label>
                     <div className="flex items-end gap-2">
-                      <Button type="button" variant="default" size="sm" onClick={onOAuthLogin}>
-                        {t("settingsX.mcp.oauthLogin")}
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        onClick={onOAuthLogin}
+                        disabled={oauthBusy}
+                      >
+                        {selectedOAuthCredential?.oauthStatus?.state === "expired"
+                          ? t("settingsX.mcp.oauthRelogin")
+                          : t("settingsX.mcp.oauthLogin")}
                       </Button>
                       <Button
                         type="button"
                         variant="default"
                         size="sm"
                         onClick={onOAuthRefresh}
-                        disabled={!selectedOAuthCredential}
+                        disabled={!selectedOAuthCredential || oauthBusy}
                       >
                         {t("settingsX.mcp.oauthRefresh")}
                       </Button>
@@ -1285,14 +1348,48 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => void onOAuthLogout()}
-                        disabled={!selectedOAuthCredential}
+                        onClick={onOAuthLogout}
+                        disabled={!selectedOAuthCredential || oauthBusy}
                       >
                         {t("settingsX.mcp.oauthLogout")}
                       </Button>
                     </div>
                   </div>
                   <OAuthCredentialStatus credential={selectedOAuthCredential} />
+                  <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+                    <input
+                      className="rounded-sm border bg-transparent px-2 py-1.5 text-sm"
+                      value={oauthClientId}
+                      onChange={(event) => setOAuthClientId(event.target.value)}
+                      placeholder={t("settingsX.mcp.oauthClientIdPlaceholder")}
+                      disabled={oauthBusy}
+                    />
+                    <input
+                      className="rounded-sm border bg-transparent px-2 py-1.5 text-sm"
+                      value={oauthScopes}
+                      onChange={(event) => setOAuthScopes(event.target.value)}
+                      placeholder={t("settingsX.mcp.oauthScopesPlaceholder")}
+                      disabled={oauthBusy}
+                    />
+                    <input
+                      className="rounded-sm border bg-transparent px-2 py-1.5 text-sm"
+                      value={oauthAuthorizationEndpoint}
+                      onChange={(event) => setOAuthAuthorizationEndpoint(event.target.value)}
+                      placeholder={t("settingsX.mcp.oauthAuthorizationPlaceholder")}
+                      disabled={oauthBusy}
+                    />
+                    <input
+                      className="rounded-sm border bg-transparent px-2 py-1.5 text-sm"
+                      value={oauthTokenEndpoint}
+                      onChange={(event) => setOAuthTokenEndpoint(event.target.value)}
+                      placeholder={t("settingsX.mcp.oauthTokenPlaceholder")}
+                      disabled={oauthBusy}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t("settingsX.mcp.oauthDiscoveryHint")}
+                  </p>
+                  {oauthError && <p className="mt-2 text-xs text-status-err">{oauthError}</p>}
                 </div>
               )}
             </>
@@ -1310,7 +1407,7 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
         <Button variant="default" onClick={onCancel}>
           {t("settingsX.mcp.cancel")}
         </Button>
-        <Button variant="solid" onClick={submit}>
+        <Button variant="solid" onClick={submit} disabled={oauthBusy}>
           {initial ? t("settingsX.mcp.save") : t("settingsX.mcp.add")}
         </Button>
       </div>

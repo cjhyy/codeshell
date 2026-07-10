@@ -5,7 +5,12 @@ import { join } from "node:path";
 import type { Credential, CredentialType } from "./types.js";
 import { CredentialStore } from "./store.js";
 import { formatNetscapeCookies, parseCookieJar } from "./cookie-jar.js";
-import { summarizeOAuthCredentialSecret } from "./oauth.js";
+import {
+  parseOAuthCredentialSecret,
+  shouldRefreshOAuthCredential,
+  summarizeOAuthCredentialSecret,
+} from "./oauth.js";
+import { refreshToken } from "../services/oauth.js";
 import type { SettingsScope } from "../settings/manager.js";
 import type { RpcMessage } from "../protocol/types.js";
 import type { Transport } from "../protocol/transport.js";
@@ -39,6 +44,12 @@ export interface CredentialAccess {
     scope: CredentialAccessScope;
     purpose: "use" | "mcp";
   }): Promise<string>;
+  /** Resolve only the bearer material needed by an MCP request. */
+  resolveOAuthAccess?(req: {
+    id: string;
+    scope: "full";
+    forceRefresh?: boolean;
+  }): Promise<{ accessToken: string; expiresAt?: string }>;
   materializeCookie?(req: {
     cwd?: string;
     id: string;
@@ -155,6 +166,19 @@ export function createIpcCredentialAccess(
         throw new Error(`credential "${req.id}" is unavailable`);
       return result.value;
     },
+    async resolveOAuthAccess(req) {
+      const result = (await request(
+        "desktop/oauthAccessResolve",
+        req as unknown as Record<string, unknown>,
+      )) as { accessToken?: unknown; expiresAt?: unknown };
+      if (typeof result?.accessToken !== "string") {
+        throw new Error(`oauth credential "${req.id}" requires login`);
+      }
+      return {
+        accessToken: result.accessToken,
+        expiresAt: typeof result.expiresAt === "string" ? result.expiresAt : undefined,
+      };
+    },
     async materializeCookie(req) {
       const result = (await request(
         "desktop/credentialMaterializeCookie",
@@ -223,6 +247,9 @@ export const localCredentialAccess: CredentialAccess = {
     }
     return cred.secret;
   },
+  async resolveOAuthAccess(req) {
+    return resolveLocalOAuthAccess(req.id, Boolean(req.forceRefresh));
+  },
   async materializeCookie(req) {
     const cred = storeFor(req.cwd).resolve(req.id, req.scope);
     if (!cred || cred.type !== "cookie" || !isCredentialSecretAvailable(cred.secret)) {
@@ -231,6 +258,69 @@ export const localCredentialAccess: CredentialAccess = {
     return materializeCookieSecret(cred.id, cred.secret);
   },
 };
+
+const localOAuthRefreshes = new Map<string, Promise<{ accessToken: string; expiresAt?: string }>>();
+
+async function resolveLocalOAuthAccess(
+  id: string,
+  forceRefresh: boolean,
+): Promise<{ accessToken: string; expiresAt?: string }> {
+  const store = new CredentialStore(undefined);
+  const cred = store.resolve(id, "full");
+  if (!cred || cred.type !== "oauth" || !isCredentialSecretAvailable(cred.secret)) {
+    throw new Error(`oauth credential "${id}" requires login`);
+  }
+  const parsed = parseOAuthCredentialSecret(cred.secret);
+  const decision = shouldRefreshOAuthCredential(parsed);
+  if (!forceRefresh && decision === "no") {
+    return { accessToken: parsed.accessToken, expiresAt: parsed.expiresAt };
+  }
+  if (!parsed.refreshToken || !parsed.tokenEndpoint || !parsed.clientId) {
+    throw new Error(`oauth credential "${id}" requires login`);
+  }
+  const inflight = localOAuthRefreshes.get(id);
+  if (inflight) return inflight;
+  const pending = (async () => {
+    const latestCred = store.resolve(id, "full");
+    if (!latestCred || latestCred.type !== "oauth" || !latestCred.secret) {
+      throw new Error(`oauth credential "${id}" requires login`);
+    }
+    const latest = parseOAuthCredentialSecret(latestCred.secret);
+    if (!forceRefresh && shouldRefreshOAuthCredential(latest) === "no") {
+      return { accessToken: latest.accessToken, expiresAt: latest.expiresAt };
+    }
+    if (!latest.refreshToken || !latest.tokenEndpoint || !latest.clientId) {
+      throw new Error(`oauth credential "${id}" requires login`);
+    }
+    const tokens = await refreshToken(
+      {
+        clientId: latest.clientId,
+        clientSecret: latest.clientSecret,
+        tokenEndpoint: latest.tokenEndpoint,
+        authorizationEndpoint: "",
+        scopes: latest.scopes,
+        resource: latest.resource,
+      },
+      latest.refreshToken,
+    );
+    const next = {
+      ...latest,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken ?? latest.refreshToken,
+      expiresAt: tokens.expiresAt ? new Date(tokens.expiresAt).toISOString() : undefined,
+      tokenType: tokens.tokenType,
+      scope: tokens.scope ?? latest.scope,
+    };
+    store.save("user", {
+      ...latestCred,
+      secret: JSON.stringify(next),
+      meta: { ...latestCred.meta, lastRefreshAt: new Date().toISOString() },
+    });
+    return { accessToken: next.accessToken, expiresAt: next.expiresAt };
+  })().finally(() => localOAuthRefreshes.delete(id));
+  localOAuthRefreshes.set(id, pending);
+  return pending;
+}
 
 export function materializeCookieSecret(
   credentialId: string,

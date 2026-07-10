@@ -15,11 +15,18 @@ export interface CredentialView {
     scope?: "domain" | "all";
     switchMode?: "clear" | "merge";
     oauthProvider?: string;
+    mcpServerName?: string;
+    mcpServerUrl?: string;
+    issuer?: string;
+    resource?: string;
     authUrl?: string;
     tokenEndpoint?: string;
     clientId?: string;
     scopes?: string[];
     lastRefreshAt?: string;
+    revocationEndpoint?: string;
+    lastRefreshFailedAt?: string;
+    lastRefreshErrorCode?: "invalid_grant" | "network" | "server_error" | "invalid_response";
   };
 }
 export interface MaskedCredentialView extends Omit<CredentialView, "secret"> {

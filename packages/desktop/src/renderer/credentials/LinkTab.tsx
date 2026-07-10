@@ -8,20 +8,21 @@ import type { MaskedCredentialView } from "./types";
 
 /**
  * Link tab = 三方集成市场(Codex 风格)。目录写死在 link-catalog.ts;OAuth
- * credential 已存在时展示登录状态。登录/刷新后台流程仍预留,退出会删除对应凭证。
+ * credential 已存在时展示登录状态。只有 main 已审计 profile 的集成可发起登录。
  */
-export function LinkTab({ cwd }: { cwd: string }) {
+export function LinkTab({ cwd: _cwd }: { cwd: string }) {
   const { t } = useT();
   const toast = useToast();
   const [credentials, setCredentials] = useState<MaskedCredentialView[]>([]);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const load = useCallback(() => {
-    void window.codeshell.credentials
-      .list(cwd)
-      .then((all) => setCredentials(all.filter((c) => c.type === "oauth")));
-  }, [cwd]);
+  const load = useCallback(async () => {
+    const all = await window.codeshell.credentials.list("");
+    setCredentials(all.filter((c) => c.type === "oauth"));
+  }, []);
 
-  useEffect(load, [load]);
+  useEffect(() => void load(), [load]);
 
   const byIntegration = useMemo(() => {
     const map = new Map<string, MaskedCredentialView>();
@@ -37,18 +38,47 @@ export function LinkTab({ cwd }: { cwd: string }) {
     return map;
   }, [credentials]);
 
+  const run = async (item: LinkIntegration, action: () => Promise<void>) => {
+    if (busyId) return;
+    setBusyId(item.id);
+    setErrors((current) => ({ ...current, [item.id]: "" }));
+    try {
+      await action();
+      await load();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setErrors((current) => ({ ...current, [item.id]: message }));
+      toast({ message });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const onLogin = (item: LinkIntegration) => {
-    toast({ message: t("ext.link.oauthLoginPending", { name: item.name }) });
+    if (!item.oauthProfileId) return;
+    void run(item, async () => {
+      await window.codeshell.mcpOAuth.login({
+        source: "catalog",
+        profileId: item.oauthProfileId!,
+      });
+    });
   };
 
-  const onRefresh = (item: LinkIntegration) => {
-    toast({ message: t("ext.link.oauthRefreshPending", { name: item.name }) });
+  const onRefresh = (item: LinkIntegration, credential: MaskedCredentialView) => {
+    void run(item, async () => {
+      await window.codeshell.mcpOAuth.refresh(credential.id);
+    });
   };
 
-  const onLogout = async (item: LinkIntegration, credential: MaskedCredentialView) => {
-    await window.codeshell.credentials.remove(cwd, "user", credential.id);
-    load();
-    toast({ message: t("ext.link.oauthLogoutDone", { name: item.name }) });
+  const onLogout = (item: LinkIntegration, credential: MaskedCredentialView) => {
+    void run(item, async () => {
+      const result = await window.codeshell.mcpOAuth.logout(credential.id);
+      toast({
+        message: result.remoteRevoked
+          ? t("ext.link.oauthLogoutDone", { name: item.name })
+          : t("ext.link.oauthLogoutWarning", { name: item.name }),
+      });
+    });
   };
 
   return (
@@ -64,9 +94,11 @@ export function LinkTab({ cwd }: { cwd: string }) {
                 key={item.id}
                 item={item}
                 credential={byIntegration.get(item.id)}
+                busy={busyId === item.id}
+                error={errors[item.id]}
                 onLogin={() => onLogin(item)}
-                onRefresh={() => onRefresh(item)}
-                onLogout={(credential) => void onLogout(item, credential)}
+                onRefresh={(credential) => onRefresh(item, credential)}
+                onLogout={(credential) => onLogout(item, credential)}
               />
             ))}
           </div>
@@ -79,14 +111,18 @@ export function LinkTab({ cwd }: { cwd: string }) {
 function LinkIntegrationRow({
   item,
   credential,
+  busy,
+  error,
   onLogin,
   onRefresh,
   onLogout,
 }: {
   item: LinkIntegration;
   credential?: MaskedCredentialView;
+  busy: boolean;
+  error?: string;
   onLogin: () => void;
-  onRefresh: () => void;
+  onRefresh: (credential: MaskedCredentialView) => void;
   onLogout: (credential: MaskedCredentialView) => void;
 }) {
   const { t } = useT();
@@ -139,20 +175,32 @@ function LinkIntegrationRow({
             t(item.descKey)
           )}
         </div>
+        {error && <div className="truncate text-xs text-status-err">{error}</div>}
       </div>
       <div className="flex shrink-0 items-center gap-1">
         {credential ? (
           <>
-            <Button variant="secondary" size="sm" onClick={onRefresh}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => onRefresh(credential)}
+              disabled={busy}
+            >
               {t("ext.link.oauthRefresh")}
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => onLogout(credential)}>
+            <Button variant="ghost" size="sm" onClick={() => onLogout(credential)} disabled={busy}>
               {t("ext.link.oauthLogout")}
             </Button>
           </>
         ) : (
-          <Button variant="secondary" size="sm" onClick={onLogin}>
-            {t("ext.link.oauthLogin")}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onLogin}
+            disabled={busy || !item.oauthProfileId}
+            title={!item.oauthProfileId ? t("ext.link.oauthUnsupported") : undefined}
+          >
+            {item.oauthProfileId ? t("ext.link.oauthLogin") : t("ext.link.oauthUnsupported")}
           </Button>
         )}
       </div>

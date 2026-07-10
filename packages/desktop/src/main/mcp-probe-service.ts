@@ -16,10 +16,13 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import {
   buildHttpHeaders,
   buildStdioEnv,
+  createMcpAuthenticatedFetch,
   CredentialStore,
   isCredentialSecretAvailable,
+  localCredentialAccess,
 } from "@cjhyy/code-shell-core";
 import { dlog } from "./desktop-logger.js";
+import type { McpOAuthService } from "./mcp-oauth-service.js";
 
 export interface McpServerConfig {
   name: string;
@@ -146,7 +149,10 @@ async function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise
   }
 }
 
-async function probeOne(cfg: McpServerConfig): Promise<McpProbeResult> {
+async function probeOne(
+  cfg: McpServerConfig,
+  oauthService?: Pick<McpOAuthService, "resolveAccessToken">,
+): Promise<McpProbeResult> {
   const transport = transportOf(cfg);
   const startedAt = new Date().toISOString();
   const base: McpProbeResult = {
@@ -181,9 +187,23 @@ async function probeOne(cfg: McpServerConfig): Promise<McpProbeResult> {
       // Resolve credentialRef against the user-scope store (same surface as the
       // real connect in core's MCPManager) so testing a credential-bound server
       // actually sends its auth instead of a misleading 401.
-      const headers = buildProbeHttpHeaders(cfg);
+      const credential = cfg.credentialRef
+        ? new CredentialStore(undefined).resolve(cfg.credentialRef)
+        : undefined;
+      const oauth = credential?.type === "oauth";
+      const headers = oauth
+        ? buildHttpHeaders(cfg.name, { ...cfg, credentialRef: undefined })
+        : buildProbeHttpHeaders(cfg);
+      const access = oauthService
+        ? {
+            ...localCredentialAccess,
+            resolveOAuthAccess: (req: { id: string; scope: "full"; forceRefresh?: boolean }) =>
+              oauthService.resolveAccessToken(req.id, { forceRefresh: req.forceRefresh }),
+          }
+        : localCredentialAccess;
       mcpTransport = new StreamableHTTPClientTransport(new URL(cfg.url), {
         requestInit: Object.keys(headers).length > 0 ? { headers } : undefined,
+        fetch: createMcpAuthenticatedFetch(cfg.name, cfg, access) as never,
       });
     }
 
@@ -245,7 +265,7 @@ export function buildProbeHttpHeaders(cfg: McpServerConfig): Record<string, stri
  */
 export async function probeMcpServer(
   cfg: McpServerConfig,
-  options: { force?: boolean } = {},
+  options: { force?: boolean; oauthService?: Pick<McpOAuthService, "resolveAccessToken"> } = {},
 ): Promise<McpProbeResult> {
   const configHash = hashConfig(cfg);
   const cached = cache.get(cfg.name);
@@ -258,7 +278,7 @@ export async function probeMcpServer(
     return cached.result;
   }
 
-  const result = await probeOne(cfg);
+  const result = await probeOne(cfg, options.oauthService);
   cache.set(cfg.name, {
     result,
     configHash,
@@ -273,7 +293,7 @@ export async function probeMcpServer(
  */
 export async function probeMcpServers(
   configs: McpServerConfig[],
-  options: { force?: boolean } = {},
+  options: { force?: boolean; oauthService?: Pick<McpOAuthService, "resolveAccessToken"> } = {},
 ): Promise<McpProbeResult[]> {
   return Promise.all(configs.map((c) => probeMcpServer(c, options)));
 }

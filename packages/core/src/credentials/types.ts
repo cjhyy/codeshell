@@ -26,6 +26,27 @@ export interface OAuthCredentialSecret {
   clientId?: string;
   /** Optional confidential client secret, if the integration requires it. */
   clientSecret?: string;
+  /** OAuth issuer discovered for the MCP protected resource. */
+  issuer?: string;
+  /** RFC 8707 resource indicator used for authorization/token requests. */
+  resource?: string;
+  /** Optional endpoint used to revoke the refresh/access token on logout. */
+  revocationEndpoint?: string;
+  /** Dynamic registration result, retained with the encrypted secret. */
+  clientRegistration?: {
+    clientId: string;
+    clientSecret?: string;
+    clientIdIssuedAt?: number;
+    clientSecretExpiresAt?: number;
+  };
+}
+
+export interface OAuthTokenResponse {
+  access_token: unknown;
+  refresh_token?: unknown;
+  expires_in?: unknown;
+  token_type?: unknown;
+  scope?: unknown;
 }
 
 export interface OAuthCredentialPublicStatus {
@@ -87,6 +108,11 @@ export interface Credential {
     switchMode?: "clear" | "merge";
     /** OAuth provider/integration id, e.g. "figma". */
     oauthProvider?: string;
+    /** MCP server identity associated with an advanced OAuth login. */
+    mcpServerName?: string;
+    mcpServerUrl?: string;
+    issuer?: string;
+    resource?: string;
     /** OAuth authorization endpoint, used by UI/login launchers. */
     authUrl?: string;
     /** OAuth token endpoint, duplicated from secret for non-secret UI display. */
@@ -95,8 +121,12 @@ export interface Credential {
     clientId?: string;
     /** OAuth scopes requested for this credential. */
     scopes?: string[];
-    /** Last successful refresh time; refresh wiring is reserved for a later step. */
+    revocationEndpoint?: string;
+    /** Last successful refresh time. */
     lastRefreshAt?: string;
+    /** Normalized refresh diagnostics; never contains endpoint response bodies. */
+    lastRefreshFailedAt?: string;
+    lastRefreshErrorCode?: "invalid_grant" | "network" | "server_error" | "invalid_response";
   };
 }
 

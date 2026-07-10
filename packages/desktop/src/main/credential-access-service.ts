@@ -45,12 +45,12 @@ export function resolveCredentialValueForWorker(req: CredentialResolveRequest): 
   }
   const allowed =
     req.purpose === "mcp"
-      ? cred.type === "token" || cred.type === "link" || cred.type === "oauth"
+      ? cred.type === "token" || cred.type === "link"
       : cred.type === "token" || cred.type === "link";
   if (!allowed) {
     throw new Error(
       `credential "${req.id}" is not a ${
-        req.purpose === "mcp" ? "token/link/oauth" : "token/link"
+        req.purpose === "mcp" ? "token/link (OAuth uses the host access resolver)" : "token/link"
       } credential`,
     );
   }
