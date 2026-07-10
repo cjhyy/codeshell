@@ -124,6 +124,38 @@ describe("AgentServer agent/backgroundWork", () => {
     });
   });
 
+  it("surfaces DriveAgent linkage fields without exposing unknown CLI values", () => {
+    backgroundJobRegistry.start("drive-1", "s-1", "delegate task", {
+      kind: "drive-agent",
+      cwd: "/tmp/project",
+      cli: "codex",
+    });
+    backgroundJobRegistry.finish("drive-1", { ccSessionId: "thread-123" });
+    backgroundJobRegistry.start("drive-bad", "s-1", "legacy task", {
+      kind: "drive-agent",
+      cwd: "/tmp/project",
+      cli: "unknown-cli" as "codex",
+    });
+
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, engine: makeEngine() });
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "agent/backgroundWork",
+      params: { sessionId: "s-1" },
+    });
+
+    const items = lastResult(t.sent)?.items ?? [];
+    expect(items.find((i: any) => i.jobId === "drive-1")).toMatchObject({
+      jobKind: "drive-agent",
+      externalSessionId: "thread-123",
+      cli: "codex",
+      cwd: "/tmp/project",
+    });
+    expect(items.find((i: any) => i.jobId === "drive-bad")?.cli).toBeUndefined();
+  });
+
   it("keeps a just-finished sub-agent briefly (inside its fade window)", () => {
     asyncAgentRegistry.register({
       agentId: "a-done",

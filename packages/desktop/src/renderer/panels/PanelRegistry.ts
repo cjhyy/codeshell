@@ -17,6 +17,7 @@ import { ReviewPanel } from "./ReviewPanel";
 import { TerminalPanel } from "./TerminalPanel";
 import { BackgroundShellPanel } from "./BackgroundShellPanel";
 import { CCRoomView } from "../cc-room/CCRoomView";
+import type { OpenCliSessionRequest } from "../cc-room/types";
 
 export interface PanelAvailabilityContext {
   cwd: string | null;
@@ -35,6 +36,7 @@ export interface PanelRenderContext extends PanelAvailabilityContext {
   revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
   onRevealConsumed?: (nonce: number) => void;
   openUrl?: { url: string; nonce: number };
+  openCliSession?: OpenCliSessionRequest;
   onAttachImage?: (absPath: string) => void;
   browserAnchors?: Anchor[];
   onRemoveBrowserAnchor?: (anchorId: string) => void;
@@ -133,8 +135,12 @@ const PANEL_ENTRIES = {
     label: "panels.kinds.ccRoom",
     icon: Bot,
     enabled: alwaysEnabled,
-    render: ({ cwd, foregroundVisible }) =>
-      createElement(CCRoomView, { cwd, active: foregroundVisible }),
+    render: ({ cwd, foregroundVisible, openCliSession }) =>
+      createElement(CCRoomView, {
+        cwd,
+        active: foregroundVisible,
+        openRequest: openCliSession,
+      }),
   },
   quickChat: {
     key: "quickChat",

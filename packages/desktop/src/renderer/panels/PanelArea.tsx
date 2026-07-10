@@ -18,6 +18,7 @@ import {
   type PanelAvailabilityContext,
 } from "./PanelRegistry";
 import { usePanelWorkspaceRoot } from "./usePanelWorkspaceRoot";
+import type { OpenCliSessionRequest } from "../cc-room/types";
 
 export interface OpenTab {
   id: string;
@@ -73,6 +74,8 @@ interface Props {
   onRevealConsumed?: (nonce: number) => void;
   /** URL a chat http(s)-link asked the Browser panel to open (nonce re-fires). */
   openUrl?: { url: string; nonce: number };
+  /** DriveAgent external CLI conversation to open directly. */
+  openCliSession?: OpenCliSessionRequest;
   /** Active engine sessionId — the background-shell panel queries shells by it (TODO 3.2). */
   engineSessionId?: string | null;
   /** Controlled dock width (px). The divider on the left edge resizes it. */
@@ -116,6 +119,7 @@ export function PanelArea({
   revealFile,
   onRevealConsumed,
   openUrl,
+  openCliSession,
   engineSessionId,
   width,
   onResizeStart,
@@ -374,6 +378,7 @@ export function PanelArea({
                   revealFile={revealFile}
                   onRevealConsumed={onRevealConsumed}
                   openUrl={openUrl}
+                  openCliSession={openCliSession}
                   onAttachImage={onAttachImage}
                   onRemoveBrowserAnchor={onRemoveBrowserAnchor}
                   onUpdateBrowserAnchor={onUpdateBrowserAnchor}
@@ -431,6 +436,7 @@ function PanelBody({
   revealFile,
   onRevealConsumed,
   openUrl,
+  openCliSession,
   engineSessionId,
   onAttachImage,
   browserAnchors,
@@ -448,6 +454,7 @@ function PanelBody({
   revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
   onRevealConsumed?: (nonce: number) => void;
   openUrl?: { url: string; nonce: number };
+  openCliSession?: OpenCliSessionRequest;
   engineSessionId?: string | null;
   onAttachImage?: (absPath: string) => void;
   browserAnchors?: Anchor[];
@@ -470,6 +477,7 @@ function PanelBody({
     revealFile,
     onRevealConsumed,
     openUrl,
+    openCliSession,
     engineSessionId: engineSessionId ?? null,
     onAttachImage,
     browserAnchors,

@@ -7,7 +7,7 @@ import {
   appendFileSync,
   rmSync,
 } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import type { ResidentAgentEvent } from "./resident-agent.js";
 
 /**
@@ -400,6 +400,41 @@ export class RoomManager {
     }
     const { status } = this.open(meta.id);
     return { roomId: meta.id, status };
+  }
+
+  /**
+   * Open a room reached from an external-session link. Unlike openForSession,
+   * this never changes an existing room's permission mode: following a link is
+   * a view/navigation action, not permission escalation or downgrade.
+   */
+  openLinkedSession(
+    externalSessionId: string,
+    cwd: string,
+    kind: RoomKind,
+  ): {
+    roomId: string;
+    status: "running" | "missing";
+    mode: RoomPermissionMode;
+  } {
+    if (!externalSessionId.trim() || !cwd.trim()) {
+      throw new Error("linked session id and cwd are required");
+    }
+    const existing = this.listRooms().find(
+      (room) => room.claudeSessionId === externalSessionId && room.kind === kind,
+    );
+    if (existing && resolve(existing.cwd) !== resolve(cwd)) {
+      throw new Error("linked session cwd does not match the existing room");
+    }
+    const meta =
+      existing ??
+      this.createRoom({
+        cwd,
+        kind,
+        permissionMode: "default",
+        claudeSessionId: externalSessionId,
+      });
+    const { status } = this.open(meta.id);
+    return { roomId: meta.id, status, mode: meta.permissionMode };
   }
 
   /**

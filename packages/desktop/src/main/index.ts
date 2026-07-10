@@ -2821,6 +2821,19 @@ ipcMain.handle(
     kind?: "claude-code" | "codex",
   ) => roomManager.openForSession(claudeSessionId, cwd, mode, kind ?? "claude-code"),
 );
+ipcMain.handle(
+  "ccRoom:openLinkedSession",
+  async (_e, externalSessionId: unknown, cwd: unknown, kind: unknown) => {
+    if (typeof externalSessionId !== "string" || !externalSessionId.trim()) {
+      throw new Error("external session id is required");
+    }
+    if (typeof cwd !== "string" || !cwd.trim()) throw new Error("cwd is required");
+    if (kind !== "claude-code" && kind !== "codex") {
+      throw new Error("unsupported linked session kind");
+    }
+    return roomManager.openLinkedSession(externalSessionId, cwd, kind);
+  },
+);
 const transcriptCleanupSenders = new Set<number>();
 ipcMain.handle(
   "ccRoom:subscribeTranscript",

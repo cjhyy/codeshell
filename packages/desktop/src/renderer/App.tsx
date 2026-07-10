@@ -129,6 +129,8 @@ import { AutomationView } from "./automation/AutomationView";
 import { CustomizeView } from "./customize/CustomizeView";
 import { CredentialsPage } from "./credentials/CredentialsPage";
 import { PanelArea } from "./panels/PanelArea";
+import type { OpenCliSessionEventDetail, OpenCliSessionRequest } from "./cc-room/types";
+import { resolveOpenCliSessionBucket } from "./cc-room/openCliSession";
 import { QuickChatPanel } from "./panels/QuickChatPanel";
 import type { PanelTab } from "./view";
 import { nextAnchorId, type Anchor } from "./chat/anchors";
@@ -236,6 +238,7 @@ interface PanelBucketState {
   reviewDiff?: string;
   revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
   openUrl?: { url: string; nonce: number };
+  openCliSession?: OpenCliSessionRequest;
 }
 
 function emptyPanelBucketState(): PanelBucketState {
@@ -3041,6 +3044,7 @@ function App() {
   // manually-opened Files tab reads it as already-handled and won't replay the
   // old file) WITHOUT the timing race the old setTimeout(0) flip had.
   const openUrlNonceRef = useRef<number>(0);
+  const openCliSessionNonceRef = useRef<number>(0);
   // Comment anchors pinned from the panels (diff line / browser element / file
   // line). They show as chips above the composer and ride along with the next
   // message. Panels push them via the "codeshell:add-anchor" window event.
@@ -3601,6 +3605,44 @@ function App() {
     };
     window.addEventListener("codeshell:open-url", onOpenUrl);
     return () => window.removeEventListener("codeshell:open-url", onOpenUrl);
+  }, [updatePanelBucket]);
+
+  useEffect(() => {
+    const onOpenCliSession = (event: Event): void => {
+      const detail = (event as CustomEvent<Partial<OpenCliSessionEventDetail>>).detail;
+      if (
+        typeof detail?.externalSessionId !== "string" ||
+        !detail.externalSessionId.trim() ||
+        typeof detail.cwd !== "string" ||
+        !detail.cwd.trim() ||
+        typeof detail.sourceSessionId !== "string" ||
+        !detail.sourceSessionId.trim() ||
+        (detail.cliKind !== "claude-code" && detail.cliKind !== "codex")
+      ) {
+        return;
+      }
+      const targetBucket = resolveOpenCliSessionBucket(
+        detail.sourceSessionId,
+        engineToBucketRef.current,
+        activeBucketRef.current,
+      );
+      const nonce = openCliSessionNonceRef.current + 1;
+      openCliSessionNonceRef.current = nonce;
+      updatePanelBucket(targetBucket, (state) => ({
+        ...state,
+        open: true,
+        openCliSession: {
+          nonce,
+          externalSessionId: detail.externalSessionId!,
+          cliKind: detail.cliKind!,
+          cwd: detail.cwd!,
+        },
+        requestNonce: state.requestNonce + 1,
+        requestKind: "ccRoom",
+      }));
+    };
+    window.addEventListener("codeshell:open-cli-session", onOpenCliSession);
+    return () => window.removeEventListener("codeshell:open-cli-session", onOpenCliSession);
   }, [updatePanelBucket]);
 
   // A chat answer's file path link was clicked: open it in the in-app Files
@@ -4298,6 +4340,7 @@ function App() {
                       requestNonce: state.requestNonce + 1,
                       requestKind: null,
                       openUrl: undefined,
+                      openCliSession: undefined,
                     }))
                   }
                   requestNonce={panelState.requestNonce}
@@ -4307,6 +4350,7 @@ function App() {
                   revealFile={panelState.revealFile}
                   onRevealConsumed={(nonce) => onRevealConsumed(panelBucket, nonce)}
                   openUrl={panelState.openUrl}
+                  openCliSession={panelState.openCliSession}
                   width={panelWidth}
                   onResizeStart={beginPanelResize}
                   onAttachImage={(p) => void attachImageByPath(p)}

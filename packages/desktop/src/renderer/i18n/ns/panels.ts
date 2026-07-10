@@ -60,12 +60,18 @@ export const panels = {
         jobFailed: "失败",
         jobCancelled: "已取消",
         jobChangedFiles: "编辑了 {{count}} 个文件",
+        openClaudeSession: "打开 Claude Code 会话",
+        openCodexSession: "打开 Codex 会话",
       },
       terminal: {
         title: "终端",
         processExited: "[进程已退出 (code {code})]",
         startFailed: "[终端启动失败: {detail}]",
         workspaceChanged: "工作区已切换；此终端仍在旧目录。新建终端以使用新工作区。",
+      },
+      room: {
+        cliUnavailable: "未检测到对应的 Claude Code / Codex CLI",
+        openLinkedFailed: "无法打开外部会话：{error}",
       },
       quickChat: {
         title: "快聊",
@@ -269,6 +275,8 @@ export const panels = {
         jobFailed: "failed",
         jobCancelled: "cancelled",
         jobChangedFiles: "edited {{count}} file(s)",
+        openClaudeSession: "Open Claude Code session",
+        openCodexSession: "Open Codex session",
       },
       terminal: {
         title: "Terminal",
@@ -276,6 +284,10 @@ export const panels = {
         startFailed: "[Terminal failed to start: {detail}]",
         workspaceChanged:
           "The workspace changed; this terminal remains in its original directory. Open a new terminal to use the new workspace.",
+      },
+      room: {
+        cliUnavailable: "The corresponding Claude Code / Codex CLI is unavailable",
+        openLinkedFailed: "Could not open the external session: {error}",
       },
       quickChat: {
         title: "Quick Chat",

@@ -100,6 +100,10 @@ export type BackgroundWorkInfo =
       finalText?: string;
       /** Files an external agent (DriveAgent) changed, parsed from its transcript. */
       changedFiles?: string[];
+      jobKind?: "drive-agent" | "video" | "job";
+      externalSessionId?: string;
+      cli?: "claude" | "codex";
+      cwd?: string;
     }>;
 
 export type WorktreeCleanupSkippedEvent = {
@@ -1439,6 +1443,15 @@ export interface CodeshellApi {
       mode: string,
       kind?: "claude-code" | "codex",
     ): Promise<{ roomId: string }>;
+    openLinkedSession(
+      externalSessionId: string,
+      cwd: string,
+      kind: "claude-code" | "codex",
+    ): Promise<{
+      roomId: string;
+      status: "running" | "missing";
+      mode: "default" | "acceptEdits" | "bypassPermissions";
+    }>;
     send(roomId: string, text: string): Promise<boolean>;
     respondApproval(roomId: string, requestId: string, decision: unknown): Promise<boolean>;
     roomHistory(roomId: string, sinceSeq?: number): Promise<unknown[]>;

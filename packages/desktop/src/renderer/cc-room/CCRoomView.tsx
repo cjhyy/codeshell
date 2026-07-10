@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -10,6 +10,9 @@ import {
 } from "@/components/ui/dialog";
 import { CCConversationView } from "./CCConversationView";
 import { QuotaPanel } from "./QuotaPanel";
+import type { OpenCliSessionRequest, RoomCliKind } from "./types";
+import { useToast } from "../ui/ToastProvider";
+import { useT } from "../i18n/I18nProvider";
 
 /**
  * CC Room — lists this project's external coding-agent CLI sessions for the
@@ -28,7 +31,7 @@ import { QuotaPanel } from "./QuotaPanel";
  * cron jobs — including ones that drive these CLIs — live in the Automation
  * view, not in a CLI-specific task list.
  */
-type CliKind = "claude-code" | "codex";
+type CliKind = RoomCliKind;
 const CLI_LABEL: Record<CliKind, string> = { "claude-code": "Claude Code", codex: "Codex" };
 const CLI_COMMAND: Record<CliKind, string> = { "claude-code": "claude", codex: "codex" };
 const CLI_KINDS: CliKind[] = ["claude-code", "codex"];
@@ -47,7 +50,21 @@ interface Availability {
   reason?: "not-found" | "not-executable";
 }
 
-export function CCRoomView({ cwd, active = true }: { cwd: string | null; active?: boolean }) {
+export function CCRoomView({
+  cwd,
+  active = true,
+  openRequest,
+}: {
+  cwd: string | null;
+  active?: boolean;
+  openRequest?: OpenCliSessionRequest;
+}) {
+  const { t } = useT();
+  const toast = useToast();
+  const tRef = useRef(t);
+  const toastRef = useRef(toast);
+  tRef.current = t;
+  toastRef.current = toast;
   const [cliKind, setCliKind] = useState<CliKind>("claude-code");
   const [avail, setAvail] = useState<Availability | null>(null);
   const [sessions, setSessions] = useState<DiscoveredSession[]>([]);
@@ -55,10 +72,15 @@ export function CCRoomView({ cwd, active = true }: { cwd: string | null; active?
   // shown and not expanded, offer "load more" (TODO room-list convergence).
   const [total, setTotal] = useState(0);
   const [expanded, setExpanded] = useState(false);
-  const [conv, setConv] = useState<{ roomId: string; sessionId: string; mode: string } | null>(
-    null,
-  );
+  const [conv, setConv] = useState<{
+    roomId: string;
+    sessionId: string;
+    mode: string;
+    cwd: string;
+    cliKind: CliKind;
+  } | null>(null);
   const [picking, setPicking] = useState<{ sessionId: string } | null>(null);
+  const lastOpenRequestNonceRef = useRef(-1);
 
   const probeFor = useCallback(
     (kind: CliKind, force = false) =>
@@ -67,6 +89,52 @@ export function CCRoomView({ cwd, active = true }: { cwd: string | null; active?
         : window.codeshell.ccRoom.probe(force),
     [],
   );
+
+  useEffect(() => {
+    if (!openRequest || lastOpenRequestNonceRef.current === openRequest.nonce) return;
+    lastOpenRequestNonceRef.current = openRequest.nonce;
+    let cancelled = false;
+    setCliKind(openRequest.cliKind);
+    setAvail(null);
+    setPicking(null);
+    void probeFor(openRequest.cliKind)
+      .then(async (availability) => {
+        if (cancelled) return;
+        setAvail(availability);
+        if (!availability.available) {
+          toastRef.current({
+            message: tRef.current("panels.room.cliUnavailable"),
+            variant: "error",
+          });
+          return;
+        }
+        const linked = await window.codeshell.ccRoom.openLinkedSession(
+          openRequest.externalSessionId,
+          openRequest.cwd,
+          openRequest.cliKind,
+        );
+        if (cancelled) return;
+        setConv({
+          roomId: linked.roomId,
+          sessionId: openRequest.externalSessionId,
+          mode: linked.mode,
+          cwd: openRequest.cwd,
+          cliKind: openRequest.cliKind,
+        });
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        toastRef.current({
+          message: tRef.current("panels.room.openLinkedFailed", {
+            error: error instanceof Error ? error.message : String(error),
+          }),
+          variant: "error",
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [openRequest, probeFor]);
 
   const openWithMode = useCallback(
     async (mode: "default" | "acceptEdits" | "bypassPermissions") => {
@@ -77,7 +145,7 @@ export function CCRoomView({ cwd, active = true }: { cwd: string | null; active?
         mode,
         cliKind,
       );
-      setConv({ roomId, sessionId: picking.sessionId, mode });
+      setConv({ roomId, sessionId: picking.sessionId, mode, cwd, cliKind });
       setPicking(null);
     },
     [cwd, picking, cliKind],
@@ -173,11 +241,11 @@ export function CCRoomView({ cwd, active = true }: { cwd: string | null; active?
     return (
       <CCConversationView
         roomId={conv.roomId}
-        cwd={cwd}
+        cwd={conv.cwd}
         sessionId={conv.sessionId}
         mode={conv.mode}
-        cliKind={cliKind}
-        cliLabel={CLI_LABEL[cliKind]}
+        cliKind={conv.cliKind}
+        cliLabel={CLI_LABEL[conv.cliKind]}
         active={active}
         onBack={() => setConv(null)}
       />

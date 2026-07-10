@@ -299,6 +299,39 @@ describe("RoomManager", () => {
     expect(agents).toHaveLength(1); // reused, no respawn
   });
 
+  test("openLinkedSession creates a default room and reports its mode", () => {
+    const { mgr } = makeManager();
+    const linked = mgr.openLinkedSession("thread-new", "/tmp/p", "codex");
+    expect(linked.status).toBe("running");
+    expect(linked.mode).toBe("default");
+    expect(mgr.getRoom(linked.roomId)).toMatchObject({
+      cwd: "/tmp/p",
+      kind: "codex",
+      claudeSessionId: "thread-new",
+      permissionMode: "default",
+    });
+  });
+
+  test("openLinkedSession preserves an existing room mode and live agent", () => {
+    const { mgr, agents } = makeManager();
+    const existing = mgr.openForSession("cc-linked", "/tmp/p", "bypassPermissions");
+    expect(agents).toHaveLength(1);
+
+    const linked = mgr.openLinkedSession("cc-linked", "/tmp/p", "claude-code");
+    expect(linked).toMatchObject({ roomId: existing.roomId, mode: "bypassPermissions" });
+    expect(mgr.getRoom(existing.roomId)?.permissionMode).toBe("bypassPermissions");
+    expect(agents).toHaveLength(1);
+    expect(agents[0]?.running).toBe(true);
+  });
+
+  test("openLinkedSession rejects a cwd mismatch for an existing external session", () => {
+    const { mgr } = makeManager();
+    mgr.openForSession("cc-linked", "/tmp/project-a", "default", "claude-code");
+    expect(() => mgr.openLinkedSession("cc-linked", "/tmp/project-b", "claude-code")).toThrow(
+      /cwd/i,
+    );
+  });
+
   test("approval_request event persists an approval message and forwards to onApprovalRequest", () => {
     dir = mkdtempSync(join(tmpdir(), "rooms-"));
     let emit!: (e: ResidentAgentEvent) => void;

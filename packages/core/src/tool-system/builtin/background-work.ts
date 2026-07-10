@@ -14,7 +14,12 @@
 import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { asyncAgentRegistry, type AsyncAgentStatus } from "./agent-registry.js";
-import { backgroundJobRegistry, type BackgroundJobStatus } from "./background-jobs.js";
+import {
+  backgroundJobRegistry,
+  type BackgroundJobKind,
+  type BackgroundJobStatus,
+  type ExternalCliKind,
+} from "./background-jobs.js";
 import { backgroundShellManager, type BgShell } from "../../runtime/background-shell.js";
 import { codeShellHome } from "../../session/session-manager.js";
 
@@ -109,6 +114,11 @@ export type BackgroundWorkEntry =
       finalText?: string;
       /** Files an external agent (DriveAgent) changed, parsed from its transcript. */
       changedFiles?: string[];
+      /** Machine-readable job kind and external-session linkage for DriveAgent. */
+      jobKind?: BackgroundJobKind;
+      externalSessionId?: string;
+      cli?: ExternalCliKind;
+      cwd?: string;
     }>;
 
 type SessionTitleCacheEntry = { mtimeMs: number; title?: string };
@@ -213,6 +223,10 @@ export function listBackgroundWorkForUI(
       ...(j.finishedAt != null ? { finishedAt: j.finishedAt } : {}),
       ...(j.finalText != null ? { finalText: j.finalText } : {}),
       ...(j.changedFiles && j.changedFiles.length ? { changedFiles: j.changedFiles } : {}),
+      ...(j.kind ? { jobKind: j.kind } : {}),
+      ...(j.ccSessionId ? { externalSessionId: j.ccSessionId } : {}),
+      ...(j.cli === "claude" || j.cli === "codex" ? { cli: j.cli } : {}),
+      ...(j.cwd ? { cwd: j.cwd } : {}),
       sourceSession: sourceSession(sessionId, j.sessionId),
     });
   }

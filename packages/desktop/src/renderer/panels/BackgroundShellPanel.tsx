@@ -1,11 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Ban, Bot, RefreshCw, Square, Terminal, Film, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Ban,
+  Bot,
+  RefreshCw,
+  Square,
+  Terminal,
+  Film,
+  CheckCircle2,
+  XCircle,
+  ExternalLink,
+} from "lucide-react";
 import type {
   BackgroundShellInfo,
   BackgroundWorkInfo,
   BackgroundWorkSourceSession,
 } from "../../preload/types";
 import { useT, type TFunction } from "../i18n/I18nProvider";
+import { driveAgentLinkDetail } from "../cc-room/driveAgentLink";
 
 type AgentStatus = "running" | "completed" | "failed" | "cancelled";
 type ShellWorkItem = Extract<BackgroundWorkInfo, { kind: "shell" }>;
@@ -312,6 +323,7 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
             <Section title={t("panels.shells.sectionJobs")}>
               <ul className="m-0 list-none p-0">
                 {jobs.map((j) => {
+                  const cliLink = driveAgentLinkDetail(j);
                   const done = j.status !== "running";
                   const changed = j.changedFiles ?? [];
                   const expandable = done && (!!j.finalText || changed.length > 0);
@@ -352,6 +364,32 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
                           <span className="shrink-0 text-[10px] text-muted-foreground">
                             {t("panels.shells.jobChangedFiles", { count: changed.length })}
                           </span>
+                        )}
+                        {cliLink && (
+                          <button
+                            type="button"
+                            className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                            aria-label={t(
+                              cliLink.cliKind === "codex"
+                                ? "panels.shells.openCodexSession"
+                                : "panels.shells.openClaudeSession",
+                            )}
+                            title={t(
+                              cliLink.cliKind === "codex"
+                                ? "panels.shells.openCodexSession"
+                                : "panels.shells.openClaudeSession",
+                            )}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              window.dispatchEvent(
+                                new CustomEvent("codeshell:open-cli-session", {
+                                  detail: cliLink,
+                                }),
+                              );
+                            }}
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </button>
                         )}
                         <SourceSessionBadge source={j.sourceSession} t={t} />
                         <span className="shrink-0 text-[10px] text-muted-foreground">

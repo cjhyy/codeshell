@@ -31,6 +31,7 @@ type Listener = () => void;
 
 export type BackgroundJobStatus = "running" | "cancelling" | "completed" | "failed" | "cancelled";
 export type BackgroundJobKind = "drive-agent" | "video" | "job";
+export type ExternalCliKind = "claude" | "codex";
 
 /** Generous per-session cap on retained terminal jobs — a leak backstop, not a
  *  UX limit; a human never spawns this many background jobs in one session. */
@@ -61,7 +62,7 @@ export interface BackgroundJobEntry {
   /** DriveAgent prompt summary, separate from the UI-oriented description. */
   promptSummary?: string;
   /** External CLI kind for DriveAgent jobs. */
-  cli?: string;
+  cli?: ExternalCliKind;
   /** Client message that launched this external job. */
   originClientMessageId?: string;
   /** Optional cancellation hook for jobs backed by a live process. */
@@ -80,7 +81,7 @@ export interface BackgroundJobStartOptions {
   kind?: BackgroundJobKind;
   cwd?: string;
   promptSummary?: string;
-  cli?: string;
+  cli?: ExternalCliKind;
   originClientMessageId?: string;
   abort?: () => void | Promise<void>;
 }

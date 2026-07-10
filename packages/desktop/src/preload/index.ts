@@ -66,6 +66,10 @@ export type BackgroundWorkInfo =
       finishedAt?: number;
       finalText?: string;
       changedFiles?: string[];
+      jobKind?: "drive-agent" | "video" | "job";
+      externalSessionId?: string;
+      cli?: "claude" | "codex";
+      cwd?: string;
     }>;
 
 export type WorktreeCleanupSkippedEvent = {
@@ -1251,6 +1255,8 @@ contextBridge.exposeInMainWorld("codeshell", {
       mode: string,
       kind?: "claude-code" | "codex",
     ) => ipcRenderer.invoke("ccRoom:openSession", claudeSessionId, cwd, mode, kind),
+    openLinkedSession: (externalSessionId: string, cwd: string, kind: "claude-code" | "codex") =>
+      ipcRenderer.invoke("ccRoom:openLinkedSession", externalSessionId, cwd, kind),
     send: (roomId: string, text: string) => ipcRenderer.invoke("ccRoom:send", roomId, text),
     respondApproval: (roomId: string, requestId: string, decision: unknown) =>
       ipcRenderer.invoke("ccRoom:respondApproval", roomId, requestId, decision),
