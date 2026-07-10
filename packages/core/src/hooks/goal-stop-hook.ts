@@ -25,7 +25,6 @@ import type { HookHandler } from "./registry.js";
 import type { LLMResponse, TokenUsage, ToolResult } from "../types.js";
 import { normalizeGoal, type GoalConfig } from "../engine/goal.js";
 import { listRunningBackgroundWork } from "../tool-system/builtin/background-work.js";
-import { extractJSON } from "../utils/json.js";
 
 /** Narrow LLM surface the judge needs — just a one-shot completion. */
 export interface GoalJudgeLLM {
@@ -453,30 +452,107 @@ function renderProgress(
   ].join("\n");
 }
 
-/** Pull the first balanced JSON object out of possibly-prose text. */
-function extractJson(text: string): JudgeVerdict | null {
-  const slice = extractJSON(text).trim();
-  if (!slice.startsWith("{") || !slice.endsWith("}")) return null;
+/** Collect every balanced object while ignoring braces inside JSON strings. */
+function balancedObjectSlices(text: string): string[] {
+  const slices: string[] = [];
+  let start = -1;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = 0; index < text.length; index++) {
+    const ch = text[index]!;
+    if (start < 0) {
+      if (ch === "{") {
+        start = index;
+        depth = 1;
+        inString = false;
+        escaped = false;
+      }
+      continue;
+    }
+
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        slices.push(text.slice(start, index + 1));
+        start = -1;
+      }
+    }
+  }
+  return slices;
+}
+
+/** Decode top-level object keys, preserving duplicates for strict validation. */
+function topLevelObjectKeys(slice: string): string[] | null {
+  const keys: string[] = [];
+  let depth = 0;
+  let stringStart = -1;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = 0; index < slice.length; index++) {
+    const ch = slice[index]!;
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (ch === "\\") {
+        escaped = true;
+        continue;
+      }
+      if (ch !== '"') continue;
+
+      inString = false;
+      if (depth !== 1) continue;
+      let next = index + 1;
+      while (/\s/u.test(slice[next] ?? "")) next++;
+      if (slice[next] !== ":") continue;
+      try {
+        const key = JSON.parse(slice.slice(stringStart, index + 1)) as unknown;
+        if (typeof key !== "string") return null;
+        keys.push(key);
+      } catch {
+        return null;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+      stringStart = index;
+    } else if (ch === "{" || ch === "[") {
+      depth++;
+    } else if (ch === "}" || ch === "]") {
+      depth--;
+    }
+  }
+  return keys;
+}
+
+function parseVerdictCandidate(slice: string): JudgeVerdict | null {
   try {
     const parsed = JSON.parse(slice) as unknown;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-
-    // A second parseable object makes the provider output ambiguous. Do not
-    // guess which verdict was intended; keep Goal mode fail-closed instead.
-    const sliceStart = text.indexOf(slice);
-    if (sliceStart >= 0) {
-      const remainder = `${text.slice(0, sliceStart)}${text.slice(sliceStart + slice.length)}`;
-      const secondSlice = extractJSON(remainder).trim();
-      if (secondSlice.startsWith("{") && secondSlice.endsWith("}")) {
-        try {
-          const second = JSON.parse(secondSlice) as unknown;
-          if (second && typeof second === "object" && !Array.isArray(second)) return null;
-        } catch {
-          // Non-JSON prose containing braces is not a second verdict object.
-        }
-      }
+    const keys = topLevelObjectKeys(slice);
+    const requiredKeys = ["met", "waiting", "gaps"];
+    if (
+      !keys ||
+      keys.length !== requiredKeys.length ||
+      new Set(keys).size !== requiredKeys.length ||
+      requiredKeys.some((key) => !keys.includes(key))
+    ) {
+      return null;
     }
-
     const p = parsed as Record<string, unknown>;
     if (
       typeof p.met !== "boolean" ||
@@ -491,6 +567,14 @@ function extractJson(text: string): JudgeVerdict | null {
   } catch {
     return null;
   }
+}
+
+/** Accept exactly one strict verdict candidate from the complete model output. */
+function extractJson(text: string): JudgeVerdict | null {
+  const candidates = balancedObjectSlices(text)
+    .map(parseVerdictCandidate)
+    .filter((candidate): candidate is JudgeVerdict => candidate !== null);
+  return candidates.length === 1 ? candidates[0]! : null;
 }
 
 /** Render the running background tasks for the judge prompt. */

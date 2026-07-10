@@ -729,6 +729,11 @@ describe("createGoalStopHook — three-state judge", () => {
     ["wrong gaps type", '{"met":true,"waiting":false,"gaps":[]}'],
     ["met and waiting conflict", '{"met":true,"waiting":true,"gaps":""}'],
     ["met with non-empty gaps", '{"met":true,"waiting":false,"gaps":"still incomplete"}'],
+    ["duplicate conflicting met key", '{"met":false,"met":true,"waiting":false,"gaps":""}'],
+    [
+      "additional conflicting field",
+      '{"met":true,"waiting":false,"gaps":"","override":"unfinished"}',
+    ],
   ] as const) {
     it(`invalid verdict schema (${label}) fails closed`, async () => {
       let metCalls = 0;
@@ -771,6 +776,31 @@ describe("createGoalStopHook — three-state judge", () => {
     });
 
     expect(res.continueSession).toBe(true);
+    expect(metCalls).toBe(0);
+  });
+
+  it("valid met plus non-JSON braces plus an opposite verdict fails closed", async () => {
+    let metCalls = 0;
+    const hook = createGoalStopHook({
+      goal: "ship it",
+      llm: fakeJudge(
+        '{"met":true,"waiting":false,"gaps":""}\n' +
+          "note {not json}\n" +
+          '{"met":false,"waiting":false,"gaps":"unfinished"}',
+      ),
+      log: noopLog,
+      onMet: () => {
+        metCalls += 1;
+      },
+    });
+
+    const res = await hook({
+      eventName: "on_stop",
+      data: { sessionId: SID, finalText: "done" },
+    });
+
+    expect(res.continueSession).toBe(true);
+    expect(res.data?.goalVerdict).toBeUndefined();
     expect(metCalls).toBe(0);
   });
 

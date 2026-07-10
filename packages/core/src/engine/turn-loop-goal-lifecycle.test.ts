@@ -775,6 +775,51 @@ describe("Engine persisted goal lifecycle", () => {
     }
   });
 
+  it("met:true judge crossing the token budget writes a tombstone instead of clearing as met", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-met-budget-exhausted-"));
+    const model = uniqueModel("met-budget-exhausted");
+    const sessionId = "goal-met-budget-exhausted-tombstone";
+    engineScenarios.set(model, {
+      mainResponses: [stopResponse("looks complete")],
+      mainCalls: 0,
+      judgeResponse: '{"met":true,"waiting":false,"gaps":""}',
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const result = await engine.run("bounded completion", {
+        sessionId,
+        cwd: dir,
+        goal: { objective: "finish within sixteen tokens", tokenBudget: 16 },
+      });
+
+      expect(result.reason).toBe("goal_budget_exhausted");
+      expect(engineScenarios.get(model)?.mainCalls).toBe(1);
+      expect(
+        engineScenarios
+          .get(model)
+          ?.systemPrompts?.filter((prompt) => prompt.includes("目标完成度裁判")),
+      ).toHaveLength(1);
+      expect(engine.getGoal(sessionId)).toBeUndefined();
+      expect(persistedState(dir, sessionId).activeGoal).toBeUndefined();
+      expect(persistedState(dir, sessionId).goalTerminal).toMatchObject({
+        objective: "finish within sixteen tokens",
+        reason: "token_budget_exhausted",
+      });
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("clears a goal-mode max-turns termination", async () => {
     const dir = mkdtempSync(join(tmpdir(), "engine-goal-max-turns-"));
     const model = uniqueModel("max-turns");
