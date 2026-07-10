@@ -36,6 +36,44 @@ interface Props {
   turnDiff?: string;
 }
 
+/** Latest-only recent-commit loader bound to one exact workspace root. */
+export function useWorkspaceRecentCommits(cwd: string | null): {
+  commits: GitCommit[] | null;
+  loadCommits: () => void;
+} {
+  const [commits, setCommits] = useState<GitCommit[] | null>(null);
+  const requestSeq = useRef(0);
+  const targetCwd = useRef(cwd);
+  // Invalidate during render, not only in the [cwd] effect: an old promise may
+  // settle between the new-root render and that effect being flushed.
+  if (targetCwd.current !== cwd) {
+    targetCwd.current = cwd;
+    requestSeq.current += 1;
+  }
+
+  useEffect(() => setCommits(null), [cwd]);
+
+  const loadCommits = (): void => {
+    if (commits !== null || !cwd) return;
+    const requestCwd = cwd;
+    const requestId = ++requestSeq.current;
+    void window.codeshell
+      .getGitRecentCommits(requestCwd, 20)
+      .then((next) => {
+        if (requestSeq.current === requestId && targetCwd.current === requestCwd) {
+          setCommits(next);
+        }
+      })
+      .catch(() => {
+        if (requestSeq.current === requestId && targetCwd.current === requestCwd) {
+          setCommits([]);
+        }
+      });
+  };
+
+  return { commits, loadCommits };
+}
+
 /**
  * Code-review panel (TODO 2.3a). Full-width diff (Codex/GitLab style — no left
  * file-list sidebar). Scope chips top-left switch what's shown — 本轮改动 /
@@ -69,20 +107,11 @@ export function ReviewPanel({ cwd, files, turnDiff }: Props) {
   // null = no specific commit picked → default to the most recent (HEAD~1..HEAD).
   const [selectedCommit, setSelectedCommit] = useState<GitCommit | null>(null);
   // Recent commits for the 提交 submenu, loaded lazily when it opens.
-  const [commits, setCommits] = useState<GitCommit[] | null>(null);
-  const commitsRequestSeq = useRef(0);
-  const commitsTargetCwd = useRef(cwd);
-  // Invalidate during render, not only in the [cwd] effect: an old promise may
-  // settle between the new-root render and that effect being flushed.
-  if (commitsTargetCwd.current !== cwd) {
-    commitsTargetCwd.current = cwd;
-    commitsRequestSeq.current += 1;
-  }
+  const { commits, loadCommits } = useWorkspaceRecentCommits(cwd);
 
   // Git-derived selections belong to one workspace. A session switching from
   // main to a worktree must not retain commits/ranges/stats from the old root.
   useEffect(() => {
-    setCommits(null);
     setSelectedCommit(null);
     setRange(null);
     setStats(null);
@@ -110,31 +139,6 @@ export function ReviewPanel({ cwd, files, turnDiff }: Props) {
       cancelled = true;
     };
   }, [scope, cwd, refreshKey, selectedCommit]);
-
-  // Lazy-load recent commits the first time the 提交 submenu is opened.
-  const loadCommits = (): void => {
-    if (commits !== null || !cwd) return;
-    const requestCwd = cwd;
-    const requestSeq = ++commitsRequestSeq.current;
-    void window.codeshell
-      .getGitRecentCommits(requestCwd, 20)
-      .then((cs) => {
-        if (
-          commitsRequestSeq.current === requestSeq &&
-          commitsTargetCwd.current === requestCwd
-        ) {
-          setCommits(cs);
-        }
-      })
-      .catch(() => {
-        if (
-          commitsRequestSeq.current === requestSeq &&
-          commitsTargetCwd.current === requestCwd
-        ) {
-          setCommits([]);
-        }
-      });
-  };
 
   // When the caller hands us a focus set (e.g. from a "files changed" card),
   // snap to its turn scope + first file. Re-runs when the set identity changes.
