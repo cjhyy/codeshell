@@ -124,6 +124,10 @@ import {
 } from "./credentials-service.js";
 import { loginAndCaptureCookies } from "./credentials-login/index.js";
 import { RemoteHostManager } from "./mobile-remote/remote-host-manager.js";
+import {
+  mobileTranscriptSubscriberId,
+  type MobileViewerIdentity,
+} from "./mobile-remote/viewer-identity.js";
 import { PendingMobileApprovals } from "./mobile-remote/pending-approvals.js";
 import { TrustedDeviceStore } from "./mobile-remote/trusted-device-store.js";
 import { CloudflaredBinary } from "./mobile-remote/cloudflared-binary.js";
@@ -142,6 +146,7 @@ import { ResidentAgentProcess } from "./mobile-remote/resident-agent.js";
 import { CodexRoomAgent } from "./mobile-remote/codex-room-agent.js";
 import { ApprovalBridge } from "./cc-room/approval-bridge.js";
 import { TranscriptSubscriptionManager } from "./cc-room/transcript-subscriptions.js";
+import { QuickChatOwnershipRegistry } from "./quick-chat-ownership.js";
 import { buildSessionHistory } from "./mobile-remote/mobile-history.js";
 import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } from "./fs-service.js";
 import {
@@ -307,6 +312,8 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
 let bridge: AgentBridge | null = null;
 let cspInstalled = false;
 let automationHandle: AutomationHandle | null = null;
+const quickChatOwnership = new QuickChatOwnershipRegistry();
+const quickChatOwnerCleanupRegistered = new Set<number>();
 
 function broadcastWorkspaceChanged(payload: {
   sessionId: string;
@@ -335,10 +342,10 @@ const mobileDevices = new TrustedDeviceStore(
 const mobileRemote = new RemoteHostManager({
   devices: mobileDevices,
   onClientEvent: (event) => {
-    // The remote host tags authenticated events with the sending device id
-    // (see remote-host-manager: { ...event, deviceId }). Thread it through so
-    // session selection / permission mode / replies are per-device.
-    void handleMobileClientEvent(event as MobileClientEvent & { deviceId?: string });
+    // The remote host tags authenticated events with both the device id and a
+    // per-socket viewer id. Device state/replies remain shared per phone, while
+    // transcript ownership follows the exact tab that subscribed.
+    void handleMobileClientEvent(event as AuthenticatedMobileClientEvent);
   },
 });
 const pendingMobileApprovals = new PendingMobileApprovals();
@@ -530,11 +537,11 @@ function roomMatchesTranscript(
   );
 }
 
-// An abruptly closed phone socket has no chance to send unsubscribe. The
-// device-offline transition fires only after its LAST authenticated socket is
-// gone, so a second tab on the same phone keeps the shared subscription alive.
-mobileRemote.on("device-offline", (deviceId: string) => {
-  transcriptSubscriptions?.unsubscribeSubscriber(`mobile:${deviceId}`);
+// An abruptly closed phone tab has no chance to send unsubscribe. Release the
+// exact socket/viewer without disturbing another tab authenticated as the same
+// device.
+mobileRemote.on("viewer-offline", ({ viewerId }: MobileViewerIdentity) => {
+  transcriptSubscriptions?.unsubscribeSubscriber(mobileTranscriptSubscriberId(viewerId));
 });
 
 // Idle-based room GC: rooms untouched for longer than this are reaped at
@@ -758,9 +765,7 @@ function injectAndAwaitResult(
  * the renderer's preload rpc() would emit, so the core permission engine,
  * goal logic, and snapshots all apply unchanged.
  */
-async function handleMobileClientEvent(
-  event: MobileClientEvent & { deviceId?: string },
-): Promise<void> {
+async function handleMobileClientEvent(event: AuthenticatedMobileClientEvent): Promise<void> {
   // ── CC Room (external claude CLI sessions) — checked first so "ccRoom.*"
   // never gets misrouted by the "room." prefix check below ───────────────
   if (event.type.startsWith("ccRoom.")) {
@@ -1083,7 +1088,12 @@ async function resolveRoomPermissionMode(
  * a non-trusted cwd that requests bypassPermissions is downgraded to "default"
  * here (the high-risk gate is surfaced by the UI / future approval step).
  */
-async function handleRoomEvent(event: MobileClientEvent & { deviceId?: string }): Promise<void> {
+type AuthenticatedMobileClientEvent = MobileClientEvent & {
+  deviceId?: string;
+  viewerId?: string;
+};
+
+async function handleRoomEvent(event: AuthenticatedMobileClientEvent): Promise<void> {
   try {
     if (event.type === "room.list") {
       mobileRemote.broadcast({
@@ -1161,7 +1171,7 @@ async function handleRoomEvent(event: MobileClientEvent & { deviceId?: string })
  * dual-ended, like desktop). listSessions echoes the cwd so a phone that has
  * since switched projects can discard a stale reply.
  */
-async function handleCcRoomEvent(event: MobileClientEvent & { deviceId?: string }): Promise<void> {
+async function handleCcRoomEvent(event: AuthenticatedMobileClientEvent): Promise<void> {
   const deviceId = event.deviceId;
   const reply = (e: MobileServerEvent): void => {
     if (deviceId) mobileRemote.sendToDevice(deviceId, e);
@@ -1210,7 +1220,7 @@ async function handleCcRoomEvent(event: MobileClientEvent & { deviceId?: string 
         throw new Error("cc-room transcript subscription does not match the opened room");
       }
       const snapshot = transcriptSubscriptions!.subscribe({
-        subscriberId: `mobile:${deviceId ?? "anonymous"}`,
+        subscriberId: mobileTranscriptSubscriberId(event.viewerId ?? ""),
         roomId: event.roomId,
         cwd: event.cwd,
         sessionId: event.sessionId,
@@ -1226,7 +1236,10 @@ async function handleCcRoomEvent(event: MobileClientEvent & { deviceId?: string 
       return;
     }
     if (event.type === "ccRoom.unsubscribeTranscript") {
-      transcriptSubscriptions!.unsubscribe(`mobile:${deviceId ?? "anonymous"}`, event.roomId);
+      transcriptSubscriptions!.unsubscribe(
+        mobileTranscriptSubscriberId(event.viewerId ?? ""),
+        event.roomId,
+      );
       return;
     }
     if (event.type === "ccRoom.readHistory") {
@@ -3418,8 +3431,7 @@ ipcMain.handle("memory:dream", async (_e, level: unknown, cwd?: string) => {
 });
 
 ipcMain.handle("sessions:list", async () => listSessions());
-ipcMain.handle("sessions:delete", async (_e, id: string) => {
-  if (typeof id !== "string") throw new Error("session id required");
+async function deleteDesktopSession(id: string): Promise<void> {
   // Reap the session's background shells (if any) before dropping it —
   // explicit delete is the one tab-close path that DOES kill (core §6).
   bridge?.closeSession(id);
@@ -3429,6 +3441,31 @@ ipcMain.handle("sessions:delete", async (_e, id: string) => {
   // replayed into a fresh tab that happens to reuse the id.
   bridge?.forgetSession(id);
   pendingMobileApprovals.forgetSession(id);
+}
+
+ipcMain.handle("sessions:delete", async (_e, id: string) => {
+  if (typeof id !== "string") throw new Error("session id required");
+  await deleteDesktopSession(id);
+});
+ipcMain.handle("quickChat:claimSession", async (event, id: string) => {
+  if (typeof id !== "string" || !/^qchat-[A-Za-z0-9.-]+$/.test(id)) {
+    throw new Error("quick-chat session id required");
+  }
+  const ownerId = event.sender.id;
+  quickChatOwnership.claim(id, ownerId);
+  if (!quickChatOwnerCleanupRegistered.has(ownerId)) {
+    quickChatOwnerCleanupRegistered.add(ownerId);
+    event.sender.once("destroyed", () => {
+      quickChatOwnerCleanupRegistered.delete(ownerId);
+      quickChatOwnership.releaseOwner(ownerId);
+    });
+  }
+});
+ipcMain.handle("quickChat:cleanupSession", async (event, id: string) => {
+  if (typeof id !== "string" || !/^qchat-[A-Za-z0-9.-]+$/.test(id)) {
+    throw new Error("quick-chat session id required");
+  }
+  return quickChatOwnership.cleanup(id, event.sender.id, () => deleteDesktopSession(id));
 });
 
 /**

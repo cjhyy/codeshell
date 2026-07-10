@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import type { ReactElement } from "react";
 import type { PanelTab } from "../view";
 import {
   getEnabledPanelEntries,
@@ -42,6 +43,7 @@ describe("PanelRegistry", () => {
       tabId: "quickChat-7",
       bucket: "repo::session-1",
       visible: true,
+      foregroundVisible: true,
     };
     let received: unknown;
 
@@ -59,5 +61,18 @@ describe("PanelRegistry", () => {
       tabId: "quickChat-7",
       cwd: "/repo",
     });
+  });
+
+  it("does not mark a lifecycle-live hidden CC Room as active", () => {
+    const rendered = getPanelEntry("ccRoom").render({
+      cwd: "/repo",
+      engineSessionId: "session-1",
+      tabId: "ccRoom-1",
+      bucket: "repo::session-1",
+      visible: true,
+      foregroundVisible: false,
+    }) as ReactElement<{ active: boolean }>;
+
+    expect(rendered.props.active).toBe(false);
   });
 });

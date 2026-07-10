@@ -464,6 +464,16 @@ function App() {
   activeBucketRef.current = activeBucket;
   quickChatSessionsRef.current = quickChatSessions;
   useEffect(() => {
+    for (const session of Object.values(quickChatSessions)) {
+      void window.codeshell.claimQuickChatSession(session.sessionId).catch((e) =>
+        window.codeshell.log("quick_chat.claim_session_failed", {
+          sessionId: session.sessionId,
+          error: String(e),
+        }),
+      );
+    }
+  }, [quickChatSessions]);
+  useEffect(() => {
     if (!activeSessionId) return;
     window.codeshell.registerBrowserSessionBucket({
       sessionId: activeSessionId,
@@ -1594,7 +1604,7 @@ function App() {
             (session) => session.sessionId === sessionId,
           );
           if (isLive) continue;
-          void window.codeshell.deleteSession(sessionId).catch((e) =>
+          void window.codeshell.cleanupQuickChatSession(sessionId).catch((e) =>
             window.codeshell.log("quick_chat.cleanup_stale_session_failed", {
               sessionId,
               error: String(e),
@@ -3163,7 +3173,7 @@ function App() {
     for (const [, session] of stale) {
       setBusyForKey(session.bucket, false);
       engineToBucketRef.current.delete(session.sessionId);
-      void window.codeshell.deleteSession(session.sessionId).catch((e) =>
+      void window.codeshell.cleanupQuickChatSession(session.sessionId).catch((e) =>
         window.codeshell.log("quick_chat.delete_session_failed", {
           sessionId: session.sessionId,
           error: String(e),
@@ -3175,7 +3185,7 @@ function App() {
   useEffect(
     () => () => {
       for (const session of Object.values(quickChatSessionsRef.current)) {
-        void window.codeshell.deleteSession(session.sessionId).catch(() => undefined);
+        void window.codeshell.cleanupQuickChatSession(session.sessionId).catch(() => undefined);
       }
     },
     [],

@@ -521,4 +521,79 @@ describe("useRemoteApp cc transcript streaming", () => {
 
     await hook.unmount();
   });
+
+  test("reconnect keeps the open room cwd after selecting another project", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const firstSocket = FakeWebSocket.instances[0]!;
+
+    await act(async () => {
+      firstSocket.open();
+      firstSocket.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      firstSocket.message({
+        type: "room.projects.ok",
+        projects: [
+          { path: "/repo-a", name: "repo-a" },
+          { path: "/repo-b", name: "repo-b" },
+        ],
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      hook.result.current.selectProject("/repo-a");
+      hook.result.current.openCcSession("thread-a", "/repo-a", "default");
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      firstSocket.message({
+        type: "ccRoom.opened",
+        roomId: "room-a",
+        sessionId: "thread-a",
+        status: "running",
+      });
+      firstSocket.message({
+        type: "ccRoom.transcriptSubscribed",
+        roomId: "room-a",
+        sessionId: "thread-a",
+        active: true,
+        messages: [],
+        hasMore: false,
+        totalCount: 0,
+        roomCursor: 1,
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      hook.result.current.selectProject("/repo-b");
+      await flushMicrotasks();
+    });
+
+    await act(async () => {
+      firstSocket.close();
+      window.dispatchEvent(new Event("online"));
+      await flushMicrotasks();
+    });
+    const reconnectedSocket = FakeWebSocket.instances[1]!;
+    await act(async () => {
+      reconnectedSocket.open();
+      reconnectedSocket.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      await flushMicrotasks();
+    });
+
+    const transcriptSubscriptions = reconnectedSocket.sent
+      .map((payload) => JSON.parse(payload))
+      .filter((event) => event.type === "ccRoom.subscribeTranscript");
+    expect(transcriptSubscriptions).toEqual([
+      {
+        type: "ccRoom.subscribeTranscript",
+        roomId: "room-a",
+        cwd: "/repo-a",
+        sessionId: "thread-a",
+        limit: 150,
+        kind: "claude-code",
+      },
+    ]);
+
+    await hook.unmount();
+  });
 });
