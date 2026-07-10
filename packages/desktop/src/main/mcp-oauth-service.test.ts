@@ -8,7 +8,7 @@ import {
   type EncryptionCipher,
   type OAuthTokens,
 } from "@cjhyy/code-shell-core";
-import { McpOAuthService } from "./mcp-oauth-service.js";
+import { McpOAuthService, McpOAuthServiceError } from "./mcp-oauth-service.js";
 
 class TestCipher implements EncryptionCipher {
   encrypt(plaintext: string): string {
@@ -45,23 +45,30 @@ describe("McpOAuthService", () => {
       now?: () => number;
       changed?: () => void;
       revocationTimeoutMs?: number;
+      authorizeError?: Error;
+      logWarning?: (event: string, fields: Record<string, unknown>) => void;
     } = {},
   ) {
     const store = new CredentialStore(undefined, new TestCipher());
     const service = new McpOAuthService({
       store,
       openExternal: () => {},
-      authorizeFn: async () =>
-        options.authorizeTokens ?? {
-          accessToken: "access-login",
-          refreshToken: "refresh-login",
-          expiresAt: Date.UTC(2030, 0, 1),
-          tokenType: "Bearer",
-        },
+      authorizeFn: async () => {
+        if (options.authorizeError) throw options.authorizeError;
+        return (
+          options.authorizeTokens ?? {
+            accessToken: "access-login",
+            refreshToken: "refresh-login",
+            expiresAt: Date.UTC(2030, 0, 1),
+            tokenType: "Bearer",
+          }
+        );
+      },
       fetch: options.fetch,
       now: options.now,
       onCredentialsChanged: options.changed,
       revocationTimeoutMs: options.revocationTimeoutMs,
+      logWarning: options.logWarning,
     });
     return { service, store };
   }
@@ -231,7 +238,7 @@ describe("McpOAuthService", () => {
         authorizationEndpoint: "https://auth.example/authorize",
         tokenEndpoint: "https://auth.example/token",
       }),
-    ).rejects.toThrow(/HTTPS/);
+    ).rejects.toThrow(/MCP_OAUTH_INVALID_REQUEST/);
     expect(store.list()).toHaveLength(0);
   });
 
@@ -413,5 +420,77 @@ describe("McpOAuthService", () => {
     const disk = readFileSync(join(home, ".code-shell", "credentials.json"), "utf8");
     expect(disk).not.toContain("example-oauth");
     expect(disk).not.toContain("enc:test:");
+  });
+
+  test("normalizes explicit authorization errors without exposing provider details", async () => {
+    const sentinel = "sentinel-provider-error-description";
+    const logs: Array<{ event: string; fields: Record<string, unknown> }> = [];
+    const { service, store } = makeService({
+      authorizeError: new Error(`token endpoint rejected request: ${sentinel}`),
+      logWarning: (event, fields) => logs.push({ event, fields }),
+    });
+
+    let failure: unknown;
+    try {
+      await service.login({
+        source: "mcp",
+        serverName: "Example",
+        serverUrl: "https://mcp.example/rpc",
+        clientId: "client",
+        authorizationEndpoint: "https://auth.example/authorize",
+        tokenEndpoint: "https://auth.example/token",
+      });
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure).toBeInstanceOf(McpOAuthServiceError);
+    expect((failure as McpOAuthServiceError).code).toBe("protocol_error");
+    expect(String(failure)).toBe("McpOAuthServiceError: MCP_OAUTH_PROTOCOL_ERROR: OAuth failed");
+    expect(String(failure)).not.toContain(sentinel);
+    expect(JSON.stringify(logs)).not.toContain(sentinel);
+    expect(logs).toEqual([
+      {
+        event: "mcp.oauth.failed",
+        fields: { stage: "authorization", code: "protocol_error" },
+      },
+    ]);
+    expect(store.list()).toEqual([]);
+  });
+
+  test("normalizes discovery response bodies before they reach renderer or logs", async () => {
+    const sentinel = "sentinel-discovery-response-secret";
+    const logs: Array<{ event: string; fields: Record<string, unknown> }> = [];
+    const { service, store } = makeService({
+      fetch: (async () =>
+        Response.json(
+          { error: "server_error", error_description: sentinel },
+          { status: 503 },
+        )) as typeof fetch,
+      logWarning: (event, fields) => logs.push({ event, fields }),
+    });
+
+    let failure: unknown;
+    try {
+      await service.login({
+        source: "mcp",
+        serverName: "Discovery",
+        serverUrl: "https://mcp.example/rpc",
+      });
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure).toBeInstanceOf(McpOAuthServiceError);
+    expect((failure as McpOAuthServiceError).code).toBe("server_error");
+    expect(String(failure)).not.toContain(sentinel);
+    expect(JSON.stringify(logs)).not.toContain(sentinel);
+    expect(logs).toEqual([
+      {
+        event: "mcp.oauth.failed",
+        fields: { stage: "discovery_registration", code: "server_error", status: 503 },
+      },
+    ]);
+    expect(store.list()).toEqual([]);
   });
 });

@@ -14,6 +14,7 @@ import {
   CredentialStore,
   authorize,
   createHardenedOAuthFetch,
+  logger,
   mergeOAuthTokenResponse,
   parseOAuthCredentialSecret,
   shouldRefreshOAuthCredential,
@@ -45,6 +46,21 @@ export interface McpOAuthActionResult {
 
 type OAuthErrorCode = NonNullable<Credential["meta"]>["lastRefreshErrorCode"];
 
+export type McpOAuthServiceErrorCode =
+  | "invalid_request"
+  | "access_denied"
+  | "timeout"
+  | "network_error"
+  | "server_error"
+  | "protocol_error";
+
+type OAuthFailureStage =
+  | "validation"
+  | "authorization"
+  | "discovery_registration"
+  | "authorization_callback"
+  | "token_exchange";
+
 interface McpOAuthServiceOptions {
   store?: CredentialStore;
   fetch?: typeof fetch;
@@ -54,6 +70,7 @@ interface McpOAuthServiceOptions {
   now?: () => number;
   onCredentialsChanged?: () => void;
   revocationTimeoutMs?: number;
+  logWarning?: (event: string, fields: Record<string, unknown>) => void;
 }
 
 interface LoginSpec {
@@ -79,6 +96,28 @@ class NormalizedOAuthError extends Error {
 }
 
 class StaleOAuthOperationError extends Error {}
+
+class OAuthStageError extends Error {
+  constructor(
+    readonly stage: OAuthFailureStage,
+    readonly internalCause: unknown,
+  ) {
+    super("OAuth stage failed");
+  }
+}
+
+export class McpOAuthServiceError extends Error {
+  readonly name = "McpOAuthServiceError";
+
+  constructor(
+    readonly code: McpOAuthServiceErrorCode,
+    message: string,
+    readonly stage: OAuthFailureStage,
+    readonly status?: number,
+  ) {
+    super(`MCP_OAUTH_${code.toUpperCase()}: ${message}`);
+  }
+}
 
 function safeCredentialId(value: string): string {
   const id = value.trim();
@@ -121,6 +160,54 @@ function normalizedErrorCode(err: unknown): OAuthErrorCode {
   if (/fetch|network|ECONN|ENOTFOUND|timed out/i.test(message)) return "network";
   if (/\(5\d\d\)|server/i.test(message)) return "server_error";
   return "invalid_response";
+}
+
+function internalErrorMessage(error: unknown): string {
+  if (error instanceof OAuthStageError) return internalErrorMessage(error.internalCause);
+  return error instanceof Error ? error.message : String(error);
+}
+
+function internalStatus(error: unknown): number | undefined {
+  if (error instanceof OAuthStageError) return internalStatus(error.internalCause);
+  if (error && typeof error === "object") {
+    const direct = (error as { status?: unknown }).status;
+    if (typeof direct === "number" && direct >= 400 && direct <= 599) return direct;
+    const responseStatus = (error as { response?: { status?: unknown } }).response?.status;
+    if (typeof responseStatus === "number" && responseStatus >= 400 && responseStatus <= 599) {
+      return responseStatus;
+    }
+  }
+  const match = internalErrorMessage(error).match(/(?:^|\D)([45]\d{2})(?:\D|$)/);
+  return match ? Number(match[1]) : undefined;
+}
+
+function publicOAuthError(error: unknown, fallbackStage: OAuthFailureStage): McpOAuthServiceError {
+  if (error instanceof McpOAuthServiceError) return error;
+  const stage = error instanceof OAuthStageError ? error.stage : fallbackStage;
+  const message = internalErrorMessage(error);
+  const status = internalStatus(error);
+  let code: McpOAuthServiceErrorCode;
+  let publicMessage: string;
+  if (/access_denied|access denied/i.test(message)) {
+    code = "access_denied";
+    publicMessage = "OAuth authorization was denied";
+  } else if (/timed out|timeout|aborted/i.test(message)) {
+    code = "timeout";
+    publicMessage = "OAuth authorization timed out";
+  } else if (/fetch|network|ECONN|ENOTFOUND|EAI_AGAIN/i.test(message)) {
+    code = "network_error";
+    publicMessage = "OAuth network request failed";
+  } else if (status !== undefined && status >= 500) {
+    code = "server_error";
+    publicMessage = "OAuth failed";
+  } else if (stage === "validation") {
+    code = "invalid_request";
+    publicMessage = "OAuth configuration is invalid";
+  } else {
+    code = "protocol_error";
+    publicMessage = "OAuth failed";
+  }
+  return new McpOAuthServiceError(code, publicMessage, stage, status);
 }
 
 async function responseError(response: Response, action: string): Promise<NormalizedOAuthError> {
@@ -205,6 +292,7 @@ export class McpOAuthService {
   private readonly profiles: Readonly<Record<string, McpOAuthProfile>>;
   private readonly now: () => number;
   private readonly revocationTimeoutMs: number;
+  private readonly logWarning: (event: string, fields: Record<string, unknown>) => void;
   private readonly refreshes = new Map<
     string,
     Promise<{ accessToken: string; expiresAt?: string }>
@@ -220,32 +308,43 @@ export class McpOAuthService {
     this.profiles = options.profiles ?? MCP_OAUTH_PROFILES;
     this.now = options.now ?? Date.now;
     this.revocationTimeoutMs = Math.max(1, Math.min(30_000, options.revocationTimeoutMs ?? 5_000));
+    this.logWarning = options.logWarning ?? ((event, fields) => logger.warn(event, fields));
   }
 
   async login(input: McpOAuthLoginInput): Promise<McpOAuthActionResult> {
-    const spec = this.loginSpec(input);
-    validateOAuthEndpoint(spec.serverUrl, "MCP server URL");
-    if (spec.authorizationEndpoint)
-      validateOAuthEndpoint(spec.authorizationEndpoint, "authorization endpoint");
-    if (spec.tokenEndpoint) validateOAuthEndpoint(spec.tokenEndpoint, "token endpoint");
-    if (spec.revocationEndpoint)
-      validateOAuthEndpoint(spec.revocationEndpoint, "revocation endpoint");
-    const hasExplicitEndpoint = Boolean(spec.authorizationEndpoint || spec.tokenEndpoint);
-    if (
-      hasExplicitEndpoint &&
-      !(spec.clientId && spec.authorizationEndpoint && spec.tokenEndpoint)
-    ) {
-      throw new Error(
-        "Explicit OAuth metadata requires clientId, authorizationEndpoint and tokenEndpoint",
-      );
-    }
+    let stage: OAuthFailureStage = "validation";
+    try {
+      const spec = this.loginSpec(input);
+      validateOAuthEndpoint(spec.serverUrl, "MCP server URL");
+      if (spec.authorizationEndpoint)
+        validateOAuthEndpoint(spec.authorizationEndpoint, "authorization endpoint");
+      if (spec.tokenEndpoint) validateOAuthEndpoint(spec.tokenEndpoint, "token endpoint");
+      if (spec.revocationEndpoint)
+        validateOAuthEndpoint(spec.revocationEndpoint, "revocation endpoint");
+      const hasExplicitEndpoint = Boolean(spec.authorizationEndpoint || spec.tokenEndpoint);
+      if (
+        hasExplicitEndpoint &&
+        !(spec.clientId && spec.authorizationEndpoint && spec.tokenEndpoint)
+      ) {
+        throw new Error(
+          "Explicit OAuth metadata requires clientId, authorizationEndpoint and tokenEndpoint",
+        );
+      }
 
-    const result =
-      spec.clientId && spec.authorizationEndpoint && spec.tokenEndpoint
-        ? await this.explicitLogin(spec)
-        : await this.discoveryLogin(spec);
-    const credential = this.saveLogin(spec, result.secret, result.meta);
-    return { credential };
+      const explicit = Boolean(spec.clientId && spec.authorizationEndpoint && spec.tokenEndpoint);
+      stage = explicit ? "authorization" : "discovery_registration";
+      const result = explicit ? await this.explicitLogin(spec) : await this.discoveryLogin(spec);
+      const credential = this.saveLogin(spec, result.secret, result.meta);
+      return { credential };
+    } catch (error) {
+      const normalized = publicOAuthError(error, stage);
+      this.logWarning("mcp.oauth.failed", {
+        stage: normalized.stage,
+        code: normalized.code,
+        ...(normalized.status === undefined ? {} : { status: normalized.status }),
+      });
+      throw normalized;
+    }
   }
 
   async refresh(credentialId: string): Promise<McpOAuthActionResult> {
@@ -375,16 +474,21 @@ export class McpOAuthService {
     secret: OAuthCredentialSecret;
     meta: Partial<NonNullable<Credential["meta"]>>;
   }> {
-    const tokens = await this.authorizeFn(
-      {
-        clientId: spec.clientId!,
-        authorizationEndpoint: spec.authorizationEndpoint!,
-        tokenEndpoint: spec.tokenEndpoint!,
-        scopes: spec.scopes,
-        resource: spec.serverUrl,
-      },
-      { openExternal: this.options.openExternal, fetch: this.fetchFn },
-    );
+    let tokens: OAuthTokens;
+    try {
+      tokens = await this.authorizeFn(
+        {
+          clientId: spec.clientId!,
+          authorizationEndpoint: spec.authorizationEndpoint!,
+          tokenEndpoint: spec.tokenEndpoint!,
+          scopes: spec.scopes,
+          resource: spec.serverUrl,
+        },
+        { openExternal: this.options.openExternal, fetch: this.fetchFn },
+      );
+    } catch (error) {
+      throw new OAuthStageError("authorization", error);
+    }
     return {
       secret: this.secretFromTokens(tokens, {
         clientId: spec.clientId,
@@ -454,12 +558,14 @@ export class McpOAuthService {
       return this.fetchFn(url, init);
     }) as typeof fetch;
     let callbackTimeout: ReturnType<typeof setTimeout> | undefined;
+    let stage: OAuthFailureStage = "discovery_registration";
     try {
       const first = await auth(provider, {
         serverUrl: spec.serverUrl,
         fetchFn: safeFetch as never,
       });
       if (first !== "REDIRECT") throw new Error("OAuth discovery did not start authorization");
+      stage = "authorization_callback";
       const authorizationCode = await Promise.race([
         callback.code,
         new Promise<never>((_resolve, reject) => {
@@ -469,11 +575,14 @@ export class McpOAuthService {
           );
         }),
       ]);
+      stage = "token_exchange";
       await auth(provider, {
         serverUrl: spec.serverUrl,
         authorizationCode,
         fetchFn: safeFetch as never,
       });
+    } catch (error) {
+      throw new OAuthStageError(stage, error);
     } finally {
       if (callbackTimeout) clearTimeout(callbackTimeout);
       callback.close();
