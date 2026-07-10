@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Goal 持久化 · 最终技术方案</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --line:#2a3341;
+    --ink:#e6edf3; --dim:#9aa7b5; --faint:#6b7684;
+    --accent:#4493f8; --green:#3fb950; --amber:#d29922; --red:#f85149;
+    --purple:#bc8cff; --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB",sans-serif;
+    line-height:1.65;font-size:15px}
+  .wrap{max-width:1180px;margin:0 auto;padding:48px 28px 120px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.5px}
+  h2{font-size:21px;margin:52px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:10px}
+  h2 .n{display:inline-flex;width:26px;height:26px;border-radius:7px;background:var(--accent);
+    color:#04122b;font-size:14px;font-weight:700;align-items:center;justify-content:center}
+  h3{font-size:16px;margin:26px 0 10px;color:var(--ink)}
+  p{margin:10px 0;color:var(--ink)}
+  .sub{color:var(--dim);font-size:14px}
+  .lead{color:var(--dim);font-size:15.5px;max-width:820px}
+  code{font-family:var(--mono);font-size:.88em;background:#20262e;padding:2px 6px;border-radius:5px;color:#c9d5e1}
+  .grid{display:grid;gap:16px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:820px){.g2,.g3{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+  .card h3{margin-top:0}
+  .tag{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:20px;
+    letter-spacing:.3px;vertical-align:middle}
+  .t-green{background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.35)}
+  .t-red{background:rgba(248,81,73,.13);color:var(--red);border:1px solid rgba(248,81,73,.32)}
+  .t-amber{background:rgba(210,153,34,.14);color:var(--amber);border:1px solid rgba(210,153,34,.34)}
+  .t-blue{background:rgba(68,147,248,.14);color:var(--accent);border:1px solid rgba(68,147,248,.34)}
+  .t-purple{background:rgba(188,140,255,.14);color:var(--purple);border:1px solid rgba(188,140,255,.34)}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--dim);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.4px}
+  tr:hover td{background:rgba(255,255,255,.015)}
+  .kbd{font-family:var(--mono);font-size:12.5px;color:var(--purple)}
+  pre{background:#0a0e13;border:1px solid var(--line);border-radius:10px;padding:16px 18px;
+    overflow:auto;font-family:var(--mono);font-size:12.8px;line-height:1.6;color:#c9d5e1}
+  .hero{background:linear-gradient(135deg,#161b22,#12181f);border:1px solid var(--line);
+    border-radius:16px;padding:26px 28px;margin:22px 0}
+  .verdict{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px}
+  .verdict .pill{background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+    padding:12px 16px;flex:1;min-width:200px}
+  .verdict .pill b{display:block;font-size:13px;color:var(--dim);font-weight:600;margin-bottom:4px}
+  .flow{display:flex;flex-direction:column;gap:8px;font-family:var(--mono);font-size:12.5px}
+  .flow .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .node{padding:5px 11px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);white-space:nowrap}
+  .node.active{border-color:var(--green);color:var(--green)}
+  .node.waiting{border-color:var(--amber);color:var(--amber)}
+  .node.terminal{border-color:var(--red);color:var(--red)}
+  .arrow{color:var(--faint)}
+  .arrow b{color:var(--accent);font-weight:500}
+  ul.clean{margin:8px 0;padding-left:20px}
+  ul.clean li{margin:6px 0}
+  .step{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
+  .step:last-child{border-bottom:none}
+  .step .idx{flex:0 0 34px;height:34px;border-radius:9px;background:var(--panel2);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);font-family:var(--mono)}
+  .step .body{flex:1}
+  .step .body b{font-size:14.5px}
+  .step .r{color:var(--red)} .step .g{color:var(--green)}
+  .banner{border-radius:12px;padding:16px 20px;margin:16px 0;border:1px solid}
+  .banner.ok{background:rgba(63,185,80,.08);border-color:rgba(63,185,80,.3)}
+  .banner.warn{background:rgba(210,153,34,.08);border-color:rgba(210,153,34,.3)}
+  .toc{position:sticky;top:0;background:rgba(13,17,23,.92);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);margin:-48px -28px 24px;padding:12px 28px;z-index:10;
+    display:flex;gap:18px;flex-wrap:wrap;font-size:13px}
+  .toc a{color:var(--dim);text-decoration:none}
+  .toc a:hover{color:var(--accent)}
+  .muted{color:var(--faint);font-size:12.5px}
+  .del{color:var(--red)} .add{color:var(--green)}
+  .src{font-size:12px;color:var(--faint);font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="toc">
+    <a href="#tldr">结论</a>
+    <a href="#who">谁来做</a>
+    <a href="#bench">三家对比</a>
+    <a href="#now">当前现状</a>
+    <a href="#model">数据模型</a>
+    <a href="#fsm">状态机</a>
+    <a href="#api">领域更新 API</a>
+    <a href="#tdd">TDD 8 步</a>
+    <a href="#diff">改/删清单</a>
+    <a href="#gate">完成门槛</a>
+  </nav>
+
+  <h1>Goal 持久化 · 最终技术方案</h1>
+  <p class="lead">修一个「goal 已结束却在唤醒时反复冒提示」的 bug，前三轮越修越复杂（CAS / 跨进程锁 / watermark / 双 sidecar），每轮复核都生新 blocker。本方案<b>止损回到简洁形态</b>，参考 Codex CLI / Claude Code / OpenCode 三家真实做法定案。基线 <code>c3e9020b</code>。</p>
+
+  <!-- ============ TLDR ============ -->
+  <section id="tldr">
+    <div class="hero">
+      <span class="tag t-blue">核心结论</span>
+      <h3 style="margin:10px 0 4px">一个 <code>state.json.goalLifecycle</code> 状态字段搞定，不造任何并发协议</h3>
+      <p class="sub">每个 session 只有一个 goal 权威来源：带 <code>version</code> 和不可变 <code>goalId</code> 的判别联合 <span class="kbd">active | waiting | terminal</span>。所有变更走「读最新 state → 只改本领域字段 → tmp+rename」。<b>删掉</b> 双字段 <code>activeGoal+goalTerminal</code>、<code>objective+setAtMs</code> 脆弱 identity、whole-state tombstone merge。<b>不引入</b> revision / CAS / watermark / 锁 / sidecar / journal。</p>
+      <div class="verdict">
+        <div class="pill"><b>要不要回退</b>那套复杂机制 <span class="tag t-green">已确认没进 main</span><br><span class="muted">main 是干净的单 tombstone 版，复杂协议只活在被否决的实验 diff 里</span></div>
+        <div class="pill"><b>并发契约</b><br>同 session 多进程并发写 = <span class="del">明确不支持</span>（本地单用户可接受）</div>
+        <div class="pill"><b>复杂度</b><br>三处持久化真相 + 自研文件协议 → <span class="add">一次 state.json 原子状态转换</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WHO / MODEL ============ -->
+  <h2 id="who"><span class="n">M</span>用什么模型、怎么做</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3>执行角色分工</h3>
+      <table>
+        <tr><th>环节</th><th>由谁</th><th>为什么</th></tr>
+        <tr><td>写方案 / 调研</td><td><span class="tag t-purple">Codex</span></td><td>已完成本文；额度充裕、擅长长任务</td></tr>
+        <tr><td>TDD 实现（8 步）</td><td><span class="tag t-purple">Codex</span></td><td>你定的：确认后让 codex TDD 执行</td></tr>
+        <tr><td>独立复核</td><td><span class="tag t-blue">另开 Codex / CC</span></td><td>换新 session 当陌生代码审，避免自证</td></tr>
+        <tr><td>编排 / 合并 / QA</td><td>本机主 Agent（我）</td><td>跑合并后全量回归、把关不并发撞文件</td></tr>
+      </table>
+      <p class="muted">调用方式：<code>DriveAgent(cli:codex, permissionMode:bypassPermissions)</code> 后台派发，完成自动唤醒。</p>
+    </div>
+    <div class="card">
+      <h3>怎么做（防再翻车的三条铁律）</h3>
+      <ul class="clean">
+        <li><b>独立 worktree 实现</b>：从 <code>c3e9020b</code> 切干净 worktree，codex 在里面走 TDD，不动你 main 工作区。</li>
+        <li><b>绝不并发改同一批 goal 文件</b>：实现期只跑这一个写手；复核只读 + 写独立报告。（踩过的坑：夜间任务并发→UU 冲突）</li>
+        <li><b>红→绿→回归</b>：每步先写失败测试再实现；收尾跑 goal 定向套件 + <code>bun test packages/core</code> 全绿再合。</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============ BENCH ============ -->
+  <h2 id="bench"><span class="n">1</span>三家 harness 怎么持久化（定案依据）</h2>
+  <div class="banner warn">
+    <b>原命题被推翻：</b>「大家都单文件、没人用 sequence/锁」不成立。真实共识更窄也更可靠 →
+    <b>简单路径单 writer 顺序追加；真需要并发就直接用 SQLite 事务；没有任何一家为「单个 goal」自造 lock+CAS+watermark+journal 多文件协议。</b>
+  </div>
+  <table>
+    <tr><th>Harness</th><th>存储形态</th><th>并发控制</th><th>生命周期表达</th></tr>
+    <tr>
+      <td><b>OpenAI Codex</b><br><span class="src">@1f0566d3</span></td>
+      <td>canonical = 每 thread 一份 rollout <code>.jsonl</code>；另有 <code>state_5.sqlite</code> 存 metadata，goal 在 <code>goals_1.sqlite</code> 单行</td>
+      <td>同进程每 thread 一个 live recorder，单 writer task 串行；SQLite WAL；goal 更新可带 <code>expected_goal_id</code> 条件。<span class="muted">无单调 revision/watermark</span></td>
+      <td>goal row 有 <code>goal_id</code> + <code>active/paused/blocked/usage_limited/budget_limited/complete</code></td>
+    </tr>
+    <tr>
+      <td><b>Claude Code</b><br><span class="src">官方文档</span></td>
+      <td>每 session 一份 <code>.jsonl</code>，一行一 message/tool/metadata，持续追加</td>
+      <td>同 session 两 terminal resume 会<b>交错</b>进同一 transcript（无 single-owner 拒绝）。文件锁/fsync <span class="muted">未证实</span></td>
+      <td>UUID parent chain；无独立「长任务状态表」<span class="muted">（未证实）</span></td>
+    </tr>
+    <tr>
+      <td><b>OpenCode</b><br><span class="src">@v1.17.18</span></td>
+      <td>全放 <code>opencode.db</code>（SQLite + Drizzle），session/message/event/sequence 都是表</td>
+      <td>SQLite WAL + <code>busy_timeout=5000</code>；durable event 在 <code>BEGIN IMMEDIATE</code> 事务里分配 aggregate seq + owner 校验</td>
+      <td>event 带 <code>{aggregateID,seq,version}</code>；tool state 判别联合 <code>pending/running/completed/error</code></td>
+    </tr>
+  </table>
+  <div class="card">
+    <h3>可迁移到 CodeShell 的窄共识 → 本项目决策</h3>
+    <table>
+      <tr><th>观察</th><th>决策</th></tr>
+      <tr><td>会话历史适合 append log；小状态适合 snapshot</td><td>保持 <code>transcript.jsonl + state.json</code> 分工，goal 只进 snapshot</td></tr>
+      <tr><td>防旧回调误伤新任务要 stable identity</td><td>加随机不可变 <code>goalId</code>，<code>setAtMs</code> 只做 deadline anchor</td></tr>
+      <tr><td>生命周期要显式表达，不靠「字段存在」猜</td><td>一个 <code>goalLifecycle</code> 判别联合</td></tr>
+      <tr><td>真多 writer 一致性交给 SQLite/事务</td><td>本轮不做多进程写；未来要就整体迁 SQLite，<b>不</b>逐个补回 goal 层协议</td></tr>
+    </table>
+  </div>
+
+  <!-- ============ NOW ============ -->
+  <h2 id="now"><span class="n">2</span>当前 main 现状（起点）</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3><span class="tag t-green">好消息</span> 复杂机制没进 main</h3>
+      <p class="sub">对 <code>packages/core/src</code> 精确搜索，当前 HEAD <b>没有</b>：</p>
+      <ul class="clean sub">
+        <li>❌ goalRevision / revision allocator</li>
+        <li>❌ CAS / expected revision</li>
+        <li>❌ goalTerminalWatermark</li>
+        <li>❌ goal lockfile / lease</li>
+        <li>❌ goal-lifecycle.json / goal-terminals/ journal</li>
+        <li>❌ legacy hash bridge / terminal 历史数组</li>
+      </ul>
+      <p class="muted">→ 重实现不是「拆一套已合入的复杂协议」，而是「替换干净但表达力不足的单 tombstone + 收紧写入边界」。</p>
+    </div>
+    <div class="card">
+      <h3><span class="tag t-amber">待清债务</span> 干净但不够好</h3>
+      <ul class="clean sub">
+        <li>双字段 <code>activeGoal?</code> + <code>goalTerminal?</code> 分开存 <span class="src">types.ts:229-305</span></li>
+        <li>identity 靠 <code>objective + setAtMs</code>（脆弱）<span class="src">goal.ts:52-76</span></li>
+        <li>通用 whole-state <code>saveState</code> 承担特殊 tombstone merge <span class="src">session-manager.ts:502-533</span></li>
+        <li>title 是 fire-and-forget，延迟回调改整份 <code>session.state</code> 再保存 → 进程内 stale writeback 真实来源 <span class="src">engine.ts:2263-2294</span></li>
+      </ul>
+      <p class="muted">forced termination 清 goal、waiting 不清、arm guard —— 这些行为<b>已正确</b>，是必保留绿线。</p>
+    </div>
+  </div>
+
+  <!-- ============ MODEL ============ -->
+  <h2 id="model"><span class="n">3</span>推荐数据模型</h2>
+  <pre><span class="add">// 唯一权威字段，替换 activeGoal + goalTerminal</span>
+type GoalTerminalReason =
+  | "judge_met" | "complete_goal" | "cancel_goal" | "user_cleared"
+  | "stop_blocks_exhausted" | "token_budget_exhausted"
+  | "time_budget_exhausted" | "max_turns_exhausted";
+
+type GoalLifecycleV1 =
+  | { version:1; goalId:string; phase:<span style="color:var(--green)">"active"</span>;   config:GoalConfig; updatedAtMs:number }
+  | { version:1; goalId:string; phase:<span style="color:var(--amber)">"waiting"</span>;  config:GoalConfig; updatedAtMs:number;
+      waitingSinceMs:number; waitingFor:"finite_background_work" }
+  | { version:1; goalId:string; phase:<span style="color:var(--red)">"terminal"</span>; config:GoalConfig; updatedAtMs:number;
+      terminal:{ reason:GoalTerminalReason; atMs:number } };
+
+interface SessionState {
+  goalLifecycle?: GoalLifecycleV1;          <span class="add">// 新写只输出这个</span>
+  activeGoal?: GoalConfig;                  <span class="del">// 仅 legacy 迁移期 decode，新 writer 不再输出</span>
+  goalTerminal?: GoalTerminal;              <span class="del">// 同上</span>
+}</pre>
+  <div class="card">
+    <h3>关键不变量</h3>
+    <ul class="clean sub">
+      <li><b>唯一权威</b>：goal 状态只看 <code>goalLifecycle</code>，禁止从其他字段/session status 拼。</li>
+      <li><b>ID 即身份</b>：每次显式 set/restart 都新建 <code>goalId</code>（含 same-objective 改预算）；A/B 是否同一只看 ID。</li>
+      <li><b>可 arm 集</b>：<span class="tag t-green">active</span> 与 <span class="tag t-amber">waiting</span> 可进下一 run；<span class="tag t-red">terminal</span> 永不自动 arm。</li>
+      <li><b>正交</b>：<code>status=completed</code> / manual stop 都<b>不能</b>推导 terminal。</li>
+      <li><b>fail-closed</b>：未知 version / 非法 phase → 不 arm、不覆写原文件、报可诊断错误。</li>
+    </ul>
+  </div>
+
+  <!-- ============ FSM ============ -->
+  <h2 id="fsm"><span class="n">4</span>生命周期状态机</h2>
+  <div class="card">
+    <div class="flow">
+      <div class="row"><span class="node">none / terminal</span><span class="arrow">—— explicit set <b>(新 goalId)</b> ——▶</span><span class="node active">active</span></div>
+      <div class="row"><span class="node active">active</span><span class="arrow">—— 有限后台任务让出 ——▶</span><span class="node waiting">waiting</span></div>
+      <div class="row"><span class="node waiting">waiting</span><span class="arrow">—— 后台唤醒 / bare send ——▶</span><span class="node active">active <span class="muted">(同 goalId)</span></span></div>
+      <div class="row"><span class="node active">active/waiting</span><span class="arrow">—— judge met / complete / confirmed cancel / user clear ——▶</span><span class="node terminal">terminal</span></div>
+      <div class="row"><span class="node active">active</span><span class="arrow">—— forced stop <b>(4 种)</b> ——▶</span><span class="node terminal">terminal</span></div>
+      <div class="row"><span class="node active">active</span><span class="arrow">—— manual Stop / aborted_streaming ——▶</span><span class="node active">active <span class="muted">(不转移)</span></span></div>
+      <div class="row"><span class="node terminal">terminal</span><span class="arrow">—— bare send / resume / 通知唤醒 ——▶</span><span class="node terminal">terminal <span class="muted">(不 arm)</span></span></div>
+    </div>
+  </div>
+  <p class="muted">最后一行就是原 bug 的正解：terminal goal 被唤醒时<b>保持 terminal、不重新 arm</b>，round 不再从 1 重来。</p>
+
+  <!-- ============ API ============ -->
+  <h2 id="api"><span class="n">5</span>SessionManager 领域更新 API</h2>
+  <p class="sub">私有同步原语 <code>updateState(sid, mutator)</code>：读最新 → 严格 decode/迁移 → <b>只改本领域字段</b> → 同目录写 tmp → rename。同进程 read/rename 之间不跨 <code>await</code>，天然串行。<b>不是</b>跨进程 CAS，不接受 expected revision。</p>
+  <table>
+    <tr><th>API</th><th>可改字段</th><th>条件 / 返回</th></tr>
+    <tr><td class="kbd">setGoal</td><td>goalLifecycle</td><td>总是生成新 goalId，返回 committed active record</td></tr>
+    <tr><td class="kbd">markGoalWaiting(expectedGoalId)</td><td>goalLifecycle</td><td>ID 匹配且 active 才转 waiting，否则 no-op</td></tr>
+    <tr><td class="kbd">armGoal(expectedGoalId)</td><td>goalLifecycle</td><td>waiting→active；active 幂等；terminal/no-match 不 arm</td></tr>
+    <tr><td class="kbd">terminateGoal(expectedGoalId, reason)</td><td>goalLifecycle</td><td>ID 匹配且 armable 才转 terminal；幂等</td></tr>
+    <tr><td class="kbd">clearCurrentGoal</td><td>goalLifecycle</td><td>armable→terminal(user_cleared)；terminal/无 goal 返回 false</td></tr>
+    <tr><td class="kbd">readArmableGoal</td><td>—</td><td>active/waiting 返回 view；terminal/none/invalid 返回无</td></tr>
+    <tr><td class="kbd">updateRunProgress / completeRun</td><td>status/usage/turn/cost</td><td><b>不</b>携带 goal/title/workspace 旧值</td></tr>
+    <tr><td class="kbd">setTitle / setWorkspace / resetUsage</td><td>各自单领域</td><td>fire-and-forget title 只能 setTitle，不覆盖 goal</td></tr>
+  </table>
+  <div class="banner ok"><b>消除 stale writeback：</b>运行期业务代码<b>禁止</b>再把整份 <code>SessionState</code> 传给 public whole-state <code>saveState</code>。<code>expectedGoalId</code> 是进程内延迟回调的 identity guard —— 旧 run 的 A 回调若 ID 不匹配当前 B，transition 直接 no-op，改不动 B。</div>
+
+  <!-- ============ TDD ============ -->
+  <h2 id="tdd"><span class="n">6</span>TDD 实现计划（8 步 · red→green）</h2>
+  <div class="card">
+    <div class="step"><div class="idx">1</div><div class="body"><b>lifecycle 类型 + 严格 decoder</b><br><span class="r">红</span>：unknown version / 非法 phase fail-closed 测试　<span class="g">绿</span>：定义 <code>GoalLifecycleV1</code> + decode/normalize</div></div>
+    <div class="step"><div class="idx">2</div><div class="body"><b>旧 state 一次性迁移</b><br><span class="r">红</span>：raw legacy fixtures（只有 activeGoal / 带 goalTerminal / 都没有）resume 不崩　<span class="g">绿</span>：迁移映射，迁后只认 goalId</div></div>
+    <div class="step"><div class="idx">3</div><div class="body"><b>updateState 原子原语 + 领域 API</b><br><span class="r">红</span>：state-domain-update permutation（title/usage/goal 互不覆盖）　<span class="g">绿</span>：tmp+rename、字段级更新</div></div>
+    <div class="step"><div class="idx">4</div><div class="body"><b>goal transition（set/wait/arm/terminate/clear）</b><br><span class="r">红</span>：状态机迁移矩阵 + 幂等　<span class="g">绿</span>：lifecycle transitions，删 tombstone merge</div></div>
+    <div class="step"><div class="idx">5</div><div class="body"><b>Engine 单一入口 + commit-before-event</b><br><span class="r">红</span>：注入 commit 失败断言无 <code>goal_set</code> 事件　<span class="g">绿</span>：Engine set/arm/wait/terminal 走 API，先提交再发事件</div></div>
+    <div class="step"><div class="idx">6</div><div class="body"><b>四类 forced termination + waiting</b><br><span class="r">红</span>：stop-block/token/time/max-turns 终结即无 armable；真实后台任务 waiting 不清　<span class="g">绿</span>：TurnLoop 统一 outcome，移除持久化 callback</div></div>
+    <div class="step"><div class="idx">7</div><div class="body"><b>host 恢复链路（protocol/desktop）</b><br><span class="r">红</span>：disk-only get、幂等 clear、通知唤醒只醒 waiting 一次、terminal 不 re-arm、worker restart 恢复　<span class="g">绿</span>：外部 RPC shape 不变，内部切 lifecycle API</div></div>
+    <div class="step"><div class="idx">8</div><div class="body"><b>守卫测试驱动删旧机制</b><br><span class="r">红</span>：源码 guard（禁 whole-state save / 新写不含 activeGoal / 无 revision-CAS-watermark-lock-sidecar）　<span class="g">绿</span>：删 GoalTerminal、isSameGoalInstance、newestGoalTerminal、direct mutations</div></div>
+  </div>
+
+  <!-- ============ DIFF ============ -->
+  <h2 id="diff"><span class="n">7</span>改 / 删清单</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3>必改源码</h3>
+      <table>
+        <tr><th>文件</th><th>变化</th></tr>
+        <tr><td class="src">types.ts</td><td>goalLifecycle 权威；legacy 仅迁移期</td></tr>
+        <tr><td class="src">engine/goal.ts</td><td>lifecycle/reason/armable/ID helpers</td></tr>
+        <tr><td class="src">session-manager.ts</td><td>领域更新 + 原子迁移 + transitions</td></tr>
+        <tr><td class="src">engine/engine.ts</td><td>单一入口，全 whole-state save 改领域更新</td></tr>
+        <tr><td class="src">engine/turn-loop.ts</td><td>统一 waiting/terminal outcome，去持久化回调</td></tr>
+        <tr><td class="src">hooks/goal-stop-hook.ts</td><td>返回 outcome，不直接写盘</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>相对 main 要删除</h3>
+      <ul class="clean sub">
+        <li class="del">activeGoal / goalTerminal 的新写路径</li>
+        <li class="del">GoalTerminal 类型、isSameGoalInstance、newestGoalTerminal</li>
+        <li class="del">saveState 里 goal tombstone 的 read/merge/write 特判</li>
+        <li class="del">Engine 里所有 <code>session.state.activeGoal = ...</code> 直接赋值</li>
+        <li class="del">以「最后 tombstone / 同毫秒 setAtMs+1」为中心的 guard</li>
+        <li class="del">过时 tombstone 测试与注释</li>
+      </ul>
+      <p class="muted">当前 main 无 sidecar/lock/journal 实现文件可删——那些只存在于被否决的实验 diff。</p>
+    </div>
+  </div>
+
+  <!-- ============ GATE ============ -->
+  <h2 id="gate"><span class="n">8</span>完成门槛（全满足才合入）</h2>
+  <div class="card">
+    <ul class="clean">
+      <li>✅ 8 个 TDD 步骤逐步完成</li>
+      <li>✅ 必保留行为回归矩阵全绿（4 类 forced termination / waiting 不误清 / terminal arm guard / 旧 state 不崩 / A 不清 B / commit-before-event …）</li>
+      <li>✅ runtime 不再有 public whole-state save</li>
+      <li>✅ 新 state 只写 <code>goalLifecycle</code>，旧 state 可一次性迁移</li>
+      <li>✅ 无 revision / CAS / watermark / goal lock / sidecar / journal</li>
+      <li>✅ 同 sid 多进程写在契约中明确为 unsupported</li>
+      <li>✅ goal 定向套件 + <code>bun test packages/core</code> 通过</li>
+      <li>✅ 未碰任何 view_image / image-history 文件</li>
+    </ul>
+  </div>
+
+  <p class="muted" style="margin-top:40px">来源：<code>docs/refactor/goal-persistence-final-design.md</code>（Codex 调研，2026-07-10，基线 c3e9020b）。本页仅可视化，不含实现代码。</p>
+
+</div>
+</body>
+</html>
