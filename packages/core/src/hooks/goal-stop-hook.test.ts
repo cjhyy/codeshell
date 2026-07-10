@@ -826,6 +826,74 @@ describe("createGoalStopHook — three-state judge", () => {
     expect(evidence).toContain("[文本已省略]");
   });
 
+  it("protects the latest successful verification from older error bodies", async () => {
+    const evidence = await renderToolEvidence(
+      [
+        ...Array.from({ length: 7 }, (_, index) => ({
+          turnCount: 1,
+          toolName: `OldFailure${index + 1}`,
+          status: "error" as const,
+          text: `OLD-ERROR-${index + 1} release verification failed ${"E".repeat(1_500)}`,
+        })),
+        {
+          turnCount: 2,
+          toolName: "RunAcceptanceTests",
+          status: "success" as const,
+          text: `LATEST-ACCEPTANCE-SUCCEEDED ${"S".repeat(1_500)}`,
+        },
+      ],
+      "complete the release verification",
+    );
+
+    expect(evidence).toContain("LATEST-ACCEPTANCE-SUCCEEDED");
+    expect(evidence).toContain("[RunAcceptanceTests] success");
+    expect(evidence).toContain("OLD-ERROR-");
+    expect(evidence).toContain("error");
+    expect(JSON.stringify(evidence).length).toBeLessThanOrEqual(8_000);
+  });
+
+  it("renders a small evidence set in chronological order without changing content", async () => {
+    const evidence = await renderToolEvidence([
+      { turnCount: 1, toolName: "Inspect", status: "success", text: "found the target" },
+      { turnCount: 2, toolName: "Build", status: "error", text: "compile failed" },
+      { turnCount: 3, toolName: "Verify", status: "success", text: "checks passed" },
+    ]);
+
+    expect(evidence).toBe(
+      [
+        "- turn 1 [Inspect] success\nfound the target",
+        "- turn 2 [Build] error\ncompile failed",
+        "- turn 3 [Verify] success\nchecks passed",
+      ].join("\n\n"),
+    );
+  });
+
+  it("renders large item counts with near-linear scaling", async () => {
+    const batch = (count: number): GoalJudgeToolResult[] =>
+      Array.from({ length: count }, (_, index) => ({
+        turnCount: 1,
+        toolName: `BulkTool${index}`,
+        status: index % 5 === 0 ? ("error" as const) : ("success" as const),
+        text: `BULK-${index} ${String(index % 10).repeat(1_500)}`,
+      }));
+    const medianMs = async (count: number): Promise<number> => {
+      const samples: number[] = [];
+      const items = batch(count);
+      for (let iteration = 0; iteration < 3; iteration++) {
+        const startedAt = performance.now();
+        await renderToolEvidence(items);
+        samples.push(performance.now() - startedAt);
+      }
+      return samples.sort((a, b) => a - b)[1]!;
+    };
+
+    await renderToolEvidence(batch(100));
+    const ms800 = await medianMs(800);
+    const ms1600 = await medianMs(1_600);
+
+    expect(ms1600).toBeLessThan(ms800 * 3);
+  });
+
   it("skips an oversized block and still selects an earlier small block", async () => {
     const evidence = await renderToolEvidence([
       { turnCount: 1, toolName: "EarlyStatus", status: "success", text: "EARLY-SMALL-FACT" },
