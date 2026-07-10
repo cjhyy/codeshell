@@ -1,7 +1,8 @@
-import { spawn } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import type { AgentAdapter, BuildArgsOpts, PermissionMode } from "./agent-adapter.js";
 import { pathWithCommonBins } from "./cc-capability.js";
+import { killProcessGroup } from "../runtime/spawn-common.js";
 
 export interface AgentRunResult {
   sessionId: string;
@@ -26,11 +27,130 @@ export interface DriverRunOpts extends Omit<BuildArgsOpts, "permissionMode"> {
 }
 
 const codexImageFlagCache = new Map<string, Promise<boolean>>();
+const CODEX_IMAGE_PROBE_TIMEOUT_MS = 5_000;
+const AGENT_TERMINATE_GRACE_MS = 500;
 
-export function detectCodexImageInput(command: string, cwd: string): Promise<boolean> {
-  const cached = codexImageFlagCache.get(command);
-  if (cached) return cached;
-  const probe = new Promise<boolean>((resolve) => {
+function listPosixProcessTree(rootPid: number): Promise<number[]> {
+  return new Promise((resolve) => {
+    execFile("ps", ["-axo", "pid=,ppid="], { encoding: "utf8" }, (err, stdout) => {
+      if (err) {
+        resolve([rootPid]);
+        return;
+      }
+      const childrenByParent = new Map<number, number[]>();
+      for (const line of stdout.split("\n")) {
+        const [pidText, parentText] = line.trim().split(/\s+/, 2);
+        const pid = Number(pidText);
+        const parentPid = Number(parentText);
+        if (!Number.isInteger(pid) || !Number.isInteger(parentPid)) continue;
+        const children = childrenByParent.get(parentPid) ?? [];
+        children.push(pid);
+        childrenByParent.set(parentPid, children);
+      }
+      const pids: number[] = [];
+      const visit = (pid: number) => {
+        if (pids.includes(pid)) return;
+        pids.push(pid);
+        for (const childPid of childrenByParent.get(pid) ?? []) visit(childPid);
+      };
+      visit(rootPid);
+      resolve(pids);
+    });
+  });
+}
+
+function isPidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForPidsToExit(pids: Set<number>, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while ([...pids].some(isPidAlive)) {
+    if (Date.now() >= deadline) return false;
+    await delay(25);
+  }
+  return true;
+}
+
+function signalPids(pids: Set<number>, killSignal: NodeJS.Signals): void {
+  for (const pid of pids) {
+    try {
+      process.kill(pid, killSignal);
+    } catch {
+      // already gone
+    }
+  }
+}
+
+async function terminateAttachedProcessTree(child: {
+  pid?: number;
+  kill: (signal?: NodeJS.Signals) => boolean;
+}): Promise<void> {
+  const pid = child.pid;
+  if (!pid) {
+    try {
+      child.kill("SIGKILL");
+    } catch {
+      // already gone
+    }
+    return;
+  }
+  if (process.platform === "win32") {
+    // Windows has no POSIX SIGTERM semantics or negative-pid groups. Reap the
+    // tree via taskkill, then use positive-pid process.kill as the fallback the
+    // platform supports when taskkill is unavailable/races.
+    await killProcessGroup(pid, { graceMs: AGENT_TERMINATE_GRACE_MS });
+    if (isPidAlive(pid)) {
+      try {
+        process.kill(pid);
+      } catch {
+        // already gone
+      }
+    }
+    return;
+  }
+
+  const trackedPids = new Set(await listPosixProcessTree(pid));
+  signalPids(trackedPids, "SIGTERM");
+  if (await waitForPidsToExit(trackedPids, AGENT_TERMINATE_GRACE_MS)) return;
+
+  // Capture descendants created during the grace window while the leader is
+  // still addressable, but retain the first snapshot so reparented stubborn
+  // descendants cannot disappear from the escalation set.
+  for (const treePid of await listPosixProcessTree(pid)) trackedPids.add(treePid);
+  signalPids(trackedPids, "SIGKILL");
+  await waitForPidsToExit(trackedPids, 1_000);
+}
+
+function abortError(): Error {
+  const err = new Error("Agent run aborted");
+  err.name = "AbortError";
+  return err;
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) throw abortError();
+}
+
+function createCodexImageProbe(
+  command: string,
+  cwd: string,
+  signal?: AbortSignal,
+): Promise<boolean> {
+  return new Promise<boolean>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(abortError());
+      return;
+    }
     const child = spawn(command, ["exec", "--help"], {
       cwd,
       env: { ...process.env, PATH: pathWithCommonBins() },
@@ -39,29 +159,61 @@ export function detectCodexImageInput(command: string, cwd: string): Promise<boo
     });
     let out = "";
     let settled = false;
+    let terminating = false;
+    const cleanup = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+    };
     const done = (value: boolean) => {
       if (settled) return;
       settled = true;
-      clearTimeout(timer);
+      cleanup();
       resolve(value);
     };
+    const fail = (err: unknown) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(err);
+    };
+    const onAbort = () => {
+      if (settled || terminating) return;
+      terminating = true;
+      cleanup();
+      void terminateAttachedProcessTree(child).then(() => fail(abortError()));
+    };
     const timer = setTimeout(() => {
-      try {
-        child.kill("SIGTERM");
-      } catch {
-        // already gone
-      }
-      done(false);
-    }, 2_000);
+      if (settled || terminating) return;
+      terminating = true;
+      cleanup();
+      void terminateAttachedProcessTree(child).then(() => done(false));
+    }, CODEX_IMAGE_PROBE_TIMEOUT_MS);
+    signal?.addEventListener("abort", onAbort, { once: true });
+    if (signal?.aborted) onAbort();
     child.stdout?.on("data", (chunk: Buffer) => {
       out += chunk.toString("utf8");
     });
     child.stderr?.on("data", (chunk: Buffer) => {
       out += chunk.toString("utf8");
     });
-    child.on("error", () => done(false));
-    child.on("exit", () => done(/(?:^|\s)-i(?:,|\s)|--image\b/.test(out)));
+    child.on("error", () => {
+      if (!terminating) done(false);
+    });
+    child.on("exit", () => {
+      if (!terminating) done(/(?:^|\s)-i(?:,|\s)|--image\b/.test(out));
+    });
   });
+}
+
+export function detectCodexImageInput(
+  command: string,
+  cwd: string,
+  signal?: AbortSignal,
+): Promise<boolean> {
+  if (signal) return createCodexImageProbe(command, cwd, signal);
+  const cached = codexImageFlagCache.get(command);
+  if (cached) return cached;
+  const probe = createCodexImageProbe(command, cwd);
   codexImageFlagCache.set(command, probe);
   return probe;
 }
@@ -75,10 +227,15 @@ export function runAgentOnce(
 ): Promise<AgentRunResult> {
   return new Promise((resolve, reject) => {
     void (async () => {
+      throwIfAborted(signal);
       const codexImageInputSupported =
         adapter.kind === "codex" && (opts.imagePaths?.length ?? 0) > 0
-          ? await detectCodexImageInput(opts.command, opts.cwd).catch(() => false)
+          ? await detectCodexImageInput(opts.command, opts.cwd, signal).catch((err) => {
+              if (signal?.aborted || (err as Error)?.name === "AbortError") throw err;
+              return false;
+            })
           : false;
+      throwIfAborted(signal);
       const args = adapter.buildArgs({
         prompt: opts.prompt,
         resumeSessionId: opts.resumeSessionId,
@@ -88,6 +245,7 @@ export function runAgentOnce(
         imagePaths: opts.imagePaths,
         codexImageInputSupported,
       });
+      throwIfAborted(signal);
       // claude takes the prompt in argv (`-p <prompt>`) and wants stdin closed
       // (verified: avoids a 3s wait). codex `exec` reads the prompt from stdin
       // (argv ends with `-`), so adapters that set promptViaStdin get a piped
@@ -96,14 +254,25 @@ export function runAgentOnce(
       const child = spawn(opts.command, args, {
         cwd: opts.cwd,
         env: { ...process.env, PATH: pathWithCommonBins() },
-        // NOT detached: this child is owned by the (long-lived) worker that reads
-        // its stdout. Detaching orphaned it across a worker/app restart — the
-        // reader promise then never resolved and the completion notification never
-        // fired (the "后台任务没返回" bug). Bound to the worker, it lives or dies
-        // with the process that's actually listening for its result.
+        // Keep the agent in the owning worker/app process group. If that owner
+        // is force-terminated, the CLI and its descendants must not escape into
+        // a detached group that can keep editing the workspace unseen.
         detached: false,
         stdio: [viaStdin ? "pipe" : "ignore", "pipe", "pipe"],
       });
+      let settled = false;
+      let abortRequested = false;
+      let termination: Promise<void> | undefined;
+      const cleanup = () => {
+        signal?.removeEventListener("abort", onAbort);
+      };
+      const onAbort = () => {
+        if (abortRequested) return;
+        abortRequested = true;
+        termination = terminateAttachedProcessTree(child);
+      };
+      signal?.addEventListener("abort", onAbort, { once: true });
+      if (signal?.aborted) onAbort();
       if (viaStdin && child.stdin) {
         child.stdin.end(opts.prompt);
       }
@@ -112,19 +281,10 @@ export function runAgentOnce(
         const rl = createInterface({ input: child.stdout });
         rl.on("line", (line) => lines.push(line));
       }
-      // Not detached → no own process group, so kill the child directly (a
-      // negative-pid group kill would target the worker's group). claude has no
-      // long-lived child tree of its own here, so a direct SIGTERM is sufficient.
-      const onAbort = () => {
-        try {
-          child.kill("SIGTERM");
-        } catch {
-          /* already gone */
-        }
-      };
-      signal?.addEventListener("abort", onAbort, { once: true });
       child.on("error", (err) => {
-        signal?.removeEventListener("abort", onAbort);
+        if (settled) return;
+        settled = true;
+        cleanup();
         // A missing binary is the most common failure (user hasn't installed the
         // CLI, or GUI-launched Electron's PATH misses it). Turn the cryptic
         // "spawn codex ENOENT" into something actionable that names the command.
@@ -139,8 +299,12 @@ export function runAgentOnce(
         reject(err);
       });
       child.on("exit", (code) => {
-        signal?.removeEventListener("abort", onAbort);
-        resolve(runWithLines(adapter, lines, code));
+        if (settled) return;
+        settled = true;
+        cleanup();
+        void (termination ?? Promise.resolve()).then(() => {
+          resolve(runWithLines(adapter, lines, code));
+        });
       });
     })().catch(reject);
   });

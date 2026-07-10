@@ -3,7 +3,42 @@
  * - token/link 第一期已有;cookie 第二期改为「具名 cookie 凭证」进库
  *   (用户主动按域拓取存,支持同域多账号),见 credential-use-gate 设计稿。
  */
-export type CredentialType = "token" | "link" | "cookie";
+export type CredentialType = "token" | "link" | "cookie" | "oauth";
+
+export interface OAuthCredentialSecret {
+  /** Schema version for the JSON stored in Credential.secret. */
+  version?: 1;
+  /** Current access token. MCP HTTP auth sends this as Authorization: Bearer. */
+  accessToken: string;
+  /** Optional refresh token. Stored encrypted with the credential secret. */
+  refreshToken?: string;
+  /** ISO-8601 expiry time for accessToken. Missing means "unknown", not expired. */
+  expiresAt?: string;
+  /** Upstream token type, usually Bearer. Stored for round-trip/debugging. */
+  tokenType?: string;
+  /** Space-delimited OAuth scope string returned by many token endpoints. */
+  scope?: string;
+  /** Structured scopes used by first-party UI/catalog metadata. */
+  scopes?: string[];
+  /** Token endpoint to use when a future refresh flow is wired. */
+  tokenEndpoint?: string;
+  /** OAuth client id associated with this token. */
+  clientId?: string;
+  /** Optional confidential client secret, if the integration requires it. */
+  clientSecret?: string;
+}
+
+export interface OAuthCredentialPublicStatus {
+  state: "valid" | "expired" | "missing" | "invalid";
+  expiresAt?: string;
+  expiresInMs?: number;
+  hasRefreshToken?: boolean;
+  tokenEndpoint?: string;
+  clientId?: string;
+  scope?: string;
+  scopes?: string[];
+  error?: string;
+}
 
 export interface Credential {
   /**
@@ -20,6 +55,7 @@ export interface Credential {
    * 密文(UI 只显示掩码):
    * - token: token 值;
    * - link: client id/secret 等的 JSON 字符串;
+   * - oauth: OAuthCredentialSecret JSON 字符串(access/refresh/expiry/client info);
    * - cookie: 序列化的 cookie jar(JSON.stringify 的 ElectronCookieLike[])。
    */
   secret?: string;
@@ -49,6 +85,18 @@ export interface Credential {
     domain?: string;
     scope?: "domain" | "all";
     switchMode?: "clear" | "merge";
+    /** OAuth provider/integration id, e.g. "figma". */
+    oauthProvider?: string;
+    /** OAuth authorization endpoint, used by UI/login launchers. */
+    authUrl?: string;
+    /** OAuth token endpoint, duplicated from secret for non-secret UI display. */
+    tokenEndpoint?: string;
+    /** OAuth client id, duplicated from secret for non-secret UI display. */
+    clientId?: string;
+    /** OAuth scopes requested for this credential. */
+    scopes?: string[];
+    /** Last successful refresh time; refresh wiring is reserved for a later step. */
+    lastRefreshAt?: string;
   };
 }
 

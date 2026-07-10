@@ -9,9 +9,15 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
 import type { MCPServerConfig, RegisteredTool } from "../types.js";
+import type { CredentialType } from "../credentials/types.js";
 import { ToolRegistry } from "./registry.js";
 import { logger } from "../logging/logger.js";
 import { getCredentialAccess, type CredentialAccess } from "../credentials/access.js";
+import {
+  buildOAuthRefreshRequest,
+  oauthCredentialStatus,
+  parseOAuthCredentialSecret,
+} from "../credentials/oauth.js";
 import { ENV_ALLOWLIST } from "../runtime/spawn-common.js";
 import { mkdir, readdir, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -45,6 +51,19 @@ export function readRequiredEnv(serverName: string, field: string, envName: stri
     throw new Error(`MCP server "${serverName}": env var "${envName}" (from ${field}) is not set`);
   }
   return v;
+}
+
+export interface ResolvedMcpCredential {
+  secret: string;
+  type?: CredentialType;
+  label?: string;
+}
+
+export type HttpCredentialResolverResult = string | ResolvedMcpCredential | undefined;
+
+export interface BuildHttpHeadersOptions {
+  now?: () => number;
+  oauthRefreshSkewMs?: number;
 }
 
 /**
@@ -99,17 +118,23 @@ export function buildStdioEnv(
 export function buildHttpHeaders(
   serverName: string,
   config: MCPServerConfig,
-  resolveCredential?: (id: string) => string | undefined,
+  resolveCredential?: (id: string) => HttpCredentialResolverResult,
+  options: BuildHttpHeadersOptions = {},
 ): Record<string, string> {
   const headers: Record<string, string> = { ...(config.headers ?? {}) };
   if (config.credentialRef) {
-    const secret = resolveCredential?.(config.credentialRef);
-    if (secret === undefined || secret === "") {
+    const credential = normalizeResolvedMcpCredential(resolveCredential?.(config.credentialRef));
+    if (!credential || credential.secret === "") {
       throw new Error(
         `MCP server "${serverName}": credential "${config.credentialRef}" not found or empty`,
       );
     }
-    headers["Authorization"] = `Bearer ${secret}`;
+    headers["Authorization"] = `Bearer ${bearerTokenFromMcpCredential(
+      serverName,
+      config.credentialRef,
+      credential,
+      options,
+    )}`;
   } else if (config.bearerTokenEnvVar) {
     headers["Authorization"] = `Bearer ${readRequiredEnv(
       serverName,
@@ -123,15 +148,81 @@ export function buildHttpHeaders(
   return headers;
 }
 
+function normalizeResolvedMcpCredential(
+  value: HttpCredentialResolverResult,
+): ResolvedMcpCredential | undefined {
+  if (typeof value === "string") return { secret: value };
+  if (!value) return undefined;
+  return value;
+}
+
+export function bearerTokenFromMcpCredential(
+  serverName: string,
+  credentialId: string,
+  credential: ResolvedMcpCredential,
+  options: BuildHttpHeadersOptions = {},
+): string {
+  if (credential.type === undefined) return credential.secret;
+  if (credential.type !== "oauth") {
+    if (credential.type !== "token" && credential.type !== "link") {
+      throw new Error(
+        `MCP server "${serverName}": credential "${credentialId}" type "${credential.type}" cannot be used as a bearer token`,
+      );
+    }
+    try {
+      const parsed = JSON.parse(credential.secret);
+      if (parsed !== null && typeof parsed === "object") {
+        throw new Error(
+          `MCP server "${serverName}": credential "${credentialId}" resolved to a structured secret that does not match token metadata; refusing bearer injection`,
+        );
+      }
+    } catch (err) {
+      if (err instanceof SyntaxError) return credential.secret;
+      throw err;
+    }
+    return credential.secret;
+  }
+
+  const secret = parseOAuthCredentialSecret(credential.secret);
+  const status = oauthCredentialStatus(secret, {
+    now: options.now,
+    skewMs: options.oauthRefreshSkewMs,
+  });
+  if (status.state === "expired") {
+    const refresh = buildOAuthRefreshRequest(credentialId, secret);
+    const refreshHint = refresh
+      ? "refresh data is present, but automatic OAuth refresh is reserved and not wired yet"
+      : "missing refreshToken or tokenEndpoint for automatic refresh";
+    throw new Error(
+      `MCP server "${serverName}": oauth credential "${credentialId}" access token expired; ${refreshHint}`,
+    );
+  }
+
+  return secret.accessToken;
+}
+
 export async function buildHttpHeadersWithCredentialAccess(
   serverName: string,
   config: MCPServerConfig,
-  access: Pick<CredentialAccess, "resolveValue"> = getCredentialAccess(),
+  access: Pick<CredentialAccess, "resolveValue"> &
+    Partial<Pick<CredentialAccess, "resolveMeta">> = getCredentialAccess(),
+  options: BuildHttpHeadersOptions = {},
 ): Promise<Record<string, string>> {
-  if (!config.credentialRef) return buildHttpHeaders(serverName, config);
+  if (!config.credentialRef) return buildHttpHeaders(serverName, config, undefined, options);
   if (!access.resolveValue) {
     throw new Error(
       `MCP server "${serverName}": credential "${config.credentialRef}" not found or empty`,
+    );
+  }
+  const meta = access.resolveMeta?.(undefined, config.credentialRef, "full");
+  if (!meta) {
+    throw new Error(
+      `MCP server "${serverName}": credential "${config.credentialRef}" metadata is unavailable; refusing bearer injection`,
+    );
+  }
+  if (meta.type !== "token" && meta.type !== "link" && meta.type !== "oauth") {
+    throw new Error(
+      `MCP server "${serverName}": credential "${config.credentialRef}" type "${meta.type}" cannot be used as a bearer token`,
     );
   }
   const secret = await access.resolveValue({
@@ -140,8 +231,12 @@ export async function buildHttpHeadersWithCredentialAccess(
     scope: "full",
     purpose: "mcp",
   });
-  return buildHttpHeaders(serverName, config, (id) =>
-    id === config.credentialRef ? secret : undefined,
+  return buildHttpHeaders(
+    serverName,
+    config,
+    (id) =>
+      id === config.credentialRef ? { secret, type: meta?.type, label: meta?.label } : undefined,
+    options,
   );
 }
 

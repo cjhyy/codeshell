@@ -310,7 +310,9 @@ describe("Engine persisted goal lifecycle", () => {
       const result = await engine.run("bare follow-up", {
         sessionId,
         cwd: dir,
-        onStream: (event) => events.push(event),
+        onStream: (event) => {
+          events.push(event);
+        },
       });
 
       expect(result.reason).toBe("completed");
@@ -349,7 +351,9 @@ describe("Engine persisted goal lifecycle", () => {
         sessionId,
         cwd: dir,
         goal: { objective: "finish the goal", maxStopBlocks: 1 },
-        onStream: (event) => firstEvents.push(event),
+        onStream: (event) => {
+          firstEvents.push(event);
+        },
       });
 
       expect(first.reason).toBe("completed");
@@ -364,7 +368,9 @@ describe("Engine persisted goal lifecycle", () => {
       await engine.run("plain follow-up", {
         sessionId,
         cwd: dir,
-        onStream: (event) => bareEvents.push(event),
+        onStream: (event) => {
+          bareEvents.push(event);
+        },
       });
 
       expect(engineScenarios.get(model)?.mainCalls).toBe(3);
@@ -408,7 +414,9 @@ describe("Engine persisted goal lifecycle", () => {
       await engine.run("plain follow-up", {
         sessionId,
         cwd: dir,
-        onStream: (event) => bareEvents.push(event),
+        onStream: (event) => {
+          bareEvents.push(event);
+        },
       });
       expect(engineScenarios.get(model)?.mainCalls).toBe(2);
       expect(bareEvents.some((event) => event.type === "goal_progress")).toBe(false);

@@ -148,4 +148,35 @@ describe("desktop credential access service", () => {
       resolveCredentialValueForWorker({ cwd, id: "figma", scope: "full", purpose: "use" }),
     ).toThrow(/unavailable/);
   });
+
+  test("oauth credentials are available to MCP but not generic credential use", () => {
+    const secret = JSON.stringify({
+      accessToken: "oauth-access",
+      refreshToken: "oauth-refresh",
+      expiresAt: "2030-01-01T00:00:00.000Z",
+    });
+    new CredentialStore(cwd).save("user", {
+      id: "figma-oauth",
+      type: "oauth",
+      label: "Figma OAuth",
+      secret,
+    });
+
+    expect(
+      resolveCredentialValueForWorker({
+        cwd,
+        id: "figma-oauth",
+        scope: "full",
+        purpose: "mcp",
+      }),
+    ).toEqual({ value: secret });
+    expect(() =>
+      resolveCredentialValueForWorker({
+        cwd,
+        id: "figma-oauth",
+        scope: "full",
+        purpose: "use",
+      }),
+    ).toThrow(/token\/link credential/);
+  });
 });

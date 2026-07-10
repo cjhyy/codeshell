@@ -38,6 +38,48 @@ interface ToolEditChange {
   diff: string;
 }
 
+interface ExternalFileChange {
+  sourceId: string;
+  path: string;
+  identity: string;
+  displayPath: string;
+}
+
+function normalizeFilePath(path: string): string {
+  const slash = path.replace(/\\/g, "/");
+  const drive = slash.match(/^[A-Za-z]:\//)?.[0]?.slice(0, 2).toUpperCase();
+  const absolute = slash.startsWith("/") || drive !== undefined;
+  const body = drive ? slash.slice(3) : slash.startsWith("/") ? slash.slice(1) : slash;
+  const parts: string[] = [];
+  for (const part of body.split("/")) {
+    if (!part || part === ".") continue;
+    if (part === "..") {
+      if (parts.length > 0 && parts[parts.length - 1] !== "..") parts.pop();
+      else if (!absolute) parts.push(part);
+      continue;
+    }
+    parts.push(part);
+  }
+  const prefix = drive ? `${drive}/` : absolute ? "/" : "";
+  return `${prefix}${parts.join("/")}` || (absolute ? prefix : ".");
+}
+
+function isAbsoluteFilePath(path: string): boolean {
+  return path.startsWith("/") || /^[A-Za-z]:\//.test(path);
+}
+
+function resolveFilePath(cwd: string, path: string): string {
+  const normalized = normalizeFilePath(path);
+  if (isAbsoluteFilePath(normalized)) return normalized;
+  return normalizeFilePath(`${normalizeFilePath(cwd)}/${normalized}`);
+}
+
+function displayExternalPath(cwd: string, path: string): string {
+  const absolute = resolveFilePath(cwd, path);
+  const root = normalizeFilePath(cwd).replace(/\/$/, "");
+  return absolute.startsWith(`${root}/`) ? absolute.slice(root.length + 1) : absolute;
+}
+
 function parseApplyPatch(patch: string): ToolEditChange[] {
   const out: ToolEditChange[] = [];
   let current: {
@@ -280,18 +322,69 @@ export function aggregateFileChangeSummary(
     }
   }
   if (start < 0) return null;
+  const boundary = messages[start];
+  const boundaryClientMessageId = boundary.kind === "user" ? boundary.clientMessageId : undefined;
+
+  // Pre-index external paths before consuming tools. This lets an in-session
+  // relative path (`src/a.ts`) and DriveAgent's absolute transcript path
+  // (`/repo/src/a.ts`) resolve to one physical file regardless of event order.
+  const externalFiles: ExternalFileChange[] = [];
+  const externalIdentities = new Set<string>();
+  const externalCwds = new Set<string>();
+  const seenExternalAttribution = new Set<string>();
+  for (let i = start + 1; i < messages.length; i++) {
+    const m = messages[i];
+    if (m.kind !== "system" || !m.externalFileChanges) continue;
+    const { sourceId, cwd, files } = m.externalFileChanges;
+    if (
+      m.externalFileChanges.originClientMessageId !== undefined &&
+      m.externalFileChanges.originClientMessageId !== boundaryClientMessageId
+    ) {
+      continue;
+    }
+    externalCwds.add(cwd);
+    for (const path of files) {
+      if (typeof path !== "string" || !path.trim()) continue;
+      const identity = resolveFilePath(cwd, path.trim());
+      const attributionKey = `${sourceId}\0${identity}`;
+      if (seenExternalAttribution.has(attributionKey)) continue;
+      seenExternalAttribution.add(attributionKey);
+      externalIdentities.add(identity);
+      externalFiles.push({
+        sourceId,
+        path,
+        identity,
+        displayPath: displayExternalPath(cwd, path),
+      });
+    }
+  }
+
+  const identityForToolPath = (path: string): string => {
+    const normalized = normalizeFilePath(path);
+    if (isAbsoluteFilePath(normalized)) return normalized;
+    for (const cwd of externalCwds) {
+      const candidate = resolveFilePath(cwd, normalized);
+      if (externalIdentities.has(candidate)) return candidate;
+    }
+    return normalized;
+  };
 
   const byPath = new Map<string, FileEditEntry>();
   const sessionDiffs: SessionFileDiff[] = [];
-  const consume = (toolCallId: string, raw: ToolEditChange): void => {
-    const existing = byPath.get(raw.path);
+  const consume = (
+    toolCallId: string,
+    raw: ToolEditChange,
+    identity = identityForToolPath(raw.path),
+    displayPath = normalizeFilePath(raw.path),
+  ): void => {
+    const existing = byPath.get(identity);
     if (existing) {
       existing.added += raw.added;
       existing.removed += raw.removed;
       existing.count += 1;
     } else {
-      byPath.set(raw.path, {
-        path: raw.path,
+      byPath.set(identity, {
+        path: displayPath,
         added: raw.added,
         removed: raw.removed,
         count: 1,
@@ -315,6 +408,15 @@ export function aggregateFileChangeSummary(
         else if (e) consume(t.id, e);
       }
     }
+  }
+
+  for (const external of externalFiles) {
+    consume(
+      `external:${external.sourceId}`,
+      { path: external.path, added: 0, removed: 0, diff: "" },
+      external.identity,
+      external.displayPath,
+    );
   }
 
   if (byPath.size === 0) return null;

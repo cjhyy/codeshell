@@ -7,6 +7,8 @@ import { cronScheduler } from "../../automation/scheduler.js";
 import type { CronPermissionLevel } from "../../automation/scheduler.js";
 import { getCurrentSid } from "../../logging/logger.js";
 
+export { cronListToolDef } from "./cron-list.definition.js";
+
 /** Sink notified after a cron job is created/deleted, so the host (Electron
  *  main) can reload+arm the scheduler that actually executes jobs. The worker
  *  process only persists cron jobs (executionEnabled=false); without this the
@@ -48,7 +50,10 @@ export const cronCreateToolDef: ToolDefinition = {
   inputSchema: {
     type: "object",
     properties: {
-      name: { type: "string", description: "Short human-readable name for the job (e.g. '工作日晨间简报')" },
+      name: {
+        type: "string",
+        description: "Short human-readable name for the job (e.g. '工作日晨间简报')",
+      },
       schedule: {
         type: "string",
         description:
@@ -58,9 +63,13 @@ export const cronCreateToolDef: ToolDefinition = {
       prompt: { type: "string", description: "The task prompt the agent runs on each execution" },
       timezone: {
         type: "string",
-        description: "IANA timezone for cron-expression schedules (e.g. 'Asia/Shanghai'). Optional; defaults to the host system's timezone.",
+        description:
+          "IANA timezone for cron-expression schedules (e.g. 'Asia/Shanghai'). Optional; defaults to the host system's timezone.",
       },
-      cwd: { type: "string", description: "Working directory / project the job runs in. Optional." },
+      cwd: {
+        type: "string",
+        description: "Working directory / project the job runs in. Optional.",
+      },
       permissionLevel: {
         type: "string",
         enum: ["read-only", "workspace-write", "full"],
@@ -101,8 +110,11 @@ export async function cronCreateTool(args: Record<string, unknown>): Promise<str
     typeof args.timezone === "string"
       ? args.timezone
       : (() => {
-          try { return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; }
-          catch { return undefined; }
+          try {
+            return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+          } catch {
+            return undefined;
+          }
         })();
   const cwd = typeof args.cwd === "string" ? args.cwd : undefined;
   const once = args.once === true;
@@ -158,12 +170,6 @@ export async function cronDeleteTool(args: Record<string, unknown>): Promise<str
   if (deleted) fireCronChanged();
   return deleted ? `Cron job #${id} deleted.` : `Cron job #${id} not found.`;
 }
-
-export const cronListToolDef: ToolDefinition = {
-  name: "CronList",
-  description: "List all scheduled cron jobs.",
-  inputSchema: { type: "object", properties: {} },
-};
 
 export async function cronListTool(_args: Record<string, unknown>): Promise<string> {
   const jobs = cronScheduler.list();

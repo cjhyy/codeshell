@@ -61,7 +61,7 @@ export type BackgroundWorkInfo =
       kind: "job";
       jobId: string;
       description: string;
-      status: "running" | "completed" | "failed";
+      status: "running" | "completed" | "failed" | "cancelled";
       startedAt: number;
       finishedAt?: number;
       finalText?: string;
@@ -391,8 +391,20 @@ contextBridge.exposeInMainWorld("codeshell", {
    * guidance mid-run). No-op-ish if the session has no active run (message waits
    * for its next run).
    */
-  steer: (sessionId: string, text: string, id?: string, clientMessageId?: string) =>
-    rpc("agent/steer", { sessionId, text, id, clientMessageId }),
+  steer: (
+    sessionId: string,
+    text: string,
+    id?: string,
+    clientMessageId?: string,
+    attachments?: InputAttachmentMeta[],
+  ) =>
+    rpc("agent/steer", {
+      sessionId,
+      text,
+      id,
+      clientMessageId,
+      ...(attachments && attachments.length > 0 ? { attachments } : {}),
+    }),
   /**
    * Revoke a still-pending steer entry by id (撤回). Returns { removed } —
    * false means the turn loop already consumed it (can't take it back; it will
@@ -741,6 +753,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("settings:set", scope, patch, cwd),
   listSessions: () => ipcRenderer.invoke("sessions:list"),
   deleteSession: (id: string) => ipcRenderer.invoke("sessions:delete", id),
+  claimQuickChatSession: (id: string) => ipcRenderer.invoke("quickChat:claimSession", id),
+  cleanupQuickChatSession: (id: string) => ipcRenderer.invoke("quickChat:cleanupSession", id),
   listSessionTitles: () => ipcRenderer.invoke("sessions:titles"),
   renameSession: (id: string, title: string) => ipcRenderer.invoke("sessions:rename", id, title),
   tailLog: (bucket: "ui-ink" | "engine" | "desktop", lines?: number) =>
@@ -1017,7 +1031,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("fs:exists", root, path),
 
   // ── Browser popout window ─────────────────────────────────────────────
-  /** Credentials module: token/link store CRUD + cookie capture. */
+  /** Credentials module: token/link/oauth store CRUD + cookie capture. */
   credentials: {
     list: (cwd: string) => ipcRenderer.invoke("credentials:list", cwd),
     save: (cwd: string, scope: "user" | "project", cred: unknown) =>
@@ -1230,6 +1244,15 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer.invoke("ccRoom:readHistory", cwd, sessionId, limit),
     readCodexHistory: (cwd: string, threadId: string, limit: number) =>
       ipcRenderer.invoke("ccRoom:readCodexHistory", cwd, threadId, limit),
+    subscribeTranscript: (
+      roomId: string,
+      cwd: string,
+      sessionId: string,
+      kind: "claude-code" | "codex",
+      limit: number,
+    ) => ipcRenderer.invoke("ccRoom:subscribeTranscript", roomId, cwd, sessionId, kind, limit),
+    unsubscribeTranscript: (roomId: string) =>
+      ipcRenderer.invoke("ccRoom:unsubscribeTranscript", roomId),
     closeSession: (roomId: string) => ipcRenderer.invoke("ccRoom:closeSession", roomId),
     onRoomMessage: (cb: (env: { roomId: string; msg: unknown }) => void): (() => void) => {
       const h = (_e: IpcRendererEvent, env: { roomId: string; msg: unknown }) => cb(env);

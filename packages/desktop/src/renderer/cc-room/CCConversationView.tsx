@@ -1,15 +1,17 @@
 import { useEffect, useReducer, useState, useCallback } from "react";
-import { Bot, ChevronDown, ChevronRight, ShieldAlert, TerminalSquare, UserRound } from "lucide-react";
+import {
+  Bot,
+  ChevronDown,
+  ChevronRight,
+  ShieldAlert,
+  TerminalSquare,
+  UserRound,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Markdown } from "@/Markdown";
-import {
-  reduceStream,
-  initialChatState,
-  type ChatItem,
-  type ChatState,
-} from "@/lib/streamReducer";
+import { reduceStream, initialChatState, type ChatItem, type ChatState } from "@/lib/streamReducer";
 import { roomMsgToEvent, ccHistoryToEvents } from "@/lib/messageMappers";
 
 /**
@@ -76,6 +78,7 @@ export function CCConversationView({
   mode,
   cliKind = "claude-code",
   cliLabel = "Claude Code",
+  active = true,
   onBack,
 }: {
   roomId: string;
@@ -90,14 +93,59 @@ export function CCConversationView({
   /** Which external CLI drives this room ("Claude Code" | "Codex") — labels the
    *  header + composer so a Codex room isn't mislabeled "Claude Code". */
   cliLabel?: string;
+  /** PanelArea keeps inactive tabs mounted. Only the visible tab owns a main-
+   * process transcript subscription; switching tabs tears it down. */
+  active?: boolean;
   onBack: () => void;
 }) {
   const [chat, dispatch] = useReducer(chatReducer, undefined, initialChatState);
   const [pending, setPending] = useState<ApprovalReq[]>([]);
   const [input, setInput] = useState("");
 
+  // Approval delivery is independent of transcript tailing. PanelArea keeps
+  // inactive tabs mounted, so retain these lightweight listeners and do not
+  // miss a prompt merely because the user glanced at another panel.
   useEffect(() => {
+    const offRequest = window.codeshell.ccRoom.onApprovalRequest((req) => {
+      if (req.roomId === roomId) {
+        setPending((current) =>
+          current.some((item) => item.requestId === req.requestId) ? current : [...current, req],
+        );
+      }
+    });
+    const offResolved = window.codeshell.ccRoom.onApprovalResolved(({ requestId }) => {
+      setPending((current) => current.filter((item) => item.requestId !== requestId));
+    });
+    return () => {
+      offRequest();
+      offResolved();
+    };
+  }, [roomId]);
+
+  useEffect(() => {
+    if (!active) return;
     let cancelled = false;
+    let ready = false;
+    let seenSeq = 0;
+    const pending = new Map<number, RoomMessageWire>();
+
+    const applyLive = (messages: RoomMessageWire[]) => {
+      for (const msg of messages.slice().sort((a, b) => a.seq - b.seq)) {
+        if (!Number.isFinite(msg.seq) || msg.seq <= seenSeq) continue;
+        seenSeq = msg.seq;
+        dispatch({ kind: "raw", raw: roomMsgToEvent(msg) });
+      }
+    };
+
+    const offMsg = window.codeshell.ccRoom.onRoomMessage(({ roomId: rid, msg }) => {
+      if (rid !== roomId) return;
+      const message = msg as RoomMessageWire;
+      if (!ready) {
+        if (Number.isFinite(message.seq)) pending.set(message.seq, message);
+        return;
+      }
+      applyLive([message]);
+    });
     // The backlog comes from EXACTLY ONE source, never both (the room's
     // messages.jsonl and the CC disk transcript overlap, so replaying both
     // double-renders turns — the "工具堆叠" / duplicated-feed bug):
@@ -107,40 +155,65 @@ export function CCConversationView({
     // Mirrors the phone (useRemoteApp's ccHistorySessionRef gate).
     const boot = async () => {
       if (sessionId && cwd) {
-        const r =
-          cliKind === "codex"
-            ? await window.codeshell.ccRoom.readCodexHistory(cwd, sessionId, 50)
-            : await window.codeshell.ccRoom.readHistory(cwd, sessionId, 50);
-        if (!cancelled) {
-          dispatch({ kind: "replayHistory", messages: (r as { messages: HistoryMessage[] }).messages });
-        }
+        // subscribeTranscript takes the snapshot and EOF cursor atomically.
+        // Any lines appended while the IPC response travels are persisted in
+        // room history after roomCursor and merged below by seq.
+        const snapshot = await window.codeshell.ccRoom.subscribeTranscript(
+          roomId,
+          cwd,
+          sessionId,
+          cliKind,
+          50,
+        );
+        if (cancelled) return;
+        dispatch({ kind: "replayHistory", messages: snapshot.messages as HistoryMessage[] });
+        seenSeq = snapshot.roomCursor;
+        const catchup = (await window.codeshell.ccRoom.roomHistory(
+          roomId,
+          snapshot.roomCursor,
+        )) as RoomMessageWire[];
+        if (cancelled) return;
+        const merged = new Map<number, RoomMessageWire>();
+        for (const msg of [...catchup, ...pending.values()]) merged.set(msg.seq, msg);
+        applyLive([...merged.values()]);
+        pending.clear();
+        ready = true;
       } else {
         const live = (await window.codeshell.ccRoom.roomHistory(roomId)) as RoomMessageWire[];
-        if (!cancelled) dispatch({ kind: "replayLive", messages: live });
+        if (cancelled) return;
+        dispatch({ kind: "replayLive", messages: live });
+        seenSeq = live.at(-1)?.seq ?? 0;
+        applyLive([...pending.values()]);
+        pending.clear();
+        ready = true;
       }
     };
-    void boot();
-
-    const offMsg = window.codeshell.ccRoom.onRoomMessage(({ roomId: rid, msg }) => {
-      if (rid === roomId) dispatch({ kind: "raw", raw: roomMsgToEvent(msg) });
-    });
-    const offApp = window.codeshell.ccRoom.onApprovalRequest((req) => {
-      if (req.roomId === roomId) {
-        setPending((p) => (p.some((r) => r.requestId === req.requestId) ? p : [...p, req]));
+    void boot().catch(async () => {
+      // Preserve the pre-existing snapshot experience if the live subscription
+      // cannot be established (missing/rotated transcript, transient IPC error).
+      if (cancelled || !sessionId || !cwd) return;
+      const fallback =
+        cliKind === "codex"
+          ? await window.codeshell.ccRoom.readCodexHistory(cwd, sessionId, 50)
+          : await window.codeshell.ccRoom.readHistory(cwd, sessionId, 50);
+      if (!cancelled) {
+        dispatch({
+          kind: "replayHistory",
+          messages: (fallback as { messages: HistoryMessage[] }).messages,
+        });
+        ready = true;
+        applyLive([...pending.values()]);
+        pending.clear();
       }
-    });
-    // Another端 (a phone, another window) or a timeout resolved this request —
-    // drop the now-stale card so it doesn't linger ("点了还存在").
-    const offResolved = window.codeshell.ccRoom.onApprovalResolved(({ requestId }) => {
-      setPending((p) => p.filter((r) => r.requestId !== requestId));
     });
     return () => {
       cancelled = true;
       offMsg();
-      offApp();
-      offResolved();
+      if (sessionId && cwd) {
+        void window.codeshell.ccRoom.unsubscribeTranscript(roomId);
+      }
     };
-  }, [roomId, cwd, sessionId, cliKind]);
+  }, [active, roomId, cwd, sessionId, cliKind]);
 
   const send = useCallback(() => {
     const t = input.trim();
@@ -171,7 +244,8 @@ export function CCConversationView({
       <div className="flex items-center justify-between border-b border-border p-2">
         <div className="text-sm font-medium">
           {cliLabel} 会话 ·{" "}
-          <code className="text-xs text-muted-foreground">{(sessionId || roomId).slice(0, 8)}</code> · {mode}
+          <code className="text-xs text-muted-foreground">{(sessionId || roomId).slice(0, 8)}</code>{" "}
+          · {mode}
         </div>
         <Button variant="ghost" size="sm" onClick={onBack}>
           返回
@@ -298,7 +372,11 @@ function CcToolCard({ tool }: { tool: Extract<ChatItem, { kind: "tool" }> }) {
         <span
           className={cn(
             "size-1.5 shrink-0 rounded-full",
-            !tool.done ? "animate-pulse bg-status-running" : tool.error ? "bg-status-err" : "bg-status-ok",
+            !tool.done
+              ? "animate-pulse bg-status-running"
+              : tool.error
+                ? "bg-status-err"
+                : "bg-status-ok",
           )}
         />
         <span className="font-mono font-medium text-foreground">{tool.name}</span>
@@ -323,7 +401,9 @@ function CcToolCard({ tool }: { tool: Extract<ChatItem, { kind: "tool" }> }) {
                 tool.error ? "text-status-err" : "text-foreground/80",
               )}
             >
-              {tool.result.length > 4000 ? tool.result.slice(0, 4000) + "\n… (truncated)" : tool.result}
+              {tool.result.length > 4000
+                ? tool.result.slice(0, 4000) + "\n… (truncated)"
+                : tool.result}
             </pre>
           )}
         </div>
@@ -340,7 +420,9 @@ function CcApprovalCard({
   req: ApprovalReq;
   onResolve: (
     req: ApprovalReq,
-    decision: { behavior: "allow"; updatedInput?: unknown; answer?: string } | { behavior: "deny"; message: string },
+    decision:
+      | { behavior: "allow"; updatedInput?: unknown; answer?: string }
+      | { behavior: "deny"; message: string },
   ) => void;
 }) {
   const ask = req.askUser;
@@ -383,7 +465,11 @@ function CcApprovalCard({
             )}
           </div>
           {ask.multiSelect && (
-            <Button size="sm" disabled={picked.length === 0} onClick={() => answer(picked.join(", "))}>
+            <Button
+              size="sm"
+              disabled={picked.length === 0}
+              onClick={() => answer(picked.join(", "))}
+            >
               确认所选 ({picked.length})
             </Button>
           )}

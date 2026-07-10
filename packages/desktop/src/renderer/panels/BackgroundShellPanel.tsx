@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bot, RefreshCw, Square, Terminal, Film, CheckCircle2, XCircle } from "lucide-react";
+import { Ban, Bot, RefreshCw, Square, Terminal, Film, CheckCircle2, XCircle } from "lucide-react";
 import type {
   BackgroundShellInfo,
   BackgroundWorkInfo,
@@ -321,7 +321,9 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
                       ? t("panels.shells.jobCompleted")
                       : j.status === "failed"
                         ? t("panels.shells.jobFailed")
-                        : t("panels.shells.jobRunning");
+                        : j.status === "cancelled"
+                          ? t("panels.shells.jobCancelled")
+                          : t("panels.shells.jobRunning");
                   return (
                     <li key={j.jobId} className="border-b border-border/60">
                       <div
@@ -334,6 +336,8 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
                           <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-status-running" />
                         ) : j.status === "completed" ? (
                           <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-status-ok" />
+                        ) : j.status === "cancelled" ? (
+                          <Ban className="h-3.5 w-3.5 shrink-0 text-status-warn" />
                         ) : (
                           <XCircle className="h-3.5 w-3.5 shrink-0 text-status-err" />
                         )}

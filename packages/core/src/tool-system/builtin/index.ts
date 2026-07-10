@@ -52,7 +52,8 @@ import {
   switchSessionWorkspaceToolDef,
   switchSessionWorkspaceTool,
 } from "./worktree.js";
-import { sleepToolDef, sleepTool } from "./sleep.js";
+import { sleepToolDef } from "./sleep.definition.js";
+import { sleepTool } from "./sleep.js";
 import { configToolDef, configTool } from "./config.js";
 import { notebookEditToolDef, notebookEditTool } from "./notebook-edit.js";
 import { lspToolDef, lspTool } from "./lsp.js";
@@ -61,14 +62,16 @@ import {
   cronCreateTool,
   cronDeleteToolDef,
   cronDeleteTool,
-  cronListToolDef,
   cronListTool,
 } from "./cron.js";
+import { cronListToolDef } from "./cron-list.definition.js";
 import {
   driveClaudeCodeToolDef,
   driveClaudeCodeTool,
   driveAgentToolDef,
   driveAgentTool,
+  driveAgentJobsToolDef,
+  driveAgentJobsTool,
   DRIVE_AGENT_TOOL_TIMEOUT_MS,
 } from "./drive-claude-code.js";
 import { checkQuotaToolDef, checkQuotaTool } from "./check-quota.js";
@@ -572,6 +575,16 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       pathPolicy: [{ kind: "arg", arg: "attachmentPaths", operation: "read" }],
     },
     execute: driveAgentTool,
+  },
+  {
+    definition: {
+      ...driveAgentJobsToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: driveAgentJobsTool,
   },
   // Back-compat alias: DriveClaudeCode = DriveAgent pinned to cli:claude. Kept
   // registered so old prompts/memories that name DriveClaudeCode still resolve.

@@ -14,7 +14,8 @@ afterEach(() => {
 });
 
 /** A stand-in built mobile app (out/mobile) for the static server to serve. */
-const MOBILE_HTML = '<!doctype html><html><head><title>CodeShell Remote</title></head><body><div id="app"></div></body></html>';
+const MOBILE_HTML =
+  '<!doctype html><html><head><title>CodeShell Remote</title></head><body><div id="app"></div></body></html>';
 function mobileFixture(base: string): string {
   const root = join(base, "mobile-app");
   mkdirSync(join(root, "assets"), { recursive: true });
@@ -151,7 +152,9 @@ describe("RemoteHostManager", () => {
       onClientEvent: () => {},
     });
     const events: string[][] = [];
+    const offline: string[] = [];
     host.on("online-change", (ids: string[]) => events.push([...ids].sort()));
+    host.on("device-offline", (id: string) => offline.push(id));
 
     expect(host.onlineDeviceIds()).toEqual([]);
     host.markOnline("dev1");
@@ -162,8 +165,10 @@ describe("RemoteHostManager", () => {
     host.markOnline("dev2");
     host.markOffline("dev1"); // still one socket left → dev1 stays online
     expect(host.onlineDeviceIds().sort()).toEqual(["dev1", "dev2"]);
+    expect(offline).toEqual([]);
     host.markOffline("dev1"); // last socket gone → dev1 offline
     expect(host.onlineDeviceIds()).toEqual(["dev2"]);
+    expect(offline).toEqual(["dev1"]);
 
     // dev1 appears then disappears; dev2 appears → at least these transitions
     expect(events.some((e) => e.includes("dev1"))).toBe(true);
@@ -215,6 +220,77 @@ describe("RemoteHostManager", () => {
     ca.sock.close();
     cb.sock.close();
     await host.stop();
+  });
+
+  test("same-device sockets get distinct viewer identities and close independently", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const store = new TrustedDeviceStore(join(dir, "devices.json"));
+    const device = store.addDevice({ name: "Phone", secretHash: "secret" });
+    const clientEvents: Array<{ deviceId?: string; viewerId?: string; roomId?: string }> = [];
+    let resolveClientEvents!: () => void;
+    const bothClientEvents = new Promise<void>((resolve) => {
+      resolveClientEvents = resolve;
+    });
+    const host = new RemoteHostManager({
+      devices: store,
+      onClientEvent: (event) => {
+        clientEvents.push(event as { deviceId?: string; viewerId?: string; roomId?: string });
+        if (clientEvents.length === 2) resolveClientEvents();
+      },
+    });
+    const viewerOffline: Array<{ deviceId: string; viewerId: string }> = [];
+    host.on("viewer-offline", (identity) => viewerOffline.push(identity));
+    const started = await host.start({ host: "127.0.0.1", port: 0 });
+    const wsUrl = `${started.url.replace(/^http/, "ws")}/ws`;
+    const { WebSocket: WS } = await import("ws");
+
+    const connect = () =>
+      new Promise<import("ws").WebSocket>((resolve) => {
+        const socket = new WS(wsUrl);
+        socket.on("message", (raw) => {
+          if (JSON.parse(String(raw)).type === "auth.ok") resolve(socket);
+        });
+        socket.on("open", () =>
+          socket.send(
+            JSON.stringify({
+              type: "auth.device",
+              deviceId: device.id,
+              secretHash: "secret",
+            }),
+          ),
+        );
+      });
+
+    const first = await connect();
+    const second = await connect();
+    try {
+      first.send(JSON.stringify({ type: "room.history", roomId: "first" }));
+      second.send(JSON.stringify({ type: "room.history", roomId: "second" }));
+      await bothClientEvents;
+
+      expect(clientEvents.map((event) => event.deviceId)).toEqual([device.id, device.id]);
+      const firstViewerId = clientEvents.find((event) => event.roomId === "first")?.viewerId;
+      const secondViewerId = clientEvents.find((event) => event.roomId === "second")?.viewerId;
+      expect(typeof firstViewerId).toBe("string");
+      expect(typeof secondViewerId).toBe("string");
+      expect(firstViewerId).not.toBe(secondViewerId);
+
+      first.close();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(viewerOffline).toEqual([{ deviceId: device.id, viewerId: firstViewerId! }]);
+      expect(host.onlineDeviceIds()).toEqual([device.id]);
+
+      second.close();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(viewerOffline).toEqual([
+        { deviceId: device.id, viewerId: firstViewerId! },
+        { deviceId: device.id, viewerId: secondViewerId! },
+      ]);
+    } finally {
+      first.terminate();
+      second.terminate();
+      await host.stop();
+    }
   });
 
   test("resolveLanHost never returns loopback/link-local/VPN ranges", () => {

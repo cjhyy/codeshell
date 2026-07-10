@@ -98,6 +98,45 @@ describe("buildInputAttachmentContext", () => {
     }
   });
 
+  test("rejects workspace symlink file attachments whose realpath escapes cwd", async () => {
+    const outside = mkdtempSync(join(tmpdir(), "input-attachments-symlink-file-outside-"));
+    try {
+      const secretContent = "outside attachment payload should stay unread";
+      const secret = join(outside, "notes.txt");
+      const linkRel = "linked-notes.txt";
+      const linkAbs = join(cwd, linkRel);
+      writeFileSync(secret, secretContent, "utf-8");
+      symlinkSync(secret, linkAbs);
+
+      const out = await buildInputAttachmentContext(
+        [
+          meta({
+            id: "link_file_1",
+            kind: "file",
+            path: linkRel,
+            absPath: linkAbs,
+            relPath: linkRel,
+            mime: "text/plain",
+            size: secretContent.length,
+            sha256: "2".repeat(64),
+            origin: "mention",
+          }),
+        ],
+        cwd,
+        { expectedSessionId: "sid" },
+      );
+
+      expect(out.images).toEqual([]);
+      expect(out.text).toBe("");
+      expect(out.hasStructuredImageAttachments).toBe(false);
+      expect(out.errors.join("\n")).toContain("blocked by path policy");
+      expect(out.errors.join("\n")).toContain("outside workspace");
+      expect(JSON.stringify(out)).not.toContain(secretContent);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
   test("reports missing paths as errors", async () => {
     const out = await buildInputAttachmentContext(
       [meta({ path: "missing.png", absPath: join(cwd, "missing.png"), relPath: "missing.png" })],
@@ -106,6 +145,23 @@ describe("buildInputAttachmentContext", () => {
     );
     expect(out.images).toEqual([]);
     expect(out.errors.join("\n")).toContain("stat failed");
+  });
+
+  test("reports malformed runtime path metadata instead of throwing", async () => {
+    const malformed = {
+      ...meta({}),
+      path: 42,
+      absPath: undefined,
+      relPath: undefined,
+      vision: { include: true, mediaPath: null },
+    } as unknown as InputAttachmentMeta;
+
+    const out = await buildInputAttachmentContext([malformed], cwd, {
+      expectedSessionId: "sid",
+    });
+
+    expect(out.images).toEqual([]);
+    expect(out.errors.join("\n")).toContain("has no valid path");
   });
 
   test("rejects sensitive paths through path-policy before reading image bytes", async () => {

@@ -139,6 +139,13 @@ export interface SystemMessage {
   kind: "system";
   id: string;
   text: string;
+  /** Hidden attribution payload carried by a DriveAgent completion marker. */
+  externalFileChanges?: {
+    sourceId: string;
+    cwd: string;
+    files: string[];
+    originClientMessageId?: string;
+  };
 }
 
 /**
@@ -409,10 +416,91 @@ function previewLine(text: string, max = BG_COMPLETION_PREVIEW_CHARS): string {
   return flat.length > max ? `${flat.slice(0, max)}…` : flat;
 }
 
+function logChangedFiles(stage: string, data: Record<string, unknown>): void {
+  if (typeof window === "undefined" || !window.codeshell?.log) return;
+  window.codeshell.log(`changed_files.${stage}`, data);
+}
+
+function filesChangedMessage(
+  summary: NonNullable<ReturnType<typeof aggregateFileChangeSummary>>,
+  id = freshId("files-changed"),
+): FilesChangedSummaryMessage {
+  const totalAdded = summary.files.reduce((acc, entry) => acc + entry.added, 0);
+  const totalRemoved = summary.files.reduce((acc, entry) => acc + entry.removed, 0);
+  return {
+    kind: "files_changed",
+    id,
+    files: summary.files,
+    totalAdded,
+    totalRemoved,
+    sessionDiffs: summary.sessionDiffs,
+  };
+}
+
+function attachExternalChangesToOriginTurn(
+  messages: Message[],
+  marker: SystemMessage,
+  originClientMessageId: string,
+): { messages: Message[]; insertedAt?: number; summary?: FilesChangedSummaryMessage } {
+  const start = messages.findIndex(
+    (message) =>
+      message.kind === "user" &&
+      !message.injected &&
+      message.clientMessageId === originClientMessageId,
+  );
+  if (start < 0) return { messages: [...messages, marker] };
+
+  let end = messages.length;
+  for (let i = start + 1; i < messages.length; i++) {
+    const message = messages[i];
+    if (message.kind === "user" && !message.injected) {
+      end = i;
+      break;
+    }
+  }
+  const existingCardIndex = messages.findIndex(
+    (message, index) => index > start && index < end && message.kind === "files_changed",
+  );
+  // Earlier late completions were appended after the next real user turn, so
+  // they sit outside this origin turn's slice. Pull matching markers back into
+  // the logical turn before rebuilding its single cumulative file card.
+  const priorLateMarkers = messages
+    .slice(end)
+    .filter(
+      (message): message is SystemMessage =>
+        message.kind === "system" &&
+        message.externalFileChanges?.originClientMessageId === originClientMessageId,
+    );
+  const logicalTurn = [
+    ...messages.slice(start, end).filter((message) => message.kind !== "files_changed"),
+    ...priorLateMarkers,
+    marker,
+  ];
+  const aggregate = aggregateFileChangeSummary(logicalTurn);
+  if (!aggregate) return { messages: [...messages, marker] };
+
+  const summary = filesChangedMessage(
+    aggregate,
+    existingCardIndex >= 0 && messages[existingCardIndex]?.kind === "files_changed"
+      ? messages[existingCardIndex].id
+      : undefined,
+  );
+  const next = messages.slice();
+  let insertedAt: number | undefined;
+  if (existingCardIndex >= 0) {
+    next[existingCardIndex] = summary;
+  } else {
+    next.splice(end, 0, summary);
+    insertedAt = end;
+  }
+  next.push(marker);
+  return { messages: next, insertedAt, summary };
+}
+
 export function bgCompletionText(event: {
   name?: string;
   description: string;
-  status: "completed" | "failed";
+  status: "completed" | "failed" | "cancelled";
   workKind?: "agent" | "shell" | "video" | "cc";
   command?: string;
   finalText?: string;
@@ -436,6 +524,12 @@ export function bgCompletionText(event: {
     return translate(lang, "misc.bgTask.completed", {
       name: who,
       preview: completedPreview,
+    });
+  }
+  if (event.status === "cancelled") {
+    return translate(lang, "misc.bgTask.cancelled", {
+      name: who,
+      preview: failedPreview,
     });
   }
   return translate(lang, "misc.bgTask.failed", {
@@ -1099,20 +1193,16 @@ export function applyStreamEvent(
       }
       const summary = aggregateFileChangeSummary(finalized);
       if (summary) {
-        const entries = summary.files;
-        const totalAdded = entries.reduce((acc, e) => acc + e.added, 0);
-        const totalRemoved = entries.reduce((acc, e) => acc + e.removed, 0);
-        finalized = [
-          ...finalized,
-          {
-            kind: "files_changed",
-            id: freshId("files-changed"),
-            files: entries,
-            totalAdded,
-            totalRemoved,
-            sessionDiffs: summary.sessionDiffs,
-          },
-        ];
+        const card = filesChangedMessage(summary);
+        const entries = card.files;
+        finalized = [...finalized, card];
+        logChangedFiles("renderer.aggregated", {
+          sessionId: state.sessionId,
+          size: entries.length,
+          files: entries.map((entry) => entry.path),
+          totalAdded: card.totalAdded,
+          totalRemoved: card.totalRemoved,
+        });
       }
 
       // Only a cleanly completed turn bumps turnEpoch — that counter is what
@@ -1181,13 +1271,63 @@ export function applyStreamEvent(
           }
         }
       }
+      const externalFileChanges =
+        event.workKind === "cc" &&
+        Array.isArray(event.changedFiles) &&
+        event.changedFiles.length > 0 &&
+        typeof event.cwd === "string" &&
+        event.cwd.length > 0
+          ? {
+              sourceId: event.agentId,
+              cwd: event.cwd,
+              files: event.changedFiles,
+              ...(event.originClientMessageId
+                ? { originClientMessageId: event.originClientMessageId }
+                : {}),
+            }
+          : undefined;
+      if (externalFileChanges) {
+        logChangedFiles("renderer.received", {
+          sessionId: state.sessionId,
+          sourceId: externalFileChanges.sourceId,
+          cwd: externalFileChanges.cwd,
+          originClientMessageId: externalFileChanges.originClientMessageId,
+          size: externalFileChanges.files.length,
+          files: externalFileChanges.files,
+        });
+      }
+      const marker: SystemMessage = {
+        kind: "system",
+        id: freshId("bg-done"),
+        text: bgCompletionText(event),
+        ...(externalFileChanges ? { externalFileChanges } : {}),
+      };
+      const attributed = externalFileChanges?.originClientMessageId
+        ? attachExternalChangesToOriginTurn(msgs, marker, externalFileChanges.originClientMessageId)
+        : { messages: [...msgs, marker] };
+      let agentMessageIndex = state.agentMessageIndex;
+      if (attributed.insertedAt !== undefined) {
+        agentMessageIndex = Object.fromEntries(
+          Object.entries(state.agentMessageIndex).map(([id, index]) => [
+            id,
+            index >= attributed.insertedAt! ? index + 1 : index,
+          ]),
+        );
+      }
+      if (attributed.summary) {
+        logChangedFiles("renderer.attributed", {
+          sessionId: state.sessionId,
+          sourceId: externalFileChanges?.sourceId,
+          originClientMessageId: externalFileChanges?.originClientMessageId,
+          size: attributed.summary.files.length,
+          files: attributed.summary.files.map((file) => file.path),
+        });
+      }
       return {
         ...state,
         activeAgents,
-        messages: [
-          ...msgs,
-          { kind: "system", id: freshId("bg-done"), text: bgCompletionText(event) },
-        ],
+        agentMessageIndex,
+        messages: attributed.messages,
       };
     }
 

@@ -1,7 +1,15 @@
-import { readdirSync, readFileSync, statSync, existsSync, openSync, readSync, closeSync } from "node:fs";
+import {
+  readdirSync,
+  readFileSync,
+  statSync,
+  existsSync,
+  openSync,
+  readSync,
+  closeSync,
+} from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import type { HistoryMessage } from "./session-history.js";
+import type { HistoryMessage, SessionTailEvent } from "./session-history.js";
 
 /**
  * Read the last `limit` user/assistant messages from a codex CLI session,
@@ -29,7 +37,7 @@ export function readCodexRecentHistory(
   codexHome = join(homedir(), ".codex"),
 ): { messages: HistoryMessage[]; hasMore: boolean; totalCount: number } {
   const empty = { messages: [] as HistoryMessage[], hasMore: false, totalCount: 0 };
-  const file = findRolloutFile(codexHome, cwd, threadId);
+  const file = findCodexRolloutFile(codexHome, cwd, threadId);
   if (!file) return empty;
   let raw: string;
   try {
@@ -38,6 +46,15 @@ export function readCodexRecentHistory(
     return empty;
   }
 
+  return parseCodexRecentHistory(raw, limit);
+}
+
+/** Parse a bounded/raw Codex rollout snapshot. Shared with the desktop tail
+ * follower so its initial history and EOF cursor are atomic. */
+export function parseCodexRecentHistory(
+  raw: string,
+  limit: number,
+): { messages: HistoryMessage[]; hasMore: boolean; totalCount: number } {
   const all: HistoryMessage[] = [];
   for (const line of raw.split("\n")) {
     if (!line.trim()) continue;
@@ -56,7 +73,11 @@ export function readCodexRecentHistory(
       if (!t || t.startsWith("<environment_context>")) continue;
       all.push({ role: p.role, text: t });
     } else if (p.type === "function_call" || p.type === "custom_tool_call") {
-      const tool = { name: typeof p.name === "string" ? p.name : "tool", summary: summaryOf(p), args: argsOf(p) };
+      const tool = {
+        name: typeof p.name === "string" ? p.name : "tool",
+        summary: summaryOf(p),
+        args: argsOf(p),
+      };
       const last = all[all.length - 1];
       // Attach the tool to the preceding assistant turn; otherwise start one.
       if (last && last.role === "assistant") {
@@ -70,6 +91,56 @@ export function readCodexRecentHistory(
   const lim = limit > 0 ? limit : 20;
   const start = Math.max(0, all.length - lim);
   return { messages: all.slice(start), hasMore: start > 0, totalCount: all.length };
+}
+
+/** Parse one newly-appended Codex rollout JSONL line. `response_item` is the
+ * authoritative rendered stream; parallel `event_msg.agent_message` records
+ * are deliberately ignored to avoid duplicate assistant bubbles. */
+export function parseCodexTranscriptLine(line: string): SessionTailEvent[] {
+  let d: any;
+  try {
+    d = JSON.parse(line);
+  } catch {
+    return [];
+  }
+  if (d?.type === "event_msg" && d.payload?.type === "task_complete") {
+    return [{ type: "turn_end", reason: "completed" }];
+  }
+  if (d?.type !== "response_item" || !d.payload) return [];
+  const p = d.payload;
+  if (p.type === "message" && (p.role === "user" || p.role === "assistant")) {
+    const text = textOf(p.content).trim();
+    if (!text || text.startsWith("<environment_context>")) return [];
+    return [{ type: p.role === "user" ? "user" : "assistant", text }];
+  }
+  if (p.type === "function_call" || p.type === "custom_tool_call") {
+    return [
+      {
+        type: "tool",
+        id: typeof p.call_id === "string" ? p.call_id : undefined,
+        name: typeof p.name === "string" ? p.name : "tool",
+        summary: summaryOf(p),
+        args: argsOf(p),
+      },
+    ];
+  }
+  if (p.type === "function_call_output" || p.type === "custom_tool_call_output") {
+    const result =
+      typeof p.output === "string"
+        ? p.output
+        : typeof p.content === "string"
+          ? p.content
+          : JSON.stringify(p.output ?? p.content ?? "");
+    return [
+      {
+        type: "tool_result",
+        id: typeof p.call_id === "string" ? p.call_id : undefined,
+        result: result.slice(0, 4000),
+        isError: Boolean(p.is_error),
+      },
+    ];
+  }
+  return [];
 }
 
 /** Join the text of codex content parts (`input_text`/`output_text`). */
@@ -119,7 +190,11 @@ function argsOf(payload: any): Record<string, unknown> | undefined {
 }
 
 /** Find the rollout file whose `session_meta` matches both `threadId` and `cwd`. */
-function findRolloutFile(codexHome: string, cwd: string, threadId: string): string | undefined {
+export function findCodexRolloutFile(
+  codexHome: string,
+  cwd: string,
+  threadId: string,
+): string | undefined {
   const root = join(codexHome, "sessions");
   if (!existsSync(root)) return undefined;
   for (const file of walkRollouts(root)) {
@@ -159,7 +234,10 @@ function* walkRollouts(root: string): Generator<string> {
 }
 
 /** Parse the first-line `session_meta` event → `{ id, cwd }`, reading a bounded prefix. */
-function readSessionMeta(file: string, maxBytes = 1 << 16): { id?: string; cwd?: string } | undefined {
+function readSessionMeta(
+  file: string,
+  maxBytes = 1 << 16,
+): { id?: string; cwd?: string } | undefined {
   const fd = openSync(file, "r");
   let text: string;
   try {

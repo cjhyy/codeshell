@@ -18,11 +18,13 @@ import {
 import { LLMClientBase } from "../packages/core/src/llm/client-base.js";
 import type { LLMResponse } from "../packages/core/src/types.js";
 import type { CreateMessageOptions } from "../packages/core/src/llm/types.js";
+import { backgroundJobRegistry } from "../packages/core/src/tool-system/builtin/background-jobs.js";
 
 // What the next non-judge turn should return. Set per-test. After emitting a
 // tool call once, we flip to a plain answer so the run terminates.
 let scriptedToolCall: { toolName: string; args: Record<string, unknown> } | null = null;
 let judgeVerdict: "met" | "not_met" = "not_met";
+let judgeWaiting = false;
 
 class Client extends LLMClientBase {
   protected initClient(): void {}
@@ -31,7 +33,7 @@ class Client extends LLMClientBase {
     if (sys.includes("目标完成度裁判")) {
       const met = judgeVerdict === "met";
       return {
-        text: JSON.stringify({ met, gaps: met ? "" : "还没完成" }),
+        text: JSON.stringify({ met, waiting: judgeWaiting, gaps: met ? "" : "还没完成" }),
         toolCalls: [],
         stopReason: "stop",
         usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
@@ -62,9 +64,12 @@ beforeEach(() => {
   PROVIDER_REGISTRY.clear();
   scriptedToolCall = null;
   judgeVerdict = "not_met";
+  judgeWaiting = false;
+  backgroundJobRegistry.reset();
   registerProvider("openai", Client);
 });
 afterEach(() => {
+  backgroundJobRegistry.reset();
   PROVIDER_REGISTRY.clear();
   for (const [k, v] of savedProviders) PROVIDER_REGISTRY.set(k, v);
 });
@@ -106,6 +111,8 @@ describe("goal-control tool short-circuits", () => {
   });
 
   it("cancel_goal WITHOUT confirm does NOT clear the goal", async () => {
+    judgeWaiting = true;
+    backgroundJobRegistry.start("finite-unconfirmed-cancel", sid, "finite test work");
     scriptedToolCall = { toolName: "cancel_goal", args: { reason: "随口" } };
     await engine.run("开工", { sessionId: sid, goal: "干到4点一直找问题" });
     expect(activeGoal()).toBe("干到4点一直找问题");

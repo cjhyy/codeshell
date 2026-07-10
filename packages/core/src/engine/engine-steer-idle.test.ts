@@ -7,6 +7,7 @@ import { LLMClientBase } from "../llm/client-base.js";
 import { registerProvider } from "../llm/client-factory.js";
 import type { CreateMessageOptions } from "../llm/types.js";
 import type { LLMResponse, StreamEvent } from "../types.js";
+import type { ToolContext } from "../tool-system/context.js";
 
 const fakeProvider = "fake-steer-order";
 const fakeScenarios = new Map<string, { calls: number; responses: LLMResponse[] }>();
@@ -19,7 +20,10 @@ class FakeSteerOrderClient extends LLMClientBase {
     if (!scenario) throw new Error(`missing fake scenario: ${this.model}`);
     const response = scenario.responses[Math.min(scenario.calls, scenario.responses.length - 1)]!;
     scenario.calls++;
-    this.recordUsage(response.usage ?? { promptTokens: 0, completionTokens: 0, totalTokens: 0 }, options);
+    this.recordUsage(
+      response.usage ?? { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      options,
+    );
     return response;
   }
 }
@@ -127,6 +131,77 @@ describe("Engine.enqueueSteer active-run gate", () => {
         accepted: false,
         id: "steer-idle",
       });
+    } finally {
+      fakeScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("wires a consumed steer origin through Engine into the next tool context", async () => {
+    const sessionId = "s-steer-origin-wiring";
+    const model = `${fakeProvider}-origin-${Date.now()}`;
+    const dir = mkdtempSync(join(tmpdir(), "engine-steer-origin-"));
+    const origins: Array<string | undefined> = [];
+    fakeScenarios.set(model, {
+      calls: 0,
+      responses: [
+        {
+          text: "done",
+          toolCalls: [],
+          stopReason: "stop",
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        },
+        {
+          text: "",
+          toolCalls: [{ id: "capture-1", toolName: "CaptureSteerOrigin", args: {} }],
+          stopReason: "tool_use",
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        },
+        {
+          text: "continued",
+          toolCalls: [],
+          stopReason: "stop",
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        },
+      ],
+    });
+    const engine = new Engine({
+      llm: { provider: fakeProvider, model, apiKey: "test" } as never,
+      cwd: dir,
+      sessionStorageDir: join(dir, "sessions"),
+      headless: true,
+      permissionMode: "bypassPermissions",
+    });
+    engine.registerCustomTool(
+      {
+        name: "CaptureSteerOrigin",
+        description: "Capture the active client-message origin for a wiring regression test.",
+        inputSchema: { type: "object", properties: {} },
+        source: "builtin",
+        permissionDefault: "allow",
+      },
+      async (_args, ctx?: ToolContext) => {
+        origins.push(ctx?.originClientMessageId);
+        return "captured";
+      },
+    );
+    (engine as any).hooks.clear();
+    let enqueued = false;
+
+    try {
+      await engine.run("original submit", {
+        sessionId,
+        cwd: dir,
+        clientMessageId: "client-submit",
+        onStream: (event) => {
+          if (event.type === "assistant_message" && event.message.content === "done" && !enqueued) {
+            enqueued = true;
+            engine.enqueueSteer(sessionId, "now run the tool", "steer-origin", "client-steer");
+          }
+        },
+      });
+
+      expect(origins).toEqual(["client-steer"]);
     } finally {
       fakeScenarios.delete(model);
       rmSync(dir, { recursive: true, force: true });

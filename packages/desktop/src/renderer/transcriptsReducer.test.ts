@@ -6,6 +6,16 @@ import { foldTranscript } from "./automation/foldTranscript";
 import type { FoldItem } from "../preload/types";
 
 describe("transcriptsReducer pending steer bubbles", () => {
+  it("evicts only the requested transcript bucket", () => {
+    const one = { ...INITIAL_STATE, snapshotSeq: 3 };
+    const two = { ...INITIAL_STATE, snapshotSeq: 7 };
+
+    const next = transcriptsReducer({ one, two }, { type: "evict", bucket: "one" });
+
+    expect(next).toEqual({ two });
+    expect(transcriptsReducer(next, { type: "evict", bucket: "missing" })).toBe(next);
+  });
+
   it("advances snapshotSeq after applying a stream batch", () => {
     let map: TranscriptsMap = {};
     map = transcriptsReducer(map, {

@@ -140,6 +140,7 @@ describe("Engine structured image attachment vision gate", () => {
       });
 
       expect(result.reason).toBe("completed");
+      expect(result.text).toBe("ok");
       expect(scenario.calls.length).toBeGreaterThan(0);
       expect(scenario.calls.flatMap((call) => imageBlocks(call))).toHaveLength(0);
       const textMessages = scenario.calls
@@ -157,6 +158,60 @@ describe("Engine structured image attachment vision gate", () => {
       expect(textMessages).toContain("mime: text/plain");
       expect(textMessages).toContain(`sha256: ${"1".repeat(64)}`);
       expect(textMessages).not.toContain("does not accept image input");
+    } finally {
+      scenarios.delete(model);
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("returns image_error instead of rejecting when runtime attachment metadata is malformed", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "engine-structured-malformed-attachment-"));
+    const model = `${fakeProvider}-malformed-${Date.now()}-${Math.random()}`;
+    const scenario = { calls: [] as Message[][] };
+    scenarios.set(model, scenario);
+
+    try {
+      const attachment = {
+        ...makeAttachment(cwd, "sid"),
+        path: 42,
+        absPath: undefined,
+        relPath: undefined,
+      } as unknown as InputAttachmentMeta;
+
+      const result = await makeEngine(cwd, model).run("inspect this attachment", {
+        sessionId: "sid",
+        cwd,
+        attachments: [attachment],
+      });
+
+      expect(result.reason).toBe("image_error");
+      expect(result.text).toContain("has no valid path");
+      expect(scenario.calls).toHaveLength(0);
+    } finally {
+      scenarios.delete(model);
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("sends a structured-only image attachment as user content to a vision model", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "engine-structured-image-only-"));
+    const model = "gpt-4o";
+    const scenario = { calls: [] as Message[][] };
+    scenarios.set(model, scenario);
+
+    try {
+      const result = await makeEngine(cwd, model, "openai").run("describe this image", {
+        sessionId: "sid",
+        cwd,
+        attachments: [writeAttachment(cwd, "sid")],
+      });
+
+      expect(result.reason).toBe("completed");
+      const images = scenario.calls
+        .map((call) => imageBlocks(call))
+        .find((blocks) => blocks.length > 0);
+      expect(images).toHaveLength(1);
+      expect(images![0]?.source?.data).toBe(PNG_B64);
     } finally {
       scenarios.delete(model);
       rmSync(cwd, { recursive: true, force: true });

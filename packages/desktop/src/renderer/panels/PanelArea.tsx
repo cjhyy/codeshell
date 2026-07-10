@@ -1,16 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  FolderTree,
-  Globe,
-  GitCompare,
-  SquareTerminal,
-  X,
-  Plus,
-  Maximize2,
-  Minimize2,
-  ServerCog,
-  Bot,
-} from "lucide-react";
+import { X, Plus, Maximize2, Minimize2 } from "lucide-react";
 import type { PanelTab } from "../view";
 import { cn } from "@/lib/utils";
 import {
@@ -20,14 +9,14 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { FilesPanel } from "./FilesPanel";
-import { BrowserPanel } from "./BrowserPanel";
 import type { Anchor } from "../chat/anchors";
-import { ReviewPanel } from "./ReviewPanel";
-import { TerminalPanel } from "./TerminalPanel";
-import { BackgroundShellPanel } from "./BackgroundShellPanel";
-import { CCRoomView } from "../cc-room/CCRoomView";
-import { useT, type TFunction } from "../i18n/I18nProvider";
+import { useT } from "../i18n/I18nProvider";
+import { resolvePanelVisibility } from "./panelVisibility";
+import {
+  getEnabledPanelEntries,
+  getPanelEntry,
+  type PanelAvailabilityContext,
+} from "./PanelRegistry";
 
 export interface OpenTab {
   id: string;
@@ -96,29 +85,12 @@ interface Props {
   onRemoveBrowserAnchor?: (anchorId: string) => void;
   /** Update a browser anchor's comment by id. */
   onUpdateBrowserAnchor?: (anchorId: string, comment: string) => void;
-}
-
-const KINDS: { kind: PanelTab; Icon: typeof FolderTree }[] = [
-  { kind: "files", Icon: FolderTree },
-  { kind: "browser", Icon: Globe },
-  { kind: "review", Icon: GitCompare },
-  { kind: "terminal", Icon: SquareTerminal },
-  { kind: "shells", Icon: ServerCog },
-  { kind: "ccRoom", Icon: Bot },
-];
-
-const META: Record<PanelTab, { Icon: typeof FolderTree }> = {
-  files: { Icon: FolderTree },
-  browser: { Icon: Globe },
-  review: { Icon: GitCompare },
-  terminal: { Icon: SquareTerminal },
-  shells: { Icon: ServerCog },
-  ccRoom: { Icon: Bot },
-};
-
-/** Translated label for a panel kind. */
-function kindLabel(t: TFunction, kind: PanelTab): string {
-  return t(`panels.kinds.${kind}`);
+  /** Render an isolated quick-chat tab body owned by this panel bucket. */
+  renderQuickChatPanel?: (args: {
+    ownerBucket: string;
+    tabId: string;
+    cwd: string | null;
+  }) => React.ReactNode;
 }
 
 /**
@@ -149,6 +121,7 @@ export function PanelArea({
   browserAnchors,
   onRemoveBrowserAnchor,
   onUpdateBrowserAnchor,
+  renderQuickChatPanel,
   tabs,
   setTabs,
   activeId,
@@ -156,6 +129,11 @@ export function PanelArea({
   bucket,
 }: Props) {
   const { t } = useT();
+  const panelAvailability: PanelAvailabilityContext = {
+    cwd,
+    engineSessionId: engineSessionId ?? null,
+  };
+  const enabledPanels = getEnabledPanelEntries(panelAvailability);
   // Fresh, collision-proof tab id. The module counter resets to 0 on a renderer
   // reload, but tabs are persisted per bucket; bump past ids already present in
   // this bucket so restored tabs and newly-opened tabs don't collide.
@@ -285,8 +263,9 @@ export function PanelArea({
       {/* Tab strip */}
       <div className="flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-border px-1.5 py-1">
         {activeTabs.map((tab) => {
-          const { Icon } = META[tab.kind];
-          const label = kindLabel(t, tab.kind);
+          const entry = getPanelEntry(tab.kind);
+          const Icon = entry.icon;
+          const label = t(entry.label);
           const active = tab.id === visibleActiveId;
           return (
             <div
@@ -335,12 +314,15 @@ export function PanelArea({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            {KINDS.map(({ kind, Icon }) => (
-              <DropdownMenuItem key={kind} onSelect={() => addTab(kind)}>
-                <Icon className="mr-2 h-4 w-4" />
-                <span className="flex-1">{kindLabel(t, kind)}</span>
-              </DropdownMenuItem>
-            ))}
+            {enabledPanels.map((entry) => {
+              const Icon = entry.icon;
+              return (
+                <DropdownMenuItem key={entry.key} onSelect={() => addTab(entry.key)}>
+                  <Icon className="mr-2 h-4 w-4" />
+                  <span className="flex-1">{t(entry.label)}</span>
+                </DropdownMenuItem>
+              );
+            })}
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -364,50 +346,65 @@ export function PanelArea({
           one mounted PanelArea per bucket, so no body here ever changes owner
           during a session switch. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
-        {activeTabs.length === 0 && <PanelLanding onPick={addTab} />}
-        {activeTabs.map((t) => (
-          <Slot key={t.id} active={t.id === visibleActiveId}>
-            <PanelBody
-              tab={t}
-              bucket={bucket}
-              visible={(!hidden || keepActiveBodyLive) && t.id === visibleActiveId}
-              cwd={cwd}
-              reviewFiles={reviewFiles}
-              reviewDiff={reviewDiff}
-              engineSessionId={engineSessionId}
-              browserAnchors={browserAnchors}
-              revealFile={revealFile}
-              onRevealConsumed={onRevealConsumed}
-              openUrl={openUrl}
-              onAttachImage={onAttachImage}
-              onRemoveBrowserAnchor={onRemoveBrowserAnchor}
-              onUpdateBrowserAnchor={onUpdateBrowserAnchor}
-            />
-          </Slot>
-        ))}
+        {activeTabs.length === 0 && <PanelLanding entries={enabledPanels} onPick={addTab} />}
+        {activeTabs.map((t) => {
+          const activeTab = t.id === visibleActiveId;
+          const visibility = resolvePanelVisibility({ hidden, keepActiveBodyLive, activeTab });
+          return (
+            <Slot key={t.id} active={activeTab}>
+              <PanelBody
+                tab={t}
+                bucket={bucket}
+                visible={visibility.lifecycleVisible}
+                foregroundVisible={visibility.foregroundVisible}
+                cwd={cwd}
+                reviewFiles={reviewFiles}
+                reviewDiff={reviewDiff}
+                engineSessionId={engineSessionId}
+                browserAnchors={browserAnchors}
+                revealFile={revealFile}
+                onRevealConsumed={onRevealConsumed}
+                openUrl={openUrl}
+                onAttachImage={onAttachImage}
+                onRemoveBrowserAnchor={onRemoveBrowserAnchor}
+                onUpdateBrowserAnchor={onUpdateBrowserAnchor}
+                renderQuickChatPanel={renderQuickChatPanel}
+              />
+            </Slot>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-/** Empty-dock landing: a card grid to open one of the four panels. */
-function PanelLanding({ onPick }: { onPick: (k: PanelTab) => void }) {
+/** Empty-dock landing: a card grid to open one of the registered panels. */
+function PanelLanding({
+  entries,
+  onPick,
+}: {
+  entries: ReturnType<typeof getEnabledPanelEntries>;
+  onPick: (k: PanelTab) => void;
+}) {
   const { t } = useT();
   return (
     <div className="flex min-h-0 flex-1 items-center justify-center p-6">
       <div className="grid w-full max-w-md grid-cols-2 gap-3">
-        {KINDS.map(({ kind, Icon }) => (
-          <Button
-            key={kind}
-            type="button"
-            onClick={() => onPick(kind)}
-            variant="outline"
-            className="flex h-auto flex-col items-center gap-2 rounded-lg bg-card px-4 py-6 text-center hover:border-primary/50"
-          >
-            <Icon className="h-7 w-7 text-muted-foreground" />
-            <span className="text-sm font-medium text-foreground">{kindLabel(t, kind)}</span>
-          </Button>
-        ))}
+        {entries.map((entry) => {
+          const Icon = entry.icon;
+          return (
+            <Button
+              key={entry.key}
+              type="button"
+              onClick={() => onPick(entry.key)}
+              variant="outline"
+              className="flex h-auto flex-col items-center gap-2 rounded-lg bg-card px-4 py-6 text-center hover:border-primary/50"
+            >
+              <Icon className="h-7 w-7 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">{t(entry.label)}</span>
+            </Button>
+          );
+        })}
       </div>
     </div>
   );
@@ -417,6 +414,7 @@ function PanelBody({
   tab,
   bucket,
   visible,
+  foregroundVisible,
   cwd,
   reviewFiles,
   reviewDiff,
@@ -428,10 +426,12 @@ function PanelBody({
   browserAnchors,
   onRemoveBrowserAnchor,
   onUpdateBrowserAnchor,
+  renderQuickChatPanel,
 }: {
   tab: OpenTab;
   bucket: string;
   visible: boolean;
+  foregroundVisible: boolean;
   cwd: string | null;
   reviewFiles?: string[];
   reviewDiff?: string;
@@ -443,45 +443,30 @@ function PanelBody({
   browserAnchors?: Anchor[];
   onRemoveBrowserAnchor?: (anchorId: string) => void;
   onUpdateBrowserAnchor?: (anchorId: string, comment: string) => void;
+  renderQuickChatPanel?: (args: {
+    ownerBucket: string;
+    tabId: string;
+    cwd: string | null;
+  }) => React.ReactNode;
 }) {
-  switch (tab.kind) {
-    case "files":
-      return (
-        <FilesPanel
-          cwd={cwd}
-          onAttachImage={onAttachImage}
-          revealFile={revealFile}
-          onRevealConsumed={onRevealConsumed}
-        />
-      );
-    case "browser":
-      // Per-bucket partition so each chat session's browser is storage/page
-      // isolated (bucket = `${repoKey}::${sessionId}`). Sanitize to the chars
-      // Electron allows in a partition name (the bucket has `::`, which is fine,
-      // but be defensive about anything exotic).
-      return (
-        <BrowserPanel
-          cwd={cwd}
-          visible={visible}
-          openUrl={openUrl}
-          anchors={browserAnchors}
-          onRemoveAnchor={onRemoveBrowserAnchor}
-          onUpdateAnchor={onUpdateBrowserAnchor}
-          bucket={bucket}
-          engineSessionId={engineSessionId}
-          partition={`persist:browser:${bucket.replace(/[^a-zA-Z0-9_:.@-]/g, "_")}`}
-        />
-      );
-    case "review":
-      return <ReviewPanel cwd={cwd} files={reviewFiles} turnDiff={reviewDiff} />;
-    case "terminal":
-      // Per-tab session id so multiple terminals are independent shells.
-      return <TerminalPanel cwd={cwd} sessionId={`term:${bucket}:${tab.id}`} />;
-    case "shells":
-      return <BackgroundShellPanel sessionId={engineSessionId ?? null} />;
-    case "ccRoom":
-      return <CCRoomView cwd={cwd} />;
-  }
+  return getPanelEntry(tab.kind).render({
+    tabId: tab.id,
+    bucket,
+    visible,
+    foregroundVisible,
+    cwd,
+    reviewFiles,
+    reviewDiff,
+    revealFile,
+    onRevealConsumed,
+    openUrl,
+    engineSessionId: engineSessionId ?? null,
+    onAttachImage,
+    browserAnchors,
+    onRemoveBrowserAnchor,
+    onUpdateBrowserAnchor,
+    renderQuickChatPanel,
+  });
 }
 
 /** A mounted-but-hideable container. Hidden panels keep their state/DOM. */

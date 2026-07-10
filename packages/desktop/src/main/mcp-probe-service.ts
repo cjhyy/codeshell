@@ -35,7 +35,7 @@ export interface McpServerConfig {
   bearerTokenEnvVar?: string;
   /** (HTTP) header-name → env-var-NAME map, values read at connect time. */
   envHeaders?: Record<string, string>;
-  /** (HTTP) id of a stored credential used as the Bearer token. */
+  /** (HTTP) id of a stored token/link/oauth credential used as Bearer auth. */
   credentialRef?: string;
 }
 
@@ -116,10 +116,13 @@ export function humanizeError(raw: string, command?: string): string {
   if (envMiss) {
     return `鉴权配置错误：环境变量 ${envMiss[1]}（${envMiss[2]}）未设置或为空 — 该字段填的是环境变量名，值在连接时从系统环境读取，请先在启动环境里设置它`;
   }
+  if (/oauth credential "([^"]+)" access token expired/i.test(raw)) {
+    return "OAuth 登录已过期 — 请在 MCP 认证设置里刷新或重新登录该 OAuth 凭证";
+  }
   // 2. Credentials reached the server but were rejected (401) vs accepted
   //    but lacking permission (403).
   if (/unauthorized|\b401\b|-32001/i.test(raw)) {
-    return "鉴权失败（HTTP 401）— 该 server 需要认证：如果是 Bearer/JWT，请配置 Bearer 凭证或 Bearer Token 环境变量；如果是 API key，请配置服务要求的自定义认证 Header（如 x-api-key）";
+    return "鉴权失败（HTTP 401）— 该 server 需要认证：如果是 Bearer/JWT，请配置 Bearer 凭证或 Bearer Token 环境变量；如果是 OAuth，请登录或刷新 OAuth 凭证；如果是 API key，请配置服务要求的自定义认证 Header（如 x-api-key）";
   }
   if (/forbidden|\b403\b/i.test(raw)) {
     return "无权限（HTTP 403）— 凭证有效但权限不足，请检查该 token / key 的权限范围";
@@ -231,7 +234,9 @@ export function buildProbeHttpHeaders(cfg: McpServerConfig): Record<string, stri
   const credStore = new CredentialStore(undefined);
   return buildHttpHeaders(cfg.name, cfg, (id) => {
     const cred = credStore.resolve(id);
-    return cred && isCredentialSecretAvailable(cred.secret) ? cred.secret : undefined;
+    return cred && isCredentialSecretAvailable(cred.secret)
+      ? { secret: cred.secret, type: cred.type, label: cred.label }
+      : undefined;
   });
 }
 

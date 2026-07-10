@@ -34,7 +34,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: assert version == tag
@@ -65,7 +65,9 @@ jobs:
           const fail = (message) => errors.push(`::error::${message}`);
 
           const coreIndex = fs.readFileSync("packages/core/src/index.ts", "utf8");
-          const versionMatch = coreIndex.match(/export\s+const\s+VERSION\s*=\s*["']([^"']+)["']/);
+          const versionMatch = coreIndex.match(
+            /^\s*export\s+const\s+VERSION(?:\s*:\s*[^\n=]+)?\s*=\s*["']([^"']+)["'](?:\s+as\s+const)?\s*;?/m,
+          );
           if (!versionMatch) {
             fail("packages/core/src/index.ts does not export a VERSION constant.");
           } else {
@@ -159,7 +161,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -227,7 +229,7 @@ jobs:
             artifact: windows
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -240,7 +242,7 @@ jobs:
       # the version now default on the macOS/ubuntu runners. Without this the
       # native rebuild dies with "No module named 'distutils'". Pin Python 3.11
       # (still ships distutils) and ensure setuptools is present as a backstop.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - name: ensure setuptools (distutils for node-gyp)
@@ -330,7 +332,7 @@ jobs:
           esac
 
       - name: upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: codeshell-${{ matrix.artifact }}
           # electron-builder writes installers and update metadata to
@@ -357,7 +359,7 @@ jobs:
       contents: write
     steps:
       - name: download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 

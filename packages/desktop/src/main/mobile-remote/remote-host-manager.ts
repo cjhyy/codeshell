@@ -9,6 +9,7 @@ import { PairingTokenManager } from "./pairing.js";
 import type { AccessPasscode } from "./access-passcode.js";
 import type { TrustedDeviceStore } from "./trusted-device-store.js";
 import type { MobileClientEvent, MobileServerEvent } from "./types.js";
+import type { MobileViewerIdentity } from "./viewer-identity.js";
 
 /**
  * Pick the Mac's real LAN IPv4 so a phone on the same Wi-Fi can reach the
@@ -33,9 +34,7 @@ export function resolveLanHost(): string | undefined {
   }
   // Prefer private LAN ranges (192.168.x, 10.x, 172.16-31.x) over anything else.
   const isPrivate = (ip: string) =>
-    ip.startsWith("192.168.") ||
-    ip.startsWith("10.") ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(ip);
+    ip.startsWith("192.168.") || ip.startsWith("10.") || /^172\.(1[6-9]|2\d|3[01])\./.test(ip);
   return candidates.find(isPrivate) ?? candidates[0];
 }
 
@@ -81,6 +80,9 @@ export class RemoteHostManager extends EventEmitter {
   private pairing = new PairingTokenManager();
   /** ws → authenticated device id. A socket absent here is unauthenticated. */
   private authed = new WeakMap<WebSocket, string>();
+  /** Stable identity for each individual tab/socket, independent of device id. */
+  private viewers = new WeakMap<WebSocket, string>();
+  private nextViewerId = 1;
   /** deviceId → number of live authenticated sockets (a phone may open more
    *  than one). A device is "online" while its count is > 0. */
   private onlineCounts = new Map<string, number>();
@@ -121,6 +123,7 @@ export class RemoteHostManager extends EventEmitter {
     if (prev <= 1) {
       if (this.onlineCounts.delete(deviceId)) {
         this.emit("online-change", this.onlineDeviceIds());
+        this.emit("device-offline", deviceId);
       }
     } else {
       this.onlineCounts.set(deviceId, prev - 1);
@@ -171,7 +174,14 @@ export class RemoteHostManager extends EventEmitter {
           socket.destroy();
           return;
         }
-        if (!gate.allows(req as unknown as { url?: string; headers: Record<string, string | string[] | undefined> })) {
+        if (
+          !gate.allows(
+            req as unknown as {
+              url?: string;
+              headers: Record<string, string | string[] | undefined>;
+            },
+          )
+        ) {
           socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
           socket.destroy();
           return;
@@ -182,6 +192,8 @@ export class RemoteHostManager extends EventEmitter {
       });
     }
     this.wss.on("connection", (ws) => {
+      const viewerId = `viewer-${this.nextViewerId++}`;
+      this.viewers.set(ws, viewerId);
       ws.on("message", (raw) => {
         let event: MobileClientEvent;
         try {
@@ -213,12 +225,13 @@ export class RemoteHostManager extends EventEmitter {
         }
         // Authenticated, non-auth event → hand to the main dispatcher, which
         // routes chat/approval into the existing run/permission path.
-        this.opts.onClientEvent({ ...event, deviceId: this.authed.get(ws) }, ws);
+        this.opts.onClientEvent(
+          { ...event, deviceId: this.authed.get(ws), viewerId: this.viewers.get(ws) },
+          ws,
+        );
       });
       ws.on("close", () => {
-        const id = this.authed.get(ws);
-        if (id) this.markOffline(id);
-        this.authed.delete(ws);
+        this.releaseSocket(ws);
       });
     });
     this.server = server;
@@ -303,10 +316,7 @@ export class RemoteHostManager extends EventEmitter {
   sendToDevice(deviceId: string, event: MobileServerEvent): void {
     const payload = JSON.stringify(event);
     for (const client of this.wss?.clients ?? []) {
-      if (
-        client.readyState === client.OPEN &&
-        this.authed.get(client) === deviceId
-      ) {
+      if (client.readyState === client.OPEN && this.authed.get(client) === deviceId) {
         client.send(payload);
       }
     }
@@ -315,10 +325,7 @@ export class RemoteHostManager extends EventEmitter {
   /** Send a raw JSON-RPC worker line to ONLY one authenticated device. */
   sendRawToDevice(deviceId: string, payload: string): void {
     for (const client of this.wss?.clients ?? []) {
-      if (
-        client.readyState === client.OPEN &&
-        this.authed.get(client) === deviceId
-      ) {
+      if (client.readyState === client.OPEN && this.authed.get(client) === deviceId) {
         client.send(payload);
       }
     }
@@ -335,12 +342,27 @@ export class RemoteHostManager extends EventEmitter {
     }
   }
 
+  private releaseSocket(ws: WebSocket): void {
+    const deviceId = this.authed.get(ws);
+    const viewerId = this.viewers.get(ws);
+    this.authed.delete(ws);
+    this.viewers.delete(ws);
+    if (!deviceId) return;
+    if (viewerId) {
+      this.emit("viewer-offline", { deviceId, viewerId } satisfies MobileViewerIdentity);
+    }
+    this.markOffline(deviceId);
+  }
+
   async stop(): Promise<void> {
     const server = this.server;
     // Forcibly drop live WS sockets first. wss.close() alone waits for clients
     // to disconnect, so a phone left connected would hang stop() indefinitely.
     // terminate() severs each immediately.
     for (const client of this.wss?.clients ?? []) {
+      // Release viewer-owned resources synchronously. The later socket close
+      // event is idempotent because releaseSocket removes its auth binding.
+      this.releaseSocket(client);
       client.terminate();
     }
     this.wss?.close();
@@ -349,8 +371,9 @@ export class RemoteHostManager extends EventEmitter {
     this.started = undefined;
     this.publicBaseUrl = undefined;
     this.passcode = undefined;
-    // Drop online bookkeeping directly (no per-device offline events — the whole
-    // host is going away). authed is a WeakMap and clears with its sockets.
+    // releaseSocket normally empties this map. Retain a defensive fallback for
+    // manually injected bookkeeping (tests / future non-WS transports).
+    for (const deviceId of this.onlineCounts.keys()) this.emit("device-offline", deviceId);
     this.onlineCounts.clear();
     if (!server) return;
     // server.close() only stops accepting new connections and waits for live

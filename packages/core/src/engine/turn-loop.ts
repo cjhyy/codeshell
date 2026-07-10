@@ -78,6 +78,11 @@ export interface TurnLoopConfig {
    */
   freshImageMessages?: Iterable<Message>;
   /**
+   * Per-run injected context that must be visible to the model but must not be
+   * summarized into durable history. Engine uses this for dynamicContext.
+   */
+  volatileContextMessages?: Iterable<Message>;
+  /**
    * Fired after each turn boundary is recorded. Lets the engine flush an
    * up-to-date snapshot to state.json mid-run, so a long run doesn't leave
    * the on-disk turnCount/status frozen at the last completion.
@@ -142,6 +147,11 @@ export interface TurnLoopDeps {
    * Returns the updated counters so usage_update can carry both metric scopes.
    */
   recordCumulativeUsage?: (usage: TokenUsage) => CumulativeUsageCounters;
+  /**
+   * Lightweight per-session prompt-cache diagnostic, owned by Engine because it
+   * needs memory across TurnLoop instances.
+   */
+  recordCacheReadDiagnostics?: (usage: TokenUsage) => void;
   /** Persist the latest context-estimation anchor derived from provider usage. */
   recordContextUsageAnchor?: (anchor: ContextUsageAnchor) => void;
   /**
@@ -153,12 +163,22 @@ export interface TurnLoopDeps {
    * tests (turn loop tolerates undefined).
    */
   consumeSteer?: (source?: "normal_step" | "finalize_backfill") => SteerItem[];
+  /** Restore steer items whose model-facing content could not be prepared. */
+  restoreSteer?: (items: SteerItem[]) => void;
+  /** Build model-facing content for a queued steer item, including attachments. */
+  buildSteerUserMessageContent?: (
+    item: SteerItem,
+  ) => string | ContentBlock[] | Promise<string | ContentBlock[]>;
   /**
    * Execution-level idempotency guard for host-supplied user/steer intents.
    * Returns false only when a present clientMessageId has already entered this
    * run or the persisted transcript. Messages without an id bypass this guard.
    */
   claimClientMessageId?: (clientMessageId: string, source: "steer") => boolean;
+  /** Release a steer id reservation when preparation fails before persistence. */
+  releaseClientMessageId?: (clientMessageId: string) => void;
+  /** Make tools launched after an injected steer attribute side effects to that steer. */
+  setOriginClientMessageId?: (clientMessageId: string | undefined) => void;
   /**
    * Clear this session's PERSISTED goal (state.activeGoal) and drop the
    * in-flight goal-stop hook, so a user-initiated cancel_goal both stops the
@@ -219,6 +239,7 @@ export class TurnLoop {
   private currentCumulativeUsage: CumulativeUsageCounters | undefined;
   private readonly sensitiveToolResultRedactions = new Map<string, string>();
   private readonly pendingImageMessages = new Set<Message>();
+  private readonly volatileContextMessages = new Set<Message>();
 
   /**
    * Consecutive on_stop blocks (Goal mode kept the agent going). Reset to 0
@@ -335,6 +356,9 @@ export class TurnLoop {
     for (const msg of this.config.freshImageMessages ?? []) {
       this.pendingImageMessages.add(msg);
     }
+    for (const msg of this.config.volatileContextMessages ?? []) {
+      this.volatileContextMessages.add(msg);
+    }
 
     // Wrap onStream so a single throwing handler can't silently break
     // the channel for the rest of the run. A 2026-05-25 incident saw a
@@ -400,6 +424,22 @@ export class TurnLoop {
       });
     }
     return result.messages;
+  }
+
+  private stripVolatileContextMessages(messages: Message[]): Message[] {
+    if (this.volatileContextMessages.size === 0) return messages;
+    let changed = false;
+    const stripped = messages.filter((message) => {
+      const keep = !this.volatileContextMessages.has(message);
+      if (!keep) changed = true;
+      return keep;
+    });
+    return changed ? stripped : messages;
+  }
+
+  private appendVolatileContextMessages(messages: Message[]): Message[] {
+    if (this.volatileContextMessages.size === 0) return messages;
+    return [...this.stripVolatileContextMessages(messages), ...this.volatileContextMessages];
   }
 
   private markPendingImagesConsumed(messages: Message[]): Message[] {
@@ -492,6 +532,7 @@ export class TurnLoop {
   private recordResponseUsage(usage: NonNullable<LLMResponse["usage"]>): void {
     this.currentTurnUsage = addTokenUsage(this.currentTurnUsage, usage);
     this.currentCumulativeUsage = this.deps.recordCumulativeUsage?.(usage);
+    this.deps.recordCacheReadDiagnostics?.(usage);
   }
 
   private emitCtxFromUsage(usage: NonNullable<LLMResponse["usage"]>, messages: Message[]): void {
@@ -615,7 +656,7 @@ export class TurnLoop {
         // they join THIS step's request — no abort, no lost in-flight work. Same
         // loop-top user-push pattern as turnStartInjection / turn-limit warnings
         // below. Push to transcript too so they persist + survive resume.
-        this.consumeQueuedSteer(messages, "normal_step");
+        await this.consumeQueuedSteer(messages, "normal_step");
 
         const state = initialTurnState(this.turnCount);
 
@@ -685,6 +726,7 @@ export class TurnLoop {
         // pendingImageMessages are preserved through this next model request.
         const hasPendingSensitiveToolResults = this.sensitiveToolResultRedactions.size > 0;
         messages = this.prepareMessagesForModel(messages);
+        messages = this.stripVolatileContextMessages(messages);
 
         if (hasPendingSensitiveToolResults) {
           tlog.info("turn.sensitive_tool_result_context_management_skipped", {
@@ -731,6 +773,7 @@ export class TurnLoop {
             messages.push(compactInjection);
           }
         }
+        messages = this.appendVolatileContextMessages(messages);
 
         // Model call (with streaming fallback and max_output_tokens continuation)
         // Track tool IDs streamed during this turn to avoid duplicate UI events
@@ -802,10 +845,11 @@ export class TurnLoop {
         // compaction decisions use hybrid (actual + delta) estimation rather than
         // pure heuristics. Without this the manager falls back to char/4 estimates.
         if (response!.usage?.promptTokens !== undefined) {
+          const contextAnchorMessages = this.stripVolatileContextMessages(messages);
           const anchor = this.deps.contextManager.recordActualUsage(
             response!.usage.promptTokens,
-            messages.length,
-            messages,
+            contextAnchorMessages.length,
+            contextAnchorMessages,
           );
           if (anchor) this.deps.recordContextUsageAnchor?.(anchor);
         }
@@ -949,7 +993,7 @@ export class TurnLoop {
             hasToolUse: false,
           });
           messages.push({ role: "assistant", content: finalText });
-          if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+          if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
           }
 
@@ -1038,7 +1082,7 @@ export class TurnLoop {
             });
           }
           this.stopBlockCount = 0;
-          if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+          if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
           }
           messages = this.redactConsumedSensitiveToolResults(messages);
@@ -1182,7 +1226,7 @@ export class TurnLoop {
           tlog.info("turn.goal_self_reported_complete", { cat: "goal" });
           this.stopBlockCount = 0;
           this.deps.clearPersistedGoal?.();
-          if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+          if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
           }
           messages = this.redactConsumedSensitiveToolResults(messages);
@@ -1201,7 +1245,7 @@ export class TurnLoop {
           tlog.info("turn.goal_user_cancelled", { cat: "goal" });
           this.stopBlockCount = 0;
           this.deps.clearPersistedGoal?.();
-          if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+          if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
           }
           return { text: finalText, reason: "completed", messages };
@@ -1226,7 +1270,7 @@ export class TurnLoop {
             message: { role: "assistant", content: finalText },
           });
           messages.push({ role: "assistant", content: finalText });
-          if (this.consumeQueuedSteer(messages, "finalize_backfill")) {
+          if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
           }
           messages = this.redactConsumedSensitiveToolResults(messages);
@@ -1315,7 +1359,7 @@ export class TurnLoop {
       turnCount: this.turnCount,
     });
 
-    this.consumeQueuedSteer(messages, "finalize_backfill");
+    await this.consumeQueuedSteer(messages, "finalize_backfill");
     const hasPendingSensitiveToolResults = this.sensitiveToolResultRedactions.size > 0;
     messages = this.prepareMessagesForModel(messages);
     if (hasPendingSensitiveToolResults) {
@@ -1465,13 +1509,15 @@ export class TurnLoop {
     return this.turnCount;
   }
 
-  private consumeQueuedSteer(
+  private async consumeQueuedSteer(
     messages: Message[],
     source: "normal_step" | "finalize_backfill",
-  ): boolean {
+  ): Promise<boolean> {
     const steered = this.deps.consumeSteer?.(source) ?? [];
     let consumed = false;
-    for (const { id, text, clientMessageId } of steered) {
+    for (let index = 0; index < steered.length; index++) {
+      const item = steered[index]!;
+      const { id, text, clientMessageId } = item;
       if (!text) continue;
       if (clientMessageId && this.deps.claimClientMessageId?.(clientMessageId, "steer") === false) {
         logger.info("steer.submit.duplicate_ignored", {
@@ -1482,9 +1528,31 @@ export class TurnLoop {
         });
         continue;
       }
+      let content: string | ContentBlock[];
+      try {
+        content = this.deps.buildSteerUserMessageContent
+          ? await this.deps.buildSteerUserMessageContent(item)
+          : text;
+      } catch (err) {
+        if (clientMessageId) this.deps.releaseClientMessageId?.(clientMessageId);
+        const pendingSuffix = steered.slice(index);
+        this.deps.restoreSteer?.(pendingSuffix);
+        logger.warn("steer.prepare.failed_requeued", {
+          clientMessageId,
+          steerId: id,
+          sessionId: this.deps.sessionId,
+          source,
+          restoredCount: pendingSuffix.length,
+          error: (err as Error).message,
+        });
+        break;
+      }
       consumed = true;
-      messages.push({ role: "user", content: text });
-      this.deps.transcript.appendMessage("user", text, { steerId: id, clientMessageId });
+      this.deps.setOriginClientMessageId?.(clientMessageId);
+      const message: Message = { role: "user", content };
+      messages.push(message);
+      this.trackFreshImageMessage(message);
+      this.deps.transcript.appendMessage("user", content, { steerId: id, clientMessageId });
       this.config.onStream?.({ type: "steer_injected", text, id });
     }
     return consumed;

@@ -169,6 +169,10 @@ export type TranscriptEventType =
   // data = { agentId, name, description }; agentId === the sub-agent's session
   // id (agent_id===childSid), the key to fetch that session's state + result.
   | "subagent"
+  // Files attributed to a completed external DriveAgent run. Persisted in the
+  // parent transcript so desktop replay rebuilds the same per-user-turn file
+  // summary as the live background_agent_completed stream event.
+  | "external_file_changes"
   | "turn_boundary"
   | "goal_progress"
   // User interrupted the in-flight turn (pressed Stop). Persisted so a resume
@@ -605,18 +609,17 @@ export type StreamEvent =
       sessionPromptTokens?: number;
       agentId?: string;
     }
-  // B2.2 — background sub-agent finished (completed | failed). Mirrors the
+  // B2.2 — background sub-agent/job finished (completed | failed | cancelled). Mirrors the
   // shape of NotificationItem in tool-system/builtin/agent-notifications.ts
-  // so adapters between the two paths are trivial. Status "cancelled" is
-  // intentionally absent — the in-memory queue does not enqueue cancelled
-  // agents (user explicitly stopped, no follow-up turn needed), and this
-  // protocol event matches that policy.
+  // so adapters between the two paths are trivial. Sub-agent cancellation stays
+  // silent, but DriveAgent cancellation enqueues a cancelled event so the
+  // detached external CLI job does not leave a session waiting forever.
   | {
       type: "background_agent_completed";
       agentId: string;
       name?: string;
       description: string;
-      status: "completed" | "failed";
+      status: "completed" | "failed" | "cancelled";
       /**
        * What kind of background work this was. Lets UIs localize the
        * completion toast (e.g. a shell shows "命令完成" not the raw English
@@ -628,8 +631,16 @@ export type StreamEvent =
       command?: string;
       /** Final assistant text (status === "completed" only). */
       finalText?: string;
-      /** Error message (status === "failed" only). */
+      /** Error message (status === "failed" or "cancelled" only). */
       error?: string;
+      /** External Claude/Codex session id, when workKind === "cc". */
+      ccSessionId?: string;
+      /** Files attributed to an external DriveAgent transcript. */
+      changedFiles?: string[];
+      /** Working directory used to canonicalize relative/absolute path aliases. */
+      cwd?: string;
+      /** Client id of the real user turn that launched this background work. */
+      originClientMessageId?: string;
       /** When the bg agent finished (Date.now() value). */
       enqueuedAt: number;
     };
@@ -778,9 +789,10 @@ export interface MCPServerConfig {
    */
   envHeaders?: Record<string, string>;
   /**
-   * (HTTP) id of a stored credential (CredentialStore) to use as the Bearer
-   * token. Resolved at connect time via a resolver passed to buildHttpHeaders;
-   * the secret is never stored in the MCP config. Wins over bearerTokenEnvVar.
+   * (HTTP) id of a stored credential (token/link/oauth) to use as Bearer auth.
+   * OAuth credentials inject their current access token. Resolved at connect
+   * time via CredentialStore; the secret is never stored in MCP config. Wins
+   * over bearerTokenEnvVar.
    */
   credentialRef?: string;
   /**
@@ -804,6 +816,7 @@ export interface MCPServerConfig {
 export interface MCPServerOverride {
   env?: Record<string, string>;
   envVars?: string[];
+  /** (HTTP) id of a stored token/link/oauth credential used as Bearer auth. */
   credentialRef?: string;
   bearerTokenEnvVar?: string;
   envHeaders?: Record<string, string>;

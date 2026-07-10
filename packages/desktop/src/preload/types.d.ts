@@ -75,7 +75,7 @@ export type BackgroundWorkInfo =
       kind: "job";
       jobId: string;
       description: string;
-      status: "running" | "completed" | "failed";
+      status: "running" | "completed" | "failed" | "cancelled";
       startedAt: number;
       finishedAt?: number;
       /** Result summary / error, once finished. */
@@ -361,10 +361,10 @@ export interface FileContent {
   size: number;
 }
 
-/** A stored credential (token/link) as edited in the renderer. */
+/** A stored credential (token/link/oauth/cookie) as edited in the renderer. */
 export interface CredentialView {
   id: string;
-  type: "token" | "link" | "cookie";
+  type: "token" | "link" | "cookie" | "oauth";
   label: string;
   secret?: string;
   exposeAsEnv?: string;
@@ -372,19 +372,36 @@ export interface CredentialView {
   autoUseByAI?: boolean;
   /** 逐条「AI 可自动注入浏览器」开关(把 cookie 灌进内置浏览器,免审批门)。 */
   autoInjectByAI?: boolean;
-  /** link: appUrl;cookie: 拓取平台与主域 + 抓取范围(all=全量分区)+ 切换策略。 */
+  /** link: appUrl; oauth: provider/client hints; cookie: 拓取平台与主域 + 切换策略。 */
   meta?: {
     appUrl?: string;
     platform?: string;
     domain?: string;
     scope?: "domain" | "all";
     switchMode?: "clear" | "merge";
+    oauthProvider?: string;
+    authUrl?: string;
+    tokenEndpoint?: string;
+    clientId?: string;
+    scopes?: string[];
+    lastRefreshAt?: string;
   };
 }
 /** Masked credential returned to the renderer — never carries the secret value. */
 export interface MaskedCredentialView extends Omit<CredentialView, "secret"> {
   hasSecret: boolean;
   secretHint?: string;
+  oauthStatus?: {
+    state: "valid" | "expired" | "missing" | "invalid";
+    expiresAt?: string;
+    expiresInMs?: number;
+    hasRefreshToken?: boolean;
+    tokenEndpoint?: string;
+    clientId?: string;
+    scope?: string;
+    scopes?: string[];
+    error?: string;
+  };
 }
 
 export type MarketplaceSource = { source: "github"; repo: string } | { source: "git"; url: string };
@@ -504,6 +521,7 @@ export interface CodeshellApi {
     text: string,
     id?: string,
     clientMessageId?: string,
+    attachments?: InputAttachmentMeta[],
   ): Promise<RpcResponse>;
   /** Revoke a still-pending steer entry by id (撤回). The response data carries
    *  `{ removed }` — false if the loop already consumed it. */
@@ -752,6 +770,12 @@ export interface CodeshellApi {
           domain?: string;
           scope?: "domain" | "all";
           switchMode?: "clear" | "merge";
+          oauthProvider?: string;
+          authUrl?: string;
+          tokenEndpoint?: string;
+          clientId?: string;
+          scopes?: string[];
+          lastRefreshAt?: string;
         };
       },
     ): Promise<void>;
@@ -946,6 +970,8 @@ export interface CodeshellApi {
   ): Promise<void>;
   listSessions(): Promise<DesktopSessionSummary[]>;
   deleteSession(id: string): Promise<void>;
+  claimQuickChatSession(id: string): Promise<void>;
+  cleanupQuickChatSession(id: string): Promise<{ deleted: boolean }>;
   listSessionTitles(): Promise<Record<string, string>>;
   renameSession(id: string, title: string): Promise<void>;
   tailLog(bucket: "ui-ink" | "engine" | "desktop", lines?: number): Promise<string[]>;
@@ -1382,6 +1408,26 @@ export interface CodeshellApi {
       hasMore: boolean;
       totalCount: number;
     }>;
+    /** Atomically load the initial external-CLI transcript snapshot and start
+     * tailing new JSONL lines into the room.message push stream. */
+    subscribeTranscript(
+      roomId: string,
+      cwd: string,
+      sessionId: string,
+      kind: "claude-code" | "codex",
+      limit: number,
+    ): Promise<{
+      active: boolean;
+      messages: {
+        role: "user" | "assistant";
+        text: string;
+        tools?: { name: string; summary: string; args?: Record<string, unknown> }[];
+      }[];
+      hasMore: boolean;
+      totalCount: number;
+      roomCursor: number;
+    }>;
+    unsubscribeTranscript(roomId: string): Promise<void>;
     closeSession(roomId: string): Promise<void>;
     onRoomMessage(cb: (env: { roomId: string; msg: unknown }) => void): () => void;
     onApprovalRequest(
@@ -1591,7 +1637,7 @@ export interface McpServerProbeInput {
   bearerTokenEnvVar?: string;
   /** (HTTP) header-name → env-var-NAME map, values read at connect time. */
   envHeaders?: Record<string, string>;
-  /** (HTTP) id of a stored credential used as the Bearer token. */
+  /** (HTTP) id of a stored token/link/oauth credential used as Bearer auth. */
   credentialRef?: string;
 }
 

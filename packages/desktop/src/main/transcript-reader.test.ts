@@ -68,6 +68,38 @@ describe("transcriptToFoldItems", () => {
     expect(userItems).toEqual([{ kind: "user", text: "真正的用户问题", timestamp: 1 }]);
   });
 
+  it("replays persisted external changed files into the renderer stream", () => {
+    const items = transcriptToFoldItems(
+      line("external_file_changes", {
+        jobId: "cc-files",
+        cli: "claude",
+        cwd: "/repo",
+        description: "DriveAgent(claude): edit feature",
+        status: "completed",
+        changedFiles: ["src/a.ts", "src/b.ts"],
+        originClientMessageId: "client-turn-1",
+      }),
+    );
+
+    expect(items).toEqual([
+      {
+        kind: "stream",
+        event: {
+          type: "background_agent_completed",
+          agentId: "cc-files",
+          description: "DriveAgent(claude): edit feature",
+          status: "completed",
+          workKind: "cc",
+          changedFiles: ["src/a.ts", "src/b.ts"],
+          cwd: "/repo",
+          originClientMessageId: "client-turn-1",
+          enqueuedAt: 1,
+        },
+        timestamp: 1,
+      },
+    ]);
+  });
+
   it("maps tool_use + tool_result", () => {
     const jsonl = [
       line("tool_use", { toolName: "Bash", toolCallId: "tc1", args: { command: "ls" } }),

@@ -2,6 +2,7 @@ import {
   CredentialStore,
   isCredentialSecretAvailable,
   materializeCookieSecret,
+  summarizeOAuthCredentialSecret,
   type CredentialAccessScope,
   type Credential,
   type CredentialMetadata,
@@ -42,8 +43,16 @@ export function resolveCredentialValueForWorker(req: CredentialResolveRequest): 
   if (!cred || !isCredentialSecretAvailable(cred.secret)) {
     throw new Error(`credential "${req.id}" is unavailable`);
   }
-  if (cred.type !== "token" && cred.type !== "link") {
-    throw new Error(`credential "${req.id}" is not a token/link credential`);
+  const allowed =
+    req.purpose === "mcp"
+      ? cred.type === "token" || cred.type === "link" || cred.type === "oauth"
+      : cred.type === "token" || cred.type === "link";
+  if (!allowed) {
+    throw new Error(
+      `credential "${req.id}" is not a ${
+        req.purpose === "mcp" ? "token/link/oauth" : "token/link"
+      } credential`,
+    );
   }
   return { value: cred.secret };
 }
@@ -98,5 +107,6 @@ function toMetadata(cred: Credential): CredentialMetadata {
     meta,
     hasSecret,
     secretHint: hasSecret ? (secret.length > 4 ? `****${secret.slice(-4)}` : "****") : undefined,
+    ...(cred.type === "oauth" ? { oauthStatus: summarizeOAuthCredentialSecret(secret) } : {}),
   };
 }

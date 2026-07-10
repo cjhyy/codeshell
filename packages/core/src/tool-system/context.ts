@@ -186,6 +186,16 @@ export interface ToolVisibilityContext {
   settingsScope?: import("../settings/manager.js").SettingsScope;
 }
 
+export interface ExternalFileChangesRecord {
+  jobId: string;
+  description: string;
+  cli: "claude" | "codex";
+  cwd: string;
+  status: "completed" | "failed" | "cancelled";
+  changedFiles: string[];
+  originClientMessageId?: string;
+}
+
 export interface ToolContext {
   /** Active working directory for this Engine. */
   cwd: string;
@@ -263,6 +273,15 @@ export interface ToolContext {
    * narrow context, or standalone tool tests. (B2 — Gate 1, standard §S3.)
    */
   sessionId?: string;
+  /** Stable id of the real user turn that owns async work launched here. */
+  originClientMessageId?: string;
+  /**
+   * Persist file attribution from an async external DriveAgent completion in
+   * the owning CodeShell transcript. The callback closes over the live parent
+   * transcript, so a background job can record its files after the run that
+   * launched it has already returned.
+   */
+  recordExternalFileChanges?: (record: ExternalFileChangesRecord) => void;
   /**
    * Skill names the user has hidden from the LLM (full namespaced names
    * for plugin skills, e.g. "docs:pdf"). The skill builtin tool uses

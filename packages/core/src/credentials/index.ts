@@ -20,7 +20,23 @@ export {
   type CredentialSnapshot,
   type CredentialSnapshotEntry,
 } from "./access.js";
-export type { Credential, CredentialType, CredentialStoreFile } from "./types.js";
+export type {
+  Credential,
+  CredentialType,
+  CredentialStoreFile,
+  OAuthCredentialPublicStatus,
+  OAuthCredentialSecret,
+} from "./types.js";
+export {
+  buildOAuthRefreshRequest,
+  isOAuthAccessTokenExpired,
+  oauthCredentialStatus,
+  parseOAuthCredentialSecret,
+  summarizeOAuthCredentialSecret,
+  type OAuthClockOptions,
+  type OAuthRefreshHandler,
+  type OAuthRefreshRequest,
+} from "./oauth.js";
 export { formatNetscapeCookies, parseCookieJar, type CookieLike } from "./cookie-jar.js";
 export {
   useCredentialToolDef,

@@ -7,9 +7,11 @@ import {
   makeDriveClaudeCodeTool,
   driveAgentToolDef,
   makeDriveAgentTool,
+  driveAgentJobsToolDef,
+  driveAgentJobsTool,
 } from "./drive-claude-code.js";
 import { backgroundJobRegistry } from "./background-jobs.js";
-import { notificationQueue } from "./agent-notifications.js";
+import { agentNotificationBus, notificationQueue } from "./agent-notifications.js";
 import { makeDriveClaudeCodeTool as mkBg } from "./drive-claude-code.js";
 import { ExternalAgentSessionStore } from "../../cc-orchestrator/external-agent-session-store.js";
 import { BUILTIN_TOOLS } from "./index.js";
@@ -21,6 +23,18 @@ describe("DriveAgent tool", () => {
     expect((driveAgentToolDef.inputSchema as any).properties.background).toBeDefined();
     expect((driveAgentToolDef.inputSchema as any).properties.model).toBeDefined();
     expect((driveAgentToolDef.inputSchema as any).properties.cli.enum).toEqual(["claude", "codex"]);
+  });
+
+  it("passes only an explicitly provided non-empty model to the runner", async () => {
+    const seen: Array<string | undefined> = [];
+    const tool = makeDriveAgentTool(async (o) => {
+      seen.push(o.model);
+      return { sessionId: "S", finalText: "", isError: false, exitCode: 0, lines: [] };
+    });
+    await tool({ prompt: "p", cwd: "/x", background: false, model: "codex-x" } as any);
+    await tool({ prompt: "p", cwd: "/x", background: false } as any);
+    await tool({ prompt: "p", cwd: "/x", background: false, model: "   " } as any);
+    expect(seen).toEqual(["codex-x", undefined, undefined]);
   });
 
   it("routes cli:'codex' to the codex runner, defaults (omitted) to claude", async () => {
@@ -61,22 +75,25 @@ describe("DriveAgent tool", () => {
   it("registers DriveAgent and DriveClaudeCode with explicit long timeouts", () => {
     const drive = BUILTIN_TOOLS.find((t) => t.definition.name === "DriveAgent")?.definition;
     const alias = BUILTIN_TOOLS.find((t) => t.definition.name === "DriveClaudeCode")?.definition;
+    const jobs = BUILTIN_TOOLS.find((t) => t.definition.name === "DriveAgentJobs")?.definition;
     expect(drive?.timeoutMs).toBeGreaterThan(120_000);
     expect(alias?.timeoutMs).toBe(drive?.timeoutMs);
+    expect(jobs?.name).toBe("DriveAgentJobs");
   });
 
-  it("passes the ToolContext AbortSignal through to the runner", async () => {
+  it("propagates the ToolContext AbortSignal to the runner", async () => {
     const controller = new AbortController();
     let seen: AbortSignal | undefined;
     const tool = makeDriveAgentTool(async (o) => {
       seen = o.signal;
+      controller.abort();
       return { sessionId: "S", finalText: "", isError: false, exitCode: 0, lines: [] };
     });
     await tool(
       { prompt: "p", cwd: "/x", background: false } as any,
       { cwd: "/x", sessionId: "S-CTX", signal: controller.signal } as any,
     );
-    expect(seen).toBe(controller.signal);
+    expect(seen?.aborted).toBe(true);
   });
 
   it("appends attachment paths to the driven prompt and passes Codex image paths", async () => {
@@ -135,15 +152,16 @@ describe("DriveAgent tool", () => {
     }
   });
 
-  it("uses the registry-injected __signal when ToolContext is absent", async () => {
+  it("propagates the registry-injected __signal when ToolContext is absent", async () => {
     const controller = new AbortController();
     let seen: AbortSignal | undefined;
     const tool = makeDriveAgentTool(async (o) => {
       seen = o.signal;
+      controller.abort();
       return { sessionId: "S", finalText: "", isError: false, exitCode: 0, lines: [] };
     });
     await tool({ prompt: "p", cwd: "/x", background: false, __signal: controller.signal } as any);
-    expect(seen).toBe(controller.signal);
+    expect(seen?.aborted).toBe(true);
   });
 });
 
@@ -323,6 +341,8 @@ describe("DriveClaudeCode alias (back-compat)", () => {
       expect(first).not.toContain("Warning");
       expect(second).toContain("Warning");
       expect(second).toContain(realpathSync(tmp));
+      expect(second).toContain("DriveAgentJobs");
+      expect(second).toContain("first");
       expect(backgroundJobRegistry.listRunningForSession("S-CWD").map((j) => j.cwd)).toEqual([
         realpathSync(tmp),
         realpathSync(tmp),
@@ -532,7 +552,411 @@ describe("DriveClaudeCode alias (back-compat)", () => {
   });
 });
 
+describe("DriveAgentJobs tool", () => {
+  it("has list/inspect/cancel actions", () => {
+    expect(driveAgentJobsToolDef.name).toBe("DriveAgentJobs");
+    expect((driveAgentJobsToolDef.inputSchema as any).properties.action.enum).toEqual([
+      "list",
+      "inspect",
+      "cancel",
+    ]);
+  });
+
+  it("lists running DriveAgent jobs in a cwd before dispatching another one", async () => {
+    backgroundJobRegistry.reset?.();
+    const tmp = mkdtempSync(join(tmpdir(), "drive-jobs-list-"));
+    try {
+      const never = () => new Promise<any>(() => {});
+      const tool = makeDriveAgentTool(never as any);
+
+      await tool(
+        {
+          prompt: "edit src/alpha.ts and keep tests focused",
+          cwd: tmp,
+          cli: "codex",
+        } as any,
+        { cwd: tmp, sessionId: "S-JOBS-LIST" } as any,
+      );
+
+      const job = backgroundJobRegistry.listRunningByCwd(tmp)[0];
+      expect(job).toBeDefined();
+      if (!job) throw new Error("expected running DriveAgent job");
+
+      const out = await driveAgentJobsTool(
+        { action: "list", cwd: tmp } as any,
+        { cwd: tmp, sessionId: "S-OTHER" } as any,
+      );
+
+      expect(out).toContain(job.jobId);
+      expect(out).toContain("status=running");
+      expect(out).toContain("cli=codex");
+      expect(out).toContain(`session=S-JOBS-LIST`);
+      expect(out).toContain(realpathSync(tmp));
+      expect(out).toContain("edit src/alpha.ts");
+      expect(out).toContain("changedFiles=unknown");
+    } finally {
+      backgroundJobRegistry.reset?.();
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("inspect returns DriveAgent prompt, cwd, cli, status, and known changed files", async () => {
+    backgroundJobRegistry.reset?.();
+    const tmp = mkdtempSync(join(tmpdir(), "drive-jobs-inspect-"));
+    try {
+      backgroundJobRegistry.start("cc-known", "S-INSPECT", "DriveAgent(claude): update docs", {
+        kind: "drive-agent",
+        cli: "claude",
+        cwd: tmp,
+        promptSummary: "update docs and tests",
+      });
+      backgroundJobRegistry.finish("cc-known", {
+        status: "completed",
+        finalText: "done",
+        changedFiles: ["docs/a.md", "packages/core/src/a.test.ts"],
+      });
+
+      const out = await driveAgentJobsTool(
+        { action: "inspect", jobId: "cc-known" } as any,
+        {
+          cwd: tmp,
+          sessionId: "S-INSPECT",
+        } as any,
+      );
+
+      expect(out).toContain("jobId: cc-known");
+      expect(out).toContain("status: completed");
+      expect(out).toContain("cli: claude");
+      expect(out).toContain(`cwd: ${realpathSync(tmp)}`);
+      expect(out).toContain("prompt: update docs and tests");
+      expect(out).toContain("changedFiles:");
+      expect(out).toContain("docs/a.md");
+      expect(out).toContain("packages/core/src/a.test.ts");
+    } finally {
+      backgroundJobRegistry.reset?.();
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("cancel aborts a running DriveAgent job, marks it cancelled, and emits exactly one cancel notification", async () => {
+    backgroundJobRegistry.reset?.();
+    notificationQueue.reset("S-CANCEL-CC");
+    const tmp = mkdtempSync(join(tmpdir(), "drive-jobs-cancel-"));
+    try {
+      let seenSignal: AbortSignal | undefined;
+      const runner = (opts: { signal?: AbortSignal }) =>
+        new Promise<any>((resolve) => {
+          seenSignal = opts.signal;
+          opts.signal?.addEventListener(
+            "abort",
+            () =>
+              resolve({
+                sessionId: "CC-CANCELLED",
+                finalText: "runner observed abort",
+                isError: true,
+                exitCode: null,
+                lines: [],
+              }),
+            { once: true },
+          );
+        });
+      const tool = makeDriveAgentTool(runner as any);
+
+      await tool(
+        { prompt: "long edit", cwd: tmp, cli: "claude" } as any,
+        { cwd: tmp, sessionId: "S-CANCEL-CC" } as any,
+      );
+      const job = backgroundJobRegistry.listRunningForSession("S-CANCEL-CC")[0];
+      expect(job).toBeDefined();
+      if (!job) throw new Error("expected running DriveAgent job");
+
+      const cancelOut = await driveAgentJobsTool(
+        { action: "cancel", jobId: job.jobId } as any,
+        { cwd: tmp, sessionId: "S-CANCEL-CC" } as any,
+      );
+
+      expect(cancelOut).toContain("cancelled");
+      expect(seenSignal?.aborted).toBe(true);
+      expect(backgroundJobRegistry.get(job.jobId)?.status).toBe("cancelled");
+
+      const firstDrain = notificationQueue.drainAll("S-CANCEL-CC");
+      expect(firstDrain).toHaveLength(1);
+      expect(firstDrain[0]).toMatchObject({
+        agentId: job.jobId,
+        status: "cancelled",
+        workKind: "cc",
+      });
+
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(backgroundJobRegistry.get(job.jobId)?.status).toBe("cancelled");
+      expect(notificationQueue.drainAll("S-CANCEL-CC")).toHaveLength(0);
+    } finally {
+      backgroundJobRegistry.reset?.();
+      notificationQueue.reset("S-CANCEL-CC");
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("does not return or publish cancelled until the runner has exited", async () => {
+    backgroundJobRegistry.reset?.();
+    notificationQueue.reset("S-CANCEL-WAIT");
+    const tmp = mkdtempSync(join(tmpdir(), "drive-jobs-cancel-wait-"));
+    let resolveRun!: (result: any) => void;
+    let abortObserved = false;
+    try {
+      const runner = (opts: { signal?: AbortSignal }) =>
+        new Promise<any>((resolve) => {
+          resolveRun = resolve;
+          opts.signal?.addEventListener(
+            "abort",
+            () => {
+              abortObserved = true;
+            },
+            { once: true },
+          );
+        });
+      const tool = makeDriveAgentTool(runner as any);
+      await tool(
+        { prompt: "stubborn edit", cwd: tmp, cli: "codex" } as any,
+        { cwd: tmp, sessionId: "S-CANCEL-WAIT" } as any,
+      );
+      const job = backgroundJobRegistry.listRunningForSession("S-CANCEL-WAIT")[0];
+      expect(job).toBeDefined();
+      if (!job) throw new Error("expected running DriveAgent job");
+
+      let cancelReturned = false;
+      const cancel = driveAgentJobsTool(
+        { action: "cancel", jobId: job.jobId } as any,
+        { cwd: tmp, sessionId: "S-CANCEL-WAIT" } as any,
+      ).then((value) => {
+        cancelReturned = true;
+        return value;
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(abortObserved).toBe(true);
+      expect(cancelReturned).toBe(false);
+      expect(backgroundJobRegistry.get(job.jobId)?.status).toBe("cancelling");
+      expect(backgroundJobRegistry.listRunningByCwd(tmp).map((entry) => entry.jobId)).toEqual([
+        job.jobId,
+      ]);
+      expect(notificationQueue.drainAll("S-CANCEL-WAIT")).toEqual([]);
+
+      resolveRun({
+        sessionId: "CODEX-CANCEL-WAIT",
+        finalText: "runner exited after abort",
+        isError: true,
+        exitCode: null,
+        lines: [],
+      });
+      await expect(cancel).resolves.toContain("cancelled");
+      expect(backgroundJobRegistry.get(job.jobId)?.status).toBe("cancelled");
+      expect(notificationQueue.drainAll("S-CANCEL-WAIT")).toHaveLength(1);
+    } finally {
+      resolveRun?.({
+        sessionId: "",
+        finalText: "cleanup",
+        isError: true,
+        exitCode: null,
+        lines: [],
+      });
+      backgroundJobRegistry.reset?.();
+      notificationQueue.reset("S-CANCEL-WAIT");
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("flushes an aborted runner session id and partial changed files into cancellation", async () => {
+    backgroundJobRegistry.reset?.();
+    notificationQueue.reset("S-CANCEL-ARTIFACTS");
+    const tmp = mkdtempSync(join(tmpdir(), "drive-jobs-cancel-artifacts-"));
+    const store = new ExternalAgentSessionStore(join(tmp, "sessions.json"));
+    let attributed: Record<string, unknown> | undefined;
+    let streamed: Record<string, unknown> | undefined;
+    const unsubscribe = agentNotificationBus.subscribe((sessionId, event) => {
+      if (sessionId === "S-CANCEL-ARTIFACTS") streamed = event as Record<string, unknown>;
+    });
+    try {
+      const runner = (opts: { signal?: AbortSignal }) =>
+        new Promise<any>((resolve) => {
+          opts.signal?.addEventListener(
+            "abort",
+            () =>
+              resolve({
+                sessionId: "CC-CANCEL-PARTIAL",
+                finalText: "aborted after a partial edit",
+                isError: true,
+                exitCode: null,
+                lines: [],
+              }),
+            { once: true },
+          );
+        });
+      const tool = makeDriveAgentTool(runner as any, undefined, {
+        sessionStore: store,
+        readChangedFiles: () => [join(realpathSync(tmp), "src", "partial.ts")],
+      });
+      await tool(
+        { prompt: "partially edit one file", cwd: tmp, cli: "claude" } as any,
+        {
+          cwd: tmp,
+          sessionId: "S-CANCEL-ARTIFACTS",
+          originClientMessageId: "client-cancel-artifacts",
+          recordExternalFileChanges: (event: Record<string, unknown>) => {
+            attributed = event;
+          },
+        } as any,
+      );
+      const job = backgroundJobRegistry.listRunningForSession("S-CANCEL-ARTIFACTS")[0];
+      expect(job).toBeDefined();
+      if (!job) throw new Error("expected running DriveAgent job");
+
+      await driveAgentJobsTool(
+        { action: "cancel", jobId: job.jobId } as any,
+        { cwd: tmp, sessionId: "S-CANCEL-ARTIFACTS" } as any,
+      );
+
+      const cancelled = backgroundJobRegistry.get(job.jobId);
+      expect(cancelled).toMatchObject({
+        status: "cancelled",
+        ccSessionId: "CC-CANCEL-PARTIAL",
+        changedFiles: ["src/partial.ts"],
+      });
+      const notifications = notificationQueue.drainAll("S-CANCEL-ARTIFACTS");
+      expect(notifications).toHaveLength(1);
+      expect(notifications[0]).toMatchObject({
+        status: "cancelled",
+        ccSessionId: "CC-CANCEL-PARTIAL",
+        changedFiles: ["src/partial.ts"],
+        cwd: realpathSync(tmp),
+        originClientMessageId: "client-cancel-artifacts",
+      });
+      expect(streamed).toMatchObject({
+        type: "background_agent_completed",
+        status: "cancelled",
+        ccSessionId: "CC-CANCEL-PARTIAL",
+        changedFiles: ["src/partial.ts"],
+        cwd: realpathSync(tmp),
+        originClientMessageId: "client-cancel-artifacts",
+      });
+      expect(store.get("claude", "CC-CANCEL-PARTIAL")?.cwd).toBe(realpathSync(tmp));
+      expect(attributed).toMatchObject({
+        status: "cancelled",
+        changedFiles: ["src/partial.ts"],
+        originClientMessageId: "client-cancel-artifacts",
+      });
+    } finally {
+      unsubscribe();
+      backgroundJobRegistry.reset?.();
+      notificationQueue.reset("S-CANCEL-ARTIFACTS");
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("session teardown aborts a running DriveAgent and suppresses its late completion", async () => {
+    backgroundJobRegistry.reset?.();
+    notificationQueue.reset("S-CLOSE-CC");
+    const tmp = mkdtempSync(join(tmpdir(), "drive-jobs-close-"));
+    try {
+      let seenSignal: AbortSignal | undefined;
+      const runner = (opts: { signal?: AbortSignal }) =>
+        new Promise<any>((resolve) => {
+          seenSignal = opts.signal;
+          opts.signal?.addEventListener(
+            "abort",
+            () =>
+              resolve({
+                sessionId: "CC-CLOSED",
+                finalText: "late result after close",
+                isError: false,
+                exitCode: null,
+                lines: [],
+              }),
+            { once: true },
+          );
+        });
+      const tool = makeDriveAgentTool(runner as any);
+      await tool(
+        { prompt: "long edit", cwd: tmp, cli: "claude" } as any,
+        { cwd: tmp, sessionId: "S-CLOSE-CC" } as any,
+      );
+
+      backgroundJobRegistry.dropForSession("S-CLOSE-CC");
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(seenSignal?.aborted).toBe(true);
+      expect(backgroundJobRegistry.listForSession("S-CLOSE-CC")).toEqual([]);
+      expect(notificationQueue.drainAll("S-CLOSE-CC")).toEqual([]);
+    } finally {
+      backgroundJobRegistry.reset?.();
+      notificationQueue.reset("S-CLOSE-CC");
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("DriveClaudeCode background completion delivery", () => {
+  it("publishes and persists deduped changed files with the completion", async () => {
+    backgroundJobRegistry.reset?.();
+    notificationQueue.drainAll("S-CHANGED");
+    let resolveRun!: (r: any) => void;
+    let persisted: Record<string, unknown> | undefined;
+    let streamed: { sessionId: string; event: Record<string, unknown> } | undefined;
+    const unsubscribe = agentNotificationBus.subscribe((sessionId, event) => {
+      if (sessionId === "S-CHANGED") streamed = { sessionId, event };
+    });
+    const runner = () =>
+      new Promise<any>((res) => {
+        resolveRun = res;
+      });
+    const tool = mkBg(
+      runner as any,
+      {
+        readChangedFiles: () => ["/repo/src/a.ts", "/repo/src/a.ts", "/repo/src/b.ts"],
+      } as any,
+    );
+
+    await tool({ prompt: "edit two files", cwd: "/repo" }, {
+      cwd: "/repo",
+      sessionId: "S-CHANGED",
+      originClientMessageId: "client-turn-1",
+      recordExternalFileChanges: (event: Record<string, unknown>) => {
+        persisted = event;
+      },
+    } as any);
+    resolveRun({
+      sessionId: "CC-CHANGED",
+      finalText: "done",
+      isError: false,
+      exitCode: 0,
+      lines: [],
+    });
+    await new Promise((r) => setTimeout(r, 20));
+
+    const items = notificationQueue.drainAll("S-CHANGED");
+    expect(items).toHaveLength(1);
+    expect(items[0]?.changedFiles).toEqual(["src/a.ts", "src/b.ts"]);
+    expect(items[0]?.cwd).toBe("/repo");
+    expect(items[0]?.originClientMessageId).toBe("client-turn-1");
+    expect(streamed).toMatchObject({
+      sessionId: "S-CHANGED",
+      event: {
+        type: "background_agent_completed",
+        changedFiles: ["src/a.ts", "src/b.ts"],
+        cwd: "/repo",
+        originClientMessageId: "client-turn-1",
+      },
+    });
+    expect(persisted).toMatchObject({
+      cli: "claude",
+      cwd: "/repo",
+      changedFiles: ["src/a.ts", "src/b.ts"],
+      originClientMessageId: "client-turn-1",
+    });
+    unsubscribe();
+  });
+
   it("enqueues a completion notification carrying cc's finalText so the woken agent sees the answer", async () => {
     backgroundJobRegistry.reset?.();
     notificationQueue.drainAll("S-NOTIFY"); // clear bucket

@@ -474,6 +474,72 @@ describe("buildHttpHeaders", () => {
       buildHttpHeaders("srv", httpCfg("srv", { envHeaders: { "X-Api-Key": "MCP_MISSING" } })),
     ).toThrow('MCP server "srv": env var "MCP_MISSING" (from envHeaders) is not set');
   });
+
+  test("legacy credentialRef string remains a bearer token", () => {
+    const headers = buildHttpHeaders(
+      "srv",
+      httpCfg("srv", { credentialRef: "plain-token" }),
+      () => "tok-legacy",
+    );
+
+    expect(headers.Authorization).toBe("Bearer tok-legacy");
+  });
+
+  test("link credentialRef remains a non-OAuth bearer token", () => {
+    const config = httpCfg("srv", { credentialRef: "saved-link" });
+    const headers = buildHttpHeaders("srv", config, () => ({
+      type: "link",
+      secret: "bearer-from-link",
+    }));
+
+    expect(headers.Authorization).toBe("Bearer bearer-from-link");
+    expect(() =>
+      buildHttpHeaders("srv", config, () => ({
+        type: "link",
+        secret: JSON.stringify({ accessToken: "oauth-must-not-be-injected" }),
+      })),
+    ).toThrow(/structured.*secret.*metadata/);
+  });
+
+  test("oauth credentialRef injects its access token", () => {
+    const headers = buildHttpHeaders(
+      "srv",
+      httpCfg("srv", { credentialRef: "oauth-account" }),
+      () => ({
+        type: "oauth",
+        secret: JSON.stringify({
+          accessToken: "oauth-access",
+          refreshToken: "oauth-refresh",
+          expiresAt: "2030-01-01T00:00:00.000Z",
+          tokenEndpoint: "https://auth.example.com/token",
+          clientId: "client-id",
+        }),
+      }),
+      { now: () => Date.UTC(2026, 0, 1) },
+    );
+
+    expect(headers.Authorization).toBe("Bearer oauth-access");
+  });
+
+  test("expired oauth credentialRef fails before connecting", () => {
+    expect(() =>
+      buildHttpHeaders(
+        "srv",
+        httpCfg("srv", { credentialRef: "oauth-account" }),
+        () => ({
+          type: "oauth",
+          secret: JSON.stringify({
+            accessToken: "oauth-access",
+            refreshToken: "oauth-refresh",
+            expiresAt: "2020-01-01T00:00:00.000Z",
+            tokenEndpoint: "https://auth.example.com/token",
+            clientId: "client-id",
+          }),
+        }),
+        { now: () => Date.UTC(2026, 0, 1) },
+      ),
+    ).toThrow(/oauth credential "oauth-account" access token expired/);
+  });
 });
 
 describe("buildHttpHeadersWithCredentialAccess", () => {
@@ -487,6 +553,9 @@ describe("buildHttpHeadersWithCredentialAccess", () => {
         credentialRef: "figma",
       },
       {
+        resolveMeta(_cwd, id) {
+          return { id, type: "token", label: "Figma token", hasSecret: true };
+        },
         async resolveValue(req) {
           expect(req).toEqual({
             cwd: undefined,
@@ -500,6 +569,134 @@ describe("buildHttpHeadersWithCredentialAccess", () => {
     );
 
     expect(headers.Authorization).toBe("Bearer figd_secret");
+  });
+
+  test("resolves link credentialRef through the async credential access layer", async () => {
+    const headers = await buildHttpHeadersWithCredentialAccess(
+      "srv",
+      {
+        name: "srv",
+        transport: "streamable-http",
+        url: "https://example.com",
+        credentialRef: "saved-link",
+      },
+      {
+        resolveMeta(_cwd, id) {
+          return { id, type: "link", label: "Saved link", hasSecret: true };
+        },
+        async resolveValue(req) {
+          expect(req).toEqual({
+            cwd: undefined,
+            id: "saved-link",
+            scope: "full",
+            purpose: "mcp",
+          });
+          return "bearer-from-link";
+        },
+      },
+    );
+
+    expect(headers.Authorization).toBe("Bearer bearer-from-link");
+  });
+
+  test("uses credential metadata to parse oauth secrets", async () => {
+    const headers = await buildHttpHeadersWithCredentialAccess(
+      "srv",
+      {
+        name: "srv",
+        transport: "streamable-http",
+        url: "https://example.com",
+        credentialRef: "oauth-account",
+      },
+      {
+        resolveMeta(_cwd, id) {
+          return {
+            id,
+            type: "oauth",
+            label: "OAuth Account",
+            hasSecret: true,
+          };
+        },
+        async resolveValue(req) {
+          expect(req.purpose).toBe("mcp");
+          return JSON.stringify({
+            accessToken: "oauth-access",
+            refreshToken: "oauth-refresh",
+            expiresAt: "2030-01-01T00:00:00.000Z",
+          });
+        },
+      },
+      { now: () => Date.UTC(2026, 0, 1) },
+    );
+
+    expect(headers.Authorization).toBe("Bearer oauth-access");
+  });
+
+  test("fails closed when credential metadata is unavailable for a structured oauth secret", async () => {
+    const secret = JSON.stringify({
+      accessToken: "oauth-access-missing-meta",
+      refreshToken: "refresh-must-not-leak",
+      clientSecret: "client-secret-must-not-leak",
+    });
+    let error: Error | undefined;
+
+    try {
+      await buildHttpHeadersWithCredentialAccess(
+        "srv",
+        {
+          name: "srv",
+          transport: "streamable-http",
+          url: "https://example.com",
+          credentialRef: "oauth-missing-meta",
+        },
+        {
+          async resolveValue() {
+            return secret;
+          },
+        },
+      );
+    } catch (err) {
+      error = err as Error;
+    }
+
+    expect(error?.message).toMatch(/metadata.*unavailable|metadata.*missing/i);
+    expect(error?.message).not.toContain("refresh-must-not-leak");
+    expect(error?.message).not.toContain("client-secret-must-not-leak");
+  });
+
+  test("rejects stale token metadata when the resolved secret is structured JSON", async () => {
+    const secret = JSON.stringify({
+      accessToken: "oauth-access-stale-meta",
+      refreshToken: "stale-refresh-must-not-leak",
+      clientSecret: "stale-client-secret-must-not-leak",
+    });
+    let error: Error | undefined;
+
+    try {
+      await buildHttpHeadersWithCredentialAccess(
+        "srv",
+        {
+          name: "srv",
+          transport: "streamable-http",
+          url: "https://example.com",
+          credentialRef: "oauth-stale-meta",
+        },
+        {
+          resolveMeta(_cwd, id) {
+            return { id, type: "token", label: "stale metadata", hasSecret: true };
+          },
+          async resolveValue() {
+            return secret;
+          },
+        },
+      );
+    } catch (err) {
+      error = err as Error;
+    }
+
+    expect(error?.message).toMatch(/structured.*secret|metadata.*mismatch/i);
+    expect(error?.message).not.toContain("stale-refresh-must-not-leak");
+    expect(error?.message).not.toContain("stale-client-secret-must-not-leak");
   });
 });
 
