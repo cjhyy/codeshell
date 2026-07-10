@@ -60,6 +60,13 @@ const GENERAL_BUILTIN_TOOLS = [
   "WebFetch",
   "GenerateImage",
   "GenerateVideo",
+  // Load a workspace image (by path) or an earlier history image (by number)
+  // into context so a vision model can SEE it. Same whitelist requirement as
+  // the rest: registered in BUILTIN_TOOLS but filtered out by registerBuiltins
+  // unless the preset names it — so it was registered-but-invisible before.
+  // Self-degrades to a text placeholder on non-vision models and gates format/
+  // size, so listing it unconditionally is safe.
+  "view_image",
   "AskUserQuestion",
   "Agent",
   // AgentStatus removed: background agents now write to ~/.code-shell/agents/
