@@ -1,4 +1,4 @@
-import React, { memo, useState, useEffect } from "react";
+import React, { memo, useState, useEffect, useRef } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { ToolCard } from "../tool-cards";
 import { ToolGroupCard } from "./ToolGroupCard";
@@ -46,12 +46,19 @@ function dedupeById<T extends { id: string }>(items: T[]): T[] {
  */
 function TurnProcessGroupCardImpl({ group, turnEpoch, cwd }: Props) {
   const [open, setOpen] = useState(group.isLive);
+  const prevIsLiveRef = useRef(group.isLive);
+  const prevTurnEpochRef = useRef(turnEpoch);
 
-  // Force-collapse on turn boundary, but only for already-closed groups — and
-  // never for an interrupted (stopped) turn, which must keep its produced
-  // content visible (it has no fold header at all; see showHeader below).
+  // Force-collapse only the process card whose own clean turn just transitioned
+  // from live to closed. Older closed groups may have been manually expanded;
+  // a later turnEpoch bump (background wakeup / next turn) must not fold them
+  // again. Interrupted (stopped) turns still render flat; see showHeader below.
   useEffect(() => {
-    if (turnEpoch !== undefined && !group.isLive && !group.stopped) setOpen(false);
+    const wasLive = prevIsLiveRef.current;
+    const turnEpochChanged = turnEpoch !== undefined && prevTurnEpochRef.current !== turnEpoch;
+    if (wasLive && !group.isLive && turnEpochChanged && !group.stopped) setOpen(false);
+    prevIsLiveRef.current = group.isLive;
+    prevTurnEpochRef.current = turnEpoch;
   }, [turnEpoch, group.isLive, group.stopped]);
 
   // Codex-style "已处理 X m Y s" header. Live turn: tick every 1s from the
