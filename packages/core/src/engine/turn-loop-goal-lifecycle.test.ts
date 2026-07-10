@@ -16,6 +16,7 @@ import type { LLMResponse, Message, StreamEvent, ToolCall, ToolResult } from "..
 import { CANCEL_GOAL_TOOL_NAME } from "../tool-system/builtin/cancel-goal.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
+import { ToolRegistry } from "../tool-system/registry.js";
 import { Engine } from "./engine.js";
 import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js";
 
@@ -223,6 +224,49 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     ]);
   });
 
+  it("scrubs bare env and URL query credentials from the runtime judge snapshot", async () => {
+    const snapshots: any[] = [];
+    const outputs: Record<string, string> = {
+      BareToken: "TOKEN=runtime-bare-token-secret",
+      BarePassword: "PASSWORD=runtime-bare-password-secret",
+      QueryCredential:
+        "https://example.com/path?token=runtime-query-token&api_key=runtime-query-key&password=runtime-query-password",
+    };
+    const secrets = [
+      "runtime-bare-token-secret",
+      "runtime-bare-password-secret",
+      "runtime-query-token",
+      "runtime-query-key",
+      "runtime-query-password",
+    ];
+    const toolCalls = Object.keys(outputs).map((toolName, index) => ({
+      id: `scrub-${index}`,
+      toolName,
+      args: {},
+    }));
+    const { deps } = makeTurnLoopDeps([toolBatchResponse(toolCalls), stopResponse("scrubbed")], {
+      execute: async (call) => ({
+        id: call.id,
+        toolName: call.toolName,
+        result: outputs[call.toolName],
+      }),
+      hook: (event) =>
+        event === "on_stop" ? { data: { goalVerdict: { met: true, gaps: "" } } } : {},
+      updateGoalJudgeContext: (context) => snapshots.push(context),
+    });
+
+    await new TurnLoop(deps, {
+      maxTurns: 4,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "verify scrubbed credentials" },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(snapshots).toHaveLength(1);
+    const serialized = JSON.stringify(snapshots[0]);
+    for (const secret of secrets) expect(serialized).not.toContain(secret);
+    expect(serialized).toContain("[REDACTED]");
+  });
+
   it("honors tool registration metadata that declares sensitive results", async () => {
     const snapshots: any[] = [];
     const secret = "METADATA_DECLARED_RESULT_SECRET";
@@ -261,6 +305,46 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     expect(JSON.stringify(snapshots[0])).not.toContain(secret);
     expect(snapshots[0].toolResults).toEqual([
       { turnCount: 1, toolName: "CredentialLookup", status: "success" },
+    ]);
+  });
+
+  it("carries sensitiveResult from ToolRegistry definitions into TurnLoop", async () => {
+    const snapshots: any[] = [];
+    const secret = "REGISTRY_TO_TURN_LOOP_SECRET";
+    const registry = new ToolRegistry({ builtinTools: [] });
+    registry.registerTool({
+      name: "RegistryCredentialLookup",
+      description: "returns credentials",
+      inputSchema: { type: "object", properties: {} },
+      source: "builtin",
+      permissionDefault: "allow",
+      sensitiveResult: true,
+    });
+    const { deps } = makeTurnLoopDeps(
+      [
+        toolResponse({ id: "registry-secret-1", toolName: "RegistryCredentialLookup", args: {} }),
+        stopResponse("credential checked"),
+      ],
+      {
+        execute: async (call) => ({ id: call.id, toolName: call.toolName, result: secret }),
+        hook: (event) =>
+          event === "on_stop" ? { data: { goalVerdict: { met: true, gaps: "" } } } : {},
+        updateGoalJudgeContext: (context) => snapshots.push(context),
+      },
+    );
+    deps.tools = registry.getToolDefinitions();
+
+    await new TurnLoop(deps, {
+      maxTurns: 4,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "check registry credential state" },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(deps.tools[0]?.sensitiveResult).toBe(true);
+    expect(snapshots).toHaveLength(1);
+    expect(JSON.stringify(snapshots[0])).not.toContain(secret);
+    expect(snapshots[0].toolResults).toEqual([
+      { turnCount: 1, toolName: "RegistryCredentialLookup", status: "success" },
     ]);
   });
 

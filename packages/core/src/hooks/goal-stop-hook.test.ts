@@ -284,6 +284,25 @@ describe("createGoalStopHook — three-state judge", () => {
       },
       ["alice", "supersecret"],
     ],
+    [
+      "bare TOKEN and PASSWORD environment variables",
+      {
+        id: "bare-env-secret",
+        toolName: "Bash",
+        result: "TOKEN=plain-token-secret\nPASSWORD=plain-password-secret\nstatus=ok",
+      },
+      ["plain-token-secret", "plain-password-secret"],
+    ],
+    [
+      "URL query credentials",
+      {
+        id: "url-query-secret",
+        toolName: "WebFetch",
+        result:
+          "GET https://example.com/private?token=query-token-secret&access_token=query-access-secret&api_key=query-key-secret&password=query-password-secret&safe=ok",
+      },
+      ["query-token-secret", "query-access-secret", "query-key-secret", "query-password-secret"],
+    ],
   ] as const) {
     it(`scrubs an unmarked ${label} from both projection and judge prompt`, async () => {
       const projection = projectGoalJudgeToolResult(result, 1);

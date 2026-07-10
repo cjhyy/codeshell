@@ -294,10 +294,14 @@ function projectedContent(result: ToolResult): { text: string; omittedNonText: b
 function scrubSecrets(text: string): string {
   return text
     .replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s/@:]+:[^\s/@]+@/giu, "$1[REDACTED]@")
+    .replace(
+      /([?&](?:(?:access|refresh|auth|id)[_-]?token|token|api[_-]?key|password|passwd|client[_-]?secret|secret)=)[^&#\s]*/giu,
+      "$1[REDACTED]",
+    )
     .replace(/(\bAuthorization\s*:\s*)(?:Bearer|Basic|Token)\s+[^\s,;]+/giu, "$1[REDACTED]")
     .replace(/(\b(?:Set-Cookie|Cookie)\s*:\s*)[^\r\n]+/giu, "$1[REDACTED]")
     .replace(
-      /((?:^|[\s"'`;,])(?:[A-Za-z_][A-Za-z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD|PWD))\s*=\s*)(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s"'`;]+)/gimu,
+      /((?:^|[\s"'`;,])(?=[A-Za-z_][A-Za-z0-9_]*\s*=)(?=[A-Za-z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD|PWD))[A-Za-z_][A-Za-z0-9_]*\s*=\s*)(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s"'`;]+)/gimu,
       "$1[REDACTED]",
     )
     .replace(
