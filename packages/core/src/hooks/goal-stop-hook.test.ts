@@ -332,14 +332,9 @@ describe("createGoalStopHook — three-state judge", () => {
         toolName: "Bash",
         result:
           "deploy --token cli-token-secret --api-key=cli-api-key-secret " +
-          '--password "cli password secret" -p cli-short-password-secret --verbose',
+          '--password "cli password secret" --client-secret cli-client-secret --verbose',
       },
-      [
-        "cli-token-secret",
-        "cli-api-key-secret",
-        "cli password secret",
-        "cli-short-password-secret",
-      ],
+      ["cli-token-secret", "cli-api-key-secret", "cli password secret", "cli-client-secret"],
     ],
   ] as const) {
     it(`scrubs an unmarked ${label} from both projection and judge prompt`, async () => {
@@ -354,6 +349,110 @@ describe("createGoalStopHook — three-state judge", () => {
       expect(prompt).toContain("[REDACTED]");
     });
   }
+
+  for (const [label, input, expected] of [
+    [
+      "plain YAML values through line end",
+      [
+        "password: correct horse battery staple",
+        '"authorization": Bearer auth-secret',
+        "safe: keep me",
+      ].join("\n"),
+      ["password: [REDACTED]", '"authorization": [REDACTED]', "safe: keep me"].join("\n"),
+    ],
+    [
+      "case-insensitive quoted keys with spacing",
+      "  'API_Key' : \"quoted api key secret\"\nRefreshToken:\trefresh-secret\nname: visible",
+      "  'API_Key' : [REDACTED]\nRefreshToken:\t[REDACTED]\nname: visible",
+    ],
+    [
+      "YAML literal and folded block scalars",
+      [
+        "password: |",
+        "  literal-secret-one",
+        "  literal-secret-two",
+        "safe: visible",
+        "api_key: >-",
+        "  folded-secret-one",
+        "  folded-secret-two",
+        "another: keep",
+      ].join("\n"),
+      ["password: [REDACTED]", "safe: visible", "api_key: [REDACTED]", "another: keep"].join("\n"),
+    ],
+    [
+      "multi-line quoted structured values",
+      'password: "first-line-secret\nsecond-line-secret"\nsafe: visible',
+      "password: [REDACTED]\nsafe: visible",
+    ],
+    [
+      "structured array values",
+      "token: [first-secret, second-secret]\nsafe: ok",
+      "token: [REDACTED]\nsafe: ok",
+    ],
+    [
+      "YAML comments and flow-structure boundaries",
+      [
+        "password: correct horse battery staple # retained comment",
+        "config: { token: flow-secret, safe: visible }",
+        '{"api_key":["first","second"],"safe":"json-visible"}',
+      ].join("\n"),
+      [
+        "password: [REDACTED] # retained comment",
+        "config: { token: [REDACTED], safe: visible }",
+        '{"api_key":[REDACTED],"safe":"json-visible"}',
+      ].join("\n"),
+    ],
+    [
+      "argv array credential pairs",
+      '["deploy","--token","argv-secret","--API-key", "argv-key-secret","--verbose"]',
+      '["deploy","--token","[REDACTED]","--API-key", "[REDACTED]","--verbose"]',
+    ],
+    [
+      "newline and backslash-escaped CLI values",
+      'deploy --TOKEN\nnewline-secret --password escaped\\ space\\ secret --api-key = "quoted cli secret" --verbose',
+      "deploy --TOKEN\n[REDACTED] --password [REDACTED] --api-key = [REDACTED] --verbose",
+    ],
+    [
+      "ambiguous short -p options",
+      "mkdir -p /path && ssh -p 2222 host",
+      "mkdir -p /path && ssh -p 2222 host",
+    ],
+  ] as const) {
+    it(`scrubs ${label} without damaging retained evidence`, () => {
+      const projection = projectGoalJudgeToolResult(
+        { id: `review-${label}`, toolName: "Bash", result: input },
+        1,
+      );
+
+      expect(projection.text).toBe(expected);
+    });
+  }
+
+  it("bounds large evidence before secret scanning without quadratic slowdown", () => {
+    const input = " ".repeat(40_000);
+    const startedAt = performance.now();
+    const projection = projectGoalJudgeToolResult(
+      { id: "large-spaces", toolName: "Bash", result: input },
+      1,
+    );
+    const elapsedMs = performance.now() - startedAt;
+
+    expect(Array.from(projection.text ?? "")).toHaveLength(1_600);
+    expect(elapsedMs).toBeLessThan(250);
+  });
+
+  it("bounds then scrubs finalText before sending it to the judge", async () => {
+    const judge = fakeJudge('{"met":false,"waiting":false,"gaps":"more work"}');
+    const hook = createGoalStopHook({ goal: "inspect final output", llm: judge, log: noopLog });
+    const finalText = `password: final text secret with spaces\n${" ".repeat(40_000)}`;
+
+    await hook({ eventName: "on_stop", data: { sessionId: SID, finalText } });
+
+    const payload = JSON.parse(judge.lastUserContent ?? "{}") as { agent最近的输出?: string };
+    expect(payload.agent最近的输出).not.toContain("final text secret with spaces");
+    expect(payload.agent最近的输出).toContain("password: [REDACTED]");
+    expect(Array.from(payload.agent最近的输出 ?? "").length).toBeLessThanOrEqual(4_000);
+  });
 
   it("omits unmarked results from the known credential-value tool", () => {
     const secret = "unmarked-use-credential-secret";
