@@ -151,6 +151,63 @@ describe("buildGoalJudgeRuntimeContext", () => {
     expect(context.renderedConversation).toContain("[credential value withheld]");
   });
 
+  it("scrubs unmarked credentials from message text, tool input, and tool results", () => {
+    const secrets = [
+      "sk-live-1234567890abcdef",
+      "header-token-secret",
+      "alice",
+      "url-password-secret",
+      "cli-token-secret",
+      "yaml-api-key-secret",
+      "json-password-secret",
+      "query-token-secret",
+    ];
+    const context = buildGoalJudgeRuntimeContext([
+      {
+        role: "user",
+        content: `OPENAI_API_KEY=${secrets[0]} status=ok`,
+      },
+      {
+        role: "assistant",
+        content: [
+          {
+            type: "tool_use",
+            id: "credentials-in-input",
+            name: "Bash",
+            input: {
+              headers: `Authorization: Bearer ${secrets[1]}`,
+              url: `https://${secrets[2]}:${secrets[3]}@example.test/private`,
+              command: `deploy --token ${secrets[4]} --verbose`,
+            },
+          },
+        ],
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "tool_result",
+            tool_use_id: "credentials-in-input",
+            content: [
+              {
+                type: "text",
+                text: [
+                  `api_key: ${secrets[5]}`,
+                  `{"password":"${secrets[6]}"}`,
+                  `GET https://example.test/?token=${secrets[7]}&safe=ok`,
+                ].join("\n"),
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    const retained = JSON.stringify(context.conversation) + context.renderedConversation;
+    for (const secret of secrets) expect(retained).not.toContain(secret);
+    expect(context.renderedConversation).toContain("[REDACTED]");
+  });
+
   it("omits reasoning content", () => {
     const context = buildGoalJudgeRuntimeContext([
       {

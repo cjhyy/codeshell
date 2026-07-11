@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { estimateTokens, groupMessagesByApiRound } from "../context/compaction.js";
 import { sanitizeMessages } from "../logging/sanitize-messages.js";
+import { scrubSecrets } from "../utils/secret-scrubber.js";
 import type { GoalJudgeRuntimeContext } from "../hooks/goal-stop-hook.js";
 import type { ContentBlock, Message } from "../types.js";
 
@@ -18,6 +19,20 @@ export interface BuildGoalJudgeContextOptions {
 type GoalJudgeImageBlock = ContentBlock & {
   source: ContentBlock["source"] & { bytes?: number; omitted?: true };
 };
+
+function scrubUnknown(value: unknown): unknown {
+  if (typeof value === "string") return scrubSecrets(value);
+  if (Array.isArray(value)) return value.map(scrubUnknown);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+        key,
+        scrubUnknown(entry),
+      ]),
+    );
+  }
+  return value;
+}
 
 function sanitizeNestedBlocks(blocks: ContentBlock[]): ContentBlock[] {
   return blocks.map((block) => {
@@ -38,7 +53,7 @@ function sanitizeNestedBlocks(blocks: ContentBlock[]): ContentBlock[] {
     if (block.type === "tool_result" && Array.isArray(block.content)) {
       return { ...block, content: sanitizeNestedBlocks(block.content) };
     }
-    return { ...block };
+    return scrubUnknown({ ...block }) as ContentBlock;
   });
 }
 
@@ -50,7 +65,7 @@ function sanitizeConversation(
     ...message,
     content:
       typeof message.content === "string"
-        ? message.content
+        ? scrubSecrets(message.content)
         : sanitizeNestedBlocks(message.content as ContentBlock[]),
   }));
 }
