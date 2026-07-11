@@ -810,7 +810,7 @@ export class TurnLoop {
           });
         } else {
           // Context management (async — may trigger LLM summarization)
-          messages = await this.deps.contextManager.manageAsync(messages);
+          messages = await this.deps.contextManager.manageAsync(messages, this.config.signal);
 
           // manageAsync can itself issue an LLM summarization call lasting several
           // seconds; if the signal aborted during it, stop here rather than

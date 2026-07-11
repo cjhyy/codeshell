@@ -74,7 +74,8 @@ describe("Write/Edit revalidate the final write target after approval", () => {
       args: { file_path: target, content: "must stay inside" },
     });
 
-    expect(result.result).toMatch(/^Error:/);
+    expect(result.isError).toBe(true);
+    expect(result.error).toMatch(/^Error:/);
     expect(existsSync(outsideTarget)).toBe(false);
     expect(existsSync(join(`${parent}-original`, "new.txt"))).toBe(false);
   });
@@ -94,7 +95,8 @@ describe("Write/Edit revalidate the final write target after approval", () => {
       args: { file_path: target, old_string: "before", new_string: "after" },
     });
 
-    expect(result.result).toMatch(/^Error:/);
+    expect(result.isError).toBe(true);
+    expect(result.error).toMatch(/^Error:/);
     expect(readFileSync(outsideTarget, "utf-8")).toBe("before\n");
     expect(readFileSync(join(`${parent}-original`, "edit.txt"), "utf-8")).toBe("before\n");
   });

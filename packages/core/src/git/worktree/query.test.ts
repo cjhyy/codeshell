@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createWorktree } from "./crud.js";
-import { listWorktrees, listWorktreesFast } from "./query.js";
+import { findMainWorktreeRoot, listWorktrees, listWorktreesFast } from "./query.js";
 import type { SessionWorkspace } from "../../types.js";
 
 const ENV = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
@@ -41,6 +41,18 @@ describe("listWorktreesFast", () => {
     } finally {
       rmSync(nonGit, { recursive: true, force: true });
     }
+  });
+
+  test("propagates an AbortSignal to root and list git queries", async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(findMainWorktreeRoot(repo, controller.signal)).rejects.toMatchObject({
+      name: "AbortError",
+    });
+    await expect(listWorktreesFast(repo, { signal: controller.signal })).rejects.toMatchObject({
+      name: "AbortError",
+    });
   });
 
   test("returns ownership and managed metadata without diff summaries", async () => {

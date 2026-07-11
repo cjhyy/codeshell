@@ -23,7 +23,7 @@
 
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
-import type { BuiltinToolResult } from "./index.js";
+import type { BuiltinToolReturn } from "./index.js";
 import type { BrowserImageData } from "../browser-bridge.js";
 import { renderElementList } from "../browser-bridge.js";
 import { capabilitiesFor } from "../../llm/capabilities/index.js";
@@ -93,7 +93,7 @@ function toImageBlock(d: BrowserImageData): ContentBlock | null {
   return { type: "image", source: { type: "base64", media_type: d.mediaType, data: d.base64 } };
 }
 
-export async function browserObserveTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<BuiltinToolResult> {
+export async function browserObserveTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<BuiltinToolReturn> {
   const b = bridge(ctx);
   if (!b) return NO_BROWSER;
   const mode = (args.mode as string) || "snapshot";

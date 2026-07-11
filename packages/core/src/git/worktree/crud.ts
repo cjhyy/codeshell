@@ -1,4 +1,5 @@
 import { existsSync, lstatSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { safeSpawnShell } from "../../runtime/safe-spawn.js";
 import { buildSandboxEnv, defaultShellBinary, mergeShellEnv } from "../../runtime/spawn-common.js";
@@ -27,6 +28,26 @@ export interface PlatformScripts {
 
 export interface CreateWorktreeOptions {
   prefix?: string;
+  signal?: AbortSignal;
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  signal?.throwIfAborted();
+}
+
+/** Best-effort rollback for an aborted `git worktree add`. */
+export async function cleanupAbortedWorktree(
+  gitRoot: string,
+  worktreePath: string,
+  branchName: string,
+): Promise<void> {
+  try {
+    await execGit(gitRoot, ["worktree", "remove", worktreePath, "--force"], 30_000);
+  } catch {
+    await rm(worktreePath, { recursive: true, force: true }).catch(() => {});
+    await execGit(gitRoot, ["worktree", "prune"], 10_000).catch(() => {});
+  }
+  await execGit(gitRoot, ["branch", "-D", branchName], 10_000).catch(() => {});
 }
 
 /**
@@ -59,20 +80,38 @@ export async function createWorktree(
   opts: CreateWorktreeOptions = {},
 ): Promise<WorktreeSession> {
   validateWorktreeSlug(slug);
+  throwIfAborted(opts.signal);
 
   const gitRoot = await findGitRoot(cwd);
+  throwIfAborted(opts.signal);
   const branchName = applyPrefix(opts.prefix, slug, sessionId);
   const worktreePath = resolve(gitRoot, "..", `.worktrees/${slug}-${sessionId.slice(0, 8)}`);
   await assertBranchNotCheckedOut(gitRoot, branchName);
+  throwIfAborted(opts.signal);
 
   const originalBranch = await currentBranch(gitRoot);
+  throwIfAborted(opts.signal);
 
   // The argv form keeps branchName/worktreePath as literal positional
   // arguments even if a future caller bypasses validateWorktreeSlug.
-  await execGit(gitRoot, ["worktree", "add", "-b", branchName, worktreePath], 30000);
+  try {
+    await execGit(
+      gitRoot,
+      ["worktree", "add", "-b", branchName, worktreePath],
+      30_000,
+      opts.signal,
+    );
+    throwIfAborted(opts.signal);
 
-  // Symlink large directories to avoid disk bloat.
-  symlinkLargeDirectories(gitRoot, worktreePath);
+    // Symlink large directories to avoid disk bloat.
+    symlinkLargeDirectories(gitRoot, worktreePath);
+    throwIfAborted(opts.signal);
+  } catch (error) {
+    if (opts.signal?.aborted) {
+      await cleanupAbortedWorktree(gitRoot, worktreePath, branchName);
+    }
+    throw error;
+  }
 
   return {
     originalCwd: cwd,

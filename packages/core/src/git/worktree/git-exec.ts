@@ -1,19 +1,59 @@
 import { execFile, execFileSync } from "node:child_process";
-import { promisify } from "node:util";
+import { killChildTree } from "../../runtime/spawn-common.js";
 import { resolveExecutable } from "../../utils/exec.js";
 
 // git resolved via PATH×PATHEXT on Windows (.cmd/.exe shim); no-op on POSIX.
 export const GIT_BIN = resolveExecutable("git");
 
-const execFileAsync = promisify(execFile);
+export async function execGit(
+  cwd: string,
+  args: string[],
+  timeout = 10000,
+  signal?: AbortSignal,
+): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(signal.reason);
+      return;
+    }
 
-export async function execGit(cwd: string, args: string[], timeout = 10000): Promise<string> {
-  const { stdout } = await execFileAsync(GIT_BIN, args, {
-    cwd,
-    encoding: "utf-8",
-    timeout,
+    let settled = false;
+    const child = execFile(GIT_BIN, args, { cwd, encoding: "utf-8" }, (error, stdout, stderr) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      if (error) {
+        Object.assign(error, { stdout, stderr });
+        reject(error);
+      } else {
+        resolve(stdout);
+      }
+    });
+    const terminate = (error: unknown) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      killChildTree(child, 1000);
+      reject(error);
+    };
+    const onAbort = () =>
+      terminate(
+        signal?.reason ?? Object.assign(new Error("Git command aborted"), { name: "AbortError" }),
+      );
+    const timer = setTimeout(() => {
+      terminate(
+        Object.assign(new Error(`Git command timed out after ${timeout}ms`), {
+          code: "ETIMEDOUT",
+        }),
+      );
+    }, timeout);
+    const cleanup = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+    if (signal?.aborted) onAbort();
   });
-  return stdout;
 }
 
 export function execGitSync(cwd: string, args: string[], timeout = 10000): string {
@@ -28,10 +68,12 @@ export async function gitOutput(
   cwd: string,
   args: string[],
   timeout = 10000,
+  signal?: AbortSignal,
 ): Promise<string | undefined> {
   try {
-    return await execGit(cwd, args, timeout);
-  } catch {
+    return await execGit(cwd, args, timeout, signal);
+  } catch (error) {
+    if (signal?.aborted) throw error;
     return undefined;
   }
 }

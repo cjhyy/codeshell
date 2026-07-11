@@ -97,7 +97,7 @@ function defaultKeepRecent(maxTokens: number): number {
  * Async function type for LLM summarization calls.
  * Injected by the Engine so the ContextManager doesn't depend on LLM directly.
  */
-export type SummarizeFn = (prompt: string) => Promise<string>;
+export type SummarizeFn = (prompt: string, signal?: AbortSignal) => Promise<string>;
 
 export type CompactStrategy = "micro" | "summary" | "window" | "snip" | "emergency";
 export type OnCompactFn = (info: {
@@ -263,6 +263,7 @@ export class ContextManager {
     messages: Message[],
     before: number,
     logEvent: SummaryCompactLogEvent,
+    signal?: AbortSignal,
   ): Promise<SummaryCompactResult> {
     if (!this.summarizeFn || this.consecutiveSummaryFailures >= 3) {
       return { messages, tokens: before, compacted: false, noProgress: false };
@@ -282,7 +283,7 @@ export class ContextManager {
       // re-summarizes from scratch.
       const priorSummary = extractAnchoredSummary(messages) ?? this.lastSummary;
       const prompt = buildSummarizationPrompt(messagesToSummarize, priorSummary);
-      const summary = await this.summarizeFn(prompt);
+      const summary = await this.summarizeFn(prompt, signal);
 
       if (!summary || summary.length <= 50) {
         this.consecutiveSummaryFailures++;
@@ -486,7 +487,7 @@ export class ContextManager {
    * Async context management — attempts LLM summarization before falling back.
    * Call this when you have access to the LLM (between turns).
    */
-  async manageAsync(messages: Message[]): Promise<Message[]> {
+  async manageAsync(messages: Message[], signal?: AbortSignal): Promise<Message[]> {
     let result = messages;
 
     // Tier 0a: Persist large tool_results to disk + replace with preview.
@@ -571,6 +572,7 @@ export class ContextManager {
         result,
         tokens,
         "context.summary_compact",
+        signal,
       );
       result = summarized.messages;
       tokens = summarized.tokens;
@@ -638,7 +640,7 @@ export class ContextManager {
    * a long-but-under-threshold text-only conversation (the /compact bug) still
    * gets summarized here.
    */
-  async forceSummarize(messages: Message[]): Promise<Message[]> {
+  async forceSummarize(messages: Message[], signal?: AbortSignal): Promise<Message[]> {
     let result = messages;
 
     // Tier 0: same waste-removal + micro as the automatic path.
@@ -662,6 +664,7 @@ export class ContextManager {
         result,
         tokens,
         "context.force_summary_compact",
+        signal,
       );
       result = summarized.messages;
       tokens = summarized.tokens;

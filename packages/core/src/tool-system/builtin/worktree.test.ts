@@ -4,6 +4,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   unlinkSync,
   writeFileSync,
@@ -247,6 +248,31 @@ describe("ExitWorktree cleanup actions", () => {
     expect(out).toContain("Worktree created and switched");
     expect(active.branch).toContain("legacy");
     removeWorktree(active.path, true);
+  });
+
+  test("abort after worktree creation compensates without switching the session binding", async () => {
+    const controller = new AbortController();
+    const toolCtx = ctx("abort123456") as ToolContext & {
+      engine: {
+        readWorktreeSetupScripts: () => { default: string };
+      };
+    };
+    toolCtx.signal = controller.signal;
+    toolCtx.engine.readWorktreeSetupScripts = () => ({ default: "sleep 5" });
+
+    const pending = enterWorktreeTool({ target: "abort-cleanup" }, toolCtx);
+    const worktreesRoot = join(repo, "..", ".worktrees");
+    for (let i = 0; i < 200; i++) {
+      if (existsSync(worktreesRoot) && readdirSync(worktreesRoot).length > 0) break;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    controller.abort();
+    const out = await pending;
+
+    expect(out).toContain("Error");
+    expect(sm.getSessionWorkspace("abort123456")).toEqual({ root: repo, kind: "main" });
+    expect(existsSync(worktreesRoot) ? readdirSync(worktreesRoot) : []).toHaveLength(0);
+    expect(git(repo, ["branch", "--list", "worktree/abort-cleanup-*"])).toBe("");
   });
 
   test("detach refuses to remove a worktree still attached to another session", async () => {
