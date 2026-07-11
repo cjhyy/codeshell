@@ -55,3 +55,6 @@ packages/desktop/.preview/
 # Renderer source 'logs/' view dir is NOT a runtime-logs dir — keep it tracked
 !packages/desktop/src/renderer/logs/
 !packages/desktop/src/renderer/logs/**
+
+# loop-mode 运行时状态（每次 loop 的账本/待批/经验，非源码，不提交）
+.loop/
