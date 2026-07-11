@@ -2380,6 +2380,15 @@ export class Engine {
       // failures (model_error, prompt_too_long, ...) — previously every
       // non-completed outcome collapsed to "errored", which threw away the
       // distinction and misled anyone reading state.json.
+      if (session.transcript.flushFailed()) {
+        const failure = session.transcript.getFlushFailure();
+        logger.error("engine.transcript_persistence_failed", {
+          sessionId: session.state.sessionId,
+          terminalReason: result.reason,
+          degraded: true,
+          ...failure,
+        });
+      }
       session.state.turnCount = turnLoop.currentTurn;
       session.state.status = result.reason;
       // Session-cumulative (baseline + this run) for persistence...

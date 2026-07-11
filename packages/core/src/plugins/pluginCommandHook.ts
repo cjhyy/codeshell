@@ -34,6 +34,7 @@
 import { spawn } from "node:child_process";
 import type { HookContext, HookResult } from "../hooks/events.js";
 import { MAX_HOOK_OUTPUT_BYTES } from "../hooks/hook-output.js";
+import { closeHookStdin, MAX_HOOK_STDIN_BYTES, writeHookStdin } from "../hooks/shell-runner.js";
 import { killChildTree } from "../runtime/spawn-common.js";
 
 const DEFAULT_TIMEOUT_MS = 60_000;
@@ -185,8 +186,9 @@ export async function runPluginCommandHook(
       settle({});
     });
 
-    child.on("close", (code: number | null) => {
-      clearTimeout(timer);
+    let stdinFinished = false;
+    let pendingClose: { code: number | null } | undefined;
+    const handleClose = (code: number | null) => {
       if (stdoutCapped) {
         // eslint-disable-next-line no-console
         console.error(
@@ -229,16 +231,67 @@ export async function runPluginCommandHook(
         return;
       }
       settle({ messages: [additional] });
+    };
+    child.on("close", (code: number | null) => {
+      clearTimeout(timer);
+      if (settled) return;
+      if (!stdinFinished && !stdoutCapped) {
+        pendingClose = { code };
+        return;
+      }
+      handleClose(code);
     });
 
+    const finishStdin = () => {
+      stdinFinished = true;
+      if (pendingClose && !settled) {
+        const { code } = pendingClose;
+        pendingClose = undefined;
+        handleClose(code);
+      }
+    };
+
     // Stdin envelope: matches the shape codeshell-native shell hooks use.
-    // CC plugins generally don't read stdin, but writing it is cheap and
-    // keeps the protocol open for plugin authors who want it.
+    let envelope: string;
     try {
-      child.stdin?.write(JSON.stringify({ eventName: ctx.eventName, data: ctx.data }));
-      child.stdin?.end();
+      envelope = JSON.stringify({ eventName: ctx.eventName, data: ctx.data });
     } catch {
-      // Child may have closed stdin already; not fatal.
+      closeHookStdin(child.stdin);
+      finishStdin();
+      return;
     }
+    if (Buffer.byteLength(envelope, "utf8") > MAX_HOOK_STDIN_BYTES) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[plugin-hook] ${spec.pluginKey} ${ctx.eventName} stdin exceeded ${MAX_HOOK_STDIN_BYTES} bytes; running without envelope`,
+      );
+      closeHookStdin(child.stdin);
+      finishStdin();
+      return;
+    }
+
+    setImmediate(() => {
+      void (async () => {
+        try {
+          await writeHookStdin(child.stdin, envelope);
+          finishStdin();
+        } catch (error) {
+          clearTimeout(timer);
+          const err = error as NodeJS.ErrnoException;
+          const failure = {
+            type: "stdin_error" as const,
+            code: typeof err?.code === "string" ? err.code : "UNKNOWN",
+            message: err instanceof Error ? err.message : String(error),
+          };
+          // eslint-disable-next-line no-console
+          console.error(
+            `[plugin-hook] ${spec.pluginKey} ${ctx.eventName} stdin error:`,
+            failure.message,
+          );
+          killChildTree(child, 1000);
+          settle({ data: { hookFailure: failure } });
+        }
+      })();
+    });
   });
 }

@@ -9,17 +9,33 @@ import { nanoid } from "nanoid";
 import type { TranscriptEvent, TranscriptEventType, Message, ContentBlock } from "../types.js";
 import { logger } from "../logging/logger.js";
 
+type TranscriptWriter = (filePath: string, data: string, encoding: "utf-8") => void;
+
+export interface TranscriptFlushFailure {
+  errno: string | number;
+  code?: string;
+  message: string;
+  timestamp: number;
+  attempts: 2;
+  recoverable: false;
+  filePath: string;
+}
+
 export class Transcript {
   private events: TranscriptEvent[] = [];
   private filePath: string;
   private currentTurn = 0;
+  private readonly writer: TranscriptWriter;
+  private dirty = false;
+  private lastFlushFailure: TranscriptFlushFailure | undefined;
 
   getFilePath(): string {
     return this.filePath;
   }
 
-  constructor(filePath: string) {
+  constructor(filePath: string, writer: TranscriptWriter = appendFileSync) {
     this.filePath = filePath;
+    this.writer = writer;
     mkdirSync(dirname(filePath), { recursive: true });
     if (!existsSync(filePath)) {
       writeFileSync(filePath, "", "utf-8");
@@ -224,6 +240,16 @@ export class Transcript {
     return this.events.length;
   }
 
+  /** True once any event failed both persistence attempts. Sticky by design. */
+  flushFailed(): boolean {
+    return this.dirty;
+  }
+
+  /** Structured details for the most recent unrecoverable flush failure. */
+  getFlushFailure(): TranscriptFlushFailure | undefined {
+    return this.lastFlushFailure ? { ...this.lastFlushFailure } : undefined;
+  }
+
   private findMessageByClientId(clientMessageId: string): TranscriptEvent | undefined {
     return this.events.find(
       (event) =>
@@ -232,12 +258,50 @@ export class Transcript {
     );
   }
 
-  private flush(event: TranscriptEvent): void {
+  private flush(event: TranscriptEvent): boolean {
+    const line = JSON.stringify(event) + "\n";
     try {
-      appendFileSync(this.filePath, JSON.stringify(event) + "\n", "utf-8");
-    } catch {
-      // Silently fail on flush errors — events are still in memory
+      this.writer(this.filePath, line, "utf-8");
+      return true;
+    } catch (firstError) {
+      try {
+        this.writer(this.filePath, line, "utf-8");
+        logger.warn("transcript.flush_retry_recovered", {
+          filePath: this.filePath,
+          errno: this.errorErrno(firstError),
+          message: this.errorMessage(firstError),
+        });
+        return true;
+      } catch (retryError) {
+        const err = retryError as NodeJS.ErrnoException;
+        const failure: TranscriptFlushFailure = {
+          errno: this.errorErrno(retryError),
+          ...(typeof err?.code === "string" ? { code: err.code } : {}),
+          message: this.errorMessage(retryError),
+          timestamp: Date.now(),
+          attempts: 2,
+          recoverable: false,
+          filePath: this.filePath,
+        };
+        // Sticky: a later successful append cannot restore an earlier missing
+        // JSONL event, so the transcript remains degraded for this instance.
+        this.dirty = true;
+        this.lastFlushFailure = failure;
+        logger.error("transcript.flush_failed", { ...failure });
+        return false;
+      }
     }
+  }
+
+  private errorErrno(error: unknown): string | number {
+    const err = error as NodeJS.ErrnoException;
+    if (typeof err?.errno === "number" || typeof err?.errno === "string") return err.errno;
+    if (typeof err?.code === "string") return err.code;
+    return "UNKNOWN";
+  }
+
+  private errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
   }
 
   /**
