@@ -428,11 +428,17 @@ async function pollToCompletion(
 ): Promise<BackgroundJobOutcome> {
   let knownVideoUrl: string | undefined;
 
+  const retainedUrlOutcome = (): BackgroundJobOutcome | undefined => {
+    if (!knownVideoUrl) return undefined;
+    const msg = `Video rendered successfully, but the local download did not finish. Download it from ${knownVideoUrl}`;
+    notifyVideo(sessionId, "completed", prompt, undefined, undefined, knownVideoUrl);
+    return { status: "completed", finalText: msg };
+  };
+
   const abortOutcome = (): BackgroundJobOutcome => {
-    if (knownVideoUrl) {
-      const msg = `Video rendered successfully, but the local download stopped. Download it from ${knownVideoUrl}`;
-      notifyVideo(sessionId, "completed", prompt, undefined, undefined, knownVideoUrl);
-      return { status: "completed", finalText: msg };
+    const retained = retainedUrlOutcome();
+    if (retained) {
+      return retained;
     }
     if (getAbortKind() === "timeout") {
       const msg = `video job ${jobId} timed out after ${Math.round(totalTimeoutMs / 1000)}s`;
@@ -483,6 +489,8 @@ async function pollToCompletion(
     );
     if (signal.aborted) return abortOutcome();
     if (!dl.ok) {
+      const retained = retainedUrlOutcome();
+      if (retained) return retained;
       notifyVideo(sessionId, "failed", prompt, undefined, dl.error);
       return { status: "failed", finalText: dl.error };
     }
@@ -495,6 +503,8 @@ async function pollToCompletion(
     notifyVideo(sessionId, "completed", prompt, path, undefined, knownVideoUrl);
     return { status: "completed", finalText: path };
   } catch (err) {
+    const retained = retainedUrlOutcome();
+    if (retained) return retained;
     if (signal.aborted) return abortOutcome();
     notifyVideo(sessionId, "failed", prompt, undefined, (err as Error).message);
     return { status: "failed", finalText: (err as Error).message };

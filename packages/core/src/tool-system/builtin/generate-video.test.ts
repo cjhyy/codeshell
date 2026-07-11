@@ -117,9 +117,10 @@ describe("GenerateVideo", () => {
         return { ok: true, jobId: "known-url" };
       },
       async poll(): Promise<VideoPollResult> {
-        return { ok: true, status: "succeeded", url };
+        return { ok: true, status: "succeeded" };
       },
       async download(req): Promise<VideoDownloadResult> {
+        req.onUrl?.(url);
         downloadStarted();
         if (!req.signal) throw new Error("download did not receive a signal");
         return await new Promise((resolve) => {
@@ -144,6 +145,65 @@ describe("GenerateVideo", () => {
     const notification = notificationQueue.getSnapshot("s-vid")[0];
     expect(notification.status).toBe("completed");
     expect(notification.finalText).toContain(url);
+  });
+
+  test("download request timeout retains a URL reported before the byte download hangs", async () => {
+    __setVideoPollingLimitsForTests({ maxPollMs: 1_000, requestTimeoutMs: 25 });
+    const url = "https://cdn.example/timed-out-download.mp4";
+    let downloadSignal: AbortSignal | undefined;
+    const provider: VideoProvider = {
+      kind: "fake",
+      async submit(): Promise<VideoSubmitResult> {
+        return { ok: true, jobId: "download-timeout-url" };
+      },
+      async poll(): Promise<VideoPollResult> {
+        return { ok: true, status: "succeeded" };
+      },
+      async download(req): Promise<VideoDownloadResult> {
+        downloadSignal = req.signal;
+        req.onUrl?.(url);
+        return await new Promise(() => {});
+      },
+    };
+    __setVideoProviderForTests(provider);
+
+    await generateVideoTool({ prompt: "retain timed out URL", pollIntervalMs: 1 }, ctx());
+
+    await until(() => backgroundJobRegistry.get("video-download-timeout-url")?.status !== "running");
+    const job = backgroundJobRegistry.get("video-download-timeout-url");
+    expect(downloadSignal?.aborted).toBe(true);
+    expect(job?.status).toBe("completed");
+    expect(job?.finalText).toContain(url);
+    const notification = notificationQueue.getSnapshot("s-vid")[0];
+    expect(notification.status).toBe("completed");
+    expect(notification.finalText).toContain(url);
+  });
+
+  test("poll request timeout aborts its request without waiting for the total deadline", async () => {
+    __setVideoPollingLimitsForTests({ maxPollMs: 1_000, requestTimeoutMs: 25 });
+    let pollSignal: AbortSignal | undefined;
+    const provider: VideoProvider = {
+      kind: "fake",
+      async submit(): Promise<VideoSubmitResult> {
+        return { ok: true, jobId: "poll-request-timeout" };
+      },
+      async poll(req): Promise<VideoPollResult> {
+        pollSignal = req.signal;
+        return await new Promise(() => {});
+      },
+      async download(): Promise<VideoDownloadResult> {
+        throw new Error("download must not run");
+      },
+    };
+    __setVideoProviderForTests(provider);
+
+    await generateVideoTool({ prompt: "poll timeout", pollIntervalMs: 1 }, ctx());
+
+    await until(() => backgroundJobRegistry.get("video-poll-request-timeout")?.status === "failed");
+    expect(pollSignal?.aborted).toBe(true);
+    expect(backgroundJobRegistry.get("video-poll-request-timeout")?.finalText).not.toContain(
+      "video job poll-request-timeout timed out",
+    );
   });
 
   test("abort before remote completion stops polling and marks the job cancelled", async () => {

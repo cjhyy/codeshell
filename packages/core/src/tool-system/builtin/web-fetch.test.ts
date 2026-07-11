@@ -128,4 +128,39 @@ describe("webFetchTool — successful fetch", () => {
     expect(out.startsWith("x".repeat(100))).toBe(true);
     expect(out).toContain("content truncated");
   });
+
+  it("does not emit a replacement character when the byte budget splits UTF-8", async () => {
+    stubFetch({ contentType: "text/html; charset=utf-8", body: `<p>${"你".repeat(20)}</p>` });
+
+    const out = await webFetchTool({ url: "https://example.com/utf8", max_length: 2 });
+
+    expect(out).not.toContain("�");
+    expect(out.startsWith("你")).toBe(true);
+    expect(out).toContain("content truncated (showing first");
+    expect(out).not.toContain("chars total");
+  });
+
+  it("returns the empty-content placeholder for an empty stream", async () => {
+    stubFetch({ contentType: "text/plain", body: "" });
+    expect(await webFetchTool({ url: "https://example.com/empty" })).toBe(
+      "(page returned empty content)",
+    );
+  });
+
+  it("surfaces a response stream error without returning partial content", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("partial"));
+        controller.error(new Error("connection reset while streaming"));
+      },
+    });
+    globalThis.fetch = (async () =>
+      new Response(body, { headers: { "content-type": "text/plain" } })) as typeof fetch;
+
+    const out = await webFetchTool({ url: "https://example.com/broken-stream" });
+
+    expect(out).toContain("Fetch error");
+    expect(out).toContain("connection reset while streaming");
+    expect(out).not.toContain("partial");
+  });
 });

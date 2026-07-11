@@ -303,7 +303,12 @@ async function readAndTruncateBody(res: Response, maxLength: number): Promise<st
         chunks.push(decoder.decode(value, { stream: true }));
         bytesRead += value.byteLength;
       }
-      chunks.push(decoder.decode());
+      const tail = decoder.decode();
+      // When the byte budget cuts through a multi-byte code point, flushing
+      // the decoder would turn that intentionally incomplete suffix into �.
+      // All complete code points were already emitted by stream:true, so the
+      // truncated tail is safe to discard.
+      if (!rawTruncated) chunks.push(tail);
       body = chunks.join("");
     } finally {
       reader.releaseLock();
@@ -318,7 +323,8 @@ async function readAndTruncateBody(res: Response, maxLength: number): Promise<st
   }
 
   if (rawTruncated || text.length > maxLength) {
-    text = text.slice(0, maxLength) + `\n\n... content truncated (${text.length} chars total)`;
+    const shownChars = Math.min(text.length, maxLength);
+    text = text.slice(0, maxLength) + `\n\n... content truncated (showing first ${shownChars} chars)`;
   }
   return text || "(page returned empty content)";
 }
