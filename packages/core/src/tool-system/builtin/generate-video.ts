@@ -83,7 +83,17 @@ const VIDEO_PROVIDER_KINDS: string[] = ["fal"];
 
 const DEFAULT_POLL_INTERVAL_MS = 5_000;
 /** Safety cap so a stuck job's background loop can't poll forever. */
-const MAX_POLL_MS = 15 * 60 * 1000;
+const DEFAULT_MAX_POLL_MS = 15 * 60 * 1000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
+let maxPollMs = DEFAULT_MAX_POLL_MS;
+let requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS;
+
+export function __setVideoPollingLimitsForTests(
+  limits: { maxPollMs: number; requestTimeoutMs: number } | null,
+): void {
+  maxPollMs = limits?.maxPollMs ?? DEFAULT_MAX_POLL_MS;
+  requestTimeoutMs = limits?.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+}
 
 export const generateVideoToolDef: ToolDefinition = {
   name: "GenerateVideo",
@@ -352,12 +362,46 @@ export async function generateVideoTool(
   // two providers can't collide.
   const jobKey = `video-${jobId}`;
   const promptPreview = prompt.length > 80 ? `${prompt.slice(0, 80)}…` : prompt;
-  backgroundJobRegistry.start(jobKey, sessionId ?? "", `生成视频中:${promptPreview}`);
-  void pollToCompletion(adapter, jobId, creds, cwd, sessionId, prompt, pollIntervalMs)
+  const controller = new AbortController();
+  let abortKind: "cancelled" | "timeout" | undefined;
+  const abortTask = (kind: "cancelled" | "timeout"): void => {
+    if (controller.signal.aborted) return;
+    abortKind = kind;
+    controller.abort();
+  };
+  const onTurnAbort = (): void => abortTask("cancelled");
+  if (ctx?.signal?.aborted) onTurnAbort();
+  else ctx?.signal?.addEventListener("abort", onTurnAbort, { once: true });
+  const totalTimer = setTimeout(() => abortTask("timeout"), maxPollMs);
+  const polling = pollToCompletion(
+    adapter,
+    jobId,
+    creds,
+    cwd,
+    sessionId,
+    prompt,
+    pollIntervalMs,
+    controller.signal,
+    () => abortKind,
+    maxPollMs,
+    requestTimeoutMs,
+  );
+  backgroundJobRegistry.start(jobKey, sessionId ?? "", `生成视频中:${promptPreview}`, {
+    kind: "video",
+    abort: async () => {
+      abortTask("cancelled");
+      return await polling;
+    },
+  });
+  void polling
     .then((outcome) => backgroundJobRegistry.finish(jobKey, outcome))
     .catch((err) =>
       backgroundJobRegistry.finish(jobKey, { status: "failed", finalText: (err as Error).message }),
-    );
+    )
+    .finally(() => {
+      clearTimeout(totalTimer);
+      ctx?.signal?.removeEventListener("abort", onTurnAbort);
+    });
 
   return [
     `Video generation started in the background.`,
@@ -377,16 +421,38 @@ async function pollToCompletion(
   sessionId: string | undefined,
   prompt: string,
   pollIntervalMs: number,
+  signal: AbortSignal,
+  getAbortKind: () => "cancelled" | "timeout" | undefined,
+  totalTimeoutMs: number,
+  perRequestTimeoutMs: number,
 ): Promise<BackgroundJobOutcome> {
-  const started = Date.now();
+  let knownVideoUrl: string | undefined;
+
+  const abortOutcome = (): BackgroundJobOutcome => {
+    if (knownVideoUrl) {
+      const msg = `Video rendered successfully, but the local download stopped. Download it from ${knownVideoUrl}`;
+      notifyVideo(sessionId, "completed", prompt, undefined, undefined, knownVideoUrl);
+      return { status: "completed", finalText: msg };
+    }
+    if (getAbortKind() === "timeout") {
+      const msg = `video job ${jobId} timed out after ${Math.round(totalTimeoutMs / 1000)}s`;
+      notifyVideo(sessionId, "failed", prompt, undefined, msg);
+      return { status: "failed", finalText: msg };
+    }
+    const msg = "Local waiting stopped; the remote service may still be rendering the video.";
+    notifyVideo(sessionId, "cancelled", prompt, undefined, msg);
+    return { status: "cancelled", finalText: msg };
+  };
+
   try {
     for (;;) {
-      if (Date.now() - started > MAX_POLL_MS) {
-        const msg = `video job ${jobId} timed out after ${Math.round(MAX_POLL_MS / 1000)}s`;
-        notifyVideo(sessionId, "failed", prompt, undefined, msg);
-        return { status: "failed", finalText: msg };
-      }
-      const res = await adapter.poll({ jobId, creds });
+      if (signal.aborted) return abortOutcome();
+      const res = await runVideoRequest(
+        (requestSignal) => adapter.poll({ jobId, creds, signal: requestSignal }),
+        signal,
+        perRequestTimeoutMs,
+      );
+      if (signal.aborted) return abortOutcome();
       if (!res.ok) {
         notifyVideo(sessionId, "failed", prompt, undefined, res.error);
         return { status: "failed", finalText: res.error };
@@ -395,30 +461,91 @@ async function pollToCompletion(
         notifyVideo(sessionId, "failed", prompt, undefined, res.error);
         return { status: "failed", finalText: res.error };
       }
-      if (res.status === "succeeded") break;
-      await new Promise((r) => setTimeout(r, pollIntervalMs));
+      if (res.status === "succeeded") {
+        knownVideoUrl = res.url;
+        break;
+      }
+      await abortableDelay(pollIntervalMs, signal);
     }
 
-    const dl = await adapter.download({ jobId, creds });
+    const dl = await runVideoRequest(
+      (requestSignal) =>
+        adapter.download({
+          jobId,
+          creds,
+          signal: requestSignal,
+          onUrl: (url) => {
+            knownVideoUrl = url;
+          },
+        }),
+      signal,
+      perRequestTimeoutMs,
+    );
+    if (signal.aborted) return abortOutcome();
     if (!dl.ok) {
       notifyVideo(sessionId, "failed", prompt, undefined, dl.error);
       return { status: "failed", finalText: dl.error };
     }
+    knownVideoUrl = dl.url ?? knownVideoUrl;
     const dir = join(cwd, ".code-shell", "generated_videos");
     await mkdir(dir, { recursive: true });
+    if (signal.aborted) return abortOutcome();
     const path = join(dir, `${Date.now()}.${dl.ext || "mp4"}`);
-    await writeFile(path, dl.bytes);
-    notifyVideo(sessionId, "completed", prompt, path, undefined, dl.url);
+    await writeFile(path, dl.bytes, { signal });
+    notifyVideo(sessionId, "completed", prompt, path, undefined, knownVideoUrl);
     return { status: "completed", finalText: path };
   } catch (err) {
+    if (signal.aborted) return abortOutcome();
     notifyVideo(sessionId, "failed", prompt, undefined, (err as Error).message);
     return { status: "failed", finalText: (err as Error).message };
   }
 }
 
+async function runVideoRequest<T>(
+  request: (signal: AbortSignal) => Promise<T>,
+  taskSignal: AbortSignal,
+  timeoutMs: number,
+): Promise<T> {
+  const requestSignal = AbortSignal.any([taskSignal, AbortSignal.timeout(timeoutMs)]);
+  const promise = request(requestSignal);
+  if (requestSignal.aborted) throw requestSignal.reason;
+  return await new Promise<T>((resolve, reject) => {
+    const onAbort = (): void => reject(requestSignal.reason);
+    const cleanup = (): void => requestSignal.removeEventListener("abort", onAbort);
+    requestSignal.addEventListener("abort", onAbort, { once: true });
+    promise.then(
+      (value) => {
+        cleanup();
+        resolve(value);
+      },
+      (error) => {
+        cleanup();
+        reject(error);
+      },
+    );
+  });
+}
+
+async function abortableDelay(ms: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) throw signal.reason;
+  await new Promise<void>((resolve, reject) => {
+    const cleanup = (): void => signal.removeEventListener("abort", onAbort);
+    const timer = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, ms);
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      cleanup();
+      reject(signal.reason);
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
 function notifyVideo(
   sessionId: string | undefined,
-  status: "completed" | "failed",
+  status: "completed" | "failed" | "cancelled",
   prompt: string,
   path?: string,
   error?: string,
@@ -439,12 +566,20 @@ function notifyVideo(
       name: "video generation",
       description:
         status === "completed"
-          ? `Video generated: ${path} (prompt: ${prompt})`
-          : `Video generation failed (prompt: ${prompt})`,
+          ? path
+            ? `Video generated: ${path} (prompt: ${prompt})`
+            : `Video rendered: ${url} (local download stopped; prompt: ${prompt})`
+          : status === "cancelled"
+            ? `Stopped waiting for video generation (prompt: ${prompt})`
+            : `Video generation failed (prompt: ${prompt})`,
       status,
       finalText:
-        status === "completed" ? `Video saved to ${path}.${extendHint}` : undefined,
-      error: status === "failed" ? error : undefined,
+        status === "completed"
+          ? path
+            ? `Video saved to ${path}.${extendHint}`
+            : `Video rendered successfully. Download it from ${url}.${extendHint}`
+          : undefined,
+      error: status === "failed" || status === "cancelled" ? error : undefined,
       enqueuedAt: Date.now(),
     },
     sessionId,

@@ -11,16 +11,15 @@ function stubFetch(opts: {
   body?: string;
   location?: string;
 }): void {
-  const headers = new Map<string, string>();
+  const headers = new Headers();
   if (opts.contentType) headers.set("content-type", opts.contentType);
   if (opts.location) headers.set("location", opts.location);
-  globalThis.fetch = (async () => ({
-    status: opts.status ?? 200,
-    statusText: opts.statusText ?? "OK",
-    ok: (opts.status ?? 200) < 400,
-    headers: { get: (k: string) => headers.get(k.toLowerCase()) ?? null },
-    text: async () => opts.body ?? "",
-  })) as unknown as typeof fetch;
+  globalThis.fetch = (async () =>
+    new Response(opts.body ?? "", {
+      status: opts.status ?? 200,
+      statusText: opts.statusText ?? "OK",
+      headers,
+    })) as unknown as typeof fetch;
 }
 
 beforeEach(() => {
@@ -102,5 +101,31 @@ describe("webFetchTool — successful fetch", () => {
   it("surfaces an HTTP error status", async () => {
     stubFetch({ status: 404, statusText: "Not Found" });
     expect(await webFetchTool({ url: "https://example.com/missing" })).toContain("HTTP 404");
+  });
+
+  it("cancels a large response stream as soon as the raw byte budget is reached", async () => {
+    let pulls = 0;
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulls++;
+        controller.enqueue(new TextEncoder().encode("x".repeat(128)));
+        if (pulls === 100) controller.close();
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    globalThis.fetch = (async () =>
+      new Response(body, {
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      })) as typeof fetch;
+
+    const out = await webFetchTool({ url: "https://example.com/large", max_length: 100 });
+
+    expect(cancelled).toBe(true);
+    expect(pulls).toBeLessThan(100);
+    expect(out.startsWith("x".repeat(100))).toBe(true);
+    expect(out).toContain("content truncated");
   });
 });

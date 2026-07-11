@@ -220,8 +220,11 @@ describe("spillMcpImage CODE_SHELL_HOME layout", () => {
         "image/png",
         { now: () => 123 },
       );
-      const expected = join(home, "mcp_images", "srv-shot-123.png");
-      const nested = join(home, ".code-shell", "mcp_images", "srv-shot-123.png");
+      const files = readdirSync(join(home, "mcp_images"));
+      expect(files).toHaveLength(1);
+      expect(files[0]).toMatch(/^srv-shot-123-[0-9a-f]{8}\.png$/);
+      const expected = join(home, "mcp_images", files[0]);
+      const nested = join(home, ".code-shell", "mcp_images", files[0]);
 
       expect(note).toContain(`saved=${expected}`);
       expect(existsSync(expected)).toBe(true);
@@ -238,6 +241,30 @@ describe("spillMcpImage CODE_SHELL_HOME layout", () => {
 });
 
 describe("spillMcpImage retention", () => {
+  test("same-prefix spills in the same millisecond use distinct files and keep both contents", async () => {
+    const baseDir = mkdtempSync(join(tmpdir(), "mcp-spill-concurrent-"));
+    try {
+      const [first, second] = await Promise.all([
+        spillMcpImage("srv", "shot", Buffer.from("first").toString("base64"), "image/png", {
+          baseDir,
+          now: () => 123,
+        }),
+        spillMcpImage("srv", "shot", Buffer.from("second").toString("base64"), "image/png", {
+          baseDir,
+          now: () => 123,
+        }),
+      ]);
+      const files = readdirSync(baseDir).filter((name) => name.startsWith("srv-shot-123-"));
+
+      expect(files).toHaveLength(2);
+      expect(first).not.toBe(second);
+      const contents = await Promise.all(files.map((file) => Bun.file(join(baseDir, file)).text()));
+      expect(contents.sort()).toEqual(["first", "second"]);
+    } finally {
+      rmSync(baseDir, { recursive: true, force: true });
+    }
+  });
+
   test("deletes older spills after the per-server-tool retained-file cap", async () => {
     const baseDir = mkdtempSync(join(tmpdir(), "mcp-spill-retention-"));
     try {
@@ -252,9 +279,9 @@ describe("spillMcpImage retention", () => {
       const files = readdirSync(baseDir).filter((name) => name.startsWith("srv-shot-"));
 
       expect(files).toHaveLength(50);
-      expect(files).not.toContain("srv-shot-0.png");
-      expect(files).not.toContain("srv-shot-1.png");
-      expect(files).toContain("srv-shot-51.png");
+      expect(files.some((name) => /^srv-shot-0-/.test(name))).toBe(false);
+      expect(files.some((name) => /^srv-shot-1-/.test(name))).toBe(false);
+      expect(files.some((name) => /^srv-shot-51-/.test(name))).toBe(true);
     } finally {
       rmSync(baseDir, { recursive: true, force: true });
     }
