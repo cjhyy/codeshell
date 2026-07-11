@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { Engine } from "./engine.js";
+import { buildSummarizeFn } from "./auxiliary-pipeline.js";
 
 describe("Engine compaction summarizer abort propagation", () => {
   it("passes ContextManager's AbortSignal to the billed LLM request", async () => {
@@ -11,7 +11,7 @@ describe("Engine compaction summarizer abort propagation", () => {
         return { text: "summary", toolCalls: [], stopReason: "stop" };
       },
     };
-    const summarize = (Engine.prototype as any).buildSummarizeFn(client);
+    const summarize = buildSummarizeFn(client as never);
 
     await summarize("conversation", controller.signal);
 

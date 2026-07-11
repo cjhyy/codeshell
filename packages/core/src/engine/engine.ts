@@ -5,7 +5,6 @@
 import type {
   ClientDefaults,
   Message,
-  LLMConfig,
   StreamCallback,
   TaskInfo,
   TokenUsage,
@@ -19,7 +18,6 @@ import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
 import { applyDynamicToolDef } from "./dynamic-tool-defs.js";
 import { getMergedCatalog } from "../model-catalog/index.js";
 import { modelEntriesFromConnections } from "./model-connections-pool.js";
-import { resolveAuxKey } from "./aux-key.js";
 import {
   addTokenUsage,
   addCumulativeUsage,
@@ -86,7 +84,7 @@ import {
 import { ModelFacade } from "./model-facade.js";
 import { logger, runWithSid, getCurrentSid } from "../logging/logger.js";
 import { recordSessionStart, recordSessionEnd } from "../logging/session-recorder.js";
-import { sanitizeContent, sanitizeTaskString } from "../logging/sanitize-messages.js";
+import { sanitizeTaskString } from "../logging/sanitize-messages.js";
 import { TurnLoop } from "./turn-loop.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
@@ -117,13 +115,12 @@ import {
   promptCacheDropHint,
   type PromptCacheDiagnosticSample,
 } from "./prompt-cache-diagnostics.js";
-import { MemoryOrchestrator } from "../services/memory-orchestrator.js";
-import { runDreamConsolidation } from "../services/dream-consolidation.js";
 import { EngineRuntime } from "./runtime.js";
 import { buildRunUserMessageContent, prepareRunImageInput } from "./run-image-input.js";
 import type { EngineRunOptions } from "./run-types.js";
 import { createSubAgentSpawner } from "./subagent-spawner.js";
 import { stripInjectedContextMessages } from "./run-finalizer.js";
+import { AuxiliaryPipeline } from "./auxiliary-pipeline.js";
 import { join } from "node:path";
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import type { InputAttachmentMeta } from "../protocol/types.js";
@@ -143,29 +140,6 @@ export function compatFileNamesFrom(instructions?: {
   if (instructions?.compatClaude !== false) names.push("CLAUDE.md");
   if (instructions?.compatCodex !== false) names.push("AGENTS.md");
   return names;
-}
-
-/**
- * True when two LLMConfigs name the SAME client identity — i.e. building a
- * client from either would talk to the same model on the same endpoint with the
- * same shaping. Used by resolveAuxClient to de-dup the aux client against the
- * active model WITHOUT collapsing two distinct pool keys that merely share a
- * `model` NAME but differ in reasoning/maxTokens/baseUrl/provider. Compares the
- * fields that actually change request behavior; apiKey is intentionally NOT
- * compared (two keys with the same endpoint+model but different credentials
- * still produce equivalent aux work and don't warrant a second client). The
- * reasoning object is compared by normalized JSON since it's a small
- * discriminated union.
- */
-function sameLlmIdentity(a: LLMConfig, b: LLMConfig): boolean {
-  return (
-    a.model === b.model &&
-    (a.baseUrl ?? undefined) === (b.baseUrl ?? undefined) &&
-    (a.provider ?? undefined) === (b.provider ?? undefined) &&
-    (a.providerKind ?? undefined) === (b.providerKind ?? undefined) &&
-    (a.maxTokens ?? undefined) === (b.maxTokens ?? undefined) &&
-    JSON.stringify(a.reasoning ?? null) === JSON.stringify(b.reasoning ?? null)
-  );
 }
 
 // EngineConfig / EngineHookConfig / EngineResult now live in engine/types.ts
@@ -312,6 +286,7 @@ export class Engine {
   /** Shared resources supplied at construction (adapter pattern — null when self-constructed). */
   readonly runtime: EngineRuntime | null;
   private readonly runEnvironmentResolver: RunEnvironmentResolver;
+  private readonly auxiliaryPipeline: AuxiliaryPipeline;
   private readonly interactiveBackends = new WeakMap<ApprovalRouter, InteractiveApprovalBackend>();
   private activeApprovalRouter: ApprovalRouter | undefined;
   /** Active permission mode for this Engine instance. */
@@ -323,17 +298,6 @@ export class Engine {
   // don't re-read 6+ JSON files on every /model, /login, etc. The manager
   // handles its own cache invalidation in saveUserSetting().
   private settingsManager: SettingsManager | undefined;
-
-  /**
-   * Cached auxiliary-task LLM client, keyed by the models[].key it was built
-   * from. Background calls (memory extraction, auto-dream) reuse it across
-   * runs so we don't redo the provider handshake every session. Invalidated
-   * implicitly: a changed auxModelKey produces a different cache key.
-   */
-  private auxClientCache?: {
-    key: string;
-    client: Awaited<ReturnType<typeof createLLMClient>>;
-  };
 
   // Live state from the current/most-recent run, retained for /compact and
   // run-boundary PermissionClassifier replacement/reconfiguration.
@@ -619,6 +583,13 @@ export class Engine {
 
     // Initialize model pool — prefer runtime's shared pool, fall back to self-constructed.
     this.modelPool = config.runtime?.modelPool ?? new ModelPool();
+    this.auxiliaryPipeline = new AuxiliaryPipeline({
+      config: () => this.config,
+      settings: () => this.getSettingsManager(),
+      modelPool: () => this.modelPool,
+      toolRegistry: () => this.toolRegistry,
+      toolContext: () => this.buildToolContext(),
+    });
     if (!config.runtime) {
       this.populateModelPoolFromSettings();
     }
@@ -2396,103 +2367,17 @@ export class Engine {
     });
   }
 
-  /**
-   * Run the end-of-session memory pipeline as a fire-and-forget background
-   * task. Extracts durable memories from the transcript, saves a session
-   * summary, and conditionally triggers auto-dream consolidation.
-   */
-  /**
-   * Resolve the LLM client for background/auxiliary work (memory extraction,
-   * auto-dream). When settings.defaults.auxText names a valid pool model, build
-   * (and cache) a dedicated client for it so per-turn book-keeping runs on a cheap
-   * fast model instead of the expensive primary. Falls back to `fallback` (the
-   * active run's client) when unset, unknown, or on any build failure — aux
-   * work is best-effort and must never break a run.
-   */
-  /**
-   * Build the SummarizeFn used for context compaction. Extracted so both the
-   * run path and forceCompact share one definition of the summarization call.
-   */
   private buildSummarizeFn(
     auxSummaryClient: Awaited<ReturnType<typeof createLLMClient>>,
     recordCumulativeUsage?: (usage: TokenUsage) => CumulativeUsageCounters,
   ): (prompt: string, signal?: AbortSignal) => Promise<string> {
-    return async (prompt: string, signal?: AbortSignal) => {
-      const summaryResponse = await auxSummaryClient.createMessage({
-        systemPrompt: "You are a conversation summarizer. Be concise and factual.",
-        messages: [{ role: "user", content: prompt }],
-        tools: [],
-        maxTokens: 1024,
-        billingEnabled: true,
-        requestVisible: false,
-        // Auxiliary call — no need to burn reasoning tokens. On DeepSeek V4
-        // this flips thinking off (~3x faster, fewer tokens); on every other
-        // OpenAI-compatible provider the field is ignored.
-        reasoning: { mode: "off" },
-        signal,
-      });
-      if (summaryResponse.usage) {
-        recordCumulativeUsage?.(summaryResponse.usage);
-      }
-      return summaryResponse.text;
-    };
+    return this.auxiliaryPipeline.buildSummarizeFn(auxSummaryClient, recordCumulativeUsage);
   }
 
   private async resolveAuxClient(
     fallback: Awaited<ReturnType<typeof createLLMClient>>,
   ): Promise<Awaited<ReturnType<typeof createLLMClient>>> {
-    let auxKey: string | undefined;
-    try {
-      // Re-read from disk: settings may have been changed by the desktop
-      // (a separate process) since this worker last cached them. This runs
-      // once per run on the post-run background path, so the cost is fine.
-      const sm = this.getSettingsManager();
-      sm.invalidate();
-      // Unified store's defaults.auxText (a connection id = pool key) selects
-      // the aux model; resolveAuxKey returns it (or undefined).
-      auxKey = resolveAuxKey(sm.get() as { defaults?: { auxText?: string } });
-    } catch {
-      return fallback;
-    }
-    if (!auxKey) return fallback;
-
-    // Don't spin up a second client when the aux key resolves to the SAME
-    // client config as this engine's active model. Compare FULL LLM IDENTITY
-    // (model + reasoning + maxTokens + baseUrl + provider/providerKind) against
-    // this engine's own per-session config.llm — NOT a separately-tracked active
-    // key, and NOT just the model NAME. Two distinct pool keys can share the same
-    // `model` string yet differ in reasoning/maxOutputTokens/baseUrl/apiKey/
-    // providerKey; de-duping on the name alone would wrongly route the user's
-    // chosen aux entry onto the primary's config. config.llm is isolated per
-    // session and always set for a real run, so this is correct even for desktop
-    // worker sessions built with a shared runtime (which never explicitly
-    // switchModel, so the old activeModelKey field was undefined and defeated the
-    // de-dup), AND immune to another session mutating the shared pool's activeKey.
-    const entry = this.modelPool.get(auxKey);
-    if (entry && sameLlmIdentity(this.modelPool.toLLMConfig(entry), this.config.llm)) {
-      return fallback;
-    }
-
-    if (this.auxClientCache?.key === auxKey) return this.auxClientCache.client;
-
-    if (!entry) {
-      logger.warn("engine.aux_model_missing", { auxModelKey: auxKey });
-      return fallback;
-    }
-    try {
-      const client = await createLLMClient(
-        this.modelPool.toLLMConfig(entry),
-        this.config.clientDefaults,
-      );
-      this.auxClientCache = { key: auxKey, client };
-      return client;
-    } catch (err) {
-      logger.warn("engine.aux_model_build_failed", {
-        auxModelKey: auxKey,
-        error: (err as Error).message,
-      });
-      return fallback;
-    }
+    return this.auxiliaryPipeline.resolveAuxClient(fallback);
   }
 
   private async runMemoryPipeline(
@@ -2502,118 +2387,13 @@ export class Engine {
     primaryClient: Awaited<ReturnType<typeof createLLMClient>>,
     recordBilledUsage?: (usage: TokenUsage) => void,
   ): Promise<void> {
-    try {
-      // Background calls run on the auxiliary model when configured, so memory
-      // book-keeping doesn't burn the expensive primary model every turn.
-      // settings.memories.extractionModel (if set + valid) overrides the aux
-      // model specifically for memory extraction (TODO 8.1).
-      const llmClient = await this.resolveExtractionClient(primaryClient);
-      // Only run memory extraction for substantive sessions. The previous
-      // threshold of 4 user+assistant messages was low enough that two-line
-      // exchanges ("what's the time?" / "noon") triggered a full LLM
-      // extraction, which then padded the memory store with low-signal
-      // entries. 8 messages is roughly "more than a single back-and-forth"
-      // — substantive enough to be worth a durable note.
-      const messages = transcript
-        .toMessages()
-        .filter((m) => m.role === "user" || m.role === "assistant");
-      if (messages.length < 8) return;
-
-      // Memory orchestrator + dream-loop calls are auxiliary LLM calls
-      // that don't (and shouldn't) carry image payloads. Sanitize before
-      // stringify so we don't pump a 10 MB base64 string into the
-      // summarization prompt — provider 400s on it, and it leaks bytes
-      // into a downstream cost-tracking path we don't audit as carefully
-      // as the primary turn.
-      const plainMessages = messages.map((m) => {
-        const safe = sanitizeContent(m.content);
-        return {
-          role: m.role,
-          content: typeof safe === "string" ? safe : JSON.stringify(safe),
-        };
-      });
-
-      const orchestrator = new MemoryOrchestrator({
-        callLLM: async (sysPrompt, userMsg) => {
-          // Use a lightweight auxiliary call (no tools, no streaming, no
-          // reasoning tokens).
-          const resp = await llmClient.createMessage({
-            systemPrompt: sysPrompt,
-            messages: [{ role: "user", content: userMsg }],
-            tools: [],
-            maxTokens: 1024,
-            billingEnabled: true,
-            requestVisible: false,
-            reasoning: { mode: "off" },
-          });
-          if (resp.usage) recordBilledUsage?.(resp.usage);
-          return resp.text;
-        },
-        runDream: async ({ systemPrompt, userPrompt, projectDir }) =>
-          this.runDreamLoop({
-            systemPrompt,
-            userPrompt,
-            projectDir,
-            llmClient,
-            sessionId,
-            recordBilledUsage,
-          }),
-        projectDir: cwd,
-        // settings.memories.maxCount caps memories accepted per extraction;
-        // autoExtract=false turns the extractor off (summaries/dream stay).
-        maxCount: this.readMemoriesConfig()?.maxCount,
-        autoExtract: this.readMemoriesConfig()?.autoExtract,
-      });
-
-      await orchestrator.run(plainMessages, sessionId);
-    } catch (err) {
-      // Memory pipeline is best-effort — never surface errors to the user.
-      logger.warn("engine.memory_pipeline_failed", {
-        sessionId,
-        error: (err as Error).message,
-      });
-    }
-  }
-
-  /**
-   * Drive the auto-dream tool-call loop.
-   *
-   * Runs the LLM with a whitelisted subset of memory tools (MemoryList,
-   * MemoryRead, MemorySave, MemoryDelete). The loop is intentionally small
-   * and offline:
-   *   - No streaming, no UI events — runs in the background after a session.
-   *   - No permission prompts — UI isn't attached, so we hard-reject any
-   *     attempt to Save/Delete in the "user" scope before dispatching. Dream
-   *     scope is the LLM's workspace and goes through freely.
-   *   - Capped at MAX_TURNS LLM round-trips and MAX_WRITES total
-   *     mutations to bound damage on misbehavior.
-   *
-   * Returns true if the loop ran (with or without writes); false if we
-   * bailed before the first LLM call (e.g. registry missing the tools).
-   */
-  private async runDreamLoop(opts: {
-    systemPrompt: string;
-    userPrompt: string;
-    projectDir?: string;
-    llmClient: Awaited<ReturnType<typeof createLLMClient>>;
-    sessionId: string;
-    recordBilledUsage?: (usage: TokenUsage) => void;
-  }): Promise<boolean> {
-    // The loop body now lives in services/dream-consolidation.ts so it can
-    // also be driven from the desktop host's manual "整理 / Dream" trigger.
-    // The orchestrator built systemPrompt/userPrompt from this engine's
-    // MemoryManager already; runDreamConsolidation rebuilds them from the same
-    // projectDir, so passing them here would be redundant — we just hand it the
-    // tool registry + a memory-scoped tool context.
-    const { ran } = await runDreamConsolidation({
-      llmClient: opts.llmClient,
-      toolRegistry: this.toolRegistry,
-      toolContext: this.buildToolContext(),
-      projectDir: opts.projectDir,
-      sessionId: opts.sessionId,
-      onUsage: opts.recordBilledUsage,
-    });
-    return ran;
+    return this.auxiliaryPipeline.runMemoryPipeline(
+      transcript,
+      sessionId,
+      cwd,
+      primaryClient,
+      recordBilledUsage,
+    );
   }
 
   getToolRegistry(): ToolRegistry {
@@ -3527,50 +3307,7 @@ export class Engine {
   private readMemoriesConfig():
     | { maxCount?: number; maxAge?: number; extractionModel?: string; autoExtract?: boolean }
     | undefined {
-    try {
-      const settings = this.getSettingsManager().get() as {
-        memories?: {
-          maxCount?: number;
-          maxAge?: number;
-          extractionModel?: string;
-          autoExtract?: boolean;
-        };
-      };
-      return settings.memories;
-    } catch {
-      return undefined;
-    }
-  }
-
-  /**
-   * LLM client for memory extraction (TODO 8.1). Prefers
-   * settings.memories.extractionModel when it names a valid pool model;
-   * otherwise falls back to the aux client (which itself falls back to the
-   * passed primary). Build failures fall back too — extraction is best-effort.
-   */
-  private async resolveExtractionClient(
-    primaryClient: Awaited<ReturnType<typeof createLLMClient>>,
-  ): Promise<Awaited<ReturnType<typeof createLLMClient>>> {
-    const key = this.readMemoriesConfig()?.extractionModel;
-    if (key) {
-      const entry = this.modelPool.get(key);
-      if (entry) {
-        try {
-          return await createLLMClient(
-            this.modelPool.toLLMConfig(entry),
-            this.config.clientDefaults,
-          );
-        } catch (err) {
-          logger.warn("engine.extraction_model_build_failed", {
-            extractionModel: key,
-            error: (err as Error).message,
-          });
-        }
-      } else {
-        logger.warn("engine.extraction_model_missing", { extractionModel: key });
-      }
-    }
-    return this.resolveAuxClient(primaryClient);
+    return this.auxiliaryPipeline.readMemoriesConfig();
   }
 }
 
