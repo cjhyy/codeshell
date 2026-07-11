@@ -11,6 +11,8 @@ import { logger } from "../logging/logger.js";
 
 type TranscriptWriter = (filePath: string, data: string, encoding: "utf-8") => void;
 
+type ParsedEvents = { events: TranscriptEvent[]; malformedLineCount: number };
+
 export interface TranscriptFlushFailure {
   errno: string | number;
   code?: string;
@@ -341,6 +343,80 @@ export class Transcript {
       }
       return true;
     });
+  }
+
+  static readEvents(filePath: string): ParsedEvents {
+    let raw: string;
+    try {
+      raw = readFileSync(filePath, "utf-8");
+    } catch {
+      return { events: [], malformedLineCount: 0 };
+    }
+    const lines = raw.split("\n").filter((line) => line.trim().length > 0);
+    const events: TranscriptEvent[] = [];
+    let malformedLineCount = 0;
+    for (const line of lines) {
+      try {
+        events.push(JSON.parse(line));
+      } catch {
+        malformedLineCount++;
+      }
+    }
+    return { events, malformedLineCount };
+  }
+
+  static eventsToMessages(events: readonly TranscriptEvent[]): Array<{
+    role: string;
+    content: string | ContentBlock[];
+  }> {
+    const messages: Array<{ role: string; content: string | ContentBlock[] }> = [];
+    for (const event of events) {
+      switch (event.type) {
+        case "message": {
+          const { role, content } = event.data as {
+            role: string;
+            content: string | ContentBlock[];
+          };
+          messages.push({ role, content });
+          break;
+        }
+        case "tool_use":
+          break;
+        case "tool_result": {
+          const { toolCallId, result, error, contentBlocks } = event.data as {
+            toolCallId: string;
+            result?: string;
+            error?: string;
+            contentBlocks?: ContentBlock[];
+          };
+          const block: ContentBlock = {
+            type: "tool_result",
+            tool_use_id: toolCallId,
+            content: error
+              ? `Error: ${error}`
+              : Array.isArray(contentBlocks) && contentBlocks.length > 0
+                ? contentBlocks
+                : (result ?? "(no output)"),
+          };
+          const last = messages[messages.length - 1];
+          if (last?.role === "user" && Array.isArray(last.content)) {
+            (last.content as ContentBlock[]).push(block);
+          } else {
+            messages.push({ role: "user", content: [block] });
+          }
+          break;
+        }
+        case "summary": {
+          const { summary } = event.data as { summary: string };
+          messages.push({
+            role: "user",
+            content: `<system-reminder>Previous conversation was summarized:\n${summary}</system-reminder>`,
+          });
+          break;
+        }
+      }
+    }
+    return messages;
   }
 
   static loadFromFile(filePath: string): Transcript {

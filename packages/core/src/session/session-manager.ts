@@ -26,7 +26,7 @@ import type {
   TranscriptEvent,
   TranscriptEventType,
 } from "../types.js";
-import { Transcript, eventsToMessages } from "./transcript.js";
+import { Transcript } from "./transcript.js";
 import { SessionError } from "../exceptions.js";
 import { normalizeCumulativeUsageCounters } from "../engine/session-usage.js";
 import { isSameGoalInstance, type GoalTerminal } from "../engine/goal.js";
@@ -906,7 +906,7 @@ function validateForkToolPairs(events: readonly TranscriptEvent[]): void {
   const seenProjectedResults = new Set<string>();
   const projectedPending: string[] = [];
 
-  for (const message of eventsToMessages(events)) {
+  for (const message of Transcript.eventsToMessages(events)) {
     const blocks = Array.isArray(message.content) ? message.content : [];
     const uses = blocks.filter((block) => block.type === "tool_use");
     const results = blocks.filter((block) => block.type === "tool_result");

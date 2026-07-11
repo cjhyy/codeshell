@@ -141,8 +141,7 @@ export {
 
 // ─── Session ─────────────────────────────────────────────────────
 
-export { Transcript, eventsToMessages } from "./session/transcript.js";
-export type { ReadTranscriptResult, ImportTranscriptOptions } from "./session/transcript.js";
+export { Transcript } from "./session/transcript.js";
 export {
   SessionManager,
   buildForkState,

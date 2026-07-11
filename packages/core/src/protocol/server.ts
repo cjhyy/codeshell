@@ -580,7 +580,7 @@ export class AgentServer {
 
     let source;
     try {
-      source = this.chatManager?.getIdle(sourceSessionId);
+      source = this.chatManager?.get(sourceSessionId);
     } catch (err) {
       this.transport.send(
         createErrorResponse(
