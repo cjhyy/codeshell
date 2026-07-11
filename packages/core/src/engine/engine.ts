@@ -123,6 +123,7 @@ import { EngineRuntime } from "./runtime.js";
 import { buildRunUserMessageContent, prepareRunImageInput } from "./run-image-input.js";
 import type { EngineRunOptions } from "./run-types.js";
 import { createSubAgentSpawner } from "./subagent-spawner.js";
+import { stripInjectedContextMessages } from "./run-finalizer.js";
 import { join } from "node:path";
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import type { InputAttachmentMeta } from "../protocol/types.js";
@@ -2216,7 +2217,7 @@ export class Engine {
         fileHistoryHook.dispose();
       }
       this.lastMessages = result.messages;
-      const cachedMessages = this.stripInjectedContextMessages(
+      const cachedMessages = stripInjectedContextMessages(
         result.messages,
         userContextMsg,
         dynamicContextMsg,
@@ -3020,20 +3021,6 @@ export class Engine {
       after,
       strategy: after >= before ? "no compaction needed" : (compactStrategy ?? "compacted"),
     };
-  }
-
-  private stripInjectedContextMessages(
-    messages: Message[],
-    userContextMsg: Message | null,
-    dynamicContextMsg: Message | null,
-  ): Message[] {
-    const withoutDynamicContext = dynamicContextMsg
-      ? messages.filter((msg) => msg !== dynamicContextMsg)
-      : [...messages];
-    if (!userContextMsg || messages[0] !== userContextMsg) {
-      return withoutDynamicContext;
-    }
-    return withoutDynamicContext.slice(1);
   }
 
   private recordCacheReadDiagnostics(sessionId: string, sample: PromptCacheDiagnosticSample): void {
