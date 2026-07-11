@@ -19,7 +19,7 @@ import {
 } from "./PanelRegistry";
 import {
   PanelWorkspaceRootConsumer,
-  panelWorkspaceBodyReady,
+  panelWorkspacePresentation,
 } from "./PanelWorkspaceRootConsumer";
 import type { PanelWorkspaceState } from "./usePanelWorkspaceRoot";
 import type { OpenCliSessionRequest } from "../cc-room/types";
@@ -376,13 +376,10 @@ function ResolvedPanelArea({
         {activeTabs.map((panelTab) => {
           const activeTab = panelTab.id === visibleActiveId;
           const visibility = resolvePanelVisibility({ hidden, keepActiveBodyLive, activeTab });
+          const workspacePresentation = panelWorkspacePresentation(workspace);
           return (
             <Slot key={panelTab.id} active={activeTab}>
-              {!panelWorkspaceBodyReady(workspace) ? (
-                <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-muted-foreground">
-                  {t("panels.common.loading")}
-                </div>
-              ) : (
+              {workspacePresentation.mountBody && (
                 <PanelBody
                   tab={panelTab}
                   bucket={bucket}
@@ -403,6 +400,11 @@ function ResolvedPanelArea({
                   onUpdateBrowserAnchor={onUpdateBrowserAnchor}
                   renderQuickChatPanel={renderQuickChatPanel}
                 />
+              )}
+              {workspacePresentation.showLoading && (
+                <div className="absolute inset-0 z-20 flex min-h-0 flex-1 items-center justify-center bg-background text-sm text-muted-foreground">
+                  {t("panels.common.loading")}
+                </div>
               )}
             </Slot>
           );

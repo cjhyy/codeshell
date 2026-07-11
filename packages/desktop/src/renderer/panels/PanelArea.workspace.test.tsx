@@ -6,6 +6,7 @@ import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import {
   PanelWorkspaceRootConsumer,
   panelWorkspaceBodyReady,
+  panelWorkspacePresentation,
 } from "./PanelWorkspaceRootConsumer";
 
 function deferred<T>() {
@@ -51,6 +52,22 @@ afterEach(async () => {
 });
 
 describe("PanelArea workspace consumers", () => {
+  test("covers a retained panel body while a changed workspace is resolving", () => {
+    expect(panelWorkspacePresentation({ root: null, kind: null, ready: false })).toEqual({
+      mountBody: false,
+      showLoading: true,
+    });
+    expect(
+      panelWorkspacePresentation({ root: "/repo/.worktrees/one", kind: "worktree", ready: true }),
+    ).toEqual({ mountBody: true, showLoading: false });
+    expect(
+      panelWorkspacePresentation({ root: "/repo/.worktrees/one", kind: "worktree", ready: false }),
+    ).toEqual({
+      mountBody: true,
+      showLoading: true,
+    });
+  });
+
   test("gates bodies until resolution and updates quick chat from the matching workspace event", async () => {
     await act(async () => {
       root?.render(

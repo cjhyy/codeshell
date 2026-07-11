@@ -115,32 +115,34 @@ describe("AgentServer agent/forkSession", () => {
     }
     expect(
       transport.sent.filter((message) => message.error).map((message) => message.error.code),
-    ).toEqual([
-      ErrorCodes.SessionNotFound,
-      ErrorCodes.InvalidParams,
-      ErrorCodes.InvalidParams,
-    ]);
+    ).toEqual([ErrorCodes.SessionNotFound, ErrorCodes.InvalidParams, ErrorCodes.InvalidParams]);
   });
 
-  it("rejects a live busy source without forking", async () => {
-    const fake = fakeEngine();
-    const manager = new ChatSessionManager({
-      runtime: {} as never,
-      engineFactory: () => fake.engine,
-    });
-    const live = manager.getOrCreate("source", {} as never);
-    live.isBusy = () => true;
-    const transport = makeTransport();
-    new AgentServer({ transport: transport.transport, chatManager: manager });
+  for (const sourceState of ["busy", "queued"] as const) {
+    it(`rejects a live ${sourceState} source without forking`, async () => {
+      const fake = fakeEngine();
+      const manager = new ChatSessionManager({
+        runtime: {} as never,
+        engineFactory: () => fake.engine,
+      });
+      const live = await manager.getOrCreate("source", {} as never);
+      live.isBusy = () => sourceState === "busy";
+      live.queueDepth = () => (sourceState === "queued" ? 1 : 0);
+      const transport = makeTransport();
+      new AgentServer({ transport: transport.transport, chatManager: manager });
 
-    transport.deliver({
-      jsonrpc: "2.0",
-      id: 1,
-      method: Methods.ForkSession,
-      params: { sourceSessionId: "source", mode: "full" },
+      transport.deliver({
+        jsonrpc: "2.0",
+        id: 1,
+        method: Methods.ForkSession,
+        params: { sourceSessionId: "source", mode: "full" },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(transport.sent.at(-1)?.error).toEqual({
+        code: ErrorCodes.Overloaded,
+        message: "source session is still producing or has queued turns",
+      });
+      expect(fake.calls).toHaveLength(0);
     });
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(transport.sent.at(-1)?.error?.code).toBe(ErrorCodes.Overloaded);
-    expect(fake.calls).toHaveLength(0);
-  });
+  }
 });

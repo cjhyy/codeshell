@@ -591,6 +591,16 @@ export class AgentServer {
       );
       return;
     }
+    if (source && (source.isBusy() || source.queueDepth() > 0)) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.Overloaded,
+          "source session is still producing or has queued turns",
+        ),
+      );
+      return;
+    }
     const engine = source?.engine ?? this.legacyEngine ?? this.anyEngine();
     if (!engine || !engine.sessionExistsOnDisk(sourceSessionId)) {
       this.transport.send(
