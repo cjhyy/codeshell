@@ -72,6 +72,7 @@ import { PLAN_MODE_ALLOWED_TOOLS } from "../tool-system/plan-mode-allowlist.js";
 import { PromptComposer } from "../prompt/composer.js";
 import {
   SessionManager,
+  sessionsRoot,
   type ForkSessionOptions,
   type ForkSessionResult,
   type SessionBundle,
@@ -1790,7 +1791,7 @@ export class Engine {
       };
 
       const sessionDir = join(
-        this.config.sessionStorageDir ?? join(userHome(), ".code-shell", "sessions"),
+        this.config.sessionStorageDir ?? sessionsRoot(),
         session.state.sessionId,
       );
       const fileHistoryHook = registerFileHistoryHook({

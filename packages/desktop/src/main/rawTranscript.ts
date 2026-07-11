@@ -7,11 +7,10 @@
  * transcript from a known event `id` and resume without gaps or duplicates.
  * The disk `id` is the stable dedup key (live StreamEvents have none).
  */
+import { sessionsRoot } from "@cjhyy/code-shell-core";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import * as os from "node:os";
 
-const SESSIONS_DIR = path.join(os.homedir(), ".code-shell", "sessions");
 const SAFE_ID = /^[A-Za-z0-9_.-]+$/;
 
 export interface RawTranscriptEvent {
@@ -46,12 +45,13 @@ export function parseRawTranscriptEvents(jsonl: string, sinceId?: string): RawTr
 
 /**
  * Read + parse raw transcript events for `sessionId`. `baseDir` overridable for
- * tests; defaults to ~/.code-shell/sessions. Returns [] when absent/empty.
+ * tests; defaults to core's CODE_SHELL_HOME-aware sessions root. Returns []
+ * when absent/empty.
  */
 export async function getSessionEvents(
   sessionId: string,
   sinceId?: string,
-  baseDir: string = SESSIONS_DIR,
+  baseDir: string = sessionsRoot(),
 ): Promise<RawTranscriptEvent[]> {
   if (!SAFE_ID.test(sessionId) || sessionId === "." || sessionId === "..") return [];
   const file = path.join(baseDir, sessionId, "transcript.jsonl");
