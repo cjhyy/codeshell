@@ -101,8 +101,7 @@ import {
 } from "../settings/feature-flags.js";
 import { effectiveDisabledList, effectiveBuiltinLists } from "../capability-control/overlay.js";
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
-import { FileHistory } from "../session/file-history.js";
-import { patchBackupTargets } from "../tool-system/builtin/apply-patch/backup-targets.js";
+import { registerFileHistoryHook } from "./file-history-hook.js";
 import type { ToolContext } from "../tool-system/context.js";
 import type { SandboxBackend } from "../tool-system/sandbox/index.js";
 import { resolveAgentPreset, resolveBuiltinToolNames, type AgentPreset } from "../preset/index.js";
@@ -1814,45 +1813,16 @@ export class Engine {
         return resp.text;
       };
 
-      // File history: auto-backup before Write/Edit
       const sessionDir = join(
         this.config.sessionStorageDir ?? join(userHome(), ".code-shell", "sessions"),
         session.state.sessionId,
       );
-      const fileHistory = FileHistory.loadFromDir(sessionDir);
-
-      // Keep a reference so we can unregister in the finally below. Registering an
-      // anonymous handler every run() leaks: unregister matches by handler
-      // identity, so without a stored reference each run stacks another identical
-      // on_tool_start handler that fires (and re-snapshots) on every tool forever.
-      const fileHistoryHandler: HookHandler = async (context) => {
-        const toolName = context.data?.toolName as string;
-        const args = context.data?.args as Record<string, unknown> | undefined;
-        // Tag snapshots with the current turn (stamped above before any tool
-        // runs) so turn-level /undo can revert just this user message's edits.
-        const turnSeq = session.state.turnSeq;
-        if ((toolName === "Write" || toolName === "Edit") && args?.file_path) {
-          const path = args.file_path as string;
-          // saveSnapshot returns null when the file does not exist yet — this
-          // hook runs BEFORE the tool, so a null here means the turn is CREATING
-          // the file. Record it (idempotent per turn) so /undo can delete it and
-          // /redo can recreate it.
-          if (fileHistory.saveSnapshot(path, turnSeq) === null && turnSeq !== undefined) {
-            fileHistory.recordCreated(path, turnSeq);
-          }
-        } else if (toolName === "ApplyPatch" && typeof args?.patch === "string") {
-          // ApplyPatch mutates files too, so /undo must see them. Snapshot every
-          // existing file the patch updates or deletes (adds have no prior
-          // content). Resolve relative patch paths against the engine cwd, the
-          // same base ApplyPatch itself uses.
-          const cwd = this.config.cwd ?? process.cwd();
-          for (const target of patchBackupTargets(args.patch, cwd)) {
-            fileHistory.saveSnapshot(target, turnSeq);
-          }
-        }
-        return {};
-      };
-      this.hooks.register("on_tool_start", fileHistoryHandler, 100, "file_history_backup");
+      const fileHistoryHook = registerFileHistoryHook({
+        hooks: this.hooks,
+        sessionDir,
+        cwd,
+        getTurnSeq: () => session.state.turnSeq,
+      });
 
       // Hook: agent start
       await this.emitHook(
@@ -2243,7 +2213,7 @@ export class Engine {
         if (this.activeRunSession === session) this.activeRunSession = null;
         // Run-scoped too: this handler is re-registered every run(), so it must be
         // dropped here or it stacks duplicates that re-snapshot on every tool.
-        this.hooks.unregister("on_tool_start", fileHistoryHandler);
+        fileHistoryHook.dispose();
       }
       this.lastMessages = result.messages;
       const cachedMessages = this.stripInjectedContextMessages(
