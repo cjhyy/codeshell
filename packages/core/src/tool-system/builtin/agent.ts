@@ -46,6 +46,8 @@ export interface AgentTypeOverrides {
   maxTurns?: number;
   toolAllowlist?: string[];
   skillAllowlist?: string[];
+  sandboxMode?: AgentDefinition["sandbox"];
+  mcpAllowlist?: string[];
   appendSystemPrompt?: string;
 }
 
@@ -87,6 +89,8 @@ export function resolveAgentTypeOverrides(
     maxTurns: def.maxTurns,
     toolAllowlist: def.tools,
     skillAllowlist: namespacePluginSkills(def.skills, def.source, def.pluginName),
+    sandboxMode: def.sandbox,
+    mcpAllowlist: def.mcp,
     appendSystemPrompt: def.systemPrompt,
   };
 }
@@ -305,6 +309,8 @@ async function runSubAgent(
     model?: string;
     toolAllowlist?: string[];
     skillAllowlist?: string[];
+    sandboxMode?: AgentDefinition["sandbox"];
+    mcpAllowlist?: string[];
     appendSystemPrompt?: string;
     readOnlySession?: boolean;
     /** Resume an existing child session (transcript replay) instead of cold
@@ -456,6 +462,8 @@ export async function agentTool(
         model: overrides.model,
         toolAllowlist: overrides.toolAllowlist,
         skillAllowlist: overrides.skillAllowlist,
+        sandboxMode: overrides.sandboxMode,
+        mcpAllowlist: overrides.mcpAllowlist,
         appendSystemPrompt: overrides.appendSystemPrompt,
         readOnlySession: overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
         hooks: ctx?.hooks,
@@ -709,6 +717,8 @@ async function runSyncSubAgent(args: {
     model: overrides.model,
     toolAllowlist: overrides.toolAllowlist,
     skillAllowlist: overrides.skillAllowlist,
+    sandboxMode: overrides.sandboxMode,
+    mcpAllowlist: overrides.mcpAllowlist,
     appendSystemPrompt: overrides.appendSystemPrompt,
     readOnlySession: overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
     resumeSessionId,

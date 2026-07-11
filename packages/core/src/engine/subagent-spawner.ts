@@ -4,6 +4,12 @@ import type { ModelPool } from "../llm/model-pool.js";
 import type { SubAgentSpawner } from "../tool-system/context.js";
 import type { EngineConfig } from "./types.js";
 import type { ChildEngineRunner } from "./run-types.js";
+import {
+  defaultSandboxConfig,
+  type SandboxConfig,
+  type SandboxMode,
+} from "../tool-system/sandbox/index.js";
+import type { MCPServerConfig } from "../types.js";
 
 export const NESTED_AGENT_TOOLS = ["Agent", "AgentStatus", "AgentCancel", "AgentSendInput"];
 
@@ -34,6 +40,23 @@ export function resolveChildToolScope(
     enabled: parentEnabled?.filter((tool) => !NESTED_AGENT_TOOLS.includes(tool)),
     disabled: Array.from(new Set([...(parentDisabled ?? []), ...NESTED_AGENT_TOOLS])),
   };
+}
+
+export function resolveChildSandbox(
+  mode: SandboxMode | undefined,
+  parent: SandboxConfig | undefined,
+): SandboxConfig | undefined {
+  if (mode === undefined) return parent;
+  return { ...defaultSandboxConfig(mode), ...parent, mode };
+}
+
+export function resolveChildMcpServers(
+  allowlist: string[] | undefined,
+  parent: Record<string, MCPServerConfig> | undefined,
+): Record<string, MCPServerConfig> | undefined {
+  if (allowlist === undefined) return parent;
+  const allowed = new Set(allowlist);
+  return Object.fromEntries(Object.entries(parent ?? {}).filter(([name]) => allowed.has(name)));
 }
 
 export function wrapChildStream(
@@ -114,7 +137,8 @@ export function createSubAgentSpawner(deps: CreateSubAgentSpawnerDeps): SubAgent
         headless: deps.parentConfig.headless,
         readOnlySession: request.readOnlySession,
         skillAllowlist: request.skillAllowlist,
-        sandbox: deps.parentConfig.sandbox,
+        sandbox: resolveChildSandbox(request.sandboxMode, deps.parentConfig.sandbox),
+        mcpServers: resolveChildMcpServers(request.mcpAllowlist, deps.parentConfig.mcpServers),
         settingsScope: deps.parentConfig.settingsScope ?? "project",
         isSubAgent: true,
       };

@@ -110,6 +110,71 @@ describe("subagent spawner", () => {
     expect(childSid).toBe("existing");
   });
 
+  it("inherits parent sandbox and MCP config when the role leaves both undefined", async () => {
+    let childConfig: EngineConfig | undefined;
+    const parent = parentConfig();
+    parent.mcpServers = {
+      github: { name: "github", command: "github-mcp" },
+      docs: { name: "docs", command: "docs-mcp" },
+    };
+    const spawner = createSubAgentSpawner({
+      parentConfig: parent,
+      presetName: "terminal-coding",
+      cwd: "/repo",
+      permissionMode: "acceptEdits",
+      appendParentSubagent: () => {},
+      sessionExists: () => false,
+      childRunner: {
+        async runChild(config, _task, options) {
+          childConfig = config;
+          return { text: "done", sessionId: options.sessionId! };
+        },
+      },
+    });
+
+    await spawner.spawn({
+      agentId: "child-inherit",
+      description: "inherit",
+      prompt: "inspect",
+      maxTurns: 2,
+      signal: new AbortController().signal,
+    });
+
+    expect(childConfig?.sandbox).toBe(parent.sandbox);
+    expect(childConfig?.mcpServers).toBe(parent.mcpServers);
+  });
+
+  it("preserves an empty MCP allowlist as no child servers", async () => {
+    let childConfig: EngineConfig | undefined;
+    const parent = parentConfig();
+    parent.mcpServers = { github: { name: "github", command: "github-mcp" } };
+    const spawner = createSubAgentSpawner({
+      parentConfig: parent,
+      presetName: "terminal-coding",
+      cwd: "/repo",
+      permissionMode: "acceptEdits",
+      appendParentSubagent: () => {},
+      sessionExists: () => false,
+      childRunner: {
+        async runChild(config, _task, options) {
+          childConfig = config;
+          return { text: "done", sessionId: options.sessionId! };
+        },
+      },
+    });
+
+    await spawner.spawn({
+      agentId: "child-empty",
+      description: "empty",
+      prompt: "inspect",
+      maxTurns: 2,
+      signal: new AbortController().signal,
+      mcpAllowlist: [],
+    });
+
+    expect(childConfig?.mcpServers).toEqual({});
+  });
+
   it("filters child context events and tags forwarded events with agentId", () => {
     const seen: any[] = [];
     const stream = wrapChildStream((event) => seen.push(event), "child-1")!;

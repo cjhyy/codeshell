@@ -148,7 +148,7 @@ describe("AgentSendInput — subagent continuation via transcript replay", () =>
     expect(out).toMatch(/nested agents are not supported/i);
   });
 
-  it("re-resolves the role's tool/skill scope on resume (restricted role stays restricted)", async () => {
+  it("re-resolves all role capability scopes on resume", async () => {
     // A resumed child Engine is built fresh; its scope comes from the spawn
     // request, not the persisted session. So AgentSendInput must re-resolve the
     // role's allowlists from agentType — otherwise a read-only reviewer would
@@ -161,7 +161,15 @@ describe("AgentSendInput — subagent continuation via transcript replay", () =>
       list: () => [{ name: "reviewer", description: "r", systemPrompt: "" }],
       get: (n: string) =>
         n === "reviewer"
-          ? { name: "reviewer", description: "r", systemPrompt: "sp", tools: ["Read", "Grep"], skills: [] }
+          ? {
+              name: "reviewer",
+              description: "r",
+              systemPrompt: "sp",
+              tools: ["Read", "Grep"],
+              skills: [],
+              sandbox: "bwrap",
+              mcp: [],
+            }
           : undefined,
     };
     asyncAgentRegistry.register({
@@ -184,6 +192,8 @@ describe("AgentSendInput — subagent continuation via transcript replay", () =>
     expect(last.resumeSessionId).toBe("agent-x");
     expect(last.toolAllowlist).toEqual(["Read", "Grep"]);
     expect(last.skillAllowlist).toEqual([]);
+    expect(last.sandboxMode).toBe("bwrap");
+    expect(last.mcpAllowlist).toEqual([]);
   });
 
   it("refuses to resume an agent that is still running (concurrent-write guard)", async () => {
