@@ -2,7 +2,7 @@
 
 > 已完成项一律删除（记录在 git 历史与记忆里）。本文件只保留**未完成**的待办。
 > 分区规则：**小 feature = 体量 M 及以下（M/S/XS），可单会话直接着手**；**大功能升级 = 体量 L**，需先方案设计再分阶段落地。
-> 最近一次核对：2026-07-10（对照最近 80 条提交、nightly 汇总、重构/评审文档与当前代码：删除已完成的 Quick Chat、DriveAgentJobs 查询/取消、Node 24 Actions 及 rc.18 三条发版遗留；更新 engine/OAuth/命名/prompt cache、两条新增 feature 和大功能项的现状与锚点）。
+> 最近一次核对：2026-07-11（v0.7.1 发版，28 条 finding 修复合并）（对照最近 80 条提交、nightly 汇总、重构/评审文档与当前代码：删除已完成的 Quick Chat、DriveAgentJobs 查询/取消、Node 24 Actions 及 rc.18 三条发版遗留；更新 engine/OAuth/命名/prompt cache、两条新增 feature 和大功能项的现状与锚点）。
 
 ---
 
