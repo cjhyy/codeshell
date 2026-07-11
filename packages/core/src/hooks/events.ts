@@ -38,6 +38,10 @@ import type { GoalTerminationReason } from "../engine/goal.js";
  *                                          consecutive-block cap (maxStopBlocks)
  *                                          and maxTurns. ctx.data carries `goal`,
  *                                          `finalText`, `turnCount`. Distinct from
+ *                                          the built-in Goal judge's recent
+ *                                          conversation, which stays on a private
+ *                                          TurnLoop-to-hook closure and is never
+ *                                          exposed through HookContext.
  *                                          HookResult.stop, which controls the hook
  *                                          CHAIN, not agent termination.
  *   - pre_tool_use / post_tool_use         (executor.ts) — pre_tool_use honors

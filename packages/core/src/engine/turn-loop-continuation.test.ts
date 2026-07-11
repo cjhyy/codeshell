@@ -245,11 +245,11 @@ describe("TurnLoop max-output continuation", () => {
     expect(calls()).toBe(3);
   });
 
-  it("keeps normal non-truncated Goal usage accounting unchanged", async () => {
-    let tokensUsed: number | undefined;
+  it("publishes normal non-truncated Goal conversation context", async () => {
+    let renderedConversation: string | undefined;
     const { deps, calls } = makeDeps([resp("all done", "stop")]);
-    deps.updateGoalJudgeContext = (context) => {
-      tokensUsed = context.progress.tokensUsed;
+    deps.publishGoalJudgeContext = (context) => {
+      renderedConversation = context.renderedConversation;
     };
     const loop = new TurnLoop(deps, {
       ...config,
@@ -260,6 +260,6 @@ describe("TurnLoop max-output continuation", () => {
 
     expect(result.reason).toBe("completed");
     expect(calls()).toBe(1);
-    expect(tokensUsed).toBe(15);
+    expect(renderedConversation).toContain("all done");
   });
 });

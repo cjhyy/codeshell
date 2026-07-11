@@ -2090,13 +2090,13 @@ export class Engine {
           ? { ...normalizedGoal }
           : undefined;
       let goalHookHandler: ReturnType<typeof createGoalStopHook> | null = null;
-      let goalJudgeContext: GoalJudgeRuntimeContext | undefined;
+      let latestGoalJudgeContext: GoalJudgeRuntimeContext | undefined;
       if (normalizedGoal && this.config.isSubAgent !== true) {
         goalHookHandler = createGoalStopHook({
           goal: normalizedGoal,
           llm: llmClient,
           log: logger,
-          getJudgeContext: () => goalJudgeContext,
+          getJudgeContext: () => latestGoalJudgeContext,
           onJudgeUsage: (usage) => {
             // The provider records this request into llmClient.getUsage() and the
             // process-wide CostTracker. This separate callback feeds the session
@@ -2212,8 +2212,8 @@ export class Engine {
               if (this.activeGoalHook === goalHookHandler) this.activeGoalHook = null;
             }
           },
-          updateGoalJudgeContext: (context) => {
-            goalJudgeContext = context;
+          publishGoalJudgeContext: (context) => {
+            latestGoalJudgeContext = context;
           },
           ctxOverheadStore: {
             get: (s) => this.ctxOverheadBySid.get(s) ?? 0,

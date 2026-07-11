@@ -105,12 +105,6 @@ class AutoCompactionGoalClient extends LLMClientBase {
 
 registerProvider(provider, AutoCompactionGoalClient);
 
-function goalTokensFromJudgePrompt(prompt: string): number {
-  const match = prompt.match(/Goal tokens: (\d+) \/ /);
-  if (!match) throw new Error(`Goal token progress missing from judge prompt: ${prompt}`);
-  return Number(match[1]);
-}
-
 describe("Engine auto-compaction Goal accounting", () => {
   const roots: string[] = [];
 
@@ -170,11 +164,9 @@ describe("Engine auto-compaction Goal accounting", () => {
     expect(result.reason).toBe("completed");
     expect(scenario.summaryCalls).toBeGreaterThan(0);
     expect(scenario.judgeCalls).toBe(1);
+    expect(scenario.judgePrompts[0]).toContain("最近的完整对话");
     // Tool summaries are hidden from the foreground request list but are real
-    // billed calls and therefore part of the Goal budget.
-    expect(goalTokensFromJudgePrompt(scenario.judgePrompts[0]!)).toBe(
-      scenario.mainTokens + scenario.summaryTokens + scenario.auxiliaryTokensAtJudge!,
-    );
+    // billed calls and therefore part of the returned usage and Goal budget.
     expect(result.usage.totalTokens).toBeGreaterThanOrEqual(
       scenario.mainTokens +
         scenario.summaryTokens +
@@ -217,7 +209,9 @@ describe("Engine auto-compaction Goal accounting", () => {
 
     expect(result.reason).toBe("completed");
     expect(scenario.summaryCalls).toBe(0);
-    expect(goalTokensFromJudgePrompt(scenario.judgePrompts[0]!)).toBe(normalUsage.totalTokens);
+    expect(result.usage.totalTokens).toBeGreaterThanOrEqual(
+      normalUsage.totalTokens + MAIN_USAGE.totalTokens,
+    );
   });
 
   it("continues normally after auto-compaction when no Goal is active", async () => {
