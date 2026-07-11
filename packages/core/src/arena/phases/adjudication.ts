@@ -14,6 +14,7 @@ import type {
   ClaimRecord,
   ClaimAdjudication,
   ArenaProgressEvent,
+  ArenaUsageRecorder,
 } from "../types.js";
 import { isStrategyV2 } from "../types.js";
 import type { ArenaStrategyV2 } from "../types.js";
@@ -30,6 +31,7 @@ interface AdjudicationOptions {
   ledger: ArenaLedger;
   signal?: AbortSignal;
   onProgress?: (event: ArenaProgressEvent) => void;
+  onUsage?: ArenaUsageRecorder;
 }
 
 /**
@@ -39,7 +41,7 @@ interface AdjudicationOptions {
 export async function runAdjudication(
   options: AdjudicationOptions,
 ): Promise<ClaimAdjudication[]> {
-  const { concluder, strategy, topic, ledger, signal, onProgress } = options;
+  const { concluder, strategy, topic, ledger, signal, onProgress, onUsage } = options;
 
   const allAdjudications: ClaimAdjudication[] = [];
   const v2 = isStrategyV2(strategy);
@@ -86,6 +88,7 @@ export async function runAdjudication(
       messages: [{ role: "user", content: userContent }],
       signal,
     });
+    onUsage?.(response.usage);
 
     logger.info("arena.adjudication_response", {
       claimId: claim.claimId,

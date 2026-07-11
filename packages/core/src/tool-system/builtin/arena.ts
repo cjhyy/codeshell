@@ -476,6 +476,7 @@ export async function arenaTool(
     });
 
     const result = await arena.run(topic);
+    ctx.recordBilledUsage?.(result.usage);
 
     // Use session renderer (markdown, no ANSI) for tool results.
     // Terminal renderer (chalk) is only for direct stdout printing.

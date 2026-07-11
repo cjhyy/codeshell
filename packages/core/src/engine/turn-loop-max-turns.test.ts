@@ -19,11 +19,13 @@ function makeDeps(
   callArgs: Message[][];
   modelCalls: () => number;
   stoppedMarkers: () => number;
+  recordedUsage: LLMResponse["usage"][];
 } {
   let i = 0;
   let calls = 0;
   let stopped = 0;
   const callArgs: Message[][] = [];
+  const recordedUsage: LLMResponse["usage"][] = [];
   const call = async (_sys: string, messages: Message[]): Promise<LLMResponse> => {
     calls++;
     callArgs.push(messages.map((m) => ({ ...m })));
@@ -102,6 +104,14 @@ function makeDeps(
     tools: [],
     sessionId: "test",
     ctxOverheadStore: { get: () => 0, set: () => {} },
+    recordCumulativeUsage: (usage) => {
+      recordedUsage.push(usage);
+      return {
+        cumulativePromptTokens: 0,
+        cumulativeCacheReadTokens: 0,
+        cumulativeCacheCreationTokens: 0,
+      };
+    },
   };
 
   return {
@@ -109,6 +119,7 @@ function makeDeps(
     callArgs,
     modelCalls: () => calls,
     stoppedMarkers: () => stopped,
+    recordedUsage,
   };
 }
 
@@ -150,6 +161,39 @@ describe("TurnLoop maxTurns ceiling (§4.3)", () => {
       .map((m) => (typeof m.content === "string" ? m.content : ""))
       .find((c) => c.includes("Turn limit reached"));
     expect(finalReminder).toBeDefined();
+  });
+
+  it("records the final maxTurns summary response in session usage", async () => {
+    const { deps, recordedUsage } = makeDeps([toolResp(), summaryResp()]);
+    const loop = new TurnLoop(deps, { maxTurns: 1, maxToolCallsPerTurn: 10 });
+
+    await loop.run([{ role: "user", content: "go" }]);
+
+    expect(recordedUsage).toEqual([toolResp().usage, summaryResp().usage]);
+  });
+
+  it("stops before another parent request when externally reported child usage exhausts Goal", async () => {
+    const { deps, modelCalls } = makeDeps([toolResp(), summaryResp()]);
+    let loop!: TurnLoop;
+    deps.toolExecutor.executeSingle = async (call: ToolCall) => {
+      loop.recordGoalJudgeUsage({
+        promptTokens: 80,
+        completionTokens: 20,
+        totalTokens: 100,
+      });
+      return { id: call.id, toolName: call.toolName, result: "child done" };
+    };
+    loop = new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "finish with a child", tokenBudget: 50 },
+    });
+
+    const result = await loop.run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("goal_budget_exhausted");
+    expect(result.goalTermination).toBe("token_budget_exhausted");
+    expect(modelCalls()).toBe(1);
   });
 
   it("stops cleanly when the final maxTurns summary resolves after the signal aborts", async () => {

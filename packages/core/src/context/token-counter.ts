@@ -19,6 +19,10 @@ const RATIOS = {
   cjk: 1.5,          // CJK characters: ~1.5 chars per token
 };
 
+// Base64 is transport data, not text. A fixed vision estimate prevents large
+// images from spuriously exhausting the text context window.
+const IMAGE_TOKEN_ESTIMATE = 170;
+
 /**
  * Estimate token count for a string, detecting content type.
  */
@@ -86,13 +90,12 @@ function estimateBlockTokens(block: ContentBlock): number {
   }
   if (block.name) tokens += estimateStringTokens(block.name);
   if (block.source?.data) {
-    tokens += estimateStringTokens(block.source.media_type);
-    tokens += estimateStringTokens(block.source.data);
+    tokens += IMAGE_TOKEN_ESTIMATE;
   }
 
   const maybeOpenAI = block as unknown as { image_url?: { url?: string } };
   if (typeof maybeOpenAI.image_url?.url === "string") {
-    tokens += estimateStringTokens(maybeOpenAI.image_url.url);
+    tokens += IMAGE_TOKEN_ESTIMATE;
   }
 
   return tokens;

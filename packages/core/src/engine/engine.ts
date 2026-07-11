@@ -21,6 +21,7 @@ import { getMergedCatalog } from "../model-catalog/index.js";
 import { modelEntriesFromConnections } from "./model-connections-pool.js";
 import { resolveAuxKey } from "./aux-key.js";
 import {
+  addTokenUsage,
   addCumulativeUsage,
   cumulativeCacheHitRate,
   foldRunUsage,
@@ -1216,7 +1217,7 @@ export class Engine {
           onStream: childStream,
           sessionId: childSessionId,
         });
-        return { text: result.text, sessionId: result.sessionId };
+        return { text: result.text, sessionId: result.sessionId, usage: result.usage };
       },
       sessionExists: (sessionId: string) => this.sessionManager.exists(sessionId),
     };
@@ -1828,6 +1829,14 @@ export class Engine {
       // construction but cannot execute until turnLoop.run() starts.
       let turnLoop!: TurnLoop;
       let autoCompactionGoalTermination: ReturnType<TurnLoop["recordGoalJudgeUsage"]>;
+      let externalRunUsage: TokenUsage = {
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+        cacheReadTokens: 0,
+        cacheCreationTokens: 0,
+      };
+      let runAccountingFinalized = false;
       Object.assign(
         session.state,
         normalizeCumulativeUsageCounters(session.state, session.state.tokenUsage),
@@ -1837,16 +1846,49 @@ export class Engine {
         Object.assign(session.state, next);
         return next;
       };
-      contextManager.setSummarizeFn(
-        this.buildSummarizeFn(llmClient, (usage) => {
-          const cumulative = recordCumulativeUsage(usage);
-          autoCompactionGoalTermination = turnLoop.recordGoalJudgeUsage(usage);
-          return cumulative;
-        }),
-      );
+      const recordExternalBilledUsage = (usage: TokenUsage): CumulativeUsageCounters => {
+        externalRunUsage = addTokenUsage(externalRunUsage, usage);
+        const cumulative = recordCumulativeUsage(usage);
+        autoCompactionGoalTermination = turnLoop.recordGoalJudgeUsage(usage);
+        if (runAccountingFinalized) {
+          try {
+            const latest = this.sessionManager.resume(sid).state;
+            const lateCumulative = addCumulativeUsage(latest, usage);
+            this.sessionManager.updateSessionState(sid, {
+              tokenUsage: addTokenUsage(latest.tokenUsage, usage),
+              ...lateCumulative,
+              ...(this.config.costStore
+                ? {
+                    costState: this.config.costStore.serialize() as Record<string, unknown>,
+                  }
+                : {}),
+            });
+          } catch (err) {
+            logger.warn("engine.late_usage_persist_failed", {
+              sessionId: sid,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        }
+        return cumulative;
+      };
+      contextManager.setSummarizeFn(this.buildSummarizeFn(llmClient, recordExternalBilledUsage));
 
       // Create components (requires resolved llmClient).
       const modelFacade = new ModelFacade(llmClient, session.transcript);
+      const getRunUsage = () => {
+        const visible = modelFacade.getUsage();
+        return {
+          ...visible,
+          totalPromptTokens: visible.totalPromptTokens + externalRunUsage.promptTokens,
+          totalCompletionTokens: visible.totalCompletionTokens + externalRunUsage.completionTokens,
+          totalTokens: visible.totalTokens + externalRunUsage.totalTokens,
+          totalCacheReadTokens:
+            visible.totalCacheReadTokens + (externalRunUsage.cacheReadTokens ?? 0),
+          totalCacheCreationTokens:
+            visible.totalCacheCreationTokens + (externalRunUsage.cacheCreationTokens ?? 0),
+        };
+      };
       const callPrimaryModel = modelFacade.call.bind(modelFacade);
       modelFacade.call = async (...args: Parameters<ModelFacade["call"]>) => {
         // A primary-model summary may itself exhaust the Goal budget. Do not
@@ -1871,24 +1913,25 @@ export class Engine {
 
       // Wire getOutputTokens for token budget tracking
       modelFacade.getOutputTokens = () => {
-        const usage = llmClient.getUsage();
+        const usage = getRunUsage();
         return usage.totalCompletionTokens;
       };
 
-      // Wire summarize for tool use summaries (uses lightweight call).
-      // recordUsage=false keeps these auxiliary sub-calls out of the main usage
-      // tracker so session_end.cost reflects only the user-facing turns and
-      // turns/requestCount stay aligned.
+      // Wire summarize for tool use summaries (uses lightweight call). Keep the
+      // request out of the foreground tracker while billing and reporting it to
+      // the owning session/Goal budget.
       modelFacade.summarize = async (sysPrompt: string, userMsg: string) => {
         const resp = await auxSummaryClient.createMessage({
           systemPrompt: sysPrompt,
           messages: [{ role: "user", content: userMsg }],
           tools: [],
           maxTokens: 256,
-          recordUsage: false,
+          billingEnabled: true,
+          requestVisible: false,
           // Auxiliary call — see contextManager.setSummarizeFn above.
           reasoning: { mode: "off" },
         });
+        if (resp.usage) recordExternalBilledUsage(resp.usage);
         logger.debug("summarize.call", {
           sysPromptLen: sysPrompt.length,
           userMsgLen: userMsg.length,
@@ -2178,7 +2221,7 @@ export class Engine {
             session.state.turnCount = turnCount;
             // baseline + this run's running total (idempotent per boundary,
             // accumulates across runs; carries cacheRead/cacheCreation too).
-            session.state.tokenUsage = foldRunUsage(usageBaseline, modelFacade.getUsage());
+            session.state.tokenUsage = foldRunUsage(usageBaseline, getRunUsage());
             // Surface the whole-session monotonic cache counts to the UI.
             // Separate from turn-loop's authoritative per-response emit (which
             // drives the live context reading and single-turn metric).
@@ -2212,6 +2255,7 @@ export class Engine {
           },
         },
       );
+      toolCtx.recordBilledUsage = recordExternalBilledUsage;
 
       // Expose this run's loop for mid-run extension (TODO 3.1). Top-level only —
       // a sub-agent's loop is its own concern and isn't user-extendable.
@@ -2340,12 +2384,12 @@ export class Engine {
         sessionId: session.state.sessionId,
         reason: result.reason,
         turns: turnLoop.currentTurn,
-        tokens: modelFacade.getUsage().totalTokens,
+        tokens: getRunUsage().totalTokens,
       });
       recordSessionEnd(session.state.sessionId, {
         reason: result.reason,
         turns: turnLoop.currentTurn,
-        cost: modelFacade.getUsage(),
+        cost: getRunUsage(),
       });
 
       // Session-level hook: fired symmetrically with on_session_start once
@@ -2361,7 +2405,13 @@ export class Engine {
       // Fire-and-forget memory pipeline: extract durable memories from the
       // transcript, save a session summary, and conditionally trigger
       // auto-dream consolidation. Doesn't block the Engine result.
-      void this.runMemoryPipeline(session.transcript, session.state.sessionId, cwd, llmClient);
+      void this.runMemoryPipeline(
+        session.transcript,
+        session.state.sessionId,
+        cwd,
+        llmClient,
+        recordExternalBilledUsage,
+      );
 
       // Fire-and-forget session title generation — only after the FIRST turn.
       // Reuses the already-resolved auxSummaryClient (aux model, cheap). Best-
@@ -2416,7 +2466,7 @@ export class Engine {
       session.state.turnCount = turnLoop.currentTurn;
       session.state.status = result.reason;
       // Session-cumulative (baseline + this run) for persistence...
-      const usage = modelFacade.getUsage();
+      const usage = getRunUsage();
       session.state.tokenUsage = foldRunUsage(usageBaseline, usage);
       if (this.config.costStore) {
         session.state.costState = this.config.costStore.serialize() as Record<string, unknown>;
@@ -2426,6 +2476,7 @@ export class Engine {
       // this saveState (including an old run's abort cleanup vs a replacement
       // Engine); cross-instance/process session serialization is a separate finding.
       this.sessionManager.saveState(session.state);
+      runAccountingFinalized = true;
 
       // Hook: agent end
       await this.emitHook("on_agent_end", {
@@ -2511,6 +2562,8 @@ export class Engine {
         messages: [{ role: "user", content: prompt }],
         tools: [],
         maxTokens: 1024,
+        billingEnabled: true,
+        requestVisible: false,
         // Auxiliary call — no need to burn reasoning tokens. On DeepSeek V4
         // this flips thinking off (~3x faster, fewer tokens); on every other
         // OpenAI-compatible provider the field is ignored.
@@ -2585,6 +2638,7 @@ export class Engine {
     sessionId: string,
     cwd: string,
     primaryClient: Awaited<ReturnType<typeof createLLMClient>>,
+    recordBilledUsage?: (usage: TokenUsage) => void,
   ): Promise<void> {
     try {
       // Background calls run on the auxiliary model when configured, so memory
@@ -2626,13 +2680,22 @@ export class Engine {
             messages: [{ role: "user", content: userMsg }],
             tools: [],
             maxTokens: 1024,
-            recordUsage: false,
+            billingEnabled: true,
+            requestVisible: false,
             reasoning: { mode: "off" },
           });
+          if (resp.usage) recordBilledUsage?.(resp.usage);
           return resp.text;
         },
         runDream: async ({ systemPrompt, userPrompt, projectDir }) =>
-          this.runDreamLoop({ systemPrompt, userPrompt, projectDir, llmClient, sessionId }),
+          this.runDreamLoop({
+            systemPrompt,
+            userPrompt,
+            projectDir,
+            llmClient,
+            sessionId,
+            recordBilledUsage,
+          }),
         projectDir: cwd,
         // settings.memories.maxCount caps memories accepted per extraction;
         // autoExtract=false turns the extractor off (summaries/dream stay).
@@ -2672,6 +2735,7 @@ export class Engine {
     projectDir?: string;
     llmClient: Awaited<ReturnType<typeof createLLMClient>>;
     sessionId: string;
+    recordBilledUsage?: (usage: TokenUsage) => void;
   }): Promise<boolean> {
     // The loop body now lives in services/dream-consolidation.ts so it can
     // also be driven from the desktop host's manual "整理 / Dream" trigger.
@@ -2685,6 +2749,7 @@ export class Engine {
       toolContext: this.buildToolContext(),
       projectDir: opts.projectDir,
       sessionId: opts.sessionId,
+      onUsage: opts.recordBilledUsage,
     });
     return ran;
   }

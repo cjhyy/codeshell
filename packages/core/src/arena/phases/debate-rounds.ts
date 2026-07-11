@@ -17,6 +17,7 @@ import type {
   DebateTurn,
   ArenaExecutionLimits,
   ArenaProgressEvent,
+  ArenaUsageRecorder,
 } from "../types.js";
 import { isStrategyV2 } from "../types.js";
 import type { ArenaStrategyV2 } from "../types.js";
@@ -34,6 +35,7 @@ interface DebateOptions {
   maxRounds: number;
   signal?: AbortSignal;
   onProgress?: (event: ArenaProgressEvent) => void;
+  onUsage?: ArenaUsageRecorder;
 }
 
 /**
@@ -41,7 +43,7 @@ interface DebateOptions {
  * Returns empty array if no contested claims exist.
  */
 export async function runDebateRounds(options: DebateOptions): Promise<DebateRound[]> {
-  const { participants, strategy, topic, ledger, limits, maxRounds, signal, onProgress } = options;
+  const { participants, strategy, topic, ledger, limits, maxRounds, signal, onProgress, onUsage } = options;
 
   // Select contested claims, capped
   const contested = ledger.getClaimsByStatus("contested")
@@ -74,6 +76,7 @@ export async function runDebateRounds(options: DebateOptions): Promise<DebateRou
       maxRounds,
       signal,
       onProgress,
+      onUsage,
     });
 
     allDebateRounds.push(...claimDebateRounds);
@@ -95,10 +98,11 @@ interface DebateClaimOptions {
   maxRounds: number;
   signal?: AbortSignal;
   onProgress?: (event: ArenaProgressEvent) => void;
+  onUsage?: ArenaUsageRecorder;
 }
 
 async function debateClaim(options: DebateClaimOptions): Promise<DebateRound[]> {
-  const { claim, participants, strategy, v2, topic, ledger, maxRounds, signal, onProgress } = options;
+  const { claim, participants, strategy, v2, topic, ledger, maxRounds, signal, onProgress, onUsage } = options;
 
   // Identify debaters: claim owner + primary challenger
   const owner = participants.find((p) => p.name === claim.owner);
@@ -146,6 +150,7 @@ async function debateClaim(options: DebateClaimOptions): Promise<DebateRound[]> 
         messages: [{ role: "user", content: userContent }],
         signal,
       });
+      onUsage?.(response.usage);
 
       logger.info("arena.debate_turn", {
         participant: p.name,

@@ -39,6 +39,7 @@ export async function buildSessionTitle(
       messages: [{ role: "user", content: prompt }],
       tools: [],
       maxTokens: 64,
+      requestVisible: false,
       reasoning: { mode: "off" },
     });
     const title = clean(resp.text ?? "");
