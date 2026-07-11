@@ -47,6 +47,7 @@ describe("SessionManager side snapshot", () => {
     );
     expect(forked.lineage.throughEventId).toBe(completedBoundary.id);
     expect(forked.bundle.state.ephemeral).toBe(true);
+    manager.create("/project", "model", "provider", "qchat-blank");
     expect(manager.list(10).map((session) => session.sessionId)).toEqual(["parent"]);
   });
 

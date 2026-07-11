@@ -2,16 +2,16 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import {
-  cleanupStaleQuickChatSessions,
-  deleteSessionDir,
-  listSessions,
-} from "./sessions-service";
+import { cleanupStaleQuickChatSessions, deleteSessionDir, listSessions } from "./sessions-service";
 
 describe("deleteSessionDir", () => {
   let dir: string;
-  beforeEach(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), "cs-ss-")); });
-  afterEach(() => { fs.rmSync(dir, { recursive: true, force: true }); });
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "cs-ss-"));
+  });
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
 
   it("removes a session directory", async () => {
     const sdir = path.join(dir, "sess-1");
@@ -36,8 +36,8 @@ describe("deleteSessionDir", () => {
     // Create a sibling dir one level above baseDir's child to prove no escape.
     const victim = path.join(dir, "victim");
     fs.mkdirSync(victim, { recursive: true });
-    await deleteSessionDir("..", dir);          // bare ".." must be rejected
-    await deleteSessionDir("../victim", dir);    // slashes + .. rejected
+    await deleteSessionDir("..", dir); // bare ".." must be rejected
+    await deleteSessionDir("../victim", dir); // slashes + .. rejected
     expect(fs.existsSync(victim)).toBe(true);
   });
 
