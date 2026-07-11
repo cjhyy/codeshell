@@ -104,7 +104,7 @@ import { effectiveDisabledList, effectiveBuiltinLists } from "../capability-cont
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
 import { FileHistory } from "../session/file-history.js";
 import { patchBackupTargets } from "../tool-system/builtin/apply-patch/backup-targets.js";
-import type { ToolContext, SubAgentSpawner } from "../tool-system/context.js";
+import type { ToolContext } from "../tool-system/context.js";
 import {
   resolveSandboxBackend,
   type SandboxBackend,
@@ -127,6 +127,8 @@ import { MemoryOrchestrator } from "../services/memory-orchestrator.js";
 import { runDreamConsolidation } from "../services/dream-consolidation.js";
 import { EngineRuntime } from "./runtime.js";
 import { buildRunUserMessageContent, prepareRunImageInput } from "./run-image-input.js";
+import type { EngineRunOptions } from "./run-types.js";
+import { createSubAgentSpawner } from "./subagent-spawner.js";
 import { join } from "node:path";
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import type { InputAttachmentMeta } from "../protocol/types.js";
@@ -184,39 +186,6 @@ export interface EnqueueSteerResult {
   id: string;
 }
 
-interface EngineRunOptions {
-  cwd?: string;
-  onStream?: StreamCallback;
-  signal?: AbortSignal;
-  sessionId?: string;
-  /** Immutable permission context for this run only. Omitted uses Engine config. */
-  permissionMode?: NonNullable<EngineConfig["permissionMode"]>;
-  /** Immutable plan context for this run only. Omitted follows permissionMode. */
-  planMode?: boolean;
-  /** Protocol connection's approval owner router for this run. */
-  approvalRouter?: ApprovalRouter;
-  /**
-   * Goal mode for this run: the engine registers a GoalStopHook so the
-   * turn loop runs until the session model judges this goal met. Falls
-   * back to config.goal. Orthogonal to permissionMode. Accepts a raw
-   * string or a full GoalConfig; normalized once at the run boundary.
-   */
-  goal?: string | GoalConfig;
-  /**
-   * Marks this turn's task as a SYNTHETIC system-reminder injection (e.g. a
-   * background-job completion notification the server re-injects to wake an
-   * idle session) rather than the user's own input. The task is still sent
-   * to the model as a `role:"user"` message, but it is persisted with an
-   * `injected` flag so the disk reader skips rendering it as a user bubble
-   * on replay (matching the live UI, which shows only the assistant reply).
-   */
-  injected?: boolean;
-  /** Stable id for this user-intent, used to make duplicate submits idempotent. */
-  clientMessageId?: string;
-  /** Structured input attachments. Legacy `<codeshell-image>` blocks remain supported. */
-  attachments?: InputAttachmentMeta[];
-}
-
 // Re-export the config hot-reload patch builder from here so the protocol
 // server (and tests) can import it alongside Engine without reaching into the
 // settings/ subtree directly. The implementation lives in settings/ to keep
@@ -235,17 +204,7 @@ export { diskDefaultsFrom, type DiskDefaultPatch } from "../settings/disk-defaul
  * Engine directly via EngineConfig.clientDefaults — they do not flow through
  * this helper because they're not part of LLMConfig anymore.
  */
-export function resolveChildLlm(
-  modelKey: string | undefined,
-  pool: ModelPool | undefined,
-  parentLlm: LLMConfig,
-): LLMConfig {
-  if (modelKey && pool?.has(modelKey)) {
-    const resolved = pool.resolveLLMConfig(modelKey);
-    if (resolved) return resolved;
-  }
-  return parentLlm;
-}
+export { resolveChildLlm, resolveChildToolScope } from "./subagent-spawner.js";
 
 /**
  * Load reusable sub-agent role definitions, merging:
@@ -301,8 +260,6 @@ export function loadAgentDefinitionsForCwd(
   );
 }
 
-const NESTED_AGENT_TOOLS = ["Agent", "AgentStatus", "AgentCancel", "AgentSendInput"];
-
 /**
  * #7: apply a project's per-turn builtin capability override to a tool list.
  * A builtin marked `off` for the current cwd is HIDDEN from the turn's tool
@@ -326,22 +283,6 @@ export function applyBuiltinOverrideVisibility<T extends { name: string }>(
  * - `allowlist` undefined → inherit parent enabled/disabled, always with the
  *   nested-agent tools forced into `disabled` (no grandchildren).
  */
-export function resolveChildToolScope(
-  allowlist: string[] | undefined,
-  parentDisabled: string[] | undefined,
-  parentEnabled: string[] | undefined,
-): { enabled?: string[]; disabled: string[] } {
-  if (allowlist) {
-    return {
-      enabled: allowlist.filter((t) => !NESTED_AGENT_TOOLS.includes(t)),
-      disabled: [...NESTED_AGENT_TOOLS],
-    };
-  }
-  const disabled = Array.from(new Set([...(parentDisabled ?? []), ...NESTED_AGENT_TOOLS]));
-  const enabled = parentEnabled?.filter((t) => !NESTED_AGENT_TOOLS.includes(t));
-  return { enabled, disabled };
-}
-
 export class Engine {
   // Resolved per-session preset. Set in the ctor; re-resolved by
   // refreshRuntimeConfig on a preset hot-reload so the next-turn PromptComposer
@@ -1119,124 +1060,24 @@ export class Engine {
     // Build the per-Engine ToolContext that will be threaded through every
     // tool call. Replaces the old module-level singletons (setAskUserFn,
     // setArenaLLMConfig, setSubAgentConfig, setToolSearchRegistry).
-    const subAgentSpawner: SubAgentSpawner = {
+    const subAgentSpawner = createSubAgentSpawner({
+      parentConfig: this.config,
+      presetName: this.preset.name,
+      cwd,
+      permissionMode: runPermissionMode,
+      modelPool: this.modelPool,
       parentStream: options?.onStream,
-      describe: () => ({
-        cwd,
-        preset: this.preset.name,
-        permissionMode: runPermissionMode,
-      }),
-      spawn: async (req) => {
-        // Anchor this sub-agent in the PARENT transcript at spawn time — before
-        // it runs, so it's recorded whether it later completes, is interrupted,
-        // or still runs. Replay reads these anchors to rebuild sub-agent cards
-        // from sessions/<agentId>/ (agentId === childSid); without it a
-        // backgrounded sub-agent leaves no parent-transcript trace and vanishes
-        // on reopen. Only on a fresh spawn (not a resume/continuation, which
-        // already has its anchor). Guarded so a transcript hiccup never breaks
-        // the spawn.
-        if (!req.resumeSessionId) {
-          try {
-            session.transcript.appendSubagent(req.agentId, undefined, req.description);
-          } catch {
-            /* anchor is best-effort; never block the spawn */
-          }
-        }
-        // No nested agents. Strip Agent / AgentStatus / AgentCancel from the
-        // child's tool pool so the LLM can't spawn grandchildren — matches
-        // Claude Code's ALL_AGENT_DISALLOWED_TOOLS approach. Without this
-        // guard a runaway model could fork-bomb sub-agents (token cost +
-        // background process explosion), and the sid / approval / dock
-        // model assumes a flat parent→children hierarchy. Layered with a
-        // runtime check in agent.ts as defense-in-depth.
-        const { enabled: childEnabled, disabled: childDisabled } = resolveChildToolScope(
-          req.toolAllowlist,
-          this.config.disabledBuiltinTools,
-          this.config.enabledBuiltinTools,
-        );
-        const childLlm = resolveChildLlm(req.model, this.modelPool, this.config.llm);
-        const child = new Engine({
-          llm: childLlm,
-          // Inherit parent's runtime knobs (temperature, image detail, timeouts)
-          // but cap sub-agent retries at 2 — they're short-lived and we'd
-          // rather surface failures than burn a 9 s exponential backoff loop.
-          clientDefaults: { ...(this.config.clientDefaults ?? {}), retryMaxAttempts: 2 },
-          cwd,
-          permissionMode: runPermissionMode,
-          preset: this.preset.name,
-          enabledBuiltinTools: childEnabled,
-          disabledBuiltinTools: childDisabled,
-          builtinToolHost: this.config.builtinToolHost,
-          customSystemPrompt: this.config.customSystemPrompt,
-          appendSystemPrompt:
-            [this.config.appendSystemPrompt, req.appendSystemPrompt].filter(Boolean).join("\n\n") ||
-            undefined,
-          responseLanguage: this.config.responseLanguage,
-          userProfile: this.config.userProfile,
-          instructions: this.config.instructions,
-          maxTurns: req.maxTurns,
-          maxContextTokens: this.config.maxContextTokens ?? 200_000,
-          sessionStorageDir: this.config.sessionStorageDir,
-          headless: this.config.headless,
-          readOnlySession: req.readOnlySession,
-          skillAllowlist: req.skillAllowlist,
-          sandbox: this.config.sandbox,
-          // Subagents inherit the parent's scope: a child runs in the same
-          // cwd/session, so it should see the same config layers the parent did.
-          settingsScope: this.config.settingsScope ?? "project",
-          isSubAgent: true,
-        });
-        // Where the spawned child Engine's stream events go. AgentTool's
-        // background path passes a `streamOverride` (transcriptSink) so the
-        // per-event detail is captured into the agent's transcript instead
-        // of flooding the main feed. Sync calls leave streamOverride unset
-        // and we fall back to the parent UI's onStream so synchronous
-        // sub-agents still render inline.
-        const destStream: StreamCallback | undefined = req.streamOverride ?? options?.onStream;
-        const childStream: StreamCallback | undefined = destStream
-          ? (event) => {
-              // Filter ctx-bar signals: the bar tracks the main conversation's
-              // prompt size, and a sub-agent's own session emits would clobber
-              // it (its sid is new, its messages are tiny, the rough char/4
-              // seed lands the bar at <1% mid-turn). Sub-agent token accounting
-              // lives in CostTracker (recordUsage), not the ctx bar.
-              //
-              // - session_started: would seed main ctx with sub-agent's prompt
-              // - usage_update: would overwrite main ctx with sub-agent's prompt
-              // - context_compact: would reset main ctx to sub-agent's post-compact
-              //   value AND print a misleading "context compacted" boundary in
-              //   the main chat (the main session didn't compact).
-              if (
-                event.type === "usage_update" ||
-                event.type === "session_started" ||
-                event.type === "context_compact"
-              ) {
-                return;
-              }
-              destStream({ ...event, agentId: req.agentId } as typeof event);
-            }
-          : undefined;
-        // child.run() establishes its own runWithSid scope internally, so
-        // child log lines route to the child's sid and parent's ALS
-        // binding is unaffected when control returns here.
-        //
-        // agent_id === childSid: cold-start the child UNDER its agentId as the
-        // session id (run() shape (2): a fresh sid the host wants materialized),
-        // so the session persists at sessions/<agentId>/ and AgentSendInput can
-        // later resume it by agentId with no extra id→sid mapping. When
-        // resumeSessionId is set we resume that existing session instead —
-        // run() detects the on-disk session and replays its full transcript
-        // (the CC continuation model; see AgentSendInput).
-        const childSessionId = req.resumeSessionId ?? req.agentId;
-        const result = await child.run(req.prompt, {
-          signal: req.signal,
-          onStream: childStream,
-          sessionId: childSessionId,
-        });
-        return { text: result.text, sessionId: result.sessionId, usage: result.usage };
+      appendParentSubagent: (agentId, description) => {
+        session.transcript.appendSubagent(agentId, undefined, description);
       },
-      sessionExists: (sessionId: string) => this.sessionManager.exists(sessionId),
-    };
+      sessionExists: (sessionId) => this.sessionManager.exists(sessionId),
+      childRunner: {
+        runChild: async (config, childTask, childOptions) => {
+          const child = new Engine(config);
+          return child.run(childTask, childOptions);
+        },
+      },
+    });
 
     const sandboxConfig = this.resolveSandboxConfigForCwd(cwd);
     // A2: explicit sandbox modes (seatbelt, bwrap) must fail closed
