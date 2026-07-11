@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { Message } from "../types.js";
-import { stripInjectedContextMessages } from "./run-finalizer.js";
+import { stripInjectedContextMessages } from "./injected-context-cache.js";
 
 describe("stripInjectedContextMessages", () => {
   it("removes the exact user head and dynamic tail identities without matching equal content", () => {

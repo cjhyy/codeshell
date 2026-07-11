@@ -114,7 +114,7 @@ import { EngineRuntime } from "./runtime.js";
 import { buildRunUserMessageContent, prepareRunImageInput } from "./run-image-input.js";
 import type { EngineRunOptions } from "./run-types.js";
 import { createSubAgentSpawner } from "./subagent-spawner.js";
-import { stripInjectedContextMessages } from "./run-finalizer.js";
+import { stripInjectedContextMessages } from "./injected-context-cache.js";
 import { AuxiliaryPipeline } from "./auxiliary-pipeline.js";
 import { PermissionController } from "./permission-controller.js";
 import { join } from "node:path";
