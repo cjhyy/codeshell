@@ -283,6 +283,13 @@ export interface SessionState {
    * in-flight run. Absent on legacy sessions and before the first completion.
    */
   completedThroughEventId?: string;
+  /**
+   * Presence distinguishes sessions written by the completed-snapshot cursor
+   * implementation from legacy sessions. Version 1 with no cursor means the
+   * latest completion could not establish a durable snapshot (for example a
+   * transcript flush failure) and must fail closed instead of using the tail.
+   */
+  completedSnapshotVersion?: 1;
   invokedSkills: string[];
   /**
    * Owning parent session for a sub-agent run; `null` explicitly marks a

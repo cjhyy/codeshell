@@ -469,7 +469,7 @@ describe("App quick-chat integration", () => {
     expect(claimQuickChatSessionCalls[0]).toBe(panel.sessionId);
   });
 
-  test("keeps inherited parent history as model context without hydrating parent bubbles", async () => {
+  test("starts the full quick-chat UI empty without reading the inherited target transcript", async () => {
     await mountApp({
       withNormalSession: true,
       panelTabs: [{ id: "quickChat-hidden-parent-history", kind: "quickChat" }],
@@ -842,6 +842,90 @@ describe("App quick-chat integration", () => {
 
     cleanup.resolve({ deleted: true });
     await flushApp();
+  });
+
+  test("late approvals and AskUser from a closed quick chat fail closed while parent approval routes normally", async () => {
+    const ownerBucket = await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-close-approval", kind: "quickChat" }],
+    });
+    const [closed] = currentQuickPanels();
+    const panel = panelAreaProps.get(ownerBucket);
+    if (!closed || !panel || !chatProps) throw new Error("quick chat close surface was not ready");
+
+    await act(async () => {
+      panel.setTabs([]);
+      panel.setActiveId(null);
+      await flushMicrotasks();
+    });
+    await flushApp();
+    expect(currentQuickPanels()).toEqual([]);
+
+    await act(async () => {
+      emitApproval(approvalEnvelope(closed.sessionId, "late-tool-closed"));
+      emitApproval(approvalEnvelope(closed.sessionId, "late-ask-closed", "__ask_user__"));
+      emitApproval(approvalEnvelope("engine-a", "parent-tool-after-close"));
+      await flushMicrotasks();
+    });
+    await flushApp();
+
+    expect(chatProps.pendingApproval?.requestId).toBe("parent-tool-after-close");
+    expect(
+      chatProps.messages.some(
+        (message) => message.kind === "ask_user" && message.requestId === "late-ask-closed",
+      ),
+    ).toBe(false);
+    expect(approveCalls.map((args) => args.slice(0, 3))).toEqual([
+      [closed.sessionId, "late-tool-closed", "deny"],
+      [closed.sessionId, "late-ask-closed", "deny"],
+    ]);
+  });
+
+  test("late approvals and AskUser from a replaced quick chat cannot enter its replacement or parent", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-replace-approval", kind: "quickChat" }],
+    });
+    const [oldQuick] = currentQuickPanels();
+    if (!oldQuick || !chatProps) throw new Error("quick chat replacement surface was not ready");
+
+    await act(async () => {
+      oldQuick.onUseBlank();
+      await flushMicrotasks();
+    });
+    await flushApp();
+    const [replacement] = currentQuickPanels();
+    if (!replacement) throw new Error("replacement quick chat was not ready");
+    expect(replacement.sessionId).not.toBe(oldQuick.sessionId);
+
+    await act(async () => {
+      emitApproval(approvalEnvelope(oldQuick.sessionId, "late-tool-replaced"));
+      emitApproval(approvalEnvelope(oldQuick.sessionId, "late-ask-replaced", "__ask_user__"));
+      emitApproval(approvalEnvelope(replacement.sessionId, "replacement-tool"));
+      emitApproval(approvalEnvelope(replacement.sessionId, "replacement-ask", "__ask_user__"));
+      await flushMicrotasks();
+    });
+    await flushApp();
+
+    const currentReplacement = quickChatProps.get(replacement.sessionId);
+    expect(currentReplacement?.pendingApproval?.requestId).toBe("replacement-tool");
+    expect(
+      currentReplacement?.messages.flatMap((message) =>
+        message.kind === "ask_user" ? [message.requestId] : [],
+      ),
+    ).toEqual(["replacement-ask"]);
+    expect(
+      chatProps.messages.some(
+        (message) =>
+          message.kind === "ask_user" &&
+          (message.requestId === "late-ask-replaced" || message.requestId === "replacement-ask"),
+      ),
+    ).toBe(false);
+    expect(chatProps.pendingApproval?.requestId).not.toBe("late-tool-replaced");
+    expect(approveCalls.map((args) => args.slice(0, 3))).toEqual([
+      [oldQuick.sessionId, "late-tool-replaced", "deny"],
+      [oldQuick.sessionId, "late-ask-replaced", "deny"],
+    ]);
   });
 
   test("tool approvals stay on their owning quick or normal session", async () => {

@@ -2016,6 +2016,39 @@ function App() {
         toolName: env.request.toolName,
         engineSessionId: env.sessionId ?? null,
       });
+      let resolved = resolveBucket(
+        env.sessionId ?? "",
+        engineToBucketRef.current,
+        sessionIndicesRef.current,
+        runningBucketRef.current,
+      );
+      if (!resolved && env.sessionId && isQuickChatSessionId(env.sessionId)) {
+        resolved =
+          Object.values(quickChatSessionsRef.current).find(
+            (session) => session.sessionId === env.sessionId,
+          )?.bucket ?? null;
+        if (!resolved) {
+          // The quick-chat claim/generation is gone (closed or replaced).
+          // Never project its late approval into the active parent/child UI.
+          // Best-effort deny also releases a still-pending core request.
+          const reason = "quick chat is no longer active";
+          void window.codeshell
+            .approve(env.sessionId, env.requestId, "deny", reason)
+            .catch((error) =>
+              window.codeshell.log("quick_chat.late_approval_deny_failed", {
+                sessionId: env.sessionId,
+                requestId: env.requestId,
+                error: String(error),
+              }),
+            );
+          void window.codeshell.mobileRemote.notifyApprovalResolved({
+            requestId: env.requestId,
+            sessionId: env.sessionId,
+            approved: false,
+          });
+          return;
+        }
+      }
       // AskUserQuestion is delivered through the same channel as tool
       // approvals (toolName === "__ask_user__"). Route it into the chat
       // stream as an inline AskUserMessage instead of the approval modal
@@ -2048,16 +2081,10 @@ function App() {
         // Resolve the ORIGINATING session's bucket via the shared resolver
         // (live table → on-disk index reverse lookup → runningBucket only when
         // there's no sessionId). When a sessionId is present but unresolvable
-        // (cold table + not yet in the index), fall back to the active bucket so
-        // the user still sees the prompt, but warn — and either way carry
-        // env.sessionId on the message so the ANSWER routes back to the right
-        // session regardless of which bucket rendered it.
-        const resolved = resolveBucket(
-          env.sessionId ?? "",
-          engineToBucketRef.current,
-          sessionIndicesRef.current,
-          runningBucketRef.current,
-        );
+        // (cold table + not yet in the index), a normal persisted session keeps
+        // the legacy active-bucket fallback so the user still sees the prompt.
+        // Unknown quick-chat ids were already rejected above. Either way carry
+        // env.sessionId so the answer routes back to the originating session.
         if (env.sessionId && !resolved) {
           console.warn(
             "[ask_user] could not resolve bucket for session; rendering in active bucket",
@@ -2084,12 +2111,6 @@ function App() {
       // is belt-and-braces so "full access" never silently blocks on a
       // modal. Resolve the request's OWN bucket (not the active one) —
       // concurrent runs may target a different tab.
-      const resolved = resolveBucket(
-        env.sessionId ?? "",
-        engineToBucketRef.current,
-        sessionIndicesRef.current,
-        runningBucketRef.current,
-      );
       if (env.sessionId && !resolved) {
         console.warn(
           "[approval] could not resolve bucket for session; rendering in active bucket",

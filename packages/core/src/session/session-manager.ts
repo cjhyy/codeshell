@@ -743,8 +743,13 @@ export class SessionManager {
     if (snapshotMode === "completed" && effectiveCursor === undefined) {
       // Legacy sessions predate completedThroughEventId. Their tail is a safe
       // completed snapshot only when the persisted lifecycle status says the
-      // last run completed naturally. Active/error/abort tails may be partial.
-      frozen = sourceState.status === "completed" ? sourceEvents : [];
+      // last run completed naturally. A modern schema marker without a cursor
+      // means persistence was degraded, so even status=completed must not use
+      // the tail. Active/error/abort tails may be partial as well.
+      frozen =
+        sourceState.completedSnapshotVersion === undefined && sourceState.status === "completed"
+          ? sourceEvents
+          : [];
     } else if (effectiveCursor !== undefined) {
       const matches = sourceEvents
         .map((event, index) => (event.id === effectiveCursor ? index : -1))

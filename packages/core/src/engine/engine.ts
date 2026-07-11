@@ -2506,8 +2506,11 @@ export class Engine {
       }
       session.state.turnCount = turnLoop.currentTurn;
       session.state.status = result.reason;
-      if (result.reason === "completed" && !transcriptFlushFailed) {
-        session.state.completedThroughEventId = session.transcript.getEvents().at(-1)?.id;
+      if (result.reason === "completed") {
+        session.state.completedSnapshotVersion = 1;
+        if (!transcriptFlushFailed) {
+          session.state.completedThroughEventId = session.transcript.getEvents().at(-1)?.id;
+        }
       }
       // Session-cumulative (baseline + this run) for persistence...
       const usage = getRunUsage();
