@@ -104,9 +104,28 @@ export async function cleanupStaleQuickChatSessions(
   }
 
   const ids = new Set<string>();
+  const stagingDirs: string[] = [];
   for (const entry of entries) {
     if (entry.isDirectory() && SAFE_ID.test(entry.name) && isQuickChatSessionId(entry.name)) {
       ids.add(entry.name);
+      continue;
+    }
+    if (entry.isDirectory() && entry.name.startsWith(".pending-fork-")) {
+      try {
+        const state = JSON.parse(
+          await fs.readFile(path.join(baseDir, entry.name, "state.json"), "utf8"),
+        ) as Record<string, unknown>;
+        if (
+          state.ephemeral === true &&
+          typeof state.sessionId === "string" &&
+          isQuickChatSessionId(state.sessionId)
+        ) {
+          stagingDirs.push(entry.name);
+        }
+      } catch {
+        // Missing, malformed, or unreadable state cannot prove ephemeral
+        // ownership, so fail closed and leave the staging directory intact.
+      }
       continue;
     }
     if (!entry.isFile() || (!entry.name.endsWith(".jsonl") && !entry.name.endsWith(".json"))) {
@@ -117,7 +136,10 @@ export async function cleanupStaleQuickChatSessions(
   }
 
   for (const id of ids) await deleteSessionDir(id, baseDir);
-  return [...ids];
+  for (const stagingDir of stagingDirs) {
+    await fs.rm(path.join(baseDir, stagingDir), { recursive: true, force: true });
+  }
+  return [...ids, ...stagingDirs];
 }
 
 export interface DiskSessionMeta {
