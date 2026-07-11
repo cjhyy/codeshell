@@ -50,6 +50,15 @@ export function LinkTab({ cwd: _cwd }: { cwd: string }) {
       const message = err instanceof Error ? err.message : String(err);
       setErrors((current) => ({ ...current, [item.id]: message }));
       toast({ message });
+      // Refresh failures can persist recovery metadata (notably
+      // lastRefreshErrorCode=invalid_grant) before rejecting. Reload without
+      // replacing the original action error so the row immediately switches
+      // to the relogin action while preserving the provider-facing message.
+      try {
+        await load();
+      } catch {
+        // The action error above remains the useful failure to show.
+      }
     } finally {
       setBusyId(null);
     }
