@@ -667,9 +667,9 @@ export class TurnLoop {
     // wall-clock start now and accumulates prompt+completion tokens across
     // every turn; the guardrail below force-stops the run once any configured
     // budget is blown — the unattended-safety backstop.
-    this.goalTracker = this.config.goal
-      ? createGoalBudgetTracker(this.config.goal, Date.now())
-      : null;
+    if (!this.goalTracker && this.config.goal) {
+      this.goalTracker = createGoalBudgetTracker(this.config.goal, Date.now());
+    }
     const goalTracker = this.goalTracker;
     // Fresh run: re-arm the approaching-limit announcement.
     this.approachAnnounced = false;
@@ -683,6 +683,25 @@ export class TurnLoop {
     // hook emits, guards) and surfaces them as a model_error result.
     try {
       while (this.turnCount < this.config.maxTurns) {
+        const preTurnGoalTermination = goalTracker
+          ? goalBudgetTerminationReason(goalTracker, Date.now())
+          : undefined;
+        if (preTurnGoalTermination) {
+          this.config.onStream?.({
+            type: "assistant_message",
+            message: {
+              role: "assistant",
+              content: "（Goal 预算已耗尽，强制停止。）",
+            },
+          });
+          messages = this.redactConsumedSensitiveToolResults(messages);
+          return {
+            text: finalText,
+            reason: "goal_budget_exhausted",
+            messages,
+            goalTermination: preTurnGoalTermination,
+          };
+        }
         this.turnCount++;
         this.currentTurnUsage = {
           promptTokens: 0,
@@ -1584,6 +1603,15 @@ export class TurnLoop {
         this.config.signal,
         this.modelCallRecordingOptions(),
       );
+      if (summaryResponse.usage?.promptTokens !== undefined) {
+        this.recordResponseUsage(summaryResponse.usage);
+      }
+      if (goalTracker && summaryResponse.usage) {
+        recordGoalUsage(
+          goalTracker,
+          (summaryResponse.usage.promptTokens ?? 0) + (summaryResponse.usage.completionTokens ?? 0),
+        );
+      }
       if (this.config.signal?.aborted) {
         this.markStopped();
         messages = this.redactConsumedSensitiveToolResults(messages);

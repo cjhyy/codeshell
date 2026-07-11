@@ -26,6 +26,8 @@ type Scenario = {
   judgePrompts: string[];
   mainTokens: number;
   summaryTokens: number;
+  auxiliaryTokens: number;
+  auxiliaryTokensAtJudge?: number;
 };
 
 const scenarios = new Map<string, Scenario>();
@@ -79,6 +81,7 @@ class AutoCompactionGoalClient extends LLMClientBase {
 
     if (options.systemPrompt.includes("目标完成度裁判")) {
       scenario.judgeCalls++;
+      scenario.auxiliaryTokensAtJudge ??= scenario.auxiliaryTokens;
       scenario.judgePrompts.push(JSON.stringify(options.messages));
       const verdict = response('{"met":true,"waiting":false,"gaps":""}', undefined, MAIN_USAGE);
       this.recordUsage(verdict.usage!, options);
@@ -87,6 +90,7 @@ class AutoCompactionGoalClient extends LLMClientBase {
 
     if (!options.systemPrompt.includes("Working directory:")) {
       const auxiliary = response("auxiliary response long enough to be harmless");
+      scenario.auxiliaryTokens += auxiliary.usage!.totalTokens;
       this.recordUsage(auxiliary.usage!, options);
       return auxiliary;
     }
@@ -138,6 +142,7 @@ describe("Engine auto-compaction Goal accounting", () => {
       judgePrompts: [],
       mainTokens: 0,
       summaryTokens: 0,
+      auxiliaryTokens: 0,
     };
     scenarios.set(model, scenario);
     const engine = new Engine({
@@ -165,8 +170,16 @@ describe("Engine auto-compaction Goal accounting", () => {
     expect(result.reason).toBe("completed");
     expect(scenario.summaryCalls).toBeGreaterThan(0);
     expect(scenario.judgeCalls).toBe(1);
+    // Tool summaries are hidden from the foreground request list but are real
+    // billed calls and therefore part of the Goal budget.
     expect(goalTokensFromJudgePrompt(scenario.judgePrompts[0]!)).toBe(
-      scenario.mainTokens + scenario.summaryTokens,
+      scenario.mainTokens + scenario.summaryTokens + scenario.auxiliaryTokensAtJudge!,
+    );
+    expect(result.usage.totalTokens).toBeGreaterThanOrEqual(
+      scenario.mainTokens +
+        scenario.summaryTokens +
+        scenario.auxiliaryTokensAtJudge! +
+        MAIN_USAGE.totalTokens,
     );
   });
 

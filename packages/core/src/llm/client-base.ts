@@ -68,15 +68,18 @@ export abstract class LLMClientBase {
   abstract createMessage(options: CreateMessageOptions): Promise<LLMResponse>;
 
   protected recordUsage(usage: TokenUsage, options?: CreateMessageOptions): void {
-    if (options?.recordUsage === false) return;
-    this.usage.records.push(usage);
-    this.usage.totalPromptTokens += usage.promptTokens;
-    this.usage.totalCompletionTokens += usage.completionTokens;
-    this.usage.totalTokens += usage.totalTokens;
-    this.usage.totalCacheReadTokens += usage.cacheReadTokens ?? 0;
-    this.usage.totalCacheCreationTokens += usage.cacheCreationTokens ?? 0;
-    this.usage.requestCount++;
-    LLMClientBase.onUsage?.(this.model, usage);
+    if (options?.requestVisible !== false) {
+      this.usage.records.push(usage);
+      this.usage.totalPromptTokens += usage.promptTokens;
+      this.usage.totalCompletionTokens += usage.completionTokens;
+      this.usage.totalTokens += usage.totalTokens;
+      this.usage.totalCacheReadTokens += usage.cacheReadTokens ?? 0;
+      this.usage.totalCacheCreationTokens += usage.cacheCreationTokens ?? 0;
+      this.usage.requestCount++;
+    }
+    if (options?.billingEnabled !== false) {
+      LLMClientBase.onUsage?.(this.model, usage);
+    }
   }
 
   getUsage(): LLMUsageTracker {

@@ -22,7 +22,7 @@
 import type { LLMClientBase } from "../llm/client-base.js";
 import type { ToolRegistry } from "../tool-system/registry.js";
 import type { ToolContext } from "../tool-system/context.js";
-import type { Message, ContentBlock, ToolCall } from "../types.js";
+import type { Message, ContentBlock, ToolCall, TokenUsage } from "../types.js";
 import { MemoryManager } from "../session/memory.js";
 import { buildDreamSystemPrompt, buildDreamUserPrompt } from "./auto-dream.js";
 import { logger } from "../logging/logger.js";
@@ -47,6 +47,8 @@ export interface DreamConsolidationInput {
   projectDir?: string;
   /** For log attribution. */
   sessionId?: string;
+  /** Owning Engine session/Goal recorder; process billing already happened. */
+  onUsage?: (usage: TokenUsage) => void;
 }
 
 export interface DreamConsolidationResult {
@@ -113,9 +115,11 @@ export async function runDreamConsolidation(
       messages,
       tools: toolDefs,
       maxTokens: 2048,
-      recordUsage: false,
+      billingEnabled: true,
+      requestVisible: false,
       reasoning: { mode: "off" },
     });
+    if (resp.usage) input.onUsage?.(resp.usage);
 
     if (resp.toolCalls.length === 0) {
       logger.info("memory.dream_finished", {

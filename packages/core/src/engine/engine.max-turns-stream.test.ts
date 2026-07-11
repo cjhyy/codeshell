@@ -99,6 +99,7 @@ describe("Engine max_turns stream terminal", () => {
 
       expect(result.reason).toBe("max_turns");
       expect(result.text).toBe("final summary");
+      expect(result.usage.totalTokens).toBeGreaterThanOrEqual(4);
       expect(persistedState.status).toBe("max_turns");
       expect(maxTurnsCompletions).toHaveLength(1);
     } finally {

@@ -19,6 +19,7 @@ import type {
   ArenaProgressEvent,
   ArenaExecutionLimits,
   ArenaStrategyPlanning,
+  ArenaUsageRecorder,
 } from "../types.js";
 import type { ToolDefinition, Message, ContentBlock, ToolCall } from "../../types.js";
 import type { ArenaLedger } from "../ledger.js";
@@ -40,6 +41,7 @@ interface DetailExpansionOptions {
   contextTools?: ToolDefinition[];
   signal?: AbortSignal;
   onProgress?: (event: ArenaProgressEvent) => void;
+  onUsage?: ArenaUsageRecorder;
 }
 
 /** Max tool rounds per phase expansion (lighter than research) */
@@ -54,7 +56,7 @@ const MAX_EXPANSION_TOOL_ROUNDS = 3;
 export async function runDetailExpansion(
   options: DetailExpansionOptions,
 ): Promise<ArenaRoadmapPhaseDetail[]> {
-  const { concluder, strategy, topic, phases, ledger, limits, signal, onProgress } = options;
+  const { concluder, strategy, topic, phases, ledger, limits, signal, onProgress, onUsage } = options;
   const tools = options.enableContextTools !== false
     ? (options.contextTools ?? CONTEXT_TOOLS)
     : undefined;
@@ -98,6 +100,7 @@ export async function runDetailExpansion(
         tools: offerTools,
         signal,
       });
+      onUsage?.(response.usage);
 
       const hasTools = response.toolCalls && response.toolCalls.length > 0;
 

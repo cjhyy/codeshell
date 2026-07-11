@@ -72,7 +72,7 @@ describe("downgradeImagePayloadsInHistory", () => {
     expect(placeholderTexts(twice.messages)).toEqual(placeholderTexts(laterTurn.messages));
   });
 
-  test("later-turn token estimate is dramatically lower after image payload removal", () => {
+  test("image payload removal lowers the fixed vision estimate without counting base64 bytes", () => {
     const messages: Message[] = [
       { role: "user", content: [{ type: "text", text: "screenshot" }, anthropicImage()] },
     ];
@@ -81,7 +81,8 @@ describe("downgradeImagePayloadsInHistory", () => {
     const after = estimateTokens(afterMessages);
 
     expect(hasBase64(afterMessages)).toBe(false);
-    expect(before).toBeGreaterThan(after * 100);
+    expect(before).toBeLessThanOrEqual(500);
+    expect(before).toBeGreaterThan(after);
   });
 
   test("handles OpenAI-style image_url data URLs", () => {

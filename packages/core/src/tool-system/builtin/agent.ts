@@ -312,6 +312,8 @@ async function runSubAgent(
     resumeSessionId?: string;
     /** Engine HookRegistry for lifecycle events. Undefined → no hooks. */
     hooks?: HookRegistry;
+    /** Parent session/Goal accounting sink for the completed child run. */
+    recordBilledUsage?: (usage: import("../../types.js").TokenUsage) => void;
   },
   /**
    * Optional sink for the user-visible `agent_start` / `agent_end` markers.
@@ -339,7 +341,8 @@ async function runSubAgent(
   // that no longer exists. The child Engine is a fresh instance; plan-mode
   // isolation between parent and child is enforced via separate Engine
   // instances (finalized in T6).
-  const { text } = await spawner.spawn({ ...opts, streamOverride });
+  const { text, usage } = await spawner.spawn({ ...opts, streamOverride });
+  if (usage) opts.recordBilledUsage?.(usage);
   const finalText = text || `Agent completed but produced no text output.`;
   safeEmit(startEndSink, { type: "agent_end", agentId, name, description, text: finalText, agentType });
   emitSubAgentHook(opts.hooks, "subagent_finish", { agentId, description, text: finalText });
@@ -456,6 +459,7 @@ export async function agentTool(
         appendSystemPrompt: overrides.appendSystemPrompt,
         readOnlySession: overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
         hooks: ctx?.hooks,
+        recordBilledUsage: ctx?.recordBilledUsage,
         signal: controller.signal,
       },
       parentStream,    // uiStream: agent_start/end → main feed
@@ -709,6 +713,7 @@ async function runSyncSubAgent(args: {
     readOnlySession: overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
     resumeSessionId,
     hooks: ctx?.hooks,
+    recordBilledUsage: ctx?.recordBilledUsage,
     signal: syncController.signal,
   });
 

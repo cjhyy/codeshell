@@ -35,7 +35,8 @@ export interface GoalJudgeLLM {
     messages: { role: "user" | "assistant" | "system"; content: string }[];
     stream?: boolean;
     maxTokens?: number;
-    recordUsage?: boolean;
+    billingEnabled?: boolean;
+    requestVisible?: boolean;
     signal?: AbortSignal;
     /** Reasoning control — the judge always asks for it OFF (see call site). */
     reasoning?: import("../llm/reasoning-setting.js").ReasoningSetting;
