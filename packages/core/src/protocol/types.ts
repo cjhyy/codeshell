@@ -180,6 +180,8 @@ export interface ForkSessionParams {
   sourceSessionId: string;
   targetSessionId?: string;
   mode: "full";
+  /** Ephemeral side fork: snapshot only the last completed conversation turn. */
+  forkKind?: "side";
   /** Inclusive source event cursor; omitted freezes the current tail. */
   throughEventId?: string;
   /** Desktop host ownership generation; ignored by protocol-only hosts. */

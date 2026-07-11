@@ -542,6 +542,7 @@ export class AgentServer {
       typeof params.targetSessionId === "string" ? params.targetSessionId : undefined;
     const throughEventId =
       typeof params.throughEventId === "string" ? params.throughEventId : undefined;
+    const isSideFork = params.forkKind === "side";
     if (!sourceSessionId || params.mode !== "full") {
       this.transport.send(
         createErrorResponse(
@@ -561,6 +562,22 @@ export class AgentServer {
     if (params.throughEventId !== undefined && typeof params.throughEventId !== "string") {
       this.transport.send(
         createErrorResponse(req.id, ErrorCodes.InvalidParams, "throughEventId must be a string"),
+      );
+      return;
+    }
+    if (params.forkKind !== undefined && !isSideFork) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "forkKind must be side when present"),
+      );
+      return;
+    }
+    if (isSideFork && throughEventId !== undefined) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InvalidParams,
+          "side fork uses the last completed turn and cannot specify throughEventId",
+        ),
       );
       return;
     }
@@ -591,7 +608,7 @@ export class AgentServer {
       );
       return;
     }
-    if (source && (source.isBusy() || source.queueDepth() > 0)) {
+    if (!isSideFork && source && (source.isBusy() || source.queueDepth() > 0)) {
       this.transport.send(
         createErrorResponse(
           req.id,
@@ -623,7 +640,12 @@ export class AgentServer {
       return;
     }
     try {
-      const result = engine.forkSession(sourceSessionId, { targetSessionId, throughEventId });
+      const result = engine.forkSession(
+        sourceSessionId,
+        isSideFork
+          ? { targetSessionId, snapshotMode: "completed" }
+          : { targetSessionId, throughEventId },
+      );
       const workspace = result.bundle.state.workspace ?? {
         root: result.bundle.state.cwd,
         kind: "main" as const,

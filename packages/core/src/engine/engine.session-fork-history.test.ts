@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { LLMClientBase } from "../llm/client-base.js";
@@ -98,5 +98,50 @@ describe("Engine first turn after a session fork", () => {
     expect(resultBlocks).toEqual([
       { type: "tool_result", tool_use_id: "read-1", content: "file contents" },
     ]);
+    const completed = manager.resume("fork-target");
+    expect(completed.state.completedThroughEventId).toBe(
+      completed.transcript.getEvents().at(-1)?.id,
+    );
+  });
+
+  test("a modern completed run with injected transcript flush degradation cannot use legacy tail fallback", async () => {
+    dir = mkdtempSync(join(tmpdir(), "engine-session-fork-flush-degraded-"));
+    model = `${provider}-${Date.now()}-${Math.random()}`;
+    calls.set(model, []);
+    const engine = new Engine({
+      llm: { provider, model, apiKey: "test" } as never,
+      cwd: dir,
+      sessionStorageDir: join(dir, "sessions"),
+      enabledBuiltinTools: [],
+      maxTurns: 1,
+      headless: true,
+      permissionMode: "bypassPermissions",
+    });
+    (engine as any).hooks.clear();
+    const manager = engine.getSessionManager();
+    const originalCreate = manager.create.bind(manager);
+    manager.create = ((...args: Parameters<typeof manager.create>) => {
+      const bundle = originalCreate(...args);
+      bundle.transcript.flushFailed = () => true;
+      return bundle;
+    }) as typeof manager.create;
+
+    await engine.run("completed in memory but transcript persistence degraded", {
+      sessionId: "flush-degraded-parent",
+      cwd: dir,
+    });
+
+    const parentState = JSON.parse(
+      readFileSync(join(dir, "sessions", "flush-degraded-parent", "state.json"), "utf-8"),
+    );
+    expect(parentState.status).toBe("completed");
+    expect(parentState.completedSnapshotVersion).toBe(1);
+    expect(parentState.completedThroughEventId).toBeUndefined();
+    const forked = manager.fork("flush-degraded-parent", {
+      targetSessionId: "flush-degraded-side",
+      snapshotMode: "completed",
+    });
+    expect(forked.copiedEventCount).toBe(0);
+    expect(forked.bundle.transcript.getEvents("message")).toEqual([]);
   });
 });

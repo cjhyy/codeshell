@@ -46,6 +46,8 @@ export interface ForkSessionOptions {
   targetSessionId?: string;
   /** Inclusive source event cursor; omitted means the frozen transcript tail. */
   throughEventId?: string;
+  /** `completed` is the interrupted snapshot used by ephemeral side chats. */
+  snapshotMode?: "tail" | "completed";
 }
 
 export interface ForkSessionResult {
@@ -687,7 +689,14 @@ export class SessionManager {
   fork(sourceSessionId: string, options: ForkSessionOptions = {}): ForkSessionResult {
     assertSafeSessionId(sourceSessionId);
     if (options.targetSessionId !== undefined) assertSafeSessionId(options.targetSessionId);
-    const snapshot = this.readForkSnapshot(sourceSessionId, options.throughEventId);
+    if (options.snapshotMode === "completed" && options.throughEventId !== undefined) {
+      throw new SessionError(`Completed snapshot cannot use an explicit fork cursor`);
+    }
+    const snapshot = this.readForkSnapshot(
+      sourceSessionId,
+      options.throughEventId,
+      options.snapshotMode ?? "tail",
+    );
     const targetSessionId = options.targetSessionId ?? nanoid(16);
     const createdAt = Date.now();
     const lineage: SessionForkLineage = {
@@ -704,7 +713,11 @@ export class SessionManager {
     return { bundle, lineage, copiedEventCount: snapshot.copiedEvents.length };
   }
 
-  private readForkSnapshot(sourceSessionId: string, throughEventId?: string): FrozenForkSnapshot {
+  private readForkSnapshot(
+    sourceSessionId: string,
+    throughEventId: string | undefined,
+    snapshotMode: "tail" | "completed",
+  ): FrozenForkSnapshot {
     const sessionDir = join(this.sessionsDir, sourceSessionId);
     const stateFile = join(sessionDir, "state.json");
     const transcriptFile = join(sessionDir, "transcript.jsonl");
@@ -725,12 +738,28 @@ export class SessionManager {
     }
     const sourceEvents = structuredClone(parsed.events);
     let frozen = sourceEvents;
-    if (throughEventId !== undefined) {
+    const effectiveCursor =
+      snapshotMode === "completed" ? sourceState.completedThroughEventId : throughEventId;
+    if (snapshotMode === "completed" && effectiveCursor === undefined) {
+      // Legacy sessions predate completedThroughEventId. Their tail is a safe
+      // completed snapshot only when the persisted lifecycle status says the
+      // last run completed naturally. A modern schema marker without a cursor
+      // means persistence was degraded, so even status=completed must not use
+      // the tail. Active/error/abort tails may be partial as well.
+      frozen =
+        sourceState.completedSnapshotVersion === undefined && sourceState.status === "completed"
+          ? sourceEvents
+          : [];
+    } else if (effectiveCursor !== undefined) {
       const matches = sourceEvents
-        .map((event, index) => (event.id === throughEventId ? index : -1))
+        .map((event, index) => (event.id === effectiveCursor ? index : -1))
         .filter((index) => index >= 0);
       if (matches.length !== 1) {
-        throw new SessionError(`Fork cursor must identify exactly one source event`);
+        throw new SessionError(
+          snapshotMode === "completed"
+            ? `Completed fork cursor must identify exactly one source event`
+            : `Fork cursor must identify exactly one source event`,
+        );
       }
       const cursor = sourceEvents[matches[0]];
       if (cursor.type === "session_meta") {

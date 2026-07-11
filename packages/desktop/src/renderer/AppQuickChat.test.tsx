@@ -163,6 +163,7 @@ let activeQuickChatClaims = new Map<string, string>();
 let cancelCalls: Array<string | undefined> = [];
 let approveCalls: unknown[][] = [];
 let forkSessionCalls: Array<Record<string, unknown>> = [];
+let getSessionTranscriptCalls: string[] = [];
 
 function restoreGlobalProperty(
   key: "localStorage" | "window",
@@ -220,6 +221,7 @@ function seedApp(options: {
 function installCodeshellStub(
   listDiskSessions: () => Promise<any>,
   forkSession: (params: Record<string, unknown>) => Promise<any>,
+  getSessionTranscript: (sessionId: string) => Promise<any> = async () => [],
 ): void {
   const unsubscribe = () => undefined;
   const project = { path: "/tmp/repo-a", name: "Repo A", addedAt: 1 };
@@ -257,7 +259,10 @@ function installCodeshellStub(
       aheadCommits: 0,
       hasUncommittedChanges: false,
     }),
-    getSessionTranscript: async () => [],
+    getSessionTranscript: async (sessionId: string) => {
+      getSessionTranscriptCalls.push(sessionId);
+      return getSessionTranscript(sessionId);
+    },
     subscribeSession: async () => ({ events: [], nextSeq: 0 }),
     goalGet: async () => ({ goal: null }),
     listRuns: async () => [],
@@ -335,6 +340,7 @@ async function mountApp(options: {
   panelTabs: Array<{ id: string; kind: string }>;
   listDiskSessions?: () => Promise<any>;
   forkSession?: (params: Record<string, unknown>) => Promise<any>;
+  getSessionTranscript?: (sessionId: string) => Promise<any>;
 }): Promise<string> {
   ensureMiniDom();
   Object.defineProperty(globalThis, "localStorage", {
@@ -363,6 +369,7 @@ async function mountApp(options: {
         workspace: { root: "/tmp/repo-a", kind: "main" },
         copiedEventCount: 0,
       })),
+    options.getSessionTranscript,
   );
   container = document.createElement("div");
   root = createRoot(container);
@@ -430,6 +437,7 @@ afterEach(async () => {
   cancelCalls = [];
   approveCalls = [];
   forkSessionCalls = [];
+  getSessionTranscriptCalls = [];
   chatProps = null;
   quickChatProps.clear();
   panelAreaProps.clear();
@@ -451,6 +459,7 @@ describe("App quick-chat integration", () => {
         sourceSessionId: "engine-a",
         targetSessionId: panel.sessionId,
         mode: "full",
+        forkKind: "side",
         quickChatClaimId: expect.any(String),
       }),
     ]);
@@ -458,6 +467,22 @@ describe("App quick-chat integration", () => {
     expect(panel.contextMode).toBe("full");
     expect(panel.sourceTitle).toBe("Session A");
     expect(claimQuickChatSessionCalls[0]).toBe(panel.sessionId);
+  });
+
+  test("starts the full quick-chat UI empty without reading the inherited target transcript", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-hidden-parent-history", kind: "quickChat" }],
+      getSessionTranscript: async () => [
+        { kind: "user", text: "parent request still running", clientMessageId: "parent-live" },
+      ],
+    });
+
+    const [panel] = currentQuickPanels();
+    if (!panel) throw new Error("quick chat session was not created");
+    expect(panel.creationStatus).toBe("ready");
+    expect(panel.messages).toEqual([]);
+    expect(getSessionTranscriptCalls).not.toContain(panel.sessionId);
   });
 
   test("a failed fork can explicitly fall back to a blank quick chat", async () => {
@@ -766,9 +791,23 @@ describe("App quick-chat integration", () => {
     // revive the old bucket while main-side deletion is still pending.
     await act(async () => {
       emitStream(quickOne.sessionId, { type: "text_delta", text: "late-orphan" });
+      emitStream("engine-a", {
+        type: "stream_request_start",
+        messageId: "parent-after-side-close",
+      });
+      emitStream("engine-a", { type: "text_delta", text: "parent-late-stays-parent" });
     });
     await flushApp(70);
     expect(quickChatProps.has(quickOne.sessionId)).toBe(false);
+    expect(
+      quickChatProps
+        .get(quickTwo.sessionId)
+        ?.messages.some(
+          (message) =>
+            message.kind === "assistant" &&
+            (message.text.includes("late-orphan") || message.text.includes("parent-late")),
+        ),
+    ).toBe(false);
     expect(
       quickChatProps
         .get(quickTwo.sessionId)
@@ -778,9 +817,15 @@ describe("App quick-chat integration", () => {
     ).toBe(true);
     expect(
       chatProps.messages.some(
-        (message) => message.kind === "assistant" && message.text === "normal-must-survive",
+        (message) =>
+          message.kind === "assistant" && message.text.includes("parent-late-stays-parent"),
       ),
     ).toBe(true);
+    expect(
+      chatProps.messages.some(
+        (message) => message.kind === "assistant" && message.text.includes("late-orphan"),
+      ),
+    ).toBe(false);
 
     // Reusing the same panel tab id must allocate a fresh, empty transcript.
     await act(async () => {
@@ -797,6 +842,90 @@ describe("App quick-chat integration", () => {
 
     cleanup.resolve({ deleted: true });
     await flushApp();
+  });
+
+  test("late approvals and AskUser from a closed quick chat fail closed while parent approval routes normally", async () => {
+    const ownerBucket = await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-close-approval", kind: "quickChat" }],
+    });
+    const [closed] = currentQuickPanels();
+    const panel = panelAreaProps.get(ownerBucket);
+    if (!closed || !panel || !chatProps) throw new Error("quick chat close surface was not ready");
+
+    await act(async () => {
+      panel.setTabs([]);
+      panel.setActiveId(null);
+      await flushMicrotasks();
+    });
+    await flushApp();
+    expect(currentQuickPanels()).toEqual([]);
+
+    await act(async () => {
+      emitApproval(approvalEnvelope(closed.sessionId, "late-tool-closed"));
+      emitApproval(approvalEnvelope(closed.sessionId, "late-ask-closed", "__ask_user__"));
+      emitApproval(approvalEnvelope("engine-a", "parent-tool-after-close"));
+      await flushMicrotasks();
+    });
+    await flushApp();
+
+    expect(chatProps.pendingApproval?.requestId).toBe("parent-tool-after-close");
+    expect(
+      chatProps.messages.some(
+        (message) => message.kind === "ask_user" && message.requestId === "late-ask-closed",
+      ),
+    ).toBe(false);
+    expect(approveCalls.map((args) => args.slice(0, 3))).toEqual([
+      [closed.sessionId, "late-tool-closed", "deny"],
+      [closed.sessionId, "late-ask-closed", "deny"],
+    ]);
+  });
+
+  test("late approvals and AskUser from a replaced quick chat cannot enter its replacement or parent", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-replace-approval", kind: "quickChat" }],
+    });
+    const [oldQuick] = currentQuickPanels();
+    if (!oldQuick || !chatProps) throw new Error("quick chat replacement surface was not ready");
+
+    await act(async () => {
+      oldQuick.onUseBlank();
+      await flushMicrotasks();
+    });
+    await flushApp();
+    const [replacement] = currentQuickPanels();
+    if (!replacement) throw new Error("replacement quick chat was not ready");
+    expect(replacement.sessionId).not.toBe(oldQuick.sessionId);
+
+    await act(async () => {
+      emitApproval(approvalEnvelope(oldQuick.sessionId, "late-tool-replaced"));
+      emitApproval(approvalEnvelope(oldQuick.sessionId, "late-ask-replaced", "__ask_user__"));
+      emitApproval(approvalEnvelope(replacement.sessionId, "replacement-tool"));
+      emitApproval(approvalEnvelope(replacement.sessionId, "replacement-ask", "__ask_user__"));
+      await flushMicrotasks();
+    });
+    await flushApp();
+
+    const currentReplacement = quickChatProps.get(replacement.sessionId);
+    expect(currentReplacement?.pendingApproval?.requestId).toBe("replacement-tool");
+    expect(
+      currentReplacement?.messages.flatMap((message) =>
+        message.kind === "ask_user" ? [message.requestId] : [],
+      ),
+    ).toEqual(["replacement-ask"]);
+    expect(
+      chatProps.messages.some(
+        (message) =>
+          message.kind === "ask_user" &&
+          (message.requestId === "late-ask-replaced" || message.requestId === "replacement-ask"),
+      ),
+    ).toBe(false);
+    expect(chatProps.pendingApproval?.requestId).not.toBe("late-tool-replaced");
+    expect(approveCalls.map((args) => args.slice(0, 3))).toEqual([
+      [oldQuick.sessionId, "late-tool-replaced", "deny"],
+      [oldQuick.sessionId, "late-ask-replaced", "deny"],
+    ]);
   });
 
   test("tool approvals stay on their owning quick or normal session", async () => {

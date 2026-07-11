@@ -15,6 +15,7 @@ export interface ParsedRpc {
     sessionId?: string;
     sourceSessionId?: string;
     targetSessionId?: string;
+    forkKind?: "side";
     quickChatClaimId?: string;
     type?: string;
   };

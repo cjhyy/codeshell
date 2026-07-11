@@ -2282,7 +2282,8 @@ export class Engine {
       // failures (model_error, prompt_too_long, ...) — previously every
       // non-completed outcome collapsed to "errored", which threw away the
       // distinction and misled anyone reading state.json.
-      if (session.transcript.flushFailed()) {
+      const transcriptFlushFailed = session.transcript.flushFailed();
+      if (transcriptFlushFailed) {
         const failure = session.transcript.getFlushFailure();
         logger.error("engine.transcript_persistence_failed", {
           sessionId: session.state.sessionId,
@@ -2293,6 +2294,12 @@ export class Engine {
       }
       session.state.turnCount = turnLoop.currentTurn;
       session.state.status = result.reason;
+      if (result.reason === "completed") {
+        session.state.completedSnapshotVersion = 1;
+        if (!transcriptFlushFailed) {
+          session.state.completedThroughEventId = session.transcript.getEvents().at(-1)?.id;
+        }
+      }
       // Session-cumulative (baseline + this run) for persistence...
       const usage = getRunUsage();
       session.state.tokenUsage = foldRunUsage(usageBaseline, usage);
