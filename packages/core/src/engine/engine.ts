@@ -42,12 +42,7 @@ import {
 } from "../tool-system/builtin/agent-notifications.js";
 import {
   PermissionClassifier,
-  HeadlessApprovalBackend,
-  AutoApprovalBackend,
   InteractiveApprovalBackend,
-  getInteractiveApprovalBackend,
-  type ApprovalBackend,
-  type ApprovalRouter,
 } from "../tool-system/permission.js";
 import { HookRegistry } from "../hooks/registry.js";
 import type { HookEventName, HookResult } from "../hooks/events.js";
@@ -121,6 +116,7 @@ import type { EngineRunOptions } from "./run-types.js";
 import { createSubAgentSpawner } from "./subagent-spawner.js";
 import { stripInjectedContextMessages } from "./run-finalizer.js";
 import { AuxiliaryPipeline } from "./auxiliary-pipeline.js";
+import { PermissionController } from "./permission-controller.js";
 import { join } from "node:path";
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import type { InputAttachmentMeta } from "../protocol/types.js";
@@ -287,12 +283,7 @@ export class Engine {
   readonly runtime: EngineRuntime | null;
   private readonly runEnvironmentResolver: RunEnvironmentResolver;
   private readonly auxiliaryPipeline: AuxiliaryPipeline;
-  private readonly interactiveBackends = new WeakMap<ApprovalRouter, InteractiveApprovalBackend>();
-  private activeApprovalRouter: ApprovalRouter | undefined;
-  /** Active permission mode for this Engine instance. */
-  permissionMode: NonNullable<EngineConfig["permissionMode"]>;
-  /** True when permissionMode === "plan". */
-  planMode: boolean;
+  private readonly permissionController: PermissionController;
 
   // Lazy SettingsManager — reused across updateConfig/readSetting so we
   // don't re-read 6+ JSON files on every /model, /login, etc. The manager
@@ -331,7 +322,6 @@ export class Engine {
    * multiple Engines don't interfere and it stays cleanly extractable.
    */
   private steerQueueBySid = new Map<string, SteerItem[]>();
-  private activePermission: PermissionClassifier | undefined;
   /**
    * The TurnLoop of the in-flight run(), exposed so extendGoalRun() can bump a
    * running goal's turn/budget ceilings mid-run (TODO 3.1). Null when idle.
@@ -365,9 +355,6 @@ export class Engine {
    */
   private runInProgress = false;
   /** Permission update requested while runInProgress. Applied in run() finally. */
-  private pendingPermissionMode: NonNullable<EngineConfig["permissionMode"]> | null = null;
-  /** Plan update paired with pendingPermissionMode for one atomic boundary apply. */
-  private pendingPlanMode: boolean | null = null;
 
   /** Public accessor so UI/clients can read the resolved per-model window. */
   get maxContextTokens(): number {
@@ -520,11 +507,15 @@ export class Engine {
       ...(this.runtime ? { runtime: this.runtime } : {}),
     });
 
-    // Instance-level permission/plan mode fields.
-    this.permissionMode = config.permissionMode ?? "acceptEdits";
-    this.planMode = this.permissionMode === "plan";
-
     this.preset = resolveAgentPreset(config.preset);
+    this.permissionController = new PermissionController({
+      config: () => this.config,
+      updateConfig: (next) => {
+        this.config = next;
+      },
+      presetRules: () => [...this.preset.defaultPermissionRules],
+      runInProgress: () => this.runInProgress,
+    });
     // Fold the project's capabilityOverrides.builtin overlay over the global
     // enabled/disabled builtin lists so a project can force-enable a
     // globally-disabled builtin tool or force-disable a globally-enabled one
@@ -884,6 +875,14 @@ export class Engine {
     return this.config.headless === true;
   }
 
+  get permissionMode(): NonNullable<EngineConfig["permissionMode"]> {
+    return this.permissionController.permissionMode;
+  }
+
+  get planMode(): boolean {
+    return this.permissionController.planMode;
+  }
+
   /**
    * Probe whether a session already exists on disk (its state/transcript dir is
    * present). Used by the protocol server to distinguish "resume an existing
@@ -913,7 +912,7 @@ export class Engine {
       return await this.runExclusive(task, options);
     } finally {
       try {
-        this.applyPendingPermissionState();
+        this.permissionController.applyPending();
       } finally {
         this.runInProgress = false;
       }
@@ -1413,15 +1412,14 @@ export class Engine {
       void llmClientPromise.catch(() => {});
 
       const mode = runPermissionMode;
-      this.activeApprovalRouter = toolCtx.approvalRouter;
-      const { rules: defaultRules, backend: approvalBackend } = this.buildPermissionConfig(
+      const { rules: defaultRules, backend: approvalBackend } = this.permissionController.build(
         mode,
         cwd,
         toolCtx.approvalRouter,
       );
 
       const permission = new PermissionClassifier(defaultRules, mode, approvalBackend);
-      this.activePermission = permission;
+      this.permissionController.attach(permission, toolCtx.approvalRouter);
 
       // If the backend is the interactive one, wire it for project-scope
       // persistence: it needs cwd to find settings.local.json, and a callback
@@ -2867,92 +2865,6 @@ export class Engine {
     return target;
   }
 
-  private buildPermissionConfig(
-    mode: NonNullable<EngineConfig["permissionMode"]>,
-    cwd: string,
-    approvalRouter?: ApprovalRouter,
-  ): { rules: import("../types.js").PermissionRule[]; backend: ApprovalBackend } {
-    const rules: import("../types.js").PermissionRule[] = [...this.preset.defaultPermissionRules];
-
-    // Memory tools: dream scope is the LLM's own workspace, so save/delete
-    // there go through without prompting. user-scope save/delete have no
-    // explicit allow rule here, so default-mode classifier fallback asks the
-    // user to confirm modifications. RegisteredTool.permissionDefault is only
-    // UI/metadata and is not read by the classifier.
-    rules.push({
-      tool: "MemorySave",
-      argsPattern: { scope: "^dream$" },
-      decision: "allow",
-      reason: "Dream scope is the LLM's auto-consolidation workspace",
-    });
-    rules.push({
-      tool: "MemoryDelete",
-      argsPattern: { scope: "^dream$" },
-      decision: "allow",
-      reason: "Dream scope is the LLM's auto-consolidation workspace",
-    });
-
-    if (mode === "acceptEdits" || mode === "bypassPermissions") {
-      rules.push({ tool: "Write", decision: "allow" });
-      rules.push({ tool: "Edit", decision: "allow" });
-    }
-    if (mode === "bypassPermissions") {
-      rules.push({ tool: "Bash", decision: "allow" });
-    }
-
-    try {
-      const settingsManager = new SettingsManager(
-        cwd,
-        this.config.settingsScope ?? "project",
-        this.config.projectTrusted !== false,
-      );
-      const settings = settingsManager.get();
-      if (settings.permissions?.rules?.length) {
-        rules.unshift(...settings.permissions.rules);
-      }
-    } catch {
-      // Settings not available — defaults only
-    }
-
-    let backend: ApprovalBackend;
-    if (this.config.approvalBackend) {
-      backend =
-        mode === "auto"
-          ? new AutoApprovalBackend(this.config.approvalBackend)
-          : this.config.approvalBackend;
-    } else if (mode === "auto") {
-      backend = new AutoApprovalBackend();
-    } else {
-      // If a host installed an InteractiveApprovalBackend prompt fn
-      // (agent-server-stdio does this on boot via setInteractiveApprovalFn),
-      // use it so the UI gets a chance to approve/deny. Without this,
-      // every `ask` permission silently fell through to deny-all and
-      // the user saw "Permission denied by user" with NO modal — exactly
-      // the bug that motivated this fix.
-      let interactive: InteractiveApprovalBackend;
-      if (approvalRouter) {
-        interactive =
-          this.interactiveBackends.get(approvalRouter) ??
-          new InteractiveApprovalBackend(approvalRouter);
-        this.interactiveBackends.set(approvalRouter, interactive);
-      } else {
-        interactive = getInteractiveApprovalBackend();
-      }
-      if (interactive.hasPromptFn()) {
-        backend = interactive;
-      } else {
-        backend = new HeadlessApprovalBackend(
-          mode === "bypassPermissions"
-            ? "approve-all"
-            : mode === "dontAsk"
-              ? "deny-all"
-              : "deny-all",
-        );
-      }
-    }
-    return { rules, backend };
-  }
-
   /**
    * Switch permission mode at runtime. Idle updates apply immediately; busy
    * updates are committed atomically when the current run settles, so its
@@ -2960,43 +2872,11 @@ export class Engine {
    * Session-only — does not persist to settings.
    */
   setPermissionMode(mode: NonNullable<EngineConfig["permissionMode"]>): void {
-    if (this.runInProgress) {
-      this.pendingPermissionMode = mode;
-      this.pendingPlanMode = mode === "plan";
-      return;
-    }
-    this.applyPermissionState(mode, mode === "plan");
-  }
-
-  private applyPermissionState(
-    mode: NonNullable<EngineConfig["permissionMode"]>,
-    planMode: boolean,
-  ): void {
-    this.config = { ...this.config, permissionMode: mode };
-    this.permissionMode = mode;
-    this.planMode = planMode;
-    if (this.activePermission) {
-      const cwd = this.config.cwd ?? process.cwd();
-      const { rules, backend } = this.buildPermissionConfig(
-        mode,
-        cwd,
-        this.activeApprovalRouter,
-      );
-      this.activePermission.reconfigure(mode, backend, rules);
-    }
-  }
-
-  private applyPendingPermissionState(): void {
-    if (this.pendingPermissionMode === null) return;
-    const mode = this.pendingPermissionMode;
-    const planMode = this.pendingPlanMode ?? mode === "plan";
-    this.pendingPermissionMode = null;
-    this.pendingPlanMode = null;
-    this.applyPermissionState(mode, planMode);
+    this.permissionController.setPermissionMode(mode);
   }
 
   getPermissionMode(): NonNullable<EngineConfig["permissionMode"]> {
-    return this.config.permissionMode ?? "acceptEdits";
+    return this.permissionController.getPermissionMode();
   }
 
   /**
@@ -3022,11 +2902,7 @@ export class Engine {
    * rule set buildPermissionConfig does, without constructing a backend.
    */
   getPermissionRules(): import("../types.js").PermissionRule[] {
-    return this.buildPermissionConfig(
-      this.getPermissionMode(),
-      this.config.cwd ?? process.cwd(),
-      this.activeApprovalRouter,
-    ).rules;
+    return this.permissionController.getPermissionRules();
   }
 
   /**
@@ -3034,12 +2910,7 @@ export class Engine {
    * Also syncs permissionMode to keep both fields consistent.
    */
   setPlanMode(value: boolean): void {
-    if (value) {
-      this.setPermissionMode("plan");
-    } else if ((this.pendingPermissionMode ?? this.permissionMode) === "plan") {
-      // Leaving plan mode: drop back to the default.
-      this.setPermissionMode("acceptEdits");
-    }
+    this.permissionController.setPlanMode(value);
   }
 
   /**
