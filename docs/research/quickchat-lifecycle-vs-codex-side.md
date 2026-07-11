@@ -1,6 +1,6 @@
 # CodeShell 快聊生命周期与 Codex `/side` 对齐调研
 
-> 调研日期：2026-07-12  
+> 调研日期：2026-07-12
 > 基线：`feat/quickchat-ephemeral`，基于 `main` HEAD，已包含上一轮 quick chat
 > stable-completed fork、隐藏继承气泡与迟到 approval/AskUser fail-closed 修复。
 

@@ -1,7 +1,7 @@
 # 快聊创建后，父会话新增上下文是否传播
 
-> 调研日期：2026-07-12  
-> 分支：`feat/quickchat-ephemeral`  
+> 调研日期：2026-07-12
+> 分支：`feat/quickchat-ephemeral`
 > 问题：快聊已经打开后，父 session 再完成新 turn，这些新内容会不会进入现有 child？
 
 ## 1. 明确回答
