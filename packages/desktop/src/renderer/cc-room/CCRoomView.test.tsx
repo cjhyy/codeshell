@@ -19,6 +19,14 @@ const { CCRoomView } = await import("./CCRoomView");
 
 let root: Root | null = null;
 
+function findElements(node: unknown, tagName: string): unknown[] {
+  const current = node as { tagName?: string; childNodes?: unknown[] };
+  return [
+    ...(current.tagName === tagName ? [current] : []),
+    ...(current.childNodes ?? []).flatMap((child) => findElements(child, tagName)),
+  ];
+}
+
 afterEach(async () => {
   if (root) {
     await act(async () => {
@@ -207,5 +215,48 @@ describe("CCRoomView DriveAgent deep links", () => {
     expect(conversationProps).toMatchObject({ roomId: "room_codex", cliKind: "codex" });
     expect(claudeCalls).toBe(1);
     expect(codexCalls).toBe(1);
+  });
+
+  test("leaves the loading state and never opens a linked room when the CLI probe rejects", async () => {
+    ensureMiniDom();
+    let openCalls = 0;
+    Object.assign(window, {
+      codeshell: {
+        ccRoom: {
+          probe: async () => {
+            throw new Error("probe failed");
+          },
+          codexProbe: async () => ({ available: true }),
+          listSessions: async () => ({ sessions: [], total: 0 }),
+          listCodexSessions: async () => ({ sessions: [], total: 0 }),
+          openLinkedSession: async () => {
+            openCalls += 1;
+            return { roomId: "room_never", status: "running", mode: "default" };
+          },
+        },
+      },
+    });
+    const container = document.createElement("div");
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <CCRoomView
+          cwd="/repo"
+          openRequest={{
+            nonce: 11,
+            externalSessionId: "claude-thread",
+            cliKind: "claude-code",
+            cwd: "/repo",
+          }}
+          onOpenRequestConsumed={() => undefined}
+        />,
+      );
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    expect(openCalls).toBe(0);
+    // CLI switch (2) + retry button (1). The loading state has only the switch.
+    expect(findElements(container, "BUTTON")).toHaveLength(3);
   });
 });
