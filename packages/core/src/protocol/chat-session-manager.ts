@@ -40,6 +40,8 @@ export interface ChatSessionManagerOptions {
   idleTtlMs?: number; // default 30 min
 }
 
+export const CLOSED_CHAT_SESSION_TOMBSTONE_LIMIT = 4096;
+
 export class ChatSessionManager {
   private readonly sessions = new Map<string, ChatSession>();
   private readonly closingSessions = new Map<string, Promise<void>>();
@@ -58,10 +60,10 @@ export class ChatSessionManager {
     this.idleTtlMs = opts.idleTtlMs ?? 30 * 60 * 1000;
   }
 
-  getOrCreate(sessionId: string, slice: EngineConfigSlice): ChatSession | Promise<ChatSession> {
+  async getOrCreate(sessionId: string, slice: EngineConfigSlice): Promise<ChatSession> {
     const closing = this.closingSessions.get(sessionId);
     if (closing) {
-      return closing.then(() => this.getOrCreateNow(sessionId, slice));
+      await closing;
     }
     return this.getOrCreateNow(sessionId, slice);
   }
@@ -72,6 +74,9 @@ export class ChatSessionManager {
     const existing = this.sessions.get(sessionId);
     if (existing) {
       existing.lastActivityAt = Date.now();
+      if (slice.permissionMode && existing.engine.getPermissionMode?.() !== slice.permissionMode) {
+        existing.engine.setPermissionMode?.(slice.permissionMode);
+      }
       return existing;
     }
     if (this.sessions.size >= this.maxSessions) {
@@ -133,7 +138,7 @@ export class ChatSessionManager {
     if (alreadyClosing) return alreadyClosing;
     const s = this.sessions.get(sessionId);
     if (!s) {
-      if (markClosed) this.closedSessions.add(sessionId);
+      if (markClosed) this.rememberClosedSession(sessionId);
       return Promise.resolve();
     }
 
@@ -149,7 +154,7 @@ export class ChatSessionManager {
     const finishClose = () => {
       this.unregisterMcpOwner(s);
       if (this.sessions.get(sessionId) === s) this.sessions.delete(sessionId);
-      if (markClosed) this.closedSessions.add(sessionId);
+      if (markClosed) this.rememberClosedSession(sessionId);
       else this.closedSessions.delete(sessionId);
       this.sessionGeneration.delete(sessionId);
     };
@@ -167,6 +172,16 @@ export class ChatSessionManager {
     })();
     this.closingSessions.set(sessionId, closing);
     return closing;
+  }
+
+  private rememberClosedSession(sessionId: string): void {
+    this.closedSessions.delete(sessionId);
+    this.closedSessions.add(sessionId);
+    while (this.closedSessions.size > CLOSED_CHAT_SESSION_TOMBSTONE_LIMIT) {
+      const oldest = this.closedSessions.values().next().value;
+      if (oldest === undefined) break;
+      this.closedSessions.delete(oldest);
+    }
   }
 
   closeAll(): void {

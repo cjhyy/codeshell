@@ -41,7 +41,6 @@ describe("browser tools — no bridge (headless / no panel)", () => {
     expect(isBrowserAutomationAvailable(ctx)).toBe(false);
   });
 });
-
 describe("browser_observe", () => {
   test("snapshot renders url/title + element list; surfaces needsHuman", async () => {
     const ctx = ctxWith({
@@ -106,7 +105,7 @@ describe("browser_observe", () => {
     expect(typeof out).toBe("object");
     if (typeof out === "object" && "contentBlocks" in out) {
       expect(out.contentBlocks).toHaveLength(2);
-      expect(out.contentBlocks[0]).toMatchObject({ type: "image", source: { type: "base64", media_type: "image/jpeg" } });
+      expect(out.contentBlocks![0]).toMatchObject({ type: "image", source: { type: "base64", media_type: "image/jpeg" } });
     }
   });
 
@@ -131,7 +130,7 @@ describe("browser_observe", () => {
     const ctx = ctxVision({ screenshot: async () => ({ ok: true, base64: "QUJD", mediaType: "image/jpeg" }) });
     const out = await browserObserveTool({ mode: "vision" }, ctx);
     expect(typeof out).toBe("object");
-    if (typeof out === "object" && "contentBlocks" in out) expect(out.contentBlocks[0]).toMatchObject({ type: "image" });
+    if (typeof out === "object" && "contentBlocks" in out) expect(out.contentBlocks![0]).toMatchObject({ type: "image" });
   });
 });
 

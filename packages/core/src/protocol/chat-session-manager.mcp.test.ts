@@ -17,8 +17,8 @@ describe("ChatSessionManager MCP owner lifecycle", () => {
       engineFactory: () => engine,
     });
 
-    manager.getOrCreate("s1", {} as never);
-    manager.close("s1");
+    await manager.getOrCreate("s1", {} as never);
+    await manager.close("s1");
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(unregistered).toEqual([engine]);

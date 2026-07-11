@@ -117,6 +117,7 @@ function makeEngine(initialMode: "default" | "bypassPermissions") {
       description: "A mutating test tool used to verify permission snapshots.",
       inputSchema: { type: "object", properties: {} },
       source: "builtin",
+      permissionDefault: "ask",
     },
     async (_args, ctx?: ToolContext) => {
       executions.push({ planMode: ctx?.planMode, permissionMode: ctx?.permissionMode });

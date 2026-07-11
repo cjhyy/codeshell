@@ -30,6 +30,10 @@ export interface ApprovalConnectionHandler {
   ownershipLost?(targets: ApprovalRouteTarget[], reason: string): void;
 }
 
+export type ApprovalRegistrationResult =
+  | { ok: true; target: ApprovalRouteTarget }
+  | { ok: false; conflict: ApprovalRouteTarget };
+
 /**
  * Process-local connection owner router. Handlers are connection-scoped while
  * session ownership is an explicit binding with a monotonic generation.
@@ -54,22 +58,18 @@ export class ApprovalRouter {
     return () => this.deregister(connectionId);
   }
 
-  register(sessionId: string, connectionId: string): ApprovalRouteTarget {
+  register(sessionId: string, connectionId: string): ApprovalRegistrationResult {
     if (!sessionId) throw new Error("approval sessionId is required");
     if (!this.handlers.has(connectionId)) {
       throw new Error(`approval connection is not registered: ${connectionId}`);
     }
     const current = this.owners.get(sessionId);
-    if (current?.connectionId === connectionId) return current;
+    if (current?.connectionId === connectionId) return { ok: true, target: current };
+    if (current) return { ok: false, conflict: current };
 
     const target = { connectionId, sessionId, generation: this.nextGeneration++ };
     this.owners.set(sessionId, target);
-    if (current) {
-      this.handlers
-        .get(current.connectionId)
-        ?.ownershipLost?.([current], "approval ownership changed");
-    }
-    return target;
+    return { ok: true, target };
   }
 
   resolve(request: ApprovalRequest): Promise<ApprovalResult> | null {
@@ -77,7 +77,10 @@ export class ApprovalRouter {
     let target = this.owners.get(request.sessionId);
     if (!target && this.fallbackConnections.size === 1) {
       const connectionId = this.fallbackConnections.values().next().value;
-      if (connectionId) target = this.register(request.sessionId, connectionId);
+      if (connectionId) {
+        const registration = this.register(request.sessionId, connectionId);
+        if (registration.ok) target = registration.target;
+      }
     }
     if (!target) return null;
     const handler = this.handlers.get(target.connectionId);

@@ -141,6 +141,9 @@ describe("ToolRegistry result protocol", () => {
       "MCP tool error: rejected",
       "REPL aborted by signal",
       "REPL timed out after 100ms",
+      'Skill "missing" not found. Run /skills to list available skills.',
+      'Skill "disabled" is disabled. Enable it in Customize.',
+      'Skill "denied" is not available to this sub-agent.',
       { error: "structured failure" },
       { isError: true, result: "flagged failure" },
     ];
@@ -187,6 +190,7 @@ describe("Bash failure artifact semantics", () => {
       signal: null,
       stderr: "boom",
     });
+    expect(typeof direct !== "string" && !direct.ok ? direct.error : "").toContain("Exit code: 7");
 
     const registry = new ToolRegistry({ builtinTools: ["Bash"] });
     const command = "sh -c 'exit 7' > failed.txt";

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import { connect, type Socket } from "node:net";
 import type { Engine, EngineResult } from "../engine/engine.js";
-import { getInteractiveApprovalBackend, getApprovalRouter } from "../tool-system/permission.js";
+import { ApprovalRouter, InteractiveApprovalBackend } from "../tool-system/permission.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { AgentServer } from "./server.js";
 import { listenTcp, type TcpListenResult } from "./tcp-transport.js";
@@ -53,9 +53,12 @@ function makeApprovalEngine(decisions: Array<{ sessionId: string; approved: bool
     setBrowserBridge() {},
     setInjectCredential() {},
     isHeadless: () => false,
-    async run(_task: string, opts: { sessionId?: string }): Promise<EngineResult> {
+    async run(
+      _task: string,
+      opts: { sessionId?: string; approvalRouter?: ApprovalRouter },
+    ): Promise<EngineResult> {
       const sessionId = opts.sessionId!;
-      const decision = await getInteractiveApprovalBackend().requestApproval({
+      const decision = await new InteractiveApprovalBackend(opts.approvalRouter).requestApproval({
         sessionId,
         toolName: "Bash",
         args: { command: "rm protected.txt" },
@@ -89,6 +92,7 @@ describe("TCP approval routing is connection-owned", () => {
 
   async function setup() {
     const decisions: Array<{ sessionId: string; approved: boolean }> = [];
+    const approvalRouter = new ApprovalRouter();
     const manager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () => makeApprovalEngine(decisions),
@@ -100,7 +104,7 @@ describe("TCP approval routing is connection-owned", () => {
         chatManager: manager,
         transport,
         connectionId,
-        approvalRouter: getApprovalRouter(),
+        approvalRouter,
       });
       servers.add(server);
       socket.once("close", () => {
@@ -111,7 +115,7 @@ describe("TCP approval routing is connection-owned", () => {
     const a = await openClient(listener.port);
     const b = await openClient(listener.port);
     clients.push(a, b);
-    return { a, b, decisions };
+    return { a, b, decisions, approvalRouter };
   }
 
   it("does not expose A's approval to B and accepts A's matching four-tuple", async () => {
@@ -179,7 +183,7 @@ describe("TCP approval routing is connection-owned", () => {
   });
 
   it("fails a pending approval closed when its owning TCP connection disconnects", async () => {
-    const { a, b, decisions } = await setup();
+    const { a, b, decisions, approvalRouter } = await setup();
     a.send({
       jsonrpc: "2.0",
       id: "run-disconnect",
@@ -194,7 +198,7 @@ describe("TCP approval routing is connection-owned", () => {
     await waitFor(() => decisions.length === 1, "disconnect should reject the pending approval");
     expect(decisions).toEqual([{ sessionId: "tcp-approval-disconnect", approved: false }]);
 
-    const late = await getInteractiveApprovalBackend().requestApproval({
+    const late = await new InteractiveApprovalBackend(approvalRouter).requestApproval({
       sessionId: "tcp-approval-disconnect",
       toolName: "Bash",
       args: { command: "rm after-disconnect.txt" },
@@ -203,5 +207,31 @@ describe("TCP approval routing is connection-owned", () => {
     });
     expect(late.approved).toBe(false);
     expect(approvalRequests(b)).toHaveLength(0);
+  });
+
+  it("rejects a second connection that tries to claim an active session", async () => {
+    const { a, b, decisions } = await setup();
+    const sessionId = "tcp-approval-owned";
+    a.send({
+      jsonrpc: "2.0",
+      id: "run-owner-a",
+      method: Methods.Run,
+      params: { sessionId, task: "needs approval" },
+    });
+    await waitFor(() => approvalRequests(a).length === 1, "A should own the approval");
+
+    b.send({
+      jsonrpc: "2.0",
+      id: "run-owner-b",
+      method: Methods.Run,
+      params: { sessionId, task: "must not steal approval ownership" },
+    });
+    await waitFor(
+      () => b.messages.some((message) => message.id === "run-owner-b" && message.error),
+      "B's conflicting run should be rejected",
+    );
+
+    expect(approvalRequests(b)).toHaveLength(0);
+    expect(decisions).toEqual([]);
   });
 });

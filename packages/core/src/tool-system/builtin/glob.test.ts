@@ -97,6 +97,7 @@ describe("globTool", () => {
     const past = Date.now() / 1000 - 10_000;
     utimesSync(join(dir, "old.ts"), past, past);
     const out = await globTool({ pattern: "*.ts" }, ctx());
+    if (typeof out !== "string") throw new Error("expected glob text result");
     expect(out.indexOf("new.ts")).toBeLessThan(out.indexOf("old.ts"));
   });
 

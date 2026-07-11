@@ -1667,7 +1667,7 @@ describe("createGoalStopHook — three-state judge", () => {
         warn: (msg, data) => logs.push({ msg, data }),
         error: () => {},
       },
-    } as GoalStopHookOptions);
+    } as unknown as GoalStopHookOptions);
 
     const res = await hook({
       eventName: "on_stop",

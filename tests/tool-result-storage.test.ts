@@ -8,6 +8,7 @@ import {
   reconstructContentReplacementState,
   resolveToolResultsDir,
   isPersistedReplacement,
+  safeToolResultFilename,
   DEFAULT_PERSIST_THRESHOLD,
 } from "../packages/core/src/context/tool-result-storage.js";
 import type { Message } from "../packages/core/src/types.js";
@@ -21,6 +22,10 @@ function userToolResult(toolUseId: string, content: string): Message {
     role: "user",
     content: [{ type: "tool_result", tool_use_id: toolUseId, content }],
   };
+}
+
+function persistedPath(dir: string, toolUseId: string): string {
+  return join(dir, safeToolResultFilename(toolUseId));
 }
 
 describe("tool-result-storage", () => {
@@ -47,8 +52,8 @@ describe("tool-result-storage", () => {
     const block = (result[0].content as any)[0];
     expect(isPersistedReplacement(block.content)).toBe(true);
     expect(block.content).toContain("Full output saved to:");
-    expect(existsSync(join(dir, "id-1.txt"))).toBe(true);
-    expect(readFileSync(join(dir, "id-1.txt"), "utf-8")).toBe(content);
+    expect(existsSync(persistedPath(dir, "id-1"))).toBe(true);
+    expect(readFileSync(persistedPath(dir, "id-1"), "utf-8")).toBe(content);
     expect(state.replacements.has("id-1")).toBe(true);
     expect(state.seenIds.has("id-1")).toBe(true);
   });
@@ -87,7 +92,7 @@ describe("tool-result-storage", () => {
     });
     const block = (result[0].content as any)[0];
     expect(block.content).toBe(huge); // untouched
-    expect(existsSync(join(dir, "id-1.txt"))).toBe(false);
+    expect(existsSync(persistedPath(dir, "id-1"))).toBe(false);
   });
 
   it("re-applies cached replacement byte-identically on repeat calls", () => {
@@ -196,7 +201,7 @@ describe("tool-result-storage", () => {
       toolResultsDir: dir,
       state: stateA,
     });
-    expect(existsSync(join(dir, "id-1.txt"))).toBe(true);
+    expect(existsSync(persistedPath(dir, "id-1"))).toBe(true);
 
     // Fresh state — second call should hit EEXIST and skip gracefully,
     // still producing a replacement string in the message.
@@ -291,7 +296,7 @@ describe("tool-result-storage", () => {
     expect(isPersistedReplacement((result[0].content as any)[0].content)).toBe(
       true,
     );
-    expect(existsSync(join(nested, "id-1.txt"))).toBe(true);
+    expect(existsSync(persistedPath(nested, "id-1"))).toBe(true);
   });
 
   it("ignores tool_result blocks on non-user messages", () => {
@@ -344,7 +349,7 @@ describe("tool-result-storage", () => {
       [userToolResult("id-1", huge)],
       { toolResultsDir: dir, state: stateA },
     );
-    rmSync(join(dir, "id-1.txt"));
+    rmSync(persistedPath(dir, "id-1"));
 
     const stateB = reconstructContentReplacementState(persisted);
     expect(stateB.replacements.has("id-1")).toBe(true);
@@ -359,7 +364,7 @@ describe("tool-result-storage", () => {
       onPersist: () => calls.push(1),
     });
     expect(calls).toHaveLength(0);
-    expect(existsSync(join(dir, "id-1.txt"))).toBe(false);
+    expect(existsSync(persistedPath(dir, "id-1"))).toBe(false);
   });
 
   it("multiple parallel results in one message are all persisted when each exceeds the per-result threshold", () => {

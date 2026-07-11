@@ -42,7 +42,6 @@ describe("PermissionClassifier", () => {
     expect(c.classify("Bash", { command: "rm file" })).toBe("ask");
   });
 });
-
 describe("HeadlessApprovalBackend", () => {
   it("approves all in approve-all mode", async () => {
     const b = new HeadlessApprovalBackend("approve-all");
@@ -264,11 +263,9 @@ describe("PermissionClassifier — acceptEdits allowlist", () => {
     expect(c.classify("CustomTool", {})).toBe("ask");
   });
 
-  it("keeps Bash safe-write auto-allow path in acceptEdits", () => {
+  it("requires approval for Bash safe-write commands in acceptEdits", () => {
     const c = new PermissionClassifier([], "acceptEdits");
-    // safe-write Bash (e.g. `mkdir foo`) is still auto-allowed because
-    // the Bash branch decides before falling into the default switch.
-    expect(c.classify("Bash", { command: "mkdir foo" })).toBe("allow");
+    expect(c.classify("Bash", { command: "mkdir foo" })).toBe("ask");
   });
 
   it("ACCEPT_EDITS_ALLOWLIST exposes the expected set", () => {

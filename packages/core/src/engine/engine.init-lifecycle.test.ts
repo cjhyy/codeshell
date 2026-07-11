@@ -75,7 +75,7 @@ function makeEngine(dir: string, model: string, mcpPool: FakeMcpPool): Engine {
     modelPool: new ModelPool(),
     toolRegistry: new ToolRegistry({ builtinTools: [] }),
     settings: {} as EngineRuntimeOptions["settings"],
-    mcpPool: mcpPool as EngineRuntimeOptions["mcpPool"],
+    mcpPool: mcpPool as unknown as EngineRuntimeOptions["mcpPool"],
     costTracker: {} as EngineRuntimeOptions["costTracker"],
   });
   const engine = new Engine({
@@ -150,7 +150,9 @@ describe("Engine initialization lifecycle", () => {
       fixture.engine.run("first run", {
         sessionId: "client-init-failure",
         cwd: fixture.dir,
-        onStream: (event) => events.push(event),
+        onStream: (event) => {
+          events.push(event);
+        },
       }),
     );
 
@@ -186,7 +188,9 @@ describe("Engine initialization lifecycle", () => {
       fixture.engine.run("first run", {
         sessionId: "mcp-init-failure",
         cwd: fixture.dir,
-        onStream: (event) => events.push(event),
+        onStream: (event) => {
+          events.push(event);
+        },
       }),
     );
 

@@ -194,7 +194,7 @@ describe("Engine auto-compaction Goal accounting", () => {
 
     expect(scenario.summaryCalls).toBeGreaterThan(0);
     expect(scenario.mainCallsAtFirstSummary).toBeDefined();
-    expect(scenario.mainCalls).toBe(scenario.mainCallsAtFirstSummary);
+    expect(scenario.mainCalls).toBe(scenario.mainCallsAtFirstSummary!);
     expect(result.reason).toBe("goal_budget_exhausted");
     expect(result.goalTermination).toBe("token_budget_exhausted");
   });

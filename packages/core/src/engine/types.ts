@@ -20,7 +20,7 @@ import type {
 } from "../types.js";
 import type { AgentPresetName } from "../preset/index.js";
 import type { GoalConfig, GoalTerminationReason } from "./goal.js";
-import type { ApprovalBackend } from "../tool-system/permission.js";
+import type { ApprovalBackend, ApprovalRouter } from "../tool-system/permission.js";
 import type { SandboxConfig } from "../tool-system/sandbox/index.js";
 import type { CostStateStore } from "./cost-store.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
@@ -75,6 +75,8 @@ export interface EngineConfig {
   sessionStorageDir?: string;
   maxContextTokens?: number;
   approvalBackend?: ApprovalBackend;
+  /** Connection-scoped permission approval router supplied by an interactive host. */
+  approvalRouter?: ApprovalRouter;
   hooks?: EngineHookConfig[];
   askUser?: AskUserFn;
   /** Browser automation bridge (browser_* tools). Wired by the host (desktop)

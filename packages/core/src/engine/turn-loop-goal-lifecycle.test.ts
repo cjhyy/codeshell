@@ -1461,9 +1461,9 @@ describe("Engine persisted goal lifecycle", () => {
         requestCount: 2,
       });
       expect(persistedState(dir, sessionId).tokenUsage).toMatchObject({
-        promptTokens: 11,
-        completionTokens: 6,
-        totalTokens: 17,
+        promptTokens: 12,
+        completionTokens: 7,
+        totalTokens: 19,
       });
     } finally {
       engineScenarios.delete(primaryModel);

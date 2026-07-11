@@ -13,8 +13,9 @@ function ctx(extra: Partial<ToolContext>): ToolContext {
   return { cwd: process.cwd(), ...extra } as ToolContext;
 }
 
-function text(out: string | { result: string }): string {
-  return typeof out === "string" ? out : out.result;
+function text(out: Awaited<ReturnType<typeof bashTool>>): string {
+  if (typeof out === "string") return out;
+  return out.ok ? (out.result ?? "") : out.error;
 }
 
 describe("Bash honors ctx.shellEnv (localEnvironment.env)", () => {
@@ -80,7 +81,10 @@ describe("Bash honors ctx.shellEnv (localEnvironment.env)", () => {
     const fakeBackend = {
       name: "seatbelt" as const,
       network: "deny" as const,
-      wrap: (command: string, o: { cwd: string; shell: string }) => ({ file: o.shell, args: ["-c", command] }),
+      wrap: (command: string, o: { cwd: string; shell: string }) => ({
+        file: o.shell,
+        args: ["-c", command],
+      }),
     };
     const out = await bashTool({ command: "echo hi" }, ctx({ sandbox: fakeBackend }));
     if (typeof out === "string") throw new Error("expected object return");

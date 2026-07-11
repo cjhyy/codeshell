@@ -217,7 +217,9 @@ describe("Engine.run concurrent re-entry guard", () => {
       const result = await engine.run("single task", {
         sessionId: "session-single",
         cwd: dir,
-        onStream: (event) => events.push(event),
+        onStream: (event) => {
+          events.push(event);
+        },
       });
 
       expect(result).toMatchObject({

@@ -20,6 +20,7 @@ import type { SandboxBackend } from "./sandbox/index.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type { SessionManager } from "../session/session-manager.js";
 import type { SessionWorkspace } from "../types.js";
+import type { ApprovalRouter } from "./permission.js";
 
 /**
  * Narrow view of the owning Engine that tools are allowed to call back into.
@@ -263,6 +264,8 @@ export interface ToolContext {
    * billing hook again; the originating provider client already did that.
    */
   recordBilledUsage?: (usage: TokenUsage) => void;
+  /** Connection-scoped approval owner router supplied by the protocol host. */
+  approvalRouter?: ApprovalRouter;
   /** Whether the owning Engine is currently in plan mode. Replaces the
    *  removed module-level `isInPlanMode()` singleton. */
   planMode: boolean;

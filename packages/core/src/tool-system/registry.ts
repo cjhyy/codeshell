@@ -167,7 +167,8 @@ export class ToolRegistry {
     };
 
     try {
-      const result = await Promise.race([executor(argsWithSignal, ctx), aborted]);
+      const rawResult = await Promise.race([executor(argsWithSignal, ctx), aborted]);
+      const result = toToolExecutionResult(rawResult);
       if (childController.signal.aborted) {
         throw childController.signal.reason instanceof Error
           ? childController.signal.reason

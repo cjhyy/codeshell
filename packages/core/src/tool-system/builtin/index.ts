@@ -182,10 +182,10 @@ type BuiltinToolImplementation = (
 export type BuiltinToolFn = (
   args: Record<string, unknown>,
   ctx?: import("../context.js").ToolContext,
-) => Promise<BuiltinToolResult>;
+) => Promise<string | BuiltinToolResult>;
 
 const FAILURE_TEXT =
-  /^(?:error\b|failed\b|failure\b|(?:[a-z][\w-]*\s+){1,3}(?:error\b|failed\b|failure\b|aborted\b|timed out\b))/i;
+  /^(?:error\b|failed\b|failure\b|skill\b.*(?:not found\b|disabled\b|not available\b|allowlist\b|denied\b)|(?:[a-z][\w-]*\s+){1,3}(?:error\b|failed\b|failure\b|aborted\b|timed out\b))/i;
 
 function failureMessage(result: Record<string, unknown>): string {
   if (typeof result.error === "string" && result.error) return result.error;

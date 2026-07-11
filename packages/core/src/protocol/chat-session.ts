@@ -4,6 +4,7 @@ import type { StreamEvent } from "../types.js";
 import type { PermissionMode } from "../types.js";
 import { isAbortError } from "../llm/client-base.js";
 import type { InputAttachmentMeta } from "./types.js";
+import type { ApprovalRouter } from "../tool-system/permission.js";
 
 export interface ChatSessionOptions {
   id: string;
@@ -31,6 +32,8 @@ export interface TurnOpts {
   permissionMode?: PermissionMode;
   /** Plan-mode snapshot for this queued turn only. */
   planMode?: boolean;
+  /** Connection owner router for permission prompts in this turn. */
+  approvalRouter?: ApprovalRouter;
 }
 
 interface QueuedTurn {
@@ -243,6 +246,7 @@ export class ChatSession {
         attachments: next.opts.attachments,
         permissionMode: next.opts.permissionMode,
         planMode: next.opts.planMode,
+        approvalRouter: next.opts.approvalRouter,
       });
       this.lastActivityAt = Date.now();
       next.resolve(result);

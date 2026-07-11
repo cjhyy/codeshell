@@ -126,7 +126,7 @@ describe("AgentServer — background shell completion wakes an idle session", ()
       engineFactory: () => engine,
     });
     // Materialize the session so chatManager.get(sid) finds it.
-    chatManager.getOrCreate("sess-1", {} as never);
+    await chatManager.getOrCreate("sess-1", {} as never);
     const t = makeTransport();
     servers.push(new AgentServer({ transport: t.transport, chatManager }));
 
@@ -167,7 +167,7 @@ describe("AgentServer — background shell completion wakes an idle session", ()
       runtime: {} as never,
       engineFactory: () => engine,
     });
-    const session = chatManager.getOrCreate("sess-1", {} as never);
+    const session = await chatManager.getOrCreate("sess-1", {} as never);
     const t = makeTransport();
     servers.push(new AgentServer({ transport: t.transport, chatManager }));
 
@@ -204,7 +204,7 @@ describe("AgentServer — background shell completion wakes an idle session", ()
       runtime: {} as never,
       engineFactory: () => engine,
     });
-    chatManager.getOrCreate("sess-1", {} as never);
+    await chatManager.getOrCreate("sess-1", {} as never);
     const t = makeTransport();
     servers.push(new AgentServer({ transport: t.transport, chatManager }));
 
@@ -236,7 +236,7 @@ describe("AgentServer — background shell completion wakes an idle session", ()
       runtime: {} as never,
       engineFactory: () => engine,
     });
-    const session = chatManager.getOrCreate("sess-1", {} as never);
+    const session = await chatManager.getOrCreate("sess-1", {} as never);
     const t = makeTransport();
     servers.push(new AgentServer({ transport: t.transport, chatManager }));
 
@@ -283,7 +283,9 @@ describe("AgentServer — background shell completion wakes an idle session", ()
     const t = makeTransport();
     servers.push(new AgentServer({ transport: t.transport, chatManager }));
 
-    const session = chatManager.getOrCreate(sid, { cwd: "/tmp/project-closed" } as never);
+    const session = await chatManager.getOrCreate(sid, {
+      cwd: "/tmp/project-closed",
+    } as never);
     await session.enqueueTurn("initial user turn", {});
     await chatManager.close(sid);
     expect(chatManager.get(sid)).toBeUndefined();
