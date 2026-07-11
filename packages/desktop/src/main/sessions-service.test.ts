@@ -61,6 +61,35 @@ describe("deleteSessionDir", () => {
     expect(fs.existsSync(path.join(dir, "normal-legacy.jsonl"))).toBe(true);
   });
 
+  it("removes only proven ephemeral qchat fork staging directories", async () => {
+    const ephemeralStage = path.join(dir, ".pending-fork-qchat-ephemeral-12345678");
+    const persistentStage = path.join(dir, ".pending-fork-qchat-persistent-12345678");
+    const nonQuickStage = path.join(dir, ".pending-fork-normal-ephemeral-12345678");
+    for (const stage of [ephemeralStage, persistentStage, nonQuickStage]) {
+      fs.mkdirSync(stage);
+      fs.writeFileSync(path.join(stage, "transcript.jsonl"), "copied parent transcript");
+    }
+    fs.writeFileSync(
+      path.join(ephemeralStage, "state.json"),
+      JSON.stringify({ sessionId: "qchat-ephemeral", ephemeral: true }),
+    );
+    fs.writeFileSync(
+      path.join(persistentStage, "state.json"),
+      JSON.stringify({ sessionId: "qchat-persistent", ephemeral: false }),
+    );
+    fs.writeFileSync(
+      path.join(nonQuickStage, "state.json"),
+      JSON.stringify({ sessionId: "normal-ephemeral", ephemeral: true }),
+    );
+
+    expect(await cleanupStaleQuickChatSessions(dir)).toEqual([
+      ".pending-fork-qchat-ephemeral-12345678",
+    ]);
+    expect(fs.existsSync(ephemeralStage)).toBe(false);
+    expect(fs.existsSync(persistentStage)).toBe(true);
+    expect(fs.existsSync(nonQuickStage)).toBe(true);
+  });
+
   it("does not expose legacy flat qchat records in the sessions view", async () => {
     fs.writeFileSync(path.join(dir, "qchat-hidden.jsonl"), "quick transcript");
     fs.writeFileSync(path.join(dir, "normal-visible.jsonl"), "normal transcript");
