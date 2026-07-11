@@ -16,6 +16,7 @@ import { ToolExecutor } from "./executor.js";
 import type { ApprovalBackend } from "./permission.js";
 import { PermissionClassifier } from "./permission.js";
 import { ToolRegistry } from "./registry.js";
+import { runPluginCommandHook } from "../plugins/pluginCommandHook.js";
 
 const PROBE_TOOL = "HookPermissionProbe";
 
@@ -103,6 +104,27 @@ describe("ToolExecutor permission hook hardening", () => {
     expect(didRun()).toBe(false);
     expect(result.isError).toBe(true);
     expect(result.error).toContain(`Permission denied for tool: ${PROBE_TOOL}`);
+  });
+
+  it("blocks execution when a CC-compatible plugin exits 2 from pre_tool_use", async () => {
+    const { executor, hooks, didRun } = makeExecutor({ rules: [rule("allow")] });
+    hooks.register("pre_tool_use", (ctx) =>
+      runPluginCommandHook(
+        {
+          command: "printf '%s' 'rejected by plugin' >&2; exit 2",
+          installPath: process.cwd(),
+          pluginKey: "deny-test@local",
+        },
+        ctx,
+      ),
+    );
+
+    const result = await runProbe(executor);
+
+    expect(didRun()).toBe(false);
+    expect(result.isError).toBe(true);
+    expect(result.error).toContain("Blocked by pre_tool_use hook");
+    expect(result.error).toContain("rejected by plugin");
   });
 
   it("keeps the user-approval gate when pre_tool_use allow tries to bypass classifier ask", async () => {

@@ -40,7 +40,10 @@ import { logger } from "../logging/logger.js";
 
 // ─── Event Types ────────────────────────────────────────────────────
 
-export type ApprovalRequestMeta = Pick<ApprovalRequestNotification, "sessionId">;
+export type ApprovalRequestMeta = Pick<
+  ApprovalRequestNotification,
+  "connectionId" | "sessionId" | "generation"
+>;
 export type ApprovalResolvedEvent = ApprovalResolvedNotification;
 
 export interface AgentClientEvents {
@@ -80,6 +83,8 @@ export class AgentClient {
       reject: (error: Error) => void;
     }
   >();
+  /** Routing tuple captured from approval notifications and echoed on approve. */
+  private approvalRoutes = new Map<string, ApprovalRequestMeta>();
 
   /**
    * Map from a user-supplied `BackgroundAgentCompletedHandler` to the
@@ -161,17 +166,29 @@ export class AgentClient {
   approve(...args: unknown[]): Promise<void> {
     if (args.length === 3) {
       const [sessionId, requestId, decision] = args as [string, string, ApprovalResult];
-      return this.request(Methods.Approve, {
-        sessionId,
-        requestId,
-        decision,
-      } as unknown as Record<string, unknown>) as Promise<void>;
+      const route = this.approvalRoutes.get(requestId);
+      return (
+        this.request(Methods.Approve, {
+          ...route,
+          sessionId,
+          requestId,
+          decision,
+        } as unknown as Record<string, unknown>) as Promise<void>
+      ).finally(() => {
+        this.approvalRoutes.delete(requestId);
+      });
     }
     const [requestId, decision] = args as [string, ApprovalResult];
-    return this.request(Methods.Approve, {
-      requestId,
-      decision,
-    } as unknown as Record<string, unknown>) as Promise<void>;
+    const route = this.approvalRoutes.get(requestId);
+    return (
+      this.request(Methods.Approve, {
+        ...route,
+        requestId,
+        decision,
+      } as unknown as Record<string, unknown>) as Promise<void>
+    ).finally(() => {
+      this.approvalRoutes.delete(requestId);
+    });
   }
 
   /**
@@ -415,7 +432,16 @@ export class AgentClient {
         if (requestId && request) {
           const sessionId =
             typeof params.sessionId === "string" ? (params.sessionId as string) : undefined;
-          const meta: ApprovalRequestMeta = sessionId === undefined ? {} : { sessionId };
+          const connectionId =
+            typeof params.connectionId === "string" ? (params.connectionId as string) : undefined;
+          const generation =
+            typeof params.generation === "number" ? (params.generation as number) : undefined;
+          const meta: ApprovalRequestMeta = {
+            ...(connectionId === undefined ? {} : { connectionId }),
+            ...(sessionId === undefined ? {} : { sessionId }),
+            ...(generation === undefined ? {} : { generation }),
+          };
+          this.approvalRoutes.set(requestId, meta);
           this.emitter.emit("approvalRequest", requestId, request, meta);
         }
         break;
@@ -423,6 +449,7 @@ export class AgentClient {
       case Methods.ApprovalResolved: {
         const requestId = params.requestId as string | undefined;
         if (requestId) {
+          this.approvalRoutes.delete(requestId);
           const sessionId =
             typeof params.sessionId === "string" ? (params.sessionId as string) : undefined;
           const event: ApprovalResolvedEvent =

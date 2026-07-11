@@ -37,7 +37,12 @@ import { diskDefaultsFrom } from "../engine/engine.js";
 import type { ValidatedSettings } from "../settings/schema.js";
 import { isProtectedSettingKey } from "../settings/manager.js";
 import type { ApprovalRequest, ApprovalResult, PermissionMode, StreamEvent } from "../types.js";
-import { setInteractiveApprovalFn } from "../tool-system/permission.js";
+import {
+  type ApprovalRouteTarget,
+  type ApprovalRouter,
+  getApprovalRouter,
+  getInteractiveApprovalBackend,
+} from "../tool-system/permission.js";
 import { getArenaStatus } from "../tool-system/builtin/arena.js";
 import {
   agentNotificationBus,
@@ -113,6 +118,11 @@ export interface AgentServerOptions {
    * service.
    */
   workspaceBridge?: boolean;
+  /** Stable transport connection identity. Supplying it enables strict
+   * connection+session+generation+requestId approval response matching. */
+  connectionId?: string;
+  /** Shared owner router; injectable for hosts/tests, process singleton by default. */
+  approvalRouter?: ApprovalRouter;
 }
 
 export class AgentServer {
@@ -127,6 +137,15 @@ export class AgentServer {
     | ((sessionId: string) => import("../engine/goal.js").GoalConfig | undefined)
     | null;
   private readonly workspaceBridgeEnabled: boolean;
+  private readonly connectionId: string;
+  private readonly strictApprovalRouting: boolean;
+  private readonly approvalRouter: ApprovalRouter;
+  private approvalConnectionUnregister: (() => void) | null = null;
+  private disconnected = false;
+  private readonly pendingApprovalTargets = new Map<
+    string,
+    ApprovalRouteTarget & { requestId: string }
+  >();
   /**
    * Last per-session EngineConfigSlice supplied by agent/run. Kept even after
    * idle eviction so background-completion wakeups can rebuild the ChatSession
@@ -184,6 +203,13 @@ export class AgentServer {
     this.settingsReader = options.settingsReader ?? null;
     this.readActiveGoalFromDisk = options.readActiveGoalFromDisk ?? null;
     this.workspaceBridgeEnabled = options.workspaceBridge === true;
+    this.connectionId = options.connectionId ?? "legacy-agent-server";
+    this.strictApprovalRouting = options.connectionId !== undefined;
+    this.approvalRouter = options.approvalRouter ?? getApprovalRouter();
+    if (!this.strictApprovalRouting) {
+      this.approvalRouter.deregister(this.connectionId, "legacy approval host replaced");
+    }
+    getInteractiveApprovalBackend().clearPromptFn();
 
     if (!this.chatManager && !this.legacyEngine) {
       throw new Error("AgentServer: either chatManager or engine must be supplied");
@@ -202,9 +228,14 @@ export class AgentServer {
       }
     });
 
-    setInteractiveApprovalFn((request: ApprovalRequest) => {
-      return this.requestApprovalFromClient(request);
-    });
+    this.approvalConnectionUnregister = this.approvalRouter.addConnection(
+      this.connectionId,
+      {
+        requestApproval: (request, target) => this.requestApprovalFromClient(request, target),
+        ownershipLost: (targets, reason) => this.failClosedApprovalTargets(targets, reason),
+      },
+      { claimUnownedSessions: !this.strictApprovalRouting },
+    );
 
     if (this.legacyEngine) {
       // Only wire an interactive askUser when a human is present. For
@@ -556,6 +587,7 @@ export class AgentServer {
     }
 
     const sid = params.sessionId;
+    this.approvalRouter.register(sid, this.connectionId);
 
     // Wire AskUserQuestion and host bridges for this interactive session. The
     // chatManager path builds a fresh per-session Engine via engineFactory, so
@@ -614,6 +646,9 @@ export class AgentServer {
         createErrorResponse(req.id, ErrorCodes.InvalidParams, "task is required"),
       );
       return;
+    }
+    if (typeof params.sessionId === "string" && params.sessionId.length > 0) {
+      this.approvalRouter.register(params.sessionId, this.connectionId);
     }
     if (params.cwd !== undefined && (typeof params.cwd !== "string" || params.cwd.length === 0)) {
       this.transport.send(
@@ -725,7 +760,28 @@ export class AgentServer {
   // ─── Approve ────────────────────────────────────────────────────
 
   private handleApprove(req: RpcRequest): void {
-    const params = (req.params ?? {}) as unknown as ApproveParams;
+    const params = (req.params ?? {}) as unknown as ApproveParams & Partial<ApprovalRouteTarget>;
+
+    if (this.strictApprovalRouting) {
+      const pending = this.pendingApprovalTargets.get(params.requestId);
+      const matchesPending =
+        pending !== undefined &&
+        params.connectionId === this.connectionId &&
+        params.sessionId === pending.sessionId &&
+        params.connectionId === pending.connectionId &&
+        params.generation === pending.generation &&
+        this.approvalRouter.matches(pending);
+      if (!matchesPending) {
+        this.transport.send(
+          createErrorResponse(
+            req.id,
+            ErrorCodes.InvalidParams,
+            "Approval response does not match connectionId, sessionId, generation, and requestId",
+          ),
+        );
+        return;
+      }
+    }
 
     // ChatSessionManager path: approvals are scoped by (sessionId, requestId).
     // Never fall back from a session-tagged response to the legacy global map:
@@ -755,6 +811,7 @@ export class AgentServer {
         return;
       }
       s.pendingApprovals.delete(params.requestId);
+      this.pendingApprovalTargets.delete(params.requestId);
       // Cancel the pending timeout for requests that arm one (browser actions,
       // credential injection, and tool approvals). AskUserQuestion does not use
       // a timeout; this is harmless for those request ids.
@@ -778,6 +835,7 @@ export class AgentServer {
     }
 
     this.pendingApprovals.delete(params.requestId);
+    this.pendingApprovalTargets.delete(params.requestId);
     this.clearApprovalTimer(params.requestId);
     resolve(params.decision);
     this.transport.send(createResponse(req.id, { ok: true }));
@@ -1057,6 +1115,7 @@ export class AgentServer {
       if (session) {
         this.cancelSessionApprovals(session, "session closed");
       }
+      this.approvalRouter.release(params.sessionId, this.connectionId, "session closed");
       this.chatManager.close(params.sessionId);
     }
     // Explicit session teardown — reap that session's background shells
@@ -1987,10 +2046,18 @@ export class AgentServer {
   /**
    * Ask the client to approve a tool operation (legacy single-engine path).
    */
-  private requestApprovalFromClient(request: ApprovalRequest): Promise<ApprovalResult> {
+  private requestApprovalFromClient(
+    request: ApprovalRequest,
+    route?: ApprovalRouteTarget,
+  ): Promise<ApprovalResult> {
     return new Promise((resolve) => {
       const requestId = nanoid(12);
-      const sessionId = typeof request.sessionId === "string" ? request.sessionId : undefined;
+      const effectiveRoute = route ?? {
+        connectionId: this.connectionId,
+        sessionId: request.sessionId ?? "",
+        generation: 0,
+      };
+      const sessionId = effectiveRoute.sessionId;
       const session = this.chatManager && sessionId ? this.chatManager.get(sessionId) : undefined;
 
       if (this.chatManager && sessionId && !session) {
@@ -2005,11 +2072,13 @@ export class AgentServer {
       } else {
         this.pendingApprovals.set(requestId, resolve);
       }
+      this.pendingApprovalTargets.set(requestId, { ...effectiveRoute, requestId });
 
       const timer = setTimeout(() => {
         const pending = session?.pendingApprovals ?? this.pendingApprovals;
         if (pending.has(requestId)) {
           pending.delete(requestId);
+          this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
           resolve({ approved: false, reason: "approval timed out" });
         }
@@ -2017,11 +2086,24 @@ export class AgentServer {
       this.approvalTimers.set(requestId, timer);
 
       this.notify(Methods.ApprovalRequest, {
+        connectionId: effectiveRoute.connectionId,
         ...(sessionId ? { sessionId } : {}),
+        generation: effectiveRoute.generation,
         requestId,
         request,
       });
     });
+  }
+
+  private approvalRouteEnvelope(
+    sessionId: string,
+    requestId: string,
+  ): (ApprovalRouteTarget & { requestId: string }) | { sessionId: string; requestId: string } {
+    const route = this.approvalRouter.current(sessionId);
+    if (!route || route.connectionId !== this.connectionId) return { sessionId, requestId };
+    const target = { ...route, requestId };
+    this.pendingApprovalTargets.set(requestId, target);
+    return target;
   }
 
   /**
@@ -2061,8 +2143,7 @@ export class AgentServer {
       if (opts?.optionsOnly !== undefined) args.optionsOnly = opts.optionsOnly;
 
       this.notify(Methods.ApprovalRequest, {
-        sessionId,
-        requestId,
+        ...this.approvalRouteEnvelope(sessionId, requestId),
         request: {
           toolName: "__ask_user__",
           args,
@@ -2090,6 +2171,7 @@ export class AgentServer {
           const resolveFn = session.pendingApprovals.get(requestId);
           if (resolveFn) {
             session.pendingApprovals.delete(requestId);
+            this.pendingApprovalTargets.delete(requestId);
             this.approvalTimers.delete(requestId);
             resolveFn("(用户未在限定时间内回答;目标运行中请自行做出合理假设并继续推进。)");
             // Tell every client the ask is resolved (nobody answered) so the
@@ -2169,6 +2251,7 @@ export class AgentServer {
       const timer = setTimeout(() => {
         if (session.pendingApprovals.has(requestId)) {
           session.pendingApprovals.delete(requestId);
+          this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
           resolve({ ok: false, detail: "browser action timed out" });
         }
@@ -2176,8 +2259,7 @@ export class AgentServer {
       this.approvalTimers.set(requestId, timer);
 
       this.notify(Methods.ApprovalRequest, {
-        sessionId,
-        requestId,
+        ...this.approvalRouteEnvelope(sessionId, requestId),
         request: {
           toolName: "__browser_action__",
           args: { action, ...payload },
@@ -2225,6 +2307,7 @@ export class AgentServer {
       const timer = setTimeout(() => {
         if (session.pendingApprovals.has(requestId)) {
           session.pendingApprovals.delete(requestId);
+          this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
           resolve({ ok: false, error: "credential inject timed out" });
         }
@@ -2232,8 +2315,7 @@ export class AgentServer {
       this.approvalTimers.set(requestId, timer);
 
       this.notify(Methods.ApprovalRequest, {
-        sessionId,
-        requestId,
+        ...this.approvalRouteEnvelope(sessionId, requestId),
         request: {
           toolName: "__credential_action__",
           args: { action: "injectCookie", credentialId, credentialScope },
@@ -2290,6 +2372,7 @@ export class AgentServer {
       const timer = setTimeout(() => {
         if (session.pendingApprovals.has(requestId)) {
           session.pendingApprovals.delete(requestId);
+          this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
           reject(new Error("workspace switch timed out"));
         }
@@ -2297,8 +2380,7 @@ export class AgentServer {
       this.approvalTimers.set(requestId, timer);
 
       this.notify(Methods.ApprovalRequest, {
-        sessionId,
-        requestId,
+        ...this.approvalRouteEnvelope(sessionId, requestId),
         request: {
           toolName: "__workspace_action__",
           args: { action: "switch", target },
@@ -2376,6 +2458,7 @@ export class AgentServer {
   // ─── Lifecycle ──────────────────────────────────────────────────
 
   close(): void {
+    this.disconnect("server closing");
     // Detach the bg-agent bus subscription first so a final flurry of
     // completions during shutdown can't race the `shutdown` status
     // notify below. Safe to call repeatedly — the unsubscribe is a
@@ -2415,6 +2498,18 @@ export class AgentServer {
     this.transport.close();
   }
 
+  /** Release only this transport's approval ownership. Safe on socket close
+   * even when the ChatSessionManager is shared by other TCP connections. */
+  disconnect(reason = "approval connection disconnected"): void {
+    if (this.disconnected) return;
+    this.disconnected = true;
+    const unregister = this.approvalConnectionUnregister;
+    this.approvalConnectionUnregister = null;
+    if (unregister) {
+      this.approvalRouter.deregister(this.connectionId, reason);
+    }
+  }
+
   private clearApprovalTimer(requestId: string): void {
     const timer = this.approvalTimers.get(requestId);
     if (timer) {
@@ -2436,6 +2531,7 @@ export class AgentServer {
   ): void {
     for (const [requestId, resolve] of session.pendingApprovals) {
       this.clearApprovalTimer(requestId);
+      this.pendingApprovalTargets.delete(requestId);
       try {
         resolve({ approved: false, reason });
       } catch {
@@ -2443,6 +2539,30 @@ export class AgentServer {
       }
     }
     session.pendingApprovals.clear();
+  }
+
+  private failClosedApprovalTargets(targets: ApprovalRouteTarget[], reason: string): void {
+    for (const target of targets) {
+      const session = this.chatManager?.get(target.sessionId);
+      if (session) {
+        this.cancelSessionApprovals(session, reason);
+        continue;
+      }
+      for (const [requestId, pending] of this.pendingApprovalTargets) {
+        if (
+          pending.connectionId !== target.connectionId ||
+          pending.sessionId !== target.sessionId ||
+          pending.generation !== target.generation
+        ) {
+          continue;
+        }
+        const resolve = this.pendingApprovals.get(requestId);
+        this.pendingApprovals.delete(requestId);
+        this.pendingApprovalTargets.delete(requestId);
+        this.clearApprovalTimer(requestId);
+        resolve?.({ approved: false, reason });
+      }
+    }
   }
 
   private clearAllApprovalTimers(): void {

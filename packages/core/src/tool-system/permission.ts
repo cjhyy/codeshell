@@ -19,6 +19,112 @@ export interface ApprovalBackend {
   requestApproval(request: ApprovalRequest): Promise<ApprovalResult>;
 }
 
+export interface ApprovalRouteTarget {
+  connectionId: string;
+  sessionId: string;
+  generation: number;
+}
+
+export interface ApprovalConnectionHandler {
+  requestApproval(request: ApprovalRequest, target: ApprovalRouteTarget): Promise<ApprovalResult>;
+  ownershipLost?(targets: ApprovalRouteTarget[], reason: string): void;
+}
+
+/**
+ * Process-local connection owner router. Handlers are connection-scoped while
+ * session ownership is an explicit binding with a monotonic generation.
+ */
+export class ApprovalRouter {
+  private readonly handlers = new Map<string, ApprovalConnectionHandler>();
+  private readonly owners = new Map<string, ApprovalRouteTarget>();
+  private readonly fallbackConnections = new Set<string>();
+  private nextGeneration = 1;
+
+  addConnection(
+    connectionId: string,
+    handler: ApprovalConnectionHandler,
+    options?: { claimUnownedSessions?: boolean },
+  ): () => void {
+    if (!connectionId) throw new Error("approval connectionId is required");
+    if (this.handlers.has(connectionId)) {
+      throw new Error(`approval connection already registered: ${connectionId}`);
+    }
+    this.handlers.set(connectionId, handler);
+    if (options?.claimUnownedSessions) this.fallbackConnections.add(connectionId);
+    return () => this.deregister(connectionId);
+  }
+
+  register(sessionId: string, connectionId: string): ApprovalRouteTarget {
+    if (!sessionId) throw new Error("approval sessionId is required");
+    if (!this.handlers.has(connectionId)) {
+      throw new Error(`approval connection is not registered: ${connectionId}`);
+    }
+    const current = this.owners.get(sessionId);
+    if (current?.connectionId === connectionId) return current;
+
+    const target = { connectionId, sessionId, generation: this.nextGeneration++ };
+    this.owners.set(sessionId, target);
+    if (current) {
+      this.handlers
+        .get(current.connectionId)
+        ?.ownershipLost?.([current], "approval ownership changed");
+    }
+    return target;
+  }
+
+  resolve(request: ApprovalRequest): Promise<ApprovalResult> | null {
+    if (!request.sessionId) return null;
+    let target = this.owners.get(request.sessionId);
+    if (!target && this.fallbackConnections.size === 1) {
+      const connectionId = this.fallbackConnections.values().next().value;
+      if (connectionId) target = this.register(request.sessionId, connectionId);
+    }
+    if (!target) return null;
+    const handler = this.handlers.get(target.connectionId);
+    if (!handler) {
+      this.owners.delete(request.sessionId);
+      return null;
+    }
+    return handler.requestApproval(request, target);
+  }
+
+  matches(target: ApprovalRouteTarget): boolean {
+    const current = this.owners.get(target.sessionId);
+    return (
+      current?.connectionId === target.connectionId && current.generation === target.generation
+    );
+  }
+
+  current(sessionId: string): ApprovalRouteTarget | null {
+    return this.owners.get(sessionId) ?? null;
+  }
+
+  release(sessionId: string, connectionId: string, reason = "approval session released"): void {
+    const current = this.owners.get(sessionId);
+    if (!current || current.connectionId !== connectionId) return;
+    this.owners.delete(sessionId);
+    this.handlers.get(connectionId)?.ownershipLost?.([current], reason);
+  }
+
+  deregister(connectionId: string, reason = "approval connection disconnected"): void {
+    const handler = this.handlers.get(connectionId);
+    if (!handler) return;
+    this.handlers.delete(connectionId);
+    this.fallbackConnections.delete(connectionId);
+    const lost: ApprovalRouteTarget[] = [];
+    for (const [sessionId, target] of this.owners) {
+      if (target.connectionId !== connectionId) continue;
+      this.owners.delete(sessionId);
+      lost.push(target);
+    }
+    if (lost.length > 0) handler.ownershipLost?.(lost, reason);
+  }
+
+  hasConnections(): boolean {
+    return this.handlers.size > 0;
+  }
+}
+
 export class HeadlessApprovalBackend implements ApprovalBackend {
   constructor(private readonly mode: "approve-all" | "deny-all" | "approve-read-only") {}
 
@@ -170,19 +276,26 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
     onProjectRules: null,
   };
 
+  constructor(private readonly approvalRouter = new ApprovalRouter()) {}
+
   setPromptFn(fn: (request: ApprovalRequest) => Promise<ApprovalResult>): void {
     this.promptFn = fn;
+  }
+
+  clearPromptFn(): void {
+    this.promptFn = null;
   }
 
   /**
    * Has someone installed a real prompt callback? Engine consults this
    * to decide whether to use the interactive backend (= talk to a UI)
    * or fall back to HeadlessApprovalBackend (= deny-all). Without it,
-   * the agent-server-stdio entry — which wires setInteractiveApprovalFn
-   * during server boot — would still fall through to deny-all because
+   * a protocol host registers its connection with ApprovalRouter during boot
+   * but before the first session is bound — without this check Engine would
+   * still fall through to deny-all because
    * the engine couldn't tell the difference. */
   hasPromptFn(): boolean {
-    return this.promptFn !== null;
+    return this.promptFn !== null || this.approvalRouter.hasConnections();
   }
 
   /** Inject the project root so persistence writes to the right settings file. */
@@ -274,7 +387,7 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
     const cached = state ? this.checkSessionRules(req, state) : null;
     if (cached) return cached;
 
-    if (!this.promptFn) {
+    if (!this.promptFn && !this.approvalRouter.hasConnections()) {
       return { approved: false, reason: "interactive approval backend has no prompt function" };
     }
 
@@ -321,10 +434,24 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
     req: ApprovalRequest,
     state: InteractiveApprovalSessionState | null,
   ): Promise<ApprovalResult> {
-    if (!this.promptFn) {
+    const hasOwner = !!req.sessionId && this.approvalRouter.current(req.sessionId) !== null;
+    const routed = hasOwner ? this.approvalRouter.resolve(req) : null;
+    let result: ApprovalResult;
+    if (routed) {
+      result = await routed;
+    } else if (this.promptFn) {
+      result = await this.promptFn(req);
+    } else if (req.sessionId && this.approvalRouter.hasConnections()) {
+      const fallback = this.approvalRouter.resolve(req);
+      result = fallback
+        ? await fallback
+        : {
+            approved: false,
+            reason: `no approval connection owns session ${req.sessionId}`,
+          };
+    } else {
       return { approved: false, reason: "interactive approval backend has no prompt function" };
     }
-    const result = await this.promptFn(req);
     const scope = result.scope ?? (result.always ? "session" : "once");
     const activeState = this.isActiveSessionState(req.sessionId, state) ? state : null;
     const context = activeState ?? (!req.sessionId ? this.legacyContext : null);
@@ -599,12 +726,17 @@ function persistProjectRule(cwd: string, rule: PermissionRule): void {
   renameSync(tmp, file);
 }
 
-// Singleton interactive backend for use by the UI
+// Singleton interactive backend and its multi-connection owner router.
+const _approvalRouter = new ApprovalRouter();
 let _interactiveBackend: InteractiveApprovalBackend | null = null;
+
+export function getApprovalRouter(): ApprovalRouter {
+  return _approvalRouter;
+}
 
 export function getInteractiveApprovalBackend(): InteractiveApprovalBackend {
   if (!_interactiveBackend) {
-    _interactiveBackend = new InteractiveApprovalBackend();
+    _interactiveBackend = new InteractiveApprovalBackend(_approvalRouter);
   }
   return _interactiveBackend;
 }
@@ -615,12 +747,6 @@ export function openInteractiveApprovalSession(sessionId: string): void {
 
 export function clearInteractiveApprovalSession(sessionId: string): void {
   getInteractiveApprovalBackend().clearSession(sessionId);
-}
-
-export function setInteractiveApprovalFn(
-  fn: (request: ApprovalRequest) => Promise<ApprovalResult>,
-): void {
-  getInteractiveApprovalBackend().setPromptFn(fn);
 }
 
 // ─── YOLO Classifier — categorize bash commands by safety level ───

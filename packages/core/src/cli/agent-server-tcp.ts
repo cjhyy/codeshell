@@ -34,6 +34,8 @@ import { createRunManager } from "../run/factory.js";
 import { startAutomation } from "../automation/index.js";
 import { CronStore, defaultCronStorePath } from "../automation/store.js";
 import { resolveLLMConfigForTag } from "../engine/resolve-llm-config.js";
+import { randomUUID } from "node:crypto";
+import { getApprovalRouter } from "../tool-system/permission.js";
 
 const cwd = process.env.AGENT_CWD ?? process.cwd();
 const port = Number(process.env.AGENT_TCP_PORT ?? "4321");
@@ -57,7 +59,7 @@ if (!seedLlm) {
     `[agent-server] 没有可用的文本模型连接(defaults.text=${
       (settings as { defaults?: { text?: string } }).defaults?.text ?? "未设置"
     })。` +
-    `请在「连接」页添加并填写凭证。`,
+      `请在「连接」页添加并填写凭证。`,
   );
   process.exit(1);
 }
@@ -138,9 +140,18 @@ const automation = startAutomation({
 // One AgentServer per accepted connection, all sharing the same chatManager.
 const servers = new Set<AgentServer>();
 
-listenTcp({ port, host }, (transport) => {
-  const server = new AgentServer({ chatManager, transport });
+listenTcp({ port, host }, (transport, socket) => {
+  const server = new AgentServer({
+    chatManager,
+    transport,
+    connectionId: randomUUID(),
+    approvalRouter: getApprovalRouter(),
+  });
   servers.add(server);
+  socket.once("close", () => {
+    server.disconnect();
+    servers.delete(server);
+  });
 })
   .then((listener) => {
     process.stderr.write(`[code-shell] automation server listening on ${host}:${listener.port}\n`);
