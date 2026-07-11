@@ -150,6 +150,11 @@ export function codeShellHome(): string {
   return process.env.CODE_SHELL_HOME || join(homedir(), ".code-shell");
 }
 
+/** Canonical root for every persisted CodeShell session. */
+export function sessionsRoot(): string {
+  return join(codeShellHome(), "sessions");
+}
+
 function isSessionWorkspace(value: unknown): value is SessionWorkspace {
   if (!value || typeof value !== "object") return false;
   const ws = value as Partial<SessionWorkspace>;
@@ -188,7 +193,7 @@ export class SessionManager {
   private readonly registeredCloseEpochs = new Map<string, number>();
 
   constructor(storageDir?: string) {
-    this.sessionsDir = storageDir ?? join(codeShellHome(), "sessions");
+    this.sessionsDir = storageDir ?? sessionsRoot();
     mkdirSync(this.sessionsDir, { recursive: true });
     this.cleanupStaleForkStaging();
   }

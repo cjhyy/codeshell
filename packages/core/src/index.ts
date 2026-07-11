@@ -144,6 +144,8 @@ export {
 export { Transcript } from "./session/transcript.js";
 export {
   SessionManager,
+  codeShellHome,
+  sessionsRoot,
   buildForkState,
   buildForkTranscript,
   type ForkSessionOptions,

@@ -1,12 +1,12 @@
 /**
  * List session files persisted by the agent worker.
- * Sessions are JSONL files under ~/.code-shell/sessions/.
+ * Uses core's canonical session root so CODE_SHELL_HOME matches the worker.
  */
 
+import { sessionsRoot } from "@cjhyy/code-shell-core";
 import * as fs from "node:fs/promises";
 import * as fsSync from "node:fs";
 import * as path from "node:path";
-import * as os from "node:os";
 
 export interface DesktopSessionSummary {
   id: string;
@@ -17,8 +17,6 @@ export interface DesktopSessionSummary {
   updatedAt: number;
 }
 
-const SESSIONS_DIR = path.join(os.homedir(), ".code-shell", "sessions");
-
 const SAFE_ID = /^[A-Za-z0-9_.-]+$/;
 const QUICK_CHAT_SESSION_PREFIX = "qchat-";
 
@@ -27,7 +25,7 @@ function isQuickChatSessionId(id: string): boolean {
 }
 
 export async function listSessions(
-  baseDir: string = SESSIONS_DIR,
+  baseDir: string = sessionsRoot(),
 ): Promise<DesktopSessionSummary[]> {
   try {
     const entries = await fs.readdir(baseDir, { withFileTypes: true });
@@ -67,7 +65,10 @@ export async function listSessions(
  * `baseDir` is overridable for tests. Unsafe ids (slashes / "." / "..")
  * are rejected without any filesystem access.
  */
-export async function deleteSessionDir(id: string, baseDir: string = SESSIONS_DIR): Promise<void> {
+export async function deleteSessionDir(
+  id: string,
+  baseDir: string = sessionsRoot(),
+): Promise<void> {
   if (!SAFE_ID.test(id) || id === "." || id === "..") return;
   // Directory form (current).
   await fs.rm(path.join(baseDir, id), { recursive: true, force: true });
@@ -92,7 +93,7 @@ export async function deleteSession(id: string): Promise<void> {
  * coordinated by QuickChatOwnershipRegistry instead.
  */
 export async function cleanupStaleQuickChatSessions(
-  baseDir: string = SESSIONS_DIR,
+  baseDir: string = sessionsRoot(),
 ): Promise<string[]> {
   let entries: fsSync.Dirent[];
   try {
@@ -143,7 +144,7 @@ export interface ListDiskSessionsResult {
  */
 export async function listDiskSessions(
   opts: { limit: number; cursor?: string },
-  baseDir: string = SESSIONS_DIR,
+  baseDir: string = sessionsRoot(),
 ): Promise<ListDiskSessionsResult> {
   // Async fs throughout: this is an IPC handler on the Electron main thread
   // (sessions:listDisk). The previous synchronous statSync/readFileSync loops
