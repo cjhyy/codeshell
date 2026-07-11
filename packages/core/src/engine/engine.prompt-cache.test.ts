@@ -10,6 +10,10 @@ import { registerProvider } from "../llm/client-factory.js";
 import type { CreateMessageOptions } from "../llm/types.js";
 import type { LLMResponse, Message, TokenUsage } from "../types.js";
 import { logger } from "../logging/logger.js";
+import type {
+  PromptCacheDiagnosticSample,
+  PromptPrefixFingerprint,
+} from "./prompt-cache-diagnostics.js";
 
 const provider = "fake-engine-prompt-cache";
 const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
@@ -26,6 +30,24 @@ type Scenario = {
 };
 
 const scenarios = new Map<string, Scenario>();
+
+function diagnosticSample(
+  cacheReadTokens: number,
+  fingerprint: Partial<PromptPrefixFingerprint> = {},
+): PromptCacheDiagnosticSample {
+  return {
+    usage: { promptTokens: 2000, completionTokens: 1, totalTokens: 2001, cacheReadTokens },
+    requestKind: "primary",
+    fingerprint: {
+      version: 1,
+      cacheScopeHash: "scope",
+      systemHash: "system",
+      toolsHash: "tools",
+      configHash: "config",
+      ...fingerprint,
+    },
+  };
+}
 
 function cloneMessages(messages: Message[]): Message[] {
   return JSON.parse(JSON.stringify(messages)) as Message[];
@@ -303,6 +325,8 @@ describe("Engine prompt-cache hygiene", () => {
           sessionId,
           previousCacheReadTokens: 1200,
           currentCacheReadTokens: 0,
+          cause: "no_tracked_prefix_change",
+          changedPrefixes: [],
         }),
       );
     } finally {
@@ -323,14 +347,80 @@ describe("Engine prompt-cache hygiene", () => {
     });
 
     for (let i = 0; i < 260; i++) {
-      (engine as any).recordCacheReadDiagnostics(`s-${i}`, {
-        cacheReadTokens: i + 1,
-      });
+      (engine as any).recordCacheReadDiagnostics(`s-${i}`, diagnosticSample(i + 1));
     }
 
-    const diagnostics = (engine as any).lastCacheReadBySid as Map<string, number>;
+    const diagnostics = (engine as any).promptCacheDiagnostics;
     expect(diagnostics.size).toBeLessThanOrEqual(256);
     expect(diagnostics.has("s-0")).toBe(false);
     expect(diagnostics.has("s-259")).toBe(true);
+  });
+
+  it("attributes changed prefixes and resets a changed cache scope without warning", () => {
+    const model = `${provider}-cache-attribution-${Date.now()}-${Math.random()}`;
+    const engine = new Engine({
+      llm: {
+        provider,
+        model,
+        apiKey: "SUPER_SECRET",
+        baseUrl: "https://secret.example/v1",
+      } as never,
+      cwd: repo,
+      sessionStorageDir: sessions,
+      enabledBuiltinTools: [],
+      preset: "terminal-coding",
+      headless: true,
+    });
+    const warn = spyOn(logger, "warn").mockImplementation(() => {});
+
+    try {
+      (engine as any).recordCacheReadDiagnostics("system-change", diagnosticSample(1200));
+      (engine as any).recordCacheReadDiagnostics(
+        "system-change",
+        diagnosticSample(0, { systemHash: "system-2" }),
+      );
+      expect(warn).toHaveBeenCalledWith(
+        "engine.cache_read_drop",
+        expect.objectContaining({
+          cause: "system_changed",
+          changedPrefixes: ["system"],
+        }),
+      );
+
+      warn.mockClear();
+      for (const [sessionId, changes, cause, changedPrefixes] of [
+        ["tools-change", { toolsHash: "tools-2" }, "tools_changed", ["tools"]],
+        ["config-change", { configHash: "config-2" }, "config_changed", ["config"]],
+        [
+          "multiple-change",
+          { systemHash: "system-2", toolsHash: "tools-2" },
+          "multiple_prefixes_changed",
+          ["system", "tools"],
+        ],
+      ] as const) {
+        (engine as any).recordCacheReadDiagnostics(sessionId, diagnosticSample(1200));
+        (engine as any).recordCacheReadDiagnostics(sessionId, diagnosticSample(0, changes));
+        expect(warn).toHaveBeenCalledWith(
+          "engine.cache_read_drop",
+          expect.objectContaining({ cause, changedPrefixes: [...changedPrefixes] }),
+        );
+        warn.mockClear();
+      }
+
+      (engine as any).recordCacheReadDiagnostics("scope-change", diagnosticSample(1200));
+      (engine as any).recordCacheReadDiagnostics(
+        "scope-change",
+        diagnosticSample(0, { cacheScopeHash: "scope-2" }),
+      );
+      expect(warn).not.toHaveBeenCalledWith("engine.cache_read_drop", expect.anything());
+      expect(
+        JSON.stringify((engine as any).promptCacheDiagnostics.get("scope-change")),
+      ).not.toContain("SUPER_SECRET");
+      expect(
+        JSON.stringify((engine as any).promptCacheDiagnostics.get("scope-change")),
+      ).not.toContain("secret.example");
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

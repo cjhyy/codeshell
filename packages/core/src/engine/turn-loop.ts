@@ -26,6 +26,7 @@ import { HookRegistry } from "../hooks/registry.js";
 import type { HookEventName, HookResult } from "../hooks/events.js";
 import type { GoalJudgeRuntimeContext } from "../hooks/goal-stop-hook.js";
 import { buildGoalJudgeRuntimeContext } from "./goal-judge-context.js";
+import type { PromptCacheDiagnosticSample } from "./prompt-cache-diagnostics.js";
 import { wrapHookMessages } from "../hooks/inject.js";
 import { Transcript } from "../session/transcript.js";
 import { ContextLimitError } from "../exceptions.js";
@@ -154,7 +155,7 @@ export interface TurnLoopDeps {
    * Lightweight per-session prompt-cache diagnostic, owned by Engine because it
    * needs memory across TurnLoop instances.
    */
-  recordCacheReadDiagnostics?: (usage: TokenUsage) => void;
+  recordCacheReadDiagnostics?: (sample: PromptCacheDiagnosticSample) => void;
   /** Persist the latest context-estimation anchor derived from provider usage. */
   recordContextUsageAnchor?: (anchor: ContextUsageAnchor) => void;
   /**
@@ -577,10 +578,23 @@ export class TurnLoop {
     });
   }
 
-  private recordResponseUsage(usage: NonNullable<LLMResponse["usage"]>): void {
+  private recordResponseUsage(
+    usage: NonNullable<LLMResponse["usage"]>,
+    requestKind: PromptCacheDiagnosticSample["requestKind"] = "primary",
+    recordCacheDiagnostics = true,
+  ): void {
     this.currentTurnUsage = addTokenUsage(this.currentTurnUsage, usage);
     this.currentCumulativeUsage = this.deps.recordCumulativeUsage?.(usage);
-    this.deps.recordCacheReadDiagnostics?.(usage);
+    if (recordCacheDiagnostics && this.deps.recordCacheReadDiagnostics) {
+      this.deps.recordCacheReadDiagnostics({
+        usage,
+        requestKind,
+        fingerprint: this.deps.model.getPromptPrefixFingerprint(
+          this.deps.systemPrompt,
+          this.deps.tools,
+        ),
+      });
+    }
   }
 
   private emitCtxFromUsage(usage: NonNullable<LLMResponse["usage"]>, messages: Message[]): void {
@@ -1019,7 +1033,7 @@ export class TurnLoop {
                 this.stopBlockCount = 0;
               }
               if (contResponse.usage?.promptTokens !== undefined) {
-                this.recordResponseUsage(contResponse.usage);
+                this.recordResponseUsage(contResponse.usage, "continuation");
                 continuedResponse = true;
               }
               if (goalTracker && contResponse.usage) {
@@ -1576,7 +1590,7 @@ export class TurnLoop {
         this.modelCallRecordingOptions(),
       );
       if (summaryResponse.usage?.promptTokens !== undefined) {
-        this.recordResponseUsage(summaryResponse.usage);
+        this.recordResponseUsage(summaryResponse.usage, "primary", false);
       }
       if (goalTracker && summaryResponse.usage) {
         recordGoalUsage(

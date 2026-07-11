@@ -71,6 +71,16 @@ export class AnthropicClient extends LLMClientBase {
     return this._capability;
   }
 
+  override getPromptCacheConfigIdentity(): Readonly<Record<string, unknown>> {
+    return {
+      ...super.getPromptCacheConfigIdentity(),
+      cacheStrategy: "anthropic-explicit",
+      cacheLayoutVersion: "system-tools-history-v1",
+      breakpointCount: 3,
+      reasoningShape: this.capability.reasoning,
+    };
+  }
+
   /**
    * Translate the resolved ReasoningSetting into Anthropic's `thinking` field,
    * honoring the model's reasoning shape (rules.ts):

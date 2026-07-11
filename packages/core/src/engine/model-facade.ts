@@ -14,6 +14,10 @@ import {
 import { sanitizeMessages } from "../logging/sanitize-messages.js";
 import { addAPIDuration, addToModelUsage, addInputTokens, addOutputTokens } from "../state.js";
 import { cacheHitRateFromUsage } from "./session-usage.js";
+import {
+  createPromptPrefixFingerprint,
+  type PromptPrefixFingerprint,
+} from "./prompt-cache-diagnostics.js";
 
 export interface ModelCallRecordingOptions {
   sensitiveToolResultRedactions?: ReadonlyMap<string, string>;
@@ -43,6 +47,27 @@ export class ModelFacade {
     private readonly client: LLMClientBase,
     private readonly transcript: Transcript,
   ) {}
+
+  getPromptPrefixFingerprint(
+    systemPrompt: string,
+    tools: readonly ToolDefinition[],
+  ): PromptPrefixFingerprint {
+    const client = this.client as LLMClientBase & {
+      getPromptCacheConfigIdentity?: () => Readonly<Record<string, unknown>>;
+      getPromptCacheScopeIdentity?: () => Readonly<Record<string, unknown>>;
+    };
+    const fallbackIdentity = {
+      provider: client.provider ?? "unknown",
+      model: client.model ?? "unknown",
+      identityVersion: "legacy-client-v1",
+    };
+    return createPromptPrefixFingerprint(
+      systemPrompt,
+      tools,
+      client.getPromptCacheConfigIdentity?.() ?? fallbackIdentity,
+      client.getPromptCacheScopeIdentity?.() ?? fallbackIdentity,
+    );
+  }
 
   async call(
     systemPrompt: string,
@@ -111,6 +136,7 @@ export class ModelFacade {
     }
 
     const latencyMs = Date.now() - startMs;
+    const promptPrefix = this.getPromptPrefixFingerprint(systemPrompt, tools);
     logger.info("llm.request", {
       stream: true,
       latencyMs,
@@ -120,6 +146,7 @@ export class ModelFacade {
       textLen: response.text?.length ?? 0,
       usage: response.usage,
       cacheHitRate: cacheHitRate(response.usage),
+      promptPrefix,
     });
     recordLLMResponse(
       sid,
@@ -183,6 +210,7 @@ export class ModelFacade {
     }
 
     const latencyMs = Date.now() - startMs;
+    const promptPrefix = this.getPromptPrefixFingerprint(systemPrompt, tools);
     logger.info("llm.request", {
       stream: false,
       latencyMs,
@@ -192,6 +220,7 @@ export class ModelFacade {
       textLen: response.text?.length ?? 0,
       usage: response.usage,
       cacheHitRate: cacheHitRate(response.usage),
+      promptPrefix,
     });
     recordLLMResponse(
       sid,

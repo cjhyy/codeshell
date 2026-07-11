@@ -118,6 +118,11 @@ import { detectProviderFromApiKey, buildModelPool } from "../onboarding.js";
 import { detectPastedNoise } from "../utils/task-sanitizer.js";
 import { formatFriendlyError } from "./friendly-error.js";
 import { buildSessionTitle } from "./session-title.js";
+import {
+  PromptCacheDiagnosticRecorder,
+  promptCacheDropHint,
+  type PromptCacheDiagnosticSample,
+} from "./prompt-cache-diagnostics.js";
 import { MemoryOrchestrator } from "../services/memory-orchestrator.js";
 import { runDreamConsolidation } from "../services/dream-consolidation.js";
 import { EngineRuntime } from "./runtime.js";
@@ -125,11 +130,6 @@ import { buildRunUserMessageContent, prepareRunImageInput } from "./run-image-in
 import { join } from "node:path";
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import type { InputAttachmentMeta } from "../protocol/types.js";
-
-const CACHE_READ_DROP_MIN_PREVIOUS_TOKENS = 100;
-const CACHE_READ_DROP_MAX_CURRENT_TOKENS = 64;
-const CACHE_READ_DROP_RATIO = 0.1;
-const CACHE_READ_DIAGNOSTIC_MAX_SESSIONS = 256;
 
 /**
  * Build ScanOptions.compatFileNames from the user's instruction compat toggles.
@@ -421,7 +421,7 @@ export class Engine {
    * LLM response arrives.
    */
   private ctxOverheadBySid = new Map<string, number>();
-  private lastCacheReadBySid = new Map<string, number>();
+  private promptCacheDiagnostics = new PromptCacheDiagnosticRecorder({ maxSessions: 256 });
   /**
    * Step-gap steering queue (per sessionId, in-memory). Host pushes user
    * messages here via enqueueSteer while a run is in flight; the turn loop
@@ -2185,8 +2185,8 @@ export class Engine {
             toolCtx.originClientMessageId = clientMessageId;
           },
           recordCumulativeUsage,
-          recordCacheReadDiagnostics: (usage) => {
-            this.recordCacheReadDiagnostics(sid, usage);
+          recordCacheReadDiagnostics: (sample) => {
+            this.recordCacheReadDiagnostics(sid, sample);
           },
           recordContextUsageAnchor: (anchor) => {
             session.state.contextUsageAnchor = {
@@ -3224,29 +3224,35 @@ export class Engine {
     return withoutDynamicContext.slice(1);
   }
 
-  private recordCacheReadDiagnostics(sessionId: string, usage: TokenUsage): void {
-    const current = usage.cacheReadTokens;
-    if (current === undefined || !Number.isFinite(current)) return;
-
-    const previous = this.lastCacheReadBySid.get(sessionId);
-    this.lastCacheReadBySid.delete(sessionId);
-    this.lastCacheReadBySid.set(sessionId, current);
-    if (this.lastCacheReadBySid.size > CACHE_READ_DIAGNOSTIC_MAX_SESSIONS) {
-      const oldestSessionId = this.lastCacheReadBySid.keys().next().value;
-      if (oldestSessionId !== undefined) this.lastCacheReadBySid.delete(oldestSessionId);
-    }
-    if (previous === undefined || previous < CACHE_READ_DROP_MIN_PREVIOUS_TOKENS) return;
-
-    const dropRatio = previous > 0 ? current / previous : 1;
-    if (current <= CACHE_READ_DROP_MAX_CURRENT_TOKENS && dropRatio <= CACHE_READ_DROP_RATIO) {
-      logger.warn("engine.cache_read_drop", {
+  private recordCacheReadDiagnostics(sessionId: string, sample: PromptCacheDiagnosticSample): void {
+    const result = this.promptCacheDiagnostics.record(sessionId, sample);
+    if (result.kind === "scope_changed") {
+      logger.info("engine.cache_scope_changed", {
         sessionId,
-        previousCacheReadTokens: previous,
-        currentCacheReadTokens: current,
-        dropRatio,
-        hint: "Prompt cache read tokens dropped sharply. Check for changed cacheable prefix, stale dynamic context in history, tool/schema changes, or provider cache eviction.",
+        cacheScopeHash: sample.fingerprint.cacheScopeHash,
       });
+      return;
     }
+    if (result.kind === "schema_changed") {
+      logger.info("engine.cache_diagnostic_schema_changed", {
+        sessionId,
+        version: sample.fingerprint.version,
+      });
+      return;
+    }
+    if (result.kind !== "drop") return;
+
+    logger.warn("engine.cache_read_drop", {
+      sessionId,
+      previousCacheReadTokens: result.previous.cacheReadTokens,
+      currentCacheReadTokens: result.current.cacheReadTokens,
+      dropRatio: result.dropRatio,
+      cause: result.attribution.cause,
+      changedPrefixes: result.attribution.changedPrefixes,
+      previousPrefix: result.previous.fingerprint,
+      currentPrefix: result.current.fingerprint,
+      hint: promptCacheDropHint(result.attribution),
+    });
   }
 
   private getSettingsManager(): SettingsManager {

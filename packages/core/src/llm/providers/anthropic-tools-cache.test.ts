@@ -49,6 +49,15 @@ const opts = (tools: CreateMessageOptions["tools"]): CreateMessageOptions => ({
 });
 
 describe("AnthropicClient tools prompt-cache breakpoint", () => {
+  it("reports its explicit three-breakpoint cache layout", () => {
+    const { client } = clientCapturing();
+    expect(client.getPromptCacheConfigIdentity()).toMatchObject({
+      cacheStrategy: "anthropic-explicit",
+      cacheLayoutVersion: "system-tools-history-v1",
+      breakpointCount: 3,
+    });
+  });
+
   it("marks the LAST tool with cache_control ephemeral", async () => {
     const { client, lastBody } = clientCapturing();
     await client.createMessage(opts(TOOLS));

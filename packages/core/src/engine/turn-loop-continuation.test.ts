@@ -35,6 +35,13 @@ function makeDeps(responses: Array<LLMResponse | Error>): {
       requestCount: 0,
     }),
     getOutputTokens: () => 0,
+    getPromptPrefixFingerprint: () => ({
+      version: 1 as const,
+      cacheScopeHash: "scope",
+      systemHash: "system",
+      toolsHash: "tools",
+      configHash: "config",
+    }),
     summarize: undefined,
   } as unknown as TurnLoopDeps["model"];
 
@@ -112,6 +119,17 @@ const resp = (text: string, stopReason: string): LLMResponse => ({
 });
 
 describe("TurnLoop max-output continuation", () => {
+  it("labels primary and continuation cache diagnostic samples", async () => {
+    const { deps } = makeDeps([resp("part one ", "length"), resp("part two", "stop")]);
+    const samples: any[] = [];
+    deps.recordCacheReadDiagnostics = (sample) => samples.push(sample);
+
+    await new TurnLoop(deps, config).run([{ role: "user", content: "go" }]);
+
+    expect(samples.map((sample) => sample.requestKind)).toEqual(["primary", "continuation"]);
+    expect(samples[0].fingerprint).toEqual(samples[1].fingerprint);
+  });
+
   it("continues when an OpenAI stream stops with 'length' (output cap)", async () => {
     // First response truncated ("length"); continuation finishes clean.
     const { deps, calls, stopHookCalls } = makeDeps([
