@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   acquireDesktopInstanceLock,
+  registerSecondInstanceFocus,
   runOwnedQuickChatStartupCleanup,
 } from "./quick-chat-startup-cleanup";
 import { cleanupStaleQuickChatSessions } from "./sessions-service";
@@ -61,5 +62,30 @@ describe("quick-chat startup cleanup ownership", () => {
     expect(quitCalls).toBe(0);
     expect(removed).toEqual(["qchat-stale-owned"]);
     expect(existsSync(staleSessionDir)).toBe(false);
+  });
+
+  test("a second launch restores, shows, and focuses the existing main window", () => {
+    let secondInstanceHandler: (() => void) | undefined;
+    let registrations = 0;
+    const calls: string[] = [];
+    registerSecondInstanceFocus(
+      (handler) => {
+        registrations++;
+        secondInstanceHandler = handler;
+      },
+      () => [
+        {
+          isDestroyed: () => false,
+          isMinimized: () => true,
+          restore: () => calls.push("restore"),
+          show: () => calls.push("show"),
+          focus: () => calls.push("focus"),
+        },
+      ],
+    );
+
+    expect(registrations).toBe(1);
+    secondInstanceHandler?.();
+    expect(calls).toEqual(["restore", "show", "focus"]);
   });
 });
