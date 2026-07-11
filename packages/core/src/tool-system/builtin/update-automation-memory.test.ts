@@ -1,8 +1,8 @@
 import { describe, test, expect } from "bun:test";
 import { makeUpdateAutomationMemoryTool } from "./update-automation-memory.js";
-import type { BuiltinToolResult } from "./index.js";
+import type { BuiltinToolReturn } from "./index.js";
 
-function asText(r: BuiltinToolResult): string {
+function asText(r: BuiltinToolReturn): string {
   return typeof r === "string" ? r : (r.result ?? "");
 }
 

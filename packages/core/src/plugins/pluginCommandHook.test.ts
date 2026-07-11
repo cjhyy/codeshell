@@ -185,4 +185,22 @@ describe("runPluginCommandHook → additionalContext becomes messages", () => {
 
     expect(out.messages).toEqual(["0"]);
   });
+
+  test("abort settles an in-flight plugin hook without waiting for the command", async () => {
+    const controller = new AbortController();
+    const startedAt = Date.now();
+    const pending = runPluginCommandHook(
+      {
+        command: "sleep 5",
+        installPath: process.cwd(),
+        pluginKey: "test@local",
+        timeoutMs: 10_000,
+      },
+      { ...ctx, data: { ...ctx.data, signal: controller.signal } },
+    );
+    setTimeout(() => controller.abort(), 30);
+
+    await expect(pending).resolves.toEqual({});
+    expect(Date.now() - startedAt).toBeLessThan(1_000);
+  });
 });

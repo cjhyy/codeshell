@@ -6,6 +6,7 @@ import { mkdir } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
+import type { ToolFailure } from "./index.js";
 import { fileCache } from "./file-cache.js";
 import {
   getFinalWritePathSnapshot,
@@ -31,7 +32,7 @@ export const writeToolDef: ToolDefinition = {
 export async function writeTool(
   args: Record<string, unknown>,
   ctx?: ToolContext,
-): Promise<string> {
+): Promise<string | ToolFailure> {
   const rawPath = args.file_path as string;
   const content = args.content as string;
   if (!rawPath) return "Error: file_path is required";
@@ -42,17 +43,17 @@ export async function writeTool(
   try {
     const approvedPath = getFinalWritePathSnapshot(args, filePath, cwd);
     const beforeMkdir = revalidateFinalWritePath(filePath, cwd, approvedPath);
-    if ("error" in beforeMkdir) return beforeMkdir.error;
+    if ("error" in beforeMkdir) return { ok: false, error: beforeMkdir.error };
     await mkdir(dirname(beforeMkdir.resolvedPath), { recursive: true });
 
     // mkdir may have crossed an existing symlink in a missing parent chain;
     // resolve again immediately before opening the final file.
     const beforeWrite = revalidateFinalWritePath(filePath, cwd, approvedPath);
-    if ("error" in beforeWrite) return beforeWrite.error;
+    if ("error" in beforeWrite) return { ok: false, error: beforeWrite.error };
     await writeFileNoFollow(beforeWrite.resolvedPath, content);
     fileCache.invalidate(filePath);
     return `Successfully wrote to ${filePath}`;
   } catch (err) {
-    return `Error writing file: ${(err as Error).message}`;
+    return { ok: false, error: `Error writing file: ${(err as Error).message}` };
   }
 }

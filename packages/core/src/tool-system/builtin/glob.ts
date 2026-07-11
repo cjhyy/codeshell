@@ -8,6 +8,7 @@ import * as path from "node:path";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { classifyPath } from "../path-policy.js";
+import type { ToolFailure } from "./index.js";
 
 export const globToolDef: ToolDefinition = {
   name: "Glob",
@@ -25,7 +26,10 @@ export const globToolDef: ToolDefinition = {
   },
 };
 
-export async function globTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<string> {
+export async function globTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string | ToolFailure> {
   const pattern = args.pattern as string;
   if (!pattern) return "Error: pattern is required";
 
@@ -112,6 +116,6 @@ export async function globTool(args: Record<string, unknown>, ctx?: ToolContext)
     }
     return result;
   } catch (err) {
-    return `Error in glob: ${(err as Error).message}`;
+    return { ok: false, error: `Error in glob: ${(err as Error).message}` };
   }
 }

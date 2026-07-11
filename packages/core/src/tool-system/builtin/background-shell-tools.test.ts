@@ -10,8 +10,8 @@ import {
 } from "./background-shell-tools.js";
 import { bashTool } from "./bash.js";
 
-function text(out: string | { result: string }): string {
-  return typeof out === "string" ? out : out.result;
+function text(out: string | { result?: string; error?: string }): string {
+  return typeof out === "string" ? out : (out.result ?? out.error ?? "");
 }
 import type { ToolContext } from "../context.js";
 import { notificationQueue } from "./agent-notifications.js";

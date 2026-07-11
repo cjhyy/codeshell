@@ -89,6 +89,20 @@ describe("ContextManager.manageAsync micro no-op escalation", () => {
     expect(after).toBeLessThan(before);
   });
 
+  it("passes the run AbortSignal to summarizeFn", async () => {
+    const mgr = new ContextManager({ maxTokens: 200_000 });
+    const controller = new AbortController();
+    let receivedSignal: AbortSignal | undefined;
+    mgr.setSummarizeFn(async (_prompt, signal) => {
+      receivedSignal = signal;
+      return "SUMMARY: " + "the prior discussion was condensed safely. ".repeat(4);
+    });
+
+    await mgr.manageAsync(textConversation(32), controller.signal);
+
+    expect(receivedSignal).toBe(controller.signal);
+  });
+
   it("does not summarize below the microcompact floor", async () => {
     const mgr = new ContextManager({ maxTokens: 200_000 });
     let summarizeCalls = 0;

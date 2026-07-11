@@ -143,8 +143,11 @@ export function closeHookStdin(stdin: Writable | null | undefined): void {
 export async function runShellHook(
   config: SettingsHookConfig,
   ctx: HookContext,
+  abortSignal?: AbortSignal,
 ): Promise<HookResult> {
   const timeoutMs = config.timeout_ms ?? DEFAULT_TIMEOUT_MS;
+  const signal = abortSignal ?? (ctx.data.signal as AbortSignal | undefined);
+  if (signal?.aborted) return {};
 
   return new Promise<HookResult>((resolve) => {
     let child;
@@ -171,14 +174,22 @@ export async function runShellHook(
     let stdout = "";
     let stderr = "";
     let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
     const settle = (value: HookResult) => {
       if (settled) return;
       settled = true;
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
       resolve(value);
     };
 
-    const timer = setTimeout(() => {
+    const onAbort = () => {
+      killChildTree(child, 1000);
+      settle({});
+    };
+
+    timer = setTimeout(() => {
       // eslint-disable-next-line no-console
       console.warn(
         `[hooks] ${config.event} hook timed out after ${timeoutMs}ms: ${config.command}`,
@@ -188,6 +199,8 @@ export async function runShellHook(
       killChildTree(child, 1000);
       settle({});
     }, timeoutMs);
+    signal?.addEventListener("abort", onAbort, { once: true });
+    if (signal?.aborted) onAbort();
 
     // Byte cap: once we cross MAX_HOOK_OUTPUT_BYTES on stdout, kill the
     // child and surface a 'cap exceeded' failure. A misbehaving handler
@@ -345,6 +358,7 @@ export async function runShellHook(
     // EPIPE/ECONNRESET while the child is still alive.
     setImmediate(() => {
       void (async () => {
+        if (settled) return;
         try {
           await writeHookStdin(child.stdin, envelope);
           finishStdin();

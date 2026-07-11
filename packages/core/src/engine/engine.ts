@@ -516,10 +516,12 @@ export class Engine {
   private async emitHook(
     event: HookEventName,
     data: Record<string, unknown> = {},
+    signal?: AbortSignal,
   ): Promise<HookResult> {
     return this.hooks.emit(event, {
       ...data,
       isSubAgent: this.config.isSubAgent === true,
+      signal,
     });
   }
 
@@ -1453,27 +1455,35 @@ export class Engine {
       // <system-reminder> at the head of the conversation (between
       // userContext and the new user prompt). Used by the built-in
       // superpowers injector to surface the `using-superpowers` ruleset.
-      const sessionStartHook = await this.emitHook("on_session_start", {
-        sessionId: session.state.sessionId,
-        cwd,
-        resumed: resumedFromDisk,
-        source: resumedFromDisk ? "resume" : "startup",
-      });
+      const sessionStartHook = await this.emitHook(
+        "on_session_start",
+        {
+          sessionId: session.state.sessionId,
+          cwd,
+          resumed: resumedFromDisk,
+          source: resumedFromDisk ? "resume" : "startup",
+        },
+        options?.signal,
+      );
 
       // Per-turn hook: fired every time a new user prompt enters the loop.
       // Equivalent to CC's UserPromptSubmit. Handlers can inject lightweight
       // reminders that should accompany each user turn (e.g. "skills
       // available — check before acting").
-      const promptSubmitHook = await this.emitHook("user_prompt_submit", {
-        sessionId: session.state.sessionId,
-        // Pass the text-only portion. Handlers reading the prompt for keyword
-        // detection / classification (e.g. superpowers' "did the user ask
-        // about X?") don't gain anything from megabytes of base64 inlined here,
-        // and silently leaking attachment bytes through hooks is the kind of
-        // exfiltration risk a curious user-installed shell hook shouldn't carry.
-        prompt: taskText,
-        resumed: resumedFromDisk,
-      });
+      const promptSubmitHook = await this.emitHook(
+        "user_prompt_submit",
+        {
+          sessionId: session.state.sessionId,
+          // Pass the text-only portion. Handlers reading the prompt for keyword
+          // detection / classification (e.g. superpowers' "did the user ask
+          // about X?") don't gain anything from megabytes of base64 inlined here,
+          // and silently leaking attachment bytes through hooks is the kind of
+          // exfiltration risk a curious user-installed shell hook shouldn't carry.
+          prompt: taskText,
+          resumed: resumedFromDisk,
+        },
+        options?.signal,
+      );
       // updatedPrompt: handler rewrote the user's prompt text. Replace the
       // last user message we just pushed (cold-start: line ~511; resume:
       // line ~500). Original prompt is in the transcript already — we log
@@ -1986,11 +1996,15 @@ export class Engine {
       this.hooks.register("on_tool_start", fileHistoryHandler, 100, "file_history_backup");
 
       // Hook: agent start
-      await this.emitHook("on_agent_start", {
-        sessionId: session.state.sessionId,
-        task,
-        model: this.config.llm.model,
-      });
+      await this.emitHook(
+        "on_agent_start",
+        {
+          sessionId: session.state.sessionId,
+          task,
+          model: this.config.llm.model,
+        },
+        options?.signal,
+      );
 
       // Goal mode: register a GoalStopHook for the lifetime of THIS run so the
       // turn loop keeps going until the session model judges the goal met.
@@ -2396,11 +2410,15 @@ export class Engine {
       // the turn loop has resolved (completion, error, or abort). Handlers
       // are notify-only — any returned messages are dropped because the run
       // is already over and there's no next turn to inject into.
-      await this.emitHook("on_session_end", {
-        sessionId: session.state.sessionId,
-        reason: result.reason,
-        turnCount: turnLoop.currentTurn,
-      });
+      await this.emitHook(
+        "on_session_end",
+        {
+          sessionId: session.state.sessionId,
+          reason: result.reason,
+          turnCount: turnLoop.currentTurn,
+        },
+        options?.signal,
+      );
 
       // Fire-and-forget memory pipeline: extract durable memories from the
       // transcript, save a session summary, and conditionally trigger
@@ -2479,11 +2497,15 @@ export class Engine {
       runAccountingFinalized = true;
 
       // Hook: agent end
-      await this.emitHook("on_agent_end", {
-        sessionId: session.state.sessionId,
-        reason: result.reason,
-        turnCount: turnLoop.currentTurn,
-      });
+      await this.emitHook(
+        "on_agent_end",
+        {
+          sessionId: session.state.sessionId,
+          reason: result.reason,
+          turnCount: turnLoop.currentTurn,
+        },
+        options?.signal,
+      );
 
       // Emit completion
       options?.onStream?.({ type: "turn_complete", reason: result.reason });
@@ -2555,8 +2577,8 @@ export class Engine {
   private buildSummarizeFn(
     auxSummaryClient: Awaited<ReturnType<typeof createLLMClient>>,
     recordCumulativeUsage?: (usage: TokenUsage) => CumulativeUsageCounters,
-  ): (prompt: string) => Promise<string> {
-    return async (prompt: string) => {
+  ): (prompt: string, signal?: AbortSignal) => Promise<string> {
+    return async (prompt: string, signal?: AbortSignal) => {
       const summaryResponse = await auxSummaryClient.createMessage({
         systemPrompt: "You are a conversation summarizer. Be concise and factual.",
         messages: [{ role: "user", content: prompt }],
@@ -2568,6 +2590,7 @@ export class Engine {
         // this flips thinking off (~3x faster, fewer tokens); on every other
         // OpenAI-compatible provider the field is ignored.
         reasoning: { mode: "off" },
+        signal,
       });
       if (summaryResponse.usage) {
         recordCumulativeUsage?.(summaryResponse.usage);

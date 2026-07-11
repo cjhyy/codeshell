@@ -121,8 +121,11 @@ function parseJson(stdout: string): unknown | undefined {
 export async function runPluginCommandHook(
   spec: PluginCommandHookSpec,
   ctx: HookContext,
+  abortSignal?: AbortSignal,
 ): Promise<HookResult> {
   const timeoutMs = spec.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const signal = abortSignal ?? (ctx.data.signal as AbortSignal | undefined);
+  if (signal?.aborted) return {};
 
   return new Promise<HookResult>((resolve) => {
     let child;
@@ -156,6 +159,7 @@ export async function runPluginCommandHook(
     let stdout = "";
     let stderr = "";
     let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     // Output byte caps mirror src/hooks/shell-runner.ts so a chatty plugin
     // hook can't hold engine memory hostage. Past the cap we SIGTERM the
     // child and treat the hook as failed; stderr cap truncates with a
@@ -166,10 +170,17 @@ export async function runPluginCommandHook(
     const settle = (value: HookResult) => {
       if (settled) return;
       settled = true;
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
       resolve(value);
     };
 
-    const timer = setTimeout(() => {
+    const onAbort = () => {
+      killChildTree(child, 1000);
+      settle({});
+    };
+
+    timer = setTimeout(() => {
       // eslint-disable-next-line no-console
       console.warn(
         `[plugin-hook] ${spec.pluginKey} ${ctx.eventName} timed out after ${timeoutMs}ms`,
@@ -178,6 +189,8 @@ export async function runPluginCommandHook(
       killChildTree(child, 1000);
       settle({});
     }, timeoutMs);
+    signal?.addEventListener("abort", onAbort, { once: true });
+    if (signal?.aborted) onAbort();
 
     child.stdout?.on("data", (chunk: Buffer) => {
       stdoutBytes += chunk.length;
@@ -309,6 +322,7 @@ export async function runPluginCommandHook(
 
     setImmediate(() => {
       void (async () => {
+        if (settled) return;
         try {
           await writeHookStdin(child.stdin, envelope);
           finishStdin();

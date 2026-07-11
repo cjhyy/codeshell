@@ -66,4 +66,27 @@ describe("grepTool", () => {
     expect(out).toContain("a.ts:1:const needle = 1;");
     expect(out).not.toContain("c.md");
   });
+
+  it("passes ctx.signal to the search process and stops fallback after abort", async () => {
+    const controller = new AbortController();
+    const receivedSignals: Array<AbortSignal | undefined> = [];
+    _setGrepExecFileForTest(async (_file, _args, options) => {
+      const signal = (options as { signal?: AbortSignal }).signal;
+      receivedSignals.push(signal);
+      if (!signal) throw new Error("missing abort signal");
+      return new Promise((_resolve, reject) => {
+        signal.addEventListener(
+          "abort",
+          () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })),
+          { once: true },
+        );
+      });
+    });
+
+    const pending = grepTool({ pattern: "needle" }, { ...ctx(), signal: controller.signal });
+    setTimeout(() => controller.abort(), 20);
+
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    expect(receivedSignals).toEqual([controller.signal]);
+  });
 });

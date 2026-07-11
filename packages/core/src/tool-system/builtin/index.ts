@@ -138,17 +138,33 @@ import { credentialAccessScope, getCredentialAccess } from "../../credentials/ac
  * ctx is optional in the signature so legacy call sites (and tests) that
  * pass only args still type-check; ToolRegistry always passes ctx at runtime.
  */
-/**
- * 内置工具返回值:大多数返回纯文本字符串。需要回传图片(或其它结构化
- * 内容块)的工具(view_image)可改为返回 `{ contentBlocks }`;此时
- * registry 会把它放进 ToolResult.contentBlocks。可选的 `result` 字段是给
- * transcript / 摘要用的纯文本镜像。沙箱执行类工具(Bash 等)可返回
- * `{ result, sandbox }`,registry 把 sandbox 透传到 ToolResult.sandbox 供 UI 显示。
- * 敏感结果可返回 `{ result, sensitive, displayResult, transcriptResult }`;
- * `result` 仅供当前模型轮使用,显示/持久化路径必须使用占位字段。
- */
-export type BuiltinToolResult =
+/** Canonical tool-handler protocol. Only ToolSuccess is recorded as ok:true. */
+export interface ToolSuccess {
+  ok: true;
+  result?: string;
+  contentBlocks?: import("../../types.js").ContentBlock[];
+  sandbox?: import("../../types.js").ToolResult["sandbox"];
+  sensitive?: boolean;
+  displayResult?: string;
+  transcriptResult?: string;
+}
+
+export interface ToolFailure {
+  ok: false;
+  error: string;
+  sandbox?: import("../../types.js").ToolResult["sandbox"];
+  exitCode?: number | null;
+  signal?: NodeJS.Signals | null;
+  stderr?: string;
+}
+
+export type ToolExecutionResult = ToolSuccess | ToolFailure;
+export type BuiltinToolResult = ToolExecutionResult;
+
+/** Direct implementation shape, normalized before entering the registry. */
+export type BuiltinToolReturn =
   | string
+  | BuiltinToolResult
   | { contentBlocks: import("../../types.js").ContentBlock[]; result?: string }
   | {
       result: string;
@@ -158,10 +174,54 @@ export type BuiltinToolResult =
       transcriptResult?: string;
     };
 
+type BuiltinToolImplementation = (
+  args: Record<string, unknown>,
+  ctx?: import("../context.js").ToolContext,
+) => Promise<unknown>;
+
 export type BuiltinToolFn = (
   args: Record<string, unknown>,
   ctx?: import("../context.js").ToolContext,
 ) => Promise<BuiltinToolResult>;
+
+const FAILURE_TEXT =
+  /^(?:error\b|failed\b|failure\b|(?:[a-z][\w-]*\s+){1,3}(?:error\b|failed\b|failure\b|aborted\b|timed out\b))/i;
+
+function failureMessage(result: Record<string, unknown>): string {
+  if (typeof result.error === "string" && result.error) return result.error;
+  if (typeof result.result === "string" && result.result) return result.result;
+  return "Tool execution failed";
+}
+
+/** Convert every builtin implementation into the closed discriminated protocol. */
+export function toToolExecutionResult(value: unknown): ToolExecutionResult {
+  if (typeof value === "string") {
+    return FAILURE_TEXT.test(value) ? { ok: false, error: value } : { ok: true, result: value };
+  }
+  if (!value || typeof value !== "object") {
+    return { ok: false, error: `Invalid tool result: ${String(value)}` };
+  }
+
+  const result = value as Record<string, unknown>;
+  if (result.ok === false || result.isError === true || "error" in result) {
+    return {
+      ...(result as Omit<ToolFailure, "ok" | "error">),
+      ok: false,
+      error: failureMessage(result),
+    };
+  }
+  if (result.ok === true) return result as unknown as ToolSuccess;
+
+  const text = typeof result.result === "string" ? result.result : undefined;
+  if (text && FAILURE_TEXT.test(text)) {
+    return {
+      ok: false,
+      error: text,
+      ...(result.sandbox ? { sandbox: result.sandbox as ToolFailure["sandbox"] } : {}),
+    };
+  }
+  return { ok: true, ...(result as Omit<ToolSuccess, "ok">) };
+}
 
 export type BuiltinToolGuard = (ctx: ToolVisibilityContext) => boolean;
 
@@ -170,7 +230,10 @@ export interface BuiltinTool {
   execute: BuiltinToolFn;
 }
 
-export const BUILTIN_TOOLS: BuiltinTool[] = [
+const BUILTIN_IMPLEMENTATIONS: Array<{
+  definition: RegisteredTool;
+  execute: BuiltinToolImplementation;
+}> = [
   {
     definition: {
       ...readToolDef,
@@ -859,6 +922,13 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     execute: injectCredentialTool,
   },
 ];
+
+export const BUILTIN_TOOLS: BuiltinTool[] = BUILTIN_IMPLEMENTATIONS.map(
+  ({ definition, execute }) => ({
+    definition,
+    execute: async (args, ctx) => toToolExecutionResult(await execute(args, ctx)),
+  }),
+);
 
 /**
  * Per-tool availability predicates. A tool listed here is filtered OUT of the
