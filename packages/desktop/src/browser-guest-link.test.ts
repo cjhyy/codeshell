@@ -30,6 +30,11 @@ describe("browser guest host channel", () => {
         click({ target: { closest: () => ({ href: "http://localhost:3000", target: "_blank" }) } }),
       ),
     ).toEqual({ url: "http://localhost:3000/", disposition: "internal-tab" });
+    expect(
+      guestLinkRequestFromClick(
+        click({ target: { closest: () => ({ href: "https://example.com/case", target: "_BLANK" }) } }),
+      ),
+    ).toEqual({ url: "https://example.com/case", disposition: "internal-tab" });
     expect(guestLinkRequestFromClick(click({ button: 1 }))).toMatchObject({
       disposition: "internal-tab",
     });
