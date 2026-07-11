@@ -3158,6 +3158,7 @@ function App() {
           sourceSessionId: session.sourceSessionId,
           targetSessionId: sessionId,
           mode: "full",
+          forkKind: "side",
           quickChatClaimId: nonce,
         });
         const mainClaimStillActive = await window.codeshell.isQuickChatClaimActive(
@@ -3172,20 +3173,10 @@ function App() {
           await window.codeshell.cleanupQuickChatSession(result.sessionId, nonce);
           return;
         }
-        const state = foldTranscript(await window.codeshell.getSessionTranscript(result.sessionId));
-        const claimActiveAfterHydrate = await window.codeshell.isQuickChatClaimActive(
-          result.sessionId,
-          nonce,
-        );
-        if (
-          !claimActiveAfterHydrate ||
-          !quickChatSessionsRef.current[key] ||
-          quickChatSessionsRef.current[key].creationNonce !== nonce
-        ) {
-          await window.codeshell.cleanupQuickChatSession(result.sessionId, nonce);
-          return;
-        }
-        dispatch({ type: "hydrate", bucket, state });
+        // Match Codex /side: inherited transcript remains in the child Engine's
+        // model context, while the side UI starts at its own conversation boundary.
+        // Never hydrate copied parent events into this renderer bucket.
+        dispatch({ type: "hydrate", bucket, state: foldTranscript([]) });
         engineToBucketRef.current.set(result.sessionId, bucket);
         setModelOverrides((current) =>
           current[session.ownerBucket] === undefined

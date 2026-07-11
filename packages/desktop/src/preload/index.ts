@@ -538,6 +538,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     sourceSessionId: string;
     targetSessionId?: string;
     mode: "full";
+    forkKind?: "side";
     throughEventId?: string;
     quickChatClaimId?: string;
   }) => rpc("agent/forkSession", params).then(rpcResult),

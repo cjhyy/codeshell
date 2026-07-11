@@ -163,6 +163,7 @@ let activeQuickChatClaims = new Map<string, string>();
 let cancelCalls: Array<string | undefined> = [];
 let approveCalls: unknown[][] = [];
 let forkSessionCalls: Array<Record<string, unknown>> = [];
+let getSessionTranscriptCalls: string[] = [];
 
 function restoreGlobalProperty(
   key: "localStorage" | "window",
@@ -220,6 +221,7 @@ function seedApp(options: {
 function installCodeshellStub(
   listDiskSessions: () => Promise<any>,
   forkSession: (params: Record<string, unknown>) => Promise<any>,
+  getSessionTranscript: (sessionId: string) => Promise<any> = async () => [],
 ): void {
   const unsubscribe = () => undefined;
   const project = { path: "/tmp/repo-a", name: "Repo A", addedAt: 1 };
@@ -257,7 +259,10 @@ function installCodeshellStub(
       aheadCommits: 0,
       hasUncommittedChanges: false,
     }),
-    getSessionTranscript: async () => [],
+    getSessionTranscript: async (sessionId: string) => {
+      getSessionTranscriptCalls.push(sessionId);
+      return getSessionTranscript(sessionId);
+    },
     subscribeSession: async () => ({ events: [], nextSeq: 0 }),
     goalGet: async () => ({ goal: null }),
     listRuns: async () => [],
@@ -335,6 +340,7 @@ async function mountApp(options: {
   panelTabs: Array<{ id: string; kind: string }>;
   listDiskSessions?: () => Promise<any>;
   forkSession?: (params: Record<string, unknown>) => Promise<any>;
+  getSessionTranscript?: (sessionId: string) => Promise<any>;
 }): Promise<string> {
   ensureMiniDom();
   Object.defineProperty(globalThis, "localStorage", {
@@ -363,6 +369,7 @@ async function mountApp(options: {
         workspace: { root: "/tmp/repo-a", kind: "main" },
         copiedEventCount: 0,
       })),
+    options.getSessionTranscript,
   );
   container = document.createElement("div");
   root = createRoot(container);
@@ -430,6 +437,7 @@ afterEach(async () => {
   cancelCalls = [];
   approveCalls = [];
   forkSessionCalls = [];
+  getSessionTranscriptCalls = [];
   chatProps = null;
   quickChatProps.clear();
   panelAreaProps.clear();
@@ -451,6 +459,7 @@ describe("App quick-chat integration", () => {
         sourceSessionId: "engine-a",
         targetSessionId: panel.sessionId,
         mode: "full",
+        forkKind: "side",
         quickChatClaimId: expect.any(String),
       }),
     ]);
@@ -458,6 +467,22 @@ describe("App quick-chat integration", () => {
     expect(panel.contextMode).toBe("full");
     expect(panel.sourceTitle).toBe("Session A");
     expect(claimQuickChatSessionCalls[0]).toBe(panel.sessionId);
+  });
+
+  test("keeps inherited parent history as model context without hydrating parent bubbles", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-hidden-parent-history", kind: "quickChat" }],
+      getSessionTranscript: async () => [
+        { kind: "user", text: "parent request still running", clientMessageId: "parent-live" },
+      ],
+    });
+
+    const [panel] = currentQuickPanels();
+    if (!panel) throw new Error("quick chat session was not created");
+    expect(panel.creationStatus).toBe("ready");
+    expect(panel.messages).toEqual([]);
+    expect(getSessionTranscriptCalls).not.toContain(panel.sessionId);
   });
 
   test("a failed fork can explicitly fall back to a blank quick chat", async () => {
@@ -766,9 +791,23 @@ describe("App quick-chat integration", () => {
     // revive the old bucket while main-side deletion is still pending.
     await act(async () => {
       emitStream(quickOne.sessionId, { type: "text_delta", text: "late-orphan" });
+      emitStream("engine-a", {
+        type: "stream_request_start",
+        messageId: "parent-after-side-close",
+      });
+      emitStream("engine-a", { type: "text_delta", text: "parent-late-stays-parent" });
     });
     await flushApp(70);
     expect(quickChatProps.has(quickOne.sessionId)).toBe(false);
+    expect(
+      quickChatProps
+        .get(quickTwo.sessionId)
+        ?.messages.some(
+          (message) =>
+            message.kind === "assistant" &&
+            (message.text.includes("late-orphan") || message.text.includes("parent-late")),
+        ),
+    ).toBe(false);
     expect(
       quickChatProps
         .get(quickTwo.sessionId)
@@ -778,9 +817,15 @@ describe("App quick-chat integration", () => {
     ).toBe(true);
     expect(
       chatProps.messages.some(
-        (message) => message.kind === "assistant" && message.text === "normal-must-survive",
+        (message) =>
+          message.kind === "assistant" && message.text.includes("parent-late-stays-parent"),
       ),
     ).toBe(true);
+    expect(
+      chatProps.messages.some(
+        (message) => message.kind === "assistant" && message.text.includes("late-orphan"),
+      ),
+    ).toBe(false);
 
     // Reusing the same panel tab id must allocate a fresh, empty transcript.
     await act(async () => {

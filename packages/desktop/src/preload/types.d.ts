@@ -22,6 +22,7 @@ export interface ForkSessionParams {
   sourceSessionId: string;
   targetSessionId?: string;
   mode: "full";
+  forkKind?: "side";
   throughEventId?: string;
   quickChatClaimId?: string;
 }
