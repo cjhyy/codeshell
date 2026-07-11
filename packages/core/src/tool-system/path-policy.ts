@@ -31,6 +31,7 @@
  */
 
 import {
+  constants,
   realpathSync,
   existsSync,
   readFileSync,
@@ -38,6 +39,7 @@ import {
   mkdirSync,
   renameSync,
 } from "node:fs";
+import { open } from "node:fs/promises";
 import { homedir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { dirname, isAbsolute, join, resolve as resolvePath, sep } from "node:path";
@@ -65,6 +67,14 @@ export interface ClassifyOptions {
   /** "read" or "write" — different defaults for sensitive paths. */
   operation: PathOperation;
 }
+
+export interface FinalWritePathSnapshot {
+  resolvedPath: string;
+  workspacePath: string;
+  insideWorkspace: boolean;
+}
+
+const FINAL_WRITE_PATH_SNAPSHOT = Symbol("codeshell.finalWritePathSnapshot");
 
 /**
  * Default sensitive path patterns. These are evaluated AFTER home-expansion
@@ -406,6 +416,86 @@ function safeRealpath(p: string): string {
     }
   }
   return abs;
+}
+
+/**
+ * Capture the concrete target approved by the executor's first path-policy
+ * pass. The snapshot is carried on the internal args object via a symbol, so
+ * it cannot collide with an LLM-supplied schema property or leak into logs.
+ */
+export function attachFinalWritePathSnapshot(
+  args: Record<string, unknown>,
+  filePath: string,
+  workspaceRoot: string,
+): Record<string, unknown> {
+  const resolvedPath = safeRealpath(filePath);
+  const workspacePath = safeRealpath(workspaceRoot);
+  const snapshot: FinalWritePathSnapshot = {
+    resolvedPath,
+    workspacePath,
+    insideWorkspace: isInsideDir(resolvedPath, workspacePath),
+  };
+  return { ...args, [FINAL_WRITE_PATH_SNAPSHOT]: snapshot };
+}
+
+export function getFinalWritePathSnapshot(
+  args: Record<string, unknown>,
+  filePath: string,
+  workspaceRoot: string,
+): FinalWritePathSnapshot {
+  const carried = (
+    args as Record<string, unknown> & { [FINAL_WRITE_PATH_SNAPSHOT]?: unknown }
+  )[FINAL_WRITE_PATH_SNAPSHOT];
+  if (carried && typeof carried === "object") {
+    return carried as FinalWritePathSnapshot;
+  }
+  // Direct tool calls do not pass through ToolExecutor. Preserve that API by
+  // taking the baseline at handler entry, while still protecting Edit's
+  // read-to-write interval with a second check before its writeFile.
+  const resolvedPath = safeRealpath(filePath);
+  const workspacePath = safeRealpath(workspaceRoot);
+  return {
+    resolvedPath,
+    workspacePath,
+    insideWorkspace: isInsideDir(resolvedPath, workspacePath),
+  };
+}
+
+export function revalidateFinalWritePath(
+  filePath: string,
+  workspaceRoot: string,
+  approved: FinalWritePathSnapshot,
+): { resolvedPath: string } | { error: string } {
+  const currentPath = safeRealpath(filePath);
+  const currentWorkspace = safeRealpath(workspaceRoot);
+  const sameTarget = normPath(currentPath) === normPath(approved.resolvedPath);
+  const sameWorkspace = normPath(currentWorkspace) === normPath(approved.workspacePath);
+  const crossedWorkspaceBoundary =
+    approved.insideWorkspace && !isInsideDir(currentPath, currentWorkspace);
+
+  if (crossedWorkspaceBoundary || !sameTarget || !sameWorkspace) {
+    const reason = crossedWorkspaceBoundary
+      ? "final write path resolved outside the workspace after approval"
+      : "final write path changed after approval";
+    return {
+      error:
+        `Error: ${reason}; refusing to write. ` +
+        `Approved target: ${approved.resolvedPath}. Current target: ${currentPath}`,
+    };
+  }
+
+  return { resolvedPath: currentPath };
+}
+
+/** Open the already-revalidated final path without following its last segment. */
+export async function writeFileNoFollow(filePath: string, content: string): Promise<void> {
+  const flags = constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW;
+  const handle = await open(filePath, flags, 0o666);
+  try {
+    await handle.writeFile(content, "utf-8");
+  } finally {
+    await handle.close();
+  }
 }
 
 function isInsideDir(child: string, parent: string): boolean {
