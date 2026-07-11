@@ -195,6 +195,7 @@ import {
 import { runDream } from "./dream-service.js";
 import type { MemoryScope } from "@cjhyy/code-shell-core";
 import {
+  cleanupStaleQuickChatSessions,
   listSessions,
   deleteSession,
   getSessionTranscript,
@@ -1841,6 +1842,14 @@ async function cleanupKnownAttachments(sessionId?: string): Promise<void> {
 app.whenReady().then(async () => {
   writeSettingsSchemaAtStartup();
   void cleanupKnownAttachments();
+
+  const staleQuickChats = await cleanupStaleQuickChatSessions().catch((error) => {
+    dlog("main", "quick_chat.startup_cleanup_failed", { error: String(error) });
+    return [];
+  });
+  if (staleQuickChats.length > 0) {
+    dlog("main", "quick_chat.startup_cleanup_done", { sessionIds: staleQuickChats });
+  }
 
   await injectLoginShellPathAtStartup({
     log: (event, data) => dlog("main", event, data),
