@@ -25,6 +25,7 @@ describe("Agent role sandbox and MCP spawn integration", () => {
     let childConfig: EngineConfig | undefined;
     const spawner = createSubAgentSpawner({
       parentConfig,
+      parentSandbox: parentConfig.sandbox!,
       presetName: "general",
       cwd: "/repo",
       permissionMode: "acceptEdits",

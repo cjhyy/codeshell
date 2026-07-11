@@ -44,9 +44,15 @@ export function resolveChildToolScope(
 
 export function resolveChildSandbox(
   mode: SandboxMode | undefined,
-  parent: SandboxConfig | undefined,
-): SandboxConfig | undefined {
+  parent: SandboxConfig,
+): SandboxConfig {
   if (mode === undefined) return parent;
+  // Role definitions are project/plugin-authored capability constraints, not
+  // an authority to weaken the user's effective run sandbox. Explicit native
+  // backends are already fail-closed; keep them unchanged. `auto` may resolve
+  // to an isolated backend, so it likewise cannot be downgraded to off/auto.
+  if (parent.mode === "seatbelt" || parent.mode === "bwrap") return parent;
+  if (parent.mode === "auto" && (mode === "off" || mode === "auto")) return parent;
   return { ...defaultSandboxConfig(mode), ...parent, mode };
 }
 
@@ -78,6 +84,8 @@ export function wrapChildStream(
 
 export interface CreateSubAgentSpawnerDeps {
   parentConfig: EngineConfig;
+  /** Fully resolved sandbox for this parent run, including settings layers. */
+  parentSandbox: SandboxConfig;
   presetName: AgentPresetName;
   cwd: string;
   permissionMode: NonNullable<EngineConfig["permissionMode"]>;
@@ -137,7 +145,7 @@ export function createSubAgentSpawner(deps: CreateSubAgentSpawnerDeps): SubAgent
         headless: deps.parentConfig.headless,
         readOnlySession: request.readOnlySession,
         skillAllowlist: request.skillAllowlist,
-        sandbox: resolveChildSandbox(request.sandboxMode, deps.parentConfig.sandbox),
+        sandbox: resolveChildSandbox(request.sandboxMode, deps.parentSandbox),
         mcpServers: resolveChildMcpServers(request.mcpAllowlist, deps.parentConfig.mcpServers),
         settingsScope: deps.parentConfig.settingsScope ?? "project",
         isSubAgent: true,

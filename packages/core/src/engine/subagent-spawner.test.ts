@@ -2,9 +2,12 @@ import { describe, expect, it } from "bun:test";
 import type { EngineConfig } from "./types.js";
 import {
   createSubAgentSpawner,
+  resolveChildSandbox,
   resolveChildToolScope,
   wrapChildStream,
 } from "./subagent-spawner.js";
+import { RunEnvironmentResolver } from "./run-environment.js";
+import { defaultSandboxConfig } from "../tool-system/sandbox/index.js";
 
 function parentConfig(): EngineConfig {
   return {
@@ -27,11 +30,22 @@ function parentConfig(): EngineConfig {
 }
 
 describe("subagent spawner", () => {
+  it.each([
+    ["seatbelt", "off"],
+    ["seatbelt", "auto"],
+    ["bwrap", "off"],
+    ["bwrap", "auto"],
+  ] as const)("does not widen parent %s sandbox with child %s", (parentMode, childMode) => {
+    const parent = { ...defaultSandboxConfig(parentMode), network: "deny" as const };
+    expect(resolveChildSandbox(childMode, parent)).toEqual(parent);
+  });
+
   it("builds a child config through the injected runner and anchors cold spawns", async () => {
     const anchors: unknown[][] = [];
     const runs: Array<{ config: EngineConfig; task: string; sessionId?: string }> = [];
     const spawner = createSubAgentSpawner({
       parentConfig: parentConfig(),
+      parentSandbox: parentConfig().sandbox!,
       presetName: "terminal-coding",
       cwd: "/repo",
       permissionMode: "acceptEdits",
@@ -85,6 +99,7 @@ describe("subagent spawner", () => {
     let childSid = "";
     const spawner = createSubAgentSpawner({
       parentConfig: parentConfig(),
+      parentSandbox: parentConfig().sandbox!,
       presetName: "terminal-coding",
       cwd: "/repo",
       permissionMode: "acceptEdits",
@@ -119,6 +134,7 @@ describe("subagent spawner", () => {
     };
     const spawner = createSubAgentSpawner({
       parentConfig: parent,
+      parentSandbox: parent.sandbox!,
       presetName: "terminal-coding",
       cwd: "/repo",
       permissionMode: "acceptEdits",
@@ -144,12 +160,58 @@ describe("subagent spawner", () => {
     expect(childConfig?.mcpServers).toBe(parent.mcpServers);
   });
 
+  it("inherits the effective project-settings sandbox when EngineConfig.sandbox is absent", async () => {
+    const parent = parentConfig();
+    delete parent.sandbox;
+    const resolver = new RunEnvironmentResolver({
+      config: () => parent,
+      settings: () => ({
+        get: () => ({}),
+        getForScope: (scope: string) =>
+          scope === "project"
+            ? { sandbox: { mode: "seatbelt", network: "deny" } }
+            : {},
+      }),
+      credentialAccess: { envExposures: () => ({}) },
+    });
+    const effectiveSandbox = resolver.resolveSandboxConfig("/repo");
+    let childConfig: EngineConfig | undefined;
+    const spawner = createSubAgentSpawner({
+      parentConfig: parent,
+      parentSandbox: effectiveSandbox,
+      presetName: "terminal-coding",
+      cwd: "/repo",
+      permissionMode: "acceptEdits",
+      appendParentSubagent: () => {},
+      sessionExists: () => false,
+      childRunner: {
+        async runChild(config, _task, options) {
+          childConfig = config;
+          return { text: "done", sessionId: options.sessionId! };
+        },
+      },
+    });
+
+    await spawner.spawn({
+      agentId: "child-project-sandbox",
+      description: "inherit project sandbox",
+      prompt: "inspect",
+      maxTurns: 2,
+      signal: new AbortController().signal,
+    });
+
+    expect(effectiveSandbox.mode).toBe("seatbelt");
+    expect(effectiveSandbox.network).toBe("deny");
+    expect(childConfig?.sandbox).toEqual(effectiveSandbox);
+  });
+
   it("preserves an empty MCP allowlist as no child servers", async () => {
     let childConfig: EngineConfig | undefined;
     const parent = parentConfig();
     parent.mcpServers = { github: { name: "github", command: "github-mcp" } };
     const spawner = createSubAgentSpawner({
       parentConfig: parent,
+      parentSandbox: parent.sandbox!,
       presetName: "terminal-coding",
       cwd: "/repo",
       permissionMode: "acceptEdits",

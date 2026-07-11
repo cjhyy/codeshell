@@ -1030,11 +1030,18 @@ export class Engine {
       };
     }
 
+    // Resolve before constructing the child spawner: a parent sandbox may come
+    // solely from project/user settings rather than config.sandbox, while a
+    // child intentionally skips project settings. Passing the complete
+    // effective config is what makes undefined role sandbox mean inherit.
+    const sandboxConfig = this.runEnvironmentResolver.resolveSandboxConfig(cwd);
+
     // Build the per-Engine ToolContext that will be threaded through every
     // tool call. Replaces the old module-level singletons (setAskUserFn,
     // setArenaLLMConfig, setSubAgentConfig, setToolSearchRegistry).
     const subAgentSpawner = createSubAgentSpawner({
       parentConfig: this.config,
+      parentSandbox: sandboxConfig,
       presetName: this.preset.name,
       cwd,
       permissionMode: runPermissionMode,
@@ -1052,7 +1059,6 @@ export class Engine {
       },
     });
 
-    const sandboxConfig = this.runEnvironmentResolver.resolveSandboxConfig(cwd);
     // A2: explicit sandbox modes (seatbelt, bwrap) must fail closed
     // per standard §S4. resolveSandboxBackend throws when an explicit
     // mode is unavailable on this host; we let it propagate. The
