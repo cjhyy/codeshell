@@ -23,7 +23,11 @@ import type { ToolContext } from "./context.js";
 import type { InvestigationGuard } from "./investigation-guard.js";
 import type { TaskGuard } from "./task-guard.js";
 import { PLAN_MODE_ALLOWED_TOOLS } from "./plan-mode-allowlist.js";
-import { enforcePathPolicyWithApproval, type PathOperation } from "./path-policy.js";
+import {
+  attachFinalWritePathSnapshot,
+  enforcePathPolicyWithApproval,
+  type PathOperation,
+} from "./path-policy.js";
 import { parsePatch } from "./builtin/apply-patch/parser.js";
 import { BUILTIN_TOOL_GUARDS } from "./builtin/index.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "./builtin/complete-goal.js";
@@ -322,6 +326,18 @@ export class ToolExecutor {
     // path surface on RegisteredTool.pathPolicy; the executor enforces it
     // after hooks have had a chance to rewrite args, but before permission
     // classification or the handler can touch the filesystem.
+    if (
+      (call.toolName === "Write" || call.toolName === "Edit") &&
+      this.toolCtx?.cwd &&
+      typeof call.args.file_path === "string"
+    ) {
+      const raw = call.args.file_path;
+      const target = isAbsolutePath(raw) ? raw : resolvePath(this.toolCtx.cwd, raw);
+      call = {
+        ...call,
+        args: attachFinalWritePathSnapshot(call.args, target, this.toolCtx.cwd),
+      };
+    }
     const pathPolicyError = await this.enforceDeclaredPathPolicy(toolDef, call.args);
     if (pathPolicyError) {
       return {

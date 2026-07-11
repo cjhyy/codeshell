@@ -2,13 +2,18 @@
  * Built-in Edit file tool — exact string replacement.
  */
 
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { fileCache } from "./file-cache.js";
 import { detectEol, toLf, applyEol } from "./eol.js";
+import {
+  getFinalWritePathSnapshot,
+  revalidateFinalWritePath,
+  writeFileNoFollow,
+} from "../path-policy.js";
 
 export const editToolDef: ToolDefinition = {
   name: "Edit",
@@ -57,7 +62,10 @@ export async function editTool(
   if (!existsSync(filePath)) return `Error: File not found: ${filePath}`;
 
   try {
-    const raw = await readFile(filePath, "utf-8");
+    const approvedPath = getFinalWritePathSnapshot(args, filePath, cwd);
+    const beforeRead = revalidateFinalWritePath(filePath, cwd, approvedPath);
+    if ("error" in beforeRead) return beforeRead.error;
+    const raw = await readFile(beforeRead.resolvedPath, "utf-8");
 
     // CRLF handling: detect the file's line ending, then match/replace in LF
     // space (the model emits LF, so a CRLF file would never match otherwise),
@@ -84,7 +92,9 @@ export async function editTool(
       ? content.split(oldLf).join(newLf)
       : content.replace(oldLf, newLf);
 
-    await writeFile(filePath, applyEol(updatedLf, eol), "utf-8");
+    const beforeWrite = revalidateFinalWritePath(filePath, cwd, approvedPath);
+    if ("error" in beforeWrite) return beforeWrite.error;
+    await writeFileNoFollow(beforeWrite.resolvedPath, applyEol(updatedLf, eol));
     fileCache.invalidate(filePath);
 
     const count = replaceAll

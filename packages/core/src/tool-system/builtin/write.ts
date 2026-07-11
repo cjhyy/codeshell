@@ -2,11 +2,16 @@
  * Built-in Write file tool.
  */
 
-import { writeFile, mkdir } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { fileCache } from "./file-cache.js";
+import {
+  getFinalWritePathSnapshot,
+  revalidateFinalWritePath,
+  writeFileNoFollow,
+} from "../path-policy.js";
 
 export const writeToolDef: ToolDefinition = {
   name: "Write",
@@ -35,8 +40,16 @@ export async function writeTool(
   const filePath = isAbsolute(rawPath) ? rawPath : resolve(cwd, rawPath);
 
   try {
-    await mkdir(dirname(filePath), { recursive: true });
-    await writeFile(filePath, content, "utf-8");
+    const approvedPath = getFinalWritePathSnapshot(args, filePath, cwd);
+    const beforeMkdir = revalidateFinalWritePath(filePath, cwd, approvedPath);
+    if ("error" in beforeMkdir) return beforeMkdir.error;
+    await mkdir(dirname(beforeMkdir.resolvedPath), { recursive: true });
+
+    // mkdir may have crossed an existing symlink in a missing parent chain;
+    // resolve again immediately before opening the final file.
+    const beforeWrite = revalidateFinalWritePath(filePath, cwd, approvedPath);
+    if ("error" in beforeWrite) return beforeWrite.error;
+    await writeFileNoFollow(beforeWrite.resolvedPath, content);
     fileCache.invalidate(filePath);
     return `Successfully wrote to ${filePath}`;
   } catch (err) {
