@@ -81,6 +81,8 @@ export class ChatSession {
    * (the user is engaging again) so normal wakeups resume working afterward.
    */
   private cancelledSinceLastTurn = false;
+  private settlePromise: Promise<void> = Promise.resolve();
+  private resolveSettled: (() => void) | null = null;
 
   constructor(opts: ChatSessionOptions) {
     this.id = opts.id;
@@ -134,6 +136,11 @@ export class ChatSession {
 
   isBusy(): boolean {
     return this.active !== null;
+  }
+
+  /** Resolves after the active engine.run() has completed its pump finally. */
+  get settled(): Promise<void> {
+    return this.settlePromise;
   }
 
   /**
@@ -213,6 +220,9 @@ export class ChatSession {
     const next = this.queue.shift();
     if (!next) return;
     this.active = next;
+    this.settlePromise = new Promise<void>((resolve) => {
+      this.resolveSettled = resolve;
+    });
     this.cancelledActive = false;
     this.controller = new AbortController();
     try {
@@ -247,18 +257,29 @@ export class ChatSession {
         next.reject(err);
       }
     } finally {
+      // close() must never be held hostage by run-boundary cleanup. Resolve
+      // before model switching or any other operation that may throw.
+      this.resolveSettled?.();
+      this.resolveSettled = null;
       this.active = null;
       this.controller = null;
       this.cancelledActive = false;
       // Run boundary: apply any model switch that was deferred because it was
       // requested mid-run. Done here (not in pump) so it still applies when
       // no further turn is queued.
-      if (this.pendingModel !== null) {
-        this.applyModelSwitch(this.pendingModel);
+      try {
+        if (this.pendingModel !== null) {
+          this.applyModelSwitch(this.pendingModel);
+        }
+      } catch {
+        // requestModelSwitch already returned when the switch was queued. A
+        // run-boundary persistence failure must not become an unhandled pump
+        // rejection or prevent the session from settling/continuing.
+      } finally {
         this.pendingModel = null;
+        // Drain the next turn even if deferred model switching failed.
+        if (this.queue.length > 0) void this.pump();
       }
-      // Drain the next turn if one is waiting.
-      if (this.queue.length > 0) void this.pump();
     }
   }
 }
