@@ -21,3 +21,25 @@ export async function runOwnedQuickChatStartupCleanup(
   if (!ownsDesktopInstance) return [];
   return cleanup();
 }
+
+interface FocusableWindow {
+  isDestroyed(): boolean;
+  isMinimized(): boolean;
+  restore(): void;
+  show(): void;
+  focus(): void;
+}
+
+/** Register exactly one first-instance handler that foregrounds its live window. */
+export function registerSecondInstanceFocus(
+  register: (handler: () => void) => void,
+  getWindows: () => FocusableWindow[],
+): void {
+  register(() => {
+    const window = getWindows().find((candidate) => !candidate.isDestroyed());
+    if (!window) return;
+    if (window.isMinimized()) window.restore();
+    window.show();
+    window.focus();
+  });
+}

@@ -289,6 +289,7 @@ import { parseDataUrl, suggestImageFilename } from "./image-save.js";
 import { injectLoginShellPathAtStartup } from "./login-shell-path.js";
 import {
   acquireDesktopInstanceLock,
+  registerSecondInstanceFocus,
   runOwnedQuickChatStartupCleanup,
 } from "./quick-chat-startup-cleanup.js";
 import {
@@ -311,6 +312,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 app.setName("code-shell");
 if (process.platform === "win32") app.setAppUserModelId("com.cjhyy.codeshell");
 const ownsDesktopInstance = acquireDesktopInstanceLock(app);
+if (ownsDesktopInstance) {
+  registerSecondInstanceFocus(
+    (handler) => app.on("second-instance", handler),
+    () => BrowserWindow.getAllWindows(),
+  );
+}
 
 dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: process.cwd() });
 
