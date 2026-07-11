@@ -137,7 +137,9 @@ describe("TurnLoop max-output continuation", () => {
     ]);
     const loop = new TurnLoop(deps, {
       ...config,
-      onStream: (event) => events.push(event),
+      onStream: (event) => {
+        events.push(event);
+      },
     });
 
     const result = await loop.run([{ role: "user", content: "go" }]);

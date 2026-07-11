@@ -119,7 +119,7 @@ describe("webFetchTool — successful fetch", () => {
     globalThis.fetch = (async () =>
       new Response(body, {
         headers: { "content-type": "text/plain; charset=utf-8" },
-      })) as typeof fetch;
+      })) as unknown as typeof fetch;
 
     const out = await webFetchTool({ url: "https://example.com/large", max_length: 100 });
 
@@ -155,7 +155,7 @@ describe("webFetchTool — successful fetch", () => {
       },
     });
     globalThis.fetch = (async () =>
-      new Response(body, { headers: { "content-type": "text/plain" } })) as typeof fetch;
+      new Response(body, { headers: { "content-type": "text/plain" } })) as unknown as typeof fetch;
 
     const out = await webFetchTool({ url: "https://example.com/broken-stream" });
 

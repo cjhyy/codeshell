@@ -3,7 +3,9 @@ import { makeUpdateAutomationMemoryTool } from "./update-automation-memory.js";
 import type { BuiltinToolReturn } from "./index.js";
 
 function asText(r: BuiltinToolReturn): string {
-  return typeof r === "string" ? r : (r.result ?? "");
+  if (typeof r === "string") return r;
+  if ("result" in r) return r.result ?? "";
+  return "error" in r && typeof r.error === "string" ? r.error : "";
 }
 
 describe("UpdateAutomationMemory", () => {

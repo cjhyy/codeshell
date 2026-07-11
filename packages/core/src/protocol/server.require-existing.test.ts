@@ -88,7 +88,7 @@ describe("agent/run requireExisting", () => {
       engineFactory: () => missing.engine,
       maxSessions: 1,
     });
-    chatManager.getOrCreate("live-sid", {} as never);
+    await chatManager.getOrCreate("live-sid", {} as never);
 
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });

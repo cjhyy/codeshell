@@ -20,7 +20,7 @@ function fakeClient(text: string, opts?: { throws?: boolean }): LLMClientBase {
         text,
         toolCalls: [],
         stopReason: "end_turn",
-        usage: { promptTokens: 1, completionTokens: 1 },
+        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
       };
     },
     getUsage: () => ({
@@ -33,12 +33,15 @@ function fakeClient(text: string, opts?: { throws?: boolean }): LLMClientBase {
 
 describe("buildSessionTitle", () => {
   it("returns a trimmed one-line title from the LLM", async () => {
+    const usages: Array<NonNullable<LLMResponse["usage"]>> = [];
     const title = await buildSessionTitle(
       fakeClient("  修复登录超时问题  \n"),
       "帮我看看登录为什么会超时",
       "登录超时通常是因为...",
+      (usage) => usages.push(usage),
     );
     expect(title).toBe("修复登录超时问题");
+    expect(usages).toEqual([{ promptTokens: 1, completionTokens: 1, totalTokens: 2 }]);
   });
 
   it("strips surrounding quotes the model sometimes adds", async () => {
@@ -280,7 +283,7 @@ describe("Engine session title persistence", () => {
     }
   });
 
-  it("persists a normally completed title without changing other session fields", async () => {
+  it("persists a title and folds its billed usage into the latest session state", async () => {
     const root = mkdtempSync(join(tmpdir(), "engine-title-normal-"));
     const storageDir = join(root, "sessions");
     const sessionId = "title-normal-session";
@@ -322,7 +325,12 @@ describe("Engine session title persistence", () => {
       expect(afterTitle.title).toBe("normal title");
       expect(afterTitle.status).toBe(beforeTitle.status);
       expect(afterTitle.turnCount).toBe(beforeTitle.turnCount);
-      expect(afterTitle.tokenUsage).toEqual(beforeTitle.tokenUsage);
+      expect(afterTitle.tokenUsage).toEqual({
+        ...beforeTitle.tokenUsage,
+        promptTokens: beforeTitle.tokenUsage.promptTokens + 1,
+        completionTokens: beforeTitle.tokenUsage.completionTokens + 1,
+        totalTokens: beforeTitle.tokenUsage.totalTokens + 2,
+      });
       expect(afterTitle.workspace).toEqual(beforeTitle.workspace);
       expect(afterTitle.activeGoal).toEqual(beforeTitle.activeGoal);
     } finally {

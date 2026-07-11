@@ -85,7 +85,13 @@ describe("synchronous Agent auto-backgrounds past the threshold", () => {
   it("reports an auto-backgrounded child's usage once without emitting duplicate usage UI", async () => {
     const billed: TokenUsage[] = [];
     const events: Array<{ type: string }> = [];
-    const usage = { promptTokens: 80, completionTokens: 20, totalTokens: 100 };
+    const usage = {
+      promptTokens: 80,
+      completionTokens: 20,
+      totalTokens: 100,
+      cacheReadTokens: 40,
+      cacheCreationTokens: 10,
+    };
     const ctx = makeCtx(
       async () => {
         await new Promise((resolve) => setTimeout(resolve, 100));

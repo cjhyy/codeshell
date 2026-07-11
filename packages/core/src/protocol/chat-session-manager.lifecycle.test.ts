@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Engine, EngineResult } from "../engine/engine.js";
 import { SessionManager } from "../session/session-manager.js";
-import { ChatSessionManager } from "./chat-session-manager.js";
+import { CLOSED_CHAT_SESSION_TOMBSTONE_LIMIT, ChatSessionManager } from "./chat-session-manager.js";
 
 function result(sessionId: string): EngineResult {
   return {
@@ -31,6 +31,19 @@ afterEach(() => {
 });
 
 describe("ChatSessionManager serialized lifecycle", () => {
+  it("bounds closed-session tombstones and evicts the oldest id", async () => {
+    const manager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => ({}) as Engine,
+    });
+
+    for (let i = 0; i <= CLOSED_CHAT_SESSION_TOMBSTONE_LIMIT; i++) {
+      await manager.close(`closed-${i}`);
+    }
+
+    expect(manager.isClosed("closed-0")).toBe(false);
+    expect(manager.isClosed(`closed-${CLOSED_CHAT_SESSION_TOMBSTONE_LIMIT}`)).toBe(true);
+  });
   it("fences a closing Engine's late save before reopening the same sid", async () => {
     const storageDir = mkdtempSync(join(tmpdir(), "chat-generation-fence-"));
     tempDirs.push(storageDir);
@@ -68,12 +81,12 @@ describe("ChatSessionManager serialized lifecycle", () => {
       },
     });
 
-    const oldSession = manager.getOrCreate(sid, {} as never);
+    const oldSession = await manager.getOrCreate(sid, {} as never);
     const oldTurn = oldSession.enqueueTurn("old", {});
     await oldRunStarted.promise;
 
     const closing = manager.close(sid);
-    const reopening = Promise.resolve(manager.getOrCreate(sid, {} as never));
+    const reopening = manager.getOrCreate(sid, {} as never);
     let reopened = false;
     void reopening.then(() => {
       reopened = true;
@@ -110,7 +123,7 @@ describe("ChatSessionManager serialized lifecycle", () => {
         } as unknown as Engine;
       },
     });
-    const session = manager.getOrCreate("settle-sid", {} as never);
+    const session = await manager.getOrCreate("settle-sid", {} as never);
     const turn = session.enqueueTurn("work", {});
     await started.promise;
 
@@ -124,7 +137,7 @@ describe("ChatSessionManager serialized lifecycle", () => {
     expect(manager.get("settle-sid")).toBeUndefined();
     expect(manager.sessionCount()).toBe(0);
 
-    await Promise.resolve(manager.getOrCreate("settle-sid", {} as never));
+    await manager.getOrCreate("settle-sid", {} as never);
     expect(engines).toBe(2);
   });
 
@@ -145,10 +158,10 @@ describe("ChatSessionManager serialized lifecycle", () => {
       },
     });
 
-    const first = manager.getOrCreate("serial-sid", {} as never);
+    const first = await manager.getOrCreate("serial-sid", {} as never);
     await first.enqueueTurn("first", {});
     await manager.close("serial-sid");
-    const second = await Promise.resolve(manager.getOrCreate("serial-sid", {} as never));
+    const second = await manager.getOrCreate("serial-sid", {} as never);
     await second.enqueueTurn("second", {});
 
     expect(runs).toEqual([1, 2]);

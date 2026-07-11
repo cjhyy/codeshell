@@ -8,7 +8,7 @@ import { Transcript } from "./transcript.js";
 type TranscriptWriter = (filePath: string, data: string, encoding: "utf-8") => void;
 
 function injectedError(code: "ENOSPC" | "EACCES" | "EPERM"): NodeJS.ErrnoException {
-  return Object.assign(new Error(`injected ${code}`), { code, errno: code });
+  return Object.assign(new Error(`injected ${code}`), { code });
 }
 
 describe("Transcript flush failures", () => {

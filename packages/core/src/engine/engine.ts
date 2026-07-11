@@ -50,6 +50,7 @@ import {
   InteractiveApprovalBackend,
   getInteractiveApprovalBackend,
   type ApprovalBackend,
+  type ApprovalRouter,
 } from "../tool-system/permission.js";
 import { HookRegistry } from "../hooks/registry.js";
 import type { HookEventName, HookResult } from "../hooks/events.js";
@@ -187,6 +188,8 @@ interface EngineRunOptions {
   permissionMode?: NonNullable<EngineConfig["permissionMode"]>;
   /** Immutable plan context for this run only. Omitted follows permissionMode. */
   planMode?: boolean;
+  /** Protocol connection's approval owner router for this run. */
+  approvalRouter?: ApprovalRouter;
   /**
    * Goal mode for this run: the engine registers a GoalStopHook so the
    * turn loop runs until the session model judges this goal met. Falls
@@ -368,6 +371,8 @@ export class Engine {
   /** Shared resources supplied at construction (adapter pattern — null when self-constructed). */
   readonly runtime: EngineRuntime | null;
   private readonly sandboxCache = new Map<string, Promise<SandboxBackend>>();
+  private readonly interactiveBackends = new WeakMap<ApprovalRouter, InteractiveApprovalBackend>();
+  private activeApprovalRouter: ApprovalRouter | undefined;
   /** Active permission mode for this Engine instance. */
   permissionMode: NonNullable<EngineConfig["permissionMode"]>;
   /** True when permissionMode === "plan". */
@@ -1257,6 +1262,7 @@ export class Engine {
     // after the assignment.
     const toolCtx: ToolContext = {
       ...this.buildToolContext(),
+      approvalRouter: options?.approvalRouter ?? this.config.approvalRouter,
       permissionMode: runPermissionMode,
       planMode: runPlanMode,
       subAgentSpawner,
@@ -1585,9 +1591,11 @@ export class Engine {
       void llmClientPromise.catch(() => {});
 
       const mode = runPermissionMode;
+      this.activeApprovalRouter = toolCtx.approvalRouter;
       const { rules: defaultRules, backend: approvalBackend } = this.buildPermissionConfig(
         mode,
         cwd,
+        toolCtx.approvalRouter,
       );
 
       const permission = new PermissionClassifier(defaultRules, mode, approvalBackend);
@@ -2447,7 +2455,12 @@ export class Engine {
           const rawContent = (userMsgEvents[0]?.data as { content?: unknown })?.content;
           const firstUserText =
             typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent ?? "");
-          void buildSessionTitle(auxSummaryClient, firstUserText, result.text)
+          void buildSessionTitle(
+            auxSummaryClient,
+            firstUserText,
+            result.text,
+            recordExternalBilledUsage,
+          )
             .then((title) => {
               if (title) {
                 // Persist the title so it survives a localStorage wipe / disk
@@ -2520,6 +2533,8 @@ export class Engine {
           promptTokens: usage.totalPromptTokens,
           completionTokens: usage.totalCompletionTokens,
           totalTokens: usage.totalTokens,
+          cacheReadTokens: usage.totalCacheReadTokens,
+          cacheCreationTokens: usage.totalCacheCreationTokens,
         },
       };
     });
@@ -2552,6 +2567,8 @@ export class Engine {
           promptTokens: usage.promptTokens ?? 0,
           completionTokens: usage.completionTokens ?? 0,
           totalTokens: usage.totalTokens ?? 0,
+          cacheReadTokens: usage.cacheReadTokens ?? 0,
+          cacheCreationTokens: usage.cacheCreationTokens ?? 0,
         },
       };
     });
@@ -3259,6 +3276,7 @@ export class Engine {
   private buildPermissionConfig(
     mode: NonNullable<EngineConfig["permissionMode"]>,
     cwd: string,
+    approvalRouter?: ApprovalRouter,
   ): { rules: import("../types.js").PermissionRule[]; backend: ApprovalBackend } {
     const rules: import("../types.js").PermissionRule[] = [...this.preset.defaultPermissionRules];
 
@@ -3317,7 +3335,15 @@ export class Engine {
       // every `ask` permission silently fell through to deny-all and
       // the user saw "Permission denied by user" with NO modal — exactly
       // the bug that motivated this fix.
-      const interactive = getInteractiveApprovalBackend();
+      let interactive: InteractiveApprovalBackend;
+      if (approvalRouter) {
+        interactive =
+          this.interactiveBackends.get(approvalRouter) ??
+          new InteractiveApprovalBackend(approvalRouter);
+        this.interactiveBackends.set(approvalRouter, interactive);
+      } else {
+        interactive = getInteractiveApprovalBackend();
+      }
       if (interactive.hasPromptFn()) {
         backend = interactive;
       } else {
@@ -3357,7 +3383,11 @@ export class Engine {
     this.planMode = planMode;
     if (this.activePermission) {
       const cwd = this.config.cwd ?? process.cwd();
-      const { rules, backend } = this.buildPermissionConfig(mode, cwd);
+      const { rules, backend } = this.buildPermissionConfig(
+        mode,
+        cwd,
+        this.activeApprovalRouter,
+      );
       this.activePermission.reconfigure(mode, backend, rules);
     }
   }
@@ -3398,8 +3428,11 @@ export class Engine {
    * rule set buildPermissionConfig does, without constructing a backend.
    */
   getPermissionRules(): import("../types.js").PermissionRule[] {
-    return this.buildPermissionConfig(this.getPermissionMode(), this.config.cwd ?? process.cwd())
-      .rules;
+    return this.buildPermissionConfig(
+      this.getPermissionMode(),
+      this.config.cwd ?? process.cwd(),
+      this.activeApprovalRouter,
+    ).rules;
   }
 
   /**

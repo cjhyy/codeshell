@@ -5,6 +5,7 @@
  * resolves the aux client and wiring; this only does the LLM call + cleanup.
  */
 import type { LLMClientBase } from "../llm/client-base.js";
+import type { TokenUsage } from "../types.js";
 
 const SYSTEM_PROMPT =
   "You generate a very short title (≤6 words, no quotes, no trailing punctuation) " +
@@ -28,6 +29,7 @@ export async function buildSessionTitle(
   client: LLMClientBase,
   firstUserText: string,
   firstAssistantText: string,
+  recordBilledUsage?: (usage: TokenUsage) => void,
 ): Promise<string | null> {
   try {
     const prompt =
@@ -42,6 +44,7 @@ export async function buildSessionTitle(
       requestVisible: false,
       reasoning: { mode: "off" },
     });
+    if (resp.usage) recordBilledUsage?.(resp.usage);
     const title = clean(resp.text ?? "");
     return title.length > 0 ? title : null;
   } catch {

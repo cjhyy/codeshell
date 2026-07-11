@@ -197,6 +197,7 @@ export class AgentServer {
    * itself outlives the server (it's a process-local singleton).
    */
   private bgAgentBusUnsubscribe: (() => void) | null = null;
+  private readonly wakeupsInFlight = new Set<string>();
 
   constructor(options: AgentServerOptions) {
     this.chatManager = options.chatManager ?? null;
@@ -296,78 +297,79 @@ export class AgentServer {
    *   the first drains all currently-pending items; subsequent bus events for
    *   the same session find it busy (or find an empty queue) and no-op.
    *
-   * INVARIANT (the burst-merge correctness depends on it): the merge only
-   * holds because (a) the bus fans out to subscribers SYNCHRONOUSLY, and (b)
-   * `enqueueTurn` sets the session's `active` (→ isBusy()===true) SYNCHRONOUSLY
-   * before its first await. So when bus events #2..N arrive — still on the same
-   * synchronous fan-out as #1 — they already see the session as busy and no-op.
-   * If either path is ever made async (e.g. an await is added inside
-   * enqueueTurn before `active` is set, or the bus starts deferring delivery),
-   * this degrades into N concurrent wakeups for N completions. Keep both
-   * synchronous, or replace this comment's assumption with an explicit
-   * "wakeup in flight" guard flag.
+   * `wakeupsInFlight` serializes the now-async rehydrate path, so a burst of
+   * completion events cannot create duplicate sessions or enqueue duplicate
+   * wakeup turns while getOrCreate waits for a closing generation to settle.
    */
   private maybeWakeIdleSession(sessionId: string): void {
-    if (!this.chatManager) return;
-    if (this.chatManager.isUnavailable(sessionId)) return;
-    const session = this.chatManager.get(sessionId) ?? this.rehydrateSessionForWake(sessionId);
-    if (!session || session.isBusy()) return;
+    if (this.wakeupsInFlight.has(sessionId)) return;
+    this.wakeupsInFlight.add(sessionId);
+    void this.wakeIdleSession(sessionId)
+      .then((ranTurn) => {
+        this.wakeupsInFlight.delete(sessionId);
+        if (ranTurn && notificationQueue.getSnapshot(sessionId).length > 0) {
+          this.maybeWakeIdleSession(sessionId);
+        }
+      })
+      .catch(() => {
+        this.wakeupsInFlight.delete(sessionId);
+      });
+  }
+
+  private async wakeIdleSession(sessionId: string): Promise<boolean> {
+    if (!this.chatManager) return false;
+    if (this.chatManager.isUnavailable(sessionId)) return false;
+    const session =
+      this.chatManager.get(sessionId) ?? (await this.rehydrateSessionForWake(sessionId));
+    if (!session || session.isBusy()) return false;
     // Headless / automation runs are one-shot: the caller takes result.text and
     // is gone, so there's no consumer for a woken continuation turn. Headless
     // already drained its background sub-agents inside engine.run before
     // returning; any remaining queued notification (video/shell) must NOT spin
     // an orphan turn. Only the interactive path auto-continues.
-    if (session.engine.isHeadless()) return;
+    if (session.engine.isHeadless()) return false;
     // Don't resurrect a session the user just Stopped: cancel() leaves it idle
     // (active=null) so isBusy() reads false, but auto-running a fresh turn here
     // would defeat the Stop. The flag clears the moment the user sends again.
-    if (session.wasCancelledSinceLastTurn()) return;
+    if (session.wasCancelledSinceLastTurn()) return false;
     const pending = notificationQueue.drainAll(sessionId);
-    if (pending.length === 0) return;
+    if (pending.length === 0) return false;
     const task = `<system-reminder>\n${buildNotificationMessage(pending)}\n</system-reminder>`;
-    void session
-      .enqueueTurn(task, {
+    try {
+      await session.enqueueTurn(task, {
         // Synthetic notification, not the user's own input: persisted with an
         // `injected` flag so a disk rebuild doesn't render it as a phantom user
         // bubble (the live UI shows only the woken assistant's reply).
         injected: true,
         onStream: (event: StreamEvent) => this.notify(Methods.StreamEvent, { sessionId, event }),
-      })
-      .catch((err) => {
-        // A wakeup turn failing must not crash the bus fan-out. The drained
-        // notifications are already in the transcript via the run's messages;
-        // log and move on.
-        logger.warn("bg_wakeup.turn_failed", {
-          sessionId,
-          error: (err as Error).message,
-        });
-        // Belt-and-braces, mirroring the send() path's run().then(clear-busy):
-        // the renderer set the composer "working" spinner on this run's
-        // session_started, and clears it on turn_complete/error. A failure
-        // BEFORE the turn-loop runs (e.g. a setup error) emits neither, which
-        // would leave the spinner stuck. Emit a terminal `error` (NOT a
-        // turn_complete) so the renderer clears busy AND a woken automation
-        // session's runStatus flips to "failed" rather than being mislabeled
-        // "completed". If the turn-loop already emitted its own `error`, this is
-        // a harmless duplicate (busy already cleared, status already failed).
-        this.notify(Methods.StreamEvent, {
-          sessionId,
-          event: { type: "error", error: (err as Error)?.message ?? "background wakeup failed" },
-        });
-      })
-      .finally(() => {
-        // Run-boundary re-check (trigger B): the woken summarize turn may have
-        // spawned NEW background work (e.g. goal "generate 2 videos" → after #1
-        // completes, this turn submits #2). When #2 finishes its notification
-        // arrives while we're idle again — but if it arrived DURING this turn
-        // (busy), trigger A skipped it. Re-checking at the run boundary drains
-        // anything that landed while busy, chaining wakeups until the queue is
-        // truly empty. Replaces the old engine for(;;) outer loop.
-        this.maybeWakeIdleSession(sessionId);
+        approvalRouter: this.approvalRouter,
       });
+    } catch (err) {
+      // A wakeup turn failing must not crash the bus fan-out. The drained
+      // notifications are already in the transcript via the run's messages;
+      // log and move on.
+      logger.warn("bg_wakeup.turn_failed", {
+        sessionId,
+        error: (err as Error).message,
+      });
+      // Belt-and-braces, mirroring the send() path's run().then(clear-busy):
+      // the renderer set the composer "working" spinner on this run's
+      // session_started, and clears it on turn_complete/error. A failure
+      // BEFORE the turn-loop runs (e.g. a setup error) emits neither, which
+      // would leave the spinner stuck. Emit a terminal `error` (NOT a
+      // turn_complete) so the renderer clears busy AND a woken automation
+      // session's runStatus flips to "failed" rather than being mislabeled
+      // "completed". If the turn-loop already emitted its own `error`, this is
+      // a harmless duplicate (busy already cleared, status already failed).
+      this.notify(Methods.StreamEvent, {
+        sessionId,
+        event: { type: "error", error: (err as Error)?.message ?? "background wakeup failed" },
+      });
+    }
+    return true;
   }
 
-  private rehydrateSessionForWake(sessionId: string): ChatSession | null {
+  private async rehydrateSessionForWake(sessionId: string): Promise<ChatSession | null> {
     if (!this.chatManager) return null;
     if (this.chatManager.isUnavailable(sessionId)) return null;
     try {
@@ -394,10 +396,7 @@ export class AgentServer {
         return null;
       }
 
-      const session = this.chatManager.getOrCreate(sessionId, slice);
-      // No await occurs between the unavailable guard and getOrCreate, so this
-      // can only be a Promise if a future caller makes the wake path async.
-      if (session instanceof Promise) return null;
+      const session = await this.chatManager.getOrCreate(sessionId, slice);
       this.wireInteractiveSession(session, sessionId);
       logger.debug("bg_wakeup.rehydrated_session", {
         sessionId,
@@ -567,6 +566,18 @@ export class AgentServer {
       this.transport.send(createErrorResponse(req.id, code, err.message));
       return;
     }
+    const sid = params.sessionId;
+    const approvalRegistration = this.approvalRouter.register(sid, this.connectionId);
+    if (!approvalRegistration.ok) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.Overloaded,
+          `Session ${sid} is owned by another connection`,
+        ),
+      );
+      return;
+    }
     this.rememberSessionSlice(params.sessionId, sessionConfig);
 
     if (params.model !== undefined) {
@@ -585,9 +596,6 @@ export class AgentServer {
         return;
       }
     }
-
-    const sid = params.sessionId;
-    this.approvalRouter.register(sid, this.connectionId);
 
     // Wire AskUserQuestion and host bridges for this interactive session. The
     // chatManager path builds a fresh per-session Engine via engineFactory, so
@@ -608,6 +616,7 @@ export class AgentServer {
           typeof params.clientMessageId === "string" ? params.clientMessageId : undefined,
         permissionMode: params.permissionMode,
         planMode: params.planMode,
+        approvalRouter: this.approvalRouter,
       });
 
       const runResult: RunResult = {
@@ -650,7 +659,20 @@ export class AgentServer {
       return;
     }
     if (typeof params.sessionId === "string" && params.sessionId.length > 0) {
-      this.approvalRouter.register(params.sessionId, this.connectionId);
+      const approvalRegistration = this.approvalRouter.register(
+        params.sessionId,
+        this.connectionId,
+      );
+      if (!approvalRegistration.ok) {
+        this.transport.send(
+          createErrorResponse(
+            req.id,
+            ErrorCodes.Overloaded,
+            `Session ${params.sessionId} is owned by another connection`,
+          ),
+        );
+        return;
+      }
     }
     if (params.cwd !== undefined && (typeof params.cwd !== "string" || params.cwd.length === 0)) {
       this.transport.send(
