@@ -138,7 +138,11 @@ function detectBinary(
   if (sample.length === 0) return null;
   if (sample.includes(0)) return { kind: "binary" };
   try {
-    new TextDecoder("utf-8", { fatal: true }).decode(sample);
+    // `stream: true` tolerates a multi-byte UTF-8 char truncated by the sample
+    // boundary (e.g. a CJK char split at byte 8192). Without it, a valid UTF-8
+    // text file gets misdetected as binary whenever the sample cut lands mid-char.
+    // A genuinely invalid byte in the MIDDLE of the sample still throws.
+    new TextDecoder("utf-8", { fatal: true }).decode(sample, { stream: true });
   } catch {
     return { kind: "binary" };
   }

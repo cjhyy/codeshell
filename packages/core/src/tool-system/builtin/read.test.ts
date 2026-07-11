@@ -89,6 +89,18 @@ describe("readTool", () => {
     expect(out).not.toContain("view_image");
   });
 
+  it("reads a UTF-8 file whose multi-byte char is split at the 8192-byte sample boundary", async () => {
+    // Regression: the binary sniffer only reads the first 8192 bytes. When that
+    // cut lands mid multi-byte char (CJK = 3 bytes), a valid UTF-8 file was
+    // wrongly flagged binary. Craft content so byte 8192 splits a "字" (3 bytes).
+    const p = join(dir, "cjk.md");
+    const filler = "a".repeat(8191); // byte 8192 lands inside the next char
+    writeFileSync(p, filler + "字符内容\n第二行");
+    const out = await readTool({ file_path: p }, ctx());
+    expect(out).not.toContain("Binary file");
+    expect(out).toContain("字符内容");
+  });
+
   it("returns metadata for large binary files instead of the large-text error", async () => {
     const p = join(dir, "large.bin");
     writeFileSync(p, Buffer.alloc(6 * 1024 * 1024));
