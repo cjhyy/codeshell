@@ -9,6 +9,7 @@ import {
   type OAuthTokens,
 } from "@cjhyy/code-shell-core";
 import { McpOAuthService, McpOAuthServiceError } from "./mcp-oauth-service.js";
+import type { McpOAuthProfile } from "./mcp-oauth-profiles.js";
 
 class TestCipher implements EncryptionCipher {
   encrypt(plaintext: string): string {
@@ -40,13 +41,17 @@ describe("McpOAuthService", () => {
 
   function makeService(
     options: {
-      authorizeTokens?: OAuthTokens | Promise<OAuthTokens>;
+      authorizeTokens?:
+        | OAuthTokens
+        | Promise<OAuthTokens>
+        | (() => OAuthTokens | Promise<OAuthTokens>);
       fetch?: typeof fetch;
       now?: () => number;
       changed?: () => void;
       revocationTimeoutMs?: number;
       authorizeError?: Error;
       logWarning?: (event: string, fields: Record<string, unknown>) => void;
+      profiles?: Readonly<Record<string, McpOAuthProfile>>;
       onAuthorizeConfig?: (config: {
         clientId: string;
         clientSecret?: string;
@@ -63,8 +68,9 @@ describe("McpOAuthService", () => {
       authorizeFn: async (config) => {
         options.onAuthorizeConfig?.(config);
         if (options.authorizeError) throw options.authorizeError;
+        const supplied = options.authorizeTokens;
         return (
-          options.authorizeTokens ?? {
+          (typeof supplied === "function" ? await supplied() : await supplied) ?? {
             accessToken: "access-login",
             refreshToken: "refresh-login",
             expiresAt: Date.UTC(2030, 0, 1),
@@ -77,6 +83,7 @@ describe("McpOAuthService", () => {
       onCredentialsChanged: options.changed,
       revocationTimeoutMs: options.revocationTimeoutMs,
       logWarning: options.logWarning,
+      profiles: options.profiles,
     });
     return { service, store };
   }
@@ -700,11 +707,156 @@ describe("McpOAuthService", () => {
         serverUrl: "https://other-mcp.example/rpc",
         credentialId: "original-oauth",
       }),
-    ).rejects.toThrow(/MCP_OAUTH_SERVER_ERROR/);
+    ).rejects.toThrow(/MCP_OAUTH_INVALID_REQUEST/);
     expect(authorizeCalls).toBe(1);
     expect(parseOAuthCredentialSecret(store.resolve("original-oauth")!.secret!)).toMatchObject({
       clientSecret: "private-registration",
       accessToken: "access",
     });
+  });
+
+  test("catalog login refuses credential ids owned by another provider or MCP server", async () => {
+    let authorizeCalls = 0;
+    const profile: McpOAuthProfile = {
+      id: "figma-profile",
+      provider: "figma",
+      label: "Figma",
+      serverUrl: "https://mcp.figma.example/rpc",
+      clientId: "figma-client",
+      authorizationEndpoint: "https://auth.figma.example/authorize",
+      tokenEndpoint: "https://auth.figma.example/token",
+    };
+    const { service, store } = makeService({
+      profiles: { "figma-profile": profile },
+      authorizeTokens: () => {
+        authorizeCalls += 1;
+        return { accessToken: "new-access", tokenType: "Bearer" };
+      },
+    });
+    const saveCollision = (
+      id: string,
+      oauthProvider: string,
+      mcpServerUrl: string,
+    ): void => {
+      store.save("user", {
+        id,
+        type: "oauth",
+        label: "Unrelated OAuth",
+        secret: JSON.stringify({ version: 1, accessToken: `original-${id}` }),
+        meta: { oauthProvider, mcpServerUrl },
+      });
+    };
+    saveCollision("provider-collision", "other-provider", profile.serverUrl);
+    saveCollision("figma-oauth", profile.provider, "https://other-mcp.example/rpc");
+
+    await expect(
+      service.login({
+        source: "catalog",
+        profileId: profile.id,
+        credentialId: "provider-collision",
+      }),
+    ).rejects.toThrow(/MCP_OAUTH_INVALID_REQUEST/);
+    await expect(
+      service.login({ source: "catalog", profileId: profile.id }),
+    ).rejects.toThrow(/MCP_OAUTH_INVALID_REQUEST/);
+
+    expect(authorizeCalls).toBe(0);
+    expect(parseOAuthCredentialSecret(store.resolve("provider-collision")!.secret!)).toMatchObject({
+      accessToken: "original-provider-collision",
+    });
+    expect(parseOAuthCredentialSecret(store.resolve("figma-oauth")!.secret!)).toMatchObject({
+      accessToken: "original-figma-oauth",
+    });
+  });
+
+  test("relogin supersedes a deferred refresh and requests wait for the new login", async () => {
+    const now = Date.UTC(2026, 0, 1);
+    let authorizeCalls = 0;
+    let finishRelogin!: (tokens: OAuthTokens) => void;
+    const deferredRelogin = new Promise<OAuthTokens>((resolve) => {
+      finishRelogin = resolve;
+    });
+    let refreshStarted!: () => void;
+    const didStartRefresh = new Promise<void>((resolve) => {
+      refreshStarted = resolve;
+    });
+    let finishOldRefresh!: (response: Response) => void;
+    const deferredOldRefresh = new Promise<Response>((resolve) => {
+      finishOldRefresh = resolve;
+    });
+    const { service, store } = makeService({
+      now: () => now,
+      authorizeTokens: () => {
+        authorizeCalls += 1;
+        if (authorizeCalls === 1) {
+          return {
+            accessToken: "old-access",
+            refreshToken: "old-refresh",
+            expiresAt: now - 1,
+            tokenType: "Bearer",
+          };
+        }
+        return deferredRelogin;
+      },
+      fetch: (async () => {
+        refreshStarted();
+        return deferredOldRefresh;
+      }) as typeof fetch,
+    });
+    const input = {
+      source: "mcp" as const,
+      serverName: "Example",
+      serverUrl: "https://mcp.example/rpc",
+      credentialId: "example-oauth",
+      clientId: "client",
+      authorizationEndpoint: "https://auth.example/authorize",
+      tokenEndpoint: "https://auth.example/token",
+    };
+    await service.login(input);
+
+    const refreshing = service.refresh("example-oauth");
+    await didStartRefresh;
+    const relogin = service.login(input);
+    const requestDuringLogin = service.resolveAccessToken("example-oauth");
+    finishRelogin({
+      accessToken: "new-login-access",
+      refreshToken: "new-login-refresh",
+      expiresAt: now + 3_600_000,
+      tokenType: "Bearer",
+    });
+    await relogin;
+    const requestSettledBeforeOldRefresh = await Promise.race([
+      requestDuringLogin.then(() => true, () => true),
+      new Promise<false>((resolve) => setTimeout(() => resolve(false), 0)),
+    ]);
+
+    finishOldRefresh(
+      Response.json({
+        access_token: "late-old-refresh-access",
+        refresh_token: "late-old-refresh-token",
+        expires_in: 7200,
+      }),
+    );
+    const [refreshResult, requestResult] = await Promise.allSettled([
+      refreshing,
+      requestDuringLogin,
+    ]);
+
+    expect(requestSettledBeforeOldRefresh).toBe(true);
+    expect(refreshResult.status).toBe("rejected");
+    expect(requestResult).toEqual({
+      status: "fulfilled",
+      value: {
+        accessToken: "new-login-access",
+        expiresAt: "2026-01-01T01:00:00.000Z",
+      },
+    });
+    const stored = store.resolve("example-oauth")!;
+    expect(parseOAuthCredentialSecret(stored.secret!)).toMatchObject({
+      accessToken: "new-login-access",
+      refreshToken: "new-login-refresh",
+    });
+    expect(stored.meta?.lastRefreshAt).toBeUndefined();
+    expect(stored.meta?.lastRefreshErrorCode).toBeUndefined();
   });
 });

@@ -43,7 +43,8 @@ export function guestLinkRequestFromClick(event: LinkClickLike): GuestLinkReques
   const disposition: GuestLinkDisposition | null =
     event.metaKey || event.ctrlKey
       ? "external"
-      : anchor.target === "_blank" || event.button === 1
+      : (typeof anchor.target === "string" && anchor.target.toLowerCase() === "_blank") ||
+          event.button === 1
         ? "internal-tab"
         : null;
   if (!disposition) return null;

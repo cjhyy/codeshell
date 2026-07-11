@@ -127,12 +127,14 @@ export function CCRoomView({
     const force = probeForceRef.current;
     probeForceRef.current = false;
     let cancelled = false;
+    let probeResolved = false;
     setAvail(null);
     setSessions([]);
     setExpanded(false);
     void probeFor(cliKind, force)
       .then(async (availability) => {
         if (cancelled || probeSequenceRef.current !== sequence) return;
+        probeResolved = true;
         setAvail(availability);
         if (!linkedRequest) return;
         if (!availability.available) {
@@ -167,7 +169,11 @@ export function CCRoomView({
         });
       })
       .catch((error) => {
-        if (cancelled) return;
+        if (cancelled || probeSequenceRef.current !== sequence) return;
+        if (pendingOpenRequestRef.current?.nonce === linkedRequest?.nonce) {
+          pendingOpenRequestRef.current = null;
+        }
+        if (!probeResolved) setAvail({ available: false });
         toastRef.current({
           message: tRef.current("panels.room.openLinkedFailed", {
             error: error instanceof Error ? error.message : String(error),
