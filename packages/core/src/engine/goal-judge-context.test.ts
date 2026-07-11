@@ -107,6 +107,41 @@ describe("buildGoalJudgeRuntimeContext", () => {
     expect(context.renderedConversation).toContain("TOOL_RESULT tool_use_id=huge");
   });
 
+  it("enforces hard limits for a single round with many text blocks", () => {
+    const context = buildGoalJudgeRuntimeContext(
+      [
+        {
+          role: "assistant",
+          content: Array.from({ length: 100 }, (_, index) => ({
+            type: "text" as const,
+            text: `block-${index}-${"x".repeat(200)}`,
+          })),
+        },
+      ],
+      { maxChars: 900, maxEstimatedTokens: 250 },
+    );
+
+    expect(context.truncated).toBe(true);
+    expect(context.chars).toBeLessThanOrEqual(900);
+    expect(context.estimatedTokens).toBeLessThanOrEqual(250);
+  });
+
+  it("enforces hard limits even when structural overhead exceeds a tiny budget", () => {
+    const context = buildGoalJudgeRuntimeContext(
+      [
+        {
+          role: "assistant",
+          content: [{ type: "tool_use", id: "tiny", name: "Read", input: { path: "/tmp" } }],
+        },
+      ],
+      { maxChars: 1, maxEstimatedTokens: 1 },
+    );
+
+    expect(context.truncated).toBe(true);
+    expect(context.chars).toBeLessThanOrEqual(1);
+    expect(context.estimatedTokens).toBeLessThanOrEqual(1);
+  });
+
   it("removes nested image base64 payloads while retaining image metadata", () => {
     const payload = "a".repeat(256);
     const context = buildGoalJudgeRuntimeContext([

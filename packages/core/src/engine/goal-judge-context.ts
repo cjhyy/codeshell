@@ -183,6 +183,37 @@ function emergencyTruncate(round: Message[], maxChars: number, maxTokens: number
   return candidate;
 }
 
+function structuralFallback(round: Message[], maxChars: number, maxTokens: number): Message[] {
+  const perMessageBudget = Math.max(0, Math.floor(maxChars / Math.max(1, round.length)) - 32);
+  const candidate = round.map((message) => {
+    if (typeof message.content === "string") {
+      return { ...message, content: truncateString(message.content, perMessageBudget) };
+    }
+
+    const text = message.content
+      .filter((block) => block.type === "text")
+      .map((block) => block.text ?? "")
+      .join("\n");
+    const blocks: ContentBlock[] = [];
+    if (text) blocks.push({ type: "text", text: truncateString(text, perMessageBudget) });
+    for (const block of message.content) {
+      if (block.type === "text") continue;
+      if (block.type === "tool_use") {
+        blocks.push({ ...block, input: {} });
+      } else if (block.type === "tool_result") {
+        blocks.push({ ...block, content: "" });
+      } else {
+        blocks.push({ ...block });
+      }
+    }
+    return { ...message, content: blocks };
+  });
+
+  return renderConversation([candidate]).length <= maxChars && estimateTokens(candidate) <= maxTokens
+    ? candidate
+    : [];
+}
+
 export function buildGoalJudgeRuntimeContext(
   messages: readonly Message[],
   options: BuildGoalJudgeContextOptions = {},
@@ -218,11 +249,30 @@ export function buildGoalJudgeRuntimeContext(
     ) {
       selected = [emergencyTruncate(conversation, maxChars, maxEstimatedTokens)];
       truncated = true;
+      if (
+        estimateTokens(selected[0]!) > maxEstimatedTokens ||
+        renderConversation(selected).length > maxChars
+      ) {
+        const fallback = structuralFallback(conversation, maxChars, maxEstimatedTokens);
+        selected = fallback.length > 0 ? [fallback] : [];
+      }
     }
   }
 
-  const conversation = selected.flat();
-  const renderedConversation = renderConversation(selected);
+  let conversation = selected.flat();
+  let renderedConversation = renderConversation(selected);
+  // Absolute postcondition: even pathological structural overhead must not
+  // escape the advertised hard limits. The ellipsis is deterministic and the
+  // empty conversation has zero estimated tokens.
+  if (
+    renderedConversation.length > maxChars ||
+    estimateTokens(conversation) > maxEstimatedTokens
+  ) {
+    selected = [];
+    conversation = [];
+    renderedConversation = "…".slice(0, maxChars);
+    truncated = true;
+  }
   return {
     conversation,
     renderedConversation,
