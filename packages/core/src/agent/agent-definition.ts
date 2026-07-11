@@ -1,4 +1,5 @@
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import type { SandboxMode } from "../tool-system/sandbox/index.js";
 
 /** A reusable sub-agent role, loaded from a Markdown file. */
 export interface AgentDefinition {
@@ -19,6 +20,10 @@ export interface AgentDefinition {
    * system prompt and the only ones it may invoke. Empty array → no skills.
    */
   skills?: string[];
+  /** Optional OS shell sandbox mode. Undefined → inherit the parent sandbox. */
+  sandbox?: SandboxMode;
+  /** Optional MCP server allowlist. Undefined → inherit all; [] → no MCP. */
+  mcp?: string[];
   /** Markdown body — becomes the child Engine's appendSystemPrompt. */
   systemPrompt: string;
   /** Where this def was loaded from. Runtime-only; never serialized. */
@@ -47,6 +52,14 @@ interface RawFrontmatter {
   maxTurns?: unknown;
   tools?: unknown;
   skills?: unknown;
+  sandbox?: unknown;
+  mcp?: unknown;
+}
+
+const SANDBOX_MODES: ReadonlySet<string> = new Set(["off", "auto", "seatbelt", "bwrap"]);
+
+function normalizeSandboxMode(value: unknown): SandboxMode | undefined {
+  return typeof value === "string" && SANDBOX_MODES.has(value) ? (value as SandboxMode) : undefined;
 }
 
 /**
@@ -104,6 +117,10 @@ export function parseAgentDefinition(raw: string, sourceName: string): AgentDefi
   if (tools !== undefined) def.tools = tools;
   const skills = normalizeNameList(fm.skills);
   if (skills !== undefined) def.skills = skills;
+  const sandbox = normalizeSandboxMode(fm.sandbox);
+  if (sandbox !== undefined) def.sandbox = sandbox;
+  const mcp = normalizeNameList(fm.mcp);
+  if (mcp !== undefined) def.mcp = mcp;
   return def;
 }
 
@@ -123,6 +140,8 @@ export function serializeAgentDefinition(def: AgentDefinition): string {
   if (def.maxTurns !== undefined) fm.maxTurns = def.maxTurns;
   if (def.tools !== undefined) fm.tools = def.tools;
   if (def.skills !== undefined) fm.skills = def.skills;
+  if (def.sandbox !== undefined) fm.sandbox = def.sandbox;
+  if (def.mcp !== undefined) fm.mcp = def.mcp;
   const yaml = stringifyYaml(fm).trimEnd();
   return `---\n${yaml}\n---\n${def.systemPrompt}\n`;
 }

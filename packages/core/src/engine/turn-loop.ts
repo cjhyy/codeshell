@@ -24,10 +24,9 @@ import { ToolExecutor } from "../tool-system/executor.js";
 import { ContextManager } from "../context/manager.js";
 import { HookRegistry } from "../hooks/registry.js";
 import type { HookEventName, HookResult } from "../hooks/events.js";
-import {
-  projectGoalJudgeToolResult,
-  type GoalJudgeRuntimeContext,
-} from "../hooks/goal-stop-hook.js";
+import type { GoalJudgeRuntimeContext } from "../hooks/goal-stop-hook.js";
+import { buildGoalJudgeRuntimeContext } from "./goal-judge-context.js";
+import type { PromptCacheDiagnosticSample } from "./prompt-cache-diagnostics.js";
 import { wrapHookMessages } from "../hooks/inject.js";
 import { Transcript } from "../session/transcript.js";
 import { ContextLimitError } from "../exceptions.js";
@@ -46,6 +45,7 @@ import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js
 import { CANCEL_GOAL_TOOL_NAME } from "../tool-system/builtin/cancel-goal.js";
 import {
   redactSensitiveToolResultsInMessages,
+  SENSITIVE_TOOL_RESULT_PLACEHOLDER,
   toolResultForDisplay,
   toolResultTranscriptText,
   toolResultsForDisplay,
@@ -155,7 +155,7 @@ export interface TurnLoopDeps {
    * Lightweight per-session prompt-cache diagnostic, owned by Engine because it
    * needs memory across TurnLoop instances.
    */
-  recordCacheReadDiagnostics?: (usage: TokenUsage) => void;
+  recordCacheReadDiagnostics?: (sample: PromptCacheDiagnosticSample) => void;
   /** Persist the latest context-estimation anchor derived from provider usage. */
   recordContextUsageAnchor?: (anchor: ContextUsageAnchor) => void;
   /**
@@ -196,7 +196,7 @@ export interface TurnLoopDeps {
    * Private Goal-judge evidence seam. Engine stores this snapshot in the
    * built-in judge closure; it is never added to the public on_stop context.
    */
-  updateGoalJudgeContext?: (context: GoalJudgeRuntimeContext) => void;
+  publishGoalJudgeContext?: (context: GoalJudgeRuntimeContext) => void;
 }
 
 export interface TurnLoopResult {
@@ -578,10 +578,23 @@ export class TurnLoop {
     });
   }
 
-  private recordResponseUsage(usage: NonNullable<LLMResponse["usage"]>): void {
+  private recordResponseUsage(
+    usage: NonNullable<LLMResponse["usage"]>,
+    requestKind: PromptCacheDiagnosticSample["requestKind"] = "primary",
+    recordCacheDiagnostics = true,
+  ): void {
     this.currentTurnUsage = addTokenUsage(this.currentTurnUsage, usage);
     this.currentCumulativeUsage = this.deps.recordCumulativeUsage?.(usage);
-    this.deps.recordCacheReadDiagnostics?.(usage);
+    if (recordCacheDiagnostics && this.deps.recordCacheReadDiagnostics) {
+      this.deps.recordCacheReadDiagnostics({
+        usage,
+        requestKind,
+        fingerprint: this.deps.model.getPromptPrefixFingerprint(
+          this.deps.systemPrompt,
+          this.deps.tools,
+        ),
+      });
+    }
   }
 
   private emitCtxFromUsage(usage: NonNullable<LLMResponse["usage"]>, messages: Message[]): void {
@@ -655,14 +668,9 @@ export class TurnLoop {
     let messages = [...initialMessages];
     let finalText = "";
     const budgetTracker = createBudgetTracker();
-    // Recent execution evidence for the built-in Goal judge. Values enter this
-    // window only after irreversible sensitive-data removal, non-text omission,
-    // and per-item truncation at the current-round ToolResult boundary.
-    const goalToolResults: GoalJudgeRuntimeContext["toolResults"] = [];
     const sensitiveGoalResultTools = this.config.goal
       ? new Set(this.deps.tools.filter((tool) => tool.sensitiveResult).map((tool) => tool.name))
       : undefined;
-
     // Goal-mode run-scoped budget tracker (P0). Null when no goal. Stamps a
     // wall-clock start now and accumulates prompt+completion tokens across
     // every turn; the guardrail below force-stops the run once any configured
@@ -1025,7 +1033,7 @@ export class TurnLoop {
                 this.stopBlockCount = 0;
               }
               if (contResponse.usage?.promptTokens !== undefined) {
-                this.recordResponseUsage(contResponse.usage);
+                this.recordResponseUsage(contResponse.usage, "continuation");
                 continuedResponse = true;
               }
               if (goalTracker && contResponse.usage) {
@@ -1131,21 +1139,12 @@ export class TurnLoop {
           // maxStopBlocks (consecutive) and the outer maxTurns ceiling.
           const maxStopBlocks = this.config.maxStopBlocks ?? GOAL_DEFAULT_MAX_STOP_BLOCKS;
           if (goalTracker) {
-            this.deps.updateGoalJudgeContext?.({
-              toolResults: goalToolResults.map((item) => ({
-                ...item,
-              })),
-              progress: {
-                turnCount: this.turnCount,
-                stopRound: this.stopBlockCount + 1,
-                elapsedMs: Math.max(0, Date.now() - goalTracker.startedAtMs),
-                tokensUsed: goalTracker.tokensUsed,
-                tokenBudget: goalTracker.goal.tokenBudget,
-                timeBudgetMs: goalTracker.goal.timeBudgetMs,
-                maxTurns: this.config.maxTurns,
-                maxStopBlocks,
-              },
-            });
+            const judgeMessages = this.stripVolatileContextMessages(messages);
+            this.deps.publishGoalJudgeContext?.(
+              buildGoalJudgeRuntimeContext(judgeMessages, {
+                sensitiveToolResultRedactions: this.sensitiveToolResultRedactions,
+              }),
+            );
           }
           const stopHook = await this.emitHook("on_stop", {
             goal: this.config.goal,
@@ -1329,26 +1328,13 @@ export class TurnLoop {
         // Record results in transcript and stream
         const resultBlocks: ContentBlock[] = [];
         for (const result of results) {
-          if (goalTracker) {
-            goalToolResults.push(
-              projectGoalJudgeToolResult(
-                result,
-                this.turnCount,
-                sensitiveGoalResultTools?.has(result.toolName) === true,
-              ),
-            );
-            // Never evict the front of one legal batch: the default executor may
-            // return 25 results in a turn. Keep at least maxToolCallsPerTurn so
-            // the judge renderer can preserve metadata for the entire newest batch.
-            const residencyLimit = Math.max(20, this.config.maxToolCallsPerTurn);
-            if (goalToolResults.length > residencyLimit) {
-              goalToolResults.splice(0, goalToolResults.length - residencyLimit);
-            }
-          }
           resultBlocks.push(toolResultToBlock(result));
           const streamResult = toolResultForDisplay(result);
-          const transcriptResult = toolResultTranscriptText(result);
-          if (result.sensitive && transcriptResult !== undefined) {
+          const sensitiveByMetadata = sensitiveGoalResultTools?.has(result.toolName) === true;
+          const transcriptResult = sensitiveByMetadata
+            ? SENSITIVE_TOOL_RESULT_PLACEHOLDER
+            : toolResultTranscriptText(result);
+          if ((result.sensitive || sensitiveByMetadata) && transcriptResult !== undefined) {
             this.sensitiveToolResultRedactions.set(result.id, transcriptResult);
           }
 
@@ -1604,7 +1590,7 @@ export class TurnLoop {
         this.modelCallRecordingOptions(),
       );
       if (summaryResponse.usage?.promptTokens !== undefined) {
-        this.recordResponseUsage(summaryResponse.usage);
+        this.recordResponseUsage(summaryResponse.usage, "primary", false);
       }
       if (goalTracker && summaryResponse.usage) {
         recordGoalUsage(

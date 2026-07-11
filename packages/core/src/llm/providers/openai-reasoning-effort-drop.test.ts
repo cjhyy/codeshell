@@ -137,6 +137,7 @@ describe("OpenAIClient reasoning_effort + tools (gpt-5.5)", () => {
       maxTokens: 2048,
     });
 
+    expect(client.getPromptCacheConfigIdentity()).toMatchObject({ dropReasoningEffort: false });
     const resp = await client.createMessage(toolCallOpts({ mode: "effort", effort: "high" }));
     expect(resp.text).toBe("done");
 
@@ -145,5 +146,6 @@ describe("OpenAIClient reasoning_effort + tools (gpt-5.5)", () => {
     expect(all[0].reasoning_effort).toBeDefined();
     expect(all[1].reasoning_effort).toBeUndefined();
     expect(Array.isArray(all[1].tools)).toBe(true);
+    expect(client.getPromptCacheConfigIdentity()).toMatchObject({ dropReasoningEffort: true });
   });
 });

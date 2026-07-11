@@ -5,7 +5,6 @@
 import type {
   ClientDefaults,
   Message,
-  LLMConfig,
   StreamCallback,
   TaskInfo,
   TokenUsage,
@@ -19,7 +18,6 @@ import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
 import { applyDynamicToolDef } from "./dynamic-tool-defs.js";
 import { getMergedCatalog } from "../model-catalog/index.js";
 import { modelEntriesFromConnections } from "./model-connections-pool.js";
-import { resolveAuxKey } from "./aux-key.js";
 import {
   addTokenUsage,
   addCumulativeUsage,
@@ -34,8 +32,7 @@ import {
   removeSteerItem,
   type SteerItem,
 } from "./steer-queue.js";
-import { resolveSandboxConfig, type SettingsSandbox } from "./sandbox-config.js";
-import { sandboxCacheKey } from "./sandbox-cache-key.js";
+import { RunEnvironmentResolver } from "./run-environment.js";
 import { BUILTIN_TOOL_GUARDS, type BuiltinToolFn } from "../tool-system/builtin/index.js";
 import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
@@ -45,12 +42,7 @@ import {
 } from "../tool-system/builtin/agent-notifications.js";
 import {
   PermissionClassifier,
-  HeadlessApprovalBackend,
-  AutoApprovalBackend,
   InteractiveApprovalBackend,
-  getInteractiveApprovalBackend,
-  type ApprovalBackend,
-  type ApprovalRouter,
 } from "../tool-system/permission.js";
 import { HookRegistry } from "../hooks/registry.js";
 import type { HookEventName, HookResult } from "../hooks/events.js";
@@ -87,7 +79,7 @@ import {
 import { ModelFacade } from "./model-facade.js";
 import { logger, runWithSid, getCurrentSid } from "../logging/logger.js";
 import { recordSessionStart, recordSessionEnd } from "../logging/session-recorder.js";
-import { sanitizeContent, sanitizeTaskString } from "../logging/sanitize-messages.js";
+import { sanitizeTaskString } from "../logging/sanitize-messages.js";
 import { TurnLoop } from "./turn-loop.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
@@ -102,14 +94,9 @@ import {
 } from "../settings/feature-flags.js";
 import { effectiveDisabledList, effectiveBuiltinLists } from "../capability-control/overlay.js";
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
-import { FileHistory } from "../session/file-history.js";
-import { patchBackupTargets } from "../tool-system/builtin/apply-patch/backup-targets.js";
-import type { ToolContext, SubAgentSpawner } from "../tool-system/context.js";
-import {
-  resolveSandboxBackend,
-  type SandboxBackend,
-  type SandboxConfig,
-} from "../tool-system/sandbox/index.js";
+import { registerFileHistoryHook } from "./file-history-hook.js";
+import type { ToolContext } from "../tool-system/context.js";
+import type { SandboxBackend } from "../tool-system/sandbox/index.js";
 import { resolveAgentPreset, resolveBuiltinToolNames, type AgentPreset } from "../preset/index.js";
 import { ModelPool, type ModelEntry } from "../llm/model-pool.js";
 import { AgentDefinitionRegistry } from "../agent/agent-definition-registry.js";
@@ -118,18 +105,21 @@ import { detectProviderFromApiKey, buildModelPool } from "../onboarding.js";
 import { detectPastedNoise } from "../utils/task-sanitizer.js";
 import { formatFriendlyError } from "./friendly-error.js";
 import { buildSessionTitle } from "./session-title.js";
-import { MemoryOrchestrator } from "../services/memory-orchestrator.js";
-import { runDreamConsolidation } from "../services/dream-consolidation.js";
+import {
+  PromptCacheDiagnosticRecorder,
+  promptCacheDropHint,
+  type PromptCacheDiagnosticSample,
+} from "./prompt-cache-diagnostics.js";
 import { EngineRuntime } from "./runtime.js";
 import { buildRunUserMessageContent, prepareRunImageInput } from "./run-image-input.js";
+import type { EngineRunOptions } from "./run-types.js";
+import { createSubAgentSpawner } from "./subagent-spawner.js";
+import { stripInjectedContextMessages } from "./injected-context-cache.js";
+import { AuxiliaryPipeline } from "./auxiliary-pipeline.js";
+import { PermissionController } from "./permission-controller.js";
 import { join } from "node:path";
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import type { InputAttachmentMeta } from "../protocol/types.js";
-
-const CACHE_READ_DROP_MIN_PREVIOUS_TOKENS = 100;
-const CACHE_READ_DROP_MAX_CURRENT_TOKENS = 64;
-const CACHE_READ_DROP_RATIO = 0.1;
-const CACHE_READ_DIAGNOSTIC_MAX_SESSIONS = 256;
 
 /**
  * Build ScanOptions.compatFileNames from the user's instruction compat toggles.
@@ -148,29 +138,6 @@ export function compatFileNamesFrom(instructions?: {
   return names;
 }
 
-/**
- * True when two LLMConfigs name the SAME client identity — i.e. building a
- * client from either would talk to the same model on the same endpoint with the
- * same shaping. Used by resolveAuxClient to de-dup the aux client against the
- * active model WITHOUT collapsing two distinct pool keys that merely share a
- * `model` NAME but differ in reasoning/maxTokens/baseUrl/provider. Compares the
- * fields that actually change request behavior; apiKey is intentionally NOT
- * compared (two keys with the same endpoint+model but different credentials
- * still produce equivalent aux work and don't warrant a second client). The
- * reasoning object is compared by normalized JSON since it's a small
- * discriminated union.
- */
-function sameLlmIdentity(a: LLMConfig, b: LLMConfig): boolean {
-  return (
-    a.model === b.model &&
-    (a.baseUrl ?? undefined) === (b.baseUrl ?? undefined) &&
-    (a.provider ?? undefined) === (b.provider ?? undefined) &&
-    (a.providerKind ?? undefined) === (b.providerKind ?? undefined) &&
-    (a.maxTokens ?? undefined) === (b.maxTokens ?? undefined) &&
-    JSON.stringify(a.reasoning ?? null) === JSON.stringify(b.reasoning ?? null)
-  );
-}
-
 // EngineConfig / EngineHookConfig / EngineResult now live in engine/types.ts
 // so type-only consumers (protocol server, run factory, product layer,
 // settings/disk-defaults, SDK index) can import them without dragging in this
@@ -182,39 +149,6 @@ import type { EngineConfig, EngineResult } from "./types.js";
 export interface EnqueueSteerResult {
   accepted: boolean;
   id: string;
-}
-
-interface EngineRunOptions {
-  cwd?: string;
-  onStream?: StreamCallback;
-  signal?: AbortSignal;
-  sessionId?: string;
-  /** Immutable permission context for this run only. Omitted uses Engine config. */
-  permissionMode?: NonNullable<EngineConfig["permissionMode"]>;
-  /** Immutable plan context for this run only. Omitted follows permissionMode. */
-  planMode?: boolean;
-  /** Protocol connection's approval owner router for this run. */
-  approvalRouter?: ApprovalRouter;
-  /**
-   * Goal mode for this run: the engine registers a GoalStopHook so the
-   * turn loop runs until the session model judges this goal met. Falls
-   * back to config.goal. Orthogonal to permissionMode. Accepts a raw
-   * string or a full GoalConfig; normalized once at the run boundary.
-   */
-  goal?: string | GoalConfig;
-  /**
-   * Marks this turn's task as a SYNTHETIC system-reminder injection (e.g. a
-   * background-job completion notification the server re-injects to wake an
-   * idle session) rather than the user's own input. The task is still sent
-   * to the model as a `role:"user"` message, but it is persisted with an
-   * `injected` flag so the disk reader skips rendering it as a user bubble
-   * on replay (matching the live UI, which shows only the assistant reply).
-   */
-  injected?: boolean;
-  /** Stable id for this user-intent, used to make duplicate submits idempotent. */
-  clientMessageId?: string;
-  /** Structured input attachments. Legacy `<codeshell-image>` blocks remain supported. */
-  attachments?: InputAttachmentMeta[];
 }
 
 // Re-export the config hot-reload patch builder from here so the protocol
@@ -235,17 +169,7 @@ export { diskDefaultsFrom, type DiskDefaultPatch } from "../settings/disk-defaul
  * Engine directly via EngineConfig.clientDefaults — they do not flow through
  * this helper because they're not part of LLMConfig anymore.
  */
-export function resolveChildLlm(
-  modelKey: string | undefined,
-  pool: ModelPool | undefined,
-  parentLlm: LLMConfig,
-): LLMConfig {
-  if (modelKey && pool?.has(modelKey)) {
-    const resolved = pool.resolveLLMConfig(modelKey);
-    if (resolved) return resolved;
-  }
-  return parentLlm;
-}
+export { resolveChildLlm, resolveChildToolScope } from "./subagent-spawner.js";
 
 /**
  * Load reusable sub-agent role definitions, merging:
@@ -301,8 +225,6 @@ export function loadAgentDefinitionsForCwd(
   );
 }
 
-const NESTED_AGENT_TOOLS = ["Agent", "AgentStatus", "AgentCancel", "AgentSendInput"];
-
 /**
  * #7: apply a project's per-turn builtin capability override to a tool list.
  * A builtin marked `off` for the current cwd is HIDDEN from the turn's tool
@@ -326,22 +248,6 @@ export function applyBuiltinOverrideVisibility<T extends { name: string }>(
  * - `allowlist` undefined → inherit parent enabled/disabled, always with the
  *   nested-agent tools forced into `disabled` (no grandchildren).
  */
-export function resolveChildToolScope(
-  allowlist: string[] | undefined,
-  parentDisabled: string[] | undefined,
-  parentEnabled: string[] | undefined,
-): { enabled?: string[]; disabled: string[] } {
-  if (allowlist) {
-    return {
-      enabled: allowlist.filter((t) => !NESTED_AGENT_TOOLS.includes(t)),
-      disabled: [...NESTED_AGENT_TOOLS],
-    };
-  }
-  const disabled = Array.from(new Set([...(parentDisabled ?? []), ...NESTED_AGENT_TOOLS]));
-  const enabled = parentEnabled?.filter((t) => !NESTED_AGENT_TOOLS.includes(t));
-  return { enabled, disabled };
-}
-
 export class Engine {
   // Resolved per-session preset. Set in the ctor; re-resolved by
   // refreshRuntimeConfig on a preset hot-reload so the next-turn PromptComposer
@@ -375,29 +281,14 @@ export class Engine {
 
   /** Shared resources supplied at construction (adapter pattern — null when self-constructed). */
   readonly runtime: EngineRuntime | null;
-  private readonly sandboxCache = new Map<string, Promise<SandboxBackend>>();
-  private readonly interactiveBackends = new WeakMap<ApprovalRouter, InteractiveApprovalBackend>();
-  private activeApprovalRouter: ApprovalRouter | undefined;
-  /** Active permission mode for this Engine instance. */
-  permissionMode: NonNullable<EngineConfig["permissionMode"]>;
-  /** True when permissionMode === "plan". */
-  planMode: boolean;
+  private readonly runEnvironmentResolver: RunEnvironmentResolver;
+  private readonly auxiliaryPipeline: AuxiliaryPipeline;
+  private readonly permissionController: PermissionController;
 
   // Lazy SettingsManager — reused across updateConfig/readSetting so we
   // don't re-read 6+ JSON files on every /model, /login, etc. The manager
   // handles its own cache invalidation in saveUserSetting().
   private settingsManager: SettingsManager | undefined;
-
-  /**
-   * Cached auxiliary-task LLM client, keyed by the models[].key it was built
-   * from. Background calls (memory extraction, auto-dream) reuse it across
-   * runs so we don't redo the provider handshake every session. Invalidated
-   * implicitly: a changed auxModelKey produces a different cache key.
-   */
-  private auxClientCache?: {
-    key: string;
-    client: Awaited<ReturnType<typeof createLLMClient>>;
-  };
 
   // Live state from the current/most-recent run, retained for /compact and
   // run-boundary PermissionClassifier replacement/reconfiguration.
@@ -421,7 +312,7 @@ export class Engine {
    * LLM response arrives.
    */
   private ctxOverheadBySid = new Map<string, number>();
-  private lastCacheReadBySid = new Map<string, number>();
+  private promptCacheDiagnostics = new PromptCacheDiagnosticRecorder({ maxSessions: 256 });
   /**
    * Step-gap steering queue (per sessionId, in-memory). Host pushes user
    * messages here via enqueueSteer while a run is in flight; the turn loop
@@ -431,7 +322,6 @@ export class Engine {
    * multiple Engines don't interfere and it stays cleanly extractable.
    */
   private steerQueueBySid = new Map<string, SteerItem[]>();
-  private activePermission: PermissionClassifier | undefined;
   /**
    * The TurnLoop of the in-flight run(), exposed so extendGoalRun() can bump a
    * running goal's turn/budget ceilings mid-run (TODO 3.1). Null when idle.
@@ -465,9 +355,6 @@ export class Engine {
    */
   private runInProgress = false;
   /** Permission update requested while runInProgress. Applied in run() finally. */
-  private pendingPermissionMode: NonNullable<EngineConfig["permissionMode"]> | null = null;
-  /** Plan update paired with pendingPermissionMode for one atomic boundary apply. */
-  private pendingPlanMode: boolean | null = null;
 
   /** Public accessor so UI/clients can read the resolved per-model window. */
   get maxContextTokens(): number {
@@ -611,12 +498,24 @@ export class Engine {
   constructor(private config: EngineConfig) {
     // Wire shared runtime (adapter pattern — null when self-constructing).
     this.runtime = config.runtime ?? null;
-
-    // Instance-level permission/plan mode fields.
-    this.permissionMode = config.permissionMode ?? "acceptEdits";
-    this.planMode = this.permissionMode === "plan";
+    this.runEnvironmentResolver = new RunEnvironmentResolver({
+      config: () => this.config,
+      settings: () => this.getSettingsManager(),
+      credentialAccess: {
+        envExposures: (cwd, scope) => getCredentialAccess().envExposures(cwd, scope),
+      },
+      ...(this.runtime ? { runtime: this.runtime } : {}),
+    });
 
     this.preset = resolveAgentPreset(config.preset);
+    this.permissionController = new PermissionController({
+      config: () => this.config,
+      updateConfig: (next) => {
+        this.config = next;
+      },
+      presetRules: () => [...this.preset.defaultPermissionRules],
+      runInProgress: () => this.runInProgress,
+    });
     // Fold the project's capabilityOverrides.builtin overlay over the global
     // enabled/disabled builtin lists so a project can force-enable a
     // globally-disabled builtin tool or force-disable a globally-enabled one
@@ -675,6 +574,13 @@ export class Engine {
 
     // Initialize model pool — prefer runtime's shared pool, fall back to self-constructed.
     this.modelPool = config.runtime?.modelPool ?? new ModelPool();
+    this.auxiliaryPipeline = new AuxiliaryPipeline({
+      config: () => this.config,
+      settings: () => this.getSettingsManager(),
+      modelPool: () => this.modelPool,
+      toolRegistry: () => this.toolRegistry,
+      toolContext: () => this.buildToolContext(),
+    });
     if (!config.runtime) {
       this.populateModelPoolFromSettings();
     }
@@ -969,6 +875,14 @@ export class Engine {
     return this.config.headless === true;
   }
 
+  get permissionMode(): NonNullable<EngineConfig["permissionMode"]> {
+    return this.permissionController.permissionMode;
+  }
+
+  get planMode(): boolean {
+    return this.permissionController.planMode;
+  }
+
   /**
    * Probe whether a session already exists on disk (its state/transcript dir is
    * present). Used by the protocol server to distinguish "resume an existing
@@ -998,7 +912,7 @@ export class Engine {
       return await this.runExclusive(task, options);
     } finally {
       try {
-        this.applyPendingPermissionState();
+        this.permissionController.applyPending();
       } finally {
         this.runInProgress = false;
       }
@@ -1116,129 +1030,35 @@ export class Engine {
       };
     }
 
+    // Resolve before constructing the child spawner: a parent sandbox may come
+    // solely from project/user settings rather than config.sandbox, while a
+    // child intentionally skips project settings. Passing the complete
+    // effective config is what makes undefined role sandbox mean inherit.
+    const sandboxConfig = this.runEnvironmentResolver.resolveSandboxConfig(cwd);
+
     // Build the per-Engine ToolContext that will be threaded through every
     // tool call. Replaces the old module-level singletons (setAskUserFn,
     // setArenaLLMConfig, setSubAgentConfig, setToolSearchRegistry).
-    const subAgentSpawner: SubAgentSpawner = {
+    const subAgentSpawner = createSubAgentSpawner({
+      parentConfig: this.config,
+      parentSandbox: sandboxConfig,
+      presetName: this.preset.name,
+      cwd,
+      permissionMode: runPermissionMode,
+      modelPool: this.modelPool,
       parentStream: options?.onStream,
-      describe: () => ({
-        cwd,
-        preset: this.preset.name,
-        permissionMode: runPermissionMode,
-      }),
-      spawn: async (req) => {
-        // Anchor this sub-agent in the PARENT transcript at spawn time — before
-        // it runs, so it's recorded whether it later completes, is interrupted,
-        // or still runs. Replay reads these anchors to rebuild sub-agent cards
-        // from sessions/<agentId>/ (agentId === childSid); without it a
-        // backgrounded sub-agent leaves no parent-transcript trace and vanishes
-        // on reopen. Only on a fresh spawn (not a resume/continuation, which
-        // already has its anchor). Guarded so a transcript hiccup never breaks
-        // the spawn.
-        if (!req.resumeSessionId) {
-          try {
-            session.transcript.appendSubagent(req.agentId, undefined, req.description);
-          } catch {
-            /* anchor is best-effort; never block the spawn */
-          }
-        }
-        // No nested agents. Strip Agent / AgentStatus / AgentCancel from the
-        // child's tool pool so the LLM can't spawn grandchildren — matches
-        // Claude Code's ALL_AGENT_DISALLOWED_TOOLS approach. Without this
-        // guard a runaway model could fork-bomb sub-agents (token cost +
-        // background process explosion), and the sid / approval / dock
-        // model assumes a flat parent→children hierarchy. Layered with a
-        // runtime check in agent.ts as defense-in-depth.
-        const { enabled: childEnabled, disabled: childDisabled } = resolveChildToolScope(
-          req.toolAllowlist,
-          this.config.disabledBuiltinTools,
-          this.config.enabledBuiltinTools,
-        );
-        const childLlm = resolveChildLlm(req.model, this.modelPool, this.config.llm);
-        const child = new Engine({
-          llm: childLlm,
-          // Inherit parent's runtime knobs (temperature, image detail, timeouts)
-          // but cap sub-agent retries at 2 — they're short-lived and we'd
-          // rather surface failures than burn a 9 s exponential backoff loop.
-          clientDefaults: { ...(this.config.clientDefaults ?? {}), retryMaxAttempts: 2 },
-          cwd,
-          permissionMode: runPermissionMode,
-          preset: this.preset.name,
-          enabledBuiltinTools: childEnabled,
-          disabledBuiltinTools: childDisabled,
-          builtinToolHost: this.config.builtinToolHost,
-          customSystemPrompt: this.config.customSystemPrompt,
-          appendSystemPrompt:
-            [this.config.appendSystemPrompt, req.appendSystemPrompt].filter(Boolean).join("\n\n") ||
-            undefined,
-          responseLanguage: this.config.responseLanguage,
-          userProfile: this.config.userProfile,
-          instructions: this.config.instructions,
-          maxTurns: req.maxTurns,
-          maxContextTokens: this.config.maxContextTokens ?? 200_000,
-          sessionStorageDir: this.config.sessionStorageDir,
-          headless: this.config.headless,
-          readOnlySession: req.readOnlySession,
-          skillAllowlist: req.skillAllowlist,
-          sandbox: this.config.sandbox,
-          // Subagents inherit the parent's scope: a child runs in the same
-          // cwd/session, so it should see the same config layers the parent did.
-          settingsScope: this.config.settingsScope ?? "project",
-          isSubAgent: true,
-        });
-        // Where the spawned child Engine's stream events go. AgentTool's
-        // background path passes a `streamOverride` (transcriptSink) so the
-        // per-event detail is captured into the agent's transcript instead
-        // of flooding the main feed. Sync calls leave streamOverride unset
-        // and we fall back to the parent UI's onStream so synchronous
-        // sub-agents still render inline.
-        const destStream: StreamCallback | undefined = req.streamOverride ?? options?.onStream;
-        const childStream: StreamCallback | undefined = destStream
-          ? (event) => {
-              // Filter ctx-bar signals: the bar tracks the main conversation's
-              // prompt size, and a sub-agent's own session emits would clobber
-              // it (its sid is new, its messages are tiny, the rough char/4
-              // seed lands the bar at <1% mid-turn). Sub-agent token accounting
-              // lives in CostTracker (recordUsage), not the ctx bar.
-              //
-              // - session_started: would seed main ctx with sub-agent's prompt
-              // - usage_update: would overwrite main ctx with sub-agent's prompt
-              // - context_compact: would reset main ctx to sub-agent's post-compact
-              //   value AND print a misleading "context compacted" boundary in
-              //   the main chat (the main session didn't compact).
-              if (
-                event.type === "usage_update" ||
-                event.type === "session_started" ||
-                event.type === "context_compact"
-              ) {
-                return;
-              }
-              destStream({ ...event, agentId: req.agentId } as typeof event);
-            }
-          : undefined;
-        // child.run() establishes its own runWithSid scope internally, so
-        // child log lines route to the child's sid and parent's ALS
-        // binding is unaffected when control returns here.
-        //
-        // agent_id === childSid: cold-start the child UNDER its agentId as the
-        // session id (run() shape (2): a fresh sid the host wants materialized),
-        // so the session persists at sessions/<agentId>/ and AgentSendInput can
-        // later resume it by agentId with no extra id→sid mapping. When
-        // resumeSessionId is set we resume that existing session instead —
-        // run() detects the on-disk session and replays its full transcript
-        // (the CC continuation model; see AgentSendInput).
-        const childSessionId = req.resumeSessionId ?? req.agentId;
-        const result = await child.run(req.prompt, {
-          signal: req.signal,
-          onStream: childStream,
-          sessionId: childSessionId,
-        });
-        return { text: result.text, sessionId: result.sessionId, usage: result.usage };
+      appendParentSubagent: (agentId, description) => {
+        session.transcript.appendSubagent(agentId, undefined, description);
       },
-      sessionExists: (sessionId: string) => this.sessionManager.exists(sessionId),
-    };
+      sessionExists: (sessionId) => this.sessionManager.exists(sessionId),
+      childRunner: {
+        runChild: async (config, childTask, childOptions) => {
+          const child = new Engine(config);
+          return child.run(childTask, childOptions);
+        },
+      },
+    });
 
-    const sandboxConfig = this.resolveSandboxConfigForCwd(cwd);
     // A2: explicit sandbox modes (seatbelt, bwrap) must fail closed
     // per standard §S4. resolveSandboxBackend throws when an explicit
     // mode is unavailable on this host; we let it propagate. The
@@ -1249,9 +1069,7 @@ export class Engine {
     //
     // Backend is cached per runtime/engine so the capability probe runs once
     // per (mode, cwd) instead of every turn.
-    const sandboxBackend = this.runtime
-      ? await this.runtime.resolveSandbox(sandboxConfig, cwd)
-      : await this.resolveSandboxWithoutRuntime(sandboxConfig, cwd);
+    const sandboxBackend = await this.runEnvironmentResolver.resolveSandbox(cwd);
 
     // Observability: surface what sandbox actually applied this run — the
     // configured mode vs the resolved backend (auto may downgrade to off when
@@ -1285,7 +1103,7 @@ export class Engine {
           ? sandboxBackend
           : { ...sandboxBackend, network: sandboxConfig.network },
       cwd,
-      shellEnv: this.readShellEnv(cwd),
+      shellEnv: this.runEnvironmentResolver.readShellEnv(cwd),
       // TodoWrite reads this to push task_update events independently
       // of its return value, so the UI's pinned task panel refreshes
       // immediately rather than after the LLM next surfaces the
@@ -1600,15 +1418,14 @@ export class Engine {
       void llmClientPromise.catch(() => {});
 
       const mode = runPermissionMode;
-      this.activeApprovalRouter = toolCtx.approvalRouter;
-      const { rules: defaultRules, backend: approvalBackend } = this.buildPermissionConfig(
+      const { rules: defaultRules, backend: approvalBackend } = this.permissionController.build(
         mode,
         cwd,
         toolCtx.approvalRouter,
       );
 
       const permission = new PermissionClassifier(defaultRules, mode, approvalBackend);
-      this.activePermission = permission;
+      this.permissionController.attach(permission, toolCtx.approvalRouter);
 
       // If the backend is the interactive one, wire it for project-scope
       // persistence: it needs cwd to find settings.local.json, and a callback
@@ -1972,45 +1789,16 @@ export class Engine {
         return resp.text;
       };
 
-      // File history: auto-backup before Write/Edit
       const sessionDir = join(
         this.config.sessionStorageDir ?? join(userHome(), ".code-shell", "sessions"),
         session.state.sessionId,
       );
-      const fileHistory = FileHistory.loadFromDir(sessionDir);
-
-      // Keep a reference so we can unregister in the finally below. Registering an
-      // anonymous handler every run() leaks: unregister matches by handler
-      // identity, so without a stored reference each run stacks another identical
-      // on_tool_start handler that fires (and re-snapshots) on every tool forever.
-      const fileHistoryHandler: HookHandler = async (context) => {
-        const toolName = context.data?.toolName as string;
-        const args = context.data?.args as Record<string, unknown> | undefined;
-        // Tag snapshots with the current turn (stamped above before any tool
-        // runs) so turn-level /undo can revert just this user message's edits.
-        const turnSeq = session.state.turnSeq;
-        if ((toolName === "Write" || toolName === "Edit") && args?.file_path) {
-          const path = args.file_path as string;
-          // saveSnapshot returns null when the file does not exist yet — this
-          // hook runs BEFORE the tool, so a null here means the turn is CREATING
-          // the file. Record it (idempotent per turn) so /undo can delete it and
-          // /redo can recreate it.
-          if (fileHistory.saveSnapshot(path, turnSeq) === null && turnSeq !== undefined) {
-            fileHistory.recordCreated(path, turnSeq);
-          }
-        } else if (toolName === "ApplyPatch" && typeof args?.patch === "string") {
-          // ApplyPatch mutates files too, so /undo must see them. Snapshot every
-          // existing file the patch updates or deletes (adds have no prior
-          // content). Resolve relative patch paths against the engine cwd, the
-          // same base ApplyPatch itself uses.
-          const cwd = this.config.cwd ?? process.cwd();
-          for (const target of patchBackupTargets(args.patch, cwd)) {
-            fileHistory.saveSnapshot(target, turnSeq);
-          }
-        }
-        return {};
-      };
-      this.hooks.register("on_tool_start", fileHistoryHandler, 100, "file_history_backup");
+      const fileHistoryHook = registerFileHistoryHook({
+        hooks: this.hooks,
+        sessionDir,
+        cwd,
+        getTurnSeq: () => session.state.turnSeq,
+      });
 
       // Hook: agent start
       await this.emitHook(
@@ -2090,13 +1878,13 @@ export class Engine {
           ? { ...normalizedGoal }
           : undefined;
       let goalHookHandler: ReturnType<typeof createGoalStopHook> | null = null;
-      let goalJudgeContext: GoalJudgeRuntimeContext | undefined;
+      let latestGoalJudgeContext: GoalJudgeRuntimeContext | undefined;
       if (normalizedGoal && this.config.isSubAgent !== true) {
         goalHookHandler = createGoalStopHook({
           goal: normalizedGoal,
           llm: llmClient,
           log: logger,
-          getJudgeContext: () => goalJudgeContext,
+          getJudgeContext: () => latestGoalJudgeContext,
           onJudgeUsage: (usage) => {
             // The provider records this request into llmClient.getUsage() and the
             // process-wide CostTracker. This separate callback feeds the session
@@ -2185,8 +1973,8 @@ export class Engine {
             toolCtx.originClientMessageId = clientMessageId;
           },
           recordCumulativeUsage,
-          recordCacheReadDiagnostics: (usage) => {
-            this.recordCacheReadDiagnostics(sid, usage);
+          recordCacheReadDiagnostics: (sample) => {
+            this.recordCacheReadDiagnostics(sid, sample);
           },
           recordContextUsageAnchor: (anchor) => {
             session.state.contextUsageAnchor = {
@@ -2212,8 +2000,8 @@ export class Engine {
               if (this.activeGoalHook === goalHookHandler) this.activeGoalHook = null;
             }
           },
-          updateGoalJudgeContext: (context) => {
-            goalJudgeContext = context;
+          publishGoalJudgeContext: (context) => {
+            latestGoalJudgeContext = context;
           },
           ctxOverheadStore: {
             get: (s) => this.ctxOverheadBySid.get(s) ?? 0,
@@ -2401,10 +2189,10 @@ export class Engine {
         if (this.activeRunSession === session) this.activeRunSession = null;
         // Run-scoped too: this handler is re-registered every run(), so it must be
         // dropped here or it stacks duplicates that re-snapshot on every tool.
-        this.hooks.unregister("on_tool_start", fileHistoryHandler);
+        fileHistoryHook.dispose();
       }
       this.lastMessages = result.messages;
-      const cachedMessages = this.stripInjectedContextMessages(
+      const cachedMessages = stripInjectedContextMessages(
         result.messages,
         userContextMsg,
         dynamicContextMsg,
@@ -2583,103 +2371,17 @@ export class Engine {
     });
   }
 
-  /**
-   * Run the end-of-session memory pipeline as a fire-and-forget background
-   * task. Extracts durable memories from the transcript, saves a session
-   * summary, and conditionally triggers auto-dream consolidation.
-   */
-  /**
-   * Resolve the LLM client for background/auxiliary work (memory extraction,
-   * auto-dream). When settings.defaults.auxText names a valid pool model, build
-   * (and cache) a dedicated client for it so per-turn book-keeping runs on a cheap
-   * fast model instead of the expensive primary. Falls back to `fallback` (the
-   * active run's client) when unset, unknown, or on any build failure — aux
-   * work is best-effort and must never break a run.
-   */
-  /**
-   * Build the SummarizeFn used for context compaction. Extracted so both the
-   * run path and forceCompact share one definition of the summarization call.
-   */
   private buildSummarizeFn(
     auxSummaryClient: Awaited<ReturnType<typeof createLLMClient>>,
     recordCumulativeUsage?: (usage: TokenUsage) => CumulativeUsageCounters,
   ): (prompt: string, signal?: AbortSignal) => Promise<string> {
-    return async (prompt: string, signal?: AbortSignal) => {
-      const summaryResponse = await auxSummaryClient.createMessage({
-        systemPrompt: "You are a conversation summarizer. Be concise and factual.",
-        messages: [{ role: "user", content: prompt }],
-        tools: [],
-        maxTokens: 1024,
-        billingEnabled: true,
-        requestVisible: false,
-        // Auxiliary call — no need to burn reasoning tokens. On DeepSeek V4
-        // this flips thinking off (~3x faster, fewer tokens); on every other
-        // OpenAI-compatible provider the field is ignored.
-        reasoning: { mode: "off" },
-        signal,
-      });
-      if (summaryResponse.usage) {
-        recordCumulativeUsage?.(summaryResponse.usage);
-      }
-      return summaryResponse.text;
-    };
+    return this.auxiliaryPipeline.buildSummarizeFn(auxSummaryClient, recordCumulativeUsage);
   }
 
   private async resolveAuxClient(
     fallback: Awaited<ReturnType<typeof createLLMClient>>,
   ): Promise<Awaited<ReturnType<typeof createLLMClient>>> {
-    let auxKey: string | undefined;
-    try {
-      // Re-read from disk: settings may have been changed by the desktop
-      // (a separate process) since this worker last cached them. This runs
-      // once per run on the post-run background path, so the cost is fine.
-      const sm = this.getSettingsManager();
-      sm.invalidate();
-      // Unified store's defaults.auxText (a connection id = pool key) selects
-      // the aux model; resolveAuxKey returns it (or undefined).
-      auxKey = resolveAuxKey(sm.get() as { defaults?: { auxText?: string } });
-    } catch {
-      return fallback;
-    }
-    if (!auxKey) return fallback;
-
-    // Don't spin up a second client when the aux key resolves to the SAME
-    // client config as this engine's active model. Compare FULL LLM IDENTITY
-    // (model + reasoning + maxTokens + baseUrl + provider/providerKind) against
-    // this engine's own per-session config.llm — NOT a separately-tracked active
-    // key, and NOT just the model NAME. Two distinct pool keys can share the same
-    // `model` string yet differ in reasoning/maxOutputTokens/baseUrl/apiKey/
-    // providerKey; de-duping on the name alone would wrongly route the user's
-    // chosen aux entry onto the primary's config. config.llm is isolated per
-    // session and always set for a real run, so this is correct even for desktop
-    // worker sessions built with a shared runtime (which never explicitly
-    // switchModel, so the old activeModelKey field was undefined and defeated the
-    // de-dup), AND immune to another session mutating the shared pool's activeKey.
-    const entry = this.modelPool.get(auxKey);
-    if (entry && sameLlmIdentity(this.modelPool.toLLMConfig(entry), this.config.llm)) {
-      return fallback;
-    }
-
-    if (this.auxClientCache?.key === auxKey) return this.auxClientCache.client;
-
-    if (!entry) {
-      logger.warn("engine.aux_model_missing", { auxModelKey: auxKey });
-      return fallback;
-    }
-    try {
-      const client = await createLLMClient(
-        this.modelPool.toLLMConfig(entry),
-        this.config.clientDefaults,
-      );
-      this.auxClientCache = { key: auxKey, client };
-      return client;
-    } catch (err) {
-      logger.warn("engine.aux_model_build_failed", {
-        auxModelKey: auxKey,
-        error: (err as Error).message,
-      });
-      return fallback;
-    }
+    return this.auxiliaryPipeline.resolveAuxClient(fallback);
   }
 
   private async runMemoryPipeline(
@@ -2689,118 +2391,13 @@ export class Engine {
     primaryClient: Awaited<ReturnType<typeof createLLMClient>>,
     recordBilledUsage?: (usage: TokenUsage) => void,
   ): Promise<void> {
-    try {
-      // Background calls run on the auxiliary model when configured, so memory
-      // book-keeping doesn't burn the expensive primary model every turn.
-      // settings.memories.extractionModel (if set + valid) overrides the aux
-      // model specifically for memory extraction (TODO 8.1).
-      const llmClient = await this.resolveExtractionClient(primaryClient);
-      // Only run memory extraction for substantive sessions. The previous
-      // threshold of 4 user+assistant messages was low enough that two-line
-      // exchanges ("what's the time?" / "noon") triggered a full LLM
-      // extraction, which then padded the memory store with low-signal
-      // entries. 8 messages is roughly "more than a single back-and-forth"
-      // — substantive enough to be worth a durable note.
-      const messages = transcript
-        .toMessages()
-        .filter((m) => m.role === "user" || m.role === "assistant");
-      if (messages.length < 8) return;
-
-      // Memory orchestrator + dream-loop calls are auxiliary LLM calls
-      // that don't (and shouldn't) carry image payloads. Sanitize before
-      // stringify so we don't pump a 10 MB base64 string into the
-      // summarization prompt — provider 400s on it, and it leaks bytes
-      // into a downstream cost-tracking path we don't audit as carefully
-      // as the primary turn.
-      const plainMessages = messages.map((m) => {
-        const safe = sanitizeContent(m.content);
-        return {
-          role: m.role,
-          content: typeof safe === "string" ? safe : JSON.stringify(safe),
-        };
-      });
-
-      const orchestrator = new MemoryOrchestrator({
-        callLLM: async (sysPrompt, userMsg) => {
-          // Use a lightweight auxiliary call (no tools, no streaming, no
-          // reasoning tokens).
-          const resp = await llmClient.createMessage({
-            systemPrompt: sysPrompt,
-            messages: [{ role: "user", content: userMsg }],
-            tools: [],
-            maxTokens: 1024,
-            billingEnabled: true,
-            requestVisible: false,
-            reasoning: { mode: "off" },
-          });
-          if (resp.usage) recordBilledUsage?.(resp.usage);
-          return resp.text;
-        },
-        runDream: async ({ systemPrompt, userPrompt, projectDir }) =>
-          this.runDreamLoop({
-            systemPrompt,
-            userPrompt,
-            projectDir,
-            llmClient,
-            sessionId,
-            recordBilledUsage,
-          }),
-        projectDir: cwd,
-        // settings.memories.maxCount caps memories accepted per extraction;
-        // autoExtract=false turns the extractor off (summaries/dream stay).
-        maxCount: this.readMemoriesConfig()?.maxCount,
-        autoExtract: this.readMemoriesConfig()?.autoExtract,
-      });
-
-      await orchestrator.run(plainMessages, sessionId);
-    } catch (err) {
-      // Memory pipeline is best-effort — never surface errors to the user.
-      logger.warn("engine.memory_pipeline_failed", {
-        sessionId,
-        error: (err as Error).message,
-      });
-    }
-  }
-
-  /**
-   * Drive the auto-dream tool-call loop.
-   *
-   * Runs the LLM with a whitelisted subset of memory tools (MemoryList,
-   * MemoryRead, MemorySave, MemoryDelete). The loop is intentionally small
-   * and offline:
-   *   - No streaming, no UI events — runs in the background after a session.
-   *   - No permission prompts — UI isn't attached, so we hard-reject any
-   *     attempt to Save/Delete in the "user" scope before dispatching. Dream
-   *     scope is the LLM's workspace and goes through freely.
-   *   - Capped at MAX_TURNS LLM round-trips and MAX_WRITES total
-   *     mutations to bound damage on misbehavior.
-   *
-   * Returns true if the loop ran (with or without writes); false if we
-   * bailed before the first LLM call (e.g. registry missing the tools).
-   */
-  private async runDreamLoop(opts: {
-    systemPrompt: string;
-    userPrompt: string;
-    projectDir?: string;
-    llmClient: Awaited<ReturnType<typeof createLLMClient>>;
-    sessionId: string;
-    recordBilledUsage?: (usage: TokenUsage) => void;
-  }): Promise<boolean> {
-    // The loop body now lives in services/dream-consolidation.ts so it can
-    // also be driven from the desktop host's manual "整理 / Dream" trigger.
-    // The orchestrator built systemPrompt/userPrompt from this engine's
-    // MemoryManager already; runDreamConsolidation rebuilds them from the same
-    // projectDir, so passing them here would be redundant — we just hand it the
-    // tool registry + a memory-scoped tool context.
-    const { ran } = await runDreamConsolidation({
-      llmClient: opts.llmClient,
-      toolRegistry: this.toolRegistry,
-      toolContext: this.buildToolContext(),
-      projectDir: opts.projectDir,
-      sessionId: opts.sessionId,
-      onUsage: opts.recordBilledUsage,
-    });
-    return ran;
+    return this.auxiliaryPipeline.runMemoryPipeline(
+      transcript,
+      sessionId,
+      cwd,
+      primaryClient,
+      recordBilledUsage,
+    );
   }
 
   getToolRegistry(): ToolRegistry {
@@ -3210,43 +2807,35 @@ export class Engine {
     };
   }
 
-  private stripInjectedContextMessages(
-    messages: Message[],
-    userContextMsg: Message | null,
-    dynamicContextMsg: Message | null,
-  ): Message[] {
-    const withoutDynamicContext = dynamicContextMsg
-      ? messages.filter((msg) => msg !== dynamicContextMsg)
-      : [...messages];
-    if (!userContextMsg || messages[0] !== userContextMsg) {
-      return withoutDynamicContext;
-    }
-    return withoutDynamicContext.slice(1);
-  }
-
-  private recordCacheReadDiagnostics(sessionId: string, usage: TokenUsage): void {
-    const current = usage.cacheReadTokens;
-    if (current === undefined || !Number.isFinite(current)) return;
-
-    const previous = this.lastCacheReadBySid.get(sessionId);
-    this.lastCacheReadBySid.delete(sessionId);
-    this.lastCacheReadBySid.set(sessionId, current);
-    if (this.lastCacheReadBySid.size > CACHE_READ_DIAGNOSTIC_MAX_SESSIONS) {
-      const oldestSessionId = this.lastCacheReadBySid.keys().next().value;
-      if (oldestSessionId !== undefined) this.lastCacheReadBySid.delete(oldestSessionId);
-    }
-    if (previous === undefined || previous < CACHE_READ_DROP_MIN_PREVIOUS_TOKENS) return;
-
-    const dropRatio = previous > 0 ? current / previous : 1;
-    if (current <= CACHE_READ_DROP_MAX_CURRENT_TOKENS && dropRatio <= CACHE_READ_DROP_RATIO) {
-      logger.warn("engine.cache_read_drop", {
+  private recordCacheReadDiagnostics(sessionId: string, sample: PromptCacheDiagnosticSample): void {
+    const result = this.promptCacheDiagnostics.record(sessionId, sample);
+    if (result.kind === "scope_changed") {
+      logger.info("engine.cache_scope_changed", {
         sessionId,
-        previousCacheReadTokens: previous,
-        currentCacheReadTokens: current,
-        dropRatio,
-        hint: "Prompt cache read tokens dropped sharply. Check for changed cacheable prefix, stale dynamic context in history, tool/schema changes, or provider cache eviction.",
+        cacheScopeHash: sample.fingerprint.cacheScopeHash,
       });
+      return;
     }
+    if (result.kind === "schema_changed") {
+      logger.info("engine.cache_diagnostic_schema_changed", {
+        sessionId,
+        version: sample.fingerprint.version,
+      });
+      return;
+    }
+    if (result.kind !== "drop") return;
+
+    logger.warn("engine.cache_read_drop", {
+      sessionId,
+      previousCacheReadTokens: result.previous.cacheReadTokens,
+      currentCacheReadTokens: result.current.cacheReadTokens,
+      dropRatio: result.dropRatio,
+      cause: result.attribution.cause,
+      changedPrefixes: result.attribution.changedPrefixes,
+      previousPrefix: result.previous.fingerprint,
+      currentPrefix: result.current.fingerprint,
+      hint: promptCacheDropHint(result.attribution),
+    });
   }
 
   private getSettingsManager(): SettingsManager {
@@ -3282,92 +2871,6 @@ export class Engine {
     return target;
   }
 
-  private buildPermissionConfig(
-    mode: NonNullable<EngineConfig["permissionMode"]>,
-    cwd: string,
-    approvalRouter?: ApprovalRouter,
-  ): { rules: import("../types.js").PermissionRule[]; backend: ApprovalBackend } {
-    const rules: import("../types.js").PermissionRule[] = [...this.preset.defaultPermissionRules];
-
-    // Memory tools: dream scope is the LLM's own workspace, so save/delete
-    // there go through without prompting. user-scope save/delete have no
-    // explicit allow rule here, so default-mode classifier fallback asks the
-    // user to confirm modifications. RegisteredTool.permissionDefault is only
-    // UI/metadata and is not read by the classifier.
-    rules.push({
-      tool: "MemorySave",
-      argsPattern: { scope: "^dream$" },
-      decision: "allow",
-      reason: "Dream scope is the LLM's auto-consolidation workspace",
-    });
-    rules.push({
-      tool: "MemoryDelete",
-      argsPattern: { scope: "^dream$" },
-      decision: "allow",
-      reason: "Dream scope is the LLM's auto-consolidation workspace",
-    });
-
-    if (mode === "acceptEdits" || mode === "bypassPermissions") {
-      rules.push({ tool: "Write", decision: "allow" });
-      rules.push({ tool: "Edit", decision: "allow" });
-    }
-    if (mode === "bypassPermissions") {
-      rules.push({ tool: "Bash", decision: "allow" });
-    }
-
-    try {
-      const settingsManager = new SettingsManager(
-        cwd,
-        this.config.settingsScope ?? "project",
-        this.config.projectTrusted !== false,
-      );
-      const settings = settingsManager.get();
-      if (settings.permissions?.rules?.length) {
-        rules.unshift(...settings.permissions.rules);
-      }
-    } catch {
-      // Settings not available — defaults only
-    }
-
-    let backend: ApprovalBackend;
-    if (this.config.approvalBackend) {
-      backend =
-        mode === "auto"
-          ? new AutoApprovalBackend(this.config.approvalBackend)
-          : this.config.approvalBackend;
-    } else if (mode === "auto") {
-      backend = new AutoApprovalBackend();
-    } else {
-      // If a host installed an InteractiveApprovalBackend prompt fn
-      // (agent-server-stdio does this on boot via setInteractiveApprovalFn),
-      // use it so the UI gets a chance to approve/deny. Without this,
-      // every `ask` permission silently fell through to deny-all and
-      // the user saw "Permission denied by user" with NO modal — exactly
-      // the bug that motivated this fix.
-      let interactive: InteractiveApprovalBackend;
-      if (approvalRouter) {
-        interactive =
-          this.interactiveBackends.get(approvalRouter) ??
-          new InteractiveApprovalBackend(approvalRouter);
-        this.interactiveBackends.set(approvalRouter, interactive);
-      } else {
-        interactive = getInteractiveApprovalBackend();
-      }
-      if (interactive.hasPromptFn()) {
-        backend = interactive;
-      } else {
-        backend = new HeadlessApprovalBackend(
-          mode === "bypassPermissions"
-            ? "approve-all"
-            : mode === "dontAsk"
-              ? "deny-all"
-              : "deny-all",
-        );
-      }
-    }
-    return { rules, backend };
-  }
-
   /**
    * Switch permission mode at runtime. Idle updates apply immediately; busy
    * updates are committed atomically when the current run settles, so its
@@ -3375,43 +2878,11 @@ export class Engine {
    * Session-only — does not persist to settings.
    */
   setPermissionMode(mode: NonNullable<EngineConfig["permissionMode"]>): void {
-    if (this.runInProgress) {
-      this.pendingPermissionMode = mode;
-      this.pendingPlanMode = mode === "plan";
-      return;
-    }
-    this.applyPermissionState(mode, mode === "plan");
-  }
-
-  private applyPermissionState(
-    mode: NonNullable<EngineConfig["permissionMode"]>,
-    planMode: boolean,
-  ): void {
-    this.config = { ...this.config, permissionMode: mode };
-    this.permissionMode = mode;
-    this.planMode = planMode;
-    if (this.activePermission) {
-      const cwd = this.config.cwd ?? process.cwd();
-      const { rules, backend } = this.buildPermissionConfig(
-        mode,
-        cwd,
-        this.activeApprovalRouter,
-      );
-      this.activePermission.reconfigure(mode, backend, rules);
-    }
-  }
-
-  private applyPendingPermissionState(): void {
-    if (this.pendingPermissionMode === null) return;
-    const mode = this.pendingPermissionMode;
-    const planMode = this.pendingPlanMode ?? mode === "plan";
-    this.pendingPermissionMode = null;
-    this.pendingPlanMode = null;
-    this.applyPermissionState(mode, planMode);
+    this.permissionController.setPermissionMode(mode);
   }
 
   getPermissionMode(): NonNullable<EngineConfig["permissionMode"]> {
-    return this.config.permissionMode ?? "acceptEdits";
+    return this.permissionController.getPermissionMode();
   }
 
   /**
@@ -3437,11 +2908,7 @@ export class Engine {
    * rule set buildPermissionConfig does, without constructing a backend.
    */
   getPermissionRules(): import("../types.js").PermissionRule[] {
-    return this.buildPermissionConfig(
-      this.getPermissionMode(),
-      this.config.cwd ?? process.cwd(),
-      this.activeApprovalRouter,
-    ).rules;
+    return this.permissionController.getPermissionRules();
   }
 
   /**
@@ -3449,12 +2916,7 @@ export class Engine {
    * Also syncs permissionMode to keep both fields consistent.
    */
   setPlanMode(value: boolean): void {
-    if (value) {
-      this.setPermissionMode("plan");
-    } else if ((this.pendingPermissionMode ?? this.permissionMode) === "plan") {
-      // Leaving plan mode: drop back to the default.
-      this.setPermissionMode("acceptEdits");
-    }
+    this.permissionController.setPlanMode(value);
   }
 
   /**
@@ -3588,126 +3050,6 @@ export class Engine {
    * overlays turn-specific fields like sandbox and subAgentSpawner) and
    * by tests that want a ToolContext without a full run() cycle.
    */
-  private resolveSandboxWithoutRuntime(
-    config: SandboxConfig,
-    cwd: string,
-  ): Promise<SandboxBackend> {
-    const key = sandboxCacheKey(config, cwd);
-    let cached = this.sandboxCache.get(key);
-    if (!cached) {
-      cached = resolveSandboxBackend(config, cwd);
-      // Mirror EngineRuntime.resolveSandbox: don't cache a rejection, or an
-      // explicit-mode probe that throws stays sticky until process restart even
-      // after the user fixes the config.
-      cached.catch(() => {
-        if (this.sandboxCache.get(key) === cached) this.sandboxCache.delete(key);
-      });
-      this.sandboxCache.set(key, cached);
-    }
-    return cached;
-  }
-
-  private resolveSandboxConfigForCwd(cwd: string): SandboxConfig {
-    // Priority: config.sandbox → project settings.sandbox → global → per-run
-    // default. Read UNMERGED per-scope (getForScope) so a project that wrote no
-    // sandbox genuinely follows global, rather than inheriting global's mode and
-    // looking like it set one. Fixes "项目级配了不生效" + the scope model.
-    let projectSandbox: SettingsSandbox | undefined;
-    let globalSandbox: SettingsSandbox | undefined;
-    try {
-      const sm = this.getSettingsManager();
-      if (this.config.isSubAgent !== true) {
-        projectSandbox = (sm.getForScope("project", cwd) as { sandbox?: SettingsSandbox }).sandbox;
-      }
-      globalSandbox = (sm.getForScope("user") as { sandbox?: SettingsSandbox }).sandbox;
-    } catch {
-      // settings unavailable → fall through to per-run default
-    }
-    return resolveSandboxConfig(
-      this.config.sandbox,
-      projectSandbox,
-      globalSandbox,
-      this.config.headless === true,
-    );
-  }
-
-  /**
-   * Build the shell env layered onto the Bash tool / background shells (see
-   * mergeShellEnv). Three user-configured sources, merged lowest → highest:
-   *
-   *   1. project `localEnvironment.env`  — the per-project "local environment"
-   *      panel (DATABASE_URL etc.); the floor, so a project's own panel values
-   *      can be overridden by an explicit top-level `env`.
-   *   2. global top-level `env`          — ~/.code-shell/settings.json; the
-   *      canonical home for API keys (OPENAI_API_KEY) a skill script reads —
-   *      configure once, every project's skills get it.
-   *   3. project top-level `env`         — .code-shell/settings.json; a project
-   *      that wants to override a global key wins.
-   *
-   * Each scope is read UNMERGED so the layering here is the single source of
-   * precedence (getForScope merges nothing). Returns undefined when no layer
-   * contributes a key, so the caller passes it through unchanged for projects
-   * that configure none.
-   *
-   * Sub-agents: a sub-agent is the user's OWN agent doing the user's work
-   * (mirrors Claude Code, where sub-agents inherit the parent environment), so
-   * it now reads the SAME env as the parent. The sub-agent branch is kept as an
-   * explicit seam (`filterSubagentEnv`) rather than removed — a future policy
-   * could narrow what a sub-agent sees (e.g. drop credential secrets) by
-   * changing that one hook; today it passes everything through unchanged.
-   * A no-cwd context still gets nothing (there is genuinely no project to read).
-   *
-   * None of these is filtered through the deny regex (mergeShellEnv): the user
-   * put them there deliberately. The allowlist/deny machinery only guards the
-   * host's process.env from a tainted model exfiltrating it via `env | curl`.
-   */
-  private readShellEnv(cwd?: string): Record<string, string> | undefined {
-    if (!cwd) return undefined;
-    const merged: Record<string, string> = {};
-    const layer = (env: Record<string, string> | undefined): void => {
-      if (!env) return;
-      for (const [k, v] of Object.entries(env)) {
-        if (typeof v === "string") merged[k] = v;
-      }
-    };
-    try {
-      // The fully-merged settings already apply the scope guard (a 'project'
-      // scope never reads the host ~/.code-shell) and the user < project <
-      // local precedence — so the top-level `env` map read from here is global
-      // values overridden by project values, exactly as specified. We layer
-      // localEnvironment.env *under* it as the floor.
-      const settings = this.getSettingsManager().get() as {
-        env?: Record<string, string>;
-        localEnvironment?: { env?: Record<string, string> };
-      };
-      layer(settings.localEnvironment?.env); // floor
-      // Credentials flagged "expose as env var" (Credential.exposeAsEnv). This
-      // is the wiring that was missing — the UI/store recorded the flag but no
-      // code ever injected the secret, so `$FIGMA_TOKEN` was always empty.
-      // Scope mirrors settingsScope so a project-scoped engine never surfaces
-      // the host user's credentials (same isolation contract as top-level env).
-      // Placed below settings.env so an explicit `env` entry can still override.
-      const credScope = (this.config.settingsScope ?? "project") === "full" ? "full" : "project";
-      layer(getCredentialAccess().envExposures(cwd, credScope));
-      layer(settings.env); // top-level env (global ⊕ project) wins
-    } catch {
-      return undefined;
-    }
-    const result = this.config.isSubAgent === true ? this.filterSubagentEnv(merged) : merged;
-    return Object.keys(result).length > 0 ? result : undefined;
-  }
-
-  /**
-   * Policy seam for what a sub-agent's shell sees. A sub-agent inherits the
-   * parent environment by default (mirrors Claude Code), so this is the
-   * identity function today. It exists so a future policy can narrow the set
-   * (e.g. strip credential `exposeAsEnv` secrets, or allowlist by name) in ONE
-   * place instead of scattering `isSubAgent` checks through readShellEnv.
-   */
-  private filterSubagentEnv(env: Record<string, string>): Record<string, string> {
-    return env;
-  }
-
   /**
    * Read the project's `localEnvironment.setupScripts` for this cwd (the raw
    * per-platform map). Used by EnterWorktree to run setup once in a freshly
@@ -3718,50 +3060,25 @@ export class Engine {
   readWorktreeSetupScripts(
     cwd?: string,
   ): { default?: string; macos?: string; linux?: string; windows?: string } | undefined {
-    if (this.config.isSubAgent === true || !cwd) return undefined;
-    try {
-      const scoped = this.getSettingsManager().getForScope("project", cwd) as {
-        localEnvironment?: {
-          setupScripts?: { default?: string; macos?: string; linux?: string; windows?: string };
-        };
-      };
-      return scoped.localEnvironment?.setupScripts;
-    } catch {
-      return undefined;
-    }
+    return this.runEnvironmentResolver.readWorktreeSetupScripts(cwd);
   }
 
   readWorktreeBranchPrefix(cwd?: string): string | undefined {
-    if (this.config.isSubAgent === true || !cwd) return undefined;
-    try {
-      const settings = this.getSettingsManager().get() as {
-        worktree?: { branchPrefix?: string };
-      };
-      return settings.worktree?.branchPrefix;
-    } catch {
-      return undefined;
-    }
+    return this.runEnvironmentResolver.readWorktreeBranchPrefix(cwd);
   }
 
   async resolveWorktreeSetupSandbox(cwd: string): Promise<SandboxBackend | undefined> {
-    if (!cwd) return undefined;
-    const sandboxConfig = this.resolveSandboxConfigForCwd(cwd);
-    const sandboxBackend = this.runtime
-      ? await this.runtime.resolveSandbox(sandboxConfig, cwd)
-      : await this.resolveSandboxWithoutRuntime(sandboxConfig, cwd);
-    return sandboxBackend.name === "off"
-      ? sandboxBackend
-      : { ...sandboxBackend, network: sandboxConfig.network };
+    return this.runEnvironmentResolver.resolveWorktreeSetupSandbox(cwd);
   }
 
   readWorktreeSetupShellEnv(cwd?: string): Record<string, string> | undefined {
-    return this.readShellEnv(cwd);
+    return this.runEnvironmentResolver.readShellEnv(cwd);
   }
 
   buildToolContext(): ToolContext {
     const { disabledSkills, disabledPlugins } = this.readDisabledLists();
     const ctx: ToolContext = {
-      shellEnv: this.readShellEnv(this.config.cwd),
+      shellEnv: this.runEnvironmentResolver.readShellEnv(this.config.cwd),
       cwd: this.config.cwd ?? process.cwd(),
       llmConfig: this.config.llm,
       modelPool: this.modelPool,
@@ -3867,50 +3184,7 @@ export class Engine {
   private readMemoriesConfig():
     | { maxCount?: number; maxAge?: number; extractionModel?: string; autoExtract?: boolean }
     | undefined {
-    try {
-      const settings = this.getSettingsManager().get() as {
-        memories?: {
-          maxCount?: number;
-          maxAge?: number;
-          extractionModel?: string;
-          autoExtract?: boolean;
-        };
-      };
-      return settings.memories;
-    } catch {
-      return undefined;
-    }
-  }
-
-  /**
-   * LLM client for memory extraction (TODO 8.1). Prefers
-   * settings.memories.extractionModel when it names a valid pool model;
-   * otherwise falls back to the aux client (which itself falls back to the
-   * passed primary). Build failures fall back too — extraction is best-effort.
-   */
-  private async resolveExtractionClient(
-    primaryClient: Awaited<ReturnType<typeof createLLMClient>>,
-  ): Promise<Awaited<ReturnType<typeof createLLMClient>>> {
-    const key = this.readMemoriesConfig()?.extractionModel;
-    if (key) {
-      const entry = this.modelPool.get(key);
-      if (entry) {
-        try {
-          return await createLLMClient(
-            this.modelPool.toLLMConfig(entry),
-            this.config.clientDefaults,
-          );
-        } catch (err) {
-          logger.warn("engine.extraction_model_build_failed", {
-            extractionModel: key,
-            error: (err as Error).message,
-          });
-        }
-      } else {
-        logger.warn("engine.extraction_model_missing", { extractionModel: key });
-      }
-    }
-    return this.resolveAuxClient(primaryClient);
+    return this.auxiliaryPipeline.readMemoriesConfig();
   }
 }
 

@@ -68,6 +68,26 @@ const opts = (
 });
 
 describe("OpenAIClient OpenRouter+Anthropic prompt-cache breakpoints", () => {
+  it("identifies explicit versus automatic provider cache strategies", () => {
+    const anthropic = capturingClient({
+      providerKind: "openrouter",
+      model: "anthropic/claude-opus-4.7-fast",
+    }).client;
+    const ordinary = capturingClient({
+      providerKind: "openrouter",
+      model: "openai/gpt-5.4",
+    }).client;
+
+    expect(anthropic.getPromptCacheConfigIdentity()).toMatchObject({
+      cacheStrategy: "openrouter-anthropic-explicit",
+      cacheLayoutVersion: "system-history-v1",
+    });
+    expect(ordinary.getPromptCacheConfigIdentity()).toMatchObject({
+      cacheStrategy: "provider-automatic",
+      cacheLayoutVersion: "automatic-v1",
+    });
+  });
+
   it("marks the system message as a content-array text block with cache_control", async () => {
     const { client, lastBody } = capturingClient({
       providerKind: "openrouter",

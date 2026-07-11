@@ -260,6 +260,24 @@ export class OpenAIClient extends LLMClientBase {
     return this.config.providerKind === "openrouter" && /^~?anthropic\//.test(this.model);
   }
 
+  override getPromptCacheConfigIdentity(): Readonly<Record<string, unknown>> {
+    const capability = this.capability;
+    return {
+      ...super.getPromptCacheConfigIdentity(),
+      cacheStrategy: this.isOpenRouterAnthropic
+        ? "openrouter-anthropic-explicit"
+        : "provider-automatic",
+      cacheLayoutVersion: this.isOpenRouterAnthropic ? "system-history-v1" : "automatic-v1",
+      tokenLimitField: this._forceMaxCompletionTokens
+        ? "max_completion_tokens"
+        : capability.tokenLimitField,
+      reasoningShape: capability.reasoning,
+      rejectedParams: [...capability.rejectedParams].sort(),
+      forceMaxCompletionTokens: this._forceMaxCompletionTokens,
+      dropReasoningEffort: this._dropReasoningEffort,
+    };
+  }
+
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
     return this.withRetry(async (requestSignal) => {
       // requestSignal = caller's cancel signal composed with a per-request
@@ -1153,4 +1171,3 @@ function mapImageDetailToOpenAI(
   if (detail === "low") return "low";
   return "high";
 }
-

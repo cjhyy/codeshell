@@ -33,8 +33,15 @@ describe("resolveAgentTypeOverrides — falls back to a configured agent", () =>
   });
   it("returns overrides for a valid configured agent_type", () => {
     const reg = registryWith(["researcher"]);
+    // @ts-expect-error — test helper augments the in-memory role directly
+    Object.assign(reg.defs.get("researcher")!, {
+      sandbox: "auto",
+      mcp: ["github"],
+    });
     const ov = resolveAgentTypeOverrides("researcher", reg);
     expect(ov.appendSystemPrompt).toBe("x");
+    expect(ov.sandboxMode).toBe("auto");
+    expect(ov.mcpAllowlist).toEqual(["github"]);
   });
   it("returns {} when registry is empty and no agent_type", () => {
     const reg = registryWith([]);

@@ -16,7 +16,7 @@ import type { LLMConfig, StreamCallback, TokenUsage } from "../types.js";
 import type { ModelPool } from "../llm/model-pool.js";
 import type { ToolRegistry } from "./registry.js";
 import type { AgentPresetName } from "../preset/index.js";
-import type { SandboxBackend } from "./sandbox/index.js";
+import type { SandboxBackend, SandboxMode } from "./sandbox/index.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type { SessionManager } from "../session/session-manager.js";
 import type { SessionWorkspace } from "../types.js";
@@ -131,6 +131,10 @@ export interface SubAgentSpawnRequest {
    * tool. Undefined → child inherits the parent's full skill pool.
    */
   skillAllowlist?: string[];
+  /** Optional role-level sandbox mode. Undefined → inherit the parent sandbox. */
+  sandboxMode?: SandboxMode;
+  /** Optional MCP server allowlist. Undefined → inherit all; [] → no MCP. */
+  mcpAllowlist?: string[];
   /**
    * Optional per-call system prompt appended to the child Engine's prompt
    * (the role definition's Markdown body). Undefined → child inherits only

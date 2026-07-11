@@ -86,6 +86,50 @@ export abstract class LLMClientBase {
     return { ...this.usage };
   }
 
+  /**
+   * Cache-relevant request identity only. Credentials, retry/timeout policy,
+   * arbitrary catalog payloads, and endpoint text are deliberately excluded.
+   */
+  getPromptCacheConfigIdentity(): Readonly<Record<string, unknown>> {
+    const allowedExtraBodyKeys = new Set([
+      "temperature",
+      "top_p",
+      "thinking",
+      "reasoning",
+      "reasoning_effort",
+      "max_tokens",
+      "max_completion_tokens",
+      "service_tier",
+    ]);
+    const extraBody = Object.fromEntries(
+      Object.entries(this.config.extraBody ?? {}).filter(([key]) => allowedExtraBodyKeys.has(key)),
+    );
+    return {
+      provider: this.provider,
+      providerKind: this.config.providerKind ?? this.provider,
+      model: this.model,
+      ...(this.maxTokens !== undefined ? { maxTokens: this.maxTokens } : {}),
+      ...(this.config.reasoning !== undefined ? { reasoning: this.config.reasoning } : {}),
+      ...(this.config.reasoningSummary !== undefined
+        ? { reasoningSummary: this.config.reasoningSummary }
+        : {}),
+      ...(this.config.serviceTier !== undefined ? { serviceTier: this.config.serviceTier } : {}),
+      temperature: this.temperature,
+      ...(this.imageDetail !== undefined ? { imageDetail: this.imageDetail } : {}),
+      ...(Object.keys(extraBody).length > 0 ? { extraBody } : {}),
+    };
+  }
+
+  /** Cache namespace identity with a normalized, credential-free endpoint. */
+  getPromptCacheScopeIdentity(): Readonly<Record<string, unknown>> {
+    return {
+      provider: this.provider,
+      providerKind: this.config.providerKind ?? this.provider,
+      model: this.model,
+      endpoint: normalizeCacheEndpoint(this.config.baseUrl),
+    };
+  }
+
   /** Zero all accumulated usage. Used when starting a fresh accounting window
    *  (e.g. after a model switch, where the prior model's cache stats no longer
    *  apply). */
@@ -259,6 +303,28 @@ export abstract class LLMClientBase {
     }
 
     throw lastError ?? new LLMError("Unknown LLM error");
+  }
+}
+
+function normalizeCacheEndpoint(baseUrl: string | undefined): string {
+  if (!baseUrl) return "(provider-default)";
+  try {
+    const url = new URL(baseUrl);
+    url.username = "";
+    url.password = "";
+    url.search = "";
+    url.hash = "";
+    const path = url.pathname.replace(/\/+$/u, "") || "/";
+    const port =
+      (url.protocol === "https:" && url.port === "443") ||
+      (url.protocol === "http:" && url.port === "80")
+        ? ""
+        : url.port;
+    return `${url.protocol.toLocaleLowerCase()}//${url.hostname.toLocaleLowerCase()}${
+      port ? `:${port}` : ""
+    }${path}`;
+  } catch {
+    return "(custom-endpoint)";
   }
 }
 

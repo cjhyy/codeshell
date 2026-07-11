@@ -42,6 +42,13 @@ function makeDeps(
       requestCount: 0,
     }),
     getOutputTokens: () => 0,
+    getPromptPrefixFingerprint: () => ({
+      version: 1 as const,
+      cacheScopeHash: "scope",
+      systemHash: "system",
+      toolsHash: "tools",
+      configHash: "config",
+    }),
     summarize: undefined,
   } as unknown as TurnLoopDeps["model"];
 
@@ -166,6 +173,41 @@ async function runCapturingEventsWithCumulative(responses: LLMResponse[]): Promi
 }
 
 describe("TurnLoop usage_update carries cache tokens", () => {
+  it("forwards a primary diagnostic sample with the effective prefix fingerprint", async () => {
+    const { deps } = makeDeps([respWithCache()]);
+    const samples: any[] = [];
+    deps.recordCacheReadDiagnostics = (sample) => samples.push(sample);
+
+    await new TurnLoop(deps, { maxTurns: 2, maxToolCallsPerTurn: 10 }).run([
+      { role: "user", content: "hi" },
+    ]);
+
+    expect(samples).toHaveLength(1);
+    expect(samples[0]).toMatchObject({
+      requestKind: "primary",
+      usage: { cacheReadTokens: 800 },
+      fingerprint: {
+        version: 1,
+        cacheScopeHash: "scope",
+        systemHash: "system",
+        toolsHash: "tools",
+        configHash: "config",
+      },
+    });
+  });
+
+  it("does not let the no-tools max-turn summary replace the primary cache baseline", async () => {
+    const { deps } = makeDeps([respWithCache()]);
+    const samples: any[] = [];
+    deps.recordCacheReadDiagnostics = (sample) => samples.push(sample);
+
+    await new TurnLoop(deps, { maxTurns: 0, maxToolCallsPerTurn: 10 }).run([
+      { role: "user", content: "hi" },
+    ]);
+
+    expect(samples).toEqual([]);
+  });
+
   it("labels message-estimate usage updates as heuristic low confidence", () => {
     const { deps } = makeDeps([respNoCache()]);
     const events: StreamEvent[] = [];
