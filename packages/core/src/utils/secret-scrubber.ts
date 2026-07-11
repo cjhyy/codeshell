@@ -41,10 +41,9 @@ const SENSITIVE_NORMALIZED_KEYS = new Set([
 
 function isSensitiveKey(key: string): boolean {
   const normalized = key.toLowerCase().replace(/[^a-z0-9]/gu, "");
-  return (
-    SENSITIVE_NORMALIZED_KEYS.has(normalized) ||
-    /(?:token|secret|password|passwd|apikey|privatekey)$/u.test(normalized)
-  );
+  // Exact normalized words only. Suffix matching would erase legitimate
+  // design-system evidence such as designToken / color_token.
+  return SENSITIVE_NORMALIZED_KEYS.has(normalized);
 }
 
 function lineEnd(text: string, start: number): number {

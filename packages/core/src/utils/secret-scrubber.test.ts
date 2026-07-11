@@ -98,4 +98,28 @@ describe("scrubSecretValue", () => {
     };
     expect(scrubSecretValue(input)).toEqual(input);
   });
+
+  it("preserves design-token business fields while redacting exact credential keys", () => {
+    expect(
+      scrubSecretValue({
+        designToken: "spacing-large",
+        color_token: "brand-blue-500",
+        colorToken: "surface-muted",
+        access_token: "access-value",
+        refresh_token: "refresh-value",
+        client_secret: "client-value",
+        api_key: "api-value",
+        "Access-Token": "header-access-value",
+      }),
+    ).toEqual({
+      designToken: "spacing-large",
+      color_token: "brand-blue-500",
+      colorToken: "surface-muted",
+      access_token: "[REDACTED]",
+      refresh_token: "[REDACTED]",
+      client_secret: "[REDACTED]",
+      api_key: "[REDACTED]",
+      "Access-Token": "[REDACTED]",
+    });
+  });
 });
