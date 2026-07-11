@@ -109,13 +109,29 @@ describe("AgentServer agent/forkSession", () => {
       [1, { sourceSessionId: "missing", mode: "full" }],
       [2, { sourceSessionId: "source", targetSessionId: "existing", mode: "full" }],
       [3, { sourceSessionId: "source", mode: "summary" }],
+      [4, { sourceSessionId: "source", mode: "full", forkKind: "other" }],
+      [
+        5,
+        {
+          sourceSessionId: "source",
+          mode: "full",
+          forkKind: "side",
+          throughEventId: "z",
+        },
+      ],
     ] as const) {
       transport.deliver({ jsonrpc: "2.0", id, method: Methods.ForkSession, params });
       await new Promise((resolve) => setTimeout(resolve, 0));
     }
     expect(
       transport.sent.filter((message) => message.error).map((message) => message.error.code),
-    ).toEqual([ErrorCodes.SessionNotFound, ErrorCodes.InvalidParams, ErrorCodes.InvalidParams]);
+    ).toEqual([
+      ErrorCodes.SessionNotFound,
+      ErrorCodes.InvalidParams,
+      ErrorCodes.InvalidParams,
+      ErrorCodes.InvalidParams,
+      ErrorCodes.InvalidParams,
+    ]);
   });
 
   for (const sourceState of ["busy", "queued"] as const) {
@@ -145,4 +161,38 @@ describe("AgentServer agent/forkSession", () => {
       expect(fake.calls).toHaveLength(0);
     });
   }
+
+  it("forks a busy source as a completed side snapshot without weakening normal fork guard", async () => {
+    const fake = fakeEngine();
+    const manager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => fake.engine,
+    });
+    const live = await manager.getOrCreate("source", {} as never);
+    live.isBusy = () => true;
+    live.queueDepth = () => 0;
+    const transport = makeTransport();
+    new AgentServer({ transport: transport.transport, chatManager: manager });
+
+    transport.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: Methods.ForkSession,
+      params: {
+        sourceSessionId: "source",
+        targetSessionId: "target",
+        mode: "full",
+        forkKind: "side",
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(transport.sent.at(-1)?.error).toBeUndefined();
+    expect(fake.calls).toEqual([
+      {
+        sourceSessionId: "source",
+        options: { targetSessionId: "target", snapshotMode: "completed" },
+      },
+    ]);
+  });
 });

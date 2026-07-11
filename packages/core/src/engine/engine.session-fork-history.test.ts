@@ -98,5 +98,9 @@ describe("Engine first turn after a session fork", () => {
     expect(resultBlocks).toEqual([
       { type: "tool_result", tool_use_id: "read-1", content: "file contents" },
     ]);
+    const completed = manager.resume("fork-target");
+    expect(completed.state.completedThroughEventId).toBe(
+      completed.transcript.getEvents().at(-1)?.id,
+    );
   });
 });

@@ -276,6 +276,13 @@ export interface SessionState {
    * the last user message changed. Absent on legacy sessions → treated as 0.
    */
   turnSeq?: number;
+  /**
+   * Inclusive transcript cursor for the last naturally completed conversation
+   * turn. It advances only when Engine.run finishes with reason="completed",
+   * so a side fork can exclude a newer user message already persisted by an
+   * in-flight run. Absent on legacy sessions and before the first completion.
+   */
+  completedThroughEventId?: string;
   invokedSkills: string[];
   /**
    * Owning parent session for a sub-agent run; `null` explicitly marks a
