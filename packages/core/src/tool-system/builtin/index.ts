@@ -281,7 +281,10 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       permissionDefault: "allow",
       isReadOnly: true,
       isConcurrencySafe: true,
-      pathPolicy: [{ kind: "arg", arg: "path", operation: "read", defaultToCwd: true }],
+      pathPolicy: [
+        { kind: "arg", arg: "path", operation: "read", defaultToCwd: true },
+        { kind: "arg", arg: "pattern", operation: "read" },
+      ],
     },
     execute: globTool,
   },

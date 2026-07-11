@@ -75,9 +75,15 @@ describe("validateToolMetadata", () => {
   it("every shipped built-in tool has consistent pathPolicy metadata", () => {
     // Doubles as a codebase audit: any real typo in a builtin's pathPolicy.arg
     // surfaces here.
-    const issues = collectToolMetadataIssues(
-      BUILTIN_TOOLS.map((t) => t.definition),
-    );
+    const issues = collectToolMetadataIssues(BUILTIN_TOOLS.map((t) => t.definition));
     expect(issues).toEqual([]);
+  });
+
+  it("declares both the Glob search path and pattern as read path surfaces", () => {
+    const glob = BUILTIN_TOOLS.find((t) => t.definition.name === "Glob")?.definition;
+    expect(glob?.pathPolicy).toEqual([
+      { kind: "arg", arg: "path", operation: "read", defaultToCwd: true },
+      { kind: "arg", arg: "pattern", operation: "read" },
+    ]);
   });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, utimesSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, utimesSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { globTool } from "./glob.js";
@@ -31,6 +31,58 @@ describe("globTool", () => {
     expect(out).not.toContain("c.js");
     expect(out).toContain("2 files matched");
     expect(out).toMatch(/\(\d+B\)/);
+  });
+
+  it("rejects an absolute pattern instead of returning files outside the workspace", async () => {
+    const out = await globTool({ pattern: "/etc/hosts" }, ctx());
+    expect(out).toContain("Error");
+    expect(out).not.toContain("/etc/hosts  (");
+  });
+
+  it("rejects a pattern that escapes above the workspace", async () => {
+    const workspace = join(dir, "nested", "workspace");
+    mkdirSync(workspace, { recursive: true });
+    writeFileSync(join(dir, "outside-workspace.ts"), "secret");
+
+    const out = await globTool({ pattern: "../../**" }, ctx({ cwd: workspace }));
+    expect(out).toContain("Error");
+    expect(out).not.toContain("outside-workspace.ts");
+  });
+
+  it("does not return files reached through a symlink outside the search root", async () => {
+    const outside = mkdtempSync(join(tmpdir(), "glob-outside-"));
+    try {
+      writeFileSync(join(outside, "outside-workspace.ts"), "secret");
+      symlinkSync(outside, join(dir, "linked"), "dir");
+
+      const out = await globTool({ pattern: "linked/**" }, ctx());
+      expect(out).not.toContain("outside-workspace.ts");
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps workspace-relative recursive patterns working", async () => {
+    mkdirSync(join(dir, "src"), { recursive: true });
+    mkdirSync(join(dir, "packages", "core", "src"), { recursive: true });
+    writeFileSync(join(dir, "src", "root.ts"), "x");
+    writeFileSync(join(dir, "packages", "core", "src", "index.ts"), "x");
+
+    const recursive = await globTool({ pattern: "**/*.ts" }, ctx());
+    expect(recursive).toContain("src/root.ts");
+    expect(recursive).toContain("packages/core/src/index.ts");
+
+    const packageSources = await globTool({ pattern: "packages/*/src/**" }, ctx());
+    expect(packageSources).toContain("packages/core/src/index.ts");
+    expect(packageSources).not.toContain("src/root.ts");
+  });
+
+  it("keeps a workspace subdirectory path working with a relative pattern", async () => {
+    mkdirSync(join(dir, "packages", "core", "src"), { recursive: true });
+    writeFileSync(join(dir, "packages", "core", "src", "index.ts"), "x");
+
+    const out = await globTool({ path: join(dir, "packages", "core"), pattern: "**/*.ts" }, ctx());
+    expect(out).toContain("src/index.ts");
   });
 
   it("returns a clear message when nothing matches", async () => {
