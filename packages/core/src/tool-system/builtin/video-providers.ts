@@ -36,7 +36,7 @@ export type VideoSubmitResult =
 
 export type VideoPollResult =
   | { ok: true; status: "running" }
-  | { ok: true; status: "succeeded" }
+  | { ok: true; status: "succeeded"; url?: string }
   | { ok: true; status: "failed"; error: string }
   | { ok: false; error: string };
 
@@ -44,11 +44,20 @@ export type VideoDownloadResult =
   | { ok: true; bytes: Uint8Array; ext: string; url?: string }
   | { ok: false; error: string };
 
+export interface VideoDownloadRequest {
+  jobId: string;
+  creds: VideoProviderCreds;
+  signal?: AbortSignal;
+  /** Called as soon as the provider exposes the remote result URL, before the
+   *  potentially long byte download begins. */
+  onUrl?: (url: string) => void;
+}
+
 export interface VideoProvider {
   readonly kind: string;
   submit(req: VideoSubmitRequest): Promise<VideoSubmitResult>;
   poll(req: { jobId: string; creds: VideoProviderCreds; signal?: AbortSignal }): Promise<VideoPollResult>;
-  download(req: { jobId: string; creds: VideoProviderCreds; signal?: AbortSignal }): Promise<VideoDownloadResult>;
+  download(req: VideoDownloadRequest): Promise<VideoDownloadResult>;
 }
 
 /**
@@ -90,7 +99,7 @@ export class FakeVideoProvider implements VideoProvider {
     return { ok: true, status: "running" };
   }
 
-  async download(_req: { jobId: string; creds?: VideoProviderCreds; signal?: AbortSignal }): Promise<VideoDownloadResult> {
+  async download(_req: VideoDownloadRequest): Promise<VideoDownloadResult> {
     return { ok: true, bytes: Buffer.from(this.opts.bytes ?? "FAKE_VIDEO"), ext: "mp4" };
   }
 }
@@ -223,7 +232,7 @@ export class FalVideoProvider implements VideoProvider {
     }
   }
 
-  async download(req: { jobId: string; creds: VideoProviderCreds; signal?: AbortSignal }): Promise<VideoDownloadResult> {
+  async download(req: VideoDownloadRequest): Promise<VideoDownloadResult> {
     const { responseUrl } = this.split(req.jobId);
     try {
       // hop 1: result JSON
@@ -239,6 +248,7 @@ export class FalVideoProvider implements VideoProvider {
       const j = (await r.json()) as { video?: { url?: string } };
       const videoUrl = j.video?.url;
       if (!videoUrl) return { ok: false, error: "fal result: no video.url" };
+      req.onUrl?.(videoUrl);
 
       // hop 2: video bytes
       const vr = await this.fetchImpl(videoUrl, { method: "GET", signal: req.signal });
