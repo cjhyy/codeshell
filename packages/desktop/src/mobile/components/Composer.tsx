@@ -38,6 +38,9 @@ export function Composer({
   const galleryRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const previewUrlsRef = useRef(new Set<string>());
+  // React state does not update until the next render, so two taps in the same
+  // frame can both see pending=false. This ref closes that tiny upload window.
+  const submitInFlightRef = useRef(false);
   const [attachments, setAttachments] = useState<DraftAttachment[]>([]);
   const [pending, setPending] = useState(false);
   const [queued, setQueued] = useState(false);
@@ -102,11 +105,12 @@ export function Composer({
   };
 
   const submit = async () => {
-    if (pending || queued) return;
+    if (submitInFlightRef.current || pending || queued) return;
     const el = ref.current;
     if (!el) return;
     const text = el.value.trim();
     if (!text && attachments.length === 0) return;
+    submitInFlightRef.current = true;
     setPending(true);
     setError(null);
     try {
@@ -127,6 +131,7 @@ export function Composer({
       el.value = "";
       autosize();
     } finally {
+      submitInFlightRef.current = false;
       setPending(false);
     }
   };

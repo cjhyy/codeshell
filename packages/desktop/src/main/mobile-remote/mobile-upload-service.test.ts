@@ -85,6 +85,29 @@ function fakePut(
 }
 
 describe("MobileUploadService", () => {
+  test("keeps the first PUT successful when the same ticket is submitted concurrently", async () => {
+    const service = makeService();
+    await service.ready();
+    const ticket = service.begin("device-a", {
+      clientId: "duplicate-put",
+      name: "photo.png",
+      mime: "image/png",
+      size: PNG.byteLength,
+    });
+
+    const first = fakePut(service, ticket.uploadId, "image/png", PNG.byteLength);
+    const duplicate = fakePut(service, ticket.uploadId, "image/png", PNG.byteLength);
+    first.request.end(PNG);
+    duplicate.request.end(PNG);
+    await Promise.all([first.done, duplicate.done]);
+
+    expect([first.response.status, duplicate.response.status].sort()).toEqual([201, 409]);
+    const uploaded = service.claim("device-a", ticket.uploadId);
+    expect(existsSync(uploaded.path)).toBe(true);
+    expect(uploaded.size).toBe(PNG.byteLength);
+    await service.finalize("device-a", ticket.uploadId, uploaded.claimId);
+  });
+
   test("atomically claims a ticket, binds the claim to its owner, and finalizes the spool", async () => {
     const service = makeService();
     const bytes = PNG;

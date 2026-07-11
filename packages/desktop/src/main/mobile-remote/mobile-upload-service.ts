@@ -179,13 +179,25 @@ export class MobileUploadService {
       return;
     }
 
-    await mkdir(this.opts.rootDir, { recursive: true });
+    // Reserve the ticket synchronously before the first filesystem await. Two
+    // near-simultaneous PUTs used to both observe `pending`, then race on the
+    // same .part path and reset/delete each other's record. The duplicate now
+    // receives the existing 409 above while this first request runs normally.
+    record.status = "uploading";
+    try {
+      await mkdir(this.opts.rootDir, { recursive: true });
+    } catch {
+      if (this.uploads.get(uploadId) === record && record.status === "uploading") {
+        record.status = "pending";
+      }
+      reply(res, 500, "upload storage is unavailable");
+      return;
+    }
     const partPath = join(this.opts.rootDir, `${uploadId}.part`);
     const finalPath = join(this.opts.rootDir, `${uploadId}.upload`);
     const hash = createHash("sha256");
     let received = 0;
     let deadlineExpired = false;
-    record.status = "uploading";
     const counter = new Transform({
       transform(chunk: Buffer, _encoding, callback) {
         received += chunk.byteLength;
