@@ -4,6 +4,8 @@ import { createServer, type IncomingMessage, type Server } from "node:http";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import {
   CredentialStore,
   PlaintextCipher,
@@ -31,6 +33,7 @@ function listen(server: Server): Promise<number> {
 }
 
 function close(server: Server): Promise<void> {
+  server.closeAllConnections();
   return new Promise((resolve) => server.close(() => resolve()));
 }
 
@@ -38,8 +41,11 @@ describe("MCP OAuth local protocol round-trip", () => {
   let home: string | undefined;
   let previousHome: string | undefined;
   let server: Server | undefined;
+  let receiverServer: Server | undefined;
 
   afterEach(async () => {
+    if (receiverServer) await close(receiverServer);
+    receiverServer = undefined;
     if (server) await close(server);
     server = undefined;
     if (previousHome === undefined) delete process.env.HOME;
@@ -54,6 +60,7 @@ describe("MCP OAuth local protocol round-trip", () => {
     process.env.HOME = home;
 
     let origin = "";
+    let receiverOrigin = "";
     let registrationBody: Record<string, unknown> | undefined;
     let authorizationUrl: URL | undefined;
     let callbackUrl = "";
@@ -64,6 +71,8 @@ describe("MCP OAuth local protocol round-trip", () => {
     const mcpAuthorizations: string[] = [];
     const always401Authorizations: string[] = [];
     const revokedTokens: string[] = [];
+    const redirectReceiverRequests: Array<{ url: string; body: string }> = [];
+    const trustedRedirectBodies: Array<{ path: string; body: string }> = [];
     let protectedDiscoveryCalls = 0;
     let authorizationDiscoveryCalls = 0;
     let registrationCalls = 0;
@@ -108,6 +117,16 @@ describe("MCP OAuth local protocol round-trip", () => {
         json(201, { ...registrationBody, client_id: "dynamic-client" });
         return;
       }
+      if (url.pathname === "/redirect-token" && req.method === "POST") {
+        trustedRedirectBodies.push({ path: url.pathname, body: await requestBody(req) });
+        res.writeHead(307, { Location: `${receiverOrigin}/collect-token` }).end();
+        return;
+      }
+      if (url.pathname === "/redirect-revoke" && req.method === "POST") {
+        trustedRedirectBodies.push({ path: url.pathname, body: await requestBody(req) });
+        res.writeHead(308, { Location: `${receiverOrigin}/collect-revoke` }).end();
+        return;
+      }
       if (url.pathname === "/token" && req.method === "POST") {
         const params = new URLSearchParams(await requestBody(req));
         tokenBodies.push(params);
@@ -137,8 +156,50 @@ describe("MCP OAuth local protocol round-trip", () => {
         mcpAuthorizations.push(authorization);
         if (authorization !== "Bearer access-3") {
           res.writeHead(401).end();
+          return;
+        }
+        if (req.method !== "POST") {
+          res.writeHead(405, { Allow: "POST" }).end();
+          return;
+        }
+        const message = JSON.parse(await requestBody(req)) as {
+          jsonrpc: "2.0";
+          id?: string | number;
+          method?: string;
+          params?: { protocolVersion?: string };
+        };
+        if (message.method === "initialize") {
+          json(200, {
+            jsonrpc: "2.0",
+            id: message.id,
+            result: {
+              protocolVersion: message.params?.protocolVersion ?? "2025-03-26",
+              capabilities: { tools: {} },
+              serverInfo: { name: "local-oauth-mcp", version: "1.0.0" },
+            },
+          });
+        } else if (message.method === "notifications/initialized") {
+          res.writeHead(202).end();
+        } else if (message.method === "tools/list") {
+          json(200, {
+            jsonrpc: "2.0",
+            id: message.id,
+            result: {
+              tools: [
+                {
+                  name: "local-tool",
+                  description: "Local OAuth MCP tool",
+                  inputSchema: { type: "object", properties: {} },
+                },
+              ],
+            },
+          });
         } else {
-          json(200, { jsonrpc: "2.0", result: { tools: [] } });
+          json(400, {
+            jsonrpc: "2.0",
+            id: message.id ?? null,
+            error: { code: -32601, message: "Method not found" },
+          });
         }
         return;
       }
@@ -156,6 +217,14 @@ describe("MCP OAuth local protocol round-trip", () => {
       res.writeHead(404).end();
     });
     origin = `http://127.0.0.1:${await listen(server)}`;
+    receiverServer = createServer(async (req, res) => {
+      redirectReceiverRequests.push({
+        url: req.url ?? "",
+        body: await requestBody(req),
+      });
+      res.writeHead(200).end();
+    });
+    receiverOrigin = `http://127.0.0.1:${await listen(receiverServer)}`;
 
     const store = new CredentialStore(undefined, new PlaintextCipher());
     const service = new McpOAuthService({
@@ -233,20 +302,49 @@ describe("MCP OAuth local protocol round-trip", () => {
       fetch,
     );
 
-    expect((await authenticatedFetch(`${origin}/mcp`, { method: "POST", body: "{}" })).status).toBe(
-      200,
+    const mcpClient = new Client(
+      { name: "oauth-e2e-client", version: "1.0.0" },
+      { capabilities: {} },
     );
-    expect(mcpAuthorizations).toEqual(["Bearer access-2", "Bearer access-3"]);
+    const mcpTransport = new StreamableHTTPClientTransport(new URL(`${origin}/mcp`), {
+      fetch: authenticatedFetch as never,
+    });
+    await mcpClient.connect(mcpTransport);
+    const listedTools = await mcpClient.listTools();
+    expect(listedTools.tools.map((tool) => tool.name)).toEqual(["local-tool"]);
+    await mcpClient.close();
+    expect(mcpAuthorizations.slice(0, 2)).toEqual(["Bearer access-2", "Bearer access-3"]);
+    expect(mcpAuthorizations.slice(2).length).toBeGreaterThanOrEqual(2);
+    expect(mcpAuthorizations.slice(2).every((value) => value === "Bearer access-3")).toBe(true);
 
     expect((await authenticatedFetch(`${origin}/always-401`, { method: "POST" })).status).toBe(401);
     expect(always401Authorizations).toEqual(["Bearer access-3", "Bearer access-4"]);
     expect(tokenBodies).toHaveLength(4);
 
+    const current = store.resolve("local-mcp-oauth")!;
+    const currentSecret = parseOAuthCredentialSecret(current.secret!);
+    store.save("user", {
+      ...current,
+      secret: JSON.stringify({
+        ...currentSecret,
+        tokenEndpoint: `${origin}/redirect-token`,
+        revocationEndpoint: `${origin}/redirect-revoke`,
+      }),
+    });
+    await expect(service.refresh("local-mcp-oauth")).rejects.toThrow(/refresh failed/);
+
     await expect(service.logout("local-mcp-oauth")).resolves.toEqual({
       removed: true,
-      remoteRevoked: true,
+      remoteRevoked: false,
     });
-    expect(revokedTokens).toEqual(["refresh-4"]);
+    expect(revokedTokens).toEqual([]);
+    expect(trustedRedirectBodies.map((request) => request.path)).toEqual([
+      "/redirect-token",
+      "/redirect-revoke",
+    ]);
+    expect(trustedRedirectBodies[0]?.body).toContain("refresh-4");
+    expect(trustedRedirectBodies[1]?.body).toContain("refresh-4");
+    expect(redirectReceiverRequests).toEqual([]);
     expect(store.resolve("local-mcp-oauth")).toBeUndefined();
   });
 
@@ -354,5 +452,56 @@ describe("MCP OAuth local protocol round-trip", () => {
     expect(store.resolve("local-mcp-oauth")).toBeUndefined();
     expect(buildCredentialSnapshot([], 8).entries[0]?.full).toEqual([]);
     expect(invalidations).toBe(1);
+  });
+
+  test("discovery without a registration endpoint fails closed before authorization", async () => {
+    previousHome = process.env.HOME;
+    home = mkdtempSync(join(tmpdir(), "codeshell-oauth-no-dcr-"));
+    process.env.HOME = home;
+
+    let origin = "";
+    server = createServer((req, res) => {
+      const url = new URL(req.url ?? "/", origin || "http://127.0.0.1");
+      const json = (body: unknown) => {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify(body));
+      };
+      if (
+        url.pathname === "/.well-known/oauth-protected-resource/mcp" ||
+        url.pathname === "/.well-known/oauth-protected-resource"
+      ) {
+        json({ resource: `${origin}/mcp`, authorization_servers: [origin] });
+        return;
+      }
+      if (url.pathname === "/.well-known/oauth-authorization-server") {
+        json({
+          issuer: origin,
+          authorization_endpoint: `${origin}/authorize`,
+          token_endpoint: `${origin}/token`,
+          response_types_supported: ["code"],
+          grant_types_supported: ["authorization_code", "refresh_token"],
+          token_endpoint_auth_methods_supported: ["none"],
+          code_challenge_methods_supported: ["S256"],
+        });
+        return;
+      }
+      res.writeHead(404).end();
+    });
+    origin = `http://127.0.0.1:${await listen(server)}`;
+    let browserOpens = 0;
+    const store = new CredentialStore(undefined, new PlaintextCipher());
+    const service = new McpOAuthService({
+      store,
+      openExternal: () => {
+        browserOpens++;
+      },
+      logWarning: () => {},
+    });
+
+    await expect(
+      service.login({ source: "mcp", serverName: "No DCR", serverUrl: `${origin}/mcp` }),
+    ).rejects.toThrow(/MCP_OAUTH_PROTOCOL_ERROR/);
+    expect(browserOpens).toBe(0);
+    expect(store.list()).toEqual([]);
   });
 });
