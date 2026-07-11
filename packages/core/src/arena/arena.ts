@@ -38,6 +38,8 @@ import { runDetailExpansion } from "./phases/planning-detail-expansion.js";
 import { withLanguage } from "./strategies/language-wrapper.js";
 import { ArenaLedger } from "./ledger.js";
 import { registerClaims } from "./phases/claim-registry.js";
+import type { TokenUsage } from "../types.js";
+import { addTokenUsage } from "../engine/session-usage.js";
 
 /** Bucket claims by status. Shared by the two consensus phases. */
 function summarizeClaims(all: ReturnType<ArenaLedger["getAllClaims"]>): ClaimStatusSummary {
@@ -53,6 +55,17 @@ export class Arena {
   private config: Required<Pick<ArenaConfig, "maxDiscussionRounds" | "mode">> & ArenaConfig;
   private strategy: ArenaStrategy;
   private limits: ArenaExecutionLimits;
+  private usage: TokenUsage = {
+    promptTokens: 0,
+    completionTokens: 0,
+    totalTokens: 0,
+    cacheReadTokens: 0,
+    cacheCreationTokens: 0,
+  };
+
+  private readonly recordUsage = (usage: TokenUsage | undefined): void => {
+    if (usage) this.usage = addTokenUsage(this.usage, usage);
+  };
 
   constructor(config: ArenaConfig) {
     if (config.participants.length < 2) {
@@ -81,6 +94,13 @@ export class Arena {
    * @param flags  - Optional explicit overrides (mode, base, head)
    */
   async run(topic: string, flags?: PlannerFlags): Promise<ArenaResultV2> {
+    this.usage = {
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+      cacheReadTokens: 0,
+      cacheCreationTokens: 0,
+    };
     const participantNames = this.config.participants.map((p) => p.name);
     const signal = this.config.signal;
     logger.info("arena.start", { mode: this.config.mode, participants: participantNames });
@@ -89,7 +109,7 @@ export class Arena {
 
     // ─── Phase 0: Plan ────────────────────────────────────────
     const llmConfig = this.config.participants[0].llm;
-    const plan = await planArena(topic, llmConfig, flags, signal);
+    const plan = await planArena(topic, llmConfig, flags, signal, this.recordUsage);
     this.config.onProgress?.({ type: "plan_resolved", plan });
     logger.info("arena.plan", {
       mode: plan.mode,
@@ -156,6 +176,7 @@ export class Arena {
       contextTools,
       signal,
       onProgress: this.config.onProgress,
+      onUsage: this.recordUsage,
     });
 
     const reports = researchResults.map((r) => r.report);
@@ -243,6 +264,7 @@ export class Arena {
       mode: "planning",
       signal,
       onProgress: this.config.onProgress,
+      onUsage: this.recordUsage,
     });
 
     signal?.throwIfAborted();
@@ -261,6 +283,7 @@ export class Arena {
       claimSummary,
       signal,
       onProgress: this.config.onProgress,
+      onUsage: this.recordUsage,
     });
 
     signal?.throwIfAborted();
@@ -280,6 +303,7 @@ export class Arena {
           contextTools,
           signal,
           onProgress: this.config.onProgress,
+          onUsage: this.recordUsage,
         });
         consensus.roadmapDetails = details;
       } catch (err) {
@@ -302,6 +326,7 @@ export class Arena {
       claims: allClaims,
       reviews,
       consensus,
+      usage: { ...this.usage },
     };
   }
 
@@ -324,6 +349,7 @@ export class Arena {
       limits: this.limits,
       signal,
       onProgress: this.config.onProgress,
+      onUsage: this.recordUsage,
     });
 
     signal?.throwIfAborted();
@@ -339,6 +365,7 @@ export class Arena {
       maxRounds: this.config.maxDiscussionRounds,
       signal,
       onProgress: this.config.onProgress,
+      onUsage: this.recordUsage,
     });
 
     signal?.throwIfAborted();
@@ -352,6 +379,7 @@ export class Arena {
       ledger,
       signal,
       onProgress: this.config.onProgress,
+      onUsage: this.recordUsage,
     });
 
     signal?.throwIfAborted();
@@ -374,6 +402,7 @@ export class Arena {
       claimSummary,
       signal,
       onProgress: this.config.onProgress,
+      onUsage: this.recordUsage,
     });
 
     return {
@@ -389,6 +418,7 @@ export class Arena {
       debateRounds,
       adjudications,
       consensus,
+      usage: { ...this.usage },
     };
   }
 }

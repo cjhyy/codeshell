@@ -4,7 +4,10 @@
  * V2 architecture: shared facts → independent research → findings → cross-review → consensus.
  */
 
-import type { ClientDefaults, LLMConfig } from "../types.js";
+import type { ClientDefaults, LLMConfig, TokenUsage } from "../types.js";
+
+/** Receives usage for each completed Arena provider request. */
+export type ArenaUsageRecorder = (usage: TokenUsage | undefined) => void;
 
 // ─── Arena Mode ─────────────────────────────────────────────────
 
@@ -432,6 +435,8 @@ export interface ArenaResultV2 {
   /** Claim adjudications (Phase 3+) */
   adjudications?: ClaimAdjudication[];
   consensus: ArenaConsensus;
+  /** Aggregate of every provider request made by this Arena run. */
+  usage: TokenUsage;
 }
 
 // ─── Strategy ───────────────────────────────────────────────────

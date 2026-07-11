@@ -15,6 +15,7 @@ import {
   runWorktreeSetup,
   worktreeHasUncommittedOrAheadChanges,
   currentBranch,
+  cleanupAbortedWorktree,
   type RemoveWorktreeResult,
   type WorktreeSession,
 } from "../../git/worktree.js";
@@ -69,7 +70,7 @@ export async function switchSessionWorkspaceTool(
       nextTurnNotice(workspace.root, ctx?.cwd ?? workspace.root)
     );
   } catch (err) {
-    return `Error switching workspace: ${(err as Error).message}`;
+    return `Error: switching workspace failed: ${(err as Error).message}`;
   }
 }
 
@@ -119,6 +120,7 @@ export async function enterWorktreeTool(
 
   try {
     if (target === "main") {
+      ctx?.signal?.throwIfAborted();
       const workspace: SessionWorkspace = { root: mainRoot, kind: "main" };
       persistSessionWorkspace(sessionManager, sessionId, workspace, ctx);
       sessionManager.recordWorkspaceHandoff(sessionId, fromWorkspace, workspace);
@@ -137,15 +139,35 @@ export async function enterWorktreeTool(
       sessionId,
       currentWorkspace: fromWorkspace,
       branchPrefix,
+      signal: ctx?.signal,
     });
+    if (ctx?.signal?.aborted) {
+      if (selected.created) {
+        await cleanupAbortedWorktree(
+          mainRoot,
+          selected.session.worktreePath,
+          selected.session.worktreeBranch,
+        );
+      }
+      throw new Error("Worktree creation aborted");
+    }
 
     const workspace = toSessionWorkspace(selected, fromWorkspace);
-    persistSessionWorkspace(sessionManager, sessionId, workspace, ctx);
-    sessionManager.recordWorkspaceHandoff(sessionId, fromWorkspace, workspace);
-
     const setupNote = selected.created
       ? await runSetupIfConfigured(selected.session.worktreePath, mainRoot, ctx)
       : "";
+    if (ctx?.signal?.aborted) {
+      if (selected.created) {
+        await cleanupAbortedWorktree(
+          mainRoot,
+          selected.session.worktreePath,
+          selected.session.worktreeBranch,
+        );
+      }
+      throw new Error("Worktree creation aborted");
+    }
+    persistSessionWorkspace(sessionManager, sessionId, workspace, ctx);
+    sessionManager.recordWorkspaceHandoff(sessionId, fromWorkspace, workspace);
     const verb = selected.created ? "Worktree created and switched" : "Switched to worktree";
     return (
       `${verb}:\n` +
@@ -157,7 +179,7 @@ export async function enterWorktreeTool(
       setupNote
     );
   } catch (err) {
-    return `Error switching worktree: ${(err as Error).message}`;
+    return `Error: switching worktree failed: ${(err as Error).message}`;
   }
 }
 
@@ -310,7 +332,7 @@ export async function exitWorktreeTool(
       nextTurnNotice(mainRoot, currentTurnRoot)
     );
   } catch (err) {
-    return `Error exiting worktree: ${(err as Error).message}`;
+    return `Error: exiting worktree failed: ${(err as Error).message}`;
   }
 }
 
@@ -373,8 +395,10 @@ async function resolveWorktreeTarget(opts: {
   sessionId: string;
   currentWorkspace: SessionWorkspace;
   branchPrefix?: string;
+  signal?: AbortSignal;
 }): Promise<ResolvedTarget> {
   const entries = await listWorktrees(opts.mainRoot);
+  opts.signal?.throwIfAborted();
   const pathTarget = pathLike(opts.target) ? resolvePathTarget(opts.target, opts.cwd) : undefined;
   const branchTarget = normalizeBranchName(opts.target);
   const match = entries.find((entry) => {
@@ -383,6 +407,8 @@ async function resolveWorktreeTarget(opts: {
   });
 
   if (match) {
+    const originalBranch = await currentBranch(opts.mainRoot);
+    opts.signal?.throwIfAborted();
     return {
       created: false,
       session: {
@@ -390,7 +416,7 @@ async function resolveWorktreeTarget(opts: {
         worktreePath: match.path,
         worktreeName: match.path.split(/[\\/]/).pop() ?? match.branch,
         worktreeBranch: match.branch,
-        originalBranch: await currentBranch(opts.mainRoot),
+        originalBranch,
         sessionId: opts.sessionId,
         createdAt: Date.now(),
       },
@@ -405,6 +431,7 @@ async function resolveWorktreeTarget(opts: {
   validateWorktreeSlug(opts.target);
   const created = await createWorktree(opts.mainRoot, opts.target, opts.sessionId, {
     prefix: opts.branchPrefix,
+    signal: opts.signal,
   });
   return { created: true, session: created, from: created.originalBranch ?? "HEAD" };
 }

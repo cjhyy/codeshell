@@ -80,7 +80,7 @@ describe("executor enforces builtin `off` at execution time", () => {
       args: {},
     });
 
-    expect(result.isError).toBeUndefined();
+    expect(result.isError).toBe(false);
     expect(ran.value).toBe(true);
   });
 
@@ -98,7 +98,7 @@ describe("executor enforces builtin `off` at execution time", () => {
       args: {},
     });
 
-    expect(result.isError).toBeUndefined();
+    expect(result.isError).toBe(false);
     expect(ran.value).toBe(true);
   });
 });

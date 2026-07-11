@@ -65,8 +65,10 @@ export interface BackgroundJobEntry {
   cli?: ExternalCliKind;
   /** Client message that launched this external job. */
   originClientMessageId?: string;
-  /** Optional cancellation hook for jobs backed by a live process. */
-  abort?: () => void | Promise<void>;
+  /** Optional cancellation hook for jobs backed by a live process. It may
+   *  return a richer terminal outcome when cancellation races with a result
+   *  that must still be retained (for example, a remotely rendered video). */
+  abort?: () => void | BackgroundJobOutcome | Promise<void | BackgroundJobOutcome>;
 }
 
 /** Outcome passed to finish() to record how a job ended. */
@@ -83,7 +85,7 @@ export interface BackgroundJobStartOptions {
   promptSummary?: string;
   cli?: ExternalCliKind;
   originClientMessageId?: string;
-  abort?: () => void | Promise<void>;
+  abort?: () => void | BackgroundJobOutcome | Promise<void | BackgroundJobOutcome>;
 }
 
 const CANCEL_WAIT_TIMEOUT_MS = 5_000;
@@ -92,18 +94,22 @@ function isActiveStatus(status: BackgroundJobStatus): boolean {
   return status === "running" || status === "cancelling";
 }
 
-async function waitForAbort(abort: () => void | Promise<void>): Promise<void> {
+async function waitForAbort(
+  abort: () => void | BackgroundJobOutcome | Promise<void | BackgroundJobOutcome>,
+): Promise<BackgroundJobOutcome | undefined> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    await Promise.race([
+    const result = await Promise.race([
       Promise.resolve().then(abort),
-      new Promise<void>((resolve) => {
-        timer = setTimeout(resolve, CANCEL_WAIT_TIMEOUT_MS);
+      new Promise<undefined>((resolve) => {
+        timer = setTimeout(() => resolve(undefined), CANCEL_WAIT_TIMEOUT_MS);
       }),
     ]);
+    return result && typeof result === "object" ? result : undefined;
   } catch {
     // Cancellation is best-effort; the terminal state still closes after the
     // abort hook settles or the hard deadline expires.
+    return undefined;
   } finally {
     if (timer) clearTimeout(timer);
   }
@@ -179,16 +185,19 @@ class BackgroundJobRegistry {
     // process as active until the abort hook confirms exit.
     entry.status = "cancelling";
     this.notify();
-    if (entry.abort) await waitForAbort(entry.abort);
+    const abortOutcome = entry.abort ? await waitForAbort(entry.abort) : undefined;
 
     // Session teardown/reset may have removed the entry while termination was
     // in flight. Do not resurrect or notify for a closed session.
     if (this.jobs.get(jobId) !== entry || entry.status !== "cancelling") return false;
-    entry.status = "cancelled";
+    entry.status = abortOutcome?.status ?? "cancelled";
     entry.finishedAt = Date.now();
-    if (outcome?.finalText !== undefined) entry.finalText = outcome.finalText;
-    if (outcome?.ccSessionId !== undefined) entry.ccSessionId = outcome.ccSessionId;
-    if (outcome?.changedFiles !== undefined) entry.changedFiles = outcome.changedFiles;
+    const finalText = abortOutcome?.finalText ?? outcome?.finalText;
+    const ccSessionId = abortOutcome?.ccSessionId ?? outcome?.ccSessionId;
+    const changedFiles = abortOutcome?.changedFiles ?? outcome?.changedFiles;
+    if (finalText !== undefined) entry.finalText = finalText;
+    if (ccSessionId !== undefined) entry.ccSessionId = ccSessionId;
+    if (changedFiles !== undefined) entry.changedFiles = changedFiles;
     this.evictTerminalOverCap(entry.sessionId);
     this.notify();
     return true;
@@ -228,7 +237,8 @@ class BackgroundJobRegistry {
   /** Drop every job of a session — called when the session is deleted/closed. */
   dropForSession(sessionId: string): void {
     let removed = false;
-    const aborts: Array<() => void | Promise<void>> = [];
+    const aborts: Array<() => void | BackgroundJobOutcome | Promise<void | BackgroundJobOutcome>> =
+      [];
     for (const [id, e] of this.jobs) {
       if (e.sessionId === sessionId) {
         // Delete first so a synchronous/queued completion caused by abort sees

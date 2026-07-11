@@ -11,19 +11,28 @@ import type { LLMResponse, Message, StreamEvent, ToolCall, ToolResult } from "..
  *   - it returns reason "max_turns"; Engine epilogue owns turn_complete,
  *   - the turns-remaining warning reminders (2 / 1 left) are injected.
  */
-function makeDeps(responses: LLMResponse[]): {
+function makeDeps(
+  responses: Array<LLMResponse | Error>,
+  options: { onCall?: (callNumber: number) => void } = {},
+): {
   deps: TurnLoopDeps;
   callArgs: Message[][];
   modelCalls: () => number;
+  stoppedMarkers: () => number;
+  recordedUsage: LLMResponse["usage"][];
 } {
   let i = 0;
   let calls = 0;
+  let stopped = 0;
   const callArgs: Message[][] = [];
+  const recordedUsage: LLMResponse["usage"][] = [];
   const call = async (_sys: string, messages: Message[]): Promise<LLMResponse> => {
     calls++;
     callArgs.push(messages.map((m) => ({ ...m })));
     const r = responses[Math.min(i, responses.length - 1)]!;
     i++;
+    options.onCall?.(calls);
+    if (r instanceof Error) throw r;
     return r;
   };
   const model = {
@@ -64,6 +73,9 @@ function makeDeps(responses: LLMResponse[]): {
     appendToolResult() {},
     appendTurnBoundary() {},
     appendMessage() {},
+    appendTurnStopped() {
+      stopped++;
+    },
   } as unknown as TurnLoopDeps["transcript"];
 
   const toolExecutor = {
@@ -92,12 +104,22 @@ function makeDeps(responses: LLMResponse[]): {
     tools: [],
     sessionId: "test",
     ctxOverheadStore: { get: () => 0, set: () => {} },
+    recordCumulativeUsage: (usage) => {
+      recordedUsage.push(usage);
+      return {
+        cumulativePromptTokens: 0,
+        cumulativeCacheReadTokens: 0,
+        cumulativeCacheCreationTokens: 0,
+      };
+    },
   };
 
   return {
     deps,
     callArgs,
     modelCalls: () => calls,
+    stoppedMarkers: () => stopped,
+    recordedUsage,
   };
 }
 
@@ -139,6 +161,92 @@ describe("TurnLoop maxTurns ceiling (§4.3)", () => {
       .map((m) => (typeof m.content === "string" ? m.content : ""))
       .find((c) => c.includes("Turn limit reached"));
     expect(finalReminder).toBeDefined();
+  });
+
+  it("records the final maxTurns summary response in session usage", async () => {
+    const { deps, recordedUsage } = makeDeps([toolResp(), summaryResp()]);
+    const loop = new TurnLoop(deps, { maxTurns: 1, maxToolCallsPerTurn: 10 });
+
+    await loop.run([{ role: "user", content: "go" }]);
+
+    expect(recordedUsage).toEqual([toolResp().usage, summaryResp().usage]);
+  });
+
+  it("stops before another parent request when externally reported child usage exhausts Goal", async () => {
+    const { deps, modelCalls } = makeDeps([toolResp(), summaryResp()]);
+    let loop!: TurnLoop;
+    deps.toolExecutor.executeSingle = async (call: ToolCall) => {
+      loop.recordGoalJudgeUsage({
+        promptTokens: 80,
+        completionTokens: 20,
+        totalTokens: 100,
+      });
+      return { id: call.id, toolName: call.toolName, result: "child done" };
+    };
+    loop = new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "finish with a child", tokenBudget: 50 },
+    });
+
+    const result = await loop.run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("goal_budget_exhausted");
+    expect(result.goalTermination).toBe("token_budget_exhausted");
+    expect(modelCalls()).toBe(1);
+  });
+
+  it("stops cleanly when the final maxTurns summary resolves after the signal aborts", async () => {
+    const controller = new AbortController();
+    const { deps, stoppedMarkers } = makeDeps([toolResp(), summaryResp()], {
+      onCall: (callNumber) => {
+        if (callNumber === 2) controller.abort();
+      },
+    });
+    const loop = new TurnLoop(deps, {
+      maxTurns: 1,
+      maxToolCallsPerTurn: 10,
+      signal: controller.signal,
+    });
+
+    const result = await loop.run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("aborted_streaming");
+    expect(stoppedMarkers()).toBe(1);
+    expect(result.reason).not.toBe("max_turns");
+  });
+
+  it("stops cleanly when the final maxTurns summary rejects with AbortError", async () => {
+    const abortError = new Error("summary aborted");
+    abortError.name = "AbortError";
+    const { deps, stoppedMarkers } = makeDeps([toolResp(), abortError]);
+    const loop = new TurnLoop(deps, {
+      maxTurns: 1,
+      maxToolCallsPerTurn: 10,
+    });
+
+    const result = await loop.run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("aborted_streaming");
+    expect(stoppedMarkers()).toBe(1);
+  });
+
+  it("keeps the prior text and max_turns reason when the final summary fails normally", async () => {
+    const priorTextResponse: LLMResponse = {
+      ...toolResp(),
+      text: "work completed before summary",
+    };
+    const { deps, stoppedMarkers } = makeDeps([
+      priorTextResponse,
+      new Error("summary service unavailable"),
+    ]);
+    const loop = new TurnLoop(deps, { maxTurns: 1, maxToolCallsPerTurn: 10 });
+
+    const result = await loop.run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("max_turns");
+    expect(result.text).toBe("work completed before summary");
+    expect(stoppedMarkers()).toBe(0);
   });
 
   it("injects the turns-remaining warning reminders (2 and 1 left)", async () => {

@@ -34,6 +34,7 @@
 import { spawn } from "node:child_process";
 import type { HookContext, HookResult } from "../hooks/events.js";
 import { MAX_HOOK_OUTPUT_BYTES } from "../hooks/hook-output.js";
+import { closeHookStdin, MAX_HOOK_STDIN_BYTES, writeHookStdin } from "../hooks/shell-runner.js";
 import { killChildTree } from "../runtime/spawn-common.js";
 
 const DEFAULT_TIMEOUT_MS = 60_000;
@@ -78,10 +79,39 @@ function extractAdditionalContext(parsed: unknown): string | null {
   return null;
 }
 
+function extractExplicitDenial(parsed: unknown): { message?: string } | null {
+  if (!parsed || typeof parsed !== "object") return null;
+  const obj = parsed as Record<string, unknown>;
+  const nested =
+    obj.hookSpecificOutput && typeof obj.hookSpecificOutput === "object"
+      ? (obj.hookSpecificOutput as Record<string, unknown>)
+      : undefined;
+  const decision =
+    obj.decision ?? obj.permissionDecision ?? nested?.decision ?? nested?.permissionDecision;
+  if (decision !== "deny" && decision !== "reject") return null;
+  const message =
+    obj.reason ??
+    obj.message ??
+    obj.permissionDecisionReason ??
+    nested?.reason ??
+    nested?.message ??
+    nested?.permissionDecisionReason;
+  return typeof message === "string" && message.trim() ? { message: message.trim() } : {};
+}
+
+function parseJson(stdout: string): unknown | undefined {
+  if (!stdout) return undefined;
+  try {
+    return JSON.parse(stdout);
+  } catch {
+    return undefined;
+  }
+}
+
 /**
- * Run one plugin hook command. Returns an empty HookResult on any failure
- * (spawn error, timeout, non-zero exit, unparseable stdout) so the hook
- * chain keeps moving — a misbehaving plugin must not wedge the engine.
+ * Run one plugin hook command. CC's exit-code 2 and explicit deny/reject JSON
+ * are normalized to the native HookResult deny contract. Other failures stay
+ * non-blocking so a broken plugin does not wedge the engine.
  *
  * Stdin carries the same envelope shape the codeshell-native shell-runner
  * uses (eventName + data) so plugin authors who want richer context can
@@ -91,8 +121,11 @@ function extractAdditionalContext(parsed: unknown): string | null {
 export async function runPluginCommandHook(
   spec: PluginCommandHookSpec,
   ctx: HookContext,
+  abortSignal?: AbortSignal,
 ): Promise<HookResult> {
   const timeoutMs = spec.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const signal = abortSignal ?? (ctx.data.signal as AbortSignal | undefined);
+  if (signal?.aborted) return {};
 
   return new Promise<HookResult>((resolve) => {
     let child;
@@ -126,6 +159,7 @@ export async function runPluginCommandHook(
     let stdout = "";
     let stderr = "";
     let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     // Output byte caps mirror src/hooks/shell-runner.ts so a chatty plugin
     // hook can't hold engine memory hostage. Past the cap we SIGTERM the
     // child and treat the hook as failed; stderr cap truncates with a
@@ -136,10 +170,17 @@ export async function runPluginCommandHook(
     const settle = (value: HookResult) => {
       if (settled) return;
       settled = true;
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
       resolve(value);
     };
 
-    const timer = setTimeout(() => {
+    const onAbort = () => {
+      killChildTree(child, 1000);
+      settle({});
+    };
+
+    timer = setTimeout(() => {
       // eslint-disable-next-line no-console
       console.warn(
         `[plugin-hook] ${spec.pluginKey} ${ctx.eventName} timed out after ${timeoutMs}ms`,
@@ -148,6 +189,8 @@ export async function runPluginCommandHook(
       killChildTree(child, 1000);
       settle({});
     }, timeoutMs);
+    signal?.addEventListener("abort", onAbort, { once: true });
+    if (signal?.aborted) onAbort();
 
     child.stdout?.on("data", (chunk: Buffer) => {
       stdoutBytes += chunk.length;
@@ -185,14 +228,24 @@ export async function runPluginCommandHook(
       settle({});
     });
 
-    child.on("close", (code: number | null) => {
-      clearTimeout(timer);
+    let stdinFinished = false;
+    let pendingClose: { code: number | null } | undefined;
+    const handleClose = (code: number | null) => {
       if (stdoutCapped) {
         // eslint-disable-next-line no-console
         console.error(
           `[plugin-hook] ${spec.pluginKey} ${ctx.eventName} killed due to oversized stdout (> ${MAX_HOOK_OUTPUT_BYTES} bytes)`,
         );
         settle({});
+        return;
+      }
+      const trimmed = stdout.trim();
+      const parsedForDecision = parseJson(trimmed);
+      const explicitDenial = extractExplicitDenial(parsedForDecision);
+      if (code === 2 || explicitDenial) {
+        const message =
+          stderr.trim() || explicitDenial?.message || "Plugin denied this tool operation";
+        settle({ decision: "deny", messages: [message] });
         return;
       }
       if (code !== 0) {
@@ -204,7 +257,6 @@ export async function runPluginCommandHook(
         settle({});
         return;
       }
-      const trimmed = stdout.trim();
       if (trimmed.length === 0) {
         settle({});
         return;
@@ -229,16 +281,68 @@ export async function runPluginCommandHook(
         return;
       }
       settle({ messages: [additional] });
+    };
+    child.on("close", (code: number | null) => {
+      clearTimeout(timer);
+      if (settled) return;
+      if (!stdinFinished && !stdoutCapped) {
+        pendingClose = { code };
+        return;
+      }
+      handleClose(code);
     });
 
+    const finishStdin = () => {
+      stdinFinished = true;
+      if (pendingClose && !settled) {
+        const { code } = pendingClose;
+        pendingClose = undefined;
+        handleClose(code);
+      }
+    };
+
     // Stdin envelope: matches the shape codeshell-native shell hooks use.
-    // CC plugins generally don't read stdin, but writing it is cheap and
-    // keeps the protocol open for plugin authors who want it.
+    let envelope: string;
     try {
-      child.stdin?.write(JSON.stringify({ eventName: ctx.eventName, data: ctx.data }));
-      child.stdin?.end();
+      envelope = JSON.stringify({ eventName: ctx.eventName, data: ctx.data });
     } catch {
-      // Child may have closed stdin already; not fatal.
+      closeHookStdin(child.stdin);
+      finishStdin();
+      return;
     }
+    if (Buffer.byteLength(envelope, "utf8") > MAX_HOOK_STDIN_BYTES) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[plugin-hook] ${spec.pluginKey} ${ctx.eventName} stdin exceeded ${MAX_HOOK_STDIN_BYTES} bytes; running without envelope`,
+      );
+      closeHookStdin(child.stdin);
+      finishStdin();
+      return;
+    }
+
+    setImmediate(() => {
+      void (async () => {
+        if (settled) return;
+        try {
+          await writeHookStdin(child.stdin, envelope);
+          finishStdin();
+        } catch (error) {
+          clearTimeout(timer);
+          const err = error as NodeJS.ErrnoException;
+          const failure = {
+            type: "stdin_error" as const,
+            code: typeof err?.code === "string" ? err.code : "UNKNOWN",
+            message: err instanceof Error ? err.message : String(error),
+          };
+          // eslint-disable-next-line no-console
+          console.error(
+            `[plugin-hook] ${spec.pluginKey} ${ctx.eventName} stdin error:`,
+            failure.message,
+          );
+          killChildTree(child, 1000);
+          settle({ data: { hookFailure: failure } });
+        }
+      })();
+    });
   });
 }

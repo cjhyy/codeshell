@@ -20,6 +20,7 @@ import {
 } from "../credentials/oauth.js";
 import { ENV_ALLOWLIST } from "../runtime/spawn-common.js";
 import { mkdir, readdir, unlink, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { diagnoseMcpStdioMissingCommand, previewPath } from "./mcp-stdio-diagnostics.js";
 import type { ToolContext } from "./context.js";
@@ -334,9 +335,7 @@ const MAX_MCP_IMAGE_BYTES = 8 * 1024 * 1024;
 
 function spillTimestamp(filename: string, prefix: string): number {
   const suffix = filename.slice(prefix.length);
-  const dot = suffix.lastIndexOf(".");
-  const raw = dot === -1 ? suffix : suffix.slice(0, dot);
-  const timestamp = Number(raw);
+  const timestamp = Number(/^\d+/.exec(suffix)?.[0]);
   return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
@@ -393,7 +392,7 @@ export async function spillMcpImage(
   const safeServer = serverName.replace(/[^\w.-]+/g, "_");
   const safeTool = toolName.replace(/[^\w.-]+/g, "_");
   const prefix = `${safeServer}-${safeTool}-`;
-  const filename = `${prefix}${now()}.${ext}`;
+  const filename = `${prefix}${now()}-${randomUUID().slice(0, 8)}.${ext}`;
   const filePath = join(baseDir, filename);
 
   try {

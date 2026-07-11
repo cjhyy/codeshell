@@ -3640,7 +3640,7 @@ ipcMain.handle("sessions:list", async () => listSessions());
 async function deleteDesktopSession(id: string): Promise<void> {
   // Reap the session's background shells (if any) before dropping it —
   // explicit delete is the one tab-close path that DOES kill (core §6).
-  bridge?.closeSession(id);
+  await bridge?.closeSession(id);
   await deleteSession(id);
   await cleanupKnownAttachments(id);
   // Drop any in-memory snapshot for the deleted session so it can't be

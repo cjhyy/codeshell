@@ -16,7 +16,7 @@ import { readFile, stat } from "node:fs/promises";
 import { extname, isAbsolute, resolve } from "node:path";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
-import type { BuiltinToolResult } from "./index.js";
+import type { BuiltinToolReturn } from "./index.js";
 import { capabilitiesFor } from "../../llm/capabilities/index.js";
 import type { ProviderKindName } from "../../llm/provider-kinds.js";
 import { collectBase64Images, findImageByNumber } from "../../context/compaction.js";
@@ -64,7 +64,7 @@ export const viewImageToolDef: ToolDefinition = {
 export async function viewImageTool(
   args: Record<string, unknown>,
   ctx?: ToolContext,
-): Promise<BuiltinToolResult> {
+): Promise<BuiltinToolReturn> {
   const rawPath = args.path;
   const rawImageNumber = args.imageNumber;
   const hasPath = typeof rawPath === "string" && rawPath.trim().length > 0;
@@ -146,7 +146,7 @@ function supportsVision(ctx?: ToolContext): boolean {
 async function viewHistoricalImage(
   imageNumber: number,
   ctx?: ToolContext,
-): Promise<BuiltinToolResult> {
+): Promise<BuiltinToolReturn> {
   if (!supportsVision(ctx)) {
     return `[图片未取回: image #${imageNumber} —— 当前模型不支持视觉输入,已跳过。切换到 vision 模型后再 view_image。]`;
   }

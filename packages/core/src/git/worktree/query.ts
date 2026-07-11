@@ -15,6 +15,7 @@ export interface ListWorktreesFastOptions {
   workspaceOwners?: WorktreeWorkspaceOwner[];
   owners?: WorktreeWorkspaceOwner[];
   prefix?: string;
+  signal?: AbortSignal;
 }
 
 export interface ListWorktreesOptions extends ListWorktreesFastOptions {
@@ -35,13 +36,13 @@ export interface WorktreeInfo {
 /**
  * Find the canonical git root (resolves worktree -> main repo).
  */
-export async function findGitRoot(cwd: string): Promise<string> {
-  return await findMainWorktreeRoot(cwd);
+export async function findGitRoot(cwd: string, signal?: AbortSignal): Promise<string> {
+  return await findMainWorktreeRoot(cwd, signal);
 }
 
-export async function findMainWorktreeRoot(cwd: string): Promise<string> {
+export async function findMainWorktreeRoot(cwd: string, signal?: AbortSignal): Promise<string> {
   const commonDir = (
-    await execGit(cwd, ["rev-parse", "--path-format=absolute", "--git-common-dir"], 5000)
+    await execGit(cwd, ["rev-parse", "--path-format=absolute", "--git-common-dir"], 5000, signal)
   ).trim();
   return dirname(commonDir);
 }
@@ -49,39 +50,60 @@ export async function findMainWorktreeRoot(cwd: string): Promise<string> {
 export async function findWorktreeForBranch(
   cwd: string,
   branch: string,
+  signal?: AbortSignal,
 ): Promise<string | undefined> {
   const normalized = normalizeBranchName(branch);
-  return (await listWorktreesFast(cwd)).find((entry) => entry.branch === normalized)?.path;
+  return (await listWorktreesFast(cwd, { signal })).find((entry) => entry.branch === normalized)
+    ?.path;
 }
 
-export async function assertBranchNotCheckedOut(cwd: string, branch: string): Promise<void> {
-  const existingPath = await findWorktreeForBranch(cwd, branch);
+export async function assertBranchNotCheckedOut(
+  cwd: string,
+  branch: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  const existingPath = await findWorktreeForBranch(cwd, branch, signal);
   if (existingPath) {
     throw new Error(`branch ${normalizeBranchName(branch)} already checked out at ${existingPath}`);
   }
 }
 
-export async function branchExists(cwd: string, branch: string): Promise<boolean> {
-  const out = await gitOutput(cwd, ["branch", "--list", normalizeBranchName(branch)], 10000);
+export async function branchExists(
+  cwd: string,
+  branch: string,
+  signal?: AbortSignal,
+): Promise<boolean> {
+  const out = await gitOutput(
+    cwd,
+    ["branch", "--list", normalizeBranchName(branch)],
+    10000,
+    signal,
+  );
   return (out?.trim().length ?? 0) > 0;
 }
 
-export async function isGitWorktreeRoot(cwd: string): Promise<boolean> {
+export async function isGitWorktreeRoot(cwd: string, signal?: AbortSignal): Promise<boolean> {
   if (!existsSync(join(cwd, ".git"))) return false;
   try {
-    const inside = (await execGit(cwd, ["rev-parse", "--is-inside-work-tree"], 5000)).trim();
+    const inside = (
+      await execGit(cwd, ["rev-parse", "--is-inside-work-tree"], 5000, signal)
+    ).trim();
     if (inside !== "true") return false;
     const topLevel = (
-      await execGit(cwd, ["rev-parse", "--path-format=absolute", "--show-toplevel"], 5000)
+      await execGit(cwd, ["rev-parse", "--path-format=absolute", "--show-toplevel"], 5000, signal)
     ).trim();
     return resolve(topLevel) === resolve(cwd);
-  } catch {
+  } catch (error) {
+    if (signal?.aborted) throw error;
     return false;
   }
 }
 
-export async function currentBranch(cwd: string): Promise<string | undefined> {
-  const branch = (await gitOutput(cwd, ["branch", "--show-current"], 5000))?.trim();
+export async function currentBranch(
+  cwd: string,
+  signal?: AbortSignal,
+): Promise<string | undefined> {
+  const branch = (await gitOutput(cwd, ["branch", "--show-current"], 5000, signal))?.trim();
   return branch || undefined;
 }
 
@@ -91,8 +113,9 @@ export async function listWorktreesFast(
 ): Promise<WorktreeInfo[]> {
   let raw: string;
   try {
-    raw = (await execGit(cwd, ["worktree", "list", "--porcelain"], 10000)).trim();
-  } catch {
+    raw = (await execGit(cwd, ["worktree", "list", "--porcelain"], 10000, opts.signal)).trim();
+  } catch (error) {
+    if (opts.signal?.aborted) throw error;
     return [];
   }
 
@@ -115,8 +138,9 @@ export async function listWorktreesFast(
 
   let mainRoot = "";
   try {
-    mainRoot = await findMainWorktreeRoot(cwd);
-  } catch {
+    mainRoot = await findMainWorktreeRoot(cwd, opts.signal);
+  } catch (error) {
+    if (opts.signal?.aborted) throw error;
     mainRoot = entries[0]?.path ?? "";
   }
 

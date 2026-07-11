@@ -14,19 +14,26 @@ import { agentTool } from "./agent.js";
 import type { SubAgentSpawner, ToolContext } from "../context.js";
 import { asyncAgentRegistry } from "./agent-registry.js";
 import { notificationQueue } from "./agent-notifications.js";
+import type { TokenUsage } from "../../types.js";
 
 function makeCtx(
   spawnText: (req: { agentId: string; prompt: string }) => Promise<string>,
   sessionId = "s-test",
   onEvent?: (e: { type: string; agentId?: string; error?: string }) => void,
+  usage?: TokenUsage,
+  recordBilledUsage?: (usage: TokenUsage) => void,
 ): ToolContext {
   const spawner: SubAgentSpawner = {
     // Wrap the text-returning mock into spawn()'s { text, sessionId } shape.
-    spawn: async (req) => ({ text: await spawnText(req), sessionId: req.resumeSessionId ?? req.agentId }),
+    spawn: async (req) => ({
+      text: await spawnText(req),
+      sessionId: req.resumeSessionId ?? req.agentId,
+      usage: usage ?? { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    }),
     parentStream: onEvent ? (e) => onEvent(e as never) : () => {},
     describe: () => ({ cwd: "/tmp", permissionMode: "acceptEdits" }),
   };
-  return { subAgentSpawner: spawner, sessionId } as unknown as ToolContext;
+  return { subAgentSpawner: spawner, sessionId, recordBilledUsage } as unknown as ToolContext;
 }
 
 beforeEach(() => {
@@ -73,6 +80,34 @@ describe("synchronous Agent auto-backgrounds past the threshold", () => {
     const notif = notificationQueue.getSnapshot("s-test")[0];
     expect(notif.status).toBe("completed");
     expect(notif.finalText).toBe("slow result");
+  });
+
+  it("reports an auto-backgrounded child's usage once without emitting duplicate usage UI", async () => {
+    const billed: TokenUsage[] = [];
+    const events: Array<{ type: string }> = [];
+    const usage = {
+      promptTokens: 80,
+      completionTokens: 20,
+      totalTokens: 100,
+      cacheReadTokens: 40,
+      cacheCreationTokens: 10,
+    };
+    const ctx = makeCtx(
+      async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return "slow result";
+      },
+      "s-test",
+      (event) => events.push(event),
+      usage,
+      (childUsage) => billed.push(childUsage),
+    );
+
+    await agentTool({ description: "long task", prompt: "p" }, ctx);
+    await until(() => billed.length === 1);
+
+    expect(billed).toEqual([usage]);
+    expect(events.filter((event) => event.type === "usage_update")).toHaveLength(0);
   });
 
   it("a fast sync agent (under threshold) returns its text inline as before", async () => {

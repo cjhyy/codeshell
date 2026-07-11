@@ -12,7 +12,7 @@
  * Tools that don't need any context (Read/Write/Bash/...) just ignore
  * the second argument; the type is purely additive.
  */
-import type { LLMConfig, StreamCallback } from "../types.js";
+import type { LLMConfig, StreamCallback, TokenUsage } from "../types.js";
 import type { ModelPool } from "../llm/model-pool.js";
 import type { ToolRegistry } from "./registry.js";
 import type { AgentPresetName } from "../preset/index.js";
@@ -20,6 +20,7 @@ import type { SandboxBackend } from "./sandbox/index.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type { SessionManager } from "../session/session-manager.js";
 import type { SessionWorkspace } from "../types.js";
+import type { ApprovalRouter } from "./permission.js";
 
 /**
  * Narrow view of the owning Engine that tools are allowed to call back into.
@@ -157,7 +158,7 @@ export interface SubAgentSpawner {
    * (or `resumeSessionId` when resuming), so the parent can address follow-up
    * input at the same session via AgentSendInput (transcript replay).
    */
-  spawn(req: SubAgentSpawnRequest): Promise<{ text: string; sessionId: string }>;
+  spawn(req: SubAgentSpawnRequest): Promise<SubAgentSpawnResult>;
   /**
    * Whether a child session id exists on disk. Lets AgentSendInput resume an
    * agent across a process restart (when the in-memory registry is empty but
@@ -172,6 +173,13 @@ export interface SubAgentSpawner {
     preset?: AgentPresetName;
     permissionMode: string;
   };
+}
+
+export interface SubAgentSpawnResult {
+  text: string;
+  sessionId: string;
+  /** Complete billed usage returned by the child Engine run. */
+  usage?: TokenUsage;
 }
 
 /**
@@ -250,6 +258,14 @@ export interface ToolContext {
    * headless/test mode; tools must tolerate absence.
    */
   streamCallback?: StreamCallback;
+  /**
+   * Report provider usage produced by a tool or child Engine into the owning
+   * session and run-scoped Goal budget. This must not invoke the process-wide
+   * billing hook again; the originating provider client already did that.
+   */
+  recordBilledUsage?: (usage: TokenUsage) => void;
+  /** Connection-scoped approval owner router supplied by the protocol host. */
+  approvalRouter?: ApprovalRouter;
   /** Whether the owning Engine is currently in plan mode. Replaces the
    *  removed module-level `isInPlanMode()` singleton. */
   planMode: boolean;

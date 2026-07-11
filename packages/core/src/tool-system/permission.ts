@@ -19,6 +19,115 @@ export interface ApprovalBackend {
   requestApproval(request: ApprovalRequest): Promise<ApprovalResult>;
 }
 
+export interface ApprovalRouteTarget {
+  connectionId: string;
+  sessionId: string;
+  generation: number;
+}
+
+export interface ApprovalConnectionHandler {
+  requestApproval(request: ApprovalRequest, target: ApprovalRouteTarget): Promise<ApprovalResult>;
+  ownershipLost?(targets: ApprovalRouteTarget[], reason: string): void;
+}
+
+export type ApprovalRegistrationResult =
+  | { ok: true; target: ApprovalRouteTarget }
+  | { ok: false; conflict: ApprovalRouteTarget };
+
+/**
+ * Process-local connection owner router. Handlers are connection-scoped while
+ * session ownership is an explicit binding with a monotonic generation.
+ */
+export class ApprovalRouter {
+  private readonly handlers = new Map<string, ApprovalConnectionHandler>();
+  private readonly owners = new Map<string, ApprovalRouteTarget>();
+  private readonly fallbackConnections = new Set<string>();
+  private nextGeneration = 1;
+
+  addConnection(
+    connectionId: string,
+    handler: ApprovalConnectionHandler,
+    options?: { claimUnownedSessions?: boolean },
+  ): () => void {
+    if (!connectionId) throw new Error("approval connectionId is required");
+    if (this.handlers.has(connectionId)) {
+      throw new Error(`approval connection already registered: ${connectionId}`);
+    }
+    this.handlers.set(connectionId, handler);
+    if (options?.claimUnownedSessions) this.fallbackConnections.add(connectionId);
+    return () => this.deregister(connectionId);
+  }
+
+  register(sessionId: string, connectionId: string): ApprovalRegistrationResult {
+    if (!sessionId) throw new Error("approval sessionId is required");
+    if (!this.handlers.has(connectionId)) {
+      throw new Error(`approval connection is not registered: ${connectionId}`);
+    }
+    const current = this.owners.get(sessionId);
+    if (current?.connectionId === connectionId) return { ok: true, target: current };
+    if (current) return { ok: false, conflict: current };
+
+    const target = { connectionId, sessionId, generation: this.nextGeneration++ };
+    this.owners.set(sessionId, target);
+    return { ok: true, target };
+  }
+
+  resolve(request: ApprovalRequest): Promise<ApprovalResult> | null {
+    if (!request.sessionId) return null;
+    let target = this.owners.get(request.sessionId);
+    if (!target && this.fallbackConnections.size === 1) {
+      const connectionId = this.fallbackConnections.values().next().value;
+      if (connectionId) {
+        const registration = this.register(request.sessionId, connectionId);
+        if (registration.ok) target = registration.target;
+      }
+    }
+    if (!target) return null;
+    const handler = this.handlers.get(target.connectionId);
+    if (!handler) {
+      this.owners.delete(request.sessionId);
+      return null;
+    }
+    return handler.requestApproval(request, target);
+  }
+
+  matches(target: ApprovalRouteTarget): boolean {
+    const current = this.owners.get(target.sessionId);
+    return (
+      current?.connectionId === target.connectionId && current.generation === target.generation
+    );
+  }
+
+  current(sessionId: string): ApprovalRouteTarget | null {
+    return this.owners.get(sessionId) ?? null;
+  }
+
+  release(sessionId: string, connectionId: string, reason = "approval session released"): void {
+    const current = this.owners.get(sessionId);
+    if (!current || current.connectionId !== connectionId) return;
+    this.owners.delete(sessionId);
+    this.handlers.get(connectionId)?.ownershipLost?.([current], reason);
+  }
+
+  deregister(connectionId: string, reason = "approval connection disconnected"): void {
+    const handler = this.handlers.get(connectionId);
+    if (!handler) return;
+    this.handlers.delete(connectionId);
+    this.fallbackConnections.delete(connectionId);
+    const lost: ApprovalRouteTarget[] = [];
+    for (const [sessionId, target] of this.owners) {
+      if (target.connectionId !== connectionId) continue;
+      this.owners.delete(sessionId);
+      lost.push(target);
+    }
+    if (lost.length > 0) handler.ownershipLost?.(lost, reason);
+  }
+
+  hasConnections(): boolean {
+    return this.handlers.size > 0;
+  }
+}
+
 export class HeadlessApprovalBackend implements ApprovalBackend {
   constructor(private readonly mode: "approve-all" | "deny-all" | "approve-read-only") {}
 
@@ -170,19 +279,26 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
     onProjectRules: null,
   };
 
+  constructor(private readonly approvalRouter = new ApprovalRouter()) {}
+
   setPromptFn(fn: (request: ApprovalRequest) => Promise<ApprovalResult>): void {
     this.promptFn = fn;
+  }
+
+  clearPromptFn(): void {
+    this.promptFn = null;
   }
 
   /**
    * Has someone installed a real prompt callback? Engine consults this
    * to decide whether to use the interactive backend (= talk to a UI)
    * or fall back to HeadlessApprovalBackend (= deny-all). Without it,
-   * the agent-server-stdio entry — which wires setInteractiveApprovalFn
-   * during server boot — would still fall through to deny-all because
+   * a protocol host registers its connection with ApprovalRouter during boot
+   * but before the first session is bound — without this check Engine would
+   * still fall through to deny-all because
    * the engine couldn't tell the difference. */
   hasPromptFn(): boolean {
-    return this.promptFn !== null;
+    return this.promptFn !== null || this.approvalRouter.hasConnections();
   }
 
   /** Inject the project root so persistence writes to the right settings file. */
@@ -274,7 +390,7 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
     const cached = state ? this.checkSessionRules(req, state) : null;
     if (cached) return cached;
 
-    if (!this.promptFn) {
+    if (!this.promptFn && !this.approvalRouter.hasConnections()) {
       return { approved: false, reason: "interactive approval backend has no prompt function" };
     }
 
@@ -321,10 +437,24 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
     req: ApprovalRequest,
     state: InteractiveApprovalSessionState | null,
   ): Promise<ApprovalResult> {
-    if (!this.promptFn) {
+    const hasOwner = !!req.sessionId && this.approvalRouter.current(req.sessionId) !== null;
+    const routed = hasOwner ? this.approvalRouter.resolve(req) : null;
+    let result: ApprovalResult;
+    if (routed) {
+      result = await routed;
+    } else if (this.promptFn) {
+      result = await this.promptFn(req);
+    } else if (req.sessionId && this.approvalRouter.hasConnections()) {
+      const fallback = this.approvalRouter.resolve(req);
+      result = fallback
+        ? await fallback
+        : {
+            approved: false,
+            reason: `no approval connection owns session ${req.sessionId}`,
+          };
+    } else {
       return { approved: false, reason: "interactive approval backend has no prompt function" };
     }
-    const result = await this.promptFn(req);
     const scope = result.scope ?? (result.always ? "session" : "once");
     const activeState = this.isActiveSessionState(req.sessionId, state) ? state : null;
     const context = activeState ?? (!req.sessionId ? this.legacyContext : null);
@@ -599,12 +729,17 @@ function persistProjectRule(cwd: string, rule: PermissionRule): void {
   renameSync(tmp, file);
 }
 
-// Singleton interactive backend for use by the UI
+// Singleton interactive backend and its multi-connection owner router.
+const _approvalRouter = new ApprovalRouter();
 let _interactiveBackend: InteractiveApprovalBackend | null = null;
+
+export function getApprovalRouter(): ApprovalRouter {
+  return _approvalRouter;
+}
 
 export function getInteractiveApprovalBackend(): InteractiveApprovalBackend {
   if (!_interactiveBackend) {
-    _interactiveBackend = new InteractiveApprovalBackend();
+    _interactiveBackend = new InteractiveApprovalBackend(_approvalRouter);
   }
   return _interactiveBackend;
 }
@@ -615,12 +750,6 @@ export function openInteractiveApprovalSession(sessionId: string): void {
 
 export function clearInteractiveApprovalSession(sessionId: string): void {
   getInteractiveApprovalBackend().clearSession(sessionId);
-}
-
-export function setInteractiveApprovalFn(
-  fn: (request: ApprovalRequest) => Promise<ApprovalResult>,
-): void {
-  getInteractiveApprovalBackend().setPromptFn(fn);
 }
 
 // ─── YOLO Classifier — categorize bash commands by safety level ───
@@ -660,9 +789,6 @@ const SAFE_READ_PATTERNS = [
   // are NOT classified safe-read. Plain predicates (-name, -type, -print) stay.
   /^find\s(?!.*\s-(delete|exec(dir)?|ok(dir)?|fprintf?|fls)\b)/,
   /^(grep|rg|ag|ack|fgrep|egrep)\s/,
-  // Word-boundary the git read subcommands so `git difftool -x <cmd>` (which
-  // runs an arbitrary external command) does NOT match on the `diff` branch.
-  /^(git\s+(status|log|diff|branch|show|blame|remote|tag|stash\s+list|rev-parse|describe))\b/,
   /^(node|python|ruby|go|rustc|java|javac)\s+--version/,
   /^(npm|pnpm|yarn|cargo|pip|gem|brew)\s+(list|ls|info|show|view|outdated|audit)/,
   /^pwd$/,
@@ -673,6 +799,164 @@ const SAFE_READ_PATTERNS = [
   /^env$/,
   /^printenv/,
 ];
+
+/** Split a command conservatively enough to validate git's argument shape. */
+function splitShellWords(input: string): string[] | null {
+  const words: string[] = [];
+  let word = "";
+  let quote: "'" | '"' | null = null;
+  let hasWord = false;
+
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+    if (quote === null && /\s/.test(ch)) {
+      if (hasWord) {
+        words.push(word);
+        word = "";
+        hasWord = false;
+      }
+      continue;
+    }
+    if (ch === "\\" && quote !== "'") {
+      const next = input[++i];
+      if (next === undefined) return null;
+      word += next;
+      hasWord = true;
+      continue;
+    }
+    // Single quotes make expansion syntax literal. Outside them, reject all
+    // parameter/command expansion rather than let expansion change a vetted
+    // git argument into an unsafe option or action at execution time.
+    if (quote !== "'" && (ch === "$" || ch === "`")) return null;
+    if (ch === "'" || ch === '"') {
+      if (quote === null) {
+        quote = ch;
+        hasWord = true;
+        continue;
+      }
+      if (quote === ch) {
+        quote = null;
+        continue;
+      }
+    }
+    word += ch;
+    hasWord = true;
+  }
+
+  if (quote !== null) return null;
+  if (hasWord) words.push(word);
+  return words;
+}
+
+const GIT_LIST_STANDALONE_OPTIONS = new Set([
+  "--all",
+  "--color",
+  "--column",
+  "--ignore-case",
+  "--no-abbrev",
+  "--no-color",
+  "--no-column",
+  "--omit-empty",
+  "--remotes",
+  "--show-current",
+  "--verbose",
+  "-a",
+  "-r",
+  "-v",
+  "-vv",
+]);
+
+const GIT_LIST_VALUE_OPTIONS = new Set([
+  "--contains",
+  "--format",
+  "--merged",
+  "--no-contains",
+  "--no-merged",
+  "--points-at",
+  "--sort",
+]);
+
+const GIT_SAFE_GLOBAL_OPTIONS = new Set(["--no-pager", "--no-optional-locks"]);
+
+function isSafeGitListArgs(args: string[]): boolean {
+  let listMode = false;
+  let positionalOnly = false;
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (positionalOnly) continue;
+    if (arg === "--") {
+      if (!listMode) return false;
+      positionalOnly = true;
+      continue;
+    }
+    if (arg === "-l" || arg === "--list") {
+      listMode = true;
+      continue;
+    }
+    if (GIT_LIST_STANDALONE_OPTIONS.has(arg)) continue;
+    if (
+      [...GIT_LIST_STANDALONE_OPTIONS, ...GIT_LIST_VALUE_OPTIONS].some((option) =>
+        arg.startsWith(`${option}=`),
+      )
+    ) {
+      continue;
+    }
+    if (GIT_LIST_VALUE_OPTIONS.has(arg)) {
+      if (++i >= args.length) return false;
+      continue;
+    }
+    if (listMode && !arg.startsWith("-")) continue;
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Git is safe-read only for an explicit read subcommand and a read-only
+ * argument shape. In particular, branch/tag positional creation and all
+ * remote sub-actions fail closed instead of inheriting safety from the
+ * subcommand name.
+ */
+function isSafeReadGitCommand(segment: string): boolean {
+  const words = splitShellWords(segment.trim());
+  if (!words || words[0] !== "git") return false;
+
+  let subcommandIndex = 1;
+  while (GIT_SAFE_GLOBAL_OPTIONS.has(words[subcommandIndex])) subcommandIndex++;
+
+  const subcommand = words[subcommandIndex];
+  const args = words.slice(subcommandIndex + 1);
+  const hasWriteOrExecutionOption = (gitArgs: string[]) =>
+    gitArgs.some(
+      (arg) =>
+        arg === "--ext-diff" ||
+        arg === "--textconv" ||
+        arg === "--output" ||
+        arg.startsWith("--output="),
+    );
+  if (["status", "log", "diff", "show", "blame", "rev-parse", "describe"].includes(subcommand)) {
+    return !hasWriteOrExecutionOption(args);
+  }
+  if (subcommand === "stash") {
+    return args[0] === "list" && !hasWriteOrExecutionOption(args.slice(1));
+  }
+  if (subcommand === "branch" || subcommand === "tag") return isSafeGitListArgs(args);
+  if (subcommand === "remote") {
+    return args.every((arg) => arg === "-v" || arg === "--verbose");
+  }
+  return false;
+}
+
+function matchesSafeReadPattern(segment: string, allowArgumentless = false): boolean {
+  return (
+    isSafeReadGitCommand(segment) ||
+    SAFE_READ_PATTERNS.some(
+      (pattern) => pattern.test(segment) || (allowArgumentless && pattern.test(`${segment} `)),
+    )
+  );
+}
 
 // ─── Sensitive safe-read downgrade ────────────────────────────────
 //
@@ -738,25 +1022,73 @@ const SAFE_WRITE_PATTERNS = [
 //   - top-level `;`, `&&`, `||`, newline split the command into
 //     segments. Every segment must independently classify as safe
 //     for the whole command to be safe.
-//   - unquoted command substitution (` ` ` or `$(` ), redirection
+//   - command substitution (` ` ` or `$(` ) outside single quotes, redirection
 //     (`>` `>>` `<` `<<`), process substitution (`<(` `>(`), and
 //     pipe-to-shell (`| sh`, `| bash`, ...) flag the command as
 //     dangerous.
-//   - quoted (`'…'`, `"…"`) and backslash-escaped characters are
-//     ignored — `echo "a; b"` is a single segment.
+//   - single quotes make command-substitution syntax literal; double quotes
+//     do not. Other quoted and backslash-escaped metacharacters are ignored —
+//     `echo "a; b"` is a single segment.
 //
 // This is intentionally detection-only, not a full shell parser. We
 // only need to find unquoted metacharacters and split safely.
 
-const PIPE_TO_SHELL_RE =
-  /\|\s*(sh|bash|zsh|dash|ksh|fish|python|python3|node|nodejs|ruby|perl|php)\b/;
+const PIPE_SHELL_COMMAND_RE =
+  /^(sh|bash|zsh|dash|ksh|fish|python|python3|node|nodejs|ruby|perl|php)\b/;
 
 interface ScanResult {
   segments: string[];
   dangerous: boolean;
 }
 
+/** Apply Bash line continuation before inspecting shell syntax. */
+function normalizeShellLineContinuations(input: string): string {
+  let normalized = "";
+  let quote: "'" | '"' | null = null;
+
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+    const next = input[i + 1];
+
+    // Backslash-newline remains literal inside single quotes.
+    if (quote === "'") {
+      if (ch === quote) quote = null;
+      normalized += ch;
+      continue;
+    }
+
+    if (ch === "\\") {
+      if (next === "\n") {
+        i++;
+        continue;
+      }
+      if (next === "\r" && input[i + 2] === "\n") {
+        i += 2;
+        continue;
+      }
+
+      // Preserve other escapes verbatim and do not treat an escaped quote as
+      // changing the quote state used by this normalization pass.
+      normalized += ch;
+      if (next !== undefined) {
+        normalized += next;
+        i++;
+      }
+      continue;
+    }
+
+    if (ch === "'" || ch === '"') {
+      if (quote === null) quote = ch;
+      else if (quote === ch) quote = null;
+    }
+    normalized += ch;
+  }
+
+  return normalized;
+}
+
 function scanShellCommand(input: string): ScanResult {
+  const normalizedInput = normalizeShellLineContinuations(input);
   const segments: string[] = [];
   let buf = "";
   let dangerous = false;
@@ -772,9 +1104,9 @@ function scanShellCommand(input: string): ScanResult {
     buf = "";
   };
 
-  while (i < input.length) {
-    const ch = input[i];
-    const next = input[i + 1];
+  while (i < normalizedInput.length) {
+    const ch = normalizedInput[i];
+    const next = normalizedInput[i + 1];
 
     if (quote === null) {
       // Escape: skip the next character
@@ -833,10 +1165,26 @@ function scanShellCommand(input: string): ScanResult {
       continue;
     }
 
-    // Inside a quote
+    // Inside single quotes, every character other than the closing quote is
+    // literal. In particular, `$(` and backticks do not execute.
+    if (quote === "'") {
+      if (ch === quote) quote = null;
+      buf += ch;
+      i++;
+      continue;
+    }
+
+    // Inside double quotes, escapes still suppress substitution syntax, but
+    // unescaped `$(` and backticks execute and must fail closed.
     if (ch === "\\" && next !== undefined) {
       buf += ch + next;
       i += 2;
+      continue;
+    }
+    if (ch === "`" || (ch === "$" && next === "(")) {
+      dangerous = true;
+      buf += ch;
+      i++;
       continue;
     }
     if (ch === quote) {
@@ -858,6 +1206,38 @@ function scanShellCommand(input: string): ScanResult {
   return { segments, dangerous };
 }
 
+/** Split only on real shell pipes, preserving pipes inside quotes or escapes. */
+function splitUnquotedPipes(input: string): string[] {
+  const parts: string[] = [];
+  let buf = "";
+  let quote: "'" | '"' | null = null;
+
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+    const next = input[i + 1];
+    if (ch === "\\" && quote !== "'" && next !== undefined) {
+      buf += ch + next;
+      i++;
+      continue;
+    }
+    if (ch === "'" || ch === '"') {
+      if (quote === null) quote = ch;
+      else if (quote === ch) quote = null;
+      buf += ch;
+      continue;
+    }
+    if (ch === "|" && quote === null) {
+      parts.push(buf.trim());
+      buf = "";
+      continue;
+    }
+    buf += ch;
+  }
+
+  parts.push(buf.trim());
+  return parts;
+}
+
 function classifySegment(segment: string): BashSafetyLevel {
   if (DANGEROUS_PATTERNS.some((p) => p.test(segment))) return "dangerous";
 
@@ -869,14 +1249,14 @@ function classifySegment(segment: string): BashSafetyLevel {
   // `| nc ...` exfil tail — declaring a piped-to-network command safe-read.
   // We did not split on `|` in the scanner because pipes are not statement
   // boundaries; they're per-segment data flow.
-  if (segment.includes("|")) {
+  const parts = splitUnquotedPipes(segment);
+  if (parts.length > 1) {
     // A pipe part may be an argument-less command (`ls`, `pwd`) whose trailing
     // space was stripped along with the `|`. Test each part both as-is (for
     // `$`-anchored patterns like /^pwd$/) and with a trailing space appended
     // (for `\s`-delimited patterns like /^ls\s/), so neither form is missed.
-    const parts = segment.split("|").map((p) => p.trim());
-    const partIsSafeRead = (p: string) =>
-      SAFE_READ_PATTERNS.some((re) => re.test(p) || re.test(`${p} `));
+    if (parts.slice(1).some((part) => PIPE_SHELL_COMMAND_RE.test(part))) return "dangerous";
+    const partIsSafeRead = (p: string) => matchesSafeReadPattern(p, true);
     if (parts.every(partIsSafeRead)) {
       // A sensitive read anywhere in the pipe (`cat ~/.ssh/id_rsa | base64`,
       // `env | grep KEY`) downgrades the whole pipe.
@@ -886,7 +1266,7 @@ function classifySegment(segment: string): BashSafetyLevel {
     return "unsafe";
   }
 
-  if (SAFE_READ_PATTERNS.some((p) => p.test(segment))) {
+  if (matchesSafeReadPattern(segment)) {
     return segmentIsSensitiveRead(segment) ? "unsafe" : "safe-read";
   }
   if (SAFE_WRITE_PATTERNS.some((p) => p.test(segment))) return "safe-write";
@@ -912,8 +1292,6 @@ export function classifyBashCommand(command: string): BashSafetyLevel {
   // be checked against the raw text because some of them span
   // separators we would split on.
   if (DANGEROUS_PATTERNS.some((p) => p.test(trimmed))) return "dangerous";
-  if (PIPE_TO_SHELL_RE.test(trimmed)) return "dangerous";
-
   const scan = scanShellCommand(trimmed);
   if (scan.dangerous) return "dangerous";
   if (scan.segments.length === 0) return "unsafe";
@@ -1048,12 +1426,13 @@ export class PermissionClassifier {
     // YOLO classifier for Bash commands
     if (toolName === "Bash") {
       const level = classifyBashCommand(String(args.command ?? ""));
+      // acceptEdits opts into workspace edits through the tool allowlist below;
+      // it never opts into unattended shell execution. Explicit rules were
+      // already honored above, and bypassPermissions returned before them.
+      if (this.defaultMode === "acceptEdits") return "ask";
       if (level === "dangerous") return "ask";
       if (level === "safe-read") return "allow";
-      if (
-        level === "safe-write" &&
-        (this.defaultMode === "acceptEdits" || this.defaultMode === "auto")
-      ) {
+      if (level === "safe-write" && this.defaultMode === "auto") {
         return "allow";
       }
       if (level === "unsafe") return "ask";

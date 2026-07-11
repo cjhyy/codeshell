@@ -30,6 +30,7 @@
  */
 
 import { spawn } from "node:child_process";
+import type { Writable } from "node:stream";
 import type { HookContext, HookResult } from "./events.js";
 import type { SettingsHookConfig } from "../types.js";
 import { MAX_HOOK_OUTPUT_BYTES, validateHookResult } from "./hook-output.js";
@@ -40,6 +41,99 @@ import { killChildTree } from "../runtime/spawn-common.js";
 export { validateHookResult };
 
 const DEFAULT_TIMEOUT_MS = 60_000;
+export const MAX_HOOK_STDIN_BYTES = 256 * 1024;
+
+interface HookStdinFailure {
+  type: "stdin_error";
+  code: string;
+  message: string;
+}
+
+function stdinFailure(error: unknown): HookStdinFailure {
+  const err = error as NodeJS.ErrnoException;
+  return {
+    type: "stdin_error",
+    code: typeof err?.code === "string" ? err.code : "UNKNOWN",
+    message: err instanceof Error ? err.message : String(error),
+  };
+}
+
+/**
+ * Write one hook envelope without leaving a Writable `error` event unhandled.
+ * The listener is installed before write(), remains through end(), and the
+ * promise does not resolve until both the write callback and any required
+ * drain have completed.
+ */
+export function writeHookStdin(
+  stdin: Writable | null | undefined,
+  envelope: string,
+): Promise<void> {
+  if (!stdin) return Promise.resolve();
+
+  return new Promise<void>((resolve, reject) => {
+    let settled = false;
+    let writeComplete = false;
+    let drained = false;
+    let ending = false;
+
+    const cleanup = (removeErrorListener = true) => {
+      if (removeErrorListener) stdin.off("error", onError);
+      stdin.off("drain", onDrain);
+    };
+    const finish = (error?: unknown, keepErrorListener = false) => {
+      if (settled) return;
+      settled = true;
+      cleanup(!keepErrorListener);
+      if (error !== undefined) reject(error);
+      else resolve();
+    };
+    const onError = (error: Error) => finish(error);
+    const onDrain = () => {
+      drained = true;
+      maybeEnd();
+    };
+    const maybeEnd = () => {
+      if (!writeComplete || !drained || ending || settled) return;
+      ending = true;
+      try {
+        stdin.end(() => finish());
+      } catch (error) {
+        finish(error, true);
+      }
+    };
+
+    // EventEmitter treats an unhandled stream `error` as fatal. Register the
+    // one-shot handler before the first byte is handed to the child.
+    stdin.once("error", onError);
+    try {
+      drained = stdin.write(envelope, (error?: Error | null) => {
+        if (error) {
+          // Some Writable implementations invoke the callback before emitting
+          // their fatal `error`. Keep the one-shot guard installed for it.
+          finish(error, true);
+          return;
+        }
+        writeComplete = true;
+        maybeEnd();
+      });
+      if (!drained) stdin.once("drain", onDrain);
+      maybeEnd();
+    } catch (error) {
+      finish(error, true);
+    }
+  });
+}
+
+/** Close stdin for an oversized envelope while still absorbing stream errors. */
+export function closeHookStdin(stdin: Writable | null | undefined): void {
+  if (!stdin) return;
+  stdin.once("error", () => {});
+  try {
+    stdin.end();
+  } catch {
+    // No envelope was written; the hook is still allowed to run without args.
+  }
+}
 
 /**
  * Run one shell-hook command and return the parsed HookResult. Catches
@@ -49,8 +143,11 @@ const DEFAULT_TIMEOUT_MS = 60_000;
 export async function runShellHook(
   config: SettingsHookConfig,
   ctx: HookContext,
+  abortSignal?: AbortSignal,
 ): Promise<HookResult> {
   const timeoutMs = config.timeout_ms ?? DEFAULT_TIMEOUT_MS;
+  const signal = abortSignal ?? (ctx.data.signal as AbortSignal | undefined);
+  if (signal?.aborted) return {};
 
   return new Promise<HookResult>((resolve) => {
     let child;
@@ -77,14 +174,22 @@ export async function runShellHook(
     let stdout = "";
     let stderr = "";
     let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
     const settle = (value: HookResult) => {
       if (settled) return;
       settled = true;
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
       resolve(value);
     };
 
-    const timer = setTimeout(() => {
+    const onAbort = () => {
+      killChildTree(child, 1000);
+      settle({});
+    };
+
+    timer = setTimeout(() => {
       // eslint-disable-next-line no-console
       console.warn(
         `[hooks] ${config.event} hook timed out after ${timeoutMs}ms: ${config.command}`,
@@ -94,6 +199,8 @@ export async function runShellHook(
       killChildTree(child, 1000);
       settle({});
     }, timeoutMs);
+    signal?.addEventListener("abort", onAbort, { once: true });
+    if (signal?.aborted) onAbort();
 
     // Byte cap: once we cross MAX_HOOK_OUTPUT_BYTES on stdout, kill the
     // child and surface a 'cap exceeded' failure. A misbehaving handler
@@ -143,8 +250,9 @@ export async function runShellHook(
       settle({});
     });
 
-    child.on("close", (code: number | null) => {
-      clearTimeout(timer);
+    let stdinFinished = false;
+    let pendingClose: { code: number | null } | undefined;
+    const handleClose = (code: number | null) => {
       if (stdoutCapped) {
         // eslint-disable-next-line no-console
         console.error(
@@ -201,20 +309,69 @@ export async function runShellHook(
         stderr.slice(0, 500),
       );
       settle({});
+    };
+    child.on("close", (code: number | null) => {
+      clearTimeout(timer);
+      if (settled) return;
+      // If close wins the event-loop race, wait for stdin's callback/error so
+      // an EPIPE cannot be overwritten by an apparently clean child exit.
+      if (!stdinFinished && !stdoutCapped) {
+        pendingClose = { code };
+        return;
+      }
+      handleClose(code);
     });
 
-    // Write the context envelope on stdin then close.
+    const finishStdin = () => {
+      stdinFinished = true;
+      if (pendingClose && !settled) {
+        const { code } = pendingClose;
+        pendingClose = undefined;
+        handleClose(code);
+      }
+    };
+
+    let envelope: string;
     try {
-      child.stdin?.write(JSON.stringify({ eventName: ctx.eventName, data: ctx.data }));
-      child.stdin?.end();
-    } catch (err) {
+      envelope = JSON.stringify({ eventName: ctx.eventName, data: ctx.data });
+    } catch (error) {
       // eslint-disable-next-line no-console
       console.error(
-        `[hooks] failed to write stdin for ${config.event}:`,
-        (err as Error).message,
+        `[hooks] failed to serialize stdin for ${config.event}:`,
+        error instanceof Error ? error.message : String(error),
       );
       settle({});
+      return;
     }
+    if (Buffer.byteLength(envelope, "utf8") > MAX_HOOK_STDIN_BYTES) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[hooks] ${config.event} hook stdin exceeded ${MAX_HOOK_STDIN_BYTES} bytes; running without envelope`,
+      );
+      closeHookStdin(child.stdin);
+      finishStdin();
+      return;
+    }
+
+    // Let the spawned shell enter user code before writing. Besides avoiding a
+    // needless race, this makes an intentional early stdin close observable as
+    // EPIPE/ECONNRESET while the child is still alive.
+    setImmediate(() => {
+      void (async () => {
+        if (settled) return;
+        try {
+          await writeHookStdin(child.stdin, envelope);
+          finishStdin();
+        } catch (error) {
+          clearTimeout(timer);
+          const failure = stdinFailure(error);
+          // eslint-disable-next-line no-console
+          console.error(`[hooks] failed to write stdin for ${config.event}:`, failure.message);
+          killChildTree(child, 1000);
+          settle({ data: { hookFailure: failure } });
+        }
+      })();
+    });
   });
 }
 

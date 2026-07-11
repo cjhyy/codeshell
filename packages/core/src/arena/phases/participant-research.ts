@@ -19,6 +19,7 @@ import type {
   EvidencePacket,
   FindingEvidenceLink,
   ArenaProgressEvent,
+  ArenaUsageRecorder,
 } from "../types.js";
 import type { ToolDefinition } from "../../types.js";
 import { CONTEXT_TOOLS, MAX_TOOL_ROUNDS, executeContextTool } from "../context/context-tools.js";
@@ -42,6 +43,7 @@ interface ResearchOptions {
   /** AbortSignal — cancels in-flight LLM calls */
   signal?: AbortSignal;
   onProgress?: (event: ArenaProgressEvent) => void;
+  onUsage?: ArenaUsageRecorder;
 }
 
 /**
@@ -59,7 +61,7 @@ export async function runParticipantResearch(options: ResearchOptions): Promise<
  * Returns both reports (backward compat) and dossiers (evidence trail).
  */
 export async function runParticipantResearchWithDossiers(options: ResearchOptions): Promise<ResearchResult[]> {
-  const { participants, strategy, topic, baseContext, enableContextTools, contextTools, signal, onProgress } = options;
+  const { participants, strategy, topic, baseContext, enableContextTools, contextTools, signal, onProgress, onUsage } = options;
   const tools = enableContextTools ? (contextTools ?? CONTEXT_TOOLS) : undefined;
 
   const tasks = participants.map(async (p) => {
@@ -100,6 +102,7 @@ export async function runParticipantResearchWithDossiers(options: ResearchOption
         tools,
         signal,
       });
+      onUsage?.(response.usage);
 
       const toolNames = (response.toolCalls ?? []).map((tc: ToolCall) => tc.toolName);
       const hasTools = response.toolCalls && response.toolCalls.length > 0;
@@ -215,6 +218,7 @@ export async function runParticipantResearchWithDossiers(options: ResearchOption
           },
         ],
       });
+      onUsage?.(forceResponse.usage);
 
       logger.info("arena.research_force_conclude_response", {
         participant: p.name,

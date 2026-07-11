@@ -15,6 +15,7 @@ import {
 import type { LLMResponse, Message, StreamEvent, ToolCall, ToolResult } from "../types.js";
 import { CANCEL_GOAL_TOOL_NAME } from "../tool-system/builtin/cancel-goal.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js";
+import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { Engine } from "./engine.js";
@@ -59,14 +60,20 @@ function makeTurnLoopDeps(
   deps: TurnLoopDeps;
   calls: Message[][];
   executedTools: ToolCall[];
+  boundaryTurns: number[];
+  assistantTranscriptTurns: number[];
 } {
   let responseIndex = 0;
+  let transcriptTurn = 0;
   const calls: Message[][] = [];
   const executedTools: ToolCall[] = [];
+  const boundaryTurns: number[] = [];
+  const assistantTranscriptTurns: number[] = [];
   const call = async (_systemPrompt: string, messages: Message[]): Promise<LLMResponse> => {
     calls.push(messages.map((message) => ({ ...message })));
     const response = responses[Math.min(responseIndex, responses.length - 1)]!;
     responseIndex++;
+    assistantTranscriptTurns.push(transcriptTurn);
     return response;
   };
 
@@ -124,7 +131,10 @@ function makeTurnLoopDeps(
     transcript: {
       appendToolUse() {},
       appendToolResult() {},
-      appendTurnBoundary() {},
+      appendTurnBoundary() {
+        transcriptTurn++;
+        boundaryTurns.push(transcriptTurn);
+      },
       appendMessage() {},
     } as unknown as TurnLoopDeps["transcript"],
     systemPrompt: "system",
@@ -135,10 +145,138 @@ function makeTurnLoopDeps(
     ctxOverheadStore: { get: () => 0, set: () => {} },
   };
 
-  return { deps, calls, executedTools };
+  return { deps, calls, executedTools, boundaryTurns, assistantTranscriptTurns };
 }
 
 describe("TurnLoop goal lifecycle guardrails", () => {
+  it("finalizes a stop-hook-blocked no-tool turn before continuing", async () => {
+    let stopHookCalls = 0;
+    const heartbeatTurns: number[] = [];
+    const { deps, boundaryTurns, assistantTranscriptTurns } = makeTurnLoopDeps(
+      [stopResponse("blocked"), stopResponse("done")],
+      {
+        hook: (event) => {
+          if (event !== "on_stop") return {};
+          stopHookCalls++;
+          return stopHookCalls === 1 ? { continueSession: true, messages: ["keep going"] } : {};
+        },
+      },
+    );
+
+    await new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "finish after one block" },
+      onTurnBoundary: (turnCount) => {
+        heartbeatTurns.push(turnCount);
+      },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(assistantTranscriptTurns).toEqual([0, 1]);
+    expect(boundaryTurns).toEqual([1, 2]);
+    expect(heartbeatTurns).toEqual([1, 2]);
+  });
+
+  it("finalizes a no-tool turn before finalize-backfill steering continues", async () => {
+    let steerConsumed = false;
+    const heartbeatTurns: number[] = [];
+    const { deps, boundaryTurns, assistantTranscriptTurns } = makeTurnLoopDeps([
+      stopResponse("first answer"),
+      stopResponse("answer after steer"),
+    ]);
+    deps.consumeSteer = (source) => {
+      if (source !== "finalize_backfill" || steerConsumed) return [];
+      steerConsumed = true;
+      return [{ id: "late-steer", text: "incorporate this" }];
+    };
+
+    await new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+      onTurnBoundary: (turnCount) => {
+        heartbeatTurns.push(turnCount);
+      },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(assistantTranscriptTurns).toEqual([0, 1]);
+    expect(boundaryTurns).toEqual([1, 2]);
+    expect(heartbeatTurns).toEqual([1, 2]);
+  });
+
+  it("persists advancing heartbeat state and separate transcript turns across repeated blocks", async () => {
+    let stopHookCalls = 0;
+    let heartbeat = 0;
+    const persistedSnapshots: Array<{ turnCount: number; heartbeat: number }> = [];
+    const { deps, boundaryTurns, assistantTranscriptTurns } = makeTurnLoopDeps(
+      [stopResponse("blocked 1"), stopResponse("blocked 2"), stopResponse("done")],
+      {
+        hook: (event) => {
+          if (event !== "on_stop") return {};
+          stopHookCalls++;
+          return stopHookCalls <= 2
+            ? { continueSession: true, messages: [`continue ${stopHookCalls}`] }
+            : {};
+        },
+      },
+    );
+
+    await new TurnLoop(deps, {
+      maxTurns: 4,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "finish after repeated blocks" },
+      onTurnBoundary: (turnCount) => {
+        persistedSnapshots.push({ turnCount, heartbeat: ++heartbeat });
+      },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(assistantTranscriptTurns).toEqual([0, 1, 2]);
+    expect(boundaryTurns).toEqual([1, 2, 3]);
+    expect(persistedSnapshots).toEqual([
+      { turnCount: 1, heartbeat: 1 },
+      { turnCount: 2, heartbeat: 2 },
+      { turnCount: 3, heartbeat: 3 },
+    ]);
+  });
+
+  it("records exactly one boundary for a normal tool turn and the final no-tool turn", async () => {
+    const heartbeatTurns: number[] = [];
+    const { deps, boundaryTurns, assistantTranscriptTurns } = makeTurnLoopDeps([
+      toolResponse({ id: "read-1", toolName: "Read", args: {} }),
+      stopResponse("done"),
+    ]);
+
+    await new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+      onTurnBoundary: (turnCount) => {
+        heartbeatTurns.push(turnCount);
+      },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(assistantTranscriptTurns).toEqual([0, 1]);
+    expect(boundaryTurns).toEqual([1, 2]);
+    expect(heartbeatTurns).toEqual([1, 2]);
+  });
+
+  it("records exactly one boundary for a normal final answer", async () => {
+    const heartbeatTurns: number[] = [];
+    const { deps, boundaryTurns, assistantTranscriptTurns } = makeTurnLoopDeps([
+      stopResponse("done"),
+    ]);
+
+    await new TurnLoop(deps, {
+      maxTurns: 2,
+      maxToolCallsPerTurn: 10,
+      onTurnBoundary: (turnCount) => {
+        heartbeatTurns.push(turnCount);
+      },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(assistantTranscriptTurns).toEqual([0]);
+    expect(boundaryTurns).toEqual([1]);
+    expect(heartbeatTurns).toEqual([1]);
+  });
+
   it("does not scan sensitive-result tool metadata for a non-goal run", async () => {
     const { deps } = makeTurnLoopDeps([stopResponse("plain completion")]);
     let filterReads = 0;
@@ -488,7 +626,201 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     expect(judgeCalls).toBe(1);
   });
 
-  it("forces a stop when the stop hook reaches maxStopBlocks, bounding continuations", async () => {
+  it("does not exhaust stop blocks when tool-use turns with failure strings separate blocks", async () => {
+    const events: StreamEvent[] = [];
+    let stopHookCalls = 0;
+    const responses: LLMResponse[] = [];
+    for (let round = 1; round <= 3; round++) {
+      responses.push(
+        stopResponse(`blocked ${round}`),
+        toolResponse({ id: `tool-${round}`, toolName: "ProgressTool", args: { round } }),
+      );
+    }
+    responses.push(stopResponse("goal complete"));
+
+    const { deps, calls, executedTools } = makeTurnLoopDeps(responses, {
+      execute: async (call) => ({
+        id: call.id,
+        toolName: call.toolName,
+        result: `Error: simulated WebFetch failure in round ${call.args.round}`,
+      }),
+      hook: (event) => {
+        if (event !== "on_stop") return {};
+        stopHookCalls++;
+        if (stopHookCalls <= 3) {
+          return {
+            continueSession: true,
+            messages: [`continue ${stopHookCalls}`],
+            data: { goalVerdict: { met: false, gaps: "still incomplete" } },
+          };
+        }
+        return { data: { goalVerdict: { met: true, gaps: "" } } };
+      },
+    });
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 10,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "make steady progress" },
+      maxStopBlocks: 2,
+      onStream: (event) => {
+        events.push(event);
+      },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(result.goalTermination).toBeUndefined();
+    expect(stopHookCalls).toBe(4);
+    expect(calls).toHaveLength(7);
+    expect(executedTools).toHaveLength(3);
+    expect(
+      events.some((event) => event.type === "goal_progress" && event.status === "exhausted"),
+    ).toBe(false);
+  });
+
+  it("uses tool_use itself to reset the streak regardless of ToolResult error fields", async () => {
+    let stopHookCalls = 0;
+    const { deps, calls, executedTools } = makeTurnLoopDeps(
+      [
+        stopResponse("not done"),
+        toolResponse({ id: "failed-tool-1", toolName: "Bash", args: {} }),
+        stopResponse("still not done"),
+        toolResponse({ id: "failed-tool-2", toolName: "Bash", args: {} }),
+        stopResponse("done"),
+      ],
+      {
+        execute: async (call) => ({
+          id: call.id,
+          toolName: call.toolName,
+          result: "Error: command failed",
+          error: "command failed",
+          isError: true,
+        }),
+        hook: (event) => {
+          if (event !== "on_stop") return {};
+          stopHookCalls++;
+          return stopHookCalls <= 2
+            ? {
+                continueSession: true,
+                messages: ["continue after the tool attempt"],
+                data: { goalVerdict: { met: false, gaps: "try the next step" } },
+              }
+            : { data: { goalVerdict: { met: true, gaps: "" } } };
+        },
+      },
+    );
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "continue after a tool attempt" },
+      maxStopBlocks: 1,
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(result.goalTermination).toBeUndefined();
+    expect(stopHookCalls).toBe(3);
+    expect(calls).toHaveLength(5);
+    expect(executedTools).toHaveLength(2);
+  });
+
+  it("resets the stop-block streak before a truncated tool_use response continues", async () => {
+    let stopHookCalls = 0;
+    const { deps, calls, executedTools } = makeTurnLoopDeps(
+      [
+        stopResponse("not done"),
+        {
+          text: "",
+          toolCalls: [{ id: "truncated-tool", toolName: "Write", args: {} }],
+          stopReason: "length",
+          usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+        },
+        stopResponse("still not done"),
+        stopResponse("done"),
+      ],
+      {
+        hook: (event) => {
+          if (event !== "on_stop") return {};
+          stopHookCalls++;
+          return stopHookCalls <= 2
+            ? {
+                continueSession: true,
+                messages: ["continue after the truncated tool attempt"],
+                data: { goalVerdict: { met: false, gaps: "retry remains" } },
+              }
+            : { data: { goalVerdict: { met: true, gaps: "" } } };
+        },
+      },
+    );
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 6,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "recover from a truncated tool call" },
+      maxStopBlocks: 1,
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(result.goalTermination).toBeUndefined();
+    expect(stopHookCalls).toBe(3);
+    expect(calls).toHaveLength(4);
+    expect(executedTools).toHaveLength(0);
+  });
+
+  it("resets the stop-block streak before a budget-stop queued steer continues", async () => {
+    let stopHookCalls = 0;
+    let toolExecutions = 0;
+    let steerConsumed = false;
+    const { deps, calls, executedTools } = makeTurnLoopDeps(
+      [
+        toolResponse({ id: "budget-nudge-tool", toolName: "Read", args: {} }),
+        stopResponse("not done"),
+        toolResponse({ id: "budget-stop-tool", toolName: "Read", args: {} }),
+        stopResponse("still not done"),
+        stopResponse("done"),
+      ],
+      {
+        execute: async (call) => {
+          toolExecutions++;
+          return { id: call.id, toolName: call.toolName, result: "ok" };
+        },
+        hook: (event) => {
+          if (event !== "on_stop") return {};
+          stopHookCalls++;
+          return stopHookCalls <= 2
+            ? {
+                continueSession: true,
+                messages: ["continue after the tool turn"],
+                data: { goalVerdict: { met: false, gaps: "one step remains" } },
+              }
+            : { data: { goalVerdict: { met: true, gaps: "" } } };
+        },
+      },
+    );
+    deps.model.getOutputTokens = () => 9;
+    deps.consumeSteer = (source) => {
+      if (source !== "finalize_backfill" || toolExecutions < 2 || steerConsumed) return [];
+      steerConsumed = true;
+      return [{ id: "budget-stop-steer", text: "continue with this queued guidance" }];
+    };
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 7,
+      maxToolCallsPerTurn: 10,
+      tokenBudget: 10,
+      goal: { objective: "honor queued guidance after the budget stop" },
+      maxStopBlocks: 1,
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(result.goalTermination).toBeUndefined();
+    expect(stopHookCalls).toBe(3);
+    expect(calls).toHaveLength(5);
+    expect(executedTools).toHaveLength(2);
+    expect(steerConsumed).toBe(true);
+  });
+
+  it("forces a stop after maxStopBlocks consecutive blocks, bounding continuations", async () => {
     const events: StreamEvent[] = [];
     let stopHookCalls = 0;
     const { deps, calls } = makeTurnLoopDeps([stopResponse("round")], {
@@ -534,6 +866,84 @@ describe("TurnLoop goal lifecycle guardrails", () => {
           event.message.content.includes("Goal 续跑已达 2 次上限"),
       ),
     ).toBe(true);
+  });
+
+  it("preserves normal recovery after a single stop block", async () => {
+    const events: StreamEvent[] = [];
+    let stopHookCalls = 0;
+    const { deps, calls, executedTools } = makeTurnLoopDeps(
+      [
+        stopResponse("not done"),
+        toolResponse({ id: "recovery-tool", toolName: "ProgressTool", args: {} }),
+        stopResponse("done"),
+      ],
+      {
+        hook: (event) => {
+          if (event !== "on_stop") return {};
+          stopHookCalls++;
+          return stopHookCalls === 1
+            ? {
+                continueSession: true,
+                messages: ["continue once"],
+                data: { goalVerdict: { met: false, gaps: "one step remains" } },
+              }
+            : { data: { goalVerdict: { met: true, gaps: "" } } };
+        },
+      },
+    );
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "recover after one block" },
+      maxStopBlocks: 1,
+      onStream: (event) => {
+        events.push(event);
+      },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(result.goalTermination).toBeUndefined();
+    expect(stopHookCalls).toBe(2);
+    expect(calls).toHaveLength(3);
+    expect(executedTools).toHaveLength(1);
+    expect(
+      events.filter((event) => event.type === "goal_progress" && event.status === "not_met"),
+    ).toHaveLength(1);
+    expect(
+      events.some((event) => event.type === "goal_progress" && event.status === "exhausted"),
+    ).toBe(false);
+  });
+
+  it("bounds repeated ineffective tool-use turns with maxTurns instead of stop blocks", async () => {
+    let stopHookCalls = 0;
+    const responses = Array.from({ length: 3 }, (_, index) =>
+      toolResponse({ id: `ineffective-${index + 1}`, toolName: "Bash", args: {} }),
+    );
+    const { deps, calls, executedTools } = makeTurnLoopDeps(responses, {
+      execute: async (call) => ({
+        id: call.id,
+        toolName: call.toolName,
+        result: "Error: command failed again",
+      }),
+      hook: (event) => {
+        if (event === "on_stop") stopHookCalls++;
+        return {};
+      },
+    });
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "eventually stop the ineffective loop" },
+      maxStopBlocks: 1,
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("max_turns");
+    expect(result.goalTermination).toBe("max_turns_exhausted");
+    expect(stopHookCalls).toBe(0);
+    expect(executedTools).toHaveLength(3);
+    expect(calls).toHaveLength(4);
   });
 
   it("reuses a verdict across two real stop rounds when only runtime counters advance", async () => {
@@ -595,6 +1005,8 @@ const engineScenarios = new Map<
     judgeResponse?: string;
     systemPrompts?: string[];
     lastUsage?: LLMUsageTracker;
+    mainMessages?: Message[][];
+    afterMainCall?: (callNumber: number) => void;
   }
 >();
 
@@ -624,6 +1036,9 @@ class GoalLifecycleClient extends LLMClientBase {
     const response =
       scenario.mainResponses[Math.min(scenario.mainCalls, scenario.mainResponses.length - 1)]!;
     scenario.mainCalls++;
+    scenario.mainMessages ??= [];
+    scenario.mainMessages.push(options.messages.map((message) => ({ ...message })));
+    scenario.afterMainCall?.(scenario.mainCalls);
     this.recordUsage(
       response.usage ?? { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
       options,
@@ -657,9 +1072,334 @@ function persistedState(
 
 afterEach(() => {
   backgroundJobRegistry.reset();
+  notificationQueue.reset();
 });
 
 describe("Engine persisted goal lifecycle", () => {
+  it("G1: does not re-enter headless TurnLoop after the first goal termination", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-headless-terminal-"));
+    const model = uniqueModel("headless-terminal");
+    const sessionId = "goal-headless-terminal";
+    const events: StreamEvent[] = [];
+    notificationQueue.enqueue(
+      {
+        agentId: "already-finished-agent",
+        description: "already finished background check",
+        status: "completed",
+        finalText: "background result waiting to be delivered",
+        enqueuedAt: Date.now(),
+      },
+      sessionId,
+    );
+    engineScenarios.set(model, {
+      mainResponses: [
+        stopResponse("budget is exhausted"),
+        {
+          text: "must not run",
+          toolCalls: [{ id: "must-not-run", toolName: "UnknownTool", args: {} }],
+          stopReason: "tool_use",
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        },
+        {
+          text: "would overwrite the terminal result",
+          toolCalls: [],
+          stopReason: "stop",
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        },
+      ],
+      mainCalls: 0,
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const result = await engine.run("bounded headless work", {
+        sessionId,
+        cwd: dir,
+        goal: { objective: "finish within budget", tokenBudget: 10 },
+        onStream: (event) => {
+          events.push(event);
+        },
+      });
+
+      expect(engineScenarios.get(model)?.mainCalls).toBe(1);
+      expect(events.filter((event) => event.type === "tool_use_start")).toHaveLength(0);
+      expect(result.reason).toBe("goal_budget_exhausted");
+      expect(result.goalTermination).toBe("token_budget_exhausted");
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("G1: persists a later background notification without restarting after termination", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-terminal-notification-"));
+    const model = uniqueModel("terminal-notification");
+    const sessionId = "goal-terminal-notification";
+    engineScenarios.set(model, {
+      mainResponses: [
+        stopResponse("budget is exhausted"),
+        {
+          text: "must not summarize after termination",
+          toolCalls: [],
+          stopReason: "stop",
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        },
+      ],
+      mainCalls: 0,
+      afterMainCall: (callNumber) => {
+        if (callNumber !== 1) return;
+        notificationQueue.enqueue(
+          {
+            agentId: "just-finished-agent",
+            description: "post-termination background check",
+            status: "completed",
+            finalText: "post-termination background result",
+            enqueuedAt: Date.now(),
+          },
+          sessionId,
+        );
+      },
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const result = await engine.run("bounded headless work", {
+        sessionId,
+        cwd: dir,
+        goal: { objective: "finish within budget", tokenBudget: 10 },
+      });
+      const transcript = readFileSync(join(dir, "sessions", sessionId, "transcript.jsonl"), "utf8");
+
+      expect(engineScenarios.get(model)?.mainCalls).toBe(1);
+      expect(notificationQueue.getSnapshot(sessionId)).toHaveLength(0);
+      expect(transcript).toContain("post-termination background result");
+      expect(transcript).toContain('"injected":true');
+      expect(result.reason).toBe("goal_budget_exhausted");
+      expect(result.goalTermination).toBe("token_budget_exhausted");
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("G1 regression: keeps normal headless background continuation without goal termination", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-headless-normal-continuation-"));
+    const model = uniqueModel("normal-continuation");
+    const sessionId = "headless-normal-continuation";
+    engineScenarios.set(model, {
+      mainResponses: [
+        stopResponse("background work started"),
+        stopResponse("background result summarized"),
+      ],
+      mainCalls: 0,
+      afterMainCall: (callNumber) => {
+        if (callNumber !== 1) return;
+        notificationQueue.enqueue(
+          {
+            agentId: "normal-finished-agent",
+            description: "normal background check",
+            status: "completed",
+            finalText: "normal background result",
+            enqueuedAt: Date.now(),
+          },
+          sessionId,
+        );
+      },
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const result = await engine.run("continue normally", { sessionId, cwd: dir });
+      const continuationMessages = engineScenarios.get(model)?.mainMessages?.[1] ?? [];
+
+      expect(engineScenarios.get(model)?.mainCalls).toBe(2);
+      expect(
+        continuationMessages.some(
+          (message) =>
+            message.role === "user" &&
+            typeof message.content === "string" &&
+            message.content.includes("normal background result"),
+        ),
+      ).toBe(true);
+      expect(result.text).toBe("background result summarized");
+      expect(result.goalTermination).toBeUndefined();
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("F7: stops immediately on unrecoverable judge overflow but preserves the active goal", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-judge-overflow-"));
+    const model = uniqueModel("judge-overflow");
+    const sessionId = "goal-judge-overflow-preserves";
+    const objective = `OBJECTIVE-HEAD-${"g".repeat(30_000)}-OBJECTIVE-TAIL`;
+    engineScenarios.set(model, {
+      mainResponses: [stopResponse("cannot judge this prompt")],
+      mainCalls: 0,
+      judgeResponse: '{"met":true,"waiting":false,"gaps":""}',
+    });
+
+    try {
+      for (let index = 0; index < 16; index++) {
+        backgroundJobRegistry.start(
+          `f7-engine-fixed-overflow-${index}`,
+          sessionId,
+          `BACKGROUND-${index}-${String(index % 10).repeat(2_000)}`,
+        );
+      }
+      const events: StreamEvent[] = [];
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const result = await engine.run("start the large goal", {
+        sessionId,
+        cwd: dir,
+        goal: { objective, maxStopBlocks: 3 },
+        onStream: (event) => {
+          events.push(event);
+        },
+      });
+
+      expect(result.reason).toBe("completed");
+      expect(result.goalTermination).toBe("judge_prompt_too_large");
+      expect(engineScenarios.get(model)?.mainCalls).toBe(1);
+      expect(
+        engineScenarios
+          .get(model)
+          ?.systemPrompts?.filter((prompt) => prompt.includes("目标完成度裁判")),
+      ).toHaveLength(0);
+      expect(engine.getGoal(sessionId)?.objective).toBe(objective);
+      expect(persistedState(dir, sessionId).activeGoal?.objective).toBe(objective);
+      expect(persistedState(dir, sessionId).goalTerminal).toBeUndefined();
+      expect(events.some((event) => event.type === "goal_progress" && event.status === "met")).toBe(
+        false,
+      );
+      expect(
+        events.some(
+          (event) =>
+            event.type === "assistant_message" &&
+            typeof event.message.content === "string" &&
+            event.message.content.includes("目标已保留"),
+        ),
+      ).toBe(true);
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("F7: a bounded long objective still reaches the judge through Engine", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-bounded-objective-"));
+    const model = uniqueModel("bounded-objective");
+    const sessionId = "goal-bounded-objective-judges";
+    const objective = `OBJECTIVE-HEAD-${"x".repeat(30_000)}-OBJECTIVE-TAIL`;
+    engineScenarios.set(model, {
+      mainResponses: [stopResponse("large goal is complete")],
+      mainCalls: 0,
+      judgeResponse: '{"met":true,"waiting":false,"gaps":""}',
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const result = await engine.run("finish the large goal", {
+        sessionId,
+        cwd: dir,
+        goal: { objective },
+      });
+
+      expect(result.reason).toBe("completed");
+      expect(result.goalTermination).toBeUndefined();
+      expect(engineScenarios.get(model)?.mainCalls).toBe(1);
+      expect(
+        engineScenarios
+          .get(model)
+          ?.systemPrompts?.filter((prompt) => prompt.includes("目标完成度裁判")),
+      ).toHaveLength(1);
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("F7 regression: a normal objective still reaches the judge through Engine", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-normal-objective-"));
+    const model = uniqueModel("normal-objective");
+    const sessionId = "goal-normal-objective-judges";
+    engineScenarios.set(model, {
+      mainResponses: [stopResponse("normal goal is complete")],
+      mainCalls: 0,
+      judgeResponse: '{"met":true,"waiting":false,"gaps":""}',
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const result = await engine.run("finish the normal goal", {
+        sessionId,
+        cwd: dir,
+        goal: { objective: "ship the normal release" },
+      });
+
+      expect(result.reason).toBe("completed");
+      expect(result.goalTermination).toBeUndefined();
+      expect(engineScenarios.get(model)?.mainCalls).toBe(1);
+      expect(
+        engineScenarios
+          .get(model)
+          ?.systemPrompts?.filter((prompt) => prompt.includes("目标完成度裁判")),
+      ).toHaveLength(1);
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("routes goal judgment to primary even when a distinct auxText model is configured", async () => {
     const dir = mkdtempSync(join(tmpdir(), "engine-goal-primary-judge-"));
     const primaryModel = uniqueModel("primary-judge");
@@ -721,9 +1461,9 @@ describe("Engine persisted goal lifecycle", () => {
         requestCount: 2,
       });
       expect(persistedState(dir, sessionId).tokenUsage).toMatchObject({
-        promptTokens: 11,
-        completionTokens: 6,
-        totalTokens: 17,
+        promptTokens: 12,
+        completionTokens: 7,
+        totalTokens: 19,
       });
     } finally {
       engineScenarios.delete(primaryModel);

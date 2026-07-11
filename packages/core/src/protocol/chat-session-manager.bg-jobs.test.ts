@@ -21,9 +21,9 @@ describe("ChatSessionManager.sweepIdle background jobs", () => {
     backgroundJobRegistry.reset();
   });
 
-  it("does not evict an expired idle session while it has a running background job", () => {
+  it("does not evict an expired idle session while it has a running background job", async () => {
     const mgr = makeManager();
-    const session = mgr.getOrCreate("s-bg-running", {} as EngineConfigSlice);
+    const session = await mgr.getOrCreate("s-bg-running", {} as EngineConfigSlice);
     backgroundJobRegistry.start("job-running", "s-bg-running", "DriveAgent running");
     session.lastActivityAt = Date.now() - 60_000;
 
@@ -32,9 +32,9 @@ describe("ChatSessionManager.sweepIdle background jobs", () => {
     expect(mgr.get("s-bg-running")).toBe(session);
   });
 
-  it("still evicts an expired idle session with no running background jobs", () => {
+  it("still evicts an expired idle session with no running background jobs", async () => {
     const mgr = makeManager();
-    const session = mgr.getOrCreate("s-bg-none", {} as EngineConfigSlice);
+    const session = await mgr.getOrCreate("s-bg-none", {} as EngineConfigSlice);
     session.lastActivityAt = Date.now() - 60_000;
 
     mgr.sweepIdle();

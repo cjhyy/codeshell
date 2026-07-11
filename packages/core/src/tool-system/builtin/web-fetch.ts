@@ -30,6 +30,7 @@ export const webFetchToolDef: ToolDefinition = {
 
 const MAX_OUTPUT = 100_000;
 const DEFAULT_MAX = 50_000;
+const RAW_BYTE_BUDGET_MULTIPLIER = 4;
 
 // Header names that must not be overridable via args.headers (SSRF / auth injection)
 const BLOCKED_REQUEST_HEADERS = new Set([
@@ -277,7 +278,42 @@ export async function webFetchTool(args: Record<string, unknown>): Promise<strin
 
 async function readAndTruncateBody(res: Response, maxLength: number): Promise<string> {
   const contentType = res.headers.get("content-type") ?? "";
-  const body = await res.text();
+  const maxBytes = maxLength * RAW_BYTE_BUDGET_MULTIPLIER;
+  const reader = res.body?.getReader();
+  let body: string;
+  let rawTruncated = false;
+  if (!reader) {
+    body = await res.text();
+  } else {
+    const decoder = new TextDecoder("utf-8");
+    const chunks: string[] = [];
+    let bytesRead = 0;
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const remaining = maxBytes - bytesRead;
+        if (value.byteLength >= remaining) {
+          chunks.push(decoder.decode(value.subarray(0, remaining), { stream: true }));
+          bytesRead += remaining;
+          rawTruncated = true;
+          await reader.cancel();
+          break;
+        }
+        chunks.push(decoder.decode(value, { stream: true }));
+        bytesRead += value.byteLength;
+      }
+      const tail = decoder.decode();
+      // When the byte budget cuts through a multi-byte code point, flushing
+      // the decoder would turn that intentionally incomplete suffix into �.
+      // All complete code points were already emitted by stream:true, so the
+      // truncated tail is safe to discard.
+      if (!rawTruncated) chunks.push(tail);
+      body = chunks.join("");
+    } finally {
+      reader.releaseLock();
+    }
+  }
 
   let text: string;
   if (contentType.includes("text/html") || contentType.includes("application/xhtml")) {
@@ -286,8 +322,9 @@ async function readAndTruncateBody(res: Response, maxLength: number): Promise<st
     text = body;
   }
 
-  if (text.length > maxLength) {
-    text = text.slice(0, maxLength) + `\n\n... content truncated (${text.length} chars total)`;
+  if (rawTruncated || text.length > maxLength) {
+    const shownChars = Math.min(text.length, maxLength);
+    text = text.slice(0, maxLength) + `\n\n... content truncated (showing first ${shownChars} chars)`;
   }
   return text || "(page returned empty content)";
 }

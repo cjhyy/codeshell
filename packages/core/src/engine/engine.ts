@@ -21,6 +21,7 @@ import { getMergedCatalog } from "../model-catalog/index.js";
 import { modelEntriesFromConnections } from "./model-connections-pool.js";
 import { resolveAuxKey } from "./aux-key.js";
 import {
+  addTokenUsage,
   addCumulativeUsage,
   cumulativeCacheHitRate,
   foldRunUsage,
@@ -49,6 +50,7 @@ import {
   InteractiveApprovalBackend,
   getInteractiveApprovalBackend,
   type ApprovalBackend,
+  type ApprovalRouter,
 } from "../tool-system/permission.js";
 import { HookRegistry } from "../hooks/registry.js";
 import type { HookEventName, HookResult } from "../hooks/events.js";
@@ -114,6 +116,7 @@ import { AgentDefinitionRegistry } from "../agent/agent-definition-registry.js";
 import { defaultCacheDir } from "../llm/model-cache.js";
 import { detectProviderFromApiKey, buildModelPool } from "../onboarding.js";
 import { detectPastedNoise } from "../utils/task-sanitizer.js";
+import { formatFriendlyError } from "./friendly-error.js";
 import { buildSessionTitle } from "./session-title.js";
 import { MemoryOrchestrator } from "../services/memory-orchestrator.js";
 import { runDreamConsolidation } from "../services/dream-consolidation.js";
@@ -179,6 +182,39 @@ import type { EngineConfig, EngineResult } from "./types.js";
 export interface EnqueueSteerResult {
   accepted: boolean;
   id: string;
+}
+
+interface EngineRunOptions {
+  cwd?: string;
+  onStream?: StreamCallback;
+  signal?: AbortSignal;
+  sessionId?: string;
+  /** Immutable permission context for this run only. Omitted uses Engine config. */
+  permissionMode?: NonNullable<EngineConfig["permissionMode"]>;
+  /** Immutable plan context for this run only. Omitted follows permissionMode. */
+  planMode?: boolean;
+  /** Protocol connection's approval owner router for this run. */
+  approvalRouter?: ApprovalRouter;
+  /**
+   * Goal mode for this run: the engine registers a GoalStopHook so the
+   * turn loop runs until the session model judges this goal met. Falls
+   * back to config.goal. Orthogonal to permissionMode. Accepts a raw
+   * string or a full GoalConfig; normalized once at the run boundary.
+   */
+  goal?: string | GoalConfig;
+  /**
+   * Marks this turn's task as a SYNTHETIC system-reminder injection (e.g. a
+   * background-job completion notification the server re-injects to wake an
+   * idle session) rather than the user's own input. The task is still sent
+   * to the model as a `role:"user"` message, but it is persisted with an
+   * `injected` flag so the disk reader skips rendering it as a user bubble
+   * on replay (matching the live UI, which shows only the assistant reply).
+   */
+  injected?: boolean;
+  /** Stable id for this user-intent, used to make duplicate submits idempotent. */
+  clientMessageId?: string;
+  /** Structured input attachments. Legacy `<codeshell-image>` blocks remain supported. */
+  attachments?: InputAttachmentMeta[];
 }
 
 // Re-export the config hot-reload patch builder from here so the protocol
@@ -340,6 +376,8 @@ export class Engine {
   /** Shared resources supplied at construction (adapter pattern — null when self-constructed). */
   readonly runtime: EngineRuntime | null;
   private readonly sandboxCache = new Map<string, Promise<SandboxBackend>>();
+  private readonly interactiveBackends = new WeakMap<ApprovalRouter, InteractiveApprovalBackend>();
+  private activeApprovalRouter: ApprovalRouter | undefined;
   /** Active permission mode for this Engine instance. */
   permissionMode: NonNullable<EngineConfig["permissionMode"]>;
   /** True when permissionMode === "plan". */
@@ -362,7 +400,7 @@ export class Engine {
   };
 
   // Live state from the current/most-recent run, retained for /compact and
-  // for live-mutating PermissionClassifier on permission-mode switch.
+  // run-boundary PermissionClassifier replacement/reconfiguration.
   private lastContextManager: ContextManager | undefined;
   private lastMessages: Message[] | undefined;
   private lastSessionId: string | undefined;
@@ -417,6 +455,19 @@ export class Engine {
    * Null when idle; set at run start, cleared in run's finally.
    */
   private activeRunSession: SessionBundle | null = null;
+  /**
+   * Same-instance run guard. Engine owns single-valued live controls and one
+   * HookRegistry, so a second run must not enter until the first has completed
+   * all state persistence and end hooks. This prevents handle contamination and
+   * whole-state saveState overlap only within this Engine instance. It does not
+   * coordinate different Engine instances sharing a sessionId, Workers, or
+   * processes; session-level locking/CAS for those cases is a separate finding.
+   */
+  private runInProgress = false;
+  /** Permission update requested while runInProgress. Applied in run() finally. */
+  private pendingPermissionMode: NonNullable<EngineConfig["permissionMode"]> | null = null;
+  /** Plan update paired with pendingPermissionMode for one atomic boundary apply. */
+  private pendingPlanMode: boolean | null = null;
 
   /** Public accessor so UI/clients can read the resolved per-model window. */
   get maxContextTokens(): number {
@@ -475,10 +526,12 @@ export class Engine {
   private async emitHook(
     event: HookEventName,
     data: Record<string, unknown> = {},
+    signal?: AbortSignal,
   ): Promise<HookResult> {
     return this.hooks.emit(event, {
       ...data,
       isSubAgent: this.config.isSubAgent === true,
+      signal,
     });
   }
 
@@ -932,37 +985,37 @@ export class Engine {
   }
 
   /**
-   * Run a task from start to finish.
+   * Run a task from start to finish. Rejects immediately when this Engine
+   * instance already has a run in progress; hosts that want queueing own that
+   * policy (for example ChatSession's FIFO queue).
    */
-  async run(
-    task: string,
-    options?: {
-      cwd?: string;
-      onStream?: StreamCallback;
-      signal?: AbortSignal;
-      sessionId?: string;
-      /**
-       * Goal mode for this run: the engine registers a GoalStopHook so the
-       * turn loop runs until the session model judges this goal met. Falls
-       * back to config.goal. Orthogonal to permissionMode. Accepts a raw
-       * string or a full GoalConfig; normalized once at the run boundary.
-       */
-      goal?: string | GoalConfig;
-      /**
-       * Marks this turn's task as a SYNTHETIC system-reminder injection (e.g. a
-       * background-job completion notification the server re-injects to wake an
-       * idle session) rather than the user's own input. The task is still sent
-       * to the model as a `role:"user"` message, but it is persisted with an
-       * `injected` flag so the disk reader skips rendering it as a user bubble
-       * on replay (matching the live UI, which shows only the assistant reply).
-       */
-      injected?: boolean;
-      /** Stable id for this user-intent, used to make duplicate submits idempotent. */
-      clientMessageId?: string;
-      /** Structured input attachments. Legacy `<codeshell-image>` blocks remain supported. */
-      attachments?: InputAttachmentMeta[];
-    },
-  ): Promise<EngineResult> {
+  async run(task: string, options?: EngineRunOptions): Promise<EngineResult> {
+    if (this.runInProgress) {
+      throw new Error("Engine.run() cannot start while another run is in progress");
+    }
+    this.runInProgress = true;
+    try {
+      return await this.runExclusive(task, options);
+    } finally {
+      try {
+        this.applyPendingPermissionState();
+      } finally {
+        this.runInProgress = false;
+      }
+    }
+  }
+
+  private async runExclusive(task: string, options?: EngineRunOptions): Promise<EngineResult> {
+    // Freeze permission context once, before the first await. Per-turn protocol
+    // overrides live only for this run; persistent setPermissionMode/setPlanMode
+    // calls made while busy are staged separately and cannot mutate this pair.
+    let runPermissionMode = options?.permissionMode ?? this.config.permissionMode ?? "acceptEdits";
+    if (options?.planMode === true) {
+      runPermissionMode = "plan";
+    } else if (options?.planMode === false && runPermissionMode === "plan") {
+      runPermissionMode = "acceptEdits";
+    }
+    const runPlanMode = runPermissionMode === "plan";
     const workspaceResume =
       options?.sessionId && this.sessionManager.exists(options.sessionId)
         ? await this.sessionManager.resolveSessionWorkspaceForResume(options.sessionId)
@@ -1071,7 +1124,7 @@ export class Engine {
       describe: () => ({
         cwd,
         preset: this.preset.name,
-        permissionMode: this.config.permissionMode ?? "acceptEdits",
+        permissionMode: runPermissionMode,
       }),
       spawn: async (req) => {
         // Anchor this sub-agent in the PARENT transcript at spawn time — before
@@ -1109,7 +1162,7 @@ export class Engine {
           // rather surface failures than burn a 9 s exponential backoff loop.
           clientDefaults: { ...(this.config.clientDefaults ?? {}), retryMaxAttempts: 2 },
           cwd,
-          permissionMode: this.config.permissionMode,
+          permissionMode: runPermissionMode,
           preset: this.preset.name,
           enabledBuiltinTools: childEnabled,
           disabledBuiltinTools: childDisabled,
@@ -1180,7 +1233,7 @@ export class Engine {
           onStream: childStream,
           sessionId: childSessionId,
         });
-        return { text: result.text, sessionId: result.sessionId };
+        return { text: result.text, sessionId: result.sessionId, usage: result.usage };
       },
       sessionExists: (sessionId: string) => this.sessionManager.exists(sessionId),
     };
@@ -1218,6 +1271,9 @@ export class Engine {
     // after the assignment.
     const toolCtx: ToolContext = {
       ...this.buildToolContext(),
+      approvalRouter: options?.approvalRouter ?? this.config.approvalRouter,
+      permissionMode: runPermissionMode,
+      planMode: runPlanMode,
       subAgentSpawner,
       agentDefinitions: this.getAgentDefinitions(cwd),
       // Stamp the resolved network policy onto the backend the tools see so
@@ -1396,7 +1452,7 @@ export class Engine {
     toolCtx.setSessionWorkspace = (workspace) => {
       session.state.workspace = workspace;
     };
-    return runWithSid(session.state.sessionId, async () => {
+    const sessionRun = runWithSid(session.state.sessionId, async () => {
       recordSessionStart(session.state.sessionId, {
         // Strip <codeshell-image> base64 payloads before they reach
         // <repo>/log/. Reader still sees the marker + byte count, just
@@ -1405,7 +1461,7 @@ export class Engine {
         cwd,
         model: this.config.llm.model,
         provider: this.config.llm.provider,
-        permissionMode: this.config.permissionMode ?? "acceptEdits",
+        permissionMode: runPermissionMode,
         resumed: resumedFromDisk,
       });
 
@@ -1414,27 +1470,35 @@ export class Engine {
       // <system-reminder> at the head of the conversation (between
       // userContext and the new user prompt). Used by the built-in
       // superpowers injector to surface the `using-superpowers` ruleset.
-      const sessionStartHook = await this.emitHook("on_session_start", {
-        sessionId: session.state.sessionId,
-        cwd,
-        resumed: resumedFromDisk,
-        source: resumedFromDisk ? "resume" : "startup",
-      });
+      const sessionStartHook = await this.emitHook(
+        "on_session_start",
+        {
+          sessionId: session.state.sessionId,
+          cwd,
+          resumed: resumedFromDisk,
+          source: resumedFromDisk ? "resume" : "startup",
+        },
+        options?.signal,
+      );
 
       // Per-turn hook: fired every time a new user prompt enters the loop.
       // Equivalent to CC's UserPromptSubmit. Handlers can inject lightweight
       // reminders that should accompany each user turn (e.g. "skills
       // available — check before acting").
-      const promptSubmitHook = await this.emitHook("user_prompt_submit", {
-        sessionId: session.state.sessionId,
-        // Pass the text-only portion. Handlers reading the prompt for keyword
-        // detection / classification (e.g. superpowers' "did the user ask
-        // about X?") don't gain anything from megabytes of base64 inlined here,
-        // and silently leaking attachment bytes through hooks is the kind of
-        // exfiltration risk a curious user-installed shell hook shouldn't carry.
-        prompt: taskText,
-        resumed: resumedFromDisk,
-      });
+      const promptSubmitHook = await this.emitHook(
+        "user_prompt_submit",
+        {
+          sessionId: session.state.sessionId,
+          // Pass the text-only portion. Handlers reading the prompt for keyword
+          // detection / classification (e.g. superpowers' "did the user ask
+          // about X?") don't gain anything from megabytes of base64 inlined here,
+          // and silently leaking attachment bytes through hooks is the kind of
+          // exfiltration risk a curious user-installed shell hook shouldn't carry.
+          prompt: taskText,
+          resumed: resumedFromDisk,
+        },
+        options?.signal,
+      );
       // updatedPrompt: handler rewrote the user's prompt text. Replace the
       // last user message we just pushed (cold-start: line ~511; resume:
       // line ~500). Original prompt is in the transcript already — we log
@@ -1529,11 +1593,18 @@ export class Engine {
 
       // Kick off LLM client creation early (network handshake)
       const llmClientPromise = createLLMClient(this.config.llm, this.config.clientDefaults);
+      // MCP connection below may keep us from awaiting this promise for a while.
+      // Observe rejection immediately so a fast client-init failure cannot become
+      // an unhandledRejection during that gap; Promise.all still receives the
+      // original promise and routes the same error through the lifecycle catch.
+      void llmClientPromise.catch(() => {});
 
-      const mode = this.config.permissionMode ?? "acceptEdits";
+      const mode = runPermissionMode;
+      this.activeApprovalRouter = toolCtx.approvalRouter;
       const { rules: defaultRules, backend: approvalBackend } = this.buildPermissionConfig(
         mode,
         cwd,
+        toolCtx.approvalRouter,
       );
 
       const permission = new PermissionClassifier(defaultRules, mode, approvalBackend);
@@ -1716,7 +1787,7 @@ export class Engine {
       // PLAN_MODE_ALLOWED_TOOLS so what the model SEES and what the executor
       // RUNS can't drift apart. (Bash is in the set; the executor additionally
       // gates Bash to read-only commands at call time.)
-      const toolDefs = this.planMode
+      const toolDefs = runPlanMode
         ? allToolDefs.filter((t) => PLAN_MODE_ALLOWED_TOOLS.has(t.name))
         : allToolDefs;
 
@@ -1780,6 +1851,19 @@ export class Engine {
       //    These are tiny throwaway outputs ("Wrote design doc") fired every turn;
       //    that high-frequency, low-stakes chore is exactly what aux is for.
       const auxSummaryClient = await this.resolveAuxClient(llmClient);
+      // Auto-compaction runs inside TurnLoop.manageAsync(), after the loop has
+      // initialized its run-scoped Goal tracker. The closure is wired before
+      // construction but cannot execute until turnLoop.run() starts.
+      let turnLoop!: TurnLoop;
+      let autoCompactionGoalTermination: ReturnType<TurnLoop["recordGoalJudgeUsage"]>;
+      let externalRunUsage: TokenUsage = {
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+        cacheReadTokens: 0,
+        cacheCreationTokens: 0,
+      };
+      let runAccountingFinalized = false;
       Object.assign(
         session.state,
         normalizeCumulativeUsageCounters(session.state, session.state.tokenUsage),
@@ -1789,10 +1873,64 @@ export class Engine {
         Object.assign(session.state, next);
         return next;
       };
-      contextManager.setSummarizeFn(this.buildSummarizeFn(llmClient, recordCumulativeUsage));
+      const recordExternalBilledUsage = (usage: TokenUsage): CumulativeUsageCounters => {
+        externalRunUsage = addTokenUsage(externalRunUsage, usage);
+        const cumulative = recordCumulativeUsage(usage);
+        autoCompactionGoalTermination = turnLoop.recordGoalJudgeUsage(usage);
+        if (runAccountingFinalized) {
+          try {
+            const latest = this.sessionManager.resume(sid).state;
+            const lateCumulative = addCumulativeUsage(latest, usage);
+            this.sessionManager.updateSessionState(sid, {
+              tokenUsage: addTokenUsage(latest.tokenUsage, usage),
+              ...lateCumulative,
+              ...(this.config.costStore
+                ? {
+                    costState: this.config.costStore.serialize() as Record<string, unknown>,
+                  }
+                : {}),
+            });
+          } catch (err) {
+            logger.warn("engine.late_usage_persist_failed", {
+              sessionId: sid,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        }
+        return cumulative;
+      };
+      contextManager.setSummarizeFn(this.buildSummarizeFn(llmClient, recordExternalBilledUsage));
 
       // Create components (requires resolved llmClient).
       const modelFacade = new ModelFacade(llmClient, session.transcript);
+      const getRunUsage = () => {
+        const visible = modelFacade.getUsage();
+        return {
+          ...visible,
+          totalPromptTokens: visible.totalPromptTokens + externalRunUsage.promptTokens,
+          totalCompletionTokens: visible.totalCompletionTokens + externalRunUsage.completionTokens,
+          totalTokens: visible.totalTokens + externalRunUsage.totalTokens,
+          totalCacheReadTokens:
+            visible.totalCacheReadTokens + (externalRunUsage.cacheReadTokens ?? 0),
+          totalCacheCreationTokens:
+            visible.totalCacheCreationTokens + (externalRunUsage.cacheCreationTokens ?? 0),
+        };
+      };
+      const callPrimaryModel = modelFacade.call.bind(modelFacade);
+      modelFacade.call = async (...args: Parameters<ModelFacade["call"]>) => {
+        // A primary-model summary may itself exhaust the Goal budget. Do not
+        // issue the main turn request after that billed sub-call; return control
+        // to TurnLoop, whose existing post-response guard emits and persists the
+        // canonical goal_budget_exhausted termination.
+        if (autoCompactionGoalTermination) {
+          return {
+            text: "",
+            toolCalls: [],
+            stopReason: "stop",
+          };
+        }
+        return callPrimaryModel(...args);
+      };
 
       // Session-cumulative usage baseline: the LLM client is recreated per run
       // (its getUsage() counts only THIS run), so to accumulate across runs we
@@ -1802,24 +1940,25 @@ export class Engine {
 
       // Wire getOutputTokens for token budget tracking
       modelFacade.getOutputTokens = () => {
-        const usage = llmClient.getUsage();
+        const usage = getRunUsage();
         return usage.totalCompletionTokens;
       };
 
-      // Wire summarize for tool use summaries (uses lightweight call).
-      // recordUsage=false keeps these auxiliary sub-calls out of the main usage
-      // tracker so session_end.cost reflects only the user-facing turns and
-      // turns/requestCount stay aligned.
+      // Wire summarize for tool use summaries (uses lightweight call). Keep the
+      // request out of the foreground tracker while billing and reporting it to
+      // the owning session/Goal budget.
       modelFacade.summarize = async (sysPrompt: string, userMsg: string) => {
         const resp = await auxSummaryClient.createMessage({
           systemPrompt: sysPrompt,
           messages: [{ role: "user", content: userMsg }],
           tools: [],
           maxTokens: 256,
-          recordUsage: false,
+          billingEnabled: true,
+          requestVisible: false,
           // Auxiliary call — see contextManager.setSummarizeFn above.
           reasoning: { mode: "off" },
         });
+        if (resp.usage) recordExternalBilledUsage(resp.usage);
         logger.debug("summarize.call", {
           sysPromptLen: sysPrompt.length,
           userMsgLen: userMsg.length,
@@ -1874,11 +2013,15 @@ export class Engine {
       this.hooks.register("on_tool_start", fileHistoryHandler, 100, "file_history_backup");
 
       // Hook: agent start
-      await this.emitHook("on_agent_start", {
-        sessionId: session.state.sessionId,
-        task,
-        model: this.config.llm.model,
-      });
+      await this.emitHook(
+        "on_agent_start",
+        {
+          sessionId: session.state.sessionId,
+          task,
+          model: this.config.llm.model,
+        },
+        options?.signal,
+      );
 
       // Goal mode: register a GoalStopHook for the lifetime of THIS run so the
       // turn loop keeps going until the session model judges the goal met.
@@ -1948,7 +2091,6 @@ export class Engine {
           : undefined;
       let goalHookHandler: ReturnType<typeof createGoalStopHook> | null = null;
       let goalJudgeContext: GoalJudgeRuntimeContext | undefined;
-      let turnLoop!: TurnLoop;
       if (normalizedGoal && this.config.isSubAgent !== true) {
         goalHookHandler = createGoalStopHook({
           goal: normalizedGoal,
@@ -2110,7 +2252,7 @@ export class Engine {
             session.state.turnCount = turnCount;
             // baseline + this run's running total (idempotent per boundary,
             // accumulates across runs; carries cacheRead/cacheCreation too).
-            session.state.tokenUsage = foldRunUsage(usageBaseline, modelFacade.getUsage());
+            session.state.tokenUsage = foldRunUsage(usageBaseline, getRunUsage());
             // Surface the whole-session monotonic cache counts to the UI.
             // Separate from turn-loop's authoritative per-response emit (which
             // drives the live context reading and single-turn metric).
@@ -2144,6 +2286,7 @@ export class Engine {
           },
         },
       );
+      toolCtx.recordBilledUsage = recordExternalBilledUsage;
 
       // Expose this run's loop for mid-run extension (TODO 3.1). Top-level only —
       // a sub-agent's loop is its own concern and isn't user-extendable.
@@ -2155,6 +2298,10 @@ export class Engine {
 
       const applyGoalTermination = (termination: GoalTerminationReason | undefined): void => {
         if (!termination || !persistedRunGoal) return;
+        // Judge prompt overflow ends only this run. The objective is unfinished
+        // and may be resumed after the user reduces fixed judge context, so it
+        // must not get a terminal tombstone or be cleared from activeGoal.
+        if (termination === "judge_prompt_too_large") return;
         // Record the terminal identity even when a newer goal has already
         // replaced it. Only clear activeGoal when it is still the run's goal.
         session.state.goalTerminal = {
@@ -2174,8 +2321,10 @@ export class Engine {
       };
 
       let result: Awaited<ReturnType<typeof turnLoop.run>>;
+      let firstGoalTermination: GoalTerminationReason | undefined;
       try {
         result = await turnLoop.run(messages);
+        firstGoalTermination = result.goalTermination;
         applyGoalTermination(result.goalTermination);
 
         // ── Headless: drain background sub-agents before resolving ───────
@@ -2228,14 +2377,18 @@ export class Engine {
               role: "user",
               content: `<system-reminder>\n${buildNotificationMessage(pending)}\n</system-reminder>`,
             };
-            if (aborted) {
+            if (aborted || firstGoalTermination) {
               // Mark injected: a synthetic notification, not the user's own input —
               // the disk reader drops it on replay so no phantom user bubble.
+              // A goal termination is also a hard boundary: retain the notification
+              // for recovery, but never re-enter TurnLoop (which would reset its
+              // run-scoped goal budget tracker and could overwrite the first reason).
               session.transcript.appendMessage(injected.role, injected.content, { injected: true });
               result = { ...result, messages: [...result.messages, injected] };
               break;
             }
             result = await turnLoop.run([...result.messages, injected]);
+            firstGoalTermination ??= result.goalTermination;
             applyGoalTermination(result.goalTermination);
           }
         }
@@ -2262,28 +2415,38 @@ export class Engine {
         sessionId: session.state.sessionId,
         reason: result.reason,
         turns: turnLoop.currentTurn,
-        tokens: modelFacade.getUsage().totalTokens,
+        tokens: getRunUsage().totalTokens,
       });
       recordSessionEnd(session.state.sessionId, {
         reason: result.reason,
         turns: turnLoop.currentTurn,
-        cost: modelFacade.getUsage(),
+        cost: getRunUsage(),
       });
 
       // Session-level hook: fired symmetrically with on_session_start once
       // the turn loop has resolved (completion, error, or abort). Handlers
       // are notify-only — any returned messages are dropped because the run
       // is already over and there's no next turn to inject into.
-      await this.emitHook("on_session_end", {
-        sessionId: session.state.sessionId,
-        reason: result.reason,
-        turnCount: turnLoop.currentTurn,
-      });
+      await this.emitHook(
+        "on_session_end",
+        {
+          sessionId: session.state.sessionId,
+          reason: result.reason,
+          turnCount: turnLoop.currentTurn,
+        },
+        options?.signal,
+      );
 
       // Fire-and-forget memory pipeline: extract durable memories from the
       // transcript, save a session summary, and conditionally trigger
       // auto-dream consolidation. Doesn't block the Engine result.
-      void this.runMemoryPipeline(session.transcript, session.state.sessionId, cwd, llmClient);
+      void this.runMemoryPipeline(
+        session.transcript,
+        session.state.sessionId,
+        cwd,
+        llmClient,
+        recordExternalBilledUsage,
+      );
 
       // Fire-and-forget session title generation — only after the FIRST turn.
       // Reuses the already-resolved auxSummaryClient (aux model, cheap). Best-
@@ -2297,21 +2460,27 @@ export class Engine {
         const userMsgCount = userMsgEvents.length;
         const onStream = options?.onStream;
         if (userMsgCount === 1 && onStream && result.text) {
+          const sessionId = session.state.sessionId;
           const rawContent = (userMsgEvents[0]?.data as { content?: unknown })?.content;
           const firstUserText =
             typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent ?? "");
-          void buildSessionTitle(auxSummaryClient, firstUserText, result.text)
+          void buildSessionTitle(
+            auxSummaryClient,
+            firstUserText,
+            result.text,
+            recordExternalBilledUsage,
+          )
             .then((title) => {
               if (title) {
                 // Persist the title so it survives a localStorage wipe / disk
                 // rebuild — it used to live only in the renderer's localStorage
-                // index. This .then resolves AFTER the saveState below (:1892), so
-                // it must save again itself rather than rely on that write.
-                session.state.title = title;
-                this.sessionManager.saveState(session.state);
+                // index. Read the latest persisted state at callback time and
+                // merge only title; the completed run's session.state snapshot
+                // may already be stale after later serial session updates.
+                this.sessionManager.updateSessionState(sessionId, { title });
                 onStream({
                   type: "session_title",
-                  sessionId: session.state.sessionId,
+                  sessionId,
                   title,
                 });
               }
@@ -2325,22 +2494,40 @@ export class Engine {
       // failures (model_error, prompt_too_long, ...) — previously every
       // non-completed outcome collapsed to "errored", which threw away the
       // distinction and misled anyone reading state.json.
+      if (session.transcript.flushFailed()) {
+        const failure = session.transcript.getFlushFailure();
+        logger.error("engine.transcript_persistence_failed", {
+          sessionId: session.state.sessionId,
+          terminalReason: result.reason,
+          degraded: true,
+          ...failure,
+        });
+      }
       session.state.turnCount = turnLoop.currentTurn;
       session.state.status = result.reason;
       // Session-cumulative (baseline + this run) for persistence...
-      const usage = modelFacade.getUsage();
+      const usage = getRunUsage();
       session.state.tokenUsage = foldRunUsage(usageBaseline, usage);
       if (this.config.costStore) {
         session.state.costState = this.config.costStore.serialize() as Record<string, unknown>;
       }
+      // runInProgress excludes another whole-state writer only on this Engine
+      // instance. A different Engine using the same sessionId can still race
+      // this saveState (including an old run's abort cleanup vs a replacement
+      // Engine); cross-instance/process session serialization is a separate finding.
       this.sessionManager.saveState(session.state);
+      runAccountingFinalized = true;
 
       // Hook: agent end
-      await this.emitHook("on_agent_end", {
-        sessionId: session.state.sessionId,
-        reason: result.reason,
-        turnCount: turnLoop.currentTurn,
-      });
+      await this.emitHook(
+        "on_agent_end",
+        {
+          sessionId: session.state.sessionId,
+          reason: result.reason,
+          turnCount: turnLoop.currentTurn,
+        },
+        options?.signal,
+      );
 
       // Emit completion
       options?.onStream?.({ type: "turn_complete", reason: result.reason });
@@ -2348,12 +2535,49 @@ export class Engine {
       return {
         text: result.text,
         reason: result.reason,
+        goalTermination: firstGoalTermination,
         sessionId: session.state.sessionId,
         turnCount: turnLoop.currentTurn,
         usage: {
           promptTokens: usage.totalPromptTokens,
           completionTokens: usage.totalCompletionTokens,
           totalTokens: usage.totalTokens,
+          cacheReadTokens: usage.totalCacheReadTokens,
+          cacheCreationTokens: usage.totalCacheCreationTokens,
+        },
+      };
+    });
+    return Promise.resolve(sessionRun).catch((err): EngineResult => {
+      // The session is already persisted as active before runWithSid starts.
+      // Initialization failures (client creation, MCP connection, prompt/hooks)
+      // therefore need the same terminal lifecycle treatment as turn-loop errors.
+      const error = formatFriendlyError(err);
+      session.state.status = "model_error";
+      this.sessionManager.saveState(session.state);
+      session.transcript.appendError(error, { phase: "initialization" });
+      logger.error("engine.run_lifecycle_failed", {
+        sessionId: session.state.sessionId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      recordSessionEnd(session.state.sessionId, {
+        reason: "model_error",
+        turns: session.state.turnCount,
+      });
+      options?.onStream?.({ type: "error", error });
+      options?.onStream?.({ type: "turn_complete", reason: "model_error" });
+
+      const usage = session.state.tokenUsage;
+      return {
+        text: `ERROR: ${error}`,
+        reason: "model_error",
+        sessionId: session.state.sessionId,
+        turnCount: session.state.turnCount,
+        usage: {
+          promptTokens: usage.promptTokens ?? 0,
+          completionTokens: usage.completionTokens ?? 0,
+          totalTokens: usage.totalTokens ?? 0,
+          cacheReadTokens: usage.cacheReadTokens ?? 0,
+          cacheCreationTokens: usage.cacheCreationTokens ?? 0,
         },
       };
     });
@@ -2379,17 +2603,20 @@ export class Engine {
   private buildSummarizeFn(
     auxSummaryClient: Awaited<ReturnType<typeof createLLMClient>>,
     recordCumulativeUsage?: (usage: TokenUsage) => CumulativeUsageCounters,
-  ): (prompt: string) => Promise<string> {
-    return async (prompt: string) => {
+  ): (prompt: string, signal?: AbortSignal) => Promise<string> {
+    return async (prompt: string, signal?: AbortSignal) => {
       const summaryResponse = await auxSummaryClient.createMessage({
         systemPrompt: "You are a conversation summarizer. Be concise and factual.",
         messages: [{ role: "user", content: prompt }],
         tools: [],
         maxTokens: 1024,
+        billingEnabled: true,
+        requestVisible: false,
         // Auxiliary call — no need to burn reasoning tokens. On DeepSeek V4
         // this flips thinking off (~3x faster, fewer tokens); on every other
         // OpenAI-compatible provider the field is ignored.
         reasoning: { mode: "off" },
+        signal,
       });
       if (summaryResponse.usage) {
         recordCumulativeUsage?.(summaryResponse.usage);
@@ -2460,6 +2687,7 @@ export class Engine {
     sessionId: string,
     cwd: string,
     primaryClient: Awaited<ReturnType<typeof createLLMClient>>,
+    recordBilledUsage?: (usage: TokenUsage) => void,
   ): Promise<void> {
     try {
       // Background calls run on the auxiliary model when configured, so memory
@@ -2501,13 +2729,22 @@ export class Engine {
             messages: [{ role: "user", content: userMsg }],
             tools: [],
             maxTokens: 1024,
-            recordUsage: false,
+            billingEnabled: true,
+            requestVisible: false,
             reasoning: { mode: "off" },
           });
+          if (resp.usage) recordBilledUsage?.(resp.usage);
           return resp.text;
         },
         runDream: async ({ systemPrompt, userPrompt, projectDir }) =>
-          this.runDreamLoop({ systemPrompt, userPrompt, projectDir, llmClient, sessionId }),
+          this.runDreamLoop({
+            systemPrompt,
+            userPrompt,
+            projectDir,
+            llmClient,
+            sessionId,
+            recordBilledUsage,
+          }),
         projectDir: cwd,
         // settings.memories.maxCount caps memories accepted per extraction;
         // autoExtract=false turns the extractor off (summaries/dream stay).
@@ -2547,6 +2784,7 @@ export class Engine {
     projectDir?: string;
     llmClient: Awaited<ReturnType<typeof createLLMClient>>;
     sessionId: string;
+    recordBilledUsage?: (usage: TokenUsage) => void;
   }): Promise<boolean> {
     // The loop body now lives in services/dream-consolidation.ts so it can
     // also be driven from the desktop host's manual "整理 / Dream" trigger.
@@ -2560,6 +2798,7 @@ export class Engine {
       toolContext: this.buildToolContext(),
       projectDir: opts.projectDir,
       sessionId: opts.sessionId,
+      onUsage: opts.recordBilledUsage,
     });
     return ran;
   }
@@ -3046,6 +3285,7 @@ export class Engine {
   private buildPermissionConfig(
     mode: NonNullable<EngineConfig["permissionMode"]>,
     cwd: string,
+    approvalRouter?: ApprovalRouter,
   ): { rules: import("../types.js").PermissionRule[]; backend: ApprovalBackend } {
     const rules: import("../types.js").PermissionRule[] = [...this.preset.defaultPermissionRules];
 
@@ -3104,7 +3344,15 @@ export class Engine {
       // every `ask` permission silently fell through to deny-all and
       // the user saw "Permission denied by user" with NO modal — exactly
       // the bug that motivated this fix.
-      const interactive = getInteractiveApprovalBackend();
+      let interactive: InteractiveApprovalBackend;
+      if (approvalRouter) {
+        interactive =
+          this.interactiveBackends.get(approvalRouter) ??
+          new InteractiveApprovalBackend(approvalRouter);
+        this.interactiveBackends.set(approvalRouter, interactive);
+      } else {
+        interactive = getInteractiveApprovalBackend();
+      }
       if (interactive.hasPromptFn()) {
         backend = interactive;
       } else {
@@ -3121,20 +3369,45 @@ export class Engine {
   }
 
   /**
-   * Switch permission mode at runtime. Takes effect immediately for any
-   * in-flight ToolExecutor (which holds a reference to the same classifier),
-   * and the new mode is used for any subsequent run() calls.
+   * Switch permission mode at runtime. Idle updates apply immediately; busy
+   * updates are committed atomically when the current run settles, so its
+   * classifier and ToolContext retain the immutable start-of-run snapshot.
    * Session-only — does not persist to settings.
    */
   setPermissionMode(mode: NonNullable<EngineConfig["permissionMode"]>): void {
+    if (this.runInProgress) {
+      this.pendingPermissionMode = mode;
+      this.pendingPlanMode = mode === "plan";
+      return;
+    }
+    this.applyPermissionState(mode, mode === "plan");
+  }
+
+  private applyPermissionState(
+    mode: NonNullable<EngineConfig["permissionMode"]>,
+    planMode: boolean,
+  ): void {
     this.config = { ...this.config, permissionMode: mode };
     this.permissionMode = mode;
-    this.planMode = mode === "plan";
+    this.planMode = planMode;
     if (this.activePermission) {
       const cwd = this.config.cwd ?? process.cwd();
-      const { rules, backend } = this.buildPermissionConfig(mode, cwd);
+      const { rules, backend } = this.buildPermissionConfig(
+        mode,
+        cwd,
+        this.activeApprovalRouter,
+      );
       this.activePermission.reconfigure(mode, backend, rules);
     }
+  }
+
+  private applyPendingPermissionState(): void {
+    if (this.pendingPermissionMode === null) return;
+    const mode = this.pendingPermissionMode;
+    const planMode = this.pendingPlanMode ?? mode === "plan";
+    this.pendingPermissionMode = null;
+    this.pendingPlanMode = null;
+    this.applyPermissionState(mode, planMode);
   }
 
   getPermissionMode(): NonNullable<EngineConfig["permissionMode"]> {
@@ -3164,8 +3437,11 @@ export class Engine {
    * rule set buildPermissionConfig does, without constructing a backend.
    */
   getPermissionRules(): import("../types.js").PermissionRule[] {
-    return this.buildPermissionConfig(this.getPermissionMode(), this.config.cwd ?? process.cwd())
-      .rules;
+    return this.buildPermissionConfig(
+      this.getPermissionMode(),
+      this.config.cwd ?? process.cwd(),
+      this.activeApprovalRouter,
+    ).rules;
   }
 
   /**
@@ -3175,11 +3451,9 @@ export class Engine {
   setPlanMode(value: boolean): void {
     if (value) {
       this.setPermissionMode("plan");
-    } else if (this.permissionMode === "plan") {
+    } else if ((this.pendingPermissionMode ?? this.permissionMode) === "plan") {
       // Leaving plan mode: drop back to the default.
       this.setPermissionMode("acceptEdits");
-    } else {
-      this.planMode = value;
     }
   }
 

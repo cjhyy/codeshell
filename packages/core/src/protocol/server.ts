@@ -38,7 +38,12 @@ import { diskDefaultsFrom } from "../engine/engine.js";
 import type { ValidatedSettings } from "../settings/schema.js";
 import { isProtectedSettingKey } from "../settings/manager.js";
 import type { ApprovalRequest, ApprovalResult, PermissionMode, StreamEvent } from "../types.js";
-import { setInteractiveApprovalFn } from "../tool-system/permission.js";
+import {
+  type ApprovalRouteTarget,
+  type ApprovalRouter,
+  getApprovalRouter,
+  getInteractiveApprovalBackend,
+} from "../tool-system/permission.js";
 import { getArenaStatus } from "../tool-system/builtin/arena.js";
 import {
   agentNotificationBus,
@@ -142,6 +147,11 @@ export interface AgentServerOptions {
    * service.
    */
   workspaceBridge?: boolean;
+  /** Stable transport connection identity. Supplying it enables strict
+   * connection+session+generation+requestId approval response matching. */
+  connectionId?: string;
+  /** Shared owner router; injectable for hosts/tests, process singleton by default. */
+  approvalRouter?: ApprovalRouter;
 }
 
 export class AgentServer {
@@ -156,10 +166,20 @@ export class AgentServer {
     | ((sessionId: string) => import("../engine/goal.js").GoalConfig | undefined)
     | null;
   private readonly workspaceBridgeEnabled: boolean;
+  private readonly connectionId: string;
+  private readonly strictApprovalRouting: boolean;
+  private readonly approvalRouter: ApprovalRouter;
+  private approvalConnectionUnregister: (() => void) | null = null;
+  private disconnected = false;
+  private readonly pendingApprovalTargets = new Map<
+    string,
+    ApprovalRouteTarget & { requestId: string }
+  >();
   /**
    * Last per-session EngineConfigSlice supplied by agent/run. Kept even after
    * idle eviction so background-completion wakeups can rebuild the ChatSession
-   * with the same cwd/permission/trust inputs before draining the queue.
+   * with the same cwd/trust inputs before draining the queue. Per-turn
+   * permission/plan overrides deliberately do not survive into wakeup turns.
    */
   private readonly lastSliceBySession = new Map<string, EngineConfigSlice>();
   /** Lazy disk reader for cold wakeup rehydrate when this process lacks a slice. */
@@ -206,6 +226,7 @@ export class AgentServer {
    * itself outlives the server (it's a process-local singleton).
    */
   private bgAgentBusUnsubscribe: (() => void) | null = null;
+  private readonly wakeupsInFlight = new Set<string>();
 
   constructor(options: AgentServerOptions) {
     this.chatManager = options.chatManager ?? null;
@@ -213,6 +234,13 @@ export class AgentServer {
     this.settingsReader = options.settingsReader ?? null;
     this.readActiveGoalFromDisk = options.readActiveGoalFromDisk ?? null;
     this.workspaceBridgeEnabled = options.workspaceBridge === true;
+    this.connectionId = options.connectionId ?? "legacy-agent-server";
+    this.strictApprovalRouting = options.connectionId !== undefined;
+    this.approvalRouter = options.approvalRouter ?? getApprovalRouter();
+    if (!this.strictApprovalRouting) {
+      this.approvalRouter.deregister(this.connectionId, "legacy approval host replaced");
+    }
+    getInteractiveApprovalBackend().clearPromptFn();
 
     if (!this.chatManager && !this.legacyEngine) {
       throw new Error("AgentServer: either chatManager or engine must be supplied");
@@ -231,9 +259,14 @@ export class AgentServer {
       }
     });
 
-    setInteractiveApprovalFn((request: ApprovalRequest) => {
-      return this.requestApprovalFromClient(request);
-    });
+    this.approvalConnectionUnregister = this.approvalRouter.addConnection(
+      this.connectionId,
+      {
+        requestApproval: (request, target) => this.requestApprovalFromClient(request, target),
+        ownershipLost: (targets, reason) => this.failClosedApprovalTargets(targets, reason),
+      },
+      { claimUnownedSessions: !this.strictApprovalRouting },
+    );
 
     if (this.legacyEngine) {
       // Only wire an interactive askUser when a human is present. For
@@ -293,78 +326,81 @@ export class AgentServer {
    *   the first drains all currently-pending items; subsequent bus events for
    *   the same session find it busy (or find an empty queue) and no-op.
    *
-   * INVARIANT (the burst-merge correctness depends on it): the merge only
-   * holds because (a) the bus fans out to subscribers SYNCHRONOUSLY, and (b)
-   * `enqueueTurn` sets the session's `active` (→ isBusy()===true) SYNCHRONOUSLY
-   * before its first await. So when bus events #2..N arrive — still on the same
-   * synchronous fan-out as #1 — they already see the session as busy and no-op.
-   * If either path is ever made async (e.g. an await is added inside
-   * enqueueTurn before `active` is set, or the bus starts deferring delivery),
-   * this degrades into N concurrent wakeups for N completions. Keep both
-   * synchronous, or replace this comment's assumption with an explicit
-   * "wakeup in flight" guard flag.
+   * `wakeupsInFlight` serializes the now-async rehydrate path, so a burst of
+   * completion events cannot create duplicate sessions or enqueue duplicate
+   * wakeup turns while getOrCreate waits for a closing generation to settle.
    */
   private maybeWakeIdleSession(sessionId: string): void {
-    if (!this.chatManager) return;
-    const session = this.chatManager.get(sessionId) ?? this.rehydrateSessionForWake(sessionId);
-    if (!session || session.isBusy()) return;
+    if (this.wakeupsInFlight.has(sessionId)) return;
+    this.wakeupsInFlight.add(sessionId);
+    void this.wakeIdleSession(sessionId)
+      .then((ranTurn) => {
+        this.wakeupsInFlight.delete(sessionId);
+        if (ranTurn && notificationQueue.getSnapshot(sessionId).length > 0) {
+          this.maybeWakeIdleSession(sessionId);
+        }
+      })
+      .catch(() => {
+        this.wakeupsInFlight.delete(sessionId);
+      });
+  }
+
+  private async wakeIdleSession(sessionId: string): Promise<boolean> {
+    if (!this.chatManager) return false;
+    if (this.chatManager.isUnavailable(sessionId)) return false;
+    const session =
+      this.chatManager.get(sessionId) ?? (await this.rehydrateSessionForWake(sessionId));
+    if (!session || session.isBusy()) return false;
     // Headless / automation runs are one-shot: the caller takes result.text and
     // is gone, so there's no consumer for a woken continuation turn. Headless
     // already drained its background sub-agents inside engine.run before
     // returning; any remaining queued notification (video/shell) must NOT spin
     // an orphan turn. Only the interactive path auto-continues.
-    if (session.engine.isHeadless()) return;
+    if (session.engine.isHeadless()) return false;
     // Don't resurrect a session the user just Stopped: cancel() leaves it idle
     // (active=null) so isBusy() reads false, but auto-running a fresh turn here
     // would defeat the Stop. The flag clears the moment the user sends again.
-    if (session.wasCancelledSinceLastTurn()) return;
+    if (session.wasCancelledSinceLastTurn()) return false;
     const pending = notificationQueue.drainAll(sessionId);
-    if (pending.length === 0) return;
+    if (pending.length === 0) return false;
     const task = `<system-reminder>\n${buildNotificationMessage(pending)}\n</system-reminder>`;
-    void session
-      .enqueueTurn(task, {
+    try {
+      await session.enqueueTurn(task, {
         // Synthetic notification, not the user's own input: persisted with an
         // `injected` flag so a disk rebuild doesn't render it as a phantom user
         // bubble (the live UI shows only the woken assistant's reply).
         injected: true,
         onStream: (event: StreamEvent) => this.notify(Methods.StreamEvent, { sessionId, event }),
-      })
-      .catch((err) => {
-        // A wakeup turn failing must not crash the bus fan-out. The drained
-        // notifications are already in the transcript via the run's messages;
-        // log and move on.
-        logger.warn("bg_wakeup.turn_failed", {
-          sessionId,
-          error: (err as Error).message,
-        });
-        // Belt-and-braces, mirroring the send() path's run().then(clear-busy):
-        // the renderer set the composer "working" spinner on this run's
-        // session_started, and clears it on turn_complete/error. A failure
-        // BEFORE the turn-loop runs (e.g. a setup error) emits neither, which
-        // would leave the spinner stuck. Emit a terminal `error` (NOT a
-        // turn_complete) so the renderer clears busy AND a woken automation
-        // session's runStatus flips to "failed" rather than being mislabeled
-        // "completed". If the turn-loop already emitted its own `error`, this is
-        // a harmless duplicate (busy already cleared, status already failed).
-        this.notify(Methods.StreamEvent, {
-          sessionId,
-          event: { type: "error", error: (err as Error)?.message ?? "background wakeup failed" },
-        });
-      })
-      .finally(() => {
-        // Run-boundary re-check (trigger B): the woken summarize turn may have
-        // spawned NEW background work (e.g. goal "generate 2 videos" → after #1
-        // completes, this turn submits #2). When #2 finishes its notification
-        // arrives while we're idle again — but if it arrived DURING this turn
-        // (busy), trigger A skipped it. Re-checking at the run boundary drains
-        // anything that landed while busy, chaining wakeups until the queue is
-        // truly empty. Replaces the old engine for(;;) outer loop.
-        this.maybeWakeIdleSession(sessionId);
+        approvalRouter: this.approvalRouter,
       });
+    } catch (err) {
+      // A wakeup turn failing must not crash the bus fan-out. The drained
+      // notifications are already in the transcript via the run's messages;
+      // log and move on.
+      logger.warn("bg_wakeup.turn_failed", {
+        sessionId,
+        error: (err as Error).message,
+      });
+      // Belt-and-braces, mirroring the send() path's run().then(clear-busy):
+      // the renderer set the composer "working" spinner on this run's
+      // session_started, and clears it on turn_complete/error. A failure
+      // BEFORE the turn-loop runs (e.g. a setup error) emits neither, which
+      // would leave the spinner stuck. Emit a terminal `error` (NOT a
+      // turn_complete) so the renderer clears busy AND a woken automation
+      // session's runStatus flips to "failed" rather than being mislabeled
+      // "completed". If the turn-loop already emitted its own `error`, this is
+      // a harmless duplicate (busy already cleared, status already failed).
+      this.notify(Methods.StreamEvent, {
+        sessionId,
+        event: { type: "error", error: (err as Error)?.message ?? "background wakeup failed" },
+      });
+    }
+    return true;
   }
 
-  private rehydrateSessionForWake(sessionId: string): ChatSession | null {
+  private async rehydrateSessionForWake(sessionId: string): Promise<ChatSession | null> {
     if (!this.chatManager) return null;
+    if (this.chatManager.isUnavailable(sessionId)) return null;
     try {
       const pending = notificationQueue.getSnapshot(sessionId);
       if (pending.length === 0) {
@@ -389,7 +425,7 @@ export class AgentServer {
         return null;
       }
 
-      const session = this.chatManager.getOrCreate(sessionId, slice);
+      const session = await this.chatManager.getOrCreate(sessionId, slice);
       this.wireInteractiveSession(session, sessionId);
       logger.debug("bg_wakeup.rehydrated_session", {
         sessionId,
@@ -414,7 +450,6 @@ export class AgentServer {
     const cwd = this.diskSessionReader.readCwd(sessionId);
     if (!cwd) return null;
     return {
-      permissionMode: "default",
       projectTrusted: false,
       cwd,
     };
@@ -470,7 +505,7 @@ export class AgentServer {
         this.handleUnsteer(req);
         break;
       case Methods.CloseSession:
-        this.handleCloseSession(req);
+        await this.handleCloseSession(req);
         break;
       case Methods.ReleaseWorkspace:
         this.handleReleaseWorkspace(req);
@@ -631,7 +666,6 @@ export class AgentServer {
     }
 
     const sessionConfig = {
-      permissionMode: params.permissionMode,
       cwd: params.cwd,
       projectTrusted: params.projectTrusted,
       goal:
@@ -663,10 +697,22 @@ export class AgentServer {
 
     let session;
     try {
-      session = cm.getOrCreate(params.sessionId, sessionConfig);
+      session = await cm.getOrCreate(params.sessionId, sessionConfig);
     } catch (err: any) {
       const code = err.code ?? ErrorCodes.InternalError;
       this.transport.send(createErrorResponse(req.id, code, err.message));
+      return;
+    }
+    const sid = params.sessionId;
+    const approvalRegistration = this.approvalRouter.register(sid, this.connectionId);
+    if (!approvalRegistration.ok) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.Overloaded,
+          `Session ${sid} is owned by another connection`,
+        ),
+      );
       return;
     }
     this.rememberSessionSlice(params.sessionId, sessionConfig);
@@ -688,12 +734,6 @@ export class AgentServer {
       }
     }
 
-    if (typeof params.planMode === "boolean") {
-      session.engine.setPlanMode(params.planMode);
-    }
-
-    const sid = params.sessionId;
-
     // Wire AskUserQuestion and host bridges for this interactive session. The
     // chatManager path builds a fresh per-session Engine via engineFactory, so
     // these host callbacks must be installed after every create/recreate.
@@ -711,6 +751,9 @@ export class AgentServer {
           this.notify(Methods.StreamEvent, { sessionId: sid, event }),
         clientMessageId:
           typeof params.clientMessageId === "string" ? params.clientMessageId : undefined,
+        permissionMode: params.permissionMode,
+        planMode: params.planMode,
+        approvalRouter: this.approvalRouter,
       });
       this.notify(Methods.RunAccepted, { requestId: req.id, sessionId: sid });
       const result = await run;
@@ -752,6 +795,22 @@ export class AgentServer {
     if (inputError) {
       this.transport.send(createErrorResponse(req.id, ErrorCodes.InvalidParams, inputError));
       return;
+    }
+    if (typeof params.sessionId === "string" && params.sessionId.length > 0) {
+      const approvalRegistration = this.approvalRouter.register(
+        params.sessionId,
+        this.connectionId,
+      );
+      if (!approvalRegistration.ok) {
+        this.transport.send(
+          createErrorResponse(
+            req.id,
+            ErrorCodes.Overloaded,
+            `Session ${params.sessionId} is owned by another connection`,
+          ),
+        );
+        return;
+      }
     }
     if (params.cwd !== undefined && (typeof params.cwd !== "string" || params.cwd.length === 0)) {
       this.transport.send(
@@ -868,7 +927,28 @@ export class AgentServer {
   // ─── Approve ────────────────────────────────────────────────────
 
   private handleApprove(req: RpcRequest): void {
-    const params = (req.params ?? {}) as unknown as ApproveParams;
+    const params = (req.params ?? {}) as unknown as ApproveParams & Partial<ApprovalRouteTarget>;
+
+    if (this.strictApprovalRouting) {
+      const pending = this.pendingApprovalTargets.get(params.requestId);
+      const matchesPending =
+        pending !== undefined &&
+        params.connectionId === this.connectionId &&
+        params.sessionId === pending.sessionId &&
+        params.connectionId === pending.connectionId &&
+        params.generation === pending.generation &&
+        this.approvalRouter.matches(pending);
+      if (!matchesPending) {
+        this.transport.send(
+          createErrorResponse(
+            req.id,
+            ErrorCodes.InvalidParams,
+            "Approval response does not match connectionId, sessionId, generation, and requestId",
+          ),
+        );
+        return;
+      }
+    }
 
     // ChatSessionManager path: approvals are scoped by (sessionId, requestId).
     // Never fall back from a session-tagged response to the legacy global map:
@@ -898,6 +978,7 @@ export class AgentServer {
         return;
       }
       s.pendingApprovals.delete(params.requestId);
+      this.pendingApprovalTargets.delete(params.requestId);
       // Cancel the pending timeout for requests that arm one (browser actions,
       // credential injection, and tool approvals). AskUserQuestion does not use
       // a timeout; this is harmless for those request ids.
@@ -921,6 +1002,7 @@ export class AgentServer {
     }
 
     this.pendingApprovals.delete(params.requestId);
+    this.pendingApprovalTargets.delete(params.requestId);
     this.clearApprovalTimer(params.requestId);
     resolve(params.decision);
     this.transport.send(createResponse(req.id, { ok: true }));
@@ -1187,7 +1269,7 @@ export class AgentServer {
 
   // ─── CloseSession ───────────────────────────────────────────────
 
-  private handleCloseSession(req: RpcRequest): void {
+  private async handleCloseSession(req: RpcRequest): Promise<void> {
     const params = (req.params ?? {}) as unknown as import("./types.js").CloseSessionParams;
     if (typeof params.sessionId !== "string" || params.sessionId.length === 0) {
       this.transport.send(
@@ -1200,13 +1282,15 @@ export class AgentServer {
       if (session) {
         this.cancelSessionApprovals(session, "session closed");
       }
-      this.chatManager.close(params.sessionId);
+      this.approvalRouter.release(params.sessionId, this.connectionId, "session closed");
+      await this.chatManager.close(params.sessionId);
     }
     // Explicit session teardown — reap that session's background shells
     // (design §6 "session 被显式删除 → killSession"). This is the RPC path
     // (agent/closeSession from the host on delete), distinct from the idle
-    // sweeper's chatManager.close() which must NOT kill (§6). Fire-and-forget.
-    void backgroundShellManager.killSession(params.sessionId);
+    // sweeper's idle eviction which must NOT kill (§6). Await teardown so the
+    // close RPC is a real deletion barrier for Desktop.
+    await backgroundShellManager.killSession(params.sessionId);
     // Drop this session's retained background jobs too (#2/#5): finished jobs
     // are kept for the panel, so explicit teardown is where they're released.
     backgroundJobRegistry.dropForSession(params.sessionId);
@@ -1581,6 +1665,16 @@ export class AgentServer {
 
         if (this.chatManager) {
           if (compactSessionId) {
+            if (this.chatManager.isUnavailable(compactSessionId)) {
+              this.transport.send(
+                createErrorResponse(
+                  req.id,
+                  ErrorCodes.SessionClosed,
+                  `Session is closing or closed: ${compactSessionId}`,
+                ),
+              );
+              return;
+            }
             let session = this.chatManager.get(compactSessionId);
             if (!session) {
               const probeEngine = this.anyEngine();
@@ -1595,7 +1689,7 @@ export class AgentServer {
                 return;
               }
               try {
-                session = this.chatManager.getOrCreate(compactSessionId, {
+                session = await this.chatManager.getOrCreate(compactSessionId, {
                   cwd: probeEngine.getSessionManager().readCwd(compactSessionId),
                 } as any);
               } catch (err: any) {
@@ -2019,6 +2113,16 @@ export class AgentServer {
     }
     // In the chatManager path, inject into the session's engine
     if (this.chatManager) {
+      if (this.chatManager.isUnavailable(params.sessionId)) {
+        this.transport.send(
+          createErrorResponse(
+            req.id,
+            ErrorCodes.SessionClosed,
+            `Session is closing or closed: ${params.sessionId}`,
+          ),
+        );
+        return;
+      }
       const s = this.chatManager.get(params.sessionId);
       if (!s) {
         this.transport.send(
@@ -2063,6 +2167,16 @@ export class AgentServer {
       );
       return;
     }
+    if (this.chatManager?.isUnavailable(params.sessionId)) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.SessionClosed,
+          `Session is closing or closed: ${params.sessionId}`,
+        ),
+      );
+      return;
+    }
     const engine = this.chatManager
       ? this.chatManager.get(params.sessionId)?.engine
       : this.legacyEngine;
@@ -2100,6 +2214,16 @@ export class AgentServer {
       );
       return;
     }
+    if (this.chatManager?.isUnavailable(params.sessionId)) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.SessionClosed,
+          `Session is closing or closed: ${params.sessionId}`,
+        ),
+      );
+      return;
+    }
     const engine = this.chatManager
       ? this.chatManager.get(params.sessionId)?.engine
       : this.legacyEngine;
@@ -2130,10 +2254,18 @@ export class AgentServer {
   /**
    * Ask the client to approve a tool operation (legacy single-engine path).
    */
-  private requestApprovalFromClient(request: ApprovalRequest): Promise<ApprovalResult> {
+  private requestApprovalFromClient(
+    request: ApprovalRequest,
+    route?: ApprovalRouteTarget,
+  ): Promise<ApprovalResult> {
     return new Promise((resolve) => {
       const requestId = nanoid(12);
-      const sessionId = typeof request.sessionId === "string" ? request.sessionId : undefined;
+      const effectiveRoute = route ?? {
+        connectionId: this.connectionId,
+        sessionId: request.sessionId ?? "",
+        generation: 0,
+      };
+      const sessionId = effectiveRoute.sessionId;
       const session = this.chatManager && sessionId ? this.chatManager.get(sessionId) : undefined;
 
       if (this.chatManager && sessionId && !session) {
@@ -2148,11 +2280,13 @@ export class AgentServer {
       } else {
         this.pendingApprovals.set(requestId, resolve);
       }
+      this.pendingApprovalTargets.set(requestId, { ...effectiveRoute, requestId });
 
       const timer = setTimeout(() => {
         const pending = session?.pendingApprovals ?? this.pendingApprovals;
         if (pending.has(requestId)) {
           pending.delete(requestId);
+          this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
           resolve({ approved: false, reason: "approval timed out" });
         }
@@ -2160,11 +2294,24 @@ export class AgentServer {
       this.approvalTimers.set(requestId, timer);
 
       this.notify(Methods.ApprovalRequest, {
+        connectionId: effectiveRoute.connectionId,
         ...(sessionId ? { sessionId } : {}),
+        generation: effectiveRoute.generation,
         requestId,
         request,
       });
     });
+  }
+
+  private approvalRouteEnvelope(
+    sessionId: string,
+    requestId: string,
+  ): (ApprovalRouteTarget & { requestId: string }) | { sessionId: string; requestId: string } {
+    const route = this.approvalRouter.current(sessionId);
+    if (!route || route.connectionId !== this.connectionId) return { sessionId, requestId };
+    const target = { ...route, requestId };
+    this.pendingApprovalTargets.set(requestId, target);
+    return target;
   }
 
   /**
@@ -2204,8 +2351,7 @@ export class AgentServer {
       if (opts?.optionsOnly !== undefined) args.optionsOnly = opts.optionsOnly;
 
       this.notify(Methods.ApprovalRequest, {
-        sessionId,
-        requestId,
+        ...this.approvalRouteEnvelope(sessionId, requestId),
         request: {
           toolName: "__ask_user__",
           args,
@@ -2233,6 +2379,7 @@ export class AgentServer {
           const resolveFn = session.pendingApprovals.get(requestId);
           if (resolveFn) {
             session.pendingApprovals.delete(requestId);
+            this.pendingApprovalTargets.delete(requestId);
             this.approvalTimers.delete(requestId);
             resolveFn("(用户未在限定时间内回答;目标运行中请自行做出合理假设并继续推进。)");
             // Tell every client the ask is resolved (nobody answered) so the
@@ -2312,6 +2459,7 @@ export class AgentServer {
       const timer = setTimeout(() => {
         if (session.pendingApprovals.has(requestId)) {
           session.pendingApprovals.delete(requestId);
+          this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
           resolve({ ok: false, detail: "browser action timed out" });
         }
@@ -2319,8 +2467,7 @@ export class AgentServer {
       this.approvalTimers.set(requestId, timer);
 
       this.notify(Methods.ApprovalRequest, {
-        sessionId,
-        requestId,
+        ...this.approvalRouteEnvelope(sessionId, requestId),
         request: {
           toolName: "__browser_action__",
           args: { action, ...payload },
@@ -2368,6 +2515,7 @@ export class AgentServer {
       const timer = setTimeout(() => {
         if (session.pendingApprovals.has(requestId)) {
           session.pendingApprovals.delete(requestId);
+          this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
           resolve({ ok: false, error: "credential inject timed out" });
         }
@@ -2375,8 +2523,7 @@ export class AgentServer {
       this.approvalTimers.set(requestId, timer);
 
       this.notify(Methods.ApprovalRequest, {
-        sessionId,
-        requestId,
+        ...this.approvalRouteEnvelope(sessionId, requestId),
         request: {
           toolName: "__credential_action__",
           args: { action: "injectCookie", credentialId, credentialScope },
@@ -2433,6 +2580,7 @@ export class AgentServer {
       const timer = setTimeout(() => {
         if (session.pendingApprovals.has(requestId)) {
           session.pendingApprovals.delete(requestId);
+          this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
           reject(new Error("workspace switch timed out"));
         }
@@ -2440,8 +2588,7 @@ export class AgentServer {
       this.approvalTimers.set(requestId, timer);
 
       this.notify(Methods.ApprovalRequest, {
-        sessionId,
-        requestId,
+        ...this.approvalRouteEnvelope(sessionId, requestId),
         request: {
           toolName: "__workspace_action__",
           args: { action: "switch", target },
@@ -2519,6 +2666,7 @@ export class AgentServer {
   // ─── Lifecycle ──────────────────────────────────────────────────
 
   close(): void {
+    this.disconnect("server closing");
     // Detach the bg-agent bus subscription first so a final flurry of
     // completions during shutdown can't race the `shutdown` status
     // notify below. Safe to call repeatedly — the unsubscribe is a
@@ -2558,6 +2706,18 @@ export class AgentServer {
     this.transport.close();
   }
 
+  /** Release only this transport's approval ownership. Safe on socket close
+   * even when the ChatSessionManager is shared by other TCP connections. */
+  disconnect(reason = "approval connection disconnected"): void {
+    if (this.disconnected) return;
+    this.disconnected = true;
+    const unregister = this.approvalConnectionUnregister;
+    this.approvalConnectionUnregister = null;
+    if (unregister) {
+      this.approvalRouter.deregister(this.connectionId, reason);
+    }
+  }
+
   private clearApprovalTimer(requestId: string): void {
     const timer = this.approvalTimers.get(requestId);
     if (timer) {
@@ -2579,6 +2739,7 @@ export class AgentServer {
   ): void {
     for (const [requestId, resolve] of session.pendingApprovals) {
       this.clearApprovalTimer(requestId);
+      this.pendingApprovalTargets.delete(requestId);
       try {
         resolve({ approved: false, reason });
       } catch {
@@ -2586,6 +2747,30 @@ export class AgentServer {
       }
     }
     session.pendingApprovals.clear();
+  }
+
+  private failClosedApprovalTargets(targets: ApprovalRouteTarget[], reason: string): void {
+    for (const target of targets) {
+      const session = this.chatManager?.get(target.sessionId);
+      if (session) {
+        this.cancelSessionApprovals(session, reason);
+        continue;
+      }
+      for (const [requestId, pending] of this.pendingApprovalTargets) {
+        if (
+          pending.connectionId !== target.connectionId ||
+          pending.sessionId !== target.sessionId ||
+          pending.generation !== target.generation
+        ) {
+          continue;
+        }
+        const resolve = this.pendingApprovals.get(requestId);
+        this.pendingApprovals.delete(requestId);
+        this.pendingApprovalTargets.delete(requestId);
+        this.clearApprovalTimer(requestId);
+        resolve?.({ approved: false, reason });
+      }
+    }
   }
 
   private clearAllApprovalTimers(): void {

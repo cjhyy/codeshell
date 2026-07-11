@@ -14,13 +14,20 @@ export interface CreateMessageOptions {
   onChunk?: (chunk: LLMStreamChunk) => void;
   signal?: AbortSignal;
   /**
-   * If false, this call's usage is excluded from the client's usage tracker
-   * and from the process-wide onUsage hook. Used for auxiliary sub-calls
-   * (tool-summary, future helper prompts) that should not appear in
-   * session_end.cost or skew turn/requestCount semantics.
+   * Whether this real provider request is billed through the process-wide
+   * usage hook. This is independent of request visibility: auxiliary calls
+   * are normally billed while remaining hidden from the foreground request
+   * tracker. Only explicit manual-audit paths should disable billing.
    * @default true
    */
-  recordUsage?: boolean;
+  billingEnabled?: boolean;
+  /**
+   * Whether this request appears in the client's foreground usage tracker.
+   * Hidden auxiliary calls must report their usage to their owning Engine's
+   * session/Goal recorder instead.
+   * @default true
+   */
+  requestVisible?: boolean;
   /**
    * Reasoning/thinking setting for this call. Overrides LLMConfig.reasoning.
    * Rich shape ({mode:"off"|"on"} | {mode:"effort",effort} |

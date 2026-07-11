@@ -19,6 +19,7 @@ import type {
   ClaimChallenge,
   ArenaProgressEvent,
   ArenaExecutionLimits,
+  ArenaUsageRecorder,
 } from "../types.js";
 import { isStrategyV2, isStrategyPlanning } from "../types.js";
 import type { ArenaLedger } from "../ledger.js";
@@ -36,13 +37,14 @@ interface CrossReviewOptions {
   reports: ParticipantReport[];
   signal?: AbortSignal;
   onProgress?: (event: ArenaProgressEvent) => void;
+  onUsage?: ArenaUsageRecorder;
 }
 
 /**
  * Run cross-review phase (V1). Each participant reviews the others' findings.
  */
 export async function runCrossReview(options: CrossReviewOptions): Promise<FindingReview[]> {
-  const { participants, strategy, topic, reports, signal, onProgress } = options;
+  const { participants, strategy, topic, reports, signal, onProgress, onUsage } = options;
 
   onProgress?.({ type: "cross_review_start", round: 1 });
 
@@ -66,6 +68,7 @@ export async function runCrossReview(options: CrossReviewOptions): Promise<Findi
       messages: [{ role: "user", content: userContent }],
       signal,
     });
+    onUsage?.(response.usage);
 
     logger.info("arena.cross_review_raw_response", {
       participant: p.name,
@@ -90,6 +93,7 @@ export async function runCrossReview(options: CrossReviewOptions): Promise<Findi
         ],
         signal,
       });
+      onUsage?.(retryResponse.usage);
 
       logger.info("arena.cross_review_retry", {
         participant: p.name,
@@ -124,6 +128,7 @@ interface VerificationReviewOptions {
   mode?: "review" | "discussion" | "planning";
   signal?: AbortSignal;
   onProgress?: (event: ArenaProgressEvent) => void;
+  onUsage?: ArenaUsageRecorder;
 }
 
 interface VerificationReviewResult {
@@ -138,7 +143,7 @@ interface VerificationReviewResult {
 export async function runVerificationReview(
   options: VerificationReviewOptions,
 ): Promise<VerificationReviewResult> {
-  const { participants, strategy, topic, reports, ledger, limits, mode, signal, onProgress } = options;
+  const { participants, strategy, topic, reports, ledger, limits, mode, signal, onProgress, onUsage } = options;
 
   // Select claims to review, prioritized by severity + confidence
   const allClaims = ledger.getAllClaims();
@@ -190,6 +195,7 @@ export async function runVerificationReview(
         messages: [{ role: "user", content: userContent }],
         signal,
       });
+      onUsage?.(response.usage);
 
       logger.info("arena.verification_review_raw", {
         participant: p.name,
@@ -206,6 +212,7 @@ export async function runVerificationReview(
           ],
           signal,
         });
+        onUsage?.(retryResponse.usage);
         response = retryResponse;
       }
 
@@ -238,6 +245,7 @@ export async function runVerificationReview(
         messages: [{ role: "user", content: userContent }],
         signal,
       });
+      onUsage?.(response.usage);
 
       if (response.stopReason === "length") {
         const retryResponse = await client.createMessage({
@@ -249,6 +257,7 @@ export async function runVerificationReview(
           ],
           signal,
         });
+        onUsage?.(retryResponse.usage);
         response = retryResponse;
       }
 

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { LLMClientBase } from "./client-base.js";
 import type { LLMConfig, LLMResponse, TokenUsage } from "../types.js";
+import type { CreateMessageOptions } from "./types.js";
 
 // The usage tracker must accumulate cache-read / cache-creation tokens across
 // LLM responses (once per real response), so a session-level cumulative cache
@@ -11,8 +12,8 @@ class TestClient extends LLMClientBase {
   async createMessage(): Promise<LLMResponse> {
     throw new Error("unused");
   }
-  record(usage: TokenUsage): void {
-    this.recordUsage(usage);
+  record(usage: TokenUsage, options?: CreateMessageOptions): void {
+    this.recordUsage(usage, options);
   }
   reset(): void {
     this.resetUsage();
@@ -20,7 +21,12 @@ class TestClient extends LLMClientBase {
 }
 
 function makeClient(): TestClient {
-  const config = { provider: "openai", model: "m", apiKey: "x", baseUrl: "http://localhost" } as LLMConfig;
+  const config = {
+    provider: "openai",
+    model: "m",
+    apiKey: "x",
+    baseUrl: "http://localhost",
+  } as LLMConfig;
   return new TestClient(config);
 }
 
@@ -33,6 +39,35 @@ const u = (p: number, c: number, read?: number, creation?: number): TokenUsage =
 });
 
 describe("LLMUsageTracker cache accumulation", () => {
+  it("separates billing from request visibility", () => {
+    const billed: TokenUsage[] = [];
+    const previous = LLMClientBase.onUsage;
+    LLMClientBase.onUsage = (_model, usage) => billed.push(usage);
+    try {
+      const c = makeClient();
+      c.record(u(100, 10), {
+        systemPrompt: "aux",
+        messages: [],
+        billingEnabled: true,
+        requestVisible: false,
+      });
+
+      expect(billed).toEqual([u(100, 10)]);
+      expect(c.getUsage().requestCount).toBe(0);
+
+      c.record(u(50, 5), {
+        systemPrompt: "audit",
+        messages: [],
+        billingEnabled: false,
+        requestVisible: true,
+      });
+      expect(billed).toHaveLength(1);
+      expect(c.getUsage().requestCount).toBe(1);
+    } finally {
+      LLMClientBase.onUsage = previous;
+    }
+  });
+
   it("sums cacheReadTokens / cacheCreationTokens across responses", () => {
     const c = makeClient();
     c.record(u(100, 10, 60, 20));

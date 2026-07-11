@@ -198,6 +198,10 @@ export interface ForkSessionResult {
 /** Respond to an approval request from the server. */
 export interface ApproveParams {
   sessionId: string;
+  /** Connection owner echoed from ApprovalRequestNotification when present. */
+  connectionId?: string;
+  /** Session-owner generation echoed from ApprovalRequestNotification when present. */
+  generation?: number;
   requestId: string;
   decision: ApprovalResult;
 }
@@ -385,6 +389,10 @@ export interface AgentStreamEventNotification {
 export interface ApprovalRequestNotification {
   /** Originating engine session when known. */
   sessionId?: string;
+  /** Connection owner required by strict multi-connection hosts. */
+  connectionId?: string;
+  /** Monotonic owner generation required by strict multi-connection hosts. */
+  generation?: number;
   requestId: string;
   request: ApprovalRequest;
 }

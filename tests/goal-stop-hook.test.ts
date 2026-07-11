@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach } from "bun:test";
-import { createGoalStopHook } from "../packages/core/src/hooks/goal-stop-hook.ts";
+import {
+  createGoalStopHook as createGoalStopHookImpl,
+  type GoalStopHookOptions,
+} from "../packages/core/src/hooks/goal-stop-hook.ts";
 import type { HookContext } from "../packages/core/src/hooks/events.ts";
 import { backgroundJobRegistry } from "../packages/core/src/tool-system/builtin/background-jobs.ts";
 
@@ -23,6 +26,19 @@ const silentLog = {
   error: () => {},
 };
 
+function createGoalStopHook(
+  opts: Omit<GoalStopHookOptions, "getJudgeContext"> &
+    Partial<Pick<GoalStopHookOptions, "getJudgeContext">>,
+) {
+  return createGoalStopHookImpl({
+    getJudgeContext: () => ({
+      toolResults: [],
+      progress: { turnCount: 1, stopRound: 1, elapsedMs: 0, tokensUsed: 0 },
+    }),
+    ...opts,
+  });
+}
+
 describe("createGoalStopHook", () => {
   it("allows stop (no-op) when no goal is in ctx.data", async () => {
     let called = false;
@@ -37,7 +53,7 @@ describe("createGoalStopHook", () => {
   });
 
   it("allows stop when the judge says the goal is met", async () => {
-    const llm = fakeLLM(JSON.stringify({ met: true, gaps: "" }));
+    const llm = fakeLLM(JSON.stringify({ met: true, waiting: false, gaps: "" }));
     const hook = createGoalStopHook({ llm, log: silentLog });
     const res = await hook(
       ctx({ goal: "ship it", finalText: "shipped" }),
@@ -47,7 +63,7 @@ describe("createGoalStopHook", () => {
 
   it("blocks stop and injects gaps when the judge says not met", async () => {
     const llm = fakeLLM(
-      JSON.stringify({ met: false, gaps: "tests still failing" }),
+      JSON.stringify({ met: false, waiting: false, gaps: "tests still failing" }),
     );
     const hook = createGoalStopHook({ llm, log: silentLog });
     const res = await hook(
@@ -63,7 +79,7 @@ describe("createGoalStopHook", () => {
   // the same {met, gaps} the hook already computed is surfaced to the UI.
   it("surfaces the structured verdict in data.goalVerdict (not met)", async () => {
     const llm = fakeLLM(
-      JSON.stringify({ met: false, gaps: "tests still failing" }),
+      JSON.stringify({ met: false, waiting: false, gaps: "tests still failing" }),
     );
     const hook = createGoalStopHook({ llm, log: silentLog });
     const res = await hook(
@@ -73,15 +89,15 @@ describe("createGoalStopHook", () => {
   });
 
   it("surfaces the structured verdict in data.goalVerdict (met)", async () => {
-    const llm = fakeLLM(JSON.stringify({ met: true, gaps: "" }));
+    const llm = fakeLLM(JSON.stringify({ met: true, waiting: false, gaps: "" }));
     const hook = createGoalStopHook({ llm, log: silentLog });
     const res = await hook(ctx({ goal: "ship it", finalText: "shipped" }));
     expect(res.data?.goalVerdict).toEqual({ met: true, gaps: "" });
   });
 
-  it("tolerates JSON wrapped in prose / code fences", async () => {
+  it("tolerates JSON wrapped in a code fence", async () => {
     const llm = fakeLLM(
-      'Sure!\n```json\n{"met": false, "gaps": "deploy step missing"}\n```\n',
+      '```json\n{"met": false, "waiting": false, "gaps": "deploy step missing"}\n```',
     );
     const hook = createGoalStopHook({ llm, log: silentLog });
     const res = await hook(ctx({ goal: "deploy", finalText: "built" }));
@@ -119,7 +135,7 @@ describe("createGoalStopHook", () => {
   });
 
   it("accepts a GoalConfig object goal (not just a string)", async () => {
-    const llm = fakeLLM(JSON.stringify({ met: true, gaps: "" }));
+    const llm = fakeLLM(JSON.stringify({ met: true, waiting: false, gaps: "" }));
     const hook = createGoalStopHook({ llm, log: silentLog });
     const res = await hook(
       ctx({ goal: { objective: "ship it", tokenBudget: 1000 }, finalText: "shipped" }),
@@ -138,7 +154,6 @@ describe("createGoalStopHook", () => {
     expect(called).toBe(false);
   });
 });
-
 // The mechanical short-circuit is gone (2026-06-17 unified-background-work
 // redesign). The judge now sees the running background tasks and returns a
 // three-state verdict; `waiting:true` allows the stop without pushing. These
@@ -170,7 +185,7 @@ describe("createGoalStopHook three-state verdict (waiting)", () => {
     const hook = createGoalStopHook({ goal: "g", llm, log: silentLog });
     await hook(ctx({ goal: "g", sessionId: "s1", finalText: "x" }));
     expect(seen).toContain("生成视频中:a dog");
-    expect(seen).toContain("当前在后台运行的任务");
+    expect(seen).toContain("untrustedBackgroundTasks");
   });
 
   it("judges normally (not_met → continue) when the judge does NOT set waiting", async () => {
@@ -184,7 +199,7 @@ describe("createGoalStopHook three-state verdict (waiting)", () => {
     expect(res.messages!.join("\n")).toContain("还要写脚本");
   });
 
-  it("treats a missing `waiting` field as false (back-compat with old judge JSON)", async () => {
+  it("continues safely when an old judge omits the required `waiting` field", async () => {
     const llm = fakeLLM(JSON.stringify({ met: false, gaps: "还差一个" }));
     const hook = createGoalStopHook({ goal: "g", llm, log: silentLog });
     const res = await hook(ctx({ goal: "g", sessionId: "s1", finalText: "x" }));
@@ -205,7 +220,7 @@ describe("createGoalStopHook three-state verdict (waiting)", () => {
 describe("createGoalStopHook onMet callback (persistent goal clear)", () => {
   it("calls onMet exactly when the judge returns met", async () => {
     let mets = 0;
-    const llm = fakeLLM(JSON.stringify({ met: true, gaps: "" }));
+    const llm = fakeLLM(JSON.stringify({ met: true, waiting: false, gaps: "" }));
     const hook = createGoalStopHook({ goal: "g", llm, log: silentLog, onMet: () => mets++ });
     const res = await hook(ctx({ goal: "g", sessionId: "s1", finalText: "done" }));
     expect((res.data as { goalVerdict?: { met: boolean } })?.goalVerdict?.met).toBe(true);
@@ -214,14 +229,14 @@ describe("createGoalStopHook onMet callback (persistent goal clear)", () => {
 
   it("does NOT call onMet when the goal is not met", async () => {
     let mets = 0;
-    const llm = fakeLLM(JSON.stringify({ met: false, gaps: "还差" }));
+    const llm = fakeLLM(JSON.stringify({ met: false, waiting: false, gaps: "还差" }));
     const hook = createGoalStopHook({ goal: "g", llm, log: silentLog, onMet: () => mets++ });
     await hook(ctx({ goal: "g", sessionId: "s1", finalText: "x" }));
     expect(mets).toBe(0);
   });
 
   it("a throwing onMet does not block the met verdict", async () => {
-    const llm = fakeLLM(JSON.stringify({ met: true, gaps: "" }));
+    const llm = fakeLLM(JSON.stringify({ met: true, waiting: false, gaps: "" }));
     const hook = createGoalStopHook({
       goal: "g",
       llm,

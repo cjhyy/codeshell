@@ -9,7 +9,7 @@ import {
   ToolExecutionError,
   ToolTimeoutError,
 } from "../exceptions.js";
-import { BUILTIN_TOOLS, type BuiltinToolFn } from "./builtin/index.js";
+import { BUILTIN_TOOLS, type BuiltinToolFn, toToolExecutionResult } from "./builtin/index.js";
 import type { ToolContext } from "./context.js";
 import { validateToolMetadata } from "./validate-tool-metadata.js";
 
@@ -23,6 +23,8 @@ export const DEFAULT_TOOL_TIMEOUT_MS = 120_000;
 export interface ToolRegistryOptions {
   builtinTools?: readonly string[];
 }
+
+type ToolImplementation = (args: Record<string, unknown>, ctx?: ToolContext) => Promise<unknown>;
 
 export class ToolRegistry {
   private tools = new Map<string, RegisteredTool>();
@@ -57,11 +59,13 @@ export class ToolRegistry {
     }
   }
 
-  registerTool(tool: RegisteredTool, executor?: BuiltinToolFn): void {
+  registerTool(tool: RegisteredTool, executor?: ToolImplementation): void {
     validateToolMetadata(tool);
     this.tools.set(tool.name, tool);
     if (executor) {
-      this.builtinExecutors.set(tool.name, executor);
+      this.builtinExecutors.set(tool.name, async (args, ctx) =>
+        toToolExecutionResult(await executor(args, ctx)),
+      );
     }
   }
 
@@ -121,14 +125,19 @@ export class ToolRegistry {
 
     // Create a child AbortController that aborts on timeout OR parent abort
     const childController = new AbortController();
+    let timedOut = false;
     const timerId =
       timeout > 0
-        ? setTimeout(() => childController.abort(new ToolTimeoutError(name, timeout)), timeout)
+        ? setTimeout(() => {
+            timedOut = true;
+            childController.abort(new ToolTimeoutError(name, timeout));
+          }, timeout)
         : undefined;
 
     // Cascade parent abort to child
     const onParentAbort = () => childController.abort(parentSignal?.reason);
     parentSignal?.addEventListener("abort", onParentAbort, { once: true });
+    if (parentSignal?.aborted) onParentAbort();
 
     // Inject the abort signal into args so tools (like Agent) can use it
     const argsWithSignal = { ...args, __signal: childController.signal };
@@ -138,54 +147,61 @@ export class ToolRegistry {
       ? { ...options.ctx, signal: childController.signal }
       : undefined;
 
-    try {
-      const result = await Promise.race([
-        executor(argsWithSignal, ctx),
-        new Promise<never>((_, reject) => {
-          childController.signal.addEventListener(
-            "abort",
-            () => {
-              const reason = childController.signal.reason;
-              reject(reason instanceof ToolTimeoutError ? reason : new Error("Tool aborted"));
-            },
-            { once: true },
-          );
-        }),
-      ]);
-
+    let onChildAbort: (() => void) | undefined;
+    const aborted = new Promise<never>((_, reject) => {
+      onChildAbort = () => {
+        const reason = childController.signal.reason;
+        reject(
+          reason instanceof Error
+            ? reason
+            : Object.assign(new Error("Tool aborted"), { name: "AbortError" }),
+        );
+      };
+      childController.signal.addEventListener("abort", onChildAbort, { once: true });
+      if (childController.signal.aborted) onChildAbort();
+    });
+    const cleanup = () => {
       clearTimeout(timerId);
       parentSignal?.removeEventListener("abort", onParentAbort);
-      // executor 可返回纯字符串,或 { contentBlocks, result? }(view_image
-      // 用后者回传图片块)。归一化成 ToolResult:有 contentBlocks 就带上,
-      // result 始终保留一份文本镜像供 transcript / 摘要使用。
-      if (typeof result === "string") {
-        return { id, toolName: name, result };
+      if (onChildAbort) childController.signal.removeEventListener("abort", onChildAbort);
+    };
+
+    try {
+      const rawResult = await Promise.race([executor(argsWithSignal, ctx), aborted]);
+      const result = toToolExecutionResult(rawResult);
+      if (childController.signal.aborted) {
+        throw childController.signal.reason instanceof Error
+          ? childController.signal.reason
+          : Object.assign(new Error("Tool aborted"), { name: "AbortError" });
       }
-      // 结构化返回:图片块(view_image)或沙箱标记(Bash 等)。两者互斥,
-      // 各取所有,缺的字段为 undefined。
-      const contentBlocks = "contentBlocks" in result ? result.contentBlocks : undefined;
-      const sandbox = "sandbox" in result ? result.sandbox : undefined;
-      const sensitive = "sensitive" in result ? result.sensitive : undefined;
-      const displayResult = "displayResult" in result ? result.displayResult : undefined;
-      const transcriptResult = "transcriptResult" in result ? result.transcriptResult : undefined;
+      cleanup();
+      if (!result.ok) {
+        return {
+          id,
+          toolName: name,
+          error: result.error,
+          isError: true,
+          sandbox: result.sandbox,
+        };
+      }
       return {
         id,
         toolName: name,
-        result: result.result ?? (contentBlocks ? "(image)" : ""),
-        contentBlocks,
-        sandbox,
-        sensitive,
-        displayResult,
-        transcriptResult,
+        result: result.result ?? (result.contentBlocks ? "(image)" : ""),
+        contentBlocks: result.contentBlocks,
+        sandbox: result.sandbox,
+        sensitive: result.sensitive,
+        displayResult: result.displayResult,
+        transcriptResult: result.transcriptResult,
+        isError: false,
       };
     } catch (err) {
-      clearTimeout(timerId);
-      parentSignal?.removeEventListener("abort", onParentAbort);
+      cleanup();
 
       // Always return error as ToolResult, never throw
       let errorMsg: string;
       const isAbort = (err as Error)?.name === "AbortError" || parentSignal?.aborted === true;
-      if (err instanceof ToolTimeoutError) {
+      if (timedOut || err instanceof ToolTimeoutError) {
         errorMsg = `Tool timed out after ${timeout}ms: ${name}`;
       } else if (isAbort) {
         errorMsg = `Tool aborted: ${name}`;

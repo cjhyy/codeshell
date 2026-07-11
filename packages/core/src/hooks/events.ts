@@ -1,6 +1,7 @@
 /**
  * Hook event type definitions.
  */
+import type { GoalTerminationReason } from "../engine/goal.js";
 
 /**
  * Lifecycle hooks the engine emits.
@@ -124,6 +125,8 @@ export interface HookResult {
    * chain). Ignored for non-on_stop events. Bounded by maxStopBlocks.
    */
   continueSession?: boolean;
+  /** For on_stop: typed Goal-run stop outcome propagated to TurnLoop/Engine. */
+  goalTermination?: GoalTerminationReason;
   /** Modified data to pass along */
   data?: Record<string, unknown>;
   /** Additional messages to inject */

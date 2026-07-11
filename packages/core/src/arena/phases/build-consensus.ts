@@ -19,6 +19,7 @@ import type {
   ArenaConsensus,
   ClaimStatusSummary,
   ArenaProgressEvent,
+  ArenaUsageRecorder,
 } from "../types.js";
 import { isStrategyV2 } from "../types.js";
 import type { ArenaStrategyV2 } from "../types.js";
@@ -34,6 +35,7 @@ interface ConsensusOptions {
   claimSummary?: ClaimStatusSummary;
   signal?: AbortSignal;
   onProgress?: (event: ArenaProgressEvent) => void;
+  onUsage?: ArenaUsageRecorder;
 }
 
 /**
@@ -41,7 +43,7 @@ interface ConsensusOptions {
  * and optionally adjudicated claim data.
  */
 export async function buildConsensus(options: ConsensusOptions): Promise<ArenaConsensus> {
-  const { concluder, strategy, topic, reports, reviews, claimSummary, signal, onProgress } = options;
+  const { concluder, strategy, topic, reports, reviews, claimSummary, signal, onProgress, onUsage } = options;
 
   onProgress?.({ type: "consensus_start" });
 
@@ -72,6 +74,7 @@ export async function buildConsensus(options: ConsensusOptions): Promise<ArenaCo
     messages: [{ role: "user", content: userContent }],
     signal,
   });
+  onUsage?.(response.usage);
 
   logger.info("arena.consensus_raw_response", {
     text: response.text,
@@ -99,6 +102,7 @@ export async function buildConsensus(options: ConsensusOptions): Promise<ArenaCo
       ],
       signal,
     });
+    onUsage?.(retryResponse.usage);
 
     logger.info("arena.consensus_retry_response", {
       textLen: retryResponse.text?.length ?? 0,

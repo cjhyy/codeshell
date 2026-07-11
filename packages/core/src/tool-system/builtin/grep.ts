@@ -4,22 +4,71 @@
 
 import { execFile } from "node:child_process";
 import { readdir, readFile, stat } from "node:fs/promises";
-import { promisify } from "node:util";
 import { basename, join, relative, resolve, sep, isAbsolute } from "node:path";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
+import { killChildTree } from "../../runtime/spawn-common.js";
 
 type ExecFileForGrep = (
   file: string,
   args: readonly string[],
-  options: { maxBuffer: number; timeout: number },
+  options: { maxBuffer: number; timeout: number; signal?: AbortSignal },
 ) => Promise<{ stdout: string; stderr: string }>;
 
-const execFileAsync = promisify(execFile) as ExecFileForGrep;
-let execFileForTest: ExecFileForGrep = execFileAsync;
+function abortError(): Error {
+  return Object.assign(new Error("Search aborted"), { name: "AbortError" });
+}
+
+const execFileAbortable: ExecFileForGrep = (file, args, options) =>
+  new Promise((resolvePromise, reject) => {
+    if (options.signal?.aborted) {
+      reject(abortError());
+      return;
+    }
+
+    let settled = false;
+    const child = execFile(
+      file,
+      [...args],
+      { encoding: "utf8", maxBuffer: options.maxBuffer },
+      (error, stdout, stderr) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        if (error) {
+          Object.assign(error, { stdout, stderr });
+          reject(error);
+        } else {
+          resolvePromise({ stdout, stderr });
+        }
+      },
+    );
+    const finishWithKill = (error: Error) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      killChildTree(child, 1000);
+      reject(error);
+    };
+    const onAbort = () => finishWithKill(abortError());
+    const timer = setTimeout(() => {
+      const error = Object.assign(new Error(`Search timed out after ${options.timeout}ms`), {
+        code: "ETIMEDOUT",
+      });
+      finishWithKill(error);
+    }, options.timeout);
+    const cleanup = () => {
+      clearTimeout(timer);
+      options.signal?.removeEventListener("abort", onAbort);
+    };
+    options.signal?.addEventListener("abort", onAbort, { once: true });
+    if (options.signal?.aborted) onAbort();
+  });
+
+let execFileForTest: ExecFileForGrep = execFileAbortable;
 
 export function _setGrepExecFileForTest(fn?: ExecFileForGrep): void {
-  execFileForTest = fn ?? execFileAsync;
+  execFileForTest = fn ?? execFileAbortable;
 }
 
 /**
@@ -54,11 +103,15 @@ export const grepToolDef: ToolDefinition = {
       pattern: { type: "string", description: "Regular expression pattern to search for" },
       path: { type: "string", description: "File or directory to search in (default: cwd)" },
       glob: { type: "string", description: 'Glob pattern to filter files (e.g. "*.ts")' },
-      context: { type: "number", description: "Lines of context around matches (only with output_mode content)" },
+      context: {
+        type: "number",
+        description: "Lines of context around matches (only with output_mode content)",
+      },
       max_results: { type: "number", description: "Maximum number of results (default: 50)" },
       output_mode: {
         type: "string",
-        description: 'Output mode: "files_with_matches" (default, just file paths), "content" (matching lines), "count" (match counts per file)',
+        description:
+          'Output mode: "files_with_matches" (default, just file paths), "content" (matching lines), "count" (match counts per file)',
       },
       case_insensitive: { type: "boolean", description: "Case-insensitive search" },
     },
@@ -66,10 +119,7 @@ export const grepToolDef: ToolDefinition = {
   },
 };
 
-export async function grepTool(
-  args: Record<string, unknown>,
-  ctx?: ToolContext,
-): Promise<string> {
+export async function grepTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<string> {
   const pattern = args.pattern as string;
   if (!pattern) return "Error: pattern is required";
 
@@ -89,20 +139,53 @@ export async function grepTool(
   const caseInsensitive = (args.case_insensitive as boolean) || false;
 
   try {
-    return await runRipgrep(pattern, searchPath, fileGlob, context, maxResults, outputMode, caseInsensitive);
+    return await runRipgrep(
+      pattern,
+      searchPath,
+      fileGlob,
+      context,
+      maxResults,
+      outputMode,
+      caseInsensitive,
+      ctx?.signal,
+    );
   } catch (rgErr) {
+    if (isAbort(rgErr, ctx?.signal)) throw rgErr;
     // rg/grep exit code 1 = no matches (not an error)
     if (isNoMatchExit(rgErr)) return "No matches found.";
     try {
-      return await runGrep(pattern, searchPath, fileGlob, context, maxResults, outputMode, caseInsensitive);
+      return await runGrep(
+        pattern,
+        searchPath,
+        fileGlob,
+        context,
+        maxResults,
+        outputMode,
+        caseInsensitive,
+        ctx?.signal,
+      );
     } catch (grepErr) {
+      if (isAbort(grepErr, ctx?.signal)) throw grepErr;
       if (isNoMatchExit(grepErr)) return "No matches found.";
       if (isCommandNotFound(rgErr) || isCommandNotFound(grepErr)) {
-        return await runNodeGrep(pattern, searchPath, fileGlob, context, maxResults, outputMode, caseInsensitive);
+        return await runNodeGrep(
+          pattern,
+          searchPath,
+          fileGlob,
+          context,
+          maxResults,
+          outputMode,
+          caseInsensitive,
+          ctx?.signal,
+        );
       }
-      return `Error in search: ${(grepErr as Error).message}`;
+      throw new Error(`Error in search: ${(grepErr as Error).message}`);
     }
   }
+}
+
+function isAbort(error: unknown, signal?: AbortSignal): boolean {
+  return signal?.aborted === true || (error as Error)?.name === "AbortError";
 }
 
 function isCommandNotFound(err: unknown): boolean {
@@ -117,6 +200,7 @@ async function runRipgrep(
   maxResults: number,
   outputMode: string,
   caseInsensitive: boolean,
+  signal?: AbortSignal,
 ): Promise<string> {
   const args = ["--color=never"];
 
@@ -143,6 +227,7 @@ async function runRipgrep(
   const { stdout } = await execFileForTest("rg", args, {
     maxBuffer: 10 * 1024 * 1024,
     timeout: 30_000,
+    signal,
   });
 
   const result = relativizeOutput(stdout, path).trim();
@@ -164,6 +249,7 @@ async function runGrep(
   maxResults: number,
   outputMode: string,
   caseInsensitive: boolean,
+  signal?: AbortSignal,
 ): Promise<string> {
   const args = ["-r", "--color=never"];
 
@@ -189,6 +275,7 @@ async function runGrep(
   const { stdout } = await execFileForTest("grep", args, {
     maxBuffer: 10 * 1024 * 1024,
     timeout: 30_000,
+    signal,
   });
 
   const result = relativizeOutput(stdout, path).trim();
@@ -211,53 +298,62 @@ async function runNodeGrep(
   maxResults: number,
   outputMode: string,
   caseInsensitive: boolean,
+  signal?: AbortSignal,
 ): Promise<string> {
+  signal?.throwIfAborted();
   let regex: RegExp;
   try {
     regex = new RegExp(pattern, caseInsensitive ? "i" : "");
   } catch (err) {
-    return `Error in search: ${(err as Error).message}`;
+    throw new Error(`Error in search: ${(err as Error).message}`);
   }
 
   const matches: string[] = [];
-  await walkTextFiles(path, fileGlob, async (file) => {
-    if (matches.length >= maxResults) return;
-    let text: string;
-    try {
-      text = await readFile(file, "utf8");
-    } catch {
-      return;
-    }
-    const lines = text.split(/\r?\n/);
-    const matchingLines: number[] = [];
-    for (let i = 0; i < lines.length; i++) {
-      regex.lastIndex = 0;
-      if (regex.test(lines[i])) matchingLines.push(i);
-    }
-    if (matchingLines.length === 0) return;
+  await walkTextFiles(
+    path,
+    fileGlob,
+    async (file) => {
+      signal?.throwIfAborted();
+      if (matches.length >= maxResults) return;
+      let text: string;
+      try {
+        text = await readFile(file, "utf8");
+      } catch {
+        return;
+      }
+      const lines = text.split(/\r?\n/);
+      const matchingLines: number[] = [];
+      for (let i = 0; i < lines.length; i++) {
+        regex.lastIndex = 0;
+        if (regex.test(lines[i])) matchingLines.push(i);
+      }
+      if (matchingLines.length === 0) return;
 
-    const rel = relative(path, file) || basename(file);
-    if (outputMode === "files_with_matches") {
-      matches.push(rel);
-    } else if (outputMode === "count") {
-      matches.push(`${rel}:${matchingLines.length}`);
-    } else {
-      const emitted = new Set<number>();
-      for (const lineIndex of matchingLines) {
-        const start = Math.max(0, lineIndex - context);
-        const end = Math.min(lines.length - 1, lineIndex + context);
-        for (let i = start; i <= end; i++) {
-          if (emitted.has(i)) continue;
-          emitted.add(i);
-          matches.push(`${rel}:${i + 1}:${lines[i]}`);
-          if (matches.length >= maxResults) return;
+      const rel = relative(path, file) || basename(file);
+      if (outputMode === "files_with_matches") {
+        matches.push(rel);
+      } else if (outputMode === "count") {
+        matches.push(`${rel}:${matchingLines.length}`);
+      } else {
+        const emitted = new Set<number>();
+        for (const lineIndex of matchingLines) {
+          const start = Math.max(0, lineIndex - context);
+          const end = Math.min(lines.length - 1, lineIndex + context);
+          for (let i = start; i <= end; i++) {
+            if (emitted.has(i)) continue;
+            emitted.add(i);
+            matches.push(`${rel}:${i + 1}:${lines[i]}`);
+            if (matches.length >= maxResults) return;
+          }
         }
       }
-    }
-  });
+    },
+    signal,
+  );
 
   if (matches.length === 0) return "No matches found.";
-  if (matches.length > 200) return matches.slice(0, 200).join("\n") + `\n\n... ${matches.length - 200} more results`;
+  if (matches.length > 200)
+    return matches.slice(0, 200).join("\n") + `\n\n... ${matches.length - 200} more results`;
   return matches.join("\n");
 }
 
@@ -265,8 +361,11 @@ async function walkTextFiles(
   root: string,
   fileGlob: string | undefined,
   visit: (file: string) => Promise<void>,
+  signal?: AbortSignal,
 ): Promise<void> {
+  signal?.throwIfAborted();
   const info = await stat(root).catch(() => null);
+  signal?.throwIfAborted();
   if (!info) return;
   if (info.isFile()) {
     if (!fileGlob || matchesSimpleGlob(basename(root), fileGlob)) await visit(root);
@@ -275,10 +374,12 @@ async function walkTextFiles(
   if (!info.isDirectory()) return;
 
   const entries = await readdir(root, { withFileTypes: true }).catch(() => []);
+  signal?.throwIfAborted();
   for (const entry of entries) {
+    signal?.throwIfAborted();
     if (entry.isDirectory()) {
       if (IGNORED_DIRS.has(entry.name)) continue;
-      await walkTextFiles(join(root, entry.name), fileGlob, visit);
+      await walkTextFiles(join(root, entry.name), fileGlob, visit, signal);
     } else if (entry.isFile()) {
       if (!fileGlob || matchesSimpleGlob(entry.name, fileGlob)) await visit(join(root, entry.name));
     }
@@ -286,6 +387,9 @@ async function walkTextFiles(
 }
 
 function matchesSimpleGlob(name: string, glob: string): boolean {
-  const escaped = glob.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".");
+  const escaped = glob
+    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+    .replace(/\*/g, ".*")
+    .replace(/\?/g, ".");
   return new RegExp(`^${escaped}$`).test(name);
 }

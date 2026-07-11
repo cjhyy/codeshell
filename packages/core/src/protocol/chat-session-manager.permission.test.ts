@@ -1,16 +1,4 @@
-/**
- * Integration test for the #11 SECONDARY fix (permission 档位 backend).
- *
- * Bug: ChatSessionManager.getOrCreate returned an EXISTING session early and
- * dropped slice.permissionMode, so changing the pill on an already-running
- * session was silently ignored at enforcement time — the engine kept whatever
- * mode it was first created with. Fix: re-apply slice.permissionMode (via
- * engine.setPermissionMode, which reconfigures the live backend) when it
- * differs, before returning the cached session.
- *
- * This drives the REAL ChatSessionManager.getOrCreate against a fake engine
- * that records permission-mode reads/writes.
- */
+/** Permission-mode lifecycle and approval cleanup integration coverage. */
 import { afterEach, describe, it, expect } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -93,41 +81,37 @@ afterEach(() => {
   }
 });
 
-describe("ChatSessionManager.getOrCreate re-applies permissionMode (#11)", () => {
-  it("applies a CHANGED permissionMode to an already-created session", () => {
+describe("ChatSessionManager.getOrCreate synchronizes reused permission context", () => {
+  it("applies a changed mode through the Engine's run-boundary setter", async () => {
     const { mgr, fakes } = makeManager("default");
-    // First send creates the engine with "default".
-    mgr.getOrCreate("s1", { permissionMode: "default" } as EngineConfigSlice);
+    await mgr.getOrCreate("s1", { permissionMode: "default" } as EngineConfigSlice);
     expect(fakes).toHaveLength(1);
     expect(fakes[0]!.current()).toBe("default");
 
-    // Pill changed to bypassPermissions, user re-sends in the SAME session.
-    mgr.getOrCreate("s1", { permissionMode: "bypassPermissions" } as EngineConfigSlice);
-    // No new engine; the existing one was reconfigured live.
+    await mgr.getOrCreate("s1", { permissionMode: "bypassPermissions" } as EngineConfigSlice);
     expect(fakes).toHaveLength(1);
-    expect(fakes[0]!.setCalls).toContain("bypassPermissions");
+    expect(fakes[0]!.setCalls).toEqual(["bypassPermissions"]);
     expect(fakes[0]!.current()).toBe("bypassPermissions");
   });
 
-  it("does NOT call setPermissionMode when the mode is unchanged", () => {
+  it("does NOT call setPermissionMode when the mode is unchanged", async () => {
     const { mgr, fakes } = makeManager("acceptEdits");
-    mgr.getOrCreate("s1", { permissionMode: "acceptEdits" } as EngineConfigSlice);
-    mgr.getOrCreate("s1", { permissionMode: "acceptEdits" } as EngineConfigSlice);
+    await mgr.getOrCreate("s1", { permissionMode: "acceptEdits" } as EngineConfigSlice);
+    await mgr.getOrCreate("s1", { permissionMode: "acceptEdits" } as EngineConfigSlice);
     expect(fakes).toHaveLength(1);
     expect(fakes[0]!.setCalls).toHaveLength(0); // no redundant reconfigure
   });
 
-  it("keeps modes independent across different sessions (no cross-session bleed)", () => {
+  it("updates only the reused session when different sessions are looked up", async () => {
     const { mgr, fakes } = makeManager("default");
-    mgr.getOrCreate("s1", { permissionMode: "default" } as EngineConfigSlice);
-    mgr.getOrCreate("s2", { permissionMode: "default" } as EngineConfigSlice);
+    await mgr.getOrCreate("s1", { permissionMode: "default" } as EngineConfigSlice);
+    await mgr.getOrCreate("s2", { permissionMode: "default" } as EngineConfigSlice);
     expect(fakes).toHaveLength(2);
 
-    // Bump only s1 to bypass.
-    mgr.getOrCreate("s1", { permissionMode: "bypassPermissions" } as EngineConfigSlice);
+    await mgr.getOrCreate("s1", { permissionMode: "bypassPermissions" } as EngineConfigSlice);
     expect(fakes[0]!.current()).toBe("bypassPermissions");
-    // s2 is untouched — its engine never got a setPermissionMode call.
     expect(fakes[1]!.current()).toBe("default");
+    expect(fakes[0]!.setCalls).toEqual(["bypassPermissions"]);
     expect(fakes[1]!.setCalls).toHaveLength(0);
   });
 });
@@ -136,7 +120,7 @@ describe("ChatSessionManager.close approval cleanup", () => {
   it("clears interactive approval session rules for the closed session", async () => {
     const sessionId = "interactive-cleanup-s1";
     const { mgr } = makeManager("default");
-    mgr.getOrCreate(sessionId, { permissionMode: "default" } as EngineConfigSlice);
+    await mgr.getOrCreate(sessionId, { permissionMode: "default" } as EngineConfigSlice);
     const backend = getInteractiveApprovalBackend();
     let prompts = 0;
     backend.setPromptFn(async () => {
@@ -157,7 +141,7 @@ describe("ChatSessionManager.close approval cleanup", () => {
     expect(remembered.approved).toBe(true);
     expect(prompts).toBe(1);
 
-    mgr.close(sessionId);
+    await mgr.close(sessionId);
 
     const afterClose = await backend.requestApproval(
       interactiveRequest(sessionId, "curl https://cleanup.example/c"),
@@ -169,7 +153,7 @@ describe("ChatSessionManager.close approval cleanup", () => {
   it("ignores a late interactive approval that resolves after session close", async () => {
     const sessionId = "interactive-late-s1";
     const { mgr } = makeManager("default");
-    mgr.getOrCreate(sessionId, { permissionMode: "default" } as EngineConfigSlice);
+    await mgr.getOrCreate(sessionId, { permissionMode: "default" } as EngineConfigSlice);
     const backend = getInteractiveApprovalBackend();
     let resolvePrompt!: (r: ApprovalResult) => void;
     let prompts = 0;
@@ -189,7 +173,7 @@ describe("ChatSessionManager.close approval cleanup", () => {
       interactiveRequest(sessionId, "curl https://late.example/a"),
     );
     await promptStarted;
-    mgr.close(sessionId);
+    await mgr.close(sessionId);
     resolvePrompt({ approved: true, always: true, scope: "session" } as ApprovalResult);
     expect((await pending).approved).toBe(true);
 
@@ -207,7 +191,7 @@ describe("ChatSessionManager.close approval cleanup", () => {
   it("clears session path approvals for the closed session", async () => {
     _resetSessionPathGrants();
     const { mgr } = makeManager("default");
-    mgr.getOrCreate("s1", { permissionMode: "default" } as EngineConfigSlice);
+    await mgr.getOrCreate("s1", { permissionMode: "default" } as EngineConfigSlice);
     const cwd = tempDir("cs-path-cleanup-cwd-");
     const outside = tempDir("cs-path-cleanup-outside-");
     let asks = 0;
@@ -225,7 +209,7 @@ describe("ChatSessionManager.close approval cleanup", () => {
     ).toBeNull();
     expect(asks).toBe(1);
 
-    mgr.close("s1");
+    await mgr.close("s1");
 
     const denyCtx = {
       cwd,
@@ -248,7 +232,7 @@ describe("ChatSessionManager.close approval cleanup", () => {
     async (_scope, answer) => {
       _resetSessionPathGrants();
       const { mgr } = makeManager("default");
-      mgr.getOrCreate("s1", { permissionMode: "default" } as EngineConfigSlice);
+      await mgr.getOrCreate("s1", { permissionMode: "default" } as EngineConfigSlice);
       const cwd = tempDir("cs-path-late-cwd-");
       const outside = tempDir("cs-path-late-outside-");
       let resolveAsk!: (answer: string) => void;
@@ -272,7 +256,7 @@ describe("ChatSessionManager.close approval cleanup", () => {
 
       const pending = enforcePathPolicyWithApproval(join(outside, "a.txt"), "read", pendingCtx);
       await askStarted;
-      mgr.close("s1");
+      await mgr.close("s1");
       resolveAsk(answer);
       expect(await pending).toBeNull();
 
@@ -296,7 +280,7 @@ describe("ChatSessionManager.close approval cleanup", () => {
     const cwd = tempDir("cs-credential-cleanup-cwd-");
     __resetCredentialSessionAllowForTests();
     const { mgr } = makeManager("default");
-    mgr.getOrCreate("s1", { permissionMode: "default" } as EngineConfigSlice);
+    await mgr.getOrCreate("s1", { permissionMode: "default" } as EngineConfigSlice);
     new CredentialStore(cwd).save("user", {
       id: "figma",
       type: "token",

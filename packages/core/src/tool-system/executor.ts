@@ -23,7 +23,11 @@ import type { ToolContext } from "./context.js";
 import type { InvestigationGuard } from "./investigation-guard.js";
 import type { TaskGuard } from "./task-guard.js";
 import { PLAN_MODE_ALLOWED_TOOLS } from "./plan-mode-allowlist.js";
-import { enforcePathPolicyWithApproval, type PathOperation } from "./path-policy.js";
+import {
+  attachFinalWritePathSnapshot,
+  enforcePathPolicyWithApproval,
+  type PathOperation,
+} from "./path-policy.js";
 import { parsePatch } from "./builtin/apply-patch/parser.js";
 import { BUILTIN_TOOL_GUARDS } from "./builtin/index.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "./builtin/complete-goal.js";
@@ -285,6 +289,7 @@ export class ToolExecutor {
       toolName: call.toolName,
       args: call.args,
       toolCallId: call.id,
+      signal: this.signal ?? this.toolCtx?.signal,
     });
     if (hookResult.decision === "deny") {
       return {
@@ -322,6 +327,18 @@ export class ToolExecutor {
     // path surface on RegisteredTool.pathPolicy; the executor enforces it
     // after hooks have had a chance to rewrite args, but before permission
     // classification or the handler can touch the filesystem.
+    if (
+      (call.toolName === "Write" || call.toolName === "Edit") &&
+      this.toolCtx?.cwd &&
+      typeof call.args.file_path === "string"
+    ) {
+      const raw = call.args.file_path;
+      const target = isAbsolutePath(raw) ? raw : resolvePath(this.toolCtx.cwd, raw);
+      call = {
+        ...call,
+        args: attachFinalWritePathSnapshot(call.args, target, this.toolCtx.cwd),
+      };
+    }
     const pathPolicyError = await this.enforceDeclaredPathPolicy(toolDef, call.args);
     if (pathPolicyError) {
       return {
@@ -370,6 +387,7 @@ export class ToolExecutor {
       args: call.args,
       toolCallId: call.id,
       classifierDecision,
+      signal: this.signal ?? this.toolCtx?.signal,
     });
 
     const preClamped = clampHookDecision(classifierDecision, hookResult.decision);
@@ -436,6 +454,7 @@ export class ToolExecutor {
       toolName: call.toolName,
       args: call.args,
       toolCallId: call.id,
+      signal: this.signal ?? this.toolCtx?.signal,
     });
 
     // 3. Execute. Use a span so begin/end share one cat and end carries
@@ -484,25 +503,25 @@ export class ToolExecutor {
     result.id = call.id;
     // Prepend any non-blocking guard reminder onto a successful result so the
     // model sees it on its next turn alongside the content it just fetched.
-    if (guardDecision?.prepend && !result.error && result.result) {
+    if (guardDecision?.prepend && !result.isError && result.result) {
       result.result = `${guardDecision.prepend}\n${result.result}`;
     }
     const observerResult = toolResultDisplayText(result);
     const payload = observerResult ?? result.error ?? "";
     span.end({
-      ok: !result.error,
+      ok: !result.isError,
       chars: payload.length,
       // Snippet only on failure — successful tool output can be huge and is
       // already on the transcript. Failures are rare and the first 500 chars
       // usually contain the message we need.
-      ...(result.error ? { errorSnippet: payload.slice(0, 500) } : {}),
+      ...(result.isError ? { errorSnippet: payload.slice(0, 500) } : {}),
     });
     recordToolResult(sid, {
       id: call.id,
       toolName: call.toolName,
-      ok: !result.error,
+      ok: !result.isError,
       durationMs: Date.now() - toolStartedAt,
-      output: result.error ? undefined : observerResult,
+      output: result.isError ? undefined : observerResult,
       error: result.error,
     });
 
@@ -512,6 +531,7 @@ export class ToolExecutor {
       toolCallId: call.id,
       result: observerResult,
       error: result.error,
+      signal: this.signal ?? this.toolCtx?.signal,
     });
 
     // 5. Post-tool-use hook (after execution, can observe/modify result)
@@ -520,13 +540,14 @@ export class ToolExecutor {
       toolCallId: call.id,
       result: observerResult,
       error: result.error,
+      signal: this.signal ?? this.toolCtx?.signal,
     });
     // Append handler-supplied context (linter output, type-check result,
     // etc.) onto the tool result so the model sees it on the next turn.
     // Tagged with a separator so the model can tell hook output from
     // tool output. Skip when the tool errored — additional context on a
     // failed tool would be confusing.
-    if (postHook.additionalContext && !result.error) {
+    if (postHook.additionalContext && !result.isError) {
       const tag = "--- additional context from post_tool_use hook ---";
       result.result = result.result
         ? `${result.result}\n\n${tag}\n${postHook.additionalContext}`
@@ -540,10 +561,11 @@ export class ToolExecutor {
     }
 
     // 6. file_changed hook for Write/Edit tools
-    if ((call.toolName === "Write" || call.toolName === "Edit") && !result.error) {
+    if ((call.toolName === "Write" || call.toolName === "Edit") && !result.isError) {
       await this.hooks.emit("file_changed", {
         toolName: call.toolName,
         filePath: call.args.file_path as string,
+        signal: this.signal ?? this.toolCtx?.signal,
       });
     }
 

@@ -56,5 +56,5 @@ packages/desktop/.preview/
 !packages/desktop/src/renderer/logs/
 !packages/desktop/src/renderer/logs/**
 
-# loop-mode 运行时状态（每次 loop 的账本/待批/经验，非源码，不提交）
+# nightly loop bookkeeping (untracked)
 .loop/

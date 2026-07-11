@@ -846,21 +846,55 @@ export class AgentBridge {
    * Tell the worker to tear down a session explicitly (on user delete). The
    * worker's agent/closeSession handler reaps that session's background
    * shells (core design §6). No-op if no live worker — then there are no
-   * shells to reap. Best-effort; delete proceeds regardless.
+   * shells to reap. With a live worker, resolve only after its close ACK so a
+   * caller can safely remove the session directory afterward.
    */
-  closeSession(sessionId: string): void {
-    if (!this.child?.stdin || this.child.stdin.destroyed) return;
+  closeSession(sessionId: string): Promise<void> {
+    if (!this.child?.stdin || this.child.stdin.destroyed) return Promise.resolve();
+    const id = `close-${sessionId}-${Date.now()}`;
     const line = JSON.stringify({
       jsonrpc: "2.0",
-      id: `close-${sessionId}`,
+      id,
       method: "agent/closeSession",
       params: { sessionId },
     });
-    try {
-      this.child.stdin.write(line + "\n");
-    } catch {
-      /* best-effort */
-    }
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = (err?: Error): void => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        unsubscribe();
+        if (err) reject(err);
+        else resolve();
+      };
+      const unsubscribe = this.subscribeOutbound((outLine) => {
+        try {
+          const msg = JSON.parse(outLine) as {
+            id?: string | number;
+            error?: { message?: string };
+            result?: { ok?: boolean; error?: string };
+          };
+          if (msg.id !== id) return;
+          const resultError =
+            msg.result && msg.result.ok === false
+              ? new Error(msg.result.error ?? "closeSession failed")
+              : undefined;
+          finish(msg.error ? new Error(msg.error.message ?? "closeSession failed") : resultError);
+        } catch {
+          /* ignore non-json worker output */
+        }
+      });
+      const timer = setTimeout(
+        () => finish(new Error(`closeSession timed out for session ${sessionId}`)),
+        30_000,
+      );
+      try {
+        this.child!.stdin!.write(line + "\n");
+      } catch (err) {
+        finish(err instanceof Error ? err : new Error(String(err)));
+      }
+    });
   }
 
   releaseWorkspace(sessionId: string): Promise<void> {

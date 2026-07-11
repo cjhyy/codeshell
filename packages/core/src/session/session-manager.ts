@@ -32,6 +32,11 @@ import { normalizeCumulativeUsageCounters } from "../engine/session-usage.js";
 import { isSameGoalInstance, type GoalTerminal } from "../engine/goal.js";
 import { branchExists, isGitWorktreeRoot } from "../git/worktree.js";
 
+// Shared close epochs for SessionManager instances in this process. Concurrent
+// Engines bind the same epoch; only close advances it. This intentionally does
+// not claim cross-process/Worker protection.
+const currentSessionCloseEpochs = new Map<string, number>();
+
 export interface SessionBundle {
   state: SessionState;
   transcript: Transcript;
@@ -176,6 +181,7 @@ async function validateResumeWorktreeRoot(root: string): Promise<string | null> 
 
 export class SessionManager {
   private readonly sessionsDir: string;
+  private readonly registeredCloseEpochs = new Map<string, number>();
 
   constructor(storageDir?: string) {
     this.sessionsDir = storageDir ?? join(codeShellHome(), "sessions");
@@ -204,6 +210,24 @@ export class SessionManager {
         // must never prevent the SessionManager from serving normal sessions.
       }
     }
+  }
+
+  /** Bind one Engine/session pair to the current close epoch without advancing it. */
+  registerSessionGeneration(sessionId: string): number {
+    assertSafeSessionId(sessionId);
+    const key = this.generationKey(sessionId);
+    const generation = currentSessionCloseEpochs.get(key) ?? 0;
+    this.registeredCloseEpochs.set(sessionId, generation);
+    return generation;
+  }
+
+  /** Advance the close epoch once before close waits for the old run to settle. */
+  incrementSessionGeneration(sessionId: string): number {
+    assertSafeSessionId(sessionId);
+    const key = this.generationKey(sessionId);
+    const next = (currentSessionCloseEpochs.get(key) ?? 0) + 1;
+    currentSessionCloseEpochs.set(key, next);
+    return next;
   }
 
   /**
@@ -569,14 +593,59 @@ export class SessionManager {
     return { state, transcript };
   }
 
-  saveState(state: SessionState): void {
+  /**
+   * Merge a field-level state update into the latest persisted snapshot.
+   *
+   * Unlike saveState(), callers do not supply a potentially stale whole-state
+   * object. The read, shallow merge, and atomic write are synchronous, so no
+   * other callback on this process's event loop can interleave between them.
+   * This is deliberately not a session-level lock. Engine.run rejects re-entry
+   * on one Engine (G6), and the generation check in saveState rejects an older
+   * registered Engine in this process. Workers and separate processes remain
+   * an unresolved finding requiring locking/CAS.
+   */
+  updateSessionState(
+    sessionId: string,
+    partial: Readonly<Partial<Omit<SessionState, "sessionId">>>,
+  ): void {
+    assertSafeSessionId(sessionId);
+    const stateFile = join(this.sessionsDir, sessionId, "state.json");
+    if (!existsSync(stateFile)) {
+      throw new SessionError(`Session state file not found: ${sessionId}`);
+    }
+    let state: SessionState;
+    try {
+      state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
+    } catch (err) {
+      throw new SessionError(
+        `Session state is corrupt for ${sessionId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    Object.assign(state, partial);
+    state.sessionId = sessionId;
+    this.saveState(state);
+  }
+
+  saveState(state: SessionState, generation?: number): boolean {
     // state.sessionId could come from a deserialized state.json that was
     // tampered with on disk. Validate before joining.
     assertSafeSessionId(state.sessionId);
+    const writerGeneration = generation ?? this.registeredCloseEpochs.get(state.sessionId);
+    if (
+      writerGeneration !== undefined &&
+      (currentSessionCloseEpochs.get(this.generationKey(state.sessionId)) ?? 0) !== writerGeneration
+    ) {
+      // A closing/old Engine may finish asynchronously after its generation was
+      // invalidated. Reject explicitly without throwing into an unobserved
+      // engine finally path, and most importantly without touching the disk.
+      return false;
+    }
     const sessionDir = join(this.sessionsDir, state.sessionId);
     mkdirSync(sessionDir, { recursive: true });
-    // Atomic write: stage to .tmp, then rename. Protects against two processes
-    // clobbering each other's state.json mid-write.
+    // Atomic file replacement: stage to .tmp, then rename, preventing a torn
+    // state.json. Registered Engines share one epoch until close advances it,
+    // so concurrent opens are not fenced from each other. Workers, separate
+    // processes, and their stale-writer ordering still require locking/CAS.
     const target = join(sessionDir, "state.json");
     // Preserve the newest goal tombstone across whole-state writers. If an old
     // detached bundle still carries the tombstoned goal, drop it before write;
@@ -591,6 +660,13 @@ export class SessionManager {
         // behavior and overwrite malformed state with the caller's snapshot.
       }
     }
+    // A title is generated after the first run and may be merged while the
+    // next run still owns a state object loaded before that title existed.
+    // Preserve the newly persisted title when such a stale whole-state writer
+    // saves later; assigning title = undefined explicitly still clears it.
+    if (persisted?.title !== undefined && !("title" in state)) {
+      state.title = persisted.title;
+    }
     const terminal = newestGoalTerminal(state.goalTerminal, persisted?.goalTerminal);
     if (terminal) state.goalTerminal = terminal;
     if (terminal && isSameGoalInstance(state.activeGoal, terminal)) {
@@ -600,6 +676,11 @@ export class SessionManager {
     const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
     writeFileSync(tmp, JSON.stringify(state, null, 2), "utf-8");
     renameSync(tmp, target);
+    return true;
+  }
+
+  private generationKey(sessionId: string): string {
+    return `${this.sessionsDir}\0${sessionId}`;
   }
 
   /** Create an independent, top-level session from a frozen event cursor. */

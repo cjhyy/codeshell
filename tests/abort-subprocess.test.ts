@@ -13,6 +13,9 @@ function textOf(result: unknown): string {
   if (typeof result === "object" && result !== null && "result" in result) {
     return String((result as { result?: unknown }).result ?? "");
   }
+  if (typeof result === "object" && result !== null && "error" in result) {
+    return String((result as { error?: unknown }).error ?? "");
+  }
   return typeof result === "string" ? result : "";
 }
 

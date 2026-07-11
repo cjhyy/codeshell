@@ -14,6 +14,7 @@
 
 import { createLLMClient } from "../llm/client-factory.js";
 import type { LLMConfig } from "../types.js";
+import type { ArenaUsageRecorder } from "./types.js";
 import type {
   ArenaPlan,
   ArenaMode,
@@ -84,6 +85,7 @@ export async function planArena(
   llmConfig: LLMConfig,
   flags?: PlannerFlags,
   signal?: AbortSignal,
+  onUsage?: ArenaUsageRecorder,
 ): Promise<ArenaPlan> {
   // If mode and base are both explicit, we can skip the LLM call
   if (flags?.mode && flags?.base) {
@@ -104,6 +106,7 @@ export async function planArena(
       maxTokens: 1024,
       signal,
     });
+    onUsage?.(response.usage);
 
     const plan = parsePlanResponse(response.text, topic);
 

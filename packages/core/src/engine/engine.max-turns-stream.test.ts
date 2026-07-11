@@ -70,13 +70,25 @@ describe("Engine max_turns stream terminal", () => {
           text: "",
           toolCalls: [{ id: "c1", toolName: "NoopTool", args: {} }],
           stopReason: "tool_use",
-          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+          usage: {
+            promptTokens: 1,
+            completionTokens: 1,
+            totalTokens: 2,
+            cacheReadTokens: 11,
+            cacheCreationTokens: 3,
+          },
         },
         {
           text: "final summary",
           toolCalls: [],
           stopReason: "stop",
-          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+          usage: {
+            promptTokens: 1,
+            completionTokens: 1,
+            totalTokens: 2,
+            cacheReadTokens: 13,
+            cacheCreationTokens: 7,
+          },
         },
       ],
     });
@@ -99,6 +111,9 @@ describe("Engine max_turns stream terminal", () => {
 
       expect(result.reason).toBe("max_turns");
       expect(result.text).toBe("final summary");
+      expect(result.usage.totalTokens).toBeGreaterThanOrEqual(4);
+      expect(result.usage.cacheReadTokens).toBeGreaterThanOrEqual(24);
+      expect(result.usage.cacheCreationTokens).toBeGreaterThanOrEqual(10);
       expect(persistedState.status).toBe("max_turns");
       expect(maxTurnsCompletions).toHaveLength(1);
     } finally {

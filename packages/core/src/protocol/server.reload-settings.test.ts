@@ -73,7 +73,7 @@ describe("AgentServer configure({ reloadSettings })", () => {
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
-    chatManager.getOrCreate("sess-1", {} as never);
+    await chatManager.getOrCreate("sess-1", {} as never);
 
     const approval = getInteractiveApprovalBackend().requestApproval({
       sessionId: "sess-1",

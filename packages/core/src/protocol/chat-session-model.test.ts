@@ -110,4 +110,25 @@ describe("ChatSession.requestModelSwitch", () => {
     release();
     await turn;
   });
+
+  it("resolves settled before a deferred model switch throws", async () => {
+    const { engine, release, runStarted } = fakeEngine();
+    engine.switchModel = () => {
+      throw new Error("switch persistence failed");
+    };
+    const session = new ChatSession({ id: "s", engine });
+    const turn = session.enqueueTurn("do work", {});
+    await runStarted;
+    session.requestModelSwitch("gpt");
+
+    let settled = false;
+    void session.settled.then(() => {
+      settled = true;
+    });
+    release();
+    await turn;
+    await Promise.resolve();
+
+    expect(settled).toBe(true);
+  });
 });
