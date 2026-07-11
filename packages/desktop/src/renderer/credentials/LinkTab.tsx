@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
 import { LINK_CATALOG, type LinkIntegration } from "./link-catalog";
+import { linkOAuthPrimaryAction } from "./link-oauth-actions";
 import type { MaskedCredentialView } from "./types";
 
 /**
@@ -54,12 +55,13 @@ export function LinkTab({ cwd: _cwd }: { cwd: string }) {
     }
   };
 
-  const onLogin = (item: LinkIntegration) => {
+  const onLogin = (item: LinkIntegration, credential?: MaskedCredentialView) => {
     if (!item.oauthProfileId) return;
     void run(item, async () => {
       await window.codeshell.mcpOAuth.login({
         source: "catalog",
         profileId: item.oauthProfileId!,
+        credentialId: credential?.id,
       });
     });
   };
@@ -96,7 +98,7 @@ export function LinkTab({ cwd: _cwd }: { cwd: string }) {
                 credential={byIntegration.get(item.id)}
                 busy={busyId === item.id}
                 error={errors[item.id]}
-                onLogin={() => onLogin(item)}
+                onLogin={(credential) => onLogin(item, credential)}
                 onRefresh={(credential) => onRefresh(item, credential)}
                 onLogout={(credential) => onLogout(item, credential)}
               />
@@ -121,12 +123,13 @@ function LinkIntegrationRow({
   credential?: MaskedCredentialView;
   busy: boolean;
   error?: string;
-  onLogin: () => void;
+  onLogin: (credential?: MaskedCredentialView) => void;
   onRefresh: (credential: MaskedCredentialView) => void;
   onLogout: (credential: MaskedCredentialView) => void;
 }) {
   const { t } = useT();
   const state = credential?.oauthStatus?.state ?? (credential ? "valid" : "missing");
+  const primaryAction = linkOAuthPrimaryAction(credential, Boolean(item.oauthProfileId));
   const status =
     state === "valid"
       ? t("ext.link.oauthStatusValid")
@@ -183,10 +186,14 @@ function LinkIntegrationRow({
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => onRefresh(credential)}
+              onClick={() =>
+                primaryAction === "login" ? onLogin(credential) : onRefresh(credential)
+              }
               disabled={busy}
             >
-              {t("ext.link.oauthRefresh")}
+              {primaryAction === "login"
+                ? t("ext.link.oauthRelogin")
+                : t("ext.link.oauthRefresh")}
             </Button>
             <Button variant="ghost" size="sm" onClick={() => onLogout(credential)} disabled={busy}>
               {t("ext.link.oauthLogout")}
@@ -196,7 +203,7 @@ function LinkIntegrationRow({
           <Button
             variant="secondary"
             size="sm"
-            onClick={onLogin}
+            onClick={() => onLogin()}
             disabled={busy || !item.oauthProfileId}
             title={!item.oauthProfileId ? t("ext.link.oauthUnsupported") : undefined}
           >
