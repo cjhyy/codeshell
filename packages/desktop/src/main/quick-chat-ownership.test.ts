@@ -1,5 +1,15 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { QuickChatOwnershipRegistry } from "./quick-chat-ownership";
+import { deleteSessionDir, listDiskSessions } from "./sessions-service";
+
+const tempDirs: string[] = [];
+
+afterEach(() => {
+  for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
 
 describe("QuickChatOwnershipRegistry", () => {
   test("a cleanup requester cannot delete a quick chat owned by another window", async () => {
@@ -20,6 +30,37 @@ describe("QuickChatOwnershipRegistry", () => {
     });
 
     expect(deleted).toEqual(["qchat-live"]);
+  });
+
+  test("owned cleanup removes the child state and transcript from disk", async () => {
+    const baseDir = mkdtempSync(join(tmpdir(), "quick-chat-cleanup-"));
+    tempDirs.push(baseDir);
+    const sessionId = "qchat-close-disk";
+    const sessionDir = join(baseDir, sessionId);
+    mkdirSync(sessionDir);
+    writeFileSync(
+      join(sessionDir, "state.json"),
+      JSON.stringify({
+        sessionId,
+        cwd: "",
+        parentSessionId: null,
+        origin: "desktop",
+        ephemeral: true,
+      }),
+    );
+    writeFileSync(join(sessionDir, "transcript.jsonl"), "private quick-chat transcript");
+    const registry = new QuickChatOwnershipRegistry();
+    registry.claim(sessionId, 101, "generation-close");
+
+    expect(
+      await registry.cleanup(sessionId, 101, "generation-close", () =>
+        deleteSessionDir(sessionId, baseDir),
+      ),
+    ).toEqual({ deleted: true });
+
+    expect(existsSync(sessionDir)).toBe(false);
+    expect((await listDiskSessions({ limit: 10 }, baseDir)).sessions).toEqual([]);
+    expect(registry.isClaimActive(sessionId, 101, "generation-close")).toBe(false);
   });
 
   test("releasing a destroyed window deletes all materialized quick-chat sessions", async () => {

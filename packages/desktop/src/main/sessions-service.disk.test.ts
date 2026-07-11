@@ -55,6 +55,21 @@ describe("listDiskSessions", () => {
     expect(sessions.map((s) => s.id)).toEqual(["top-1"]);
   });
 
+  it("filters ephemeral and legacy qchat sessions out of the ordinary picker", async () => {
+    mkSession(dir, "normal", { cwd: "/p", parentSessionId: null }, 1000);
+    mkSession(
+      dir,
+      "side-with-marker",
+      { cwd: "/p", parentSessionId: null, ephemeral: true },
+      2000,
+    );
+    mkSession(dir, "qchat-legacy", { cwd: "/p", parentSessionId: null }, 3000);
+
+    const { sessions } = await listDiskSessions({ limit: 10 }, dir);
+
+    expect(sessions.map((s) => s.id)).toEqual(["normal"]);
+  });
+
   it("skips legacy sessions with NO parentSessionId key (存量 not auto-rebuilt)", async () => {
     mkSession(dir, "legacy-1", { cwd: "/p", summary: "旧" }, 2000); // no parentSessionId key at all
     mkSession(dir, "new-top", { cwd: "/p", parentSessionId: null }, 1000);
