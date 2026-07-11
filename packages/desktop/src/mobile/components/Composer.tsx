@@ -130,6 +130,10 @@ export function Composer({
       setAttachments([]);
       el.value = "";
       autosize();
+    } catch {
+      // Keep both text and image drafts intact so a transient socket/upload
+      // failure can be retried without re-selecting anything.
+      setError(t("mobile.composer.sendFailed"));
     } finally {
       submitInFlightRef.current = false;
       setPending(false);

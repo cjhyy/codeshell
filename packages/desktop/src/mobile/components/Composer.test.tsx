@@ -83,3 +83,40 @@ test("Composer synchronously suppresses a repeated send while the first upload i
     await flushMicrotasks();
   });
 });
+
+test("Composer keeps the draft and handles a rejected send so it can be retried", async () => {
+  ensureMiniDom();
+  Object.assign(window, {
+    matchMedia: () => ({ matches: false }),
+  });
+  const container = document.createElement("div") as unknown as HTMLElement;
+  mountedRoot = createRoot(container);
+  let sends = 0;
+  await act(async () => {
+    mountedRoot?.render(
+      <Composer
+        disabled={false}
+        running={false}
+        onSend={async () => {
+          sends += 1;
+          throw new Error("socket failed unexpectedly");
+        }}
+        onStop={() => undefined}
+      />,
+    );
+    await flushMicrotasks();
+  });
+
+  const textarea = findElements(container, "TEXTAREA")[0];
+  textarea.value = "retry this draft";
+  const sendButton = findElements(container, "BUTTON").at(-1);
+  await act(async () => {
+    reactPropsOf(sendButton).onClick();
+    await flushMicrotasks();
+    await flushMicrotasks();
+  });
+
+  expect(sends).toBe(1);
+  expect(textarea.value).toBe("retry this draft");
+  expect(reactPropsOf(findElements(container, "BUTTON").at(-1)).disabled).toBe(false);
+});
