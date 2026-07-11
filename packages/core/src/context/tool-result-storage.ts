@@ -23,7 +23,8 @@
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { createHash } from "node:crypto";
+import { dirname, isAbsolute, join, relative, resolve, sep, win32 } from "node:path";
 import type { ContentBlock, Message } from "../types.js";
 import { logger } from "../logging/logger.js";
 
@@ -106,12 +107,35 @@ function ensureDir(dir: string): void {
 }
 
 /**
- * Write content to <dir>/<toolUseId>.txt. Idempotent: skips if the file
- * already exists (tool_use_id is a UUID, content is deterministic per id).
+ * Convert an externally supplied tool_use_id to a bounded internal filename.
+ * The original id remains the key in ContentReplacementState/onPersist; it is
+ * never used as a path component.
  */
+export function safeToolResultFilename(toolUseId: string): string {
+  if (toolUseId.length > 256) {
+    throw new RangeError("tool_use_id exceeds the 256 character limit");
+  }
+  if (
+    isAbsolute(toolUseId) ||
+    win32.isAbsolute(toolUseId) ||
+    toolUseId.includes("/") ||
+    toolUseId.includes("\\")
+  ) {
+    throw new Error("tool_use_id must not contain a path");
+  }
+  return `${createHash("sha256").update(toolUseId, "utf8").digest("hex")}.txt`;
+}
+
+/** Write content to the contained hashed path. Idempotent by original id. */
 function persistToFile(dir: string, toolUseId: string, content: string): string {
+  const root = resolve(dir);
+  const filename = safeToolResultFilename(toolUseId);
+  const filepath = resolve(root, filename);
+  const rel = relative(root, filepath);
+  if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
+    throw new Error("tool_result path escaped its storage root");
+  }
   ensureDir(dir);
-  const filepath = join(dir, `${toolUseId}.txt`);
   try {
     // 'wx' = fail if exists. Skipping on collision is correct: same id =
     // same content. Avoids re-writing the same bytes every turn.

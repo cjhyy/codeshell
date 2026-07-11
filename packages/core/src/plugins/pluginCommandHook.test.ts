@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, test, expect, spyOn } from "bun:test";
 import { runPluginCommandHook } from "./pluginCommandHook.js";
 import type { HookContext } from "../hooks/events.js";
 
@@ -77,6 +77,52 @@ describe("runPluginCommandHook → additionalContext becomes messages", () => {
       ctx,
     );
     expect(out).toEqual({});
+  });
+
+  test("exit 2 → native-compatible deny with stderr message", async () => {
+    const out = await runPluginCommandHook(
+      {
+        command: "printf '%s' 'blocked by plugin policy' >&2; exit 2",
+        installPath: process.cwd(),
+        pluginKey: "test@local",
+      },
+      { eventName: "pre_tool_use", data: { toolName: "Bash" } },
+    );
+
+    expect(out).toEqual({ decision: "deny", messages: ["blocked by plugin policy"] });
+  });
+
+  test("exit 1 stays normalized but logs a warning", async () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const out = await runPluginCommandHook(
+        {
+          command: "printf '%s' 'plugin crashed' >&2; exit 1",
+          installPath: process.cwd(),
+          pluginKey: "test@local",
+        },
+        { eventName: "pre_tool_use", data: { toolName: "Bash" } },
+      );
+
+      expect(out).toEqual({});
+      expect(warn).toHaveBeenCalled();
+      expect(warn.mock.calls.flat().join(" ")).toContain("exited 1");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  test("explicit deny JSON is propagated even when the plugin exits non-zero", async () => {
+    const out = await runPluginCommandHook(
+      {
+        command: 'printf \'%s\' \'{"decision":"deny","reason":"unsafe args"}\'; exit 1',
+        installPath: process.cwd(),
+        pluginKey: "test@local",
+      },
+      { eventName: "pre_tool_use", data: { toolName: "Bash" } },
+    );
+
+    expect(out).toEqual({ decision: "deny", messages: ["unsafe args"] });
   });
 
   test("non-JSON stdout → empty result", async () => {

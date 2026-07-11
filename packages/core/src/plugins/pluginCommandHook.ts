@@ -78,10 +78,39 @@ function extractAdditionalContext(parsed: unknown): string | null {
   return null;
 }
 
+function extractExplicitDenial(parsed: unknown): { message?: string } | null {
+  if (!parsed || typeof parsed !== "object") return null;
+  const obj = parsed as Record<string, unknown>;
+  const nested =
+    obj.hookSpecificOutput && typeof obj.hookSpecificOutput === "object"
+      ? (obj.hookSpecificOutput as Record<string, unknown>)
+      : undefined;
+  const decision =
+    obj.decision ?? obj.permissionDecision ?? nested?.decision ?? nested?.permissionDecision;
+  if (decision !== "deny" && decision !== "reject") return null;
+  const message =
+    obj.reason ??
+    obj.message ??
+    obj.permissionDecisionReason ??
+    nested?.reason ??
+    nested?.message ??
+    nested?.permissionDecisionReason;
+  return typeof message === "string" && message.trim() ? { message: message.trim() } : {};
+}
+
+function parseJson(stdout: string): unknown | undefined {
+  if (!stdout) return undefined;
+  try {
+    return JSON.parse(stdout);
+  } catch {
+    return undefined;
+  }
+}
+
 /**
- * Run one plugin hook command. Returns an empty HookResult on any failure
- * (spawn error, timeout, non-zero exit, unparseable stdout) so the hook
- * chain keeps moving — a misbehaving plugin must not wedge the engine.
+ * Run one plugin hook command. CC's exit-code 2 and explicit deny/reject JSON
+ * are normalized to the native HookResult deny contract. Other failures stay
+ * non-blocking so a broken plugin does not wedge the engine.
  *
  * Stdin carries the same envelope shape the codeshell-native shell-runner
  * uses (eventName + data) so plugin authors who want richer context can
@@ -195,6 +224,15 @@ export async function runPluginCommandHook(
         settle({});
         return;
       }
+      const trimmed = stdout.trim();
+      const parsedForDecision = parseJson(trimmed);
+      const explicitDenial = extractExplicitDenial(parsedForDecision);
+      if (code === 2 || explicitDenial) {
+        const message =
+          stderr.trim() || explicitDenial?.message || "Plugin denied this tool operation";
+        settle({ decision: "deny", messages: [message] });
+        return;
+      }
       if (code !== 0) {
         // eslint-disable-next-line no-console
         console.warn(
@@ -204,7 +242,6 @@ export async function runPluginCommandHook(
         settle({});
         return;
       }
-      const trimmed = stdout.trim();
       if (trimmed.length === 0) {
         settle({});
         return;
