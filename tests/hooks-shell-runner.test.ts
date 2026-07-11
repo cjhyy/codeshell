@@ -9,6 +9,17 @@ function ctx(extra: Partial<HookContext["data"]> = {}): HookContext {
   };
 }
 
+function slowPayload(): { toJSON: () => string } {
+  return {
+    toJSON: () => {
+      // Serialization happens after spawn. Give the hook enough wall time to
+      // close fd 0 before the parent starts its still-under-cap write.
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);
+      return "x".repeat(200 * 1024);
+    },
+  };
+}
+
 describe("runShellHook — exit codes", () => {
   it("exit 0 with valid JSON stdout becomes the HookResult", async () => {
     const result = await runShellHook(
@@ -84,6 +95,42 @@ describe("runShellHook — protocol", () => {
       ctx(),
     );
     expect(result.messages).toEqual(["pre_tool_use"]);
+  });
+
+  it("returns a structured stdin_error when the hook closes stdin early", async () => {
+    const result = await runShellHook(
+      {
+        event: "pre_tool_use",
+        command: "exec 0<&-; sleep 1",
+        timeout_ms: 2_000,
+      },
+      ctx({ payload: slowPayload() }),
+    );
+
+    const failure = result.data?.hookFailure as
+      | { type?: string; code?: string; message?: string }
+      | undefined;
+    expect(failure?.type).toBe("stdin_error");
+    expect(["EPIPE", "ECONNRESET"]).toContain(failure?.code);
+    expect(failure?.message).toBeTruthy();
+  });
+
+  it("closes stdin without an envelope when the serialized context exceeds 256 KiB", async () => {
+    const result = await runShellHook(
+      {
+        event: "pre_tool_use",
+        command: `node -e '
+          let input = "";
+          process.stdin.on("data", (chunk) => input += chunk);
+          process.stdin.on("end", () => {
+            process.stdout.write(JSON.stringify({ messages: [String(Buffer.byteLength(input))] }));
+          });
+        '`,
+      },
+      ctx({ payload: "x".repeat(300 * 1024) }),
+    );
+
+    expect(result.messages).toEqual(["0"]);
   });
 });
 

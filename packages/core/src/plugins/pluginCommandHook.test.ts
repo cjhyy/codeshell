@@ -20,6 +20,15 @@ function echoJson(json: string): string {
   return `printf '%s' '${json}'`;
 }
 
+function slowPayload(): { toJSON: () => string } {
+  return {
+    toJSON: () => {
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);
+      return "x".repeat(200 * 1024);
+    },
+  };
+}
+
 describe("runPluginCommandHook → additionalContext becomes messages", () => {
   test("CC nested shape: hookSpecificOutput.additionalContext", async () => {
     const out = await runPluginCommandHook(
@@ -131,5 +140,49 @@ describe("runPluginCommandHook → additionalContext becomes messages", () => {
       ctx,
     );
     expect(out).toEqual({});
+  });
+
+  test("early stdin close → structured stdin_error instead of an unhandled EPIPE", async () => {
+    const out = await runPluginCommandHook(
+      {
+        command: "exec 0<&-; sleep 1",
+        installPath: process.cwd(),
+        pluginKey: "test@local",
+        timeoutMs: 2_000,
+      },
+      {
+        ...ctx,
+        data: { ...ctx.data, payload: slowPayload() },
+      },
+    );
+
+    const failure = out.data?.hookFailure as
+      | { type?: string; code?: string; message?: string }
+      | undefined;
+    expect(failure?.type).toBe("stdin_error");
+    expect(["EPIPE", "ECONNRESET"]).toContain(failure?.code);
+    expect(failure?.message).toBeTruthy();
+  });
+
+  test("oversized context closes stdin without writing the envelope", async () => {
+    const out = await runPluginCommandHook(
+      {
+        command: `node -e '
+          let input = "";
+          process.stdin.on("data", (chunk) => input += chunk);
+          process.stdin.on("end", () => {
+            process.stdout.write(JSON.stringify({ additionalContext: String(Buffer.byteLength(input)) }));
+          });
+        '`,
+        installPath: process.cwd(),
+        pluginKey: "test@local",
+      },
+      {
+        ...ctx,
+        data: { ...ctx.data, payload: "x".repeat(300 * 1024) },
+      },
+    );
+
+    expect(out.messages).toEqual(["0"]);
   });
 });

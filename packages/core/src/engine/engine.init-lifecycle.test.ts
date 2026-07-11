@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -12,6 +12,7 @@ import { ToolRegistry } from "../tool-system/registry.js";
 import { defaultSandboxConfig } from "../tool-system/sandbox/index.js";
 import type { CreateMessageOptions } from "../llm/types.js";
 import type { LLMResponse, SessionState, StreamEvent } from "../types.js";
+import { _resetLoggerStateForTesting, getInMemoryErrors } from "../logging/logger.js";
 
 const provider = "fake-engine-init-lifecycle";
 
@@ -19,6 +20,7 @@ interface Scenario {
   initAttempts: number;
   initFailures: number;
   modelCalls: number;
+  breakTranscriptPath?: string;
 }
 
 const scenarios = new Map<string, Scenario>();
@@ -38,6 +40,11 @@ class InitLifecycleClient extends LLMClientBase {
     const scenario = scenarios.get(this.model);
     if (!scenario) throw new Error(`missing init lifecycle scenario: ${this.model}`);
     scenario.modelCalls++;
+    if (scenario.breakTranscriptPath) {
+      rmSync(scenario.breakTranscriptPath, { force: true });
+      mkdirSync(scenario.breakTranscriptPath);
+      scenario.breakTranscriptPath = undefined;
+    }
     this.recordUsage({ promptTokens: 1, completionTokens: 1, totalTokens: 2 }, options);
     return {
       text: "ok",
@@ -219,5 +226,36 @@ describe("Engine initialization lifecycle", () => {
     expect(fixture.scenario.modelCalls).toBeGreaterThanOrEqual(1);
     expect(fixture.mcpPool.connectCalls).toBe(1);
     expect((fixture.engine as any).runInProgress).toBe(false);
+  });
+
+  it("logs a structured persistence error when transcript flushing becomes unrecoverable", async () => {
+    _resetLoggerStateForTesting();
+    const fixture = setup(0, async () => {});
+    const sessionId = "transcript-persistence-failure";
+    fixture.scenario.breakTranscriptPath = join(
+      fixture.dir,
+      "sessions",
+      sessionId,
+      "transcript.jsonl",
+    );
+
+    const result = await fixture.engine.run("persist this", {
+      sessionId,
+      cwd: fixture.dir,
+    });
+
+    expect(result.reason).toBe("completed");
+    expect(readState(fixture.dir, sessionId).status).toBe("completed");
+    expect(getInMemoryErrors()).toContainEqual(
+      expect.objectContaining({
+        msg: "engine.transcript_persistence_failed",
+        data: expect.objectContaining({
+          sessionId,
+          code: "EISDIR",
+          attempts: 2,
+          recoverable: false,
+        }),
+      }),
+    );
   });
 });
