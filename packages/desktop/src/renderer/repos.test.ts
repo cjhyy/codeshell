@@ -13,6 +13,8 @@ import {
   loadActiveProjectId,
   loadProjects,
   loadRemovedProjectPaths,
+  makeCreateProjectForCwd,
+  reconcileProjectsFromDiskWithRemap,
   saveActiveProjectId,
   saveProjects,
   saveRemovedProjectPaths,
@@ -99,6 +101,25 @@ describe("canonical project persistence compatibility", () => {
     saveActiveProjectId(null);
 
     expect(localStorage.getItem("codeshell.activeRepoId")).toBeNull();
+  });
+
+  it("adapts nested helper shapes so canonical callers never need repo names", () => {
+    const projects: TrackedProject[] = [];
+    const factory = makeCreateProjectForCwd(projects);
+
+    const projectId = factory.createProjectForCwd("/work/new-project");
+    expect(projectId).toBeTruthy();
+    expect(projects[0]).toMatchObject({ id: projectId, path: "/work/new-project" });
+    expect("createRepoForCwd" in factory).toBe(false);
+
+    const reconciled = reconcileProjectsFromDiskWithRemap(
+      [{ path: "/work/new-project", name: "new-project" }],
+      projects,
+    );
+    expect(reconciled.projects).toHaveLength(1);
+    expect(reconciled.projectIdRemap).toEqual({});
+    expect("repos" in reconciled).toBe(false);
+    expect("repoIdRemap" in reconciled).toBe(false);
   });
 });
 

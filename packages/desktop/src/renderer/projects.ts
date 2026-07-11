@@ -22,13 +22,15 @@ import {
   saveRepos,
   sortRepos,
   unmarkRepoPathRemoved,
-  type ReconciledRepos,
   type Repo,
 } from "./repos";
 
 export type ProjectId = string;
 export type TrackedProject = Repo;
-export type ReconciledProjects = ReconciledRepos;
+export interface ReconciledProjects {
+  projects: TrackedProject[];
+  projectIdRemap: Record<ProjectId, ProjectId>;
+}
 
 export const loadProjects = loadRepos;
 export const saveProjects = saveRepos;
@@ -40,8 +42,28 @@ export const isProjectPathRemoved = isRepoPathRemoved;
 export const markProjectPathRemoved = markRepoPathRemoved;
 export const unmarkProjectPathRemoved = unmarkRepoPathRemoved;
 export const makeProjectId = makeRepoId;
-export const makeCreateProjectForCwd = makeCreateRepoForCwd;
 export const reconcileProjectsFromDisk = reconcileReposFromDisk;
-export const reconcileProjectsFromDiskWithRemap = reconcileReposFromDiskWithRemap;
 export const projectLabel = repoLabel;
 export const sortProjects = sortRepos;
+
+export function makeCreateProjectForCwd(projectList: TrackedProject[]): {
+  createProjectForCwd: (cwd: string) => ProjectId | null;
+  changed: () => boolean;
+} {
+  const legacy = makeCreateRepoForCwd(projectList);
+  return {
+    createProjectForCwd: legacy.createRepoForCwd,
+    changed: legacy.changed,
+  };
+}
+
+export function reconcileProjectsFromDiskWithRemap(
+  diskProjects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>,
+  cached: TrackedProject[],
+): ReconciledProjects {
+  const legacy = reconcileReposFromDiskWithRemap(diskProjects, cached);
+  return {
+    projects: legacy.repos,
+    projectIdRemap: legacy.repoIdRemap,
+  };
+}
