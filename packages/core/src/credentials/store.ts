@@ -1,7 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
-import { credentialAllowsEnvExposure, type Credential, type CredentialStoreFile } from "./types.js";
+import {
+  credentialAllowsEnvExposure,
+  credentialSecretHint,
+  type Credential,
+  type CredentialStoreFile,
+} from "./types.js";
 import { type EncryptionCipher, getDefaultCredentialCipher } from "./cipher.js";
 import { logger } from "../logging/logger.js";
 import { summarizeOAuthCredentialSecret } from "./oauth.js";
@@ -208,10 +213,7 @@ export class CredentialStore {
         ...rest,
         ...(credentialAllowsEnvExposure(c.type) ? {} : { exposeAsEnv: undefined }),
         hasSecret: typeof secret === "string" && secret.length > 0,
-        // Reveal at most the last 4 chars — and ONLY when the secret is longer
-        // than 4, so those chars aren't the whole secret. `"ab".slice(-4)` is
-        // "ab", so a short secret would otherwise leak in full through the hint.
-        secretHint: secret ? (secret.length > 4 ? `****${secret.slice(-4)}` : "****") : undefined,
+        secretHint: credentialSecretHint(c.type, secret),
         ...(c.type === "oauth" ? { oauthStatus: summarizeOAuthCredentialSecret(secret) } : {}),
       };
     });

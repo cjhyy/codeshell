@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { CredentialStore } from "./store.js";
+import { localCredentialAccess } from "./access.js";
 
 describe("CredentialStore", () => {
   let home: string;
@@ -225,6 +226,35 @@ describe("CredentialStore", () => {
     expect(m.hasSecret).toBe(true);
     expect(m.secretHint).toBeDefined();
     expect(m.secretHint).not.toContain("ab"); // must not reveal the short secret
+  });
+
+  test("structured credential hints never derive bytes from OAuth or cookie JSON", () => {
+    const store = new CredentialStore(cwd);
+    store.save("user", {
+      id: "oauth-hint",
+      type: "oauth",
+      label: "OAuth hint",
+      secret: JSON.stringify({ accessToken: "access", clientSecret: "client-SUFFIX" }),
+    });
+    store.save("user", {
+      id: "cookie-hint",
+      type: "cookie",
+      label: "Cookie hint",
+      secret: JSON.stringify([{ name: "sid", value: "cookie-SUFFIX" }]),
+    });
+
+    const storeHints = store
+      .listMasked()
+      .filter((credential) => credential.id.endsWith("-hint"))
+      .map((credential) => credential.secretHint);
+    const accessHints = localCredentialAccess
+      .listMasked(cwd, "full")
+      .filter((credential) => credential.id.endsWith("-hint"))
+      .map((credential) => credential.secretHint);
+
+    expect(storeHints).toEqual(["****", "****"]);
+    expect(accessHints).toEqual(["****", "****"]);
+    expect(JSON.stringify({ storeHints, accessHints })).not.toContain("IX");
   });
 
   test("cookie credential round-trips (type + jar secret + meta)", () => {

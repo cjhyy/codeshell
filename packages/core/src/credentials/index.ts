@@ -28,7 +28,7 @@ export type {
   OAuthCredentialSecret,
   OAuthTokenResponse,
 } from "./types.js";
-export { credentialAllowsEnvExposure } from "./types.js";
+export { credentialAllowsEnvExposure, credentialSecretHint } from "./types.js";
 export {
   buildOAuthRefreshRequest,
   isOAuthAccessTokenExpired,

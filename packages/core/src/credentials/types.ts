@@ -14,6 +14,16 @@ export function credentialAllowsEnvExposure(type: CredentialType): boolean {
   return type === "token" || type === "link";
 }
 
+/** Build a renderer-safe hint without deriving bytes from structured JSON. */
+export function credentialSecretHint(
+  type: CredentialType,
+  secret: string | undefined,
+): string | undefined {
+  if (!secret) return undefined;
+  if (type === "oauth" || type === "cookie") return "****";
+  return secret.length > 4 ? `****${secret.slice(-4)}` : "****";
+}
+
 export interface OAuthCredentialSecret {
   /** Schema version for the JSON stored in Credential.secret. */
   version?: 1;

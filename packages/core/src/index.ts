@@ -528,6 +528,7 @@ export {
   localCredentialAccess,
   credentialAccessScope,
   credentialAllowsEnvExposure,
+  credentialSecretHint,
   isCredentialSecretAvailable,
   materializeCookieSecret,
   type CredentialAccess,

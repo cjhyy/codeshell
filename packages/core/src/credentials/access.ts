@@ -2,7 +2,12 @@ import { existsSync, readdirSync, rmSync, statSync, writeFileSync } from "node:f
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { credentialAllowsEnvExposure, type Credential, type CredentialType } from "./types.js";
+import {
+  credentialAllowsEnvExposure,
+  credentialSecretHint,
+  type Credential,
+  type CredentialType,
+} from "./types.js";
 import { CredentialStore } from "./store.js";
 import { formatNetscapeCookies, parseCookieJar } from "./cookie-jar.js";
 import {
@@ -211,7 +216,7 @@ function toMetadata(cred: Credential): CredentialMetadata {
     ...rest,
     ...(credentialAllowsEnvExposure(cred.type) ? {} : { exposeAsEnv: undefined }),
     hasSecret: available,
-    secretHint: available ? (secret.length > 4 ? `****${secret.slice(-4)}` : "****") : undefined,
+    secretHint: available ? credentialSecretHint(cred.type, secret) : undefined,
     ...(cred.type === "oauth" ? { oauthStatus: summarizeOAuthCredentialSecret(secret) } : {}),
   };
 }

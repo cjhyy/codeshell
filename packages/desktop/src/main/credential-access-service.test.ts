@@ -198,7 +198,7 @@ describe("desktop credential access service", () => {
 
   test("legacy structured env exposure is filtered from metadata and worker env", () => {
     const sentinelRefresh = "sentinel-refresh-token";
-    const sentinelClientSecret = "sentinel-client-secret";
+    const sentinelClientSecret = "sentinel-client-QX9Z";
     mkdirSync(join(home, ".code-shell"), { recursive: true });
     writeFileSync(
       join(home, ".code-shell", "credentials.json"),
@@ -221,7 +221,7 @@ describe("desktop credential access service", () => {
             type: "cookie",
             label: "Legacy Cookie",
             exposeAsEnv: "COOKIE_JSON",
-            secret: JSON.stringify([{ name: "sid", value: "sentinel-cookie" }]),
+              secret: JSON.stringify([{ name: "sid", value: "sentinel-cookie-K7WQ" }]),
           },
         ],
       }),
@@ -230,12 +230,17 @@ describe("desktop credential access service", () => {
     const snapshot = buildCredentialSnapshot([cwd], 10);
     const entry = snapshot.entries.find((item) => item.cwd === cwd)!;
     const serialized = JSON.stringify(snapshot);
+    const oauthMetadata = entry.full.find((credential) => credential.id === "legacy-oauth");
+    const cookieMetadata = entry.full.find((credential) => credential.id === "legacy-cookie");
 
     expect(entry.envFull).toEqual({});
     expect(entry.full.map((cred) => cred.exposeAsEnv)).toEqual([undefined, undefined]);
+    expect(oauthMetadata?.secretHint).toBe("****");
+    expect(cookieMetadata?.secretHint).toBe("****");
     expect(serialized).not.toContain(sentinelRefresh);
     expect(serialized).not.toContain(sentinelClientSecret);
-    expect(serialized).not.toContain("sentinel-cookie");
+    expect(serialized).not.toContain("sentinel-cookie-K7WQ");
+    expect(serialized).not.toContain("9Z");
     expect(() =>
       resolveCredentialValueForWorker({
         cwd,

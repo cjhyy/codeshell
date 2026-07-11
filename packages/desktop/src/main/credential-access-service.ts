@@ -1,6 +1,7 @@
 import {
   CredentialStore,
   credentialAllowsEnvExposure,
+  credentialSecretHint,
   isCredentialSecretAvailable,
   materializeCookieSecret,
   summarizeOAuthCredentialSecret,
@@ -108,7 +109,7 @@ function toMetadata(cred: Credential): CredentialMetadata {
     exposeAsEnv: credentialAllowsEnvExposure(type) ? cred.exposeAsEnv : undefined,
     meta,
     hasSecret,
-    secretHint: hasSecret ? (secret.length > 4 ? `****${secret.slice(-4)}` : "****") : undefined,
+    secretHint: hasSecret ? credentialSecretHint(type, secret) : undefined,
     ...(cred.type === "oauth" ? { oauthStatus: summarizeOAuthCredentialSecret(secret) } : {}),
   };
 }
