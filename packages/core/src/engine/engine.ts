@@ -34,8 +34,7 @@ import {
   removeSteerItem,
   type SteerItem,
 } from "./steer-queue.js";
-import { resolveSandboxConfig, type SettingsSandbox } from "./sandbox-config.js";
-import { sandboxCacheKey } from "./sandbox-cache-key.js";
+import { RunEnvironmentResolver } from "./run-environment.js";
 import { BUILTIN_TOOL_GUARDS, type BuiltinToolFn } from "../tool-system/builtin/index.js";
 import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
@@ -105,11 +104,7 @@ import { computeEffectiveDisabledLists } from "../capability-control/disabled-li
 import { FileHistory } from "../session/file-history.js";
 import { patchBackupTargets } from "../tool-system/builtin/apply-patch/backup-targets.js";
 import type { ToolContext } from "../tool-system/context.js";
-import {
-  resolveSandboxBackend,
-  type SandboxBackend,
-  type SandboxConfig,
-} from "../tool-system/sandbox/index.js";
+import type { SandboxBackend } from "../tool-system/sandbox/index.js";
 import { resolveAgentPreset, resolveBuiltinToolNames, type AgentPreset } from "../preset/index.js";
 import { ModelPool, type ModelEntry } from "../llm/model-pool.js";
 import { AgentDefinitionRegistry } from "../agent/agent-definition-registry.js";
@@ -316,7 +311,7 @@ export class Engine {
 
   /** Shared resources supplied at construction (adapter pattern — null when self-constructed). */
   readonly runtime: EngineRuntime | null;
-  private readonly sandboxCache = new Map<string, Promise<SandboxBackend>>();
+  private readonly runEnvironmentResolver: RunEnvironmentResolver;
   private readonly interactiveBackends = new WeakMap<ApprovalRouter, InteractiveApprovalBackend>();
   private activeApprovalRouter: ApprovalRouter | undefined;
   /** Active permission mode for this Engine instance. */
@@ -552,6 +547,14 @@ export class Engine {
   constructor(private config: EngineConfig) {
     // Wire shared runtime (adapter pattern — null when self-constructing).
     this.runtime = config.runtime ?? null;
+    this.runEnvironmentResolver = new RunEnvironmentResolver({
+      config: () => this.config,
+      settings: () => this.getSettingsManager(),
+      credentialAccess: {
+        envExposures: (cwd, scope) => getCredentialAccess().envExposures(cwd, scope),
+      },
+      ...(this.runtime ? { runtime: this.runtime } : {}),
+    });
 
     // Instance-level permission/plan mode fields.
     this.permissionMode = config.permissionMode ?? "acceptEdits";
@@ -1079,7 +1082,7 @@ export class Engine {
       },
     });
 
-    const sandboxConfig = this.resolveSandboxConfigForCwd(cwd);
+    const sandboxConfig = this.runEnvironmentResolver.resolveSandboxConfig(cwd);
     // A2: explicit sandbox modes (seatbelt, bwrap) must fail closed
     // per standard §S4. resolveSandboxBackend throws when an explicit
     // mode is unavailable on this host; we let it propagate. The
@@ -1090,9 +1093,7 @@ export class Engine {
     //
     // Backend is cached per runtime/engine so the capability probe runs once
     // per (mode, cwd) instead of every turn.
-    const sandboxBackend = this.runtime
-      ? await this.runtime.resolveSandbox(sandboxConfig, cwd)
-      : await this.resolveSandboxWithoutRuntime(sandboxConfig, cwd);
+    const sandboxBackend = await this.runEnvironmentResolver.resolveSandbox(cwd);
 
     // Observability: surface what sandbox actually applied this run — the
     // configured mode vs the resolved backend (auto may downgrade to off when
@@ -1126,7 +1127,7 @@ export class Engine {
           ? sandboxBackend
           : { ...sandboxBackend, network: sandboxConfig.network },
       cwd,
-      shellEnv: this.readShellEnv(cwd),
+      shellEnv: this.runEnvironmentResolver.readShellEnv(cwd),
       // TodoWrite reads this to push task_update events independently
       // of its return value, so the UI's pinned task panel refreshes
       // immediately rather than after the LLM next surfaces the
@@ -3435,126 +3436,6 @@ export class Engine {
    * overlays turn-specific fields like sandbox and subAgentSpawner) and
    * by tests that want a ToolContext without a full run() cycle.
    */
-  private resolveSandboxWithoutRuntime(
-    config: SandboxConfig,
-    cwd: string,
-  ): Promise<SandboxBackend> {
-    const key = sandboxCacheKey(config, cwd);
-    let cached = this.sandboxCache.get(key);
-    if (!cached) {
-      cached = resolveSandboxBackend(config, cwd);
-      // Mirror EngineRuntime.resolveSandbox: don't cache a rejection, or an
-      // explicit-mode probe that throws stays sticky until process restart even
-      // after the user fixes the config.
-      cached.catch(() => {
-        if (this.sandboxCache.get(key) === cached) this.sandboxCache.delete(key);
-      });
-      this.sandboxCache.set(key, cached);
-    }
-    return cached;
-  }
-
-  private resolveSandboxConfigForCwd(cwd: string): SandboxConfig {
-    // Priority: config.sandbox → project settings.sandbox → global → per-run
-    // default. Read UNMERGED per-scope (getForScope) so a project that wrote no
-    // sandbox genuinely follows global, rather than inheriting global's mode and
-    // looking like it set one. Fixes "项目级配了不生效" + the scope model.
-    let projectSandbox: SettingsSandbox | undefined;
-    let globalSandbox: SettingsSandbox | undefined;
-    try {
-      const sm = this.getSettingsManager();
-      if (this.config.isSubAgent !== true) {
-        projectSandbox = (sm.getForScope("project", cwd) as { sandbox?: SettingsSandbox }).sandbox;
-      }
-      globalSandbox = (sm.getForScope("user") as { sandbox?: SettingsSandbox }).sandbox;
-    } catch {
-      // settings unavailable → fall through to per-run default
-    }
-    return resolveSandboxConfig(
-      this.config.sandbox,
-      projectSandbox,
-      globalSandbox,
-      this.config.headless === true,
-    );
-  }
-
-  /**
-   * Build the shell env layered onto the Bash tool / background shells (see
-   * mergeShellEnv). Three user-configured sources, merged lowest → highest:
-   *
-   *   1. project `localEnvironment.env`  — the per-project "local environment"
-   *      panel (DATABASE_URL etc.); the floor, so a project's own panel values
-   *      can be overridden by an explicit top-level `env`.
-   *   2. global top-level `env`          — ~/.code-shell/settings.json; the
-   *      canonical home for API keys (OPENAI_API_KEY) a skill script reads —
-   *      configure once, every project's skills get it.
-   *   3. project top-level `env`         — .code-shell/settings.json; a project
-   *      that wants to override a global key wins.
-   *
-   * Each scope is read UNMERGED so the layering here is the single source of
-   * precedence (getForScope merges nothing). Returns undefined when no layer
-   * contributes a key, so the caller passes it through unchanged for projects
-   * that configure none.
-   *
-   * Sub-agents: a sub-agent is the user's OWN agent doing the user's work
-   * (mirrors Claude Code, where sub-agents inherit the parent environment), so
-   * it now reads the SAME env as the parent. The sub-agent branch is kept as an
-   * explicit seam (`filterSubagentEnv`) rather than removed — a future policy
-   * could narrow what a sub-agent sees (e.g. drop credential secrets) by
-   * changing that one hook; today it passes everything through unchanged.
-   * A no-cwd context still gets nothing (there is genuinely no project to read).
-   *
-   * None of these is filtered through the deny regex (mergeShellEnv): the user
-   * put them there deliberately. The allowlist/deny machinery only guards the
-   * host's process.env from a tainted model exfiltrating it via `env | curl`.
-   */
-  private readShellEnv(cwd?: string): Record<string, string> | undefined {
-    if (!cwd) return undefined;
-    const merged: Record<string, string> = {};
-    const layer = (env: Record<string, string> | undefined): void => {
-      if (!env) return;
-      for (const [k, v] of Object.entries(env)) {
-        if (typeof v === "string") merged[k] = v;
-      }
-    };
-    try {
-      // The fully-merged settings already apply the scope guard (a 'project'
-      // scope never reads the host ~/.code-shell) and the user < project <
-      // local precedence — so the top-level `env` map read from here is global
-      // values overridden by project values, exactly as specified. We layer
-      // localEnvironment.env *under* it as the floor.
-      const settings = this.getSettingsManager().get() as {
-        env?: Record<string, string>;
-        localEnvironment?: { env?: Record<string, string> };
-      };
-      layer(settings.localEnvironment?.env); // floor
-      // Credentials flagged "expose as env var" (Credential.exposeAsEnv). This
-      // is the wiring that was missing — the UI/store recorded the flag but no
-      // code ever injected the secret, so `$FIGMA_TOKEN` was always empty.
-      // Scope mirrors settingsScope so a project-scoped engine never surfaces
-      // the host user's credentials (same isolation contract as top-level env).
-      // Placed below settings.env so an explicit `env` entry can still override.
-      const credScope = (this.config.settingsScope ?? "project") === "full" ? "full" : "project";
-      layer(getCredentialAccess().envExposures(cwd, credScope));
-      layer(settings.env); // top-level env (global ⊕ project) wins
-    } catch {
-      return undefined;
-    }
-    const result = this.config.isSubAgent === true ? this.filterSubagentEnv(merged) : merged;
-    return Object.keys(result).length > 0 ? result : undefined;
-  }
-
-  /**
-   * Policy seam for what a sub-agent's shell sees. A sub-agent inherits the
-   * parent environment by default (mirrors Claude Code), so this is the
-   * identity function today. It exists so a future policy can narrow the set
-   * (e.g. strip credential `exposeAsEnv` secrets, or allowlist by name) in ONE
-   * place instead of scattering `isSubAgent` checks through readShellEnv.
-   */
-  private filterSubagentEnv(env: Record<string, string>): Record<string, string> {
-    return env;
-  }
-
   /**
    * Read the project's `localEnvironment.setupScripts` for this cwd (the raw
    * per-platform map). Used by EnterWorktree to run setup once in a freshly
@@ -3565,50 +3446,25 @@ export class Engine {
   readWorktreeSetupScripts(
     cwd?: string,
   ): { default?: string; macos?: string; linux?: string; windows?: string } | undefined {
-    if (this.config.isSubAgent === true || !cwd) return undefined;
-    try {
-      const scoped = this.getSettingsManager().getForScope("project", cwd) as {
-        localEnvironment?: {
-          setupScripts?: { default?: string; macos?: string; linux?: string; windows?: string };
-        };
-      };
-      return scoped.localEnvironment?.setupScripts;
-    } catch {
-      return undefined;
-    }
+    return this.runEnvironmentResolver.readWorktreeSetupScripts(cwd);
   }
 
   readWorktreeBranchPrefix(cwd?: string): string | undefined {
-    if (this.config.isSubAgent === true || !cwd) return undefined;
-    try {
-      const settings = this.getSettingsManager().get() as {
-        worktree?: { branchPrefix?: string };
-      };
-      return settings.worktree?.branchPrefix;
-    } catch {
-      return undefined;
-    }
+    return this.runEnvironmentResolver.readWorktreeBranchPrefix(cwd);
   }
 
   async resolveWorktreeSetupSandbox(cwd: string): Promise<SandboxBackend | undefined> {
-    if (!cwd) return undefined;
-    const sandboxConfig = this.resolveSandboxConfigForCwd(cwd);
-    const sandboxBackend = this.runtime
-      ? await this.runtime.resolveSandbox(sandboxConfig, cwd)
-      : await this.resolveSandboxWithoutRuntime(sandboxConfig, cwd);
-    return sandboxBackend.name === "off"
-      ? sandboxBackend
-      : { ...sandboxBackend, network: sandboxConfig.network };
+    return this.runEnvironmentResolver.resolveWorktreeSetupSandbox(cwd);
   }
 
   readWorktreeSetupShellEnv(cwd?: string): Record<string, string> | undefined {
-    return this.readShellEnv(cwd);
+    return this.runEnvironmentResolver.readShellEnv(cwd);
   }
 
   buildToolContext(): ToolContext {
     const { disabledSkills, disabledPlugins } = this.readDisabledLists();
     const ctx: ToolContext = {
-      shellEnv: this.readShellEnv(this.config.cwd),
+      shellEnv: this.runEnvironmentResolver.readShellEnv(this.config.cwd),
       cwd: this.config.cwd ?? process.cwd(),
       llmConfig: this.config.llm,
       modelPool: this.modelPool,
