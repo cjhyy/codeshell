@@ -40,7 +40,7 @@ describe("McpOAuthService", () => {
 
   function makeService(
     options: {
-      authorizeTokens?: OAuthTokens;
+      authorizeTokens?: OAuthTokens | Promise<OAuthTokens>;
       fetch?: typeof fetch;
       now?: () => number;
       changed?: () => void;
@@ -387,6 +387,68 @@ describe("McpOAuthService", () => {
     expect(changed).toBe(2);
     await Promise.resolve();
     expect(store.resolve("example-oauth")).toBeUndefined();
+  });
+
+  test("concurrent logout tombstones a deferred explicit relogin and late tokens never revive it", async () => {
+    let changed = 0;
+    let authorizeStarted!: () => void;
+    const didStartAuthorize = new Promise<void>((resolve) => {
+      authorizeStarted = resolve;
+    });
+    let finishAuthorize!: (tokens: OAuthTokens) => void;
+    const deferredAuthorize = new Promise<OAuthTokens>((resolve) => {
+      finishAuthorize = resolve;
+    });
+    const { service, store } = makeService({
+      changed: () => changed++,
+      authorizeTokens: deferredAuthorize,
+      onAuthorizeConfig: () => authorizeStarted(),
+    });
+    store.save("user", {
+      id: "example-oauth",
+      type: "oauth",
+      label: "Example OAuth",
+      secret: JSON.stringify({
+        version: 1,
+        accessToken: "old-access",
+        refreshToken: "old-refresh",
+        clientId: "client",
+        tokenEndpoint: "https://auth.example/token",
+      }),
+      meta: {
+        mcpServerName: "Example",
+        mcpServerUrl: "https://mcp.example/rpc",
+        authUrl: "https://auth.example/authorize",
+        tokenEndpoint: "https://auth.example/token",
+        clientId: "client",
+      },
+    });
+
+    const relogin = service.login({
+      source: "mcp",
+      serverName: "Example",
+      serverUrl: "https://mcp.example/rpc",
+      credentialId: "example-oauth",
+      clientId: "client",
+      authorizationEndpoint: "https://auth.example/authorize",
+      tokenEndpoint: "https://auth.example/token",
+    });
+    await didStartAuthorize;
+    const loggingOut = service.logout("example-oauth");
+    await expect(loggingOut).resolves.toEqual({ removed: true, remoteRevoked: true });
+    expect(store.resolve("example-oauth")).toBeUndefined();
+    expect(changed).toBe(1);
+
+    finishAuthorize({
+      accessToken: "late-access",
+      refreshToken: "late-refresh",
+      expiresAt: Date.UTC(2030, 0, 1),
+      tokenType: "Bearer",
+    });
+    await expect(relogin).rejects.toThrow();
+
+    expect(store.resolve("example-oauth")).toBeUndefined();
+    expect(changed).toBe(1);
   });
 
   test("revocation timeout cannot block local deletion or cache invalidation", async () => {

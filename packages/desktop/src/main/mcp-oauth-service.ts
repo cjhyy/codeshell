@@ -329,6 +329,8 @@ export class McpOAuthService {
     let stage: OAuthFailureStage = "validation";
     try {
       const spec = this.withStoredLoginMetadata(this.loginSpec(input));
+      if (this.loggingOut.has(spec.credentialId)) throw this.unavailable(spec.credentialId);
+      const generation = this.generationOf(spec.credentialId);
       validateOAuthEndpoint(spec.serverUrl, "MCP server URL");
       if (spec.authorizationEndpoint)
         validateOAuthEndpoint(spec.authorizationEndpoint, "authorization endpoint");
@@ -348,7 +350,7 @@ export class McpOAuthService {
       const explicit = Boolean(spec.clientId && spec.authorizationEndpoint && spec.tokenEndpoint);
       stage = explicit ? "authorization" : "discovery_registration";
       const result = explicit ? await this.explicitLogin(spec) : await this.discoveryLogin(spec);
-      const credential = this.saveLogin(spec, result.secret, result.meta);
+      const credential = this.saveLogin(spec, result.secret, result.meta, generation);
       return { credential };
     } catch (error) {
       const normalized = publicOAuthError(error, stage);
@@ -711,8 +713,11 @@ export class McpOAuthService {
     spec: LoginSpec,
     secret: OAuthCredentialSecret,
     discoveredMeta: Partial<NonNullable<Credential["meta"]>>,
+    generation: number,
   ): MaskedCredential {
-    if (this.loggingOut.has(spec.credentialId)) throw this.unavailable(spec.credentialId);
+    if (!this.isCurrentGeneration(spec.credentialId, generation)) {
+      throw new StaleOAuthOperationError();
+    }
     this.store.save("user", {
       id: spec.credentialId,
       type: "oauth",
