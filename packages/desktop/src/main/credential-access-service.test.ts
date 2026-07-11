@@ -180,6 +180,22 @@ describe("desktop credential access service", () => {
     ).toThrow(/token\/link credential/);
   });
 
+  test("single-value link credentials retain metadata and worker env exposure", () => {
+    new CredentialStore(cwd).save("user", {
+      id: "service-link",
+      type: "link",
+      label: "Service link",
+      secret: "single-value-link-secret",
+      exposeAsEnv: "SERVICE_LINK",
+    });
+
+    const snapshot = buildCredentialSnapshot([cwd], 9);
+    const entry = snapshot.entries.find((item) => item.cwd === cwd)!;
+    const metadata = entry.full.find((credential) => credential.id === "service-link");
+    expect(metadata?.exposeAsEnv).toBe("SERVICE_LINK");
+    expect(entry.envFull).toEqual({ SERVICE_LINK: "single-value-link-secret" });
+  });
+
   test("legacy structured env exposure is filtered from metadata and worker env", () => {
     const sentinelRefresh = "sentinel-refresh-token";
     const sentinelClientSecret = "sentinel-client-secret";
@@ -211,7 +227,7 @@ describe("desktop credential access service", () => {
       }),
     );
 
-    const snapshot = buildCredentialSnapshot([cwd], 9);
+    const snapshot = buildCredentialSnapshot([cwd], 10);
     const entry = snapshot.entries.find((item) => item.cwd === cwd)!;
     const serialized = JSON.stringify(snapshot);
 

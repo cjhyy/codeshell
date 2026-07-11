@@ -163,7 +163,6 @@ describe("CredentialStore", () => {
       for (const [id, type] of [
         ["oauth", "oauth"],
         ["cookie", "cookie"],
-        ["link", "link"],
       ] as const) {
         store.save("user", {
           id,
@@ -178,6 +177,27 @@ describe("CredentialStore", () => {
       }
 
       expect(store.envExposures("full")).toEqual({});
+    });
+
+    test("preserves the established env exposure behavior for a single-value link credential", () => {
+      const store = new CredentialStore(cwd);
+      store.save("user", {
+        id: "service-link",
+        type: "link",
+        label: "Service link",
+        secret: "single-value-link-secret",
+        exposeAsEnv: "SERVICE_LINK",
+      });
+      expect(store.resolve("service-link")?.exposeAsEnv).toBe("SERVICE_LINK");
+      expect(store.envExposures("full")).toEqual({
+        SERVICE_LINK: "single-value-link-secret",
+      });
+
+      store.patch("user", "service-link", { exposeAsEnv: "SERVICE_LINK_PATCHED" });
+      expect(store.resolve("service-link")?.exposeAsEnv).toBe("SERVICE_LINK_PATCHED");
+      expect(store.envExposures("full")).toEqual({
+        SERVICE_LINK_PATCHED: "single-value-link-secret",
+      });
     });
   });
 
