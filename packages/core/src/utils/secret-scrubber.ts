@@ -14,6 +14,39 @@ const CLI_SECRET_RE = new RegExp(
   "gimu",
 );
 
+const SENSITIVE_NORMALIZED_KEYS = new Set([
+  "password",
+  "passwd",
+  "pwd",
+  "secret",
+  "token",
+  "apikey",
+  "authorization",
+  "auth",
+  "authheader",
+  "bearer",
+  "cookie",
+  "setcookie",
+  "accesstoken",
+  "refreshtoken",
+  "authtoken",
+  "idtoken",
+  "bearertoken",
+  "sessiontoken",
+  "clientsecret",
+  "privatekey",
+  "awssecretaccesskey",
+  "awsaccesskeyid",
+]);
+
+function isSensitiveKey(key: string): boolean {
+  const normalized = key.toLowerCase().replace(/[^a-z0-9]/gu, "");
+  return (
+    SENSITIVE_NORMALIZED_KEYS.has(normalized) ||
+    /(?:token|secret|password|passwd|apikey|privatekey)$/u.test(normalized)
+  );
+}
+
 function lineEnd(text: string, start: number): number {
   const newline = text.indexOf("\n", start);
   if (newline < 0) return text.length;
@@ -203,4 +236,23 @@ export function scrubSecrets(text: string): string {
     /\b(?:sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16})\b/gu,
     "[REDACTED]",
   );
+}
+
+/**
+ * Recursively scrub JSON-like structured values with key-aware redaction.
+ * Sensitive keys redact their complete value; ordinary strings retain the
+ * free-form defense-in-depth scrub used for logs and tool-result text.
+ */
+export function scrubSecretValue(value: unknown): unknown {
+  if (typeof value === "string") return scrubSecrets(value);
+  if (Array.isArray(value)) return value.map(scrubSecretValue);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+        key,
+        isSensitiveKey(key) ? "[REDACTED]" : scrubSecretValue(entry),
+      ]),
+    );
+  }
+  return value;
 }

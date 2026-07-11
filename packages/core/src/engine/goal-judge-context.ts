@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { estimateTokens, groupMessagesByApiRound } from "../context/compaction.js";
 import { sanitizeMessages } from "../logging/sanitize-messages.js";
-import { scrubSecrets } from "../utils/secret-scrubber.js";
+import { scrubSecrets, scrubSecretValue } from "../utils/secret-scrubber.js";
 import type { GoalJudgeRuntimeContext } from "../hooks/goal-stop-hook.js";
 import type { ContentBlock, Message } from "../types.js";
 
@@ -20,20 +20,6 @@ type GoalJudgeImageBlock = ContentBlock & {
   source: ContentBlock["source"] & { bytes?: number; omitted?: true };
 };
 
-function scrubUnknown(value: unknown): unknown {
-  if (typeof value === "string") return scrubSecrets(value);
-  if (Array.isArray(value)) return value.map(scrubUnknown);
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
-        key,
-        scrubUnknown(entry),
-      ]),
-    );
-  }
-  return value;
-}
-
 function sanitizeNestedBlocks(blocks: ContentBlock[]): ContentBlock[] {
   return blocks.map((block) => {
     if (block.type === "reasoning") {
@@ -51,9 +37,12 @@ function sanitizeNestedBlocks(blocks: ContentBlock[]): ContentBlock[] {
       } as GoalJudgeImageBlock;
     }
     if (block.type === "tool_result" && Array.isArray(block.content)) {
-      return { ...block, content: sanitizeNestedBlocks(block.content) };
+      return scrubSecretValue({
+        ...block,
+        content: sanitizeNestedBlocks(block.content),
+      }) as ContentBlock;
     }
-    return scrubUnknown({ ...block }) as ContentBlock;
+    return scrubSecretValue({ ...block }) as ContentBlock;
   });
 }
 

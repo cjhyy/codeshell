@@ -243,6 +243,70 @@ describe("buildGoalJudgeRuntimeContext", () => {
     expect(context.renderedConversation).toContain("[REDACTED]");
   });
 
+  it("scrubs key-aware credentials from a real nested tool input object", () => {
+    const secrets = [
+      "plain-password-secret-42",
+      "opaque-header-secret-42",
+      "client-secret-value-42",
+      "refresh-token-value-42",
+      "private-key-value-42",
+    ];
+    const context = buildGoalJudgeRuntimeContext([
+      {
+        role: "assistant",
+        content: [
+          {
+            type: "tool_use",
+            id: "nested-credentials",
+            name: "MCPTool",
+            input: {
+              password: secrets[0],
+              headers: { Authorization: `Bearer ${secrets[1]}` },
+              "CLIENT-SECRET": secrets[2],
+              Refresh_Token: secrets[3],
+              privateKey: secrets[4],
+              name: "preserved-name",
+              title: "preserved-title",
+              description: "preserved-description",
+            },
+          },
+        ],
+      },
+    ]);
+
+    const retained = JSON.stringify(context.conversation) + context.renderedConversation;
+    for (const secret of secrets) {
+      expect(retained).not.toContain(secret);
+      expect(context.digest).not.toContain(secret);
+    }
+    for (const evidence of ["preserved-name", "preserved-title", "preserved-description"]) {
+      expect(retained).toContain(evidence);
+    }
+  });
+
+  it("scrubs a structured secret before emergency truncation can expose its suffix", () => {
+    const context = buildGoalJudgeRuntimeContext(
+      [
+        {
+          role: "user",
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: "large-secret",
+              content: `password: BEGIN_SENTINEL_${"x".repeat(5_000)}_TAIL_SENTINEL\nsafe: retained`,
+            },
+          ],
+        },
+      ],
+      { maxChars: 900, maxEstimatedTokens: 250 },
+    );
+
+    expect(context.renderedConversation).not.toContain("BEGIN_SENTINEL");
+    expect(context.renderedConversation).not.toContain("TAIL_SENTINEL");
+    expect(context.renderedConversation).toContain("password: [REDACTED]");
+    expect(context.renderedConversation).toContain("safe: retained");
+  });
+
   it("omits reasoning content", () => {
     const context = buildGoalJudgeRuntimeContext([
       {

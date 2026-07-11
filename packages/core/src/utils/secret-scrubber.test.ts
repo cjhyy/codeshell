@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { scrubSecrets } from "./secret-scrubber.js";
+import { scrubSecrets, scrubSecretValue } from "./secret-scrubber.js";
 
 describe("scrubSecrets", () => {
   it.each([
@@ -26,5 +26,76 @@ describe("scrubSecrets", () => {
     const scrubbed = scrubSecrets(input);
     for (const secret of secrets) expect(scrubbed).not.toContain(secret);
     expect(scrubbed).toContain("[REDACTED]");
+  });
+
+  it("preserves ordinary evidence byte-for-byte", () => {
+    const input = [
+      "build completed successfully",
+      "https://example.test/docs?section=install",
+      '{"name":"release","title":"Status","description":"all checks passed"}',
+    ].join("\n");
+    expect(scrubSecrets(input)).toBe(input);
+  });
+
+  it("scrubs YAML blocks and continuations while preserving sibling evidence", () => {
+    const input = [
+      "password: |",
+      "  literal-secret-one",
+      "  literal-secret-two",
+      "status: healthy",
+      "api_key: folded-secret-one",
+      "  folded-secret-two",
+      "description: retained evidence",
+    ].join("\n");
+
+    expect(scrubSecrets(input)).toBe(
+      [
+        "password: [REDACTED]",
+        "status: healthy",
+        "api_key: [REDACTED]",
+        "description: retained evidence",
+      ].join("\n"),
+    );
+  });
+
+  it("handles large inputs without throwing or superlinear slowdown", () => {
+    for (const input of [" ".repeat(40_000), `password: ${"s".repeat(40_000)}`]) {
+      const startedAt = performance.now();
+      const scrubbed = scrubSecrets(input);
+      expect(typeof scrubbed).toBe("string");
+      expect(performance.now() - startedAt).toBeLessThan(500);
+    }
+  });
+});
+
+describe("scrubSecretValue", () => {
+  it("redacts sensitive object keys across case and separator variants", () => {
+    expect(
+      scrubSecretValue({
+        password: "password-value",
+        API_Key: "api-key-value",
+        "client-secret": "client-secret-value",
+        RefreshToken: "refresh-token-value",
+        headers: { AUTHORIZATION: "Bearer header-value", Accept: "application/json" },
+        name: "visible-name",
+      }),
+    ).toEqual({
+      password: "[REDACTED]",
+      API_Key: "[REDACTED]",
+      "client-secret": "[REDACTED]",
+      RefreshToken: "[REDACTED]",
+      headers: { AUTHORIZATION: "[REDACTED]", Accept: "application/json" },
+      name: "visible-name",
+    });
+  });
+
+  it("does not redact normal business keys", () => {
+    const input = {
+      name: "Ada",
+      title: "Release status",
+      description: "Everything passed",
+      metadata: { count: 3, enabled: true },
+    };
+    expect(scrubSecretValue(input)).toEqual(input);
   });
 });
