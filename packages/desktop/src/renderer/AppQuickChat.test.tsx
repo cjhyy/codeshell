@@ -485,6 +485,36 @@ describe("App quick-chat integration", () => {
     expect(getSessionTranscriptCalls).not.toContain(panel.sessionId);
   });
 
+  test("keeps parent turns emitted after opening out of the existing quick chat", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-parent-snapshot", kind: "quickChat" }],
+    });
+    const [quick] = currentQuickPanels();
+    if (!quick || !chatProps) throw new Error("parent and quick-chat surfaces were not ready");
+
+    await act(async () => {
+      emitStream("engine-a", { type: "session_started", sessionId: "engine-a" });
+      emitStream("engine-a", {
+        type: "stream_request_start",
+        messageId: "parent-after-side-opened",
+      });
+      emitStream("engine-a", { type: "text_delta", text: "parent context added later" });
+      emitStream("engine-a", { type: "turn_complete", reason: "completed" });
+    });
+    await flushApp(70);
+
+    const parentText = chatProps.messages.flatMap((message) =>
+      message.kind === "assistant" ? [message.text] : [],
+    );
+    const childText = quickChatProps
+      .get(quick.sessionId)
+      ?.messages.flatMap((message) => (message.kind === "assistant" ? [message.text] : []));
+    expect(parentText).toContain("parent context added later");
+    expect(childText).not.toContain("parent context added later");
+    expect(quickChatProps.get(quick.sessionId)?.busy).toBe(false);
+  });
+
   test("a failed fork can explicitly fall back to a blank quick chat", async () => {
     await mountApp({
       withNormalSession: true,

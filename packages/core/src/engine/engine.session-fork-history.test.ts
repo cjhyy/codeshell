@@ -104,6 +104,61 @@ describe("Engine first turn after a session fork", () => {
     );
   });
 
+  test("does not propagate parent turns completed after the child snapshot", async () => {
+    dir = mkdtempSync(join(tmpdir(), "engine-session-fork-parent-update-"));
+    model = `${provider}-${Date.now()}-${Math.random()}`;
+    calls.set(model, []);
+    const engine = new Engine({
+      llm: { provider, model, apiKey: "test" } as never,
+      cwd: dir,
+      sessionStorageDir: join(dir, "sessions"),
+      enabledBuiltinTools: [],
+      maxTurns: 1,
+      headless: true,
+      permissionMode: "bypassPermissions",
+    });
+    (engine as any).hooks.clear();
+    const manager = engine.getSessionManager();
+    const source = manager.create(dir, model, provider, "snapshot-parent");
+    source.transcript.appendMessage("user", "history before side opened");
+    source.transcript.appendMessage("assistant", "answer before side opened");
+    const completedBoundary = source.transcript.appendTurnBoundary();
+    source.state.completedThroughEventId = completedBoundary.id;
+    source.state.completedSnapshotVersion = 1;
+    source.state.status = "completed";
+    manager.saveState(source.state);
+
+    manager.fork("snapshot-parent", {
+      targetSessionId: "snapshot-child",
+      snapshotMode: "completed",
+      ephemeral: true,
+    });
+
+    await engine.run("parent update after side opened", {
+      sessionId: "snapshot-parent",
+      cwd: dir,
+    });
+    await engine.run("child question after parent advanced", {
+      sessionId: "snapshot-child",
+      cwd: dir,
+    });
+
+    const providerCalls = calls.get(model)!;
+    expect(providerCalls).toHaveLength(2);
+    expect(JSON.stringify(providerCalls[0])).toContain("parent update after side opened");
+    expect(JSON.stringify(providerCalls[1])).toContain("history before side opened");
+    expect(JSON.stringify(providerCalls[1])).toContain("child question after parent advanced");
+    expect(JSON.stringify(providerCalls[1])).not.toContain("parent update after side opened");
+
+    const childContents = manager
+      .resume("snapshot-child")
+      .transcript.getEvents("message")
+      .map((event) => event.data.content);
+    expect(childContents).toContain("history before side opened");
+    expect(childContents).toContain("child question after parent advanced");
+    expect(childContents).not.toContain("parent update after side opened");
+  });
+
   test("a modern completed run with injected transcript flush degradation cannot use legacy tail fallback", async () => {
     dir = mkdtempSync(join(tmpdir(), "engine-session-fork-flush-degraded-"));
     model = `${provider}-${Date.now()}-${Math.random()}`;

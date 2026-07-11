@@ -301,6 +301,12 @@ export interface SessionState {
   /** User-fork lineage; deliberately separate from sub-agent ownership. */
   forkedFrom?: SessionForkLineage;
   /**
+   * Temporary child sessions are persisted only while their owning surface is
+   * alive. Ordinary resume/session pickers must omit them. Absent on legacy
+   * sessions; desktop also recognizes its historical `qchat-*` namespace.
+   */
+  ephemeral?: boolean;
+  /**
    * Which host/context created this session. Desktop disk-rebuild shows only
    * `desktop` + `automation`. Absent on legacy sessions.
    */

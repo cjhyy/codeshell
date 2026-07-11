@@ -195,6 +195,7 @@ import {
 import { runDream } from "./dream-service.js";
 import type { MemoryScope } from "@cjhyy/code-shell-core";
 import {
+  cleanupStaleQuickChatSessions,
   listSessions,
   deleteSession,
   getSessionTranscript,
@@ -287,6 +288,11 @@ import { probeImage, type ImageProbeInput } from "./image-probe-service.js";
 import { parseDataUrl, suggestImageFilename } from "./image-save.js";
 import { injectLoginShellPathAtStartup } from "./login-shell-path.js";
 import {
+  acquireDesktopInstanceLock,
+  registerSecondInstanceFocus,
+  runOwnedQuickChatStartupCleanup,
+} from "./quick-chat-startup-cleanup.js";
+import {
   cleanupSessionWorktreeForUi,
   getSessionWorktreeDiffForUi,
   getSessionWorkspaceForUi,
@@ -305,6 +311,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // makes Windows taskbar/notification grouping work correctly.
 app.setName("code-shell");
 if (process.platform === "win32") app.setAppUserModelId("com.cjhyy.codeshell");
+const ownsDesktopInstance = acquireDesktopInstanceLock(app);
+if (ownsDesktopInstance) {
+  registerSecondInstanceFocus(
+    (handler) => app.on("second-instance", handler),
+    () => BrowserWindow.getAllWindows(),
+  );
+}
 
 dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: process.cwd() });
 
@@ -1839,8 +1852,20 @@ async function cleanupKnownAttachments(sessionId?: string): Promise<void> {
 }
 
 app.whenReady().then(async () => {
+  if (!ownsDesktopInstance) return;
   writeSettingsSchemaAtStartup();
   void cleanupKnownAttachments();
+
+  const staleQuickChats = await runOwnedQuickChatStartupCleanup(
+    ownsDesktopInstance,
+    cleanupStaleQuickChatSessions,
+  ).catch((error) => {
+    dlog("main", "quick_chat.startup_cleanup_failed", { error: String(error) });
+    return [];
+  });
+  if (staleQuickChats.length > 0) {
+    dlog("main", "quick_chat.startup_cleanup_done", { sessionIds: staleQuickChats });
+  }
 
   await injectLoginShellPathAtStartup({
     log: (event, data) => dlog("main", event, data),

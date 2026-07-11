@@ -48,6 +48,8 @@ export interface ForkSessionOptions {
   throughEventId?: string;
   /** `completed` is the interrupted snapshot used by ephemeral side chats. */
   snapshotMode?: "tail" | "completed";
+  /** Hide this temporary fork from ordinary session lists and resume pickers. */
+  ephemeral?: boolean;
 }
 
 export interface ForkSessionResult {
@@ -148,6 +150,11 @@ export function codeShellHome(): string {
   return process.env.CODE_SHELL_HOME || join(homedir(), ".code-shell");
 }
 
+/** Canonical root for every persisted CodeShell session. */
+export function sessionsRoot(): string {
+  return join(codeShellHome(), "sessions");
+}
+
 function isSessionWorkspace(value: unknown): value is SessionWorkspace {
   if (!value || typeof value !== "object") return false;
   const ws = value as Partial<SessionWorkspace>;
@@ -186,7 +193,7 @@ export class SessionManager {
   private readonly registeredCloseEpochs = new Map<string, number>();
 
   constructor(storageDir?: string) {
-    this.sessionsDir = storageDir ?? join(codeShellHome(), "sessions");
+    this.sessionsDir = storageDir ?? sessionsRoot();
     mkdirSync(this.sessionsDir, { recursive: true });
     this.cleanupStaleForkStaging();
   }
@@ -708,6 +715,7 @@ export class SessionManager {
       createdAt,
     };
     const state = buildForkState(snapshot.sourceState, targetSessionId, lineage, createdAt);
+    if (options.ephemeral === true) state.ephemeral = true;
     const events = buildForkTranscript(snapshot.copiedEvents, state);
     const bundle = this.publishSessionAtomically(targetSessionId, state, events);
     return { bundle, lineage, copiedEventCount: snapshot.copiedEvents.length };
@@ -815,13 +823,15 @@ export class SessionManager {
     if (!existsSync(this.sessionsDir)) return [];
 
     const dirs = readdirSync(this.sessionsDir, { withFileTypes: true })
-      .filter((d) => d.isDirectory() && !d.name.startsWith(".pending-"))
+      .filter(
+        (d) => d.isDirectory() && !d.name.startsWith(".pending-") && !d.name.startsWith("qchat-"),
+      )
       .map((d) => d.name);
 
     // Two-pass scan. Pass 1: cheap stat to find each session's
-    // lastActiveAt, sort, take top `limit`. Pass 2: only for those
-    // winners do we open state.json + tail the transcript for a
-    // preview. With ~1 k sessions on disk the difference is ~1 s
+    // lastActiveAt and sort. Pass 2 opens state.json in that order until it
+    // finds `limit` non-ephemeral winners, then tails only those transcripts
+    // for previews. With ~1 k sessions on disk the difference is ~1 s
     // (preview-every) vs ~50 ms (preview-top-20).
     type Candidate = {
       dir: string;
@@ -853,12 +863,12 @@ export class SessionManager {
     }
 
     candidates.sort((a, b) => b.lastActiveAt - a.lastActiveAt);
-    const top = candidates.slice(0, limit);
-
     const sessions: SessionListEntry[] = [];
-    for (const c of top) {
+    for (const c of candidates) {
+      if (sessions.length >= limit) break;
       try {
         const state = JSON.parse(readFileSync(c.stateFile, "utf-8")) as SessionState;
+        if (state.ephemeral === true) continue;
         const preview = c.transcriptExists ? readLastUserMessage(c.transcriptFile) : undefined;
         sessions.push({ ...state, preview, lastActiveAt: c.lastActiveAt });
       } catch {

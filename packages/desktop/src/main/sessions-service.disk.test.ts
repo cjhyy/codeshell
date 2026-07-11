@@ -29,8 +29,12 @@ function mkSession(base: string, id: string, state: Record<string, unknown>, mti
 
 describe("listDiskSessions", () => {
   let dir: string;
-  beforeEach(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), "ds-")); });
-  afterEach(() => { fs.rmSync(dir, { recursive: true, force: true }); });
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "ds-"));
+  });
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
 
   it("returns top-level sessions (parentSessionId === null), newest first", async () => {
     mkSession(dir, "top-old", { cwd: "/p", summary: "老", parentSessionId: null }, 1000);
@@ -43,7 +47,12 @@ describe("listDiskSessions", () => {
   it("drops sessions whose cwd was deleted (deleted-project resurrection guard)", async () => {
     mkSession(dir, "alive", { cwd: "/p", parentSessionId: null, summary: "在" }, 2000);
     // cwd points at a path that does not exist on disk → must be filtered out.
-    mkSession(dir, "deleted", { cwd: path.join(dir, "gone-project"), parentSessionId: null, summary: "删" }, 3000);
+    mkSession(
+      dir,
+      "deleted",
+      { cwd: path.join(dir, "gone-project"), parentSessionId: null, summary: "删" },
+      3000,
+    );
     const { sessions } = await listDiskSessions({ limit: 10 }, dir);
     expect(sessions.map((s) => s.id)).toEqual(["alive"]);
   });
@@ -53,6 +62,16 @@ describe("listDiskSessions", () => {
     mkSession(dir, "sub-1", { cwd: "/p", parentSessionId: "top-1" }, 3000);
     const { sessions } = await listDiskSessions({ limit: 10 }, dir);
     expect(sessions.map((s) => s.id)).toEqual(["top-1"]);
+  });
+
+  it("filters ephemeral and legacy qchat sessions out of the ordinary picker", async () => {
+    mkSession(dir, "normal", { cwd: "/p", parentSessionId: null }, 1000);
+    mkSession(dir, "side-with-marker", { cwd: "/p", parentSessionId: null, ephemeral: true }, 2000);
+    mkSession(dir, "qchat-legacy", { cwd: "/p", parentSessionId: null }, 3000);
+
+    const { sessions } = await listDiskSessions({ limit: 10 }, dir);
+
+    expect(sessions.map((s) => s.id)).toEqual(["normal"]);
   });
 
   it("skips legacy sessions with NO parentSessionId key (存量 not auto-rebuilt)", async () => {
@@ -69,7 +88,8 @@ describe("listDiskSessions", () => {
   });
 
   it("paginates with limit + cursor", async () => {
-    for (let i = 0; i < 5; i++) mkSession(dir, `s${i}`, { cwd: "/p", parentSessionId: null }, 1000 + i * 1000);
+    for (let i = 0; i < 5; i++)
+      mkSession(dir, `s${i}`, { cwd: "/p", parentSessionId: null }, 1000 + i * 1000);
     const p1 = await listDiskSessions({ limit: 2 }, dir);
     expect(p1.sessions.map((s) => s.id)).toEqual(["s4", "s3"]);
     expect(p1.nextCursor).not.toBeNull();

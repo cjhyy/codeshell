@@ -1,12 +1,12 @@
 /**
  * List session files persisted by the agent worker.
- * Sessions are JSONL files under ~/.code-shell/sessions/.
+ * Uses core's canonical session root so CODE_SHELL_HOME matches the worker.
  */
 
+import { sessionsRoot } from "@cjhyy/code-shell-core";
 import * as fs from "node:fs/promises";
 import * as fsSync from "node:fs";
 import * as path from "node:path";
-import * as os from "node:os";
 
 export interface DesktopSessionSummary {
   id: string;
@@ -17,22 +17,29 @@ export interface DesktopSessionSummary {
   updatedAt: number;
 }
 
-const SESSIONS_DIR = path.join(os.homedir(), ".code-shell", "sessions");
-
 const SAFE_ID = /^[A-Za-z0-9_.-]+$/;
+const QUICK_CHAT_SESSION_PREFIX = "qchat-";
 
-export async function listSessions(): Promise<DesktopSessionSummary[]> {
+function isQuickChatSessionId(id: string): boolean {
+  return id.startsWith(QUICK_CHAT_SESSION_PREFIX);
+}
+
+export async function listSessions(
+  baseDir: string = sessionsRoot(),
+): Promise<DesktopSessionSummary[]> {
   try {
-    const entries = await fs.readdir(SESSIONS_DIR, { withFileTypes: true });
+    const entries = await fs.readdir(baseDir, { withFileTypes: true });
     const summaries: DesktopSessionSummary[] = [];
     for (const e of entries) {
       if (!e.isFile()) continue;
       if (!e.name.endsWith(".jsonl") && !e.name.endsWith(".json")) continue;
-      const full = path.join(SESSIONS_DIR, e.name);
+      const id = e.name.replace(/\.jsonl?$/, "");
+      if (isQuickChatSessionId(id)) continue;
+      const full = path.join(baseDir, e.name);
       try {
         const st = await fs.stat(full);
         summaries.push({
-          id: e.name.replace(/\.jsonl?$/, ""),
+          id,
           file: full,
           size: st.size,
           createdAt: st.birthtimeMs || st.mtimeMs,
@@ -60,7 +67,7 @@ export async function listSessions(): Promise<DesktopSessionSummary[]> {
  */
 export async function deleteSessionDir(
   id: string,
-  baseDir: string = SESSIONS_DIR,
+  baseDir: string = sessionsRoot(),
 ): Promise<void> {
   if (!SAFE_ID.test(id) || id === "." || id === "..") return;
   // Directory form (current).
@@ -78,6 +85,61 @@ export async function deleteSessionDir(
 /** @deprecated retained for the existing IPC handler; delegates to deleteSessionDir. */
 export async function deleteSession(id: string): Promise<void> {
   await deleteSessionDir(id);
+}
+
+/**
+ * Reap quick-chat data left by an unclean prior desktop exit. This must run
+ * before a new renderer/worker can claim a qchat id; normal live cleanup is
+ * coordinated by QuickChatOwnershipRegistry instead.
+ */
+export async function cleanupStaleQuickChatSessions(
+  baseDir: string = sessionsRoot(),
+): Promise<string[]> {
+  let entries: fsSync.Dirent[];
+  try {
+    entries = await fs.readdir(baseDir, { withFileTypes: true });
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw e;
+  }
+
+  const ids = new Set<string>();
+  const stagingDirs: string[] = [];
+  for (const entry of entries) {
+    if (entry.isDirectory() && SAFE_ID.test(entry.name) && isQuickChatSessionId(entry.name)) {
+      ids.add(entry.name);
+      continue;
+    }
+    if (entry.isDirectory() && entry.name.startsWith(".pending-fork-")) {
+      try {
+        const state = JSON.parse(
+          await fs.readFile(path.join(baseDir, entry.name, "state.json"), "utf8"),
+        ) as Record<string, unknown>;
+        if (
+          state.ephemeral === true &&
+          typeof state.sessionId === "string" &&
+          isQuickChatSessionId(state.sessionId)
+        ) {
+          stagingDirs.push(entry.name);
+        }
+      } catch {
+        // Missing, malformed, or unreadable state cannot prove ephemeral
+        // ownership, so fail closed and leave the staging directory intact.
+      }
+      continue;
+    }
+    if (!entry.isFile() || (!entry.name.endsWith(".jsonl") && !entry.name.endsWith(".json"))) {
+      continue;
+    }
+    const id = entry.name.replace(/\.jsonl?$/, "");
+    if (SAFE_ID.test(id) && isQuickChatSessionId(id)) ids.add(id);
+  }
+
+  for (const id of ids) await deleteSessionDir(id, baseDir);
+  for (const stagingDir of stagingDirs) {
+    await fs.rm(path.join(baseDir, stagingDir), { recursive: true, force: true });
+  }
+  return [...ids, ...stagingDirs];
 }
 
 export interface DiskSessionMeta {
@@ -104,7 +166,7 @@ export interface ListDiskSessionsResult {
  */
 export async function listDiskSessions(
   opts: { limit: number; cursor?: string },
-  baseDir: string = SESSIONS_DIR,
+  baseDir: string = sessionsRoot(),
 ): Promise<ListDiskSessionsResult> {
   // Async fs throughout: this is an IPC handler on the Electron main thread
   // (sessions:listDisk). The previous synchronous statSync/readFileSync loops
@@ -116,7 +178,9 @@ export async function listDiskSessions(
     if ((e as NodeJS.ErrnoException).code === "ENOENT") return { sessions: [], nextCursor: null };
     throw e;
   }
-  const candidates = entries.filter((e) => e.isDirectory() && SAFE_ID.test(e.name));
+  const candidates = entries.filter(
+    (e) => e.isDirectory() && SAFE_ID.test(e.name) && !isQuickChatSessionId(e.name),
+  );
   const stats = await Promise.all(
     candidates.map(async (e) => {
       try {
@@ -138,7 +202,10 @@ export async function listDiskSessions(
   const pathExists = async (cwdStr: string): Promise<boolean> => {
     const cached = cwdExists.get(cwdStr);
     if (cached !== undefined) return cached;
-    const ok = await fs.access(cwdStr).then(() => true).catch(() => false);
+    const ok = await fs
+      .access(cwdStr)
+      .then(() => true)
+      .catch(() => false);
     cwdExists.set(cwdStr, ok);
     return ok;
   };
@@ -148,9 +215,12 @@ export async function listDiskSessions(
     let state: Record<string, unknown>;
     try {
       state = JSON.parse(await fs.readFile(path.join(baseDir, id, "state.json"), "utf8"));
-    } catch { continue; }
-    if (!("parentSessionId" in state)) continue;          // legacy → skip
-    if (state.parentSessionId) continue;                  // sub-agent (non-empty) → filter
+    } catch {
+      continue;
+    }
+    if (state.ephemeral === true) continue;
+    if (!("parentSessionId" in state)) continue; // legacy → skip
+    if (state.parentSessionId) continue; // sub-agent (non-empty) → filter
     // Only desktop + automation belong in the desktop sidebar. tui / missing
     // origin are filtered out (tui shares ~/.code-shell; legacy has no origin).
     const origin = state.origin;

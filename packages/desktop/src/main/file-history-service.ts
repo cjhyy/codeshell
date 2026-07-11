@@ -12,14 +12,13 @@
  * separate client-side counter).
  */
 import * as path from "node:path";
-import * as os from "node:os";
 import {
   FileHistory,
   latestTurnUndoTargets,
   latestRedoTargets,
+  sessionsRoot,
 } from "@cjhyy/code-shell-core";
 
-const SESSIONS_DIR = path.join(os.homedir(), ".code-shell", "sessions");
 const SAFE_ID = /^[A-Za-z0-9_.-]+$/;
 
 export interface TurnUndoState {
@@ -38,7 +37,7 @@ export interface TurnUndoResult {
 
 function historyFor(sessionId: string): FileHistory | null {
   if (typeof sessionId !== "string" || !SAFE_ID.test(sessionId)) return null;
-  return FileHistory.loadFromDir(path.join(SESSIONS_DIR, sessionId));
+  return FileHistory.loadFromDir(path.join(sessionsRoot(), sessionId));
 }
 
 /** Read-only: what the latest turn's card should show (undo vs redo vs nothing). */

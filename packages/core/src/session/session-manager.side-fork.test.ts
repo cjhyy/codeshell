@@ -34,6 +34,7 @@ describe("SessionManager side snapshot", () => {
     const forked = manager.fork("parent", {
       targetSessionId: "side-child",
       snapshotMode: "completed",
+      ephemeral: true,
     } as never);
     const copiedMessages = forked.bundle.transcript.getEvents("message");
 
@@ -45,6 +46,9 @@ describe("SessionManager side snapshot", () => {
       false,
     );
     expect(forked.lineage.throughEventId).toBe(completedBoundary.id);
+    expect(forked.bundle.state.ephemeral).toBe(true);
+    manager.create("/project", "model", "provider", "qchat-blank");
+    expect(manager.list(10).map((session) => session.sessionId)).toEqual(["parent"]);
   });
 
   test("cuts all paired assistant and tool tail events after the completed cursor", () => {

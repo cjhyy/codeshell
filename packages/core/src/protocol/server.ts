@@ -643,7 +643,7 @@ export class AgentServer {
       const result = engine.forkSession(
         sourceSessionId,
         isSideFork
-          ? { targetSessionId, snapshotMode: "completed" }
+          ? { targetSessionId, snapshotMode: "completed", ephemeral: true }
           : { targetSessionId, throughEventId },
       );
       const workspace = result.bundle.state.workspace ?? {

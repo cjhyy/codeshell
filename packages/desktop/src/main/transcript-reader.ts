@@ -7,13 +7,10 @@
  * TranscriptEvent shape: packages/core/src/types.ts:84-90.
  * StreamEvent shapes:     packages/core/src/types.ts:241-271.
  */
+import { sessionsRoot, type ContentBlock } from "@cjhyy/code-shell-core";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import * as os from "node:os";
 import type { FoldItem } from "../preload/types";
-import type { ContentBlock } from "@cjhyy/code-shell-core";
-
-const SESSIONS_DIR = path.join(os.homedir(), ".code-shell", "sessions");
 
 interface TranscriptEvent {
   id: string;
@@ -283,13 +280,14 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
 
 /**
  * Read + convert the transcript for `sessionId`. `baseDir` overridable for
- * tests; defaults to ~/.code-shell/sessions. Returns [] when absent/empty.
+ * tests; defaults to core's CODE_SHELL_HOME-aware sessions root. Returns []
+ * when absent/empty.
  */
 const SAFE_ID = /^[A-Za-z0-9_.-]+$/;
 
 export async function getSessionTranscript(
   sessionId: string,
-  baseDir: string = SESSIONS_DIR,
+  baseDir: string = sessionsRoot(),
 ): Promise<FoldItem[]> {
   if (!SAFE_ID.test(sessionId) || sessionId === "." || sessionId === "..") return [];
   const file = path.join(baseDir, sessionId, "transcript.jsonl");

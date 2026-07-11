@@ -191,7 +191,7 @@ describe("AgentServer agent/forkSession", () => {
     expect(fake.calls).toEqual([
       {
         sourceSessionId: "source",
-        options: { targetSessionId: "target", snapshotMode: "completed" },
+        options: { targetSessionId: "target", snapshotMode: "completed", ephemeral: true },
       },
     ]);
   });
