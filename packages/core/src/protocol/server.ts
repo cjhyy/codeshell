@@ -149,7 +149,8 @@ export class AgentServer {
   /**
    * Last per-session EngineConfigSlice supplied by agent/run. Kept even after
    * idle eviction so background-completion wakeups can rebuild the ChatSession
-   * with the same cwd/permission/trust inputs before draining the queue.
+   * with the same cwd/trust inputs before draining the queue. Per-turn
+   * permission/plan overrides deliberately do not survive into wakeup turns.
    */
   private readonly lastSliceBySession = new Map<string, EngineConfigSlice>();
   /** Lazy disk reader for cold wakeup rehydrate when this process lacks a slice. */
@@ -421,7 +422,6 @@ export class AgentServer {
     const cwd = this.diskSessionReader.readCwd(sessionId);
     if (!cwd) return null;
     return {
-      permissionMode: "default",
       projectTrusted: false,
       cwd,
     };
@@ -530,7 +530,6 @@ export class AgentServer {
     }
 
     const sessionConfig = {
-      permissionMode: params.permissionMode,
       cwd: params.cwd,
       projectTrusted: params.projectTrusted,
       goal:
@@ -587,10 +586,6 @@ export class AgentServer {
       }
     }
 
-    if (typeof params.planMode === "boolean") {
-      session.engine.setPlanMode(params.planMode);
-    }
-
     const sid = params.sessionId;
     this.approvalRouter.register(sid, this.connectionId);
 
@@ -611,6 +606,8 @@ export class AgentServer {
           this.notify(Methods.StreamEvent, { sessionId: sid, event }),
         clientMessageId:
           typeof params.clientMessageId === "string" ? params.clientMessageId : undefined,
+        permissionMode: params.permissionMode,
+        planMode: params.planMode,
       });
 
       const runResult: RunResult = {
