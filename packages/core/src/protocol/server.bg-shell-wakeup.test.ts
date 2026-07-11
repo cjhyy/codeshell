@@ -273,7 +273,30 @@ describe("AgentServer — background shell completion wakes an idle session", ()
     expect(runs.length).toBe(0);
   });
 
-  it("rehydrates an evicted disk-backed session and wakes it with the pending notification", async () => {
+  it("does not rehydrate a closed session when background work finishes afterward", async () => {
+    const sid = "bg-wake-closed-s1";
+    const { engineFactory, runs } = makeRehydratableEngineFactory(true, sid);
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory,
+    });
+    const t = makeTransport();
+    servers.push(new AgentServer({ transport: t.transport, chatManager }));
+
+    const session = chatManager.getOrCreate(sid, { cwd: "/tmp/project-closed" } as never);
+    await session.enqueueTurn("initial user turn", {});
+    await chatManager.close(sid);
+    expect(chatManager.get(sid)).toBeUndefined();
+
+    enqueueShellExit(sid);
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(runs.map((r) => r.task)).toEqual(["initial user turn"]);
+    expect(chatManager.get(sid)).toBeUndefined();
+    expect(notificationQueue.getSnapshot(sid)).toHaveLength(1);
+  });
+
+  it("rehydrates an idle-evicted disk-backed session and wakes it with the pending notification", async () => {
     const sid = "bg-wake-rehydrate-s1";
     const { engineFactory, runs, slices } = makeRehydratableEngineFactory(
       (sessionId) => sessionId === sid,
@@ -282,6 +305,7 @@ describe("AgentServer — background shell completion wakes an idle session", ()
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory,
+      idleTtlMs: 0,
     });
     const t = makeTransport();
     servers.push(new AgentServer({ transport: t.transport, chatManager }));
@@ -302,7 +326,9 @@ describe("AgentServer — background shell completion wakes an idle session", ()
     expect(runs.map((r) => r.task)).toEqual(["initial user turn"]);
     expect(chatManager.get(sid)).toBeDefined();
 
-    chatManager.close(sid);
+    chatManager.get(sid)!.lastActivityAt = Date.now() - 1;
+    chatManager.sweepIdle();
+    await new Promise((r) => setTimeout(r, 0));
     expect(chatManager.get(sid)).toBeUndefined();
 
     enqueueShellExit(sid);

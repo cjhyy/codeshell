@@ -277,6 +277,7 @@ export class AgentServer {
    */
   private maybeWakeIdleSession(sessionId: string): void {
     if (!this.chatManager) return;
+    if (this.chatManager.isUnavailable(sessionId)) return;
     const session = this.chatManager.get(sessionId) ?? this.rehydrateSessionForWake(sessionId);
     if (!session || session.isBusy()) return;
     // Headless / automation runs are one-shot: the caller takes result.text and
@@ -336,6 +337,7 @@ export class AgentServer {
 
   private rehydrateSessionForWake(sessionId: string): ChatSession | null {
     if (!this.chatManager) return null;
+    if (this.chatManager.isUnavailable(sessionId)) return null;
     try {
       const pending = notificationQueue.getSnapshot(sessionId);
       if (pending.length === 0) {
@@ -361,6 +363,9 @@ export class AgentServer {
       }
 
       const session = this.chatManager.getOrCreate(sessionId, slice);
+      // No await occurs between the unavailable guard and getOrCreate, so this
+      // can only be a Promise if a future caller makes the wake path async.
+      if (session instanceof Promise) return null;
       this.wireInteractiveSession(session, sessionId);
       logger.debug("bg_wakeup.rehydrated_session", {
         sessionId,
@@ -438,7 +443,7 @@ export class AgentServer {
         this.handleUnsteer(req);
         break;
       case Methods.CloseSession:
-        this.handleCloseSession(req);
+        await this.handleCloseSession(req);
         break;
       case Methods.ReleaseWorkspace:
         this.handleReleaseWorkspace(req);
@@ -526,7 +531,7 @@ export class AgentServer {
 
     let session;
     try {
-      session = cm.getOrCreate(params.sessionId, sessionConfig);
+      session = await cm.getOrCreate(params.sessionId, sessionConfig);
     } catch (err: any) {
       const code = err.code ?? ErrorCodes.InternalError;
       this.transport.send(createErrorResponse(req.id, code, err.message));
@@ -1044,7 +1049,7 @@ export class AgentServer {
 
   // ─── CloseSession ───────────────────────────────────────────────
 
-  private handleCloseSession(req: RpcRequest): void {
+  private async handleCloseSession(req: RpcRequest): Promise<void> {
     const params = (req.params ?? {}) as unknown as import("./types.js").CloseSessionParams;
     if (typeof params.sessionId !== "string" || params.sessionId.length === 0) {
       this.transport.send(
@@ -1057,13 +1062,14 @@ export class AgentServer {
       if (session) {
         this.cancelSessionApprovals(session, "session closed");
       }
-      this.chatManager.close(params.sessionId);
+      await this.chatManager.close(params.sessionId);
     }
     // Explicit session teardown — reap that session's background shells
     // (design §6 "session 被显式删除 → killSession"). This is the RPC path
     // (agent/closeSession from the host on delete), distinct from the idle
-    // sweeper's chatManager.close() which must NOT kill (§6). Fire-and-forget.
-    void backgroundShellManager.killSession(params.sessionId);
+    // sweeper's idle eviction which must NOT kill (§6). Await teardown so the
+    // close RPC is a real deletion barrier for Desktop.
+    await backgroundShellManager.killSession(params.sessionId);
     // Drop this session's retained background jobs too (#2/#5): finished jobs
     // are kept for the panel, so explicit teardown is where they're released.
     backgroundJobRegistry.dropForSession(params.sessionId);
@@ -1438,6 +1444,16 @@ export class AgentServer {
 
         if (this.chatManager) {
           if (compactSessionId) {
+            if (this.chatManager.isUnavailable(compactSessionId)) {
+              this.transport.send(
+                createErrorResponse(
+                  req.id,
+                  ErrorCodes.SessionClosed,
+                  `Session is closing or closed: ${compactSessionId}`,
+                ),
+              );
+              return;
+            }
             let session = this.chatManager.get(compactSessionId);
             if (!session) {
               const probeEngine = this.anyEngine();
@@ -1452,7 +1468,7 @@ export class AgentServer {
                 return;
               }
               try {
-                session = this.chatManager.getOrCreate(compactSessionId, {
+                session = await this.chatManager.getOrCreate(compactSessionId, {
                   cwd: probeEngine.getSessionManager().readCwd(compactSessionId),
                 } as any);
               } catch (err: any) {
@@ -1876,6 +1892,16 @@ export class AgentServer {
     }
     // In the chatManager path, inject into the session's engine
     if (this.chatManager) {
+      if (this.chatManager.isUnavailable(params.sessionId)) {
+        this.transport.send(
+          createErrorResponse(
+            req.id,
+            ErrorCodes.SessionClosed,
+            `Session is closing or closed: ${params.sessionId}`,
+          ),
+        );
+        return;
+      }
       const s = this.chatManager.get(params.sessionId);
       if (!s) {
         this.transport.send(
@@ -1920,6 +1946,16 @@ export class AgentServer {
       );
       return;
     }
+    if (this.chatManager?.isUnavailable(params.sessionId)) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.SessionClosed,
+          `Session is closing or closed: ${params.sessionId}`,
+        ),
+      );
+      return;
+    }
     const engine = this.chatManager
       ? this.chatManager.get(params.sessionId)?.engine
       : this.legacyEngine;
@@ -1954,6 +1990,16 @@ export class AgentServer {
     if (!params.id || !params.sessionId) {
       this.transport.send(
         createErrorResponse(req.id, ErrorCodes.InvalidParams, "id and sessionId required"),
+      );
+      return;
+    }
+    if (this.chatManager?.isUnavailable(params.sessionId)) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.SessionClosed,
+          `Session is closing or closed: ${params.sessionId}`,
+        ),
       );
       return;
     }

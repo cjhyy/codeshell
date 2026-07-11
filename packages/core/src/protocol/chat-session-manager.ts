@@ -42,6 +42,9 @@ export interface ChatSessionManagerOptions {
 
 export class ChatSessionManager {
   private readonly sessions = new Map<string, ChatSession>();
+  private readonly closingSessions = new Map<string, Promise<void>>();
+  private readonly closedSessions = new Set<string>();
+  private readonly sessionGeneration = new Map<string, number>();
   readonly runtime: EngineRuntime;
   private readonly factory: (slice: EngineConfigSlice) => Engine;
   private readonly maxSessions: number;
@@ -55,7 +58,15 @@ export class ChatSessionManager {
     this.idleTtlMs = opts.idleTtlMs ?? 30 * 60 * 1000;
   }
 
-  getOrCreate(sessionId: string, slice: EngineConfigSlice): ChatSession {
+  getOrCreate(sessionId: string, slice: EngineConfigSlice): ChatSession | Promise<ChatSession> {
+    const closing = this.closingSessions.get(sessionId);
+    if (closing) {
+      return closing.then(() => this.getOrCreateNow(sessionId, slice));
+    }
+    return this.getOrCreateNow(sessionId, slice);
+  }
+
+  private getOrCreateNow(sessionId: string, slice: EngineConfigSlice): ChatSession {
     openSessionPathApprovals(sessionId);
     openInteractiveApprovalSession(sessionId);
     const existing = this.sessions.get(sessionId);
@@ -83,12 +94,30 @@ export class ChatSessionManager {
     }
     const engine = this.factory(slice);
     const session = new ChatSession({ id: sessionId, engine });
+    const sessionManager = this.engineSessionManager(engine);
+    const generation = sessionManager?.registerSessionGeneration(sessionId) ?? 1;
+    this.sessionGeneration.set(sessionId, generation);
     this.sessions.set(sessionId, session);
+    // A direct user run is an explicit resume/open and may clear the tombstone.
+    // Background wakeups must check isUnavailable() before reaching this path.
+    this.closedSessions.delete(sessionId);
     return session;
   }
 
   get(sessionId: string): ChatSession | undefined {
     return this.sessions.get(sessionId);
+  }
+
+  isClosing(sessionId: string): boolean {
+    return this.closingSessions.has(sessionId);
+  }
+
+  isClosed(sessionId: string): boolean {
+    return this.closedSessions.has(sessionId);
+  }
+
+  isUnavailable(sessionId: string): boolean {
+    return this.isClosing(sessionId) || this.isClosed(sessionId);
   }
 
   sessionExistsOnDisk(sessionId: string, slice: EngineConfigSlice): boolean {
@@ -108,16 +137,49 @@ export class ChatSessionManager {
     for (const s of [...this.sessions.values()]) fn(s);
   }
 
-  close(sessionId: string): void {
+  close(sessionId: string): Promise<void> {
+    return this.closeSession(sessionId, true);
+  }
+
+  private closeSession(sessionId: string, markClosed: boolean): Promise<void> {
+    const alreadyClosing = this.closingSessions.get(sessionId);
+    if (alreadyClosing) return alreadyClosing;
     const s = this.sessions.get(sessionId);
-    if (!s) return;
+    if (!s) {
+      if (markClosed) this.closedSessions.add(sessionId);
+      return Promise.resolve();
+    }
+
+    const sessionManager = this.engineSessionManager(s.engine);
+    const generation = this.sessionGeneration.get(sessionId) ?? 0;
+    const invalidated = sessionManager?.incrementSessionGeneration(sessionId) ?? generation + 1;
+    this.sessionGeneration.set(sessionId, invalidated);
     s.cancel();
     clearSessionPathApprovals(sessionId);
     clearInteractiveApprovalSession(sessionId);
     clearCredentialSessionAllow(sessionId);
     clearInjectCredentialSessionAllow(sessionId);
-    this.unregisterMcpOwner(s);
-    this.sessions.delete(sessionId);
+    const finishClose = () => {
+      this.unregisterMcpOwner(s);
+      if (this.sessions.get(sessionId) === s) this.sessions.delete(sessionId);
+      if (markClosed) this.closedSessions.add(sessionId);
+      else this.closedSessions.delete(sessionId);
+      this.sessionGeneration.delete(sessionId);
+    };
+    if (!s.isBusy()) {
+      finishClose();
+      return Promise.resolve();
+    }
+    const closing = (async () => {
+      try {
+        await s.settled;
+        finishClose();
+      } finally {
+        this.closingSessions.delete(sessionId);
+      }
+    })();
+    this.closingSessions.set(sessionId, closing);
+    return closing;
   }
 
   closeAll(): void {
@@ -135,7 +197,7 @@ export class ChatSessionManager {
    * immediately afterward (the TUI REPL) doesn't orphan detached dev servers.
    */
   async closeAllAsync(): Promise<void> {
-    for (const id of [...this.sessions.keys()]) this.close(id);
+    await Promise.all([...this.sessions.keys()].map((id) => this.close(id)));
     // App/worker shutdown — reap every background shell so a detached
     // `npm run dev` doesn't outlive the process as an orphan holding a port
     // (design §6 / §难点1). NOTE: deliberately NOT in close()/sweepIdle() —
@@ -158,7 +220,7 @@ export class ChatSessionManager {
       if (s.lastActivityAt >= cutoff) continue;
       if (s.isBusy()) continue;
       if (backgroundJobRegistry.hasRunningForSession(id)) continue;
-      this.close(id);
+      void this.closeSession(id, false);
     }
   }
 
@@ -187,5 +249,30 @@ export class ChatSessionManager {
         error: err instanceof Error ? err.message : String(err),
       });
     });
+  }
+
+  private engineSessionManager(engine: Engine):
+    | {
+        registerSessionGeneration: (sessionId: string) => number;
+        incrementSessionGeneration: (sessionId: string) => number;
+      }
+    | undefined {
+    const candidate = engine as Engine & {
+      getSessionManager?: () => {
+        registerSessionGeneration?: (sessionId: string) => number;
+        incrementSessionGeneration?: (sessionId: string) => number;
+      };
+    };
+    const manager = candidate.getSessionManager?.();
+    if (
+      typeof manager?.registerSessionGeneration !== "function" ||
+      typeof manager.incrementSessionGeneration !== "function"
+    ) {
+      return undefined;
+    }
+    return manager as {
+      registerSessionGeneration: (sessionId: string) => number;
+      incrementSessionGeneration: (sessionId: string) => number;
+    };
   }
 }
