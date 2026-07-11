@@ -1,6 +1,7 @@
 import type { Engine, EngineResult } from "../engine/engine.js";
 import type { ModelEntry } from "../llm/model-pool.js";
 import type { StreamEvent } from "../types.js";
+import type { PermissionMode } from "../types.js";
 import { isAbortError } from "../llm/client-base.js";
 import type { InputAttachmentMeta } from "./types.js";
 
@@ -26,6 +27,10 @@ export interface TurnOpts {
   clientMessageId?: string;
   /** Structured input attachments for this turn. */
   attachments?: InputAttachmentMeta[];
+  /** Permission mode snapshot for this queued turn only. */
+  permissionMode?: PermissionMode;
+  /** Plan-mode snapshot for this queued turn only. */
+  planMode?: boolean;
 }
 
 interface QueuedTurn {
@@ -236,6 +241,8 @@ export class ChatSession {
         injected: next.opts.injected,
         clientMessageId: next.opts.clientMessageId,
         attachments: next.opts.attachments,
+        permissionMode: next.opts.permissionMode,
+        planMode: next.opts.planMode,
       });
       this.lastActivityAt = Date.now();
       next.resolve(result);

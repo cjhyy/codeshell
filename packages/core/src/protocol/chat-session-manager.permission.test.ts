@@ -1,16 +1,4 @@
-/**
- * Integration test for the #11 SECONDARY fix (permission 档位 backend).
- *
- * Bug: ChatSessionManager.getOrCreate returned an EXISTING session early and
- * dropped slice.permissionMode, so changing the pill on an already-running
- * session was silently ignored at enforcement time — the engine kept whatever
- * mode it was first created with. Fix: re-apply slice.permissionMode (via
- * engine.setPermissionMode, which reconfigures the live backend) when it
- * differs, before returning the cached session.
- *
- * This drives the REAL ChatSessionManager.getOrCreate against a fake engine
- * that records permission-mode reads/writes.
- */
+/** Permission-mode lifecycle and approval cleanup integration coverage. */
 import { afterEach, describe, it, expect } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -93,20 +81,17 @@ afterEach(() => {
   }
 });
 
-describe("ChatSessionManager.getOrCreate re-applies permissionMode (#11)", () => {
-  it("applies a CHANGED permissionMode to an already-created session", () => {
+describe("ChatSessionManager.getOrCreate does not mutate live permission context", () => {
+  it("does not apply a changed per-send mode while reusing a session", () => {
     const { mgr, fakes } = makeManager("default");
-    // First send creates the engine with "default".
     mgr.getOrCreate("s1", { permissionMode: "default" } as EngineConfigSlice);
     expect(fakes).toHaveLength(1);
     expect(fakes[0]!.current()).toBe("default");
 
-    // Pill changed to bypassPermissions, user re-sends in the SAME session.
     mgr.getOrCreate("s1", { permissionMode: "bypassPermissions" } as EngineConfigSlice);
-    // No new engine; the existing one was reconfigured live.
     expect(fakes).toHaveLength(1);
-    expect(fakes[0]!.setCalls).toContain("bypassPermissions");
-    expect(fakes[0]!.current()).toBe("bypassPermissions");
+    expect(fakes[0]!.setCalls).toEqual([]);
+    expect(fakes[0]!.current()).toBe("default");
   });
 
   it("does NOT call setPermissionMode when the mode is unchanged", () => {
@@ -117,17 +102,16 @@ describe("ChatSessionManager.getOrCreate re-applies permissionMode (#11)", () =>
     expect(fakes[0]!.setCalls).toHaveLength(0); // no redundant reconfigure
   });
 
-  it("keeps modes independent across different sessions (no cross-session bleed)", () => {
+  it("does not mutate either engine when different sessions are looked up", () => {
     const { mgr, fakes } = makeManager("default");
     mgr.getOrCreate("s1", { permissionMode: "default" } as EngineConfigSlice);
     mgr.getOrCreate("s2", { permissionMode: "default" } as EngineConfigSlice);
     expect(fakes).toHaveLength(2);
 
-    // Bump only s1 to bypass.
     mgr.getOrCreate("s1", { permissionMode: "bypassPermissions" } as EngineConfigSlice);
-    expect(fakes[0]!.current()).toBe("bypassPermissions");
-    // s2 is untouched — its engine never got a setPermissionMode call.
+    expect(fakes[0]!.current()).toBe("default");
     expect(fakes[1]!.current()).toBe("default");
+    expect(fakes[0]!.setCalls).toHaveLength(0);
     expect(fakes[1]!.setCalls).toHaveLength(0);
   });
 });

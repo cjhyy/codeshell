@@ -182,6 +182,10 @@ interface EngineRunOptions {
   onStream?: StreamCallback;
   signal?: AbortSignal;
   sessionId?: string;
+  /** Immutable permission context for this run only. Omitted uses Engine config. */
+  permissionMode?: NonNullable<EngineConfig["permissionMode"]>;
+  /** Immutable plan context for this run only. Omitted follows permissionMode. */
+  planMode?: boolean;
   /**
    * Goal mode for this run: the engine registers a GoalStopHook so the
    * turn loop runs until the session model judges this goal met. Falls
@@ -385,7 +389,7 @@ export class Engine {
   };
 
   // Live state from the current/most-recent run, retained for /compact and
-  // for live-mutating PermissionClassifier on permission-mode switch.
+  // run-boundary PermissionClassifier replacement/reconfiguration.
   private lastContextManager: ContextManager | undefined;
   private lastMessages: Message[] | undefined;
   private lastSessionId: string | undefined;
@@ -449,6 +453,10 @@ export class Engine {
    * processes; session-level locking/CAS for those cases is a separate finding.
    */
   private runInProgress = false;
+  /** Permission update requested while runInProgress. Applied in run() finally. */
+  private pendingPermissionMode: NonNullable<EngineConfig["permissionMode"]> | null = null;
+  /** Plan update paired with pendingPermissionMode for one atomic boundary apply. */
+  private pendingPlanMode: boolean | null = null;
 
   /** Public accessor so UI/clients can read the resolved per-model window. */
   get maxContextTokens(): number {
@@ -972,11 +980,25 @@ export class Engine {
     try {
       return await this.runExclusive(task, options);
     } finally {
-      this.runInProgress = false;
+      try {
+        this.applyPendingPermissionState();
+      } finally {
+        this.runInProgress = false;
+      }
     }
   }
 
   private async runExclusive(task: string, options?: EngineRunOptions): Promise<EngineResult> {
+    // Freeze permission context once, before the first await. Per-turn protocol
+    // overrides live only for this run; persistent setPermissionMode/setPlanMode
+    // calls made while busy are staged separately and cannot mutate this pair.
+    let runPermissionMode = options?.permissionMode ?? this.config.permissionMode ?? "acceptEdits";
+    if (options?.planMode === true) {
+      runPermissionMode = "plan";
+    } else if (options?.planMode === false && runPermissionMode === "plan") {
+      runPermissionMode = "acceptEdits";
+    }
+    const runPlanMode = runPermissionMode === "plan";
     const workspaceResume =
       options?.sessionId && this.sessionManager.exists(options.sessionId)
         ? await this.sessionManager.resolveSessionWorkspaceForResume(options.sessionId)
@@ -1085,7 +1107,7 @@ export class Engine {
       describe: () => ({
         cwd,
         preset: this.preset.name,
-        permissionMode: this.config.permissionMode ?? "acceptEdits",
+        permissionMode: runPermissionMode,
       }),
       spawn: async (req) => {
         // Anchor this sub-agent in the PARENT transcript at spawn time — before
@@ -1123,7 +1145,7 @@ export class Engine {
           // rather surface failures than burn a 9 s exponential backoff loop.
           clientDefaults: { ...(this.config.clientDefaults ?? {}), retryMaxAttempts: 2 },
           cwd,
-          permissionMode: this.config.permissionMode,
+          permissionMode: runPermissionMode,
           preset: this.preset.name,
           enabledBuiltinTools: childEnabled,
           disabledBuiltinTools: childDisabled,
@@ -1232,6 +1254,8 @@ export class Engine {
     // after the assignment.
     const toolCtx: ToolContext = {
       ...this.buildToolContext(),
+      permissionMode: runPermissionMode,
+      planMode: runPlanMode,
       subAgentSpawner,
       agentDefinitions: this.getAgentDefinitions(cwd),
       // Stamp the resolved network policy onto the backend the tools see so
@@ -1419,7 +1443,7 @@ export class Engine {
         cwd,
         model: this.config.llm.model,
         provider: this.config.llm.provider,
-        permissionMode: this.config.permissionMode ?? "acceptEdits",
+        permissionMode: runPermissionMode,
         resumed: resumedFromDisk,
       });
 
@@ -1549,7 +1573,7 @@ export class Engine {
       // original promise and routes the same error through the lifecycle catch.
       void llmClientPromise.catch(() => {});
 
-      const mode = this.config.permissionMode ?? "acceptEdits";
+      const mode = runPermissionMode;
       const { rules: defaultRules, backend: approvalBackend } = this.buildPermissionConfig(
         mode,
         cwd,
@@ -1735,7 +1759,7 @@ export class Engine {
       // PLAN_MODE_ALLOWED_TOOLS so what the model SEES and what the executor
       // RUNS can't drift apart. (Bash is in the set; the executor additionally
       // gates Bash to read-only commands at call time.)
-      const toolDefs = this.planMode
+      const toolDefs = runPlanMode
         ? allToolDefs.filter((t) => PLAN_MODE_ALLOWED_TOOLS.has(t.name))
         : allToolDefs;
 
@@ -3213,20 +3237,41 @@ export class Engine {
   }
 
   /**
-   * Switch permission mode at runtime. Takes effect immediately for any
-   * in-flight ToolExecutor (which holds a reference to the same classifier),
-   * and the new mode is used for any subsequent run() calls.
+   * Switch permission mode at runtime. Idle updates apply immediately; busy
+   * updates are committed atomically when the current run settles, so its
+   * classifier and ToolContext retain the immutable start-of-run snapshot.
    * Session-only — does not persist to settings.
    */
   setPermissionMode(mode: NonNullable<EngineConfig["permissionMode"]>): void {
+    if (this.runInProgress) {
+      this.pendingPermissionMode = mode;
+      this.pendingPlanMode = mode === "plan";
+      return;
+    }
+    this.applyPermissionState(mode, mode === "plan");
+  }
+
+  private applyPermissionState(
+    mode: NonNullable<EngineConfig["permissionMode"]>,
+    planMode: boolean,
+  ): void {
     this.config = { ...this.config, permissionMode: mode };
     this.permissionMode = mode;
-    this.planMode = mode === "plan";
+    this.planMode = planMode;
     if (this.activePermission) {
       const cwd = this.config.cwd ?? process.cwd();
       const { rules, backend } = this.buildPermissionConfig(mode, cwd);
       this.activePermission.reconfigure(mode, backend, rules);
     }
+  }
+
+  private applyPendingPermissionState(): void {
+    if (this.pendingPermissionMode === null) return;
+    const mode = this.pendingPermissionMode;
+    const planMode = this.pendingPlanMode ?? mode === "plan";
+    this.pendingPermissionMode = null;
+    this.pendingPlanMode = null;
+    this.applyPermissionState(mode, planMode);
   }
 
   getPermissionMode(): NonNullable<EngineConfig["permissionMode"]> {
@@ -3267,11 +3312,9 @@ export class Engine {
   setPlanMode(value: boolean): void {
     if (value) {
       this.setPermissionMode("plan");
-    } else if (this.permissionMode === "plan") {
+    } else if ((this.pendingPermissionMode ?? this.permissionMode) === "plan") {
       // Leaving plan mode: drop back to the default.
       this.setPermissionMode("acceptEdits");
-    } else {
-      this.planMode = value;
     }
   }
 

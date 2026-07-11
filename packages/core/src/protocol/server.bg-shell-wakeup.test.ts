@@ -341,9 +341,11 @@ describe("AgentServer — background shell completion wakes an idle session", ()
     expect(notificationQueue.getSnapshot(sid)).toHaveLength(0);
     expect(slices[slices.length - 1]).toMatchObject({
       cwd: "/tmp/project-a",
-      permissionMode: "bypassPermissions",
       projectTrusted: false,
     });
+    // permissionMode was a one-turn override; the synthetic wakeup must fall
+    // back to the engine factory's global default instead of inheriting it.
+    expect(slices[slices.length - 1]!.permissionMode).toBeUndefined();
   });
 
   it("does not rehydrate or drain when an evicted session is absent from disk", async () => {
