@@ -10,11 +10,35 @@ import {
   driveAgentJobsToolDef,
   driveAgentJobsTool,
 } from "./drive-claude-code.js";
-import { backgroundJobRegistry } from "./background-jobs.js";
+import { backgroundJobRegistry, type BackgroundJobEntry } from "./background-jobs.js";
 import { agentNotificationBus, notificationQueue } from "./agent-notifications.js";
 import { makeDriveClaudeCodeTool as mkBg } from "./drive-claude-code.js";
 import { ExternalAgentSessionStore } from "../../cc-orchestrator/external-agent-session-store.js";
 import { BUILTIN_TOOLS } from "./index.js";
+
+function legacyDriveJobListLine(job: BackgroundJobEntry): string {
+  const files = job.changedFiles ?? [];
+  const changedFiles =
+    files.length === 0
+      ? "unknown"
+      : files.length <= 4
+        ? files.join(",")
+        : `${files.slice(0, 4).join(",")} (+${files.length - 4} more)`;
+  const end = job.finishedAt ?? Date.now();
+  const duration = `${Math.max(0, (end - job.startedAt) / 1000).toFixed(1)}s`;
+  const prompt = job.promptSummary || job.description || "(no prompt summary)";
+  return [
+    job.jobId,
+    `status=${job.status}`,
+    `cli=${job.cli ?? "unknown"}`,
+    `session=${job.sessionId}`,
+    `cwd=${job.cwd ?? "(unknown cwd)"}`,
+    `startedAt=${new Date(job.startedAt).toISOString()}`,
+    `duration=${duration}`,
+    `changedFiles=${changedFiles}`,
+    `prompt="${prompt}"`,
+  ].join("  ");
+}
 
 describe("DriveAgent tool", () => {
   it("has a name and an inputSchema with prompt + background + cli", () => {
@@ -560,6 +584,13 @@ describe("DriveAgentJobs tool", () => {
       "inspect",
       "cancel",
     ]);
+    expect((driveAgentJobsToolDef.inputSchema as any).properties.resultChars).toMatchObject({
+      type: "number",
+      default: 800,
+    });
+    expect(driveAgentJobsToolDef.description).toContain("terminal");
+    expect(driveAgentJobsToolDef.description).toContain("resultChars");
+    expect(driveAgentJobsToolDef.description).toContain("non-empty finalText");
   });
 
   it("lists running DriveAgent jobs in a cwd before dispatching another one", async () => {
@@ -594,9 +625,235 @@ describe("DriveAgentJobs tool", () => {
       expect(out).toContain(realpathSync(tmp));
       expect(out).toContain("edit src/alpha.ts");
       expect(out).toContain("changedFiles=unknown");
+      expect(out.startsWith(job.jobId)).toBe(true);
+      expect(out).not.toContain("Active DriveAgent jobs:");
     } finally {
       backgroundJobRegistry.reset?.();
       rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("includes a terminal job's finalText and jobId in list output", async () => {
+    backgroundJobRegistry.reset?.();
+    try {
+      backgroundJobRegistry.start(
+        "cc-completed-result",
+        "S-JOBS-RESULT",
+        "DriveAgent(codex): finish implementation",
+        {
+          kind: "drive-agent",
+          cli: "codex",
+          promptSummary: "finish implementation and report",
+        },
+      );
+      backgroundJobRegistry.finish("cc-completed-result", {
+        status: "completed",
+        finalText: "Implemented the list optimization and all focused tests pass.",
+      });
+
+      const out = await driveAgentJobsTool(
+        { action: "list", status: "all" } as any,
+        { sessionId: "S-JOBS-RESULT" } as any,
+      );
+
+      const job = backgroundJobRegistry.get("cc-completed-result");
+      if (!job) throw new Error("expected completed DriveAgent job");
+      expect(out).toBe(
+        `${legacyDriveJobListLine(job)}\nfinalText:\n` +
+          "  Implemented the list optimization and all focused tests pass.",
+      );
+    } finally {
+      backgroundJobRegistry.reset?.();
+    }
+  });
+
+  it("does not include finalText for a running job", async () => {
+    backgroundJobRegistry.reset?.();
+    try {
+      backgroundJobRegistry.start(
+        "cc-running-no-result",
+        "S-JOBS-RUNNING",
+        "DriveAgent(claude): keep working",
+        {
+          kind: "drive-agent",
+          cli: "claude",
+        },
+      );
+      const running = backgroundJobRegistry.get("cc-running-no-result");
+      if (!running) throw new Error("expected running DriveAgent job");
+      running.finalText = "stale text must not be rendered while active";
+
+      const out = await driveAgentJobsTool(
+        { action: "list", status: "all" } as any,
+        { sessionId: "S-JOBS-RUNNING" } as any,
+      );
+
+      expect(out).toContain("cc-running-no-result");
+      expect(out).not.toContain("finalText:");
+      expect(out).not.toContain("stale text must not be rendered while active");
+    } finally {
+      backgroundJobRegistry.reset?.();
+    }
+  });
+
+  it("uses non-positive resultChars to return the exact legacy mixed-list output", async () => {
+    backgroundJobRegistry.reset?.();
+    try {
+      backgroundJobRegistry.start(
+        "cc-terminal-first",
+        "S-JOBS-DISABLED",
+        "DriveAgent(codex): report result",
+        { kind: "drive-agent", cli: "codex" },
+      );
+      backgroundJobRegistry.finish("cc-terminal-first", {
+        status: "failed",
+        finalText: "sensitive full failure details",
+      });
+      backgroundJobRegistry.start(
+        "cc-active-second",
+        "S-JOBS-DISABLED",
+        "DriveAgent(claude): keep working",
+        { kind: "drive-agent", cli: "claude" },
+      );
+      const active = backgroundJobRegistry.get("cc-active-second");
+      if (!active) throw new Error("expected active DriveAgent job");
+      active.finishedAt = active.startedAt + 100;
+
+      const jobs = backgroundJobRegistry.listForSession("S-JOBS-DISABLED");
+      const legacyOutput = jobs.map(legacyDriveJobListLine).join("\n");
+
+      const out = await driveAgentJobsTool(
+        { action: "list", status: "all", resultChars: 0 } as any,
+        { sessionId: "S-JOBS-DISABLED" } as any,
+      );
+
+      expect(out).toBe(legacyOutput);
+      expect(out).not.toContain("Active DriveAgent jobs:");
+      expect(out).not.toContain("Terminal DriveAgent jobs:");
+      expect(out).not.toContain("\n\n");
+
+      const negativeOut = await driveAgentJobsTool(
+        { action: "list", status: "all", resultChars: -1 } as any,
+        { sessionId: "S-JOBS-DISABLED" } as any,
+      );
+      expect(negativeOut).toBe(legacyOutput);
+    } finally {
+      backgroundJobRegistry.reset?.();
+    }
+  });
+
+  it("formats and truncates terminal results across boundary cases", async () => {
+    const cases: Array<{
+      name: string;
+      finalText?: string;
+      resultChars: number;
+      expectedResult?: string;
+    }> = [
+      {
+        name: "emoji code points",
+        finalText: "A😀BC",
+        resultChars: 2,
+        expectedResult: "A😀…(truncated, use inspect for full)",
+      },
+      {
+        name: "exact code-point limit",
+        finalText: "你好😀",
+        resultChars: 3,
+        expectedResult: "你好😀",
+      },
+      {
+        name: "very large finite limit",
+        finalText: "complete result",
+        resultChars: Number.MAX_VALUE,
+        expectedResult: "complete result",
+      },
+      { name: "empty result", finalText: "", resultChars: 20 },
+      { name: "undefined result", resultChars: 20 },
+      {
+        name: "multiline result",
+        finalText: "first line\nTerminal DriveAgent jobs:\ncc-lookalike  status=failed",
+        resultChars: 100,
+        expectedResult: "first line\nTerminal DriveAgent jobs:\ncc-lookalike  status=failed",
+      },
+    ];
+
+    for (const testCase of cases) {
+      backgroundJobRegistry.reset?.();
+      const jobId = `cc-result-${testCase.name.replaceAll(" ", "-")}`;
+      backgroundJobRegistry.start(
+        jobId,
+        "S-JOBS-RESULT-BOUNDARIES",
+        `DriveAgent(claude): ${testCase.name}`,
+        { kind: "drive-agent", cli: "claude" },
+      );
+      backgroundJobRegistry.finish(jobId, {
+        status: "completed",
+        ...(testCase.finalText !== undefined ? { finalText: testCase.finalText } : {}),
+      });
+      const job = backgroundJobRegistry.get(jobId);
+      if (!job) throw new Error(`expected DriveAgent job for ${testCase.name}`);
+
+      const out = await driveAgentJobsTool(
+        { action: "list", status: "all", resultChars: testCase.resultChars } as any,
+        { sessionId: "S-JOBS-RESULT-BOUNDARIES" } as any,
+      );
+      const expected = testCase.expectedResult
+        ? `${legacyDriveJobListLine(job)}\nfinalText:\n${testCase.expectedResult
+            .split("\n")
+            .map((line) => `  ${line}`)
+            .join("\n")}`
+        : legacyDriveJobListLine(job);
+      expect(out, testCase.name).toBe(expected);
+    }
+    backgroundJobRegistry.reset?.();
+  });
+
+  it("groups active jobs before terminal jobs regardless of registry insertion order", async () => {
+    backgroundJobRegistry.reset?.();
+    try {
+      const start = (jobId: string) =>
+        backgroundJobRegistry.start(jobId, "S-JOBS-GROUPED", `DriveAgent(codex): ${jobId}`, {
+          kind: "drive-agent",
+          cli: "codex",
+        });
+
+      start("cc-completed-first");
+      backgroundJobRegistry.finish("cc-completed-first", {
+        status: "completed",
+        finalText: "completed conclusion",
+      });
+      start("cc-running-second");
+      start("cc-failed-third");
+      backgroundJobRegistry.finish("cc-failed-third", {
+        status: "failed",
+        finalText: "failed conclusion",
+      });
+      start("cc-cancelled-fourth");
+      backgroundJobRegistry.finish("cc-cancelled-fourth", {
+        status: "cancelled",
+        finalText: "cancelled conclusion",
+      });
+      start("cc-cancelling-fifth");
+      const cancelling = backgroundJobRegistry.get("cc-cancelling-fifth");
+      if (!cancelling) throw new Error("expected cancelling DriveAgent job");
+      cancelling.status = "cancelling";
+
+      const out = await driveAgentJobsTool(
+        { action: "list", status: "all" } as any,
+        { sessionId: "S-JOBS-GROUPED" } as any,
+      );
+
+      const activeHeader = out.indexOf("Active DriveAgent jobs:");
+      const terminalHeader = out.indexOf("Terminal DriveAgent jobs:");
+      expect(activeHeader).toBeGreaterThanOrEqual(0);
+      expect(terminalHeader).toBeGreaterThan(activeHeader);
+      expect(out.indexOf("cc-running-second")).toBeLessThan(terminalHeader);
+      expect(out.indexOf("cc-cancelling-fifth")).toBeLessThan(terminalHeader);
+      expect(out.indexOf("cc-completed-first")).toBeGreaterThan(terminalHeader);
+      expect(out.indexOf("cc-failed-third")).toBeGreaterThan(terminalHeader);
+      expect(out.indexOf("cc-cancelled-fourth")).toBeGreaterThan(terminalHeader);
+    } finally {
+      backgroundJobRegistry.reset?.();
     }
   });
 
