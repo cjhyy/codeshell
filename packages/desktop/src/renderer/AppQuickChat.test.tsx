@@ -658,6 +658,34 @@ describe("App quick-chat integration", () => {
     expect(chatProps?.busy).toBe(true);
   });
 
+  test("restores busy from the authoritative marker after the start event was evicted", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [],
+      subscribeSession: async () => ({
+        events: [{ seq: 20, event: { type: "text_delta", text: "still working" } }],
+        nextSeq: 21,
+        topLevelRunning: true,
+      }),
+    });
+
+    expect(chatProps?.busy).toBe(true);
+  });
+
+  test("keeps idle when the authoritative marker overrides an unterminated start", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [],
+      subscribeSession: async () => ({
+        events: [{ seq: 1, event: { type: "session_started", sessionId: "engine-a" } }],
+        nextSeq: 2,
+        topLevelRunning: false,
+      }),
+    });
+
+    expect(chatProps?.busy).toBe(false);
+  });
+
   test("keeps busy after a streaming tombstone while the top-level turn is unfinished", async () => {
     await mountApp({
       withNormalSession: true,

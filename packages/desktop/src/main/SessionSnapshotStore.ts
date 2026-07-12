@@ -27,12 +27,16 @@ export interface Snapshot {
   events: SnapshotEntry[];
   /** The seq the next appended event will receive (cursor for the client). */
   nextSeq: number;
+  /** Authoritative top-level run state, retained independently of event eviction. */
+  topLevelRunning: boolean;
 }
 
 interface SessionLog {
   events: SnapshotEntry[];
   /** Next seq to assign — keeps climbing across eviction, never reused. */
   nextSeq: number;
+  /** Current top-level run state from the complete worker event stream. */
+  topLevelRunning: boolean;
 }
 
 const DEFAULT_MAX_PER_SESSION = 2000;
@@ -49,8 +53,16 @@ export class SessionSnapshotStore {
   append(sessionId: string, event: unknown): SnapshotEntry {
     let log = this.logs.get(sessionId);
     if (!log) {
-      log = { events: [], nextSeq: 1 };
+      log = { events: [], nextSeq: 1, topLevelRunning: false };
       this.logs.set(sessionId, log);
+    }
+    const lifecycle = event as { type?: unknown; agentId?: unknown } | null;
+    if (lifecycle && !lifecycle.agentId) {
+      if (lifecycle.type === "session_started" || lifecycle.type === "stream_request_start") {
+        log.topLevelRunning = true;
+      } else if (lifecycle.type === "turn_complete" || lifecycle.type === "error") {
+        log.topLevelRunning = false;
+      }
     }
     const entry = { seq: log.nextSeq, event };
     log.events.push(entry);
@@ -67,18 +79,21 @@ export class SessionSnapshotStore {
    */
   get(sessionId: string, sinceSeq = 0): Snapshot {
     const log = this.logs.get(sessionId);
-    if (!log) return { events: [], nextSeq: 1 };
+    if (!log) return { events: [], nextSeq: 1, topLevelRunning: false };
     const events = sinceSeq > 0 ? log.events.filter((e) => e.seq > sinceSeq) : log.events.slice();
-    return { events, nextSeq: log.nextSeq };
+    return { events, nextSeq: log.nextSeq, topLevelRunning: log.topLevelRunning };
   }
 
   /**
-   * Worker exited. Intentionally a no-op on the snapshots: the worker exits
-   * cleanly after every run and may respawn to resume the same session, so
-   * snapshots belong to the session lifecycle, not the worker's.
+   * A worker exited. Retain replay events, but mark only sessions owned by
+   * that worker idle. Other producers (for example in-main automation) share
+   * this store and must keep their independent run state.
    */
-  onWorkerExit(): void {
-    /* snapshots intentionally retained */
+  onWorkerExit(ownedSessionIds: Iterable<string>): void {
+    for (const sessionId of ownedSessionIds) {
+      const log = this.logs.get(sessionId);
+      if (log) log.topLevelRunning = false;
+    }
   }
 
   /** Drop a single session's snapshot (e.g. when the session is deleted). */

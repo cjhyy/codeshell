@@ -208,6 +208,8 @@ export interface SnapshotEntry {
 export interface SessionSnapshot {
   events: SnapshotEntry[];
   nextSeq: number;
+  /** Main-authoritative top-level run state. Missing on legacy snapshots. */
+  topLevelRunning?: boolean;
 }
 
 /**

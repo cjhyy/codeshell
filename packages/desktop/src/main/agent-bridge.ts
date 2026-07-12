@@ -238,6 +238,7 @@ export class AgentBridge {
       this.safeSend("agent:lifecycle", { type: "gave_up" });
       return;
     }
+    const workerSnapshotSessionIds = new Set<string>();
     const rl = createInterface({ input: this.child.stdout });
     rl.on("line", (line) => {
       if (!line.trim()) return;
@@ -268,6 +269,7 @@ export class AgentBridge {
       // Mirror stream events into the per-session snapshot so a remounted
       // renderer can replay what it missed. Non-streamEvent lines yield null.
       const append = parseSnapshotAppend(line);
+      if (append) workerSnapshotSessionIds.add(append.sessionId);
       const snapshotEntry = append
         ? { sessionId: append.sessionId, ...this.snapshots.append(append.sessionId, append.event) }
         : undefined;
@@ -312,7 +314,7 @@ export class AgentBridge {
       this.child = null;
       this.outbox = [];
       this.failPendingQuickChatForks();
-      this.snapshots.onWorkerExit();
+      this.snapshots.onWorkerExit(workerSnapshotSessionIds);
       this.safeSend("agent:lifecycle", { type: "gave_up" });
     });
     this.child.on("exit", (code, signal) => {
@@ -325,7 +327,7 @@ export class AgentBridge {
       this.failPendingQuickChatForks();
       // Snapshots intentionally survive worker exit — a respawn may resume the
       // same session, and a remounted renderer still needs to replay them.
-      this.snapshots.onWorkerExit();
+      this.snapshots.onWorkerExit(workerSnapshotSessionIds);
       if (code === 0 && signal === null) {
         // Normal completion. Reset restart counter — clean exits don't count.
         this.restartCount = 0;

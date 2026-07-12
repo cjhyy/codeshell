@@ -30,6 +30,8 @@ export function selectReplayEvents(snapshot: SessionSnapshot, appliedSeq: number
 
 /** Whether the retained snapshot ends inside an unfinished top-level turn. */
 export function snapshotHasUnfinishedTopLevelTurn(snapshot: SessionSnapshot): boolean {
+  if (typeof snapshot.topLevelRunning === "boolean") return snapshot.topLevelRunning;
+
   let running = false;
   for (const entry of snapshot.events) {
     const event = entry.event as { type?: unknown; agentId?: unknown };

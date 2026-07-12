@@ -3777,6 +3777,7 @@ ipcMain.handle("agent:subscribe", async (_e, sessionId: string, sinceSeq?: numbe
     bridge?.getSnapshot(sessionId, typeof sinceSeq === "number" ? sinceSeq : 0) ?? {
       events: [],
       nextSeq: 1,
+      topLevelRunning: false,
     }
   );
 });

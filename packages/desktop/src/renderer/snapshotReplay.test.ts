@@ -9,11 +9,11 @@
  * SessionSnapshotStore (live StreamEvents have no stable id).
  */
 import { describe, it, expect } from "bun:test";
-import { selectReplayEvents } from "./snapshotReplay";
+import { selectReplayEvents, snapshotHasUnfinishedTopLevelTurn } from "./snapshotReplay";
 import type { SessionSnapshot } from "../preload/types";
 
 const snap = (events: Array<{ seq: number; event: unknown }>, nextSeq: number): SessionSnapshot =>
-  ({ events, nextSeq } as unknown as SessionSnapshot);
+  ({ events, nextSeq }) as unknown as SessionSnapshot;
 
 describe("selectReplayEvents", () => {
   it("replays the whole snapshot when nothing has been applied (fresh remount)", () => {
@@ -71,5 +71,41 @@ describe("selectReplayEvents", () => {
     // Both are past the cursor; cursor advances to the highest seq seen.
     expect(events.length).toBe(2);
     expect(cursor).toBe(4);
+  });
+});
+
+describe("snapshotHasUnfinishedTopLevelTurn", () => {
+  it("stays running when the authoritative marker is true after the start was evicted", () => {
+    const s = {
+      events: [{ seq: 20, event: { type: "text_delta", text: "still working" } }],
+      nextSeq: 21,
+      topLevelRunning: true,
+    } as unknown as SessionSnapshot;
+
+    expect(snapshotHasUnfinishedTopLevelTurn(s)).toBe(true);
+  });
+
+  it("is idle when the authoritative marker is false despite a retained start without terminal", () => {
+    const s = {
+      events: [{ seq: 1, event: { type: "session_started", sessionId: "s1" } }],
+      nextSeq: 2,
+      topLevelRunning: false,
+    } as unknown as SessionSnapshot;
+
+    expect(snapshotHasUnfinishedTopLevelTurn(s)).toBe(false);
+  });
+
+  it("falls back to lifecycle inference for old snapshots without the marker", () => {
+    const running = snap([{ seq: 1, event: { type: "stream_request_start" } }], 2);
+    const idle = snap(
+      [
+        { seq: 1, event: { type: "session_started" } },
+        { seq: 2, event: { type: "turn_complete" } },
+      ],
+      3,
+    );
+
+    expect(snapshotHasUnfinishedTopLevelTurn(running)).toBe(true);
+    expect(snapshotHasUnfinishedTopLevelTurn(idle)).toBe(false);
   });
 });

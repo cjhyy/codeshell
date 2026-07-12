@@ -68,10 +68,46 @@ describe("SessionSnapshotStore", () => {
     expect(snap.nextSeq).toBe(6);
   });
 
+  it("keeps top-level running authoritative after the start event is evicted", () => {
+    const store = new SessionSnapshotStore({ maxPerSession: 2 });
+    store.append("s1", { type: "session_started" });
+    store.append("s1", { type: "text_delta", text: "a" });
+    store.append("s1", { type: "text_delta", text: "b" });
+
+    const snap = store.get("s1");
+    expect(snap.events.map((e) => (e.event as { type: string }).type)).toEqual([
+      "text_delta",
+      "text_delta",
+    ]);
+    expect(snap.topLevelRunning).toBe(true);
+  });
+
+  it("marks retained unfinished starts idle when the worker exits", () => {
+    const store = new SessionSnapshotStore();
+    store.append("s1", { type: "session_started" });
+    store.onWorkerExit(["s1"]);
+
+    expect(store.get("s1").topLevelRunning).toBe(false);
+  });
+
+  it("clears only worker-owned running sessions when automation is also running", () => {
+    const store = new SessionSnapshotStore();
+    store.append("automation-1", { type: "session_started" });
+    store.append("worker-1", { type: "session_started" });
+
+    expect(store.get("automation-1").topLevelRunning).toBe(true);
+    expect(store.get("worker-1").topLevelRunning).toBe(true);
+
+    store.onWorkerExit(["worker-1"]);
+
+    expect(store.get("automation-1").topLevelRunning).toBe(true);
+    expect(store.get("worker-1").topLevelRunning).toBe(false);
+  });
+
   it("does NOT clear a session's snapshot on worker exit (snapshot outlives worker)", () => {
     const store = new SessionSnapshotStore();
     store.append("s1", { type: "text_delta", text: "a" });
-    store.onWorkerExit(); // clean exit after a run — must not wipe snapshots
+    store.onWorkerExit(["s1"]); // clean exit after a run — must not wipe snapshots
     expect(store.get("s1").events.length).toBe(1);
   });
 
