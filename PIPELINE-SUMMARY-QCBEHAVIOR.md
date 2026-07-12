@@ -228,3 +228,65 @@ Desktop wiring/UI/lifecycle：
 - 没有新增独立权限枚举或第二套 permission controller；`quickChatRestricted` 只是组合现有 plan snapshot、通用 allowlist gate 和 PromptComposer 注入的命名 per-run profile。
 - 未做 Electron 端到端截图测试；UI 由真实组件 SSR 测试验证“受限访问/完全访问”两种状态，App integration 验证状态与发送到 core 的参数一致。
 - 无 merge、push 或分支切换。
+
+## 路线调整：硬限制→prompt 引导
+
+本节取代上文“已关闭缺口”“偏离与未决”中关于 quick-chat 五工具白名单、executor gate、强制 plan 和“切换徽标才解除限制”的旧结论；上文保留为此前实现与复审过程的历史记录。
+
+### 改动面判断
+
+- 快聊专用硬限制只通过 `RunBehaviorMode` 接线到 `ToolContext.toolAllowlist`：Engine 用同一集合裁剪模型可见工具，ToolExecutor 在 handler 前拒绝集合外调用。该 run-scoped 字段没有其他产品路径复用。
+- 子代理角色自己的 `SubAgentSpawnRequest.toolAllowlist` 是另一条独立能力链，仍由 agent definition 和 child Engine 使用，本次没有删除或改动。
+- quick-chat 行为提示已有 `PromptComposer.appendSystemPrompt` 注入点，可直接保留 per-run profile 传递而无需改变 sandbox、approval 或普通 permission controller。
+- 旧 UI 将 quick chat 强制初始化为 `plan`，并把 plan 文案覆盖为“受限访问”；App 也只在 plan 时发送 behavior profile。因此徽标同时承担了硬限制开关，和新的“如实显示当前权限/审批模式”语义不符。
+
+### TDD 证据
+
+- 红灯先行：改写测试后得到 `20 pass / 6 fail`。失败分别证明 Engine 仍注入旧提示并裁剪工具、App 仍把两个快聊强制设为 plan、普通 plan 文案仍被覆盖为“受限访问”。
+- 绿灯核心/UI 集：`26 pass / 0 fail / 136 expect()`，覆盖 side boundary prompt、Write/Edit/Bash/Agent 可见、明确编辑请求仍保留 prompt、真实 permission pill 往返、第二个快聊和主线程不受影响、QuickChatPanel 真实接线。
+
+### 实现与 commit
+
+- `1366c0e0` — `refactor(quickchat): replace hard tool gate with prompt guidance`
+  - 删除 `QUICK_CHAT_RESTRICTED_TOOLS`、`ToolContext.toolAllowlist`、Engine tool-definition filter 和 ToolExecutor run-scoped execution gate。
+  - 删除仅验证该硬 gate 的 `tool-allowlist-execution-gate.test.ts`；子代理通用 allowlist 保持原样。
+  - side prompt 改为明确的 `Side Conversation Boundary`：边界前历史只作参考，不主动续做旧计划；默认直接回答和轻量只读探索；除非用户在边界后明确要求，否则不改文件/git/配置/权限；不创建或调用子代理。
+  - quick chat 在 default、accept edits、bypass 和 plan 下都发送该 prompt。prompt 只作行为引导，不改变模型工具集、sandbox 或 approval；用户明确要求修改时可正常使用当前权限允许的 Write/Edit/Bash 等工具。
+  - 新快聊继承并固定打开时主会话的真实 permission mode；pill 之后只改变该 quick-chat bucket 的真实审批模式，不污染主线程或第二个快聊。
+  - 移除 quick-chat 的“受限访问”标签覆盖和 `PermissionPill.labelKeyOverrides` 死接口，侧聊与主线程统一显示“计划模式/默认权限/接受编辑/完全访问权限”等真实状态。
+
+改动文件：
+
+- `packages/core/src/engine/engine.ts`
+- `packages/core/src/engine/run-types.ts`
+- `packages/core/src/tool-system/context.ts`
+- `packages/core/src/tool-system/executor.ts`
+- `packages/core/src/engine/engine.quick-chat-restricted.test.ts`
+- `packages/core/src/tool-system/__tests__/tool-allowlist-execution-gate.test.ts`（删除）
+- `packages/desktop/src/renderer/App.tsx`
+- `packages/desktop/src/renderer/AppQuickChat.test.tsx`
+- `packages/desktop/src/renderer/ChatView.tsx`
+- `packages/desktop/src/renderer/ChatView.composer-variant.test.tsx`
+- `packages/desktop/src/renderer/chat/PermissionPill.tsx`
+- `packages/desktop/src/renderer/i18n/ns/panels.ts`
+- `packages/desktop/src/renderer/panels/QuickChatPanel.test.tsx`
+
+### 正交能力保留与验证
+
+- ephemeral durable-memory 隔离保留：restricted/guided 轮次和显式高权限轮次都不运行 dream memory、session summary 或 auto-dream 持久化管线。
+- 语音/转写/附件迟到隔离、creation nonce/claim 串行清理、共享主 Composer、侧聊模型/草稿/附件 bucket 隔离、side fork 快照和 GC 安全均未撤销。
+- 隔离回归：`158 pass / 0 fail / 495 expect()`；覆盖 ephemeral memory、session side fork、录音/附件 lifecycle、ownership、override persistence、App/ChatView/QuickChatPanel。
+- protocol + behavior + memory 回归：`112 pass / 0 fail / 336 expect()`。
+- `bun run --filter '@cjhyy/code-shell-core' build`：通过。
+- `bun run --filter '@cjhyy/code-shell-desktop' typecheck`：通过。
+- `bun test 2>&1 | tail -5`（实际以 `pipefail + tee` 保留完整日志）：
+
+  ```text
+  5847 pass
+  6 skip
+  0 fail
+  14401 expect() calls
+  Ran 5853 tests across 833 files. [73.78s]
+  ```
+
+`ExternalAgentSessionStore concurrent writers` 预存基线失败本次未复现；没有新增失败。未 merge、push 或切换分支。
