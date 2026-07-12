@@ -1,16 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Folder, FolderPlus, Search, X, Check } from "lucide-react";
-import { repoLabel, type Repo } from "../repos";
+import { projectLabel, type TrackedProject } from "../projects";
 import { useAnchoredPopover } from "./useAnchoredPopover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useT } from "../i18n/I18nProvider";
 
 interface Props {
-  repos: Repo[];
-  activeRepoId: string | null;
+  projects: TrackedProject[];
+  activeProjectId: string | null;
   onSelect: (id: string | null) => void;
-  onAddRepo: () => void;
+  onAddProject: () => void;
   disabled?: boolean;
 }
 
@@ -26,7 +26,13 @@ interface Props {
  *
  * Mirrors the project-switcher reference screenshot.
  */
-export function ProjectPicker({ repos, activeRepoId, onSelect, onAddRepo, disabled }: Props) {
+export function ProjectPicker({
+  projects,
+  activeProjectId,
+  onSelect,
+  onAddProject,
+  disabled,
+}: Props) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("");
@@ -58,16 +64,18 @@ export function ProjectPicker({ repos, activeRepoId, onSelect, onAddRepo, disabl
 
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    if (!q) return repos;
-    return repos.filter((r) => repoLabel(r).toLowerCase().includes(q) || r.path.toLowerCase().includes(q));
-  }, [repos, filter]);
+    if (!q) return projects;
+    return projects.filter(
+      (project) =>
+        projectLabel(project).toLowerCase().includes(q) || project.path.toLowerCase().includes(q),
+    );
+  }, [projects, filter]);
 
-  const active = repos.find((r) => r.id === activeRepoId) ?? null;
-  const triggerLabel = active ? repoLabel(active) : t("chat.project.none");
+  const active = projects.find((project) => project.id === activeProjectId) ?? null;
+  const triggerLabel = active ? projectLabel(active) : t("chat.project.none");
 
   const itemCls = (active: boolean) =>
-    "cs-menu-item flex cursor-pointer gap-2 px-2 py-1.5 text-sm " +
-    (active ? "bg-accent" : "");
+    "cs-menu-item flex cursor-pointer gap-2 px-2 py-1.5 text-sm " + (active ? "bg-accent" : "");
 
   return (
     <div className="relative" ref={wrapRef}>
@@ -86,11 +94,7 @@ export function ProjectPicker({ repos, activeRepoId, onSelect, onAddRepo, disabl
       </Button>
 
       {open && (
-        <div
-          ref={popoverRef}
-          style={popoverStyle}
-          className="cs-popup-surface w-64 rounded-md p-1"
-        >
+        <div ref={popoverRef} style={popoverStyle} className="cs-popup-surface w-64 rounded-md p-1">
           <div className="flex items-center gap-1.5 border-b border-border px-2 py-1.5">
             <Search size={12} className="opacity-50" />
             <Input
@@ -101,7 +105,13 @@ export function ProjectPicker({ repos, activeRepoId, onSelect, onAddRepo, disabl
               onChange={(e) => setFilter(e.target.value)}
             />
             {filter && (
-              <Button variant="ghost" size="icon" className="h-6 w-6 opacity-50 hover:opacity-100" onClick={() => setFilter("")} aria-label={t("chat.project.clearAria")}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 opacity-50 hover:opacity-100"
+                onClick={() => setFilter("")}
+                aria-label={t("chat.project.clearAria")}
+              >
                 <X size={12} />
               </Button>
             )}
@@ -109,18 +119,23 @@ export function ProjectPicker({ repos, activeRepoId, onSelect, onAddRepo, disabl
 
           <ul className="max-h-64 overflow-y-auto py-1">
             {filtered.length === 0 && (
-              <li className="px-2 py-1.5 text-sm text-muted-foreground">{t("chat.project.noMatch")}</li>
+              <li className="px-2 py-1.5 text-sm text-muted-foreground">
+                {t("chat.project.noMatch")}
+              </li>
             )}
-            {filtered.map((r) => {
-              const isActive = r.id === activeRepoId;
+            {filtered.map((project) => {
+              const isActive = project.id === activeProjectId;
               return (
                 <li
-                  key={r.id}
+                  key={project.id}
                   className={itemCls(isActive)}
-                  onClick={() => { onSelect(r.id); setOpen(false); }}
+                  onClick={() => {
+                    onSelect(project.id);
+                    setOpen(false);
+                  }}
                 >
                   <Folder size={12} className="opacity-60" />
-                  <span className="flex-1 truncate">{repoLabel(r)}</span>
+                  <span className="flex-1 truncate">{projectLabel(project)}</span>
                   {isActive && <Check size={12} className="text-primary" />}
                 </li>
               );
@@ -130,17 +145,26 @@ export function ProjectPicker({ repos, activeRepoId, onSelect, onAddRepo, disabl
           <div className="my-1 h-px bg-border" />
 
           <ul className="py-1">
-            <li className={itemCls(false)} onClick={() => { onAddRepo(); setOpen(false); }}>
+            <li
+              className={itemCls(false)}
+              onClick={() => {
+                onAddProject();
+                setOpen(false);
+              }}
+            >
               <FolderPlus size={12} className="opacity-60" />
               <span className="flex-1 truncate">{t("chat.project.addNew")}</span>
             </li>
             <li
-              className={itemCls(activeRepoId === null)}
-              onClick={() => { onSelect(null); setOpen(false); }}
+              className={itemCls(activeProjectId === null)}
+              onClick={() => {
+                onSelect(null);
+                setOpen(false);
+              }}
             >
               <Folder size={12} className="opacity-60" />
               <span className="flex-1 truncate">{t("chat.project.none")}</span>
-              {activeRepoId === null && <Check size={12} className="text-primary" />}
+              {activeProjectId === null && <Check size={12} className="text-primary" />}
             </li>
           </ul>
         </div>

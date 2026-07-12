@@ -10,6 +10,7 @@ import {
   type Repo,
 } from "./repos";
 import {
+  adaptLegacyRepo,
   loadActiveProjectId,
   loadProjects,
   loadRemovedProjectPaths,
@@ -67,6 +68,28 @@ describe("canonical project persistence compatibility", () => {
     expect(loadProjects()).toEqual(projects);
     expect(loadActiveProjectId()).toBe("stable-project-id");
     expect(loadRemovedProjectPaths()).toEqual(["/work/removed"]);
+  });
+
+  it("adapts every legacy Repo field into the canonical TrackedProject shape", () => {
+    const legacyRepo: Repo = {
+      id: "stable-project-id",
+      name: "code-shell",
+      path: "/work/code-shell",
+      addedAt: 123,
+      displayName: "CodeShell",
+      pinned: true,
+    };
+
+    const project: TrackedProject = adaptLegacyRepo(legacyRepo);
+
+    expect(project).toEqual({
+      id: "stable-project-id",
+      name: "code-shell",
+      path: "/work/code-shell",
+      addedAt: 123,
+      displayName: "CodeShell",
+      pinned: true,
+    });
   });
 
   it("writes only legacy keys with the unchanged JSON shape", () => {

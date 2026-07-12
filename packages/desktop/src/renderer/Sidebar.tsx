@@ -23,30 +23,30 @@ import { copyText } from "./lib/clipboard";
 import { SettingsMenu } from "./settings/SettingsMenu";
 import { SidebarUpdaterButton } from "./updater/UpdaterBanner";
 import type { ViewMode } from "./view";
-import { repoLabel, sortRepos, type Repo } from "./repos";
+import { projectLabel, sortProjects, type TrackedProject } from "./projects";
 import { NO_REPO_KEY, bucketKey, type SessionIndex, type SessionSummary } from "./transcripts";
 import type { SessionStatus } from "./sessionStatus";
 import { useT } from "./i18n";
 
 interface SidebarProps {
-  repos: Repo[];
+  projects: TrackedProject[];
   sessions: Record<string, SessionIndex>;
-  activeRepoId: string | null;
+  activeProjectId: string | null;
   activeSessionId: string | null;
-  collapsedRepos: Set<string>;
+  collapsedProjects: Set<string>;
   /** Per-bucket status mark, keyed by the shared bucketKey(repoId, sessionId). */
   sessionStatuses?: Record<string, SessionStatus>;
   sidebarCollapsed?: boolean;
 
-  onSelectRepo: (id: string | null) => void;
-  onSelectSession: (repoId: string | null, sessionId: string) => void;
-  onToggleRepo: (id: string) => void;
-  onAddRepo: () => void;
-  onRemoveRepo: (id: string) => void;
-  onPinRepo: (id: string, pinned: boolean) => void;
-  onRenameRepo: (id: string, name: string) => void;
+  onSelectProject: (id: string | null) => void;
+  onSelectSession: (projectId: string | null, sessionId: string) => void;
+  onToggleProject: (id: string) => void;
+  onAddProject: () => void;
+  onRemoveProject: (id: string) => void;
+  onPinProject: (id: string, pinned: boolean) => void;
+  onRenameProject: (id: string, name: string) => void;
   onArchiveAllSessions: (id: string) => void;
-  onNewConversationForRepo: (id: string | null) => void;
+  onNewConversationForProject: (id: string | null) => void;
 
   onNewConversation: () => void;
   onOpenSearch: () => void;
@@ -55,37 +55,37 @@ interface SidebarProps {
   onOpenCredentials: () => void;
   onOpenSettingsPage: () => void;
 
-  onRenameSession: (repoId: string | null, sessionId: string, title: string) => void;
-  onArchiveSession: (repoId: string | null, sessionId: string, archived: boolean) => void;
-  onDeleteSession: (repoId: string | null, sessionId: string) => void;
+  onRenameSession: (projectId: string | null, sessionId: string, title: string) => void;
+  onArchiveSession: (projectId: string | null, sessionId: string, archived: boolean) => void;
+  onDeleteSession: (projectId: string | null, sessionId: string) => void;
 
-  activeRepoPath: string | null;
+  activeProjectPath: string | null;
   viewMode: ViewMode;
 }
 
 const COMPACT_SESSION_LIMIT = 5;
 
 type MenuTarget =
-  | { kind: "repo"; x: number; y: number; repo: Repo }
-  | { kind: "session"; x: number; y: number; repoId: string | null; session: SessionSummary };
+  | { kind: "project"; x: number; y: number; project: TrackedProject }
+  | { kind: "session"; x: number; y: number; projectId: string | null; session: SessionSummary };
 
 export function Sidebar({
-  repos,
+  projects,
   sessions,
-  activeRepoId,
+  activeProjectId,
   activeSessionId,
-  collapsedRepos,
+  collapsedProjects,
   sessionStatuses,
   sidebarCollapsed,
-  onSelectRepo,
+  onSelectProject,
   onSelectSession,
-  onToggleRepo,
-  onAddRepo,
-  onRemoveRepo,
-  onPinRepo,
-  onRenameRepo,
+  onToggleProject,
+  onAddProject,
+  onRemoveProject,
+  onPinProject,
+  onRenameProject,
   onArchiveAllSessions,
-  onNewConversationForRepo,
+  onNewConversationForProject,
   onNewConversation,
   onOpenSearch,
   onOpenAutomations,
@@ -95,7 +95,6 @@ export function Sidebar({
   onRenameSession,
   onArchiveSession,
   onDeleteSession,
-  activeRepoPath,
   viewMode,
 }: SidebarProps) {
   const { t } = useT();
@@ -105,21 +104,23 @@ export function Sidebar({
   const prompt = usePrompt();
   const toast = useToast();
 
-  // Pin sort (sortRepos: pinned first, then by addedAt asc).
-  const orderedRepos = useMemo(() => sortRepos(repos), [repos]);
+  // Pin sort (sortProjects: pinned first, then by addedAt asc).
+  const orderedProjects = useMemo(() => sortProjects(projects), [projects]);
 
   // No-repo conversations live under the bottom 对话 section.
   const noRepoIndex = sessions[NO_REPO_KEY];
   const noRepoSessions = noRepoIndex?.sessions.filter((s) => !s.archived) ?? [];
 
-  const repoMenu = (repo: Repo): ContextMenuItem[] => [
+  const projectMenu = (project: TrackedProject): ContextMenuItem[] => [
     {
-      label: repo.pinned ? t("sidebar.unpinProject") : t("sidebar.pinProject"),
-      onClick: () => onPinRepo(repo.id, !repo.pinned),
+      label: project.pinned ? t("sidebar.unpinProject") : t("sidebar.pinProject"),
+      onClick: () => onPinProject(project.id, !project.pinned),
     },
     {
       label: t("sidebar.revealInFinder"),
-      onClick: () => { void window.codeshell.revealInFinder(repo.path); },
+      onClick: () => {
+        void window.codeshell.revealInFinder(project.path);
+      },
     },
     {
       label: t("sidebar.renameProject"),
@@ -127,26 +128,26 @@ export function Sidebar({
         void prompt({
           title: t("sidebar.renameProjectTitle"),
           message: t("sidebar.renameProjectMessage"),
-          defaultValue: repoLabel(repo),
+          defaultValue: projectLabel(project),
         }).then((next) => {
-          if (next !== null && next.trim()) onRenameRepo(repo.id, next.trim());
+          if (next !== null && next.trim()) onRenameProject(project.id, next.trim());
         });
       },
     },
     {
       label: t("sidebar.archiveConversations"),
       onClick: () => {
-        const live = sessions[repo.id]?.sessions.filter((s) => !s.archived).length ?? 0;
+        const live = sessions[project.id]?.sessions.filter((s) => !s.archived).length ?? 0;
         if (live === 0) return;
         void confirm({
           title: t("sidebar.archiveConversationsTitle"),
           message: t("sidebar.archiveConversationsMessage", {
-            name: truncateTitle(repoLabel(repo), 24),
+            name: truncateTitle(projectLabel(project), 24),
             count: live,
           }),
           confirmLabel: t("common.archive"),
         }).then((ok) => {
-          if (ok) onArchiveAllSessions(repo.id);
+          if (ok) onArchiveAllSessions(project.id);
         });
       },
     },
@@ -156,18 +157,20 @@ export function Sidebar({
       onClick: () => {
         void confirm({
           title: t("sidebar.removeProjectTitle"),
-          message: t("sidebar.removeProjectMessage", { name: truncateTitle(repoLabel(repo), 24) }),
+          message: t("sidebar.removeProjectMessage", {
+            name: truncateTitle(projectLabel(project), 24),
+          }),
           detail: t("sidebar.removeProjectDetail"),
           confirmLabel: t("common.remove"),
           destructive: true,
         }).then((ok) => {
-          if (ok) onRemoveRepo(repo.id);
+          if (ok) onRemoveProject(project.id);
         });
       },
     },
   ];
 
-  const sessionMenu = (repoId: string | null, s: SessionSummary): ContextMenuItem[] => [
+  const sessionMenu = (projectId: string | null, s: SessionSummary): ContextMenuItem[] => [
     {
       label: t("sidebar.renameSession"),
       onClick: () => {
@@ -176,7 +179,7 @@ export function Sidebar({
           message: t("sidebar.renameSessionMessage"),
           defaultValue: s.title,
         }).then((next) => {
-          if (next !== null && next.trim()) onRenameSession(repoId, s.id, next.trim());
+          if (next !== null && next.trim()) onRenameSession(projectId, s.id, next.trim());
         });
       },
     },
@@ -192,8 +195,8 @@ export function Sidebar({
       },
     },
     s.archived
-      ? { label: t("common.restore"), onClick: () => onArchiveSession(repoId, s.id, false) }
-      : { label: t("common.archive"), onClick: () => onArchiveSession(repoId, s.id, true) },
+      ? { label: t("common.restore"), onClick: () => onArchiveSession(projectId, s.id, false) }
+      : { label: t("common.archive"), onClick: () => onArchiveSession(projectId, s.id, true) },
     {
       label: t("sidebar.deleteSession"),
       danger: true,
@@ -204,7 +207,7 @@ export function Sidebar({
           confirmLabel: t("common.delete"),
           destructive: true,
         }).then((ok) => {
-          if (ok) onDeleteSession(repoId, s.id);
+          if (ok) onDeleteSession(projectId, s.id);
         });
       },
     },
@@ -213,8 +216,18 @@ export function Sidebar({
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-card/40">
       <nav className="flex flex-col gap-0.5 p-2">
-        <SidebarItem label={t("sidebar.newConversation")} Icon={MessageSquare} onClick={onNewConversation} active={false} />
-        <SidebarItem label={t("sidebar.search")} Icon={Search} onClick={onOpenSearch} active={false} />
+        <SidebarItem
+          label={t("sidebar.newConversation")}
+          Icon={MessageSquare}
+          onClick={onNewConversation}
+          active={false}
+        />
+        <SidebarItem
+          label={t("sidebar.search")}
+          Icon={Search}
+          onClick={onOpenSearch}
+          active={false}
+        />
         <SidebarItem
           label={t("sidebar.extensions")}
           Icon={Blocks}
@@ -241,11 +254,13 @@ export function Sidebar({
 
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center justify-between px-3 py-2">
-          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("sidebar.projects")}</span>
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {t("sidebar.projects")}
+          </span>
           <button
             type="button"
             className="text-muted-foreground hover:text-foreground"
-            onClick={onAddRepo}
+            onClick={onAddProject}
             aria-label={t("sidebar.addProject")}
             title={t("sidebar.addProject")}
           >
@@ -254,44 +269,56 @@ export function Sidebar({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-2">
-          {orderedRepos.length === 0 && noRepoSessions.length === 0 && (
+          {orderedProjects.length === 0 && noRepoSessions.length === 0 && (
             <div className="px-2 py-3 text-xs text-muted-foreground">{t("sidebar.emptyHint")}</div>
           )}
-          {orderedRepos.map((repo) => (
+          {orderedProjects.map((project) => (
             <ProjectGroup
-              key={repo.id}
-              repo={repo}
-              index={sessions[repo.id]}
-              collapsed={collapsedRepos.has(repo.id)}
-              isActiveRepo={activeRepoId === repo.id}
+              key={project.id}
+              project={project}
+              index={sessions[project.id]}
+              collapsed={collapsedProjects.has(project.id)}
+              isActiveProject={activeProjectId === project.id}
               activeSessionId={activeSessionId}
-              statusFor={(sid) => sessionStatuses?.[bucketKey(repo.id, sid)]}
-              onToggle={() => onToggleRepo(repo.id)}
-              onSelectRepo={() => onSelectRepo(repo.id)}
-              onSelectSession={(sid) => onSelectSession(repo.id, sid)}
-              onMenuClick={(x, y) => setMenu({ kind: "repo", x, y, repo })}
-              onNewChat={() => onNewConversationForRepo(repo.id)}
-              onRepoContextMenu={(e) => {
+              statusFor={(sid) => sessionStatuses?.[bucketKey(project.id, sid)]}
+              onToggle={() => onToggleProject(project.id)}
+              onSelectProject={() => onSelectProject(project.id)}
+              onSelectSession={(sid) => onSelectSession(project.id, sid)}
+              onMenuClick={(x, y) => setMenu({ kind: "project", x, y, project })}
+              onNewChat={() => onNewConversationForProject(project.id)}
+              onProjectContextMenu={(e) => {
                 e.preventDefault();
-                setMenu({ kind: "repo", x: e.clientX, y: e.clientY, repo });
+                setMenu({ kind: "project", x: e.clientX, y: e.clientY, project });
               }}
               onSessionContextMenu={(e, s) => {
                 e.preventDefault();
-                setMenu({ kind: "session", x: e.clientX, y: e.clientY, repoId: repo.id, session: s });
+                setMenu({
+                  kind: "session",
+                  x: e.clientX,
+                  y: e.clientY,
+                  projectId: project.id,
+                  session: s,
+                });
               }}
-              onArchiveSession={(sid) => onArchiveSession(repo.id, sid, true)}
+              onArchiveSession={(sid) => onArchiveSession(project.id, sid, true)}
             />
           ))}
 
           {noRepoSessions.length > 0 && (
             <NoRepoSection
               sessions={noRepoSessions}
-              activeSessionId={activeRepoId === null ? activeSessionId : null}
+              activeSessionId={activeProjectId === null ? activeSessionId : null}
               statusFor={(sid) => sessionStatuses?.[bucketKey(null, sid)]}
               onSelectSession={(sid) => onSelectSession(null, sid)}
               onSessionContextMenu={(e, s) => {
                 e.preventDefault();
-                setMenu({ kind: "session", x: e.clientX, y: e.clientY, repoId: null, session: s });
+                setMenu({
+                  kind: "session",
+                  x: e.clientX,
+                  y: e.clientY,
+                  projectId: null,
+                  session: s,
+                });
               }}
               onArchiveSession={(sid) => onArchiveSession(null, sid, true)}
             />
@@ -302,7 +329,10 @@ export function Sidebar({
       <div className="border-t border-border p-2">
         <div className="flex items-center gap-1.5">
           <div className="min-w-0 flex-1">
-            <SettingsMenu onOpenSettingsPage={onOpenSettingsPage} sidebarCollapsed={sidebarCollapsed} />
+            <SettingsMenu
+              onOpenSettingsPage={onOpenSettingsPage}
+              sidebarCollapsed={sidebarCollapsed}
+            />
           </div>
           <SidebarUpdaterButton />
         </div>
@@ -314,9 +344,9 @@ export function Sidebar({
           y={menu.y}
           onClose={closeMenu}
           items={
-            menu.kind === "repo"
-              ? repoMenu(menu.repo)
-              : sessionMenu(menu.repoId, menu.session)
+            menu.kind === "project"
+              ? projectMenu(menu.project)
+              : sessionMenu(menu.projectId, menu.session)
           }
         />
       )}
@@ -353,33 +383,33 @@ function SidebarItem({
 }
 
 function ProjectGroup({
-  repo,
+  project,
   index,
   collapsed,
-  isActiveRepo,
+  isActiveProject,
   activeSessionId,
   statusFor,
   onToggle,
-  onSelectRepo,
+  onSelectProject,
   onSelectSession,
   onMenuClick,
   onNewChat,
-  onRepoContextMenu,
+  onProjectContextMenu,
   onSessionContextMenu,
   onArchiveSession,
 }: {
-  repo: Repo;
+  project: TrackedProject;
   index: SessionIndex | undefined;
   collapsed: boolean;
-  isActiveRepo: boolean;
+  isActiveProject: boolean;
   activeSessionId: string | null;
   statusFor: (sid: string) => SessionStatus | undefined;
   onToggle: () => void;
-  onSelectRepo: () => void;
+  onSelectProject: () => void;
   onSelectSession: (sid: string) => void;
   onMenuClick: (x: number, y: number) => void;
   onNewChat: () => void;
-  onRepoContextMenu: (e: React.MouseEvent) => void;
+  onProjectContextMenu: (e: React.MouseEvent) => void;
   onSessionContextMenu: (e: React.MouseEvent, s: SessionSummary) => void;
   onArchiveSession: (sid: string) => void;
 }) {
@@ -400,21 +430,25 @@ function ProjectGroup({
       <div
         className={
           "group flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-sm " +
-          (isActiveRepo ? "bg-accent" : "hover:bg-accent/60")
+          (isActiveProject ? "bg-accent" : "hover:bg-accent/60")
         }
         onClick={() => {
-          onSelectRepo();
+          onSelectProject();
           onToggle();
         }}
-        onContextMenu={onRepoContextMenu}
+        onContextMenu={onProjectContextMenu}
       >
         {collapsed ? (
           <Folder size={13} className="shrink-0 text-muted-foreground" />
         ) : (
           <FolderOpen size={13} className="shrink-0 text-muted-foreground" />
         )}
-        <span className="flex-1 truncate font-medium">{repoLabel(repo)}</span>
-        {repo.pinned && <span className="text-primary" title={t("sidebar.pinned")}>·</span>}
+        <span className="flex-1 truncate font-medium">{projectLabel(project)}</span>
+        {project.pinned && (
+          <span className="text-primary" title={t("sidebar.pinned")}>
+            ·
+          </span>
+        )}
         <span className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
           <button
             className="rounded p-0.5 text-muted-foreground hover:bg-background hover:text-foreground"
@@ -430,8 +464,8 @@ function ProjectGroup({
           </button>
           <button
             className="rounded p-0.5 text-muted-foreground hover:bg-background hover:text-foreground"
-            aria-label={t("sidebar.newChatIn", { name: repoLabel(repo) })}
-            title={t("sidebar.newChatIn", { name: repoLabel(repo) })}
+            aria-label={t("sidebar.newChatIn", { name: projectLabel(project) })}
+            title={t("sidebar.newChatIn", { name: projectLabel(project) })}
             onClick={(e) => {
               e.stopPropagation();
               onNewChat();
@@ -450,9 +484,9 @@ function ProjectGroup({
                 <SessionRow
                   key={s.id}
                   s={s}
-                  isActive={isActiveRepo && activeSessionId === s.id}
+                  isActive={isActiveProject && activeSessionId === s.id}
                   status={statusFor(s.id)}
-                  showKbd={isActiveRepo && i < 5}
+                  showKbd={isActiveProject && i < 5}
                   kbdIndex={i + 1}
                   onClick={() => onSelectSession(s.id)}
                   onContextMenu={(e) => onSessionContextMenu(e, s)}
@@ -500,7 +534,9 @@ function NoRepoSection({
   if (sessions.length === 0) return null;
   return (
     <div className="mt-2">
-      <div className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("sidebar.conversations")}</div>
+      <div className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {t("sidebar.conversations")}
+      </div>
       <ul className="space-y-0.5">
         {sessions.map((s) => (
           <SessionRow
@@ -583,7 +619,10 @@ function SessionRow({
       title={s.title}
     >
       {s.source === "automation" && (
-        <Clock className="h-3 w-3 shrink-0 text-muted-foreground" aria-label={t("sidebar.automationLabel")} />
+        <Clock
+          className="h-3 w-3 shrink-0 text-muted-foreground"
+          aria-label={t("sidebar.automationLabel")}
+        />
       )}
       <span className="flex-1 truncate">{s.title}</span>
       {status === "running" ? (
@@ -619,9 +658,13 @@ function SessionRow({
             {/* Shortcut / relative-time badge sits in normal flow and defines
                 the slot width. */}
             {showKbd ? (
-              <kbd className="rounded bg-muted px-1 text-[10px] text-muted-foreground">⌘{kbdIndex}</kbd>
+              <kbd className="rounded bg-muted px-1 text-[10px] text-muted-foreground">
+                ⌘{kbdIndex}
+              </kbd>
             ) : (
-              <span className="text-[10px] text-muted-foreground">{formatRelative(s.updatedAt)}</span>
+              <span className="text-[10px] text-muted-foreground">
+                {formatRelative(s.updatedAt)}
+              </span>
             )}
             {/* Archive action overlays the badge on hover (absolute, right-
                 anchored) so it covers the shortcut instead of pushing it. */}

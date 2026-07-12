@@ -26,10 +26,37 @@ import {
 } from "./repos";
 
 export type ProjectId = string;
-export type TrackedProject = Repo;
+
+/** Canonical renderer model for a project tracked in the sidebar. */
+export interface TrackedProject {
+  /** Stable project id. Persisted as the legacy `id` JSON field for compatibility. */
+  id: ProjectId;
+  /** Default name derived from the path basename when first added. */
+  name: string;
+  /** Absolute canonical project path. */
+  path: string;
+  addedAt: number;
+  /** User-set rename, which wins over `name` in project UI. */
+  displayName?: string;
+  /** Pinned projects render before unpinned projects. */
+  pinned?: boolean;
+}
+
 export interface ReconciledProjects {
   projects: TrackedProject[];
   projectIdRemap: Record<ProjectId, ProjectId>;
+}
+
+/** Convert a value read through the legacy Repo API into the canonical project model. */
+export function adaptLegacyRepo(repo: Repo): TrackedProject {
+  return {
+    id: repo.id,
+    name: repo.name,
+    path: repo.path,
+    addedAt: repo.addedAt,
+    displayName: repo.displayName,
+    pinned: repo.pinned,
+  };
 }
 
 export const loadProjects = loadRepos;

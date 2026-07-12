@@ -82,21 +82,21 @@ import type {
   StreamEventEnvelope,
 } from "../preload/types";
 import {
-  loadRepos,
-  saveRepos,
-  loadActiveRepoId,
-  saveActiveRepoId,
-  makeRepoId,
-  isRepoPathRemoved,
-  markRepoPathRemoved,
-  unmarkRepoPathRemoved,
-  makeCreateRepoForCwd,
-  reconcileReposFromDisk,
-  reconcileReposFromDiskWithRemap,
-  repoLabel,
-  sortRepos,
-  type Repo,
-} from "./repos";
+  loadProjects,
+  saveProjects,
+  loadActiveProjectId,
+  saveActiveProjectId,
+  makeProjectId,
+  isProjectPathRemoved,
+  markProjectPathRemoved,
+  unmarkProjectPathRemoved,
+  makeCreateProjectForCwd,
+  reconcileProjectsFromDisk,
+  reconcileProjectsFromDiskWithRemap,
+  projectLabel,
+  sortProjects,
+  type TrackedProject,
+} from "./projects";
 import { importAutomationRuns, type ImportableRun } from "./automation/importRuns";
 import { foldTranscript } from "./automation/foldTranscript";
 import { chooseHydrateBase } from "./automation/hydrateOrder";
@@ -379,8 +379,10 @@ function App() {
   // session. Cleared when the user selects the bucket (handleSelectSession).
   // Not persisted — purely a live "did something finish off-screen" hint.
   const [unreadBuckets, setUnreadBuckets] = useState<Set<string>>(() => new Set());
-  const [repos, setRepos] = useState<Repo[]>(() => loadRepos());
-  const [activeRepoId, setActiveRepoId] = useState<string | null>(() => loadActiveRepoId());
+  const [projects, setProjects] = useState<TrackedProject[]>(() => loadProjects());
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(() =>
+    loadActiveProjectId(),
+  );
   const [view, setView] = useState<ViewState>(() => loadView());
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -422,7 +424,7 @@ function App() {
     loadOverrideMap<boolean>("goal"),
   );
   const [settingsRevision, setSettingsRevision] = useState(0);
-  const [collapsedRepos, setCollapsedRepos] = useState<Set<string>>(new Set());
+  const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
   /** Transient: a run to pre-select when jumping into the runs view (e.g. from
    *  the 自动化 detail's 「查看最近运行」 button). Not persisted in view state. */
   const [runsInitialRunId, setRunsInitialRunId] = useState<string | null>(null);
@@ -430,13 +432,16 @@ function App() {
   // Session indices per repo (keyed by repoKey).
   const [sessionIndices, setSessionIndices] = useState<Record<string, SessionIndex>>(() => {
     const out: Record<string, SessionIndex> = {};
-    const liveRepos = loadRepos();
-    for (const r of liveRepos) out[r.id] = loadSessionIndex(r.id);
+    const liveProjects = loadProjects();
+    for (const project of liveProjects) out[project.id] = loadSessionIndex(project.id);
     out[GLOBAL_KEY] = loadSessionIndex(null);
     // Re-surface deleted projects' all-archived indices so 设置→高级→已归档
     // still lists them (under their original name) after a restart — App only
-    // seeds from live repos above, which a removed project is no longer in.
-    Object.assign(out, loadDeletedArchivedIndices(new Set(liveRepos.map((r) => r.id))));
+    // seeds from live projects above, which a removed project is no longer in.
+    Object.assign(
+      out,
+      loadDeletedArchivedIndices(new Set(liveProjects.map((project) => project.id))),
+    );
     return out;
   });
 
@@ -455,9 +460,9 @@ function App() {
     return sessionId;
   };
 
-  const activeRepoKey = repoKeyOf(activeRepoId);
+  const activeRepoKey = repoKeyOf(activeProjectId);
   const activeSessionId = sessionIndices[activeRepoKey]?.activeSessionId ?? null;
-  const activeBucket = bucketKey(activeRepoId, activeSessionId);
+  const activeBucket = bucketKey(activeProjectId, activeSessionId);
   const permissionMode = permissionOverrides[activeBucket] ?? defaultPermissionMode;
   // The model shown/used for the ACTIVE session: its own override if it has
   // one, else the global default. Drafts share the per-repo "_none_" bucket.
@@ -515,7 +520,7 @@ function App() {
   // chip shows it and the wire payload carries it. Reads bytes via IPC.
   const attachImageByPath = async (absPath: string): Promise<void> => {
     const dataUrl = await window.codeshell.readImageDataUrl(absPath, {
-      cwd: activeRepo?.path ?? undefined,
+      cwd: activeProject?.path ?? undefined,
     });
     if (!dataUrl) {
       window.codeshell.log("attach.path.not_image", { path: absPath });
@@ -601,9 +606,9 @@ function App() {
   const coalescerSeqRef = useRef<Map<string, number>>(new Map());
   const permissionModeRef = useRef<PermissionMode | null>(permissionMode);
   /**
-   * Repo keys already probed for a disk rebuild this session. Guards against an
+   * Legacy repo keys already probed for a disk rebuild this session. Guards against an
    * infinite re-scan: the rebuild effect depends on `sessionIndices` and calls
-   * `setSessionIndices`, so when a disk page maps only into OTHER repos the
+   * `setSessionIndices`, so when a disk page maps only into OTHER projects the
    * active repo's index stays empty → the effect would re-run and re-scan disk
    * on every render. Probing each active repo at most once breaks that loop.
    */
@@ -617,10 +622,10 @@ function App() {
    */
   const permissionForBucketRef = useRef<(bucket: string) => PermissionMode | null>(() => null);
   const defaultPermissionModeRef = useRef<PermissionMode | null>(null);
-  const activeRepo = repos.find((r) => r.id === activeRepoId) ?? null;
+  const activeProject = projects.find((project) => project.id === activeProjectId) ?? null;
 
   function prepareAttachmentSession(): { cwd: string; sessionId: string } | null {
-    const cwd = activeRepo?.path ?? noRepoCwdRef.current;
+    const cwd = activeProject?.path ?? noRepoCwdRef.current;
     if (!cwd) return null;
     if (activeSessionId) {
       const sessionId = resolveAttachmentSessionId(
@@ -630,7 +635,7 @@ function App() {
       if (sessionId) return { cwd, sessionId };
     }
 
-    const repoId = activeRepoId;
+    const repoId = activeProjectId;
     const draftBucket = bucketKey(repoId, null);
     const { index, sessionId } = createSession(repoId);
     const nextBucket = bucketKey(repoId, sessionId);
@@ -728,8 +733,8 @@ function App() {
   }, [approvalQueue, sessionIndices, busyKeys, unreadBuckets]);
 
   useEffect(() => {
-    saveRepos(repos);
-  }, [repos]);
+    saveProjects(projects);
+  }, [projects]);
   useEffect(() => {
     let cancelled = false;
     void window.codeshell
@@ -756,17 +761,17 @@ function App() {
       projects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>,
     ): void => {
       if (!alive) return;
-      setRepos((prev) => reconcileReposFromDisk(projects, prev));
+      setProjects((prev) => reconcileProjectsFromDisk(projects, prev));
     };
     void (async () => {
-      // Back-fill: legacy repos live only in the localStorage cache and were
+      // Back-fill: legacy projects live only in the localStorage cache and were
       // never written to disk. Push any cached path missing from disk so disk
       // becomes a complete source of truth (no project silently disappears on
       // the first run after this change). Soft-deleted ones stay deleted because
       // pushRecent un-deletes only on explicit re-add, and we skip removed paths.
       const disk = await window.codeshell.projects.list();
       const onDisk = new Set(disk.map((p) => p.path));
-      const cached = loadRepos();
+      const cached = loadProjects();
       const normalizedCached = await Promise.all(
         cached.map(async (r) => {
           try {
@@ -779,7 +784,7 @@ function App() {
       );
       const seenMissing = new Set<string>();
       const missing = normalizedCached.filter((r) => {
-        if (onDisk.has(r.path) || isRepoPathRemoved(r.path) || seenMissing.has(r.path))
+        if (onDisk.has(r.path) || isProjectPathRemoved(r.path) || seenMissing.has(r.path))
           return false;
         seenMissing.add(r.path);
         return true;
@@ -793,23 +798,23 @@ function App() {
               return window.codeshell.projects.list();
             })()
           : disk;
-      const { repos: reconciled, repoIdRemap } = reconcileReposFromDiskWithRemap(
+      const { projects: reconciled, projectIdRemap } = reconcileProjectsFromDiskWithRemap(
         latestDisk,
         normalizedCached,
       );
-      const remapEntries = Object.entries(repoIdRemap);
+      const remapEntries = Object.entries(projectIdRemap);
       const migratedRepoIds = new Set<string>();
       for (const [fromRepoId, toRepoId] of remapEntries) {
         migrateRepoSessionBucket(fromRepoId, toRepoId);
         migratedRepoIds.add(toRepoId);
       }
       if (!alive) return;
-      setRepos(reconciled);
+      setProjects(reconciled);
       if (remapEntries.length > 0) {
-        setActiveRepoId((prev) => (prev && repoIdRemap[prev] ? repoIdRemap[prev] : prev));
-        setPermissionOverrides((prev) => migrateRepoBucketOverrides(prev, repoIdRemap));
-        setModelOverrides((prev) => migrateRepoBucketOverrides(prev, repoIdRemap));
-        setGoalOverrides((prev) => migrateRepoBucketOverrides(prev, repoIdRemap));
+        setActiveProjectId((prev) => (prev && projectIdRemap[prev] ? projectIdRemap[prev] : prev));
+        setPermissionOverrides((prev) => migrateRepoBucketOverrides(prev, projectIdRemap));
+        setModelOverrides((prev) => migrateRepoBucketOverrides(prev, projectIdRemap));
+        setGoalOverrides((prev) => migrateRepoBucketOverrides(prev, projectIdRemap));
         setSessionIndices((prev) => {
           const next = { ...prev };
           for (const [fromRepoId] of remapEntries) delete next[fromRepoId];
@@ -828,14 +833,14 @@ function App() {
   }, []);
   useEffect(() => {
     void window.codeshell.mobileRemote.updateProjects(
-      sortRepos(repos).map((r) => ({
-        path: r.path,
-        name: repoLabel(r),
-        addedAt: r.addedAt,
-        pinned: Boolean(r.pinned),
+      sortProjects(projects).map((project) => ({
+        path: project.path,
+        name: projectLabel(project),
+        addedAt: project.addedAt,
+        pinned: Boolean(project.pinned),
       })),
     );
-  }, [repos]);
+  }, [projects]);
   useEffect(() => {
     const entries: MobilePermissionModeSnapshotEntry[] = [];
     const seen = new Set<string>();
@@ -861,8 +866,8 @@ function App() {
       );
   }, [sessionIndices, permissionOverrides, defaultPermissionMode]);
   useEffect(() => {
-    saveActiveRepoId(activeRepoId);
-  }, [activeRepoId]);
+    saveActiveProjectId(activeProjectId);
+  }, [activeProjectId]);
   useEffect(() => {
     saveView(view);
   }, [view]);
@@ -939,14 +944,14 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
-    if (!activeRepo?.path) {
+    if (!activeProject?.path) {
       setActiveGitMeta({ branch: null, clean: null });
       return () => {
         cancelled = true;
       };
     }
     void window.codeshell
-      .getGitStatus(activeRepo.path)
+      .getGitStatus(activeProject.path)
       .then((status) => {
         if (!cancelled) {
           setActiveGitMeta({
@@ -961,7 +966,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [activeRepo?.path, busy]);
+  }, [activeProject?.path, busy]);
 
   // No auto-create here: a null activeSessionId is the legitimate
   // "draft" state. A real session row only appears after the user
@@ -981,7 +986,7 @@ function App() {
   useEffect(() => {
     if (!activeSessionId) return;
     if (transcripts[activeBucket]) return;
-    const local = loadTranscript(activeRepoId, activeSessionId);
+    const local = loadTranscript(activeProjectId, activeSessionId);
     const summary = sessionIndices[activeRepoKey]?.sessions.find((s) => s.id === activeSessionId);
     const engineId = summary?.engineSessionId;
     const bucket = activeBucket;
@@ -1061,7 +1066,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [activeBucket, activeRepoId, activeSessionId, activeRepoKey, sessionIndices, transcripts]);
+  }, [activeBucket, activeProjectId, activeSessionId, activeRepoKey, sessionIndices, transcripts]);
 
   // Persist active transcript (debounced).
   useEffect(() => {
@@ -1069,10 +1074,10 @@ function App() {
     const handle = setTimeout(() => {
       const s = transcripts[activeBucket];
       if (!s) return;
-      saveTranscript(activeRepoId, activeSessionId, s);
+      saveTranscript(activeProjectId, activeSessionId, s);
     }, 600);
     return () => clearTimeout(handle);
-  }, [transcripts, activeBucket, activeRepoId, activeSessionId]);
+  }, [transcripts, activeBucket, activeProjectId, activeSessionId]);
 
   // Display state for the active bucket. Prefer the hydrated reducer state; if
   // this bucket hasn't been hydrated yet (just switched to it), fall back to the
@@ -1085,7 +1090,7 @@ function App() {
   // bucket so we don't re-read localStorage on unrelated renders.
   const fallbackState = useMemo<MessagesReducerState>(() => {
     if (!activeSessionId) return INITIAL_STATE;
-    const local = loadTranscript(activeRepoId, activeSessionId);
+    const local = loadTranscript(activeProjectId, activeSessionId);
     return local.messages.length > 0 ? local : INITIAL_STATE;
     // activeBucket captures (repoId, sessionId); recomputing per-bucket is the intent.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1137,25 +1142,25 @@ function App() {
     });
   };
 
-  const handleAddRepo = async (): Promise<void> => {
+  const handleAddProject = async (): Promise<void> => {
     window.codeshell.log("sidebar.add_clicked", {});
     const picked = await window.codeshell.pickDir();
     if (!picked) return;
-    const dup = repos.find((r) => r.path === picked.path);
+    const dup = projects.find((project) => project.path === picked.path);
     if (dup) {
-      unmarkRepoPathRemoved(picked.path);
-      setActiveRepoId(dup.id);
+      unmarkProjectPathRemoved(picked.path);
+      setActiveProjectId(dup.id);
       return;
     }
-    const next: Repo = {
-      id: makeRepoId(),
+    const next: TrackedProject = {
+      id: makeProjectId(),
       name: picked.name,
       path: picked.path,
       addedAt: Date.now(),
     };
-    unmarkRepoPathRemoved(next.path);
-    setRepos((prev) => [...prev, next]);
-    setActiveRepoId(next.id);
+    unmarkProjectPathRemoved(next.path);
+    setProjects((prev) => [...prev, next]);
+    setActiveProjectId(next.id);
     setSessionIndices((prev) => ({
       ...prev,
       [next.id]: loadSessionIndex(next.id),
@@ -1166,25 +1171,25 @@ function App() {
     window.codeshell.log("repo.added", { id: next.id, path: next.path });
   };
 
-  const handleRemoveRepo = async (id: string): Promise<void> => {
-    const repo = repos.find((r) => r.id === id);
-    if (repo) {
-      markRepoPathRemoved(repo.path);
+  const handleRemoveProject = async (id: string): Promise<void> => {
+    const project = projects.find((candidate) => candidate.id === id);
+    if (project) {
+      markProjectPathRemoved(project.path);
       // Soft-delete on disk so the removal persists + reaches phones live.
-      void window.codeshell.projects.remove(repo.path);
+      void window.codeshell.projects.remove(project.path);
     }
     // Archive (don't orphan) the project's sessions: persist every session as
     // archived + stamp the project label so they remain visible/restorable in
     // 设置→高级→已归档 under their original project name. The project row still
-    // leaves the sidebar (the sidebar iterates `repos`), but the conversations
+    // leaves the sidebar (which iterates `projects`), but the conversations
     // survive instead of silently vanishing from localStorage.
     const idx = sessionIndices[repoKeyOf(id)] ?? loadSessionIndex(id);
-    if (repo) {
+    if (project) {
       await releaseWorkspacesForArchiveMany(idx.sessions, window.codeshell);
     }
-    const archived = repo ? archiveAllSessions(id, repoLabel(repo)) : undefined;
-    setRepos((prev) => prev.filter((r) => r.id !== id));
-    if (activeRepoId === id) setActiveRepoId(null);
+    const archived = project ? archiveAllSessions(id, projectLabel(project)) : undefined;
+    setProjects((prev) => prev.filter((candidate) => candidate.id !== id));
+    if (activeProjectId === id) setActiveProjectId(null);
     setSessionIndices((prev) => {
       // Keep the index in state (now all-archived) so the archived view can
       // list them; drop it only if there was nothing to archive.
@@ -1197,8 +1202,8 @@ function App() {
     window.codeshell.log("repo.removed", { id });
   };
 
-  const handleToggleRepo = (id: string): void => {
-    setCollapsedRepos((prev) => {
+  const handleToggleProject = (id: string): void => {
+    setCollapsedProjects((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -1206,14 +1211,18 @@ function App() {
     });
   };
 
-  const handlePinRepo = (id: string, pinned: boolean): void => {
-    const repo = repos.find((r) => r.id === id);
-    setRepos((prev) => prev.map((r) => (r.id === id ? { ...r, pinned } : r)));
-    if (repo) void window.codeshell.projects.setPinned(repo.path, pinned);
+  const handlePinProject = (id: string, pinned: boolean): void => {
+    const project = projects.find((candidate) => candidate.id === id);
+    setProjects((prev) =>
+      prev.map((candidate) => (candidate.id === id ? { ...candidate, pinned } : candidate)),
+    );
+    if (project) void window.codeshell.projects.setPinned(project.path, pinned);
   };
 
-  const handleRenameRepo = (id: string, name: string): void => {
-    setRepos((prev) => prev.map((r) => (r.id === id ? { ...r, displayName: name } : r)));
+  const handleRenameProject = (id: string, name: string): void => {
+    setProjects((prev) =>
+      prev.map((project) => (project.id === id ? { ...project, displayName: name } : project)),
+    );
   };
 
   const handleArchiveAllSessions = async (id: string): Promise<void> => {
@@ -1234,11 +1243,11 @@ function App() {
   };
 
   /**
-   * "新对话" anchored to a specific repo (used by the row's pen icon).
-   * Switches active repo if needed, then enters draft state.
+   * "新对话" anchored to a specific project (used by the row's pen icon).
+   * Switches active project if needed, then enters draft state.
    */
-  const handleNewConversationForRepo = (repoId: string | null): void => {
-    if (activeRepoId !== repoId) setActiveRepoId(repoId);
+  const handleNewConversationForProject = (repoId: string | null): void => {
+    if (activeProjectId !== repoId) setActiveProjectId(repoId);
     setSessionIndices((prev) => ({
       ...prev,
       [repoKeyOf(repoId)]: setActiveSession(repoId, null),
@@ -1272,7 +1281,7 @@ function App() {
       next.delete(selectedBucket);
       return next;
     });
-    setActiveRepoId(repoId);
+    setActiveProjectId(repoId);
     setSessionIndices((prev) => ({
       ...prev,
       [key]: setActiveSession(repoId, sessionId),
@@ -1285,8 +1294,8 @@ function App() {
   const findSessionByEngineId = (
     engineSessionId: string,
   ): { repoId: string | null; session: SessionSummary } | null => {
-    const reposNow = loadRepos();
-    for (const repoId of [null as string | null, ...reposNow.map((r) => r.id)]) {
+    const projectsNow = loadProjects();
+    for (const repoId of [null as string | null, ...projectsNow.map((project) => project.id)]) {
       const session = loadSessionIndex(repoId).sessions.find(
         (s) => s.engineSessionId === engineSessionId || s.id === engineSessionId,
       );
@@ -1317,9 +1326,9 @@ function App() {
       return;
     }
 
-    const reposNow = loadRepos();
+    const projectsNow = loadProjects();
     const touchedRepoIds = new Set<string | null>();
-    const repoFactory = makeCreateRepoForCwd(reposNow);
+    const projectFactory = makeCreateProjectForCwd(projectsNow);
     await importAutomationRuns(
       [
         {
@@ -1334,13 +1343,13 @@ function App() {
           cronJobName: run.cronJobName,
         },
       ],
-      reposNow,
+      projectsNow,
       {
         caseInsensitive: isCaseInsensitivePlatform(),
         existingEngineSessionIds: new Set(),
         cap: 1,
         fetchTranscript: (sid) => window.codeshell.getSessionTranscript(sid),
-        createRepoForCwd: repoFactory.createRepoForCwd,
+        createRepoForCwd: projectFactory.createProjectForCwd,
         writeImported: (repoId, summary, state) => {
           saveTranscript(repoId, summary.id, state);
           upsertImportedSession(repoId, summary);
@@ -1349,7 +1358,7 @@ function App() {
       },
     );
 
-    if (repoFactory.changed()) setRepos(reposNow.slice());
+    if (projectFactory.changed()) setProjects(projectsNow.slice());
     if (touchedRepoIds.size > 0) {
       setSessionIndices((prev) => {
         const next = { ...prev };
@@ -1373,15 +1382,15 @@ function App() {
       return;
     }
 
-    const reposNow = loadRepos();
-    const repoFactory = makeCreateRepoForCwd(reposNow);
+    const projectsNow = loadProjects();
+    const projectFactory = makeCreateProjectForCwd(projectsNow);
     const resolvedSession: DiskSessionMeta = {
       ...session,
       cwd: await resolveProjectCwd(session.cwd),
     };
-    const [placement] = planDiskRebuild([resolvedSession], reposNow, {
+    const [placement] = planDiskRebuild([resolvedSession], projectsNow, {
       caseInsensitive: isCaseInsensitivePlatform(),
-      createRepoForCwd: repoFactory.createRepoForCwd,
+      createRepoForCwd: projectFactory.createProjectForCwd,
     });
     if (!placement) return;
 
@@ -1394,7 +1403,7 @@ function App() {
     saveTranscript(placement.repoId, placement.summary.id, state);
     const nextIdx = upsertImportedSession(placement.repoId, placement.summary);
 
-    if (repoFactory.changed()) setRepos(reposNow.slice());
+    if (projectFactory.changed()) setProjects(projectsNow.slice());
     setSessionIndices((prev) => ({
       ...prev,
       [repoKeyOf(placement.repoId)]: nextIdx,
@@ -1409,14 +1418,14 @@ function App() {
    * (see `send` → ensureActiveSession + touchSession).
    */
   const handleNewConversation = (): void => {
-    const repoId = activeRepoId;
+    const repoId = activeProjectId;
     setSessionIndices((prev) => ({
       ...prev,
       [repoKeyOf(repoId)]: setActiveSession(repoId, null),
     }));
     // Reset the shared per-repo draft panel slot so a previous draft's open
     // panels don't carry into this fresh conversation (see the longer note in
-    // handleNewConversationForRepo — same reasoning, same in-memory reset).
+    // handleNewConversationForProject — same reasoning, same in-memory reset).
     const draftBucket = bucketKey(repoId, null);
     clearPanelState(draftBucket);
     setPanelByBucket((prev) => ({ ...prev, [draftBucket]: emptyPanelBucketState() }));
@@ -1542,10 +1551,10 @@ function App() {
       const TERMINAL_RUN = new Set(["completed", "failed", "cancelled"]);
       const dedupable = (s: SessionSummary): boolean =>
         s.source !== "automation" || !s.runStatus || TERMINAL_RUN.has(s.runStatus);
-      const currentRepos = loadRepos();
+      const currentProjects = loadProjects();
       const known = new Set<string>();
-      for (const r of currentRepos) {
-        for (const s of loadSessionIndex(r.id).sessions) {
+      for (const project of currentProjects) {
+        for (const s of loadSessionIndex(project.id).sessions) {
           if (s.engineSessionId && dedupable(s)) known.add(s.engineSessionId);
         }
       }
@@ -1554,13 +1563,13 @@ function App() {
       }
 
       const touchedRepoIds = new Set<string | null>();
-      const repoFactory = makeCreateRepoForCwd(currentRepos);
-      await importAutomationRuns(runs, currentRepos, {
+      const projectFactory = makeCreateProjectForCwd(currentProjects);
+      await importAutomationRuns(runs, currentProjects, {
         caseInsensitive: isCaseInsensitivePlatform(),
         existingEngineSessionIds: known,
         cap: 50,
         fetchTranscript: (sid) => window.codeshell.getSessionTranscript(sid),
-        createRepoForCwd: repoFactory.createRepoForCwd,
+        createRepoForCwd: projectFactory.createProjectForCwd,
         writeImported: (repoId, summary, state) => {
           saveTranscript(repoId, summary.id, state);
           upsertImportedSession(repoId, summary);
@@ -1569,7 +1578,7 @@ function App() {
       });
       if (cancelled) return;
 
-      if (repoFactory.changed()) setRepos(currentRepos.slice());
+      if (projectFactory.changed()) setProjects(currentProjects.slice());
       if (touchedRepoIds.size > 0) {
         setSessionIndices((prev) => {
           const next = { ...prev };
@@ -1587,7 +1596,7 @@ function App() {
   // Only when the active repo's index is empty → no disk scan otherwise. Mirrors
   // D1's automation placement: match disk cwd → repo, auto-create on miss.
   useEffect(() => {
-    const repoKey = repoKeyOf(activeRepoId);
+    const repoKey = repoKeyOf(activeProjectId);
     const idx = sessionIndices[repoKey];
     if (idx && idx.sessions.length > 0) return; // has data → don't scan disk
     if (diskProbedRef.current.has(repoKey)) return; // already scanned for this repo
@@ -1620,11 +1629,11 @@ function App() {
           (s) => !isQuickChatSessionId(s.engineSessionId || s.id),
         );
         if (cancelled) return;
-        const reposNow = loadRepos();
-        const repoFactory = makeCreateRepoForCwd(reposNow);
-        const placements = planDiskRebuild(sessions, reposNow, {
+        const projectsNow = loadProjects();
+        const projectFactory = makeCreateProjectForCwd(projectsNow);
+        const placements = planDiskRebuild(sessions, projectsNow, {
           caseInsensitive: isCaseInsensitivePlatform(),
-          createRepoForCwd: repoFactory.createRepoForCwd,
+          createRepoForCwd: projectFactory.createProjectForCwd,
         });
         if (cancelled) return;
         const touched = new Set<string>();
@@ -1632,7 +1641,7 @@ function App() {
           upsertImportedSession(repoId, summary);
           touched.add(repoKeyOf(repoId));
         }
-        if (repoFactory.changed()) setRepos(reposNow.slice());
+        if (projectFactory.changed()) setProjects(projectsNow.slice());
         setSessionIndices((prev) => {
           const next = { ...prev };
           for (const k of touched) next[k] = loadSessionIndex(k === GLOBAL_KEY ? null : k);
@@ -1647,10 +1656,10 @@ function App() {
       cancelled = true;
       // If we tore down before the disk read resolved, drop the mark so a
       // future visit can retry. A completed probe keeps its mark — that's what
-      // breaks the re-scan loop when a page maps only into other repos.
+      // breaks the re-scan loop when a page maps only into other projects.
       if (!probed) diskProbedRef.current.delete(repoKey);
     };
-  }, [activeRepoId, sessionIndices]);
+  }, [activeProjectId, sessionIndices]);
 
   function getCoalescer(bucket: string) {
     let c = coalescersRef.current.get(bucket);
@@ -1839,8 +1848,8 @@ function App() {
         // by engineSessionId (== local id for automation imports) and update it.
         if (env.sessionId) {
           const eid = env.sessionId;
-          const reposNow = loadRepos();
-          for (const rid of [null as string | null, ...reposNow.map((r) => r.id)]) {
+          const projectsNow = loadProjects();
+          for (const rid of [null as string | null, ...projectsNow.map((project) => project.id)]) {
             const owner = loadSessionIndex(rid).sessions.find(
               (s) => s.source === "automation" && s.engineSessionId === eid,
             );
@@ -1870,14 +1879,17 @@ function App() {
       });
       // Idempotency: if any repo already has this engine session (a prior
       // announce, or a disk-backfilled import), don't duplicate.
-      const reposNow = loadRepos();
-      const alreadyKnown = [null as string | null, ...reposNow.map((r) => r.id)].some((rid) =>
+      const projectsNow = loadProjects();
+      const alreadyKnown = [
+        null as string | null,
+        ...projectsNow.map((project) => project.id),
+      ].some((rid) =>
         loadSessionIndex(rid).sessions.some((s) => s.engineSessionId === meta.sessionId),
       );
       if (alreadyKnown) {
         // Still (re)register the route in case the table was wiped by a remount.
         const knownRepoId =
-          [null as string | null, ...reposNow.map((r) => r.id)].find((rid) =>
+          [null as string | null, ...projectsNow.map((project) => project.id)].find((rid) =>
             loadSessionIndex(rid).sessions.some((s) => s.engineSessionId === meta.sessionId),
           ) ?? null;
         engineToBucketRef.current.set(meta.sessionId, bucketKey(knownRepoId, meta.sessionId));
@@ -1888,18 +1900,21 @@ function App() {
           ...meta,
           cwd: await resolveProjectCwd(meta.cwd),
         };
-        const reposAfterResolve = loadRepos();
-        const existingRepoId = [null as string | null, ...reposAfterResolve.map((r) => r.id)].find(
-          (rid) => loadSessionIndex(rid).sessions.some((s) => s.engineSessionId === meta.sessionId),
+        const projectsAfterResolve = loadProjects();
+        const existingRepoId = [
+          null as string | null,
+          ...projectsAfterResolve.map((project) => project.id),
+        ].find((rid) =>
+          loadSessionIndex(rid).sessions.some((s) => s.engineSessionId === meta.sessionId),
         );
         if (existingRepoId !== undefined) {
           engineToBucketRef.current.set(meta.sessionId, bucketKey(existingRepoId, meta.sessionId));
           return;
         }
-        const repoFactory = makeCreateRepoForCwd(reposAfterResolve);
-        const placement = placeLiveAutomationSession(resolvedMeta, reposAfterResolve, {
+        const projectFactory = makeCreateProjectForCwd(projectsAfterResolve);
+        const placement = placeLiveAutomationSession(resolvedMeta, projectsAfterResolve, {
           caseInsensitive: isCaseInsensitivePlatform(),
-          createRepoForCwd: repoFactory.createRepoForCwd,
+          createRepoForCwd: projectFactory.createProjectForCwd,
         });
         if (!placement) return;
         const { repoId, summary } = placement;
@@ -1930,7 +1945,7 @@ function App() {
             `automation:${meta.sessionId}:${stablePromptHash(meta.prompt.trim())}`;
           dispatch({ type: "user_message", bucket, text: meta.prompt, clientMessageId });
         }
-        if (repoFactory.changed()) setRepos(reposAfterResolve.slice());
+        if (projectFactory.changed()) setProjects(projectsAfterResolve.slice());
         setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: nextIdx }));
       })();
     });
@@ -1939,9 +1954,9 @@ function App() {
         sessionId: meta.sessionId,
         cwd: meta.cwd,
       });
-      const reposNow = loadRepos();
+      const projectsNow = loadProjects();
       const knownRepoId =
-        [null as string | null, ...reposNow.map((r) => r.id)].find((rid) =>
+        [null as string | null, ...projectsNow.map((project) => project.id)].find((rid) =>
           loadSessionIndex(rid).sessions.some(
             (s) => s.engineSessionId === meta.sessionId || s.id === meta.sessionId,
           ),
@@ -1963,7 +1978,7 @@ function App() {
         sessionId = known.id;
         nextIdx = touchSession(repoId, sessionId, title);
       } else {
-        const repoFactory = makeCreateRepoForCwd(reposNow);
+        const projectFactory = makeCreateProjectForCwd(projectsNow);
         const now = Date.now();
         const [placement] = planDiskRebuild(
           [
@@ -1976,10 +1991,10 @@ function App() {
               origin: "desktop",
             },
           ],
-          reposNow,
+          projectsNow,
           {
             caseInsensitive: isCaseInsensitivePlatform(),
-            createRepoForCwd: repoFactory.createRepoForCwd,
+            createRepoForCwd: projectFactory.createProjectForCwd,
           },
         );
         if (!placement) return;
@@ -1991,7 +2006,7 @@ function App() {
           createdAt: now,
           updatedAt: now,
         });
-        if (repoFactory.changed()) setRepos(reposNow.slice());
+        if (projectFactory.changed()) setProjects(projectsNow.slice());
       }
 
       const bucket = bucketKey(repoId, sessionId);
@@ -2264,13 +2279,13 @@ function App() {
     // createSession persists to localStorage synchronously, so reading
     // it back via touchSession() right after sees the new entry.
     const parsedBucket = sendOpts.bucket ? parsePanelBucket(sendOpts.bucket) : null;
-    const targetRepoId = parsedBucket ? parsedBucket.repoId : activeRepoId;
+    const targetProjectId = parsedBucket ? parsedBucket.repoId : activeProjectId;
     const targetSessionId = parsedBucket ? parsedBucket.sessionId : activeSessionId;
     const wasDraft = targetSessionId === null;
-    const sid = targetSessionId ?? ensureActiveSession(targetRepoId);
-    const bucket = bucketKey(targetRepoId, sid);
-    const repoKey = repoKeyOf(targetRepoId);
-    const targetRepo = repos.find((r) => r.id === targetRepoId) ?? null;
+    const sid = targetSessionId ?? ensureActiveSession(targetProjectId);
+    const bucket = bucketKey(targetProjectId, sid);
+    const repoKey = repoKeyOf(targetProjectId);
+    const targetProject = projects.find((project) => project.id === targetProjectId) ?? null;
     // A draft's pre-send toggles (permission/goal/model) were keyed under the
     // SHARED draft bucket (<repo>::_none_), NOT the freshly-created real session
     // bucket that `ensureActiveSession` just produced above. Read them from the
@@ -2290,7 +2305,7 @@ function App() {
     // draft to <repo>::_none_). On the first send the draft solidifies into a
     // real session — migrate the override onto the real bucket so the choice
     // FOLLOWS this session, then clear the shared draft slot so it doesn't
-    // "粘连" onto the next 新对话 / other drafts in this repo (#11 per-session
+    // "粘连" onto the next 新对话 / other drafts in this project (#11 per-session
     // permission stickiness).
     if (wasDraft && bucket !== (sendOpts.bucket ?? activeBucket)) {
       const draftBucket = sendOpts.bucket ?? activeBucket;
@@ -2316,12 +2331,12 @@ function App() {
     // sessionId so the engineToBucket route is populated synchronously.
     const summary =
       sessionIndices[repoKey]?.sessions.find((s) => s.id === sid) ??
-      loadSessionIndex(targetRepoId).sessions.find((s) => s.id === sid);
+      loadSessionIndex(targetProjectId).sessions.find((s) => s.id === sid);
     const engineSessionId = summary?.engineSessionId ?? sid;
 
     window.codeshell.log("send", {
       textLen: text.length,
-      repo: targetRepo?.name ?? null,
+      repo: targetProject?.name ?? null,
       bucket,
       engineSessionId,
       clientMessageId,
@@ -2344,10 +2359,10 @@ function App() {
     // and persist engineSessionId so future sends in this UI session
     // pass the same value (and the engine resumes the right convo).
     setSessionIndices((prev) => {
-      const touched = touchSession(targetRepoId, sid, titleFromWire(displayText));
+      const touched = touchSession(targetProjectId, sid, titleFromWire(displayText));
       const next = summary?.engineSessionId
         ? touched
-        : bindEngineSession(targetRepoId, sid, engineSessionId);
+        : bindEngineSession(targetProjectId, sid, engineSessionId);
       return { ...prev, [repoKey]: next };
     });
 
@@ -2377,12 +2392,12 @@ function App() {
     if (sendPermissionMode !== null) {
       opts.permissionMode = toCorePermissionMode(sendPermissionMode);
     }
-    // Pass cwd explicitly in BOTH cases: a real repo → its path; no-repo chat →
+    // Pass cwd explicitly in BOTH cases: a real project → its path; no-repo chat →
     // the no-repo sandbox. Never leave cwd undefined — the long-lived worker
     // would otherwise default to a stale project (see noRepoCwdRef). Falls back
     // to undefined only if the one-time fetch hasn't resolved yet, in which case
     // the core-side stdio worker still defaults to noRepoDir() (defense #2).
-    if (targetRepo) opts.cwd = targetRepo.path;
+    if (targetProject) opts.cwd = targetProject.path;
     else if (noRepoCwdRef.current) opts.cwd = noRepoCwdRef.current;
     // Goal mode: this send's prompt IS the goal — the engine runs
     // loop-until-done. Goal text == prompt text (reuses the composer input).
@@ -3087,7 +3102,7 @@ function App() {
   const clearAnchors = (): void => {
     // Clear the active bucket AND the repo's draft slot — see clearAnchorBuckets.
     setAnchorsByBucket((s) =>
-      clearAnchorBuckets(s, [activeAnchorBucketRef.current, bucketKey(activeRepoId, null)]),
+      clearAnchorBuckets(s, [activeAnchorBucketRef.current, bucketKey(activeProjectId, null)]),
     );
   };
   // Panel state is owned by session bucket, not by the global App shell. This
@@ -3525,7 +3540,7 @@ function App() {
     // Start a FRESH draft session — never pile onto whatever task/run session
     // happened to be active. Mirrors handleNewConversation: clear
     // activeSessionId so a brand-new session materializes on first send.
-    const repoId = activeRepoId;
+    const repoId = activeProjectId;
     setSessionIndices((prev) => ({
       ...prev,
       [repoKeyOf(repoId)]: setActiveSession(repoId, null),
@@ -3572,11 +3587,11 @@ function App() {
       } else if (mod && e.key >= "1" && e.key <= "9") {
         // Cmd+N — jump to Nth session under active repo.
         const n = parseInt(e.key, 10) - 1;
-        const idx = sessionIndices[repoKeyOf(activeRepoId)];
+        const idx = sessionIndices[repoKeyOf(activeProjectId)];
         const target = idx?.sessions[n];
         if (target) {
           e.preventDefault();
-          handleSelectSession(activeRepoId, target.id);
+          handleSelectSession(activeProjectId, target.id);
         }
       } else if (e.key === "Escape") {
         if (paletteOpen) setPaletteOpen(false);
@@ -3586,7 +3601,7 @@ function App() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [paletteOpen, searchOpen, sessionSearchOpen, sessionIndices, activeRepoId, view.viewMode]);
+  }, [paletteOpen, searchOpen, sessionSearchOpen, sessionIndices, activeProjectId, view.viewMode]);
 
   // A chat "files changed" card asked to review its edited files: open the
   // review panel in the dock, focused on those files.
@@ -3767,18 +3782,21 @@ function App() {
     const off = window.codeshell.onMenuEvent((evt, payload) => {
       switch (evt) {
         case "add-project":
-          void handleAddRepo();
+          void handleAddProject();
           break;
         case "open-recent": {
           const p = payload as { path: string; name: string } | undefined;
           if (!p) return;
-          unmarkRepoPathRemoved(p.path);
-          const existing = repos.find((r) => r.path === p.path);
-          if (existing) setActiveRepoId(existing.id);
+          unmarkProjectPathRemoved(p.path);
+          const existing = projects.find((project) => project.path === p.path);
+          if (existing) setActiveProjectId(existing.id);
           else {
-            const id = makeRepoId();
-            setRepos((prev) => [...prev, { id, name: p.name, path: p.path, addedAt: Date.now() }]);
-            setActiveRepoId(id);
+            const id = makeProjectId();
+            setProjects((prev) => [
+              ...prev,
+              { id, name: p.name, path: p.path, addedAt: Date.now() },
+            ]);
+            setActiveProjectId(id);
             setSessionIndices((prev) => ({ ...prev, [id]: loadSessionIndex(id) }));
           }
           break;
@@ -3801,14 +3819,14 @@ function App() {
       }
     });
     return off;
-  }, [repos]);
+  }, [projects]);
 
   // Refresh model list + active selection + permission from settings.
   useEffect(() => {
     let cancelled = false;
     const refresh = async (): Promise<void> => {
       try {
-        const cwd = activeRepo?.path;
+        const cwd = activeProject?.path;
         const projectS = cwd ? ((await window.codeshell.getSettings("project", cwd)) ?? {}) : {};
         const userS = (await window.codeshell.getSettings("user")) ?? {};
         const merged: Record<string, unknown> = { ...userS, ...projectS };
@@ -3873,7 +3891,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [activeRepo, view.viewMode, settingsRevision]);
+  }, [activeProject, view.viewMode, settingsRevision]);
 
   useEffect(() => {
     void window.codeshell.setBadgeCount(approvalQueue.length);
@@ -3884,13 +3902,13 @@ function App() {
     if (prevBusyRef.current && !busy && document.hidden) {
       void window.codeshell.notify({
         title: "code-shell",
-        body: activeRepo
-          ? t("misc.app.notifyDone", { name: activeRepo.name })
+        body: activeProject
+          ? t("misc.app.notifyDone", { name: activeProject.name })
           : t("misc.app.notifyAgentDone"),
       });
     }
     prevBusyRef.current = busy;
-  }, [busy, activeRepo]);
+  }, [busy, activeProject]);
 
   const handleAskUserAnswer = (requestId: string, answer: string): void => {
     // Route the answer to the session that ORIGINATED the prompt. The prompt
@@ -4110,8 +4128,8 @@ function App() {
       >
         <div className="shrink-0">
           <TopBar
-            repoName={activeRepo?.name ?? null}
-            repoPath={activeRepo?.path ?? null}
+            projectName={activeProject?.name ?? null}
+            projectPath={activeProject?.path ?? null}
             sessionId={engineSessionIdForActive()}
             sessionTitle={sessionTitleForTop}
             busy={busy}
@@ -4139,24 +4157,24 @@ function App() {
           {!view.sidebarCollapsed && (
             <div className="flex shrink-0 overflow-hidden">
               <Sidebar
-                repos={repos}
+                projects={projects}
                 sessions={sessionIndices}
-                activeRepoId={activeRepoId}
+                activeProjectId={activeProjectId}
                 activeSessionId={activeSessionId}
-                collapsedRepos={collapsedRepos}
+                collapsedProjects={collapsedProjects}
                 sidebarCollapsed={view.sidebarCollapsed}
                 sessionStatuses={sessionStatusMap}
-                onSelectRepo={setActiveRepoId}
+                onSelectProject={setActiveProjectId}
                 onSelectSession={handleSelectSession}
-                onToggleRepo={handleToggleRepo}
-                onAddRepo={() => {
-                  void handleAddRepo();
+                onToggleProject={handleToggleProject}
+                onAddProject={() => {
+                  void handleAddProject();
                 }}
-                onRemoveRepo={handleRemoveRepo}
-                onPinRepo={handlePinRepo}
-                onRenameRepo={handleRenameRepo}
+                onRemoveProject={handleRemoveProject}
+                onPinProject={handlePinProject}
+                onRenameProject={handleRenameProject}
                 onArchiveAllSessions={handleArchiveAllSessions}
-                onNewConversationForRepo={handleNewConversationForRepo}
+                onNewConversationForProject={handleNewConversationForProject}
                 onNewConversation={handleNewConversation}
                 onOpenSearch={() => setSessionSearchOpen(true)}
                 onOpenAutomations={() => setViewMode("automation")}
@@ -4166,7 +4184,7 @@ function App() {
                 onRenameSession={handleRenameSession}
                 onArchiveSession={handleArchiveSession}
                 onDeleteSession={handleDeleteSession}
-                activeRepoPath={activeRepo?.path ?? null}
+                activeProjectPath={activeProject?.path ?? null}
                 viewMode={view.viewMode}
               />
             </div>
@@ -4190,10 +4208,10 @@ function App() {
               ) : view.viewMode === "logs" ? (
                 <LogsView />
               ) : view.viewMode === "customize" ? (
-                <CustomizeView activeRepoPath={activeRepo?.path ?? null} />
+                <CustomizeView activeRepoPath={activeProject?.path ?? null} />
               ) : view.viewMode === "credentials" ? (
                 <CredentialsPage
-                  activeRepoPath={activeRepo?.path ?? null}
+                  activeRepoPath={activeProject?.path ?? null}
                   activeBucket={activeSessionId !== null ? activeBucket : null}
                 />
               ) : view.viewMode === "runs" ? (
@@ -4213,7 +4231,7 @@ function App() {
                   }}
                   onOpenSession={handleSelectSession}
                   sessionIndices={sessionIndices}
-                  repos={repos}
+                  repos={projects}
                 />
               ) : (
                 <>
@@ -4245,7 +4263,7 @@ function App() {
                     onRemoveQueuedInput={removeActiveQueuedInputAt}
                     onGuideQueuedInput={guideActiveQueuedInput}
                     runningAgents={runningAgents}
-                    activeRepoId={activeRepoId}
+                    activeProjectId={activeProjectId}
                     composerSeed={composerSeed}
                     composerSeedNonce={composerSeedNonce}
                     draft={composerDraft.text}
@@ -4284,25 +4302,25 @@ function App() {
                     cumulativePromptTokens={state.cumulativePromptTokens}
                     cumulativeCacheReadTokens={state.cumulativeCacheReadTokens}
                     cumulativeCacheCreationTokens={state.cumulativeCacheCreationTokens}
-                    repos={repos}
+                    projects={projects}
                     // Picking a project (or 不使用项目) from the composer's
-                    // ProjectPicker enters a fresh draft for that repo rather than a
-                    // bare setActiveRepoId — otherwise the chat snaps to whatever
+                    // ProjectPicker enters a fresh draft for that project rather than a
+                    // bare setActiveProjectId — otherwise the chat snaps to whatever
                     // session that bucket last had active (the top of its list),
                     // which reads as an unexpected auto-jump. (The reload-time
                     // auto-jump was fixed separately in transcripts.ts; this is the
                     // interactive project-switch path, same symptom, different code.)
-                    onSelectRepo={handleNewConversationForRepo}
-                    onAddRepo={() => {
-                      void handleAddRepo();
+                    onSelectProject={handleNewConversationForProject}
+                    onAddProject={() => {
+                      void handleAddProject();
                     }}
-                    activeRepoPath={activeRepo?.path ?? null}
+                    activeProjectPath={activeProject?.path ?? null}
                     // cwd used to RESOLVE message content (relative path links, inline
-                    // images) — distinct from activeRepoPath (git/STT/branch, which
+                    // images) — distinct from activeProjectPath (git/STT/branch, which
                     // must stay null for a no-repo chat). A no-repo session actually
                     // runs under the sandbox cwd, so fall back to it; otherwise a
                     // relative `docs/x.md` link can't resolve and renders as dead text.
-                    messageCwd={activeRepo?.path ?? noRepoCwdRef.current}
+                    messageCwd={activeProject?.path ?? noRepoCwdRef.current}
                     repoClean={activeGitMeta.clean}
                     welcomeNode={
                       showWelcome ? (
@@ -4314,11 +4332,11 @@ function App() {
                             className="h-32 w-32 select-none rounded-2xl object-contain"
                           />
                           <div className="text-3xl font-semibold tracking-tight text-foreground">
-                            {activeRepo
-                              ? t("misc.app.welcomeTitleRepo", { name: activeRepo.name })
+                            {activeProject
+                              ? t("misc.app.welcomeTitleRepo", { name: activeProject.name })
                               : t("misc.app.welcomeTitleNoRepo")}
                           </div>
-                          {!activeRepo && (
+                          {!activeProject && (
                             <div className="text-sm text-muted-foreground">
                               {t("misc.app.welcomeHintNoRepo")}
                             </div>
@@ -4349,8 +4367,8 @@ function App() {
               const panelState = panelByBucket[panelBucket] ?? emptyPanelBucketState();
               const isActivePanelBucket = panelBucket === activeBucket;
               const { repoId: panelRepoId } = parsePanelBucket(panelBucket);
-              const panelRepo = panelRepoId
-                ? (repos.find((r) => r.id === panelRepoId) ?? null)
+              const panelProject = panelRepoId
+                ? (projects.find((project) => project.id === panelRepoId) ?? null)
                 : null;
               const panelEngineSessionId = resolveEngineSessionIdForBucket(panelBucket) ?? null;
               const hidden = !isActivePanelBucket || !isChatView || !panelState.open;
@@ -4364,7 +4382,7 @@ function App() {
                   // cannot be rewritten by another session.
                   hidden={hidden}
                   keepActiveBodyLive={keepActiveBodyLive}
-                  repoPath={panelRepo?.path ?? null}
+                  repoPath={panelProject?.path ?? null}
                   onClose={() =>
                     updatePanelBucket(panelBucket, (state) => ({
                       ...state,
@@ -4469,14 +4487,14 @@ function App() {
         <SessionSearchModal
           open={sessionSearchOpen}
           onClose={() => setSessionSearchOpen(false)}
-          repos={repos}
+          repos={projects}
           sessions={sessionIndices}
-          activeRepoId={activeRepoId}
+          activeRepoId={activeProjectId}
           onPick={(repoId, sid) => handleSelectSession(repoId, sid)}
         />
 
         <TrustGate
-          repoPath={activeRepo?.path ?? null}
+          repoPath={activeProject?.path ?? null}
           onDecide={() => {
             /* trust persisted in main */
           }}
@@ -4489,8 +4507,8 @@ function App() {
       {isSettingsPage && (
         <div className="absolute inset-0 z-50 overflow-hidden bg-background">
           <SettingsPage
-            activeRepoPath={activeRepo?.path ?? null}
-            repos={repos}
+            activeRepoPath={activeProject?.path ?? null}
+            repos={projects}
             sessionIndices={sessionIndices}
             onRestoreArchivedSession={(repoId, sessionId) => {
               const next = archiveSession(repoId, sessionId, false);

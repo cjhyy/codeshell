@@ -16,19 +16,25 @@ type Scope = "user" | "project";
 type Tab = "model" | "catalog" | "permission" | "mcp" | "update" | "json";
 
 interface Props {
-  activeRepoPath: string | null;
+  activeProjectPath: string | null;
 }
 
-export function SettingsView({ activeRepoPath }: Props) {
+export function SettingsView({ activeProjectPath }: Props) {
   const { t } = useT();
   const tabLabel = (tb: Tab): string => {
     switch (tb) {
-      case "model": return t("settingsX.view.tabModel");
-      case "catalog": return t("settingsX.view.tabCatalog");
-      case "permission": return t("settingsX.view.tabPermission");
-      case "mcp": return "MCP";
-      case "update": return t("settingsX.view.tabUpdate");
-      case "json": return "JSON";
+      case "model":
+        return t("settingsX.view.tabModel");
+      case "catalog":
+        return t("settingsX.view.tabCatalog");
+      case "permission":
+        return t("settingsX.view.tabPermission");
+      case "mcp":
+        return "MCP";
+      case "update":
+        return t("settingsX.view.tabUpdate");
+      case "json":
+        return "JSON";
     }
   };
   const [scope, setScope] = useState<Scope>("user");
@@ -38,7 +44,7 @@ export function SettingsView({ activeRepoPath }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
+  const cwd = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
 
   const refresh = async () => {
     setError(null);
@@ -55,7 +61,7 @@ export function SettingsView({ activeRepoPath }: Props) {
 
   useEffect(() => {
     if (tab === "json") void refresh();
-  }, [scope, activeRepoPath, tab]);
+  }, [scope, activeProjectPath, tab]);
 
   const dirty = draft !== loaded;
 
@@ -78,15 +84,25 @@ export function SettingsView({ activeRepoPath }: Props) {
     <div className="flex h-full flex-col gap-3 p-6">
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
-          <Button variant="ghost" size="sm" className={segBtn(scope === "user")} title={t("settingsX.view.globalTitle")} onClick={() => setScope("user")}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={segBtn(scope === "user")}
+            title={t("settingsX.view.globalTitle")}
+            onClick={() => setScope("user")}
+          >
             {t("settingsX.view.global")}
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            className={segBtn(scope === "project") + (!activeRepoPath ? " opacity-50" : "")}
-            disabled={!activeRepoPath}
-            title={activeRepoPath ? t("settingsX.view.currentProjectTitle") : t("settingsX.view.pickProjectFirst")}
+            className={segBtn(scope === "project") + (!activeProjectPath ? " opacity-50" : "")}
+            disabled={!activeProjectPath}
+            title={
+              activeProjectPath
+                ? t("settingsX.view.currentProjectTitle")
+                : t("settingsX.view.pickProjectFirst")
+            }
             onClick={() => setScope("project")}
           >
             {t("settingsX.view.currentProject")}
@@ -94,25 +110,37 @@ export function SettingsView({ activeRepoPath }: Props) {
         </div>
         <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
           {(["model", "catalog", "permission", "mcp", "update", "json"] as Tab[]).map((t) => (
-            <Button key={t} variant="ghost" size="sm" className={segBtn(tab === t)} onClick={() => setTab(t)}>
+            <Button
+              key={t}
+              variant="ghost"
+              size="sm"
+              className={segBtn(tab === t)}
+              onClick={() => setTab(t)}
+            >
               {tabLabel(t)}
             </Button>
           ))}
         </div>
         <span className="text-xs text-muted-foreground">
-          {scope === "project" && !activeRepoPath
+          {scope === "project" && !activeProjectPath
             ? t("settingsX.view.pickAProject")
             : scope === "user"
               ? "~/.code-shell/settings.json"
-              : `${activeRepoPath}/.code-shell/settings.json`}
+              : `${activeProjectPath}/.code-shell/settings.json`}
         </span>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {tab === "model" && <TextConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} />}
-        {tab === "catalog" && <ModelCatalogPanel scope={scope} activeRepoPath={activeRepoPath} />}
-        {tab === "permission" && <PermissionSection scope={scope} activeRepoPath={activeRepoPath} />}
-        {tab === "mcp" && <McpSection scope={scope} activeRepoPath={activeRepoPath} />}
+        {tab === "model" && (
+          <TextConnectionsPanel scope={scope} activeRepoPath={activeProjectPath} />
+        )}
+        {tab === "catalog" && (
+          <ModelCatalogPanel scope={scope} activeRepoPath={activeProjectPath} />
+        )}
+        {tab === "permission" && (
+          <PermissionSection scope={scope} activeRepoPath={activeProjectPath} />
+        )}
+        {tab === "mcp" && <McpSection scope={scope} activeRepoPath={activeProjectPath} />}
         {tab === "update" && <UpdaterSettingsRow />}
         {tab === "json" && (
           <div className="flex flex-col gap-2">
@@ -124,7 +152,9 @@ export function SettingsView({ activeRepoPath }: Props) {
                 {saving ? t("settingsX.view.saving") : t("settingsX.view.save")}
               </Button>
             </div>
-            {error && <div className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">{error}</div>}
+            {error && (
+              <div className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">{error}</div>
+            )}
             <Textarea
               className="min-h-[400px] w-full rounded-md border border-input bg-transparent p-3 font-mono text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               spellCheck={false}
