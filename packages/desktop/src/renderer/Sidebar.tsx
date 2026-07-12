@@ -41,6 +41,7 @@ interface SidebarProps {
   petOverviewOpen: boolean;
   petPendingCount: number;
   petRunningCount: number;
+  petWidgetVisible: boolean;
 
   onSelectProject: (id: string | null) => void;
   onSelectSession: (projectId: string | null, sessionId: string) => void;
@@ -59,6 +60,7 @@ interface SidebarProps {
   onOpenCredentials: () => void;
   onOpenSettingsPage: () => void;
   onOpenPetOverview: () => void;
+  onTogglePetWidget: () => void;
 
   onRenameSession: (projectId: string | null, sessionId: string, title: string) => void;
   onArchiveSession: (projectId: string | null, sessionId: string, archived: boolean) => void;
@@ -85,6 +87,7 @@ export function Sidebar({
   petOverviewOpen,
   petPendingCount,
   petRunningCount,
+  petWidgetVisible,
   onSelectProject,
   onSelectSession,
   onToggleProject,
@@ -101,6 +104,7 @@ export function Sidebar({
   onOpenCredentials,
   onOpenSettingsPage,
   onOpenPetOverview,
+  onTogglePetWidget,
   onRenameSession,
   onArchiveSession,
   onDeleteSession,
@@ -230,6 +234,8 @@ export function Sidebar({
           pendingCount={petPendingCount}
           runningCount={petRunningCount}
           onOpen={onOpenPetOverview}
+          widgetVisible={petWidgetVisible}
+          onToggleWidget={onTogglePetWidget}
         />
         <div className="my-1 border-t border-border/70" aria-hidden="true" />
         <SidebarItem

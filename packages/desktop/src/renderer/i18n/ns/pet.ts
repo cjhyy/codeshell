@@ -67,6 +67,11 @@ export const pet = {
         close: "关闭提醒",
         openPending: "查看全部待决策",
       },
+      widget: {
+        open: "打开 Pet 概览",
+        show: "显示左下角 Pet 挂件",
+        hide: "隐藏左下角 Pet 挂件",
+      },
     },
   },
   en: {
@@ -136,6 +141,11 @@ export const pet = {
       peek: {
         close: "Dismiss notification",
         openPending: "View all pending",
+      },
+      widget: {
+        open: "Open Pet overview",
+        show: "Show bottom-left Pet widget",
+        hide: "Hide bottom-left Pet widget",
       },
     },
   },

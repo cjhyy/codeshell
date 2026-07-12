@@ -9,6 +9,8 @@ import { PetWorldPane } from "./pet/PetWorldPane";
 import { openPetTarget } from "./pet/petNavigation";
 import { PetChatHost } from "./pet/PetChatHost";
 import { PetPeekHost } from "./pet/PetPeekHost";
+import { PetWidget } from "./pet/PetWidget";
+import { loadPetWidgetVisible, savePetWidgetVisible } from "./pet/petWidgetPrefs";
 import { TopBar } from "./TopBar";
 import dogIcon from "./assets/codeshell-dog-icon.png";
 import { timePhase } from "./perf";
@@ -423,6 +425,7 @@ function App() {
     removePeek,
   } = usePetState();
   const { width: petOverviewWidth, beginResize: beginPetOverviewResize } = usePetOverviewWidth();
+  const [petWidgetVisible, setPetWidgetVisible] = useState(loadPetWidgetVisible);
   const [transcripts, dispatch] = useReducer(transcriptsReducer, {} as TranscriptsMap);
   const [approval, setApproval] = useState<ApprovalState>(null);
   const [approvalQueue, setApprovalQueue] = useState<ApprovalRequestEnvelope[]>([]);
@@ -1575,6 +1578,19 @@ function App() {
     petDispatch({ type: "set-overview-focus", focus: "pending" });
     petDispatch({ type: "set-overview-open", open: true });
     setView((current) => ({ ...current, sidebarCollapsed: false }));
+  };
+
+  const openPetOverview = (): void => {
+    petDispatch({ type: "set-overview-open", open: true });
+    setView((current) => ({ ...current, sidebarCollapsed: false }));
+  };
+
+  const togglePetWidget = (): void => {
+    setPetWidgetVisible((current) => {
+      const next = !current;
+      savePetWidgetVisible(next);
+      return next;
+    });
   };
 
   /**
@@ -4523,6 +4539,7 @@ function App() {
                 petOverviewOpen={petState.overviewOpen}
                 petPendingCount={petPendingCount}
                 petRunningCount={petRunningCount}
+                petWidgetVisible={petWidgetVisible}
                 sessionStatuses={sessionStatusMap}
                 onSelectProject={setActiveProjectId}
                 onSelectSession={handleSelectSession}
@@ -4541,7 +4558,8 @@ function App() {
                 onOpenCustomize={() => setViewMode("customize")}
                 onOpenCredentials={() => setViewMode("credentials")}
                 onOpenSettingsPage={() => setViewMode("settings_page")}
-                onOpenPetOverview={() => petDispatch({ type: "set-overview-open", open: true })}
+                onOpenPetOverview={openPetOverview}
+                onTogglePetWidget={togglePetWidget}
                 onRenameSession={handleRenameSession}
                 onArchiveSession={handleArchiveSession}
                 onDeleteSession={handleDeleteSession}
@@ -4934,6 +4952,12 @@ function App() {
         peeks={petPeeks}
         onAction={handlePetPeekAction}
         onDismiss={(peek) => settlePetPeek(peek, "dismissed")}
+      />
+      <PetWidget
+        visible={petWidgetVisible}
+        runningCount={petRunningCount}
+        pendingCount={petPendingCount}
+        onOpen={openPetOverview}
       />
 
       {isSettingsPage && (
