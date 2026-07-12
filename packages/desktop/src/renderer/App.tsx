@@ -4560,6 +4560,7 @@ function App() {
               <PetWorldPane
                 projection={petState.projection}
                 status={petState.status}
+                focusPending={petState.overviewFocus === "pending"}
                 onNavigate={(request) => void handleOpenPetTarget(request)}
               />
               <PetChatHost

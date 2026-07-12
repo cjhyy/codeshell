@@ -18,6 +18,8 @@ describe("PetOverviewPanel", () => {
 
     expect(html).toContain('data-pet-overview="sidecar"');
     expect(html).toContain('role="complementary"');
+    expect(html).toContain('data-pet-overview-heading="focus-target"');
+    expect(html).toContain('tabindex="-1"');
     expect(html).toContain('aria-label="调整 Pet 概览宽度"');
     expect(html).toContain('aria-label="关闭 Pet 概览"');
     expect(html).toContain("world pane");

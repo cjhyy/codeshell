@@ -11,13 +11,21 @@ export function PetWorldPane({
   status,
   now = Date.now(),
   onNavigate,
+  focusPending = false,
 }: {
   projection: PetProjectionSnapshot | null;
   status: PetProjectionStatus;
   now?: number;
   onNavigate?: (request: PetOpenSessionRequest) => void;
+  focusPending?: boolean;
 }) {
   const selected = selectPetOverview(projection, status, now);
+  const pendingRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (!focusPending) return;
+    pendingRef.current?.focus();
+    pendingRef.current?.scrollIntoView({ block: "start" });
+  }, [focusPending]);
   return (
     <section
       data-pet-world-pane="deterministic"
@@ -33,19 +41,21 @@ export function PetWorldPane({
         reconciling={status === "reconciling"}
       />
       <div className="space-y-3 p-2">
-        <PendingDecisionSection
-          pending={selected.pending}
-          onOpen={(decision) => {
-            if (!projection) return;
-            onNavigate?.({
-              agentSessionId: decision.agentSessionId,
-              snapshotVersion: projection.version,
-              generation: projection.generation,
-              requestId: decision.requestId,
-              routeGeneration: decision.routeGeneration,
-            });
-          }}
-        />
+        <div ref={pendingRef} tabIndex={-1} className="outline-none">
+          <PendingDecisionSection
+            pending={selected.pending}
+            onOpen={(decision) => {
+              if (!projection) return;
+              onNavigate?.({
+                agentSessionId: decision.agentSessionId,
+                snapshotVersion: projection.version,
+                generation: projection.generation,
+                requestId: decision.requestId,
+                routeGeneration: decision.routeGeneration,
+              });
+            }}
+          />
+        </div>
         <SessionStatusSection
           sessions={selected.sessions}
           emptyState={selected.emptyState}

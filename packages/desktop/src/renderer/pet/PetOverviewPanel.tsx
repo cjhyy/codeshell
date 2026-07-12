@@ -86,11 +86,15 @@ export function PetOverviewPanel({
   children,
 }: PetOverviewPanelProps) {
   const { t } = useT();
+  const headingRef = React.useRef<HTMLHeadingElement>(null);
+  React.useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
   return (
     <aside
       data-pet-overview="sidecar"
       role="complementary"
-      aria-label={t("pet.overview.regionLabel")}
+      aria-labelledby="pet-overview-heading"
       className="relative flex h-full shrink-0 flex-col border-r border-border bg-background shadow-sm"
       style={{ width }}
       onKeyDown={(event) => {
@@ -108,7 +112,13 @@ export function PetOverviewPanel({
         }}
       />
       <div className="flex h-10 shrink-0 items-center justify-between border-b border-border px-3">
-        <h1 tabIndex={-1} className="text-sm font-semibold outline-none">
+        <h1
+          ref={headingRef}
+          id="pet-overview-heading"
+          data-pet-overview-heading="focus-target"
+          tabIndex={-1}
+          className="text-sm font-semibold outline-none"
+        >
           {t("pet.overview.title")}
         </h1>
         <button
