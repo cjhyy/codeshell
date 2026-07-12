@@ -47,6 +47,8 @@ import { pageAttribution } from "./browser/markerEcho";
 import { useT } from "./i18n/I18nProvider";
 
 interface Props {
+  /** Quick chats reuse the normal composer but omit durable-session controls. */
+  variant?: "main" | "quickChat";
   messages: Message[];
   /**
    * True while an EXISTING session picked from the sidebar is being hydrated
@@ -292,6 +294,7 @@ function appendReference(
 }
 
 export function ChatView({
+  variant = "main",
   messages,
   awaitingHydration = false,
   turnEpoch,
@@ -352,7 +355,9 @@ export function ChatView({
   onClearAnchors,
 }: Props) {
   const { t } = useT();
-  const [history, setHistory] = useState<string[]>(() => loadHistory(activeRepoId));
+  const [history, setHistory] = useState<string[]>(() =>
+    variant === "quickChat" ? [] : loadHistory(activeRepoId),
+  );
   const [historyCursor, setHistoryCursor] = useState(-1);
   const liveDraftStash = useRef<string>("");
   const [isComposing, setIsComposing] = useState(false);
@@ -543,10 +548,10 @@ export function ChatView({
   }, [composerSeedNonce]);
 
   useEffect(() => {
-    setHistory(loadHistory(activeRepoId));
+    setHistory(variant === "quickChat" ? [] : loadHistory(activeRepoId));
     setHistoryCursor(-1);
     liveDraftStash.current = "";
-  }, [activeRepoId]);
+  }, [activeRepoId, variant]);
 
   // Auto-size the composer to its content by measuring scrollHeight. The catch:
   // scrollHeight is only right once the textarea is actually laid out at its
@@ -732,6 +737,9 @@ export function ChatView({
 
   const submit = (): void => {
     if (compacting) return;
+    // Some embedded variants (quick chat) intentionally do not support the
+    // main session's queued-input pipeline. Keep the draft intact while busy.
+    if (busy && !onQueueInput) return;
     const text = draft.trim();
     const hasImages = attachments.length > 0;
     const hasAnchors = anchors.length > 0;
@@ -771,7 +779,8 @@ export function ChatView({
       });
     // Snap the stream to the bottom + re-arm follow regardless of scroll pos.
     setSendEpoch((n) => n + 1);
-    if (text) setHistory(pushHistory(activeRepoId, text));
+    // Reusing the main composer must not make ephemeral side prompts durable.
+    if (text && variant !== "quickChat") setHistory(pushHistory(activeRepoId, text));
     setDraft("");
     setAttachments([]);
     setInputReferences([]);
@@ -1507,26 +1516,37 @@ export function ChatView({
                     value={permissionMode}
                     onChange={onPermissionChange}
                     disabled={controlsDisabled}
+                    labelKeyOverrides={
+                      variant === "quickChat"
+                        ? { plan: "panels.quickChat.restrictedAccess" }
+                        : undefined
+                    }
                   />
-                  <GoalToggle
-                    enabled={goalEnabled}
-                    onToggle={onGoalToggle}
-                    disabled={controlsDisabled}
-                  />
+                  {variant === "main" && (
+                    <GoalToggle
+                      enabled={goalEnabled}
+                      onToggle={onGoalToggle}
+                      disabled={controlsDisabled}
+                    />
+                  )}
                 </div>
 
                 <div className="flex min-w-0 items-center justify-end gap-1.5">
-                  <ContextRing
-                    used={contextTokens}
-                    max={contextMax}
-                    busy={busy}
-                    singleTurnPromptTokens={singleTurnPromptTokens}
-                    singleTurnCacheReadTokens={singleTurnCacheReadTokens}
-                    singleTurnCacheCreationTokens={singleTurnCacheCreationTokens}
-                    cumulativePromptTokens={cumulativePromptTokens}
-                    cumulativeCacheReadTokens={cumulativeCacheReadTokens}
-                    cumulativeCacheCreationTokens={cumulativeCacheCreationTokens}
-                  />
+                  {variant === "main" && (
+                    <div data-composer-control="context-usage">
+                      <ContextRing
+                        used={contextTokens}
+                        max={contextMax}
+                        busy={busy}
+                        singleTurnPromptTokens={singleTurnPromptTokens}
+                        singleTurnCacheReadTokens={singleTurnCacheReadTokens}
+                        singleTurnCacheCreationTokens={singleTurnCacheCreationTokens}
+                        cumulativePromptTokens={cumulativePromptTokens}
+                        cumulativeCacheReadTokens={cumulativeCacheReadTokens}
+                        cumulativeCacheCreationTokens={cumulativeCacheCreationTokens}
+                      />
+                    </div>
+                  )}
                   <ModelPill
                     activeKey={activeModelKey}
                     options={modelOptions}
@@ -1649,7 +1669,7 @@ export function ChatView({
             would be confusing (cwd / context / engine sessionId are
             already tied to the existing repo). Use the sidebar to
             jump projects after a session has started. */}
-          {isNewChat && (
+          {isNewChat && variant === "main" && (
             <div className="mt-2 flex items-center gap-2">
               <ProjectPicker
                 repos={repos}

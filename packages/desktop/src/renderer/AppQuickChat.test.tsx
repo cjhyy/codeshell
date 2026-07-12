@@ -5,6 +5,7 @@ import type { ApprovalRequestEnvelope } from "../preload/types";
 import type { Message } from "./types";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
 import type { PermissionMode } from "./chat/PermissionPill";
+import type { ModelOption } from "./chat/ModelPill";
 
 interface QuickChatPanelProps {
   sessionId: string;
@@ -14,10 +15,17 @@ interface QuickChatPanelProps {
   contextMode: "full" | "blank";
   sourceTitle?: string;
   draft: string;
+  attachments: unknown[];
   permissionMode: PermissionMode;
+  modelOptions: ModelOption[];
+  activeModelKey: string | null;
   onPermissionChange: (mode: PermissionMode) => void;
+  onModelChange: (option: ModelOption) => void;
   onDraftChange: (text: string) => void;
-  onSend: (text: string) => void;
+  onSend: (
+    text: string,
+    opts?: { attachments?: Array<Record<string, unknown>>; displayText?: string },
+  ) => void;
   onStop: () => void;
   onRetry: () => void;
   onUseBlank: () => void;
@@ -31,6 +39,7 @@ interface ChatProps {
   busy: boolean;
   draft: string;
   permissionMode: PermissionMode | null;
+  activeModelKey: string | null;
   onPermissionChange: (mode: PermissionMode) => void;
   onDraftChange: (text: string) => void;
   onAskUserAnswer?: (requestId: string, answer: string) => void;
@@ -250,6 +259,7 @@ function installCodeshellStub(
     },
     noRepoCwd: async () => "/tmp",
     configure: async () => undefined,
+    markAttachmentsSent: async () => undefined,
     registerBrowserSessionBucket: () => undefined,
     setGitPrefs: async () => undefined,
     getGitStatus: async () => ({ branch: "main", entries: [], clean: true }),
@@ -457,6 +467,90 @@ afterEach(async () => {
 });
 
 describe("App quick-chat integration", () => {
+  test("routes composer attachments only to the owning quick-chat run", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-attachment", kind: "quickChat" }],
+    });
+    const [quick] = currentQuickPanels();
+    if (!quick) throw new Error("quick chat session was not created");
+    const attachment = {
+      id: "quick-image",
+      sessionId: quick.sessionId,
+      kind: "image",
+      origin: "picker",
+      path: ".code-shell/attachments/quick-image.png",
+      absPath: "/tmp/repo-a/.code-shell/attachments/quick-image.png",
+      size: 12,
+      sha256: "abc",
+      originalName: "quick-image.png",
+      createdAt: 1,
+      vision: { include: true },
+    };
+
+    await act(async () => {
+      quick.onSend("describe this", {
+        attachments: [attachment],
+        displayText: "describe this\n[image:quick-image.png]",
+      });
+      await flushMicrotasks();
+    });
+
+    expect(runCalls.at(-1)).toEqual({
+      prompt: "describe this",
+      opts: expect.objectContaining({
+        sessionId: quick.sessionId,
+        attachments: [attachment],
+      }),
+    });
+    expect(quickChatProps.get(quick.sessionId)?.messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ text: "describe this\n[image:quick-image.png]" }),
+      ]),
+    );
+  });
+
+  test("keeps a quick-chat model selection local and uses it for that side session", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [
+        { id: "quickChat-model-one", kind: "quickChat" },
+        { id: "quickChat-model-two", kind: "quickChat" },
+      ],
+    });
+    const [quickOne, quickTwo] = currentQuickPanels();
+    if (!quickOne || !quickTwo || !chatProps) throw new Error("chat surfaces were not created");
+    const mainModel = chatProps.activeModelKey;
+    const siblingModel = quickTwo.activeModelKey;
+    const sideModel: ModelOption = {
+      key: "side-only-model",
+      label: "Side only",
+      provider: "test",
+      supportsVision: true,
+    };
+
+    await act(async () => {
+      quickOne.onModelChange(sideModel);
+      await flushMicrotasks();
+    });
+
+    expect(quickChatProps.get(quickOne.sessionId)?.activeModelKey).toBe("side-only-model");
+    expect(quickChatProps.get(quickTwo.sessionId)?.activeModelKey).toBe(siblingModel);
+    expect(chatProps.activeModelKey).toBe(mainModel);
+
+    await act(async () => {
+      quickChatProps.get(quickOne.sessionId)?.onSend("inspect with side model");
+      await flushMicrotasks();
+    });
+    expect(runCalls.at(-1)).toEqual({
+      prompt: "inspect with side model",
+      opts: expect.objectContaining({
+        sessionId: quickOne.sessionId,
+        model: "side-only-model",
+      }),
+    });
+  });
+
   test("round-trips one quick chat through every elevation while another quick chat and main stay unchanged", async () => {
     await mountApp({
       withNormalSession: true,
