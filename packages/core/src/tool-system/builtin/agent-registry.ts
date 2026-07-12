@@ -12,7 +12,49 @@
  * RunManager, not here.
  */
 
-export type AsyncAgentStatus = "running" | "completed" | "failed" | "cancelled";
+export type AsyncAgentStatus = "running" | "cancelling" | "completed" | "failed" | "cancelled";
+
+import type {
+  DirectionAck,
+  DirectionDelivery,
+  DirectionEnvelopeDraft,
+  DirectionRejectReason,
+  ProgressPayload,
+} from "./agent-notifications.js";
+import { notificationQueue } from "./agent-notifications.js";
+
+export type { DirectionAck } from "./agent-notifications.js";
+
+export type LiveChildState =
+  | "starting"
+  | "model"
+  | "tool-batch"
+  | "safe-point"
+  | "interrupting"
+  | "redriving"
+  | "closing"
+  | "terminal";
+
+export interface LiveChildControl {
+  readonly childSessionId: string;
+  readonly runtimeGeneration: number;
+  getState(): LiveChildState;
+  routeDirection(draft: DirectionEnvelopeDraft): DirectionAck | Promise<DirectionAck>;
+}
+
+export interface ChildWriterLease {
+  childSessionId: string;
+  runtimeGeneration: number;
+  ownerToken: string;
+}
+
+export interface RouteDirectionRequest {
+  callerSessionId: string;
+  callerIsSubAgent: boolean;
+  agentId: string;
+  prompt: string;
+  delivery: DirectionDelivery;
+}
 
 /** Process-wide cap on concurrent background sub-agents (aligns with Codex max_threads=6). */
 export const MAX_BACKGROUND_AGENTS = 6;
@@ -48,6 +90,10 @@ export interface AsyncAgentEntry {
    *  this equals `agentId`, but it is stored explicitly so the contract is
    *  not coupled to that identity. Undefined for legacy entries. */
   childSessionId?: string;
+  runtimeGeneration?: number;
+  liveControl?: LiveChildControl;
+  writerLease?: ChildWriterLease;
+  progress?: ProgressPayload;
   status: AsyncAgentStatus;
   startedAt: number;
   finishedAt?: number;
@@ -62,6 +108,9 @@ class AsyncAgentRegistry {
   private agents = new Map<string, AsyncAgentEntry>();
   private listeners = new Set<() => void>();
   private snapshot: AsyncAgentEntry[] = [];
+  private writerLeases = new Map<string, ChildWriterLease>();
+  private generationByChildSession = new Map<string, number>();
+  private closedDirectionIntake = new Set<string>();
 
   // ── observer API (React useSyncExternalStore compatible) ──────────────
 
@@ -77,18 +126,20 @@ class AsyncAgentRegistry {
   };
 
   hasRunning = (): boolean => {
-    return this.snapshot.some((e) => e.status === "running");
+    return this.snapshot.some((e) => e.status === "running" || e.status === "cancelling");
   };
 
   /** True if any background agent spawned by `sessionId` is still running.
    *  Drives Engine.run's "wait for my background agents before resolving". */
   hasRunningForSession = (sessionId: string): boolean => {
-    return this.snapshot.some((e) => e.status === "running" && e.sessionId === sessionId);
+    return this.snapshot.some(
+      (e) => (e.status === "running" || e.status === "cancelling") && e.sessionId === sessionId,
+    );
   };
 
   /** Count of agents currently in the "running" state (cap enforcement). */
   runningCount(): number {
-    return this.snapshot.filter((e) => e.status === "running").length;
+    return this.snapshot.filter((e) => e.status === "running" || e.status === "cancelling").length;
   }
 
   private notify(): void {
@@ -105,8 +156,144 @@ class AsyncAgentRegistry {
   // ── mutators ──────────────────────────────────────────────────────────
 
   register(entry: AsyncAgentEntry): void {
+    if (entry.childSessionId && entry.runtimeGeneration === undefined) {
+      const generation = (this.generationByChildSession.get(entry.childSessionId) ?? 0) + 1;
+      entry.runtimeGeneration = generation;
+      this.generationByChildSession.set(entry.childSessionId, generation);
+    } else if (entry.childSessionId && entry.runtimeGeneration !== undefined) {
+      this.generationByChildSession.set(
+        entry.childSessionId,
+        Math.max(
+          this.generationByChildSession.get(entry.childSessionId) ?? 0,
+          entry.runtimeGeneration,
+        ),
+      );
+    }
+    this.closedDirectionIntake.delete(entry.agentId);
     this.agents.set(entry.agentId, entry);
     this.notify();
+  }
+
+  allocateRuntimeGeneration(childSessionId: string): number {
+    const generation = (this.generationByChildSession.get(childSessionId) ?? 0) + 1;
+    this.generationByChildSession.set(childSessionId, generation);
+    return generation;
+  }
+
+  acquireWriterLease(
+    childSessionId: string,
+    runtimeGeneration: number,
+    ownerToken: string,
+  ): ChildWriterLease | undefined {
+    if (!childSessionId || !ownerToken || !Number.isSafeInteger(runtimeGeneration))
+      return undefined;
+    if (this.writerLeases.has(childSessionId)) return undefined;
+    const lease = { childSessionId, runtimeGeneration, ownerToken };
+    this.writerLeases.set(childSessionId, lease);
+    return lease;
+  }
+
+  getWriterLease(childSessionId: string): ChildWriterLease | undefined {
+    return this.writerLeases.get(childSessionId);
+  }
+
+  releaseWriterLease(lease: ChildWriterLease): boolean {
+    const held = this.writerLeases.get(lease.childSessionId);
+    if (
+      held?.ownerToken !== lease.ownerToken ||
+      held.runtimeGeneration !== lease.runtimeGeneration
+    ) {
+      return false;
+    }
+    this.writerLeases.delete(lease.childSessionId);
+    return true;
+  }
+
+  bindLiveControl(agentId: string, control: LiveChildControl, lease: ChildWriterLease): boolean {
+    const entry = this.agents.get(agentId);
+    const held = this.writerLeases.get(lease.childSessionId);
+    if (
+      !entry ||
+      entry.status !== "running" ||
+      entry.childSessionId !== control.childSessionId ||
+      entry.childSessionId !== lease.childSessionId ||
+      entry.runtimeGeneration !== control.runtimeGeneration ||
+      entry.runtimeGeneration !== lease.runtimeGeneration ||
+      held?.ownerToken !== lease.ownerToken
+    ) {
+      return false;
+    }
+    entry.liveControl = control;
+    entry.writerLease = lease;
+    this.notify();
+    return true;
+  }
+
+  closeDirectionIntake(agentId: string, lease: ChildWriterLease): boolean {
+    const entry = this.agents.get(agentId);
+    const held = this.writerLeases.get(lease.childSessionId);
+    if (
+      !entry ||
+      entry.childSessionId !== lease.childSessionId ||
+      entry.runtimeGeneration !== lease.runtimeGeneration ||
+      entry.writerLease?.ownerToken !== lease.ownerToken ||
+      held?.ownerToken !== lease.ownerToken ||
+      held.runtimeGeneration !== lease.runtimeGeneration
+    ) {
+      return false;
+    }
+    this.closedDirectionIntake.add(agentId);
+    return true;
+  }
+
+  updateProgress(agentId: string, progress: ProgressPayload): boolean {
+    const entry = this.agents.get(agentId);
+    if (!entry || entry.status !== "running") return false;
+    entry.progress = progress;
+    this.notify();
+    return true;
+  }
+
+  routeDirection(request: RouteDirectionRequest): DirectionAck | Promise<DirectionAck> {
+    const rejected = (
+      reason: DirectionRejectReason,
+      target?: { sessionId: string; agentId?: string; authority: "agent" },
+    ): DirectionAck => ({
+      status: "rejected",
+      reason,
+      ...(target ? { target } : {}),
+      rejectedAt: Date.now(),
+    });
+    if (!request.prompt.trim()) return rejected("invalid-request");
+    const entry = this.agents.get(request.agentId);
+    if (!entry) return rejected("target-not-found");
+    const target = entry.childSessionId
+      ? { sessionId: entry.childSessionId, agentId: entry.agentId, authority: "agent" as const }
+      : undefined;
+    if (request.callerIsSubAgent || entry.sessionId !== request.callerSessionId) {
+      return rejected("not-direct-parent", target);
+    }
+    if (entry.status !== "running") return rejected("target-not-running", target);
+    if (this.closedDirectionIntake.has(entry.agentId)) return rejected("intake-closed", target);
+    if (!entry.liveControl || !entry.writerLease || !target)
+      return rejected("target-not-ready", target);
+    const held = this.writerLeases.get(entry.writerLease.childSessionId);
+    if (
+      entry.liveControl.runtimeGeneration !== entry.runtimeGeneration ||
+      entry.writerLease.runtimeGeneration !== entry.runtimeGeneration ||
+      held?.runtimeGeneration !== entry.runtimeGeneration ||
+      held.ownerToken !== entry.writerLease.ownerToken
+    ) {
+      return rejected("runtime-generation-mismatch", target);
+    }
+    return entry.liveControl.routeDirection({
+      kind: "direction",
+      from: { sessionId: request.callerSessionId, authority: "agent" },
+      to: target,
+      delivery: request.delivery,
+      runtimeGeneration: entry.runtimeGeneration,
+      payload: { prompt: request.prompt, origin: "agent_send_input" },
+    });
   }
 
   appendToTranscript(agentId: string, entry: AgentTranscriptEntry): void {
@@ -145,13 +332,53 @@ class AsyncAgentRegistry {
     return [...this.agents.values()].filter((e) => e.sessionId === sessionId);
   }
 
-  private markFinished(agentId: string, status: "completed" | "failed" | "cancelled"): void {
+  completeTerminal(
+    agentId: string,
+    status: "completed" | "failed" | "cancelled",
+    lease: ChildWriterLease,
+  ): boolean {
     const e = this.agents.get(agentId);
-    if (!e) return;
-    if (e.status !== "running") return;
+    const held = this.writerLeases.get(lease.childSessionId);
+    if (
+      !e ||
+      (e.status !== "running" && e.status !== "cancelling") ||
+      e.childSessionId !== lease.childSessionId ||
+      e.runtimeGeneration !== lease.runtimeGeneration ||
+      e.writerLease?.ownerToken !== lease.ownerToken ||
+      held?.ownerToken !== lease.ownerToken ||
+      held.runtimeGeneration !== lease.runtimeGeneration
+    ) {
+      return false;
+    }
     e.status = status;
     e.finishedAt = Date.now();
     e.finishedFadeAt = e.finishedAt + 30_000;
+    this.closedDirectionIntake.add(agentId);
+    this.writerLeases.delete(lease.childSessionId);
+    if (e.sessionId) notificationQueue.clearProgress(e.sessionId, agentId, lease.runtimeGeneration);
+    notificationQueue.clearDirections(lease.childSessionId, lease.runtimeGeneration);
+    e.liveControl = undefined;
+    e.writerLease = undefined;
+    e.progress = undefined;
+    this.notify();
+    return true;
+  }
+
+  private markFinished(agentId: string, status: "completed" | "failed" | "cancelled"): void {
+    const e = this.agents.get(agentId);
+    if (!e || (e.status !== "running" && e.status !== "cancelling")) return;
+    // Live runtimes require the full generation/owner fence. Their supervisor
+    // must call completeTerminal after Engine.run has completely settled.
+    if (e.writerLease) return;
+    e.status = status;
+    e.finishedAt = Date.now();
+    e.finishedFadeAt = e.finishedAt + 30_000;
+    this.closedDirectionIntake.add(agentId);
+    if (e.sessionId && e.runtimeGeneration !== undefined) {
+      notificationQueue.clearProgress(e.sessionId, agentId, e.runtimeGeneration);
+    }
+    e.liveControl = undefined;
+    e.progress = undefined;
     this.notify();
   }
 
@@ -171,20 +398,28 @@ class AsyncAgentRegistry {
     const e = this.agents.get(agentId);
     if (!e) return false;
     if (e.status !== "running") return false;
+    e.status = "cancelling";
+    this.closedDirectionIntake.add(agentId);
+    if (e.sessionId && e.runtimeGeneration !== undefined) {
+      notificationQueue.clearProgress(e.sessionId, agentId, e.runtimeGeneration);
+    }
+    e.progress = undefined;
+    this.notify();
     try {
       e.abort();
     } catch {
       // ignore abort errors — we still mark cancelled
     }
-    // Reuse markFinished for the status/timestamp/notify bookkeeping rather
-    // than duplicating it (the entry is still "running" after abort()).
-    this.markFinished(agentId, "cancelled");
+    // Legacy/ad-hoc entries have no live writer lease to fence. There is no
+    // supervisor terminal callback coming for them, so preserve their historic
+    // immediate terminal bookkeeping after the abort request.
+    if (!e.writerLease) this.markFinished(agentId, "cancelled");
     return true;
   }
 
   reset(): void {
     for (const e of this.agents.values()) {
-      if (e.status === "running") {
+      if (e.status === "running" || e.status === "cancelling") {
         try {
           e.abort();
         } catch {
@@ -193,6 +428,9 @@ class AsyncAgentRegistry {
       }
     }
     this.agents.clear();
+    this.writerLeases.clear();
+    this.generationByChildSession.clear();
+    this.closedDirectionIntake.clear();
     this.notify();
   }
 }

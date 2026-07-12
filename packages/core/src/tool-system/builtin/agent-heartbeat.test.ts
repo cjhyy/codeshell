@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { AgentHeartbeatPinger } from "./agent-heartbeat.js";
 import { asyncAgentRegistry } from "./agent-registry.js";
+import { agentNotificationBus, notificationQueue } from "./agent-notifications.js";
 
 /**
  * B: while background agents are running, a pinger publishes periodic
@@ -28,6 +29,7 @@ describe("AgentHeartbeatPinger", () => {
   afterEach(() => {
     pinger.stop();
     asyncAgentRegistry.reset();
+    notificationQueue.reset();
   });
 
   function register(agentId: string, sessionId: string) {
@@ -100,5 +102,42 @@ describe("AgentHeartbeatPinger", () => {
     // With one 5ms timer over ~12ms we expect ~2 ticks, not ~4. Allow slack but
     // assert it's not doubled.
     expect(published.length).toBeLessThanOrEqual(3);
+  });
+
+  it("publishes child progress upstream through the unified queue and bus", async () => {
+    pinger.stop();
+    const seen: string[] = [];
+    const unsubscribe = agentNotificationBus.subscribe((envelope) => seen.push(envelope.kind));
+    asyncAgentRegistry.register({
+      agentId: "worker",
+      description: "inspect",
+      sessionId: "parent",
+      childSessionId: "child",
+      status: "running",
+      startedAt: 0,
+      abort: () => {},
+      progress: {
+        phase: "tool",
+        lastTool: { name: "Read", state: "running", startedAt: 900 },
+        tokens: { prompt: 10, completion: 2, total: 12 },
+        summary: "正在运行 Read",
+        observedAt: 950,
+      },
+    });
+    const unified = new AgentHeartbeatPinger({ intervalMs: 5, now: () => 1000 });
+    unified.start();
+    await tick(8);
+    unified.stop();
+
+    expect(notificationQueue.getSnapshot("parent")).toHaveLength(1);
+    expect(notificationQueue.getSnapshot("parent")[0]).toMatchObject({
+      kind: "progress",
+      from: { sessionId: "child", agentId: "worker", authority: "agent" },
+      to: { sessionId: "parent" },
+      delivery: "observe-only",
+      payload: { phase: "tool", summary: "正在运行 Read", observedAt: 950 },
+    });
+    expect(seen).toContain("progress");
+    unsubscribe();
   });
 });

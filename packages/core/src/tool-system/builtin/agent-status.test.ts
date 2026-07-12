@@ -17,8 +17,12 @@ describe("agentStatusTool — session filtering", () => {
   beforeEach(() => asyncAgentRegistry.reset());
 
   it("lists only the current session's agents by default", async () => {
-    asyncAgentRegistry.register(entry({ agentId: "mine", sessionId: "s1", description: "in session" }));
-    asyncAgentRegistry.register(entry({ agentId: "theirs", sessionId: "s2", description: "other session" }));
+    asyncAgentRegistry.register(
+      entry({ agentId: "mine", sessionId: "s1", description: "in session" }),
+    );
+    asyncAgentRegistry.register(
+      entry({ agentId: "theirs", sessionId: "s2", description: "other session" }),
+    );
     const out = await agentStatusTool({}, { sessionId: "s1" } as never);
     expect(out).toContain("mine");
     expect(out).not.toContain("theirs");
@@ -46,10 +50,32 @@ describe("agentStatusTool — session filtering", () => {
     expect(out).toBe("No background agents in this session.");
   });
 
-  it("a specific agent_id still resolves regardless of session", async () => {
+  it("rejects a specific agent_id outside the caller's direct tree", async () => {
     asyncAgentRegistry.register(entry({ agentId: "theirs", sessionId: "s2", status: "running" }));
     const out = await agentStatusTool({ agent_id: "theirs" }, { sessionId: "s1" } as never);
-    expect(out).toContain("agent_id: theirs");
-    expect(out).toContain("status:   running");
+    expect(out).toMatch(/not found|not in this session/i);
+  });
+
+  it("returns the latest structured progress without copying transcript", async () => {
+    asyncAgentRegistry.register(
+      entry({
+        agentId: "mine",
+        sessionId: "s1",
+        childSessionId: "child",
+        progress: {
+          phase: "tool",
+          lastTool: { name: "Grep", state: "running" },
+          tokens: { prompt: 12, completion: 3, total: 15 },
+          summary: "正在运行 Grep",
+          observedAt: 123,
+        },
+        transcript: [{ id: "secret", type: "assistant", text: "do not copy" }],
+      }),
+    );
+    const out = await agentStatusTool({ agent_id: "mine" }, { sessionId: "s1" } as never);
+    expect(out).toContain("phase:    tool");
+    expect(out).toContain("正在运行 Grep");
+    expect(out).toContain("tokens:   15");
+    expect(out).not.toContain("do not copy");
   });
 });

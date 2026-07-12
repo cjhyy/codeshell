@@ -70,7 +70,15 @@ export class Transcript {
   appendMessage(
     role: string,
     content: string | ContentBlock[],
-    opts?: { injected?: boolean; steerId?: string; clientMessageId?: string },
+    opts?: {
+      injected?: boolean;
+      steerId?: string;
+      clientMessageId?: string;
+      authority?: "user" | "agent" | "system" | "policy";
+      source?: "agent-direction";
+      envelopeIds?: string[];
+      correlationIds?: string[];
+    },
   ): TranscriptEvent {
     if (opts?.clientMessageId) {
       const existing = this.findMessageByClientId(opts.clientMessageId);
@@ -89,6 +97,10 @@ export class Transcript {
       ...(opts?.injected ? { injected: true } : {}),
       ...(opts?.steerId ? { steerId: opts.steerId } : {}),
       ...(opts?.clientMessageId ? { clientMessageId: opts.clientMessageId } : {}),
+      ...(opts?.authority ? { authority: opts.authority } : {}),
+      ...(opts?.source ? { source: opts.source } : {}),
+      ...(opts?.envelopeIds ? { envelopeIds: opts.envelopeIds } : {}),
+      ...(opts?.correlationIds ? { correlationIds: opts.correlationIds } : {}),
     });
   }
 

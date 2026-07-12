@@ -2,13 +2,7 @@
  * Engine — the main facade that wires all components together.
  */
 
-import type {
-  ClientDefaults,
-  Message,
-  StreamCallback,
-  TaskInfo,
-  TokenUsage,
-} from "../types.js";
+import type { ClientDefaults, Message, StreamCallback, TaskInfo, TokenUsage } from "../types.js";
 import { createLLMClient } from "../llm/client-factory.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { ToolExecutor } from "../tool-system/executor.js";
@@ -34,16 +28,13 @@ import {
 } from "./steer-queue.js";
 import { RunEnvironmentResolver } from "./run-environment.js";
 import { BUILTIN_TOOL_GUARDS, type BuiltinToolFn } from "../tool-system/builtin/index.js";
-import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
+import { asyncAgentRegistry, type LiveChildState } from "../tool-system/builtin/agent-registry.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
 import {
   notificationQueue,
   buildNotificationMessage,
 } from "../tool-system/builtin/agent-notifications.js";
-import {
-  PermissionClassifier,
-  InteractiveApprovalBackend,
-} from "../tool-system/permission.js";
+import { PermissionClassifier, InteractiveApprovalBackend } from "../tool-system/permission.js";
 import { HookRegistry } from "../hooks/registry.js";
 import type { HookEventName, HookResult } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
@@ -354,6 +345,8 @@ export class Engine {
    * processes; session-level locking/CAS for those cases is a separate finding.
    */
   private runInProgress = false;
+  private agentControlStateListener?: (state: LiveChildState) => void;
+  private agentDirectionsDeliveredListener?: (envelopeIds: string[]) => void;
   /** Permission update requested while runInProgress. Applied in run() finally. */
 
   /** Public accessor so UI/clients can read the resolved per-model window. */
@@ -748,6 +741,17 @@ export class Engine {
     this.config.askUser = fn;
   }
 
+  /** Internal child-runtime seam used by the single-writer supervisor. */
+  setAgentControlStateListener(listener: ((state: LiveChildState) => void) | undefined): void {
+    this.agentControlStateListener = listener;
+  }
+
+  setAgentDirectionsDeliveredListener(
+    listener: ((envelopeIds: string[]) => void) | undefined,
+  ): void {
+    this.agentDirectionsDeliveredListener = listener;
+  }
+
   /**
    * Inject the browser automation bridge after construction (same chicken-and-egg
    * as setAskUser: the desktop host builds the bridge — which drives a webview —
@@ -1051,7 +1055,9 @@ export class Engine {
         session.transcript.appendSubagent(agentId, undefined, description);
       },
       sessionExists: (sessionId) => this.sessionManager.exists(sessionId),
+      getSessionParentId: (sessionId) => this.sessionManager.readParentSessionId(sessionId),
       childRunner: {
+        createChild: (config) => new Engine(config),
         runChild: async (config, childTask, childOptions) => {
           const child = new Engine(config);
           return child.run(childTask, childOptions);
@@ -1211,7 +1217,18 @@ export class Engine {
       session.transcript.appendMessage("user", userMessageContent, {
         injected: options?.injected === true,
         clientMessageId: options?.clientMessageId,
+        ...(options?.agentDirection
+          ? {
+              authority: "agent" as const,
+              source: "agent-direction" as const,
+              envelopeIds: options.agentDirection.envelopeIds,
+              correlationIds: options.agentDirection.correlationIds,
+            }
+          : {}),
       });
+      if (options?.agentDirection) {
+        this.agentDirectionsDeliveredListener?.(options.agentDirection.envelopeIds);
+      }
       // Flush "active" status to disk immediately. resume() set it in memory
       // (session-manager.ts), but without this write the on-disk state.json
       // still shows the previous run's terminal reason — so any external
@@ -1234,8 +1251,20 @@ export class Engine {
       if (parsedTask.hasImages) freshImageMessage = userMsg;
       messages = [userMsg];
       session.transcript.appendMessage("user", userMessageContent, {
+        injected: options?.injected === true,
         clientMessageId: options?.clientMessageId,
+        ...(options?.agentDirection
+          ? {
+              authority: "agent" as const,
+              source: "agent-direction" as const,
+              envelopeIds: options.agentDirection.envelopeIds,
+              correlationIds: options.agentDirection.correlationIds,
+            }
+          : {}),
       });
+      if (options?.agentDirection) {
+        this.agentDirectionsDeliveredListener?.(options.agentDirection.envelopeIds);
+      }
       // Save first user message as session summary — text only. The summary
       // shows up in the session list; "[image]" is more informative than a
       // truncated `[object Object]` when the prompt was purely visual.
@@ -1304,7 +1333,7 @@ export class Engine {
       // reminders that should accompany each user turn (e.g. "skills
       // available — check before acting").
       const promptSubmitHook = await this.emitHook(
-        "user_prompt_submit",
+        options?.agentDirection ? "agent_direction_submit" : "user_prompt_submit",
         {
           sessionId: session.state.sessionId,
           // Pass the text-only portion. Handlers reading the prompt for keyword
@@ -1314,6 +1343,14 @@ export class Engine {
           // exfiltration risk a curious user-installed shell hook shouldn't carry.
           prompt: taskText,
           resumed: resumedFromDisk,
+          ...(options?.agentDirection
+            ? {
+                source: "agent-direction",
+                authority: "agent",
+                envelopeIds: options.agentDirection.envelopeIds,
+                correlationIds: options.agentDirection.correlationIds,
+              }
+            : {}),
         },
         options?.signal,
       );
@@ -1425,6 +1462,13 @@ export class Engine {
       );
 
       const permission = new PermissionClassifier(defaultRules, mode, approvalBackend);
+      permission.setApprovalStateListener((waiting, toolName) => {
+        options?.onAgentProgress?.({
+          type: "phase",
+          phase: waiting ? "waiting-permission" : "tool",
+          toolName,
+        });
+      });
       this.permissionController.attach(permission, toolCtx.approvalRouter);
 
       // If the backend is the interactive one, wire it for project-scope
@@ -1671,6 +1715,9 @@ export class Engine {
       // Auto-compaction runs inside TurnLoop.manageAsync(), after the loop has
       // initialized its run-scoped Goal tracker. The closure is wired before
       // construction but cannot execute until turnLoop.run() starts.
+      // Assigned after the callbacks that close over it are constructed; they
+      // cannot run until turnLoop.run(), so definite assignment is intentional.
+      // eslint-disable-next-line prefer-const
       let turnLoop!: TurnLoop;
       let autoCompactionGoalTermination: ReturnType<TurnLoop["recordGoalJudgeUsage"]>;
       let externalRunUsage: TokenUsage = {
@@ -1946,6 +1993,31 @@ export class Engine {
             return info;
           },
           consumeSteer: (source) => this.consumeSteer(sid, source),
+          consumeAgentDirections:
+            this.config.isSubAgent === true
+              ? () =>
+                  notificationQueue.drain(
+                    sid,
+                    (envelope) =>
+                      envelope.kind === "direction" &&
+                      envelope.runtimeGeneration === options?.runtimeGeneration,
+                  ) as import("../tool-system/builtin/agent-notifications.js").DirectionEnvelope[]
+              : undefined,
+          onAgentControlState:
+            this.config.isSubAgent === true
+              ? (state) => {
+                  this.agentControlStateListener?.(state);
+                  if (state === "model") {
+                    options?.onAgentProgress?.({ type: "phase", phase: "model" });
+                  } else if (state === "tool-batch") {
+                    options?.onAgentProgress?.({ type: "phase", phase: "tool" });
+                  }
+                }
+              : undefined,
+          onAgentDirectionsDelivered:
+            this.config.isSubAgent === true
+              ? (envelopeIds) => this.agentDirectionsDeliveredListener?.(envelopeIds)
+              : undefined,
           restoreSteer: (items) => this.restoreSteer(sid, items),
           buildSteerUserMessageContent: async (item) => {
             const steerImageInput = await prepareRunImageInput({
@@ -1973,6 +2045,7 @@ export class Engine {
             toolCtx.originClientMessageId = clientMessageId;
           },
           recordCumulativeUsage,
+          onAgentUsage: (usage) => options?.onAgentProgress?.({ type: "usage", usage }),
           recordCacheReadDiagnostics: (sample) => {
             this.recordCacheReadDiagnostics(sid, sample);
           },
@@ -2292,6 +2365,7 @@ export class Engine {
           ...failure,
         });
       }
+      options?.onAgentProgress?.({ type: "phase", phase: "finalizing" });
       session.state.turnCount = turnLoop.currentTurn;
       session.state.status = result.reason;
       if (result.reason === "completed") {
