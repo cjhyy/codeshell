@@ -13,12 +13,20 @@ import type { AgentDefinitionRegistry } from "../../agent/agent-definition-regis
 import type { AgentDefinition } from "../../agent/agent-definition.js";
 import type { HookRegistry } from "../../hooks/registry.js";
 import { asyncAgentRegistry, MAX_BACKGROUND_AGENTS } from "./agent-registry.js";
+import type { ChildWriterLease, LiveChildControl } from "./agent-registry.js";
 import { ensureAgentHeartbeat } from "./agent-heartbeat.js";
 import { writeAgentOutputFile } from "./agent-output-file.js";
 import { createTranscriptTranslator } from "./agent-transcript-translator.js";
 import { notificationQueue } from "./agent-notifications.js";
 import { nanoid } from "nanoid";
 import { logger } from "../../logging/logger.js";
+import {
+  applyAgentProgressPhase,
+  applyAgentProgressUsage,
+  initialAgentProgress,
+  reduceAgentProgress,
+} from "./agent-progress.js";
+import type { ProgressPayload } from "./agent-notifications.js";
 
 /**
  * Invoke a stream callback that came from outside the engine's own
@@ -129,9 +137,7 @@ export function namespacePluginSkills(
  * see the Core A/B/C incident. Returns "" when no roles are defined, so the
  * base description is left untouched.
  */
-export function buildAgentTypesBlock(
-  registry: AgentDefinitionRegistry | undefined,
-): string {
+export function buildAgentTypesBlock(registry: AgentDefinitionRegistry | undefined): string {
   const defs = registry?.list() ?? [];
   if (defs.length === 0) return "";
   const lines = defs.map((d) => {
@@ -177,8 +183,7 @@ export function agentToolDefWithTypes(
     ...agentToolDef.inputSchema,
     properties: {
       ...baseProps,
-      agent_type:
-        names.length > 0 ? { ...baseAgentType, enum: names } : baseAgentType,
+      agent_type: names.length > 0 ? { ...baseAgentType, enum: names } : baseAgentType,
     },
   };
   return {
@@ -320,6 +325,14 @@ async function runSubAgent(
     hooks?: HookRegistry;
     /** Parent session/Goal accounting sink for the completed child run. */
     recordBilledUsage?: (usage: import("../../types.js").TokenUsage) => void;
+    runtimeGeneration?: number;
+    bindLiveControl?: (
+      control: LiveChildControl,
+      ownerToken: string,
+    ) => ChildWriterLease | true | false;
+    closeLiveControl?: (control: LiveChildControl, lease?: ChildWriterLease) => void;
+    onProgressEvent?: (event: Parameters<StreamCallback>[0]) => void;
+    onAgentProgress?: import("../../engine/run-types.js").EngineRunOptions["onAgentProgress"];
   },
   /**
    * Optional sink for the user-visible `agent_start` / `agent_end` markers.
@@ -350,15 +363,41 @@ async function runSubAgent(
   const { text, usage } = await spawner.spawn({ ...opts, streamOverride });
   if (usage) opts.recordBilledUsage?.(usage);
   const finalText = text || `Agent completed but produced no text output.`;
-  safeEmit(startEndSink, { type: "agent_end", agentId, name, description, text: finalText, agentType });
+  safeEmit(startEndSink, {
+    type: "agent_end",
+    agentId,
+    name,
+    description,
+    text: finalText,
+    agentType,
+  });
   emitSubAgentHook(opts.hooks, "subagent_finish", { agentId, description, text: finalText });
   return finalText;
 }
 
-export async function agentTool(
-  args: Record<string, unknown>,
-  ctx?: ToolContext,
-): Promise<string> {
+function createAgentProgressTracker(agentId: string): {
+  current: () => ProgressPayload;
+  onEvent: (event: Parameters<StreamCallback>[0]) => void;
+  onRuntime: NonNullable<import("../../engine/run-types.js").EngineRunOptions["onAgentProgress"]>;
+} {
+  let progress = initialAgentProgress();
+  return {
+    current: () => progress,
+    onEvent: (event) => {
+      progress = reduceAgentProgress(progress, event);
+      asyncAgentRegistry.updateProgress(agentId, progress);
+    },
+    onRuntime: (event) => {
+      progress =
+        event.type === "usage"
+          ? applyAgentProgressUsage(progress, event.usage)
+          : applyAgentProgressPhase(progress, event.phase, Date.now(), event.toolName);
+      asyncAgentRegistry.updateProgress(agentId, progress);
+    },
+  };
+}
+
+export async function agentTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<string> {
   const prompt = args.prompt as string;
   const description = (args.description as string) || "sub-agent";
   const rawName = (args.name as string | undefined)?.trim();
@@ -415,10 +454,15 @@ export async function agentTool(
   // through AgentCancel(agent_id).
   if (runInBackground) {
     if (asyncAgentRegistry.runningCount() >= MAX_BACKGROUND_AGENTS) {
-      return `Error: too many background agents running (limit ${MAX_BACKGROUND_AGENTS}). ` +
-        `Wait for some to finish or cancel one with AgentCancel(agent_id) before launching more.`;
+      return (
+        `Error: too many background agents running (limit ${MAX_BACKGROUND_AGENTS}). ` +
+        `Wait for some to finish or cancel one with AgentCancel(agent_id) before launching more.`
+      );
     }
     const controller = new AbortController();
+    const runtimeGeneration = asyncAgentRegistry.allocateRuntimeGeneration(agentId);
+    const progressTracker = createAgentProgressTracker(agentId);
+    let liveLease: ChildWriterLease | undefined;
     asyncAgentRegistry.register({
       agentId,
       name,
@@ -427,6 +471,9 @@ export async function agentTool(
       // Tag with the spawning session so the parent Engine.run waits only on
       // its own background agents (hasRunningForSession).
       sessionId: ctx?.sessionId,
+      childSessionId: agentId,
+      runtimeGeneration,
+      progress: progressTracker.current(),
       status: "running",
       startedAt: Date.now(),
       abort: () => controller.abort(),
@@ -465,16 +512,51 @@ export async function agentTool(
         sandboxMode: overrides.sandboxMode,
         mcpAllowlist: overrides.mcpAllowlist,
         appendSystemPrompt: overrides.appendSystemPrompt,
-        readOnlySession: overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
+        readOnlySession:
+          overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
         hooks: ctx?.hooks,
         recordBilledUsage: ctx?.recordBilledUsage,
+        runtimeGeneration,
+        bindLiveControl: (control, ownerToken) => {
+          const lease = asyncAgentRegistry.acquireWriterLease(
+            control.childSessionId,
+            control.runtimeGeneration,
+            ownerToken,
+          );
+          if (!lease) return false;
+          if (!asyncAgentRegistry.bindLiveControl(agentId, control, lease)) {
+            asyncAgentRegistry.releaseWriterLease(lease);
+            return false;
+          }
+          liveLease = lease;
+          return lease;
+        },
+        closeLiveControl: (_control, lease) => {
+          if (lease) asyncAgentRegistry.closeDirectionIntake(agentId, lease);
+        },
+        onProgressEvent: progressTracker.onEvent,
+        onAgentProgress: progressTracker.onRuntime,
         signal: controller.signal,
       },
-      parentStream,    // uiStream: agent_start/end → main feed
-      transcriptSink,  // streamOverride: per-event detail → transcript
+      parentStream, // uiStream: agent_start/end → main feed
+      transcriptSink, // streamOverride: per-event detail → transcript
     )
       .then((text) => {
-        asyncAgentRegistry.markCompleted(agentId);
+        if (controller.signal.aborted) {
+          if (liveLease) asyncAgentRegistry.completeTerminal(agentId, "cancelled", liveLease);
+          else asyncAgentRegistry.markCancelled(agentId);
+          void ctx?.hooks?.emit("notification", {
+            kind: "agent_cancelled",
+            agentId,
+            name,
+            description,
+          });
+          return;
+        }
+        const transitioned = liveLease
+          ? asyncAgentRegistry.completeTerminal(agentId, "completed", liveLease)
+          : (asyncAgentRegistry.markCompleted(agentId), true);
+        if (!transitioned) return;
         // External-readable copy of the result (tail / cross-session history).
         // Best-effort; never blocks the completion path.
         void writeAgentOutputFile(agentId, {
@@ -539,7 +621,8 @@ export async function agentTool(
           // User-initiated cancel: mark status but do NOT enqueue —
           // the main agent doesn't need a follow-up turn. Dock still
           // shows the "cancelled" badge for the fade window.
-          asyncAgentRegistry.markCancelled(agentId);
+          if (liveLease) asyncAgentRegistry.completeTerminal(agentId, "cancelled", liveLease);
+          else asyncAgentRegistry.markCancelled(agentId);
           void ctx?.hooks?.emit("notification", {
             kind: "agent_cancelled",
             agentId,
@@ -548,7 +631,10 @@ export async function agentTool(
           });
           return;
         }
-        asyncAgentRegistry.markFailed(agentId);
+        const transitioned = liveLease
+          ? asyncAgentRegistry.completeTerminal(agentId, "failed", liveLease)
+          : (asyncAgentRegistry.markFailed(agentId), true);
+        if (!transitioned) return;
         void writeAgentOutputFile(agentId, {
           status: "failed",
           body: err.message,
@@ -630,6 +716,7 @@ function recordCompletedSyncAgent(opts: {
   agentType?: string;
   description: string;
   parentSessionId?: string;
+  runtimeGeneration?: number;
 }): void {
   // Don't clobber a live/handed-off entry of the same id.
   if (asyncAgentRegistry.get(opts.agentId)) return;
@@ -642,6 +729,7 @@ function recordCompletedSyncAgent(opts: {
     sessionId: opts.parentSessionId,
     // agent_id === childSid: the resumable session lives at sessions/<agentId>/.
     childSessionId: opts.agentId,
+    runtimeGeneration: opts.runtimeGeneration,
     status: "completed",
     startedAt: now,
     finishedAt: now,
@@ -702,6 +790,10 @@ async function runSyncSubAgent(args: {
   // the background, so the finally block leaves the parent-abort listener with
   // the background handlers instead of removing it.
   let handedOff = false;
+  const childSessionId = resumeSessionId ?? agentId;
+  const runtimeGeneration = asyncAgentRegistry.allocateRuntimeGeneration(childSessionId);
+  const progressTracker = createAgentProgressTracker(agentId);
+  let liveBinding: { control: LiveChildControl; lease: ChildWriterLease } | undefined;
 
   // Run the agent, but don't necessarily await it to completion: race the run
   // against the auto-background timer. The run promise is shared between the
@@ -720,10 +812,29 @@ async function runSyncSubAgent(args: {
     sandboxMode: overrides.sandboxMode,
     mcpAllowlist: overrides.mcpAllowlist,
     appendSystemPrompt: overrides.appendSystemPrompt,
-    readOnlySession: overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
+    readOnlySession:
+      overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
     resumeSessionId,
     hooks: ctx?.hooks,
     recordBilledUsage: ctx?.recordBilledUsage,
+    runtimeGeneration,
+    bindLiveControl: (control, ownerToken) => {
+      const lease = asyncAgentRegistry.acquireWriterLease(
+        control.childSessionId,
+        control.runtimeGeneration,
+        ownerToken,
+      );
+      if (!lease) return false;
+      liveBinding = { control, lease };
+      return lease;
+    },
+    closeLiveControl: (_control, lease) => {
+      if (!lease) return;
+      if (handedOff) return asyncAgentRegistry.closeDirectionIntake(agentId, lease);
+      return asyncAgentRegistry.releaseWriterLease(lease);
+    },
+    onProgressEvent: progressTracker.onEvent,
+    onAgentProgress: progressTracker.onRuntime,
     signal: syncController.signal,
   });
 
@@ -741,7 +852,12 @@ async function runSyncSubAgent(args: {
   try {
     // If there's no timer (threshold 0/∞ disabled), just await as before.
     const winner = timerPromise
-      ? await Promise.race([runPromise.then((t) => ({ ok: true as const, text: t })).catch((e) => ({ ok: false as const, err: e as Error })), timerPromise])
+      ? await Promise.race([
+          runPromise
+            .then((t) => ({ ok: true as const, text: t }))
+            .catch((e) => ({ ok: false as const, err: e as Error })),
+          timerPromise,
+        ])
       : { ok: true as const, text: await runPromise };
 
     if (winner === BG_HANDOFF) {
@@ -759,6 +875,10 @@ async function runSyncSubAgent(args: {
         hooks: ctx?.hooks,
         parentSignal,
         onParentAbort,
+        childSessionId,
+        runtimeGeneration,
+        liveBinding,
+        progress: progressTracker.current(),
         // The agent_start fired in runSubAgent put the UI card into 'working'.
         // runSubAgent's own agent_end (line ~299) only fires if spawn() RESOLVES;
         // on failure/cancel it throws before that, so the card would hang
@@ -788,13 +908,25 @@ async function runSyncSubAgent(args: {
         agentType: overrides.resolvedType,
         description,
         parentSessionId: ctx?.sessionId,
+        runtimeGeneration,
       });
       return winner.text;
     }
     throw winner.err;
   } catch (err) {
-    emitSubAgentHook(ctx?.hooks, "subagent_error", { agentId, description, error: (err as Error).message });
-    safeEmit(parentStream, { type: "agent_end", agentId, name, description, error: (err as Error).message, agentType: overrides.resolvedType });
+    emitSubAgentHook(ctx?.hooks, "subagent_error", {
+      agentId,
+      description,
+      error: (err as Error).message,
+    });
+    safeEmit(parentStream, {
+      type: "agent_end",
+      agentId,
+      name,
+      description,
+      error: (err as Error).message,
+      agentType: overrides.resolvedType,
+    });
     if (parentSignal?.aborted) return "Agent was aborted.";
     return `Agent error: ${(err as Error).message}`;
   } finally {
@@ -822,6 +954,10 @@ function handoffToBackground(
     description: string;
     agentType?: string;
     sessionId?: string;
+    childSessionId: string;
+    runtimeGeneration: number;
+    liveBinding?: { control: LiveChildControl; lease: ChildWriterLease };
+    progress?: ProgressPayload;
     hooks?: HookRegistry;
     parentSignal?: AbortSignal;
     onParentAbort: () => void;
@@ -836,7 +972,19 @@ function handoffToBackground(
     uiStream?: StreamCallback;
   },
 ): void {
-  const { agentId, name, description, agentType, sessionId, hooks, uiStream } = meta;
+  const {
+    agentId,
+    name,
+    description,
+    agentType,
+    sessionId,
+    hooks,
+    uiStream,
+    childSessionId,
+    runtimeGeneration,
+    liveBinding,
+    progress,
+  } = meta;
 
   // The agent outlives the spawning turn now, so parent-turn abort must NOT
   // cascade to it (same contract as an explicit background agent). Detach the
@@ -849,10 +997,23 @@ function handoffToBackground(
     agentType,
     description,
     sessionId,
+    childSessionId,
+    runtimeGeneration,
+    progress,
     status: "running",
     startedAt: Date.now(),
     abort: () => controller.abort(),
   });
+  if (
+    liveBinding &&
+    !asyncAgentRegistry.bindLiveControl(agentId, liveBinding.control, liveBinding.lease)
+  ) {
+    logger.warn("agent_live_control.handoff_bind_failed", {
+      agentId,
+      childSessionId,
+      runtimeGeneration,
+    });
+  }
 
   // Tell the UI this agent is now running in the BACKGROUND (still working,
   // just detached from the parent turn). Without this the card's only signals
@@ -868,7 +1029,19 @@ function handoffToBackground(
 
   runPromise
     .then((text) => {
-      asyncAgentRegistry.markCompleted(agentId);
+      if (controller.signal.aborted) {
+        if (liveBinding) {
+          asyncAgentRegistry.completeTerminal(agentId, "cancelled", liveBinding.lease);
+        } else {
+          asyncAgentRegistry.markCancelled(agentId);
+        }
+        void hooks?.emit("notification", { kind: "agent_cancelled", agentId, name, description });
+        return;
+      }
+      const transitioned = liveBinding
+        ? asyncAgentRegistry.completeTerminal(agentId, "completed", liveBinding.lease)
+        : (asyncAgentRegistry.markCompleted(agentId), true);
+      if (!transitioned) return;
       void writeAgentOutputFile(agentId, {
         status: "completed",
         body: text,
@@ -878,25 +1051,52 @@ function handoffToBackground(
       });
       if (sessionId) {
         notificationQueue.enqueue(
-          { agentId, name, description, status: "completed", finalText: text, enqueuedAt: Date.now() },
+          {
+            agentId,
+            name,
+            description,
+            status: "completed",
+            finalText: text,
+            enqueuedAt: Date.now(),
+          },
           sessionId,
         );
       } else {
         logger.warn("agent_completion_without_session", { agentId, name, status: "completed" });
       }
-      void hooks?.emit("notification", { kind: "agent_completed", agentId, name, description, finalText: text });
+      void hooks?.emit("notification", {
+        kind: "agent_completed",
+        agentId,
+        name,
+        description,
+        finalText: text,
+      });
     })
     .catch((err: Error) => {
       // runSubAgent threw before its success agent_end, so the UI card is still
       // 'working'. Close it out with a terminal agent_end{error} (mirrors the
       // synchronous catch at the agentTool level).
-      safeEmit(uiStream, { type: "agent_end", agentId, name, description, error: err.message, agentType });
+      safeEmit(uiStream, {
+        type: "agent_end",
+        agentId,
+        name,
+        description,
+        error: err.message,
+        agentType,
+      });
       if (controller.signal.aborted) {
-        asyncAgentRegistry.markCancelled(agentId);
+        if (liveBinding) {
+          asyncAgentRegistry.completeTerminal(agentId, "cancelled", liveBinding.lease);
+        } else {
+          asyncAgentRegistry.markCancelled(agentId);
+        }
         void hooks?.emit("notification", { kind: "agent_cancelled", agentId, name, description });
         return;
       }
-      asyncAgentRegistry.markFailed(agentId);
+      const transitioned = liveBinding
+        ? asyncAgentRegistry.completeTerminal(agentId, "failed", liveBinding.lease)
+        : (asyncAgentRegistry.markFailed(agentId), true);
+      if (!transitioned) return;
       void writeAgentOutputFile(agentId, {
         status: "failed",
         body: err.message,
@@ -906,13 +1106,26 @@ function handoffToBackground(
       });
       if (sessionId) {
         notificationQueue.enqueue(
-          { agentId, name, description, status: "failed", error: err.message, enqueuedAt: Date.now() },
+          {
+            agentId,
+            name,
+            description,
+            status: "failed",
+            error: err.message,
+            enqueuedAt: Date.now(),
+          },
           sessionId,
         );
       } else {
         logger.warn("agent_completion_without_session", { agentId, name, status: "failed" });
       }
-      void hooks?.emit("notification", { kind: "agent_failed", agentId, name, description, error: err.message });
+      void hooks?.emit("notification", {
+        kind: "agent_failed",
+        agentId,
+        name,
+        description,
+        error: err.message,
+      });
     });
 }
 
@@ -965,13 +1178,17 @@ export async function agentStatusTool(
     return list
       .map((e) => {
         const dur = ((e.finishedAt ?? Date.now()) - e.startedAt) / 1000;
-        return `${e.agentId} [${e.status}] ${e.description} (${dur.toFixed(1)}s)`;
+        const progress = e.status === "running" && e.progress ? ` — ${e.progress.summary}` : "";
+        return `${e.agentId} [${e.status}] ${e.description}${progress} (${dur.toFixed(1)}s)`;
       })
       .join("\n");
   }
 
   const e = asyncAgentRegistry.get(agentId);
   if (!e) return `Error: agent_id "${agentId}" not found.`;
+  if (ctx?.sessionId && e.sessionId !== ctx.sessionId) {
+    return `Error: agent_id "${agentId}" is not in this session.`;
+  }
 
   const dur = ((e.finishedAt ?? Date.now()) - e.startedAt) / 1000;
   const lines = [
@@ -981,12 +1198,23 @@ export async function agentStatusTool(
     `duration: ${dur.toFixed(1)}s`,
   ];
   if (e.status === "completed") {
-    lines.push("", "(completed — result was delivered to the conversation when the agent finished)");
+    lines.push(
+      "",
+      "(completed — result was delivered to the conversation when the agent finished)",
+    );
   } else if (e.status === "failed") {
     lines.push("", "(failed — error was delivered to the conversation when the agent finished)");
   } else if (e.status === "cancelled") {
     lines.push("", "(cancelled — no result delivered)");
   } else if (e.status === "running") {
+    if (e.progress) {
+      lines.push(
+        `phase:    ${e.progress.phase}`,
+        `progress: ${e.progress.summary}`,
+        `tokens:   ${e.progress.tokens.total}`,
+        `observed: ${e.progress.observedAt}`,
+      );
+    }
     lines.push("", "(still running — call AgentStatus again later)");
   }
   return lines.join("\n");
@@ -1020,9 +1248,7 @@ export async function agentCancelTool(args: Record<string, unknown>): Promise<st
   }
 
   const ok = asyncAgentRegistry.cancel(agentId);
-  return ok
-    ? `Agent ${agentId} cancelled.`
-    : `Failed to cancel agent ${agentId}.`;
+  return ok ? `Agent ${agentId} cancelled.` : `Failed to cancel agent ${agentId}.`;
 }
 
 // ─── AgentSendInput — continue a previously-spawned sub-agent ────
@@ -1056,7 +1282,15 @@ export const agentSendInputToolDef: ToolDefinition = {
           "The follow-up instruction. The agent already remembers its earlier work — " +
           "send only what's new (feedback, the next step, a question).",
       },
+      delivery: {
+        type: "string",
+        enum: ["next-safe-point", "interrupt-and-redrive"],
+        description:
+          "For a running child: queue at the next complete model/tool boundary (default), " +
+          "or cooperatively interrupt the active batch and serially redrive the same runtime.",
+      },
     },
+    additionalProperties: false,
     required: ["agent_id", "prompt"],
   },
 };
@@ -1065,11 +1299,24 @@ export async function agentSendInputTool(
   args: Record<string, unknown>,
   ctx?: ToolContext,
 ): Promise<string> {
+  const allowedKeys = new Set(["agent_id", "prompt", "delivery", "__signal"]);
+  if (Object.keys(args).some((key) => !allowedKeys.has(key))) {
+    return "Error: invalid-request: AgentSendInput accepts only agent_id, prompt, and delivery.";
+  }
   const agentId = (args.agent_id as string | undefined)?.trim();
   const prompt = args.prompt as string | undefined;
+  const rawDelivery = args.delivery;
 
   if (!agentId) return "Error: agent_id is required.";
   if (!prompt) return "Error: prompt is required.";
+  if (
+    rawDelivery !== undefined &&
+    rawDelivery !== "next-safe-point" &&
+    rawDelivery !== "interrupt-and-redrive"
+  ) {
+    return "Error: invalid delivery. Expected next-safe-point or interrupt-and-redrive.";
+  }
+  const delivery = rawDelivery ?? "next-safe-point";
 
   if (!ctx?.subAgentSpawner) {
     return "Error: Agent tool is not configured (no subAgentSpawner in ctx).";
@@ -1105,18 +1352,44 @@ export async function agentSendInputTool(
     );
   }
 
-  // Concurrency guard: a sub-agent that's still running (e.g. it auto-moved to
-  // the background and hasn't finished) owns its child session. Resuming now
-  // would build a SECOND child Engine that resumes the SAME session and appends
-  // to the SAME transcript concurrently — sub-agents have no per-session
-  // `active` lock (the protocol layer's serialization only covers top-level
-  // sessions), so the two writers interleave and can corrupt the transcript.
-  // Refuse until it finishes (or is cancelled).
+  // A running target owns its transcript writer lease. This branch is route-only:
+  // registry validation + the bound live runtime enqueue the direction envelope;
+  // it must never construct/resume a second child Engine.
   if (entry?.status === "running") {
+    const ack = await asyncAgentRegistry.routeDirection({
+      callerSessionId: ctx.sessionId ?? "",
+      callerIsSubAgent: false,
+      agentId,
+      prompt,
+      delivery,
+    });
+    return JSON.stringify(ack);
+  }
+
+  if (entry?.status === "cancelling" || asyncAgentRegistry.getWriterLease(resumeSessionId)) {
+    return `Error: sub-agent "${agentId}" is still cancelling; wait for its previous runtime to fully exit.`;
+  }
+
+  const callerSessionId = ctx.sessionId ?? "";
+  if (entry) {
+    if (!callerSessionId || entry.sessionId !== callerSessionId) {
+      return `Error: caller is not the direct parent of sub-agent "${agentId}" (not in this session).`;
+    }
+  } else {
+    const persistedParent = spawner.getSessionParentId?.(resumeSessionId);
+    if (!callerSessionId || persistedParent === undefined || persistedParent === null) {
+      return `Error: cannot verify the direct parent of sub-agent "${agentId}"; continuation is denied.`;
+    }
+    if (persistedParent !== callerSessionId) {
+      return `Error: caller is not the direct parent of sub-agent "${agentId}" (not in this session).`;
+    }
+  }
+
+  if (delivery === "interrupt-and-redrive") {
     return (
-      `Error: sub-agent "${agentId}" is still running. ` +
-      `Wait for it to finish (poll with AgentStatus), or cancel it with ` +
-      `AgentCancel, before sending it more input.`
+      `Error: sub-agent "${agentId}" is no longer running; ` +
+      `interrupt-and-redrive cannot interrupt a terminal target. ` +
+      `Omit delivery to use the existing transcript continuation path.`
     );
   }
 

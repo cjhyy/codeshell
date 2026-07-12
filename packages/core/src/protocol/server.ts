@@ -49,6 +49,7 @@ import {
   agentNotificationBus,
   notificationQueue,
   buildNotificationMessage,
+  notificationEnvelopeToLegacyStreamEvent,
 } from "../tool-system/builtin/agent-notifications.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
@@ -288,8 +289,10 @@ export class AgentServer {
     // polls (background-jobs.ts). The bus now guarantees a real sessionId
     // (no more legacy-bucket coercion to ""), so we forward whatever sid it
     // hands us.
-    this.bgAgentBusUnsubscribe = agentNotificationBus.subscribe((sessionId, event) => {
-      this.notify(Methods.StreamEvent, { sessionId, event });
+    this.bgAgentBusUnsubscribe = agentNotificationBus.subscribe((envelope) => {
+      const sessionId = envelope.to.sessionId;
+      const event = notificationEnvelopeToLegacyStreamEvent(envelope);
+      if (event) this.notify(Methods.StreamEvent, { sessionId, event });
       // Background work that finishes while the session is IDLE (a
       // run_in_background Bash like a download, a background sub-agent, or a
       // video poll — the engine no longer parks on any of them) would otherwise
@@ -301,7 +304,7 @@ export class AgentServer {
       // (trigger B) drains it at end-of-turn instead. A never-exiting dev server
       // emits no completion, so it never wakes anything (no task/service
       // classification needed).
-      this.maybeWakeIdleSession(sessionId);
+      if (envelope.kind === "result") this.maybeWakeIdleSession(sessionId);
     });
 
     // Notify client we're ready
@@ -707,7 +710,7 @@ export class AgentServer {
     } as EngineConfigSlice;
 
     if (params.requireExisting === true && !cm.get(params.sessionId)) {
-      let existsOnDisk = false;
+      let existsOnDisk: boolean;
       try {
         existsOnDisk = cm.sessionExistsOnDisk(params.sessionId, sessionConfig);
       } catch (err: any) {

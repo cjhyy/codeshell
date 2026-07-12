@@ -107,6 +107,7 @@ export type HookEventName =
   | "pre_tool_use"
   | "post_tool_use"
   | "user_prompt_submit"
+  | "agent_direction_submit"
   | "pre_compact"
   | "post_compact"
   | "file_changed"

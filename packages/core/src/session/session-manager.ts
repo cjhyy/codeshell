@@ -346,6 +346,25 @@ export class SessionManager {
     }
   }
 
+  /** Disk-only direct-parent ACL metadata. Undefined means unprovable/corrupt. */
+  readParentSessionId(sessionId: string): string | null | undefined {
+    try {
+      assertSafeSessionId(sessionId);
+    } catch {
+      return undefined;
+    }
+    const stateFile = join(this.sessionsDir, sessionId, "state.json");
+    if (!existsSync(stateFile)) return undefined;
+    try {
+      const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
+      return state.parentSessionId === null || typeof state.parentSessionId === "string"
+        ? state.parentSessionId
+        : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   /**
    * Disk-only workspace pointer reader. Legacy sessions written before
    * `workspace` existed are treated as main-workspace sessions rooted at

@@ -21,6 +21,7 @@ import type { HookRegistry } from "../hooks/registry.js";
 import type { SessionManager } from "../session/session-manager.js";
 import type { SessionWorkspace } from "../types.js";
 import type { ApprovalRouter } from "./permission.js";
+import type { ChildWriterLease, LiveChildControl } from "./builtin/agent-registry.js";
 
 /**
  * Narrow view of the owning Engine that tools are allowed to call back into.
@@ -153,6 +154,18 @@ export interface SubAgentSpawnRequest {
    * See AgentSendInput in builtin/agent.ts.
    */
   resumeSessionId?: string;
+  /** Trusted live-runtime generation; never exposed in the Agent tool schema. */
+  runtimeGeneration?: number;
+  /** Bind the existing child runtime to the registry's single-writer lease. */
+  bindLiveControl?: (
+    control: LiveChildControl,
+    ownerToken: string,
+  ) => ChildWriterLease | true | false;
+  /** Atomically close intake before the child publishes its terminal result. */
+  closeLiveControl?: (control: LiveChildControl, lease?: ChildWriterLease) => boolean | void;
+  /** Raw child stream tap used to deterministically reduce structured progress. */
+  onProgressEvent?: (event: Parameters<StreamCallback>[0]) => void;
+  onAgentProgress?: import("../engine/run-types.js").EngineRunOptions["onAgentProgress"];
 }
 
 export interface SubAgentSpawner {
@@ -169,6 +182,8 @@ export interface SubAgentSpawner {
    * the session transcript is still persisted). Optional for legacy callers.
    */
   sessionExists?(sessionId: string): boolean;
+  /** Persisted direct-parent metadata used to authorize cross-restart continuation. */
+  getSessionParentId?(sessionId: string): string | null | undefined;
   /** Stream callback to forward sub-agent events back to the parent UI. */
   parentStream?: StreamCallback;
   /** Static config used to describe what the spawned engine looks like. */
