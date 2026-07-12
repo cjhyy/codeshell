@@ -172,6 +172,55 @@ Desktop wiring/UI/lifecycle：
 
 全量无新增失败，`ExternalAgentSessionStore concurrent writers` 预存基线失败本次未复现。
 
+## 终审修复
+
+统一修复 commit：`ee287266` — `fix(quickchat): isolate composer async lifecycle`。
+
+### MAJOR 1 — 快聊卸载后录音/转写继续
+
+- Commit：`ee287266`。
+- `ChatView` 新增 mounted generation 与显式 media stream ref。卸载时取消两分钟 timer，先解除 recorder `onstop/ondataavailable`，再停止 recorder 和全部 tracks。
+- 麦克风授权、`getUserMedia`、blob 读取、STT 请求与结果回写每个 async 边界都检查 mounted generation；迟到结果不再 `setDraft`/toast/setState。
+- 转写回写改为 functional draft update，避免捕获旧草稿。App quick-chat draft setter 再按 `quickChatSessionsRef` 验证 bucket 存活，旧 bucket fail closed。
+
+### MAJOR 2 — 迟到附件 stage/mark 复活 ephemeral 目录
+
+- Commit：`ee287266`。
+- 复用 quick-chat `creationNonce`/claim：`QuickChatPanel → ChatView → preload → main` 的 stage payload 和 App mark-sent payload 都携带同一 `quickChatClaimId`。
+- `QuickChatOwnershipRegistry` 在原 fork-in-flight 机制上增加 claim 内 auxiliary operation 计数。stage/mark 开始前校验 active claim；cleanup 先 tombstone，在途操作未 settle 时返回 deferred；最后一个操作 settle 后执行唯一删除。
+- settle 后如 claim 已失效，main 丢弃结果并再次清理 payload 精确 cwd 下的旧 session 附件目录，覆盖 worktree cwd 不在通用 project scan 里的情况。
+- `ChatView` 在 build/compress/stage 每个 await 后检查 mounted；App attachment/model setter 也拒绝已死 bucket。
+
+### MINOR 1 — 无 handler 的 `/compact` 吞草稿
+
+- Commit：`ee287266`。
+- 只在实际传入 `onCompactCommand` 时注册 `/compact` slash item；侧聊不再显示该命令，裸 `/compact` 按普通文本发送，不会静默清空。
+
+### MINOR 2 — 真实 wrapper 与异步竞态测试盲点
+
+- Commit：`ee287266`。
+- 恢复 `QuickChatPanel.test.tsx` 真实 wrapper 渲染，硬断言 `data-chat-variant="quickChat"`、权限徽标及 Goal/usage 不可见；包装层漏传 variant 会直接失败。
+- 新增 `ChatView.ephemeral-lifecycle.test.tsx`，覆盖 prompt history 不持久化、`/compact` 不展示、卸载停 recorder/track/timer、迟到 STT 不回写、迟到 stage 不更新附件。
+- App 集成测试覆盖关闭/替换后旧 draft/attachment/model callback 不能复活状态，且 mark-sent 真实携带所属 creation nonce。
+- ownership 磁盘测试同时挂起 stage 与 mark-sent，断言 cleanup 延迟到两者 settle，然后旧附件目录不存在。
+
+### TDD 与验证
+
+- 红灯：首次生命周期/ownership 复现为 `5 pass / 4 fail / 21 expect()`，四个失败分别是 recorder 未停、迟到 STT 回写、迟到 stage 回写、registry 无 operation gate；`/compact` 单独红灯为 `0 pass / 1 fail`。
+- 相关定向回归（ChatView/QuickChatPanel/App/override persistence/ownership/fork/attachment service）：`63 pass / 0 fail / 255 expect()`。
+- `bun run --filter '@cjhyy/code-shell-desktop' typecheck`：通过。
+- `bun test 2>&1 | tail -5`（`pipefail` + 临时 tee）：
+
+  ```text
+  5848 pass
+  6 skip
+  0 fail
+  14424 expect() calls
+  Ran 5854 tests across 834 files. [69.84s]
+  ```
+
+全量无新增失败，`ExternalAgentSessionStore concurrent writers` 预存基线失败本次未复现。现有 side-chat system prompt/行为限制未修改。
+
 ## 偏离与未决
 
 - “明确提权”采用可审计的 UI 动作：用户必须切换 quick chat 自己的访问徽标。仅在自然语言里要求写入不会静默绕过 hard gate；模型会提示用户切换徽标。这避免模型自行判断一句话是否足以授权。
