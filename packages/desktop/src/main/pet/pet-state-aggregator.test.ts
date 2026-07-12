@@ -256,4 +256,60 @@ describe("PetStateAggregator", () => {
       "keep",
     ]);
   });
+
+  test("revalidates structured navigation against current disk and pending generations", async () => {
+    const bridge = new FakeBridge();
+    bridge.active = true;
+    bridge.snapshot = {
+      ...snapshot(7, 4, [live("one")]),
+      pending: [
+        {
+          owner: "local-user",
+          agentSessionId: "one",
+          coreSessionId: "core-one",
+          requestId: "req-1",
+          routeGeneration: 3,
+          workerGeneration: 7,
+          kind: "tool_approval",
+          title: "Approve Write",
+          createdAt: 2_000,
+          status: "pending",
+        },
+      ],
+    };
+    const catalog = pagedCatalog([disk("one")]);
+    const aggregator = new PetStateAggregator({ bridge, listDiskSessions: catalog.list });
+    await aggregator.start();
+
+    expect(
+      await aggregator.resolveNavigation({
+        agentSessionId: "one",
+        snapshotVersion: aggregator.getSnapshot().version,
+        generation: 7,
+        requestId: "req-1",
+        routeGeneration: 3,
+      }),
+    ).toMatchObject({
+      status: "ok",
+      target: { uiSessionId: "one", projectPath: "/Users/me/work/one" },
+    });
+
+    expect(
+      await aggregator.resolveNavigation({
+        agentSessionId: "one",
+        snapshotVersion: 0,
+        generation: 6,
+        requestId: "resolved",
+      }),
+    ).toMatchObject({ status: "stale", pendingStatus: "resolved" });
+
+    catalog.replace([]);
+    expect(
+      await aggregator.resolveNavigation({
+        agentSessionId: "one",
+        snapshotVersion: 0,
+        generation: 7,
+      }),
+    ).toEqual({ status: "not-found" });
+  });
 });

@@ -44,6 +44,32 @@ export interface PetProjectionSnapshot {
   observedAt: number;
 }
 
+export interface PetOpenSessionRequest {
+  agentSessionId: string;
+  snapshotVersion: number;
+  generation: number;
+  requestId?: string;
+  routeGeneration?: number;
+}
+
+export interface PetNavigationTarget {
+  uiSessionId: string;
+  engineSessionId: string;
+  projectPath: string | null;
+  title: string;
+  updatedAt: number;
+  origin: "desktop" | "automation";
+  status?: "active" | "paused" | "completed" | "failed" | "cancelled";
+}
+
+export type PetOpenSessionResult =
+  | { status: "not-found" }
+  | {
+      status: "ok" | "stale";
+      target: PetNavigationTarget;
+      pendingStatus?: "pending" | "resolved";
+    };
+
 interface PetProjectionEventBase {
   version: number;
   generation: number;
@@ -63,10 +89,11 @@ export type PetProjectionEvent = PetProjectionEventBase &
 export interface PetApi {
   getSnapshot(): Promise<PetProjectionSnapshot>;
   onProjectionEvent(listener: (event: PetProjectionEvent) => void): () => void;
+  openSession(request: PetOpenSessionRequest): Promise<PetOpenSessionResult>;
 }
 
 export interface PetIpcRenderer {
-  invoke(channel: string): Promise<unknown>;
+  invoke(channel: string, payload?: unknown): Promise<unknown>;
   on(channel: string, listener: (event: unknown, payload: PetProjectionEvent) => void): unknown;
   removeListener(
     channel: string,
@@ -77,6 +104,8 @@ export interface PetIpcRenderer {
 export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
   return {
     getSnapshot: () => ipcRenderer.invoke("pet:get-snapshot") as Promise<PetProjectionSnapshot>,
+    openSession: (request) =>
+      ipcRenderer.invoke("pet:open-session", request) as Promise<PetOpenSessionResult>,
     onProjectionEvent: (listener) => {
       const handler = (_event: unknown, payload: PetProjectionEvent): void => listener(payload);
       ipcRenderer.on("pet:projection-event", handler);

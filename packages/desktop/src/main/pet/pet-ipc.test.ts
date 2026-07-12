@@ -18,18 +18,23 @@ function snapshot(): DesktopPetProjectionSnapshot {
 
 describe("registerPetIpc", () => {
   test("exposes only the bounded snapshot schema and rejects command payloads", async () => {
-    let handler: ((event: unknown, ...args: unknown[]) => unknown) | undefined;
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
     const ipc = {
-      handle: (_channel: string, next: typeof handler) => (handler = next),
+      handle: (channel: string, next: (event: unknown, ...args: unknown[]) => unknown) =>
+        handlers.set(channel, next),
       removeHandler: () => {},
     };
     registerPetIpc({
       ipcMain: ipc,
-      aggregator: { getSnapshot: snapshot, subscribe: () => () => {} },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
       windows: () => [],
     });
 
-    const result = (await handler?.({})) as Record<string, unknown>;
+    const result = (await handlers.get("pet:get-snapshot")?.({})) as Record<string, unknown>;
     expect(Object.keys(result).sort()).toEqual([
       "generation",
       "observedAt",
@@ -39,7 +44,9 @@ describe("registerPetIpc", () => {
       "workerState",
     ]);
     expect(JSON.stringify(result)).not.toContain("coreSessionId");
-    expect(() => handler?.({}, { command: "rawTranscript" })).toThrow("does not accept arguments");
+    expect(() => handlers.get("pet:get-snapshot")?.({}, { command: "rawTranscript" })).toThrow(
+      "does not accept arguments",
+    );
   });
 
   test("broadcasts each ordered event once per live window and disposes cleanly", () => {
@@ -58,6 +65,7 @@ describe("registerPetIpc", () => {
           listener = next;
           return () => (unsubscribed = true);
         },
+        resolveNavigation: async () => ({ status: "not-found" }),
       },
       windows: () => [
         {
@@ -78,5 +86,40 @@ describe("registerPetIpc", () => {
     expect(sent).toEqual([["pet:projection-event", event]]);
     dispose();
     expect({ removed, unsubscribed }).toEqual({ removed: true, unsubscribed: true });
+  });
+
+  test("accepts only a structured navigation request and delegates revalidation", async () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    let received: unknown;
+    registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: () => {},
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async (request) => {
+          received = request;
+          return { status: "not-found" };
+        },
+      },
+      windows: () => [],
+    });
+    const request = {
+      agentSessionId: "session-a",
+      snapshotVersion: 4,
+      generation: 2,
+      requestId: "req-a",
+      routeGeneration: 9,
+    };
+
+    expect(await handlers.get("pet:open-session")?.({}, request)).toEqual({
+      status: "not-found",
+    });
+    expect(received).toEqual(request);
+    expect(() => handlers.get("pet:open-session")?.({}, { ...request, approve: true })).toThrow(
+      "invalid navigation request",
+    );
   });
 });

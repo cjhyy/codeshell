@@ -52,6 +52,10 @@ export const pet = {
         toolApproval: "工具审批",
         askUser: "需要回答",
       },
+      navigation: {
+        stale: "该请求已处理或状态已更新；已打开原会话",
+        notFound: "原会话已不存在或不可打开",
+      },
     },
   },
   en: {
@@ -106,6 +110,10 @@ export const pet = {
         open: "Open and handle",
         toolApproval: "Tool approval",
         askUser: "Answer needed",
+      },
+      navigation: {
+        stale: "The request changed or was handled; opened the original session",
+        notFound: "The original session no longer exists or cannot be opened",
       },
     },
   },

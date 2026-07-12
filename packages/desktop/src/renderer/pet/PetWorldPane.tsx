@@ -1,4 +1,4 @@
-import type { PetProjectionSnapshot } from "../../preload/types";
+import type { PetOpenSessionRequest, PetProjectionSnapshot } from "../../preload/types";
 import React from "react";
 import { PendingDecisionSection } from "./PendingDecisionSection";
 import { PetOverviewHeader } from "./PetOverviewHeader";
@@ -10,14 +10,12 @@ export function PetWorldPane({
   projection,
   status,
   now = Date.now(),
-  onOpenPending,
-  onOpenSession,
+  onNavigate,
 }: {
   projection: PetProjectionSnapshot | null;
   status: PetProjectionStatus;
   now?: number;
-  onOpenPending?: (sessionId: string, requestId: string) => void;
-  onOpenSession?: (sessionId: string) => void;
+  onNavigate?: (request: PetOpenSessionRequest) => void;
 }) {
   const selected = selectPetOverview(projection, status, now);
   return (
@@ -37,13 +35,29 @@ export function PetWorldPane({
       <div className="space-y-3 p-2">
         <PendingDecisionSection
           pending={selected.pending}
-          onOpen={(decision) => onOpenPending?.(decision.agentSessionId, decision.requestId)}
+          onOpen={(decision) => {
+            if (!projection) return;
+            onNavigate?.({
+              agentSessionId: decision.agentSessionId,
+              snapshotVersion: projection.version,
+              generation: projection.generation,
+              requestId: decision.requestId,
+              routeGeneration: decision.routeGeneration,
+            });
+          }}
         />
         <SessionStatusSection
           sessions={selected.sessions}
           emptyState={selected.emptyState}
           now={now}
-          onOpen={(session) => onOpenSession?.(session.agentSessionId)}
+          onOpen={(session) => {
+            if (!projection) return;
+            onNavigate?.({
+              agentSessionId: session.agentSessionId,
+              snapshotVersion: projection.version,
+              generation: projection.generation,
+            });
+          }}
         />
       </div>
     </section>

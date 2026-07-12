@@ -32,6 +32,7 @@ describe("PetStateProvider", () => {
         maximumListeners = Math.max(maximumListeners, listeners.size);
         return () => listeners.delete(listener);
       },
+      openSession: async () => ({ status: "not-found" }),
     };
     const container = document.createElement("div");
     const root = createRoot(container);
@@ -63,6 +64,7 @@ describe("PetStateProvider", () => {
         listeners.add(listener);
         return () => listeners.delete(listener);
       },
+      openSession: async () => ({ status: "not-found" }),
     };
     let latest: ReturnType<typeof usePetState> | undefined;
     function Consumer({ page }: { page: "chat" | "settings_page" }) {

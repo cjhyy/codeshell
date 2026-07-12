@@ -20,6 +20,9 @@ import type { PetApi } from "./pet-api";
 export type {
   PetApi,
   PetPendingDecision,
+  PetNavigationTarget,
+  PetOpenSessionRequest,
+  PetOpenSessionResult,
   PetProjectionEvent,
   PetProjectionSnapshot,
   PetSessionProjection,

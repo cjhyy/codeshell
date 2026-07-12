@@ -43,6 +43,32 @@ export interface DesktopPetProjectionSnapshot {
   observedAt: number;
 }
 
+export interface PetNavigationRequest {
+  agentSessionId: string;
+  snapshotVersion: number;
+  generation: number;
+  requestId?: string;
+  routeGeneration?: number;
+}
+
+export interface PetNavigationTarget {
+  uiSessionId: string;
+  engineSessionId: string;
+  projectPath: string | null;
+  title: string;
+  updatedAt: number;
+  origin: DiskSessionMeta["origin"];
+  status?: DiskSessionMeta["status"];
+}
+
+export type PetNavigationResult =
+  | { status: "not-found" }
+  | {
+      status: "ok" | "stale";
+      target: PetNavigationTarget;
+      pendingStatus?: "pending" | "resolved";
+    };
+
 interface DesktopPetEventBase {
   version: number;
   generation: number;
@@ -152,6 +178,7 @@ function pendingKey(sessionId: string, requestId: string): string {
 
 export class PetStateAggregator {
   private readonly diskSessions = new Map<string, DesktopPetSession>();
+  private readonly diskBindings = new Map<string, PetNavigationTarget>();
   private readonly liveSessions = new Map<string, DesktopPetSession>();
   private readonly pending = new Map<string, DesktopPendingDecision>();
   private readonly listeners = new Set<(event: DesktopPetProjectionEvent) => void>();
@@ -229,19 +256,55 @@ export class PetStateAggregator {
     return () => this.listeners.delete(listener);
   }
 
+  async resolveNavigation(request: PetNavigationRequest): Promise<PetNavigationResult> {
+    await this.refreshCatalog(false);
+    const target = this.diskBindings.get(request.agentSessionId);
+    if (!target) return { status: "not-found" };
+
+    let stale = request.snapshotVersion !== this.version || request.generation !== this.generation;
+    let pendingStatus: "pending" | "resolved" | undefined;
+    if (request.requestId) {
+      const pending = this.pending.get(pendingKey(request.agentSessionId, request.requestId));
+      const routeMatches =
+        request.routeGeneration === undefined ||
+        pending?.routeGeneration === undefined ||
+        request.routeGeneration === pending.routeGeneration;
+      const generationMatches = pending?.workerGeneration === request.generation;
+      if (!pending || pending.status !== "pending" || !routeMatches || !generationMatches) {
+        stale = true;
+        pendingStatus = "resolved";
+      } else {
+        pendingStatus = "pending";
+      }
+    }
+    return { status: stale ? "stale" : "ok", target, pendingStatus };
+  }
+
   async refreshCatalog(emit = true): Promise<void> {
     const next = new Map<string, DesktopPetSession>();
+    const nextBindings = new Map<string, PetNavigationTarget>();
     let cursor: string | undefined;
     const observedAt = this.now();
     do {
       const page = await this.options.listDiskSessions({ limit: this.pageSize, cursor });
       for (const session of page.sessions) {
         next.set(session.engineSessionId, diskProjection(session, observedAt));
+        nextBindings.set(session.engineSessionId, {
+          uiSessionId: session.id,
+          engineSessionId: session.engineSessionId,
+          projectPath: session.cwd || null,
+          title: bounded(session.title, MAX_TITLE_LENGTH) ?? session.id,
+          updatedAt: session.updatedAt,
+          origin: session.origin,
+          status: session.status,
+        });
       }
       cursor = page.nextCursor ?? undefined;
     } while (cursor !== undefined);
     this.diskSessions.clear();
+    this.diskBindings.clear();
     for (const [sessionId, session] of next) this.diskSessions.set(sessionId, session);
+    for (const [sessionId, target] of nextBindings) this.diskBindings.set(sessionId, target);
     this.observedAt = observedAt;
     if (emit) this.emit({ kind: "reset" });
   }
