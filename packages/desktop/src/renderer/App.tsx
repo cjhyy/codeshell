@@ -4,7 +4,7 @@ import { ChatView } from "./ChatView";
 import type { ContextPackageCreatedOptions } from "./MessageStream";
 import { Sidebar } from "./Sidebar";
 import { PetOverviewPanel, usePetOverviewWidth } from "./pet/PetOverviewPanel";
-import { usePetState } from "./pet/PetStateProvider";
+import { useOptionalPetState } from "./pet/PetStateProvider";
 import { PetWorldPane } from "./pet/PetWorldPane";
 import { openPetTarget } from "./pet/petNavigation";
 import { PetChatHost } from "./pet/PetChatHost";
@@ -423,7 +423,7 @@ function App() {
     surfaceablePendingCount,
     peeks: petPeeks,
     removePeek,
-  } = usePetState();
+  } = useOptionalPetState();
   const { width: petOverviewWidth, beginResize: beginPetOverviewResize } = usePetOverviewWidth();
   const [petWidgetVisible, setPetWidgetVisible] = useState(loadPetWidgetVisible);
   const [transcripts, dispatch] = useReducer(transcriptsReducer, {} as TranscriptsMap);
@@ -1566,7 +1566,7 @@ function App() {
 
   const settlePetPeek = (peek: PetPeek, state: "seen" | "dismissed"): void => {
     removePeek(peek.id);
-    void window.codeshell.pet.markAttentionReceipt(peek.receiptKeys, state);
+    void window.codeshell.pet?.markAttentionReceipt?.(peek.receiptKeys, state);
   };
 
   const handlePetPeekAction = (peek: PetPeek): void => {
@@ -4343,7 +4343,7 @@ function App() {
   };
 
   useEffect(() => {
-    void window.codeshell.pet.setActiveSession(engineSessionIdForActive());
+    void window.codeshell.pet?.setActiveSession?.(engineSessionIdForActive());
   }, [activeSessionId, activeRepoKey, sessionIndices]);
 
   const matchCount = useMemo(() => {

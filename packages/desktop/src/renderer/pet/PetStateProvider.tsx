@@ -197,3 +197,27 @@ export function usePetState(): PetStateContextValue {
   if (!context) throw new Error("usePetState must be used inside PetStateProvider");
   return context;
 }
+
+/**
+ * Compatibility seam for legacy App unit harnesses that render <App />
+ * directly. Production main.tsx always supplies PetStateProvider; this inert
+ * value creates no subscriptions and can never auto-open a Pet surface.
+ */
+const INERT_PET_CONTEXT: PetStateContextValue = {
+  state: initialPetState,
+  dispatch: () => {},
+  petSessionId: null,
+  chatState: INITIAL_STATE,
+  chatDispatch: () => {},
+  chatBusy: false,
+  setChatBusy: () => {},
+  chatModelKey: null,
+  setChatModelKey: () => {},
+  surfaceablePendingCount: 0,
+  peeks: [],
+  removePeek: () => {},
+};
+
+export function useOptionalPetState(): PetStateContextValue {
+  return React.useContext(PetStateContext) ?? INERT_PET_CONTEXT;
+}
