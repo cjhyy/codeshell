@@ -30,6 +30,8 @@ interface ChatProps {
   messages: Message[];
   busy: boolean;
   draft: string;
+  permissionMode: PermissionMode | null;
+  onPermissionChange: (mode: PermissionMode) => void;
   onDraftChange: (text: string) => void;
   onAskUserAnswer?: (requestId: string, answer: string) => void;
   pendingApproval?: ApprovalRequestEnvelope | null;
@@ -455,6 +457,32 @@ afterEach(async () => {
 });
 
 describe("App quick-chat integration", () => {
+  test("round-trips one quick chat through every elevation while another quick chat and main stay unchanged", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [
+        { id: "quickChat-permission-one", kind: "quickChat" },
+        { id: "quickChat-permission-two", kind: "quickChat" },
+      ],
+    });
+    const [quickOne, quickTwo] = currentQuickPanels();
+    if (!quickOne || !quickTwo || !chatProps) throw new Error("chat surfaces were not created");
+    const mainMode = chatProps.permissionMode;
+
+    expect(quickOne.permissionMode).toBe("plan");
+    expect(quickTwo.permissionMode).toBe("plan");
+
+    for (const mode of ["default", "accept_edits", "bypass", "plan"] as const) {
+      await act(async () => {
+        quickChatProps.get(quickOne.sessionId)?.onPermissionChange(mode);
+        await flushMicrotasks();
+      });
+      expect(quickChatProps.get(quickOne.sessionId)?.permissionMode).toBe(mode);
+      expect(quickChatProps.get(quickTwo.sessionId)?.permissionMode).toBe("plan");
+      expect(chatProps.permissionMode).toBe(mainMode);
+    }
+  });
+
   test("defaults quick chat to restricted access and only lifts it after an explicit pill change", async () => {
     await mountApp({
       withNormalSession: true,

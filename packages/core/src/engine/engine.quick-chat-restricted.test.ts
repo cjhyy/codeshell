@@ -73,12 +73,13 @@ describe("Engine quick-chat restricted behavior", () => {
     const restricted = calls.at(-1);
     expect(restricted?.systemPrompt).toContain("# Quick Chat Restricted Mode");
     expect(restricted?.systemPrompt).toContain("Do not use sub-agents");
-    expect(restricted?.toolNames).toEqual(
-      expect.arrayContaining(["Read", "Glob", "Grep", "WebSearch", "WebFetch"]),
-    );
-    expect(restricted?.toolNames).not.toEqual(
-      expect.arrayContaining(["Agent", "Write", "Edit", "ApplyPatch", "Bash", "Config"]),
-    );
+    expect(restricted?.toolNames.toSorted()).toEqual([
+      "Glob",
+      "Grep",
+      "Read",
+      "WebFetch",
+      "WebSearch",
+    ]);
   });
 
   it("restores the normal tool set when a later turn is explicitly elevated", async () => {
