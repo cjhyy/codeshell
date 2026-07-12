@@ -206,6 +206,35 @@ function formatDriveJobListLine(job: BackgroundJobEntry): string {
   ].join("  ");
 }
 
+const DEFAULT_DRIVE_JOB_RESULT_CHARS = 800;
+const DRIVE_JOB_RESULT_TRUNCATED_SUFFIX = "…(truncated, use inspect for full)";
+
+function isTerminalDriveJob(job: BackgroundJobEntry): boolean {
+  return job.status === "completed" || job.status === "failed" || job.status === "cancelled";
+}
+
+function driveJobResultChars(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return DEFAULT_DRIVE_JOB_RESULT_CHARS;
+  return Math.floor(value);
+}
+
+function truncateDriveJobResult(finalText: string, maxChars: number): string {
+  const characters = Array.from(finalText);
+  if (characters.length <= maxChars) return finalText;
+  return `${characters.slice(0, maxChars).join("")}${DRIVE_JOB_RESULT_TRUNCATED_SUFFIX}`;
+}
+
+function formatDriveJobListBlock(job: BackgroundJobEntry, resultChars: number): string {
+  const lines = [formatDriveJobListLine(job)];
+  if (isTerminalDriveJob(job) && resultChars > 0 && job.finalText) {
+    const resultLines = truncateDriveJobResult(job.finalText, resultChars)
+      .split("\n")
+      .map((line) => `  ${line}`);
+    lines.push("finalText:", ...resultLines);
+  }
+  return lines.join("\n");
+}
+
 function isValidSessionId(sessionId: unknown): sessionId is string {
   return typeof sessionId === "string" && sessionId.length > 0;
 }
@@ -639,7 +668,11 @@ export const driveAgentJobsToolDef: ToolDefinition = {
   description:
     "List, inspect, or cancel background DriveAgent jobs. Use action:'list' before launching " +
     "writable DriveAgent work in a cwd to see already-running jobs there, including prompt " +
-    "summary, owner session, cwd, CLI kind, status, start time, and known changed files. " +
+    "summary, owner session, cwd, CLI kind, status, start time, and known changed files. With " +
+    "status:'all', list groups active jobs before terminal jobs and includes each terminal job's " +
+    "available/non-empty finalText result summary, so you usually do not need to inspect every " +
+    "completed job. Use " +
+    "resultChars to control each result summary (default 800; 0 or less hides results). " +
     "Use action:'inspect' with jobId for full details, or action:'cancel' with jobId to abort " +
     "a running DriveAgent external CLI process and deliver a cancellation notification.",
   inputSchema: {
@@ -668,6 +701,12 @@ export const driveAgentJobsToolDef: ToolDefinition = {
         type: "boolean",
         description:
           "When listing without cwd: true lists DriveAgent jobs from every session; default lists only this session when session context exists.",
+      },
+      resultChars: {
+        type: "number",
+        default: DEFAULT_DRIVE_JOB_RESULT_CHARS,
+        description:
+          "When listing, maximum characters of finalText shown for each terminal job. Defaults to 800; 0 or a negative number hides results and returns summary-only job entries. Use inspect for the full result.",
       },
     },
   },
@@ -701,7 +740,21 @@ function listDriveAgentJobs(args: Record<string, unknown>, ctx?: ToolContext): s
     if (listAllSessions) return `No ${status} DriveAgent jobs in this process.`;
     return `No ${status} DriveAgent jobs in this session.`;
   }
-  return jobs.map(formatDriveJobListLine).join("\n");
+  const resultChars = driveJobResultChars(args.resultChars);
+  if (resultChars <= 0) return jobs.map(formatDriveJobListLine).join("\n");
+  const activeJobs = jobs.filter((job) => !isTerminalDriveJob(job));
+  const terminalJobs = jobs.filter(isTerminalDriveJob);
+  const activeOutput = activeJobs.map(formatDriveJobListLine).join("\n");
+  const terminalOutput = terminalJobs
+    .map((job) => formatDriveJobListBlock(job, resultChars))
+    .join("\n\n");
+  if (activeOutput && terminalOutput) {
+    return [
+      `Active DriveAgent jobs:\n${activeOutput}`,
+      `Terminal DriveAgent jobs:\n${terminalOutput}`,
+    ].join("\n\n");
+  }
+  return activeOutput || terminalOutput;
 }
 
 function inspectDriveAgentJob(jobId: string | undefined): string {
