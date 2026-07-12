@@ -104,6 +104,49 @@ describe("Engine first turn after a session fork", () => {
     );
   });
 
+  test("sends only the persisted transfer summary before the first real target message", async () => {
+    dir = mkdtempSync(join(tmpdir(), "engine-summary-fork-"));
+    model = `${provider}-${Date.now()}-${Math.random()}`;
+    calls.set(model, []);
+    const engine = new Engine({
+      llm: { provider, model, apiKey: "test" } as never,
+      cwd: dir,
+      sessionStorageDir: join(dir, "sessions"),
+      enabledBuiltinTools: [],
+      maxTurns: 1,
+      headless: true,
+      permissionMode: "bypassPermissions",
+    });
+    (engine as any).hooks.clear();
+    const manager = engine.getSessionManager();
+    const source = manager.create(dir, model, provider, "summary-source");
+    const from = source.transcript.appendMessage("user", "selected source detail");
+    const to = source.transcript.appendMessage("assistant", "selected source answer");
+    source.transcript.appendMessage("user", "outside selection");
+    manager.createSummaryFork("summary-source", {
+      targetSessionId: "summary-target",
+      fromEventId: from.id,
+      toEventId: to.id,
+      summary: "portable background only",
+      sourceEventCount: 2,
+      estimatedTokens: 4,
+    });
+
+    await engine.run("first target request", { sessionId: "summary-target", cwd: dir });
+
+    const messages = calls.get(model)![0]!;
+    expect(JSON.stringify(messages)).toContain("portable background only");
+    expect(JSON.stringify(messages)).not.toContain("selected source detail");
+    expect(JSON.stringify(messages)).not.toContain("outside selection");
+    const summaryIndex = messages.findIndex(
+      (message) =>
+        typeof message.content === "string" && message.content.includes("portable background only"),
+    );
+    const targetIndex = messages.findIndex((message) => message.content === "first target request");
+    expect(summaryIndex).toBeGreaterThanOrEqual(0);
+    expect(summaryIndex).toBeLessThan(targetIndex);
+  });
+
   test("a modern completed run with injected transcript flush degradation cannot use legacy tail fallback", async () => {
     dir = mkdtempSync(join(tmpdir(), "engine-session-fork-flush-degraded-"));
     model = `${provider}-${Date.now()}-${Math.random()}`;

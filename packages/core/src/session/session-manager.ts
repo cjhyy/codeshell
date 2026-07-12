@@ -18,17 +18,23 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { createHash } from "node:crypto";
 import { nanoid } from "nanoid";
 import type {
   SessionForkLineage,
   SessionState,
   SessionWorkspace,
+  TokenUsage,
   TranscriptEvent,
   TranscriptEventType,
 } from "../types.js";
 import { Transcript } from "./transcript.js";
 import { SessionError } from "../exceptions.js";
-import { normalizeCumulativeUsageCounters } from "../engine/session-usage.js";
+import {
+  addCumulativeUsage,
+  addTokenUsage,
+  normalizeCumulativeUsageCounters,
+} from "../engine/session-usage.js";
 import { isSameGoalInstance, type GoalTerminal } from "../engine/goal.js";
 import { branchExists, isGitWorktreeRoot } from "../git/worktree.js";
 
@@ -54,6 +60,15 @@ export interface ForkSessionResult {
   bundle: SessionBundle;
   lineage: SessionForkLineage;
   copiedEventCount: number;
+}
+
+export interface SummaryForkOptions {
+  targetSessionId?: string;
+  fromEventId: string;
+  toEventId: string;
+  summary: string;
+  sourceEventCount: number;
+  estimatedTokens: number;
 }
 
 interface FrozenForkSnapshot {
@@ -628,6 +643,35 @@ export class SessionManager {
     this.saveState(state);
   }
 
+  /**
+   * Atomically add one billed auxiliary request to the latest source state.
+   * This field-level read/add/write avoids publishing a detached stale state
+   * snapshot and accounts prompt, completion, total, cache, and cost together.
+   */
+  recordAuxiliaryUsage(
+    sessionId: string,
+    usage: TokenUsage,
+    costState?: Record<string, unknown>,
+  ): void {
+    assertSafeSessionId(sessionId);
+    const stateFile = join(this.sessionsDir, sessionId, "state.json");
+    if (!existsSync(stateFile))
+      throw new SessionError(`Session state file not found: ${sessionId}`);
+    let state: SessionState;
+    try {
+      state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
+    } catch (err) {
+      throw new SessionError(
+        `Session state is corrupt for ${sessionId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    Object.assign(state, normalizeCumulativeUsageCounters(state, state.tokenUsage));
+    Object.assign(state, addCumulativeUsage(state, usage));
+    state.tokenUsage = addTokenUsage(state.tokenUsage, usage);
+    if (costState !== undefined) state.costState = costState;
+    this.saveState(state);
+  }
+
   saveState(state: SessionState, generation?: number): boolean {
     // state.sessionId could come from a deserialized state.json that was
     // tampered with on disk. Validate before joining.
@@ -711,6 +755,69 @@ export class SessionManager {
     const events = buildForkTranscript(snapshot.copiedEvents, state);
     const bundle = this.publishSessionAtomically(targetSessionId, state, events);
     return { bundle, lineage, copiedEventCount: snapshot.copiedEvents.length };
+  }
+
+  /** Freeze and validate an inclusive source range before any model call. */
+  selectContextPackage(
+    sourceSessionId: string,
+    range: { fromEventId: string; toEventId: string },
+  ): ReturnType<typeof Transcript.selectContextRange> {
+    assertSafeSessionId(sourceSessionId);
+    const transcriptFile = join(this.sessionsDir, sourceSessionId, "transcript.jsonl");
+    const stateFile = join(this.sessionsDir, sourceSessionId, "state.json");
+    if (!existsSync(stateFile)) throw new SessionError(`Session not found: ${sourceSessionId}`);
+    const parsed = Transcript.readEvents(transcriptFile);
+    if (parsed.malformedLineCount > 0) {
+      throw new SessionError(
+        `Session transcript is malformed for ${sourceSessionId}: ${parsed.malformedLineCount} invalid line(s)`,
+      );
+    }
+    return Transcript.selectContextRange(parsed.events, range);
+  }
+
+  /** Publish a summary-only top-level fork after summarization has succeeded. */
+  createSummaryFork(sourceSessionId: string, options: SummaryForkOptions): ForkSessionResult {
+    assertSafeSessionId(sourceSessionId);
+    if (options.targetSessionId !== undefined) assertSafeSessionId(options.targetSessionId);
+    if (!options.fromEventId || !options.toEventId) {
+      throw new SessionError("Summary fork requires a closed source event range");
+    }
+    if (!options.summary.trim())
+      throw new SessionError("Summary fork requires a non-empty summary");
+    const source = this.resume(sourceSessionId);
+    const targetSessionId = options.targetSessionId ?? nanoid(16);
+    const createdAt = Date.now();
+    const lineage: SessionForkLineage = {
+      sessionId: sourceSessionId,
+      mode: "summary",
+      fromEventId: options.fromEventId,
+      throughEventId: options.toEventId,
+      sourceEventCount: options.sourceEventCount,
+      createdAt,
+    };
+    const state = buildForkState(source.state, targetSessionId, lineage, createdAt);
+    const [meta] = buildForkTranscript([], state);
+    const summaryEvent: TranscriptEvent = {
+      id: nanoid(12),
+      type: "summary",
+      timestamp: createdAt,
+      turnNumber: 0,
+      data: {
+        summary: options.summary,
+        trigger: "context_transfer",
+        sourceRange: {
+          sessionId: sourceSessionId,
+          fromEventId: options.fromEventId,
+          toEventId: options.toEventId,
+        },
+        sourceEventCount: options.sourceEventCount,
+        estimatedTokens: options.estimatedTokens,
+        summaryVersion: 1,
+        summaryHash: createHash("sha256").update(options.summary).digest("hex"),
+      },
+    };
+    const bundle = this.publishSessionAtomically(targetSessionId, state, [meta!, summaryEvent]);
+    return { bundle, lineage, copiedEventCount: 0 };
   }
 
   private readForkSnapshot(

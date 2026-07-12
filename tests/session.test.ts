@@ -201,6 +201,55 @@ describe("SessionManager", () => {
     expect(sm.resume("target").state.model).toBe(existing.state.model);
   });
 
+  it("publishes a summary fork with context_transfer as the only inherited context", () => {
+    const source = sm.create("/tmp", "model", "provider", "source", null, "desktop");
+    const from = source.transcript.appendMessage("user", "selected request");
+    source.transcript.appendMessage("assistant", "selected answer");
+    const to = source.transcript.appendTurnBoundary();
+    source.transcript.appendMessage("user", "outside range");
+
+    const result = sm.createSummaryFork("source", {
+      targetSessionId: "summary-target",
+      fromEventId: from.id,
+      toEventId: to.id,
+      summary: "Packaged background",
+      sourceEventCount: 3,
+      estimatedTokens: 1500,
+    });
+
+    expect(result.bundle.state.forkedFrom).toMatchObject({
+      sessionId: "source",
+      mode: "summary",
+      fromEventId: from.id,
+      throughEventId: to.id,
+      sourceEventCount: 3,
+    });
+    const events = result.bundle.transcript.getEvents();
+    expect(events.map((event) => event.type)).toEqual(["session_meta", "summary"]);
+    expect(events[1]?.data).toMatchObject({
+      summary: "Packaged background",
+      trigger: "context_transfer",
+      sourceRange: {
+        sessionId: "source",
+        fromEventId: from.id,
+        toEventId: to.id,
+      },
+      sourceEventCount: 3,
+      estimatedTokens: 1500,
+      summaryVersion: 1,
+    });
+    expect(events[1]?.data.summaryHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(result.bundle.transcript.toMessages()).toEqual([
+      {
+        role: "user",
+        content:
+          "<system-reminder>Previous conversation was summarized:\nPackaged background</system-reminder>",
+      },
+    ]);
+    expect(JSON.stringify(events)).not.toContain("selected request");
+    expect(JSON.stringify(events)).not.toContain("outside range");
+  });
+
   it("removes only stale fork staging directories older than 24 hours", () => {
     const stale = join(tmpDir, ".pending-fork-target-ABCDEFGH");
     const fresh = join(tmpDir, ".pending-fork-fresh-12345678");

@@ -11,7 +11,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { MessageStream } from "./MessageStream";
+import { MessageStream, type ContextPackageCreatedHandler } from "./MessageStream";
 import type { Message } from "./types";
 import { loadHistory, pushHistory } from "./promptHistory";
 import { PermissionPill, type PermissionMode } from "./chat/PermissionPill";
@@ -59,6 +59,7 @@ interface Props {
   /** Engine session id — lets the Files-Changed card do turn-level undo/redo. */
   engineSessionId?: string | null;
   liveTurnActive?: boolean;
+  onContextPackageCreated?: ContextPackageCreatedHandler;
   sendBucket?: string;
   onSend: (
     text: string,
@@ -297,6 +298,7 @@ export function ChatView({
   turnEpoch,
   engineSessionId,
   liveTurnActive,
+  onContextPackageCreated,
   sendBucket,
   onSend,
   onQueueInput,
@@ -1115,6 +1117,7 @@ export function ChatView({
             trailingKey={pendingApproval?.requestId ?? null}
             cwd={messageCwd ?? activeRepoPath}
             sendEpoch={sendEpoch}
+            onContextPackageCreated={onContextPackageCreated}
           />
         )
       )}

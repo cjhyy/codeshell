@@ -15,6 +15,11 @@ import type { EngineConfig } from "./types.js";
 
 export type EngineLlmClient = Awaited<ReturnType<typeof createLLMClient>>;
 
+export interface ResolvedAuxClient {
+  client: EngineLlmClient;
+  maxContextTokens: number;
+}
+
 export interface MemoriesConfig {
   maxCount?: number;
   maxAge?: number;
@@ -82,25 +87,40 @@ export class AuxiliaryPipeline {
   }
 
   async resolveAuxClient(fallback: EngineLlmClient): Promise<EngineLlmClient> {
+    return (await this.resolveAuxClientWithMetadata(fallback)).client;
+  }
+
+  async resolveAuxClientWithMetadata(
+    fallback: EngineLlmClient,
+    fallbackMaxContextTokens = 200_000,
+  ): Promise<ResolvedAuxClient> {
     let auxKey: string | undefined;
     try {
       const settings = this.deps.settings();
       settings.invalidate();
       auxKey = resolveAuxKey(settings.get() as { defaults?: { auxText?: string } });
     } catch {
-      return fallback;
+      return { client: fallback, maxContextTokens: fallbackMaxContextTokens };
     }
-    if (!auxKey) return fallback;
+    if (!auxKey) return { client: fallback, maxContextTokens: fallbackMaxContextTokens };
 
     const modelPool = this.deps.modelPool();
     const entry = modelPool.get(auxKey);
     if (entry && sameLlmIdentity(modelPool.toLLMConfig(entry), this.deps.config().llm)) {
-      return fallback;
+      return {
+        client: fallback,
+        maxContextTokens: entry.maxContextTokens ?? fallbackMaxContextTokens,
+      };
     }
-    if (this.auxClientCache?.key === auxKey) return this.auxClientCache.client;
+    if (this.auxClientCache?.key === auxKey) {
+      return {
+        client: this.auxClientCache.client,
+        maxContextTokens: entry?.maxContextTokens ?? fallbackMaxContextTokens,
+      };
+    }
     if (!entry) {
       logger.warn("engine.aux_model_missing", { auxModelKey: auxKey });
-      return fallback;
+      return { client: fallback, maxContextTokens: fallbackMaxContextTokens };
     }
     try {
       const client = await createLLMClient(
@@ -108,13 +128,16 @@ export class AuxiliaryPipeline {
         this.deps.config().clientDefaults,
       );
       this.auxClientCache = { key: auxKey, client };
-      return client;
+      return {
+        client,
+        maxContextTokens: entry.maxContextTokens ?? fallbackMaxContextTokens,
+      };
     } catch (error) {
       logger.warn("engine.aux_model_build_failed", {
         auxModelKey: auxKey,
         error: (error as Error).message,
       });
-      return fallback;
+      return { client: fallback, maxContextTokens: fallbackMaxContextTokens };
     }
   }
 

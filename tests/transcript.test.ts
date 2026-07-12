@@ -72,9 +72,7 @@ describe("Transcript", () => {
     const events = t2.getEvents();
     // orphan should get a synthetic result
     const results = events.filter((e) => e.type === "tool_result");
-    const hasOrphanResult = results.some(
-      (e) => e.data.toolCallId === "tc_orphan",
-    );
+    const hasOrphanResult = results.some((e) => e.data.toolCallId === "tc_orphan");
     expect(hasOrphanResult).toBe(true);
     // ghost should be removed
     const hasGhost = results.some((e) => e.data.toolCallId === "tc_ghost");
@@ -88,6 +86,28 @@ describe("Transcript", () => {
     expect(summaries).toHaveLength(1);
     expect(summaries[0].data.summary).toBe("Work summary");
     expect(summaries[0].data.compactedRange).toEqual({ fromTurn: 0, toTurn: 5, eventCount: 20 });
+  });
+
+  it("appendSummary records context_transfer provenance", () => {
+    const t = new Transcript(filePath);
+    t.appendSummary("portable", {
+      trigger: "context_transfer",
+      sourceRange: { sessionId: "source", fromEventId: "a", toEventId: "z" },
+      sourceEventCount: 9,
+      estimatedTokens: 1500,
+      summaryVersion: 1,
+      summaryHash: "abc",
+    });
+
+    expect(t.getEvents("summary")[0]?.data).toEqual({
+      summary: "portable",
+      trigger: "context_transfer",
+      sourceRange: { sessionId: "source", fromEventId: "a", toEventId: "z" },
+      sourceEventCount: 9,
+      estimatedTokens: 1500,
+      summaryVersion: 1,
+      summaryHash: "abc",
+    });
   });
 
   it("deduplicates message appends with the same clientMessageId", () => {
@@ -118,5 +138,77 @@ describe("Transcript", () => {
     t.appendMessage("user", "continue", { clientMessageId: "client-2" });
 
     expect(t.getEvents("message")).toHaveLength(2);
+  });
+
+  it("selects an inclusive context range and filters non-context events", () => {
+    const t = new Transcript(filePath);
+    t.append("session_meta", { sessionId: "source" });
+    const from = t.appendMessage("user", "selected request");
+    t.append("goal_progress", { status: "not_met" });
+    t.appendMessage("assistant", [
+      { type: "tool_use", id: "call-1", name: "Read", input: { file_path: "a.ts" } },
+    ]);
+    t.appendToolUse("Read", "call-1", { file_path: "a.ts" });
+    const to = t.appendToolResult("call-1", "Read", "selected result");
+    t.appendMessage("assistant", "outside range");
+
+    const selected = Transcript.selectContextRange(t.getEvents(), {
+      fromEventId: from.id,
+      toEventId: to.id,
+    });
+
+    expect(selected.events.map((event) => event.type)).toEqual([
+      "message",
+      "message",
+      "tool_use",
+      "tool_result",
+    ]);
+    expect(JSON.stringify(selected.messages)).toContain("selected request");
+    expect(JSON.stringify(selected.messages)).toContain("selected result");
+    expect(JSON.stringify(selected.messages)).not.toContain("outside range");
+    expect(selected.sourceEventCount).toBe(5);
+  });
+
+  it("rejects reversed, missing, duplicate and tool-incomplete context boundaries", () => {
+    const t = new Transcript(filePath);
+    const first = t.appendMessage("user", "request");
+    const assistant = t.appendMessage("assistant", [
+      { type: "tool_use", id: "call-1", name: "Read", input: {} },
+    ]);
+    const use = t.appendToolUse("Read", "call-1", {});
+    const result = t.appendToolResult("call-1", "Read", "ok");
+
+    expect(() =>
+      Transcript.selectContextRange(t.getEvents(), {
+        fromEventId: result.id,
+        toEventId: first.id,
+      }),
+    ).toThrow(/order/i);
+    expect(() =>
+      Transcript.selectContextRange(t.getEvents(), {
+        fromEventId: "missing",
+        toEventId: result.id,
+      }),
+    ).toThrow(/exactly one/i);
+    expect(() =>
+      Transcript.selectContextRange(t.getEvents(), {
+        fromEventId: first.id,
+        toEventId: use.id,
+      }),
+    ).toThrow(/unfinished tool round/i);
+    expect(() =>
+      Transcript.selectContextRange(t.getEvents(), {
+        fromEventId: use.id,
+        toEventId: result.id,
+      }),
+    ).toThrow(/orphaned|metadata/i);
+
+    const duplicate = { ...assistant, id: first.id };
+    expect(() =>
+      Transcript.selectContextRange([...t.getEvents(), duplicate], {
+        fromEventId: first.id,
+        toEventId: result.id,
+      }),
+    ).toThrow(/exactly one/i);
   });
 });

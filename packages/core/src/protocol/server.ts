@@ -481,7 +481,7 @@ export class AgentServer {
         await this.handleRun(req);
         break;
       case Methods.ForkSession:
-        this.handleForkSession(req);
+        await this.handleForkSession(req);
         break;
       case Methods.Approve:
         this.handleApprove(req);
@@ -534,7 +534,7 @@ export class AgentServer {
 
   // ─── Run ────────────────────────────────────────────────────────
 
-  private handleForkSession(req: RpcRequest): void {
+  private async handleForkSession(req: RpcRequest): Promise<void> {
     const params = req.params ?? {};
     const sourceSessionId =
       typeof params.sourceSessionId === "string" ? params.sourceSessionId : "";
@@ -542,26 +542,81 @@ export class AgentServer {
       typeof params.targetSessionId === "string" ? params.targetSessionId : undefined;
     const throughEventId =
       typeof params.throughEventId === "string" ? params.throughEventId : undefined;
+    const fromEventId = typeof params.fromEventId === "string" ? params.fromEventId : undefined;
+    const toEventId = typeof params.toEventId === "string" ? params.toEventId : undefined;
+    const mode = params.mode;
     const isSideFork = params.forkKind === "side";
-    if (!sourceSessionId || params.mode !== "full") {
+    if (!sourceSessionId || (mode !== "full" && mode !== "summary")) {
       this.transport.send(
         createErrorResponse(
           req.id,
           ErrorCodes.InvalidParams,
-          "forkSession requires sourceSessionId and mode=full",
+          "forkSession requires sourceSessionId and mode=full|summary",
         ),
       );
       return;
     }
-    if (params.targetSessionId !== undefined && typeof params.targetSessionId !== "string") {
+    if (
+      params.targetSessionId !== undefined &&
+      (typeof params.targetSessionId !== "string" || params.targetSessionId.length === 0)
+    ) {
       this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.InvalidParams, "targetSessionId must be a string"),
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InvalidParams,
+          "targetSessionId must be a non-empty string",
+        ),
       );
       return;
     }
     if (params.throughEventId !== undefined && typeof params.throughEventId !== "string") {
       this.transport.send(
         createErrorResponse(req.id, ErrorCodes.InvalidParams, "throughEventId must be a string"),
+      );
+      return;
+    }
+    if (mode === "summary" && (!fromEventId || !toEventId)) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InvalidParams,
+          "summary fork requires fromEventId and toEventId",
+        ),
+      );
+      return;
+    }
+    if (
+      mode === "summary" &&
+      (params.throughEventId !== undefined ||
+        params.forkKind !== undefined ||
+        params.quickChatClaimId !== undefined)
+    ) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InvalidParams,
+          "summary fork only accepts fromEventId/toEventId range fields",
+        ),
+      );
+      return;
+    }
+    if (mode === "full" && (params.fromEventId !== undefined || params.toEventId !== undefined)) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InvalidParams,
+          "full fork does not accept summary range fields",
+        ),
+      );
+      return;
+    }
+    if (
+      mode === "full" &&
+      params.quickChatClaimId !== undefined &&
+      typeof params.quickChatClaimId !== "string"
+    ) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "quickChatClaimId must be a string"),
       );
       return;
     }
@@ -583,7 +638,7 @@ export class AgentServer {
     }
     try {
       assertSafeSessionId(sourceSessionId);
-      if (targetSessionId) assertSafeSessionId(targetSessionId);
+      if (targetSessionId !== undefined) assertSafeSessionId(targetSessionId);
     } catch (err) {
       this.transport.send(
         createErrorResponse(
@@ -598,6 +653,30 @@ export class AgentServer {
     let source;
     try {
       source = this.chatManager?.get(sourceSessionId);
+      if (!source && this.chatManager) {
+        if (this.chatManager.isUnavailable(sourceSessionId)) {
+          this.transport.send(
+            createErrorResponse(
+              req.id,
+              ErrorCodes.SessionClosed,
+              `Session is closing or closed: ${sourceSessionId}`,
+            ),
+          );
+          return;
+        }
+        source =
+          (await this.chatManager.getOrCreatePersisted(
+            sourceSessionId,
+            this.lastSliceBySession.get(sourceSessionId),
+            mode === "summary",
+          )) ?? undefined;
+        if (source) {
+          this.rememberSessionSlice(sourceSessionId, {
+            ...this.lastSliceBySession.get(sourceSessionId),
+            cwd: source.engine.getConfig().cwd,
+          });
+        }
+      }
     } catch (err) {
       this.transport.send(
         createErrorResponse(
@@ -618,7 +697,7 @@ export class AgentServer {
       );
       return;
     }
-    const engine = source?.engine ?? this.legacyEngine ?? this.anyEngine();
+    const engine = source?.engine ?? this.legacyEngine;
     if (!engine || !engine.sessionExistsOnDisk(sourceSessionId)) {
       this.transport.send(
         createErrorResponse(
@@ -640,6 +719,57 @@ export class AgentServer {
       return;
     }
     try {
+      if (mode === "summary") {
+        const sourceRange = { fromEventId: fromEventId!, toEventId: toEventId! };
+        const packageAndPublish = async (signal?: AbortSignal) => {
+          const selected = engine.selectContextPackage(sourceSessionId, sourceRange);
+          const packaged = await engine.summarizeContextPackage(
+            selected.messages,
+            signal,
+            sourceSessionId,
+          );
+          const result = engine.createSummaryFork(sourceSessionId, {
+            targetSessionId,
+            ...sourceRange,
+            summary: packaged.summary,
+            sourceEventCount: selected.sourceEventCount,
+            estimatedTokens: packaged.estimatedTokens,
+          });
+          return { selected, packaged, result };
+        };
+        let packagedResult: Awaited<ReturnType<typeof packageAndPublish>>;
+        if (source) {
+          packagedResult = await source.runExclusive(packageAndPublish);
+        } else {
+          if (this.running)
+            throw new Error("source session is still producing or has queued turns");
+          this.running = true;
+          this.abortController = new AbortController();
+          try {
+            packagedResult = await packageAndPublish(this.abortController.signal);
+          } finally {
+            this.abortController = null;
+            this.running = false;
+          }
+        }
+        const { packaged, result } = packagedResult;
+        const workspace = result.bundle.state.workspace ?? {
+          root: result.bundle.state.cwd,
+          kind: "main" as const,
+        };
+        this.transport.send(
+          createResponse(req.id, {
+            sessionId: result.bundle.state.sessionId,
+            mode: "summary",
+            summary: packaged.summary,
+            sourceRange,
+            estimatedTokens: packaged.estimatedTokens,
+            forkedFrom: result.lineage,
+            workspace,
+          }),
+        );
+        return;
+      }
       const result = engine.forkSession(
         sourceSessionId,
         isSideFork
@@ -663,11 +793,13 @@ export class AgentServer {
       const message = err instanceof Error ? err.message : String(err);
       const code = /not found/i.test(message)
         ? ErrorCodes.SessionNotFound
-        : /already exists|invalid|cursor|metadata|unfinished|orphaned|unsupported|malformed/i.test(
-              message,
-            )
-          ? ErrorCodes.InvalidParams
-          : ErrorCodes.InternalError;
+        : /still producing|queued turns|busy/i.test(message)
+          ? ErrorCodes.Overloaded
+          : /already exists|invalid|cursor|metadata|unfinished|orphaned|unsupported|malformed/i.test(
+                message,
+              )
+            ? ErrorCodes.InvalidParams
+            : ErrorCodes.InternalError;
       this.transport.send(createErrorResponse(req.id, code, message));
     }
   }
@@ -707,7 +839,7 @@ export class AgentServer {
     } as EngineConfigSlice;
 
     if (params.requireExisting === true && !cm.get(params.sessionId)) {
-      let existsOnDisk = false;
+      let existsOnDisk: boolean;
       try {
         existsOnDisk = cm.sessionExistsOnDisk(params.sessionId, sessionConfig);
       } catch (err: any) {

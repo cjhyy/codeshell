@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
+import type { ContextPackageCreatedOptions } from "./MessageStream";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import dogIcon from "./assets/codeshell-dog-icon.png";
@@ -79,6 +80,7 @@ import type {
   MobilePermissionModeEnvelope,
   MobilePermissionModeSnapshotEntry,
   RunSummary,
+  SummaryForkSessionResult,
   StreamEventEnvelope,
 } from "../preload/types";
 import {
@@ -154,6 +156,7 @@ import {
   toCorePermissionMode,
   type PermissionMode,
 } from "./chat/PermissionPill";
+import { copyContextPackageOverrides } from "./contextSelection";
 import type { ModelOption } from "./chat/ModelPill";
 import { catalogModelOptions, type ModelInstance } from "./settings/textConnections";
 import {
@@ -4094,6 +4097,58 @@ function App() {
     setGoalOverrides((prev) => ({ ...prev, [activeBucket]: false }));
   };
 
+  const handleContextPackageCreated = async (
+    result: SummaryForkSessionResult,
+    sourceBucket: string,
+    options?: ContextPackageCreatedOptions,
+  ): Promise<void> => {
+    const repoId = activeRepoId;
+    const title = result.titleSuggestion?.trim() || t("chat.contextPackage.cardTitle");
+    const previouslyActiveSessionId = loadSessionIndex(repoId).activeSessionId;
+    const created = createSession(repoId, title);
+    // Registration must not select the target before async hydration finishes.
+    // In particular, a stale package from another session remains reachable in
+    // the sidebar without stealing focus from the session the user switched to.
+    setActiveSession(repoId, previouslyActiveSessionId);
+    bindEngineSession(repoId, created.sessionId, result.sessionId);
+    const bucket = bucketKey(repoId, created.sessionId);
+    const targetOverrides = copyContextPackageOverrides({
+      sourceBucket,
+      targetBucket: bucket,
+      modelOverrides,
+      permissionOverrides,
+      goalOverrides,
+      defaultModel: defaultActiveModelKey,
+      defaultPermission: defaultPermissionMode,
+    });
+    const inheritedModel = targetOverrides.modelOverrides[bucket];
+    const inheritedPermission = targetOverrides.permissionOverrides[bucket];
+    let hydrated: MessagesReducerState;
+    try {
+      hydrated = foldTranscript(await window.codeshell.getSessionTranscript(result.sessionId));
+    } catch {
+      // Core already published the target atomically. Keep it reachable in the
+      // sidebar even if this one hydration read fails; selecting it later will
+      // retry the normal disk hydration path.
+      hydrated = foldTranscript([]);
+    }
+    saveTranscript(repoId, created.sessionId, hydrated);
+    engineToBucketRef.current.set(result.sessionId, bucket);
+    dispatch({ type: "hydrate", bucket, state: hydrated });
+    if (inheritedModel) {
+      setModelOverrides((prev) => ({ ...prev, [bucket]: inheritedModel }));
+    }
+    if (inheritedPermission) {
+      setPermissionOverrides((prev) => ({ ...prev, [bucket]: inheritedPermission }));
+    }
+    setGoalOverrides((prev) => ({ ...prev, [bucket]: false }));
+    setSessionIndices((prev) => ({
+      ...prev,
+      [repoKeyOf(repoId)]: loadSessionIndex(repoId),
+    }));
+    if (options?.shouldActivate() ?? true) handleSelectSession(repoId, created.sessionId);
+  };
+
   const platformClass = isMac ? "platform-darwin" : "";
   const isSettingsPage = view.viewMode === "settings_page";
   const isChatView = view.viewMode === "chat";
@@ -4223,6 +4278,9 @@ function App() {
                     turnEpoch={state.turnEpoch}
                     engineSessionId={state.sessionId ?? engineSessionIdForActive()}
                     liveTurnActive={liveTurnActive}
+                    onContextPackageCreated={(result, options) =>
+                      handleContextPackageCreated(result, activeBucket, options)
+                    }
                     sendBucket={activeBucket}
                     onSend={(text, opts) =>
                       send(text, { ...opts, bucket: opts?.bucket ?? activeBucket })
