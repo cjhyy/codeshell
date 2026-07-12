@@ -16,6 +16,7 @@ import type {
   ApprovalResult,
   PermissionMode,
   SessionForkLineage,
+  SessionKind,
   SessionWorkspace,
 } from "../types.js";
 import type { RunBehaviorMode } from "../engine/run-types.js";
@@ -174,6 +175,8 @@ export interface RunParams {
   planMode?: boolean;
   /** Named behavior profile for a product-specific per-run interaction mode. */
   behaviorMode?: RunBehaviorMode;
+  /** Durable classification used only when creating a new session. */
+  kind?: SessionKind;
   /**
    * Require the target session to already exist on disk. When true and the
    * session is absent, the run is rejected with `SessionNotFound` instead of

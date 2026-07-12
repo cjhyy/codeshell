@@ -100,8 +100,15 @@ function runInputError(params: RunParams): string | null {
   if (params.task.trim().length === 0 && !hasAttachment) {
     return "task or a valid attachment is required";
   }
-  if (params.behaviorMode !== undefined && params.behaviorMode !== "quickChatRestricted") {
+  if (
+    params.behaviorMode !== undefined &&
+    params.behaviorMode !== "quickChatRestricted" &&
+    params.behaviorMode !== "pet"
+  ) {
     return `invalid behavior mode: ${String(params.behaviorMode)}`;
+  }
+  if (params.kind !== undefined && params.kind !== "work" && params.kind !== "pet") {
+    return `invalid session kind: ${String(params.kind)}`;
   }
   return null;
 }
@@ -964,6 +971,7 @@ export class AgentServer {
         permissionMode: params.permissionMode,
         planMode: params.planMode,
         behaviorMode: params.behaviorMode,
+        kind: params.kind,
         approvalRouter: this.approvalRouter,
       });
       this.notify(Methods.RunAccepted, { requestId: req.id, sessionId: sid });
@@ -1100,6 +1108,7 @@ export class AgentServer {
         permissionMode: params.permissionMode,
         planMode: params.planMode,
         behaviorMode: params.behaviorMode,
+        kind: params.kind,
       });
 
       const runResult: RunResult = {
@@ -3018,7 +3027,7 @@ export class AgentServer {
     const live = this.chatManager
       ?.getLiveSessionSnapshot()
       .sessions.find((session) => session.sessionId === sessionId);
-    if (!live) return undefined;
+    if (!live || live.kind === "pet") return undefined;
     this.ensurePetSession(sessionId, live.lastActivityAt);
     const indexed = this.petSessionIndex.get(sessionId);
     const pendingDecisionCount = this.pendingDecisionIndex
@@ -3051,6 +3060,7 @@ export class AgentServer {
     const observedAt = Date.now();
     const live = this.chatManager?.getLiveSessionSnapshot();
     const sessions = (live?.sessions ?? [])
+      .filter((session) => session.kind !== "pet")
       .map((session) => this.currentPetSessionProjection(session.sessionId, observedAt))
       .filter((session): session is PetSessionProjection => session !== undefined)
       .sort((a, b) => a.agentSessionId.localeCompare(b.agentSessionId));
@@ -3070,6 +3080,10 @@ export class AgentServer {
 
   private recordPetStreamEvent(sessionId: string, event: StreamEvent): void {
     const observedAt = Date.now();
+    const live = this.chatManager
+      ?.getLiveSessionSnapshot()
+      .sessions.find((session) => session.sessionId === sessionId);
+    if (live?.kind === "pet") return;
     this.ensurePetSession(sessionId, observedAt);
     const version = this.nextPetProjectionVersion();
     this.petSessionIndex.applyStreamEvent({
@@ -3184,6 +3198,16 @@ export class AgentServer {
     metadata: PendingApprovalMetadata,
     resolve: (decision: unknown) => void,
   ): void {
+    const kind = (
+      session.engine as Engine & {
+        getSessionManager?: () => { readSessionKind?: (sessionId: string) => "work" | "pet" };
+      }
+    )
+      .getSessionManager?.()
+      .readSessionKind?.(session.id);
+    if (kind === "pet") {
+      metadata = { ...metadata, surfaceable: false };
+    }
     session.pendingApprovals.set(metadata.requestId, { resolve, metadata });
     if (this.pendingDecisionIndex.created(metadata)) {
       const pending = this.pendingDecisionIndex.get(metadata.sessionId, metadata.requestId);

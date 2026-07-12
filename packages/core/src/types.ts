@@ -210,6 +210,7 @@ export type SessionStatus = "active" | "paused" | TerminalReason;
 /** Which host/context created a session — used by the desktop disk-rebuild to
  *  filter the sidebar (only `desktop` + `automation` are shown). */
 export type SessionOrigin = "desktop" | "tui" | "automation" | "subagent";
+export type SessionKind = "work" | "pet";
 
 export interface SessionWorkspace {
   root: string;
@@ -243,6 +244,8 @@ export interface SessionForkLineage {
 
 export interface SessionState {
   sessionId: string;
+  /** Durable local classification. Missing on legacy state and normalized to `work`. */
+  kind?: SessionKind;
   /**
    * Monotonic whole-state revision used by SessionManager.saveState as a CAS
    * token. Absent only on legacy state files; the first successful save

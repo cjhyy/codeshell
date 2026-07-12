@@ -8,13 +8,14 @@ import { AgentServer } from "./server.js";
 import { createInProcessTransport } from "./transport.js";
 import type { PetProjectionDelta } from "./types.js";
 
-function makeEngine(sessionId: string): Engine {
+function makeEngine(sessionId: string, kind: "work" | "pet" = "work"): Engine {
   return {
     setPlanMode() {},
     setAskUser() {},
     setBrowserBridge() {},
     setInjectCredential() {},
     isHeadless: () => false,
+    getSessionManager: () => ({ readSessionKind: () => kind }),
     async run(_task: string, options?: any): Promise<EngineResult> {
       options?.onStream?.({ type: "stream_request_start", turnNumber: 1 });
       options?.onStream?.({
@@ -37,8 +38,12 @@ function makeEngine(sessionId: string): Engine {
   } as unknown as Engine;
 }
 
-function makePair(generation: number, sessionIds = ["session-a", "session-b"]) {
-  const engines = sessionIds.map((sessionId) => makeEngine(sessionId));
+function makePair(
+  generation: number,
+  sessionIds = ["session-a", "session-b"],
+  kind: "work" | "pet" = "work",
+) {
+  const engines = sessionIds.map((sessionId) => makeEngine(sessionId, kind));
   const manager = new ChatSessionManager({
     runtime: {} as never,
     engineFactory: () => engines.shift() ?? makeEngine("fallback"),
@@ -198,6 +203,19 @@ describe("Pet projection protocol", () => {
     expect(deltas).toContainEqual(
       expect.objectContaining({ kind: "pending-remove", requestId: before.pending[0]!.requestId }),
     );
+    client.close();
+  });
+
+  test("never exposes the durable pet session as a work session or work pending", async () => {
+    const { client, manager, server } = makePair(9, ["local-pet"], "pet");
+    const session = await manager.getOrCreate("local-pet", {} as never);
+    void (server as any).requestAskUserForSession(session, "local-pet", "pet-only question");
+
+    const snapshot = await client.getPetProjectionSnapshot();
+    expect(snapshot.sessions).toEqual([]);
+    expect(snapshot.pending).toEqual([]);
+
+    server.close();
     client.close();
   });
 });

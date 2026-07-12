@@ -18,6 +18,7 @@ export type {
   TranscriptEvent,
   TranscriptEventType,
   SessionState,
+  SessionKind,
   SessionWorkspace,
   SessionForkLineage,
   ContextUsageAnchor,

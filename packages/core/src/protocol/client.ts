@@ -38,6 +38,7 @@ import type {
   ApprovalResult,
   PermissionMode,
   BackgroundAgentCompletedEvent,
+  SessionKind,
 } from "../types.js";
 import { EventEmitter } from "node:events";
 import { logger } from "../logging/logger.js";
@@ -71,6 +72,7 @@ export interface AgentRunOptions {
   model?: string;
   planMode?: boolean;
   behaviorMode?: RunBehaviorMode;
+  kind?: SessionKind;
 }
 
 // ─── Client ─────────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 import { ChatSession } from "./chat-session.js";
+import type { SessionKind } from "../types.js";
 import type { Engine } from "../engine/engine.js";
 import type { EngineRuntime } from "../engine/runtime.js";
 import type { EngineConfig } from "../engine/types.js";
@@ -49,6 +50,7 @@ export interface LiveChatSessionSnapshot {
     busy: boolean;
     queueDepth: number;
     lastActivityAt: number;
+    kind: SessionKind;
   }>;
 }
 
@@ -177,6 +179,14 @@ export class ChatSessionManager {
         busy: session.isBusy(),
         queueDepth: session.queueDepth(),
         lastActivityAt: session.lastActivityAt,
+        kind:
+          (
+            session.engine as Engine & {
+              getSessionManager?: () => { readSessionKind?: (sessionId: string) => SessionKind };
+            }
+          )
+            .getSessionManager?.()
+            .readSessionKind?.(session.id) ?? "work",
       });
     });
     sessions.sort((a, b) => a.sessionId.localeCompare(b.sessionId));

@@ -1,7 +1,7 @@
 import type { Engine, EngineResult } from "../engine/engine.js";
 import type { ModelEntry } from "../llm/model-pool.js";
 import type { StreamEvent } from "../types.js";
-import type { PermissionMode } from "../types.js";
+import type { PermissionMode, SessionKind } from "../types.js";
 import { isAbortError } from "../llm/client-base.js";
 import type { InputAttachmentMeta, PendingApprovalMetadata } from "./types.js";
 import type { ApprovalRouter } from "../tool-system/permission.js";
@@ -40,6 +40,8 @@ export interface TurnOpts {
   planMode?: boolean;
   /** Named behavior profile snapshot for this queued turn only. */
   behaviorMode?: RunBehaviorMode;
+  /** Durable classification used only when the Engine creates the session. */
+  kind?: SessionKind;
   /** Connection owner router for permission prompts in this turn. */
   approvalRouter?: ApprovalRouter;
 }
@@ -298,6 +300,7 @@ export class ChatSession {
         permissionMode: next.opts.permissionMode,
         planMode: next.opts.planMode,
         behaviorMode: next.opts.behaviorMode,
+        kind: next.opts.kind,
         approvalRouter: next.opts.approvalRouter,
       });
       this.lastActivityAt = Date.now();
