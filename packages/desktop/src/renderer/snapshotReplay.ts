@@ -27,3 +27,18 @@ export function selectReplayEvents(snapshot: SessionSnapshot, appliedSeq: number
   }
   return { events, cursor };
 }
+
+/** Whether the retained snapshot ends inside an unfinished top-level turn. */
+export function snapshotHasUnfinishedTopLevelTurn(snapshot: SessionSnapshot): boolean {
+  let running = false;
+  for (const entry of snapshot.events) {
+    const event = entry.event as { type?: unknown; agentId?: unknown };
+    if (event.agentId) continue;
+    if (event.type === "session_started" || event.type === "stream_request_start") {
+      running = true;
+    } else if (event.type === "turn_complete" || event.type === "error") {
+      running = false;
+    }
+  }
+  return running;
+}

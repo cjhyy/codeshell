@@ -66,7 +66,7 @@ import {
 import { resolveBucket, findAskUserOrigin } from "./streamRouting";
 import { resolveStopBucket } from "./stopRouting";
 import { statusForBucket, type SessionStatus } from "./sessionStatus";
-import { selectReplayEvents } from "./snapshotReplay";
+import { selectReplayEvents, snapshotHasUnfinishedTopLevelTurn } from "./snapshotReplay";
 import { runAfterModelSwitch } from "./modelSwitchRun";
 import { persistDefaultTextModel } from "./modelSelection";
 import { writeSettings } from "./settingsBus";
@@ -272,6 +272,22 @@ function browserPartitionForBucket(bucket: string): string {
 function quickChatLiveTurnActive(state: MessagesReducerState, busy: boolean): boolean {
   const lastMessage = state.messages[state.messages.length - 1];
   return busy && (state.streamingAssistantId !== null || lastMessage?.kind === "user");
+}
+
+function resolveMainComposerBucket(
+  requestedBucket: string | undefined,
+  renderedBucket: string,
+  activeBucket: string,
+): string {
+  // ChatView explicitly echoes the bucket it rendered with. If navigation
+  // synchronously changed the active bucket before that old render's callback
+  // fires, the echoed bucket is stale and must not override the new authority.
+  // A different explicitly requested bucket is intentional multi-session
+  // routing and remains untouched; quick chat does not use this wrapper.
+  if (requestedBucket === renderedBucket && renderedBucket !== activeBucket) {
+    return activeBucket;
+  }
+  return requestedBucket ?? activeBucket;
 }
 
 interface QuickChatPanelHostProps {
@@ -1050,15 +1066,18 @@ function App() {
       if (engineId) {
         try {
           const sinceSeq = base.snapshotSeq ?? 0;
-          const snapshot = await window.codeshell.subscribeSession(engineId, sinceSeq);
+          // Busy recovery needs the retained top-level lifecycle, including
+          // starts at/before the persisted cursor. Request the full snapshot
+          // for that decision, while selectReplayEvents still applies only the
+          // tail past sinceSeq to the reducer (no duplicate consumption).
+          const snapshot = await window.codeshell.subscribeSession(engineId, 0);
+          snapshotShowsRunning = snapshotHasUnfinishedTopLevelTurn(snapshot);
           const { events, cursor } = selectReplayEvents(snapshot, sinceSeq);
           if (events.length > 0) {
             appliedSeqRef.current.set(bucket, cursor);
             let acc = base;
             for (const ev of events) acc = applyStreamEvent(acc, ev as StreamEvent);
             state = { ...acc, snapshotSeq: Math.max(acc.snapshotSeq, cursor) };
-            snapshotShowsRunning =
-              state.streamingAssistantId !== null || state.streamingThinkingId !== null;
           } else {
             appliedSeqRef.current.set(bucket, sinceSeq);
           }
@@ -4443,18 +4462,33 @@ function App() {
                     liveTurnActive={liveTurnActive}
                     sendBucket={activeBucket}
                     onSend={(text, opts) =>
-                      send(text, { ...opts, bucket: opts?.bucket ?? activeBucketRef.current })
+                      send(text, {
+                        ...opts,
+                        bucket: resolveMainComposerBucket(
+                          opts?.bucket,
+                          activeBucket,
+                          activeBucketRef.current,
+                        ),
+                      })
                     }
                     onQueueInput={(text, opts) =>
                       queueInput(text, {
                         ...opts,
-                        bucket: opts?.bucket ?? activeBucketRef.current,
+                        bucket: resolveMainComposerBucket(
+                          opts?.bucket,
+                          activeBucket,
+                          activeBucketRef.current,
+                        ),
                       })
                     }
                     onForceSend={(text, opts) =>
                       forceSend(text, {
                         ...opts,
-                        bucket: opts?.bucket ?? activeBucketRef.current,
+                        bucket: resolveMainComposerBucket(
+                          opts?.bucket,
+                          activeBucket,
+                          activeBucketRef.current,
+                        ),
                       })
                     }
                     onCompactCommand={compactActiveSession}
