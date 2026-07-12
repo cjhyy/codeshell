@@ -9,6 +9,7 @@ import {
   loadSessionIndex,
   loadTranscript,
   NO_REPO_KEY,
+  projectBucketSegment,
   repoKeyOf,
   saveSessionIndex,
   saveTranscript,
@@ -70,8 +71,9 @@ describe("transcript snapshot cursor persistence", () => {
 
   it("keeps no-project and conversation bucket strings byte-identical", () => {
     expect(NO_REPO_KEY).toBe("__no_repo__");
+    expect(projectBucketSegment(null)).toBe("__no_repo__");
+    expect(projectBucketSegment("stable-project-id")).toBe("stable-project-id");
     expect(repoKeyOf(null)).toBe("__no_repo__");
-    expect(repoKeyOf("stable-project-id")).toBe("stable-project-id");
     expect(bucketKey(null, null)).toBe("__no_repo__::_none_");
     expect(bucketKey(null, "session-1")).toBe("__no_repo__::session-1");
     expect(bucketKey("stable-project-id", "session-1")).toBe("stable-project-id::session-1");

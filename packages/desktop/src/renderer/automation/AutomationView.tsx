@@ -121,8 +121,8 @@ function automationSessionLinks(
   const out: AutomationSessionLink[] = [];
   const seenRunIds = new Set<string>();
   const seenSessionIds = new Set<string>();
-  for (const [repoKey, idx] of Object.entries(sessionIndices)) {
-    const projectId = repoKey === NO_REPO_KEY ? null : repoKey;
+  for (const [projectBucketSegment, idx] of Object.entries(sessionIndices)) {
+    const projectId = projectBucketSegment === NO_REPO_KEY ? null : projectBucketSegment;
     for (const session of idx.sessions) {
       if (session.source !== "automation" || session.archived) continue;
       const run = session.runId

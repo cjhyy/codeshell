@@ -12,7 +12,7 @@ import {
   bucketKey,
   migrateBucketOverride,
   clearBucketOverride,
-  migrateRepoBucketOverrides,
+  migrateProjectBucketOverrides,
 } from "./transcripts";
 
 type Mode = "default" | "bypassPermissions" | "acceptEdits";
@@ -61,7 +61,7 @@ describe("clearBucketOverride (新对话 resets the shared draft slot)", () => {
   });
 });
 
-describe("migrateRepoBucketOverrides (repo id merge)", () => {
+describe("migrateProjectBucketOverrides (repo id merge)", () => {
   it("moves all bucket overrides from a merged repo id onto the surviving repo id", () => {
     const before: Record<string, Mode> = {
       [bucketKey("old-subdir", "s1")]: "bypassPermissions",
@@ -69,7 +69,7 @@ describe("migrateRepoBucketOverrides (repo id merge)", () => {
       [bucketKey("root", "s2")]: "default",
     };
 
-    const after = migrateRepoBucketOverrides(before, { "old-subdir": "root" });
+    const after = migrateProjectBucketOverrides(before, { "old-subdir": "root" });
 
     expect(after).toEqual({
       [bucketKey("root", "s1")]: "bypassPermissions",
@@ -85,7 +85,7 @@ describe("migrateRepoBucketOverrides (repo id merge)", () => {
       [target]: "acceptEdits",
     };
 
-    const after = migrateRepoBucketOverrides(before, { "old-subdir": "root" });
+    const after = migrateProjectBucketOverrides(before, { "old-subdir": "root" });
 
     expect(after[target]).toBe("acceptEdits");
     expect(after[bucketKey("old-subdir", "s1")]).toBeUndefined();
