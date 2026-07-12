@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import type { ApprovalRequestEnvelope } from "../preload/types";
 import type { Message } from "./types";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
+import type { PermissionMode } from "./chat/PermissionPill";
 
 interface QuickChatPanelProps {
   sessionId: string;
@@ -13,6 +14,8 @@ interface QuickChatPanelProps {
   contextMode: "full" | "blank";
   sourceTitle?: string;
   draft: string;
+  permissionMode: PermissionMode;
+  onPermissionChange: (mode: PermissionMode) => void;
   onDraftChange: (text: string) => void;
   onSend: (text: string) => void;
   onStop: () => void;
@@ -164,6 +167,7 @@ let cancelCalls: Array<string | undefined> = [];
 let approveCalls: unknown[][] = [];
 let forkSessionCalls: Array<Record<string, unknown>> = [];
 let getSessionTranscriptCalls: string[] = [];
+let runCalls: Array<{ prompt: string; opts: Record<string, unknown> }> = [];
 
 function restoreGlobalProperty(
   key: "localStorage" | "window",
@@ -297,7 +301,10 @@ function installCodeshellStub(
     approve: async (...args: unknown[]) => {
       approveCalls.push(args);
     },
-    run: async () => new Promise(() => undefined),
+    run: async (prompt: string, opts: Record<string, unknown>) => {
+      runCalls.push({ prompt, opts });
+      return new Promise(() => undefined);
+    },
     onStreamEvent: (listener: (env: any) => void) => {
       streamListener = listener;
       return unsubscribe;
@@ -438,6 +445,7 @@ afterEach(async () => {
   approveCalls = [];
   forkSessionCalls = [];
   getSessionTranscriptCalls = [];
+  runCalls = [];
   chatProps = null;
   quickChatProps.clear();
   panelAreaProps.clear();
@@ -447,6 +455,49 @@ afterEach(async () => {
 });
 
 describe("App quick-chat integration", () => {
+  test("defaults quick chat to restricted access and only lifts it after an explicit pill change", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-restricted", kind: "quickChat" }],
+    });
+    const [quick] = currentQuickPanels();
+    if (!quick) throw new Error("quick chat session was not created");
+
+    expect(quick.permissionMode).toBe("plan");
+    await act(async () => {
+      quick.onSend("inspect only");
+      await flushMicrotasks();
+    });
+    expect(runCalls.at(-1)).toEqual({
+      prompt: "inspect only",
+      opts: expect.objectContaining({
+        sessionId: quick.sessionId,
+        permissionMode: "plan",
+        behaviorMode: "quickChatRestricted",
+      }),
+    });
+
+    await act(async () => {
+      quickChatProps.get(quick.sessionId)?.onPermissionChange("bypass");
+      await flushMicrotasks();
+    });
+    const elevated = quickChatProps.get(quick.sessionId);
+    expect(elevated?.permissionMode).toBe("bypass");
+
+    await act(async () => {
+      elevated?.onSend("make the requested edit");
+      await flushMicrotasks();
+    });
+    expect(runCalls.at(-1)).toEqual({
+      prompt: "make the requested edit",
+      opts: expect.objectContaining({
+        sessionId: quick.sessionId,
+        permissionMode: "bypassPermissions",
+      }),
+    });
+    expect(runCalls.at(-1)?.opts).not.toHaveProperty("behaviorMode");
+  });
+
   test("defaults to a full fork of the owner engine session before becoming ready", async () => {
     await mountApp({
       withNormalSession: true,
