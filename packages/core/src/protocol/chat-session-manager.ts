@@ -68,6 +68,31 @@ export class ChatSessionManager {
     return this.getOrCreateNow(sessionId, slice);
   }
 
+  /**
+   * Cold-resume a persisted session using its own cwd. The first detached
+   * Engine is only a storage probe; all actual work runs on the second Engine
+   * built from the recovered project slice.
+   */
+  async getOrCreatePersisted(
+    sessionId: string,
+    slice: Partial<EngineConfigSlice> = {},
+    restorePersistedModel = true,
+  ): Promise<ChatSession | null> {
+    const existing = this.sessions.get(sessionId);
+    if (existing) return existing;
+    const probe = this.factory(slice as EngineConfigSlice);
+    if (!probe.sessionExistsOnDisk(sessionId)) return null;
+    const cwd = probe.getSessionManager().readCwd(sessionId);
+    if (!cwd) return null;
+    const session = await this.getOrCreate(sessionId, {
+      ...slice,
+      cwd,
+      projectTrusted: slice.projectTrusted ?? false,
+    } as EngineConfigSlice);
+    if (restorePersistedModel) session.engine.restoreSessionModel(sessionId);
+    return session;
+  }
+
   private getOrCreateNow(sessionId: string, slice: EngineConfigSlice): ChatSession {
     openSessionPathApprovals(sessionId);
     openInteractiveApprovalSession(sessionId);

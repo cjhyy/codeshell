@@ -311,11 +311,7 @@ export function adjustIndexToPreserveAPIInvariants(
  * Less aggressive than windowCompact — preserves initial context AND recent history.
  * Uses adjustIndexToPreserveAPIInvariants on both boundaries.
  */
-export function snipCompact(
-  messages: Message[],
-  keepFirstN = 3,
-  keepLastM = 8,
-): Message[] {
+export function snipCompact(messages: Message[], keepFirstN = 3, keepLastM = 8): Message[] {
   if (messages.length <= keepFirstN + keepLastM + 1) return messages;
 
   // Adjust last-M boundary to preserve tool pairs
@@ -333,11 +329,7 @@ export function snipCompact(
       `Use the transcript file to review details if needed.]</system-reminder>`,
   };
 
-  return [
-    ...messages.slice(0, keepFirstN),
-    snipMarker,
-    ...messages.slice(lastStart),
-  ];
+  return [...messages.slice(0, keepFirstN), snipMarker, ...messages.slice(lastStart)];
 }
 
 /**
@@ -463,10 +455,7 @@ export interface MicrocompactOptions {
  *  - Replacement string includes tool name + key args so the model isn't
  *    forced into blind re-Reads (which then trip the Investigation guard).
  */
-export function microcompact(
-  messages: Message[],
-  options: MicrocompactOptions = {},
-): Message[] {
+export function microcompact(messages: Message[], options: MicrocompactOptions = {}): Message[] {
   const keepRecentN = options.keepRecentN ?? 5;
   const compactable = options.compactableTools ?? COMPACTABLE_TOOL_NAMES;
 
@@ -661,7 +650,10 @@ const OLD_SNAPSHOT_PLACEHOLDER =
  * extract observations and act results are left untouched. Renamed from
  * maskOldBrowserSnapshots when the 9 browser_* tools collapsed into 3.
  */
-export function maskOldObservations(messages: Message[]): { messages: Message[]; maskedCount: number } {
+export function maskOldObservations(messages: Message[]): {
+  messages: Message[];
+  maskedCount: number;
+} {
   const snapshotIds = buildSnapshotObserveIdSet(messages);
   const snapResults: string[] = [];
   for (const msg of messages) {
@@ -774,9 +766,7 @@ export function truncateToolResult(result: string, maxChars = 30_000): string {
   const tail = result.slice(-tailSize);
 
   return (
-    head +
-    `\n\n... [${result.length - headSize - tailSize} characters truncated] ...\n\n` +
-    tail
+    head + `\n\n... [${result.length - headSize - tailSize} characters truncated] ...\n\n` + tail
   );
 }
 
@@ -784,6 +774,17 @@ export function truncateToolResult(result: string, maxChars = 30_000): string {
  * Build a structured summarization prompt from messages to be compacted.
  * Produces a 9-section summary preserving key details.
  */
+const SUMMARY_SECTION_LIST =
+  "1. **Primary Request**: What the user originally asked for\n" +
+  "2. **Key Concepts**: Important technical terms, patterns, file paths\n" +
+  "3. **Files Referenced**: List of files read/edited with key content\n" +
+  "4. **Errors & Fixes**: Any errors encountered and how they were resolved\n" +
+  "5. **Actions Taken**: Tools used and their outcomes\n" +
+  "6. **User Messages**: All distinct user requests (verbatim if short)\n" +
+  "7. **Pending Tasks**: Anything started but not finished\n" +
+  "8. **Current State**: Where things stand right now\n" +
+  "9. **Next Steps**: What should happen next\n";
+
 export function buildSummarizationPrompt(
   messagesToSummarize: Message[],
   priorSummary?: string,
@@ -808,17 +809,6 @@ export function buildSummarizationPrompt(
     }
   }
 
-  const sectionList =
-    "1. **Primary Request**: What the user originally asked for\n" +
-    "2. **Key Concepts**: Important technical terms, patterns, file paths\n" +
-    "3. **Files Referenced**: List of files read/edited with key content\n" +
-    "4. **Errors & Fixes**: Any errors encountered and how they were resolved\n" +
-    "5. **Actions Taken**: Tools used and their outcomes\n" +
-    "6. **User Messages**: All distinct user requests (verbatim if short)\n" +
-    "7. **Pending Tasks**: Anything started but not finished\n" +
-    "8. **Current State**: Where things stand right now\n" +
-    "9. **Next Steps**: What should happen next\n";
-
   if (priorSummary) {
     return (
       "You are updating an anchored conversation summary. A prior summary is " +
@@ -831,7 +821,7 @@ export function buildSummarizationPrompt(
       "- Stays in the same 9-section structure below\n" +
       "- Is factual; preserves file paths, function names, and error " +
       "messages exactly\n\n" +
-      sectionList +
+      SUMMARY_SECTION_LIST +
       "\n=== Prior summary ===\n" +
       priorSummary +
       "\n\n=== New conversation ===\n\n" +
@@ -842,9 +832,147 @@ export function buildSummarizationPrompt(
   return (
     "Summarize the following conversation into these sections. " +
     "Be factual. Preserve file paths, function names, and error messages exactly.\n\n" +
-    sectionList +
+    SUMMARY_SECTION_LIST +
     "\nConversation:\n\n" +
     parts.join("\n")
+  );
+}
+
+/** Target size for a portable context package (roughly one background page). */
+export const CONTEXT_PACKAGE_TARGET_TOKENS = 1_500;
+/** Hard output ceiling; the design allows a 1,500-2,000 token final package. */
+export const CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS = 2_000;
+
+export interface SerializedContextPackage {
+  /** Complete textual representation. Image bytes are replaced by explicit metadata placeholders. */
+  text: string;
+  /** False when the selection contains images/placeholders but no facts a text model can summarize. */
+  hasSummarizableContent: boolean;
+}
+
+function serializeContextPackageBlock(block: ContentBlock): SerializedContextPackage {
+  switch (block.type) {
+    case "text": {
+      const text = block.text ?? "";
+      return { text, hasSummarizableContent: text.trim().length > 0 };
+    }
+    case "reasoning": {
+      const text = block.reasoningContent ?? block.text ?? "";
+      return {
+        text: `[reasoning]: ${text}`,
+        hasSummarizableContent: text.trim().length > 0,
+      };
+    }
+    case "tool_use": {
+      const args = JSON.stringify(block.input ?? {});
+      const name = block.name ?? "unknown_tool";
+      return {
+        text: `[tool_use id=${block.id ?? "unknown"}]: ${name}(${args})`,
+        hasSummarizableContent: name !== "unknown_tool" || args !== "{}",
+      };
+    }
+    case "tool_result": {
+      if (typeof block.content === "string") {
+        return {
+          text: `[tool_result tool_use_id=${block.tool_use_id ?? "unknown"}${block.is_error ? " is_error=true" : ""}]: ${block.content}`,
+          hasSummarizableContent: block.content.trim().length > 0,
+        };
+      }
+      const nested = (block.content ?? []).map(serializeContextPackageBlock);
+      return {
+        text:
+          `[tool_result tool_use_id=${block.tool_use_id ?? "unknown"}${block.is_error ? " is_error=true" : ""}]:\n` +
+          nested.map((item) => item.text).join("\n"),
+        hasSummarizableContent: nested.some((item) => item.hasSummarizableContent),
+      };
+    }
+    case "image": {
+      const source = block.source;
+      const mediaType = source?.media_type ?? "unknown";
+      const encoding = source?.type ?? "unknown";
+      const encodedChars = source?.data.length ?? 0;
+      return {
+        text: `[image media_type=${mediaType} encoding=${encoding} encoded_chars=${encodedChars}; binary payload intentionally represented by metadata]`,
+        hasSummarizableContent: false,
+      };
+    }
+    default: {
+      return {
+        text: `[unknown content block]: ${JSON.stringify(block)}`,
+        hasSummarizableContent: true,
+      };
+    }
+  }
+}
+
+/**
+ * Serialize a selected context range without head-only truncation. Text, tool
+ * arguments/results, nested structured results, and reasoning are retained in
+ * full. Raw image bytes are intentionally not copied into a text prompt; an
+ * explicit metadata placeholder makes that conversion visible and bounded.
+ */
+export function serializeContextPackageMessages(messages: Message[]): SerializedContextPackage {
+  const lines: string[] = [];
+  let hasSummarizableContent = false;
+  for (const message of messages) {
+    if (typeof message.content === "string") {
+      lines.push(`[${message.role}]: ${message.content}`);
+      if (message.content.trim()) hasSummarizableContent = true;
+      continue;
+    }
+    for (const block of message.content) {
+      const serialized = serializeContextPackageBlock(block);
+      lines.push(`[${message.role}] ${serialized.text}`);
+      hasSummarizableContent ||= serialized.hasSummarizableContent;
+    }
+  }
+  return { text: lines.join("\n"), hasSummarizableContent };
+}
+
+export function buildContextPackagePromptFromSerialized(
+  serializedConversation: string,
+  priorSummary?: string,
+): string {
+  const instruction =
+    "Create a portable background context package for a new session. " +
+    "Target about 1,500 tokens (never more than 2,000). Preserve the selected " +
+    "range's questions, conclusions, failed attempts, files and symbols, commands, " +
+    "exact errors, unresolved items, and concrete next steps. Do not imply that work " +
+    "outside the supplied range occurred. Be factual and retain explicit image placeholders.\n\n";
+  if (priorSummary) {
+    return (
+      instruction +
+      "Update the prior package with the next lossless conversation fragment. " +
+      "Preserve every critical prior fact, resolve contradictions in favor of the newer " +
+      "fragment, and return the same nine sections.\n\n" +
+      SUMMARY_SECTION_LIST +
+      "\n=== Prior summary ===\n" +
+      priorSummary +
+      "\n\n=== New conversation fragment ===\n" +
+      serializedConversation
+    );
+  }
+  return (
+    instruction +
+    "Summarize the selected conversation into the same nine sections.\n\n" +
+    SUMMARY_SECTION_LIST +
+    "\n=== Selected conversation ===\n" +
+    serializedConversation
+  );
+}
+
+/**
+ * Build the session-transfer variant on top of the same structured prompt used
+ * by /compact. Keeping this wrapper small makes changes to the canonical nine
+ * sections flow into both compaction and context packaging.
+ */
+export function buildContextPackagePrompt(
+  messagesToSummarize: Message[],
+  priorSummary?: string,
+): string {
+  return buildContextPackagePromptFromSerialized(
+    serializeContextPackageMessages(messagesToSummarize).text,
+    priorSummary,
   );
 }
 
@@ -977,7 +1105,8 @@ export function dropOldestRounds(messages: Message[], roundsToDrop: number): Mes
   if (result.length > 0 && result[0].role === "assistant") {
     result.unshift({
       role: "user",
-      content: "<system-reminder>Earlier conversation context was removed to fit within the context window. Continue from the assistant's response below.</system-reminder>",
+      content:
+        "<system-reminder>Earlier conversation context was removed to fit within the context window. Continue from the assistant's response below.</system-reminder>",
     });
   }
 

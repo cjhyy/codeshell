@@ -167,4 +167,88 @@ describe("ChatSessionManager serialized lifecycle", () => {
     expect(runs).toEqual([1, 2]);
     expect(manager.get("serial-sid")).toBe(second);
   });
+
+  it("holds queued turns behind an exclusive summary operation", async () => {
+    const summaryStarted = deferred();
+    const releaseSummary = deferred();
+    const order: string[] = [];
+    const manager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () =>
+        ({
+          isHeadless: () => false,
+          async run(): Promise<EngineResult> {
+            order.push("turn");
+            return result("exclusive-sid");
+          },
+        }) as unknown as Engine,
+    });
+    const session = await manager.getOrCreate("exclusive-sid", {} as never);
+
+    const summary = session.runExclusive(async () => {
+      order.push("summary-start");
+      summaryStarted.resolve();
+      await releaseSummary.promise;
+      order.push("summary-end");
+    });
+    await summaryStarted.promise;
+    const turn = session.enqueueTurn("queued-during-summary", {});
+    await Promise.resolve();
+
+    expect(session.isBusy()).toBe(true);
+    expect(session.queueDepth()).toBe(1);
+    expect(order).toEqual(["summary-start"]);
+
+    releaseSummary.resolve();
+    await summary;
+    await turn;
+    expect(order).toEqual(["summary-start", "summary-end", "turn"]);
+  });
+
+  it("applies a model switch requested during exclusive work before the queued run", async () => {
+    const summaryStarted = deferred();
+    const releaseSummary = deferred();
+    const order: string[] = [];
+    let activeModel = "old";
+    const manager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () =>
+        ({
+          isHeadless: () => false,
+          getModelPool: () => ({
+            get: (key: string) => ({ key, model: key }),
+          }),
+          switchModel(key: string) {
+            activeModel = key;
+            order.push(`switch:${key}`);
+            return { key, model: key };
+          },
+          resetSessionUsage() {},
+          async run(): Promise<EngineResult> {
+            order.push(`run:${activeModel}`);
+            return result("exclusive-model-sid");
+          },
+        }) as unknown as Engine,
+    });
+    const session = await manager.getOrCreate("exclusive-model-sid", {} as never);
+
+    const summary = session.runExclusive(async () => {
+      summaryStarted.resolve();
+      await releaseSummary.promise;
+    });
+    await summaryStarted.promise;
+    session.requestModelSwitch("new");
+    const turn = session.enqueueTurn("queued-during-summary", {});
+
+    releaseSummary.resolve();
+    await summary;
+    await turn;
+
+    expect(order).toEqual(["switch:new", "run:new"]);
+
+    await session.runExclusive(async () => {
+      session.requestModelSwitch("newest");
+    });
+    expect(order).toEqual(["switch:new", "run:new", "switch:newest"]);
+  });
 });

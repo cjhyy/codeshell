@@ -176,7 +176,7 @@ export interface RunResult {
   usage: TokenUsage;
 }
 
-export interface ForkSessionParams {
+export interface FullForkSessionParams {
   sourceSessionId: string;
   targetSessionId?: string;
   mode: "full";
@@ -188,7 +188,18 @@ export interface ForkSessionParams {
   quickChatClaimId?: string;
 }
 
-export interface ForkSessionResult {
+export interface SummaryForkSessionParams {
+  sourceSessionId: string;
+  targetSessionId?: string;
+  mode: "summary";
+  /** Inclusive stable source event range. */
+  fromEventId: string;
+  toEventId: string;
+}
+
+export type ForkSessionParams = FullForkSessionParams | SummaryForkSessionParams;
+
+export interface FullForkSessionResult {
   sessionId: string;
   mode: "full";
   forkedFrom: SessionForkLineage;
@@ -196,6 +207,19 @@ export interface ForkSessionResult {
   copiedEventCount: number;
   titleSuggestion?: string;
 }
+
+export interface SummaryForkSessionResult {
+  sessionId: string;
+  mode: "summary";
+  summary: string;
+  sourceRange: { fromEventId: string; toEventId: string };
+  estimatedTokens: number;
+  forkedFrom: SessionForkLineage;
+  workspace: SessionWorkspace;
+  titleSuggestion?: string;
+}
+
+export type ForkSessionResult = FullForkSessionResult | SummaryForkSessionResult;
 
 /** Respond to an approval request from the server. */
 export interface ApproveParams {

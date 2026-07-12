@@ -56,7 +56,11 @@ import { patchOrphanedToolUses } from "./patch-orphaned-tools.js";
 import { runShellHook, shellHookMatches } from "../hooks/shell-runner.js";
 import { ContextManager, type CompactStrategy } from "../context/manager.js";
 import {
+  CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS,
+  buildContextPackagePromptFromSerialized,
   estimateTokens,
+  groupMessagesByApiRound,
+  serializeContextPackageMessages,
   clampContextRatios as clampContextRatiosImpl,
 } from "../context/compaction.js";
 import { PLAN_MODE_ALLOWED_TOOLS } from "../tool-system/plan-mode-allowlist.js";
@@ -65,6 +69,7 @@ import {
   SessionManager,
   type ForkSessionOptions,
   type ForkSessionResult,
+  type SummaryForkOptions,
   type SessionBundle,
 } from "../session/session-manager.js";
 import { ModelFacade } from "./model-facade.js";
@@ -106,7 +111,7 @@ import { buildRunUserMessageContent, prepareRunImageInput } from "./run-image-in
 import type { EngineRunOptions } from "./run-types.js";
 import { createSubAgentSpawner } from "./subagent-spawner.js";
 import { stripInjectedContextMessages } from "./injected-context-cache.js";
-import { AuxiliaryPipeline } from "./auxiliary-pipeline.js";
+import { AuxiliaryPipeline, sameLlmIdentity } from "./auxiliary-pipeline.js";
 import { PermissionController } from "./permission-controller.js";
 import { join } from "node:path";
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
@@ -355,8 +360,15 @@ export class Engine {
   }
 
   private resolveMaxContextTokens(): number {
-    const modelEntry = this.modelPool.get();
-    return modelEntry?.maxContextTokens ?? this.config.maxContextTokens ?? 200_000;
+    const modelEntry = this.modelPool
+      .list()
+      .find((entry) => sameLlmIdentity(this.modelPool.toLLMConfig(entry), this.config.llm));
+    return (
+      this.config.llm.maxContextTokens ??
+      modelEntry?.maxContextTokens ??
+      this.config.maxContextTokens ??
+      200_000
+    );
   }
 
   /**
@@ -900,6 +912,146 @@ export class Engine {
 
   forkSession(sourceSessionId: string, options?: ForkSessionOptions): ForkSessionResult {
     return this.sessionManager.fork(sourceSessionId, options);
+  }
+
+  selectContextPackage(
+    sourceSessionId: string,
+    range: { fromEventId: string; toEventId: string },
+  ): ReturnType<SessionManager["selectContextPackage"]> {
+    return this.sessionManager.selectContextPackage(sourceSessionId, range);
+  }
+
+  createSummaryFork(sourceSessionId: string, options: SummaryForkOptions): ForkSessionResult {
+    return this.sessionManager.createSummaryFork(sourceSessionId, options);
+  }
+
+  /** Summarize a selected transcript package using the configured aux tier. */
+  async summarizeContextPackage(
+    messages: Message[],
+    signal?: AbortSignal,
+    sourceSessionId?: string,
+  ): Promise<{ summary: string; estimatedTokens: number }> {
+    if (messages.length === 0) throw new Error("Cannot summarize an empty context package");
+    const serializedSelection = serializeContextPackageMessages(messages);
+    if (!serializedSelection.hasSummarizableContent) {
+      throw new Error(
+        "Cannot summarize an image-only context package without textual or tool facts",
+      );
+    }
+    if (sourceSessionId && this.config.costStore) {
+      const persistedCost = this.sessionManager.resume(sourceSessionId).state.costState;
+      if (persistedCost) this.config.costStore.restore(persistedCost);
+    }
+    const primaryClient = await createLLMClient(this.config.llm, this.config.clientDefaults);
+    const resolvedAux = await this.auxiliaryPipeline.resolveAuxClientWithMetadata(
+      primaryClient,
+      this.resolveMaxContextTokens(),
+    );
+    const client = resolvedAux.client;
+    const systemPrompt =
+      "You package selected conversation context. Be concise, factual, and complete.";
+    const fitsAuxWindow = (conversation: string, priorSummary?: string): boolean => {
+      const prompt = buildContextPackagePromptFromSerialized(conversation, priorSummary);
+      const requestTokens = estimateTokens([
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt },
+      ]);
+      return requestTokens + CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS <= resolvedAux.maxContextTokens;
+    };
+    if (!fitsAuxWindow("x")) {
+      throw new Error(
+        `Auxiliary model context window (${resolvedAux.maxContextTokens}) is too small for the context package template and output reserve`,
+      );
+    }
+
+    // Preserve complete API rounds whenever they fit. If one round alone is
+    // larger than the aux window, split its lossless serialized form and feed
+    // every fragment through the same rolling nine-section merge.
+    const pending = groupMessagesByApiRound(messages).map(
+      (group) => serializeContextPackageMessages(group).text,
+    );
+    let summary: string | undefined;
+    while (pending.length > 0) {
+      let conversation = "";
+      while (pending.length > 0) {
+        const next = pending[0]!;
+        const candidate = conversation ? `${conversation}\n${next}` : next;
+        if (fitsAuxWindow(candidate, summary)) {
+          conversation = candidate;
+          pending.shift();
+          continue;
+        }
+        if (conversation) break;
+
+        let low = 1;
+        let high = next.length;
+        let fitLength = 0;
+        while (low <= high) {
+          const middle = Math.floor((low + high) / 2);
+          if (fitsAuxWindow(next.slice(0, middle), summary)) {
+            fitLength = middle;
+            low = middle + 1;
+          } else {
+            high = middle - 1;
+          }
+        }
+        if (fitLength === 0) {
+          throw new Error(
+            `Auxiliary model context window (${resolvedAux.maxContextTokens}) cannot fit the rolling context package prompt`,
+          );
+        }
+        conversation = next.slice(0, fitLength);
+        const remainder = next.slice(fitLength);
+        if (remainder) pending[0] = remainder;
+        else pending.shift();
+        break;
+      }
+      const response = await client.createMessage({
+        systemPrompt,
+        messages: [
+          {
+            role: "user",
+            content: buildContextPackagePromptFromSerialized(conversation, summary),
+          },
+        ],
+        tools: [],
+        maxTokens: CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS,
+        billingEnabled: true,
+        requestVisible: false,
+        reasoning: { mode: "off" },
+        signal,
+      });
+      if (response.usage && sourceSessionId) {
+        this.sessionManager.recordAuxiliaryUsage(
+          sourceSessionId,
+          response.usage,
+          this.config.costStore?.serialize() as Record<string, unknown> | undefined,
+        );
+      }
+      summary = response.text.trim();
+      if (!summary) throw new Error("Context package summary was empty");
+    }
+    return {
+      summary: summary!,
+      estimatedTokens: estimateTokens([{ role: "user", content: summary! }]),
+    };
+  }
+
+  /** Restore a cold Engine's configured model from persisted source state without resetting usage. */
+  restoreSessionModel(sessionId: string): void {
+    const state = this.sessionManager.resume(sessionId).state;
+    if (this.config.llm.model === state.model && this.config.llm.provider === state.provider)
+      return;
+    const entry =
+      this.modelPool
+        .list()
+        .find(
+          (candidate) => candidate.model === state.model && candidate.provider === state.provider,
+        ) ?? this.modelPool.list().find((candidate) => candidate.model === state.model);
+    if (!entry) {
+      throw new Error(`Persisted source model is no longer configured: ${state.model}`);
+    }
+    this.config = { ...this.config, llm: this.modelPool.toLLMConfig(entry) };
   }
 
   /**

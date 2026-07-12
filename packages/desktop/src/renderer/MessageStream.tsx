@@ -1,10 +1,9 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { Message } from "./types";
 import { ToolCard } from "./tool-cards";
 import { AssistantMessageView } from "./messages/AssistantMessageView";
 import { ThinkingMessageView } from "./messages/ThinkingMessageView";
 import { AgentMessageView } from "./messages/AgentMessageView";
-import { TaskListMessageView } from "./messages/TaskListMessageView";
 import { ContextBoundaryView } from "./messages/ContextBoundaryView";
 import { GoalProgressView } from "./messages/GoalProgressView";
 import { TurnEndMessageView } from "./messages/TurnEndMessageView";
@@ -28,10 +27,26 @@ import { formatMessageTime } from "./messages/time";
 import { Lightbox } from "./chat/Lightbox";
 import { timePhase } from "./perf";
 import { useT } from "./i18n/I18nProvider";
+import type { SummaryForkSessionResult } from "../preload/types";
+import {
+  buildSelectableContextTurns,
+  selectedTurnRange,
+  type SelectableContextTurn,
+} from "./contextSelection";
 
 // Stable fallback so memoized AskUserMessageView siblings don't see a
 // fresh onAnswer prop on every render.
 const NOOP_ON_ANSWER = (): void => undefined;
+
+export interface ContextPackageCreatedOptions {
+  /** Re-check immediately before navigating because registration may itself be asynchronous. */
+  shouldActivate: () => boolean;
+}
+
+export type ContextPackageCreatedHandler = (
+  result: SummaryForkSessionResult,
+  options?: ContextPackageCreatedOptions,
+) => void | Promise<void>;
 
 interface Props {
   messages: Message[];
@@ -83,6 +98,8 @@ interface Props {
    * the session id so a send never reads as a session switch.
    */
   sendEpoch?: number;
+  /** Registers a summary fork as a normal host session after core publishes it. */
+  onContextPackageCreated?: ContextPackageCreatedHandler;
 }
 
 export function MessageStream({
@@ -96,6 +113,7 @@ export function MessageStream({
   liveTurnActive,
   cwd,
   sendEpoch,
+  onContextPackageCreated,
 }: Props) {
   const { t } = useT();
   // The LAST files_changed message = the most recent turn's file edits. Only
@@ -120,9 +138,88 @@ export function MessageStream({
   });
   // Zoom state carries the whole sibling-image group plus the clicked index,
   // so the Lightbox can offer prev/next across the images in one message.
-  const [zoomed, setZoomed] = useState<
-    { items: { src: string; alt: string; name?: string }[]; index: number } | null
-  >(null);
+  const [zoomed, setZoomed] = useState<{
+    items: { src: string; alt: string; name?: string }[];
+    index: number;
+  } | null>(null);
+  const [selectionOpen, setSelectionOpen] = useState(false);
+  const [selectionTurns, setSelectionTurns] = useState<SelectableContextTurn[]>([]);
+  const [selectionAnchor, setSelectionAnchor] = useState<number | null>(null);
+  const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
+  const [selectionStatus, setSelectionStatus] = useState<"idle" | "loading" | "packaging">("idle");
+  const [selectionError, setSelectionError] = useState<string | null>(null);
+  const selectionLoadEpochRef = useRef(0);
+  const currentSessionIdRef = useRef(engineSessionId);
+  currentSessionIdRef.current = engineSessionId;
+
+  useEffect(() => {
+    selectionLoadEpochRef.current += 1;
+    setSelectionOpen(false);
+    setSelectionTurns([]);
+    setSelectionAnchor(null);
+    setSelectionEnd(null);
+    setSelectionStatus("idle");
+    setSelectionError(null);
+  }, [engineSessionId]);
+
+  const openContextSelection = async () => {
+    if (!engineSessionId || liveTurnActive) return;
+    const loadEpoch = ++selectionLoadEpochRef.current;
+    setSelectionOpen(true);
+    setSelectionStatus("loading");
+    setSelectionError(null);
+    try {
+      const raw = await window.codeshell.getSessionRawEvents(engineSessionId);
+      if (loadEpoch !== selectionLoadEpochRef.current) return;
+      setSelectionTurns(buildSelectableContextTurns(raw, false));
+      setSelectionAnchor(null);
+      setSelectionEnd(null);
+    } catch (error) {
+      if (loadEpoch !== selectionLoadEpochRef.current) return;
+      setSelectionError(error instanceof Error ? error.message : String(error));
+    } finally {
+      if (loadEpoch === selectionLoadEpochRef.current) setSelectionStatus("idle");
+    }
+  };
+
+  const chooseTurn = (index: number) => {
+    if (selectionAnchor === null || selectionEnd !== selectionAnchor) {
+      setSelectionAnchor(index);
+      setSelectionEnd(index);
+      return;
+    }
+    setSelectionEnd(index);
+  };
+
+  const createContextPackage = async () => {
+    if (!engineSessionId || selectionAnchor === null || selectionEnd === null) return;
+    const operationEpoch = selectionLoadEpochRef.current;
+    const sourceSessionId = engineSessionId;
+    const operationIsCurrent = () =>
+      operationEpoch === selectionLoadEpochRef.current &&
+      sourceSessionId === currentSessionIdRef.current;
+    setSelectionStatus("packaging");
+    setSelectionError(null);
+    try {
+      const from = Math.min(selectionAnchor, selectionEnd);
+      const to = Math.max(selectionAnchor, selectionEnd);
+      const range = selectedTurnRange(selectionTurns, from, to);
+      const result = await window.codeshell.forkSession({
+        sourceSessionId,
+        mode: "summary",
+        ...range,
+      });
+      if (result.mode !== "summary") throw new Error("Unexpected full-fork response");
+      await onContextPackageCreated?.(result, { shouldActivate: operationIsCurrent });
+      if (!operationIsCurrent()) return;
+      setSelectionOpen(false);
+    } catch (error) {
+      if (!operationIsCurrent()) return;
+      setSelectionError(error instanceof Error ? error.message : String(error));
+    } finally {
+      if (operationIsCurrent()) setSelectionStatus("idle");
+    }
+  };
 
   // Two-level fold (see messages/streamGroups.ts):
   //   - level 1: adjacent tool calls → ToolGroup
@@ -156,138 +253,216 @@ export function MessageStream({
 
   return (
     <div className="relative min-w-0 max-w-full flex-1 overflow-hidden">
+      {engineSessionId && onContextPackageCreated && !liveTurnActive && !selectionOpen && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="absolute right-4 top-2 z-20"
+          onClick={() => void openContextSelection()}
+        >
+          {t("chat.contextPackage.select")}
+        </Button>
+      )}
+      {selectionOpen && (
+        <div className="absolute inset-x-4 top-2 z-30 max-h-[70%] overflow-auto rounded-lg border border-border bg-background p-3 shadow-lg">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div className="font-medium">{t("chat.contextPackage.title")}</div>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setSelectionOpen(false)}>
+              {t("chat.contextPackage.cancel")}
+            </Button>
+          </div>
+          {selectionStatus === "loading" ? (
+            <div className="py-3 text-sm text-muted-foreground">
+              {t("chat.contextPackage.loading")}
+            </div>
+          ) : selectionTurns.length === 0 ? (
+            <div className="py-3 text-sm text-muted-foreground">
+              {t("chat.contextPackage.empty")}
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {selectionTurns.map((turn, index) => {
+                const low = Math.min(selectionAnchor ?? -1, selectionEnd ?? -1);
+                const high = Math.max(selectionAnchor ?? -1, selectionEnd ?? -1);
+                const selected = selectionAnchor !== null && index >= low && index <= high;
+                return (
+                  <button
+                    type="button"
+                    key={`${turn.fromEventId}:${turn.toEventId}`}
+                    className={
+                      "block w-full rounded-md border px-3 py-2 text-left text-sm " +
+                      (selected
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:bg-muted/50")
+                    }
+                    onClick={() => chooseTurn(index)}
+                  >
+                    <span className="mr-2 text-xs text-muted-foreground">
+                      #{turn.turnNumber + 1}
+                    </span>
+                    {turn.preview}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {selectionError && (
+            <div className="mt-2 text-sm text-status-err">
+              {t("chat.contextPackage.failed", { error: selectionError })}
+            </div>
+          )}
+          <div className="mt-3 flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              disabled={
+                selectionAnchor === null || selectionEnd === null || selectionStatus !== "idle"
+              }
+              onClick={() => void createContextPackage()}
+            >
+              {selectionStatus === "packaging"
+                ? t("chat.contextPackage.packaging")
+                : t("chat.contextPackage.create")}
+            </Button>
+          </div>
+        </div>
+      )}
       <div className="h-full min-w-0 max-w-full overflow-x-hidden overflow-y-auto" ref={ref}>
         <div className="min-w-0 max-w-full">
           {items.map((m) => {
-        if (m.kind === "turn_process_group") {
-          return <TurnProcessGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} />;
-        }
-        if (m.kind === "tool_group") {
-          return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} />;
-        }
-        if (m.kind === "agent_group") {
-          return <AgentGroupCard key={m.id} group={m} />;
-        }
-        switch (m.kind) {
-          case "tool":
-            // Tool cards now display their full args/result body inline
-            // when expanded — no separate inspector pane to feed.
-            return <ToolCard key={m.id} message={m} turnEpoch={turnEpoch} cwd={cwd} />;
-          case "user": {
-            // decodeWireForDisplay drops images with an empty data URL (dead
-            // ephemeral screenshots), so a turn that was only such an image
-            // decodes to empty text + no images.
-            const decoded = decodeWireForDisplay(m.text);
-            const images = decoded.images;
-            // Pull the pinned-comment block (diff/browser/file anchors) out of
-            // the prose so it renders as a styled card, not raw XML.
-            const { block: annotations, text } = extractAnnotations(decoded.text);
-            const askedAt = formatMessageTime(m.createdAt);
-            // Nothing to show (no prose, no annotations, all images were dead) →
-            // render no bubble rather than an empty selectable box.
-            if (!text && !annotations && images.length === 0) return null;
-            return (
-              <div key={m.id} className="group flex min-w-0 max-w-full flex-col items-end px-4 py-1.5">
-                {m.isGoal && (
-                  // Persistent-goal marker (CC /goal). This send set/advanced a goal.
-                  <span className="mb-0.5 flex items-center gap-1 px-1 text-[11px] font-medium text-status-running">
-                    ◎ {t("msg.user.goal")}
-                  </span>
-                )}
-                <div
-                  className={
-                    "min-w-0 max-w-[80%] rounded-xl border px-3 py-2 text-sm " +
-                    (m.isGoal
-                      ? "border-status-running/50 bg-status-running/10"
-                      : "border-border bg-muted/40")
-                  }
-                >
-                  {annotations && <AnnotationsBlock block={annotations} />}
-                  {text && (
-                    <CollapsibleContent>
-                      <div className="whitespace-pre-wrap break-words">{text}</div>
-                    </CollapsibleContent>
-                  )}
-                  {images.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2 [&>img]:h-20 [&>img]:rounded-md [&>img]:object-cover [&>img]:cursor-pointer">
-                      {images.map((img, i) => (
-                        <img
-                          key={i}
-                          src={img.dataUrl}
-                          alt={img.name || "image"}
-                          title={img.name || undefined}
-                          onClick={() =>
-                            setZoomed({
-                              items: images.map((g) => ({
-                                src: g.dataUrl,
-                                alt: g.name || "image",
-                                name: g.name || undefined,
-                              })),
-                              index: i,
-                            })
-                          }
-                        />
-                      ))}
+            if (m.kind === "turn_process_group") {
+              return <TurnProcessGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} />;
+            }
+            if (m.kind === "tool_group") {
+              return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} />;
+            }
+            if (m.kind === "agent_group") {
+              return <AgentGroupCard key={m.id} group={m} />;
+            }
+            switch (m.kind) {
+              case "tool":
+                // Tool cards now display their full args/result body inline
+                // when expanded — no separate inspector pane to feed.
+                return <ToolCard key={m.id} message={m} turnEpoch={turnEpoch} cwd={cwd} />;
+              case "user": {
+                // decodeWireForDisplay drops images with an empty data URL (dead
+                // ephemeral screenshots), so a turn that was only such an image
+                // decodes to empty text + no images.
+                const decoded = decodeWireForDisplay(m.text);
+                const images = decoded.images;
+                // Pull the pinned-comment block (diff/browser/file anchors) out of
+                // the prose so it renders as a styled card, not raw XML.
+                const { block: annotations, text } = extractAnnotations(decoded.text);
+                const askedAt = formatMessageTime(m.createdAt);
+                // Nothing to show (no prose, no annotations, all images were dead) →
+                // render no bubble rather than an empty selectable box.
+                if (!text && !annotations && images.length === 0) return null;
+                return (
+                  <div
+                    key={m.id}
+                    className="group flex min-w-0 max-w-full flex-col items-end px-4 py-1.5"
+                  >
+                    {m.isGoal && (
+                      // Persistent-goal marker (CC /goal). This send set/advanced a goal.
+                      <span className="mb-0.5 flex items-center gap-1 px-1 text-[11px] font-medium text-status-running">
+                        ◎ {t("msg.user.goal")}
+                      </span>
+                    )}
+                    <div
+                      className={
+                        "min-w-0 max-w-[80%] rounded-xl border px-3 py-2 text-sm " +
+                        (m.isGoal
+                          ? "border-status-running/50 bg-status-running/10"
+                          : "border-border bg-muted/40")
+                      }
+                    >
+                      {annotations && <AnnotationsBlock block={annotations} />}
+                      {text && (
+                        <CollapsibleContent>
+                          <div className="whitespace-pre-wrap break-words">{text}</div>
+                        </CollapsibleContent>
+                      )}
+                      {images.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2 [&>img]:h-20 [&>img]:rounded-md [&>img]:object-cover [&>img]:cursor-pointer">
+                          {images.map((img, i) => (
+                            <img
+                              key={i}
+                              src={img.dataUrl}
+                              alt={img.name || "image"}
+                              title={img.name || undefined}
+                              onClick={() =>
+                                setZoomed({
+                                  items: images.map((g) => ({
+                                    src: g.dataUrl,
+                                    alt: g.name || "image",
+                                    name: g.name || undefined,
+                                  })),
+                                  index: i,
+                                })
+                              }
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                {askedAt && (
-                  <span className="mt-0.5 px-1 text-[11px] tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
-                    {askedAt}
-                  </span>
-                )}
-              </div>
-            );
-          }
-          case "assistant":
-            return <AssistantMessageView key={m.id} message={m} cwd={cwd ?? null} />;
-          case "thinking":
-            return <ThinkingMessageView key={m.id} message={m} />;
-          case "agent":
-            return <AgentMessageView key={m.id} message={m} />;
-          case "task_list":
-            // task_list is rendered as a pinned panel above the
-            // composer (see ChatView), not inline in the scroll stream
-            // — that way the user keeps tasks in view as new messages
-            // push old ones up.
-            return null;
-          case "context_boundary":
-            return <ContextBoundaryView key={m.id} message={m} />;
-          case "goal_progress":
-            return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;
-          case "ask_user":
-            // ask_user is also pinned above the composer. We still
-            // render the resolved (answered) cards inline so the chat
-            // history reflects the conversation.
-            return m.answer !== undefined ? (
-              <AskUserMessageView
-                key={m.id}
-                message={m}
-                onAnswer={onAskUserAnswer ?? NOOP_ON_ANSWER}
-              />
-            ) : null;
-          case "system":
-            // Empty system text = a blank centered block; skip it.
-            if (m.text.trim() === "") return null;
-            return (
-              <div key={m.id} className="px-4 py-1 text-center text-xs text-muted-foreground">
-                {m.text}
-              </div>
-            );
-          case "files_changed":
-            return (
-              <FilesChangedCard
-                key={m.id}
-                message={m}
-                cwd={cwd ?? null}
-                sessionId={engineSessionId ?? null}
-                isLatest={m.id === lastFilesChangedId}
-              />
-            );
-            case "turn_end":
-              return <TurnEndMessageView key={m.id} message={m} />;
-          }
-        })}
+                    {askedAt && (
+                      <span className="mt-0.5 px-1 text-[11px] tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+                        {askedAt}
+                      </span>
+                    )}
+                  </div>
+                );
+              }
+              case "assistant":
+                return <AssistantMessageView key={m.id} message={m} cwd={cwd ?? null} />;
+              case "thinking":
+                return <ThinkingMessageView key={m.id} message={m} />;
+              case "agent":
+                return <AgentMessageView key={m.id} message={m} />;
+              case "task_list":
+                // task_list is rendered as a pinned panel above the
+                // composer (see ChatView), not inline in the scroll stream
+                // — that way the user keeps tasks in view as new messages
+                // push old ones up.
+                return null;
+              case "context_boundary":
+                return <ContextBoundaryView key={m.id} message={m} />;
+              case "goal_progress":
+                return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;
+              case "ask_user":
+                // ask_user is also pinned above the composer. We still
+                // render the resolved (answered) cards inline so the chat
+                // history reflects the conversation.
+                return m.answer !== undefined ? (
+                  <AskUserMessageView
+                    key={m.id}
+                    message={m}
+                    onAnswer={onAskUserAnswer ?? NOOP_ON_ANSWER}
+                  />
+                ) : null;
+              case "system":
+                // Empty system text = a blank centered block; skip it.
+                if (m.text.trim() === "") return null;
+                return (
+                  <div key={m.id} className="px-4 py-1 text-center text-xs text-muted-foreground">
+                    {m.text}
+                  </div>
+                );
+              case "files_changed":
+                return (
+                  <FilesChangedCard
+                    key={m.id}
+                    message={m}
+                    cwd={cwd ?? null}
+                    sessionId={engineSessionId ?? null}
+                    isLatest={m.id === lastFilesChangedId}
+                  />
+                );
+              case "turn_end":
+                return <TurnEndMessageView key={m.id} message={m} />;
+            }
+          })}
           {liveTurnActive && <LiveActivityLine messages={messages} running={liveTurnActive} />}
           {trailing}
         </div>
