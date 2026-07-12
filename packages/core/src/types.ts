@@ -162,6 +162,7 @@ export type TranscriptEventType =
   | "tool_use"
   | "tool_result"
   | "summary"
+  | "context_transfer"
   | "content_replace"
   | "file_history"
   | "plan_operation"
@@ -608,6 +609,16 @@ export type StreamEvent =
       before: number;
       after: number;
       agentId?: string;
+    }
+  | {
+      /** Persisted summary-only history transferred into a newly forked session. */
+      type: "context_transfer";
+      summary: string;
+      sourceSessionId: string;
+      fromEventId: string;
+      toEventId: string;
+      sourceEventCount: number;
+      estimatedTokens: number;
     }
   | {
       type: "usage_update";

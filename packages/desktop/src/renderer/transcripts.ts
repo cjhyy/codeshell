@@ -21,12 +21,43 @@
  * cheaply while the heavy transcript only writes for the active session.
  */
 
+import type { RendererStreamEvent } from "../preload/types";
 import type { MessagesReducerState } from "./types";
-import { INITIAL_STATE } from "./types";
+import { INITIAL_STATE, applyStreamEvent } from "./types";
 
 const TRANSCRIPT_MSG_CAP = 500;
 /** Bucket key for sessions that have no associated repo. */
 export const NO_REPO_KEY = "__no_repo__";
+
+/** Fold persisted transcript stream events through the renderer's canonical reducer. */
+export function applyTranscriptStreamEvent(
+  state: MessagesReducerState,
+  event: RendererStreamEvent,
+  clock: () => number | undefined = Date.now,
+): MessagesReducerState {
+  if (event.type !== "context_transfer") return applyStreamEvent(state, event, clock);
+  return {
+    ...state,
+    messages: [
+      ...state.messages,
+      {
+        kind: "context_boundary",
+        id: `context-transfer:${event.sourceSessionId}:${event.fromEventId}:${event.toEventId}`,
+        strategy: "summary",
+        before: 0,
+        after: 0,
+        contextTransfer: {
+          summary: event.summary,
+          sourceSessionId: event.sourceSessionId,
+          fromEventId: event.fromEventId,
+          toEventId: event.toEventId,
+          sourceEventCount: event.sourceEventCount,
+          estimatedTokens: event.estimatedTokens,
+        },
+      },
+    ],
+  };
+}
 
 /**
  * Placeholder title a session wears until auto-titled from the first user

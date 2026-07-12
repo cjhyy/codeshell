@@ -186,11 +186,10 @@ describe("transcriptToFoldItems", () => {
     });
   });
 
-  it("replays a context_transfer summary with its package provenance", () => {
+  it("replays a context_transfer event with its package provenance", () => {
     const items = transcriptToFoldItems(
-      line("summary", {
+      line("context_transfer", {
         summary: "portable background",
-        trigger: "context_transfer",
         sourceRange: { sessionId: "source", fromEventId: "a", toEventId: "z" },
         sourceEventCount: 12,
         estimatedTokens: 1500,
@@ -200,18 +199,13 @@ describe("transcriptToFoldItems", () => {
     expect(items[0]).toEqual({
       kind: "stream",
       event: {
-        type: "context_compact",
-        strategy: "summary",
-        before: 0,
-        after: 0,
-        contextTransfer: {
-          summary: "portable background",
-          sourceSessionId: "source",
-          fromEventId: "a",
-          toEventId: "z",
-          sourceEventCount: 12,
-          estimatedTokens: 1500,
-        },
+        type: "context_transfer",
+        summary: "portable background",
+        sourceSessionId: "source",
+        fromEventId: "a",
+        toEventId: "z",
+        sourceEventCount: 12,
+        estimatedTokens: 1500,
       },
       timestamp: 1,
     });

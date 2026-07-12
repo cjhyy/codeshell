@@ -286,6 +286,26 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
           timestamp: ts,
         });
         break;
+      case "context_transfer": {
+        const sourceRange =
+          d.sourceRange && typeof d.sourceRange === "object"
+            ? (d.sourceRange as Record<string, unknown>)
+            : {};
+        items.push({
+          kind: "stream",
+          event: {
+            type: "context_transfer",
+            summary: String(d.summary ?? ""),
+            sourceSessionId: String(sourceRange.sessionId ?? ""),
+            fromEventId: String(sourceRange.fromEventId ?? ""),
+            toEventId: String(sourceRange.toEventId ?? ""),
+            sourceEventCount: Number(d.sourceEventCount ?? 0),
+            estimatedTokens: Number(d.estimatedTokens ?? 0),
+          },
+          timestamp: ts,
+        });
+        break;
+      }
       case "error":
         items.push({
           kind: "stream",

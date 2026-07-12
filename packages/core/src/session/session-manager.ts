@@ -108,6 +108,7 @@ const FORK_COPY_EVENT_TYPES: ReadonlySet<TranscriptEventType> = new Set([
   "tool_use",
   "tool_result",
   "summary",
+  "context_transfer",
   "content_replace",
   "subagent",
   "external_file_changes",
@@ -1017,12 +1018,11 @@ export class SessionManager {
     const [meta] = buildForkTranscript([], state);
     const summaryEvent: TranscriptEvent = {
       id: nanoid(12),
-      type: "summary",
+      type: "context_transfer",
       timestamp: createdAt,
       turnNumber: 0,
       data: {
         summary: options.summary,
-        trigger: "context_transfer",
         sourceRange: {
           sessionId: sourceSessionId,
           fromEventId: options.fromEventId,

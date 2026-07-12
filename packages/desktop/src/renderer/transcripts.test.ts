@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { INITIAL_STATE } from "./types";
 import {
+  applyTranscriptStreamEvent,
   archiveAllSessions,
   archiveSession,
   bucketKey,
@@ -194,5 +195,33 @@ describe("transcript snapshot cursor persistence", () => {
     expect(setActiveSession("repo-a", "archived").activeSessionId).toBeNull();
     expect(setActiveSession("repo-a", "missing").activeSessionId).toBeNull();
     expect(setActiveSession("repo-a", "live").activeSessionId).toBe("live");
+  });
+
+  it("hydrates context_transfer as a background package card", () => {
+    const next = applyTranscriptStreamEvent(INITIAL_STATE, {
+      type: "context_transfer",
+      summary: "portable background",
+      sourceSessionId: "source",
+      fromEventId: "a",
+      toEventId: "z",
+      sourceEventCount: 12,
+      estimatedTokens: 1500,
+    });
+
+    expect(next.messages).toHaveLength(1);
+    expect(next.messages[0]).toMatchObject({
+      kind: "context_boundary",
+      strategy: "summary",
+      before: 0,
+      after: 0,
+      contextTransfer: {
+        summary: "portable background",
+        sourceSessionId: "source",
+        fromEventId: "a",
+        toEventId: "z",
+        sourceEventCount: 12,
+        estimatedTokens: 1500,
+      },
+    });
   });
 });

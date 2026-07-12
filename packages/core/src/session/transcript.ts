@@ -54,6 +54,7 @@ const CONTEXT_EVENT_TYPES: ReadonlySet<TranscriptEventType> = new Set([
   "tool_use",
   "tool_result",
   "summary",
+  "context_transfer",
 ]);
 
 export class Transcript {
@@ -192,7 +193,8 @@ export class Transcript {
 
   appendSummary(summary: string, metadata: SummaryAppendMetadata): TranscriptEvent {
     if ("trigger" in metadata) {
-      return this.append("summary", { summary, ...metadata });
+      const { trigger: _trigger, ...provenance } = metadata;
+      return this.append("context_transfer", { summary, ...provenance });
     }
     return this.append("summary", {
       summary,
@@ -263,6 +265,14 @@ export class Transcript {
           messages.push({
             role: "user",
             content: `<system-reminder>Previous conversation was summarized:\n${summary}</system-reminder>`,
+          });
+          break;
+        }
+        case "context_transfer": {
+          const { summary } = event.data as { summary: string };
+          messages.push({
+            role: "user",
+            content: `<system-reminder>Background context transferred from a selected conversation range:\n${summary}</system-reminder>`,
           });
           break;
         }
@@ -456,6 +466,14 @@ export class Transcript {
           messages.push({
             role: "user",
             content: `<system-reminder>Previous conversation was summarized:\n${summary}</system-reminder>`,
+          });
+          break;
+        }
+        case "context_transfer": {
+          const { summary } = event.data as { summary: string };
+          messages.push({
+            role: "user",
+            content: `<system-reminder>Background context transferred from a selected conversation range:\n${summary}</system-reminder>`,
           });
           break;
         }

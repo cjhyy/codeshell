@@ -218,6 +218,27 @@ describe("AgentServer agent/forkSession", () => {
       "summarize",
       "publish",
     ]);
+    expect(fake.calls[1]).toEqual({
+      sourceSessionId: "source",
+      range: { fromEventId: "b", toEventId: "c" },
+      operation: "select",
+    });
+    expect(fake.calls[2]).toEqual({
+      messages: [{ role: "user", content: "selected" }],
+      operation: "summarize",
+    });
+    expect(fake.calls[3]).toEqual({
+      sourceSessionId: "source",
+      operation: "publish",
+      options: {
+        targetSessionId: "summary-target",
+        fromEventId: "b",
+        toEventId: "c",
+        summary: "packaged summary",
+        sourceEventCount: 2,
+        estimatedTokens: 42,
+      },
+    });
   });
 
   it("does not publish a target when context summarization fails", async () => {

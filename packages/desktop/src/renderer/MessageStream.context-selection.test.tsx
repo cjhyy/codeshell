@@ -239,4 +239,79 @@ describe("MessageStream context selection session boundary", () => {
     expect(reactPropsOf(findElements(container, "BUTTON")[2]).disabled).toBe(true);
     expect(findElements(container, "BUTTON")).toHaveLength(3);
   });
+
+  test("sends the inclusive raw-event range for a reverse continuous turn selection", async () => {
+    const calls: unknown[] = [];
+    const events: RawTranscriptEvent[] = [
+      {
+        id: "u1",
+        type: "message",
+        turnNumber: 0,
+        timestamp: 1,
+        data: { role: "user", content: "first" },
+      },
+      { id: "b1", type: "turn_boundary", turnNumber: 1, timestamp: 2, data: {} },
+      {
+        id: "u2",
+        type: "message",
+        turnNumber: 1,
+        timestamp: 3,
+        data: { role: "user", content: "second" },
+      },
+      { id: "b2", type: "turn_boundary", turnNumber: 2, timestamp: 4, data: {} },
+      {
+        id: "u3",
+        type: "message",
+        turnNumber: 2,
+        timestamp: 5,
+        data: { role: "user", content: "third" },
+      },
+      { id: "b3", type: "turn_boundary", turnNumber: 3, timestamp: 6, data: {} },
+    ];
+    Object.assign(window.codeshell, {
+      getSessionRawEvents: async () => events,
+      forkSession: async (params: unknown) => {
+        calls.push(params);
+        return summaryResult;
+      },
+    });
+
+    await act(async () => {
+      root?.render(
+        <MessageStream
+          messages={[]}
+          engineSessionId="old-session"
+          liveTurnActive={false}
+          onContextPackageCreated={() => undefined}
+        />,
+      );
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactPropsOf(findElements(container, "BUTTON")[0]).onClick();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      const buttons = findElements(container, "BUTTON");
+      reactPropsOf(buttons[3]).onClick();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactPropsOf(findElements(container, "BUTTON")[1]).onClick();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactPropsOf(findElements(container, "BUTTON")[4]).onClick();
+      await flushMicrotasks();
+    });
+
+    expect(calls).toEqual([
+      {
+        sourceSessionId: "old-session",
+        mode: "summary",
+        fromEventId: "u1",
+        toEventId: "b3",
+      },
+    ]);
+  });
 });

@@ -1,11 +1,11 @@
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { timePhase } from "./perf";
+import { applyTranscriptStreamEvent } from "./transcripts";
 import {
   INITIAL_STATE,
   appendAskUserMessage,
   appendTurnEndMessage,
   appendUserMessage,
-  applyStreamEvent,
   markAskUserAnswered,
   removePendingSteerMessages,
   type AskUserOption,
@@ -128,7 +128,7 @@ export function transcriptsReducer(map: TranscriptsMap, action: TranscriptsActio
       next = appendTurnEndMessage(current, action.reason, action.elapsedMs, action.detail);
       break;
     case "stream":
-      next = applyStreamEvent(current, action.event);
+      next = applyTranscriptStreamEvent(current, action.event);
       break;
     case "stream_batch": {
       // Fold the whole 50ms batch into one new state so the list re-renders
@@ -139,7 +139,7 @@ export function transcriptsReducer(map: TranscriptsMap, action: TranscriptsActio
         "reducer.batch",
         () => {
           let acc = current;
-          for (const ev of action.events) acc = applyStreamEvent(acc, ev);
+          for (const ev of action.events) acc = applyTranscriptStreamEvent(acc, ev);
           if (action.maxSeq !== undefined && action.maxSeq > acc.snapshotSeq) {
             acc = { ...acc, snapshotSeq: action.maxSeq };
           }

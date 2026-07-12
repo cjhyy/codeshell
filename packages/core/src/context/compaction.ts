@@ -788,12 +788,14 @@ const SUMMARY_SECTION_LIST =
 export function buildSummarizationPrompt(
   messagesToSummarize: Message[],
   priorSummary?: string,
+  options: { maxTextChars?: number } = {},
 ): string {
   const parts: string[] = [];
+  const maxTextChars = options.maxTextChars ?? 3_000;
 
   for (const msg of messagesToSummarize) {
     if (typeof msg.content === "string") {
-      parts.push(`[${msg.role}]: ${msg.content.slice(0, 3000)}`);
+      parts.push(`[${msg.role}]: ${msg.content.slice(0, maxTextChars)}`);
     } else {
       for (const block of msg.content) {
         if (block.type === "text" && block.text) {
@@ -939,25 +941,11 @@ export function buildContextPackagePromptFromSerialized(
     "range's questions, conclusions, failed attempts, files and symbols, commands, " +
     "exact errors, unresolved items, and concrete next steps. Do not imply that work " +
     "outside the supplied range occurred. Be factual and retain explicit image placeholders.\n\n";
-  if (priorSummary) {
-    return (
-      instruction +
-      "Update the prior package with the next lossless conversation fragment. " +
-      "Preserve every critical prior fact, resolve contradictions in favor of the newer " +
-      "fragment, and return the same nine sections.\n\n" +
-      SUMMARY_SECTION_LIST +
-      "\n=== Prior summary ===\n" +
-      priorSummary +
-      "\n\n=== New conversation fragment ===\n" +
-      serializedConversation
-    );
-  }
   return (
     instruction +
-    "Summarize the selected conversation into the same nine sections.\n\n" +
-    SUMMARY_SECTION_LIST +
-    "\n=== Selected conversation ===\n" +
-    serializedConversation
+    buildSummarizationPrompt([{ role: "user", content: serializedConversation }], priorSummary, {
+      maxTextChars: Number.POSITIVE_INFINITY,
+    })
   );
 }
 

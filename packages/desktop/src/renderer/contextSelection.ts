@@ -9,7 +9,13 @@ export interface SelectableContextTurn {
   preview: string;
 }
 
-const SELECTABLE_TYPES = new Set(["message", "tool_use", "tool_result", "summary"]);
+const SELECTABLE_TYPES = new Set([
+  "message",
+  "tool_use",
+  "tool_result",
+  "summary",
+  "context_transfer",
+]);
 
 /** Build selectable complete turns from raw core events, never renderer ids. */
 export function buildSelectableContextTurns(
