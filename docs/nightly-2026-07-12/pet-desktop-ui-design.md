@@ -77,7 +77,7 @@
 
 - 使用仓库已有 CodeShell dog asset 作为识别符；该 asset 已用于主 chat welcome（`packages/desktop/src/renderer/App.tsx:4650`、`packages/desktop/src/renderer/App.tsx:4653`），可保持品牌连续性。
 - badge 数字**只表示已越过 15s grace、当前仍有效的 `PendingDecisionIndex.status === "pending"` 数量**，覆盖 tool approval 与 `AskUserQuestion`；不把 running 数混进同一个数字。grace 内的 request 已在 overview pending section 可见，但按本稿默认策略尚不进入 L0 数字。
-- `0` 时不显示数字。是否在 `0 pending` 但存在 running session 时给 avatar 增加一个低对比 running dot，留作用户拍板；即使增加，也不能与“等你决定”的数字同色同形。
+- `0` 时不显示数字。**✅已拍板：在存在 running session 时给 avatar 增加一个低对比 running dot**（参照 Cursor Agent 侧栏跑任务时的呼吸/转圈点），零抬眼即知「还有活在动」。约束：running dot 必须与「等你决定」的数字 badge **不同色不同形不同位**（如数字 badge 右上角红色数字 pill vs running dot 左下角低对比呼吸点），避免双编码混淆；有 pending 时两者可共存（数字 pill + running dot 同时出现）。
 - `1…99` 原样展示，`>99` 沿用现有 `99+`。
 - hover/focus tooltip 写完整语义，如“3 个 session 等你决定；2 个正在运行”，避免只靠颜色。
 - active 态只表示 overview 当前打开，不表示 Pet 正在运行。
@@ -542,8 +542,8 @@ interface PetOverviewSnapshot {
 2. **badge 在 `0 pending` 时是否额外表达 running？**  
    numeric badge 的含义建议锁定为 pending 数；需拍板的是 `0 pending` 且有 running 时，avatar 是否加低对比 running dot。推荐先不加，避免双编码；overview header 再显示 running count。
 
-3. **L1 peek 的位置与点击行为。**  
-   推荐复用右下角 toast 位置；单项点击直达原 session，多项点击打开 Pet pending section。备选是贴 Sidebar Pet 入口的左上气泡，但更易挡项目列表，也与现有 toast stack 不一致。
+3. **L1 peek 的位置与点击行为 —— ✅已拍板：复用右下角 toast 位置，单项直达、多项聚合开 overview。**  
+   复用现有 `ToastProvider`（`bottom-4 right-4`）的右下角非模态可关闭位置，与现有 toast stack 一致（对齐 VS Code/Linear 习惯）；**单条**待决策 peek 点击 → 直达那个 session（由原 approval route 处理，pet 不代批）；**多条**聚合成一条「N 个 session 等你决定」→ 点击打开 Pet overview 的 pending 区。备选「贴 Sidebar Pet 入口左上气泡」已否决（易挡项目列表、与现有 toast 机制不一致）。关闭 peek 只写 receipt、不 resolve pending、badge 不变。
 
 4. **Pet chat 与普通 session chat 的视觉区分程度。**  
    推荐复用同一 `ChatView` 语言，只在 header/avatar、world-action chips、无 workspace/permission affordance 上区分；不要另造聊天视觉体系。需拍板 model control、附件、voice 在 MVP 是否全部露出。
