@@ -14,7 +14,7 @@
 
 - **左侧栏顶部常驻入口 + overview panel**，不是独立窗口，也不是另一套产品导航。
 - Phase 1 是当前机器上的**单用户本地唯一 Pet**；没有账号、登录、租户切换或 ownership UI。`userId` 只保留为上位设计中的后续演进位（上位设计 §1.1、§8.1）。
-- overview 默认推荐为现有 shell 中的**中央覆盖式 panel**：保留 Sidebar 与 TopBar，覆盖 chat + session-owned dock 所在工作区；关闭后回到原 session，底层 session UI 不因打开 Pet 而销毁。
+- overview 形态**已拍板 = Sidebar 内嵌展开的宽面板**（参照 Cursor 的 Agent 侧栏形态）：点击 Pet 入口后，左侧栏向右展开为一块**可调宽的宽面板**（非窄导航条），overview 与 session 列表并存、不遮挡主 chat；关闭后侧栏收回，底层 session UI 不因打开 Pet 而销毁。**解掉原「宽度不足退化为手机式单列」顾虑的前提**：这是可调宽的宽侧栏面板，宽度足以承载「左侧 pending/session 聚合 + 右侧 durable pet chat」的高密度双栏，符合 web/desktop parity 北极星（记忆 codeshell-web-client-desktop-parity-northstar）；若某设备宽度确实不足再降级为单列，但默认按宽面板设计。
 - Phase 1 只做 read + chat + navigate：可问全局、看 pending、点击打开原 session；**不在 Pet 中批准/回答，不向 running child 发 direction**。
 - 通知只做 L0 badge + L1 peek；**任何 projection event 都不得自动打开 overview（L2）**。
 - 不呈现 sibling session 互连、Team、多数字人、跨用户 Pet；不复制所有 session transcript；不绕过原 permission gate。
@@ -536,8 +536,8 @@ interface PetOverviewSnapshot {
 
 按影响排序：
 
-1. **Overview 的空间形态：中央覆盖式 panel，还是 Sidebar 内嵌展开？**  
-   推荐中央覆盖式：保留 Sidebar/TopBar、覆盖 chat + dock、底层保持 mounted，能容纳高密度 world pane +完整 chat。Sidebar 内嵌宽度不足，容易退化为手机式单列。无论拍哪一个，都不改“侧栏常驻入口 + overview”总形态。
+1. **Overview 的空间形态 —— ✅已拍板：Sidebar 内嵌展开的宽面板（参照 Cursor Agent 侧栏形态）。**  
+   用户选定内嵌宽面板而非覆盖式，理由是「overall agent 始终在页面上」的常驻陪伴感更强、与 session 并排切换零成本。原「Sidebar 内嵌宽度不足、易退化为手机式单列」的顾虑通过**可调宽的宽侧栏面板**化解：宽度足以承载「左侧 pending/session 聚合 + 右侧 durable pet chat」高密度双栏，符合 web/desktop parity 北极星；仅在设备宽度确实不足时才降级单列。总形态仍是「侧栏常驻入口 + overview」，不变。
 
 2. **badge 在 `0 pending` 时是否额外表达 running？**  
    numeric badge 的含义建议锁定为 pending 数；需拍板的是 `0 pending` 且有 running 时，avatar 是否加低对比 running dot。推荐先不加，避免双编码；overview header 再显示 running count。
