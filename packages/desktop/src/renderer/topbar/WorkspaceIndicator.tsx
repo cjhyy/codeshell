@@ -31,10 +31,10 @@ type CleanupAction = "detach" | "discard";
 
 interface Props {
   sessionId: string | null;
-  repoPath: string | null;
-  repoName: string | null;
+  projectPath: string | null;
+  projectName: string | null;
   sessionBusy?: boolean;
-  includeRepoNameInLabel?: boolean;
+  includeProjectNameInLabel?: boolean;
 }
 
 interface CleanupConfirm {
@@ -44,16 +44,16 @@ interface CleanupConfirm {
 
 export function workspaceIndicatorText(
   workspace: SessionWorkspace | null,
-  repoName: string | null,
-  opts: { includeRepoName?: boolean; mainBranch?: string | null } = {},
+  projectName: string | null,
+  opts: { includeProjectName?: boolean; mainBranch?: string | null } = {},
 ): string {
   const branch =
     workspace?.kind === "worktree" && workspace.worktree?.branch
       ? workspace.worktree.branch
       : opts.mainBranch;
   const base = branch ? `⑃ ${branch}` : "main";
-  if (opts.includeRepoName === false) return base;
-  return repoName ? `${base} (${repoName})` : base;
+  if (opts.includeProjectName === false) return base;
+  return projectName ? `${base} (${projectName})` : base;
 }
 
 export function normalizeCurrentBranch(current: string | null): string | null {
@@ -123,10 +123,10 @@ export function workspaceCleanupActionState(
 
 export function WorkspaceIndicator({
   sessionId,
-  repoPath,
-  repoName,
+  projectPath,
+  projectName,
   sessionBusy = false,
-  includeRepoNameInLabel = true,
+  includeProjectNameInLabel = true,
 }: Props) {
   const { t } = useT();
   const toast = useToast();
@@ -139,7 +139,7 @@ export function WorkspaceIndicator({
   const [newOpen, setNewOpen] = useState(false);
   const [slug, setSlug] = useState("");
   const [confirm, setConfirm] = useState<CleanupConfirm | null>(null);
-  // Whether repoPath is an actual git repo. null = not yet probed. The
+  // Whether projectPath is an actual git repo. null = not yet probed. The
   // indicator is a git-worktree switcher, so on a non-git folder it must not
   // render at all (worktrees don't exist there). Probed via getGitBranches,
   // the same signal BranchPicker uses.
@@ -149,7 +149,7 @@ export function WorkspaceIndicator({
   const listRequestId = useRef(0);
   const diffRequestId = useRef(0);
   const gitProbeRequestId = useRef(0);
-  const targetKey = `${sessionId ?? ""}\0${repoPath ?? ""}`;
+  const targetKey = `${sessionId ?? ""}\0${projectPath ?? ""}`;
   const targetKeyRef = useRef(targetKey);
   if (targetKeyRef.current !== targetKey) {
     targetKeyRef.current = targetKey;
@@ -158,7 +158,7 @@ export function WorkspaceIndicator({
     gitProbeRequestId.current += 1;
   }
 
-  const canLoad = Boolean(sessionId && repoPath);
+  const canLoad = Boolean(sessionId && projectPath);
   const isLoading = currentLoading || listLoading;
 
   const reportError = useCallback(
@@ -175,7 +175,7 @@ export function WorkspaceIndicator({
 
   const refreshCurrent = useCallback(async () => {
     const requestId = ++currentRequestId.current;
-    if (!sessionId || !repoPath) {
+    if (!sessionId || !projectPath) {
       setCurrentLoading(false);
       setWorkspace(null);
       setList(null);
@@ -183,16 +183,16 @@ export function WorkspaceIndicator({
     }
     setCurrentLoading(true);
     try {
-      const next = await window.codeshell.getSessionWorkspace(sessionId, repoPath);
+      const next = await window.codeshell.getSessionWorkspace(sessionId, projectPath);
       if (currentRequestId.current !== requestId) return;
       setWorkspace(next);
     } catch {
       if (currentRequestId.current !== requestId) return;
-      setWorkspace({ root: repoPath, kind: "main" });
+      setWorkspace({ root: projectPath, kind: "main" });
     } finally {
       if (currentRequestId.current === requestId) setCurrentLoading(false);
     }
-  }, [repoPath, sessionId]);
+  }, [projectPath, sessionId]);
 
   const hydrateDiffs = useCallback(
     (next: SessionWorkspaceList) => {
@@ -237,14 +237,14 @@ export function WorkspaceIndicator({
   const refreshList = useCallback(async () => {
     const requestId = ++listRequestId.current;
     const requestTargetKey = targetKeyRef.current;
-    if (!sessionId || !repoPath) {
+    if (!sessionId || !projectPath) {
       setList(null);
       setListLoading(false);
       return;
     }
     setListLoading(true);
     try {
-      const next = await window.codeshell.listSessionWorktrees(sessionId, repoPath);
+      const next = await window.codeshell.listSessionWorktrees(sessionId, projectPath);
       if (listRequestId.current !== requestId) return;
       if (targetKeyRef.current !== requestTargetKey) return;
       applyWorkspaceList(next);
@@ -255,17 +255,17 @@ export function WorkspaceIndicator({
     } finally {
       if (listRequestId.current === requestId) setListLoading(false);
     }
-  }, [applyWorkspaceList, repoPath, reportError, sessionId]);
+  }, [applyWorkspaceList, projectPath, reportError, sessionId]);
 
   const refreshGitProbe = useCallback(async () => {
     const requestId = ++gitProbeRequestId.current;
-    if (!repoPath) {
+    if (!projectPath) {
       setIsGitRepo(null);
       setMainBranch(null);
       return;
     }
     try {
-      const res = await window.codeshell.getGitBranches(repoPath);
+      const res = await window.codeshell.getGitBranches(projectPath);
       if (gitProbeRequestId.current !== requestId) return;
       setIsGitRepo(res.isRepo === true);
       setMainBranch(res.isRepo === true ? normalizeCurrentBranch(res.current) : null);
@@ -274,7 +274,7 @@ export function WorkspaceIndicator({
       setIsGitRepo(false);
       setMainBranch(null);
     }
-  }, [repoPath]);
+  }, [projectPath]);
 
   useEffect(() => {
     return () => {
@@ -306,10 +306,10 @@ export function WorkspaceIndicator({
   }, [refreshGitProbe]);
 
   useEffect(() => {
-    if (!repoPath) return;
+    if (!projectPath) return;
     const onBranchesChanged = (event: Event) => {
       const detail = (event as CustomEvent<{ cwd?: string }>).detail;
-      if (!detail?.cwd || samePath(detail.cwd, repoPath)) void refreshGitProbe();
+      if (!detail?.cwd || samePath(detail.cwd, projectPath)) void refreshGitProbe();
     };
     const onFilesChanged = () => {
       void refreshGitProbe();
@@ -320,7 +320,7 @@ export function WorkspaceIndicator({
       window.removeEventListener("codeshell:git-branches-changed", onBranchesChanged);
       window.removeEventListener("codeshell:files-changed", onFilesChanged);
     };
-  }, [refreshGitProbe, repoPath]);
+  }, [refreshGitProbe, projectPath]);
 
   useEffect(() => {
     const subscribe = window.codeshell.onWorkspaceChanged;
@@ -341,10 +341,10 @@ export function WorkspaceIndicator({
   };
 
   const switchTo = async (target: string): Promise<boolean> => {
-    if (!sessionId || !repoPath) return false;
+    if (!sessionId || !projectPath) return false;
     setBusyAction(target);
     try {
-      const next = await window.codeshell.switchSessionWorkspace(sessionId, repoPath, target);
+      const next = await window.codeshell.switchSessionWorkspace(sessionId, projectPath, target);
       applyWorkspaceList(next);
       setOpen(false);
       return true;
@@ -366,13 +366,13 @@ export function WorkspaceIndicator({
   };
 
   const cleanup = async () => {
-    if (!confirm || !sessionId || !repoPath) return;
+    if (!confirm || !sessionId || !projectPath) return;
     const { row, action } = confirm;
     setBusyAction(`${action}:${row.path}`);
     try {
       const next = await window.codeshell.cleanupSessionWorktree(
         sessionId,
-        repoPath,
+        projectPath,
         row.path,
         action,
       );
@@ -387,11 +387,11 @@ export function WorkspaceIndicator({
 
   const label = useMemo(
     () =>
-      workspaceIndicatorText(workspace, repoName, {
-        includeRepoName: includeRepoNameInLabel,
+      workspaceIndicatorText(workspace, projectName, {
+        includeProjectName: includeProjectNameInLabel,
         mainBranch,
       }),
-    [includeRepoNameInLabel, mainBranch, repoName, workspace],
+    [includeProjectNameInLabel, mainBranch, projectName, workspace],
   );
   const rows = list?.worktrees ?? [];
   const mainRows = rows.filter((row) => row.isMain);

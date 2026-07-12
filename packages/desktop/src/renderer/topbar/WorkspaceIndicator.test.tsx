@@ -173,10 +173,10 @@ describe("WorkspaceIndicator helpers", () => {
     expect(workspaceIndicatorText(main, "codeshell", { mainBranch: "release/2026" })).toBe(
       "⑃ release/2026 (codeshell)",
     );
-    expect(workspaceIndicatorText(main, "codeshell", { includeRepoName: false })).toBe("main");
+    expect(workspaceIndicatorText(main, "codeshell", { includeProjectName: false })).toBe("main");
     expect(
       workspaceIndicatorText(main, "codeshell", {
-        includeRepoName: false,
+        includeProjectName: false,
         mainBranch: "release/2026",
       }),
     ).toBe("⑃ release/2026");
@@ -398,7 +398,9 @@ describe("WorkspaceIndicator", () => {
     root = createRoot(container);
 
     await act(async () => {
-      root?.render(<WorkspaceIndicator sessionId="session" repoPath="/repo" repoName="repo" />);
+      root?.render(
+        <WorkspaceIndicator sessionId="session" projectPath="/repo" projectName="repo" />,
+      );
       await flushMicrotasks();
     });
 
@@ -464,7 +466,9 @@ describe("WorkspaceIndicator", () => {
     root = createRoot(container);
 
     await act(async () => {
-      root?.render(<WorkspaceIndicator sessionId="session" repoPath="/repo" repoName="repo" />);
+      root?.render(
+        <WorkspaceIndicator sessionId="session" projectPath="/repo" projectName="repo" />,
+      );
       await flushMicrotasks();
     });
     const trigger = findElement(container, (node) => node.tagName === "BUTTON");
@@ -532,7 +536,7 @@ describe("WorkspaceIndicator", () => {
 
     await act(async () => {
       root?.render(
-        <WorkspaceIndicator sessionId="old-session" repoPath="/repo-old" repoName="old" />,
+        <WorkspaceIndicator sessionId="old-session" projectPath="/repo-old" projectName="old" />,
       );
       await flushMicrotasks();
     });
@@ -540,7 +544,7 @@ describe("WorkspaceIndicator", () => {
 
     await act(async () => {
       root?.render(
-        <WorkspaceIndicator sessionId="new-session" repoPath="/repo-new" repoName="new" />,
+        <WorkspaceIndicator sessionId="new-session" projectPath="/repo-new" projectName="new" />,
       );
       await flushMicrotasks();
     });
@@ -614,8 +618,8 @@ describe("WorkspaceIndicator", () => {
       root?.render(
         <WorkspaceIndicator
           sessionId="current-session"
-          repoPath="/repo"
-          repoName="repo"
+          projectPath="/repo"
+          projectName="repo"
           sessionBusy={false}
         />,
       );
@@ -641,8 +645,8 @@ describe("WorkspaceIndicator", () => {
       root?.render(
         <WorkspaceIndicator
           sessionId="current-session"
-          repoPath="/repo"
-          repoName="repo"
+          projectPath="/repo"
+          projectName="repo"
           sessionBusy
         />,
       );
@@ -693,7 +697,9 @@ describe("WorkspaceIndicator", () => {
     root = createRoot(container);
 
     await act(async () => {
-      root?.render(<WorkspaceIndicator sessionId="session" repoPath="/repo" repoName="repo" />);
+      root?.render(
+        <WorkspaceIndicator sessionId="session" projectPath="/repo" projectName="repo" />,
+      );
       await flushMicrotasks();
     });
     const trigger = findElement(container, (node) => node.tagName === "BUTTON");
@@ -737,7 +743,7 @@ describe("WorkspaceIndicator", () => {
     await act(async () => {
       root?.render(
         <ToastProvider>
-          <WorkspaceIndicator sessionId="session" repoPath="/repo" repoName="repo" />
+          <WorkspaceIndicator sessionId="session" projectPath="/repo" projectName="repo" />
         </ToastProvider>,
       );
       await flushMicrotasks();
@@ -788,7 +794,7 @@ describe("WorkspaceIndicator", () => {
     await act(async () => {
       root?.render(
         <ToastProvider>
-          <WorkspaceIndicator sessionId="old-session" repoPath="/repo-old" repoName="old" />
+          <WorkspaceIndicator sessionId="old-session" projectPath="/repo-old" projectName="old" />
         </ToastProvider>,
       );
       await flushMicrotasks();
@@ -805,7 +811,7 @@ describe("WorkspaceIndicator", () => {
     await act(async () => {
       root?.render(
         <ToastProvider>
-          <WorkspaceIndicator sessionId="new-session" repoPath="/repo-new" repoName="new" />
+          <WorkspaceIndicator sessionId="new-session" projectPath="/repo-new" projectName="new" />
         </ToastProvider>,
       );
       await flushMicrotasks();
@@ -878,7 +884,9 @@ describe("WorkspaceIndicator", () => {
     root = createRoot(container);
 
     await act(async () => {
-      root?.render(<WorkspaceIndicator sessionId="old-session" repoPath="/repo" repoName="repo" />);
+      root?.render(
+        <WorkspaceIndicator sessionId="old-session" projectPath="/repo" projectName="repo" />,
+      );
       await flushMicrotasks();
     });
     const trigger = findElement(container, (node) => node.tagName === "BUTTON");
@@ -892,7 +900,9 @@ describe("WorkspaceIndicator", () => {
     expect(diffResponses).toHaveLength(1);
 
     await act(async () => {
-      root?.render(<WorkspaceIndicator sessionId="new-session" repoPath="/repo" repoName="repo" />);
+      root?.render(
+        <WorkspaceIndicator sessionId="new-session" projectPath="/repo" projectName="repo" />,
+      );
       await flushMicrotasks();
     });
     expect(textOf(container)).not.toContain("worktree/old-session");
@@ -965,7 +975,9 @@ describe("WorkspaceIndicator", () => {
     root = createRoot(container);
 
     await act(async () => {
-      root?.render(<WorkspaceIndicator sessionId="session" repoPath="/repo" repoName="repo" />);
+      root?.render(
+        <WorkspaceIndicator sessionId="session" projectPath="/repo" projectName="repo" />,
+      );
       await flushMicrotasks();
     });
     expect(textOf(container)).toContain("main");
@@ -988,15 +1000,15 @@ describe("WorkspaceIndicator", () => {
 });
 
 describe("TopBar workspace label", () => {
-  test("does not repeat the repo name in the adjacent workspace chip", () => {
+  test("does not repeat the project name in the adjacent workspace chip", () => {
     // The TopBar chip renders WorkspaceIndicator, which now hides itself until
     // an async git-repo probe resolves — so static markup can't exercise the
     // chip. The invariant under test is the label helper: on main it omits the
     // repo name (the header already shows it), so no "main (codeshell)".
     const html = renderToStaticMarkup(
       <TopBar
-        repoName="codeshell"
-        repoPath="/repo/codeshell"
+        projectName="codeshell"
+        projectPath="/repo/codeshell"
         sessionId="session"
         sessionTitle={null}
         busy={false}
@@ -1012,7 +1024,7 @@ describe("TopBar workspace label", () => {
     expect(html).toContain("codeshell");
 
     const label = workspaceIndicatorText({ root: "/repo/codeshell", kind: "main" }, "codeshell", {
-      includeRepoName: false,
+      includeProjectName: false,
     });
     expect(label).toBe("main");
     expect(label).not.toContain("main (codeshell)");

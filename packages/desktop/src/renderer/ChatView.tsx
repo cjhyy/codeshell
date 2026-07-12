@@ -25,7 +25,7 @@ import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { ApprovalCard } from "./approvals/ApprovalCard";
 import type { ApproveChoice, ApprovePathScope } from "./approvals/approvalDecision";
 import type { AskUserMessage } from "./types";
-import type { Repo } from "./repos";
+import type { TrackedProject } from "./projects";
 import type { ApprovalRequestEnvelope, FileSearchHit, InputAttachmentMeta } from "../preload/types";
 import {
   buildAttachments,
@@ -103,7 +103,7 @@ interface Props {
    *  separate "后台 N 个子代理运行中" hint even after busy clears (run_in_background
    *  resolves the main run immediately while children keep working). */
   runningAgents?: number;
-  activeRepoId: string | null;
+  activeProjectId: string | null;
   onAskUserAnswer?: (requestId: string, answer: string) => void;
   /** Extend the running goal (TODO 3.1). opts target the nearest ceiling. */
   onExtendGoal?: (opts: {
@@ -145,13 +145,13 @@ interface Props {
   cumulativeCacheCreationTokens?: number;
 
   // Project picker (composer second row)
-  repos: Repo[];
-  onSelectRepo: (id: string | null) => void;
-  onAddRepo: () => void;
-  activeRepoPath: string | null;
+  projects: TrackedProject[];
+  onSelectProject: (id: string | null) => void;
+  onAddProject: () => void;
+  activeProjectPath: string | null;
   /** cwd for resolving message content (relative path links / inline images).
-   *  Equals activeRepoPath for a real repo, the sandbox cwd for a no-repo chat.
-   *  Kept separate from activeRepoPath so git/STT/branch stay repo-only. */
+   *  Equals activeProjectPath for a real project, the sandbox cwd for a no-project chat.
+   *  Kept separate from activeProjectPath so git/STT/branch stay project-only. */
   messageCwd?: string | null;
   repoClean?: boolean | null;
 
@@ -311,7 +311,7 @@ export function ChatView({
   onRemoveQueuedInput,
   onGuideQueuedInput,
   runningAgents = 0,
-  activeRepoId,
+  activeProjectId,
   onAskUserAnswer,
   onExtendGoal,
   onAttachImagePath,
@@ -334,10 +334,10 @@ export function ChatView({
   cumulativePromptTokens,
   cumulativeCacheReadTokens,
   cumulativeCacheCreationTokens,
-  repos,
-  onSelectRepo,
-  onAddRepo,
-  activeRepoPath,
+  projects,
+  onSelectProject,
+  onAddProject,
+  activeProjectPath,
   messageCwd,
   repoClean,
   welcomeNode,
@@ -352,7 +352,7 @@ export function ChatView({
   onClearAnchors,
 }: Props) {
   const { t } = useT();
-  const [history, setHistory] = useState<string[]>(() => loadHistory(activeRepoId));
+  const [history, setHistory] = useState<string[]>(() => loadHistory(activeProjectId));
   const [historyCursor, setHistoryCursor] = useState(-1);
   const liveDraftStash = useRef<string>("");
   const [isComposing, setIsComposing] = useState(false);
@@ -389,7 +389,7 @@ export function ChatView({
   useEffect(() => {
     let cancelled = false;
     void window.codeshell
-      .sttAvailable(activeRepoPath ?? "")
+      .sttAvailable(activeProjectPath ?? "")
       .then((r) => {
         if (!cancelled) setSttAvailable(r.available);
       })
@@ -399,7 +399,7 @@ export function ChatView({
     return () => {
       cancelled = true;
     };
-  }, [activeRepoPath]);
+  }, [activeProjectPath]);
 
   const transcribeChunks = useCallback(
     async (blob: Blob, mimeType: string) => {
@@ -407,7 +407,7 @@ export function ChatView({
       try {
         const buf = await blob.arrayBuffer();
         const res = await window.codeshell.transcribeAudio({
-          cwd: activeRepoPath ?? "",
+          cwd: activeProjectPath ?? "",
           audio: buf,
           mimeType,
         });
@@ -428,7 +428,7 @@ export function ChatView({
         setVoiceState("idle");
       }
     },
-    [activeRepoPath, draft, setDraft, toast, t],
+    [activeProjectPath, draft, setDraft, toast, t],
   );
 
   const startRecording = useCallback(async () => {
@@ -543,10 +543,10 @@ export function ChatView({
   }, [composerSeedNonce]);
 
   useEffect(() => {
-    setHistory(loadHistory(activeRepoId));
+    setHistory(loadHistory(activeProjectId));
     setHistoryCursor(-1);
     liveDraftStash.current = "";
-  }, [activeRepoId]);
+  }, [activeProjectId]);
 
   // Auto-size the composer to its content by measuring scrollHeight. The catch:
   // scrollHeight is only right once the textarea is actually laid out at its
@@ -771,7 +771,7 @@ export function ChatView({
       });
     // Snap the stream to the bottom + re-arm follow regardless of scroll pos.
     setSendEpoch((n) => n + 1);
-    if (text) setHistory(pushHistory(activeRepoId, text));
+    if (text) setHistory(pushHistory(activeProjectId, text));
     setDraft("");
     setAttachments([]);
     setInputReferences([]);
@@ -1113,7 +1113,7 @@ export function ChatView({
             onExtendGoal={onExtendGoal}
             trailing={inlineApproval}
             trailingKey={pendingApproval?.requestId ?? null}
-            cwd={messageCwd ?? activeRepoPath}
+            cwd={messageCwd ?? activeProjectPath}
             sendEpoch={sendEpoch}
           />
         )
@@ -1354,7 +1354,7 @@ export function ChatView({
             <div className="relative">
               {mention && (
                 <MentionPopover
-                  cwd={activeRepoPath}
+                  cwd={activeProjectPath}
                   query={mention.query}
                   selected={mentionSelected}
                   onPick={applyMentionPick}
@@ -1596,7 +1596,7 @@ export function ChatView({
                           attachments: runAttachments,
                           displayText: displayPayload,
                         });
-                        if (draft.trim()) setHistory(pushHistory(activeRepoId, draft.trim()));
+                        if (draft.trim()) setHistory(pushHistory(activeProjectId, draft.trim()));
                         setDraft("");
                         setAttachments([]);
                         setInputReferences([]);
@@ -1647,15 +1647,15 @@ export function ChatView({
           {/* Project picker only appears for fresh conversations — once
             the session has any messages, switching project mid-chat
             would be confusing (cwd / context / engine sessionId are
-            already tied to the existing repo). Use the sidebar to
+            already tied to the existing project). Use the sidebar to
             jump projects after a session has started. */}
           {isNewChat && (
             <div className="mt-2 flex items-center gap-2">
               <ProjectPicker
-                repos={repos}
-                activeRepoId={activeRepoId}
-                onSelect={onSelectRepo}
-                onAddRepo={onAddRepo}
+                projects={projects}
+                activeProjectId={activeProjectId}
+                onSelect={onSelectProject}
+                onAddProject={onAddProject}
                 disabled={controlsDisabled}
               />
               <span
@@ -1665,7 +1665,7 @@ export function ChatView({
                 <Monitor size={12} />
                 <span>{t("chat.localMode")}</span>
               </span>
-              <BranchPicker cwd={activeRepoPath} clean={repoClean} disabled={controlsDisabled} />
+              <BranchPicker cwd={activeProjectPath} clean={repoClean} disabled={controlsDisabled} />
             </div>
           )}
         </div>
