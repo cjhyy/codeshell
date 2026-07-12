@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 // @ts-expect-error Bun supports query-suffixed TypeScript module imports.
 const { ChatView } = await import("./ChatView.tsx?composer-variant-render-test");
 
-function renderComposer(variant: "main" | "quickChat", permissionMode = "plan") {
+function renderComposer(variant: "main" | "quickChat" | "pet", permissionMode = "plan") {
   return renderToStaticMarkup(
     <ChatView
       variant={variant}
@@ -72,6 +72,18 @@ describe("ChatView composer variants", () => {
     const html = renderComposer("quickChat", "bypass");
 
     expect(html).toContain("当前对话权限：完全访问权限");
+    expect(html).not.toContain(">Goal<");
+    expect(html).not.toContain('data-composer-control="context-usage"');
+  });
+
+  test("keeps the shared chat language while hiding pet-unsafe affordances", () => {
+    const html = renderComposer("pet", "bypass");
+
+    expect(html).toContain('data-chat-variant="pet"');
+    expect(html).toContain("当前模型：Side Model");
+    expect(html).toContain('aria-label="语音输入"');
+    expect(html).not.toContain("完全访问权限");
+    expect(html).not.toContain('aria-label="添加图片"');
     expect(html).not.toContain(">Goal<");
     expect(html).not.toContain('data-composer-control="context-usage"');
   });

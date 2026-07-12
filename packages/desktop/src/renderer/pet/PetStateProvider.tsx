@@ -1,5 +1,12 @@
 import type { PetApi, PetProjectionEvent } from "../../preload/types";
 import React from "react";
+import { foldTranscript } from "../automation/foldTranscript";
+import {
+  transcriptsReducer,
+  type TranscriptsAction,
+  type TranscriptsMap,
+} from "../transcriptsReducer";
+import { INITIAL_STATE, type MessagesReducerState } from "../types";
 import {
   initialPetState,
   petStateReducer,
@@ -10,7 +17,16 @@ import {
 export interface PetStateContextValue {
   state: PetState;
   dispatch: React.Dispatch<PetStateAction>;
+  petSessionId: string | null;
+  chatState: MessagesReducerState;
+  chatDispatch: React.Dispatch<TranscriptsAction>;
+  chatBusy: boolean;
+  setChatBusy: React.Dispatch<React.SetStateAction<boolean>>;
+  chatModelKey: string | null;
+  setChatModelKey: React.Dispatch<React.SetStateAction<string | null>>;
 }
+
+export const PET_CHAT_BUCKET = "__codeshell_pet_chat__";
 
 const PetStateContext = React.createContext<PetStateContextValue | null>(null);
 
@@ -23,6 +39,13 @@ export function PetStateProvider({
 }) {
   const api = apiOverride ?? window.codeshell.pet;
   const [state, dispatch] = React.useReducer(petStateReducer, initialPetState);
+  const [petSessionId, setPetSessionId] = React.useState<string | null>(null);
+  const [chatBusy, setChatBusy] = React.useState(false);
+  const [chatModelKey, setChatModelKey] = React.useState<string | null>(null);
+  const [chatTranscripts, chatDispatch] = React.useReducer(
+    transcriptsReducer,
+    {} as TranscriptsMap,
+  );
 
   React.useEffect(() => {
     let active = true;
@@ -80,7 +103,60 @@ export function PetStateProvider({
     };
   }, [api, state.needsSnapshot]);
 
-  const value = React.useMemo(() => ({ state, dispatch }), [state]);
+  React.useEffect(() => {
+    let active = true;
+    void api.dispatch({ type: "get_global_status" }).then(async (result) => {
+      if (!active || !result.ok || result.type !== "global_status") return;
+      setPetSessionId(result.petSessionId);
+      const shell = globalThis.window?.codeshell;
+      if (!shell?.getSessionTranscript) return;
+      try {
+        const transcript = await shell.getSessionTranscript(result.petSessionId);
+        if (active) {
+          chatDispatch({
+            type: "hydrate",
+            bucket: PET_CHAT_BUCKET,
+            state: foldTranscript(transcript),
+          });
+        }
+      } catch {
+        // A new Pet has no transcript yet; the first chat turn creates it.
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [api]);
+
+  React.useEffect(() => {
+    if (!petSessionId) return;
+    const shell = globalThis.window?.codeshell;
+    if (!shell?.onStreamEvent) return;
+    return shell.onStreamEvent((envelope) => {
+      if (envelope.sessionId !== petSessionId) return;
+      chatDispatch({ type: "stream", bucket: PET_CHAT_BUCKET, event: envelope.event });
+      if (envelope.event.type === "stream_request_start") setChatBusy(true);
+      if (envelope.event.type === "turn_complete" || envelope.event.type === "error") {
+        setChatBusy(false);
+      }
+    });
+  }, [petSessionId]);
+
+  const chatState = chatTranscripts[PET_CHAT_BUCKET] ?? INITIAL_STATE;
+  const value = React.useMemo(
+    () => ({
+      state,
+      dispatch,
+      petSessionId,
+      chatState,
+      chatDispatch,
+      chatBusy,
+      setChatBusy,
+      chatModelKey,
+      setChatModelKey,
+    }),
+    [state, petSessionId, chatState, chatBusy, chatModelKey],
+  );
   return <PetStateContext.Provider value={value}>{children}</PetStateContext.Provider>;
 }
 

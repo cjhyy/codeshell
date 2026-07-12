@@ -7,6 +7,7 @@ import { PetOverviewPanel, usePetOverviewWidth } from "./pet/PetOverviewPanel";
 import { usePetState } from "./pet/PetStateProvider";
 import { PetWorldPane } from "./pet/PetWorldPane";
 import { openPetTarget } from "./pet/petNavigation";
+import { PetChatHost } from "./pet/PetChatHost";
 import { TopBar } from "./TopBar";
 import dogIcon from "./assets/codeshell-dog-icon.png";
 import { timePhase } from "./perf";
@@ -1544,7 +1545,6 @@ function App() {
           title: target.title,
           updatedAt: target.updatedAt,
           origin: target.origin,
-          status: target.status,
         });
         petDispatch({ type: "set-overview-open", open: false });
       },
@@ -4535,9 +4535,11 @@ function App() {
                 status={petState.status}
                 onNavigate={(request) => void handleOpenPetTarget(request)}
               />
-              <section className="min-h-0 overflow-hidden p-3">
-                <p className="text-sm text-muted-foreground">Pet chat</p>
-              </section>
+              <PetChatHost
+                modelOptions={modelOptions}
+                defaultModelKey={defaultActiveModelKey}
+                onNavigate={(request) => void handleOpenPetTarget(request)}
+              />
             </PetOverviewPanel>
           )}
 

@@ -56,6 +56,13 @@ export const pet = {
         stale: "该请求已处理或状态已更新；已打开原会话",
         notFound: "原会话已不存在或不可打开",
       },
+      chat: {
+        title: "Pet 对话",
+        loading: "正在恢复 Pet 对话",
+        failed: "Pet 对话暂时不可用",
+        globalStatus: "全局状态",
+        listPending: "列出待决策",
+      },
     },
   },
   en: {
@@ -114,6 +121,13 @@ export const pet = {
       navigation: {
         stale: "The request changed or was handled; opened the original session",
         notFound: "The original session no longer exists or cannot be opened",
+      },
+      chat: {
+        title: "Pet chat",
+        loading: "Restoring Pet chat",
+        failed: "Pet chat is temporarily unavailable",
+        globalStatus: "Global status",
+        listPending: "List pending",
       },
     },
   },

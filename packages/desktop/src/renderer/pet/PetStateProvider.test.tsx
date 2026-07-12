@@ -106,4 +106,75 @@ describe("PetStateProvider", () => {
     expect(latest?.state.projection?.workerState).toBe("active");
     await act(async () => root.unmount());
   });
+
+  test("hydrates the durable pet transcript and routes only its main stream bucket", async () => {
+    ensureMiniDom();
+    let streamListener: ((envelope: any) => void) | undefined;
+    const testWindow = window as unknown as Record<string, unknown>;
+    const originalCodeshell = testWindow.codeshell;
+    testWindow.codeshell = {
+      getSessionTranscript: async () => [{ kind: "user", text: "durable history" }],
+      onStreamEvent: (listener: (envelope: any) => void) => {
+        streamListener = listener;
+        return () => {
+          streamListener = undefined;
+        };
+      },
+    };
+    const api: PetApi = {
+      getSnapshot: async () => snapshot(),
+      onProjectionEvent: () => () => {},
+      openSession: async () => ({ status: "not-found" }),
+      dispatch: async (command) =>
+        command.type === "get_global_status"
+          ? {
+              ok: true,
+              type: "global_status",
+              version: 0,
+              generation: 0,
+              observedAt: 1,
+              workerState: "reclaimed",
+              petSessionId: "pet-one",
+              runningCount: 0,
+              queuedCount: 0,
+              pendingCount: 0,
+              sessions: [],
+            }
+          : { ok: false, code: "invalid-command" },
+    };
+    let latest: ReturnType<typeof usePetState> | undefined;
+    function Consumer() {
+      latest = usePetState();
+      return null;
+    }
+    const root = createRoot(document.createElement("div"));
+    await act(async () => {
+      root.render(
+        <PetStateProvider api={api}>
+          <Consumer />
+        </PetStateProvider>,
+      );
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    expect(latest?.petSessionId).toBe("pet-one");
+    expect(latest?.chatState.messages[0]).toMatchObject({
+      kind: "user",
+      text: "durable history",
+    });
+    await act(async () => {
+      streamListener?.({ sessionId: "work-one", event: { type: "stream_request_start" } });
+      streamListener?.({ sessionId: "pet-one", event: { type: "stream_request_start" } });
+    });
+    expect(latest?.chatBusy).toBe(true);
+    await act(async () => {
+      streamListener?.({ sessionId: "pet-one", event: { type: "turn_complete" } });
+    });
+    expect(latest?.chatBusy).toBe(false);
+
+    await act(async () => root.unmount());
+    if (originalCodeshell === undefined) delete testWindow.codeshell;
+    else testWindow.codeshell = originalCodeshell;
+  });
 });
