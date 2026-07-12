@@ -5,6 +5,7 @@ import type { ContextPackageCreatedOptions } from "./MessageStream";
 import { Sidebar } from "./Sidebar";
 import { PetOverviewPanel, usePetOverviewWidth } from "./pet/PetOverviewPanel";
 import { usePetState } from "./pet/PetStateProvider";
+import { PetWorldPane } from "./pet/PetWorldPane";
 import { TopBar } from "./TopBar";
 import dogIcon from "./assets/codeshell-dog-icon.png";
 import { timePhase } from "./perf";
@@ -4508,9 +4509,7 @@ function App() {
               onResizeStart={beginPetOverviewResize}
               onClose={() => petDispatch({ type: "set-overview-open", open: false })}
             >
-              <section className="min-h-0 overflow-y-auto border-r border-border p-3">
-                <p className="text-sm text-muted-foreground">{t("pet.overview.loading")}</p>
-              </section>
+              <PetWorldPane projection={petState.projection} status={petState.status} />
               <section className="min-h-0 overflow-hidden p-3">
                 <p className="text-sm text-muted-foreground">Pet chat</p>
               </section>

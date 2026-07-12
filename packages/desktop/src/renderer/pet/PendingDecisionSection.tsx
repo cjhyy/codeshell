@@ -1,4 +1,4 @@
-import type { PendingDecisionProjection } from "@cjhyy/code-shell-core";
+import type { PetPendingDecision } from "../../preload/types";
 import React from "react";
 import { RiskPill } from "../approvals/RiskPill";
 import { useT } from "../i18n";
@@ -7,8 +7,8 @@ export function PendingDecisionSection({
   pending,
   onOpen,
 }: {
-  pending: readonly PendingDecisionProjection[];
-  onOpen?: (decision: PendingDecisionProjection) => void;
+  pending: readonly PetPendingDecision[];
+  onOpen?: (decision: PetPendingDecision) => void;
 }) {
   const { t } = useT();
   return (

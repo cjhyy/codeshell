@@ -1,4 +1,4 @@
-import type { PetSessionProjection } from "@cjhyy/code-shell-core";
+import type { PetSessionProjection } from "../../preload/types";
 import React from "react";
 import { useT, type TFunction } from "../i18n";
 
@@ -49,7 +49,15 @@ function bounded(value: string | undefined, max: number): string | undefined {
   return value.length > max ? `${value.slice(0, max - 1)}…` : value;
 }
 
-function SessionRow({ session, now }: { session: PetSessionProjection; now: number }) {
+function SessionRow({
+  session,
+  now,
+  onOpen,
+}: {
+  session: PetSessionProjection;
+  now: number;
+  onOpen?: (session: PetSessionProjection) => void;
+}) {
   const { t } = useT();
   const state = sessionDisplayState(session);
   const stateLabel = t(`pet.session.state.${state}`);
@@ -60,37 +68,43 @@ function SessionRow({ session, now }: { session: PetSessionProjection; now: numb
   const animated = state === "running" ? " animate-pulse motion-reduce:animate-none" : "";
 
   return (
-    <li className="flex min-w-0 items-start gap-2 border-b border-border/60 px-2 py-2 last:border-b-0">
-      <span
-        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${STATE_TONE[state]}${animated}`}
-        aria-label={t("pet.session.stateAria", { state: stateLabel })}
-      />
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-2 text-sm">
-          <span className="min-w-0 flex-1 truncate font-medium" title={session.title}>
-            {title}
-          </span>
-          <span className="shrink-0 text-xs text-muted-foreground">{stateLabel}</span>
-        </div>
-        <div className="flex min-w-0 gap-1 text-xs text-muted-foreground">
-          {workspace && (
-            <span className="max-w-40 truncate" title={session.workspaceDisplayName}>
-              {workspace}
+    <li className="border-b border-border/60 last:border-b-0">
+      <button
+        type="button"
+        className="flex w-full min-w-0 items-start gap-2 px-2 py-2 text-left hover:bg-muted/50"
+        onClick={() => onOpen?.(session)}
+      >
+        <span
+          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${STATE_TONE[state]}${animated}`}
+          aria-label={t("pet.session.stateAria", { state: stateLabel })}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2 text-sm">
+            <span className="min-w-0 flex-1 truncate font-medium" title={session.title}>
+              {title}
             </span>
+            <span className="shrink-0 text-xs text-muted-foreground">{stateLabel}</span>
+          </div>
+          <div className="flex min-w-0 gap-1 text-xs text-muted-foreground">
+            {workspace && (
+              <span className="max-w-40 truncate" title={session.workspaceDisplayName}>
+                {workspace}
+              </span>
+            )}
+            {workspace && <span aria-hidden="true">·</span>}
+            <span className="font-mono">{shortId}</span>
+            <span aria-hidden="true">·</span>
+            <time dateTime={new Date(session.lastActivityAt).toISOString()}>
+              {formatPetRelativeTime(t, session.lastActivityAt, now)}
+            </time>
+          </div>
+          {summary && (
+            <p className="truncate text-xs text-muted-foreground" title={session.summary}>
+              {summary}
+            </p>
           )}
-          {workspace && <span aria-hidden="true">·</span>}
-          <span className="font-mono">{shortId}</span>
-          <span aria-hidden="true">·</span>
-          <time dateTime={new Date(session.lastActivityAt).toISOString()}>
-            {formatPetRelativeTime(t, session.lastActivityAt, now)}
-          </time>
         </div>
-        {summary && (
-          <p className="truncate text-xs text-muted-foreground" title={session.summary}>
-            {summary}
-          </p>
-        )}
-      </div>
+      </button>
     </li>
   );
 }
@@ -99,10 +113,12 @@ export function SessionStatusSection({
   sessions,
   emptyState = "empty",
   now = Date.now(),
+  onOpen,
 }: {
   sessions: readonly PetSessionProjection[];
   emptyState?: PetSessionEmptyState;
   now?: number;
+  onOpen?: (session: PetSessionProjection) => void;
 }) {
   const { t } = useT();
   return (
@@ -116,7 +132,7 @@ export function SessionStatusSection({
       {sessions.length > 0 ? (
         <ul className="divide-y-0" data-density="compact-list">
           {sessions.map((session) => (
-            <SessionRow key={session.agentSessionId} session={session} now={now} />
+            <SessionRow key={session.agentSessionId} session={session} now={now} onOpen={onOpen} />
           ))}
         </ul>
       ) : emptyState === "loading" ? (
