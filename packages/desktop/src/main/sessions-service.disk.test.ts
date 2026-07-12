@@ -74,6 +74,15 @@ describe("listDiskSessions", () => {
     expect(sessions.map((s) => s.id)).toEqual(["normal"]);
   });
 
+  it("filters durable pet sessions out of the ordinary work catalog", async () => {
+    mkSession(dir, "normal", { cwd: "/p", parentSessionId: null, kind: "work" }, 1000);
+    mkSession(dir, "local-pet", { cwd: "/p", parentSessionId: null, kind: "pet" }, 2000);
+
+    const { sessions } = await listDiskSessions({ limit: 10 }, dir);
+
+    expect(sessions.map((session) => session.id)).toEqual(["normal"]);
+  });
+
   it("skips legacy sessions with NO parentSessionId key (存量 not auto-rebuilt)", async () => {
     mkSession(dir, "legacy-1", { cwd: "/p", summary: "旧" }, 2000); // no parentSessionId key at all
     mkSession(dir, "new-top", { cwd: "/p", parentSessionId: null }, 1000);

@@ -35,7 +35,12 @@ import {
   buildWorkspaceActionReply,
 } from "./browser-driver/intercept.js";
 import { handleBrowserAction } from "./browser-driver/automation-host.js";
-import { SessionManager } from "@cjhyy/code-shell-core";
+import {
+  Methods,
+  SessionManager,
+  type PetProjectionDelta,
+  type PetProjectionSnapshotResult,
+} from "@cjhyy/code-shell-core";
 import { restoreCookiesToBrowser, type ElectronCookieLike } from "./credentials-service.js";
 import { resolveCookieCredentialForBrowser } from "./credential-action.js";
 import {
@@ -63,6 +68,7 @@ import { prepareAgentRunMetadata, resolveCredentialSessionCwd } from "./agent-ru
 import { getTrustCachedSync } from "./trust-store.js";
 import { reloadAutomations } from "./automation-service.js";
 import { switchSessionWorkspaceForUi } from "./session-workspace-service.js";
+import type { AgentBridgePetEvent, PetStateBridge } from "./pet/pet-state-aggregator.js";
 
 /**
  * Neutral sandbox directory used when the user is in a "no project"
@@ -125,7 +131,7 @@ function normalizeCredentialMaterializeParams(params: Record<string, unknown> | 
   };
 }
 
-export class AgentBridge {
+export class AgentBridge implements PetStateBridge {
   private child: ChildProcess | null = null;
   /** Pending lines that arrived before the worker was spawned. */
   private outbox: string[] = [];
@@ -179,6 +185,14 @@ export class AgentBridge {
   private credentialSnapshotRevision = 0;
   private readonly credentialSnapshotCwds = new Set<string>();
   private readonly quickChatForkRouter: QuickChatForkRouter | null;
+  private readonly petProjectionObservers = new Set<
+    (event: AgentBridgePetEvent) => void | Promise<void>
+  >();
+  private readonly pendingPetSnapshots = new Map<
+    string,
+    (snapshot: PetProjectionSnapshotResult | null) => void
+  >();
+  private petSnapshotRequestId = 0;
 
   constructor(
     window: BrowserWindow,
@@ -228,6 +242,7 @@ export class AgentBridge {
       // declare give-up so preload rejects the pending run instead of hanging.
       dlog("bridge", "spawn.throw", { error: String(e) });
       this.child = null;
+      this.emitPetProjection({ kind: "lifecycle", state: "disconnected" });
       this.safeSend("agent:lifecycle", { type: "gave_up" });
       return;
     }
@@ -235,9 +250,11 @@ export class AgentBridge {
     if (!this.child.stdout || !this.child.stdin || !this.child.stderr) {
       dlog("bridge", "spawn.error", { reason: "stdio not piped" });
       this.child = null;
+      this.emitPetProjection({ kind: "lifecycle", state: "disconnected" });
       this.safeSend("agent:lifecycle", { type: "gave_up" });
       return;
     }
+    this.emitPetProjection({ kind: "lifecycle", state: "active" });
     const workerSnapshotSessionIds = new Set<string>();
     const rl = createInterface({ input: this.child.stdout });
     rl.on("line", (line) => {
@@ -257,6 +274,10 @@ export class AgentBridge {
       // cron change: the worker created/deleted a cron job (agent/cronChanged);
       // reload main's scheduler so it arms immediately. DON'T forward to renderer.
       if (this.maybeHandleCronChanged(line)) return;
+      // Pet projection is a host-only read model. Consume its internal snapshot
+      // responses/deltas here so resolver-free-but-core-shaped payloads never
+      // leak through the generic renderer agent:msg channel.
+      if (this.routePetProjectionLine(line)) return;
       const quickChatForkSettlement = this.quickChatForkRouter?.routeWorkerResponse(line) ?? null;
       let summary: Record<string, unknown> = { raw: previewLine(line) };
       try {
@@ -315,6 +336,8 @@ export class AgentBridge {
       this.outbox = [];
       this.failPendingQuickChatForks();
       this.snapshots.onWorkerExit(workerSnapshotSessionIds);
+      this.resolvePendingPetSnapshots(null);
+      this.emitPetProjection({ kind: "lifecycle", state: "disconnected" });
       this.safeSend("agent:lifecycle", { type: "gave_up" });
     });
     this.child.on("exit", (code, signal) => {
@@ -331,12 +354,16 @@ export class AgentBridge {
       if (code === 0 && signal === null) {
         // Normal completion. Reset restart counter — clean exits don't count.
         this.restartCount = 0;
+        this.resolvePendingPetSnapshots(null);
+        this.emitPetProjection({ kind: "lifecycle", state: "reclaimed" });
         this.safeSend("agent:lifecycle", { type: "exited", code });
         return;
       }
       // Real crash. Note it but DON'T pre-emptively respawn — next user
       // run will trigger a fresh spawn anyway. We just decide whether to
       // declare "gave up" so the renderer can show a banner.
+      this.resolvePendingPetSnapshots(null);
+      this.emitPetProjection({ kind: "lifecycle", state: "disconnected" });
       if (this.shouldDeclareGaveUp()) {
         dlog("bridge", "crash.gave_up", { restartCount: this.restartCount });
         this.safeSend("agent:lifecycle", { type: "gave_up" });
@@ -733,6 +760,95 @@ export class AgentBridge {
       }
     })();
     return true;
+  }
+
+  private routePetProjectionLine(line: string): boolean {
+    let message: {
+      id?: string | number;
+      method?: string;
+      params?: unknown;
+      result?: unknown;
+      error?: unknown;
+    };
+    try {
+      message = JSON.parse(line) as typeof message;
+    } catch {
+      return false;
+    }
+    if (typeof message.id === "string") {
+      const resolve = this.pendingPetSnapshots.get(message.id);
+      if (resolve) {
+        this.pendingPetSnapshots.delete(message.id);
+        const result = message.error ? null : (message.result as PetProjectionSnapshotResult);
+        resolve(result ?? null);
+        return true;
+      }
+    }
+    if (message.method !== Methods.PetProjectionDelta) return false;
+    const delta = message.params as Partial<PetProjectionDelta> | undefined;
+    if (
+      delta &&
+      typeof delta.workerGeneration === "number" &&
+      typeof delta.version === "number" &&
+      typeof delta.observedAt === "number" &&
+      typeof delta.kind === "string"
+    ) {
+      this.emitPetProjection({ kind: "delta", delta: delta as PetProjectionDelta });
+    }
+    return true;
+  }
+
+  private emitPetProjection(event: AgentBridgePetEvent): void {
+    for (const observer of this.petProjectionObservers) {
+      try {
+        void Promise.resolve(observer(event)).catch((error) =>
+          dlog("bridge", "pet_projection.observer_failed", { error: String(error) }),
+        );
+      } catch (error) {
+        dlog("bridge", "pet_projection.observer_failed", { error: String(error) });
+      }
+    }
+  }
+
+  private resolvePendingPetSnapshots(snapshot: PetProjectionSnapshotResult | null): void {
+    const pending = [...this.pendingPetSnapshots.values()];
+    this.pendingPetSnapshots.clear();
+    for (const resolve of pending) resolve(snapshot);
+  }
+
+  hasLiveWorker(): boolean {
+    return !!this.child?.stdin?.writable && !this.child.stdin.destroyed;
+  }
+
+  requestPetProjectionSnapshot(): Promise<PetProjectionSnapshotResult | null> {
+    if (!this.hasLiveWorker()) return Promise.resolve(null);
+    const id = `desktop-pet-snapshot-${++this.petSnapshotRequestId}`;
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (snapshot: PetProjectionSnapshotResult | null): void => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        this.pendingPetSnapshots.delete(id);
+        resolve(snapshot);
+      };
+      const timer = setTimeout(() => finish(null), 5_000);
+      this.pendingPetSnapshots.set(id, finish);
+      try {
+        this.child!.stdin!.write(
+          JSON.stringify({ jsonrpc: "2.0", id, method: Methods.GetPetProjectionSnapshot }) + "\n",
+        );
+      } catch {
+        finish(null);
+      }
+    });
+  }
+
+  subscribePetProjection(
+    observer: (event: AgentBridgePetEvent) => void | Promise<void>,
+  ): () => void {
+    this.petProjectionObservers.add(observer);
+    return () => this.petProjectionObservers.delete(observer);
   }
 
   /**

@@ -73,6 +73,7 @@ import {
   normalizeWorktreeBranchPrefix,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
+import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
@@ -329,6 +330,7 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
  * same worker" — not "extra concurrent agents".
  */
 let bridge: AgentBridge | null = null;
+let petStateAggregator: PetStateAggregator | null = null;
 let mcpOAuthService: McpOAuthService | null = null;
 let cspInstalled = false;
 let automationHandle: AutomationHandle | null = null;
@@ -1727,6 +1729,8 @@ async function createWindow(): Promise<BrowserWindow> {
         mobileRemote.broadcastRaw(line);
       }
     });
+    petStateAggregator = new PetStateAggregator({ bridge, listDiskSessions });
+    await petStateAggregator.start();
   } else {
     bridge.attachWindow(win);
   }
@@ -3912,6 +3916,8 @@ app.on("before-quit", (event) => {
   event.preventDefault();
   if (quitCleanupPromise) return;
   bridge?.kill();
+  petStateAggregator?.stop();
+  petStateAggregator = null;
   automationHandle?.stop();
   automationHandle = null;
   ptyKillAll();
