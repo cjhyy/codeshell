@@ -27,6 +27,7 @@ import { projectLabel, sortProjects, type TrackedProject } from "./projects";
 import { NO_REPO_KEY, bucketKey, type SessionIndex, type SessionSummary } from "./transcripts";
 import type { SessionStatus } from "./sessionStatus";
 import { useT } from "./i18n";
+import { PetSidebarEntry } from "./pet/PetSidebarEntry";
 
 interface SidebarProps {
   projects: TrackedProject[];
@@ -37,6 +38,9 @@ interface SidebarProps {
   /** Per-bucket status mark, keyed by the shared bucketKey(repoId, sessionId). */
   sessionStatuses?: Record<string, SessionStatus>;
   sidebarCollapsed?: boolean;
+  petOverviewOpen: boolean;
+  petPendingCount: number;
+  petRunningCount: number;
 
   onSelectProject: (id: string | null) => void;
   onSelectSession: (projectId: string | null, sessionId: string) => void;
@@ -54,6 +58,7 @@ interface SidebarProps {
   onOpenCustomize: () => void;
   onOpenCredentials: () => void;
   onOpenSettingsPage: () => void;
+  onOpenPetOverview: () => void;
 
   onRenameSession: (projectId: string | null, sessionId: string, title: string) => void;
   onArchiveSession: (projectId: string | null, sessionId: string, archived: boolean) => void;
@@ -77,6 +82,9 @@ export function Sidebar({
   collapsedProjects,
   sessionStatuses,
   sidebarCollapsed,
+  petOverviewOpen,
+  petPendingCount,
+  petRunningCount,
   onSelectProject,
   onSelectSession,
   onToggleProject,
@@ -92,6 +100,7 @@ export function Sidebar({
   onOpenCustomize,
   onOpenCredentials,
   onOpenSettingsPage,
+  onOpenPetOverview,
   onRenameSession,
   onArchiveSession,
   onDeleteSession,
@@ -216,6 +225,13 @@ export function Sidebar({
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-card/40">
       <nav className="flex flex-col gap-0.5 p-2">
+        <PetSidebarEntry
+          active={petOverviewOpen}
+          pendingCount={petPendingCount}
+          runningCount={petRunningCount}
+          onOpen={onOpenPetOverview}
+        />
+        <div className="my-1 border-t border-border/70" aria-hidden="true" />
         <SidebarItem
           label={t("sidebar.newConversation")}
           Icon={MessageSquare}

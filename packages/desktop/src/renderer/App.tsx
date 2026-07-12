@@ -3,6 +3,8 @@ import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
 import type { ContextPackageCreatedOptions } from "./MessageStream";
 import { Sidebar } from "./Sidebar";
+import { PetOverviewPanel, usePetOverviewWidth } from "./pet/PetOverviewPanel";
+import { usePetState } from "./pet/PetStateProvider";
 import { TopBar } from "./TopBar";
 import dogIcon from "./assets/codeshell-dog-icon.png";
 import { timePhase } from "./perf";
@@ -407,6 +409,8 @@ function QuickChatPanelHost({
 function App() {
   const toast = useToast();
   const { t, lang } = useT();
+  const { state: petState, dispatch: petDispatch } = usePetState();
+  const { width: petOverviewWidth, beginResize: beginPetOverviewResize } = usePetOverviewWidth();
   const [transcripts, dispatch] = useReducer(transcriptsReducer, {} as TranscriptsMap);
   const [approval, setApproval] = useState<ApprovalState>(null);
   const [approvalQueue, setApprovalQueue] = useState<ApprovalRequestEnvelope[]>([]);
@@ -4415,6 +4419,10 @@ function App() {
   const platformClass = isMac ? "platform-darwin" : "";
   const isSettingsPage = view.viewMode === "settings_page";
   const isChatView = view.viewMode === "chat";
+  const petPendingCount =
+    petState.projection?.pending.filter((pending) => pending.status === "pending").length ?? 0;
+  const petRunningCount =
+    petState.projection?.sessions.filter((session) => session.runState === "running").length ?? 0;
 
   return (
     <div
@@ -4463,6 +4471,9 @@ function App() {
                 activeSessionId={activeSessionId}
                 collapsedProjects={collapsedProjects}
                 sidebarCollapsed={view.sidebarCollapsed}
+                petOverviewOpen={petState.overviewOpen}
+                petPendingCount={petPendingCount}
+                petRunningCount={petRunningCount}
                 sessionStatuses={sessionStatusMap}
                 onSelectProject={setActiveProjectId}
                 onSelectSession={handleSelectSession}
@@ -4481,6 +4492,7 @@ function App() {
                 onOpenCustomize={() => setViewMode("customize")}
                 onOpenCredentials={() => setViewMode("credentials")}
                 onOpenSettingsPage={() => setViewMode("settings_page")}
+                onOpenPetOverview={() => petDispatch({ type: "set-overview-open", open: true })}
                 onRenameSession={handleRenameSession}
                 onArchiveSession={handleArchiveSession}
                 onDeleteSession={handleDeleteSession}
@@ -4488,6 +4500,21 @@ function App() {
                 viewMode={view.viewMode}
               />
             </div>
+          )}
+
+          {petState.overviewOpen && (
+            <PetOverviewPanel
+              width={petOverviewWidth}
+              onResizeStart={beginPetOverviewResize}
+              onClose={() => petDispatch({ type: "set-overview-open", open: false })}
+            >
+              <section className="min-h-0 overflow-y-auto border-r border-border p-3">
+                <p className="text-sm text-muted-foreground">{t("pet.overview.loading")}</p>
+              </section>
+              <section className="min-h-0 overflow-hidden p-3">
+                <p className="text-sm text-muted-foreground">Pet chat</p>
+              </section>
+            </PetOverviewPanel>
           )}
 
           {/* Chat column + dock share a relative container so a maximized panel can

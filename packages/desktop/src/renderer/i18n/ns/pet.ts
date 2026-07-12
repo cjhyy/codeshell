@@ -1,8 +1,15 @@
 export const pet = {
   zh: {
     pet: {
+      sidebar: {
+        label: "Pet",
+        summary: "{pending} 个 session 等你决定；{running} 个正在运行",
+      },
       overview: {
         title: "Pet 工作概览",
+        regionLabel: "Pet 概览面板",
+        resize: "调整 Pet 概览宽度",
+        close: "关闭 Pet 概览",
         loading: "正在加载工作状态",
         reconciling: "正在对账",
         runningCount: "{count} 个运行中",
@@ -49,8 +56,15 @@ export const pet = {
   },
   en: {
     pet: {
+      sidebar: {
+        label: "Pet",
+        summary: "{pending} sessions need you; {running} running",
+      },
       overview: {
         title: "Pet work overview",
+        regionLabel: "Pet overview panel",
+        resize: "Resize Pet overview",
+        close: "Close Pet overview",
         loading: "Loading work status",
         reconciling: "Reconciling",
         runningCount: "{count} running",
