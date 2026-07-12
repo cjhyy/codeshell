@@ -129,6 +129,49 @@ Desktop wiring/UI/lifecycle：
 
 `ExternalAgentSessionStore concurrent writers` 预存基线失败本次仍未复现，全量没有新增失败。
 
+## 输入框对齐
+
+### 现状差异
+
+- 主线程 `ChatView` 是完整 Composer：附件、权限、Goal、ContextRing 用量、ModelPill、语音和发送均在同一控件栏。
+- 实现前的 `QuickChatPanel` 没有复用该 Composer，而是独立简化 textarea，只提供权限 pill 和发送/停止；确实缺少模型、语音和附件，当时也没有误带 Goal/ContextRing。
+- App 的运行层已会按 quick-chat bucket 读取 model override，但之前侧聊没有模型选择入口。
+
+### 改法与 commit
+
+- `d65b88f0` — `feat(quickchat): align side-chat composer`
+  - `QuickChatPanel` 直接复用 `ChatView`/Composer，通过 `variant="quickChat"` 定义侧聊差异，不再维护第二套输入框。
+  - 侧聊保留 ModelPill、语音输入、附件/粘贴/拖放、权限 pill、发送/停止与正常消息流；隐藏 GoalToggle、ContextRing 用量和新对话项目/分支选择。
+  - 模型选择只写所属 quick-chat bucket，发送时将该 model 传入所属 side session；不更新全局默认、主线程或其他快聊。
+  - 附件状态和 run payload 按 quick-chat bucket 隔离；关闭/重建时一并清理草稿、附件和模型 override。
+  - 复用主 Composer 时显式禁止侧聊 prompt 写入持久 prompt history，并在 busy 且无队列管线时保留未发草稿。
+  - 现有 `QUICK_CHAT_RESTRICTED_SYSTEM_PROMPT` 与 core 行为限制未修改。
+
+改动文件：
+
+- `packages/desktop/src/renderer/ChatView.tsx`
+- `packages/desktop/src/renderer/panels/QuickChatPanel.tsx`
+- `packages/desktop/src/renderer/App.tsx`
+- `packages/desktop/src/renderer/ChatView.composer-variant.test.tsx`
+- `packages/desktop/src/renderer/AppQuickChat.test.tsx`
+
+### TDD 与验证
+
+- 红灯：旧 quick-chat 真实渲染测试为 `3 pass / 1 fail / 7 expect()`，失败点是找不到侧聊 ModelPill，输出仅有权限与发送。
+- 绿灯定向回归：`30 pass / 0 fail / 129 expect()`，覆盖 main/quickChat variant 控件显隐、受限/完全访问徽标、模型真实 run 参数、两个快聊/主线程模型隔离、附件路由与 transient override 不持久化。
+- `bun run --filter '@cjhyy/code-shell-desktop' typecheck`：通过。
+- `bun test 2>&1 | tail -5`（`pipefail` + 临时 tee）：
+
+  ```text
+  5839 pass
+  6 skip
+  0 fail
+  14393 expect() calls
+  Ran 5845 tests across 832 files. [70.12s]
+  ```
+
+全量无新增失败，`ExternalAgentSessionStore concurrent writers` 预存基线失败本次未复现。
+
 ## 偏离与未决
 
 - “明确提权”采用可审计的 UI 动作：用户必须切换 quick chat 自己的访问徽标。仅在自然语言里要求写入不会静默绕过 hard gate；模型会提示用户切换徽标。这避免模型自行判断一句话是否足以授权。
