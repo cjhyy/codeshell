@@ -14,6 +14,7 @@ function api(result: Awaited<ReturnType<PetApi["openSession"]>>): PetApi {
     }),
     onProjectionEvent: () => () => {},
     openSession: async () => result,
+    dispatch: async () => ({ ok: false, code: "invalid-command" }),
   };
 }
 

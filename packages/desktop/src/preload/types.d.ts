@@ -19,6 +19,8 @@ import type { PetApi } from "./pet-api";
 
 export type {
   PetApi,
+  PetDispatchCommand,
+  PetDispatchResult,
   PetPendingDecision,
   PetNavigationTarget,
   PetOpenSessionRequest,

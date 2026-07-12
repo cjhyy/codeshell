@@ -75,6 +75,8 @@ import {
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { registerPetIpc } from "./pet/pet-ipc.js";
+import { PetMetadataStore } from "./pet/pet-metadata-store.js";
+import { PetDispatchService } from "./pet/pet-dispatch-service.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
@@ -1733,9 +1735,19 @@ async function createWindow(): Promise<BrowserWindow> {
     });
     petStateAggregator = new PetStateAggregator({ bridge, listDiskSessions });
     await petStateAggregator.start();
+    const petMetadata = new PetMetadataStore(
+      resolve(app.getPath("userData"), "pet", "metadata.json"),
+    );
+    const petDispatch = new PetDispatchService({
+      metadata: petMetadata,
+      aggregator: petStateAggregator,
+      worker: bridge,
+      hostCwd: resolveNoRepoCwd(),
+    });
     disposePetIpc = registerPetIpc({
       ipcMain,
       aggregator: petStateAggregator,
+      dispatcher: petDispatch,
       windows: () => BrowserWindow.getAllWindows(),
     });
   } else {

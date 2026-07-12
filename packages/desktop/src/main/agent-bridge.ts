@@ -193,6 +193,7 @@ export class AgentBridge implements PetStateBridge {
     (snapshot: PetProjectionSnapshotResult | null) => void
   >();
   private petSnapshotRequestId = 0;
+  private petHostRequestId = 0;
 
   constructor(
     window: BrowserWindow,
@@ -849,6 +850,52 @@ export class AgentBridge implements PetStateBridge {
   ): () => void {
     this.petProjectionObservers.add(observer);
     return () => this.petProjectionObservers.delete(observer);
+  }
+
+  requestWorker(
+    method: string,
+    params: Record<string, unknown>,
+    timeoutMs = 120_000,
+  ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }> {
+    const id = `desktop-pet-host-${++this.petHostRequestId}`;
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (
+        result: { ok: true; result: unknown } | { ok: false; message: string; code?: number },
+      ): void => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        unsubscribe();
+        resolve(result);
+      };
+      const unsubscribe = this.subscribeOutbound((line) => {
+        try {
+          const message = JSON.parse(line) as {
+            id?: string;
+            result?: unknown;
+            error?: { message?: string; code?: number };
+          };
+          if (message.id !== id) return;
+          if (message.error) {
+            finish({
+              ok: false,
+              message: message.error.message ?? "worker rejected the request",
+              code: message.error.code,
+            });
+          } else {
+            finish({ ok: true, result: message.result });
+          }
+        } catch {
+          /* ignore unrelated worker output */
+        }
+      });
+      const timer = setTimeout(
+        () => finish({ ok: false, message: "worker did not respond" }),
+        timeoutMs,
+      );
+      this.injectWorkerMessage(JSON.stringify({ jsonrpc: "2.0", id, method, params }));
+    });
   }
 
   /**

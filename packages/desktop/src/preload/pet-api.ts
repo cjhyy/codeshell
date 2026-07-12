@@ -70,6 +70,35 @@ export type PetOpenSessionResult =
       pendingStatus?: "pending" | "resolved";
     };
 
+export type PetDispatchCommand =
+  | { type: "get_global_status" }
+  | { type: "list_pending" }
+  | { type: "open_session"; target: PetOpenSessionRequest }
+  | { type: "chat"; message: string };
+
+export type PetDispatchResult =
+  | {
+      ok: false;
+      code: "unsupported-in-phase-1" | "invalid-command" | "worker-error";
+      message?: string;
+    }
+  | {
+      ok: true;
+      type: "global_status";
+      version: number;
+      generation: number;
+      observedAt: number;
+      workerState: PetWorkerState;
+      petSessionId: string;
+      runningCount: number;
+      queuedCount: number;
+      pendingCount: number;
+      sessions: PetSessionProjection[];
+    }
+  | { ok: true; type: "pending_list"; pending: PetPendingDecision[] }
+  | { ok: true; type: "open_session"; result: PetOpenSessionResult }
+  | { ok: true; type: "chat"; petSessionId: string; result: unknown };
+
 interface PetProjectionEventBase {
   version: number;
   generation: number;
@@ -90,6 +119,7 @@ export interface PetApi {
   getSnapshot(): Promise<PetProjectionSnapshot>;
   onProjectionEvent(listener: (event: PetProjectionEvent) => void): () => void;
   openSession(request: PetOpenSessionRequest): Promise<PetOpenSessionResult>;
+  dispatch(command: PetDispatchCommand): Promise<PetDispatchResult>;
 }
 
 export interface PetIpcRenderer {
@@ -106,6 +136,8 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
     getSnapshot: () => ipcRenderer.invoke("pet:get-snapshot") as Promise<PetProjectionSnapshot>,
     openSession: (request) =>
       ipcRenderer.invoke("pet:open-session", request) as Promise<PetOpenSessionResult>,
+    dispatch: (command) =>
+      ipcRenderer.invoke("pet:dispatch", command) as Promise<PetDispatchResult>,
     onProjectionEvent: (listener) => {
       const handler = (_event: unknown, payload: PetProjectionEvent): void => listener(payload);
       ipcRenderer.on("pet:projection-event", handler);

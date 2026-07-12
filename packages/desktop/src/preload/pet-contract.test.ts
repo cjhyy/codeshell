@@ -15,6 +15,10 @@ describe("Pet preload contract", () => {
     const ipc = {
       invoke: async (channel: string, payload?: unknown) => {
         if (channel === "pet:get-snapshot") return snapshot;
+        if (channel === "pet:dispatch") {
+          expect(payload).toEqual({ type: "get_global_status" });
+          return { ok: true, type: "global_status", petSessionId: "pet-one" };
+        }
         expect(channel).toBe("pet:open-session");
         expect(payload).toEqual({ agentSessionId: "work-a", snapshotVersion: 1, generation: 0 });
         return { status: "not-found" };
@@ -50,6 +54,10 @@ describe("Pet preload contract", () => {
     expect(
       await api.openSession({ agentSessionId: "work-a", snapshotVersion: 1, generation: 0 }),
     ).toEqual({ status: "not-found" });
+    expect(await api.dispatch({ type: "get_global_status" })).toMatchObject({
+      ok: true,
+      petSessionId: "pet-one",
+    });
     expect(first.map((event) => event.version)).toEqual([1]);
     expect(second.map((event) => event.version)).toEqual([1, 2]);
     expect(handlers.size).toBe(1);

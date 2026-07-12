@@ -33,6 +33,7 @@ describe("PetStateProvider", () => {
         return () => listeners.delete(listener);
       },
       openSession: async () => ({ status: "not-found" }),
+      dispatch: async () => ({ ok: false, code: "invalid-command" }),
     };
     const container = document.createElement("div");
     const root = createRoot(container);
@@ -65,6 +66,7 @@ describe("PetStateProvider", () => {
         return () => listeners.delete(listener);
       },
       openSession: async () => ({ status: "not-found" }),
+      dispatch: async () => ({ ok: false, code: "invalid-command" }),
     };
     let latest: ReturnType<typeof usePetState> | undefined;
     function Consumer({ page }: { page: "chat" | "settings_page" }) {
