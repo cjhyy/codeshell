@@ -66,6 +66,7 @@ export class ChatSession {
 
   private queue: QueuedTurn[] = [];
   private active: QueuedTurn | null = null;
+  private exclusiveOperation = false;
   private controller: AbortController | null = null;
   private readonly defaultOnStream?: (event: StreamEvent) => void;
   /**
@@ -114,6 +115,35 @@ export class ChatSession {
   }
 
   /**
+   * Run session maintenance (for example context-package summarization) under
+   * the same per-session mutex as turns. Existing activity fails fast; turns
+   * arriving after the lock is acquired remain queued until maintenance has
+   * persisted its final usage/state update.
+   */
+  async runExclusive<T>(operation: (signal: AbortSignal) => Promise<T>): Promise<T> {
+    if (this.active || this.exclusiveOperation || this.queue.length > 0) {
+      throw new Error("source session is still producing or has queued turns");
+    }
+    this.lastActivityAt = Date.now();
+    this.exclusiveOperation = true;
+    this.settlePromise = new Promise<void>((resolve) => {
+      this.resolveSettled = resolve;
+    });
+    this.controller = new AbortController();
+    try {
+      return await operation(this.controller.signal);
+    } finally {
+      this.lastActivityAt = Date.now();
+      this.resolveSettled?.();
+      this.resolveSettled = null;
+      this.controller = null;
+      this.exclusiveOperation = false;
+      this.applyPendingModelSwitchAtRunBoundary();
+      if (this.queue.length > 0) void this.pump();
+    }
+  }
+
+  /**
    * True when the user hit Stop and hasn't started a new turn since. The server
    * consults this before auto-waking an idle session on a background-job
    * completion, so a download finishing right after Stop doesn't restart the
@@ -146,7 +176,7 @@ export class ChatSession {
   }
 
   isBusy(): boolean {
-    return this.active !== null;
+    return this.active !== null || this.exclusiveOperation;
   }
 
   /** Resolves after the active engine.run() has completed its pump finally. */
@@ -222,12 +252,26 @@ export class ChatSession {
     return entry;
   }
 
+  /** Apply and clear a deferred switch before another run may start. */
+  private applyPendingModelSwitchAtRunBoundary(): void {
+    const key = this.pendingModel;
+    this.pendingModel = null;
+    if (key === null) return;
+    try {
+      this.applyModelSwitch(key);
+    } catch {
+      // requestModelSwitch already returned when the switch was queued. A
+      // run-boundary persistence failure must not become an unhandled pump
+      // rejection or prevent the session from settling/continuing.
+    }
+  }
+
   queueDepth(): number {
     return this.queue.length;
   }
 
   private async pump(): Promise<void> {
-    if (this.active) return;
+    if (this.active || this.exclusiveOperation) return;
     const next = this.queue.shift();
     if (!next) return;
     this.active = next;
@@ -282,19 +326,9 @@ export class ChatSession {
       // Run boundary: apply any model switch that was deferred because it was
       // requested mid-run. Done here (not in pump) so it still applies when
       // no further turn is queued.
-      try {
-        if (this.pendingModel !== null) {
-          this.applyModelSwitch(this.pendingModel);
-        }
-      } catch {
-        // requestModelSwitch already returned when the switch was queued. A
-        // run-boundary persistence failure must not become an unhandled pump
-        // rejection or prevent the session from settling/continuing.
-      } finally {
-        this.pendingModel = null;
-        // Drain the next turn even if deferred model switching failed.
-        if (this.queue.length > 0) void this.pump();
-      }
+      this.applyPendingModelSwitchAtRunBoundary();
+      // Drain the next turn even if deferred model switching failed.
+      if (this.queue.length > 0) void this.pump();
     }
   }
 }

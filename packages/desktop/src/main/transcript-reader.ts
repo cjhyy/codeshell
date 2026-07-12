@@ -104,8 +104,10 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
     // at / elapsed") instead of leaving them blank (which read as 0s elapsed).
     const ts = typeof ev.timestamp === "number" ? ev.timestamp : undefined;
     if (ts !== undefined) lastTs = ts;
-    if (ev.type === "turn_boundary") { sawBoundary = true; pendingContentAfterBoundary = false; }
-    else if (ev.type === "message" || ev.type === "tool_use") pendingContentAfterBoundary = true;
+    if (ev.type === "turn_boundary") {
+      sawBoundary = true;
+      pendingContentAfterBoundary = false;
+    } else if (ev.type === "message" || ev.type === "tool_use") pendingContentAfterBoundary = true;
     switch (ev.type) {
       case "session_meta":
         items.push({
@@ -134,11 +136,22 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
             timestamp: ts,
           });
         } else if (role === "assistant") {
-          items.push({ kind: "stream", event: { type: "stream_request_start", turnNumber: ev.turnNumber }, timestamp: ts });
-          items.push({ kind: "stream", event: { type: "text_delta", text: textOf(d.content) }, timestamp: ts });
           items.push({
             kind: "stream",
-            event: { type: "assistant_message", message: { role: "assistant", content: d.content as string | ContentBlock[] } },
+            event: { type: "stream_request_start", turnNumber: ev.turnNumber },
+            timestamp: ts,
+          });
+          items.push({
+            kind: "stream",
+            event: { type: "text_delta", text: textOf(d.content) },
+            timestamp: ts,
+          });
+          items.push({
+            kind: "stream",
+            event: {
+              type: "assistant_message",
+              message: { role: "assistant", content: d.content as string | ContentBlock[] },
+            },
             timestamp: ts,
           });
         }
@@ -237,13 +250,48 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
         break;
       }
       case "turn_boundary":
-        items.push({ kind: "stream", event: { type: "turn_complete", reason: "completed" }, timestamp: ts });
+        items.push({
+          kind: "stream",
+          event: { type: "turn_complete", reason: "completed" },
+          timestamp: ts,
+        });
         break;
       case "summary":
-        items.push({ kind: "stream", event: { type: "context_compact", strategy: "summary", before: 0, after: 0 }, timestamp: ts });
+        items.push({
+          kind: "stream",
+          event: {
+            type: "context_compact",
+            strategy: "summary",
+            before: 0,
+            after: 0,
+            ...(d.trigger === "context_transfer" &&
+            d.sourceRange &&
+            typeof d.sourceRange === "object"
+              ? {
+                  contextTransfer: {
+                    summary: String(d.summary ?? ""),
+                    sourceSessionId: String(
+                      (d.sourceRange as Record<string, unknown>).sessionId ?? "",
+                    ),
+                    fromEventId: String(
+                      (d.sourceRange as Record<string, unknown>).fromEventId ?? "",
+                    ),
+                    toEventId: String((d.sourceRange as Record<string, unknown>).toEventId ?? ""),
+                    sourceEventCount: Number(d.sourceEventCount ?? 0),
+                    estimatedTokens: Number(d.estimatedTokens ?? 0),
+                  },
+                }
+              : {}),
+          } as never,
+          timestamp: ts,
+        });
         break;
       case "error":
-        items.push({ kind: "stream", event: { type: "error", error: String(d.error ?? "error") }, timestamp: ts });
+        items.push({
+          kind: "stream",
+          event: { type: "error", error: String(d.error ?? "error") },
+          timestamp: ts,
+        });
         break;
       case "turn_stopped":
         // User interrupted this turn — rebuild the renderer's stop marker so
@@ -273,7 +321,11 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
   // turn never gets a turn_complete, so its files_changed card stays pinned
   // before the closing summary text instead of at the turn's end.
   if (sawBoundary && pendingContentAfterBoundary) {
-    items.push({ kind: "stream", event: { type: "turn_complete", reason: "completed" }, timestamp: lastTs });
+    items.push({
+      kind: "stream",
+      event: { type: "turn_complete", reason: "completed" },
+      timestamp: lastTs,
+    });
   }
   return items;
 }
@@ -303,7 +355,13 @@ export async function getSessionTranscript(
 
 /** Statuses that mean the sub-agent finished/ended (terminal). Anything else
  *  (stuck "active") means it never wrapped up → render as interrupted. */
-const SUBAGENT_DONE_STATUSES = new Set(["completed", "failed", "cancelled", "model_error", "aborted_streaming"]);
+const SUBAGENT_DONE_STATUSES = new Set([
+  "completed",
+  "failed",
+  "cancelled",
+  "model_error",
+  "aborted_streaming",
+]);
 
 /**
  * Expand each replayed sub-agent `agent_start` (from a "subagent" anchor) into a
@@ -324,7 +382,7 @@ async function enrichSubagentCards(items: FoldItem[], baseDir: string): Promise<
     const agentId = item.event.agentId;
     if (!agentId || !SAFE_ID.test(agentId)) continue;
 
-    let status = "active";
+    let status: string;
     let resultText = "";
     try {
       const state = JSON.parse(
@@ -341,7 +399,11 @@ async function enrichSubagentCards(items: FoldItem[], baseDir: string): Promise<
         const line = raw.trim();
         if (!line) continue;
         let ev: TranscriptEvent;
-        try { ev = JSON.parse(line) as TranscriptEvent; } catch { continue; }
+        try {
+          ev = JSON.parse(line) as TranscriptEvent;
+        } catch {
+          continue;
+        }
         if (ev.type === "message" && (ev.data as { role?: string })?.role === "assistant") {
           resultText = textOf((ev.data as { content?: unknown }).content);
         }
@@ -352,12 +414,21 @@ async function enrichSubagentCards(items: FoldItem[], baseDir: string): Promise<
 
     const ts = item.timestamp;
     if (resultText) {
-      out.push({ kind: "stream", event: { type: "text_delta", text: resultText, agentId }, timestamp: ts });
+      out.push({
+        kind: "stream",
+        event: { type: "text_delta", text: resultText, agentId },
+        timestamp: ts,
+      });
     }
     if (SUBAGENT_DONE_STATUSES.has(status)) {
       out.push({
         kind: "stream",
-        event: { type: "agent_end", agentId, description: item.event.description, text: resultText || undefined },
+        event: {
+          type: "agent_end",
+          agentId,
+          description: item.event.description,
+          text: resultText || undefined,
+        },
         timestamp: ts,
       });
     } else {
@@ -365,7 +436,12 @@ async function enrichSubagentCards(items: FoldItem[], baseDir: string): Promise<
       // card resolves to a failed/interrupted state, not an eternal spinner.
       out.push({
         kind: "stream",
-        event: { type: "agent_end", agentId, description: item.event.description, error: "上次会话中断,未完成" },
+        event: {
+          type: "agent_end",
+          agentId,
+          description: item.event.description,
+          error: "上次会话中断,未完成",
+        },
         timestamp: ts,
       });
     }

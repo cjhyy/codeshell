@@ -9,8 +9,8 @@ import type { TaskListMessage } from "./types";
 import { useT } from "./i18n";
 
 interface Props {
-  repoName: string | null;
-  repoPath?: string | null;
+  projectName: string | null;
+  projectPath?: string | null;
   sessionId?: string | null;
   sessionTitle: string | null;
   busy: boolean;
@@ -42,7 +42,7 @@ interface Props {
 
 /**
  * Slim TopBar — Codex-style single-row header: macOS traffic-light
- * gutter, sidebar toggle, identity (repo / session title), status.
+ * gutter, sidebar toggle, identity (project / session title), status.
  * Model selector, permission mode, and context token count live in
  * the composer (see ChatView). Settings access is in the sidebar's
  * pinned bottom row.
@@ -52,8 +52,8 @@ interface Props {
  * is the agent doing right now" affordance.
  */
 function TopBarImpl({
-  repoName,
-  repoPath,
+  projectName,
+  projectPath,
   sessionId,
   sessionTitle,
   busy,
@@ -92,16 +92,16 @@ function TopBarImpl({
           </IconButton>
         </span>
         <span className="shrink-0 font-semibold">code-shell</span>
-        {repoName && <span className="shrink-0 text-muted-foreground">/</span>}
-        {repoName && <span className="shrink-0 text-foreground">{repoName}</span>}
-        {repoName && sessionId && repoPath && (
+        {projectName && <span className="shrink-0 text-muted-foreground">/</span>}
+        {projectName && <span className="shrink-0 text-foreground">{projectName}</span>}
+        {projectName && sessionId && projectPath && (
           <span className="shrink-0" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
             <WorkspaceIndicator
               sessionId={sessionId}
-              repoPath={repoPath}
-              repoName={repoName}
+              projectPath={projectPath}
+              projectName={projectName}
               sessionBusy={busy}
-              includeRepoNameInLabel={false}
+              includeProjectNameInLabel={false}
             />
           </span>
         )}
@@ -242,7 +242,7 @@ function StatusBadge({
  * streaming at ~10ms a pop (the dominant non-MessageStream cost behind the
  * freeze: perf showed commit.TopBar ≈ commit.App ≫ commit.MessageStream).
  *
- * The visible header only depends on busy/repoName/sessionTitle/sidebar; the
+ * The visible header only depends on busy/projectName/sessionTitle/sidebar; the
  * `activity`/`tasks` objects feed only the hover popover. So we re-render only
  * when a *meaningful* field changes — the activity's current tool / in-flight /
  * count, or the task list identity — not on every token that merely grows the
@@ -251,8 +251,8 @@ function StatusBadge({
  */
 function topBarPropsEqual(a: Props, b: Props): boolean {
   return (
-    a.repoName === b.repoName &&
-    a.repoPath === b.repoPath &&
+    a.projectName === b.projectName &&
+    a.projectPath === b.projectPath &&
     a.sessionId === b.sessionId &&
     a.sessionTitle === b.sessionTitle &&
     a.busy === b.busy &&

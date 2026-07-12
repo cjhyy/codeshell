@@ -18,6 +18,7 @@
     "paths": {
       "react/compiler-runtime": ["packages/tui/src/react-compiler-runtime-shim.ts"],
       "@cjhyy/code-shell-core": ["packages/core/src/index.ts"],
+      "@cjhyy/code-shell-core/internal": ["packages/core/src/index.internal.ts"],
       "@cjhyy/code-shell-core/*": ["packages/core/src/*"],
       "@cjhyy/code-shell-tui": ["packages/tui/src/index.ts"],
       "@cjhyy/code-shell-tui/*": ["packages/tui/src/*"]
@@ -25,11 +26,7 @@
     "jsx": "react-jsx",
     "types": ["node", "bun-types"]
   },
-  "include": [
-    "packages/core/src/**/*.ts",
-    "packages/tui/src/**/*.ts",
-    "packages/tui/src/**/*.tsx"
-  ],
+  "include": ["packages/core/src/**/*.ts", "packages/tui/src/**/*.ts", "packages/tui/src/**/*.tsx"],
   "exclude": [
     "node_modules",
     "dist",

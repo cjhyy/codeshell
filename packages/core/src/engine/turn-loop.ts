@@ -15,9 +15,11 @@ import type {
   TokenUsage,
   ContextUsageAnchor,
 } from "../types.js";
-import type { TurnState } from "./turn-state.js";
 import type { SteerItem } from "./steer-queue.js";
-import { initialTurnState, newTurnId } from "./turn-state.js";
+import type { DirectionEnvelope } from "../tool-system/builtin/agent-notifications.js";
+import { buildAgentDirectionMessage } from "../tool-system/builtin/agent-notifications.js";
+import type { LiveChildState } from "../tool-system/builtin/agent-registry.js";
+import { newTurnId } from "./turn-state.js";
 import { ModelFacade, type ModelCallRecordingOptions } from "./model-facade.js";
 import { formatFriendlyError } from "./friendly-error.js";
 import { ToolExecutor } from "../tool-system/executor.js";
@@ -31,7 +33,7 @@ import { wrapHookMessages } from "../hooks/inject.js";
 import { Transcript } from "../session/transcript.js";
 import { ContextLimitError } from "../exceptions.js";
 import { logger } from "../logging/logger.js";
-import { checkTokenBudget, type BudgetTracker, createBudgetTracker } from "./token-budget.js";
+import { checkTokenBudget, createBudgetTracker } from "./token-budget.js";
 import { StreamingToolQueue } from "./streaming-tool-queue.js";
 import {
   downgradeImagePayloadsInHistory,
@@ -151,6 +153,8 @@ export interface TurnLoopDeps {
    * Returns the updated counters so usage_update can carry both metric scopes.
    */
   recordCumulativeUsage?: (usage: TokenUsage) => CumulativeUsageCounters;
+  /** Child-only billed usage delta for structured progress accounting. */
+  onAgentUsage?: (usage: TokenUsage) => void;
   /**
    * Lightweight per-session prompt-cache diagnostic, owned by Engine because it
    * needs memory across TurnLoop instances.
@@ -167,6 +171,12 @@ export interface TurnLoopDeps {
    * tests (turn loop tolerates undefined).
    */
   consumeSteer?: (source?: "normal_step" | "finalize_backfill") => SteerItem[];
+  /** Child-only mailbox drain; separate from user steering for provenance/consent. */
+  consumeAgentDirections?: () => DirectionEnvelope[];
+  /** Exposes semantic model/tool boundaries to the bound live child supervisor. */
+  onAgentControlState?: (state: LiveChildState) => void;
+  /** Confirms that specific envelopes reached messages + persisted provenance. */
+  onAgentDirectionsDelivered?: (envelopeIds: string[]) => void;
   /** Restore steer items whose model-facing content could not be prepared. */
   restoreSteer?: (items: SteerItem[]) => void;
   /** Build model-facing content for a queued steer item, including attachments. */
@@ -584,6 +594,7 @@ export class TurnLoop {
     recordCacheDiagnostics = true,
   ): void {
     this.currentTurnUsage = addTokenUsage(this.currentTurnUsage, usage);
+    this.deps.onAgentUsage?.(usage);
     this.currentCumulativeUsage = this.deps.recordCumulativeUsage?.(usage);
     if (recordCacheDiagnostics && this.deps.recordCacheReadDiagnostics) {
       this.deps.recordCacheReadDiagnostics({
@@ -740,8 +751,7 @@ export class TurnLoop {
         // loop-top user-push pattern as turnStartInjection / turn-limit warnings
         // below. Push to transcript too so they persist + survive resume.
         await this.consumeQueuedSteer(messages, "normal_step");
-
-        const state = initialTurnState(this.turnCount);
+        this.deps.onAgentControlState?.("model");
 
         // Per-turn correlation ID. Every log written through `tlog` (or any
         // child derived from it) is stamped with `turn` + `turnId`, so
@@ -1285,6 +1295,7 @@ export class TurnLoop {
         }
 
         // Tool execution phase
+        this.deps.onAgentControlState?.("tool-batch");
         tlog.info("turn.tool_use", {
           cat: "turn",
           tools: response.toolCalls.map((t) => t.toolName),
@@ -1562,6 +1573,7 @@ export class TurnLoop {
     });
 
     await this.consumeQueuedSteer(messages, "finalize_backfill");
+    this.deps.onAgentControlState?.("model");
     const hasPendingSensitiveToolResults = this.sensitiveToolResultRedactions.size > 0;
     messages = this.prepareMessagesForModel(messages);
     if (hasPendingSensitiveToolResults) {
@@ -1734,8 +1746,9 @@ export class TurnLoop {
     messages: Message[],
     source: "normal_step" | "finalize_backfill",
   ): Promise<boolean> {
+    const directionConsumed = await this.consumeQueuedAgentDirections(messages, source);
     const steered = this.deps.consumeSteer?.(source) ?? [];
-    let consumed = false;
+    let consumed = directionConsumed;
     for (let index = 0; index < steered.length; index++) {
       const item = steered[index]!;
       const { id, text, clientMessageId } = item;
@@ -1777,6 +1790,43 @@ export class TurnLoop {
       this.config.onStream?.({ type: "steer_injected", text, id });
     }
     return consumed;
+  }
+
+  private async consumeQueuedAgentDirections(
+    messages: Message[],
+    source: "normal_step" | "finalize_backfill",
+  ): Promise<boolean> {
+    if (!this.deps.consumeAgentDirections) return false;
+    this.deps.onAgentControlState?.("safe-point");
+    const directions = this.deps.consumeAgentDirections();
+    if (directions.length === 0) return false;
+    directions.sort((left, right) => left.sequence - right.sequence);
+    const content = buildAgentDirectionMessage(directions);
+    const envelopeIds = directions.map((item) => item.id);
+    const correlationIds = directions
+      .map((item) => item.correlationId)
+      .filter((value): value is string => value !== undefined);
+    const hook = await this.emitHook("agent_direction_submit", {
+      source: "agent-direction",
+      authority: "agent",
+      prompt: directions.map((item) => item.payload.prompt).join("\n"),
+      envelopeIds,
+      correlationIds,
+      safePoint: source,
+    });
+    const message: Message = { role: "user", content };
+    messages.push(message);
+    this.deps.transcript.appendMessage("user", content, {
+      injected: true,
+      authority: "agent",
+      source: "agent-direction",
+      envelopeIds,
+      correlationIds,
+    });
+    this.deps.onAgentDirectionsDelivered?.(envelopeIds);
+    const hookInjection = wrapHookMessages(hook.messages);
+    if (hookInjection) messages.push(hookInjection);
+    return true;
   }
 
   /**

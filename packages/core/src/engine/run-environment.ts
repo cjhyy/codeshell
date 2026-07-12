@@ -1,5 +1,4 @@
 import type { CredentialAccess } from "../credentials/access.js";
-import type { SettingsManager } from "../settings/manager.js";
 import {
   resolveSandboxBackend,
   type SandboxBackend,
@@ -10,7 +9,10 @@ import { sandboxCacheKey } from "./sandbox-cache-key.js";
 import type { EngineRuntime } from "./runtime.js";
 import type { EngineConfig } from "./types.js";
 
-type EnvironmentSettings = Pick<SettingsManager, "get" | "getForScope">;
+type EnvironmentSettings = {
+  get(): unknown;
+  getForScope(scope: "user" | "project", cwd?: string): unknown;
+};
 type SetupScripts = { default?: string; macos?: string; linux?: string; windows?: string };
 
 export interface RunEnvironmentResolverDeps {

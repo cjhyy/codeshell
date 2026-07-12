@@ -160,7 +160,7 @@ describe("runPluginCommandHook → additionalContext becomes messages", () => {
       | { type?: string; code?: string; message?: string }
       | undefined;
     expect(failure?.type).toBe("stdin_error");
-    expect(["EPIPE", "ECONNRESET"]).toContain(failure?.code!);
+    expect(["EPIPE", "ECONNRESET"]).toContain(failure?.code);
     expect(failure?.message).toBeTruthy();
   });
 

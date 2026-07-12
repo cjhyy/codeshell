@@ -23,6 +23,39 @@ export interface TranscriptFlushFailure {
   filePath: string;
 }
 
+export interface ContextEventRange {
+  fromEventId: string;
+  toEventId: string;
+}
+
+export interface SelectedContextRange {
+  events: TranscriptEvent[];
+  messages: Message[];
+  sourceEventCount: number;
+}
+
+export type SummaryAppendMetadata =
+  | { fromTurn: number; toTurn: number; eventCount: number }
+  | {
+      trigger: "context_transfer";
+      sourceRange: {
+        sessionId: string;
+        fromEventId: string;
+        toEventId: string;
+      };
+      sourceEventCount: number;
+      estimatedTokens: number;
+      summaryVersion: number;
+      summaryHash: string;
+    };
+
+const CONTEXT_EVENT_TYPES: ReadonlySet<TranscriptEventType> = new Set([
+  "message",
+  "tool_use",
+  "tool_result",
+  "summary",
+]);
+
 export class Transcript {
   private events: TranscriptEvent[] = [];
   private filePath: string;
@@ -70,7 +103,15 @@ export class Transcript {
   appendMessage(
     role: string,
     content: string | ContentBlock[],
-    opts?: { injected?: boolean; steerId?: string; clientMessageId?: string },
+    opts?: {
+      injected?: boolean;
+      steerId?: string;
+      clientMessageId?: string;
+      authority?: "user" | "agent" | "system" | "policy";
+      source?: "agent-direction";
+      envelopeIds?: string[];
+      correlationIds?: string[];
+    },
   ): TranscriptEvent {
     if (opts?.clientMessageId) {
       const existing = this.findMessageByClientId(opts.clientMessageId);
@@ -89,6 +130,10 @@ export class Transcript {
       ...(opts?.injected ? { injected: true } : {}),
       ...(opts?.steerId ? { steerId: opts.steerId } : {}),
       ...(opts?.clientMessageId ? { clientMessageId: opts.clientMessageId } : {}),
+      ...(opts?.authority ? { authority: opts.authority } : {}),
+      ...(opts?.source ? { source: opts.source } : {}),
+      ...(opts?.envelopeIds ? { envelopeIds: opts.envelopeIds } : {}),
+      ...(opts?.correlationIds ? { correlationIds: opts.correlationIds } : {}),
     });
   }
 
@@ -145,14 +190,14 @@ export class Transcript {
     return this.append("turn_stopped", {});
   }
 
-  appendSummary(
-    summary: string,
-    compactedRange: { fromTurn: number; toTurn: number; eventCount: number },
-  ): TranscriptEvent {
+  appendSummary(summary: string, metadata: SummaryAppendMetadata): TranscriptEvent {
+    if ("trigger" in metadata) {
+      return this.append("summary", { summary, ...metadata });
+    }
     return this.append("summary", {
       summary,
       trigger: "auto",
-      compactedRange,
+      compactedRange: metadata,
       preservedSegment: {
         headEventId: this.events[0]?.id,
         tailEventId: this.events[this.events.length - 1]?.id,
@@ -419,6 +464,41 @@ export class Transcript {
     return messages;
   }
 
+  /**
+   * Select one inclusive, stable event-id range and project only LLM-context
+   * events from it. Audit/UI events remain part of sourceEventCount but never
+   * enter the package prompt.
+   */
+  static selectContextRange(
+    events: readonly TranscriptEvent[],
+    range: ContextEventRange,
+  ): SelectedContextRange {
+    const fromMatches = events
+      .map((event, index) => (event.id === range.fromEventId ? index : -1))
+      .filter((index) => index >= 0);
+    const toMatches = events
+      .map((event, index) => (event.id === range.toEventId ? index : -1))
+      .filter((index) => index >= 0);
+    if (fromMatches.length !== 1 || toMatches.length !== 1) {
+      throw new Error("Context range endpoints must each identify exactly one source event");
+    }
+    const fromIndex = fromMatches[0]!;
+    const toIndex = toMatches[0]!;
+    if (fromIndex > toIndex) throw new Error("Context range endpoints are out of order");
+
+    const frozen = structuredClone(events.slice(fromIndex, toIndex + 1));
+    if (frozen[0]?.type === "session_meta" || frozen.at(-1)?.type === "session_meta") {
+      throw new Error("Context range cannot use session metadata as a boundary");
+    }
+    const selected = frozen.filter((event) => CONTEXT_EVENT_TYPES.has(event.type));
+    validateSelectedToolPairs(selected);
+    return {
+      events: selected,
+      messages: Transcript.eventsToMessages(selected) as Message[],
+      sourceEventCount: frozen.length,
+    };
+  }
+
   static loadFromFile(filePath: string): Transcript {
     const transcript = new Transcript(filePath);
     if (!existsSync(filePath)) return transcript;
@@ -443,4 +523,54 @@ export class Transcript {
 
     return transcript;
   }
+}
+
+function validateSelectedToolPairs(events: readonly TranscriptEvent[]): void {
+  const providerUses: string[] = [];
+  const metadataUses: string[] = [];
+  const results: string[] = [];
+
+  for (const event of events) {
+    if (event.type === "message") {
+      const content = event.data.content;
+      if (!Array.isArray(content)) continue;
+      for (const block of content as ContentBlock[]) {
+        if (block.type === "tool_use" && typeof block.id === "string") providerUses.push(block.id);
+      }
+    } else if (event.type === "tool_use") {
+      if (typeof event.data.toolCallId === "string") metadataUses.push(event.data.toolCallId);
+    } else if (event.type === "tool_result") {
+      if (typeof event.data.toolCallId === "string") results.push(event.data.toolCallId);
+    }
+  }
+
+  if (new Set(providerUses).size !== providerUses.length) {
+    throw new Error("Context range contains duplicate provider tool metadata");
+  }
+  if (new Set(metadataUses).size !== metadataUses.length) {
+    throw new Error("Context range contains duplicate tool metadata");
+  }
+  if (new Set(results).size !== results.length) {
+    throw new Error("Context range contains duplicate tool results");
+  }
+  if (
+    providerUses.length !== metadataUses.length ||
+    providerUses.some((id, index) => metadataUses[index] !== id)
+  ) {
+    throw new Error("Context range has orphaned or mismatched tool metadata");
+  }
+
+  const pending = new Set<string>();
+  for (const event of events) {
+    if (event.type === "tool_use") {
+      const id = event.data.toolCallId;
+      if (typeof id === "string") pending.add(id);
+    } else if (event.type === "tool_result") {
+      const id = event.data.toolCallId;
+      if (typeof id !== "string" || !pending.delete(id)) {
+        throw new Error("Context range contains an orphaned or out-of-order tool result");
+      }
+    }
+  }
+  if (pending.size > 0) throw new Error("Context range ends with an unfinished tool round");
 }

@@ -16,7 +16,7 @@ function renderComposer(variant: "main" | "quickChat", permissionMode = "plan") 
       onSend={() => undefined}
       onStop={() => undefined}
       busy={false}
-      activeRepoId={null}
+      activeProjectId={null}
       permissionMode={permissionMode}
       onPermissionChange={() => undefined}
       goalEnabled={false}
@@ -34,10 +34,10 @@ function renderComposer(variant: "main" | "quickChat", permissionMode = "plan") 
       onModelChange={() => undefined}
       contextTokens={1_000}
       contextMax={100_000}
-      repos={[]}
-      onSelectRepo={() => undefined}
-      onAddRepo={() => undefined}
-      activeRepoPath={null}
+      projects={[]}
+      onSelectProject={() => undefined}
+      onAddProject={() => undefined}
+      activeProjectPath={null}
       draft=""
       onDraftChange={() => undefined}
       attachments={[]}

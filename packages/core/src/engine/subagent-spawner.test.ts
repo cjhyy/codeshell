@@ -8,6 +8,7 @@ import {
 } from "./subagent-spawner.js";
 import { RunEnvironmentResolver } from "./run-environment.js";
 import { defaultSandboxConfig } from "../tool-system/sandbox/index.js";
+import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
 
 function parentConfig(): EngineConfig {
   return {
@@ -30,6 +31,195 @@ function parentConfig(): EngineConfig {
 }
 
 describe("subagent spawner", () => {
+  it("interrupts then serially redrives the same child runtime and session", async () => {
+    notificationQueue.reset();
+    let runtimeCreations = 0;
+    let activeRuns = 0;
+    let maxActiveRuns = 0;
+    const tasks: string[] = [];
+    let resolveFirst!: () => void;
+    let firstStarted!: () => void;
+    const firstStartedPromise = new Promise<void>((resolve) => {
+      firstStarted = resolve;
+    });
+    let liveControl:
+      | import("../tool-system/builtin/agent-registry.js").LiveChildControl
+      | undefined;
+    const runtime = {
+      stateListener: undefined as
+        | ((state: import("../tool-system/builtin/agent-registry.js").LiveChildState) => void)
+        | undefined,
+      setAgentControlStateListener(
+        listener:
+          | ((state: import("../tool-system/builtin/agent-registry.js").LiveChildState) => void)
+          | undefined,
+      ) {
+        this.stateListener = listener;
+      },
+      async run(task: string, options: { sessionId?: string; signal?: AbortSignal }) {
+        activeRuns++;
+        maxActiveRuns = Math.max(maxActiveRuns, activeRuns);
+        tasks.push(task);
+        this.stateListener?.("model");
+        if (tasks.length === 1) {
+          firstStarted();
+          await new Promise<void>((resolve) => {
+            resolveFirst = resolve;
+            options.signal?.addEventListener("abort", () => resolve(), { once: true });
+          });
+        }
+        activeRuns--;
+        return {
+          text: tasks.length === 1 ? "aborted" : "redirected",
+          reason: "completed" as const,
+          sessionId: options.sessionId!,
+          turnCount: 1,
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        };
+      },
+    };
+    const spawner = createSubAgentSpawner({
+      parentConfig: parentConfig(),
+      parentSandbox: parentConfig().sandbox!,
+      presetName: "terminal-coding",
+      cwd: "/repo",
+      permissionMode: "acceptEdits",
+      appendParentSubagent: () => {},
+      sessionExists: () => false,
+      childRunner: {
+        createChild() {
+          runtimeCreations++;
+          return runtime;
+        },
+        async runChild() {
+          throw new Error("legacy runner must not be used");
+        },
+      },
+    });
+
+    try {
+      const run = spawner.spawn({
+        agentId: "child-live",
+        description: "live",
+        prompt: "original",
+        maxTurns: 3,
+        signal: new AbortController().signal,
+        runtimeGeneration: 4,
+        bindLiveControl: (control) => {
+          liveControl = control;
+          return true;
+        },
+      });
+      await firstStartedPromise;
+      const ack = liveControl!.routeDirection({
+        kind: "direction",
+        from: { sessionId: "parent", authority: "agent" },
+        to: { sessionId: "child-live", agentId: "child-live", authority: "agent" },
+        delivery: "interrupt-and-redrive",
+        runtimeGeneration: 4,
+        payload: { prompt: "new direction", origin: "agent_send_input" },
+      });
+      expect((await ack).status).toBe("interrupted");
+      const result = await run;
+
+      expect(result.text).toBe("redirected");
+      expect(runtimeCreations).toBe(1);
+      expect(maxActiveRuns).toBe(1);
+      expect(tasks).toHaveLength(2);
+      expect(tasks[1]).toContain("new direction");
+      expect(result.sessionId).toBe("child-live");
+    } finally {
+      resolveFirst?.();
+      notificationQueue.reset();
+    }
+  });
+
+  it("closes intake only after consuming a direction that won the completion race", async () => {
+    notificationQueue.reset();
+    const tasks: string[] = [];
+    let liveControl:
+      | import("../tool-system/builtin/agent-registry.js").LiveChildControl
+      | undefined;
+    let tailAck: Promise<unknown> | undefined;
+    let intakeClosed = false;
+    const runtime = {
+      stateListener: undefined as
+        | ((state: import("../tool-system/builtin/agent-registry.js").LiveChildState) => void)
+        | undefined,
+      setAgentControlStateListener(
+        listener:
+          | ((state: import("../tool-system/builtin/agent-registry.js").LiveChildState) => void)
+          | undefined,
+      ) {
+        this.stateListener = listener;
+      },
+      async run(task: string, options: { sessionId?: string }) {
+        tasks.push(task);
+        this.stateListener?.("model");
+        if (tasks.length === 1) {
+          queueMicrotask(() => {
+            tailAck = Promise.resolve(
+              liveControl!.routeDirection({
+                kind: "direction",
+                from: { sessionId: "parent", authority: "agent" },
+                to: { sessionId: "tail-child", agentId: "tail-child", authority: "agent" },
+                delivery: "next-safe-point",
+                runtimeGeneration: 3,
+                payload: { prompt: "tail correction", origin: "agent_send_input" },
+              }),
+            );
+          });
+        }
+        return {
+          text: tasks.length === 1 ? "first final" : "corrected final",
+          reason: "completed" as const,
+          sessionId: options.sessionId!,
+          turnCount: 1,
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        };
+      },
+    };
+    const spawner = createSubAgentSpawner({
+      parentConfig: parentConfig(),
+      parentSandbox: parentConfig().sandbox!,
+      presetName: "terminal-coding",
+      cwd: "/repo",
+      permissionMode: "acceptEdits",
+      appendParentSubagent: () => {},
+      sessionExists: () => false,
+      childRunner: {
+        createChild: () => runtime,
+        async runChild() {
+          throw new Error("legacy runner must not be used");
+        },
+      },
+    });
+
+    const result = await spawner.spawn({
+      agentId: "tail-child",
+      description: "tail race",
+      prompt: "original",
+      maxTurns: 3,
+      signal: new AbortController().signal,
+      runtimeGeneration: 3,
+      bindLiveControl: (control) => {
+        liveControl = control;
+        return true;
+      },
+      closeLiveControl: () => {
+        intakeClosed = true;
+        return true;
+      },
+    });
+
+    await tailAck;
+    expect(intakeClosed).toBe(true);
+    expect(result.text).toBe("corrected final");
+    expect(tasks).toHaveLength(2);
+    expect(tasks[1]).toContain("tail correction");
+    expect(notificationQueue.getSnapshot("tail-child")).toHaveLength(0);
+  });
+
   it.each([
     ["seatbelt", "off"],
     ["seatbelt", "auto"],
@@ -168,9 +358,7 @@ describe("subagent spawner", () => {
       settings: () => ({
         get: () => ({}),
         getForScope: (scope: string) =>
-          scope === "project"
-            ? { sandbox: { mode: "seatbelt", network: "deny" } }
-            : {},
+          scope === "project" ? { sandbox: { mode: "seatbelt", network: "deny" } } : {},
       }),
       credentialAccess: { envExposures: () => ({}) },
     });
@@ -245,6 +433,46 @@ describe("subagent spawner", () => {
     stream({ type: "context_compact", strategy: "summary", before: 10, after: 2 });
     stream({ type: "text_delta", text: "hello" });
     expect(seen).toEqual([{ type: "text_delta", text: "hello", agentId: "child-1" }]);
+  });
+
+  it("feeds raw child events to progress reduction before UI filtering", async () => {
+    const progressEvents: string[] = [];
+    const uiEvents: string[] = [];
+    const spawner = createSubAgentSpawner({
+      parentConfig: parentConfig(),
+      parentSandbox: parentConfig().sandbox!,
+      presetName: "terminal-coding",
+      cwd: "/repo",
+      permissionMode: "acceptEdits",
+      appendParentSubagent: () => {},
+      sessionExists: () => false,
+      parentStream: (event) => {
+        uiEvents.push(event.type);
+      },
+      childRunner: {
+        async runChild(_config, _task, options) {
+          options.onStream?.({ type: "stream_request_start", turnNumber: 1 });
+          options.onStream?.({ type: "usage_update", promptTokens: 42 });
+          return {
+            text: "done",
+            sessionId: options.sessionId!,
+            usage: { promptTokens: 42, completionTokens: 1, totalTokens: 43 },
+          };
+        },
+      },
+    });
+    await spawner.spawn({
+      agentId: "progress-child",
+      description: "progress",
+      prompt: "work",
+      maxTurns: 2,
+      signal: new AbortController().signal,
+      onProgressEvent: (event) => {
+        progressEvents.push(event.type);
+      },
+    });
+    expect(progressEvents).toEqual(["stream_request_start", "usage_update"]);
+    expect(uiEvents).toEqual(["stream_request_start"]);
   });
 
   it("always strips nested-agent tools from inherited and explicit scopes", () => {

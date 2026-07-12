@@ -1386,6 +1386,8 @@ export class PermissionClassifier {
    * tests and ad-hoc usages still write log lines.
    */
   private log: typeof rootPermLogger = rootPermLogger;
+  private approvalStateListener?: (waiting: boolean, toolName: string) => void;
+  private activeApprovalCount = 0;
 
   constructor(
     private rules: PermissionRule[],
@@ -1395,6 +1397,12 @@ export class PermissionClassifier {
 
   setLogger(log: typeof rootPermLogger): void {
     this.log = log;
+  }
+
+  setApprovalStateListener(
+    listener: ((waiting: boolean, toolName: string) => void) | undefined,
+  ): void {
+    this.approvalStateListener = listener;
   }
 
   /** Replace mode + backend in place so live tool execution sees the change. */
@@ -1493,6 +1501,8 @@ export class PermissionClassifier {
       riskLevel,
     });
     let result: ApprovalResult;
+    this.activeApprovalCount++;
+    this.approvalStateListener?.(true, toolName);
     try {
       const baseDescription = this.describeToolCall(toolName, args);
       const description = reason ? `${baseDescription}\n\nReason:\n${reason}` : baseDescription;
@@ -1506,6 +1516,9 @@ export class PermissionClassifier {
     } catch (err) {
       span.fail(err, { tool: toolName });
       throw err;
+    } finally {
+      this.activeApprovalCount = Math.max(0, this.activeApprovalCount - 1);
+      if (this.activeApprovalCount === 0) this.approvalStateListener?.(false, toolName);
     }
 
     if (result.approved) {

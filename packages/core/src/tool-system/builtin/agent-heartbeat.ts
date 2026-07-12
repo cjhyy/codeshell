@@ -18,7 +18,8 @@
 
 import type { StreamEvent } from "../../types.js";
 import { asyncAgentRegistry } from "./agent-registry.js";
-import { agentNotificationBus } from "./agent-notifications.js";
+import { notificationQueue } from "./agent-notifications.js";
+import { initialAgentProgress } from "./agent-progress.js";
 
 /** Default 30s — user-chosen. Stale threshold downstream is 3× (90s). */
 export const DEFAULT_HEARTBEAT_INTERVAL_MS = 30_000;
@@ -26,14 +27,14 @@ export const DEFAULT_HEARTBEAT_INTERVAL_MS = 30_000;
 export interface AgentHeartbeatConfig {
   intervalMs?: number;
   /** Sink for each heartbeat event (server forwards to the client). */
-  publish: (sessionId: string, event: StreamEvent) => void;
+  publish?: (sessionId: string, event: StreamEvent) => void;
   /** Injectable clock for tests. */
   now?: () => number;
 }
 
 export class AgentHeartbeatPinger {
   private readonly intervalMs: number;
-  private readonly publish: (sessionId: string, event: StreamEvent) => void;
+  private readonly publish?: (sessionId: string, event: StreamEvent) => void;
   private readonly now: () => number;
   private timer: ReturnType<typeof setInterval> | null = null;
 
@@ -72,18 +73,33 @@ export class AgentHeartbeatPinger {
     }
 
     const bySession = new Map<string, string[]>();
+    const ts = this.now();
     for (const e of running) {
       // Background agents always carry their spawning sessionId; skip any
       // legacy/ad-hoc entry without one (can't address a heartbeat to nobody).
       if (!e.sessionId) continue;
+      if (!this.publish) {
+        notificationQueue.enqueue({
+          kind: "progress",
+          from: {
+            sessionId: e.childSessionId ?? e.agentId,
+            agentId: e.agentId,
+            authority: "agent",
+          },
+          to: { sessionId: e.sessionId, authority: "agent" },
+          delivery: "observe-only",
+          runtimeGeneration: e.runtimeGeneration,
+          payload: e.progress ?? initialAgentProgress(ts),
+        });
+        continue;
+      }
       const list = bySession.get(e.sessionId);
       if (list) list.push(e.agentId);
       else bySession.set(e.sessionId, [e.agentId]);
     }
 
-    const ts = this.now();
     for (const [sessionId, agentIds] of bySession) {
-      this.publish(sessionId, { type: "agent_heartbeat", agentIds, ts });
+      this.publish?.(sessionId, { type: "agent_heartbeat", agentIds, ts });
     }
   }
 }
@@ -94,9 +110,7 @@ export class AgentHeartbeatPinger {
  * event to the client). `ensureRunning()` is called when an agent backgrounds;
  * the pinger self-stops once no agent is running, so a fresh handoff re-arms it.
  */
-export const agentHeartbeatPinger = new AgentHeartbeatPinger({
-  publish: (sessionId, event) => agentNotificationBus.publish(sessionId, event),
-});
+export const agentHeartbeatPinger = new AgentHeartbeatPinger({});
 
 /** Start the shared pinger if not already ticking (idempotent). Call when an
  *  agent enters the background. */

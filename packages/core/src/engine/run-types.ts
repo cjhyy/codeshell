@@ -1,8 +1,9 @@
-import type { StreamCallback } from "../types.js";
+import type { StreamCallback, TokenUsage } from "../types.js";
 import type { InputAttachmentMeta } from "../protocol/types.js";
 import type { ApprovalRouter } from "../tool-system/permission.js";
 import type { GoalConfig } from "./goal.js";
 import type { EngineConfig, EngineResult } from "./types.js";
+import type { LiveChildState } from "../tool-system/builtin/agent-registry.js";
 
 export type RunBehaviorMode = "quickChatRestricted";
 
@@ -28,9 +29,35 @@ export interface EngineRunOptions {
   attachments?: InputAttachmentMeta[];
   /** Named per-run behavior profile supplied by interactive product surfaces. */
   behaviorMode?: RunBehaviorMode;
+  /** Trusted metadata for an interrupt redrive initiated by agent direction. */
+  agentDirection?: {
+    envelopeIds: string[];
+    correlationIds: string[];
+  };
+  /** Trusted child writer generation used to fence mailbox drains. */
+  runtimeGeneration?: number;
+  /** Trusted runtime-only progress events; never model/tool input. */
+  onAgentProgress?: (event: AgentRuntimeProgressEvent) => void;
+}
+
+export type AgentRuntimeProgressEvent =
+  | {
+      type: "phase";
+      phase: "starting" | "model" | "tool" | "waiting-permission" | "compacting" | "finalizing";
+      toolName?: string;
+    }
+  | { type: "usage"; usage: TokenUsage };
+
+export interface ChildEngineRuntime {
+  run(task: string, options?: EngineRunOptions): Promise<EngineResult>;
+  setAgentControlStateListener(listener: ((state: LiveChildState) => void) | undefined): void;
+  setAgentDirectionsDeliveredListener?(
+    listener: ((envelopeIds: string[]) => void) | undefined,
+  ): void;
 }
 
 export interface ChildEngineRunner {
+  createChild?(config: EngineConfig): ChildEngineRuntime;
   runChild(
     config: EngineConfig,
     task: string,

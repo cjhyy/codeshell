@@ -133,6 +133,14 @@ export interface ContextBoundaryMessage {
   strategy: "micro" | "summary" | "window" | "snip" | "emergency" | "compacted";
   before: number;
   after: number;
+  contextTransfer?: {
+    summary: string;
+    sourceSessionId: string;
+    fromEventId: string;
+    toEventId: string;
+    sourceEventCount: number;
+    estimatedTokens: number;
+  };
 }
 
 export interface SystemMessage {
@@ -970,6 +978,11 @@ export function applyStreamEvent(
     }
 
     case "context_compact": {
+      const contextTransfer = (
+        event as typeof event & {
+          contextTransfer?: ContextBoundaryMessage["contextTransfer"];
+        }
+      ).contextTransfer;
       return {
         ...state,
         messages: [
@@ -980,6 +993,7 @@ export function applyStreamEvent(
             strategy: event.strategy,
             before: event.before,
             after: event.after,
+            ...(contextTransfer ? { contextTransfer } : {}),
           },
         ],
       };

@@ -179,7 +179,7 @@ export async function grepTool(args: Record<string, unknown>, ctx?: ToolContext)
           ctx?.signal,
         );
       }
-      throw new Error(`Error in search: ${(grepErr as Error).message}`);
+      throw new Error(`Error in search: ${(grepErr as Error).message}`, { cause: grepErr });
     }
   }
 }
@@ -305,7 +305,7 @@ async function runNodeGrep(
   try {
     regex = new RegExp(pattern, caseInsensitive ? "i" : "");
   } catch (err) {
-    throw new Error(`Error in search: ${(err as Error).message}`);
+    throw new Error(`Error in search: ${(err as Error).message}`, { cause: err });
   }
 
   const matches: string[] = [];

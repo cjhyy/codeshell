@@ -28,7 +28,7 @@ import {
 } from "./steer-queue.js";
 import { RunEnvironmentResolver } from "./run-environment.js";
 import { BUILTIN_TOOL_GUARDS, type BuiltinToolFn } from "../tool-system/builtin/index.js";
-import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
+import { asyncAgentRegistry, type LiveChildState } from "../tool-system/builtin/agent-registry.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
 import {
   notificationQueue,
@@ -56,7 +56,11 @@ import { patchOrphanedToolUses } from "./patch-orphaned-tools.js";
 import { runShellHook, shellHookMatches } from "../hooks/shell-runner.js";
 import { ContextManager, type CompactStrategy } from "../context/manager.js";
 import {
+  CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS,
+  buildContextPackagePromptFromSerialized,
   estimateTokens,
+  groupMessagesByApiRound,
+  serializeContextPackageMessages,
   clampContextRatios as clampContextRatiosImpl,
 } from "../context/compaction.js";
 import { PLAN_MODE_ALLOWED_TOOLS } from "../tool-system/plan-mode-allowlist.js";
@@ -67,6 +71,7 @@ import {
   sessionsRoot,
   type ForkSessionOptions,
   type ForkSessionResult,
+  type SummaryForkOptions,
   type SessionBundle,
 } from "../session/session-manager.js";
 import { ModelFacade } from "./model-facade.js";
@@ -108,7 +113,7 @@ import { buildRunUserMessageContent, prepareRunImageInput } from "./run-image-in
 import { QUICK_CHAT_RESTRICTED_SYSTEM_PROMPT, type EngineRunOptions } from "./run-types.js";
 import { createSubAgentSpawner } from "./subagent-spawner.js";
 import { stripInjectedContextMessages } from "./injected-context-cache.js";
-import { AuxiliaryPipeline } from "./auxiliary-pipeline.js";
+import { AuxiliaryPipeline, sameLlmIdentity } from "./auxiliary-pipeline.js";
 import { PermissionController } from "./permission-controller.js";
 import { join } from "node:path";
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
@@ -347,6 +352,8 @@ export class Engine {
    * processes; session-level locking/CAS for those cases is a separate finding.
    */
   private runInProgress = false;
+  private agentControlStateListener?: (state: LiveChildState) => void;
+  private agentDirectionsDeliveredListener?: (envelopeIds: string[]) => void;
   /** Permission update requested while runInProgress. Applied in run() finally. */
 
   /** Public accessor so UI/clients can read the resolved per-model window. */
@@ -355,8 +362,15 @@ export class Engine {
   }
 
   private resolveMaxContextTokens(): number {
-    const modelEntry = this.modelPool.get();
-    return modelEntry?.maxContextTokens ?? this.config.maxContextTokens ?? 200_000;
+    const modelEntry = this.modelPool
+      .list()
+      .find((entry) => sameLlmIdentity(this.modelPool.toLLMConfig(entry), this.config.llm));
+    return (
+      this.config.llm.maxContextTokens ??
+      modelEntry?.maxContextTokens ??
+      this.config.maxContextTokens ??
+      200_000
+    );
   }
 
   /**
@@ -741,6 +755,17 @@ export class Engine {
     this.config.askUser = fn;
   }
 
+  /** Internal child-runtime seam used by the single-writer supervisor. */
+  setAgentControlStateListener(listener: ((state: LiveChildState) => void) | undefined): void {
+    this.agentControlStateListener = listener;
+  }
+
+  setAgentDirectionsDeliveredListener(
+    listener: ((envelopeIds: string[]) => void) | undefined,
+  ): void {
+    this.agentDirectionsDeliveredListener = listener;
+  }
+
   /**
    * Inject the browser automation bridge after construction (same chicken-and-egg
    * as setAskUser: the desktop host builds the bridge — which drives a webview —
@@ -889,6 +914,146 @@ export class Engine {
 
   forkSession(sourceSessionId: string, options?: ForkSessionOptions): ForkSessionResult {
     return this.sessionManager.fork(sourceSessionId, options);
+  }
+
+  selectContextPackage(
+    sourceSessionId: string,
+    range: { fromEventId: string; toEventId: string },
+  ): ReturnType<SessionManager["selectContextPackage"]> {
+    return this.sessionManager.selectContextPackage(sourceSessionId, range);
+  }
+
+  createSummaryFork(sourceSessionId: string, options: SummaryForkOptions): ForkSessionResult {
+    return this.sessionManager.createSummaryFork(sourceSessionId, options);
+  }
+
+  /** Summarize a selected transcript package using the configured aux tier. */
+  async summarizeContextPackage(
+    messages: Message[],
+    signal?: AbortSignal,
+    sourceSessionId?: string,
+  ): Promise<{ summary: string; estimatedTokens: number }> {
+    if (messages.length === 0) throw new Error("Cannot summarize an empty context package");
+    const serializedSelection = serializeContextPackageMessages(messages);
+    if (!serializedSelection.hasSummarizableContent) {
+      throw new Error(
+        "Cannot summarize an image-only context package without textual or tool facts",
+      );
+    }
+    if (sourceSessionId && this.config.costStore) {
+      const persistedCost = this.sessionManager.resume(sourceSessionId).state.costState;
+      if (persistedCost) this.config.costStore.restore(persistedCost);
+    }
+    const primaryClient = await createLLMClient(this.config.llm, this.config.clientDefaults);
+    const resolvedAux = await this.auxiliaryPipeline.resolveAuxClientWithMetadata(
+      primaryClient,
+      this.resolveMaxContextTokens(),
+    );
+    const client = resolvedAux.client;
+    const systemPrompt =
+      "You package selected conversation context. Be concise, factual, and complete.";
+    const fitsAuxWindow = (conversation: string, priorSummary?: string): boolean => {
+      const prompt = buildContextPackagePromptFromSerialized(conversation, priorSummary);
+      const requestTokens = estimateTokens([
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt },
+      ]);
+      return requestTokens + CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS <= resolvedAux.maxContextTokens;
+    };
+    if (!fitsAuxWindow("x")) {
+      throw new Error(
+        `Auxiliary model context window (${resolvedAux.maxContextTokens}) is too small for the context package template and output reserve`,
+      );
+    }
+
+    // Preserve complete API rounds whenever they fit. If one round alone is
+    // larger than the aux window, split its lossless serialized form and feed
+    // every fragment through the same rolling nine-section merge.
+    const pending = groupMessagesByApiRound(messages).map(
+      (group) => serializeContextPackageMessages(group).text,
+    );
+    let summary: string | undefined;
+    while (pending.length > 0) {
+      let conversation = "";
+      while (pending.length > 0) {
+        const next = pending[0]!;
+        const candidate = conversation ? `${conversation}\n${next}` : next;
+        if (fitsAuxWindow(candidate, summary)) {
+          conversation = candidate;
+          pending.shift();
+          continue;
+        }
+        if (conversation) break;
+
+        let low = 1;
+        let high = next.length;
+        let fitLength = 0;
+        while (low <= high) {
+          const middle = Math.floor((low + high) / 2);
+          if (fitsAuxWindow(next.slice(0, middle), summary)) {
+            fitLength = middle;
+            low = middle + 1;
+          } else {
+            high = middle - 1;
+          }
+        }
+        if (fitLength === 0) {
+          throw new Error(
+            `Auxiliary model context window (${resolvedAux.maxContextTokens}) cannot fit the rolling context package prompt`,
+          );
+        }
+        conversation = next.slice(0, fitLength);
+        const remainder = next.slice(fitLength);
+        if (remainder) pending[0] = remainder;
+        else pending.shift();
+        break;
+      }
+      const response = await client.createMessage({
+        systemPrompt,
+        messages: [
+          {
+            role: "user",
+            content: buildContextPackagePromptFromSerialized(conversation, summary),
+          },
+        ],
+        tools: [],
+        maxTokens: CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS,
+        billingEnabled: true,
+        requestVisible: false,
+        reasoning: { mode: "off" },
+        signal,
+      });
+      if (response.usage && sourceSessionId) {
+        this.sessionManager.recordAuxiliaryUsage(
+          sourceSessionId,
+          response.usage,
+          this.config.costStore?.serialize() as Record<string, unknown> | undefined,
+        );
+      }
+      summary = response.text.trim();
+      if (!summary) throw new Error("Context package summary was empty");
+    }
+    return {
+      summary: summary!,
+      estimatedTokens: estimateTokens([{ role: "user", content: summary! }]),
+    };
+  }
+
+  /** Restore a cold Engine's configured model from persisted source state without resetting usage. */
+  restoreSessionModel(sessionId: string): void {
+    const state = this.sessionManager.resume(sessionId).state;
+    if (this.config.llm.model === state.model && this.config.llm.provider === state.provider)
+      return;
+    const entry =
+      this.modelPool
+        .list()
+        .find(
+          (candidate) => candidate.model === state.model && candidate.provider === state.provider,
+        ) ?? this.modelPool.list().find((candidate) => candidate.model === state.model);
+    if (!entry) {
+      throw new Error(`Persisted source model is no longer configured: ${state.model}`);
+    }
+    this.config = { ...this.config, llm: this.modelPool.toLLMConfig(entry) };
   }
 
   /**
@@ -1045,7 +1210,9 @@ export class Engine {
         session.transcript.appendSubagent(agentId, undefined, description);
       },
       sessionExists: (sessionId) => this.sessionManager.exists(sessionId),
+      getSessionParentId: (sessionId) => this.sessionManager.readParentSessionId(sessionId),
       childRunner: {
+        createChild: (config) => new Engine(config),
         runChild: async (config, childTask, childOptions) => {
           const child = new Engine(config);
           return child.run(childTask, childOptions);
@@ -1205,7 +1372,18 @@ export class Engine {
       session.transcript.appendMessage("user", userMessageContent, {
         injected: options?.injected === true,
         clientMessageId: options?.clientMessageId,
+        ...(options?.agentDirection
+          ? {
+              authority: "agent" as const,
+              source: "agent-direction" as const,
+              envelopeIds: options.agentDirection.envelopeIds,
+              correlationIds: options.agentDirection.correlationIds,
+            }
+          : {}),
       });
+      if (options?.agentDirection) {
+        this.agentDirectionsDeliveredListener?.(options.agentDirection.envelopeIds);
+      }
       // Flush "active" status to disk immediately. resume() set it in memory
       // (session-manager.ts), but without this write the on-disk state.json
       // still shows the previous run's terminal reason — so any external
@@ -1228,8 +1406,20 @@ export class Engine {
       if (parsedTask.hasImages) freshImageMessage = userMsg;
       messages = [userMsg];
       session.transcript.appendMessage("user", userMessageContent, {
+        injected: options?.injected === true,
         clientMessageId: options?.clientMessageId,
+        ...(options?.agentDirection
+          ? {
+              authority: "agent" as const,
+              source: "agent-direction" as const,
+              envelopeIds: options.agentDirection.envelopeIds,
+              correlationIds: options.agentDirection.correlationIds,
+            }
+          : {}),
       });
+      if (options?.agentDirection) {
+        this.agentDirectionsDeliveredListener?.(options.agentDirection.envelopeIds);
+      }
       // Save first user message as session summary — text only. The summary
       // shows up in the session list; "[image]" is more informative than a
       // truncated `[object Object]` when the prompt was purely visual.
@@ -1298,7 +1488,7 @@ export class Engine {
       // reminders that should accompany each user turn (e.g. "skills
       // available — check before acting").
       const promptSubmitHook = await this.emitHook(
-        "user_prompt_submit",
+        options?.agentDirection ? "agent_direction_submit" : "user_prompt_submit",
         {
           sessionId: session.state.sessionId,
           // Pass the text-only portion. Handlers reading the prompt for keyword
@@ -1308,6 +1498,14 @@ export class Engine {
           // exfiltration risk a curious user-installed shell hook shouldn't carry.
           prompt: taskText,
           resumed: resumedFromDisk,
+          ...(options?.agentDirection
+            ? {
+                source: "agent-direction",
+                authority: "agent",
+                envelopeIds: options.agentDirection.envelopeIds,
+                correlationIds: options.agentDirection.correlationIds,
+              }
+            : {}),
         },
         options?.signal,
       );
@@ -1419,6 +1617,13 @@ export class Engine {
       );
 
       const permission = new PermissionClassifier(defaultRules, mode, approvalBackend);
+      permission.setApprovalStateListener((waiting, toolName) => {
+        options?.onAgentProgress?.({
+          type: "phase",
+          phase: waiting ? "waiting-permission" : "tool",
+          toolName,
+        });
+      });
       this.permissionController.attach(permission, toolCtx.approvalRouter);
 
       // If the backend is the interactive one, wire it for project-scope
@@ -1671,6 +1876,9 @@ export class Engine {
       // Auto-compaction runs inside TurnLoop.manageAsync(), after the loop has
       // initialized its run-scoped Goal tracker. The closure is wired before
       // construction but cannot execute until turnLoop.run() starts.
+      // Assigned after the callbacks that close over it are constructed; they
+      // cannot run until turnLoop.run(), so definite assignment is intentional.
+      // eslint-disable-next-line prefer-const
       let turnLoop!: TurnLoop;
       let autoCompactionGoalTermination: ReturnType<TurnLoop["recordGoalJudgeUsage"]>;
       let externalRunUsage: TokenUsage = {
@@ -1946,6 +2154,31 @@ export class Engine {
             return info;
           },
           consumeSteer: (source) => this.consumeSteer(sid, source),
+          consumeAgentDirections:
+            this.config.isSubAgent === true
+              ? () =>
+                  notificationQueue.drain(
+                    sid,
+                    (envelope) =>
+                      envelope.kind === "direction" &&
+                      envelope.runtimeGeneration === options?.runtimeGeneration,
+                  ) as import("../tool-system/builtin/agent-notifications.js").DirectionEnvelope[]
+              : undefined,
+          onAgentControlState:
+            this.config.isSubAgent === true
+              ? (state) => {
+                  this.agentControlStateListener?.(state);
+                  if (state === "model") {
+                    options?.onAgentProgress?.({ type: "phase", phase: "model" });
+                  } else if (state === "tool-batch") {
+                    options?.onAgentProgress?.({ type: "phase", phase: "tool" });
+                  }
+                }
+              : undefined,
+          onAgentDirectionsDelivered:
+            this.config.isSubAgent === true
+              ? (envelopeIds) => this.agentDirectionsDeliveredListener?.(envelopeIds)
+              : undefined,
           restoreSteer: (items) => this.restoreSteer(sid, items),
           buildSteerUserMessageContent: async (item) => {
             const steerImageInput = await prepareRunImageInput({
@@ -1973,6 +2206,7 @@ export class Engine {
             toolCtx.originClientMessageId = clientMessageId;
           },
           recordCumulativeUsage,
+          onAgentUsage: (usage) => options?.onAgentProgress?.({ type: "usage", usage }),
           recordCacheReadDiagnostics: (sample) => {
             this.recordCacheReadDiagnostics(sid, sample);
           },
@@ -2297,6 +2531,7 @@ export class Engine {
           ...failure,
         });
       }
+      options?.onAgentProgress?.({ type: "phase", phase: "finalizing" });
       session.state.turnCount = turnLoop.currentTurn;
       session.state.status = result.reason;
       if (result.reason === "completed") {

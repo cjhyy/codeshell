@@ -29,6 +29,7 @@ function makeSpawner(opts?: {
       return { text, sessionId: req.resumeSessionId ?? req.agentId };
     },
     sessionExists: (sid: string) => existing.has(sid),
+    getSessionParentId: (sid: string) => (existing.has(sid) ? "s-test" : undefined),
     parentStream: () => {},
     describe: () => ({ cwd: "/tmp", permissionMode: "acceptEdits" }),
   };
@@ -113,6 +114,45 @@ describe("AgentSendInput — subagent continuation via transcript replay", () =>
     expect(reqs[reqs.length - 1]!.resumeSessionId).toBe(agentId);
   });
 
+  it("rejects terminal continuation from a session other than the recorded direct parent", async () => {
+    const { spawner, reqs } = makeSpawner({ existing: new Set(["agent-terminal"]) });
+    asyncAgentRegistry.register({
+      agentId: "agent-terminal",
+      description: "done",
+      sessionId: "real-parent",
+      childSessionId: "agent-terminal",
+      status: "completed",
+      startedAt: 0,
+      abort: () => {},
+    });
+    const out = await agentSendInputTool(
+      { agent_id: "agent-terminal", prompt: "steal continuation" },
+      makeCtx(spawner, "other-parent"),
+    );
+    expect(out).toMatch(/direct parent|not in this session/i);
+    expect(reqs).toHaveLength(0);
+  });
+
+  it("checks persisted parent metadata before cross-restart continuation", async () => {
+    const existing = new Set(["persisted-child"]);
+    const { spawner, reqs } = makeSpawner({ existing });
+    spawner.getSessionParentId = () => "real-parent";
+    const denied = await agentSendInputTool(
+      { agent_id: "persisted-child", prompt: "continue" },
+      makeCtx(spawner, "other-parent"),
+    );
+    expect(denied).toMatch(/direct parent|not in this session/i);
+    expect(reqs).toHaveLength(0);
+
+    spawner.getSessionParentId = () => undefined;
+    const unknown = await agentSendInputTool(
+      { agent_id: "persisted-child", prompt: "continue" },
+      makeCtx(spawner, "real-parent"),
+    );
+    expect(unknown).toMatch(/cannot verify|direct parent/i);
+    expect(reqs).toHaveLength(0);
+  });
+
   it("returns a clear error for an unknown agent_id (no crash)", async () => {
     const { spawner } = makeSpawner();
     const ctx = makeCtx(spawner);
@@ -176,6 +216,7 @@ describe("AgentSendInput — subagent continuation via transcript replay", () =>
       agentId: "agent-x",
       agentType: "reviewer",
       description: "review",
+      sessionId: "s-test",
       childSessionId: "agent-x",
       status: "completed",
       startedAt: 0,
@@ -196,16 +237,15 @@ describe("AgentSendInput — subagent continuation via transcript replay", () =>
     expect(last.mcpAllowlist).toEqual([]);
   });
 
-  it("refuses to resume an agent that is still running (concurrent-write guard)", async () => {
-    // If the agent is still running (e.g. it auto-moved to the background and
-    // hasn't finished), resuming would build a SECOND child Engine that resumes
-    // the SAME on-disk session and appends to the SAME transcript concurrently —
-    // sub-agents have no per-session `active` lock, so the two writers interleave
-    // and can corrupt the child transcript. Reject instead of spawning.
+  it("rejects a running legacy entry without live control and never resumes it", async () => {
+    // Phase 0 opens running targets only through a bound live control + writer
+    // lease. A legacy running entry without that handle must fail closed and,
+    // crucially, still must not create a second child Engine.
     const { spawner, reqs } = makeSpawner({ existing: new Set(["agent-run"]) });
     asyncAgentRegistry.register({
       agentId: "agent-run",
       description: "long task",
+      sessionId: "s-test",
       childSessionId: "agent-run",
       status: "running",
       startedAt: 0,
@@ -213,7 +253,7 @@ describe("AgentSendInput — subagent continuation via transcript replay", () =>
     });
     const ctx = makeCtx(spawner);
     const out = await agentSendInputTool({ agent_id: "agent-run", prompt: "more" }, ctx);
-    expect(out).toMatch(/still running/i);
+    expect(JSON.parse(out)).toMatchObject({ status: "rejected", reason: "target-not-ready" });
     // Crucially, it must NOT have spawned a concurrent resume.
     expect(reqs).toHaveLength(0);
   });

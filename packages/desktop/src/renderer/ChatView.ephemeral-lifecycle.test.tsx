@@ -113,7 +113,7 @@ async function mountChatView(options: {
         onSend={(text) => options.onSend?.(text)}
         onStop={() => undefined}
         busy={false}
-        activeRepoId={null}
+        activeProjectId={null}
         permissionMode="plan"
         onPermissionChange={() => undefined}
         goalEnabled={false}
@@ -129,10 +129,10 @@ async function mountChatView(options: {
         activeModelKey="vision-model"
         onModelChange={() => undefined}
         contextTokens={0}
-        repos={[]}
-        onSelectRepo={() => undefined}
-        onAddRepo={() => undefined}
-        activeRepoPath="/tmp/project"
+        projects={[]}
+        onSelectProject={() => undefined}
+        onAddProject={() => undefined}
+        activeProjectPath="/tmp/project"
         draft={draft}
         onDraftChange={updateDraft}
         attachments={attachments}
