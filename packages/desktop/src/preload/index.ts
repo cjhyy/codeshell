@@ -377,6 +377,7 @@ contextBridge.exposeInMainWorld("codeshell", {
       browserPartition?: string;
       permissionMode?: string;
       planMode?: boolean;
+      behaviorMode?: "quickChatRestricted";
       clientMessageId?: string;
       attachments?: InputAttachmentMeta[];
     } & Record<string, unknown>,

@@ -282,6 +282,8 @@ interface QuickChatPanelHostProps {
   state: MessagesReducerState;
   busy: boolean;
   draft: string;
+  permissionMode: PermissionMode;
+  onPermissionChange: (bucket: string, mode: PermissionMode) => void;
   onEnsureSession: (ownerBucket: string, tabId: string, cwd: string | null) => void;
   onRetry: (session: QuickChatSessionRef) => void;
   onUseBlank: (session: QuickChatSessionRef) => void;
@@ -306,6 +308,8 @@ function QuickChatPanelHost({
   state,
   busy,
   draft,
+  permissionMode,
+  onPermissionChange,
   onEnsureSession,
   onRetry,
   onUseBlank,
@@ -344,6 +348,8 @@ function QuickChatPanelHost({
       contextMode={session.contextMode}
       sourceTitle={session.sourceTitle}
       draft={draft}
+      permissionMode={permissionMode}
+      onPermissionChange={(mode) => onPermissionChange(session.bucket, mode)}
       onDraftChange={(text) => onDraftChange(session.bucket, text)}
       onSend={(text) => onSend(session, text)}
       onStop={() => onStop(session.bucket)}
@@ -2491,7 +2497,7 @@ function App() {
     const bucket = session.bucket;
     const engineSessionId = session.sessionId;
     const clientMessageId = newQueuedId();
-    const sendPermissionMode = permissionOverrides[bucket] ?? defaultPermissionMode;
+    const sendPermissionMode = permissionOverrides[bucket] ?? "plan";
     const sendModelKey = modelOverrides[bucket] ?? defaultActiveModelKey;
     const cwd = session.cwd ?? noRepoCwdRef.current ?? undefined;
     const opts: {
@@ -2500,6 +2506,7 @@ function App() {
       bucket: string;
       browserPartition: string;
       permissionMode?: ReturnType<typeof toCorePermissionMode>;
+      behaviorMode?: "quickChatRestricted";
       clientMessageId: string;
     } = {
       sessionId: engineSessionId,
@@ -2510,6 +2517,9 @@ function App() {
     if (cwd) opts.cwd = cwd;
     if (sendPermissionMode !== null) {
       opts.permissionMode = toCorePermissionMode(sendPermissionMode);
+    }
+    if (sendPermissionMode === "plan") {
+      opts.behaviorMode = "quickChatRestricted";
     }
 
     dispatch({
@@ -3166,11 +3176,7 @@ function App() {
               ? current
               : { ...current, [bucket]: current[session.ownerBucket] },
           );
-          setPermissionOverrides((current) =>
-            current[session.ownerBucket] === undefined
-              ? current
-              : { ...current, [bucket]: current[session.ownerBucket] },
-          );
+          setPermissionOverrides((current) => ({ ...current, [bucket]: "plan" }));
           updateQuickChatCreation(key, nonce, (current) => ({ ...current, status: "ready" }));
           return;
         }
@@ -3204,11 +3210,7 @@ function App() {
             ? current
             : { ...current, [bucket]: current[session.ownerBucket] },
         );
-        setPermissionOverrides((current) =>
-          current[session.ownerBucket] === undefined
-            ? current
-            : { ...current, [bucket]: current[session.ownerBucket] },
-        );
+        setPermissionOverrides((current) => ({ ...current, [bucket]: "plan" }));
         updateQuickChatCreation(key, nonce, (current) => ({
           ...current,
           cwd: result.workspace.root,
@@ -3289,6 +3291,10 @@ function App() {
       };
       quickChatSessionsRef.current = { ...quickChatSessionsRef.current, [session.key]: next };
       setQuickChatSessions(quickChatSessionsRef.current);
+      setPermissionOverrides((current) => {
+        const { [session.bucket]: _oldMode, ...rest } = current;
+        return { ...rest, [bucket]: "plan" };
+      });
       engineToBucketRef.current.delete(session.sessionId);
       dispatch({ type: "evict", bucket: session.bucket });
       void window.codeshell
@@ -3308,6 +3314,10 @@ function App() {
       }
       return { ...prev, [bucket]: text };
     });
+  }, []);
+
+  const setQuickChatPermission = useCallback((bucket: string, mode: PermissionMode) => {
+    setPermissionOverrides((current) => ({ ...current, [bucket]: mode }));
   }, []);
 
   useEffect(() => {
@@ -3344,6 +3354,17 @@ function App() {
     quickChatSessionsRef.current = nextQuickChatSessions;
     setQuickChatSessions(nextQuickChatSessions);
     setQuickChatDrafts((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const [, session] of stale) {
+        if (session.bucket in next) {
+          delete next[session.bucket];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+    setPermissionOverrides((prev) => {
       let changed = false;
       const next = { ...prev };
       for (const [, session] of stale) {
@@ -4420,6 +4441,9 @@ function App() {
                       ? approvalForBucket(quickSession.bucket)
                       : null;
                     const quickCwd = cwd ?? noRepoCwdRef.current;
+                    const quickPermissionMode = quickSession
+                      ? (permissionOverrides[quickSession.bucket] ?? "plan")
+                      : "plan";
                     return (
                       <QuickChatPanelHost
                         ownerBucket={ownerBucket}
@@ -4429,6 +4453,8 @@ function App() {
                         state={quickState}
                         busy={quickBusy}
                         draft={quickSession ? (quickChatDrafts[quickSession.bucket] ?? "") : ""}
+                        permissionMode={quickPermissionMode}
+                        onPermissionChange={setQuickChatPermission}
                         onEnsureSession={ensureQuickChatSession}
                         onRetry={(session) => restartQuickChatSession(session, "full")}
                         onUseBlank={(session) => restartQuickChatSession(session, "blank")}

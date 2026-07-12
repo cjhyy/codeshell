@@ -88,6 +88,9 @@ function runInputError(params: RunParams): string | null {
   if (params.task.trim().length === 0 && !hasAttachment) {
     return "task or a valid attachment is required";
   }
+  if (params.behaviorMode !== undefined && params.behaviorMode !== "quickChatRestricted") {
+    return `invalid behavior mode: ${String(params.behaviorMode)}`;
+  }
   return null;
 }
 
@@ -785,6 +788,7 @@ export class AgentServer {
           typeof params.clientMessageId === "string" ? params.clientMessageId : undefined,
         permissionMode: params.permissionMode,
         planMode: params.planMode,
+        behaviorMode: params.behaviorMode,
         approvalRouter: this.approvalRouter,
       });
       this.notify(Methods.RunAccepted, { requestId: req.id, sessionId: sid });
@@ -915,6 +919,9 @@ export class AgentServer {
           (params.goal != null && typeof params.goal === "object")
             ? (params.goal as string | import("../engine/goal.js").GoalConfig)
             : undefined,
+        permissionMode: params.permissionMode,
+        planMode: params.planMode,
+        behaviorMode: params.behaviorMode,
       });
 
       const runResult: RunResult = {

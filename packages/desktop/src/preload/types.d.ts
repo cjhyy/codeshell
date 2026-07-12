@@ -550,6 +550,7 @@ export interface CodeshellApi {
       clientMessageId?: string;
       attachments?: InputAttachmentMeta[];
       planMode?: boolean;
+      behaviorMode?: "quickChatRestricted";
       /**
        * Goal mode: when set, the engine runs loop-until-done — on each
        * natural completion a GoalStopHook judges whether this goal is met

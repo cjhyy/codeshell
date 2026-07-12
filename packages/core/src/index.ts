@@ -61,6 +61,7 @@ export {
 
 export { Engine, loadAgentDefinitionsForCwd } from "./engine/engine.js";
 export type { EngineConfig, EngineHookConfig, EngineResult } from "./engine/types.js";
+export type { RunBehaviorMode } from "./engine/run-types.js";
 export { resolveLLMConfigForTag } from "./engine/resolve-llm-config.js";
 export { resolveAuxKey } from "./engine/aux-key.js";
 export {

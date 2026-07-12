@@ -92,4 +92,13 @@ describe("saveOverrideMap / loadOverrideMap round-trip", () => {
     expect(loadOverrideMap<Mode>("permission")).toEqual({});
     expect(localStorage.getItem("codeshell.overrides.permission")).toBeNull();
   });
+
+  it("strips ephemeral quick-chat buckets instead of persisting access elevation", () => {
+    saveOverrideMap("permission", {
+      "repoA::s1": "default",
+      "__quick_chat__::qchat-temporary": "bypassPermissions",
+    });
+
+    expect(loadOverrideMap<Mode>("permission")).toEqual({ "repoA::s1": "default" });
+  });
 });

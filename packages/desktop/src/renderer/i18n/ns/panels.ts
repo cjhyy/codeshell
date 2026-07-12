@@ -87,6 +87,7 @@ export const panels = {
         forkFailed: "上下文分叉失败",
         retryFork: "重试分叉",
         useBlank: "改为空白快聊",
+        restrictedAccess: "受限访问",
       },
       files: {
         filterPlaceholder: "筛选文件…",
@@ -304,6 +305,7 @@ export const panels = {
         forkFailed: "Context fork failed",
         retryFork: "Retry fork",
         useBlank: "Use blank chat",
+        restrictedAccess: "Restricted access",
       },
       files: {
         filterPlaceholder: "Filter files…",

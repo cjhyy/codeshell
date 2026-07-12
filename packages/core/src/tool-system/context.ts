@@ -351,6 +351,12 @@ export interface ToolContext {
    */
   disabledBuiltins?: Set<string>;
   /**
+   * Optional run-scoped hard allowlist. Engine uses the same set to filter the
+   * tool definitions shown to the model; ToolExecutor rejects a direct call to
+   * anything outside it so hidden tools cannot be invoked from stale context.
+   */
+  toolAllowlist?: ReadonlySet<string>;
+  /**
    * Per-turn context used by builtin availability guards. Engine.run() uses the
    * same object to hide tools from the model; ToolExecutor reuses it to reject
    * direct calls to tools that are not available in the current runtime state.

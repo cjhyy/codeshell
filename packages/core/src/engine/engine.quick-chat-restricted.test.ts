@@ -112,4 +112,3 @@ describe("Engine quick-chat restricted behavior", () => {
     expect(elevated?.toolNames).toEqual(expect.arrayContaining(["Agent", "Write", "Edit", "Bash"]));
   });
 });
-

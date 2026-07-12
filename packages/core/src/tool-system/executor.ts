@@ -154,6 +154,17 @@ export class ToolExecutor {
         isError: true,
       };
     }
+    // 0. Run-scoped allowlist: visibility filtering alone is not a security
+    // boundary because a model can name a tool remembered from earlier context.
+    // Keep this before hooks/permission/handler dispatch and fail closed.
+    if (this.toolCtx?.toolAllowlist && !this.toolCtx.toolAllowlist.has(call.toolName)) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        error: `Tool ${call.toolName} is not available in this run. Do NOT retry this tool call unless the run's access mode changes.`,
+        isError: true,
+      };
+    }
     // 0. Capability override: a builtin the project marked `off` is HIDDEN from
     // the model's tool list (engine.ts applyBuiltinOverrideVisibility), but the
     // model can still NAME it (hallucination, or a remembered earlier turn). The

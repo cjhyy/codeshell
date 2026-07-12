@@ -2,13 +2,7 @@
  * Engine — the main facade that wires all components together.
  */
 
-import type {
-  ClientDefaults,
-  Message,
-  StreamCallback,
-  TaskInfo,
-  TokenUsage,
-} from "../types.js";
+import type { ClientDefaults, Message, StreamCallback, TaskInfo, TokenUsage } from "../types.js";
 import { createLLMClient } from "../llm/client-factory.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { ToolExecutor } from "../tool-system/executor.js";
@@ -40,10 +34,7 @@ import {
   notificationQueue,
   buildNotificationMessage,
 } from "../tool-system/builtin/agent-notifications.js";
-import {
-  PermissionClassifier,
-  InteractiveApprovalBackend,
-} from "../tool-system/permission.js";
+import { PermissionClassifier, InteractiveApprovalBackend } from "../tool-system/permission.js";
 import { HookRegistry } from "../hooks/registry.js";
 import type { HookEventName, HookResult } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
@@ -113,7 +104,11 @@ import {
 } from "./prompt-cache-diagnostics.js";
 import { EngineRuntime } from "./runtime.js";
 import { buildRunUserMessageContent, prepareRunImageInput } from "./run-image-input.js";
-import type { EngineRunOptions } from "./run-types.js";
+import {
+  QUICK_CHAT_RESTRICTED_SYSTEM_PROMPT,
+  QUICK_CHAT_RESTRICTED_TOOLS,
+  type EngineRunOptions,
+} from "./run-types.js";
 import { createSubAgentSpawner } from "./subagent-spawner.js";
 import { stripInjectedContextMessages } from "./injected-context-cache.js";
 import { AuxiliaryPipeline } from "./auxiliary-pipeline.js";
@@ -924,8 +919,9 @@ export class Engine {
     // Freeze permission context once, before the first await. Per-turn protocol
     // overrides live only for this run; persistent setPermissionMode/setPlanMode
     // calls made while busy are staged separately and cannot mutate this pair.
+    const quickChatRestricted = options?.behaviorMode === "quickChatRestricted";
     let runPermissionMode = options?.permissionMode ?? this.config.permissionMode ?? "acceptEdits";
-    if (options?.planMode === true) {
+    if (quickChatRestricted || options?.planMode === true) {
       runPermissionMode = "plan";
     } else if (options?.planMode === false && runPermissionMode === "plan") {
       runPermissionMode = "acceptEdits";
@@ -1093,6 +1089,7 @@ export class Engine {
       approvalRouter: options?.approvalRouter ?? this.config.approvalRouter,
       permissionMode: runPermissionMode,
       planMode: runPlanMode,
+      toolAllowlist: quickChatRestricted ? QUICK_CHAT_RESTRICTED_TOOLS : undefined,
       subAgentSpawner,
       agentDefinitions: this.getAgentDefinitions(cwd),
       // Stamp the resolved network policy onto the backend the tools see so
@@ -1465,7 +1462,13 @@ export class Engine {
         model: this.config.llm.model,
         preset: this.preset,
         customSystemPrompt: this.config.customSystemPrompt,
-        appendSystemPrompt: this.config.appendSystemPrompt,
+        appendSystemPrompt:
+          [
+            this.config.appendSystemPrompt,
+            quickChatRestricted ? QUICK_CHAT_RESTRICTED_SYSTEM_PROMPT : undefined,
+          ]
+            .filter(Boolean)
+            .join("\n\n") || undefined,
         responseLanguage: this.config.responseLanguage,
         userProfile: this.config.userProfile,
         instructionOptions: { compatFileNames: compatFileNamesFrom(this.config.instructions) },
@@ -1593,6 +1596,7 @@ export class Engine {
           const flag = TOOL_FEATURE_FLAGS.get(t.name);
           return flag ? isFeatureEnabled(featureFlags, flag) : true;
         })
+        .filter((t) => !toolCtx.toolAllowlist || toolCtx.toolAllowlist.has(t.name))
         // Dynamic per-engine bits the static defs can't carry: the Agent tool's
         // agent_type enum + listing, and the image/video provider names. See
         // applyDynamicToolDef — forwarding only the Agent description (dropping

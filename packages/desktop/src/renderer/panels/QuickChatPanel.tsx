@@ -8,6 +8,7 @@ import { ApprovalCard } from "../approvals/ApprovalCard";
 import { useT } from "../i18n/I18nProvider";
 import { MessageSquare, Send, Square } from "../ui/icons";
 import type { QuickChatContextMode, QuickChatCreationStatus } from "../quickChatSession";
+import { PermissionPill, type PermissionMode } from "../chat/PermissionPill";
 
 interface Props {
   sessionId: string;
@@ -21,6 +22,8 @@ interface Props {
   contextMode: QuickChatContextMode;
   sourceTitle?: string;
   draft: string;
+  permissionMode: PermissionMode;
+  onPermissionChange: (mode: PermissionMode) => void;
   onDraftChange: (text: string) => void;
   onSend: (text: string) => void;
   onStop: () => void;
@@ -48,6 +51,8 @@ export function QuickChatPanel({
   contextMode,
   sourceTitle,
   draft,
+  permissionMode,
+  onPermissionChange,
   onDraftChange,
   onSend,
   onStop,
@@ -150,7 +155,13 @@ export function QuickChatPanel({
             }}
             className="max-h-36 min-h-20 resize-none border-0 bg-transparent px-1 py-1 shadow-none focus-visible:ring-0"
           />
-          <div className="mt-2 flex items-center justify-end gap-2">
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <PermissionPill
+              value={permissionMode}
+              onChange={onPermissionChange}
+              disabled={creationStatus !== "ready" || busy}
+              labelKeyOverrides={{ plan: "panels.quickChat.restrictedAccess" }}
+            />
             {busy ? (
               <button
                 type="button"
