@@ -9,6 +9,7 @@ import type { ModelOption } from "./chat/ModelPill";
 
 interface QuickChatPanelProps {
   sessionId: string;
+  creationNonce: string;
   messages: Message[];
   busy: boolean;
   creationStatus: "creating" | "ready" | "error";
@@ -21,7 +22,8 @@ interface QuickChatPanelProps {
   activeModelKey: string | null;
   onPermissionChange: (mode: PermissionMode) => void;
   onModelChange: (option: ModelOption) => void;
-  onDraftChange: (text: string) => void;
+  onDraftChange: (next: React.SetStateAction<string>) => void;
+  onAttachmentsChange: (next: React.SetStateAction<unknown[]>) => void;
   onSend: (
     text: string,
     opts?: { attachments?: Array<Record<string, unknown>>; displayText?: string },
@@ -35,6 +37,7 @@ interface QuickChatPanelProps {
 }
 
 interface ChatProps {
+  variant?: "main" | "quickChat";
   messages: Message[];
   busy: boolean;
   draft: string;
@@ -67,7 +70,23 @@ const panelAreaProps = new Map<string, PanelAreaProps>();
 mock.module("./ChatView", () => ({
   ChatView(props: ChatProps) {
     chatProps = props;
-    return <div data-testid="chat" />;
+    const variant = props.variant ?? "main";
+    return (
+      <div data-testid="chat" data-chat-variant={variant}>
+        <span data-composer-control="model" />
+        <span data-composer-control="voice" />
+        <span data-composer-control="permission">
+          当前对话权限：
+          {props.permissionMode === "plan"
+            ? "受限访问"
+            : props.permissionMode === "bypass"
+              ? "完全访问权限"
+              : "默认权限"}
+        </span>
+        {variant === "main" && <span data-composer-control="goal" />}
+        {variant === "main" && <span data-composer-control="context-usage" />}
+      </div>
+    );
   },
 }));
 
@@ -179,6 +198,7 @@ let approveCalls: unknown[][] = [];
 let forkSessionCalls: Array<Record<string, unknown>> = [];
 let getSessionTranscriptCalls: string[] = [];
 let runCalls: Array<{ prompt: string; opts: Record<string, unknown> }> = [];
+let markAttachmentsSentCalls: Array<Record<string, unknown>> = [];
 
 function restoreGlobalProperty(
   key: "localStorage" | "window",
@@ -259,7 +279,10 @@ function installCodeshellStub(
     },
     noRepoCwd: async () => "/tmp",
     configure: async () => undefined,
-    markAttachmentsSent: async () => undefined,
+    markAttachmentsSent: async (payload: Record<string, unknown>) => {
+      markAttachmentsSentCalls.push(payload);
+      return { ok: true };
+    },
     registerBrowserSessionBucket: () => undefined,
     setGitPrefs: async () => undefined,
     getGitStatus: async () => ({ branch: "main", entries: [], clean: true }),
@@ -458,6 +481,7 @@ afterEach(async () => {
   forkSessionCalls = [];
   getSessionTranscriptCalls = [];
   runCalls = [];
+  markAttachmentsSentCalls = [];
   chatProps = null;
   quickChatProps.clear();
   panelAreaProps.clear();
@@ -503,6 +527,13 @@ describe("App quick-chat integration", () => {
         attachments: [attachment],
       }),
     });
+    expect(markAttachmentsSentCalls).toEqual([
+      expect.objectContaining({
+        sessionId: quick.sessionId,
+        quickChatClaimId: quick.creationNonce,
+        attachments: [attachment],
+      }),
+    ]);
     expect(quickChatProps.get(quick.sessionId)?.messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ text: "describe this\n[image:quick-image.png]" }),
@@ -1045,6 +1076,51 @@ describe("App quick-chat integration", () => {
 
     cleanup.resolve({ deleted: true });
     await flushApp();
+  });
+
+  test("late composer setters cannot restore state after close or replacement", async () => {
+    const ownerBucket = await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-late-composer", kind: "quickChat" }],
+    });
+    const [oldQuick] = currentQuickPanels();
+    const panel = panelAreaProps.get(ownerBucket);
+    if (!oldQuick || !panel) throw new Error("quick-chat composer was not ready");
+    const lateDraft = oldQuick.onDraftChange;
+    const lateAttachments = oldQuick.onAttachmentsChange;
+    const lateModel = oldQuick.onModelChange;
+
+    await act(async () => {
+      panel.setTabs([]);
+      panel.setActiveId(null);
+      await flushMicrotasks();
+    });
+    await flushApp();
+    expect(currentQuickPanels()).toEqual([]);
+
+    await act(async () => {
+      lateDraft("late private transcript");
+      lateAttachments([
+        {
+          id: "late-image",
+          name: "late.png",
+          mime: "image/png",
+          dataUrl: "data:image/png;base64,aA==",
+          size: 1,
+        },
+      ]);
+      lateModel({ key: "late-model", label: "Late", provider: "test" });
+      panel.setTabs([{ id: "quickChat-late-composer", kind: "quickChat" }]);
+      await flushMicrotasks();
+    });
+    await flushApp();
+
+    const [replacement] = currentQuickPanels();
+    if (!replacement) throw new Error("replacement quick chat was not created");
+    expect(replacement.sessionId).not.toBe(oldQuick.sessionId);
+    expect(replacement.draft).toBe("");
+    expect(replacement.attachments).toEqual([]);
+    expect(replacement.activeModelKey).not.toBe("late-model");
   });
 
   test("late approvals and AskUser from a closed quick chat fail closed while parent approval routes normally", async () => {

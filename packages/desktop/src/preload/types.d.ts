@@ -938,6 +938,7 @@ export interface CodeshellApi {
     mime?: string;
     dataUrl: string;
     origin: InputAttachmentOrigin;
+    quickChatClaimId?: string;
   }): Promise<InputAttachmentMeta>;
   cleanupAttachments(payload: {
     cwd: string;
@@ -949,6 +950,7 @@ export interface CodeshellApi {
     cwd: string;
     sessionId: string;
     attachments: InputAttachmentMeta[];
+    quickChatClaimId?: string;
   }): Promise<{ ok: true }>;
   /**
    * Save an image (`data:` URL) to a user-chosen location via a native save

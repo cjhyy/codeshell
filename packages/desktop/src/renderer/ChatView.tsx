@@ -117,7 +117,12 @@ interface Props {
   /** Attach an image to the composer by absolute path (file-panel drag — TODO 2.1). */
   onAttachImagePath?: (absPath: string) => void;
   /** Ensure the current draft has a cwd/sessionId suitable for attachment staging. */
-  onPrepareAttachmentSession?: () => { cwd: string; sessionId: string } | null;
+  onPrepareAttachmentSession?: () => {
+    cwd: string;
+    sessionId: string;
+    /** Ephemeral side-chat generation; main validates it before/after disk IO. */
+    quickChatClaimId?: string;
+  } | null;
   /** Provider-agnostic image clarity; drives renderer-side downscale before send. */
   imageDetail?: ImageDetail;
   pendingApproval?: ApprovalRequestEnvelope | null;
@@ -378,7 +383,9 @@ export function ChatView({
   // append the text to the draft for the user to edit (NOT auto-send). idle →
   // recording → transcribing → idle.
   const [voiceState, setVoiceState] = useState<"idle" | "recording" | "transcribing">("idle");
+  const mountedRef = useRef(true);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   // Whether a transcription provider is configured (or fallback-reachable). When
   // false the mic button is disabled with a "configure in settings" tooltip,
@@ -388,6 +395,34 @@ export function ChatView({
   // the provider's upload size limit. The user can still stop earlier manually.
   const MAX_RECORDING_MS = 120_000; // 2 min
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (maxDurationTimerRef.current) {
+        clearTimeout(maxDurationTimerRef.current);
+        maxDurationTimerRef.current = null;
+      }
+      const recorder = mediaRecorderRef.current;
+      mediaRecorderRef.current = null;
+      if (recorder) {
+        // Detach first: stop() normally fires onstop, which would otherwise
+        // start transcription after the quick-chat surface has disappeared.
+        recorder.onstop = null;
+        recorder.ondataavailable = null;
+        try {
+          if (recorder.state !== "inactive") recorder.stop();
+        } catch {
+          // Best effort: tracks are stopped independently below.
+        }
+      }
+      const stream = mediaStreamRef.current;
+      mediaStreamRef.current = null;
+      stream?.getTracks().forEach((track) => track.stop());
+      audioChunksRef.current = [];
+    };
+  }, []);
 
   // Probe transcription availability on mount + when the project changes, so the
   // mic button reflects whether voice input is usable right now.
@@ -408,18 +443,23 @@ export function ChatView({
 
   const transcribeChunks = useCallback(
     async (blob: Blob, mimeType: string) => {
+      if (!mountedRef.current) return;
       setVoiceState("transcribing");
       try {
         const buf = await blob.arrayBuffer();
+        if (!mountedRef.current) return;
         const res = await window.codeshell.transcribeAudio({
           cwd: activeRepoPath ?? "",
           audio: buf,
           mimeType,
         });
+        if (!mountedRef.current) return;
         if (res.ok) {
           const text = res.text.trim();
           if (text) {
-            setDraft(draft && !/\s$/.test(draft) ? `${draft} ${text}` : `${draft}${text}`);
+            setDraft((current) =>
+              current && !/\s$/.test(current) ? `${current} ${text}` : `${current}${text}`,
+            );
             textareaRef.current?.focus();
           }
         } else if (res.error === "no-audio-provider") {
@@ -428,12 +468,14 @@ export function ChatView({
           toast({ message: t("chat.composer.voiceFailed"), variant: "error" });
         }
       } catch {
-        toast({ message: t("chat.composer.voiceFailed"), variant: "error" });
+        if (mountedRef.current) {
+          toast({ message: t("chat.composer.voiceFailed"), variant: "error" });
+        }
       } finally {
-        setVoiceState("idle");
+        if (mountedRef.current) setVoiceState("idle");
       }
     },
-    [activeRepoPath, draft, setDraft, toast, t],
+    [activeRepoPath, setDraft, toast, t],
   );
 
   const startRecording = useCallback(async () => {
@@ -441,11 +483,17 @@ export function ChatView({
       // macOS gates the mic at the OS level — request access first so the user
       // gets the system prompt (and we surface a clear message if denied).
       const access = await window.codeshell.ensureMicAccess();
+      if (!mountedRef.current) return;
       if (!access.granted) {
         toast({ message: t("chat.composer.voicePermissionDenied"), variant: "error" });
         return;
       }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!mountedRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      mediaStreamRef.current = stream;
       const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
         : "audio/webm";
@@ -456,8 +504,10 @@ export function ChatView({
       };
       mr.onstop = () => {
         stream.getTracks().forEach((tr) => tr.stop()); // release the mic
+        if (mediaStreamRef.current === stream) mediaStreamRef.current = null;
         const blob = new Blob(audioChunksRef.current, { type: mr.mimeType });
         audioChunksRef.current = [];
+        if (!mountedRef.current) return;
         if (blob.size > 0) void transcribeChunks(blob, mr.mimeType);
         else setVoiceState("idle");
       };
@@ -467,10 +517,15 @@ export function ChatView({
       // Cap recording length; auto-stop (→ transcribe what we have).
       if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
       maxDurationTimerRef.current = setTimeout(() => {
+        if (!mountedRef.current) return;
         mediaRecorderRef.current?.stop();
         mediaRecorderRef.current = null;
       }, MAX_RECORDING_MS);
     } catch (err) {
+      const stream = mediaStreamRef.current;
+      mediaStreamRef.current = null;
+      stream?.getTracks().forEach((track) => track.stop());
+      if (!mountedRef.current) return;
       const name = (err as Error)?.name;
       toast({
         message:
@@ -512,14 +567,17 @@ export function ChatView({
   const activeModel = modelOptions.find((o) => o.key === activeModelKey) ?? null;
   const activeSupportsVision = activeModel?.supportsVision === true;
   const slashCommands = useMemo<SlashCommandItem[]>(
-    () => [
-      {
-        name: "/compact",
-        title: t("chat.slash.compactTitle"),
-        description: t("chat.slash.compactDescription"),
-      },
-    ],
-    [t],
+    () =>
+      onCompactCommand
+        ? [
+            {
+              name: "/compact",
+              title: t("chat.slash.compactTitle"),
+              description: t("chat.slash.compactDescription"),
+            },
+          ]
+        : [],
+    [onCompactCommand, t],
   );
   const slashItems = useMemo(() => {
     if (!slash) return [];
@@ -625,7 +683,7 @@ export function ChatView({
 
     if (mention) closeMention();
 
-    const nextSlash = detectSlashCommand(value, caret);
+    const nextSlash = slashCommands.length > 0 ? detectSlashCommand(value, caret) : null;
     if (nextSlash) {
       if (!slash || slash.query !== nextSlash.query) setSlashSelected(0);
       setSlash(nextSlash);
@@ -725,7 +783,8 @@ export function ChatView({
   const executeSlashCommand = (item: SlashCommandItem): void => {
     if (compacting) return;
     if (item.name === "/compact") {
-      onCompactCommand?.();
+      if (!onCompactCommand) return;
+      onCompactCommand();
       setDraft("");
       setInputReferences([]);
       setAttachmentError(null);
@@ -744,7 +803,7 @@ export function ChatView({
     const hasImages = attachments.length > 0;
     const hasAnchors = anchors.length > 0;
     if (!text && !hasImages && !hasAnchors) return;
-    if (text === "/compact" && !hasImages && !hasAnchors) {
+    if (text === "/compact" && !hasImages && !hasAnchors && slashCommands[0]) {
       executeSlashCommand(slashCommands[0]);
       return;
     }
@@ -795,6 +854,7 @@ export function ChatView({
     if (files.length === 0) return;
     setAttachmentError(null);
     const { accepted, errors } = await buildAttachments(files, attachments);
+    if (!mountedRef.current) return;
     if (accepted.length > 0) {
       // Compress before staging so the chip thumbnail and the wire
       // payload share the same bytes — keeps the UI honest about what
@@ -802,6 +862,7 @@ export function ChatView({
       // back to the original if encoding fails (engine policy still
       // gates oversize bytes downstream).
       const compressed = await compressBatch(accepted, imageDetail);
+      if (!mountedRef.current) return;
       const context = onPrepareAttachmentSession?.();
       if (!context) {
         errors.push({
@@ -819,6 +880,7 @@ export function ChatView({
                 mime: att.mime,
                 dataUrl: att.dataUrl,
                 origin,
+                quickChatClaimId: context.quickChatClaimId,
               });
               return {
                 ...att,
@@ -835,8 +897,10 @@ export function ChatView({
               };
             }),
           );
+          if (!mountedRef.current) return;
           setAttachments((cur) => [...cur, ...staged]);
         } catch (e) {
+          if (!mountedRef.current) return;
           errors.push({
             kind: "staging-failed",
             message: t("chat.attachment.stagingFailed", {
@@ -846,7 +910,7 @@ export function ChatView({
         }
       }
     }
-    if (errors.length > 0) {
+    if (mountedRef.current && errors.length > 0) {
       setAttachmentError(errors.map((e) => e.message).join("；"));
     }
   };
@@ -1093,6 +1157,7 @@ export function ChatView({
         (dragOver ? " ring-2 ring-inset ring-primary/40" : "")
       }
       data-mode={isNewChat ? "new" : "active"}
+      data-chat-variant={variant}
       onDragEnter={onChatDragEnter}
       onDragOver={onChatDragOver}
       onDragLeave={onChatDragLeave}

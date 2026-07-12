@@ -120,4 +120,41 @@ describe("QuickChatOwnershipRegistry", () => {
     );
     expect(deleted).toEqual(["qchat-window"]);
   });
+
+  test("defers cleanup until staged and mark-sent operations settle, then removes late disk output", async () => {
+    const baseDir = mkdtempSync(join(tmpdir(), "quick-chat-attachment-race-"));
+    tempDirs.push(baseDir);
+    const sessionId = "qchat-attachment-race";
+    const attachmentDir = join(baseDir, sessionId);
+    const registry = new QuickChatOwnershipRegistry();
+    registry.claim(sessionId, 101, "generation-attachment");
+
+    expect(registry.beginOperation(sessionId, 101, "generation-attachment")).toBe(true);
+    expect(registry.beginOperation(sessionId, 101, "generation-attachment")).toBe(true);
+    expect(
+      await registry.cleanup(sessionId, 101, "generation-attachment", async () => {
+        rmSync(attachmentDir, { recursive: true, force: true });
+      }),
+    ).toEqual({ deleted: false, deferred: true });
+
+    mkdirSync(attachmentDir);
+    writeFileSync(join(attachmentDir, "private.png"), "private side attachment");
+    expect(existsSync(attachmentDir)).toBe(true);
+
+    // The stage operation settles first, but mark-sent is still in flight, so
+    // cleanup remains deferred and the second operation still sees its files.
+    expect(
+      await registry.settleOperation(sessionId, 101, "generation-attachment", async () => {
+        rmSync(attachmentDir, { recursive: true, force: true });
+      }),
+    ).toEqual({ active: false, deleted: false });
+    expect(existsSync(attachmentDir)).toBe(true);
+
+    expect(
+      await registry.settleOperation(sessionId, 101, "generation-attachment", async () => {
+        rmSync(attachmentDir, { recursive: true, force: true });
+      }),
+    ).toEqual({ active: false, deleted: true });
+    expect(existsSync(attachmentDir)).toBe(false);
+  });
 });

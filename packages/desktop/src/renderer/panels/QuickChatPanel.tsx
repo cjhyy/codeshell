@@ -12,7 +12,10 @@ import type { ImageDetail } from "../chat/compress";
 import { ChatView } from "../ChatView";
 
 interface Props {
+  /** Test seam for rendering the real child despite Bun's process-wide module mocks. */
+  chatComponent?: React.ComponentType<React.ComponentProps<typeof ChatView>>;
   sessionId: string;
+  creationNonce: string;
   messages: Message[];
   turnEpoch?: number;
   liveTurnActive?: boolean;
@@ -50,7 +53,9 @@ interface Props {
 }
 
 export function QuickChatPanel({
+  chatComponent: ChatComponent = ChatView,
   sessionId,
+  creationNonce,
   messages,
   turnEpoch,
   liveTurnActive,
@@ -127,7 +132,7 @@ export function QuickChatPanel({
         </div>
       ) : (
         <div className="min-h-0 flex-1">
-          <ChatView
+          <ChatComponent
             variant="quickChat"
             messages={messages}
             turnEpoch={turnEpoch}
@@ -160,7 +165,9 @@ export function QuickChatPanel({
             onDraftChange={onDraftChange}
             attachments={attachments}
             onAttachmentsChange={onAttachmentsChange}
-            onPrepareAttachmentSession={() => (cwd ? { cwd, sessionId } : null)}
+            onPrepareAttachmentSession={() =>
+              cwd ? { cwd, sessionId, quickChatClaimId: creationNonce } : null
+            }
             imageDetail={imageDetail}
           />
         </div>

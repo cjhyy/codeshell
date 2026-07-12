@@ -354,6 +354,7 @@ function QuickChatPanelHost({
   return (
     <QuickChatPanel
       sessionId={session.sessionId}
+      creationNonce={session.creationNonce}
       messages={state.messages}
       turnEpoch={state.turnEpoch}
       liveTurnActive={quickChatLiveTurnActive(state, busy)}
@@ -2570,7 +2571,12 @@ function App() {
     });
     if (cwd && attachments.length > 0) {
       void window.codeshell
-        .markAttachmentsSent({ cwd, sessionId: engineSessionId, attachments })
+        .markAttachmentsSent({
+          cwd,
+          sessionId: engineSessionId,
+          attachments,
+          quickChatClaimId: session.creationNonce,
+        })
         .catch((err) => {
           window.codeshell.log("quick_chat.attachments.mark_sent_failed", {
             bucket,
@@ -3361,6 +3367,11 @@ function App() {
 
   const setQuickChatDraft = useCallback((bucket: string, next: React.SetStateAction<string>) => {
     setQuickChatDrafts((prev) => {
+      if (
+        !Object.values(quickChatSessionsRef.current).some((session) => session.bucket === bucket)
+      ) {
+        return prev;
+      }
       const current = prev[bucket] ?? "";
       const text = typeof next === "function" ? next(current) : next;
       if (prev[bucket] === text) return prev;
@@ -3375,6 +3386,11 @@ function App() {
   const setQuickChatAttachmentState = useCallback(
     (bucket: string, next: React.SetStateAction<ImageAttachment[]>) => {
       setQuickChatAttachments((prev) => {
+        if (
+          !Object.values(quickChatSessionsRef.current).some((session) => session.bucket === bucket)
+        ) {
+          return prev;
+        }
         const current = prev[bucket] ?? EMPTY_ATTACHMENTS;
         const attachments = typeof next === "function" ? next(current) : next;
         if (attachments === current) return prev;
@@ -3395,7 +3411,11 @@ function App() {
   const setQuickChatModel = useCallback((bucket: string, option: ModelOption) => {
     // Side-chat model choice is ephemeral and bucket-local: unlike the main
     // composer, it must not update the global default or any sibling session.
-    setModelOverrides((current) => ({ ...current, [bucket]: option.key }));
+    setModelOverrides((current) =>
+      Object.values(quickChatSessionsRef.current).some((session) => session.bucket === bucket)
+        ? { ...current, [bucket]: option.key }
+        : current,
+    );
   }, []);
 
   useEffect(() => {
