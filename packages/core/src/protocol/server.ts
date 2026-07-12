@@ -26,6 +26,7 @@ import {
   type InjectParams,
   type SteerParams,
   type UnsteerParams,
+  type PendingApprovalMetadata,
   Methods,
   ErrorCodes,
   createResponse,
@@ -61,6 +62,8 @@ import type { ChatSessionManager, EngineConfigSlice } from "./chat-session-manag
 import { assertSafeSessionId, SessionManager } from "../session/session-manager.js";
 import { redactLlmConfig, maskSecretValue } from "./redact.js";
 import { redactSecrets } from "../logging/sanitize-messages.js";
+import { PendingDecisionIndex, safePendingTitle } from "../pet/pending-decision-index.js";
+import type { PendingDecisionStatus } from "../pet/types.js";
 
 type ContextCompactStreamEvent = Extract<StreamEvent, { type: "context_compact" }>;
 
@@ -108,6 +111,23 @@ function toCompactStreamStrategy(strategy: string): ContextCompactStreamEvent["s
   return COMPACT_STREAM_STRATEGIES.has(strategy as ContextCompactStreamEvent["strategy"])
     ? (strategy as ContextCompactStreamEvent["strategy"])
     : "compacted";
+}
+
+const INTERNAL_PENDING_TOOLS = new Set([
+  "__browser_action__",
+  "__credential_action__",
+  "__workspace_action__",
+]);
+
+function safeApprovalToolName(toolName: string): string {
+  const firstLine = toolName.split(/\r?\n/, 1)[0]?.trim() ?? "";
+  if (/(?:sk|api|token|secret)[-_][a-z0-9_-]{6,}/i.test(firstLine)) return "工具";
+  return (
+    firstLine
+      .replace(/[^\p{L}\p{N}_.:@/-]+/gu, " ")
+      .trim()
+      .slice(0, 40) || "工具"
+  );
 }
 
 export interface AgentServerOptions {
@@ -179,6 +199,7 @@ export class AgentServer {
     string,
     ApprovalRouteTarget & { requestId: string }
   >();
+  private readonly pendingDecisionIndex = new PendingDecisionIndex();
   /**
    * Last per-session EngineConfigSlice supplied by agent/run. Kept even after
    * idle eviction so background-completion wakeups can rebuild the ChatSession
@@ -1140,8 +1161,8 @@ export class AgentServer {
         );
         return;
       }
-      const resolve = s.pendingApprovals.get(params.requestId);
-      if (!resolve) {
+      const entry = s.pendingApprovals.get(params.requestId);
+      if (!entry) {
         this.transport.send(
           createErrorResponse(
             req.id,
@@ -1152,12 +1173,19 @@ export class AgentServer {
         return;
       }
       s.pendingApprovals.delete(params.requestId);
+      this.pendingDecisionIndex.transition({
+        sessionId: params.sessionId,
+        requestId: params.requestId,
+        routeGeneration: entry.metadata.routeGeneration,
+        status: "resolved",
+        terminalAt: Date.now(),
+      });
       this.pendingApprovalTargets.delete(params.requestId);
       // Cancel the pending timeout for requests that arm one (browser actions,
       // credential injection, and tool approvals). AskUserQuestion does not use
       // a timeout; this is harmless for those request ids.
       this.clearApprovalTimer(params.requestId);
-      resolve(params.decision);
+      entry.resolve(params.decision);
       this.transport.send(createResponse(req.id, { ok: true }));
       return;
     }
@@ -2462,9 +2490,25 @@ export class AgentServer {
       }
 
       if (session) {
-        session.pendingApprovals.set(requestId, (decision: unknown) => {
-          resolve(decision as ApprovalResult);
-        });
+        const internal = INTERNAL_PENDING_TOOLS.has(request.toolName);
+        const toolName = safeApprovalToolName(request.toolName);
+        this.registerSessionApproval(
+          session,
+          {
+            sessionId,
+            requestId,
+            routeGeneration: effectiveRoute.generation,
+            workerGeneration: 0,
+            kind: internal ? "internal" : "tool_approval",
+            title: internal ? "内部操作等待" : `等待批准 ${toolName}`,
+            toolName,
+            riskLevel: request.riskLevel,
+            createdAt: Date.now(),
+            expiresAt: Date.now() + AgentServer.APPROVAL_TIMEOUT_MS,
+            surfaceable: !internal,
+          },
+          (decision: unknown) => resolve(decision as ApprovalResult),
+        );
       } else {
         this.pendingApprovals.set(requestId, resolve);
       }
@@ -2473,7 +2517,11 @@ export class AgentServer {
       const timer = setTimeout(() => {
         const pending = session?.pendingApprovals ?? this.pendingApprovals;
         if (pending.has(requestId)) {
-          pending.delete(requestId);
+          if (session) {
+            this.takeSessionApproval(session, requestId, "expired");
+          } else {
+            pending.delete(requestId);
+          }
           this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
           resolve({ approved: false, reason: "approval timed out" });
@@ -2517,20 +2565,34 @@ export class AgentServer {
   ): Promise<string> {
     return new Promise((resolve) => {
       const requestId = nanoid(12);
-      session.pendingApprovals.set(requestId, (decision: unknown) => {
-        this.clearApprovalTimer(requestId);
-        const result = decision as ApprovalResult;
-        if (result && typeof result === "object" && "approved" in result) {
-          resolve(
-            result.approved
-              ? (result.answer ?? "")
-              : (result.reason ?? "(user declined to answer)"),
-          );
-        } else {
-          // chatManager approve handler resolves with the raw decision value.
-          resolve(typeof decision === "string" ? decision : "");
-        }
-      });
+      const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);
+      this.registerSessionApproval(
+        session,
+        {
+          sessionId,
+          requestId,
+          routeGeneration: "generation" in routeEnvelope ? routeEnvelope.generation : undefined,
+          workerGeneration: 0,
+          kind: "ask_user",
+          title: safePendingTitle(question),
+          createdAt: Date.now(),
+          surfaceable: true,
+        },
+        (decision: unknown) => {
+          this.clearApprovalTimer(requestId);
+          const result = decision as ApprovalResult;
+          if (result && typeof result === "object" && "approved" in result) {
+            resolve(
+              result.approved
+                ? (result.answer ?? "")
+                : (result.reason ?? "(user declined to answer)"),
+            );
+          } else {
+            // chatManager approve handler resolves with the raw decision value.
+            resolve(typeof decision === "string" ? decision : "");
+          }
+        },
+      );
 
       const args: Record<string, unknown> = { question };
       if (opts?.header !== undefined) args.header = opts.header;
@@ -2539,7 +2601,7 @@ export class AgentServer {
       if (opts?.optionsOnly !== undefined) args.optionsOnly = opts.optionsOnly;
 
       this.notify(Methods.ApprovalRequest, {
-        ...this.approvalRouteEnvelope(sessionId, requestId),
+        ...routeEnvelope,
         request: {
           toolName: "__ask_user__",
           args,
@@ -2564,12 +2626,11 @@ export class AgentServer {
       }
       if (goalActive) {
         const timer = setTimeout(() => {
-          const resolveFn = session.pendingApprovals.get(requestId);
-          if (resolveFn) {
-            session.pendingApprovals.delete(requestId);
+          const entry = this.takeSessionApproval(session, requestId, "expired");
+          if (entry) {
             this.pendingApprovalTargets.delete(requestId);
             this.approvalTimers.delete(requestId);
-            resolveFn("(用户未在限定时间内回答;目标运行中请自行做出合理假设并继续推进。)");
+            entry.resolve("(用户未在限定时间内回答;目标运行中请自行做出合理假设并继续推进。)");
             // Tell every client the ask is resolved (nobody answered) so the
             // stale AskUserQuestion card is dismissed instead of lingering as
             // if still waiting. Reuses the same envelope shape the desktop main
@@ -2622,31 +2683,36 @@ export class AgentServer {
   ): Promise<any> {
     return new Promise((resolve) => {
       const requestId = nanoid(12);
-      session.pendingApprovals.set(requestId, (decision: unknown) => {
-        this.clearApprovalTimer(requestId);
-        // Main replies with { approved:true, answer:<json string> } (reusing the
-        // ApprovalResult shape) or a raw json string. Parse → typed result.
-        let raw: string | undefined;
-        if (decision && typeof decision === "object" && "approved" in decision) {
-          const r = decision as ApprovalResult;
-          raw = r.approved ? r.answer : undefined;
-        } else if (typeof decision === "string") {
-          raw = decision;
-        }
-        if (raw === undefined) {
-          resolve({ ok: false, detail: "browser action declined or unavailable" });
-          return;
-        }
-        try {
-          resolve(JSON.parse(raw));
-        } catch {
-          resolve({ ok: false, detail: "malformed browser action result" });
-        }
-      });
+      const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);
+      this.registerSessionApproval(
+        session,
+        this.internalPendingMetadata(sessionId, requestId, routeEnvelope, "__browser_action__"),
+        (decision: unknown) => {
+          this.clearApprovalTimer(requestId);
+          // Main replies with { approved:true, answer:<json string> } (reusing the
+          // ApprovalResult shape) or a raw json string. Parse → typed result.
+          let raw: string | undefined;
+          if (decision && typeof decision === "object" && "approved" in decision) {
+            const r = decision as ApprovalResult;
+            raw = r.approved ? r.answer : undefined;
+          } else if (typeof decision === "string") {
+            raw = decision;
+          }
+          if (raw === undefined) {
+            resolve({ ok: false, detail: "browser action declined or unavailable" });
+            return;
+          }
+          try {
+            resolve(JSON.parse(raw));
+          } catch {
+            resolve({ ok: false, detail: "malformed browser action result" });
+          }
+        },
+      );
 
       const timer = setTimeout(() => {
         if (session.pendingApprovals.has(requestId)) {
-          session.pendingApprovals.delete(requestId);
+          this.takeSessionApproval(session, requestId, "expired");
           this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
           resolve({ ok: false, detail: "browser action timed out" });
@@ -2655,7 +2721,7 @@ export class AgentServer {
       this.approvalTimers.set(requestId, timer);
 
       this.notify(Methods.ApprovalRequest, {
-        ...this.approvalRouteEnvelope(sessionId, requestId),
+        ...routeEnvelope,
         request: {
           toolName: "__browser_action__",
           args: { action, ...payload },
@@ -2680,29 +2746,34 @@ export class AgentServer {
   ): Promise<{ ok: boolean; count?: number; error?: string }> {
     return new Promise((resolve) => {
       const requestId = nanoid(12);
-      session.pendingApprovals.set(requestId, (decision: unknown) => {
-        this.clearApprovalTimer(requestId);
-        let raw: string | undefined;
-        if (decision && typeof decision === "object" && "approved" in decision) {
-          const r = decision as ApprovalResult;
-          raw = r.approved ? r.answer : undefined;
-        } else if (typeof decision === "string") {
-          raw = decision;
-        }
-        if (raw === undefined) {
-          resolve({ ok: false, error: "credential inject declined or unavailable" });
-          return;
-        }
-        try {
-          resolve(JSON.parse(raw));
-        } catch {
-          resolve({ ok: false, error: "malformed credential inject result" });
-        }
-      });
+      const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);
+      this.registerSessionApproval(
+        session,
+        this.internalPendingMetadata(sessionId, requestId, routeEnvelope, "__credential_action__"),
+        (decision: unknown) => {
+          this.clearApprovalTimer(requestId);
+          let raw: string | undefined;
+          if (decision && typeof decision === "object" && "approved" in decision) {
+            const r = decision as ApprovalResult;
+            raw = r.approved ? r.answer : undefined;
+          } else if (typeof decision === "string") {
+            raw = decision;
+          }
+          if (raw === undefined) {
+            resolve({ ok: false, error: "credential inject declined or unavailable" });
+            return;
+          }
+          try {
+            resolve(JSON.parse(raw));
+          } catch {
+            resolve({ ok: false, error: "malformed credential inject result" });
+          }
+        },
+      );
 
       const timer = setTimeout(() => {
         if (session.pendingApprovals.has(requestId)) {
-          session.pendingApprovals.delete(requestId);
+          this.takeSessionApproval(session, requestId, "expired");
           this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
           resolve({ ok: false, error: "credential inject timed out" });
@@ -2711,7 +2782,7 @@ export class AgentServer {
       this.approvalTimers.set(requestId, timer);
 
       this.notify(Methods.ApprovalRequest, {
-        ...this.approvalRouteEnvelope(sessionId, requestId),
+        ...routeEnvelope,
         request: {
           toolName: "__credential_action__",
           args: { action: "injectCookie", credentialId, credentialScope },
@@ -2738,36 +2809,41 @@ export class AgentServer {
   ): Promise<import("../types.js").SessionWorkspace> {
     return new Promise((resolve, reject) => {
       const requestId = nanoid(12);
-      session.pendingApprovals.set(requestId, (decision: unknown) => {
-        this.clearApprovalTimer(requestId);
-        let raw: string | undefined;
-        if (decision && typeof decision === "object" && "approved" in decision) {
-          const r = decision as ApprovalResult;
-          raw = r.approved ? r.answer : undefined;
-        } else if (typeof decision === "string") {
-          raw = decision;
-        }
-        if (raw === undefined) {
-          reject(new Error("workspace switch declined or unavailable"));
-          return;
-        }
-        try {
-          const parsed = JSON.parse(raw) as
-            | import("../types.js").SessionWorkspace
-            | { ok?: false; error?: string };
-          if ("ok" in parsed && parsed.ok === false) {
-            reject(new Error(parsed.error ?? "workspace switch failed"));
+      const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);
+      this.registerSessionApproval(
+        session,
+        this.internalPendingMetadata(sessionId, requestId, routeEnvelope, "__workspace_action__"),
+        (decision: unknown) => {
+          this.clearApprovalTimer(requestId);
+          let raw: string | undefined;
+          if (decision && typeof decision === "object" && "approved" in decision) {
+            const r = decision as ApprovalResult;
+            raw = r.approved ? r.answer : undefined;
+          } else if (typeof decision === "string") {
+            raw = decision;
+          }
+          if (raw === undefined) {
+            reject(new Error("workspace switch declined or unavailable"));
             return;
           }
-          resolve(parsed as import("../types.js").SessionWorkspace);
-        } catch {
-          reject(new Error("malformed workspace switch result"));
-        }
-      });
+          try {
+            const parsed = JSON.parse(raw) as
+              | import("../types.js").SessionWorkspace
+              | { ok?: false; error?: string };
+            if ("ok" in parsed && parsed.ok === false) {
+              reject(new Error(parsed.error ?? "workspace switch failed"));
+              return;
+            }
+            resolve(parsed as import("../types.js").SessionWorkspace);
+          } catch {
+            reject(new Error("malformed workspace switch result"));
+          }
+        },
+      );
 
       const timer = setTimeout(() => {
         if (session.pendingApprovals.has(requestId)) {
-          session.pendingApprovals.delete(requestId);
+          this.takeSessionApproval(session, requestId, "expired");
           this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
           reject(new Error("workspace switch timed out"));
@@ -2776,7 +2852,7 @@ export class AgentServer {
       this.approvalTimers.set(requestId, timer);
 
       this.notify(Methods.ApprovalRequest, {
-        ...this.approvalRouteEnvelope(sessionId, requestId),
+        ...routeEnvelope,
         request: {
           toolName: "__workspace_action__",
           args: { action: "switch", target },
@@ -2906,6 +2982,59 @@ export class AgentServer {
     }
   }
 
+  /** Resolver-free metadata view for Pet projection and protocol snapshots. */
+  getPendingDecisionSnapshot(): import("../pet/types.js").PendingDecisionProjection[] {
+    return this.pendingDecisionIndex.snapshot();
+  }
+
+  private registerSessionApproval(
+    session: ChatSession,
+    metadata: PendingApprovalMetadata,
+    resolve: (decision: unknown) => void,
+  ): void {
+    session.pendingApprovals.set(metadata.requestId, { resolve, metadata });
+    this.pendingDecisionIndex.created(metadata);
+  }
+
+  private takeSessionApproval(
+    session: ChatSession,
+    requestId: string,
+    status: Exclude<PendingDecisionStatus, "pending">,
+  ): import("./chat-session.js").PendingApprovalEntry | undefined {
+    const entry = session.pendingApprovals.get(requestId);
+    if (!entry) return undefined;
+    session.pendingApprovals.delete(requestId);
+    this.pendingDecisionIndex.transition({
+      sessionId: entry.metadata.sessionId,
+      requestId,
+      routeGeneration: entry.metadata.routeGeneration,
+      status,
+      terminalAt: Date.now(),
+    });
+    return entry;
+  }
+
+  private internalPendingMetadata(
+    sessionId: string,
+    requestId: string,
+    route: ReturnType<AgentServer["approvalRouteEnvelope"]>,
+    toolName: string,
+  ): PendingApprovalMetadata {
+    const createdAt = Date.now();
+    return {
+      sessionId,
+      requestId,
+      routeGeneration: "generation" in route ? route.generation : undefined,
+      workerGeneration: 0,
+      kind: "internal",
+      title: "内部操作等待",
+      toolName,
+      createdAt,
+      expiresAt: createdAt + AgentServer.APPROVAL_TIMEOUT_MS,
+      surfaceable: false,
+    };
+  }
+
   private clearApprovalTimer(requestId: string): void {
     const timer = this.approvalTimers.get(requestId);
     if (timer) {
@@ -2924,12 +3053,20 @@ export class AgentServer {
   private cancelSessionApprovals(
     session: import("./chat-session.js").ChatSession,
     reason = "cancelled",
+    status: Exclude<PendingDecisionStatus, "pending"> = "cancelled",
   ): void {
-    for (const [requestId, resolve] of session.pendingApprovals) {
+    for (const [requestId, entry] of session.pendingApprovals) {
       this.clearApprovalTimer(requestId);
       this.pendingApprovalTargets.delete(requestId);
+      this.pendingDecisionIndex.transition({
+        sessionId: entry.metadata.sessionId,
+        requestId,
+        routeGeneration: entry.metadata.routeGeneration,
+        status,
+        terminalAt: Date.now(),
+      });
       try {
-        resolve({ approved: false, reason });
+        entry.resolve({ approved: false, reason });
       } catch {
         /* a resolver must never break cancel cleanup */
       }
@@ -2941,7 +3078,7 @@ export class AgentServer {
     for (const target of targets) {
       const session = this.chatManager?.get(target.sessionId);
       if (session) {
-        this.cancelSessionApprovals(session, reason);
+        this.cancelSessionApprovals(session, reason, "owner-lost");
         continue;
       }
       for (const [requestId, pending] of this.pendingApprovalTargets) {

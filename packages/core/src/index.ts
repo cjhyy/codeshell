@@ -39,6 +39,7 @@ export type {
   MCPServerConfig,
 } from "./types.js";
 export { SessionIndex } from "./pet/session-index.js";
+export { PendingDecisionIndex, safePendingTitle } from "./pet/pending-decision-index.js";
 export type {
   PetCatalogSession,
   PetLiveSessionState,

@@ -20,6 +20,23 @@ import type {
 } from "../types.js";
 import type { RunBehaviorMode } from "../engine/run-types.js";
 
+export type PendingApprovalKind = "tool_approval" | "ask_user" | "internal";
+
+/** Resolver-free metadata retained beside a pending approval callback. */
+export interface PendingApprovalMetadata {
+  sessionId: string;
+  requestId: string;
+  routeGeneration?: number;
+  workerGeneration: number;
+  kind: PendingApprovalKind;
+  title: string;
+  toolName?: string;
+  riskLevel?: "low" | "medium" | "high";
+  createdAt: number;
+  expiresAt?: number;
+  surfaceable: boolean;
+}
+
 // ─── Envelope ───────────────────────────────────────────────────────
 
 export interface RpcRequest {
