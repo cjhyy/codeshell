@@ -38,6 +38,27 @@ export type {
   Settings,
   MCPServerConfig,
 } from "./types.js";
+export { SessionIndex } from "./pet/session-index.js";
+export type {
+  PetCatalogSession,
+  PetLiveSessionState,
+  PetLiveSessionsSnapshot,
+  PetOwnerId,
+  PetOwnerScopedCatalog,
+  PetProjectionCursor,
+  PetProjectionFreshness,
+  PetProjectionSnapshot,
+  PetSessionPhase,
+  PetSessionProjection,
+  PetSessionRunState,
+  PetSessionStreamEvent,
+  PetTerminalStatus,
+  PetWorkerLifecycleEvent,
+  PetWorkerState,
+  PendingDecisionKind,
+  PendingDecisionProjection,
+  PendingDecisionStatus,
+} from "./pet/types.js";
 
 // ─── Exceptions ──────────────────────────────────────────────────
 
