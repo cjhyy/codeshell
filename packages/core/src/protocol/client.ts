@@ -29,6 +29,8 @@ import {
   isNotification,
   type ApprovalRequestNotification,
   type ApprovalResolvedNotification,
+  type PetProjectionDelta,
+  type PetProjectionSnapshotResult,
 } from "./types.js";
 import type {
   StreamEvent,
@@ -59,6 +61,7 @@ export interface AgentClientEvents {
   ) => void;
   approvalResolved: (event: ApprovalResolvedEvent) => void;
   status: (status: string, message?: string) => void;
+  petProjectionDelta: (delta: PetProjectionDelta) => void;
 }
 
 export interface AgentRunOptions {
@@ -321,6 +324,10 @@ export class AgentClient {
     return this.request(Methods.Query, params) as Promise<QueryResult>;
   }
 
+  async getPetProjectionSnapshot(): Promise<PetProjectionSnapshotResult> {
+    return this.request(Methods.GetPetProjectionSnapshot) as Promise<PetProjectionSnapshotResult>;
+  }
+
   /**
    * Inject context into the session transcript without triggering a LLM turn.
    * Used to make arena results, tool outputs, etc. visible to subsequent LLM calls.
@@ -370,6 +377,14 @@ export class AgentClient {
 
   offStatus(handler: (status: string, message?: string) => void): void {
     this.emitter.off("status", handler);
+  }
+
+  onPetProjectionDelta(handler: (delta: PetProjectionDelta) => void): void {
+    this.emitter.on("petProjectionDelta", handler);
+  }
+
+  offPetProjectionDelta(handler: (delta: PetProjectionDelta) => void): void {
+    this.emitter.off("petProjectionDelta", handler);
   }
 
   /**
@@ -473,6 +488,10 @@ export class AgentClient {
         const status = params.status as string | undefined;
         const message = params.message as string | undefined;
         this.emitter.emit("status", status, message);
+        break;
+      }
+      case Methods.PetProjectionDelta: {
+        this.emitter.emit("petProjectionDelta", params as unknown as PetProjectionDelta);
         break;
       }
     }

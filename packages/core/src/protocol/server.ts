@@ -27,6 +27,8 @@ import {
   type SteerParams,
   type UnsteerParams,
   type PendingApprovalMetadata,
+  type PetProjectionDelta,
+  type PetProjectionSnapshotResult,
   Methods,
   ErrorCodes,
   createResponse,
@@ -63,7 +65,13 @@ import { assertSafeSessionId, SessionManager } from "../session/session-manager.
 import { redactLlmConfig, maskSecretValue } from "./redact.js";
 import { redactSecrets } from "../logging/sanitize-messages.js";
 import { PendingDecisionIndex, safePendingTitle } from "../pet/pending-decision-index.js";
-import type { PendingDecisionStatus } from "../pet/types.js";
+import { SessionIndex } from "../pet/session-index.js";
+import {
+  LOCAL_PET_OWNER,
+  type PendingDecisionProjection,
+  type PendingDecisionStatus,
+  type PetSessionProjection,
+} from "../pet/types.js";
 
 type ContextCompactStreamEvent = Extract<StreamEvent, { type: "context_compact" }>;
 
@@ -200,6 +208,11 @@ export class AgentServer {
     ApprovalRouteTarget & { requestId: string }
   >();
   private readonly pendingDecisionIndex = new PendingDecisionIndex();
+  private readonly petSessionIndex = new SessionIndex();
+  private readonly petCatalog = new Map<string, { sessionId: string; updatedAt: number }>();
+  private petProjectionVersion = 0;
+  private petProjectionDisconnected = false;
+  private petProjectionClosing = false;
   /**
    * Last per-session EngineConfigSlice supplied by agent/run. Kept even after
    * idle eviction so background-completion wakeups can rebuild the ChatSession
@@ -552,6 +565,9 @@ export class AgentServer {
       case Methods.BackgroundWork:
         this.handleBackgroundWork(req);
         break;
+      case Methods.GetPetProjectionSnapshot:
+        this.transport.send(createResponse(req.id, this.buildPetProjectionSnapshot()));
+        break;
       default:
         this.transport.send(
           createErrorResponse(req.id, ErrorCodes.MethodNotFound, `Unknown method: ${req.method}`),
@@ -895,6 +911,7 @@ export class AgentServer {
       return;
     }
     const sid = params.sessionId;
+    this.ensurePetSession(sid, session.lastActivityAt);
     const approvalRegistration = this.approvalRouter.register(sid, this.connectionId);
     if (!approvalRegistration.ok) {
       this.transport.send(
@@ -938,8 +955,10 @@ export class AgentServer {
           (params.goal != null && typeof params.goal === "object")
             ? (params.goal as string | import("../engine/goal.js").GoalConfig)
             : undefined,
-        onStream: (event: StreamEvent) =>
-          this.notify(Methods.StreamEvent, { sessionId: sid, event }),
+        onStream: (event: StreamEvent) => {
+          this.recordPetStreamEvent(sid, event);
+          this.notify(Methods.StreamEvent, { sessionId: sid, event });
+        },
         clientMessageId:
           typeof params.clientMessageId === "string" ? params.clientMessageId : undefined,
         permissionMode: params.permissionMode,
@@ -948,7 +967,9 @@ export class AgentServer {
         approvalRouter: this.approvalRouter,
       });
       this.notify(Methods.RunAccepted, { requestId: req.id, sessionId: sid });
+      this.emitPetSessionUpsert(sid);
       const result = await run;
+      this.emitPetSessionUpsert(sid);
 
       const runResult: RunResult = {
         text: result.text,
@@ -965,6 +986,7 @@ export class AgentServer {
       // drained its sub-agents inside engine.run before returning.
       this.maybeWakeIdleSession(sid);
     } catch (err) {
+      this.emitPetSessionUpsert(sid);
       this.transport.send(
         createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
       );
@@ -1173,13 +1195,7 @@ export class AgentServer {
         return;
       }
       s.pendingApprovals.delete(params.requestId);
-      this.pendingDecisionIndex.transition({
-        sessionId: params.sessionId,
-        requestId: params.requestId,
-        routeGeneration: entry.metadata.routeGeneration,
-        status: "resolved",
-        terminalAt: Date.now(),
-      });
+      this.transitionPendingDecision(entry.metadata, "resolved");
       this.pendingApprovalTargets.delete(params.requestId);
       // Cancel the pending timeout for requests that arm one (browser actions,
       // credential injection, and tool approvals). AskUserQuestion does not use
@@ -1500,6 +1516,8 @@ export class AgentServer {
       }
       this.approvalRouter.release(params.sessionId, this.connectionId, "session closed");
       await this.chatManager.close(params.sessionId);
+      this.petCatalog.delete(params.sessionId);
+      this.emitPetSessionRemove(params.sessionId);
     }
     // Explicit session teardown — reap that session's background shells
     // (design §6 "session 被显式删除 → killSession"). This is the RPC path
@@ -1778,21 +1796,8 @@ export class AgentServer {
       }
       case "sessions": {
         if (this.chatManager) {
-          // Return the ChatSessionManager's live sessions
-          const sessions: Array<{
-            sessionId: string;
-            busy: boolean;
-            queueDepth: number;
-            lastActivityAt: number;
-          }> = [];
-          this.chatManager.forEachSession((s) => {
-            sessions.push({
-              sessionId: s.id,
-              busy: s.isBusy(),
-              queueDepth: s.queueDepth(),
-              lastActivityAt: s.lastActivityAt,
-            });
-          });
+          // Pet projection and the legacy query share this one live-state builder.
+          const { sessions } = this.chatManager.getLiveSessionSnapshot();
           this.transport.send(createResponse(req.id, { type: "sessions", data: sessions }));
         } else if (engine) {
           const sessions = engine.getSessionManager().list();
@@ -2498,7 +2503,7 @@ export class AgentServer {
             sessionId,
             requestId,
             routeGeneration: effectiveRoute.generation,
-            workerGeneration: 0,
+            workerGeneration: this.petWorkerGeneration(),
             kind: internal ? "internal" : "tool_approval",
             title: internal ? "内部操作等待" : `等待批准 ${toolName}`,
             toolName,
@@ -2572,7 +2577,7 @@ export class AgentServer {
           sessionId,
           requestId,
           routeGeneration: "generation" in routeEnvelope ? routeEnvelope.generation : undefined,
-          workerGeneration: 0,
+          workerGeneration: this.petWorkerGeneration(),
           kind: "ask_user",
           title: safePendingTitle(question),
           createdAt: Date.now(),
@@ -2930,6 +2935,8 @@ export class AgentServer {
   // ─── Lifecycle ──────────────────────────────────────────────────
 
   close(): void {
+    this.petProjectionClosing = true;
+    this.emitPetWorkerDisconnected();
     this.disconnect("server closing");
     // Detach the bg-agent bus subscription first so a final flurry of
     // completions during shutdown can't race the `shutdown` status
@@ -2987,13 +2994,201 @@ export class AgentServer {
     return this.pendingDecisionIndex.snapshot();
   }
 
+  private petWorkerGeneration(): number {
+    return this.chatManager?.getLiveSessionSnapshot().generation ?? 0;
+  }
+
+  private ensurePetSession(sessionId: string, updatedAt = Date.now()): void {
+    const previous = this.petCatalog.get(sessionId);
+    this.petCatalog.set(sessionId, {
+      sessionId,
+      updatedAt: Math.max(previous?.updatedAt ?? 0, updatedAt),
+    });
+    this.petSessionIndex.replaceCatalog({
+      owner: LOCAL_PET_OWNER,
+      sessions: [...this.petCatalog.values()],
+      observedAt: updatedAt,
+    });
+  }
+
+  private currentPetSessionProjection(
+    sessionId: string,
+    observedAt: number,
+  ): PetSessionProjection | undefined {
+    const live = this.chatManager
+      ?.getLiveSessionSnapshot()
+      .sessions.find((session) => session.sessionId === sessionId);
+    if (!live) return undefined;
+    this.ensurePetSession(sessionId, live.lastActivityAt);
+    const indexed = this.petSessionIndex.get(sessionId);
+    const pendingDecisionCount = this.pendingDecisionIndex
+      .pendingSnapshot()
+      .filter((entry) => entry.agentSessionId === sessionId).length;
+    const runState = live.busy ? "running" : live.queueDepth > 0 ? "queued" : "idle";
+    return {
+      owner: LOCAL_PET_OWNER,
+      agentSessionId: sessionId,
+      coreSessionId: sessionId,
+      title: indexed?.title,
+      workspaceDisplayName: indexed?.workspaceDisplayName,
+      runState,
+      phase: pendingDecisionCount > 0 ? "waiting-decision" : indexed?.phase,
+      summary:
+        pendingDecisionCount > 0
+          ? pendingDecisionCount === 1
+            ? "等待用户决定"
+            : `等待用户决定（${pendingDecisionCount}）`
+          : (indexed?.summary ?? (runState === "running" ? "运行中" : undefined)),
+      queueDepth: live.queueDepth,
+      lastActivityAt: live.lastActivityAt,
+      pendingDecisionCount,
+      terminal: runState === "idle" ? undefined : indexed?.terminal,
+      freshness: { source: "live-snapshot", observedAt, workerState: "active" },
+    };
+  }
+
+  private buildPetProjectionSnapshot(): PetProjectionSnapshotResult {
+    const observedAt = Date.now();
+    const live = this.chatManager?.getLiveSessionSnapshot();
+    const sessions = (live?.sessions ?? [])
+      .map((session) => this.currentPetSessionProjection(session.sessionId, observedAt))
+      .filter((session): session is PetSessionProjection => session !== undefined)
+      .sort((a, b) => a.agentSessionId.localeCompare(b.agentSessionId));
+    return {
+      snapshotVersion: this.petProjectionVersion,
+      workerGeneration: live?.generation ?? 0,
+      observedAt,
+      sessions,
+      pending: this.pendingDecisionIndex.pendingSnapshot(),
+    };
+  }
+
+  private nextPetProjectionVersion(): number {
+    this.petProjectionVersion += 1;
+    return this.petProjectionVersion;
+  }
+
+  private recordPetStreamEvent(sessionId: string, event: StreamEvent): void {
+    const observedAt = Date.now();
+    this.ensurePetSession(sessionId, observedAt);
+    const version = this.nextPetProjectionVersion();
+    this.petSessionIndex.applyStreamEvent({
+      sessionId,
+      event,
+      generation: this.petWorkerGeneration(),
+      version,
+      observedAt,
+    });
+    const session = this.currentPetSessionProjection(sessionId, observedAt);
+    if (!session) return;
+    this.sendPetProjectionDelta({
+      workerGeneration: this.petWorkerGeneration(),
+      version,
+      observedAt,
+      kind: "session-upsert",
+      session,
+    });
+  }
+
+  private emitPetSessionUpsert(sessionId: string): void {
+    const observedAt = Date.now();
+    const session = this.currentPetSessionProjection(sessionId, observedAt);
+    if (!session) return;
+    this.sendPetProjectionDelta({
+      workerGeneration: this.petWorkerGeneration(),
+      version: this.nextPetProjectionVersion(),
+      observedAt,
+      kind: "session-upsert",
+      session,
+    });
+  }
+
+  private emitPetSessionRemove(sessionId: string): void {
+    const observedAt = Date.now();
+    this.sendPetProjectionDelta({
+      workerGeneration: this.petWorkerGeneration(),
+      version: this.nextPetProjectionVersion(),
+      observedAt,
+      kind: "session-remove",
+      sessionId,
+    });
+  }
+
+  private emitPetPendingUpsert(pending: PendingDecisionProjection): void {
+    const observedAt = Date.now();
+    this.sendPetProjectionDelta({
+      workerGeneration: this.petWorkerGeneration(),
+      version: this.nextPetProjectionVersion(),
+      observedAt,
+      kind: "pending-upsert",
+      pending,
+    });
+  }
+
+  private transitionPendingDecision(
+    metadata: PendingApprovalMetadata,
+    status: Exclude<PendingDecisionStatus, "pending">,
+  ): void {
+    const observedAt = Date.now();
+    if (
+      !this.pendingDecisionIndex.transition({
+        sessionId: metadata.sessionId,
+        requestId: metadata.requestId,
+        routeGeneration: metadata.routeGeneration,
+        status,
+        terminalAt: observedAt,
+      })
+    ) {
+      return;
+    }
+    this.sendPetProjectionDelta({
+      workerGeneration: this.petWorkerGeneration(),
+      version: this.nextPetProjectionVersion(),
+      observedAt,
+      kind: "pending-remove",
+      sessionId: metadata.sessionId,
+      requestId: metadata.requestId,
+      status,
+    });
+  }
+
+  private emitPetWorkerDisconnected(): void {
+    if (this.petProjectionDisconnected) return;
+    this.petProjectionDisconnected = true;
+    const observedAt = Date.now();
+    const version = this.nextPetProjectionVersion();
+    this.petSessionIndex.applyWorkerLifecycle({
+      state: "disconnected",
+      generation: this.petWorkerGeneration(),
+      version,
+      observedAt,
+    });
+    this.sendPetProjectionDelta({
+      workerGeneration: this.petWorkerGeneration(),
+      version,
+      observedAt,
+      kind: "worker-state",
+      state: "disconnected",
+    });
+  }
+
+  private sendPetProjectionDelta(delta: PetProjectionDelta): void {
+    // Socket teardown can resolve a fail-closed approval and finish its run.
+    // Do not write projection tail events to a transport whose owner is gone.
+    if (this.disconnected && !this.petProjectionClosing) return;
+    this.notify(Methods.PetProjectionDelta, delta as unknown as Record<string, unknown>);
+  }
+
   private registerSessionApproval(
     session: ChatSession,
     metadata: PendingApprovalMetadata,
     resolve: (decision: unknown) => void,
   ): void {
     session.pendingApprovals.set(metadata.requestId, { resolve, metadata });
-    this.pendingDecisionIndex.created(metadata);
+    if (this.pendingDecisionIndex.created(metadata)) {
+      const pending = this.pendingDecisionIndex.get(metadata.sessionId, metadata.requestId);
+      if (pending) this.emitPetPendingUpsert(pending);
+    }
   }
 
   private takeSessionApproval(
@@ -3004,13 +3199,7 @@ export class AgentServer {
     const entry = session.pendingApprovals.get(requestId);
     if (!entry) return undefined;
     session.pendingApprovals.delete(requestId);
-    this.pendingDecisionIndex.transition({
-      sessionId: entry.metadata.sessionId,
-      requestId,
-      routeGeneration: entry.metadata.routeGeneration,
-      status,
-      terminalAt: Date.now(),
-    });
+    this.transitionPendingDecision(entry.metadata, status);
     return entry;
   }
 
@@ -3025,7 +3214,7 @@ export class AgentServer {
       sessionId,
       requestId,
       routeGeneration: "generation" in route ? route.generation : undefined,
-      workerGeneration: 0,
+      workerGeneration: this.petWorkerGeneration(),
       kind: "internal",
       title: "内部操作等待",
       toolName,
@@ -3058,13 +3247,7 @@ export class AgentServer {
     for (const [requestId, entry] of session.pendingApprovals) {
       this.clearApprovalTimer(requestId);
       this.pendingApprovalTargets.delete(requestId);
-      this.pendingDecisionIndex.transition({
-        sessionId: entry.metadata.sessionId,
-        requestId,
-        routeGeneration: entry.metadata.routeGeneration,
-        status,
-        terminalAt: Date.now(),
-      });
+      this.transitionPendingDecision(entry.metadata, status);
       try {
         entry.resolve({ approved: false, reason });
       } catch {

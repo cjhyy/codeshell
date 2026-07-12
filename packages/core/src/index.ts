@@ -96,7 +96,10 @@ export type { CostStateStore, CostStateSnapshot } from "./engine/cost-store.js";
 export { EngineRuntime } from "./engine/runtime.js";
 export type { EngineRuntimeOptions } from "./engine/runtime.js";
 export { ChatSessionManager } from "./protocol/chat-session-manager.js";
-export type { ChatSessionManagerOptions } from "./protocol/chat-session-manager.js";
+export type {
+  ChatSessionManagerOptions,
+  LiveChatSessionSnapshot,
+} from "./protocol/chat-session-manager.js";
 
 // ─── LLM ─────────────────────────────────────────────────────────
 
@@ -160,6 +163,8 @@ export {
   type RunResult,
   type ForkSessionParams,
   type ForkSessionResult as ProtocolForkSessionResult,
+  type PetProjectionDelta,
+  type PetProjectionSnapshotResult,
 } from "./protocol/types.js";
 
 // ─── Session ─────────────────────────────────────────────────────
