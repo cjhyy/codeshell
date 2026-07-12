@@ -4120,7 +4120,7 @@ function App() {
     sourceBucket: string,
     options?: ContextPackageCreatedOptions,
   ): Promise<void> => {
-    const repoId = activeRepoId;
+    const repoId = activeProjectId;
     const title = result.titleSuggestion?.trim() || t("chat.contextPackage.cardTitle");
     const previouslyActiveSessionId = loadSessionIndex(repoId).activeSessionId;
     const created = createSession(repoId, title);
