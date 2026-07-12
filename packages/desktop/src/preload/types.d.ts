@@ -18,6 +18,19 @@ import type {
 
 export type { SessionWorkspace, SessionForkLineage };
 
+/** Kept local so desktop typechecking does not depend on a prebuilt core dist. */
+export interface ContextTransferStreamEvent {
+  type: "context_transfer";
+  summary: string;
+  sourceSessionId: string;
+  fromEventId: string;
+  toEventId: string;
+  sourceEventCount: number;
+  estimatedTokens: number;
+}
+
+export type RendererStreamEvent = StreamEvent | ContextTransferStreamEvent;
+
 export interface FullForkSessionParams {
   sourceSessionId: string;
   targetSessionId?: string;
@@ -61,7 +74,7 @@ export type ForkSessionResult = FullForkSessionResult | SummaryForkSessionResult
 
 /** One step in replaying a persisted transcript into renderer state. */
 export type FoldItem =
-  | { kind: "stream"; event: StreamEvent; timestamp?: number }
+  | { kind: "stream"; event: RendererStreamEvent; timestamp?: number }
   | { kind: "user"; text: string; steerId?: string; clientMessageId?: string; timestamp?: number }
   // User interrupted this turn (Stop). Rebuilt from the core transcript's
   // `turn_stopped` event so resume restores the "你停止了本轮" marker; without

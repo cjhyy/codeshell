@@ -3,10 +3,16 @@
  * into a MessagesReducerState by reusing the SAME reducer the live stream
  * uses. This keeps message-folding logic single-sourced in types.ts.
  */
-import { applyStreamEvent, appendUserMessage, appendTurnEndMessage, INITIAL_STATE, type MessagesReducerState } from "../types";
+import {
+  appendUserMessage,
+  appendTurnEndMessage,
+  INITIAL_STATE,
+  type MessagesReducerState,
+} from "../types";
 import type { FoldItem } from "../../preload/types";
 import { translate } from "../i18n/translate";
 import { loadUILanguage } from "../uiLanguage";
+import { applyTranscriptStreamEvent } from "../transcripts";
 
 export function foldTranscript(items: FoldItem[]): MessagesReducerState {
   let state = INITIAL_STATE;
@@ -49,7 +55,7 @@ export function foldTranscript(items: FoldItem[]): MessagesReducerState {
       // replay; the marker's presence is what un-folds the turn.
       state = appendTurnEndMessage(state, "stopped");
     } else {
-      state = applyStreamEvent(state, item.event, replayClock);
+      state = applyTranscriptStreamEvent(state, item.event, replayClock);
     }
   }
   return sealOrphanedAgents(state);
