@@ -22,6 +22,7 @@
     "dev:tui": "CODE_SHELL_DEV=1 CODESHELL_UI_PERF=1 bun run packages/tui/src/cli/main.ts",
     "dev:bigtranscript": "bun run scripts/render-bigtranscript-dev.ts",
     "test": "bun test",
+    "test:core-exports": "bun run --filter '@cjhyy/code-shell-core' build && node scripts/smoke-core-exports.mjs",
     "test:watch": "bun test --watch",
     "bench:render": "bun run bench/render-tail.bench.ts && bun run bench/render-streaming.bench.ts && bun run bench/render-spinner.bench.ts && bun run bench/render-wheel.bench.ts",
     "typecheck": "tsc --noEmit",

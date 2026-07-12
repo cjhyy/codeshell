@@ -10,6 +10,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./internal": {
+      "types": "./dist/index.internal.d.ts",
+      "import": "./dist/index.internal.js"
+    },
     "./bin/agent-server-stdio": "./dist/cli/agent-server-stdio.js"
   },
   "sideEffects": [
