@@ -265,12 +265,16 @@ class AsyncAgentRegistry {
       rejectedAt: Date.now(),
     });
     if (!request.prompt.trim()) return rejected("invalid-request");
+    // Authenticate the caller before resolving the target. Besides enforcing
+    // the flat child hierarchy, this prevents a sub-agent from probing agent
+    // ids and distinguishing an existing child from an unknown one.
+    if (request.callerIsSubAgent) return rejected("not-direct-parent");
     const entry = this.agents.get(request.agentId);
     if (!entry) return rejected("target-not-found");
     const target = entry.childSessionId
       ? { sessionId: entry.childSessionId, agentId: entry.agentId, authority: "agent" as const }
       : undefined;
-    if (request.callerIsSubAgent || entry.sessionId !== request.callerSessionId) {
+    if (entry.sessionId !== request.callerSessionId) {
       return rejected("not-direct-parent", target);
     }
     if (entry.status !== "running") return rejected("target-not-running", target);

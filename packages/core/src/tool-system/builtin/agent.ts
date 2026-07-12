@@ -1324,7 +1324,12 @@ export async function agentSendInputTool(
   // Same flat-hierarchy rule as Agent: a sub-agent cannot continue (or spawn)
   // another sub-agent. Layered with the NESTED_AGENT_TOOLS strip in engine.ts.
   if (ctx.isSubAgent === true) {
-    return "Error: nested agents are not supported. Sub-agents cannot send input to other sub-agents. Complete the task directly using your available tools.";
+    return JSON.stringify({
+      status: "rejected",
+      reason: "not-direct-parent",
+      rejectedAt: Date.now(),
+      message: "Nested agents are not supported. Sub-agents cannot send input to other sub-agents.",
+    });
   }
   const spawner = ctx.subAgentSpawner;
 
