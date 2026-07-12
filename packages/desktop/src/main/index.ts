@@ -74,6 +74,7 @@ import {
 } from "@cjhyy/code-shell-core";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
+import { registerPetIpc } from "./pet/pet-ipc.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
@@ -331,6 +332,7 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
  */
 let bridge: AgentBridge | null = null;
 let petStateAggregator: PetStateAggregator | null = null;
+let disposePetIpc: (() => void) | null = null;
 let mcpOAuthService: McpOAuthService | null = null;
 let cspInstalled = false;
 let automationHandle: AutomationHandle | null = null;
@@ -1731,6 +1733,11 @@ async function createWindow(): Promise<BrowserWindow> {
     });
     petStateAggregator = new PetStateAggregator({ bridge, listDiskSessions });
     await petStateAggregator.start();
+    disposePetIpc = registerPetIpc({
+      ipcMain,
+      aggregator: petStateAggregator,
+      windows: () => BrowserWindow.getAllWindows(),
+    });
   } else {
     bridge.attachWindow(win);
   }
@@ -3918,6 +3925,8 @@ app.on("before-quit", (event) => {
   bridge?.kill();
   petStateAggregator?.stop();
   petStateAggregator = null;
+  disposePetIpc?.();
+  disposePetIpc = null;
   automationHandle?.stop();
   automationHandle = null;
   ptyKillAll();
