@@ -597,7 +597,13 @@ describe("App quick-chat integration", () => {
     expect(quickOne.permissionMode).toBe(mainMode);
     expect(quickTwo.permissionMode).toBe(mainMode);
 
-    for (const mode of ["default", "accept_edits", "bypass", "plan"] as const) {
+    const modes = [
+      ["plan", "plan"],
+      ["default", "default"],
+      ["accept_edits", "acceptEdits"],
+      ["bypass", "bypassPermissions"],
+    ] as const;
+    for (const [mode, coreMode] of modes) {
       await act(async () => {
         quickChatProps.get(quickOne.sessionId)?.onPermissionChange(mode);
         await flushMicrotasks();
@@ -605,6 +611,20 @@ describe("App quick-chat integration", () => {
       expect(quickChatProps.get(quickOne.sessionId)?.permissionMode).toBe(mode);
       expect(quickChatProps.get(quickTwo.sessionId)?.permissionMode).toBe(mainMode);
       expect(chatProps.permissionMode).toBe(mainMode);
+
+      const prompt = `send with ${mode}`;
+      await act(async () => {
+        quickChatProps.get(quickOne.sessionId)?.onSend(prompt);
+        await flushMicrotasks();
+      });
+      expect(runCalls.at(-1)).toEqual({
+        prompt,
+        opts: expect.objectContaining({
+          sessionId: quickOne.sessionId,
+          permissionMode: coreMode,
+          behaviorMode: "quickChatRestricted",
+        }),
+      });
     }
   });
 

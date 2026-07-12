@@ -1,17 +1,16 @@
-# PIPELINE SUMMARY — Quick Chat Restricted Mode
+# PIPELINE SUMMARY — Quick Chat Side-Conversation Mode
 
 ## 结果
 
-Quick chat 现在默认以真实受限模式运行，并在输入框左下角显示与实际权限一致的访问徽标：
+Quick chat 现在以对齐 Codex `/side` 的 prompt guidance 运行，并在输入框左下角显示真实权限/审批模式：
 
-- 默认权限为 `plan`，在 quick-chat UI 中显示为“受限访问”；
-- restricted turn 注入 side-chat 行为边界，默认只回答问题并仅做轻量只读探索；
-- 模型只看到 `Read`、`Glob`、`Grep`、`WebSearch`、`WebFetch`；
-- executor 使用同一 allowlist fail closed，历史上下文即使直接点名 `Agent`、写工具或配置工具也不能执行；
-- 用户在 quick chat 自己的权限徽标中选择默认权限、接受编辑或完全访问后，下一轮不再附加 restricted profile，按所选真实权限运行；
-- quick-chat 提权只影响 child bucket，不改变主线程 Composer；quick-chat override 不持久化到 localStorage。
+- 每个 quick-chat turn 都注入 `Side Conversation Boundary` developer/system prompt：边界前历史只作参考，不主动续做旧任务；默认直接回答和轻量只读探索；除非用户明确要求，否则不改文件、git、配置或权限；不创建或调用子代理。
+- 约束是 prompt 引导，不是代码层硬锁：模型保留普通工具集，不使用五工具白名单或 executor 专用 gate；用户明确要求修改时，工具仍按当前真实 sandbox/approval/permission mode 工作。
+- 权限徽标只显示和切换该 quick-chat bucket 的真实权限模式，使用与主线程相同的普通文案；切换权限不会移除 side prompt，也不会改变主线程或其他快聊。
+- ephemeral 隐私和生命周期隔离继续生效：侧聊不写 durable memory，关闭/替换后录音、转写和附件迟到结果不能复活状态或磁盘目录。
+- 输入框继续复用主 Composer，保留模型、语音、附件、权限和发送，隐藏 goal、quota/usage 与主线程项目/分支控件；side fork 快照、会话 GC 与 bucket 隔离保持不变。
 
-## 判断阶段摘要
+## 判断阶段摘要（历史调研）
 
 详细证据见 `docs/research/quickchat-restricted-mode-gap.md`。实现前的五项结论是：
 
@@ -21,7 +20,9 @@ Quick chat 现在默认以真实受限模式运行，并在输入框左下角显
 4. 主 Composer 已有真实 `PermissionPill`，quick-chat footer 没有权限控件；
 5. 最小修复应复用 per-run permission、tool visibility/executor gate、PromptComposer 与现有 pill，而不是新建一套平行权限系统。
 
-## 已关闭缺口
+## 已关闭缺口（历史硬限制实现，已撤销）
+
+以下内容记录最初的 hard-gate 实现，已由文末“路线调整：硬限制→prompt 引导”取代，不代表当前行为。
 
 - 系统提示：新增命名的 `quickChatRestricted` per-run profile，并通过 PromptComposer 的 append system prompt 注入行为边界。
 - 权限：profile 强制本轮 permission snapshot 为 `plan`；普通/default 权限不足以替代该硬限制。
@@ -290,3 +291,5 @@ Desktop wiring/UI/lifecycle：
   ```
 
 `ExternalAgentSessionStore concurrent writers` 预存基线失败本次未复现；没有新增失败。未 merge、push 或切换分支。
+
+- 终审 nit 修复：首屏结论已改为当前 prompt-guidance 事实；App 集成测试现对 `plan/default/accept_edits/bypass` 四种权限逐一发送并断言始终携带 `behaviorMode: "quickChatRestricted"`；定向 `19 pass / 0 fail`，全量 `5847 pass / 6 skip / 0 fail / 14405 expect()`。
