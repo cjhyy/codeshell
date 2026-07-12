@@ -62,6 +62,7 @@ import {
 import { PLAN_MODE_ALLOWED_TOOLS } from "../tool-system/plan-mode-allowlist.js";
 import { PromptComposer } from "../prompt/composer.js";
 import {
+  isEphemeralSessionState,
   SessionManager,
   sessionsRoot,
   type ForkSessionOptions,
@@ -2230,16 +2231,21 @@ export class Engine {
         options?.signal,
       );
 
-      // Fire-and-forget memory pipeline: extract durable memories from the
-      // transcript, save a session summary, and conditionally trigger
-      // auto-dream consolidation. Doesn't block the Engine result.
-      void this.runMemoryPipeline(
-        session.transcript,
-        session.state.sessionId,
-        cwd,
-        llmClient,
-        recordExternalBilledUsage,
-      );
+      // Ephemeral side chats must never leak into durable memory, even after
+      // the user explicitly elevates tool permissions for a turn. Lifecycle
+      // isolation is independent of the run-scoped behavior/permission mode.
+      if (!isEphemeralSessionState(session.state)) {
+        // Fire-and-forget memory pipeline: extract durable memories from the
+        // transcript, save a session summary, and conditionally trigger
+        // auto-dream consolidation. Doesn't block the Engine result.
+        void this.runMemoryPipeline(
+          session.transcript,
+          session.state.sessionId,
+          cwd,
+          llmClient,
+          recordExternalBilledUsage,
+        );
+      }
 
       // Fire-and-forget session title generation — only after the FIRST turn.
       // Reuses the already-resolved auxSummaryClient (aux model, cheap). Best-
