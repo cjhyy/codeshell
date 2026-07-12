@@ -1312,6 +1312,11 @@ export class AgentServer {
       );
       return;
     }
+    const clearingGoal = session
+      ? session.getGoal?.()
+      : params.sessionId
+        ? this.legacyEngine?.getGoal(params.sessionId)
+        : undefined;
     const cleared = session
       ? session.clearGoal()
       : params.sessionId
@@ -1320,7 +1325,10 @@ export class AgentServer {
     if (cleared && typeof params.sessionId === "string" && params.sessionId.length > 0) {
       this.notify(Methods.StreamEvent, {
         sessionId: params.sessionId,
-        event: { type: "goal_cleared" },
+        event: {
+          type: "goal_cleared",
+          ...(clearingGoal?.goalId ? { goalId: clearingGoal.goalId } : {}),
+        },
       });
     }
     this.transport.send(createResponse(req.id, { ok: true, cleared }));
@@ -1360,7 +1368,13 @@ export class AgentServer {
       : (this.readActiveGoalFromDisk?.(params.sessionId) ??
         this.legacyEngine?.getGoal(params.sessionId) ??
         undefined);
-    this.transport.send(createResponse(req.id, { ok: true, goal: goal ? goal.objective : null }));
+    this.transport.send(
+      createResponse(req.id, {
+        ok: true,
+        goal: goal ? goal.objective : null,
+        ...(goal?.goalId ? { goalId: goal.goalId } : {}),
+      }),
+    );
   }
 
   /**

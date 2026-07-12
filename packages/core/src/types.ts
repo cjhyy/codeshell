@@ -242,6 +242,12 @@ export interface SessionForkLineage {
 
 export interface SessionState {
   sessionId: string;
+  /**
+   * Monotonic whole-state revision used by SessionManager.saveState as a CAS
+   * token. Absent only on legacy state files; the first successful save
+   * upgrades them. Detached writers with an older revision are rejected.
+   */
+  stateRevision?: number;
   cwd: string;
   /** Current session workspace pointer. Absent only on legacy state.json files. */
   workspace?: SessionWorkspace;
@@ -334,11 +340,13 @@ export interface SessionState {
    */
   activeGoal?: GoalConfig;
   /**
-   * Last force-terminated goal instance. Kept separately from activeGoal so an
-   * old whole-state writer cannot make that same exhausted goal armable again.
+   * Latest terminal goal instance (legacy/single-marker view). Kept alongside
+   * the bounded goalTerminals identity set for backward-compatible readers.
    * Optional for backward compatibility with pre-tombstone state.json files.
    */
   goalTerminal?: GoalTerminal;
+  /** Recent terminal identities, bounded to prevent unbounded state growth. */
+  goalTerminals?: GoalTerminal[];
 }
 
 export interface TokenUsage {
@@ -528,6 +536,8 @@ export type StreamEvent =
   // No extra LLM call — `gaps` reuses the verdict the judge already produced.
   | {
       type: "goal_progress";
+      /** Concrete goal instance; absent only on legacy replayed events. */
+      goalId?: string;
       status: "not_met" | "met" | "exhausted" | "approaching_limit";
       round: number;
       gaps?: string;
@@ -544,8 +554,8 @@ export type StreamEvent =
   // replace). `goal_cleared` fires on explicit clear (agent/goalClear) — the
   // judge-met path emits goal_progress(met) instead. The UI keeps an
   // "active goal" per session from these + goal_progress.
-  | { type: "goal_set"; objective: string; replaced: boolean }
-  | { type: "goal_cleared" }
+  | { type: "goal_set"; goalId?: string; objective: string; replaced: boolean }
+  | { type: "goal_cleared"; goalId?: string }
   | { type: "error"; error: string; agentId?: string }
   | { type: "tombstone"; messageId: string; agentId?: string }
   | { type: "task_update"; tasks: TaskInfo[]; agentId?: string }

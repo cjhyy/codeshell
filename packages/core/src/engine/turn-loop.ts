@@ -5,6 +5,7 @@
  * pre_check → model_call → post_check → tool_exec → context_mgmt → hook_notify → next turn
  */
 
+import { randomUUID } from "node:crypto";
 import type {
   Message,
   StreamCallback,
@@ -68,6 +69,7 @@ import {
   goalBudgetTerminationReason,
   applyGoalExtension,
   limitProximity,
+  normalizeGoal,
   GOAL_DEFAULT_MAX_STOP_BLOCKS,
 } from "./goal.js";
 
@@ -194,14 +196,14 @@ export interface TurnLoopDeps {
   /** Make tools launched after an injected steer attribute side effects to that steer. */
   setOriginClientMessageId?: (clientMessageId: string | undefined) => void;
   /**
-   * Clear this session's PERSISTED goal (state.activeGoal) and drop the
-   * in-flight goal-stop hook, so a user-initiated cancel_goal both stops the
-   * current run AND prevents the goal from re-inheriting on the next bare send.
+   * Terminally clear this session's PERSISTED goal (state.activeGoal) and drop
+   * the in-flight goal-stop hook, so complete_goal/cancel_goal both stop the
+   * current run AND prevent the goal from re-inheriting on the next bare send.
    * Wired by Engine (delegates to Engine.clearGoal for the running session);
    * absent in standalone tests (turn loop tolerates undefined — the local
    * goalTracker short-circuit still stops the run).
    */
-  clearPersistedGoal?: () => void;
+  clearPersistedGoal?: (reason: "completed" | "cancelled") => void;
   /**
    * Private Goal-judge evidence seam. Engine stores this snapshot in the
    * built-in judge closure; it is never added to the public on_stop context.
@@ -379,11 +381,23 @@ export class TurnLoop {
     this.approachAnnounced = true;
     this.config.onStream?.({
       type: "goal_progress",
+      goalId: this.config.goal.goalId,
       status: "approaching_limit",
       round: this.stopBlockCount,
       turnsRemaining: prox.turnsRemaining,
       stopBlocksRemaining: prox.stopBlocksRemaining,
       nearest: prox.nearest,
+    });
+  }
+
+  /** Emit the one terminal UI event shared by every permanent Goal exhaustion. */
+  private emitGoalExhausted(): void {
+    if (!this.config.goal) return;
+    this.config.onStream?.({
+      type: "goal_progress",
+      goalId: this.config.goal.goalId,
+      status: "exhausted",
+      round: this.stopBlockCount,
     });
   }
 
@@ -394,6 +408,15 @@ export class TurnLoop {
     // each turn so mutations take effect on the next iteration.
     private config: TurnLoopConfig,
   ) {
+    const normalizedGoal = normalizeGoal(this.config.goal as GoalConfig | string | undefined);
+    if (normalizedGoal) {
+      this.config = {
+        ...this.config,
+        goal: { ...normalizedGoal, goalId: normalizedGoal.goalId ?? randomUUID() },
+      };
+    } else if (this.config.goal !== undefined) {
+      this.config = { ...this.config, goal: undefined };
+    }
     for (const msg of this.config.freshImageMessages ?? []) {
       this.pendingImageMessages.add(msg);
     }
@@ -706,6 +729,7 @@ export class TurnLoop {
           ? goalBudgetTerminationReason(goalTracker, Date.now())
           : undefined;
         if (preTurnGoalTermination) {
+          this.emitGoalExhausted();
           this.config.onStream?.({
             type: "assistant_message",
             message: {
@@ -1107,6 +1131,7 @@ export class TurnLoop {
             tokenBudget: this.config.goal?.tokenBudget,
             timeBudgetMs: this.config.goal?.timeBudgetMs,
           });
+          this.emitGoalExhausted();
           this.config.onStream?.({
             type: "assistant_message",
             messageId: assistantMessageId,
@@ -1181,6 +1206,7 @@ export class TurnLoop {
               tokenBudget: goalTracker.goal.tokenBudget,
               timeBudgetMs: goalTracker.goal.timeBudgetMs,
             });
+            this.emitGoalExhausted();
             this.config.onStream?.({
               type: "assistant_message",
               messageId: assistantMessageId,
@@ -1225,6 +1251,7 @@ export class TurnLoop {
             // up with stopBlockCount so the UI can show "第 N 轮".
             this.config.onStream?.({
               type: "goal_progress",
+              goalId: this.config.goal?.goalId,
               status: "not_met",
               round: this.stopBlockCount,
               gaps: goalVerdict?.gaps || undefined,
@@ -1263,11 +1290,7 @@ export class TurnLoop {
               stopBlockCount: this.stopBlockCount,
               maxStopBlocks,
             });
-            this.config.onStream?.({
-              type: "goal_progress",
-              status: "exhausted",
-              round: this.stopBlockCount,
-            });
+            this.emitGoalExhausted();
             goalTermination = "stop_blocks_exhausted";
             this.config.onStream?.({
               type: "assistant_message",
@@ -1282,6 +1305,7 @@ export class TurnLoop {
             // rounds = prior blocks + this accepted final round.
             this.config.onStream?.({
               type: "goal_progress",
+              goalId: this.config.goal.goalId,
               status: "met",
               round: this.stopBlockCount + 1,
             });
@@ -1433,8 +1457,14 @@ export class TurnLoop {
         // completion and re-arms every follow-up turn).
         if (goalTracker && toolCalls.some((tc) => tc.toolName === COMPLETE_GOAL_TOOL_NAME)) {
           tlog.info("turn.goal_self_reported_complete", { cat: "goal" });
+          this.config.onStream?.({
+            type: "goal_progress",
+            goalId: this.config.goal?.goalId,
+            status: "met",
+            round: this.stopBlockCount + 1,
+          });
           this.stopBlockCount = 0;
-          this.deps.clearPersistedGoal?.();
+          this.deps.clearPersistedGoal?.("completed");
           this.finalizeModelTurn();
           if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
@@ -1454,7 +1484,8 @@ export class TurnLoop {
         if (goalTracker && confirmedCancel) {
           tlog.info("turn.goal_user_cancelled", { cat: "goal" });
           this.stopBlockCount = 0;
-          this.deps.clearPersistedGoal?.();
+          this.deps.clearPersistedGoal?.("cancelled");
+          this.config.onStream?.({ type: "goal_cleared", goalId: this.config.goal?.goalId });
           this.finalizeModelTurn();
           if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
@@ -1637,6 +1668,7 @@ export class TurnLoop {
       messages.push({ role: "assistant", content: finalText });
     }
     messages = this.redactConsumedSensitiveToolResults(messages);
+    if (this.config.goal) this.emitGoalExhausted();
     return {
       text: finalText,
       reason: "max_turns",

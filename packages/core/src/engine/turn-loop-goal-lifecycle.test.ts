@@ -55,6 +55,7 @@ function makeTurnLoopDeps(
     execute?: (call: ToolCall) => Promise<ToolResult>;
     clearPersistedGoal?: () => void;
     publishGoalJudgeContext?: (context: GoalJudgeRuntimeContext) => void;
+    callDelayMs?: number;
   } = {},
 ): {
   deps: TurnLoopDeps;
@@ -70,6 +71,7 @@ function makeTurnLoopDeps(
   const boundaryTurns: number[] = [];
   const assistantTranscriptTurns: number[] = [];
   const call = async (_systemPrompt: string, messages: Message[]): Promise<LLMResponse> => {
+    if (options.callDelayMs) await Bun.sleep(options.callDelayMs);
     calls.push(messages.map((message) => ({ ...message })));
     const response = responses[Math.min(responseIndex, responses.length - 1)]!;
     responseIndex++;
@@ -149,6 +151,61 @@ function makeTurnLoopDeps(
 }
 
 describe("TurnLoop goal lifecycle guardrails", () => {
+  it("emits met when complete_goal clears the persistent goal", async () => {
+    const events: StreamEvent[] = [];
+    let clearCalls = 0;
+    const { deps } = makeTurnLoopDeps(
+      [
+        toolResponse({
+          id: "complete-1",
+          toolName: COMPLETE_GOAL_TOOL_NAME,
+          args: { summary: "done" },
+        }),
+      ],
+      { clearPersistedGoal: () => clearCalls++ },
+    );
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 2,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "finish", goalId: "goal-complete" } as never,
+      onStream: (event) => {
+        events.push(event);
+      },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(clearCalls).toBe(1);
+    expect(events).toContainEqual({
+      type: "goal_progress",
+      goalId: "goal-complete",
+      status: "met",
+      round: 1,
+    });
+  });
+
+  it("emits goal_cleared when confirmed cancel_goal clears the persistent goal", async () => {
+    const events: StreamEvent[] = [];
+    const { deps } = makeTurnLoopDeps([
+      toolResponse({
+        id: "cancel-1",
+        toolName: CANCEL_GOAL_TOOL_NAME,
+        args: { confirm: true, reason: "user asked" },
+      }),
+    ]);
+
+    await new TurnLoop(deps, {
+      maxTurns: 2,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "finish", goalId: "goal-cancel" } as never,
+      onStream: (event) => {
+        events.push(event);
+      },
+    }).run([{ role: "user", content: "stop" }]);
+
+    expect(events).toContainEqual({ type: "goal_cleared", goalId: "goal-cancel" });
+  });
+
   it("finalizes a stop-hook-blocked no-tool turn before continuing", async () => {
     let stopHookCalls = 0;
     const heartbeatTurns: number[] = [];
@@ -514,7 +571,7 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     const config: TurnLoopConfig = {
       maxTurns: 5,
       maxToolCallsPerTurn: 10,
-      goal: { objective: "ship", tokenBudget: 100 },
+      goal: { objective: "ship", goalId: "goal-token-budget", tokenBudget: 100 },
       onStream: (event) => {
         events.push(event);
       },
@@ -526,6 +583,12 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     expect(result.goalTermination).toBe("token_budget_exhausted");
     expect(calls).toHaveLength(1);
     expect(executedTools).toHaveLength(0);
+    expect(events).toContainEqual({
+      type: "goal_progress",
+      goalId: "goal-token-budget",
+      status: "exhausted",
+      round: 0,
+    });
     expect(
       events.some(
         (event) =>
@@ -536,10 +599,31 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     ).toBe(true);
   });
 
+  it("emits exhausted with the run goalId when the time budget expires", async () => {
+    const events: StreamEvent[] = [];
+    const { deps } = makeTurnLoopDeps([stopResponse("too late")], { callDelayMs: 5 });
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "finish quickly", goalId: "goal-time-budget", timeBudgetMs: 1 },
+      onStream: (event) => {
+        events.push(event);
+      },
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(result.goalTermination).toBe("time_budget_exhausted");
+    expect(events).toContainEqual({
+      type: "goal_progress",
+      goalId: "goal-time-budget",
+      status: "exhausted",
+      round: 0,
+    });
+  });
+
   it("charges judge usage to the Goal budget before deciding to continue", async () => {
     let judgeContext: GoalJudgeRuntimeContext | undefined;
     let judgeCalls = 0;
-    let loop!: TurnLoop;
     const judge: GoalJudgeLLM = {
       async createMessage(): Promise<LLMResponse> {
         judgeCalls += 1;
@@ -566,11 +650,19 @@ describe("TurnLoop goal lifecycle guardrails", () => {
         judgeContext = context as GoalJudgeRuntimeContext;
       },
     });
-    loop = new TurnLoop(deps, {
+    const events: StreamEvent[] = [];
+    const loop = new TurnLoop(deps, {
       maxTurns: 4,
       maxToolCallsPerTurn: 10,
-      goal: { objective: "finish within budget", tokenBudget: 16 },
+      goal: {
+        objective: "finish within budget",
+        goalId: "goal-post-judge-budget",
+        tokenBudget: 16,
+      },
       maxStopBlocks: 3,
+      onStream: (event) => {
+        events.push(event);
+      },
     });
 
     const result = await loop.run([{ role: "user", content: "go" }]);
@@ -579,6 +671,12 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     expect(result.goalTermination).toBe("token_budget_exhausted");
     expect(calls).toHaveLength(1);
     expect(judgeCalls).toBe(1);
+    expect(events).toContainEqual({
+      type: "goal_progress",
+      goalId: "goal-post-judge-budget",
+      status: "exhausted",
+      round: 0,
+    });
   });
 
   it("does not exhaust stop blocks when tool-use turns with failure strings separate blocks", async () => {
@@ -887,11 +985,15 @@ describe("TurnLoop goal lifecycle guardrails", () => {
       },
     });
 
+    const events: StreamEvent[] = [];
     const result = await new TurnLoop(deps, {
       maxTurns: 3,
       maxToolCallsPerTurn: 10,
-      goal: { objective: "eventually stop the ineffective loop" },
+      goal: { objective: "eventually stop the ineffective loop", goalId: "goal-max-turns" },
       maxStopBlocks: 1,
+      onStream: (event) => {
+        events.push(event);
+      },
     }).run([{ role: "user", content: "go" }]);
 
     expect(result.reason).toBe("max_turns");
@@ -899,6 +1001,12 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     expect(stopHookCalls).toBe(0);
     expect(executedTools).toHaveLength(3);
     expect(calls).toHaveLength(4);
+    expect(events).toContainEqual({
+      type: "goal_progress",
+      goalId: "goal-max-turns",
+      status: "exhausted",
+      round: 0,
+    });
   });
 
   it("refreshes the conversation digest across two real stop rounds", async () => {
@@ -961,6 +1069,7 @@ const engineScenarios = new Map<
     mainMessages?: Message[][];
     judgeMessages?: Message[][];
     afterMainCall?: (callNumber: number) => void;
+    afterJudgeCall?: (callNumber: number) => void;
   }
 >();
 
@@ -980,6 +1089,7 @@ class GoalLifecycleClient extends LLMClientBase {
         scenario.judgeMessages ??= [];
         scenario.judgeMessages.push(options.messages.map((message) => ({ ...message })));
         scenario.judgeCalls = (scenario.judgeCalls ?? 0) + 1;
+        scenario.afterJudgeCall?.(scenario.judgeCalls);
       }
       const response: LLMResponse = {
         text: isGoalJudge ? (scenario.judgeResponse ?? "aux") : "[]",
@@ -1021,8 +1131,16 @@ function persistedState(
   dir: string,
   sessionId: string,
 ): {
-  activeGoal?: { objective: string; setAtMs?: number };
-  goalTerminal?: { objective: string; setAtMs?: number; reason: string };
+  activeGoal?: { objective: string; goalId?: string; setAtMs?: number };
+  goalTerminal?: { objective: string; goalId?: string; setAtMs?: number; reason: string };
+  goalTerminals?: Array<{
+    objective: string;
+    goalId?: string;
+    setAtMs?: number;
+    reason: string;
+  }>;
+  workspace?: unknown;
+  status?: string;
   tokenUsage?: { promptTokens: number; completionTokens: number; totalTokens: number };
 } {
   const raw = readFileSync(join(dir, "sessions", sessionId, "state.json"), "utf8");
@@ -1358,6 +1476,8 @@ describe("Engine persisted goal lifecycle", () => {
           .get(model)
           ?.systemPrompts?.filter((prompt) => prompt.includes("目标完成度裁判")),
       ).toHaveLength(1);
+      expect(persistedState(dir, sessionId).activeGoal).toBeUndefined();
+      expect(persistedState(dir, sessionId).goalTerminal?.reason).toBe("completed");
     } finally {
       engineScenarios.delete(model);
       rmSync(dir, { recursive: true, force: true });
@@ -1792,6 +1912,70 @@ describe("Engine persisted goal lifecycle", () => {
     }
   });
 
+  for (const scenario of ["judge-met", "complete_goal", "cancel_goal"] as const) {
+    it(`${scenario} records run goal A terminal identity after live goal changes to B`, async () => {
+      const dir = mkdtempSync(join(tmpdir(), `engine-goal-${scenario}-replaced-`));
+      const model = uniqueModel(`${scenario}-replaced`);
+      const sessionId = `${scenario}-records-a`;
+      let engine!: Engine;
+      let goalAId: string | undefined;
+      const mainResponse =
+        scenario === "judge-met"
+          ? stopResponse("A is complete")
+          : scenario === "complete_goal"
+            ? toolResponse({
+                id: "complete-a",
+                toolName: COMPLETE_GOAL_TOOL_NAME,
+                args: { summary: "done" },
+              })
+            : toolResponse({
+                id: "cancel-a",
+                toolName: CANCEL_GOAL_TOOL_NAME,
+                args: { confirm: true, reason: "stop A" },
+              });
+      engineScenarios.set(model, {
+        mainResponses: [mainResponse],
+        mainCalls: 0,
+        judgeResponse: '{"met":true,"waiting":false,"gaps":""}',
+        [scenario === "judge-met" ? "afterJudgeCall" : "afterMainCall"]: () => {
+          const live = (engine as any).activeRunSession;
+          goalAId = live.state.activeGoal?.goalId;
+          live.state.activeGoal = {
+            objective: "goal B",
+            goalId: "goal-b",
+            setAtMs: 9_999_999,
+          };
+          (engine as any).sessionManager.saveState(live.state);
+        },
+      });
+
+      try {
+        engine = new Engine({
+          llm: { provider, model, apiKey: "test" } as never,
+          cwd: dir,
+          sessionStorageDir: join(dir, "sessions"),
+          permissionMode: "bypassPermissions",
+          headless: true,
+        });
+        (engine as any).hooks.clear();
+
+        await engine.run("work on A", {
+          sessionId,
+          cwd: dir,
+          goal: { objective: "goal A", maxStopBlocks: 1 },
+        });
+
+        const state = persistedState(dir, sessionId);
+        expect(goalAId).toBeString();
+        expect(state.activeGoal).toMatchObject({ objective: "goal B", goalId: "goal-b" });
+        expect(state.goalTerminals?.some((terminal) => terminal.goalId === goalAId)).toBe(true);
+      } finally {
+        engineScenarios.delete(model);
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
+
   it("complete_goal clears state.activeGoal so the next bare send cannot inherit it", async () => {
     const dir = mkdtempSync(join(tmpdir(), "engine-goal-complete-"));
     const model = uniqueModel("complete");
@@ -1803,6 +1987,7 @@ describe("Engine persisted goal lifecycle", () => {
           toolName: COMPLETE_GOAL_TOOL_NAME,
           args: { summary: "done" },
         }),
+        stopResponse("plain follow-up"),
       ],
       mainCalls: 0,
     });
@@ -1827,6 +2012,178 @@ describe("Engine persisted goal lifecycle", () => {
       expect(engineScenarios.get(model)?.mainCalls).toBe(1);
       expect(engine.getGoal(sessionId)).toBeUndefined();
       expect(activeGoalFromState(dir, sessionId)).toBeUndefined();
+      expect(persistedState(dir, sessionId).goalTerminal?.reason).toBe("completed");
+
+      // Simulate a foreign stale writer restoring the just-completed goal, then
+      // reload through a fresh Engine. The terminal identity must prevent a
+      // resumed bare send from arming the completed goal again.
+      const stale = persistedState(dir, sessionId);
+      stale.activeGoal = {
+        objective: "finish this goal",
+        goalId: stale.goalTerminal?.goalId,
+        setAtMs: stale.goalTerminal?.setAtMs,
+      };
+      writeFileSync(
+        join(dir, "sessions", sessionId, "state.json"),
+        JSON.stringify(stale, null, 2),
+        "utf8",
+      );
+      const reloaded = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (reloaded as any).hooks.clear();
+      const followUpEvents: StreamEvent[] = [];
+      await reloaded.run("plain follow-up", {
+        sessionId,
+        cwd: dir,
+        onStream: (event) => {
+          followUpEvents.push(event);
+        },
+      });
+      expect(followUpEvents.some((event) => event.type === "goal_progress")).toBe(false);
+      expect(activeGoalFromState(dir, sessionId)).toBeUndefined();
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("desktop workspace switch rebases the live revision before complete_goal persists", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-workspace-complete-"));
+    const sessionsDir = join(dir, "sessions");
+    const model = uniqueModel("workspace-complete");
+    const sessionId = "goal-workspace-complete";
+    const workspace = {
+      root: join(dir, ".worktrees", "feature"),
+      kind: "worktree" as const,
+      worktree: {
+        path: join(dir, ".worktrees", "feature"),
+        branch: "worktree/feature",
+        baseRef: "main",
+        createdBy: "codeshell" as const,
+      },
+    };
+    engineScenarios.set(model, {
+      mainResponses: [
+        toolResponse({
+          id: "switch-workspace-1",
+          toolName: "SwitchSessionWorkspace",
+          args: { target: "feature" },
+        }),
+        toolResponse({
+          id: "complete-after-switch-1",
+          toolName: COMPLETE_GOAL_TOOL_NAME,
+          args: { summary: "done after switching" },
+        }),
+      ],
+      mainCalls: 0,
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: sessionsDir,
+        permissionMode: "bypassPermissions",
+        builtinToolHost: "desktop",
+        workspaceBridge: {
+          switch: async () => {
+            // The desktop main-process bridge persists through its own
+            // SessionManager before returning the selected workspace to the
+            // worker that owns this live Engine bundle.
+            engine.getSessionManager().setSessionWorkspace(sessionId, workspace);
+            return workspace;
+          },
+        },
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const result = await engine.run("switch and finish", {
+        sessionId,
+        cwd: dir,
+        goal: "finish after switching workspace",
+      });
+
+      expect(result.reason).toBe("completed");
+      expect(engineScenarios.get(model)?.mainCalls).toBe(2);
+      const reloaded = persistedState(dir, sessionId);
+      expect(reloaded.workspace).toEqual(workspace);
+      expect(reloaded.activeGoal).toBeUndefined();
+      expect(reloaded.goalTerminal).toMatchObject({
+        objective: "finish after switching workspace",
+        reason: "completed",
+      });
+      expect(reloaded.status).toBe("completed");
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("desktop workspace switch rebases the live revision before budget exhaustion persists", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-workspace-exhaust-"));
+    const sessionsDir = join(dir, "sessions");
+    const model = uniqueModel("workspace-exhaust");
+    const sessionId = "goal-workspace-exhaust";
+    const workspace = {
+      root: join(dir, ".worktrees", "feature"),
+      kind: "worktree" as const,
+      worktree: {
+        path: join(dir, ".worktrees", "feature"),
+        branch: "worktree/feature",
+        baseRef: "main",
+        createdBy: "codeshell" as const,
+      },
+    };
+    engineScenarios.set(model, {
+      mainResponses: [
+        toolResponse({
+          id: "switch-workspace-before-exhaust-1",
+          toolName: "SwitchSessionWorkspace",
+          args: { target: "feature" },
+        }),
+        stopResponse("budget exhausted after switch"),
+      ],
+      mainCalls: 0,
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: sessionsDir,
+        permissionMode: "bypassPermissions",
+        builtinToolHost: "desktop",
+        workspaceBridge: {
+          switch: async () => {
+            engine.getSessionManager().setSessionWorkspace(sessionId, workspace);
+            return workspace;
+          },
+        },
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const result = await engine.run("switch until budget ends", {
+        sessionId,
+        cwd: dir,
+        goal: { objective: "finish within budget after switching", tokenBudget: 20 },
+      });
+
+      expect(result.reason).toBe("goal_budget_exhausted");
+      const reloaded = persistedState(dir, sessionId);
+      expect(reloaded.workspace).toEqual(workspace);
+      expect(reloaded.activeGoal).toBeUndefined();
+      expect(reloaded.goalTerminal).toMatchObject({
+        objective: "finish within budget after switching",
+        reason: "token_budget_exhausted",
+      });
+      expect(reloaded.status).toBe("goal_budget_exhausted");
     } finally {
       engineScenarios.delete(model);
       rmSync(dir, { recursive: true, force: true });
@@ -1868,6 +2225,7 @@ describe("Engine persisted goal lifecycle", () => {
       expect(engineScenarios.get(model)?.mainCalls).toBe(1);
       expect(engine.getGoal(sessionId)).toBeUndefined();
       expect(activeGoalFromState(dir, sessionId)).toBeUndefined();
+      expect(persistedState(dir, sessionId).goalTerminal?.reason).toBe("cancelled");
     } finally {
       engineScenarios.delete(model);
       rmSync(dir, { recursive: true, force: true });

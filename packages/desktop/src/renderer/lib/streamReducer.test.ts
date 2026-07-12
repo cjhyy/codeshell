@@ -1,10 +1,5 @@
 import { test, expect } from "bun:test";
-import {
-  reduceStream,
-  initialChatState,
-  appendUserMessage,
-  type ChatItem,
-} from "./streamReducer";
+import { reduceStream, initialChatState, appendUserMessage, type ChatItem } from "./streamReducer";
 
 /** Wrap an inner StreamEvent into the agent/streamEvent JSON-RPC envelope. */
 function ev(event: Record<string, unknown>, sessionId?: string) {
@@ -47,7 +42,10 @@ test("thinking_delta 累计到 reasoning", () => {
 
 test("tool_use_start + tool_result 配对", () => {
   const s = feed([
-    ev({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Read", args: { file_path: "x" } } }),
+    ev({
+      type: "tool_use_start",
+      toolCall: { id: "t1", toolName: "Read", args: { file_path: "x" } },
+    }),
     ev({ type: "tool_result", result: { id: "t1", result: "ok" } }),
   ]);
   expect(tool(s).name).toBe("Read");
@@ -69,7 +67,10 @@ test("tool_result 在 tool_use_start 之前到达(乱序)→ 不丢,start 落地
   // WebSocket reordering/buffering can deliver tool_result before tool_use_start.
   const s = feed([
     ev({ type: "tool_result", result: { id: "t1", result: "ok" } }),
-    ev({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Read", args: { file_path: "x" } } }),
+    ev({
+      type: "tool_use_start",
+      toolCall: { id: "t1", toolName: "Read", args: { file_path: "x" } },
+    }),
   ]);
   expect(tool(s).name).toBe("Read");
   expect(tool(s).done).toBe(true); // not stuck open
@@ -168,8 +169,12 @@ test("turn_complete model_error → run error", () => {
 test("turn_complete max_turns/goal_budget_exhausted → 正常完成,非 error", () => {
   // Regression: budget/turn limits are EXPECTED stops, not failures.
   expect(feed([ev({ type: "turn_complete", reason: "max_turns" })]).run).toBe("completed");
-  expect(feed([ev({ type: "turn_complete", reason: "goal_budget_exhausted" })]).run).toBe("completed");
-  expect(feed([ev({ type: "turn_complete", reason: "stop_hook_prevented" })]).run).toBe("completed");
+  expect(feed([ev({ type: "turn_complete", reason: "goal_budget_exhausted" })]).run).toBe(
+    "completed",
+  );
+  expect(feed([ev({ type: "turn_complete", reason: "stop_hook_prevented" })]).run).toBe(
+    "completed",
+  );
 });
 
 test("subagent turn_complete 不翻转全局 run(父轮仍在跑)", () => {
@@ -202,6 +207,25 @@ test("goal_set 显示目标,goal_cleared 清掉,met 也清", () => {
   expect(met.goal).toBeUndefined();
 });
 
+test("旧 goal A 的终态事件晚到时不隐藏当前 goal B", () => {
+  const s = feed([
+    ev({ type: "goal_set", objective: "A", goalId: "goal-a", replaced: false }),
+    ev({ type: "goal_set", objective: "B", goalId: "goal-b", replaced: true }),
+    ev({ type: "goal_progress", goalId: "goal-a", status: "met", round: 3 }),
+    ev({ type: "goal_cleared", goalId: "goal-a" }),
+  ]);
+  expect(s.goal).toContain("B");
+});
+
+test("goal_progress(exhausted) 按 goalId 清掉 mobile goal 指示器", () => {
+  const s = feed([
+    ev({ type: "goal_set", objective: "A", goalId: "goal-a", replaced: false }),
+    ev({ type: "goal_progress", goalId: "goal-a", status: "exhausted", round: 4 }),
+  ]);
+  expect(s.goal).toBeUndefined();
+  expect(s.goalId).toBeUndefined();
+});
+
 test("agent_start/agent_end 维护单条 subagent 行(按 agentId)", () => {
   const s = feed([
     ev({ type: "agent_start", agentId: "sub-A", description: "查代码" }),
@@ -215,8 +239,16 @@ test("agent_start/agent_end 维护单条 subagent 行(按 agentId)", () => {
 
 test("task_update 按 agentId 隔离,不新增重复行", () => {
   const s = feed([
-    ev({ type: "task_update", agentId: "sub-A", tasks: [{ status: "pending" }, { status: "completed" }] }),
-    ev({ type: "task_update", agentId: "sub-A", tasks: [{ status: "completed" }, { status: "completed" }] }),
+    ev({
+      type: "task_update",
+      agentId: "sub-A",
+      tasks: [{ status: "pending" }, { status: "completed" }],
+    }),
+    ev({
+      type: "task_update",
+      agentId: "sub-A",
+      tasks: [{ status: "completed" }, { status: "completed" }],
+    }),
   ]);
   const subs = s.items.filter((i) => i.kind === "subagent");
   expect(subs).toHaveLength(1);
@@ -238,7 +270,10 @@ test("task_update 空任务列表不算 completed", () => {
 
 test("tool_use_args_delta 增量合并进 tool 的 args", () => {
   const s = feed([
-    ev({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Edit", args: { file_path: "a.ts" } } }),
+    ev({
+      type: "tool_use_start",
+      toolCall: { id: "t1", toolName: "Edit", args: { file_path: "a.ts" } },
+    }),
     ev({ type: "tool_use_args_delta", toolCallId: "t1", args: { old_string: "x" } }),
     ev({ type: "tool_use_args_delta", toolCallId: "t1", args: { new_string: "y" } }),
   ]);
@@ -254,7 +289,10 @@ test("并发子代理 text_delta 不串进主气泡(按 agentId 路由)", () => 
     ev({ type: "text_delta", text: "子", agentId: "sub-A" }),
     ev({ type: "text_delta", text: "线" }), // main continues
   ]);
-  const assts = s.items.filter((i) => i.kind === "assistant") as Extract<ChatItem, { kind: "assistant" }>[];
+  const assts = s.items.filter((i) => i.kind === "assistant") as Extract<
+    ChatItem,
+    { kind: "assistant" }
+  >[];
   expect(assts).toHaveLength(2);
   const main = assts.find((a) => !a.agentId)!;
   const child = assts.find((a) => a.agentId === "sub-A")!;
@@ -265,7 +303,10 @@ test("并发子代理 text_delta 不串进主气泡(按 agentId 路由)", () => 
 test("error 事件追加系统错误并置 run error", () => {
   const s = feed([ev({ type: "error", error: "炸了" })]);
   expect(s.run).toBe("error");
-  const e = s.items.find((i) => i.kind === "system_error") as Extract<ChatItem, { kind: "system_error" }>;
+  const e = s.items.find((i) => i.kind === "system_error") as Extract<
+    ChatItem,
+    { kind: "system_error" }
+  >;
   expect(e.text).toBe("炸了");
 });
 
@@ -302,7 +343,10 @@ test("完整 history 回放重建一轮对话", () => {
     { type: "user_message", text: "看看仓库" },
     { type: "stream_request_start", turnNumber: 1 },
     { type: "text_delta", text: "好的" },
-    { type: "tool_use_start", toolCall: { id: "t1", toolName: "Read", args: { file_path: "package.json" } } },
+    {
+      type: "tool_use_start",
+      toolCall: { id: "t1", toolName: "Read", args: { file_path: "package.json" } },
+    },
     { type: "tool_result", result: { id: "t1", result: "{...}" } },
     { type: "turn_complete", reason: "completed" },
   ]);

@@ -304,6 +304,7 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
           kind: "stream",
           event: {
             type: "goal_progress",
+            ...(typeof d.goalId === "string" ? { goalId: d.goalId } : {}),
             status: (d.status as "not_met" | "met" | "exhausted") ?? "not_met",
             // A corrupt/hand-edited transcript may carry a non-numeric `round`;
             // Number("abc") === NaN would propagate invalid state. Fall back to 0.

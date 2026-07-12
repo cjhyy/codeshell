@@ -1,15 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Ban,
-  Bot,
-  RefreshCw,
-  Square,
-  Terminal,
-  Film,
-  CheckCircle2,
-  XCircle,
-  ExternalLink,
-} from "lucide-react";
+import { Ban, Bot, RefreshCw, Square, Terminal, Film, CheckCircle2, XCircle } from "lucide-react";
 import type {
   BackgroundShellInfo,
   BackgroundWorkInfo,
@@ -17,6 +7,7 @@ import type {
 } from "../../preload/types";
 import { useT, type TFunction } from "../i18n/I18nProvider";
 import { driveAgentLinkDetail } from "../cc-room/driveAgentLink";
+import { DriveAgentLinkButton } from "../cc-room/DriveAgentLinkButton";
 
 type AgentStatus = "running" | "completed" | "failed" | "cancelled";
 type ShellWorkItem = Extract<BackgroundWorkInfo, { kind: "shell" }>;
@@ -365,32 +356,7 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
                             {t("panels.shells.jobChangedFiles", { count: changed.length })}
                           </span>
                         )}
-                        {cliLink && (
-                          <button
-                            type="button"
-                            className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-                            aria-label={t(
-                              cliLink.cliKind === "codex"
-                                ? "panels.shells.openCodexSession"
-                                : "panels.shells.openClaudeSession",
-                            )}
-                            title={t(
-                              cliLink.cliKind === "codex"
-                                ? "panels.shells.openCodexSession"
-                                : "panels.shells.openClaudeSession",
-                            )}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              window.dispatchEvent(
-                                new CustomEvent("codeshell:open-cli-session", {
-                                  detail: cliLink,
-                                }),
-                              );
-                            }}
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </button>
-                        )}
+                        {cliLink && <DriveAgentLinkButton detail={cliLink} />}
                         <SourceSessionBadge source={j.sourceSession} t={t} />
                         <span className="shrink-0 text-[10px] text-muted-foreground">
                           {statusLabel}

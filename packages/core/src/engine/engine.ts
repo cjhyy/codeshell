@@ -2,7 +2,15 @@
  * Engine — the main facade that wires all components together.
  */
 
-import type { ClientDefaults, Message, StreamCallback, TaskInfo, TokenUsage } from "../types.js";
+import { randomUUID } from "node:crypto";
+import type {
+  ClientDefaults,
+  Message,
+  SessionState,
+  StreamCallback,
+  TaskInfo,
+  TokenUsage,
+} from "../types.js";
 import { createLLMClient } from "../llm/client-factory.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { ToolExecutor } from "../tool-system/executor.js";
@@ -45,7 +53,10 @@ import {
   resolveGoalSetAt,
   resolveMaxTurns,
   resolveMaxStopBlocks,
+  deriveLegacyGoalId,
+  isGoalTerminated,
   isSameGoalInstance,
+  recordGoalTerminal,
   type GoalConfig,
   type GoalExtension,
   type GoalTerminationReason,
@@ -346,10 +357,8 @@ export class Engine {
   /**
    * Same-instance run guard. Engine owns single-valued live controls and one
    * HookRegistry, so a second run must not enter until the first has completed
-   * all state persistence and end hooks. This prevents handle contamination and
-   * whole-state saveState overlap only within this Engine instance. It does not
-   * coordinate different Engine instances sharing a sessionId, Workers, or
-   * processes; session-level locking/CAS for those cases is a separate finding.
+   * all state persistence and end hooks. Cross-instance/process whole-state
+   * writers are additionally fenced by SessionManager's persisted revision CAS.
    */
   private runInProgress = false;
   private agentControlStateListener?: (state: LiveChildState) => void;
@@ -1154,6 +1163,7 @@ export class Engine {
       // re-enters the LLM context.
       if (event.type === "goal_progress") {
         session.transcript.append("goal_progress", {
+          ...(event.goalId ? { goalId: event.goalId } : {}),
           status: event.status,
           round: event.round,
           ...(event.gaps ? { gaps: event.gaps } : {}),
@@ -1451,8 +1461,15 @@ export class Engine {
     toolCtx.recordExternalFileChanges = (record) => {
       session.transcript.append("external_file_changes", { ...record });
     };
-    toolCtx.setSessionWorkspace = (workspace) => {
-      session.state.workspace = workspace;
+    toolCtx.setSessionWorkspace = (workspace, persistedRevision) => {
+      // Enter/ExitWorktree passes the revision returned by its in-process
+      // field update. The desktop bridge persists in another process before
+      // returning, so repeat the idempotent workspace update here to obtain a
+      // revision owned by this live bundle.
+      const stateRevision =
+        persistedRevision ??
+        this.sessionManager.setSessionWorkspace(session.state.sessionId, workspace);
+      Object.assign(session.state, { workspace, stateRevision });
     };
     const sessionRun = runWithSid(session.state.sessionId, async () => {
       recordSessionStart(session.state.sessionId, {
@@ -1906,7 +1923,7 @@ export class Engine {
           try {
             const latest = this.sessionManager.resume(sid).state;
             const lateCumulative = addCumulativeUsage(latest, usage);
-            this.sessionManager.updateSessionState(sid, {
+            this.updatePersistedSessionState(sid, {
               tokenUsage: addTokenUsage(latest.tokenUsage, usage),
               ...lateCumulative,
               ...(this.config.costStore
@@ -2048,9 +2065,22 @@ export class Engine {
       // Defense in depth: a stale whole-state writer may have restored the
       // activeGoal field after this exact goal instance was force-terminated.
       // Refuse to arm it and converge the live bundle before hook registration.
-      if (storedGoal && isSameGoalInstance(storedGoal, session.state.goalTerminal)) {
+      if (
+        storedGoal &&
+        isGoalTerminated(storedGoal, session.state.goalTerminals, session.state.goalTerminal)
+      ) {
         session.state.activeGoal = undefined;
         storedGoal = undefined;
+        this.sessionManager.saveState(session.state);
+      }
+      // Legacy state.json files predate goalId. Assign one when that goal is
+      // next armed, then persist it before any lifecycle event can reference it.
+      if (storedGoal && !storedGoal.goalId) {
+        storedGoal = {
+          ...storedGoal,
+          goalId: deriveLegacyGoalId(session.state.sessionId, storedGoal),
+        };
+        session.state.activeGoal = storedGoal;
         this.sessionManager.saveState(session.state);
       }
       if (explicitGoal && this.config.isSubAgent !== true) {
@@ -2062,22 +2092,23 @@ export class Engine {
         // keeps the original anchor (the goal continues, the user didn't restate a
         // new deadline). User input never carries setAtMs, so we set it here.
         const resolvedSetAt = resolveGoalSetAt(explicitGoal.objective, storedGoal, Date.now());
-        // A user explicitly re-starting the same objective creates a new goal
-        // instance. Avoid a same-millisecond collision with its old tombstone.
-        explicitGoal.setAtMs =
-          session.state.goalTerminal?.objective === explicitGoal.objective &&
-          session.state.goalTerminal.setAtMs === resolvedSetAt
-            ? resolvedSetAt + 1
-            : resolvedSetAt;
+        explicitGoal.setAtMs = resolvedSetAt;
+        explicitGoal.goalId = randomUUID();
+        // Replacing/restarting terminally closes the previous instance so no
+        // detached snapshot can restore it after the new goal is armed.
+        if (storedGoal) recordGoalTerminal(session.state, storedGoal, "cancelled");
         session.state.activeGoal = explicitGoal;
         this.sessionManager.saveState(session.state);
         options?.onStream?.({
           type: "goal_set",
+          goalId: explicitGoal.goalId,
           objective: explicitGoal.objective,
           replaced,
         });
       }
-      const normalizedGoal = explicitGoal ?? storedGoal ?? normalizeGoal(this.config.goal);
+      const fallbackGoal = normalizeGoal(this.config.goal);
+      if (fallbackGoal && !fallbackGoal.goalId) fallbackGoal.goalId = randomUUID();
+      const normalizedGoal = explicitGoal ?? storedGoal ?? fallbackGoal;
       // Snapshot the persisted goal identity owned by THIS run. Terminal
       // cleanup compares against this immutable copy so an old run cannot
       // delete a replacement goal installed while it was finishing.
@@ -2105,12 +2136,8 @@ export class Engine {
           // calls this from inside its met branch (single source of truth for
           // "goal achieved"); engine owns the persistence side-effect.
           onMet: () => {
-            if (
-              persistedRunGoal &&
-              isSameGoalInstance(session.state.activeGoal, persistedRunGoal)
-            ) {
-              session.state.activeGoal = undefined;
-              this.sessionManager.saveState(session.state);
+            if (persistedRunGoal) {
+              this.persistGoalTerminal(session.state, persistedRunGoal, "completed");
             }
           },
           // Re-read the persisted goal each turn so a mid-run 清除 (clearGoal
@@ -2221,13 +2248,9 @@ export class Engine {
           // cancel. Clears the in-RAM session's activeGoal (so THIS run's later
           // turns don't re-arm) AND persists it, and drops the in-flight stop
           // hook so nothing re-blocks the stop we're about to return.
-          clearPersistedGoal: () => {
-            if (
-              persistedRunGoal &&
-              isSameGoalInstance(session.state.activeGoal, persistedRunGoal)
-            ) {
-              session.state.activeGoal = undefined;
-              this.sessionManager.saveState(session.state);
+          clearPersistedGoal: (reason) => {
+            if (persistedRunGoal) {
+              this.persistGoalTerminal(session.state, persistedRunGoal, reason);
             }
             if (goalHookHandler) {
               this.hooks.unregister("on_stop", goalHookHandler);
@@ -2326,16 +2349,7 @@ export class Engine {
         if (termination === "judge_prompt_too_large") return;
         // Record the terminal identity even when a newer goal has already
         // replaced it. Only clear activeGoal when it is still the run's goal.
-        session.state.goalTerminal = {
-          objective: persistedRunGoal.objective,
-          setAtMs: persistedRunGoal.setAtMs,
-          reason: termination,
-          terminatedAtMs: Date.now(),
-        };
-        if (isSameGoalInstance(session.state.activeGoal, persistedRunGoal)) {
-          session.state.activeGoal = undefined;
-        }
-        this.sessionManager.saveState(session.state);
+        this.persistGoalTerminal(session.state, persistedRunGoal, termination);
         if (goalHookHandler) {
           this.hooks.unregister("on_stop", goalHookHandler);
           if (this.activeGoalHook === goalHookHandler) this.activeGoalHook = null;
@@ -2504,7 +2518,7 @@ export class Engine {
                 // index. Read the latest persisted state at callback time and
                 // merge only title; the completed run's session.state snapshot
                 // may already be stale after later serial session updates.
-                this.sessionManager.updateSessionState(sessionId, { title });
+                this.updatePersistedSessionState(sessionId, { title });
                 onStream({
                   type: "session_title",
                   sessionId,
@@ -2546,11 +2560,7 @@ export class Engine {
       if (this.config.costStore) {
         session.state.costState = this.config.costStore.serialize() as Record<string, unknown>;
       }
-      // runInProgress excludes another whole-state writer only on this Engine
-      // instance. A different Engine using the same sessionId can still race
-      // this saveState (including an old run's abort cleanup vs a replacement
-      // Engine); cross-instance/process session serialization is a separate finding.
-      this.sessionManager.saveState(session.state);
+      this.persistFinalRunState(session.state);
       runAccountingFinalized = true;
 
       // Hook: agent end
@@ -2588,7 +2598,7 @@ export class Engine {
       // therefore need the same terminal lifecycle treatment as turn-loop errors.
       const error = formatFriendlyError(err);
       session.state.status = "model_error";
-      this.sessionManager.saveState(session.state);
+      this.persistFinalRunState(session.state);
       session.transcript.appendError(error, { phase: "initialization" });
       logger.error("engine.run_lifecycle_failed", {
         sessionId: session.state.sessionId,
@@ -2772,6 +2782,51 @@ export class Engine {
     return this.sessionManager;
   }
 
+  /**
+   * Apply a field-level disk update and rebase this Engine's matching live
+   * bundle onto the returned revision so its next whole-state CAS can proceed.
+   */
+  private updatePersistedSessionState(
+    sessionId: string,
+    partial: Readonly<Partial<Omit<SessionState, "sessionId">>>,
+  ): void {
+    const stateRevision = this.sessionManager.updateSessionState(sessionId, partial);
+    if (this.activeRunSession?.state.sessionId !== sessionId) return;
+    Object.assign(this.activeRunSession.state, partial, { stateRevision });
+  }
+
+  private persistGoalTerminal(
+    state: SessionState,
+    goal: GoalConfig,
+    reason: import("./goal.js").PersistedGoalTerminationReason,
+  ): void {
+    if (!this.sessionManager.saveGoalTerminal(state, goal, reason)) {
+      logger.warn("session.goal_terminal_persist_failed", {
+        sessionId: state.sessionId,
+        goalId: goal.goalId,
+        reason,
+      });
+    }
+  }
+
+  private persistFinalRunState(state: SessionState): void {
+    const finalFields = {
+      status: state.status,
+      turnCount: state.turnCount,
+      tokenUsage: state.tokenUsage,
+      cumulativePromptTokens: state.cumulativePromptTokens,
+      cumulativeCacheReadTokens: state.cumulativeCacheReadTokens,
+      cumulativeCacheCreationTokens: state.cumulativeCacheCreationTokens,
+      contextUsageAnchor: state.contextUsageAnchor,
+      costState: state.costState,
+      completedSnapshotVersion: state.completedSnapshotVersion,
+      completedThroughEventId: state.completedThroughEventId,
+    } satisfies Partial<Omit<SessionState, "sessionId">>;
+    if (!this.sessionManager.saveStateOrUpdateFields(state, finalFields)) {
+      logger.warn("session.final_state_persist_failed", { sessionId: state.sessionId });
+    }
+  }
+
   getConfig(): EngineConfig {
     return this.config;
   }
@@ -2909,8 +2964,8 @@ export class Engine {
     const session = live ?? this.sessionManager.resume(sessionId);
     const had = session.state.activeGoal !== undefined;
     if (had) {
-      session.state.activeGoal = undefined;
-      this.sessionManager.saveState(session.state);
+      const clearedGoal = session.state.activeGoal!;
+      this.persistGoalTerminal(session.state, clearedGoal, "cancelled");
     }
     // If THIS session's goal run is in flight, drop its stop hook so the
     // current run can terminate (the closure-held goal would otherwise keep
@@ -2937,22 +2992,13 @@ export class Engine {
         : undefined);
     if (!mainRoot) return null;
     const workspace: import("../types.js").SessionWorkspace = { root: mainRoot, kind: "main" };
-    if (this.activeRunSession?.state.sessionId === sessionId) {
-      this.activeRunSession.state.workspace = workspace;
-    }
     try {
-      const bundle =
-        this.activeRunSession?.state.sessionId === sessionId
-          ? this.activeRunSession
-          : this.sessionManager.resume(sessionId);
-      bundle.state.workspace = workspace;
-      this.sessionManager.saveState(bundle.state);
-    } catch {
-      try {
-        this.sessionManager.setSessionWorkspace(sessionId, workspace);
-      } catch {
-        return null;
+      const stateRevision = this.sessionManager.setSessionWorkspace(sessionId, workspace);
+      if (this.activeRunSession?.state.sessionId === sessionId) {
+        Object.assign(this.activeRunSession.state, { workspace, stateRevision });
       }
+    } catch {
+      return null;
     }
     return workspace;
   }

@@ -42,13 +42,19 @@ function lastResult(sent: any[]): any {
 
 describe("AgentServer agent/goalGet", () => {
   it("returns the persisted goal objective for a session that is NOT live (disk-only)", () => {
-    const engine = makeEngine({ "s-1": { objective: "有授权 你直接帮我做完" } });
+    const engine = makeEngine({
+      "s-1": { objective: "有授权 你直接帮我做完", goalId: "goal-1" },
+    });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, engine });
 
     t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/goalGet", params: { sessionId: "s-1" } });
 
-    expect(lastResult(t.sent)).toEqual({ ok: true, goal: "有授权 你直接帮我做完" });
+    expect(lastResult(t.sent)).toEqual({
+      ok: true,
+      goal: "有授权 你直接帮我做完",
+      goalId: "goal-1",
+    });
   });
 
   it("returns goal:null (not an error) for a session with no active goal", () => {

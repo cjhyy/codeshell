@@ -194,8 +194,8 @@ function persistSessionWorkspace(
   workspace: SessionWorkspace,
   ctx?: ToolContext,
 ): void {
-  sessionManager.setSessionWorkspace(sessionId, workspace);
-  ctx?.setSessionWorkspace?.(workspace);
+  const stateRevision = sessionManager.setSessionWorkspace(sessionId, workspace);
+  ctx?.setSessionWorkspace?.(workspace, stateRevision);
 }
 
 function nextTurnNotice(nextRoot: string, currentTurnRoot: string): string {

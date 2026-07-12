@@ -12,6 +12,8 @@ interface Props {
   details?: React.ReactNode;
   /** Optional chip rendered on the head row (e.g. sandbox status). */
   headerBadge?: React.ReactNode;
+  /** Optional interactive action beside the toggle button. */
+  headerAction?: React.ReactNode;
   onSelect?: (m: ToolMessage) => void;
   selected?: boolean;
   /**
@@ -27,6 +29,7 @@ export function ToolCardShell({
   summary,
   details,
   headerBadge,
+  headerAction,
   onSelect,
   selected,
   turnEpoch,
@@ -54,27 +57,34 @@ export function ToolCardShell({
       }
       onClick={() => onSelect?.(message)}
     >
-      <button
-        className="flex w-full items-center gap-2 px-3 py-2 text-left"
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen((o) => !o);
-        }}
-        aria-expanded={open}
-      >
-        {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-        <StatusDot status={status} title={message.status} />
-        <span className="font-medium">{message.toolName}</span>
-        <span className="min-w-0 flex-1 truncate text-muted-foreground">{summary}</span>
-        {headerBadge}
-        {duration && <span className="shrink-0 text-xs text-muted-foreground">{duration}</span>}
-        {message.status === "failed" && (
-          <span className="shrink-0 rounded border border-status-err/40 px-1.5 text-xs text-status-err">error</span>
-        )}
-      </button>
+      <div className="flex items-center">
+        <button
+          className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left"
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen((o) => !o);
+          }}
+          aria-expanded={open}
+        >
+          {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          <StatusDot status={status} title={message.status} />
+          <span className="font-medium">{message.toolName}</span>
+          <span className="min-w-0 flex-1 truncate text-muted-foreground">{summary}</span>
+          {headerBadge}
+          {duration && <span className="shrink-0 text-xs text-muted-foreground">{duration}</span>}
+          {message.status === "failed" && (
+            <span className="shrink-0 rounded border border-status-err/40 px-1.5 text-xs text-status-err">
+              error
+            </span>
+          )}
+        </button>
+        {headerAction && <div className="shrink-0 pr-3">{headerAction}</div>}
+      </div>
       {open && details && <div className="border-t border-border px-3 py-2">{details}</div>}
       {message.summary && (
-        <div className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground">{message.summary}</div>
+        <div className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground">
+          {message.summary}
+        </div>
       )}
     </div>
   );

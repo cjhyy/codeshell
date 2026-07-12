@@ -1,9 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { TurnLoop } from "../packages/core/src/engine/turn-loop.ts";
-import type {
-  TurnLoopConfig,
-  TurnLoopDeps,
-} from "../packages/core/src/engine/turn-loop.ts";
+import type { TurnLoopConfig, TurnLoopDeps } from "../packages/core/src/engine/turn-loop.ts";
 import { HookRegistry } from "../packages/core/src/hooks/registry.ts";
 import type { LLMResponse, Message } from "../packages/core/src/types.ts";
 
@@ -143,7 +140,8 @@ describe("TurnLoop on_stop seam", () => {
     });
     const loop = new TurnLoop(deps, makeConfig({ goal: "ship the feature" }));
     await loop.run([{ role: "user", content: "go" }]);
-    expect(seenGoal).toBe("ship the feature");
+    expect(seenGoal).toMatchObject({ objective: "ship the feature" });
+    expect((seenGoal as { goalId?: string }).goalId).toBeString();
   });
 });
 
@@ -161,21 +159,38 @@ describe("TurnLoop goal_progress events", () => {
     // Judge: not met (round 1), not met (round 2), then met.
     hooks.register("on_stop", () => {
       fired++;
-      if (fired === 1) return { continueSession: true, messages: ["go"], data: { goalVerdict: { met: false, gaps: "缺测试" } } };
-      if (fired === 2) return { continueSession: true, messages: ["go"], data: { goalVerdict: { met: false, gaps: "缺类型" } } };
+      if (fired === 1)
+        return {
+          continueSession: true,
+          messages: ["go"],
+          data: { goalVerdict: { met: false, gaps: "缺测试" } },
+        };
+      if (fired === 2)
+        return {
+          continueSession: true,
+          messages: ["go"],
+          data: { goalVerdict: { met: false, gaps: "缺类型" } },
+        };
       return { data: { goalVerdict: { met: true, gaps: "" } } };
     });
     const events: GP[] = [];
-    const loop = new TurnLoop(deps, makeConfig({
-      goal: "make it pass",
-      onStream: (e) => { if (e.type === "goal_progress") events.push(e as GP); },
-    }));
+    const loop = new TurnLoop(
+      deps,
+      makeConfig({
+        goal: "make it pass",
+        onStream: (e) => {
+          if (e.type === "goal_progress") events.push(e as GP);
+        },
+      }),
+    );
     await loop.run([{ role: "user", content: "go" }]);
 
+    const goalId = events[0]?.goalId;
+    expect(goalId).toBeString();
     expect(events).toEqual([
-      { type: "goal_progress", status: "not_met", round: 1, gaps: "缺测试" },
-      { type: "goal_progress", status: "not_met", round: 2, gaps: "缺类型" },
-      { type: "goal_progress", status: "met", round: 3 },
+      { type: "goal_progress", goalId, status: "not_met", round: 1, gaps: "缺测试" },
+      { type: "goal_progress", goalId, status: "not_met", round: 2, gaps: "缺类型" },
+      { type: "goal_progress", goalId, status: "met", round: 3 },
     ]);
   });
 
@@ -188,11 +203,16 @@ describe("TurnLoop goal_progress events", () => {
       data: { goalVerdict: { met: false, gaps: "still going" } },
     }));
     const events: GP[] = [];
-    const loop = new TurnLoop(deps, makeConfig({
-      goal: "unsatisfiable",
-      maxStopBlocks: 2,
-      onStream: (e) => { if (e.type === "goal_progress") events.push(e as GP); },
-    }));
+    const loop = new TurnLoop(
+      deps,
+      makeConfig({
+        goal: "unsatisfiable",
+        maxStopBlocks: 2,
+        onStream: (e) => {
+          if (e.type === "goal_progress") events.push(e as GP);
+        },
+      }),
+    );
     await loop.run([{ role: "user", content: "go" }]);
 
     // 2 not_met rounds, then exhausted at the cap. An approaching_limit marker
@@ -207,9 +227,14 @@ describe("TurnLoop goal_progress events", () => {
     const model = scriptedModel([noTool("done")]);
     const { deps } = makeDeps(model);
     const events: GP[] = [];
-    const loop = new TurnLoop(deps, makeConfig({
-      onStream: (e) => { if (e.type === "goal_progress") events.push(e as GP); },
-    }));
+    const loop = new TurnLoop(
+      deps,
+      makeConfig({
+        onStream: (e) => {
+          if (e.type === "goal_progress") events.push(e as GP);
+        },
+      }),
+    );
     await loop.run([{ role: "user", content: "go" }]);
     expect(events).toEqual([]);
   });
@@ -228,12 +253,17 @@ describe("TurnLoop goal_progress events", () => {
       data: { goalVerdict: { met: false, gaps: "g" } },
     }));
     const events: GP[] = [];
-    const loop = new TurnLoop(deps, makeConfig({
-      goal: "unsatisfiable",
-      maxTurns: 300,
-      maxStopBlocks: 4,
-      onStream: (e) => { if (e.type === "goal_progress") events.push(e as GP); },
-    }));
+    const loop = new TurnLoop(
+      deps,
+      makeConfig({
+        goal: "unsatisfiable",
+        maxTurns: 300,
+        maxStopBlocks: 4,
+        onStream: (e) => {
+          if (e.type === "goal_progress") events.push(e as GP);
+        },
+      }),
+    );
     await loop.run([{ role: "user", content: "go" }]);
 
     const approaching = events.filter((e) => e.status === "approaching_limit");
@@ -261,7 +291,11 @@ describe("TurnLoop.extend (TODO 3.1 — 续跑作用于真正逼停的维度)", 
         // Mid-run extension: raise the cap and reset the streak.
         loopRef!.extend({ addStopBlocks: 5 });
       }
-      return { continueSession: true, messages: ["again"], data: { goalVerdict: { met: false, gaps: "g" } } };
+      return {
+        continueSession: true,
+        messages: ["again"],
+        data: { goalVerdict: { met: false, gaps: "g" } },
+      };
     });
     const loop = new TurnLoop(deps, makeConfig({ goal: { objective: "g" }, maxStopBlocks: 3 }));
     loopRef = loop;
@@ -283,7 +317,11 @@ describe("TurnLoop.extend (TODO 3.1 — 续跑作用于真正逼停的维度)", 
     hooks.register("on_stop", () => {
       fired++;
       if (fired === 2) loopRef!.extend({ addTimeBudgetMs: 600_000 });
-      return { continueSession: true, messages: ["again"], data: { goalVerdict: { met: false, gaps: "g" } } };
+      return {
+        continueSession: true,
+        messages: ["again"],
+        data: { goalVerdict: { met: false, gaps: "g" } },
+      };
     });
     const loop = new TurnLoop(deps, makeConfig({ goal: { objective: "g" }, maxStopBlocks: 3 }));
     loopRef = loop;
@@ -304,7 +342,11 @@ describe("TurnLoop.extend (TODO 3.1 — 续跑作用于真正逼停的维度)", 
       if (fired === 1) loopRef!.extend({ addTimeBudgetMs: 600_000 });
       // After extend, allow it to finish on the 3rd attempt.
       if (fired >= 3) return { data: { goalVerdict: { met: true, gaps: "" } } };
-      return { continueSession: true, messages: ["again"], data: { goalVerdict: { met: false, gaps: "g" } } };
+      return {
+        continueSession: true,
+        messages: ["again"],
+        data: { goalVerdict: { met: false, gaps: "g" } },
+      };
     });
     const loop = new TurnLoop(deps, makeConfig({ goal: { objective: "g" }, maxStopBlocks: 25 }));
     loopRef = loop;

@@ -628,7 +628,7 @@ export interface CodeshellApi {
    * persistent goal isn't replayed from the transcript, so a reloaded session
    * would otherwise show nothing.
    */
-  goalGet(sessionId: string): Promise<{ ok: boolean; goal: string | null }>;
+  goalGet(sessionId: string): Promise<{ ok: boolean; goal: string | null; goalId?: string }>;
   /** Background-shell dock panel (TODO 3.2). */
   listBackgroundShells(sessionId: string): Promise<{ shells: BackgroundShellInfo[] }>;
   backgroundShellOutput(

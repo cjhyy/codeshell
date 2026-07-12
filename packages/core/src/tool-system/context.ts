@@ -228,8 +228,8 @@ export interface ToolContext {
   cwd: string;
   /** Mutate the owning live context cwd. Worktree switching intentionally does not use this. */
   setCwd?(cwd: string): void;
-  /** Mutate the owning live session state after a session workspace switch. */
-  setSessionWorkspace?(workspace: SessionWorkspace): void;
+  /** Mutate/rebase the owning live session state after a workspace switch. */
+  setSessionWorkspace?(workspace: SessionWorkspace, stateRevision?: number): void;
   /** LLM credentials/endpoint for tools that need to make their own calls. */
   llmConfig: LLMConfig;
   /** Active model pool (Arena reads this to pick participants). */
