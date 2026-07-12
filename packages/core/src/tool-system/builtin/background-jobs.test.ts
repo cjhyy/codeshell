@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "bun:test";
-import { mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, realpathSync, renameSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { backgroundJobRegistry } from "./background-jobs.js";
@@ -169,6 +170,7 @@ describe("backgroundJobRegistry", () => {
         sessionId: "s1",
         kind: "drive-agent",
         cli: "claude",
+        launchCwd: realpathSync(tmp),
         cwd: realpathSync(tmp),
         promptSummary: "inspect repo and report likely edits",
         status: "running",
@@ -189,6 +191,172 @@ describe("backgroundJobRegistry", () => {
 
       await expect(backgroundJobRegistry.cancel("cc-1")).resolves.toBe(false);
       expect(aborts).toBe(1);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("detects different launch directories inside the same effective git workspace", () => {
+    const repo = mkdtempSync(join(tmpdir(), "drive-job-workspace-same-"));
+    try {
+      execFileSync("git", ["init", "--quiet"], { cwd: repo });
+      const firstCwd = join(repo, "packages", "first");
+      const secondCwd = join(repo, "packages", "second");
+      mkdirSync(firstCwd, { recursive: true });
+      mkdirSync(secondCwd, { recursive: true });
+
+      backgroundJobRegistry.start("first", "s1", "first", { cwd: firstCwd });
+
+      expect(backgroundJobRegistry.listRunningByCwd(secondCwd).map((job) => job.jobId)).toEqual([
+        "first",
+      ]);
+      expect(backgroundJobRegistry.get("first")?.effectiveWorkspaceRoot).toBe(realpathSync(repo));
+      expect(backgroundJobRegistry.get("first")?.gitCommonDir).toBe(
+        realpathSync(join(repo, ".git")),
+      );
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
+  it("does not conflate different declared effective workspaces with the same launch cwd", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "drive-job-workspace-distinct-"));
+    try {
+      const launchCwd = join(tmp, "launcher");
+      const firstWorkspace = join(tmp, "first-workspace");
+      const secondWorkspace = join(tmp, "second-workspace");
+      mkdirSync(launchCwd);
+      mkdirSync(firstWorkspace);
+      mkdirSync(secondWorkspace);
+      execFileSync("git", ["init", "--quiet"], { cwd: firstWorkspace });
+      execFileSync("git", ["init", "--quiet"], { cwd: secondWorkspace });
+
+      backgroundJobRegistry.start("first", "s1", "first", {
+        launchCwd,
+        effectiveWorkspaceCwd: firstWorkspace,
+      });
+      backgroundJobRegistry.start("second", "s2", "second", {
+        launchCwd,
+        effectiveWorkspaceCwd: secondWorkspace,
+      });
+
+      expect(
+        backgroundJobRegistry.listRunningByCwd(secondWorkspace).map((job) => job.jobId),
+      ).toEqual(["second"]);
+      expect(backgroundJobRegistry.get("first")?.launchCwd).toBe(realpathSync(launchCwd));
+      expect(backgroundJobRegistry.get("first")?.cwd).toBe(realpathSync(launchCwd));
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("does not conflate linked worktrees that share a main repository", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "drive-job-worktree-distinct-"));
+    const repo = join(tmp, "main");
+    const linked = join(tmp, "linked");
+    try {
+      mkdirSync(repo);
+      execFileSync("git", ["init", "--quiet"], { cwd: repo });
+      execFileSync(
+        "git",
+        [
+          "-c",
+          "user.name=CodeShell Test",
+          "-c",
+          "user.email=codeshell@example.invalid",
+          "commit",
+          "--quiet",
+          "--allow-empty",
+          "-m",
+          "init",
+        ],
+        { cwd: repo },
+      );
+      execFileSync("git", ["worktree", "add", "--quiet", "-b", "linked-test", linked], {
+        cwd: repo,
+      });
+
+      backgroundJobRegistry.start("main", "s1", "main", { cwd: repo });
+
+      expect(backgroundJobRegistry.listRunningByCwd(linked)).toEqual([]);
+      const main = backgroundJobRegistry.get("main");
+      expect(main?.effectiveWorkspaceRoot).toBe(realpathSync(repo));
+      expect(main?.gitCommonDir).toBe(realpathSync(join(repo, ".git")));
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("matches the effective cwd snapshot when registration git resolution succeeds then query fails", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "drive-job-workspace-git-to-fallback-"));
+    try {
+      const launchCwd = join(tmp, "launcher");
+      const repo = join(tmp, "repo");
+      const effectiveCwd = join(repo, "packages", "target");
+      mkdirSync(launchCwd);
+      mkdirSync(effectiveCwd, { recursive: true });
+      execFileSync("git", ["init", "--quiet"], { cwd: repo });
+
+      backgroundJobRegistry.start("git-first", "s1", "git first", {
+        launchCwd,
+        effectiveWorkspaceCwd: effectiveCwd,
+      });
+      expect(backgroundJobRegistry.get("git-first")?.effectiveWorkspaceKind).toBe("git-worktree");
+
+      renameSync(join(repo, ".git"), join(repo, ".git-disabled"));
+
+      expect(backgroundJobRegistry.listRunningByCwd(effectiveCwd).map((job) => job.jobId)).toEqual([
+        "git-first",
+      ]);
+      expect(backgroundJobRegistry.get("git-first")?.effectiveWorkspaceCwd).toBe(
+        realpathSync(effectiveCwd),
+      );
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("matches the effective cwd snapshot when registration git resolution fails then query succeeds", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "drive-job-workspace-fallback-to-git-"));
+    try {
+      const launchCwd = join(tmp, "launcher");
+      const repo = join(tmp, "repo");
+      const effectiveCwd = join(repo, "packages", "target");
+      mkdirSync(launchCwd);
+      mkdirSync(effectiveCwd, { recursive: true });
+
+      backgroundJobRegistry.start("fallback-first", "s1", "fallback first", {
+        launchCwd,
+        effectiveWorkspaceCwd: effectiveCwd,
+      });
+      expect(backgroundJobRegistry.get("fallback-first")?.effectiveWorkspaceKind).toBe("cwd");
+
+      execFileSync("git", ["init", "--quiet"], { cwd: repo });
+
+      expect(backgroundJobRegistry.listRunningByCwd(effectiveCwd).map((job) => job.jobId)).toEqual([
+        "fallback-first",
+      ]);
+      expect(backgroundJobRegistry.get("fallback-first")?.effectiveWorkspaceCwd).toBe(
+        realpathSync(effectiveCwd),
+      );
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("falls back to the legacy normalized cwd comparison outside git", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "drive-job-workspace-fallback-"));
+    try {
+      const sibling = join(tmp, "sibling");
+      mkdirSync(sibling);
+      backgroundJobRegistry.start("plain", "s1", "plain", { cwd: `${tmp}/` });
+
+      expect(backgroundJobRegistry.listRunningByCwd(tmp).map((job) => job.jobId)).toEqual([
+        "plain",
+      ]);
+      expect(backgroundJobRegistry.listRunningByCwd(sibling)).toEqual([]);
+      expect(backgroundJobRegistry.get("plain")?.effectiveWorkspaceRoot).toBe(realpathSync(tmp));
+      expect(backgroundJobRegistry.get("plain")?.gitCommonDir).toBeUndefined();
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }

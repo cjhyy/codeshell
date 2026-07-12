@@ -214,6 +214,7 @@ export function listBackgroundWorkForUI(
       ? backgroundJobRegistry.list()
       : backgroundJobRegistry.listForSession(sessionId);
   for (const j of jobs) {
+    const launchCwd = j.launchCwd ?? j.cwd;
     entries.push({
       kind: "job",
       jobId: j.jobId,
@@ -226,7 +227,7 @@ export function listBackgroundWorkForUI(
       ...(j.kind ? { jobKind: j.kind } : {}),
       ...(j.ccSessionId ? { externalSessionId: j.ccSessionId } : {}),
       ...(j.cli === "claude" || j.cli === "codex" ? { cli: j.cli } : {}),
-      ...(j.cwd ? { cwd: j.cwd } : {}),
+      ...(launchCwd ? { cwd: launchCwd } : {}),
       sourceSession: sourceSession(sessionId, j.sessionId),
     });
   }

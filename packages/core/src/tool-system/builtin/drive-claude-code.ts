@@ -39,6 +39,9 @@ export const driveAgentToolDef: ToolDefinition = {
     "Before launching writable work in a cwd, call DriveAgentJobs(action:'list', cwd) to see any " +
     "already-running DriveAgent jobs there, their prompt summaries, owner sessions, CLI kind, and " +
     "known changed files; use DriveAgentJobs(action:'cancel', jobId) if you must stop one. " +
+    "If the external agent is explicitly expected to write a workspace other than its launch cwd, " +
+    "set effectiveWorkspaceCwd so cross-session conflict checks use that declared workspace; omit " +
+    "it when the run writes in cwd. " +
     "For a quick task where you want the answer inline, pass background:false. " +
     "It has NO time concept of its own: for 'in N minutes' / 'every N' / looping, use CronCreate " +
     "instead (never sleep). A scheduled CronCreate job runs one codeshell turn whose prompt can " +
@@ -81,6 +84,11 @@ export const driveAgentToolDef: ToolDefinition = {
           "Optional model override, passed through to `claude --model` / `codex exec --model`. Omit to use the CLI default; only pass when the user explicitly requests a model.",
       },
       cwd: { type: "string", description: "Working directory the run operates in." },
+      effectiveWorkspaceCwd: {
+        type: "string",
+        description:
+          "Optional declared workspace the external agent is expected to write when that differs from its launch cwd (for example, an explicitly managed worktree it will cd into). Used for conflict detection only; the CLI still launches in cwd. Defaults to cwd.",
+      },
       attachmentPaths: {
         type: "array",
         items: { type: "string" },
@@ -191,14 +199,14 @@ function jobDurationSeconds(job: BackgroundJobEntry): string {
 
 function formatDriveJobListLine(job: BackgroundJobEntry): string {
   const prompt = job.promptSummary || job.description || "(no prompt summary)";
-  const cwd = job.cwd ?? "(unknown cwd)";
+  const launchCwd = job.launchCwd ?? job.cwd ?? "(unknown cwd)";
   const cli = job.cli ?? "unknown";
   return [
     `${job.jobId}`,
     `status=${job.status}`,
     `cli=${cli}`,
     `session=${job.sessionId}`,
-    `cwd=${cwd}`,
+    `launchCwd=${launchCwd}`,
     `startedAt=${new Date(job.startedAt).toISOString()}`,
     `duration=${jobDurationSeconds(job)}`,
     `changedFiles=${changedFilesSummary(job)}`,
@@ -310,15 +318,19 @@ function recordSuccessfulSession(
   }
 }
 
-function duplicateCwdWarning(cwd: string, writable: boolean): string | undefined {
+function duplicateCwdWarning(effectiveWorkspaceCwd: string, writable: boolean): string | undefined {
   if (!writable) return undefined;
-  const running = backgroundJobRegistry.listRunningByCwd(cwd).filter(isDriveAgentJob);
+  const running = backgroundJobRegistry
+    .listRunningByCwd(effectiveWorkspaceCwd)
+    .filter(isDriveAgentJob);
   if (running.length === 0) return undefined;
   const jobs = running.map(formatDriveJobListLine).join("; ");
+  const workspaceRoot =
+    running[0]?.effectiveWorkspaceRoot ?? normalizeCwdPath(effectiveWorkspaceCwd);
   return (
-    `Warning: another DriveAgent job is already running in cwd ${cwd}. ` +
-    "Concurrent writable agents in the same directory can overwrite each other's work. " +
-    `Run DriveAgentJobs(action:"list", cwd:"${cwd}") before dispatching parallel work for details/cancellation. ` +
+    `Warning: another DriveAgent job is already running in effective workspace ${workspaceRoot}. ` +
+    "Concurrent writable agents in the same workspace can overwrite each other's work. " +
+    `Run DriveAgentJobs(action:"list", cwd:"${effectiveWorkspaceCwd}") before dispatching parallel work for details/cancellation. ` +
     `Running: ${jobs}`
   );
 }
@@ -450,6 +462,7 @@ function trackBackgroundRun(params: {
   label: string;
   cli: DriveCli;
   cwd: string;
+  effectiveWorkspaceCwd: string;
   promptSummary: string;
   start: () => Promise<AgentRunResult>;
   abort: () => void;
@@ -459,12 +472,13 @@ function trackBackgroundRun(params: {
   recordExternalFileChanges?: ToolContext["recordExternalFileChanges"];
   originClientMessageId?: string;
 }): { jobId: string; warning?: string } {
-  const warning = duplicateCwdWarning(params.cwd, params.writable);
+  const warning = duplicateCwdWarning(params.effectiveWorkspaceCwd, params.writable);
   const jobId = newDriveJobId();
   const run = params.start();
   backgroundJobRegistry.start(jobId, params.sessionId, params.label, {
     kind: "drive-agent",
-    cwd: params.cwd,
+    launchCwd: params.cwd,
+    effectiveWorkspaceCwd: params.effectiveWorkspaceCwd,
     cli: params.cli,
     promptSummary: params.promptSummary,
     originClientMessageId: params.originClientMessageId,
@@ -555,6 +569,10 @@ export function makeDriveAgentTool(
         }
       }
     }
+    const effectiveWorkspaceCwd =
+      typeof args.effectiveWorkspaceCwd === "string" && args.effectiveWorkspaceCwd.trim()
+        ? normalizeCwdPath(args.effectiveWorkspaceCwd)
+        : cwd;
     // Default to bypassPermissions: this tool is a fire-one-turn delegation to
     // an external CLI with nobody watching for approvals, and there is no
     // interactive approval loop here — so under "default" a tool that needs
@@ -609,6 +627,7 @@ export function makeDriveAgentTool(
         label,
         cli,
         cwd,
+        effectiveWorkspaceCwd,
         promptSummary,
         start: () => startRun(runner, { ...runOptsBase, signal: abortController.signal }),
         abort: () => abortController.abort(),
@@ -635,6 +654,7 @@ export function makeDriveAgentTool(
         label,
         cli,
         cwd,
+        effectiveWorkspaceCwd,
         promptSummary,
         start: () => run,
         abort: () => foregroundAbort.abort(),
@@ -666,10 +686,14 @@ export const driveAgentTool = makeDriveAgentTool();
 export const driveAgentJobsToolDef: ToolDefinition = {
   name: "DriveAgentJobs",
   description:
-    "List, inspect, or cancel background DriveAgent jobs. Use action:'list' before launching " +
-    "writable DriveAgent work in a cwd to see already-running jobs there, including prompt " +
-    "summary, owner session, cwd, CLI kind, status, start time, and known changed files. With " +
-    "status:'all', list groups active jobs before terminal jobs and includes each terminal job's " +
+    "List, inspect, or cancel background DriveAgent jobs. action:'list' without cwd defaults to " +
+    "the current CodeShell session, not by cwd; all:true expands that to every session. status " +
+    "defaults to running, so use " +
+    "status:'all' to include completed, failed, and cancelled retained jobs. Before launching " +
+    "writable DriveAgent work, pass cwd as a cross-session conflict filter; cwd is not a grouping " +
+    "or ownership dimension. Results include prompt summary, owner session, launchCwd, CLI kind, " +
+    "status, start time, and known changed files. With status:'all', list groups active jobs before " +
+    "terminal jobs and includes each terminal job's " +
     "available/non-empty finalText result summary, so you usually do not need to inspect every " +
     "completed job. Use " +
     "resultChars to control each result summary (default 800; 0 or less hides results). " +
@@ -690,7 +714,7 @@ export const driveAgentJobsToolDef: ToolDefinition = {
       cwd: {
         type: "string",
         description:
-          "When listing, restrict to DriveAgent jobs in this cwd. This is cross-session so it can catch same-directory write conflicts before dispatch.",
+          "When listing, use the effective workspace containing this cwd as a cross-session filter for conflict inspection. A job's launch cwd is output metadata, not a grouping or ownership key; omit cwd to list the current CodeShell session.",
       },
       status: {
         type: "string",
@@ -725,18 +749,18 @@ function listDriveAgentJobs(args: Record<string, unknown>, ctx?: ToolContext): s
   const sessionId = ctx?.sessionId;
   const listAllSessions = args.all === true || !!cwd || !sessionId;
   const status = args.status === "all" ? "all" : "running";
-  let jobs =
-    listAllSessions || !sessionId
+  let jobs = cwd
+    ? backgroundJobRegistry.listByWorkspaceCwd(cwd)
+    : listAllSessions || !sessionId
       ? backgroundJobRegistry.list()
       : backgroundJobRegistry.listForSession(sessionId);
   jobs = jobs.filter(isDriveAgentJob);
-  if (cwd) jobs = jobs.filter((job) => job.cwd === cwd);
   if (status === "running") {
     jobs = jobs.filter((job) => job.status === "running" || job.status === "cancelling");
   }
 
   if (jobs.length === 0) {
-    if (cwd) return `No ${status} DriveAgent jobs in cwd ${cwd}.`;
+    if (cwd) return `No ${status} DriveAgent jobs in the effective workspace containing ${cwd}.`;
     if (listAllSessions) return `No ${status} DriveAgent jobs in this process.`;
     return `No ${status} DriveAgent jobs in this session.`;
   }
@@ -766,7 +790,7 @@ function inspectDriveAgentJob(jobId: string | undefined): string {
     `status: ${job.status}`,
     `cli: ${job.cli ?? "unknown"}`,
     `session: ${job.sessionId}`,
-    `cwd: ${job.cwd ?? "(unknown cwd)"}`,
+    `launchCwd: ${job.launchCwd ?? job.cwd ?? "(unknown cwd)"}`,
     `startedAt: ${new Date(job.startedAt).toISOString()}`,
     `duration: ${jobDurationSeconds(job)}`,
     `prompt: ${job.promptSummary || job.description || "(no prompt summary)"}`,
@@ -806,7 +830,9 @@ async function cancelDriveAgentJob(jobId: string | undefined): Promise<string> {
       workKind: "cc",
       error: finalText,
       ccSessionId: job.ccSessionId,
-      ...(job.changedFiles?.length ? { changedFiles: job.changedFiles, cwd: job.cwd } : {}),
+      ...(job.changedFiles?.length
+        ? { changedFiles: job.changedFiles, cwd: job.launchCwd ?? job.cwd }
+        : {}),
       ...(job.originClientMessageId ? { originClientMessageId: job.originClientMessageId } : {}),
       enqueuedAt: Date.now(),
     },
@@ -850,6 +876,8 @@ export const driveClaudeCodeToolDef: ToolDefinition = {
       },
       model: (driveAgentToolDef.inputSchema as any).properties.model,
       cwd: (driveAgentToolDef.inputSchema as any).properties.cwd,
+      effectiveWorkspaceCwd: (driveAgentToolDef.inputSchema as any).properties
+        .effectiveWorkspaceCwd,
       attachmentPaths: (driveAgentToolDef.inputSchema as any).properties.attachmentPaths,
       permissionMode: (driveAgentToolDef.inputSchema as any).properties.permissionMode,
       background: (driveAgentToolDef.inputSchema as any).properties.background,

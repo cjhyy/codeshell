@@ -22,6 +22,8 @@
  */
 
 import { normalizeCwdPath } from "../../cc-orchestrator/cwd-normalize.js";
+import { execFileSync } from "node:child_process";
+import { resolveGit } from "../../utils/exec.js";
 
 function isValidSessionId(sid: unknown): sid is string {
   return typeof sid === "string" && sid.length > 0;
@@ -57,8 +59,23 @@ export interface BackgroundJobEntry {
   ccSessionId?: string;
   /** Files the external agent changed (parsed from its transcript, #6). */
   changedFiles?: string[];
-  /** Working directory for jobs that operate on the filesystem, e.g. DriveAgent. */
+  /** Directory in which the external job was launched. This is an audit/listing
+   *  snapshot, not necessarily the workspace the job ultimately writes. */
+  launchCwd?: string;
+  /** @deprecated Back-compatible serialized alias of launchCwd. */
   cwd?: string;
+  /** Normalized snapshot of the declared effective workspace cwd. Preserved
+   *  separately from its resolved root for mixed git-resolution fallback. */
+  effectiveWorkspaceCwd?: string;
+  /** Canonical conflict identity: git worktree root when resolvable, otherwise
+   *  the normalized effective workspace cwd. */
+  effectiveWorkspaceRoot?: string;
+  /** Git common dir identifies the main repository shared by linked worktrees.
+   *  Conflict checks deliberately compare worktree roots, so separate
+   *  worktrees of the same repository remain isolated. */
+  gitCommonDir?: string;
+  /** Whether effectiveWorkspaceRoot came from git or the cwd fallback. */
+  effectiveWorkspaceKind?: "git-worktree" | "cwd";
   /** DriveAgent prompt summary, separate from the UI-oriented description. */
   promptSummary?: string;
   /** External CLI kind for DriveAgent jobs. */
@@ -81,7 +98,13 @@ export interface BackgroundJobOutcome {
 
 export interface BackgroundJobStartOptions {
   kind?: BackgroundJobKind;
+  /** Preferred name for the external process's launch directory. */
+  launchCwd?: string;
+  /** @deprecated Back-compatible alias for launchCwd. */
   cwd?: string;
+  /** Optional host-declared workspace the job is expected to write. Defaults
+   *  to launchCwd. This avoids guessing later shell `cd` commands. */
+  effectiveWorkspaceCwd?: string;
   promptSummary?: string;
   cli?: ExternalCliKind;
   originClientMessageId?: string;
@@ -89,6 +112,42 @@ export interface BackgroundJobStartOptions {
 }
 
 const CANCEL_WAIT_TIMEOUT_MS = 5_000;
+
+interface EffectiveWorkspaceIdentity {
+  root: string;
+  kind: "git-worktree" | "cwd";
+  gitCommonDir?: string;
+}
+
+/** Resolve once at registration/query time. Git failures and non-git paths
+ *  intentionally collapse to the legacy normalized-cwd identity. */
+function resolveEffectiveWorkspaceIdentity(cwd: string): EffectiveWorkspaceIdentity {
+  const normalizedCwd = normalizeCwdPath(cwd);
+  try {
+    const output = execFileSync(
+      resolveGit(),
+      ["rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir"],
+      {
+        cwd: normalizedCwd,
+        encoding: "utf-8",
+        timeout: 5_000,
+        stdio: ["ignore", "pipe", "ignore"],
+      },
+    ).trim();
+    const [rawRoot, rawCommonDir] = output.split(/\r?\n/);
+    if (rawRoot && rawCommonDir) {
+      return {
+        root: normalizeCwdPath(rawRoot),
+        kind: "git-worktree",
+        gitCommonDir: normalizeCwdPath(rawCommonDir),
+      };
+    }
+  } catch {
+    // Non-git, missing git, deleted cwd, and timeouts all retain legacy cwd
+    // comparison semantics. Conflict detection must never break job launch.
+  }
+  return { root: normalizedCwd, kind: "cwd" };
+}
 
 function isActiveStatus(status: BackgroundJobStatus): boolean {
   return status === "running" || status === "cancelling";
@@ -127,6 +186,14 @@ class BackgroundJobRegistry {
     options?: BackgroundJobStartOptions,
   ): void {
     if (!isValidSessionId(sessionId)) return;
+    const rawLaunchCwd = options?.launchCwd ?? options?.cwd;
+    const launchCwd = rawLaunchCwd ? normalizeCwdPath(rawLaunchCwd) : undefined;
+    const effectiveWorkspaceCwd = options?.effectiveWorkspaceCwd
+      ? normalizeCwdPath(options.effectiveWorkspaceCwd)
+      : launchCwd;
+    const workspaceIdentity = effectiveWorkspaceCwd
+      ? resolveEffectiveWorkspaceIdentity(effectiveWorkspaceCwd)
+      : undefined;
     this.jobs.set(jobId, {
       jobId,
       sessionId,
@@ -134,7 +201,17 @@ class BackgroundJobRegistry {
       description,
       status: "running",
       startedAt: Date.now(),
-      ...(options?.cwd ? { cwd: normalizeCwdPath(options.cwd) } : {}),
+      ...(launchCwd ? { launchCwd, cwd: launchCwd } : {}),
+      ...(effectiveWorkspaceCwd ? { effectiveWorkspaceCwd } : {}),
+      ...(workspaceIdentity
+        ? {
+            effectiveWorkspaceRoot: workspaceIdentity.root,
+            effectiveWorkspaceKind: workspaceIdentity.kind,
+            ...(workspaceIdentity.gitCommonDir
+              ? { gitCommonDir: workspaceIdentity.gitCommonDir }
+              : {}),
+          }
+        : {}),
       ...(options?.promptSummary ? { promptSummary: options.promptSummary } : {}),
       ...(options?.cli ? { cli: options.cli } : {}),
       ...(options?.originClientMessageId
@@ -218,10 +295,32 @@ class BackgroundJobRegistry {
     );
   }
 
-  /** Running jobs, across all sessions, that are operating in the same cwd. */
+  /** Running jobs, across all sessions, in the same effective workspace.
+   *
+   * Git paths compare by canonical worktree root, so sibling launch directories
+   * collide while distinct linked worktrees do not. A declared
+   * effectiveWorkspaceCwd takes precedence over launchCwd. If either side could
+   * not be resolved through git, exact launch-cwd matching remains the
+   * conservative back-compatible fallback. */
   listRunningByCwd(cwd: string): BackgroundJobEntry[] {
+    return this.listByWorkspaceCwd(cwd).filter((e) => isActiveStatus(e.status));
+  }
+
+  /** Running and retained terminal jobs in the effective workspace containing
+   *  cwd. Used by DriveAgentJobs' cross-session cwd filter. */
+  listByWorkspaceCwd(cwd: string): BackgroundJobEntry[] {
     const normalized = normalizeCwdPath(cwd);
-    return [...this.jobs.values()].filter((e) => isActiveStatus(e.status) && e.cwd === normalized);
+    const queryIdentity = resolveEffectiveWorkspaceIdentity(normalized);
+    return [...this.jobs.values()].filter((e) => {
+      if (e.effectiveWorkspaceRoot === queryIdentity.root) return true;
+      if (e.effectiveWorkspaceKind === "git-worktree" && queryIdentity.kind === "git-worktree") {
+        return false;
+      }
+      // Mixed git-resolution states compare the declared effective cwd
+      // snapshot. Only entries created before that field existed fall back to
+      // the legacy launch cwd alias.
+      return (e.effectiveWorkspaceCwd ?? e.launchCwd ?? e.cwd) === normalized;
+    });
   }
 
   /** All jobs (running + retained terminal) for `sessionId`. Feeds the panel. */

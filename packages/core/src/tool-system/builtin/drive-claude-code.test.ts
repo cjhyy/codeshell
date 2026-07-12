@@ -1,4 +1,5 @@
 import { describe, it, expect } from "bun:test";
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, realpathSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { tmpdir } from "node:os";
@@ -32,7 +33,7 @@ function legacyDriveJobListLine(job: BackgroundJobEntry): string {
     `status=${job.status}`,
     `cli=${job.cli ?? "unknown"}`,
     `session=${job.sessionId}`,
-    `cwd=${job.cwd ?? "(unknown cwd)"}`,
+    `launchCwd=${job.launchCwd ?? job.cwd ?? "(unknown cwd)"}`,
     `startedAt=${new Date(job.startedAt).toISOString()}`,
     `duration=${duration}`,
     `changedFiles=${changedFiles}`,
@@ -46,6 +47,7 @@ describe("DriveAgent tool", () => {
     expect((driveAgentToolDef.inputSchema as any).properties.prompt).toBeDefined();
     expect((driveAgentToolDef.inputSchema as any).properties.background).toBeDefined();
     expect((driveAgentToolDef.inputSchema as any).properties.model).toBeDefined();
+    expect((driveAgentToolDef.inputSchema as any).properties.effectiveWorkspaceCwd).toBeDefined();
     expect((driveAgentToolDef.inputSchema as any).properties.cli.enum).toEqual(["claude", "codex"]);
   });
 
@@ -377,6 +379,42 @@ describe("DriveClaudeCode alias (back-compat)", () => {
     }
   });
 
+  it("uses a declared effective workspace instead of launch cwd for dispatch conflicts", async () => {
+    backgroundJobRegistry.reset?.();
+    const tmp = mkdtempSync(join(tmpdir(), "drive-effective-workspace-"));
+    try {
+      const launchCwd = join(tmp, "launcher");
+      const firstWorkspace = join(tmp, "first");
+      const secondWorkspace = join(tmp, "second");
+      mkdirSync(launchCwd);
+      mkdirSync(firstWorkspace);
+      mkdirSync(secondWorkspace);
+      const never = () => new Promise<any>(() => {});
+      const tool = makeDriveAgentTool(never as any);
+
+      const first = await tool(
+        { prompt: "first", cwd: launchCwd, effectiveWorkspaceCwd: firstWorkspace } as any,
+        { sessionId: "S-EFFECTIVE-FIRST" } as any,
+      );
+      const second = await tool(
+        { prompt: "second", cwd: launchCwd, effectiveWorkspaceCwd: secondWorkspace } as any,
+        { sessionId: "S-EFFECTIVE-SECOND" } as any,
+      );
+      const third = await tool(
+        { prompt: "third", cwd: tmp, effectiveWorkspaceCwd: firstWorkspace } as any,
+        { sessionId: "S-EFFECTIVE-THIRD" } as any,
+      );
+
+      expect(first).not.toContain("Warning");
+      expect(second).not.toContain("Warning");
+      expect(third).toContain("Warning");
+      expect(third).toContain(realpathSync(firstWorkspace));
+    } finally {
+      backgroundJobRegistry.reset?.();
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
   it("background job registry compares normalized cwd values", () => {
     backgroundJobRegistry.reset?.();
     const tmp = mkdtempSync(join(tmpdir(), "drive-registry-cwd-"));
@@ -591,6 +629,15 @@ describe("DriveAgentJobs tool", () => {
     expect(driveAgentJobsToolDef.description).toContain("terminal");
     expect(driveAgentJobsToolDef.description).toContain("resultChars");
     expect(driveAgentJobsToolDef.description).toContain("non-empty finalText");
+    expect(driveAgentJobsToolDef.description).toContain("current CodeShell session");
+    expect(driveAgentJobsToolDef.description).toContain("not by cwd");
+    expect(driveAgentJobsToolDef.description).toContain("status:'all'");
+    expect((driveAgentJobsToolDef.inputSchema as any).properties.cwd.description).toContain(
+      "cross-session filter",
+    );
+    expect((driveAgentJobsToolDef.inputSchema as any).properties.cwd.description).toContain(
+      "launch cwd",
+    );
   });
 
   it("lists running DriveAgent jobs in a cwd before dispatching another one", async () => {
@@ -630,6 +677,34 @@ describe("DriveAgentJobs tool", () => {
     } finally {
       backgroundJobRegistry.reset?.();
       rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("uses cwd as a cross-session effective-workspace filter, not a launch-cwd bucket", async () => {
+    backgroundJobRegistry.reset?.();
+    const repo = mkdtempSync(join(tmpdir(), "drive-jobs-workspace-filter-"));
+    try {
+      const launchCwd = join(repo, "packages", "first");
+      const queryCwd = join(repo, "packages", "second");
+      mkdirSync(launchCwd, { recursive: true });
+      mkdirSync(queryCwd, { recursive: true });
+      execFileSync("git", ["init", "--quiet"], { cwd: repo });
+      backgroundJobRegistry.start("cc-workspace-filter", "S-OTHER", "DriveAgent(codex): edit", {
+        kind: "drive-agent",
+        launchCwd,
+      });
+
+      const out = await driveAgentJobsTool(
+        { action: "list", cwd: queryCwd } as any,
+        { sessionId: "S-CURRENT" } as any,
+      );
+
+      expect(out).toContain("cc-workspace-filter");
+      expect(out).toContain(`launchCwd=${realpathSync(launchCwd)}`);
+      expect(out).not.toContain("No running DriveAgent jobs");
+    } finally {
+      backgroundJobRegistry.reset?.();
+      rmSync(repo, { recursive: true, force: true });
     }
   });
 
@@ -857,7 +932,7 @@ describe("DriveAgentJobs tool", () => {
     }
   });
 
-  it("inspect returns DriveAgent prompt, cwd, cli, status, and known changed files", async () => {
+  it("inspect returns DriveAgent prompt, launch cwd, cli, status, and known changed files", async () => {
     backgroundJobRegistry.reset?.();
     const tmp = mkdtempSync(join(tmpdir(), "drive-jobs-inspect-"));
     try {
@@ -884,7 +959,7 @@ describe("DriveAgentJobs tool", () => {
       expect(out).toContain("jobId: cc-known");
       expect(out).toContain("status: completed");
       expect(out).toContain("cli: claude");
-      expect(out).toContain(`cwd: ${realpathSync(tmp)}`);
+      expect(out).toContain(`launchCwd: ${realpathSync(tmp)}`);
       expect(out).toContain("prompt: update docs and tests");
       expect(out).toContain("changedFiles:");
       expect(out).toContain("docs/a.md");
