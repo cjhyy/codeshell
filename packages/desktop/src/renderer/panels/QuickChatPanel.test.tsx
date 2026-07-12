@@ -54,8 +54,8 @@ describe("QuickChatPanel real composer integration", () => {
     expect(html).not.toContain('data-composer-control="context-usage"');
   });
 
-  test("keeps the real restricted and elevated permission labels", () => {
-    expect(render("plan")).toContain("当前对话权限：受限访问");
+  test("shows the ordinary real permission labels", () => {
+    expect(render("plan")).toContain("当前对话权限：计划模式");
     expect(render("bypass")).toContain("当前对话权限：完全访问权限");
   });
 });

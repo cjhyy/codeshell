@@ -61,11 +61,9 @@ interface Props {
   value: PermissionMode | null;
   onChange: (mode: PermissionMode) => void;
   disabled?: boolean;
-  /** Surface-specific wording while preserving the underlying real mode. */
-  labelKeyOverrides?: Partial<Record<PermissionMode, TranslationKey>>;
 }
 
-export function PermissionPill({ value, onChange, disabled, labelKeyOverrides }: Props) {
+export function PermissionPill({ value, onChange, disabled }: Props) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -76,8 +74,6 @@ export function PermissionPill({ value, onChange, disabled, labelKeyOverrides }:
     preferredSide: "top",
   });
   const cur = MODES.find((m) => m.id === value) ?? MODES[1];
-  const labelFor = (mode: (typeof MODES)[number]) =>
-    t(labelKeyOverrides?.[mode.id] ?? mode.labelKey);
 
   useEffect(() => {
     if (!open) return;
@@ -104,13 +100,13 @@ export function PermissionPill({ value, onChange, disabled, labelKeyOverrides }:
         type="button"
         className={`cs-control inline-flex min-h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium disabled:opacity-50 ${toneText(cur.tone)} ${toneBorder(cur.tone)}`}
         disabled={disabled}
-        aria-label={t("chat.permission.currentLabel", { label: labelFor(cur) })}
-        title={t("chat.permission.currentLabel", { label: labelFor(cur) })}
+        aria-label={t("chat.permission.currentLabel", { label: t(cur.labelKey) })}
+        title={t("chat.permission.currentLabel", { label: t(cur.labelKey) })}
         onClick={() => setOpen((o) => !o)}
       >
         <span className={`h-2 w-2 shrink-0 rounded-full ${toneDot(cur.tone)}`} aria-hidden="true" />
         <span className="max-w-[7rem] truncate @max-[520px]/composer-controls:hidden">
-          {labelFor(cur)}
+          {t(cur.labelKey)}
         </span>
         <ChevronDown
           size={11}
@@ -137,7 +133,7 @@ export function PermissionPill({ value, onChange, disabled, labelKeyOverrides }:
               }}
             >
               <span className={`h-2 w-2 shrink-0 rounded-full ${toneDot(m.tone)}`} />
-              <span className="font-medium">{labelFor(m)}</span>
+              <span className="font-medium">{t(m.labelKey)}</span>
             </li>
           ))}
         </ul>

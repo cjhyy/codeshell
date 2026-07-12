@@ -47,8 +47,8 @@ afterEach(() => {
   for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
-describe("Engine quick-chat restricted behavior", () => {
-  it("injects the side-chat behavior and exposes only lightweight read-only tools", async () => {
+describe("Engine quick-chat prompt guidance", () => {
+  it("injects the side boundary guidance without trimming the normal tool set", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "quick-chat-restricted-"));
     tempDirs.push(cwd);
     const model = `${provider}-${Date.now()}-${Math.random()}`;
@@ -71,18 +71,21 @@ describe("Engine quick-chat restricted behavior", () => {
     } as any);
 
     const restricted = calls.at(-1);
-    expect(restricted?.systemPrompt).toContain("# Quick Chat Restricted Mode");
-    expect(restricted?.systemPrompt).toContain("Do not use sub-agents");
-    expect(restricted?.toolNames.toSorted()).toEqual([
-      "Glob",
-      "Grep",
-      "Read",
-      "WebFetch",
-      "WebSearch",
-    ]);
+    expect(restricted?.systemPrompt).toContain("# Side Conversation Boundary");
+    expect(restricted?.systemPrompt).toContain("not the main-thread task execution environment");
+    expect(restricted?.systemPrompt).toContain("lightweight read-only exploration");
+    expect(restricted?.systemPrompt).toContain(
+      "Do not modify files, git state, configuration, or permissions unless the user explicitly asks",
+    );
+    expect(restricted?.systemPrompt).toContain("Allow you to modify files, please help me");
+    expect(restricted?.systemPrompt).toContain("Do not create or invoke sub-agents");
+    expect(restricted?.systemPrompt).toContain("before this boundary");
+    expect(restricted?.toolNames).toEqual(
+      expect.arrayContaining(["Read", "Write", "Edit", "Bash", "Agent"]),
+    );
   });
 
-  it("restores the normal tool set when a later turn is explicitly elevated", async () => {
+  it("keeps guidance and normal tools when the user explicitly requests an edit", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "quick-chat-elevated-"));
     tempDirs.push(cwd);
     const model = `${provider}-${Date.now()}-${Math.random()}`;
@@ -99,17 +102,14 @@ describe("Engine quick-chat restricted behavior", () => {
     });
     (engine as any).hooks.clear();
 
-    await engine.run("inspect", {
-      sessionId: "qchat-elevated",
-      behaviorMode: "quickChatRestricted",
-    } as any);
-    await engine.run("make the requested edit", {
+    await engine.run("Please directly edit the requested file", {
       sessionId: "qchat-elevated",
       permissionMode: "bypassPermissions",
+      behaviorMode: "quickChatRestricted",
     });
 
     const elevated = calls.at(-1);
-    expect(elevated?.systemPrompt).not.toContain("# Quick Chat Restricted Mode");
+    expect(elevated?.systemPrompt).toContain("# Side Conversation Boundary");
     expect(elevated?.toolNames).toEqual(expect.arrayContaining(["Agent", "Write", "Edit", "Bash"]));
   });
 });

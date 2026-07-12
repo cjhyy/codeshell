@@ -63,7 +63,7 @@ describe("ChatView composer variants", () => {
     expect(html).toContain("当前模型：Side Model");
     expect(html).toContain('aria-label="语音输入"');
     expect(html).toContain('aria-label="添加图片"');
-    expect(html).toContain("当前对话权限：受限访问");
+    expect(html).toContain("当前对话权限：计划模式");
     expect(html).not.toContain(">Goal<");
     expect(html).not.toContain('data-composer-control="context-usage"');
   });

@@ -78,7 +78,7 @@ mock.module("./ChatView", () => ({
         <span data-composer-control="permission">
           当前对话权限：
           {props.permissionMode === "plan"
-            ? "受限访问"
+            ? "计划模式"
             : props.permissionMode === "bypass"
               ? "完全访问权限"
               : "默认权限"}
@@ -594,8 +594,8 @@ describe("App quick-chat integration", () => {
     if (!quickOne || !quickTwo || !chatProps) throw new Error("chat surfaces were not created");
     const mainMode = chatProps.permissionMode;
 
-    expect(quickOne.permissionMode).toBe("plan");
-    expect(quickTwo.permissionMode).toBe("plan");
+    expect(quickOne.permissionMode).toBe(mainMode);
+    expect(quickTwo.permissionMode).toBe(mainMode);
 
     for (const mode of ["default", "accept_edits", "bypass", "plan"] as const) {
       await act(async () => {
@@ -603,12 +603,12 @@ describe("App quick-chat integration", () => {
         await flushMicrotasks();
       });
       expect(quickChatProps.get(quickOne.sessionId)?.permissionMode).toBe(mode);
-      expect(quickChatProps.get(quickTwo.sessionId)?.permissionMode).toBe("plan");
+      expect(quickChatProps.get(quickTwo.sessionId)?.permissionMode).toBe(mainMode);
       expect(chatProps.permissionMode).toBe(mainMode);
     }
   });
 
-  test("defaults quick chat to restricted access and only lifts it after an explicit pill change", async () => {
+  test("always sends side guidance while the pill changes only the real permission mode", async () => {
     await mountApp({
       withNormalSession: true,
       panelTabs: [{ id: "quickChat-restricted", kind: "quickChat" }],
@@ -616,7 +616,7 @@ describe("App quick-chat integration", () => {
     const [quick] = currentQuickPanels();
     if (!quick) throw new Error("quick chat session was not created");
 
-    expect(quick.permissionMode).toBe("plan");
+    expect(quick.permissionMode).toBe(chatProps?.permissionMode);
     await act(async () => {
       quick.onSend("inspect only");
       await flushMicrotasks();
@@ -625,7 +625,7 @@ describe("App quick-chat integration", () => {
       prompt: "inspect only",
       opts: expect.objectContaining({
         sessionId: quick.sessionId,
-        permissionMode: "plan",
+        permissionMode: "default",
         behaviorMode: "quickChatRestricted",
       }),
     });
@@ -646,9 +646,9 @@ describe("App quick-chat integration", () => {
       opts: expect.objectContaining({
         sessionId: quick.sessionId,
         permissionMode: "bypassPermissions",
+        behaviorMode: "quickChatRestricted",
       }),
     });
-    expect(runCalls.at(-1)?.opts).not.toHaveProperty("behaviorMode");
   });
 
   test("defaults to a full fork of the owner engine session before becoming ready", async () => {

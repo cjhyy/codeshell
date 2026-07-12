@@ -1581,11 +1581,6 @@ export function ChatView({
                     value={permissionMode}
                     onChange={onPermissionChange}
                     disabled={controlsDisabled}
-                    labelKeyOverrides={
-                      variant === "quickChat"
-                        ? { plan: "panels.quickChat.restrictedAccess" }
-                        : undefined
-                    }
                   />
                   {variant === "main" && (
                     <GoalToggle

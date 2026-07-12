@@ -2528,7 +2528,11 @@ function App() {
     const bucket = session.bucket;
     const engineSessionId = session.sessionId;
     const clientMessageId = newQueuedId();
-    const sendPermissionMode = permissionOverrides[bucket] ?? "plan";
+    const sendPermissionMode =
+      permissionOverrides[bucket] ??
+      permissionOverrides[session.ownerBucket] ??
+      defaultPermissionMode ??
+      "default";
     const sendModelKey = modelOverrides[bucket] ?? defaultActiveModelKey;
     const cwd = session.cwd ?? noRepoCwdRef.current ?? undefined;
     const opts: {
@@ -2545,14 +2549,12 @@ function App() {
       bucket,
       browserPartition: browserPartitionForBucket(bucket),
       clientMessageId,
+      behaviorMode: "quickChatRestricted",
     };
     if (cwd) opts.cwd = cwd;
     if (attachments.length > 0) opts.attachments = attachments;
     if (sendPermissionMode !== null) {
       opts.permissionMode = toCorePermissionMode(sendPermissionMode);
-    }
-    if (sendPermissionMode === "plan") {
-      opts.behaviorMode = "quickChatRestricted";
     }
 
     dispatch({
@@ -3224,7 +3226,10 @@ function App() {
               ? current
               : { ...current, [bucket]: current[session.ownerBucket] },
           );
-          setPermissionOverrides((current) => ({ ...current, [bucket]: "plan" }));
+          setPermissionOverrides((current) => ({
+            ...current,
+            [bucket]: current[session.ownerBucket] ?? defaultPermissionMode ?? "default",
+          }));
           updateQuickChatCreation(key, nonce, (current) => ({ ...current, status: "ready" }));
           return;
         }
@@ -3258,7 +3263,10 @@ function App() {
             ? current
             : { ...current, [bucket]: current[session.ownerBucket] },
         );
-        setPermissionOverrides((current) => ({ ...current, [bucket]: "plan" }));
+        setPermissionOverrides((current) => ({
+          ...current,
+          [bucket]: current[session.ownerBucket] ?? defaultPermissionMode ?? "default",
+        }));
         updateQuickChatCreation(key, nonce, (current) => ({
           ...current,
           cwd: result.workspace.root,
@@ -3275,7 +3283,7 @@ function App() {
         }));
       }
     },
-    [updateQuickChatCreation],
+    [defaultPermissionMode, updateQuickChatCreation],
   );
 
   const onOpenCliSessionConsumed = useCallback(
@@ -3341,7 +3349,10 @@ function App() {
       setQuickChatSessions(quickChatSessionsRef.current);
       setPermissionOverrides((current) => {
         const { [session.bucket]: _oldMode, ...rest } = current;
-        return { ...rest, [bucket]: "plan" };
+        return {
+          ...rest,
+          [bucket]: current[session.ownerBucket] ?? defaultPermissionMode ?? "default",
+        };
       });
       setModelOverrides((current) => {
         const { [session.bucket]: _oldModel, ...rest } = current;
@@ -3362,7 +3373,7 @@ function App() {
         .catch(() => undefined);
       void startQuickChatCreation(next);
     },
-    [startQuickChatCreation],
+    [defaultPermissionMode, startQuickChatCreation],
   );
 
   const setQuickChatDraft = useCallback((bucket: string, next: React.SetStateAction<string>) => {
@@ -4562,8 +4573,11 @@ function App() {
                       : null;
                     const quickCwd = cwd ?? noRepoCwdRef.current;
                     const quickPermissionMode = quickSession
-                      ? (permissionOverrides[quickSession.bucket] ?? "plan")
-                      : "plan";
+                      ? (permissionOverrides[quickSession.bucket] ??
+                        permissionOverrides[quickSession.ownerBucket] ??
+                        defaultPermissionMode ??
+                        "default")
+                      : (defaultPermissionMode ?? "default");
                     const quickActiveModelKey = quickSession
                       ? (modelOverrides[quickSession.bucket] ?? defaultActiveModelKey)
                       : defaultActiveModelKey;
