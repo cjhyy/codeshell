@@ -91,6 +91,44 @@ Desktop wiring/UI/lifecycle：
 
 已知 `ExternalAgentSessionStore concurrent writers` 基线失败本次没有复现。
 
+## 复审修复
+
+### MAJOR 1 — ephemeral quick chat 绕过工具 gate 写入持久记忆
+
+- `288f7f5b` — `test(quickchat): reproduce ephemeral memory leak`
+  - 新增 full-fork 快聊的端到端记忆隔离测试，父 transcript 预置 8 条消息以触发真实 pipeline。
+  - 同时覆盖 restricted 轮次和显式 `bypassPermissions` 提权轮次，断言 extraction/summary 不调用、dream memory 不写入、quick-chat session summary 不持久化、auto-dream 状态不更新。
+  - 补充 blank `qchat-*` 首次建会话必须落下 `ephemeral: true` 的断言。
+  - 红灯：`5 pass / 3 fail / 19 expect()`；两种轮次均实际产生 dream memory/session summary/auto-dream 写入，blank quick chat 的 marker 为 `undefined`。
+- `d0e60f08` — `fix(quickchat): skip durable memory for ephemeral sessions`
+  - 复用 `SessionState.ephemeral` 作为与 behavior/permission 无关的 runtime 生命周期标记；现代 side fork 读显式 marker，历史/blank `qchat-*` 通过同一 helper fail closed。
+  - `SessionManager.create()` 为 blank `qchat-*` 持久化 `ephemeral: true`；普通 marker 缺失 session 保持原行为。
+  - Engine 在调用 `runMemoryPipeline()` 前按 session ephemeral 状态短路，整个 extraction/session-memory/auto-dream/dream-consolidation 持久化链都不运行；快聊提权不会清除该标记。
+
+### MAJOR 2 — 安全边界测试过弱
+
+- `57425e2e` — `test(quickchat): harden restricted mode boundaries`
+  - 模型可见工具集改为排序后严格等于 `Glob/Grep/Read/WebFetch/WebSearch`，不再使用弱否定 `arrayContaining`。
+  - executor 表驱动硬调 `Write/Edit/ApplyPatch/Bash/Config/Agent/Task/MCPTool/mcp__*`，每项都断言 `isError` 且 handler mock 为 0 次调用。
+  - App 集成覆盖同一快聊 `restricted → default → acceptEdits → bypass → restricted` 往返，并断言第二个快聊与主线程权限全程不变。
+  - 这组安全回归在当时实现上直接绿灯：它加固已有正确 gate，未伪造生产代码失败。
+
+### 复审后验证
+
+- 联合定向回归（ephemeral memory、restricted Engine、executor gate、side fork、MemoryOrchestrator、App quick-chat integration）：`36 pass / 0 fail / 193 expect()`。
+- `bun run --filter '@cjhyy/code-shell-core' build`：通过。
+- `bun test 2>&1 | tail -5`（使用 `pipefail` + 临时 tee 保留诊断日志）：
+
+  ```text
+  5836 pass
+  6 skip
+  0 fail
+  14375 expect() calls
+  Ran 5842 tests across 832 files. [69.78s]
+  ```
+
+`ExternalAgentSessionStore concurrent writers` 预存基线失败本次仍未复现，全量没有新增失败。
+
 ## 偏离与未决
 
 - “明确提权”采用可审计的 UI 动作：用户必须切换 quick chat 自己的访问徽标。仅在自然语言里要求写入不会静默绕过 hard gate；模型会提示用户切换徽标。这避免模型自行判断一句话是否足以授权。
@@ -98,4 +136,3 @@ Desktop wiring/UI/lifecycle：
 - 没有新增独立权限枚举或第二套 permission controller；`quickChatRestricted` 只是组合现有 plan snapshot、通用 allowlist gate 和 PromptComposer 注入的命名 per-run profile。
 - 未做 Electron 端到端截图测试；UI 由真实组件 SSR 测试验证“受限访问/完全访问”两种状态，App integration 验证状态与发送到 core 的参数一致。
 - 无 merge、push 或分支切换。
-
