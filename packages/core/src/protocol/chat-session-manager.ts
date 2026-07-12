@@ -1,4 +1,5 @@
 import { ChatSession } from "./chat-session.js";
+import type { SessionKind } from "../types.js";
 import type { Engine } from "../engine/engine.js";
 import type { EngineRuntime } from "../engine/runtime.js";
 import type { EngineConfig } from "../engine/types.js";
@@ -38,6 +39,19 @@ export interface ChatSessionManagerOptions {
   engineFactory: (slice: EngineConfigSlice) => Engine;
   maxSessions?: number; // default 16
   idleTtlMs?: number; // default 30 min
+  /** Host lifecycle generation attached to Pet projection snapshots/deltas. */
+  projectionGeneration?: number;
+}
+
+export interface LiveChatSessionSnapshot {
+  generation: number;
+  sessions: Array<{
+    sessionId: string;
+    busy: boolean;
+    queueDepth: number;
+    lastActivityAt: number;
+    kind: SessionKind;
+  }>;
 }
 
 export const CLOSED_CHAT_SESSION_TOMBSTONE_LIMIT = 4096;
@@ -51,6 +65,7 @@ export class ChatSessionManager {
   private readonly factory: (slice: EngineConfigSlice) => Engine;
   private readonly maxSessions: number;
   private readonly idleTtlMs: number;
+  private readonly projectionGeneration: number;
   private sweeper: ReturnType<typeof setInterval> | null = null;
 
   constructor(opts: ChatSessionManagerOptions) {
@@ -58,6 +73,7 @@ export class ChatSessionManager {
     this.factory = opts.engineFactory;
     this.maxSessions = opts.maxSessions ?? 16;
     this.idleTtlMs = opts.idleTtlMs ?? 30 * 60 * 1000;
+    this.projectionGeneration = opts.projectionGeneration ?? 1;
   }
 
   async getOrCreate(sessionId: string, slice: EngineConfigSlice): Promise<ChatSession> {
@@ -152,6 +168,29 @@ export class ChatSessionManager {
    */
   forEachSession(fn: (s: ChatSession) => void): void {
     for (const s of [...this.sessions.values()]) fn(s);
+  }
+
+  /** Snapshot-safe, read-only source shared by query("sessions") and Pet projection. */
+  getLiveSessionSnapshot(): LiveChatSessionSnapshot {
+    const sessions: LiveChatSessionSnapshot["sessions"] = [];
+    this.forEachSession((session) => {
+      sessions.push({
+        sessionId: session.id,
+        busy: session.isBusy(),
+        queueDepth: session.queueDepth(),
+        lastActivityAt: session.lastActivityAt,
+        kind:
+          (
+            session.engine as Engine & {
+              getSessionManager?: () => { readSessionKind?: (sessionId: string) => SessionKind };
+            }
+          )
+            .getSessionManager?.()
+            .readSessionKind?.(session.id) ?? "work",
+      });
+    });
+    sessions.sort((a, b) => a.sessionId.localeCompare(b.sessionId));
+    return { generation: this.projectionGeneration, sessions };
   }
 
   close(sessionId: string): Promise<void> {

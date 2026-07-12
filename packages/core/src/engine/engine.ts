@@ -121,7 +121,12 @@ import {
 } from "./prompt-cache-diagnostics.js";
 import { EngineRuntime } from "./runtime.js";
 import { buildRunUserMessageContent, prepareRunImageInput } from "./run-image-input.js";
-import { QUICK_CHAT_RESTRICTED_SYSTEM_PROMPT, type EngineRunOptions } from "./run-types.js";
+import {
+  PET_ALLOWED_TOOL_NAMES,
+  PET_SYSTEM_PROMPT,
+  QUICK_CHAT_RESTRICTED_SYSTEM_PROMPT,
+  type EngineRunOptions,
+} from "./run-types.js";
 import { createSubAgentSpawner } from "./subagent-spawner.js";
 import { stripInjectedContextMessages } from "./injected-context-cache.js";
 import { AuxiliaryPipeline, sameLlmIdentity } from "./auxiliary-pipeline.js";
@@ -1091,10 +1096,27 @@ export class Engine {
     // overrides live only for this run; persistent setPermissionMode/setPlanMode
     // calls made while busy are staged separately and cannot mutate this pair.
     const quickChatRestricted = options?.behaviorMode === "quickChatRestricted";
-    let runPermissionMode = options?.permissionMode ?? this.config.permissionMode ?? "acceptEdits";
-    if (options?.planMode === true) {
+    const persistedSessionKind =
+      options?.sessionId && this.sessionManager.exists(options.sessionId)
+        ? this.sessionManager.readSessionKind(options.sessionId)
+        : undefined;
+    if (
+      persistedSessionKind !== undefined &&
+      options?.kind !== undefined &&
+      persistedSessionKind !== options.kind
+    ) {
+      throw new Error(
+        `session kind mismatch: persisted ${persistedSessionKind}, requested ${options.kind}`,
+      );
+    }
+    const sessionKind = persistedSessionKind ?? options?.kind ?? "work";
+    const petProfile = sessionKind === "pet" || options?.behaviorMode === "pet";
+    let runPermissionMode = petProfile
+      ? "default"
+      : (options?.permissionMode ?? this.config.permissionMode ?? "acceptEdits");
+    if (!petProfile && options?.planMode === true) {
       runPermissionMode = "plan";
-    } else if (options?.planMode === false && runPermissionMode === "plan") {
+    } else if (!petProfile && options?.planMode === false && runPermissionMode === "plan") {
       runPermissionMode = "acceptEdits";
     }
     const runPlanMode = runPermissionMode === "plan";
@@ -1285,6 +1307,7 @@ export class Engine {
         toolCtx.cwd = nextCwd;
       },
     };
+    if (petProfile) toolCtx.allowedToolNames = PET_ALLOWED_TOOL_NAMES;
 
     logger.info("engine.run", {
       task: taskText.slice(0, 200),
@@ -1410,6 +1433,7 @@ export class Engine {
         options?.sessionId,
         this.config.isSubAgent === true ? getCurrentSid() : undefined,
         this.config.isSubAgent === true ? "subagent" : this.config.origin,
+        sessionKind,
       );
       const userMsg: Message = { role: "user", content: userMessageContent };
       claimClientMessageId(session, options?.clientMessageId, "submit");
@@ -1684,6 +1708,7 @@ export class Engine {
           [
             this.config.appendSystemPrompt,
             quickChatRestricted ? QUICK_CHAT_RESTRICTED_SYSTEM_PROMPT : undefined,
+            petProfile ? PET_SYSTEM_PROMPT : undefined,
           ]
             .filter(Boolean)
             .join("\n\n") || undefined,
@@ -1709,7 +1734,7 @@ export class Engine {
       // per-Engine instance keeps the null-runtime path (tests, ad-hoc
       // scripts) working.
       const mcpServers = this.config.mcpServers ?? {};
-      if (Object.keys(mcpServers).length > 0 && !this.mcpManager) {
+      if (!petProfile && Object.keys(mcpServers).length > 0 && !this.mcpManager) {
         if (this.runtime) {
           this.mcpManager = this.runtime.mcpPool;
         } else {
@@ -1783,9 +1808,11 @@ export class Engine {
       // being present: engines without one (sub-agents, bare tests) have no
       // MCP tools in their private registries anyway.
       const allowedMcpServers = new Set(
-        Object.entries(this.config.mcpServers ?? {})
-          .filter(([, c]) => c.enabled !== false)
-          .map(([n]) => n),
+        petProfile
+          ? []
+          : Object.entries(this.config.mcpServers ?? {})
+              .filter(([, c]) => c.enabled !== false)
+              .map(([n]) => n),
       );
       toolCtx.allowedMcpServers = allowedMcpServers;
       const mcpVisible = (toolName: string): boolean => {
@@ -1826,9 +1853,12 @@ export class Engine {
       // PLAN_MODE_ALLOWED_TOOLS so what the model SEES and what the executor
       // RUNS can't drift apart. (Bash is in the set; the executor additionally
       // gates Bash to read-only commands at call time.)
-      const toolDefs = runPlanMode
-        ? allToolDefs.filter((t) => PLAN_MODE_ALLOWED_TOOLS.has(t.name))
+      const profileToolDefs = petProfile
+        ? allToolDefs.filter((tool) => PET_ALLOWED_TOOL_NAMES.has(tool.name))
         : allToolDefs;
+      const toolDefs = runPlanMode
+        ? profileToolDefs.filter((t) => PLAN_MODE_ALLOWED_TOOLS.has(t.name))
+        : profileToolDefs;
 
       const [llmClient, fullSystemPrompt, dynamicContextMsg] = await Promise.all([
         llmClientPromise,
