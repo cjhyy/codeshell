@@ -1,13 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { INITIAL_STATE } from "./types";
 import {
+  archiveAllSessions,
+  archiveSession,
   bucketKey,
+  deleteSessionLocal,
   loadSessionIndex,
   loadTranscript,
   NO_REPO_KEY,
   repoKeyOf,
   saveSessionIndex,
   saveTranscript,
+  setActiveSession,
 } from "./transcripts";
 
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem" | "clear">;
@@ -91,5 +95,104 @@ describe("transcript snapshot cursor persistence", () => {
     expect(storage.getItem("codeshell.transcript.stable-project-id.session-1")).not.toBeNull();
     expect(storage.getItem("codeshell.projectSessionIndex.stable-project-id")).toBeNull();
     expect(storage.getItem("codeshell.projectTranscript.stable-project-id.session-1")).toBeNull();
+  });
+
+  it("normalizes a dangling persisted active session to draft", () => {
+    storage.setItem(
+      "codeshell.sessionIndex.repo-a",
+      JSON.stringify({
+        activeSessionId: "missing",
+        sessions: [{ id: "live", title: "Live", createdAt: 1, updatedAt: 1 }],
+      }),
+    );
+
+    expect(loadSessionIndex("repo-a").activeSessionId).toBeNull();
+    expect(
+      JSON.parse(storage.getItem("codeshell.sessionIndex.repo-a") ?? "{}").activeSessionId,
+    ).toBeNull();
+  });
+
+  it("preserves an explicit draft when live sessions still exist", () => {
+    storage.setItem(
+      "codeshell.sessionIndex.repo-a",
+      JSON.stringify({
+        activeSessionId: null,
+        sessions: [{ id: "live", title: "Live", createdAt: 1, updatedAt: 1 }],
+      }),
+    );
+
+    expect(loadSessionIndex("repo-a").activeSessionId).toBeNull();
+  });
+
+  it("keeps a legacy index without an active field in draft", () => {
+    storage.setItem(
+      "codeshell.sessionIndex.repo-a",
+      JSON.stringify({
+        sessions: [{ id: "live", title: "Live", createdAt: 1, updatedAt: 1 }],
+      }),
+    );
+
+    expect(loadSessionIndex("repo-a").activeSessionId).toBeNull();
+  });
+
+  it("normalizes an archived persisted active session to draft", () => {
+    storage.setItem(
+      "codeshell.sessionIndex.repo-a",
+      JSON.stringify({
+        activeSessionId: "archived",
+        sessions: [
+          { id: "archived", title: "Archived", createdAt: 1, updatedAt: 2, archived: true },
+          { id: "live", title: "Live", createdAt: 1, updatedAt: 1 },
+        ],
+      }),
+    );
+
+    expect(loadSessionIndex("repo-a").activeSessionId).toBeNull();
+  });
+
+  it("deleting the active session enters draft instead of selecting an archived session", () => {
+    saveSessionIndex("repo-a", {
+      activeSessionId: "active",
+      sessions: [
+        { id: "active", title: "Active", createdAt: 1, updatedAt: 2 },
+        { id: "archived", title: "Archived", createdAt: 1, updatedAt: 1, archived: true },
+      ],
+    });
+
+    const next = deleteSessionLocal("repo-a", "active");
+
+    expect(next.activeSessionId).toBeNull();
+    expect(next.sessions.map((session) => session.id)).toEqual(["archived"]);
+  });
+
+  it("clears the active session when archiving it or archiving the whole project", () => {
+    saveSessionIndex("repo-a", {
+      activeSessionId: "active",
+      sessions: [
+        { id: "active", title: "Active", createdAt: 1, updatedAt: 2 },
+        { id: "other", title: "Other", createdAt: 1, updatedAt: 1 },
+      ],
+    });
+
+    expect(archiveSession("repo-a", "active", true).activeSessionId).toBeNull();
+
+    setActiveSession("repo-a", "other");
+    const archived = archiveAllSessions("repo-a", "Repo A");
+    expect(archived.activeSessionId).toBeNull();
+    expect(archived.sessions.every((session) => session.archived)).toBe(true);
+  });
+
+  it("refuses to activate archived or missing sessions", () => {
+    saveSessionIndex("repo-a", {
+      activeSessionId: null,
+      sessions: [
+        { id: "live", title: "Live", createdAt: 1, updatedAt: 2 },
+        { id: "archived", title: "Archived", createdAt: 1, updatedAt: 1, archived: true },
+      ],
+    });
+
+    expect(setActiveSession("repo-a", "archived").activeSessionId).toBeNull();
+    expect(setActiveSession("repo-a", "missing").activeSessionId).toBeNull();
+    expect(setActiveSession("repo-a", "live").activeSessionId).toBe("live");
   });
 });

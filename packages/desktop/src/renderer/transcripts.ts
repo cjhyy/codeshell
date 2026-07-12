@@ -86,6 +86,51 @@ export interface SessionIndex {
   deletedProjectLabel?: string;
 }
 
+function logSessionDiagnostic(event: string, details: Record<string, unknown>): void {
+  try {
+    if (typeof window !== "undefined" && typeof window.codeshell?.log === "function") {
+      window.codeshell.log(event, details);
+    }
+  } catch {
+    // Diagnostics must never make local session persistence fail.
+  }
+}
+
+/**
+ * Enforce the renderer's active-session invariant at every persistence boundary.
+ * `null` is an intentional draft. Any other value must name a live, unarchived
+ * row in this exact repo index; invalid legacy/dangling values fail closed to
+ * draft instead of guessing another conversation.
+ */
+function normalizeSessionIndex(
+  repoId: string | null,
+  idx: SessionIndex,
+  source: string,
+): SessionIndex {
+  const requested = idx.activeSessionId as string | null | undefined;
+  if (requested === null) return idx;
+  const summary =
+    typeof requested === "string"
+      ? idx.sessions.find((session) => session.id === requested)
+      : undefined;
+  if (summary && !summary.archived) return idx;
+
+  logSessionDiagnostic("session.active_normalized", {
+    repoId,
+    source,
+    previousActiveSessionId: requested ?? null,
+    reason:
+      requested === undefined
+        ? "missing"
+        : summary?.archived
+          ? "archived"
+          : typeof requested === "string"
+            ? "dangling"
+            : "invalid",
+  });
+  return { ...idx, activeSessionId: null };
+}
+
 function repoKey(repoId: string | null): string {
   return repoId ?? NO_REPO_KEY;
 }
@@ -368,22 +413,27 @@ export function loadSessionIndex(repoId: string | null): SessionIndex {
     if (!parsed || !Array.isArray(parsed.sessions)) {
       return { sessions: [], activeSessionId: null };
     }
-    return {
+    const loaded = {
       sessions: parsed.sessions,
-      // A persisted `null` is the legitimate "draft" state (user hit 新对话
-      // and hasn't sent a message). Only fall back to the first session when
-      // the field is genuinely absent (legacy data missing the key) — using
-      // `??` here would resurrect a closed draft and auto-jump to sessions[0].
-      activeSessionId:
-        parsed.activeSessionId !== undefined
-          ? parsed.activeSessionId
-          : (parsed.sessions[0]?.id ?? null),
+      // A persisted `null` is the legitimate draft state. Missing, dangling,
+      // archived, and malformed values are normalized below; never guess
+      // sessions[0], because that can silently route a send into an old chat.
+      activeSessionId: parsed.activeSessionId as string | null,
       // Carry the deleted-project label through so the archived-sessions view
       // can still name a removed project. Only string values survive.
       ...(typeof parsed.deletedProjectLabel === "string"
         ? { deletedProjectLabel: parsed.deletedProjectLabel }
         : {}),
-    };
+    } satisfies SessionIndex;
+    const normalized = normalizeSessionIndex(repoId, loaded, "load");
+    if (normalized !== loaded) {
+      try {
+        localStorage.setItem(indexKey(repoId), JSON.stringify(normalized));
+      } catch {
+        // best effort
+      }
+    }
+    return normalized;
   } catch {
     return { sessions: [], activeSessionId: null };
   }
@@ -391,7 +441,8 @@ export function loadSessionIndex(repoId: string | null): SessionIndex {
 
 export function saveSessionIndex(repoId: string | null, idx: SessionIndex): void {
   try {
-    localStorage.setItem(indexKey(repoId), JSON.stringify(idx));
+    const normalized = normalizeSessionIndex(repoId, idx, "save");
+    localStorage.setItem(indexKey(repoId), JSON.stringify(normalized));
   } catch {
     // best effort
   }
@@ -551,9 +602,14 @@ export function createSession(
 export function deleteSessionLocal(repoId: string | null, sessionId: string): SessionIndex {
   const idx = loadSessionIndex(repoId);
   const remaining = idx.sessions.filter((s) => s.id !== sessionId);
-  const nextActive =
-    idx.activeSessionId === sessionId ? (remaining[0]?.id ?? null) : idx.activeSessionId;
-  const next: SessionIndex = { sessions: remaining, activeSessionId: nextActive };
+  const next = normalizeSessionIndex(
+    repoId,
+    {
+      sessions: remaining,
+      activeSessionId: idx.activeSessionId === sessionId ? null : idx.activeSessionId,
+    },
+    "delete",
+  );
   saveSessionIndex(repoId, next);
   clearTranscript(repoId, sessionId);
   return next;
@@ -626,13 +682,17 @@ export function archiveSession(
   archived: boolean,
 ): SessionIndex {
   const idx = loadSessionIndex(repoId);
-  const next: SessionIndex = {
-    ...idx,
-    sessions: idx.sessions.map((s) => (s.id === sessionId ? { ...s, archived } : s)),
-    // If we just archived the active session, clear it (the chat surface
-    // returns to draft state until the user picks another).
-    activeSessionId: archived && idx.activeSessionId === sessionId ? null : idx.activeSessionId,
-  };
+  const next = normalizeSessionIndex(
+    repoId,
+    {
+      ...idx,
+      sessions: idx.sessions.map((s) => (s.id === sessionId ? { ...s, archived } : s)),
+      // If we just archived the active session, clear it (the chat surface
+      // returns to draft state until the user picks another).
+      activeSessionId: archived && idx.activeSessionId === sessionId ? null : idx.activeSessionId,
+    },
+    archived ? "archive" : "restore",
+  );
   saveSessionIndex(repoId, next);
   return next;
 }
@@ -708,7 +768,7 @@ export function touchSession(
 
 export function setActiveSession(repoId: string | null, sessionId: string | null): SessionIndex {
   const idx = loadSessionIndex(repoId);
-  const next: SessionIndex = { ...idx, activeSessionId: sessionId };
+  const next = normalizeSessionIndex(repoId, { ...idx, activeSessionId: sessionId }, "set_active");
   saveSessionIndex(repoId, next);
   return next;
 }

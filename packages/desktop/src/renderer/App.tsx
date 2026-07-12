@@ -67,7 +67,7 @@ import {
 import { resolveBucket, findAskUserOrigin } from "./streamRouting";
 import { resolveStopBucket } from "./stopRouting";
 import { statusForBucket, type SessionStatus } from "./sessionStatus";
-import { selectReplayEvents } from "./snapshotReplay";
+import { selectReplayEvents, snapshotHasUnfinishedTopLevelTurn } from "./snapshotReplay";
 import { runAfterModelSwitch } from "./modelSwitchRun";
 import { persistDefaultTextModel } from "./modelSelection";
 import { writeSettings } from "./settingsBus";
@@ -275,6 +275,22 @@ function browserPartitionForBucket(bucket: string): string {
 function quickChatLiveTurnActive(state: MessagesReducerState, busy: boolean): boolean {
   const lastMessage = state.messages[state.messages.length - 1];
   return busy && (state.streamingAssistantId !== null || lastMessage?.kind === "user");
+}
+
+function resolveMainComposerBucket(
+  requestedBucket: string | undefined,
+  renderedBucket: string,
+  activeBucket: string,
+): string {
+  // ChatView explicitly echoes the bucket it rendered with. If navigation
+  // synchronously changed the active bucket before that old render's callback
+  // fires, the echoed bucket is stale and must not override the new authority.
+  // A different explicitly requested bucket is intentional multi-session
+  // routing and remains untouched; quick chat does not use this wrapper.
+  if (requestedBucket === renderedBucket && renderedBucket !== activeBucket) {
+    return activeBucket;
+  }
+  return requestedBucket ?? activeBucket;
 }
 
 interface QuickChatPanelHostProps {
@@ -1026,7 +1042,13 @@ function App() {
     const engineId = summary?.engineSessionId;
     const bucket = activeBucket;
     let cancelled = false;
+    window.codeshell.log("session.hydrate.begin", {
+      bucket,
+      uiSessionId: activeSessionId,
+      engineSessionId: engineId ?? null,
+    });
     void (async () => {
+      let snapshotShowsRunning = false;
       // Base projection: disk-authoritative for ANY session with an engine id.
       // Fold the on-disk transcript and let chooseHydrateBase merge the genuine
       // localStorage tail (disk order wins, so no orphan trailing group);
@@ -1036,7 +1058,12 @@ function App() {
         try {
           const disk = foldTranscript(await window.codeshell.getSessionTranscript(engineId));
           base = chooseHydrateBase(disk, local);
-        } catch {
+        } catch (error) {
+          window.codeshell.log("session.hydrate.fail", {
+            bucket,
+            stage: "transcript",
+            error: error instanceof Error ? error.message : String(error),
+          });
           // disk read failed — fall back to the localStorage projection.
         }
       }
@@ -1047,7 +1074,12 @@ function App() {
       if (engineId) {
         try {
           const sinceSeq = base.snapshotSeq ?? 0;
-          const snapshot = await window.codeshell.subscribeSession(engineId, sinceSeq);
+          // Busy recovery needs the retained top-level lifecycle, including
+          // starts at/before the persisted cursor. Request the full snapshot
+          // for that decision, while selectReplayEvents still applies only the
+          // tail past sinceSeq to the reducer (no duplicate consumption).
+          const snapshot = await window.codeshell.subscribeSession(engineId, 0);
+          snapshotShowsRunning = snapshotHasUnfinishedTopLevelTurn(snapshot);
           const { events, cursor } = selectReplayEvents(snapshot, sinceSeq);
           if (events.length > 0) {
             appliedSeqRef.current.set(bucket, cursor);
@@ -1057,7 +1089,12 @@ function App() {
           } else {
             appliedSeqRef.current.set(bucket, sinceSeq);
           }
-        } catch {
+        } catch (error) {
+          window.codeshell.log("session.hydrate.fail", {
+            bucket,
+            stage: "snapshot",
+            error: error instanceof Error ? error.message : String(error),
+          });
           // Snapshot unavailable (no bridge / unknown session) — use base.
         }
         // Long-disconnect fallback: snapshot empty (evicted / worker long gone)
@@ -1068,12 +1105,33 @@ function App() {
           try {
             const disk = foldTranscript(await window.codeshell.getSessionTranscript(engineId));
             if (disk.messages.length > 0) state = disk;
-          } catch {
+          } catch (error) {
+            window.codeshell.log("session.hydrate.fail", {
+              bucket,
+              stage: "transcript_fallback",
+              error: error instanceof Error ? error.message : String(error),
+            });
             // disk read failed — keep base.
           }
         }
       }
-      if (!cancelled) dispatch({ type: "hydrate", bucket, state });
+      if (!cancelled) {
+        dispatch({ type: "hydrate", bucket, state });
+        if (snapshotShowsRunning) {
+          setBusyForKey(bucket, true);
+          runningBucketRef.current = bucket;
+          window.codeshell.log("session.busy_restored", {
+            bucket,
+            engineSessionId: engineId ?? null,
+            source: "snapshot",
+          });
+        }
+        window.codeshell.log("session.hydrate.end", {
+          bucket,
+          messageCount: state.messages.length,
+          snapshotSeq: state.snapshotSeq,
+        });
+      }
       // Re-surface a persistent goal on load. A goal lives only in the engine's
       // state.json (state.activeGoal) and is NEVER replayed from the transcript,
       // so a session rebuilt from disk (localStorage wiped, or an aborted goal
@@ -1288,14 +1346,23 @@ function App() {
    */
   const handleNewConversationForProject = (repoId: string | null): void => {
     if (activeProjectId !== repoId) setActiveProjectId(repoId);
+    const draftBucket = bucketKey(repoId, null);
+    const previousBucket = activeBucketRef.current;
+    activeBucketRef.current = draftBucket;
+    const nextIndex = setActiveSession(repoId, null);
     setSessionIndices((prev) => ({
       ...prev,
-      [repoKeyOf(repoId)]: setActiveSession(repoId, null),
+      [repoKeyOf(repoId)]: nextIndex,
     }));
+    window.codeshell.log("session.new_draft", {
+      repoId,
+      previousBucket,
+      bucket: draftBucket,
+      source: "repo",
+    });
     // A fresh draft must start from the default permission/goal — clear the
     // shared per-repo "_none_" draft slot so a previous draft's choice doesn't
     // carry over (it's a single slot shared by all drafts in this repo). (#11)
-    const draftBucket = bucketKey(repoId, null);
     setPermissionOverrides((prev) => clearBucketOverride(prev, draftBucket));
     setGoalOverrides((prev) => clearBucketOverride(prev, draftBucket));
     // Same for model: a new draft starts on the global default, not the
@@ -1322,10 +1389,19 @@ function App() {
       return next;
     });
     setActiveProjectId(repoId);
+    const nextIndex = setActiveSession(repoId, sessionId);
+    const nextBucket = nextIndex.activeSessionId ? selectedBucket : bucketKey(repoId, null);
+    activeBucketRef.current = nextBucket;
     setSessionIndices((prev) => ({
       ...prev,
-      [key]: setActiveSession(repoId, sessionId),
+      [key]: nextIndex,
     }));
+    window.codeshell.log("session.select", {
+      repoId,
+      requestedSessionId: sessionId,
+      activeSessionId: nextIndex.activeSessionId,
+      bucket: nextBucket,
+    });
     // Make sure we're looking at chat, not settings, when the user
     // explicitly picks a session.
     setView((v) => ({ ...v, viewMode: "chat" }));
@@ -1459,14 +1535,23 @@ function App() {
    */
   const handleNewConversation = (): void => {
     const repoId = activeProjectId;
+    const draftBucket = bucketKey(repoId, null);
+    const previousBucket = activeBucketRef.current;
+    activeBucketRef.current = draftBucket;
+    const nextIndex = setActiveSession(repoId, null);
     setSessionIndices((prev) => ({
       ...prev,
-      [repoKeyOf(repoId)]: setActiveSession(repoId, null),
+      [repoKeyOf(repoId)]: nextIndex,
     }));
+    window.codeshell.log("session.new_draft", {
+      repoId,
+      previousBucket,
+      bucket: draftBucket,
+      source: "global",
+    });
     // Reset the shared per-repo draft panel slot so a previous draft's open
     // panels don't carry into this fresh conversation (see the longer note in
     // handleNewConversationForProject — same reasoning, same in-memory reset).
-    const draftBucket = bucketKey(repoId, null);
     clearPanelState(draftBucket);
     setPanelByBucket((prev) => ({ ...prev, [draftBucket]: emptyPanelBucketState() }));
     setView((v) => ({ ...v, viewMode: "chat" }));
@@ -4461,13 +4546,34 @@ function App() {
                     }
                     sendBucket={activeBucket}
                     onSend={(text, opts) =>
-                      send(text, { ...opts, bucket: opts?.bucket ?? activeBucket })
+                      send(text, {
+                        ...opts,
+                        bucket: resolveMainComposerBucket(
+                          opts?.bucket,
+                          activeBucket,
+                          activeBucketRef.current,
+                        ),
+                      })
                     }
                     onQueueInput={(text, opts) =>
-                      queueInput(text, { ...opts, bucket: opts?.bucket ?? activeBucket })
+                      queueInput(text, {
+                        ...opts,
+                        bucket: resolveMainComposerBucket(
+                          opts?.bucket,
+                          activeBucket,
+                          activeBucketRef.current,
+                        ),
+                      })
                     }
                     onForceSend={(text, opts) =>
-                      forceSend(text, { ...opts, bucket: opts?.bucket ?? activeBucket })
+                      forceSend(text, {
+                        ...opts,
+                        bucket: resolveMainComposerBucket(
+                          opts?.bucket,
+                          activeBucket,
+                          activeBucketRef.current,
+                        ),
+                      })
                     }
                     onCompactCommand={compactActiveSession}
                     onStop={() => stop()}

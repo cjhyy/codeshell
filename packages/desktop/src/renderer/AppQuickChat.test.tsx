@@ -39,15 +39,23 @@ interface QuickChatPanelProps {
 interface ChatProps {
   variant?: "main" | "quickChat";
   messages: Message[];
+  awaitingHydration?: boolean;
+  sendBucket?: string;
   busy: boolean;
   draft: string;
   permissionMode: PermissionMode | null;
   activeModelKey: string | null;
   onPermissionChange: (mode: PermissionMode) => void;
   onDraftChange: (text: string) => void;
+  onSend: (text: string, opts?: { bucket?: string }) => Promise<void> | void;
   onAskUserAnswer?: (requestId: string, answer: string) => void;
   pendingApproval?: ApprovalRequestEnvelope | null;
   onApprovalDecide?: (decision: "approve" | "deny", reason?: string) => void;
+}
+
+interface SidebarProps {
+  onNewConversation: () => void;
+  onSelectSession: (repoId: string | null, sessionId: string) => void;
 }
 
 interface PanelAreaProps {
@@ -64,6 +72,7 @@ interface PanelAreaProps {
 }
 
 let chatProps: ChatProps | null = null;
+let sidebarProps: SidebarProps | null = null;
 const quickChatProps = new Map<string, QuickChatPanelProps>();
 const panelAreaProps = new Map<string, PanelAreaProps>();
 
@@ -124,7 +133,12 @@ mock.module("./panels/PanelArea", () => ({
   },
 }));
 
-mock.module("./Sidebar", () => ({ Sidebar: () => <div data-testid="sidebar" /> }));
+mock.module("./Sidebar", () => ({
+  Sidebar(props: SidebarProps) {
+    sidebarProps = props;
+    return <div data-testid="sidebar" />;
+  },
+}));
 mock.module("./workspace-trust/TrustGate", () => ({ TrustGate: () => null }));
 mock.module("./shell/SearchBar", () => ({ SearchBar: () => <div data-testid="search" /> }));
 mock.module("./shell/CommandPalette", () => ({
@@ -214,8 +228,12 @@ function restoreGlobalProperty(
 function seedApp(options: {
   withNormalSession: boolean;
   panelTabs: Array<{ id: string; kind: string }>;
+  sidebarCollapsed?: boolean;
+  startInDraft?: boolean;
+  savedTranscript?: Record<string, unknown>;
 }): string {
-  const bucket = options.withNormalSession ? "repoA::session-a" : "repoA::_none_";
+  const hasActiveSession = options.withNormalSession && !options.startInDraft;
+  const bucket = hasActiveSession ? "repoA::session-a" : "repoA::_none_";
   localStorageMock.setItem(
     "codeshell.repos",
     JSON.stringify([{ id: "repoA", name: "Repo A", path: "/tmp/repo-a", addedAt: 1 }]),
@@ -223,12 +241,16 @@ function seedApp(options: {
   localStorageMock.setItem("codeshell.activeRepoId", "repoA");
   localStorageMock.setItem(
     "codeshell.view",
-    JSON.stringify({ viewMode: "chat", sidebarCollapsed: true, inspectorCollapsed: false }),
+    JSON.stringify({
+      viewMode: "chat",
+      sidebarCollapsed: options.sidebarCollapsed ?? true,
+      inspectorCollapsed: false,
+    }),
   );
   localStorageMock.setItem(
     "codeshell.sessionIndex.repoA",
     JSON.stringify({
-      activeSessionId: options.withNormalSession ? "session-a" : null,
+      activeSessionId: hasActiveSession ? "session-a" : null,
       sessions: options.withNormalSession
         ? [
             {
@@ -250,6 +272,12 @@ function seedApp(options: {
       activeId: options.panelTabs[0]?.id ?? null,
     }),
   );
+  if (hasActiveSession && options.savedTranscript) {
+    localStorageMock.setItem(
+      "codeshell.transcript.repoA.session-a",
+      JSON.stringify(options.savedTranscript),
+    );
+  }
   return bucket;
 }
 
@@ -257,6 +285,10 @@ function installCodeshellStub(
   listDiskSessions: () => Promise<any>,
   forkSession: (params: Record<string, unknown>) => Promise<any>,
   getSessionTranscript: (sessionId: string) => Promise<any> = async () => [],
+  subscribeSession: (sessionId: string, sinceSeq?: number) => Promise<any> = async () => ({
+    events: [],
+    nextSeq: 1,
+  }),
 ): void {
   const unsubscribe = () => undefined;
   const project = { path: "/tmp/repo-a", name: "Repo A", addedAt: 1 };
@@ -302,7 +334,7 @@ function installCodeshellStub(
       getSessionTranscriptCalls.push(sessionId);
       return getSessionTranscript(sessionId);
     },
-    subscribeSession: async () => ({ events: [], nextSeq: 0 }),
+    subscribeSession,
     goalGet: async () => ({ goal: null }),
     listRuns: async () => [],
     listDiskSessions: async () => {
@@ -380,9 +412,13 @@ async function flushApp(waitMs = 0): Promise<void> {
 async function mountApp(options: {
   withNormalSession: boolean;
   panelTabs: Array<{ id: string; kind: string }>;
+  sidebarCollapsed?: boolean;
+  startInDraft?: boolean;
+  savedTranscript?: Record<string, unknown>;
   listDiskSessions?: () => Promise<any>;
   forkSession?: (params: Record<string, unknown>) => Promise<any>;
   getSessionTranscript?: (sessionId: string) => Promise<any>;
+  subscribeSession?: (sessionId: string, sinceSeq?: number) => Promise<any>;
 }): Promise<string> {
   ensureMiniDom();
   Object.defineProperty(globalThis, "localStorage", {
@@ -412,6 +448,7 @@ async function mountApp(options: {
         copiedEventCount: 0,
       })),
     options.getSessionTranscript,
+    options.subscribeSession,
   );
   container = document.createElement("div");
   root = createRoot(container);
@@ -483,6 +520,7 @@ afterEach(async () => {
   runCalls = [];
   markAttachmentsSentCalls = [];
   chatProps = null;
+  sidebarProps = null;
   quickChatProps.clear();
   panelAreaProps.clear();
   localStorageMock.clear();
@@ -491,6 +529,221 @@ afterEach(async () => {
 });
 
 describe("App quick-chat integration", () => {
+  test("moves same-tick composer callbacks to the draft bucket when starting a new conversation", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [],
+      sidebarCollapsed: false,
+    });
+    if (!chatProps || !sidebarProps) throw new Error("main chat controls were not rendered");
+    const previousChat = chatProps;
+    expect(previousChat.sendBucket).toBe("repoA::session-a");
+
+    await act(async () => {
+      sidebarProps?.onNewConversation();
+      previousChat.onDraftChange("fresh draft");
+      await flushMicrotasks();
+    });
+
+    expect(chatProps?.sendBucket).toBe("repoA::_none_");
+    expect(chatProps?.draft).toBe("fresh draft");
+  });
+
+  test("routes a same-tick send after new conversation away from the previous session", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [],
+      sidebarCollapsed: false,
+    });
+    if (!chatProps || !sidebarProps) throw new Error("main chat controls were not rendered");
+    const previousChat = chatProps;
+
+    await act(async () => {
+      sidebarProps?.onNewConversation();
+      void previousChat.onSend("fresh send", { bucket: previousChat.sendBucket });
+      await flushMicrotasks();
+    });
+
+    expect(runCalls).toHaveLength(1);
+    const nextIndex = JSON.parse(
+      localStorageMock.getItem("codeshell.sessionIndex.repoA") ?? "null",
+    ) as { activeSessionId: string | null };
+    expect(nextIndex.activeSessionId).not.toBeNull();
+    expect(runCalls[0]?.opts).toEqual(
+      expect.objectContaining({
+        bucket: `repoA::${nextIndex.activeSessionId}`,
+        sessionId: nextIndex.activeSessionId,
+      }),
+    );
+  });
+
+  test("routes a same-tick send from a draft callback to the selected existing session", async () => {
+    await mountApp({
+      withNormalSession: true,
+      startInDraft: true,
+      panelTabs: [],
+      sidebarCollapsed: false,
+    });
+    if (!chatProps || !sidebarProps) throw new Error("main chat controls were not rendered");
+    const previousChat = chatProps;
+    expect(previousChat.sendBucket).toBe("repoA::_none_");
+
+    await act(async () => {
+      sidebarProps?.onSelectSession("repoA", "session-a");
+      void previousChat.onSend("selected send", { bucket: previousChat.sendBucket });
+      await flushMicrotasks();
+    });
+
+    expect(runCalls).toHaveLength(1);
+    expect(runCalls[0]?.opts).toEqual(
+      expect.objectContaining({
+        bucket: "repoA::session-a",
+        sessionId: "engine-a",
+      }),
+    );
+  });
+
+  test("marks an existing session as awaiting hydration after it is selected from draft", async () => {
+    const diskTranscript = deferred<any>();
+    await mountApp({
+      withNormalSession: true,
+      startInDraft: true,
+      panelTabs: [],
+      sidebarCollapsed: false,
+      getSessionTranscript: () => diskTranscript.promise,
+    });
+    if (!sidebarProps) throw new Error("sidebar was not rendered");
+
+    await act(async () => {
+      sidebarProps?.onSelectSession("repoA", "session-a");
+      await flushMicrotasks();
+    });
+
+    expect(chatProps?.sendBucket).toBe("repoA::session-a");
+    expect(chatProps?.messages).toEqual([]);
+    expect(chatProps?.awaitingHydration).toBe(true);
+  });
+
+  test("restores busy when the remount snapshot contains an unfinished turn", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [],
+      subscribeSession: async () => ({
+        events: [
+          {
+            seq: 1,
+            event: { type: "stream_request_start", messageId: "assistant-running" },
+          },
+        ],
+        nextSeq: 2,
+      }),
+    });
+
+    expect(chatProps?.messages).toEqual([
+      expect.objectContaining({ kind: "assistant", id: "assistant-running" }),
+    ]);
+    expect(chatProps?.busy).toBe(true);
+  });
+
+  test("restores busy from a session_started-only snapshot", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [],
+      subscribeSession: async () => ({
+        events: [{ seq: 1, event: { type: "session_started", sessionId: "engine-a" } }],
+        nextSeq: 2,
+      }),
+    });
+
+    expect(chatProps?.busy).toBe(true);
+  });
+
+  test("keeps busy after a streaming tombstone while the top-level turn is unfinished", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [],
+      subscribeSession: async () => ({
+        events: [
+          {
+            seq: 1,
+            event: { type: "stream_request_start", messageId: "assistant-fallback" },
+          },
+          { seq: 2, event: { type: "tombstone", messageId: "assistant-fallback" } },
+        ],
+        nextSeq: 3,
+      }),
+    });
+
+    expect(chatProps?.messages).toEqual([]);
+    expect(chatProps?.busy).toBe(true);
+  });
+
+  test("restores busy from the full snapshot when the persisted cursor has no new tail", async () => {
+    const subscribeCalls: Array<number | undefined> = [];
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [],
+      savedTranscript: {
+        messages: [
+          {
+            kind: "assistant",
+            id: "assistant-persisted",
+            text: "",
+            done: false,
+            createdAt: 1,
+          },
+        ],
+        streamingAssistantId: "assistant-persisted",
+        streamingThinkingId: null,
+        snapshotSeq: 1,
+      },
+      subscribeSession: async (_sessionId, sinceSeq) => {
+        subscribeCalls.push(sinceSeq);
+        return {
+          events:
+            sinceSeq === 0
+              ? [
+                  {
+                    seq: 1,
+                    event: {
+                      type: "stream_request_start",
+                      messageId: "assistant-persisted",
+                    },
+                  },
+                ]
+              : [],
+          nextSeq: 2,
+        };
+      },
+    });
+
+    expect(subscribeCalls).toContain(0);
+    expect(chatProps?.messages).toEqual([
+      expect.objectContaining({ kind: "assistant", id: "assistant-persisted" }),
+    ]);
+    expect(chatProps?.busy).toBe(true);
+  });
+
+  test("does not restore busy when the snapshot top-level turn completed", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [],
+      subscribeSession: async () => ({
+        events: [
+          { seq: 1, event: { type: "session_started", sessionId: "engine-a" } },
+          {
+            seq: 2,
+            event: { type: "stream_request_start", messageId: "assistant-complete" },
+          },
+          { seq: 3, event: { type: "turn_complete", reason: "completed" } },
+        ],
+        nextSeq: 4,
+      }),
+    });
+
+    expect(chatProps?.busy).toBe(false);
+  });
+
   test("routes composer attachments only to the owning quick-chat run", async () => {
     await mountApp({
       withNormalSession: true,
