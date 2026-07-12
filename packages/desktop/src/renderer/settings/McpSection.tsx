@@ -164,12 +164,12 @@ export function McpSection({ scope, activeProjectPath }: Props) {
   const confirm = useConfirm();
   const { t } = useT();
 
-  const cwd = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
+  const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
+      const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
       const disabledPlugins = Array.isArray(s.disabledPlugins)
         ? s.disabledPlugins.filter((x): x is string => typeof x === "string")
         : [];
@@ -189,7 +189,7 @@ export function McpSection({ scope, activeProjectPath }: Props) {
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     }
-  }, [scope, cwd, activeProjectPath]);
+  }, [scope, projectPath, activeProjectPath]);
 
   const runProbe = useCallback(async (list: McpServer[], force: boolean) => {
     // Disabled servers are never connected by the engine, so probing them
@@ -245,7 +245,7 @@ export function McpSection({ scope, activeProjectPath }: Props) {
     const record = Object.fromEntries(
       persistableMcpServers(next).map((s) => [s.name, stripNameFromServer(s)]),
     );
-    await window.codeshell.updateSettings(scope, { mcpServers: record }, cwd);
+    await window.codeshell.updateSettings(scope, { mcpServers: record }, projectPath);
     setServers(next);
     broadcastSettingsChanged();
   };
@@ -258,7 +258,7 @@ export function McpSection({ scope, activeProjectPath }: Props) {
       destructive: true,
     });
     if (!ok) return;
-    await window.codeshell.updateSettings(scope, { mcpServers: { [name]: null } }, cwd);
+    await window.codeshell.updateSettings(scope, { mcpServers: { [name]: null } }, projectPath);
     await window.codeshell.invalidateMcpProbeCache(name);
     setProbes((prev) => {
       const { [name]: _, ...rest } = prev;
@@ -278,7 +278,7 @@ export function McpSection({ scope, activeProjectPath }: Props) {
     await window.codeshell.updateSettings(
       scope,
       { mcpServers: { [s.name]: stripNameFromServer({ ...s, enabled: nextEnabled }) } },
-      cwd,
+      projectPath,
     );
     setServers(updated);
     broadcastSettingsChanged();
@@ -311,7 +311,7 @@ export function McpSection({ scope, activeProjectPath }: Props) {
     if (originalName && originalName !== next.name) {
       record[originalName] = null;
     }
-    await window.codeshell.updateSettings(scope, { mcpServers: record }, cwd);
+    await window.codeshell.updateSettings(scope, { mcpServers: record }, projectPath);
     setServers(updated);
     if (originalName && originalName !== next.name) {
       await window.codeshell.invalidateMcpProbeCache(originalName);

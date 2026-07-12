@@ -50,10 +50,10 @@ export interface UseModelConnectionsResult {
 
 export function useModelConnections(
   scope: "user" | "project",
-  cwd: string | undefined,
+  projectPath: string | undefined,
   tag: ConnTag,
 ): UseModelConnectionsResult {
-  const cacheKey = `conn:${tag}:${scope}:${cwd ?? ""}`;
+  const cacheKey = `conn:${tag}:${scope}:${projectPath ?? ""}`;
   const { t } = useT();
   const confirm = useConfirm();
   const toast = useToast();
@@ -74,7 +74,10 @@ export function useModelConnections(
   const load = useCallback(async () => {
     const cat = (await window.codeshell.getModelCatalog().catch(() => [])) as CatalogEntry[];
     setCatalog(cat);
-    const s = ((await window.codeshell.getSettings(scope, cwd)) ?? {}) as Record<string, unknown>;
+    const s = ((await window.codeshell.getSettings(scope, projectPath)) ?? {}) as Record<
+      string,
+      unknown
+    >;
     const conns = Array.isArray(s.modelConnections) ? (s.modelConnections as ModelInstance[]) : [];
     const mine = conns.filter((c) => c.tag === tag);
     setInstances(mine);
@@ -85,7 +88,7 @@ export function useModelConnections(
     setAuxId(defaults.auxText ?? "");
     if (tag === "audio") {
       try {
-        const d = await window.codeshell.sttDescribe(cwd ?? "");
+        const d = await window.codeshell.sttDescribe(projectPath ?? "");
         setSttFallback(
           d.source === "fallback"
             ? {
@@ -101,11 +104,14 @@ export function useModelConnections(
     } else {
       setSttFallback(null);
     }
-  }, [scope, cwd, cacheKey, tag]);
+  }, [scope, projectPath, cacheKey, tag]);
 
   const persist = useCallback(
     async (next: ModelInstance[], nextCreds: Credential[], nextDefault: string) => {
-      const s = ((await window.codeshell.getSettings(scope, cwd)) ?? {}) as Record<string, unknown>;
+      const s = ((await window.codeshell.getSettings(scope, projectPath)) ?? {}) as Record<
+        string,
+        unknown
+      >;
       const all = Array.isArray(s.modelConnections) ? (s.modelConnections as ModelInstance[]) : [];
       const others = all.filter((c) => c.tag !== tag);
       const defaults = (s.defaults ?? {}) as Record<string, unknown>;
@@ -116,18 +122,25 @@ export function useModelConnections(
           modelConnections: [...others, ...next],
           defaults: { ...defaults, [tag]: nextDefault || undefined },
         },
-        cwd,
+        projectPath,
       );
     },
-    [scope, cwd, tag],
+    [scope, projectPath, tag],
   );
 
   const setAux = useCallback(
     async (id: string) => {
       setAuxId(id);
-      const s = ((await window.codeshell.getSettings(scope, cwd)) ?? {}) as Record<string, unknown>;
+      const s = ((await window.codeshell.getSettings(scope, projectPath)) ?? {}) as Record<
+        string,
+        unknown
+      >;
       const defaults = (s.defaults ?? {}) as Record<string, unknown>;
-      await writeSettings(scope, { defaults: { ...defaults, auxText: id || undefined } }, cwd);
+      await writeSettings(
+        scope,
+        { defaults: { ...defaults, auxText: id || undefined } },
+        projectPath,
+      );
       toast({
         message: id
           ? t("settingsX.textConn.toastAuxSet", { id })
@@ -135,7 +148,7 @@ export function useModelConnections(
         variant: "success",
       });
     },
-    [scope, cwd, t, toast],
+    [scope, projectPath, t, toast],
   );
 
   const addFromTemplate = useCallback(

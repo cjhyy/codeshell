@@ -44,13 +44,13 @@ export function SettingsView({ activeProjectPath }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const cwd = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
+  const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
 
   const refresh = async () => {
     setError(null);
     setLoaded(null);
     try {
-      const cur = await window.codeshell.getSettings(scope, cwd);
+      const cur = await window.codeshell.getSettings(scope, projectPath);
       const text = cur ? JSON.stringify(cur, null, 2) : "{}";
       setLoaded(text);
       setDraft(text);
@@ -70,7 +70,7 @@ export function SettingsView({ activeProjectPath }: Props) {
     setError(null);
     try {
       const patch = JSON.parse(draft) as Record<string, unknown>;
-      await window.codeshell.updateSettings(scope, patch, cwd);
+      await window.codeshell.updateSettings(scope, patch, projectPath);
       window.dispatchEvent(new Event("codeshell:settings-changed"));
       await refresh();
     } catch (e) {

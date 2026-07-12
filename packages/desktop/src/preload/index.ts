@@ -766,10 +766,13 @@ contextBridge.exposeInMainWorld("codeshell", {
   /** Authoritative no-repo conversation cwd (~/.code-shell/no-repo) from main.
    *  Renderer must use this, never recompute homedir() itself. */
   noRepoCwd: (): Promise<string> => ipcRenderer.invoke("no-repo:cwd"),
-  getSettings: (scope: "user" | "project", cwd?: string) =>
-    ipcRenderer.invoke("settings:get", scope, cwd),
-  updateSettings: (scope: "user" | "project", patch: Record<string, unknown>, cwd?: string) =>
-    ipcRenderer.invoke("settings:set", scope, patch, cwd),
+  getSettings: (scope: "user" | "project", projectPath?: string) =>
+    ipcRenderer.invoke("settings:get", scope, projectPath),
+  updateSettings: (
+    scope: "user" | "project",
+    patch: Record<string, unknown>,
+    projectPath?: string,
+  ) => ipcRenderer.invoke("settings:set", scope, patch, projectPath),
   listSessions: () => ipcRenderer.invoke("sessions:list"),
   deleteSession: (id: string) => ipcRenderer.invoke("sessions:delete", id),
   claimQuickChatSession: (id: string, claimId: string) =>

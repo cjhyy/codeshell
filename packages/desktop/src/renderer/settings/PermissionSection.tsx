@@ -32,11 +32,11 @@ export function PermissionSection({ scope, activeProjectPath }: Props) {
   const [mode, setMode] = useState<PermissionMode | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const cwd = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
+  const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
 
   const load = async () => {
     try {
-      const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
+      const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
       const permissions =
         s.permissions && typeof s.permissions === "object"
           ? (s.permissions as Record<string, unknown>)
@@ -59,7 +59,7 @@ export function PermissionSection({ scope, activeProjectPath }: Props) {
           permissionMode: m,
           permissions: { defaultMode: toCorePermissionMode(m) },
         },
-        cwd,
+        projectPath,
       );
       window.dispatchEvent(new Event("codeshell:settings-changed"));
       setMode(m);

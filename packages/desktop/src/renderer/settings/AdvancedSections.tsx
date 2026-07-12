@@ -124,14 +124,14 @@ export function PersonalizationSection({ scope, activeProjectPath }: ScopedProps
   const [instructions, setInstructions] = useState("");
   const { t } = useT();
 
-  const cwd = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
+  const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
 
   const { schedule, flush } = useDebouncedSave((value) =>
-    writeSettings(scope, { agent: { appendSystemPrompt: value } }, cwd),
+    writeSettings(scope, { agent: { appendSystemPrompt: value } }, projectPath),
   );
 
   const load = async () => {
-    const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
+    const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
     const agent = objectOf(s.agent);
     setInstructions(stringOf(agent.appendSystemPrompt));
   };
@@ -182,18 +182,18 @@ export function ResponsePrefsSection({ scope, activeProjectPath }: ScopedProps) 
   languageRef.current = language;
   profileRef.current = profile;
   const { t } = useT();
-  const cwd = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
+  const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
 
   const { schedule, flush } = useDebouncedSave(() =>
     writeSettings(
       scope,
       { agent: { responseLanguage: languageRef.current, userProfile: profileRef.current } },
-      cwd,
+      projectPath,
     ),
   );
 
   const load = async () => {
-    const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
+    const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
     const agent = objectOf(s.agent);
     setLanguage(stringOf(agent.responseLanguage));
     setProfile(stringOf(agent.userProfile));
@@ -245,7 +245,7 @@ export function InstructionFilesSection({ scope, activeProjectPath }: ScopedProp
   const [compatClaude, setCompatClaude] = useState(true);
   const [compatCodex, setCompatCodex] = useState(true);
   const { t } = useT();
-  const cwd = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
+  const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
   // Mirror latest state so a toggle persists the up-to-date value of BOTH flags,
   // never a stale closure capture. writeChain serializes the fire-and-forget
   // writes so a slower earlier write can't land after — and clobber — a later one.
@@ -253,7 +253,7 @@ export function InstructionFilesSection({ scope, activeProjectPath }: ScopedProp
   const writeChain = useRef<Promise<unknown>>(Promise.resolve());
 
   const load = async () => {
-    const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
+    const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
     const agent = objectOf(s.agent);
     const instr = objectOf(agent.instructions);
     const claude = instr.compatClaude !== false;
@@ -276,7 +276,7 @@ export function InstructionFilesSection({ scope, activeProjectPath }: ScopedProp
         writeSettings(
           scope,
           { agent: { instructions: { compatClaude: claude, compatCodex: codex } } },
-          cwd,
+          projectPath,
         ),
       );
     void writeChain.current;
@@ -1265,10 +1265,10 @@ export function ToggleCapabilitySection({
   const [saving, setSaving] = useState(false);
   const { t } = useT();
   const toast = useToast();
-  const cwd = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
+  const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
 
   const load = async () => {
-    const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
+    const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
     setEnabled(objectOf(s[settingKey]).enabled === true);
   };
   useEffect(() => {
@@ -1280,7 +1280,7 @@ export function ToggleCapabilitySection({
     setEnabled(next); // optimistic
     setSaving(true);
     try {
-      await writeSettings(scope, { [settingKey]: { enabled: next } }, cwd);
+      await writeSettings(scope, { [settingKey]: { enabled: next } }, projectPath);
     } catch (e) {
       // Write failed — revert the optimistic flip and surface it, otherwise the
       // toggle reads "enabled" while disk stays unchanged (silent desync until remount).
@@ -1318,13 +1318,13 @@ export function ToggleCapabilitySection({
  * per-call args.
  */
 export function ImageSettingsSection({ scope, activeProjectPath }: ScopedProps) {
-  const cwd = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
+  const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
   const [detail, setDetail] = useState<"low" | "standard" | "high" | "">("");
   const [saving, setSaving] = useState(false);
   const { t } = useT();
 
   const load = async () => {
-    const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
+    const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
     const images = objectOf(s.images);
     // Migrate legacy "original" → "high".
     const d = images.detail === "original" ? "high" : images.detail;
@@ -1338,9 +1338,9 @@ export function ImageSettingsSection({ scope, activeProjectPath }: ScopedProps) 
     setDetail(next);
     setSaving(true);
     try {
-      const current = objectOf((await window.codeshell.getSettings(scope, cwd))?.images);
+      const current = objectOf((await window.codeshell.getSettings(scope, projectPath))?.images);
       const nextImages = next ? { ...current, detail: next } : { ...current, detail: undefined };
-      await writeSettings(scope, { images: nextImages }, cwd);
+      await writeSettings(scope, { images: nextImages }, projectPath);
     } finally {
       setSaving(false);
     }

@@ -182,8 +182,8 @@ interface SearchSnapshot {
 }
 
 function SearchProvidersGrid({ scope, activeProjectPath }: Props) {
-  const cwd = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
-  const cacheKey = `search:${scope}:${cwd ?? ""}`;
+  const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
+  const cacheKey = `search:${scope}:${projectPath ?? ""}`;
   const [seed] = useState(() => cacheGet<SearchSnapshot>(cacheKey));
   const [defaultProvider, setDefaultProvider] = useState<Provider>(
     seed?.defaultProvider ?? "serper",
@@ -202,7 +202,7 @@ function SearchProvidersGrid({ scope, activeProjectPath }: Props) {
   const { t } = useT();
 
   const load = useCallback(async () => {
-    const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
+    const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
     const search =
       s.search && typeof s.search === "object" ? (s.search as Record<string, unknown>) : {};
     // Legacy schema stored a single { provider, apiKey, baseUrl }. We migrate
@@ -248,7 +248,7 @@ function SearchProvidersGrid({ scope, activeProjectPath }: Props) {
     setByProvider(next);
     setLoaded(true);
     cacheSet(cacheKey, { defaultProvider: nextDefault, byProvider: next } satisfies SearchSnapshot);
-  }, [scope, cwd, cacheKey]);
+  }, [scope, projectPath, cacheKey]);
 
   // Load on mount/scope switch + auto-refresh on config change (one place wires
   // the listeners — see useRefreshOnSettingsChange).
@@ -280,10 +280,10 @@ function SearchProvidersGrid({ scope, activeProjectPath }: Props) {
             providers: providersOut,
           },
         },
-        cwd,
+        projectPath,
       );
     },
-    [scope, cwd],
+    [scope, projectPath],
   );
 
   const saveProvider = async (id: Provider) => {

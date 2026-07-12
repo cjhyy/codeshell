@@ -29,7 +29,7 @@ interface Props {
 }
 
 export function TextConnectionsPanel({ scope, activeProjectPath, tag = "text", title }: Props) {
-  const cwd = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
+  const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
   const { t } = useT();
   const heading =
     title ??
@@ -59,7 +59,7 @@ export function TextConnectionsPanel({ scope, activeProjectPath, tag = "text", t
     setAux,
     setDefaultInstance,
     toggleShowKey,
-  } = useModelConnections(scope, cwd, tag);
+  } = useModelConnections(scope, projectPath, tag);
 
   // Load on mount + on scope/tag switch (deps=[load]) + auto-refresh when
   // catalog/settings change anywhere. Listeners live in one place — see
