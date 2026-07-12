@@ -3,7 +3,7 @@ import { createPetApi, type PetProjectionEvent, type PetProjectionSnapshot } fro
 
 describe("Pet preload contract", () => {
   test("gets a snapshot and gives every subscriber an isolated removable listener", async () => {
-    const handlers = new Set<(event: unknown, payload: PetProjectionEvent) => void>();
+    const handlers = new Map<string, Set<(event: unknown, payload: unknown) => void>>();
     const snapshot: PetProjectionSnapshot = {
       version: 0,
       generation: 0,
@@ -15,6 +15,9 @@ describe("Pet preload contract", () => {
     const ipc = {
       invoke: async (channel: string, payload?: unknown) => {
         if (channel === "pet:get-snapshot") return snapshot;
+        if (channel === "pet:get-attention") return { surfaceablePendingCount: 2 };
+        if (channel === "pet:set-active-session") return { ok: true };
+        if (channel === "pet:attention-receipt") return { ok: true };
         if (channel === "pet:dispatch") {
           expect(payload).toEqual({ type: "get_global_status" });
           return { ok: true, type: "global_status", petSessionId: "pet-one" };
@@ -23,15 +26,13 @@ describe("Pet preload contract", () => {
         expect(payload).toEqual({ agentSessionId: "work-a", snapshotVersion: 1, generation: 0 });
         return { status: "not-found" };
       },
-      on: (channel: string, handler: (event: unknown, payload: PetProjectionEvent) => void) => {
-        expect(channel).toBe("pet:projection-event");
-        handlers.add(handler);
+      on: (channel: string, handler: (event: unknown, payload: unknown) => void) => {
+        const channelHandlers = handlers.get(channel) ?? new Set();
+        channelHandlers.add(handler);
+        handlers.set(channel, channelHandlers);
       },
-      removeListener: (
-        _channel: string,
-        handler: (event: unknown, payload: PetProjectionEvent) => void,
-      ) => {
-        handlers.delete(handler);
+      removeListener: (channel: string, handler: (event: unknown, payload: unknown) => void) => {
+        handlers.get(channel)?.delete(handler);
       },
     };
     const api = createPetApi(ipc);
@@ -46,9 +47,11 @@ describe("Pet preload contract", () => {
       observedAt: 2,
     };
 
-    for (const handler of handlers) handler({}, delta);
+    for (const handler of handlers.get("pet:projection-event") ?? []) handler({}, delta);
     offFirst();
-    for (const handler of handlers) handler({}, { ...delta, version: 2 });
+    for (const handler of handlers.get("pet:projection-event") ?? []) {
+      handler({}, { ...delta, version: 2 });
+    }
 
     expect(await api.getSnapshot()).toEqual(snapshot);
     expect(
@@ -60,6 +63,9 @@ describe("Pet preload contract", () => {
     });
     expect(first.map((event) => event.version)).toEqual([1]);
     expect(second.map((event) => event.version)).toEqual([1, 2]);
-    expect(handlers.size).toBe(1);
+    expect(handlers.get("pet:projection-event")?.size).toBe(1);
+    expect(await api.getAttentionSnapshot()).toEqual({ surfaceablePendingCount: 2 });
+    expect(await api.setActiveSession("work-a")).toEqual({ ok: true });
+    expect(await api.markAttentionReceipt(["receipt"], "dismissed")).toEqual({ ok: true });
   });
 });

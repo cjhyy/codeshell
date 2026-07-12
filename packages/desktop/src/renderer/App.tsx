@@ -8,6 +8,7 @@ import { usePetState } from "./pet/PetStateProvider";
 import { PetWorldPane } from "./pet/PetWorldPane";
 import { openPetTarget } from "./pet/petNavigation";
 import { PetChatHost } from "./pet/PetChatHost";
+import { PetPeekHost } from "./pet/PetPeekHost";
 import { TopBar } from "./TopBar";
 import dogIcon from "./assets/codeshell-dog-icon.png";
 import { timePhase } from "./perf";
@@ -85,6 +86,7 @@ import type {
   MobilePermissionModeEnvelope,
   MobilePermissionModeSnapshotEntry,
   PetOpenSessionRequest,
+  PetPeek,
   RunSummary,
   SummaryForkSessionResult,
   StreamEventEnvelope,
@@ -413,7 +415,13 @@ function QuickChatPanelHost({
 function App() {
   const toast = useToast();
   const { t, lang } = useT();
-  const { state: petState, dispatch: petDispatch } = usePetState();
+  const {
+    state: petState,
+    dispatch: petDispatch,
+    surfaceablePendingCount,
+    peeks: petPeeks,
+    removePeek,
+  } = usePetState();
   const { width: petOverviewWidth, beginResize: beginPetOverviewResize } = usePetOverviewWidth();
   const [transcripts, dispatch] = useReducer(transcriptsReducer, {} as TranscriptsMap);
   const [approval, setApproval] = useState<ApprovalState>(null);
@@ -1551,6 +1559,22 @@ function App() {
       onStale: () => toast({ message: t("pet.navigation.stale"), variant: "default" }),
       onNotFound: () => toast({ message: t("pet.navigation.notFound"), variant: "error" }),
     });
+  };
+
+  const settlePetPeek = (peek: PetPeek, state: "seen" | "dismissed"): void => {
+    removePeek(peek.id);
+    void window.codeshell.pet.markAttentionReceipt(peek.receiptKeys, state);
+  };
+
+  const handlePetPeekAction = (peek: PetPeek): void => {
+    settlePetPeek(peek, "seen");
+    if (peek.action.type === "open_session") {
+      void handleOpenPetTarget(peek.action.target);
+      return;
+    }
+    petDispatch({ type: "set-overview-focus", focus: "pending" });
+    petDispatch({ type: "set-overview-open", open: true });
+    setView((current) => ({ ...current, sidebarCollapsed: false }));
   };
 
   /**
@@ -4165,8 +4189,8 @@ function App() {
   }, [activeProject, view.viewMode, settingsRevision]);
 
   useEffect(() => {
-    void window.codeshell.setBadgeCount(approvalQueue.length);
-  }, [approvalQueue.length]);
+    void window.codeshell.setBadgeCount(surfaceablePendingCount);
+  }, [surfaceablePendingCount]);
 
   const prevBusyRef = useRef(busy);
   useEffect(() => {
@@ -4301,6 +4325,10 @@ function App() {
     const summary = sessionIndices[activeRepoKey]?.sessions.find((s) => s.id === activeSessionId);
     return summary?.engineSessionId ?? activeSessionId;
   };
+
+  useEffect(() => {
+    void window.codeshell.pet.setActiveSession(engineSessionIdForActive());
+  }, [activeSessionId, activeRepoKey, sessionIndices]);
 
   const matchCount = useMemo(() => {
     if (!searchQuery) return 0;
@@ -4441,8 +4469,7 @@ function App() {
   const platformClass = isMac ? "platform-darwin" : "";
   const isSettingsPage = view.viewMode === "settings_page";
   const isChatView = view.viewMode === "chat";
-  const petPendingCount =
-    petState.projection?.pending.filter((pending) => pending.status === "pending").length ?? 0;
+  const petPendingCount = surfaceablePendingCount;
   const petRunningCount =
     petState.projection?.sessions.filter((session) => session.runState === "running").length ?? 0;
 
@@ -4901,6 +4928,12 @@ function App() {
         {/* Inspector panel removed — tool detail lives inline in each
           tool card's expandable body. */}
       </div>
+
+      <PetPeekHost
+        peeks={petPeeks}
+        onAction={handlePetPeekAction}
+        onDismiss={(peek) => settlePetPeek(peek, "dismissed")}
+      />
 
       {isSettingsPage && (
         <div className="absolute inset-0 z-50 overflow-hidden bg-background">

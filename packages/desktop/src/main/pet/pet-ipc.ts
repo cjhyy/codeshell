@@ -5,11 +5,16 @@ import type {
   PetNavigationResult,
 } from "./pet-state-aggregator.js";
 import type { PetDispatchCommand, PetDispatchResult } from "./pet-dispatch-service.js";
+import type { PetAttentionEvent, PetAttentionSnapshot } from "./pet-attention-policy.js";
 
 export const PET_SNAPSHOT_CHANNEL = "pet:get-snapshot";
 export const PET_EVENT_CHANNEL = "pet:projection-event";
 export const PET_OPEN_SESSION_CHANNEL = "pet:open-session";
 export const PET_DISPATCH_CHANNEL = "pet:dispatch";
+export const PET_ATTENTION_SNAPSHOT_CHANNEL = "pet:get-attention";
+export const PET_ATTENTION_EVENT_CHANNEL = "pet:attention-event";
+export const PET_ACTIVE_SESSION_CHANNEL = "pet:set-active-session";
+export const PET_ATTENTION_RECEIPT_CHANNEL = "pet:attention-receipt";
 
 export interface PetIpcAggregator {
   getSnapshot(): DesktopPetProjectionSnapshot;
@@ -29,6 +34,13 @@ export interface PetIpcWindowLike {
 
 export interface PetIpcDispatcher {
   dispatch(command: PetDispatchCommand): Promise<PetDispatchResult>;
+}
+
+export interface PetIpcAttention {
+  getSnapshot(): PetAttentionSnapshot;
+  subscribe(listener: (event: PetAttentionEvent) => void): () => void;
+  setActiveSession(sessionId: string | null): void;
+  markReceipts(keys: readonly string[], state: "seen" | "dismissed"): void;
 }
 
 function parseNavigationRequest(value: unknown): PetNavigationRequest {
@@ -97,6 +109,7 @@ export function registerPetIpc(options: {
   aggregator: PetIpcAggregator;
   windows: () => readonly PetIpcWindowLike[];
   dispatcher?: PetIpcDispatcher;
+  attention?: PetIpcAttention;
 }): () => void {
   options.ipcMain.handle(PET_SNAPSHOT_CHANNEL, (_event, ...args) => {
     if (args.length > 0) throw new Error("pet:getSnapshot does not accept arguments");
@@ -112,15 +125,53 @@ export function registerPetIpc(options: {
       return options.dispatcher!.dispatch(parseDispatchCommand(args[0]));
     });
   }
+  if (options.attention) {
+    options.ipcMain.handle(PET_ATTENTION_SNAPSHOT_CHANNEL, (_event, ...args) => {
+      if (args.length !== 0) throw new Error("pet attention snapshot does not accept arguments");
+      return options.attention!.getSnapshot();
+    });
+    options.ipcMain.handle(PET_ACTIVE_SESSION_CHANNEL, (_event, ...args) => {
+      if (args.length !== 1 || (args[0] !== null && typeof args[0] !== "string")) {
+        throw new Error("invalid active session");
+      }
+      options.attention!.setActiveSession(args[0] as string | null);
+      return { ok: true };
+    });
+    options.ipcMain.handle(PET_ATTENTION_RECEIPT_CHANNEL, (_event, ...args) => {
+      const payload = args[0] as { keys?: unknown; state?: unknown } | undefined;
+      if (
+        args.length !== 1 ||
+        !payload ||
+        !Array.isArray(payload.keys) ||
+        payload.keys.some((key) => typeof key !== "string") ||
+        (payload.state !== "seen" && payload.state !== "dismissed")
+      ) {
+        throw new Error("invalid attention receipt");
+      }
+      options.attention!.markReceipts(payload.keys as string[], payload.state);
+      return { ok: true };
+    });
+  }
   const unsubscribe = options.aggregator.subscribe((event) => {
     for (const window of options.windows()) {
       if (!window.isDestroyed()) window.webContents.send(PET_EVENT_CHANNEL, event);
     }
   });
+  const unsubscribeAttention = options.attention?.subscribe((event) => {
+    for (const window of options.windows()) {
+      if (!window.isDestroyed()) window.webContents.send(PET_ATTENTION_EVENT_CHANNEL, event);
+    }
+  });
   return () => {
     unsubscribe();
+    unsubscribeAttention?.();
     options.ipcMain.removeHandler(PET_SNAPSHOT_CHANNEL);
     options.ipcMain.removeHandler(PET_OPEN_SESSION_CHANNEL);
     if (options.dispatcher) options.ipcMain.removeHandler(PET_DISPATCH_CHANNEL);
+    if (options.attention) {
+      options.ipcMain.removeHandler(PET_ATTENTION_SNAPSHOT_CHANNEL);
+      options.ipcMain.removeHandler(PET_ACTIVE_SESSION_CHANNEL);
+      options.ipcMain.removeHandler(PET_ATTENTION_RECEIPT_CHANNEL);
+    }
   };
 }

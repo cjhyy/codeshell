@@ -99,6 +99,24 @@ export type PetDispatchResult =
   | { ok: true; type: "open_session"; result: PetOpenSessionResult }
   | { ok: true; type: "chat"; petSessionId: string; result: unknown };
 
+export interface PetPeek {
+  id: string;
+  title: string;
+  detail: string;
+  receiptKeys: string[];
+  action:
+    | { type: "open_session"; target: PetOpenSessionRequest }
+    | { type: "open_pet_pending"; count: number };
+}
+
+export interface PetAttentionSnapshot {
+  surfaceablePendingCount: number;
+}
+
+export type PetAttentionEvent =
+  | { kind: "count"; surfaceablePendingCount: number }
+  | { kind: "peek"; peek: PetPeek };
+
 interface PetProjectionEventBase {
   version: number;
   generation: number;
@@ -120,15 +138,16 @@ export interface PetApi {
   onProjectionEvent(listener: (event: PetProjectionEvent) => void): () => void;
   openSession(request: PetOpenSessionRequest): Promise<PetOpenSessionResult>;
   dispatch(command: PetDispatchCommand): Promise<PetDispatchResult>;
+  getAttentionSnapshot(): Promise<PetAttentionSnapshot>;
+  onAttentionEvent(listener: (event: PetAttentionEvent) => void): () => void;
+  setActiveSession(sessionId: string | null): Promise<{ ok: true }>;
+  markAttentionReceipt(keys: string[], state: "seen" | "dismissed"): Promise<{ ok: true }>;
 }
 
 export interface PetIpcRenderer {
   invoke(channel: string, payload?: unknown): Promise<unknown>;
-  on(channel: string, listener: (event: unknown, payload: PetProjectionEvent) => void): unknown;
-  removeListener(
-    channel: string,
-    listener: (event: unknown, payload: PetProjectionEvent) => void,
-  ): unknown;
+  on(channel: string, listener: (event: unknown, payload: unknown) => void): unknown;
+  removeListener(channel: string, listener: (event: unknown, payload: unknown) => void): unknown;
 }
 
 export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
@@ -139,9 +158,22 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
     dispatch: (command) =>
       ipcRenderer.invoke("pet:dispatch", command) as Promise<PetDispatchResult>,
     onProjectionEvent: (listener) => {
-      const handler = (_event: unknown, payload: PetProjectionEvent): void => listener(payload);
+      const handler = (_event: unknown, payload: unknown): void =>
+        listener(payload as PetProjectionEvent);
       ipcRenderer.on("pet:projection-event", handler);
       return () => ipcRenderer.removeListener("pet:projection-event", handler);
     },
+    getAttentionSnapshot: () =>
+      ipcRenderer.invoke("pet:get-attention") as Promise<PetAttentionSnapshot>,
+    onAttentionEvent: (listener) => {
+      const handler = (_event: unknown, payload: unknown): void =>
+        listener(payload as PetAttentionEvent);
+      ipcRenderer.on("pet:attention-event", handler);
+      return () => ipcRenderer.removeListener("pet:attention-event", handler);
+    },
+    setActiveSession: (sessionId) =>
+      ipcRenderer.invoke("pet:set-active-session", sessionId) as Promise<{ ok: true }>,
+    markAttentionReceipt: (keys, state) =>
+      ipcRenderer.invoke("pet:attention-receipt", { keys, state }) as Promise<{ ok: true }>,
   };
 }

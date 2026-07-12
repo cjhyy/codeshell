@@ -1,4 +1,4 @@
-import type { PetApi, PetProjectionEvent } from "../../preload/types";
+import type { PetApi, PetPeek, PetProjectionEvent } from "../../preload/types";
 import React from "react";
 import { foldTranscript } from "../automation/foldTranscript";
 import {
@@ -24,6 +24,9 @@ export interface PetStateContextValue {
   setChatBusy: React.Dispatch<React.SetStateAction<boolean>>;
   chatModelKey: string | null;
   setChatModelKey: React.Dispatch<React.SetStateAction<string | null>>;
+  surfaceablePendingCount: number;
+  peeks: PetPeek[];
+  removePeek: (id: string) => void;
 }
 
 export const PET_CHAT_BUCKET = "__codeshell_pet_chat__";
@@ -42,6 +45,8 @@ export function PetStateProvider({
   const [petSessionId, setPetSessionId] = React.useState<string | null>(null);
   const [chatBusy, setChatBusy] = React.useState(false);
   const [chatModelKey, setChatModelKey] = React.useState<string | null>(null);
+  const [surfaceablePendingCount, setSurfaceablePendingCount] = React.useState(0);
+  const [peeks, setPeeks] = React.useState<PetPeek[]>([]);
   const [chatTranscripts, chatDispatch] = React.useReducer(
     transcriptsReducer,
     {} as TranscriptsMap,
@@ -142,6 +147,30 @@ export function PetStateProvider({
     });
   }, [petSessionId]);
 
+  React.useEffect(() => {
+    let active = true;
+    const unsubscribe = api.onAttentionEvent((event) => {
+      if (!active) return;
+      if (event.kind === "count") {
+        setSurfaceablePendingCount(event.surfaceablePendingCount);
+      } else {
+        setPeeks((current) =>
+          current.some((peek) => peek.id === event.peek.id) ? current : [...current, event.peek],
+        );
+      }
+    });
+    void api
+      .getAttentionSnapshot()
+      .then((snapshot) => {
+        if (active) setSurfaceablePendingCount(snapshot.surfaceablePendingCount);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [api]);
+
   const chatState = chatTranscripts[PET_CHAT_BUCKET] ?? INITIAL_STATE;
   const value = React.useMemo(
     () => ({
@@ -154,8 +183,11 @@ export function PetStateProvider({
       setChatBusy,
       chatModelKey,
       setChatModelKey,
+      surfaceablePendingCount,
+      peeks,
+      removePeek: (id: string) => setPeeks((current) => current.filter((peek) => peek.id !== id)),
     }),
-    [state, petSessionId, chatState, chatBusy, chatModelKey],
+    [state, petSessionId, chatState, chatBusy, chatModelKey, surfaceablePendingCount, peeks],
   );
   return <PetStateContext.Provider value={value}>{children}</PetStateContext.Provider>;
 }

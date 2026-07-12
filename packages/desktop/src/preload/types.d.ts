@@ -19,6 +19,8 @@ import type { PetApi } from "./pet-api";
 
 export type {
   PetApi,
+  PetAttentionEvent,
+  PetAttentionSnapshot,
   PetDispatchCommand,
   PetDispatchResult,
   PetPendingDecision,
@@ -29,6 +31,7 @@ export type {
   PetProjectionSnapshot,
   PetSessionProjection,
   PetWorkerState,
+  PetPeek,
 } from "./pet-api";
 
 export type { SessionWorkspace, SessionForkLineage };

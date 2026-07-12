@@ -34,6 +34,10 @@ describe("PetStateProvider", () => {
       },
       openSession: async () => ({ status: "not-found" }),
       dispatch: async () => ({ ok: false, code: "invalid-command" }),
+      getAttentionSnapshot: async () => ({ surfaceablePendingCount: 0 }),
+      onAttentionEvent: () => () => {},
+      setActiveSession: async () => ({ ok: true }),
+      markAttentionReceipt: async () => ({ ok: true }),
     };
     const container = document.createElement("div");
     const root = createRoot(container);
@@ -67,6 +71,10 @@ describe("PetStateProvider", () => {
       },
       openSession: async () => ({ status: "not-found" }),
       dispatch: async () => ({ ok: false, code: "invalid-command" }),
+      getAttentionSnapshot: async () => ({ surfaceablePendingCount: 0 }),
+      onAttentionEvent: () => () => {},
+      setActiveSession: async () => ({ ok: true }),
+      markAttentionReceipt: async () => ({ ok: true }),
     };
     let latest: ReturnType<typeof usePetState> | undefined;
     function Consumer({ page }: { page: "chat" | "settings_page" }) {
@@ -141,6 +149,10 @@ describe("PetStateProvider", () => {
               sessions: [],
             }
           : { ok: false, code: "invalid-command" },
+      getAttentionSnapshot: async () => ({ surfaceablePendingCount: 0 }),
+      onAttentionEvent: () => () => {},
+      setActiveSession: async () => ({ ok: true }),
+      markAttentionReceipt: async () => ({ ok: true }),
     };
     let latest: ReturnType<typeof usePetState> | undefined;
     function Consumer() {

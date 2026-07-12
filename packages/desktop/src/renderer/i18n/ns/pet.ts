@@ -63,6 +63,10 @@ export const pet = {
         globalStatus: "全局状态",
         listPending: "列出待决策",
       },
+      peek: {
+        close: "关闭提醒",
+        openPending: "查看全部待决策",
+      },
     },
   },
   en: {
@@ -128,6 +132,10 @@ export const pet = {
         failed: "Pet chat is temporarily unavailable",
         globalStatus: "Global status",
         listPending: "List pending",
+      },
+      peek: {
+        close: "Dismiss notification",
+        openPending: "View all pending",
       },
     },
   },
