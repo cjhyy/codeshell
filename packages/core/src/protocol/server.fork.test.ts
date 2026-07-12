@@ -26,7 +26,8 @@ function fakeEngine() {
     isHeadless: () => true,
     getConfig: () => ({ cwd: "/project/from-source-state" }),
     getSessionManager: () => ({
-      readCwd: (id: string) => (id === "source" ? "/project/from-source-state" : undefined),
+      readSessionMainRoot: (id: string) =>
+        id === "source" ? "/project/from-source-state" : undefined,
       registerSessionGeneration: () => 1,
       incrementSessionGeneration: () => 2,
     }),

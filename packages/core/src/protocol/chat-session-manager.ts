@@ -82,7 +82,7 @@ export class ChatSessionManager {
     if (existing) return existing;
     const probe = this.factory(slice as EngineConfigSlice);
     if (!probe.sessionExistsOnDisk(sessionId)) return null;
-    const cwd = probe.getSessionManager().readCwd(sessionId);
+    const cwd = probe.getSessionManager().readSessionMainRoot(sessionId);
     if (!cwd) return null;
     const session = await this.getOrCreate(sessionId, {
       ...slice,

@@ -137,7 +137,7 @@ function candidateGitCwds(binding: ExternalAgentRunBinding): string[] {
   const candidates = new Set<string>();
   if (existsSync(binding.cwd)) candidates.add(binding.cwd);
   if (binding.codeShellSessionId) {
-    const sessionCwd = new SessionManager().readCwd(binding.codeShellSessionId);
+    const sessionCwd = new SessionManager().readSessionMainRoot(binding.codeShellSessionId);
     if (sessionCwd) candidates.add(sessionCwd);
   }
   candidates.add(process.cwd());

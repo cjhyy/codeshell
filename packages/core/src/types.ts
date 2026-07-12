@@ -212,6 +212,7 @@ export type SessionStatus = "active" | "paused" | TerminalReason;
 export type SessionOrigin = "desktop" | "tui" | "automation" | "subagent";
 
 export interface SessionWorkspace {
+  /** Current execution root used when this session resumes. */
   root: string;
   kind: "main" | "worktree";
   worktree?: {
@@ -249,8 +250,9 @@ export interface SessionState {
    * upgrades them. Detached writers with an older revision are rejected.
    */
   stateRevision?: number;
+  /** Legacy persisted main-project root. Kept byte-compatible in state.json. */
   cwd: string;
-  /** Current session workspace pointer. Absent only on legacy state.json files. */
+  /** Current main/worktree execution pointer. Absent only on legacy state.json files. */
   workspace?: SessionWorkspace;
   startedAt: number;
   model: string;
