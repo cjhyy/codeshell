@@ -5,11 +5,7 @@ import { useT } from "../i18n/I18nProvider";
 import type { TranslationKey } from "../i18n/dict";
 
 export type PermissionMode = "plan" | "default" | "accept_edits" | "bypass";
-export type CorePermissionMode =
-  | "plan"
-  | "default"
-  | "acceptEdits"
-  | "bypassPermissions";
+export type CorePermissionMode = "plan" | "default" | "acceptEdits" | "bypassPermissions";
 
 const MODES: Array<{
   id: PermissionMode;

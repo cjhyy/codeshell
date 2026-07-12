@@ -2,13 +2,7 @@
  * Engine — the main facade that wires all components together.
  */
 
-import type {
-  ClientDefaults,
-  Message,
-  StreamCallback,
-  TaskInfo,
-  TokenUsage,
-} from "../types.js";
+import type { ClientDefaults, Message, StreamCallback, TaskInfo, TokenUsage } from "../types.js";
 import { createLLMClient } from "../llm/client-factory.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { ToolExecutor } from "../tool-system/executor.js";
@@ -40,10 +34,7 @@ import {
   notificationQueue,
   buildNotificationMessage,
 } from "../tool-system/builtin/agent-notifications.js";
-import {
-  PermissionClassifier,
-  InteractiveApprovalBackend,
-} from "../tool-system/permission.js";
+import { PermissionClassifier, InteractiveApprovalBackend } from "../tool-system/permission.js";
 import { HookRegistry } from "../hooks/registry.js";
 import type { HookEventName, HookResult } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
@@ -71,6 +62,7 @@ import {
 import { PLAN_MODE_ALLOWED_TOOLS } from "../tool-system/plan-mode-allowlist.js";
 import { PromptComposer } from "../prompt/composer.js";
 import {
+  isEphemeralSessionState,
   SessionManager,
   sessionsRoot,
   type ForkSessionOptions,
@@ -113,7 +105,7 @@ import {
 } from "./prompt-cache-diagnostics.js";
 import { EngineRuntime } from "./runtime.js";
 import { buildRunUserMessageContent, prepareRunImageInput } from "./run-image-input.js";
-import type { EngineRunOptions } from "./run-types.js";
+import { QUICK_CHAT_RESTRICTED_SYSTEM_PROMPT, type EngineRunOptions } from "./run-types.js";
 import { createSubAgentSpawner } from "./subagent-spawner.js";
 import { stripInjectedContextMessages } from "./injected-context-cache.js";
 import { AuxiliaryPipeline } from "./auxiliary-pipeline.js";
@@ -924,6 +916,7 @@ export class Engine {
     // Freeze permission context once, before the first await. Per-turn protocol
     // overrides live only for this run; persistent setPermissionMode/setPlanMode
     // calls made while busy are staged separately and cannot mutate this pair.
+    const quickChatRestricted = options?.behaviorMode === "quickChatRestricted";
     let runPermissionMode = options?.permissionMode ?? this.config.permissionMode ?? "acceptEdits";
     if (options?.planMode === true) {
       runPermissionMode = "plan";
@@ -1465,7 +1458,13 @@ export class Engine {
         model: this.config.llm.model,
         preset: this.preset,
         customSystemPrompt: this.config.customSystemPrompt,
-        appendSystemPrompt: this.config.appendSystemPrompt,
+        appendSystemPrompt:
+          [
+            this.config.appendSystemPrompt,
+            quickChatRestricted ? QUICK_CHAT_RESTRICTED_SYSTEM_PROMPT : undefined,
+          ]
+            .filter(Boolean)
+            .join("\n\n") || undefined,
         responseLanguage: this.config.responseLanguage,
         userProfile: this.config.userProfile,
         instructionOptions: { compatFileNames: compatFileNamesFrom(this.config.instructions) },
@@ -2226,16 +2225,21 @@ export class Engine {
         options?.signal,
       );
 
-      // Fire-and-forget memory pipeline: extract durable memories from the
-      // transcript, save a session summary, and conditionally trigger
-      // auto-dream consolidation. Doesn't block the Engine result.
-      void this.runMemoryPipeline(
-        session.transcript,
-        session.state.sessionId,
-        cwd,
-        llmClient,
-        recordExternalBilledUsage,
-      );
+      // Ephemeral side chats must never leak into durable memory, even after
+      // the user explicitly elevates tool permissions for a turn. Lifecycle
+      // isolation is independent of the run-scoped behavior/permission mode.
+      if (!isEphemeralSessionState(session.state)) {
+        // Fire-and-forget memory pipeline: extract durable memories from the
+        // transcript, save a session summary, and conditionally trigger
+        // auto-dream consolidation. Doesn't block the Engine result.
+        void this.runMemoryPipeline(
+          session.transcript,
+          session.state.sessionId,
+          cwd,
+          llmClient,
+          recordExternalBilledUsage,
+        );
+      }
 
       // Fire-and-forget session title generation — only after the FIRST turn.
       // Reuses the already-resolved auxSummaryClient (aux model, cheap). Best-

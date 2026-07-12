@@ -5,6 +5,7 @@ import type { PermissionMode } from "../types.js";
 import { isAbortError } from "../llm/client-base.js";
 import type { InputAttachmentMeta } from "./types.js";
 import type { ApprovalRouter } from "../tool-system/permission.js";
+import type { RunBehaviorMode } from "../engine/run-types.js";
 
 export interface ChatSessionOptions {
   id: string;
@@ -32,6 +33,8 @@ export interface TurnOpts {
   permissionMode?: PermissionMode;
   /** Plan-mode snapshot for this queued turn only. */
   planMode?: boolean;
+  /** Named behavior profile snapshot for this queued turn only. */
+  behaviorMode?: RunBehaviorMode;
   /** Connection owner router for permission prompts in this turn. */
   approvalRouter?: ApprovalRouter;
 }
@@ -246,6 +249,7 @@ export class ChatSession {
         attachments: next.opts.attachments,
         permissionMode: next.opts.permissionMode,
         planMode: next.opts.planMode,
+        behaviorMode: next.opts.behaviorMode,
         approvalRouter: next.opts.approvalRouter,
       });
       this.lastActivityAt = Date.now();

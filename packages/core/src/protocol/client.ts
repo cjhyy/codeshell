@@ -39,6 +39,7 @@ import type {
 } from "../types.js";
 import { EventEmitter } from "node:events";
 import { logger } from "../logging/logger.js";
+import type { RunBehaviorMode } from "../engine/run-types.js";
 
 // ─── Event Types ────────────────────────────────────────────────────
 
@@ -66,6 +67,7 @@ export interface AgentRunOptions {
   permissionMode?: PermissionMode;
   model?: string;
   planMode?: boolean;
+  behaviorMode?: RunBehaviorMode;
 }
 
 // ─── Client ─────────────────────────────────────────────────────────

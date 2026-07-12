@@ -4,17 +4,30 @@ import { createRoot, type Root } from "react-dom/client";
 import type { ApprovalRequestEnvelope } from "../preload/types";
 import type { Message } from "./types";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
+import type { PermissionMode } from "./chat/PermissionPill";
+import type { ModelOption } from "./chat/ModelPill";
 
 interface QuickChatPanelProps {
   sessionId: string;
+  creationNonce: string;
   messages: Message[];
   busy: boolean;
   creationStatus: "creating" | "ready" | "error";
   contextMode: "full" | "blank";
   sourceTitle?: string;
   draft: string;
-  onDraftChange: (text: string) => void;
-  onSend: (text: string) => void;
+  attachments: unknown[];
+  permissionMode: PermissionMode;
+  modelOptions: ModelOption[];
+  activeModelKey: string | null;
+  onPermissionChange: (mode: PermissionMode) => void;
+  onModelChange: (option: ModelOption) => void;
+  onDraftChange: (next: React.SetStateAction<string>) => void;
+  onAttachmentsChange: (next: React.SetStateAction<unknown[]>) => void;
+  onSend: (
+    text: string,
+    opts?: { attachments?: Array<Record<string, unknown>>; displayText?: string },
+  ) => void;
   onStop: () => void;
   onRetry: () => void;
   onUseBlank: () => void;
@@ -24,9 +37,13 @@ interface QuickChatPanelProps {
 }
 
 interface ChatProps {
+  variant?: "main" | "quickChat";
   messages: Message[];
   busy: boolean;
   draft: string;
+  permissionMode: PermissionMode | null;
+  activeModelKey: string | null;
+  onPermissionChange: (mode: PermissionMode) => void;
   onDraftChange: (text: string) => void;
   onAskUserAnswer?: (requestId: string, answer: string) => void;
   pendingApproval?: ApprovalRequestEnvelope | null;
@@ -53,7 +70,23 @@ const panelAreaProps = new Map<string, PanelAreaProps>();
 mock.module("./ChatView", () => ({
   ChatView(props: ChatProps) {
     chatProps = props;
-    return <div data-testid="chat" />;
+    const variant = props.variant ?? "main";
+    return (
+      <div data-testid="chat" data-chat-variant={variant}>
+        <span data-composer-control="model" />
+        <span data-composer-control="voice" />
+        <span data-composer-control="permission">
+          当前对话权限：
+          {props.permissionMode === "plan"
+            ? "计划模式"
+            : props.permissionMode === "bypass"
+              ? "完全访问权限"
+              : "默认权限"}
+        </span>
+        {variant === "main" && <span data-composer-control="goal" />}
+        {variant === "main" && <span data-composer-control="context-usage" />}
+      </div>
+    );
   },
 }));
 
@@ -164,6 +197,8 @@ let cancelCalls: Array<string | undefined> = [];
 let approveCalls: unknown[][] = [];
 let forkSessionCalls: Array<Record<string, unknown>> = [];
 let getSessionTranscriptCalls: string[] = [];
+let runCalls: Array<{ prompt: string; opts: Record<string, unknown> }> = [];
+let markAttachmentsSentCalls: Array<Record<string, unknown>> = [];
 
 function restoreGlobalProperty(
   key: "localStorage" | "window",
@@ -244,6 +279,10 @@ function installCodeshellStub(
     },
     noRepoCwd: async () => "/tmp",
     configure: async () => undefined,
+    markAttachmentsSent: async (payload: Record<string, unknown>) => {
+      markAttachmentsSentCalls.push(payload);
+      return { ok: true };
+    },
     registerBrowserSessionBucket: () => undefined,
     setGitPrefs: async () => undefined,
     getGitStatus: async () => ({ branch: "main", entries: [], clean: true }),
@@ -297,7 +336,10 @@ function installCodeshellStub(
     approve: async (...args: unknown[]) => {
       approveCalls.push(args);
     },
-    run: async () => new Promise(() => undefined),
+    run: async (prompt: string, opts: Record<string, unknown>) => {
+      runCalls.push({ prompt, opts });
+      return new Promise(() => undefined);
+    },
     onStreamEvent: (listener: (env: any) => void) => {
       streamListener = listener;
       return unsubscribe;
@@ -438,6 +480,8 @@ afterEach(async () => {
   approveCalls = [];
   forkSessionCalls = [];
   getSessionTranscriptCalls = [];
+  runCalls = [];
+  markAttachmentsSentCalls = [];
   chatProps = null;
   quickChatProps.clear();
   panelAreaProps.clear();
@@ -447,6 +491,186 @@ afterEach(async () => {
 });
 
 describe("App quick-chat integration", () => {
+  test("routes composer attachments only to the owning quick-chat run", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-attachment", kind: "quickChat" }],
+    });
+    const [quick] = currentQuickPanels();
+    if (!quick) throw new Error("quick chat session was not created");
+    const attachment = {
+      id: "quick-image",
+      sessionId: quick.sessionId,
+      kind: "image",
+      origin: "picker",
+      path: ".code-shell/attachments/quick-image.png",
+      absPath: "/tmp/repo-a/.code-shell/attachments/quick-image.png",
+      size: 12,
+      sha256: "abc",
+      originalName: "quick-image.png",
+      createdAt: 1,
+      vision: { include: true },
+    };
+
+    await act(async () => {
+      quick.onSend("describe this", {
+        attachments: [attachment],
+        displayText: "describe this\n[image:quick-image.png]",
+      });
+      await flushMicrotasks();
+    });
+
+    expect(runCalls.at(-1)).toEqual({
+      prompt: "describe this",
+      opts: expect.objectContaining({
+        sessionId: quick.sessionId,
+        attachments: [attachment],
+      }),
+    });
+    expect(markAttachmentsSentCalls).toEqual([
+      expect.objectContaining({
+        sessionId: quick.sessionId,
+        quickChatClaimId: quick.creationNonce,
+        attachments: [attachment],
+      }),
+    ]);
+    expect(quickChatProps.get(quick.sessionId)?.messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ text: "describe this\n[image:quick-image.png]" }),
+      ]),
+    );
+  });
+
+  test("keeps a quick-chat model selection local and uses it for that side session", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [
+        { id: "quickChat-model-one", kind: "quickChat" },
+        { id: "quickChat-model-two", kind: "quickChat" },
+      ],
+    });
+    const [quickOne, quickTwo] = currentQuickPanels();
+    if (!quickOne || !quickTwo || !chatProps) throw new Error("chat surfaces were not created");
+    const mainModel = chatProps.activeModelKey;
+    const siblingModel = quickTwo.activeModelKey;
+    const sideModel: ModelOption = {
+      key: "side-only-model",
+      label: "Side only",
+      provider: "test",
+      supportsVision: true,
+    };
+
+    await act(async () => {
+      quickOne.onModelChange(sideModel);
+      await flushMicrotasks();
+    });
+
+    expect(quickChatProps.get(quickOne.sessionId)?.activeModelKey).toBe("side-only-model");
+    expect(quickChatProps.get(quickTwo.sessionId)?.activeModelKey).toBe(siblingModel);
+    expect(chatProps.activeModelKey).toBe(mainModel);
+
+    await act(async () => {
+      quickChatProps.get(quickOne.sessionId)?.onSend("inspect with side model");
+      await flushMicrotasks();
+    });
+    expect(runCalls.at(-1)).toEqual({
+      prompt: "inspect with side model",
+      opts: expect.objectContaining({
+        sessionId: quickOne.sessionId,
+        model: "side-only-model",
+      }),
+    });
+  });
+
+  test("round-trips one quick chat through every elevation while another quick chat and main stay unchanged", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [
+        { id: "quickChat-permission-one", kind: "quickChat" },
+        { id: "quickChat-permission-two", kind: "quickChat" },
+      ],
+    });
+    const [quickOne, quickTwo] = currentQuickPanels();
+    if (!quickOne || !quickTwo || !chatProps) throw new Error("chat surfaces were not created");
+    const mainMode = chatProps.permissionMode;
+
+    expect(quickOne.permissionMode).toBe(mainMode);
+    expect(quickTwo.permissionMode).toBe(mainMode);
+
+    const modes = [
+      ["plan", "plan"],
+      ["default", "default"],
+      ["accept_edits", "acceptEdits"],
+      ["bypass", "bypassPermissions"],
+    ] as const;
+    for (const [mode, coreMode] of modes) {
+      await act(async () => {
+        quickChatProps.get(quickOne.sessionId)?.onPermissionChange(mode);
+        await flushMicrotasks();
+      });
+      expect(quickChatProps.get(quickOne.sessionId)?.permissionMode).toBe(mode);
+      expect(quickChatProps.get(quickTwo.sessionId)?.permissionMode).toBe(mainMode);
+      expect(chatProps.permissionMode).toBe(mainMode);
+
+      const prompt = `send with ${mode}`;
+      await act(async () => {
+        quickChatProps.get(quickOne.sessionId)?.onSend(prompt);
+        await flushMicrotasks();
+      });
+      expect(runCalls.at(-1)).toEqual({
+        prompt,
+        opts: expect.objectContaining({
+          sessionId: quickOne.sessionId,
+          permissionMode: coreMode,
+          behaviorMode: "quickChatRestricted",
+        }),
+      });
+    }
+  });
+
+  test("always sends side guidance while the pill changes only the real permission mode", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-restricted", kind: "quickChat" }],
+    });
+    const [quick] = currentQuickPanels();
+    if (!quick) throw new Error("quick chat session was not created");
+
+    expect(quick.permissionMode).toBe(chatProps?.permissionMode);
+    await act(async () => {
+      quick.onSend("inspect only");
+      await flushMicrotasks();
+    });
+    expect(runCalls.at(-1)).toEqual({
+      prompt: "inspect only",
+      opts: expect.objectContaining({
+        sessionId: quick.sessionId,
+        permissionMode: "default",
+        behaviorMode: "quickChatRestricted",
+      }),
+    });
+
+    await act(async () => {
+      quickChatProps.get(quick.sessionId)?.onPermissionChange("bypass");
+      await flushMicrotasks();
+    });
+    const elevated = quickChatProps.get(quick.sessionId);
+    expect(elevated?.permissionMode).toBe("bypass");
+
+    await act(async () => {
+      elevated?.onSend("make the requested edit");
+      await flushMicrotasks();
+    });
+    expect(runCalls.at(-1)).toEqual({
+      prompt: "make the requested edit",
+      opts: expect.objectContaining({
+        sessionId: quick.sessionId,
+        permissionMode: "bypassPermissions",
+        behaviorMode: "quickChatRestricted",
+      }),
+    });
+  });
+
   test("defaults to a full fork of the owner engine session before becoming ready", async () => {
     await mountApp({
       withNormalSession: true,
@@ -872,6 +1096,51 @@ describe("App quick-chat integration", () => {
 
     cleanup.resolve({ deleted: true });
     await flushApp();
+  });
+
+  test("late composer setters cannot restore state after close or replacement", async () => {
+    const ownerBucket = await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-late-composer", kind: "quickChat" }],
+    });
+    const [oldQuick] = currentQuickPanels();
+    const panel = panelAreaProps.get(ownerBucket);
+    if (!oldQuick || !panel) throw new Error("quick-chat composer was not ready");
+    const lateDraft = oldQuick.onDraftChange;
+    const lateAttachments = oldQuick.onAttachmentsChange;
+    const lateModel = oldQuick.onModelChange;
+
+    await act(async () => {
+      panel.setTabs([]);
+      panel.setActiveId(null);
+      await flushMicrotasks();
+    });
+    await flushApp();
+    expect(currentQuickPanels()).toEqual([]);
+
+    await act(async () => {
+      lateDraft("late private transcript");
+      lateAttachments([
+        {
+          id: "late-image",
+          name: "late.png",
+          mime: "image/png",
+          dataUrl: "data:image/png;base64,aA==",
+          size: 1,
+        },
+      ]);
+      lateModel({ key: "late-model", label: "Late", provider: "test" });
+      panel.setTabs([{ id: "quickChat-late-composer", kind: "quickChat" }]);
+      await flushMicrotasks();
+    });
+    await flushApp();
+
+    const [replacement] = currentQuickPanels();
+    if (!replacement) throw new Error("replacement quick chat was not created");
+    expect(replacement.sessionId).not.toBe(oldQuick.sessionId);
+    expect(replacement.draft).toBe("");
+    expect(replacement.attachments).toEqual([]);
+    expect(replacement.activeModelKey).not.toBe("late-model");
   });
 
   test("late approvals and AskUser from a closed quick chat fail closed while parent approval routes normally", async () => {

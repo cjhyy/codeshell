@@ -377,6 +377,7 @@ contextBridge.exposeInMainWorld("codeshell", {
       browserPartition?: string;
       permissionMode?: string;
       planMode?: boolean;
+      behaviorMode?: "quickChatRestricted";
       clientMessageId?: string;
       attachments?: InputAttachmentMeta[];
     } & Record<string, unknown>,
@@ -718,6 +719,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     mime?: string;
     dataUrl: string;
     origin: InputAttachmentOrigin;
+    quickChatClaimId?: string;
   }) =>
     ipcRenderer.invoke("attachments:stageImageDataUrl", payload) as Promise<InputAttachmentMeta>,
   cleanupAttachments: (payload: { cwd: string; sessionId?: string; now?: number }) =>
@@ -731,6 +733,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     cwd: string;
     sessionId: string;
     attachments: InputAttachmentMeta[];
+    quickChatClaimId?: string;
   }) => ipcRenderer.invoke("attachments:markSent", payload) as Promise<{ ok: true }>,
   /**
    * Save an image (data: URL) to a user-chosen location via a save dialog.

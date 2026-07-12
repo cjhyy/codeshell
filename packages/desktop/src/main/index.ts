@@ -2375,10 +2375,55 @@ ipcMain.handle("files:search", async (_e, cwd: string, query: string) => {
   const q = typeof query === "string" ? query : "";
   return searchFiles(cwd, q);
 });
+
+async function runClaimBoundAttachmentOperation<T>(
+  ownerId: number,
+  payload: { cwd?: string; sessionId?: string; quickChatClaimId?: string },
+  operation: () => Promise<T>,
+): Promise<T> {
+  const sessionId = payload.sessionId!;
+  if (!sessionId.startsWith("qchat-")) return operation();
+
+  // Quick-chat disk writes share the same ownership generation as fork/GC.
+  // Missing/stale claims fail before IO; cleanup tombstones the claim and waits
+  // for already-started operations to settle before deleting the session.
+  assertQuickChatClaim(sessionId, payload.quickChatClaimId);
+  const claimId = payload.quickChatClaimId!;
+  if (!quickChatOwnership.beginOperation(sessionId, ownerId, claimId)) {
+    throw new Error("quick-chat attachment claim is no longer active");
+  }
+
+  let result: T | undefined;
+  let operationError: unknown;
+  try {
+    result = await operation();
+  } catch (error) {
+    operationError = error;
+  }
+  const settled = await quickChatOwnership.settleOperation(
+    sessionId,
+    ownerId,
+    claimId,
+    async () => {
+      await deleteDesktopSession(sessionId);
+      if (payload.cwd) {
+        // Worktree cwd may not be in the project registry scanned by the
+        // generic session cleanup, so remove the exact late-write directory.
+        await cleanupSessionAttachments(payload.cwd, sessionId).catch(() => undefined);
+      }
+    },
+  );
+  if (operationError) throw operationError;
+  if (!settled.active) {
+    throw new Error("quick-chat attachment result arrived after cleanup");
+  }
+  return result as T;
+}
+
 ipcMain.handle(
   "attachments:stageImageDataUrl",
   async (
-    _e,
+    event,
     payload: {
       cwd?: string;
       sessionId?: string;
@@ -2386,6 +2431,7 @@ ipcMain.handle(
       mime?: string;
       dataUrl?: string;
       origin?: string;
+      quickChatClaimId?: string;
     },
   ) => {
     if (!payload || typeof payload !== "object") {
@@ -2409,14 +2455,16 @@ ipcMain.handle(
       payload.origin === "tool"
         ? payload.origin
         : "paste";
-    return stageImageDataUrl({
-      cwd: payload.cwd,
-      sessionId: payload.sessionId,
-      name: payload.name,
-      mime: payload.mime,
-      dataUrl: payload.dataUrl,
-      origin,
-    });
+    return runClaimBoundAttachmentOperation(event.sender.id, payload, () =>
+      stageImageDataUrl({
+        cwd: payload.cwd!,
+        sessionId: payload.sessionId!,
+        name: payload.name,
+        mime: payload.mime,
+        dataUrl: payload.dataUrl!,
+        origin,
+      }),
+    );
   },
 );
 ipcMain.handle(
@@ -2444,19 +2492,22 @@ ipcMain.handle("attachments:inspect", async (_e, payload: { cwd?: string; sessio
 ipcMain.handle(
   "attachments:markSent",
   async (
-    _e,
+    event,
     payload: {
       cwd?: string;
       sessionId?: string;
       attachments?: Array<Parameters<typeof markAttachmentsSent>[2][number]>;
+      quickChatClaimId?: string;
     },
   ) => {
     if (!payload || typeof payload.cwd !== "string" || typeof payload.sessionId !== "string") {
       throw new Error("attachments:markSent requires cwd and sessionId");
     }
     const attachments = Array.isArray(payload.attachments) ? payload.attachments : [];
-    await markAttachmentsSent(payload.cwd, payload.sessionId, attachments);
-    return { ok: true };
+    return runClaimBoundAttachmentOperation(event.sender.id, payload, async () => {
+      await markAttachmentsSent(payload.cwd!, payload.sessionId!, attachments);
+      return { ok: true } as const;
+    });
   },
 );
 ipcMain.handle(

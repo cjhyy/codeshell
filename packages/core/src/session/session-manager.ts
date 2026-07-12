@@ -140,6 +140,18 @@ export function assertSafeSessionId(sessionId: unknown): asserts sessionId is st
 }
 
 /**
+ * Runtime source of truth for sessions whose state must not outlive their UI
+ * lifecycle. The explicit marker covers modern side forks; the qchat namespace
+ * keeps historical/blank quick chats fail-closed if their older state file did
+ * not contain the marker yet.
+ */
+export function isEphemeralSessionState(
+  state: Pick<SessionState, "sessionId" | "ephemeral">,
+): boolean {
+  return state.ephemeral === true || state.sessionId.startsWith("qchat-");
+}
+
+/**
  * Resolve the `.code-shell` home dir. `CODE_SHELL_HOME` overrides the default
  * `~/.code-shell` — mirrors Codex's `CODEX_HOME`. Tests set it to a temp dir
  * (see bunfig.toml preload) so a `new Engine()` / `new SessionManager()` with
@@ -288,6 +300,7 @@ export class SessionManager {
       // new top-level session (key present, null) apart from a legacy session
       // (key absent) and from a sub-agent (key present, non-empty string).
       parentSessionId: parentSessionId ?? null,
+      ...(sessionId.startsWith("qchat-") ? { ephemeral: true } : {}),
       ...(origin ? { origin } : {}),
     };
 
@@ -868,7 +881,7 @@ export class SessionManager {
       if (sessions.length >= limit) break;
       try {
         const state = JSON.parse(readFileSync(c.stateFile, "utf-8")) as SessionState;
-        if (state.ephemeral === true) continue;
+        if (isEphemeralSessionState(state)) continue;
         const preview = c.transcriptExists ? readLastUserMessage(c.transcriptFile) : undefined;
         sessions.push({ ...state, preview, lastActiveAt: c.lastActiveAt });
       } catch {

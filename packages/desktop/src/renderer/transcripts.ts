@@ -186,6 +186,10 @@ function overrideMapKey(namespace: string): string {
   return `codeshell.overrides.${namespace}`;
 }
 
+function isTransientOverrideBucket(bucket: string): boolean {
+  return isDraftBucket(bucket) || bucket.startsWith("__quick_chat__::");
+}
+
 /** Load a saved override map for a namespace, or {} when absent/corrupt. */
 export function loadOverrideMap<V>(namespace: string): Record<string, V> {
   try {
@@ -203,19 +207,17 @@ export function loadOverrideMap<V>(namespace: string): Record<string, V> {
 /**
  * Persist an override map. An empty map clears the key to avoid clutter.
  *
- * Draft buckets (`<repo>::_none_`) are stripped before persisting: that slot is
- * shared by every new/draft chat in a repo, so persisting a draft's choice would
- * let it survive a refresh and silently bleed onto the NEXT new chat in that repo
- * (it inherits 完全访问 / the picked model). Draft overrides are transient — they
- * migrate to the real bucket on first send (migrateBucketOverride) — so they have
- * no business in localStorage.
+ * Draft buckets (`<repo>::_none_`) and ephemeral quick-chat buckets are stripped
+ * before persisting. A draft slot is shared by every new chat in a repo; a quick
+ * chat is destroyed on close/exit. Persisting either would leave a stale access,
+ * model, or goal choice that can bleed into a later conversation.
  */
 export function saveOverrideMap<V>(namespace: string, map: Record<string, V>): void {
   try {
     if (typeof localStorage === "undefined") return;
     const persistable: Record<string, V> = {};
     for (const [bucket, value] of Object.entries(map)) {
-      if (!isDraftBucket(bucket)) persistable[bucket] = value;
+      if (!isTransientOverrideBucket(bucket)) persistable[bucket] = value;
     }
     if (Object.keys(persistable).length === 0) {
       localStorage.removeItem(overrideMapKey(namespace));

@@ -1,6 +1,7 @@
 interface QuickChatClaim {
   claimId: string;
   forkInFlight: boolean;
+  operationsInFlight: number;
   tombstoned: boolean;
 }
 
@@ -18,7 +19,12 @@ export class QuickChatOwnershipRegistry {
       claims = new Map<number, QuickChatClaim>();
       this.claimsBySession.set(sessionId, claims);
     }
-    claims.set(ownerId, { claimId, forkInFlight: false, tombstoned: false });
+    claims.set(ownerId, {
+      claimId,
+      forkInFlight: false,
+      operationsInFlight: 0,
+      tombstoned: false,
+    });
     this.deletedSessions.delete(sessionId);
 
     let sessions = this.sessionsByOwner.get(ownerId);
@@ -41,6 +47,32 @@ export class QuickChatOwnershipRegistry {
     return true;
   }
 
+  /** Bind an auxiliary async write (attachments today) to this claim. */
+  beginOperation(sessionId: string, ownerId: number, claimId: string): boolean {
+    const claim = this.claimsBySession.get(sessionId)?.get(ownerId);
+    if (!claim || claim.claimId !== claimId || claim.tombstoned) return false;
+    claim.operationsInFlight += 1;
+    return true;
+  }
+
+  async settleOperation(
+    sessionId: string,
+    ownerId: number,
+    claimId: string,
+    deleteSession: () => Promise<void>,
+  ): Promise<{ active: boolean; deleted: boolean }> {
+    const claim = this.claimsBySession.get(sessionId)?.get(ownerId);
+    if (claim && claim.claimId === claimId) {
+      claim.operationsInFlight = Math.max(0, claim.operationsInFlight - 1);
+    }
+    const active = this.isClaimActive(sessionId, ownerId, claimId);
+    if (active || this.hasActiveOwner(sessionId) || this.hasInFlightWork(sessionId)) {
+      return { active, deleted: false };
+    }
+    await this.deleteOnce(sessionId, deleteSession);
+    return { active: false, deleted: true };
+  }
+
   async settleFork(
     sessionId: string,
     ownerId: number,
@@ -54,7 +86,7 @@ export class QuickChatOwnershipRegistry {
     // A failed/missing worker reply does not prove the atomic publish never
     // happened. Once every owner is tombstoned, deleting the target is the
     // only fail-closed outcome and is safe when the directory is absent.
-    if (active || this.hasActiveOwner(sessionId)) {
+    if (active || this.hasActiveOwner(sessionId) || this.hasInFlightWork(sessionId)) {
       return { active, deleted: false };
     }
     await this.deleteOnce(sessionId, async () => deleteSession());
@@ -70,7 +102,7 @@ export class QuickChatOwnershipRegistry {
     const claim = this.claimsBySession.get(sessionId)?.get(requesterId);
     if (claim && claim.claimId === claimId) claim.tombstoned = true;
     if (this.hasActiveOwner(sessionId)) return { deleted: false };
-    if (this.hasForkInFlight(sessionId)) return { deleted: false, deferred: true };
+    if (this.hasInFlightWork(sessionId)) return { deleted: false, deferred: true };
     await this.deleteOnce(sessionId, deleteSession);
     return { deleted: true };
   }
@@ -81,7 +113,7 @@ export class QuickChatOwnershipRegistry {
     for (const sessionId of sessions) {
       const claim = this.claimsBySession.get(sessionId)?.get(ownerId);
       if (claim) claim.tombstoned = true;
-      if (this.hasActiveOwner(sessionId) || this.hasForkInFlight(sessionId)) continue;
+      if (this.hasActiveOwner(sessionId) || this.hasInFlightWork(sessionId)) continue;
       await this.deleteOnce(sessionId, () => deleteSession(sessionId));
     }
   }
@@ -94,6 +126,14 @@ export class QuickChatOwnershipRegistry {
   private hasForkInFlight(sessionId: string): boolean {
     const claims = this.claimsBySession.get(sessionId);
     return Boolean(claims && [...claims.values()].some((claim) => claim.forkInFlight));
+  }
+
+  private hasInFlightWork(sessionId: string): boolean {
+    const claims = this.claimsBySession.get(sessionId);
+    return Boolean(
+      this.hasForkInFlight(sessionId) ||
+      (claims && [...claims.values()].some((claim) => claim.operationsInFlight > 0)),
+    );
   }
 
   private async deleteOnce(sessionId: string, deleteSession: () => Promise<void>): Promise<void> {
