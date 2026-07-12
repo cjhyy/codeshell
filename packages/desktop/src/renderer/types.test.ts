@@ -536,12 +536,15 @@ describe("applyStreamEvent — subagent isolation", () => {
   test("6a. stream_request_start with agentId does not open a new main assistant", () => {
     const s = dispatch(INITIAL_STATE, [...mainTurn(), startAgent("A")]);
     const before = s;
+    const parentId = before.streamingAssistantId;
     const after = applyStreamEvent(
       before,
       ev("stream_request_start", { agentId: "A", turnNumber: 1 } as any),
     );
-    expect(after.streamingAssistantId).toBe(before.streamingAssistantId);
+    expect(after.streamingAssistantId).toBe(parentId);
     expect(after.messages.length).toBe(before.messages.length);
+    const parent = after.messages.find((m) => m.kind === "assistant" && m.id === parentId);
+    expect(parent && parent.kind === "assistant" && parent.done).toBe(false);
   });
 
   test("6b. top-level stream_request_start opens a main slot even if activeAgents is dirty", () => {
@@ -658,6 +661,55 @@ describe("applyStreamEvent — subagent isolation", () => {
 });
 
 describe("applyStreamEvent — turn_complete files_changed + turnEpoch", () => {
+  test("sub-agent turn_complete leaves the parent stream and epoch untouched", () => {
+    const messages: Message[] = [
+      { kind: "assistant", id: "parent", text: "still running", done: false, createdAt: 10 },
+    ];
+    const before = withMessages(messages, {
+      streamingAssistantId: "parent",
+      turnEpoch: 7,
+    });
+
+    const after = applyStreamEvent(
+      before,
+      ev("turn_complete", { agentId: "A", reason: "completed" } as any),
+      () => 999,
+    );
+
+    expect(after).toBe(before);
+    expect(after.messages).toBe(messages);
+    expect(after.streamingAssistantId).toBe("parent");
+    expect(after.turnEpoch).toBe(7);
+  });
+
+  test("top-level turn_complete seals every unfinished assistant without replacing doneAt", () => {
+    const messages: Message[] = [
+      { kind: "assistant", id: "a1", text: "first", done: false, createdAt: 10 },
+      {
+        kind: "assistant",
+        id: "a2",
+        text: "second",
+        done: false,
+        createdAt: 20,
+        doneAt: 222,
+      },
+      { kind: "assistant", id: "a3", text: "done", done: true, doneAt: 333 },
+    ];
+    const before = withMessages(messages, { streamingAssistantId: "a2" });
+
+    const after = applyStreamEvent(before, turnComplete, () => 999);
+    const assistants = after.messages.filter(
+      (m): m is AssistantMessage => m.kind === "assistant",
+    );
+
+    expect(assistants.map(({ id, done, doneAt }) => ({ id, done, doneAt }))).toEqual([
+      { id: "a1", done: true, doneAt: 999 },
+      { id: "a2", done: true, doneAt: 222 },
+      { id: "a3", done: true, doneAt: 333 },
+    ]);
+    expect(after.streamingAssistantId).toBeNull();
+  });
+
   test("bumps turnEpoch from 0 to 1", () => {
     const next = applyStreamEvent(withMessages([]), turnComplete);
     expect(next.turnEpoch).toBe(1);
@@ -808,6 +860,40 @@ describe("applyStreamEvent — turn_complete files_changed + turnEpoch", () => {
 });
 
 describe("applyStreamEvent — message timestamps", () => {
+  test("a new top-level request seals the previous assistant at the new start time", () => {
+    let replayNow = 100;
+    let s = applyStreamEvent(
+      INITIAL_STATE,
+      ev("stream_request_start", { turnNumber: 1, messageId: "a1" } as any),
+      () => replayNow,
+    );
+    s = applyStreamEvent(s, ev("text_delta", { text: "I'll inspect `x`." } as any));
+    s = applyStreamEvent(
+      s,
+      ev("tool_use_start", {
+        toolCall: { id: "tool-1", toolName: "Read", args: { file_path: "x" } },
+      } as any),
+      () => replayNow,
+    );
+
+    replayNow = 200;
+    s = applyStreamEvent(
+      s,
+      ev("stream_request_start", { turnNumber: 2, messageId: "a2" } as any),
+      () => replayNow,
+    );
+
+    const assistants = s.messages.filter(
+      (m): m is AssistantMessage => m.kind === "assistant",
+    );
+    expect(assistants.find((m) => m.id === "a1")).toMatchObject({ done: true, doneAt: 200 });
+    expect(assistants.find((m) => m.id === "a2")).toMatchObject({
+      done: false,
+      createdAt: 200,
+    });
+    expect(s.streamingAssistantId).toBe("a2");
+  });
+
   test("stream_request_start stamps assistant createdAt", () => {
     const before = Date.now();
     const s = applyStreamEvent(INITIAL_STATE, mainTurn()[0]);

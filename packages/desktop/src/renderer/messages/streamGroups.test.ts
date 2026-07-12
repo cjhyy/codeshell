@@ -22,8 +22,8 @@ function user(text = "hi", createdAt?: number): Message {
 
 /** An engine-injected user turn (steer / goal wakeup / cron续接) — carries
  *  injected:true. Such a message must NOT open a new turn boundary. */
-function injectedUser(text = "steer", createdAt?: number): Message {
-  return { kind: "user", id: freshId("user"), text, createdAt, injected: true };
+function injectedUser(text = "steer", createdAt?: number, steerId?: string): Message {
+  return { kind: "user", id: freshId("user"), text, createdAt, injected: true, steerId };
 }
 
 /** A still-streaming assistant message (done:false) — the turn hasn't finalized,
@@ -297,6 +297,31 @@ describe("buildStreamItems", () => {
     // message did not become a new turn boundary demoting the prior turn.
     expect(groups).toHaveLength(1);
     expect(groups[0]!.isLive).toBe(true);
+  });
+
+  test("a consumed mid-turn steer stays in one live group after an intermediate assistant", () => {
+    const messages: Message[] = [
+      user("run", 0),
+      assistant("I'll inspect first.", { createdAt: 100, doneAt: 500 }),
+      tool("Read", 600, 900),
+      injectedUser("also check tests", 1_000, "steer-1"),
+      streamingAssistant("continuing…", 1_100),
+    ];
+
+    const groups = processGroups(buildStreamItems(messages, { liveTurnActive: true }));
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.isLive).toBe(true);
+    expect(
+      groups[0]!.items.some(
+        (item) => item.kind === "user" && item.steerId === "steer-1",
+      ),
+    ).toBe(true);
+    expect(
+      groups[0]!.items.some(
+        (item) => item.kind === "assistant" && item.text === "continuing…",
+      ),
+    ).toBe(true);
   });
 
   // Real wakeup form: the PRIOR turn already finished (assistant done + tool),
