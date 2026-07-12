@@ -423,15 +423,16 @@ function foldTurnProcess(
   for (let i = 0; i < items.length; i++) {
     const it = items[i]!;
     if (it.kind !== "user") continue;
-    const injected = (it as { injected?: boolean }).injected === true;
+    const injected = it.injected === true;
     if (!injected) {
       userIdxs.push(i);
       continue;
     }
+    if (it.steerId) continue;
     // Injected: only a boundary if a done assistant precedes it since the last
     // real boundary (i.e. the prior turn completed before this wakeup).
     const priorStart = userIdxs.length ? userIdxs[userIdxs.length - 1]! : -1;
-    if (turnHasDoneAssistant(items, priorStart, i)) userIdxs.push(i);
+    if (latestAssistantIsDone(items, priorStart, i)) userIdxs.push(i);
   }
   if (userIdxs.length === 0) return items.slice();
 
@@ -444,7 +445,8 @@ function foldTurnProcess(
   for (let k = 0; k < userIdxs.length; k++) {
     const start = userIdxs[k]!;
     const end = k + 1 < userIdxs.length ? userIdxs[k + 1]! : items.length;
-    const isLive = liveTurnActive && start === lastTurnStart && !turnHasDoneAssistant(items, start, end);
+    const isLive =
+      liveTurnActive && start === lastTurnStart && !latestAssistantIsDone(items, start, end);
     // A turn the user interrupted carries a trailing turn_end reason="stopped"
     // (a flat sibling after the last tool). Such a turn must render flat, not
     // behind the elapsed-time fold header.
@@ -501,14 +503,14 @@ function foldTurnProcess(
   return out;
 }
 
-function turnHasDoneAssistant(
+function latestAssistantIsDone(
   items: Array<Message | ToolGroup>,
   start: number,
   end: number,
 ): boolean {
-  for (let i = start + 1; i < end; i++) {
+  for (let i = end - 1; i > start; i--) {
     const item = items[i]!;
-    if (item.kind === "assistant" && item.done) return true;
+    if (item.kind === "assistant") return item.done;
   }
   return false;
 }

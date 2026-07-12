@@ -572,11 +572,20 @@ export function applyStreamEvent(
       // stale/orphan cleanup state during replay and background handoffs.
       if (event.agentId) return state;
       const id = event.messageId ?? freshId("assistant");
+      const startedAt = now();
+      const previousId = state.streamingAssistantId;
+      const messages = previousId
+        ? state.messages.map((m) =>
+            m.kind === "assistant" && m.id === previousId && !m.done
+              ? { ...m, done: true, doneAt: m.doneAt ?? startedAt }
+              : m,
+          )
+        : state.messages;
       return {
         ...state,
         messages: [
-          ...state.messages,
-          { kind: "assistant", id, text: "", done: false, createdAt: now() },
+          ...messages,
+          { kind: "assistant", id, text: "", done: false, createdAt: startedAt },
         ],
         streamingAssistantId: id,
         streamingThinkingId: null,
@@ -1144,6 +1153,7 @@ export function applyStreamEvent(
     }
 
     case "turn_complete": {
+      if (event.agentId) return state;
       // 1. Flush every active agent's textBuffer to its `text` field, and on a
       //    CLEAN completion also mark any still-running agent done. A cleanly
       //    completed main turn means no foreground subagent is legitimately
@@ -1190,11 +1200,10 @@ export function applyStreamEvent(
       }
 
       // 2. Finalize streaming pointers (existing behavior).
-      const streamingAssistantId = state.streamingAssistantId;
       const streamingThinkingId = state.streamingThinkingId;
       const turnDoneAt = now();
       let finalized: Message[] = msgs.map((m) => {
-        if (m.kind === "assistant" && m.id === streamingAssistantId) {
+        if (m.kind === "assistant" && !m.done) {
           return { ...m, done: true, doneAt: m.doneAt ?? turnDoneAt };
         }
         if (m.kind === "thinking" && m.id === streamingThinkingId) {
