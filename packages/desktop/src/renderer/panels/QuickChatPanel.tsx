@@ -141,7 +141,7 @@ export function QuickChatPanel({
             onSend={onSend}
             onStop={onStop}
             busy={busy}
-            activeRepoId={null}
+            activeProjectId={null}
             onAskUserAnswer={onAskUserAnswer}
             pendingApproval={pendingApproval}
             onApprovalDecide={onApprovalDecide}
@@ -153,10 +153,10 @@ export function QuickChatPanel({
             activeModelKey={activeModelKey}
             onModelChange={onModelChange}
             contextTokens={0}
-            repos={[]}
-            onSelectRepo={() => undefined}
-            onAddRepo={() => undefined}
-            activeRepoPath={cwd ?? null}
+            projects={[]}
+            onSelectProject={() => undefined}
+            onAddProject={() => undefined}
+            activeProjectPath={cwd ?? null}
             messageCwd={cwd}
             welcomeNode={
               <div className="text-sm text-muted-foreground">{t("panels.quickChat.empty")}</div>

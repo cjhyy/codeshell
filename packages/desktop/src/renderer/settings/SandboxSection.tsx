@@ -16,7 +16,7 @@ import { SimpleSelect as Select } from "@/components/ui/simple-select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ProjectPicker } from "./ProjectPicker";
-import { repoLabel, type Repo } from "../repos";
+import { projectLabel, type TrackedProject } from "../projects";
 import { writeSettings } from "../settingsBus";
 import { useRefreshOnSettingsChange } from "./useSettingsResource";
 import { useT } from "../i18n/I18nProvider";
@@ -33,27 +33,34 @@ function arrText(v: unknown): string {
   return Array.isArray(v) ? (v as unknown[]).filter((x) => typeof x === "string").join("\n") : "";
 }
 function lines(s: string): string[] {
-  return s.split("\n").map((l) => l.trim()).filter(Boolean);
+  return s
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
 }
 
-export function SandboxSection({ repos }: { repos: Repo[] }) {
+export function SandboxSection({ projects }: { projects: TrackedProject[] }) {
   const { t } = useT();
   // selectedPath: undefined = list view; null = global (user scope); a repo
   // path = that project. Distinguishing undefined from null is what makes the
   // 全局 row a real selection (drill-in) instead of the default.
   const [selectedPath, setSelectedPath] = useState<string | null | undefined>(undefined);
-  const selectedRepo = selectedPath ? repos.find((r) => r.path === selectedPath) ?? null : null;
+  const selectedProject = selectedPath
+    ? (projects.find((r) => r.path === selectedPath) ?? null)
+    : null;
 
   // List view: 全局 + per-project picker. Same shape as EnvironmentSection.
   if (selectedPath === undefined) {
     return (
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">{t("settingsX.sandbox.title")}</h3>
+          <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">
+            {t("settingsX.sandbox.title")}
+          </h3>
           <p className="text-sm text-muted-foreground">{t("settingsX.sandbox.desc")}</p>
         </div>
         <ProjectPicker
-          repos={repos}
+          projects={projects}
           includeGlobal
           globalHint={t("settingsX.sandbox.globalHint")}
           onSelect={(path) => setSelectedPath(path)}
@@ -80,8 +87,8 @@ export function SandboxSection({ repos }: { repos: Repo[] }) {
         <span className="truncate text-sm font-medium text-foreground">
           {isGlobal
             ? t("settingsX.sandbox.scopeGlobal")
-            : selectedRepo
-              ? repoLabel(selectedRepo)
+            : selectedProject
+              ? projectLabel(selectedProject)
               : selectedPath}
         </span>
       </div>
@@ -148,7 +155,15 @@ function SandboxEditor({
   const hint = "mt-1 text-xs text-muted-foreground";
   const showDetail = mode !== FOLLOW && mode !== "off";
   const modeOptions = [
-    ...(isGlobal ? [] : [{ value: FOLLOW, label: t("settingsX.sandbox.follow"), description: t("settingsX.sandbox.followDesc") }]),
+    ...(isGlobal
+      ? []
+      : [
+          {
+            value: FOLLOW,
+            label: t("settingsX.sandbox.follow"),
+            description: t("settingsX.sandbox.followDesc"),
+          },
+        ]),
     { value: "off", label: "off", description: t("settingsX.sandbox.offDesc") },
     { value: "auto", label: "auto", description: t("settingsX.sandbox.autoDesc") },
     { value: "seatbelt", label: "seatbelt", description: t("settingsX.sandbox.seatbeltDesc") },
@@ -169,7 +184,11 @@ function SandboxEditor({
               value={network}
               onChange={setNetwork}
               options={[
-                { value: "allow", label: "allow", description: t("settingsX.sandbox.networkAllow") },
+                {
+                  value: "allow",
+                  label: "allow",
+                  description: t("settingsX.sandbox.networkAllow"),
+                },
                 { value: "deny", label: "deny", description: t("settingsX.sandbox.networkDeny") },
               ]}
             />
@@ -178,7 +197,9 @@ function SandboxEditor({
         {showDetail && (
           <>
             <label className={field}>
-              <span className="text-sm text-muted-foreground">{t("settingsX.sandbox.writableRoots")}</span>
+              <span className="text-sm text-muted-foreground">
+                {t("settingsX.sandbox.writableRoots")}
+              </span>
               <Textarea
                 value={writableRoots}
                 onChange={(e) => setWritableRoots(e.target.value)}
@@ -187,7 +208,9 @@ function SandboxEditor({
               <span className={hint}>{t("settingsX.sandbox.writableRootsHint")}</span>
             </label>
             <label className={field}>
-              <span className="text-sm text-muted-foreground">{t("settingsX.sandbox.deniedReads")}</span>
+              <span className="text-sm text-muted-foreground">
+                {t("settingsX.sandbox.deniedReads")}
+              </span>
               <Textarea
                 value={deniedReads}
                 onChange={(e) => setDeniedReads(e.target.value)}
@@ -205,7 +228,12 @@ function SandboxEditor({
         </Button>
         {savedAt && (
           <span className="text-sm text-status-ok">
-            {t("settingsX.sandbox.savedAt", { time: new Date(savedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) })}
+            {t("settingsX.sandbox.savedAt", {
+              time: new Date(savedAt).toLocaleTimeString(undefined, {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+            })}
           </span>
         )}
       </div>

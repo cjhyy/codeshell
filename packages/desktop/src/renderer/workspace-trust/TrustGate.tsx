@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
 
 interface Props {
-  repoPath: string | null;
+  projectPath: string | null;
   onDecide: (level: "trusted" | "untrusted") => void;
 }
 
@@ -15,7 +15,7 @@ interface TrustRisks {
   setupScripts: boolean;
 }
 
-export function TrustGate({ repoPath, onDecide }: Props) {
+export function TrustGate({ projectPath, onDecide }: Props) {
   const { t } = useT();
   const [pending, setPending] = useState(false);
   const [unknown, setUnknown] = useState(false);
@@ -24,17 +24,17 @@ export function TrustGate({ repoPath, onDecide }: Props) {
   useEffect(() => {
     setUnknown(false);
     setRisks(null);
-    if (!repoPath) return;
+    if (!projectPath) return;
     let cancelled = false;
     void window.codeshell
-      .getTrust(repoPath)
+      .getTrust(projectPath)
       .then((tr) => {
         if (cancelled) return;
         setUnknown(tr === "unknown");
         // Fetch the risk summary only when we'll actually prompt.
         if (tr === "unknown") {
           void window.codeshell
-            .getTrustRisks(repoPath)
+            .getTrustRisks(projectPath)
             .then((r) => {
               if (!cancelled) setRisks(r);
             })
@@ -49,9 +49,9 @@ export function TrustGate({ repoPath, onDecide }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [repoPath]);
+  }, [projectPath]);
 
-  if (!repoPath || !unknown) return null;
+  if (!projectPath || !unknown) return null;
 
   const riskLines: string[] = [];
   if (risks) {
@@ -68,7 +68,7 @@ export function TrustGate({ repoPath, onDecide }: Props) {
   const decide = async (level: "trusted" | "untrusted") => {
     setPending(true);
     try {
-      await window.codeshell.setTrust(repoPath, level);
+      await window.codeshell.setTrust(projectPath, level);
       onDecide(level);
       setUnknown(false);
     } catch (err) {
@@ -82,10 +82,10 @@ export function TrustGate({ repoPath, onDecide }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
       <div className="w-full max-w-lg rounded-md border bg-popover p-5 text-popover-foreground shadow-2xl">
         <h2 className="mb-2 text-lg font-semibold">{t("auto.trust.title")}</h2>
-        <div className="mb-3 break-all rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted-foreground">{repoPath}</div>
-        <p className="mb-3 text-sm leading-relaxed text-muted-foreground">
-          {t("auto.trust.body")}
-        </p>
+        <div className="mb-3 break-all rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted-foreground">
+          {projectPath}
+        </div>
+        <p className="mb-3 text-sm leading-relaxed text-muted-foreground">{t("auto.trust.body")}</p>
         {risks &&
           (riskLines.length > 0 ? (
             <div className="mb-4 rounded-md border border-status-warn/40 bg-status-warn/10 px-3 py-2">
@@ -104,18 +104,10 @@ export function TrustGate({ repoPath, onDecide }: Props) {
             <p className="mb-4 text-xs text-muted-foreground">{t("auto.trust.risksNone")}</p>
           ))}
         <div className="flex justify-end gap-2">
-          <Button
-            variant="default"
-            disabled={pending}
-            onClick={() => void decide("untrusted")}
-          >
+          <Button variant="default" disabled={pending} onClick={() => void decide("untrusted")}>
             {t("auto.trust.viewOnly")}
           </Button>
-          <Button
-            variant="solid"
-            disabled={pending}
-            onClick={() => void decide("trusted")}
-          >
+          <Button variant="solid" disabled={pending} onClick={() => void decide("trusted")}>
             {t("auto.trust.trustContinue")}
           </Button>
         </div>

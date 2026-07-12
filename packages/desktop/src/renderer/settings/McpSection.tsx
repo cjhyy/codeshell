@@ -142,7 +142,7 @@ function broadcastSettingsChanged(): void {
 
 interface Props {
   scope: "user" | "project";
-  activeRepoPath: string | null;
+  activeProjectPath: string | null;
 }
 
 type EditState =
@@ -153,7 +153,7 @@ type EditState =
   // saved to the global mcpServerOverrides layer (not mcpServers).
   | { kind: "override"; original: string };
 
-export function McpSection({ scope, activeRepoPath }: Props) {
+export function McpSection({ scope, activeProjectPath }: Props) {
   const [servers, setServers] = useState<McpServer[]>([]);
   const [probes, setProbes] = useState<Record<string, McpProbeResult>>({});
   const [loadingProbe, setLoadingProbe] = useState<Set<string>>(new Set());
@@ -164,7 +164,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
   const confirm = useConfirm();
   const { t } = useT();
 
-  const cwd = scope === "project" ? (activeRepoPath ?? undefined) : undefined;
+  const cwd = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
 
   const load = useCallback(async () => {
     setError(null);
@@ -181,7 +181,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
         // (能力总览 project on/off), even while viewing the 用户(全局) scope.
         // Otherwise a project-enabled plugin's MCP shows 关闭 in the global
         // view while the session is actually connecting it (user-confusing).
-        activeRepoPath ?? undefined,
+        activeProjectPath ?? undefined,
       );
       const list = mcpServersFromSettings(merged);
       setServers(list);
@@ -189,7 +189,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     }
-  }, [scope, cwd, activeRepoPath]);
+  }, [scope, cwd, activeProjectPath]);
 
   const runProbe = useCallback(async (list: McpServer[], force: boolean) => {
     // Disabled servers are never connected by the engine, so probing them

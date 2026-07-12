@@ -9,10 +9,10 @@ export interface PanelWorkspaceState {
 
 function immediateState(
   engineSessionId: string | null,
-  repoPath: string | null,
+  projectPath: string | null,
 ): PanelWorkspaceState {
-  if (!repoPath) return { root: null, kind: null, ready: true };
-  if (!engineSessionId) return { root: repoPath, kind: "main", ready: true };
+  if (!projectPath) return { root: null, kind: null, ready: true };
+  if (!engineSessionId) return { root: projectPath, kind: "main", ready: true };
   return { root: null, kind: null, ready: false };
 }
 
@@ -23,13 +23,13 @@ function immediateState(
  */
 export function usePanelWorkspaceRoot(
   engineSessionId: string | null,
-  repoPath: string | null,
+  projectPath: string | null,
 ): PanelWorkspaceState {
   const [workspace, setWorkspace] = useState<PanelWorkspaceState>(() =>
-    immediateState(engineSessionId, repoPath),
+    immediateState(engineSessionId, projectPath),
   );
   const requestIdRef = useRef(0);
-  const targetKey = `${engineSessionId ?? ""}\0${repoPath ?? ""}`;
+  const targetKey = `${engineSessionId ?? ""}\0${projectPath ?? ""}`;
   const targetKeyRef = useRef(targetKey);
 
   // Invalidate a pending request during render, before an older promise has a
@@ -42,8 +42,8 @@ export function usePanelWorkspaceRoot(
   const refresh = useCallback(async () => {
     const requestId = ++requestIdRef.current;
     const requestTargetKey = targetKey;
-    if (!repoPath || !engineSessionId) {
-      setWorkspace(immediateState(engineSessionId, repoPath));
+    if (!projectPath || !engineSessionId) {
+      setWorkspace(immediateState(engineSessionId, projectPath));
       return;
     }
 
@@ -56,19 +56,19 @@ export function usePanelWorkspaceRoot(
         : { root: null, kind: null, ready: false },
     );
     try {
-      const next = await window.codeshell.getSessionWorkspace(engineSessionId, repoPath);
+      const next = await window.codeshell.getSessionWorkspace(engineSessionId, projectPath);
       if (requestIdRef.current !== requestId || targetKeyRef.current !== requestTargetKey) return;
       setWorkspace({ root: next.root, kind: next.kind, ready: true });
     } catch (error) {
       if (requestIdRef.current !== requestId || targetKeyRef.current !== requestTargetKey) return;
       setWorkspace({
-        root: repoPath,
+        root: projectPath,
         kind: "main",
         ready: true,
         error: error instanceof Error ? error.message : String(error),
       });
     }
-  }, [engineSessionId, repoPath, targetKey]);
+  }, [engineSessionId, projectPath, targetKey]);
 
   useEffect(() => {
     void refresh();
@@ -79,11 +79,11 @@ export function usePanelWorkspaceRoot(
 
   useEffect(() => {
     const subscribe = window.codeshell.onWorkspaceChanged;
-    if (typeof subscribe !== "function" || !engineSessionId || !repoPath) return;
+    if (typeof subscribe !== "function" || !engineSessionId || !projectPath) return;
     return subscribe((event) => {
       if (event.sessionId === engineSessionId) void refresh();
     });
-  }, [engineSessionId, refresh, repoPath]);
+  }, [engineSessionId, refresh, projectPath]);
 
   return workspace;
 }

@@ -24,7 +24,7 @@ import {
 
 interface Props {
   scope: "user" | "project";
-  activeRepoPath: string | null;
+  activeProjectPath: string | null;
 }
 
 /**
@@ -32,7 +32,7 @@ interface Props {
  * (WebSearch, 图片生成, …). Each group folds independently; the WebSearch group
  * used to be un-collapsible, now all groups fold.
  */
-export function ConnectionsPanel({ scope, activeRepoPath }: Props) {
+export function ConnectionsPanel({ scope, activeProjectPath }: Props) {
   const { t } = useT();
   return (
     <section className="mb-6 flex flex-col gap-3">
@@ -51,7 +51,7 @@ export function ConnectionsPanel({ scope, activeRepoPath }: Props) {
           subtitle={t("settingsX.searchConn.groupWebSearchSub")}
           defaultOpen
         >
-          <SearchProvidersGrid scope={scope} activeRepoPath={activeRepoPath} />
+          <SearchProvidersGrid scope={scope} activeProjectPath={activeProjectPath} />
         </CollapsibleGroup>
 
         <CollapsibleGroup
@@ -59,7 +59,11 @@ export function ConnectionsPanel({ scope, activeRepoPath }: Props) {
           subtitle={t("settingsX.searchConn.groupImageSub")}
           defaultOpen={false}
         >
-          <UnifiedConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} tag="image" />
+          <UnifiedConnectionsPanel
+            scope={scope}
+            activeProjectPath={activeProjectPath}
+            tag="image"
+          />
         </CollapsibleGroup>
 
         <CollapsibleGroup
@@ -67,7 +71,11 @@ export function ConnectionsPanel({ scope, activeRepoPath }: Props) {
           subtitle={t("settingsX.searchConn.groupVideoSub")}
           defaultOpen={false}
         >
-          <UnifiedConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} tag="video" />
+          <UnifiedConnectionsPanel
+            scope={scope}
+            activeProjectPath={activeProjectPath}
+            tag="video"
+          />
         </CollapsibleGroup>
 
         <CollapsibleGroup
@@ -75,7 +83,11 @@ export function ConnectionsPanel({ scope, activeRepoPath }: Props) {
           subtitle={t("settingsX.searchConn.groupAudioSub")}
           defaultOpen={false}
         >
-          <UnifiedConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} tag="audio" />
+          <UnifiedConnectionsPanel
+            scope={scope}
+            activeProjectPath={activeProjectPath}
+            tag="audio"
+          />
         </CollapsibleGroup>
       </div>
     </section>
@@ -169,17 +181,20 @@ interface SearchSnapshot {
   byProvider: Record<Provider, ProviderState>;
 }
 
-function SearchProvidersGrid({ scope, activeRepoPath }: Props) {
-  const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
+function SearchProvidersGrid({ scope, activeProjectPath }: Props) {
+  const cwd = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
   const cacheKey = `search:${scope}:${cwd ?? ""}`;
   const [seed] = useState(() => cacheGet<SearchSnapshot>(cacheKey));
-  const [defaultProvider, setDefaultProvider] = useState<Provider>(seed?.defaultProvider ?? "serper");
-  const [byProvider, setByProvider] = useState<Record<Provider, ProviderState>>(() =>
-    seed?.byProvider ?? {
-      serper: initialProviderState(),
-      tavily: initialProviderState(),
-      searxng: initialProviderState(),
-    },
+  const [defaultProvider, setDefaultProvider] = useState<Provider>(
+    seed?.defaultProvider ?? "serper",
+  );
+  const [byProvider, setByProvider] = useState<Record<Provider, ProviderState>>(
+    () =>
+      seed?.byProvider ?? {
+        serper: initialProviderState(),
+        tavily: initialProviderState(),
+        searxng: initialProviderState(),
+      },
   );
   const [loaded, setLoaded] = useState(!!seed);
   const toast = useToast();
@@ -188,16 +203,18 @@ function SearchProvidersGrid({ scope, activeRepoPath }: Props) {
 
   const load = useCallback(async () => {
     const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
-    const search = (s.search && typeof s.search === "object") ? (s.search as Record<string, unknown>) : {};
+    const search =
+      s.search && typeof s.search === "object" ? (s.search as Record<string, unknown>) : {};
     // Legacy schema stored a single { provider, apiKey, baseUrl }. We migrate
     // by stamping its values onto the matching provider card; nothing is lost.
     const legacyProvider = typeof search.provider === "string" ? search.provider : "serper";
     const legacyKey = typeof search.apiKey === "string" ? search.apiKey : "";
     const legacyBaseUrl = typeof search.baseUrl === "string" ? search.baseUrl : "";
 
-    const providersBag = (search.providers && typeof search.providers === "object")
-      ? (search.providers as Record<string, Record<string, unknown>>)
-      : {};
+    const providersBag =
+      search.providers && typeof search.providers === "object"
+        ? (search.providers as Record<string, Record<string, unknown>>)
+        : {};
 
     const next: Record<Provider, ProviderState> = {
       serper: initialProviderState(),
@@ -216,7 +233,11 @@ function SearchProvidersGrid({ scope, activeRepoPath }: Props) {
 
     // Apply legacy fallback to whatever provider the legacy slot named.
     let nextDefault: Provider = "serper";
-    if (legacyProvider === "serper" || legacyProvider === "tavily" || legacyProvider === "searxng") {
+    if (
+      legacyProvider === "serper" ||
+      legacyProvider === "tavily" ||
+      legacyProvider === "searxng"
+    ) {
       const cur = next[legacyProvider];
       if (!cur.apiKey && legacyKey) cur.apiKey = legacyKey;
       if (!cur.baseUrl && legacyBaseUrl) cur.baseUrl = legacyBaseUrl;
@@ -361,7 +382,9 @@ function SearchProvidersGrid({ scope, activeRepoPath }: Props) {
             state={st}
             isDefault={isDefault}
             isConfigured={isConfigured}
-            onConfigChange={(patch) => updateProvider(meta.id, { ...patch, dirty: true, probe: undefined })}
+            onConfigChange={(patch) =>
+              updateProvider(meta.id, { ...patch, dirty: true, probe: undefined })
+            }
             onUiChange={(patch) => updateProvider(meta.id, patch)}
             onSave={() => void saveProvider(meta.id)}
             onTest={() => void testProvider(meta.id)}
@@ -401,7 +424,8 @@ function ConnectionCard({
 }: CardProps) {
   const { t } = useT();
   const statusBadge = useMemo(() => {
-    if (state.testing) return <Badge variant="info">{t("settingsX.searchConn.statusTesting")}</Badge>;
+    if (state.testing)
+      return <Badge variant="info">{t("settingsX.searchConn.statusTesting")}</Badge>;
     if (state.probe?.status === "ok")
       return <Badge variant="success">{t("settingsX.searchConn.statusOk")}</Badge>;
     if (state.probe?.status === "error")
@@ -463,7 +487,8 @@ function ConnectionCard({
             {t("settingsX.searchConn.testSuccess")}
             {formatProbeTime(state.probe.lastProbedAt) && (
               <span className="font-normal text-muted-foreground">
-                {" "}· {formatProbeTime(state.probe.lastProbedAt)}
+                {" "}
+                · {formatProbeTime(state.probe.lastProbedAt)}
               </span>
             )}
           </div>

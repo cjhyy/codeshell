@@ -48,13 +48,13 @@ function skillSourceBadgeClass(source: string): string {
 }
 
 interface Props {
-  activeRepoPath: string | null;
+  activeProjectPath: string | null;
 }
 
-export function PluginsAndSkillsSection({ activeRepoPath }: Props) {
+export function PluginsAndSkillsSection({ activeProjectPath }: Props) {
   return (
     <section className="mb-6 flex flex-col gap-3">
-      <CustomizePage activeRepoPath={activeRepoPath} />
+      <CustomizePage activeProjectPath={activeProjectPath} />
     </section>
   );
 }
@@ -147,8 +147,8 @@ interface CustomizeSnapshot {
   disabledPlugins: Set<string>;
 }
 
-function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
-  const cacheKey = `plugins-skills:${activeRepoPath ?? "/"}`;
+function CustomizePage({ activeProjectPath }: { activeProjectPath: string | null }) {
+  const cacheKey = `plugins-skills:${activeProjectPath ?? "/"}`;
   const [seed] = useState(() => cacheGet<CustomizeSnapshot>(cacheKey));
   const [skills, setSkills] = useState<SkillSummary[] | null>(seed?.skills ?? null);
   const [plugins, setPlugins] = useState<PluginSummary[]>(seed?.plugins ?? []);
@@ -172,7 +172,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
   const alert = useAlert();
   const { t } = useT();
 
-  const cwd = activeRepoPath ?? "/";
+  const cwd = activeProjectPath ?? "/";
 
   const refresh = async () => {
     try {
@@ -202,7 +202,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
 
   useEffect(() => {
     void refresh();
-  }, [activeRepoPath]);
+  }, [activeProjectPath]);
 
   const pluginRows = useMemo(() => buildPluginRows(skills ?? [], plugins), [skills, plugins]);
 
@@ -529,7 +529,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
       <section className="min-h-0 rounded-md border p-3">
         {selection.kind === "addPanel" ? (
           <AddPanel
-            activeRepoPath={activeRepoPath}
+            activeProjectPath={activeProjectPath}
             onInstalled={() => {
               void refresh();
               // Make the just-installed skill live in running sessions without
@@ -688,10 +688,10 @@ function PluginInfoCard({ row }: { row: PluginRow }) {
 // ─── AddPanel — unchanged from the previous tab implementation ────────
 
 function AddPanel({
-  activeRepoPath,
+  activeProjectPath,
   onInstalled,
 }: {
-  activeRepoPath: string | null;
+  activeProjectPath: string | null;
   onInstalled: () => void;
 }) {
   const [source, setSource] = useState<"github" | "local">("github");
@@ -721,19 +721,19 @@ function AddPanel({
       </div>
 
       {source === "github" ? (
-        <GithubAddPanel activeRepoPath={activeRepoPath} onInstalled={onInstalled} />
+        <GithubAddPanel activeProjectPath={activeProjectPath} onInstalled={onInstalled} />
       ) : (
-        <LocalAddPanel activeRepoPath={activeRepoPath} onInstalled={onInstalled} />
+        <LocalAddPanel activeProjectPath={activeProjectPath} onInstalled={onInstalled} />
       )}
     </div>
   );
 }
 
 function LocalAddPanel({
-  activeRepoPath,
+  activeProjectPath,
   onInstalled,
 }: {
-  activeRepoPath: string | null;
+  activeProjectPath: string | null;
   onInstalled: () => void;
 }) {
   const [source, setSource] = useState<{ path: string; name: string } | null>(null);
@@ -759,7 +759,7 @@ function LocalAddPanel({
       await window.codeshell.installLocalSkill(
         source.path,
         scope,
-        scope === "project" ? (activeRepoPath ?? undefined) : undefined,
+        scope === "project" ? (activeProjectPath ?? undefined) : undefined,
         name.trim() || undefined,
       );
       onInstalled();
@@ -815,8 +815,8 @@ function LocalAddPanel({
               {
                 value: "project",
                 label: t("settingsX.plugins.scopeCurrentProject"),
-                description: activeRepoPath ?? t("settingsX.plugins.noProjectSelected"),
-                disabled: !activeRepoPath,
+                description: activeProjectPath ?? t("settingsX.plugins.noProjectSelected"),
+                disabled: !activeProjectPath,
               },
             ]}
           />
@@ -829,7 +829,7 @@ function LocalAddPanel({
       <Button
         variant="solid"
         className="w-fit"
-        disabled={!source || saving || (scope === "project" && !activeRepoPath)}
+        disabled={!source || saving || (scope === "project" && !activeProjectPath)}
         onClick={() => void install()}
       >
         {saving ? t("settingsX.plugins.installing") : t("settingsX.plugins.installSkill")}
@@ -839,10 +839,10 @@ function LocalAddPanel({
 }
 
 function GithubAddPanel({
-  activeRepoPath,
+  activeProjectPath,
   onInstalled,
 }: {
-  activeRepoPath: string | null;
+  activeProjectPath: string | null;
   onInstalled: () => void;
 }) {
   const [url, setUrl] = useState("");
@@ -872,7 +872,7 @@ function GithubAddPanel({
     setSelected(null);
     try {
       // Pass existing installed names so the preview can flag conflicts.
-      const installed = await window.codeshell.listSkills(activeRepoPath ?? "/", {
+      const installed = await window.codeshell.listSkills(activeProjectPath ?? "/", {
         includeDisabled: true,
       });
       const names = installed.map((s) => s.name);
@@ -912,7 +912,7 @@ function GithubAddPanel({
         inspection,
         selected,
         scope,
-        cwd: scope === "project" ? (activeRepoPath ?? undefined) : undefined,
+        cwd: scope === "project" ? (activeProjectPath ?? undefined) : undefined,
         installName: installName.trim() || selected.name,
       });
       onInstalled();
@@ -1036,8 +1036,8 @@ function GithubAddPanel({
                       {
                         value: "project",
                         label: t("settingsX.plugins.scopeCurrentProject"),
-                        description: activeRepoPath ?? t("settingsX.plugins.noProjectSelected"),
-                        disabled: !activeRepoPath,
+                        description: activeProjectPath ?? t("settingsX.plugins.noProjectSelected"),
+                        disabled: !activeProjectPath,
                       },
                     ]}
                   />
@@ -1062,7 +1062,7 @@ function GithubAddPanel({
                   installing ||
                   !trustAck ||
                   selected.alreadyInstalled ||
-                  (scope === "project" && !activeRepoPath)
+                  (scope === "project" && !activeProjectPath)
                 }
                 onClick={() => void install()}
               >

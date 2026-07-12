@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
-import type { Repo } from "../repos";
-import { repoLabel } from "../repos";
+import type { TrackedProject } from "../projects";
+import { projectLabel } from "../projects";
 import { NO_REPO_KEY, type SessionIndex, type SessionSummary } from "../transcripts";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -12,16 +12,16 @@ import { loadUILanguage } from "../uiLanguage";
 interface Props {
   open: boolean;
   onClose: () => void;
-  repos: Repo[];
+  projects: TrackedProject[];
   sessions: Record<string, SessionIndex>;
-  activeRepoId: string | null;
+  activeProjectId: string | null;
   /** Caller switches to the chosen session. */
-  onPick: (repoId: string | null, sessionId: string) => void;
+  onPick: (projectId: string | null, sessionId: string) => void;
 }
 
 interface Hit {
-  repoId: string | null;
-  repoLabel: string;
+  projectId: string | null;
+  projectLabel: string;
   session: SessionSummary;
 }
 
@@ -31,7 +31,7 @@ interface Hit {
  *
  * - Centered dim-backdropped modal.
  * - Input is focused on open.
- * - Before typing: shows recent sessions across all repos + no-repo.
+ * - Before typing: shows recent sessions across all projects + no-repo.
  * - While typing: substring match on session title + repo label.
  * - Up/Down to navigate, Enter to pick, Esc to close.
  *
@@ -41,9 +41,9 @@ interface Hit {
 export function SessionSearchModal({
   open,
   onClose,
-  repos,
+  projects,
   sessions,
-  activeRepoId,
+  activeProjectId,
   onPick,
 }: Props) {
   const { t } = useT();
@@ -58,36 +58,36 @@ export function SessionSearchModal({
     setTimeout(() => inputRef.current?.focus(), 0);
   }, [open]);
 
-  // Flatten all live sessions across all repos into a single ranked list.
+  // Flatten all live sessions across all projects into a single ranked list.
   const allHits: Hit[] = useMemo(() => {
     const out: Hit[] = [];
-    for (const r of repos) {
+    for (const r of projects) {
       const idx = sessions[r.id];
       if (!idx) continue;
       for (const s of idx.sessions) {
         if (s.archived) continue;
-        out.push({ repoId: r.id, repoLabel: repoLabel(r), session: s });
+        out.push({ projectId: r.id, projectLabel: projectLabel(r), session: s });
       }
     }
     const noRepoIdx = sessions[NO_REPO_KEY];
     if (noRepoIdx) {
       for (const s of noRepoIdx.sessions) {
         if (s.archived) continue;
-        out.push({ repoId: null, repoLabel: t("panels.search.noRepoLabel"), session: s });
+        out.push({ projectId: null, projectLabel: t("panels.search.noRepoLabel"), session: s });
       }
     }
     // Default sort: most-recently-updated first.
     out.sort((a, b) => b.session.updatedAt - a.session.updatedAt);
     return out;
-  }, [repos, sessions, t]);
+  }, [projects, sessions, t]);
 
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase();
     if (!q) return allHits.slice(0, 20);
     return allHits
-      .filter((h) =>
-        h.session.title.toLowerCase().includes(q) ||
-        h.repoLabel.toLowerCase().includes(q),
+      .filter(
+        (h) =>
+          h.session.title.toLowerCase().includes(q) || h.projectLabel.toLowerCase().includes(q),
       )
       .slice(0, 50);
   }, [allHits, filter]);
@@ -99,13 +99,19 @@ export function SessionSearchModal({
   if (!open) return null;
 
   const pick = (h: Hit): void => {
-    onPick(h.repoId, h.session.id);
+    onPick(h.projectId, h.session.id);
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/35 px-4 pt-[14vh]" onMouseDown={onClose}>
-      <div className="w-full max-w-xl overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/35 px-4 pt-[14vh]"
+      onMouseDown={onClose}
+    >
+      <div
+        className="w-full max-w-xl overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-2xl"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center gap-2 border-b px-3 py-2">
           <Search size={14} className="text-muted-foreground" />
           <Input
@@ -138,16 +144,16 @@ export function SessionSearchModal({
         </div>
         <ul className="max-h-[55vh] overflow-y-auto px-2 pb-2">
           {filtered.length === 0 && (
-            <li className="px-2 py-6 text-center text-sm text-muted-foreground">{t("panels.search.noMatch")}</li>
+            <li className="px-2 py-6 text-center text-sm text-muted-foreground">
+              {t("panels.search.noMatch")}
+            </li>
           )}
           {filtered.map((h, i) => {
-            const isActive =
-              activeRepoId === h.repoId &&
-              false; // hits not "active" in the picker — only the cursor is.
+            const isActive = activeProjectId === h.projectId && false; // hits not "active" in the picker — only the cursor is.
             void isActive;
             return (
               <li
-                key={`${h.repoId ?? "_"}::${h.session.id}`}
+                key={`${h.projectId ?? "_"}::${h.session.id}`}
                 className={cn(
                   "flex cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-2 text-sm",
                   i === cursor ? "bg-accent text-accent-foreground" : "hover:bg-accent/70",
@@ -157,7 +163,7 @@ export function SessionSearchModal({
               >
                 <span className="min-w-0 truncate font-medium">{h.session.title}</span>
                 <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-                  <span className="max-w-32 truncate">{h.repoLabel}</span>
+                  <span className="max-w-32 truncate">{h.projectLabel}</span>
                   <span className="tabular-nums">{formatRelative(h.session.updatedAt)}</span>
                 </span>
               </li>

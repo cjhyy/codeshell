@@ -21,15 +21,15 @@ import { useRefreshOnSettingsChange } from "./useSettingsResource";
 
 interface Props {
   scope: "user" | "project";
-  activeRepoPath: string | null;
+  activeProjectPath: string | null;
   /** Which catalog tag this panel manages. Defaults to text. */
   tag?: ConnTag;
   /** Section heading. */
   title?: string;
 }
 
-export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", title }: Props) {
-  const cwd = scope === "project" ? (activeRepoPath ?? undefined) : undefined;
+export function TextConnectionsPanel({ scope, activeProjectPath, tag = "text", title }: Props) {
+  const cwd = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
   const { t } = useT();
   const heading =
     title ??

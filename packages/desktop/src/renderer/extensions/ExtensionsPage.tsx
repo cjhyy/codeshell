@@ -4,7 +4,7 @@ import { ManagePage, type TabKey } from "./ManagePage";
 import { useT } from "../i18n/I18nProvider";
 
 interface Props {
-  activeRepoPath: string | null;
+  activeProjectPath: string | null;
   /**
    * When true (default), opens to the discovery home and lets the user drill
    * into the management page. When false, renders the management page only —
@@ -14,9 +14,7 @@ interface Props {
   showDiscover?: boolean;
 }
 
-type View =
-  | { mode: "home" }
-  | { mode: "manage"; tab: TabKey; query?: string };
+type View = { mode: "home" } | { mode: "manage"; tab: TabKey; query?: string };
 
 /**
  * Unified extensions surface (Codex-style). By default opens to a minimal
@@ -24,15 +22,15 @@ type View =
  * submitting a search switches into the tabbed management page. With
  * showDiscover=false it renders the management page directly.
  */
-export function ExtensionsPage({ activeRepoPath, showDiscover = true }: Props) {
+export function ExtensionsPage({ activeProjectPath, showDiscover = true }: Props) {
   const { t } = useT();
-  const cwd = activeRepoPath ?? "/";
+  const cwd = activeProjectPath ?? "/";
   const [view, setView] = useState<View>({ mode: "home" });
 
   if (!showDiscover) {
     return (
       <div className="h-full overflow-y-auto p-6">
-        <ManagePage cwd={cwd} activeRepoPath={activeRepoPath} />
+        <ManagePage cwd={cwd} activeProjectPath={activeProjectPath} />
       </div>
     );
   }
@@ -54,7 +52,7 @@ export function ExtensionsPage({ activeRepoPath, showDiscover = true }: Props) {
           </button>
           <ManagePage
             cwd={cwd}
-            activeRepoPath={activeRepoPath}
+            activeProjectPath={activeProjectPath}
             initialTab={view.tab}
             initialQuery={view.query}
           />

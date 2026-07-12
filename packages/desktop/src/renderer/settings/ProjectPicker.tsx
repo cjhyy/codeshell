@@ -1,27 +1,27 @@
 import React from "react";
 import { ChevronRight, FolderGit2, Globe } from "lucide-react";
-import { repoLabel, type Repo } from "../repos";
+import { projectLabel, type TrackedProject } from "../projects";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
 
 /**
- * A list of projects (repos) the user can click to drill into. Used by the
+ * A list of projects (projects) the user can click to drill into. Used by the
  * 钩子 and 记忆 settings pages: pick a project first, then view/edit that
- * project's hooks / memory. Reuses the same `repos` list as the sidebar.
+ * project's hooks / memory. Reuses the same `projects` list as the sidebar.
  *
  * When `includeGlobal` is set (memory page), a "全局" row is rendered at the
  * top — selecting it calls `onSelect(null)`, meaning the global / user level
  * (which has no project dimension).
  */
 export function ProjectPicker({
-  repos,
+  projects,
   includeGlobal = false,
   globalLabel,
   globalHint,
   emptyHint,
   onSelect,
 }: {
-  repos: Repo[];
+  projects: TrackedProject[];
   includeGlobal?: boolean;
   globalLabel?: string;
   globalHint?: string;
@@ -33,13 +33,11 @@ export function ProjectPicker({
   const resolvedEmptyHint = emptyHint ?? t("settingsX.projectPicker.empty");
   const ordered = React.useMemo(
     () =>
-      repos
-        .slice()
-        .sort((a, b) => {
-          if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
-          return repoLabel(a).localeCompare(repoLabel(b));
-        }),
-    [repos],
+      projects.slice().sort((a, b) => {
+        if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+        return projectLabel(a).localeCompare(projectLabel(b));
+      }),
+    [projects],
   );
 
   return (
@@ -61,7 +59,7 @@ export function ProjectPicker({
           <Row
             key={repo.id}
             icon={<FolderGit2 size={15} />}
-            title={repoLabel(repo)}
+            title={projectLabel(repo)}
             hint={repo.path}
             onClick={() => onSelect(repo.path)}
           />
@@ -95,9 +93,7 @@ function Row({
         <span className="shrink-0 text-muted-foreground">{icon}</span>
         <span className="flex min-w-0 flex-col">
           <span className="truncate text-sm font-medium text-foreground">{title}</span>
-          {hint && (
-            <span className="truncate text-xs text-muted-foreground">{hint}</span>
-          )}
+          {hint && <span className="truncate text-xs text-muted-foreground">{hint}</span>}
         </span>
         <ChevronRight
           size={16}

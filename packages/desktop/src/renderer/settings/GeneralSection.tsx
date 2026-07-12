@@ -14,12 +14,7 @@
 import React, { useState } from "react";
 import { PermissionSection } from "./PermissionSection";
 import { UpdaterSettingsRow } from "../updater/UpdaterBanner";
-import {
-  loadUILanguage,
-  saveUILanguage,
-  languageLabel,
-  type UILanguage,
-} from "../uiLanguage";
+import { loadUILanguage, saveUILanguage, languageLabel, type UILanguage } from "../uiLanguage";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n";
 import type { TranslationKey } from "../i18n";
@@ -40,7 +35,9 @@ function LanguageBlock() {
 
   return (
     <section className="mb-6 flex flex-col gap-3">
-      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">{t("settings.general.languageTitle")}</h3>
+      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">
+        {t("settings.general.languageTitle")}
+      </h3>
       <p className="m-0 text-xs text-muted-foreground">
         {t("settings.general.languageDescription")}
       </p>
@@ -65,13 +62,13 @@ function LanguageBlock() {
 
 interface Props {
   scope: "user" | "project";
-  activeRepoPath: string | null;
+  activeProjectPath: string | null;
 }
 
-export function GeneralSection({ scope, activeRepoPath }: Props) {
+export function GeneralSection({ scope, activeProjectPath }: Props) {
   return (
     <>
-      <PermissionSection scope={scope} activeRepoPath={activeRepoPath} />
+      <PermissionSection scope={scope} activeProjectPath={activeProjectPath} />
       <LanguageBlock />
       <UpdaterSettingsRow />
     </>

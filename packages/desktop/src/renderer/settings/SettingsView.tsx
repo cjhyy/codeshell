@@ -132,15 +132,15 @@ export function SettingsView({ activeProjectPath }: Props) {
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {tab === "model" && (
-          <TextConnectionsPanel scope={scope} activeRepoPath={activeProjectPath} />
+          <TextConnectionsPanel scope={scope} activeProjectPath={activeProjectPath} />
         )}
         {tab === "catalog" && (
-          <ModelCatalogPanel scope={scope} activeRepoPath={activeProjectPath} />
+          <ModelCatalogPanel scope={scope} activeProjectPath={activeProjectPath} />
         )}
         {tab === "permission" && (
-          <PermissionSection scope={scope} activeRepoPath={activeProjectPath} />
+          <PermissionSection scope={scope} activeProjectPath={activeProjectPath} />
         )}
-        {tab === "mcp" && <McpSection scope={scope} activeRepoPath={activeProjectPath} />}
+        {tab === "mcp" && <McpSection scope={scope} activeProjectPath={activeProjectPath} />}
         {tab === "update" && <UpdaterSettingsRow />}
         {tab === "json" && (
           <div className="flex flex-col gap-2">

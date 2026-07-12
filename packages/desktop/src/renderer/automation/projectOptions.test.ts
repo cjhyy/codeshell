@@ -4,17 +4,17 @@ import {
   selectedProjectValue,
   cwdFromSelection,
   NO_PROJECT_VALUE,
-  type ProjectRepo,
+  type ProjectOptionSource,
 } from "./projectOptions";
 
-const repos: ProjectRepo[] = [
+const projects: ProjectOptionSource[] = [
   { id: "a", path: "/work/alpha", name: "alpha" },
   { id: "b", path: "/work/beta", name: "beta", displayName: "Beta!" },
 ];
 
 describe("buildProjectOptions", () => {
-  it("leads with the no-project option, then the repos in order", () => {
-    const opts = buildProjectOptions(repos, "/work/alpha");
+  it("leads with the no-project option, then the projects in order", () => {
+    const opts = buildProjectOptions(projects, "/work/alpha");
     expect(opts[0]).toEqual({ value: NO_PROJECT_VALUE, label: "无项目(对话)" });
     expect(opts.slice(1)).toEqual([
       { value: "/work/alpha", label: "alpha" },
@@ -23,24 +23,24 @@ describe("buildProjectOptions", () => {
   });
 
   it("appends a synthetic entry when the current cwd is not a tracked repo", () => {
-    const opts = buildProjectOptions(repos, "/elsewhere/gamma");
+    const opts = buildProjectOptions(projects, "/elsewhere/gamma");
     expect(opts.at(-1)).toEqual({ value: "/elsewhere/gamma", label: "/elsewhere/gamma" });
-    expect(opts).toHaveLength(repos.length + 2); // no-project + 2 repos + synthetic
+    expect(opts).toHaveLength(projects.length + 2); // no-project + 2 projects + synthetic
   });
 
   it("does not append a synthetic entry when cwd matches a tracked repo", () => {
-    const opts = buildProjectOptions(repos, "/work/beta");
-    expect(opts).toHaveLength(repos.length + 1); // no-project + 2 repos
+    const opts = buildProjectOptions(projects, "/work/beta");
+    expect(opts).toHaveLength(projects.length + 1); // no-project + 2 projects
   });
 
   it("adds no synthetic entry for an empty / missing cwd", () => {
-    expect(buildProjectOptions(repos, "")).toHaveLength(repos.length + 1);
-    expect(buildProjectOptions(repos, null)).toHaveLength(repos.length + 1);
-    expect(buildProjectOptions(repos, undefined)).toHaveLength(repos.length + 1);
+    expect(buildProjectOptions(projects, "")).toHaveLength(projects.length + 1);
+    expect(buildProjectOptions(projects, null)).toHaveLength(projects.length + 1);
+    expect(buildProjectOptions(projects, undefined)).toHaveLength(projects.length + 1);
   });
 
-  it("dedupes repos that share a path", () => {
-    const dup: ProjectRepo[] = [
+  it("dedupes projects that share a path", () => {
+    const dup: ProjectOptionSource[] = [
       { id: "a", path: "/work/alpha", name: "alpha" },
       { id: "a2", path: "/work/alpha", name: "alpha-copy" },
     ];
@@ -48,7 +48,7 @@ describe("buildProjectOptions", () => {
     expect(opts).toHaveLength(2); // no-project + one /work/alpha
   });
 
-  it("skips repos with an empty path", () => {
+  it("skips projects with an empty path", () => {
     const opts = buildProjectOptions([{ id: "x", path: "", name: "ghost" }], null);
     expect(opts).toEqual([{ value: NO_PROJECT_VALUE, label: "无项目(对话)" }]);
   });
@@ -56,8 +56,8 @@ describe("buildProjectOptions", () => {
   it("treats the no-repo sandbox cwd as 无项目, not a ghost project", () => {
     // A headless/automation job records "no project" as the sandbox path.
     // It must NOT become a synthetic option labelled with the full path.
-    const opts = buildProjectOptions(repos, "/Users/admin/.code-shell/no-repo");
-    expect(opts).toHaveLength(repos.length + 1); // no-project + 2 repos, no ghost
+    const opts = buildProjectOptions(projects, "/Users/admin/.code-shell/no-repo");
+    expect(opts).toHaveLength(projects.length + 1); // no-project + 2 projects, no ghost
     expect(opts.some((o) => o.label.includes("no-repo"))).toBe(false);
   });
 });
