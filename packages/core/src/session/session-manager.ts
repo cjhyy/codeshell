@@ -29,13 +29,38 @@ import type {
 import { Transcript } from "./transcript.js";
 import { SessionError } from "../exceptions.js";
 import { normalizeCumulativeUsageCounters } from "../engine/session-usage.js";
-import { isSameGoalInstance, type GoalTerminal } from "../engine/goal.js";
+import {
+  deriveLegacyGoalId,
+  isGoalTerminated,
+  isSameGoalInstance,
+  mergeGoalTerminals,
+  recordGoalTerminal,
+  type GoalConfig,
+  type GoalTerminal,
+  type PersistedGoalTerminationReason,
+} from "../engine/goal.js";
 import { branchExists, isGitWorktreeRoot } from "../git/worktree.js";
+import { lockSync } from "../utils/lockfile.js";
 
 // Shared close epochs for SessionManager instances in this process. Concurrent
 // Engines bind the same epoch; only close advances it. This intentionally does
 // not claim cross-process/Worker protection.
 const currentSessionCloseEpochs = new Map<string, number>();
+
+const SESSION_STATE_LOCK_STALE_MS = 10_000;
+const SESSION_STATE_LOCK_RETRY_DELAYS_MS = [5, 10, 20, 40] as const;
+const syncSleepCell = new Int32Array(new SharedArrayBuffer(4));
+
+type StateSaveAttempt =
+  | { ok: true }
+  | {
+      ok: false;
+      reason: "generation_conflict" | "lock_conflict" | "revision_conflict";
+    };
+
+function sleepSync(ms: number): void {
+  Atomics.wait(syncSleepCell, 0, 0, ms);
+}
 
 export interface SessionBundle {
   state: SessionState;
@@ -283,6 +308,7 @@ export class SessionManager {
 
     const state: SessionState = {
       sessionId,
+      stateRevision: 0,
       cwd,
       workspace: { root: cwd, kind: "main" },
       startedAt: Date.now(),
@@ -395,25 +421,12 @@ export class SessionManager {
    * `cwd`. P1 will teach ToolContext to resolve cwd from this field; for P0 it
    * is a safety pointer and resume breadcrumb.
    */
-  setSessionWorkspace(sessionId: string, workspace: SessionWorkspace): void {
+  setSessionWorkspace(sessionId: string, workspace: SessionWorkspace): number {
     assertSafeSessionId(sessionId);
     if (!isSessionWorkspace(workspace)) {
       throw new SessionError(`invalid workspace for session ${sessionId}`);
     }
-    const stateFile = join(this.sessionsDir, sessionId, "state.json");
-    if (!existsSync(stateFile)) {
-      throw new SessionError(`Session state file not found: ${sessionId}`);
-    }
-    let state: SessionState;
-    try {
-      state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
-    } catch (err) {
-      throw new SessionError(
-        `Session state is corrupt for ${sessionId}: ${err instanceof Error ? err.message : String(err)}`,
-      );
-    }
-    state.workspace = workspace;
-    this.saveState(state);
+    return this.updateSessionState(sessionId, { workspace });
   }
 
   recordWorkspaceHandoff(
@@ -539,7 +552,7 @@ export class SessionManager {
     if (!existsSync(stateFile)) return undefined;
     try {
       const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
-      return isSameGoalInstance(state.activeGoal, state.goalTerminal)
+      return isGoalTerminated(state.activeGoal, state.goalTerminals, state.goalTerminal)
         ? undefined
         : state.activeGoal;
     } catch {
@@ -549,8 +562,9 @@ export class SessionManager {
 
   /**
    * Disk-only "wipe this session's persistent goal" — the counterpart to
-   * readActiveGoal. Reads state.json, removes state.activeGoal, and rewrites it
-   * atomically (via saveState). Returns true only if a goal was actually
+   * readActiveGoal. Reads state.json, removes state.activeGoal, records a
+   * cancelled terminal marker, and rewrites it atomically (via saveState).
+   * Returns true only if a goal was actually
    * present (idempotent — clearing a session with no goal is a no-op returning
    * false). Never throws on an unknown / malformed / traversal-shaped id
    * (returns false), matching readActiveGoal's tolerance.
@@ -578,9 +592,9 @@ export class SessionManager {
       return false;
     }
     if (state.activeGoal === undefined) return false;
-    state.activeGoal = undefined;
-    this.saveState(state);
-    return true;
+    const clearedGoal = state.activeGoal;
+    clearedGoal.goalId ??= deriveLegacyGoalId(sessionId, clearedGoal);
+    return this.saveGoalTerminal(state, clearedGoal, "cancelled");
   }
 
   resume(sessionId: string): SessionBundle {
@@ -619,36 +633,93 @@ export class SessionManager {
    * Merge a field-level state update into the latest persisted snapshot.
    *
    * Unlike saveState(), callers do not supply a potentially stale whole-state
-   * object. The read, shallow merge, and atomic write are synchronous, so no
-   * other callback on this process's event loop can interleave between them.
-   * This is deliberately not a session-level lock. Engine.run rejects re-entry
-   * on one Engine (G6), and the generation check in saveState rejects an older
-   * registered Engine in this process. Workers and separate processes remain
-   * an unresolved finding requiring locking/CAS.
+   * object. saveState serializes the read/revision-check/write section with the
+   * per-session lock and returns the new persisted revision to the caller.
    */
   updateSessionState(
     sessionId: string,
     partial: Readonly<Partial<Omit<SessionState, "sessionId">>>,
-  ): void {
+  ): number {
     assertSafeSessionId(sessionId);
-    const stateFile = join(this.sessionsDir, sessionId, "state.json");
-    if (!existsSync(stateFile)) {
-      throw new SessionError(`Session state file not found: ${sessionId}`);
+    for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
+      const state = this.readPersistedState(sessionId);
+      Object.assign(state, partial);
+      state.sessionId = sessionId;
+      const result = this.saveStateAttempt(state);
+      if (result.ok) return state.stateRevision!;
+      if (result.reason === "generation_conflict") {
+        throw new SessionError(`Session generation conflict for ${sessionId}`);
+      }
+      if (result.reason === "lock_conflict") {
+        throw new SessionError(`Session state lock contention for ${sessionId}`);
+      }
+      // A field-level update is explicitly authorized to merge into the newest
+      // snapshot. Re-read it on the next iteration instead of treating its CAS
+      // miss like a lock collision.
     }
-    let state: SessionState;
-    try {
-      state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
-    } catch (err) {
-      throw new SessionError(
-        `Session state is corrupt for ${sessionId}: ${err instanceof Error ? err.message : String(err)}`,
-      );
-    }
-    Object.assign(state, partial);
-    state.sessionId = sessionId;
-    this.saveState(state);
+    throw new SessionError(`Session state revision conflict for ${sessionId}`);
   }
 
   saveState(state: SessionState, generation?: number): boolean {
+    return this.saveStateAttempt(state, generation).ok;
+  }
+
+  /**
+   * Persist one goal terminal transition without allowing a revision race to
+   * resurrect that goal. A CAS miss is handled as a domain merge: read the
+   * newest snapshot, append the terminal by goalId, clear only a matching
+   * activeGoal, then retry. Lock/generation conflicts remain distinct failures.
+   */
+  saveGoalTerminal(
+    state: SessionState,
+    goal: GoalConfig | undefined,
+    reason: PersistedGoalTerminationReason,
+  ): boolean {
+    if (!goal) return false;
+    goal.goalId ??= deriveLegacyGoalId(state.sessionId, goal);
+    recordGoalTerminal(state, goal, reason);
+    if (isSameGoalInstance(state.activeGoal, goal)) state.activeGoal = undefined;
+
+    let result = this.saveStateAttempt(state);
+    if (result.ok) return true;
+    if (result.reason !== "revision_conflict") return false;
+
+    for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
+      const latest = this.readPersistedState(state.sessionId);
+      recordGoalTerminal(latest, goal, reason);
+      if (isSameGoalInstance(latest.activeGoal, goal)) latest.activeGoal = undefined;
+      result = this.saveStateAttempt(latest);
+      if (result.ok) {
+        this.rebaseLiveGoalState(state, latest);
+        return true;
+      }
+      if (result.reason !== "revision_conflict") return false;
+    }
+    return false;
+  }
+
+  /**
+   * Whole-state fast path with a field-level fallback for a legitimate live
+   * run's final accounting/status update. Only revision conflicts are merged;
+   * generation fencing and exhausted lock contention still fail closed.
+   */
+  saveStateOrUpdateFields(
+    state: SessionState,
+    partial: Readonly<Partial<Omit<SessionState, "sessionId">>>,
+  ): boolean {
+    const result = this.saveStateAttempt(state);
+    if (result.ok) return true;
+    if (result.reason !== "revision_conflict") return false;
+    try {
+      const stateRevision = this.updateSessionState(state.sessionId, partial);
+      Object.assign(state, partial, { stateRevision });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private saveStateAttempt(state: SessionState, generation?: number): StateSaveAttempt {
     // state.sessionId could come from a deserialized state.json that was
     // tampered with on disk. Validate before joining.
     assertSafeSessionId(state.sessionId);
@@ -657,48 +728,153 @@ export class SessionManager {
       writerGeneration !== undefined &&
       (currentSessionCloseEpochs.get(this.generationKey(state.sessionId)) ?? 0) !== writerGeneration
     ) {
-      // A closing/old Engine may finish asynchronously after its generation was
-      // invalidated. Reject explicitly without throwing into an unobserved
-      // engine finally path, and most importantly without touching the disk.
-      return false;
+      return { ok: false, reason: "generation_conflict" };
     }
+
     const sessionDir = join(this.sessionsDir, state.sessionId);
     mkdirSync(sessionDir, { recursive: true });
-    // Atomic file replacement: stage to .tmp, then rename, preventing a torn
-    // state.json. Registered Engines share one epoch until close advances it,
-    // so concurrent opens are not fenced from each other. Workers, separate
-    // processes, and their stale-writer ordering still require locking/CAS.
     const target = join(sessionDir, "state.json");
-    // Preserve the newest goal tombstone across whole-state writers. If an old
-    // detached bundle still carries the tombstoned goal, drop it before write;
-    // when disk already contains a newer replacement goal, retain that goal as
-    // well instead of letting the stale bundle erase it.
-    let persisted: SessionState | undefined;
-    if (existsSync(target)) {
+    // proper-lockfile uses an atomic mkdir lock plus an mtime lease. It
+    // recovers crash-orphaned locks after `stale` and refreshes live locks so a
+    // slow writer is not stolen. Short genuine contention gets bounded retry.
+    const release = this.acquireStateLock(target);
+    if (!release) return { ok: false, reason: "lock_conflict" };
+
+    try {
+      let persisted: SessionState | undefined;
+      if (existsSync(target)) {
+        try {
+          persisted = JSON.parse(readFileSync(target, "utf-8")) as SessionState;
+        } catch {
+          // Preserve the historical recovery behavior for malformed state.
+        }
+      }
+
+      const persistedRevision = persisted?.stateRevision;
+      const incomingRevision = state.stateRevision;
+      const revisionsMatch =
+        persisted === undefined ||
+        (persistedRevision === undefined && incomingRevision === undefined) ||
+        (typeof persistedRevision === "number" && incomingRevision === persistedRevision);
+      if (!revisionsMatch) return { ok: false, reason: "revision_conflict" };
+
+      // A title can be generated by a field-level writer while this bundle is
+      // live. Preserve it when the incoming object never owned the field.
+      if (persisted?.title !== undefined && !("title" in state)) {
+        state.title = persisted.title;
+      }
+
+      const terminal = newestGoalTerminal(state.goalTerminal, persisted?.goalTerminal);
+      let terminals = mergeGoalTerminals(
+        persisted?.goalTerminals,
+        persisted?.goalTerminal,
+        state.goalTerminals,
+        state.goalTerminal,
+      );
+      if (terminal) {
+        state.goalTerminal = terminal;
+        // The compatibility single-marker view must also remain represented in
+        // the bounded identity set even if malformed timestamps disagree.
+        if (!isGoalTerminated(terminal, terminals)) {
+          terminals = mergeGoalTerminals(terminals.slice(1), terminal);
+        }
+      }
+      if (terminals.length > 0) state.goalTerminals = terminals;
+
+      const incomingGoal = state.activeGoal;
+      const diskGoal = persisted?.activeGoal;
+      const incomingTerminated = isGoalTerminated(incomingGoal, terminals);
+      const diskTerminated = isGoalTerminated(diskGoal, terminals);
+      if (incomingGoal && !incomingTerminated) {
+        state.activeGoal = incomingGoal;
+      } else if (diskGoal && !diskTerminated && !isSameGoalInstance(diskGoal, incomingGoal)) {
+        state.activeGoal = diskGoal;
+      } else {
+        state.activeGoal = undefined;
+      }
+
+      state.stateRevision = (persistedRevision ?? incomingRevision ?? 0) + 1;
+      const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
+      writeFileSync(tmp, JSON.stringify(state, null, 2), "utf-8");
+      renameSync(tmp, target);
+      return { ok: true };
+    } finally {
       try {
-        persisted = JSON.parse(readFileSync(target, "utf-8")) as SessionState;
+        release();
       } catch {
-        // The atomic writer should make this rare. Preserve the existing
-        // behavior and overwrite malformed state with the caller's snapshot.
+        // A compromised/reaped lease must not mask the persistence result.
       }
     }
-    // A title is generated after the first run and may be merged while the
-    // next run still owns a state object loaded before that title existed.
-    // Preserve the newly persisted title when such a stale whole-state writer
-    // saves later; assigning title = undefined explicitly still clears it.
-    if (persisted?.title !== undefined && !("title" in state)) {
-      state.title = persisted.title;
+  }
+
+  private acquireStateLock(target: string): (() => void) | undefined {
+    const lockPath = `${target}.lock`;
+    for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
+      if (!this.prepareLegacyStateLock(lockPath)) {
+        const delay = SESSION_STATE_LOCK_RETRY_DELAYS_MS[attempt];
+        if (delay === undefined) return undefined;
+        sleepSync(delay);
+        continue;
+      }
+      try {
+        return lockSync(target, {
+          stale: SESSION_STATE_LOCK_STALE_MS,
+          update: SESSION_STATE_LOCK_STALE_MS / 2,
+          retries: 0,
+          realpath: false,
+        });
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException).code;
+        if (code !== "ELOCKED" && code !== "EEXIST") throw err;
+        const delay = SESSION_STATE_LOCK_RETRY_DELAYS_MS[attempt];
+        if (delay === undefined) return undefined;
+        sleepSync(delay);
+      }
     }
-    const terminal = newestGoalTerminal(state.goalTerminal, persisted?.goalTerminal);
-    if (terminal) state.goalTerminal = terminal;
-    if (terminal && isSameGoalInstance(state.activeGoal, terminal)) {
-      const diskGoal = persisted?.activeGoal;
-      state.activeGoal = diskGoal && !isSameGoalInstance(diskGoal, terminal) ? diskGoal : undefined;
+    return undefined;
+  }
+
+  /** Recover only the old implementation's regular-file orphan lock. */
+  private prepareLegacyStateLock(lockPath: string): boolean {
+    if (!existsSync(lockPath)) return true;
+    let stat;
+    try {
+      stat = lstatSync(lockPath);
+    } catch {
+      return true;
     }
-    const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
-    writeFileSync(tmp, JSON.stringify(state, null, 2), "utf-8");
-    renameSync(tmp, target);
-    return true;
+    if (stat.isDirectory()) return true;
+    if (Date.now() - stat.mtimeMs <= SESSION_STATE_LOCK_STALE_MS) return false;
+    try {
+      rmSync(lockPath, { force: true });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private readPersistedState(sessionId: string): SessionState {
+    const stateFile = join(this.sessionsDir, sessionId, "state.json");
+    if (!existsSync(stateFile)) {
+      throw new SessionError(`Session state file not found: ${sessionId}`);
+    }
+    try {
+      return JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
+    } catch (err) {
+      throw new SessionError(
+        `Session state is corrupt for ${sessionId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
+  private rebaseLiveGoalState(live: SessionState, persisted: SessionState): void {
+    live.stateRevision = persisted.stateRevision;
+    live.workspace = persisted.workspace;
+    if ("title" in persisted) live.title = persisted.title;
+    else delete live.title;
+    live.activeGoal = persisted.activeGoal;
+    live.goalTerminal = persisted.goalTerminal;
+    live.goalTerminals = persisted.goalTerminals;
   }
 
   private generationKey(sessionId: string): string {
@@ -904,6 +1080,7 @@ export function buildForkState(
     : { root: source.cwd, kind: "main" as const };
   return {
     sessionId: targetSessionId,
+    stateRevision: 0,
     cwd: source.cwd,
     workspace,
     startedAt,
@@ -1072,7 +1249,7 @@ function newestGoalTerminal(
   if (!persisted) return incoming;
   const incomingAt = incoming.terminatedAtMs ?? Number.NEGATIVE_INFINITY;
   const persistedAt = persisted.terminatedAtMs ?? Number.NEGATIVE_INFINITY;
-  return incomingAt > persistedAt ? incoming : persisted;
+  return incomingAt >= persistedAt ? incoming : persisted;
 }
 
 export type SessionListEntry = SessionState & {

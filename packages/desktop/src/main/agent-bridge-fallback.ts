@@ -103,7 +103,11 @@ export function buildNoChildFallbackReply(
       const sid = parsed.params?.sessionId;
       if (typeof sid !== "string" || !sid) return null;
       const goal = sessions.readActiveGoal(sid);
-      return respond({ ok: true, goal: goal ? goal.objective : null });
+      return respond({
+        ok: true,
+        goal: goal ? goal.objective : null,
+        ...(goal?.goalId ? { goalId: goal.goalId } : {}),
+      });
     }
     case "agent/goalClear": {
       const sid = parsed.params?.sessionId;

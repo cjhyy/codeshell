@@ -16,11 +16,11 @@ import { TaskList } from "./components/TaskList.js";
 import { SpinnerWithVerb } from "./components/SpinnerWithVerb.js";
 import { StatusLine } from "./components/StatusLine.js";
 import { FullscreenLayout, useUnseenDivider } from "./components/FullscreenLayout.js";
-import { VirtualMessageList, type VirtualMessageListHandle } from "./components/VirtualMessageList.js";
 import {
-  FullscreenModeContext,
-  INITIAL_FULLSCREEN_MODE,
-} from "./fullscreen-mode.js";
+  VirtualMessageList,
+  type VirtualMessageListHandle,
+} from "./components/VirtualMessageList.js";
+import { FullscreenModeContext, INITIAL_FULLSCREEN_MODE } from "./fullscreen-mode.js";
 import {
   MessageContent,
   UserMessage,
@@ -66,7 +66,11 @@ import { imageCommand } from "../cli/commands/builtin/image-command.js";
 import { buildPluginSlashCommands } from "../cli/commands/builtin/plugin-commands-registration.js";
 import type { ApprovalRequest, StreamEvent, TaskInfo } from "@cjhyy/code-shell-core";
 import { chatStore, createEntry, type ChatEntry } from "./store.js";
-import { nextPermissionMode, permissionConfigurePayload, type TuiPermissionMode } from "./permission-mode.js";
+import {
+  nextPermissionMode,
+  permissionConfigurePayload,
+  type TuiPermissionMode,
+} from "./permission-mode.js";
 import { formatDuration, formatTokens } from "@cjhyy/code-shell-core";
 import { removeLastFromHistory } from "./input-history.js";
 import { logger } from "@cjhyy/code-shell-core";
@@ -213,10 +217,7 @@ export function App({
   }, [tasks]);
 
   const queryGuard = useRef(new QueryGuard()).current;
-  const isQueryActive = useSyncExternalStore(
-    queryGuard.subscribe,
-    queryGuard.getSnapshot,
-  );
+  const isQueryActive = useSyncExternalStore(queryGuard.subscribe, queryGuard.getSnapshot);
   const hasRunningBgAgents = useSyncExternalStore(
     asyncAgentRegistry.subscribe,
     asyncAgentRegistry.hasRunning,
@@ -280,7 +281,9 @@ export function App({
   // handleStreamEvent is memoized without sessionId in its deps; reading from
   // a ref avoids re-creating the handler on every session change.
   const sidRef = useRef<string | undefined>(initialSessionId);
-  useEffect(() => { sidRef.current = sessionId; }, [sessionId]);
+  useEffect(() => {
+    sidRef.current = sessionId;
+  }, [sessionId]);
   const [model, setModel] = useState(initialModel);
   const [activeMaxContextTokens, setActiveMaxContextTokens] = useState(maxContextTokens);
   const pendingContextRef = useRef<string | null>(null);
@@ -294,6 +297,7 @@ export function App({
   // Best-effort mirror of the session's active goal objective for /goal status.
   // Set when /goal submits one, cleared on /goal clear or a goal_progress(met).
   const activeGoalRef = useRef<string | null>(null);
+  const activeGoalIdRef = useRef<string | null>(null);
   const [showBanner, setShowBanner] = useState(true);
   const [totalTokens, setTotalTokens] = useState(0);
   const [totalCost, setTotalCost] = useState(0);
@@ -351,8 +355,13 @@ export function App({
   // tracks `sessionId` for display and for re-passing on subsequent runs.
 
   // Unseen message divider tracking
-  const { dividerIndex, showPill, unseenCount, onScrollAway, onScrollToBottom: clearUnseen } =
-    useUnseenDivider(chatLog.length);
+  const {
+    dividerIndex,
+    showPill,
+    unseenCount,
+    onScrollAway,
+    onScrollToBottom: clearUnseen,
+  } = useUnseenDivider(chatLog.length);
   // Imperative handle on VirtualMessageList so we can scroll the list to
   // the bottom when the user dismisses the "N new messages" pill or
   // submits a new turn.
@@ -422,9 +431,10 @@ export function App({
         setPendingQuestion({
           requestId,
           question: request.description,
-          header: typeof (args as { header?: unknown }).header === "string"
-            ? ((args as { header: string }).header)
-            : undefined,
+          header:
+            typeof (args as { header?: unknown }).header === "string"
+              ? (args as { header: string }).header
+              : undefined,
           options,
           multiSelect: (args as { multiSelect?: unknown }).multiSelect === true,
         });
@@ -505,9 +515,7 @@ export function App({
     buf.clear();
 
     const gap =
-      STREAM_DIAG_ON && lastFlushAtRef.current !== 0
-        ? flushEnter - lastFlushAtRef.current
-        : 0;
+      STREAM_DIAG_ON && lastFlushAtRef.current !== 0 ? flushEnter - lastFlushAtRef.current : 0;
     const scheduledAt = flushScheduledAtRef.current;
     const timerDelay =
       STREAM_DIAG_ON && scheduledAt !== 0
@@ -570,8 +578,7 @@ export function App({
       recordStreamEvent(event.type, agentId);
       // session_started carries the authoritative sid; use it directly so the
       // record lands in the correct dir even before sidRef has caught up.
-      const eventSid =
-        event.type === "session_started" ? event.sessionId : sidRef.current;
+      const eventSid = event.type === "session_started" ? event.sessionId : sidRef.current;
       if (shouldTraceStreamEvent(event.type)) {
         uiLog.debug("debug.stream.event", { type: event.type, agentId });
         recordUIEvent(eventSid, "ui.stream_event", { type: event.type, agentId });
@@ -590,7 +597,10 @@ export function App({
           // previous turn's usage_update.
           if (event.promptTokens > 0) {
             uiLog.info("debug.ctx.set", { from: "session_started", value: event.promptTokens });
-            recordUIEvent(event.sessionId, "ui.ctx.set", { from: "session_started", value: event.promptTokens });
+            recordUIEvent(event.sessionId, "ui.ctx.set", {
+              from: "session_started",
+              value: event.promptTokens,
+            });
             setContextTokens(event.promptTokens);
           }
           break;
@@ -601,7 +611,7 @@ export function App({
           if (agentId !== undefined) break;
           setStreamMode("thinking");
           setThinkingContent(null);
-      clearThinkingBuffer();
+          clearThinkingBuffer();
           // Reset the spinner's "alive" counter at the top of each LLM call.
           // Tracks output of the current call only; ctx size is the bar's job.
           streamingTokensRef.current = 0;
@@ -630,7 +640,7 @@ export function App({
           // pipeline stall.
           if (agentId !== undefined) {
             // Sample at most once per second to keep the log readable.
-            const last = (subAgentDeltaSampleRef.current ?? 0);
+            const last = subAgentDeltaSampleRef.current ?? 0;
             const now = Date.now();
             if (now - last > 1000) {
               subAgentDeltaSampleRef.current = now;
@@ -762,7 +772,13 @@ export function App({
           const ev = event as Extract<StreamEvent, { type: "agent_start" }>;
           chatStore.update((prev) => [
             ...prev,
-            entry({ type: "agent_start", agentId: ev.agentId, name: ev.name, description: ev.description, agentType: ev.agentType }),
+            entry({
+              type: "agent_start",
+              agentId: ev.agentId,
+              name: ev.name,
+              description: ev.description,
+              agentType: ev.agentType,
+            }),
           ]);
           break;
         }
@@ -809,18 +825,31 @@ export function App({
           // the /goal command; this catches goals set elsewhere too).
           const ev = event as Extract<StreamEvent, { type: "goal_set" }>;
           activeGoalRef.current = ev.objective;
+          activeGoalIdRef.current = ev.goalId ?? null;
           break;
         }
 
         case "goal_cleared": {
-          activeGoalRef.current = null;
+          const ev = event as Extract<StreamEvent, { type: "goal_cleared" }>;
+          if (
+            ev.goalId ? activeGoalIdRef.current === ev.goalId : activeGoalIdRef.current === null
+          ) {
+            activeGoalRef.current = null;
+            activeGoalIdRef.current = null;
+          }
           break;
         }
 
         case "goal_progress": {
           // The goal is achieved (or gave up) — drop the status mirror.
           const ev = event as Extract<StreamEvent, { type: "goal_progress" }>;
-          if (ev.status === "met" || ev.status === "exhausted") activeGoalRef.current = null;
+          if (
+            (ev.status === "met" || ev.status === "exhausted") &&
+            (ev.goalId ? activeGoalIdRef.current === ev.goalId : activeGoalIdRef.current === null)
+          ) {
+            activeGoalRef.current = null;
+            activeGoalIdRef.current = null;
+          }
           break;
         }
 
@@ -845,7 +874,9 @@ export function App({
           // ctx bar always reflects the real (next-prompt) size — including
           // after tool_result append, post-compaction, and LLM response.
           uiLog.info("debug.ctx.usage_update", { promptTokens: event.promptTokens });
-          recordUIEvent(sidRef.current, "ui.ctx.usage_update", { promptTokens: event.promptTokens });
+          recordUIEvent(sidRef.current, "ui.ctx.usage_update", {
+            promptTokens: event.promptTokens,
+          });
           if (event.promptTokens > 0) setContextTokens(event.promptTokens);
           break;
         }
@@ -1060,10 +1091,7 @@ export function App({
     // returns early on each one, so they never reach the cancel-Esc or
     // transcript handlers below.
     if (dockFocusIdx !== null) {
-      const visible = getVisibleAgents(
-        asyncAgentRegistry.getSnapshot(),
-        Date.now(),
-      );
+      const visible = getVisibleAgents(asyncAgentRegistry.getSnapshot(), Date.now());
       // 0 = main row; 1..maxIdx = agents.
       const maxIdx = Math.min(MAX_VISIBLE, visible.length);
 
@@ -1146,7 +1174,7 @@ export function App({
         cancelledRef.current = true;
         setStreamMode("thinking");
         setThinkingContent(null);
-      clearThinkingBuffer();
+        clearThinkingBuffer();
       } else {
         exit();
       }
@@ -1159,7 +1187,10 @@ export function App({
 
         // Notify server of mode change
         client
-          .configure({ sessionId: sidRef.current ?? sessionId, ...permissionConfigurePayload(next) })
+          .configure({
+            sessionId: sidRef.current ?? sessionId,
+            ...permissionConfigurePayload(next),
+          })
           .catch(() => {});
 
         return next;
@@ -1492,14 +1523,7 @@ export function App({
     const xml = buildNotificationMessage(items);
     const summary = buildNotificationSummary(items);
     void submitToEngine(xml, { asInjection: true, chatSummary: summary });
-  }, [
-    notificationSnapshot,
-    isQueryActive,
-    input,
-    overlayOpen,
-    submitToEngine,
-    sessionId,
-  ]);
+  }, [notificationSnapshot, isQueryActive, input, overlayOpen, submitToEngine, sessionId]);
 
   const handleSubmit = useCallback(
     async (value: string) => {
@@ -1629,11 +1653,13 @@ export function App({
         submitGoal: (objective: string) => {
           pendingGoalRef.current = objective;
           activeGoalRef.current = objective;
+          activeGoalIdRef.current = null;
           void submitToEngine(objective, { asInjection: false });
         },
         clearGoal: async () => {
           const cleared = await client.goalClear(sidRef.current);
           activeGoalRef.current = null;
+          activeGoalIdRef.current = null;
           return cleared;
         },
       };
@@ -1860,7 +1886,10 @@ export function App({
           onSelect={async (key) => {
             setModelEntries(null);
             try {
-              const result = await client.configure({ sessionId: sidRef.current ?? sessionId, model: key });
+              const result = await client.configure({
+                sessionId: sidRef.current ?? sessionId,
+                model: key,
+              });
               const newModel = applyModelConfigureResult(result, key);
               addStatus(`✓ 切换到: ${key} (${newModel})`);
             } catch (err) {
@@ -1918,7 +1947,14 @@ export function App({
               }
             }
             setWizard(null);
-            try { await client.configure({ sessionId: sidRef.current ?? sessionId, reloadModels: true }); } catch { /* best-effort */ }
+            try {
+              await client.configure({
+                sessionId: sidRef.current ?? sessionId,
+                reloadModels: true,
+              });
+            } catch {
+              /* best-effort */
+            }
             await refreshModelManagerState();
             if (failures.length > 0) {
               chatStore.update((prev) => [
@@ -1950,7 +1986,10 @@ export function App({
             );
           }}
           onSwitch={async (key) => {
-            const result = await client.configure({ sessionId: sidRef.current ?? sessionId, model: key });
+            const result = await client.configure({
+              sessionId: sidRef.current ?? sessionId,
+              model: key,
+            });
             applyModelConfigureResult(result, key);
             // Mutate the local panel state so the active marker updates
             // without re-fetching from the server.
@@ -2044,10 +2083,7 @@ export function App({
               disabled={dockFocusIdx !== null}
               onArrowOut={(dir) => {
                 if (dir !== "down") return;
-                const visible = getVisibleAgents(
-                  asyncAgentRegistry.getSnapshot(),
-                  Date.now(),
-                );
+                const visible = getVisibleAgents(asyncAgentRegistry.getSnapshot(), Date.now());
                 if (visible.length === 0) return;
                 // Restore focus to the row we're currently viewing, so the
                 // user doesn't have to scroll back down to the agent they
@@ -2230,7 +2266,9 @@ export function renderEntry(entry: ChatEntry, key: string, expanded = false) {
         return (
           <Box key={key} flexDirection="column" marginLeft={1} marginTop={1}>
             {lines.map((line, i) => (
-              <Text key={i} dim>{line}</Text>
+              <Text key={i} dim>
+                {line}
+              </Text>
             ))}
           </Box>
         );

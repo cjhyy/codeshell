@@ -1077,12 +1077,17 @@ function App() {
       // synthetic goal_set through the same reducer path the live event uses.
       if (engineId && !cancelled && state.activeGoal === null) {
         try {
-          const { goal } = await window.codeshell.goalGet(engineId);
+          const { goal, goalId } = await window.codeshell.goalGet(engineId);
           if (goal && !cancelled) {
             dispatch({
               type: "stream",
               bucket,
-              event: { type: "goal_set", objective: goal, replaced: false } as StreamEvent,
+              event: {
+                type: "goal_set",
+                goalId,
+                objective: goal,
+                replaced: false,
+              } as StreamEvent,
             });
           }
         } catch {
@@ -4240,7 +4245,10 @@ function App() {
     dispatch({
       type: "stream",
       bucket: activeBucket,
-      event: { type: "goal_cleared" } as StreamEvent,
+      event: {
+        type: "goal_cleared",
+        goalId: state.activeGoal?.goalId,
+      } as StreamEvent,
     });
     // And drop the composer goal toggle for this bucket.
     setGoalOverrides((prev) => ({ ...prev, [activeBucket]: false }));

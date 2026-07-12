@@ -25,6 +25,7 @@ describe("AgentServer agent/goalClear", () => {
       get: (sessionId: string) =>
         sessionId === "s-1"
           ? {
+              getGoal: () => ({ objective: "ship", goalId: "goal-1" }),
               clearGoal: () => {
                 clearCalls += 1;
                 return true;
@@ -50,7 +51,7 @@ describe("AgentServer agent/goalClear", () => {
     expect(goalClearedNotifications).toHaveLength(1);
     expect(goalClearedNotifications[0]?.params).toEqual({
       sessionId: "s-1",
-      event: { type: "goal_cleared" },
+      event: { type: "goal_cleared", goalId: "goal-1" },
     });
   });
 

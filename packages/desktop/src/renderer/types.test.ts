@@ -1219,8 +1219,12 @@ describe("persistent goal lifecycle (reducer)", () => {
 
   test("goal_progress(exhausted) clears the active goal", () => {
     const s = dispatch(INITIAL_STATE, [
-      ev("goal_set", { objective: "g", replaced: false } as never),
-      ev("goal_progress", { status: "exhausted", round: 5 } as never),
+      ev("goal_set", { objective: "g", goalId: "goal-exhausted", replaced: false } as never),
+      ev("goal_progress", {
+        goalId: "goal-exhausted",
+        status: "exhausted",
+        round: 5,
+      } as never),
     ]);
     expect(s.activeGoal).toBeNull();
   });
@@ -1231,5 +1235,27 @@ describe("persistent goal lifecycle (reducer)", () => {
       ev("goal_cleared", {} as never),
     ]);
     expect(s.activeGoal).toBeNull();
+  });
+
+  test("late terminal events for goal A do not clear replacement goal B", () => {
+    const afterLateMet = dispatch(INITIAL_STATE, [
+      ev("goal_set", { objective: "A", goalId: "goal-a", replaced: false } as never),
+      ev("goal_set", { objective: "B", goalId: "goal-b", replaced: true } as never),
+      ev("goal_progress", { goalId: "goal-a", status: "met", round: 3 } as never),
+    ]);
+    expect(afterLateMet.activeGoal).toEqual({
+      objective: "B",
+      goalId: "goal-b",
+      round: 0,
+    });
+
+    const afterLateClear = dispatch(afterLateMet, [
+      ev("goal_cleared", { goalId: "goal-a" } as never),
+    ]);
+    expect(afterLateClear.activeGoal).toEqual({
+      objective: "B",
+      goalId: "goal-b",
+      round: 0,
+    });
   });
 });

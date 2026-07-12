@@ -158,6 +158,7 @@ export interface SystemMessage {
 export interface GoalProgressMessage {
   kind: "goal_progress";
   id: string;
+  goalId?: string;
   status: "not_met" | "met" | "exhausted" | "approaching_limit";
   round: number;
   gaps?: string;
@@ -336,7 +337,7 @@ export interface MessagesReducerState {
    * `goal_progress(met)`. Null when no goal is active. Drives the TopBar
    * status-popover Goal block + the goal-message marker.
    */
-  activeGoal: { objective: string; round: number } | null;
+  activeGoal: { objective: string; goalId?: string; round: number } | null;
 }
 
 export const INITIAL_STATE: MessagesReducerState = {
@@ -986,9 +987,18 @@ export function applyStreamEvent(
     }
 
     case "goal_progress": {
+      if (
+        state.activeGoal &&
+        (event.goalId
+          ? state.activeGoal.goalId !== event.goalId
+          : state.activeGoal.goalId !== undefined)
+      ) {
+        return state;
+      }
       const msg: GoalProgressMessage = {
         kind: "goal_progress",
         id: freshId("goal"),
+        goalId: event.goalId,
         status: event.status,
         round: event.round,
         gaps: event.gaps,
@@ -1028,11 +1038,19 @@ export function applyStreamEvent(
       // A send established or replaced the session's persistent goal.
       return {
         ...state,
-        activeGoal: { objective: event.objective, round: 0 },
+        activeGoal: { objective: event.objective, goalId: event.goalId, round: 0 },
       };
     }
 
     case "goal_cleared": {
+      if (
+        state.activeGoal &&
+        (event.goalId
+          ? state.activeGoal.goalId !== event.goalId
+          : state.activeGoal.goalId !== undefined)
+      ) {
+        return state;
+      }
       return { ...state, activeGoal: null };
     }
 

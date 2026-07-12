@@ -59,6 +59,8 @@ export interface ChatState {
   run: RunState;
   /** Latest goal-progress status line, if any (display-only). */
   goal?: string;
+  /** Identity of the active goal banner; absent for legacy events. */
+  goalId?: string;
   sessionId?: string;
   /** Per-session title pushed via session_title. */
   title?: string;
@@ -209,9 +211,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
           ...s,
           run: "running",
           items: s.items.map((i) =>
-            i.id === liveId && i.kind === "assistant"
-              ? { ...i, reasoning: i.reasoning + text }
-              : i,
+            i.id === liveId && i.kind === "assistant" ? { ...i, reasoning: i.reasoning + text } : i,
           ),
         };
       }
@@ -325,7 +325,10 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       const isError = Boolean(event.isError);
       let idx = -1;
       for (let i = s.items.length - 1; i >= 0; i--) {
-        if (s.items[i].kind === "tool" && !(s.items[i] as Extract<ChatItem, { kind: "tool" }>).done) {
+        if (
+          s.items[i].kind === "tool" &&
+          !(s.items[i] as Extract<ChatItem, { kind: "tool" }>).done
+        ) {
           idx = i;
           break;
         }
@@ -333,7 +336,13 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       if (idx === -1) return s;
       const items = s.items.slice();
       const tool = items[idx] as Extract<ChatItem, { kind: "tool" }>;
-      items[idx] = { ...tool, done: true, result: resultText, summary: resultText || tool.summary, error: isError };
+      items[idx] = {
+        ...tool,
+        done: true,
+        result: resultText,
+        summary: resultText || tool.summary,
+        error: isError,
+      };
       return { ...s, items };
     }
 
@@ -398,9 +407,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       if (!(key in s.liveByAgent)) return s;
       const { [key]: _gone, ...rest } = s.liveByAgent;
       const items = s.items.map((i) =>
-        i.kind === "assistant" && !i.done && (i.agentId ?? "") === key
-          ? { ...i, done: true }
-          : i,
+        i.kind === "assistant" && !i.done && (i.agentId ?? "") === key ? { ...i, done: true } : i,
       );
       return { ...s, liveByAgent: rest, items };
     }
@@ -411,9 +418,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       // Seal this agent's live bubble and mark its open assistant items done.
       const { [key]: _gone, ...rest } = s.liveByAgent;
       const items = s.items.map((i) =>
-        i.kind === "assistant" && !i.done && (i.agentId ?? "") === key
-          ? { ...i, done: true }
-          : i,
+        i.kind === "assistant" && !i.done && (i.agentId ?? "") === key ? { ...i, done: true } : i,
       );
       // A SUBAGENT's turn_complete (agentId present) must NOT flip the global run
       // state — the parent turn is still running (mirrors renderer App.tsx).
@@ -426,17 +431,27 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
     case "goal_set": {
       // Persistent goal established/replaced. Show the objective directly.
       const objective = (event.objective as string | undefined) ?? "";
-      return { ...s, goal: objective ? `◎ ${objective}` : "◎ 目标" };
+      return {
+        ...s,
+        goal: objective ? `◎ ${objective}` : "◎ 目标",
+        goalId: event.goalId as string | undefined,
+      };
     }
 
     case "goal_cleared": {
-      return { ...s, goal: undefined };
+      const goalId = event.goalId as string | undefined;
+      if (s.goal && (goalId ? s.goalId !== goalId : s.goalId !== undefined)) return s;
+      return { ...s, goal: undefined, goalId: undefined };
     }
 
     case "goal_progress": {
+      const goalId = event.goalId as string | undefined;
+      if (s.goal && (goalId ? s.goalId !== goalId : s.goalId !== undefined)) return s;
       const status = (event.status as string) ?? "";
       // Goal achieved / gave up → drop the banner.
-      if (status === "met" || status === "exhausted") return { ...s, goal: undefined };
+      if (status === "met" || status === "exhausted") {
+        return { ...s, goal: undefined, goalId: undefined };
+      }
       const round = event.round as number | undefined;
       const label = round ? `目标 · 第 ${round} 轮 (${status})` : `目标 (${status})`;
       return { ...s, goal: label };
@@ -453,9 +468,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       const tasks = (event.tasks as { status: string }[] | undefined) ?? [];
       const done = tasks.filter((t) => t.status === "completed").length;
       const label = `任务 ${done}/${tasks.length}`;
-      const existing = s.items.findIndex(
-        (i) => i.kind === "subagent" && i.agentId === agentId,
-      );
+      const existing = s.items.findIndex((i) => i.kind === "subagent" && i.agentId === agentId);
       const sub: ChatItem = {
         kind: "subagent",
         id: `sub-${agentId}`,

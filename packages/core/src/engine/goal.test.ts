@@ -15,6 +15,10 @@ import {
   INTERACTIVE_DEFAULT_MAX_TURNS,
   APPROACH_TURNS,
   APPROACH_STOP_BLOCKS,
+  MAX_GOAL_TERMINALS,
+  isGoalTerminated,
+  isSameGoalInstance,
+  mergeGoalTerminals,
   type GoalConfig,
 } from "./goal.js";
 
@@ -196,6 +200,73 @@ describe("normalizeGoal", () => {
     });
     expect(normalizeGoal({ objective: "x", maxTurns: 0 })).toEqual({ objective: "x" });
     expect(normalizeGoal({ objective: "x", maxTurns: -5 })).toEqual({ objective: "x" });
+  });
+});
+
+describe("goal instance identity", () => {
+  test("goalId is authoritative while two id-less values use the legacy signature", () => {
+    expect(
+      isSameGoalInstance(
+        { objective: "renamed", goalId: "goal-1", setAtMs: 2 },
+        { objective: "old", goalId: "goal-1", setAtMs: 1 },
+      ),
+    ).toBe(true);
+    expect(
+      isSameGoalInstance(
+        { objective: "same", goalId: "goal-1", setAtMs: 1 },
+        { objective: "same", goalId: "goal-2", setAtMs: 1 },
+      ),
+    ).toBe(false);
+    expect(
+      isSameGoalInstance({ objective: "legacy", setAtMs: 1 }, { objective: "legacy", setAtMs: 1 }),
+    ).toBe(true);
+  });
+
+  test("a migrated terminal still rejects an id-less legacy snapshot", () => {
+    expect(
+      isGoalTerminated({ objective: "legacy", setAtMs: 1 }, [
+        {
+          objective: "legacy",
+          goalId: "migrated-id",
+          setAtMs: 1,
+          reason: "completed",
+        },
+      ]),
+    ).toBe(true);
+  });
+
+  test("terminal identity history is deduped and bounded", () => {
+    const terminals = mergeGoalTerminals(
+      Array.from({ length: MAX_GOAL_TERMINALS + 2 }, (_, index) => ({
+        objective: `goal ${index}`,
+        goalId: `goal-${index}`,
+        reason: "cancelled" as const,
+      })),
+    );
+    expect(terminals).toHaveLength(MAX_GOAL_TERMINALS);
+    expect(terminals[0]?.goalId).toBe("goal-2");
+    expect(terminals.at(-1)?.goalId).toBe(`goal-${MAX_GOAL_TERMINALS + 1}`);
+  });
+
+  test("terminal identity history keeps the newest timestamps regardless of source order", () => {
+    const newer = Array.from({ length: MAX_GOAL_TERMINALS }, (_, index) => ({
+      objective: `new goal ${index}`,
+      goalId: `new-${index}`,
+      reason: "cancelled" as const,
+      terminatedAtMs: 1_000 + index,
+    }));
+    const older = Array.from({ length: MAX_GOAL_TERMINALS }, (_, index) => ({
+      objective: `old goal ${index}`,
+      goalId: `old-${index}`,
+      reason: "cancelled" as const,
+      terminatedAtMs: index,
+    }));
+
+    const terminals = mergeGoalTerminals(newer, older);
+
+    expect(terminals.map((terminal) => terminal.goalId)).toEqual(
+      newer.map((terminal) => terminal.goalId),
+    );
   });
 });
 

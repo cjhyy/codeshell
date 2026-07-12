@@ -12,8 +12,12 @@ import { SessionManager } from "./session-manager.js";
 // write. Idempotent, never throws on a bad id, writes atomically via saveState.
 describe("SessionManager.clearActiveGoal", () => {
   let dir: string;
-  beforeEach(() => { dir = mkdtempSync(join(tmpdir(), "sm-")); });
-  afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "sm-"));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
 
   test("clears an existing goal and returns true", () => {
     const sm = new SessionManager(dir);
@@ -24,6 +28,8 @@ describe("SessionManager.clearActiveGoal", () => {
     expect(sm.clearActiveGoal("s-1")).toBe(true);
     // The goal is gone from disk — a subsequent read sees nothing.
     expect(sm.readActiveGoal("s-1")).toBeUndefined();
+    expect(sm.resume("s-1").state.goalTerminal?.reason).toBe("cancelled");
+    expect(sm.resume("s-1").state.goalTerminal?.goalId).toBeString();
   });
 
   test("returns false when the session has no goal (no-op)", () => {

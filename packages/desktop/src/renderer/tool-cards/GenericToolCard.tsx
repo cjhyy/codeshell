@@ -6,6 +6,9 @@ import { parsedArgs, truncate } from "./utils";
 import { detectAttachments } from "./attachments";
 import { AttachmentCard } from "./AttachmentCard";
 import { Lightbox } from "../chat/Lightbox";
+import { driveAgentLinkDetailForToolMessage } from "../cc-room/driveAgentLink";
+import { DriveAgentLinkButton } from "../cc-room/DriveAgentLinkButton";
+import { useDriveAgentJobs } from "./DriveAgentJobsContext";
 
 interface Props {
   message: ToolMessage;
@@ -17,6 +20,8 @@ interface Props {
 }
 
 export function GenericToolCard({ message, onSelect, selected, turnEpoch, cwd }: Props) {
+  const backgroundJobs = useDriveAgentJobs();
+  const cliLink = driveAgentLinkDetailForToolMessage(message, backgroundJobs);
   // Use parsedArgs (argsLive ?? parsed message.args), NOT raw message.args —
   // message.args is the tool_use_start snapshot ("{}" while streaming); the real
   // args arrive via tool_use_args_delta and live in argsLive. Reading the raw
@@ -26,11 +31,7 @@ export function GenericToolCard({ message, onSelect, selected, turnEpoch, cwd }:
   const args = parsedArgs(message);
   const argsJson = JSON.stringify(args);
   const oneLine = summarizeArgs(args);
-  const attachments = detectAttachments(
-    message.toolName,
-    argsJson,
-    message.result,
-  );
+  const attachments = detectAttachments(message.toolName, argsJson, message.result);
   // Screenshots / images the tool returned (browser_observe vision/image,
   // view_image). Click a thumbnail to zoom via the shared Lightbox.
   const images = message.images ?? [];
@@ -42,18 +43,28 @@ export function GenericToolCard({ message, onSelect, selected, turnEpoch, cwd }:
   const details = (
     <div className="flex flex-col gap-2">
       <div className="flex flex-col gap-1">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">args</span>
-        <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{JSON.stringify(args, null, 2)}</pre>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">
+          args
+        </span>
+        <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">
+          {JSON.stringify(args, null, 2)}
+        </pre>
       </div>
       {message.result !== undefined && (
         <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">result</span>
-          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{truncate(message.result, 1500)}</pre>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">
+            result
+          </span>
+          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">
+            {truncate(message.result, 1500)}
+          </pre>
         </div>
       )}
       {images.length > 0 && (
         <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">screenshot</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">
+            screenshot
+          </span>
           <div className="flex flex-wrap gap-2">
             {images.map((_, i) => (
               <button
@@ -75,7 +86,9 @@ export function GenericToolCard({ message, onSelect, selected, turnEpoch, cwd }:
       )}
       {attachments.length > 0 && (
         <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">files</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">
+            files
+          </span>
           <div className="flex flex-wrap gap-2">
             {attachments.map((a) => (
               <AttachmentCard key={a.path} attachment={a} cwd={cwd} />
@@ -85,8 +98,12 @@ export function GenericToolCard({ message, onSelect, selected, turnEpoch, cwd }:
       )}
       {message.error && (
         <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">error</span>
-          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-status-err/10 p-2 font-mono text-xs text-status-err">{message.error}</pre>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">
+            error
+          </span>
+          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-status-err/10 p-2 font-mono text-xs text-status-err">
+            {message.error}
+          </pre>
         </div>
       )}
     </div>
@@ -99,6 +116,7 @@ export function GenericToolCard({ message, onSelect, selected, turnEpoch, cwd }:
         summary={summary}
         details={details}
         headerBadge={message.sandbox && <SandboxBadge sandbox={message.sandbox} />}
+        headerAction={cliLink && <DriveAgentLinkButton detail={cliLink} />}
         onSelect={onSelect}
         selected={selected}
         turnEpoch={turnEpoch}

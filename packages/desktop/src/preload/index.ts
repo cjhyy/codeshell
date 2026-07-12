@@ -450,6 +450,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     rpc("agent/goalGet", { sessionId }).then(rpcResult) as Promise<{
       ok: boolean;
       goal: string | null;
+      goalId?: string;
     }>,
   /** List a session's background shells for the dock panel (TODO 3.2). */
   listBackgroundShells: (sessionId: string) =>

@@ -11,7 +11,11 @@
  * so an unattended goal run can't burn tokens or wall time without bound.
  */
 
+import { createHash, randomUUID } from "node:crypto";
+
 export interface GoalConfig {
+  /** Stable unique identity for this concrete armed goal instance. */
+  goalId?: string;
   /** The objective text shown to the judge / injected into context. */
   objective: string;
   /** Hard cap on total tokens (prompt+completion) for the whole goal run. */
@@ -58,17 +62,21 @@ export type GoalTerminationReason =
   | "judge_prompt_too_large";
 
 /** Outcomes that permanently close one concrete persisted Goal instance. */
-export type PersistedGoalTerminationReason = Exclude<
-  GoalTerminationReason,
-  "judge_prompt_too_large"
->;
+export type PersistedGoalTerminationReason =
+  | Exclude<GoalTerminationReason, "judge_prompt_too_large">
+  | "completed"
+  | "cancelled";
 
 /**
  * Persisted terminal marker used to prevent a stale whole-state writer from
- * making an exhausted goal armable again. `objective + setAtMs` is the goal
- * instance identity; `terminatedAtMs` only orders competing tombstones.
+ * making a completed, cancelled, or exhausted goal armable again.
+ * `goalId` is the authoritative instance identity. `objective + setAtMs` is
+ * retained only for pre-goalId state compatibility; `terminatedAtMs` orders
+ * the legacy single-marker view while goalTerminals preserves the identity set.
  */
 export interface GoalTerminal {
+  /** Identity of the concrete goal instance that reached a terminal state. */
+  goalId?: string;
   objective: string;
   setAtMs?: number;
   reason: PersistedGoalTerminationReason;
@@ -77,10 +85,110 @@ export interface GoalTerminal {
 
 /** True only when both values identify the same concrete goal instance. */
 export function isSameGoalInstance(
-  left: Pick<GoalConfig, "objective" | "setAtMs"> | undefined,
-  right: Pick<GoalConfig, "objective" | "setAtMs"> | undefined,
+  left: Pick<GoalConfig, "goalId" | "objective" | "setAtMs"> | undefined,
+  right: Pick<GoalConfig, "goalId" | "objective" | "setAtMs"> | undefined,
 ): boolean {
-  return !!left && !!right && left.objective === right.objective && left.setAtMs === right.setAtMs;
+  if (!left || !right) return false;
+  if (left.goalId !== undefined || right.goalId !== undefined) {
+    return !!left.goalId && left.goalId === right.goalId;
+  }
+  return left.objective === right.objective && left.setAtMs === right.setAtMs;
+}
+
+/** Bound stale-writer protection while retaining enough recent terminal identities. */
+export const MAX_GOAL_TERMINALS = 64;
+
+/**
+ * Deterministic identity for a pre-goalId persisted goal. Two detached
+ * snapshots of the same session/legacy signature must migrate to the same id.
+ */
+export function deriveLegacyGoalId(
+  sessionId: string,
+  goal: Pick<
+    GoalConfig,
+    "objective" | "setAtMs" | "tokenBudget" | "timeBudgetMs" | "maxTurns" | "maxStopBlocks"
+  >,
+): string {
+  const signature = JSON.stringify([
+    sessionId,
+    goal.objective.trim(),
+    goal.setAtMs ?? null,
+    goal.tokenBudget ?? null,
+    goal.timeBudgetMs ?? null,
+    goal.maxTurns ?? null,
+    goal.maxStopBlocks ?? null,
+  ]);
+  return `legacy-${createHash("sha256").update(signature).digest("hex")}`;
+}
+
+/** Merge terminal identities oldest→newest, dedupe by instance, and cap growth. */
+export function mergeGoalTerminals(
+  ...sources: Array<GoalTerminal | readonly GoalTerminal[] | undefined>
+): GoalTerminal[] {
+  const merged = new Map<string, { terminal: GoalTerminal; order: number }>();
+  let order = 0;
+  for (const source of sources) {
+    const terminals = Array.isArray(source) ? source : source ? [source] : [];
+    for (const terminal of terminals) {
+      if (!terminal || typeof terminal.objective !== "string") continue;
+      const key = terminal.goalId
+        ? `id:${terminal.goalId}`
+        : `legacy:${terminal.objective}\0${terminal.setAtMs ?? ""}`;
+      const existing = merged.get(key);
+      const incomingAt = terminal.terminatedAtMs ?? Number.NEGATIVE_INFINITY;
+      const existingAt = existing?.terminal.terminatedAtMs ?? Number.NEGATIVE_INFINITY;
+      if (!existing || incomingAt >= existingAt) {
+        merged.set(key, { terminal, order: existing?.order ?? order });
+      }
+      order++;
+    }
+  }
+  return [...merged.values()]
+    .sort((left, right) => {
+      const leftAt = left.terminal.terminatedAtMs ?? Number.NEGATIVE_INFINITY;
+      const rightAt = right.terminal.terminatedAtMs ?? Number.NEGATIVE_INFINITY;
+      return leftAt - rightAt || left.order - right.order;
+    })
+    .slice(-MAX_GOAL_TERMINALS)
+    .map(({ terminal }) => terminal);
+}
+
+/** Whether this concrete goal is present in the bounded terminal identity set. */
+export function isGoalTerminated(
+  goal: GoalConfig | undefined,
+  terminals: readonly GoalTerminal[] | undefined,
+  latest?: GoalTerminal,
+): boolean {
+  if (!goal) return false;
+  return mergeGoalTerminals(terminals, latest).some((terminal) => {
+    if (goal.goalId) return terminal.goalId === goal.goalId;
+    // A legacy detached snapshot has no goalId. Compare its historical
+    // objective+setAt signature even when the terminal was recorded after the
+    // live instance was migrated to a UUID. Newly armed goals always have an
+    // id, so this fallback cannot suppress a genuine new instance.
+    return goal.objective === terminal.objective && goal.setAtMs === terminal.setAtMs;
+  });
+}
+
+/** Record one terminal identity on a state-like holder without losing prior identities. */
+export function recordGoalTerminal(
+  state: { goalTerminal?: GoalTerminal; goalTerminals?: GoalTerminal[] },
+  goal: GoalConfig,
+  reason: PersistedGoalTerminationReason,
+  terminatedAtMs = Date.now(),
+): GoalTerminal {
+  const goalId = goal.goalId ?? randomUUID();
+  goal.goalId = goalId;
+  const terminal: GoalTerminal = {
+    goalId,
+    objective: goal.objective,
+    setAtMs: goal.setAtMs,
+    reason,
+    terminatedAtMs,
+  };
+  state.goalTerminals = mergeGoalTerminals(state.goalTerminals, state.goalTerminal, terminal);
+  state.goalTerminal = terminal;
+  return terminal;
 }
 
 /**
@@ -142,6 +250,7 @@ export function normalizeGoal(raw: string | GoalConfig | undefined): GoalConfig 
   const objective = (obj.objective ?? "").trim();
   if (!objective) return undefined;
   const out: GoalConfig = { objective };
+  if (typeof obj.goalId === "string" && obj.goalId.trim()) out.goalId = obj.goalId;
   if (typeof obj.tokenBudget === "number" && obj.tokenBudget > 0) out.tokenBudget = obj.tokenBudget;
   if (typeof obj.timeBudgetMs === "number" && obj.timeBudgetMs > 0)
     out.timeBudgetMs = obj.timeBudgetMs;

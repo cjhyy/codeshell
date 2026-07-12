@@ -4,7 +4,6 @@ import { ToolCard } from "./tool-cards";
 import { AssistantMessageView } from "./messages/AssistantMessageView";
 import { ThinkingMessageView } from "./messages/ThinkingMessageView";
 import { AgentMessageView } from "./messages/AgentMessageView";
-import { TaskListMessageView } from "./messages/TaskListMessageView";
 import { ContextBoundaryView } from "./messages/ContextBoundaryView";
 import { GoalProgressView } from "./messages/GoalProgressView";
 import { TurnEndMessageView } from "./messages/TurnEndMessageView";
@@ -28,6 +27,7 @@ import { formatMessageTime } from "./messages/time";
 import { Lightbox } from "./chat/Lightbox";
 import { timePhase } from "./perf";
 import { useT } from "./i18n/I18nProvider";
+import { DriveAgentJobsLoader } from "./tool-cards/DriveAgentJobsContext";
 
 // Stable fallback so memoized AskUserMessageView siblings don't see a
 // fresh onAnswer prop on every render.
@@ -120,9 +120,10 @@ export function MessageStream({
   });
   // Zoom state carries the whole sibling-image group plus the clicked index,
   // so the Lightbox can offer prev/next across the images in one message.
-  const [zoomed, setZoomed] = useState<
-    { items: { src: string; alt: string; name?: string }[]; index: number } | null
-  >(null);
+  const [zoomed, setZoomed] = useState<{
+    items: { src: string; alt: string; name?: string }[];
+    index: number;
+  } | null>(null);
 
   // Two-level fold (see messages/streamGroups.ts):
   //   - level 1: adjacent tool calls → ToolGroup
@@ -155,166 +156,173 @@ export function MessageStream({
   );
 
   return (
-    <div className="relative min-w-0 max-w-full flex-1 overflow-hidden">
-      <div className="h-full min-w-0 max-w-full overflow-x-hidden overflow-y-auto" ref={ref}>
-        <div className="min-w-0 max-w-full">
-          {items.map((m) => {
-        if (m.kind === "turn_process_group") {
-          return <TurnProcessGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} />;
-        }
-        if (m.kind === "tool_group") {
-          return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} />;
-        }
-        if (m.kind === "agent_group") {
-          return <AgentGroupCard key={m.id} group={m} />;
-        }
-        switch (m.kind) {
-          case "tool":
-            // Tool cards now display their full args/result body inline
-            // when expanded — no separate inspector pane to feed.
-            return <ToolCard key={m.id} message={m} turnEpoch={turnEpoch} cwd={cwd} />;
-          case "user": {
-            // decodeWireForDisplay drops images with an empty data URL (dead
-            // ephemeral screenshots), so a turn that was only such an image
-            // decodes to empty text + no images.
-            const decoded = decodeWireForDisplay(m.text);
-            const images = decoded.images;
-            // Pull the pinned-comment block (diff/browser/file anchors) out of
-            // the prose so it renders as a styled card, not raw XML.
-            const { block: annotations, text } = extractAnnotations(decoded.text);
-            const askedAt = formatMessageTime(m.createdAt);
-            // Nothing to show (no prose, no annotations, all images were dead) →
-            // render no bubble rather than an empty selectable box.
-            if (!text && !annotations && images.length === 0) return null;
-            return (
-              <div key={m.id} className="group flex min-w-0 max-w-full flex-col items-end px-4 py-1.5">
-                {m.isGoal && (
-                  // Persistent-goal marker (CC /goal). This send set/advanced a goal.
-                  <span className="mb-0.5 flex items-center gap-1 px-1 text-[11px] font-medium text-status-running">
-                    ◎ {t("msg.user.goal")}
-                  </span>
-                )}
-                <div
-                  className={
-                    "min-w-0 max-w-[80%] rounded-xl border px-3 py-2 text-sm " +
-                    (m.isGoal
-                      ? "border-status-running/50 bg-status-running/10"
-                      : "border-border bg-muted/40")
-                  }
-                >
-                  {annotations && <AnnotationsBlock block={annotations} />}
-                  {text && (
-                    <CollapsibleContent>
-                      <div className="whitespace-pre-wrap break-words">{text}</div>
-                    </CollapsibleContent>
-                  )}
-                  {images.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2 [&>img]:h-20 [&>img]:rounded-md [&>img]:object-cover [&>img]:cursor-pointer">
-                      {images.map((img, i) => (
-                        <img
-                          key={i}
-                          src={img.dataUrl}
-                          alt={img.name || "image"}
-                          title={img.name || undefined}
-                          onClick={() =>
-                            setZoomed({
-                              items: images.map((g) => ({
-                                src: g.dataUrl,
-                                alt: g.name || "image",
-                                name: g.name || undefined,
-                              })),
-                              index: i,
-                            })
-                          }
-                        />
-                      ))}
+    <DriveAgentJobsLoader sessionId={engineSessionId} messages={messages}>
+      <div className="relative min-w-0 max-w-full flex-1 overflow-hidden">
+        <div className="h-full min-w-0 max-w-full overflow-x-hidden overflow-y-auto" ref={ref}>
+          <div className="min-w-0 max-w-full">
+            {items.map((m) => {
+              if (m.kind === "turn_process_group") {
+                return (
+                  <TurnProcessGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} />
+                );
+              }
+              if (m.kind === "tool_group") {
+                return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} />;
+              }
+              if (m.kind === "agent_group") {
+                return <AgentGroupCard key={m.id} group={m} />;
+              }
+              switch (m.kind) {
+                case "tool":
+                  // Tool cards now display their full args/result body inline
+                  // when expanded — no separate inspector pane to feed.
+                  return <ToolCard key={m.id} message={m} turnEpoch={turnEpoch} cwd={cwd} />;
+                case "user": {
+                  // decodeWireForDisplay drops images with an empty data URL (dead
+                  // ephemeral screenshots), so a turn that was only such an image
+                  // decodes to empty text + no images.
+                  const decoded = decodeWireForDisplay(m.text);
+                  const images = decoded.images;
+                  // Pull the pinned-comment block (diff/browser/file anchors) out of
+                  // the prose so it renders as a styled card, not raw XML.
+                  const { block: annotations, text } = extractAnnotations(decoded.text);
+                  const askedAt = formatMessageTime(m.createdAt);
+                  // Nothing to show (no prose, no annotations, all images were dead) →
+                  // render no bubble rather than an empty selectable box.
+                  if (!text && !annotations && images.length === 0) return null;
+                  return (
+                    <div
+                      key={m.id}
+                      className="group flex min-w-0 max-w-full flex-col items-end px-4 py-1.5"
+                    >
+                      {m.isGoal && (
+                        // Persistent-goal marker (CC /goal). This send set/advanced a goal.
+                        <span className="mb-0.5 flex items-center gap-1 px-1 text-[11px] font-medium text-status-running">
+                          ◎ {t("msg.user.goal")}
+                        </span>
+                      )}
+                      <div
+                        className={
+                          "min-w-0 max-w-[80%] rounded-xl border px-3 py-2 text-sm " +
+                          (m.isGoal
+                            ? "border-status-running/50 bg-status-running/10"
+                            : "border-border bg-muted/40")
+                        }
+                      >
+                        {annotations && <AnnotationsBlock block={annotations} />}
+                        {text && (
+                          <CollapsibleContent>
+                            <div className="whitespace-pre-wrap break-words">{text}</div>
+                          </CollapsibleContent>
+                        )}
+                        {images.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-2 [&>img]:h-20 [&>img]:rounded-md [&>img]:object-cover [&>img]:cursor-pointer">
+                            {images.map((img, i) => (
+                              <img
+                                key={i}
+                                src={img.dataUrl}
+                                alt={img.name || "image"}
+                                title={img.name || undefined}
+                                onClick={() =>
+                                  setZoomed({
+                                    items: images.map((g) => ({
+                                      src: g.dataUrl,
+                                      alt: g.name || "image",
+                                      name: g.name || undefined,
+                                    })),
+                                    index: i,
+                                  })
+                                }
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {askedAt && (
+                        <span className="mt-0.5 px-1 text-[11px] tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+                          {askedAt}
+                        </span>
+                      )}
                     </div>
-                  )}
-                </div>
-                {askedAt && (
-                  <span className="mt-0.5 px-1 text-[11px] tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
-                    {askedAt}
-                  </span>
-                )}
-              </div>
-            );
-          }
-          case "assistant":
-            return <AssistantMessageView key={m.id} message={m} cwd={cwd ?? null} />;
-          case "thinking":
-            return <ThinkingMessageView key={m.id} message={m} />;
-          case "agent":
-            return <AgentMessageView key={m.id} message={m} />;
-          case "task_list":
-            // task_list is rendered as a pinned panel above the
-            // composer (see ChatView), not inline in the scroll stream
-            // — that way the user keeps tasks in view as new messages
-            // push old ones up.
-            return null;
-          case "context_boundary":
-            return <ContextBoundaryView key={m.id} message={m} />;
-          case "goal_progress":
-            return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;
-          case "ask_user":
-            // ask_user is also pinned above the composer. We still
-            // render the resolved (answered) cards inline so the chat
-            // history reflects the conversation.
-            return m.answer !== undefined ? (
-              <AskUserMessageView
-                key={m.id}
-                message={m}
-                onAnswer={onAskUserAnswer ?? NOOP_ON_ANSWER}
-              />
-            ) : null;
-          case "system":
-            // Empty system text = a blank centered block; skip it.
-            if (m.text.trim() === "") return null;
-            return (
-              <div key={m.id} className="px-4 py-1 text-center text-xs text-muted-foreground">
-                {m.text}
-              </div>
-            );
-          case "files_changed":
-            return (
-              <FilesChangedCard
-                key={m.id}
-                message={m}
-                cwd={cwd ?? null}
-                sessionId={engineSessionId ?? null}
-                isLatest={m.id === lastFilesChangedId}
-              />
-            );
-            case "turn_end":
-              return <TurnEndMessageView key={m.id} message={m} />;
-          }
-        })}
-          {liveTurnActive && <LiveActivityLine messages={messages} running={liveTurnActive} />}
-          {trailing}
+                  );
+                }
+                case "assistant":
+                  return <AssistantMessageView key={m.id} message={m} cwd={cwd ?? null} />;
+                case "thinking":
+                  return <ThinkingMessageView key={m.id} message={m} />;
+                case "agent":
+                  return <AgentMessageView key={m.id} message={m} />;
+                case "task_list":
+                  // task_list is rendered as a pinned panel above the
+                  // composer (see ChatView), not inline in the scroll stream
+                  // — that way the user keeps tasks in view as new messages
+                  // push old ones up.
+                  return null;
+                case "context_boundary":
+                  return <ContextBoundaryView key={m.id} message={m} />;
+                case "goal_progress":
+                  return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;
+                case "ask_user":
+                  // ask_user is also pinned above the composer. We still
+                  // render the resolved (answered) cards inline so the chat
+                  // history reflects the conversation.
+                  return m.answer !== undefined ? (
+                    <AskUserMessageView
+                      key={m.id}
+                      message={m}
+                      onAnswer={onAskUserAnswer ?? NOOP_ON_ANSWER}
+                    />
+                  ) : null;
+                case "system":
+                  // Empty system text = a blank centered block; skip it.
+                  if (m.text.trim() === "") return null;
+                  return (
+                    <div key={m.id} className="px-4 py-1 text-center text-xs text-muted-foreground">
+                      {m.text}
+                    </div>
+                  );
+                case "files_changed":
+                  return (
+                    <FilesChangedCard
+                      key={m.id}
+                      message={m}
+                      cwd={cwd ?? null}
+                      sessionId={engineSessionId ?? null}
+                      isLatest={m.id === lastFilesChangedId}
+                    />
+                  );
+                case "turn_end":
+                  return <TurnEndMessageView key={m.id} message={m} />;
+              }
+            })}
+            {liveTurnActive && <LiveActivityLine messages={messages} running={liveTurnActive} />}
+            {trailing}
+          </div>
         </div>
+        {showJump && (
+          <Button
+            type="button"
+            variant="solid"
+            size="icon"
+            onClick={scrollToBottom}
+            aria-label={t("chat.stream.jumpToBottomAria")}
+            title={t("chat.stream.jumpToBottomTitle")}
+            className="absolute bottom-4 right-4 h-9 w-9 rounded-full shadow-md"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        )}
+        {zoomed && (
+          <Lightbox
+            items={zoomed.items}
+            index={zoomed.index}
+            src={zoomed.items[zoomed.index]?.src ?? ""}
+            alt={zoomed.items[zoomed.index]?.alt ?? "image"}
+            name={zoomed.items[zoomed.index]?.name}
+            onClose={() => setZoomed(null)}
+          />
+        )}
       </div>
-      {showJump && (
-        <Button
-          type="button"
-          variant="solid"
-          size="icon"
-          onClick={scrollToBottom}
-          aria-label={t("chat.stream.jumpToBottomAria")}
-          title={t("chat.stream.jumpToBottomTitle")}
-          className="absolute bottom-4 right-4 h-9 w-9 rounded-full shadow-md"
-        >
-          <ChevronDown className="h-4 w-4" />
-        </Button>
-      )}
-      {zoomed && (
-        <Lightbox
-          items={zoomed.items}
-          index={zoomed.index}
-          src={zoomed.items[zoomed.index]?.src ?? ""}
-          alt={zoomed.items[zoomed.index]?.alt ?? "image"}
-          name={zoomed.items[zoomed.index]?.name}
-          onClose={() => setZoomed(null)}
-        />
-      )}
-    </div>
+    </DriveAgentJobsLoader>
   );
 }
