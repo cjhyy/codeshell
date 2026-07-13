@@ -1,0 +1,61 @@
+import { afterEach, describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { GatewayControlServer } from "../../desktop/src/main/im-gateway-control-server.js";
+import type { DesktopGatewayConfig } from "./config.js";
+import { DesktopControlClient } from "./desktop-control-client.js";
+
+const roots: string[] = [];
+
+afterEach(() => {
+  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+});
+
+describe("desktop control protocol integration", () => {
+  test("the standalone client talks to the real Electron-main loopback server", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-gateway-integration-"));
+    roots.push(root);
+    const descriptorPath = join(root, "desktop-control.json");
+    let closes = 0;
+    const server = new GatewayControlServer({
+      descriptorPath,
+      open: async () => ({
+        url: "https://integration.trycloudflare.com",
+        pairingUrl: "https://integration.trycloudflare.com/mobile?pairing=one-time",
+        expiresAt: 1234,
+        mode: "tunnel",
+      }),
+      close: async () => {
+        closes++;
+      },
+      status: () => ({
+        running: true,
+        mode: "tunnel",
+        url: "https://integration.trycloudflare.com",
+        tunnelRunning: true,
+        tunnelConnected: true,
+        passcodeSet: true,
+        onlineDeviceCount: 2,
+      }),
+      pairingUrl: () => ({
+        pairingUrl: "https://integration.trycloudflare.com/mobile?pairing=fresh",
+        expiresAt: 5678,
+      }),
+    });
+    await server.start();
+
+    const config: DesktopGatewayConfig = {
+      descriptorPath,
+      autoLaunch: false,
+      args: [],
+      startupTimeoutMs: 1_000,
+    };
+    const client = new DesktopControlClient(config);
+    expect(await client.status()).toMatchObject({ tunnelConnected: true, onlineDeviceCount: 2 });
+    expect(await client.open()).toMatchObject({ mode: "tunnel", expiresAt: 1234 });
+    await client.close();
+    expect(closes).toBe(1);
+    await server.stop();
+  });
+});

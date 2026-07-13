@@ -24,6 +24,7 @@ export type InputAttachmentOrigin =
   | "mention"
   | "generated"
   | "mobile"
+  | "im-gateway"
   | "tool";
 
 export interface InputAttachmentMeta {
@@ -73,6 +74,15 @@ export interface StageImageBytesInput {
   origin: InputAttachmentOrigin;
 }
 
+export interface StageFileBytesInput {
+  cwd: string;
+  sessionId: string;
+  name?: string;
+  mime?: string;
+  bytes: Uint8Array;
+  origin: InputAttachmentOrigin;
+}
+
 export interface AttachmentCleanupInput {
   cwd: string;
   sessionId?: string;
@@ -111,6 +121,7 @@ const GITIGNORE_CONTENT = "*\n!.gitignore\n";
 export const DRAFT_ATTACHMENT_TTL_MS = 24 * 60 * 60 * 1000;
 export const SENT_ATTACHMENT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 export const MAX_STAGED_IMAGE_BYTES = 10 * 1024 * 1024;
+export const MAX_STAGED_FILE_BYTES = 20 * 1024 * 1024;
 
 const IMAGE_MIME_EXT: Record<string, string> = {
   "image/png": ".png",
@@ -223,6 +234,62 @@ async function stageImageBuffer(
     width: image.width,
     height: image.height,
     vision: { include: true },
+  };
+  await appendManifest(sessionDir, { event: "staged", status: "draft", ...meta });
+  return meta;
+}
+
+/** Stage an untrusted non-image file inside the canonical attachment root. */
+export async function stageFileBytes(input: StageFileBytesInput): Promise<InputAttachmentMeta> {
+  const cwd = await resolveExistingDirectory(input.cwd, "cwd");
+  assertSafeSessionId(input.sessionId);
+  const buffer = Buffer.from(input.bytes);
+  if (buffer.byteLength > MAX_STAGED_FILE_BYTES) {
+    throw new Error(`file attachment exceeds size limit (${formatBytes(MAX_STAGED_FILE_BYTES)})`);
+  }
+
+  const attachmentsRoot = await ensureAttachmentsRoot(cwd);
+  const sessionDir = await ensureSessionDir(attachmentsRoot, input.sessionId);
+  const sha256 = createHash("sha256").update(buffer).digest("hex");
+  const sha16 = sha256.slice(0, 16);
+  const safeBase = safeSlug(input.name, "file");
+  const rawExt = extname(basename(input.name ?? ""));
+  const originalExt = /^\.[A-Za-z0-9]{1,15}$/.test(rawExt) ? rawExt : "";
+  const existing = await findExistingSessionFile(sessionDir, sha16);
+  const filename = existing ?? `${sha16}-${safeBase}${originalExt}`;
+  const absPath = await safeJoin(sessionDir, filename, sessionDir);
+
+  if (!existing) {
+    const tmpPath = await safeJoin(
+      sessionDir,
+      `.${filename}.${process.pid}.${Date.now()}.tmp`,
+      sessionDir,
+    );
+    await writeFile(tmpPath, buffer, { flag: "wx" });
+    try {
+      await rename(tmpPath, absPath);
+    } catch (error) {
+      await rm(tmpPath, { force: true }).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  const relPath = normalizePath(relative(cwd, absPath));
+  const createdAt = Date.now();
+  idCounter += 1;
+  const meta: InputAttachmentMeta = {
+    id: `att_${sha16}_${idCounter.toString(36)}`,
+    sessionId: input.sessionId,
+    kind: "file",
+    origin: input.origin,
+    path: relPath,
+    absPath,
+    relPath,
+    mime: normalizeMime(input.mime) || "application/octet-stream",
+    size: buffer.byteLength,
+    sha256,
+    ...(input.name ? { originalName: basename(input.name) } : {}),
+    createdAt,
   };
   await appendManifest(sessionDir, { event: "staged", status: "draft", ...meta });
   return meta;

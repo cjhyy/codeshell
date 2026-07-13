@@ -1,0 +1,210 @@
+import { readFile, stat } from "node:fs/promises";
+import { spawn, type ChildProcess } from "node:child_process";
+import type { DesktopGatewayConfig } from "./config.js";
+import {
+  DESKTOP_CONTROL_PROTOCOL_VERSION,
+  type DesktopControlDescriptor,
+  type MobileRemoteOpenResult,
+  type MobileRemoteStatus,
+  type PetChatRequest,
+  type PetChatResult,
+} from "./protocol.js";
+
+type SpawnFn = (
+  command: string,
+  args: readonly string[],
+  options: { detached: boolean; stdio: "ignore" },
+) => ChildProcess;
+
+export interface DesktopControlClientOptions {
+  fetch?: typeof fetch;
+  spawn?: SpawnFn;
+  readDescriptor?: () => Promise<string>;
+  sleep?: (ms: number) => Promise<void>;
+}
+
+export class DesktopControlUnavailableError extends Error {
+  constructor(message = "桌面端未在线") {
+    super(message);
+    this.name = "DesktopControlUnavailableError";
+  }
+}
+
+export class DesktopControlOperationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DesktopControlOperationError";
+  }
+}
+
+export class DesktopControlClient {
+  private readonly fetchFn: typeof fetch;
+  private readonly spawnFn: SpawnFn;
+  private readonly readDescriptorFn: () => Promise<string>;
+  private readonly sleepFn: (ms: number) => Promise<void>;
+
+  constructor(
+    private readonly config: DesktopGatewayConfig,
+    opts: DesktopControlClientOptions = {},
+  ) {
+    this.fetchFn = opts.fetch ?? fetch;
+    this.spawnFn = opts.spawn ?? spawn;
+    this.readDescriptorFn =
+      opts.readDescriptor ?? (() => readSecureDescriptor(this.config.descriptorPath));
+    this.sleepFn = opts.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+  }
+
+  async open(): Promise<MobileRemoteOpenResult> {
+    await this.ensureDesktopAvailable();
+    return this.request<MobileRemoteOpenResult>("POST", "/v1/open", 120_000);
+  }
+
+  async close(): Promise<void> {
+    await this.request<{ closed: boolean }>("POST", "/v1/close", 15_000);
+  }
+
+  status(): Promise<MobileRemoteStatus> {
+    return this.request<MobileRemoteStatus>("GET", "/v1/status", 5_000);
+  }
+
+  pairingUrl(): Promise<{ pairingUrl: string; expiresAt: number }> {
+    return this.request("POST", "/v1/pairing-url", 10_000);
+  }
+
+  async petChat(input: PetChatRequest): Promise<PetChatResult> {
+    await this.ensureDesktopAvailable();
+    return this.request("POST", "/v1/pet/chat", 150_000, input);
+  }
+
+  private async ensureDesktopAvailable(): Promise<void> {
+    try {
+      await this.status();
+      return;
+    } catch (error) {
+      if (!(error instanceof DesktopControlUnavailableError)) throw error;
+    }
+
+    if (!this.config.autoLaunch || !this.config.command) {
+      throw new DesktopControlUnavailableError("桌面端未在线，且自动唤起已关闭");
+    }
+
+    try {
+      const child = this.spawnFn(this.config.command, this.config.args, {
+        detached: true,
+        stdio: "ignore",
+      });
+      child.unref();
+    } catch (error) {
+      throw new DesktopControlUnavailableError(
+        `无法唤起桌面端：${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+
+    const deadline = Date.now() + this.config.startupTimeoutMs;
+    while (Date.now() < deadline) {
+      await this.sleepFn(500);
+      try {
+        await this.status();
+        return;
+      } catch (error) {
+        if (!(error instanceof DesktopControlUnavailableError)) throw error;
+      }
+    }
+    throw new DesktopControlUnavailableError("已唤起桌面端，但本地控制面未在超时前就绪");
+  }
+
+  private async request<T>(
+    method: "GET" | "POST",
+    path: string,
+    timeoutMs: number,
+    payload?: unknown,
+  ): Promise<T> {
+    let descriptor: DesktopControlDescriptor;
+    try {
+      descriptor = parseDescriptor(await this.readDescriptorFn());
+    } catch (error) {
+      if (error instanceof DesktopControlUnavailableError) throw error;
+      throw new DesktopControlUnavailableError(
+        `无法读取桌面端控制信息：${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let response: Response;
+    try {
+      response = await this.fetchFn(`${descriptor.baseUrl}${path}`, {
+        method,
+        headers: {
+          authorization: `Bearer ${descriptor.token}`,
+          ...(payload === undefined ? {} : { "content-type": "application/json" }),
+        },
+        ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      throw new DesktopControlUnavailableError(
+        `无法连接桌面端：${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      clearTimeout(timer);
+    }
+
+    let body: any;
+    try {
+      body = await response.json();
+    } catch {
+      throw new DesktopControlOperationError(`桌面端返回了无效响应（HTTP ${response.status}）`);
+    }
+    if (!response.ok) {
+      throw new DesktopControlOperationError(
+        typeof body?.message === "string"
+          ? body.message
+          : `桌面端操作失败（HTTP ${response.status}）`,
+      );
+    }
+    return body as T;
+  }
+}
+
+export function parseDescriptor(raw: string): DesktopControlDescriptor {
+  let parsed: Partial<DesktopControlDescriptor>;
+  try {
+    parsed = JSON.parse(raw) as Partial<DesktopControlDescriptor>;
+  } catch {
+    throw new DesktopControlUnavailableError("桌面端控制信息不是有效 JSON");
+  }
+  if (
+    parsed.version !== DESKTOP_CONTROL_PROTOCOL_VERSION ||
+    typeof parsed.pid !== "number" ||
+    typeof parsed.baseUrl !== "string" ||
+    typeof parsed.token !== "string" ||
+    !/^[a-f0-9]{64}$/.test(parsed.token) ||
+    typeof parsed.startedAt !== "number"
+  ) {
+    throw new DesktopControlUnavailableError("桌面端控制协议版本或字段无效");
+  }
+
+  const url = new URL(parsed.baseUrl);
+  if (
+    url.protocol !== "http:" ||
+    url.hostname !== "127.0.0.1" ||
+    !url.port ||
+    url.pathname !== "/" ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash
+  ) {
+    throw new DesktopControlUnavailableError("桌面端控制地址必须是 127.0.0.1 loopback HTTP");
+  }
+  return parsed as DesktopControlDescriptor;
+}
+
+async function readSecureDescriptor(path: string): Promise<string> {
+  const [raw, info] = await Promise.all([readFile(path, "utf-8"), stat(path)]);
+  if (process.platform !== "win32" && (info.mode & 0o077) !== 0) {
+    throw new Error("桌面端控制信息权限不是 0600");
+  }
+  return raw;
+}

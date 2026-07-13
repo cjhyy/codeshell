@@ -92,13 +92,22 @@ describe("PetDispatchService", () => {
       await service.dispatch({
         type: "chat",
         message: "What is running?",
-        clientMessageId: "pet-client-one",
+        clientMessageId: "im:one",
+        attachments: [
+          {
+            id: "att-one",
+            sessionId: "pet-one",
+            kind: "file",
+            origin: "im-gateway",
+            path: ".code-shell/attachments/pet-one/a.txt",
+            absPath: "/safe/pet/.code-shell/attachments/pet-one/a.txt",
+            size: 1,
+            sha256: "a".repeat(64),
+            createdAt: 1,
+          },
+        ],
       }),
-    ).toMatchObject({
-      ok: true,
-      type: "chat",
-      petSessionId: "pet-one",
-    });
+    ).toMatchObject({ ok: true, type: "chat", petSessionId: "pet-one" });
     expect(request).toMatchObject({
       method: "agent/run",
       params: {
@@ -107,7 +116,8 @@ describe("PetDispatchService", () => {
         behaviorMode: "pet",
         kind: "pet",
         permissionMode: "default",
-        clientMessageId: "pet-client-one",
+        clientMessageId: "im:one",
+        attachments: [{ id: "att-one", origin: "im-gateway" }],
       },
     });
     expect(String(request?.params.task)).toContain("What is running?");

@@ -1,0 +1,121 @@
+{
+  "name": "@cjhyy/code-shell-chat",
+  "version": "0.7.1",
+  "description": "A standalone, transport-agnostic multi-channel chat gateway for Node.js and Bun.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./codeshell": {
+      "types": "./dist/codeshell.d.ts",
+      "import": "./dist/codeshell.js"
+    },
+    "./factory": {
+      "types": "./dist/adapter-factory.d.ts",
+      "import": "./dist/adapter-factory.js"
+    },
+    "./telegram": {
+      "types": "./dist/telegram.d.ts",
+      "import": "./dist/telegram.js"
+    },
+    "./discord": {
+      "types": "./dist/discord.d.ts",
+      "import": "./dist/discord.js"
+    },
+    "./slack": {
+      "types": "./dist/slack.d.ts",
+      "import": "./dist/slack.js"
+    },
+    "./lark": {
+      "types": "./dist/lark.d.ts",
+      "import": "./dist/lark.js"
+    },
+    "./dingtalk": {
+      "types": "./dist/dingtalk.d.ts",
+      "import": "./dist/dingtalk.js"
+    },
+    "./wecom": {
+      "types": "./dist/wecom.d.ts",
+      "import": "./dist/wecom.js"
+    },
+    "./wechat": {
+      "types": "./dist/wechat.d.ts",
+      "import": "./dist/wechat.js"
+    },
+    "./matrix": {
+      "types": "./dist/matrix.d.ts",
+      "import": "./dist/matrix.js"
+    },
+    "./mattermost": {
+      "types": "./dist/mattermost.d.ts",
+      "import": "./dist/mattermost.js"
+    },
+    "./line": {
+      "types": "./dist/line.d.ts",
+      "import": "./dist/line.js"
+    },
+    "./whatsapp": {
+      "types": "./dist/whatsapp.d.ts",
+      "import": "./dist/whatsapp.js"
+    },
+    "./teams": {
+      "types": "./dist/teams.d.ts",
+      "import": "./dist/teams.js"
+    }
+  },
+  "bin": {
+    "code-shell-chat": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test src",
+    "dev": "bun run src/cli.ts",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cjhyy/codeshell.git",
+    "directory": "packages/chat"
+  },
+  "engines": {
+    "node": ">=20.10"
+  },
+  "keywords": [
+    "chat",
+    "gateway",
+    "bot",
+    "telegram",
+    "discord",
+    "slack",
+    "lark",
+    "wechat"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@larksuiteoapi/node-sdk": "1.71.0",
+    "@slack/socket-mode": "2.0.7",
+    "@slack/web-api": "7.19.0",
+    "@wecom/aibot-node-sdk": "1.0.7",
+    "botbuilder": "4.23.3",
+    "dingtalk-stream": "2.1.6-beta.1",
+    "discord.js": "14.26.5",
+    "qrcode-terminal": "0.12.0",
+    "ws": "8.21.0"
+  },
+  "devDependencies": {
+    "@types/ws": "8.18.1"
+  }
+}

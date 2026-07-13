@@ -57,11 +57,7 @@ function makeManager(
   });
 }
 
-async function waitFor(
-  predicate: () => boolean,
-  timeoutMs = 200,
-  intervalMs = 5,
-): Promise<void> {
+async function waitFor(predicate: () => boolean, timeoutMs = 200, intervalMs = 5): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (predicate()) return;
@@ -81,6 +77,7 @@ describe("TunnelManager", () => {
     );
     const res = await promise;
     expect(res.url).toBe("https://foo-bar-baz.trycloudflare.com");
+    expect(mgr.publicUrl()).toBe(res.url);
   });
 
   test("spawns with --protocol http2 (QUIC is blocked on many networks → 1033)", async () => {
@@ -186,6 +183,7 @@ describe("TunnelManager", () => {
     await new Promise((r) => setTimeout(r, 5));
     // no disconnected after an intentional stop
     expect(statuses).not.toContain("disconnected");
+    expect(mgr.publicUrl()).toBeUndefined();
   });
 
   test("restart after a soft disconnect waits for the stale child to exit before re-spawning", async () => {

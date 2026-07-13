@@ -5,6 +5,7 @@ import type {
   DesktopPetProjectionSnapshot,
 } from "./pet-state-aggregator.js";
 import { PET_AUTO_DELEGATE_MARKER } from "@cjhyy/code-shell-core";
+import type { InputAttachmentMeta } from "../attachment-service.js";
 
 export interface PetAutoDelegation {
   clientMessageId: string;
@@ -21,6 +22,7 @@ export type PetDispatchCommand =
       message: string;
       clientMessageId?: string;
       preferredProjectId?: string;
+      attachments?: InputAttachmentMeta[];
     };
 
 export type PetDispatchResult =
@@ -107,6 +109,10 @@ export function petResultRequestsDelegation(result: unknown): boolean {
 export class PetDispatchService {
   constructor(private readonly options: PetDispatchOptions) {}
 
+  async getSessionId(): Promise<string> {
+    return (await this.options.metadata.ensure()).petSessionId;
+  }
+
   async dispatch(command: PetDispatchCommand): Promise<PetDispatchResult> {
     if (!command || typeof command !== "object" || typeof command.type !== "string") {
       return { ok: false, code: "invalid-command" };
@@ -147,7 +153,11 @@ export class PetDispatchService {
           result: await this.options.aggregator.resolveNavigation(command.target),
         };
       case "chat": {
-        if (typeof command.message !== "string" || !command.message.trim()) {
+        const attachments = Array.isArray(command.attachments) ? command.attachments : [];
+        if (
+          typeof command.message !== "string" ||
+          (!command.message.trim() && attachments.length === 0)
+        ) {
           return { ok: false, code: "invalid-command" };
         }
         const metadata = await this.options.metadata.ensure();
@@ -155,6 +165,7 @@ export class PetDispatchService {
         const response = await this.options.worker.requestWorker("agent/run", {
           sessionId: metadata.petSessionId,
           task: command.message.trim(),
+          ...(attachments.length > 0 ? { attachments } : {}),
           petRuntimeContext: JSON.stringify(world),
           cwd: this.options.hostCwd,
           behaviorMode: "pet",

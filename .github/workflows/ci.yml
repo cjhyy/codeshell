@@ -59,6 +59,9 @@ jobs:
         # core stability surface here; sweep the rest as separate work.
         run: |
           bun test \
+            packages/chat/src/*.test.ts \
+            packages/desktop/src/main/im-gateway-control-server.test.ts \
+            packages/desktop/src/main/mobile-remote/tunnel-manager.test.ts \
             tests/agent-notifications.test.ts \
             tests/background-agent-protocol.test.ts \
             tests/chat-session-isolation.test.ts \
