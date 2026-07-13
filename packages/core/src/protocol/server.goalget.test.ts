@@ -43,7 +43,12 @@ function lastResult(sent: any[]): any {
 describe("AgentServer agent/goalGet", () => {
   it("returns the persisted goal objective for a session that is NOT live (disk-only)", () => {
     const engine = makeEngine({
-      "s-1": { objective: "有授权 你直接帮我做完", goalId: "goal-1" },
+      "s-1": {
+        objective: "有授权 你直接帮我做完",
+        goalId: "goal-1",
+        revision: 3,
+        paused: true,
+      },
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, engine });
@@ -54,6 +59,8 @@ describe("AgentServer agent/goalGet", () => {
       ok: true,
       goal: "有授权 你直接帮我做完",
       goalId: "goal-1",
+      revision: 3,
+      paused: true,
     });
   });
 
@@ -64,7 +71,7 @@ describe("AgentServer agent/goalGet", () => {
 
     t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/goalGet", params: { sessionId: "s-2" } });
 
-    expect(lastResult(t.sent)).toEqual({ ok: true, goal: null });
+    expect(lastResult(t.sent)).toEqual({ ok: true, goal: null, paused: false });
   });
 
   it("chatManager mode: session NOT live falls through to the disk reader", () => {
@@ -83,7 +90,11 @@ describe("AgentServer agent/goalGet", () => {
 
     t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/goalGet", params: { sessionId: "s-3" } });
 
-    expect(lastResult(t.sent)).toEqual({ ok: true, goal: "重启后仍在跑的目标" });
+    expect(lastResult(t.sent)).toEqual({
+      ok: true,
+      goal: "重启后仍在跑的目标",
+      paused: false,
+    });
   });
 
   it("chatManager mode: a LIVE session's goal wins over the disk reader", () => {
@@ -100,7 +111,7 @@ describe("AgentServer agent/goalGet", () => {
 
     t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/goalGet", params: { sessionId: "s-4" } });
 
-    expect(lastResult(t.sent)).toEqual({ ok: true, goal: "live goal" });
+    expect(lastResult(t.sent)).toEqual({ ok: true, goal: "live goal", paused: false });
   });
 
   it("errors when sessionId is missing", () => {

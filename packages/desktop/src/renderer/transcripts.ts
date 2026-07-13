@@ -550,7 +550,14 @@ export function loadTranscript(projectId: string | null, sessionId: string): Mes
       // localStorage reload (core also persists it in session state, but the
       // goal_set event isn't replayed from the transcript). Absent on legacy
       // saved transcripts → null.
-      activeGoal: parsed.activeGoal ?? null,
+      activeGoal: parsed.activeGoal
+        ? {
+            ...parsed.activeGoal,
+            // Legacy localStorage projections predate pause/resume. Treat an
+            // absent flag as running so old sessions remain loadable.
+            paused: parsed.activeGoal.paused ?? false,
+          }
+        : null,
     };
   } catch {
     return INITIAL_STATE;

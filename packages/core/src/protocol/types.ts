@@ -308,6 +308,15 @@ export interface UnsteerParams {
   id: string;
 }
 
+/** Edit or pause/resume a persisted goal without replacing its identity. */
+export interface GoalUpdateParams {
+  sessionId: string;
+  objective?: string;
+  paused?: boolean;
+  expectedGoalId: string;
+  expectedRevision: number;
+}
+
 /** Update runtime configuration. */
 export interface ConfigureParams {
   /** When present, configure that specific chat session. Otherwise worker-global. */
@@ -540,6 +549,10 @@ export const Methods = {
   ReleaseWorkspace: "agent/releaseWorkspace",
   /** Extend a running goal's turn/budget ceilings mid-run (TODO 3.1). */
   GoalExtend: "agent/goalExtend",
+  /** Edit or pause/resume a session's persisted goal. */
+  GoalUpdate: "agent/goalUpdate",
+  /** Delete a persisted goal (explicit alias of goalClear). */
+  GoalDelete: "agent/goalDelete",
   /** Clear a session's persisted active goal (CC /goal clear). */
   GoalClear: "agent/goalClear",
   /** Read a session's persisted active goal, to re-surface it on session load. */

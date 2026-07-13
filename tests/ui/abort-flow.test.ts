@@ -17,8 +17,8 @@ function reset() {
 test("forceEnd + commitInterruptedStreaming yields a single interrupted entry", () => {
   reset();
   const g = new QueryGuard();
-  g.reserve();
-  g.tryStart(new AbortController());
+  const token = g.reserve()!;
+  g.tryStart(new AbortController(), token);
 
   chatStore.append({ type: "assistant_text", text: "halfway", streaming: true });
 
@@ -41,8 +41,8 @@ test("forceEnd + commitInterruptedStreaming yields a single interrupted entry", 
 test("late chunk after forceEnd does not double-write the partial", () => {
   reset();
   const g = new QueryGuard();
-  g.reserve();
-  g.tryStart(new AbortController());
+  const token = g.reserve()!;
+  g.tryStart(new AbortController(), token);
 
   chatStore.append({ type: "assistant_text", text: "first half", streaming: true });
 
@@ -60,8 +60,7 @@ test("late chunk after forceEnd does not double-write the partial", () => {
   expect(assistantEntries.length).toBe(1);
   const first = assistantEntries[0];
   if (first.type === "assistant_text") {
-    const occurrences =
-      first.text.split("[Request interrupted by user]").length - 1;
+    const occurrences = first.text.split("[Request interrupted by user]").length - 1;
     expect(occurrences).toBe(1);
   }
 });

@@ -14,7 +14,11 @@ const SUMMARY_SYSTEM_PROMPT =
   '"Read 3 config files", "Fixed import in auth.ts", "Searched for API endpoints". ' +
   "Respond with ONLY the summary text, nothing else.";
 
-export type SummarizeFn = (systemPrompt: string, userMessage: string) => Promise<string>;
+export type SummarizeFn = (
+  systemPrompt: string,
+  userMessage: string,
+  signal?: AbortSignal,
+) => Promise<string>;
 
 /**
  * Generate a 1-line summary of completed tool executions.
@@ -24,6 +28,7 @@ export async function generateToolUseSummary(
   toolCalls: ToolCall[],
   results: ToolResult[],
   summarize: SummarizeFn,
+  signal?: AbortSignal,
 ): Promise<string | null> {
   if (toolCalls.length === 0) return null;
 
@@ -37,7 +42,7 @@ export async function generateToolUseSummary(
       parts.push(`Tool: ${tc.toolName}(${input}) → ${output}`);
     }
 
-    const summary = await summarize(SUMMARY_SYSTEM_PROMPT, parts.join("\n"));
+    const summary = await summarize(SUMMARY_SYSTEM_PROMPT, parts.join("\n"), signal);
     return summary?.trim() || null;
   } catch (err) {
     logger.warn("tool_summary.failed", { error: (err as Error).message });

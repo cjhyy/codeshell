@@ -56,8 +56,7 @@ function buildPrompt(intent: Intent, d: Detection, cwd: string): string {
   // Append the rules-scaffold opt-in only for create/migrate when the user
   // doesn't already have a .codeshell/rules/ directory. improve doesn't get
   // it (they already have CODESHELL.md and presumably know the layout).
-  const offerRulesSplit =
-    (intent === "create" || intent === "migrate") && !d.hasCodeshellRulesDir;
+  const offerRulesSplit = (intent === "create" || intent === "migrate") && !d.hasCodeshellRulesDir;
   const body = offerRulesSplit ? `${template}\n\n${rulesScaffoldSuffix}` : template;
 
   return body
@@ -103,12 +102,13 @@ export const initCommand: SlashCommand = {
     ctx.addStatus(summarize(d));
     ctx.addStatus(statusForIntent(intent));
 
-    if (!ctx.queryGuard.reserve()) {
+    const guardToken = ctx.queryGuard.reserve();
+    if (guardToken === null) {
       ctx.addStatus("Busy — wait for current turn to finish.");
       return;
     }
     const ac = new AbortController();
-    ctx.queryGuard.tryStart(ac);
+    ctx.queryGuard.tryStart(ac, guardToken);
     try {
       const result = await ctx.client.run(buildPrompt(intent, d, ctx.cwd), ctx.sessionId);
       ctx.setSessionId(result.sessionId);
@@ -149,7 +149,7 @@ export const initCommand: SlashCommand = {
     } catch (err) {
       ctx.addStatus(`Init failed during ${intent} phase: ${(err as Error).message}`);
     } finally {
-      ctx.queryGuard.end();
+      ctx.queryGuard.end(guardToken);
     }
   },
 };

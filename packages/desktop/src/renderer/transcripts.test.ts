@@ -69,6 +69,23 @@ describe("transcript snapshot cursor persistence", () => {
     expect(loadTranscript(null, "legacy").snapshotSeq).toBe(0);
   });
 
+  it("defaults legacy active goals without paused to running", () => {
+    storage.setItem(
+      `codeshell.transcript.${NO_REPO_KEY}.legacy-goal`,
+      JSON.stringify({
+        messages: [],
+        activeGoal: { objective: "legacy", goalId: "goal-a", round: 2 },
+      }),
+    );
+
+    expect(loadTranscript(null, "legacy-goal").activeGoal).toEqual({
+      objective: "legacy",
+      goalId: "goal-a",
+      round: 2,
+      paused: false,
+    });
+  });
+
   it("keeps no-project and conversation bucket strings byte-identical", () => {
     expect(NO_REPO_KEY).toBe("__no_repo__");
     expect(projectBucketSegment(null)).toBe("__no_repo__");

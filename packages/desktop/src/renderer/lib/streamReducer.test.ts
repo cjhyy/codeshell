@@ -207,6 +207,58 @@ test("goal_set 显示目标,goal_cleared 清掉,met 也清", () => {
   expect(met.goal).toBeUndefined();
 });
 
+test("goal_updated 更新目标与暂停状态", () => {
+  const s = feed([
+    ev({
+      type: "goal_set",
+      objective: "old",
+      goalId: "goal-a",
+      revision: 0,
+      replaced: false,
+    }),
+    ev({
+      type: "goal_updated",
+      objective: "new",
+      goalId: "goal-a",
+      revision: 1,
+      paused: true,
+    }),
+  ]);
+  expect(s.goal).toContain("new");
+  expect(s.goal).toContain("已暂停");
+  expect(s.goalPaused).toBe(true);
+  expect(s.goalRevision).toBe(1);
+});
+
+test("编辑后忽略旧 revision 的 met/clear", () => {
+  const s = feed([
+    ev({
+      type: "goal_set",
+      objective: "old",
+      goalId: "goal-a",
+      revision: 0,
+      replaced: false,
+    }),
+    ev({
+      type: "goal_updated",
+      objective: "new",
+      goalId: "goal-a",
+      revision: 1,
+      paused: false,
+    }),
+    ev({
+      type: "goal_progress",
+      goalId: "goal-a",
+      revision: 0,
+      status: "met",
+      round: 2,
+    }),
+    ev({ type: "goal_cleared", goalId: "goal-a", revision: 0 }),
+  ]);
+  expect(s.goal).toContain("new");
+  expect(s.goalRevision).toBe(1);
+});
+
 test("旧 goal A 的终态事件晚到时不隐藏当前 goal B", () => {
   const s = feed([
     ev({ type: "goal_set", objective: "A", goalId: "goal-a", replaced: false }),

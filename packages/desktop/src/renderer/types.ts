@@ -178,6 +178,16 @@ export interface GoalProgressMessage {
   nearest?: "turns" | "stopBlocks";
 }
 
+/** Renderer projection of the session's persisted Goal state. */
+export interface ActiveGoal {
+  objective: string;
+  goalId?: string;
+  /** Monotonic edit/pause generation used to fence late terminal events. */
+  revision?: number;
+  round: number;
+  paused: boolean;
+}
+
 /**
  * Lightweight marker for how a turn ended when it didn't end naturally
  * (TODO 2.8). Rendered as a thin right-aligned status line with a divider —
@@ -345,7 +355,7 @@ export interface MessagesReducerState {
    * `goal_progress(met)`. Null when no goal is active. Drives the TopBar
    * status-popover Goal block + the goal-message marker.
    */
-  activeGoal: { objective: string; goalId?: string; round: number } | null;
+  activeGoal: ActiveGoal | null;
 }
 
 export const INITIAL_STATE: MessagesReducerState = {
@@ -545,6 +555,29 @@ export function bgCompletionText(event: {
     name: who,
     preview: failedPreview,
   });
+}
+
+type GoalFenceEvent = { goalId?: string; revision?: number };
+
+/** Reject an event that targets an older/different Goal projection. Once a
+ *  revisioned goal is visible, a legacy event without a revision is also
+ *  fenced out: it cannot prove that it belongs to the current generation. */
+function isStaleGoalEvent(
+  activeGoal: ActiveGoal,
+  event: GoalFenceEvent,
+  allowLegacyIdentityUpgrade = false,
+): boolean {
+  if (activeGoal.goalId !== event.goalId) {
+    if (
+      !(allowLegacyIdentityUpgrade && activeGoal.goalId === undefined && event.goalId !== undefined)
+    ) {
+      return true;
+    }
+  }
+  if (activeGoal.revision !== undefined) {
+    return event.revision === undefined || event.revision < activeGoal.revision;
+  }
+  return false;
 }
 
 export function applyStreamEvent(
@@ -1010,12 +1043,7 @@ export function applyStreamEvent(
     }
 
     case "goal_progress": {
-      if (
-        state.activeGoal &&
-        (event.goalId
-          ? state.activeGoal.goalId !== event.goalId
-          : state.activeGoal.goalId !== undefined)
-      ) {
+      if (state.activeGoal && isStaleGoalEvent(state.activeGoal, event)) {
         return state;
       }
       const msg: GoalProgressMessage = {
@@ -1052,26 +1080,58 @@ export function applyStreamEvent(
         event.status === "met" || event.status === "exhausted"
           ? null
           : state.activeGoal
-            ? { ...state.activeGoal, round: event.round }
+            ? {
+                ...state.activeGoal,
+                round: event.round,
+                revision: event.revision ?? state.activeGoal.revision,
+              }
             : state.activeGoal;
       return { ...state, messages: [...base, msg], activeGoal };
     }
 
     case "goal_set": {
       // A send established or replaced the session's persistent goal.
+      if (
+        state.activeGoal &&
+        state.activeGoal.goalId === event.goalId &&
+        isStaleGoalEvent(state.activeGoal, event)
+      ) {
+        return state;
+      }
       return {
         ...state,
-        activeGoal: { objective: event.objective, goalId: event.goalId, round: 0 },
+        activeGoal: {
+          objective: event.objective,
+          goalId: event.goalId,
+          revision: event.revision,
+          round: 0,
+          paused: event.paused ?? false,
+        },
+      };
+    }
+
+    case "goal_updated": {
+      // An edit or pause/resume can be the first Goal event observed after a
+      // reconnect, so establish the projection when goal_set was not replayed.
+      // A concrete mismatched id is stale and must not overwrite a replacement
+      // goal; an absent id remains compatible with older servers.
+      if (state.activeGoal && isStaleGoalEvent(state.activeGoal, event, true)) {
+        return state;
+      }
+      return {
+        ...state,
+        activeGoal: {
+          objective: event.objective,
+          goalId: event.goalId ?? state.activeGoal?.goalId,
+          revision: event.revision ?? state.activeGoal?.revision,
+          round: state.activeGoal?.round ?? 0,
+          paused: event.paused,
+        },
       };
     }
 
     case "goal_cleared": {
-      if (
-        state.activeGoal &&
-        (event.goalId
-          ? state.activeGoal.goalId !== event.goalId
-          : state.activeGoal.goalId !== undefined)
-      ) {
+      if (state.activeGoal && isStaleGoalEvent(state.activeGoal, event)) {
         return state;
       }
       return { ...state, activeGoal: null };

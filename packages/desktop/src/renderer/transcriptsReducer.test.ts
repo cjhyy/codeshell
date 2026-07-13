@@ -305,4 +305,124 @@ describe("transcriptsReducer pending steer bubbles", () => {
     expect(duplicateSubmit).toHaveLength(1);
     expect(repeatedText).toHaveLength(2);
   });
+
+  it("keeps an optimistic revision+1 goal when the old terminal event arrives mid-update", () => {
+    let map: TranscriptsMap = {};
+    map = transcriptsReducer(map, {
+      type: "stream",
+      bucket: "b",
+      event: {
+        type: "goal_set",
+        goalId: "goal-a",
+        revision: 1,
+        objective: "old objective",
+        replaced: false,
+      } as StreamEvent,
+    });
+    map = transcriptsReducer(map, {
+      type: "stream",
+      bucket: "b",
+      event: {
+        type: "goal_updated",
+        goalId: "goal-a",
+        revision: 2,
+        objective: "optimistic edit",
+        paused: false,
+      } as StreamEvent,
+    });
+
+    map = transcriptsReducer(map, {
+      type: "stream",
+      bucket: "b",
+      event: {
+        type: "goal_progress",
+        goalId: "goal-a",
+        revision: 1,
+        status: "met",
+        round: 4,
+      } as StreamEvent,
+    });
+
+    expect(map.b.activeGoal).toMatchObject({
+      objective: "optimistic edit",
+      revision: 2,
+    });
+  });
+
+  it("authoritatively rolls back a failed optimistic goal update without overriding a newer one", () => {
+    const optimistic = {
+      ...INITIAL_STATE,
+      activeGoal: {
+        objective: "optimistic edit",
+        goalId: "goal-a",
+        revision: 2,
+        round: 3,
+        paused: true,
+      },
+    };
+    const rolledBack = transcriptsReducer(
+      { b: optimistic },
+      {
+        type: "goal_reconcile",
+        bucket: "b",
+        expected: { goalId: "goal-a", revision: 2 },
+        goal: {
+          objective: "persisted objective",
+          goalId: "goal-a",
+          revision: 1,
+          round: 3,
+          paused: false,
+        },
+      },
+    );
+    expect(rolledBack.b.activeGoal?.revision).toBe(1);
+    expect(rolledBack.b.activeGoal?.objective).toBe("persisted objective");
+
+    const newer = {
+      ...optimistic,
+      activeGoal: { ...optimistic.activeGoal!, revision: 3, objective: "newer stream edit" },
+    };
+    const ignored = transcriptsReducer(
+      { b: newer },
+      {
+        type: "goal_reconcile",
+        bucket: "b",
+        expected: { goalId: "goal-a", revision: 2 },
+        goal: rolledBack.b.activeGoal,
+      },
+    );
+    expect(ignored.b).toBe(newer);
+  });
+
+  it("restores a failed optimistic delete only while the projection is still empty", () => {
+    const persistedGoal = {
+      objective: "persisted objective",
+      goalId: "goal-a",
+      revision: 1,
+      round: 0,
+      paused: false,
+    };
+    const restored = transcriptsReducer(
+      { b: INITIAL_STATE },
+      {
+        type: "goal_reconcile",
+        bucket: "b",
+        expected: null,
+        goal: persistedGoal,
+      },
+    );
+    expect(restored.b.activeGoal).toEqual(persistedGoal);
+
+    const replacement = { ...INITIAL_STATE, activeGoal: { ...persistedGoal, goalId: "goal-b" } };
+    const ignored = transcriptsReducer(
+      { b: replacement },
+      {
+        type: "goal_reconcile",
+        bucket: "b",
+        expected: null,
+        goal: persistedGoal,
+      },
+    );
+    expect(ignored.b).toBe(replacement);
+  });
 });

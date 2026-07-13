@@ -56,6 +56,7 @@ import {
   deriveLegacyGoalId,
   isGoalTerminated,
   isSameGoalInstance,
+  isSameGoalVersion,
   recordGoalTerminal,
   type GoalConfig,
   type GoalExtension,
@@ -347,6 +348,12 @@ export class Engine {
    * otherwise keep re-blocking the stop). Null when no goal run is active.
    */
   private activeGoalHook: ReturnType<typeof createGoalStopHook> | null = null;
+  /** Whether activeGoalHook is currently registered (pause detaches it). */
+  private activeGoalHookAttached = false;
+  /** Mutable goal view consumed by the running judge after edits/resume. */
+  private activeRuntimeGoal: GoalConfig | null = null;
+  /** Mutable terminal snapshot kept in sync with a mid-run objective edit. */
+  private activePersistedRunGoal: GoalConfig | null = null;
   /**
    * The in-flight run's session bundle, held so clearGoal() can wipe the goal
    * on the SAME instance the run loop is persisting each turn — not a fresh
@@ -1698,6 +1705,15 @@ export class Engine {
       toolExecutor.setSignal(options?.signal);
       toolExecutor.setContext(toolCtx);
 
+      const visibilityExplicitGoal = normalizeGoal(options?.goal);
+      const visibilityStoredGoal = session.state.activeGoal;
+      const visibilityDefaultGoal = normalizeGoal(this.config.goal);
+      const hasRunnableGoal =
+        this.config.isSubAgent !== true &&
+        ((visibilityExplicitGoal !== undefined && visibilityExplicitGoal.paused !== true) ||
+          (visibilityStoredGoal !== undefined && visibilityStoredGoal.paused !== true) ||
+          (visibilityDefaultGoal !== undefined && visibilityDefaultGoal.paused !== true));
+
       const { disabledSkills, disabledPlugins } = this.readDisabledLists();
       const promptComposer = new PromptComposer({
         cwd,
@@ -1719,13 +1735,7 @@ export class Engine {
         disabledPlugins,
         skillAllowlist: this.config.skillAllowlist,
         memoriesMaxAgeDays: this.readMemoriesConfig()?.maxAge,
-        goalToolState: {
-          hasGoal:
-            this.config.isSubAgent !== true &&
-            (normalizeGoal(options?.goal) !== undefined ||
-              session.state.activeGoal !== undefined ||
-              normalizeGoal(this.config.goal) !== undefined),
-        },
+        goalToolState: { hasGoal: hasRunnableGoal },
       });
 
       // Connect MCP servers (if configured and not already connected).
@@ -1764,11 +1774,7 @@ export class Engine {
       const guardCwd = toolCtx.cwd;
       const toolVisibility = {
         cwd: guardCwd,
-        hasGoal:
-          this.config.isSubAgent !== true &&
-          (normalizeGoal(options?.goal) !== undefined ||
-            session.state.activeGoal !== undefined ||
-            normalizeGoal(this.config.goal) !== undefined),
+        hasGoal: hasRunnableGoal,
         settingsScope: this.config.settingsScope ?? "project",
       };
       toolCtx.toolVisibility = toolVisibility;
@@ -2023,12 +2029,13 @@ export class Engine {
       // Wire summarize for tool use summaries (uses lightweight call). Keep the
       // request out of the foreground tracker while billing and reporting it to
       // the owning session/Goal budget.
-      modelFacade.summarize = async (sysPrompt: string, userMsg: string) => {
+      modelFacade.summarize = async (sysPrompt: string, userMsg: string, signal?: AbortSignal) => {
         const resp = await auxSummaryClient.createMessage({
           systemPrompt: sysPrompt,
           messages: [{ role: "user", content: userMsg }],
           tools: [],
           maxTokens: 256,
+          signal,
           billingEnabled: true,
           requestVisible: false,
           // Auxiliary call — see contextManager.setSummarizeFn above.
@@ -2109,15 +2116,18 @@ export class Engine {
       }
       // Legacy state.json files predate goalId. Assign one when that goal is
       // next armed, then persist it before any lifecycle event can reference it.
-      if (storedGoal && !storedGoal.goalId) {
+      if (storedGoal && (!storedGoal.goalId || !storedGoal.revision)) {
         storedGoal = {
           ...storedGoal,
-          goalId: deriveLegacyGoalId(session.state.sessionId, storedGoal),
+          goalId: storedGoal.goalId ?? deriveLegacyGoalId(session.state.sessionId, storedGoal),
+          revision: storedGoal.revision ?? 1,
         };
         session.state.activeGoal = storedGoal;
         this.sessionManager.saveState(session.state);
       }
       if (explicitGoal && this.config.isSubAgent !== true) {
+        // Supplying a goal on a run is an explicit arm/resume operation.
+        delete explicitGoal.paused;
         const replaced = !!storedGoal && storedGoal.objective !== explicitGoal.objective;
         // Stamp WHEN this goal was set so the judge can anchor relative deadlines
         // ("做到3点") to the set time, not "now" — else once the clock passes the
@@ -2128,6 +2138,7 @@ export class Engine {
         const resolvedSetAt = resolveGoalSetAt(explicitGoal.objective, storedGoal, Date.now());
         explicitGoal.setAtMs = resolvedSetAt;
         explicitGoal.goalId = randomUUID();
+        explicitGoal.revision = 1;
         // Replacing/restarting terminally closes the previous instance so no
         // detached snapshot can restore it after the new goal is armed.
         if (storedGoal) recordGoalTerminal(session.state, storedGoal, "cancelled");
@@ -2136,25 +2147,36 @@ export class Engine {
         options?.onStream?.({
           type: "goal_set",
           goalId: explicitGoal.goalId,
+          revision: explicitGoal.revision,
           objective: explicitGoal.objective,
           replaced,
         });
       }
       const fallbackGoal = normalizeGoal(this.config.goal);
       if (fallbackGoal && !fallbackGoal.goalId) fallbackGoal.goalId = randomUUID();
-      const normalizedGoal = explicitGoal ?? storedGoal ?? fallbackGoal;
+      if (fallbackGoal && !fallbackGoal.revision) fallbackGoal.revision = 1;
+      const normalizedGoal =
+        explicitGoal ??
+        (storedGoal?.paused === true ? undefined : storedGoal) ??
+        (fallbackGoal?.paused === true ? undefined : fallbackGoal);
       // Snapshot the persisted goal identity owned by THIS run. Terminal
       // cleanup compares against this immutable copy so an old run cannot
       // delete a replacement goal installed while it was finishing.
       const persistedRunGoal =
-        normalizedGoal && isSameGoalInstance(session.state.activeGoal, normalizedGoal)
+        normalizedGoal && isSameGoalVersion(session.state.activeGoal, normalizedGoal)
           ? { ...normalizedGoal }
           : undefined;
       let goalHookHandler: ReturnType<typeof createGoalStopHook> | null = null;
       let latestGoalJudgeContext: GoalJudgeRuntimeContext | undefined;
-      if (normalizedGoal && this.config.isSubAgent !== true) {
+      if (this.config.isSubAgent !== true) {
+        // Keep a dormant hook even when this ordinary run inherited a paused
+        // persisted goal. A mid-run Resume can then arm Goal mode at the same
+        // safe step boundary as Steer instead of waiting for another submit.
+        this.activeRuntimeGoal = normalizedGoal ?? null;
+        this.activePersistedRunGoal = persistedRunGoal ?? null;
         goalHookHandler = createGoalStopHook({
           goal: normalizedGoal,
+          getGoal: () => this.activeRuntimeGoal ?? undefined,
           llm: llmClient,
           log: logger,
           getJudgeContext: () => latestGoalJudgeContext,
@@ -2163,6 +2185,10 @@ export class Engine {
             // process-wide CostTracker. This separate callback feeds the session
             // cumulative cache counters and the live Goal hard-budget tracker.
             if (usage) recordCumulativeUsage(usage);
+            // Charge the request even if an edit landed while the judge was
+            // awaiting its response. Revision fencing suppresses the old
+            // verdict, not the provider cost; otherwise repeated edits can
+            // bypass the Goal hard budget.
             return turnLoop.recordGoalJudgeUsage(usage);
           },
           // Clear the persisted active goal the moment the judge says it's met,
@@ -2170,20 +2196,31 @@ export class Engine {
           // calls this from inside its met branch (single source of truth for
           // "goal achieved"); engine owns the persistence side-effect.
           onMet: () => {
-            if (persistedRunGoal) {
-              this.persistGoalTerminal(session.state, persistedRunGoal, "completed");
-            }
+            const runGoal = this.activePersistedRunGoal ?? persistedRunGoal;
+            return runGoal ? this.persistGoalTerminal(session.state, runGoal, "completed") : true;
           },
           // Re-read the persisted goal each turn so a mid-run 清除 (clearGoal
           // wrote state.json but this hook's frozen goal copy + the closure's
           // in-RAM session are untouched) actually stops the judge. Reads disk
           // via readActiveGoal — authoritative and independent of which session
           // instance the run closure holds.
-          isGoalActive: (sid) =>
-            isSameGoalInstance(this.sessionManager.readActiveGoal(sid), normalizedGoal),
+          isGoalActive: (sid) => {
+            const runtimeGoal = this.activeRuntimeGoal;
+            if (!runtimeGoal) return false;
+            // A config-only Goal has no disk record to re-check.
+            if (!this.activePersistedRunGoal) return true;
+            const liveGoal = this.sessionManager.readActiveGoal(sid);
+            return liveGoal?.paused !== true && isSameGoalVersion(liveGoal, runtimeGoal);
+          },
         });
-        this.hooks.register("on_stop", goalHookHandler, 0, "goal-stop");
-        // Expose for clearGoal() mid-run. Already guarded by isSubAgent above.
+        if (normalizedGoal) {
+          this.hooks.register("on_stop", goalHookHandler, 0, "goal-stop");
+          this.activeGoalHookAttached = true;
+        } else {
+          this.activeGoalHookAttached = false;
+        }
+        // Expose for edit/pause/resume/delete mid-run. Already guarded by
+        // isSubAgent above.
         this.activeGoalHook = goalHookHandler;
       }
 
@@ -2283,13 +2320,20 @@ export class Engine {
           // turns don't re-arm) AND persists it, and drops the in-flight stop
           // hook so nothing re-blocks the stop we're about to return.
           clearPersistedGoal: (reason) => {
-            if (persistedRunGoal) {
-              this.persistGoalTerminal(session.state, persistedRunGoal, reason);
+            const runGoal = this.activePersistedRunGoal ?? persistedRunGoal;
+            if (runGoal && !this.persistGoalTerminal(session.state, runGoal, reason)) {
+              return false;
             }
             if (goalHookHandler) {
               this.hooks.unregister("on_stop", goalHookHandler);
-              if (this.activeGoalHook === goalHookHandler) this.activeGoalHook = null;
+              if (this.activeGoalHook === goalHookHandler) {
+                this.activeGoalHook = null;
+                this.activeGoalHookAttached = false;
+                this.activeRuntimeGoal = null;
+                this.activePersistedRunGoal = null;
+              }
             }
+            return true;
           },
           publishGoalJudgeContext: (context) => {
             latestGoalJudgeContext = context;
@@ -2376,17 +2420,38 @@ export class Engine {
       if (this.config.isSubAgent !== true) this.activeRunSession = session;
 
       const applyGoalTermination = (termination: GoalTerminationReason | undefined): void => {
-        if (!termination || !persistedRunGoal) return;
+        const runGoal = this.activePersistedRunGoal ?? persistedRunGoal;
+        if (!termination || !runGoal) return;
         // Judge prompt overflow ends only this run. The objective is unfinished
         // and may be resumed after the user reduces fixed judge context, so it
         // must not get a terminal tombstone or be cleared from activeGoal.
         if (termination === "judge_prompt_too_large") return;
         // Record the terminal identity even when a newer goal has already
         // replaced it. Only clear activeGoal when it is still the run's goal.
-        this.persistGoalTerminal(session.state, persistedRunGoal, termination);
+        if (!this.persistGoalTerminal(session.state, runGoal, termination)) {
+          // TurnLoop already emitted exhausted before returning. Reconcile the
+          // UI immediately with the authoritative still-active disk goal so it
+          // cannot leave a cleared banner while the next send re-inherits it.
+          const authoritative = this.sessionManager.readActiveGoal(session.state.sessionId);
+          if (authoritative) {
+            options?.onStream?.({
+              type: "goal_updated",
+              goalId: authoritative.goalId,
+              revision: authoritative.revision,
+              objective: authoritative.objective,
+              paused: authoritative.paused === true,
+            });
+          }
+          return;
+        }
         if (goalHookHandler) {
           this.hooks.unregister("on_stop", goalHookHandler);
-          if (this.activeGoalHook === goalHookHandler) this.activeGoalHook = null;
+          if (this.activeGoalHook === goalHookHandler) {
+            this.activeGoalHook = null;
+            this.activeGoalHookAttached = false;
+            this.activeRuntimeGoal = null;
+            this.activePersistedRunGoal = null;
+          }
         }
       };
 
@@ -2466,7 +2531,12 @@ export class Engine {
         // Run-scoped: drop the GoalStopHook so a later goal-less send on this
         // long-lived engine doesn't keep blocking stops.
         if (goalHookHandler) this.hooks.unregister("on_stop", goalHookHandler);
-        if (this.activeGoalHook === goalHookHandler) this.activeGoalHook = null;
+        if (this.activeGoalHook === goalHookHandler) {
+          this.activeGoalHook = null;
+          this.activeGoalHookAttached = false;
+          this.activeRuntimeGoal = null;
+          this.activePersistedRunGoal = null;
+        }
         if (this.activeTurnLoop === turnLoop) this.activeTurnLoop = null;
         if (this.activeRunSession === session) this.activeRunSession = null;
         // Run-scoped too: this handler is re-registered every run(), so it must be
@@ -2829,18 +2899,52 @@ export class Engine {
     Object.assign(this.activeRunSession.state, partial, { stateRevision });
   }
 
+  /**
+   * Adopt the exact persisted snapshot that won a Goal-control CAS without
+   * discarding counters which the current run has advanced since its previous
+   * heartbeat. Merely copying the new stateRevision is unsafe: the next
+   * whole-state save would then be allowed to publish stale title/workspace
+   * metadata over a concurrent field-level writer.
+   */
+  private rebaseActiveRunAfterGoalUpdate(live: SessionState, persisted: SessionState): void {
+    const runOwned = {
+      status: live.status,
+      summary: live.summary,
+      tokenUsage: live.tokenUsage,
+      contextUsageAnchor: live.contextUsageAnchor,
+      cumulativePromptTokens: live.cumulativePromptTokens,
+      cumulativeCacheReadTokens: live.cumulativeCacheReadTokens,
+      cumulativeCacheCreationTokens: live.cumulativeCacheCreationTokens,
+      turnCount: live.turnCount,
+      turnSeq: live.turnSeq,
+      completedThroughEventId: live.completedThroughEventId,
+      completedSnapshotVersion: live.completedSnapshotVersion,
+      invokedSkills: live.invokedSkills,
+      costState: live.costState,
+    } satisfies Partial<SessionState>;
+
+    // Optional fields deleted by another writer must disappear locally too;
+    // clear before assigning rather than leaving stale own-properties behind.
+    for (const key of Object.keys(live)) {
+      delete (live as unknown as Record<string, unknown>)[key];
+    }
+    Object.assign(live, persisted, runOwned);
+  }
+
   private persistGoalTerminal(
     state: SessionState,
     goal: GoalConfig,
     reason: import("./goal.js").PersistedGoalTerminationReason,
-  ): void {
-    if (!this.sessionManager.saveGoalTerminal(state, goal, reason)) {
+  ): boolean {
+    const persisted = this.sessionManager.saveGoalTerminal(state, goal, reason);
+    if (!persisted) {
       logger.warn("session.goal_terminal_persist_failed", {
         sessionId: state.sessionId,
         goalId: goal.goalId,
         reason,
       });
     }
+    return persisted;
   }
 
   private persistFinalRunState(state: SessionState): void {
@@ -2974,6 +3078,112 @@ export class Engine {
     return this.sessionManager.readActiveGoal(sessionId);
   }
 
+  /** True when the current run was built with Goal prompt/tools and can resume in place. */
+  canResumeGoalInPlace(sessionId: string): boolean {
+    return (
+      this.activeTurnLoop !== null &&
+      this.activeRunSession?.state.sessionId === sessionId &&
+      this.activeRuntimeGoal !== null &&
+      this.activeGoalHook !== null
+    );
+  }
+
+  /**
+   * Edit or pause/resume a persisted goal. Mid-run edits use the same step-gap
+   * delivery seam as Steer: the current model/tool call is not aborted, and the
+   * updated objective is injected before the next model step. Pausing detaches
+   * the goal judge and stops this run before another model request is started.
+   */
+  updateGoal(
+    sessionId: string,
+    patch: {
+      objective?: string;
+      paused?: boolean;
+      expectedGoalId?: string;
+      expectedRevision?: number;
+    },
+  ): GoalConfig | undefined {
+    if (!sessionId || !this.sessionManager.exists(sessionId)) return undefined;
+    const live =
+      this.activeRunSession?.state.sessionId === sessionId ? this.activeRunSession : null;
+    const before = live?.state.activeGoal ?? this.sessionManager.readActiveGoal(sessionId);
+    if (!before) return undefined;
+    if (patch.expectedGoalId !== undefined && before.goalId !== patch.expectedGoalId) {
+      return undefined;
+    }
+    if (patch.expectedRevision !== undefined && (before.revision ?? 1) !== patch.expectedRevision) {
+      return undefined;
+    }
+    const updated = this.sessionManager.updateActiveGoal(sessionId, {
+      ...patch,
+      expectedGoalId: patch.expectedGoalId ?? before.goalId,
+      expectedRevision: patch.expectedRevision ?? before.revision ?? 1,
+    });
+    if (!updated) return undefined;
+    const next = updated.goal;
+    if (live) {
+      this.rebaseActiveRunAfterGoalUpdate(live.state, updated.state);
+    }
+
+    const resumesDormantGoal =
+      this.activeTurnLoop !== null &&
+      live !== null &&
+      before.paused === true &&
+      next.paused !== true &&
+      this.activeRuntimeGoal === null &&
+      this.activeGoalHook !== null;
+    if (resumesDormantGoal) {
+      // This ordinary run was constructed while the persisted Goal was paused:
+      // its system prompt, visible tools and ToolContext are goal-less and
+      // cannot be safely hot-swapped. Stop it at the next step boundary; the
+      // protocol's conditional resume turn will rebuild a fully Goal-capable
+      // run from the now-unpaused persisted state.
+      this.activeTurnLoop!.updateGoal(undefined);
+    }
+    const controlsThisRun =
+      this.activeTurnLoop !== null &&
+      live !== null &&
+      isSameGoalVersion(before, this.activeRuntimeGoal ?? undefined);
+    if (controlsThisRun) {
+      if (this.activeRuntimeGoal) {
+        Object.assign(this.activeRuntimeGoal, next);
+        if (next.paused !== true) delete this.activeRuntimeGoal.paused;
+      }
+      if (this.activePersistedRunGoal) {
+        Object.assign(this.activePersistedRunGoal, next);
+        if (next.paused !== true) delete this.activePersistedRunGoal.paused;
+      }
+
+      if (next.paused === true) {
+        if (this.activeGoalHook && this.activeGoalHookAttached) {
+          this.hooks.unregister("on_stop", this.activeGoalHook);
+          this.activeGoalHookAttached = false;
+        }
+        this.activeTurnLoop!.updateGoal(undefined);
+      } else {
+        const objectiveChanged = before.objective !== next.objective;
+        const resumed = before.paused === true;
+        this.activeTurnLoop!.updateGoal(
+          next,
+          objectiveChanged
+            ? `目标已编辑。新的目标：${next.objective}`
+            : resumed
+              ? `目标已恢复：${next.objective}`
+              : undefined,
+          {
+            maxTurns: resolveMaxTurns(this.config.maxTurns, next),
+            maxStopBlocks: resolveMaxStopBlocks(this.config.maxStopBlocks, next),
+          },
+        );
+        if (this.activeGoalHook && !this.activeGoalHookAttached) {
+          this.hooks.register("on_stop", this.activeGoalHook, 0, "goal-stop");
+          this.activeGoalHookAttached = true;
+        }
+      }
+    }
+    return next;
+  }
+
   /**
    * Clear a session's persisted active goal (CC `/goal clear`). Works whether
    * the session is idle or its goal run is in flight: it wipes
@@ -2983,7 +3193,7 @@ export class Engine {
    * Returns true if a goal was actually cleared. Idempotent — clearing a
    * session with no active goal is a no-op returning false.
    */
-  clearGoal(sessionId: string): boolean {
+  clearGoal(sessionId: string, expected?: { goalId?: string; revision?: number }): boolean {
     if (!this.sessionManager.exists(sessionId)) return false;
     // Prefer the LIVE run's bundle when it's this session: clearing its
     // in-RAM state.activeGoal is what stops the run loop from writing the goal
@@ -2997,17 +3207,53 @@ export class Engine {
         : null;
     const session = live ?? this.sessionManager.resume(sessionId);
     const had = session.state.activeGoal !== undefined;
+    let controlsThisRun = false;
+    if (session.state.activeGoal && !session.state.activeGoal.goalId) {
+      session.state.activeGoal = {
+        ...session.state.activeGoal,
+        goalId: deriveLegacyGoalId(sessionId, session.state.activeGoal),
+        revision: session.state.activeGoal.revision ?? 1,
+      };
+    }
+    if (
+      had &&
+      ((expected?.goalId !== undefined && session.state.activeGoal?.goalId !== expected.goalId) ||
+        (expected?.revision !== undefined &&
+          (session.state.activeGoal?.revision ?? 1) !== expected.revision))
+    ) {
+      return false;
+    }
     if (had) {
       const clearedGoal = session.state.activeGoal!;
-      this.persistGoalTerminal(session.state, clearedGoal, "cancelled");
+      controlsThisRun =
+        this.activeTurnLoop !== null &&
+        live !== null &&
+        isSameGoalVersion(clearedGoal, this.activeRuntimeGoal ?? undefined);
+      if (!this.persistGoalTerminal(session.state, clearedGoal, "cancelled")) return false;
+      // A cross-writer edit may have won between the expected-version check
+      // above and saveGoalTerminal's conflict merge. In that case the old
+      // revision's tombstone is durable but the newer active revision remains;
+      // report a stale delete, and never stop/detach the run that owns it.
+      if (session.state.activeGoal) return false;
+      // A paused Goal inherited by an ordinary run is only dormant persisted
+      // state; deleting it must not cancel that unrelated conversation.
+      if (controlsThisRun) this.activeTurnLoop!.updateGoal(undefined);
     }
     // If THIS session's goal run is in flight, drop its stop hook so the
     // current run can terminate (the closure-held goal would otherwise keep
     // re-blocking). The run's own `finally` also unregisters; double-unregister
     // is safe (set delete is idempotent).
-    if (this.activeGoalHook && this.lastSessionId === sessionId) {
-      this.hooks.unregister("on_stop", this.activeGoalHook);
+    if (
+      had &&
+      this.activeGoalHook &&
+      this.lastSessionId === sessionId &&
+      (controlsThisRun || this.activeRuntimeGoal === null)
+    ) {
+      if (this.activeGoalHookAttached) this.hooks.unregister("on_stop", this.activeGoalHook);
       this.activeGoalHook = null;
+      this.activeGoalHookAttached = false;
+      this.activeRuntimeGoal = null;
+      this.activePersistedRunGoal = null;
     }
     return had;
   }

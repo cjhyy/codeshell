@@ -6,6 +6,7 @@ import { isAbortError } from "../llm/client-base.js";
 import type { InputAttachmentMeta, PendingApprovalMetadata } from "./types.js";
 import type { ApprovalRouter } from "../tool-system/permission.js";
 import type { RunBehaviorMode } from "../engine/run-types.js";
+import { isSameGoalInstance, type GoalConfig } from "../engine/goal.js";
 
 export interface ChatSessionOptions {
   id: string;
@@ -53,6 +54,11 @@ interface QueuedTurn {
   opts: TurnOpts;
   resolve: (r: EngineResult) => void;
   reject: (e: unknown) => void;
+  /** Stable Goal instance for a queued synthetic resume turn. */
+  goalResumeId?: string;
+  /** Evaluated only when this entry reaches the head of the queue. */
+  guard?: () => boolean;
+  onSkipped?: () => void;
 }
 
 /**
@@ -225,8 +231,63 @@ export class ChatSession {
    * Clear this session's persisted active goal (CC /goal clear). Works idle or
    * mid-run. Returns true if a goal was actually cleared.
    */
-  clearGoal(): boolean {
-    return this.engine.clearGoal(this.id);
+  clearGoal(expected?: { goalId?: string; revision?: number }): boolean {
+    return this.engine.clearGoal(this.id, expected);
+  }
+
+  /** Edit or pause/resume this session's persistent goal. */
+  updateGoal(patch: {
+    objective?: string;
+    paused?: boolean;
+    expectedGoalId?: string;
+    expectedRevision?: number;
+  }): import("../engine/goal.js").GoalConfig | undefined {
+    return this.engine.updateGoal(this.id, patch);
+  }
+
+  /** Whether a paused Goal can reuse this run's already Goal-capable prompt/tools. */
+  canResumeGoalInPlace(): boolean {
+    return this.engine.canResumeGoalInPlace(this.id);
+  }
+
+  /**
+   * Queue the synthetic turn which actually drives an idle/dormant Goal after
+   * Resume. The version guard is checked at queue head, so a later edit/delete
+   * cannot leave a stale "resume" turn behind another user turn.
+   */
+  enqueueGoalResumeTurn(goal: GoalConfig, opts: Omit<TurnOpts, "goal"> = {}): Promise<boolean> {
+    this.lastActivityAt = Date.now();
+    this.cancelledSinceLastTurn = false;
+    return new Promise<boolean>((resolve, reject) => {
+      // Resume is level-triggered, not an instruction that should accumulate.
+      // While another turn owns the session, pause -> resume can otherwise
+      // leave multiple continuation turns for the same Goal instance queued.
+      // Supersede only pending entries; an already-active resume is governed by
+      // the live TurnLoop control path.
+      if (goal.goalId) {
+        for (let index = this.queue.length - 1; index >= 0; index--) {
+          const pending = this.queue[index];
+          if (pending?.goalResumeId !== goal.goalId) continue;
+          this.queue.splice(index, 1);
+          pending.onSkipped?.();
+        }
+      }
+      this.queue.push({
+        task: "<system-reminder>\n用户已恢复持久目标。请读取当前持久目标并继续执行。\n</system-reminder>",
+        opts: { ...opts, injected: true },
+        ...(goal.goalId ? { goalResumeId: goal.goalId } : {}),
+        guard: () => {
+          const current = this.engine.getGoal(this.id);
+          // Edits retain the same user-owned goalId and should update the
+          // queued resume, not cancel it. Pause/delete/replacement must skip.
+          return current?.paused !== true && isSameGoalInstance(current, goal);
+        },
+        onSkipped: () => resolve(false),
+        resolve: () => resolve(true),
+        reject,
+      });
+      void this.pump();
+    });
   }
 
   /**
@@ -280,7 +341,18 @@ export class ChatSession {
 
   private async pump(): Promise<void> {
     if (this.active || this.exclusiveOperation) return;
-    const next = this.queue.shift();
+    let next: QueuedTurn | undefined;
+    while ((next = this.queue.shift())) {
+      let allowed = true;
+      try {
+        allowed = next.guard?.() ?? true;
+      } catch {
+        allowed = false;
+      }
+      if (allowed) break;
+      next.onSkipped?.();
+      next = undefined;
+    }
     if (!next) return;
     this.active = next;
     this.settlePromise = new Promise<void>((resolve) => {
@@ -338,7 +410,12 @@ export class ChatSession {
       // no further turn is queued.
       this.applyPendingModelSwitchAtRunBoundary();
       // Drain the next turn even if deferred model switching failed.
-      if (this.queue.length > 0) void this.pump();
+      if (this.queue.length > 0) {
+        // Let the just-settled turn's resolve/reject handlers publish their
+        // terminal lifecycle before a queued turn can synchronously emit its
+        // session_started event. This preserves external QueryGuard ordering.
+        queueMicrotask(() => void this.pump());
+      }
     }
   }
 }

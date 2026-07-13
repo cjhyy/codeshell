@@ -23,7 +23,7 @@
 import type { HookContext, HookResult } from "./events.js";
 import type { HookHandler } from "./registry.js";
 import type { LLMResponse, Message, TokenUsage } from "../types.js";
-import { normalizeGoal, type GoalConfig } from "../engine/goal.js";
+import { isSameGoalVersion, normalizeGoal, type GoalConfig } from "../engine/goal.js";
 import { listRunningBackgroundWork } from "../tool-system/builtin/background-work.js";
 import { scrubSecrets } from "../utils/secret-scrubber.js";
 
@@ -55,6 +55,8 @@ export interface GoalStopHookOptions {
   log: GoalLogger;
   /** Override the goal instead of reading ctx.data.goal (mainly for tests). */
   goal?: string | GoalConfig;
+  /** Live goal accessor used by edit/pause controls during a running loop. */
+  getGoal?: () => GoalConfig | undefined;
   /**
    * Re-check whether the session STILL has a live persisted goal, evaluated
    * fresh each time the hook fires. The hook's `goal` above is frozen at
@@ -73,7 +75,8 @@ export interface GoalStopHookOptions {
    * a later bare send doesn't re-inherit a satisfied goal. Optional so tests /
    * non-persistent callers can omit it.
    */
-  onMet?: () => void;
+  /** Return false when durable cleanup failed; the hook will keep Goal mode active. */
+  onMet?: () => boolean | void;
   /**
    * Clock source for the current time fed to the judge. Injectable so tests
    * pin a fixed instant (the judge prompt is a fresh sub-call, not part of the
@@ -95,6 +98,7 @@ export interface GoalStopHookOptions {
    */
   onJudgeUsage?: (
     usage: TokenUsage | undefined,
+    judgedGoal?: GoalConfig,
   ) => "token_budget_exhausted" | "time_budget_exhausted" | undefined;
 }
 
@@ -374,6 +378,7 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
   let judgeRequestCount = 0;
   let judgeRequestWindowKey: string | null = null;
   let judgeRequestWindowCount = 0;
+  let lastGoalVersionKey: string | null = null;
   const judgeUsage: TokenUsage = {
     promptTokens: 0,
     completionTokens: 0,
@@ -383,14 +388,45 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
   };
   return async (ctx: HookContext): Promise<HookResult> => {
     // Accept string or GoalConfig from either the override or ctx.data.goal.
-    const g = normalizeGoal(opts.goal ?? (ctx.data.goal as string | GoalConfig | undefined));
+    const g = normalizeGoal(
+      opts.getGoal?.() ?? opts.goal ?? (ctx.data.goal as string | GoalConfig | undefined),
+    );
     // No goal → not Goal mode → allow stop.
     if (!g) return {};
-    // The persisted objective is intentionally immutable for the life of a
-    // Goal, so context compaction can never make an oversized objective fit a
-    // later judge request. Bound the judge's projection on first use while
-    // preserving both ends (deadlines/acceptance criteria often live at the
-    // tail); the original persisted Goal remains untouched.
+    const goalVersionKey = JSON.stringify([
+      g.goalId ?? null,
+      g.revision ?? 1,
+      g.objective,
+      g.setAtMs ?? null,
+    ]);
+    if (lastGoalVersionKey !== goalVersionKey) {
+      // An edit is a new judging problem. Keep the cumulative usage ledger,
+      // but never carry the old objective's verdict/gaps, cache entry, or
+      // evidence-window retry count into the new revision.
+      lastGoalVersionKey = goalVersionKey;
+      lastKey = null;
+      lastResult = null;
+      previousVerdict = undefined;
+      previousGaps = "";
+      judgeRequestWindowKey = null;
+      judgeRequestWindowCount = 0;
+    }
+    const controlResultIfChanged = (): HookResult | null => {
+      if (!opts.getGoal) return null;
+      const latest = normalizeGoal(opts.getGoal());
+      if (latest?.paused !== true && isSameGoalVersion(latest, g)) return null;
+      if (latest && latest.paused !== true) {
+        return {
+          continueSession: true,
+          messages: [`继续 —— 目标已更新。当前目标：${latest.objective}`],
+        };
+      }
+      return {};
+    };
+    // Bound the current objective projection while preserving both ends
+    // (deadlines/acceptance criteria often live at the tail). Goal controls may
+    // edit the persisted objective between stop rounds, so this is deliberately
+    // recomputed for every hook invocation.
     const goal = truncateHeadTail(g.objective, MAX_JUDGE_OBJECTIVE_CHARS);
 
     const sessionId = ctx.data.sessionId;
@@ -501,7 +537,7 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
       // The TurnLoop normally catches this before on_stop. Re-check through the
       // private seam so a true Goal budget exhaustion is never disguised as a
       // request-limit continuation for older/direct callers.
-      const budgetTermination = opts.onJudgeUsage?.(undefined);
+      const budgetTermination = opts.onJudgeUsage?.(undefined, g);
       if (budgetTermination) {
         log.info("goal_stop.judge_budget_exhausted", {
           cat: "goal",
@@ -606,6 +642,8 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
         signal: judgeAbort.signal,
       });
     } catch (err) {
+      const controlResult = controlResultIfChanged();
+      if (controlResult) return controlResult;
       log.warn("goal_stop.judge_failed", {
         cat: "goal",
         error: (err as Error).message,
@@ -641,7 +679,9 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
       totalTokens: judgeUsage.totalTokens,
     });
 
-    const judgeBudgetTermination = opts.onJudgeUsage?.(resp.usage);
+    const judgeBudgetTermination = opts.onJudgeUsage?.(resp.usage, g);
+    const controlResult = controlResultIfChanged();
+    if (controlResult) return controlResult;
     if (judgeBudgetTermination) {
       log.info("goal_stop.judge_budget_exhausted", {
         cat: "goal",
@@ -677,12 +717,26 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     if (verdict.met) {
       log.info("goal_stop.met", { cat: "goal" });
       // Clear the persisted active goal (engine side-effect) so a later bare
-      // send doesn't re-inherit a satisfied goal. Isolated so a throwing
-      // callback can't block the stop.
+      // send doesn't re-inherit a satisfied goal. Never report met when that
+      // durable transition failed, otherwise the UI clears while state.json
+      // immediately re-arms the same Goal on the next run.
       try {
-        opts.onMet?.();
-      } catch {
-        /* ignore */
+        if (opts.onMet?.() === false) {
+          log.warn("goal_stop.met_persist_failed", { cat: "goal" });
+          return {
+            continueSession: true,
+            messages: ["继续 —— 目标已完成，但持久化完成状态失败；请先恢复会话状态写入。"],
+          };
+        }
+      } catch (err) {
+        log.warn("goal_stop.met_persist_failed", {
+          cat: "goal",
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return {
+          continueSession: true,
+          messages: ["继续 —— 目标已完成，但持久化完成状态失败；请先恢复会话状态写入。"],
+        };
       }
       // Surface the verdict so the loop can emit a goal_progress(met) event.
       return { data: { goalVerdict: { met: true, gaps: "" } } };

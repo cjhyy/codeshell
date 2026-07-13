@@ -1005,3 +1005,117 @@ describe("createGoalStopHook — three-state judge", () => {
     expect(JSON.stringify(logs)).not.toContain(body);
   });
 });
+
+describe("createGoalStopHook — goal control revision fencing", () => {
+  function deferredJudge() {
+    let resolveResponse: ((response: LLMResponse) => void) | undefined;
+    const llm: GoalJudgeLLM = {
+      createMessage: () =>
+        new Promise<LLMResponse>((resolve) => {
+          resolveResponse = resolve;
+        }),
+    };
+    return {
+      llm,
+      resolve(response: LLMResponse) {
+        if (!resolveResponse) throw new Error("judge was not called");
+        resolveResponse(response);
+      },
+      called: () => resolveResponse !== undefined,
+    };
+  }
+
+  const metResponse: LLMResponse = {
+    text: '{"met":true,"waiting":false,"gaps":""}',
+    toolCalls: [],
+  };
+
+  it("ignores an old met verdict when the objective is edited before the judge returns", async () => {
+    let goal = { objective: "old objective", goalId: "goal-1", revision: 1 };
+    let metCalls = 0;
+    const judge = deferredJudge();
+    const hook = createGoalStopHookImpl({
+      llm: judge.llm,
+      log: noopLog,
+      getGoal: () => goal,
+      getJudgeContext: emptyJudgeContext,
+      onMet: () => {
+        metCalls += 1;
+      },
+    });
+
+    const pending = hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "done" } });
+    expect(judge.called()).toBe(true);
+    goal = { objective: "new objective", goalId: "goal-1", revision: 2 };
+    judge.resolve(metResponse);
+
+    const result = await pending;
+    expect(result.continueSession).toBe(true);
+    expect(result.messages).toEqual(["继续 —— 目标已更新。当前目标：new objective"]);
+    expect(metCalls).toBe(0);
+  });
+
+  it("ignores an old met verdict when the goal is paused before the judge returns", async () => {
+    let goal = {
+      objective: "old objective",
+      goalId: "goal-1",
+      revision: 1,
+      paused: false,
+    };
+    let metCalls = 0;
+    const judge = deferredJudge();
+    const hook = createGoalStopHookImpl({
+      llm: judge.llm,
+      log: noopLog,
+      getGoal: () => goal,
+      getJudgeContext: emptyJudgeContext,
+      onMet: () => {
+        metCalls += 1;
+      },
+    });
+
+    const pending = hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "done" } });
+    expect(judge.called()).toBe(true);
+    goal = {
+      objective: "old objective",
+      goalId: "goal-1",
+      revision: 2,
+      paused: true,
+    };
+    judge.resolve(metResponse);
+
+    const result = await pending;
+    expect(result.continueSession).toBeUndefined();
+    expect(result.messages).toBeUndefined();
+    expect(metCalls).toBe(0);
+  });
+
+  it("ignores an old met verdict when the goal is deleted before the judge returns", async () => {
+    let goal: { objective: string; goalId: string; revision: number } | undefined = {
+      objective: "old objective",
+      goalId: "goal-1",
+      revision: 1,
+    };
+    let metCalls = 0;
+    const judge = deferredJudge();
+    const hook = createGoalStopHookImpl({
+      llm: judge.llm,
+      log: noopLog,
+      getGoal: () => goal,
+      getJudgeContext: emptyJudgeContext,
+      onMet: () => {
+        metCalls += 1;
+      },
+    });
+
+    const pending = hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "done" } });
+    expect(judge.called()).toBe(true);
+    goal = undefined;
+    judge.resolve(metResponse);
+
+    const result = await pending;
+    expect(result.continueSession).toBeUndefined();
+    expect(result.messages).toBeUndefined();
+    expect(metCalls).toBe(0);
+  });
+});

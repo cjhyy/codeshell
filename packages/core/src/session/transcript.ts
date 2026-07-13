@@ -109,7 +109,7 @@ export class Transcript {
       steerId?: string;
       clientMessageId?: string;
       authority?: "user" | "agent" | "system" | "policy";
-      source?: "agent-direction";
+      source?: "agent-direction" | "goal-control";
       envelopeIds?: string[];
       correlationIds?: string[];
     },

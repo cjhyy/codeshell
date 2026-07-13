@@ -448,12 +448,38 @@ contextBridge.exposeInMainWorld("codeshell", {
       ok: boolean;
       cleared: boolean;
     }>,
+  /** Edit or pause/resume a session's persisted active goal. */
+  goalUpdate: (
+    sessionId: string,
+    update: {
+      objective?: string;
+      paused?: boolean;
+      expectedGoalId: string;
+      expectedRevision: number;
+    },
+  ) =>
+    rpc("agent/goalUpdate", { sessionId, ...update }).then(rpcResult) as Promise<{
+      ok: boolean;
+      updated: boolean;
+      goal?: string;
+      goalId?: string;
+      paused?: boolean;
+      revision?: number;
+    }>,
+  /** Delete a session's persisted active goal. `goalClear` remains as a legacy alias. */
+  goalDelete: (sessionId: string, expected: { expectedGoalId: string; expectedRevision: number }) =>
+    rpc("agent/goalDelete", { sessionId, ...expected }).then(rpcResult) as Promise<{
+      ok: boolean;
+      deleted: boolean;
+    }>,
   /** Read a session's persisted active goal objective (null when none). */
   goalGet: (sessionId: string) =>
     rpc("agent/goalGet", { sessionId }).then(rpcResult) as Promise<{
       ok: boolean;
       goal: string | null;
       goalId?: string;
+      paused?: boolean;
+      revision?: number;
     }>,
   /** List a session's background shells for the dock panel (TODO 3.2). */
   listBackgroundShells: (sessionId: string) =>

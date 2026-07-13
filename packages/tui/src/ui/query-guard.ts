@@ -18,6 +18,9 @@ export type QueryState = "idle" | "reserved" | "running";
 export class QueryGuard {
   private state: QueryState = "idle";
   private controller: AbortController | null = null;
+  private externalOwner = false;
+  private generation = 0;
+  private ownerToken: number | null = null;
   private listeners = new Set<() => void>();
 
   // ── useSyncExternalStore contract ──
@@ -42,40 +45,72 @@ export class QueryGuard {
   }
 
   /** Reserve a slot synchronously before the AbortController exists. */
-  reserve(): boolean {
-    if (this.state !== "idle") return false;
+  reserve(): number | null {
+    if (this.state !== "idle") return null;
+    const token = ++this.generation;
+    this.ownerToken = token;
     this.state = "reserved";
+    this.externalOwner = false;
     this.notify();
-    return true;
+    return token;
   }
 
   /** Attach the AbortController. Must follow reserve(). */
-  tryStart(controller: AbortController): boolean {
-    if (this.state !== "reserved") return false;
+  tryStart(controller: AbortController, token: number): boolean {
+    if (this.state !== "reserved" || this.ownerToken !== token) return false;
     this.controller = controller;
+    this.externalOwner = false;
     this.state = "running";
     this.notify();
     return true;
   }
 
+  /** Mark a server-driven turn (Goal resume/background wake) as running. */
+  startExternal(): number | null {
+    if (this.state !== "idle") return null;
+    const token = ++this.generation;
+    this.ownerToken = token;
+    this.controller = null;
+    this.externalOwner = true;
+    this.state = "running";
+    this.notify();
+    return token;
+  }
+
   /** Roll back reserve() when processUserInput threw before tryStart. */
-  cancelReservation(): void {
-    if (this.state !== "reserved") return;
+  cancelReservation(token: number): void {
+    if (this.state !== "reserved" || this.ownerToken !== token) return;
     this.state = "idle";
+    this.externalOwner = false;
+    this.ownerToken = null;
     this.notify();
   }
 
   /** Normal completion — clean up without aborting (already finished). */
-  end(): void {
-    if (this.state === "idle") return;
+  end(token: number): void {
+    if (this.state === "idle" || this.ownerToken !== token) return;
     this.state = "idle";
     this.controller = null;
+    this.externalOwner = false;
+    this.ownerToken = null;
     this.notify();
   }
 
+  /** End only a server-driven turn; never release a client.run-owned guard. */
+  endExternal(): boolean {
+    if (this.state !== "running" || !this.externalOwner) return false;
+    this.state = "idle";
+    this.controller = null;
+    this.externalOwner = false;
+    this.ownerToken = null;
+    this.notify();
+    return true;
+  }
+
   /** Hard abort: abort the controller AND clean up. */
-  forceEnd(reason: string = "force-end"): void {
-    if (this.state === "idle") return;
+  forceEnd(reason: string = "force-end"): "local" | "external" | null {
+    if (this.state === "idle") return null;
+    const owner = this.externalOwner ? "external" : "local";
     if (this.state === "running" && this.controller) {
       try {
         this.controller.abort(reason);
@@ -85,11 +120,33 @@ export class QueryGuard {
     }
     this.state = "idle";
     this.controller = null;
+    this.externalOwner = false;
+    this.ownerToken = null;
+    this.generation++;
     this.notify();
+    return owner;
   }
 
   /** Read the current controller's signal; null when idle/reserved. */
   getSignal(): AbortSignal | null {
     return this.controller?.signal ?? null;
+  }
+
+  /**
+   * Release only a client.run-owned slot when its transport response arrives.
+   * This runs synchronously inside AgentClient before a following queued
+   * session_started notification is parsed, closing the Promise-microtask
+   * handoff gap. The old local finally is token-fenced and cannot release the
+   * external owner which may start immediately afterward.
+   */
+  endLocalResponse(token: number): boolean {
+    if (this.state === "idle" || this.externalOwner || this.ownerToken !== token) return false;
+    this.state = "idle";
+    this.controller = null;
+    this.externalOwner = false;
+    this.ownerToken = null;
+    this.generation++;
+    this.notify();
+    return true;
   }
 }

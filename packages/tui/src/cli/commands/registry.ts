@@ -41,8 +41,18 @@ export interface CommandContext {
   submitGoal?: (objective: string) => void;
   /** Clear the session's active persistent goal (/goal clear). */
   clearGoal?: () => Promise<boolean>;
+  /** Edit or pause/resume the active goal at the next safe turn boundary. */
+  updateGoal?: (patch: { objective?: string; paused?: boolean }) => Promise<boolean>;
+  /** Delete the active goal using its current id/revision as a stale-write fence. */
+  deleteGoal?: () => Promise<boolean>;
   /** The session's active goal objective, if any (for /goal status). */
   activeGoal?: string | null;
+  /** Whether the mirrored active goal is paused. */
+  activeGoalPaused?: boolean;
+  /** False while a set/hydrate is still missing the Goal CAS identity. */
+  activeGoalVersionReady?: boolean;
+  /** True only for an older server that returned a Goal without version fields. */
+  activeGoalLegacy?: boolean;
   exit: () => void;
   // State accessors
   effort: string;

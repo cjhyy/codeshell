@@ -40,7 +40,10 @@ export const gitCommands: SlashCommand[] = [
 
       // If -m flag provided, commit directly
       if (arg.startsWith("-m ")) {
-        const msg = arg.slice(3).trim().replace(/^["']|["']$/g, "");
+        const msg = arg
+          .slice(3)
+          .trim()
+          .replace(/^["']|["']$/g, "");
         if (!msg) {
           ctx.addStatus("Empty commit message.");
           return;
@@ -56,12 +59,13 @@ export const gitCommands: SlashCommand[] = [
       }
 
       // Otherwise, send diff to model to generate commit message
-      if (!ctx.queryGuard.reserve()) {
+      const guardToken = ctx.queryGuard.reserve();
+      if (guardToken === null) {
         ctx.addStatus("Busy — wait for current turn to finish.");
         return;
       }
       const ac = new AbortController();
-      ctx.queryGuard.tryStart(ac);
+      ctx.queryGuard.tryStart(ac, guardToken);
       try {
         const stat = getGitDiffStat(ctx.cwd);
         const diff = getGitDiff(ctx.cwd);
@@ -89,7 +93,7 @@ export const gitCommands: SlashCommand[] = [
       } catch (err) {
         ctx.addStatus(`Commit failed: ${(err as Error).message}`);
       } finally {
-        ctx.queryGuard.end();
+        ctx.queryGuard.end(guardToken);
       }
     },
   },
@@ -145,12 +149,13 @@ export const gitCommands: SlashCommand[] = [
       const dimensions = parseDimensions(dimFlag?.split("=")[1]);
       const file = tokens.find((t) => !t.startsWith("--"));
 
-      if (!ctx.queryGuard.reserve()) {
+      const guardToken = ctx.queryGuard.reserve();
+      if (guardToken === null) {
         ctx.addStatus("Busy — wait for current turn to finish.");
         return;
       }
       const ac = new AbortController();
-      ctx.queryGuard.tryStart(ac);
+      ctx.queryGuard.tryStart(ac, guardToken);
       try {
         const diff = getGitDiff(ctx.cwd, {
           ...(file ? { file } : {}),
@@ -158,9 +163,7 @@ export const gitCommands: SlashCommand[] = [
         });
 
         if (!diff) {
-          ctx.addStatus(
-            staged ? "No staged changes to review." : "No changes to review.",
-          );
+          ctx.addStatus(staged ? "No staged changes to review." : "No changes to review.");
           return;
         }
 
@@ -177,7 +180,7 @@ export const gitCommands: SlashCommand[] = [
       } catch (err) {
         ctx.addStatus(`Review failed: ${(err as Error).message}`);
       } finally {
-        ctx.queryGuard.end();
+        ctx.queryGuard.end(guardToken);
       }
     },
   },
@@ -224,12 +227,13 @@ export const gitCommands: SlashCommand[] = [
         return;
       }
 
-      if (!ctx.queryGuard.reserve()) {
+      const guardToken = ctx.queryGuard.reserve();
+      if (guardToken === null) {
         ctx.addStatus("Busy — wait for current turn to finish.");
         return;
       }
       const ac = new AbortController();
-      ctx.queryGuard.tryStart(ac);
+      ctx.queryGuard.tryStart(ac, guardToken);
       try {
         const comments = ghPrComments(ctx.cwd, arg.trim());
         if (!comments) {
@@ -248,7 +252,7 @@ export const gitCommands: SlashCommand[] = [
       } catch (err) {
         ctx.addStatus(`Autofix failed: ${(err as Error).message}`);
       } finally {
-        ctx.queryGuard.end();
+        ctx.queryGuard.end(guardToken);
       }
     },
   },

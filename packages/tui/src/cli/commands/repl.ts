@@ -9,6 +9,7 @@ import { Engine } from "@cjhyy/code-shell-core";
 import { mergePluginMcpServers } from "@cjhyy/code-shell-core";
 import { EngineRuntime } from "@cjhyy/code-shell-core";
 import { ChatSessionManager } from "@cjhyy/code-shell-core";
+import { SessionManager } from "@cjhyy/code-shell-core";
 import { AgentServer } from "@cjhyy/code-shell-core";
 import { AgentClient } from "@cjhyy/code-shell-core";
 import { createInProcessTransport } from "@cjhyy/code-shell-core";
@@ -80,8 +81,10 @@ export async function replCommand(options: ReplOptions): Promise<void> {
   // not have them silently chosen.
   const hasSavedAuth =
     !!options.apiKey ||
-    (Array.isArray((settings as any).credentials) && (settings as any).credentials.some((c: any) => c?.apiKey)) ||
-    (Array.isArray((settings as any).modelConnections) && (settings as any).modelConnections.length > 0);
+    (Array.isArray((settings as any).credentials) &&
+      (settings as any).credentials.some((c: any) => c?.apiKey)) ||
+    (Array.isArray((settings as any).modelConnections) &&
+      (settings as any).modelConnections.length > 0);
   let apiKey = options.apiKey;
 
   let model = options.model;
@@ -93,7 +96,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
       console.error(
         chalk.red(
           "Error: No API key configured and stdin is not a TTY. " +
-          "Set --api-key, OPENROUTER_API_KEY, or run interactively to onboard.",
+            "Set --api-key, OPENROUTER_API_KEY, or run interactively to onboard.",
         ),
       );
       process.exit(1);
@@ -211,25 +214,40 @@ export async function replCommand(options: ReplOptions): Promise<void> {
         // Per-session overrides from the protocol request take precedence
         ...(slice.permissionMode ? { permissionMode: slice.permissionMode } : {}),
         ...(slice.preset ? { preset: slice.preset } : {}),
-        ...(slice.customSystemPrompt !== undefined ? { customSystemPrompt: slice.customSystemPrompt } : {}),
-        ...(slice.appendSystemPrompt !== undefined ? { appendSystemPrompt: slice.appendSystemPrompt } : {}),
+        ...(slice.customSystemPrompt !== undefined
+          ? { customSystemPrompt: slice.customSystemPrompt }
+          : {}),
+        ...(slice.appendSystemPrompt !== undefined
+          ? { appendSystemPrompt: slice.appendSystemPrompt }
+          : {}),
         ...(slice.maxTurns !== undefined ? { maxTurns: slice.maxTurns } : {}),
-        ...(slice.maxContextTokens !== undefined ? { maxContextTokens: slice.maxContextTokens } : {}),
+        ...(slice.maxContextTokens !== undefined
+          ? { maxContextTokens: slice.maxContextTokens }
+          : {}),
         ...(slice.cwd ? { cwd: slice.cwd } : {}),
       }),
-    maxSessions: 4,  // TUI is single-user; 4 accommodates a few sub-sessions without runaway resource use
+    maxSessions: 4, // TUI is single-user; 4 accommodates a few sub-sessions without runaway resource use
     idleTtlMs: 30 * 60 * 1000,
   });
   chatManager.startIdleSweeper();
 
   // 5. Create in-process transport pair
   const [serverTransport, clientTransport] = createInProcessTransport();
+  // Must use the same configured root as every Engine created above; otherwise
+  // /resume can display/control a different state.json tree when users override
+  // session.storageDir.
+  const goalDiskManager = new SessionManager(settings.session.storageDir);
 
   // 6. Wire up AgentServer (wraps chatManager, handles protocol)
   const _server = new AgentServer({
     chatManager,
     transport: serverTransport,
     settingsReader: () => settingsManager.load(),
+    readActiveGoalFromDisk: (sessionId) => goalDiskManager.readActiveGoal(sessionId),
+    updateActiveGoalOnDisk: (sessionId, patch) =>
+      goalDiskManager.updateActiveGoal(sessionId, patch)?.goal,
+    clearActiveGoalOnDisk: (sessionId, expected) =>
+      goalDiskManager.clearActiveGoal(sessionId, expected),
   });
 
   // 7. Create AgentClient (UI-side)

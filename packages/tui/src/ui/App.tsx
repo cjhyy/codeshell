@@ -61,7 +61,10 @@ import { utilityCommands } from "../cli/commands/builtin/utility-commands.js";
 import { advancedCommands } from "../cli/commands/builtin/advanced-commands.js";
 import { extraCommands } from "../cli/commands/builtin/extra-commands.js";
 import { moreCommands } from "../cli/commands/builtin/more-commands.js";
-import { goalCommand } from "../cli/commands/builtin/goal-command.js";
+import {
+  canExecuteGoalCommandWhileRunning,
+  goalCommand,
+} from "../cli/commands/builtin/goal-command.js";
 import { imageCommand } from "../cli/commands/builtin/image-command.js";
 import { buildPluginSlashCommands } from "../cli/commands/builtin/plugin-commands-registration.js";
 import type { ApprovalRequest, StreamEvent, TaskInfo } from "@cjhyy/code-shell-core";
@@ -118,6 +121,72 @@ export function shouldDrainBackgroundNotifications(opts: {
   return typeof opts.sessionId === "string" && opts.sessionId.length > 0;
 }
 
+/** Commands that are safe to execute without starting a second model run. */
+export function canExecuteCommandWhileRunning(input: string): boolean {
+  const [head = "", ...rest] = input.trim().split(/\s+/);
+  const normalizedHead = head.toLowerCase();
+  if (normalizedHead === "/sid" || normalizedHead === "/help") return true;
+  return normalizedHead === "/goal" && canExecuteGoalCommandWhileRunning(rest.join(" "));
+}
+
+/** Strict `(goalId, revision)` match used before applying terminal events. */
+export function goalEventMatchesActive(
+  activeGoalId: string | null,
+  activeRevision: number | null,
+  eventGoalId: string | undefined,
+  eventRevision: number | undefined,
+): boolean {
+  if ((eventGoalId ?? null) !== activeGoalId) return false;
+  if (activeRevision === null && eventRevision === undefined) return true;
+  return activeRevision !== null && eventRevision === activeRevision;
+}
+
+function shouldApplyGoalUpdateEvent(
+  activeGoalId: string | null,
+  activeRevision: number | null,
+  eventGoalId: string | undefined,
+  eventRevision: number | undefined,
+): boolean {
+  if (activeGoalId !== null && eventGoalId !== activeGoalId) return false;
+  if (activeRevision !== null && (eventRevision === undefined || eventRevision < activeRevision)) {
+    return false;
+  }
+  return true;
+}
+
+/** A mutation response may never overwrite a newer stream/event snapshot. */
+export function goalUpdateResponseIsFresh(
+  activeGoalId: string | null,
+  activeRevision: number | null,
+  responseGoalId: string | undefined,
+  responseRevision: number | undefined,
+): boolean {
+  if (!activeGoalId || !responseGoalId || responseGoalId !== activeGoalId) return false;
+  if (responseRevision === undefined) return false;
+  return activeRevision === null || responseRevision >= activeRevision;
+}
+
+const CANCELLED_RUN_LIFECYCLE_EVENTS = new Set<StreamEvent["type"]>([
+  "session_started",
+  "turn_complete",
+  "goal_set",
+  "goal_updated",
+  "goal_cleared",
+  "goal_progress",
+]);
+
+/** Hide late presentation events from a cancelled local run until its response boundary. */
+export function shouldSuppressCancelledMainStreamEvent(
+  cancelledRunPending: boolean,
+  event: StreamEvent,
+): boolean {
+  return (
+    cancelledRunPending &&
+    (event as { agentId?: string }).agentId === undefined &&
+    !CANCELLED_RUN_LIFECYCLE_EVENTS.has(event.type)
+  );
+}
+
 function formatCommandError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -167,6 +236,8 @@ interface AppProps {
   sessionId?: string;
   /** Pre-fill the input box without submitting (--prefill flag). */
   prefill?: string;
+  /** Optional lifecycle guard injection for focused UI tests. */
+  queryGuard?: QueryGuard;
 }
 
 export function App({
@@ -178,6 +249,7 @@ export function App({
   maxContextTokens,
   sessionId: initialSessionId,
   prefill,
+  queryGuard: providedQueryGuard,
 }: AppProps) {
   // Perf probe: count every App body invocation. Pairs with the 1s
   // aggregator in perf-probes.ts to expose re-render storms.
@@ -216,7 +288,7 @@ export function App({
     };
   }, [tasks]);
 
-  const queryGuard = useRef(new QueryGuard()).current;
+  const queryGuard = useRef(providedQueryGuard ?? new QueryGuard()).current;
   const isQueryActive = useSyncExternalStore(queryGuard.subscribe, queryGuard.getSnapshot);
   const hasRunningBgAgents = useSyncExternalStore(
     asyncAgentRegistry.subscribe,
@@ -290,14 +362,62 @@ export function App({
   // Image attachments staged by the `/image` command, drained on next
   // submitToEngine. See `cli/commands/builtin/image-command.ts`.
   const pendingImagesRef = useRef<string[]>([]);
-  // Persistent goal (CC /goal) staged by the `/goal` command, drained on the
-  // next submitToEngine. Once set in core it persists across sends until met
-  // or cleared, so we only need to pass it on the submit that establishes it.
-  const pendingGoalRef = useRef<string | null>(null);
   // Best-effort mirror of the session's active goal objective for /goal status.
   // Set when /goal submits one, cleared on /goal clear or a goal_progress(met).
   const activeGoalRef = useRef<string | null>(null);
   const activeGoalIdRef = useRef<string | null>(null);
+  const activeGoalRevisionRef = useRef<number | null>(null);
+  const activeGoalPausedRef = useRef(false);
+  const activeGoalLegacyRef = useRef(false);
+  const activeGoalSessionIdRef = useRef<string | null>(initialSessionId ?? null);
+  // Invalidates a slower goalGet hydrate whenever a stream/local control has
+  // already supplied newer state for the same session.
+  const goalMirrorEpochRef = useRef(0);
+
+  useEffect(() => {
+    const hydrateSessionId = sessionId;
+    const epoch = ++goalMirrorEpochRef.current;
+    if (!hydrateSessionId) {
+      activeGoalRef.current = null;
+      activeGoalIdRef.current = null;
+      activeGoalRevisionRef.current = null;
+      activeGoalPausedRef.current = false;
+      activeGoalLegacyRef.current = false;
+      activeGoalSessionIdRef.current = null;
+      return;
+    }
+    if (activeGoalSessionIdRef.current !== hydrateSessionId) {
+      activeGoalRef.current = null;
+      activeGoalIdRef.current = null;
+      activeGoalRevisionRef.current = null;
+      activeGoalPausedRef.current = false;
+      activeGoalLegacyRef.current = false;
+      activeGoalSessionIdRef.current = hydrateSessionId;
+    }
+    void client
+      .goalGetState(hydrateSessionId)
+      .then((goal) => {
+        if (
+          goalMirrorEpochRef.current !== epoch ||
+          sidRef.current !== hydrateSessionId ||
+          activeGoalSessionIdRef.current !== hydrateSessionId
+        ) {
+          return;
+        }
+        activeGoalRef.current = goal?.objective ?? null;
+        activeGoalIdRef.current = goal?.goalId ?? null;
+        activeGoalRevisionRef.current = goal?.revision ?? null;
+        activeGoalPausedRef.current = goal?.paused === true;
+        activeGoalLegacyRef.current =
+          !!goal && (goal.goalId === undefined || goal.revision === undefined);
+      })
+      .catch((error) => {
+        uiLog.warn("goal hydrate failed", {
+          sessionId: hydrateSessionId,
+          error: formatCommandError(error),
+        });
+      });
+  }, [client, sessionId]);
   const [showBanner, setShowBanner] = useState(true);
   const [totalTokens, setTotalTokens] = useState(0);
   const [totalCost, setTotalCost] = useState(0);
@@ -345,6 +465,14 @@ export function App({
   // turn-duration / status entry into chat. Cleared at the top of each new
   // submit.
   const cancelledRef = useRef(false);
+  /** Monotonic cancellation fence captured independently by each local run. */
+  const cancellationEpochRef = useRef(0);
+  /** Local Run whose transport response has not been parsed yet. */
+  const localRunTokenRef = useRef<number | null>(null);
+  /** Cancelled local requests whose late stream may still precede their response. */
+  const cancelledLocalRunTokensRef = useRef(new Set<number>());
+  /** External run cancelled optimistically but not yet at its turn_complete boundary. */
+  const cancelledExternalRunPendingRef = useRef(false);
 
   // P1.6: Transcript mode — toggle between prompt and read-only transcript view
   const [screen, setScreen] = useState<"prompt" | "transcript">("prompt");
@@ -563,6 +691,23 @@ export function App({
     }
   }, []);
 
+  /** Commit the shared stream presentation state at a top-level turn boundary. */
+  const finalizeStreamPresentation = useCallback(() => {
+    if (flushTimerRef.current) {
+      clearTimeout(flushTimerRef.current);
+      flushTimerRef.current = null;
+    }
+    flushTextBuffer();
+    chatStore.update((prev) =>
+      prev
+        .filter((e) => e.type !== "thinking" && e.type !== "tool_running")
+        .map((e) => (e.type === "assistant_text" && e.streaming ? { ...e, streaming: false } : e)),
+    );
+    setStreamMode("thinking");
+    setThinkingContent(null);
+    clearThinkingBuffer();
+  }, [clearThinkingBuffer, flushTextBuffer]);
+
   useEffect(() => {
     return () => {
       if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
@@ -573,9 +718,10 @@ export function App({
   // ─── Stream event handler (wired to client) ───────────────────
 
   const handleStreamEvent = useCallback(
-    (event: StreamEvent) => {
+    (event: StreamEvent, sourceSessionId?: string) => {
       const agentId = (event as any).agentId as string | undefined;
       recordStreamEvent(event.type, agentId);
+      if (shouldSuppressCancelledMainStreamEvent(cancelledRef.current, event)) return;
       // session_started carries the authoritative sid; use it directly so the
       // record lands in the correct dir even before sidRef has caught up.
       const eventSid = event.type === "session_started" ? event.sessionId : sidRef.current;
@@ -586,11 +732,22 @@ export function App({
 
       switch (event.type) {
         case "session_started":
+          if (agentId !== undefined) break;
           // Server tells us the authoritative sid up-front so /sid works
           // mid-turn. setSessionId at run-completion (line ~672) still runs
           // but is now redundant for the first run; resumed runs already
           // had the sid from initialSessionId.
+          sidRef.current = event.sessionId;
           setSessionId(event.sessionId);
+          // Goal Resume and background wakeups are server-driven turns rather
+          // than client.run promises. Reflect them in the same guard so input,
+          // Steer routing and ESC cancel semantics stay identical.
+          // A pending local Run owns its own session_started even if ESC already
+          // released the UI guard. Its exact response clears this ref before a
+          // queued external session_started can be parsed.
+          if (localRunTokenRef.current === null && queryGuard.startExternal() !== null) {
+            cancelledRef.current = false;
+          }
           // Engine only sends promptTokens > 0 on the first turn of a sid
           // (cold start / cross-process resume). On subsequent turns it sends
           // 0 to avoid clobbering the accurate value we already have from the
@@ -602,6 +759,16 @@ export function App({
               value: event.promptTokens,
             });
             setContextTokens(event.promptTokens);
+          }
+          break;
+
+        case "turn_complete":
+          if (agentId === undefined && queryGuard.endExternal()) {
+            finalizeStreamPresentation();
+          }
+          if (agentId === undefined && cancelledExternalRunPendingRef.current) {
+            cancelledExternalRunPendingRef.current = false;
+            if (cancelledLocalRunTokensRef.current.size === 0) cancelledRef.current = false;
           }
           break;
 
@@ -824,18 +991,65 @@ export function App({
           // Mirror the active goal for /goal status (objective also staged by
           // the /goal command; this catches goals set elsewhere too).
           const ev = event as Extract<StreamEvent, { type: "goal_set" }>;
+          if (
+            activeGoalIdRef.current === (ev.goalId ?? null) &&
+            !shouldApplyGoalUpdateEvent(
+              activeGoalIdRef.current,
+              activeGoalRevisionRef.current,
+              ev.goalId,
+              ev.revision,
+            )
+          ) {
+            break;
+          }
+          goalMirrorEpochRef.current += 1;
           activeGoalRef.current = ev.objective;
           activeGoalIdRef.current = ev.goalId ?? null;
+          activeGoalRevisionRef.current = ev.revision ?? null;
+          activeGoalPausedRef.current = ev.paused === true;
+          activeGoalLegacyRef.current = ev.goalId === undefined || ev.revision === undefined;
+          activeGoalSessionIdRef.current = sourceSessionId ?? sidRef.current ?? null;
+          break;
+        }
+
+        case "goal_updated": {
+          const ev = event as Extract<StreamEvent, { type: "goal_updated" }>;
+          if (
+            !shouldApplyGoalUpdateEvent(
+              activeGoalIdRef.current,
+              activeGoalRevisionRef.current,
+              ev.goalId,
+              ev.revision,
+            )
+          ) {
+            break;
+          }
+          goalMirrorEpochRef.current += 1;
+          activeGoalRef.current = ev.objective;
+          activeGoalIdRef.current = ev.goalId ?? null;
+          activeGoalRevisionRef.current = ev.revision ?? null;
+          activeGoalPausedRef.current = ev.paused;
+          activeGoalLegacyRef.current = ev.goalId === undefined || ev.revision === undefined;
+          activeGoalSessionIdRef.current = sourceSessionId ?? sidRef.current ?? null;
           break;
         }
 
         case "goal_cleared": {
           const ev = event as Extract<StreamEvent, { type: "goal_cleared" }>;
           if (
-            ev.goalId ? activeGoalIdRef.current === ev.goalId : activeGoalIdRef.current === null
+            goalEventMatchesActive(
+              activeGoalIdRef.current,
+              activeGoalRevisionRef.current,
+              ev.goalId,
+              ev.revision,
+            )
           ) {
+            goalMirrorEpochRef.current += 1;
             activeGoalRef.current = null;
             activeGoalIdRef.current = null;
+            activeGoalRevisionRef.current = null;
+            activeGoalPausedRef.current = false;
+            activeGoalLegacyRef.current = false;
           }
           break;
         }
@@ -845,10 +1059,19 @@ export function App({
           const ev = event as Extract<StreamEvent, { type: "goal_progress" }>;
           if (
             (ev.status === "met" || ev.status === "exhausted") &&
-            (ev.goalId ? activeGoalIdRef.current === ev.goalId : activeGoalIdRef.current === null)
+            goalEventMatchesActive(
+              activeGoalIdRef.current,
+              activeGoalRevisionRef.current,
+              ev.goalId,
+              ev.revision,
+            )
           ) {
+            goalMirrorEpochRef.current += 1;
             activeGoalRef.current = null;
             activeGoalIdRef.current = null;
+            activeGoalRevisionRef.current = null;
+            activeGoalPausedRef.current = false;
+            activeGoalLegacyRef.current = false;
           }
           break;
         }
@@ -889,6 +1112,9 @@ export function App({
           // Sub-agent errors belong in the dock/detail view; don't pollute
           // the main feed (see stream_request_start above).
           if (agentId !== undefined) break;
+          // Error is not a lifecycle terminal: normal Engine failures are
+          // followed by turn_complete, while control-plane errors may not own
+          // a run at all. Only turn_complete may release an external guard.
           const errorText = event.error;
           const errorKind = classifyError(errorText);
           chatStore.update((prev) => {
@@ -906,14 +1132,21 @@ export function App({
         }
       }
     },
-    [flushTextBuffer],
+    [clearThinkingBuffer, finalizeStreamPresentation, flushTextBuffer, queryGuard],
   );
 
   // Wire stream events from client
   useEffect(() => {
-    // T10 changed onStreamEvent signature to pass an envelope { sessionId, event }.
-    // Unwrap to the legacy event-only signature; T12 will properly thread sessionId.
-    const envelopeHandler = (envelope: any) => handleStreamEvent(envelope.event);
+    const envelopeHandler = (envelope: { sessionId?: string; event: StreamEvent }) => {
+      const currentSessionId = sidRef.current;
+      // A background wake or another TCP client must not mutate the currently
+      // rendered session. The first run has no sid yet, so its authoritative
+      // session_started envelope is allowed through.
+      if (currentSessionId && envelope.sessionId && envelope.sessionId !== currentSessionId) {
+        return;
+      }
+      handleStreamEvent(envelope.event, envelope.sessionId);
+    };
     client.onStreamEvent(envelopeHandler);
     return () => client.offStreamEvent(envelopeHandler);
   }, [client, handleStreamEvent]);
@@ -1158,7 +1391,8 @@ export function App({
         // shows what the model had produced before Esc.
         chatStore.update((prev) => prev.filter((e) => e.type !== "tool_running"));
         chatStore.commitInterruptedStreaming("\n\n[Request interrupted by user]");
-        queryGuard.forceEnd("user-cancel");
+        const cancelledOwner = queryGuard.forceEnd("user-cancel");
+        if (cancelledOwner === "external") cancelledExternalRunPendingRef.current = true;
         // Multi-session server rejects cancel without a sessionId; pass the
         // current session so the underlying run actually aborts (not just the
         // optimistic UI flip). Log failures instead of swallowing them.
@@ -1171,6 +1405,10 @@ export function App({
           if (a.status === "running") asyncAgentRegistry.cancel(a.agentId);
         }
         // Same optimistic-cancel path as ESC — see cancelledRef comment.
+        if (localRunTokenRef.current !== null) {
+          cancelledLocalRunTokensRef.current.add(localRunTokenRef.current);
+        }
+        cancellationEpochRef.current += 1;
         cancelledRef.current = true;
         setStreamMode("thinking");
         setThinkingContent(null);
@@ -1221,7 +1459,8 @@ export function App({
       flushTextBuffer();
       chatStore.update((prev) => prev.filter((e) => e.type !== "tool_running"));
       chatStore.commitInterruptedStreaming("\n\n[Request interrupted by user]");
-      queryGuard.forceEnd("user-cancel");
+      const cancelledOwner = queryGuard.forceEnd("user-cancel");
+      if (cancelledOwner === "external") cancelledExternalRunPendingRef.current = true;
       // Multi-session server rejects cancel without a sessionId — pass it so
       // the run truly aborts. See ctrl+c branch above.
       client
@@ -1232,6 +1471,10 @@ export function App({
       // socket teardown), and the awaited client.run() in handleSubmit will
       // eventually resolve/reject — cancelledRef tells that path to skip the
       // late "aborted" error / turn-duration entries.
+      if (localRunTokenRef.current !== null) {
+        cancelledLocalRunTokensRef.current.add(localRunTokenRef.current);
+      }
+      cancellationEpochRef.current += 1;
       cancelledRef.current = true;
       setStreamMode("thinking");
       setThinkingContent(null);
@@ -1316,20 +1559,40 @@ export function App({
   const submitToEngine = useCallback(
     async (
       message: string,
-      opts: { asInjection: boolean; chatSummary?: string },
-    ): Promise<void> => {
-      if (!queryGuard.reserve()) return; // already busy → ignore concurrent submit
+      opts: { asInjection: boolean; chatSummary?: string; goal?: string },
+    ): Promise<boolean> => {
+      const guardToken = queryGuard.reserve();
+      if (guardToken === null) return false;
+      const runCancellationEpoch = cancellationEpochRef.current;
+      const runWasCancelled = () => cancellationEpochRef.current !== runCancellationEpoch;
       streamingTokensRef.current = 0;
-      cancelledRef.current = false;
+      if (
+        cancelledLocalRunTokensRef.current.size === 0 &&
+        !cancelledExternalRunPendingRef.current
+      ) {
+        cancelledRef.current = false;
+      }
       // taskManager removed — tasks live in the transcript now; engine
       // emits task_update on resume so the UI re-hydrates without a
       // module-level reset.
 
       const abortController = new AbortController();
-      if (!queryGuard.tryStart(abortController)) {
+      if (!queryGuard.tryStart(abortController, guardToken)) {
         // Race-safety check — should be unreachable since reserve just succeeded
-        queryGuard.cancelReservation();
-        return;
+        queryGuard.cancelReservation(guardToken);
+        return false;
+      }
+      localRunTokenRef.current = guardToken;
+
+      const goal = !opts.asInjection ? opts.goal?.trim() || null : null;
+      const stagedGoalEpoch = goal ? ++goalMirrorEpochRef.current : null;
+      if (goal) {
+        activeGoalRef.current = goal;
+        activeGoalIdRef.current = null;
+        activeGoalRevisionRef.current = null;
+        activeGoalPausedRef.current = false;
+        activeGoalLegacyRef.current = false;
+        activeGoalSessionIdRef.current = sidRef.current ?? sessionId ?? null;
       }
 
       // After reserving the engine slot, commit the chat entry. Appending
@@ -1348,6 +1611,7 @@ export function App({
         chatStore.update((prev) => [...prev, entry({ type: "user", text: message })]);
       }
 
+      let streamPresentationFinalized = false;
       try {
         // For real user input: prepend pending /arena-style context if any.
         // Injections do not honor pendingContext (it belongs to the user
@@ -1377,34 +1641,42 @@ export function App({
           pendingImagesRef.current = [];
         }
 
-        // Drain a staged persistent goal (/goal). Passed only on this submit;
-        // core persists it on the session for subsequent bare sends.
-        const goal = !opts.asInjection ? pendingGoalRef.current : null;
-        pendingGoalRef.current = null;
+        const handleTransportResponse = () => {
+          const released = queryGuard.endLocalResponse(guardToken);
+          if (localRunTokenRef.current === guardToken) localRunTokenRef.current = null;
+          cancelledLocalRunTokensRef.current.delete(guardToken);
+          if (
+            cancelledLocalRunTokensRef.current.size === 0 &&
+            !cancelledExternalRunPendingRef.current
+          ) {
+            cancelledRef.current = false;
+          }
+          // Finalize this run synchronously before the transport can parse a
+          // queued external turn's early stream events from the same chunk.
+          if (released && !runWasCancelled() && !streamPresentationFinalized) {
+            finalizeStreamPresentation();
+            streamPresentationFinalized = true;
+          }
+        };
         const result = goal
-          ? await client.run({ task: engineMessage, sessionId: sessionId ?? "", goal })
-          : await client.run(engineMessage, sessionId);
+          ? await client.run(
+              { task: engineMessage, sessionId: sessionId ?? "", goal },
+              undefined,
+              handleTransportResponse,
+            )
+          : await client.run(engineMessage, sessionId, handleTransportResponse);
 
         // ESC / Ctrl+C took us through the optimistic-cancel path — UI is
         // already idle, history rewound. Don't append turn-duration / status
         // entries from this resolution (would arrive 1–7s after ESC).
-        if (cancelledRef.current) {
-          return;
+        if (runWasCancelled()) {
+          return true;
         }
 
-        if (flushTimerRef.current) {
-          clearTimeout(flushTimerRef.current);
-          flushTimerRef.current = null;
+        if (!streamPresentationFinalized) {
+          finalizeStreamPresentation();
+          streamPresentationFinalized = true;
         }
-        flushTextBuffer();
-
-        chatStore.update((prev) =>
-          prev
-            .filter((e) => e.type !== "thinking" && e.type !== "tool_running")
-            .map((e) =>
-              e.type === "assistant_text" && e.streaming ? { ...e, streaming: false } : e,
-            ),
-        );
 
         setSessionId(result.sessionId);
         setTotalTokens(costTracker.getTotalTokens().total);
@@ -1438,7 +1710,27 @@ export function App({
           ]);
         }
       } catch (err) {
-        if (!cancelledRef.current) {
+        if (goal && stagedGoalEpoch !== null) {
+          const goalSessionId = sidRef.current ?? sessionId;
+          if (goalSessionId) {
+            try {
+              const authoritative = await client.goalGetState(goalSessionId);
+              if (goalMirrorEpochRef.current === stagedGoalEpoch) {
+                activeGoalRef.current = authoritative?.objective ?? null;
+                activeGoalIdRef.current = authoritative?.goalId ?? null;
+                activeGoalRevisionRef.current = authoritative?.revision ?? null;
+                activeGoalPausedRef.current = authoritative?.paused === true;
+                activeGoalLegacyRef.current =
+                  !!authoritative &&
+                  (authoritative.goalId === undefined || authoritative.revision === undefined);
+              }
+            } catch {
+              // Preserve the optimistic mirror when the authoritative read is
+              // unavailable; a later session hydrate will reconcile it.
+            }
+          }
+        }
+        if (!runWasCancelled()) {
           chatStore.update((prev) => [
             ...prev,
             entry({ type: "error", error: friendlyError((err as Error).message) }),
@@ -1447,16 +1739,25 @@ export function App({
       } finally {
         // end() is idempotent — safe to call even if forceEnd already released
         // the guard (ESC/Ctrl+C path).
-        queryGuard.end();
+        queryGuard.end(guardToken);
+        if (localRunTokenRef.current === guardToken) localRunTokenRef.current = null;
+        cancelledLocalRunTokensRef.current.delete(guardToken);
+        if (
+          cancelledLocalRunTokensRef.current.size === 0 &&
+          !cancelledExternalRunPendingRef.current
+        ) {
+          cancelledRef.current = false;
+        }
       }
 
-      if (!cancelledRef.current) {
+      if (!runWasCancelled() && !streamPresentationFinalized) {
         setStreamMode("thinking");
         setThinkingContent(null);
         clearThinkingBuffer();
       }
+      return true;
     },
-    [client, sessionId, model, flushTextBuffer, clearThinkingBuffer],
+    [client, sessionId, model, clearThinkingBuffer, finalizeStreamPresentation],
   );
 
   // Background sub-agent completion → main-agent turn injection.
@@ -1531,7 +1832,6 @@ export function App({
       if (!trimmed) return;
 
       const head = trimmed.split(/\s+/)[0]?.toLowerCase();
-      const READ_ONLY_WHILE_RUNNING = new Set(["/sid", "/help"]);
       if (isQueryActive && head === "/force") {
         const next = trimmed.slice("/force".length).trim();
         if (next) setQueuedInputs((prev) => [...prev, next]);
@@ -1541,7 +1841,7 @@ export function App({
           .catch((err) => uiLog.warn("/force cancel failed", { err: String(err) }));
         return;
       }
-      if (isQueryActive && !READ_ONLY_WHILE_RUNNING.has(head ?? "")) {
+      if (isQueryActive && !canExecuteCommandWhileRunning(trimmed)) {
         setQueuedInputs((prev) => [...prev, trimmed]);
         setInput("");
         return;
@@ -1577,6 +1877,28 @@ export function App({
         addStatus(commandRegistry.helpText());
         return;
       }
+
+      const reconcileGoalMirror = async (goalSessionId: string): Promise<void> => {
+        const epoch = goalMirrorEpochRef.current;
+        try {
+          const authoritative = await client.goalGetState(goalSessionId);
+          if (goalMirrorEpochRef.current !== epoch || sidRef.current !== goalSessionId) return;
+          goalMirrorEpochRef.current += 1;
+          activeGoalRef.current = authoritative?.objective ?? null;
+          activeGoalIdRef.current = authoritative?.goalId ?? null;
+          activeGoalRevisionRef.current = authoritative?.revision ?? null;
+          activeGoalPausedRef.current = authoritative?.paused === true;
+          activeGoalLegacyRef.current =
+            !!authoritative &&
+            (authoritative.goalId === undefined || authoritative.revision === undefined);
+          activeGoalSessionIdRef.current = goalSessionId;
+        } catch (error) {
+          uiLog.warn("goal mutation reconcile failed", {
+            sessionId: goalSessionId,
+            error: formatCommandError(error),
+          });
+        }
+      };
 
       const cmdCtx = {
         client,
@@ -1650,16 +1972,104 @@ export function App({
           list: () => pendingImagesRef.current,
         },
         activeGoal: activeGoalRef.current,
+        activeGoalPaused: activeGoalPausedRef.current,
+        activeGoalVersionReady:
+          activeGoalIdRef.current !== null && activeGoalRevisionRef.current !== null,
+        activeGoalLegacy: activeGoalLegacyRef.current,
         submitGoal: (objective: string) => {
-          pendingGoalRef.current = objective;
-          activeGoalRef.current = objective;
-          activeGoalIdRef.current = null;
-          void submitToEngine(objective, { asInjection: false });
+          void submitToEngine(objective, { asInjection: false, goal: objective }).then(
+            (accepted) => {
+              if (!accepted) setQueuedInputs((prev) => [`/goal ${objective}`, ...prev]);
+            },
+          );
+        },
+        updateGoal: async (patch: { objective?: string; paused?: boolean }) => {
+          const goalSessionId = sidRef.current ?? sessionId;
+          const expectedGoalId = activeGoalIdRef.current;
+          const expectedRevision = activeGoalRevisionRef.current;
+          if (!goalSessionId || !expectedGoalId || expectedRevision === null) return false;
+          const goal = await client.goalUpdate(goalSessionId, {
+            ...patch,
+            expectedGoalId,
+            expectedRevision,
+          });
+          if (!goal) {
+            await reconcileGoalMirror(goalSessionId);
+            return false;
+          }
+          if (
+            sidRef.current === goalSessionId &&
+            goalUpdateResponseIsFresh(
+              activeGoalIdRef.current,
+              activeGoalRevisionRef.current,
+              goal.goalId,
+              goal.revision,
+            )
+          ) {
+            goalMirrorEpochRef.current += 1;
+            activeGoalRef.current = goal.objective;
+            activeGoalIdRef.current = goal.goalId ?? null;
+            activeGoalRevisionRef.current = goal.revision ?? null;
+            activeGoalPausedRef.current = goal.paused === true;
+            activeGoalLegacyRef.current = false;
+            activeGoalSessionIdRef.current = goalSessionId;
+          }
+          return true;
+        },
+        deleteGoal: async () => {
+          const goalSessionId = sidRef.current ?? sessionId;
+          const goalId = activeGoalIdRef.current;
+          const revision = activeGoalRevisionRef.current;
+          const mutationEpoch = goalMirrorEpochRef.current;
+          const legacy = activeGoalLegacyRef.current;
+          if (!goalSessionId) return false;
+          const deleted =
+            goalId && revision !== null
+              ? await client.goalDelete(goalSessionId, { goalId, revision })
+              : legacy
+                ? await client.goalClear(goalSessionId)
+                : false;
+          if (!deleted) {
+            await reconcileGoalMirror(goalSessionId);
+            return false;
+          }
+          const stillOwnsDeletedVersion =
+            goalId && revision !== null
+              ? goalEventMatchesActive(
+                  activeGoalIdRef.current,
+                  activeGoalRevisionRef.current,
+                  goalId,
+                  revision,
+                )
+              : legacy && goalMirrorEpochRef.current === mutationEpoch;
+          if (sidRef.current === goalSessionId && stillOwnsDeletedVersion) {
+            goalMirrorEpochRef.current += 1;
+            activeGoalRef.current = null;
+            activeGoalIdRef.current = null;
+            activeGoalRevisionRef.current = null;
+            activeGoalPausedRef.current = false;
+            activeGoalLegacyRef.current = false;
+          }
+          return deleted;
         },
         clearGoal: async () => {
-          const cleared = await client.goalClear(sidRef.current);
-          activeGoalRef.current = null;
-          activeGoalIdRef.current = null;
+          const goalSessionId = sidRef.current;
+          const mutationEpoch = goalMirrorEpochRef.current;
+          const cleared = await client.goalClear(goalSessionId);
+          if (
+            cleared &&
+            sidRef.current === goalSessionId &&
+            goalMirrorEpochRef.current === mutationEpoch
+          ) {
+            goalMirrorEpochRef.current += 1;
+            activeGoalRef.current = null;
+            activeGoalIdRef.current = null;
+            activeGoalRevisionRef.current = null;
+            activeGoalPausedRef.current = false;
+            activeGoalLegacyRef.current = false;
+          } else if (!cleared && goalSessionId) {
+            await reconcileGoalMirror(goalSessionId);
+          }
           return cleared;
         },
       };

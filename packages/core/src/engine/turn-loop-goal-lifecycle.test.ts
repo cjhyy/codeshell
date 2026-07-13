@@ -53,7 +53,7 @@ function makeTurnLoopDeps(
   options: {
     hook?: (event: string, data?: Record<string, unknown>) => Promise<HookResult> | HookResult;
     execute?: (call: ToolCall) => Promise<ToolResult>;
-    clearPersistedGoal?: () => void;
+    clearPersistedGoal?: () => boolean | void;
     publishGoalJudgeContext?: (context: GoalJudgeRuntimeContext) => void;
     callDelayMs?: number;
   } = {},
@@ -204,6 +204,252 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     }).run([{ role: "user", content: "stop" }]);
 
     expect(events).toContainEqual({ type: "goal_cleared", goalId: "goal-cancel" });
+  });
+
+  it("does not let an old model response complete an edited Goal revision", async () => {
+    const events: StreamEvent[] = [];
+    let clearCalls = 0;
+    const { deps, calls } = makeTurnLoopDeps(
+      [
+        toolResponse({
+          id: "complete-old-revision",
+          toolName: COMPLETE_GOAL_TOOL_NAME,
+          args: { summary: "the old objective is done" },
+        }),
+        stopResponse("continuing under the edited objective"),
+      ],
+      { clearPersistedGoal: () => clearCalls++, callDelayMs: 20 },
+    );
+    const loop = new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "old objective", goalId: "goal-edit", revision: 1 },
+      onStream: (event) => events.push(event),
+    });
+
+    const running = loop.run([{ role: "user", content: "work on the old objective" }]);
+    await Bun.sleep(5);
+    loop.updateGoal(
+      { objective: "new objective", goalId: "goal-edit", revision: 2 },
+      "目标已编辑。新的目标：new objective",
+    );
+    await running;
+
+    expect(clearCalls).toBe(0);
+    expect(
+      events.some(
+        (event) =>
+          event.type === "goal_progress" && event.status === "met" && event.goalId === "goal-edit",
+      ),
+    ).toBe(false);
+    expect(calls).toHaveLength(2);
+    expect(JSON.stringify(calls[1])).toContain("新的目标：new objective");
+  });
+
+  it("does not let an old model response cancel a resumed Goal revision", async () => {
+    const events: StreamEvent[] = [];
+    let clearCalls = 0;
+    const { deps } = makeTurnLoopDeps(
+      [
+        toolResponse({
+          id: "cancel-old-revision",
+          toolName: CANCEL_GOAL_TOOL_NAME,
+          args: { confirm: true, reason: "old prompt" },
+        }),
+        stopResponse("the resumed goal remains active"),
+      ],
+      { clearPersistedGoal: () => clearCalls++, callDelayMs: 20 },
+    );
+    const loop = new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "goal", goalId: "goal-resume", revision: 1 },
+      onStream: (event) => events.push(event),
+    });
+
+    const running = loop.run([{ role: "user", content: "work" }]);
+    await Bun.sleep(5);
+    loop.updateGoal({ objective: "goal", goalId: "goal-resume", revision: 3 }, "目标已恢复：goal");
+    await running;
+
+    expect(clearCalls).toBe(0);
+    expect(events.some((event) => event.type === "goal_cleared")).toBe(false);
+  });
+
+  it("stops before another model call when pause/delete arrives during a tool batch", async () => {
+    let markToolStarted!: () => void;
+    let releaseTool!: () => void;
+    const toolStarted = new Promise<void>((resolve) => {
+      markToolStarted = resolve;
+    });
+    const toolRelease = new Promise<void>((resolve) => {
+      releaseTool = resolve;
+    });
+    const { deps, calls, executedTools } = makeTurnLoopDeps(
+      [
+        toolResponse({ id: "current-tool", toolName: "Write", args: {} }),
+        stopResponse("must never be requested"),
+      ],
+      {
+        execute: async (call) => {
+          markToolStarted();
+          await toolRelease;
+          return { id: call.id, toolName: call.toolName, result: "settled" };
+        },
+      },
+    );
+    const loop = new TurnLoop(deps, {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "finish", goalId: "goal-safe-stop", revision: 1 },
+    });
+
+    const running = loop.run([{ role: "user", content: "go" }]);
+    await toolStarted;
+    loop.updateGoal(undefined);
+    releaseTool();
+    const result = await running;
+
+    expect(result.reason).toBe("completed");
+    expect(executedTools).toHaveLength(1);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("does not start auxiliary or max-turn summaries after the final tool safe boundary", async () => {
+    let markToolStarted!: () => void;
+    let releaseTool!: () => void;
+    const toolStarted = new Promise<void>((resolve) => {
+      markToolStarted = resolve;
+    });
+    const toolRelease = new Promise<void>((resolve) => {
+      releaseTool = resolve;
+    });
+    let summaryCalls = 0;
+    const { deps, calls } = makeTurnLoopDeps(
+      [
+        toolResponse({ id: "last-tool", toolName: "Write", args: {} }),
+        stopResponse("must never be requested"),
+      ],
+      {
+        execute: async (call) => {
+          markToolStarted();
+          await toolRelease;
+          return { id: call.id, toolName: call.toolName, result: "settled" };
+        },
+      },
+    );
+    deps.model.summarize = async () => {
+      summaryCalls++;
+      return "must never be requested";
+    };
+    const loop = new TurnLoop(deps, {
+      maxTurns: 1,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "finish", goalId: "goal-last-safe-boundary", revision: 1 },
+      onStream: () => {},
+    });
+
+    const running = loop.run([{ role: "user", content: "go" }]);
+    await toolStarted;
+    loop.updateGoal(undefined);
+    releaseTool();
+    expect((await running).reason).toBe("completed");
+    await Promise.resolve();
+
+    expect(calls).toHaveLength(1);
+    expect(summaryCalls).toBe(0);
+  });
+
+  it("stops during async preflight without emitting or starting a model request", async () => {
+    let markPreflightStarted!: () => void;
+    let releasePreflight!: () => void;
+    const preflightStarted = new Promise<void>((resolve) => {
+      markPreflightStarted = resolve;
+    });
+    const preflightRelease = new Promise<void>((resolve) => {
+      releasePreflight = resolve;
+    });
+    const events: StreamEvent[] = [];
+    const { deps, calls } = makeTurnLoopDeps([stopResponse("must never be requested")]);
+    deps.contextManager.manageAsync = async (messages: Message[]) => {
+      markPreflightStarted();
+      await preflightRelease;
+      return messages;
+    };
+    const loop = new TurnLoop(deps, {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "finish", goalId: "goal-preflight-stop", revision: 1 },
+      onStream: (event) => events.push(event),
+    });
+
+    const running = loop.run([{ role: "user", content: "go" }]);
+    await preflightStarted;
+    loop.updateGoal(undefined);
+    releasePreflight();
+    expect((await running).reason).toBe("completed");
+    expect(calls).toHaveLength(0);
+    expect(events.some((event) => event.type === "stream_request_start")).toBe(false);
+  });
+
+  it("does not issue a max-output continuation after a goal pause/delete", async () => {
+    const truncated: LLMResponse = {
+      text: "partial",
+      toolCalls: [],
+      stopReason: "max_tokens",
+      usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+    };
+    const { deps, calls } = makeTurnLoopDeps([truncated, stopResponse("extra")], {
+      callDelayMs: 20,
+    });
+    const loop = new TurnLoop(deps, {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "finish", goalId: "goal-continuation-stop", revision: 1 },
+    });
+
+    const running = loop.run([{ role: "user", content: "go" }]);
+    await Bun.sleep(5);
+    loop.updateGoal(undefined);
+    await running;
+
+    expect(calls).toHaveLength(1);
+  });
+
+  it("keeps Goal mode active when complete_goal persistence fails", async () => {
+    const events: StreamEvent[] = [];
+    let persistCalls = 0;
+    const { deps, calls } = makeTurnLoopDeps(
+      [
+        toolResponse({
+          id: "complete-persist-failure",
+          toolName: COMPLETE_GOAL_TOOL_NAME,
+          args: { summary: "done" },
+        }),
+        stopResponse("cleanup still needs persistence"),
+      ],
+      {
+        clearPersistedGoal: () => {
+          persistCalls++;
+          return false;
+        },
+      },
+    );
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+      goal: { objective: "finish", goalId: "goal-persist-failure", revision: 1 },
+      onStream: (event) => events.push(event),
+    }).run([{ role: "user", content: "go" }]);
+
+    expect(result.reason).toBe("completed");
+    expect(persistCalls).toBe(1);
+    expect(calls).toHaveLength(2);
+    expect(events.some((event) => event.type === "goal_progress" && event.status === "met")).toBe(
+      false,
+    );
+    expect(JSON.stringify(result.messages)).toContain("complete_goal 未能持久化完成状态");
   });
 
   it("finalizes a stop-hook-blocked no-tool turn before continuing", async () => {

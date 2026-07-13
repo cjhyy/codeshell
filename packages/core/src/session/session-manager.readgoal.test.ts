@@ -25,7 +25,11 @@ describe("SessionManager.readActiveGoal", () => {
     const { state } = sm.create("/Users/me/proj", "m", "p", "s-1");
     state.activeGoal = { objective: "有授权 你直接帮我做完" };
     sm.saveState(state);
-    expect(sm.readActiveGoal("s-1")).toEqual({ objective: "有授权 你直接帮我做完" });
+    expect(sm.readActiveGoal("s-1")).toMatchObject({
+      objective: "有授权 你直接帮我做完",
+      revision: 1,
+    });
+    expect(sm.readActiveGoal("s-1")?.goalId).toStartWith("legacy-");
   });
 
   test("returns undefined when the session has no goal", () => {

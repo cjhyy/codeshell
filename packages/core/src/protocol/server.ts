@@ -26,6 +26,7 @@ import {
   type InjectParams,
   type SteerParams,
   type UnsteerParams,
+  type GoalUpdateParams,
   type PendingApprovalMetadata,
   type PetProjectionDelta,
   type PetProjectionSnapshotResult,
@@ -196,6 +197,20 @@ export interface AgentServerOptions {
   readActiveGoalFromDisk?: (
     sessionId: string,
   ) => import("../engine/goal.js").GoalConfig | undefined;
+  /** Disk controls for a persisted goal whose ChatSession is not live. */
+  updateActiveGoalOnDisk?: (
+    sessionId: string,
+    patch: {
+      objective?: string;
+      paused?: boolean;
+      expectedGoalId?: string;
+      expectedRevision?: number;
+    },
+  ) => import("../engine/goal.js").GoalConfig | undefined;
+  clearActiveGoalOnDisk?: (
+    sessionId: string,
+    expected?: { goalId?: string; revision?: number },
+  ) => boolean;
   /**
    * Enable the desktop workspace bridge channel. Off by default so generic
    * protocol hosts do not emit hidden workspace approval requests they cannot
@@ -219,6 +234,20 @@ export class AgentServer {
   /** Disk-only active-goal reader for agent/goalGet on a non-live session. */
   private readonly readActiveGoalFromDisk:
     | ((sessionId: string) => import("../engine/goal.js").GoalConfig | undefined)
+    | null;
+  private readonly updateActiveGoalOnDisk:
+    | ((
+        sessionId: string,
+        patch: {
+          objective?: string;
+          paused?: boolean;
+          expectedGoalId?: string;
+          expectedRevision?: number;
+        },
+      ) => import("../engine/goal.js").GoalConfig | undefined)
+    | null;
+  private readonly clearActiveGoalOnDisk:
+    | ((sessionId: string, expected?: { goalId?: string; revision?: number }) => boolean)
     | null;
   private readonly workspaceBridgeEnabled: boolean;
   private readonly connectionId: string;
@@ -294,6 +323,8 @@ export class AgentServer {
     this.legacyEngine = options.engine ?? null;
     this.settingsReader = options.settingsReader ?? null;
     this.readActiveGoalFromDisk = options.readActiveGoalFromDisk ?? null;
+    this.updateActiveGoalOnDisk = options.updateActiveGoalOnDisk ?? null;
+    this.clearActiveGoalOnDisk = options.clearActiveGoalOnDisk ?? null;
     this.workspaceBridgeEnabled = options.workspaceBridge === true;
     this.connectionId = options.connectionId ?? "legacy-agent-server";
     this.strictApprovalRouting = options.connectionId !== undefined;
@@ -575,6 +606,12 @@ export class AgentServer {
         break;
       case Methods.GoalExtend:
         this.handleGoalExtend(req);
+        break;
+      case Methods.GoalUpdate:
+        await this.handleGoalUpdate(req);
+        break;
+      case Methods.GoalDelete:
+        this.handleGoalClear(req, true);
         break;
       case Methods.GoalClear:
         this.handleGoalClear(req);
@@ -1362,18 +1399,305 @@ export class AgentServer {
     this.transport.send(createResponse(req.id, { ok: true, limits: result }));
   }
 
+  /** Reject destructive Goal controls owned by a different TCP connection. */
+  private authorizeGoalControl(req: RpcRequest, sessionId: string): boolean {
+    if (!this.strictApprovalRouting) return true;
+    const owner = this.approvalRouter.current(sessionId);
+    if (!owner || owner.connectionId === this.connectionId) return true;
+    this.transport.send(
+      createErrorResponse(
+        req.id,
+        ErrorCodes.Overloaded,
+        `Session ${sessionId} is owned by another connection`,
+      ),
+    );
+    return false;
+  }
+
+  /** Start a fully rebuilt Goal run for an idle or goal-less in-flight session. */
+  private async queueGoalResumeTurn(
+    sessionId: string,
+    goal: import("../engine/goal.js").GoalConfig,
+    existing?: import("./chat-session.js").ChatSession,
+  ): Promise<{ completion: Promise<boolean> } | null> {
+    if (!this.chatManager) return null;
+    let session = existing;
+    if (!session) {
+      // Let ChatSessionManager probe through its configured Engine factory so
+      // custom sessionStorageDir roots stay aligned with the host. The generic
+      // background-wakeup helper's default SessionManager probe is not safe for
+      // this cold-resume path.
+      session =
+        (await this.chatManager.getOrCreatePersisted(sessionId, {
+          projectTrusted: false,
+        })) ?? undefined;
+      if (!session) return null;
+      this.wireInteractiveSession(session, sessionId);
+    }
+    if (session.engine.isHeadless()) return null;
+    return {
+      completion: session.enqueueGoalResumeTurn(goal, {
+        onStream: (event: StreamEvent) => this.notify(Methods.StreamEvent, { sessionId, event }),
+        approvalRouter: this.approvalRouter,
+      }),
+    };
+  }
+
+  private reconcileFailedGoalResume(
+    sessionId: string,
+    goal: import("../engine/goal.js").GoalConfig,
+    claimedOwner: ApprovalRouteTarget | null,
+    error: unknown,
+  ): void {
+    const patch = {
+      paused: true,
+      expectedGoalId: goal.goalId,
+      expectedRevision: goal.revision,
+    };
+    const live = this.chatManager?.get(sessionId);
+    const rolledBack = live
+      ? live.updateGoal(patch)
+      : this.updateActiveGoalOnDisk?.(sessionId, patch);
+    const authoritative = rolledBack ?? live?.getGoal() ?? this.readActiveGoalFromDisk?.(sessionId);
+    if (authoritative) {
+      this.notify(Methods.StreamEvent, {
+        sessionId,
+        event: {
+          type: "goal_updated",
+          goalId: authoritative.goalId,
+          revision: authoritative.revision,
+          objective: authoritative.objective,
+          paused: authoritative.paused === true,
+        },
+      });
+    }
+    if (rolledBack && claimedOwner && this.approvalRouter.matches(claimedOwner)) {
+      this.approvalRouter.release(sessionId, this.connectionId, "goal resume turn was not queued");
+    }
+    logger.warn("goal.resume_turn_not_queued", {
+      sessionId,
+      goalId: goal.goalId,
+      revision: goal.revision,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    this.notify(Methods.StreamEvent, {
+      sessionId,
+      event: {
+        type: "error",
+        error: rolledBack
+          ? "Goal resume could not start; the Goal was paused again"
+          : "Goal resume could not start; Goal state changed before rollback",
+      },
+    });
+  }
+
+  /** Edit or pause/resume a persisted goal without replacing its identity. */
+  private async handleGoalUpdate(req: RpcRequest): Promise<void> {
+    const params = (req.params ?? {}) as unknown as GoalUpdateParams;
+    if (typeof params.sessionId !== "string" || !params.sessionId) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "sessionId is required"),
+      );
+      return;
+    }
+    if (params.objective === undefined && params.paused === undefined) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "objective or paused is required"),
+      );
+      return;
+    }
+    if (params.objective !== undefined && typeof params.objective !== "string") {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "objective must be a string"),
+      );
+      return;
+    }
+    if (params.objective !== undefined && !params.objective.trim()) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "objective must not be blank"),
+      );
+      return;
+    }
+    if (params.paused !== undefined && typeof params.paused !== "boolean") {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "paused must be boolean"),
+      );
+      return;
+    }
+    if (typeof params.expectedGoalId !== "string" || !params.expectedGoalId) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InvalidParams,
+          "expectedGoalId is required and must be a non-empty string",
+        ),
+      );
+      return;
+    }
+    if (
+      typeof params.expectedRevision !== "number" ||
+      !Number.isInteger(params.expectedRevision) ||
+      params.expectedRevision < 1
+    ) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InvalidParams,
+          "expectedRevision is required and must be a positive integer",
+        ),
+      );
+      return;
+    }
+    const patch = {
+      objective: params.objective,
+      paused: params.paused,
+      expectedGoalId: params.expectedGoalId,
+      expectedRevision: params.expectedRevision,
+    };
+    const session = this.chatManager?.get(params.sessionId);
+    const beforeGoal =
+      session?.getGoal?.() ??
+      this.legacyEngine?.getGoal(params.sessionId) ??
+      this.readActiveGoalFromDisk?.(params.sessionId);
+    const resumeInPlace = session?.canResumeGoalInPlace?.() === true;
+    // `paused:false` is also an explicit kick for an unpaused-but-idle Goal
+    // left behind by ESC, a model failure, or worker restart. A live Goal run
+    // consumes the update in place and must not enqueue a duplicate turn.
+    const driveRequested = !!beforeGoal && params.paused === false && !resumeInPlace;
+    if (!this.authorizeGoalControl(req, params.sessionId)) return;
+    if (driveRequested && !this.chatManager) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InvalidParams,
+          "Goal resume requires a multi-session host that can schedule a continuation turn",
+        ),
+      );
+      return;
+    }
+    let claimedResumeOwner: ApprovalRouteTarget | null = null;
+    if (
+      this.strictApprovalRouting &&
+      driveRequested &&
+      !this.approvalRouter.current(params.sessionId)
+    ) {
+      const registration = this.approvalRouter.register(params.sessionId, this.connectionId);
+      if (!registration.ok) {
+        this.transport.send(
+          createErrorResponse(
+            req.id,
+            ErrorCodes.Overloaded,
+            `Session ${params.sessionId} is owned by another connection`,
+          ),
+        );
+        return;
+      }
+      claimedResumeOwner = registration.target;
+    }
+    const goal = session
+      ? session.updateGoal(patch)
+      : this.legacyEngine
+        ? this.legacyEngine.updateGoal(params.sessionId, patch)
+        : this.updateActiveGoalOnDisk?.(params.sessionId, patch);
+    if (!goal) {
+      if (claimedResumeOwner && this.approvalRouter.matches(claimedResumeOwner)) {
+        this.approvalRouter.release(
+          params.sessionId,
+          this.connectionId,
+          "goal resume CAS did not apply",
+        );
+      }
+      // A missing/stale goal is an ordinary optimistic-concurrency miss, not a
+      // malformed request. Keep it in the result channel so Desktop, TUI and
+      // the no-worker fallback share one contract.
+      this.transport.send(createResponse(req.id, { ok: true, updated: false }));
+      return;
+    }
+    this.notify(Methods.StreamEvent, {
+      sessionId: params.sessionId,
+      event: {
+        type: "goal_updated",
+        ...(goal.goalId ? { goalId: goal.goalId } : {}),
+        ...(goal.revision ? { revision: goal.revision } : {}),
+        objective: goal.objective,
+        paused: goal.paused === true,
+      },
+    });
+    this.transport.send(
+      createResponse(req.id, {
+        ok: true,
+        updated: true,
+        goal: goal.objective,
+        ...(goal.goalId ? { goalId: goal.goalId } : {}),
+        ...(goal.revision ? { revision: goal.revision } : {}),
+        paused: goal.paused === true,
+      }),
+    );
+    if (driveRequested) {
+      void this.queueGoalResumeTurn(params.sessionId, goal, session)
+        .then((ticket) => {
+          if (!ticket) {
+            this.reconcileFailedGoalResume(
+              params.sessionId,
+              goal,
+              claimedResumeOwner,
+              "session is unavailable or headless",
+            );
+            return;
+          }
+          void ticket.completion.catch((err) => {
+            this.reconcileFailedGoalResume(params.sessionId, goal, claimedResumeOwner, err);
+          });
+        })
+        .catch((err) => {
+          this.reconcileFailedGoalResume(params.sessionId, goal, claimedResumeOwner, err);
+        });
+    }
+  }
+
   /**
    * Clear a session's persisted active goal (CC /goal clear). Routes to the
    * named session, falling back to the legacy single engine (mirrors
    * handleGoalExtend / handleCancel's dual path). Returns { ok, cleared }.
    */
-  private handleGoalClear(req: RpcRequest): void {
-    const params = (req.params ?? {}) as { sessionId?: string };
+  private handleGoalClear(req: RpcRequest, deleteAlias = false): void {
+    const params = (req.params ?? {}) as {
+      sessionId?: string;
+      expectedGoalId?: string;
+      expectedRevision?: number;
+    };
+    if (typeof params.sessionId !== "string" || !params.sessionId) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "sessionId is required"),
+      );
+      return;
+    }
+    if (
+      deleteAlias &&
+      (typeof params.expectedGoalId !== "string" ||
+        !params.expectedGoalId ||
+        typeof params.expectedRevision !== "number" ||
+        !Number.isInteger(params.expectedRevision) ||
+        params.expectedRevision < 1)
+    ) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InvalidParams,
+          "goalDelete requires expectedGoalId and a positive expectedRevision",
+        ),
+      );
+      return;
+    }
+    if (!this.authorizeGoalControl(req, params.sessionId)) return;
+    const expected = deleteAlias
+      ? { goalId: params.expectedGoalId, revision: params.expectedRevision }
+      : undefined;
     const session =
       this.chatManager && typeof params.sessionId === "string"
         ? this.chatManager.get(params.sessionId)
         : undefined;
-    if (!session && !this.legacyEngine) {
+    if (!session && !this.legacyEngine && !this.clearActiveGoalOnDisk) {
       this.transport.send(
         createErrorResponse(
           req.id,
@@ -1386,12 +1710,15 @@ export class AgentServer {
     const clearingGoal = session
       ? session.getGoal?.()
       : params.sessionId
-        ? this.legacyEngine?.getGoal(params.sessionId)
+        ? (this.legacyEngine?.getGoal(params.sessionId) ??
+          this.readActiveGoalFromDisk?.(params.sessionId))
         : undefined;
     const cleared = session
-      ? session.clearGoal()
+      ? session.clearGoal(expected)
       : params.sessionId
-        ? (this.legacyEngine!.clearGoal(params.sessionId) ?? false)
+        ? (this.legacyEngine?.clearGoal(params.sessionId, expected) ??
+          this.clearActiveGoalOnDisk?.(params.sessionId, expected) ??
+          false)
         : false;
     if (cleared && typeof params.sessionId === "string" && params.sessionId.length > 0) {
       this.notify(Methods.StreamEvent, {
@@ -1399,10 +1726,13 @@ export class AgentServer {
         event: {
           type: "goal_cleared",
           ...(clearingGoal?.goalId ? { goalId: clearingGoal.goalId } : {}),
+          ...(clearingGoal?.revision ? { revision: clearingGoal.revision } : {}),
         },
       });
     }
-    this.transport.send(createResponse(req.id, { ok: true, cleared }));
+    this.transport.send(
+      createResponse(req.id, deleteAlias ? { ok: true, deleted: cleared } : { ok: true, cleared }),
+    );
   }
 
   /**
@@ -1444,6 +1774,8 @@ export class AgentServer {
         ok: true,
         goal: goal ? goal.objective : null,
         ...(goal?.goalId ? { goalId: goal.goalId } : {}),
+        ...(goal?.revision ? { revision: goal.revision } : {}),
+        paused: goal?.paused === true,
       }),
     );
   }

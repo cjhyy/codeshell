@@ -23,6 +23,7 @@ import {
   applyStreamEvent,
   bgCompletionText,
   INITIAL_STATE,
+  type ActiveGoal,
   type MessagesReducerState,
   type ApprovalState,
   type AskUserOption,
@@ -656,6 +657,10 @@ function App() {
   // which is registered once with a [toast]-only dep) can find an ask_user card
   // by requestId without capturing a stale transcripts snapshot.
   const transcriptsRef = useRef(transcripts);
+  /** Latest local Goal mutation per session bucket. Prevents a slower failed
+   *  edit from rolling back a newer pause/edit/delete without letting an
+   *  operation in another tab suppress this bucket's reconciliation. */
+  const goalMutationSeqRef = useRef<Map<string, number>>(new Map());
   /**
    * The no-repo sandbox cwd (~/.code-shell/no-repo), fetched once from main.
    * A no-repo "纯聊天" send must pass THIS explicitly as cwd — if we omit cwd,
@@ -1137,6 +1142,46 @@ function App() {
           }
         }
       }
+      // Goal state is persisted separately from the transcript. Reconcile it
+      // into the projection before hydration so objective edits and paused
+      // state survive reloads (including legacy localStorage entries that did
+      // not carry `paused`). The engine is authoritative when goalGet succeeds.
+      if (engineId && !cancelled) {
+        try {
+          const { ok, goal, goalId, paused, revision } = await window.codeshell.goalGet(engineId);
+          // `ok` was absent on early goalGet bridges; only an explicit false
+          // means the read was rejected.
+          if (ok !== false && goal) {
+            const persistedGoalId = goalId ?? state.activeGoal?.goalId;
+            const persistedRevision = revision ?? state.activeGoal?.revision;
+            const replacesLocalGoal =
+              state.activeGoal?.goalId !== undefined &&
+              goalId !== undefined &&
+              state.activeGoal.goalId !== goalId;
+            state = applyStreamEvent(state, {
+              type: replacesLocalGoal ? "goal_set" : "goal_updated",
+              goalId: persistedGoalId,
+              revision: persistedRevision,
+              objective: goal,
+              paused: paused ?? false,
+              ...(replacesLocalGoal ? { replaced: true } : {}),
+            } as StreamEvent);
+          } else if (ok !== false && state.activeGoal) {
+            state = applyStreamEvent(state, {
+              type: "goal_cleared",
+              goalId: state.activeGoal.goalId,
+              revision: state.activeGoal.revision,
+            } as StreamEvent);
+          }
+        } catch (error) {
+          window.codeshell.log("session.hydrate.fail", {
+            bucket,
+            stage: "goal",
+            error: error instanceof Error ? error.message : String(error),
+          });
+          // Goal state unavailable — retain the transcript/localStorage value.
+        }
+      }
       if (!cancelled) {
         dispatch({ type: "hydrate", bucket, state });
         if (snapshotShowsRunning) {
@@ -1153,34 +1198,6 @@ function App() {
           messageCount: state.messages.length,
           snapshotSeq: state.snapshotSeq,
         });
-      }
-      // Re-surface a persistent goal on load. A goal lives only in the engine's
-      // state.json (state.activeGoal) and is NEVER replayed from the transcript,
-      // so a session rebuilt from disk (localStorage wiped, or an aborted goal
-      // run reloaded) hydrates with activeGoal === null — the goal block + its
-      // Cancel button vanish even though the goal is still active on disk (the
-      // "goal 还在但页面不显示、取消不了" bug). Ask the engine for the persisted
-      // goal and, only when the hydrated state didn't already carry one (so we
-      // never clobber a localStorage-preserved goal or its round), inject a
-      // synthetic goal_set through the same reducer path the live event uses.
-      if (engineId && !cancelled && state.activeGoal === null) {
-        try {
-          const { goal, goalId } = await window.codeshell.goalGet(engineId);
-          if (goal && !cancelled) {
-            dispatch({
-              type: "stream",
-              bucket,
-              event: {
-                type: "goal_set",
-                goalId,
-                objective: goal,
-                replaced: false,
-              } as StreamEvent,
-            });
-          }
-        } catch {
-          // goalGet unavailable (no bridge / unknown session) — leave as-is.
-        }
       }
     })();
     return () => {
@@ -4384,7 +4401,7 @@ function App() {
 
   useEffect(() => {
     void window.codeshell.pet?.setActiveSession?.(engineSessionIdForActive());
-  }, [activeSessionId, activeRepoKey, sessionIndices]);
+  }, [activeSessionId, activeProjectBucketSegment, sessionIndices]);
 
   const matchCount = useMemo(() => {
     if (!searchQuery) return 0;
@@ -4441,33 +4458,196 @@ function App() {
     return null;
   }, [state.messages]);
 
-  // Clear the active persistent goal (CC /goal clear) for the active session.
-  // goalClear's core path clears state.json authoritatively, but for an idle /
-  // aborted session there is NO live worker and thus NO stream to push a
-  // goal_cleared event back on — so state.activeGoal (which drives the GOAL
-  // popover) would never get nulled and the block would stay on screen despite
-  // the disk clear succeeding ("清除 点了没反应"). So we optimistically feed a
-  // goal_cleared event into the reducer for this bucket ourselves: the popover
-  // disappears immediately, independent of whether a worker exists. The dropped
-  // composer toggle keeps the next bare send from re-inheriting the goal.
-  const handleClearGoal = (): void => {
+  /** After an RPC rejection/CAS miss, ask disk for the authoritative Goal.
+   *  Roll back to the local snapshot only when that reconciliation also fails. */
+  const reconcileGoalMutation = async (
+    eid: string,
+    bucket: string,
+    before: ActiveGoal,
+    expectedProjection: ActiveGoal | null,
+    mutationSeq: number,
+  ): Promise<"active" | "deleted" | "superseded"> => {
+    if (goalMutationSeqRef.current.get(bucket) !== mutationSeq) return "superseded";
+    try {
+      const persisted = await window.codeshell.goalGet(eid);
+      if (goalMutationSeqRef.current.get(bucket) !== mutationSeq) return "superseded";
+      if (persisted.ok === false) throw new Error("goal reconciliation rejected");
+      if (persisted.goal) {
+        const persistedGoalId = persisted.goalId ?? before.goalId;
+        const sameGoal = persistedGoalId === before.goalId;
+        dispatch({
+          type: "goal_reconcile",
+          bucket,
+          expected: expectedProjection
+            ? {
+                goalId: expectedProjection.goalId,
+                revision: expectedProjection.revision,
+              }
+            : null,
+          goal: {
+            goalId: persistedGoalId,
+            revision: persisted.revision ?? (sameGoal ? before.revision : undefined),
+            objective: persisted.goal,
+            paused: persisted.paused ?? false,
+            round: sameGoal ? before.round : 0,
+          },
+        });
+        return "active";
+      } else {
+        dispatch({
+          type: "goal_reconcile",
+          bucket,
+          expected: expectedProjection
+            ? {
+                goalId: expectedProjection.goalId,
+                revision: expectedProjection.revision,
+              }
+            : null,
+          goal: null,
+        });
+        return "deleted";
+      }
+    } catch (error) {
+      window.codeshell.log("goal.reconcile.failed", {
+        sessionId: eid,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    if (goalMutationSeqRef.current.get(bucket) !== mutationSeq) return "superseded";
+    dispatch({
+      type: "goal_reconcile",
+      bucket,
+      expected: expectedProjection
+        ? { goalId: expectedProjection.goalId, revision: expectedProjection.revision }
+        : null,
+      goal: before,
+    });
+    return "active";
+  };
+
+  /** Optimistically project one Goal edit, then reconcile the canonical RPC
+   *  result. A failed operation is logged and rolled back as long as no newer
+   *  local Goal mutation superseded it. */
+  const mutateActiveGoal = (next: ActiveGoal, operation: "edit" | "pause" | "resume"): void => {
     const eid = engineSessionIdForActive();
-    if (!eid) return;
-    void window.codeshell
-      .goalClear(eid)
-      .catch((e) => window.codeshell.log("goal.clear.failed", { error: String(e) }));
-    // Reflect immediately (client-side, no dependency on a backend event):
-    // null out state.activeGoal for this bucket so the GOAL block hides now.
+    const before = state.activeGoal;
+    if (!eid || !before || !before.goalId || before.revision === undefined) return;
+    const expectedGoalId = before.goalId;
+    const expectedRevision = before.revision;
+    const bucket = activeBucket;
+    const optimistic: ActiveGoal = {
+      ...next,
+      revision: Math.max(1, before.revision) + 1,
+    };
+    const mutationSeq = (goalMutationSeqRef.current.get(bucket) ?? 0) + 1;
+    goalMutationSeqRef.current.set(bucket, mutationSeq);
     dispatch({
       type: "stream",
-      bucket: activeBucket,
+      bucket,
       event: {
-        type: "goal_cleared",
-        goalId: state.activeGoal?.goalId,
+        type: "goal_updated",
+        goalId: optimistic.goalId,
+        revision: optimistic.revision,
+        objective: optimistic.objective,
+        paused: optimistic.paused,
       } as StreamEvent,
     });
-    // And drop the composer goal toggle for this bucket.
-    setGoalOverrides((prev) => ({ ...prev, [activeBucket]: false }));
+
+    void (async () => {
+      try {
+        const result = await window.codeshell.goalUpdate(eid, {
+          ...(next.objective !== before.objective ? { objective: next.objective } : {}),
+          ...(next.paused !== before.paused ? { paused: next.paused } : {}),
+          expectedGoalId,
+          expectedRevision,
+        });
+        if (!result.ok || !result.updated) {
+          throw new Error(result.ok ? "goal was not updated" : "goal update rejected");
+        }
+        if (goalMutationSeqRef.current.get(bucket) !== mutationSeq) return;
+        dispatch({
+          type: "stream",
+          bucket,
+          event: {
+            type: "goal_updated",
+            goalId: result.goalId ?? optimistic.goalId,
+            revision: result.revision ?? optimistic.revision,
+            objective: result.goal?.trim() || optimistic.objective,
+            paused: result.paused ?? optimistic.paused,
+          } as StreamEvent,
+        });
+      } catch (error) {
+        window.codeshell.log("goal.update.failed", {
+          operation,
+          sessionId: eid,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        await reconcileGoalMutation(eid, bucket, before, optimistic, mutationSeq);
+      }
+    })();
+  };
+
+  const handleUpdateGoal = (objective: string): void => {
+    const goal = state.activeGoal;
+    const nextObjective = objective.trim();
+    if (!goal || !nextObjective || nextObjective === goal.objective) return;
+    mutateActiveGoal({ ...goal, objective: nextObjective }, "edit");
+  };
+
+  const handleGoalPausedChange = (paused: boolean): void => {
+    const goal = state.activeGoal;
+    if (!goal || paused === goal.paused) return;
+    mutateActiveGoal({ ...goal, paused }, paused ? "pause" : "resume");
+  };
+
+  // Delete is optimistic for the same idle-session reason as the legacy clear
+  // control: without a live worker no goal_cleared event is streamed back. Keep
+  // goalClear as a runtime fallback for an older preload during hot reload.
+  const handleDeleteGoal = (): void => {
+    const eid = engineSessionIdForActive();
+    const before = state.activeGoal;
+    if (!eid || !before || !before.goalId || before.revision === undefined) return;
+    const expectedGoalId = before.goalId;
+    const expectedRevision = before.revision;
+    const bucket = activeBucket;
+    const previousGoalToggle = goalOverrides[bucket] ?? false;
+    const mutationSeq = (goalMutationSeqRef.current.get(bucket) ?? 0) + 1;
+    goalMutationSeqRef.current.set(bucket, mutationSeq);
+    dispatch({
+      type: "stream",
+      bucket,
+      event: {
+        type: "goal_cleared",
+        goalId: before.goalId,
+        revision: before.revision,
+      } as StreamEvent,
+    });
+    setGoalOverrides((prev) => ({ ...prev, [bucket]: false }));
+
+    void (async () => {
+      try {
+        const result = window.codeshell.goalDelete
+          ? await window.codeshell.goalDelete(eid, {
+              expectedGoalId,
+              expectedRevision,
+            })
+          : await window.codeshell
+              .goalClear(eid)
+              .then(({ ok, cleared }) => ({ ok, deleted: cleared }));
+        if (!result.ok || !result.deleted) {
+          throw new Error(result.ok ? "goal was not deleted" : "goal delete rejected");
+        }
+      } catch (error) {
+        window.codeshell.log("goal.delete.failed", {
+          sessionId: eid,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        const reconciled = await reconcileGoalMutation(eid, bucket, before, null, mutationSeq);
+        if (reconciled === "active") {
+          setGoalOverrides((prev) => ({ ...prev, [bucket]: previousGoalToggle }));
+        }
+      }
+    })();
   };
 
   const handleContextPackageCreated = async (
@@ -4562,7 +4742,9 @@ function App() {
             activity={liveActivity}
             tasks={latestTasks}
             activeGoal={state.activeGoal}
-            onClearGoal={handleClearGoal}
+            onUpdateGoal={handleUpdateGoal}
+            onGoalPausedChange={handleGoalPausedChange}
+            onDeleteGoal={handleDeleteGoal}
           />
         </div>
 

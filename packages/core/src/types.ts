@@ -544,6 +544,8 @@ export type StreamEvent =
       type: "goal_progress";
       /** Concrete goal instance; absent only on legacy replayed events. */
       goalId?: string;
+      /** Edit/pause/resume revision for stale-event fencing. */
+      revision?: number;
       status: "not_met" | "met" | "exhausted" | "approaching_limit";
       round: number;
       gaps?: string;
@@ -560,8 +562,22 @@ export type StreamEvent =
   // replace). `goal_cleared` fires on explicit clear (agent/goalClear) — the
   // judge-met path emits goal_progress(met) instead. The UI keeps an
   // "active goal" per session from these + goal_progress.
-  | { type: "goal_set"; goalId?: string; objective: string; replaced: boolean }
-  | { type: "goal_cleared"; goalId?: string }
+  | {
+      type: "goal_set";
+      goalId?: string;
+      revision?: number;
+      objective: string;
+      replaced: boolean;
+      paused?: boolean;
+    }
+  | {
+      type: "goal_updated";
+      goalId?: string;
+      revision?: number;
+      objective: string;
+      paused: boolean;
+    }
+  | { type: "goal_cleared"; goalId?: string; revision?: number }
   | { type: "error"; error: string; agentId?: string }
   | { type: "tombstone"; messageId: string; agentId?: string }
   | { type: "task_update"; tasks: TaskInfo[]; agentId?: string }

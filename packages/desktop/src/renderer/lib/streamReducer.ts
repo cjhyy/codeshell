@@ -61,6 +61,10 @@ export interface ChatState {
   goal?: string;
   /** Identity of the active goal banner; absent for legacy events. */
   goalId?: string;
+  /** Whether the active goal is paused. */
+  goalPaused?: boolean;
+  /** Monotonic Goal edit generation used to fence late events. */
+  goalRevision?: number;
   sessionId?: string;
   /** Per-session title pushed via session_title. */
   title?: string;
@@ -85,6 +89,23 @@ export function initialChatState(): ChatState {
 /** The agentId bucket key for an event ("" = main agent). */
 function agentKey(event: Record<string, unknown>): string {
   return (event.agentId as string | undefined) ?? "";
+}
+
+function staleGoalEvent(
+  state: ChatState,
+  event: Record<string, unknown>,
+  allowLegacyIdentityUpgrade = false,
+): boolean {
+  const goalId = event.goalId as string | undefined;
+  if (state.goalId !== goalId) {
+    if (!(allowLegacyIdentityUpgrade && state.goalId === undefined && goalId !== undefined)) {
+      return true;
+    }
+  }
+  const revision = event.revision as number | undefined;
+  return (
+    state.goalRevision !== undefined && (revision === undefined || revision < state.goalRevision)
+  );
 }
 
 /**
@@ -431,30 +452,64 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
     case "goal_set": {
       // Persistent goal established/replaced. Show the objective directly.
       const objective = (event.objective as string | undefined) ?? "";
+      const paused = Boolean(event.paused);
+      if (s.goal && s.goalId === (event.goalId as string | undefined) && staleGoalEvent(s, event)) {
+        return s;
+      }
       return {
         ...s,
-        goal: objective ? `◎ ${objective}` : "◎ 目标",
+        goal: objective ? `◎ ${objective}${paused ? " (已暂停)" : ""}` : "◎ 目标",
         goalId: event.goalId as string | undefined,
+        goalPaused: paused,
+        goalRevision: event.revision as number | undefined,
+      };
+    }
+
+    case "goal_updated": {
+      if (s.goal && staleGoalEvent(s, event, true)) return s;
+      const goalId = event.goalId as string | undefined;
+      const objective = (event.objective as string | undefined) ?? "";
+      const paused = Boolean(event.paused);
+      return {
+        ...s,
+        goal: objective ? `◎ ${objective}${paused ? " (已暂停)" : ""}` : s.goal,
+        goalId: goalId ?? s.goalId,
+        goalPaused: paused,
+        goalRevision: (event.revision as number | undefined) ?? s.goalRevision,
       };
     }
 
     case "goal_cleared": {
-      const goalId = event.goalId as string | undefined;
-      if (s.goal && (goalId ? s.goalId !== goalId : s.goalId !== undefined)) return s;
-      return { ...s, goal: undefined, goalId: undefined };
+      if (s.goal && staleGoalEvent(s, event)) return s;
+      return {
+        ...s,
+        goal: undefined,
+        goalId: undefined,
+        goalPaused: undefined,
+        goalRevision: undefined,
+      };
     }
 
     case "goal_progress": {
-      const goalId = event.goalId as string | undefined;
-      if (s.goal && (goalId ? s.goalId !== goalId : s.goalId !== undefined)) return s;
+      if (s.goal && staleGoalEvent(s, event)) return s;
       const status = (event.status as string) ?? "";
       // Goal achieved / gave up → drop the banner.
       if (status === "met" || status === "exhausted") {
-        return { ...s, goal: undefined, goalId: undefined };
+        return {
+          ...s,
+          goal: undefined,
+          goalId: undefined,
+          goalPaused: undefined,
+          goalRevision: undefined,
+        };
       }
       const round = event.round as number | undefined;
       const label = round ? `目标 · 第 ${round} 轮 (${status})` : `目标 (${status})`;
-      return { ...s, goal: label };
+      return {
+        ...s,
+        goal: label,
+        goalRevision: (event.revision as number | undefined) ?? s.goalRevision,
+      };
     }
 
     case "task_update": {

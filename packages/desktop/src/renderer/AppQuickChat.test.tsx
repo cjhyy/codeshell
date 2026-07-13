@@ -289,6 +289,7 @@ function installCodeshellStub(
     events: [],
     nextSeq: 1,
   }),
+  goalGet: (sessionId: string) => Promise<any> = async () => ({ ok: true, goal: null }),
 ): void {
   const unsubscribe = () => undefined;
   const project = { path: "/tmp/repo-a", name: "Repo A", addedAt: 1 };
@@ -335,7 +336,7 @@ function installCodeshellStub(
       return getSessionTranscript(sessionId);
     },
     subscribeSession,
-    goalGet: async () => ({ goal: null }),
+    goalGet,
     listRuns: async () => [],
     listDiskSessions: async () => {
       listDiskSessionsCalls += 1;
@@ -419,6 +420,7 @@ async function mountApp(options: {
   forkSession?: (params: Record<string, unknown>) => Promise<any>;
   getSessionTranscript?: (sessionId: string) => Promise<any>;
   subscribeSession?: (sessionId: string, sinceSeq?: number) => Promise<any>;
+  goalGet?: (sessionId: string) => Promise<any>;
 }): Promise<string> {
   ensureMiniDom();
   Object.defineProperty(globalThis, "localStorage", {
@@ -449,6 +451,7 @@ async function mountApp(options: {
       })),
     options.getSessionTranscript,
     options.subscribeSession,
+    options.goalGet,
   );
   container = document.createElement("div");
   root = createRoot(container);
@@ -643,6 +646,37 @@ describe("App quick-chat integration", () => {
       expect.objectContaining({ kind: "assistant", id: "assistant-running" }),
     ]);
     expect(chatProps?.busy).toBe(true);
+  });
+
+  test("hydrates a persisted paused goal before rendering the top-bar projection", async () => {
+    const goalGetCalls: string[] = [];
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [],
+      goalGet: async (sessionId) => {
+        goalGetCalls.push(sessionId);
+        return {
+          ok: true,
+          goal: "pause-aware goal",
+          goalId: "goal-a",
+          revision: 3,
+          paused: true,
+        };
+      },
+    });
+
+    expect(goalGetCalls).toEqual(["engine-a"]);
+    await flushApp(650);
+    const saved = JSON.parse(
+      localStorageMock.getItem("codeshell.transcript.repoA.session-a") ?? "null",
+    ) as { activeGoal?: Record<string, unknown> } | null;
+    expect(saved?.activeGoal).toEqual({
+      objective: "pause-aware goal",
+      goalId: "goal-a",
+      revision: 3,
+      round: 0,
+      paused: true,
+    });
   });
 
   test("restores busy from a session_started-only snapshot", async () => {

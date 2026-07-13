@@ -36,6 +36,7 @@ import { CronStore, defaultCronStorePath } from "../automation/store.js";
 import { resolveLLMConfigForTag } from "../engine/resolve-llm-config.js";
 import { randomUUID } from "node:crypto";
 import { getApprovalRouter } from "../tool-system/permission.js";
+import { SessionManager } from "../session/session-manager.js";
 
 const cwd = process.env.AGENT_CWD ?? process.cwd();
 const port = Number(process.env.AGENT_TCP_PORT ?? "4321");
@@ -58,8 +59,7 @@ if (!seedLlm) {
   console.error(
     `[agent-server] 没有可用的文本模型连接(defaults.text=${
       (settings as { defaults?: { text?: string } }).defaults?.text ?? "未设置"
-    })。` +
-      `请在「连接」页添加并填写凭证。`,
+    })。` + `请在「连接」页添加并填写凭证。`,
   );
   process.exit(1);
 }
@@ -139,6 +139,7 @@ const automation = startAutomation({
 // ── Serve over TCP ──────────────────────────────────────────────
 // One AgentServer per accepted connection, all sharing the same chatManager.
 const servers = new Set<AgentServer>();
+const goalDiskManager = new SessionManager();
 
 listenTcp({ port, host }, (transport, socket) => {
   const server = new AgentServer({
@@ -146,6 +147,11 @@ listenTcp({ port, host }, (transport, socket) => {
     transport,
     connectionId: randomUUID(),
     approvalRouter: getApprovalRouter(),
+    readActiveGoalFromDisk: (sessionId) => goalDiskManager.readActiveGoal(sessionId),
+    updateActiveGoalOnDisk: (sessionId, patch) =>
+      goalDiskManager.updateActiveGoal(sessionId, patch)?.goal,
+    clearActiveGoalOnDisk: (sessionId, expected) =>
+      goalDiskManager.clearActiveGoal(sessionId, expected),
   });
   servers.add(server);
   socket.once("close", () => {

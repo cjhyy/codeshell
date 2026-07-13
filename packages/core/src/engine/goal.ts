@@ -16,8 +16,16 @@ import { createHash, randomUUID } from "node:crypto";
 export interface GoalConfig {
   /** Stable unique identity for this concrete armed goal instance. */
   goalId?: string;
+  /** Monotonic control revision for edit/pause/resume race fencing. */
+  revision?: number;
   /** The objective text shown to the judge / injected into context. */
   objective: string;
+  /**
+   * A paused goal remains persisted and visible, but is not inherited by a
+   * bare send and does not install the run-level stop judge. Resuming flips
+   * this back to false without creating a new goal identity.
+   */
+  paused?: boolean;
   /** Hard cap on total tokens (prompt+completion) for the whole goal run. */
   tokenBudget?: number;
   /** Hard cap on wall-clock duration of the whole goal run, in ms. */
@@ -77,6 +85,8 @@ export type PersistedGoalTerminationReason =
 export interface GoalTerminal {
   /** Identity of the concrete goal instance that reached a terminal state. */
   goalId?: string;
+  /** Goal control revision that reached the terminal state. */
+  revision?: number;
   objective: string;
   setAtMs?: number;
   reason: PersistedGoalTerminationReason;
@@ -93,6 +103,17 @@ export function isSameGoalInstance(
     return !!left.goalId && left.goalId === right.goalId;
   }
   return left.objective === right.objective && left.setAtMs === right.setAtMs;
+}
+
+/** Same concrete goal and same edit/pause/resume revision. */
+export function isSameGoalVersion(
+  left: Pick<GoalConfig, "goalId" | "objective" | "setAtMs" | "revision"> | undefined,
+  right: Pick<GoalConfig, "goalId" | "objective" | "setAtMs" | "revision"> | undefined,
+): boolean {
+  return (
+    isSameGoalInstance(left, right) &&
+    Math.max(1, Math.floor(left?.revision ?? 1)) === Math.max(1, Math.floor(right?.revision ?? 1))
+  );
 }
 
 /** Bound stale-writer protection while retaining enough recent terminal identities. */
@@ -132,7 +153,7 @@ export function mergeGoalTerminals(
     for (const terminal of terminals) {
       if (!terminal || typeof terminal.objective !== "string") continue;
       const key = terminal.goalId
-        ? `id:${terminal.goalId}`
+        ? `id:${terminal.goalId}:rev:${terminal.revision ?? 1}`
         : `legacy:${terminal.objective}\0${terminal.setAtMs ?? ""}`;
       const existing = merged.get(key);
       const incomingAt = terminal.terminatedAtMs ?? Number.NEGATIVE_INFINITY;
@@ -161,7 +182,9 @@ export function isGoalTerminated(
 ): boolean {
   if (!goal) return false;
   return mergeGoalTerminals(terminals, latest).some((terminal) => {
-    if (goal.goalId) return terminal.goalId === goal.goalId;
+    if (goal.goalId) {
+      return terminal.goalId === goal.goalId && (terminal.revision ?? 1) === (goal.revision ?? 1);
+    }
     // A legacy detached snapshot has no goalId. Compare its historical
     // objective+setAt signature even when the terminal was recorded after the
     // live instance was migrated to a UUID. Newly armed goals always have an
@@ -179,8 +202,11 @@ export function recordGoalTerminal(
 ): GoalTerminal {
   const goalId = goal.goalId ?? randomUUID();
   goal.goalId = goalId;
+  const revision = goal.revision ?? 1;
+  goal.revision = revision;
   const terminal: GoalTerminal = {
     goalId,
+    revision,
     objective: goal.objective,
     setAtMs: goal.setAtMs,
     reason,
@@ -251,6 +277,10 @@ export function normalizeGoal(raw: string | GoalConfig | undefined): GoalConfig 
   if (!objective) return undefined;
   const out: GoalConfig = { objective };
   if (typeof obj.goalId === "string" && obj.goalId.trim()) out.goalId = obj.goalId;
+  if (typeof obj.revision === "number" && obj.revision > 0) {
+    out.revision = Math.floor(obj.revision);
+  }
+  if (obj.paused === true) out.paused = true;
   if (typeof obj.tokenBudget === "number" && obj.tokenBudget > 0) out.tokenBudget = obj.tokenBudget;
   if (typeof obj.timeBudgetMs === "number" && obj.timeBudgetMs > 0)
     out.timeBudgetMs = obj.timeBudgetMs;

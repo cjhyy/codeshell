@@ -40,6 +40,7 @@ import {
   deriveLegacyGoalId,
   isGoalTerminated,
   isSameGoalInstance,
+  isSameGoalVersion,
   mergeGoalTerminals,
   recordGoalTerminal,
   type GoalConfig,
@@ -619,9 +620,17 @@ export class SessionManager {
     if (!existsSync(stateFile)) return undefined;
     try {
       const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
-      return isGoalTerminated(state.activeGoal, state.goalTerminals, state.goalTerminal)
-        ? undefined
-        : state.activeGoal;
+      const goal = state.activeGoal;
+      if (!goal || isGoalTerminated(goal, state.goalTerminals, state.goalTerminal)) {
+        return undefined;
+      }
+      // Expose a concrete version even for legacy state.json so UI delete/edit
+      // operations can send an expected fence instead of acting unconditionally.
+      return {
+        ...goal,
+        goalId: goal.goalId ?? deriveLegacyGoalId(sessionId, goal),
+        revision: goal.revision ?? 1,
+      };
     } catch {
       return undefined;
     }
@@ -644,24 +653,100 @@ export class SessionManager {
    * Engine.clearGoal also delegates its disk write here so the wipe logic lives
    * in exactly one place.
    */
-  clearActiveGoal(sessionId: string): boolean {
+  clearActiveGoal(sessionId: string, expected?: { goalId?: string; revision?: number }): boolean {
     try {
       assertSafeSessionId(sessionId);
     } catch {
       return false;
     }
-    const stateFile = join(this.sessionsDir, sessionId, "state.json");
-    if (!existsSync(stateFile)) return false;
-    let state: SessionState;
-    try {
-      state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
-    } catch {
-      return false;
+    for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
+      let state: SessionState;
+      try {
+        state = this.readPersistedState(sessionId);
+      } catch {
+        return false;
+      }
+      const clearedGoal = state.activeGoal;
+      if (!clearedGoal) return false;
+      clearedGoal.goalId ??= deriveLegacyGoalId(sessionId, clearedGoal);
+      const revision = clearedGoal.revision ?? 1;
+      if (expected?.goalId !== undefined && clearedGoal.goalId !== expected.goalId) return false;
+      if (expected?.revision !== undefined && revision !== expected.revision) return false;
+
+      recordGoalTerminal(state, clearedGoal, "cancelled");
+      if (isSameGoalVersion(state.activeGoal, clearedGoal)) state.activeGoal = undefined;
+      const result = this.saveStateAttempt(state);
+      if (result.ok) return true;
+      if (result.reason !== "revision_conflict") return false;
     }
-    if (state.activeGoal === undefined) return false;
-    const clearedGoal = state.activeGoal;
-    clearedGoal.goalId ??= deriveLegacyGoalId(sessionId, clearedGoal);
-    return this.saveGoalTerminal(state, clearedGoal, "cancelled");
+    return false;
+  }
+
+  /**
+   * Edit or pause/resume the currently active goal with an identity-checked,
+   * field-level CAS. The goalId is preserved: editing the objective changes
+   * the same user-owned goal rather than terminally cancelling it and arming a
+   * replacement. A changed objective receives a fresh deadline anchor.
+   *
+   * Returns undefined when the session/goal is absent or the patch is invalid.
+   * The returned revision lets a live Engine rebase its in-memory bundle so a
+   * later whole-state heartbeat cannot overwrite this control operation.
+   */
+  updateActiveGoal(
+    sessionId: string,
+    patch: {
+      objective?: string;
+      paused?: boolean;
+      expectedGoalId?: string;
+      expectedRevision?: number;
+    },
+  ): { goal: GoalConfig; stateRevision: number; state: SessionState } | undefined {
+    try {
+      assertSafeSessionId(sessionId);
+    } catch {
+      return undefined;
+    }
+    if (patch.objective === undefined && patch.paused === undefined) return undefined;
+    if (patch.objective !== undefined && !patch.objective.trim()) return undefined;
+    if (patch.paused !== undefined && typeof patch.paused !== "boolean") return undefined;
+
+    let expectedGoalId = patch.expectedGoalId;
+    let expectedRevision = patch.expectedRevision;
+    for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
+      let state: SessionState;
+      try {
+        state = this.readPersistedState(sessionId);
+      } catch {
+        return undefined;
+      }
+      const current = state.activeGoal;
+      if (!current || isGoalTerminated(current, state.goalTerminals, state.goalTerminal)) {
+        return undefined;
+      }
+      current.goalId ??= deriveLegacyGoalId(sessionId, current);
+      const currentRevision = Math.max(1, Math.floor(current.revision ?? 1));
+      expectedGoalId ??= current.goalId;
+      expectedRevision ??= currentRevision;
+      if (current.goalId !== expectedGoalId || currentRevision !== expectedRevision) {
+        return undefined;
+      }
+      const objective = patch.objective?.trim() ?? current.objective;
+      const objectiveChanged = objective !== current.objective;
+      const goal: GoalConfig = {
+        ...current,
+        objective,
+        revision: currentRevision + 1,
+        ...(objectiveChanged ? { setAtMs: Date.now() } : {}),
+      };
+      if (patch.paused === true) goal.paused = true;
+      else if (patch.paused === false) delete goal.paused;
+      state.activeGoal = goal;
+
+      const result = this.saveStateAttempt(state);
+      if (result.ok) return { goal, stateRevision: state.stateRevision!, state };
+      if (result.reason !== "revision_conflict") return undefined;
+    }
+    return undefined;
   }
 
   resume(sessionId: string): SessionBundle {
@@ -784,18 +869,34 @@ export class SessionManager {
     reason: PersistedGoalTerminationReason,
   ): boolean {
     if (!goal) return false;
-    goal.goalId ??= deriveLegacyGoalId(state.sessionId, goal);
-    recordGoalTerminal(state, goal, reason);
-    if (isSameGoalInstance(state.activeGoal, goal)) state.activeGoal = undefined;
+    // Work on a detached candidate first. A failed lock/generation write must
+    // not make the caller's live bundle *look* cleared: Engine uses that bundle
+    // to decide whether it may report goal_met/goal_cleared to the UI.
+    const terminalGoal: GoalConfig = {
+      ...goal,
+      goalId: goal.goalId ?? deriveLegacyGoalId(state.sessionId, goal),
+      revision: goal.revision ?? 1,
+    };
+    const candidate: SessionState = {
+      ...state,
+      activeGoal: state.activeGoal ? { ...state.activeGoal } : undefined,
+      goalTerminal: state.goalTerminal ? { ...state.goalTerminal } : undefined,
+      goalTerminals: state.goalTerminals?.map((terminal) => ({ ...terminal })),
+    };
+    recordGoalTerminal(candidate, terminalGoal, reason);
+    if (isSameGoalVersion(candidate.activeGoal, terminalGoal)) candidate.activeGoal = undefined;
 
-    let result = this.saveStateAttempt(state);
-    if (result.ok) return true;
+    let result = this.saveStateAttempt(candidate);
+    if (result.ok) {
+      this.rebaseLiveGoalState(state, candidate);
+      return true;
+    }
     if (result.reason !== "revision_conflict") return false;
 
     for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
       const latest = this.readPersistedState(state.sessionId);
-      recordGoalTerminal(latest, goal, reason);
-      if (isSameGoalInstance(latest.activeGoal, goal)) latest.activeGoal = undefined;
+      recordGoalTerminal(latest, terminalGoal, reason);
+      if (isSameGoalVersion(latest.activeGoal, terminalGoal)) latest.activeGoal = undefined;
       result = this.saveStateAttempt(latest);
       if (result.ok) {
         this.rebaseLiveGoalState(state, latest);
@@ -902,7 +1003,7 @@ export class SessionManager {
       const diskTerminated = isGoalTerminated(diskGoal, terminals);
       if (incomingGoal && !incomingTerminated) {
         state.activeGoal = incomingGoal;
-      } else if (diskGoal && !diskTerminated && !isSameGoalInstance(diskGoal, incomingGoal)) {
+      } else if (diskGoal && !diskTerminated && !isSameGoalVersion(diskGoal, incomingGoal)) {
         state.activeGoal = diskGoal;
       } else {
         state.activeGoal = undefined;

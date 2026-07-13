@@ -5,7 +5,7 @@ import { PanelLeft, PanelRight } from "./ui/icons";
 import { StatusPopover } from "./topbar/StatusPopover";
 import { WorkspaceIndicator } from "./topbar/WorkspaceIndicator";
 import type { LiveActivity } from "./topbar/liveActivity";
-import type { TaskListMessage } from "./types";
+import type { ActiveGoal, TaskListMessage } from "./types";
 import { useT } from "./i18n";
 
 interface Props {
@@ -34,10 +34,16 @@ interface Props {
    *  numbered task overview instead of the tool/elapsed summary. */
   tasks?: TaskListMessage | null;
   /** The session's active persistent goal (CC /goal). When present the dot
-   *  shows a ◎ marker and the popover surfaces a Goal block + clear button. */
-  activeGoal?: { objective: string; round: number } | null;
-  /** Clear the active goal (agent/goalClear). */
+   *  shows a ◎ marker and the popover surfaces Goal controls. */
+  activeGoal?: ActiveGoal | null;
+  /** Legacy clear callback retained for compatibility. */
   onClearGoal?: () => void;
+  /** Edit the active goal objective. */
+  onUpdateGoal?: (objective: string) => void;
+  /** Pause or resume active Goal driving. */
+  onGoalPausedChange?: (paused: boolean) => void;
+  /** Delete the active goal (agent/goalDelete). */
+  onDeleteGoal?: () => void;
 }
 
 /**
@@ -68,6 +74,9 @@ function TopBarImpl({
   tasks,
   activeGoal,
   onClearGoal,
+  onUpdateGoal,
+  onGoalPausedChange,
+  onDeleteGoal,
 }: Props) {
   const { t } = useT();
   return (
@@ -123,6 +132,9 @@ function TopBarImpl({
           tasks={tasks ?? null}
           activeGoal={activeGoal ?? null}
           onClearGoal={onClearGoal}
+          onUpdateGoal={onUpdateGoal}
+          onGoalPausedChange={onGoalPausedChange}
+          onDeleteGoal={onDeleteGoal}
         />
         {panelAvailable && (
           <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
@@ -152,16 +164,23 @@ function StatusBadge({
   tasks,
   activeGoal,
   onClearGoal,
+  onUpdateGoal,
+  onGoalPausedChange,
+  onDeleteGoal,
 }: {
   busy: boolean;
   activity?: LiveActivity;
   tasks: TaskListMessage | null;
-  activeGoal: { objective: string; round: number } | null;
+  activeGoal: ActiveGoal | null;
   onClearGoal?: () => void;
+  onUpdateGoal?: (objective: string) => void;
+  onGoalPausedChange?: (paused: boolean) => void;
+  onDeleteGoal?: () => void;
 }) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const cancelClose = (): void => {
     if (closeTimer.current !== null) {
       window.clearTimeout(closeTimer.current);
@@ -170,12 +189,18 @@ function StatusBadge({
   };
   const scheduleClose = (): void => {
     cancelClose();
-    closeTimer.current = window.setTimeout(() => setOpen(false), 120);
+    closeTimer.current = window.setTimeout(() => {
+      // Keep the popover mounted while its inline Goal editor has focus, even
+      // if the pointer temporarily leaves the hover zone.
+      if (containerRef.current?.contains(document.activeElement)) return;
+      setOpen(false);
+    }, 120);
   };
   useEffect(() => () => cancelClose(), []);
 
   return (
     <div
+      ref={containerRef}
       className="relative flex items-center"
       // Opt out of the header's drag region so hover/focus reach the dot.
       style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
@@ -193,7 +218,14 @@ function StatusBadge({
       <div className="flex items-center gap-1.5">
         {activeGoal && (
           // ◎ marker: an active persistent goal exists. Hover the dot to see it.
-          <span className="text-xs text-status-running" title={t("topbar.hasActiveGoal")}>
+          <span
+            className={`text-xs ${activeGoal.paused ? "text-muted-foreground" : "text-status-running"}`}
+            title={
+              activeGoal.paused
+                ? `${t("topbar.hasActiveGoal")} · ${t("misc.status.paused")}`
+                : t("topbar.hasActiveGoal")
+            }
+          >
             ◎
           </span>
         )}
@@ -228,6 +260,9 @@ function StatusBadge({
             tasks={tasks}
             activeGoal={activeGoal}
             onClearGoal={onClearGoal}
+            onUpdateGoal={onUpdateGoal}
+            onGoalPausedChange={onGoalPausedChange}
+            onDeleteGoal={onDeleteGoal}
           />
         </div>
       )}
@@ -266,11 +301,18 @@ function topBarPropsEqual(a: Props, b: Props): boolean {
     a.activity?.toolCount === b.activity?.toolCount &&
     a.activity?.lastTool?.id === b.activity?.lastTool?.id &&
     a.activity?.lastTool?.status === b.activity?.lastTool?.status &&
+    a.onClearGoal === b.onClearGoal &&
+    a.onUpdateGoal === b.onUpdateGoal &&
+    a.onGoalPausedChange === b.onGoalPausedChange &&
+    a.onDeleteGoal === b.onDeleteGoal &&
     // Active goal drives the ◎ marker + popover Goal block, so changes must
-    // re-render. Compare by value (objective + round); the callback identity
-    // is stable enough to ignore.
+    // re-render. Compare both value and callback identity so replacing a Goal
+    // with the same objective cannot retain controls closed over the old id.
+    a.activeGoal?.goalId === b.activeGoal?.goalId &&
+    a.activeGoal?.revision === b.activeGoal?.revision &&
     a.activeGoal?.objective === b.activeGoal?.objective &&
-    a.activeGoal?.round === b.activeGoal?.round
+    a.activeGoal?.round === b.activeGoal?.round &&
+    a.activeGoal?.paused === b.activeGoal?.paused
   );
 }
 

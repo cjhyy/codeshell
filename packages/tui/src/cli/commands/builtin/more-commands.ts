@@ -40,7 +40,9 @@ export const moreCommands: SlashCommand[] = [
       for (const p of changelogPaths) {
         if (existsSync(p)) {
           const content = readFileSync(p, "utf-8");
-          ctx.addStatus(content.slice(0, 2000) + (content.length > 2000 ? "\n... (truncated)" : ""));
+          ctx.addStatus(
+            content.slice(0, 2000) + (content.length > 2000 ? "\n... (truncated)" : ""),
+          );
           return;
         }
       }
@@ -88,12 +90,13 @@ export const moreCommands: SlashCommand[] = [
           return;
         }
 
-        if (!ctx.queryGuard.reserve()) {
+        const guardToken = ctx.queryGuard.reserve();
+        if (guardToken === null) {
           ctx.addStatus("Busy — wait for current turn to finish.");
           return;
         }
         const ac = new AbortController();
-        ctx.queryGuard.tryStart(ac);
+        ctx.queryGuard.tryStart(ac, guardToken);
         const prompt = `You are a senior security engineer. Review the pending diff for security issues.
 
 GIT STATUS:
@@ -116,7 +119,7 @@ If no issues found, say so clearly.`;
         } catch (err) {
           ctx.addStatus(`Security review failed: ${(err as Error).message}`);
         } finally {
-          ctx.queryGuard.end();
+          ctx.queryGuard.end(guardToken);
         }
       } catch (err) {
         ctx.addStatus(`Security review failed: ${(err as Error).message}`);
@@ -134,7 +137,7 @@ If no issues found, say so clearly.`;
       if (!desc) {
         ctx.addStatus(
           "Usage: /feedback <description>\n" +
-          "Include what you expected, what happened, steps to reproduce.",
+            "Include what you expected, what happened, steps to reproduce.",
         );
         return;
       }

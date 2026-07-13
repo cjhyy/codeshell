@@ -698,9 +698,7 @@ describe("applyStreamEvent — turn_complete files_changed + turnEpoch", () => {
     const before = withMessages(messages, { streamingAssistantId: "a2" });
 
     const after = applyStreamEvent(before, turnComplete, () => 999);
-    const assistants = after.messages.filter(
-      (m): m is AssistantMessage => m.kind === "assistant",
-    );
+    const assistants = after.messages.filter((m): m is AssistantMessage => m.kind === "assistant");
 
     expect(assistants.map(({ id, done, doneAt }) => ({ id, done, doneAt }))).toEqual([
       { id: "a1", done: true, doneAt: 999 },
@@ -883,9 +881,7 @@ describe("applyStreamEvent — message timestamps", () => {
       () => replayNow,
     );
 
-    const assistants = s.messages.filter(
-      (m): m is AssistantMessage => m.kind === "assistant",
-    );
+    const assistants = s.messages.filter((m): m is AssistantMessage => m.kind === "assistant");
     expect(assistants.find((m) => m.id === "a1")).toMatchObject({ done: true, doneAt: 200 });
     expect(assistants.find((m) => m.id === "a2")).toMatchObject({
       done: false,
@@ -1276,7 +1272,7 @@ describe("persistent goal lifecycle (reducer)", () => {
     const s = dispatch(INITIAL_STATE, [
       ev("goal_set", { objective: "完成全部任务", replaced: false } as never),
     ]);
-    expect(s.activeGoal).toEqual({ objective: "完成全部任务", round: 0 });
+    expect(s.activeGoal).toEqual({ objective: "完成全部任务", round: 0, paused: false });
   });
 
   test("goal_set replaces an existing active goal", () => {
@@ -1292,7 +1288,7 @@ describe("persistent goal lifecycle (reducer)", () => {
       ev("goal_set", { objective: "g", replaced: false } as never),
       ev("goal_progress", { status: "not_met", round: 2, gaps: "还差" } as never),
     ]);
-    expect(s.activeGoal).toEqual({ objective: "g", round: 2 });
+    expect(s.activeGoal).toEqual({ objective: "g", round: 2, paused: false });
   });
 
   test("goal_progress(met) clears the active goal", () => {
@@ -1333,6 +1329,7 @@ describe("persistent goal lifecycle (reducer)", () => {
       objective: "B",
       goalId: "goal-b",
       round: 0,
+      paused: false,
     });
 
     const afterLateClear = dispatch(afterLateMet, [
@@ -1342,6 +1339,73 @@ describe("persistent goal lifecycle (reducer)", () => {
       objective: "B",
       goalId: "goal-b",
       round: 0,
+      paused: false,
     });
+  });
+
+  test("goal_updated edits and pauses in place while preserving progress", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ev("goal_set", {
+        objective: "old",
+        goalId: "goal-a",
+        revision: 0,
+        replaced: false,
+      } as never),
+      ev("goal_progress", {
+        goalId: "goal-a",
+        revision: 0,
+        status: "not_met",
+        round: 2,
+      } as never),
+      ev("goal_updated", {
+        objective: "new",
+        goalId: "goal-a",
+        revision: 1,
+        paused: true,
+      } as never),
+    ]);
+    expect(s.activeGoal).toEqual({
+      objective: "new",
+      goalId: "goal-a",
+      revision: 1,
+      round: 2,
+      paused: true,
+    });
+  });
+
+  test("older or revision-less terminal events cannot clear an edited goal", () => {
+    const current = dispatch(INITIAL_STATE, [
+      ev("goal_set", {
+        objective: "old",
+        goalId: "goal-a",
+        revision: 0,
+        replaced: false,
+      } as never),
+      ev("goal_updated", {
+        objective: "new",
+        goalId: "goal-a",
+        revision: 1,
+        paused: false,
+      } as never),
+    ]);
+    const afterLateMet = dispatch(current, [
+      ev("goal_progress", {
+        goalId: "goal-a",
+        revision: 0,
+        status: "met",
+        round: 3,
+      } as never),
+    ]);
+    expect(afterLateMet.activeGoal).toEqual(current.activeGoal);
+
+    const afterLegacyClear = dispatch(afterLateMet, [
+      ev("goal_cleared", { goalId: "goal-a" } as never),
+    ]);
+    expect(afterLegacyClear.activeGoal).toEqual(current.activeGoal);
+
+    const afterCurrentClear = dispatch(afterLegacyClear, [
+      ev("goal_cleared", { goalId: "goal-a", revision: 1 } as never),
+    ]);
+    expect(afterCurrentClear.activeGoal).toBeNull();
   });
 });

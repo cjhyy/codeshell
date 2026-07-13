@@ -18,6 +18,10 @@ export interface ParsedRpc {
     forkKind?: "side";
     quickChatClaimId?: string;
     type?: string;
+    objective?: string;
+    paused?: boolean;
+    expectedGoalId?: string;
+    expectedRevision?: number;
   };
 }
 
@@ -107,7 +111,66 @@ export function buildNoChildFallbackReply(
         ok: true,
         goal: goal ? goal.objective : null,
         ...(goal?.goalId ? { goalId: goal.goalId } : {}),
+        ...(goal?.revision ? { revision: goal.revision } : {}),
+        paused: goal?.paused === true,
       });
+    }
+    case "agent/goalUpdate": {
+      const sid = parsed.params?.sessionId;
+      if (typeof sid !== "string" || !sid) return null;
+      const objective =
+        typeof parsed.params?.objective === "string" ? parsed.params.objective : undefined;
+      const paused = typeof parsed.params?.paused === "boolean" ? parsed.params.paused : undefined;
+      if (objective === undefined && paused === undefined) return null;
+      const expectedGoalId = parsed.params?.expectedGoalId;
+      const expectedRevision = parsed.params?.expectedRevision;
+      if (
+        typeof expectedGoalId !== "string" ||
+        !expectedGoalId ||
+        typeof expectedRevision !== "number" ||
+        !Number.isInteger(expectedRevision) ||
+        expectedRevision < 1
+      ) {
+        return null;
+      }
+      const updated = sessions.updateActiveGoal(sid, {
+        objective,
+        paused,
+        expectedGoalId,
+        expectedRevision,
+      })?.goal;
+      return respond({
+        ok: true,
+        updated: !!updated,
+        ...(updated
+          ? {
+              goal: updated.objective,
+              ...(updated.goalId ? { goalId: updated.goalId } : {}),
+              ...(updated.revision ? { revision: updated.revision } : {}),
+              paused: updated.paused === true,
+            }
+          : {}),
+      });
+    }
+    case "agent/goalDelete": {
+      const sid = parsed.params?.sessionId;
+      if (typeof sid !== "string" || !sid) return null;
+      const expectedGoalId = parsed.params?.expectedGoalId;
+      const expectedRevision = parsed.params?.expectedRevision;
+      if (
+        typeof expectedGoalId !== "string" ||
+        !expectedGoalId ||
+        typeof expectedRevision !== "number" ||
+        !Number.isInteger(expectedRevision) ||
+        expectedRevision < 1
+      ) {
+        return null;
+      }
+      const deleted = sessions.clearActiveGoal(sid, {
+        goalId: expectedGoalId,
+        revision: expectedRevision,
+      });
+      return respond({ ok: true, deleted });
     }
     case "agent/goalClear": {
       const sid = parsed.params?.sessionId;

@@ -69,6 +69,7 @@ import {
   goalBudgetTerminationReason,
   applyGoalExtension,
   limitProximity,
+  isSameGoalVersion,
   normalizeGoal,
   GOAL_DEFAULT_MAX_STOP_BLOCKS,
 } from "./goal.js";
@@ -203,7 +204,8 @@ export interface TurnLoopDeps {
    * absent in standalone tests (turn loop tolerates undefined — the local
    * goalTracker short-circuit still stops the run).
    */
-  clearPersistedGoal?: (reason: "completed" | "cancelled") => void;
+  /** Return false when the durable transition failed; the loop must keep driving. */
+  clearPersistedGoal?: (reason: "completed" | "cancelled") => boolean | void;
   /**
    * Private Goal-judge evidence seam. Engine stores this snapshot in the
    * built-in judge closure; it is never added to the public on_stop context.
@@ -287,6 +289,60 @@ export class TurnLoop {
    * being re-emitted every turn while still within the approach threshold.
    */
   private approachAnnounced = false;
+  /** Latest coalesced Goal edit/resume reminder, consumed at a safe point. */
+  private pendingGoalControlMessage: { goalId?: string; revision?: number; text: string } | null =
+    null;
+  /** Pause/delete requested while a Goal run is in flight. The current
+   * model/tool step is allowed to settle, then the loop stops before starting
+   * another model request. */
+  private goalControlStopRequested = false;
+  /** Auxiliary tool-summary calls started by this loop and revoked by Goal pause/delete. */
+  private readonly activeToolSummaryControllers = new Set<AbortController>();
+
+  /**
+   * Apply a user goal edit/pause/resume to the live loop. Passing undefined
+   * pauses goal-driving at the next step boundary; a goal value resumes it.
+   * Usage accumulated before an edit is retained, while a pause/resume starts
+   * a fresh run-scoped budget window (matching a later persisted resume).
+   */
+  updateGoal(
+    goal: GoalConfig | undefined,
+    controlMessage?: string,
+    limits?: { maxTurns?: number; maxStopBlocks?: number },
+  ): void {
+    const normalized = normalizeGoal(goal);
+    if (!normalized) {
+      this.config = { ...this.config, goal: undefined };
+      this.goalTracker = null;
+      this.pendingGoalControlMessage = null;
+      this.goalControlStopRequested = true;
+      for (const controller of this.activeToolSummaryControllers) controller.abort();
+      this.activeToolSummaryControllers.clear();
+      this.stopBlockCount = 0;
+      this.approachAnnounced = false;
+      return;
+    }
+    const next = { ...normalized, goalId: normalized.goalId ?? randomUUID() };
+    const wasPaused = !this.config.goal;
+    this.config = {
+      ...this.config,
+      goal: next,
+      ...(typeof limits?.maxTurns === "number" && limits.maxTurns > 0
+        ? { maxTurns: Math.max(this.config.maxTurns, Math.floor(limits.maxTurns)) }
+        : {}),
+      ...(typeof limits?.maxStopBlocks === "number" && limits.maxStopBlocks > 0
+        ? { maxStopBlocks: Math.floor(limits.maxStopBlocks) }
+        : {}),
+    };
+    this.goalControlStopRequested = false;
+    this.pendingGoalControlMessage = controlMessage?.trim()
+      ? { goalId: next.goalId, revision: next.revision, text: controlMessage.trim() }
+      : null;
+    if (this.goalTracker && !wasPaused) this.goalTracker.goal = next;
+    else this.goalTracker = createGoalBudgetTracker(next, Date.now());
+    this.stopBlockCount = 0;
+    this.approachAnnounced = false;
+  }
 
   /**
    * Extend the in-flight run's limits (TODO 3.1 — 运行中续轮/加预算). Mutates
@@ -382,6 +438,7 @@ export class TurnLoop {
     this.config.onStream?.({
       type: "goal_progress",
       goalId: this.config.goal.goalId,
+      revision: this.config.goal.revision,
       status: "approaching_limit",
       round: this.stopBlockCount,
       turnsRemaining: prox.turnsRemaining,
@@ -396,6 +453,7 @@ export class TurnLoop {
     this.config.onStream?.({
       type: "goal_progress",
       goalId: this.config.goal.goalId,
+      revision: this.config.goal.revision,
       status: "exhausted",
       round: this.stopBlockCount,
     });
@@ -712,7 +770,6 @@ export class TurnLoop {
     if (!this.goalTracker && this.config.goal) {
       this.goalTracker = createGoalBudgetTracker(this.config.goal, Date.now());
     }
-    const goalTracker = this.goalTracker;
     // Fresh run: re-arm the approaching-limit announcement.
     this.approachAnnounced = false;
 
@@ -725,8 +782,12 @@ export class TurnLoop {
     // hook emits, guards) and surfaces them as a model_error result.
     try {
       while (this.turnCount < this.config.maxTurns) {
-        const preTurnGoalTermination = goalTracker
-          ? goalBudgetTerminationReason(goalTracker, Date.now())
+        if (this.goalControlStopRequested) {
+          messages = this.redactConsumedSensitiveToolResults(messages);
+          return { text: finalText, reason: "completed", messages };
+        }
+        const preTurnGoalTermination = this.goalTracker
+          ? goalBudgetTerminationReason(this.goalTracker, Date.now())
           : undefined;
         if (preTurnGoalTermination) {
           this.emitGoalExhausted();
@@ -774,7 +835,17 @@ export class TurnLoop {
         // they join THIS step's request — no abort, no lost in-flight work. Same
         // loop-top user-push pattern as turnStartInjection / turn-limit warnings
         // below. Push to transcript too so they persist + survive resume.
+        // Bind self-reported Goal terminal tools to the revision that was
+        // actually visible when this model step began. An edit/pause/delete can
+        // arrive while context management, the model request, or its tool batch
+        // is in flight; a late complete_goal/cancel_goal from that old prompt
+        // must never terminate the newer revision.
+        const requestedGoalVersion = this.config.goal ? { ...this.config.goal } : undefined;
         await this.consumeQueuedSteer(messages, "normal_step");
+        if (this.goalControlStopRequested) {
+          messages = this.redactConsumedSensitiveToolResults(messages);
+          return { text: finalText, reason: "completed", messages };
+        }
         this.deps.onAgentControlState?.("model");
 
         // Per-turn correlation ID. Every log written through `tlog` (or any
@@ -793,17 +864,16 @@ export class TurnLoop {
 
         // Tag downstream tool-exec / permission lines with this turn's IDs.
         this.deps.toolExecutor.setLogger(tlog);
-        this.config.onStream?.({
-          type: "stream_request_start",
-          turnNumber: this.turnCount,
-          messageId: assistantMessageId,
-        });
         const turnStartHook = await this.emitHook("on_turn_start", {
           turnNumber: this.turnCount,
         });
         const turnStartInjection = wrapHookMessages(turnStartHook.messages);
         if (turnStartInjection) {
           messages.push(turnStartInjection);
+        }
+        if (this.goalControlStopRequested) {
+          messages = this.redactConsumedSensitiveToolResults(messages);
+          return { text: finalText, reason: "completed", messages };
         }
 
         // Approaching max turns: inject a warning so the model can wrap up.
@@ -862,6 +932,10 @@ export class TurnLoop {
             this.markStopped();
             return { text: finalText, reason: "aborted_streaming", messages };
           }
+          if (this.goalControlStopRequested) {
+            messages = this.redactConsumedSensitiveToolResults(messages);
+            return { text: finalText, reason: "completed", messages };
+          }
         }
         // No pre-llm ctx emit here: the messages-only estimate would be ~16k
         // smaller than the real prompt (system + tools not included), making
@@ -890,9 +964,18 @@ export class TurnLoop {
             messages.push(compactInjection);
           }
         }
+        if (this.goalControlStopRequested) {
+          messages = this.redactConsumedSensitiveToolResults(messages);
+          return { text: finalText, reason: "completed", messages };
+        }
         messages = this.appendVolatileContextMessages(messages);
 
         // Model call (with streaming fallback and max_output_tokens continuation)
+        this.config.onStream?.({
+          type: "stream_request_start",
+          turnNumber: this.turnCount,
+          messageId: assistantMessageId,
+        });
         // Track tool IDs streamed during this turn to avoid duplicate UI events
         this.streamedToolIds.clear();
         // Tool queue is created before the call, but enqueue happens only after
@@ -903,10 +986,18 @@ export class TurnLoop {
           response = await this.callModelWithFallback(messages, assistantMessageId);
         } catch (err) {
           if (err instanceof ContextLimitError) {
+            if (this.goalControlStopRequested) {
+              messages = this.redactConsumedSensitiveToolResults(messages);
+              return { text: finalText, reason: "completed", messages };
+            }
             // Progressive recovery: drop oldest API rounds, up to 3 retries
             const { dropOldestRounds } = await import("../context/compaction.js");
             let recovered = false;
             for (let retry = 1; retry <= 3; retry++) {
+              if (this.goalControlStopRequested) {
+                messages = this.redactConsumedSensitiveToolResults(messages);
+                return { text: finalText, reason: "completed", messages };
+              }
               tlog.warn("turn.ptl_recovery", { cat: "turn", retry, roundsToDrop: retry });
               messages = dropOldestRounds(messages, retry);
               try {
@@ -961,13 +1052,13 @@ export class TurnLoop {
 
         // Charge every provider response to the run-scoped Goal budget before
         // any truncation path can retry or continue the outer turn loop.
-        if (goalTracker && response!.usage) {
+        if (this.goalTracker && response!.usage) {
           const used =
             (response!.usage.promptTokens ?? 0) + (response!.usage.completionTokens ?? 0);
-          recordGoalUsage(goalTracker, used);
+          recordGoalUsage(this.goalTracker, used);
         }
-        let budgetTermination = goalTracker
-          ? goalBudgetTerminationReason(goalTracker, Date.now())
+        let budgetTermination = this.goalTracker
+          ? goalBudgetTerminationReason(this.goalTracker, Date.now())
           : undefined;
 
         // Feed actual token usage back to the context manager so subsequent
@@ -1038,9 +1129,9 @@ export class TurnLoop {
             // Don't fire another continuation call if the user cancelled — without
             // this an abort during a truncated response could still issue up to 3
             // more model calls, emitting text after Stop.
-            if (this.config.signal?.aborted) break;
-            budgetTermination = goalTracker
-              ? goalBudgetTerminationReason(goalTracker, Date.now())
+            if (this.config.signal?.aborted || this.goalControlStopRequested) break;
+            budgetTermination = this.goalTracker
+              ? goalBudgetTerminationReason(this.goalTracker, Date.now())
               : undefined;
             if (budgetTermination) break;
             tlog.info("turn.max_tokens_continuation", { cat: "turn", retry: retry + 1 });
@@ -1070,14 +1161,14 @@ export class TurnLoop {
                 this.recordResponseUsage(contResponse.usage, "continuation");
                 continuedResponse = true;
               }
-              if (goalTracker && contResponse.usage) {
+              if (this.goalTracker && contResponse.usage) {
                 const used =
                   (contResponse.usage.promptTokens ?? 0) +
                   (contResponse.usage.completionTokens ?? 0);
-                recordGoalUsage(goalTracker, used);
+                recordGoalUsage(this.goalTracker, used);
               }
-              budgetTermination = goalTracker
-                ? goalBudgetTerminationReason(goalTracker, Date.now())
+              budgetTermination = this.goalTracker
+                ? goalBudgetTerminationReason(this.goalTracker, Date.now())
                 : undefined;
               combinedText += contResponse.text;
               if (
@@ -1121,13 +1212,13 @@ export class TurnLoop {
         // is force-stopped regardless of what the model wants to do next (stop OR
         // continue with tool calls). This is the unattended-safety backstop, so
         // it sits BEFORE the "tool calls?" branch — both paths pass the gate.
-        budgetTermination = goalTracker
-          ? (budgetTermination ?? goalBudgetTerminationReason(goalTracker, Date.now()))
+        budgetTermination = this.goalTracker
+          ? (budgetTermination ?? goalBudgetTerminationReason(this.goalTracker, Date.now()))
           : undefined;
-        if (goalTracker && budgetTermination) {
+        if (this.goalTracker && budgetTermination) {
           tlog.info("turn.goal_budget_exhausted", {
             cat: "goal",
-            tokensUsed: goalTracker.tokensUsed,
+            tokensUsed: this.goalTracker.tokensUsed,
             tokenBudget: this.config.goal?.tokenBudget,
             timeBudgetMs: this.config.goal?.timeBudgetMs,
           });
@@ -1173,7 +1264,7 @@ export class TurnLoop {
           // we run another turn instead of returning. Bounded by
           // maxStopBlocks (consecutive) and the outer maxTurns ceiling.
           const maxStopBlocks = this.config.maxStopBlocks ?? GOAL_DEFAULT_MAX_STOP_BLOCKS;
-          if (goalTracker) {
+          if (this.goalTracker) {
             const judgeMessages = this.stripVolatileContextMessages(messages);
             this.deps.publishGoalJudgeContext?.(
               buildGoalJudgeRuntimeContext(judgeMessages, {
@@ -1195,16 +1286,16 @@ export class TurnLoop {
             hookGoalTermination === "time_budget_exhausted"
               ? hookGoalTermination
               : undefined;
-          const postJudgeBudgetTermination = goalTracker
-            ? (hookBudgetTermination ?? goalBudgetTerminationReason(goalTracker, Date.now()))
+          const postJudgeBudgetTermination = this.goalTracker
+            ? (hookBudgetTermination ?? goalBudgetTerminationReason(this.goalTracker, Date.now()))
             : undefined;
-          if (goalTracker && postJudgeBudgetTermination) {
+          if (this.goalTracker && postJudgeBudgetTermination) {
             tlog.info("turn.goal_budget_exhausted_after_judge", {
               cat: "goal",
               reason: postJudgeBudgetTermination,
-              tokensUsed: goalTracker.tokensUsed,
-              tokenBudget: goalTracker.goal.tokenBudget,
-              timeBudgetMs: goalTracker.goal.timeBudgetMs,
+              tokensUsed: this.goalTracker.tokensUsed,
+              tokenBudget: this.goalTracker.goal.tokenBudget,
+              timeBudgetMs: this.goalTracker.goal.timeBudgetMs,
             });
             this.emitGoalExhausted();
             this.config.onStream?.({
@@ -1222,7 +1313,7 @@ export class TurnLoop {
               goalTermination: postJudgeBudgetTermination,
             };
           }
-          if (goalTracker && hookGoalTermination === "judge_prompt_too_large") {
+          if (this.goalTracker && hookGoalTermination === "judge_prompt_too_large") {
             tlog.warn("turn.goal_judge_prompt_too_large", { cat: "goal" });
             this.config.onStream?.({
               type: "assistant_message",
@@ -1252,6 +1343,7 @@ export class TurnLoop {
             this.config.onStream?.({
               type: "goal_progress",
               goalId: this.config.goal?.goalId,
+              revision: this.config.goal?.revision,
               status: "not_met",
               round: this.stopBlockCount,
               gaps: goalVerdict?.gaps || undefined,
@@ -1306,6 +1398,7 @@ export class TurnLoop {
             this.config.onStream?.({
               type: "goal_progress",
               goalId: this.config.goal.goalId,
+              revision: this.config.goal.revision,
               status: "met",
               round: this.stopBlockCount + 1,
             });
@@ -1388,16 +1481,19 @@ export class TurnLoop {
         // best-effort observability — a thrown onStream handler, a failed dynamic
         // import, or a rejecting summarize must never surface as an unhandled
         // rejection (Node can treat those as fatal). Swallow at the tail. (B-2)
-        if (this.config.onStream) {
+        if (this.config.onStream && this.deps.model.summarize && !this.goalControlStopRequested) {
+          const summaryController = new AbortController();
+          this.activeToolSummaryControllers.add(summaryController);
           void import("./tool-summary.js")
             .then(({ generateToolUseSummary }) => {
-              if (!this.deps.model.summarize) return;
+              if (this.goalControlStopRequested || summaryController.signal.aborted) return;
               return generateToolUseSummary(
                 toolCalls,
                 toolResultsForDisplay(results),
-                this.deps.model.summarize,
+                this.deps.model.summarize!,
+                summaryController.signal,
               ).then((summary) => {
-                if (summary) {
+                if (summary && !summaryController.signal.aborted) {
                   this.config.onStream?.({
                     type: "tool_summary",
                     summary,
@@ -1411,6 +1507,9 @@ export class TurnLoop {
                 cat: "turn",
                 error: (err as Error).message,
               });
+            })
+            .finally(() => {
+              this.activeToolSummaryControllers.delete(summaryController);
             });
         }
 
@@ -1455,22 +1554,35 @@ export class TurnLoop {
         // the model just declared finished (the judge's onMet does this when IT
         // decides; a self-report must do the same, else the goal outlives its
         // completion and re-arms every follow-up turn).
-        if (goalTracker && toolCalls.some((tc) => tc.toolName === COMPLETE_GOAL_TOOL_NAME)) {
-          tlog.info("turn.goal_self_reported_complete", { cat: "goal" });
-          this.config.onStream?.({
-            type: "goal_progress",
-            goalId: this.config.goal?.goalId,
-            status: "met",
-            round: this.stopBlockCount + 1,
-          });
-          this.stopBlockCount = 0;
-          this.deps.clearPersistedGoal?.("completed");
-          this.finalizeModelTurn();
-          if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
-            continue;
+        const completeGoalRequested =
+          !!this.goalTracker &&
+          isSameGoalVersion(requestedGoalVersion, this.config.goal) &&
+          toolCalls.some((tc) => tc.toolName === COMPLETE_GOAL_TOOL_NAME);
+        if (completeGoalRequested) {
+          const persisted = this.deps.clearPersistedGoal?.("completed") !== false;
+          if (persisted) {
+            tlog.info("turn.goal_self_reported_complete", { cat: "goal" });
+            this.config.onStream?.({
+              type: "goal_progress",
+              goalId: this.config.goal?.goalId,
+              revision: this.config.goal?.revision,
+              status: "met",
+              round: this.stopBlockCount + 1,
+            });
+            this.stopBlockCount = 0;
+            this.finalizeModelTurn();
+            if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
+              continue;
+            }
+            messages = this.redactConsumedSensitiveToolResults(messages);
+            return { text: finalText, reason: "completed", messages };
           }
-          messages = this.redactConsumedSensitiveToolResults(messages);
-          return { text: finalText, reason: "completed", messages };
+          tlog.warn("turn.goal_self_reported_complete_persist_failed", { cat: "goal" });
+          messages.push({
+            role: "user",
+            content:
+              "<system-reminder>complete_goal 未能持久化完成状态；目标仍处于活动状态。请不要宣称已经结束，并在会话状态恢复可写后重试。</system-reminder>",
+          });
         }
 
         // Goal mode: user-initiated cancellation. cancel_goal is the "strong
@@ -1481,16 +1593,33 @@ export class TurnLoop {
         const confirmedCancel = toolCalls.some(
           (tc) => tc.toolName === CANCEL_GOAL_TOOL_NAME && tc.args?.confirm === true,
         );
-        if (goalTracker && confirmedCancel) {
-          tlog.info("turn.goal_user_cancelled", { cat: "goal" });
-          this.stopBlockCount = 0;
-          this.deps.clearPersistedGoal?.("cancelled");
-          this.config.onStream?.({ type: "goal_cleared", goalId: this.config.goal?.goalId });
-          this.finalizeModelTurn();
-          if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
-            continue;
+        if (
+          this.goalTracker &&
+          isSameGoalVersion(requestedGoalVersion, this.config.goal) &&
+          confirmedCancel &&
+          !completeGoalRequested
+        ) {
+          const persisted = this.deps.clearPersistedGoal?.("cancelled") !== false;
+          if (persisted) {
+            tlog.info("turn.goal_user_cancelled", { cat: "goal" });
+            this.stopBlockCount = 0;
+            this.config.onStream?.({
+              type: "goal_cleared",
+              goalId: this.config.goal?.goalId,
+              revision: this.config.goal?.revision,
+            });
+            this.finalizeModelTurn();
+            if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
+              continue;
+            }
+            return { text: finalText, reason: "completed", messages };
           }
-          return { text: finalText, reason: "completed", messages };
+          tlog.warn("turn.goal_user_cancelled_persist_failed", { cat: "goal" });
+          messages.push({
+            role: "user",
+            content:
+              "<system-reminder>cancel_goal 未能持久化删除状态；目标仍处于活动状态。请在会话状态恢复可写后重试。</system-reminder>",
+          });
         }
 
         // Token budget check
@@ -1596,6 +1725,13 @@ export class TurnLoop {
       return { text: finalText, reason: "model_error", messages };
     }
 
+    // Pause/delete may have landed while the final allowed tool batch was
+    // draining. Do not cross that safe boundary into an extra summary request.
+    if (this.goalControlStopRequested) {
+      messages = this.redactConsumedSensitiveToolResults(messages);
+      return { text: finalText, reason: "completed", messages };
+    }
+
     // Max turns reached — do one final summarization call (no tools)
     logger.warn("turn.max_turns_reached", {
       cat: "turn",
@@ -1604,6 +1740,10 @@ export class TurnLoop {
     });
 
     await this.consumeQueuedSteer(messages, "finalize_backfill");
+    if (this.goalControlStopRequested) {
+      messages = this.redactConsumedSensitiveToolResults(messages);
+      return { text: finalText, reason: "completed", messages };
+    }
     this.deps.onAgentControlState?.("model");
     const hasPendingSensitiveToolResults = this.sensitiveToolResultRedactions.size > 0;
     messages = this.prepareMessagesForModel(messages);
@@ -1616,6 +1756,10 @@ export class TurnLoop {
     } else {
       messages = this.deps.contextManager.manage(messages);
     }
+    if (this.goalControlStopRequested) {
+      messages = this.redactConsumedSensitiveToolResults(messages);
+      return { text: finalText, reason: "completed", messages };
+    }
     messages.push({
       role: "user",
       content:
@@ -1624,6 +1768,10 @@ export class TurnLoop {
     this.emitCtxFromMessages(messages);
 
     try {
+      if (this.goalControlStopRequested) {
+        messages = this.redactConsumedSensitiveToolResults(messages);
+        return { text: finalText, reason: "completed", messages };
+      }
       const summaryResponse = await this.deps.model.call(
         this.deps.systemPrompt,
         this.prepareMessagesForModel(messages),
@@ -1635,9 +1783,9 @@ export class TurnLoop {
       if (summaryResponse.usage?.promptTokens !== undefined) {
         this.recordResponseUsage(summaryResponse.usage, "primary", false);
       }
-      if (goalTracker && summaryResponse.usage) {
+      if (this.goalTracker && summaryResponse.usage) {
         recordGoalUsage(
-          goalTracker,
+          this.goalTracker,
           (summaryResponse.usage.promptTokens ?? 0) + (summaryResponse.usage.completionTokens ?? 0),
         );
       }
@@ -1740,6 +1888,15 @@ export class TurnLoop {
       // really just a cancel. The signal is the authoritative cancel source.
       if (isAbortError(err) || this.config.signal?.aborted) throw err;
 
+      // Pause/delete arrived while the streaming attempt was in flight. A
+      // non-streaming fallback would be a brand-new provider request after the
+      // promised safe boundary, so revoke any partial stream and synthesize an
+      // empty settled step instead.
+      if (this.goalControlStopRequested) {
+        this.config.onStream?.({ type: "tombstone", messageId: assistantMessageId });
+        return { text: "", toolCalls: [], stopReason: "stop" };
+      }
+
       // Sensitive tool results are model-facing exactly once. A streaming
       // fallback would re-send the same pending plaintext in a second request,
       // so fail the turn and let the unified exit redact returned history.
@@ -1778,9 +1935,27 @@ export class TurnLoop {
     messages: Message[],
     source: "normal_step" | "finalize_backfill",
   ): Promise<boolean> {
+    let consumed = false;
+    const goalControl = this.pendingGoalControlMessage;
+    this.pendingGoalControlMessage = null;
+    if (
+      goalControl &&
+      this.config.goal?.paused !== true &&
+      this.config.goal?.goalId === goalControl.goalId &&
+      (this.config.goal?.revision ?? 1) === (goalControl.revision ?? 1)
+    ) {
+      const content = `<system-reminder>\n${goalControl.text}\n</system-reminder>`;
+      const message: Message = { role: "user", content };
+      messages.push(message);
+      this.deps.transcript.appendMessage("user", content, {
+        injected: true,
+        source: "goal-control",
+      });
+      consumed = true;
+    }
     const directionConsumed = await this.consumeQueuedAgentDirections(messages, source);
     const steered = this.deps.consumeSteer?.(source) ?? [];
-    let consumed = directionConsumed;
+    consumed ||= directionConsumed;
     for (let index = 0; index < steered.length; index++) {
       const item = steered[index]!;
       const { id, text, clientMessageId } = item;

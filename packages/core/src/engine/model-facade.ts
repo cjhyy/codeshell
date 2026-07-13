@@ -257,7 +257,7 @@ export class ModelFacade {
   }
 
   /** Optional summarize function for tool use summaries. */
-  summarize?: (systemPrompt: string, userMessage: string) => Promise<string>;
+  summarize?: (systemPrompt: string, userMessage: string, signal?: AbortSignal) => Promise<string>;
 
   /** Get cumulative output tokens (for token budget). */
   getOutputTokens?(): number;

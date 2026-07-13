@@ -31,6 +31,7 @@ import {
   type ApprovalResolvedNotification,
   type PetProjectionDelta,
   type PetProjectionSnapshotResult,
+  ErrorCodes,
 } from "./types.js";
 import type {
   StreamEvent,
@@ -43,6 +44,7 @@ import type {
 import { EventEmitter } from "node:events";
 import { logger } from "../logging/logger.js";
 import type { RunBehaviorMode } from "../engine/run-types.js";
+import type { GoalConfig } from "../engine/goal.js";
 
 // ─── Event Types ────────────────────────────────────────────────────
 
@@ -88,6 +90,7 @@ export class AgentClient {
   private pendingRequests = new Map<
     string | number,
     {
+      onResponse?: () => void;
       resolve: (result: unknown) => void;
       reject: (error: Error) => void;
     }
@@ -131,6 +134,7 @@ export class AgentClient {
   async run(
     taskOrParams: string | RunParams,
     sessionIdOrOptions?: string | AgentRunOptions,
+    onTransportResponse?: () => void,
   ): Promise<RunResult> {
     let params: RunParams;
     if (typeof taskOrParams === "string") {
@@ -159,6 +163,7 @@ export class AgentClient {
     const result = (await this.request(
       Methods.Run,
       params as unknown as Record<string, unknown>,
+      onTransportResponse,
     )) as RunResult;
     if (result.sessionId) logger.setSid(result.sessionId);
     return result;
@@ -227,6 +232,71 @@ export class AgentClient {
       unknown
     >)) as { cleared?: boolean } | undefined;
     return res?.cleared === true;
+  }
+
+  /** Delete a persisted goal. Kept separate from goalClear for UI semantics. */
+  async goalDelete(
+    sessionId: string,
+    expected: { goalId: string; revision: number },
+  ): Promise<boolean> {
+    try {
+      const res = (await this.request(Methods.GoalDelete, {
+        sessionId,
+        expectedGoalId: expected.goalId,
+        expectedRevision: expected.revision,
+      } as Record<string, unknown>)) as { deleted?: boolean } | undefined;
+      return res?.deleted === true;
+    } catch (err) {
+      // Compatibility only: old servers do not know GoalDelete and expose the
+      // unfenced GoalClear method. Never downgrade on a stale/validation error.
+      if ((err as Error & { code?: number }).code !== ErrorCodes.MethodNotFound) throw err;
+      return this.goalClear(sessionId);
+    }
+  }
+
+  /** Edit or pause/resume a goal while preserving its goalId. */
+  async goalUpdate(
+    sessionId: string,
+    patch: {
+      objective?: string;
+      paused?: boolean;
+      expectedGoalId: string;
+      expectedRevision: number;
+    },
+  ): Promise<GoalConfig | null> {
+    const res = (await this.request(Methods.GoalUpdate, {
+      sessionId,
+      ...patch,
+    } as Record<string, unknown>)) as
+      | {
+          updated?: boolean;
+          goal?: string;
+          goalId?: string;
+          revision?: number;
+          paused?: boolean;
+        }
+      | undefined;
+    if (res?.updated !== true || !res.goal) return null;
+    return {
+      objective: res.goal,
+      ...(res.goalId ? { goalId: res.goalId } : {}),
+      ...(res.revision ? { revision: res.revision } : {}),
+      ...(res.paused === true ? { paused: true } : {}),
+    };
+  }
+
+  /** Read the full persisted goal control state. */
+  async goalGetState(sessionId: string): Promise<GoalConfig | null> {
+    const res = (await this.request(Methods.GoalGet, { sessionId } as Record<string, unknown>)) as
+      | { goal?: string | null; goalId?: string; revision?: number; paused?: boolean }
+      | undefined;
+    if (!res?.goal) return null;
+    return {
+      objective: res.goal,
+      ...(res.goalId ? { goalId: res.goalId } : {}),
+      ...(res.revision ? { revision: res.revision } : {}),
+      ...(res.paused === true ? { paused: true } : {}),
+    };
   }
 
   /**
@@ -415,10 +485,14 @@ export class AgentClient {
 
   // ─── Internals ──────────────────────────────────────────────────
 
-  private request(method: string, params?: Record<string, unknown>): Promise<unknown> {
+  private request(
+    method: string,
+    params?: Record<string, unknown>,
+    onResponse?: () => void,
+  ): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const req = createRequest(method, params);
-      this.pendingRequests.set(req.id, { resolve, reject });
+      this.pendingRequests.set(req.id, { onResponse, resolve, reject });
       this.transport.send(req);
     });
   }
@@ -428,6 +502,19 @@ export class AgentClient {
     if (!pending) return;
 
     this.pendingRequests.delete(res.id);
+
+    // Emit before resolving/rejecting: Promise continuations run in a later
+    // microtask, while the transport may synchronously parse the next queued
+    // session_started notification in the same chunk.
+    if (pending.onResponse) {
+      try {
+        pending.onResponse();
+      } catch (error) {
+        logger.warn("client.run_response_handler_failed", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
 
     if (res.error) {
       // Attach both message and code so callers can do toMatchObject({ code }).

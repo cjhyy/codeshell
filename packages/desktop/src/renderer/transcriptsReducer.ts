@@ -8,6 +8,7 @@ import {
   appendUserMessage,
   markAskUserAnswered,
   removePendingSteerMessages,
+  type ActiveGoal,
   type AskUserOption,
   type MessagesReducerState,
 } from "./types";
@@ -27,6 +28,14 @@ export type TranscriptsAction =
     }
   | { type: "stream"; bucket: string; event: StreamEvent }
   | { type: "stream_batch"; bucket: string; events: StreamEvent[]; maxSeq?: number }
+  | {
+      /** Apply an authoritative goalGet result after an optimistic RPC failed.
+       *  `expected` fences this rollback against a newer local/stream update. */
+      type: "goal_reconcile";
+      bucket: string;
+      expected: Pick<ActiveGoal, "goalId" | "revision"> | null;
+      goal: ActiveGoal | null;
+    }
   | { type: "hydrate"; bucket: string; state: MessagesReducerState }
   | { type: "evict"; bucket: string }
   | { type: "remove_pending_steers"; bucket: string; steerIds: string[] }
@@ -147,6 +156,18 @@ export function transcriptsReducer(map: TranscriptsMap, action: TranscriptsActio
         },
         () => ({ events: action.events.length, msgs: current.messages.length }),
       );
+      break;
+    }
+    case "goal_reconcile": {
+      const active = current.activeGoal;
+      const expectedMatches =
+        action.expected === null
+          ? active === null
+          : active !== null &&
+            active.goalId === action.expected.goalId &&
+            active.revision === action.expected.revision;
+      if (!expectedMatches) return map;
+      next = { ...current, activeGoal: action.goal };
       break;
     }
     default:

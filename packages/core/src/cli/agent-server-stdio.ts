@@ -334,6 +334,10 @@ const agentServer = new AgentServer({
   // newly-created session converge on identical disk config (no divergence).
   settingsReader: freshSettings,
   readActiveGoalFromDisk: (sessionId) => goalDiskReader.readActiveGoal(sessionId),
+  updateActiveGoalOnDisk: (sessionId, patch) =>
+    goalDiskReader.updateActiveGoal(sessionId, patch)?.goal,
+  clearActiveGoalOnDisk: (sessionId, expected) =>
+    goalDiskReader.clearActiveGoal(sessionId, expected),
 });
 
 // Clean up on termination signals. Without this, SIGTERM (parent kill),
