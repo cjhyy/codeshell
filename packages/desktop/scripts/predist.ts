@@ -1,5 +1,5 @@
-// Pre-package step: replace the @cjhyy/code-shell-core workspace SYMLINK with a
-// real, self-contained directory inside packages/desktop/node_modules.
+// Pre-package step: replace the core and optional Arena workspace SYMLINKS with
+// real, self-contained directories inside packages/desktop/node_modules.
 //
 // WHY THIS EXISTS
 // ---------------
@@ -14,18 +14,16 @@
 // `files` field avoids it — both were tried and don't work.
 //
 // All of desktop's OTHER deps are build-time only (esbuild bundles main, vite
-// bundles the renderer; only `electron` + this package stay external), so they
-// live in devDependencies and electron-builder never walks them. core is the
-// ONE runtime dep that must ship as real files — main spawns its
-// bin/agent-server-stdio as a child process via the Electron-as-node runtime.
+// bundles the renderer). core and Arena are runtime deps: main spawns core's
+// bin/agent-server-stdio as a child process, and that worker dynamically loads
+// the Arena package through core's capability seam.
 //
 // THE FIX
 // -------
-// Materialize core into a real in-tree directory containing exactly what the
-// app needs at runtime: dist/, package.json, and core's own production
-// node_modules (dereferenced from bun's .bun store into real files). LICENSE
-// and README are deliberately NOT copied — they are the offending out-of-tree
-// files and a bundled internal copy needs neither.
+// Materialize both packages into real in-tree directories containing exactly
+// what the app needs at runtime: dist/ + package.json, plus core's production
+// dependency closure. LICENSE and README are deliberately NOT copied — they
+// are the offending out-of-tree files and a bundled internal copy needs neither.
 //
 // Idempotent and best-effort: dead/orphan symlinks in a dev box's node_modules
 // are skipped rather than aborting. A clean CI checkout has none. We do not
@@ -50,7 +48,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 const desktopRoot = resolve(here, "..");
 const repoRoot = resolve(desktopRoot, "../..");
 const coreSrc = resolve(repoRoot, "packages/core");
-const target = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-core");
+const arenaSrc = resolve(repoRoot, "packages/arena");
+const coreTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-core");
+const arenaTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-arena");
 
 function log(msg: string): void {
   // eslint-disable-next-line no-console
@@ -59,6 +59,7 @@ function log(msg: string): void {
 
 function main(): void {
   if (!existsSync(coreSrc)) throw new Error(`core package not found at ${coreSrc}`);
+  if (!existsSync(arenaSrc)) throw new Error(`Arena package not found at ${arenaSrc}`);
 
   // Rebuild the desktop bundle FIRST. electron-builder only packs whatever is
   // already in out/**; predist itself just materializes core. Without this, a
@@ -75,24 +76,44 @@ function main(): void {
   // `recursive: true`. For a junction/symlink, `recursive` removes only the
   // link entry, never following it into the real core dir (verified: rm of a
   // junction does not delete the target's contents).
+  removeWorkspaceTarget(coreTarget, "core");
+  removeWorkspaceTarget(arenaTarget, "Arena");
+
+  materializePackage(coreSrc, coreTarget);
+  materializePackage(arenaSrc, arenaTarget);
+
+  // Each materialized sibling owns its production closure. Arena imports zod
+  // directly, so relying on core's nested node_modules would break Node's
+  // sibling-package resolution in the packaged app.
+  installProductionDeps(coreSrc, coreTarget, "core");
+  installProductionDeps(arenaSrc, arenaTarget, "Arena");
+  verifyMaterializedArena();
+
+  log(`materialized core + Arena into node_modules (LICENSE/README excluded)`);
+}
+
+function verifyMaterializedArena(): void {
+  log("verifying packaged Arena can resolve its runtime dependencies");
+  execFileSync("bun", ["--eval", "await import('@cjhyy/code-shell-arena')"], {
+    cwd: desktopRoot,
+    stdio: "inherit",
+  });
+}
+
+function removeWorkspaceTarget(target: string, label: string): void {
   if (isSymlink(target)) {
-    log(`unlinking link -> ${safeReadlink(target)}`);
+    log(`unlinking ${label} link -> ${safeReadlink(target)}`);
     rmSync(target, { recursive: true, force: true });
   } else if (existsSync(target)) {
-    log(`removing stale real dir`);
+    log(`removing stale ${label} real dir`);
     rmSync(target, { recursive: true, force: true });
   }
+}
 
+function materializePackage(source: string, target: string): void {
   mkdirSync(target, { recursive: true });
-
-  // coreSrc is a real path; its dist/package.json are real files.
-  copyDir(resolve(coreSrc, "dist"), resolve(target, "dist"));
-  copyFile(resolve(coreSrc, "package.json"), resolve(target, "package.json"));
-
-  // core's production deps — the spawned agent-server requires them at runtime.
-  installProductionDeps(target);
-
-  log(`materialized core into node_modules (LICENSE/README excluded)`);
+  copyDir(resolve(source, "dist"), resolve(target, "dist"));
+  copyFile(resolve(source, "package.json"), resolve(target, "package.json"));
 }
 
 // Install core's FULL production dependency CLOSURE as real files under the
@@ -111,30 +132,40 @@ function main(): void {
 // exist on the user's machine). This is self-maintaining: when a dep bumps and
 // pulls in new transitive deps, they are installed automatically — no manual
 // store-walking to keep in sync.
-function installProductionDeps(coreTarget: string): void {
-  const corePkg = JSON.parse(
-    readFileSync(resolve(coreSrc, "package.json"), "utf8"),
-  ) as { name: string; version: string; dependencies?: Record<string, string> };
+function installProductionDeps(source: string, target: string, label: string): void {
+  const pkg = JSON.parse(readFileSync(resolve(source, "package.json"), "utf8")) as {
+    name: string;
+    version: string;
+    dependencies?: Record<string, string>;
+  };
+  // Workspace siblings are materialized by this script and resolve through the
+  // desktop node_modules ancestor. Bun cannot install `workspace:*` from the
+  // isolated minimal manifest, and doing so would duplicate core inside Arena.
+  const dependencies = Object.fromEntries(
+    Object.entries(pkg.dependencies ?? {}).filter(
+      ([, version]) => !version.startsWith("workspace:"),
+    ),
+  );
 
   // Minimal manifest: name/version + prod deps only. Omitting workspace fields
   // (workspaces, scripts, devDependencies) keeps bun from re-linking the
   // monorepo or running lifecycle scripts here.
   writeFileSync(
-    resolve(coreTarget, "package.json"),
+    resolve(target, "package.json"),
     JSON.stringify(
       {
-        name: corePkg.name,
-        version: corePkg.version,
-        dependencies: corePkg.dependencies ?? {},
+        name: pkg.name,
+        version: pkg.version,
+        dependencies,
       },
       null,
       2,
     ) + "\n",
   );
 
-  log(`installing core production dependency closure (bun install --production)`);
+  log(`installing ${label} production dependency closure (bun install --production)`);
   execFileSync("bun", ["install", "--production", "--linker=hoisted"], {
-    cwd: coreTarget,
+    cwd: target,
     stdio: "inherit",
   });
 
@@ -146,8 +177,8 @@ function installProductionDeps(coreTarget: string): void {
   // app would fail to resolve `@cjhyy/code-shell-core` and its
   // `/bin/agent-server-stdio` subpath. The node_modules/ bun just created stays.
   writeFileSync(
-    resolve(coreTarget, "package.json"),
-    readFileSync(resolve(coreSrc, "package.json"), "utf8"),
+    resolve(target, "package.json"),
+    readFileSync(resolve(source, "package.json"), "utf8"),
   );
 }
 

@@ -1,10 +1,8 @@
 /**
  * Generic JSON extraction from LLM text output — strip markdown fences and
  * pull out the first balanced object/array. These are provider-agnostic and
- * have no Arena dependency; they live here (not in arena/strategies/utils.ts)
- * so non-Arena consumers (e.g. services/memory-orchestrator) can use them
- * without dragging in the Arena subsystem. Arena re-exports them for
- * back-compat.
+ * live in core so any service or extension can consume them without importing
+ * a product capability package.
  */
 
 /** Extract JSON from text that might have markdown fences or surrounding text. */

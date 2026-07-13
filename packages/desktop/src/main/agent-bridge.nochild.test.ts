@@ -61,7 +61,7 @@ describe("buildNoChildFallbackReply — no live worker", () => {
     expect(JSON.parse(reply!).result).toEqual({ ok: true, cleared: false });
   });
 
-  test("agent/goalGet returns the goal objective off disk", () => {
+  test("agent/goalGet returns the goal identity and control revision off disk", () => {
     const m = sm();
     const { state } = m.create("/p", "gpt-5.5", "openai", "s-3");
     state.activeGoal = { objective: "找问题挖细节" };
@@ -70,7 +70,14 @@ describe("buildNoChildFallbackReply — no live worker", () => {
       { id: 11, method: "agent/goalGet", params: { sessionId: "s-3" } },
       m,
     );
-    expect(JSON.parse(reply!).result).toEqual({ ok: true, goal: "找问题挖细节" });
+    const result = JSON.parse(reply!).result;
+    expect(result).toMatchObject({
+      ok: true,
+      goal: "找问题挖细节",
+      paused: false,
+      revision: 1,
+    });
+    expect(result.goalId).toMatch(/^legacy-[a-f0-9]{64}$/);
   });
 
   test("agent/goalGet with no goal replies goal:null", () => {
@@ -80,7 +87,7 @@ describe("buildNoChildFallbackReply — no live worker", () => {
       { id: 12, method: "agent/goalGet", params: { sessionId: "s-4" } },
       m,
     );
-    expect(JSON.parse(reply!).result).toEqual({ ok: true, goal: null });
+    expect(JSON.parse(reply!).result).toEqual({ ok: true, goal: null, paused: false });
   });
 
   test("existing background-work fallback still answers empty", () => {

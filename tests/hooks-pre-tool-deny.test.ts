@@ -10,7 +10,11 @@ import { HookRegistry } from "../packages/core/src/hooks/registry.js";
 // LLM has enough context to recover (CC parity).
 describe("pre_tool_use deny short-circuits the executor", () => {
   function setup() {
-    const registry = new ToolRegistry({ builtinTools: ["Read"] });
+    const registry = new ToolRegistry({ builtinTools: [] });
+    registry.registerTool(
+      { name: "Read", description: "x", inputSchema: { type: "object" } },
+      async () => ({ id: "ok", toolName: "Read", content: "ran" }),
+    );
     // "allow" rule so the deny under test is unambiguously coming from the
     // hook, not the permission classifier.
     const permission = new PermissionClassifier([{ tool: "Read", decision: "allow" }]);
@@ -25,7 +29,7 @@ describe("pre_tool_use deny short-circuits the executor", () => {
     // Replace Read with a sentinel so we can detect if it ever runs. The
     // executor pulls executors via builtinExecutors; registerTool with a
     // second arg overwrites the entry for "Read".
-    const registry2 = new ToolRegistry({ builtinTools: ["Read"] });
+    const registry2 = new ToolRegistry({ builtinTools: [] });
     registry2.registerTool(
       { name: "Read", description: "x", inputSchema: { type: "object" } },
       async () => {
@@ -76,7 +80,7 @@ describe("pre_tool_use deny short-circuits the executor", () => {
     // A hook returning `allow` when the classifier said `deny` is
     // logged as a rejected upgrade and the tool stays denied.
     let toolRan = false;
-    const registry = new ToolRegistry({ builtinTools: ["Read"] });
+    const registry = new ToolRegistry({ builtinTools: [] });
     registry.registerTool(
       { name: "Read", description: "x", inputSchema: { type: "object" } },
       async () => {
@@ -105,7 +109,7 @@ describe("pre_tool_use deny short-circuits the executor", () => {
   it("decision:'ask' approved by user runs the tool", async () => {
     let toolRan = false;
     let askReason: string | undefined;
-    const registry = new ToolRegistry({ builtinTools: ["Read"] });
+    const registry = new ToolRegistry({ builtinTools: [] });
     registry.registerTool(
       { name: "Read", description: "x", inputSchema: { type: "object" } },
       async () => {
@@ -145,7 +149,7 @@ describe("pre_tool_use deny short-circuits the executor", () => {
 
   it("decision:'ask' rejected by user returns the unified permission denial", async () => {
     let toolRan = false;
-    const registry = new ToolRegistry({ builtinTools: ["Read"] });
+    const registry = new ToolRegistry({ builtinTools: [] });
     registry.registerTool(
       { name: "Read", description: "x", inputSchema: { type: "object" } },
       async () => {

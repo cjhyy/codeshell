@@ -3478,7 +3478,13 @@ ipcMain.handle("workspace:switch", async (_e, sessionId: string, cwd: string, ta
     throw new Error("workspace:switch requires target");
   }
   knownGitRoots.add(cwd);
-  const list = await switchSessionWorkspaceForUi(sessionId, cwd, target);
+  const currentBridge = bridge;
+  const list = await switchSessionWorkspaceForUi(sessionId, cwd, target, {
+    setLiveWorkspace:
+      currentBridge?.hasLiveWorker() && currentBridge.hasKnownSession(sessionId)
+        ? (id, workspace) => currentBridge.setWorkspace(id, workspace)
+        : undefined,
+  });
   broadcastWorkspaceChanged({ sessionId, workspace: list.current, mainRoot: list.mainRoot });
   return list;
 });
@@ -3542,7 +3548,13 @@ ipcMain.handle(
       throw new Error("workspace:cleanup requires action detach or discard");
     }
     knownGitRoots.add(cwd);
-    const list = await cleanupSessionWorktreeForUi(sessionId, cwd, worktreePath, action);
+    const currentBridge = bridge;
+    const list = await cleanupSessionWorktreeForUi(sessionId, cwd, worktreePath, action, {
+      setLiveWorkspace:
+        currentBridge?.hasLiveWorker() && currentBridge.hasKnownSession(sessionId)
+          ? (id, workspace) => currentBridge.setWorkspace(id, workspace)
+          : undefined,
+    });
     broadcastWorkspaceChanged({ sessionId, workspace: list.current, mainRoot: list.mainRoot });
     return list;
   },

@@ -27,6 +27,7 @@ import {
   type SteerParams,
   type UnsteerParams,
   type GoalUpdateParams,
+  type SetWorkspaceParams,
   type PendingApprovalMetadata,
   type PetProjectionDelta,
   type PetProjectionSnapshotResult,
@@ -48,7 +49,6 @@ import {
   getApprovalRouter,
   getInteractiveApprovalBackend,
 } from "../tool-system/permission.js";
-import { getArenaStatus } from "../tool-system/builtin/arena.js";
 import {
   agentNotificationBus,
   notificationQueue,
@@ -603,6 +603,9 @@ export class AgentServer {
         break;
       case Methods.ReleaseWorkspace:
         this.handleReleaseWorkspace(req);
+        break;
+      case Methods.SetWorkspace:
+        this.handleSetWorkspace(req);
         break;
       case Methods.GoalExtend:
         this.handleGoalExtend(req);
@@ -1738,7 +1741,7 @@ export class AgentServer {
   /**
    * Read a session's persisted active goal so the host can re-surface the goal
    * block + Cancel button on session load. A persistent goal lives only in
-   * state.activeGoal and is never replayed from the transcript, so a reloaded
+   * state.goalLifecycle and is never replayed from the transcript, so a reloaded
    * (or disk-rebuilt) session has no other way to learn it. Prefers a live
    * chatManager session, else falls through to a disk read (readActiveGoalFromDisk
    * in worker mode, or the legacy engine's disk read in single-engine mode) — the
@@ -1924,6 +1927,49 @@ export class AgentServer {
       | null;
     const workspace = engine?.releaseSessionWorkspace?.(params.sessionId) ?? null;
     this.transport.send(createResponse(req.id, { ok: true, workspace }));
+  }
+
+  private handleSetWorkspace(req: RpcRequest): void {
+    const params = (req.params ?? {}) as unknown as SetWorkspaceParams;
+    if (typeof params.sessionId !== "string" || params.sessionId.length === 0) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "sessionId is required"),
+      );
+      return;
+    }
+    if (
+      !params.workspace ||
+      typeof params.workspace !== "object" ||
+      typeof params.workspace.root !== "string" ||
+      params.workspace.root.length === 0 ||
+      (params.workspace.kind !== "main" && params.workspace.kind !== "worktree")
+    ) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "valid workspace is required"),
+      );
+      return;
+    }
+    const engine = this.chatManager
+      ? this.chatManager.get(params.sessionId)?.engine
+      : this.legacyEngine;
+    if (!engine) {
+      this.transport.send(createResponse(req.id, { ok: true, workspace: null }));
+      return;
+    }
+    const workspace = (
+      engine as Engine & {
+        setSessionWorkspace?: (
+          sessionId: string,
+          workspace: import("../types.js").SessionWorkspace,
+        ) => import("../types.js").SessionWorkspace | null;
+      }
+    ).setSessionWorkspace?.(params.sessionId, params.workspace);
+    this.transport.send(
+      createResponse(req.id, {
+        ok: workspace !== undefined && workspace !== null,
+        workspace: workspace ?? null,
+      }),
+    );
   }
 
   // ─── Configure ──────────────────────────────────────────────────
@@ -2402,11 +2448,6 @@ export class AgentServer {
         }
         break;
       }
-      case "arena_status": {
-        const status = getArenaStatus();
-        this.transport.send(createResponse(req.id, { type: "arena_status", data: status }));
-        break;
-      }
       case "config_set": {
         if (!engine) {
           this.transport.send(
@@ -2670,7 +2711,14 @@ export class AgentServer {
         }
         break;
       }
-      default:
+      default: {
+        const capability = engine
+          ? await engine.queryCapability(params.type, params as unknown as Record<string, unknown>)
+          : { handled: false as const };
+        if (capability.handled) {
+          this.transport.send(createResponse(req.id, { type: params.type, data: capability.data }));
+          break;
+        }
         this.transport.send(
           createErrorResponse(
             req.id,
@@ -2678,6 +2726,7 @@ export class AgentServer {
             `Unknown query type: ${params.type}`,
           ),
         );
+      }
     }
   }
 

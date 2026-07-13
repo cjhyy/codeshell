@@ -1,7 +1,6 @@
 // @ts-nocheck
 import React, { type PropsWithChildren, type Ref, useImperativeHandle, useRef, useState } from 'react';
 import type { Except } from 'type-fest';
-import { markScrollActivity } from '@cjhyy/code-shell-core';
 import { logger } from "@cjhyy/code-shell-core";
 import type { DOMElement } from '../dom.js';
 import { markDirty, scheduleRenderFrom } from '../dom.js';
@@ -147,7 +146,6 @@ function ScrollBox({
     // Signal background intervals (IDE poll, LSP poll, GCS fetch, orphan
     // check) to skip their next tick — they compete for the event loop and
     // contributed to 1402ms max frame gaps during scroll drain.
-    markScrollActivity();
     markDirty(el);
     markCommitStart();
     notify();

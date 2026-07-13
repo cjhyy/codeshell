@@ -62,8 +62,8 @@ Supporting modules:
 
 - **Aux and primary summarizers are distinct.** Automatic context compaction uses the primary run client for high-fidelity summaries through `buildSummarizeFn()` (`packages/core/src/engine/engine.ts:1845`, `packages/core/src/engine/engine.ts:2324`). Per-turn tool-use one-line summaries use the cheaper aux client and `recordUsage: false` (`packages/core/src/engine/engine.ts:1862`).
 - **ModelFacade records the provider boundary.** Streaming calls log sanitized prompts, relay text/tool deltas, pass the run signal, record responses and usage, and append assistant content to the transcript (`packages/core/src/engine/model-facade.ts:43`, `packages/core/src/engine/model-facade.ts:73`, `packages/core/src/engine/model-facade.ts:230`).
-- **Persistent goals are resolved once per run.** Explicit `options.goal` replaces the stored session goal; otherwise a top-level run inherits `session.state.activeGoal`, then falls back to `config.goal` (`packages/core/src/engine/engine.ts:1936`, `packages/core/src/engine/engine.ts:1957`). `resolveGoalSetAt()` preserves deadline anchors for unchanged goals (`packages/core/src/engine/engine.ts:1967`, `packages/core/src/engine/goal.ts:135`).
-- **Goal stop hook is run-scoped.** A normalized top-level goal registers `createGoalStopHook()` on `on_stop`; `clearPersistedGoal` later removes both `state.activeGoal` and the active hook (`packages/core/src/engine/engine.ts:1978`, `packages/core/src/engine/engine.ts:2034`).
+- **Persistent goals are resolved once per run.** Explicit `options.goal` replaces the stored lifecycle; otherwise a top-level run inherits an armable `goalLifecycle`, then falls back to `config.goal`. Waiting re-arms with the same identity, while paused/terminal phases do not install Goal mode. `resolveGoalSetAt()` preserves deadline anchors independently of identity.
+- **Goal stop hook is run-scoped.** A normalized top-level goal registers `createGoalStopHook()` on `on_stop`; met, confirmed cancel, forced exhaustion, user clear, and finite-background waiting commit their lifecycle transition before the hook is detached or the stop is accepted.
 
 ### Stage 5 — The loop (`TurnLoop.run`, `packages/core/src/engine/turn-loop.ts:516`)
 
@@ -125,7 +125,7 @@ A still-pending item can be revoked through `unsteer`; once consumed, it is ordi
 
 ### Persistent goals and live extension
 
-A `GoalConfig` carries an objective plus optional `tokenBudget`, `timeBudgetMs`, `maxTurns`, `maxStopBlocks`, and `setAtMs` (`packages/core/src/engine/goal.ts:14`). The session stores exactly one active goal in `state.activeGoal`, not in transcript events, so hosts can recover or clear it cheaply from `state.json` (`packages/core/src/session/session-manager.ts:193`, `packages/core/src/session/session-manager.ts:236`).
+A `GoalConfig` carries an objective plus optional token/time/turn/stop-block limits and a deadline anchor. Durable state stores one `GoalLifecycleV1`, not transcript events: identity/revision are top-level, config has no duplicated control fields, and phase explicitly distinguishes active, paused, waiting, and terminal. Hosts recover or control it through `SessionManager`/protocol domain APIs rather than reading the JSON shape directly.
 
 The loop exposes `extendGoalRun()` through `ChatSession`, `Engine`, and `TurnLoop`. Extensions can add turns, token budget, time budget, and stop-block allowance; any real extension resets the consecutive stop-block streak and re-arms approaching-limit announcements (`packages/core/src/protocol/chat-session.ts:136`, `packages/core/src/engine/engine.ts:3022`, `packages/core/src/engine/turn-loop.ts:226`). The UI-facing approach marker watches both turns remaining and stop-blocks remaining because re-blocked goals usually hit the stop-block cap first (`packages/core/src/engine/turn-loop.ts:286`, `packages/core/src/engine/goal.ts:196`).
 

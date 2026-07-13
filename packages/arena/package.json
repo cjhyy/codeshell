@@ -1,0 +1,29 @@
+{
+  "name": "@cjhyy/code-shell-arena",
+  "version": "0.7.1",
+  "description": "Optional multi-model Arena capability for CodeShell.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@cjhyy/code-shell-core": "workspace:*",
+    "zod": "^3.24.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT"
+}

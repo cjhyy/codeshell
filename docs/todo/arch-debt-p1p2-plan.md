@@ -1,6 +1,6 @@
 # 架构债 P1/P2 调研与实施拆解（含 Goal 持久化）
 
-> 文档状态：实施前调研与 PR 拆解；本轮只写本文，不含实现代码。
+> 文档状态：实施记录；2026-07-14 本轮范围已实现并完成复审整改，以下盘点/PR 序列保留为实施依据。
 >
 > 源码快照：`429867b1`（2026-07-12）。行号均以该快照为准；题面中的
 > `packages/desktop/src/renderer/App.tsx` 4286 行、`packages/core/src/index.ts` 约 843 行是较早
@@ -10,6 +10,20 @@
 > `docs/todo/core-harness-and-plugin-panels.md:42-117`、
 > `docs/refactor/goal-persistence-final-design.md:1-729`，以及当前源码。若本文出现尚未由代码证明的
 > 判断，会显式标记为“**推测**”。
+
+> 2026-07-14 最终结果：A1-A6 已落为
+> `@cjhyy/code-shell-arena` + core `./extension` + host 显式 composition；Desktop D1-D7 与 TUI
+> 控制面/helper 拆分完成；`state.ts` 删除；Goal G1-G8 已落为单一 versioned `goalLifecycle`；
+> 两个 CAS MAJOR 以及后续 1 Critical、3 High、4 Medium 复审项均已收口。
+
+实施后的关键结果：
+
+- core 不再静态 import、注册、查询或校验 Arena；TUI/Desktop 显式安装 `createArenaCapability()`。
+- Desktop `App.tsx` 从本分支峰值约 5005 行降至 2036 行；TUI 根 App 降至 2203 行。
+- 新 session writer 不再输出 `activeGoal`/`goalTerminal`/`goalTerminals`，legacy 仅在读取时迁移；未知
+  lifecycle 版本 fail-closed。
+- `stateRevision` CAS、proper-lockfile 与 live worker rebase 保留，不采用本文早期草案里“移除 CAS”的
+  假设。后文冲突处均视作实施前历史，而非当前约束。
 
 ## 0. 执行摘要
 
@@ -39,7 +53,7 @@ Goal 纯模型 -> legacy decoder -> state 领域更新 -> Engine/host 切换 -> 
 - Goal 持久化与 Arena/App 无语义依赖；与 `index.ts` 只有 `SessionState` 类型出口的文件冲突，排期上
   建议错开修改 `packages/core/src/index.ts` / `types.ts`，不构成架构前置。
 
-## 1. 基线与证据口径
+## 1. 实施前基线与证据口径（历史）
 
 ### 1.1 已确认的架构不变量
 
@@ -59,7 +73,7 @@ Goal 纯模型 -> legacy decoder -> state 领域更新 -> Engine/host 切换 -> 
   `engine/types.ts` 化解；`engine.ts` 当前 3207 行，拆 Engine 仍应先于进一步扩大其职责。本文不把
   Goal 领域 API 塞回一个更大的 Engine 私有协议，而把持久化责任放在 SessionManager。
 
-### 1.2 本文不做的事
+### 1.2 调研阶段原定不做的事（历史）
 
 - 不修改任何 `.ts/.tsx/package.json`，不 commit、不 push。
 - 不在 Goal 层引入 revision、CAS、watermark、lockfile、sidecar 或 journal。
@@ -155,12 +169,12 @@ composition entry”的文件名是**推测**，架构约束（core 不反向依
 | PR | 一句话目标 | 主要影响文件 | 可独立合并 | 回归风险 | 必需测试/验证 |
 |---|---|---|---|---|---|
 | A0（已完成） | 把通用 JSON 提取从 Arena 移到 core utils。 | `utils/json.ts`、`memory-orchestrator.ts`、Arena compat re-export | 已合入 | 已验证 | 保留现有 JSON/array tests |
-| A1 | 为 ToolRegistry/Engine 增加可信 `CapabilityModule` 注入点，不迁移任何现有能力。 | `engine/types.ts`、`tool-system/registry.ts`、protocol/settings extension types、public index | 是 | 中；装配顺序、重复工具名、guard 合并 | 空 modules 行为快照不变；重复名 fail loud；tools/hooks/RPC/settings contribution 单测；全 core tests |
-| A2 | 把 Arena adapter 从静态 builtin 表改成 `createArenaCapability()`，纯 core 默认不注册。 | `builtin/index.ts`、`builtin/arena.ts`、preset、Engine/host composition、registry tests | 是，依赖 A1 | 中；工具可能在宿主中静默消失 | `new ToolRegistry()` 无 Arena；显式 module 有 Arena；TUI/desktop host profile 有 Arena；cron/headless 无；permission/timeout metadata 不变 |
-| A3 | 将 `arena_status` 和 Arena settings/onboarding ownership 移入 capability，保留 legacy settings read。 | `protocol/server.ts/types.ts`、`settings/schema.ts`、`onboarding.ts`、TUI model manager、Arena module | 是，依赖 A2 | 中；配置丢失或 query shape 漂移 | old/new settings fixtures；valid module RPC present/absent；secret redaction；TUI settings save/reload |
-| A4 | 创建 `packages/arena`，先搬纯实现和测试，使其只依赖 core 的稳定 public extension API。 | 新 package、workspace/build config、`core/src/arena/**`、TUI package/imports | 否，建议 stacked 后整体合并 | 高；跨包路径、循环依赖、资源/声明文件遗漏 | 包依赖图无环；Arena/IterativeArena tests；TUI arena CLI smoke；`bun run build` |
-| A5 | 切 desktop/TUI 产品 composition 到新包，并在 core 留一个发布周期的 deprecated compatibility re-export。 | product worker entry、TUI commands、core experimental/root compat、package manifests | 是，依赖 A4 | 中到高；打包后模块缺失、worker 启动失败 | packaged worker smoke；TUI `/arena`；desktop terminal-coding tools query；npm tarball import fixtures |
-| A6 | 在下一 major 删除 core Arena 目录、根 re-export、固定 RPC/schema 残留。 | core index/package/protocol/settings/onboarding、release notes | 否；breaking release | 高（API）但低（运行时逻辑） | `rg` guard：core 无 `src/arena` 和静态 Arena import；public API snapshot；全仓 build/test |
+| A1（已完成） | 为 ToolRegistry/Engine 增加可信 `CapabilityModule` 注入点，不迁移任何现有能力。 | `engine/types.ts`、`tool-system/registry.ts`、protocol/settings extension types、public index | 是 | 中；装配顺序、重复工具名、guard 合并 | 空 modules 行为快照不变；重复名 fail loud；tools/hooks/RPC/settings contribution 单测；全 core tests |
+| A2（已完成） | 把 Arena adapter 从静态 builtin 表改成 `createArenaCapability()`，纯 core 默认不注册。 | `builtin/index.ts`、`builtin/arena.ts`、preset、Engine/host composition、registry tests | 是，依赖 A1 | 中；工具可能在宿主中静默消失 | `new ToolRegistry()` 无 Arena；显式 module 有 Arena；TUI/desktop host profile 有 Arena；cron/headless 无；permission/timeout metadata 不变 |
+| A3（已完成） | 将 `arena_status` 和 Arena settings/onboarding ownership 移入 capability，保留 legacy settings read。 | `protocol/server.ts/types.ts`、`settings/schema.ts`、`onboarding.ts`、TUI model manager、Arena module | 是，依赖 A2 | 中；配置丢失或 query shape 漂移 | old/new settings fixtures；valid module RPC present/absent；secret redaction；TUI settings save/reload |
+| A4（已完成） | 创建 `packages/arena`，先搬纯实现和测试，使其只依赖 core 的稳定 public extension API。 | 新 package、workspace/build config、`core/src/arena/**`、TUI package/imports | 否，建议 stacked 后整体合并 | 高；跨包路径、循环依赖、资源/声明文件遗漏 | 包依赖图无环；Arena/IterativeArena tests；TUI arena CLI smoke；`bun run build` |
+| A5（已完成） | 切 desktop/TUI 产品 composition 到新包；core 不保留 Arena runtime re-export。 | product worker entry、TUI commands、core extension/root、package manifests | 是，依赖 A4 | 中到高；打包后模块缺失、worker 启动失败 | packaged worker smoke；TUI `/arena`；desktop terminal-coding tools query；npm tarball import fixtures |
+| A6（已完成） | 删除 core Arena 目录、根 re-export、固定 RPC/schema 残留。 | core index/package/protocol/settings/onboarding、release notes | 本分支整体合并 | 高（API）但低（运行时逻辑） | `rg` guard：core 无 `src/arena` 和静态 Arena import；public API snapshot；全仓 build/test |
 
 ### 3.4 不应采用的捷径
 
@@ -203,19 +217,24 @@ panel webview/PTY 生命周期和 persistent goal 的 optimistic UI。
 
 | PR | 一句话目标 | 主要影响文件 | 可独立合并 | 回归风险 | 必需测试/验证 |
 |---|---|---|---|---|---|
-| D1 | 先搬顶层纯 helpers 与 `QuickChatPanelHost`，建立无行为变化的拆分模板。 | `App.tsx:176-357`、新 app/quick-chat 文件 | 是 | 低 | `AppQuickChat.test.tsx`、renderer typecheck/build |
-| D2 | 抽 `useBucketOverrides` 与 `useTranscriptBuckets`，保持现有 reducer 和 storage keys。 | `App.tsx:403-425,730-1124`、新 hooks | 是 | 中 | `overridePersistence`、`snapshotReplay`、`transcriptsReducer`、App draft/compact tests |
-| D3 | 抽 `useSessionNavigation` / automation disk import，收口 repo/session 双投影。 | `App.tsx:1140-1671`、automation/transcript helpers | 是，依赖 D2 更稳妥 | 中 | repo/session deletion/archive tests、automation import/rebuild tests、startup smoke |
-| D4 | 抽 `useStreamRouter`，只搬 routing/coalescing/subscription，不改任何 event reducer。 | `App.tsx:599-610,1672-2242`、新 hook | 是 | 高；本块最敏感 | `streamRouting`、`streamCoalescer`、`snapshotReplay`、`AppQuickChat` 的 late/multi-session cases；listener cleanup 测试 |
-| D5 | 抽 `useRunController` 与 `useQueuedSteering`，收口 send/stop/relay/compact。 | `App.tsx:2255-2963`、新 hooks | 是，建议依赖 D4 | 高 | `queuedInput`、`stopRouting`、App draft/quick-chat/compact；并发 session stop/steer smoke |
-| D6 | 抽 `usePanelBuckets` / `useAnchors`，保持每 bucket dock 挂载语义。 | `App.tsx:3057-3764`、panel/chat hooks | 是 | 中到高；webview/PTY 被误卸载 | PanelArea/Files/Terminal/Browser workspace tests、anchor tests；切 session/关开 dock 冒烟 |
-| D7 | 最后抽 `AppShell`、`AppMainView`、`SessionPanelDock`，让 `App` 只做 hook 装配。 | `App.tsx:4101-4507`、新 components | 是，依赖 D1-D6 | 中；props wiring | `App*.test.tsx` 全集、narrow layout smoke、desktop renderer build、人工 chat/panel/settings 冒烟 |
+| D1（已完成） | 先搬顶层纯 helpers 与 `QuickChatPanelHost`，建立无行为变化的拆分模板。 | `App.tsx:176-357`、新 app/quick-chat 文件 | 是 | 低 | `AppQuickChat.test.tsx`、renderer typecheck/build |
+| D2（已完成） | 抽 `useBucketOverrides` 与 `useTranscriptBuckets`，保持现有 reducer 和 storage keys。 | `App.tsx:403-425,730-1124`、新 hooks | 是 | 中 | `overridePersistence`、`snapshotReplay`、`transcriptsReducer`、App draft/compact tests |
+| D3（已完成） | 抽 `useSessionNavigation` / automation disk import，收口 repo/session 双投影。 | `App.tsx:1140-1671`、automation/transcript helpers | 是，依赖 D2 更稳妥 | 中 | repo/session deletion/archive tests、automation import/rebuild tests、startup smoke |
+| D4（已完成） | 抽 host stream/approval/mobile/automation subscription 与路由装配，不改 event reducer。 | `App.tsx`、`useHostSubscriptions.ts` | 是 | 高；本块最敏感 | `streamRouting`、`streamCoalescer`、`snapshotReplay`、listener cleanup 测试 |
+| D5（已完成） | 抽 `useRunController`，收口 send/stop/relay/compact。 | `App.tsx`、`useRunController.ts` | 是，依赖 D4 | 高 | `queuedInput`、`stopRouting`、App draft/quick-chat/compact；并发 session stop/steer smoke |
+| D6（已完成） | 抽 `usePanelBuckets`，保持每 bucket dock 挂载语义。 | `App.tsx`、`usePanelBuckets.ts` | 是 | 中到高；webview/PTY 被误卸载 | PanelArea/Files/Terminal/Browser workspace tests、anchor tests；切 session/关开 dock 冒烟 |
+| D7（已完成） | 抽 `AppShell` 与 `SessionPanelDock`，根 App 保留装配。 | `App.tsx`、新 components | 是，依赖 D1-D6 | 中；props wiring | `App*.test.tsx` 全集、narrow layout smoke、desktop renderer build |
 
 每个 PR 都应以 `git diff --stat App.tsx` 明显净减行为为验收，但“行数下降”不是唯一 gate；更重要的是
 每个 hook 只有一个状态域，且 subscription cleanup 可单测。不要先抽一个携带 50 个参数的
 `useEverything()`，那只是换文件保存上帝组件。
 
 ## 5. 块四：用 versioned `goalLifecycle` 收口 Goal 持久化
+
+> **2026-07-13 已实施：** V1 在历史草案上补入 `paused` phase 与顶层 revision，并保留已经上线的
+> `stateRevision`/proper-lockfile。legacy 三字段只读迁移，新 writer 仅输出 `goalLifecycle`；waiting
+> commit-before-stop、bare send 同 identity arm、未知版本 fail-closed 均有回归。下方“当前 HEAD
+> 盘点”保留为实施前基线。
 
 ### 5.1 当前 HEAD 盘点
 
@@ -240,28 +259,30 @@ panel webview/PTY 生命周期和 persistent goal 的 optimistic UI。
 
 ```ts
 type GoalTerminalReason =
-  | "judge_met"
-  | "complete_goal"
-  | "cancel_goal"
+  | "completed"
+  | "cancelled"
   | "user_cleared"
   | "stop_blocks_exhausted"
   | "token_budget_exhausted"
   | "time_budget_exhausted"
   | "max_turns_exhausted";
 
+type GoalLifecycleConfig = Omit<GoalConfig, "goalId" | "revision" | "paused">;
 type GoalLifecycleV1 =
   | {
       version: 1;
       goalId: string;          // 每次 explicit set/restart 都新建，建议沿用 nanoid seam
-      phase: "active";
-      config: GoalConfig;
+      revision: number;
+      phase: "active" | "paused";
+      config: GoalLifecycleConfig;
       updatedAtMs: number;
     }
   | {
       version: 1;
       goalId: string;
+      revision: number;
       phase: "waiting";
-      config: GoalConfig;
+      config: GoalLifecycleConfig;
       updatedAtMs: number;
       waitingSinceMs: number;
       waitingFor: "finite_background_work";
@@ -269,8 +290,9 @@ type GoalLifecycleV1 =
   | {
       version: 1;
       goalId: string;
+      revision: number;
       phase: "terminal";
-      config: GoalConfig;
+      config: GoalLifecycleConfig;
       updatedAtMs: number;
       terminal: { reason: GoalTerminalReason; atMs: number };
     };
@@ -284,7 +306,7 @@ interface SessionState {
 
 不变量：
 
-- `goalLifecycle` 是唯一权威；active/waiting armable，terminal 永不由 bare send/resume/wake 自动 arm。
+- `goalLifecycle` 是唯一权威；active/waiting armable，paused 可见但不 arm，terminal 永不由 bare send/resume/wake 自动 arm。
 - `goalId` 才是实例 identity；`setAtMs` 只保留相对 deadline anchor 语义。
 - `SessionState.status` 与 goal phase 正交；manual Stop / `aborted_streaming` 不自动 terminal。
 - waiting 不保存 task ID；background registry/notification queue 仍是短生命周期任务真相。
@@ -308,10 +330,10 @@ interface SessionState {
 | 旧 state | 新 lifecycle |
 |---|---|
 | 无 active、无 terminal | 不写 lifecycle |
-| 只有 active | 新随机 ID，`active`，config 归一化 |
-| active 与 terminal 的 `objective + setAtMs` 匹配 | 新随机 ID，`terminal`；config 来自 active，reason/time 来自 terminal |
-| active 与 terminal 不匹配 | 新随机 ID，`active`；terminal 视作上一实例残留，不迁入当前 lifecycle |
-| 只有 terminal | 新随机 ID，`terminal`；用 objective/setAtMs 构造最小合法 config |
+| 只有 active | 用 session/objective/setAtMs 的 SHA-256 派生稳定 legacy ID，`active`，config 归一化 |
+| active 与 terminal 的 `objective + setAtMs` 匹配 | 同一稳定 legacy ID，`terminal`；config 来自 active，reason/time 来自 terminal |
+| active 与 terminal 不匹配 | active 派生稳定 legacy ID；terminal 视作上一实例残留，不迁入当前 lifecycle |
+| 只有 terminal | 派生稳定 legacy ID，`terminal`；用 objective/setAtMs 构造最小合法 config |
 
 迁移一次 tmp + rename 同时写 lifecycle并删除两个 legacy 字段。rename 前仍是完整旧 state，rename 后是
 完整新 state；不双写 compatibility aliases。明确不支持旧 binary 与新 binary 同时写同一 sid，也不
@@ -382,8 +404,8 @@ Goal 核心：
 - `server.goalget.test.ts` / `server.goalclear.test.ts`：active/waiting/terminal、live/disk-only、幂等。
 - `engine-goal-cancel` / persistent/background integration：judge met、complete、confirmed/unconfirmed cancel、
   manual Stop、notification wake、worker restart。
-- 静态 guard：运行期业务不直接 `saveState`；新 writer 无 legacy aliases；不存在 revision/CAS/watermark/
-  goal lock/sidecar/journal。
+- 静态 guard：运行期业务不直接 `saveState`；新 writer 无 legacy aliases；不新增 watermark、goal
+  sidecar/journal，并保留已上线的 `stateRevision` CAS + per-session proper-lockfile。
 
 P2 邻接边界（与 Goal schema 无逻辑耦合，但列入本轮完成矩阵）：
 
@@ -443,9 +465,6 @@ session、Stop/steer、panel close/reopen、settings 做人工 smoke；不能用
 | Goal lifecycle | 消除真实 stale-write/复活风险，领域模型收益最高 | 持久化迁移、事件顺序、恢复链路，风险高 | 第 2/3，单独 worktree 严格 TDD |
 | App.tsx 拆分 | 长期 UI 可维护性明显提升 | stream/steer/panel 竞态，行为测试不完全 | 可独立并行；先 D1/D2，D4/D5 慢走 |
 
-下一轮最适合先做 **I1：增加 `/internal` subpath 与兼容 re-export**。理由：它不改变运行时行为，失败
-大多能被声明生成、typecheck 和 build 直接发现；收益是立即建立后续 Arena/宿主迁移需要的包边界，
-且不必碰 Goal 持久化或 renderer 竞态。完成 I1 后再做 I2 的仓内 import 迁移；不要在第一个 PR 就删除
-根入口 aliases。
-
-**一句话结论：下一轮 codex 应先实现 public/internal export 分层的 I1（新增 `/internal` 且保留兼容 re-export），因为它风险最低、验证最确定，并直接解除 Arena 后续可选注册与移包的入口阻塞。**
+本轮已按上述依赖完成 I1、A1-A6、D1-D7、TUI 拆分、state singleton 清理与 Goal G1-G8。
+后续评审应重点检查包发布兼容性、Desktop 多 session/Stop/steer、Goal legacy fixture 与未知版本
+fail-closed；不再把这些实现项留作下一轮 TODO。

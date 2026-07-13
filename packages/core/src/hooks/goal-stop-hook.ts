@@ -77,6 +77,8 @@ export interface GoalStopHookOptions {
    */
   /** Return false when durable cleanup failed; the hook will keep Goal mode active. */
   onMet?: () => boolean | void;
+  /** Persist active → waiting before allowing a finite-background-work stop. */
+  onWaiting?: () => boolean | void;
   /**
    * Clock source for the current time fed to the judge. Injectable so tests
    * pin a fixed instant (the judge prompt is a fresh sub-call, not part of the
@@ -755,6 +757,25 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     // to not_met (continueSession), where the model is nudged to keep working.
     if (verdict.waiting && runningWork.length > 0) {
       log.info("goal_stop.waiting_on_background_task", { cat: "goal", sessionId });
+      try {
+        if (opts.onWaiting?.() === false) {
+          log.warn("goal_stop.waiting_persist_failed", { cat: "goal", sessionId });
+          return {
+            continueSession: true,
+            messages: ["继续 —— 等待状态持久化失败；请先恢复会话状态写入。"],
+          };
+        }
+      } catch (error) {
+        log.warn("goal_stop.waiting_persist_failed", {
+          cat: "goal",
+          sessionId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return {
+          continueSession: true,
+          messages: ["继续 —— 等待状态持久化失败；请先恢复会话状态写入。"],
+        };
+      }
       const result: HookResult = {
         data: { goalVerdict: { met: false, gaps: verdict.gaps.trim() } },
       };

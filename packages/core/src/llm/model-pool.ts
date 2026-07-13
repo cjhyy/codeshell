@@ -9,7 +9,7 @@
  *
  * Consumers:
  *   - Engine/TurnLoop: `pool.get()` for the active model
- *   - Arena: `pool.get("sonnet")` to resolve participants by key
+ *   - Product capabilities: `pool.get("sonnet")` to resolve a model by key
  *   - /model command: `pool.switch("haiku")` for hot-swap
  */
 

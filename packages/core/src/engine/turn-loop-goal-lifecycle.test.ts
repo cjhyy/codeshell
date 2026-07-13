@@ -19,6 +19,7 @@ import { notificationQueue } from "../tool-system/builtin/agent-notifications.js
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { Engine } from "./engine.js";
+import { goalConfigFromLifecycle } from "./goal.js";
 import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js";
 
 function stopResponse(text = "not done yet"): LLMResponse {
@@ -162,7 +163,11 @@ describe("TurnLoop goal lifecycle guardrails", () => {
           args: { summary: "done" },
         }),
       ],
-      { clearPersistedGoal: () => clearCalls++ },
+      {
+        clearPersistedGoal: () => {
+          clearCalls++;
+        },
+      },
     );
 
     const result = await new TurnLoop(deps, {
@@ -218,13 +223,20 @@ describe("TurnLoop goal lifecycle guardrails", () => {
         }),
         stopResponse("continuing under the edited objective"),
       ],
-      { clearPersistedGoal: () => clearCalls++, callDelayMs: 20 },
+      {
+        clearPersistedGoal: () => {
+          clearCalls++;
+        },
+        callDelayMs: 20,
+      },
     );
     const loop = new TurnLoop(deps, {
       maxTurns: 3,
       maxToolCallsPerTurn: 10,
       goal: { objective: "old objective", goalId: "goal-edit", revision: 1 },
-      onStream: (event) => events.push(event),
+      onStream: (event) => {
+        events.push(event);
+      },
     });
 
     const running = loop.run([{ role: "user", content: "work on the old objective" }]);
@@ -258,13 +270,20 @@ describe("TurnLoop goal lifecycle guardrails", () => {
         }),
         stopResponse("the resumed goal remains active"),
       ],
-      { clearPersistedGoal: () => clearCalls++, callDelayMs: 20 },
+      {
+        clearPersistedGoal: () => {
+          clearCalls++;
+        },
+        callDelayMs: 20,
+      },
     );
     const loop = new TurnLoop(deps, {
       maxTurns: 3,
       maxToolCallsPerTurn: 10,
       goal: { objective: "goal", goalId: "goal-resume", revision: 1 },
-      onStream: (event) => events.push(event),
+      onStream: (event) => {
+        events.push(event);
+      },
     });
 
     const running = loop.run([{ role: "user", content: "work" }]);
@@ -380,7 +399,9 @@ describe("TurnLoop goal lifecycle guardrails", () => {
       maxTurns: 5,
       maxToolCallsPerTurn: 10,
       goal: { objective: "finish", goalId: "goal-preflight-stop", revision: 1 },
-      onStream: (event) => events.push(event),
+      onStream: (event) => {
+        events.push(event);
+      },
     });
 
     const running = loop.run([{ role: "user", content: "go" }]);
@@ -440,7 +461,9 @@ describe("TurnLoop goal lifecycle guardrails", () => {
       maxTurns: 3,
       maxToolCallsPerTurn: 10,
       goal: { objective: "finish", goalId: "goal-persist-failure", revision: 1 },
-      onStream: (event) => events.push(event),
+      onStream: (event) => {
+        events.push(event);
+      },
     }).run([{ role: "user", content: "go" }]);
 
     expect(result.reason).toBe("completed");
@@ -829,12 +852,10 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     expect(result.goalTermination).toBe("token_budget_exhausted");
     expect(calls).toHaveLength(1);
     expect(executedTools).toHaveLength(0);
-    expect(events).toContainEqual({
-      type: "goal_progress",
-      goalId: "goal-token-budget",
-      status: "exhausted",
-      round: 0,
-    });
+    expect(result.goalTerminationRound).toBe(0);
+    expect(
+      events.some((event) => event.type === "goal_progress" && event.status === "exhausted"),
+    ).toBe(false);
     expect(
       events.some(
         (event) =>
@@ -845,7 +866,7 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     ).toBe(true);
   });
 
-  it("emits exhausted with the run goalId when the time budget expires", async () => {
+  it("returns time exhaustion without publishing a pre-persistence terminal event", async () => {
     const events: StreamEvent[] = [];
     const { deps } = makeTurnLoopDeps([stopResponse("too late")], { callDelayMs: 5 });
 
@@ -859,12 +880,10 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     }).run([{ role: "user", content: "go" }]);
 
     expect(result.goalTermination).toBe("time_budget_exhausted");
-    expect(events).toContainEqual({
-      type: "goal_progress",
-      goalId: "goal-time-budget",
-      status: "exhausted",
-      round: 0,
-    });
+    expect(result.goalTerminationRound).toBe(0);
+    expect(
+      events.some((event) => event.type === "goal_progress" && event.status === "exhausted"),
+    ).toBe(false);
   });
 
   it("charges judge usage to the Goal budget before deciding to continue", async () => {
@@ -917,12 +936,10 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     expect(result.goalTermination).toBe("token_budget_exhausted");
     expect(calls).toHaveLength(1);
     expect(judgeCalls).toBe(1);
-    expect(events).toContainEqual({
-      type: "goal_progress",
-      goalId: "goal-post-judge-budget",
-      status: "exhausted",
-      round: 0,
-    });
+    expect(result.goalTerminationRound).toBe(0);
+    expect(
+      events.some((event) => event.type === "goal_progress" && event.status === "exhausted"),
+    ).toBe(false);
   });
 
   it("does not exhaust stop blocks when tool-use turns with failure strings separate blocks", async () => {
@@ -1156,7 +1173,8 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     ).toHaveLength(2);
     expect(
       events.some((event) => event.type === "goal_progress" && event.status === "exhausted"),
-    ).toBe(true);
+    ).toBe(false);
+    expect(result.goalTerminationRound).toBe(2);
     expect(
       events.some(
         (event) =>
@@ -1247,12 +1265,10 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     expect(stopHookCalls).toBe(0);
     expect(executedTools).toHaveLength(3);
     expect(calls).toHaveLength(4);
-    expect(events).toContainEqual({
-      type: "goal_progress",
-      goalId: "goal-max-turns",
-      status: "exhausted",
-      round: 0,
-    });
+    expect(result.goalTerminationRound).toBe(0);
+    expect(
+      events.some((event) => event.type === "goal_progress" && event.status === "exhausted"),
+    ).toBe(false);
   });
 
   it("refreshes the conversation digest across two real stop rounds", async () => {
@@ -1385,12 +1401,35 @@ function persistedState(
     setAtMs?: number;
     reason: string;
   }>;
+  goalLifecycle?: { version: number; phase: string; goalId: string; revision: number };
   workspace?: unknown;
   status?: string;
+  turnSeq?: number;
   tokenUsage?: { promptTokens: number; completionTokens: number; totalTokens: number };
 } {
   const raw = readFileSync(join(dir, "sessions", sessionId, "state.json"), "utf8");
-  return JSON.parse(raw);
+  const state = JSON.parse(raw) as any;
+  const lifecycle = state.goalLifecycle;
+  if (lifecycle?.version === 1) {
+    if (lifecycle.phase === "terminal") {
+      state.activeGoal = undefined;
+      state.goalTerminal = {
+        objective: lifecycle.config.objective,
+        goalId: lifecycle.goalId,
+        setAtMs: lifecycle.config.setAtMs,
+        reason: lifecycle.terminal.reason,
+      };
+      state.goalTerminals = [state.goalTerminal];
+    } else {
+      state.activeGoal = {
+        ...lifecycle.config,
+        goalId: lifecycle.goalId,
+        revision: lifecycle.revision,
+        ...(lifecycle.phase === "paused" ? { paused: true } : {}),
+      };
+    }
+  }
+  return state;
 }
 
 afterEach(() => {
@@ -1438,6 +1477,55 @@ describe("Engine persisted goal lifecycle", () => {
       expect(judgePrompt).toContain("TOOL_RESULT tool_use_id=failed-check error=true");
       expect(judgePrompt).toContain("ENGINE_FAILURE_EVIDENCE");
       expect(judgePrompt).toContain("done despite the failed check");
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("publishes exhausted only after the terminal lifecycle commit succeeds", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-terminal-publish-barrier-"));
+    const model = uniqueModel("terminal-publish-barrier");
+    const sessionId = "goal-terminal-publish-barrier";
+    const events: StreamEvent[] = [];
+    engineScenarios.set(model, {
+      mainResponses: [
+        {
+          text: "over budget",
+          toolCalls: [],
+          stopReason: "stop",
+          usage: { promptTokens: 90, completionTokens: 20, totalTokens: 110 },
+        },
+      ],
+      mainCalls: 0,
+      judgeResponse: '{"met":false,"waiting":false,"gaps":"unfinished"}',
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+      (engine as any).sessionManager.saveGoalTerminalOutcome = () => "failed";
+
+      const result = await engine.run("work", {
+        sessionId,
+        cwd: dir,
+        goal: { objective: "ship", tokenBudget: 100 },
+        onStream: (event) => {
+          events.push(event);
+        },
+      });
+
+      expect(result.reason).toBe("goal_budget_exhausted");
+      expect(activeGoalFromState(dir, sessionId)).toMatchObject({ objective: "ship" });
+      expect(
+        events.some((event) => event.type === "goal_progress" && event.status === "exhausted"),
+      ).toBe(false);
     } finally {
       engineScenarios.delete(model);
       rmSync(dir, { recursive: true, force: true });
@@ -2108,6 +2196,7 @@ describe("Engine persisted goal lifecycle", () => {
       expect(result.reason).toBe("completed");
       expect(engine.getGoal(sessionId)?.objective).toBe("finish after the download");
       expect(persistedState(dir, sessionId).goalTerminal).toBeUndefined();
+      expect(persistedState(dir, sessionId).goalLifecycle?.phase).toBe("waiting");
     } finally {
       engineScenarios.delete(model);
       rmSync(dir, { recursive: true, force: true });
@@ -2123,6 +2212,14 @@ describe("Engine persisted goal lifecycle", () => {
       mainResponses: [stopResponse("A is unfinished")],
       mainCalls: 0,
       judgeResponse: '{"met":false,"waiting":false,"gaps":"A remains"}',
+      afterJudgeCall: () => {
+        const live = (engine as any).activeRunSession;
+        (engine as any).sessionManager.saveActiveGoal(
+          live.state,
+          { objective: "goal B", goalId: "goal-b", revision: 1, setAtMs: 9_999_999 },
+          { replaceCurrent: true },
+        );
+      },
     });
 
     try {
@@ -2139,19 +2236,12 @@ describe("Engine persisted goal lifecycle", () => {
         sessionId,
         cwd: dir,
         goal: { objective: "goal A", maxStopBlocks: 1 },
-        onStream: (event) => {
-          if (event.type !== "goal_progress" || event.status !== "exhausted") return;
-          const live = (engine as any).activeRunSession;
-          live.state.activeGoal = { objective: "goal B", setAtMs: 9_999_999 };
-          (engine as any).sessionManager.saveState(live.state);
-        },
       });
       const state = persistedState(dir, sessionId);
 
       expect(result.reason).toBe("completed");
-      expect(state.activeGoal).toEqual({ objective: "goal B", setAtMs: 9_999_999 });
-      expect(state.goalTerminal?.objective).toBe("goal A");
-      expect(state.goalTerminal?.reason).toBe("stop_blocks_exhausted");
+      expect(state.activeGoal).toMatchObject({ objective: "goal B", setAtMs: 9_999_999 });
+      expect(state.goalTerminal).toBeUndefined();
     } finally {
       engineScenarios.delete(model);
       rmSync(dir, { recursive: true, force: true });
@@ -2185,13 +2275,13 @@ describe("Engine persisted goal lifecycle", () => {
         judgeResponse: '{"met":true,"waiting":false,"gaps":""}',
         [scenario === "judge-met" ? "afterJudgeCall" : "afterMainCall"]: () => {
           const live = (engine as any).activeRunSession;
-          goalAId = live.state.activeGoal?.goalId;
-          live.state.activeGoal = {
-            objective: "goal B",
-            goalId: "goal-b",
-            setAtMs: 9_999_999,
-          };
-          (engine as any).sessionManager.saveState(live.state);
+          const lifecycle = live.state.goalLifecycle;
+          goalAId = lifecycle ? goalConfigFromLifecycle(lifecycle).goalId : undefined;
+          (engine as any).sessionManager.saveActiveGoal(
+            live.state,
+            { objective: "goal B", goalId: "goal-b", revision: 1, setAtMs: 9_999_999 },
+            { replaceCurrent: true },
+          );
         },
       });
 
@@ -2214,7 +2304,9 @@ describe("Engine persisted goal lifecycle", () => {
         const state = persistedState(dir, sessionId);
         expect(goalAId).toBeString();
         expect(state.activeGoal).toMatchObject({ objective: "goal B", goalId: "goal-b" });
-        expect(state.goalTerminals?.some((terminal) => terminal.goalId === goalAId)).toBe(true);
+        // V1 stores only the current lifecycle. A stale A completion is a
+        // guarded no-op once B owns the slot, rather than an appended tombstone.
+        expect(state.goalTerminals).toBeUndefined();
       } finally {
         engineScenarios.delete(model);
         rmSync(dir, { recursive: true, force: true });
@@ -2430,6 +2522,56 @@ describe("Engine persisted goal lifecycle", () => {
         reason: "token_budget_exhausted",
       });
       expect(reloaded.status).toBe("goal_budget_exhausted");
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("preserves the second turnSeq when a desktop workspace write advances disk revision", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-workspace-turn-seq-"));
+    const sessionsDir = join(dir, "sessions");
+    const model = uniqueModel("workspace-turn-seq");
+    const sessionId = "workspace-turn-seq";
+    const workspace = {
+      root: join(dir, ".worktrees", "feature"),
+      kind: "worktree" as const,
+      worktree: {
+        path: join(dir, ".worktrees", "feature"),
+        branch: "worktree/feature",
+        baseRef: "main",
+        createdBy: "codeshell" as const,
+      },
+    };
+    const engine = new Engine({
+      llm: { provider, model, apiKey: "test" } as never,
+      cwd: dir,
+      sessionStorageDir: sessionsDir,
+      permissionMode: "bypassPermissions",
+      headless: true,
+    });
+    (engine as any).hooks.clear();
+    engineScenarios.set(model, {
+      mainResponses: [stopResponse("first turn"), stopResponse("second turn")],
+      mainCalls: 0,
+      afterMainCall: (callNumber) => {
+        if (callNumber === 2) {
+          // Mirrors the top-bar main-process SessionManager writing while the
+          // worker still owns a live bundle whose turnSeq already advanced.
+          engine.getSessionManager().setSessionWorkspace(sessionId, workspace);
+        }
+      },
+    });
+
+    try {
+      await engine.run("first", { sessionId, cwd: dir });
+      expect(persistedState(dir, sessionId).turnSeq).toBe(1);
+
+      await engine.run("second", { sessionId, cwd: dir });
+
+      const reloaded = persistedState(dir, sessionId);
+      expect(reloaded.turnSeq).toBe(2);
+      expect(reloaded.workspace).toEqual(workspace);
     } finally {
       engineScenarios.delete(model);
       rmSync(dir, { recursive: true, force: true });

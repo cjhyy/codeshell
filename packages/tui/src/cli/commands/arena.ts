@@ -11,26 +11,29 @@
  */
 
 import chalk from "chalk";
-import { Arena } from "@cjhyy/code-shell-core";
 import { SettingsManager } from "@cjhyy/code-shell-core";
 import {
+  Arena,
+  MODEL_PRESETS,
+  getMaxOutputTokens,
+  formatArenaResultForSession,
   formatArenaResult,
   printArenaResult,
   renderProgress,
   createProgressRenderer,
-} from "@cjhyy/code-shell-core";
+  type ArenaMode,
+  type ArenaParticipant,
+  type ArenaResultV2,
+  type OutputSink,
+} from "@cjhyy/code-shell-arena";
 import { CHALK_COLORIZER } from "../../utils/colorizer.js";
-import type { OutputSink } from "@cjhyy/code-shell-core";
-import { formatArenaResultForSession } from "@cjhyy/code-shell-core";
-import type { ArenaMode, ArenaParticipant, ArenaResultV2 } from "@cjhyy/code-shell-core";
-import { MODEL_PRESETS, getMaxOutputTokens } from "@cjhyy/code-shell-core";
 import { ModelPool, type ModelEntry } from "@cjhyy/code-shell-core";
 import { getMergedCatalog, modelEntriesFromConnections } from "@cjhyy/code-shell-core";
 import type { EngineConfig } from "@cjhyy/code-shell-core";
 import type { LLMConfig } from "@cjhyy/code-shell-core";
 
 // Re-export for backward compat with core-commands.ts
-export { formatArenaResultForSession } from "@cjhyy/code-shell-core";
+export { formatArenaResultForSession } from "@cjhyy/code-shell-arena";
 
 /** Options for controlling arena output destination. */
 export interface ArenaRunOptions {
@@ -239,10 +242,15 @@ function resolveParticipants(
     });
   }
 
-  // From settings.arena.participants
-  const settings = new SettingsManager(process.cwd()).get();
-  if (settings.arena?.participants?.length >= 2) {
-    const resolved = settings.arena.participants
+  // Capability-owned settings namespace, with legacy read compatibility.
+  const settings = new SettingsManager(process.cwd()).get() as unknown as {
+    capabilities?: { arena?: { participants?: Array<string | object> } };
+    arena?: { participants?: Array<string | object> };
+  };
+  const configured =
+    settings.capabilities?.arena?.participants ?? settings.arena?.participants ?? [];
+  if (configured.length >= 2) {
+    const resolved = configured
       .map((p: string | object) => resolveOneParticipant(p as any, pool, engineConfig))
       .filter((p: any): p is ArenaParticipant => p !== undefined);
     if (resolved.length >= 2) return resolved;

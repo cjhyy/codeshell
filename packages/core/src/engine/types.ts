@@ -28,6 +28,7 @@ import type { SettingsScope } from "../settings/manager.js";
 import type { EngineRuntime } from "./runtime.js";
 import type { HookEventName } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
+import type { CapabilityModule } from "../tool-system/capability-module.js";
 
 export interface EngineConfig {
   llm: LLMConfig;
@@ -49,6 +50,8 @@ export interface EngineConfig {
   preset?: AgentPresetName;
   enabledBuiltinTools?: string[];
   disabledBuiltinTools?: string[];
+  /** Trusted optional product capabilities installed by the owning host. */
+  capabilities?: readonly CapabilityModule[];
   /**
    * When false, `Bash(run_in_background=true)` is rejected and the
    * background-shell tools are disabled (design §5.5). Set false by

@@ -9,9 +9,6 @@ import { Box, Text, useApp, useInput, forceRedraw } from "../render/index.js";
 import { Banner } from "./components/Banner.js";
 import { UpdateBanner } from "./components/UpdateBanner.js";
 import { WelcomeTips } from "./components/WelcomeTips.js";
-import { CommandInput } from "./components/CommandInput.js";
-import { ToolCallStart, ToolCallRunning, ToolCallResult } from "./components/ToolCall.js";
-import { AgentBlockStart, AgentBlockEnd } from "./components/AgentBlock.js";
 import { TaskList } from "./components/TaskList.js";
 import { SpinnerWithVerb } from "./components/SpinnerWithVerb.js";
 import { StatusLine } from "./components/StatusLine.js";
@@ -21,29 +18,21 @@ import {
   type VirtualMessageListHandle,
 } from "./components/VirtualMessageList.js";
 import { FullscreenModeContext, INITIAL_FULLSCREEN_MODE } from "./fullscreen-mode.js";
-import {
-  MessageContent,
-  UserMessage,
-  ErrorMessage,
-  RateLimitMessage,
-  ContextLimitMessage,
-  ThinkingMessage,
-} from "./components/MessageContent.js";
 import { AgentClient } from "@cjhyy/code-shell-core";
 import { costTracker } from "@cjhyy/code-shell-core";
 import { PermissionPrompt } from "./components/PermissionPrompt.js";
-import { AskUserPrompt } from "./components/AskUserPrompt.js";
-import { OnboardingPrompt } from "./components/OnboardingPrompt.js";
-import { ModelSelector, type ModelEntry } from "./components/ModelSelector.js";
-import {
-  ModelManager,
-  type ArenaParticipantEntry,
-  type ProviderManagerEntry,
+import type { ModelEntry } from "./components/ModelSelector.js";
+import type {
+  ArenaParticipantEntry,
+  ProviderManagerEntry,
 } from "./components/ModelManager.js";
-import { ProviderModelFlow } from "./components/ProviderModelFlow.js";
-import { SessionPicker, type SessionPickerEntry } from "./components/SessionPicker.js";
-import type { OnboardingResult } from "@cjhyy/code-shell-core";
-import { CommandRegistry, type CommandContext } from "../cli/commands/registry.js";
+import type { SessionPickerEntry } from "./components/SessionPicker.js";
+import {
+  TuiControlSurface,
+  type ModelManagerState,
+  type PendingQuestion,
+} from "./components/TuiControlSurface.js";
+import { CommandRegistry } from "../cli/commands/registry.js";
 import type { RestoredChatEntry } from "../cli/commands/registry.js";
 import { QueryGuard } from "./query-guard.js";
 import { AgentDock, getVisibleAgents, MAX_VISIBLE } from "./components/AgentDock.js";
@@ -62,7 +51,6 @@ import { advancedCommands } from "../cli/commands/builtin/advanced-commands.js";
 import { extraCommands } from "../cli/commands/builtin/extra-commands.js";
 import { moreCommands } from "../cli/commands/builtin/more-commands.js";
 import {
-  canExecuteGoalCommandWhileRunning,
   goalCommand,
 } from "../cli/commands/builtin/goal-command.js";
 import { imageCommand } from "../cli/commands/builtin/image-command.js";
@@ -84,6 +72,36 @@ import {
   startAllPerfProbes,
   stopAllPerfProbes,
 } from "./perf-probes.js";
+import {
+  ModeIndicator,
+  canExecuteCommandWhileRunning,
+  classifyError,
+  dispatchSlashCommandSafely,
+  findLastIndex,
+  formatCommandError,
+  friendlyError,
+  friendlyReason,
+  goalEventMatchesActive,
+  goalUpdateResponseIsFresh,
+  renderEntry,
+  shouldAppendThinkingDeltaToMainFeed,
+  shouldApplyGoalUpdateEvent,
+  shouldDrainBackgroundNotifications,
+  shouldSuppressCancelledMainStreamEvent,
+  shouldTraceStreamEvent,
+  streamDiagnosticsEnabled,
+} from "./app-helpers.js";
+
+export {
+  canExecuteCommandWhileRunning,
+  dispatchSlashCommandSafely,
+  goalEventMatchesActive,
+  goalUpdateResponseIsFresh,
+  renderEntry,
+  shouldAppendThinkingDeltaToMainFeed,
+  shouldDrainBackgroundNotifications,
+  shouldSuppressCancelledMainStreamEvent,
+} from "./app-helpers.js";
 
 // UI-scoped child logger — system-log lines route to ui-ink-*.log so engine
 // traces aren't drowned by 200ms spinner ticks and per-stream-event logs.
@@ -91,120 +109,7 @@ import {
 // unified engine.jsonl) so display bugs can be aligned with LLM responses
 // by sid.
 const uiLog = logger.child({ cat: "ui" });
-const STREAM_DIAG_ON = process.env.CODESHELL_DEBUG_STREAM === "1";
-const HIGH_FREQUENCY_STREAM_EVENTS = new Set<StreamEvent["type"]>([
-  "text_delta",
-  "thinking_delta",
-  "tool_use_args_delta",
-]);
-
-function shouldTraceStreamEvent(type: StreamEvent["type"]): boolean {
-  return STREAM_DIAG_ON || !HIGH_FREQUENCY_STREAM_EVENTS.has(type);
-}
-
-export function shouldAppendThinkingDeltaToMainFeed(agentId: string | undefined): boolean {
-  return agentId === undefined;
-}
-
-export function shouldDrainBackgroundNotifications(opts: {
-  notificationCount: number;
-  isQueryActive: boolean;
-  queryGuardBusy: boolean;
-  input: string;
-  overlayOpen: boolean;
-  sessionId: string | undefined;
-}): boolean {
-  if (opts.notificationCount === 0) return false;
-  if (opts.isQueryActive || opts.queryGuardBusy) return false;
-  if (opts.input.trim() !== "") return false;
-  if (opts.overlayOpen) return false;
-  return typeof opts.sessionId === "string" && opts.sessionId.length > 0;
-}
-
-/** Commands that are safe to execute without starting a second model run. */
-export function canExecuteCommandWhileRunning(input: string): boolean {
-  const [head = "", ...rest] = input.trim().split(/\s+/);
-  const normalizedHead = head.toLowerCase();
-  if (normalizedHead === "/sid" || normalizedHead === "/help") return true;
-  return normalizedHead === "/goal" && canExecuteGoalCommandWhileRunning(rest.join(" "));
-}
-
-/** Strict `(goalId, revision)` match used before applying terminal events. */
-export function goalEventMatchesActive(
-  activeGoalId: string | null,
-  activeRevision: number | null,
-  eventGoalId: string | undefined,
-  eventRevision: number | undefined,
-): boolean {
-  if ((eventGoalId ?? null) !== activeGoalId) return false;
-  if (activeRevision === null && eventRevision === undefined) return true;
-  return activeRevision !== null && eventRevision === activeRevision;
-}
-
-function shouldApplyGoalUpdateEvent(
-  activeGoalId: string | null,
-  activeRevision: number | null,
-  eventGoalId: string | undefined,
-  eventRevision: number | undefined,
-): boolean {
-  if (activeGoalId !== null && eventGoalId !== activeGoalId) return false;
-  if (activeRevision !== null && (eventRevision === undefined || eventRevision < activeRevision)) {
-    return false;
-  }
-  return true;
-}
-
-/** A mutation response may never overwrite a newer stream/event snapshot. */
-export function goalUpdateResponseIsFresh(
-  activeGoalId: string | null,
-  activeRevision: number | null,
-  responseGoalId: string | undefined,
-  responseRevision: number | undefined,
-): boolean {
-  if (!activeGoalId || !responseGoalId || responseGoalId !== activeGoalId) return false;
-  if (responseRevision === undefined) return false;
-  return activeRevision === null || responseRevision >= activeRevision;
-}
-
-const CANCELLED_RUN_LIFECYCLE_EVENTS = new Set<StreamEvent["type"]>([
-  "session_started",
-  "turn_complete",
-  "goal_set",
-  "goal_updated",
-  "goal_cleared",
-  "goal_progress",
-]);
-
-/** Hide late presentation events from a cancelled local run until its response boundary. */
-export function shouldSuppressCancelledMainStreamEvent(
-  cancelledRunPending: boolean,
-  event: StreamEvent,
-): boolean {
-  return (
-    cancelledRunPending &&
-    (event as { agentId?: string }).agentId === undefined &&
-    !CANCELLED_RUN_LIFECYCLE_EVENTS.has(event.type)
-  );
-}
-
-function formatCommandError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-export function dispatchSlashCommandSafely(
-  registry: Pick<CommandRegistry, "dispatch">,
-  cmd: string,
-  cmdCtx: CommandContext,
-  addStatus: (status: string) => void,
-): void {
-  try {
-    void Promise.resolve(registry.dispatch(cmd, cmdCtx)).catch((error) => {
-      addStatus(`Command failed: ${formatCommandError(error)}`);
-    });
-  } catch (error) {
-    addStatus(`Command failed: ${formatCommandError(error)}`);
-  }
-}
+const STREAM_DIAG_ON = streamDiagnosticsEnabled();
 
 // ─── Global command registry ────────────────────────────────────
 
@@ -431,22 +336,11 @@ export function App({
     riskLevel: string;
     args: Record<string, unknown>;
   } | null>(null);
-  const [pendingQuestion, setPendingQuestion] = useState<{
-    requestId: string;
-    question: string;
-    header?: string;
-    options?: { label: string; description: string }[];
-    multiSelect?: boolean;
-  } | null>(null);
+  const [pendingQuestion, setPendingQuestion] = useState<PendingQuestion | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [modelEntries, setModelEntries] = useState<ModelEntry[] | null>(null);
   const [sessionEntries, setSessionEntries] = useState<SessionPickerEntry[] | null>(null);
-  const [modelManager, setModelManager] = useState<{
-    entries: ModelEntry[];
-    snapshot: { count: number; fetchedAt: string };
-    arenaParticipants: ArenaParticipantEntry[];
-    providers: ProviderManagerEntry[];
-  } | null>(null);
+  const [modelManager, setModelManager] = useState<ModelManagerState | null>(null);
   // Whether the unified ProviderModelFlow is on top of the ModelManager.
   // The flow re-fetches the manager state on finish so the list updates
   // without closing the manager.
@@ -1202,8 +1096,9 @@ export function App({
     arenaParticipants: ArenaParticipantEntry[];
     providers: ProviderManagerEntry[];
   }> => {
-    const [modelsRes, arenaRes, providersRes, snapMod] = await Promise.all([
+    const [modelsRes, arenaRes, legacyArenaRes, providersRes, snapMod] = await Promise.all([
       client.query("models"),
+      client.query("config_get", "capabilities.arena.participants"),
       client.query("config_get", "arena.participants"),
       client.query("providers"),
       import("@cjhyy/code-shell-core"),
@@ -1211,10 +1106,13 @@ export function App({
     const entries = (modelsRes.data as ModelEntry[]) ?? [];
     const snap = snapMod.getOpenRouterSnapshot();
 
-    // arena.participants: Array<string | { name, model, ... }>. Strings are
+    // capabilities.arena.participants (or legacy arena.participants):
+    // Array<string | { name, model, ... }>. Strings are
     // editable in-place; object entries surface as read-only labels so a
     // hand-crafted settings.json round-trips intact.
-    const raw = (arenaRes.data as { value?: unknown })?.value;
+    const raw =
+      (arenaRes.data as { value?: unknown })?.value ??
+      (legacyArenaRes.data as { value?: unknown })?.value;
     const arenaParticipants: ArenaParticipantEntry[] = Array.isArray(raw)
       ? raw.map((item: unknown): ArenaParticipantEntry => {
           if (typeof item === "string") return { kind: "key", value: item };
@@ -2203,8 +2101,8 @@ export function App({
       toolName={pendingApproval.toolName}
       description={pendingApproval.description}
       riskLevel={pendingApproval.riskLevel}
-      args={pendingApproval.args}
       cwd={cwd}
+      args={pendingApproval.args}
       onDecision={(approved, scope) => {
         const { requestId } = pendingApproval;
         setPendingApproval(null);
@@ -2230,288 +2128,39 @@ export function App({
     <Box flexDirection="column" marginTop={0}>
       <Text dim>{separator}</Text>
 
-      {screen === "transcript" ? (
-        /* P1.6: Transcript mode footer */
-        <Box marginLeft={2}>
-          <Text dim>{"Transcript mode · ctrl+o to return · ↑↓ navigate"}</Text>
-          {cursorIdx !== null && (
-            <Text dim>
-              {" · selected: "}
-              {cursorIdx + 1}
-            </Text>
-          )}
-        </Box>
-      ) : showOnboarding ? (
-        <OnboardingPrompt
-          existingProviders={(modelManager?.providers ?? []).map((p) => ({
-            key: p.key,
-            label: p.label ?? p.key,
-            kind: p.kind as never,
-            baseUrl: p.baseUrl ?? "",
-            apiKey: p.apiKey,
-          }))}
-          existingModelKeys={(modelManager?.entries ?? []).map((e) => e.key)}
-          existingModelIds={(modelManager?.entries ?? []).map((e) => e.model)}
-          onComplete={async (result: OnboardingResult) => {
-            setShowOnboarding(false);
-            // startOnboarding pre-loaded modelManager state so the wizard
-            // could surface "Use existing providers" — that state was only
-            // for the wizard's existingProviders prop, not to actually
-            // open the manager panel. Tear it down on exit so the user
-            // lands back in chat, not on the ModelManager fallback.
-            setModelManager(null);
-            // Hot-swap into the engine without a process restart:
-            // reloadModels picks up the providers[]/models[] the wizard just
-            // wrote to settings.json; the subsequent model switch activates
-            // the chosen default. Falls back to the legacy "please restart"
-            // message if anything goes wrong.
-            try {
-              // The wizard already gave us the exact pool alias the user
-              // picked — use it as-is. Re-deriving with modelKey() collapsed
-              // same-family ids (v4-flash + v4-pro → "deepseek") and silently
-              // switched to whichever entry happened to claim the alias first.
-              const res = await client.configure({
-                sessionId: sidRef.current ?? sessionId,
-                reloadModels: true,
-                model: result.key,
-              });
-              const activeModel = applyModelConfigureResult(res, result.model);
-              addStatus(`✓ 配置已保存,已切换到: ${result.key} (${activeModel})`);
-            } catch (err) {
-              addStatus(
-                `✓ 配置已保存 (${result.model})。热加载失败,请重启 code-shell: ${(err as Error).message}`,
-              );
-            }
-          }}
-          onCancel={() => {
-            setShowOnboarding(false);
-            // Same teardown as onComplete — see comment above.
-            setModelManager(null);
-            addStatus("已取消配置。");
-          }}
-        />
-      ) : modelEntries ? (
-        <ModelSelector
-          entries={modelEntries}
-          onSelect={async (key) => {
-            setModelEntries(null);
-            try {
-              const result = await client.configure({
-                sessionId: sidRef.current ?? sessionId,
-                model: key,
-              });
-              const newModel = applyModelConfigureResult(result, key);
-              addStatus(`✓ 切换到: ${key} (${newModel})`);
-            } catch (err) {
-              addStatus(`切换失败: ${(err as Error).message}`);
-            }
-          }}
-          onCancel={() => setModelEntries(null)}
-        />
-      ) : sessionEntries ? (
-        <SessionPicker
-          entries={sessionEntries}
-          onSelect={(id) => {
-            setSessionEntries(null);
-            // Reuse the existing /resume <id> command path so transcript
-            // restoration logic (loadChatEntries, sessionId, status line)
-            // stays in one place.
-            handleSlashCommand(`/resume ${id}`);
-          }}
-          onCancel={() => setSessionEntries(null)}
-        />
-      ) : wizard === "flow" && modelManager ? (
-        <ProviderModelFlow
-          existingProviders={modelManager.providers.map((p) => ({
-            key: p.key,
-            label: p.label ?? p.key,
-            // ProviderModelFlow expects ProviderConfig (with ProviderKindName).
-            // We forward the string verbatim; the flow only uses it for
-            // labelling and to drive fetchModelList.
-            kind: p.kind as never,
-            baseUrl: p.baseUrl ?? "",
-            apiKey: p.apiKey,
-            protocol: p.protocol as never,
-            modelsPath: p.modelsPath,
-          }))}
-          existingModelKeys={modelManager.entries.map((e) => e.key)}
-          existingModelIds={modelManager.entries.map((e) => e.model)}
-          detectedEnvKeys={[]}
-          switchToNewModelOnFinish={false}
-          onFinish={async (result) => {
-            const failures: string[] = [];
-            try {
-              if (result.addedProvider) {
-                await client.query("provider_add", {
-                  provider: result.addedProvider,
-                } as never);
-              }
-            } catch (err) {
-              failures.push(`provider ${result.addedProvider?.key}: ${(err as Error).message}`);
-            }
-            for (const m of result.addedModels) {
-              try {
-                await client.query("model_add", { model: m } as never);
-              } catch (err) {
-                failures.push(`model ${m.key}: ${(err as Error).message}`);
-              }
-            }
-            setWizard(null);
-            try {
-              await client.configure({
-                sessionId: sidRef.current ?? sessionId,
-                reloadModels: true,
-              });
-            } catch {
-              /* best-effort */
-            }
-            await refreshModelManagerState();
-            if (failures.length > 0) {
-              chatStore.update((prev) => [
-                ...prev,
-                entry({
-                  type: "status",
-                  reason: `添加部分失败: ${failures.join("; ")}`,
-                }),
-              ]);
-            }
-          }}
-          onCancel={() => setWizard(null)}
-        />
-      ) : modelManager ? (
-        <ModelManager
-          entries={modelManager.entries}
-          snapshot={modelManager.snapshot}
-          arenaParticipants={modelManager.arenaParticipants}
-          providers={modelManager.providers}
-          onSaveArena={async (list) => {
-            await client.query("config_set", "arena.participants", list);
-            setModelManager((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    arenaParticipants: list.map((k) => ({ kind: "key", value: k })),
-                  }
-                : prev,
-            );
-          }}
-          onSwitch={async (key) => {
-            const result = await client.configure({
-              sessionId: sidRef.current ?? sessionId,
-              model: key,
-            });
-            applyModelConfigureResult(result, key);
-            // Mutate the local panel state so the active marker updates
-            // without re-fetching from the server.
-            setModelManager((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    entries: prev.entries.map((e) => ({ ...e, active: e.key === key })),
-                  }
-                : prev,
-            );
-          }}
-          onSync={async () => {
-            const mod = await import("@cjhyy/code-shell-core");
-            const r = await mod.syncOpenRouterCatalog();
-            // Refresh the snapshot info shown in the panel header.
-            const snapMod = await import("@cjhyy/code-shell-core");
-            const snap = snapMod.getOpenRouterSnapshot();
-            setModelManager((prev) =>
-              prev ? { ...prev, snapshot: { count: snap.count, fetchedAt: snap.fetchedAt } } : prev,
-            );
-            return r;
-          }}
-          onOpenFlow={() => setWizard("flow")}
-          onRefreshProvider={async (key) => {
-            try {
-              const res = (await client.query("provider_refresh", { key } as never)) as {
-                count?: number;
-                error?: string;
-              };
-              await refreshModelManagerState();
-              return { count: res?.count ?? 0, ...(res?.error ? { error: res.error } : {}) };
-            } catch (err) {
-              return { count: 0, error: (err as Error).message };
-            }
-          }}
-          onDeleteProvider={async (key) => {
-            try {
-              await client.query("provider_delete", { key } as never);
-              await refreshModelManagerState();
-              return { ok: true };
-            } catch (err) {
-              return { ok: false, error: (err as Error).message };
-            }
-          }}
-          onDeleteModel={async (key) => {
-            await client.query("model_delete", { key } as never);
-            await refreshModelManagerState();
-          }}
-          onClose={() => setModelManager(null)}
-        />
-      ) : pendingQuestion ? (
-        <AskUserPrompt
-          question={pendingQuestion.question}
-          header={pendingQuestion.header}
-          options={pendingQuestion.options}
-          multiSelect={pendingQuestion.multiSelect}
-          onAnswer={(answer) => {
-            const { requestId } = pendingQuestion;
-            setPendingQuestion(null);
-            client.approve(requestId, { approved: true, answer }).catch(() => {});
-          }}
-          onCancel={() => {
-            const { requestId } = pendingQuestion;
-            setPendingQuestion(null);
-            client
-              .approve(requestId, { approved: false, reason: "(user declined to answer)" })
-              .catch(() => {});
-          }}
-        />
-      ) : (
-        !pendingApproval && (
-          <>
-            {/* Queued-input hint (TODO 2.7): mirror desktop's "已缓存 N 条" so
-                input typed during a running turn isn't silently swallowed.
-                These flush one-by-one when the turn ends; /force jumps the
-                queue by interrupting now. */}
-            {queuedInputs.length > 0 && (
-              <Box marginLeft={2}>
-                <Text dim>
-                  {`⌛ 已缓存 ${queuedInputs.length} 条，将在本轮结束后依次发送（/force 立即打断并优先发送）`}
-                </Text>
-              </Box>
-            )}
-            <CommandInput
-              value={input}
-              onChange={setInput}
-              onSubmit={handleSubmit}
-              commands={commandDefs}
-              placeholder={isRunning ? "Interrupt… (Ctrl+C to cancel)" : undefined}
-              disabled={dockFocusIdx !== null}
-              onArrowOut={(dir) => {
-                if (dir !== "down") return;
-                const visible = getVisibleAgents(asyncAgentRegistry.getSnapshot(), Date.now());
-                if (visible.length === 0) return;
-                // Restore focus to the row we're currently viewing, so the
-                // user doesn't have to scroll back down to the agent they
-                // were just looking at. main row = idx 0, agents are 1..N.
-                if (viewMode.kind === "agent") {
-                  const idx = visible.findIndex((a) => a.agentId === viewMode.agentId);
-                  // Cap at MAX_VISIBLE since the dock only shows that many.
-                  if (idx >= 0 && idx < MAX_VISIBLE) {
-                    setDockFocusIdx(idx + 1);
-                    return;
-                  }
-                }
-                setDockFocusIdx(0);
-              }}
-            />
-          </>
-        )
-      )}
+      <TuiControlSurface
+        client={client}
+        screen={screen}
+        cursorIdx={cursorIdx}
+        showOnboarding={showOnboarding}
+        setShowOnboarding={setShowOnboarding}
+        modelManager={modelManager}
+        setModelManager={setModelManager}
+        modelEntries={modelEntries}
+        setModelEntries={setModelEntries}
+        sessionEntries={sessionEntries}
+        setSessionEntries={setSessionEntries}
+        wizard={wizard}
+        setWizard={setWizard}
+        pendingQuestion={pendingQuestion}
+        setPendingQuestion={setPendingQuestion}
+        pendingApproval={pendingApproval !== null}
+        sessionId={sessionId}
+        sidRef={sidRef}
+        applyModelConfigureResult={applyModelConfigureResult}
+        addStatus={addStatus}
+        refreshModelManagerState={refreshModelManagerState}
+        handleSlashCommand={handleSlashCommand}
+        queuedInputs={queuedInputs}
+        input={input}
+        setInput={setInput}
+        handleSubmit={handleSubmit}
+        commands={commandDefs}
+        isRunning={isRunning}
+        dockFocusIdx={dockFocusIdx}
+        setDockFocusIdx={setDockFocusIdx}
+        viewMode={viewMode}
+      />
 
       <Text dim>{separator}</Text>
 
@@ -2551,267 +2200,4 @@ export function App({
       />
     </FullscreenModeContext.Provider>
   );
-}
-
-// ─── Entry Renderer ──────────────────────────────────────────────
-
-export function renderEntry(entry: ChatEntry, key: string, expanded = false) {
-  const nested = !!(entry as any).agentId;
-
-  switch (entry.type) {
-    case "user":
-      return <UserMessage key={key} text={entry.text} />;
-
-    case "assistant_text":
-      if (nested) {
-        return (
-          <Box key={key} marginLeft={1}>
-            <Text dim>│ ⎿ </Text>
-            <MessageContent text={entry.text} streaming={entry.streaming} nested />
-          </Box>
-        );
-      }
-      return <MessageContent key={key} text={entry.text} streaming={entry.streaming} />;
-
-    case "thinking":
-      // Main spinner is shown as SpinnerWithVerb component above;
-      // only render inline thinking for nested agents
-      if (!nested) return null;
-      return (
-        <Box key={key} marginLeft={1}>
-          <Text dim>│ ⎿ </Text>
-          <ThinkingMessage content={entry.content} collapsed={!expanded} nested />
-        </Box>
-      );
-
-    case "tool_start":
-      return (
-        <ToolCallStart key={key} toolName={entry.toolName} args={entry.args} nested={nested} />
-      );
-
-    case "tool_running":
-      return <ToolCallRunning key={key} toolName={entry.toolName} nested={nested} />;
-
-    case "tool_result":
-      return (
-        <ToolCallResult
-          key={key}
-          toolName={entry.toolName}
-          result={entry.result}
-          error={entry.error}
-          nested={nested}
-          expanded={expanded}
-          compact={entry.compact}
-        />
-      );
-
-    case "agent_start":
-      return (
-        <AgentBlockStart
-          key={key}
-          name={entry.name}
-          agentType={entry.agentType}
-          description={entry.description}
-          running
-        />
-      );
-
-    case "agent_end":
-      return (
-        <AgentBlockEnd
-          key={key}
-          name={entry.name}
-          agentType={entry.agentType}
-          description={entry.description}
-          text={entry.text}
-          error={entry.error}
-        />
-      );
-
-    case "error": {
-      const kind = (entry as any).errorKind;
-      if (kind === "rate_limit") {
-        return <RateLimitMessage key={key} text={entry.error} />;
-      }
-      if (kind === "context_limit") {
-        return <ContextLimitMessage key={key} />;
-      }
-      return (
-        <Box key={key} marginLeft={nested ? 1 : 0}>
-          {nested && <Text dim>│ ⎿ </Text>}
-          <ErrorMessage error={entry.error} nested={nested} />
-        </Box>
-      );
-    }
-
-    case "system": {
-      const sysEntry = entry as ChatEntry & { type: "system" };
-      if (sysEntry.subtype === "compact_boundary") {
-        return (
-          <Box key={key} marginLeft={1} marginTop={1}>
-            <Text dim>{sysEntry.text ?? "── context compacted ──"}</Text>
-          </Box>
-        );
-      }
-      if (sysEntry.subtype === "memory_saved") {
-        return (
-          <Box key={key} marginLeft={1} marginTop={1}>
-            <Text color="ansi:magenta">{"✦ "}</Text>
-            <Text dim>{sysEntry.text ?? "Memory saved"}</Text>
-          </Box>
-        );
-      }
-      if (sysEntry.subtype === "turn_duration") {
-        return (
-          <Box key={key} marginLeft={1} marginTop={1}>
-            <Text dim>{sysEntry.text}</Text>
-          </Box>
-        );
-      }
-      if (sysEntry.subtype === "bg_agent_notification") {
-        // Pre-formatted by buildNotificationSummary — already a multi-line
-        // string. Render each line with dim styling so it reads as a
-        // system marker, not as user content.
-        const lines = (sysEntry.text ?? "").split("\n");
-        return (
-          <Box key={key} flexDirection="column" marginLeft={1} marginTop={1}>
-            {lines.map((line, i) => (
-              <Text key={i} dim>
-                {line}
-              </Text>
-            ))}
-          </Box>
-        );
-      }
-      return (
-        <Box key={key} marginLeft={1} marginTop={1}>
-          <Text dim>{sysEntry.text ?? ""}</Text>
-        </Box>
-      );
-    }
-
-    case "status":
-      return (
-        <Box key={key} marginLeft={1} marginTop={1}>
-          <Text dim>{entry.reason}</Text>
-        </Box>
-      );
-  }
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────
-
-function findLastIndex<T>(arr: T[], predicate: (item: T) => boolean): number {
-  for (let i = arr.length - 1; i >= 0; i--) {
-    if (predicate(arr[i])) return i;
-  }
-  return -1;
-}
-
-/**
- * Map a TerminalReason (or raw SDK error string) to a user-facing line.
- * Keep the technical name in parentheses so logs / bug reports stay
- * grep-able, but lead with something a human can act on.
- */
-function friendlyReason(reason: string): string {
-  switch (reason) {
-    case "aborted_streaming":
-    case "aborted_tools":
-      return "已中断";
-    case "model_error":
-      return "模型调用失败 — 检查网络 / API key / 配额后重试";
-    case "prompt_too_long":
-      return "上下文超长 — 用 /compact 压缩,或开新会话";
-    case "max_turns":
-      return "达到最大回合数 — 可继续输入推进";
-    case "goal_budget_exhausted":
-      return "目标预算已耗尽 — 调高 token/时间预算后重试";
-    case "hook_stopped":
-    case "stop_hook_prevented":
-      return "被 hook 拦截 — 检查 settings.json 中的 hook 配置";
-    case "image_error":
-      return "图片处理失败";
-    case "completed":
-      return "";
-    default:
-      return reason;
-  }
-}
-
-/**
- * Friendlify an SDK error message. Catches the common patterns
- * ("OpenAI API error: Request was aborted.", auth, rate-limit, network)
- * and rewrites them; leaves anything unrecognized intact so we never hide
- * a real bug.
- */
-function friendlyError(msg: string): string {
-  const m = msg.toLowerCase();
-  if (m.includes("aborted") || m.includes("abort")) return "已中断";
-  if (m.includes("401") || m.includes("unauthorized") || m.includes("invalid api key")) {
-    return "API key 无效或已过期 — 检查 /providers";
-  }
-  if (m.includes("429") || m.includes("rate limit") || m.includes("quota")) {
-    return "触发限流 / 配额耗尽 — 稍后再试,或切换模型";
-  }
-  if (m.includes("timeout") || m.includes("etimedout") || m.includes("econnreset")) {
-    return "网络超时 — 检查连接后重试";
-  }
-  if (m.includes("enotfound") || m.includes("getaddrinfo")) {
-    return "无法解析模型服务地址 — 检查 DNS / 代理设置";
-  }
-  if (m.includes("context length") || m.includes("maximum context") || m.includes("too long")) {
-    return "上下文超长 — 用 /compact 压缩,或开新会话";
-  }
-  return msg;
-}
-
-// ─── Mode Indicator ─────────────────────────────────────────────
-
-const MODE_DISPLAY: Record<string, { symbol: string; title: string; color: string }> = {
-  plan: { symbol: "⏵  ", title: "plan  read-only", color: "ansi:yellow" },
-  normal: { symbol: "⏵⏵ ", title: "auto-accept edits", color: "ansi:cyan" },
-  bypass: { symbol: "⏵⏵⏵", title: "bypass permissions", color: "ansi:red" },
-};
-
-function ModeIndicator({ mode }: { mode: "plan" | "normal" | "bypass" }) {
-  const d = MODE_DISPLAY[mode];
-  return (
-    <Box>
-      <Text color={d.color}>{d.symbol}</Text>
-      <Text dim>{" " + d.title + " "}</Text>
-      <Text dim>{"(shift+tab)"}</Text>
-    </Box>
-  );
-}
-
-// ─── Error Classification ───────────────────────────────────────
-
-function classifyError(error: string): import("./store.js").ErrorKind {
-  const lower = error.toLowerCase();
-  if (
-    lower.includes("rate limit") ||
-    lower.includes("429") ||
-    lower.includes("too many requests")
-  ) {
-    return "rate_limit";
-  }
-  if (
-    lower.includes("context") &&
-    (lower.includes("limit") || lower.includes("too long") || lower.includes("too many tokens"))
-  ) {
-    return "context_limit";
-  }
-  if (
-    lower.includes("invalid") &&
-    (lower.includes("api key") || lower.includes("api_key") || lower.includes("authentication"))
-  ) {
-    return "invalid_api_key";
-  }
-  if (lower.includes("timeout") || lower.includes("timed out")) {
-    return "api_timeout";
-  }
-  if (lower.includes("credit") || lower.includes("balance") || lower.includes("billing")) {
-    return "credit_balance";
-  }
-  return "generic";
 }

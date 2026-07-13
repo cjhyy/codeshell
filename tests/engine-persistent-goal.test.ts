@@ -2,7 +2,7 @@
  * Persistent goal (CC /goal style): a goal set on one send is stored on the
  * session and survives across LATER bare sends (and manual interrupts) until
  * the judge says met or the user clears it. This test drives Engine.run with a
- * scripted LLM + scripted goal judge and inspects session.state.activeGoal.
+ * scripted LLM + scripted goal judge and inspects the canonical lifecycle API.
  */
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -10,10 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { Engine } from "../packages/core/src/engine/engine.js";
-import {
-  registerProvider,
-  PROVIDER_REGISTRY,
-} from "../packages/core/src/llm/client-factory.js";
+import { registerProvider, PROVIDER_REGISTRY } from "../packages/core/src/llm/client-factory.js";
 import { LLMClientBase } from "../packages/core/src/llm/client-base.js";
 import type { LLMResponse } from "../packages/core/src/types.js";
 import type { CreateMessageOptions } from "../packages/core/src/llm/types.js";
@@ -82,7 +79,13 @@ describe("persistent goal lifecycle", () => {
     savedHome = process.env.HOME;
     process.env.HOME = cwd;
     engine = new Engine({
-      llm: { provider: "openai", providerKind: "openai", model: "gpt-5", apiKey: "test", enableStreaming: false },
+      llm: {
+        provider: "openai",
+        providerKind: "openai",
+        model: "gpt-5",
+        apiKey: "test",
+        enableStreaming: false,
+      },
       cwd,
       sessionStorageDir: join(cwd, ".code-shell", "sessions"),
       enabledBuiltinTools: [],
@@ -98,7 +101,7 @@ describe("persistent goal lifecycle", () => {
   });
 
   function activeGoal(): string | undefined {
-    return engine.getSessionManager().resume(sid).state.activeGoal?.objective;
+    return engine.getSessionManager().readActiveGoal(sid)?.objective;
   }
 
   function waitOnFiniteBackgroundWork(): void {

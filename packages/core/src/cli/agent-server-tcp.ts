@@ -68,7 +68,7 @@ const llmConfig = seedLlm;
 // ── Shared runtime (same bootstrap as stdio) ─────────────────────
 const seedEngine = new Engine({ llm: llmConfig, cwd, settingsScope: "full" });
 const modelPool = seedEngine.getModelPool();
-const toolRegistry = seedEngine.getToolRegistry();
+const toolRegistry = seedEngine.getRuntimeToolRegistry();
 const resolvedLlmConfig = seedEngine.getConfig().llm;
 const resolvedClientDefaults = seedEngine.getConfig().clientDefaults;
 const mcpPool = new MCPManager(toolRegistry);

@@ -5,7 +5,7 @@
  * pure(-ish) helpers it consumes, so there's a single input stack.
  */
 
-import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync, rmSync, chmodSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { userHome } from "./settings/manager.js";
 import { getOpenRouterModels } from "./data/openrouter-models.js";
@@ -397,25 +397,5 @@ export function appendOnboardingResult(opts: {
     writeFileSync(file, JSON.stringify(updated, null, 2) + "\n", { encoding: "utf-8", mode: 0o600 });
     rmSync(tmp, { force: true });
   }
-}
-
-// saveArenaSettings removed — replaced by saveArenaSettingsByKeys
-
-export function saveArenaSettingsByKeys(keys: string[]): void {
-  const dir = join(userHome(), ".code-shell");
-  const file = join(dir, "settings.json");
-
-  let existing: Record<string, unknown> = {};
-  if (existsSync(file)) {
-    try { existing = JSON.parse(readFileSync(file, "utf-8")); } catch {}
-  }
-
-  const updated = {
-    ...existing,
-    arena: { participants: keys },
-  };
-
-  writeFileSync(file, JSON.stringify(updated, null, 2) + "\n", { encoding: "utf-8", mode: 0o600 });
-  try { chmodSync(file, 0o600); } catch { /* best-effort */ }
 }
 

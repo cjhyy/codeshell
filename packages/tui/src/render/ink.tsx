@@ -7,7 +7,7 @@ import React, { type ReactNode } from 'react';
 import type { FiberRoot } from 'react-reconciler';
 import { ConcurrentRoot } from 'react-reconciler/constants.js';
 import { onExit } from 'signal-exit';
-import { flushInteractionTime, logForDebugging, logger } from '@cjhyy/code-shell-core';
+import { logForDebugging, logger } from '@cjhyy/code-shell-core';
 import { getYogaCounters } from '../native-ts/yoga-layout/index.js';
 import { format } from 'util';
 import { colorize } from './colorize.js';
@@ -594,7 +594,6 @@ export default class Ink {
     // Date.now() at most once per frame instead of once per keypress.
     // Done before the render to avoid dirtying state that would trigger
     // an extra React re-render cycle.
-    flushInteractionTime();
 
     // Flush any pending <Static> items to stdout BEFORE the main renderer
     // runs. This ensures detached children don't appear in the frame buffer.

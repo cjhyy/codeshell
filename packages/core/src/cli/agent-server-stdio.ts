@@ -53,6 +53,35 @@ import { cronScheduler } from "../automation/scheduler.js";
 import { CronStore, defaultCronStorePath } from "../automation/store.js";
 import { resolveLLMConfigForTag } from "../engine/resolve-llm-config.js";
 import { createIpcCredentialAccess, setDefaultCredentialAccess } from "../credentials/access.js";
+import type { CapabilityModule } from "../tool-system/capability-module.js";
+
+async function loadConfiguredCapabilities(): Promise<CapabilityModule[]> {
+  const specs = (process.env.CODE_SHELL_CAPABILITY_MODULES ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  const capabilities: CapabilityModule[] = [];
+
+  for (const spec of specs) {
+    const [moduleId, exportName = "createCapability"] = spec.split("#", 2);
+    if (!moduleId) continue;
+    try {
+      const loaded = (await import(moduleId)) as Record<string, unknown>;
+      const factory = loaded[exportName];
+      if (typeof factory !== "function") {
+        throw new Error(`export ${exportName} is not a capability factory`);
+      }
+      capabilities.push((factory as () => CapabilityModule)());
+    } catch (err) {
+      logger.warn("capability.module_unavailable", {
+        moduleId,
+        exportName,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+  return capabilities;
+}
 
 /**
  * Resolve per-session agent config: protocol slice overrides win, else fall
@@ -87,6 +116,7 @@ export function resolveSessionCwd(slice: EngineConfigSlice): string {
 // ─── Read base config from environment / settings ─────────────────
 
 const cwd = process.env.AGENT_CWD ?? process.cwd();
+const capabilities = await loadConfiguredCapabilities();
 
 // Load settings once to derive llm config for the seed engine.
 // Desktop is a host application: read the full disk hierarchy (incl. the
@@ -136,6 +166,7 @@ const seedEngine = new Engine({
   enabledBuiltinTools: settings.agent.enabledBuiltinTools,
   disabledBuiltinTools: settings.agent.disabledBuiltinTools,
   builtinToolHost: "desktop",
+  capabilities,
   settingsScope: "full",
   // No runtime — Engine.populateModelPoolFromSettings() runs in ctor.
 });
@@ -143,7 +174,7 @@ const seedEngine = new Engine({
 // ─── Step 2: extract shared resources ────────────────────────────
 
 const modelPool = seedEngine.getModelPool();
-const toolRegistry = seedEngine.getToolRegistry();
+const toolRegistry = seedEngine.getRuntimeToolRegistry();
 
 // Capture the seed engine's resolved llmConfig + clientDefaults
 // (post-populateModelPoolFromSettings). Session engines inherit defaults so
@@ -248,6 +279,7 @@ const chatManager = new ChatSessionManager({
       // session it creates is a desktop-origin session.
       origin: "desktop",
       builtinToolHost: "desktop",
+      capabilities,
       // Inherit full scope so spawned subagents read user config too.
       settingsScope: "full",
       // MCP servers from settings — the worker reads the full disk

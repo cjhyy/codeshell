@@ -325,6 +325,7 @@ export function createSubAgentSpawner(deps: CreateSubAgentSpawnerDeps): SubAgent
         enabledBuiltinTools: scope.enabled,
         disabledBuiltinTools: scope.disabled,
         builtinToolHost: deps.parentConfig.builtinToolHost,
+        capabilities: deps.parentConfig.capabilities,
         customSystemPrompt: deps.parentConfig.customSystemPrompt,
         appendSystemPrompt:
           [deps.parentConfig.appendSystemPrompt, request.appendSystemPrompt]

@@ -142,9 +142,19 @@ function toolResponse(id: string): LLMResponse {
 }
 
 function readState(storageDir: string, sessionId: string): SessionState {
-  return JSON.parse(
+  const state = JSON.parse(
     readFileSync(join(storageDir, sessionId, "state.json"), "utf-8"),
   ) as SessionState;
+  const lifecycle = state.goalLifecycle;
+  if (lifecycle && lifecycle.phase !== "terminal") {
+    state.activeGoal = {
+      ...lifecycle.config,
+      goalId: lifecycle.goalId,
+      revision: lifecycle.revision,
+      ...(lifecycle.phase === "paused" ? { paused: true } : {}),
+    };
+  }
+  return state;
 }
 
 describe("Engine session title persistence", () => {

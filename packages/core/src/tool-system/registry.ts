@@ -16,7 +16,7 @@ import { validateToolMetadata } from "./validate-tool-metadata.js";
 /**
  * Default execution timeout for any tool that does not declare its own
  * timeoutMs at registration time. Tools that need to run longer (Agent,
- * Arena, Bash, custom long-running tools) should set timeoutMs explicitly.
+ * Bash, or custom capability tools) should set timeoutMs explicitly.
  */
 export const DEFAULT_TOOL_TIMEOUT_MS = 120_000;
 
@@ -69,6 +69,14 @@ export class ToolRegistry {
     }
   }
 
+  /** Create an engine-local registry view without sharing mutable maps. */
+  fork(): ToolRegistry {
+    const fork = new ToolRegistry({ builtinTools: [] });
+    fork.tools = new Map(this.tools);
+    fork.builtinExecutors = new Map(this.builtinExecutors);
+    return fork;
+  }
+
   unregisterTool(name: string): void {
     this.tools.delete(name);
     this.builtinExecutors.delete(name);
@@ -108,7 +116,7 @@ export class ToolRegistry {
 
     // Tool timeout precedence:
     //   options.timeoutMs (per-call override) > tool.timeoutMs (declared at registration) > default 120s.
-    // To run longer, declare timeoutMs on the tool (e.g. Agent/Arena: 30min, Bash: 1h).
+    // To run longer, declare timeoutMs on the tool (e.g. Agent: 30min, Bash: 1h).
     const timeout = options?.timeoutMs ?? tool.timeoutMs ?? DEFAULT_TOOL_TIMEOUT_MS;
     const parentSignal = options?.signal;
     const id = `tool_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

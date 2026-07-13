@@ -87,7 +87,6 @@ import {
 import { replToolDef, replTool } from "./repl.js";
 import { briefToolDef, briefTool } from "./brief.js";
 import { powershellToolDef, powershellTool } from "./powershell.js";
-import { arenaToolDef, arenaTool } from "./arena.js";
 import {
   memoryListToolDef,
   memoryListTool,
@@ -755,18 +754,6 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: powershellTool,
-  },
-  // ─── Arena: Multi-Model Collaborative Analysis ────────────────
-  {
-    definition: {
-      ...arenaToolDef,
-      source: "builtin",
-      permissionDefault: "ask",
-      isReadOnly: true,
-      isConcurrencySafe: false,
-      timeoutMs: 1_800_000, // 30min — multi-model debate rounds take time
-    },
-    execute: arenaTool,
   },
   // ─── Memory tools (persistent cross-session memory) ────────────
   // Save/Delete default to "ask" so user-scope modifications go through a

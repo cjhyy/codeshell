@@ -7,19 +7,6 @@ import type {
 import * as publicApi from "./index.js";
 
 const expectedRuntimeExportsByPartition = {
-  state: [
-    "getSessionId",
-    "switchSession",
-    "getOriginalCwd",
-    "setOriginalCwd",
-    "getProjectRoot",
-    "setProjectRoot",
-    "getCwdState",
-    "getIsInteractive",
-    "updateLastInteractionTime",
-    "flushInteractionTime",
-    "markScrollActivity",
-  ],
   utils: [
     "getGraphemeSegmenter",
     "firstGrapheme",
@@ -143,13 +130,6 @@ const expectedRuntimeExportsByPartition = {
     "catalogEntryOrigins",
   ],
   protocolExtensions: ["createInProcessClient"],
-  arenaHostRendering: [
-    "formatArenaResult",
-    "printArenaResult",
-    "renderProgress",
-    "createProgressRenderer",
-    "formatArenaResultForSession",
-  ],
   llmHostExtensions: [
     "defaultCacheDir",
     "fetchModelList",
@@ -166,15 +146,14 @@ const expectedRuntimeExportsByPartition = {
 const expectedRuntimeExports = Object.values(expectedRuntimeExportsByPartition).flat();
 
 describe("core public/internal export contract", () => {
-  it("keeps the stable public API and I1 compatibility aliases at the package root", () => {
+  it("keeps the stable public API without host process state", () => {
     expect(publicApi.Engine).toBeDefined();
     expect(publicApi.createServer).toBeDefined();
 
-    // I1 is intentionally non-breaking. Removing these root aliases belongs to
-    // later migration PRs after in-repo consumers have moved to /internal.
-    expect(publicApi.getSessionId).toBeDefined();
-    expect(publicApi.formatArenaResult).toBeDefined();
-    expect(publicApi.Arena).toBeDefined();
+    expect(publicApi).not.toHaveProperty("getSessionId");
+    expect(publicApi).not.toHaveProperty("markScrollActivity");
+    expect(publicApi).not.toHaveProperty("Arena");
+    expect(publicApi).not.toHaveProperty("formatArenaResult");
   });
 
   it("exposes the complete host-only runtime surface from the source internal entry", async () => {
@@ -196,7 +175,6 @@ describe("core public/internal export contract", () => {
       }
     }
 
-    // Stable SDK and top-level Arena APIs remain owned by the public entry;
     // /internal is a focused host barrel rather than a duplicate of index.ts.
     expect(internalApi).not.toHaveProperty("Engine");
     expect(internalApi).not.toHaveProperty("Arena");
@@ -212,6 +190,13 @@ describe("core public/internal export contract", () => {
     });
     expect(rootTsconfig.compilerOptions.paths["@cjhyy/code-shell-core/internal"]).toEqual([
       "packages/core/src/index.internal.ts",
+    ]);
+    expect(packageJson.exports["./extension"]).toEqual({
+      types: "./dist/index.extension.d.ts",
+      import: "./dist/index.extension.js",
+    });
+    expect(rootTsconfig.compilerOptions.paths["@cjhyy/code-shell-core/extension"]).toEqual([
+      "packages/core/src/index.extension.ts",
     ]);
   });
 });

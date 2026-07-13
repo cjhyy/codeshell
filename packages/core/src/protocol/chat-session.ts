@@ -219,7 +219,7 @@ export class ChatSession {
   }
 
   /**
-   * Read this session's persisted active goal (state.activeGoal), or undefined
+   * Read this session's persisted active goal (state.goalLifecycle), or undefined
    * when none. Cheap — reads only state.json. The host calls this on session
    * load to re-surface the goal block + Cancel button after a reload.
    */

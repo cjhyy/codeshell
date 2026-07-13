@@ -19,8 +19,90 @@ import {
   isGoalTerminated,
   isSameGoalInstance,
   mergeGoalTerminals,
+  armGoalLifecycle,
+  createGoalLifecycle,
+  decodeGoalLifecycle,
+  goalConfigFromLifecycle,
+  isGoalLifecycleArmable,
+  terminateGoalLifecycle,
+  waitGoalLifecycle,
   type GoalConfig,
 } from "./goal.js";
+
+describe("GoalLifecycleV1", () => {
+  test("stores identity and control revision once outside config", () => {
+    const lifecycle = createGoalLifecycle(
+      { objective: "ship", goalId: "goal-a", revision: 3, paused: true, tokenBudget: 10 },
+      "paused",
+      100,
+    );
+    expect(lifecycle).toMatchObject({
+      version: 1,
+      goalId: "goal-a",
+      revision: 3,
+      phase: "paused",
+      config: { objective: "ship", tokenBudget: 10 },
+    });
+    expect(lifecycle.config).not.toHaveProperty("goalId");
+    expect(lifecycle.config).not.toHaveProperty("paused");
+    expect(goalConfigFromLifecycle(lifecycle)).toMatchObject({
+      objective: "ship",
+      goalId: "goal-a",
+      revision: 3,
+      paused: true,
+    });
+  });
+
+  test("active waits, waiting arms with the same id, and terminal never arms", () => {
+    const active = createGoalLifecycle({ objective: "ship", goalId: "goal-a" }, "active", 100);
+    const waiting = waitGoalLifecycle(active, 200)!;
+    expect(isGoalLifecycleArmable(waiting)).toBe(true);
+    expect(armGoalLifecycle(waiting, 300)).toMatchObject({
+      goalId: "goal-a",
+      phase: "active",
+      updatedAtMs: 300,
+    });
+    const terminal = terminateGoalLifecycle(waiting, "completed", 400)!;
+    expect(isGoalLifecycleArmable(terminal)).toBe(false);
+    expect(armGoalLifecycle(terminal)).toBeUndefined();
+  });
+
+  test("strict decoder rejects unknown versions and incomplete phases", () => {
+    const valid = createGoalLifecycle({ objective: "ship", goalId: "goal-a" }, "active", 100);
+    expect(decodeGoalLifecycle(valid)).toEqual(valid);
+    expect(decodeGoalLifecycle({ ...valid, version: 2 })).toBeUndefined();
+    expect(decodeGoalLifecycle({ ...valid, phase: "waiting" })).toBeUndefined();
+    expect(
+      decodeGoalLifecycle({ ...valid, config: { ...valid.config, goalId: "duplicate" } }),
+    ).toBeUndefined();
+    expect(
+      decodeGoalLifecycle({ ...valid, config: { ...valid.config, revision: 99 } }),
+    ).toBeUndefined();
+    expect(
+      decodeGoalLifecycle({ ...valid, config: { ...valid.config, paused: true } }),
+    ).toBeUndefined();
+    for (const key of ["tokenBudget", "timeBudgetMs", "maxTurns", "maxStopBlocks"] as const) {
+      expect(
+        decodeGoalLifecycle({ ...valid, config: { ...valid.config, [key]: -1 } }),
+      ).toBeUndefined();
+    }
+    expect(
+      decodeGoalLifecycle({ ...valid, config: { ...valid.config, maxTurns: 1.5 } }),
+    ).toBeUndefined();
+    expect(
+      decodeGoalLifecycle({ ...valid, terminal: { reason: "completed", atMs: 2 } }),
+    ).toBeUndefined();
+    expect(
+      decodeGoalLifecycle({
+        ...valid,
+        phase: "waiting",
+        waitingFor: "finite_background_work",
+        waitingSinceMs: 2,
+        terminal: { reason: "completed", atMs: 2 },
+      }),
+    ).toBeUndefined();
+  });
+});
 
 describe("resolveMaxStopBlocks (TODO 3.1 — 续跑上限调大可配)", () => {
   test("no goal → tighter interactive default (8), NOT the goal default (25)", () => {

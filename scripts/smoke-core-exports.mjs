@@ -37,8 +37,6 @@ assert.equal("Engine" in internalApi, false);
 assert.equal("Arena" in internalApi, false);
 
 const expectedInternalTypeExports = [
-  "AttributedCounter",
-  "ChannelEntry",
   "BashLineKind",
   "ClassifiedBashLine",
   "Theme",
@@ -96,7 +94,6 @@ const expectedInternalTypeExports = [
   "TranscribeDescription",
   "CatalogEntry",
   "ProtocolModelEntry",
-  "OutputSink",
   "CachedModel",
   "FetchResult",
   "ProviderKindName",

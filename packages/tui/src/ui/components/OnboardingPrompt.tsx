@@ -18,8 +18,8 @@ import {
   type OnboardingResult,
   detectEnvKeys,
   appendOnboardingResult,
-  saveArenaSettingsByKeys,
 } from "@cjhyy/code-shell-core";
+import { saveArenaSettingsByKeys } from "@cjhyy/code-shell-arena";
 import type { ProviderConfig } from "@cjhyy/code-shell-core";
 
 type Step = "flow" | "arena";
