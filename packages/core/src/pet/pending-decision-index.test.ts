@@ -46,6 +46,33 @@ describe("PendingDecisionIndex", () => {
     expect(JSON.stringify(snapshot)).not.toContain("secret-token");
   });
 
+  test("never projects any line of raw AskUser text, including middle and trailing secrets", () => {
+    const index = new PendingDecisionIndex();
+    const question = [
+      "联系 Alice alice@example.com 选择方案",
+      "中间凭证 token-middle-secret-778899",
+      "普通说明",
+      "末行 secret-tail-abcdef987654",
+    ].join("\n");
+    index.created({
+      sessionId: "session-sensitive",
+      requestId: "ask-sensitive",
+      workerGeneration: 1,
+      kind: "ask_user",
+      title: question,
+      createdAt: 100,
+      surfaceable: true,
+    });
+
+    const serialized = JSON.stringify(index.snapshot());
+    expect(index.snapshot()[0]?.title).toBe("需要用户回答");
+    expect(serialized).not.toContain("Alice");
+    expect(serialized).not.toContain("alice@example.com");
+    expect(serialized).not.toContain("token-middle-secret-778899");
+    expect(serialized).not.toContain("普通说明");
+    expect(serialized).not.toContain("secret-tail-abcdef987654");
+  });
+
   test("does not surface internal bridge waits", () => {
     const index = new PendingDecisionIndex();
     for (const toolName of [

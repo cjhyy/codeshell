@@ -64,7 +64,7 @@ import type { ChatSessionManager, EngineConfigSlice } from "./chat-session-manag
 import { assertSafeSessionId, SessionManager } from "../session/session-manager.js";
 import { redactLlmConfig, maskSecretValue } from "./redact.js";
 import { redactSecrets } from "../logging/sanitize-messages.js";
-import { PendingDecisionIndex, safePendingTitle } from "../pet/pending-decision-index.js";
+import { PendingDecisionIndex } from "../pet/pending-decision-index.js";
 import { SessionIndex } from "../pet/session-index.js";
 import {
   LOCAL_PET_OWNER,
@@ -2588,7 +2588,7 @@ export class AgentServer {
           routeGeneration: "generation" in routeEnvelope ? routeEnvelope.generation : undefined,
           workerGeneration: this.petWorkerGeneration(),
           kind: "ask_user",
-          title: safePendingTitle(question),
+          title: "需要用户回答",
           createdAt: Date.now(),
           surfaceable: true,
         },

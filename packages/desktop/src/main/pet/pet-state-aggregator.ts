@@ -162,7 +162,10 @@ function safePending(pending: PendingDecisionProjection): DesktopPendingDecision
     routeGeneration: pending.routeGeneration,
     workerGeneration: pending.workerGeneration,
     kind: pending.kind,
-    title: bounded(pending.title, MAX_TITLE_LENGTH) ?? "待处理决策",
+    title:
+      pending.kind === "ask_user"
+        ? "需要用户回答"
+        : `等待批准 ${bounded(pending.toolName, 80) ?? "工具"}`,
     toolName: bounded(pending.toolName, 80),
     riskLevel: pending.riskLevel,
     createdAt: pending.createdAt,

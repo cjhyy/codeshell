@@ -206,6 +206,29 @@ describe("Pet projection protocol", () => {
     client.close();
   });
 
+  test("real AskUser registration never exposes multiline question text in the Pet snapshot", async () => {
+    const { client, manager, server } = makePair(4, ["session-sensitive"]);
+    const session = await manager.getOrCreate("session-sensitive", {} as never);
+    const question = [
+      "联系人 Bob bob@example.com",
+      "middle token-middle-123456789",
+      "末尾 secret-tail-987654321",
+    ].join("\n");
+
+    void (server as any).requestAskUserForSession(session, "session-sensitive", question);
+    const snapshot = await client.getPetProjectionSnapshot();
+    const serialized = JSON.stringify(snapshot);
+
+    expect(snapshot.pending[0]?.title).toBe("需要用户回答");
+    expect(serialized).not.toContain("Bob");
+    expect(serialized).not.toContain("bob@example.com");
+    expect(serialized).not.toContain("token-middle-123456789");
+    expect(serialized).not.toContain("secret-tail-987654321");
+
+    server.close();
+    client.close();
+  });
+
   test("never exposes the durable pet session as a work session or work pending", async () => {
     const { client, manager, server } = makePair(9, ["local-pet"], "pet");
     const session = await manager.getOrCreate("local-pet", {} as never);

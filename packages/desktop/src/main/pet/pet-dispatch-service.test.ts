@@ -107,6 +107,44 @@ describe("PetDispatchService", () => {
     expect(String(request?.params.task)).not.toContain("requestId");
   });
 
+  test("does not inject or persist any raw multiline AskUser title even if host input is malformed", async () => {
+    let task = "";
+    const unsafeSnapshot: DesktopPetProjectionSnapshot = {
+      ...snapshot,
+      pending: [
+        {
+          ...snapshot.pending[0]!,
+          title: [
+            "联系人 Carol carol@example.com",
+            "middle token-middle-445566",
+            "tail secret-tail-aabbcc778899",
+          ].join("\n"),
+        },
+      ],
+    };
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => unsafeSnapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          task = String(params.task);
+          return { ok: true, result: { text: "safe" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+    });
+
+    await service.dispatch({ type: "chat", message: "list pending" });
+    expect(task).toContain("需要用户回答");
+    expect(task).not.toContain("Carol");
+    expect(task).not.toContain("carol@example.com");
+    expect(task).not.toContain("token-middle-445566");
+    expect(task).not.toContain("secret-tail-aabbcc778899");
+  });
+
   test("rejects direction, approval and arbitrary mutation commands", async () => {
     const service = new PetDispatchService({
       metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },

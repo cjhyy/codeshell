@@ -71,7 +71,7 @@ function boundedWorld(snapshot: DesktopPetProjectionSnapshot): Record<string, un
       .map((pending) => ({
         agentSessionId: pending.agentSessionId,
         kind: pending.kind,
-        title: pending.title,
+        title: pending.kind === "ask_user" ? "需要用户回答" : pending.title,
         toolName: pending.toolName,
         riskLevel: pending.riskLevel,
         createdAt: pending.createdAt,

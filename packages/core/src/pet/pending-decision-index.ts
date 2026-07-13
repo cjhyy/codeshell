@@ -8,9 +8,26 @@ import {
 const MAX_TITLE_LENGTH = 80;
 
 export function safePendingTitle(value: string): string {
-  const firstLine = value.split(/\r?\n/, 1)[0]?.trim() ?? "";
-  const redacted = firstLine.replace(/(?:sk|api|token|secret)[-_][a-z0-9_-]{6,}/gi, "[redacted]");
+  const redacted = value
+    .replace(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/gi, "[redacted]")
+    .replace(/(?:sk|api|token|secret)[-_][a-z0-9_-]{6,}/gi, "[redacted]");
   return redacted.replace(/\s+/g, " ").slice(0, MAX_TITLE_LENGTH) || "等待用户决定";
+}
+
+function safeToolName(value: string | undefined): string {
+  if (!value) return "工具";
+  if (/(?:sk|api|token|secret)[-_][a-z0-9_-]{6,}/i.test(value)) return "工具";
+  return (
+    value
+      .replace(/[^\p{L}\p{N}_.:@/-]+/gu, " ")
+      .trim()
+      .slice(0, 40) || "工具"
+  );
+}
+
+function projectedTitle(metadata: PendingApprovalMetadata): string {
+  if (metadata.kind === "ask_user") return "需要用户回答";
+  return `等待批准 ${safeToolName(metadata.toolName)}`;
 }
 
 function key(sessionId: string, requestId: string): string {
@@ -42,7 +59,7 @@ export class PendingDecisionIndex {
       routeGeneration: metadata.routeGeneration,
       workerGeneration: metadata.workerGeneration,
       kind: metadata.kind,
-      title: safePendingTitle(metadata.title),
+      title: projectedTitle(metadata),
       toolName: metadata.toolName,
       riskLevel: metadata.riskLevel,
       createdAt: metadata.createdAt,
