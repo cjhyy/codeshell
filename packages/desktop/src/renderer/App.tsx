@@ -4205,8 +4205,8 @@ function App() {
   }, [activeProject, view.viewMode, settingsRevision]);
 
   useEffect(() => {
-    void window.codeshell.setBadgeCount(surfaceablePendingCount);
-  }, [surfaceablePendingCount]);
+    void window.codeshell.setBadgeCount(approvalQueue.length);
+  }, [approvalQueue.length]);
 
   const prevBusyRef = useRef(busy);
   useEffect(() => {

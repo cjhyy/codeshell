@@ -36,8 +36,9 @@ describe("App Pet lifecycle boundaries", () => {
     expect(appSource).toContain("handlePetPeekAction");
   });
 
-  test("drives the system Dock badge from the Pet attention pending count", () => {
-    expect(appSource).toContain("setBadgeCount(surfaceablePendingCount)");
-    expect(appSource).not.toContain("setBadgeCount(approvalQueue.length)");
+  test("keeps the immediate system Dock approval badge separate from the grace-delayed Pet badge", () => {
+    expect(appSource).toContain("setBadgeCount(approvalQueue.length)");
+    expect(appSource).not.toContain("setBadgeCount(surfaceablePendingCount)");
+    expect(appSource).toContain("const petPendingCount = surfaceablePendingCount");
   });
 });
