@@ -3,6 +3,14 @@ import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
 import type { ContextPackageCreatedOptions } from "./MessageStream";
 import { Sidebar } from "./Sidebar";
+import { PetOverviewPanel, usePetOverviewWidth } from "./pet/PetOverviewPanel";
+import { useOptionalPetState } from "./pet/PetStateProvider";
+import { PetWorldPane } from "./pet/PetWorldPane";
+import { openPetTarget } from "./pet/petNavigation";
+import { PetChatHost } from "./pet/PetChatHost";
+import { PetPeekHost } from "./pet/PetPeekHost";
+import { PetWidget } from "./pet/PetWidget";
+import { loadPetWidgetVisible, savePetWidgetVisible } from "./pet/petWidgetPrefs";
 import { TopBar } from "./TopBar";
 import dogIcon from "./assets/codeshell-dog-icon.png";
 import { timePhase } from "./perf";
@@ -79,6 +87,8 @@ import type {
   MobilePermissionMode,
   MobilePermissionModeEnvelope,
   MobilePermissionModeSnapshotEntry,
+  PetOpenSessionRequest,
+  PetPeek,
   RunSummary,
   SummaryForkSessionResult,
   StreamEventEnvelope,
@@ -408,6 +418,15 @@ function QuickChatPanelHost({
 function App() {
   const toast = useToast();
   const { t, lang } = useT();
+  const {
+    state: petState,
+    dispatch: petDispatch,
+    surfaceablePendingCount,
+    peeks: petPeeks,
+    removePeek,
+  } = useOptionalPetState();
+  const { width: petOverviewWidth, beginResize: beginPetOverviewResize } = usePetOverviewWidth();
+  const [petWidgetVisible, setPetWidgetVisible] = useState(loadPetWidgetVisible);
   const [transcripts, dispatch] = useReducer(transcriptsReducer, {} as TranscriptsMap);
   const [approval, setApproval] = useState<ApprovalState>(null);
   const [approvalQueue, setApprovalQueue] = useState<ApprovalRequestEnvelope[]>([]);
@@ -1536,6 +1555,53 @@ function App() {
       [projectBucketSegmentFor(placement.projectId)]: nextIdx,
     }));
     handleSelectSession(placement.projectId, placement.summary.id);
+  };
+
+  const handleOpenPetTarget = async (request: PetOpenSessionRequest): Promise<void> => {
+    await openPetTarget(window.codeshell.pet, request, {
+      select: async (target) => {
+        await handleOpenAutomationDiskSession({
+          id: target.uiSessionId,
+          engineSessionId: target.engineSessionId,
+          cwd: target.projectPath ?? "",
+          title: target.title,
+          updatedAt: target.updatedAt,
+          origin: target.origin,
+        });
+        petDispatch({ type: "set-overview-open", open: false });
+      },
+      onStale: () => toast({ message: t("pet.navigation.stale"), variant: "default" }),
+      onNotFound: () => toast({ message: t("pet.navigation.notFound"), variant: "error" }),
+    });
+  };
+
+  const settlePetPeek = (peek: PetPeek, state: "seen" | "dismissed"): void => {
+    removePeek(peek.id);
+    void window.codeshell.pet?.markAttentionReceipt?.(peek.receiptKeys, state);
+  };
+
+  const handlePetPeekAction = (peek: PetPeek): void => {
+    settlePetPeek(peek, "seen");
+    if (peek.action.type === "open_session") {
+      void handleOpenPetTarget(peek.action.target);
+      return;
+    }
+    petDispatch({ type: "set-overview-focus", focus: "pending" });
+    petDispatch({ type: "set-overview-open", open: true });
+    setView((current) => ({ ...current, sidebarCollapsed: false }));
+  };
+
+  const openPetOverview = (): void => {
+    petDispatch({ type: "set-overview-open", open: true });
+    setView((current) => ({ ...current, sidebarCollapsed: false }));
+  };
+
+  const togglePetWidget = (): void => {
+    setPetWidgetVisible((current) => {
+      const next = !current;
+      savePetWidgetVisible(next);
+      return next;
+    });
   };
 
   /**
@@ -4316,6 +4382,10 @@ function App() {
     return summary?.engineSessionId ?? activeSessionId;
   };
 
+  useEffect(() => {
+    void window.codeshell.pet?.setActiveSession?.(engineSessionIdForActive());
+  }, [activeSessionId, activeRepoKey, sessionIndices]);
+
   const matchCount = useMemo(() => {
     if (!searchQuery) return 0;
     const q = searchQuery.toLowerCase();
@@ -4455,6 +4525,9 @@ function App() {
   const platformClass = isMac ? "platform-darwin" : "";
   const isSettingsPage = view.viewMode === "settings_page";
   const isChatView = view.viewMode === "chat";
+  const petPendingCount = surfaceablePendingCount;
+  const petRunningCount =
+    petState.projection?.sessions.filter((session) => session.runState === "running").length ?? 0;
 
   return (
     <div
@@ -4503,6 +4576,10 @@ function App() {
                 activeSessionId={activeSessionId}
                 collapsedProjects={collapsedProjects}
                 sidebarCollapsed={view.sidebarCollapsed}
+                petOverviewOpen={petState.overviewOpen}
+                petPendingCount={petPendingCount}
+                petRunningCount={petRunningCount}
+                petWidgetVisible={petWidgetVisible}
                 sessionStatuses={sessionStatusMap}
                 onSelectProject={setActiveProjectId}
                 onSelectSession={handleSelectSession}
@@ -4521,6 +4598,8 @@ function App() {
                 onOpenCustomize={() => setViewMode("customize")}
                 onOpenCredentials={() => setViewMode("credentials")}
                 onOpenSettingsPage={() => setViewMode("settings_page")}
+                onOpenPetOverview={openPetOverview}
+                onTogglePetWidget={togglePetWidget}
                 onRenameSession={handleRenameSession}
                 onArchiveSession={handleArchiveSession}
                 onDeleteSession={handleDeleteSession}
@@ -4528,6 +4607,26 @@ function App() {
                 viewMode={view.viewMode}
               />
             </div>
+          )}
+
+          {petState.overviewOpen && (
+            <PetOverviewPanel
+              width={petOverviewWidth}
+              onResizeStart={beginPetOverviewResize}
+              onClose={() => petDispatch({ type: "set-overview-open", open: false })}
+            >
+              <PetWorldPane
+                projection={petState.projection}
+                status={petState.status}
+                focusPending={petState.overviewFocus === "pending"}
+                onNavigate={(request) => void handleOpenPetTarget(request)}
+              />
+              <PetChatHost
+                modelOptions={modelOptions}
+                defaultModelKey={defaultActiveModelKey}
+                onNavigate={(request) => void handleOpenPetTarget(request)}
+              />
+            </PetOverviewPanel>
           )}
 
           {/* Chat column + dock share a relative container so a maximized panel can
@@ -4888,6 +4987,18 @@ function App() {
         {/* Inspector panel removed — tool detail lives inline in each
           tool card's expandable body. */}
       </div>
+
+      <PetPeekHost
+        peeks={petPeeks}
+        onAction={handlePetPeekAction}
+        onDismiss={(peek) => settlePetPeek(peek, "dismissed")}
+      />
+      <PetWidget
+        visible={petWidgetVisible}
+        runningCount={petRunningCount}
+        pendingCount={petPendingCount}
+        onOpen={openPetOverview}
+      />
 
       {isSettingsPage && (
         <div className="absolute inset-0 z-50 overflow-hidden bg-background">

@@ -150,6 +150,8 @@ export interface DiskSessionMeta {
   updatedAt: number;
   /** Session origin — only "desktop" / "automation" are listed (see filter). */
   origin: "desktop" | "automation";
+  /** Normalized durable status for Pet/display consumers. */
+  status?: "active" | "paused" | "completed" | "failed" | "cancelled";
 }
 
 export interface ListDiskSessionsResult {
@@ -219,6 +221,7 @@ export async function listDiskSessions(
       continue;
     }
     if (state.ephemeral === true) continue;
+    if (state.kind === "pet") continue;
     if (!("parentSessionId" in state)) continue; // legacy → skip
     if (state.parentSessionId) continue; // sub-agent (non-empty) → filter
     // Only desktop + automation belong in the desktop sidebar. tui / missing
@@ -245,6 +248,14 @@ export async function listDiskSessions(
         (typeof state.summary === "string" && state.summary ? state.summary : id),
       updatedAt: mtime,
       origin,
+      status:
+        state.status === "active" || state.status === "paused" || state.status === "completed"
+          ? state.status
+          : state.status === "aborted_streaming" || state.status === "aborted_tools"
+            ? "cancelled"
+            : typeof state.status === "string"
+              ? "failed"
+              : undefined,
     });
   }
   return { sessions, nextCursor: i < dirs.length ? String(i) : null };

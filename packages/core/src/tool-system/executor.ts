@@ -15,7 +15,7 @@ import type {
 import type { HookRegistry } from "../hooks/registry.js";
 import { ToolRegistry } from "./registry.js";
 import { PermissionClassifier, classifyBashCommand } from "./permission.js";
-import { PermissionDeniedError, ToolNotFoundError } from "../exceptions.js";
+import { ToolNotFoundError } from "../exceptions.js";
 import { logger as rootLogger, getCurrentSid } from "../logging/logger.js";
 import { recordToolCall, recordToolResult } from "../logging/session-recorder.js";
 import { validateToolArgs } from "./validation.js";
@@ -151,6 +151,14 @@ export class ToolExecutor {
         id: call.id,
         toolName: call.toolName,
         error: `Tool aborted before execution: ${call.toolName}`,
+        isError: true,
+      };
+    }
+    if (this.toolCtx?.allowedToolNames && !this.toolCtx.allowedToolNames.has(call.toolName)) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        error: `Tool ${call.toolName} is not allowed by this run profile. Do NOT retry this tool call.`,
         isError: true,
       };
     }

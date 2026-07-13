@@ -23,6 +23,7 @@ import { nanoid } from "nanoid";
 import type {
   SessionForkLineage,
   SessionState,
+  SessionKind,
   SessionWorkspace,
   TokenUsage,
   TranscriptEvent,
@@ -61,7 +62,7 @@ type StateSaveAttempt =
   | { ok: true }
   | {
       ok: false;
-      reason: "generation_conflict" | "lock_conflict" | "revision_conflict";
+      reason: "generation_conflict" | "lock_conflict" | "revision_conflict" | "kind_conflict";
     };
 
 function sleepSync(ms: number): void {
@@ -192,6 +193,10 @@ export function isEphemeralSessionState(
   return state.ephemeral === true || state.sessionId.startsWith("qchat-");
 }
 
+function normalizedSessionKind(kind: unknown): SessionKind {
+  return kind === "pet" ? "pet" : "work";
+}
+
 /**
  * Resolve the `.code-shell` home dir. `CODE_SHELL_HOME` overrides the default
  * `~/.code-shell` — mirrors Codex's `CODEX_HOME`. Tests set it to a temp dir
@@ -316,6 +321,7 @@ export class SessionManager {
     explicitSessionId?: string,
     parentSessionId?: string | null,
     origin?: import("../types.js").SessionOrigin,
+    kind: SessionKind = "work",
   ): SessionBundle {
     // External callers may pass any string; nanoid output is trusted. Either
     // way the ID gets joined into a filesystem path, so the public entry
@@ -334,6 +340,7 @@ export class SessionManager {
 
     const state: SessionState = {
       sessionId,
+      kind,
       stateRevision: 0,
       cwd,
       workspace: { root: cwd, kind: "main" },
@@ -370,6 +377,7 @@ export class SessionManager {
       model,
       provider,
       startedAt: state.startedAt,
+      kind,
     });
 
     return { state, transcript };
@@ -409,6 +417,23 @@ export class SessionManager {
     try {
       const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
       return sessionMainRoot(state);
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** Cheap durable classification read. Legacy sessions are ordinary work sessions. */
+  readSessionKind(sessionId: string): SessionKind | undefined {
+    try {
+      assertSafeSessionId(sessionId);
+    } catch {
+      return undefined;
+    }
+    const stateFile = join(this.sessionsDir, sessionId, "state.json");
+    if (!existsSync(stateFile)) return undefined;
+    try {
+      const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
+      return normalizedSessionKind(state.kind);
     } catch {
       return undefined;
     }
@@ -665,6 +690,7 @@ export class SessionManager {
     const transcriptFile = join(sessionDir, "transcript.jsonl");
     const transcript = Transcript.loadFromFile(transcriptFile);
 
+    state.kind = normalizedSessionKind(state.kind);
     state.status = "active";
     Object.assign(state, normalizeCumulativeUsageCounters(state, state.tokenUsage));
 
@@ -685,6 +711,12 @@ export class SessionManager {
     assertSafeSessionId(sessionId);
     for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
       const state = this.readPersistedState(sessionId);
+      if (
+        partial.kind !== undefined &&
+        normalizedSessionKind(partial.kind) !== normalizedSessionKind(state.kind)
+      ) {
+        throw new SessionError(`Session kind is immutable for ${sessionId}`);
+      }
       Object.assign(state, partial);
       state.sessionId = sessionId;
       const result = this.saveStateAttempt(state);
@@ -694,6 +726,9 @@ export class SessionManager {
       }
       if (result.reason === "lock_conflict") {
         throw new SessionError(`Session state lock contention for ${sessionId}`);
+      }
+      if (result.reason === "kind_conflict") {
+        throw new SessionError(`Session kind is immutable for ${sessionId}`);
       }
       // A field-level update is explicitly authorized to merge into the newest
       // snapshot. Re-read it on the next iteration instead of treating its CAS
@@ -822,6 +857,13 @@ export class SessionManager {
           // Preserve the historical recovery behavior for malformed state.
         }
       }
+
+      const incomingKind = normalizedSessionKind(state.kind);
+      const persistedKind = persisted ? normalizedSessionKind(persisted.kind) : incomingKind;
+      if (persisted && incomingKind !== persistedKind) {
+        return { ok: false, reason: "kind_conflict" };
+      }
+      state.kind = persistedKind;
 
       const persistedRevision = persisted?.stateRevision;
       const incomingRevision = state.stateRevision;
@@ -1193,6 +1235,8 @@ export class SessionManager {
       try {
         const state = JSON.parse(readFileSync(c.stateFile, "utf-8")) as SessionState;
         if (isEphemeralSessionState(state)) continue;
+        state.kind = normalizedSessionKind(state.kind);
+        if (state.kind === "pet") continue;
         const preview = c.transcriptExists ? readLastUserMessage(c.transcriptFile) : undefined;
         sessions.push({ ...state, preview, lastActiveAt: c.lastActiveAt });
       } catch {
@@ -1215,6 +1259,7 @@ export function buildForkState(
     : { root: source.cwd, kind: "main" as const };
   return {
     sessionId: targetSessionId,
+    kind: "work",
     stateRevision: 0,
     cwd: source.cwd,
     workspace,

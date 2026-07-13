@@ -48,7 +48,7 @@ import { useT } from "./i18n/I18nProvider";
 
 interface Props {
   /** Quick chats reuse the normal composer but omit durable-session controls. */
-  variant?: "main" | "quickChat";
+  variant?: "main" | "quickChat" | "pet";
   messages: Message[];
   /**
    * True while an EXISTING session picked from the sidebar is being hydrated
@@ -363,7 +363,7 @@ export function ChatView({
 }: Props) {
   const { t } = useT();
   const [history, setHistory] = useState<string[]>(() =>
-    variant === "quickChat" ? [] : loadHistory(activeProjectId),
+    variant === "main" ? loadHistory(activeProjectId) : [],
   );
   const [historyCursor, setHistoryCursor] = useState(-1);
   const liveDraftStash = useRef<string>("");
@@ -608,7 +608,7 @@ export function ChatView({
   }, [composerSeedNonce]);
 
   useEffect(() => {
-    setHistory(variant === "quickChat" ? [] : loadHistory(activeProjectId));
+    setHistory(variant === "main" ? loadHistory(activeProjectId) : []);
     setHistoryCursor(-1);
     liveDraftStash.current = "";
   }, [activeProjectId, variant]);
@@ -841,7 +841,7 @@ export function ChatView({
     // Snap the stream to the bottom + re-arm follow regardless of scroll pos.
     setSendEpoch((n) => n + 1);
     // Reusing the main composer must not make ephemeral side prompts durable.
-    if (text && variant !== "quickChat") setHistory(pushHistory(activeProjectId, text));
+    if (text && variant === "main") setHistory(pushHistory(activeProjectId, text));
     setDraft("");
     setAttachments([]);
     setInputReferences([]);
@@ -1566,25 +1566,29 @@ export function ChatView({
             <div className="@container/composer-controls mt-1 min-h-8 w-full min-w-0">
               <div className="flex min-w-0 items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-1.5">
-                  <button
-                    type="button"
-                    className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-                    aria-label={t("chat.composer.addImage")}
-                    title={
-                      activeSupportsVision
-                        ? t("chat.composer.addImageTitle")
-                        : t("chat.composer.addImageDisabledTitle")
-                    }
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={controlsDisabled}
-                  >
-                    <Paperclip size={14} />
-                  </button>
-                  <PermissionPill
-                    value={permissionMode}
-                    onChange={onPermissionChange}
-                    disabled={controlsDisabled}
-                  />
+                  {variant !== "pet" && (
+                    <button
+                      type="button"
+                      className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+                      aria-label={t("chat.composer.addImage")}
+                      title={
+                        activeSupportsVision
+                          ? t("chat.composer.addImageTitle")
+                          : t("chat.composer.addImageDisabledTitle")
+                      }
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={controlsDisabled}
+                    >
+                      <Paperclip size={14} />
+                    </button>
+                  )}
+                  {variant !== "pet" && (
+                    <PermissionPill
+                      value={permissionMode}
+                      onChange={onPermissionChange}
+                      disabled={controlsDisabled}
+                    />
+                  )}
                   {variant === "main" && (
                     <GoalToggle
                       enabled={goalEnabled}
@@ -1679,7 +1683,7 @@ export function ChatView({
                           attachments: runAttachments,
                           displayText: displayPayload,
                         });
-                        if (draft.trim() && variant !== "quickChat") {
+                        if (draft.trim() && variant === "main") {
                           setHistory(pushHistory(activeProjectId, draft.trim()));
                         }
                         setDraft("");

@@ -18,6 +18,7 @@ export type {
   TranscriptEvent,
   TranscriptEventType,
   SessionState,
+  SessionKind,
   SessionWorkspace,
   SessionForkLineage,
   ContextUsageAnchor,
@@ -38,6 +39,28 @@ export type {
   Settings,
   MCPServerConfig,
 } from "./types.js";
+export { SessionIndex } from "./pet/session-index.js";
+export { PendingDecisionIndex, safePendingTitle } from "./pet/pending-decision-index.js";
+export type {
+  PetCatalogSession,
+  PetLiveSessionState,
+  PetLiveSessionsSnapshot,
+  PetOwnerId,
+  PetOwnerScopedCatalog,
+  PetProjectionCursor,
+  PetProjectionFreshness,
+  PetProjectionSnapshot,
+  PetSessionPhase,
+  PetSessionProjection,
+  PetSessionRunState,
+  PetSessionStreamEvent,
+  PetTerminalStatus,
+  PetWorkerLifecycleEvent,
+  PetWorkerState,
+  PendingDecisionKind,
+  PendingDecisionProjection,
+  PendingDecisionStatus,
+} from "./pet/types.js";
 
 // ─── Exceptions ──────────────────────────────────────────────────
 
@@ -74,7 +97,10 @@ export type { CostStateStore, CostStateSnapshot } from "./engine/cost-store.js";
 export { EngineRuntime } from "./engine/runtime.js";
 export type { EngineRuntimeOptions } from "./engine/runtime.js";
 export { ChatSessionManager } from "./protocol/chat-session-manager.js";
-export type { ChatSessionManagerOptions } from "./protocol/chat-session-manager.js";
+export type {
+  ChatSessionManagerOptions,
+  LiveChatSessionSnapshot,
+} from "./protocol/chat-session-manager.js";
 
 // ─── LLM ─────────────────────────────────────────────────────────
 
@@ -138,6 +164,8 @@ export {
   type RunResult,
   type ForkSessionParams,
   type ForkSessionResult as ProtocolForkSessionResult,
+  type PetProjectionDelta,
+  type PetProjectionSnapshotResult,
 } from "./protocol/types.js";
 
 // ─── Session ─────────────────────────────────────────────────────

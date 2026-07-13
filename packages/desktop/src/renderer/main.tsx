@@ -8,6 +8,7 @@ import "./styles/tailwind.css";
 import { initTheme } from "./theme";
 import { BrowserPanel } from "./panels/BrowserPanel";
 import type { Anchor } from "./chat/anchors";
+import { PetStateProvider } from "./pet/PetStateProvider";
 
 initTheme();
 
@@ -57,7 +58,10 @@ if (params.get("popout") === "browser") {
       <I18nProvider>
         <DialogProvider>
           <ToastProvider>
-            <App />
+            {/* Process-shell owner: stays mounted while App swaps chat/settings/overview content. */}
+            <PetStateProvider>
+              <App />
+            </PetStateProvider>
           </ToastProvider>
         </DialogProvider>
       </I18nProvider>

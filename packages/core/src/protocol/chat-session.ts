@@ -1,9 +1,9 @@
 import type { Engine, EngineResult } from "../engine/engine.js";
 import type { ModelEntry } from "../llm/model-pool.js";
 import type { StreamEvent } from "../types.js";
-import type { PermissionMode } from "../types.js";
+import type { PermissionMode, SessionKind } from "../types.js";
 import { isAbortError } from "../llm/client-base.js";
-import type { InputAttachmentMeta } from "./types.js";
+import type { InputAttachmentMeta, PendingApprovalMetadata } from "./types.js";
 import type { ApprovalRouter } from "../tool-system/permission.js";
 import type { RunBehaviorMode } from "../engine/run-types.js";
 
@@ -11,6 +11,11 @@ export interface ChatSessionOptions {
   id: string;
   engine: Engine;
   onStream?: (event: StreamEvent) => void;
+}
+
+export interface PendingApprovalEntry {
+  resolve: (decision: unknown) => void;
+  metadata: PendingApprovalMetadata;
 }
 
 export interface TurnOpts {
@@ -35,6 +40,10 @@ export interface TurnOpts {
   planMode?: boolean;
   /** Named behavior profile snapshot for this queued turn only. */
   behaviorMode?: RunBehaviorMode;
+  /** Bounded host Pet world JSON for this turn; never part of `task`. */
+  petRuntimeContext?: string;
+  /** Durable classification used only when the Engine creates the session. */
+  kind?: SessionKind;
   /** Connection owner router for permission prompts in this turn. */
   approvalRouter?: ApprovalRouter;
 }
@@ -55,13 +64,12 @@ export class ChatSession {
   readonly id: string;
   readonly engine: Engine;
   /**
-   * Per-session approval callbacks indexed by tool-call requestId.
+   * Per-session approval callbacks and resolver-free metadata indexed by requestId.
    * `readonly` guards the Map reference (preventing reassignment); the
    * contents are mutated by `.set()` / `.delete()` as approvals come and go.
-   * Task 10 will register entries here when the Engine raises an approval
-   * request and clean them up on response.
+   * The resolver stays process-local; only metadata is eligible for Pet snapshots.
    */
-  readonly pendingApprovals = new Map<string, (decision: unknown) => void>();
+  readonly pendingApprovals = new Map<string, PendingApprovalEntry>();
   lastActivityAt = Date.now();
 
   private queue: QueuedTurn[] = [];
@@ -294,6 +302,8 @@ export class ChatSession {
         permissionMode: next.opts.permissionMode,
         planMode: next.opts.planMode,
         behaviorMode: next.opts.behaviorMode,
+        petRuntimeContext: next.opts.petRuntimeContext,
+        kind: next.opts.kind,
         approvalRouter: next.opts.approvalRouter,
       });
       this.lastActivityAt = Date.now();

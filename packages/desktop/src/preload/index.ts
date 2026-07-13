@@ -17,6 +17,7 @@
  */
 
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
+import { createPetApi } from "./pet-api";
 
 /** One background shell as surfaced to the dock panel (TODO 3.2). Mirrors core
  *  BgShell's public shape; renderer-local since the renderer can't import core. */
@@ -365,6 +366,8 @@ function rpc(
 contextBridge.exposeInMainWorld("codeshell", {
   /** Main-process platform, exposed explicitly so renderer layout doesn't infer it from UA strings. */
   platform: process.platform,
+  /** Read-only local Pet projection; no transcript, resolver, approval or mutation routes. */
+  pet: createPetApi(ipcRenderer),
   /** Forward a renderer-side log line into ~/.code-shell/logs/desktop-*.log. */
   log: (msg: string, data?: Record<string, unknown>) =>
     ipcRenderer.send("desktop:log", { msg, data }),

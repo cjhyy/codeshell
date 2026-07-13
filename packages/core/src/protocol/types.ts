@@ -16,9 +16,33 @@ import type {
   ApprovalResult,
   PermissionMode,
   SessionForkLineage,
+  SessionKind,
   SessionWorkspace,
 } from "../types.js";
 import type { RunBehaviorMode } from "../engine/run-types.js";
+import type {
+  PendingDecisionProjection,
+  PetProjectionSnapshot,
+  PetSessionProjection,
+  PetWorkerState,
+} from "../pet/types.js";
+
+export type PendingApprovalKind = "tool_approval" | "ask_user" | "internal";
+
+/** Resolver-free metadata retained beside a pending approval callback. */
+export interface PendingApprovalMetadata {
+  sessionId: string;
+  requestId: string;
+  routeGeneration?: number;
+  workerGeneration: number;
+  kind: PendingApprovalKind;
+  title: string;
+  toolName?: string;
+  riskLevel?: "low" | "medium" | "high";
+  createdAt: number;
+  expiresAt?: number;
+  surfaceable: boolean;
+}
 
 // ─── Envelope ───────────────────────────────────────────────────────
 
@@ -151,6 +175,14 @@ export interface RunParams {
   planMode?: boolean;
   /** Named behavior profile for a product-specific per-run interaction mode. */
   behaviorMode?: RunBehaviorMode;
+  /**
+   * Host-built bounded Pet world JSON for this invocation. It is delivered as
+   * non-durable system context and must never be appended to the user task or
+   * transcript. Valid only for an explicitly durable Pet run.
+   */
+  petRuntimeContext?: string;
+  /** Durable classification used only when creating a new session. */
+  kind?: SessionKind;
   /**
    * Require the target session to already exist on disk. When true and the
    * session is absent, the run is rejected with `SessionNotFound` instead of
@@ -445,6 +477,47 @@ export interface RunAcceptedNotification {
   sessionId: string;
 }
 
+export type PetProjectionDelta =
+  | {
+      workerGeneration: number;
+      version: number;
+      observedAt: number;
+      kind: "session-upsert";
+      session: PetSessionProjection;
+    }
+  | {
+      workerGeneration: number;
+      version: number;
+      observedAt: number;
+      kind: "session-remove";
+      sessionId: string;
+    }
+  | {
+      workerGeneration: number;
+      version: number;
+      observedAt: number;
+      kind: "pending-upsert";
+      pending: PendingDecisionProjection;
+    }
+  | {
+      workerGeneration: number;
+      version: number;
+      observedAt: number;
+      kind: "pending-remove";
+      sessionId: string;
+      requestId: string;
+      status: Exclude<PendingDecisionProjection["status"], "pending">;
+    }
+  | {
+      workerGeneration: number;
+      version: number;
+      observedAt: number;
+      kind: "worker-state";
+      state: PetWorkerState;
+    };
+
+export type PetProjectionSnapshotResult = PetProjectionSnapshot;
+
 // ─── Method Names ───────────────────────────────────────────────────
 
 export const Methods = {
@@ -477,6 +550,8 @@ export const Methods = {
    *  for the desktop background panel. Output/kill of a shell still goes through
    *  BackgroundShells by shellId; this is list-only across all three kinds. */
   BackgroundWork: "agent/backgroundWork",
+  /** Read-only bounded Pet projection plus the ordered-delta cursor. */
+  GetPetProjectionSnapshot: "agent/getPetProjectionSnapshot",
 
   // Server → Client (notifications, no id)
   RunAccepted: "agent/runAccepted",
@@ -486,6 +561,7 @@ export const Methods = {
    *  AskUserQuestion that timed out) so every client can dismiss its stale card
    *  without a user decision. Same envelope the desktop main broadcasts. */
   ApprovalResolved: "agent/approvalResolved",
+  PetProjectionDelta: "agent/petProjectionDelta",
   Status: "agent/status",
 } as const;
 

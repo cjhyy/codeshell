@@ -15,6 +15,24 @@ import type {
   SessionWorkspace,
   SessionForkLineage,
 } from "@cjhyy/code-shell-core";
+import type { PetApi } from "./pet-api";
+
+export type {
+  PetApi,
+  PetAttentionEvent,
+  PetAttentionSnapshot,
+  PetDispatchCommand,
+  PetDispatchResult,
+  PetPendingDecision,
+  PetNavigationTarget,
+  PetOpenSessionRequest,
+  PetOpenSessionResult,
+  PetProjectionEvent,
+  PetProjectionSnapshot,
+  PetSessionProjection,
+  PetWorkerState,
+  PetPeek,
+} from "./pet-api";
 
 export type { SessionWorkspace, SessionForkLineage };
 
@@ -569,6 +587,8 @@ export interface InputAttachmentMeta {
 }
 
 export interface CodeshellApi {
+  /** Read-only bounded Pet projection. */
+  pet: PetApi;
   /** Main-process platform (`process.platform`), used for window chrome layout. */
   platform: string;
   /** Forward a structured log line to ~/.code-shell/logs/desktop-*.log via main. */

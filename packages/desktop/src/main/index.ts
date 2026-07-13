@@ -73,6 +73,12 @@ import {
   normalizeWorktreeBranchPrefix,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
+import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
+import { registerPetIpc } from "./pet/pet-ipc.js";
+import { PetMetadataStore } from "./pet/pet-metadata-store.js";
+import { PetDispatchService } from "./pet/pet-dispatch-service.js";
+import { PetAttentionPolicy } from "./pet/pet-attention-policy.js";
+import { PetReceiptStore } from "./pet/pet-receipt-store.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
@@ -329,6 +335,9 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
  * same worker" — not "extra concurrent agents".
  */
 let bridge: AgentBridge | null = null;
+let petStateAggregator: PetStateAggregator | null = null;
+let petAttentionPolicy: PetAttentionPolicy | null = null;
+let disposePetIpc: (() => void) | null = null;
 let mcpOAuthService: McpOAuthService | null = null;
 let cspInstalled = false;
 let automationHandle: AutomationHandle | null = null;
@@ -1726,6 +1735,33 @@ async function createWindow(): Promise<BrowserWindow> {
       } else {
         mobileRemote.broadcastRaw(line);
       }
+    });
+    petStateAggregator = new PetStateAggregator({ bridge, listDiskSessions });
+    await petStateAggregator.start();
+    const petMetadata = new PetMetadataStore(
+      resolve(app.getPath("userData"), "pet", "metadata.json"),
+    );
+    const petDispatch = new PetDispatchService({
+      metadata: petMetadata,
+      aggregator: petStateAggregator,
+      worker: bridge,
+      hostCwd: resolveNoRepoCwd(),
+    });
+    const petReceipts = new PetReceiptStore(
+      resolve(app.getPath("userData"), "pet", "attention-receipts.json"),
+    );
+    await petReceipts.load();
+    petAttentionPolicy = new PetAttentionPolicy({
+      source: petStateAggregator,
+      receipts: petReceipts,
+    });
+    petAttentionPolicy.start();
+    disposePetIpc = registerPetIpc({
+      ipcMain,
+      aggregator: petStateAggregator,
+      dispatcher: petDispatch,
+      attention: petAttentionPolicy,
+      windows: () => BrowserWindow.getAllWindows(),
     });
   } else {
     bridge.attachWindow(win);
@@ -3912,6 +3948,12 @@ app.on("before-quit", (event) => {
   event.preventDefault();
   if (quitCleanupPromise) return;
   bridge?.kill();
+  petStateAggregator?.stop();
+  petStateAggregator = null;
+  petAttentionPolicy?.stop();
+  petAttentionPolicy = null;
+  disposePetIpc?.();
+  disposePetIpc = null;
   automationHandle?.stop();
   automationHandle = null;
   ptyKillAll();

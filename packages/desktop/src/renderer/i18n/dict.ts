@@ -32,6 +32,7 @@ import { extensions } from "./ns/extensions";
 import { automation } from "./ns/automation";
 import { misc } from "./ns/misc";
 import { mobile } from "./ns/mobile";
+import { pet } from "./ns/pet";
 
 export const messages = {
   zh: {
@@ -44,6 +45,7 @@ export const messages = {
     ...automation.zh,
     ...misc.zh,
     ...mobile.zh,
+    ...pet.zh,
   },
   en: {
     ...core.en,
@@ -55,6 +57,7 @@ export const messages = {
     ...automation.en,
     ...misc.en,
     ...mobile.en,
+    ...pet.en,
   },
 } as const;
 
