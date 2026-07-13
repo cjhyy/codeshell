@@ -186,6 +186,10 @@ describe("Pet projection protocol", () => {
     const session = await manager.getOrCreate("session-waiting", {} as never);
     const deltas: PetProjectionDelta[] = [];
     client.onPetProjectionDelta((delta) => deltas.push(delta));
+    (server as any).recordPetStreamEvent("session-waiting", {
+      type: "tool_use_start",
+      toolCall: { id: "tool-before-wait", toolName: "Bash", args: {} },
+    });
 
     const answer = (server as any).requestAskUserForSession(
       session,
@@ -216,7 +220,11 @@ describe("Pet projection protocol", () => {
     );
     expect(cleared).toMatchObject({
       kind: "session-upsert",
-      session: { pendingDecisionCount: 0 },
+      session: {
+        phase: "tool",
+        summary: "正在运行 Bash",
+        pendingDecisionCount: 0,
+      },
     });
     expect(
       cleared && cleared.kind === "session-upsert" ? cleared.session.phase : undefined,

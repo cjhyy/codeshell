@@ -56,9 +56,17 @@ describe("SessionIndex", () => {
     });
     expect(index.get("work-a")?.runState).toBe("running");
 
-    index.setPendingDecisionCount("work-a", 1, {
+    index.applyStreamEvent({
+      sessionId: "work-a",
       generation: 1,
       version: 4,
+      observedAt: 225,
+      event: { type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } },
+    });
+
+    index.setPendingDecisionCount("work-a", 1, {
+      generation: 1,
+      version: 5,
       observedAt: 230,
     });
     expect(index.get("work-a")).toMatchObject({
@@ -69,11 +77,13 @@ describe("SessionIndex", () => {
 
     index.setPendingDecisionCount("work-a", 0, {
       generation: 1,
-      version: 5,
+      version: 6,
       observedAt: 240,
     });
     expect(index.get("work-a")).toMatchObject({
       runState: "running",
+      phase: "tool",
+      summary: "正在运行 Bash",
       pendingDecisionCount: 0,
     });
     expect(index.get("work-a")?.phase).not.toBe("waiting-decision");

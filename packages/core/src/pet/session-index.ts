@@ -16,6 +16,7 @@ interface SessionIndexEntry {
   catalog: PetCatalogSession;
   projection: PetSessionProjection;
   live: boolean;
+  beforePending?: Pick<PetSessionProjection, "phase" | "summary">;
 }
 
 function isWorkSession(session: PetCatalogSession): boolean {
@@ -90,6 +91,7 @@ export class SessionIndex {
             }
           : baseProjection(session, catalog.observedAt, this.currentWorkerState),
         live: previous?.live ?? false,
+        beforePending: previous?.beforePending,
       });
     }
     this.entries.clear();
@@ -102,6 +104,7 @@ export class SessionIndex {
     for (const entry of this.entries.values()) {
       entry.projection = baseProjection(entry.catalog, snapshot.observedAt, "active");
       entry.live = false;
+      entry.beforePending = undefined;
     }
     for (const live of snapshot.sessions) {
       const entry = this.entries.get(live.sessionId);
@@ -129,7 +132,30 @@ export class SessionIndex {
     if (!entry) return true;
     entry.live = true;
     this.currentWorkerState = "active";
-    entry.projection = this.reduceEvent(entry.projection, input.event, input.observedAt);
+    if (entry.projection.pendingDecisionCount > 0 && entry.beforePending) {
+      const underlying = this.reduceEvent(
+        {
+          ...entry.projection,
+          phase: entry.beforePending.phase,
+          summary: entry.beforePending.summary,
+          pendingDecisionCount: 0,
+        },
+        input.event,
+        input.observedAt,
+      );
+      entry.beforePending = { phase: underlying.phase, summary: underlying.summary };
+      entry.projection = {
+        ...underlying,
+        phase: "waiting-decision",
+        summary:
+          entry.projection.pendingDecisionCount === 1
+            ? "等待用户决定"
+            : `等待用户决定（${entry.projection.pendingDecisionCount}）`,
+        pendingDecisionCount: entry.projection.pendingDecisionCount,
+      };
+    } else {
+      entry.projection = this.reduceEvent(entry.projection, input.event, input.observedAt);
+    }
     return true;
   }
 
@@ -139,19 +165,20 @@ export class SessionIndex {
     if (!entry) return true;
     const pendingDecisionCount = Math.max(0, Math.floor(count));
     const wasWaiting = entry.projection.phase === "waiting-decision";
-    const summaryAfterWaiting =
-      entry.projection.runState === "running"
-        ? "运行中"
-        : entry.projection.runState === "queued"
-          ? "队列中"
-          : undefined;
+    if (pendingDecisionCount > 0 && entry.projection.pendingDecisionCount === 0) {
+      entry.beforePending = {
+        phase: entry.projection.phase,
+        summary: entry.projection.summary,
+      };
+    }
+    const beforePending = entry.beforePending;
     entry.projection = {
       ...entry.projection,
       phase:
         pendingDecisionCount > 0
           ? "waiting-decision"
           : wasWaiting
-            ? undefined
+            ? beforePending?.phase
             : entry.projection.phase,
       pendingDecisionCount,
       summary:
@@ -160,7 +187,7 @@ export class SessionIndex {
             ? "等待用户决定"
             : `等待用户决定（${pendingDecisionCount}）`
           : wasWaiting
-            ? summaryAfterWaiting
+            ? beforePending?.summary
             : entry.projection.summary,
       freshness: {
         source: "live-event",
@@ -168,6 +195,7 @@ export class SessionIndex {
         workerState: "active",
       },
     };
+    if (pendingDecisionCount === 0) entry.beforePending = undefined;
     entry.live = true;
     return true;
   }
@@ -180,6 +208,7 @@ export class SessionIndex {
       if (event.state === "reclaimed") {
         entry.projection = baseProjection(entry.catalog, event.observedAt, "reclaimed");
         entry.live = false;
+        entry.beforePending = undefined;
         continue;
       }
       if (!entry.live) continue;
@@ -197,6 +226,7 @@ export class SessionIndex {
           workerState: "disconnected",
         },
       };
+      entry.beforePending = undefined;
     }
     return true;
   }
