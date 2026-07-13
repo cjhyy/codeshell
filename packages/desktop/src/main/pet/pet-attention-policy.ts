@@ -176,7 +176,7 @@ export class PetAttentionPolicy {
         : {
             id: `pet-peek-burst-${this.now()}`,
             title: `${decisions.length} 个 session 等你决定`,
-            detail: "打开 Pet 查看全部待决策",
+            detail: "打开 Mimi 查看全部待决策",
             receiptKeys,
             action: { type: "open_pet_pending", count: decisions.length },
           };

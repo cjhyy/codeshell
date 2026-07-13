@@ -9,6 +9,7 @@ import { initTheme } from "./theme";
 import { BrowserPanel } from "./panels/BrowserPanel";
 import type { Anchor } from "./chat/anchors";
 import { PetStateProvider } from "./pet/PetStateProvider";
+import { PetDesktopWindow } from "./pet/PetDesktopWindow";
 
 initTheme();
 
@@ -45,7 +46,18 @@ function PopoutBrowser({ initialUrl }: { initialUrl?: string }) {
 }
 
 const params = new URLSearchParams(window.location.search);
-if (params.get("popout") === "browser") {
+if (params.get("popout") === "pet") {
+  document.documentElement.classList.add("pet-widget-window");
+  root.render(
+    <React.StrictMode>
+      <I18nProvider>
+        <PetStateProvider>
+          <PetDesktopWindow />
+        </PetStateProvider>
+      </I18nProvider>
+    </React.StrictMode>,
+  );
+} else if (params.get("popout") === "browser") {
   const initialUrl = params.get("url") ?? undefined;
   root.render(
     <React.StrictMode>

@@ -12,7 +12,6 @@ export interface PetState {
   status: PetProjectionStatus;
   error?: string;
   needsSnapshot: boolean;
-  overviewOpen: boolean;
   overviewFilter: PetOverviewFilter;
   overviewFocus: string | null;
   chatDraft: string;
@@ -23,7 +22,6 @@ export const initialPetState: PetState = {
   projection: null,
   status: "loading",
   needsSnapshot: false,
-  overviewOpen: false,
   overviewFilter: "all",
   overviewFocus: null,
   chatDraft: "",
@@ -33,8 +31,8 @@ export const initialPetState: PetState = {
 export type PetStateAction =
   | { type: "snapshot-received"; snapshot: PetProjectionSnapshot }
   | { type: "snapshot-failed"; error: string }
+  | { type: "snapshot-retry" }
   | { type: "projection-event"; event: PetProjectionEvent }
-  | { type: "set-overview-open"; open: boolean }
   | { type: "set-overview-filter"; filter: PetOverviewFilter }
   | { type: "set-overview-focus"; focus: string | null }
   | { type: "set-chat-draft"; draft: string }
@@ -108,7 +106,9 @@ export function petStateReducer(state: PetState, action: PetStateAction): PetSta
         error: undefined,
       };
     case "snapshot-failed":
-      return { ...state, status: "error", needsSnapshot: false, error: action.error };
+      return { ...state, status: "error", error: action.error };
+    case "snapshot-retry":
+      return { ...state, status: "reconciling", needsSnapshot: true, error: undefined };
     case "projection-event": {
       const snapshot = state.projection;
       if (!snapshot) return requireSnapshot(state);
@@ -128,8 +128,6 @@ export function petStateReducer(state: PetState, action: PetStateAction): PetSta
         error: undefined,
       };
     }
-    case "set-overview-open":
-      return { ...state, overviewOpen: action.open };
     case "set-overview-filter":
       return { ...state, overviewFilter: action.filter };
     case "set-overview-focus":

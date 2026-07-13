@@ -5,13 +5,9 @@ import {
   Check,
   ArrowRight,
   ChevronRight,
+  Ghost,
 } from "lucide-react";
-import {
-  loadUILanguage,
-  saveUILanguage,
-  languageLabel,
-  type UILanguage,
-} from "../uiLanguage";
+import { loadUILanguage, saveUILanguage, languageLabel, type UILanguage } from "../uiLanguage";
 import { useT } from "../i18n/I18nProvider";
 
 interface Props {
@@ -19,6 +15,9 @@ interface Props {
   onOpenSettingsPage: () => void;
   /** When sidebar is collapsed the trigger goes straight to settings. */
   sidebarCollapsed?: boolean;
+  /** Floating Pet state and toggle live in this bottom menu, not under Pet navigation. */
+  petWidgetVisible: boolean;
+  onTogglePetWidget: () => void;
 }
 
 const LANGUAGES: UILanguage[] = ["zh", "en"];
@@ -26,15 +25,19 @@ const LANGUAGES: UILanguage[] = ["zh", "en"];
 /**
  * Bottom-left settings entry.
  *
- * Clicking opens an upward popover with two items: "打开设置…" navigates
- * to the full Settings page, and "切换语言" reveals a cascading submenu
- * on the right for picking the UI language (no dialog).
+ * Clicking opens an upward popover with navigation, Pet visibility and
+ * language controls. Language reveals a cascading submenu on the right.
  *
  * The submenu is `position: fixed` and anchored to the hovered item's
  * bounding rect, so it escapes the sidebar's `overflow: hidden` instead
  * of being clipped by it (same approach as the project ContextMenu).
  */
-export function SettingsMenu({ onOpenSettingsPage, sidebarCollapsed }: Props) {
+export function SettingsMenu({
+  onOpenSettingsPage,
+  sidebarCollapsed,
+  petWidgetVisible,
+  onTogglePetWidget,
+}: Props) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const [lang, setLang] = useState<UILanguage>(() => loadUILanguage());
@@ -88,7 +91,10 @@ export function SettingsMenu({ onOpenSettingsPage, sidebarCollapsed }: Props) {
 
   return (
     <div className="relative" ref={ref}>
-      <button className={triggerClass} onClick={sidebarCollapsed ? onOpenSettingsPage : () => setOpen((o) => !o)}>
+      <button
+        className={triggerClass}
+        onClick={sidebarCollapsed ? onOpenSettingsPage : () => setOpen((o) => !o)}
+      >
         <SettingsIcon size={14} className="shrink-0" />
         <span className="truncate">{t("settingsX.menu.settings")}</span>
       </button>
@@ -106,6 +112,16 @@ export function SettingsMenu({ onOpenSettingsPage, sidebarCollapsed }: Props) {
             <ArrowRight size={11} className="ml-auto text-muted-foreground" />
           </li>
           <li className="my-1 h-px bg-border" />
+          <li
+            className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
+            onClick={() => {
+              onTogglePetWidget();
+              setOpen(false);
+            }}
+          >
+            <Ghost size={14} />
+            <span>{t(petWidgetVisible ? "pet.widget.hide" : "pet.widget.show")}</span>
+          </li>
           <li
             className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
             onMouseEnter={openSubmenu}
@@ -127,9 +143,7 @@ export function SettingsMenu({ onOpenSettingsPage, sidebarCollapsed }: Props) {
               className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
               onClick={() => chooseLanguage(code)}
             >
-              <span className="ml-auto text-primary">
-                {lang === code && <Check size={12} />}
-              </span>
+              <span className="ml-auto text-primary">{lang === code && <Check size={12} />}</span>
               <span>{languageLabel(code)}</span>
             </li>
           ))}

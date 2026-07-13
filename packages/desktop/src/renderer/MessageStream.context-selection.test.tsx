@@ -242,6 +242,7 @@ describe("MessageStream context selection session boundary", () => {
 
   test("sends the inclusive raw-event range for a reverse continuous turn selection", async () => {
     const calls: unknown[] = [];
+    const createdTitles: Array<string | undefined> = [];
     const events: RawTranscriptEvent[] = [
       {
         id: "u1",
@@ -282,7 +283,7 @@ describe("MessageStream context selection session boundary", () => {
           messages={[]}
           engineSessionId="old-session"
           liveTurnActive={false}
-          onContextPackageCreated={() => undefined}
+          onContextPackageCreated={(result) => createdTitles.push(result.titleSuggestion)}
         />,
       );
       await flushMicrotasks();
@@ -313,5 +314,6 @@ describe("MessageStream context selection session boundary", () => {
         toEventId: "b3",
       },
     ]);
+    expect(createdTitles).toEqual(["first"]);
   });
 });

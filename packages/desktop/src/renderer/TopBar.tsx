@@ -25,6 +25,8 @@ interface Props {
    *  active session yet) — panels need a real conversation/context, so the
    *  toggle is hidden entirely rather than opening an empty dock. */
   panelAvailable?: boolean;
+  /** Hide session-owned status UI on first-class non-session pages. */
+  statusAvailable?: boolean;
   /**
    * Snapshot of what the agent is doing right now. Only used to
    * populate the hover popover; the dot itself only needs `busy`.
@@ -70,6 +72,7 @@ function TopBarImpl({
   isMac,
   isFullscreen,
   panelAvailable = true,
+  statusAvailable = true,
   activity,
   tasks,
   activeGoal,
@@ -126,16 +129,18 @@ function TopBarImpl({
         )}
       </div>
       <div className="flex items-center gap-1">
-        <StatusBadge
-          busy={busy}
-          activity={activity}
-          tasks={tasks ?? null}
-          activeGoal={activeGoal ?? null}
-          onClearGoal={onClearGoal}
-          onUpdateGoal={onUpdateGoal}
-          onGoalPausedChange={onGoalPausedChange}
-          onDeleteGoal={onDeleteGoal}
-        />
+        {statusAvailable && (
+          <StatusBadge
+            busy={busy}
+            activity={activity}
+            tasks={tasks ?? null}
+            activeGoal={activeGoal ?? null}
+            onClearGoal={onClearGoal}
+            onUpdateGoal={onUpdateGoal}
+            onGoalPausedChange={onGoalPausedChange}
+            onDeleteGoal={onDeleteGoal}
+          />
+        )}
         {panelAvailable && (
           <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
             <IconButton
@@ -295,6 +300,7 @@ function topBarPropsEqual(a: Props, b: Props): boolean {
     a.onToggleSidebar === b.onToggleSidebar &&
     a.panelOpen === b.panelOpen &&
     a.onTogglePanel === b.onTogglePanel &&
+    a.statusAvailable === b.statusAvailable &&
     a.tasks === b.tasks &&
     a.activity?.lastToolName === b.activity?.lastToolName &&
     a.activity?.toolInFlight === b.activity?.toolInFlight &&

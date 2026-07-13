@@ -58,7 +58,7 @@ afterEach(() => {
 });
 
 describe("Engine pet behavior", () => {
-  test("persists pet identity and hides plus gates mutation, Agent and permission tools", async () => {
+  test("persists manager identity and exposes no execution tools", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "engine-pet-"));
     tempDirs.push(cwd);
     const model = `pet-${Date.now()}-${Math.random()}`;
@@ -83,23 +83,12 @@ describe("Engine pet behavior", () => {
     });
 
     const first = calls.get(model)![0]!;
-    expect(first.systemPrompt).toContain("# Local Pet Phase 1 Boundary");
+    expect(first.systemPrompt).toContain("# Local Mimi Manager Boundary");
+    expect(first.systemPrompt).toContain("<!--PET:AUTO_DELEGATE-->");
+    expect(first.systemPrompt).toContain("decide automatically");
     expect(first.systemPrompt).toContain("runtime-only-hunter2");
     expect(JSON.stringify(first.messages)).not.toContain("runtime-only-hunter2");
-    expect(first.tools).toEqual(expect.arrayContaining(["Read", "Glob", "Grep"]));
-    for (const forbidden of [
-      "Write",
-      "Edit",
-      "ApplyPatch",
-      "Bash",
-      "Agent",
-      "AgentCancel",
-      "Config",
-      "EnterPlanMode",
-      "ExitPlanMode",
-    ]) {
-      expect(first.tools).not.toContain(forbidden);
-    }
+    expect(first.tools).toEqual([]);
     expect(existsSync(join(cwd, "should-not-exist.txt"))).toBe(false);
     expect(JSON.stringify(calls.get(model)![1]!.messages)).toContain(
       "not allowed by this run profile",

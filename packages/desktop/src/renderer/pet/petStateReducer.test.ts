@@ -77,8 +77,11 @@ describe("petStateReducer", () => {
     expect(cannotHealFromTail).toBe(afterGap);
   });
 
-  test("projection events never open overview and closing preserves projection, draft and transcript", () => {
-    let state = petStateReducer(initialPetState, { type: "set-overview-open", open: true });
+  test("projection events preserve page-local focus, draft and transcript state", () => {
+    let state = petStateReducer(initialPetState, {
+      type: "set-overview-focus",
+      focus: "pending",
+    });
     state = petStateReducer(state, { type: "set-chat-draft", draft: "hello" });
     state = petStateReducer(state, { type: "set-chat-transcript", transcript: [{ id: "m1" }] });
     state = petStateReducer(state, { type: "snapshot-received", snapshot: snapshot() });
@@ -92,20 +95,35 @@ describe("petStateReducer", () => {
         state: "reclaimed",
       },
     });
-    state = petStateReducer(state, { type: "set-overview-open", open: false });
-
-    expect(state.overviewOpen).toBe(false);
     expect(state.projection?.workerState).toBe("reclaimed");
+    expect(state.overviewFocus).toBe("pending");
     expect(state.chatDraft).toBe("hello");
     expect(state.chatTranscript).toEqual([{ id: "m1" }]);
 
-    const closed = petStateReducer(
-      { ...state, overviewOpen: false },
-      {
-        type: "projection-event",
-        event: { kind: "reset", generation: 5, version: 1, observedAt: 1_200 },
-      },
-    );
-    expect(closed.overviewOpen).toBe(false);
+    const closed = petStateReducer(state, {
+      type: "projection-event",
+      event: { kind: "reset", generation: 5, version: 1, observedAt: 1_200 },
+    });
+    expect(closed.overviewFocus).toBe("pending");
+  });
+
+  test("can schedule a snapshot retry after an early IPC startup race", () => {
+    const failed = petStateReducer(initialPetState, {
+      type: "snapshot-failed",
+      error: "handler not ready",
+    });
+    expect(petStateReducer(failed, { type: "snapshot-retry" })).toMatchObject({
+      status: "reconciling",
+      needsSnapshot: true,
+      error: undefined,
+    });
+
+    const reconciling = petStateReducer(initialPetState, { type: "snapshot-retry" });
+    expect(
+      petStateReducer(reconciling, {
+        type: "snapshot-failed",
+        error: "still starting",
+      }),
+    ).toMatchObject({ status: "error", needsSnapshot: true, error: "still starting" });
   });
 });

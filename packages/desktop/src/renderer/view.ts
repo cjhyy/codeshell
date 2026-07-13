@@ -1,13 +1,14 @@
 export type ViewMode =
   | "chat"
+  | "pet" // first-class Pet workspace; never layered over chat
   | "sessions"
   | "approvals"
   | "runs"
-  | "automation"     // scheduled automation jobs (cron) — list + detail + create
-  | "settings"       // legacy modal route — kept for routing back-compat
-  | "settings_page"  // full-screen Settings page (new in batch E)
-  | "customize"      // full-screen 扩展 (plugins + skills + MCP + market) view
-  | "credentials"    // full-screen 凭证 (cookie + token + link) view
+  | "automation" // scheduled automation jobs (cron) — list + detail + create
+  | "settings" // legacy modal route — kept for routing back-compat
+  | "settings_page" // full-screen Settings page (new in batch E)
+  | "customize" // full-screen 扩展 (plugins + skills + MCP + market) view
+  | "credentials" // full-screen 凭证 (cookie + token + link) view
   | "logs";
 
 /**
@@ -40,6 +41,7 @@ const DEFAULT: ViewState = {
 
 const VALID_MODES: ReadonlySet<ViewMode> = new Set([
   "chat",
+  "pet",
   "sessions",
   "approvals",
   "runs",

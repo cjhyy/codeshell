@@ -6,8 +6,8 @@
  *
  * Why this exists
  * ---------------
- * The release depends on package.json's `version` in FIVE places
- * (root + cdp/core/tui/desktop), the public core `VERSION` export, and the
+ * The release depends on package.json's `version` in SIX places
+ * (root + cdp/core/tui/desktop/chat), the public core `VERSION` export, and the
  * workspace version references in `bun.lock`.
  * electron-builder names its artifacts and writes latest-*.yml from
  * package.json's version — NOT the git tag. Two real incidents came from doing
@@ -49,6 +49,7 @@ const PKG_FILES = [
   "packages/core/package.json",
   "packages/tui/package.json",
   "packages/desktop/package.json",
+  "packages/chat/package.json",
 ] as const;
 const LOCKFILE = "bun.lock";
 const CORE_VERSION_FILE = "packages/core/src/index.ts";

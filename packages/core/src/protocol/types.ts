@@ -106,6 +106,7 @@ export type InputAttachmentOrigin =
   | "mention"
   | "generated"
   | "mobile"
+  | "im-gateway"
   | "tool";
 
 export interface InputAttachmentMeta {

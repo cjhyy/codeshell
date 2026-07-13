@@ -156,7 +156,28 @@ export interface DiskSessionMeta {
 
 export interface ListDiskSessionsResult {
   sessions: DiskSessionMeta[];
-  nextCursor: string | null; // index into the mtime-sorted dir list; null = no more
+  nextCursor: string | null; // opaque stable position in the mtime-sorted catalog; null = no more
+}
+
+interface DiskSessionCursor {
+  mtime: number;
+  id: string;
+}
+
+function encodeDiskSessionCursor(cursor: DiskSessionCursor): string {
+  return `v1:${cursor.mtime}:${cursor.id}`;
+}
+
+function decodeDiskSessionCursor(value: string | undefined): DiskSessionCursor | number | null {
+  if (!value) return 0;
+  // Keep accepting the old numeric offset during upgrades. New responses use
+  // a stable tuple so deleting an item from an earlier page cannot shift and
+  // skip a later session.
+  if (/^\d+$/.test(value)) return Number(value);
+  const match = /^v1:([^:]+):([A-Za-z0-9._-]+)$/.exec(value);
+  if (!match) return null;
+  const mtime = Number(match[1]);
+  return Number.isFinite(mtime) ? { mtime, id: match[2]! } : null;
 }
 
 /**
@@ -193,9 +214,21 @@ export async function listDiskSessions(
     }),
   );
   const dirs = stats.filter((d): d is { id: string; mtime: number } => d !== null);
-  dirs.sort((a, b) => b.mtime - a.mtime);
+  dirs.sort((a, b) => b.mtime - a.mtime || a.id.localeCompare(b.id));
 
-  const start = opts.cursor ? Number(opts.cursor) : 0;
+  const decodedCursor = decodeDiskSessionCursor(opts.cursor);
+  if (decodedCursor === null) return { sessions: [], nextCursor: null };
+  const start =
+    typeof decodedCursor === "number"
+      ? Math.max(0, decodedCursor)
+      : (() => {
+          const index = dirs.findIndex(
+            (entry) =>
+              entry.mtime < decodedCursor.mtime ||
+              (entry.mtime === decodedCursor.mtime && entry.id > decodedCursor.id),
+          );
+          return index < 0 ? dirs.length : index;
+        })();
   const sessions: DiskSessionMeta[] = [];
   // Cache cwd existence across the loop — many sessions share one project root,
   // and we must not re-stat it per session (nor block on a sync existsSync,
@@ -258,7 +291,10 @@ export async function listDiskSessions(
               : undefined,
     });
   }
-  return { sessions, nextCursor: i < dirs.length ? String(i) : null };
+  return {
+    sessions,
+    nextCursor: i < dirs.length && i > 0 ? encodeDiskSessionCursor(dirs[i - 1]!) : null,
+  };
 }
 
 export { getSessionTranscript } from "./transcript-reader.js";

@@ -68,13 +68,14 @@ describe("SessionStatusSection", () => {
     expect(html).not.toContain("tool output");
   });
 
-  test("has distinct empty, reclaimed, disconnected, stale and reconciling language", () => {
-    const states = ["empty", "reclaimed", "disconnected", "stale", "reconciling"] as const;
+  test("has distinct empty, reclaimed, disconnected, stale, error and reconciling language", () => {
+    const states = ["empty", "reclaimed", "disconnected", "stale", "error", "reconciling"] as const;
     const expected = [
       "还没有工作会话",
       "worker 已回收",
       "worker 已断开",
       "状态可能已过期",
+      "正在自动重试",
       "正在对账",
     ];
     for (let index = 0; index < states.length; index += 1) {

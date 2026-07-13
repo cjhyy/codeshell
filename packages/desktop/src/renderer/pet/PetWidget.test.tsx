@@ -4,21 +4,40 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { PetWidget } from "./PetWidget";
 
 describe("PetWidget", () => {
-  test("renders a personified bottom-left entry with condensed shared indicators", () => {
+  test("renders a frameless draggable pet with condensed shared indicators", () => {
     const html = renderToStaticMarkup(
-      <PetWidget visible runningCount={2} pendingCount={120} onOpen={() => undefined} />,
+      <PetWidget
+        runningCount={2}
+        activityCount={120}
+        unreadCompletedCount={3}
+        onOpen={() => undefined}
+        onClose={() => undefined}
+      />,
     );
-    expect(html).toContain('data-pet-widget="bottom-left"');
+    expect(html).toContain('data-pet-widget="desktop-window"');
+    expect(html).toContain("h-28");
+    expect(html).toContain("w-28");
+    expect(html).toContain("absolute");
+    expect(html).toContain("bg-transparent");
+    expect(html).toContain("cs-pet-idle");
     expect(html).toContain("99+");
     expect(html).toContain('data-pet-indicator="running"');
-    expect(html).toContain("120 个 session 等你决定；2 个正在运行");
+    expect(html).toContain('data-pet-indicator="activity"');
+    expect(html).toContain("120 项工作提醒；其中 3 项完成未读；2 项执行中");
   });
 
-  test("renders nothing when the persisted preference is off", () => {
-    expect(
-      renderToStaticMarkup(
-        <PetWidget visible={false} runningCount={1} pendingCount={1} onOpen={() => undefined} />,
-      ),
-    ).toBe("");
+  test("leaves desktop placement to the independent Electron window", () => {
+    const html = renderToStaticMarkup(
+      <PetWidget
+        runningCount={0}
+        activityCount={0}
+        unreadCompletedCount={0}
+        onOpen={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+    expect(html).not.toContain("position:fixed");
+    expect(html).not.toContain("left:");
+    expect(html).not.toContain("top:");
   });
 });

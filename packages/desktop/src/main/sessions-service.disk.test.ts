@@ -106,6 +106,17 @@ describe("listDiskSessions", () => {
     expect(p2.sessions.map((s) => s.id)).toEqual(["s2", "s1"]);
   });
 
+  it("keeps the next page stable when an earlier session is deleted", async () => {
+    for (let i = 0; i < 5; i++)
+      mkSession(dir, `s${i}`, { cwd: "/p", parentSessionId: null }, 1000 + i * 1000);
+    const p1 = await listDiskSessions({ limit: 2 }, dir);
+    fs.rmSync(path.join(dir, "s4"), { recursive: true, force: true });
+
+    const p2 = await listDiskSessions({ limit: 2, cursor: p1.nextCursor! }, dir);
+
+    expect(p2.sessions.map((s) => s.id)).toEqual(["s2", "s1"]);
+  });
+
   it("shows desktop + automation origins; hides tui and origin-less", async () => {
     mkSession(dir, "d1", { cwd: "/p", parentSessionId: null, origin: "desktop" }, 4000);
     mkSession(dir, "a1", { cwd: "/p", parentSessionId: null, origin: "automation" }, 3000);

@@ -4,46 +4,118 @@ import { useT } from "../i18n";
 import { Badge } from "../ui/Badge";
 
 export function PetWidget({
-  visible,
   runningCount,
-  pendingCount,
+  activityCount,
+  unreadCompletedCount,
   onOpen,
+  onClose,
 }: {
-  visible: boolean;
   runningCount: number;
-  pendingCount: number;
+  activityCount: number;
+  unreadCompletedCount: number;
   onOpen: () => void;
+  onClose: () => void;
 }) {
   const { t } = useT();
-  if (!visible) return null;
+  const clickTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dragRef = React.useRef<{
+    pointerId: number;
+    offsetX: number;
+    offsetY: number;
+    pointerX: number;
+    pointerY: number;
+    moved: boolean;
+  } | null>(null);
+
+  React.useEffect(
+    () => () => {
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    },
+    [],
+  );
+
   const running = Math.max(0, runningCount);
-  const pending = Math.max(0, pendingCount);
-  const summary = t("pet.sidebar.summary", { pending, running });
+  const activity = Math.max(0, activityCount);
+  const completed = Math.max(0, unreadCompletedCount);
+  const summary = t("pet.widget.workSummary", { activity, completed, running });
   return (
     <button
       type="button"
-      data-pet-widget="bottom-left"
-      className="group fixed bottom-4 left-4 z-40 flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-popover/95 shadow-lg transition-transform hover:-translate-y-0.5 hover:shadow-xl"
-      onClick={onOpen}
+      data-pet-widget="desktop-window"
+      className="group absolute bottom-0 right-0 flex h-28 w-28 touch-none cursor-grab items-center justify-center overflow-hidden border-0 bg-transparent p-0 outline-none active:cursor-grabbing focus-visible:drop-shadow-[0_0_6px_hsl(var(--cs-primary)/0.55)]"
+      onPointerDown={(event) => {
+        if (event.button !== 0) return;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        dragRef.current = {
+          pointerId: event.pointerId,
+          offsetX: event.clientX,
+          offsetY: event.clientY,
+          pointerX: event.screenX,
+          pointerY: event.screenY,
+          moved: false,
+        };
+      }}
+      onPointerMove={(event) => {
+        const drag = dragRef.current;
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        if (Math.hypot(event.screenX - drag.pointerX, event.screenY - drag.pointerY) >= 4) {
+          drag.moved = true;
+        }
+        if (!drag.moved) return;
+        window.codeshell.pet.moveWidget({
+          x: event.screenX - drag.offsetX,
+          y: event.screenY - drag.offsetY,
+        });
+      }}
+      onPointerUp={(event) => {
+        const drag = dragRef.current;
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        dragRef.current = null;
+        event.currentTarget.releasePointerCapture(event.pointerId);
+        if (!drag.moved) {
+          if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+          clickTimerRef.current = setTimeout(() => {
+            clickTimerRef.current = null;
+            onOpen();
+          }, 220);
+        }
+      }}
+      onPointerCancel={() => {
+        dragRef.current = null;
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
+      onDoubleClick={(event) => {
+        event.preventDefault();
+        if (clickTimerRef.current) {
+          clearTimeout(clickTimerRef.current);
+          clickTimerRef.current = null;
+        }
+        onClose();
+      }}
       aria-label={`${t("pet.widget.open")}：${summary}`}
-      title={summary}
+      title={`${summary} · ${t("pet.widget.dragHint")}`}
     >
       <img
         src={dogIcon}
         alt=""
         draggable={false}
-        className="h-10 w-10 select-none rounded-xl object-contain transition-transform group-hover:scale-105"
+        className="cs-pet-idle h-24 w-24 select-none object-contain drop-shadow-[0_5px_5px_rgb(0_0_0/0.18)] transition-transform group-hover:scale-105"
       />
       {running > 0 && (
         <span
           data-pet-indicator="running"
-          className="motion-reduce:animate-none absolute bottom-0.5 left-0.5 h-2.5 w-2.5 animate-pulse rounded-full border-2 border-popover bg-status-info"
+          className="motion-reduce:animate-none absolute bottom-3 left-3 h-2.5 w-2.5 animate-pulse rounded-full border-2 border-background bg-status-info"
           aria-hidden="true"
         />
       )}
-      {pending > 0 && (
-        <span className="absolute -right-1.5 -top-1.5" data-pet-indicator="pending">
-          <Badge count={pending} />
+      {activity > 0 && (
+        <span className="absolute right-1 top-1" data-pet-indicator="activity">
+          <Badge count={activity} />
         </span>
       )}
     </button>

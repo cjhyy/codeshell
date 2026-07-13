@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 
 import { importAutomationRuns, type ImportableRun } from "../automation/importRuns";
@@ -13,20 +13,22 @@ import {
   type SessionIndex,
   type SessionSummary,
 } from "../transcripts";
-import {
-  loadProjects,
-  makeCreateProjectForCwd,
-  type TrackedProject,
-} from "../projects";
-import { isQuickChatSessionId, type QuickChatSessionRef } from "../quickChatSession";
-
+import { loadProjects, makeCreateProjectForCwd, type TrackedProject } from "../projects";
 export interface AutomationSessionImportParams {
-  activeProjectId: string | null;
-  sessionIndices: Record<string, SessionIndex>;
+  sessionIndicesRef: MutableRefObject<Record<string, SessionIndex>>;
   setSessionIndices: Dispatch<SetStateAction<Record<string, SessionIndex>>>;
   setProjects: Dispatch<SetStateAction<TrackedProject[]>>;
-  diskProbedRef: MutableRefObject<Set<string>>;
-  quickChatSessionsRef: MutableRefObject<Record<string, QuickChatSessionRef>>;
+}
+
+export interface DiskSessionCatalogState {
+  initialized: boolean;
+  loading: boolean;
+  nextCursor: string | null;
+}
+
+export interface AutomationSessionImportResult {
+  diskSessionCatalog: DiskSessionCatalogState;
+  loadDiskSessionCatalogPage: (cursor?: string) => Promise<void>;
 }
 
 async function resolveProjectCwd(cwd: string): Promise<string> {
@@ -40,13 +42,17 @@ async function resolveProjectCwd(cwd: string): Promise<string> {
 
 /** Imports automation/disk sessions into the renderer's sidebar projection. */
 export function useAutomationSessionImport({
-  activeProjectId,
-  sessionIndices,
+  sessionIndicesRef,
   setSessionIndices,
   setProjects,
-  diskProbedRef,
-  quickChatSessionsRef,
-}: AutomationSessionImportParams): void {
+}: AutomationSessionImportParams): AutomationSessionImportResult {
+  const [diskSessionCatalog, setDiskSessionCatalog] = useState<DiskSessionCatalogState>({
+    initialized: false,
+    loading: false,
+    nextCursor: null,
+  });
+  const diskSessionCatalogLoadingRef = useRef(false);
+
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -75,9 +81,7 @@ export function useAutomationSessionImport({
 
       const terminalRun = new Set(["completed", "failed", "cancelled"]);
       const dedupable = (session: SessionSummary): boolean =>
-        session.source !== "automation" ||
-        !session.runStatus ||
-        terminalRun.has(session.runStatus);
+        session.source !== "automation" || !session.runStatus || terminalRun.has(session.runStatus);
       const currentProjects = loadProjects();
       const known = new Set<string>();
       for (const project of currentProjects) {
@@ -121,81 +125,93 @@ export function useAutomationSessionImport({
     };
   }, [setProjects, setSessionIndices]);
 
-  useEffect(() => {
-    const segment = projectBucketSegment(activeProjectId);
-    const index = sessionIndices[segment];
-    if (index && index.sessions.length > 0) return;
-    if (diskProbedRef.current.has(segment)) return;
-    diskProbedRef.current.add(segment);
-    let cancelled = false;
-    let probed = false;
-
-    void (async () => {
+  const loadDiskSessionCatalogPage = useCallback(
+    async (cursor?: string): Promise<void> => {
+      if (diskSessionCatalogLoadingRef.current) return;
+      diskSessionCatalogLoadingRef.current = true;
+      setDiskSessionCatalog((current) => ({ ...current, loading: true }));
       try {
-        const page = await window.codeshell.listDiskSessions({ limit: 30 });
-        probed = true;
-        if (cancelled || page.sessions.length === 0) return;
-        const resolvedSessions = await Promise.all(
-          page.sessions.map(async (session) => ({
-            ...session,
-            cwd: await resolveProjectCwd(session.cwd),
-          })),
-        );
-        for (const session of resolvedSessions) {
-          const sessionId = session.engineSessionId || session.id;
-          if (!isQuickChatSessionId(sessionId)) continue;
-          const isLive = Object.values(quickChatSessionsRef.current).some(
-            (quickSession) => quickSession.sessionId === sessionId,
-          );
-          if (!isLive) {
-            void window.codeshell.cleanupQuickChatSession(sessionId, "stale-disk").catch((error) =>
-              window.codeshell.log("quick_chat.cleanup_stale_session_failed", {
-                sessionId,
-                error: String(error),
-              }),
-            );
+        const page = await window.codeshell.listDiskSessions({
+          limit: 50,
+          ...(cursor ? { cursor } : {}),
+        });
+        const knownIds = new Set<string>();
+        for (const index of Object.values(sessionIndicesRef.current)) {
+          for (const session of index.sessions) {
+            knownIds.add(session.id);
+            if (session.engineSessionId) knownIds.add(session.engineSessionId);
           }
         }
-        const sessions = resolvedSessions.filter(
-          (session) => !isQuickChatSessionId(session.engineSessionId || session.id),
+        const missing = page.sessions.filter(
+          (session) =>
+            !knownIds.has(session.id) && !knownIds.has(session.engineSessionId || session.id),
         );
-        if (cancelled) return;
+        const resolvedCwds = new Map<string, Promise<string>>();
+        const resolveOnce = (cwd: string): Promise<string> => {
+          const existing = resolvedCwds.get(cwd);
+          if (existing) return existing;
+          const resolving = resolveProjectCwd(cwd);
+          resolvedCwds.set(cwd, resolving);
+          return resolving;
+        };
+        const resolvedSessions = await Promise.all(
+          missing.map(async (session) => ({ ...session, cwd: await resolveOnce(session.cwd) })),
+        );
         const projectsNow = loadProjects();
         const projectFactory = makeCreateProjectForCwd(projectsNow);
-        const placements = planDiskRebuild(sessions, projectsNow, {
+        const placements = planDiskRebuild(resolvedSessions, projectsNow, {
           caseInsensitive: isCaseInsensitivePlatform(),
           createProjectForCwd: projectFactory.createProjectForCwd,
         });
-        if (cancelled) return;
         const touched = new Set<string>();
         for (const { projectId, summary } of placements) {
+          // Automation hydration may finish while this page is resolving roots.
+          // Re-check the durable index so richer metadata and archived rows win.
+          const current = loadSessionIndex(projectId);
+          const alreadyKnown = current.sessions.some(
+            (session) =>
+              session.id === summary.id ||
+              (summary.engineSessionId && session.engineSessionId === summary.engineSessionId),
+          );
+          if (alreadyKnown) continue;
           upsertImportedSession(projectId, summary);
           touched.add(projectBucketSegment(projectId));
         }
         if (projectFactory.changed()) setProjects(projectsNow.slice());
-        setSessionIndices((prev) => {
-          const next = { ...prev };
-          for (const key of touched) {
-            next[key] = loadSessionIndex(key === NO_REPO_KEY ? null : key);
-          }
-          return next;
+        if (touched.size > 0) {
+          setSessionIndices((previous) => {
+            const next = { ...previous };
+            for (const key of touched) {
+              next[key] = loadSessionIndex(key === NO_REPO_KEY ? null : key);
+            }
+            return next;
+          });
+        }
+        setDiskSessionCatalog({
+          initialized: true,
+          loading: false,
+          nextCursor: page.nextCursor,
         });
-      } catch {
-        diskProbedRef.current.delete(segment);
+      } catch (error) {
+        // Preserve the failed cursor so the sidebar action becomes a retry.
+        setDiskSessionCatalog({
+          initialized: true,
+          loading: false,
+          nextCursor: cursor ?? "",
+        });
+        window.codeshell.log("sidebar.disk_catalog_page_failed", { error: String(error) });
+      } finally {
+        diskSessionCatalogLoadingRef.current = false;
       }
-    })();
-    return () => {
-      cancelled = true;
-      if (!probed) diskProbedRef.current.delete(segment);
-    };
-  }, [
-    activeProjectId,
-    sessionIndices,
-    diskProbedRef,
-    quickChatSessionsRef,
-    setProjects,
-    setSessionIndices,
-  ]);
+    },
+    [sessionIndicesRef, setProjects, setSessionIndices],
+  );
+
+  useEffect(() => {
+    void loadDiskSessionCatalogPage();
+  }, [loadDiskSessionCatalogPage]);
+
+  return { diskSessionCatalog, loadDiskSessionCatalogPage };
 }
 
 export { resolveProjectCwd };

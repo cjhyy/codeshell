@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Check } from "lucide-react";
 import type { Message } from "./types";
 import { ToolCard } from "./tool-cards";
 import { AssistantMessageView } from "./messages/AssistantMessageView";
@@ -184,11 +185,37 @@ export function MessageStream({
   };
 
   const chooseTurn = (index: number) => {
-    if (selectionAnchor === null || selectionEnd !== selectionAnchor) {
+    if (selectionAnchor === null || selectionEnd === null) {
       setSelectionAnchor(index);
       setSelectionEnd(index);
       return;
     }
+    const low = Math.min(selectionAnchor, selectionEnd);
+    const high = Math.max(selectionAnchor, selectionEnd);
+    if (index < low || index > high) {
+      setSelectionAnchor(Math.min(low, index));
+      setSelectionEnd(Math.max(high, index));
+      return;
+    }
+    if (low === high) {
+      setSelectionAnchor(null);
+      setSelectionEnd(null);
+      return;
+    }
+    if (index === low) {
+      setSelectionAnchor(low + 1);
+      setSelectionEnd(high);
+      return;
+    }
+    if (index === high) {
+      setSelectionAnchor(low);
+      setSelectionEnd(high - 1);
+      return;
+    }
+    // A closed context package cannot contain a hole. Clicking a selected
+    // middle row starts a new one-row selection, matching message-forwarding
+    // UIs without silently forwarding rows the user just deselected.
+    setSelectionAnchor(index);
     setSelectionEnd(index);
   };
 
@@ -211,7 +238,13 @@ export function MessageStream({
         ...range,
       });
       if (result.mode !== "summary") throw new Error("Unexpected full-fork response");
-      await onContextPackageCreated?.(result, { shouldActivate: operationIsCurrent });
+      const selectedTitle = selectionTurns[from]?.preview.trim();
+      await onContextPackageCreated?.(
+        selectedTitle && !result.titleSuggestion
+          ? { ...result, titleSuggestion: selectedTitle.slice(0, 60) }
+          : result,
+        { shouldActivate: operationIsCurrent },
+      );
       if (!operationIsCurrent()) return;
       setSelectionOpen(false);
     } catch (error) {
@@ -269,7 +302,10 @@ export function MessageStream({
         {selectionOpen && (
           <div className="absolute inset-x-4 top-2 z-30 max-h-[70%] overflow-auto rounded-lg border border-border bg-background p-3 shadow-lg">
             <div className="mb-2 flex items-center justify-between gap-3">
-              <div className="font-medium">{t("chat.contextPackage.title")}</div>
+              <div>
+                <div className="font-medium">{t("chat.contextPackage.title")}</div>
+                <div className="text-xs text-muted-foreground">{t("chat.contextPackage.hint")}</div>
+              </div>
               <Button
                 type="button"
                 variant="ghost"
@@ -298,17 +334,31 @@ export function MessageStream({
                       type="button"
                       key={`${turn.fromEventId}:${turn.toEventId}`}
                       className={
-                        "block w-full rounded-md border px-3 py-2 text-left text-sm " +
+                        "flex w-full items-start gap-2 rounded-md border px-3 py-2 text-left text-sm " +
                         (selected
                           ? "border-primary bg-primary/10"
                           : "border-border hover:bg-muted/50")
                       }
+                      aria-pressed={selected}
                       onClick={() => chooseTurn(index)}
                     >
-                      <span className="mr-2 text-xs text-muted-foreground">
-                        #{turn.turnNumber + 1}
+                      <span
+                        className={
+                          "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border " +
+                          (selected
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-muted-foreground/50")
+                        }
+                        aria-hidden="true"
+                      >
+                        {selected && <Check size={12} strokeWidth={3} />}
                       </span>
-                      {turn.preview}
+                      <span className="min-w-0">
+                        <span className="mr-2 text-xs text-muted-foreground">
+                          #{turn.turnNumber + 1}
+                        </span>
+                        <span className="break-words">{turn.preview}</span>
+                      </span>
                     </button>
                   );
                 })}

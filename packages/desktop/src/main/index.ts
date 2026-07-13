@@ -13,6 +13,7 @@ import {
   systemPreferences,
   webContents,
   Notification,
+  screen,
 } from "electron";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve, basename, extname, join } from "node:path";
@@ -79,6 +80,7 @@ import { PetMetadataStore } from "./pet/pet-metadata-store.js";
 import { PetDispatchService } from "./pet/pet-dispatch-service.js";
 import { PetAttentionPolicy } from "./pet/pet-attention-policy.js";
 import { PetReceiptStore } from "./pet/pet-receipt-store.js";
+import { stablePromptHash } from "./client-message-id.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
@@ -139,6 +141,13 @@ import { TrustedDeviceStore } from "./mobile-remote/trusted-device-store.js";
 import { CloudflaredBinary } from "./mobile-remote/cloudflared-binary.js";
 import { TunnelManager } from "./mobile-remote/tunnel-manager.js";
 import { AccessPasscode } from "./mobile-remote/access-passcode.js";
+import {
+  GatewayControlServer,
+  type MobileRemoteGatewayStatus,
+  type MobileRemoteOpenResult,
+  type PetChatControlRequest,
+  type PetChatControlResult,
+} from "./im-gateway-control-server.js";
 import {
   MobileUploadService,
   type ClaimedMobileUpload,
@@ -254,6 +263,9 @@ import {
   listRecentAttachments,
   markAttachmentsSent,
   stageImageDataUrl,
+  stageImageBytes,
+  stageFileBytes,
+  type InputAttachmentMeta,
 } from "./attachment-service.js";
 import { listAgents, readAgentBody, saveAgent, deleteAgent } from "./agents-service.js";
 import type { AgentDefinition } from "@cjhyy/code-shell-core";
@@ -274,6 +286,17 @@ import {
 } from "./updater.js";
 import { loadRecents, pushRecent, loadProjects, setPinned, softDelete } from "./recents-store.js";
 import { loadWindowState, saveWindowState } from "./window-state-store.js";
+import {
+  PET_WIDGET_EXPANDED_HEIGHT,
+  PET_WIDGET_EXPANDED_WIDTH,
+  PET_WIDGET_WINDOW_SIZE,
+  clampPetWidgetWindowPosition,
+  defaultPetWidgetWindowPosition,
+  loadPetWidgetWindowPosition,
+  sanitizePetWidgetWindowPosition,
+  savePetWidgetWindowPosition,
+  shouldSkipPetWidgetTaskbar,
+} from "./pet/pet-widget-window-state.js";
 import {
   getTrust,
   setTrust,
@@ -317,11 +340,21 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // makes Windows taskbar/notification grouping work correctly.
 app.setName("code-shell");
 if (process.platform === "win32") app.setAppUserModelId("com.cjhyy.codeshell");
+const mainWindows = new Set<BrowserWindow>();
+let petWidgetWindow: BrowserWindow | null = null;
+let petWidgetWindowCreation: Promise<BrowserWindow> | null = null;
+let petWidgetShouldBeVisible = false;
+let petWidgetExpanded = false;
+let petWidgetPositionSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let markPetIpcReady: (() => void) | null = null;
+const petIpcReady = new Promise<void>((resolveReady) => {
+  markPetIpcReady = resolveReady;
+});
 const ownsDesktopInstance = acquireDesktopInstanceLock(app);
 if (ownsDesktopInstance) {
   registerSecondInstanceFocus(
     (handler) => app.on("second-instance", handler),
-    () => BrowserWindow.getAllWindows(),
+    () => Array.from(mainWindows),
   );
 }
 
@@ -336,6 +369,7 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
  */
 let bridge: AgentBridge | null = null;
 let petStateAggregator: PetStateAggregator | null = null;
+let petDispatchService: PetDispatchService | null = null;
 let petAttentionPolicy: PetAttentionPolicy | null = null;
 let disposePetIpc: (() => void) | null = null;
 let mcpOAuthService: McpOAuthService | null = null;
@@ -511,6 +545,7 @@ const tunnelManager = new TunnelManager({
 const accessPasscode = new AccessPasscode({
   filePath: resolve(app.getPath("userData"), "mobile-remote", "access.json"),
 });
+let gatewayControlServer: GatewayControlServer | undefined;
 // Forward tunnel status changes to every renderer so the UI can reflect
 // connected / disconnected (address invalidated) without polling.
 tunnelManager.on("status", (status: string, detail?: unknown) => {
@@ -1551,6 +1586,7 @@ async function createWindow(): Promise<BrowserWindow> {
       webviewTag: true,
     },
   });
+  mainWindows.add(win);
 
   // Harden the browser-panel <webview> guests for THIS window (main + popout
   // both host a BrowserPanel, so both need it — without it on the popout the
@@ -1704,6 +1740,7 @@ async function createWindow(): Promise<BrowserWindow> {
   // window is gone would otherwise leak until quit. Reap them once the
   // webContents is actually torn down (next tick after `closed`).
   win.on("closed", () => {
+    mainWindows.delete(win);
     setImmediate(ptyReapDestroyed);
   });
 
@@ -1736,39 +1773,233 @@ async function createWindow(): Promise<BrowserWindow> {
         mobileRemote.broadcastRaw(line);
       }
     });
-    petStateAggregator = new PetStateAggregator({ bridge, listDiskSessions });
-    await petStateAggregator.start();
+    const aggregator = new PetStateAggregator({ bridge, listDiskSessions });
+    petStateAggregator = aggregator;
     const petMetadata = new PetMetadataStore(
       resolve(app.getPath("userData"), "pet", "metadata.json"),
     );
-    const petDispatch = new PetDispatchService({
+    petDispatchService = new PetDispatchService({
       metadata: petMetadata,
-      aggregator: petStateAggregator,
+      aggregator,
       worker: bridge,
       hostCwd: resolveNoRepoCwd(),
     });
     const petReceipts = new PetReceiptStore(
       resolve(app.getPath("userData"), "pet", "attention-receipts.json"),
     );
-    await petReceipts.load();
-    petAttentionPolicy = new PetAttentionPolicy({
-      source: petStateAggregator,
+    const attention = new PetAttentionPolicy({
+      source: aggregator,
       receipts: petReceipts,
     });
-    petAttentionPolicy.start();
+    petAttentionPolicy = attention;
+    const petInitialization = (async () => {
+      await aggregator.start();
+      await petReceipts.load();
+      attention.start();
+    })();
     disposePetIpc = registerPetIpc({
       ipcMain,
-      aggregator: petStateAggregator,
-      dispatcher: petDispatch,
-      attention: petAttentionPolicy,
+      aggregator,
+      dispatcher: petDispatchService,
+      attention,
       windows: () => BrowserWindow.getAllWindows(),
+      ready: petInitialization,
     });
+    await petInitialization;
+    markPetIpcReady?.();
+    markPetIpcReady = null;
   } else {
     bridge.attachWindow(win);
   }
 
   await installAppMenu(win);
   return win;
+}
+
+function petWidgetSurface(expanded: boolean): { width: number; height: number } {
+  return expanded
+    ? { width: PET_WIDGET_EXPANDED_WIDTH, height: PET_WIDGET_EXPANDED_HEIGHT }
+    : { width: PET_WIDGET_WINDOW_SIZE, height: PET_WIDGET_WINDOW_SIZE };
+}
+
+function petWindowOriginForAnchor(
+  anchor: { x: number; y: number },
+  expanded: boolean,
+): { x: number; y: number } {
+  const surface = petWidgetSurface(expanded);
+  return {
+    x: anchor.x - (surface.width - PET_WIDGET_WINDOW_SIZE),
+    y: anchor.y - (surface.height - PET_WIDGET_WINDOW_SIZE),
+  };
+}
+
+function petAnchorForWindowOrigin(
+  origin: { x: number; y: number },
+  expanded: boolean,
+): { x: number; y: number } {
+  const surface = petWidgetSurface(expanded);
+  return {
+    x: origin.x + (surface.width - PET_WIDGET_WINDOW_SIZE),
+    y: origin.y + (surface.height - PET_WIDGET_WINDOW_SIZE),
+  };
+}
+
+function currentPetAnchor(win: BrowserWindow): { x: number; y: number } {
+  const { x, y } = win.getBounds();
+  return petAnchorForWindowOrigin({ x, y }, petWidgetExpanded);
+}
+
+function clampPetPositionToDisplay(
+  position: { x: number; y: number },
+  expanded = petWidgetExpanded,
+): { x: number; y: number } {
+  const display = screen.getDisplayNearestPoint({
+    x: position.x + Math.round(PET_WIDGET_WINDOW_SIZE / 2),
+    y: position.y + Math.round(PET_WIDGET_WINDOW_SIZE / 2),
+  });
+  return clampPetWidgetWindowPosition(position, display.workArea, petWidgetSurface(expanded));
+}
+
+function persistPetWidgetPosition(win: BrowserWindow): void {
+  if (win.isDestroyed()) return;
+  void savePetWidgetWindowPosition(currentPetAnchor(win));
+}
+
+function schedulePetWidgetPositionSave(win: BrowserWindow): void {
+  if (petWidgetPositionSaveTimer) clearTimeout(petWidgetPositionSaveTimer);
+  petWidgetPositionSaveTimer = setTimeout(() => {
+    petWidgetPositionSaveTimer = null;
+    persistPetWidgetPosition(win);
+  }, 250);
+}
+
+async function createPetWidgetWindowNow(): Promise<BrowserWindow> {
+  if (petWidgetWindow && !petWidgetWindow.isDestroyed()) return petWidgetWindow;
+
+  const savedPosition = await loadPetWidgetWindowPosition();
+  const primaryWorkArea = screen.getPrimaryDisplay().workArea;
+  const anchor = savedPosition
+    ? clampPetPositionToDisplay(savedPosition, false)
+    : defaultPetWidgetWindowPosition(primaryWorkArea);
+  const position = petWindowOriginForAnchor(anchor, false);
+  const win = new BrowserWindow({
+    width: PET_WIDGET_WINDOW_SIZE,
+    height: PET_WIDGET_WINDOW_SIZE,
+    x: position.x,
+    y: position.y,
+    show: false,
+    frame: false,
+    transparent: true,
+    backgroundColor: "#00000000",
+    hasShadow: false,
+    resizable: false,
+    maximizable: false,
+    minimizable: false,
+    fullscreenable: false,
+    // macOS owns one Dock icon per application, not per BrowserWindow. Setting
+    // skipTaskbar on the Pet would hide CodeShell itself from the Dock.
+    skipTaskbar: shouldSkipPetWidgetTaskbar(process.platform),
+    alwaysOnTop: true,
+    acceptFirstMouse: true,
+    webPreferences: {
+      preload: resolve(__dirname, "..", "preload", "index.cjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  petWidgetExpanded = false;
+  petWidgetWindow = win;
+  if (process.platform === "darwin") void app.dock?.show();
+  win.setAlwaysOnTop(true, "floating");
+  try {
+    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  } catch {
+    // Some Linux window managers do not implement workspace pinning.
+  }
+
+  win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  win.webContents.on("will-navigate", (event) => event.preventDefault());
+  win.webContents.on("did-fail-load", (_event, code, desc, validatedUrl) => {
+    dlog("main", "pet-widget.did-fail-load", { code, desc, validatedUrl });
+  });
+  win.webContents.on("console-message", (_event, level, message, line, sourceId) => {
+    if (level >= 2) dlog("main", "pet-widget.console", { level, message, line, sourceId });
+  });
+  win.webContents.once("did-finish-load", () => {
+    if (!win.isDestroyed()) win.showInactive();
+  });
+
+  win.on("move", () => schedulePetWidgetPositionSave(win));
+  win.on("close", () => persistPetWidgetPosition(win));
+  win.on("closed", () => {
+    if (petWidgetPositionSaveTimer) {
+      clearTimeout(petWidgetPositionSaveTimer);
+      petWidgetPositionSaveTimer = null;
+    }
+    if (petWidgetWindow === win) petWidgetWindow = null;
+    petWidgetExpanded = false;
+  });
+
+  const devUrl = process.env.VITE_DEV_URL;
+  if (devUrl) {
+    const url = new URL(devUrl);
+    url.searchParams.set("popout", "pet");
+    await win.loadURL(url.toString());
+  } else {
+    await win.loadFile(resolve(__dirname, "..", "renderer", "index.html"), {
+      query: { popout: "pet" },
+    });
+  }
+  return win;
+}
+
+function createPetWidgetWindow(): Promise<BrowserWindow> {
+  if (petWidgetWindow && !petWidgetWindow.isDestroyed()) return Promise.resolve(petWidgetWindow);
+  if (petWidgetWindowCreation) return petWidgetWindowCreation;
+  const creation = createPetWidgetWindowNow();
+  petWidgetWindowCreation = creation;
+  const clearCreation = (): void => {
+    if (petWidgetWindowCreation === creation) petWidgetWindowCreation = null;
+  };
+  creation.then(clearCreation, clearCreation);
+  return creation;
+}
+
+function setPetWidgetExpanded(expanded: boolean): void {
+  const win = petWidgetWindow;
+  if (!win || win.isDestroyed() || petWidgetExpanded === expanded) return;
+  const anchor = currentPetAnchor(win);
+  const nextAnchor = clampPetPositionToDisplay(anchor, expanded);
+  const origin = petWindowOriginForAnchor(nextAnchor, expanded);
+  const surface = petWidgetSurface(expanded);
+  petWidgetExpanded = expanded;
+  win.setBounds({ ...origin, ...surface }, true);
+}
+
+function destroyPetWidgetWindow(): void {
+  const win = petWidgetWindow;
+  if (!win || win.isDestroyed()) return;
+  persistPetWidgetPosition(win);
+  win.destroy();
+}
+
+function preferredMainWindow(): BrowserWindow | null {
+  const focused = BrowserWindow.getFocusedWindow();
+  if (focused && mainWindows.has(focused) && !focused.isDestroyed()) return focused;
+  return Array.from(mainWindows).find((win) => !win.isDestroyed()) ?? null;
+}
+
+async function openPetOverviewFromWidget(request?: unknown): Promise<void> {
+  const target = preferredMainWindow() ?? (await createWindow());
+  if (target.isMinimized()) target.restore();
+  target.show();
+  target.focus();
+  const notify = (): void => {
+    if (!target.isDestroyed()) target.webContents.send("pet:widget-open-overview", request);
+  };
+  if (target.webContents.isLoadingMainFrame()) target.webContents.once("did-finish-load", notify);
+  else notify();
 }
 
 /** Tracks the popout browser windows so we can route anchors back to a parent. */
@@ -1887,10 +2118,99 @@ async function cleanupKnownAttachments(sessionId?: string): Promise<void> {
   }
 }
 
+async function dispatchGatewayPetChat(
+  request: PetChatControlRequest,
+): Promise<PetChatControlResult> {
+  const dispatcher = petDispatchService;
+  if (!dispatcher) throw new Error("Mimi Pet 尚未就绪，请稍后重试");
+  const sessionId = await dispatcher.getSessionId();
+  const cwd = resolveNoRepoCwd();
+  const attachments: InputAttachmentMeta[] = [];
+  let totalBytes = 0;
+  for (const input of request.attachments ?? []) {
+    const bytes = decodeGatewayAttachment(input.dataBase64, input.size);
+    totalBytes += bytes.byteLength;
+    if (bytes.byteLength > 10 * 1024 * 1024 || totalBytes > 20 * 1024 * 1024) {
+      throw new Error("IM 附件超过大小限制");
+    }
+    if (input.kind === "image") {
+      attachments.push(
+        await stageImageBytes({
+          cwd,
+          sessionId,
+          name: input.name,
+          mime: input.mimeType ?? "application/octet-stream",
+          bytes,
+          origin: "im-gateway",
+        }),
+      );
+    } else {
+      attachments.push(
+        await stageFileBytes({
+          cwd,
+          sessionId,
+          name: input.name,
+          mime: input.mimeType,
+          bytes,
+          origin: "im-gateway",
+        }),
+      );
+    }
+  }
+
+  const result = await dispatcher.dispatch({
+    type: "chat",
+    message: request.message,
+    ...(attachments.length > 0 ? { attachments } : {}),
+    ...(request.origin?.messageId
+      ? {
+          clientMessageId: `im:${stablePromptHash(
+            `${request.origin.channel}\0${request.origin.target}\0${request.origin.senderId}\0${request.origin.messageId}`,
+          )}`,
+        }
+      : {}),
+  });
+  if (!result.ok) throw new Error(result.message ?? result.code);
+  if (result.type !== "chat") throw new Error("Mimi Pet 返回了非聊天结果");
+  await markAttachmentsSent(cwd, sessionId, attachments).catch(() => undefined);
+  const worker = result.result as { text?: unknown; reason?: unknown } | undefined;
+  return {
+    text: typeof worker?.text === "string" ? worker.text : "",
+    petSessionId: result.petSessionId,
+    ...(typeof worker?.reason === "string" ? { reason: worker.reason } : {}),
+  };
+}
+
+function decodeGatewayAttachment(dataBase64: string, expectedSize: number): Buffer {
+  if (
+    dataBase64.length % 4 !== 0 ||
+    !/^[A-Za-z0-9+/]*={0,2}$/.test(dataBase64) ||
+    dataBase64.length > 28 * 1024 * 1024
+  ) {
+    throw new Error("IM 附件不是有效的 base64 数据");
+  }
+  const bytes = Buffer.from(dataBase64, "base64");
+  if (bytes.byteLength !== expectedSize) throw new Error("IM 附件大小校验失败");
+  return bytes;
+}
+
 app.whenReady().then(async () => {
   if (!ownsDesktopInstance) return;
   writeSettingsSchemaAtStartup();
   void cleanupKnownAttachments();
+
+  gatewayControlServer = new GatewayControlServer({
+    descriptorPath: join(userHome(), ".code-shell", "im-gateway", "desktop-control.json"),
+    open: () => startMobileRemote({ mode: "tunnel" }),
+    close: () => stopMobileRemote(),
+    status: () => getMobileRemoteGatewayStatus(),
+    pairingUrl: () => createMobileRemotePairingUrl(),
+    petChat: (request) => dispatchGatewayPetChat(request),
+  });
+  await gatewayControlServer.start().catch((error) => {
+    gatewayControlServer = undefined;
+    dlog("main", "im_gateway.desktop_control.start_failed", { error: String(error) });
+  });
 
   const staleQuickChats = await runOwnedQuickChatStartupCleanup(
     ownsDesktopInstance,
@@ -2840,10 +3160,31 @@ let mobileRemoteStartInFlight: Promise<{
   mode: "tunnel" | "lan";
 }> | null = null;
 
-ipcMain.handle("mobileRemote:start", async (_e, opts?: { mode?: "lan" | "tunnel" }) => {
+async function startMobileRemote(opts?: {
+  mode?: "lan" | "tunnel";
+}): Promise<MobileRemoteOpenResult> {
   if (mobileRemoteStartInFlight) return mobileRemoteStartInFlight;
   const run = (async () => {
     const mode = opts?.mode ?? "lan";
+    const existing = mobileRemote.status();
+    const reusableTunnelUrl = mode === "tunnel" ? tunnelManager.publicUrl() : undefined;
+    if (
+      existing?.mode === mode &&
+      ((mode === "lan" && !tunnelManager.isRunning()) ||
+        (tunnelManager.isConnected() && reusableTunnelUrl))
+    ) {
+      if (reusableTunnelUrl) mobileRemote.setPublicBaseUrl(reusableTunnelUrl);
+      const pairing = mobileRemote.createPairingUrl();
+      return {
+        url: reusableTunnelUrl ?? existing.url,
+        pairingUrl: pairing.url,
+        expiresAt: pairing.expiresAt,
+        mode,
+      };
+    }
+    if (existing || tunnelManager.isRunning()) {
+      await Promise.allSettled([tunnelManager.stop(), mobileRemote.stop()]);
+    }
     if (mode === "tunnel") {
       // Public tunnel: passcode MUST be set first (UI also disables the button).
       if (!accessPasscode.isSet()) {
@@ -2871,8 +3212,7 @@ ipcMain.handle("mobileRemote:start", async (_e, opts?: { mode?: "lan" | "tunnel"
       } catch (err) {
         // Tunnel failed (binary error / 15s URL timeout): tear everything down
         // and surface a friendly error so the UI returns to the off state.
-        tunnelManager.stop();
-        await mobileRemote.stop();
+        await Promise.allSettled([tunnelManager.stop(), mobileRemote.stop()]);
         throw new Error(`公网隧道启动失败:${err instanceof Error ? err.message : String(err)}`, {
           cause: err,
         });
@@ -2895,28 +3235,44 @@ ipcMain.handle("mobileRemote:start", async (_e, opts?: { mode?: "lan" | "tunnel"
   } finally {
     if (mobileRemoteStartInFlight === run) mobileRemoteStartInFlight = null;
   }
-});
-ipcMain.handle("mobileRemote:stop", async () => {
-  tunnelManager.stop();
-  await mobileRemote.stop();
-});
-// Mint a fresh pairing URL on the already-running host. Lets the UI regenerate
-// the QR after a settings-page remount (pairingUrl is renderer-local state and
-// is lost on navigation) without restarting the host.
-ipcMain.handle("mobileRemote:pairingUrl", async () => {
+}
+
+async function stopMobileRemote(): Promise<void> {
+  await Promise.all([tunnelManager.stop(), mobileRemote.stop()]);
+}
+
+function createMobileRemotePairingUrl(): { pairingUrl: string; expiresAt: number } {
   const pairing = mobileRemote.createPairingUrl();
   return { pairingUrl: pairing.url, expiresAt: pairing.expiresAt };
-});
-ipcMain.handle("mobileRemote:status", async () => {
+}
+
+function getMobileRemoteGatewayStatus(): MobileRemoteGatewayStatus {
   const status = mobileRemote.status();
   return {
     running: Boolean(status),
-    url: status?.url,
+    url:
+      status?.mode === "tunnel"
+        ? tunnelManager.isConnected()
+          ? tunnelManager.publicUrl()
+          : undefined
+        : status?.url,
     mode: status?.mode,
     tunnelRunning: tunnelManager.isRunning(),
     tunnelConnected: tunnelManager.isConnected(),
+    passcodeSet: accessPasscode.isSet(),
+    onlineDeviceCount: mobileRemote.onlineDeviceIds().length,
   };
-});
+}
+
+ipcMain.handle("mobileRemote:start", async (_e, opts?: { mode?: "lan" | "tunnel" }) =>
+  startMobileRemote(opts),
+);
+ipcMain.handle("mobileRemote:stop", async () => stopMobileRemote());
+// Mint a fresh pairing URL on the already-running host. Lets the UI regenerate
+// the QR after a settings-page remount (pairingUrl is renderer-local state and
+// is lost on navigation) without restarting the host.
+ipcMain.handle("mobileRemote:pairingUrl", async () => createMobileRemotePairingUrl());
+ipcMain.handle("mobileRemote:status", async () => getMobileRemoteGatewayStatus());
 ipcMain.handle("mobileRemote:listDevices", async () => mobileDevices.listDevices());
 ipcMain.handle("mobileRemote:revokeDevice", async (_e, id: string) => mobileDevices.revoke(id));
 ipcMain.handle("mobileRemote:removeDevice", async (_e, id: string) => mobileDevices.remove(id));
@@ -3227,6 +3583,50 @@ ipcMain.handle("window:new", async () => {
 
 ipcMain.handle("window:isFullscreen", async (e): Promise<boolean> => {
   return BrowserWindow.fromWebContents(e.sender)?.isFullScreen() ?? false;
+});
+
+ipcMain.handle("pet:widget-visible-get", () => {
+  return petWidgetShouldBeVisible && Boolean(petWidgetWindow && !petWidgetWindow.isDestroyed());
+});
+
+ipcMain.handle("pet:widget-visible", async (_event, visible: unknown) => {
+  if (typeof visible !== "boolean") throw new Error("pet:widget-visible requires boolean");
+  petWidgetShouldBeVisible = visible;
+  if (visible) {
+    await petIpcReady;
+    await createPetWidgetWindow();
+    if (!petWidgetShouldBeVisible) destroyPetWidgetWindow();
+  } else destroyPetWidgetWindow();
+  const effectiveVisible =
+    petWidgetShouldBeVisible && Boolean(petWidgetWindow && !petWidgetWindow.isDestroyed());
+  for (const win of mainWindows) {
+    if (!win.isDestroyed()) win.webContents.send("pet:widget-visibility-changed", effectiveVisible);
+  }
+  return { ok: true as const };
+});
+
+ipcMain.on("pet:widget-move", (event, rawPosition: unknown) => {
+  const win = petWidgetWindow;
+  if (!win || win.isDestroyed() || event.sender !== win.webContents) return;
+  const position = sanitizePetWidgetWindowPosition(rawPosition);
+  if (!position) return;
+  const requestedAnchor = petAnchorForWindowOrigin(position, petWidgetExpanded);
+  const nextAnchor = clampPetPositionToDisplay(requestedAnchor);
+  const nextOrigin = petWindowOriginForAnchor(nextAnchor, petWidgetExpanded);
+  win.setPosition(nextOrigin.x, nextOrigin.y, false);
+});
+
+ipcMain.handle("pet:widget-expanded", (event, expanded: unknown) => {
+  if (typeof expanded !== "boolean") throw new Error("pet:widget-expanded requires boolean");
+  if (petWidgetWindow && event.sender === petWidgetWindow.webContents) {
+    setPetWidgetExpanded(expanded);
+  }
+  return { ok: true as const };
+});
+
+ipcMain.handle("pet:widget-open-overview", async (_event, request?: unknown) => {
+  await openPetOverviewFromWidget(request);
+  return { ok: true as const };
 });
 
 // Open the standalone browser popout, parented to the requesting window so its
@@ -3962,6 +4362,7 @@ app.on("before-quit", (event) => {
   bridge?.kill();
   petStateAggregator?.stop();
   petStateAggregator = null;
+  petDispatchService = null;
   petAttentionPolicy?.stop();
   petAttentionPolicy = null;
   disposePetIpc?.();
@@ -3972,7 +4373,12 @@ app.on("before-quit", (event) => {
   transcriptSubscriptions?.closeAll();
   roomManager.closeAll();
   quitCleanupPromise = (async () => {
-    await Promise.allSettled([tunnelManager.stop(), mobileRemote.stop()]);
+    await Promise.allSettled([
+      tunnelManager.stop(),
+      mobileRemote.stop(),
+      gatewayControlServer?.stop(),
+    ]);
+    gatewayControlServer = undefined;
     await mobileUploads.dispose();
     quitCleanupDone = true;
     app.quit();
@@ -3980,5 +4386,5 @@ app.on("before-quit", (event) => {
 });
 
 app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) void createWindow();
+  if (!preferredMainWindow()) void createWindow();
 });

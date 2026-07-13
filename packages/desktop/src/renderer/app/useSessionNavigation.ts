@@ -39,6 +39,7 @@ import type { PermissionMode } from "../chat/PermissionPill";
 import type { MessagesReducerState } from "../types";
 import type { RunSummary } from "../../preload/types";
 import type { ViewState } from "../view";
+import { revealSidebarProject } from "../sidebarSessionVisibility";
 
 interface Params {
   projects: TrackedProject[];
@@ -49,9 +50,7 @@ interface Params {
   setSessionIndices: Dispatch<SetStateAction<Record<string, SessionIndex>>>;
   setCollapsedProjects: Dispatch<SetStateAction<Set<string>>>;
   setUnreadBuckets: Dispatch<SetStateAction<Set<string>>>;
-  setPermissionOverrides: Dispatch<
-    SetStateAction<Record<string, PermissionMode>>
-  >;
+  setPermissionOverrides: Dispatch<SetStateAction<Record<string, PermissionMode>>>;
   setModelOverrides: Dispatch<SetStateAction<Record<string, string>>>;
   setGoalOverrides: Dispatch<SetStateAction<Record<string, boolean>>>;
   panelByBucket: Record<string, PanelBucketState>;
@@ -87,10 +86,9 @@ export function useSessionNavigation({
       return next;
     });
     setActiveProjectId(projectId);
+    setCollapsedProjects((current) => revealSidebarProject(current, projectId));
     const nextIndex = setActiveSession(projectId, sessionId);
-    const nextBucket = nextIndex.activeSessionId
-      ? selectedBucket
-      : bucketKey(projectId, null);
+    const nextBucket = nextIndex.activeSessionId ? selectedBucket : bucketKey(projectId, null);
     activeBucketRef.current = nextBucket;
     setSessionIndices((prev) => ({
       ...prev,
@@ -226,11 +224,7 @@ export function useSessionNavigation({
     setView((view) => ({ ...view, viewMode: "chat" }));
   };
 
-  const renameSession = (
-    projectId: string | null,
-    sessionId: string,
-    title: string,
-  ): void => {
+  const renameSession = (projectId: string | null, sessionId: string, title: string): void => {
     const next = renameSessionLocal(projectId, sessionId, title, true);
     setSessionIndices((prev) => ({
       ...prev,

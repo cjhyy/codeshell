@@ -16,7 +16,7 @@
   },
   "scripts": {
     "preinstall": "node scripts/check-node.cjs",
-    "build": "bun run --filter '@cjhyy/code-shell-core' build && bun run --filter '@cjhyy/code-shell-arena' build && bun run --filter '@cjhyy/code-shell-tui' build && bun run scripts/build-meta.ts",
+    "build": "bun run --filter '@cjhyy/code-shell-core' build && bun run --filter '@cjhyy/code-shell-arena' build && bun run --filter '@cjhyy/code-shell-tui' build && bun run --filter '@cjhyy/code-shell-chat' build && bun run scripts/build-meta.ts",
     "dev": "bun run dev:desktop",
     "dev:desktop": "bun run --filter '@cjhyy/code-shell-desktop' dev",
     "dev:tui": "CODE_SHELL_DEV=1 CODESHELL_UI_PERF=1 bun run packages/tui/src/cli/main.ts",
@@ -25,7 +25,7 @@
     "test:core-exports": "bun run --filter '@cjhyy/code-shell-core' build && node scripts/smoke-core-exports.mjs",
     "test:watch": "bun test --watch",
     "bench:render": "bun run bench/render-tail.bench.ts && bun run bench/render-streaming.bench.ts && bun run bench/render-spinner.bench.ts && bun run bench/render-wheel.bench.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun run --filter '@cjhyy/code-shell-chat' typecheck && tsc --noEmit",
     "lint": "eslint packages/",
     "lint:engine-bypass": "bash scripts/check-no-engine-bypass.sh",
     "format": "prettier --write 'packages/**/*.ts'"

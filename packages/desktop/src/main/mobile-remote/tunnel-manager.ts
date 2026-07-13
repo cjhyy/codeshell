@@ -17,10 +17,7 @@ const DEFAULT_KILL_HARD_TIMEOUT_MS = 3_000;
 
 export type TunnelStatus = "connected" | "disconnected" | "error";
 
-export type SpawnFn = (
-  command: string,
-  args: string[],
-) => ChildProcess;
+export type SpawnFn = (command: string, args: string[]) => ChildProcess;
 
 /** Probe cloudflared's local metrics `/ready` endpoint; true once the edge
  *  connection count is > 0. Default implementation fetches over loopback. */
@@ -250,9 +247,7 @@ export class TunnelManager extends EventEmitter {
     for (;;) {
       if (this.child && (await this.checkReady(this.metricsPort))) return;
       if (Date.now() >= deadline) {
-        throw new Error(
-          "隧道注册失败:公网边缘连接未就绪(可能网络限制,扫码会报 1033)",
-        );
+        throw new Error("隧道注册失败:公网边缘连接未就绪(可能网络限制,扫码会报 1033)");
       }
       await new Promise((r) => setTimeout(r, this.readyIntervalMs));
     }
@@ -406,5 +401,9 @@ export class TunnelManager extends EventEmitter {
 
   isConnected(): boolean {
     return this.connected;
+  }
+
+  publicUrl(): string | undefined {
+    return this.currentUrl;
   }
 }

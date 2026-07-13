@@ -28,6 +28,7 @@ import { NO_REPO_KEY, bucketKey, type SessionIndex, type SessionSummary } from "
 import type { SessionStatus } from "./sessionStatus";
 import { useT } from "./i18n";
 import { PetSidebarEntry } from "./pet/PetSidebarEntry";
+import { compactSidebarSessions } from "./sidebarSessionVisibility";
 
 interface SidebarProps {
   projects: TrackedProject[];
@@ -38,10 +39,11 @@ interface SidebarProps {
   /** Per-bucket status mark, keyed by the shared bucketKey(projectId, sessionId). */
   sessionStatuses?: Record<string, SessionStatus>;
   sidebarCollapsed?: boolean;
-  petOverviewOpen: boolean;
   petPendingCount: number;
   petRunningCount: number;
   petWidgetVisible: boolean;
+  sessionHistoryLoading: boolean;
+  hasMoreSessionHistory: boolean;
 
   onSelectProject: (id: string | null) => void;
   onSelectSession: (projectId: string | null, sessionId: string) => void;
@@ -59,8 +61,9 @@ interface SidebarProps {
   onOpenCustomize: () => void;
   onOpenCredentials: () => void;
   onOpenSettingsPage: () => void;
-  onOpenPetOverview: () => void;
+  onOpenPetPage: () => void;
   onTogglePetWidget: () => void;
+  onLoadMoreSessionHistory: () => void;
 
   onRenameSession: (projectId: string | null, sessionId: string, title: string) => void;
   onArchiveSession: (projectId: string | null, sessionId: string, archived: boolean) => void;
@@ -84,10 +87,11 @@ export function Sidebar({
   collapsedProjects,
   sessionStatuses,
   sidebarCollapsed,
-  petOverviewOpen,
   petPendingCount,
   petRunningCount,
   petWidgetVisible,
+  sessionHistoryLoading,
+  hasMoreSessionHistory,
   onSelectProject,
   onSelectSession,
   onToggleProject,
@@ -103,8 +107,9 @@ export function Sidebar({
   onOpenCustomize,
   onOpenCredentials,
   onOpenSettingsPage,
-  onOpenPetOverview,
+  onOpenPetPage,
   onTogglePetWidget,
+  onLoadMoreSessionHistory,
   onRenameSession,
   onArchiveSession,
   onDeleteSession,
@@ -230,12 +235,10 @@ export function Sidebar({
     <aside className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-card/40">
       <nav className="flex flex-col gap-0.5 p-2">
         <PetSidebarEntry
-          active={petOverviewOpen}
+          active={viewMode === "pet"}
           pendingCount={petPendingCount}
           runningCount={petRunningCount}
-          onOpen={onOpenPetOverview}
-          widgetVisible={petWidgetVisible}
-          onToggleWidget={onTogglePetWidget}
+          onOpen={onOpenPetPage}
         />
         <div className="my-1 border-t border-border/70" aria-hidden="true" />
         <SidebarItem
@@ -345,6 +348,22 @@ export function Sidebar({
               onArchiveSession={(sid) => onArchiveSession(null, sid, true)}
             />
           )}
+
+          {(sessionHistoryLoading || hasMoreSessionHistory) && (
+            <button
+              type="button"
+              className="my-2 flex w-full items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent/60 hover:text-foreground disabled:cursor-wait disabled:opacity-60"
+              onClick={onLoadMoreSessionHistory}
+              disabled={sessionHistoryLoading}
+            >
+              {sessionHistoryLoading && <Loader2 size={12} className="animate-spin" />}
+              {t(
+                sessionHistoryLoading
+                  ? "sidebar.loadingSessionHistory"
+                  : "sidebar.loadSessionHistory",
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -354,6 +373,8 @@ export function Sidebar({
             <SettingsMenu
               onOpenSettingsPage={onOpenSettingsPage}
               sidebarCollapsed={sidebarCollapsed}
+              petWidgetVisible={petWidgetVisible}
+              onTogglePetWidget={onTogglePetWidget}
             />
           </div>
           <SidebarUpdaterButton />
@@ -442,10 +463,16 @@ function ProjectGroup({
   const live = useMemo(() => all.filter((s) => !s.archived), [all]);
 
   const visibleLive = useMemo(
-    () => (showMore ? live : live.slice(0, COMPACT_SESSION_LIMIT)),
-    [live, showMore],
+    () =>
+      compactSidebarSessions(
+        live,
+        isActiveProject ? activeSessionId : null,
+        showMore,
+        COMPACT_SESSION_LIMIT,
+      ),
+    [activeSessionId, isActiveProject, live, showMore],
   );
-  const hiddenLiveCount = Math.max(0, live.length - COMPACT_SESSION_LIMIT);
+  const hiddenLiveCount = Math.max(0, live.length - visibleLive.length);
 
   return (
     <div className="mb-1">

@@ -1,14 +1,29 @@
+import { randomUUID } from "node:crypto";
 import type {
   PetNavigationRequest,
   PetNavigationResult,
   DesktopPetProjectionSnapshot,
 } from "./pet-state-aggregator.js";
+import { PET_AUTO_DELEGATE_MARKER } from "@cjhyy/code-shell-core";
+import type { InputAttachmentMeta } from "../attachment-service.js";
+
+export interface PetAutoDelegation {
+  clientMessageId: string;
+  task: string;
+  preferredProjectId?: string;
+}
 
 export type PetDispatchCommand =
   | { type: "get_global_status" }
   | { type: "list_pending" }
   | { type: "open_session"; target: PetNavigationRequest }
-  | { type: "chat"; message: string };
+  | {
+      type: "chat";
+      message: string;
+      clientMessageId?: string;
+      preferredProjectId?: string;
+      attachments?: InputAttachmentMeta[];
+    };
 
 export type PetDispatchResult =
   | {
@@ -31,7 +46,13 @@ export type PetDispatchResult =
     }
   | { ok: true; type: "pending_list"; pending: DesktopPetProjectionSnapshot["pending"] }
   | { ok: true; type: "open_session"; result: PetNavigationResult }
-  | { ok: true; type: "chat"; petSessionId: string; result: unknown };
+  | {
+      ok: true;
+      type: "chat";
+      petSessionId: string;
+      result: unknown;
+      delegation?: PetAutoDelegation;
+    };
 
 interface PetDispatchOptions {
   metadata: { ensure(): Promise<{ petSessionId: string }> };
@@ -79,8 +100,18 @@ function boundedWorld(snapshot: DesktopPetProjectionSnapshot): Record<string, un
   };
 }
 
+export function petResultRequestsDelegation(result: unknown): boolean {
+  if (!result || typeof result !== "object" || Array.isArray(result)) return false;
+  const text = (result as Record<string, unknown>).text;
+  return typeof text === "string" && text.includes(PET_AUTO_DELEGATE_MARKER);
+}
+
 export class PetDispatchService {
   constructor(private readonly options: PetDispatchOptions) {}
+
+  async getSessionId(): Promise<string> {
+    return (await this.options.metadata.ensure()).petSessionId;
+  }
 
   async dispatch(command: PetDispatchCommand): Promise<PetDispatchResult> {
     if (!command || typeof command !== "object" || typeof command.type !== "string") {
@@ -122,7 +153,11 @@ export class PetDispatchService {
           result: await this.options.aggregator.resolveNavigation(command.target),
         };
       case "chat": {
-        if (typeof command.message !== "string" || !command.message.trim()) {
+        const attachments = Array.isArray(command.attachments) ? command.attachments : [];
+        if (
+          typeof command.message !== "string" ||
+          (!command.message.trim() && attachments.length === 0)
+        ) {
           return { ok: false, code: "invalid-command" };
         }
         const metadata = await this.options.metadata.ensure();
@@ -130,11 +165,13 @@ export class PetDispatchService {
         const response = await this.options.worker.requestWorker("agent/run", {
           sessionId: metadata.petSessionId,
           task: command.message.trim(),
+          ...(attachments.length > 0 ? { attachments } : {}),
           petRuntimeContext: JSON.stringify(world),
           cwd: this.options.hostCwd,
           behaviorMode: "pet",
           kind: "pet",
           permissionMode: "default",
+          clientMessageId: command.clientMessageId,
         });
         if (!response.ok) {
           return { ok: false, code: "worker-error", message: response.message };
@@ -144,6 +181,17 @@ export class PetDispatchService {
           type: "chat",
           petSessionId: metadata.petSessionId,
           result: response.result,
+          ...(petResultRequestsDelegation(response.result)
+            ? {
+                delegation: {
+                  clientMessageId: command.clientMessageId ?? `pet-${randomUUID()}`,
+                  task: command.message.trim(),
+                  ...(command.preferredProjectId
+                    ? { preferredProjectId: command.preferredProjectId }
+                    : {}),
+                },
+              }
+            : {}),
         };
       }
       default:

@@ -1,16 +1,15 @@
-import React, { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
 import type { ContextPackageCreatedOptions } from "./MessageStream";
 import { Sidebar } from "./Sidebar";
-import { PetOverviewPanel, usePetOverviewWidth } from "./pet/PetOverviewPanel";
+import { PetPage } from "./pet/PetPage";
 import { useOptionalPetState } from "./pet/PetStateProvider";
 import { PetWorldPane } from "./pet/PetWorldPane";
 import { openPetTarget } from "./pet/petNavigation";
 import { PetChatHost } from "./pet/PetChatHost";
+import { PetAutoDelegationHost } from "./pet/PetAutoDelegationHost";
 import { PetPeekHost } from "./pet/PetPeekHost";
-import { PetWidget } from "./pet/PetWidget";
-import { loadPetWidgetVisible, savePetWidgetVisible } from "./pet/petWidgetPrefs";
 import { TopBar } from "./TopBar";
 import dogIcon from "./assets/codeshell-dog-icon.png";
 import { summarizeLiveActivity } from "./topbar/liveActivity";
@@ -127,8 +126,8 @@ function App() {
     peeks: petPeeks,
     removePeek,
   } = useOptionalPetState();
-  const { width: petOverviewWidth, beginResize: beginPetOverviewResize } = usePetOverviewWidth();
-  const [petWidgetVisible, setPetWidgetVisible] = useState(loadPetWidgetVisible);
+  // Pet visibility is process-scoped and mirrored by the desktop host.
+  const [petWidgetVisible, setPetWidgetVisible] = useState(false);
   const [transcripts, dispatch] = useReducer(transcriptsReducer, {} as TranscriptsMap);
   const [approval, setApproval] = useState<ApprovalState>(null);
   const [approvalQueue, setApprovalQueue] = useState<ApprovalRequestEnvelope[]>([]);
@@ -201,6 +200,15 @@ function App() {
     );
     return out;
   });
+  const archivedPetSessionIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const index of Object.values(sessionIndices)) {
+      for (const session of index.sessions) {
+        if (session.archived) ids.add(session.engineSessionId ?? session.id);
+      }
+    }
+    return ids;
+  }, [sessionIndices]);
 
   /**
    * Create a fresh session on demand (lazy: only when the user actually
@@ -369,14 +377,6 @@ function App() {
   /** Max snapshot seq currently buffered inside each bucket's coalescer window. */
   const coalescerSeqRef = useRef<Map<string, number>>(new Map());
   const permissionModeRef = useRef<PermissionMode | null>(permissionMode);
-  /**
-   * Legacy repo keys already probed for a disk rebuild this session. Guards against an
-   * infinite re-scan: the rebuild effect depends on `sessionIndices` and calls
-   * `setSessionIndices`, so when a disk page maps only into OTHER projects the
-   * active repo's index stays empty → the effect would re-run and re-scan disk
-   * on every render. Probing each active repo at most once breaks that loop.
-   */
-  const diskProbedRef = useRef<Set<string>>(new Set());
   /**
    * Per-bucket permission resolver for the mount-time approval listener
    * (which closes over stale state). Mirrors the same precedence as
@@ -763,7 +763,6 @@ function App() {
           updatedAt: target.updatedAt,
           origin: target.origin,
         });
-        petDispatch({ type: "set-overview-open", open: false });
       },
       onStale: () => toast({ message: t("pet.navigation.stale"), variant: "default" }),
       onNotFound: () => toast({ message: t("pet.navigation.notFound"), variant: "error" }),
@@ -782,30 +781,71 @@ function App() {
       return;
     }
     petDispatch({ type: "set-overview-focus", focus: "pending" });
-    petDispatch({ type: "set-overview-open", open: true });
-    setView((current) => ({ ...current, sidebarCollapsed: false }));
+    setView((current) => ({
+      ...current,
+      viewMode: "pet",
+      sidebarCollapsed: false,
+    }));
   };
 
-  const openPetOverview = (): void => {
-    petDispatch({ type: "set-overview-open", open: true });
-    setView((current) => ({ ...current, sidebarCollapsed: false }));
-  };
+  const openPetPage = useCallback((): void => {
+    petDispatch({ type: "set-overview-focus", focus: null });
+    setView((current) => ({
+      ...current,
+      viewMode: "pet",
+      sidebarCollapsed: false,
+    }));
+  }, [petDispatch]);
+
+  useEffect(() => {
+    let disposed = false;
+    const pet = window.codeshell.pet;
+    if (!pet) return;
+    void pet
+      .getWidgetVisibility()
+      .then((visible) => {
+        if (!disposed) setPetWidgetVisible(visible);
+      })
+      .catch((error) =>
+        window.codeshell.log("pet.widget.visibility.read.failed", { error: String(error) }),
+      );
+    return () => {
+      disposed = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const pet = window.codeshell.pet;
+    if (!pet?.onWidgetOpenOverview) return;
+    return pet.onWidgetOpenOverview((target) => {
+      if (target) void handleOpenPetTarget(target);
+      else openPetPage();
+    });
+  }, [openPetPage]);
+
+  useEffect(() => {
+    const pet = window.codeshell.pet;
+    if (!pet?.onWidgetVisibilityChanged) return;
+    return pet.onWidgetVisibilityChanged((visible) => {
+      setPetWidgetVisible(visible);
+    });
+  }, []);
 
   const togglePetWidget = (): void => {
-    setPetWidgetVisible((current) => {
-      const next = !current;
-      savePetWidgetVisible(next);
-      return next;
+    const pet = window.codeshell.pet;
+    if (!pet) return;
+    const next = !petWidgetVisible;
+    setPetWidgetVisible(next);
+    void pet.setWidgetVisible(next).catch((error) => {
+      setPetWidgetVisible((current) => (current === next ? !next : current));
+      window.codeshell.log("pet.widget.visibility.failed", { error: String(error) });
     });
   };
 
-  useAutomationSessionImport({
-    activeProjectId,
-    sessionIndices,
+  const { diskSessionCatalog, loadDiskSessionCatalogPage } = useAutomationSessionImport({
+    sessionIndicesRef,
     setSessionIndices,
     setProjects,
-    diskProbedRef,
-    quickChatSessionsRef,
   });
 
   useHostSubscriptions({
@@ -995,6 +1035,13 @@ function App() {
     setView,
     setRunsInitialRunId,
   });
+
+  const delegatePetTask = (projectId: string | null, prompt: string): void => {
+    const message = prompt.trim();
+    if (!message) return;
+    handleNewConversationForProject(projectId);
+    void send(message, { bucket: bucketKey(projectId, null) });
+  };
 
   const toggleSidebar = (): void =>
     setView((p) => ({ ...p, sidebarCollapsed: !p.sidebarCollapsed }));
@@ -1612,6 +1659,7 @@ function App() {
 
   const platformClass = isMac ? "platform-darwin" : "";
   const isSettingsPage = view.viewMode === "settings_page";
+  const isPetView = view.viewMode === "pet";
   const isChatView = view.viewMode === "chat";
   const petPendingCount = surfaceablePendingCount;
   const petRunningCount =
@@ -1625,11 +1673,11 @@ function App() {
       >
         <div className="shrink-0">
           <TopBar
-            projectName={activeProject?.name ?? null}
-            projectPath={activeProject?.path ?? null}
-            sessionId={engineSessionIdForActive()}
-            sessionTitle={sessionTitleForTop}
-            busy={busy}
+            projectName={isPetView ? null : (activeProject?.name ?? null)}
+            projectPath={isPetView ? null : (activeProject?.path ?? null)}
+            sessionId={isPetView ? null : engineSessionIdForActive()}
+            sessionTitle={isPetView ? null : sessionTitleForTop}
+            busy={isPetView ? false : busy}
             sidebarCollapsed={view.sidebarCollapsed}
             onToggleSidebar={toggleSidebar}
             panelOpen={activePanelState.open}
@@ -1643,9 +1691,10 @@ function App() {
             // but have no panel area, so also gate on the chat viewMode — otherwise
             // the toggle wrongly shows on those pages whenever a session is active.
             panelAvailable={activeSessionId !== null && isChatView}
-            activity={liveActivity}
-            tasks={latestTasks}
-            activeGoal={state.activeGoal}
+            statusAvailable={!isPetView}
+            activity={isPetView ? undefined : liveActivity}
+            tasks={isPetView ? null : latestTasks}
+            activeGoal={isPetView ? null : state.activeGoal}
             onUpdateGoal={handleUpdateGoal}
             onGoalPausedChange={handleGoalPausedChange}
             onDeleteGoal={handleDeleteGoal}
@@ -1662,10 +1711,13 @@ function App() {
                 activeSessionId={activeSessionId}
                 collapsedProjects={collapsedProjects}
                 sidebarCollapsed={view.sidebarCollapsed}
-                petOverviewOpen={petState.overviewOpen}
                 petPendingCount={petPendingCount}
                 petRunningCount={petRunningCount}
                 petWidgetVisible={petWidgetVisible}
+                sessionHistoryLoading={diskSessionCatalog.loading}
+                hasMoreSessionHistory={
+                  diskSessionCatalog.initialized && diskSessionCatalog.nextCursor !== null
+                }
                 sessionStatuses={sessionStatusMap}
                 onSelectProject={setActiveProjectId}
                 onSelectSession={handleSelectSession}
@@ -1684,8 +1736,11 @@ function App() {
                 onOpenCustomize={() => setViewMode("customize")}
                 onOpenCredentials={() => setViewMode("credentials")}
                 onOpenSettingsPage={() => setViewMode("settings_page")}
-                onOpenPetOverview={openPetOverview}
+                onOpenPetPage={openPetPage}
                 onTogglePetWidget={togglePetWidget}
+                onLoadMoreSessionHistory={() =>
+                  void loadDiskSessionCatalogPage(diskSessionCatalog.nextCursor ?? undefined)
+                }
                 onRenameSession={handleRenameSession}
                 onArchiveSession={handleArchiveSession}
                 onDeleteSession={handleDeleteSession}
@@ -1695,42 +1750,41 @@ function App() {
             </div>
           )}
 
-          {petState.overviewOpen && (
-            <PetOverviewPanel
-              width={petOverviewWidth}
-              onResizeStart={beginPetOverviewResize}
-              onClose={() => petDispatch({ type: "set-overview-open", open: false })}
-            >
-              <PetWorldPane
-                projection={petState.projection}
-                status={petState.status}
-                focusPending={petState.overviewFocus === "pending"}
-                onNavigate={(request) => void handleOpenPetTarget(request)}
-              />
-              <PetChatHost
-                modelOptions={modelOptions}
-                defaultModelKey={defaultActiveModelKey}
-                onNavigate={(request) => void handleOpenPetTarget(request)}
-              />
-            </PetOverviewPanel>
-          )}
+          <PetAutoDelegationHost
+            projects={projects}
+            activeProjectId={activeProjectId}
+            onDelegate={delegatePetTask}
+          />
 
           {/* Chat column + dock share a relative container so a maximized panel can
           overlay the chat/composer (TODO 2.4) without covering the sidebar. */}
           <div className="relative flex min-w-0 flex-1 overflow-hidden">
             <AppMainView
-              lifecycle={lifecycle}
+              lifecycle={isChatView ? lifecycle : null}
               searchLayer={
-                <SearchBar
-                  open={searchOpen}
-                  value={searchQuery}
-                  onChange={setSearchQuery}
-                  onClose={() => setSearchOpen(false)}
-                  matchCount={matchCount}
-                />
+                !isPetView ? (
+                  <SearchBar
+                    open={searchOpen}
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    onClose={() => setSearchOpen(false)}
+                    matchCount={matchCount}
+                  />
+                ) : null
               }
             >
-              {view.viewMode === "approvals" ? (
+              {isPetView ? (
+                <PetPage>
+                  <PetWorldPane
+                    projection={petState.projection}
+                    status={petState.status}
+                    focusPending={petState.overviewFocus === "pending"}
+                    excludedSessionIds={archivedPetSessionIds}
+                    onNavigate={(request) => void handleOpenPetTarget(request)}
+                  />
+                  <PetChatHost defaultProjectId={activeProjectId} />
+                </PetPage>
+              ) : view.viewMode === "approvals" ? (
                 <ApprovalsView
                   queue={approvalQueue}
                   history={approvalHistory}
@@ -1991,12 +2045,6 @@ function App() {
         peeks={petPeeks}
         onAction={handlePetPeekAction}
         onDismiss={(peek) => settlePetPeek(peek, "dismissed")}
-      />
-      <PetWidget
-        visible={petWidgetVisible}
-        runningCount={petRunningCount}
-        pendingCount={petPendingCount}
-        onOpen={openPetOverview}
       />
 
       {isSettingsPage && (

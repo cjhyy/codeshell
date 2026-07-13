@@ -1,4 +1,10 @@
-import type { PetApi, PetAttentionEvent, PetPeek, PetProjectionEvent } from "../../preload/types";
+import type {
+  PetApi,
+  PetAttentionEvent,
+  PetPeek,
+  PetProjectionEvent,
+  StreamEventEnvelope,
+} from "../../preload/types";
 import React from "react";
 import { foldTranscript } from "../automation/foldTranscript";
 import {
@@ -30,15 +36,19 @@ export interface PetStateContextValue {
 }
 
 export const PET_CHAT_BUCKET = "__codeshell_pet_chat__";
+const DEFAULT_SNAPSHOT_RETRY_DELAY = (attempt: number): number =>
+  Math.min(2_000, 250 * 2 ** Math.min(attempt, 3));
 
 const PetStateContext = React.createContext<PetStateContextValue | null>(null);
 
 export function PetStateProvider({
   children,
   api: apiOverride,
+  snapshotRetryDelay = DEFAULT_SNAPSHOT_RETRY_DELAY,
 }: {
   children: React.ReactNode;
   api?: PetApi;
+  snapshotRetryDelay?: (attempt: number) => number;
 }) {
   const api = apiOverride ?? window.codeshell.pet;
   const [state, dispatch] = React.useReducer(petStateReducer, initialPetState);
@@ -55,6 +65,8 @@ export function PetStateProvider({
   React.useEffect(() => {
     let active = true;
     let hydrated = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryAttempt = 0;
     const buffered: PetProjectionEvent[] = [];
     const unsubscribe = api.onProjectionEvent((event) => {
       if (!active) return;
@@ -64,92 +76,163 @@ export function PetStateProvider({
       }
       dispatch({ type: "projection-event", event });
     });
-    void api
-      .getSnapshot()
-      .then((snapshot) => {
-        if (!active) return;
-        dispatch({ type: "snapshot-received", snapshot });
-        hydrated = true;
-        for (const event of buffered) dispatch({ type: "projection-event", event });
-        buffered.length = 0;
-      })
-      .catch((error) => {
-        if (!active) return;
-        hydrated = true;
-        dispatch({
-          type: "snapshot-failed",
-          error: error instanceof Error ? error.message : String(error),
+    const requestSnapshot = (): void => {
+      void api
+        .getSnapshot()
+        .then((snapshot) => {
+          if (!active) return;
+          dispatch({ type: "snapshot-received", snapshot });
+          hydrated = true;
+          for (const event of buffered) dispatch({ type: "projection-event", event });
+          buffered.length = 0;
+        })
+        .catch((error) => {
+          if (!active) return;
+          dispatch({
+            type: "snapshot-failed",
+            error: error instanceof Error ? error.message : String(error),
+          });
+          retryTimer = setTimeout(requestSnapshot, snapshotRetryDelay(retryAttempt));
+          retryAttempt += 1;
         });
-      });
+    };
+    requestSnapshot();
     return () => {
       active = false;
+      if (retryTimer) clearTimeout(retryTimer);
       buffered.length = 0;
       unsubscribe();
     };
-  }, [api]);
+  }, [api, snapshotRetryDelay]);
 
   React.useEffect(() => {
     if (!state.needsSnapshot) return;
     let active = true;
-    void api
-      .getSnapshot()
-      .then((snapshot) => {
-        if (active) dispatch({ type: "snapshot-received", snapshot });
-      })
-      .catch((error) => {
-        if (!active) return;
-        dispatch({
-          type: "snapshot-failed",
-          error: error instanceof Error ? error.message : String(error),
+    let retryAttempt = 0;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    const requestSnapshot = (): void => {
+      void api
+        .getSnapshot()
+        .then((snapshot) => {
+          if (active) dispatch({ type: "snapshot-received", snapshot });
+        })
+        .catch((error) => {
+          if (!active) return;
+          dispatch({
+            type: "snapshot-failed",
+            error: error instanceof Error ? error.message : String(error),
+          });
+          retryTimer = setTimeout(requestSnapshot, snapshotRetryDelay(retryAttempt));
+          retryAttempt += 1;
         });
-      });
+    };
+    requestSnapshot();
     return () => {
       active = false;
+      if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [api, state.needsSnapshot]);
+  }, [api, snapshotRetryDelay, state.needsSnapshot]);
 
   React.useEffect(() => {
     let active = true;
-    void api.dispatch({ type: "get_global_status" }).then(async (result) => {
-      if (!active || !result.ok || result.type !== "global_status") return;
-      setPetSessionId(result.petSessionId);
-      const shell = globalThis.window?.codeshell;
-      if (!shell?.getSessionTranscript) return;
-      try {
-        const transcript = await shell.getSessionTranscript(result.petSessionId);
-        if (active) {
-          chatDispatch({
-            type: "hydrate",
-            bucket: PET_CHAT_BUCKET,
-            state: foldTranscript(transcript),
-          });
-        }
-      } catch {
-        // A new Pet has no transcript yet; the first chat turn creates it.
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [api]);
-
-  React.useEffect(() => {
-    if (!petSessionId) return;
+    let retryAttempt = 0;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let knownPetSessionId: string | null = null;
+    let transcriptHydrated = false;
+    const bufferedStream: StreamEventEnvelope[] = [];
     const shell = globalThis.window?.codeshell;
-    if (!shell?.onStreamEvent) return;
-    return shell.onStreamEvent((envelope) => {
-      if (envelope.sessionId !== petSessionId) return;
+
+    const applyStream = (envelope: StreamEventEnvelope): void => {
       chatDispatch({ type: "stream", bucket: PET_CHAT_BUCKET, event: envelope.event });
       if (envelope.event.type === "stream_request_start") setChatBusy(true);
       if (envelope.event.type === "turn_complete" || envelope.event.type === "error") {
         setChatBusy(false);
       }
+    };
+    const receiveStream = (envelope: StreamEventEnvelope): void => {
+      if (!active) return;
+      if (!knownPetSessionId || !transcriptHydrated) {
+        bufferedStream.push(envelope);
+        if (bufferedStream.length > 500) bufferedStream.shift();
+        return;
+      }
+      if (envelope.sessionId === knownPetSessionId) applyStream(envelope);
+    };
+    const unsubscribeStream = shell?.onStreamEvent?.(receiveStream);
+
+    const finishHydration = (sessionId: string): void => {
+      if (!active || knownPetSessionId !== sessionId) return;
+      transcriptHydrated = true;
+      for (const envelope of bufferedStream.splice(0)) {
+        if (envelope.sessionId === sessionId) applyStream(envelope);
+      }
+    };
+
+    const requestGlobalStatus = (): void => {
+      void api
+        .dispatch({ type: "get_global_status" })
+        .then(async (result) => {
+          if (!active) return;
+          if (!result.ok || result.type !== "global_status") {
+            retryTimer = setTimeout(requestGlobalStatus, snapshotRetryDelay(retryAttempt));
+            retryAttempt += 1;
+            return;
+          }
+          const sessionId = result.petSessionId;
+          knownPetSessionId = sessionId;
+          setPetSessionId(sessionId);
+          if (!shell?.getSessionTranscript) {
+            finishHydration(sessionId);
+            return;
+          }
+          try {
+            const transcript = await shell.getSessionTranscript(sessionId);
+            if (active && knownPetSessionId === sessionId) {
+              chatDispatch({
+                type: "hydrate",
+                bucket: PET_CHAT_BUCKET,
+                state: foldTranscript(transcript),
+              });
+            }
+          } catch {
+            // A new Pet has no transcript yet; the first chat turn creates it.
+          } finally {
+            finishHydration(sessionId);
+          }
+        })
+        .catch(() => {
+          if (!active) return;
+          retryTimer = setTimeout(requestGlobalStatus, snapshotRetryDelay(retryAttempt));
+          retryAttempt += 1;
+        });
+    };
+    requestGlobalStatus();
+    return () => {
+      active = false;
+      if (retryTimer) clearTimeout(retryTimer);
+      bufferedStream.length = 0;
+      unsubscribeStream?.();
+    };
+  }, [api, snapshotRetryDelay]);
+
+  React.useEffect(() => {
+    if (!api.onChatEvent) return;
+    return api.onChatEvent((event) => {
+      if (event.kind !== "user-submitted") return;
+      chatDispatch({
+        type: "user_message",
+        bucket: PET_CHAT_BUCKET,
+        text: event.message,
+        clientMessageId: event.clientMessageId,
+      });
     });
-  }, [petSessionId]);
+  }, [api]);
 
   React.useEffect(() => {
     let active = true;
     let hydrated = false;
+    let retryAttempt = 0;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
     const buffered: PetAttentionEvent[] = [];
     const applyEvent = (event: PetAttentionEvent) => {
       if (event.kind === "count") {
@@ -168,27 +251,30 @@ export function PetStateProvider({
       }
       applyEvent(event);
     });
-    void api
-      .getAttentionSnapshot()
-      .then((snapshot) => {
-        if (!active) return;
-        setSurfaceablePendingCount(snapshot.surfaceablePendingCount);
-        hydrated = true;
-        for (const event of buffered) applyEvent(event);
-        buffered.length = 0;
-      })
-      .catch(() => {
-        if (!active) return;
-        hydrated = true;
-        for (const event of buffered) applyEvent(event);
-        buffered.length = 0;
-      });
+    const requestAttentionSnapshot = (): void => {
+      void api
+        .getAttentionSnapshot()
+        .then((snapshot) => {
+          if (!active) return;
+          setSurfaceablePendingCount(snapshot.surfaceablePendingCount);
+          hydrated = true;
+          for (const event of buffered) applyEvent(event);
+          buffered.length = 0;
+        })
+        .catch(() => {
+          if (!active) return;
+          retryTimer = setTimeout(requestAttentionSnapshot, snapshotRetryDelay(retryAttempt));
+          retryAttempt += 1;
+        });
+    };
+    requestAttentionSnapshot();
     return () => {
       active = false;
+      if (retryTimer) clearTimeout(retryTimer);
       buffered.length = 0;
       unsubscribe();
     };
-  }, [api]);
+  }, [api, snapshotRetryDelay]);
 
   const chatState = chatTranscripts[PET_CHAT_BUCKET] ?? INITIAL_STATE;
   const value = React.useMemo(

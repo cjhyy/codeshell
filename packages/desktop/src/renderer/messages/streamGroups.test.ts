@@ -136,6 +136,28 @@ describe("buildStreamItems — interrupted turn (stopped)", () => {
 });
 
 describe("buildStreamItems", () => {
+  test("keeps forwarded context before the first user message after that message is sent", () => {
+    const transferred: Message = {
+      kind: "context_boundary",
+      id: "context-transfer",
+      strategy: "summary",
+      before: 0,
+      after: 0,
+      contextTransfer: {
+        summary: "forwarded background",
+        sourceSessionId: "source",
+        fromEventId: "from",
+        toEventId: "to",
+        sourceEventCount: 2,
+        estimatedTokens: 20,
+      },
+    };
+    const items = buildStreamItems([transferred, user("follow up"), assistant("answer")]);
+
+    expect(items.map((item) => item.kind)).toEqual(["context_boundary", "user", "assistant"]);
+    expect(items[0]).toBe(transferred);
+  });
+
   test("wraps the whole turn (lead + middle text + tools) into one process card, but leaves the final summary outside", () => {
     const lead = assistant("我先查一下。");
     const middle = assistant("目录比较大，我继续读核心入口。");
