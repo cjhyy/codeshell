@@ -2974,7 +2974,7 @@ function App() {
   const clearActiveQueuedInput = (): void => {
     const ids = (queuedInputs[activeBucket] ?? []).map((i) => i.id);
     setQueuedInputs((prev) => clearQueuedInput(prev, activeBucket));
-    const engineSessionId = resolveActiveEngineSessionId();
+    const engineSessionId = resolveEngineSessionIdForBucket(activeBucket);
     ids.forEach((id) => {
       steeredIdsRef.current.delete(id);
       injectedSteerIdsRef.current.delete(id);
@@ -2997,7 +2997,7 @@ function App() {
       dispatch({ type: "remove_pending_steers", bucket, steerIds: [item.id] });
       setQueuedInputs((prev) => removeQueuedInputById(prev, bucket, item.id));
     };
-    const engineSessionId = resolveActiveEngineSessionId();
+    const engineSessionId = resolveEngineSessionIdForBucket(bucket);
     if (!engineSessionId || !steeredIdsRef.current.has(item.id)) {
       // Never steered (idle queue) — safe to drop immediately.
       drop();
@@ -3168,7 +3168,7 @@ function App() {
     addTokenBudget?: number;
     addTimeBudgetMs?: number;
   }): void => {
-    const engineSessionId = resolveActiveEngineSessionId();
+    const engineSessionId = resolveEngineSessionIdForBucket(activeBucket);
     if (!engineSessionId) return;
     void window.codeshell
       .goalExtend(engineSessionId, opts)
