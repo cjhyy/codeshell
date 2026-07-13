@@ -138,20 +138,30 @@ export class SessionIndex {
     const entry = this.entries.get(sessionId);
     if (!entry) return true;
     const pendingDecisionCount = Math.max(0, Math.floor(count));
+    const wasWaiting = entry.projection.phase === "waiting-decision";
+    const summaryAfterWaiting =
+      entry.projection.runState === "running"
+        ? "运行中"
+        : entry.projection.runState === "queued"
+          ? "队列中"
+          : undefined;
     entry.projection = {
       ...entry.projection,
-      runState:
-        pendingDecisionCount > 0 && entry.projection.runState === "dormant"
-          ? "running"
-          : entry.projection.runState,
-      phase: pendingDecisionCount > 0 ? "waiting-decision" : entry.projection.phase,
+      phase:
+        pendingDecisionCount > 0
+          ? "waiting-decision"
+          : wasWaiting
+            ? undefined
+            : entry.projection.phase,
       pendingDecisionCount,
       summary:
         pendingDecisionCount > 0
           ? pendingDecisionCount === 1
             ? "等待用户决定"
             : `等待用户决定（${pendingDecisionCount}）`
-          : entry.projection.summary,
+          : wasWaiting
+            ? summaryAfterWaiting
+            : entry.projection.summary,
       freshness: {
         source: "live-event",
         observedAt: cursor.observedAt,

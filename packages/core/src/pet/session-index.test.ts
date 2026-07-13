@@ -62,6 +62,36 @@ describe("SessionIndex", () => {
       observedAt: 230,
     });
     expect(index.get("work-a")).toMatchObject({
+      runState: "running",
+      phase: "waiting-decision",
+      pendingDecisionCount: 1,
+    });
+
+    index.setPendingDecisionCount("work-a", 0, {
+      generation: 1,
+      version: 5,
+      observedAt: 240,
+    });
+    expect(index.get("work-a")).toMatchObject({
+      runState: "running",
+      pendingDecisionCount: 0,
+    });
+    expect(index.get("work-a")?.phase).not.toBe("waiting-decision");
+    expect(index.get("work-a")?.summary).not.toContain("等待用户决定");
+  });
+
+  test("waiting is a display phase and does not turn a dormant session into running", () => {
+    const index = new SessionIndex();
+    index.replaceCatalog({ owner: "local-user", sessions: catalog, observedAt: 100 });
+
+    index.setPendingDecisionCount("work-a", 1, {
+      generation: 1,
+      version: 1,
+      observedAt: 200,
+    });
+
+    expect(index.get("work-a")).toMatchObject({
+      runState: "dormant",
       phase: "waiting-decision",
       pendingDecisionCount: 1,
     });

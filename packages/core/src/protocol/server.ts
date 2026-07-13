@@ -3164,6 +3164,7 @@ export class AgentServer {
       requestId: metadata.requestId,
       status,
     });
+    this.emitPetSessionUpsert(metadata.sessionId);
   }
 
   private emitPetWorkerDisconnected(): void {
@@ -3211,7 +3212,10 @@ export class AgentServer {
     session.pendingApprovals.set(metadata.requestId, { resolve, metadata });
     if (this.pendingDecisionIndex.created(metadata)) {
       const pending = this.pendingDecisionIndex.get(metadata.sessionId, metadata.requestId);
-      if (pending) this.emitPetPendingUpsert(pending);
+      if (pending) {
+        this.emitPetPendingUpsert(pending);
+        this.emitPetSessionUpsert(metadata.sessionId);
+      }
     }
   }
 

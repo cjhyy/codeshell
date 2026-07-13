@@ -182,6 +182,51 @@ describe("Pet projection protocol", () => {
     client.close();
   });
 
+  test("real AskUser lifecycle pushes matching waiting phase and count transitions", async () => {
+    const { client, manager, server } = makePair(["session-waiting"]);
+    const session = await manager.getOrCreate("session-waiting", {} as never);
+    const deltas: PetProjectionDelta[] = [];
+    client.onPetProjectionDelta((delta) => deltas.push(delta));
+
+    const answer = (server as any).requestAskUserForSession(
+      session,
+      "session-waiting",
+      "choose",
+    ) as Promise<string>;
+    await tick();
+    const created = deltas.find((delta) => delta.kind === "pending-upsert");
+    if (!created || created.kind !== "pending-upsert") throw new Error("missing pending delta");
+    const waiting = deltas.find(
+      (delta) => delta.kind === "session-upsert" && delta.version > created.version,
+    );
+    expect(waiting).toMatchObject({
+      kind: "session-upsert",
+      session: { phase: "waiting-decision", pendingDecisionCount: 1 },
+    });
+
+    await client.approve("session-waiting", created.pending.requestId, {
+      approved: true,
+      answer: "done",
+    });
+    await expect(answer).resolves.toBe("done");
+    await tick();
+    const removed = deltas.find((delta) => delta.kind === "pending-remove");
+    if (!removed || removed.kind !== "pending-remove") throw new Error("missing remove delta");
+    const cleared = deltas.find(
+      (delta) => delta.kind === "session-upsert" && delta.version > removed.version,
+    );
+    expect(cleared).toMatchObject({
+      kind: "session-upsert",
+      session: { pendingDecisionCount: 0 },
+    });
+    expect(
+      cleared && cleared.kind === "session-upsert" ? cleared.session.phase : undefined,
+    ).not.toBe("waiting-decision");
+
+    server.close();
+    client.close();
+  });
+
   test("never exposes the durable pet session as a work session or work pending", async () => {
     const { client, manager, server } = makePair(["local-pet"], "pet");
     const session = await manager.getOrCreate("local-pet", {} as never);
