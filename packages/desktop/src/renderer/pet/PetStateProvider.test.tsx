@@ -17,6 +17,55 @@ function snapshot(version = 0): PetProjectionSnapshot {
 }
 
 describe("PetStateProvider", () => {
+  test("does not let a stale attention snapshot overwrite the live PendingDecisionIndex count", async () => {
+    ensureMiniDom();
+    let resolveAttentionSnapshot:
+      | ((snapshot: { surfaceablePendingCount: number }) => void)
+      | undefined;
+    let attentionListener: Parameters<PetApi["onAttentionEvent"]>[0] | undefined;
+    const api: PetApi = {
+      getSnapshot: async () => snapshot(),
+      onProjectionEvent: () => () => {},
+      openSession: async () => ({ status: "not-found" }),
+      dispatch: async () => ({ ok: false, code: "invalid-command" }),
+      getAttentionSnapshot: () =>
+        new Promise((resolve) => {
+          resolveAttentionSnapshot = resolve;
+        }),
+      onAttentionEvent: (listener) => {
+        attentionListener = listener;
+        return () => {
+          if (attentionListener === listener) attentionListener = undefined;
+        };
+      },
+      setActiveSession: async () => ({ ok: true }),
+      markAttentionReceipt: async () => ({ ok: true }),
+    };
+    let latest: ReturnType<typeof usePetState> | undefined;
+    function Consumer() {
+      latest = usePetState();
+      return null;
+    }
+    const root = createRoot(document.createElement("div"));
+    await act(async () => {
+      root.render(
+        <PetStateProvider api={api}>
+          <Consumer />
+        </PetStateProvider>,
+      );
+      await flushMicrotasks();
+    });
+
+    await act(async () => {
+      attentionListener?.({ kind: "count", surfaceablePendingCount: 3 });
+      resolveAttentionSnapshot?.({ surfaceablePendingCount: 1 });
+      await flushMicrotasks();
+    });
+
+    expect(latest?.surfaceablePendingCount).toBe(3);
+    await act(async () => root.unmount());
+  });
+
   test("keeps one effective listener in StrictMode and cleans it up", async () => {
     ensureMiniDom();
     const listeners = new Set<(event: PetProjectionEvent) => void>();

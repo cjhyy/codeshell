@@ -1,4 +1,4 @@
-import type { PetApi, PetPeek, PetProjectionEvent } from "../../preload/types";
+import type { PetApi, PetAttentionEvent, PetPeek, PetProjectionEvent } from "../../preload/types";
 import React from "react";
 import { foldTranscript } from "../automation/foldTranscript";
 import {
@@ -149,8 +149,9 @@ export function PetStateProvider({
 
   React.useEffect(() => {
     let active = true;
-    const unsubscribe = api.onAttentionEvent((event) => {
-      if (!active) return;
+    let hydrated = false;
+    const buffered: PetAttentionEvent[] = [];
+    const applyEvent = (event: PetAttentionEvent) => {
       if (event.kind === "count") {
         setSurfaceablePendingCount(event.surfaceablePendingCount);
       } else {
@@ -158,15 +159,33 @@ export function PetStateProvider({
           current.some((peek) => peek.id === event.peek.id) ? current : [...current, event.peek],
         );
       }
+    };
+    const unsubscribe = api.onAttentionEvent((event) => {
+      if (!active) return;
+      if (!hydrated) {
+        buffered.push(event);
+        return;
+      }
+      applyEvent(event);
     });
     void api
       .getAttentionSnapshot()
       .then((snapshot) => {
-        if (active) setSurfaceablePendingCount(snapshot.surfaceablePendingCount);
+        if (!active) return;
+        setSurfaceablePendingCount(snapshot.surfaceablePendingCount);
+        hydrated = true;
+        for (const event of buffered) applyEvent(event);
+        buffered.length = 0;
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!active) return;
+        hydrated = true;
+        for (const event of buffered) applyEvent(event);
+        buffered.length = 0;
+      });
     return () => {
       active = false;
+      buffered.length = 0;
       unsubscribe();
     };
   }, [api]);
