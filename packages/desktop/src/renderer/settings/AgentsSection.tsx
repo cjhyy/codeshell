@@ -6,7 +6,7 @@ import { ProjectPicker } from "./ProjectPicker";
 import { catalogModelOptions, type ModelInstance } from "./textConnections";
 import { useRefreshOnSettingsChange } from "./useSettingsResource";
 import type { CatalogEntry } from "../../preload/types";
-import { repoLabel, type Repo } from "../repos";
+import { projectLabel, type TrackedProject } from "../projects";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,17 +22,28 @@ import {
 import { useT } from "../i18n/I18nProvider";
 
 interface Props {
-  repos: Repo[];
+  projects: TrackedProject[];
 }
 
 // Tool names a user can grant a sub-agent. "Skill" is the on/off switch
 // for skill usage. Keep roughly in sync with core BUILTIN_TOOLS.
 const TOOL_CHOICES = [
-  "Read", "Write", "Edit", "Grep", "Glob", "Bash",
-  "WebSearch", "WebFetch", "Skill", "TodoWrite",
+  "Read",
+  "Write",
+  "Edit",
+  "Grep",
+  "Glob",
+  "Bash",
+  "WebSearch",
+  "WebFetch",
+  "Skill",
+  "TodoWrite",
 ];
 
-interface ModelOption { key: string; label: string; }
+interface ModelOption {
+  key: string;
+  label: string;
+}
 
 const INHERIT = "__inherit__";
 
@@ -40,9 +51,7 @@ const INHERIT = "__inherit__";
 type Override = "on" | "off" | "inherit";
 
 /** Which store the user is editing. global = user-level; project = a repo. */
-type Target =
-  | { level: "user"; title: string }
-  | { level: "project"; cwd: string; title: string };
+type Target = { level: "user"; title: string } | { level: "project"; cwd: string; title: string };
 
 /**
  * Sub-agents settings. Like 钩子/记忆, the page first shows a project list
@@ -55,7 +64,7 @@ type Target =
  *    `capabilityOverrides.agents` overlay so a project can flip a globally
  *    enabled agent off (or vice versa) without touching the global denylist.
  */
-export function AgentsSection({ repos }: Props) {
+export function AgentsSection({ projects }: Props) {
   const [target, setTarget] = useState<Target | null>(null);
   const { t } = useT();
 
@@ -65,7 +74,7 @@ export function AgentsSection({ repos }: Props) {
         <h3 className="text-base font-semibold">{t("settingsX.agents.title")}</h3>
         <p className="text-sm text-muted-foreground">{t("settingsX.agents.pickDesc")}</p>
         <ProjectPicker
-          repos={repos}
+          projects={projects}
           includeGlobal
           globalLabel={t("settingsX.agents.globalLabel")}
           globalHint={t("settingsX.agents.globalHint")}
@@ -73,8 +82,8 @@ export function AgentsSection({ repos }: Props) {
             if (path === null) {
               setTarget({ level: "user", title: t("settingsX.agents.globalLabel") });
             } else {
-              const repo = repos.find((r) => r.path === path);
-              setTarget({ level: "project", cwd: path, title: repo ? repoLabel(repo) : path });
+              const repo = projects.find((r) => r.path === path);
+              setTarget({ level: "project", cwd: path, title: repo ? projectLabel(repo) : path });
             }
           }}
         />
@@ -133,7 +142,7 @@ function AgentsEditor({ target }: { target: Target }) {
       // (key = connection instance id = engine pool key, so resolveChildLlm
       // resolves it). Replaces the legacy settings.models[] source.
       const conns = Array.isArray((u as { modelConnections?: unknown }).modelConnections)
-        ? ((u as { modelConnections: ModelInstance[] }).modelConnections)
+        ? (u as { modelConnections: ModelInstance[] }).modelConnections
         : [];
       const catalog = (await window.codeshell.getModelCatalog().catch(() => [])) as CatalogEntry[];
       setModels(catalogModelOptions(conns, catalog).map((o) => ({ key: o.key, label: o.label })));
@@ -280,7 +289,9 @@ function AgentsEditor({ target }: { target: Target }) {
   const deletable = !!current && (current.source === "user" || current.override);
   const isNew = draft !== null && current === null;
 
-  const tagFor = (a: AgentSummary): { label: string; variant: "secondary" | "default" | "outline" } => {
+  const tagFor = (
+    a: AgentSummary,
+  ): { label: string; variant: "secondary" | "default" | "outline" } => {
     if (a.source === "project" && !a.override)
       return { label: t("settingsX.agents.tagBuiltin"), variant: "outline" };
     if (a.override) return { label: t("settingsX.agents.tagOverridden"), variant: "default" };
@@ -372,12 +383,12 @@ function AgentsEditor({ target }: { target: Target }) {
                     <button
                       type="button"
                       className="flex w-full items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent"
-                      onClick={() =>
-                        setShowDisabled((s) => ({ ...s, [g.id]: !open }))
-                      }
+                      onClick={() => setShowDisabled((s) => ({ ...s, [g.id]: !open }))}
                     >
                       {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                      <span>{t("settingsX.agents.disabledCount", { count: g.disabled.length })}</span>
+                      <span>
+                        {t("settingsX.agents.disabledCount", { count: g.disabled.length })}
+                      </span>
                     </button>
                     {open && <ul className="space-y-1">{g.disabled.map(renderRow)}</ul>}
                   </>
@@ -390,7 +401,11 @@ function AgentsEditor({ target }: { target: Target }) {
 
       {/* Right: editor form */}
       <div className="min-w-0 flex-1 overflow-y-auto">
-        {error && <div className="mb-2 rounded-md bg-status-err/10 p-2 text-sm text-status-err">{error}</div>}
+        {error && (
+          <div className="mb-2 rounded-md bg-status-err/10 p-2 text-sm text-status-err">
+            {error}
+          </div>
+        )}
         {!draft ? (
           <div className="p-6">
             <div className="font-medium">{t("settingsX.agents.noneSelected")}</div>
@@ -442,7 +457,9 @@ function AgentsEditor({ target }: { target: Target }) {
                 <span className="text-muted-foreground">{t("settingsX.agents.fieldModel")}</span>
                 <Select
                   value={draft.model ?? INHERIT}
-                  onValueChange={(v) => setDraft({ ...draft, model: v === INHERIT ? undefined : v })}
+                  onValueChange={(v) =>
+                    setDraft({ ...draft, model: v === INHERIT ? undefined : v })
+                  }
                 >
                   <SelectTrigger aria-label={t("settingsX.agents.modelAria")}>
                     <SelectValue />
@@ -452,7 +469,9 @@ function AgentsEditor({ target }: { target: Target }) {
                       {t("settingsX.agents.inheritParentModel")}
                     </SelectItem>
                     {models.map((m) => (
-                      <SelectItem key={m.key} value={m.key}>{m.label}</SelectItem>
+                      <SelectItem key={m.key} value={m.key}>
+                        {m.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -469,7 +488,10 @@ function AgentsEditor({ target }: { target: Target }) {
                     // to saveAgent and corrupt the config — keep undefined unless the
                     // input parses to a finite number (mirrors GitSection's graceMins).
                     const n = Number(e.target.value);
-                    setDraft({ ...draft, maxTurns: e.target.value === "" || !Number.isFinite(n) ? undefined : n });
+                    setDraft({
+                      ...draft,
+                      maxTurns: e.target.value === "" || !Number.isFinite(n) ? undefined : n,
+                    });
                   }}
                 />
               </label>
@@ -517,7 +539,11 @@ function AgentsEditor({ target }: { target: Target }) {
 
             <div className="flex items-center gap-2">
               {deletable && (
-                <Button variant="ghost" className="gap-1.5 text-status-err" onClick={() => current && void remove(current)}>
+                <Button
+                  variant="ghost"
+                  className="gap-1.5 text-status-err"
+                  onClick={() => current && void remove(current)}
+                >
                   <Trash2 size={13} /> <span>{t("settingsX.agents.delete")}</span>
                 </Button>
               )}

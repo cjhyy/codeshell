@@ -42,7 +42,7 @@ describe("SessionManager SessionWorkspace", () => {
     sm.setSessionWorkspace("s-wt", workspace);
 
     expect(sm.getSessionWorkspace("s-wt")).toEqual(workspace);
-    expect(sm.readCwd("s-wt")).toBe("/repo/main");
+    expect(sm.readSessionMainRoot("s-wt")).toBe("/repo/main");
 
     const onDisk = JSON.parse(readFileSync(join(dir, "s-wt", "state.json"), "utf-8"));
     expect(onDisk.workspace).toEqual(workspace);

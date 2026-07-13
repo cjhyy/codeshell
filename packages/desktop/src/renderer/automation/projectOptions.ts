@@ -4,16 +4,16 @@
  * An automation job runs in a `cwd` (the project path) or with no project at
  * all (empty/absent cwd → the sidebar-bottom "对话" section). The detail panel
  * lets the user re-point a job at a different project; the options come from
- * the user's tracked repos plus a "无项目" choice.
+ * the user's tracked projects plus a "无项目" choice.
  *
  * shadcn <Select> forbids an empty-string item value, so "no project" is
  * represented by the NO_PROJECT_VALUE sentinel in the control and mapped back
  * to an empty cwd on save. If the job's current cwd isn't among the tracked
- * repos (e.g. a path added by another machine, or a since-removed project), we
+ * projects (e.g. a path added by another machine, or a since-removed project), we
  * append a synthetic option so the current value stays visible and selectable.
  */
 
-export interface ProjectRepo {
+export interface ProjectOptionSource {
   id: string;
   path: string;
   /** Sidebar display name — `displayName` overrides `name`. */
@@ -39,27 +39,27 @@ function noProjectLabel(): string {
   return translate(loadUILanguage(), "auto.projectOptions.noProject");
 }
 
-function repoLabel(repo: ProjectRepo): string {
-  return repo.displayName?.trim() || repo.name;
+function projectLabel(project: ProjectOptionSource): string {
+  return project.displayName?.trim() || project.name;
 }
 
 /**
  * Build the dropdown options for a job's current cwd.
  *
- * Order: 无项目 first, then tracked repos (input order preserved), then — only
+ * Order: 无项目 first, then tracked projects (input order preserved), then — only
  * when the current cwd is a non-empty path absent from the repo list — a
  * trailing synthetic entry so the active selection never silently vanishes.
  */
 export function buildProjectOptions(
-  repos: ProjectRepo[],
+  projects: ProjectOptionSource[],
   currentCwd: string | null | undefined,
 ): ProjectOption[] {
   const out: ProjectOption[] = [{ value: NO_PROJECT_VALUE, label: noProjectLabel() }];
   const seen = new Set<string>();
-  for (const repo of repos) {
+  for (const repo of projects) {
     if (!repo.path || seen.has(repo.path)) continue;
     seen.add(repo.path);
-    out.push({ value: repo.path, label: repoLabel(repo) });
+    out.push({ value: repo.path, label: projectLabel(repo) });
   }
   const cwd = currentCwd?.trim();
   // The internal no-repo sandbox path (`~/.code-shell/no-repo`) is how a

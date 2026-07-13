@@ -21,20 +21,26 @@ import {
   type Schedule,
 } from "./scheduleModel";
 import type { DiskSessionMeta } from "./rebuildFromDisk";
-import type { Repo } from "../repos";
-import {
-  buildProjectOptions,
-  selectedProjectValue,
-  cwdFromSelection,
-} from "./projectOptions";
+import type { TrackedProject } from "../projects";
+import { buildProjectOptions, selectedProjectValue, cwdFromSelection } from "./projectOptions";
 import { Combobox } from "@/components/ui/combobox";
-import { allTimezones, offsetLabel, offsetBucket, uniqueOffsetBuckets, bucketLabel } from "./timezones";
+import {
+  allTimezones,
+  offsetLabel,
+  offsetBucket,
+  uniqueOffsetBuckets,
+  bucketLabel,
+} from "./timezones";
 import { cn } from "@/lib/utils";
 import { fmtRelative } from "./relativeTime";
 import { useT, type TFunction } from "../i18n/I18nProvider";
 import type { TranslationKey } from "../i18n/dict";
 
-export const PERMISSION_OPTIONS: { value: string; labelKey: TranslationKey; tone: "ok" | "warn" | "err" }[] = [
+export const PERMISSION_OPTIONS: {
+  value: string;
+  labelKey: TranslationKey;
+  tone: "ok" | "warn" | "err";
+}[] = [
   { value: "read-only", labelKey: "auto.permission.readOnly", tone: "ok" },
   { value: "workspace-write", labelKey: "auto.permission.workspaceWrite", tone: "warn" },
   { value: "full", labelKey: "auto.permission.full", tone: "err" },
@@ -86,7 +92,7 @@ function runStatusLabel(t: TFunction, status?: string): string {
 }
 
 type AutomationSessionLink = {
-  repoId: string | null;
+  projectId: string | null;
   session: SessionSummary;
   run?: RunSummary;
   disk?: DiskSessionMeta;
@@ -101,16 +107,13 @@ function automationSessionLinks(
 ): AutomationSessionLink[] {
   const runsById = new Map(runs.map((r) => [r.runId, r]));
   const runsBySessionId = new Map(
-    runs
-      .filter((r) => r.sessionId)
-      .map((r) => [r.sessionId as string, r]),
+    runs.filter((r) => r.sessionId).map((r) => [r.sessionId as string, r]),
   );
   const matchingRunIds = new Set(
     runs
       .filter(
         (r) =>
-          r.source === "automation" &&
-          (r.cronJobName === job.name || r.runId === job.lastRunId),
+          r.source === "automation" && (r.cronJobName === job.name || r.runId === job.lastRunId),
       )
       .map((r) => r.runId),
   );
@@ -118,11 +121,13 @@ function automationSessionLinks(
   const out: AutomationSessionLink[] = [];
   const seenRunIds = new Set<string>();
   const seenSessionIds = new Set<string>();
-  for (const [repoKey, idx] of Object.entries(sessionIndices)) {
-    const repoId = repoKey === NO_REPO_KEY ? null : repoKey;
+  for (const [projectBucketSegment, idx] of Object.entries(sessionIndices)) {
+    const projectId = projectBucketSegment === NO_REPO_KEY ? null : projectBucketSegment;
     for (const session of idx.sessions) {
       if (session.source !== "automation" || session.archived) continue;
-      const run = session.runId ? runsById.get(session.runId) : runsBySessionId.get(session.engineSessionId ?? session.id);
+      const run = session.runId
+        ? runsById.get(session.runId)
+        : runsBySessionId.get(session.engineSessionId ?? session.id);
       const matches =
         session.title === job.name ||
         (session.runId ? matchingRunIds.has(session.runId) : false) ||
@@ -132,7 +137,7 @@ function automationSessionLinks(
         // Locally-present session (found in a repo's session index) → already
         // imported, so never flag it for import. Set explicitly so the render
         // site can trust `link.needsImport` instead of re-deriving it.
-        out.push({ repoId, session, run, needsImport: false });
+        out.push({ projectId, session, run, needsImport: false });
         if (session.runId) seenRunIds.add(session.runId);
         if (session.engineSessionId) seenSessionIds.add(session.engineSessionId);
         seenSessionIds.add(session.id);
@@ -151,7 +156,7 @@ function automationSessionLinks(
       continue;
     }
     out.push({
-      repoId: null,
+      projectId: null,
       run,
       needsImport: true,
       session: {
@@ -178,11 +183,10 @@ function automationSessionLinks(
     }
     const promptMatches = promptNeedle.length > 0 && disk.title.includes(promptNeedle);
     const timeMatches =
-      job.lastRun != null &&
-      Math.abs(disk.updatedAt - job.lastRun) < 24 * 60 * 60 * 1000;
+      job.lastRun != null && Math.abs(disk.updatedAt - job.lastRun) < 24 * 60 * 60 * 1000;
     if (!promptMatches && !timeMatches) continue;
     out.push({
-      repoId: null,
+      projectId: null,
       disk,
       needsImport: true,
       session: {
@@ -210,15 +214,15 @@ export function AutomationView({
   onOpenDiskSession,
   onOpenSession,
   sessionIndices,
-  repos,
+  projects,
 }: {
   onCreateConversational: () => void;
   onViewRun: (runId: string) => void;
   onOpenRunSession: (run: RunSummary) => void;
   onOpenDiskSession: (session: DiskSessionMeta) => void;
-  onOpenSession: (repoId: string | null, sessionId: string) => void;
+  onOpenSession: (projectId: string | null, sessionId: string) => void;
   sessionIndices: Record<string, SessionIndex>;
-  repos: Repo[];
+  projects: TrackedProject[];
 }) {
   const { t } = useT();
   const [jobs, setJobs] = useState<AutomationSummary[] | null>(null);
@@ -277,20 +281,30 @@ export function AutomationView({
     return (
       <div className="flex flex-col items-start gap-3 p-6 text-sm text-status-err">
         {error}
-        <Button variant="outline" size="sm" onClick={() => { setError(null); void refresh(); }}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setError(null);
+            void refresh();
+          }}
+        >
           {t("auto.view.retry")}
         </Button>
       </div>
     );
   }
-  if (!jobs) return <div className="p-6 text-sm text-muted-foreground">{t("auto.view.loading")}</div>;
+  if (!jobs)
+    return <div className="p-6 text-sm text-muted-foreground">{t("auto.view.loading")}</div>;
 
   return (
     <div className="flex h-full flex-col gap-4 p-6">
       <div className="flex shrink-0 items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-foreground">{t("auto.view.title")}</h2>
-          <p className="text-xs text-muted-foreground">{t("auto.view.jobCount", { count: jobs.length })}</p>
+          <p className="text-xs text-muted-foreground">
+            {t("auto.view.jobCount", { count: jobs.length })}
+          </p>
         </div>
         <Button size="sm" onClick={onCreateConversational}>
           <Plus size={14} />
@@ -323,7 +337,8 @@ export function AutomationView({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{j.name}</span>
                   <span className="block truncate text-xs text-muted-foreground">
-                    {j.enabled ? t("auto.view.active") : t("auto.view.paused")} · {t("auto.view.runCount", { count: j.runCount })}
+                    {j.enabled ? t("auto.view.active") : t("auto.view.paused")} ·{" "}
+                    {t("auto.view.runCount", { count: j.runCount })}
                   </span>
                 </span>
                 <span className="max-w-24 shrink-0 truncate text-xs text-muted-foreground">
@@ -342,7 +357,7 @@ export function AutomationView({
               <AutomationDetail
                 t={t}
                 job={detail}
-                repos={repos}
+                projects={projects}
                 sessions={automationSessionLinks(detail, sessionIndices, runs, diskSessions)}
                 onToggleEnabled={(next) =>
                   act("toggle:" + detail.id, () =>
@@ -351,9 +366,17 @@ export function AutomationView({
                       : window.codeshell.pauseAutomation(detail.id),
                   )
                 }
-                onDelete={() => act("delete:" + detail.id, () => window.codeshell.deleteAutomation(detail.id))}
-                onRunNow={() => act("runNow:" + detail.id, () => window.codeshell.runAutomationNow(detail.id))}
-                onSave={(patch) => act("save:" + detail.id, () => window.codeshell.updateAutomation(detail.id, patch))}
+                onDelete={() =>
+                  act("delete:" + detail.id, () => window.codeshell.deleteAutomation(detail.id))
+                }
+                onRunNow={() =>
+                  act("runNow:" + detail.id, () => window.codeshell.runAutomationNow(detail.id))
+                }
+                onSave={(patch) =>
+                  act("save:" + detail.id, () =>
+                    window.codeshell.updateAutomation(detail.id, patch),
+                  )
+                }
                 runNowBusy={!!pending["runNow:" + detail.id]}
                 deleteBusy={!!pending["delete:" + detail.id]}
                 toggleBusy={!!pending["toggle:" + detail.id]}
@@ -364,7 +387,9 @@ export function AutomationView({
                 onOpenSession={onOpenSession}
               />
             ) : (
-              <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">{t("auto.view.selectJob")}</div>
+              <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
+                {t("auto.view.selectJob")}
+              </div>
             )}
           </div>
         </div>
@@ -385,7 +410,7 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
 export function AutomationDetail(props: {
   t?: TFunction;
   job: AutomationSummary;
-  repos: Repo[];
+  projects: TrackedProject[];
   onToggleEnabled: (next: boolean) => void;
   onDelete: () => void;
   onRunNow: () => void;
@@ -405,7 +430,7 @@ export function AutomationDetail(props: {
   onViewRun: (runId: string) => void;
   onOpenRunSession: (run: RunSummary) => void;
   onOpenDiskSession: (session: DiskSessionMeta) => void;
-  onOpenSession: (repoId: string | null, sessionId: string) => void;
+  onOpenSession: (projectId: string | null, sessionId: string) => void;
 }) {
   const { job } = props;
   // `t` is normally supplied by the parent (which holds the provider-bound
@@ -494,66 +519,81 @@ export function AutomationDetail(props: {
       <div className="rounded-md border bg-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
-          <span
-            className={cn(
-              "mt-1 h-2.5 w-2.5 shrink-0 rounded-full",
-              job.enabled ? "bg-status-ok" : "bg-muted-foreground",
-            )}
-          />
-          <div className="flex min-w-0 flex-col">
-            <h3 className="truncate text-base font-semibold text-foreground">{job.name}</h3>
-            <p className="text-xs text-muted-foreground">{describeSchedule(job.schedule)} · {job.timezone ?? "UTC"}</p>
-            {job.resumeSessionId && (
-              <span className="mt-1 inline-flex w-fit items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                <Link2 size={11} />{t("auto.detail.resumeBadge")}
-              </span>
-            )}
+            <span
+              className={cn(
+                "mt-1 h-2.5 w-2.5 shrink-0 rounded-full",
+                job.enabled ? "bg-status-ok" : "bg-muted-foreground",
+              )}
+            />
+            <div className="flex min-w-0 flex-col">
+              <h3 className="truncate text-base font-semibold text-foreground">{job.name}</h3>
+              <p className="text-xs text-muted-foreground">
+                {describeSchedule(job.schedule)} · {job.timezone ?? "UTC"}
+              </p>
+              {job.resumeSessionId && (
+                <span className="mt-1 inline-flex w-fit items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                  <Link2 size={11} />
+                  {t("auto.detail.resumeBadge")}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={job.enabled}
+              onCheckedChange={(v) => props.onToggleEnabled(v)}
+              disabled={props.toggleBusy}
+              aria-label={job.enabled ? t("auto.detail.enabled") : t("auto.detail.pausedAria")}
+            />
+            <Button size="sm" onClick={props.onRunNow} disabled={props.runNowBusy}>
+              {props.runNowBusy ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  {t("auto.detail.running")}
+                </>
+              ) : (
+                <>
+                  <Play size={14} />
+                  {t("auto.detail.runNow")}
+                </>
+              )}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-status-err"
+              onClick={props.onDelete}
+              disabled={props.deleteBusy}
+              aria-label={t("auto.detail.delete")}
+            >
+              <Trash2 size={14} />
+            </Button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Switch
-            checked={job.enabled}
-            onCheckedChange={(v) => props.onToggleEnabled(v)}
-            disabled={props.toggleBusy}
-            aria-label={job.enabled ? t("auto.detail.enabled") : t("auto.detail.pausedAria")}
-          />
-          <Button size="sm" onClick={props.onRunNow} disabled={props.runNowBusy}>
-            {props.runNowBusy ? (
-              <>
-                <Loader2 size={14} className="animate-spin" />
-                {t("auto.detail.running")}
-              </>
-            ) : (
-              <>
-                <Play size={14} />
-                {t("auto.detail.runNow")}
-              </>
-            )}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-status-err"
-            onClick={props.onDelete}
-            disabled={props.deleteBusy}
-            aria-label={t("auto.detail.delete")}
-          >
-            <Trash2 size={14} />
-          </Button>
-        </div>
-      </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-md border bg-card p-3">
           <span className="text-xs text-muted-foreground">{t("auto.detail.nextRun")}</span>
-          <strong className="mt-1 block text-sm text-foreground">{fmtRelative(job.nextRun, t)}</strong>
-          {job.nextRun != null && <span className="block text-[10px] text-muted-foreground tabular-nums">{fmtTime(job.nextRun)}</span>}
+          <strong className="mt-1 block text-sm text-foreground">
+            {fmtRelative(job.nextRun, t)}
+          </strong>
+          {job.nextRun != null && (
+            <span className="block text-[10px] text-muted-foreground tabular-nums">
+              {fmtTime(job.nextRun)}
+            </span>
+          )}
         </div>
         <div className="rounded-md border bg-card p-3">
           <span className="text-xs text-muted-foreground">{t("auto.detail.lastRun")}</span>
-          <strong className="mt-1 block text-sm text-foreground">{fmtRelative(job.lastRun, t)}</strong>
-          {job.lastRun != null && <span className="block text-[10px] text-muted-foreground tabular-nums">{fmtTime(job.lastRun)}</span>}
+          <strong className="mt-1 block text-sm text-foreground">
+            {fmtRelative(job.lastRun, t)}
+          </strong>
+          {job.lastRun != null && (
+            <span className="block text-[10px] text-muted-foreground tabular-nums">
+              {fmtTime(job.lastRun)}
+            </span>
+          )}
         </div>
         <div className="rounded-md border bg-card p-3">
           <span className="text-xs text-muted-foreground">{t("auto.detail.runTimes")}</span>
@@ -566,7 +606,14 @@ export function AutomationDetail(props: {
         <div className="flex flex-col gap-3 rounded-md border bg-card p-3">
           <Textarea value={promptDraft} onChange={(e) => setPromptDraft(e.target.value)} rows={5} />
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="outline" onClick={() => { setEditingPrompt(false); setPromptDraft(job.prompt); }}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setEditingPrompt(false);
+                setPromptDraft(job.prompt);
+              }}
+            >
               {t("auto.detail.cancel")}
             </Button>
             <Button
@@ -593,21 +640,32 @@ export function AutomationDetail(props: {
           <pre className="m-0 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted/40 p-3 text-sm">
             {job.prompt}
           </pre>
-          <Button size="sm" variant="outline" onClick={() => setEditingPrompt(true)}>{t("auto.detail.edit")}</Button>
+          <Button size="sm" variant="outline" onClick={() => setEditingPrompt(true)}>
+            {t("auto.detail.edit")}
+          </Button>
         </div>
       )}
 
       <div className="rounded-md border bg-card p-3">
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("auto.detail.configSection")}</p>
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          {t("auto.detail.configSection")}
+        </p>
 
         <FieldRow label={t("auto.detail.frequency")}>
           <div className="flex flex-wrap items-center justify-end gap-2">
             {/* Step 1: cadence type. */}
-            <Select value={sched.kind} onValueChange={(v) => onCadenceChange(v as Schedule["kind"])}>
-              <SelectTrigger className="h-8 w-[120px]"><SelectValue /></SelectTrigger>
+            <Select
+              value={sched.kind}
+              onValueChange={(v) => onCadenceChange(v as Schedule["kind"])}
+            >
+              <SelectTrigger className="h-8 w-[120px]">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {CADENCE_OPTIONS.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{t(c.labelKey)}</SelectItem>
+                  <SelectItem key={c.value} value={c.value}>
+                    {t(c.labelKey)}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -616,14 +674,16 @@ export function AutomationDetail(props: {
             {sched.kind === "weekly" && (
               <Select
                 value={String(sched.weekday)}
-                onValueChange={(v) =>
-                  commitSchedule({ ...sched, weekday: Number(v) })
-                }
+                onValueChange={(v) => commitSchedule({ ...sched, weekday: Number(v) })}
               >
-                <SelectTrigger className="h-8 w-[96px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 w-[96px]">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {weekdayLabels().map((label, i) => (
-                    <SelectItem key={i} value={String(i)}>{label}</SelectItem>
+                    <SelectItem key={i} value={String(i)}>
+                      {label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -645,10 +705,14 @@ export function AutomationDetail(props: {
                 value={String(sched.everyHours)}
                 onValueChange={(v) => commitSchedule({ kind: "hourly", everyHours: Number(v) })}
               >
-                <SelectTrigger className="h-8 w-[120px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 w-[120px]">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {HOURLY_OPTIONS.map((h) => (
-                    <SelectItem key={h} value={String(h)}>{t("auto.cadence.everyHours", { hours: h })}</SelectItem>
+                    <SelectItem key={h} value={String(h)}>
+                      {t("auto.cadence.everyHours", { hours: h })}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -661,7 +725,9 @@ export function AutomationDetail(props: {
                 placeholder={t("auto.detail.cronPlaceholder")}
                 onChange={(e) => setCustomDraft(e.target.value)}
                 onBlur={applyCustomSchedule}
-                onKeyDown={(e) => { if (e.key === "Enter") applyCustomSchedule(); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") applyCustomSchedule();
+                }}
               />
             )}
           </div>
@@ -679,7 +745,9 @@ export function AutomationDetail(props: {
             <Combobox
               options={tzCityOptions}
               value={job.timezone ?? "UTC"}
-              onChange={(v) => { if (v !== job.timezone) props.onSave({ timezone: v }); }}
+              onChange={(v) => {
+                if (v !== job.timezone) props.onSave({ timezone: v });
+              }}
               triggerClassName="w-[200px]"
               searchPlaceholder={t("auto.detail.tzSearch")}
               emptyText={t("auto.detail.tzEmpty")}
@@ -696,7 +764,9 @@ export function AutomationDetail(props: {
               }
             }}
           >
-            <SelectTrigger className="h-8 w-[160px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-8 w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {PERMISSION_OPTIONS.map((p) => (
                 <SelectItem key={p.value} value={p.value}>
@@ -704,7 +774,11 @@ export function AutomationDetail(props: {
                     <span
                       className={cn(
                         "inline-block h-2 w-2 rounded-full",
-                        p.tone === "ok" ? "bg-status-ok" : p.tone === "warn" ? "bg-status-warn" : "bg-status-err",
+                        p.tone === "ok"
+                          ? "bg-status-ok"
+                          : p.tone === "warn"
+                            ? "bg-status-warn"
+                            : "bg-status-err",
                       )}
                     />
                     {t(p.labelKey)}
@@ -723,10 +797,14 @@ export function AutomationDetail(props: {
               if (nextCwd !== (job.cwd ?? "")) props.onSave({ cwd: nextCwd });
             }}
           >
-            <SelectTrigger className="h-8 w-[220px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-8 w-[220px]">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
-              {buildProjectOptions(props.repos, job.cwd).map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              {buildProjectOptions(props.projects, job.cwd).map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -735,14 +813,18 @@ export function AutomationDetail(props: {
 
       {job.resumeSessionId ? (
         <div className="rounded-md border bg-card p-3">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("auto.detail.boundConversation")}</p>
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {t("auto.detail.boundConversation")}
+          </p>
           {(() => {
             const bound = sessions.find(
               (l) => (l.session.engineSessionId ?? l.session.id) === job.resumeSessionId,
             );
             if (!bound)
               return (
-                <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">{t("auto.detail.boundNotFound")}</div>
+                <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                  {t("auto.detail.boundNotFound")}
+                </div>
               );
             const status = bound.run?.status ?? bound.session.runStatus;
             const when = bound.run?.updatedAt ?? bound.session.updatedAt;
@@ -754,13 +836,17 @@ export function AutomationDetail(props: {
                 onClick={() => {
                   if (bound.needsImport && bound.run) props.onOpenRunSession(bound.run);
                   else if (bound.disk) props.onOpenDiskSession(bound.disk);
-                  else props.onOpenSession(bound.repoId, bound.session.id);
+                  else props.onOpenSession(bound.projectId, bound.session.id);
                 }}
               >
                 <Link2 size={14} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{bound.session.title || t("auto.detail.untitled")}</span>
-                  <small className="block truncate text-xs text-muted-foreground">{shortDate(when)} · {runStatusLabel(t, status)}</small>
+                  <span className="block truncate text-sm font-medium">
+                    {bound.session.title || t("auto.detail.untitled")}
+                  </span>
+                  <small className="block truncate text-xs text-muted-foreground">
+                    {shortDate(when)} · {runStatusLabel(t, status)}
+                  </small>
                 </span>
                 <span className="text-xs text-primary">{t("auto.detail.openConversation")} →</span>
               </Button>
@@ -771,8 +857,16 @@ export function AutomationDetail(props: {
         <div className="rounded-md border bg-card p-3">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <h4 className="text-sm font-semibold text-foreground">{t("auto.detail.runSession")}</h4>
-              <p className="text-xs text-muted-foreground">{lastSession ? t("auto.detail.recentAt", { when: shortDate(lastSession.run?.updatedAt ?? lastSession.session.updatedAt) }) : t("auto.detail.noSession")}</p>
+              <h4 className="text-sm font-semibold text-foreground">
+                {t("auto.detail.runSession")}
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                {lastSession
+                  ? t("auto.detail.recentAt", {
+                      when: shortDate(lastSession.run?.updatedAt ?? lastSession.session.updatedAt),
+                    })
+                  : t("auto.detail.noSession")}
+              </p>
             </div>
             {job.lastRunId && (
               <Button size="sm" variant="outline" onClick={() => props.onViewRun(job.lastRunId!)}>
@@ -782,10 +876,12 @@ export function AutomationDetail(props: {
             )}
           </div>
           {sessions.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">{t("auto.detail.noJumpableSession")}</div>
+            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              {t("auto.detail.noJumpableSession")}
+            </div>
           ) : (
             <ul className="space-y-1">
-              {sessions.map(({ repoId, session, run, disk, needsImport }) => {
+              {sessions.map(({ projectId, session, run, disk, needsImport }) => {
                 // Trust the flag set at link synthesis (automationSessionLinks):
                 // local-present links carry needsImport=false, disk/run-only links
                 // carry true. The old per-row `props.sessions.find()` was O(rows²)
@@ -794,7 +890,7 @@ export function AutomationDetail(props: {
                 const status = run?.status ?? session.runStatus;
                 const when = run?.updatedAt ?? session.updatedAt;
                 return (
-                  <li key={`${repoId ?? NO_REPO_KEY}:${session.id}`}>
+                  <li key={`${projectId ?? NO_REPO_KEY}:${session.id}`}>
                     <Button
                       type="button"
                       variant="ghost"
@@ -802,13 +898,15 @@ export function AutomationDetail(props: {
                       onClick={() => {
                         if (needsImport && run) props.onOpenRunSession(run);
                         else if (disk) props.onOpenDiskSession(disk);
-                        else props.onOpenSession(repoId, session.id);
+                        else props.onOpenSession(projectId, session.id);
                       }}
                     >
                       <Clock3 size={14} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{session.title}</span>
-                        <small className="block truncate text-xs text-muted-foreground">{shortDate(when)} · {runStatusLabel(t, status)}</small>
+                        <small className="block truncate text-xs text-muted-foreground">
+                          {shortDate(when)} · {runStatusLabel(t, status)}
+                        </small>
                       </span>
                       <span className="text-xs text-primary">{t("auto.detail.sessionView")}</span>
                     </Button>

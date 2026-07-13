@@ -48,7 +48,7 @@ import {
   ShortcutsSection,
   ToggleCapabilitySection,
 } from "./AdvancedSections";
-import type { Repo } from "../repos";
+import type { TrackedProject } from "../projects";
 import type { SessionIndex } from "../transcripts";
 import { useT } from "../i18n/I18nProvider";
 import type { TFunction } from "../i18n/I18nProvider";
@@ -142,11 +142,11 @@ function buildModuleGroups(t: TFunction): ModuleGroup[] {
 }
 
 interface Props {
-  activeRepoPath: string | null;
-  repos: Repo[];
+  activeProjectPath: string | null;
+  projects: TrackedProject[];
   sessionIndices: Record<string, SessionIndex>;
-  onRestoreArchivedSession: (repoId: string | null, sessionId: string) => void;
-  onDeleteArchivedSession: (repoId: string | null, sessionId: string) => void;
+  onRestoreArchivedSession: (projectId: string | null, sessionId: string) => void;
+  onDeleteArchivedSession: (projectId: string | null, sessionId: string) => void;
   isMac: boolean;
   isFullscreen: boolean;
   onBack: () => void;
@@ -161,8 +161,8 @@ interface Props {
  * are reused so we don't fork the model/permission/mcp UIs.
  */
 export function SettingsPage({
-  activeRepoPath,
-  repos,
+  activeProjectPath,
+  projects,
   sessionIndices,
   onRestoreArchivedSession,
   onDeleteArchivedSession,
@@ -175,7 +175,7 @@ export function SettingsPage({
   const MODULES: Module[] = MODULE_GROUPS.flatMap((g) => g.modules);
   const [active, setActive] = useState<ModuleId>("general");
   // All settings are global (user scope). Per-project overrides are not
-  // supported in the UI; sections still take a `scope`/`activeRepoPath`
+  // supported in the UI; sections still take a `scope`/`activeProjectPath`
   // prop pair, so we pass the fixed user scope through unchanged.
   const scope = "user" as const;
   const showTrafficLightGutter = isMac && !isFullscreen;
@@ -208,7 +208,9 @@ export function SettingsPage({
                   key={id}
                   className={
                     "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors " +
-                    (active === id ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60")
+                    (active === id
+                      ? "bg-accent text-foreground"
+                      : "text-muted-foreground hover:bg-accent/60")
                   }
                   onClick={() => setActive(id)}
                 >
@@ -229,33 +231,29 @@ export function SettingsPage({
 
           <div className="flex flex-col gap-6">
             {active === "general" && (
-              <GeneralSection scope={scope} activeRepoPath={activeRepoPath} />
+              <GeneralSection scope={scope} activeProjectPath={activeProjectPath} />
             )}
-            {active === "appearance" && (
-              <AppearanceSection />
-            )}
+            {active === "appearance" && <AppearanceSection />}
             {active === "config" && (
               <>
-                <TextConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} />
-                <ImageSettingsSection scope={scope} activeRepoPath={activeRepoPath} />
+                <TextConnectionsPanel scope={scope} activeProjectPath={activeProjectPath} />
+                <ImageSettingsSection scope={scope} activeProjectPath={activeProjectPath} />
               </>
             )}
             {active === "model-catalog" && (
-              <ModelCatalogPanel scope={scope} activeRepoPath={activeRepoPath} />
+              <ModelCatalogPanel scope={scope} activeProjectPath={activeProjectPath} />
             )}
             {active === "personalization" && (
               <>
-                <InstructionFilesSection scope={scope} activeRepoPath={activeRepoPath} />
-                <ResponsePrefsSection scope={scope} activeRepoPath={activeRepoPath} />
-                <PersonalizationSection scope={scope} activeRepoPath={activeRepoPath} />
+                <InstructionFilesSection scope={scope} activeProjectPath={activeProjectPath} />
+                <ResponsePrefsSection scope={scope} activeProjectPath={activeProjectPath} />
+                <PersonalizationSection scope={scope} activeProjectPath={activeProjectPath} />
               </>
             )}
-            {active === "shortcuts" && (
-              <ShortcutsSection />
-            )}
+            {active === "shortcuts" && <ShortcutsSection />}
             {active === "capabilities" && (
               <CapabilitiesOverviewSection
-                repos={repos}
+                projects={projects}
                 onNavigateToKind={(kind) => {
                   // Jump from a capability row to its dedicated detail tab.
                   // builtin has no detail tab → stay on 能力总览 (no-op).
@@ -270,50 +268,50 @@ export function SettingsPage({
                 }}
               />
             )}
-            {active === "mcp" && (
-              <McpSection scope={scope} activeRepoPath={activeRepoPath} />
-            )}
+            {active === "mcp" && <McpSection scope={scope} activeProjectPath={activeProjectPath} />}
             {active === "hooks" && (
               // Hooks live at two levels (global user + per project; core
               // concatenates both) — the section shows a "全局" row plus the
               // project list, then drills into the chosen level's hooks.
-              <HooksSection repos={repos} />
+              <HooksSection projects={projects} />
             )}
             {active === "connections" && (
-              <ConnectionsSection scope={scope} activeRepoPath={activeRepoPath} />
+              <ConnectionsSection scope={scope} activeProjectPath={activeProjectPath} />
             )}
-            {active === "git" && (
-              <GitSection />
-            )}
+            {active === "git" && <GitSection />}
             {active === "environment" && (
               // Local environment is project-scoped (setup/cleanup/env).
-              <EnvironmentSection repos={repos} />
+              <EnvironmentSection projects={projects} />
             )}
             {active === "sandbox" && (
               // Sandbox (isolation + network) is its own tab — global default
               // plus per-project overrides via the drill-in picker.
-              <SandboxSection repos={repos} />
+              <SandboxSection projects={projects} />
             )}
             {active === "conversation" && <ConversationSettingsSection />}
             {active === "context" && <ContextSettingsSection />}
             {active === "mobile-remote" && <MobileRemoteSection />}
             {active === "plugins-skills" && (
-              <ExtensionsPage activeRepoPath={activeRepoPath} showDiscover={false} />
+              <ExtensionsPage activeProjectPath={activeProjectPath} showDiscover={false} />
             )}
             {active === "agents" && (
               // Sub-agents are project-scoped like 钩子/记忆: pick 全局 or a
               // project first, then edit. Project mode flips a tri-state
               // capabilityOverrides.agents overlay.
-              <AgentsSection repos={repos} />
+              <AgentsSection projects={projects} />
             )}
             {active === "memory" && (
               // Memory: pick a store first (global, or a project), then view
-              // that store's entries. Reuses the sidebar `repos` list.
-              <MemorySection scope={scope} activeRepoPath={activeRepoPath} repos={repos} />
+              // that store's entries. Reuses the sidebar `projects` list.
+              <MemorySection
+                scope={scope}
+                activeProjectPath={activeProjectPath}
+                projects={projects}
+              />
             )}
             {active === "archived" && (
               <ArchivedConversationsSection
-                repos={repos}
+                projects={projects}
                 sessionIndices={sessionIndices}
                 onRestore={onRestoreArchivedSession}
                 onDelete={onDeleteArchivedSession}

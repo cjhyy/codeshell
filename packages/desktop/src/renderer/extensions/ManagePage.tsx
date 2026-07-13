@@ -36,12 +36,12 @@ export type TabKey = "plugins" | "skills" | "mcp" | "market";
 
 interface Props {
   cwd: string;
-  activeRepoPath: string | null;
+  activeProjectPath: string | null;
   initialTab?: TabKey;
   initialQuery?: string;
 }
 
-export function ManagePage({ cwd, activeRepoPath, initialTab, initialQuery }: Props) {
+export function ManagePage({ cwd, activeProjectPath, initialTab, initialQuery }: Props) {
   const { t } = useT();
   const [tab, setTab] = useState<TabKey>(initialTab ?? "plugins");
   const [query, setQuery] = useState(initialQuery ?? "");
@@ -166,12 +166,8 @@ export function ManagePage({ cwd, activeRepoPath, initialTab, initialQuery }: Pr
           onToggle={(s, next) => void toggleSkill(s.name, !next)}
         />
       )}
-      {tab === "mcp" && (
-        <McpSection scope="user" activeRepoPath={activeRepoPath} />
-      )}
-      {tab === "market" && (
-        <MarketList cwd={cwd} onInstalled={() => void refresh()} />
-      )}
+      {tab === "mcp" && <McpSection scope="user" activeProjectPath={activeProjectPath} />}
+      {tab === "market" && <MarketList cwd={cwd} onInstalled={() => void refresh()} />}
     </div>
   );
 }

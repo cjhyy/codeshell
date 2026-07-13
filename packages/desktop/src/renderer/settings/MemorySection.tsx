@@ -24,7 +24,7 @@ import type {
   RendererMemoryEntryFull,
   SaveMemoryInput,
 } from "../../preload/types";
-import { repoLabel, type Repo } from "../repos";
+import { projectLabel, type TrackedProject } from "../projects";
 import { cacheGet, cacheSet } from "./settingsCache";
 import { ProjectPicker } from "./ProjectPicker";
 import { Button } from "@/components/ui/button";
@@ -40,8 +40,8 @@ import type { TranslationKey } from "../i18n/dict";
 
 interface Props {
   scope: "user" | "project";
-  activeRepoPath: string | null;
-  repos: Repo[];
+  activeProjectPath: string | null;
+  projects: TrackedProject[];
 }
 
 const MEMORY_SCOPES: Array<{ id: MemoryScope; label: string; helpKey: TranslationKey }> = [
@@ -184,13 +184,13 @@ interface Target {
 /**
  * Settings → 记忆 module.
  *
- * Pick a store first: a project list (reusing the sidebar `repos`) with a
+ * Pick a store first: a project list (reusing the sidebar `projects`) with a
  * "全局" row on top. The global row → user-level memory (no project
  * dimension); a project row → that project's memory. After picking, the user
  * sees that store's entries (with the user/dream scope tab and a Dream
  * consolidation button), plus a "返回" link back to the list.
  */
-export function MemorySection({ repos }: Props) {
+export function MemorySection({ projects }: Props) {
   const [target, setTarget] = useState<Target | null>(null);
   const { t } = useT();
 
@@ -202,7 +202,7 @@ export function MemorySection({ repos }: Props) {
         </h3>
         <p className="m-0 text-xs text-muted-foreground">{t("settingsX.memory.pickDesc")}</p>
         <ProjectPicker
-          repos={repos}
+          projects={projects}
           includeGlobal
           globalLabel={t("settingsX.memory.globalLabel")}
           globalHint={t("settingsX.memory.globalHint")}
@@ -210,11 +210,11 @@ export function MemorySection({ repos }: Props) {
             if (path === null) {
               setTarget({ level: "user", title: t("settingsX.memory.globalLabel") });
             } else {
-              const repo = repos.find((r) => r.path === path);
+              const repo = projects.find((r) => r.path === path);
               setTarget({
                 level: "project",
                 cwd: path,
-                title: repo ? repoLabel(repo) : path,
+                title: repo ? projectLabel(repo) : path,
               });
             }
           }}

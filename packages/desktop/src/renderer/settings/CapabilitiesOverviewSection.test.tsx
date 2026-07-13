@@ -9,7 +9,7 @@ import { CapabilitiesOverviewSection } from "./CapabilitiesOverviewSection";
 // frame renders without needing window.codeshell at module load.
 describe("CapabilitiesOverviewSection", () => {
   test("renders the section header, tree, and loading line", () => {
-    const html = renderToStaticMarkup(<CapabilitiesOverviewSection repos={[]} />);
+    const html = renderToStaticMarkup(<CapabilitiesOverviewSection projects={[]} />);
     expect(html).toContain("能力总览");
     expect(html).toContain("项目设置独立覆盖");
     // Left tree always shows the user node.
@@ -22,7 +22,7 @@ describe("CapabilitiesOverviewSection", () => {
   test("renders a tree node per project", () => {
     const html = renderToStaticMarkup(
       <CapabilitiesOverviewSection
-        repos={[
+        projects={[
           { id: "1", name: "alpha", path: "/a", addedAt: 0 },
           { id: "2", name: "beta", path: "/b", addedAt: 0, displayName: "Beta!" },
         ]}

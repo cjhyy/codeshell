@@ -40,7 +40,7 @@ describe("AgentServer compact query", () => {
           isHeadless: () => true,
           sessionExistsOnDisk: (sessionId: string) => sessionId === "s-compact",
           getSessionManager: () => ({
-            readCwd: (sessionId: string) =>
+            readSessionMainRoot: (sessionId: string) =>
               sessionId === "s-compact" ? "/project/from/disk" : undefined,
           }),
           forceCompact: (sessionId?: string) => {
@@ -95,7 +95,7 @@ describe("AgentServer compact query", () => {
         ({
           isHeadless: () => true,
           sessionExistsOnDisk: (sessionId: string) => sessionId === "s-noop",
-          getSessionManager: () => ({ readCwd: () => "/project/from/disk" }),
+          getSessionManager: () => ({ readSessionMainRoot: () => "/project/from/disk" }),
           forceCompact: () => ({ before: 40, after: 40, strategy: "no compaction needed" }),
         }) as unknown as Engine,
     });
@@ -125,7 +125,7 @@ describe("AgentServer compact query", () => {
         ({
           isHeadless: () => true,
           sessionExistsOnDisk: (sessionId: string) => sessionId === "s-summary",
-          getSessionManager: () => ({ readCwd: () => "/project/from/disk" }),
+          getSessionManager: () => ({ readSessionMainRoot: () => "/project/from/disk" }),
           forceCompact: () => ({ before: 128_000, after: 46_000, strategy: "summary" }),
         }) as unknown as Engine,
     });
@@ -169,7 +169,7 @@ describe("AgentServer compact query", () => {
         ({
           isHeadless: () => true,
           sessionExistsOnDisk: () => false,
-          getSessionManager: () => ({ readCwd: () => undefined }),
+          getSessionManager: () => ({ readSessionMainRoot: () => undefined }),
         }) as unknown as Engine,
     });
     const t = makeTransport();

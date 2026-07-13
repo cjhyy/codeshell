@@ -21,15 +21,15 @@ import { useRefreshOnSettingsChange } from "./useSettingsResource";
 
 interface Props {
   scope: "user" | "project";
-  activeRepoPath: string | null;
+  activeProjectPath: string | null;
   /** Which catalog tag this panel manages. Defaults to text. */
   tag?: ConnTag;
   /** Section heading. */
   title?: string;
 }
 
-export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", title }: Props) {
-  const cwd = scope === "project" ? (activeRepoPath ?? undefined) : undefined;
+export function TextConnectionsPanel({ scope, activeProjectPath, tag = "text", title }: Props) {
+  const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
   const { t } = useT();
   const heading =
     title ??
@@ -59,7 +59,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
     setAux,
     setDefaultInstance,
     toggleShowKey,
-  } = useModelConnections(scope, cwd, tag);
+  } = useModelConnections(scope, projectPath, tag);
 
   // Load on mount + on scope/tag switch (deps=[load]) + auto-refresh when
   // catalog/settings change anywhere. Listeners live in one place — see

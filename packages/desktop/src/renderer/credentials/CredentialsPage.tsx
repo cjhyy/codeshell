@@ -9,15 +9,15 @@ type TabKey = "cookie" | "token" | "link";
 
 /** Full-screen 凭证 page: Cookie / Permission Token / Link (mirrors ManagePage tabs). */
 export function CredentialsPage({
-  activeRepoPath,
+  activeProjectPath,
   activeBucket = null,
 }: {
-  activeRepoPath: string | null;
+  activeProjectPath: string | null;
   activeBucket?: string | null;
 }) {
   const { t } = useT();
   const [tab, setTab] = useState<TabKey>("cookie");
-  const cwd = activeRepoPath ?? "";
+  const cwd = activeProjectPath ?? "";
 
   // 凭证取用免审批改为**逐条**(每条凭证 autoUseByAI 开关,见 CookieTab)。全局总闸
   // credentialUse.autoApprove 后端仍生效(use-gate 读它),只是 UI 不再暴露。

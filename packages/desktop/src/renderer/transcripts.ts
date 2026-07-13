@@ -1,18 +1,18 @@
 /**
- * Per-(repo, session) transcripts (renderer-side persistence).
+ * Per-(project, session) transcripts (renderer-side persistence).
  *
- * A repo holds many UI sessions. Each session is keyed by a local
+ * A project holds many UI sessions. Each session is keyed by a local
  * UI sessionId (generated client-side) and stores:
  *   - title:    short label shown in sidebar (first user prompt by default)
  *   - createdAt / updatedAt
  *   - state:    MessagesReducerState
  *
- * Two localStorage keys per repo:
- *   codeshell.sessionIndex.<repoKey>          → SessionIndex (list metadata)
- *   codeshell.transcript.<repoKey>.<sessionId>→ MessagesReducerState
+ * Two legacy localStorage keys per project:
+ *   codeshell.sessionIndex.<projectBucketSegment>          → SessionIndex (list metadata)
+ *   codeshell.transcript.<projectBucketSegment>.<sessionId>→ MessagesReducerState
  *
- * `repoKey` is the repo id, or NO_REPO_KEY ("__no_repo__") when the
- * conversation runs without a project. Sessions in the no-repo bucket
+ * `projectBucketSegment` is the stable project id, or the legacy NO_REPO_KEY
+ * ("__no_repo__") when the conversation runs without a project. No-project sessions
  * render under the sidebar's bottom `对话` section instead of under
  * any project.
  *
@@ -26,7 +26,7 @@ import type { MessagesReducerState } from "./types";
 import { INITIAL_STATE, applyStreamEvent } from "./types";
 
 const TRANSCRIPT_MSG_CAP = 500;
-/** Bucket key for sessions that have no associated repo. */
+/** Legacy byte value for the no-project conversation bucket. */
 export const NO_REPO_KEY = "__no_repo__";
 
 /** Fold persisted transcript stream events through the renderer's canonical reducer. */
@@ -109,10 +109,10 @@ export interface SessionIndex {
   activeSessionId: string | null;
   /**
    * Project label captured at delete time. Set ONLY when the owning project was
-   * removed from the sidebar (handleRemoveRepo) — the repo is gone from `repos[]`
+   * removed from the sidebar — the project is gone from the live project list,
    * so the archived-sessions view can no longer resolve its name. We stash the
    * label here so those archived sessions still show "原项目名" instead of
-   * "未知项目". Absent for live projects (their name comes from `repos`).
+   * "未知项目". Absent for live projects (their name comes from `projects`).
    */
   deletedProjectLabel?: string;
 }
@@ -130,11 +130,11 @@ function logSessionDiagnostic(event: string, details: Record<string, unknown>): 
 /**
  * Enforce the renderer's active-session invariant at every persistence boundary.
  * `null` is an intentional draft. Any other value must name a live, unarchived
- * row in this exact repo index; invalid legacy/dangling values fail closed to
+ * row in this exact project index; invalid legacy/dangling values fail closed to
  * draft instead of guessing another conversation.
  */
 function normalizeSessionIndex(
-  repoId: string | null,
+  projectId: string | null,
   idx: SessionIndex,
   source: string,
 ): SessionIndex {
@@ -147,7 +147,7 @@ function normalizeSessionIndex(
   if (summary && !summary.archived) return idx;
 
   logSessionDiagnostic("session.active_normalized", {
-    repoId,
+    repoId: projectId,
     source,
     previousActiveSessionId: requested ?? null,
     reason:
@@ -162,40 +162,39 @@ function normalizeSessionIndex(
   return { ...idx, activeSessionId: null };
 }
 
-function repoKey(repoId: string | null): string {
-  return repoId ?? NO_REPO_KEY;
+/** Resolve a project id (or null) to its byte-compatible bucket segment. */
+export function projectBucketSegment(projectId: string | null): string {
+  return projectId ?? NO_REPO_KEY;
 }
 
-/** Resolve a repo id (or null) to its bucket repo-key segment. */
-export function repoKeyOf(repoId: string | null): string {
-  return repoId ?? NO_REPO_KEY;
-}
+/** @deprecated Use projectBucketSegment; retained for renderer API compatibility. */
+export const repoKeyOf = projectBucketSegment;
 
 /**
  * Canonical transcripts-map / sidebar-status bucket key:
- *   `${repoId ?? NO_REPO_KEY}::${sessionId ?? "_none_"}`
+ *   `${projectId ?? NO_REPO_KEY}::${sessionId ?? "_none_"}`
  *
  * This is the SINGLE source of truth — App.tsx (map build), Sidebar.tsx (row
  * lookup), and streamRouting.ts all use it. The output MUST stay byte-identical
  * across versions so persisted/runtime keys keep matching. The `_none_` only
  * matters for a null sessionId (draft/global edge cases) — keep it.
  */
-export function bucketKey(repoId: string | null, sessionId: string | null): string {
-  return `${repoKeyOf(repoId)}::${sessionId ?? "_none_"}`;
+export function bucketKey(projectId: string | null, sessionId: string | null): string {
+  return `${projectBucketSegment(projectId)}::${sessionId ?? "_none_"}`;
 }
 
-/** Suffix of the shared per-repo draft bucket (null sessionId). */
+/** Suffix of the shared per-project draft bucket (null sessionId). */
 export const DRAFT_BUCKET_SUFFIX = "::_none_";
 
-/** True for the shared per-repo draft slot (`<repo>::_none_`). */
+/** True for the shared per-project draft slot (`<project-id>::_none_`). */
 export function isDraftBucket(bucket: string): boolean {
   return bucket.endsWith(DRAFT_BUCKET_SUFFIX);
 }
 
 /**
  * Per-bucket override maps (permission/goal) are keyed by bucketKey. A DRAFT has
- * a null sessionId, so every draft in a repo collapses to the SHARED
- * `<repo>::_none_` slot — which, left unmanaged, makes one draft's choice
+ * a null sessionId, so every draft in a project collapses to the SHARED
+ * `<project-id>::_none_` slot — which, left unmanaged, makes one draft's choice
  * "粘连" onto the next 新对话 (#11). These two helpers keep that slot honest:
  *
  *  - migrateBucketOverride: when a draft solidifies into a real session (first
@@ -226,11 +225,11 @@ export function clearBucketOverride<V>(prev: Record<string, V>, bucket: string):
   return rest;
 }
 
-export function migrateRepoBucketOverrides<V>(
+export function migrateProjectBucketOverrides<V>(
   prev: Record<string, V>,
-  repoIdRemap: Record<string, string>,
+  projectIdRemap: Record<string, string>,
 ): Record<string, V> {
-  const remaps = Object.entries(repoIdRemap).filter(([from, to]) => from && to && from !== to);
+  const remaps = Object.entries(projectIdRemap).filter(([from, to]) => from && to && from !== to);
   if (remaps.length === 0) return prev;
 
   let next: Record<string, V> | null = null;
@@ -247,6 +246,9 @@ export function migrateRepoBucketOverrides<V>(
   }
   return next ?? prev;
 }
+
+/** @deprecated Use migrateProjectBucketOverrides. */
+export const migrateRepoBucketOverrides = migrateProjectBucketOverrides;
 /**
  * Per-bucket override maps (permission / model / goal) keyed by bucketKey, the
  * whole map persisted under one namespaced localStorage key.
@@ -283,8 +285,8 @@ export function loadOverrideMap<V>(namespace: string): Record<string, V> {
 /**
  * Persist an override map. An empty map clears the key to avoid clutter.
  *
- * Draft buckets (`<repo>::_none_`) and ephemeral quick-chat buckets are stripped
- * before persisting. A draft slot is shared by every new chat in a repo; a quick
+ * Draft buckets (`<project-id>::_none_`) and ephemeral quick-chat buckets are stripped
+ * before persisting. A draft slot is shared by every new chat in a project; a quick
  * chat is destroyed on close/exit. Persisting either would leave a stale access,
  * model, or goal choice that can bleed into a later conversation.
  */
@@ -305,19 +307,19 @@ export function saveOverrideMap<V>(namespace: string, map: Record<string, V>): v
   }
 }
 
-function indexKey(repoId: string | null): string {
-  return `codeshell.sessionIndex.${repoKey(repoId)}`;
+function indexKey(projectId: string | null): string {
+  return `codeshell.sessionIndex.${projectBucketSegment(projectId)}`;
 }
-function transcriptKey(repoId: string | null, sessionId: string): string {
-  return `codeshell.transcript.${repoKey(repoId)}.${sessionId}`;
+function transcriptKey(projectId: string | null, sessionId: string): string {
+  return `codeshell.transcript.${projectBucketSegment(projectId)}.${sessionId}`;
 }
 
 /**
- * Per-(repo, session) right-dock panel state (open/tabs/activeId). The dock's
+ * Per-(project, session) right-dock panel state (open/tabs/activeId). The dock's
  * visibility and tab set ride with the conversation: switching sessions
  * restores that session's panels. `panelWidth` stays global (not keyed here).
  *
- * Draft sessions (null sessionId) collapse to the shared `<repo>::_none_` slot
+ * Draft sessions (null sessionId) collapse to the shared `<project-id>::_none_` slot
  * via bucketKey, matching how permission/goal overrides bucket drafts.
  */
 export interface PanelStateSnapshot<K extends string = string> {
@@ -358,7 +360,7 @@ export function loadPanelState<K extends string = string>(bucket: string): Panel
 
 /**
  * Drop a bucket's saved panel state entirely. Used when starting a fresh
- * draft so the shared per-repo "_none_" slot doesn't carry a previous
+ * draft so the shared per-project "_none_" slot doesn't carry a previous
  * draft's panel layout into the new conversation (mirrors how permission/
  * goal/model overrides clear the draft bucket).
  */
@@ -436,9 +438,9 @@ export function makeSessionId(): string {
   return `s-${Date.now().toString(36)}-${rand}`;
 }
 
-export function loadSessionIndex(repoId: string | null): SessionIndex {
+export function loadSessionIndex(projectId: string | null): SessionIndex {
   try {
-    const raw = localStorage.getItem(indexKey(repoId));
+    const raw = localStorage.getItem(indexKey(projectId));
     if (!raw) return { sessions: [], activeSessionId: null };
     const parsed = JSON.parse(raw) as Partial<SessionIndex>;
     if (!parsed || !Array.isArray(parsed.sessions)) {
@@ -456,10 +458,10 @@ export function loadSessionIndex(repoId: string | null): SessionIndex {
         ? { deletedProjectLabel: parsed.deletedProjectLabel }
         : {}),
     } satisfies SessionIndex;
-    const normalized = normalizeSessionIndex(repoId, loaded, "load");
+    const normalized = normalizeSessionIndex(projectId, loaded, "load");
     if (normalized !== loaded) {
       try {
-        localStorage.setItem(indexKey(repoId), JSON.stringify(normalized));
+        localStorage.setItem(indexKey(projectId), JSON.stringify(normalized));
       } catch {
         // best effort
       }
@@ -470,10 +472,10 @@ export function loadSessionIndex(repoId: string | null): SessionIndex {
   }
 }
 
-export function saveSessionIndex(repoId: string | null, idx: SessionIndex): void {
+export function saveSessionIndex(projectId: string | null, idx: SessionIndex): void {
   try {
-    const normalized = normalizeSessionIndex(repoId, idx, "save");
-    localStorage.setItem(indexKey(repoId), JSON.stringify(normalized));
+    const normalized = normalizeSessionIndex(projectId, idx, "save");
+    localStorage.setItem(indexKey(projectId), JSON.stringify(normalized));
   } catch {
     // best effort
   }
@@ -483,25 +485,28 @@ const INDEX_KEY_PREFIX = "codeshell.sessionIndex.";
 
 /**
  * Find session indices for projects that were DELETED (carry deletedProjectLabel)
- * but whose repoId is no longer in the live repo set. On reload App seeds
- * `sessionIndices` only from `loadRepos()`, so a deleted project's all-archived
+ * but whose projectId is no longer in the live project set. On reload App seeds
+ * `sessionIndices` only from `loadProjects()`, so a deleted project's all-archived
  * index would otherwise vanish from the 已归档 view after a restart. This scans
  * localStorage for those orphaned-but-archived indices so they survive a refresh.
- * Returns a `{ repoId: SessionIndex }` map (never includes the no-repo bucket).
+ * Returns a `{ projectId: SessionIndex }` map (never includes the no-repo bucket).
  */
-export function loadDeletedArchivedIndices(liveRepoIds: Set<string>): Record<string, SessionIndex> {
+export function loadDeletedArchivedIndices(
+  liveProjectIds: Set<string>,
+): Record<string, SessionIndex> {
   const out: Record<string, SessionIndex> = {};
   try {
     if (typeof localStorage === "undefined") return out;
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (!key || !key.startsWith(INDEX_KEY_PREFIX)) continue;
-      const repoKeySeg = key.slice(INDEX_KEY_PREFIX.length);
-      if (repoKeySeg === NO_REPO_KEY || liveRepoIds.has(repoKeySeg)) continue;
-      const idx = loadSessionIndex(repoKeySeg);
+      const projectBucketSegment = key.slice(INDEX_KEY_PREFIX.length);
+      if (projectBucketSegment === NO_REPO_KEY || liveProjectIds.has(projectBucketSegment))
+        continue;
+      const idx = loadSessionIndex(projectBucketSegment);
       // Only surface indices we deliberately stamped at delete time — never
       // resurrect arbitrary stale buckets.
-      if (idx.deletedProjectLabel && idx.sessions.length > 0) out[repoKeySeg] = idx;
+      if (idx.deletedProjectLabel && idx.sessions.length > 0) out[projectBucketSegment] = idx;
     }
   } catch {
     // best effort — a malformed localStorage shouldn't break startup.
@@ -509,9 +514,9 @@ export function loadDeletedArchivedIndices(liveRepoIds: Set<string>): Record<str
   return out;
 }
 
-export function loadTranscript(repoId: string | null, sessionId: string): MessagesReducerState {
+export function loadTranscript(projectId: string | null, sessionId: string): MessagesReducerState {
   try {
-    const raw = localStorage.getItem(transcriptKey(repoId, sessionId));
+    const raw = localStorage.getItem(transcriptKey(projectId, sessionId));
     if (!raw) return INITIAL_STATE;
     const parsed = JSON.parse(raw) as Partial<MessagesReducerState>;
     if (!parsed || !Array.isArray(parsed.messages)) return INITIAL_STATE;
@@ -553,7 +558,7 @@ export function loadTranscript(repoId: string | null, sessionId: string): Messag
 }
 
 export function saveTranscript(
-  repoId: string | null,
+  projectId: string | null,
   sessionId: string,
   state: MessagesReducerState,
 ): void {
@@ -570,50 +575,56 @@ export function saveTranscript(
             // restore — the session has already been persisted.
             agentMessageIndex: {},
           };
-    localStorage.setItem(transcriptKey(repoId, sessionId), JSON.stringify(capped));
+    localStorage.setItem(transcriptKey(projectId, sessionId), JSON.stringify(capped));
   } catch {
     // best effort
   }
 }
 
-export function clearTranscript(repoId: string | null, sessionId: string): void {
+export function clearTranscript(projectId: string | null, sessionId: string): void {
   try {
-    localStorage.removeItem(transcriptKey(repoId, sessionId));
+    localStorage.removeItem(transcriptKey(projectId, sessionId));
   } catch {
     // best effort
   }
 }
 
-/** Merge one repo bucket into another, moving index rows and transcript blobs. */
-export function migrateRepoSessionBucket(fromRepoId: string, toRepoId: string): SessionIndex {
-  if (fromRepoId === toRepoId) return loadSessionIndex(toRepoId);
-  const from = loadSessionIndex(fromRepoId);
-  const to = loadSessionIndex(toRepoId);
+/** Merge one project bucket into another, moving index rows and transcript blobs. */
+export function migrateProjectSessionBucket(
+  fromProjectId: string,
+  toProjectId: string,
+): SessionIndex {
+  if (fromProjectId === toProjectId) return loadSessionIndex(toProjectId);
+  const from = loadSessionIndex(fromProjectId);
+  const to = loadSessionIndex(toProjectId);
   const existing = new Set(to.sessions.map((s) => s.engineSessionId || s.id));
   const moved = from.sessions.filter((s) => !existing.has(s.engineSessionId || s.id));
   for (const s of moved) {
-    saveTranscript(toRepoId, s.id, loadTranscript(fromRepoId, s.id));
+    saveTranscript(toProjectId, s.id, loadTranscript(fromProjectId, s.id));
   }
   const next: SessionIndex = {
     sessions: [...moved, ...to.sessions].sort((a, b) => b.updatedAt - a.updatedAt),
     activeSessionId: to.activeSessionId ?? from.activeSessionId,
   };
-  saveSessionIndex(toRepoId, next);
+  saveSessionIndex(toProjectId, next);
   try {
-    localStorage.removeItem(indexKey(fromRepoId));
-    for (const s of from.sessions) localStorage.removeItem(transcriptKey(fromRepoId, s.id));
+    localStorage.removeItem(indexKey(fromProjectId));
+    for (const s of from.sessions) localStorage.removeItem(transcriptKey(fromProjectId, s.id));
   } catch {
     // best effort
   }
   return next;
 }
 
-/** Create a new session under `repoId` and make it active. */
+/** @deprecated Use migrateProjectSessionBucket. */
+export const migrateRepoSessionBucket = migrateProjectSessionBucket;
+
+/** Create a new session under `projectId` and make it active. */
 export function createSession(
-  repoId: string | null,
+  projectId: string | null,
   title?: string,
 ): { index: SessionIndex; sessionId: string } {
-  const idx = loadSessionIndex(repoId);
+  const idx = loadSessionIndex(projectId);
   const id = makeSessionId();
   const now = Date.now();
   const summary: SessionSummary = {
@@ -626,23 +637,23 @@ export function createSession(
     sessions: [summary, ...idx.sessions],
     activeSessionId: id,
   };
-  saveSessionIndex(repoId, next);
+  saveSessionIndex(projectId, next);
   return { index: next, sessionId: id };
 }
 
-export function deleteSessionLocal(repoId: string | null, sessionId: string): SessionIndex {
-  const idx = loadSessionIndex(repoId);
+export function deleteSessionLocal(projectId: string | null, sessionId: string): SessionIndex {
+  const idx = loadSessionIndex(projectId);
   const remaining = idx.sessions.filter((s) => s.id !== sessionId);
   const next = normalizeSessionIndex(
-    repoId,
+    projectId,
     {
       sessions: remaining,
       activeSessionId: idx.activeSessionId === sessionId ? null : idx.activeSessionId,
     },
     "delete",
   );
-  saveSessionIndex(repoId, next);
-  clearTranscript(repoId, sessionId);
+  saveSessionIndex(projectId, next);
+  clearTranscript(projectId, sessionId);
   return next;
 }
 
@@ -654,48 +665,48 @@ export function deleteSessionLocal(repoId: string | null, sessionId: string): Se
  * the session isn't found.
  */
 export function updateSessionRunStatus(
-  repoId: string | null,
+  projectId: string | null,
   sessionId: string,
   runStatus: string,
 ): SessionIndex {
-  const idx = loadSessionIndex(repoId);
+  const idx = loadSessionIndex(projectId);
   const next: SessionIndex = {
     ...idx,
     sessions: idx.sessions.map((s) => (s.id === sessionId ? { ...s, runStatus } : s)),
   };
-  saveSessionIndex(repoId, next);
+  saveSessionIndex(projectId, next);
   return next;
 }
 
 /** Persist the engine sessionId on a UI session after the first run resolves. */
 export function bindEngineSession(
-  repoId: string | null,
+  projectId: string | null,
   sessionId: string,
   engineSessionId: string,
 ): SessionIndex {
-  const idx = loadSessionIndex(repoId);
+  const idx = loadSessionIndex(projectId);
   const next: SessionIndex = {
     ...idx,
     sessions: idx.sessions.map((s) => (s.id === sessionId ? { ...s, engineSessionId } : s)),
   };
-  saveSessionIndex(repoId, next);
+  saveSessionIndex(projectId, next);
   return next;
 }
 
 /**
- * Insert or update an imported (automation) session summary in a repo's
+ * Insert or update an imported (automation) session summary in a project's
  * index, keyed by engineSessionId. Returns the new index. Does NOT write
  * the transcript (caller does that via saveTranscript). Idempotent: a second
  * call with the same engineSessionId updates in place instead of duplicating.
  */
 export function upsertImportedSession(
-  repoId: string | null,
+  projectId: string | null,
   summary: SessionSummary,
 ): SessionIndex {
   if (!summary.engineSessionId) {
     throw new Error("upsertImportedSession: summary must have engineSessionId");
   }
-  const idx = loadSessionIndex(repoId);
+  const idx = loadSessionIndex(projectId);
   const without = idx.sessions.filter(
     (s) => !(summary.engineSessionId && s.engineSessionId === summary.engineSessionId),
   );
@@ -703,18 +714,18 @@ export function upsertImportedSession(
     sessions: [summary, ...without].sort((a, b) => b.updatedAt - a.updatedAt),
     activeSessionId: idx.activeSessionId,
   };
-  saveSessionIndex(repoId, next);
+  saveSessionIndex(projectId, next);
   return next;
 }
 
 export function archiveSession(
-  repoId: string | null,
+  projectId: string | null,
   sessionId: string,
   archived: boolean,
 ): SessionIndex {
-  const idx = loadSessionIndex(repoId);
+  const idx = loadSessionIndex(projectId);
   const next = normalizeSessionIndex(
-    repoId,
+    projectId,
     {
       ...idx,
       sessions: idx.sessions.map((s) => (s.id === sessionId ? { ...s, archived } : s)),
@@ -724,38 +735,38 @@ export function archiveSession(
     },
     archived ? "archive" : "restore",
   );
-  saveSessionIndex(repoId, next);
+  saveSessionIndex(projectId, next);
   return next;
 }
 
 /**
- * Archive EVERY session in a repo's index in one write, stamping the project's
+ * Archive EVERY session in a project's index in one write, stamping the project's
  * display label so the archived-sessions view can still name it after the
- * project is removed from `repos[]`. Used by handleRemoveRepo so deleting a
+ * project is removed from `projects[]`. Used by the remove-project flow so deleting a
  * project archives its conversations (visible + restorable under 设置→高级)
  * instead of orphaning them in localStorage. Returns the updated index so the
  * caller can keep it in `sessionIndices` state (the project row is gone from
- * the sidebar regardless, since the sidebar iterates `repos`).
+ * the sidebar regardless, since the sidebar iterates `projects`).
  */
-export function archiveAllSessions(repoId: string | null, projectLabel: string): SessionIndex {
-  const idx = loadSessionIndex(repoId);
+export function archiveAllSessions(projectId: string | null, projectLabel: string): SessionIndex {
+  const idx = loadSessionIndex(projectId);
   const next: SessionIndex = {
     ...idx,
     sessions: idx.sessions.map((s) => (s.archived ? s : { ...s, archived: true })),
     activeSessionId: null,
     deletedProjectLabel: projectLabel,
   };
-  saveSessionIndex(repoId, next);
+  saveSessionIndex(projectId, next);
   return next;
 }
 
 export function renameSessionLocal(
-  repoId: string | null,
+  projectId: string | null,
   sessionId: string,
   title: string,
   manual = false,
 ): SessionIndex {
-  const idx = loadSessionIndex(repoId);
+  const idx = loadSessionIndex(projectId);
   const next: SessionIndex = {
     ...idx,
     sessions: idx.sessions.map((s) =>
@@ -769,16 +780,16 @@ export function renameSessionLocal(
         : s,
     ),
   };
-  saveSessionIndex(repoId, next);
+  saveSessionIndex(projectId, next);
   return next;
 }
 
 export function touchSession(
-  repoId: string | null,
+  projectId: string | null,
   sessionId: string,
   firstUserText?: string,
 ): SessionIndex {
-  const idx = loadSessionIndex(repoId);
+  const idx = loadSessionIndex(projectId);
   const now = Date.now();
   const next: SessionIndex = {
     ...idx,
@@ -793,13 +804,17 @@ export function touchSession(
       return out;
     }),
   };
-  saveSessionIndex(repoId, next);
+  saveSessionIndex(projectId, next);
   return next;
 }
 
-export function setActiveSession(repoId: string | null, sessionId: string | null): SessionIndex {
-  const idx = loadSessionIndex(repoId);
-  const next = normalizeSessionIndex(repoId, { ...idx, activeSessionId: sessionId }, "set_active");
-  saveSessionIndex(repoId, next);
+export function setActiveSession(projectId: string | null, sessionId: string | null): SessionIndex {
+  const idx = loadSessionIndex(projectId);
+  const next = normalizeSessionIndex(
+    projectId,
+    { ...idx, activeSessionId: sessionId },
+    "set_active",
+  );
+  saveSessionIndex(projectId, next);
   return next;
 }

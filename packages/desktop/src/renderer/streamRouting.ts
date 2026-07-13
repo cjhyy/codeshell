@@ -2,7 +2,7 @@
  * Pure routing logic for incoming agent stream events.
  *
  * An event carries the engine `sessionId`; the renderer must map it to a UI
- * "bucket" (`repoKey::uiSessionId`) to dispatch into the right tab. The live
+ * "bucket" (`projectBucketSegment::uiSessionId`) to dispatch into the right tab. The live
  * `engineToBucket` table is the fast path, but it lives in renderer memory and
  * is wiped on every remount (refresh / HMR / crash recovery). When it misses,
  * we reverse-look-up the engine sessionId in the on-disk session indices
@@ -12,10 +12,10 @@
  */
 import { bucketKey, type SessionIndex } from "./transcripts";
 
-// Bucket keys here are built from an already-resolved repoKey string (the keys
+// Bucket keys here are built from an already-resolved projectBucketSegment string (the keys
 // of `sessionIndices`, never null) + a non-null UI session id, which the shared
-// `bucketKey(repoId, sessionId)` reproduces byte-identically
-// (`${repoKey}::${uiSessionId}`). Use the shared helper so this can't drift from
+// `bucketKey(projectId, sessionId)` reproduces byte-identically
+// (`${projectBucketSegment}::${uiSessionId}`). Use the shared helper so this can't drift from
 // App's map build / Sidebar's row lookup.
 
 /**
@@ -37,10 +37,10 @@ export function resolveBucket(
     const fromTable = engineToBucket.get(sessionId);
     if (fromTable) return fromTable;
 
-    for (const [repoKey, index] of Object.entries(sessionIndices)) {
+    for (const [projectBucketSegment, index] of Object.entries(sessionIndices)) {
       for (const s of index.sessions) {
         if (s.engineSessionId === sessionId) {
-          return bucketKey(repoKey, s.id);
+          return bucketKey(projectBucketSegment, s.id);
         }
       }
     }
@@ -68,14 +68,19 @@ export function resolveBucket(
 export function findAskUserOrigin(
   transcripts: Record<
     string,
-    { messages: Array<{ kind: string; requestId?: string; engineSessionId?: string; answer?: string }> }
+    {
+      messages: Array<{
+        kind: string;
+        requestId?: string;
+        engineSessionId?: string;
+        answer?: string;
+      }>;
+    }
   >,
   requestId: string,
 ): { bucket: string; engineSessionId?: string; answer?: string } | undefined {
   for (const [bucket, state] of Object.entries(transcripts)) {
-    const msg = state.messages.find(
-      (m) => m.kind === "ask_user" && m.requestId === requestId,
-    );
+    const msg = state.messages.find((m) => m.kind === "ask_user" && m.requestId === requestId);
     if (msg) return { bucket, engineSessionId: msg.engineSessionId, answer: msg.answer };
   }
   return undefined;

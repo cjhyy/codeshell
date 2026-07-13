@@ -34,7 +34,7 @@ interface SidebarProps {
   activeProjectId: string | null;
   activeSessionId: string | null;
   collapsedProjects: Set<string>;
-  /** Per-bucket status mark, keyed by the shared bucketKey(repoId, sessionId). */
+  /** Per-bucket status mark, keyed by the shared bucketKey(projectId, sessionId). */
   sessionStatuses?: Record<string, SessionStatus>;
   sidebarCollapsed?: boolean;
 

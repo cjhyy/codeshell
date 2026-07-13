@@ -40,12 +40,12 @@ describe("usePanelWorkspaceRoot", () => {
     });
 
     let sessionId: string | null = null;
-    let repoPath: string | null = null;
-    const hook = await renderHook(() => usePanelWorkspaceRoot(sessionId, repoPath));
+    let projectPath: string | null = null;
+    const hook = await renderHook(() => usePanelWorkspaceRoot(sessionId, projectPath));
     cleanup = hook.unmount;
     expect(hook.result.current).toEqual({ root: null, kind: null, ready: true });
 
-    repoPath = "/repo";
+    projectPath = "/repo";
     await hook.rerender();
     expect(hook.result.current).toEqual({ root: "/repo", kind: "main", ready: true });
     expect(calls).toBe(0);
@@ -94,12 +94,12 @@ describe("usePanelWorkspaceRoot", () => {
     });
 
     let sessionId = "engine-a";
-    let repoPath = "/repo-a";
-    const hook = await renderHook(() => usePanelWorkspaceRoot(sessionId, repoPath));
+    let projectPath = "/repo-a";
+    const hook = await renderHook(() => usePanelWorkspaceRoot(sessionId, projectPath));
     cleanup = hook.unmount;
 
     sessionId = "engine-b";
-    repoPath = "/repo-b";
+    projectPath = "/repo-b";
     await hook.rerender();
     await act(async () => {
       second.resolve({ root: "/repo-b/.worktrees/current", kind: "worktree" });

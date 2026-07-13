@@ -3,7 +3,7 @@
  *
  * Scopes:
  *   - user:    ~/.code-shell/settings.json
- *   - project: <cwd>/.code-shell/settings.json (when cwd given)
+ *   - project: <projectPath>/.code-shell/settings.json (when a project path is given)
  *
  * Returns null when the file doesn't exist; updateSettings creates
  * the file (and dir) atomically via a temp + rename.
@@ -22,17 +22,17 @@ export interface SettingsLocation {
   path: string;
 }
 
-export function resolveSettingsPath(scope: SettingsScope, cwd?: string): string {
+export function resolveSettingsPath(scope: SettingsScope, projectPath?: string): string {
   if (scope === "user") return path.join(os.homedir(), ".code-shell", "settings.json");
-  if (!cwd) throw new Error("project scope requires cwd");
-  return path.join(cwd, ".code-shell", "settings.json");
+  if (!projectPath) throw new Error("project scope requires cwd");
+  return path.join(projectPath, ".code-shell", "settings.json");
 }
 
 export async function readSettings(
   scope: SettingsScope,
-  cwd?: string,
+  projectPath?: string,
 ): Promise<Record<string, unknown> | null> {
-  const p = resolveSettingsPath(scope, cwd);
+  const p = resolveSettingsPath(scope, projectPath);
   let raw: string;
   try {
     raw = await fs.readFile(p, "utf8");
@@ -86,9 +86,9 @@ const LOCK_RETRIES = { retries: 10, factor: 1.5, minTimeout: 20, maxTimeout: 500
 export async function writeSettings(
   scope: SettingsScope,
   patch: Record<string, unknown>,
-  cwd?: string,
+  projectPath?: string,
 ): Promise<void> {
-  const p = resolveSettingsPath(scope, cwd);
+  const p = resolveSettingsPath(scope, projectPath);
   // Serialize per file. Tail off the previous write (ignoring its rejection so
   // one failure doesn't poison the chain) before doing our read-modify-write.
   const prev = writeChains.get(p) ?? Promise.resolve();
@@ -100,7 +100,7 @@ export async function writeSettings(
       // Cross-process lock around the whole RMW. Lock the dir, not the file.
       const release = await lock(dir, { stale: LOCK_STALE_MS, retries: LOCK_RETRIES });
       try {
-        const current = (await readSettings(scope, cwd)) ?? {};
+        const current = (await readSettings(scope, projectPath)) ?? {};
         const merged = deepMerge(current, patch);
         normalizeWorktreeBranchPrefixIfPatched(patch, merged);
         // Unique temp name so a concurrent writer for the same file can't clobber

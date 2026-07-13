@@ -13,7 +13,7 @@ describe("CredentialsPage", () => {
     const html = renderToStaticMarkup(
       <ToastProvider>
         <DialogProvider>
-          <CredentialsPage activeRepoPath={null} />
+          <CredentialsPage activeProjectPath={null} />
         </DialogProvider>
       </ToastProvider>,
     );

@@ -8,9 +8,9 @@ export function resolveOpenCliSessionBucket(
 ): string | null {
   const direct = engineToBucket.get(sourceSessionId);
   if (direct) return direct;
-  for (const [repoKey, index] of Object.entries(sessionIndices)) {
+  for (const [projectBucketSegment, index] of Object.entries(sessionIndices)) {
     const owner = index.sessions.find((session) => session.engineSessionId === sourceSessionId);
-    if (owner) return `${repoKey}::${owner.id}`;
+    if (owner) return `${projectBucketSegment}::${owner.id}`;
   }
   return null;
 }

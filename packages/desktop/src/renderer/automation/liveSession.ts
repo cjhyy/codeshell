@@ -3,7 +3,7 @@
  * (`agent/automationSession`). Stream events carry only a sessionId — the cwd
  * needed to group the run under a project lives on the cron job (main side) and
  * is forwarded once via the announcement. This module turns that announcement
- * into a (repoId, SessionSummary) the renderer can upsert into the sidebar,
+ * into a (projectId, SessionSummary) the renderer can upsert into the sidebar,
  * reusing the SAME source:"automation" machinery the startup disk-backfill uses
  * (so clicking the session renders the run like a normal chat).
  *
@@ -11,7 +11,7 @@
  * Electron / localStorage.
  */
 import type { SessionSummary } from "../transcripts";
-import { matchRepoIdForCwd, isNoRepoCwd, type RepoLike } from "./pathMatch";
+import { matchProjectIdForCwd, isNoRepoCwd, type ProjectLike } from "./pathMatch";
 
 export interface AutomationSessionAnnouncement {
   sessionId: string;
@@ -27,33 +27,33 @@ export interface PlaceLiveSessionDeps {
   caseInsensitive: boolean;
   resolveCwd?: (cwd: string) => string;
   /** Create a repo for an unmatched cwd; returns its id. */
-  createRepoForCwd: (cwd: string) => string | null;
+  createProjectForCwd: (cwd: string) => string | null;
 }
 
 export interface LiveSessionPlacement {
-  repoId: string | null;
+  projectId: string | null;
   summary: SessionSummary;
 }
 
 /**
  * Resolve which project an announced automation session belongs to (matching
- * the cwd against existing repos, auto-creating one when unmatched) and build
+ * the cwd against existing projects, auto-creating one when unmatched) and build
  * the SessionSummary for it. `runStatus: "running"` mirrors the disk-backfill
  * convention so the next startup backfill re-imports the finished transcript in
  * place (upsertImportedSession keys on engineSessionId).
  */
 export function placeLiveAutomationSession(
   ann: AutomationSessionAnnouncement,
-  repos: RepoLike[],
+  projects: ProjectLike[],
   deps: PlaceLiveSessionDeps,
 ): LiveSessionPlacement | null {
   const cwd = deps.resolveCwd?.(ann.cwd) ?? ann.cwd;
   // The internal no-repo sandbox is a no-project chat → NO_REPO_KEY bucket
-  // (repoId null), never a real repo.
-  const repoId = isNoRepoCwd(cwd)
+  // (projectId null), never a real repo.
+  const projectId = isNoRepoCwd(cwd)
     ? null
-    : (matchRepoIdForCwd(cwd, repos, deps.caseInsensitive) ?? deps.createRepoForCwd(cwd));
-  if (repoId === null && !isNoRepoCwd(cwd)) return null;
+    : (matchProjectIdForCwd(cwd, projects, deps.caseInsensitive) ?? deps.createProjectForCwd(cwd));
+  if (projectId === null && !isNoRepoCwd(cwd)) return null;
   const now = Date.now();
   const summary: SessionSummary = {
     id: ann.sessionId, // engine sessionId doubles as the UI session id for imports
@@ -65,5 +65,5 @@ export function placeLiveAutomationSession(
     runStatus: "running",
     cronJobId: ann.cronJobId,
   };
-  return { repoId, summary };
+  return { projectId, summary };
 }

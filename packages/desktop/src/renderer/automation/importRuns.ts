@@ -1,14 +1,14 @@
 /**
  * Attribute completed automation runs to sidebar projects and import them
  * into localStorage as normal sessions. Pure orchestration with injected
- * side effects (fetchTranscript / writeImported / createRepoForCwd) so it
+ * side effects (fetchTranscript / writeImported / createProjectForCwd) so it
  * unit-tests without Electron or localStorage.
  */
 import type { FoldItem } from "../../preload/types";
 import type { MessagesReducerState } from "../types";
 import type { SessionSummary } from "../transcripts";
 import { foldTranscript } from "./foldTranscript";
-import { matchRepoIdForCwd, normalizeCwd, isNoRepoCwd, type RepoLike } from "./pathMatch";
+import { matchProjectIdForCwd, normalizeCwd, isNoRepoCwd, type ProjectLike } from "./pathMatch";
 
 /** A run as needed for import (subset of the main-process RunSummary). */
 export interface ImportableRun {
@@ -30,12 +30,12 @@ export interface ImportDeps {
   existingEngineSessionIds: Set<string>;
   fetchTranscript: (sessionId: string) => Promise<FoldItem[]>;
   writeImported: (
-    repoId: string | null,
+    projectId: string | null,
     summary: SessionSummary,
     state: MessagesReducerState,
   ) => void;
   /** Create a repo for an unmatched cwd; returns its id. */
-  createRepoForCwd: (cwd: string) => string | null;
+  createProjectForCwd: (cwd: string) => string | null;
   resolveCwd?: (cwd: string) => string;
   /** Max runs imported per repo (most-recent first). */
   cap: number;
@@ -43,7 +43,7 @@ export interface ImportDeps {
 
 export async function importAutomationRuns(
   runs: ImportableRun[],
-  repos: RepoLike[],
+  projects: ProjectLike[],
   deps: ImportDeps,
 ): Promise<void> {
   // 1. Filter: automation-sourced, has a sessionId, not already known.
@@ -52,40 +52,38 @@ export async function importAutomationRuns(
   //    (queued runs without a sessionId are excluded by the !!r.sessionId guard.)
   const candidates = runs.filter(
     (r) =>
-      r.source === "automation" &&
-      !!r.sessionId &&
-      !deps.existingEngineSessionIds.has(r.sessionId),
+      r.source === "automation" && !!r.sessionId && !deps.existingEngineSessionIds.has(r.sessionId),
   );
 
-  // 2. Group by attributed repoId (auto-creating repos as needed).
-  const byRepo = new Map<string | null, ImportableRun[]>();
+  // 2. Group by attributed projectId (auto-creating projects as needed).
+  const byProject = new Map<string | null, ImportableRun[]>();
   // Memo so multiple runs sharing an unmatched cwd reuse ONE auto-created repo
   // instead of spawning a new repo per run.
   const autoCreated = new Map<string, string>();
   for (const r of candidates) {
     const cwd = deps.resolveCwd?.(r.cwd) ?? r.cwd;
     // The internal no-repo sandbox is a no-project chat → NO_REPO_KEY bucket
-    // (repoId null), never a real repo.
-    let repoId = isNoRepoCwd(cwd) ? null : matchRepoIdForCwd(cwd, repos, deps.caseInsensitive);
-    if (!repoId && !isNoRepoCwd(cwd)) {
+    // (projectId null), never a real repo.
+    let projectId = isNoRepoCwd(cwd)
+      ? null
+      : matchProjectIdForCwd(cwd, projects, deps.caseInsensitive);
+    if (!projectId && !isNoRepoCwd(cwd)) {
       const key = normalizeCwd(cwd, deps.caseInsensitive);
-      repoId = autoCreated.get(key) ?? null;
-      if (!repoId) {
-        repoId = deps.createRepoForCwd(cwd);
-        if (!repoId) continue;
-        autoCreated.set(key, repoId);
+      projectId = autoCreated.get(key) ?? null;
+      if (!projectId) {
+        projectId = deps.createProjectForCwd(cwd);
+        if (!projectId) continue;
+        autoCreated.set(key, projectId);
       }
     }
-    const list = byRepo.get(repoId) ?? [];
+    const list = byProject.get(projectId) ?? [];
     list.push(r);
-    byRepo.set(repoId, list);
+    byProject.set(projectId, list);
   }
 
   // 3. Per repo: most-recent first, cap, fetch+fold+write.
-  for (const [repoId, list] of byRepo) {
-    list.sort(
-      (a, b) => (b.finishedAt ?? b.createdAt) - (a.finishedAt ?? a.createdAt),
-    );
+  for (const [projectId, list] of byProject) {
+    list.sort((a, b) => (b.finishedAt ?? b.createdAt) - (a.finishedAt ?? a.createdAt));
     for (const r of list.slice(0, deps.cap)) {
       let state: MessagesReducerState;
       try {
@@ -103,7 +101,7 @@ export async function importAutomationRuns(
         runId: r.runId,
         runStatus: r.status,
       };
-      deps.writeImported(repoId, summary, state);
+      deps.writeImported(projectId, summary, state);
     }
   }
 }
