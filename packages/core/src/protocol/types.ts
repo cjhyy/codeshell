@@ -175,6 +175,12 @@ export interface RunParams {
   planMode?: boolean;
   /** Named behavior profile for a product-specific per-run interaction mode. */
   behaviorMode?: RunBehaviorMode;
+  /**
+   * Host-built bounded Pet world JSON for this invocation. It is delivered as
+   * non-durable system context and must never be appended to the user task or
+   * transcript. Valid only for an explicitly durable Pet run.
+   */
+  petRuntimeContext?: string;
   /** Durable classification used only when creating a new session. */
   kind?: SessionKind;
   /**

@@ -163,7 +163,7 @@ describe("Pet projection protocol", () => {
     const { client, manager, server } = makePair(["session-sensitive"]);
     const session = await manager.getOrCreate("session-sensitive", {} as never);
     const question = [
-      "联系人 Bob bob@example.com",
+      "普通密码 hunter2",
       "middle token-middle-123456789",
       "末尾 secret-tail-987654321",
     ].join("\n");
@@ -173,8 +173,7 @@ describe("Pet projection protocol", () => {
     const serialized = JSON.stringify(snapshot);
 
     expect(snapshot.pending[0]?.title).toBe("需要用户回答");
-    expect(serialized).not.toContain("Bob");
-    expect(serialized).not.toContain("bob@example.com");
+    expect(serialized).not.toContain("hunter2");
     expect(serialized).not.toContain("token-middle-123456789");
     expect(serialized).not.toContain("secret-tail-987654321");
 

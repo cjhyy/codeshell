@@ -104,18 +104,21 @@ describe("PetDispatchService", () => {
       },
     });
     expect(String(request?.params.task)).toContain("What is running?");
+    expect(String(request?.params.task)).not.toContain("<pet-world>");
     expect(String(request?.params.task)).not.toContain("requestId");
+    expect(String(request?.params.petRuntimeContext)).toContain('"runState":"running"');
   });
 
   test("does not inject or persist any raw multiline AskUser title even if host input is malformed", async () => {
     let task = "";
+    let runtimeContext = "";
     const unsafeSnapshot: DesktopPetProjectionSnapshot = {
       ...snapshot,
       pending: [
         {
           ...snapshot.pending[0]!,
           title: [
-            "联系人 Carol carol@example.com",
+            "普通密码 hunter2",
             "middle token-middle-445566",
             "tail secret-tail-aabbcc778899",
           ].join("\n"),
@@ -131,6 +134,7 @@ describe("PetDispatchService", () => {
       worker: {
         requestWorker: async (_method, params) => {
           task = String(params.task);
+          runtimeContext = String(params.petRuntimeContext);
           return { ok: true, result: { text: "safe" } };
         },
       },
@@ -138,9 +142,10 @@ describe("PetDispatchService", () => {
     });
 
     await service.dispatch({ type: "chat", message: "list pending" });
-    expect(task).toContain("需要用户回答");
-    expect(task).not.toContain("Carol");
-    expect(task).not.toContain("carol@example.com");
+    expect(task).toBe("list pending");
+    expect(task).not.toContain("<pet-world>");
+    expect(runtimeContext).toContain("需要用户回答");
+    expect(runtimeContext).not.toContain("hunter2");
     expect(task).not.toContain("token-middle-445566");
     expect(task).not.toContain("secret-tail-aabbcc778899");
   });

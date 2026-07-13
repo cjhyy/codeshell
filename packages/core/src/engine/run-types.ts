@@ -40,6 +40,8 @@ export interface EngineRunOptions {
   attachments?: InputAttachmentMeta[];
   /** Named per-run behavior profile supplied by interactive product surfaces. */
   behaviorMode?: RunBehaviorMode;
+  /** Bounded host Pet world JSON; model-visible for this run, never persisted. */
+  petRuntimeContext?: string;
   /** Durable classification requested only when creating a new session. */
   kind?: SessionKind;
   /** Trusted metadata for an interrupt redrive initiated by agent direction. */

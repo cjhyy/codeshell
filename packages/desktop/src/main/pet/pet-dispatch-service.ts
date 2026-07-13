@@ -129,7 +129,8 @@ export class PetDispatchService {
         const world = boundedWorld(this.options.aggregator.getSnapshot());
         const response = await this.options.worker.requestWorker("agent/run", {
           sessionId: metadata.petSessionId,
-          task: `${command.message.trim()}\n\n<pet-world>${JSON.stringify(world)}</pet-world>`,
+          task: command.message.trim(),
+          petRuntimeContext: JSON.stringify(world),
           cwd: this.options.hostCwd,
           behaviorMode: "pet",
           kind: "pet",

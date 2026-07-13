@@ -40,6 +40,8 @@ export interface TurnOpts {
   planMode?: boolean;
   /** Named behavior profile snapshot for this queued turn only. */
   behaviorMode?: RunBehaviorMode;
+  /** Bounded host Pet world JSON for this turn; never part of `task`. */
+  petRuntimeContext?: string;
   /** Durable classification used only when the Engine creates the session. */
   kind?: SessionKind;
   /** Connection owner router for permission prompts in this turn. */
@@ -300,6 +302,7 @@ export class ChatSession {
         permissionMode: next.opts.permissionMode,
         planMode: next.opts.planMode,
         behaviorMode: next.opts.behaviorMode,
+        petRuntimeContext: next.opts.petRuntimeContext,
         kind: next.opts.kind,
         approvalRouter: next.opts.approvalRouter,
       });

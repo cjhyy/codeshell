@@ -110,6 +110,22 @@ function runInputError(params: RunParams): string | null {
   if (params.kind !== undefined && params.kind !== "work" && params.kind !== "pet") {
     return `invalid session kind: ${String(params.kind)}`;
   }
+  if (params.petRuntimeContext !== undefined) {
+    if (params.behaviorMode !== "pet" || params.kind !== "pet") {
+      return "petRuntimeContext requires behaviorMode=pet and kind=pet";
+    }
+    if (typeof params.petRuntimeContext !== "string" || params.petRuntimeContext.length > 32_768) {
+      return "petRuntimeContext must be bounded JSON";
+    }
+    try {
+      const parsed = JSON.parse(params.petRuntimeContext) as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return "petRuntimeContext must be a JSON object";
+      }
+    } catch {
+      return "petRuntimeContext must be valid JSON";
+    }
+  }
   return null;
 }
 
@@ -971,6 +987,7 @@ export class AgentServer {
         permissionMode: params.permissionMode,
         planMode: params.planMode,
         behaviorMode: params.behaviorMode,
+        petRuntimeContext: params.petRuntimeContext,
         kind: params.kind,
         approvalRouter: this.approvalRouter,
       });
@@ -1108,6 +1125,7 @@ export class AgentServer {
         permissionMode: params.permissionMode,
         planMode: params.planMode,
         behaviorMode: params.behaviorMode,
+        petRuntimeContext: params.petRuntimeContext,
         kind: params.kind,
       });
 

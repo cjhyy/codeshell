@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { LLMClientBase } from "../llm/client-base.js";
@@ -79,10 +79,13 @@ describe("Engine pet behavior", () => {
       kind: "pet",
       behaviorMode: "pet",
       permissionMode: "bypassPermissions",
+      petRuntimeContext: '{"pending":[{"title":"runtime-only-hunter2"}]}',
     });
 
     const first = calls.get(model)![0]!;
     expect(first.systemPrompt).toContain("# Local Pet Phase 1 Boundary");
+    expect(first.systemPrompt).toContain("runtime-only-hunter2");
+    expect(JSON.stringify(first.messages)).not.toContain("runtime-only-hunter2");
     expect(first.tools).toEqual(expect.arrayContaining(["Read", "Glob", "Grep"]));
     for (const forbidden of [
       "Write",
@@ -102,6 +105,8 @@ describe("Engine pet behavior", () => {
       "not allowed by this run profile",
     );
     expect(engine.getSessionManager().readSessionKind("local-pet")).toBe("pet");
+    const transcript = readFileSync(join(cwd, "sessions", "local-pet", "transcript.jsonl"), "utf8");
+    expect(transcript).not.toContain("runtime-only-hunter2");
   });
 
   test("restored pet identity keeps the safe profile and rejects kind rewrites", async () => {
