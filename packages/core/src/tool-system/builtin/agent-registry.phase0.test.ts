@@ -106,6 +106,18 @@ describe("Phase 0 live child registry routing", () => {
     expect(notificationQueue.getSnapshot("child-session")).toHaveLength(0);
   });
 
+  it("returns not-direct-parent for a sub-agent caller before resolving the target", () => {
+    const ack = asyncAgentRegistry.routeDirection({
+      callerSessionId: "child-caller",
+      callerIsSubAgent: true,
+      agentId: "unknown-worker",
+      prompt: "probe another tree",
+      delivery: "next-safe-point",
+    });
+
+    expect(ack).toMatchObject({ status: "rejected", reason: "not-direct-parent" });
+  });
+
   it("closing intake rejects without leaving an orphan direction", () => {
     register();
     const seen: unknown[] = [];
