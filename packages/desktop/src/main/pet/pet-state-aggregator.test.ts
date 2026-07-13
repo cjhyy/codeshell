@@ -10,6 +10,7 @@ import {
   type AgentBridgePetEvent,
   type PetStateBridge,
 } from "./pet-state-aggregator";
+import { PetWorkerProjectionGeneration } from "./pet-worker-generation";
 
 function disk(id: string, overrides: Partial<DiskSessionMeta> = {}): DiskSessionMeta {
   return {
@@ -28,8 +29,6 @@ function live(id: string, overrides: Partial<PetSessionProjection> = {}): PetSes
     owner: "local-user",
     agentSessionId: id,
     coreSessionId: `core-${id}`,
-    title: `Live ${id}`,
-    workspaceDisplayName: id,
     runState: "running",
     queueDepth: 0,
     lastActivityAt: 2_000,
@@ -39,13 +38,13 @@ function live(id: string, overrides: Partial<PetSessionProjection> = {}): PetSes
   };
 }
 
-function snapshot(
-  generation: number,
+function workerSnapshot(
   version: number,
   sessions: PetSessionProjection[] = [],
 ): PetProjectionSnapshotResult {
   return {
-    workerGeneration: generation,
+    // ChatSessionManager's real stdio construction defaults every process to generation 1.
+    workerGeneration: 1,
     snapshotVersion: version,
     observedAt: 2_000,
     sessions,
@@ -136,7 +135,9 @@ describe("PetStateAggregator", () => {
   test("overlays a live snapshot and applies only ordered same-generation deltas", async () => {
     const bridge = new FakeBridge();
     bridge.active = true;
-    bridge.snapshot = snapshot(4, 8, [live("one")]);
+    const generation = new PetWorkerProjectionGeneration();
+    generation.beginWorker();
+    bridge.snapshot = generation.normalizeSnapshot(workerSnapshot(8, [live("one")]));
     const catalog = pagedCatalog([disk("one"), disk("two")]);
     const aggregator = new PetStateAggregator({
       bridge,
@@ -145,15 +146,18 @@ describe("PetStateAggregator", () => {
     });
     await aggregator.start();
 
-    expect(aggregator.getSnapshot()).toMatchObject({ workerState: "active", generation: 4 });
+    expect(aggregator.getSnapshot()).toMatchObject({ workerState: "active", generation: 1 });
     expect(
       aggregator.getSnapshot().sessions.find((session) => session.agentSessionId === "one")
         ?.runState,
     ).toBe("running");
+    expect(
+      aggregator.getSnapshot().sessions.find((session) => session.agentSessionId === "one"),
+    ).toMatchObject({ title: "Disk one", workspaceDisplayName: "one" });
     expect(JSON.stringify(aggregator.getSnapshot())).not.toContain("core-one");
 
     const delta: PetProjectionDelta = {
-      workerGeneration: 4,
+      workerGeneration: 1,
       version: 9,
       observedAt: 3_100,
       kind: "session-upsert",
@@ -171,36 +175,40 @@ describe("PetStateAggregator", () => {
   test("reconciles a new generation, discards old deltas and replaces live overlay", async () => {
     const bridge = new FakeBridge();
     bridge.active = true;
-    bridge.snapshot = snapshot(2, 3, [live("old")]);
+    const generation = new PetWorkerProjectionGeneration();
+    generation.beginWorker();
+    bridge.snapshot = generation.normalizeSnapshot(workerSnapshot(3, [live("old")]));
     const aggregator = new PetStateAggregator({ bridge, listDiskSessions: pagedCatalog([]).list });
     await aggregator.start();
 
-    bridge.snapshot = snapshot(3, 1, [live("new")]);
+    const oldDelta = generation.normalizeDelta({
+      workerGeneration: 1,
+      version: 99,
+      observedAt: 5_000,
+      kind: "session-upsert",
+      session: live("ghost"),
+    });
+    generation.beginWorker();
+    bridge.snapshot = generation.normalizeSnapshot(workerSnapshot(1, [live("new")]));
     await bridge.emit({
       kind: "delta",
-      delta: {
-        workerGeneration: 3,
+      delta: generation.normalizeDelta({
+        workerGeneration: 1,
         version: 2,
         observedAt: 4_000,
         kind: "session-upsert",
         session: live("new"),
-      },
+      }),
     });
     expect(bridge.snapshotRequests).toBe(2);
-    expect(aggregator.getSnapshot()).toMatchObject({ generation: 3, workerState: "active" });
+    expect(aggregator.getSnapshot()).toMatchObject({ generation: 2, workerState: "active" });
     expect(aggregator.getSnapshot().sessions.map((session) => session.agentSessionId)).toEqual([
       "new",
     ]);
 
     await bridge.emit({
       kind: "delta",
-      delta: {
-        workerGeneration: 2,
-        version: 99,
-        observedAt: 5_000,
-        kind: "session-upsert",
-        session: live("ghost"),
-      },
+      delta: oldDelta,
     });
     expect(aggregator.getSnapshot().sessions.map((session) => session.agentSessionId)).toEqual([
       "new",
@@ -211,14 +219,14 @@ describe("PetStateAggregator", () => {
     const bridge = new FakeBridge();
     bridge.active = true;
     bridge.snapshot = {
-      ...snapshot(5, 1, [live("one")]),
+      ...workerSnapshot(1, [live("one")]),
       pending: [
         {
           owner: "local-user",
           agentSessionId: "one",
           coreSessionId: "core-one",
           requestId: "req-1",
-          workerGeneration: 5,
+          workerGeneration: 1,
           kind: "ask_user",
           title: "Need input",
           createdAt: 2_000,
@@ -236,7 +244,7 @@ describe("PetStateAggregator", () => {
     expect(aggregator.getSnapshot()).toMatchObject({ workerState: "reclaimed", pending: [] });
     expect(aggregator.getSnapshot().sessions[0].runState).toBe("dormant");
 
-    bridge.snapshot = snapshot(6, 1, [live("one")]);
+    bridge.snapshot = workerSnapshot(1, [live("one")]);
     await bridge.emit({ kind: "lifecycle", state: "active" });
     await bridge.emit({ kind: "lifecycle", state: "disconnected" });
     expect(aggregator.getSnapshot()).toMatchObject({ workerState: "disconnected", pending: [] });
@@ -261,7 +269,7 @@ describe("PetStateAggregator", () => {
     const bridge = new FakeBridge();
     bridge.active = true;
     bridge.snapshot = {
-      ...snapshot(7, 4, [live("one")]),
+      ...workerSnapshot(4, [live("one")]),
       pending: [
         {
           owner: "local-user",
@@ -269,7 +277,7 @@ describe("PetStateAggregator", () => {
           coreSessionId: "core-one",
           requestId: "req-1",
           routeGeneration: 3,
-          workerGeneration: 7,
+          workerGeneration: 1,
           kind: "tool_approval",
           title: "Approve Write",
           createdAt: 2_000,
@@ -285,7 +293,7 @@ describe("PetStateAggregator", () => {
       await aggregator.resolveNavigation({
         agentSessionId: "one",
         snapshotVersion: aggregator.getSnapshot().version,
-        generation: 7,
+        generation: 1,
         requestId: "req-1",
         routeGeneration: 3,
       }),
@@ -298,7 +306,7 @@ describe("PetStateAggregator", () => {
       await aggregator.resolveNavigation({
         agentSessionId: "one",
         snapshotVersion: 0,
-        generation: 6,
+        generation: 0,
         requestId: "resolved",
       }),
     ).toMatchObject({ status: "stale", pendingStatus: "resolved" });
@@ -308,7 +316,7 @@ describe("PetStateAggregator", () => {
       await aggregator.resolveNavigation({
         agentSessionId: "one",
         snapshotVersion: 0,
-        generation: 7,
+        generation: 1,
       }),
     ).toEqual({ status: "not-found" });
   });

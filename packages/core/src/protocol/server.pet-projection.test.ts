@@ -1,7 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import type { Engine, EngineResult } from "../engine/engine.js";
-import { PendingDecisionIndex } from "../pet/pending-decision-index.js";
-import { SessionIndex } from "../pet/session-index.js";
 import { AgentClient } from "./client.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { AgentServer } from "./server.js";
@@ -38,16 +36,11 @@ function makeEngine(sessionId: string, kind: "work" | "pet" = "work"): Engine {
   } as unknown as Engine;
 }
 
-function makePair(
-  generation: number,
-  sessionIds = ["session-a", "session-b"],
-  kind: "work" | "pet" = "work",
-) {
+function makePair(sessionIds = ["session-a", "session-b"], kind: "work" | "pet" = "work") {
   const engines = sessionIds.map((sessionId) => makeEngine(sessionId, kind));
   const manager = new ChatSessionManager({
     runtime: {} as never,
     engineFactory: () => engines.shift() ?? makeEngine("fallback"),
-    projectionGeneration: generation,
   });
   const [clientTransport, serverTransport] = createInProcessTransport();
   const server = new AgentServer({ transport: serverTransport, chatManager: manager });
@@ -62,13 +55,13 @@ async function tick(): Promise<void> {
 
 describe("Pet projection protocol", () => {
   test("returns a bounded snapshot and monotonic session-isolated deltas", async () => {
-    const { client, server } = makePair(7);
+    const { client, server } = makePair();
     const deltas: PetProjectionDelta[] = [];
     client.onPetProjectionDelta((delta) => deltas.push(delta));
 
     const initial = await client.getPetProjectionSnapshot();
     expect(initial).toMatchObject({
-      workerGeneration: 7,
+      workerGeneration: 1,
       snapshotVersion: 0,
       sessions: [],
       pending: [],
@@ -85,7 +78,7 @@ describe("Pet projection protocol", () => {
       [...deltas.map((delta) => delta.version)].sort((a, b) => a - b),
     );
     expect(new Set(deltas.map((delta) => delta.version)).size).toBe(deltas.length);
-    expect(deltas.every((delta) => delta.workerGeneration === 7)).toBe(true);
+    expect(deltas.every((delta) => delta.workerGeneration === 1)).toBe(true);
     const sessionDeltas = deltas.filter((delta) => delta.kind === "session-upsert");
     expect(sessionDeltas.some((delta) => delta.session.agentSessionId === "session-a")).toBe(true);
     expect(sessionDeltas.some((delta) => delta.session.agentSessionId === "session-b")).toBe(true);
@@ -106,7 +99,7 @@ describe("Pet projection protocol", () => {
   });
 
   test("snapshot cursor handshake applies only later deltas without duplication", async () => {
-    const { client, server } = makePair(3, ["session-a"]);
+    const { client, server } = makePair(["session-a"]);
     const received: PetProjectionDelta[] = [];
     client.onPetProjectionDelta((delta) => received.push(delta));
     await client.run({ sessionId: "session-a", task: "first" });
@@ -126,58 +119,18 @@ describe("Pet projection protocol", () => {
     client.close();
   });
 
-  test("new generation snapshot reconciles ghosts and rejects old generation events", async () => {
-    const old = makePair(1, ["session-a"]);
+  test("stdio-equivalent managers expose their real process-local generation and metadata shape", async () => {
+    const old = makePair(["session-a"]);
     await old.client.run({ sessionId: "session-a", task: "old" });
     const oldSnapshot = await old.client.getPetProjectionSnapshot();
     expect(oldSnapshot.sessions).toHaveLength(1);
+    expect(oldSnapshot.workerGeneration).toBe(1);
+    expect(oldSnapshot.sessions[0]?.title).toBeUndefined();
+    expect(oldSnapshot.sessions[0]?.workspaceDisplayName).toBeUndefined();
 
-    const pending = new PendingDecisionIndex();
-    pending.created({
-      sessionId: "session-a",
-      requestId: "old-request",
-      workerGeneration: 1,
-      kind: "ask_user",
-      title: "old",
-      createdAt: 1,
-      surfaceable: true,
-    });
-
-    const fresh = makePair(2, []);
+    const fresh = makePair([]);
     const freshSnapshot = await fresh.client.getPetProjectionSnapshot();
-    expect(freshSnapshot).toMatchObject({ workerGeneration: 2, sessions: [], pending: [] });
-    pending.reconcileGeneration(
-      freshSnapshot.workerGeneration,
-      freshSnapshot.pending.map((entry) => ({
-        sessionId: entry.agentSessionId,
-        requestId: entry.requestId,
-      })),
-      freshSnapshot.observedAt,
-    );
-    expect(pending.get("session-a", "old-request")?.status).toBe("cancelled");
-
-    const sessionIndex = new SessionIndex();
-    sessionIndex.replaceCatalog({
-      owner: "local-user",
-      observedAt: 1,
-      sessions: [{ sessionId: "session-a", updatedAt: 1 }],
-    });
-    sessionIndex.applyLiveSnapshot({
-      generation: 2,
-      version: 1,
-      observedAt: 2,
-      sessions: [],
-    });
-    expect(
-      sessionIndex.applyStreamEvent({
-        generation: 1,
-        version: 99,
-        observedAt: 3,
-        sessionId: "session-a",
-        event: { type: "stream_request_start", turnNumber: 1 },
-      }),
-    ).toBe(false);
-    expect(sessionIndex.get("session-a")?.runState).toBe("dormant");
+    expect(freshSnapshot).toMatchObject({ workerGeneration: 1, sessions: [], pending: [] });
 
     old.server.close();
     old.client.close();
@@ -186,7 +139,7 @@ describe("Pet projection protocol", () => {
   });
 
   test("disconnect delta makes live state unknown and removes pending", async () => {
-    const { client, manager, server } = makePair(4, ["session-a"]);
+    const { client, manager, server } = makePair(["session-a"]);
     await manager.getOrCreate("session-a", {} as never);
     const session = manager.get("session-a")!;
     void (server as any).requestAskUserForSession(session, "session-a", "choose");
@@ -207,7 +160,7 @@ describe("Pet projection protocol", () => {
   });
 
   test("real AskUser registration never exposes multiline question text in the Pet snapshot", async () => {
-    const { client, manager, server } = makePair(4, ["session-sensitive"]);
+    const { client, manager, server } = makePair(["session-sensitive"]);
     const session = await manager.getOrCreate("session-sensitive", {} as never);
     const question = [
       "联系人 Bob bob@example.com",
@@ -230,7 +183,7 @@ describe("Pet projection protocol", () => {
   });
 
   test("never exposes the durable pet session as a work session or work pending", async () => {
-    const { client, manager, server } = makePair(9, ["local-pet"], "pet");
+    const { client, manager, server } = makePair(["local-pet"], "pet");
     const session = await manager.getOrCreate("local-pet", {} as never);
     void (server as any).requestAskUserForSession(session, "local-pet", "pet-only question");
 

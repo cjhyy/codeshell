@@ -224,7 +224,14 @@ export class PetStateAggregator {
 
   getSnapshot(): DesktopPetProjectionSnapshot {
     const sessions = new Map(this.diskSessions);
-    for (const [sessionId, session] of this.liveSessions) sessions.set(sessionId, session);
+    for (const [sessionId, session] of this.liveSessions) {
+      const durable = sessions.get(sessionId);
+      sessions.set(sessionId, {
+        ...session,
+        title: session.title ?? durable?.title,
+        workspaceDisplayName: session.workspaceDisplayName ?? durable?.workspaceDisplayName,
+      });
+    }
     if (this.workerState === "disconnected") {
       for (const [sessionId, session] of sessions) {
         sessions.set(sessionId, {

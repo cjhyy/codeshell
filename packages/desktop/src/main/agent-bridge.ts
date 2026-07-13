@@ -68,6 +68,7 @@ import { prepareAgentRunMetadata, resolveCredentialSessionCwd } from "./agent-ru
 import { getTrustCachedSync } from "./trust-store.js";
 import { reloadAutomations } from "./automation-service.js";
 import { switchSessionWorkspaceForUi } from "./session-workspace-service.js";
+import { PetWorkerProjectionGeneration } from "./pet/pet-worker-generation.js";
 import type { AgentBridgePetEvent, PetStateBridge } from "./pet/pet-state-aggregator.js";
 
 /**
@@ -194,6 +195,7 @@ export class AgentBridge implements PetStateBridge {
   >();
   private petSnapshotRequestId = 0;
   private petHostRequestId = 0;
+  private readonly petWorkerGeneration = new PetWorkerProjectionGeneration();
 
   constructor(
     window: BrowserWindow,
@@ -255,6 +257,7 @@ export class AgentBridge implements PetStateBridge {
       this.safeSend("agent:lifecycle", { type: "gave_up" });
       return;
     }
+    this.petWorkerGeneration.beginWorker();
     this.emitPetProjection({ kind: "lifecycle", state: "active" });
     const workerSnapshotSessionIds = new Set<string>();
     const rl = createInterface({ input: this.child.stdout });
@@ -781,7 +784,7 @@ export class AgentBridge implements PetStateBridge {
       if (resolve) {
         this.pendingPetSnapshots.delete(message.id);
         const result = message.error ? null : (message.result as PetProjectionSnapshotResult);
-        resolve(result ?? null);
+        resolve(result ? this.petWorkerGeneration.normalizeSnapshot(result) : null);
         return true;
       }
     }
@@ -794,7 +797,10 @@ export class AgentBridge implements PetStateBridge {
       typeof delta.observedAt === "number" &&
       typeof delta.kind === "string"
     ) {
-      this.emitPetProjection({ kind: "delta", delta: delta as PetProjectionDelta });
+      this.emitPetProjection({
+        kind: "delta",
+        delta: this.petWorkerGeneration.normalizeDelta(delta as PetProjectionDelta),
+      });
     }
     return true;
   }
