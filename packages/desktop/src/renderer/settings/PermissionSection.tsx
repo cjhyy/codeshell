@@ -12,10 +12,10 @@ const MODES: PermissionMode[] = ["plan", "default", "accept_edits", "bypass"];
 
 interface Props {
   scope: "user" | "project";
-  activeRepoPath: string | null;
+  activeProjectPath: string | null;
 }
 
-export function PermissionSection({ scope, activeRepoPath }: Props) {
+export function PermissionSection({ scope, activeProjectPath }: Props) {
   const { t } = useT();
   const MODE_LABELS: Record<PermissionMode, string> = {
     plan: t("settingsX.permission.planLabel"),
@@ -32,14 +32,15 @@ export function PermissionSection({ scope, activeRepoPath }: Props) {
   const [mode, setMode] = useState<PermissionMode | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
+  const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
 
   const load = async () => {
     try {
-      const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
-      const permissions = s.permissions && typeof s.permissions === "object"
-        ? (s.permissions as Record<string, unknown>)
-        : {};
+      const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
+      const permissions =
+        s.permissions && typeof s.permissions === "object"
+          ? (s.permissions as Record<string, unknown>)
+          : {};
       setMode(fromSettingsPermissionMode(s.permissionMode ?? permissions.defaultMode));
     } catch (err) {
       console.error("getSettings failed", err);
@@ -47,7 +48,7 @@ export function PermissionSection({ scope, activeRepoPath }: Props) {
   };
 
   // Load on mount/scope switch + auto-refresh on config change anywhere.
-  useRefreshOnSettingsChange(() => void load(), [scope, activeRepoPath]);
+  useRefreshOnSettingsChange(() => void load(), [scope, activeProjectPath]);
 
   const choose = async (m: PermissionMode) => {
     setSaving(true);
@@ -58,7 +59,7 @@ export function PermissionSection({ scope, activeRepoPath }: Props) {
           permissionMode: m,
           permissions: { defaultMode: toCorePermissionMode(m) },
         },
-        cwd,
+        projectPath,
       );
       window.dispatchEvent(new Event("codeshell:settings-changed"));
       setMode(m);
@@ -71,10 +72,10 @@ export function PermissionSection({ scope, activeRepoPath }: Props) {
 
   return (
     <section className="mb-6 flex flex-col gap-3">
-      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">{t("settingsX.permission.title")}</h3>
-      <p className="m-0 text-xs text-muted-foreground">
-        {t("settingsX.permission.desc")}
-      </p>
+      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">
+        {t("settingsX.permission.title")}
+      </h3>
+      <p className="m-0 text-xs text-muted-foreground">{t("settingsX.permission.desc")}</p>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
         {MODES.map((m) => (
           <button

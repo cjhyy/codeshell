@@ -173,6 +173,7 @@ export {
 export { Transcript } from "./session/transcript.js";
 export {
   SessionManager,
+  sessionMainRoot,
   codeShellHome,
   sessionsRoot,
   buildForkState,

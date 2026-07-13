@@ -46,8 +46,8 @@ beforeEach(() => {
   });
 });
 
-function seed(repoId: string, idx: SessionIndex): void {
-  saveSessionIndex(repoId, idx);
+function seed(projectId: string, idx: SessionIndex): void {
+  saveSessionIndex(projectId, idx);
 }
 
 describe("archiveAllSessions (delete project → archive its sessions)", () => {

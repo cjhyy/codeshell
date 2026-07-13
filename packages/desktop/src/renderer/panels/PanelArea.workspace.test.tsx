@@ -71,7 +71,7 @@ describe("PanelArea workspace consumers", () => {
   test("gates bodies until resolution and updates quick chat from the matching workspace event", async () => {
     await act(async () => {
       root?.render(
-        <PanelWorkspaceRootConsumer engineSessionId="engine-1" repoPath="/repo">
+        <PanelWorkspaceRootConsumer engineSessionId="engine-1" projectPath="/repo">
           {(workspace) => {
             if (!panelWorkspaceBodyReady(workspace)) return <div data-loading />;
             quickChatRoots.push(workspace.root);

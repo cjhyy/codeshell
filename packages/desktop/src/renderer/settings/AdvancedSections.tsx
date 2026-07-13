@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Folder, Trash2 } from "lucide-react";
 import { NO_REPO_KEY, type SessionIndex } from "../transcripts";
-import { repoLabel, type Repo } from "../repos";
+import { projectLabel, type TrackedProject } from "../projects";
 import { useConfirm, truncateTitle } from "../ui/ConfirmDialog";
 import { usePrompt } from "../ui/DialogProvider";
 import { useToast } from "../ui/ToastProvider";
@@ -30,7 +30,7 @@ import { loadUILanguage } from "../uiLanguage";
 
 interface ScopedProps {
   scope: "user" | "project";
-  activeRepoPath: string | null;
+  activeProjectPath: string | null;
 }
 
 type MobileRemoteMode = "lan" | "tunnel";
@@ -120,25 +120,25 @@ function useDebouncedSave(persist: (value: string) => Promise<void> | void, dela
  * match Codex; they remain in the settings schema and can be set via the config
  * file. Memory enable/skip/reset toggles live in the dedicated 记忆 tab.
  */
-export function PersonalizationSection({ scope, activeRepoPath }: ScopedProps) {
+export function PersonalizationSection({ scope, activeProjectPath }: ScopedProps) {
   const [instructions, setInstructions] = useState("");
   const { t } = useT();
 
-  const cwd = scope === "project" ? (activeRepoPath ?? undefined) : undefined;
+  const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
 
   const { schedule, flush } = useDebouncedSave((value) =>
-    writeSettings(scope, { agent: { appendSystemPrompt: value } }, cwd),
+    writeSettings(scope, { agent: { appendSystemPrompt: value } }, projectPath),
   );
 
   const load = async () => {
-    const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
+    const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
     const agent = objectOf(s.agent);
     setInstructions(stringOf(agent.appendSystemPrompt));
   };
 
   useEffect(() => {
     void load();
-  }, [scope, activeRepoPath]);
+  }, [scope, activeProjectPath]);
 
   return (
     <section className="flex flex-col gap-3">
@@ -172,7 +172,7 @@ export function PersonalizationSection({ scope, activeRepoPath }: ScopedProps) {
  * `agent.userProfile` (multi-line). Auto-saves (debounced while typing,
  * flushed on blur); no Save button — same pattern as 自定义指令 above.
  */
-export function ResponsePrefsSection({ scope, activeRepoPath }: ScopedProps) {
+export function ResponsePrefsSection({ scope, activeProjectPath }: ScopedProps) {
   const [language, setLanguage] = useState("");
   const [profile, setProfile] = useState("");
   // Latest values held in refs so each field's save writes both keys without
@@ -182,25 +182,25 @@ export function ResponsePrefsSection({ scope, activeRepoPath }: ScopedProps) {
   languageRef.current = language;
   profileRef.current = profile;
   const { t } = useT();
-  const cwd = scope === "project" ? (activeRepoPath ?? undefined) : undefined;
+  const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
 
   const { schedule, flush } = useDebouncedSave(() =>
     writeSettings(
       scope,
       { agent: { responseLanguage: languageRef.current, userProfile: profileRef.current } },
-      cwd,
+      projectPath,
     ),
   );
 
   const load = async () => {
-    const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
+    const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
     const agent = objectOf(s.agent);
     setLanguage(stringOf(agent.responseLanguage));
     setProfile(stringOf(agent.userProfile));
   };
   useEffect(() => {
     void load();
-  }, [scope, activeRepoPath]);
+  }, [scope, activeProjectPath]);
 
   return (
     <section className="flex flex-col gap-3">
@@ -241,11 +241,11 @@ export function ResponsePrefsSection({ scope, activeRepoPath }: ScopedProps) {
  * compatCodex}`; absent/undefined means enabled (default true), so we treat
  * `!== false` as on.
  */
-export function InstructionFilesSection({ scope, activeRepoPath }: ScopedProps) {
+export function InstructionFilesSection({ scope, activeProjectPath }: ScopedProps) {
   const [compatClaude, setCompatClaude] = useState(true);
   const [compatCodex, setCompatCodex] = useState(true);
   const { t } = useT();
-  const cwd = scope === "project" ? (activeRepoPath ?? undefined) : undefined;
+  const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
   // Mirror latest state so a toggle persists the up-to-date value of BOTH flags,
   // never a stale closure capture. writeChain serializes the fire-and-forget
   // writes so a slower earlier write can't land after — and clobber — a later one.
@@ -253,7 +253,7 @@ export function InstructionFilesSection({ scope, activeRepoPath }: ScopedProps) 
   const writeChain = useRef<Promise<unknown>>(Promise.resolve());
 
   const load = async () => {
-    const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
+    const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
     const agent = objectOf(s.agent);
     const instr = objectOf(agent.instructions);
     const claude = instr.compatClaude !== false;
@@ -264,7 +264,7 @@ export function InstructionFilesSection({ scope, activeRepoPath }: ScopedProps) 
   };
   useEffect(() => {
     void load();
-  }, [scope, activeRepoPath]);
+  }, [scope, activeProjectPath]);
 
   // Switches persist instantly on toggle. `next` carries the full just-computed
   // pair (from pairRef, always current); writes are chained to enforce order.
@@ -276,7 +276,7 @@ export function InstructionFilesSection({ scope, activeRepoPath }: ScopedProps) 
         writeSettings(
           scope,
           { agent: { instructions: { compatClaude: claude, compatCodex: codex } } },
-          cwd,
+          projectPath,
         ),
       );
     void writeChain.current;
@@ -351,14 +351,14 @@ export function ShortcutsSection() {
  * project after), so a global hook runs in every project alongside that
  * project's own hooks (mirrors Claude Code's user-level hooks). The page
  * first shows a "全局" row plus the project list (reusing the sidebar
- * `repos`); picking one drills into that level's hooks.
+ * `projects`); picking one drills into that level's hooks.
  */
-export function HooksSection({ repos }: { repos: Repo[] }) {
+export function HooksSection({ projects }: { projects: TrackedProject[] }) {
   // undefined = picker; null = global (user level); string = project cwd.
   const [selected, setSelected] = useState<string | null | undefined>(undefined);
   const { t } = useT();
-  const selectedRepo =
-    typeof selected === "string" ? (repos.find((r) => r.path === selected) ?? null) : null;
+  const selectedProject =
+    typeof selected === "string" ? (projects.find((r) => r.path === selected) ?? null) : null;
 
   if (selected === undefined) {
     return (
@@ -367,7 +367,7 @@ export function HooksSection({ repos }: { repos: Repo[] }) {
           {t("settingsX.adv.hooksTitle")}
         </h3>
         <p className="m-0 text-xs text-muted-foreground">{t("settingsX.adv.hooksDesc")}</p>
-        <ProjectPicker repos={repos} includeGlobal onSelect={(path) => setSelected(path)} />
+        <ProjectPicker projects={projects} includeGlobal onSelect={(path) => setSelected(path)} />
       </section>
     );
   }
@@ -387,8 +387,8 @@ export function HooksSection({ repos }: { repos: Repo[] }) {
         <span className="truncate text-sm font-medium text-foreground">
           {selected === null
             ? t("settingsX.adv.globalAllProjects")
-            : selectedRepo
-              ? repoLabel(selectedRepo)
+            : selectedProject
+              ? projectLabel(selectedProject)
               : selected}
         </span>
       </div>
@@ -966,7 +966,7 @@ const EMPTY_SCRIPTS: Record<LocalEnvPlatform, string> = {
  * Local environment is PROJECT-scoped (setup/cleanup scripts + env + sandbox
  * boundary live in a specific repo's `.code-shell/settings.json`). Like 钩子,
  * the page first shows a project list; clicking one drills into that project's
- * environment editor. This replaces the old "silently follow activeRepoPath"
+ * environment editor. This replaces the old "silently follow activeProjectPath"
  * behavior where the user couldn't tell (or switch) which project they edited.
  */
 /**
@@ -1037,10 +1037,10 @@ function GlobalEnvEditor() {
   );
 }
 
-export function EnvironmentSection({ repos }: { repos: Repo[] }) {
+export function EnvironmentSection({ projects }: { projects: TrackedProject[] }) {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const { t } = useT();
-  const selectedRepo = repos.find((r) => r.path === selectedPath) ?? null;
+  const selectedProject = projects.find((r) => r.path === selectedPath) ?? null;
 
   if (!selectedPath) {
     return (
@@ -1051,7 +1051,7 @@ export function EnvironmentSection({ repos }: { repos: Repo[] }) {
             {t("settingsX.adv.perProjectTitle")}
           </h3>
           <p className="m-0 text-xs text-muted-foreground">{t("settingsX.adv.perProjectDesc")}</p>
-          <ProjectPicker repos={repos} onSelect={(path) => setSelectedPath(path)} />
+          <ProjectPicker projects={projects} onSelect={(path) => setSelectedPath(path)} />
         </section>
       </>
     );
@@ -1070,7 +1070,7 @@ export function EnvironmentSection({ repos }: { repos: Repo[] }) {
           <span>{t("settingsX.adv.backToProjectList")}</span>
         </Button>
         <span className="truncate text-sm font-medium text-foreground">
-          {selectedRepo ? repoLabel(selectedRepo) : selectedPath}
+          {selectedProject ? projectLabel(selectedProject) : selectedPath}
         </span>
       </div>
       <ProjectEnvEditor cwd={selectedPath} />
@@ -1256,7 +1256,7 @@ function LocalScriptEditor({
 
 export function ToggleCapabilitySection({
   scope,
-  activeRepoPath,
+  activeProjectPath,
   settingKey,
   title,
   description,
@@ -1265,22 +1265,22 @@ export function ToggleCapabilitySection({
   const [saving, setSaving] = useState(false);
   const { t } = useT();
   const toast = useToast();
-  const cwd = scope === "project" ? (activeRepoPath ?? undefined) : undefined;
+  const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
 
   const load = async () => {
-    const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
+    const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
     setEnabled(objectOf(s[settingKey]).enabled === true);
   };
   useEffect(() => {
     void load();
-  }, [scope, activeRepoPath, settingKey]);
+  }, [scope, activeProjectPath, settingKey]);
 
   const save = async (next: boolean) => {
     const prev = enabled;
     setEnabled(next); // optimistic
     setSaving(true);
     try {
-      await writeSettings(scope, { [settingKey]: { enabled: next } }, cwd);
+      await writeSettings(scope, { [settingKey]: { enabled: next } }, projectPath);
     } catch (e) {
       // Write failed — revert the optimistic flip and surface it, otherwise the
       // toggle reads "enabled" while disk stays unchanged (silent desync until remount).
@@ -1317,14 +1317,14 @@ export function ToggleCapabilitySection({
  * switch mid-session and we'd rather have one place to control it than
  * per-call args.
  */
-export function ImageSettingsSection({ scope, activeRepoPath }: ScopedProps) {
-  const cwd = scope === "project" ? (activeRepoPath ?? undefined) : undefined;
+export function ImageSettingsSection({ scope, activeProjectPath }: ScopedProps) {
+  const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
   const [detail, setDetail] = useState<"low" | "standard" | "high" | "">("");
   const [saving, setSaving] = useState(false);
   const { t } = useT();
 
   const load = async () => {
-    const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
+    const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
     const images = objectOf(s.images);
     // Migrate legacy "original" → "high".
     const d = images.detail === "original" ? "high" : images.detail;
@@ -1332,15 +1332,15 @@ export function ImageSettingsSection({ scope, activeRepoPath }: ScopedProps) {
   };
   useEffect(() => {
     void load();
-  }, [scope, activeRepoPath]);
+  }, [scope, activeProjectPath]);
 
   const save = async (next: "low" | "standard" | "high" | ""): Promise<void> => {
     setDetail(next);
     setSaving(true);
     try {
-      const current = objectOf((await window.codeshell.getSettings(scope, cwd))?.images);
+      const current = objectOf((await window.codeshell.getSettings(scope, projectPath))?.images);
       const nextImages = next ? { ...current, detail: next } : { ...current, detail: undefined };
-      await writeSettings(scope, { images: nextImages }, cwd);
+      await writeSettings(scope, { images: nextImages }, projectPath);
     } finally {
       setSaving(false);
     }
@@ -1390,36 +1390,40 @@ export function ImageSettingsSection({ scope, activeRepoPath }: ScopedProps) {
 }
 
 export function ArchivedConversationsSection({
-  repos,
+  projects,
   sessionIndices,
   onRestore,
   onDelete,
 }: {
-  repos: Repo[];
+  projects: TrackedProject[];
   sessionIndices: Record<string, SessionIndex>;
-  onRestore: (repoId: string | null, sessionId: string) => void;
-  onDelete: (repoId: string | null, sessionId: string) => void;
+  onRestore: (projectId: string | null, sessionId: string) => void;
+  onDelete: (projectId: string | null, sessionId: string) => void;
 }) {
   const { t } = useT();
   const rows = useMemo(() => {
-    const repoMap = new Map(repos.map((r) => [r.id, repoLabel(r)]));
+    const projectMap = new Map(projects.map((r) => [r.id, projectLabel(r)]));
     return Object.entries(sessionIndices)
       .flatMap(([key, idx]) => {
-        const repoId = key === NO_REPO_KEY ? null : key;
-        // A deleted project is gone from `repos`, so fall back to the label
+        const projectId = key === NO_REPO_KEY ? null : key;
+        // A deleted project is gone from `projects`, so fall back to the label
         // stamped at delete time (deletedProjectLabel) before giving up to
         // "未知项目" — keeps archived sessions named after their original project.
-        const project = repoId
-          ? (repoMap.get(repoId) ?? idx.deletedProjectLabel ?? t("settingsX.adv.unknownProject"))
+        const project = projectId
+          ? (projectMap.get(projectId) ??
+            idx.deletedProjectLabel ??
+            t("settingsX.adv.unknownProject"))
           : t("settingsX.adv.noRepoConv");
-        return idx.sessions.filter((s) => s.archived).map((s) => ({ repoId, project, session: s }));
+        return idx.sessions
+          .filter((s) => s.archived)
+          .map((s) => ({ projectId, project, session: s }));
       })
       .sort((a, b) => b.session.updatedAt - a.session.updatedAt);
-  }, [repos, sessionIndices, t]);
+  }, [projects, sessionIndices, t]);
 
   const confirm = useConfirm();
 
-  const removeOne = (repoId: string | null, sessionId: string, title: string): void => {
+  const removeOne = (projectId: string | null, sessionId: string, title: string): void => {
     void confirm({
       title: t("settingsX.adv.confirmDeleteTitle"),
       message: t("settingsX.adv.confirmDeleteMsg", { title: truncateTitle(title, 28) }),
@@ -1427,7 +1431,7 @@ export function ArchivedConversationsSection({
       confirmLabel: t("settingsX.adv.delete"),
       destructive: true,
     }).then((ok) => {
-      if (ok) onDelete(repoId, sessionId);
+      if (ok) onDelete(projectId, sessionId);
     });
   };
 
@@ -1441,7 +1445,7 @@ export function ArchivedConversationsSection({
       destructive: true,
     }).then((ok) => {
       if (!ok) return;
-      for (const row of rows) onDelete(row.repoId, row.session.id);
+      for (const row of rows) onDelete(row.projectId, row.session.id);
     });
   };
 
@@ -1464,9 +1468,9 @@ export function ArchivedConversationsSection({
         </div>
       ) : (
         <ul className="flex flex-col gap-2">
-          {rows.map(({ repoId, project, session }) => (
+          {rows.map(({ projectId, project, session }) => (
             <li
-              key={`${repoId ?? NO_REPO_KEY}:${session.id}`}
+              key={`${projectId ?? NO_REPO_KEY}:${session.id}`}
               className="flex items-center gap-3 rounded-md border p-3"
             >
               <div className="min-w-0 flex flex-1 flex-col">
@@ -1483,7 +1487,7 @@ export function ArchivedConversationsSection({
                 <button
                   type="button"
                   className="h-7 w-7 text-muted-foreground hover:text-status-err"
-                  onClick={() => removeOne(repoId, session.id, session.title)}
+                  onClick={() => removeOne(projectId, session.id, session.title)}
                   title={t("settingsX.adv.permDelete")}
                   aria-label={t("settingsX.adv.permDelete")}
                 >
@@ -1492,7 +1496,7 @@ export function ArchivedConversationsSection({
                 <button
                   type="button"
                   className="h-7 px-2 text-xs"
-                  onClick={() => onRestore(repoId, session.id)}
+                  onClick={() => onRestore(projectId, session.id)}
                   title={t("settingsX.adv.unarchive")}
                 >
                   {t("settingsX.adv.unarchive")}

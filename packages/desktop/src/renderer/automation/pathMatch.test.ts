@@ -1,5 +1,10 @@
 import { describe, it, expect } from "bun:test";
-import { normalizeCwd, matchRepoIdForCwd, isCaseInsensitivePlatform, isNoRepoCwd } from "./pathMatch";
+import {
+  normalizeCwd,
+  matchProjectIdForCwd,
+  isCaseInsensitivePlatform,
+  isNoRepoCwd,
+} from "./pathMatch";
 
 describe("isNoRepoCwd", () => {
   it("treats the internal no-repo sandbox dir as no-project (chat)", () => {
@@ -25,7 +30,7 @@ describe("isNoRepoCwd", () => {
   });
 });
 
-const repos = [
+const projects = [
   { id: "r1", name: "alpha", path: "/Users/me/alpha" },
   { id: "r2", name: "beta", path: "/Users/me/beta/" },
 ];
@@ -43,19 +48,19 @@ describe("normalizeCwd", () => {
   });
 });
 
-describe("matchRepoIdForCwd", () => {
+describe("matchProjectIdForCwd", () => {
   it("matches exact path", () => {
-    expect(matchRepoIdForCwd("/Users/me/alpha", repos, false)).toBe("r1");
+    expect(matchProjectIdForCwd("/Users/me/alpha", projects, false)).toBe("r1");
   });
   it("matches despite trailing slash on either side", () => {
-    expect(matchRepoIdForCwd("/Users/me/beta", repos, false)).toBe("r2");
-    expect(matchRepoIdForCwd("/Users/me/alpha/", repos, false)).toBe("r1");
+    expect(matchProjectIdForCwd("/Users/me/beta", projects, false)).toBe("r2");
+    expect(matchProjectIdForCwd("/Users/me/alpha/", projects, false)).toBe("r1");
   });
   it("matches case-insensitively when requested", () => {
-    expect(matchRepoIdForCwd("/users/me/ALPHA", repos, true)).toBe("r1");
+    expect(matchProjectIdForCwd("/users/me/ALPHA", projects, true)).toBe("r1");
   });
   it("returns null on no match", () => {
-    expect(matchRepoIdForCwd("/somewhere/else", repos, false)).toBeNull();
+    expect(matchProjectIdForCwd("/somewhere/else", projects, false)).toBeNull();
   });
 });
 

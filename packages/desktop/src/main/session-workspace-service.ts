@@ -88,7 +88,7 @@ function workspaceOwners(sm: SessionManager): WorktreeWorkspaceOwner[] {
 }
 
 async function mainRootFor(sm: SessionManager, sessionId: string, cwd: string): Promise<string> {
-  const fromSession = sm.readCwd(sessionId);
+  const fromSession = sm.readSessionMainRoot(sessionId);
   if (fromSession) {
     const sessionRoot = await findMainWorktreeRootIfUsable(fromSession);
     if (sessionRoot) return fromSession;
@@ -138,14 +138,14 @@ function requireKnownSession(sm: SessionManager, sessionId: string): void {
   if (!sm.exists(sessionId)) {
     throw new Error(`unknown session: ${sessionId}`);
   }
-  if (sm.readCwd(sessionId) === undefined) {
+  if (sm.readSessionMainRoot(sessionId) === undefined) {
     throw new Error("session exists but has no valid state — cannot perform workspace operations");
   }
 }
 
 function missingReleaseReason(sm: SessionManager, sessionId: string): string | undefined {
   if (!sm.exists(sessionId)) return `unknown session: ${sessionId}`;
-  if (sm.readCwd(sessionId) === undefined) {
+  if (sm.readSessionMainRoot(sessionId) === undefined) {
     return "session exists but has no valid state — workspace release is a no-op";
   }
   return undefined;
@@ -268,8 +268,8 @@ export async function releaseSessionWorkspaceForUi(
     return { sessionId, ok: true, status: "missing", reason: missing };
   }
   try {
-    const sessionCwd = sm.readCwd(sessionId);
-    const mainRoot = await mainRootFor(sm, sessionId, sessionCwd ?? process.cwd());
+    const persistedMainRoot = sm.readSessionMainRoot(sessionId);
+    const mainRoot = await mainRootFor(sm, sessionId, persistedMainRoot ?? process.cwd());
     const from = currentWorkspaceFor(sm, sessionId, mainRoot);
     const next: SessionWorkspace = { root: mainRoot, kind: "main" };
     if (from.kind === "main" && resolve(from.root) === resolve(mainRoot)) {

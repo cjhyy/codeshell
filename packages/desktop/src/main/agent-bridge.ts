@@ -422,7 +422,7 @@ export class AgentBridge implements PetStateBridge {
 
   private cwdForSessionOrThrow(sessionId: string): string {
     const cwd = resolveCredentialSessionCwd(sessionId, this.sessionCwd, (sid) =>
-      this.sessionsForFallback().readCwd(sid),
+      this.sessionsForFallback().readSessionMainRoot(sid),
     );
     this.sessionCwd.set(sessionId, cwd);
     return cwd;
@@ -459,12 +459,12 @@ export class AgentBridge implements PetStateBridge {
       } else {
         const forkSourceId = forkSourceSessionId(parsed);
         if (forkSourceId) {
-          this.spawnChild(this.sessionsForFallback().readCwd(forkSourceId));
+          this.spawnChild(this.sessionsForFallback().readSessionMainRoot(forkSourceId));
         }
         const compactSessionId = compactQuerySessionId(parsed);
         if (compactSessionId) {
           this.spawnChild(
-            this.sessionsForFallback().readCwd(compactSessionId) ?? parsed.params?.cwd,
+            this.sessionsForFallback().readSessionMainRoot(compactSessionId) ?? parsed.params?.cwd,
           );
         }
       }

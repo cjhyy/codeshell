@@ -1,4 +1,4 @@
-export interface RepoLike {
+export interface ProjectLike {
   id: string;
   name: string;
   path: string;
@@ -59,13 +59,13 @@ export function isNoRepoCwd(cwd: string | undefined | null): boolean {
 }
 
 /** Return the id of the repo whose path equals `cwd` (normalized), or null. */
-export function matchRepoIdForCwd(
+export function matchProjectIdForCwd(
   cwd: string,
-  repos: RepoLike[],
+  projects: ProjectLike[],
   caseInsensitive: boolean,
 ): string | null {
   const target = normalizeCwd(cwd, caseInsensitive);
-  for (const r of repos) {
+  for (const r of projects) {
     if (normalizeCwd(r.path, caseInsensitive) === target) return r.id;
   }
   return null;

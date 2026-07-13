@@ -1156,7 +1156,7 @@ export class Engine {
       workspaceCwd === undefined && options?.cwd === undefined && options?.sessionId
         ? workspaceResume?.ok
           ? workspaceResume.cwd
-          : this.sessionManager.readCwd(options.sessionId)
+          : this.sessionManager.readSessionMainRoot(options.sessionId)
         : undefined;
     const cwd =
       workspaceCwd ??
@@ -3020,7 +3020,7 @@ export class Engine {
   releaseSessionWorkspace(sessionId: string): import("../types.js").SessionWorkspace | null {
     if (!sessionId || !this.sessionManager.exists(sessionId)) return null;
     const mainRoot =
-      this.sessionManager.readCwd(sessionId) ??
+      this.sessionManager.readSessionMainRoot(sessionId) ??
       (this.activeRunSession?.state.sessionId === sessionId
         ? this.activeRunSession.state.cwd
         : undefined);

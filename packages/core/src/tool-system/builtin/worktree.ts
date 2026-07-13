@@ -109,7 +109,7 @@ export async function enterWorktreeTool(
   if (!resolved.ok) return resolved.error;
   const { sessionId, sessionManager } = resolved;
 
-  const mainRoot = sessionManager.readCwd(sessionId) ?? ctx?.cwd ?? process.cwd();
+  const mainRoot = sessionManager.readSessionMainRoot(sessionId) ?? ctx?.cwd ?? process.cwd();
   const fromWorkspace = sessionManager.getSessionWorkspace(sessionId) ?? {
     root: mainRoot,
     kind: "main" as const,
@@ -271,7 +271,7 @@ export async function exitWorktreeTool(
     );
   }
 
-  const mainRoot = sessionManager.readCwd(sessionId) ?? workspace.root;
+  const mainRoot = sessionManager.readSessionMainRoot(sessionId) ?? workspace.root;
   const currentTurnRoot = ctx?.cwd ?? workspace.root;
   const branchPrefix = ctx?.engine?.readWorktreeBranchPrefix?.(mainRoot);
   try {

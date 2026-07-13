@@ -510,7 +510,7 @@ export class AgentServer {
     if (cached) return { ...cached };
 
     if (!this.diskSessionReader) this.diskSessionReader = new SessionManager();
-    const cwd = this.diskSessionReader.readCwd(sessionId);
+    const cwd = this.diskSessionReader.readSessionMainRoot(sessionId);
     if (!cwd) return null;
     return {
       projectTrusted: false,
@@ -1938,7 +1938,7 @@ export class AgentServer {
               }
               try {
                 session = await this.chatManager.getOrCreate(compactSessionId, {
-                  cwd: probeEngine.getSessionManager().readCwd(compactSessionId),
+                  cwd: probeEngine.getSessionManager().readSessionMainRoot(compactSessionId),
                 } as any);
               } catch (err: any) {
                 this.transport.send(

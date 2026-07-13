@@ -34,7 +34,7 @@ type Origins = Record<string, CatalogEntryOrigin>;
 
 interface Props {
   scope: "user" | "project";
-  activeRepoPath: string | null;
+  activeProjectPath: string | null;
 }
 
 /** Number-or-undefined from a text input (empty → undefined, not 0/NaN). */
@@ -105,7 +105,10 @@ export function ModelCatalogPanel(_props: Props) {
     }
     const r = await window.codeshell.saveCatalogEntry(draft);
     if (!r.ok) {
-      toast({ message: `${t("settingsX.catalog.toastSaveFailed")}: ${r.error ?? ""}`, variant: "error" });
+      toast({
+        message: `${t("settingsX.catalog.toastSaveFailed")}: ${r.error ?? ""}`,
+        variant: "error",
+      });
       return;
     }
     toast({ message: t("settingsX.catalog.toastSaved"), variant: "success" });
@@ -130,11 +133,17 @@ export function ModelCatalogPanel(_props: Props) {
     if (!ok) return;
     const r = await window.codeshell.deleteCatalogEntry(entry.id);
     if (!r.ok) {
-      toast({ message: `${t("settingsX.catalog.toastDeleteFailed")}: ${r.error ?? ""}`, variant: "error" });
+      toast({
+        message: `${t("settingsX.catalog.toastDeleteFailed")}: ${r.error ?? ""}`,
+        variant: "error",
+      });
       return;
     }
     toast({
-      message: action === "reset" ? t("settingsX.catalog.toastReset") : t("settingsX.catalog.toastDeleted"),
+      message:
+        action === "reset"
+          ? t("settingsX.catalog.toastReset")
+          : t("settingsX.catalog.toastDeleted"),
       variant: "success",
     });
     collapse();
@@ -272,8 +281,7 @@ function EntryForm({
    */
   idLocked: boolean;
 }) {
-  const patch = (p: Partial<CatalogEntry>) =>
-    setDraft((cur) => (cur ? { ...cur, ...p } : cur));
+  const patch = (p: Partial<CatalogEntry>) => setDraft((cur) => (cur ? { ...cur, ...p } : cur));
 
   const patchPresets = (presets: ModelPreset[]) => patch({ modelPresets: presets });
 
@@ -298,7 +306,10 @@ function EntryForm({
     <>
       <div className="grid gap-2.5 sm:grid-cols-2">
         <ConnField label={t("settingsX.catalog.fieldDisplayName")}>
-          <Input value={draft.displayName} onChange={(e) => patch({ displayName: e.target.value })} />
+          <Input
+            value={draft.displayName}
+            onChange={(e) => patch({ displayName: e.target.value })}
+          />
         </ConnField>
         <ConnField label={t("settingsX.catalog.fieldId")}>
           <Input
@@ -334,9 +345,7 @@ function EntryForm({
         <ConnField label={t("settingsX.catalog.fieldProtocol")}>
           <SimpleSelect
             value={draft.protocol ?? ""}
-            onChange={(v) =>
-              patch({ protocol: v ? (v as CatalogEntry["protocol"]) : undefined })
-            }
+            onChange={(v) => patch({ protocol: v ? (v as CatalogEntry["protocol"]) : undefined })}
             placeholder={t("settingsX.catalog.protocolNone")}
             options={[
               { value: "", label: t("settingsX.catalog.protocolNone") },
@@ -388,9 +397,7 @@ function EntryForm({
         {presets.map((m, idx) => (
           <div key={idx} className="rounded-md border border-border bg-card">
             <div className="flex min-w-0 items-center gap-2 px-2.5 py-1.5">
-              <code className="truncate font-mono text-xs text-foreground">
-                {m.value || "—"}
-              </code>
+              <code className="truncate font-mono text-xs text-foreground">{m.value || "—"}</code>
               {m.maxContextTokens != null && (
                 <Badge variant="secondary">
                   {t("settingsX.catalog.ctx", { n: m.maxContextTokens })}
@@ -418,11 +425,7 @@ function EntryForm({
               </div>
             </div>
             {openPreset === idx && (
-              <ModelPresetEditor
-                preset={m}
-                onChange={(p) => patchPreset(idx, p)}
-                t={t}
-              />
+              <ModelPresetEditor preset={m} onChange={(p) => patchPreset(idx, p)} t={t} />
             )}
           </div>
         ))}
@@ -500,7 +503,10 @@ function ModelPresetEditor({
           </Button>
         </div>
         {params.map((p, idx) => (
-          <div key={idx} className="flex flex-col gap-2 rounded-md border border-border bg-card p-2.5">
+          <div
+            key={idx}
+            className="flex flex-col gap-2 rounded-md border border-border bg-card p-2.5"
+          >
             <div className="grid gap-2 sm:grid-cols-2">
               <ConnField label={t("settingsX.catalog.paramName")}>
                 <Input value={p.name} onChange={(e) => patchParam(idx, { name: e.target.value })} />

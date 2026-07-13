@@ -2,7 +2,7 @@ import { describe, it, expect } from "bun:test";
 import { importAutomationRuns, type ImportableRun, type ImportDeps } from "./importRuns";
 import type { FoldItem } from "../../preload/types";
 
-const repos = [{ id: "r1", name: "alpha", path: "/repo/alpha" }];
+const projects = [{ id: "r1", name: "alpha", path: "/repo/alpha" }];
 
 function run(over: Partial<ImportableRun>): ImportableRun {
   return {
@@ -19,14 +19,19 @@ function run(over: Partial<ImportableRun>): ImportableRun {
   };
 }
 
-function deps(over: Partial<ImportDeps> = {}): { d: ImportDeps; imported: Array<{ repoId: string | null; sessionId: string }> } {
-  const imported: Array<{ repoId: string | null; sessionId: string; runStatus?: string }> = [];
+function deps(over: Partial<ImportDeps> = {}): {
+  d: ImportDeps;
+  imported: Array<{ projectId: string | null; sessionId: string }>;
+} {
+  const imported: Array<{ projectId: string | null; sessionId: string; runStatus?: string }> = [];
   const d: ImportDeps = {
     caseInsensitive: false,
     existingEngineSessionIds: new Set<string>(),
     fetchTranscript: async (): Promise<FoldItem[]> => [{ kind: "user", text: "hi" }],
-    writeImported: (repoId, summary, _state) => { imported.push({ repoId, sessionId: summary.id, runStatus: summary.runStatus }); },
-    createRepoForCwd: () => "auto-repo",
+    writeImported: (projectId, summary, _state) => {
+      imported.push({ projectId, sessionId: summary.id, runStatus: summary.runStatus });
+    },
+    createProjectForCwd: () => "auto-repo",
     cap: 50,
     ...over,
   };
@@ -36,14 +41,14 @@ function deps(over: Partial<ImportDeps> = {}): { d: ImportDeps; imported: Array<
 describe("importAutomationRuns", () => {
   it("imports a completed automation run into its repo", async () => {
     const { d, imported } = deps();
-    await importAutomationRuns([run({})], repos, d);
+    await importAutomationRuns([run({})], projects, d);
     expect(imported).toHaveLength(1);
-    expect(imported[0].repoId).toBe("r1");
+    expect(imported[0].projectId).toBe("r1");
   });
 
   it("skips runs that are not automation-sourced", async () => {
     const { d, imported } = deps();
-    await importAutomationRuns([run({ source: undefined })], repos, d);
+    await importAutomationRuns([run({ source: undefined })], projects, d);
     expect(imported).toHaveLength(0);
   });
 
@@ -51,7 +56,7 @@ describe("importAutomationRuns", () => {
     const { d, imported } = deps();
     await importAutomationRuns(
       [run({ runId: "r2", sessionId: null, status: "queued", finishedAt: null })],
-      repos,
+      projects,
       d,
     );
     expect(imported).toHaveLength(0);
@@ -61,7 +66,7 @@ describe("importAutomationRuns", () => {
     const { d, imported } = deps();
     await importAutomationRuns(
       [run({ runId: "live", sessionId: "sess-live", status: "running", finishedAt: null })],
-      repos,
+      projects,
       d,
     );
     expect(imported).toHaveLength(1);
@@ -70,46 +75,55 @@ describe("importAutomationRuns", () => {
 
   it("carries terminal runStatus too", async () => {
     const { d, imported } = deps();
-    await importAutomationRuns([run({ status: "completed" })], repos, d);
+    await importAutomationRuns([run({ status: "completed" })], projects, d);
     expect(imported[0].runStatus).toBe("completed");
   });
 
   it("dedups against already-known engineSessionIds", async () => {
     const { d, imported } = deps({ existingEngineSessionIds: new Set(["sess-1"]) });
-    await importAutomationRuns([run({})], repos, d);
+    await importAutomationRuns([run({})], projects, d);
     expect(imported).toHaveLength(0);
   });
 
   it("auto-creates a repo when cwd matches none", async () => {
     let createdFor = "";
-    const { d, imported } = deps({ createRepoForCwd: (cwd) => { createdFor = cwd; return "new-repo"; } });
-    await importAutomationRuns([run({ cwd: "/somewhere/new" })], repos, d);
+    const { d, imported } = deps({
+      createProjectForCwd: (cwd) => {
+        createdFor = cwd;
+        return "new-repo";
+      },
+    });
+    await importAutomationRuns([run({ cwd: "/somewhere/new" })], projects, d);
     expect(createdFor).toBe("/somewhere/new");
-    expect(imported[0].repoId).toBe("new-repo");
+    expect(imported[0].projectId).toBe("new-repo");
   });
 
   it("imports into an existing root repo after resolving a git subdirectory cwd", async () => {
     let createCalls = 0;
     const { d, imported } = deps({
-      resolveCwd: (cwd) => cwd === "/repo/alpha/packages/desktop" ? "/repo/alpha" : cwd,
-      createRepoForCwd: () => { createCalls += 1; return "SHOULD_NOT_CREATE"; },
+      resolveCwd: (cwd) => (cwd === "/repo/alpha/packages/desktop" ? "/repo/alpha" : cwd),
+      createProjectForCwd: () => {
+        createCalls += 1;
+        return "SHOULD_NOT_CREATE";
+      },
     });
-    await importAutomationRuns([run({ cwd: "/repo/alpha/packages/desktop" })], repos, d);
+    await importAutomationRuns([run({ cwd: "/repo/alpha/packages/desktop" })], projects, d);
     expect(createCalls).toBe(0);
-    expect(imported[0].repoId).toBe("r1");
+    expect(imported[0].projectId).toBe("r1");
   });
 
   it("skips an unmatched cwd when repo creation returns null", async () => {
-    const { d, imported } = deps({ createRepoForCwd: () => null });
-    await importAutomationRuns([run({ cwd: "/somewhere/removed" })], repos, d);
+    const { d, imported } = deps({ createProjectForCwd: () => null });
+    await importAutomationRuns([run({ cwd: "/somewhere/removed" })], projects, d);
     expect(imported).toHaveLength(0);
   });
 
   it("caps to the N most-recent per repo", async () => {
     const runs: ImportableRun[] = [];
-    for (let i = 0; i < 60; i++) runs.push(run({ runId: `run-${i}`, sessionId: `sess-${i}`, finishedAt: i }));
+    for (let i = 0; i < 60; i++)
+      runs.push(run({ runId: `run-${i}`, sessionId: `sess-${i}`, finishedAt: i }));
     const { d, imported } = deps({ cap: 50 });
-    await importAutomationRuns(runs, repos, d);
+    await importAutomationRuns(runs, projects, d);
     expect(imported).toHaveLength(50);
     const ids = new Set(imported.map((x) => x.sessionId));
     expect(ids.has("sess-59")).toBe(true);
@@ -117,15 +131,22 @@ describe("importAutomationRuns", () => {
   });
 
   it("does not throw when a transcript fetch fails", async () => {
-    const { d, imported } = deps({ fetchTranscript: async () => { throw new Error("io"); } });
-    await importAutomationRuns([run({})], repos, d);
+    const { d, imported } = deps({
+      fetchTranscript: async () => {
+        throw new Error("io");
+      },
+    });
+    await importAutomationRuns([run({})], projects, d);
     expect(imported).toHaveLength(1);
   });
 
   it("creates only ONE repo for multiple runs sharing an unmatched cwd", async () => {
     let createCalls = 0;
     const { d, imported } = deps({
-      createRepoForCwd: () => { createCalls += 1; return "auto-1"; },
+      createProjectForCwd: () => {
+        createCalls += 1;
+        return "auto-1";
+      },
     });
     await importAutomationRuns(
       [
@@ -133,11 +154,11 @@ describe("importAutomationRuns", () => {
         run({ runId: "b", sessionId: "sess-b", cwd: "/new/path" }),
         run({ runId: "c", sessionId: "sess-c", cwd: "/new/path/" }), // trailing slash → same after normalize
       ],
-      repos,
+      projects,
       d,
     );
     expect(createCalls).toBe(1);
     expect(imported).toHaveLength(3);
-    expect(new Set(imported.map((x) => x.repoId))).toEqual(new Set(["auto-1"]));
+    expect(new Set(imported.map((x) => x.projectId))).toEqual(new Set(["auto-1"]));
   });
 });

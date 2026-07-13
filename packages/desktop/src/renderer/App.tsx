@@ -32,7 +32,7 @@ import { transcriptsReducer, type TranscriptsMap } from "./transcriptsReducer";
 import {
   loadTranscript,
   saveTranscript,
-  migrateRepoSessionBucket,
+  migrateProjectSessionBucket,
   loadSessionIndex,
   createSession,
   deleteSessionLocal,
@@ -47,9 +47,9 @@ import {
   setActiveSession,
   NO_REPO_KEY,
   bucketKey,
-  repoKeyOf,
+  projectBucketSegment as projectBucketSegmentFor,
   migrateBucketOverride,
-  migrateRepoBucketOverrides,
+  migrateProjectBucketOverrides,
   clearBucketOverride,
   loadPanelState,
   clearPanelState,
@@ -183,7 +183,7 @@ import {
 
 // Bucket key for sessions without a project — re-exported from transcripts.
 // We use NO_REPO_KEY everywhere instead of a local const so the renderer
-// and the persistence layer can't drift apart. `bucketKey`/`repoKeyOf` are
+// and the persistence layer can't drift apart. `bucketKey`/`projectBucketSegment` are
 // imported from transcripts (the single source of truth) so App's map build
 // can't drift from Sidebar's row lookup.
 const GLOBAL_KEY = NO_REPO_KEY;
@@ -264,16 +264,17 @@ function hydratePanelBucketState(bucket: string): PanelBucketState {
 }
 
 function parsePanelBucket(bucket: string): {
-  repoKey: string;
-  repoId: string | null;
+  projectBucketSegment: string;
+  projectId: string | null;
   sessionId: string | null;
 } {
   const sep = bucket.indexOf("::");
-  const repoKey = sep >= 0 ? bucket.slice(0, sep) : bucket;
+  const projectBucketSegment = sep >= 0 ? bucket.slice(0, sep) : bucket;
   const rawSessionId = sep >= 0 ? bucket.slice(sep + 2) : null;
   return {
-    repoKey: repoKey || NO_REPO_KEY,
-    repoId: repoKey && repoKey !== NO_REPO_KEY ? repoKey : null,
+    projectBucketSegment: projectBucketSegment || NO_REPO_KEY,
+    projectId:
+      projectBucketSegment && projectBucketSegment !== NO_REPO_KEY ? projectBucketSegment : null,
     sessionId: rawSessionId && rawSessionId !== "_none_" ? rawSessionId : null,
   };
 }
@@ -496,7 +497,7 @@ function App() {
    *  the 自动化 detail's 「查看最近运行」 button). Not persisted in view state. */
   const [runsInitialRunId, setRunsInitialRunId] = useState<string | null>(null);
 
-  // Session indices per repo (keyed by repoKey).
+  // Session indices per repo (keyed by projectBucketSegment).
   const [sessionIndices, setSessionIndices] = useState<Record<string, SessionIndex>>(() => {
     const out: Record<string, SessionIndex> = {};
     const liveProjects = loadProjects();
@@ -520,15 +521,15 @@ function App() {
    * id can be threaded into a follow-up `touchSession` without two
    * back-to-back setSessionIndices calls clobbering each other.
    */
-  const ensureActiveSession = (repoId: string | null): string => {
-    const active = loadSessionIndex(repoId).activeSessionId;
+  const ensureActiveSession = (projectId: string | null): string => {
+    const active = loadSessionIndex(projectId).activeSessionId;
     if (active) return active;
-    const { sessionId } = createSession(repoId);
+    const { sessionId } = createSession(projectId);
     return sessionId;
   };
 
-  const activeRepoKey = repoKeyOf(activeProjectId);
-  const activeSessionId = sessionIndices[activeRepoKey]?.activeSessionId ?? null;
+  const activeProjectBucketSegment = projectBucketSegmentFor(activeProjectId);
+  const activeSessionId = sessionIndices[activeProjectBucketSegment]?.activeSessionId ?? null;
   const activeBucket = bucketKey(activeProjectId, activeSessionId);
   const permissionMode = permissionOverrides[activeBucket] ?? defaultPermissionMode;
   // The model shown/used for the ACTIVE session: its own override if it has
@@ -700,17 +701,17 @@ function App() {
     if (activeSessionId) {
       const sessionId = resolveAttachmentSessionId(
         activeSessionId,
-        sessionIndices[activeRepoKey]?.sessions ?? [],
+        sessionIndices[activeProjectBucketSegment]?.sessions ?? [],
       );
       if (sessionId) return { cwd, sessionId };
     }
 
-    const repoId = activeProjectId;
-    const draftBucket = bucketKey(repoId, null);
-    const { index, sessionId } = createSession(repoId);
-    const nextBucket = bucketKey(repoId, sessionId);
+    const projectId = activeProjectId;
+    const draftBucket = bucketKey(projectId, null);
+    const { index, sessionId } = createSession(projectId);
+    const nextBucket = bucketKey(projectId, sessionId);
     activeBucketRef.current = nextBucket;
-    setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: index }));
+    setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: index }));
     setComposerDrafts((prev) => {
       const current = prev[draftBucket];
       if (!current) return prev;
@@ -740,7 +741,7 @@ function App() {
 
   /**
    * Per-session sidebar status, keyed by the SAME bucketKey() the Sidebar
-   * derives per row (repoKey::uiSessionId). Priority asking > running > unread.
+   * derives per row (projectBucketSegment::uiSessionId). Priority asking > running > unread.
    *
    * - asking: a pending approval / ask_user envelope is queued for this bucket.
    *   The envelope carries an ENGINE sessionId, so we map it through the exact
@@ -751,7 +752,7 @@ function App() {
    * - unread: bucket finished a turn off-screen.
    *
    * Iterates every known session across all repo indices so the keys here line
-   * up 1:1 with the rows Sidebar renders. NOTE: bucketKey()/repoKeyOf() must
+   * up 1:1 with the rows Sidebar renders. NOTE: bucketKey()/projectBucketSegmentFor() must
    * stay byte-identical to Sidebar's per-row key derivation (see Sidebar.tsx).
    */
   const sessionStatusMap = useMemo<Record<string, SessionStatus>>(() => {
@@ -764,11 +765,11 @@ function App() {
     // O(approvals × total-sessions).)
     const engineToBucketIndex = new Map<string, string>();
     const map: Record<string, SessionStatus> = {};
-    for (const [repoKey, index] of Object.entries(sessionIndices)) {
-      const repoId = repoKey === GLOBAL_KEY ? null : repoKey;
+    for (const [projectBucketSegment, index] of Object.entries(sessionIndices)) {
+      const projectId = projectBucketSegment === GLOBAL_KEY ? null : projectBucketSegment;
       for (const s of index.sessions) {
         if (s.engineSessionId && !engineToBucketIndex.has(s.engineSessionId)) {
-          engineToBucketIndex.set(s.engineSessionId, bucketKey(repoId, s.id));
+          engineToBucketIndex.set(s.engineSessionId, bucketKey(projectId, s.id));
         }
       }
     }
@@ -791,10 +792,10 @@ function App() {
       if (bucket) asking.add(bucket);
     }
 
-    for (const [repoKey, index] of Object.entries(sessionIndices)) {
-      const repoId = repoKey === GLOBAL_KEY ? null : repoKey;
+    for (const [projectBucketSegment, index] of Object.entries(sessionIndices)) {
+      const projectId = projectBucketSegment === GLOBAL_KEY ? null : projectBucketSegment;
       for (const s of index.sessions) {
-        const bucket = bucketKey(repoId, s.id);
+        const bucket = bucketKey(projectId, s.id);
         const status = statusForBucket(bucket, asking, busyKeys, unreadBuckets);
         if (status) map[bucket] = status;
       }
@@ -824,7 +825,7 @@ function App() {
   // Disk recents are the source of truth for the project SET + pinned/soft-delete.
   // Hydrate from disk on mount and re-project on every change (another window, a
   // phone, or our own add/remove/pin), reconciling against the localStorage cache
-  // so each known path keeps its stable repoId (session buckets stay intact).
+  // so each known path keeps its stable projectId (session buckets stay intact).
   useEffect(() => {
     let alive = true;
     const apply = (
@@ -873,22 +874,22 @@ function App() {
         normalizedCached,
       );
       const remapEntries = Object.entries(projectIdRemap);
-      const migratedRepoIds = new Set<string>();
-      for (const [fromRepoId, toRepoId] of remapEntries) {
-        migrateRepoSessionBucket(fromRepoId, toRepoId);
-        migratedRepoIds.add(toRepoId);
+      const migratedProjectIds = new Set<string>();
+      for (const [fromProjectId, toProjectId] of remapEntries) {
+        migrateProjectSessionBucket(fromProjectId, toProjectId);
+        migratedProjectIds.add(toProjectId);
       }
       if (!alive) return;
       setProjects(reconciled);
       if (remapEntries.length > 0) {
         setActiveProjectId((prev) => (prev && projectIdRemap[prev] ? projectIdRemap[prev] : prev));
-        setPermissionOverrides((prev) => migrateRepoBucketOverrides(prev, projectIdRemap));
-        setModelOverrides((prev) => migrateRepoBucketOverrides(prev, projectIdRemap));
-        setGoalOverrides((prev) => migrateRepoBucketOverrides(prev, projectIdRemap));
+        setPermissionOverrides((prev) => migrateProjectBucketOverrides(prev, projectIdRemap));
+        setModelOverrides((prev) => migrateProjectBucketOverrides(prev, projectIdRemap));
+        setGoalOverrides((prev) => migrateProjectBucketOverrides(prev, projectIdRemap));
         setSessionIndices((prev) => {
           const next = { ...prev };
-          for (const [fromRepoId] of remapEntries) delete next[fromRepoId];
-          for (const id of migratedRepoIds) next[id] = loadSessionIndex(id);
+          for (const [fromProjectId] of remapEntries) delete next[fromProjectId];
+          for (const id of migratedProjectIds) next[id] = loadSessionIndex(id);
           return next;
         });
       }
@@ -919,10 +920,10 @@ function App() {
       seen.add(sessionId);
       entries.push({ sessionId, mode });
     };
-    for (const [repoKey, index] of Object.entries(sessionIndices)) {
-      const repoId = repoKey === GLOBAL_KEY ? null : repoKey;
+    for (const [projectBucketSegment, index] of Object.entries(sessionIndices)) {
+      const projectId = projectBucketSegment === GLOBAL_KEY ? null : projectBucketSegment;
       for (const s of index.sessions) {
-        const bucket = bucketKey(repoId, s.id);
+        const bucket = bucketKey(projectId, s.id);
         const mode = toMobilePermissionMode(permissionOverrides[bucket] ?? defaultPermissionMode);
         if (!mode) continue;
         add(s.engineSessionId ?? s.id, mode);
@@ -1057,7 +1058,9 @@ function App() {
     if (!activeSessionId) return;
     if (transcripts[activeBucket]) return;
     const local = loadTranscript(activeProjectId, activeSessionId);
-    const summary = sessionIndices[activeRepoKey]?.sessions.find((s) => s.id === activeSessionId);
+    const summary = sessionIndices[activeProjectBucketSegment]?.sessions.find(
+      (s) => s.id === activeSessionId,
+    );
     const engineId = summary?.engineSessionId;
     const bucket = activeBucket;
     let cancelled = false;
@@ -1183,7 +1186,14 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [activeBucket, activeProjectId, activeSessionId, activeRepoKey, sessionIndices, transcripts]);
+  }, [
+    activeBucket,
+    activeProjectId,
+    activeSessionId,
+    activeProjectBucketSegment,
+    sessionIndices,
+    transcripts,
+  ]);
 
   // Persist active transcript (debounced).
   useEffect(() => {
@@ -1209,7 +1219,7 @@ function App() {
     if (!activeSessionId) return INITIAL_STATE;
     const local = loadTranscript(activeProjectId, activeSessionId);
     return local.messages.length > 0 ? local : INITIAL_STATE;
-    // activeBucket captures (repoId, sessionId); recomputing per-bucket is the intent.
+    // activeBucket captures (projectId, sessionId); recomputing per-bucket is the intent.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBucket]);
   const state = transcripts[activeBucket] ?? fallbackState;
@@ -1283,7 +1293,7 @@ function App() {
       [next.id]: loadSessionIndex(next.id),
     }));
     // Persist to disk (source of truth). The projects:changed echo re-projects
-    // and, because the path now matches our cache, keeps this same repoId.
+    // and, because the path now matches our cache, keeps this same projectId.
     void window.codeshell.projects.add({ path: next.path, name: next.name });
     window.codeshell.log("repo.added", { id: next.id, path: next.path });
   };
@@ -1300,7 +1310,7 @@ function App() {
     // 设置→高级→已归档 under their original project name. The project row still
     // leaves the sidebar (which iterates `projects`), but the conversations
     // survive instead of silently vanishing from localStorage.
-    const idx = sessionIndices[repoKeyOf(id)] ?? loadSessionIndex(id);
+    const idx = sessionIndices[projectBucketSegmentFor(id)] ?? loadSessionIndex(id);
     if (project) {
       await releaseWorkspacesForArchiveMany(idx.sessions, window.codeshell);
     }
@@ -1363,18 +1373,18 @@ function App() {
    * "新对话" anchored to a specific project (used by the row's pen icon).
    * Switches active project if needed, then enters draft state.
    */
-  const handleNewConversationForProject = (repoId: string | null): void => {
-    if (activeProjectId !== repoId) setActiveProjectId(repoId);
-    const draftBucket = bucketKey(repoId, null);
+  const handleNewConversationForProject = (projectId: string | null): void => {
+    if (activeProjectId !== projectId) setActiveProjectId(projectId);
+    const draftBucket = bucketKey(projectId, null);
     const previousBucket = activeBucketRef.current;
     activeBucketRef.current = draftBucket;
-    const nextIndex = setActiveSession(repoId, null);
+    const nextIndex = setActiveSession(projectId, null);
     setSessionIndices((prev) => ({
       ...prev,
-      [repoKeyOf(repoId)]: nextIndex,
+      [projectBucketSegmentFor(projectId)]: nextIndex,
     }));
     window.codeshell.log("session.new_draft", {
-      repoId,
+      repoId: projectId,
       previousBucket,
       bucket: draftBucket,
       source: "repo",
@@ -1397,26 +1407,26 @@ function App() {
     setView((v) => ({ ...v, viewMode: "chat" }));
   };
 
-  const handleSelectSession = (repoId: string | null, sessionId: string): void => {
-    const key = repoKeyOf(repoId);
+  const handleSelectSession = (projectId: string | null, sessionId: string): void => {
+    const key = projectBucketSegmentFor(projectId);
     // Selecting a session clears its unread mark — the user is now looking at it.
-    const selectedBucket = bucketKey(repoId, sessionId);
+    const selectedBucket = bucketKey(projectId, sessionId);
     setUnreadBuckets((prev) => {
       if (!prev.has(selectedBucket)) return prev;
       const next = new Set(prev);
       next.delete(selectedBucket);
       return next;
     });
-    setActiveProjectId(repoId);
-    const nextIndex = setActiveSession(repoId, sessionId);
-    const nextBucket = nextIndex.activeSessionId ? selectedBucket : bucketKey(repoId, null);
+    setActiveProjectId(projectId);
+    const nextIndex = setActiveSession(projectId, sessionId);
+    const nextBucket = nextIndex.activeSessionId ? selectedBucket : bucketKey(projectId, null);
     activeBucketRef.current = nextBucket;
     setSessionIndices((prev) => ({
       ...prev,
       [key]: nextIndex,
     }));
     window.codeshell.log("session.select", {
-      repoId,
+      repoId: projectId,
       requestedSessionId: sessionId,
       activeSessionId: nextIndex.activeSessionId,
       bucket: nextBucket,
@@ -1428,13 +1438,13 @@ function App() {
 
   const findSessionByEngineId = (
     engineSessionId: string,
-  ): { repoId: string | null; session: SessionSummary } | null => {
+  ): { projectId: string | null; session: SessionSummary } | null => {
     const projectsNow = loadProjects();
-    for (const repoId of [null as string | null, ...projectsNow.map((project) => project.id)]) {
-      const session = loadSessionIndex(repoId).sessions.find(
+    for (const projectId of [null as string | null, ...projectsNow.map((project) => project.id)]) {
+      const session = loadSessionIndex(projectId).sessions.find(
         (s) => s.engineSessionId === engineSessionId || s.id === engineSessionId,
       );
-      if (session) return { repoId, session };
+      if (session) return { projectId, session };
     }
     return null;
   };
@@ -1457,12 +1467,12 @@ function App() {
 
     const existing = findSessionByEngineId(run.sessionId);
     if (existing) {
-      handleSelectSession(existing.repoId, existing.session.id);
+      handleSelectSession(existing.projectId, existing.session.id);
       return;
     }
 
     const projectsNow = loadProjects();
-    const touchedRepoIds = new Set<string | null>();
+    const touchedProjectIds = new Set<string | null>();
     const projectFactory = makeCreateProjectForCwd(projectsNow);
     await importAutomationRuns(
       [
@@ -1484,26 +1494,27 @@ function App() {
         existingEngineSessionIds: new Set(),
         cap: 1,
         fetchTranscript: (sid) => window.codeshell.getSessionTranscript(sid),
-        createRepoForCwd: projectFactory.createProjectForCwd,
-        writeImported: (repoId, summary, state) => {
-          saveTranscript(repoId, summary.id, state);
-          upsertImportedSession(repoId, summary);
-          touchedRepoIds.add(repoId);
+        createProjectForCwd: projectFactory.createProjectForCwd,
+        writeImported: (projectId, summary, state) => {
+          saveTranscript(projectId, summary.id, state);
+          upsertImportedSession(projectId, summary);
+          touchedProjectIds.add(projectId);
         },
       },
     );
 
     if (projectFactory.changed()) setProjects(projectsNow.slice());
-    if (touchedRepoIds.size > 0) {
+    if (touchedProjectIds.size > 0) {
       setSessionIndices((prev) => {
         const next = { ...prev };
-        for (const rid of touchedRepoIds) next[repoKeyOf(rid)] = loadSessionIndex(rid);
+        for (const rid of touchedProjectIds)
+          next[projectBucketSegmentFor(rid)] = loadSessionIndex(rid);
         return next;
       });
     }
 
     const imported = findSessionByEngineId(run.sessionId);
-    if (imported) handleSelectSession(imported.repoId, imported.session.id);
+    if (imported) handleSelectSession(imported.projectId, imported.session.id);
     else {
       setRunsInitialRunId(run.runId);
       setViewMode("runs");
@@ -1513,7 +1524,7 @@ function App() {
   const handleOpenAutomationDiskSession = async (session: DiskSessionMeta): Promise<void> => {
     const existing = findSessionByEngineId(session.engineSessionId);
     if (existing) {
-      handleSelectSession(existing.repoId, existing.session.id);
+      handleSelectSession(existing.projectId, existing.session.id);
       return;
     }
 
@@ -1525,7 +1536,7 @@ function App() {
     };
     const [placement] = planDiskRebuild([resolvedSession], projectsNow, {
       caseInsensitive: isCaseInsensitivePlatform(),
-      createRepoForCwd: projectFactory.createProjectForCwd,
+      createProjectForCwd: projectFactory.createProjectForCwd,
     });
     if (!placement) return;
 
@@ -1535,15 +1546,15 @@ function App() {
     } catch {
       state = foldTranscript([]);
     }
-    saveTranscript(placement.repoId, placement.summary.id, state);
-    const nextIdx = upsertImportedSession(placement.repoId, placement.summary);
+    saveTranscript(placement.projectId, placement.summary.id, state);
+    const nextIdx = upsertImportedSession(placement.projectId, placement.summary);
 
     if (projectFactory.changed()) setProjects(projectsNow.slice());
     setSessionIndices((prev) => ({
       ...prev,
-      [repoKeyOf(placement.repoId)]: nextIdx,
+      [projectBucketSegmentFor(placement.projectId)]: nextIdx,
     }));
-    handleSelectSession(placement.repoId, placement.summary.id);
+    handleSelectSession(placement.projectId, placement.summary.id);
   };
 
   const handleOpenPetTarget = async (request: PetOpenSessionRequest): Promise<void> => {
@@ -1600,17 +1611,17 @@ function App() {
    * (see `send` → ensureActiveSession + touchSession).
    */
   const handleNewConversation = (): void => {
-    const repoId = activeProjectId;
-    const draftBucket = bucketKey(repoId, null);
+    const projectId = activeProjectId;
+    const draftBucket = bucketKey(projectId, null);
     const previousBucket = activeBucketRef.current;
     activeBucketRef.current = draftBucket;
-    const nextIndex = setActiveSession(repoId, null);
+    const nextIndex = setActiveSession(projectId, null);
     setSessionIndices((prev) => ({
       ...prev,
-      [repoKeyOf(repoId)]: nextIndex,
+      [projectBucketSegmentFor(projectId)]: nextIndex,
     }));
     window.codeshell.log("session.new_draft", {
-      repoId,
+      repoId: projectId,
       previousBucket,
       bucket: draftBucket,
       source: "global",
@@ -1623,33 +1634,41 @@ function App() {
     setView((v) => ({ ...v, viewMode: "chat" }));
   };
 
-  const handleRenameSession = (repoId: string | null, sessionId: string, title: string): void => {
-    const next = renameSessionLocal(repoId, sessionId, title, true);
-    setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
+  const handleRenameSession = (
+    projectId: string | null,
+    sessionId: string,
+    title: string,
+  ): void => {
+    const next = renameSessionLocal(projectId, sessionId, title, true);
+    setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: next }));
   };
 
   const handleArchiveSession = async (
-    repoId: string | null,
+    projectId: string | null,
     sessionId: string,
     archived: boolean,
   ): Promise<void> => {
-    const summary = sessionIndices[repoKeyOf(repoId)]?.sessions.find((s) => s.id === sessionId);
+    const summary = sessionIndices[projectBucketSegmentFor(projectId)]?.sessions.find(
+      (s) => s.id === sessionId,
+    );
     await releaseWorkspaceForArchive(summary, archived, window.codeshell);
-    const next = archiveSession(repoId, sessionId, archived);
-    setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
+    const next = archiveSession(projectId, sessionId, archived);
+    setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: next }));
   };
 
-  const handleDeleteSession = (repoId: string | null, sessionId: string): void => {
+  const handleDeleteSession = (projectId: string | null, sessionId: string): void => {
     // Capture source/runId BEFORE wiping the local entry — needed to also
     // remove the on-disk session + run dirs.
-    const summary = sessionIndices[repoKeyOf(repoId)]?.sessions.find((s) => s.id === sessionId);
-    const next = deleteSessionLocal(repoId, sessionId);
-    setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
+    const summary = sessionIndices[projectBucketSegmentFor(projectId)]?.sessions.find(
+      (s) => s.id === sessionId,
+    );
+    const next = deleteSessionLocal(projectId, sessionId);
+    setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: next }));
 
     // Drop the deleted session's panel state so its (hidden) PanelArea — and the
     // browser <webview> / terminal pty it keeps mounted — is torn down instead of
     // leaking, and its persisted layout doesn't linger in localStorage.
-    const deletedBucket = bucketKey(repoId, sessionId);
+    const deletedBucket = bucketKey(projectId, sessionId);
     clearPanelState(deletedBucket);
     setPanelByBucket((prev) => {
       if (!(deletedBucket in prev)) return prev;
@@ -1753,27 +1772,28 @@ function App() {
         if (s.engineSessionId && dedupable(s)) known.add(s.engineSessionId);
       }
 
-      const touchedRepoIds = new Set<string | null>();
+      const touchedProjectIds = new Set<string | null>();
       const projectFactory = makeCreateProjectForCwd(currentProjects);
       await importAutomationRuns(runs, currentProjects, {
         caseInsensitive: isCaseInsensitivePlatform(),
         existingEngineSessionIds: known,
         cap: 50,
         fetchTranscript: (sid) => window.codeshell.getSessionTranscript(sid),
-        createRepoForCwd: projectFactory.createProjectForCwd,
-        writeImported: (repoId, summary, state) => {
-          saveTranscript(repoId, summary.id, state);
-          upsertImportedSession(repoId, summary);
-          touchedRepoIds.add(repoId);
+        createProjectForCwd: projectFactory.createProjectForCwd,
+        writeImported: (projectId, summary, state) => {
+          saveTranscript(projectId, summary.id, state);
+          upsertImportedSession(projectId, summary);
+          touchedProjectIds.add(projectId);
         },
       });
       if (cancelled) return;
 
       if (projectFactory.changed()) setProjects(currentProjects.slice());
-      if (touchedRepoIds.size > 0) {
+      if (touchedProjectIds.size > 0) {
         setSessionIndices((prev) => {
           const next = { ...prev };
-          for (const rid of touchedRepoIds) next[repoKeyOf(rid)] = loadSessionIndex(rid);
+          for (const rid of touchedProjectIds)
+            next[projectBucketSegmentFor(rid)] = loadSessionIndex(rid);
           return next;
         });
       }
@@ -1787,11 +1807,11 @@ function App() {
   // Only when the active repo's index is empty → no disk scan otherwise. Mirrors
   // D1's automation placement: match disk cwd → repo, auto-create on miss.
   useEffect(() => {
-    const repoKey = repoKeyOf(activeProjectId);
-    const idx = sessionIndices[repoKey];
+    const projectBucketSegment = projectBucketSegmentFor(activeProjectId);
+    const idx = sessionIndices[projectBucketSegment];
     if (idx && idx.sessions.length > 0) return; // has data → don't scan disk
-    if (diskProbedRef.current.has(repoKey)) return; // already scanned for this repo
-    diskProbedRef.current.add(repoKey);
+    if (diskProbedRef.current.has(projectBucketSegment)) return; // already scanned for this repo
+    diskProbedRef.current.add(projectBucketSegment);
     let cancelled = false;
     let probed = false; // disk read resolved (with or without sessions)
     void (async () => {
@@ -1824,13 +1844,13 @@ function App() {
         const projectFactory = makeCreateProjectForCwd(projectsNow);
         const placements = planDiskRebuild(sessions, projectsNow, {
           caseInsensitive: isCaseInsensitivePlatform(),
-          createRepoForCwd: projectFactory.createProjectForCwd,
+          createProjectForCwd: projectFactory.createProjectForCwd,
         });
         if (cancelled) return;
         const touched = new Set<string>();
-        for (const { repoId, summary } of placements) {
-          upsertImportedSession(repoId, summary);
-          touched.add(repoKeyOf(repoId));
+        for (const { projectId, summary } of placements) {
+          upsertImportedSession(projectId, summary);
+          touched.add(projectBucketSegmentFor(projectId));
         }
         if (projectFactory.changed()) setProjects(projectsNow.slice());
         setSessionIndices((prev) => {
@@ -1840,7 +1860,7 @@ function App() {
         });
       } catch {
         // disk unavailable — leave empty and allow a later retry for this repo.
-        diskProbedRef.current.delete(repoKey);
+        diskProbedRef.current.delete(projectBucketSegment);
       }
     })();
     return () => {
@@ -1848,7 +1868,7 @@ function App() {
       // If we tore down before the disk read resolved, drop the mark so a
       // future visit can retry. A completed probe keeps its mark — that's what
       // breaks the re-scan loop when a page maps only into other projects.
-      if (!probed) diskProbedRef.current.delete(repoKey);
+      if (!probed) diskProbedRef.current.delete(projectBucketSegment);
     };
   }, [activeProjectId, sessionIndices]);
 
@@ -1966,13 +1986,13 @@ function App() {
         }
         const sep = target.indexOf("::");
         if (sep > 0) {
-          const repoKey = target.slice(0, sep);
+          const projectBucketSegment = target.slice(0, sep);
           const uiSessionId = target.slice(sep + 2);
-          const repoId = repoKey === GLOBAL_KEY ? null : repoKey;
+          const projectId = projectBucketSegment === GLOBAL_KEY ? null : projectBucketSegment;
           if (uiSessionId && uiSessionId !== "_none_") {
             engineToBucketRef.current.set(event.sessionId, target);
-            const nextIdx = bindEngineSession(repoId, uiSessionId, event.sessionId);
-            setSessionIndices((prev) => ({ ...prev, [repoKey]: nextIdx }));
+            const nextIdx = bindEngineSession(projectId, uiSessionId, event.sessionId);
+            setSessionIndices((prev) => ({ ...prev, [projectBucketSegment]: nextIdx }));
           }
         }
       }
@@ -1984,15 +2004,15 @@ function App() {
         if (isQuickChatBucket(target)) return;
         const sep = target.indexOf("::");
         if (sep > 0) {
-          const repoKey = target.slice(0, sep);
+          const projectBucketSegment = target.slice(0, sep);
           const uiSessionId = target.slice(sep + 2);
-          const repoId = repoKey === GLOBAL_KEY ? null : repoKey;
+          const projectId = projectBucketSegment === GLOBAL_KEY ? null : projectBucketSegment;
           if (uiSessionId && uiSessionId !== "_none_") {
             setSessionIndices((prev) => {
-              const cur = prev[repoKey]?.sessions.find((s) => s.id === uiSessionId);
+              const cur = prev[projectBucketSegment]?.sessions.find((s) => s.id === uiSessionId);
               if (!cur || cur.titleManual) return prev; // never clobber manual rename
-              const next = renameSessionLocal(repoId, uiSessionId, event.title);
-              return { ...prev, [repoKey]: next };
+              const next = renameSessionLocal(projectId, uiSessionId, event.title);
+              return { ...prev, [projectBucketSegment]: next };
             });
           }
         }
@@ -2050,7 +2070,7 @@ function App() {
                 owner.id,
                 event.type === "error" ? "failed" : "completed",
               );
-              setSessionIndices((prev) => ({ ...prev, [repoKeyOf(rid)]: nextIdx }));
+              setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(rid)]: nextIdx }));
               break;
             }
           }
@@ -2079,11 +2099,11 @@ function App() {
       );
       if (alreadyKnown) {
         // Still (re)register the route in case the table was wiped by a remount.
-        const knownRepoId =
+        const knownProjectId =
           [null as string | null, ...projectsNow.map((project) => project.id)].find((rid) =>
             loadSessionIndex(rid).sessions.some((s) => s.engineSessionId === meta.sessionId),
           ) ?? null;
-        engineToBucketRef.current.set(meta.sessionId, bucketKey(knownRepoId, meta.sessionId));
+        engineToBucketRef.current.set(meta.sessionId, bucketKey(knownProjectId, meta.sessionId));
         return;
       }
       void (async () => {
@@ -2092,25 +2112,28 @@ function App() {
           cwd: await resolveProjectCwd(meta.cwd),
         };
         const projectsAfterResolve = loadProjects();
-        const existingRepoId = [
+        const existingProjectId = [
           null as string | null,
           ...projectsAfterResolve.map((project) => project.id),
         ].find((rid) =>
           loadSessionIndex(rid).sessions.some((s) => s.engineSessionId === meta.sessionId),
         );
-        if (existingRepoId !== undefined) {
-          engineToBucketRef.current.set(meta.sessionId, bucketKey(existingRepoId, meta.sessionId));
+        if (existingProjectId !== undefined) {
+          engineToBucketRef.current.set(
+            meta.sessionId,
+            bucketKey(existingProjectId, meta.sessionId),
+          );
           return;
         }
         const projectFactory = makeCreateProjectForCwd(projectsAfterResolve);
         const placement = placeLiveAutomationSession(resolvedMeta, projectsAfterResolve, {
           caseInsensitive: isCaseInsensitivePlatform(),
-          createRepoForCwd: projectFactory.createProjectForCwd,
+          createProjectForCwd: projectFactory.createProjectForCwd,
         });
         if (!placement) return;
-        const { repoId, summary } = placement;
-        const nextIdx = upsertImportedSession(repoId, summary);
-        const bucket = bucketKey(repoId, summary.id);
+        const { projectId, summary } = placement;
+        const nextIdx = upsertImportedSession(projectId, summary);
+        const bucket = bucketKey(projectId, summary.id);
         // Register the route so this run's stream events (already arriving) bucket
         // correctly. The session_started handler's reverse-lookup would also find
         // it now that it's on disk, but setting the fast path is cheap.
@@ -2137,7 +2160,7 @@ function App() {
           dispatch({ type: "user_message", bucket, text: meta.prompt, clientMessageId });
         }
         if (projectFactory.changed()) setProjects(projectsAfterResolve.slice());
-        setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: nextIdx }));
+        setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: nextIdx }));
       })();
     });
     const offMobileSession = window.codeshell.onMobileSession((meta) => {
@@ -2146,28 +2169,28 @@ function App() {
         cwd: meta.cwd,
       });
       const projectsNow = loadProjects();
-      const knownRepoId =
+      const knownProjectId =
         [null as string | null, ...projectsNow.map((project) => project.id)].find((rid) =>
           loadSessionIndex(rid).sessions.some(
             (s) => s.engineSessionId === meta.sessionId || s.id === meta.sessionId,
           ),
         ) ?? undefined;
       const known =
-        knownRepoId !== undefined
-          ? loadSessionIndex(knownRepoId).sessions.find(
+        knownProjectId !== undefined
+          ? loadSessionIndex(knownProjectId).sessions.find(
               (s) => s.engineSessionId === meta.sessionId || s.id === meta.sessionId,
             )
           : undefined;
 
-      let repoId: string | null;
+      let projectId: string | null;
       let sessionId: string;
       let nextIdx: SessionIndex;
       const title = titleFromWire(meta.prompt || meta.title || meta.sessionId);
 
       if (known) {
-        repoId = knownRepoId ?? null;
+        projectId = knownProjectId ?? null;
         sessionId = known.id;
-        nextIdx = touchSession(repoId, sessionId, title);
+        nextIdx = touchSession(projectId, sessionId, title);
       } else {
         const projectFactory = makeCreateProjectForCwd(projectsNow);
         const now = Date.now();
@@ -2185,13 +2208,13 @@ function App() {
           projectsNow,
           {
             caseInsensitive: isCaseInsensitivePlatform(),
-            createRepoForCwd: projectFactory.createProjectForCwd,
+            createProjectForCwd: projectFactory.createProjectForCwd,
           },
         );
         if (!placement) return;
-        repoId = placement.repoId;
+        projectId = placement.projectId;
         sessionId = placement.summary.id;
-        nextIdx = upsertImportedSession(repoId, {
+        nextIdx = upsertImportedSession(projectId, {
           ...placement.summary,
           title,
           createdAt: now,
@@ -2200,7 +2223,7 @@ function App() {
         if (projectFactory.changed()) setProjects(projectsNow.slice());
       }
 
-      const bucket = bucketKey(repoId, sessionId);
+      const bucket = bucketKey(projectId, sessionId);
       engineToBucketRef.current.set(meta.sessionId, bucket);
       setBusyForKey(bucket, true);
       if (meta.prompt.trim()) {
@@ -2214,7 +2237,7 @@ function App() {
         }
         dispatch({ type: "user_message", bucket, text: meta.prompt, clientMessageId });
       }
-      setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: nextIdx }));
+      setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: nextIdx }));
     });
     const offApproval = window.codeshell.onApprovalRequest((env: ApprovalRequestEnvelope) => {
       window.codeshell.log("approval.request", {
@@ -2382,10 +2405,13 @@ function App() {
           );
         let bucket = bucketFromRoute;
         if (!bucket) {
-          for (const [repoKey, index] of Object.entries(sessionIndicesRef.current)) {
+          for (const [projectBucketSegment, index] of Object.entries(sessionIndicesRef.current)) {
             const summary = index.sessions.find((s) => s.id === env.sessionId);
             if (summary) {
-              bucket = bucketKey(repoKey === GLOBAL_KEY ? null : repoKey, summary.id);
+              bucket = bucketKey(
+                projectBucketSegment === GLOBAL_KEY ? null : projectBucketSegment,
+                summary.id,
+              );
               break;
             }
           }
@@ -2470,12 +2496,12 @@ function App() {
     // createSession persists to localStorage synchronously, so reading
     // it back via touchSession() right after sees the new entry.
     const parsedBucket = sendOpts.bucket ? parsePanelBucket(sendOpts.bucket) : null;
-    const targetProjectId = parsedBucket ? parsedBucket.repoId : activeProjectId;
+    const targetProjectId = parsedBucket ? parsedBucket.projectId : activeProjectId;
     const targetSessionId = parsedBucket ? parsedBucket.sessionId : activeSessionId;
     const wasDraft = targetSessionId === null;
     const sid = targetSessionId ?? ensureActiveSession(targetProjectId);
     const bucket = bucketKey(targetProjectId, sid);
-    const repoKey = repoKeyOf(targetProjectId);
+    const projectBucketSegment = projectBucketSegmentFor(targetProjectId);
     const targetProject = projects.find((project) => project.id === targetProjectId) ?? null;
     // A draft's pre-send toggles (permission/goal/model) were keyed under the
     // SHARED draft bucket (<repo>::_none_), NOT the freshly-created real session
@@ -2521,7 +2547,7 @@ function App() {
     // new sessions we use the UI sessionId directly as the engine
     // sessionId so the engineToBucket route is populated synchronously.
     const summary =
-      sessionIndices[repoKey]?.sessions.find((s) => s.id === sid) ??
+      sessionIndices[projectBucketSegment]?.sessions.find((s) => s.id === sid) ??
       loadSessionIndex(targetProjectId).sessions.find((s) => s.id === sid);
     const engineSessionId = summary?.engineSessionId ?? sid;
 
@@ -2554,7 +2580,7 @@ function App() {
       const next = summary?.engineSessionId
         ? touched
         : bindEngineSession(targetProjectId, sid, engineSessionId);
-      return { ...prev, [repoKey]: next };
+      return { ...prev, [projectBucketSegment]: next };
     });
 
     const opts: {
@@ -3087,12 +3113,16 @@ function App() {
     if (!bucket) return;
     const sep = bucket.indexOf("::");
     const uiSessionId = sep > 0 ? bucket.slice(sep + 2) : null;
-    const repoKey = sep > 0 ? bucket.slice(0, sep) : null;
-    const repoId = repoKey === GLOBAL_KEY || repoKey === null ? null : repoKey;
+    const projectBucketSegment = sep > 0 ? bucket.slice(0, sep) : null;
+    const projectId =
+      projectBucketSegment === GLOBAL_KEY || projectBucketSegment === null
+        ? null
+        : projectBucketSegment;
     const summary =
       uiSessionId && uiSessionId !== "_none_"
-        ? (sessionIndices[repoKey ?? GLOBAL_KEY]?.sessions.find((s) => s.id === uiSessionId) ??
-          loadSessionIndex(repoId).sessions.find((s) => s.id === uiSessionId))
+        ? (sessionIndices[projectBucketSegment ?? GLOBAL_KEY]?.sessions.find(
+            (s) => s.id === uiSessionId,
+          ) ?? loadSessionIndex(projectId).sessions.find((s) => s.id === uiSessionId))
         : undefined;
     const engineSessionId = summary?.engineSessionId ?? uiSessionId ?? undefined;
     window.codeshell.log("stop.click", { bucket, engineSessionId });
@@ -3123,10 +3153,10 @@ function App() {
     (bucket: string): string | undefined => {
       const quickChatSessionId = quickChatSessionIdFromBucket(bucket);
       if (quickChatSessionId) return quickChatSessionId;
-      const { repoKey, repoId, sessionId: uiSessionId } = parsePanelBucket(bucket);
+      const { projectBucketSegment, projectId, sessionId: uiSessionId } = parsePanelBucket(bucket);
       const summary = uiSessionId
-        ? (sessionIndices[repoKey]?.sessions.find((s) => s.id === uiSessionId) ??
-          loadSessionIndex(repoId).sessions.find((s) => s.id === uiSessionId))
+        ? (sessionIndices[projectBucketSegment]?.sessions.find((s) => s.id === uiSessionId) ??
+          loadSessionIndex(projectId).sessions.find((s) => s.id === uiSessionId))
         : undefined;
       return summary?.engineSessionId ?? uiSessionId ?? undefined;
     },
@@ -3480,10 +3510,16 @@ function App() {
       const sessionId = makeQuickChatSessionId();
       const bucket = quickChatBucket(sessionId);
       const sourceSessionId = resolveEngineSessionIdForBucket(ownerBucket) ?? null;
-      const { repoKey, repoId, sessionId: ownerUiSessionId } = parsePanelBucket(ownerBucket);
+      const {
+        projectBucketSegment,
+        projectId,
+        sessionId: ownerUiSessionId,
+      } = parsePanelBucket(ownerBucket);
       const sourceTitle = ownerUiSessionId
-        ? (sessionIndices[repoKey]?.sessions.find((item) => item.id === ownerUiSessionId)?.title ??
-          loadSessionIndex(repoId).sessions.find((item) => item.id === ownerUiSessionId)?.title)
+        ? (sessionIndices[projectBucketSegment]?.sessions.find(
+            (item) => item.id === ownerUiSessionId,
+          )?.title ??
+          loadSessionIndex(projectId).sessions.find((item) => item.id === ownerUiSessionId)?.title)
         : undefined;
       const contextMode: QuickChatContextMode = sourceSessionId ? "full" : "blank";
       const session: QuickChatSessionRef = {
@@ -3851,10 +3887,10 @@ function App() {
     // Start a FRESH draft session — never pile onto whatever task/run session
     // happened to be active. Mirrors handleNewConversation: clear
     // activeSessionId so a brand-new session materializes on first send.
-    const repoId = activeProjectId;
+    const projectId = activeProjectId;
     setSessionIndices((prev) => ({
       ...prev,
-      [repoKeyOf(repoId)]: setActiveSession(repoId, null),
+      [projectBucketSegmentFor(projectId)]: setActiveSession(projectId, null),
     }));
     setComposerSeed(t("misc.app.automationSeed"));
     setComposerSeedNonce((n) => n + 1);
@@ -3898,7 +3934,7 @@ function App() {
       } else if (mod && e.key >= "1" && e.key <= "9") {
         // Cmd+N — jump to Nth session under active repo.
         const n = parseInt(e.key, 10) - 1;
-        const idx = sessionIndices[repoKeyOf(activeProjectId)];
+        const idx = sessionIndices[projectBucketSegmentFor(activeProjectId)];
         const target = idx?.sessions[n];
         if (target) {
           e.preventDefault();
@@ -4236,10 +4272,12 @@ function App() {
     if (!engineSessionId) {
       const sep = activeBucket.indexOf("::");
       const uiSessionId = sep > 0 ? activeBucket.slice(sep + 2) : null;
-      const repoKey = sep > 0 ? activeBucket.slice(0, sep) : null;
+      const projectBucketSegment = sep > 0 ? activeBucket.slice(0, sep) : null;
       const summary =
         uiSessionId && uiSessionId !== "_none_"
-          ? sessionIndices[repoKey ?? GLOBAL_KEY]?.sessions.find((s) => s.id === uiSessionId)
+          ? sessionIndices[projectBucketSegment ?? GLOBAL_KEY]?.sessions.find(
+              (s) => s.id === uiSessionId,
+            )
           : undefined;
       engineSessionId = summary?.engineSessionId ?? uiSessionId ?? undefined;
     }
@@ -4338,7 +4376,9 @@ function App() {
    */
   const engineSessionIdForActive = (): string | null => {
     if (!activeSessionId) return null;
-    const summary = sessionIndices[activeRepoKey]?.sessions.find((s) => s.id === activeSessionId);
+    const summary = sessionIndices[activeProjectBucketSegment]?.sessions.find(
+      (s) => s.id === activeSessionId,
+    );
     return summary?.engineSessionId ?? activeSessionId;
   };
 
@@ -4367,7 +4407,7 @@ function App() {
   }, [state.messages, searchQuery]);
 
   const sessionTitleForTop = (() => {
-    const idx = sessionIndices[activeRepoKey];
+    const idx = sessionIndices[activeProjectBucketSegment];
     const s = idx?.sessions.find((x) => x.id === activeSessionId);
     return s?.title ?? null;
   })();
@@ -4435,16 +4475,16 @@ function App() {
     sourceBucket: string,
     options?: ContextPackageCreatedOptions,
   ): Promise<void> => {
-    const repoId = activeProjectId;
+    const projectId = activeProjectId;
     const title = result.titleSuggestion?.trim() || t("chat.contextPackage.cardTitle");
-    const previouslyActiveSessionId = loadSessionIndex(repoId).activeSessionId;
-    const created = createSession(repoId, title);
+    const previouslyActiveSessionId = loadSessionIndex(projectId).activeSessionId;
+    const created = createSession(projectId, title);
     // Registration must not select the target before async hydration finishes.
     // In particular, a stale package from another session remains reachable in
     // the sidebar without stealing focus from the session the user switched to.
-    setActiveSession(repoId, previouslyActiveSessionId);
-    bindEngineSession(repoId, created.sessionId, result.sessionId);
-    const bucket = bucketKey(repoId, created.sessionId);
+    setActiveSession(projectId, previouslyActiveSessionId);
+    bindEngineSession(projectId, created.sessionId, result.sessionId);
+    const bucket = bucketKey(projectId, created.sessionId);
     const targetOverrides = copyContextPackageOverrides({
       sourceBucket,
       targetBucket: bucket,
@@ -4465,7 +4505,7 @@ function App() {
       // retry the normal disk hydration path.
       hydrated = foldTranscript([]);
     }
-    saveTranscript(repoId, created.sessionId, hydrated);
+    saveTranscript(projectId, created.sessionId, hydrated);
     engineToBucketRef.current.set(result.sessionId, bucket);
     dispatch({ type: "hydrate", bucket, state: hydrated });
     if (inheritedModel) {
@@ -4477,9 +4517,9 @@ function App() {
     setGoalOverrides((prev) => ({ ...prev, [bucket]: false }));
     setSessionIndices((prev) => ({
       ...prev,
-      [repoKeyOf(repoId)]: loadSessionIndex(repoId),
+      [projectBucketSegmentFor(projectId)]: loadSessionIndex(projectId),
     }));
-    if (options?.shouldActivate() ?? true) handleSelectSession(repoId, created.sessionId);
+    if (options?.shouldActivate() ?? true) handleSelectSession(projectId, created.sessionId);
   };
 
   const platformClass = isMac ? "platform-darwin" : "";
@@ -4607,10 +4647,10 @@ function App() {
               ) : view.viewMode === "logs" ? (
                 <LogsView />
               ) : view.viewMode === "customize" ? (
-                <CustomizeView activeRepoPath={activeProject?.path ?? null} />
+                <CustomizeView activeProjectPath={activeProject?.path ?? null} />
               ) : view.viewMode === "credentials" ? (
                 <CredentialsPage
-                  activeRepoPath={activeProject?.path ?? null}
+                  activeProjectPath={activeProject?.path ?? null}
                   activeBucket={activeSessionId !== null ? activeBucket : null}
                 />
               ) : view.viewMode === "runs" ? (
@@ -4630,7 +4670,7 @@ function App() {
                   }}
                   onOpenSession={handleSelectSession}
                   sessionIndices={sessionIndices}
-                  repos={projects}
+                  projects={projects}
                 />
               ) : (
                 <>
@@ -4789,9 +4829,9 @@ function App() {
             {panelBuckets.map((panelBucket) => {
               const panelState = panelByBucket[panelBucket] ?? emptyPanelBucketState();
               const isActivePanelBucket = panelBucket === activeBucket;
-              const { repoId: panelRepoId } = parsePanelBucket(panelBucket);
-              const panelProject = panelRepoId
-                ? (projects.find((project) => project.id === panelRepoId) ?? null)
+              const { projectId: panelProjectId } = parsePanelBucket(panelBucket);
+              const panelProject = panelProjectId
+                ? (projects.find((project) => project.id === panelProjectId) ?? null)
                 : null;
               const panelEngineSessionId = resolveEngineSessionIdForBucket(panelBucket) ?? null;
               const hidden = !isActivePanelBucket || !isChatView || !panelState.open;
@@ -4805,7 +4845,7 @@ function App() {
                   // cannot be rewritten by another session.
                   hidden={hidden}
                   keepActiveBodyLive={keepActiveBodyLive}
-                  repoPath={panelProject?.path ?? null}
+                  projectPath={panelProject?.path ?? null}
                   onClose={() =>
                     updatePanelBucket(panelBucket, (state) => ({
                       ...state,
@@ -4931,14 +4971,14 @@ function App() {
         <SessionSearchModal
           open={sessionSearchOpen}
           onClose={() => setSessionSearchOpen(false)}
-          repos={projects}
+          projects={projects}
           sessions={sessionIndices}
-          activeRepoId={activeProjectId}
-          onPick={(repoId, sid) => handleSelectSession(repoId, sid)}
+          activeProjectId={activeProjectId}
+          onPick={(projectId, sid) => handleSelectSession(projectId, sid)}
         />
 
         <TrustGate
-          repoPath={activeProject?.path ?? null}
+          projectPath={activeProject?.path ?? null}
           onDecide={() => {
             /* trust persisted in main */
           }}
@@ -4963,12 +5003,15 @@ function App() {
       {isSettingsPage && (
         <div className="absolute inset-0 z-50 overflow-hidden bg-background">
           <SettingsPage
-            activeRepoPath={activeProject?.path ?? null}
-            repos={projects}
+            activeProjectPath={activeProject?.path ?? null}
+            projects={projects}
             sessionIndices={sessionIndices}
-            onRestoreArchivedSession={(repoId, sessionId) => {
-              const next = archiveSession(repoId, sessionId, false);
-              setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
+            onRestoreArchivedSession={(projectId, sessionId) => {
+              const next = archiveSession(projectId, sessionId, false);
+              setSessionIndices((prev) => ({
+                ...prev,
+                [projectBucketSegmentFor(projectId)]: next,
+              }));
             }}
             onDeleteArchivedSession={handleDeleteSession}
             isMac={isMac}

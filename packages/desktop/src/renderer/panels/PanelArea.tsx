@@ -34,7 +34,7 @@ let panelTabSeq = 0;
 
 interface Props {
   /** Registered repository root used only as the main-workspace fallback. */
-  repoPath: string | null;
+  projectPath: string | null;
   /**
    * When true the whole dock is visually hidden. Normal close uses display:none
    * so the dock occupies no width; keepActiveBodyLive uses an invisible absolute
@@ -117,7 +117,7 @@ export function PanelArea(props: Props) {
   return (
     <PanelWorkspaceRootConsumer
       engineSessionId={props.engineSessionId ?? null}
-      repoPath={props.repoPath}
+      projectPath={props.projectPath}
     >
       {(workspace) => <ResolvedPanelArea {...props} workspace={workspace} />}
     </PanelWorkspaceRootConsumer>
@@ -125,7 +125,7 @@ export function PanelArea(props: Props) {
 }
 
 function ResolvedPanelArea({
-  repoPath,
+  projectPath,
   hidden = false,
   keepActiveBodyLive = false,
   onClose,

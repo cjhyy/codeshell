@@ -10,11 +10,15 @@ import { SessionManager } from "./session-manager.js";
 // to the transcript as an event, so a session rebuilt from disk (localStorage
 // wiped) can't recover the goal from its messages. The desktop host calls this
 // on session load to re-surface the goal block + its Cancel button. Like
-// readCwd, it reads only state.json and never throws on a bad id.
+// readSessionMainRoot, it reads only state.json and never throws on a bad id.
 describe("SessionManager.readActiveGoal", () => {
   let dir: string;
-  beforeEach(() => { dir = mkdtempSync(join(tmpdir(), "sm-")); });
-  afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "sm-"));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
 
   test("returns the persisted active goal of a session", () => {
     const sm = new SessionManager(dir);

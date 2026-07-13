@@ -20,8 +20,8 @@ export function notifySettingsChanged(): void {
 export async function writeSettings(
   scope: "user" | "project",
   patch: Record<string, unknown>,
-  cwd?: string,
+  projectPath?: string,
 ): Promise<void> {
-  await window.codeshell.updateSettings(scope, patch, cwd);
+  await window.codeshell.updateSettings(scope, patch, projectPath);
   notifySettingsChanged();
 }

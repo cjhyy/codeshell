@@ -3,7 +3,7 @@
 //
 // Anchors used to be ONE App-level array, so a draft's annotations leaked into
 // whatever session you switched to. They are now keyed by the same bucketKey()
-// the transcripts map / permissionOverrides use (`${repoKey}::${sessionId ??
+// the transcripts map / permissionOverrides use (`${projectBucketSegment}::${sessionId ??
 // "_none_"}`), so switching sessions switches annotation sets. Pure functions
 // over the Record so App stays slim and this stays unit-testable.
 
@@ -61,13 +61,10 @@ export function updateAnchorCommentIn(
  * a draft (sessionId null → real id) BEFORE ChatView fires onClearAnchors, so
  * clearing only the (new) active bucket would orphan the draft slot's anchors —
  * they'd resurface on the next 新对话 (same "_none_ 粘连" failure mode as
- * permissionOverrides #11). Clear both the active bucket and the repo's draft
+ * permissionOverrides #11). Clear both the active bucket and the project's draft
  * bucket; anchors are draft-scoped, so both belong to "what was just sent".
  */
-export function clearAnchorBuckets(
-  state: AnchorsByBucket,
-  buckets: string[],
-): AnchorsByBucket {
+export function clearAnchorBuckets(state: AnchorsByBucket, buckets: string[]): AnchorsByBucket {
   let next: AnchorsByBucket | null = null;
   for (const b of buckets) {
     if ((next ?? state)[b]?.length) {

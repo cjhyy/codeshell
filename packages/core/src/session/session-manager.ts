@@ -232,6 +232,16 @@ function isSessionWorkspace(value: unknown): value is SessionWorkspace {
   );
 }
 
+/**
+ * Read the session's persisted main-project root from the legacy `state.cwd`
+ * field. The field name is part of the state.json compatibility contract and
+ * must not be rewritten to `projectRoot`; `state.workspace.root` separately
+ * identifies the current main/worktree execution root used on resume.
+ */
+export function sessionMainRoot(state: Pick<SessionState, "cwd">): string | undefined {
+  return typeof state.cwd === "string" && state.cwd.length > 0 ? state.cwd : undefined;
+}
+
 async function validateResumeWorktreeRoot(root: string): Promise<string | null> {
   if (!existsSync(root)) return "no longer exists";
   let stat;
@@ -391,16 +401,12 @@ export class SessionManager {
   }
 
   /**
-   * Cheap "what cwd is this session bound to?" probe — reads only state.json,
-   * NOT the transcript (unlike resume()). engine.run uses this to recover a
-   * resumed session's project directory when the caller omits options.cwd
-   * (e.g. a desktop host whose sidebar repo selection has drifted to null),
-   * so a project-bound session keeps loading its own agents/settings/memory
-   * instead of falling back to process.cwd(). Returns undefined for an
-   * unknown, malformed, or traversal-shaped id rather than throwing — the
-   * caller treats "no recoverable cwd" the same as "not given".
+   * Cheap persisted-main-root probe — reads only state.json, NOT the transcript
+   * (unlike resume()). This deliberately reads legacy `state.cwd`, not the
+   * current `state.workspace.root`; callers use it as the stable main-project
+   * fallback when a worktree is unavailable or is being released.
    */
-  readCwd(sessionId: string): string | undefined {
+  readSessionMainRoot(sessionId: string): string | undefined {
     try {
       assertSafeSessionId(sessionId);
     } catch {
@@ -410,7 +416,7 @@ export class SessionManager {
     if (!existsSync(stateFile)) return undefined;
     try {
       const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
-      return typeof state.cwd === "string" && state.cwd.length > 0 ? state.cwd : undefined;
+      return sessionMainRoot(state);
     } catch {
       return undefined;
     }
@@ -431,6 +437,11 @@ export class SessionManager {
     } catch {
       return undefined;
     }
+  }
+
+  /** @deprecated Use readSessionMainRoot; retained for public API compatibility. */
+  readCwd(sessionId: string): string | undefined {
+    return this.readSessionMainRoot(sessionId);
   }
 
   /** Disk-only direct-parent ACL metadata. Undefined means unprovable/corrupt. */
@@ -468,9 +479,8 @@ export class SessionManager {
     try {
       const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
       if (isSessionWorkspace(state.workspace)) return state.workspace;
-      return typeof state.cwd === "string" && state.cwd.length > 0
-        ? { root: state.cwd, kind: "main" }
-        : undefined;
+      const mainRoot = sessionMainRoot(state);
+      return mainRoot ? { root: mainRoot, kind: "main" } : undefined;
     } catch {
       return undefined;
     }
@@ -536,10 +546,8 @@ export class SessionManager {
       );
     }
 
-    const legacyMain =
-      typeof state.cwd === "string" && state.cwd.length > 0
-        ? ({ root: state.cwd, kind: "main" } as const)
-        : undefined;
+    const mainRoot = sessionMainRoot(state);
+    const legacyMain = mainRoot ? ({ root: mainRoot, kind: "main" } as const) : undefined;
     const workspace = isSessionWorkspace(state.workspace) ? state.workspace : legacyMain;
     if (!workspace) {
       throw new SessionError(`Session ${sessionId} has no recoverable cwd`);
@@ -560,12 +568,11 @@ export class SessionManager {
     }
 
     const branch = workspace.worktree?.branch;
-    const mainRoot =
-      typeof state.cwd === "string" && state.cwd.length > 0 ? state.cwd : workspace.root;
-    if (branch && existsSync(mainRoot) && (await branchExists(mainRoot, branch))) {
+    const fallbackMainRoot = mainRoot ?? workspace.root;
+    if (branch && existsSync(fallbackMainRoot) && (await branchExists(fallbackMainRoot, branch))) {
       return {
         ok: false,
-        cwd: mainRoot,
+        cwd: fallbackMainRoot,
         workspace,
         reason: "worktree_missing_branch_exists",
         message:
@@ -576,24 +583,24 @@ export class SessionManager {
       };
     }
 
-    const fallback: SessionWorkspace = { root: mainRoot, kind: "main" };
+    const fallback: SessionWorkspace = { root: fallbackMainRoot, kind: "main" };
     state.workspace = fallback;
     this.saveState(state);
     return {
       ok: true,
-      cwd: mainRoot,
+      cwd: fallbackMainRoot,
       workspace: fallback,
       reason: "worktree_missing_branch_gone",
       message:
         `Session ${sessionId} was bound to worktree ${workspace.root}, but that directory ` +
         `${invalidWorktreeReason}${branch ? ` and branch ${branch} is gone` : ""}; fell back to main ` +
-        `${mainRoot}. Re-run the request if you want to continue there.`,
+        `${fallbackMainRoot}. Re-run the request if you want to continue there.`,
     };
   }
 
   /**
    * Cheap "does this session have a persisted goal?" probe — reads only
-   * state.json, NOT the transcript (like readCwd). A persistent goal lives ONLY
+   * state.json, NOT the transcript (like readSessionMainRoot). A persistent goal lives ONLY
    * in state.activeGoal; it is never appended to the transcript as an event, so
    * a session rebuilt from disk (e.g. localStorage wiped) can't recover the
    * goal from its messages. The desktop host calls this on session load to

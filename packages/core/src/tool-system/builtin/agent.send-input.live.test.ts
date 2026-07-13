@@ -79,6 +79,41 @@ describe("AgentSendInput running child route", () => {
     expect(output).toMatch(/invalid delivery/i);
   });
 
+  it("returns structured not-direct-parent rejections for non-parent and sub-agent callers", async () => {
+    const spawner = {
+      spawn: async () => ({ text: "wrong", sessionId: "child" }),
+      describe: () => ({ cwd: "/tmp", permissionMode: "acceptEdits" }),
+    } as SubAgentSpawner;
+    asyncAgentRegistry.register({
+      agentId: "worker",
+      description: "work",
+      sessionId: "parent",
+      childSessionId: "child",
+      runtimeGeneration: 1,
+      status: "running",
+      startedAt: 0,
+      abort: () => {},
+    });
+
+    const nonParent = JSON.parse(
+      await agentSendInputTool({ agent_id: "worker", prompt: "cross-tree direction" }, {
+        subAgentSpawner: spawner,
+        sessionId: "other-parent",
+      } as ToolContext),
+    );
+    const subAgent = JSON.parse(
+      await agentSendInputTool({ agent_id: "worker", prompt: "sibling direction" }, {
+        subAgentSpawner: spawner,
+        sessionId: "parent",
+        isSubAgent: true,
+      } as ToolContext),
+    );
+
+    expect(nonParent).toMatchObject({ status: "rejected", reason: "not-direct-parent" });
+    expect(subAgent).toMatchObject({ status: "rejected", reason: "not-direct-parent" });
+    expect(notificationQueue.getSnapshot("child")).toHaveLength(0);
+  });
+
   it("fails closed on smuggled control fields through the real ToolExecutor path", async () => {
     let spawnCalls = 0;
     const spawner = {
@@ -177,6 +212,18 @@ describe("AgentSendInput running child route", () => {
     });
 
     finish({ text: "done", sessionId: agentId });
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await Bun.sleep(0);
+    expect(notificationQueue.getSnapshot("parent")).toEqual([
+      expect.objectContaining({
+        kind: "result",
+        from: expect.objectContaining({ agentId, authority: "agent" }),
+        to: expect.objectContaining({ sessionId: "parent" }),
+        payload: expect.objectContaining({
+          workId: agentId,
+          status: "completed",
+          finalText: "done",
+        }),
+      }),
+    ]);
   });
 });

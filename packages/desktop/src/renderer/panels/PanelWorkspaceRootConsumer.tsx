@@ -18,13 +18,13 @@ export function panelWorkspacePresentation(workspace: PanelWorkspaceState): {
 /** Production boundary between PanelArea and its session-owned workspace resolver. */
 export function PanelWorkspaceRootConsumer({
   engineSessionId,
-  repoPath,
+  projectPath,
   children,
 }: {
   engineSessionId: string | null;
-  repoPath: string | null;
+  projectPath: string | null;
   children: (workspace: PanelWorkspaceState) => React.ReactNode;
 }) {
-  const workspace = usePanelWorkspaceRoot(engineSessionId, repoPath);
+  const workspace = usePanelWorkspaceRoot(engineSessionId, projectPath);
   return <>{children(workspace)}</>;
 }

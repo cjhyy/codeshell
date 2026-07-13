@@ -3660,17 +3660,17 @@ ipcMain.handle("fs:exists", async (_e, root: string, path: string) => {
 // path it writes capabilityOverrides to is byte-identical to the worker cwd.
 ipcMain.handle("no-repo:cwd", async () => resolveNoRepoCwd());
 
-ipcMain.handle("settings:get", async (_e, scope: SettingsScope, cwd?: string) => {
+ipcMain.handle("settings:get", async (_e, scope: SettingsScope, projectPath?: string) => {
   if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
-  return readSettings(scope, cwd);
+  return readSettings(scope, projectPath);
 });
 
 ipcMain.handle(
   "settings:set",
-  async (_e, scope: SettingsScope, patch: Record<string, unknown>, cwd?: string) => {
+  async (_e, scope: SettingsScope, patch: Record<string, unknown>, projectPath?: string) => {
     if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
     if (!patch || typeof patch !== "object") throw new Error("patch must be object");
-    await writeSettings(scope, patch, cwd);
+    await writeSettings(scope, patch, projectPath);
     // git.path may have changed — re-apply to core's git resolver immediately.
     if ("git" in patch) void applyGitPathFromSettings();
   },

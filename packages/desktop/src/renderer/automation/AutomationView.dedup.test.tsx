@@ -4,16 +4,37 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { AutomationDetail } from "./AutomationView";
 
 const job = {
-  id: "1", name: "夜间复查", schedule: "0 22 * * *", prompt: "p",
-  enabled: true, cwd: null, timezone: "Asia/Shanghai", permissionLevel: "read-only",
-  lastRun: 1_700_000_000_000, nextRun: 1_800_000_000_000, runCount: 12,
-  createdAt: 0, lastRunId: null, once: false, resumeSessionId: null,
+  id: "1",
+  name: "夜间复查",
+  schedule: "0 22 * * *",
+  prompt: "p",
+  enabled: true,
+  cwd: null,
+  timezone: "Asia/Shanghai",
+  permissionLevel: "read-only",
+  lastRun: 1_700_000_000_000,
+  nextRun: 1_800_000_000_000,
+  runCount: 12,
+  createdAt: 0,
+  lastRunId: null,
+  once: false,
+  resumeSessionId: null,
 };
 const noop = () => {};
 const baseProps = {
-  job, repos: [], toggleBusy: false, runNowBusy: false, deleteBusy: false, saveBusy: false,
-  onToggleEnabled: noop, onRunNow: noop, onDelete: noop, onSave: noop, onViewRun: noop,
-  sessionLinks: [], onOpenSession: noop,
+  job,
+  projects: [],
+  toggleBusy: false,
+  runNowBusy: false,
+  deleteBusy: false,
+  saveBusy: false,
+  onToggleEnabled: noop,
+  onRunNow: noop,
+  onDelete: noop,
+  onSave: noop,
+  onViewRun: noop,
+  sessionLinks: [],
+  onOpenSession: noop,
 } as never;
 
 describe("AutomationDetail dedup", () => {

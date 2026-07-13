@@ -1084,11 +1084,14 @@ export interface CodeshellApi {
    * the worker's runtime cwd byte-for-byte.
    */
   noRepoCwd(): Promise<string>;
-  getSettings(scope: "user" | "project", cwd?: string): Promise<Record<string, unknown> | null>;
+  getSettings(
+    scope: "user" | "project",
+    projectPath?: string,
+  ): Promise<Record<string, unknown> | null>;
   updateSettings(
     scope: "user" | "project",
     patch: Record<string, unknown>,
-    cwd?: string,
+    projectPath?: string,
   ): Promise<void>;
   listSessions(): Promise<DesktopSessionSummary[]>;
   deleteSession(id: string): Promise<void>;
