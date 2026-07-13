@@ -169,6 +169,9 @@ describe("PetStateAggregator", () => {
       aggregator.getSnapshot().sessions.find((session) => session.agentSessionId === "one")
         ?.runState,
     ).toBe("idle");
+    expect(
+      aggregator.getSnapshot().sessions.find((session) => session.agentSessionId === "one"),
+    ).toMatchObject({ title: "Disk one", workspaceDisplayName: "one" });
     expect(aggregator.getSnapshot().version).toBe(1);
   });
 
