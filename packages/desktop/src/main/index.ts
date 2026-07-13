@@ -79,6 +79,7 @@ import { PetMetadataStore } from "./pet/pet-metadata-store.js";
 import { PetDispatchService } from "./pet/pet-dispatch-service.js";
 import { PetAttentionPolicy } from "./pet/pet-attention-policy.js";
 import { PetReceiptStore } from "./pet/pet-receipt-store.js";
+import { stablePromptHash } from "./client-message-id.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
@@ -139,6 +140,13 @@ import { TrustedDeviceStore } from "./mobile-remote/trusted-device-store.js";
 import { CloudflaredBinary } from "./mobile-remote/cloudflared-binary.js";
 import { TunnelManager } from "./mobile-remote/tunnel-manager.js";
 import { AccessPasscode } from "./mobile-remote/access-passcode.js";
+import {
+  GatewayControlServer,
+  type MobileRemoteGatewayStatus,
+  type MobileRemoteOpenResult,
+  type PetChatControlRequest,
+  type PetChatControlResult,
+} from "./im-gateway-control-server.js";
 import {
   MobileUploadService,
   type ClaimedMobileUpload,
@@ -254,6 +262,9 @@ import {
   listRecentAttachments,
   markAttachmentsSent,
   stageImageDataUrl,
+  stageImageBytes,
+  stageFileBytes,
+  type InputAttachmentMeta,
 } from "./attachment-service.js";
 import { listAgents, readAgentBody, saveAgent, deleteAgent } from "./agents-service.js";
 import type { AgentDefinition } from "@cjhyy/code-shell-core";
@@ -336,6 +347,7 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
  */
 let bridge: AgentBridge | null = null;
 let petStateAggregator: PetStateAggregator | null = null;
+let petDispatchService: PetDispatchService | null = null;
 let petAttentionPolicy: PetAttentionPolicy | null = null;
 let disposePetIpc: (() => void) | null = null;
 let mcpOAuthService: McpOAuthService | null = null;
@@ -511,6 +523,7 @@ const tunnelManager = new TunnelManager({
 const accessPasscode = new AccessPasscode({
   filePath: resolve(app.getPath("userData"), "mobile-remote", "access.json"),
 });
+let gatewayControlServer: GatewayControlServer | undefined;
 // Forward tunnel status changes to every renderer so the UI can reflect
 // connected / disconnected (address invalidated) without polling.
 tunnelManager.on("status", (status: string, detail?: unknown) => {
@@ -1741,7 +1754,7 @@ async function createWindow(): Promise<BrowserWindow> {
     const petMetadata = new PetMetadataStore(
       resolve(app.getPath("userData"), "pet", "metadata.json"),
     );
-    const petDispatch = new PetDispatchService({
+    petDispatchService = new PetDispatchService({
       metadata: petMetadata,
       aggregator: petStateAggregator,
       worker: bridge,
@@ -1759,7 +1772,7 @@ async function createWindow(): Promise<BrowserWindow> {
     disposePetIpc = registerPetIpc({
       ipcMain,
       aggregator: petStateAggregator,
-      dispatcher: petDispatch,
+      dispatcher: petDispatchService,
       attention: petAttentionPolicy,
       windows: () => BrowserWindow.getAllWindows(),
     });
@@ -1887,10 +1900,99 @@ async function cleanupKnownAttachments(sessionId?: string): Promise<void> {
   }
 }
 
+async function dispatchGatewayPetChat(
+  request: PetChatControlRequest,
+): Promise<PetChatControlResult> {
+  const dispatcher = petDispatchService;
+  if (!dispatcher) throw new Error("Mimi Pet 尚未就绪，请稍后重试");
+  const sessionId = await dispatcher.getSessionId();
+  const cwd = resolveNoRepoCwd();
+  const attachments: InputAttachmentMeta[] = [];
+  let totalBytes = 0;
+  for (const input of request.attachments ?? []) {
+    const bytes = decodeGatewayAttachment(input.dataBase64, input.size);
+    totalBytes += bytes.byteLength;
+    if (bytes.byteLength > 10 * 1024 * 1024 || totalBytes > 20 * 1024 * 1024) {
+      throw new Error("IM 附件超过大小限制");
+    }
+    if (input.kind === "image") {
+      attachments.push(
+        await stageImageBytes({
+          cwd,
+          sessionId,
+          name: input.name,
+          mime: input.mimeType ?? "application/octet-stream",
+          bytes,
+          origin: "im-gateway",
+        }),
+      );
+    } else {
+      attachments.push(
+        await stageFileBytes({
+          cwd,
+          sessionId,
+          name: input.name,
+          mime: input.mimeType,
+          bytes,
+          origin: "im-gateway",
+        }),
+      );
+    }
+  }
+
+  const result = await dispatcher.dispatch({
+    type: "chat",
+    message: request.message,
+    ...(attachments.length > 0 ? { attachments } : {}),
+    ...(request.origin?.messageId
+      ? {
+          clientMessageId: `im:${stablePromptHash(
+            `${request.origin.channel}\0${request.origin.target}\0${request.origin.senderId}\0${request.origin.messageId}`,
+          )}`,
+        }
+      : {}),
+  });
+  if (!result.ok) throw new Error(result.message ?? result.code);
+  if (result.type !== "chat") throw new Error("Mimi Pet 返回了非聊天结果");
+  await markAttachmentsSent(cwd, sessionId, attachments).catch(() => undefined);
+  const worker = result.result as { text?: unknown; reason?: unknown } | undefined;
+  return {
+    text: typeof worker?.text === "string" ? worker.text : "",
+    petSessionId: result.petSessionId,
+    ...(typeof worker?.reason === "string" ? { reason: worker.reason } : {}),
+  };
+}
+
+function decodeGatewayAttachment(dataBase64: string, expectedSize: number): Buffer {
+  if (
+    dataBase64.length % 4 !== 0 ||
+    !/^[A-Za-z0-9+/]*={0,2}$/.test(dataBase64) ||
+    dataBase64.length > 28 * 1024 * 1024
+  ) {
+    throw new Error("IM 附件不是有效的 base64 数据");
+  }
+  const bytes = Buffer.from(dataBase64, "base64");
+  if (bytes.byteLength !== expectedSize) throw new Error("IM 附件大小校验失败");
+  return bytes;
+}
+
 app.whenReady().then(async () => {
   if (!ownsDesktopInstance) return;
   writeSettingsSchemaAtStartup();
   void cleanupKnownAttachments();
+
+  gatewayControlServer = new GatewayControlServer({
+    descriptorPath: join(userHome(), ".code-shell", "im-gateway", "desktop-control.json"),
+    open: () => startMobileRemote({ mode: "tunnel" }),
+    close: () => stopMobileRemote(),
+    status: () => getMobileRemoteGatewayStatus(),
+    pairingUrl: () => createMobileRemotePairingUrl(),
+    petChat: (request) => dispatchGatewayPetChat(request),
+  });
+  await gatewayControlServer.start().catch((error) => {
+    gatewayControlServer = undefined;
+    dlog("main", "im_gateway.desktop_control.start_failed", { error: String(error) });
+  });
 
   const staleQuickChats = await runOwnedQuickChatStartupCleanup(
     ownsDesktopInstance,
@@ -2840,10 +2942,31 @@ let mobileRemoteStartInFlight: Promise<{
   mode: "tunnel" | "lan";
 }> | null = null;
 
-ipcMain.handle("mobileRemote:start", async (_e, opts?: { mode?: "lan" | "tunnel" }) => {
+async function startMobileRemote(opts?: {
+  mode?: "lan" | "tunnel";
+}): Promise<MobileRemoteOpenResult> {
   if (mobileRemoteStartInFlight) return mobileRemoteStartInFlight;
   const run = (async () => {
     const mode = opts?.mode ?? "lan";
+    const existing = mobileRemote.status();
+    const reusableTunnelUrl = mode === "tunnel" ? tunnelManager.publicUrl() : undefined;
+    if (
+      existing?.mode === mode &&
+      ((mode === "lan" && !tunnelManager.isRunning()) ||
+        (tunnelManager.isConnected() && reusableTunnelUrl))
+    ) {
+      if (reusableTunnelUrl) mobileRemote.setPublicBaseUrl(reusableTunnelUrl);
+      const pairing = mobileRemote.createPairingUrl();
+      return {
+        url: reusableTunnelUrl ?? existing.url,
+        pairingUrl: pairing.url,
+        expiresAt: pairing.expiresAt,
+        mode,
+      };
+    }
+    if (existing || tunnelManager.isRunning()) {
+      await Promise.allSettled([tunnelManager.stop(), mobileRemote.stop()]);
+    }
     if (mode === "tunnel") {
       // Public tunnel: passcode MUST be set first (UI also disables the button).
       if (!accessPasscode.isSet()) {
@@ -2871,8 +2994,7 @@ ipcMain.handle("mobileRemote:start", async (_e, opts?: { mode?: "lan" | "tunnel"
       } catch (err) {
         // Tunnel failed (binary error / 15s URL timeout): tear everything down
         // and surface a friendly error so the UI returns to the off state.
-        tunnelManager.stop();
-        await mobileRemote.stop();
+        await Promise.allSettled([tunnelManager.stop(), mobileRemote.stop()]);
         throw new Error(`公网隧道启动失败:${err instanceof Error ? err.message : String(err)}`, {
           cause: err,
         });
@@ -2895,28 +3017,44 @@ ipcMain.handle("mobileRemote:start", async (_e, opts?: { mode?: "lan" | "tunnel"
   } finally {
     if (mobileRemoteStartInFlight === run) mobileRemoteStartInFlight = null;
   }
-});
-ipcMain.handle("mobileRemote:stop", async () => {
-  tunnelManager.stop();
-  await mobileRemote.stop();
-});
-// Mint a fresh pairing URL on the already-running host. Lets the UI regenerate
-// the QR after a settings-page remount (pairingUrl is renderer-local state and
-// is lost on navigation) without restarting the host.
-ipcMain.handle("mobileRemote:pairingUrl", async () => {
+}
+
+async function stopMobileRemote(): Promise<void> {
+  await Promise.all([tunnelManager.stop(), mobileRemote.stop()]);
+}
+
+function createMobileRemotePairingUrl(): { pairingUrl: string; expiresAt: number } {
   const pairing = mobileRemote.createPairingUrl();
   return { pairingUrl: pairing.url, expiresAt: pairing.expiresAt };
-});
-ipcMain.handle("mobileRemote:status", async () => {
+}
+
+function getMobileRemoteGatewayStatus(): MobileRemoteGatewayStatus {
   const status = mobileRemote.status();
   return {
     running: Boolean(status),
-    url: status?.url,
+    url:
+      status?.mode === "tunnel"
+        ? tunnelManager.isConnected()
+          ? tunnelManager.publicUrl()
+          : undefined
+        : status?.url,
     mode: status?.mode,
     tunnelRunning: tunnelManager.isRunning(),
     tunnelConnected: tunnelManager.isConnected(),
+    passcodeSet: accessPasscode.isSet(),
+    onlineDeviceCount: mobileRemote.onlineDeviceIds().length,
   };
-});
+}
+
+ipcMain.handle("mobileRemote:start", async (_e, opts?: { mode?: "lan" | "tunnel" }) =>
+  startMobileRemote(opts),
+);
+ipcMain.handle("mobileRemote:stop", async () => stopMobileRemote());
+// Mint a fresh pairing URL on the already-running host. Lets the UI regenerate
+// the QR after a settings-page remount (pairingUrl is renderer-local state and
+// is lost on navigation) without restarting the host.
+ipcMain.handle("mobileRemote:pairingUrl", async () => createMobileRemotePairingUrl());
+ipcMain.handle("mobileRemote:status", async () => getMobileRemoteGatewayStatus());
 ipcMain.handle("mobileRemote:listDevices", async () => mobileDevices.listDevices());
 ipcMain.handle("mobileRemote:revokeDevice", async (_e, id: string) => mobileDevices.revoke(id));
 ipcMain.handle("mobileRemote:removeDevice", async (_e, id: string) => mobileDevices.remove(id));
@@ -3950,6 +4088,7 @@ app.on("before-quit", (event) => {
   bridge?.kill();
   petStateAggregator?.stop();
   petStateAggregator = null;
+  petDispatchService = null;
   petAttentionPolicy?.stop();
   petAttentionPolicy = null;
   disposePetIpc?.();
@@ -3960,7 +4099,12 @@ app.on("before-quit", (event) => {
   transcriptSubscriptions?.closeAll();
   roomManager.closeAll();
   quitCleanupPromise = (async () => {
-    await Promise.allSettled([tunnelManager.stop(), mobileRemote.stop()]);
+    await Promise.allSettled([
+      tunnelManager.stop(),
+      mobileRemote.stop(),
+      gatewayControlServer?.stop(),
+    ]);
+    gatewayControlServer = undefined;
     await mobileUploads.dispose();
     quitCleanupDone = true;
     app.quit();

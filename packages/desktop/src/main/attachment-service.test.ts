@@ -21,6 +21,7 @@ import {
   markAttachmentsSent,
   stageImageBytes,
   stageImageDataUrl,
+  stageFileBytes,
 } from "./attachment-service.js";
 
 export const IMAGE_FIXTURES = {
@@ -122,6 +123,28 @@ describe("attachment-service", () => {
     expect(fromFile.sha256).toBe(createHash("sha256").update(bytes).digest("hex"));
     expect(fromFile.relPath).toStartWith(".code-shell/attachments/sid-mobile/");
     expect(existsSync(spool)).toBe(true);
+  });
+
+  test("stages IM files under the Pet session attachment root", async () => {
+    const meta = await stageFileBytes({
+      cwd,
+      sessionId: "pet-session",
+      name: "../../notes.txt",
+      mime: "text/plain",
+      bytes: Buffer.from("hello"),
+      origin: "im-gateway",
+    });
+    expect(meta).toMatchObject({
+      kind: "file",
+      origin: "im-gateway",
+      mime: "text/plain",
+      size: 5,
+      originalName: "notes.txt",
+    });
+    expect(relative(cwd, meta.absPath)).toStartWith(
+      join(".code-shell", "attachments", "pet-session"),
+    );
+    expect(readFileSync(meta.absPath, "utf-8")).toBe("hello");
   });
 
   test("accepts structurally valid PNG, JPEG, GIF, and WebP bytes", async () => {
