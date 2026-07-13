@@ -17,6 +17,7 @@ export type PetSessionEmptyState =
   | "reclaimed"
   | "disconnected"
   | "stale"
+  | "error"
   | "reconciling";
 
 const STATE_TONE: Record<PetSessionDisplayState, string> = {

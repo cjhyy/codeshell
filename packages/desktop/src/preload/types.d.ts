@@ -19,6 +19,7 @@ import type { PetApi } from "./pet-api";
 
 export type {
   PetApi,
+  PetChatEvent,
   PetAttentionEvent,
   PetAttentionSnapshot,
   PetDispatchCommand,
@@ -32,6 +33,7 @@ export type {
   PetSessionProjection,
   PetWorkerState,
   PetPeek,
+  PetWidgetPosition,
 } from "./pet-api";
 
 export type { SessionWorkspace, SessionForkLineage };

@@ -442,6 +442,10 @@ function foldTurnProcess(
   const lastTurnStart = userIdxs[userIdxs.length - 1]!;
 
   const out: StreamItem[] = [];
+  // Keep durable session-preface items before the first user turn. Summary
+  // forks begin with a context_transfer card; dropping this prefix made the
+  // forwarded context disappear as soon as the user sent the first message.
+  for (let i = 0; i < userIdxs[0]!; i++) out.push(items[i]!);
   for (let k = 0; k < userIdxs.length; k++) {
     const start = userIdxs[k]!;
     const end = k + 1 < userIdxs.length ? userIdxs[k + 1]! : items.length;

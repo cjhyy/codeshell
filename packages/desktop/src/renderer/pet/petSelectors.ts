@@ -38,6 +38,7 @@ function selectEmptyState(
   stale: boolean,
 ): PetSessionEmptyState {
   if (!snapshot || status === "loading") return "loading";
+  if (status === "error") return "error";
   if (status === "reconciling" || snapshot.workerState === "reconciling") return "reconciling";
   if (snapshot.workerState === "disconnected") return "disconnected";
   if (stale) return "stale";
@@ -57,7 +58,7 @@ export function selectPetOverview(
       runningCount: 0,
       queuedCount: 0,
       pendingCount: 0,
-      emptyState: "loading",
+      emptyState: status === "error" ? "error" : "loading",
       stale: false,
     };
   }

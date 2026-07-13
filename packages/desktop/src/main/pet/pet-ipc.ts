@@ -6,6 +6,7 @@ import type {
 } from "./pet-state-aggregator.js";
 import type { PetDispatchCommand, PetDispatchResult } from "./pet-dispatch-service.js";
 import type { PetAttentionEvent, PetAttentionSnapshot } from "./pet-attention-policy.js";
+import { randomUUID } from "node:crypto";
 
 export const PET_SNAPSHOT_CHANNEL = "pet:get-snapshot";
 export const PET_EVENT_CHANNEL = "pet:projection-event";
@@ -15,6 +16,7 @@ export const PET_ATTENTION_SNAPSHOT_CHANNEL = "pet:get-attention";
 export const PET_ATTENTION_EVENT_CHANNEL = "pet:attention-event";
 export const PET_ACTIVE_SESSION_CHANNEL = "pet:set-active-session";
 export const PET_ATTENTION_RECEIPT_CHANNEL = "pet:attention-receipt";
+export const PET_CHAT_EVENT_CHANNEL = "pet:chat-event";
 
 export interface PetIpcAggregator {
   getSnapshot(): DesktopPetProjectionSnapshot;
@@ -41,6 +43,10 @@ export interface PetIpcAttention {
   subscribe(listener: (event: PetAttentionEvent) => void): () => void;
   setActiveSession(sessionId: string | null): void;
   markReceipts(keys: readonly string[], state: "seen" | "dismissed"): void;
+}
+
+function afterReady<T>(ready: Promise<void> | undefined, callback: () => T): T | Promise<T> {
+  return ready ? ready.then(callback) : callback();
 }
 
 function parseNavigationRequest(value: unknown): PetNavigationRequest {
@@ -87,12 +93,34 @@ function parseDispatchCommand(value: unknown): PetDispatchCommand {
       return { type: record.type };
     case "chat":
       if (
-        Object.keys(record).some((key) => key !== "type" && key !== "message") ||
-        typeof record.message !== "string"
+        Object.keys(record).some(
+          (key) =>
+            key !== "type" &&
+            key !== "message" &&
+            key !== "clientMessageId" &&
+            key !== "preferredProjectId",
+        ) ||
+        typeof record.message !== "string" ||
+        !record.message.trim() ||
+        (record.clientMessageId !== undefined &&
+          (typeof record.clientMessageId !== "string" || !record.clientMessageId.trim())) ||
+        (record.preferredProjectId !== undefined &&
+          (typeof record.preferredProjectId !== "string" ||
+            !record.preferredProjectId.trim() ||
+            record.preferredProjectId.length > 256))
       ) {
         throw new Error("invalid pet command");
       }
-      return { type: "chat", message: record.message };
+      return {
+        type: "chat",
+        message: record.message,
+        ...(typeof record.clientMessageId === "string"
+          ? { clientMessageId: record.clientMessageId }
+          : {}),
+        ...(typeof record.preferredProjectId === "string"
+          ? { preferredProjectId: record.preferredProjectId }
+          : {}),
+      };
     case "open_session":
       if (Object.keys(record).some((key) => key !== "type" && key !== "target")) {
         throw new Error("invalid pet command");
@@ -110,32 +138,68 @@ export function registerPetIpc(options: {
   windows: () => readonly PetIpcWindowLike[];
   dispatcher?: PetIpcDispatcher;
   attention?: PetIpcAttention;
+  /** Register handlers immediately while their backing indexes hydrate. */
+  ready?: Promise<void>;
 }): () => void {
   options.ipcMain.handle(PET_SNAPSHOT_CHANNEL, (_event, ...args) => {
     if (args.length > 0) throw new Error("pet:getSnapshot does not accept arguments");
-    return options.aggregator.getSnapshot();
+    return afterReady(options.ready, () => options.aggregator.getSnapshot());
   });
   options.ipcMain.handle(PET_OPEN_SESSION_CHANNEL, (_event, ...args) => {
     if (args.length !== 1) throw new Error("invalid navigation request");
-    return options.aggregator.resolveNavigation(parseNavigationRequest(args[0]));
+    const request = parseNavigationRequest(args[0]);
+    return afterReady(options.ready, () => options.aggregator.resolveNavigation(request));
   });
   if (options.dispatcher) {
     options.ipcMain.handle(PET_DISPATCH_CHANNEL, (_event, ...args) => {
       if (args.length !== 1) throw new Error("invalid pet command");
-      return options.dispatcher!.dispatch(parseDispatchCommand(args[0]));
+      const parsed = parseDispatchCommand(args[0]);
+      return afterReady(options.ready, async () => {
+        if (parsed.type !== "chat") return options.dispatcher!.dispatch(parsed);
+        const command = {
+          ...parsed,
+          clientMessageId: parsed.clientMessageId ?? `pet-${randomUUID()}`,
+        };
+        const event = {
+          kind: "user-submitted" as const,
+          clientMessageId: command.clientMessageId,
+          message: command.message.trim(),
+          createdAt: Date.now(),
+        };
+        for (const window of options.windows()) {
+          if (!window.isDestroyed()) window.webContents.send(PET_CHAT_EVENT_CHANNEL, event);
+        }
+        const result = await options.dispatcher!.dispatch(command);
+        if (result.ok && result.type === "chat" && result.delegation) {
+          const delegationEvent = {
+            kind: "delegation-requested" as const,
+            ...result.delegation,
+            createdAt: Date.now(),
+          };
+          for (const window of options.windows()) {
+            if (!window.isDestroyed()) {
+              window.webContents.send(PET_CHAT_EVENT_CHANNEL, delegationEvent);
+            }
+          }
+        }
+        return result;
+      });
     });
   }
   if (options.attention) {
     options.ipcMain.handle(PET_ATTENTION_SNAPSHOT_CHANNEL, (_event, ...args) => {
       if (args.length !== 0) throw new Error("pet attention snapshot does not accept arguments");
-      return options.attention!.getSnapshot();
+      return afterReady(options.ready, () => options.attention!.getSnapshot());
     });
     options.ipcMain.handle(PET_ACTIVE_SESSION_CHANNEL, (_event, ...args) => {
       if (args.length !== 1 || (args[0] !== null && typeof args[0] !== "string")) {
         throw new Error("invalid active session");
       }
-      options.attention!.setActiveSession(args[0] as string | null);
-      return { ok: true };
+      const sessionId = args[0] as string | null;
+      return afterReady(options.ready, () => {
+        options.attention!.setActiveSession(sessionId);
+        return { ok: true };
+      });
     });
     options.ipcMain.handle(PET_ATTENTION_RECEIPT_CHANNEL, (_event, ...args) => {
       const payload = args[0] as { keys?: unknown; state?: unknown } | undefined;
@@ -148,8 +212,12 @@ export function registerPetIpc(options: {
       ) {
         throw new Error("invalid attention receipt");
       }
-      options.attention!.markReceipts(payload.keys as string[], payload.state);
-      return { ok: true };
+      const keys = payload.keys as string[];
+      const receiptState = payload.state as "seen" | "dismissed";
+      return afterReady(options.ready, () => {
+        options.attention!.markReceipts(keys, receiptState);
+        return { ok: true };
+      });
     });
   }
   const unsubscribe = options.aggregator.subscribe((event) => {

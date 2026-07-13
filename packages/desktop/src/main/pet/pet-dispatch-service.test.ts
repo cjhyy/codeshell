@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator";
-import { PetDispatchService } from "./pet-dispatch-service";
+import { PetDispatchService, petResultRequestsDelegation } from "./pet-dispatch-service";
 
 const snapshot: DesktopPetProjectionSnapshot = {
   version: 4,
@@ -88,7 +88,13 @@ describe("PetDispatchService", () => {
       hostCwd: "/safe/pet",
     });
 
-    expect(await service.dispatch({ type: "chat", message: "What is running?" })).toMatchObject({
+    expect(
+      await service.dispatch({
+        type: "chat",
+        message: "What is running?",
+        clientMessageId: "pet-client-one",
+      }),
+    ).toMatchObject({
       ok: true,
       type: "chat",
       petSessionId: "pet-one",
@@ -101,12 +107,52 @@ describe("PetDispatchService", () => {
         behaviorMode: "pet",
         kind: "pet",
         permissionMode: "default",
+        clientMessageId: "pet-client-one",
       },
     });
     expect(String(request?.params.task)).toContain("What is running?");
     expect(String(request?.params.task)).not.toContain("<pet-world>");
     expect(String(request?.params.task)).not.toContain("requestId");
     expect(String(request?.params.petRuntimeContext)).toContain('"runState":"running"');
+  });
+
+  test("turns only the model's hidden control marker into an automatic delegation", async () => {
+    expect(petResultRequestsDelegation({ text: "普通回复" })).toBe(false);
+    expect(petResultRequestsDelegation({ text: "我会自动派发。\n<!--PET:AUTO_DELEGATE-->" })).toBe(
+      true,
+    );
+
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async () => ({
+          ok: true,
+          result: { text: "交给工作会话。\n<!--PET:AUTO_DELEGATE-->" },
+        }),
+      },
+      hostCwd: "/safe/pet",
+    });
+
+    expect(
+      await service.dispatch({
+        type: "chat",
+        message: "修复登录问题",
+        clientMessageId: "client-delegate",
+        preferredProjectId: "project-a",
+      }),
+    ).toMatchObject({
+      ok: true,
+      type: "chat",
+      delegation: {
+        clientMessageId: "client-delegate",
+        task: "修复登录问题",
+        preferredProjectId: "project-a",
+      },
+    });
   });
 
   test("does not inject or persist any raw multiline AskUser title even if host input is malformed", async () => {

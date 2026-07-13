@@ -1,5 +1,20 @@
 export type PetWorkerState = "active" | "reclaimed" | "disconnected" | "reconciling" | "unknown";
 
+export type PetChatEvent =
+  | {
+      kind: "user-submitted";
+      clientMessageId: string;
+      message: string;
+      createdAt: number;
+    }
+  | {
+      kind: "delegation-requested";
+      clientMessageId: string;
+      task: string;
+      preferredProjectId?: string;
+      createdAt: number;
+    };
+
 export type PetSessionRunState = "dormant" | "idle" | "queued" | "running" | "terminal" | "unknown";
 
 export interface PetSessionProjection {
@@ -74,7 +89,12 @@ export type PetDispatchCommand =
   | { type: "get_global_status" }
   | { type: "list_pending" }
   | { type: "open_session"; target: PetOpenSessionRequest }
-  | { type: "chat"; message: string };
+  | {
+      type: "chat";
+      message: string;
+      clientMessageId?: string;
+      preferredProjectId?: string;
+    };
 
 export type PetDispatchResult =
   | {
@@ -97,7 +117,17 @@ export type PetDispatchResult =
     }
   | { ok: true; type: "pending_list"; pending: PetPendingDecision[] }
   | { ok: true; type: "open_session"; result: PetOpenSessionResult }
-  | { ok: true; type: "chat"; petSessionId: string; result: unknown };
+  | {
+      ok: true;
+      type: "chat";
+      petSessionId: string;
+      result: unknown;
+      delegation?: {
+        clientMessageId: string;
+        task: string;
+        preferredProjectId?: string;
+      };
+    };
 
 export interface PetPeek {
   id: string;
@@ -116,6 +146,11 @@ export interface PetAttentionSnapshot {
 export type PetAttentionEvent =
   | { kind: "count"; surfaceablePendingCount: number }
   | { kind: "peek"; peek: PetPeek };
+
+export interface PetWidgetPosition {
+  x: number;
+  y: number;
+}
 
 interface PetProjectionEventBase {
   version: number;
@@ -138,14 +173,23 @@ export interface PetApi {
   onProjectionEvent(listener: (event: PetProjectionEvent) => void): () => void;
   openSession(request: PetOpenSessionRequest): Promise<PetOpenSessionResult>;
   dispatch(command: PetDispatchCommand): Promise<PetDispatchResult>;
+  onChatEvent?(listener: (event: PetChatEvent) => void): () => void;
   getAttentionSnapshot(): Promise<PetAttentionSnapshot>;
   onAttentionEvent(listener: (event: PetAttentionEvent) => void): () => void;
   setActiveSession(sessionId: string | null): Promise<{ ok: true }>;
   markAttentionReceipt(keys: string[], state: "seen" | "dismissed"): Promise<{ ok: true }>;
+  getWidgetVisibility(): Promise<boolean>;
+  setWidgetVisible(visible: boolean): Promise<{ ok: true }>;
+  setWidgetExpanded(expanded: boolean): Promise<{ ok: true }>;
+  moveWidget(position: PetWidgetPosition): void;
+  openWidgetOverview(target?: PetOpenSessionRequest): Promise<{ ok: true }>;
+  onWidgetOpenOverview(listener: (target?: PetOpenSessionRequest) => void): () => void;
+  onWidgetVisibilityChanged(listener: (visible: boolean) => void): () => void;
 }
 
 export interface PetIpcRenderer {
   invoke(channel: string, payload?: unknown): Promise<unknown>;
+  send(channel: string, payload?: unknown): void;
   on(channel: string, listener: (event: unknown, payload: unknown) => void): unknown;
   removeListener(channel: string, listener: (event: unknown, payload: unknown) => void): unknown;
 }
@@ -157,6 +201,12 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
       ipcRenderer.invoke("pet:open-session", request) as Promise<PetOpenSessionResult>,
     dispatch: (command) =>
       ipcRenderer.invoke("pet:dispatch", command) as Promise<PetDispatchResult>,
+    onChatEvent: (listener) => {
+      const handler = (_event: unknown, payload: unknown): void =>
+        listener(payload as PetChatEvent);
+      ipcRenderer.on("pet:chat-event", handler);
+      return () => ipcRenderer.removeListener("pet:chat-event", handler);
+    },
     onProjectionEvent: (listener) => {
       const handler = (_event: unknown, payload: unknown): void =>
         listener(payload as PetProjectionEvent);
@@ -175,5 +225,26 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
       ipcRenderer.invoke("pet:set-active-session", sessionId) as Promise<{ ok: true }>,
     markAttentionReceipt: (keys, state) =>
       ipcRenderer.invoke("pet:attention-receipt", { keys, state }) as Promise<{ ok: true }>,
+    getWidgetVisibility: () => ipcRenderer.invoke("pet:widget-visible-get") as Promise<boolean>,
+    setWidgetVisible: (visible) =>
+      ipcRenderer.invoke("pet:widget-visible", visible) as Promise<{ ok: true }>,
+    setWidgetExpanded: (expanded) =>
+      ipcRenderer.invoke("pet:widget-expanded", expanded) as Promise<{ ok: true }>,
+    moveWidget: (position) => ipcRenderer.send("pet:widget-move", position),
+    openWidgetOverview: (target) =>
+      ipcRenderer.invoke("pet:widget-open-overview", target) as Promise<{ ok: true }>,
+    onWidgetOpenOverview: (listener) => {
+      const handler = (_event: unknown, target: unknown): void =>
+        listener(target as PetOpenSessionRequest | undefined);
+      ipcRenderer.on("pet:widget-open-overview", handler);
+      return () => ipcRenderer.removeListener("pet:widget-open-overview", handler);
+    },
+    onWidgetVisibilityChanged: (listener) => {
+      const handler = (_event: unknown, visible: unknown): void => {
+        if (typeof visible === "boolean") listener(visible);
+      };
+      ipcRenderer.on("pet:widget-visibility-changed", handler);
+      return () => ipcRenderer.removeListener("pet:widget-visibility-changed", handler);
+    },
   };
 }

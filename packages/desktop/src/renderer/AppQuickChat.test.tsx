@@ -1180,7 +1180,7 @@ describe("App quick-chat integration", () => {
     expect(cleanupQuickChatSessionCalls).toContain(creating.sessionId);
   });
 
-  test("a delayed disk rebuild deletes stale qchat sessions but preserves one opened mid-scan", async () => {
+  test("a delayed disk page never deletes quick chats owned by main or opened mid-scan", async () => {
     const diskScan = deferred<any>();
     const ownerBucket = await mountApp({
       withNormalSession: false,
@@ -1227,7 +1227,11 @@ describe("App quick-chat integration", () => {
     await flushApp();
 
     expect(claimQuickChatSessionCalls).toContain(livePanel.sessionId);
-    expect(cleanupQuickChatSessionCalls).toEqual([staleSessionId]);
+    // Crash-leftover cleanup is a main-process startup responsibility now.
+    // The paged sidebar catalog must stay read-only even if an older/mock main
+    // leaks qchat rows into a page; it has no ownership claim with which to
+    // delete either the stale row or the live row safely.
+    expect(cleanupQuickChatSessionCalls).toEqual([]);
   });
 
   test("two quick chats and a normal chat isolate drafts, text, tools, busy state, and stop", async () => {

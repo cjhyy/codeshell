@@ -86,4 +86,8 @@ describe("selectPetOverview", () => {
     );
     expect(disconnected.emptyState).toBe("disconnected");
   });
+
+  test("shows a retry state instead of an endless skeleton after snapshot failure", () => {
+    expect(selectPetOverview(null, "error", 11_000).emptyState).toBe("error");
+  });
 });

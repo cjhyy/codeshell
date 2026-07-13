@@ -9,11 +9,11 @@ describe("PetSidebarEntry", () => {
       <PetSidebarEntry active pendingCount={120} runningCount={2} onOpen={() => undefined} />,
     );
 
-    expect(html).toContain("Pet");
+    expect(html).toContain("Mimi");
     expect(html).toContain("99+");
     expect(html).toContain('data-pet-indicator="running"');
     expect(html).toContain('data-pet-indicator="pending"');
-    expect(html).toContain("120 个 session 等你决定；2 个正在运行");
+    expect(html).toContain("120 项等你处理；2 项执行中");
     expect(html).toContain('aria-pressed="true"');
   });
 

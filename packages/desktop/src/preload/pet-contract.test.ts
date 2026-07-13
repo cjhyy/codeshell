@@ -13,11 +13,16 @@ describe("Pet preload contract", () => {
       observedAt: 1,
     };
     const ipc = {
+      sent: [] as Array<{ channel: string; payload: unknown }>,
       invoke: async (channel: string, payload?: unknown) => {
         if (channel === "pet:get-snapshot") return snapshot;
         if (channel === "pet:get-attention") return { surfaceablePendingCount: 2 };
         if (channel === "pet:set-active-session") return { ok: true };
         if (channel === "pet:attention-receipt") return { ok: true };
+        if (channel === "pet:widget-visible-get") return false;
+        if (channel === "pet:widget-visible") return { ok: true };
+        if (channel === "pet:widget-expanded") return { ok: true };
+        if (channel === "pet:widget-open-overview") return { ok: true };
         if (channel === "pet:dispatch") {
           expect(payload).toEqual({ type: "get_global_status" });
           return { ok: true, type: "global_status", petSessionId: "pet-one" };
@@ -25,6 +30,9 @@ describe("Pet preload contract", () => {
         expect(channel).toBe("pet:open-session");
         expect(payload).toEqual({ agentSessionId: "work-a", snapshotVersion: 1, generation: 0 });
         return { status: "not-found" };
+      },
+      send(channel: string, payload?: unknown) {
+        this.sent.push({ channel, payload });
       },
       on: (channel: string, handler: (event: unknown, payload: unknown) => void) => {
         const channelHandlers = handlers.get(channel) ?? new Set();
@@ -38,8 +46,10 @@ describe("Pet preload contract", () => {
     const api = createPetApi(ipc);
     const first: PetProjectionEvent[] = [];
     const second: PetProjectionEvent[] = [];
+    const chatMessages: string[] = [];
     const offFirst = api.onProjectionEvent((event) => first.push(event));
     api.onProjectionEvent((event) => second.push(event));
+    const offChat = api.onChatEvent?.((event) => chatMessages.push(event.message));
     const delta: PetProjectionEvent = {
       kind: "reset",
       version: 1,
@@ -52,6 +62,18 @@ describe("Pet preload contract", () => {
     for (const handler of handlers.get("pet:projection-event") ?? []) {
       handler({}, { ...delta, version: 2 });
     }
+    for (const handler of handlers.get("pet:chat-event") ?? []) {
+      handler(
+        {},
+        {
+          kind: "user-submitted",
+          clientMessageId: "client-one",
+          message: "delegate this",
+          createdAt: 3,
+        },
+      );
+    }
+    offChat?.();
 
     expect(await api.getSnapshot()).toEqual(snapshot);
     expect(
@@ -64,8 +86,29 @@ describe("Pet preload contract", () => {
     expect(first.map((event) => event.version)).toEqual([1]);
     expect(second.map((event) => event.version)).toEqual([1, 2]);
     expect(handlers.get("pet:projection-event")?.size).toBe(1);
+    expect(chatMessages).toEqual(["delegate this"]);
+    expect(handlers.get("pet:chat-event")?.size).toBe(0);
     expect(await api.getAttentionSnapshot()).toEqual({ surfaceablePendingCount: 2 });
     expect(await api.setActiveSession("work-a")).toEqual({ ok: true });
     expect(await api.markAttentionReceipt(["receipt"], "dismissed")).toEqual({ ok: true });
+    expect(await api.getWidgetVisibility()).toBe(false);
+    expect(await api.setWidgetVisible(true)).toEqual({ ok: true });
+    expect(await api.setWidgetExpanded(true)).toEqual({ ok: true });
+    api.moveWidget({ x: 320, y: 180 });
+    expect(ipc.sent).toEqual([{ channel: "pet:widget-move", payload: { x: 320, y: 180 } }]);
+    expect(await api.openWidgetOverview()).toEqual({ ok: true });
+    let overviewOpenCount = 0;
+    const offOverview = api.onWidgetOpenOverview(() => {
+      overviewOpenCount += 1;
+    });
+    for (const handler of handlers.get("pet:widget-open-overview") ?? []) handler({}, undefined);
+    offOverview();
+    for (const handler of handlers.get("pet:widget-open-overview") ?? []) handler({}, undefined);
+    expect(overviewOpenCount).toBe(1);
+    const visibility: boolean[] = [];
+    const offVisibility = api.onWidgetVisibilityChanged((visible) => visibility.push(visible));
+    for (const handler of handlers.get("pet:widget-visibility-changed") ?? []) handler({}, false);
+    offVisibility();
+    expect(visibility).toEqual([false]);
   });
 });
