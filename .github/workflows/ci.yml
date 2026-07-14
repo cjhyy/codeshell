@@ -60,8 +60,16 @@ jobs:
         run: |
           bun test \
             packages/chat/src/*.test.ts \
+            packages/coding/src/git/worktree/crud.test.ts \
+            packages/coding/src/tools/drive-agent.test.ts \
+            packages/coding/src/tools/drive-agent-worktree.test.ts \
+            packages/core/src/preset/preset-builtin-tools.test.ts \
+            packages/core/src/session/session-origin.test.ts \
+            packages/core/src/tool-system/builtin/tool-guards.test.ts \
+            packages/desktop/scripts/mock-provider-server.test.mjs \
             packages/desktop/src/main/im-gateway-control-server.test.ts \
             packages/desktop/src/main/mobile-remote/tunnel-manager.test.ts \
+            packages/desktop/src/main/plugin-panel-protocol.test.ts \
             tests/agent-notifications.test.ts \
             tests/background-agent-protocol.test.ts \
             tests/chat-session-isolation.test.ts \
@@ -78,6 +86,36 @@ jobs:
             tests/session-cold-start.test.ts \
             tests/tool-cwd.test.ts \
             tests/web-fetch-ssrf.test.ts
+
+  coverage:
+    name: builtin integration coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: install
+        run: bun install --frozen-lockfile
+      - name: ToolRegistry harness + builtin coverage gates
+        run: bun run test:coverage
+
+  electron-e2e:
+    name: Electron E2E (provider + panels + plugin sandbox)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: install
+        run: bun install --frozen-lockfile
+      - name: build runtime and desktop
+        run: |
+          bun run build
+          bun run --cwd packages/desktop build
+      - name: real Electron E2E
+        run: xvfb-run -a bun run --cwd packages/desktop test:e2e
 
   tests-windows:
     name: tests (windows port — real win32)

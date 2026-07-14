@@ -1,8 +1,9 @@
 # IM Gateway — IM 遥控开隧道 + 手机操作(对标 openclaw)
 
-> 状态:**Phase 1 + 主流 channel adapters 已实现**。设计稿 2026-07-02；实现 2026-07-13。
+> 状态：**Phase 1–3 代码闭环已实现**。设计稿 2026-07-02；可靠性/运维闭环 2026-07-14。
 > 已落地：`packages/chat` / `@cjhyy/code-shell-chat`（可独立使用的通用 runtime、12 个 channel、白名单）+
-> Electron main 鉴权 loopback 控制面；真实平台凭据 E2E 与 launchd/systemd 仍属后续阶段。
+> Electron main 鉴权 loopback 控制面 + Mimi Pet integration + 持久 inbox/去重/背压/adapter supervisor +
+> 主动状态回推 + 固定 ingress 生成器 + launchd/systemd/Task Scheduler + 真实凭据交互式 canary。
 > 定位:前瞻方向,和「统一 assistant 主体」那份整体产品形态 design 强绑;本稿只定
 > **IM gateway 这条通道**,编排大脑显式委托给未来的 assistant 主体(见 §6 衔接口)。
 > 关联现状记忆:`project_mobile_remote_tunnel`、`project_mobile_ui_react_rebuild`、
@@ -53,7 +54,8 @@
   - (B) 把 tunnel/host 从 main **抽成可被 gateway 直接复用的进程内/子进程能力**。
   - **MVP 倾向 (A)**:零重构复用现有接线,gateway 只做「唤起 + 路由 + 回推」。(B) 留给
     「assistant 主体」整体形态时再决定,避免和那份 design 抢架构决策。
-- **进程守护**:gateway 需能被系统级拉起(launchd/systemd/开机自启),否则「不在电脑旁」的前提不成立。此项列入未决。
+- **进程守护**：CLI 可安装当前用户的 launchd/systemd/Task Scheduler 服务；CLI 与 Desktop
+  共享原子单实例锁，避免重复消费 update/webhook。
 
 ## 四、组件边界
 
@@ -112,7 +114,8 @@ design)。gateway 与它的关系:
 ## 八、错误处理
 
 - 隧道拉起失败(二进制缺/端口占/edge 未就绪)→ 回 IM 明确错误 + 不留孤儿进程。
-- IM adapter 收发失败 → 重试有上限,失败落日志,不阻塞其他指令。
+- IM adapter 收发失败 → 单 adapter 指数退避重启，不阻塞其他渠道；消息处理失败保留在持久
+  inbox 中重试，per-target 保序且有全局背压上限。
 - gateway ↔ main 通道(方案 A)断开 → 回 IM「桌面端未在线」,不静默吞。
 
 ## 九、不做 / 未决(YAGNI + 待整体 design 拍板)
@@ -120,7 +123,6 @@ design)。gateway 与它的关系:
 - **不做**:IM 内富交互审批 UI、多租户、gateway 自带编排大脑(归 assistant 主体)。
 - **未决(等整体产品形态 design)**:
   - tunnel/host 是否从 main 抽出(§三 A vs B);
-  - gateway 进程守护方式(launchd/systemd/开机自启);
   - assistant 主体的 §6 协议细节;
   - 是否上云中继(openclaw 云模式)—— 当前默认纯本地 gateway。
 
@@ -128,6 +130,7 @@ design)。gateway 与它的关系:
 
 - **Phase 1(MVP，已实现)**:IM Adapter 抽象 + Telegram + `/open /close /status` + 复用现有隧道/配对,
   方案 A 唤起 main。交付「IM 发指令→拉隧道→手机入口回 IM→手机操作」闭环。
-- **Phase 2(adapters 已实现)**:补齐 11 个主流 channel；剩余真实平台凭据 E2E 与 gateway
-  进程守护(开机自启)。
-- **Phase 3**:接 §6 assistant 主体,IM 里可下高阶跨 session 指令。
+- **Phase 2（已实现）**：补齐 11 个主流 channel、真实平台 canary、固定 webhook ingress、
+  daemon 安装器和生产可靠性边界。
+- **Phase 3（已实现）**：普通消息接入 Mimi Pet 长期会话；隧道状态通过鉴权事件流主动回推。
+  更高阶的跨 session UI/审批仍遵循 Pet 自身权限边界。

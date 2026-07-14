@@ -1,6 +1,6 @@
 # 冒烟自动化 — 本地 mock provider server
 
-> 状态:**设计已定稿并提交 main**(spec `docs/superpowers/specs/2026-07-02-smoke-automation-mock-provider-design.md`),未动手实现。2026-07-02。
+> 状态：**v1 已落地并接入 CI**（2026-07-14）。设计 spec：`docs/superpowers/specs/2026-07-02-smoke-automation-mock-provider-design.md`。
 > 背景:第一个测试版本已发,当前靠手动真机冒烟。目标把稳定性价比最高的 80% 自动化。
 > 完整设计见 spec;本文是 todo 目录的登记 + 摘要,便于排期。
 
@@ -33,17 +33,25 @@ App 发**真实** HTTP 请求,server 返回脚本化 SSE(文本/工具调用/usa
 ## 断言粒度 & 运行
 
 - **关键链路存在性**(粗粒度):assistant 块出现 / 工具卡出现 / usage 区非空;不做文本精确匹配(UI 文案一改就碎)。
-- **先只本地命令**:`bun run smoke` 一键(启 server→启 Electron→跑 L1+L2→拆);先不接 CI(headless Electron 坑多)。
+- **本地命令**：根目录 `bun run smoke` 会先构建，再一键执行 server→Electron→L1+L2→拆；desktop 已构建时可直接 `bun run --cwd packages/desktop smoke`。
+- **CI**：`.github/workflows/ci.yml` 的独立 `electron-e2e` job 通过 `xvfb-run` 执行 provider/panels smoke 与 plugin-panel sandbox e2e。
 
 ## v1 交付清单
 
-1. mock server,OpenAI 路由完整(4 scenario)。
-2. smoke harness:隔离 HOME + 临时 catalog + spawn/teardown(finally 保拆,不留孤儿进程/临时 HOME)。
-3. L1 断言(复用/扩展面板冒烟)。
-4. L2 断言(发消息→assistant 块 / 工具卡 / usage 存在性)。
-5. `bun run smoke` 入口。
-6. Anthropic 路由(fast-follow,同 server 加路由)。
+1. [x] mock server，OpenAI 路由完整（4 scenario）。
+2. [x] smoke harness：隔离 HOME/CODE_SHELL_HOME/userData + 临时 catalog + finally teardown。
+3. [x] L1：Files/Browser/Review/Terminal、真实本地 webview、Settings 页面。
+4. [x] L2：流式 assistant、真实 Glob 工具执行/卡片、usage/cache、429 retry。
+5. [x] 根/desktop `smoke`、`test:e2e`、`mock-provider` 入口。
+6. [x] Anthropic 原始 SSE 事件序列与协议单测。
+
+实现入口：
+
+- `packages/desktop/scripts/mock-provider-server.mjs`
+- `packages/desktop/scripts/electron-harness.mjs`
+- `packages/desktop/scripts/smoke-panels.mjs`
+- `packages/desktop/scripts/e2e-plugin-panel.mjs`
 
 ## 未决 / 后续
 
-- L3 打包产物冒烟;外部集成假件(逐个);CI 接入(headless Electron)。
+- L3 打包产物冒烟；浏览器 CDP / CC / Codex / MCP / cron 等外部集成假件仍按风险逐个补。

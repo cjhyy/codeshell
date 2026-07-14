@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
 import type { ChildProcess } from "node:child_process";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { DesktopGatewayConfig } from "./config.js";
 import {
   DesktopControlClient,
@@ -110,6 +113,90 @@ describe("DesktopControlClient", () => {
       message: "inspect",
       attachments: [{ name: "a.txt", dataBase64: "aGk=" }],
     });
+  });
+
+  test("retries a failed event handler and checkpoints only after success", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-event-checkpoint-"));
+    const checkpointPath = join(root, "nested", "events.json");
+    const abort = new AbortController();
+    let handled = 0;
+    let errors = 0;
+    let recoveries = 0;
+    const client = new DesktopControlClient(baseConfig(), {
+      readDescriptor: async () => descriptor,
+      sleep: async () => undefined,
+      fetch: async () =>
+        Response.json({
+          streamId: "a".repeat(32),
+          cursor: 1,
+          events: [{ id: 1, createdAt: 1, type: "tunnel.connected", text: "ready" }],
+        }),
+    });
+    try {
+      await client.watchEvents(
+        abort.signal,
+        async () => {
+          handled++;
+          if (handled === 1) throw new Error("temporary adapter error");
+          abort.abort();
+        },
+        {
+          checkpointPath,
+          retryBaseMs: 1,
+          retryMaxMs: 1,
+          onError: () => errors++,
+          onRecovered: () => recoveries++,
+        },
+      );
+      expect(handled).toBe(2);
+      expect({ errors, recoveries }).toEqual({ errors: 1, recoveries: 1 });
+      expect(JSON.parse(readFileSync(checkpointPath, "utf-8"))).toEqual({
+        version: 1,
+        streamId: "a".repeat(32),
+        cursor: 1,
+      });
+      if (process.platform !== "win32") expect(statSync(checkpointPath).mode & 0o777).toBe(0o600);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("resets a persisted cursor when the Desktop event stream changes", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-event-stream-"));
+    const checkpointPath = join(root, "events.json");
+    writeFileSync(
+      checkpointPath,
+      JSON.stringify({ version: 1, streamId: "a".repeat(32), cursor: 99 }),
+      { mode: 0o600 },
+    );
+    if (process.platform !== "win32") chmodSync(checkpointPath, 0o600);
+    const abort = new AbortController();
+    const after: number[] = [];
+    const client = new DesktopControlClient(baseConfig(), {
+      readDescriptor: async () => descriptor,
+      fetch: async (url) => {
+        const cursor = Number(new URL(String(url)).searchParams.get("after"));
+        after.push(cursor);
+        if (cursor === 99) {
+          return Response.json({ streamId: "b".repeat(32), cursor: 99, events: [] });
+        }
+        return Response.json({
+          streamId: "b".repeat(32),
+          cursor: 1,
+          events: [{ id: 1, createdAt: 1, type: "tunnel.connected", text: "new" }],
+        });
+      },
+    });
+    try {
+      await client.watchEvents(abort.signal, async () => abort.abort(), { checkpointPath });
+      expect(after).toEqual([99, 0]);
+      expect(JSON.parse(readFileSync(checkpointPath, "utf-8"))).toMatchObject({
+        streamId: "b".repeat(32),
+        cursor: 1,
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 

@@ -20,7 +20,6 @@ export class SlackAdapter implements ChannelAdapter {
 
   async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
     const onEvent = async ({ event, ack }: any): Promise<void> => {
-      await ack();
       if (
         event?.type !== "message" ||
         typeof event.channel !== "string" ||
@@ -29,22 +28,31 @@ export class SlackAdapter implements ChannelAdapter {
         event.bot_id ||
         event.subtype
       ) {
+        await ack();
         return;
       }
+      // dispatchSafely so a rejected delivery (e.g. inbox backpressure) never
+      // escapes this SocketMode listener as an unhandled rejection — emit does
+      // not await listeners, so an unhandled rejection would crash the process
+      // and skip the ack below.
       await dispatchSafely(handler, {
         channel: this.channel,
         target: event.channel,
         senderId: event.user,
         text: event.text,
+        ...(event.client_msg_id || event.ts
+          ? { messageId: String(event.client_msg_id ?? event.ts) }
+          : {}),
       });
+      await ack();
     };
     const onCommand = async ({ body, ack }: any): Promise<void> => {
-      await ack();
       if (
         typeof body.command !== "string" ||
         typeof body.channel_id !== "string" ||
         typeof body.user_id !== "string"
       ) {
+        await ack();
         return;
       }
       await dispatchSafely(handler, {
@@ -54,7 +62,9 @@ export class SlackAdapter implements ChannelAdapter {
         text: [body.command, typeof body.text === "string" ? body.text : ""]
           .filter(Boolean)
           .join(" "),
+        ...(body.trigger_id ? { messageId: String(body.trigger_id) } : {}),
       });
+      await ack();
     };
     this.socket.on("events_api", onEvent);
     this.socket.on("slash_commands", onCommand);

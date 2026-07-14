@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync, readdirSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { BUILTIN_TOOLS } from "./index.js";
 
@@ -11,11 +11,20 @@ interface ToolCoverage {
 
 const builtinDirectory = dirname(fileURLToPath(import.meta.url));
 const coverageTestFilename = basename(fileURLToPath(import.meta.url));
-const testFiles = readdirSync(builtinDirectory)
-  .filter((filename) => filename.endsWith(".test.ts") && filename !== coverageTestFilename)
-  .sort();
+const sourceDirectory = resolve(builtinDirectory, "../..");
+
+function collectTestFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) return collectTestFiles(path);
+    if (!entry.name.endsWith(".test.ts") || entry.name === coverageTestFilename) return [];
+    return [relative(sourceDirectory, path)];
+  });
+}
+
+const testFiles = collectTestFiles(sourceDirectory).sort();
 const testSources = new Map(
-  testFiles.map((filename) => [filename, readFileSync(join(builtinDirectory, filename), "utf8")]),
+  testFiles.map((filename) => [filename, readFileSync(join(sourceDirectory, filename), "utf8")]),
 );
 
 function toKebabCase(value: string): string {
@@ -51,13 +60,25 @@ function filenameMentionsTool(filename: string, toolName: string): boolean {
 
 function sourceReferencesTool(source: string, toolName: string, executorName: string): boolean {
   const toolIdentifier = toLowerCamelCase(toolName);
+  const aliases: Record<string, string[]> = {
+    AskUserQuestion: ["askUserTool"],
+  };
+  // Most catalog entries are wrapped by the same local function name
+  // (`execute`). Treating that generic name as evidence made one broad harness
+  // file claim coverage for every builtin and hid real gaps.
+  const meaningfulExecutorName = ["", "execute", "executor", "handler", "anonymous"].includes(
+    executorName.toLowerCase(),
+  )
+    ? undefined
+    : executorName;
   const candidates = new Set(
     [
-      executorName,
+      meaningfulExecutorName,
       `${toolIdentifier}Tool`,
       `${toolIdentifier}ToolDef`,
       `make${toolIdentifier.charAt(0).toUpperCase()}${toolIdentifier.slice(1)}Tool`,
-    ].filter((name) => name.length > 0),
+      ...(aliases[toolName] ?? []),
+    ].filter((name): name is string => typeof name === "string" && name.length > 0),
   );
 
   return [...candidates].some((candidate) =>
@@ -92,10 +113,15 @@ function formatCoverageMatrix(rows: ToolCoverage[]): string {
   ].join("\n");
 }
 
-describe("builtin tool test coverage matrix (informational)", () => {
+describe("builtin tool test coverage matrix", () => {
   test("prints the current builtin tool coverage matrix", () => {
     expect(BUILTIN_TOOLS.length).toBeGreaterThan(0);
     console.log(`\n${formatCoverageMatrix(coverage)}\n`);
+  });
+
+  test("keeps direct builtin test coverage at or above 80%", () => {
+    const covered = coverage.filter((row) => row.testFiles.length > 0).length;
+    expect(covered / coverage.length).toBeGreaterThanOrEqual(0.8);
   });
 
   for (const row of coverage) {

@@ -91,6 +91,7 @@ export interface TeamsGatewayConfig extends AllowlistConfig {
   appPassword: string;
   appType: string;
   tenantId?: string;
+  statePath: string;
 }
 
 export type ConfiguredChannel =
@@ -125,6 +126,25 @@ export interface GatewayConfig {
   channels: ConfiguredChannel[];
   desktop: DesktopGatewayConfig;
   webhook: WebhookGatewayConfig;
+  runtime: GatewayRuntimeConfig;
+  notifications: GatewayNotificationTarget[];
+}
+
+export interface GatewayNotificationTarget {
+  channel: ConfiguredChannel["channel"];
+  target: string;
+}
+
+export interface GatewayRuntimeConfig {
+  lockPath: string;
+  inboxPath: string;
+  eventCursorPath: string;
+  maxPending: number;
+  maxConcurrent: number;
+  maxPerTarget: number;
+  maxMessagesPerUserPerMinute: number;
+  adapterRestartBaseMs: number;
+  adapterRestartMaxMs: number;
 }
 
 export interface LoadGatewayConfigOptions {
@@ -150,6 +170,8 @@ interface RawGatewayConfig {
   teams?: RawSection;
   webhook?: RawSection;
   desktop?: RawSection;
+  runtime?: RawSection;
+  notifications?: RawSection;
 }
 
 export function defaultGatewayConfigPath(env: NodeJS.ProcessEnv = process.env): string {
@@ -246,6 +268,17 @@ export function gatewayConfigTemplate(): Record<string, unknown> {
       allowedUserIds: [],
     },
     webhook: { host: "127.0.0.1", port: 8787, maxBodyBytes: 1048576 },
+    runtime: {
+      maxPending: 1000,
+      maxConcurrent: 4,
+      maxPerTarget: 1,
+      maxMessagesPerUserPerMinute: 20,
+    },
+    notifications: {
+      enabled: false,
+      _help: "Optional proactive Desktop/tunnel event targets, keyed by channel.",
+      targets: {},
+    },
   };
 }
 
@@ -274,7 +307,7 @@ export function loadGatewayConfig(opts: LoadGatewayConfigOptions = {}): GatewayC
   const configuredCommand = readNonEmptyString(raw.desktop?.command);
   const configuredArgs = readStringList(raw.desktop?.args, false);
   const defaultLaunch = defaultDesktopLaunch(platform);
-  return {
+  const config: GatewayConfig = {
     channels,
     desktop: {
       descriptorPath:
@@ -289,7 +322,52 @@ export function loadGatewayConfig(opts: LoadGatewayConfigOptions = {}): GatewayC
       port: readPort(raw.webhook?.port) ?? 8787,
       maxBodyBytes: readPositiveNumber(raw.webhook?.maxBodyBytes) ?? 1_048_576,
     },
+    runtime: {
+      lockPath:
+        readNonEmptyString(raw.runtime?.lockPath) ??
+        join(resolveHome(env), ".code-shell", "im-gateway", "gateway.lock"),
+      inboxPath:
+        readNonEmptyString(raw.runtime?.inboxPath) ??
+        join(resolveHome(env), ".code-shell", "im-gateway", "inbox.json"),
+      eventCursorPath:
+        readNonEmptyString(raw.runtime?.eventCursorPath) ??
+        join(resolveHome(env), ".code-shell", "im-gateway", "desktop-events.json"),
+      maxPending: readPositiveInteger(raw.runtime?.maxPending) ?? 1_000,
+      maxConcurrent: readPositiveInteger(raw.runtime?.maxConcurrent) ?? 4,
+      maxPerTarget: readPositiveInteger(raw.runtime?.maxPerTarget) ?? 1,
+      maxMessagesPerUserPerMinute:
+        readPositiveInteger(raw.runtime?.maxMessagesPerUserPerMinute) ?? 20,
+      adapterRestartBaseMs: readPositiveInteger(raw.runtime?.adapterRestartBaseMs) ?? 1_000,
+      adapterRestartMaxMs: readPositiveInteger(raw.runtime?.adapterRestartMaxMs) ?? 30_000,
+    },
+    notifications: [],
   };
+  config.notifications = loadNotificationTargets(raw.notifications, channels);
+  return config;
+}
+
+function loadNotificationTargets(
+  raw: RawSection | undefined,
+  channels: ConfiguredChannel[],
+): GatewayNotificationTarget[] {
+  if (!raw || raw.enabled === false) return [];
+  const targets = raw.targets;
+  if (!targets || typeof targets !== "object" || Array.isArray(targets)) {
+    throw new Error("notifications.targets 必须是 channel 到 target 数组的映射");
+  }
+  const result: GatewayNotificationTarget[] = [];
+  for (const [channelName, values] of Object.entries(targets as RawSection)) {
+    const channel = channels.find(({ channel }) => channel === channelName);
+    if (!channel) throw new Error(`notifications 引用了未启用的 channel：${channelName}`);
+    for (const target of readStringList(values)) {
+      if (!channel.allowedTargetIds.includes(target)) {
+        throw new Error(`notifications target 不在 ${channelName} 会话白名单中：${target}`);
+      }
+      result.push({ channel: channel.channel, target });
+    }
+  }
+  if (result.length === 0) throw new Error("notifications.enabled=true 时至少配置一个 target");
+  return result;
 }
 
 function loadChannels(raw: RawGatewayConfig, env: NodeJS.ProcessEnv): ConfiguredChannel[] {
@@ -630,6 +708,10 @@ function loadTeams(
       readNonEmptyString(raw?.appType) ??
       "MultiTenant",
     tenantId: envString(env, "CODE_SHELL_TEAMS_TENANT_ID") ?? readNonEmptyString(raw?.tenantId),
+    statePath:
+      envString(env, "CODE_SHELL_TEAMS_STATE_PATH") ??
+      readNonEmptyString(raw?.statePath) ??
+      join(resolveHome(env), ".code-shell", "im-gateway", "teams-conversations.json"),
     ...loadAllowlist(
       "Microsoft Teams",
       raw,
@@ -718,6 +800,10 @@ function readCsvOverride(value: string | undefined): string[] | undefined {
 
 function readPositiveNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+function readPositiveInteger(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : undefined;
 }
 
 function readPort(value: unknown): number | undefined {

@@ -3,8 +3,10 @@ import type { RawTranscriptEvent } from "../preload/types";
 import {
   buildSelectableContextTurns,
   copyContextPackageOverrides,
+  groupStreamItemsIntoContextTurns,
   selectedTurnRange,
 } from "./contextSelection";
+import type { Message } from "./types";
 
 const event = (
   id: string,
@@ -58,6 +60,63 @@ describe("MessageStream context selection", () => {
       eventIds: ["u1", "a1", "b1"],
       preview: "recognizable turn",
     });
+  });
+
+  it("merges injected system-reminder work into the preceding task turn", () => {
+    const turns = buildSelectableContextTurns(
+      [
+        event("u1", "message", 0, { role: "user", content: "ship the release" }),
+        event("a1", "message", 0, { role: "assistant", content: "starting" }),
+        event("b1", "turn_boundary", 1),
+        event("reminder", "message", 1, {
+          role: "user",
+          content: "<system-reminder>background task finished</system-reminder>",
+          injected: true,
+        }),
+        event("task-reply", "message", 1, { role: "assistant", content: "verified" }),
+        event("b2", "turn_boundary", 2),
+        event("u2", "message", 2, { role: "user", content: "next request" }),
+        event("a2", "message", 2, { role: "assistant", content: "done" }),
+        event("b3", "turn_boundary", 3),
+      ],
+      false,
+    );
+
+    expect(turns).toHaveLength(2);
+    expect(turns[0]).toMatchObject({
+      preview: "ship the release",
+      fromEventId: "u1",
+      toEventId: "b2",
+      eventIds: ["u1", "a1", "b1", "reminder", "task-reply", "b2"],
+    });
+    expect(turns[1]).toMatchObject({ preview: "next request", fromEventId: "u2" });
+  });
+
+  it("groups rendered reminder continuations inside the same selectable task", () => {
+    const messages: Message[] = [
+      { kind: "user", id: "ui-u1", text: "ship the release" },
+      { kind: "assistant", id: "ui-a1", text: "starting", done: true },
+      {
+        kind: "user",
+        id: "ui-reminder",
+        text: "<system-reminder>background task finished</system-reminder>",
+        injected: true,
+      },
+      { kind: "assistant", id: "ui-task-reply", text: "verified", done: true },
+      { kind: "user", id: "ui-u2", text: "next request" },
+      { kind: "assistant", id: "ui-a2", text: "done", done: true },
+    ];
+
+    const groups = groupStreamItemsIntoContextTurns(messages);
+    expect(groups).toHaveLength(2);
+    expect(groups[0]?.selectionIndex).toBe(0);
+    expect(groups[0]?.items.map((item) => item.id)).toEqual([
+      "ui-u1",
+      "ui-a1",
+      "ui-reminder",
+      "ui-task-reply",
+    ]);
+    expect(groups[1]?.selectionIndex).toBe(1);
   });
 
   it("returns one closed event range for a continuous turn selection", () => {

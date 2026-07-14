@@ -21,6 +21,8 @@ export interface PluginPanelDescriptor {
   permissions: PluginPanelPermission[];
   /** Opaque protocol authority. Never an install path. */
   hostId: string;
+  /** Changes whenever an installed panel revision changes and forces a fresh guest. */
+  revision: string;
 }
 
 /** Extensions-page view of a panel contribution, distinct from plugin packages. */
@@ -34,6 +36,7 @@ export interface PreparedPluginPanel {
   id: string;
   src: string;
   partition: string;
+  revision: string;
 }
 
 export interface PluginPanelBindInput {
@@ -47,7 +50,6 @@ export interface PluginPanelBindInput {
   busy?: boolean;
   theme: "light" | "dark" | "system";
   locale: string;
-  trusted?: boolean;
 }
 
 export interface PluginPanelHostContext {

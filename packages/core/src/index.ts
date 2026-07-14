@@ -91,7 +91,12 @@ export {
 
 export { Engine, loadAgentDefinitionsForCwd } from "./engine/engine.js";
 export type { EngineConfig, EngineHookConfig, EngineResult } from "./engine/types.js";
-export { PET_AUTO_DELEGATE_MARKER, type RunBehaviorMode } from "./engine/run-types.js";
+export type { RunBehaviorMode } from "./engine/run-types.js";
+export {
+  DELEGATE_WORK_TOOL_NAME,
+  type PetWorkspaceOption,
+  type PetWorkDelegation,
+} from "./pet/delegation.js";
 export { resolveLLMConfigForTag } from "./engine/resolve-llm-config.js";
 export { resolveAuxKey } from "./engine/aux-key.js";
 export {
@@ -140,6 +145,13 @@ export type {
 export { fileCache, invalidateFileCache } from "./tool-system/builtin/file-cache.js";
 export { validateToolArgs } from "./tool-system/validation.js";
 export { createOffBackend } from "./tool-system/sandbox/off.js";
+export {
+  createFakeToolContext,
+  createToolRegistryHarness,
+  type FakeToolContextOptions,
+  type ToolRegistryHarness,
+  type ToolRegistryHarnessOptions,
+} from "./tool-system/testing/tool-registry-harness.js";
 export {
   registerCapability,
   unregisterCapability,

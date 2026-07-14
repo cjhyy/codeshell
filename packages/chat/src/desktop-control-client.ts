@@ -1,9 +1,13 @@
-import { readFile, stat } from "node:fs/promises";
+import { chmod, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { dirname } from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
 import type { DesktopGatewayConfig } from "./config.js";
 import {
   DESKTOP_CONTROL_PROTOCOL_VERSION,
   type DesktopControlDescriptor,
+  type DesktopControlEvent,
+  type DesktopControlEventPage,
   type MobileRemoteOpenResult,
   type MobileRemoteStatus,
   type PetChatRequest,
@@ -21,6 +25,24 @@ export interface DesktopControlClientOptions {
   spawn?: SpawnFn;
   readDescriptor?: () => Promise<string>;
   sleep?: (ms: number) => Promise<void>;
+}
+
+export interface DesktopEventWatchOptions {
+  checkpointPath?: string;
+  onError?: (error: unknown) => void;
+  onRecovered?: () => void;
+  retryBaseMs?: number;
+  retryMaxMs?: number;
+}
+
+export interface DesktopEventContext {
+  streamId: string;
+}
+
+interface DesktopEventCheckpoint {
+  version: 1;
+  streamId: string;
+  cursor: number;
 }
 
 export class DesktopControlUnavailableError extends Error {
@@ -74,6 +96,65 @@ export class DesktopControlClient {
   async petChat(input: PetChatRequest): Promise<PetChatResult> {
     await this.ensureDesktopAvailable();
     return this.request("POST", "/v1/pet/chat", 150_000, input);
+  }
+
+  events(after = 0, waitMs = 25_000): Promise<DesktopControlEventPage> {
+    if (!Number.isSafeInteger(after) || after < 0 || waitMs < 0 || waitMs > 25_000) {
+      throw new Error("invalid desktop event cursor");
+    }
+    return this.request(
+      "GET",
+      `/v1/events?after=${after}&waitMs=${Math.floor(waitMs)}`,
+      waitMs + 5_000,
+    );
+  }
+
+  async watchEvents(
+    signal: AbortSignal,
+    handle: (event: DesktopControlEvent, context: DesktopEventContext) => Promise<void>,
+    options: DesktopEventWatchOptions = {},
+  ): Promise<void> {
+    const saved = options.checkpointPath
+      ? await readEventCheckpoint(options.checkpointPath)
+      : undefined;
+    let streamId = saved?.streamId;
+    let cursor = saved?.cursor ?? 0;
+    let retryMs = options.retryBaseMs ?? 1_000;
+    const retryMaxMs = options.retryMaxMs ?? 30_000;
+    let recovering = false;
+    while (!signal.aborted) {
+      try {
+        const page = await this.events(cursor);
+        if (streamId !== undefined && streamId !== page.streamId) {
+          // Event ids are local to one Desktop process. Reset before reading
+          // the replacement stream or a high old cursor could mask new events.
+          streamId = page.streamId;
+          cursor = 0;
+          continue;
+        }
+        streamId = page.streamId;
+        for (const event of page.events) {
+          if (signal.aborted) return;
+          await handle(event, { streamId });
+          cursor = Math.max(cursor, event.id);
+          if (options.checkpointPath) {
+            await writeEventCheckpoint(options.checkpointPath, { version: 1, streamId, cursor });
+          }
+        }
+        cursor = Math.max(cursor, page.cursor);
+        if (recovering) {
+          recovering = false;
+          options.onRecovered?.();
+        }
+        retryMs = options.retryBaseMs ?? 1_000;
+      } catch (error) {
+        if (signal.aborted) return;
+        recovering = true;
+        options.onError?.(error);
+        await Promise.race([this.sleepFn(retryMs), waitForAbort(signal)]);
+        retryMs = Math.min(retryMaxMs, retryMs * 2);
+      }
+    }
   }
 
   private async ensureDesktopAvailable(): Promise<void> {
@@ -167,6 +248,13 @@ export class DesktopControlClient {
   }
 }
 
+async function waitForAbort(signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return;
+  await new Promise<void>((resolve) =>
+    signal.addEventListener("abort", () => resolve(), { once: true }),
+  );
+}
+
 export function parseDescriptor(raw: string): DesktopControlDescriptor {
   let parsed: Partial<DesktopControlDescriptor>;
   try {
@@ -207,4 +295,46 @@ async function readSecureDescriptor(path: string): Promise<string> {
     throw new Error("桌面端控制信息权限不是 0600");
   }
   return raw;
+}
+
+async function readEventCheckpoint(path: string): Promise<DesktopEventCheckpoint | undefined> {
+  try {
+    const [raw, info] = await Promise.all([readFile(path, "utf-8"), stat(path)]);
+    if (process.platform !== "win32" && (info.mode & 0o077) !== 0) {
+      throw new Error(`Desktop event checkpoint permissions must be 0600: ${path}`);
+    }
+    const parsed = JSON.parse(raw) as Partial<DesktopEventCheckpoint>;
+    if (
+      parsed.version !== 1 ||
+      typeof parsed.streamId !== "string" ||
+      !/^[a-f0-9]{32}$/.test(parsed.streamId) ||
+      !Number.isSafeInteger(parsed.cursor) ||
+      (parsed.cursor ?? -1) < 0
+    ) {
+      throw new Error(`Invalid Desktop event checkpoint: ${path}`);
+    }
+    return parsed as DesktopEventCheckpoint;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
+  }
+}
+
+async function writeEventCheckpoint(
+  path: string,
+  checkpoint: DesktopEventCheckpoint,
+): Promise<void> {
+  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+  const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporary, `${JSON.stringify(checkpoint)}\n`, {
+      encoding: "utf-8",
+      mode: 0o600,
+    });
+    await rename(temporary, path);
+    await chmod(path, 0o600).catch(() => undefined);
+  } catch (error) {
+    await rm(temporary, { force: true }).catch(() => undefined);
+    throw error;
+  }
 }

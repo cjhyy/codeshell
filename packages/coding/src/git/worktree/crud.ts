@@ -1,6 +1,16 @@
-import { existsSync, lstatSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  symlinkSync,
+} from "node:fs";
 import { rm } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import {
   buildSandboxEnv,
   defaultShellBinary,
@@ -8,7 +18,7 @@ import {
   safeSpawnShell,
   type SandboxBackend,
 } from "@cjhyy/code-shell-core";
-import { execGit, execGitSync, gitErrorMessage } from "./git-exec.js";
+import { execGit, execGitSync, gitErrorMessage, gitOutput } from "./git-exec.js";
 import { assertBranchNotCheckedOut, currentBranch, findGitRoot } from "./query.js";
 import { applyPrefix, isManagedWorktreeBranch, validateWorktreeSlug } from "./slug.js";
 
@@ -18,6 +28,12 @@ export interface WorktreeSession {
   worktreeName: string;
   worktreeBranch: string;
   originalBranch?: string;
+  /** Immutable commit used to create the branch. Safe for later ahead checks. */
+  baseRef?: string;
+  /** User-facing ref selector (`head`, `fresh`, or an explicit ref). */
+  baseRefLabel?: string;
+  /** Gitignored files copied from `.worktreeinclude` / DriveAgent include patterns. */
+  includedFiles?: string[];
   sessionId: string;
   createdAt: number;
 }
@@ -33,22 +49,39 @@ export interface PlatformScripts {
 export interface CreateWorktreeOptions {
   prefix?: string;
   signal?: AbortSignal;
+  /** `head`, `fresh` (local origin/HEAD), or an explicit git ref. */
+  baseRef?: string;
+  /** Extra gitignore-style patterns, combined with a root `.worktreeinclude`. */
+  include?: string[];
 }
 
 function throwIfAborted(signal?: AbortSignal): void {
   signal?.throwIfAborted();
 }
 
-/** Best-effort rollback for an aborted `git worktree add`. */
+/**
+ * Best-effort rollback for an aborted `git worktree add`.
+ *
+ * `allowRecursiveDelete` gates the `rm -rf` fallback. It must stay `false`
+ * whenever the worktree path already existed before this call: a `git worktree
+ * add` that fails with "already exists" never registered the path, so the
+ * fallback would recursively delete a directory (and any uncommitted work in
+ * it) that this call did not create. Only genuine partial-creation states —
+ * where `worktree add` succeeded and a later step failed — may fall back to a
+ * recursive delete.
+ */
 export async function cleanupAbortedWorktree(
   gitRoot: string,
   worktreePath: string,
   branchName: string,
+  allowRecursiveDelete = true,
 ): Promise<void> {
   try {
     await execGit(gitRoot, ["worktree", "remove", worktreePath, "--force"], 30_000);
   } catch {
-    await rm(worktreePath, { recursive: true, force: true }).catch(() => {});
+    if (allowRecursiveDelete) {
+      await rm(worktreePath, { recursive: true, force: true }).catch(() => {});
+    }
     await execGit(gitRoot, ["worktree", "prune"], 10_000).catch(() => {});
   }
   await execGit(gitRoot, ["branch", "-D", branchName], 10_000).catch(() => {});
@@ -91,9 +124,23 @@ export async function createWorktree(
   const branchName = applyPrefix(opts.prefix, slug, sessionId);
   const worktreePath = resolve(gitRoot, "..", `.worktrees/${slug}-${sessionId.slice(0, 8)}`);
   await assertBranchNotCheckedOut(gitRoot, branchName);
+  if (await gitRefExists(gitRoot, `refs/heads/${branchName}`)) {
+    throw new Error(`branch ${branchName} already exists`);
+  }
+  // If a directory already sits at the worktree path, `git worktree add` will
+  // fail without registering it. Remember that so rollback never rm -rf's a
+  // pre-existing directory (and any uncommitted work in it) we did not create.
+  const worktreePathPreexisted = existsSync(worktreePath);
   throwIfAborted(opts.signal);
 
   const originalBranch = await currentBranch(gitRoot);
+  throwIfAborted(opts.signal);
+  const resolvedBase = await resolveWorktreeBase(
+    gitRoot,
+    opts.baseRef,
+    originalBranch,
+    opts.signal,
+  );
   throwIfAborted(opts.signal);
 
   // The argv form keeps branchName/worktreePath as literal positional
@@ -101,7 +148,7 @@ export async function createWorktree(
   try {
     await execGit(
       gitRoot,
-      ["worktree", "add", "-b", branchName, worktreePath],
+      ["worktree", "add", "-b", branchName, worktreePath, resolvedBase.commit],
       30_000,
       opts.signal,
     );
@@ -110,22 +157,178 @@ export async function createWorktree(
     // Symlink large directories to avoid disk bloat.
     symlinkLargeDirectories(gitRoot, worktreePath);
     throwIfAborted(opts.signal);
+
+    const includedFiles = copyWorktreeIncludes(gitRoot, worktreePath, opts.include);
+    throwIfAborted(opts.signal);
+
+    return {
+      originalCwd: cwd,
+      worktreePath,
+      worktreeName: slug,
+      worktreeBranch: branchName,
+      originalBranch,
+      baseRef: resolvedBase.commit,
+      baseRefLabel: resolvedBase.label,
+      ...(includedFiles.length > 0 ? { includedFiles } : {}),
+      sessionId,
+      createdAt: Date.now(),
+    };
   } catch (error) {
-    if (opts.signal?.aborted) {
-      await cleanupAbortedWorktree(gitRoot, worktreePath, branchName);
-    }
+    // A failed include copy is just as incomplete as an aborted checkout. Do
+    // not leave a half-configured worktree/branch behind for an agent to use.
+    // But never recursively delete a directory that predated this call: if the
+    // path already existed, `git worktree add` failed without registering it.
+    await cleanupAbortedWorktree(gitRoot, worktreePath, branchName, !worktreePathPreexisted);
     throw error;
   }
+}
 
-  return {
-    originalCwd: cwd,
-    worktreePath,
-    worktreeName: slug,
-    worktreeBranch: branchName,
-    originalBranch,
-    sessionId,
-    createdAt: Date.now(),
-  };
+interface ResolvedWorktreeBase {
+  label: string;
+  commit: string;
+}
+
+/** Resolve a stable commit before creating the branch. `fresh` intentionally
+ * uses the locally-known remote default ref and never performs implicit
+ * network I/O; callers that need the newest remote state should fetch first. */
+async function resolveWorktreeBase(
+  gitRoot: string,
+  requested: string | undefined,
+  originalBranch: string | undefined,
+  signal?: AbortSignal,
+): Promise<ResolvedWorktreeBase> {
+  const selector = requested?.trim() || "head";
+  let label = selector;
+  if (selector.toLowerCase() === "head") {
+    label = "HEAD";
+  } else if (selector.toLowerCase() === "fresh") {
+    const remoteHead = (
+      await gitOutput(gitRoot, ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"])
+    )?.trim();
+    const originalRemote = originalBranch ? `origin/${originalBranch}` : undefined;
+    label =
+      remoteHead ||
+      (originalRemote && (await gitRefExists(gitRoot, originalRemote)) ? originalRemote : "HEAD");
+  }
+  signal?.throwIfAborted();
+  const commit = (
+    await execGit(gitRoot, ["rev-parse", "--verify", `${label}^{commit}`], 10_000, signal)
+  ).trim();
+  if (!commit) throw new Error(`Unable to resolve worktree base ref: ${selector}`);
+  return { label: selector.toLowerCase() === "fresh" ? `${selector} (${label})` : label, commit };
+}
+
+async function gitRefExists(gitRoot: string, ref: string): Promise<boolean> {
+  return !!(await gitOutput(gitRoot, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]));
+}
+
+/** Copy gitignored configuration selected by `.worktreeinclude` and explicit
+ * patterns. Only regular files reported by `git ls-files --ignored` are copied,
+ * so patterns cannot escape the repository or overwrite tracked checkout data. */
+export function copyWorktreeIncludes(
+  sourceRoot: string,
+  worktreePath: string,
+  explicitPatterns: readonly string[] | undefined,
+): string[] {
+  const includeFile = join(sourceRoot, ".worktreeinclude");
+  const filePatterns = existsSync(includeFile)
+    ? parseWorktreeInclude(readFileSync(includeFile, "utf8"))
+    : [];
+  const patterns = [...filePatterns, ...(explicitPatterns ?? [])]
+    .map((pattern) => pattern.trim())
+    .filter(Boolean);
+  if (patterns.length === 0) return [];
+  for (const pattern of patterns) validateIncludePattern(pattern);
+
+  const ignored = execGitSync(
+    sourceRoot,
+    ["ls-files", "--others", "--ignored", "--exclude-standard", "-z"],
+    15_000,
+  )
+    .split("\0")
+    .filter(Boolean)
+    .map(normalizeGitPath);
+  const included: string[] = [];
+  for (const file of ignored) {
+    if (!matchesIncludePatterns(file, patterns)) continue;
+    const source = resolve(sourceRoot, file);
+    const target = resolve(worktreePath, file);
+    if (!isContainedPath(sourceRoot, source) || !isContainedPath(worktreePath, target)) continue;
+    const info = lstatSync(source);
+    if (!info.isFile()) continue;
+    mkdirSync(dirname(target), { recursive: true });
+    copyFileSync(source, target);
+    chmodSync(target, statSync(source).mode);
+    included.push(file);
+  }
+  return included;
+}
+
+function parseWorktreeInclude(raw: string): string[] {
+  return raw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("#"));
+}
+
+function validateIncludePattern(raw: string): void {
+  const pattern = raw.startsWith("!") ? raw.slice(1) : raw;
+  if (!pattern || isAbsolute(pattern) || pattern.split(/[\\/]+/).includes("..")) {
+    throw new Error(`Invalid worktree include pattern: ${raw}`);
+  }
+}
+
+/** Ordered gitignore-style subset: `*`, `?`, `**`, leading `/`, directory
+ * suffixes, basename-only matches, and `!` negation. */
+function matchesIncludePatterns(path: string, patterns: readonly string[]): boolean {
+  let included = false;
+  for (const raw of patterns) {
+    const negated = raw.startsWith("!");
+    const pattern = normalizeGitPath(negated ? raw.slice(1) : raw);
+    if (globMatches(path, pattern)) included = !negated;
+  }
+  return included;
+}
+
+function globMatches(path: string, rawPattern: string): boolean {
+  const anchored = rawPattern.startsWith("/");
+  let pattern = anchored ? rawPattern.slice(1) : rawPattern;
+  const directory = pattern.endsWith("/");
+  if (directory) pattern += "**";
+  const hasSlash = pattern.includes("/");
+  const body = globToRegExp(pattern);
+  const prefix = anchored || hasSlash ? "^" : "(?:^|/)";
+  const suffix = directory ? "(?:/.*)?$" : "$";
+  return new RegExp(`${prefix}${body}${suffix}`).test(path);
+}
+
+function globToRegExp(pattern: string): string {
+  let out = "";
+  for (let index = 0; index < pattern.length; index += 1) {
+    const char = pattern[index]!;
+    if (char === "*") {
+      if (pattern[index + 1] === "*") {
+        while (pattern[index + 1] === "*") index += 1;
+        out += ".*";
+      } else {
+        out += "[^/]*";
+      }
+    } else if (char === "?") {
+      out += "[^/]";
+    } else {
+      out += char.replace(/[|\\{}()[\]^$+?.]/g, "\\$&");
+    }
+  }
+  return out;
+}
+
+function normalizeGitPath(path: string): string {
+  return path.replaceAll("\\", "/").replace(/^\.\//, "");
+}
+
+function isContainedPath(root: string, candidate: string): boolean {
+  const rel = relative(root, candidate);
+  return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
 }
 
 export interface WorktreeSetupResult {
@@ -197,6 +400,47 @@ export interface RemoveWorktreeResult {
 
 export interface RemoveWorktreeOptions {
   prefix?: string;
+}
+
+export interface WorktreeChangeState {
+  uncommitted: boolean;
+  commitsAhead: number;
+  hasChanges: boolean;
+}
+
+/** Inspect both working-tree changes and commits made since the immutable base
+ * commit captured at creation time. */
+export function inspectWorktreeChanges(
+  worktreePath: string,
+  baseRef?: string,
+): WorktreeChangeState {
+  const uncommitted =
+    execGitSync(worktreePath, ["status", "--porcelain"], 10_000).trim().length > 0;
+  let commitsAhead = 0;
+  if (baseRef) {
+    const raw = execGitSync(
+      worktreePath,
+      ["rev-list", "--count", `${baseRef}..HEAD`],
+      10_000,
+    ).trim();
+    commitsAhead = Number.parseInt(raw, 10) || 0;
+  }
+  return { uncommitted, commitsAhead, hasChanges: uncommitted || commitsAhead > 0 };
+}
+
+/** Prevent pruning/removal while an external agent owns the worktree. */
+export function lockWorktree(worktreePath: string, reason: string): void {
+  execGitSync(worktreePath, ["worktree", "lock", "--reason", reason, worktreePath], 10_000);
+}
+
+/** Unlock is idempotent for lifecycle cleanup/keep paths. */
+export function unlockWorktree(worktreePath: string): void {
+  const entries = execGitSync(worktreePath, ["worktree", "list", "--porcelain"], 10_000);
+  const block = entries
+    .split(/\r?\n\r?\n/)
+    .find((entry) => entry.split(/\r?\n/)[0] === `worktree ${worktreePath}`);
+  if (!block || !/^locked(?: |$)/m.test(block)) return;
+  execGitSync(worktreePath, ["worktree", "unlock", worktreePath], 10_000);
 }
 
 /**

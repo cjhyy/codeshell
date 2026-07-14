@@ -44,7 +44,11 @@ function AssistantMessageViewImpl({ message, cwd }: Props) {
   };
 
   return (
-    <div className="group min-w-0 max-w-full px-4 py-2 text-sm">
+    <div
+      className="group min-w-0 max-w-full px-4 py-2 text-sm"
+      data-message-kind="assistant"
+      data-message-state={message.done ? "done" : "streaming"}
+    >
       <StreamingMarkdown text={message.text} done={message.done} cwd={cwd} />
       {message.done && (
         <div className="mt-1 flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
@@ -54,11 +58,7 @@ function AssistantMessageViewImpl({ message, cwd }: Props) {
             // duration, which lives on the turn-process card instead.
             const when = formatMessageTime(message.doneAt);
             if (!when) return null;
-            return (
-              <span className="text-[11px] tabular-nums text-muted-foreground">
-                {when}
-              </span>
-            );
+            return <span className="text-[11px] tabular-nums text-muted-foreground">{when}</span>;
           })()}
           <Button
             type="button"

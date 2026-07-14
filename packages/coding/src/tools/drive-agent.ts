@@ -18,8 +18,21 @@ import {
   type ExternalAgentSessionBinding,
   type ExternalAgentSessionRecord,
 } from "../cc-orchestrator/external-agent-session-store.js";
+import {
+  branchExists,
+  createWorktree,
+  findGitRoot,
+  inspectWorktreeChanges,
+  lockWorktree,
+  removeWorktree,
+  unlockWorktree,
+  type WorktreeSession,
+} from "../git/worktree.js";
+import { codingToolService } from "../capability-runtime.js";
 
 export type DriveCli = "claude" | "codex";
+export type DriveIsolation = "current" | "worktree" | "none";
+export type DriveWorktreeCleanup = "auto" | "keep" | "detach" | "discard";
 
 export const DRIVE_AGENT_FOREGROUND_HANDOFF_MS = 110_000;
 export const DRIVE_AGENT_TOOL_TIMEOUT_MS = 1_800_000;
@@ -87,6 +100,29 @@ export const driveAgentToolDef: ToolDefinition = {
           "Optional model override, passed through to `claude --model` / `codex exec --model`. Omit to use the CLI default; only pass when the user explicitly requests a model.",
       },
       cwd: { type: "string", description: "Working directory the run operates in." },
+      isolation: {
+        type: "string",
+        enum: ["current", "worktree", "none"],
+        description:
+          "Workspace isolation. 'worktree' creates a unique per-run git worktree; 'current' uses the CodeShell session workspace; 'none' uses cwd directly. By default the first run uses cwd directly, while a parallel writable run targeting an already-busy workspace is automatically isolated; resumes reuse their bound workspace.",
+      },
+      baseRef: {
+        type: "string",
+        description:
+          "Base for a new isolated worktree: 'head' (default), 'fresh' (locally-known origin/HEAD), or an explicit branch/ref/commit.",
+      },
+      include: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "Extra gitignore-style patterns to copy into a new worktree. Combined with repository .worktreeinclude; intended for ignored env/config files.",
+      },
+      cleanup: {
+        type: "string",
+        enum: ["auto", "keep", "detach", "discard"],
+        description:
+          "New worktree completion policy. auto (default) discards a clean/no-commit worktree and keeps one with changes; keep preserves directory+branch; detach removes the directory only when uncommitted changes are absent and preserves the branch; discard always deletes directory+branch.",
+      },
       effectiveWorkspaceCwd: {
         type: "string",
         description:
@@ -110,7 +146,7 @@ export const driveAgentToolDef: ToolDefinition = {
           "Defaults to TRUE: run in the background and notify you on completion (right for long tasks). Pass false to run in the foreground and get the result inline (only for quick tasks).",
       },
     },
-    required: ["prompt", "cwd"],
+    required: ["prompt"],
   },
 };
 
@@ -129,6 +165,17 @@ type SessionStore = {
   get(cli: DriveCli, sessionId: string): ExternalAgentSessionBinding | undefined;
   record(binding: ExternalAgentSessionRecord): void;
 };
+
+interface ManagedDriveWorktree {
+  session: WorktreeSession;
+  cleanup: DriveWorktreeCleanup;
+  branchPrefix?: string;
+}
+
+interface WorktreeLifecycleResult {
+  action: "kept" | "detached" | "discarded";
+  note: string;
+}
 
 export interface DriveAgentToolOptions {
   foregroundHandoffMs?: number;
@@ -156,6 +203,167 @@ const defaultRunner: Runner = (opts) => {
 
 function newDriveJobId(): string {
   return `cc-${process.hrtime.bigint().toString(36)}`;
+}
+
+function newDriveRunSeed(): string {
+  return process.hrtime.bigint().toString(36).padStart(8, "0");
+}
+
+function driveIsolationArg(value: unknown): DriveIsolation | undefined {
+  return value === "current" || value === "worktree" || value === "none" ? value : undefined;
+}
+
+function driveCleanupArg(value: unknown): DriveWorktreeCleanup {
+  return value === "keep" || value === "detach" || value === "discard" || value === "auto"
+    ? value
+    : "auto";
+}
+
+function driveIncludeArg(value: unknown): { patterns?: string[]; error?: string } {
+  if (value === undefined) return {};
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || !item.trim())) {
+    return { error: "include must be an array of non-empty gitignore-style patterns" };
+  }
+  return { patterns: value.map((item) => String(item).trim()) };
+}
+
+async function resolveDriveWorkspaceRoot(cwd: string): Promise<string> {
+  try {
+    return await findGitRoot(cwd);
+  } catch {
+    return normalizeCwdPath(cwd);
+  }
+}
+
+function hasRunningDriveWriter(workspaceCwd: string, workspaceRoot: string): boolean {
+  if (backgroundJobRegistry.listRunningByCwd(workspaceCwd).some(isDriveAgentJob)) return true;
+  return backgroundJobRegistry
+    .list()
+    .some(
+      (job) =>
+        (job.status === "running" || job.status === "cancelling") &&
+        isDriveAgentJob(job) &&
+        job.workspaceRoot === workspaceRoot,
+    );
+}
+
+async function prepareDriveWorktree(params: {
+  cwd: string;
+  cli: DriveCli;
+  baseRef?: string;
+  include?: string[];
+  cleanup: DriveWorktreeCleanup;
+  ctx?: ToolContext;
+  signal?: AbortSignal;
+}): Promise<ManagedDriveWorktree> {
+  const gitRoot = await findGitRoot(params.cwd, params.signal);
+  const branchPrefix = codingToolService(params.ctx)?.readWorktreeBranchPrefix(gitRoot);
+  const session = await createWorktree(gitRoot, `drive-${params.cli}`, newDriveRunSeed(), {
+    prefix: branchPrefix,
+    signal: params.signal,
+    baseRef: params.baseRef,
+    include: params.include,
+  });
+  try {
+    lockWorktree(session.worktreePath, `CodeShell DriveAgent ${params.cli} run`);
+  } catch (error) {
+    removeWorktree(session.worktreePath, true, { prefix: branchPrefix });
+    throw error;
+  }
+  return { session, cleanup: params.cleanup, branchPrefix };
+}
+
+function finalizeDriveWorktree(managed: ManagedDriveWorktree): WorktreeLifecycleResult {
+  const { session } = managed;
+  let state;
+  try {
+    state = inspectWorktreeChanges(session.worktreePath, session.baseRef);
+  } catch (error) {
+    try {
+      unlockWorktree(session.worktreePath);
+    } catch {
+      // Preservation is still safer than deleting a worktree we could not inspect.
+    }
+    return {
+      action: "kept",
+      note:
+        `Worktree kept at ${session.worktreePath} (branch ${session.worktreeBranch}) because ` +
+        `change inspection failed: ${error instanceof Error ? error.message : String(error)}.`,
+    };
+  }
+
+  let action = managed.cleanup;
+  let safetyNote = "";
+  if (action === "auto") action = state.hasChanges ? "keep" : "discard";
+  if (action === "detach" && state.uncommitted) {
+    action = "keep";
+    safetyNote = " Requested detach was changed to keep because uncommitted changes are present.";
+  }
+
+  unlockWorktree(session.worktreePath);
+  const summary = `uncommitted=${state.uncommitted}, commitsAhead=${state.commitsAhead}`;
+  if (action === "keep") {
+    return {
+      action: "kept",
+      note:
+        `Worktree kept at ${session.worktreePath} (branch ${session.worktreeBranch}; ${summary}).` +
+        `${safetyNote} Resume the external session in this path, or clean it later with ` +
+        `DriveAgentJobs(action:"cleanup", cleanup:"detach"|"discard").`,
+    };
+  }
+  if (action === "detach") {
+    removeWorktree(session.worktreePath, false);
+    return {
+      action: "detached",
+      note:
+        `Worktree directory removed; branch ${session.worktreeBranch} preserved (${summary}). ` +
+        `Review/merge the branch or recreate a worktree before resuming this external session.`,
+    };
+  }
+
+  const removal = removeWorktree(session.worktreePath, true, { prefix: managed.branchPrefix });
+  if (removal.branchDeleted === false) {
+    return {
+      action: "detached",
+      note:
+        `Worktree directory removed, but branch ${removal.branch ?? session.worktreeBranch} was ` +
+        `preserved because deletion failed: ${removal.branchError ?? "unknown error"}.`,
+    };
+  }
+  return {
+    action: "discarded",
+    note: `Clean worktree and branch ${session.worktreeBranch} removed (${summary}).`,
+  };
+}
+
+function worktreeStartNote(managed: ManagedDriveWorktree | undefined): string | undefined {
+  if (!managed) return undefined;
+  const { session } = managed;
+  return (
+    `Isolation worktree: ${session.worktreePath}\n` +
+    `Branch: ${session.worktreeBranch}\n` +
+    `Base: ${session.baseRefLabel ?? session.baseRef ?? "HEAD"}; copied ignored files: ${session.includedFiles?.length ?? 0}; cleanup: ${managed.cleanup}`
+  );
+}
+
+function appendLifecycleNote(text: string, lifecycle?: WorktreeLifecycleResult): string {
+  return lifecycle ? `${text}${text ? "\n\n" : ""}[worktree lifecycle] ${lifecycle.note}` : text;
+}
+
+function safeFinalizeDriveWorktree(
+  managed: ManagedDriveWorktree | undefined,
+): WorktreeLifecycleResult | undefined {
+  if (!managed) return undefined;
+  try {
+    return finalizeDriveWorktree(managed);
+  } catch (error) {
+    return {
+      action: "kept",
+      note:
+        `Worktree cleanup failed; inspect ${managed.session.worktreePath} and branch ` +
+        `${managed.session.worktreeBranch} manually: ${error instanceof Error ? error.message : String(error)}.`,
+    };
+  }
 }
 
 function summarizePrompt(prompt: string, max = 120): string {
@@ -210,6 +418,9 @@ function formatDriveJobListLine(job: BackgroundJobEntry): string {
     `cli=${cli}`,
     `session=${job.sessionId}`,
     `launchCwd=${launchCwd}`,
+    ...(job.worktreePath ? [`worktree=${job.worktreePath}`] : []),
+    ...(job.worktreeBranch ? [`branch=${job.worktreeBranch}`] : []),
+    ...(job.worktreeLifecycle ? [`lifecycle=${job.worktreeLifecycle}`] : []),
     `startedAt=${new Date(job.startedAt).toISOString()}`,
     `duration=${jobDurationSeconds(job)}`,
     `changedFiles=${changedFilesSummary(job)}`,
@@ -305,11 +516,48 @@ function recordSuccessfulSession(
   cli: DriveCli,
   cwd: string,
   result: AgentRunResult,
+  metadata: {
+    codeShellSessionId?: string;
+    workspaceRoot: string;
+    isolation: DriveIsolation;
+    worktree?: ManagedDriveWorktree;
+    lifecycle?: WorktreeLifecycleResult;
+  },
   includeErroredSession = false,
 ): void {
   if ((!includeErroredSession && result.isError) || !result.sessionId) return;
+  // When the isolation worktree directory was removed during finalization the
+  // recorded cwd (the worktree path) no longer exists, so a later resume would
+  // be rejected even though the external CLI session — keyed by sessionId, not
+  // cwd — is still resumable. Rebind such runs to the workspace root, which
+  // still exists, and drop the dead worktree path. `keep` runs keep the
+  // worktree; `detach` keeps the branch for recreation but its directory is
+  // gone, so bind cwd to the workspace root while retaining the branch.
+  const dirRemoved = metadata.lifecycle?.action === "discarded" || metadata.lifecycle?.action === "detached";
+  const branchPreserved = metadata.lifecycle?.action === "detached";
+  const boundCwd = dirRemoved ? metadata.workspaceRoot : cwd;
+  const boundIsolation: DriveIsolation =
+    dirRemoved && metadata.isolation === "worktree" ? "current" : metadata.isolation;
+  const worktreeBinding =
+    metadata.worktree && !dirRemoved
+      ? {
+          worktreePath: metadata.worktree.session.worktreePath,
+          worktreeBranch: metadata.worktree.session.worktreeBranch,
+          worktreeBaseRef: metadata.worktree.session.baseRef,
+        }
+      : metadata.worktree && branchPreserved
+        ? { worktreeBranch: metadata.worktree.session.worktreeBranch }
+        : {};
   try {
-    store.record({ cli, sessionId: result.sessionId, cwd });
+    store.record({
+      cli,
+      sessionId: result.sessionId,
+      ...(metadata.codeShellSessionId ? { codeShellSessionId: metadata.codeShellSessionId } : {}),
+      cwd: boundCwd,
+      workspaceRoot: metadata.workspaceRoot,
+      isolation: boundIsolation,
+      ...worktreeBinding,
+    });
   } catch (err) {
     logger.warn("drive_agent.session_binding_record_failed", {
       cat: "cc",
@@ -344,6 +592,9 @@ function attachDriveCompletion(params: {
   label: string;
   cli: DriveCli;
   cwd: string;
+  workspaceRoot: string;
+  isolation: DriveIsolation;
+  worktree?: ManagedDriveWorktree;
   run: Promise<AgentRunResult>;
   sessionStore: SessionStore;
   readChangedFiles: typeof readExternalChangedFiles;
@@ -356,6 +607,9 @@ function attachDriveCompletion(params: {
     label,
     cli,
     cwd,
+    workspaceRoot,
+    isolation,
+    worktree,
     run,
     sessionStore,
     readChangedFiles,
@@ -365,15 +619,30 @@ function attachDriveCompletion(params: {
   void run
     .then((r) => {
       const jobStatus = backgroundJobRegistry.get(jobId)?.status;
-      if (jobStatus !== "running" && jobStatus !== "cancelling") return;
+      if (jobStatus !== "running" && jobStatus !== "cancelling") {
+        safeFinalizeDriveWorktree(worktree);
+        return;
+      }
       const cancelling = jobStatus === "cancelling";
-      recordSuccessfulSession(sessionStore, cli, cwd, r, cancelling);
       // Attribute external changes BEFORE publishing completion. Previously the
       // notification event was emitted first and carried no files; changedFiles
       // only reached the background-work registry/panel, so the chat turn card
       // could never count DriveAgent edits.
       const rawChangedFiles = r.sessionId ? readChangedFiles(cli, cwd, r.sessionId) : [];
       const changedFiles = normalizeChangedFiles(cwd, rawChangedFiles);
+      const lifecycle = safeFinalizeDriveWorktree(worktree);
+      const finalText = appendLifecycleNote(r.finalText, lifecycle);
+      if (lifecycle) {
+        backgroundJobRegistry.recordWorktreeLifecycle(jobId, lifecycle.action);
+      }
+      recordSuccessfulSession(
+        sessionStore,
+        cli,
+        cwd,
+        r,
+        { codeShellSessionId: sessionId, workspaceRoot, isolation, worktree, lifecycle },
+        cancelling,
+      );
       if (changedFiles.length > 0) {
         recordExternalFileChanges?.({
           jobId,
@@ -414,7 +683,7 @@ function attachDriveCompletion(params: {
               description: label,
               status: "failed",
               workKind: "cc",
-              error: r.finalText || "(no output)",
+              error: finalText || "(no output)",
               ccSessionId: r.sessionId || undefined,
               ...(changedFiles.length ? { changedFiles, cwd } : {}),
               ...(originClientMessageId ? { originClientMessageId } : {}),
@@ -425,7 +694,7 @@ function attachDriveCompletion(params: {
               description: label,
               status: "completed",
               workKind: "cc",
-              finalText: r.finalText,
+              finalText,
               ccSessionId: r.sessionId || undefined,
               ...(changedFiles.length ? { changedFiles, cwd } : {}),
               ...(originClientMessageId ? { originClientMessageId } : {}),
@@ -437,14 +706,22 @@ function attachDriveCompletion(params: {
       // session id + changed files.
       backgroundJobRegistry.finish(jobId, {
         status: r.isError ? "failed" : "completed",
-        finalText: r.finalText || undefined,
+        finalText: finalText || undefined,
         ccSessionId: r.sessionId || undefined,
         ...(changedFiles.length ? { changedFiles } : {}),
+        ...(lifecycle ? { worktreeLifecycle: lifecycle.action } : {}),
       });
     })
     .catch((err) => {
-      if (backgroundJobRegistry.get(jobId)?.status !== "running") return;
-      const msg = (err as Error)?.message ?? String(err);
+      if (backgroundJobRegistry.get(jobId)?.status !== "running") {
+        safeFinalizeDriveWorktree(worktree);
+        return;
+      }
+      const lifecycle = safeFinalizeDriveWorktree(worktree);
+      const msg = appendLifecycleNote((err as Error)?.message ?? String(err), lifecycle);
+      if (lifecycle) {
+        backgroundJobRegistry.recordWorktreeLifecycle(jobId, lifecycle.action);
+      }
       notificationQueue.enqueue(
         {
           agentId: jobId,
@@ -456,7 +733,11 @@ function attachDriveCompletion(params: {
         },
         sessionId,
       );
-      backgroundJobRegistry.finish(jobId, { status: "failed", finalText: msg });
+      backgroundJobRegistry.finish(jobId, {
+        status: "failed",
+        finalText: msg,
+        ...(lifecycle ? { worktreeLifecycle: lifecycle.action } : {}),
+      });
     });
 }
 
@@ -466,6 +747,9 @@ function trackBackgroundRun(params: {
   cli: DriveCli;
   cwd: string;
   effectiveWorkspaceCwd: string;
+  workspaceRoot: string;
+  isolation: DriveIsolation;
+  worktree?: ManagedDriveWorktree;
   promptSummary: string;
   start: () => Promise<AgentRunResult>;
   abort: () => void;
@@ -482,6 +766,17 @@ function trackBackgroundRun(params: {
     kind: "drive-agent",
     launchCwd: params.cwd,
     effectiveWorkspaceCwd: params.effectiveWorkspaceCwd,
+    workspaceRoot: params.workspaceRoot,
+    isolation: params.isolation,
+    ...(params.worktree
+      ? {
+          worktreePath: params.worktree.session.worktreePath,
+          worktreeBranch: params.worktree.session.worktreeBranch,
+          worktreeBaseRef: params.worktree.session.baseRef,
+          worktreeCleanup: params.worktree.cleanup,
+          worktreeBranchPrefix: params.worktree.branchPrefix,
+        }
+      : {}),
     cli: params.cli,
     promptSummary: params.promptSummary,
     originClientMessageId: params.originClientMessageId,
@@ -534,8 +829,6 @@ export function makeDriveAgentTool(
 ) {
   return async (args: Record<string, unknown>, ctx?: ToolContext): Promise<string> => {
     const prompt = typeof args.prompt === "string" ? args.prompt : "";
-    const rawRequestedCwd = typeof args.cwd === "string" ? args.cwd : process.cwd();
-    const requestedCwd = normalizeCwdPath(rawRequestedCwd);
     if (!prompt) return "Error: prompt is required";
     const cli: DriveCli =
       fixedCli ??
@@ -549,16 +842,69 @@ export function makeDriveAgentTool(
     const resumeSessionId =
       typeof args.resumeSessionId === "string" ? args.resumeSessionId : undefined;
     const model = typeof args.model === "string" && args.model.trim() ? args.model : undefined;
+    const permissionMode: PermMode =
+      args.permissionMode === "default" ||
+      args.permissionMode === "acceptEdits" ||
+      args.permissionMode === "bypassPermissions"
+        ? args.permissionMode
+        : "bypassPermissions";
+    const isWritableRun = permissionMode !== "default";
+    const background = args.background !== false;
+    const cliName = cli === "codex" ? "Codex" : "Claude Code";
+    if (background && !isValidSessionId(ctx?.sessionId)) {
+      return `Error: cannot start a background ${cliName} job without a session — its result notification would be dropped. Retry with background:false, or ensure the tool runs inside a session.`;
+    }
+    const callerSignal = ctx?.signal ?? argSignal(args);
+    const rawRequestedCwd =
+      typeof args.cwd === "string" && args.cwd.trim()
+        ? args.cwd
+        : typeof ctx?.cwd === "string" && ctx.cwd
+          ? ctx.cwd
+          : process.cwd();
+    const requestedCwd = normalizeCwdPath(rawRequestedCwd);
+    const requestedWorkspaceRoot = await resolveDriveWorkspaceRoot(requestedCwd);
+    const requestedIsolation = driveIsolationArg(args.isolation);
+    const hasParallelWriter =
+      !resumeSessionId &&
+      isWritableRun &&
+      hasRunningDriveWriter(requestedCwd, requestedWorkspaceRoot);
+    let isolation: DriveIsolation = requestedIsolation ?? (hasParallelWriter ? "worktree" : "none");
+    let cwd =
+      isolation === "current" && typeof ctx?.cwd === "string" && ctx.cwd
+        ? normalizeCwdPath(ctx.cwd)
+        : requestedCwd;
+    let workspaceRoot =
+      cwd === requestedCwd ? requestedWorkspaceRoot : await resolveDriveWorkspaceRoot(cwd);
+    let managedWorktree: ManagedDriveWorktree | undefined;
+    const includeArg = driveIncludeArg(args.include);
+    if (includeArg.error) return `Error: ${includeArg.error}`;
+    const cleanup: DriveWorktreeCleanup =
+      args.cleanup === "auto" ||
+      args.cleanup === "keep" ||
+      args.cleanup === "detach" ||
+      args.cleanup === "discard"
+        ? args.cleanup
+        : resumeSessionId
+          ? "keep"
+          : driveCleanupArg(undefined);
     const sessionStore = options.sessionStore ?? externalAgentSessionStore;
-    let cwd = requestedCwd;
     let resumeNote = "";
     if (resumeSessionId) {
       const binding = sessionStore.get(cli, resumeSessionId);
       if (binding) {
         const storedCwd = normalizeCwdPath(binding.cwd);
         if (!isExistingDirectory(storedCwd)) {
-          return `Error: cannot resume ${cli} session ${resumeSessionId}: stored cwd no longer exists or is not a directory: ${storedCwd}`;
+          const branchStillExists =
+            !!binding.worktreeBranch &&
+            !!binding.workspaceRoot &&
+            isExistingDirectory(binding.workspaceRoot) &&
+            (await branchExists(binding.workspaceRoot, binding.worktreeBranch, callerSignal));
+          return branchStillExists
+            ? `Error: cannot resume ${cli} session ${resumeSessionId}: stored cwd no longer exists or is not a directory: ${storedCwd}. Branch ${binding.worktreeBranch} is preserved; recreate the worktree from ${binding.workspaceRoot} before resuming.`
+            : `Error: cannot resume ${cli} session ${resumeSessionId}: stored cwd no longer exists or is not a directory: ${storedCwd}. The bound workspace was deleted${binding.worktreeBranch ? ` and branch ${binding.worktreeBranch} is gone` : ""}; start a new external session.`;
         }
+        isolation = binding.isolation ?? (binding.worktreePath ? "worktree" : "current");
+        workspaceRoot = binding.workspaceRoot ?? storedCwd;
         if (storedCwd !== requestedCwd) {
           cwd = storedCwd;
           resumeNote = `Note: resume session ${resumeSessionId} is bound to stored cwd ${storedCwd}; ignoring requested cwd ${requestedCwd}.`;
@@ -569,11 +915,60 @@ export function makeDriveAgentTool(
             requestedCwd,
             storedCwd,
           });
+        } else {
+          cwd = storedCwd;
         }
+        if (binding.worktreePath && binding.worktreeBranch) {
+          const session: WorktreeSession = {
+            originalCwd: workspaceRoot,
+            worktreePath: normalizeCwdPath(binding.worktreePath),
+            worktreeName: "drive-resume",
+            worktreeBranch: binding.worktreeBranch,
+            baseRef: binding.worktreeBaseRef,
+            sessionId: resumeSessionId,
+            createdAt: binding.createdAt,
+          };
+          try {
+            lockWorktree(session.worktreePath, `CodeShell DriveAgent ${cli} resume`);
+          } catch (error) {
+            return `Error: cannot lock bound worktree ${session.worktreePath} for resume: ${error instanceof Error ? error.message : String(error)}`;
+          }
+          managedWorktree = { session, cleanup };
+        }
+      } else if (requestedIsolation === "worktree") {
+        return `Error: cannot create a new worktree while resuming unbound ${cli} session ${resumeSessionId}; resume requires its original workspace binding.`;
       }
     }
-    const effectiveWorkspaceCwd =
-      typeof args.effectiveWorkspaceCwd === "string" && args.effectiveWorkspaceCwd.trim()
+
+    if (!resumeSessionId && isolation === "worktree") {
+      try {
+        managedWorktree = await prepareDriveWorktree({
+          cwd,
+          cli,
+          baseRef:
+            typeof args.baseRef === "string" && args.baseRef.trim() ? args.baseRef : undefined,
+          include: includeArg.patterns,
+          cleanup,
+          ctx,
+          signal: callerSignal,
+        });
+        cwd = managedWorktree.session.worktreePath;
+        workspaceRoot = managedWorktree.session.originalCwd;
+      } catch (error) {
+        if (requestedIsolation === "worktree") {
+          return `Error: failed to create DriveAgent isolation worktree: ${error instanceof Error ? error.message : String(error)}`;
+        }
+        isolation = "none";
+        cwd = requestedCwd;
+        workspaceRoot = requestedWorkspaceRoot;
+        resumeNote =
+          `Note: parallel worktree isolation was unavailable; continuing in ${requestedCwd}. ` +
+          `${error instanceof Error ? error.message : String(error)}`;
+      }
+    }
+    const effectiveWorkspaceCwd = managedWorktree
+      ? managedWorktree.session.worktreePath
+      : typeof args.effectiveWorkspaceCwd === "string" && args.effectiveWorkspaceCwd.trim()
         ? normalizeCwdPath(args.effectiveWorkspaceCwd)
         : cwd;
     // Default to bypassPermissions: this tool is a fire-one-turn delegation to
@@ -583,24 +978,23 @@ export function makeDriveAgentTool(
     // "DriveClaudeCode 没有联网能力" report). A caller that wants gating passes
     // an explicit mode, which is honored. (For codex, the mode maps to a sandbox
     // tier inside codexAdapter.)
-    const permissionMode: PermMode =
-      args.permissionMode === "default" ||
-      args.permissionMode === "acceptEdits" ||
-      args.permissionMode === "bypassPermissions"
-        ? args.permissionMode
-        : "bypassPermissions";
-    const resolvedAttachmentPaths = resolveAttachmentPaths(args.attachmentPaths, cwd);
-    if (resolvedAttachmentPaths.error) return `Error: ${resolvedAttachmentPaths.error}`;
+    const attachmentSourceCwd = managedWorktree?.session.originalCwd ?? cwd;
+    const resolvedAttachmentPaths = resolveAttachmentPaths(
+      args.attachmentPaths,
+      attachmentSourceCwd,
+    );
+    if (resolvedAttachmentPaths.error) {
+      safeFinalizeDriveWorktree(managedWorktree);
+      return `Error: ${resolvedAttachmentPaths.error}`;
+    }
     const attachmentPaths = resolvedAttachmentPaths.paths;
     const promptWithAttachments = appendAttachmentPrompt(prompt, attachmentPaths);
     const imagePaths =
       cli === "codex"
         ? attachmentPaths.filter((path) => DRIVE_IMAGE_EXTS.has(extname(path).toLowerCase()))
         : [];
-    const cliName = cli === "codex" ? "Codex" : "Claude Code";
     const label = `DriveAgent(${cli}): ${prompt.slice(0, 40)}`;
     const promptSummary = summarizePrompt(prompt);
-    const callerSignal = ctx?.signal ?? argSignal(args);
     const runOptsBase = {
       cli,
       prompt: promptWithAttachments,
@@ -611,19 +1005,12 @@ export function makeDriveAgentTool(
       imagePaths,
     };
     const foregroundHandoffMs = options.foregroundHandoffMs ?? DRIVE_AGENT_FOREGROUND_HANDOFF_MS;
-    const isWritableRun = permissionMode !== "default";
-    // Background by default (these tasks are typically long). Only an explicit
-    // background:false runs in the foreground and returns the result inline.
-    const background = args.background !== false;
     if (background) {
       // Fail loud on a missing sessionId: a background job whose completion
       // notification can't be routed (enqueue drops invalid/empty sessionId)
       // would run to completion and then silently vanish — nobody gets woken
       // with the result. Refuse up front instead of launching disappearing work.
-      const sessionId = ctx?.sessionId;
-      if (typeof sessionId !== "string" || sessionId.length === 0) {
-        return `Error: cannot start a background ${cliName} job without a session — its result notification would be dropped. Retry with background:false, or ensure the tool runs inside a session.`;
-      }
+      const sessionId = ctx!.sessionId!;
       const abortController = makeAbortController(callerSignal, false);
       const tracked = trackBackgroundRun({
         sessionId,
@@ -631,6 +1018,9 @@ export function makeDriveAgentTool(
         cli,
         cwd,
         effectiveWorkspaceCwd,
+        workspaceRoot,
+        isolation,
+        worktree: managedWorktree,
         promptSummary,
         start: () => startRun(runner, { ...runOptsBase, signal: abortController.signal }),
         abort: () => abortController.abort(),
@@ -643,6 +1033,7 @@ export function makeDriveAgentTool(
       return [
         resumeNote,
         `已在后台启动 ${cliName}（jobId ${tracked.jobId}）。完成后会通知你结果，无需轮询。`,
+        worktreeStartNote(managedWorktree),
         tracked.warning,
       ]
         .filter(Boolean)
@@ -650,7 +1041,16 @@ export function makeDriveAgentTool(
     }
     const foregroundAbort = makeAbortController(callerSignal, true);
     const run = startRun(runner, { ...runOptsBase, signal: foregroundAbort.signal });
-    const result = await waitForForegroundOrHandoff(run, foregroundHandoffMs);
+    let result: Awaited<ReturnType<typeof waitForForegroundOrHandoff>>;
+    try {
+      result = await waitForForegroundOrHandoff(run, foregroundHandoffMs);
+    } catch (error) {
+      const lifecycle = safeFinalizeDriveWorktree(managedWorktree);
+      return appendLifecycleNote(
+        `${cliName} 运行出错：${error instanceof Error ? error.message : String(error)}`,
+        lifecycle,
+      );
+    }
     if (result.kind === "handoff" && isValidSessionId(ctx?.sessionId)) {
       const tracked = trackBackgroundRun({
         sessionId: ctx.sessionId,
@@ -658,6 +1058,9 @@ export function makeDriveAgentTool(
         cli,
         cwd,
         effectiveWorkspaceCwd,
+        workspaceRoot,
+        isolation,
+        worktree: managedWorktree,
         promptSummary,
         start: () => run,
         abort: () => foregroundAbort.abort(),
@@ -670,17 +1073,25 @@ export function makeDriveAgentTool(
       return [
         resumeNote,
         `${cliName} foreground run exceeded ${foregroundHandoffMs}ms; moved it to background (jobId ${tracked.jobId}). Completion will notify this session, so do not poll.`,
+        worktreeStartNote(managedWorktree),
         tracked.warning,
       ]
         .filter(Boolean)
         .join("\n");
     }
     const r = result.kind === "completed" ? result.result : await run;
-    recordSuccessfulSession(sessionStore, cli, cwd, r);
+    const lifecycle = safeFinalizeDriveWorktree(managedWorktree);
+    recordSuccessfulSession(sessionStore, cli, cwd, r, {
+      codeShellSessionId: ctx?.sessionId,
+      workspaceRoot,
+      isolation,
+      worktree: managedWorktree,
+      lifecycle,
+    });
     const prefix = resumeNote ? `${resumeNote}\n` : "";
-    if (r.isError)
-      return `${prefix}${cliName} 运行出错（session ${r.sessionId}）：\n${r.finalText}`;
-    return `${prefix}${cliName} 完成（session ${r.sessionId}）：\n${r.finalText}`;
+    const finalText = appendLifecycleNote(r.finalText, lifecycle);
+    if (r.isError) return `${prefix}${cliName} 运行出错（session ${r.sessionId}）：\n${finalText}`;
+    return `${prefix}${cliName} 完成（session ${r.sessionId}）：\n${finalText}`;
   };
 }
 
@@ -689,7 +1100,7 @@ export const driveAgentTool = makeDriveAgentTool();
 export const driveAgentJobsToolDef: ToolDefinition = {
   name: "DriveAgentJobs",
   description:
-    "List, inspect, or cancel background DriveAgent jobs. action:'list' without cwd defaults to " +
+    "List, inspect, cancel, or clean up background DriveAgent jobs. action:'list' without cwd defaults to " +
     "the current CodeShell session, not by cwd; all:true expands that to every session. status " +
     "defaults to running, so use " +
     "status:'all' to include completed, failed, and cancelled retained jobs. Before launching " +
@@ -700,14 +1111,14 @@ export const driveAgentJobsToolDef: ToolDefinition = {
     "available/non-empty finalText result summary, so you usually do not need to inspect every " +
     "completed job. Use " +
     "resultChars to control each result summary (default 800; 0 or less hides results). " +
-    "Use action:'inspect' with jobId for full details, or action:'cancel' with jobId to abort " +
-    "a running DriveAgent external CLI process and deliver a cancellation notification.",
+    "Use action:'inspect' with jobId for full details, action:'cancel' to abort a running process, " +
+    "or action:'cleanup' with cleanup:'detach'/'discard' for a retained isolated worktree.",
   inputSchema: {
     type: "object",
     properties: {
       action: {
         type: "string",
-        enum: ["list", "inspect", "cancel"],
+        enum: ["list", "inspect", "cancel", "cleanup"],
         description: "What to do. Defaults to list.",
       },
       jobId: {
@@ -734,6 +1145,12 @@ export const driveAgentJobsToolDef: ToolDefinition = {
         default: DEFAULT_DRIVE_JOB_RESULT_CHARS,
         description:
           "When listing, maximum characters of finalText shown for each terminal job. Defaults to 800; 0 or a negative number hides results and returns summary-only job entries. Use inspect for the full result.",
+      },
+      cleanup: {
+        type: "string",
+        enum: ["keep", "detach", "discard"],
+        description:
+          "With action cleanup: keep unlocks/preserves; detach removes the directory only when there are no uncommitted changes; discard removes directory and managed branch.",
       },
     },
   },
@@ -799,6 +1216,12 @@ function inspectDriveAgentJob(jobId: string | undefined): string {
     `prompt: ${job.promptSummary || job.description || "(no prompt summary)"}`,
     `description: ${job.description}`,
   ];
+  if (job.isolation) lines.push(`isolation: ${job.isolation}`);
+  if (job.worktreePath) lines.push(`worktreePath: ${job.worktreePath}`);
+  if (job.worktreeBranch) lines.push(`worktreeBranch: ${job.worktreeBranch}`);
+  if (job.worktreeBaseRef) lines.push(`worktreeBaseRef: ${job.worktreeBaseRef}`);
+  if (job.worktreeCleanup) lines.push(`worktreeCleanup: ${job.worktreeCleanup}`);
+  if (job.worktreeLifecycle) lines.push(`worktreeLifecycle: ${job.worktreeLifecycle}`);
   if (job.finishedAt !== undefined)
     lines.push(`finishedAt: ${new Date(job.finishedAt).toISOString()}`);
   if (job.ccSessionId) lines.push(`ccSessionId: ${job.ccSessionId}`);
@@ -844,16 +1267,80 @@ async function cancelDriveAgentJob(jobId: string | undefined): Promise<string> {
   return `DriveAgent job ${jobId} cancelled.`;
 }
 
+function cleanupDriveAgentWorktree(jobId: string | undefined, requested: unknown): string {
+  if (!jobId) return "Error: jobId is required.";
+  const job = backgroundJobRegistry.get(jobId);
+  if (!job || !isDriveAgentJob(job)) return `Error: DriveAgent jobId "${jobId}" not found.`;
+  if (job.status === "running" || job.status === "cancelling") {
+    return `Error: DriveAgent job ${jobId} is still ${job.status}; cancel or wait before cleanup.`;
+  }
+  if (!job.worktreePath || !job.worktreeBranch) {
+    return `Error: DriveAgent job ${jobId} has no managed worktree.`;
+  }
+  const action =
+    requested === "keep" || requested === "detach" || requested === "discard"
+      ? requested
+      : undefined;
+  if (!action) return "Error: cleanup must be keep, detach, or discard.";
+  if (!existsSync(job.worktreePath)) {
+    return `Worktree directory is already absent: ${job.worktreePath} (lifecycle ${job.worktreeLifecycle ?? "unknown"}).`;
+  }
+  const active = backgroundJobRegistry
+    .listRunningByCwd(job.worktreePath)
+    .filter((entry) => entry.jobId !== jobId && isDriveAgentJob(entry));
+  if (active.length > 0) {
+    return `Error: worktree ${job.worktreePath} is in use by running DriveAgent job(s): ${active.map((entry) => entry.jobId).join(", ")}.`;
+  }
+  try {
+    if (action === "keep") {
+      unlockWorktree(job.worktreePath);
+      const note = `Worktree kept at ${job.worktreePath}; branch ${job.worktreeBranch} preserved.`;
+      backgroundJobRegistry.recordWorktreeLifecycle(jobId, "kept", note);
+      return note;
+    }
+    const state = inspectWorktreeChanges(job.worktreePath, job.worktreeBaseRef);
+    if (action === "detach" && state.uncommitted) {
+      return `Error: detach refused because ${job.worktreePath} has uncommitted changes. Use keep or explicit discard.`;
+    }
+    unlockWorktree(job.worktreePath);
+    const removal = removeWorktree(job.worktreePath, action === "discard", {
+      prefix: job.worktreeBranchPrefix,
+    });
+    if (action === "discard" && removal.branchDeleted === false) {
+      const note =
+        `Worktree directory removed; branch ${removal.branch ?? job.worktreeBranch} preserved because ` +
+        `deletion failed: ${removal.branchError ?? "unknown error"}.`;
+      backgroundJobRegistry.recordWorktreeLifecycle(jobId, "cleanup-failed", note);
+      return `Warning: ${note}`;
+    }
+    const lifecycle = action === "discard" ? "discarded" : "detached";
+    const note =
+      action === "discard"
+        ? `Worktree ${job.worktreePath} and branch ${job.worktreeBranch} deleted.`
+        : `Worktree directory ${job.worktreePath} removed; branch ${job.worktreeBranch} preserved.`;
+    backgroundJobRegistry.recordWorktreeLifecycle(jobId, lifecycle, note);
+    return note;
+  } catch (error) {
+    const note = `Cleanup failed for ${job.worktreePath}: ${error instanceof Error ? error.message : String(error)}.`;
+    backgroundJobRegistry.recordWorktreeLifecycle(jobId, "cleanup-failed", note);
+    return `Error: ${note}`;
+  }
+}
+
 export async function driveAgentJobsTool(
   args: Record<string, unknown>,
   ctx?: ToolContext,
 ): Promise<string> {
   const action =
-    args.action === "inspect" || args.action === "cancel" || args.action === "list"
+    args.action === "inspect" ||
+    args.action === "cancel" ||
+    args.action === "cleanup" ||
+    args.action === "list"
       ? args.action
       : "list";
   if (action === "inspect") return inspectDriveAgentJob(jobIdArg(args));
   if (action === "cancel") return await cancelDriveAgentJob(jobIdArg(args));
+  if (action === "cleanup") return cleanupDriveAgentWorktree(jobIdArg(args), args.cleanup);
   return listDriveAgentJobs(args, ctx);
 }
 
@@ -879,13 +1366,17 @@ export const driveClaudeCodeToolDef: ToolDefinition = {
       },
       model: (driveAgentToolDef.inputSchema as any).properties.model,
       cwd: (driveAgentToolDef.inputSchema as any).properties.cwd,
+      isolation: (driveAgentToolDef.inputSchema as any).properties.isolation,
+      baseRef: (driveAgentToolDef.inputSchema as any).properties.baseRef,
+      include: (driveAgentToolDef.inputSchema as any).properties.include,
+      cleanup: (driveAgentToolDef.inputSchema as any).properties.cleanup,
       effectiveWorkspaceCwd: (driveAgentToolDef.inputSchema as any).properties
         .effectiveWorkspaceCwd,
       attachmentPaths: (driveAgentToolDef.inputSchema as any).properties.attachmentPaths,
       permissionMode: (driveAgentToolDef.inputSchema as any).properties.permissionMode,
       background: (driveAgentToolDef.inputSchema as any).properties.background,
     },
-    required: ["prompt", "cwd"],
+    required: ["prompt"],
   },
 };
 

@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { ChannelMessageHandler, OutgoingMessage, WebhookChannelAdapter } from "./channel.js";
-import { dispatchSafely, waitForAbort } from "./lifecycle.js";
+import { waitForAbort } from "./lifecycle.js";
 import { readRequestBody, sendResponse } from "./webhook.js";
 
 export interface WhatsAppAdapterConfig {
@@ -16,7 +16,7 @@ interface WhatsAppWebhookBody {
   entry?: Array<{
     changes?: Array<{
       value?: {
-        messages?: Array<{ from?: string; type?: string; text?: { body?: string } }>;
+        messages?: Array<{ id?: string; from?: string; type?: string; text?: { body?: string } }>;
       };
     }>;
   }>;
@@ -74,14 +74,15 @@ export class WhatsAppAdapter implements WebhookChannelAdapter {
                   target: message.from,
                   senderId: message.from,
                   text: message.text.body,
+                  ...(message.id ? { messageId: message.id } : {}),
                 },
               ]
             : [],
         ),
       ),
     );
+    await Promise.all(messages.map((message) => handler(message)));
     sendResponse(response, 200, "OK");
-    void Promise.all(messages.map((message) => dispatchSafely(handler, message)));
   }
 
   async send(target: string, message: OutgoingMessage): Promise<void> {

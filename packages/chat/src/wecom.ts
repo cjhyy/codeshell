@@ -29,6 +29,9 @@ export class WeComAdapter implements ChannelAdapter {
         target: message.chatid ?? message.from.userid,
         senderId: message.from.userid,
         text: message.text.content,
+        ...((frame as { headers?: { req_id?: string } }).headers?.req_id
+          ? { messageId: (frame as { headers: { req_id: string } }).headers.req_id }
+          : {}),
       });
     };
     this.client.on("message.text", onMessage);

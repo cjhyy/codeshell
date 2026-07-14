@@ -23,6 +23,7 @@ import type { AgentGroup } from "./agentGroup";
 import { describeActivity } from "../topbar/liveActivity";
 import { translate } from "../i18n/translate";
 import { UI_LANGUAGE_STORAGE_KEY, type UILanguage } from "../uiLanguage";
+import { isSystemReminderText } from "../contextSelection";
 
 /**
  * Active UI language, read without `loadUILanguage` so the pure label helpers
@@ -125,10 +126,7 @@ const HIDDEN_TOOL_NAMES = new Set([
 ]);
 
 function isHiddenTool(m: Message): boolean {
-  return (
-    m.kind === "tool" &&
-    HIDDEN_TOOL_NAMES.has(m.toolName.toLowerCase())
-  );
+  return m.kind === "tool" && HIDDEN_TOOL_NAMES.has(m.toolName.toLowerCase());
 }
 
 /**
@@ -140,10 +138,7 @@ function isHiddenTool(m: Message): boolean {
  * Excluding them from the `lastTool` anchor keeps the report visible outside
  * the card; the tool itself still renders (it isn't hidden).
  */
-const BOOKKEEPING_TOOL_NAMES = new Set([
-  "updateautomationmemory",
-  "update_automation_memory",
-]);
+const BOOKKEEPING_TOOL_NAMES = new Set(["updateautomationmemory", "update_automation_memory"]);
 
 /** True when an item is a tool (or tool group) consisting ONLY of
  *  bookkeeping tools — so it shouldn't anchor the process card's tail. */
@@ -151,10 +146,7 @@ function isBookkeepingToolish(item: Message | ToolGroup): boolean {
   const isBk = (name: string) => BOOKKEEPING_TOOL_NAMES.has(name.toLowerCase());
   if (item.kind === "tool") return isBk(item.toolName);
   if (item.kind === "tool_group") {
-    return (
-      item.items.length > 0 &&
-      item.items.every((t) => t.kind === "tool" && isBk(t.toolName))
-    );
+    return item.items.length > 0 && item.items.every((t) => t.kind === "tool" && isBk(t.toolName));
   }
   return false;
 }
@@ -306,10 +298,7 @@ function isToolish(item: Message | ToolGroup): boolean {
  * flush the run". This keeps the heuristic O(n) overall: each message
  * is visited at most twice (once by the outer loop, once by lookahead).
  */
-function nextNonTransparentIsTool(
-  messages: Message[],
-  from: number,
-): boolean {
+function nextNonTransparentIsTool(messages: Message[], from: number): boolean {
   for (let j = from; j < messages.length; j++) {
     const m = messages[j]!;
     if (m.kind === "tool") return true;
@@ -327,8 +316,7 @@ function foldAdjacentTools(messages: Message[]): Array<Message | ToolGroup> {
   // ToolMessage row (matches pre-existing behavior).
   let buf: ToolGroupItem[] = [];
 
-  const toolCountInBuf = (): number =>
-    buf.reduce((n, it) => (it.kind === "tool" ? n + 1 : n), 0);
+  const toolCountInBuf = (): number => buf.reduce((n, it) => (it.kind === "tool" ? n + 1 : n), 0);
 
   // Drop any trailing transparent items hanging off the end of the
   // run — a run must end on a tool, not on thinking. Those
@@ -402,10 +390,7 @@ function foldAdjacentTools(messages: Message[]): Array<Message | ToolGroup> {
  * streaming; for it the span extends to the end of the turn so in-flight
  * trailing text stays inside the card until the next user message lands.
  */
-function foldTurnProcess(
-  items: Array<Message | ToolGroup>,
-  liveTurnActive: boolean,
-): StreamItem[] {
+function foldTurnProcess(items: Array<Message | ToolGroup>, liveTurnActive: boolean): StreamItem[] {
   // Turn boundaries are USER messages — but NOT engine-injected ones. A steer /
   // goal wakeup / cron续接 splices in a user message with injected:true; that is
   // a continuation of the CURRENT turn, not a new user-initiated turn. Counting
@@ -423,7 +408,7 @@ function foldTurnProcess(
   for (let i = 0; i < items.length; i++) {
     const it = items[i]!;
     if (it.kind !== "user") continue;
-    const injected = it.injected === true;
+    const injected = it.injected === true || isSystemReminderText(it.text);
     if (!injected) {
       userIdxs.push(i);
       continue;
@@ -489,9 +474,7 @@ function foldTurnProcess(
     out.push({
       kind: "turn_process_group",
       id: `process-${anchorId(innerItems[0]!)}`,
-      durationMs: isLive
-        ? 0
-        : turnSpanMs(items.slice(start, end)) || spanDurationMs(innerItems),
+      durationMs: isLive ? 0 : turnSpanMs(items.slice(start, end)) || spanDurationMs(innerItems),
       firstToolStartedAt: firstToolStart(innerItems),
       isLive,
       toolCount: countToolsRecursive(innerItems),
@@ -521,11 +504,7 @@ function latestAssistantIsDone(
 
 /** True when the turn slice [start+1, end) contains a turn_end reason="stopped"
  *  — i.e. the user interrupted this turn. */
-function turnWasStopped(
-  items: Array<Message | ToolGroup>,
-  start: number,
-  end: number,
-): boolean {
+function turnWasStopped(items: Array<Message | ToolGroup>, start: number, end: number): boolean {
   for (let i = start + 1; i < end; i++) {
     const item = items[i]!;
     if (item.kind === "turn_end" && item.reason === "stopped") return true;
@@ -533,10 +512,7 @@ function turnWasStopped(
   return false;
 }
 
-function forEachTool(
-  items: Array<Message | ToolGroup>,
-  visit: (t: ToolMessage) => void,
-): void {
+function forEachTool(items: Array<Message | ToolGroup>, visit: (t: ToolMessage) => void): void {
   for (const it of items) {
     if (it.kind === "tool") visit(it);
     else if (it.kind === "tool_group") {

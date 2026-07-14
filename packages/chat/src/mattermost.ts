@@ -17,6 +17,7 @@ interface MattermostEvent {
 }
 
 interface MattermostPost {
+  id?: string;
   channel_id?: string;
   user_id?: string;
   message?: string;
@@ -124,6 +125,7 @@ export class MattermostAdapter implements ChannelAdapter {
       target: post.channel_id,
       senderId: post.user_id,
       text: post.message,
+      ...(post.id ? { messageId: post.id } : {}),
     });
   }
 }

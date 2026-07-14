@@ -1,8 +1,20 @@
 # Worktree / Session Isolation 调研：Claude Code、Codex 与 CodeShell
 
-> 状态：调研稿 / 设计输入  
-> 日期：2026-07-03  
+> 状态：调研稿 / 设计输入；DriveAgent 外部 agent 自动隔离已于 2026-07-14 落地
+> 日期：2026-07-03（实施更新：2026-07-14）
 > 目的：梳理 Claude Code、Codex 与 CodeShell 当前 worktree/session/cwd 机制，为后续 CodeShell 完整 worktree workspace 模式提供技术依据。
+
+### 2026-07-14 实施更新
+
+本稿记录的是 2026-07-03 的基线；外部 agent 路径现已完成 P0–P3：
+
+- `DriveAgent` 支持 `isolation: current/worktree/none`、`baseRef`、`include`、`cleanup`；同 workspace 的并行可写 run 会自动进入唯一 per-run worktree。
+- 外部 session binding 持久化 CodeShell session、workspace、worktree path/branch/baseRef 和生命周期时间，resume 强制回到原 cwd，并能从仍存在的 branch 重建目录。
+- worktree 创建支持 `head/fresh/explicit` base、受限 `.worktreeinclude`/显式 include、运行期 git lock，以及 `keep/detach/discard` 终态。
+- clean run 可自动丢弃；有未提交改动或领先提交的 run 默认保留并在 transcript、后台任务和 Desktop panel 显示清理提示。
+- 实现与回归位于 `packages/coding/src/tools/drive-agent.ts`、`packages/coding/src/git/worktree/crud.ts`、`packages/coding/src/tools/drive-agent-worktree.test.ts`。
+
+本次没有把同一策略扩到 core 原生 `Agent` subagent；那是独立的后续能力，不影响本稿所述外部 agent 自动隔离闭环。
 
 ## 1. 背景与结论
 
@@ -328,19 +340,19 @@ resume 规则：
 3. UI/TUI 状态栏显示当前 workspace/worktree。
 4. `EnterWorktree` 成功后真正切换 session workspace。
 
-### P2：外部 agent 自动隔离
+### P2：外部 agent 自动隔离（已完成，2026-07-14）
 
-1. DriveAgent 增加 `isolation?: "current" | "worktree" | "none"`。
-2. `isolation: "worktree"` 时自动创建 per-run worktree。
-3. background jobs 完成后根据 diff/commits 决定保留、清理或提示。
-4. 支持 subagent/DriveAgent 并行隔离，避免多 agent 改同一 checkout。
+1. [x] DriveAgent 增加 `isolation?: "current" | "worktree" | "none"`。
+2. [x] `isolation: "worktree"` 时自动创建 per-run worktree。
+3. [x] background jobs 完成后根据 diff/commits 决定保留、清理或提示。
+4. [x] 支持并行 DriveAgent 自动隔离，避免多个外部 agent 修改同一 checkout。
 
-### P3：高级体验
+### P3：外部 agent 高级体验（已完成，2026-07-14）
 
-1. `.worktreeinclude` 等价能力：复制 gitignored env/config 文件。
-2. baseRef 策略：`fresh` / `head` / explicit branch。
-3. worktree lock 与定期 cleanup。
-4. Desktop session picker 支持 worktree-backed sessions。
+1. [x] `.worktreeinclude` 等价能力：复制选中的 gitignored env/config 文件。
+2. [x] baseRef 策略：`fresh` / `head` / explicit ref。
+3. [x] DriveAgent 运行期 worktree lock、终态 unlock 与显式 cleanup。
+4. [x] Desktop 后台任务面板展示 worktree path/branch/baseRef/cleanup/lifecycle。
 
 ## 9. 设计原则
 
@@ -357,8 +369,8 @@ resume 规则：
 - OpenAI Codex docs export: [Codex full documentation](https://developers.openai.com/codex/llms-full.txt)
 - OpenAI Codex issue: [openai/codex#4791 — Resuming a session silently switches the agent cwd to the caller’s directory](https://github.com/openai/codex/issues/4791)
 - CodeShell source:
-  - `packages/core/src/tool-system/builtin/worktree.ts`
-  - `packages/core/src/git/worktree.ts`
-  - `packages/core/src/tool-system/builtin/drive-claude-code.ts`
-  - `packages/core/src/cc-orchestrator/agent-adapter.ts`
-  - `packages/core/src/cc-orchestrator/external-agent-driver.ts`
+  - `packages/coding/src/git/worktree/crud.ts`
+  - `packages/coding/src/tools/drive-agent.ts`
+  - `packages/coding/src/cc-orchestrator/external-agent-session-store.ts`
+  - `packages/coding/src/cc-orchestrator/agent-adapter.ts`
+  - `packages/coding/src/cc-orchestrator/external-agent-driver.ts`

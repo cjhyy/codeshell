@@ -1,0 +1,9 @@
+[test]
+# Coverage gate for the builtin integration surface. The source-level gate is a
+# baseline ratchet across every module loaded by the real ToolRegistry suite;
+# tool-coverage.test.ts separately requires >=80% of builtin definitions to
+# have direct executor tests.
+preload = ["./packages/core/test-setup.ts"]
+coverageSkipTestFiles = true
+coverageThreshold = { lines = 0.45, functions = 0.38 }
+

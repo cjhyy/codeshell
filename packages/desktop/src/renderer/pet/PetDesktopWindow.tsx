@@ -58,6 +58,7 @@ export function PetDesktopWindow() {
   const [chatError, setChatError] = React.useState<string | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const conversationEndRef = React.useRef<HTMLDivElement>(null);
+  const autoExpandedWorkRef = React.useRef(false);
   const messages = React.useMemo(() => selectMiniChatMessages(chatState.messages), [chatState]);
 
   const showPanel = React.useCallback((): void => {
@@ -214,6 +215,13 @@ export function PetDesktopWindow() {
     () => buildPetWidgetActivity(state.projection, workReceipts),
     [state.projection, workReceipts],
   );
+
+  React.useEffect(() => {
+    if (autoExpandedWorkRef.current || workActivity.items.length === 0) return;
+    autoExpandedWorkRef.current = true;
+    showPanel();
+  }, [showPanel, workActivity.items.length]);
+
   const noticeSessionId =
     notice?.peek?.action.type === "open_session" ? notice.peek.action.target.agentSessionId : null;
   const noticeAlreadyListed =
@@ -274,12 +282,12 @@ export function PetDesktopWindow() {
           </header>
 
           <div className="min-h-0 flex-1 space-y-2 overflow-auto p-2 text-xs">
-            {workActivity.items.length > 0 && (
-              <section className="rounded-xl border border-border/70 bg-muted/30 p-1.5">
-                <div className="flex items-center justify-between px-1.5 pb-1 text-[11px] font-medium text-muted-foreground">
-                  <span>{t("pet.widget.workTitle")}</span>
-                  <span className="tabular-nums">{workActivity.badgeCount}</span>
-                </div>
+            <section className="rounded-xl border border-border/70 bg-muted/30 p-1.5">
+              <div className="flex items-center justify-between px-1.5 pb-1 text-[11px] font-medium text-muted-foreground">
+                <span>{t("pet.widget.workTitle")}</span>
+                <span className="tabular-nums">{workActivity.badgeCount}</span>
+              </div>
+              {workActivity.items.length > 0 ? (
                 <div className="space-y-0.5">
                   {workActivity.items.slice(0, 4).map((item) => (
                     <button
@@ -307,7 +315,7 @@ export function PetDesktopWindow() {
                           </span>
                         </span>
                         {item.detail && (
-                          <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                          <span className="mt-0.5 block line-clamp-2 text-[11px] leading-4 text-muted-foreground">
                             {item.detail}
                           </span>
                         )}
@@ -315,17 +323,21 @@ export function PetDesktopWindow() {
                     </button>
                   ))}
                 </div>
-                {workActivity.items.length > 4 && (
-                  <button
-                    type="button"
-                    className="w-full px-2 py-1 text-left text-[11px] text-primary hover:underline"
-                    onClick={() => void api.openWidgetOverview()}
-                  >
-                    {t("pet.widget.workMore", { count: workActivity.items.length - 4 })}
-                  </button>
-                )}
-              </section>
-            )}
+              ) : (
+                <p className="px-2 py-2 text-[11px] text-muted-foreground">
+                  {t("pet.widget.workEmpty")}
+                </p>
+              )}
+              {workActivity.items.length > 4 && (
+                <button
+                  type="button"
+                  className="w-full px-2 py-1 text-left text-[11px] text-primary hover:underline"
+                  onClick={() => void api.openWidgetOverview()}
+                >
+                  {t("pet.widget.workMore", { count: workActivity.items.length - 4 })}
+                </button>
+              )}
+            </section>
             {notice && !noticeAlreadyListed && (
               <button
                 type="button"
@@ -394,7 +406,8 @@ export function PetDesktopWindow() {
         runningCount={workActivity.runningCount}
         activityCount={workActivity.badgeCount}
         unreadCompletedCount={workActivity.unreadCompletedCount}
-        onOpen={showPanel}
+        expanded={expanded}
+        onToggle={expanded ? hidePanel : showPanel}
         onClose={() => void api.setWidgetVisible(false)}
       />
     </div>

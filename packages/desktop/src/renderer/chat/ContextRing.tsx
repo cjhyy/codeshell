@@ -110,6 +110,9 @@ export function ContextRing({
     <div
       ref={anchorRef}
       className={"relative inline-flex items-center gap-1" + (busy ? " animate-pulse" : "")}
+      data-context-used={used}
+      data-cache-read={singleTurnCacheReadTokens ?? 0}
+      data-cache-created={singleTurnCacheCreationTokens ?? 0}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >

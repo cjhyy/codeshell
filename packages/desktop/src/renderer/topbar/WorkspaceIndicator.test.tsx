@@ -1030,4 +1030,28 @@ describe("TopBar workspace label", () => {
     expect(label).toBe("main");
     expect(label).not.toContain("main (codeshell)");
   });
+
+  test("renders context selection as an icon button in the title bar", () => {
+    const html = renderToStaticMarkup(
+      <TopBar
+        projectName="codeshell"
+        projectPath="/repo/codeshell"
+        sessionId="session"
+        sessionTitle="Context selection"
+        busy={false}
+        sidebarCollapsed={false}
+        onToggleSidebar={() => {}}
+        panelOpen={false}
+        onTogglePanel={() => {}}
+        isMac={false}
+        isFullscreen={false}
+        contextSelectionAvailable
+        onSelectContext={() => {}}
+      />,
+    );
+
+    expect(html).toContain('data-context-action="open"');
+    expect(html).toContain('aria-label="选择上下文"');
+    expect(html).not.toContain(">选择上下文<");
+  });
 });

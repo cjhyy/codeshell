@@ -1,6 +1,21 @@
 import { useEffect, useRef, useState, type Ref } from "react";
 import type { WebviewElement } from "../browser/types";
 import type { PluginPanelDescriptor, PreparedPluginPanel } from "../../shared/plugin-panels";
+import { useT } from "../i18n/I18nProvider";
+
+function currentTheme(): "light" | "dark" {
+  return document.documentElement.classList.contains("dark") ? "dark" : "light";
+}
+
+function usePluginPanelTheme(): "light" | "dark" {
+  const [theme, setTheme] = useState<"light" | "dark">(() => currentTheme());
+  useEffect(() => {
+    const observer = new MutationObserver(() => setTheme(currentTheme()));
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+  return theme;
+}
 
 export function PluginPanelHost({
   descriptor,
@@ -19,6 +34,8 @@ export function PluginPanelHost({
   engineSessionId: string | null;
   visible: boolean;
 }) {
+  const { lang } = useT();
+  const theme = usePluginPanelTheme();
   const viewRef = useRef<WebviewElement | null>(null);
   const [prepared, setPrepared] = useState<PreparedPluginPanel | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +55,7 @@ export function PluginPanelHost({
     return () => {
       alive = false;
     };
-  }, [descriptor.id]);
+  }, [descriptor.hostId, descriptor.id]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -47,7 +64,6 @@ export function PluginPanelHost({
     const bind = () => {
       const guestId = view.getWebContentsId?.();
       if (typeof guestId !== "number" || !Number.isFinite(guestId)) return;
-      const theme = document.documentElement.classList.contains("dark") ? "dark" : "light";
       void window.codeshell
         .bindPluginPanel({
           guestId,
@@ -59,8 +75,7 @@ export function PluginPanelHost({
           visible,
           busy,
           theme,
-          locale: document.documentElement.lang || navigator.language || "en",
-          trusted: false,
+          locale: lang,
         })
         .then(
           () => {
@@ -83,7 +98,7 @@ export function PluginPanelHost({
       view.removeEventListener("dom-ready", bind);
       view.removeEventListener("render-process-gone", crashed);
     };
-  }, [bucket, busy, cwd, descriptor.id, engineSessionId, prepared, tabId, visible]);
+  }, [bucket, busy, cwd, descriptor.id, engineSessionId, lang, prepared, tabId, theme, visible]);
 
   if (error) {
     return (
@@ -102,6 +117,7 @@ export function PluginPanelHost({
 
   return (
     <webview
+      key={`${prepared.partition}:${prepared.revision}`}
       ref={viewRef as unknown as Ref<HTMLElement>}
       src={prepared.src}
       partition={prepared.partition}

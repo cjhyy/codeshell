@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { ChannelMessageHandler, OutgoingMessage, WebhookChannelAdapter } from "./channel.js";
-import { dispatchSafely, waitForAbort } from "./lifecycle.js";
+import { waitForAbort } from "./lifecycle.js";
 import { readRequestBody, sendResponse } from "./webhook.js";
 
 export interface LineAdapterConfig {
@@ -13,7 +13,7 @@ interface LineWebhookBody {
   events?: Array<{
     type?: string;
     source?: { userId?: string; groupId?: string; roomId?: string };
-    message?: { type?: string; text?: string };
+    message?: { id?: string; type?: string; text?: string };
   }>;
 }
 
@@ -60,11 +60,19 @@ export class LineAdapter implements WebhookChannelAdapter {
         event.message.text &&
         target &&
         senderId
-        ? [{ channel: this.channel, target, senderId, text: event.message.text }]
+        ? [
+            {
+              channel: this.channel,
+              target,
+              senderId,
+              text: event.message.text,
+              ...(event.message.id ? { messageId: event.message.id } : {}),
+            },
+          ]
         : [];
     });
+    await Promise.all(messages.map((message) => handler(message)));
     sendResponse(response, 200, "OK");
-    void Promise.all(messages.map((message) => dispatchSafely(handler, message)));
   }
 
   async send(target: string, message: OutgoingMessage): Promise<void> {

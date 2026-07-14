@@ -22,19 +22,14 @@ describe("Pet desktop mini chat", () => {
     ]);
   });
 
-  test("keeps ordinary session progress collapsed but surfaces a real attention peek", () => {
+  test("auto-expands the first session activity and still surfaces a real attention peek", () => {
     const source = readFileSync(join(import.meta.dir, "PetDesktopWindow.tsx"), "utf8");
-    const projectionStart = source.indexOf("const applyEvent =");
-    const projectionEnd = source.indexOf(
-      "const unsubscribe = api.onProjectionEvent",
-      projectionStart,
-    );
     const attentionStart = source.indexOf("const applyAttention =");
     const attentionEnd = source.indexOf("const unsubscribe = api.onAttentionEvent", attentionStart);
 
-    expect(projectionStart).toBeGreaterThanOrEqual(0);
     expect(attentionStart).toBeGreaterThanOrEqual(0);
-    expect(source.slice(projectionStart, projectionEnd)).not.toContain("showPanel()");
+    expect(source).toContain("autoExpandedWorkRef.current || workActivity.items.length === 0");
+    expect(source).toContain("autoExpandedWorkRef.current = true");
     expect(source.slice(attentionStart, attentionEnd)).toContain("showPanel()");
   });
 });

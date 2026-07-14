@@ -1,4 +1,5 @@
 import React from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import dogIcon from "../assets/codeshell-dog-icon.png";
 import { useT } from "../i18n";
 import { Badge } from "../ui/Badge";
@@ -7,13 +8,15 @@ export function PetWidget({
   runningCount,
   activityCount,
   unreadCompletedCount,
-  onOpen,
+  expanded,
+  onToggle,
   onClose,
 }: {
   runningCount: number;
   activityCount: number;
   unreadCompletedCount: number;
-  onOpen: () => void;
+  expanded: boolean;
+  onToggle: () => void;
   onClose: () => void;
 }) {
   const { t } = useT();
@@ -76,7 +79,7 @@ export function PetWidget({
           if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
           clickTimerRef.current = setTimeout(() => {
             clickTimerRef.current = null;
-            onOpen();
+            onToggle();
           }, 220);
         }
       }}
@@ -86,7 +89,7 @@ export function PetWidget({
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          onOpen();
+          onToggle();
         }
       }}
       onDoubleClick={(event) => {
@@ -97,7 +100,8 @@ export function PetWidget({
         }
         onClose();
       }}
-      aria-label={`${t("pet.widget.open")}：${summary}`}
+      aria-expanded={expanded}
+      aria-label={`${t(expanded ? "pet.widget.collapseSessions" : "pet.widget.expandSessions")}：${summary}`}
       title={`${summary} · ${t("pet.widget.dragHint")}`}
     >
       <img
@@ -118,6 +122,13 @@ export function PetWidget({
           <Badge count={activity} />
         </span>
       )}
+      <span
+        data-pet-indicator="toggle"
+        className="absolute left-1 top-1 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-popover/95 text-popover-foreground shadow-md backdrop-blur transition-transform group-hover:scale-105"
+        aria-hidden="true"
+      >
+        {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+      </span>
     </button>
   );
 }

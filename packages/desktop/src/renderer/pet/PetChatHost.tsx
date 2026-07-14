@@ -25,7 +25,7 @@ export function selectPetChatRows(messages: readonly Message[]): PetChatRow[] {
   });
 }
 
-export function PetChatHost({ defaultProjectId }: { defaultProjectId: string | null }) {
+export function PetChatHost({ defaultProjectPath }: { defaultProjectPath: string | null }) {
   const { t } = useT();
   const { state, dispatch, petSessionId, chatState, chatDispatch, chatBusy, setChatBusy } =
     usePetState();
@@ -57,7 +57,7 @@ export function PetChatHost({ defaultProjectId }: { defaultProjectId: string | n
         type: "chat",
         message,
         clientMessageId,
-        ...(defaultProjectId ? { preferredProjectId: defaultProjectId } : {}),
+        ...(defaultProjectPath ? { preferredProjectPath: defaultProjectPath } : {}),
       });
       if (!result.ok) setError(result.message ?? t("pet.chat.failed"));
     } catch (dispatchError) {

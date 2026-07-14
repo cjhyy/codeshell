@@ -63,9 +63,13 @@ describe("App Pet lifecycle boundaries", () => {
     expect(petSource).not.toContain('t("pet.chat.delegate")');
     expect(petSource).not.toContain('t("pet.chat.ask")');
     expect(petSource).toContain('event.kind !== "delegation-requested"');
-    expect(appSource).toContain("const delegatePetTask");
-    expect(appSource).toContain("handleNewConversationForProject(projectId)");
-    expect(appSource).toContain("void send(message, { bucket: bucketKey(projectId, null) })");
+    const start = appSource.indexOf("const delegatePetTask");
+    const end = appSource.indexOf("const toggleSidebar", start);
+    const delegationHandler = appSource.slice(start, end);
+    expect(delegationHandler).toContain("createSession(projectId, undefined, { activate: false })");
+    expect(delegationHandler).toContain("bucket: bucketKey(projectId, sessionId)");
+    expect(delegationHandler).not.toContain("handleNewConversationForProject");
+    expect(delegationHandler).not.toContain('viewMode: "chat"');
     expect(appSource).toContain("<PetAutoDelegationHost");
     expect(appSource).toContain("onDelegate={delegatePetTask}");
   });

@@ -208,9 +208,14 @@ export interface TranscriptEvent {
  */
 export type SessionStatus = "active" | "paused" | TerminalReason;
 
-/** Which host/context created a session — used by the desktop disk-rebuild to
- *  filter the sidebar (only `desktop` + `automation` are shown). */
-export type SessionOrigin = "desktop" | "tui" | "automation" | "subagent";
+/** Known first-party session origins. Hosts may contribute stable names of their own. */
+export type BuiltinSessionOrigin = "desktop" | "tui" | "automation" | "subagent";
+/**
+ * Which host/context created a session. This is intentionally open: core
+ * persists the provenance label but product hosts decide how to group/filter
+ * it, so extension packages never need to add a literal back into core.
+ */
+export type SessionOrigin = BuiltinSessionOrigin | (string & {});
 export type SessionKind = "work" | "pet";
 
 export interface SessionWorkspace {

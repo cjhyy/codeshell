@@ -105,6 +105,7 @@ import {
   isInjectCredentialAvailable,
 } from "../../credentials/inject-credential-tool.js";
 import { credentialAccessScope, getCredentialAccess } from "../../credentials/access.js";
+import { delegateWorkToolDef, delegateWorkTool } from "./delegate-work.js";
 
 /**
  * Tool executor signature.
@@ -222,9 +223,26 @@ export interface BuiltinToolExposure {
   availability?: BuiltinToolGuard;
 }
 
-const BUILTIN_IMPLEMENTATIONS: Array<{
+const GENERAL_TAGS = ["general"] as const;
+const HARNESS_TAGS = ["harness-min", "general"] as const;
+const EXPLICIT_ONLY = [] as const;
+
+function expose(
+  presetTags: readonly string[],
+  options: Omit<BuiltinToolExposure, "presetTags"> = {},
+): BuiltinToolExposure {
+  return { presetTags, ...options };
+}
+
+function allow(tool: string): PermissionRule[] {
+  return [{ tool, decision: "allow" }];
+}
+
+/** One authoritative contribution record per builtin: schema, handler and product exposure. */
+const BUILTIN_CONTRIBUTIONS: Array<{
   definition: RegisteredTool;
   execute: BuiltinToolImplementation;
+  exposure: BuiltinToolExposure;
 }> = [
   {
     definition: {
@@ -236,6 +254,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       pathPolicy: [{ kind: "arg", arg: "file_path", operation: "read" }],
     },
     execute: readTool,
+    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(readToolDef.name) }),
   },
   {
     definition: {
@@ -247,6 +266,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       pathPolicy: [{ kind: "arg", arg: "file_path", operation: "write" }],
     },
     execute: writeTool,
+    exposure: expose(HARNESS_TAGS),
   },
   {
     definition: {
@@ -257,6 +277,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: false, // serializes writes to the single catalog file
     },
     execute: editModelCatalogTool,
+    exposure: expose(GENERAL_TAGS),
   },
   {
     definition: {
@@ -277,6 +298,9 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       pathPolicy: [{ kind: "arg", arg: "referenceImages", operation: "read" }],
     },
     execute: generateImageTool,
+    exposure: expose(GENERAL_TAGS, {
+      availability: (ctx) => isGenerateImageAvailable(ctx.cwd),
+    }),
   },
   {
     definition: {
@@ -295,6 +319,9 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       ],
     },
     execute: generateVideoTool,
+    exposure: expose(GENERAL_TAGS, {
+      availability: (ctx) => isGenerateVideoAvailable(ctx.cwd),
+    }),
   },
   {
     definition: {
@@ -306,6 +333,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       pathPolicy: [{ kind: "arg", arg: "path", operation: "read" }],
     },
     execute: viewImageTool,
+    exposure: expose(GENERAL_TAGS),
   },
   {
     definition: {
@@ -317,6 +345,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       pathPolicy: [{ kind: "arg", arg: "file_path", operation: "write" }],
     },
     execute: editTool,
+    exposure: expose(HARNESS_TAGS),
   },
   {
     definition: {
@@ -331,6 +360,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       ],
     },
     execute: globTool,
+    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(globToolDef.name) }),
   },
   {
     definition: {
@@ -342,6 +372,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       pathPolicy: [{ kind: "arg", arg: "path", operation: "read", defaultToCwd: true }],
     },
     execute: grepTool,
+    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(grepToolDef.name) }),
   },
   {
     definition: {
@@ -353,6 +384,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       timeoutMs: 3_600_000, // 1h — supports long-running shell loops (e.g. `until` polling)
     },
     execute: bashTool,
+    exposure: expose(HARNESS_TAGS, { requires: ["BashOutput", "KillShell", "ListShells"] }),
   },
   // ─── Background shells (Bash run_in_background companions) ──────
   {
@@ -364,6 +396,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: bashOutputTool,
+    exposure: expose(HARNESS_TAGS),
   },
   {
     definition: {
@@ -374,6 +407,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: killShellTool,
+    exposure: expose(HARNESS_TAGS),
   },
   {
     definition: {
@@ -384,6 +418,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: listShellsTool,
+    exposure: expose(HARNESS_TAGS),
   },
   {
     definition: {
@@ -394,6 +429,10 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: webSearchTool,
+    exposure: expose(GENERAL_TAGS, {
+      defaultPermissionRules: allow(webSearchToolDef.name),
+      availability: (ctx) => isWebSearchAvailable(ctx.cwd),
+    }),
   },
   {
     definition: {
@@ -404,6 +443,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: webFetchTool,
+    exposure: expose(GENERAL_TAGS, { defaultPermissionRules: allow(webFetchToolDef.name) }),
   },
   {
     definition: {
@@ -415,6 +455,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       timeoutMs: 0, // 纯等待用户操作 — 不设超时，由用户 Esc/取消
     },
     execute: askUserTool,
+    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(askUserToolDef.name) }),
   },
   {
     definition: {
@@ -426,6 +467,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       timeoutMs: 1_800_000, // 30min — sub-agent runs may execute many tool calls
     },
     execute: agentTool,
+    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(agentToolDef.name) }),
   },
   {
     definition: {
@@ -436,6 +478,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: agentStatusTool,
+    exposure: expose(EXPLICIT_ONLY),
   },
   {
     definition: {
@@ -446,6 +489,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: agentCancelTool,
+    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(agentCancelToolDef.name) }),
   },
   {
     definition: {
@@ -457,6 +501,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       timeoutMs: 1_800_000, // 30min — a continuation may execute many tool calls, like Agent
     },
     execute: agentSendInputTool,
+    exposure: expose(EXPLICIT_ONLY),
   },
   {
     definition: {
@@ -467,6 +512,9 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: enterPlanModeTool,
+    exposure: expose(GENERAL_TAGS, {
+      defaultPermissionRules: allow(enterPlanModeToolDef.name),
+    }),
   },
   {
     definition: {
@@ -477,6 +525,9 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: exitPlanModeTool,
+    exposure: expose(GENERAL_TAGS, {
+      defaultPermissionRules: allow(exitPlanModeToolDef.name),
+    }),
   },
   {
     definition: {
@@ -487,6 +538,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: toolSearchTool,
+    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(toolSearchToolDef.name) }),
   },
   {
     definition: {
@@ -497,6 +549,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: todoWriteTool,
+    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(todoWriteToolDef.name) }),
   },
   // ─── Phase 4: Multi-Agent + Worktree ───────────────────────────
   // ─── Phase 5: Utility Tools ────────────────────────────────────
@@ -509,6 +562,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: sleepTool,
+    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(sleepToolDef.name) }),
   },
   {
     definition: {
@@ -519,6 +573,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: configTool,
+    exposure: expose(HARNESS_TAGS),
   },
   // ─── Cron Tools ────────────────────────────────────────────────
   {
@@ -530,6 +585,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: cronCreateTool,
+    exposure: expose(GENERAL_TAGS),
   },
   {
     definition: {
@@ -540,6 +596,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: cronDeleteTool,
+    exposure: expose(GENERAL_TAGS),
   },
   {
     definition: {
@@ -550,6 +607,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: cronListTool,
+    exposure: expose(GENERAL_TAGS, { defaultPermissionRules: allow(cronListToolDef.name) }),
   },
   // ─── Phase 7: Missing tools from restored-src ─────────────────
   {
@@ -561,6 +619,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: skillTool,
+    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(skillToolDef.name) }),
   },
   {
     definition: {
@@ -571,6 +630,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: mcpToolExecute,
+    exposure: expose(HARNESS_TAGS),
   },
   {
     definition: {
@@ -581,6 +641,9 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: listMcpResourcesTool,
+    exposure: expose(HARNESS_TAGS, {
+      defaultPermissionRules: allow(listMcpResourcesToolDef.name),
+    }),
   },
   {
     definition: {
@@ -596,6 +659,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: readMcpResourceTool,
+    exposure: expose(HARNESS_TAGS),
   },
   {
     definition: {
@@ -606,6 +670,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: replTool,
+    exposure: expose(GENERAL_TAGS),
   },
   {
     definition: {
@@ -616,6 +681,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: powershellTool,
+    exposure: expose(GENERAL_TAGS),
   },
   // ─── Memory tools (persistent cross-session memory) ────────────
   // Save/Delete default to "ask" so user-scope modifications go through a
@@ -631,6 +697,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: memoryListTool,
+    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(memoryListToolDef.name) }),
   },
   {
     definition: {
@@ -641,6 +708,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: memoryReadTool,
+    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(memoryReadToolDef.name) }),
   },
   {
     definition: {
@@ -651,6 +719,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: memorySaveTool,
+    exposure: expose(HARNESS_TAGS),
   },
   {
     definition: {
@@ -661,6 +730,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: memoryDeleteTool,
+    exposure: expose(HARNESS_TAGS),
   },
   // ─── Goal mode: model-declared completion ──────────────────────
   // Lets the model explicitly declare the active goal complete. The
@@ -675,6 +745,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: completeGoalTool,
+    exposure: expose(HARNESS_TAGS, { availability: (ctx) => ctx.hasGoal === true }),
   },
   // ─── Goal mode: user-initiated cancellation ────────────────────
   // Distinct from complete_goal — the user explicitly asked to abandon the
@@ -690,6 +761,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: cancelGoalTool,
+    exposure: expose(HARNESS_TAGS, { availability: (ctx) => ctx.hasGoal === true }),
   },
   // ─── Plugin marketplace: model-driven source registration ──────
   {
@@ -702,6 +774,7 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       timeoutMs: 120_000, // git clone over network
     },
     execute: addMarketplaceTool,
+    exposure: expose(GENERAL_TAGS),
   },
   // Browser automation — 3 semantic tools driving the in-app webview via the
   // BrowserBridge (CDP). All serial on one webview (isConcurrencySafe:false).
@@ -721,6 +794,10 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       timeoutMs: 30_000, // wait/observe can sit through a load; RPC headroom
     },
     execute: browserObserveTool,
+    exposure: expose(GENERAL_TAGS, {
+      defaultPermissionRules: allow(browserObserveToolDef.name),
+      promptSections: ["browser"],
+    }),
   },
   {
     definition: {
@@ -732,6 +809,17 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       timeoutMs: 30_000, // the wait action internally bounds; give RPC headroom
     },
     execute: browserActTool,
+    exposure: expose(GENERAL_TAGS, {
+      defaultPermissionRules: [
+        {
+          tool: browserActToolDef.name,
+          argsPattern: { action: "^(click|type|select)$" },
+          decision: "ask",
+          reason: "browser_act click/type/select mutate the page",
+        },
+      ],
+      promptSections: ["browser"],
+    }),
   },
   {
     definition: {
@@ -742,6 +830,10 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: browserNavigateTool,
+    exposure: expose(GENERAL_TAGS, {
+      defaultPermissionRules: allow(browserNavigateToolDef.name),
+      promptSections: ["browser"],
+    }),
   },
   // Generic host-panel control. The bridge is injected only by interactive
   // Desktop sessions; plugin tools can call the same ctx.panels service.
@@ -754,6 +846,10 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: panelTool,
+    exposure: expose(GENERAL_TAGS, {
+      defaultPermissionRules: allow(panelToolDef.name),
+      availability: (ctx) => ctx.host === "desktop" && ctx.isSubAgent !== true,
+    }),
   },
   // ─── Credentials: AI 取用已存凭证(token/link/cookie) ──────────
   // permissionDefault:"allow" 是展示/声明 hint；取用审批由工具内部的
@@ -768,6 +864,9 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: useCredentialBuiltinTool,
+    exposure: expose(GENERAL_TAGS, {
+      availability: (ctx) => isUseCredentialAvailable(ctx.cwd, ctx.settingsScope),
+    }),
   },
   // InjectCredential:把 cookie 凭证注入内置浏览器(恢复登录态)。审批由工具内部
   // CredentialUseGate 负责(逐条 autoInjectByAI),permissionDefault:"allow" 仅作展示 hint。
@@ -781,177 +880,30 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: injectCredentialTool,
+    exposure: expose(GENERAL_TAGS, {
+      availability: (ctx) => isInjectCredentialAvailable(ctx.cwd, ctx.settingsScope),
+    }),
+  },
+  {
+    definition: {
+      ...delegateWorkToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: delegateWorkTool,
+    exposure: expose(HARNESS_TAGS, {
+      defaultPermissionRules: allow(delegateWorkToolDef.name),
+      availability: (ctx) => ctx.behaviorProfile === "pet" && (ctx.petWorkspaceCount ?? 0) > 0,
+    }),
   },
 ];
 
-const GENERAL_TAGS = ["general"] as const;
-const HARNESS_TAGS = ["harness-min", "general"] as const;
-const PRODUCT_FULL_TAGS = ["product-full"] as const;
-const EXPLICIT_ONLY = [] as const;
-
-function expose(
-  presetTags: readonly string[],
-  options: Omit<BuiltinToolExposure, "presetTags"> = {},
-): BuiltinToolExposure {
-  return { presetTags, ...options };
-}
-
-function allow(tool: string): PermissionRule[] {
-  return [{ tool, decision: "allow" }];
-}
-
-/**
- * Preset-facing metadata lives beside the builtin catalog. The exhaustive
- * registration-time check below makes a newly-added implementation fail loud
- * until its product exposure has been reviewed explicitly.
- */
-const BUILTIN_EXPOSURES = new Map<string, BuiltinToolExposure>([
-  [readToolDef.name, expose(HARNESS_TAGS, { defaultPermissionRules: allow(readToolDef.name) })],
-  [writeToolDef.name, expose(HARNESS_TAGS)],
-  [editModelCatalogToolDef.name, expose(GENERAL_TAGS)],
-  [
-    generateImageToolDef.name,
-    expose(GENERAL_TAGS, { availability: (ctx) => isGenerateImageAvailable(ctx.cwd) }),
-  ],
-  [
-    generateVideoToolDef.name,
-    expose(GENERAL_TAGS, { availability: (ctx) => isGenerateVideoAvailable(ctx.cwd) }),
-  ],
-  [viewImageToolDef.name, expose(GENERAL_TAGS)],
-  [editToolDef.name, expose(HARNESS_TAGS)],
-  [globToolDef.name, expose(HARNESS_TAGS, { defaultPermissionRules: allow(globToolDef.name) })],
-  [grepToolDef.name, expose(HARNESS_TAGS, { defaultPermissionRules: allow(grepToolDef.name) })],
-  [bashToolDef.name, expose(HARNESS_TAGS, { requires: ["BashOutput", "KillShell", "ListShells"] })],
-  [bashOutputToolDef.name, expose(HARNESS_TAGS)],
-  [killShellToolDef.name, expose(HARNESS_TAGS)],
-  [listShellsToolDef.name, expose(HARNESS_TAGS)],
-  [
-    webSearchToolDef.name,
-    expose(GENERAL_TAGS, {
-      defaultPermissionRules: allow(webSearchToolDef.name),
-      availability: (ctx) => isWebSearchAvailable(ctx.cwd),
-    }),
-  ],
-  [
-    webFetchToolDef.name,
-    expose(GENERAL_TAGS, { defaultPermissionRules: allow(webFetchToolDef.name) }),
-  ],
-  [
-    askUserToolDef.name,
-    expose(HARNESS_TAGS, { defaultPermissionRules: allow(askUserToolDef.name) }),
-  ],
-  [agentToolDef.name, expose(HARNESS_TAGS, { defaultPermissionRules: allow(agentToolDef.name) })],
-  [agentStatusToolDef.name, expose(EXPLICIT_ONLY)],
-  [
-    agentCancelToolDef.name,
-    expose(HARNESS_TAGS, { defaultPermissionRules: allow(agentCancelToolDef.name) }),
-  ],
-  [agentSendInputToolDef.name, expose(EXPLICIT_ONLY)],
-  [
-    enterPlanModeToolDef.name,
-    expose(GENERAL_TAGS, { defaultPermissionRules: allow(enterPlanModeToolDef.name) }),
-  ],
-  [
-    exitPlanModeToolDef.name,
-    expose(GENERAL_TAGS, { defaultPermissionRules: allow(exitPlanModeToolDef.name) }),
-  ],
-  [
-    toolSearchToolDef.name,
-    expose(HARNESS_TAGS, { defaultPermissionRules: allow(toolSearchToolDef.name) }),
-  ],
-  [
-    todoWriteToolDef.name,
-    expose(HARNESS_TAGS, { defaultPermissionRules: allow(todoWriteToolDef.name) }),
-  ],
-  [sleepToolDef.name, expose(HARNESS_TAGS, { defaultPermissionRules: allow(sleepToolDef.name) })],
-  [configToolDef.name, expose(HARNESS_TAGS)],
-  [cronCreateToolDef.name, expose(GENERAL_TAGS)],
-  [cronDeleteToolDef.name, expose(GENERAL_TAGS)],
-  [
-    cronListToolDef.name,
-    expose(GENERAL_TAGS, { defaultPermissionRules: allow(cronListToolDef.name) }),
-  ],
-  [skillToolDef.name, expose(HARNESS_TAGS, { defaultPermissionRules: allow(skillToolDef.name) })],
-  [mcpToolDef.name, expose(HARNESS_TAGS)],
-  [
-    listMcpResourcesToolDef.name,
-    expose(HARNESS_TAGS, { defaultPermissionRules: allow(listMcpResourcesToolDef.name) }),
-  ],
-  [readMcpResourceToolDef.name, expose(HARNESS_TAGS)],
-  [replToolDef.name, expose(GENERAL_TAGS)],
-  [powershellToolDef.name, expose(GENERAL_TAGS)],
-  [
-    memoryListToolDef.name,
-    expose(HARNESS_TAGS, { defaultPermissionRules: allow(memoryListToolDef.name) }),
-  ],
-  [
-    memoryReadToolDef.name,
-    expose(HARNESS_TAGS, { defaultPermissionRules: allow(memoryReadToolDef.name) }),
-  ],
-  [memorySaveToolDef.name, expose(HARNESS_TAGS)],
-  [memoryDeleteToolDef.name, expose(HARNESS_TAGS)],
-  [completeGoalToolDef.name, expose(HARNESS_TAGS, { availability: (ctx) => ctx.hasGoal === true })],
-  [cancelGoalToolDef.name, expose(HARNESS_TAGS, { availability: (ctx) => ctx.hasGoal === true })],
-  [addMarketplaceToolDef.name, expose(GENERAL_TAGS)],
-  [
-    browserObserveToolDef.name,
-    expose(GENERAL_TAGS, {
-      defaultPermissionRules: allow(browserObserveToolDef.name),
-      promptSections: ["browser"],
-    }),
-  ],
-  [
-    browserActToolDef.name,
-    expose(GENERAL_TAGS, {
-      defaultPermissionRules: [
-        {
-          tool: browserActToolDef.name,
-          argsPattern: { action: "^(click|type|select)$" },
-          decision: "ask",
-          reason: "browser_act click/type/select mutate the page",
-        },
-      ],
-      promptSections: ["browser"],
-    }),
-  ],
-  [
-    browserNavigateToolDef.name,
-    expose(GENERAL_TAGS, {
-      defaultPermissionRules: allow(browserNavigateToolDef.name),
-      promptSections: ["browser"],
-    }),
-  ],
-  [
-    panelToolDef.name,
-    expose(GENERAL_TAGS, {
-      defaultPermissionRules: allow(panelToolDef.name),
-      availability: (ctx) => ctx.host === "desktop" && ctx.isSubAgent !== true,
-    }),
-  ],
-  [
-    useCredentialToolDef.name,
-    expose(GENERAL_TAGS, {
-      availability: (ctx) => isUseCredentialAvailable(ctx.cwd, ctx.settingsScope),
-    }),
-  ],
-  [
-    injectCredentialToolDef.name,
-    expose(GENERAL_TAGS, {
-      availability: (ctx) => isInjectCredentialAvailable(ctx.cwd, ctx.settingsScope),
-    }),
-  ],
-]);
-
-function requiredExposure(name: string): BuiltinToolExposure {
-  const exposure = BUILTIN_EXPOSURES.get(name);
-  if (!exposure) throw new Error(`Builtin tool '${name}' is missing exposure metadata`);
-  return exposure;
-}
-
-export const BUILTIN_TOOLS: BuiltinTool[] = BUILTIN_IMPLEMENTATIONS.map(
-  ({ definition, execute }) => ({
+export const BUILTIN_TOOLS: BuiltinTool[] = BUILTIN_CONTRIBUTIONS.map(
+  ({ definition, execute, exposure }) => ({
     definition,
-    exposure: requiredExposure(definition.name),
+    exposure,
     execute: async (args, ctx) => toToolExecutionResult(await execute(args, ctx)),
   }),
 );

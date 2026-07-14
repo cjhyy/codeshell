@@ -119,6 +119,12 @@ export type BackgroundWorkEntry =
       externalSessionId?: string;
       cli?: ExternalCliKind;
       cwd?: string;
+      isolation?: "current" | "worktree" | "none";
+      worktreePath?: string;
+      worktreeBranch?: string;
+      worktreeBaseRef?: string;
+      worktreeCleanup?: "auto" | "keep" | "detach" | "discard";
+      worktreeLifecycle?: "running" | "kept" | "detached" | "discarded" | "cleanup-failed";
     }>;
 
 type SessionTitleCacheEntry = { mtimeMs: number; title?: string };
@@ -228,6 +234,12 @@ export function listBackgroundWorkForUI(
       ...(j.ccSessionId ? { externalSessionId: j.ccSessionId } : {}),
       ...(j.cli === "claude" || j.cli === "codex" ? { cli: j.cli } : {}),
       ...(launchCwd ? { cwd: launchCwd } : {}),
+      ...(j.isolation ? { isolation: j.isolation } : {}),
+      ...(j.worktreePath ? { worktreePath: j.worktreePath } : {}),
+      ...(j.worktreeBranch ? { worktreeBranch: j.worktreeBranch } : {}),
+      ...(j.worktreeBaseRef ? { worktreeBaseRef: j.worktreeBaseRef } : {}),
+      ...(j.worktreeCleanup ? { worktreeCleanup: j.worktreeCleanup } : {}),
+      ...(j.worktreeLifecycle ? { worktreeLifecycle: j.worktreeLifecycle } : {}),
       sourceSession: sourceSession(sessionId, j.sessionId),
     });
   }

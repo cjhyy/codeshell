@@ -118,6 +118,13 @@ export class ToolRegistry {
     return this.tools.has(name);
   }
 
+  /** Test/harness introspection: definitions without implementations are valid
+   * for some dynamic registrations, but every builtin catalog entry must have
+   * an executor. */
+  hasExecutor(name: string): boolean {
+    return this.builtinExecutors.has(name);
+  }
+
   getAvailabilityGuard(name: string): BuiltinToolGuard | undefined {
     return this.availabilityGuards.get(name);
   }

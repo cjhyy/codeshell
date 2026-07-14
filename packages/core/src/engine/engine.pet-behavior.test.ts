@@ -35,6 +35,11 @@ class PetBehaviorClient extends LLMClientBase {
                 toolName: "Write",
                 args: { file_path: "should-not-exist.txt", content: "blocked" },
               },
+              {
+                id: "delegate-work",
+                toolName: "DelegateWork",
+                args: { workspace_id: "workspace-codeshell", objective: "inspect CodeShell" },
+              },
             ],
             stopReason: "tool_use",
             usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
@@ -58,7 +63,7 @@ afterEach(() => {
 });
 
 describe("Engine pet behavior", () => {
-  test("persists manager identity and exposes no execution tools", async () => {
+  test("persists manager identity and exposes only structured work delegation", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "engine-pet-"));
     tempDirs.push(cwd);
     const model = `pet-${Date.now()}-${Math.random()}`;
@@ -74,21 +79,29 @@ describe("Engine pet behavior", () => {
     });
     (engine as any).hooks.clear();
 
-    await engine.run("global status", {
+    const result = await engine.run("global status", {
       sessionId: "local-pet",
       kind: "pet",
       behaviorMode: "pet",
       permissionMode: "bypassPermissions",
       petRuntimeContext: '{"pending":[{"title":"runtime-only-hunter2"}]}',
+      petWorkspaces: [
+        { id: "workspace-codeshell", name: "CodeShell", description: "/work/codeshell" },
+      ],
     });
 
     const first = calls.get(model)![0]!;
     expect(first.systemPrompt).toContain("# Local Mimi Manager Boundary");
-    expect(first.systemPrompt).toContain("<!--PET:AUTO_DELEGATE-->");
+    expect(first.systemPrompt).not.toContain("<!--PET:AUTO_DELEGATE-->");
     expect(first.systemPrompt).toContain("decide automatically");
+    expect(first.systemPrompt).toContain("complaints, or corrections about Mimi's own routing");
     expect(first.systemPrompt).toContain("runtime-only-hunter2");
     expect(JSON.stringify(first.messages)).not.toContain("runtime-only-hunter2");
-    expect(first.tools).toEqual([]);
+    expect(first.tools).toEqual(["DelegateWork"]);
+    expect(result.petWorkDelegation).toEqual({
+      workspaceId: "workspace-codeshell",
+      objective: "inspect CodeShell",
+    });
     expect(existsSync(join(cwd, "should-not-exist.txt"))).toBe(false);
     expect(JSON.stringify(calls.get(model)![1]!.messages)).toContain(
       "not allowed by this run profile",

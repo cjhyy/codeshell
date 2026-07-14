@@ -30,6 +30,7 @@ import type { HookEventName } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
 import type { CapabilityModule } from "../capabilities/index.js";
 import type { ExtensionModule } from "../tool-system/capability-module.js";
+import type { PetWorkDelegation } from "../pet/delegation.js";
 
 export interface EngineConfig {
   llm: LLMConfig;
@@ -199,4 +200,6 @@ export interface EngineResult {
   sessionId: string;
   turnCount: number;
   usage: TokenUsage;
+  /** Present only when Mimi successfully invoked DelegateWork during this run. */
+  petWorkDelegation?: PetWorkDelegation;
 }

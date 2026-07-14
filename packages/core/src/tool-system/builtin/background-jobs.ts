@@ -67,6 +67,10 @@ export interface BackgroundJobEntry {
   /** Normalized snapshot of the declared effective workspace cwd. Preserved
    *  separately from its resolved root for mixed git-resolution fallback. */
   effectiveWorkspaceCwd?: string;
+  /** Canonical source workspace before per-run isolation. Unlike
+   * effectiveWorkspaceRoot, this remains the main checkout for linked
+   * worktrees so later writers targeting that checkout can auto-isolate too. */
+  workspaceRoot?: string;
   /** Canonical conflict identity: git worktree root when resolvable, otherwise
    *  the normalized effective workspace cwd. */
   effectiveWorkspaceRoot?: string;
@@ -80,6 +84,14 @@ export interface BackgroundJobEntry {
   promptSummary?: string;
   /** External CLI kind for DriveAgent jobs. */
   cli?: ExternalCliKind;
+  /** DriveAgent workspace lifecycle metadata. */
+  isolation?: "current" | "worktree" | "none";
+  worktreePath?: string;
+  worktreeBranch?: string;
+  worktreeBaseRef?: string;
+  worktreeCleanup?: "auto" | "keep" | "detach" | "discard";
+  worktreeBranchPrefix?: string;
+  worktreeLifecycle?: "running" | "kept" | "detached" | "discarded" | "cleanup-failed";
   /** Client message that launched this external job. */
   originClientMessageId?: string;
   /** Optional cancellation hook for jobs backed by a live process. It may
@@ -94,6 +106,7 @@ export interface BackgroundJobOutcome {
   finalText?: string;
   ccSessionId?: string;
   changedFiles?: string[];
+  worktreeLifecycle?: "running" | "kept" | "detached" | "discarded" | "cleanup-failed";
 }
 
 export interface BackgroundJobStartOptions {
@@ -105,8 +118,16 @@ export interface BackgroundJobStartOptions {
   /** Optional host-declared workspace the job is expected to write. Defaults
    *  to launchCwd. This avoids guessing later shell `cd` commands. */
   effectiveWorkspaceCwd?: string;
+  /** Source workspace before a job-specific worktree was created. */
+  workspaceRoot?: string;
   promptSummary?: string;
   cli?: ExternalCliKind;
+  isolation?: "current" | "worktree" | "none";
+  worktreePath?: string;
+  worktreeBranch?: string;
+  worktreeBaseRef?: string;
+  worktreeCleanup?: "auto" | "keep" | "detach" | "discard";
+  worktreeBranchPrefix?: string;
   originClientMessageId?: string;
   abort?: () => void | BackgroundJobOutcome | Promise<void | BackgroundJobOutcome>;
 }
@@ -203,6 +224,7 @@ class BackgroundJobRegistry {
       startedAt: Date.now(),
       ...(launchCwd ? { launchCwd, cwd: launchCwd } : {}),
       ...(effectiveWorkspaceCwd ? { effectiveWorkspaceCwd } : {}),
+      ...(options?.workspaceRoot ? { workspaceRoot: normalizeCwdPath(options.workspaceRoot) } : {}),
       ...(workspaceIdentity
         ? {
             effectiveWorkspaceRoot: workspaceIdentity.root,
@@ -214,6 +236,15 @@ class BackgroundJobRegistry {
         : {}),
       ...(options?.promptSummary ? { promptSummary: options.promptSummary } : {}),
       ...(options?.cli ? { cli: options.cli } : {}),
+      ...(options?.isolation ? { isolation: options.isolation } : {}),
+      ...(options?.worktreePath ? { worktreePath: normalizeCwdPath(options.worktreePath) } : {}),
+      ...(options?.worktreeBranch ? { worktreeBranch: options.worktreeBranch } : {}),
+      ...(options?.worktreeBaseRef ? { worktreeBaseRef: options.worktreeBaseRef } : {}),
+      ...(options?.worktreeCleanup ? { worktreeCleanup: options.worktreeCleanup } : {}),
+      ...(options?.worktreeBranchPrefix
+        ? { worktreeBranchPrefix: options.worktreeBranchPrefix }
+        : {}),
+      ...(options?.worktreePath ? { worktreeLifecycle: "running" } : {}),
       ...(options?.originClientMessageId
         ? { originClientMessageId: options.originClientMessageId }
         : {}),
@@ -233,6 +264,9 @@ class BackgroundJobRegistry {
     if (outcome?.finalText !== undefined) entry.finalText = outcome.finalText;
     if (outcome?.ccSessionId !== undefined) entry.ccSessionId = outcome.ccSessionId;
     if (outcome?.changedFiles !== undefined) entry.changedFiles = outcome.changedFiles;
+    if (outcome?.worktreeLifecycle !== undefined) {
+      entry.worktreeLifecycle = outcome.worktreeLifecycle;
+    }
     this.evictTerminalOverCap(entry.sessionId);
     this.notify();
   }
@@ -250,6 +284,21 @@ class BackgroundJobRegistry {
     if (!entry || !isActiveStatus(entry.status)) return;
     if (artifacts.ccSessionId !== undefined) entry.ccSessionId = artifacts.ccSessionId;
     if (artifacts.changedFiles !== undefined) entry.changedFiles = artifacts.changedFiles;
+  }
+
+  /** Update retained DriveAgent lifecycle state after an explicit cleanup. */
+  recordWorktreeLifecycle(
+    jobId: string,
+    lifecycle: NonNullable<BackgroundJobEntry["worktreeLifecycle"]>,
+    note?: string,
+  ): boolean {
+    const entry = this.jobs.get(jobId);
+    if (!entry || !entry.worktreePath) return false;
+    entry.worktreeLifecycle = lifecycle;
+    if (note)
+      entry.finalText = `${entry.finalText ? `${entry.finalText}\n\n` : ""}[worktree lifecycle] ${note}`;
+    this.notify();
+    return true;
   }
 
   async cancel(jobId: string, outcome?: Omit<BackgroundJobOutcome, "status">): Promise<boolean> {

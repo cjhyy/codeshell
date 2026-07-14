@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, type WebContents } from "electron";
-import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { chmod, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { AgentBridge } from "./agent-bridge.js";
 import type { PluginPanelProtocolResource } from "./plugin-panel-protocol.js";
@@ -29,7 +29,16 @@ interface GuestBinding {
 
 export interface PluginPanelBridgeOptions {
   isTrustedHost(sender: WebContents): boolean;
+  isWorkspaceTrusted(cwd: string): boolean;
   getAgentBridge(): AgentBridge | null;
+  limits?: Partial<{
+    maxParamsBytes: number;
+    maxResultBytes: number;
+    maxCallsPerWindow: number;
+    rateWindowMs: number;
+    callTimeoutMs: number;
+    storageQuotaBytes: number;
+  }>;
 }
 
 function jsonBytes(value: unknown): number {
@@ -54,6 +63,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 
 export class PluginPanelBridge {
   private readonly guests = new Map<number, GuestBinding>();
+  private readonly storageQueues = new Map<string, Promise<void>>();
 
   constructor(private readonly options: PluginPanelBridgeOptions) {}
 
@@ -174,7 +184,7 @@ export class PluginPanelBridge {
         ? { sessionId: input.sessionId, busy: input.busy === true }
         : {}),
       ...(binding.resource.descriptor.permissions.includes("context.workspace") && input.cwd
-        ? { cwd: input.cwd, trusted: input.trusted === true }
+        ? { cwd: input.cwd, trusted: this.options.isWorkspaceTrusted(input.cwd) }
         : {}),
     };
     if (!binding.guest.isDestroyed()) {
@@ -200,17 +210,24 @@ export class PluginPanelBridge {
     const binding = this.bindingFor(sender);
     if (!binding.bucket) throw new Error("plugin panel scope is not bound");
     if (typeof method !== "string" || method.length > 64) throw new Error("invalid bridge method");
-    if (jsonBytes(params) > MAX_PARAMS_BYTES) throw new Error("plugin panel params are too large");
+    const limits = this.options.limits;
+    if (jsonBytes(params) > (limits?.maxParamsBytes ?? MAX_PARAMS_BYTES)) {
+      throw new Error("plugin panel params are too large");
+    }
     const now = Date.now();
-    binding.callTimes = binding.callTimes.filter((time) => now - time < RATE_WINDOW_MS);
-    if (binding.callTimes.length >= MAX_CALLS_PER_WINDOW) {
+    binding.callTimes = binding.callTimes.filter(
+      (time) => now - time < (limits?.rateWindowMs ?? RATE_WINDOW_MS),
+    );
+    if (binding.callTimes.length >= (limits?.maxCallsPerWindow ?? MAX_CALLS_PER_WINDOW)) {
       throw new Error("plugin panel rate limit exceeded");
     }
     binding.callTimes.push(now);
 
     const operation = this.dispatch(binding, method, params);
-    const result = await withTimeout(operation, CALL_TIMEOUT_MS);
-    if (jsonBytes(result) > MAX_RESULT_BYTES) throw new Error("plugin panel result is too large");
+    const result = await withTimeout(operation, limits?.callTimeoutMs ?? CALL_TIMEOUT_MS);
+    if (jsonBytes(result) > (limits?.maxResultBytes ?? MAX_RESULT_BYTES)) {
+      throw new Error("plugin panel result is too large");
+    }
     return result;
   }
 
@@ -279,27 +296,64 @@ export class PluginPanelBridge {
     if (encodedValue === undefined)
       throw new Error("plugin panel storage only accepts JSON values");
     const jsonValue = JSON.parse(encodedValue) as unknown;
-    const storage = await this.readStorage(binding);
-    storage[key] = jsonValue;
-    const serialized = `${JSON.stringify(storage)}\n`;
-    if (Buffer.byteLength(serialized, "utf-8") > STORAGE_QUOTA_BYTES) {
-      throw new Error("plugin panel storage quota exceeded");
-    }
-    const file = this.storagePath(binding);
-    await mkdir(dirname(file), { recursive: true });
-    await writeFile(file, serialized, "utf-8");
-    return true;
+    return this.withStorageMutation(binding, async (file) => {
+      const storage = await this.readStorage(binding);
+      storage[key] = jsonValue;
+      await this.writeStorage(file, storage);
+      return true;
+    });
   }
 
   private async storageDelete(binding: GuestBinding, params: unknown): Promise<boolean> {
     const key = this.storageKey(params);
-    const storage = await this.readStorage(binding);
-    const existed = Object.prototype.hasOwnProperty.call(storage, key);
-    delete storage[key];
+    return this.withStorageMutation(binding, async (file) => {
+      const storage = await this.readStorage(binding);
+      const existed = Object.prototype.hasOwnProperty.call(storage, key);
+      delete storage[key];
+      await this.writeStorage(file, storage);
+      return existed;
+    });
+  }
+
+  private async writeStorage(file: string, storage: Record<string, unknown>): Promise<void> {
+    const serialized = `${JSON.stringify(storage)}\n`;
+    if (
+      Buffer.byteLength(serialized, "utf-8") >
+      (this.options.limits?.storageQuotaBytes ?? STORAGE_QUOTA_BYTES)
+    ) {
+      throw new Error("plugin panel storage quota exceeded");
+    }
+    await mkdir(dirname(file), { recursive: true, mode: 0o700 });
+    const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
+    try {
+      await writeFile(temporary, serialized, { encoding: "utf-8", mode: 0o600 });
+      await rename(temporary, file);
+      await chmod(file, 0o600).catch(() => undefined);
+    } catch (error) {
+      await rm(temporary, { force: true }).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  private async withStorageMutation<T>(
+    binding: GuestBinding,
+    mutate: (file: string) => Promise<T>,
+  ): Promise<T> {
     const file = this.storagePath(binding);
-    await mkdir(dirname(file), { recursive: true });
-    await writeFile(file, `${JSON.stringify(storage)}\n`, "utf-8");
-    return existed;
+    const ready = (this.storageQueues.get(file) ?? Promise.resolve()).catch(() => undefined);
+    let release = (): void => undefined;
+    const gate = new Promise<void>((resolveGate) => {
+      release = resolveGate;
+    });
+    const tail = ready.then(() => gate);
+    this.storageQueues.set(file, tail);
+    await ready;
+    try {
+      return await mutate(file);
+    } finally {
+      release();
+      if (this.storageQueues.get(file) === tail) this.storageQueues.delete(file);
+    }
   }
 
   private async openExternal(binding: GuestBinding, params: unknown): Promise<boolean> {

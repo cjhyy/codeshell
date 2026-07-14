@@ -156,6 +156,35 @@ describe("loadGatewayConfig", () => {
       }),
     ).toThrow("缺少 botToken");
   });
+
+  test("allows proactive notifications only to enabled allowlisted targets", () => {
+    const root = tempRoot();
+    const file = join(root, "config.json");
+    writeFileSync(
+      file,
+      JSON.stringify({
+        telegram: { botToken: "secret", allowedChatIds: ["owner"] },
+        notifications: { enabled: true, targets: { telegram: ["owner"] } },
+      }),
+      { mode: 0o600 },
+    );
+    if (process.platform !== "win32") chmodSync(file, 0o600);
+    expect(
+      loadGatewayConfig({ configPath: file, env: {}, platform: "linux" }).notifications,
+    ).toEqual([{ channel: "telegram", target: "owner" }]);
+
+    writeFileSync(
+      file,
+      JSON.stringify({
+        telegram: { botToken: "secret", allowedChatIds: ["owner"] },
+        notifications: { enabled: true, targets: { telegram: ["attacker"] } },
+      }),
+      { mode: 0o600 },
+    );
+    expect(() => loadGatewayConfig({ configPath: file, env: {}, platform: "linux" })).toThrow(
+      "不在",
+    );
+  });
 });
 
 function tempRoot(): string {

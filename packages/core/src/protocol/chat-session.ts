@@ -6,6 +6,7 @@ import { isAbortError } from "../llm/client-base.js";
 import type { InputAttachmentMeta, PendingApprovalMetadata } from "./types.js";
 import type { ApprovalRouter } from "../tool-system/permission.js";
 import type { RunBehaviorMode } from "../engine/run-types.js";
+import type { PetWorkspaceOption } from "../pet/delegation.js";
 import { isSameGoalInstance, type GoalConfig } from "../engine/goal.js";
 
 export interface ChatSessionOptions {
@@ -43,6 +44,8 @@ export interface TurnOpts {
   behaviorMode?: RunBehaviorMode;
   /** Bounded host Pet world JSON for this turn; never part of `task`. */
   petRuntimeContext?: string;
+  /** Closed Workspace choices exposed to Mimi's DelegateWork tool. */
+  petWorkspaces?: PetWorkspaceOption[];
   /** Durable classification used only when the Engine creates the session. */
   kind?: SessionKind;
   /** Connection owner router for permission prompts in this turn. */
@@ -375,6 +378,7 @@ export class ChatSession {
         planMode: next.opts.planMode,
         behaviorMode: next.opts.behaviorMode,
         petRuntimeContext: next.opts.petRuntimeContext,
+        petWorkspaces: next.opts.petWorkspaces,
         kind: next.opts.kind,
         approvalRouter: next.opts.approvalRouter,
       });

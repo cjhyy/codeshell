@@ -20,8 +20,7 @@ export class DingTalkAdapter implements ChannelAdapter {
   }
 
   async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
-    this.client.registerCallbackListener(TOPIC_ROBOT, (frame) => {
-      this.client.socketCallBackResponse(frame.headers.messageId, { status: "SUCCESS" });
+    this.client.registerCallbackListener(TOPIC_ROBOT, async (frame) => {
       let message: RobotTextMessage;
       try {
         message = JSON.parse(frame.data) as RobotTextMessage;
@@ -30,12 +29,17 @@ export class DingTalkAdapter implements ChannelAdapter {
       }
       if (message.msgtype !== "text" || !message.text?.content) return;
       this.responseUrls.set(message.conversationId, message.sessionWebhook);
-      void dispatchSafely(handler, {
+      // dispatchSafely so a rejected delivery never escapes this stream
+      // callback as an unhandled rejection (which would crash the process);
+      // the SUCCESS ack below must still run so DingTalk stops redelivering.
+      await dispatchSafely(handler, {
         channel: this.channel,
         target: message.conversationId,
         senderId: message.senderStaffId || message.senderId,
         text: message.text.content,
+        messageId: frame.headers.messageId,
       });
+      this.client.socketCallBackResponse(frame.headers.messageId, { status: "SUCCESS" });
     });
     await this.client.connect();
     try {

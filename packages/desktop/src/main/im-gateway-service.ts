@@ -2,7 +2,14 @@ import { randomUUID } from "node:crypto";
 import { chmodSync, existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { IpcMain } from "electron";
-import { ChatGateway, createAllowlistMiddleware } from "@cjhyy/code-shell-chat";
+import {
+  acquireGatewayInstanceLock,
+  ChatGateway,
+  createAllowlistMiddleware,
+  createDesktopNotificationHandler,
+  createRateLimitMiddleware,
+  type GatewayInstanceLease,
+} from "@cjhyy/code-shell-chat";
 import {
   CODE_SHELL_REMOTE_COMMANDS,
   createCodeShellRemoteCommands,
@@ -54,6 +61,7 @@ interface ActiveGateway {
   task: Promise<void>;
   channels: ImGatewayChannel[];
   startedAt: number;
+  lease: GatewayInstanceLease;
 }
 
 interface PendingVerification {
@@ -69,6 +77,8 @@ export class ImGatewayService {
   private lastError?: string;
   private login?: { id: string; abort: AbortController };
   private verification?: PendingVerification;
+  /** Set while a stopped gateway's instance lease is still being released. */
+  private pendingRelease?: Promise<void>;
 
   constructor(private readonly options: ImGatewayServiceOptions = {}) {
     this.configPath = resolve(
@@ -105,47 +115,134 @@ export class ImGatewayService {
     // do not probe a renderer-like global `window` in mixed test processes.
     const { createChannelAdapter } = await import("@cjhyy/code-shell-chat/factory");
     const config = loadGatewayConfig({ configPath: this.configPath });
-    const desktop = new DesktopControlClient(config.desktop);
-    const abort = new AbortController();
-    const gateway = new ChatGateway({
-      adapters: config.channels.map((channel) =>
+    // A previous stop() may still be releasing its cross-process lease while
+    // its adapters wind down. Wait for that to finish before re-acquiring so a
+    // fast stop→start in the same process does not race the lock.
+    if (this.pendingRelease) await this.pendingRelease;
+    const lease = acquireGatewayInstanceLock(config.runtime.lockPath, "CodeShell Desktop");
+    try {
+      const desktop = new DesktopControlClient(config.desktop);
+      const abort = new AbortController();
+      const adapters = config.channels.map((channel) =>
         createChannelAdapter(channel, { discordCommands: CODE_SHELL_REMOTE_COMMANDS }),
-      ),
-      webhook: config.webhook,
-    });
-    gateway.use(
-      createAllowlistMiddleware(
-        Object.fromEntries(
-          config.channels.map((channel) => [
-            channel.channel,
-            { targetIds: channel.allowedTargetIds, userIds: channel.allowedUserIds },
-          ]),
+      );
+      // Track each adapter's first-turn outcome. superviseAdapter catches
+      // adapter.run rejections and restarts with backoff, so gateway.run never
+      // rejects; without observing adapter state a crash-looping bad token
+      // would show a permanently-green gateway. Record the latest backoff error
+      // and whether every adapter has already failed its first turn.
+      const adapterFirstError = new Map<string, string>();
+      const adapterEverRan = new Set<string>();
+      const gateway = new ChatGateway({
+        adapters,
+        webhook: config.webhook,
+        delivery: {
+          path: config.runtime.inboxPath,
+          maxPending: config.runtime.maxPending,
+          maxConcurrent: config.runtime.maxConcurrent,
+          maxPerTarget: config.runtime.maxPerTarget,
+        },
+        adapterRestart: {
+          baseMs: config.runtime.adapterRestartBaseMs,
+          maxMs: config.runtime.adapterRestartMaxMs,
+        },
+        onAdapterState: (state) => {
+          if (this.active !== active) return;
+          // `running` is set optimistically before the adapter connects, so a
+          // later transition to `backoff` (a real connect/auth failure) is the
+          // meaningful signal. Clear a recorded failure once an adapter reruns.
+          if (state.state === "running") {
+            adapterEverRan.add(state.id);
+            adapterFirstError.delete(state.id);
+          }
+          if (state.state === "backoff" && state.error) {
+            adapterFirstError.set(state.id, `${state.channel}: ${state.error}`);
+            // Surface a live adapter failure so the Link page stops showing a
+            // healthy gateway once tokens crash-loop in backoff.
+            this.lastError = state.error;
+            this.emitStatus();
+          }
+        },
+      });
+      gateway.use(
+        createAllowlistMiddleware(
+          Object.fromEntries(
+            config.channels.map((channel) => [
+              channel.channel,
+              { targetIds: channel.allowedTargetIds, userIds: channel.allowedUserIds },
+            ]),
+          ),
         ),
-      ),
-    );
-    gateway.use(createCodeShellRemoteCommands({ desktop }));
-    gateway.use(createMimiPetChat({ desktop }));
+      );
+      gateway.use(createRateLimitMiddleware(config.runtime.maxMessagesPerUserPerMinute));
+      gateway.use(createCodeShellRemoteCommands({ desktop }));
+      gateway.use(createMimiPetChat({ desktop }));
 
-    this.lastError = undefined;
-    const active: ActiveGateway = {
-      abort,
-      task: Promise.resolve(),
-      channels: config.channels.map(({ channel }) => channel),
-      startedAt: Date.now(),
-    };
-    this.active = active;
-    active.task = gateway.run(abort.signal);
-    void active.task.then(
-      () => this.onGatewaySettled(active, undefined),
-      (error) => this.onGatewaySettled(active, error),
-    );
+      this.lastError = undefined;
+      const active: ActiveGateway = {
+        abort,
+        task: Promise.resolve(),
+        channels: config.channels.map(({ channel }) => channel),
+        startedAt: Date.now(),
+        lease,
+      };
+      this.active = active;
+      const gatewayTask = gateway.run(abort.signal);
+      const notificationTask =
+        config.notifications.length > 0
+          ? desktop.watchEvents(
+              abort.signal,
+              createDesktopNotificationHandler(adapters, config.notifications),
+              {
+                checkpointPath: config.runtime.eventCursorPath,
+                onError: (error) => {
+                  this.lastError = `Desktop 通知等待重试：${error instanceof Error ? error.message : String(error)}`;
+                  this.emitStatus();
+                },
+                onRecovered: () => {
+                  if (!this.lastError?.startsWith("Desktop 通知等待重试：")) return;
+                  this.lastError = undefined;
+                  this.emitStatus();
+                },
+              },
+            )
+          : new Promise<void>((resolveDone) =>
+              abort.signal.addEventListener("abort", () => resolveDone(), { once: true }),
+            );
+      active.task = Promise.all([gatewayTask, notificationTask]).then(() => undefined);
+      void active.task.then(
+        () => this.onGatewaySettled(active, undefined),
+        (error) => this.onGatewaySettled(active, error),
+      );
 
-    // Surface adapters that reject during their first turn as a failed start,
-    // instead of briefly showing a misleading green state in the Link page.
-    await new Promise((resolveTurn) => setTimeout(resolveTurn, 25));
-    if (this.active !== active) throw new Error(this.lastError ?? "Chat Gateway 启动后立即退出");
-    this.emitStatus();
-    return this.status();
+      // Surface adapters that reject during their first turn as a failed start,
+      // instead of briefly showing a misleading green state in the Link page.
+      await new Promise((resolveTurn) => setTimeout(resolveTurn, 25));
+      if (this.active !== active) throw new Error(this.lastError ?? "Chat Gateway 启动后立即退出");
+      // superviseAdapter keeps gateway.run alive by restarting failed adapters,
+      // so a bad-token start does not settle the task. If every configured
+      // adapter has already crash-looped into backoff within the probe window,
+      // treat the start as failed rather than reporting a green gateway.
+      if (adapters.length > 0 && adapterFirstError.size >= adapters.length) {
+        throw new Error([...adapterFirstError.values()].join("; "));
+      }
+      this.emitStatus();
+      return this.status();
+    } catch (error) {
+      // If we already published this run before failing the fail-fast probe,
+      // tear it down: abort the gateway task and clear active so the lease is
+      // not released out from under still-running adapters. onGatewaySettled
+      // releases the lease once the aborted task settles.
+      const active = this.active;
+      if (active?.lease === lease) {
+        this.active = undefined;
+        active.abort.abort();
+        void active.task.catch(() => undefined).then(() => lease.release());
+      } else {
+        lease.release();
+      }
+      throw error;
+    }
   }
 
   async stop(): Promise<ImGatewayStatus> {
@@ -153,8 +250,19 @@ export class ImGatewayService {
     if (!active) return this.status();
     this.active = undefined;
     active.abort.abort();
+    // Release the single-instance lease only once the gateway task actually
+    // settles — an adapter mid-long-poll may not observe the abort for tens of
+    // seconds. Releasing on the 5s UI timeout would free the cross-process lock
+    // while adapters still poll, letting a second process double-consume the
+    // same account. Defer the release to a task-settled continuation and keep
+    // it in `pendingRelease` so a fast restart can wait for the old run to end.
+    const release = active.task.catch(() => undefined).then(() => active.lease.release());
+    this.pendingRelease = release;
+    void release.then(() => {
+      if (this.pendingRelease === release) this.pendingRelease = undefined;
+    });
     await Promise.race([
-      active.task.catch(() => undefined),
+      release,
       new Promise<void>((resolveWait) => setTimeout(resolveWait, 5_000)),
     ]);
     this.emitStatus();
@@ -245,7 +353,10 @@ export class ImGatewayService {
   private onGatewaySettled(active: ActiveGateway, error: unknown): void {
     if (this.active !== active) return;
     this.active = undefined;
-    if (!active.abort.signal.aborted) {
+    const stoppedByOwner = active.abort.signal.aborted;
+    active.abort.abort();
+    active.lease.release();
+    if (!stoppedByOwner) {
       this.lastError = error
         ? error instanceof Error
           ? error.message

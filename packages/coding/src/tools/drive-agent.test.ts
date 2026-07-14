@@ -619,12 +619,13 @@ describe("DriveClaudeCode alias (back-compat)", () => {
 });
 
 describe("DriveAgentJobs tool", () => {
-  it("has list/inspect/cancel actions", () => {
+  it("has list/inspect/cancel/cleanup actions", () => {
     expect(driveAgentJobsToolDef.name).toBe("DriveAgentJobs");
     expect((driveAgentJobsToolDef.inputSchema as any).properties.action.enum).toEqual([
       "list",
       "inspect",
       "cancel",
+      "cleanup",
     ]);
     expect((driveAgentJobsToolDef.inputSchema as any).properties.resultChars).toMatchObject({
       type: "number",

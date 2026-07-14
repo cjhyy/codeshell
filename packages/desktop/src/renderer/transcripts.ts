@@ -626,10 +626,16 @@ export function migrateProjectSessionBucket(
 /** @deprecated Use migrateProjectSessionBucket. */
 export const migrateRepoSessionBucket = migrateProjectSessionBucket;
 
-/** Create a new session under `projectId` and make it active. */
+export interface CreateSessionOptions {
+  /** Defaults to true. Background producers such as Mimi must not steal the active chat. */
+  activate?: boolean;
+}
+
+/** Create a new session under `projectId`, active by default. */
 export function createSession(
   projectId: string | null,
   title?: string,
+  options: CreateSessionOptions = {},
 ): { index: SessionIndex; sessionId: string } {
   const idx = loadSessionIndex(projectId);
   const id = makeSessionId();
@@ -642,7 +648,7 @@ export function createSession(
   };
   const next: SessionIndex = {
     sessions: [summary, ...idx.sessions],
-    activeSessionId: id,
+    activeSessionId: options.activate === false ? idx.activeSessionId : id,
   };
   saveSessionIndex(projectId, next);
   return { index: next, sessionId: id };

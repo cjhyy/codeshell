@@ -5,11 +5,14 @@ export const pluginPanelElectronMock = {
   ipcHandlers: new Map<string, (event: { sender: any }, ...args: any[]) => unknown>(),
   trustedSender: { id: 1 },
   ownerWindow: { id: 10, isDestroyed: () => false },
+  userDataPath: "/tmp/codeshell-plugin-panel-test",
+  dialogResponse: 1,
+  openedUrls: [] as string[],
 };
 
 export function installPluginPanelElectronMock(): void {
   mock.module("electron", () => ({
-    app: { getPath: () => "/tmp/codeshell-plugin-panel-test" },
+    app: { getPath: () => pluginPanelElectronMock.userDataPath },
     BrowserWindow: {
       fromWebContents: (sender: unknown) =>
         sender === pluginPanelElectronMock.trustedSender
@@ -17,7 +20,7 @@ export function installPluginPanelElectronMock(): void {
           : null,
       fromId: () => pluginPanelElectronMock.ownerWindow,
     },
-    dialog: { showMessageBox: async () => ({ response: 1 }) },
+    dialog: { showMessageBox: async () => ({ response: pluginPanelElectronMock.dialogResponse }) },
     ipcMain: {
       handle: (channel: string, handler: (event: { sender: any }, ...args: any[]) => unknown) => {
         pluginPanelElectronMock.ipcHandlers.set(channel, handler);
@@ -35,6 +38,10 @@ export function installPluginPanelElectronMock(): void {
         setPermissionCheckHandler: () => undefined,
       }),
     },
-    shell: { openExternal: async () => undefined },
+    shell: {
+      openExternal: async (url: string) => {
+        pluginPanelElectronMock.openedUrls.push(url);
+      },
+    },
   }));
 }

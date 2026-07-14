@@ -167,7 +167,7 @@ describe("registerPetIpc", () => {
                 ? command.clientMessageId
                 : "missing",
             task: "修复登录问题",
-            preferredProjectId: "project-a",
+            workspacePath: "/work/project-a",
           },
         }),
       },
@@ -185,7 +185,7 @@ describe("registerPetIpc", () => {
         type: "chat",
         message: "修复登录问题",
         clientMessageId: "client-auto",
-        preferredProjectId: "project-a",
+        preferredProjectPath: "/work/project-a",
       },
     );
 
@@ -196,9 +196,69 @@ describe("registerPetIpc", () => {
         kind: "delegation-requested",
         clientMessageId: "client-auto",
         task: "修复登录问题",
-        preferredProjectId: "project-a",
+        workspacePath: "/work/project-a",
       }),
     ]);
+  });
+
+  test("delivers each delegation once to the designated app window", async () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    const mainEvents: unknown[] = [];
+    const secondaryEvents: unknown[] = [];
+    const mainWindow = {
+      isDestroyed: () => false,
+      webContents: { send: (_channel: string, payload: unknown) => mainEvents.push(payload) },
+    };
+    const secondaryWindow = {
+      isDestroyed: () => false,
+      webContents: { send: (_channel: string, payload: unknown) => secondaryEvents.push(payload) },
+    };
+    registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: () => {},
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      dispatcher: {
+        dispatch: async (command) => ({
+          ok: true,
+          type: "chat",
+          petSessionId: "pet-one",
+          result: { text: "delegated" },
+          delegation: {
+            clientMessageId:
+              command.type === "chat" && command.clientMessageId
+                ? command.clientMessageId
+                : "missing",
+            task: "修复登录问题",
+            workspacePath: "/work/project-a",
+          },
+        }),
+      },
+      windows: () => [mainWindow, secondaryWindow],
+      delegationWindows: () => [mainWindow],
+    });
+
+    const command = {
+      type: "chat" as const,
+      message: "修复登录问题",
+      clientMessageId: "client-idempotent",
+    };
+    await handlers.get("pet:dispatch")?.({}, command);
+    await handlers.get("pet:dispatch")?.({}, command);
+
+    expect(
+      mainEvents.filter((event) => (event as { kind?: string }).kind === "delegation-requested"),
+    ).toHaveLength(1);
+    expect(
+      secondaryEvents.filter(
+        (event) => (event as { kind?: string }).kind === "delegation-requested",
+      ),
+    ).toHaveLength(0);
   });
 
   test("accepts only a structured navigation request and delegates revalidation", async () => {

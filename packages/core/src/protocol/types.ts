@@ -20,6 +20,7 @@ import type {
   SessionWorkspace,
 } from "../types.js";
 import type { RunBehaviorMode } from "../engine/run-types.js";
+import type { PetWorkspaceOption, PetWorkDelegation } from "../pet/delegation.js";
 import type {
   PendingDecisionProjection,
   PetProjectionSnapshot,
@@ -182,6 +183,8 @@ export interface RunParams {
    * transcript. Valid only for an explicitly durable Pet run.
    */
   petRuntimeContext?: string;
+  /** Closed Workspace choices exposed to Mimi's DelegateWork tool. */
+  petWorkspaces?: PetWorkspaceOption[];
   /** Durable classification used only when creating a new session. */
   kind?: SessionKind;
   /**
@@ -210,6 +213,7 @@ export interface RunResult {
   sessionId: string;
   turnCount: number;
   usage: TokenUsage;
+  petWorkDelegation?: PetWorkDelegation;
 }
 
 export interface FullForkSessionParams {

@@ -127,6 +127,33 @@ function runInputError(params: RunParams): string | null {
       return "petRuntimeContext must be valid JSON";
     }
   }
+  if (params.petWorkspaces !== undefined) {
+    if (params.behaviorMode !== "pet" || params.kind !== "pet") {
+      return "petWorkspaces requires behaviorMode=pet and kind=pet";
+    }
+    if (!Array.isArray(params.petWorkspaces) || params.petWorkspaces.length > 64) {
+      return "petWorkspaces must be a bounded array";
+    }
+    const ids = new Set<string>();
+    for (const workspace of params.petWorkspaces) {
+      if (
+        !workspace ||
+        typeof workspace !== "object" ||
+        typeof workspace.id !== "string" ||
+        !workspace.id.trim() ||
+        workspace.id.length > 128 ||
+        typeof workspace.name !== "string" ||
+        !workspace.name.trim() ||
+        workspace.name.length > 256 ||
+        (workspace.description !== undefined &&
+          (typeof workspace.description !== "string" || workspace.description.length > 4_096)) ||
+        ids.has(workspace.id)
+      ) {
+        return "petWorkspaces contains an invalid or duplicate Workspace";
+      }
+      ids.add(workspace.id);
+    }
+  }
   return null;
 }
 
@@ -1035,6 +1062,7 @@ export class AgentServer {
         planMode: params.planMode,
         behaviorMode: params.behaviorMode,
         petRuntimeContext: params.petRuntimeContext,
+        petWorkspaces: params.petWorkspaces,
         kind: params.kind,
         approvalRouter: this.approvalRouter,
       });
@@ -1049,6 +1077,7 @@ export class AgentServer {
         sessionId: result.sessionId ?? sid,
         turnCount: result.turnCount,
         usage: result.usage,
+        petWorkDelegation: result.petWorkDelegation,
       };
       this.transport.send(createResponse(req.id, runResult));
       // Run-boundary re-check (trigger B): the session is idle now. If a
@@ -1173,6 +1202,7 @@ export class AgentServer {
         planMode: params.planMode,
         behaviorMode: params.behaviorMode,
         petRuntimeContext: params.petRuntimeContext,
+        petWorkspaces: params.petWorkspaces,
         kind: params.kind,
       });
 
@@ -1182,6 +1212,7 @@ export class AgentServer {
         sessionId: result.sessionId,
         turnCount: result.turnCount,
         usage: result.usage,
+        petWorkDelegation: result.petWorkDelegation,
       };
 
       this.transport.send(createResponse(req.id, runResult));
