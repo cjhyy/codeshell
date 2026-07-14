@@ -1,9 +1,9 @@
 /**
  * Read-only enumeration of installed plugins for the Customize UI.
  *
- * Sourced from core's `readInstalledPlugins()` (the same V2 JSON the
- * scanner uses). For each install key (`<plugin>@<marketplace>`) we
- * derive a display name, a source label and a skill count by counting
+ * Sourced from core's trusted plugin catalog (the same installed state the
+ * runtime uses). For each install key (`<plugin>@<marketplace>`) we derive a
+ * source label and a skill count by counting
  * `installPath/skills/*\/SKILL.md` files on disk — the value isn't
  * authoritative for tool dispatch (the scanner is), it's just for the
  * left-pane summary.
@@ -15,7 +15,8 @@
  */
 
 import {
-  listInstalled,
+  loadPluginCatalog,
+  loadPluginPanelContributions,
   uninstallPlugin,
   uninstallPluginByName,
   updatePluginByName,
@@ -24,9 +25,20 @@ import {
   type PluginContentInventory,
   type UpdateResult,
   type UpdateCheck,
+  computeEffectiveDisabledLists,
+  SettingsManager,
 } from "@cjhyy/code-shell-core";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import * as path from "node:path";
+import type {
+  PluginPanelDescriptor,
+  PluginPanelExtensionSummary,
+} from "../shared/plugin-panels.js";
+import {
+  replacePluginPanelResources,
+  type PluginPanelProtocolResource,
+} from "./plugin-panel-protocol.js";
 
 export interface PluginSummary {
   /** Display name (without the `@marketplace` suffix). */
@@ -52,8 +64,13 @@ interface PluginManifest {
   name?: string;
 }
 
-function readPluginManifest(installPath: string): PluginManifest | null {
-  const candidates = ["plugin.json", "claude-plugin.json"];
+function readLegacyPluginManifest(installPath: string): PluginManifest | null {
+  const candidates = [
+    ".claude-plugin/plugin.json",
+    ".codex-plugin/plugin.json",
+    "plugin.json",
+    "claude-plugin.json",
+  ];
   for (const file of candidates) {
     const full = path.join(installPath, file);
     if (!existsSync(full)) continue;
@@ -65,6 +82,109 @@ function readPluginManifest(installPath: string): PluginManifest | null {
     }
   }
   return null;
+}
+
+function panelTitle(
+  title: { default: string; en?: string; "zh-CN"?: string },
+  locale: string,
+): string {
+  return locale.toLowerCase().startsWith("zh")
+    ? (title["zh-CN"] ?? title.default)
+    : (title.en ?? title.default);
+}
+
+function discoverPluginPanels(locale: string): {
+  descriptors: PluginPanelDescriptor[];
+  resources: PluginPanelProtocolResource[];
+} {
+  let panels: ReturnType<typeof loadPluginPanelContributions>;
+  try {
+    panels = loadPluginPanelContributions();
+  } catch {
+    return { descriptors: [], resources: [] };
+  }
+
+  const descriptors: PluginPanelDescriptor[] = [];
+  const resources: PluginPanelProtocolResource[] = [];
+  for (const contribution of panels) {
+    const {
+      installKey: key,
+      installPath,
+      pluginName,
+      panel,
+    } = contribution;
+    const hostSeed = createHash("sha256")
+      .update(key)
+      .update("\0")
+      .update(installPath)
+      .update("\0")
+      .update(JSON.stringify(panel))
+      .digest("hex");
+    // One authority/partition per panel is stricter than sharing a plugin
+    // origin: sibling panels cannot navigate into each other's entry trees.
+    const hostId = createHash("sha256")
+      .update(hostSeed)
+      .update("\0")
+      .update(panel.id)
+      .digest("hex")
+      .slice(0, 32);
+    const descriptor: PluginPanelDescriptor = {
+      id: `plugin:${key}:${panel.id}`,
+      installKey: key,
+      pluginName,
+      panelId: panel.id,
+      title: panelTitle(panel.title, locale),
+      icon: panel.icon,
+      singleton: panel.singleton,
+      permissions: [...panel.permissions],
+      hostId,
+    };
+    descriptors.push(descriptor);
+    resources.push({ descriptor, root: installPath, entry: panel.entry });
+  }
+  return { descriptors, resources };
+}
+
+function disabledPluginNames(cwd: string): Set<string> {
+  const disabledPlugins = (() => {
+    try {
+      return computeEffectiveDisabledLists(
+        new SettingsManager(cwd || process.cwd(), "full"),
+        cwd || undefined,
+      ).disabledPlugins;
+    } catch {
+      return [];
+    }
+  })();
+  return new Set(disabledPlugins);
+}
+
+/** Installed UI contributions for the Extensions page, including disabled ones. */
+export function listPanelExtensions(
+  cwd: string,
+  locale: string,
+): PluginPanelExtensionSummary[] {
+  const disabled = disabledPluginNames(cwd);
+  return discoverPluginPanels(locale).descriptors.map((panel) => {
+    const disabledByPackage = disabled.has(panel.pluginName);
+    return {
+      ...panel,
+      kind: "panel" as const,
+      enabled: !disabledByPackage,
+      disabledByPackage,
+    };
+  });
+}
+
+/** Runtime descriptors for the session-owned right dock. */
+export function listPluginPanels(cwd: string, locale: string): PluginPanelDescriptor[] {
+  const discovered = discoverPluginPanels(locale);
+  // Protocol resources represent all installed panels. Per-project disabling
+  // only filters descriptors, so two windows with different settings cannot
+  // accidentally revoke each other's protocol host.
+  replacePluginPanelResources(discovered.resources);
+  const disabled = disabledPluginNames(cwd);
+  return discovered.descriptors.filter((panel) => !disabled.has(panel.pluginName));
 }
 
 function countSkills(installPath: string): number {
@@ -90,37 +210,27 @@ function deriveSourceLabel(marketplace: string | null): string {
 }
 
 export function listPlugins(_cwd: string): PluginSummary[] {
-  let rows: ReturnType<typeof listInstalled>;
+  let plugins: ReturnType<typeof loadPluginCatalog>;
   try {
-    rows = listInstalled();
+    plugins = loadPluginCatalog();
   } catch {
     return [];
   }
 
-  // listInstalled() may include multiple rows per key (different scopes).
-  // For the Customize summary we collapse to one per key — keys are
-  // unique in the plugins JSON, and the MVP only writes scope:"user".
-  const seen = new Set<string>();
   const out: PluginSummary[] = [];
-  for (const { key, entry } of rows) {
-    if (seen.has(key)) continue;
-    seen.add(key);
-
-    const atIdx = key.lastIndexOf("@");
-    const name = atIdx > 0 ? key.slice(0, atIdx) : key;
-    const marketplace = atIdx > 0 ? key.slice(atIdx + 1) : null;
-    const installPath = entry.installPath;
-    const manifest = installPath ? readPluginManifest(installPath) : null;
+  for (const plugin of plugins) {
+    const { installKey, name, marketplace, installPath } = plugin;
+    const manifest = plugin.manifest ?? readLegacyPluginManifest(installPath);
 
     out.push({
       name,
-      installKey: key,
+      installKey,
       marketplace,
       sourceLabel: deriveSourceLabel(marketplace),
       installPath,
-      installedAt: entry.installedAt,
-      version: entry.version,
-      skillCount: installPath ? countSkills(installPath) : 0,
+      installedAt: plugin.installedAt,
+      version: plugin.version,
+      skillCount: countSkills(installPath),
       description: manifest?.description,
     });
   }
@@ -137,7 +247,7 @@ export function getPluginDetail(installKey: string): PluginDetail | null {
   if (!summary) return null;
   const content = summary.installPath
     ? describePluginContent(summary.name, summary.installPath)
-    : { skills: [], commands: [], agents: [], hooks: [], mcpServers: [] };
+    : { skills: [], commands: [], agents: [], hooks: [], mcpServers: [], panels: [] };
   return { ...summary, content };
 }
 
@@ -210,4 +320,3 @@ export async function checkPluginUpdateEntry(name: string): Promise<UpdateCheck>
     return { name, updateAvailable: false, reason: String((e as Error)?.message ?? e) };
   }
 }
-

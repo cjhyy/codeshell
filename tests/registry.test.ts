@@ -76,9 +76,30 @@ describe("HookRegistry", () => {
   it("respects priority ordering", async () => {
     const hr = new HookRegistry();
     const order: number[] = [];
-    hr.register("on_turn_start", () => { order.push(1); return {}; }, 1);
-    hr.register("on_turn_start", () => { order.push(2); return {}; }, 10);
-    hr.register("on_turn_start", () => { order.push(3); return {}; }, 5);
+    hr.register(
+      "on_turn_start",
+      () => {
+        order.push(1);
+        return {};
+      },
+      1,
+    );
+    hr.register(
+      "on_turn_start",
+      () => {
+        order.push(2);
+        return {};
+      },
+      10,
+    );
+    hr.register(
+      "on_turn_start",
+      () => {
+        order.push(3);
+        return {};
+      },
+      5,
+    );
     await hr.emit("on_turn_start");
     expect(order).toEqual([2, 3, 1]); // highest priority first
   });
@@ -86,8 +107,22 @@ describe("HookRegistry", () => {
   it("stops chain on stop signal", async () => {
     const hr = new HookRegistry();
     const order: number[] = [];
-    hr.register("on_turn_start", () => { order.push(1); return { stop: true }; }, 10);
-    hr.register("on_turn_start", () => { order.push(2); return {}; }, 1);
+    hr.register(
+      "on_turn_start",
+      () => {
+        order.push(1);
+        return { stop: true };
+      },
+      10,
+    );
+    hr.register(
+      "on_turn_start",
+      () => {
+        order.push(2);
+        return {};
+      },
+      1,
+    );
     const result = await hr.emit("on_turn_start");
     expect(order).toEqual([1]); // second hook not called
     expect(result.stop).toBe(true);
@@ -105,7 +140,10 @@ describe("HookRegistry", () => {
   it("unregister removes a handler by identity (run-scoped goal hook)", async () => {
     const hr = new HookRegistry();
     let calls = 0;
-    const handler = () => { calls++; return {}; };
+    const handler = () => {
+      calls++;
+      return {};
+    };
     hr.register("on_stop", handler, 0, "goal-stop");
     expect(hr.countHandlers("on_stop")).toBe(1);
     await hr.emit("on_stop");
@@ -170,7 +208,9 @@ describe("SettingsManager", () => {
     try {
       const sm = new SettingsManager(tmpDir);
       const s = sm.get();
-      expect(s.agent.preset).toBeTruthy();
+      // Disk settings do not bake in a product preset; Engine resolves the
+      // core or installed capability default at the composition boundary.
+      expect(s.agent.preset).toBeUndefined();
       expect(s.permissions.defaultMode).toBeTruthy();
       expect(s.context.maxTokens).toBeGreaterThan(0);
       expect(Array.isArray(s.modelConnections)).toBe(true);

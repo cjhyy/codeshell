@@ -7,11 +7,12 @@ Guidance for AI assistants (Code Shell, Claude Code, Codex) working in this repo
 
 **CodeShell** — a general-purpose AI Agent orchestration framework. The engine is domain-agnostic; "coding" is expressed as a preset, not hardcoded. Design principles: (1) Core First (engine decoupled from domain), (2) Presets over Hardcoding, (3) Secure by Default (permission-gated tools), (4) Long-running Ready (Task/Cron/Sleep/Sub-Agent are first-class).
 
-## Monorepo layout (5 packages)
+## Monorepo layout (6 packages)
 
 ```
 packages/
   core/     @cjhyy/code-shell-core     — engine, tools, hooks, protocol. UI-agnostic.
+  coding/   @cjhyy/code-shell-capability-coding — optional coding/git/LSP/worktree capability pack.
   tui/      @cjhyy/code-shell-tui      — Ink-based terminal REPL on top of core.
   desktop/  @cjhyy/code-shell-desktop  — Electron client (private, not published).
   cdp/      @cjhyy/code-shell-cdp      — env-agnostic CDP browser action layer (no Playwright).
@@ -24,7 +25,7 @@ Root package `@cjhyy/code-shell` is the meta package that installs core + tui an
 
 ```bash
 bun install            # bun workspaces (NOT npm/yarn/pnpm)
-bun run build          # filter order: core → tui → chat → build-meta.ts (desktop/cdp separate)
+bun run build          # filter order: core → coding → tui → chat → build-meta.ts (desktop/cdp separate)
 bun run dev            # = dev:desktop (launches the Electron app)
 bun run dev:tui        # CODE_SHELL_DEV=1 CODESHELL_UI_PERF=1 packages/tui/src/cli/main.ts
 bun test               # bun test runner (NOT vitest/jest)
@@ -48,7 +49,8 @@ bun run bench:render   # render benchmarks (tail / streaming / spinner / wheel)
 - **Package manager is `bun`**, not npm/yarn/pnpm. `preinstall` enforces Node >= 20.10 via `scripts/check-node.cjs`.
 - **React is pinned to 19.2.6** via root `overrides` — do not upgrade casually.
 - **Terminal UI is Ink** (React for CLI). `packages/tui/src/ui/**.tsx` are Ink React components, NOT browser DOM.
-- **Core is `packages/core/`** (package name `@cjhyy/code-shell-core`). There is no `src/core` directory.
+- **Core is `packages/core/`** (package name `@cjhyy/code-shell-core`). Coding policy lives in
+  `packages/coding/`; hosts compose that package explicitly. There is no `src/core` directory.
 - **Typecheck is not a clean gate**: `bun run typecheck` reports pre-existing errors across the repo. Don't treat it as a blocker for your changes.
 - **Two hard ESLint guardrails** (in `eslint.config.js`):
   - `packages/core/**` MUST NOT import `@cjhyy/code-shell-tui` (core is UI-agnostic).
@@ -64,7 +66,8 @@ bun run bench:render   # render benchmarks (tail / streaming / spinner / wheel)
 - **Roadmap TODOs** → root `TODO.md` (has P0-P7 priority sections). There is no `todo/` directory for roadmap items.
 - **In-progress design drafts** → `docs/todo/*.md` (e.g. `session-cumulative-cache-usage-plan.md`).
 - **Test files** → `tests/` and `packages/*/src/**/*.test.ts`.
-- **Prompt sections** → `packages/core/src/prompt/sections/*.md` (copied to `dist/prompt/sections/` at build via `scripts/copy-assets.mjs`).
+- **Generic prompt sections** → `packages/core/src/prompt/sections/*.md`; domain prompt sections belong
+  to their capability package (for example `packages/coding/src/prompt/coding.md`).
 
 ## Known Architecture Debt (context only, not asks)
 

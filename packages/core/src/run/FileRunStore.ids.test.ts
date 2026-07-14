@@ -10,7 +10,7 @@ function snapshot(runId: string): RunSnapshot {
   return {
     runId,
     objective: "x",
-    preset: "terminal-coding",
+    preset: "general",
     cwd: "/tmp",
     status: "queued",
     createdAt: 1,
@@ -58,7 +58,9 @@ describe("run id path safety", () => {
     const store = new FileRunStore(dir);
     await store.create(snapshot("run-safe"));
 
-    await expect(store.getApproval("run-safe", "../approval")).rejects.toThrow(/invalid approval id/);
+    await expect(store.getApproval("run-safe", "../approval")).rejects.toThrow(
+      /invalid approval id/,
+    );
   });
 
   test("JSON writes do not use the fixed target.tmp path", async () => {

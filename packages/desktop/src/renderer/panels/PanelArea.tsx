@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
-import { X, Plus, Maximize2, Minimize2 } from "lucide-react";
+import React, { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { CircleOff, X, Plus, Maximize2, Minimize2 } from "lucide-react";
 import type { PanelTab } from "../view";
 import { cn } from "@/lib/utils";
 import {
@@ -15,6 +15,8 @@ import { resolvePanelVisibility } from "./panelVisibility";
 import {
   getEnabledPanelEntries,
   getPanelEntry,
+  panelEntryTitle,
+  PANEL_REGISTRY,
   type PanelAvailabilityContext,
 } from "./PanelRegistry";
 import {
@@ -23,6 +25,7 @@ import {
 } from "./PanelWorkspaceRootConsumer";
 import type { PanelWorkspaceState } from "./usePanelWorkspaceRoot";
 import type { OpenCliSessionRequest } from "../cc-room/types";
+import { DesktopPanelLifecycleBoundary, type DesktopPanelPluginHost } from "./DesktopPanelPlugin";
 
 export interface OpenTab {
   id: string;
@@ -84,6 +87,8 @@ interface Props {
   onOpenCliSessionConsumed?: (nonce: number) => void;
   /** Active engine sessionId — the background-shell panel queries shells by it (TODO 3.2). */
   engineSessionId?: string | null;
+  /** Whether this panel bucket currently owns an in-flight top-level turn. */
+  busy?: boolean;
   /** Controlled dock width (px). The divider on the left edge resizes it. */
   width: number;
   /** Drag the divider: report the new width (parent clamps + persists). */
@@ -96,12 +101,8 @@ interface Props {
   onRemoveBrowserAnchor?: (anchorId: string) => void;
   /** Update a browser anchor's comment by id. */
   onUpdateBrowserAnchor?: (anchorId: string, comment: string) => void;
-  /** Render an isolated quick-chat tab body owned by this panel bucket. */
-  renderQuickChatPanel?: (args: {
-    ownerBucket: string;
-    tabId: string;
-    cwd: string | null;
-  }) => React.ReactNode;
+  /** Trusted code-panel services. Web manifest panels continue through their scoped bridge. */
+  panelPluginHost?: DesktopPanelPluginHost;
 }
 
 /**
@@ -125,7 +126,6 @@ export function PanelArea(props: Props) {
 }
 
 function ResolvedPanelArea({
-  projectPath,
   hidden = false,
   keepActiveBodyLive = false,
   onClose,
@@ -139,13 +139,14 @@ function ResolvedPanelArea({
   openCliSession,
   onOpenCliSessionConsumed,
   engineSessionId,
+  busy = false,
   width,
   onResizeStart,
   onAttachImage,
   browserAnchors,
   onRemoveBrowserAnchor,
   onUpdateBrowserAnchor,
-  renderQuickChatPanel,
+  panelPluginHost,
   tabs,
   setTabs,
   activeId,
@@ -154,6 +155,7 @@ function ResolvedPanelArea({
   workspace,
 }: Props & { workspace: PanelWorkspaceState }) {
   const { t } = useT();
+  useSyncExternalStore(PANEL_REGISTRY.subscribe, PANEL_REGISTRY.snapshot, PANEL_REGISTRY.snapshot);
   const cwd = workspace.root;
   const panelAvailability: PanelAvailabilityContext = {
     cwd,
@@ -192,6 +194,15 @@ function ResolvedPanelArea({
   const [maximized, setMaximized] = useState(false);
 
   const addTab = (kind: PanelTab): void => {
+    const entry = getPanelEntry(kind);
+    if (!entry) return;
+    if (entry.singleton) {
+      const existing = activeTabs.find((candidate) => candidate.kind === kind);
+      if (existing) {
+        setActiveId(existing.id);
+        return;
+      }
+    }
     const tab = { id: mkId(kind), kind };
     setTabs((prev) => [...prev, tab]);
     setActiveId(tab.id);
@@ -290,8 +301,10 @@ function ResolvedPanelArea({
       <div className="flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-border px-1.5 py-1">
         {activeTabs.map((tab) => {
           const entry = getPanelEntry(tab.kind);
-          const Icon = entry.icon;
-          const label = t(entry.label);
+          const Icon = entry?.icon ?? CircleOff;
+          const label = entry
+            ? panelEntryTitle(entry, (key) => t(key as never))
+            : t("panels.area.unavailable");
           const active = tab.id === visibleActiveId;
           return (
             <div
@@ -345,7 +358,7 @@ function ResolvedPanelArea({
               return (
                 <DropdownMenuItem key={entry.key} onSelect={() => addTab(entry.key)}>
                   <Icon className="mr-2 h-4 w-4" />
-                  <span className="flex-1">{t(entry.label)}</span>
+                  <span className="flex-1">{panelEntryTitle(entry, (key) => t(key as never))}</span>
                 </DropdownMenuItem>
               );
             })}
@@ -379,28 +392,40 @@ function ResolvedPanelArea({
           const workspacePresentation = panelWorkspacePresentation(workspace);
           return (
             <Slot key={panelTab.id} active={activeTab}>
-              {workspacePresentation.mountBody && (
-                <PanelBody
-                  tab={panelTab}
-                  bucket={bucket}
-                  visible={visibility.lifecycleVisible}
-                  foregroundVisible={visibility.foregroundVisible}
-                  cwd={cwd}
-                  reviewFiles={reviewFiles}
-                  reviewDiff={reviewDiff}
-                  engineSessionId={engineSessionId}
-                  browserAnchors={browserAnchors}
-                  revealFile={revealFile}
-                  onRevealConsumed={onRevealConsumed}
-                  openUrl={openUrl}
-                  openCliSession={openCliSession}
-                  onOpenCliSessionConsumed={onOpenCliSessionConsumed}
-                  onAttachImage={onAttachImage}
-                  onRemoveBrowserAnchor={onRemoveBrowserAnchor}
-                  onUpdateBrowserAnchor={onUpdateBrowserAnchor}
-                  renderQuickChatPanel={renderQuickChatPanel}
-                />
-              )}
+              <DesktopPanelLifecycleBoundary
+                entry={getPanelEntry(panelTab.kind)}
+                host={panelPluginHost}
+                tabId={panelTab.id}
+                bucket={bucket}
+                cwd={cwd}
+                engineSessionId={engineSessionId ?? null}
+                busy={busy}
+                visible={visibility.lifecycleVisible}
+              >
+                {workspacePresentation.mountBody && (
+                  <PanelBody
+                    tab={panelTab}
+                    bucket={bucket}
+                    busy={busy}
+                    visible={visibility.lifecycleVisible}
+                    foregroundVisible={visibility.foregroundVisible}
+                    cwd={cwd}
+                    reviewFiles={reviewFiles}
+                    reviewDiff={reviewDiff}
+                    engineSessionId={engineSessionId}
+                    browserAnchors={browserAnchors}
+                    revealFile={revealFile}
+                    onRevealConsumed={onRevealConsumed}
+                    openUrl={openUrl}
+                    openCliSession={openCliSession}
+                    onOpenCliSessionConsumed={onOpenCliSessionConsumed}
+                    onAttachImage={onAttachImage}
+                    onRemoveBrowserAnchor={onRemoveBrowserAnchor}
+                    onUpdateBrowserAnchor={onUpdateBrowserAnchor}
+                    panelPluginHost={panelPluginHost}
+                  />
+                )}
+              </DesktopPanelLifecycleBoundary>
               {workspacePresentation.showLoading && (
                 <div className="absolute inset-0 z-20 flex min-h-0 flex-1 items-center justify-center bg-background text-sm text-muted-foreground">
                   {t("panels.common.loading")}
@@ -437,7 +462,9 @@ function PanelLanding({
               className="flex h-auto flex-col items-center gap-2 rounded-lg bg-card px-4 py-6 text-center hover:border-primary/50"
             >
               <Icon className="h-7 w-7 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">{t(entry.label)}</span>
+              <span className="text-sm font-medium text-foreground">
+                {panelEntryTitle(entry, (key) => t(key as never))}
+              </span>
             </Button>
           );
         })}
@@ -449,6 +476,7 @@ function PanelLanding({
 function PanelBody({
   tab,
   bucket,
+  busy,
   visible,
   foregroundVisible,
   cwd,
@@ -464,10 +492,11 @@ function PanelBody({
   browserAnchors,
   onRemoveBrowserAnchor,
   onUpdateBrowserAnchor,
-  renderQuickChatPanel,
+  panelPluginHost,
 }: {
   tab: OpenTab;
   bucket: string;
+  busy: boolean;
   visible: boolean;
   foregroundVisible: boolean;
   cwd: string | null;
@@ -483,15 +512,22 @@ function PanelBody({
   browserAnchors?: Anchor[];
   onRemoveBrowserAnchor?: (anchorId: string) => void;
   onUpdateBrowserAnchor?: (anchorId: string, comment: string) => void;
-  renderQuickChatPanel?: (args: {
-    ownerBucket: string;
-    tabId: string;
-    cwd: string | null;
-  }) => React.ReactNode;
+  panelPluginHost?: DesktopPanelPluginHost;
 }) {
-  return getPanelEntry(tab.kind).render({
+  const entry = getPanelEntry(tab.kind);
+  if (!entry) {
+    return (
+      <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
+        {
+          "This panel is unavailable. Its plugin may be disabled or uninstalled; close this tab to remove the saved entry."
+        }
+      </div>
+    );
+  }
+  return entry.render({
     tabId: tab.id,
     bucket,
+    busy,
     visible,
     foregroundVisible,
     cwd,
@@ -507,7 +543,7 @@ function PanelBody({
     browserAnchors,
     onRemoveBrowserAnchor,
     onUpdateBrowserAnchor,
-    renderQuickChatPanel,
+    panelPluginHost,
   });
 }
 

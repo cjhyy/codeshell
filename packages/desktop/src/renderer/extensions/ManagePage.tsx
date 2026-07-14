@@ -18,10 +18,19 @@ import { McpSection } from "../settings/McpSection";
 import { writeSettings } from "../settingsBus";
 import { MarketList } from "./MarketList";
 import { PluginsTab } from "./PluginsTab";
+import { PanelsTab } from "./PanelsTab";
 import { SkillsTab } from "./SkillsTab";
 import { useT } from "../i18n/I18nProvider";
 import type { SkillSummary } from "../../main/skills-service";
-import { FileText, Plug, Puzzle, Search, ShoppingCart, type LucideIcon } from "lucide-react";
+import {
+  FileText,
+  PanelTop,
+  Plug,
+  Puzzle,
+  Search,
+  ShoppingCart,
+  type LucideIcon,
+} from "lucide-react";
 
 // Replicated from PluginsAndSkillsSection (helper is not exported there).
 // A plugin skill's namespace is the part of its name before the first ":".
@@ -32,7 +41,7 @@ function namespaceOf(s: SkillSummary): string {
   return idx > 0 ? s.name.slice(0, idx) : STANDALONE_NAMESPACE;
 }
 
-export type TabKey = "plugins" | "skills" | "mcp" | "market";
+export type TabKey = "plugins" | "panels" | "skills" | "mcp" | "market";
 
 interface Props {
   cwd: string;
@@ -117,6 +126,7 @@ export function ManagePage({ cwd, activeProjectPath, initialTab, initialQuery }:
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap items-center gap-1 rounded-lg border bg-muted/20 p-1">
           {tabBtn("plugins", t("ext.manage.tabPlugins"), Puzzle)}
+          {tabBtn("panels", t("ext.manage.tabPanels"), PanelTop)}
           {tabBtn("skills", t("ext.manage.tabSkills"), FileText)}
           {tabBtn("mcp", t("ext.manage.tabMcp"), Plug)}
           {tabBtn("market", t("ext.manage.tabMarket"), ShoppingCart)}
@@ -126,7 +136,7 @@ export function ManagePage({ cwd, activeProjectPath, initialTab, initialQuery }:
             kept flipping them believing they were per-project (feedback:
             writeflow「关闭了」却没有任何项目级文件), so say it out loud and
             point at the real per-project path. */}
-        {tab !== "mcp" && tab !== "market" && (
+        {(tab === "plugins" || tab === "skills") && (
           <span
             className="ml-1 shrink-0 rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground"
             title={t("ext.manage.globalScopeTip")}
@@ -158,6 +168,7 @@ export function ManagePage({ cwd, activeProjectPath, initialTab, initialQuery }:
           onChanged={() => void refresh()}
         />
       )}
+      {tab === "panels" && <PanelsTab cwd={cwd} query={query} />}
       {tab === "skills" && (
         <SkillsTab
           cwd={cwd}

@@ -196,3 +196,48 @@ export function buildWorkspaceActionReply(
     },
   });
 }
+
+// ── __panel_action__ (Panel tool) ──────────────────────────────────────────
+
+export interface ParsedPanelAction {
+  sessionId?: string;
+  requestId: string;
+  action: "list" | "open";
+  panelId?: string;
+}
+
+export function parsePanelActionLine(line: string): ParsedPanelAction | null {
+  let msg: any;
+  try {
+    msg = JSON.parse(line);
+  } catch {
+    return null;
+  }
+  if (!msg || msg.method !== "agent/approvalRequest") return null;
+  const params = msg.params;
+  if (!params || typeof params.requestId !== "string") return null;
+  const request = params.request;
+  if (!request || request.toolName !== "__panel_action__" || !request.args) return null;
+  const args = request.args as Record<string, unknown>;
+  if (args.action !== "list" && args.action !== "open") return null;
+  if (args.action === "open" && typeof args.panelId !== "string") return null;
+  return {
+    sessionId: typeof params.sessionId === "string" ? params.sessionId : undefined,
+    requestId: params.requestId,
+    action: args.action,
+    panelId: typeof args.panelId === "string" ? args.panelId : undefined,
+  };
+}
+
+export function buildPanelActionReply(parsed: ParsedPanelAction, resultJson: string): string {
+  return JSON.stringify({
+    jsonrpc: "2.0",
+    id: replyId(),
+    method: "agent/approve",
+    params: {
+      sessionId: parsed.sessionId,
+      requestId: parsed.requestId,
+      decision: { approved: true, answer: resultJson },
+    },
+  });
+}

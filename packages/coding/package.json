@@ -1,0 +1,35 @@
+{
+  "name": "@cjhyy/code-shell-capability-coding",
+  "version": "0.7.1",
+  "description": "Coding capability pack for the generic code-shell agent core.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./bin/agent-server-stdio": "./dist/bin/agent-server-stdio.js"
+  },
+  "files": [
+    "dist",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && bun run copy-assets",
+    "copy-assets": "node ../../scripts/copy-assets.mjs dist/prompt src/prompt/*.md && node ../../scripts/copy-assets.mjs dist/tools/apply-patch src/tools/apply-patch/NOTICE.md src/tools/apply-patch/LICENSE-codex",
+    "dev": "bun run copy-assets && tsc -p tsconfig.json --watch --preserveWatchOutput",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@cjhyy/code-shell-core": "workspace:*"
+  },
+  "engines": {
+    "node": ">=20.10"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

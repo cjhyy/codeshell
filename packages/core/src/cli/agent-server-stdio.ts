@@ -329,6 +329,7 @@ const agentServer = new AgentServer({
   chatManager,
   transport: stdioTransport,
   workspaceBridge: true,
+  panelBridge: true,
   // Config hot-reload (layer 2) reads disk through the SAME closure the
   // engineFactory uses for new sessions, so a reloaded running session and a
   // newly-created session converge on identical disk config (no divergence).

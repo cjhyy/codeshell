@@ -6,6 +6,8 @@ import {
   buildCredentialActionReply,
   parseWorkspaceActionLine,
   buildWorkspaceActionReply,
+  parsePanelActionLine,
+  buildPanelActionReply,
 } from "./intercept";
 
 const browserActionLine = (args: Record<string, unknown>, requestId = "rq1", sessionId = "s1") =>
@@ -239,5 +241,41 @@ describe("buildWorkspaceActionReply", () => {
       approved: true,
       answer: '{"root":"/repo","kind":"main"}',
     });
+  });
+});
+
+const panelActionLine = (args: Record<string, unknown>, requestId = "rq4", sessionId = "s4") =>
+  JSON.stringify({
+    jsonrpc: "2.0",
+    method: "agent/approvalRequest",
+    params: { sessionId, requestId, request: { toolName: "__panel_action__", args } },
+  });
+
+describe("panel action interception", () => {
+  test("parses list/open and rejects malformed panel ids", () => {
+    expect(parsePanelActionLine(panelActionLine({ action: "list" }))).toEqual({
+      sessionId: "s4",
+      requestId: "rq4",
+      action: "list",
+      panelId: undefined,
+    });
+    expect(parsePanelActionLine(panelActionLine({ action: "open", panelId: "quickChat" }))).toEqual(
+      {
+        sessionId: "s4",
+        requestId: "rq4",
+        action: "open",
+        panelId: "quickChat",
+      },
+    );
+    expect(parsePanelActionLine(panelActionLine({ action: "open" }))).toBeNull();
+    expect(parsePanelActionLine(panelActionLine({ action: "close" }))).toBeNull();
+  });
+
+  test("builds the hidden approval reply", () => {
+    const parsed = parsePanelActionLine(panelActionLine({ action: "open", panelId: "files" }))!;
+    const reply = JSON.parse(buildPanelActionReply(parsed, '{"ok":true,"panelId":"files"}'));
+    expect(reply.params.sessionId).toBe("s4");
+    expect(reply.params.requestId).toBe("rq4");
+    expect(reply.params.decision.answer).toContain('"panelId":"files"');
   });
 });

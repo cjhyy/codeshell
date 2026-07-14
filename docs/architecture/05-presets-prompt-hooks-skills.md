@@ -1,12 +1,12 @@
 # 05 · Presets, Prompt, Hooks, Skills
 
-> How CodeShell stays domain-agnostic: presets pick behavior and visible tools; prompt assembly turns stable sections plus volatile context into one model request; hooks intercept lifecycle/tool boundaries; skills add lightweight capability text. Source-mapped against `packages/core/src/preset/`, `prompt/`, `hooks/`, `skills/`, and the plugin hook loader.
+> How CodeShell stays domain-agnostic: core presets and capability-contributed presets pick behavior and visible tools; prompt assembly turns stable sections plus volatile provider context into one model request; hooks intercept lifecycle/tool boundaries; skills add lightweight capability text. Source-mapped against `packages/core/src/preset/`, `prompt/`, `capabilities/`, `hooks/`, `skills/`, `packages/coding/`, and the plugin hook loader.
 
-This is where the README's central claim lives: the core carries mechanism, not policy. Coding behavior is a preset, not a fork.
+This is where the README's central claim lives: the core carries mechanism, not coding policy. Coding behavior is a physically separate capability package, not a core fork.
 
-## 1. Presets (`preset/index.ts`, 337 LOC)
+## 1. Presets and capability composition
 
-A preset is the bundle that turns the generic engine into a specific agent. The current `AgentPreset` fields are `name`, `label`, `description`, ordered `promptSections`, `injectGitStatus`, `builtinTools`, and `defaultPermissionRules` (`preset/index.ts:20`).
+A preset is the bundle that turns the generic engine into a specific agent. The current `AgentPreset` fields are `name`, `label`, `description`, ordered `promptSections`, `builtinTools`, and `defaultPermissionRules`.
 
 ```ts
 interface AgentPreset {
@@ -14,37 +14,36 @@ interface AgentPreset {
   label: string;
   description: string;
   promptSections: readonly string[];
-  injectGitStatus: boolean;
   builtinTools: string[];
   defaultPermissionRules: PermissionRule[];
 }
 ```
 
-Two built-ins are defined in `BUILTIN_AGENT_PRESETS` (`preset/index.ts:185`):
+Two built-ins are defined in core's `BUILTIN_AGENT_PRESETS`:
 
-- **`general`** (`DEFAULT_AGENT_PRESET`) — sections `[base, orchestration, browser, tone]`, git status off, and the general builtin whitelist (`preset/index.ts:186`, `preset/index.ts:210`).
-- **`terminal-coding`** (`DEFAULT_CLI_PRESET`) — adds the `coding` section, turns git status on, and adds `EnterWorktree`, `ExitWorktree`, `NotebookEdit`, `LSP`, `Brief`, and `Arena` (`preset/index.ts:195`, `preset/index.ts:129`, `preset/index.ts:211`).
+- **`harness-min`** (`DEFAULT_AGENT_PRESET`) — a domain-neutral prompt and minimal reusable tool surface. This is what a core-only Engine selects.
+- **`general`** — the broader CodeShell orchestration profile.
 
-Preset resolution is builtin-first, then custom registry, then throw (`preset/index.ts:243`). That means `registerPreset()` lets SDK consumers add names, but it cannot shadow a builtin name because builtins are checked first (`preset/index.ts:234`, `preset/index.ts:247`).
+`@cjhyy/code-shell-capability-coding` contributes **`terminal-coding`** and a coding-enhanced `general` profile. It also declares `terminal-coding` as its host default. Therefore the TUI/Desktop keep their coding behavior while a consumer that installs only core gets `harness-min`.
 
-**The tool whitelist is the first visibility gate.** `resolveBuiltinToolNames()` starts from the preset's `builtinTools`, applies explicit enabled/disabled overrides, and returns the selected names (`preset/index.ts:320`). `ToolRegistry.registerBuiltins()` then validates selected names against `BUILTIN_TOOLS` and installs only selected entries (`tool-system/registry.ts:30`, `tool-system/registry.ts:44`). This is not silent for unknown enabled names: unknown names throw `ConfigError` (`tool-system/registry.ts:34`). But registered builtins that are not selected are skipped, so adding a builtin still means updating both the registration table and any preset that should expose it.
+`CapabilityModule` is the composition boundary. A module can contribute tools, presets, a default preset, prompt sections, volatile context providers, an instruction boundary, capability-private tool services, file-history targets, artifact detectors, and session-workspace validation. Engine composes core plus installed modules per instance; TUI/Desktop also register the coding module at their process roots.
 
-The general whitelist includes long-running shell companions, browser tools, media generation, orchestration tools, MCP generic tools, memory tools, credential tools, and goal tools (`preset/index.ts:34`). The comments in that list document several real gotchas: `BashOutput`/`KillShell`/`ListShells` must be visible with background Bash (`preset/index.ts:42`), browser tools must be listed or browser instructions become unusable (`preset/index.ts:49`), and `DriveAgent`/`DriveClaudeCode`, `UseCredential`, `InjectCredential`, `EditModelCatalog`, `complete_goal`, and `cancel_goal` each need whitelist membership even though their handlers are registered elsewhere (`preset/index.ts:76`, `preset/index.ts:105`, `preset/index.ts:110`, `preset/index.ts:113`, `preset/index.ts:118`).
+**The tool whitelist is the first visibility gate.** Tool entries carry exhaustive `presetTags` metadata next to their implementation, and `derivePresetExposure()` derives each preset's tool names and permission rules. `resolveBuiltinToolNames()` then applies explicit enabled/disabled overrides and capability host adjustments before `ToolRegistry` installs the selected catalog entries. This removes the old hand-maintained registration/whitelist duplication.
 
 **Tool-gated sections** keep prompt instructions aligned with visible tools. `buildPresetSystemPrompt()` filters `preset.promptSections` through `TOOL_GATED_SECTIONS` when `activeToolNames` are passed (`preset/index.ts:299`). Today the only gate is `browser`, which survives only if one of `browser_observe`, `browser_act`, or `browser_navigate` is active (`preset/index.ts:258`, `preset/index.ts:265`). Windows shell guidance is appended from the same function when `platform === "win32"` (`preset/index.ts:280`, `preset/index.ts:315`).
 
-Default permission rules are part of the preset, but they do not expose a tool by themselves. For example, the rules still include an `AgentStatus` allow rule (`preset/index.ts:148`), while `AgentStatus` is absent from the general whitelist; visibility still comes from `builtinTools`.
+Default permission rules are part of the preset, but they do not expose a tool by themselves; visibility still comes from `builtinTools`.
 
 ## 2. Prompt assembly (`prompt/`)
 
 ![Prompt assembly pipeline](images/prompt-assembly-pipeline.png)
 
-| File | Role | LOC |
-|------|------|-----|
-| `prompt/composer.ts` | `PromptComposer` — stable system prefix, user instruction context, volatile dynamic context | 310 |
-| `prompt/section-cache.ts` | `SectionCache` — per-section memoization with `cacheBreak` bypass | 43 |
-| `prompt/section-loader.ts` | `loadSection`/`loadSections`/`registerSection` over builtin and custom markdown sections | 62 |
-| `prompt/instruction-scanner.ts` | `scanInstructions`/`combineInstructions` for user/project/local instruction files | 241 |
+| File                            | Role                                                                                        | LOC |
+| ------------------------------- | ------------------------------------------------------------------------------------------- | --- |
+| `prompt/composer.ts`            | `PromptComposer` — stable system prefix, user instruction context, volatile dynamic context | 310 |
+| `prompt/section-cache.ts`       | `SectionCache` — per-section memoization with `cacheBreak` bypass                           | 43  |
+| `prompt/section-loader.ts`      | `loadSection`/`loadSections`/`registerSection` over builtin and custom markdown sections    | 62  |
+| `prompt/instruction-scanner.ts` | `scanInstructions`/`combineInstructions` for user/project/local instruction files           | 241 |
 
 Engine-level assembly happens in `Engine.run()`, not inside the composer alone. The engine emits `on_session_start` and `user_prompt_submit` first (`engine/engine.ts:1498`, `engine/engine.ts:1508`), builds a `PromptComposer` with the resolved preset plus disabled skill/plugin lists (`engine/engine.ts:1627`), computes the per-turn visible tool definitions (`engine/engine.ts:1747`), then builds the stable system prompt and volatile dynamic context in parallel (`engine/engine.ts:1776`). After that it prepends instruction context, injects lifecycle hook reminders before the latest user task, and appends dynamic context at the very end (`engine/engine.ts:1784`, `engine/engine.ts:1790`, `engine/engine.ts:1804`).
 
@@ -66,26 +65,26 @@ Instruction context is a separate user-role `<system-reminder>` built by `buildU
 `scanInstructions()` currently scans:
 
 - user-level `~/.code-shell/{CODESHELL.md,CLAUDE.md,AGENTS.md}` plus `~/.code-shell/rules/*.md`, then compat `~/.claude/*` (`prompt/instruction-scanner.ts:67`);
-- project directories from git root down to cwd, including directory-level instruction files, `.codeshell/`, extra `scanDirs`, `.claude/`, and sorted `rules/*.md` (`prompt/instruction-scanner.ts:82`, `prompt/instruction-scanner.ts:88`);
+- project directories from a capability/host-supplied boundary down to cwd, including directory-level instruction files, `.codeshell/`, extra `scanDirs`, `.claude/`, and sorted `rules/*.md`; core defaults the boundary to cwd and never executes a VCS command;
 - local override files named `*.local.md` (`prompt/instruction-scanner.ts:105`).
 
 Entries are de-duped by path with first occurrence winning (`prompt/instruction-scanner.ts:218`). `combineInstructions()` returns a single entry as-is, or joins multiple entries with source labels and separators (`prompt/instruction-scanner.ts:121`).
 
-Dynamic context is intentionally past the cache breakpoint. `buildDynamicContextMessage()` scans skills with the same disabled/allowlist options the Skill tool will enforce, renders the grouped skill listing, reads git status only when the preset opts in, appends memory index context, and appends active-goal tool guidance (`prompt/composer.ts:156`, `prompt/composer.ts:170`). The returned message is a trailing user-role `<system-reminder>` (`prompt/composer.ts:173`). Git status itself is built by `buildSystemContext()` with `git branch`, `git status --short`, and recent log (`prompt/composer.ts:106`, `prompt/composer.ts:120`); despite that method name, Engine currently places the result in dynamic context, not the stable system prefix.
+Dynamic context is intentionally past the cache breakpoint. `buildDynamicContextMessage()` scans skills with the same disabled/allowlist options the Skill tool enforces, invokes generic capability context providers, appends memory index context, and appends active-goal tool guidance. The returned message is a trailing user-role `<system-reminder>`. Repository status formatting and commands live in the coding package's provider; `PromptComposer` only invokes provider contracts and swallows optional-provider failures.
 
 ## 3. Hooks (`hooks/` + plugin hook loader)
 
 ![Hook lifecycle pipeline](images/hook-lifecycle-pipeline.png)
 
-| File | Role | LOC |
-|------|------|-----|
-| `hooks/events.ts` | `HookEventName`, `HookContext`, `HookResult`; 17 typed events, 16 currently emitted | 156 |
-| `hooks/registry.ts` | `HookRegistry` — priority ordering, aggregation, unregister/reload helpers | 163 |
-| `hooks/inject.ts` | `wrapHookMessages()` — pack hook messages into one `<system-reminder>` | 30 |
-| `hooks/shell-runner.ts` | settings shell hooks: child process protocol, timeout, caps, fail-silent handling | 244 |
-| `hooks/hook-output.ts` | shared output cap and `HookResult` validator | 73 |
-| `plugins/loadPluginHooks.ts` | plugin `hooks/hooks.json` scanner, CC event mapping, priority 80 registration | 302 |
-| `plugins/pluginCommandHook.ts` | plugin command-hook subprocess protocol and CC/Cursor/SDK output normalization | 244 |
+| File                           | Role                                                                                | LOC |
+| ------------------------------ | ----------------------------------------------------------------------------------- | --- |
+| `hooks/events.ts`              | `HookEventName`, `HookContext`, `HookResult`; 17 typed events, 16 currently emitted | 156 |
+| `hooks/registry.ts`            | `HookRegistry` — priority ordering, aggregation, unregister/reload helpers          | 163 |
+| `hooks/inject.ts`              | `wrapHookMessages()` — pack hook messages into one `<system-reminder>`              | 30  |
+| `hooks/shell-runner.ts`        | settings shell hooks: child process protocol, timeout, caps, fail-silent handling   | 244 |
+| `hooks/hook-output.ts`         | shared output cap and `HookResult` validator                                        | 73  |
+| `plugins/loadPluginHooks.ts`   | plugin `hooks/hooks.json` scanner, CC event mapping, priority 80 registration       | 302 |
+| `plugins/pluginCommandHook.ts` | plugin command-hook subprocess protocol and CC/Cursor/SDK output normalization      | 244 |
 
 `HookEventName` contains 17 names (`hooks/events.ts:91`). `pre_compact` is reserved but not emitted; current code emits `post_compact` after a non-micro compaction instead (`hooks/events.ts:85`, `engine/turn-loop.ts:652`). The currently emitted set spans session start/end, agent start/end, user prompt submit, turn start/end, stop, tool start/end, permission checks, pre/post tool use, file changes, post-compaction, and background-agent notifications (`hooks/events.ts:8`).
 
@@ -133,13 +132,13 @@ Goal mode is built on this same hook chain. When a run has an active goal, Engin
 
 ## 4. Skills (`skills/` + Skill tool)
 
-| File | Role | LOC |
-|------|------|-----|
-| `skills/scanner.ts` | discover project/user/plugin `SKILL.md`, namespace plugin skills, memoize scans, apply disabled/allow filters | 298 |
-| `skills/frontmatter.ts` | CC-compatible YAML frontmatter parser and description coercion | 82 |
-| `skills/index.ts` | barrel export for scanner APIs | 8 |
-| `tool-system/builtin/skill-prompt.ts` | render grouped `# Available Skills` listing | 56 |
-| `tool-system/builtin/skill.ts` | `Skill` builtin dispatch; enforce disabled lists and sub-agent allowlists | 96 |
+| File                                  | Role                                                                                                          | LOC |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------- | --- |
+| `skills/scanner.ts`                   | discover project/user/plugin `SKILL.md`, namespace plugin skills, memoize scans, apply disabled/allow filters | 298 |
+| `skills/frontmatter.ts`               | CC-compatible YAML frontmatter parser and description coercion                                                | 82  |
+| `skills/index.ts`                     | barrel export for scanner APIs                                                                                | 8   |
+| `tool-system/builtin/skill-prompt.ts` | render grouped `# Available Skills` listing                                                                   | 56  |
+| `tool-system/builtin/skill.ts`        | `Skill` builtin dispatch; enforce disabled lists and sub-agent allowlists                                     | 96  |
 
 `scanSkills(cwd, opts?)` discovers `SKILL.md` files from three sources:
 

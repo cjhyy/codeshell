@@ -1,0 +1,145 @@
+import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { execFileSync } from "node:child_process";
+import { SessionManager } from "@cjhyy/code-shell-core";
+import {
+  CODING_CAPABILITY,
+  createWorktree,
+  removeWorktree,
+} from "@cjhyy/code-shell-capability-coding";
+
+const ENV = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
+
+function git(cwd: string, args: string[]): string {
+  return execFileSync("git", args, { cwd, env: ENV, encoding: "utf-8" }).trim();
+}
+
+describe("SessionManager workspace resume resolution", () => {
+  let repo: string;
+  let sessions: string;
+  let sm: SessionManager;
+
+  beforeEach(() => {
+    repo = mkdtempSync(join(tmpdir(), "cs-ws-resume-repo-"));
+    sessions = mkdtempSync(join(tmpdir(), "cs-ws-resume-sessions-"));
+    sm = new SessionManager(sessions, CODING_CAPABILITY.sessionWorkspace);
+    git(repo, ["init", "-q"]);
+    git(repo, ["config", "user.email", "t@t.t"]);
+    git(repo, ["config", "user.name", "t"]);
+    writeFileSync(join(repo, "f.txt"), "x\n");
+    git(repo, ["add", "-A"]);
+    git(repo, ["commit", "-q", "-m", "init"]);
+  });
+
+  afterEach(() => {
+    rmSync(repo, { recursive: true, force: true });
+    rmSync(join(repo, "..", ".worktrees"), { recursive: true, force: true });
+    rmSync(sessions, { recursive: true, force: true });
+  });
+
+  test("restores cwd to the persisted worktree when the directory exists", async () => {
+    sm.create(repo, "m", "p", "resume-ok");
+    const wt = await createWorktree(repo, "resume-ok", "resume-ok");
+    sm.setSessionWorkspace("resume-ok", {
+      root: wt.worktreePath,
+      kind: "worktree",
+      worktree: {
+        path: wt.worktreePath,
+        branch: wt.worktreeBranch,
+        baseRef: wt.originalBranch ?? "HEAD",
+        createdBy: "codeshell",
+      },
+    });
+
+    const resolved = await sm.resolveSessionWorkspaceForResume("resume-ok");
+
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) throw new Error(resolved.message);
+    expect(resolved.cwd).toBe(wt.worktreePath);
+    const expectedWorkspace = sm.getSessionWorkspace("resume-ok");
+    expect(expectedWorkspace).toBeDefined();
+    if (!expectedWorkspace) throw new Error("expected persisted workspace");
+    expect(resolved.workspace).toEqual(expectedWorkspace);
+    removeWorktree(wt.worktreePath, true);
+  });
+
+  test("blocks resume with a recreate message when the worktree dir is gone but branch exists", async () => {
+    sm.create(repo, "m", "p", "resume-recreate");
+    const wt = await createWorktree(repo, "resume-recreate", "resume-recreate");
+    sm.setSessionWorkspace("resume-recreate", {
+      root: wt.worktreePath,
+      kind: "worktree",
+      worktree: {
+        path: wt.worktreePath,
+        branch: wt.worktreeBranch,
+        baseRef: wt.originalBranch ?? "HEAD",
+        createdBy: "codeshell",
+      },
+    });
+    removeWorktree(wt.worktreePath, false);
+
+    const resolved = await sm.resolveSessionWorkspaceForResume("resume-recreate");
+
+    expect(resolved.ok).toBe(false);
+    expect(resolved.reason).toBe("worktree_missing_branch_exists");
+    expect(resolved.message).toContain(wt.worktreePath);
+    expect(resolved.message).toContain(wt.worktreeBranch);
+    expect(sm.getSessionWorkspace("resume-recreate")!.kind).toBe("worktree");
+  });
+
+  test("does not accept a regular file at the persisted worktree path", async () => {
+    sm.create(repo, "m", "p", "resume-file");
+    const wt = await createWorktree(repo, "resume-file", "resume-file");
+    sm.setSessionWorkspace("resume-file", {
+      root: wt.worktreePath,
+      kind: "worktree",
+      worktree: {
+        path: wt.worktreePath,
+        branch: wt.worktreeBranch,
+        baseRef: wt.originalBranch ?? "HEAD",
+        createdBy: "codeshell",
+      },
+    });
+    removeWorktree(wt.worktreePath, false);
+    writeFileSync(wt.worktreePath, "not a directory\n");
+
+    const resolved = await sm.resolveSessionWorkspaceForResume("resume-file");
+
+    expect(resolved.ok).toBe(false);
+    expect(resolved.reason).toBe("worktree_missing_branch_exists");
+    expect(resolved.message).toContain("not a valid git worktree");
+    expect(resolved.message).toContain(wt.worktreePath);
+    expect(sm.getSessionWorkspace("resume-file")!.kind).toBe("worktree");
+  });
+
+  test("falls back to main with a clear message when the worktree dir and branch are gone", async () => {
+    sm.create(repo, "m", "p", "resume-main");
+    const wt = await createWorktree(repo, "resume-main", "resume-main");
+    sm.setSessionWorkspace("resume-main", {
+      root: wt.worktreePath,
+      kind: "worktree",
+      worktree: {
+        path: wt.worktreePath,
+        branch: wt.worktreeBranch,
+        baseRef: wt.originalBranch ?? "HEAD",
+        createdBy: "codeshell",
+      },
+    });
+    removeWorktree(wt.worktreePath, true);
+
+    const resolved = await sm.resolveSessionWorkspaceForResume("resume-main");
+
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) throw new Error(resolved.message);
+    expect(resolved.cwd).toBe(repo);
+    expect(resolved.workspace).toEqual({ root: repo, kind: "main" });
+    const message = resolved.message;
+    expect(message).toBeDefined();
+    if (!message) throw new Error("expected resume fallback message");
+    expect(message).toContain("fell back to main");
+    expect(message).toContain(wt.worktreeBranch);
+    expect(sm.getSessionWorkspace("resume-main")).toEqual({ root: repo, kind: "main" });
+  });
+});

@@ -55,3 +55,8 @@ class FileStateCache {
 }
 
 export const fileCache = new FileStateCache();
+
+/** Public capability seam: invalidate core's Read/Edit cache after an external file tool writes. */
+export function invalidateFileCache(filePath: string): void {
+  fileCache.invalidate(filePath);
+}

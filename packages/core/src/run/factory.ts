@@ -23,6 +23,7 @@ import { homedir } from "node:os";
 import type { LLMConfig, PermissionMode } from "../types.js";
 import type { EngineConfig, EngineHookConfig } from "../engine/types.js";
 import type { Evaluator } from "./Evaluator.js";
+import type { CapabilityModule } from "../capabilities/index.js";
 import { RunManager } from "./RunManager.js";
 import { FileRunStore } from "./FileRunStore.js";
 
@@ -85,6 +86,8 @@ export interface CreateRunManagerOptions {
    * the interactive run-aware backend.
    */
   approvalBackend?: import("../tool-system/permission.js").ApprovalBackend;
+  /** Product/domain capabilities installed into each Engine. */
+  capabilities?: readonly CapabilityModule[];
 }
 
 /**
@@ -109,6 +112,7 @@ export function createRunManager(options: CreateRunManagerOptions): RunManager {
       customSystemPrompt: options.customSystemPrompt,
       appendSystemPrompt: options.appendSystemPrompt,
       hooks: options.hooks,
+      capabilities: options.capabilities,
       ...(options.approvalBackend ? { approvalBackend: options.approvalBackend } : {}),
     },
     concurrency: options.concurrency ?? 1,
@@ -116,5 +120,6 @@ export function createRunManager(options: CreateRunManagerOptions): RunManager {
     evaluator: options.evaluator,
     defaultTags: options.defaultTags,
     defaultMetadata: options.defaultMetadata,
+    capabilities: options.capabilities,
   });
 }

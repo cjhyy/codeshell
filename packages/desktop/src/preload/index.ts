@@ -18,6 +18,7 @@
 
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 import { createPetApi } from "./pet-api";
+import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
 
 /** One background shell as surfaced to the dock panel (TODO 3.2). Mirrors core
  *  BgShell's public shape; renderer-local since the renderer can't import core. */
@@ -864,6 +865,25 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("skills:list", cwd, opts),
   searchFiles: (cwd: string, query: string) => ipcRenderer.invoke("files:search", cwd, query),
   listPlugins: (cwd: string) => ipcRenderer.invoke("plugins:list", cwd),
+  listPluginPanels: (cwd: string, locale: string) =>
+    ipcRenderer.invoke("plugin-panels:list", cwd, locale),
+  listPanelExtensions: (cwd: string, locale: string) =>
+    ipcRenderer.invoke("plugin-panels:listExtensions", cwd, locale),
+  preparePluginPanel: (id: string) => ipcRenderer.invoke("plugin-panels:prepare", id),
+  bindPluginPanel: (input: import("../shared/plugin-panels").PluginPanelBindInput) =>
+    ipcRenderer.invoke("plugin-panels:bind", input),
+  onPluginPanelsChanged: (cb: () => void) => {
+    const handler = () => cb();
+    ipcRenderer.on("plugin-panels:changed", handler);
+    return () => ipcRenderer.removeListener("plugin-panels:changed", handler);
+  },
+  onAgentPanelRequest: (cb: (request: AgentPanelHostRequest) => void) => {
+    const handler = (_event: IpcRendererEvent, request: AgentPanelHostRequest) => cb(request);
+    ipcRenderer.on("panel:agent-request", handler);
+    return () => ipcRenderer.removeListener("panel:agent-request", handler);
+  },
+  respondAgentPanelRequest: (response: AgentPanelHostResponse) =>
+    ipcRenderer.send("panel:agent-response", response),
   /** Full content inventory for one installed plugin (详情页). */
   getPluginDetail: (installKey: string) => ipcRenderer.invoke("plugins:detail", installKey),
   listCapabilities: (cwd: string) => ipcRenderer.invoke("capabilities:list", cwd),

@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createInterface } from "node:readline";
-import { CC_COST_GUARD_PROMPT } from "@cjhyy/code-shell-core";
+import { CC_COST_GUARD_PROMPT } from "@cjhyy/code-shell-capability-coding";
 import { pathWithCommonBins } from "./path-bins.js";
 
 /**
@@ -92,9 +92,11 @@ export function parseStreamJsonLine(line: string): ResidentAgentEvent[] {
         type: "approval_request",
         requestId: String(msg.request_id ?? ""),
         toolName: String(msg.request?.tool_name ?? "tool"),
-        displayName: typeof msg.request?.display_name === "string" ? msg.request.display_name : undefined,
+        displayName:
+          typeof msg.request?.display_name === "string" ? msg.request.display_name : undefined,
         input: msg.request?.input,
-        description: typeof msg.request?.description === "string" ? msg.request.description : undefined,
+        description:
+          typeof msg.request?.description === "string" ? msg.request.description : undefined,
       },
     ];
   }
@@ -133,13 +135,15 @@ export function parseStreamJsonLine(line: string): ResidentAgentEvent[] {
     return out;
   }
   if (msg.type === "result") {
-    out.push({ type: "turn_end", reason: typeof msg.subtype === "string" ? msg.subtype : "completed" });
+    out.push({
+      type: "turn_end",
+      reason: typeof msg.subtype === "string" ? msg.subtype : "completed",
+    });
     return out;
   }
   // system (init/hook), rate_limit_event, etc. → ignored noise.
   return out;
 }
-
 
 export interface ResidentAgentOptions {
   command: string; // e.g. "claude"
@@ -180,16 +184,12 @@ export class ResidentAgentProcess {
       args.push("--resume", this.opts.resumeSessionId);
     }
     args.push("--permission-mode", this.opts.permissionMode);
-    const child = spawn(
-      this.opts.command,
-      args,
-      {
-        cwd: this.opts.cwd,
-        env: { ...process.env, PATH: pathWithCommonBins() },
-        detached: true,
-        stdio: ["pipe", "pipe", "pipe"],
-      },
-    );
+    const child = spawn(this.opts.command, args, {
+      cwd: this.opts.cwd,
+      env: { ...process.env, PATH: pathWithCommonBins() },
+      detached: true,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
     this.child = child;
 
     if (child.stdout) {
@@ -202,7 +202,8 @@ export class ResidentAgentProcess {
       // claude prints non-fatal warnings to stderr; surface as error events
       // only if they look like real errors (cheap heuristic).
       const text = String(chunk);
-      if (/error/i.test(text)) this.opts.onEvent({ type: "error", error: text.trim().slice(0, 400) });
+      if (/error/i.test(text))
+        this.opts.onEvent({ type: "error", error: text.trim().slice(0, 400) });
     });
     child.on("error", (err) => {
       const isMissing = (err as NodeJS.ErrnoException).code === "ENOENT";

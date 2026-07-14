@@ -9,12 +9,7 @@ import { existsSync, realpathSync, rmSync, rmdirSync } from "node:fs";
 import { cp, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { dirname, join, sep } from "node:path";
 import { homedir, tmpdir } from "node:os";
-import {
-  gitClone,
-  gitRevParseHead,
-  gitSparseCheckoutAdd,
-  githubRepoToCloneUrl,
-} from "./gitOps.js";
+import { gitClone, gitRevParseHead, gitSparseCheckoutAdd, githubRepoToCloneUrl } from "./gitOps.js";
 import { loadMarketplace } from "./marketplaceManager.js";
 import { readKnownMarketplaces } from "./knownMarketplaces.js";
 import {
@@ -27,15 +22,13 @@ import {
 import { rewritePluginVars } from "./varRewrite.js";
 import { assertSafePluginName } from "./installer/paths.js";
 import { pruneDisabledSettingsForPlugin } from "./installer/pruneDisabled.js";
+import { detectPluginFormat } from "./installer/detectFormat.js";
+import { normalizePluginManifest } from "./installer/normalizeManifest.js";
 import {
   resolveContainedPluginSubpath,
   validateRelativePluginSubpath,
 } from "./installer/sourcePath.js";
-import type {
-  PluginEntrySource,
-  PluginInstallEntry,
-  PluginMarketplaceEntry,
-} from "./types.js";
+import type { PluginEntrySource, PluginInstallEntry, PluginMarketplaceEntry } from "./types.js";
 
 function userHome(): string {
   return process.env.HOME ?? homedir();
@@ -285,7 +278,10 @@ async function materialize(
     return { ok: true, cacheDir: finalDir, version, sha: r.sha };
   }
 
-  return { ok: false, error: `unsupported source type "${(source as { source?: string }).source}"` };
+  return {
+    ok: false,
+    error: `unsupported source type "${(source as { source?: string }).source}"`,
+  };
 }
 
 /**
@@ -316,7 +312,10 @@ export async function installPlugin(
     (p) => p.name === pluginName,
   );
   if (!entry) {
-    return { ok: false, error: `plugin "${pluginName}" not found in marketplace "${marketplaceName}".` };
+    return {
+      ok: false,
+      error: `plugin "${pluginName}" not found in marketplace "${marketplaceName}".`,
+    };
   }
 
   // materialize() validates every cache path segment (marketplace / plugin /
@@ -331,6 +330,24 @@ export async function installPlugin(
     return { ok: false, error: (e as Error).message };
   }
   if (!mat.ok) return mat;
+
+  // Validate and freeze the author-facing manifest before the install becomes
+  // visible in installed_plugins.json. Marketplace plugins keep their source
+  // tree in place, so no panel asset copy/conversion is needed here.
+  try {
+    await normalizePluginManifest(mat.cacheDir, {
+      name: pluginName,
+      version: entry.version ?? mat.version,
+      format: detectPluginFormat(mat.cacheDir),
+      destinationRoot: mat.cacheDir,
+    });
+  } catch (error) {
+    await rm(mat.cacheDir, { recursive: true, force: true });
+    return {
+      ok: false,
+      error: `invalid plugin manifest: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
 
   // Rewrite ${CLAUDE_PLUGIN_ROOT} → ${CODESHELL_PLUGIN_ROOT} across every
   // text file in the materialized tree. Plugins authored against Claude
@@ -374,10 +391,7 @@ export interface UninstallResult {
   removedFromDisk: boolean;
 }
 
-export function uninstallPlugin(
-  pluginName: string,
-  marketplaceName: string,
-): UninstallResult {
+export function uninstallPlugin(pluginName: string, marketplaceName: string): UninstallResult {
   const key = pluginInstallKey(pluginName, marketplaceName);
   const data = readInstalledPlugins();
   const entries = data.plugins[key];

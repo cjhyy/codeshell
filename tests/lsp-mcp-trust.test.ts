@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
 import { wrapMcpOutput } from "../packages/core/src/tool-system/mcp-manager.js";
-import { LSPClient } from "../packages/core/src/lsp/client.js";
+import { LSPClient } from "@cjhyy/code-shell-capability-coding";
 
 /**
  * Task 8 — MCP output is wrapped as untrusted external content; LSP framing

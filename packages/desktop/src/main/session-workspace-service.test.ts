@@ -3,7 +3,8 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createWorktree, removeWorktree, SessionManager } from "@cjhyy/code-shell-core";
+import { SessionManager } from "@cjhyy/code-shell-core";
+import { createWorktree, removeWorktree } from "@cjhyy/code-shell-capability-coding";
 import {
   __setSessionWorkspaceServiceSessionManagerForTests,
   cleanupSessionWorktreeForUi,

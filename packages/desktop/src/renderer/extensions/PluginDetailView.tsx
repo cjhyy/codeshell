@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { PluginDetail } from "../../preload/types";
 import { Button } from "@/components/ui/button";
-import { Sparkles, TerminalSquare, Bot, Webhook, Plug, Puzzle } from "lucide-react";
+import { Sparkles, TerminalSquare, Bot, Webhook, Plug, Puzzle, PanelTop } from "lucide-react";
 import { useT } from "../i18n/I18nProvider";
 
 /**
@@ -50,7 +50,8 @@ export function PluginDetailView({
         </Button>
       </div>
     );
-  if (!loaded) return <div className="p-4 text-sm text-muted-foreground">{t("ext.common.loading")}</div>;
+  if (!loaded)
+    return <div className="p-4 text-sm text-muted-foreground">{t("ext.common.loading")}</div>;
   if (!detail)
     return (
       <div className="p-4 text-sm text-muted-foreground">
@@ -67,7 +68,8 @@ export function PluginDetailView({
     content.commands.length +
     content.agents.length +
     content.hooks.length +
-    content.mcpServers.length;
+    content.mcpServers.length +
+    content.panels.length;
 
   return (
     <div className="space-y-3">
@@ -87,9 +89,7 @@ export function PluginDetailView({
           {detail.version} · {detail.sourceLabel}
         </span>
       </div>
-      {detail.description && (
-        <p className="text-xs text-muted-foreground">{detail.description}</p>
-      )}
+      {detail.description && <p className="text-xs text-muted-foreground">{detail.description}</p>}
       {total === 0 && (
         <div className="rounded-md border p-3 text-sm text-muted-foreground">
           {t("ext.pluginDetail.empty")}
@@ -97,7 +97,10 @@ export function PluginDetailView({
       )}
 
       {content.skills.length > 0 && (
-        <Section icon={<Sparkles className="h-3.5 w-3.5" />} title={t("ext.pluginDetail.skillsTitle", { count: content.skills.length })}>
+        <Section
+          icon={<Sparkles className="h-3.5 w-3.5" />}
+          title={t("ext.pluginDetail.skillsTitle", { count: content.skills.length })}
+        >
           {content.skills.map((s) => (
             <li key={s.name} className="flex items-baseline gap-2">
               <span className="shrink-0 font-mono text-xs">{s.name}</span>
@@ -115,24 +118,36 @@ export function PluginDetailView({
           title={t("ext.pluginDetail.commandsTitle", { count: content.commands.length })}
         >
           {content.commands.map((c) => (
-            <li key={c} className="font-mono text-xs">/{c}</li>
+            <li key={c} className="font-mono text-xs">
+              /{c}
+            </li>
           ))}
         </Section>
       )}
 
       {content.agents.length > 0 && (
-        <Section icon={<Bot className="h-3.5 w-3.5" />} title={t("ext.pluginDetail.agentsTitle", { count: content.agents.length })}>
+        <Section
+          icon={<Bot className="h-3.5 w-3.5" />}
+          title={t("ext.pluginDetail.agentsTitle", { count: content.agents.length })}
+        >
           {content.agents.map((a) => (
-            <li key={a} className="font-mono text-xs">{a}</li>
+            <li key={a} className="font-mono text-xs">
+              {a}
+            </li>
           ))}
         </Section>
       )}
 
       {content.hooks.length > 0 && (
-        <Section icon={<Webhook className="h-3.5 w-3.5" />} title={t("ext.pluginDetail.hooksTitle", { count: content.hooks.length })}>
+        <Section
+          icon={<Webhook className="h-3.5 w-3.5" />}
+          title={t("ext.pluginDetail.hooksTitle", { count: content.hooks.length })}
+        >
           {content.hooks.map((h, i) => (
             <li key={`${h.rawEvent}-${i}`} className="flex items-baseline gap-2">
-              <span className="shrink-0 rounded bg-muted px-1 font-mono text-[10px]">{h.rawEvent}</span>
+              <span className="shrink-0 rounded bg-muted px-1 font-mono text-[10px]">
+                {h.rawEvent}
+              </span>
               <span className="truncate font-mono text-xs text-muted-foreground">{h.command}</span>
             </li>
           ))}
@@ -140,12 +155,34 @@ export function PluginDetailView({
       )}
 
       {content.mcpServers.length > 0 && (
-        <Section icon={<Plug className="h-3.5 w-3.5" />} title={t("ext.pluginDetail.mcpTitle", { count: content.mcpServers.length })}>
+        <Section
+          icon={<Plug className="h-3.5 w-3.5" />}
+          title={t("ext.pluginDetail.mcpTitle", { count: content.mcpServers.length })}
+        >
           {content.mcpServers.map((m) => (
             <li key={m} className="flex items-baseline gap-2">
               <span className="font-mono text-xs">{m}</span>
               <span className="text-[10px] text-muted-foreground">
                 {t("ext.pluginDetail.mcpDisplayAs", { name: detail.name, server: m })}
+              </span>
+            </li>
+          ))}
+        </Section>
+      )}
+
+      {content.panels.length > 0 && (
+        <Section
+          icon={<PanelTop className="h-3.5 w-3.5" />}
+          title={t("ext.pluginDetail.panelsTitle", { count: content.panels.length })}
+        >
+          {content.panels.map((panel) => (
+            <li key={panel.id} className="flex items-baseline gap-2">
+              <span className="shrink-0 font-mono text-xs">{panel.id}</span>
+              <span className="truncate text-xs text-muted-foreground">
+                {panel.title.default}
+                {panel.permissions.length > 0
+                  ? ` · ${t("ext.pluginDetail.panelPermissions", { permissions: panel.permissions.join(", ") })}`
+                  : ` · ${t("ext.pluginDetail.panelNoPermissions")}`}
               </span>
             </li>
           ))}

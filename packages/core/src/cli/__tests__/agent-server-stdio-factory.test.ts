@@ -51,7 +51,7 @@ afterAll(() => {
 
 const baseSettings = {
   agent: {
-    preset: "terminal-coding",
+    preset: "general",
     enabledBuiltinTools: [],
     disabledBuiltinTools: [],
     customSystemPrompt: "CUSTOM_FROM_SETTINGS",
@@ -64,7 +64,7 @@ describe("resolveSessionAgentConfig", () => {
     const out = resolveSessionAgentConfig({ permissionMode: "default" } as any, baseSettings);
     expect(out.appendSystemPrompt).toBe("APPEND_FROM_SETTINGS");
     expect(out.customSystemPrompt).toBe("CUSTOM_FROM_SETTINGS");
-    expect(out.preset).toBe("terminal-coding");
+    expect(out.preset).toBe("general");
   });
 
   it("lets protocol slice override settings", () => {

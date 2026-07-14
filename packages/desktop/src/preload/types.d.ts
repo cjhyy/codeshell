@@ -9,13 +9,31 @@ import type {
   ApprovalRequest,
   CapabilityDescriptor,
   ReasoningControl,
-  CCAvailability,
-  DiscoveredSession,
-  QuotaResult,
   SessionWorkspace,
   SessionForkLineage,
 } from "@cjhyy/code-shell-core";
+import type {
+  CCAvailability,
+  DiscoveredSession,
+  QuotaResult,
+} from "@cjhyy/code-shell-capability-coding";
 import type { PetApi } from "./pet-api";
+import type {
+  PluginPanelBindInput,
+  PluginPanelDescriptor,
+  PluginPanelExtensionSummary,
+  PluginPanelHostContext,
+  PreparedPluginPanel,
+} from "../shared/plugin-panels";
+import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
+
+export type {
+  PluginPanelBindInput,
+  PluginPanelDescriptor,
+  PluginPanelExtensionSummary,
+  PluginPanelHostContext,
+  PreparedPluginPanel,
+};
 
 export type {
   PetApi,
@@ -1165,6 +1183,13 @@ export interface CodeshellApi {
   cancelAutomationRun(id: string): Promise<boolean>;
   listSkills(cwd: string, opts?: { includeDisabled?: boolean }): Promise<SkillSummary[]>;
   listPlugins(cwd: string): Promise<PluginSummary[]>;
+  listPluginPanels(cwd: string, locale: string): Promise<PluginPanelDescriptor[]>;
+  listPanelExtensions(cwd: string, locale: string): Promise<PluginPanelExtensionSummary[]>;
+  preparePluginPanel(id: string): Promise<PreparedPluginPanel>;
+  bindPluginPanel(input: PluginPanelBindInput): Promise<boolean>;
+  onPluginPanelsChanged(cb: () => void): () => void;
+  onAgentPanelRequest(cb: (request: AgentPanelHostRequest) => void): () => void;
+  respondAgentPanelRequest(response: AgentPanelHostResponse): void;
   /** Full content inventory for one installed plugin (详情页). */
   getPluginDetail(installKey: string): Promise<PluginDetail | null>;
   /**
@@ -1893,6 +1918,15 @@ export interface PluginDetail extends PluginSummary {
     agents: string[];
     hooks: PluginHookEntry[];
     mcpServers: string[];
+    panels: Array<{
+      id: string;
+      title: { default: string; en?: string; "zh-CN"?: string };
+      entry: string;
+      icon: string;
+      placement: "right-dock";
+      singleton: boolean;
+      permissions: string[];
+    }>;
   };
 }
 
@@ -1976,6 +2010,11 @@ export interface RunDetail extends RunSummary {
 declare global {
   interface Window {
     codeshell: CodeshellApi;
+    codeshellPanel?: Readonly<{
+      getContext(): Promise<PluginPanelHostContext>;
+      call(method: string, params?: unknown): Promise<unknown>;
+      on(event: "context.changed", listener: (payload: unknown) => void): () => void;
+    }>;
   }
 }
 

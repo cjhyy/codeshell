@@ -13,9 +13,9 @@ function readSectionFile(name: string): string {
 }
 
 const BUILTIN_SECTIONS: Record<string, string> = {
+  "harness-base": readSectionFile("harness-base"),
   base: readSectionFile("base"),
   orchestration: readSectionFile("orchestration"),
-  coding: readSectionFile("coding"),
   browser: readSectionFile("browser"),
   tone: readSectionFile("tone"),
 };
@@ -36,7 +36,10 @@ export function registerSection(name: string, content: string): void {
  * Looks up built-in sections first, then custom-registered sections.
  * Throws if the section name is not found.
  */
-export function loadSection(name: string): string {
+export function loadSection(name: string, sections?: Readonly<Record<string, string>>): string {
+  const contributed = sections?.[name];
+  if (contributed !== undefined) return contributed.trim();
+
   const builtin = BUILTIN_SECTIONS[name];
   if (builtin !== undefined) return builtin.trim();
 
@@ -50,8 +53,11 @@ export function loadSection(name: string): string {
 /**
  * Load multiple sections and join them with double newlines.
  */
-export function loadSections(names: readonly string[]): string {
-  return names.map(loadSection).join("\n\n");
+export function loadSections(
+  names: readonly string[],
+  sections?: Readonly<Record<string, string>>,
+): string {
+  return names.map((name) => loadSection(name, sections)).join("\n\n");
 }
 
 /**

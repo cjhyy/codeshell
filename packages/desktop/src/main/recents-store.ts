@@ -2,7 +2,7 @@ import * as fs from "node:fs/promises";
 import * as fsSync from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { resolveProjectRoot } from "@cjhyy/code-shell-core";
+import { resolveProjectRoot } from "@cjhyy/code-shell-capability-coding";
 
 export interface RecentProject {
   path: string;
@@ -77,7 +77,8 @@ function mergeCanonicalProjects(list: RecentProject[]): RecentProject[] {
       name: path.basename(p.path) || p.name || prior.name,
       lastOpenedAt: Math.max(prior.lastOpenedAt ?? 0, p.lastOpenedAt ?? 0),
       pinned: Boolean(prior.pinned || p.pinned) || undefined,
-      deletedAt: prior.deletedAt && p.deletedAt ? Math.max(prior.deletedAt, p.deletedAt) : undefined,
+      deletedAt:
+        prior.deletedAt && p.deletedAt ? Math.max(prior.deletedAt, p.deletedAt) : undefined,
     };
     byPath.set(p.path, merged);
   }

@@ -133,10 +133,6 @@ export {
   type RunWriteJobInput,
   type RunWriteJobResult,
 } from "./automation/index.js";
-export * from "./cc-orchestrator/index.js";
-export { checkQuota, formatQuota } from "./quota/index.js";
-export { resolveQuotaCredentials } from "./quota/credentials.js";
-export type { QuotaResult, ProviderQuota, QuotaWindow, QuotaCredentials } from "./quota/types.js";
 export { asyncAgentRegistry, type AsyncAgentEntry } from "./tool-system/builtin/agent-registry.js";
 export {
   backgroundShellManager,
@@ -211,3 +207,6 @@ export { type ProviderConfig } from "./llm/provider-catalog.js";
 // ─── Extended host types ─────────────────────────────────────────
 
 export type { ApprovalRequest, ApprovalResult, ApprovalScope, TaskInfo } from "./types.js";
+export { fileCache } from "./tool-system/builtin/file-cache.js";
+export { validateToolArgs } from "./tool-system/validation.js";
+export { createOffBackend } from "./tool-system/sandbox/off.js";

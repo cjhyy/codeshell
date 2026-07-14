@@ -32,6 +32,7 @@ export const panels = {
         maximize: "放大面板",
         restoreTitle: "还原(覆盖输入区→停靠)",
         maximizeTitle: "放大(覆盖输入区)",
+        unavailable: "面板不可用",
       },
       shells: {
         notStarted: "当前会话还没启动(发一条消息后才有后台任务)",
@@ -248,6 +249,7 @@ export const panels = {
         maximize: "Maximize panel",
         restoreTitle: "Restore (overlay composer → dock)",
         maximizeTitle: "Maximize (overlay composer)",
+        unavailable: "Panel unavailable",
       },
       shells: {
         notStarted:

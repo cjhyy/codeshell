@@ -24,11 +24,11 @@ import {
   AUTOMATION_PROMPT_NOTE,
   defaultSandboxConfig,
   resolveLLMConfigForTag,
-  resolveProjectRoot,
   type RunManager,
   type CronRunner,
   type CronRunResult,
 } from "@cjhyy/code-shell-core";
+import { resolveProjectRoot } from "@cjhyy/code-shell-capability-coding";
 import { readAutomationMemory, appendAutomationMemory } from "./automationMemory.js";
 import { AUTOMATION_DISABLED_TOOLS } from "./automationToolset.js";
 import { stablePromptHash } from "./client-message-id.js";

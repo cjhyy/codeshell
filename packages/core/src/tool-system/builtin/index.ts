@@ -2,7 +2,7 @@
  * Built-in tool registration.
  */
 
-import type { RegisteredTool } from "../../types.js";
+import type { PermissionRule, RegisteredTool } from "../../types.js";
 import type { ToolVisibilityContext } from "../context.js";
 import { readToolDef, readTool } from "./read.js";
 import { writeToolDef, writeTool } from "./write.js";
@@ -19,7 +19,6 @@ import {
 } from "./generate-video.js";
 import { viewImageToolDef, viewImageTool } from "./view-image.js";
 import { editToolDef, editTool } from "./edit.js";
-import { applyPatchToolDef, applyPatchTool } from "./apply-patch/index.js";
 import { globToolDef, globTool } from "./glob.js";
 import { grepToolDef, grepTool } from "./grep.js";
 import { bashToolDef, bashTool } from "./bash.js";
@@ -44,19 +43,9 @@ import {
 } from "./plan.js";
 import { toolSearchToolDef, toolSearchTool } from "./tool-search.js";
 import { todoWriteToolDef, todoWriteTool } from "./task.js";
-import {
-  enterWorktreeToolDef,
-  enterWorktreeTool,
-  exitWorktreeToolDef,
-  exitWorktreeTool,
-  switchSessionWorkspaceToolDef,
-  switchSessionWorkspaceTool,
-} from "./worktree.js";
 import { sleepToolDef } from "./sleep.definition.js";
 import { sleepTool } from "./sleep.js";
 import { configToolDef, configTool } from "./config.js";
-import { notebookEditToolDef, notebookEditTool } from "./notebook-edit.js";
-import { lspToolDef, lspTool } from "./lsp.js";
 import {
   cronCreateToolDef,
   cronCreateTool,
@@ -65,16 +54,6 @@ import {
   cronListTool,
 } from "./cron.js";
 import { cronListToolDef } from "./cron-list.definition.js";
-import {
-  driveClaudeCodeToolDef,
-  driveClaudeCodeTool,
-  driveAgentToolDef,
-  driveAgentTool,
-  driveAgentJobsToolDef,
-  driveAgentJobsTool,
-  DRIVE_AGENT_TOOL_TIMEOUT_MS,
-} from "./drive-claude-code.js";
-import { checkQuotaToolDef, checkQuotaTool } from "./check-quota.js";
 import { skillToolDef, skillTool } from "./skill.js";
 import {
   mcpToolDef,
@@ -85,7 +64,6 @@ import {
   readMcpResourceTool,
 } from "./mcp-tools.js";
 import { replToolDef, replTool } from "./repl.js";
-import { briefToolDef, briefTool } from "./brief.js";
 import { powershellToolDef, powershellTool } from "./powershell.js";
 import { arenaToolDef, arenaTool } from "./arena.js";
 import {
@@ -117,6 +95,7 @@ import {
   browserNavigateToolDef,
   browserNavigateTool,
 } from "./browser-tools.js";
+import { panelToolDef, panelTool } from "./panel.js";
 import {
   useCredentialToolDef,
   useCredentialBuiltinTool,
@@ -228,6 +207,20 @@ export type BuiltinToolGuard = (ctx: ToolVisibilityContext) => boolean;
 export interface BuiltinTool {
   definition: RegisteredTool;
   execute: BuiltinToolFn;
+  exposure: BuiltinToolExposure;
+}
+
+export interface BuiltinToolExposure {
+  /** Empty means explicit enableBuiltinTools-only. */
+  presetTags: readonly string[];
+  /** Execution policy is explicit and never inferred from permissionDefault. */
+  defaultPermissionRules?: readonly PermissionRule[];
+  /** Prompt sections enabled whenever at least one contributing tool is active. */
+  promptSections?: readonly string[];
+  /** Complete capability companions that must share every preset tag. */
+  requires?: readonly string[];
+  /** Shared by model visibility and the executor's second safety gate. */
+  availability?: BuiltinToolGuard;
 }
 
 const BUILTIN_IMPLEMENTATIONS: Array<{
@@ -325,17 +318,6 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       pathPolicy: [{ kind: "arg", arg: "file_path", operation: "write" }],
     },
     execute: editTool,
-  },
-  {
-    definition: {
-      ...applyPatchToolDef,
-      source: "builtin",
-      permissionDefault: "ask",
-      isReadOnly: false,
-      isConcurrencySafe: false,
-      pathPolicy: [{ kind: "apply_patch", arg: "patch", operation: "write" }],
-    },
-    execute: applyPatchTool,
   },
   {
     definition: {
@@ -518,36 +500,6 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
     execute: todoWriteTool,
   },
   // ─── Phase 4: Multi-Agent + Worktree ───────────────────────────
-  {
-    definition: {
-      ...enterWorktreeToolDef,
-      source: "builtin",
-      permissionDefault: "ask",
-      isReadOnly: false,
-      isConcurrencySafe: false,
-    },
-    execute: enterWorktreeTool,
-  },
-  {
-    definition: {
-      ...exitWorktreeToolDef,
-      source: "builtin",
-      permissionDefault: "ask",
-      isReadOnly: false,
-      isConcurrencySafe: false,
-    },
-    execute: exitWorktreeTool,
-  },
-  {
-    definition: {
-      ...switchSessionWorkspaceToolDef,
-      source: "builtin",
-      permissionDefault: "ask",
-      isReadOnly: false,
-      isConcurrencySafe: false,
-    },
-    execute: switchSessionWorkspaceTool,
-  },
   // ─── Phase 5: Utility Tools ────────────────────────────────────
   {
     definition: {
@@ -568,35 +520,6 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: configTool,
-  },
-  {
-    definition: {
-      ...notebookEditToolDef,
-      source: "builtin",
-      permissionDefault: "ask",
-      isReadOnly: false,
-      isConcurrencySafe: false,
-      pathPolicy: [
-        {
-          kind: "arg",
-          arg: "file_path",
-          operation: { fromArg: "action", readValues: ["read"], default: "write" },
-        },
-      ],
-    },
-    execute: notebookEditTool,
-  },
-  // ─── Phase 6: LSP ─────────────────────────────────────────────
-  {
-    definition: {
-      ...lspToolDef,
-      source: "builtin",
-      permissionDefault: "allow",
-      isReadOnly: true,
-      isConcurrencySafe: true,
-      pathPolicy: [{ kind: "arg", arg: "file_path", operation: "read" }],
-    },
-    execute: lspTool,
   },
   // ─── Cron Tools ────────────────────────────────────────────────
   {
@@ -628,57 +551,6 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: cronListTool,
-  },
-  // ─── Drive external coding-agent CLI (claude / codex) ──────────
-  {
-    definition: {
-      ...driveAgentToolDef,
-      source: "builtin",
-      permissionDefault: "ask",
-      isReadOnly: false,
-      isConcurrencySafe: false,
-      timeoutMs: DRIVE_AGENT_TOOL_TIMEOUT_MS,
-      pathPolicy: [{ kind: "arg", arg: "attachmentPaths", operation: "read" }],
-    },
-    execute: driveAgentTool,
-  },
-  {
-    definition: {
-      ...driveAgentJobsToolDef,
-      source: "builtin",
-      permissionDefault: "allow",
-      isReadOnly: false,
-      isConcurrencySafe: false,
-    },
-    execute: driveAgentJobsTool,
-  },
-  // Back-compat alias: DriveClaudeCode = DriveAgent pinned to cli:claude. Kept
-  // registered so old prompts/memories that name DriveClaudeCode still resolve.
-  {
-    definition: {
-      ...driveClaudeCodeToolDef,
-      source: "builtin",
-      permissionDefault: "ask",
-      isReadOnly: false,
-      isConcurrencySafe: false,
-      timeoutMs: DRIVE_AGENT_TOOL_TIMEOUT_MS,
-      pathPolicy: [{ kind: "arg", arg: "attachmentPaths", operation: "read" }],
-    },
-    execute: driveClaudeCodeTool,
-  },
-  // ─── Check remaining CC/Codex subscription quota ──────────────
-  {
-    definition: {
-      ...checkQuotaToolDef,
-      source: "builtin",
-      // Read-only intent (reports quota, mutates nothing). Note: the "claude"
-      // path sends a 1-token probe (Anthropic exposes quota only via response
-      // headers) — that tiny cost is documented in the tool description.
-      permissionDefault: "allow",
-      isReadOnly: true,
-      isConcurrencySafe: true,
-    },
-    execute: checkQuotaTool,
   },
   // ─── Phase 7: Missing tools from restored-src ─────────────────
   {
@@ -735,16 +607,6 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: replTool,
-  },
-  {
-    definition: {
-      ...briefToolDef,
-      source: "builtin",
-      permissionDefault: "allow",
-      isReadOnly: true,
-      isConcurrencySafe: true,
-    },
-    execute: briefTool,
   },
   {
     definition: {
@@ -894,6 +756,18 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
     },
     execute: browserNavigateTool,
   },
+  // Generic host-panel control. The bridge is injected only by interactive
+  // Desktop sessions; plugin tools can call the same ctx.panels service.
+  {
+    definition: {
+      ...panelToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: panelTool,
+  },
   // ─── Credentials: AI 取用已存凭证(token/link/cookie) ──────────
   // permissionDefault:"allow" 是展示/声明 hint；取用审批由工具内部的
   // CredentialUseGate 负责(默认问/本会话记住/全自动),避免双重弹窗。
@@ -923,34 +797,255 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
   },
 ];
 
+const GENERAL_TAGS = ["general"] as const;
+const HARNESS_TAGS = ["harness-min", "general"] as const;
+const PRODUCT_FULL_TAGS = ["product-full"] as const;
+const EXPLICIT_ONLY = [] as const;
+
+function expose(
+  presetTags: readonly string[],
+  options: Omit<BuiltinToolExposure, "presetTags"> = {},
+): BuiltinToolExposure {
+  return { presetTags, ...options };
+}
+
+function allow(tool: string): PermissionRule[] {
+  return [{ tool, decision: "allow" }];
+}
+
+/**
+ * Preset-facing metadata lives beside the builtin catalog. The exhaustive
+ * registration-time check below makes a newly-added implementation fail loud
+ * until its product exposure has been reviewed explicitly.
+ */
+const BUILTIN_EXPOSURES = new Map<string, BuiltinToolExposure>([
+  [readToolDef.name, expose(HARNESS_TAGS, { defaultPermissionRules: allow(readToolDef.name) })],
+  [writeToolDef.name, expose(HARNESS_TAGS)],
+  [editModelCatalogToolDef.name, expose(GENERAL_TAGS)],
+  [
+    generateImageToolDef.name,
+    expose(GENERAL_TAGS, { availability: (ctx) => isGenerateImageAvailable(ctx.cwd) }),
+  ],
+  [
+    generateVideoToolDef.name,
+    expose(GENERAL_TAGS, { availability: (ctx) => isGenerateVideoAvailable(ctx.cwd) }),
+  ],
+  [viewImageToolDef.name, expose(GENERAL_TAGS)],
+  [editToolDef.name, expose(HARNESS_TAGS)],
+  [globToolDef.name, expose(HARNESS_TAGS, { defaultPermissionRules: allow(globToolDef.name) })],
+  [grepToolDef.name, expose(HARNESS_TAGS, { defaultPermissionRules: allow(grepToolDef.name) })],
+  [bashToolDef.name, expose(HARNESS_TAGS, { requires: ["BashOutput", "KillShell", "ListShells"] })],
+  [bashOutputToolDef.name, expose(HARNESS_TAGS)],
+  [killShellToolDef.name, expose(HARNESS_TAGS)],
+  [listShellsToolDef.name, expose(HARNESS_TAGS)],
+  [
+    webSearchToolDef.name,
+    expose(GENERAL_TAGS, {
+      defaultPermissionRules: allow(webSearchToolDef.name),
+      availability: (ctx) => isWebSearchAvailable(ctx.cwd),
+    }),
+  ],
+  [
+    webFetchToolDef.name,
+    expose(GENERAL_TAGS, { defaultPermissionRules: allow(webFetchToolDef.name) }),
+  ],
+  [
+    askUserToolDef.name,
+    expose(HARNESS_TAGS, { defaultPermissionRules: allow(askUserToolDef.name) }),
+  ],
+  [agentToolDef.name, expose(HARNESS_TAGS, { defaultPermissionRules: allow(agentToolDef.name) })],
+  [agentStatusToolDef.name, expose(EXPLICIT_ONLY)],
+  [
+    agentCancelToolDef.name,
+    expose(HARNESS_TAGS, { defaultPermissionRules: allow(agentCancelToolDef.name) }),
+  ],
+  [agentSendInputToolDef.name, expose(EXPLICIT_ONLY)],
+  [
+    enterPlanModeToolDef.name,
+    expose(GENERAL_TAGS, { defaultPermissionRules: allow(enterPlanModeToolDef.name) }),
+  ],
+  [
+    exitPlanModeToolDef.name,
+    expose(GENERAL_TAGS, { defaultPermissionRules: allow(exitPlanModeToolDef.name) }),
+  ],
+  [
+    toolSearchToolDef.name,
+    expose(HARNESS_TAGS, { defaultPermissionRules: allow(toolSearchToolDef.name) }),
+  ],
+  [
+    todoWriteToolDef.name,
+    expose(HARNESS_TAGS, { defaultPermissionRules: allow(todoWriteToolDef.name) }),
+  ],
+  [sleepToolDef.name, expose(HARNESS_TAGS, { defaultPermissionRules: allow(sleepToolDef.name) })],
+  [configToolDef.name, expose(HARNESS_TAGS)],
+  [cronCreateToolDef.name, expose(GENERAL_TAGS)],
+  [cronDeleteToolDef.name, expose(GENERAL_TAGS)],
+  [
+    cronListToolDef.name,
+    expose(GENERAL_TAGS, { defaultPermissionRules: allow(cronListToolDef.name) }),
+  ],
+  [skillToolDef.name, expose(HARNESS_TAGS, { defaultPermissionRules: allow(skillToolDef.name) })],
+  [mcpToolDef.name, expose(HARNESS_TAGS)],
+  [
+    listMcpResourcesToolDef.name,
+    expose(HARNESS_TAGS, { defaultPermissionRules: allow(listMcpResourcesToolDef.name) }),
+  ],
+  [readMcpResourceToolDef.name, expose(HARNESS_TAGS)],
+  [replToolDef.name, expose(GENERAL_TAGS)],
+  [powershellToolDef.name, expose(GENERAL_TAGS)],
+  [arenaToolDef.name, expose(PRODUCT_FULL_TAGS)],
+  [
+    memoryListToolDef.name,
+    expose(HARNESS_TAGS, { defaultPermissionRules: allow(memoryListToolDef.name) }),
+  ],
+  [
+    memoryReadToolDef.name,
+    expose(HARNESS_TAGS, { defaultPermissionRules: allow(memoryReadToolDef.name) }),
+  ],
+  [memorySaveToolDef.name, expose(HARNESS_TAGS)],
+  [memoryDeleteToolDef.name, expose(HARNESS_TAGS)],
+  [completeGoalToolDef.name, expose(HARNESS_TAGS, { availability: (ctx) => ctx.hasGoal === true })],
+  [cancelGoalToolDef.name, expose(HARNESS_TAGS, { availability: (ctx) => ctx.hasGoal === true })],
+  [addMarketplaceToolDef.name, expose(GENERAL_TAGS)],
+  [
+    browserObserveToolDef.name,
+    expose(GENERAL_TAGS, {
+      defaultPermissionRules: allow(browserObserveToolDef.name),
+      promptSections: ["browser"],
+    }),
+  ],
+  [
+    browserActToolDef.name,
+    expose(GENERAL_TAGS, {
+      defaultPermissionRules: [
+        {
+          tool: browserActToolDef.name,
+          argsPattern: { action: "^(click|type|select)$" },
+          decision: "ask",
+          reason: "browser_act click/type/select mutate the page",
+        },
+      ],
+      promptSections: ["browser"],
+    }),
+  ],
+  [
+    browserNavigateToolDef.name,
+    expose(GENERAL_TAGS, {
+      defaultPermissionRules: allow(browserNavigateToolDef.name),
+      promptSections: ["browser"],
+    }),
+  ],
+  [
+    panelToolDef.name,
+    expose(GENERAL_TAGS, {
+      defaultPermissionRules: allow(panelToolDef.name),
+      availability: (ctx) => ctx.host === "desktop" && ctx.isSubAgent !== true,
+    }),
+  ],
+  [
+    useCredentialToolDef.name,
+    expose(GENERAL_TAGS, {
+      availability: (ctx) => isUseCredentialAvailable(ctx.cwd, ctx.settingsScope),
+    }),
+  ],
+  [
+    injectCredentialToolDef.name,
+    expose(GENERAL_TAGS, {
+      availability: (ctx) => isInjectCredentialAvailable(ctx.cwd, ctx.settingsScope),
+    }),
+  ],
+]);
+
+function requiredExposure(name: string): BuiltinToolExposure {
+  const exposure = BUILTIN_EXPOSURES.get(name);
+  if (!exposure) throw new Error(`Builtin tool '${name}' is missing exposure metadata`);
+  return exposure;
+}
+
 export const BUILTIN_TOOLS: BuiltinTool[] = BUILTIN_IMPLEMENTATIONS.map(
   ({ definition, execute }) => ({
     definition,
+    exposure: requiredExposure(definition.name),
     execute: async (args, ctx) => toToolExecutionResult(await execute(args, ctx)),
   }),
 );
 
-/**
- * Per-tool availability predicates. A tool listed here is filtered OUT of the
- * exposed toolDefs when its predicate returns false for the active cwd (see
- * engine.ts toolDefs assembly). Tools NOT listed here are always visible.
- * Keyed by the tool's `name` (must match the toolDef name).
- */
-export const BUILTIN_TOOL_GUARDS: Map<string, BuiltinToolGuard> = new Map([
-  [webSearchToolDef.name, (ctx) => isWebSearchAvailable(ctx.cwd)],
-  [generateImageToolDef.name, (ctx) => isGenerateImageAvailable(ctx.cwd)],
-  [generateVideoToolDef.name, (ctx) => isGenerateVideoAvailable(ctx.cwd)],
-  // UseCredential is hidden until at least one credential exists — keeps it out
-  // of the tool list (and the context) for the common no-credentials case,
-  // matching the spec's "quiet when empty" intent (true ToolSearch-deferral for
-  // builtins isn't wired in the engine).
-  [useCredentialToolDef.name, (ctx) => isUseCredentialAvailable(ctx.cwd, ctx.settingsScope)],
-  // InjectCredential hidden until ≥1 cookie credential exists (browser injection
-  // is cookie-only). Also degrades at call time if no browser bridge is wired.
-  [injectCredentialToolDef.name, (ctx) => isInjectCredentialAvailable(ctx.cwd, ctx.settingsScope)],
-  [completeGoalToolDef.name, (ctx) => ctx.hasGoal === true],
-  [cancelGoalToolDef.name, (ctx) => ctx.hasGoal === true],
-]);
+const KNOWN_TOOL_PROMPT_SECTIONS = new Set(["browser"]);
+
+export function validateBuiltinToolExposures(tools: readonly BuiltinTool[] = BUILTIN_TOOLS): void {
+  const byName = new Map(tools.map((tool) => [tool.definition.name, tool]));
+  if (byName.size !== tools.length)
+    throw new Error("Builtin tool catalog contains duplicate names");
+  for (const tool of tools) {
+    const { name } = tool.definition;
+    if (!Array.isArray(tool.exposure.presetTags)) {
+      throw new Error(`Builtin tool '${name}' is missing presetTags`);
+    }
+    for (const section of tool.exposure.promptSections ?? []) {
+      if (!KNOWN_TOOL_PROMPT_SECTIONS.has(section)) {
+        throw new Error(`Builtin tool '${name}' references unknown prompt section '${section}'`);
+      }
+    }
+    for (const requiredName of tool.exposure.requires ?? []) {
+      const required = byName.get(requiredName);
+      if (!required)
+        throw new Error(`Builtin tool '${name}' requires unknown tool '${requiredName}'`);
+      for (const tag of tool.exposure.presetTags) {
+        if (!required.exposure.presetTags.includes(tag)) {
+          throw new Error(`Builtin tool '${name}' requires '${requiredName}' in preset '${tag}'`);
+        }
+      }
+    }
+  }
+}
+
+validateBuiltinToolExposures();
+
+/** Derive a preset's tool list and safe defaults from any composed tool catalog. */
+export function derivePresetExposure(
+  tag: string,
+  tools: readonly BuiltinTool[] = BUILTIN_TOOLS,
+): {
+  builtinTools: string[];
+  defaultPermissionRules: PermissionRule[];
+} {
+  const selected = tools.filter((tool) => tool.exposure.presetTags.includes(tag));
+  return {
+    builtinTools: selected.map((tool) => tool.definition.name),
+    defaultPermissionRules: selected.flatMap((tool) => [
+      ...(tool.exposure.defaultPermissionRules ?? []),
+    ]),
+  };
+}
+
+/** Backwards-compatible name for callers deriving only from the core catalog. */
+export function deriveBuiltinPresetExposure(tag: string): {
+  builtinTools: string[];
+  defaultPermissionRules: PermissionRule[];
+} {
+  return derivePresetExposure(tag, BUILTIN_TOOLS);
+}
+
+export function deriveToolGatedPromptSections(
+  tools: readonly BuiltinTool[] = BUILTIN_TOOLS,
+): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  for (const tool of tools) {
+    for (const section of tool.exposure.promptSections ?? []) {
+      (result[section] ??= []).push(tool.definition.name);
+    }
+  }
+  return result;
+}
+
+/** Compatibility view consumed by engine + executor; metadata is authoritative. */
+export const BUILTIN_TOOL_GUARDS: Map<string, BuiltinToolGuard> = new Map(
+  BUILTIN_TOOLS.flatMap((tool) =>
+    tool.exposure.availability
+      ? ([[tool.definition.name, tool.exposure.availability]] as const)
+      : [],
+  ),
+);
 
 /** UseCredential is available when the cwd's credential metadata has ≥1 entry. */
 export function isUseCredentialAvailable(

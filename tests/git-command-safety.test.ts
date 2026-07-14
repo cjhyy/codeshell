@@ -10,7 +10,7 @@ import {
   getCurrentBranch,
   getGitDiff,
   ghPrComments,
-} from "../packages/core/src/git/utils.js";
+} from "@cjhyy/code-shell-capability-coding";
 
 /**
  * Task 3 — git helpers must build argv arrays, never command strings.

@@ -47,7 +47,14 @@ describe("describePluginContent (插件详情页 inventory)", () => {
     const root = mkdtempSync(join(tmpdir(), "cs-plugin-empty-"));
     try {
       const inv = describePluginContent("empty", root);
-      expect(inv).toEqual({ skills: [], commands: [], agents: [], hooks: [], mcpServers: [] });
+      expect(inv).toEqual({
+        skills: [],
+        commands: [],
+        agents: [],
+        hooks: [],
+        mcpServers: [],
+        panels: [],
+      });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

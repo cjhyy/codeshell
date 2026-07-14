@@ -16,7 +16,7 @@ function parentConfig(): EngineConfig {
     clientDefaults: { temperature: 0.4, retryMaxAttempts: 8 },
     cwd: "/repo",
     permissionMode: "acceptEdits",
-    preset: "terminal-coding",
+    preset: "general",
     enabledBuiltinTools: ["Read", "Agent", "AgentSendInput"],
     disabledBuiltinTools: ["Write"],
     customSystemPrompt: "custom",
@@ -81,7 +81,7 @@ describe("subagent spawner", () => {
     const spawner = createSubAgentSpawner({
       parentConfig: parentConfig(),
       parentSandbox: parentConfig().sandbox!,
-      presetName: "terminal-coding",
+      presetName: "general",
       cwd: "/repo",
       permissionMode: "acceptEdits",
       appendParentSubagent: () => {},
@@ -182,7 +182,7 @@ describe("subagent spawner", () => {
     const spawner = createSubAgentSpawner({
       parentConfig: parentConfig(),
       parentSandbox: parentConfig().sandbox!,
-      presetName: "terminal-coding",
+      presetName: "general",
       cwd: "/repo",
       permissionMode: "acceptEdits",
       appendParentSubagent: () => {},
@@ -236,7 +236,7 @@ describe("subagent spawner", () => {
     const spawner = createSubAgentSpawner({
       parentConfig: parentConfig(),
       parentSandbox: parentConfig().sandbox!,
-      presetName: "terminal-coding",
+      presetName: "general",
       cwd: "/repo",
       permissionMode: "acceptEdits",
       appendParentSubagent: (agentId, description) =>
@@ -290,7 +290,7 @@ describe("subagent spawner", () => {
     const spawner = createSubAgentSpawner({
       parentConfig: parentConfig(),
       parentSandbox: parentConfig().sandbox!,
-      presetName: "terminal-coding",
+      presetName: "general",
       cwd: "/repo",
       permissionMode: "acceptEdits",
       appendParentSubagent: () => anchors++,
@@ -325,7 +325,7 @@ describe("subagent spawner", () => {
     const spawner = createSubAgentSpawner({
       parentConfig: parent,
       parentSandbox: parent.sandbox!,
-      presetName: "terminal-coding",
+      presetName: "general",
       cwd: "/repo",
       permissionMode: "acceptEdits",
       appendParentSubagent: () => {},
@@ -367,7 +367,7 @@ describe("subagent spawner", () => {
     const spawner = createSubAgentSpawner({
       parentConfig: parent,
       parentSandbox: effectiveSandbox,
-      presetName: "terminal-coding",
+      presetName: "general",
       cwd: "/repo",
       permissionMode: "acceptEdits",
       appendParentSubagent: () => {},
@@ -400,7 +400,7 @@ describe("subagent spawner", () => {
     const spawner = createSubAgentSpawner({
       parentConfig: parent,
       parentSandbox: parent.sandbox!,
-      presetName: "terminal-coding",
+      presetName: "general",
       cwd: "/repo",
       permissionMode: "acceptEdits",
       appendParentSubagent: () => {},
@@ -441,7 +441,7 @@ describe("subagent spawner", () => {
     const spawner = createSubAgentSpawner({
       parentConfig: parentConfig(),
       parentSandbox: parentConfig().sandbox!,
-      presetName: "terminal-coding",
+      presetName: "general",
       cwd: "/repo",
       permissionMode: "acceptEdits",
       appendParentSubagent: () => {},

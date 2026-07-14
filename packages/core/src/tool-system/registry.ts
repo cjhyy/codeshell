@@ -9,7 +9,13 @@ import {
   ToolExecutionError,
   ToolTimeoutError,
 } from "../exceptions.js";
-import { BUILTIN_TOOLS, type BuiltinToolFn, toToolExecutionResult } from "./builtin/index.js";
+import {
+  BUILTIN_TOOLS,
+  type BuiltinTool,
+  type BuiltinToolFn,
+  type BuiltinToolGuard,
+  toToolExecutionResult,
+} from "./builtin/index.js";
 import type { ToolContext } from "./context.js";
 import { validateToolMetadata } from "./validate-tool-metadata.js";
 
@@ -22,6 +28,8 @@ export const DEFAULT_TOOL_TIMEOUT_MS = 120_000;
 
 export interface ToolRegistryOptions {
   builtinTools?: readonly string[];
+  /** Core catalog plus any tools contributed by host capability packages. */
+  toolCatalog?: readonly BuiltinTool[];
 }
 
 type ToolImplementation = (args: Record<string, unknown>, ctx?: ToolContext) => Promise<unknown>;
@@ -29,13 +37,20 @@ type ToolImplementation = (args: Record<string, unknown>, ctx?: ToolContext) => 
 export class ToolRegistry {
   private tools = new Map<string, RegisteredTool>();
   private builtinExecutors = new Map<string, BuiltinToolFn>();
+  private availabilityGuards = new Map<string, BuiltinToolGuard>();
 
   constructor(options: ToolRegistryOptions = {}) {
-    this.registerBuiltins(options.builtinTools);
+    this.registerBuiltins(options.builtinTools, options.toolCatalog ?? BUILTIN_TOOLS);
   }
 
-  private registerBuiltins(selectedBuiltinTools?: readonly string[]): void {
-    const availableNames = new Set(BUILTIN_TOOLS.map((tool) => tool.definition.name));
+  private registerBuiltins(
+    selectedBuiltinTools: readonly string[] | undefined,
+    toolCatalog: readonly BuiltinTool[],
+  ): void {
+    const availableNames = new Set(toolCatalog.map((tool) => tool.definition.name));
+    if (availableNames.size !== toolCatalog.length) {
+      throw new ConfigError("Tool catalog contains duplicate names");
+    }
     const selectedNames = selectedBuiltinTools ? new Set(selectedBuiltinTools) : null;
 
     if (selectedNames) {
@@ -47,7 +62,7 @@ export class ToolRegistry {
       }
     }
 
-    for (const tool of BUILTIN_TOOLS) {
+    for (const tool of toolCatalog) {
       if (selectedNames && !selectedNames.has(tool.definition.name)) {
         continue;
       }
@@ -56,6 +71,9 @@ export class ToolRegistry {
       validateToolMetadata(tool.definition);
       this.tools.set(tool.definition.name, tool.definition);
       this.builtinExecutors.set(tool.definition.name, tool.execute);
+      if (tool.exposure.availability) {
+        this.availabilityGuards.set(tool.definition.name, tool.exposure.availability);
+      }
     }
   }
 
@@ -72,6 +90,7 @@ export class ToolRegistry {
   unregisterTool(name: string): void {
     this.tools.delete(name);
     this.builtinExecutors.delete(name);
+    this.availabilityGuards.delete(name);
   }
 
   getToolDefinitions(): ToolDefinition[] {
@@ -89,6 +108,10 @@ export class ToolRegistry {
 
   hasTool(name: string): boolean {
     return this.tools.has(name);
+  }
+
+  getAvailabilityGuard(name: string): BuiltinToolGuard | undefined {
+    return this.availabilityGuards.get(name);
   }
 
   async executeTool(

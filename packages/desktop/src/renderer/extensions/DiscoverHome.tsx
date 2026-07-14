@@ -4,6 +4,7 @@ import { useT } from "../i18n/I18nProvider";
 import {
   ArrowRight,
   FileText,
+  PanelTop,
   Plug,
   Puzzle,
   Search,
@@ -18,6 +19,7 @@ interface Props {
 
 interface Counts {
   plugins: number;
+  panels: number;
   skills: number;
   mcp: number;
 }
@@ -25,12 +27,12 @@ interface Counts {
 /**
  * DiscoverHome — the minimal discovery landing for the extensions surface.
  * Centered title + a search box that deep-links into the 技能 tab, and an
- * "已安装概览" of three clickable counts that jump into the management page.
+ * "已安装概览" of clickable package/panel/skill/MCP/market entries.
  * Counts are best-effort: any failing source falls back to 0 rather than
  * blocking the whole page.
  */
 export function DiscoverHome({ cwd, onOpenManage }: Props) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [counts, setCounts] = useState<Counts | null>(null);
   const [search, setSearch] = useState("");
 
@@ -39,6 +41,7 @@ export function DiscoverHome({ cwd, onOpenManage }: Props) {
     setCounts(null);
     Promise.all([
       window.codeshell.listPlugins(cwd).then((d) => d.length).catch(() => 0),
+      window.codeshell.listPanelExtensions(cwd, lang).then((d) => d.length).catch(() => 0),
       window.codeshell
         .listSkills(cwd, { includeDisabled: true })
         .then((d) => d.length)
@@ -57,13 +60,13 @@ export function DiscoverHome({ cwd, onOpenManage }: Props) {
           return Object.keys(merged ?? {}).length;
         })
         .catch(() => 0),
-    ]).then(([plugins, skills, mcp]) => {
-      if (alive) setCounts({ plugins, skills, mcp });
+    ]).then(([plugins, panels, skills, mcp]) => {
+      if (alive) setCounts({ plugins, panels, skills, mcp });
     });
     return () => {
       alive = false;
     };
-  }, [cwd]);
+  }, [cwd, lang]);
 
   const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") onOpenManage("skills", search.trim() || undefined);
@@ -82,6 +85,13 @@ export function DiscoverHome({ cwd, onOpenManage }: Props) {
       description: t("ext.discover.pluginsDesc"),
       icon: Puzzle,
       value: counts?.plugins ?? null,
+    },
+    {
+      key: "panels",
+      label: t("ext.discover.panels"),
+      description: t("ext.discover.panelsDesc"),
+      icon: PanelTop,
+      value: counts?.panels ?? null,
     },
     {
       key: "skills",
@@ -128,7 +138,7 @@ export function DiscoverHome({ cwd, onOpenManage }: Props) {
         </div>
       </div>
 
-      <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {stats.map((s) => {
           const Icon = s.icon;
           return (

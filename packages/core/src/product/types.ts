@@ -45,9 +45,6 @@ export interface ProductPreset {
 
   /** Additional text appended after the main system prompt. */
   appendPrompt?: string;
-
-  /** Whether to inject git status into system context. Default: false */
-  injectGitStatus?: boolean;
 }
 
 // ─── 2. Adapter (hands) ─────────────────────────────────────────

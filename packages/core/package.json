@@ -14,16 +14,19 @@
       "types": "./dist/index.internal.d.ts",
       "import": "./dist/index.internal.js"
     },
+    "./plugin-runtime": {
+      "types": "./dist/plugins/runtime.d.ts",
+      "import": "./dist/plugins/runtime.js"
+    },
     "./bin/agent-server-stdio": "./dist/cli/agent-server-stdio.js"
   },
   "sideEffects": [
     "./dist/data/*.json",
     "./dist/prompt/sections/*.md"
   ],
-  "//files": "LICENSE/README intentionally omitted: npm/bun always include them in a publish regardless of this list, so the published tarball is unchanged — but listing them makes electron-builder (which follows the workspace symlink when packaging the desktop app) try to copy them from packages/core, tripping its 'file must be under <app>' guard (electron-builder#3238). THIRD_PARTY_NOTICES.md is listed explicitly because third-party attribution must ship with npm tarballs.",
+  "//files": "LICENSE/README intentionally omitted: npm/bun always include them in a publish regardless of this list, so the published tarball is unchanged — but listing them makes electron-builder (which follows the workspace symlink when packaging the desktop app) try to copy them from packages/core, tripping its 'file must be under <app>' guard (electron-builder#3238).",
   "files": [
-    "dist",
-    "THIRD_PARTY_NOTICES.md"
+    "dist"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && bun run copy-assets",

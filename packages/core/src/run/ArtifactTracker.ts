@@ -3,7 +3,8 @@
  *
  * Listens to StreamEvents and identifies:
  *   - Files written or edited (Write / Edit tool results)
- *   - Files created by Bash commands (mkdir, touch, cp, git commit, etc.)
+ *   - Files created by generic Bash redirection/copy commands
+ *   - Domain-specific outputs recognized by capability detectors
  *   - Structured outputs (e.g., generated configs, test results)
  *
  * Design constraint (§14):
@@ -17,10 +18,12 @@ import type { StreamEvent, ToolCall } from "../types.js";
 import type { RunStore } from "./RunStore.js";
 import { parseRedirectTarget } from "./redirect-target.js";
 import type { RunArtifactRef, ArtifactKind, ArtifactRole } from "./types.js";
+import type { CapabilityArtifact, CapabilityArtifactDetector } from "../capabilities/index.js";
 
 export interface ArtifactTrackerConfig {
   runId: string;
   store: RunStore;
+  detectors?: readonly CapabilityArtifactDetector[];
 }
 
 /** Pending tool call — we need the call args to determine artifact details. */
@@ -33,6 +36,7 @@ export class ArtifactTracker {
   private readonly config: ArtifactTrackerConfig;
   private readonly pendingCalls = new Map<string, PendingToolCall>();
   private readonly recordedPaths = new Set<string>();
+  private readonly recordedLocators = new Set<string>();
 
   constructor(config: ArtifactTrackerConfig) {
     this.config = config;
@@ -71,43 +75,30 @@ export class ArtifactTracker {
 
   // ─── Internal ──────────────────────────────────────────────────
 
-  private async processToolResult(
-    call: PendingToolCall,
-    resultText?: string,
-  ): Promise<void> {
+  private async processToolResult(call: PendingToolCall, resultText?: string): Promise<void> {
     switch (call.toolName) {
       case "Write":
-        await this.recordFileArtifact(
-          call.args.file_path as string,
-          "output",
-          "file",
-        );
+        await this.recordFileArtifact(call.args.file_path as string, "output", "file");
         break;
 
       case "Edit":
-        await this.recordFileArtifact(
-          call.args.file_path as string,
-          "output",
-          "file",
-        );
+        await this.recordFileArtifact(call.args.file_path as string, "output", "file");
         break;
 
       case "Bash":
-        await this.extractBashArtifacts(
-          call.args.command as string,
-          resultText,
-        );
+        await this.extractBashArtifacts(call.args.command as string, resultText);
         break;
+    }
 
-      case "NotebookEdit":
-        if (call.args.notebook_path) {
-          await this.recordFileArtifact(
-            call.args.notebook_path as string,
-            "output",
-            "document",
-          );
-        }
-        break;
+    for (const detector of this.config.detectors ?? []) {
+      const detected = detector({
+        toolName: call.toolName,
+        args: call.args,
+        resultText,
+      });
+      for (const artifact of detected ? (Array.isArray(detected) ? detected : [detected]) : []) {
+        await this.recordArtifact(artifact);
+      }
     }
   }
 
@@ -122,6 +113,7 @@ export class ArtifactTracker {
     // Deduplicate — only record each path once per run
     if (this.recordedPaths.has(filePath)) return;
     this.recordedPaths.add(filePath);
+    this.recordedLocators.add(filePath);
 
     const ref: RunArtifactRef = {
       artifactRefId: nanoid(12),
@@ -137,32 +129,28 @@ export class ArtifactTracker {
     await this.config.store.appendArtifactRef(ref);
   }
 
+  private async recordArtifact(artifact: CapabilityArtifact): Promise<void> {
+    if (!artifact.locator || this.recordedLocators.has(artifact.locator)) return;
+    this.recordedLocators.add(artifact.locator);
+    await this.config.store.appendArtifactRef({
+      artifactRefId: nanoid(12),
+      runId: this.config.runId,
+      kind: artifact.kind,
+      title: artifact.title,
+      locator: artifact.locator,
+      role: artifact.role,
+      version: null,
+      metadata: artifact.metadata ?? {},
+    });
+  }
+
   /**
    * Extract artifact refs from Bash commands.
    * Only track commands that clearly produce files.
    */
-  private async extractBashArtifacts(
-    command: string,
-    _resultText?: string,
-  ): Promise<void> {
+  private async extractBashArtifacts(command: string, _resultText?: string): Promise<void> {
     if (!command) return;
     const trimmed = command.trim();
-
-    // git commit — the commit itself is an artifact
-    if (/^git\s+commit\b/.test(trimmed)) {
-      const ref: RunArtifactRef = {
-        artifactRefId: nanoid(12),
-        runId: this.config.runId,
-        kind: "resource",
-        title: "git commit",
-        locator: "git:HEAD",
-        role: "output",
-        version: null,
-        metadata: { command: trimmed.slice(0, 200) },
-      };
-      await this.config.store.appendArtifactRef(ref);
-      return;
-    }
 
     // Redirect output: command > file or command >> file (quoted-path aware)
     const redirectTarget = parseRedirectTarget(trimmed);

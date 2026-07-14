@@ -35,7 +35,12 @@ import {
   type SteerItem,
 } from "./steer-queue.js";
 import { RunEnvironmentResolver } from "./run-environment.js";
-import { BUILTIN_TOOL_GUARDS, type BuiltinToolFn } from "../tool-system/builtin/index.js";
+import {
+  BUILTIN_TOOLS,
+  type BuiltinTool,
+  type BuiltinToolFn,
+  type BuiltinToolGuard,
+} from "../tool-system/builtin/index.js";
 import { asyncAgentRegistry, type LiveChildState } from "../tool-system/builtin/agent-registry.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
 import {
@@ -106,8 +111,17 @@ import { effectiveDisabledList, effectiveBuiltinLists } from "../capability-cont
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
 import { registerFileHistoryHook } from "./file-history-hook.js";
 import type { ToolContext } from "../tool-system/context.js";
-import type { SandboxBackend } from "../tool-system/sandbox/index.js";
 import { resolveAgentPreset, resolveBuiltinToolNames, type AgentPreset } from "../preset/index.js";
+import {
+  composeDynamicContextProviders,
+  composeCapabilityEngineHooks,
+  composePromptSections,
+  composeToolCatalog,
+  resolveCapabilities,
+  resolveInstructionBoundary,
+  type CapabilityDynamicContextProvider,
+  type CapabilityModule,
+} from "../capabilities/index.js";
 import { ModelPool, type ModelEntry } from "../llm/model-pool.js";
 import { AgentDefinitionRegistry } from "../agent/agent-definition-registry.js";
 import { defaultCacheDir } from "../llm/model-cache.js";
@@ -272,6 +286,11 @@ export class Engine {
   // set only takes effect on session restart (logged in refreshRuntimeConfig).
   private preset: AgentPreset;
   private toolRegistry: ToolRegistry;
+  private readonly capabilities: readonly CapabilityModule[];
+  private readonly toolCatalog: readonly BuiltinTool[];
+  private readonly toolGuards: ReadonlyMap<string, BuiltinToolGuard>;
+  private readonly capabilityPromptSections: Readonly<Record<string, string>>;
+  private readonly capabilityDynamicContextProviders: readonly CapabilityDynamicContextProvider[];
   private hooks: HookRegistry;
   private sessionManager: SessionManager;
   private mcpManager: MCPManager | undefined;
@@ -535,7 +554,19 @@ export class Engine {
       ...(this.runtime ? { runtime: this.runtime } : {}),
     });
 
-    this.preset = resolveAgentPreset(config.preset);
+    this.capabilities = resolveCapabilities(config.capabilities);
+    this.config = { ...config, capabilities: this.capabilities };
+    this.toolCatalog = composeToolCatalog(BUILTIN_TOOLS, this.capabilities);
+    this.toolGuards = new Map(
+      this.toolCatalog.flatMap((tool) =>
+        tool.exposure.availability
+          ? ([[tool.definition.name, tool.exposure.availability]] as const)
+          : [],
+      ),
+    );
+    this.capabilityPromptSections = composePromptSections(this.capabilities);
+    this.capabilityDynamicContextProviders = composeDynamicContextProviders(this.capabilities);
+    this.preset = resolveAgentPreset(config.preset, this.capabilities);
     this.permissionController = new PermissionController({
       config: () => this.config,
       updateConfig: (next) => {
@@ -571,7 +602,9 @@ export class Engine {
           host: config.builtinToolHost,
           enabledBuiltinTools: builtinLists.enabledBuiltinTools,
           disabledBuiltinTools: builtinLists.disabledBuiltinTools,
+          capabilities: this.capabilities,
         }),
+        toolCatalog: this.toolCatalog,
       });
     this.hooks = new HookRegistry();
     // Installed-plugin hooks — declared in each plugin's hooks/hooks.json.
@@ -593,12 +626,20 @@ export class Engine {
       loadPluginHooks(this.hooks, disabledPlugins, disabledPluginHooks);
     }
     // settings.hooks → shell-command wrappers. Chain order:
-    // plugin (80) → shell (50) → code (default 0).
+    // plugin (80) → shell (50) → capability (20) → SDK code (default 0).
     this.registerSettingsHooks();
+    for (const hook of composeCapabilityEngineHooks(this.capabilities)) {
+      this.hooks.register(hook.event, hook.handler, hook.priority, hook.name);
+    }
     for (const hook of config.hooks ?? []) {
       this.hooks.register(hook.event, hook.handler, hook.priority, hook.name);
     }
-    this.sessionManager = new SessionManager(config.sessionStorageDir);
+    this.sessionManager = new SessionManager(
+      config.sessionStorageDir,
+      this.capabilities
+        .map((capability) => capability.sessionWorkspace)
+        .find((candidate) => candidate !== undefined),
+    );
 
     // Initialize model pool — prefer runtime's shared pool, fall back to self-constructed.
     this.modelPool = config.runtime?.modelPool ?? new ModelPool();
@@ -804,6 +845,13 @@ export class Engine {
     bridge: import("../tool-system/workspace-bridge.js").WorkspaceBridge | undefined,
   ): void {
     this.config.workspaceBridge = bridge;
+  }
+
+  /** Inject the host-backed panel discovery/focus bridge after construction. */
+  setPanelBridge(
+    bridge: import("../tool-system/panel-bridge.js").PanelHostBridge | undefined,
+  ): void {
+    this.config.panelBridge = bridge;
   }
 
   /**
@@ -1730,12 +1778,18 @@ export class Engine {
             .join("\n\n") || undefined,
         responseLanguage: this.config.responseLanguage,
         userProfile: this.config.userProfile,
-        instructionOptions: { compatFileNames: compatFileNamesFrom(this.config.instructions) },
+        instructionOptions: {
+          compatFileNames: compatFileNamesFrom(this.config.instructions),
+          boundaryFinder: (scanCwd) => resolveInstructionBoundary(scanCwd, this.capabilities),
+        },
         disabledSkills,
         disabledPlugins,
         skillAllowlist: this.config.skillAllowlist,
         memoriesMaxAgeDays: this.readMemoriesConfig()?.maxAge,
         goalToolState: { hasGoal: hasRunnableGoal },
+        capabilityPromptSections: this.capabilityPromptSections,
+        dynamicContextProviders: this.capabilityDynamicContextProviders,
+        toolCatalog: this.toolCatalog,
       });
 
       // Connect MCP servers (if configured and not already connected).
@@ -1755,7 +1809,7 @@ export class Engine {
 
       // Parallelize slow initialization:
       //   1. createLLMClient — network handshake (started earlier)
-      //   2. buildSystemPrompt — includes git status (3 execSync calls)
+      //   2. buildSystemPrompt — cacheable prompt assembled from generic sections
       //   3. buildSystemContext — reads environment context
       // Inject the live available-agent-types listing into the Agent tool's
       // description. The registry is per-engine (loaded from .code-shell/agents
@@ -1776,6 +1830,8 @@ export class Engine {
         cwd: guardCwd,
         hasGoal: hasRunnableGoal,
         settingsScope: this.config.settingsScope ?? "project",
+        host: this.config.builtinToolHost,
+        isSubAgent: this.config.isSubAgent === true,
       };
       toolCtx.toolVisibility = toolVisibility;
       // #7: per-turn project builtin override. The toolRegistry's builtin tool
@@ -1840,7 +1896,7 @@ export class Engine {
       )
         .filter((t) => mcpVisible(t.name))
         .filter((t) => {
-          const guard = BUILTIN_TOOL_GUARDS.get(t.name);
+          const guard = this.toolGuards.get(t.name);
           return guard ? guard(toolVisibility) : true;
         })
         .filter((t) => {
@@ -2064,6 +2120,9 @@ export class Engine {
         sessionDir,
         cwd,
         getTurnSeq: () => session.state.turnSeq,
+        contributions: this.capabilities.flatMap((capability) => [
+          ...(capability.fileHistory ?? []),
+        ]),
       });
 
       // Hook: agent start
@@ -2991,7 +3050,7 @@ export class Engine {
    * the main user-visible preset effect and it IS hot. The toolRegistry's
    * builtin tool SET, however, is ctor-frozen (and may be shared via runtime):
    * it is NOT rebuilt here. So a preset change that alters the builtin tool set
-   * (e.g. general → terminal-coding adds LSP/Brief) only takes effect on the
+   * (e.g. switching to a capability-contributed preset adds tools) only takes effect on the
    * next session restart; we log a warning when that case is detected.
    *
    * disk-default-vs-slice caveat (#8): the patch carries pure DISK-default
@@ -3012,13 +3071,14 @@ export class Engine {
     // (rebuilt per turn from this.preset) reflects the new preset's system
     // prompt / behavior. Only when the preset actually changed.
     if (patch.preset !== undefined && patch.preset !== prevPresetName) {
-      const nextPreset = resolveAgentPreset(this.config.preset);
+      const nextPreset = resolveAgentPreset(this.config.preset, this.capabilities);
       // The builtin tool SET is ctor-frozen and may be shared via runtime — we
       // do NOT rebuild it here. If the new preset implies a different builtin
       // tool set, that part of the change only lands on session restart.
       const prevTools = resolveBuiltinToolNames({
         preset: prevPresetName,
         host: this.config.builtinToolHost,
+        capabilities: this.capabilities,
       })
         .slice()
         .sort()
@@ -3026,6 +3086,7 @@ export class Engine {
       const nextTools = resolveBuiltinToolNames({
         preset: nextPreset.name,
         host: this.config.builtinToolHost,
+        capabilities: this.capabilities,
       })
         .slice()
         .sort()
@@ -3623,42 +3684,32 @@ export class Engine {
    * overlays turn-specific fields like sandbox and subAgentSpawner) and
    * by tests that want a ToolContext without a full run() cycle.
    */
-  /**
-   * Read the project's `localEnvironment.setupScripts` for this cwd (the raw
-   * per-platform map). Used by EnterWorktree to run setup once in a freshly
-   * created worktree. Returns undefined for sub-agents / no cwd (same minimal
-   * surface as readShellEnv). The platform selection + run live in
-   * git/worktree.ts; this only fetches the configured scripts.
-   */
-  readWorktreeSetupScripts(
-    cwd?: string,
-  ): { default?: string; macos?: string; linux?: string; windows?: string } | undefined {
-    return this.runEnvironmentResolver.readWorktreeSetupScripts(cwd);
-  }
-
-  readWorktreeBranchPrefix(cwd?: string): string | undefined {
-    return this.runEnvironmentResolver.readWorktreeBranchPrefix(cwd);
-  }
-
-  async resolveWorktreeSetupSandbox(cwd: string): Promise<SandboxBackend | undefined> {
-    return this.runEnvironmentResolver.resolveWorktreeSetupSandbox(cwd);
-  }
-
-  readWorktreeSetupShellEnv(cwd?: string): Record<string, string> | undefined {
-    return this.runEnvironmentResolver.readShellEnv(cwd);
-  }
-
   buildToolContext(): ToolContext {
     const { disabledSkills, disabledPlugins } = this.readDisabledLists();
+    const capabilityServices = Object.fromEntries(
+      this.capabilities.flatMap((capability) => {
+        if (!capability.createToolService) return [];
+        const service = capability.createToolService({
+          isSubAgent: this.config.isSubAgent === true,
+          settings: this.getSettingsManager(),
+          resolveSandbox: (cwd) => this.runEnvironmentResolver.resolveSandbox(cwd),
+          readShellEnv: (cwd) => this.runEnvironmentResolver.readShellEnv(cwd),
+          getSessionManager: () => this.sessionManager,
+        });
+        return [[capability.id, service] as const];
+      }),
+    );
     const ctx: ToolContext = {
       shellEnv: this.runEnvironmentResolver.readShellEnv(this.config.cwd),
       cwd: this.config.cwd ?? process.cwd(),
       llmConfig: this.config.llm,
       modelPool: this.modelPool,
       toolRegistry: this.toolRegistry,
+      capabilityServices,
       askUser: this.config.askUser,
       browser: this.config.browserBridge,
       workspace: this.config.workspaceBridge,
+      panels: this.config.panelBridge,
       injectCredentialToBrowser: this.config.injectCredentialToBrowser,
       isSubAgent: this.config.isSubAgent === true,
       // Credential tools narrow their disk reads to this scope: a project/

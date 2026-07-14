@@ -16,7 +16,12 @@ import { logger } from "../logging/logger.js";
 import type { ApprovalRequest, StreamEvent } from "../types.js";
 import type { RunStore } from "./RunStore.js";
 import { RunQueue } from "./RunQueue.js";
-import { EngineRunner, type EngineRunnerConfig, type RunExecutionHandle, type RunExecutor } from "./EngineRunner.js";
+import {
+  EngineRunner,
+  type EngineRunnerConfig,
+  type RunExecutionHandle,
+  type RunExecutor,
+} from "./EngineRunner.js";
 import { CheckpointWriter } from "./CheckpointWriter.js";
 import { ArtifactTracker } from "./ArtifactTracker.js";
 import { RunLock } from "./RunLock.js";
@@ -39,6 +44,13 @@ import type {
   RunExecutionContext,
 } from "./types.js";
 import { VALID_TRANSITIONS } from "./types.js";
+import {
+  composeArtifactDetectors,
+  resolveCapabilities,
+  type CapabilityArtifactDetector,
+  type CapabilityModule,
+} from "../capabilities/index.js";
+import { resolveAgentPreset } from "../preset/index.js";
 
 function hasOwnString<T extends object, K extends PropertyKey>(
   value: T | undefined,
@@ -72,6 +84,8 @@ export interface RunManagerConfig {
   defaultTags?: string[];
   /** Metadata merged into every submitted run. Submit input wins on conflicts. */
   defaultMetadata?: Record<string, unknown>;
+  /** Product/domain capabilities used by the built-in runner and artifact tracker. */
+  capabilities?: readonly CapabilityModule[];
 }
 
 export class RunManager {
@@ -83,6 +97,8 @@ export class RunManager {
   private readonly evaluator: Evaluator;
   private readonly defaultTags: string[];
   private readonly defaultMetadata: Record<string, unknown>;
+  private readonly defaultPreset: string;
+  private readonly artifactDetectors: readonly CapabilityArtifactDetector[];
   private readonly subscribers = new Map<string, Set<RunStreamCallback>>();
   private readonly abortControllers = new Map<string, AbortController>();
   /** Active execution handles — used to resolve pending approvals/input while Engine is suspended */
@@ -102,10 +118,14 @@ export class RunManager {
   constructor(config: RunManagerConfig) {
     this.store = config.store;
     this.queue = new RunQueue({ concurrency: config.concurrency ?? 1 });
+    const localCapabilities =
+      config.capabilities ??
+      (isRunExecutor(config.executor) ? [] : (config.executor.capabilities ?? []));
+    const capabilities = resolveCapabilities(localCapabilities);
     // Accept either a RunExecutor instance or an EngineRunnerConfig
     this.runner = isRunExecutor(config.executor)
       ? config.executor
-      : new EngineRunner(config.executor);
+      : new EngineRunner({ ...config.executor, capabilities });
     this.lock = new RunLock({
       runsDir: config.runsDir,
       staleMs: config.staleLockMs,
@@ -117,6 +137,8 @@ export class RunManager {
     this.evaluator = config.evaluator ?? new NoopEvaluator();
     this.defaultTags = config.defaultTags ?? [];
     this.defaultMetadata = config.defaultMetadata ?? {};
+    this.defaultPreset = resolveAgentPreset(undefined, capabilities).name;
+    this.artifactDetectors = composeArtifactDetectors(capabilities);
 
     // Wire queue executor
     this.queue.setExecutor((runId) => this.executeRun(runId));
@@ -134,7 +156,7 @@ export class RunManager {
     const snapshot: RunSnapshot = {
       runId,
       objective: input.objective,
-      preset: input.preset ?? "terminal-coding",
+      preset: input.preset ?? this.defaultPreset,
       cwd: input.cwd ?? process.cwd(),
       status: "queued",
       createdAt: now,
@@ -493,7 +515,11 @@ export class RunManager {
       objective: run.objective,
       store: this.store,
     });
-    const artifactTracker = new ArtifactTracker({ runId, store: this.store });
+    const artifactTracker = new ArtifactTracker({
+      runId,
+      store: this.store,
+      detectors: this.artifactDetectors,
+    });
 
     // Build lifecycle hooks so Engine can notify us about approval/input needs
     const lifecycleHooks: RunLifecycleHooks = {
@@ -521,10 +547,7 @@ export class RunManager {
         // suppresses sub-agent session_started upstream (engine.ts:830-835),
         // but a custom RunExecutor could forward sub-agent events — and only
         // the MAIN run's session should identify the run, never a sub-agent's.
-        if (
-          event.type === "session_started" &&
-          !(event as { agentId?: string }).agentId
-        ) {
+        if (event.type === "session_started" && !(event as { agentId?: string }).agentId) {
           try {
             const run = await this.getOrThrow(runId);
             if (run.sessionId !== event.sessionId) {
@@ -774,9 +797,7 @@ export class RunManager {
   private async transition(run: RunSnapshot, to: RunStatus): Promise<void> {
     const allowed = VALID_TRANSITIONS[run.status];
     if (!allowed.includes(to)) {
-      throw new Error(
-        `Invalid run state transition: ${run.status} -> ${to} (run ${run.runId})`,
-      );
+      throw new Error(`Invalid run state transition: ${run.status} -> ${to} (run ${run.runId})`);
     }
     run.status = to;
     run.updatedAt = Date.now();
@@ -843,7 +864,9 @@ export class RunManager {
       throw new Error(`Cannot resume run ${run.runId}: approval ${approvalId} was not found`);
     }
     if (approval.runId !== run.runId || approval.approvalId !== approvalId) {
-      throw new Error(`Cannot resume run ${run.runId}: approval ${approvalId} does not match this run`);
+      throw new Error(
+        `Cannot resume run ${run.runId}: approval ${approvalId} does not match this run`,
+      );
     }
     if (approval.status !== "pending") {
       throw new Error(

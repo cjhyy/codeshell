@@ -36,6 +36,7 @@
     "node": ">=20.10"
   },
   "dependencies": {
+    "@cjhyy/code-shell-capability-coding": "workspace:*",
     "@cjhyy/code-shell-core": "workspace:*",
     "@alcalzone/ansi-tokenize": "^0.3.0",
     "auto-bind": "^5.0.1",

@@ -18,8 +18,42 @@ import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js
 import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
 import { ToolRegistry } from "../tool-system/registry.js";
+import type { CapabilityModule } from "../capabilities/index.js";
 import { Engine } from "./engine.js";
 import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js";
+
+const TEST_WORKSPACE_CAPABILITY: CapabilityModule = {
+  id: "test-workspace-switch",
+  tools: [
+    {
+      definition: {
+        name: "SwitchSessionWorkspace",
+        description: "Switch the current test session through the generic workspace bridge.",
+        inputSchema: {
+          type: "object",
+          properties: { target: { type: "string" } },
+          required: ["target"],
+        },
+        source: "builtin",
+        permissionDefault: "allow",
+        isReadOnly: false,
+        isConcurrencySafe: false,
+      },
+      exposure: { presetTags: [] },
+      execute: async (args, ctx) => {
+        const target = typeof args.target === "string" ? args.target : "";
+        if (!target) return "Error: target is required";
+        if (!ctx?.workspace) return "Error: workspace bridge unavailable";
+        const workspace = await ctx.workspace.switch(target);
+        ctx.setSessionWorkspace?.(workspace);
+        return `Switched session workspace to ${workspace.root}`;
+      },
+    },
+  ],
+  adjustToolSelection: (names) => {
+    names.add("SwitchSessionWorkspace");
+  },
+};
 
 function stopResponse(text = "not done yet"): LLMResponse {
   return {
@@ -2336,6 +2370,7 @@ describe("Engine persisted goal lifecycle", () => {
         sessionStorageDir: sessionsDir,
         permissionMode: "bypassPermissions",
         builtinToolHost: "desktop",
+        capabilities: [TEST_WORKSPACE_CAPABILITY],
         workspaceBridge: {
           switch: async () => {
             // The desktop main-process bridge persists through its own
@@ -2405,6 +2440,7 @@ describe("Engine persisted goal lifecycle", () => {
         sessionStorageDir: sessionsDir,
         permissionMode: "bypassPermissions",
         builtinToolHost: "desktop",
+        capabilities: [TEST_WORKSPACE_CAPABILITY],
         workspaceBridge: {
           switch: async () => {
             engine.getSessionManager().setSessionWorkspace(sessionId, workspace);

@@ -18,6 +18,12 @@ describe("registerFileHistoryHook", () => {
       sessionDir,
       cwd,
       getTurnSeq: () => 7,
+      contributions: [
+        {
+          toolName: "ExampleCompoundEdit",
+          resolveTargets: (_args, runCwd) => [join(runCwd, "existing.txt")],
+        },
+      ],
     });
 
     try {
@@ -30,13 +36,23 @@ describe("registerFileHistoryHook", () => {
         args: { file_path: join(cwd, "created.txt") },
       });
       await hooks.emit("on_tool_start", {
-        toolName: "ApplyPatch",
-        args: { patch: "*** Begin Patch\n*** Update File: existing.txt\n@@\n-before\n+after\n*** End Patch" },
+        toolName: "ExampleCompoundEdit",
+        args: { input: "opaque" },
       });
 
       const index = JSON.parse(
         readFileSync(join(sessionDir, "file-history", "index.json"), "utf8"),
-      ) as { snapshots: Array<{ filePath: string; turnSeq: number }>; created: Array<{ filePath: string; turnSeq: number }> };
+      ) as {
+        snapshots: Array<{
+          filePath: string;
+          turnSeq: number;
+          timestamp: number;
+          backupPath: string;
+          hash: string;
+          size: number;
+        }>;
+        created: Array<{ filePath: string; turnSeq: number }>;
+      };
       expect(index.snapshots).toContainEqual({
         filePath: join(cwd, "existing.txt"),
         turnSeq: 7,

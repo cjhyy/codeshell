@@ -28,6 +28,7 @@ import type { SettingsScope } from "../settings/manager.js";
 import type { EngineRuntime } from "./runtime.js";
 import type { HookEventName } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
+import type { CapabilityModule } from "../capabilities/index.js";
 
 export interface EngineConfig {
   llm: LLMConfig;
@@ -49,6 +50,8 @@ export interface EngineConfig {
   preset?: AgentPresetName;
   enabledBuiltinTools?: string[];
   disabledBuiltinTools?: string[];
+  /** Product behavior installed into this Engine instance. */
+  capabilities?: readonly CapabilityModule[];
   /**
    * When false, `Bash(run_in_background=true)` is rejected and the
    * background-shell tools are disabled (design §5.5). Set false by
@@ -84,6 +87,8 @@ export interface EngineConfig {
   browserBridge?: import("../tool-system/browser-bridge.js").BrowserBridge;
   /** Host-backed workspace switch bridge (desktop only). */
   workspaceBridge?: import("../tool-system/workspace-bridge.js").WorkspaceBridge;
+  /** Host-backed panel discovery/focus bridge (interactive Desktop only). */
+  panelBridge?: import("../tool-system/panel-bridge.js").PanelHostBridge;
   /** Inject a cookie credential into the built-in browser (InjectCredential
    *  tool). Wired by the host after construction via setInjectCredential.
    *  Undefined → the tool degrades with a clear "no browser" error. */
@@ -141,7 +146,7 @@ export interface EngineConfig {
    * worktree tools with SwitchSessionWorkspace because Electron main owns the
    * authoritative workspace switch service and UI refresh path.
    */
-  builtinToolHost?: "desktop";
+  builtinToolHost?: string;
   /**
    * Optional shared EngineRuntime providing pre-constructed shared resources
    * (modelPool, toolRegistry, etc.). When provided, Engine uses these instead

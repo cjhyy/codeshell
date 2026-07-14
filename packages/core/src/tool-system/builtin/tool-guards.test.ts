@@ -36,10 +36,10 @@ describe("builtin tool availability guards", () => {
     );
   });
 
-  test("default preset includes GenerateVideo (regression: was missing → tool invisible)", () => {
+  test("general product preset includes GenerateVideo (regression: was missing → invisible)", () => {
     // GenerateVideo was registered + guarded but absent from GENERAL_BUILTIN_TOOLS,
     // so ToolRegistry never registered it and it never showed in the tools list.
-    const names = resolveBuiltinToolNames();
+    const names = resolveBuiltinToolNames({ preset: "general" });
     expect(names).toContain("GenerateImage");
     expect(names).toContain("GenerateVideo");
   });

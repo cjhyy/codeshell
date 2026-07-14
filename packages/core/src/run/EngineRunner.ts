@@ -19,13 +19,12 @@ import {
 } from "./RunApprovalBackend.js";
 import { createInProcessClient } from "../protocol/helpers.js";
 import type { ApprovalBackend } from "../tool-system/permission.js";
+import type { CapabilityModule } from "../capabilities/index.js";
 
 /** Unattended runs (those with an injected approval backend) run headless so
  *  the in-process AgentServer does not wire an interactive askUser. Exported
  *  for unit testing the decision rule. */
-export function buildHeadlessFlag(
-  override: ApprovalBackend | undefined,
-): boolean {
+export function buildHeadlessFlag(override: ApprovalBackend | undefined): boolean {
   return override !== undefined;
 }
 
@@ -113,6 +112,7 @@ export interface EngineRunnerConfig {
   permissionMode?: EngineConfig["permissionMode"];
   enabledBuiltinTools?: string[];
   disabledBuiltinTools?: string[];
+  capabilities?: readonly CapabilityModule[];
   customSystemPrompt?: string;
   appendSystemPrompt?: string;
   mcpServers?: EngineConfig["mcpServers"];
@@ -190,6 +190,7 @@ export class EngineRunner implements RunExecutor {
       preset: run.preset,
       enabledBuiltinTools: this.config.enabledBuiltinTools,
       disabledBuiltinTools: this.config.disabledBuiltinTools,
+      capabilities: this.config.capabilities,
       customSystemPrompt: this.config.customSystemPrompt,
       // NOTE: callers must not pass appendSystemPrompt in engineConfigOverrides
       // below, or it will clobber this composed (automation note + host) value.

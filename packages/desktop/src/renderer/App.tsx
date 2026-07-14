@@ -142,6 +142,13 @@ import { AutomationView } from "./automation/AutomationView";
 import { CustomizeView } from "./customize/CustomizeView";
 import { CredentialsPage } from "./credentials/CredentialsPage";
 import { PanelArea } from "./panels/PanelArea";
+import { replacePluginPanels } from "./panels/PanelRegistry";
+import { resolveAgentPanelHostRequest } from "./panels/AgentPanelHost";
+import type { DesktopPanelPluginHost } from "./panels/DesktopPanelPlugin";
+import {
+  QUICK_CHAT_PANEL_PLUGIN_ID,
+  type QuickChatPanelPluginService,
+} from "./panels/plugins/quickChatPlugin";
 import type { OpenCliSessionEventDetail, OpenCliSessionRequest } from "./cc-room/types";
 import { resolveOpenCliSessionBucket } from "./cc-room/openCliSession";
 import { QuickChatPanel } from "./panels/QuickChatPanel";
@@ -181,6 +188,7 @@ import {
   type QuickChatContextMode,
   type QuickChatSessionRef,
 } from "./quickChatSession";
+import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
 
 // Bucket key for sessions without a project — re-exported from transcripts.
 // We use NO_REPO_KEY everywhere instead of a local const so the renderer
@@ -306,8 +314,6 @@ function resolveMainComposerBucket(
 }
 
 interface QuickChatPanelHostProps {
-  ownerBucket: string;
-  tabId: string;
   cwd: string | null;
   session?: QuickChatSessionRef;
   state: MessagesReducerState;
@@ -320,7 +326,6 @@ interface QuickChatPanelHostProps {
   imageDetail?: "low" | "standard" | "high";
   onPermissionChange: (bucket: string, mode: PermissionMode) => void;
   onModelChange: (bucket: string, option: ModelOption) => void;
-  onEnsureSession: (ownerBucket: string, tabId: string, cwd: string | null) => void;
   onRetry: (session: QuickChatSessionRef) => void;
   onUseBlank: (session: QuickChatSessionRef) => void;
   onDraftChange: (bucket: string, next: React.SetStateAction<string>) => void;
@@ -342,8 +347,6 @@ interface QuickChatPanelHostProps {
 }
 
 function QuickChatPanelHost({
-  ownerBucket,
-  tabId,
   cwd,
   session,
   state,
@@ -356,7 +359,6 @@ function QuickChatPanelHost({
   imageDetail,
   onPermissionChange,
   onModelChange,
-  onEnsureSession,
   onRetry,
   onUseBlank,
   onDraftChange,
@@ -368,9 +370,6 @@ function QuickChatPanelHost({
   onApprovalDecide,
 }: QuickChatPanelHostProps) {
   const { t } = useT();
-  useEffect(() => {
-    onEnsureSession(ownerBucket, tabId, cwd);
-  }, [cwd, onEnsureSession, ownerBucket, tabId]);
 
   if (!session) {
     return (
@@ -571,6 +570,7 @@ function App() {
     Record<string, ImageAttachment[]>
   >({});
   const quickChatSessionsRef = useRef<Record<string, QuickChatSessionRef>>({});
+  const quickChatLifecycleCleanupRef = useRef<Set<string>>(new Set());
   const activeBucketRef = useRef(activeBucket);
   activeBucketRef.current = activeBucket;
   quickChatSessionsRef.current = quickChatSessions;
@@ -710,6 +710,38 @@ function App() {
   const permissionForBucketRef = useRef<(bucket: string) => PermissionMode | null>(() => null);
   const defaultPermissionModeRef = useRef<PermissionMode | null>(null);
   const activeProject = projects.find((project) => project.id === activeProjectId) ?? null;
+
+  useEffect(() => {
+    let alive = true;
+    // Renderer tests and older preload snapshots may not expose the additive
+    // panel API yet. Treat that as an empty registry during a rolling update;
+    // the shipped preload declares and implements both methods.
+    const compatibilityApi = window.codeshell as typeof window.codeshell & {
+      listPluginPanels?: typeof window.codeshell.listPluginPanels;
+      onPluginPanelsChanged?: typeof window.codeshell.onPluginPanelsChanged;
+    };
+    const listPanels = compatibilityApi.listPluginPanels;
+    const subscribePanels = compatibilityApi.onPluginPanelsChanged;
+    if (!listPanels || !subscribePanels) {
+      replacePluginPanels([]);
+      return;
+    }
+    const refresh = () => {
+      void listPanels(activeProject?.path ?? "", lang)
+        .then((panels) => {
+          if (alive) replacePluginPanels(panels);
+        })
+        .catch(() => {
+          if (alive) replacePluginPanels([]);
+        });
+    };
+    refresh();
+    const unsubscribe = subscribePanels(refresh);
+    return () => {
+      alive = false;
+      unsubscribe();
+    };
+  }, [activeProject?.path, lang]);
 
   function prepareAttachmentSession(): { cwd: string; sessionId: string } | null {
     const cwd = activeProject?.path ?? noRepoCwdRef.current;
@@ -3636,6 +3668,20 @@ function App() {
     [resolveEngineSessionIdForBucket, sessionIndices, startQuickChatCreation],
   );
 
+  const cleanupQuickChatPanelSession = useCallback((session: QuickChatSessionRef) => {
+    const claimKey = `${session.sessionId}\0${session.creationNonce}`;
+    if (quickChatLifecycleCleanupRef.current.has(claimKey)) return;
+    quickChatLifecycleCleanupRef.current.add(claimKey);
+    void window.codeshell
+      .cleanupQuickChatSession(session.sessionId, session.creationNonce)
+      .catch((error) =>
+        window.codeshell.log("quick_chat.delete_session_failed", {
+          sessionId: session.sessionId,
+          error: String(error),
+        }),
+      );
+  }, []);
+
   const restartQuickChatSession = useCallback(
     (session: QuickChatSessionRef, contextMode: QuickChatContextMode) => {
       const sessionId = makeQuickChatSessionId();
@@ -3814,14 +3860,7 @@ function App() {
       setBusyForKey(session.bucket, false);
       if (runningBucketRef.current === session.bucket) runningBucketRef.current = null;
       engineToBucketRef.current.delete(session.sessionId);
-      void window.codeshell
-        .cleanupQuickChatSession(session.sessionId, session.creationNonce)
-        .catch((e) =>
-          window.codeshell.log("quick_chat.delete_session_failed", {
-            sessionId: session.sessionId,
-            error: String(e),
-          }),
-        );
+      cleanupQuickChatPanelSession(session);
       const coalescer = coalescersRef.current.get(session.bucket);
       coalescersRef.current.delete(session.bucket);
       coalescer?.discard();
@@ -3829,19 +3868,17 @@ function App() {
       appliedSeqRef.current.delete(session.bucket);
       dispatch({ type: "evict", bucket: session.bucket });
     }
-  }, [panelByBucket, quickChatSessions]);
+  }, [cleanupQuickChatPanelSession, panelByBucket, quickChatSessions]);
 
   useEffect(
     () => () => {
       const sessions = Object.values(quickChatSessionsRef.current);
       quickChatSessionsRef.current = {};
       for (const session of sessions) {
-        void window.codeshell
-          .cleanupQuickChatSession(session.sessionId, session.creationNonce)
-          .catch(() => undefined);
+        cleanupQuickChatPanelSession(session);
       }
     },
-    [],
+    [cleanupQuickChatPanelSession],
   );
 
   useEffect(() => {
@@ -3898,6 +3935,77 @@ function App() {
     return [...buckets];
   }, [activeBucket, activePanelState.open, activePanelState.tabs.length, panelByBucket]);
 
+  const panelPluginHost: DesktopPanelPluginHost = {
+    getService(pluginId) {
+      if (pluginId !== QUICK_CHAT_PANEL_PLUGIN_ID) return undefined;
+      const service: QuickChatPanelPluginService = {
+        ensure: ({ bucket: ownerBucket, tabId, cwd }) => {
+          ensureQuickChatSession(ownerBucket, tabId, cwd);
+        },
+        release: ({ bucket: ownerBucket, tabId }) => {
+          const session = quickChatSessionsRef.current[quickChatTabKey(ownerBucket, tabId)];
+          if (session) cleanupQuickChatPanelSession(session);
+        },
+        render: (context) => {
+          const ownerBucket = context.bucket;
+          const { tabId, cwd } = context;
+          const key = quickChatTabKey(ownerBucket, tabId);
+          const quickSession = quickChatSessions[key];
+          const quickState = quickSession
+            ? (transcripts[quickSession.bucket] ?? INITIAL_STATE)
+            : INITIAL_STATE;
+          const quickBusy = quickSession ? busyKeys.has(quickSession.bucket) : false;
+          const quickApproval = quickSession ? approvalForBucket(quickSession.bucket) : null;
+          const quickCwd = cwd ?? noRepoCwdRef.current;
+          const quickPermissionMode = quickSession
+            ? (permissionOverrides[quickSession.bucket] ??
+              permissionOverrides[quickSession.ownerBucket] ??
+              defaultPermissionMode ??
+              "default")
+            : (defaultPermissionMode ?? "default");
+          const quickActiveModelKey = quickSession
+            ? (modelOverrides[quickSession.bucket] ?? defaultActiveModelKey)
+            : defaultActiveModelKey;
+          return (
+            <QuickChatPanelHost
+              cwd={quickCwd}
+              session={quickSession}
+              state={quickState}
+              busy={quickBusy}
+              draft={quickSession ? (quickChatDrafts[quickSession.bucket] ?? "") : ""}
+              attachments={
+                quickSession
+                  ? (quickChatAttachments[quickSession.bucket] ?? EMPTY_ATTACHMENTS)
+                  : EMPTY_ATTACHMENTS
+              }
+              permissionMode={quickPermissionMode}
+              modelOptions={modelOptions}
+              activeModelKey={quickActiveModelKey}
+              imageDetail={imageDetail}
+              onPermissionChange={setQuickChatPermission}
+              onModelChange={setQuickChatModel}
+              onRetry={(session) => restartQuickChatSession(session, "full")}
+              onUseBlank={(session) => restartQuickChatSession(session, "blank")}
+              onDraftChange={setQuickChatDraft}
+              onAttachmentsChange={setQuickChatAttachmentState}
+              onSend={sendQuickChat}
+              onStop={stop}
+              onAskUserAnswer={handleAskUserAnswer}
+              pendingApproval={quickApproval}
+              onApprovalDecide={
+                quickApproval
+                  ? (decision, reason, scope, pathScope) =>
+                      decideEnvelope(quickApproval, decision, reason, scope, pathScope)
+                  : undefined
+              }
+            />
+          );
+        },
+      };
+      return service;
+    },
+  };
+
   const togglePanel = (): void =>
     updatePanelBucket(activeBucket, (state) => {
       const open = !state.open;
@@ -3917,6 +4025,38 @@ function App() {
       requestNonce: state.requestNonce + 1,
       requestKind: kind,
     }));
+
+  useEffect(() => {
+    const compatibilityApi = window.codeshell as typeof window.codeshell & {
+      onAgentPanelRequest?: (cb: (request: AgentPanelHostRequest) => void) => () => void;
+      respondAgentPanelRequest?: (response: AgentPanelHostResponse) => void;
+    };
+    if (!compatibilityApi.onAgentPanelRequest || !compatibilityApi.respondAgentPanelRequest) {
+      return;
+    }
+    return compatibilityApi.onAgentPanelRequest((request) => {
+      // The request is broadcast to every renderer window. Only the window
+      // owning this session bucket may answer; main accepts the first response.
+      if (request.bucket !== activeBucket && !panelByBucket[request.bucket]) return;
+      const { projectId } = parsePanelBucket(request.bucket);
+      const cwd = projectId
+        ? (projects.find((project) => project.id === projectId)?.path ?? null)
+        : noRepoCwdRef.current;
+      const response = resolveAgentPanelHostRequest(request, {
+        availability: { cwd, engineSessionId: request.sessionId },
+        translate: (key) => t(key as never),
+        open: (panelId) => {
+          updatePanelBucket(request.bucket, (state) => ({
+            ...state,
+            open: true,
+            requestNonce: state.requestNonce + 1,
+            requestKind: panelId,
+          }));
+        },
+      });
+      compatibilityApi.respondAgentPanelRequest?.(response);
+    });
+  }, [activeBucket, panelByBucket, projects, t, updatePanelBucket]);
 
   // Dock width (px), persisted. The divider on the dock's left edge drags it.
   const PANEL_MIN = 320;
@@ -5138,6 +5278,7 @@ function App() {
                   onRemoveBrowserAnchor={isActivePanelBucket ? removeAnchor : undefined}
                   onUpdateBrowserAnchor={isActivePanelBucket ? updateAnchorComment : undefined}
                   engineSessionId={panelEngineSessionId}
+                  busy={busyKeys.has(panelBucket)}
                   tabs={panelState.tabs}
                   setTabs={(next) =>
                     updatePanelBucket(panelBucket, (state) => {
@@ -5156,64 +5297,7 @@ function App() {
                       activeId: typeof next === "function" ? next(state.activeId) : next,
                     }))
                   }
-                  renderQuickChatPanel={({ ownerBucket, tabId, cwd }) => {
-                    const key = quickChatTabKey(ownerBucket, tabId);
-                    const quickSession = quickChatSessions[key];
-                    const quickState = quickSession
-                      ? (transcripts[quickSession.bucket] ?? INITIAL_STATE)
-                      : INITIAL_STATE;
-                    const quickBusy = quickSession ? busyKeys.has(quickSession.bucket) : false;
-                    const quickApproval = quickSession
-                      ? approvalForBucket(quickSession.bucket)
-                      : null;
-                    const quickCwd = cwd ?? noRepoCwdRef.current;
-                    const quickPermissionMode = quickSession
-                      ? (permissionOverrides[quickSession.bucket] ??
-                        permissionOverrides[quickSession.ownerBucket] ??
-                        defaultPermissionMode ??
-                        "default")
-                      : (defaultPermissionMode ?? "default");
-                    const quickActiveModelKey = quickSession
-                      ? (modelOverrides[quickSession.bucket] ?? defaultActiveModelKey)
-                      : defaultActiveModelKey;
-                    return (
-                      <QuickChatPanelHost
-                        ownerBucket={ownerBucket}
-                        tabId={tabId}
-                        cwd={quickCwd}
-                        session={quickSession}
-                        state={quickState}
-                        busy={quickBusy}
-                        draft={quickSession ? (quickChatDrafts[quickSession.bucket] ?? "") : ""}
-                        attachments={
-                          quickSession
-                            ? (quickChatAttachments[quickSession.bucket] ?? EMPTY_ATTACHMENTS)
-                            : EMPTY_ATTACHMENTS
-                        }
-                        permissionMode={quickPermissionMode}
-                        modelOptions={modelOptions}
-                        activeModelKey={quickActiveModelKey}
-                        imageDetail={imageDetail}
-                        onPermissionChange={setQuickChatPermission}
-                        onModelChange={setQuickChatModel}
-                        onEnsureSession={ensureQuickChatSession}
-                        onRetry={(session) => restartQuickChatSession(session, "full")}
-                        onUseBlank={(session) => restartQuickChatSession(session, "blank")}
-                        onDraftChange={setQuickChatDraft}
-                        onAttachmentsChange={setQuickChatAttachmentState}
-                        onSend={sendQuickChat}
-                        onStop={stop}
-                        onAskUserAnswer={handleAskUserAnswer}
-                        pendingApproval={quickApproval}
-                        onApprovalDecide={
-                          quickApproval
-                            ? (decision, reason, scope, pathScope) =>
-                                decideEnvelope(quickApproval, decision, reason, scope, pathScope)
-                            : undefined
-                        }
-                      />
-                    );
-                  }}
+                  panelPluginHost={panelPluginHost}
                   bucket={panelBucket}
                 />
               );

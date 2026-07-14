@@ -84,8 +84,15 @@ export function defineProduct(
 
   // Determine builtin tools: start from a base set, apply adapter overrides
   const baseTools = [
-    "Read", "Write", "Edit", "Glob", "Grep", "Bash",
-    "AskUserQuestion", "Agent", "ToolSearch",
+    "Read",
+    "Write",
+    "Edit",
+    "Glob",
+    "Grep",
+    "Bash",
+    "AskUserQuestion",
+    "Agent",
+    "ToolSearch",
     "TodoWrite",
   ];
   const enabledSet = new Set([...baseTools, ...(adapter?.enableTools ?? [])]);
@@ -111,7 +118,6 @@ export function defineProduct(
     label: presetDef.label,
     description: presetDef.description,
     promptSections: presetDef.sections ?? ["base", "orchestration"],
-    injectGitStatus: presetDef.injectGitStatus ?? false,
     builtinTools: [...enabledSet],
     defaultPermissionRules: permissionRules,
   };

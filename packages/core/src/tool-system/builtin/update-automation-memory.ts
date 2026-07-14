@@ -29,8 +29,7 @@ export const updateAutomationMemoryToolDef: ToolDefinition = {
     properties: {
       summary: {
         type: "string",
-        description:
-          "A concise one-paragraph summary of this run for the next run to build on.",
+        description: "A concise one-paragraph summary of this run for the next run to build on.",
       },
     },
     required: ["summary"],
@@ -43,9 +42,7 @@ export const updateAutomationMemoryToolDef: ToolDefinition = {
  * @param sink Called with the trimmed summary when a non-empty summary is given.
  *             The caller decides where/how to persist it.
  */
-export function makeUpdateAutomationMemoryTool(
-  sink: (summary: string) => void,
-): BuiltinTool {
+export function makeUpdateAutomationMemoryTool(sink: (summary: string) => void): BuiltinTool {
   return {
     definition: {
       ...updateAutomationMemoryToolDef,
@@ -56,6 +53,8 @@ export function makeUpdateAutomationMemoryTool(
       isReadOnly: false,
       isConcurrencySafe: false,
     },
+    // Host-injected automation contribution, never part of a default preset.
+    exposure: { presetTags: [] },
     execute: async (args: Record<string, unknown>): Promise<string> => {
       const raw = typeof args.summary === "string" ? args.summary : "";
       const summary = raw.trim();

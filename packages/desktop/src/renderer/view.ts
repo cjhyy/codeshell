@@ -16,14 +16,10 @@ export type ViewMode =
  * a Codex-style dock on the right: a tab strip switches between these panels,
  * and a top-bar button toggles the whole area open/closed.
  */
-export type PanelTab =
-  | "files"
-  | "browser"
-  | "review"
-  | "terminal"
-  | "shells"
-  | "ccRoom"
-  | "quickChat";
+/** Open registry id. Built-ins keep their historical ids; plugins are namespaced. */
+export type PanelId = string;
+/** @deprecated Compatibility alias for existing dock callers. */
+export type PanelTab = PanelId;
 
 const KEY = "codeshell.view";
 

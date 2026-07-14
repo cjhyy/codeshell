@@ -3,11 +3,31 @@
  */
 
 import { z } from "zod";
-import {
-  DEFAULT_WORKTREE_BRANCH_PREFIX,
-  isValidWorktreeBranchPrefix,
-  normalizeWorktreeBranchPrefix,
-} from "../git/worktree/slug.js";
+const DEFAULT_WORKTREE_BRANCH_PREFIX = "worktree/";
+
+function isValidWorktreeBranchPrefix(prefix: string): boolean {
+  const raw = prefix.trim();
+  if (!raw || raw.startsWith("/") || raw.includes("//")) return false;
+  if (raw.includes("..") || raw.includes("@{")) return false;
+  if (/[\x00-\x20~^:?*[\]\\]/.test(raw)) return false;
+  const value = raw.endsWith("/") ? raw.slice(0, -1) : raw;
+  return (
+    value.length > 0 &&
+    value
+      .split("/")
+      .every(
+        (part) =>
+          Boolean(part) && !part.startsWith(".") && !part.endsWith(".") && !part.endsWith(".lock"),
+      )
+  );
+}
+
+function normalizeWorktreeBranchPrefix(prefix: string): string {
+  const raw = prefix.trim();
+  if (!isValidWorktreeBranchPrefix(raw))
+    throw new Error(`Invalid worktree branch prefix: ${prefix}`);
+  return raw.endsWith("/") ? raw : `${raw}/`;
+}
 
 /**
  * Tri-state project capability overlay. Lives in PROJECT settings only and
@@ -53,7 +73,9 @@ export const SettingsSchema = z
     agent: z
       .object({
         // Use z.string() instead of z.enum() to allow custom presets registered via registerPreset()
-        preset: z.string().default("terminal-coding"),
+        // No domain preset is baked into core. Installed capabilities may
+        // contribute a host default.
+        preset: z.string().optional(),
         enabledBuiltinTools: z.array(z.string()).default([]),
         disabledBuiltinTools: z.array(z.string()).default([]),
         customSystemPrompt: z.string().optional(),

@@ -14,7 +14,7 @@ describe("RunEnvironmentResolver", () => {
     let calls = 0;
     const shared: SandboxBackend = { ...offBackend, name: "seatbelt" };
     const resolver = new RunEnvironmentResolver({
-      config: () => ({ llm: { provider: "x", model: "m" }, headless: true } as EngineConfig),
+      config: () => ({ llm: { provider: "x", model: "m" }, headless: true }) as EngineConfig,
       settings: () => ({
         get: () => ({}),
         getForScope: (scope: string) =>
@@ -39,10 +39,11 @@ describe("RunEnvironmentResolver", () => {
   it("evicts a rejected backend promise so an explicit mode can retry", async () => {
     let calls = 0;
     const resolver = new RunEnvironmentResolver({
-      config: () => ({
-        llm: { provider: "x", model: "m" },
-        sandbox: defaultSandboxConfig("seatbelt"),
-      } as EngineConfig),
+      config: () =>
+        ({
+          llm: { provider: "x", model: "m" },
+          sandbox: defaultSandboxConfig("seatbelt"),
+        }) as EngineConfig,
       settings: () => ({ get: () => ({}), getForScope: () => ({}) }),
       credentialAccess: { envExposures: () => ({}) },
       resolveBackend: async () => {
@@ -59,10 +60,11 @@ describe("RunEnvironmentResolver", () => {
 
   it("layers local env, credential exposure, and explicit env in precedence order", () => {
     const resolver = new RunEnvironmentResolver({
-      config: () => ({
-        llm: { provider: "x", model: "m" },
-        settingsScope: "full",
-      } as EngineConfig),
+      config: () =>
+        ({
+          llm: { provider: "x", model: "m" },
+          settingsScope: "full",
+        }) as EngineConfig,
       settings: () => ({
         get: () => ({
           localEnvironment: { env: { FLOOR: "local", OVERLAP: "local" } },
@@ -82,19 +84,5 @@ describe("RunEnvironmentResolver", () => {
       TOP: "settings",
       OVERLAP: "settings",
     });
-  });
-
-  it("reads worktree settings only from the intended scope", () => {
-    const resolver = new RunEnvironmentResolver({
-      config: () => ({ llm: { provider: "x", model: "m" } }) as EngineConfig,
-      settings: () => ({
-        get: () => ({ worktree: { branchPrefix: "feature/" } }),
-        getForScope: () => ({ localEnvironment: { setupScripts: { default: "bun install" } } }),
-      }),
-      credentialAccess: { envExposures: () => ({}) },
-      resolveBackend: async () => offBackend,
-    });
-    expect(resolver.readWorktreeSetupScripts("/repo")).toEqual({ default: "bun install" });
-    expect(resolver.readWorktreeBranchPrefix("/repo")).toBe("feature/");
   });
 });

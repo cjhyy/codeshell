@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -14,6 +14,7 @@ import type {
   PromptCacheDiagnosticSample,
   PromptPrefixFingerprint,
 } from "./prompt-cache-diagnostics.js";
+import type { CapabilityModule } from "../capabilities/index.js";
 
 const provider = "fake-engine-prompt-cache";
 const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
@@ -30,6 +31,16 @@ type Scenario = {
 };
 
 const scenarios = new Map<string, Scenario>();
+
+const dynamicContextCapability: CapabilityModule = {
+  id: "prompt-cache-test-context",
+  dynamicContextProviders: [
+    ({ cwd }) =>
+      readdirSync(cwd)
+        .filter((name) => /(?:first|second|summary)-dynamic-.*\.txt$/.test(name))
+        .join("\n"),
+  ],
+};
 
 function diagnosticSample(
   cacheReadTokens: number,
@@ -169,7 +180,8 @@ describe("Engine prompt-cache hygiene", () => {
         cwd: repo,
         sessionStorageDir: sessions,
         enabledBuiltinTools: [],
-        preset: "terminal-coding",
+        preset: "general",
+        capabilities: [dynamicContextCapability],
         headless: true,
       });
       (engine as any).hooks.clear();
@@ -251,7 +263,8 @@ describe("Engine prompt-cache hygiene", () => {
         cwd: repo,
         sessionStorageDir: sessions,
         enabledBuiltinTools: [],
-        preset: "terminal-coding",
+        preset: "general",
+        capabilities: [dynamicContextCapability],
         headless: true,
         maxContextTokens: 10_000,
       });
@@ -311,7 +324,7 @@ describe("Engine prompt-cache hygiene", () => {
         cwd: repo,
         sessionStorageDir: sessions,
         enabledBuiltinTools: [],
-        preset: "terminal-coding",
+        preset: "general",
         headless: true,
       });
       (engine as any).hooks.clear();
@@ -342,7 +355,7 @@ describe("Engine prompt-cache hygiene", () => {
       cwd: repo,
       sessionStorageDir: sessions,
       enabledBuiltinTools: [],
-      preset: "terminal-coding",
+      preset: "general",
       headless: true,
     });
 
@@ -368,7 +381,7 @@ describe("Engine prompt-cache hygiene", () => {
       cwd: repo,
       sessionStorageDir: sessions,
       enabledBuiltinTools: [],
-      preset: "terminal-coding",
+      preset: "general",
       headless: true,
     });
     const warn = spyOn(logger, "warn").mockImplementation(() => {});

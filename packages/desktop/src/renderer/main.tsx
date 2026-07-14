@@ -10,6 +10,7 @@ import { BrowserPanel } from "./panels/BrowserPanel";
 import type { Anchor } from "./chat/anchors";
 import { PetStateProvider } from "./pet/PetStateProvider";
 import { PetDesktopWindow } from "./pet/PetDesktopWindow";
+import { installQuickChatPanelPlugin } from "./panels/plugins/quickChatPlugin";
 
 initTheme();
 
@@ -65,6 +66,7 @@ if (params.get("popout") === "pet") {
     </React.StrictMode>,
   );
 } else {
+  installQuickChatPanelPlugin();
   root.render(
     <React.StrictMode>
       <I18nProvider>

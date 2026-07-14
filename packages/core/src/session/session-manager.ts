@@ -47,8 +47,8 @@ import {
   type GoalTerminal,
   type PersistedGoalTerminationReason,
 } from "../engine/goal.js";
-import { branchExists, isGitWorktreeRoot } from "../git/worktree.js";
 import { lockSync } from "../utils/lockfile.js";
+import { resolveCapabilities, type SessionWorkspaceCapability } from "../capabilities/index.js";
 
 // Shared close epochs for SessionManager instances in this process. Concurrent
 // Engines bind the same epoch; only close advances it. This intentionally does
@@ -141,7 +141,7 @@ export type SessionWorkspaceResumeResolution =
       cwd: string;
       workspace: SessionWorkspace;
       message: string;
-      reason: "worktree_missing_branch_exists";
+      reason: "worktree_missing_branch_exists" | "workspace_capability_unavailable";
     };
 
 /**
@@ -243,7 +243,10 @@ export function sessionMainRoot(state: Pick<SessionState, "cwd">): string | unde
   return typeof state.cwd === "string" && state.cwd.length > 0 ? state.cwd : undefined;
 }
 
-async function validateResumeWorktreeRoot(root: string): Promise<string | null> {
+async function validateResumeWorktreeRoot(
+  root: string,
+  workspaceCapability: SessionWorkspaceCapability,
+): Promise<string | null> {
   if (!existsSync(root)) return "no longer exists";
   let stat;
   try {
@@ -253,7 +256,7 @@ async function validateResumeWorktreeRoot(root: string): Promise<string | null> 
   }
   if (stat.isSymbolicLink()) return "is not a valid git worktree (symbolic link)";
   if (!stat.isDirectory()) return "is not a valid git worktree (not a directory)";
-  if (!(await isGitWorktreeRoot(root))) return "is not a valid git worktree";
+  if (!(await workspaceCapability.validateRoot(root))) return "is not a valid workspace root";
   return null;
 }
 
@@ -261,8 +264,15 @@ export class SessionManager {
   private readonly sessionsDir: string;
   private readonly registeredCloseEpochs = new Map<string, number>();
 
-  constructor(storageDir?: string) {
+  private readonly workspaceCapability?: SessionWorkspaceCapability;
+
+  constructor(storageDir?: string, workspaceCapability?: SessionWorkspaceCapability) {
     this.sessionsDir = storageDir ?? sessionsRoot();
+    this.workspaceCapability =
+      workspaceCapability ??
+      resolveCapabilities()
+        .map((capability) => capability.sessionWorkspace)
+        .find((candidate) => candidate !== undefined);
     mkdirSync(this.sessionsDir, { recursive: true });
     this.cleanupStaleForkStaging();
   }
@@ -563,14 +573,33 @@ export class SessionManager {
       };
     }
 
-    const invalidWorktreeReason = await validateResumeWorktreeRoot(workspace.root);
+    if (!this.workspaceCapability) {
+      return {
+        ok: false,
+        cwd: mainRoot ?? workspace.root,
+        workspace,
+        reason: "workspace_capability_unavailable",
+        message:
+          `Session ${sessionId} uses a product workspace, but this host did not install ` +
+          `the matching workspace capability. Install it before resuming this session.`,
+      };
+    }
+
+    const invalidWorktreeReason = await validateResumeWorktreeRoot(
+      workspace.root,
+      this.workspaceCapability,
+    );
     if (!invalidWorktreeReason) {
       return { ok: true, cwd: workspace.root, workspace, reason: "worktree" };
     }
 
     const branch = workspace.worktree?.branch;
     const fallbackMainRoot = mainRoot ?? workspace.root;
-    if (branch && existsSync(fallbackMainRoot) && (await branchExists(fallbackMainRoot, branch))) {
+    if (
+      branch &&
+      existsSync(fallbackMainRoot) &&
+      (await this.workspaceCapability.branchExists(fallbackMainRoot, branch))
+    ) {
       return {
         ok: false,
         cwd: fallbackMainRoot,

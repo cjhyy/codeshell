@@ -5,7 +5,7 @@ import { buildPresetSystemPrompt, BUILTIN_AGENT_PRESETS } from "./index.js";
 
 describe("shell tool selection guidance", () => {
   test("non-Windows system prompt keeps Windows-specific shell guidance out of the cacheable base", () => {
-    const out = buildPresetSystemPrompt(BUILTIN_AGENT_PRESETS["terminal-coding"], {
+    const out = buildPresetSystemPrompt(BUILTIN_AGENT_PRESETS.general, {
       activeToolNames: ["Bash", "PowerShell"],
       platform: "linux",
     });
@@ -15,7 +15,7 @@ describe("shell tool selection guidance", () => {
   });
 
   test("Windows system prompt adds Git Bash guidance", () => {
-    const out = buildPresetSystemPrompt(BUILTIN_AGENT_PRESETS["terminal-coding"], {
+    const out = buildPresetSystemPrompt(BUILTIN_AGENT_PRESETS.general, {
       activeToolNames: ["Bash", "PowerShell"],
       platform: "win32",
     });
@@ -27,7 +27,9 @@ describe("shell tool selection guidance", () => {
   test("tool descriptions steer ordinary commands to Bash and reserve PowerShell for PowerShell-specific work", () => {
     expect(bashToolDef.description).toContain("Prefer Bash over PowerShell");
     expect(powershellToolDef.description).toContain("PowerShell-specific cmdlets");
-    expect(powershellToolDef.description).toContain("Do NOT use for ordinary file, git, package-manager, test");
+    expect(powershellToolDef.description).toContain(
+      "Do NOT use for ordinary file, git, package-manager, test",
+    );
     expect(powershellToolDef.description).not.toContain("Git Bash");
   });
 });

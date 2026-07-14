@@ -1,14 +1,15 @@
 import type { HookRegistry } from "../hooks/registry.js";
 import type { HookHandler } from "../hooks/registry.js";
 import { FileHistory } from "../session/file-history.js";
-import { patchBackupTargets } from "../tool-system/builtin/apply-patch/backup-targets.js";
 import type { RunScopedDisposer } from "./run-types.js";
+import type { CapabilityFileHistoryContribution } from "../capabilities/index.js";
 
 export interface RegisterFileHistoryHookOptions {
   hooks: Pick<HookRegistry, "register" | "unregister">;
   sessionDir: string;
   cwd: string;
   getTurnSeq: () => number | undefined;
+  contributions?: readonly CapabilityFileHistoryContribution[];
 }
 
 export function registerFileHistoryHook(
@@ -23,8 +24,9 @@ export function registerFileHistoryHook(
       if (history.saveSnapshot(args.file_path, turnSeq) === null && turnSeq !== undefined) {
         history.recordCreated(args.file_path, turnSeq);
       }
-    } else if (toolName === "ApplyPatch" && typeof args?.patch === "string") {
-      for (const target of patchBackupTargets(args.patch, options.cwd)) {
+    } else if (args) {
+      const contribution = options.contributions?.find((item) => item.toolName === toolName);
+      for (const target of contribution?.resolveTargets(args, options.cwd) ?? []) {
         history.saveSnapshot(target, turnSeq);
       }
     }

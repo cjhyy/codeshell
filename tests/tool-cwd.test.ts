@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { globTool } from "../packages/core/src/tool-system/builtin/glob.js";
 import { grepTool } from "../packages/core/src/tool-system/builtin/grep.js";
-import { applyPatchTool } from "../packages/core/src/tool-system/builtin/apply-patch/index.js";
+import { applyPatchTool } from "@cjhyy/code-shell-capability-coding";
 import { replTool } from "../packages/core/src/tool-system/builtin/repl.js";
 import { skillTool } from "../packages/core/src/tool-system/builtin/skill.js";
 import type { ToolContext } from "../packages/core/src/tool-system/context.js";

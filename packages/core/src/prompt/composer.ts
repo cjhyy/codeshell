@@ -13,6 +13,8 @@ import { MemoryManager } from "../session/memory.js";
 import { scanSkills } from "../skills/index.js";
 import { buildSkillListing } from "../tool-system/builtin/skill-prompt.js";
 import { resolveAgentPreset, buildPresetSystemPrompt, type AgentPreset } from "../preset/index.js";
+import type { BuiltinTool } from "../tool-system/builtin/index.js";
+import type { CapabilityDynamicContextProvider } from "../capabilities/index.js";
 
 export interface ComposerOptions {
   cwd: string;
@@ -22,6 +24,11 @@ export interface ComposerOptions {
   preset?: AgentPreset;
   customSystemPrompt?: string;
   appendSystemPrompt?: string;
+  /** Prompt text and tool metadata supplied by this Engine's capability modules. */
+  capabilityPromptSections?: Readonly<Record<string, string>>;
+  /** Per-turn context owned by installed capability modules. */
+  dynamicContextProviders?: readonly CapabilityDynamicContextProvider[];
+  toolCatalog?: readonly BuiltinTool[];
   /** User's preferred response language (free text), injected as a stable system section. */
   responseLanguage?: string;
   /** How to address the user / short profile (free text). */
@@ -83,7 +90,7 @@ export class PromptComposer {
     // message sits in the cacheable system prefix — so every memory change
     // invalidated the whole prefix and re-billed it. Memory now rides
     // buildDynamicContextMessage (tail, past the cache breakpoint), same as the
-    // skills listing and git status which had the identical problem.
+    // skills listing and other volatile capability context which have the identical problem.
     if (!instructions) return null;
 
     // Local date, not UTC — toISOString() is UTC and would show the wrong
@@ -99,55 +106,28 @@ export class PromptComposer {
     return { role: "user", content };
   }
 
-  /**
-   * Build the systemContext (gitStatus etc.) to append to system prompt.
-   * Only injects git status if the resolved preset opts in.
-   */
+  /** Build volatile context contributed by installed capability modules. */
   async buildSystemContext(): Promise<string> {
     const preset = this.options.preset ?? resolveAgentPreset();
-    if (!preset.injectGitStatus) return "";
-
-    // gitStatus snapshot
-    let gitStatus = "";
-    try {
-      const { execSync } = await import("node:child_process");
-      const branch = execSync("git branch --show-current 2>/dev/null", {
-        cwd: this.options.cwd,
-        encoding: "utf-8",
-        timeout: 5000,
-      }).trim();
-
-      const status = execSync("git status --short 2>/dev/null", {
-        cwd: this.options.cwd,
-        encoding: "utf-8",
-        timeout: 5000,
-      }).trim();
-
-      const log = execSync("git log --oneline -5 2>/dev/null", {
-        cwd: this.options.cwd,
-        encoding: "utf-8",
-        timeout: 5000,
-      }).trim();
-
-      if (branch) {
-        gitStatus = `gitStatus: Current branch: ${branch}`;
-        if (status) gitStatus += `\n\nStatus:\n${status}`;
-        if (log) gitStatus += `\n\nRecent commits:\n${log}`;
-      }
-    } catch {
-      // Not a git repo or git not available
-    }
-
-    return gitStatus;
+    const parts = await Promise.all(
+      (this.options.dynamicContextProviders ?? []).map(async (provider) => {
+        try {
+          return await provider({ cwd: this.options.cwd, preset });
+        } catch {
+          // A capability's optional context must not make a turn fail.
+          return undefined;
+        }
+      }),
+    );
+    return parts.filter((part): part is string => Boolean(part)).join("\n\n");
   }
 
   /**
    * Per-turn dynamic context, delivered as a trailing <system-reminder> user
    * message rather than baked into the system prefix.
    *
-   * Holds the two things that change *within* a session — the skills listing
-   * (changes when a skill is installed/disabled) and the git-status snapshot
-   * (changes whenever the working tree changes). Keeping them out of the
+   * Holds things that change *within* a session — the skills listing plus
+   * capability-owned volatile context. Keeping them out of the
    * system prompt means installing a skill or editing a file no longer
    * invalidates the cached system prefix. Placed at the END of the messages
    * array (after the user task) so it sits past the conversation's cache
@@ -160,14 +140,16 @@ export class PromptComposer {
       skillAllowlist: this.options.skillAllowlist,
     });
     const skillsListing = buildSkillListing(skills);
-    const gitStatus = await this.buildSystemContext();
+    const capabilityContext = await this.buildSystemContext();
     // Memory rides here (tail, past the cache breakpoint) — not the system
     // prefix — so a memory change (extraction / recall usage++ / approve) never
     // re-bills the cached prefix. See buildUserContextMessage for the rationale.
     const memoryContext = this.getMemoryContext();
     const goalToolContext = this.buildGoalToolContext();
 
-    const parts = [skillsListing, gitStatus, memoryContext, goalToolContext].filter(Boolean);
+    const parts = [skillsListing, capabilityContext, memoryContext, goalToolContext].filter(
+      Boolean,
+    );
     if (parts.length === 0) return null;
 
     return {
@@ -224,9 +206,7 @@ export class PromptComposer {
       sections.push({
         name: "tool_definitions",
         compute: () => {
-          const toolLines = tools.map(
-            (t) => `### ${t.name}\n${t.description}`,
-          );
+          const toolLines = tools.map((t) => `### ${t.name}\n${t.description}`);
           return `# Available Tools\n\n${toolLines.join("\n\n")}`;
         },
       });
@@ -248,7 +228,12 @@ export class PromptComposer {
       cacheBreak: true,
       compute: () => {
         const preset = this.options.preset ?? resolveAgentPreset();
-        return buildPresetSystemPrompt(preset, { activeToolNames, platform: process.platform });
+        return buildPresetSystemPrompt(preset, {
+          activeToolNames,
+          platform: process.platform,
+          promptSections: this.options.capabilityPromptSections,
+          toolCatalog: this.options.toolCatalog,
+        });
       },
     });
 
@@ -256,7 +241,7 @@ export class PromptComposer {
     // skill is installed/disabled, which would invalidate the whole cached
     // system prefix on every change. It rides in the per-turn dynamic-context
     // message instead (buildDynamicContextMessage). Same reasoning keeps the
-    // git-status snapshot out of the system prefix — see buildSystemContext's
+    // capability-owned volatile context out of the system prefix — see buildSystemContext's
     // callers.
 
     // Append system prompt

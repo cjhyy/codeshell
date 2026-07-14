@@ -150,7 +150,7 @@ describe("CapabilityService.list", () => {
   });
 
   test("threads builtinToolHost into builtin defaults and effective resolution", () => {
-    const f = fakes({ agent: { preset: "terminal-coding" } });
+    const f = fakes({ agent: { preset: "general" } });
     const calls: any[] = [];
     const svc = new CapabilityService({
       registry: {
@@ -187,9 +187,9 @@ describe("CapabilityService.list", () => {
       control: { mode: "denylist", token: "SwitchSessionWorkspace" },
     });
     expect(calls).toEqual([
-      { preset: "terminal-coding", host: "desktop" },
+      { preset: "general", host: "desktop" },
       {
-        preset: "terminal-coding",
+        preset: "general",
         host: "desktop",
         enabledBuiltinTools: [],
         disabledBuiltinTools: [],

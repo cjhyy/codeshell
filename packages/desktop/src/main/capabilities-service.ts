@@ -17,6 +17,7 @@
 
 import {
   CapabilityService,
+  BUILTIN_TOOLS,
   SettingsManager,
   ToolRegistry,
   scanSkills,
@@ -25,12 +26,15 @@ import {
   loadAgentDefinitionsForCwd,
   type CapabilityDescriptor,
 } from "@cjhyy/code-shell-core";
+import { CODING_CAPABILITY, CODING_TOOLS } from "@cjhyy/code-shell-capability-coding";
 
 function makeService(cwd: string): CapabilityService {
   const settings = new SettingsManager(cwd, "full");
   const preset = (settings.get() as { agent?: { preset?: string } }).agent?.preset;
+  const capabilities = [CODING_CAPABILITY];
   const registry = new ToolRegistry({
-    builtinTools: resolveBuiltinToolNames({ preset, host: "desktop" }),
+    builtinTools: resolveBuiltinToolNames({ preset, host: "desktop", capabilities }),
+    toolCatalog: [...BUILTIN_TOOLS, ...CODING_TOOLS],
   });
   return new CapabilityService({
     registry,
@@ -42,7 +46,7 @@ function makeService(cwd: string): CapabilityService {
     // tolerates an empty cwd (skips the project dir → user roles only).
     scanAgents: (c: string) => loadAgentDefinitionsForCwd(c, [], []).list(),
     readInstalledPlugins,
-    resolveBuiltinToolNames,
+    resolveBuiltinToolNames: (options) => resolveBuiltinToolNames({ ...options, capabilities }),
     builtinToolHost: "desktop",
   });
 }

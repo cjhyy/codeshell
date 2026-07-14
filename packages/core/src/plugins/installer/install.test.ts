@@ -1,5 +1,13 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  existsSync,
+  rmSync,
+  symlinkSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { installPluginFromPath } from "./install.js";
@@ -81,7 +89,10 @@ describe("installPluginFromPath", () => {
     mkdirSync(join(src, "agents"), { recursive: true });
     writeFileSync(join(src, "agents", "r.toml"), 'name = "r"\ndescription = "d"\nmodel = "flash"');
     mkdirSync(join(src, "prompts"), { recursive: true });
-    writeFileSync(join(src, "prompts", "draftpr.md"), "---\ndescription: draft a PR\n---\nDraft $1");
+    writeFileSync(
+      join(src, "prompts", "draftpr.md"),
+      "---\ndescription: draft a PR\n---\nDraft $1",
+    );
     const dir = await installPluginFromPath(src, "cx", STAMP);
     const md = readFileSync(join(dir, "agents", "r.md"), "utf-8");
     expect(md).toContain("name: r");
@@ -92,6 +103,65 @@ describe("installPluginFromPath", () => {
     expect(mcp["cx:fs"]).toMatchObject({ command: "f", name: "cx:fs" });
     const meta = JSON.parse(readFileSync(join(dir, ".cs-meta.json"), "utf-8"));
     expect(meta).toMatchObject({ name: "cx", format: "codex", version: "2.0.0" });
+  });
+
+  test("writes a canonical manifest and copies Codex panel assets", async () => {
+    mkdirSync(join(src, ".codex-plugin"), { recursive: true });
+    mkdirSync(join(src, "panels", "dashboard"), { recursive: true });
+    writeFileSync(
+      join(src, "panels", "dashboard", "index.html"),
+      "<script src='./app.js'></script>",
+    );
+    writeFileSync(join(src, "panels", "dashboard", "app.js"), "document.body.textContent='ok'");
+    writeFileSync(
+      join(src, ".codex-plugin", "plugin.json"),
+      JSON.stringify({
+        name: "panel-cx",
+        version: "1.0.0",
+        panels: {
+          version: 1,
+          entries: [
+            {
+              id: "dashboard",
+              title: { default: "Dashboard" },
+              entry: "panels/dashboard/index.html",
+              permissions: ["context.session"],
+            },
+          ],
+        },
+      }),
+    );
+
+    const dir = await installPluginFromPath(src, "panel-cx", STAMP);
+    const canonical = JSON.parse(readFileSync(join(dir, ".cs-plugin-manifest.json"), "utf-8"));
+    expect(canonical.panels.entries[0]).toMatchObject({
+      id: "dashboard",
+      entry: "panels/dashboard/index.html",
+      permissions: ["context.session"],
+    });
+    expect(readFileSync(join(dir, "panels", "dashboard", "app.js"), "utf-8")).toContain("ok");
+  });
+
+  test("rejects a panel entry symlink that escapes the plugin root", async () => {
+    const outside = join(home, "outside.html");
+    writeFileSync(outside, "secret");
+    mkdirSync(join(src, ".claude-plugin"), { recursive: true });
+    mkdirSync(join(src, "panels"), { recursive: true });
+    symlinkSync(outside, join(src, "panels", "index.html"));
+    writeFileSync(
+      join(src, ".claude-plugin", "plugin.json"),
+      JSON.stringify({
+        name: "escape",
+        version: "1",
+        panels: {
+          version: 1,
+          entries: [{ id: "escape", title: { default: "Escape" }, entry: "panels/index.html" }],
+        },
+      }),
+    );
+
+    await expect(installPluginFromPath(src, "escape", STAMP)).rejects.toThrow(/escapes/);
+    expect(existsSync(join(home, ".code-shell", "plugins", "escape"))).toBe(false);
   });
 
   test("refuses when install dir already exists", async () => {
@@ -111,7 +181,10 @@ describe("installPluginFromPath", () => {
 
   test("leaves no install dir when conversion fails", async () => {
     mkdirSync(join(src, ".codex-plugin"), { recursive: true });
-    writeFileSync(join(src, ".codex-plugin", "plugin.json"), JSON.stringify({ name: "x", version: "1" }));
+    writeFileSync(
+      join(src, ".codex-plugin", "plugin.json"),
+      JSON.stringify({ name: "x", version: "1" }),
+    );
     mkdirSync(join(src, "agents"), { recursive: true });
     writeFileSync(join(src, "agents", "bad.toml"), 'description = "no name"');
     await expect(installPluginFromPath(src, "x", STAMP)).rejects.toThrow(/name/);

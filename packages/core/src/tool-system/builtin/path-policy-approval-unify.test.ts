@@ -1,11 +1,11 @@
 /**
- * TODO 5.1 unification: notebook-edit / apply-patch / glob / grep must route a
+ * TODO 5.1 unification: glob / grep must route a
  * path-policy "ask" through the interactive approval prompt (like read/write/
  * edit already do), so "用户批准路径后，原工具继续执行". Previously these four
  * used the non-approval enforcePathPolicy that hard-refused on "ask".
  */
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ToolContext } from "../context.js";
@@ -91,46 +91,5 @@ describe("grep routes outside-workspace ask through approval", () => {
     );
     expect(approved.asked()).toBe(1);
     expect(String(r2)).not.toMatch(/path approval denied/i);
-  });
-});
-
-describe("notebook-edit routes outside-workspace ask through approval", () => {
-  test("denied → refuses", async () => {
-    const nb = join(outside, "n.ipynb");
-    writeFileSync(
-      nb,
-      JSON.stringify({ cells: [{ cell_type: "code", source: ["x"] }], nbformat: 4, nbformat_minor: 5, metadata: {} }),
-    );
-    const denied = ctxWith("拒绝");
-    const r1 = await execute(
-      {
-        id: "c1",
-        toolName: "NotebookEdit",
-        args: { file_path: nb, action: "replace", cell_index: 0, source: "y" },
-      },
-      denied.ctx,
-    );
-    expect(denied.asked()).toBe(1);
-    expect(String(r1)).toMatch(/path approval denied|blocked by path policy/i);
-  });
-});
-
-describe("apply-patch routes outside-workspace ask through approval", () => {
-  test("denied → refuses", async () => {
-    const target = join(outside, "p.txt");
-    writeFileSync(target, "old\n");
-    const patch = `*** Begin Patch
-*** Update File: ${target}
-@@
--old
-+new
-*** End Patch`;
-    const denied = ctxWith("拒绝");
-    const r1 = await execute(
-      { id: "c1", toolName: "ApplyPatch", args: { patch } },
-      denied.ctx,
-    );
-    expect(denied.asked()).toBeGreaterThanOrEqual(1);
-    expect(String(r1)).toMatch(/path approval denied|blocked by path policy/i);
   });
 });

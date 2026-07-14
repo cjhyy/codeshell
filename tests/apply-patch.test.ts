@@ -16,9 +16,11 @@ import { mkdtempSync, rmSync, cpSync, existsSync, readdirSync, readFileSync, sta
 import { join, relative } from "node:path";
 import { tmpdir } from "node:os";
 
-import { parsePatch } from "../packages/core/src/tool-system/builtin/apply-patch/parser.js";
-import { applyPatch } from "../packages/core/src/tool-system/builtin/apply-patch/applier.js";
-import { seekSequence } from "../packages/core/src/tool-system/builtin/apply-patch/seek-sequence.js";
+import {
+  applyPatch,
+  parsePatch,
+  seekSequence,
+} from "@cjhyy/code-shell-capability-coding";
 
 const FIXTURE_ROOT = join(import.meta.dir, "fixtures", "apply-patch");
 

@@ -18,7 +18,7 @@ import {
   ghPrComments,
   buildReviewPrompt,
   parseDimensions,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-capability-coding";
 
 export const gitCommands: SlashCommand[] = [
   {

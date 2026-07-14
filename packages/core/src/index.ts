@@ -106,6 +106,7 @@ export type {
 
 export { LLMClientBase } from "./llm/client-base.js";
 export { createLLMClient, registerProvider } from "./llm/client-factory.js";
+export type { CreateMessageOptions } from "./llm/types.js";
 export { AnthropicClient } from "./llm/providers/anthropic.js";
 export { OpenAIClient } from "./llm/providers/openai.js";
 export { ModelPool, type ModelEntry } from "./llm/model-pool.js";
@@ -121,8 +122,36 @@ export {
   AutoApprovalBackend,
 } from "./tool-system/permission.js";
 export type { ApprovalBackend } from "./tool-system/permission.js";
-export { BUILTIN_TOOLS } from "./tool-system/builtin/index.js";
+export { BUILTIN_TOOLS, derivePresetExposure } from "./tool-system/builtin/index.js";
 export type { BuiltinTool, BuiltinToolFn } from "./tool-system/builtin/index.js";
+export type { ToolContext } from "./tool-system/context.js";
+export type {
+  AgentPanelDescriptor,
+  PanelHostBridge,
+  PanelOpenResult,
+} from "./tool-system/panel-bridge.js";
+export { fileCache, invalidateFileCache } from "./tool-system/builtin/file-cache.js";
+export { validateToolArgs } from "./tool-system/validation.js";
+export { createOffBackend } from "./tool-system/sandbox/off.js";
+export {
+  registerCapability,
+  unregisterCapability,
+  listRegisteredCapabilities,
+} from "./capabilities/index.js";
+export type {
+  CapabilityArtifact,
+  CapabilityArtifactDetectionContext,
+  CapabilityArtifactDetector,
+  CapabilityDynamicContext,
+  CapabilityDynamicContextProvider,
+  CapabilityFileHistoryContribution,
+  CapabilityEngineHookContribution,
+  CapabilityInstructionBoundaryFinder,
+  CapabilityModule,
+  CapabilityToolServiceHost,
+  CapabilityToolSelectionContext,
+  SessionWorkspaceCapability,
+} from "./capabilities/index.js";
 export { makeUpdateAutomationMemoryTool } from "./tool-system/builtin/update-automation-memory.js";
 export {
   MCPManager,
@@ -139,8 +168,24 @@ export type { Task, TaskStatus } from "./tool-system/builtin/task.js";
 // ─── Hooks ───────────────────────────────────────────────────────
 
 export { HookRegistry } from "./hooks/registry.js";
+export type { HookHandler } from "./hooks/registry.js";
 export type { HookEventName, HookContext, HookResult } from "./hooks/events.js";
 export { wrapHookMessages } from "./hooks/inject.js";
+
+// ─── Trusted plugin lifecycle ───────────────────────────────────
+
+export { PluginLifecycleRuntime } from "./plugins/runtime.js";
+export type {
+  PluginLifecycleError,
+  PluginLifecycleEvent,
+  PluginLifecycleEventName,
+  PluginLifecycleHook,
+  PluginLifecycleHookContext,
+  PluginLifecycleHooks,
+  PluginLifecycleModule,
+  PluginLifecycleRuntimeOptions,
+  PluginPanelInstance,
+} from "./plugins/runtime.js";
 
 // ─── Protocol (client/server + transports) ──────────────────────
 
@@ -182,30 +227,6 @@ export {
   type ForkSessionResult,
 } from "./session/session-manager.js";
 export { FileHistory } from "./session/file-history.js";
-export {
-  createWorktree,
-  currentBranch,
-  DEFAULT_WORKTREE_BRANCH_PREFIX,
-  getWorktreeDiff,
-  isManagedWorktreeBranch,
-  isValidWorktreeBranchPrefix,
-  findMainWorktreeRoot,
-  listWorktrees,
-  listWorktreesFast,
-  normalizeWorktreeBranchPrefix,
-  removeWorktree,
-  validateWorktreeSlug,
-  worktreeHasUncommittedOrAheadChanges,
-  worktreeHasUncommittedChanges,
-  type CreateWorktreeOptions,
-  type ListWorktreesOptions,
-  type ListWorktreesFastOptions,
-  type RemoveWorktreeResult,
-  type RemoveWorktreeOptions,
-  type WorktreeDiffSummary,
-  type WorktreeInfo,
-  type WorktreeWorkspaceOwner,
-} from "./git/worktree.js";
 export {
   latestUndoTarget,
   earliestSnapshotsPerFile,
@@ -325,10 +346,37 @@ export {
 } from "./plugins/installer/installFromArchive.js";
 export { parseSource, type ParsedSource } from "./plugins/installer/parseSource.js";
 export { detectPluginFormat } from "./plugins/installer/detectFormat.js";
-export { CodexPluginManifest, CSMeta, PluginInstallError } from "./plugins/installer/types.js";
+export {
+  CodexPluginManifest,
+  PluginPanelManifestEntry,
+  PluginPanelsManifest,
+  CanonicalPluginManifest,
+  CANONICAL_PLUGIN_MANIFEST_FILE,
+  PLUGIN_PANEL_PERMISSIONS,
+  PLUGIN_PANEL_ICONS,
+  CSMeta,
+  PluginInstallError,
+  type PluginPanelManifestEntry as PluginPanelManifestEntryData,
+  type PluginPanelsManifest as PluginPanelsManifestData,
+  type CanonicalPluginManifest as CanonicalPluginManifestData,
+} from "./plugins/installer/types.js";
+export {
+  normalizePluginManifest,
+  readCanonicalPluginManifest,
+  type NormalizePluginManifestOptions,
+} from "./plugins/installer/normalizeManifest.js";
 export { mergePluginMcpServers } from "./plugins/installer/loadPluginMcp.js";
+export { pluginsRoot } from "./plugins/installer/paths.js";
+export { resolveSafePluginPath } from "./plugins/pluginInstaller.js";
 export { listPluginHooks, pluginHookKey, type PluginHookEntry } from "./plugins/loadPluginHooks.js";
 export { describePluginContent, type PluginContentInventory } from "./plugins/pluginContent.js";
+export {
+  loadPluginCatalog,
+  loadPluginPanelContributions,
+  type LoadPluginCatalogOptions,
+  type PluginCatalogEntry,
+  type PluginPanelContribution,
+} from "./plugins/pluginCatalog.js";
 export { pluginAgentDirs } from "./plugins/installer/loadPluginAgents.js";
 export {
   appendInstallEntry,
@@ -691,33 +739,6 @@ export {
   type UpdateInfo,
 } from "./updater.js";
 
-// ─── Git Utilities ───────────────────────────────────────────────
-
-export {
-  isGitRepo,
-  resolveProjectRoot,
-  getCurrentBranch,
-  getGitStatus,
-  getGitDiff,
-  getGitDiffStat,
-  getGitLog,
-  gitAdd,
-  gitCommit,
-  gitListBranches,
-  gitCheckout,
-  ghAvailable,
-  ghPrComments,
-} from "./git/utils.js";
-
-// ─── Code review (TODO 7.3) ─────────────────────────────────────
-export {
-  buildReviewPrompt,
-  parseDimensions,
-  ALL_DIMENSIONS,
-  type ReviewDimension,
-  type ReviewPromptOptions,
-} from "./review/review-prompt.js";
-
 // ─── Tool-system (extended for TUI) ─────────────────────────────
 /**
  * @internal Exports below are consumed by the in-repo TUI/desktop hosts, not
@@ -727,7 +748,24 @@ export {
  */
 
 export { getInteractiveApprovalBackend } from "./tool-system/permission.js";
-export { defaultSandboxConfig, type SandboxConfig } from "./tool-system/sandbox/index.js";
+export {
+  defaultSandboxConfig,
+  type SandboxBackend,
+  type SandboxConfig,
+} from "./tool-system/sandbox/index.js";
+export { safeSpawnShell } from "./runtime/safe-spawn.js";
+export {
+  buildSandboxEnv,
+  defaultShellBinary,
+  killChildTree,
+  killProcessGroup,
+  mergeShellEnv,
+} from "./runtime/spawn-common.js";
+export { isExistingDirectory, normalizeCwdPath } from "./utils/cwd-normalize.js";
+export {
+  backgroundJobRegistry,
+  type BackgroundJobEntry,
+} from "./tool-system/builtin/background-jobs.js";
 export {
   buildNotificationMessage,
   buildNotificationSummary,
@@ -773,12 +811,6 @@ export {
   type RunWriteJobInput,
   type RunWriteJobResult,
 } from "./automation/index.js";
-// CC orchestrator (external claude-cli rooms + CC-aware scheduling).
-export * from "./cc-orchestrator/index.js";
-// Quota — remaining CC/Codex subscription usage (self-contained, plugin-liftable).
-export { checkQuota, formatQuota } from "./quota/index.js";
-export { resolveQuotaCredentials } from "./quota/credentials.js";
-export type { QuotaResult, ProviderQuota, QuotaWindow, QuotaCredentials } from "./quota/types.js";
 export { asyncAgentRegistry, type AsyncAgentEntry } from "./tool-system/builtin/agent-registry.js";
 export {
   backgroundShellManager,
@@ -886,15 +918,6 @@ export type { ApprovalRequest, ApprovalResult, ApprovalScope, TaskInfo } from ".
 // Resolves the externalAgents settings block (notably claudeCode.trustedWorkspaces),
 // the source of truth for a Room's permission mode. The former /cc & /codex
 // managed-job path was removed — the phone now talks to resident Rooms only.
-
-export { resolveExternalAgentConfig } from "./external-agents/config.js";
-export type {
-  ExternalAgentMode,
-  ExternalAgentsSettings,
-  ResolvedExternalAgentsConfig,
-  ResolvedClaudeCodeSettings,
-  ResolvedCodexSettings,
-} from "./external-agents/types.js";
 
 // ─── Browser automation bridge ───────────────────────────────────
 // Driver-agnostic contract + the pure a11y-tree flattener. The desktop host's

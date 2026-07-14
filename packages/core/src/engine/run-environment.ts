@@ -13,7 +13,6 @@ type EnvironmentSettings = {
   get(): unknown;
   getForScope(scope: "user" | "project", cwd?: string): unknown;
 };
-type SetupScripts = { default?: string; macos?: string; linux?: string; windows?: string };
 
 export interface RunEnvironmentResolverDeps {
   config: () => EngineConfig;
@@ -25,10 +24,7 @@ export interface RunEnvironmentResolverDeps {
 
 export class RunEnvironmentResolver {
   private readonly sandboxCache = new Map<string, Promise<SandboxBackend>>();
-  private readonly resolveBackend: (
-    config: SandboxConfig,
-    cwd: string,
-  ) => Promise<SandboxBackend>;
+  private readonly resolveBackend: (config: SandboxConfig, cwd: string) => Promise<SandboxBackend>;
 
   constructor(private readonly deps: RunEnvironmentResolverDeps) {
     this.resolveBackend = deps.resolveBackend ?? resolveSandboxBackend;
@@ -41,9 +37,8 @@ export class RunEnvironmentResolver {
     try {
       const settings = this.deps.settings();
       if (config.isSubAgent !== true) {
-        projectSandbox = (
-          settings.getForScope("project", cwd) as { sandbox?: SettingsSandbox }
-        ).sandbox;
+        projectSandbox = (settings.getForScope("project", cwd) as { sandbox?: SettingsSandbox })
+          .sandbox;
       }
       globalSandbox = (settings.getForScope("user") as { sandbox?: SettingsSandbox }).sandbox;
     } catch {
@@ -81,8 +76,7 @@ export class RunEnvironmentResolver {
     const sandboxConfig = this.resolveSandboxConfig(cwd);
     const backend = await this.resolveSandbox(cwd);
     return {
-      sandbox:
-        backend.name === "off" ? backend : { ...backend, network: sandboxConfig.network },
+      sandbox: backend.name === "off" ? backend : { ...backend, network: sandboxConfig.network },
       sandboxConfig,
       shellEnv: this.readShellEnv(cwd),
     };
@@ -110,33 +104,5 @@ export class RunEnvironmentResolver {
       return undefined;
     }
     return Object.keys(merged).length > 0 ? merged : undefined;
-  }
-
-  readWorktreeSetupScripts(cwd?: string): SetupScripts | undefined {
-    if (this.deps.config().isSubAgent === true || !cwd) return undefined;
-    try {
-      const scoped = this.deps.settings().getForScope("project", cwd) as {
-        localEnvironment?: { setupScripts?: SetupScripts };
-      };
-      return scoped.localEnvironment?.setupScripts;
-    } catch {
-      return undefined;
-    }
-  }
-
-  readWorktreeBranchPrefix(cwd?: string): string | undefined {
-    if (this.deps.config().isSubAgent === true || !cwd) return undefined;
-    try {
-      return (this.deps.settings().get() as { worktree?: { branchPrefix?: string } }).worktree
-        ?.branchPrefix;
-    } catch {
-      return undefined;
-    }
-  }
-
-  async resolveWorktreeSetupSandbox(cwd: string): Promise<SandboxBackend | undefined> {
-    if (!cwd) return undefined;
-    const environment = await this.resolve(cwd);
-    return environment.sandbox;
   }
 }

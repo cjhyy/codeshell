@@ -47,7 +47,6 @@ function toolContext(projectDir: string, registry: ToolRegistry): ToolContext {
     engine: {
       planMode: false,
       setPlanMode: () => {},
-      readWorktreeSetupScripts: () => undefined,
     },
   } as ToolContext;
 }

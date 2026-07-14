@@ -10,10 +10,19 @@ import { runCommand } from "./commands/run.js";
 import { replCommand } from "./commands/repl.js";
 import { resolveTaskFromArgOrStdin } from "./input/read-stdin.js";
 import { setup } from "../bootstrap/setup.js";
-import { costTracker, installCostTracking, getCurrentVersion } from "@cjhyy/code-shell-core";
+import {
+  costTracker,
+  installCostTracking,
+  getCurrentVersion,
+  registerCapability,
+} from "@cjhyy/code-shell-core";
+import { CODING_CAPABILITY } from "@cjhyy/code-shell-capability-coding";
 import { CHALK_COLORIZER } from "../utils/colorizer.js";
 import type { AgentPresetName } from "@cjhyy/code-shell-core";
 import type { SessionStatus } from "@cjhyy/code-shell-core";
+
+// TUI is a product composition root: generic core + the coding capability pack.
+registerCapability(CODING_CAPABILITY);
 
 function formatSessionStatus(s: SessionStatus): string {
   switch (s) {
@@ -41,26 +50,33 @@ const program = new Command();
 
 program
   .name("code-shell")
-  .description("Code Shell — general orchestration framework with a terminal coding assistant preset")
+  .description(
+    "Code Shell — general orchestration framework with a terminal coding assistant preset",
+  )
   .version(getCurrentVersion());
 
 // ─── Shared options ───────────────────────────────────────────────
 
 function addCommonOptions(cmd: Command): Command {
-  return cmd
-    .option("-m, --model <model>", "Model name (e.g. anthropic/claude-opus-4-6)")
-    // No default here: a hard "openai" default would make opts.provider always
-    // truthy, so the `options.provider ?? settings.model.provider` fallback in
-    // repl.ts/run.ts could never reach the user's configured provider. The
-    // "openai" last-resort default lives at the tail of those ?? chains.
-    .option("-p, --provider <provider>", "LLM provider (anthropic, openai)")
-    .option("--preset <preset>", "Agent preset (general, terminal-coding)")
-    .option("--base-url <url>", "LLM API base URL (e.g. https://openrouter.ai/api/v1)")
-    .option("--api-key <key>", "API key (or set OPENROUTER_API_KEY / ANTHROPIC_API_KEY env var)")
-    .option("--permission-mode <mode>", "Permission mode (default, acceptEdits, bypassPermissions)")
-    .option("-o, --output <format>", "Output format (text, json, jsonl, stream-json)", "text")
-    .option("--max-turns <n>", "Maximum turns", positiveIntOption("--max-turns"), 100)
-    .option("--effort <level>", "Reasoning effort (low, medium, high, max)", "high");
+  return (
+    cmd
+      .option("-m, --model <model>", "Model name (e.g. anthropic/claude-opus-4-6)")
+      // No default here: a hard "openai" default would make opts.provider always
+      // truthy, so the `options.provider ?? settings.model.provider` fallback in
+      // repl.ts/run.ts could never reach the user's configured provider. The
+      // "openai" last-resort default lives at the tail of those ?? chains.
+      .option("-p, --provider <provider>", "LLM provider (anthropic, openai)")
+      .option("--preset <preset>", "Agent preset (general, terminal-coding)")
+      .option("--base-url <url>", "LLM API base URL (e.g. https://openrouter.ai/api/v1)")
+      .option("--api-key <key>", "API key (or set OPENROUTER_API_KEY / ANTHROPIC_API_KEY env var)")
+      .option(
+        "--permission-mode <mode>",
+        "Permission mode (default, acceptEdits, bypassPermissions)",
+      )
+      .option("-o, --output <format>", "Output format (text, json, jsonl, stream-json)", "text")
+      .option("--max-turns <n>", "Maximum turns", positiveIntOption("--max-turns"), 100)
+      .option("--effort <level>", "Reasoning effort (low, medium, high, max)", "high")
+  );
 }
 
 // ─── run ──────────────────────────────────────────────────────────
@@ -68,7 +84,9 @@ function addCommonOptions(cmd: Command): Command {
 addCommonOptions(
   program
     .command("run")
-    .description("Execute a single task (headless mode). Reads the task from stdin if omitted and piped.")
+    .description(
+      "Execute a single task (headless mode). Reads the task from stdin if omitted and piped.",
+    )
     .argument("[task]", "The task to execute (or pipe it via stdin)"),
 )
   .option("--resume <sessionId>", "Resume a previous session")
@@ -82,9 +100,7 @@ addCommonOptions(
   .action(async (task: string | undefined, opts) => {
     const resolvedTask = await resolveTaskFromArgOrStdin(task);
     if (!resolvedTask) {
-      console.error(
-        "Error: no task provided. Pass a <task> argument or pipe a prompt via stdin.",
-      );
+      console.error("Error: no task provided. Pass a <task> argument or pipe a prompt via stdin.");
       process.exit(2);
     }
     await runCommand({
@@ -98,14 +114,11 @@ addCommonOptions(
 
 // ─── repl (default) ──────────────────────────────────────────────
 
-addCommonOptions(
-  program
-    .command("repl")
-    .description("Interactive REPL mode (default)"),
-)
-  .action(async (opts) => {
+addCommonOptions(program.command("repl").description("Interactive REPL mode (default)")).action(
+  async (opts) => {
     await replCommand(resolveOpts(opts));
-  });
+  },
+);
 
 // ─── sessions ─────────────────────────────────────────────────────
 
@@ -138,23 +151,28 @@ addCommonOptions(
     .description("Multi-model review arena — agent gathers context, multiple models discuss")
     .argument("<topic>", "What to review (agent will find relevant code)")
     .option("--models <models>", "Models to use (e.g. claude,gpt4o,deepseek)")
-    .option("--mode <mode>", "Arena mode: review, discussion, or planning (auto-detected if omitted)"),
-)
-  .action(async (topic: string, opts) => {
-    const { runArenaReview } = await import("./commands/arena.js");
-    const { SettingsManager, resolveLLMConfigForTag } = await import("@cjhyy/code-shell-core");
-    const settings = new SettingsManager(process.cwd()).get();
-    const llm = resolveLLMConfigForTag(settings, "text", (settings as any).defaults?.text);
-    if (!llm) {
-      console.error("Error: 没有可用的文本模型连接。");
-      process.exit(1);
-    }
-    // TODO(arena): participants 改按 modelConnections.id 解析,本次不迁
-    await runArenaReview({ topic, models: opts.models, mode: opts.mode }, {
+    .option(
+      "--mode <mode>",
+      "Arena mode: review, discussion, or planning (auto-detected if omitted)",
+    ),
+).action(async (topic: string, opts) => {
+  const { runArenaReview } = await import("./commands/arena.js");
+  const { SettingsManager, resolveLLMConfigForTag } = await import("@cjhyy/code-shell-core");
+  const settings = new SettingsManager(process.cwd()).get();
+  const llm = resolveLLMConfigForTag(settings, "text", (settings as any).defaults?.text);
+  if (!llm) {
+    console.error("Error: 没有可用的文本模型连接。");
+    process.exit(1);
+  }
+  // TODO(arena): participants 改按 modelConnections.id 解析,本次不迁
+  await runArenaReview(
+    { topic, models: opts.models, mode: opts.mode },
+    {
       llm,
       clientDefaults: { temperature: 0.3 },
-    });
-  });
+    },
+  );
+});
 
 // ─── runs ────────────────────────────────────────────────────────
 
@@ -230,7 +248,8 @@ program.hook("preAction", async (thisCommand) => {
   const opts = thisCommand.opts();
   await setup({
     cwd: process.cwd(),
-    permissionMode: (opts.permissionMode ?? "acceptEdits") as import("@cjhyy/code-shell-core").PermissionMode,
+    permissionMode: (opts.permissionMode ??
+      "acceptEdits") as import("@cjhyy/code-shell-core").PermissionMode,
   });
 });
 
@@ -246,9 +265,7 @@ process.on("exit", () => {
 
 /** Print an error the way a CLI should — message + stack, no JSON noise. */
 function reportFatal(err: unknown): never {
-  process.stderr.write(
-    (err instanceof Error ? (err.stack ?? err.message) : String(err)) + "\n",
-  );
+  process.stderr.write((err instanceof Error ? (err.stack ?? err.message) : String(err)) + "\n");
   process.exit(1);
 }
 

@@ -1,4 +1,5 @@
 import { isAbsolute, resolve } from "node:path";
+import { SessionManager, SettingsManager, type SessionWorkspace } from "@cjhyy/code-shell-core";
 import {
   createWorktree,
   currentBranch,
@@ -6,15 +7,12 @@ import {
   getWorktreeDiff,
   listWorktreesFast,
   removeWorktree,
-  SessionManager,
-  SettingsManager,
   validateWorktreeSlug,
   worktreeHasUncommittedOrAheadChanges,
-  type SessionWorkspace,
   type WorktreeDiffSummary,
   type WorktreeInfo,
   type WorktreeWorkspaceOwner,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-capability-coding";
 
 export type WorkspaceCleanupAction = "detach" | "discard";
 

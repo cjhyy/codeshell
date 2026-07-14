@@ -11,6 +11,11 @@ import { join } from "node:path";
 import { parseFrontmatter } from "../skills/frontmatter.js";
 import { listPluginHooks, type PluginHookEntry } from "./loadPluginHooks.js";
 import { mergePluginMcpServers } from "./installer/loadPluginMcp.js";
+import {
+  CANONICAL_PLUGIN_MANIFEST_FILE,
+  CanonicalPluginManifest,
+  type PluginPanelManifestEntry,
+} from "./installer/types.js";
 
 export interface PluginContentInventory {
   /** skills/<name>/SKILL.md — name + frontmatter description when present. */
@@ -23,6 +28,8 @@ export interface PluginContentInventory {
   hooks: PluginHookEntry[];
   /** MCP server names as merged (keyed `<plugin>:<server>` — bare name here). */
   mcpServers: string[];
+  /** Sandboxed desktop panels declared by the canonical plugin manifest. */
+  panels: PluginPanelManifestEntry[];
 }
 
 function listMdNames(dir: string): string[] {
@@ -47,7 +54,8 @@ function listSkills(installPath: string): { name: string; description?: string }
       try {
         if (!statSync(join(dir, entry)).isDirectory() || !existsSync(skillMd)) continue;
         const { frontmatter } = parseFrontmatter(readFileSync(skillMd, "utf-8"));
-        const desc = typeof frontmatter.description === "string" ? frontmatter.description : undefined;
+        const desc =
+          typeof frontmatter.description === "string" ? frontmatter.description : undefined;
         out.push({ name: entry, description: desc });
       } catch {
         // unreadable skill dir — skip, same as the loader would
@@ -70,26 +78,39 @@ export function describePluginContent(
   installPath: string,
 ): PluginContentInventory {
   const mcpPrefix = `${pluginName}:`;
-  let mcpServers: string[] = [];
-  try {
-    mcpServers = Object.keys(mergePluginMcpServers({}))
-      .filter((k) => k.startsWith(mcpPrefix))
-      .map((k) => k.slice(mcpPrefix.length))
-      .sort();
-  } catch {
-    mcpServers = [];
-  }
-  let hooks: PluginHookEntry[] = [];
-  try {
-    hooks = listPluginHooks().filter((h) => h.plugin === pluginName);
-  } catch {
-    hooks = [];
-  }
+  const mcpServers = (() => {
+    try {
+      return Object.keys(mergePluginMcpServers({}))
+        .filter((k) => k.startsWith(mcpPrefix))
+        .map((k) => k.slice(mcpPrefix.length))
+        .sort();
+    } catch {
+      return [];
+    }
+  })();
+  const hooks: PluginHookEntry[] = (() => {
+    try {
+      return listPluginHooks().filter((h) => h.plugin === pluginName);
+    } catch {
+      return [];
+    }
+  })();
+  const panels: PluginPanelManifestEntry[] = (() => {
+    try {
+      const canonical = CanonicalPluginManifest.parse(
+        JSON.parse(readFileSync(join(installPath, CANONICAL_PLUGIN_MANIFEST_FILE), "utf-8")),
+      );
+      return canonical.panels?.entries ?? [];
+    } catch {
+      return [];
+    }
+  })();
   return {
     skills: listSkills(installPath),
     commands: listMdNames(join(installPath, "commands")),
     agents: listMdNames(join(installPath, "agents")),
     hooks,
     mcpServers,
+    panels,
   };
 }

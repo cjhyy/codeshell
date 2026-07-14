@@ -35,7 +35,6 @@ import {
   writeSettingsSchemaFile,
   userHome,
   type AutomationHandle,
-  resolveExternalAgentConfig,
   getMergedCatalog,
   saveCatalogEntry,
   deleteUserCatalogEntry,
@@ -44,22 +43,10 @@ import {
   setGitPathOverride,
   isGitAvailable,
   resolveGitPath,
-  resolveProjectRoot,
   CredentialStore,
   type Credential,
   type CredentialScope,
   sweepStaleCredentialCookies,
-  // CC orchestrator (external claude-cli rooms).
-  probeClaudeCli,
-  probeCodexCli,
-  discoverSessions,
-  discoverCodexSessions,
-  countSessions,
-  countCodexSessions,
-  DEFAULT_DISCOVER_LIMIT,
-  DEFAULT_DISCOVER_SINCE_MS,
-  readRecentHistory,
-  readCodexRecentHistory,
   // Speech-to-text (voice input / 听写).
   transcribe,
   resolveTranscribeProvider,
@@ -67,12 +54,28 @@ import {
   describeTranscribe,
   setDefaultCredentialCipher,
   // Quota — remaining CC/Codex subscription usage.
+  ErrorCodes,
+  registerCapability,
+} from "@cjhyy/code-shell-core";
+import {
+  CODING_CAPABILITY,
   checkQuota,
+  countCodexSessions,
+  countSessions,
+  DEFAULT_DISCOVER_LIMIT,
+  DEFAULT_DISCOVER_SINCE_MS,
+  discoverCodexSessions,
+  discoverSessions,
+  normalizeWorktreeBranchPrefix,
+  probeClaudeCli,
+  probeCodexCli,
+  readCodexRecentHistory,
+  readRecentHistory,
+  resolveExternalAgentConfig,
+  resolveProjectRoot,
   resolveQuotaCredentials,
   type QuotaResult,
-  ErrorCodes,
-  normalizeWorktreeBranchPrefix,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-capability-coding";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { registerPetIpc } from "./pet/pet-ipc.js";
@@ -229,12 +232,20 @@ import {
 } from "./skills-service.js";
 import {
   listPlugins,
+  listPanelExtensions,
+  listPluginPanels,
   getPluginDetail,
   uninstallPluginEntry,
   uninstallLocalPluginEntry,
   updatePluginEntry,
   checkPluginUpdateEntry,
 } from "./plugins-service.js";
+import {
+  expectedPluginPanelPartition,
+  registerPluginPanelSchemePrivileges,
+  validatePluginPanelEntryUrl,
+} from "./plugin-panel-protocol.js";
+import { PluginPanelBridge } from "./plugin-panel-bridge.js";
 import {
   listMarketplacesForUi,
   loadMarketplaceForUi,
@@ -332,7 +343,14 @@ import {
   type WorkspaceCleanupAction,
 } from "./session-workspace-service.js";
 
+// Desktop is assembled from the reusable core plus product capability packs.
+registerCapability(CODING_CAPABILITY);
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Custom schemes must be privileged before app.ready. The request handler is
+// installed later on each plugin guest's isolated session partition.
+registerPluginPanelSchemePrivileges();
 
 // Override the runtime app name. In dev (`electron .`) the default is
 // "Electron"; this makes the macOS menu bar, Dock tooltip, and About
@@ -368,6 +386,12 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
  * same worker" — not "extra concurrent agents".
  */
 let bridge: AgentBridge | null = null;
+const pluginPanelBridge = new PluginPanelBridge({
+  isTrustedHost: (sender) =>
+    [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
+  getAgentBridge: () => bridge,
+});
+pluginPanelBridge.registerIpc();
 let petStateAggregator: PetStateAggregator | null = null;
 let petDispatchService: PetDispatchService | null = null;
 let petAttentionPolicy: PetAttentionPolicy | null = null;
@@ -433,6 +457,9 @@ function broadcastWorkspaceChanged(payload: {
 onPluginInstallJobsChanged((jobs) => {
   for (const w of BrowserWindow.getAllWindows()) {
     if (!w.isDestroyed()) w.webContents.send("plugins:installJobsChanged", jobs);
+    if (!w.isDestroyed() && jobs.some((job) => job.status === "installed")) {
+      w.webContents.send("plugin-panels:changed");
+    }
   }
 });
 
@@ -1492,8 +1519,38 @@ async function handleCcRoomEvent(event: AuthenticatedMobileClientEvent): Promise
  * Must run for EVERY window that hosts a BrowserPanel (main + browser popout).
  */
 function hardenWebviewGuests(win: BrowserWindow): void {
-  const pendingWebviewPartitions: string[] = [];
-  win.webContents.on("will-attach-webview", (_e, webPreferences, params) => {
+  const pendingWebviews: Array<
+    | { kind: "browser"; partition: string }
+    | {
+        kind: "plugin";
+        partition: string;
+        resource: NonNullable<ReturnType<typeof validatePluginPanelEntryUrl>>;
+      }
+  > = [];
+  win.webContents.on("will-attach-webview", (event, webPreferences, params) => {
+    const pluginResource = validatePluginPanelEntryUrl(String(params.src ?? ""));
+    if (String(params.src ?? "").startsWith("csplugin:")) {
+      if (
+        !pluginResource ||
+        params.partition !== expectedPluginPanelPartition(pluginResource.descriptor.hostId)
+      ) {
+        event.preventDefault();
+        return;
+      }
+      webPreferences.preload = resolve(__dirname, "..", "preload", "plugin-panel.cjs");
+      webPreferences.nodeIntegration = false;
+      webPreferences.nodeIntegrationInSubFrames = false;
+      webPreferences.contextIsolation = true;
+      webPreferences.sandbox = true;
+      webPreferences.webSecurity = true;
+      (params as Record<string, unknown>).allowpopups = false;
+      pendingWebviews.push({
+        kind: "plugin",
+        partition: String(params.partition),
+        resource: pluginResource,
+      });
+      return;
+    }
     // Ignore any renderer/page-supplied preload and pin the audited minimal
     // guest bridge. It runs in Electron's isolated preload world and exposes
     // nothing to page JavaScript; only trusted clicks can sendToHost.
@@ -1522,10 +1579,18 @@ function hardenWebviewGuests(win: BrowserWindow): void {
       wantPartition === BROWSER_PARTITION || wantPartition.startsWith(`${BROWSER_PARTITION}:`)
         ? wantPartition
         : BROWSER_PARTITION;
-    pendingWebviewPartitions.push(String(params.partition));
+    pendingWebviews.push({ kind: "browser", partition: String(params.partition) });
   });
   win.webContents.on("did-attach-webview", (_e, guest) => {
-    const partition = pendingWebviewPartitions.shift() ?? BROWSER_PARTITION;
+    const attached = pendingWebviews.shift() ?? {
+      kind: "browser" as const,
+      partition: BROWSER_PARTITION,
+    };
+    if (attached.kind === "plugin") {
+      pluginPanelBridge.registerGuest(guest, win, attached.resource);
+      return;
+    }
+    const partition = attached.partition;
     rememberAttachedGuest({ guest, windowId: win.id, partition });
     // A page link wanting a new window (target=_blank, window.open) used to be
     // DENIED outright (→ kicked to the OS browser, or silently nothing — the
@@ -2406,6 +2471,17 @@ ipcMain.handle("plugins:list", async (_e, cwd: string) => {
   if (typeof cwd !== "string") throw new Error("plugins:list requires cwd");
   return listPlugins(cwd);
 });
+ipcMain.handle("plugin-panels:list", async (_e, cwd: string, locale: string) => {
+  if (typeof cwd !== "string") throw new Error("plugin-panels:list requires cwd");
+  if (typeof locale !== "string") throw new Error("plugin-panels:list requires locale");
+  return listPluginPanels(cwd, locale);
+});
+ipcMain.handle("plugin-panels:listExtensions", async (_e, cwd: string, locale: string) => {
+  if (typeof cwd !== "string") throw new Error("plugin-panels:listExtensions requires cwd");
+  if (typeof locale !== "string")
+    throw new Error("plugin-panels:listExtensions requires locale");
+  return listPanelExtensions(cwd, locale);
+});
 
 // ── Credentials (token/link store + cookie capture) ──────────────────
 // cwd may be "" for no-repo contexts; project scope no-ops without a cwd.
@@ -2613,13 +2689,22 @@ ipcMain.handle("plugins:detail", async (_e, installKey: string) => {
   return getPluginDetail(installKey);
 });
 ipcMain.handle("plugins:uninstall", async (_e, pluginName: string, marketplaceName: string) => {
-  return uninstallPluginEntry(pluginName, marketplaceName);
+  const result = uninstallPluginEntry(pluginName, marketplaceName);
+  pluginPanelBridge.revokeInstallKey(`${pluginName}@${marketplaceName}`);
+  for (const window of mainWindows) window.webContents.send("plugin-panels:changed");
+  return result;
 });
 ipcMain.handle("plugins:uninstallLocal", async (_e, name: string) => {
-  return uninstallLocalPluginEntry(name);
+  const result = uninstallLocalPluginEntry(name);
+  pluginPanelBridge.revokeInstallKey(`${name}@local`);
+  for (const window of mainWindows) window.webContents.send("plugin-panels:changed");
+  return result;
 });
 ipcMain.handle("plugins:update", async (_e, name: string) => {
-  return updatePluginEntry(name);
+  const result = await updatePluginEntry(name);
+  pluginPanelBridge.revokeInstallKey(`${name}@local`);
+  for (const window of mainWindows) window.webContents.send("plugin-panels:changed");
+  return result;
 });
 ipcMain.handle("plugins:checkUpdate", async (_e, name: string) => {
   return checkPluginUpdateEntry(name);
@@ -2718,9 +2803,13 @@ ipcMain.handle("plugins:install", async (_e, pluginName: string, marketplaceName
   installPluginForUi(pluginName, marketplaceName),
 );
 ipcMain.handle("plugins:retryInstallJob", async (_e, id: string) => retryPluginInstallJobForUi(id));
-ipcMain.handle("plugins:installLocal", async (_e, input: { kind: "dir" | "zip"; path: string }) =>
-  installLocalPluginForUi(input),
-);
+ipcMain.handle("plugins:installLocal", async (_e, input: { kind: "dir" | "zip"; path: string }) => {
+  const result = await installLocalPluginForUi(input);
+  if (result.ok) {
+    for (const window of mainWindows) window.webContents.send("plugin-panels:changed");
+  }
+  return result;
+});
 ipcMain.handle("skills:read", async (_e, filePath: string) => readSkillBody(filePath));
 ipcMain.handle("skills:checkUpdate", async (_e, filePath: string) =>
   checkSkillUpdateEntry(filePath),
@@ -4073,6 +4162,9 @@ ipcMain.handle(
     await writeSettings(scope, patch, projectPath);
     // git.path may have changed — re-apply to core's git resolver immediately.
     if ("git" in patch) void applyGitPathFromSettings();
+    if ("disabledPlugins" in patch || "capabilityOverrides" in patch) {
+      for (const window of mainWindows) window.webContents.send("plugin-panels:changed");
+    }
   },
 );
 

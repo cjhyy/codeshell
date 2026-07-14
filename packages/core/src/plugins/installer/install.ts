@@ -1,7 +1,5 @@
 import { existsSync, statSync } from "node:fs";
-import {
-  mkdir, writeFile, readFile, readdir, cp, rm, rename,
-} from "node:fs/promises";
+import { mkdir, writeFile, readFile, readdir, cp, rm, rename } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { detectPluginFormat } from "./detectFormat.js";
 import { pluginInstallDir, pluginsRoot, assertSafePluginName } from "./paths.js";
@@ -12,6 +10,7 @@ import { copyCodexSkills } from "./codex/convertSkills.js";
 import { copyCodexCommands } from "./codex/convertCommands.js";
 import { appendInstallEntry, pluginInstallKey } from "../installedPlugins.js";
 import { rewritePluginVars } from "../varRewrite.js";
+import { normalizePluginManifest } from "./normalizeManifest.js";
 
 /**
  * Install a local plugin directory into ~/.code-shell/plugins/<name>/.
@@ -54,6 +53,12 @@ export async function installPluginFromPath(
       // CC plugins commonly omit version, and the file may be absent/malformed.
       const version = await readCcPluginVersion(sourceDir);
       meta = { name, format: "cc", version, source: sourceDir, installedAt };
+      await normalizePluginManifest(sourceDir, {
+        name,
+        version,
+        format,
+        destinationRoot: tmpDir,
+      });
     } else {
       const manifest = CodexPluginManifest.parse(
         JSON.parse(await readFile(join(sourceDir, ".codex-plugin", "plugin.json"), "utf-8")),
@@ -75,6 +80,13 @@ export async function installPluginFromPath(
         await writeFile(join(tmpDir, "mcp-servers.json"), JSON.stringify(keyed, null, 2));
       }
       meta = { name, format: "codex", version: manifest.version, source: sourceDir, installedAt };
+      await normalizePluginManifest(sourceDir, {
+        name,
+        version: manifest.version,
+        format,
+        destinationRoot: tmpDir,
+        copyPanelAssets: true,
+      });
     }
 
     rewritePluginVars(tmpDir);
@@ -114,14 +126,21 @@ async function readCcPluginVersion(sourceDir: string): Promise<string | undefine
 }
 
 /** Walk <sourceDir>/agents/**.toml → <destDir>/agents/**.md (structure preserved). */
-async function convertAgentsInto(sourceDir: string, destDir: string, pluginName: string): Promise<void> {
+async function convertAgentsInto(
+  sourceDir: string,
+  destDir: string,
+  pluginName: string,
+): Promise<void> {
   const agentsSrc = join(sourceDir, "agents");
   if (!existsSync(agentsSrc)) return;
 
   const walk = async (dir: string): Promise<void> => {
     for (const dirent of await readdir(dir, { withFileTypes: true })) {
       const abs = join(dir, dirent.name);
-      if (dirent.isDirectory()) { await walk(abs); continue; }
+      if (dirent.isDirectory()) {
+        await walk(abs);
+        continue;
+      }
       if (!dirent.name.endsWith(".toml")) continue;
       const rel = relative(agentsSrc, abs).replace(/\.toml$/, ".md");
       const outPath = join(destDir, "agents", rel);

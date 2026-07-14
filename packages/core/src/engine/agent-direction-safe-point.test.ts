@@ -242,7 +242,7 @@ describe("child Engine direction safe point", () => {
       const spawner = createSubAgentSpawner({
         parentConfig: parent,
         parentSandbox: defaultSandboxConfig("off"),
-        presetName: "terminal-coding",
+        presetName: "general",
         cwd: dir,
         permissionMode: "bypassPermissions",
         appendParentSubagent: () => {},
@@ -428,7 +428,7 @@ describe("child Engine direction safe point", () => {
     const spawner = createSubAgentSpawner({
       parentConfig: parent,
       parentSandbox: defaultSandboxConfig("off"),
-      presetName: "terminal-coding",
+      presetName: "general",
       cwd: dir,
       permissionMode: "bypassPermissions",
       appendParentSubagent: () => {},

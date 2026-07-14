@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { installPlugin } from "./pluginInstaller.js";
@@ -65,11 +65,47 @@ describe("installPlugin marketplace source path containment", () => {
   });
 
   test("rejects a git-subdir path with parent-directory traversal before cloning", async () => {
-    writeMarketplace({ source: "git-subdir", url: "file:///does-not-need-to-exist", path: "../payload" });
+    writeMarketplace({
+      source: "git-subdir",
+      url: "file:///does-not-need-to-exist",
+      path: "../payload",
+    });
 
     const res = await installPlugin("p", "shop");
 
     if (res.ok) throw new Error("expected git-subdir traversal path to be rejected");
     expect(res.error).toMatch(/parent-directory/);
+  });
+
+  test("normalizes panel manifests before activating a marketplace install", async () => {
+    mkdirSync(join(mpDir, "payload", ".claude-plugin"), { recursive: true });
+    mkdirSync(join(mpDir, "payload", "panels", "dashboard"), { recursive: true });
+    writeFileSync(join(mpDir, "payload", "panels", "dashboard", "index.html"), "dashboard");
+    writeFileSync(
+      join(mpDir, "payload", ".claude-plugin", "plugin.json"),
+      JSON.stringify({
+        name: "p",
+        version: "1.0.0",
+        panels: {
+          version: 1,
+          entries: [
+            {
+              id: "dashboard",
+              title: { default: "Dashboard" },
+              entry: "panels/dashboard/index.html",
+            },
+          ],
+        },
+      }),
+    );
+    writeMarketplace("./payload");
+
+    const res = await installPlugin("p", "shop");
+
+    if (!res.ok) throw new Error(res.error);
+    const canonical = JSON.parse(
+      readFileSync(join(res.entry.installPath, ".cs-plugin-manifest.json"), "utf-8"),
+    );
+    expect(canonical.panels.entries[0].entry).toBe("panels/dashboard/index.html");
   });
 });

@@ -33,6 +33,8 @@ import {
   buildCredentialActionReply,
   parseWorkspaceActionLine,
   buildWorkspaceActionReply,
+  parsePanelActionLine,
+  buildPanelActionReply,
 } from "./browser-driver/intercept.js";
 import { handleBrowserAction } from "./browser-driver/automation-host.js";
 import {
@@ -70,6 +72,11 @@ import { reloadAutomations } from "./automation-service.js";
 import { switchSessionWorkspaceForUi } from "./session-workspace-service.js";
 import { PetWorkerProjectionGeneration } from "./pet/pet-worker-generation.js";
 import type { AgentBridgePetEvent, PetStateBridge } from "./pet/pet-state-aggregator.js";
+import type {
+  AgentPanelHostRequest,
+  AgentPanelHostResponse,
+  AgentPanelHostResult,
+} from "../shared/agent-panels.js";
 
 /**
  * Neutral sandbox directory used when the user is in a "no project"
@@ -91,7 +98,7 @@ export function resolveNoRepoCwd(): string {
 export type { QuickChatForkLifecycle } from "./quick-chat-fork-router.js";
 
 const require = createRequire(import.meta.url);
-const agentEntry = require.resolve("@cjhyy/code-shell-core/bin/agent-server-stdio");
+const agentEntry = require.resolve("@cjhyy/code-shell-capability-coding/bin/agent-server-stdio");
 
 const RESTART_WINDOW_MS = 60_000;
 const RESTART_LIMIT = 3;
@@ -196,6 +203,11 @@ export class AgentBridge implements PetStateBridge {
   private petSnapshotRequestId = 0;
   private petHostRequestId = 0;
   private readonly petWorkerGeneration = new PetWorkerProjectionGeneration();
+  private panelHostRequestId = 0;
+  private readonly pendingPanelHostRequests = new Map<
+    string,
+    (result: AgentPanelHostResult) => void
+  >();
 
   constructor(
     window: BrowserWindow,
@@ -275,6 +287,8 @@ export class AgentBridge implements PetStateBridge {
       // Workspace switching: intercept __workspace_action__ so the worker uses
       // the same main-process service path as the UI switcher.
       if (this.maybeHandleWorkspaceAction(line)) return;
+      // Generic Panel tool: renderer owns the live registry and tab state.
+      if (this.maybeHandlePanelAction(line)) return;
       // cron change: the worker created/deleted a cron job (agent/cronChanged);
       // reload main's scheduler so it arms immediately. DON'T forward to renderer.
       if (this.maybeHandleCronChanged(line)) return;
@@ -507,6 +521,22 @@ export class AgentBridge implements PetStateBridge {
         dlog("renderer", payload.msg, payload.data);
       },
     );
+
+    ipcMain.on("panel:agent-response", (event, response: AgentPanelHostResponse) => {
+      const owner = BrowserWindow.fromWebContents(event.sender);
+      if (
+        !owner ||
+        !this.windows.has(owner) ||
+        !response ||
+        typeof response.requestId !== "string"
+      ) {
+        return;
+      }
+      const resolve = this.pendingPanelHostRequests.get(response.requestId);
+      if (!resolve) return;
+      this.pendingPanelHostRequests.delete(response.requestId);
+      resolve(response.result);
+    });
   }
 
   private failPendingQuickChatForks(): void {
@@ -762,6 +792,58 @@ export class AgentBridge implements PetStateBridge {
       if (this.child?.stdin?.writable) {
         this.child.stdin.write(reply + "\n");
       }
+    })();
+    return true;
+  }
+
+  private requestPanelHost(
+    request: Omit<AgentPanelHostRequest, "requestId">,
+  ): Promise<AgentPanelHostResult> {
+    const requestId = `panel-host-${++this.panelHostRequestId}`;
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (result: AgentPanelHostResult): void => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        this.pendingPanelHostRequests.delete(requestId);
+        resolve(result);
+      };
+      this.pendingPanelHostRequests.set(requestId, finish);
+      const timer = setTimeout(
+        () => finish({ ok: false, panelId: request.panelId, detail: "panel host timed out" }),
+        5_000,
+      );
+      this.safeSend("panel:agent-request", { ...request, requestId });
+    });
+  }
+
+  private maybeHandlePanelAction(line: string): boolean {
+    const parsed = parsePanelActionLine(line);
+    if (!parsed) return false;
+    void (async () => {
+      let result: AgentPanelHostResult;
+      if (!parsed.sessionId) {
+        result = { ok: false, panelId: parsed.panelId, detail: "panel action requires sessionId" };
+      } else {
+        const bucket = bucketForSession(parsed.sessionId);
+        if (!bucket) {
+          result = {
+            ok: false,
+            panelId: parsed.panelId,
+            detail: `no panel bucket registered for session ${parsed.sessionId}`,
+          };
+        } else {
+          result = await this.requestPanelHost({
+            sessionId: parsed.sessionId,
+            bucket,
+            action: parsed.action,
+            panelId: parsed.panelId,
+          });
+        }
+      }
+      const reply = buildPanelActionReply(parsed, JSON.stringify(result));
+      if (this.child?.stdin?.writable) this.child.stdin.write(reply + "\n");
     })();
     return true;
   }

@@ -16,12 +16,8 @@ import * as fs from "node:fs/promises";
 import {
   isManagedWorktreeBranch,
   normalizeWorktreeBranchPrefix,
-} from "@cjhyy/code-shell-core";
-import {
-  editorCandidates,
-  splitTarget,
-  buildEditorInvocation,
-} from "./editor.js";
+} from "@cjhyy/code-shell-capability-coding";
+import { editorCandidates, splitTarget, buildEditorInvocation } from "./editor.js";
 import { resolveTargetPath } from "./paths.js";
 
 const execFileAsync = promisify(execFile);
@@ -156,7 +152,10 @@ export async function getGitNumstat(
 export async function getGitRangeChanges(
   cwd: string,
   range: string,
-): Promise<{ entries: GitStatusEntry[]; numstat: Record<string, { added: number; removed: number }> }> {
+): Promise<{
+  entries: GitStatusEntry[];
+  numstat: Record<string, { added: number; removed: number }>;
+}> {
   const entries: GitStatusEntry[] = [];
   const numstat: Record<string, { added: number; removed: number }> = {};
   try {
@@ -197,7 +196,9 @@ export async function getGitBranchBase(cwd: string): Promise<string> {
     }
   }
   try {
-    return (await gitRun(cwd, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"])).trim();
+    return (
+      await gitRun(cwd, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"])
+    ).trim();
   } catch {
     return "";
   }
@@ -258,7 +259,13 @@ export async function stashAndSwitchGitBranch(cwd: string, branch: string): Prom
   if (!before.isRepo) throw new Error("Not a Git repository");
   if (!before.branches.includes(trimmed)) throw new Error(`Local branch not found: ${trimmed}`);
 
-  await gitRun(cwd, ["stash", "push", "-u", "-m", `CodeShell auto-stash before switching to ${trimmed}`]);
+  await gitRun(cwd, [
+    "stash",
+    "push",
+    "-u",
+    "-m",
+    `CodeShell auto-stash before switching to ${trimmed}`,
+  ]);
   await gitRun(cwd, ["switch", trimmed]);
   return getGitBranches(cwd);
 }
@@ -330,14 +337,13 @@ function errorDetail(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-async function resolveCleanupBaseRef(root: string, rootBranch: string | null): Promise<string | null> {
-  const candidates = [
-    rootBranch,
-    "main",
-    "master",
-    "origin/main",
-    "origin/master",
-  ].filter((ref): ref is string => !!ref);
+async function resolveCleanupBaseRef(
+  root: string,
+  rootBranch: string | null,
+): Promise<string | null> {
+  const candidates = [rootBranch, "main", "master", "origin/main", "origin/master"].filter(
+    (ref): ref is string => !!ref,
+  );
   const seen = new Set<string>();
   for (const ref of candidates) {
     if (seen.has(ref)) continue;
@@ -357,10 +363,7 @@ async function checkStaleWorktreeDeletion(
   wtPath: string,
   branch: string,
   rootBranch: string | null,
-): Promise<
-  | { ok: true }
-  | { ok: false; reason: StaleWorktreeSkipReason; detail?: string }
-> {
+): Promise<{ ok: true } | { ok: false; reason: StaleWorktreeSkipReason; detail?: string }> {
   let status: string;
   try {
     status = await gitRun(wtPath, ["status", "--porcelain=v1", "--untracked-files=all"]);
@@ -535,11 +538,7 @@ export async function getGitDiff(
   // staged → --cached (index vs HEAD); all → HEAD (worktree vs HEAD);
   // unstaged → bare diff (worktree vs index).
   const args =
-    mode === "staged"
-      ? [...base, "--cached"]
-      : mode === "all"
-        ? [...base, "HEAD"]
-        : base;
+    mode === "staged" ? [...base, "--cached"] : mode === "all" ? [...base, "HEAD"] : base;
   try {
     return await gitRun(cwd, args);
   } catch {
@@ -551,11 +550,7 @@ export async function getGitDiff(
  * Unified diff for a committed range (e.g. "HEAD~1..HEAD" or "main...HEAD"),
  * optionally limited to one file (TODO 2.3a — committed/branch review scopes).
  */
-export async function getGitRangeDiff(
-  cwd: string,
-  range: string,
-  file?: string,
-): Promise<string> {
+export async function getGitRangeDiff(cwd: string, range: string, file?: string): Promise<string> {
   if (typeof range !== "string" || !range) return "";
   const args = ["diff", "--no-color", "--unified=3", range];
   if (file) args.push("--", file);
@@ -701,10 +696,7 @@ export async function openExternal(url: string): Promise<void> {
  * "在文件夹中显示" action no longer has to round-trip through `openPath` — which
  * would launch the file in its default app as a side effect (#bug).
  */
-export async function revealInFinder(
-  targetPath: string,
-  cwd?: string,
-): Promise<void> {
+export async function revealInFinder(targetPath: string, cwd?: string): Promise<void> {
   const absolute = resolveTargetPath(targetPath, cwd);
   // showItemInFolder silently does nothing for a missing path (no window, no
   // error), leaving the user with no feedback. Check first and throw so the
@@ -740,10 +732,7 @@ export interface UndoFilesResult {
   error?: string;
 }
 
-export async function undoFiles(
-  cwd: string,
-  paths: string[],
-): Promise<UndoFilesResult[]> {
+export async function undoFiles(cwd: string, paths: string[]): Promise<UndoFilesResult[]> {
   const results: UndoFilesResult[] = [];
   for (const rel of paths) {
     // Resolve under cwd; reject paths that escape it.
@@ -769,11 +758,7 @@ export async function undoFiles(
     }
     try {
       if (tracked) {
-        await execFileAsync(
-          "git",
-          ["restore", "--source=HEAD", "--worktree", "--", rel],
-          { cwd },
-        );
+        await execFileAsync("git", ["restore", "--source=HEAD", "--worktree", "--", rel], { cwd });
         results.push({ path: rel, ok: true, action: "restore" });
       } else {
         // Untracked file — delete it from disk. Only do this if the
@@ -812,10 +797,7 @@ export async function undoFiles(
  * containing directory in Finder, which is what people usually want
  * when a generated file moved or was renamed.
  */
-export async function openPath(
-  targetPath: string,
-  cwd?: string,
-): Promise<string> {
+export async function openPath(targetPath: string, cwd?: string): Promise<string> {
   const absolute = resolveTargetPath(targetPath, cwd);
   try {
     await fs.access(absolute);
@@ -836,14 +818,9 @@ export async function openPath(
  * the command that launched; throws if none are on PATH so the renderer can
  * fall back to the OS "open".
  */
-export async function openInEditor(
-  targetPath: string,
-  cwd?: string,
-): Promise<string> {
+export async function openInEditor(targetPath: string, cwd?: string): Promise<string> {
   const { path: rel, line, col } = splitTarget(targetPath);
-  const absolute = path.isAbsolute(rel)
-    ? rel
-    : path.resolve(cwd ?? process.cwd(), rel);
+  const absolute = path.isAbsolute(rel) ? rel : path.resolve(cwd ?? process.cwd(), rel);
   const candidates = editorCandidates(process.env.CODE_SHELL_EDITOR);
   let lastErr: unknown = null;
   for (const candidate of candidates) {

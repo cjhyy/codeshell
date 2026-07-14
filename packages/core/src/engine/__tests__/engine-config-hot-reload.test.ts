@@ -1,7 +1,22 @@
 import { describe, it, expect } from "bun:test";
 import { Engine } from "../engine.js";
 import { PromptComposer } from "../../prompt/composer.js";
-import { buildPresetSystemPrompt } from "../../preset/index.js";
+import { buildPresetSystemPrompt, BUILTIN_AGENT_PRESETS } from "../../preset/index.js";
+import type { CapabilityModule } from "../../capabilities/index.js";
+
+const TEST_PRESET_NAME = "test-focused";
+const TEST_CAPABILITY: CapabilityModule = {
+  id: "test-preset-hot-reload",
+  presets: [
+    {
+      ...BUILTIN_AGENT_PRESETS.general,
+      name: TEST_PRESET_NAME,
+      label: "Focused test preset",
+      description: "A small product-contributed preset used to verify hot reloads.",
+      promptSections: ["base"],
+    },
+  ],
+};
 
 /**
  * #2: refreshRuntimeConfig with a changed `preset` must re-resolve the engine's
@@ -15,6 +30,7 @@ function buildEngine(preset: string): Engine {
     llm: { provider: "openai", model: "model-a", apiKey: "x", baseUrl: "http://localhost" },
     cwd: process.cwd(),
     preset,
+    capabilities: [TEST_CAPABILITY],
   } as any);
 }
 
@@ -36,13 +52,13 @@ describe("Engine.refreshRuntimeConfig preset hot-reload (#2)", () => {
     expect((engine as any).preset.name).toBe("general");
 
     // Hot-reload to a different real preset.
-    engine.refreshRuntimeConfig({ preset: "terminal-coding" }, 1);
+    engine.refreshRuntimeConfig({ preset: TEST_PRESET_NAME }, 1);
 
-    expect((engine as any).preset.name).toBe("terminal-coding");
+    expect((engine as any).preset.name).toBe(TEST_PRESET_NAME);
     const after = await presetSystemPrompt(engine);
     expect(after).not.toBe(before);
-    // terminal-coding adds a coding section the general preset lacks.
-    expect(after.length).toBeGreaterThan(before.length);
+    expect(before).toContain("Working style");
+    expect(after).not.toContain("Working style");
   });
 
   it("leaves the resolved preset unchanged when the patch preset matches the current one", () => {
@@ -55,11 +71,11 @@ describe("Engine.refreshRuntimeConfig preset hot-reload (#2)", () => {
 
   it("drops a stale (<= last applied) version without re-resolving", () => {
     const engine = buildEngine("general");
-    engine.refreshRuntimeConfig({ preset: "terminal-coding" }, 5);
-    expect((engine as any).preset.name).toBe("terminal-coding");
+    engine.refreshRuntimeConfig({ preset: TEST_PRESET_NAME }, 5);
+    expect((engine as any).preset.name).toBe(TEST_PRESET_NAME);
     // Stale version: ignored entirely.
     engine.refreshRuntimeConfig({ preset: "general" }, 3);
-    expect((engine as any).preset.name).toBe("terminal-coding");
+    expect((engine as any).preset.name).toBe(TEST_PRESET_NAME);
   });
 });
 
@@ -77,16 +93,19 @@ describe("Engine.refreshRuntimeConfig MCP reconcile is best-effort", () => {
         reconcileCalled = true;
         const p = Promise.reject(new Error("server X refused connection"));
         // Track that the engine attached a .catch so the rejection is handled.
-        return { catch: (fn: (e: unknown) => void) => p.catch((e) => { caught = true; fn(e); }) };
+        return {
+          catch: (fn: (e: unknown) => void) =>
+            p.catch((e) => {
+              caught = true;
+              fn(e);
+            }),
+        };
       },
     };
 
     // Must return synchronously without throwing, even though reconcile rejects.
     expect(() =>
-      engine.refreshRuntimeConfig(
-        { mcpServers: { X: { command: "x", args: [] } as any } },
-        1,
-      ),
+      engine.refreshRuntimeConfig({ mcpServers: { X: { command: "x", args: [] } as any } }, 1),
     ).not.toThrow();
     expect(reconcileCalled).toBe(true);
 

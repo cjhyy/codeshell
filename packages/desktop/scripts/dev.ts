@@ -34,6 +34,7 @@ const root = resolve(cwd, "..");
 const repoRoot = resolve(root, "..", "..");
 const coreDir = resolve(repoRoot, "packages/core");
 const coreDist = resolve(coreDir, "dist/index.js");
+const codingDir = resolve(repoRoot, "packages/coding");
 
 const VITE_PORT = 5273;
 const VITE_URL = `http://localhost:${VITE_PORT}`;
@@ -109,11 +110,13 @@ function spawnElectron(): void {
     // eslint-disable-next-line no-console
     console.log(`[dev] electron exited (${code}); quitting orchestrator`);
     coreWatchProc?.kill("SIGTERM");
+    codingWatchProc?.kill("SIGTERM");
     process.exit(code ?? 0);
   });
 }
 
 let coreWatchProc: ChildProcess | null = null;
+let codingWatchProc: ChildProcess | null = null;
 
 /**
  * Build core once (synchronously, so a stale dist never reaches main), then
@@ -134,9 +137,25 @@ function startCoreWatch(): void {
     process.exit(built.status ?? 1);
   }
 
+  // The desktop worker and main process compose core with this separate pack.
+  // Build it after core so its declarations resolve against the fresh API.
+  console.log("[dev] building @cjhyy/code-shell-capability-coding (once)…");
+  const codingBuilt = spawnSync("bun", ["run", "build"], {
+    cwd: codingDir,
+    stdio: "inherit",
+  });
+  if (codingBuilt.status !== 0) {
+    console.error("[dev] coding capability build failed; aborting");
+    process.exit(codingBuilt.status ?? 1);
+  }
+
   // tsc --watch keeps dist in sync with core source edits.
   coreWatchProc = spawn("bun", ["run", "dev"], {
     cwd: coreDir,
+    stdio: "inherit",
+  });
+  codingWatchProc = spawn("bun", ["run", "dev"], {
+    cwd: codingDir,
     stdio: "inherit",
   });
 
@@ -150,6 +169,14 @@ function startCoreWatch(): void {
     restartTimer = setTimeout(() => {
       // eslint-disable-next-line no-console
       console.log("[dev] core rebuilt → restarting electron");
+      spawnElectron();
+    }, 150);
+  });
+  watch(resolve(codingDir, "dist"), { recursive: true }, () => {
+    if (!electronProc) return;
+    if (restartTimer) clearTimeout(restartTimer);
+    restartTimer = setTimeout(() => {
+      console.log("[dev] coding capability rebuilt → restarting electron");
       spawnElectron();
     }, 150);
   });
@@ -171,15 +198,15 @@ async function buildAndWatch(): Promise<void> {
     platform: "node",
     format: "esm",
     outfile: resolve(root, "out/main/index.mjs"),
-    external: ["electron", "@cjhyy/code-shell-core"],
+    external: ["electron", "@cjhyy/code-shell-core", "@cjhyy/code-shell-capability-coding"],
     loader: { ".md": "text" },
     sourcemap: "inline",
     logLevel: "info",
     // node CJS deps (anything not converted to ESM) need a `require` shim
-    // when imported from an .mjs file. esbuild bundles them inline but
-    // their internal `require(...)` calls expect the symbol to exist.
+    // and CommonJS path globals when imported from an .mjs file. esbuild
+    // bundles them inline but does not emulate Node's per-module wrapper.
     banner: {
-      js: "import { createRequire as __ccr } from 'node:module'; const require = __ccr(import.meta.url);",
+      js: "import { createRequire as __ccr } from 'node:module'; import { dirname as __ccd } from 'node:path'; import { fileURLToPath as __ccf } from 'node:url'; const require = __ccr(import.meta.url); const __filename = __ccf(import.meta.url); const __dirname = __ccd(__filename);",
     },
     plugins: [
       {
@@ -205,6 +232,7 @@ async function buildAndWatch(): Promise<void> {
     entryPoints: {
       index: resolve(root, "src/preload/index.ts"),
       "browser-guest": resolve(root, "src/preload/browser-guest.ts"),
+      "plugin-panel": resolve(root, "src/preload/plugin-panel.ts"),
     },
     bundle: true,
     platform: "node",

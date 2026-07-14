@@ -217,6 +217,8 @@ export interface AgentServerOptions {
    * service.
    */
   workspaceBridge?: boolean;
+  /** Enable model-driven panel discovery/focus for interactive Desktop sessions. */
+  panelBridge?: boolean;
   /** Stable transport connection identity. Supplying it enables strict
    * connection+session+generation+requestId approval response matching. */
   connectionId?: string;
@@ -250,6 +252,7 @@ export class AgentServer {
     | ((sessionId: string, expected?: { goalId?: string; revision?: number }) => boolean)
     | null;
   private readonly workspaceBridgeEnabled: boolean;
+  private readonly panelBridgeEnabled: boolean;
   private readonly connectionId: string;
   private readonly strictApprovalRouting: boolean;
   private readonly approvalRouter: ApprovalRouter;
@@ -326,6 +329,7 @@ export class AgentServer {
     this.updateActiveGoalOnDisk = options.updateActiveGoalOnDisk ?? null;
     this.clearActiveGoalOnDisk = options.clearActiveGoalOnDisk ?? null;
     this.workspaceBridgeEnabled = options.workspaceBridge === true;
+    this.panelBridgeEnabled = options.panelBridge === true;
     this.connectionId = options.connectionId ?? "legacy-agent-server";
     this.strictApprovalRouting = options.connectionId !== undefined;
     this.approvalRouter = options.approvalRouter ?? getApprovalRouter();
@@ -564,6 +568,9 @@ export class AgentServer {
     );
     if (this.workspaceBridgeEnabled && typeof session.engine.setWorkspaceBridge === "function") {
       session.engine.setWorkspaceBridge(this.makeWorkspaceBridge(session, sid));
+    }
+    if (this.panelBridgeEnabled && typeof session.engine.setPanelBridge === "function") {
+      session.engine.setPanelBridge(this.makePanelBridge(session, sid));
     }
   }
 
@@ -3164,6 +3171,88 @@ export class AgentServer {
     return {
       switch: (target) => this.requestWorkspaceSwitchForSession(session, sessionId, target),
     };
+  }
+
+  private makePanelBridge(
+    session: import("./chat-session.js").ChatSession,
+    sessionId: string,
+  ): import("../tool-system/panel-bridge.js").PanelHostBridge {
+    return {
+      list: async () => {
+        const result = (await this.requestPanelActionForSession(
+          session,
+          sessionId,
+          "list",
+          {},
+        )) as { ok?: boolean; panels?: unknown };
+        return result?.ok === true && Array.isArray(result.panels)
+          ? (result.panels as import("../tool-system/panel-bridge.js").AgentPanelDescriptor[])
+          : [];
+      },
+      open: async (panelId) => {
+        const result = (await this.requestPanelActionForSession(session, sessionId, "open", {
+          panelId,
+        })) as import("../tool-system/panel-bridge.js").PanelOpenResult;
+        return result?.panelId
+          ? result
+          : { ok: false, panelId, detail: "panel host returned a malformed result" };
+      },
+    };
+  }
+
+  private requestPanelActionForSession(
+    session: import("./chat-session.js").ChatSession,
+    sessionId: string,
+    action: "list" | "open",
+    payload: Record<string, unknown>,
+  ): Promise<unknown> {
+    return new Promise((resolve) => {
+      const requestId = nanoid(12);
+      const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);
+      this.registerSessionApproval(
+        session,
+        this.internalPendingMetadata(sessionId, requestId, routeEnvelope, "__panel_action__"),
+        (decision: unknown) => {
+          this.clearApprovalTimer(requestId);
+          let raw: string | undefined;
+          if (decision && typeof decision === "object" && "approved" in decision) {
+            const result = decision as ApprovalResult;
+            raw = result.approved ? result.answer : undefined;
+          } else if (typeof decision === "string") {
+            raw = decision;
+          }
+          if (raw === undefined) {
+            resolve({ ok: false, error: "panel action declined or unavailable" });
+            return;
+          }
+          try {
+            resolve(JSON.parse(raw));
+          } catch {
+            resolve({ ok: false, error: "malformed panel action result" });
+          }
+        },
+      );
+
+      const timer = setTimeout(() => {
+        if (session.pendingApprovals.has(requestId)) {
+          this.takeSessionApproval(session, requestId, "expired");
+          this.pendingApprovalTargets.delete(requestId);
+          this.approvalTimers.delete(requestId);
+          resolve({ ok: false, error: "panel action timed out" });
+        }
+      }, AgentServer.APPROVAL_TIMEOUT_MS);
+      this.approvalTimers.set(requestId, timer);
+
+      this.notify(Methods.ApprovalRequest, {
+        ...routeEnvelope,
+        request: {
+          toolName: "__panel_action__",
+          args: { action, ...payload },
+          description: `panel:${action}`,
+          riskLevel: "low" as const,
+        },
+      });
+    });
   }
 
   private requestWorkspaceSwitchForSession(

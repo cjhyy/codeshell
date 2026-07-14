@@ -144,7 +144,7 @@ describe("Engine auto-compaction Goal accounting", () => {
       cwd: root,
       sessionStorageDir: join(root, "sessions"),
       enabledBuiltinTools: [],
-      preset: "terminal-coding",
+      preset: "general",
       headless: true,
       maxContextTokens: 10_000,
     });

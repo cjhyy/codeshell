@@ -1,6 +1,10 @@
 import { describe, it, expect } from "bun:test";
-import { BUILTIN_AGENT_PRESETS, resolveBuiltinToolNames } from "./index.js";
-import { BUILTIN_TOOLS, BUILTIN_TOOL_GUARDS } from "../tool-system/builtin/index.js";
+import { BUILTIN_AGENT_PRESETS } from "./index.js";
+import {
+  BUILTIN_TOOLS,
+  BUILTIN_TOOL_GUARDS,
+  validateBuiltinToolExposures,
+} from "../tool-system/builtin/index.js";
 import { cronListToolDef } from "../tool-system/builtin/cron-list.definition.js";
 import { sleepToolDef } from "../tool-system/builtin/sleep.definition.js";
 
@@ -30,6 +34,61 @@ describe("preset builtin tool whitelist", () => {
     }
   });
 
+  it("keeps the domain-neutral harness minimal and leaves product-only tools out", () => {
+    const harness = new Set(BUILTIN_AGENT_PRESETS["harness-min"].builtinTools);
+    const general = new Set(BUILTIN_AGENT_PRESETS.general.builtinTools);
+    expect([...harness].every((name) => general.has(name))).toBe(true);
+    for (const name of [
+      "Read",
+      "Write",
+      "Edit",
+      "Bash",
+      "Glob",
+      "Grep",
+      "AskUserQuestion",
+      "Agent",
+      "TodoWrite",
+      "Skill",
+      "MCPTool",
+      "MemoryList",
+      "Sleep",
+      "Config",
+    ]) {
+      expect(harness.has(name)).toBe(true);
+    }
+    for (const name of [
+      "Arena",
+      "GenerateImage",
+      "GenerateVideo",
+      "browser_observe",
+      "UseCredential",
+    ]) {
+      expect(harness.has(name)).toBe(false);
+    }
+    expect(BUILTIN_AGENT_PRESETS).not.toHaveProperty("terminal-coding");
+  });
+
+  it("keeps every derived permission rule scoped to a visible tool", () => {
+    for (const preset of Object.values(BUILTIN_AGENT_PRESETS)) {
+      const visible = new Set(preset.builtinTools);
+      expect(preset.defaultPermissionRules.filter((rule) => !visible.has(rule.tool))).toEqual([]);
+    }
+  });
+
+  it("fails loud on unknown requirements and prompt sections", () => {
+    const read = BUILTIN_TOOLS.find((tool) => tool.definition.name === "Read")!;
+    expect(() =>
+      validateBuiltinToolExposures([
+        { ...read, exposure: { presetTags: ["general"], requires: ["MissingCompanion"] } },
+      ]),
+    ).toThrow(/requires unknown tool/);
+    expect(() =>
+      validateBuiltinToolExposures([
+        { ...read, exposure: { presetTags: ["general"], promptSections: ["unknown"] } },
+      ]),
+    ).toThrow(/unknown prompt section/);
+  });
+
   it("every availability-gated tool is in the general preset whitelist", () => {
     // Regression (UseCredential「找不到这个工具」): a tool with a visibility
     // guard in BUILTIN_TOOL_GUARDS still has to be in the preset whitelist —
@@ -56,22 +115,6 @@ describe("preset builtin tool whitelist", () => {
     expect(general.builtinTools).toContain("AddMarketplace");
   });
 
-  it("the general preset offers DriveClaudeCode (no ScheduleRoomTask — 定时统一走 CronCreate)", () => {
-    // Regression (用户实测「为什么驱动 cc 没作为工具」,同 BashOutput/UseCredential/
-    // EditModelCatalog 第四次复发): DriveClaudeCode 在 BUILTIN_TOOLS 注册了、工具描述也
-    // 写了,但漏进 preset 白名单 → registerBuiltins 静默滤掉 → agent 工具箱里根本没有,
-    // 被问「有指挥 Claude Code 的工具吗」时只能幻觉 RemoteTrigger / 建议 Bash claude -p
-    // 兜底。钉死它在 general preset 可见。ScheduleRoomTask 已删:定时/循环统一走 CronCreate。
-    const general = BUILTIN_AGENT_PRESETS.general ?? Object.values(BUILTIN_AGENT_PRESETS)[0]!;
-    expect(general.builtinTools).toContain("DriveClaudeCode");
-    expect(general.builtinTools).not.toContain("ScheduleRoomTask");
-  });
-
-  it("the general preset offers DriveAgentJobs before launching DriveAgent work", () => {
-    const general = BUILTIN_AGENT_PRESETS.general ?? Object.values(BUILTIN_AGENT_PRESETS)[0]!;
-    expect(general.builtinTools).toContain("DriveAgentJobs");
-  });
-
   it("any preset offering Bash also offers its background-shell companions", () => {
     // If Bash(run_in_background=true) is available, BashOutput/KillShell/ListShells
     // must be too — otherwise the model can launch a background shell it can never
@@ -86,22 +129,5 @@ describe("preset builtin tool whitelist", () => {
         ListShells: tools.has("ListShells"),
       }).toEqual({ preset: preset.name, BashOutput: true, KillShell: true, ListShells: true });
     }
-  });
-
-  it("desktop terminal-coding exposes SwitchSessionWorkspace and hides legacy worktree tools", () => {
-    const tools = resolveBuiltinToolNames({
-      preset: "terminal-coding",
-      host: "desktop",
-    });
-    expect(tools).toContain("SwitchSessionWorkspace");
-    expect(tools).not.toContain("EnterWorktree");
-    expect(tools).not.toContain("ExitWorktree");
-  });
-
-  it("non-desktop terminal-coding keeps legacy worktree tools and does not add the bridge tool", () => {
-    const tools = resolveBuiltinToolNames({ preset: "terminal-coding" });
-    expect(tools).toContain("EnterWorktree");
-    expect(tools).toContain("ExitWorktree");
-    expect(tools).not.toContain("SwitchSessionWorkspace");
   });
 });

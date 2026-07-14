@@ -115,19 +115,21 @@ The builtins that declare path policy include `Read`, `Write`, `GenerateImage.re
 
 ## 6. Builtins, presets, and visibility
 
-`BUILTIN_TOOLS` currently registers 57 builtin tools (`builtin/index.ts:105`). Each entry carries `permissionDefault`, `isReadOnly`, `isConcurrencySafe`, optional `pathPolicy`, optional `timeoutMs`, and the handler (`builtin/index.ts:107`). The registry filters this table by the selected builtin list when constructed (`registry.ts:30`), validates metadata (`registry.ts:48`), and stores both definition and executor (`registry.ts:51`).
+Core's `BUILTIN_TOOLS` and every capability tool entry carry the definition, executor, `permissionDefault`, concurrency/read-only flags, optional path policy/timeout, and exhaustive preset exposure metadata. Engine composes the catalogs through `CapabilityModule`, and the registry filters the result by the selected preset before storing definition and executor.
 
 Registered builtin tools by category:
 
-- **File/workspace**: `Read`, `Write`, `Edit`, `ApplyPatch`, `Glob`, `Grep`, `view_image`, `NotebookEdit`, `LSP`, `EditModelCatalog`
+- **File/workspace**: `Read`, `Write`, `Edit`, `Glob`, `Grep`, `view_image`, `EditModelCatalog`
 - **Shell/runtime**: `Bash`, `PowerShell`, `REPL`, `BashOutput`, `KillShell`, `ListShells`
 - **Web/media/browser**: `WebSearch`, `WebFetch`, `GenerateImage`, `GenerateVideo`, `browser_observe`, `browser_act`, `browser_navigate`
-- **Agent/multi-model/orchestration**: `Agent`, `AgentStatus`, `AgentCancel`, `AgentSendInput`, `Arena`, `DriveAgent`, `DriveClaudeCode`, `CheckQuota`
-- **Planning/coordination**: `AskUserQuestion`, `EnterPlanMode`, `ExitPlanMode`, `ToolSearch`, `TodoWrite`, `Sleep`, `Config`, `Brief`, `complete_goal`, `cancel_goal`, `AddMarketplace`
+- **Agent/multi-model/orchestration**: `Agent`, `AgentStatus`, `AgentCancel`, `AgentSendInput`, `Arena`
+- **Planning/coordination**: `AskUserQuestion`, `EnterPlanMode`, `ExitPlanMode`, `ToolSearch`, `TodoWrite`, `Sleep`, `Config`, `complete_goal`, `cancel_goal`, `AddMarketplace`
 - **MCP/credentials**: `MCPTool`, `ListMcpResources`, `ReadMcpResource`, `UseCredential`, `InjectCredential`
-- **Automation/memory/worktree**: `CronCreate`, `CronDelete`, `CronList`, `MemoryList`, `MemoryRead`, `MemorySave`, `MemoryDelete`, `EnterWorktree`, `ExitWorktree`
+- **Automation/memory**: `CronCreate`, `CronDelete`, `CronList`, `MemoryList`, `MemoryRead`, `MemorySave`, `MemoryDelete`
 
-The preset whitelist is a second layer. `general` includes 47 default builtin names (`preset/index.ts:34`); `terminal-coding` adds `EnterWorktree`, `ExitWorktree`, `NotebookEdit`, `LSP`, `Brief`, and `Arena` (`preset/index.ts:129`). Registered-but-not-default-visible tools such as `view_image`, `AgentStatus`, `AgentSendInput`, and `AddMarketplace` still exist in `BUILTIN_TOOLS`, but the active preset must include them or `resolveBuiltinToolNames()` must enable them (`preset/index.ts:320`) before `ToolRegistry.registerBuiltins()` installs them (`registry.ts:44`).
+The optional coding package contributes `ApplyPatch`, `NotebookEdit`, `LSP`, `Brief`, `EnterWorktree`, `ExitWorktree`, `SwitchSessionWorkspace`, `DriveAgent`, `DriveAgentJobs`, `DriveClaudeCode`, and `CheckQuota`. Their implementations and repository-specific runtime services are not shipped as core source.
+
+Preset exposure is derived from each tool entry's `presetTags`; there is no second hand-written whitelist. Core defaults to `harness-min`. Installing the coding capability contributes `terminal-coding` as the host default and combines the appropriate core tools with its coding catalog. Registered-but-not-selected tools still require the active preset or an explicit enabled override before `ToolRegistry` installs them.
 
 Engine applies more runtime filters per turn:
 

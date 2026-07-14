@@ -4,11 +4,10 @@
  * Supports layered instruction files with priority ordering:
  *   1. managed  — shipped defaults (~/.code-shell/CODESHELL.md)
  *   2. user     — user-level (~/.code-shell/CODESHELL.md, ~/.code-shell/rules/)
- *   3. project  — project-level (from git root to cwd, walking down)
+ *   3. project  — project-level (from the host-provided boundary to cwd, walking down)
  *   4. local    — local overrides (CODESHELL.local.md, not version-controlled)
  *
- * Entries carry a `depth` field: 0 = git root / top-most, increasing toward cwd.
- * The scanner stops at the git repository root (not filesystem root).
+ * Entries carry a `depth` field: 0 = project boundary / top-most, increasing toward cwd.
  *
  * File name search order per directory:
  *   CODESHELL.md → .codeshell/CODESHELL.md → .codeshell/rules/*.md
@@ -16,8 +15,7 @@
  */
 
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
-import { join, dirname, resolve } from "node:path";
-import { execSync } from "node:child_process";
+import { join, dirname, parse, resolve } from "node:path";
 import { userHome } from "../settings/manager.js";
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -31,7 +29,7 @@ export interface InstructionEntry {
   source: "managed" | "user" | "project" | "local";
   /**
    * Depth relative to the project root.
-   * 0 = git root (or scan ceiling), increases toward cwd.
+   * 0 = project boundary (or scan ceiling), increases toward cwd.
    * user/managed entries have depth -1.
    */
   depth: number;
@@ -44,8 +42,10 @@ export interface ScanOptions {
   scanDirs?: string[];
   /** Compatibility file names to also look for (default: ["CLAUDE.md"]) */
   compatFileNames?: string[];
-  /** If true, do NOT stop at git root — scan all the way to / */
+  /** If true, ignore a supplied project boundary and scan all the way to the filesystem root. */
   ignoreGitBoundary?: boolean;
+  /** Domain/host-provided project boundary. Core itself assumes only cwd. */
+  boundaryFinder?: (cwd: string) => string | null;
 }
 
 // ─── Public API ─────────────────────────────────────────────────────
@@ -79,8 +79,11 @@ export function scanInstructions(cwd: string, options: ScanOptions = {}): Instru
   }
   tryAddRulesDir(join(homeCompatDir, "rules"), "user", -1, entries);
 
-  // 2. Determine scan ceiling (git root or /)
-  const ceiling = options.ignoreGitBoundary ? "/" : findGitRoot(cwd) ?? "/";
+  // 2. Determine scan ceiling. A generic harness must not infer a Git project
+  // or execute a VCS command. Domain packs can inject their own boundary.
+  const ceiling = options.ignoreGitBoundary
+    ? parse(resolve(cwd)).root
+    : (options.boundaryFinder?.(cwd) ?? resolve(cwd));
 
   // 3. Collect directories from ceiling down to cwd
   const dirs = collectDirsDownward(resolve(cwd), ceiling);
@@ -169,22 +172,6 @@ function tryAddRulesDir(
     }
   } catch {
     // Skip unreadable dirs
-  }
-}
-
-/**
- * Find the git repository root for the given directory, or null.
- */
-function findGitRoot(cwd: string): string | null {
-  try {
-    return execSync("git rev-parse --show-toplevel", {
-      cwd,
-      encoding: "utf-8",
-      timeout: 3000,
-      stdio: ["pipe", "pipe", "pipe"],
-    }).trim() || null;
-  } catch {
-    return null;
   }
 }
 

@@ -36,16 +36,6 @@ export interface ToolRuntimeHost {
   readonly planMode: boolean;
   /** Toggle plan mode (EnterPlanMode / ExitPlanMode tools). */
   setPlanMode(value: boolean): void;
-  /** Per-worktree setup scripts, or undefined for sub-agents / no cwd. */
-  readWorktreeSetupScripts(
-    cwd?: string,
-  ): { default?: string; macos?: string; linux?: string; windows?: string } | undefined;
-  /** Branch prefix used for CodeShell-managed worktree branches. */
-  readWorktreeBranchPrefix?(cwd?: string): string | undefined;
-  /** Resolve a setup-only sandbox for a newly-created worktree root. */
-  resolveWorktreeSetupSandbox?(cwd: string): Promise<SandboxBackend | undefined>;
-  /** Resolve setup-only shell env for a newly-created worktree root. */
-  readWorktreeSetupShellEnv?(cwd?: string): Record<string, string> | undefined;
   /** Session state store used by session-scoped tools such as worktree switching. */
   getSessionManager?(): SessionManager;
 }
@@ -211,6 +201,8 @@ export interface ToolVisibilityContext {
   cwd: string;
   hasGoal: boolean;
   settingsScope?: import("../settings/manager.js").SettingsScope;
+  host?: string;
+  isSubAgent?: boolean;
 }
 
 export interface ExternalFileChangesRecord {
@@ -236,6 +228,8 @@ export interface ToolContext {
   modelPool?: ModelPool;
   /** Tool registry (ToolSearch reads this to enumerate available tools). */
   toolRegistry: ToolRegistry;
+  /** Opaque services contributed by capability modules, keyed by capability id. */
+  capabilityServices?: Readonly<Record<string, unknown>>;
   /** UI-backed AskUserQuestion handler. Undefined → headless mode. */
   askUser?: AskUserFn;
   /** Sub-agent spawner (Agent tool). Undefined → Agent tool unavailable. */
@@ -416,6 +410,8 @@ export interface ToolContext {
    * session workspace.
    */
   workspace?: import("./workspace-bridge.js").WorkspaceBridge;
+  /** Host panel discovery/focus bridge. Undefined in non-Desktop/headless engines. */
+  panels?: import("./panel-bridge.js").PanelHostBridge;
   /**
    * Inject a stored cookie credential into the built-in browser (restore its
    * login state so the AI can drive the page as that account). The host

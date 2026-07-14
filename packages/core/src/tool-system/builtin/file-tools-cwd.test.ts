@@ -6,7 +6,6 @@ import type { ToolContext } from "../context.js";
 import { readTool } from "./read.js";
 import { writeTool } from "./write.js";
 import { editTool } from "./edit.js";
-import { notebookEditTool } from "./notebook-edit.js";
 
 describe("file tools resolve relative paths against ctx.cwd", () => {
   let workspace: string;
@@ -54,16 +53,5 @@ describe("file tools resolve relative paths against ctx.cwd", () => {
 
     expect(readFileSync(join(workspace, "edit.txt"), "utf-8")).toBe("hello there");
     expect(readFileSync(join(processRoot, "edit.txt"), "utf-8")).toBe("hello process");
-  });
-
-  test("NotebookEdit writes under ctx.cwd", async () => {
-    const out = await notebookEditTool(
-      { file_path: "notes.ipynb", action: "insert", source: "print(1)" },
-      ctx,
-    );
-
-    expect(out).toMatch(/Inserted/);
-    expect(existsSync(join(workspace, "notes.ipynb"))).toBe(true);
-    expect(existsSync(join(processRoot, "notes.ipynb"))).toBe(false);
   });
 });

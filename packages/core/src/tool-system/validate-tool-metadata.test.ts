@@ -42,21 +42,6 @@ describe("validateToolMetadata", () => {
     expect(() => validateToolMetadata(t)).toThrow(/BadRead/);
   });
 
-  it("validates apply_patch policies the same way", () => {
-    const ok = tool({
-      name: "ApplyPatch",
-      inputSchema: { type: "object", properties: { input: { type: "string" } } },
-      pathPolicy: [{ kind: "apply_patch", arg: "input", operation: "write" }],
-    });
-    const bad = tool({
-      name: "ApplyPatchBad",
-      inputSchema: { type: "object", properties: { input: { type: "string" } } },
-      pathPolicy: [{ kind: "apply_patch", arg: "patch", operation: "write" }],
-    });
-    expect(findToolMetadataIssues(ok)).toEqual([]);
-    expect(findToolMetadataIssues(bad)).toHaveLength(1);
-  });
-
   it("treats a defaultToCwd arg the same — it must still be a declared property", () => {
     // Glob/Grep can omit the arg at call time (defaults to cwd), but the field
     // must still be declared so a typo can't hide.

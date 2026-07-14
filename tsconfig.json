@@ -20,19 +20,27 @@
       "@cjhyy/code-shell-core": ["packages/core/src/index.ts"],
       "@cjhyy/code-shell-core/internal": ["packages/core/src/index.internal.ts"],
       "@cjhyy/code-shell-core/*": ["packages/core/src/*"],
+      "@cjhyy/code-shell-capability-coding": ["packages/coding/src/index.ts"],
+      "@cjhyy/code-shell-capability-coding/*": ["packages/coding/src/*"],
       "@cjhyy/code-shell-tui": ["packages/tui/src/index.ts"],
       "@cjhyy/code-shell-tui/*": ["packages/tui/src/*"]
     },
     "jsx": "react-jsx",
     "types": ["node", "bun-types"]
   },
-  "include": ["packages/core/src/**/*.ts", "packages/tui/src/**/*.ts", "packages/tui/src/**/*.tsx"],
+  "include": [
+    "packages/core/src/**/*.ts",
+    "packages/coding/src/**/*.ts",
+    "packages/tui/src/**/*.ts",
+    "packages/tui/src/**/*.tsx"
+  ],
   "exclude": [
     "node_modules",
     "dist",
     "tests",
     "packages/desktop",
     "packages/core/dist",
+    "packages/coding/dist",
     "packages/tui/dist"
   ]
 }

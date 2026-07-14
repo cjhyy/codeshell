@@ -28,8 +28,6 @@ import {
   enforcePathPolicyWithApproval,
   type PathOperation,
 } from "./path-policy.js";
-import { parsePatch } from "./builtin/apply-patch/parser.js";
-import { BUILTIN_TOOL_GUARDS } from "./builtin/index.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "./builtin/complete-goal.js";
 import { CANCEL_GOAL_TOOL_NAME } from "./builtin/cancel-goal.js";
 import { toolResultDisplayText } from "./tool-result-redaction.js";
@@ -187,7 +185,7 @@ export class ToolExecutor {
         isError: true,
       };
     }
-    const visibilityGuard = BUILTIN_TOOL_GUARDS.get(call.toolName);
+    const visibilityGuard = this.registry.getAvailabilityGuard(call.toolName);
     if (
       visibilityGuard &&
       this.toolCtx?.toolVisibility &&
@@ -596,6 +594,23 @@ export class ToolExecutor {
     tool: RegisteredTool | undefined,
     args: Record<string, unknown>,
   ): Promise<string | null> {
+    if (tool?.pathResolver) {
+      let targets: readonly string[];
+      try {
+        targets = tool.pathResolver.resolve(args, this.toolCtx?.cwd ?? process.cwd());
+      } catch (err) {
+        return `Error: ${err instanceof Error ? err.message : String(err)}`;
+      }
+      for (const target of targets) {
+        const blocked = await enforcePathPolicyWithApproval(
+          target,
+          tool.pathResolver.operation,
+          this.toolCtx,
+        );
+        if (blocked) return blocked;
+      }
+    }
+
     const policies = tool?.pathPolicy;
     if (!policies?.length) return null;
 
@@ -615,52 +630,33 @@ export class ToolExecutor {
     policy: ToolPathPolicy,
     args: Record<string, unknown>,
   ): string[] | string {
-    if (policy.kind === "arg") {
-      const raw = args[policy.arg];
-      if (typeof raw === "string" && raw.length > 0) {
-        // Resolve a RELATIVE single-string path arg against ctx.cwd before
-        // classification, mirroring the array branch below and the apply_patch
-        // branch — otherwise classifyPath's process.cwd()-based resolution
-        // mis-places an in-workspace relative path (e.g. Read "src/x.ts") as
-        // "outside workspace" and over-prompts. Absolute paths pass through.
-        const cwd = this.toolCtx?.cwd ?? process.cwd();
-        return [isAbsolutePath(raw) ? raw : resolvePath(cwd, raw)];
-      }
-      // Array path args (e.g. GenerateImage `referenceImages`, GenerateVideo
-      // `images`): enforce EVERY element. Without this an array yielded zero
-      // targets, so out-of-workspace reads bypassed the path-policy "ask" gate
-      // that Read/Write enforce. http(s) URLs aren't file reads → skip them.
-      // Relative paths resolve against ctx.cwd (the workspace) before
-      // classification, like the apply_patch branch — otherwise classifyPath's
-      // process.cwd()-based resolution would mis-place an in-workspace relative
-      // path as "outside" and over-prompt. Non-string / empty elements skipped.
-      if (Array.isArray(raw)) {
-        const cwd = this.toolCtx?.cwd ?? process.cwd();
-        const paths = raw
-          .filter((v): v is string => typeof v === "string" && v.length > 0)
-          .filter((v) => !/^https?:\/\//i.test(v))
-          .map((v) => (isAbsolutePath(v) ? v : resolvePath(cwd, v)));
-        if (paths.length > 0) return paths;
-      }
-      if (policy.defaultToCwd && this.toolCtx?.cwd) return [this.toolCtx.cwd];
-      return [];
-    }
-
-    const rawPatch = args[policy.arg];
-    if (typeof rawPatch !== "string" || rawPatch.length === 0) return [];
-    try {
-      const parsed = parsePatch(rawPatch, "lenient");
+    const raw = args[policy.arg];
+    if (typeof raw === "string" && raw.length > 0) {
+      // Resolve a RELATIVE single-string path arg against ctx.cwd before
+      // classification, mirroring the array branch below and the apply_patch
+      // branch — otherwise classifyPath's process.cwd()-based resolution
+      // mis-places an in-workspace relative path (e.g. Read "src/x.ts") as
+      // "outside workspace" and over-prompts. Absolute paths pass through.
       const cwd = this.toolCtx?.cwd ?? process.cwd();
-      const targets: string[] = [];
-      for (const hunk of parsed.hunks) {
-        targets.push(resolvePath(cwd, hunk.path));
-        if (hunk.kind === "update" && hunk.movePath) {
-          targets.push(resolvePath(cwd, hunk.movePath));
-        }
-      }
-      return targets;
-    } catch (err) {
-      return `Error: ${(err as Error).message}`;
+      return [isAbsolutePath(raw) ? raw : resolvePath(cwd, raw)];
     }
+    // Array path args (e.g. GenerateImage `referenceImages`, GenerateVideo
+    // `images`): enforce EVERY element. Without this an array yielded zero
+    // targets, so out-of-workspace reads bypassed the path-policy "ask" gate
+    // that Read/Write enforce. http(s) URLs aren't file reads → skip them.
+    // Relative paths resolve against ctx.cwd (the workspace) before
+    // classification, like the apply_patch branch — otherwise classifyPath's
+    // process.cwd()-based resolution would mis-place an in-workspace relative
+    // path as "outside" and over-prompt. Non-string / empty elements skipped.
+    if (Array.isArray(raw)) {
+      const cwd = this.toolCtx?.cwd ?? process.cwd();
+      const paths = raw
+        .filter((v): v is string => typeof v === "string" && v.length > 0)
+        .filter((v) => !/^https?:\/\//i.test(v))
+        .map((v) => (isAbsolutePath(v) ? v : resolvePath(cwd, v)));
+      if (paths.length > 0) return paths;
+    }
+    if (policy.defaultToCwd && this.toolCtx?.cwd) return [this.toolCtx.cwd];
+    return [];
   }
 }

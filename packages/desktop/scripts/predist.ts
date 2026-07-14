@@ -51,6 +51,8 @@ const desktopRoot = resolve(here, "..");
 const repoRoot = resolve(desktopRoot, "../..");
 const coreSrc = resolve(repoRoot, "packages/core");
 const target = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-core");
+const codingSrc = resolve(repoRoot, "packages/coding");
+const codingTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-capability-coding");
 
 function log(msg: string): void {
   // eslint-disable-next-line no-console
@@ -93,6 +95,24 @@ function main(): void {
   installProductionDeps(target);
 
   log(`materialized core into node_modules (LICENSE/README excluded)`);
+
+  // The desktop worker entrypoint lives in the coding capability package. It
+  // has no production dependency besides the sibling core package above, so a
+  // precise dist + manifest copy is sufficient and avoids workspace symlinks.
+  removeTarget(codingTarget);
+  mkdirSync(codingTarget, { recursive: true });
+  copyDir(resolve(codingSrc, "dist"), resolve(codingTarget, "dist"));
+  copyFile(resolve(codingSrc, "package.json"), resolve(codingTarget, "package.json"));
+  log(`materialized coding capability into node_modules`);
+}
+
+function removeTarget(path: string): void {
+  if (isSymlink(path)) {
+    log(`unlinking link -> ${safeReadlink(path)}`);
+    rmSync(path, { recursive: true, force: true });
+  } else if (existsSync(path)) {
+    rmSync(path, { recursive: true, force: true });
+  }
 }
 
 // Install core's FULL production dependency CLOSURE as real files under the
@@ -112,9 +132,11 @@ function main(): void {
 // pulls in new transitive deps, they are installed automatically — no manual
 // store-walking to keep in sync.
 function installProductionDeps(coreTarget: string): void {
-  const corePkg = JSON.parse(
-    readFileSync(resolve(coreSrc, "package.json"), "utf8"),
-  ) as { name: string; version: string; dependencies?: Record<string, string> };
+  const corePkg = JSON.parse(readFileSync(resolve(coreSrc, "package.json"), "utf8")) as {
+    name: string;
+    version: string;
+    dependencies?: Record<string, string>;
+  };
 
   // Minimal manifest: name/version + prod deps only. Omitting workspace fields
   // (workspaces, scripts, devDependencies) keeps bun from re-linking the

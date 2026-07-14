@@ -30,7 +30,7 @@ CodeShell is one orchestration engine wearing three faces:
 - an **Electron desktop app** with chat, file/browser/terminal/diff panels, model & credential management, an extensions marketplace, automation, and a phone remote, and
 - a **programmatic SDK** (`import { Engine } from "@cjhyy/code-shell"`) for embedding the engine in your own product.
 
-The core is deliberately **domain-agnostic**. The turn loop, context management, permissions, MCP integration, hooks, tasks, cron, sub-agents, sessions, and memory all stay generic; coding behavior is just a *preset* layered on top — not baked into the engine. (See `packages/core/CONTRIBUTING.md`: "core only carries mechanism, not policy.")
+The core is deliberately **domain-agnostic**. The turn loop, context management, permissions, MCP integration, hooks, tasks, cron, sub-agents, sessions, and memory all stay generic. Coding tools, git/worktree behavior, LSP, review, quota, and coding prompts live in the physically separate `@cjhyy/code-shell-capability-coding` package and are composed by the CLI/Desktop hosts. (See `packages/core/CONTRIBUTING.md`: "core only carries mechanism, not policy.")
 
 > Status: **0.6.x, entering beta**. The desktop app is the headline product; the CLI and SDK share the same core engine.
 
@@ -99,10 +99,11 @@ It gives you chat with streaming output, a side-by-side file / browser / termina
 
 ### Presets
 
-| Preset | Purpose | Extra tools |
-|--------|---------|-------------|
-| `general` | General orchestration, research, automation, long-running work | Core orchestration tools only |
-| `terminal-coding` | Terminal-native coding assistant | `EnterWorktree`, `ExitWorktree`, `NotebookEdit`, `LSP`, `Brief`, `Arena` |
+| Preset            | Purpose                                                        | Extra tools                                                              |
+| ----------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `harness-min`     | Domain-neutral core default for embedding                      | Minimal filesystem, shell, MCP, memory, task and agent mechanisms        |
+| `general`         | General orchestration, research, automation, long-running work | Core orchestration tools only                                            |
+| `terminal-coding` | Terminal-native coding assistant                               | `EnterWorktree`, `ExitWorktree`, `NotebookEdit`, `LSP`, `Brief`, `Arena` |
 
 Presets select the system prompt, the built-in tool set, and permission defaults. Configure via the SDK, the CLI `--preset` flag, or settings.
 
@@ -127,8 +128,9 @@ Presets select the system prompt, the built-in tool set, and permission defaults
 
 ### Built-in tools
 
-The default `general` preset whitelists 48 built-ins. The CLI defaults to
-`terminal-coding`, which adds coding extras. Runtime guards may hide tools that
+Core by itself defaults to the minimal `harness-min` preset. The CLI and Desktop
+compose the coding capability package, whose host default is `terminal-coding`.
+Runtime guards may hide tools that
 need unavailable providers, credentials, cookies, or an active goal.
 
 - **File / workspace**: `Read`, `Write`, `Edit`, `ApplyPatch`, `Glob`, `Grep`
@@ -216,6 +218,7 @@ The OpenAI-compatible provider aborts any LLM stream idle for `CODESHELL_STREAM_
 At a high level, CodeShell routes CLI, headless, SDK, and desktop clients through the same engine runtime:
 
 - **Preset resolution** selects the system prompt, built-in tools, and permission defaults.
+- **Capability composition** lets products install their own tools, presets, prompt sections, file-history behavior, and session-workspace adapters without putting product policy in core.
 - **TurnLoop** coordinates model streaming, context assembly, tool execution, and lifecycle events.
 - **Tool system** hosts built-ins, MCP tools, permissions, hooks, and cancellation.
 - **Session / run layers** persist transcripts, state, tasks, automation runs, and memories.
@@ -225,7 +228,7 @@ In the desktop app, the Electron main process acts as an IPC service layer: it d
 Design principles:
 
 - **Core first** — the orchestration engine stays domain-agnostic.
-- **Presets over hardcoding** — coding behavior lives in configuration.
+- **Capabilities over hardcoding** — coding behavior lives in a separate package composed at the host boundary.
 - **Secure by default** — permission-gated actions and explicit approval flow; owner-only credential files.
 - **Long-running ready** — tasks, cron, sleep, sub-agents, and persistent goals are first-class.
 
@@ -235,7 +238,8 @@ Design principles:
 
 ```text
 packages/
-├── core/      # Engine, context, tools, MCP, hooks, sessions, runs, presets, memory
+├── core/      # Domain-agnostic engine, context, MCP, hooks, sessions, runs, memory
+├── coding/    # Coding capability pack: tools, git/worktrees, LSP, review, prompt/presets
 ├── tui/       # Terminal CLI, Ink-based UI, renderer, commands, approvals
 ├── desktop/   # Electron desktop client + agent worker bridge + mobile remote app
 └── cdp/       # Environment-agnostic CDP browser-action layer (no Playwright)
@@ -256,8 +260,8 @@ scripts/      # Build, release, and repo maintenance scripts
 
 ```bash
 bun install
-bun run build          # build core + tui + meta package
-bun run typecheck      # root core + tui check; currently not a clean gate
+bun run build          # build core + coding capability + tui + chat + meta package
+bun run typecheck      # root core + coding capability + tui + chat check
 bun test               # core / tui test suites
 
 # Desktop has its OWN typecheck and build (the root checks do NOT cover it):
@@ -266,7 +270,7 @@ bun run typecheck
 bun run build
 ```
 
-> Current caveat: `bun run typecheck` at the repo root reports a pre-existing test typing error in `packages/core/src/tool-system/builtin/drive-claude-code.test.ts:158`. Use it for signal, but do not treat it as a clean gate until that is fixed.
+> Current caveat: `bun run typecheck` at the repository root still reports pre-existing test-source typing diagnostics. The package builds and Desktop typecheck above are the clean gates for this change.
 
 `bun run dev` launches the desktop app. For the TUI in dev: `bun run dev:tui`.
 
@@ -276,6 +280,8 @@ bun run build
 
 ## Further reading
 
+- [Plugin panels v1](docs/plugin-panels.md)
+
 - [Architecture & feature inventory](docs/architecture/README.md)
 - [Roadmap & TODO](docs/todo/README.md)
 - [Prior architecture documentation set (archived, pending rewrite)](docs/archive/architecture/README.md)
@@ -284,7 +290,7 @@ bun run build
 
 ## Acknowledgments
 
-The `ApplyPatch` tool (`packages/core/src/tool-system/builtin/apply-patch/`) is adapted from
+The `ApplyPatch` tool (`packages/coding/src/tools/apply-patch/`) is adapted from
 [OpenAI Codex `codex-rs/apply-patch`](https://github.com/openai/codex/tree/main/codex-rs/apply-patch),
 licensed under the Apache License 2.0. See `NOTICE.md` and `LICENSE-codex` in that directory
 for details, including the intentional behavioral divergence where our applier rolls back

@@ -7,7 +7,7 @@
  * so the panel notes that and lets you refresh explicitly.
  */
 import React from "react";
-import type { QuotaResult, ProviderQuota } from "@cjhyy/code-shell-core";
+import type { ProviderQuota, QuotaResult } from "@cjhyy/code-shell-capability-coding";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -120,7 +120,9 @@ function ProviderBlock({ name, pq }: { name: string; pq: ProviderQuota }) {
       <div className="mb-1 flex items-center gap-1.5">
         <span className="font-medium">{name}</span>
         {pq.planType && (
-          <span className="rounded bg-muted px-1 text-[10px] text-muted-foreground">{pq.planType}</span>
+          <span className="rounded bg-muted px-1 text-[10px] text-muted-foreground">
+            {pq.planType}
+          </span>
         )}
       </div>
       <div className="flex flex-col gap-1.5">

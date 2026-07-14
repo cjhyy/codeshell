@@ -102,21 +102,20 @@ export type ToolPathPolicyOperation =
       default: "read" | "write";
     };
 
-export type ToolPathPolicy =
-  | {
-      kind: "arg";
-      /** Argument containing a file or directory path. */
-      arg: string;
-      operation: ToolPathPolicyOperation;
-      /** Use ctx.cwd when the argument is omitted. Useful for Glob/Grep roots. */
-      defaultToCwd?: boolean;
-    }
-  | {
-      kind: "apply_patch";
-      /** Argument containing the V4A patch text. */
-      arg: string;
-      operation: "write";
-    };
+export interface ToolPathPolicy {
+  kind: "arg";
+  /** Argument containing a file or directory path. */
+  arg: string;
+  operation: ToolPathPolicyOperation;
+  /** Use ctx.cwd when the argument is omitted. Useful for Glob/Grep roots. */
+  defaultToCwd?: boolean;
+}
+
+/** Capability-owned resolver for compound inputs that reference multiple paths. */
+export interface ToolPathResolver {
+  operation: "read" | "write";
+  resolve(args: Record<string, unknown>, cwd: string): readonly string[];
+}
 
 export interface RegisteredTool {
   name: string;
@@ -133,6 +132,8 @@ export interface RegisteredTool {
   permissionDefault: PermissionDecision;
   isConcurrencySafe?: boolean;
   isReadOnly?: boolean;
+  /** Used when file targets cannot be described as one direct schema argument. */
+  pathResolver?: ToolPathResolver;
   /** Declaratively marks result bodies as sensitive for retained Goal evidence. */
   sensitiveResult?: boolean;
   /**

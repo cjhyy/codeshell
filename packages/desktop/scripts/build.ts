@@ -19,10 +19,14 @@ async function buildMain(): Promise<void> {
     platform: "node",
     format: "esm",
     outfile: resolve(root, "out/main/index.mjs"),
-    external: ["electron", "@cjhyy/code-shell-core"],
+    external: ["electron", "@cjhyy/code-shell-core", "@cjhyy/code-shell-capability-coding"],
     loader: { ".md": "text" },
     banner: {
-      js: "import { createRequire as __ccr } from 'node:module'; const require = __ccr(import.meta.url);",
+      // esbuild wraps bundled CommonJS dependencies but does not provide the
+      // per-module __filename/__dirname globals they normally receive from
+      // Node. A few SDKs read those globals during module initialization, so
+      // provide bundle-relative fallbacks alongside the existing require shim.
+      js: "import { createRequire as __ccr } from 'node:module'; import { dirname as __ccd } from 'node:path'; import { fileURLToPath as __ccf } from 'node:url'; const require = __ccr(import.meta.url); const __filename = __ccf(import.meta.url); const __dirname = __ccd(__filename);",
     },
     minify: false,
     logLevel: "info",
@@ -34,6 +38,7 @@ async function buildPreload(): Promise<void> {
     entryPoints: {
       index: resolve(root, "src/preload/index.ts"),
       "browser-guest": resolve(root, "src/preload/browser-guest.ts"),
+      "plugin-panel": resolve(root, "src/preload/plugin-panel.ts"),
     },
     bundle: true,
     platform: "node",

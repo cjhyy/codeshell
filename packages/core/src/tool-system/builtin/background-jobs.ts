@@ -21,7 +21,7 @@
  * loop observe the same instance.
  */
 
-import { normalizeCwdPath } from "../../cc-orchestrator/cwd-normalize.js";
+import { normalizeCwdPath } from "../../utils/cwd-normalize.js";
 import { execFileSync } from "node:child_process";
 import { resolveGit } from "../../utils/exec.js";
 
