@@ -73,6 +73,7 @@ export async function preparePluginPanel(id: string): Promise<PreparedPluginPane
     id,
     src: encodePanelUrl(resource.descriptor.hostId, resource.entry),
     partition,
+    revision: resource.descriptor.revision,
   };
 }
 

@@ -9,6 +9,8 @@ import { GoalProgressView } from "./GoalProgressView";
 import { StreamingMarkdown } from "./StreamingMarkdown";
 import { processGroupLabel, type RenderedTurnProcessGroup } from "./streamGroups";
 import { AgentGroupCard } from "./AgentGroupCard";
+import { isSystemReminderText } from "../contextSelection";
+import { SystemReminderTask } from "./SystemReminderTask";
 
 interface Props {
   /** Rendered shape: inner items may include an AgentGroup (foldAgentGroups). */
@@ -70,9 +72,7 @@ function TurnProcessGroupCardImpl({ group, turnEpoch, cwd }: Props) {
     const t = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(t);
   }, [group.isLive]);
-  const elapsedMs = group.isLive
-    ? Math.max(0, nowMs - group.firstToolStartedAt)
-    : group.durationMs;
+  const elapsedMs = group.isLive ? Math.max(0, nowMs - group.firstToolStartedAt) : group.durationMs;
   const label = processGroupLabel(elapsedMs);
 
   // An interrupted turn never collapses behind the "已处理 Xs ⌄" header — its
@@ -81,9 +81,16 @@ function TurnProcessGroupCardImpl({ group, turnEpoch, cwd }: Props) {
   // group), so we deliberately drop the header here to avoid a duplicate marker.
   const showHeader = !group.stopped;
   const itemsVisible = group.stopped || open;
+  const toolNames = group.items.flatMap((item) => {
+    if (item.kind === "tool") return [item.toolName];
+    if (item.kind === "tool_group") {
+      return item.items.flatMap((member) => (member.kind === "tool" ? [member.toolName] : []));
+    }
+    return [];
+  });
 
   return (
-    <div className="px-4 py-1">
+    <div className="px-4 py-1" data-message-kind="process" data-tool-names={toolNames.join(" ")}>
       {showHeader && (
         <button
           type="button"
@@ -101,7 +108,9 @@ function TurnProcessGroupCardImpl({ group, turnEpoch, cwd }: Props) {
         <div className={showHeader ? "mt-1 flex flex-col gap-1" : "flex flex-col gap-1"}>
           {dedupeById(group.items).map((m) => {
             if (m.kind === "tool_group") {
-              return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} defaultOpen />;
+              return (
+                <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} defaultOpen />
+              );
             }
             if (m.kind === "tool") {
               return <ToolCard key={m.id} message={m} turnEpoch={turnEpoch} cwd={cwd} />;
@@ -122,6 +131,9 @@ function TurnProcessGroupCardImpl({ group, turnEpoch, cwd }: Props) {
               );
             }
             if (m.kind === "user") {
+              if (isSystemReminderText(m.text)) {
+                return <SystemReminderTask key={m.id} text={m.text} />;
+              }
               // A steer / goal-wakeup / cron续接 spliced into a still-live turn
               // lands INSIDE this group (injected user is not a turn boundary,
               // see streamGroups foldTurnProcess). It must render as a

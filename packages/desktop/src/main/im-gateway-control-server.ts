@@ -33,6 +33,18 @@ export interface GatewayControlServerOptions {
   petChat?: (request: PetChatControlRequest) => Promise<PetChatControlResult>;
 }
 
+export interface GatewayControlEventInput {
+  type: "tunnel.connected" | "tunnel.disconnected" | "tunnel.error";
+  text: string;
+  title?: string;
+  button?: { text: string; url: string };
+}
+
+export interface GatewayControlEvent extends GatewayControlEventInput {
+  id: number;
+  createdAt: number;
+}
+
 export type PetChatControlAttachmentKind = "image" | "file" | "audio" | "video";
 
 export interface PetChatControlAttachment {
@@ -81,12 +93,19 @@ export interface DesktopControlDescriptor {
 export class GatewayControlServer {
   private server?: Server;
   private descriptor?: DesktopControlDescriptor;
+  private readonly events: GatewayControlEvent[] = [];
+  private readonly eventWaiters = new Set<() => void>();
+  private eventStreamId = "";
+  private nextEventId = 1;
 
   constructor(private readonly opts: GatewayControlServerOptions) {}
 
   async start(): Promise<DesktopControlDescriptor> {
     if (this.descriptor) return this.descriptor;
 
+    this.eventStreamId = randomBytes(16).toString("hex");
+    this.events.splice(0);
+    this.nextEventId = 1;
     const token = randomBytes(32).toString("hex");
     const server = createServer((req, res) => {
       void this.handleRequest(token, req, res);
@@ -130,9 +149,22 @@ export class GatewayControlServer {
     const descriptor = this.descriptor;
     this.server = undefined;
     this.descriptor = undefined;
+    this.wakeEventWaiters();
 
     if (server) await closeServer(server);
     if (descriptor) this.removeOwnDescriptor(descriptor.token);
+  }
+
+  publish(event: GatewayControlEventInput): GatewayControlEvent {
+    const stored: GatewayControlEvent = {
+      ...event,
+      id: this.nextEventId++,
+      createdAt: Date.now(),
+    };
+    this.events.push(stored);
+    if (this.events.length > 200) this.events.splice(0, this.events.length - 200);
+    this.wakeEventWaiters();
+    return stored;
   }
 
   private async handleRequest(
@@ -153,6 +185,27 @@ export class GatewayControlServer {
       if (req.method === "GET" && req.url === "/v1/status") {
         req.resume();
         sendJson(res, 200, await this.opts.status());
+        return;
+      }
+      if (req.method === "GET" && req.url?.startsWith("/v1/events")) {
+        req.resume();
+        const url = new URL(req.url, "http://127.0.0.1");
+        if (url.pathname !== "/v1/events") {
+          sendJson(res, 404, { error: "not_found" });
+          return;
+        }
+        const after = parseBoundedInteger(
+          url.searchParams.get("after"),
+          0,
+          Number.MAX_SAFE_INTEGER,
+        );
+        const waitMs = parseBoundedInteger(url.searchParams.get("waitMs"), 0, 25_000);
+        const events = await this.eventsAfter(after, waitMs);
+        sendJson(res, 200, {
+          streamId: this.eventStreamId,
+          events,
+          cursor: events.at(-1)?.id ?? after,
+        });
         return;
       }
       if (req.method === "POST" && req.url === "/v1/open") {
@@ -214,6 +267,27 @@ export class GatewayControlServer {
     }
   }
 
+  private async eventsAfter(after: number, waitMs: number): Promise<GatewayControlEvent[]> {
+    const read = () => this.events.filter((event) => event.id > after);
+    const immediate = read();
+    if (immediate.length > 0 || waitMs === 0 || !this.server) return immediate;
+    await new Promise<void>((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        this.eventWaiters.delete(done);
+        resolve();
+      };
+      const timer = setTimeout(done, waitMs);
+      timer.unref?.();
+      this.eventWaiters.add(done);
+    });
+    return read();
+  }
+
+  private wakeEventWaiters(): void {
+    for (const wake of [...this.eventWaiters]) wake();
+  }
+
   private removeOwnDescriptor(token: string): void {
     try {
       const current = JSON.parse(readFileSync(this.opts.descriptorPath, "utf-8")) as {
@@ -224,6 +298,15 @@ export class GatewayControlServer {
       // Already removed, malformed, or replaced by a newer desktop instance.
     }
   }
+}
+
+function parseBoundedInteger(value: string | null, min: number, max: number): number {
+  if (value === null || value === "") return min;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < min || parsed > max) {
+    throw new GatewayControlRequestError("invalid event cursor or waitMs");
+  }
+  return parsed;
 }
 
 class GatewayControlRequestError extends Error {

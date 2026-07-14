@@ -100,18 +100,35 @@ export class TelegramAdapter implements ChannelAdapter {
         );
         retryMs = 1_000;
         for (const update of updates) {
-          offset = Math.max(offset ?? 0, update.update_id + 1);
-          if (isStale(update, this.now(), this.maxMessageAgeMs)) continue;
+          const nextOffset = Math.max(offset ?? 0, update.update_id + 1);
+          if (isStale(update, this.now(), this.maxMessageAgeMs)) {
+            offset = nextOffset;
+            continue;
+          }
           const message = toChannelMessage(update, (fileId, signal) =>
             this.downloadFile(fileId, signal),
           );
-          if (!message) continue;
+          if (!message) {
+            offset = nextOffset;
+            continue;
+          }
           try {
             await handler(message);
+            // Commit the platform cursor only after ChatGateway has durably
+            // accepted the delivery. A full/broken inbox is retried by Telegram.
+            offset = nextOffset;
           } catch (error) {
             this.log(
-              `Telegram update ${update.update_id} 处理失败：${this.redact(formatError(error))}`,
+              `Telegram update ${update.update_id} 处理失败，${retryMs}ms 后重试：${this.redact(formatError(error))}`,
             );
+            // Back off before re-polling. The offset is intentionally NOT
+            // advanced, so getUpdates returns the same pending batch instantly;
+            // without a delay the loop would hot-spin and hammer the API (and
+            // spam the log) until Telegram rate-limits us. Mirror the outer
+            // error path's backoff so a persistently-full inbox settles down.
+            await this.sleepFn(retryMs, signal).catch(() => undefined);
+            retryMs = Math.min(retryMs * 2, 30_000);
+            break;
           }
         }
       } catch (error) {

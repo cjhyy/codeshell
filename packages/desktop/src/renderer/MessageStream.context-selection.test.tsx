@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import type { RawTranscriptEvent, SummaryForkSessionResult } from "../preload/types";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
 import { MessageStream } from "./MessageStream";
+import type { Message } from "./types";
 
 function reactPropsOf(node: unknown): Record<string, any> {
   const current = node as Record<string, any>;
@@ -17,6 +18,18 @@ function findElements(node: unknown, tagName: string): any[] {
     ...(current.tagName === tagName ? [current] : []),
     ...(current.childNodes ?? []).flatMap((child) => findElements(child, tagName)),
   ];
+}
+
+function contextTurnButtons(container: unknown): any[] {
+  return findElements(container, "BUTTON").filter(
+    (button) => reactPropsOf(button)["data-context-turn-index"] !== undefined,
+  );
+}
+
+function mergeButton(container: unknown): any {
+  return findElements(container, "BUTTON").find(
+    (button) => reactPropsOf(button)["data-context-action"] === "merge",
+  );
 }
 
 function deferred<T>(): {
@@ -34,9 +47,16 @@ function deferred<T>(): {
 }
 
 function renderedText(node: unknown): string {
-  const current = node as { childNodes?: unknown[]; data?: string; nodeType?: number };
-  if (current.nodeType === 3) return current.data ?? "";
-  return (current.childNodes ?? []).map(renderedText).join("");
+  const current = node as {
+    childNodes?: unknown[];
+    data?: string;
+    nodeType?: number;
+    textContent?: string;
+  };
+  if (current.nodeType === 3) return current.data ?? current.textContent ?? "";
+  const children = Array.from(current.childNodes ?? []);
+  if (children.length === 0) return current.textContent ?? "";
+  return children.map(renderedText).join("");
 }
 
 const rawEvents: RawTranscriptEvent[] = [
@@ -71,6 +91,20 @@ const summaryResult: SummaryForkSessionResult = {
   workspace: { root: "/tmp/project", kind: "main" },
 };
 
+const displayMessages: Message[] = [
+  { kind: "user", id: "display-user", text: "old selection" },
+  { kind: "assistant", id: "display-assistant", text: "answer", done: true },
+];
+
+const multiTurnDisplayMessages: Message[] = [
+  { kind: "user", id: "display-u1", text: "first" },
+  { kind: "assistant", id: "display-a1", text: "first answer", done: true },
+  { kind: "user", id: "display-u2", text: "second" },
+  { kind: "assistant", id: "display-a2", text: "second answer", done: true },
+  { kind: "user", id: "display-u3", text: "third" },
+  { kind: "assistant", id: "display-a3", text: "third answer", done: true },
+];
+
 describe("MessageStream context selection session boundary", () => {
   let root: Root | null;
   let container: HTMLElement;
@@ -95,32 +129,39 @@ describe("MessageStream context selection session boundary", () => {
   });
 
   test("closes and clears an open selection when engineSessionId changes", async () => {
-    const render = async (engineSessionId: string) => {
+    const render = async (engineSessionId: string, contextSelectionRequest: number) => {
       await act(async () => {
         root?.render(
           <MessageStream
-            messages={[]}
+            messages={displayMessages}
             engineSessionId={engineSessionId}
             liveTurnActive={false}
             onContextPackageCreated={() => undefined}
+            contextSelectionRequest={contextSelectionRequest}
           />,
         );
         await flushMicrotasks();
       });
     };
 
-    await render("old-session");
-    const openButton = findElements(container, "BUTTON")[0];
-    expect(openButton).toBeDefined();
+    await render("old-session", 0);
+    expect(contextTurnButtons(container)).toHaveLength(0);
+    await render("old-session", 1);
+    expect(contextTurnButtons(container)).toHaveLength(1);
     await act(async () => {
-      reactPropsOf(openButton).onClick();
+      reactPropsOf(contextTurnButtons(container)[0]).onClick();
       await flushMicrotasks();
     });
-    expect(findElements(container, "BUTTON").length).toBeGreaterThan(1);
+    const selectedTask = findElements(container, "DIV").find(
+      (node) => reactPropsOf(node)["data-context-turn-selected"] === "true",
+    );
+    expect(selectedTask).toBeDefined();
+    expect(renderedText(selectedTask)).toContain("old selection");
+    expect(renderedText(selectedTask)).toContain("answer");
 
-    await render("new-session");
+    await render("new-session", 1);
 
-    expect(findElements(container, "BUTTON")).toHaveLength(1);
+    expect(contextTurnButtons(container)).toHaveLength(0);
   });
 
   test("registers a deferred package without activating it after the source session changes", async () => {
@@ -138,37 +179,35 @@ describe("MessageStream context selection session boundary", () => {
       registered.push(result.sessionId);
       if (options?.shouldActivate?.() ?? true) activeSessionId = result.sessionId;
     };
-    const render = async (engineSessionId: string) => {
+    const render = async (engineSessionId: string, contextSelectionRequest: number) => {
       await act(async () => {
         root?.render(
           <MessageStream
-            messages={[]}
+            messages={displayMessages}
             engineSessionId={engineSessionId}
             liveTurnActive={false}
             onContextPackageCreated={onContextPackageCreated}
+            contextSelectionRequest={contextSelectionRequest}
           />,
         );
         await flushMicrotasks();
       });
     };
 
-    await render("old-session");
+    await render("old-session", 0);
+    await render("old-session", 1);
     await act(async () => {
-      reactPropsOf(findElements(container, "BUTTON")[0]).onClick();
+      reactPropsOf(contextTurnButtons(container)[0]).onClick();
       await flushMicrotasks();
     });
     await act(async () => {
-      reactPropsOf(findElements(container, "BUTTON")[1]).onClick();
-      await flushMicrotasks();
-    });
-    await act(async () => {
-      reactPropsOf(findElements(container, "BUTTON")[2]).onClick();
+      reactPropsOf(mergeButton(container)).onClick();
       await flushMicrotasks();
     });
 
     expect(activeSessionId).toBe("old-session");
     activeSessionId = "new-session";
-    await render("new-session");
+    await render("new-session", 1);
     await act(async () => {
       pendingFork.resolve(summaryResult);
       await flushMicrotasks();
@@ -176,7 +215,7 @@ describe("MessageStream context selection session boundary", () => {
 
     expect(registered).toEqual(["packaged-target"]);
     expect(activeSessionId).toBe("new-session");
-    expect(findElements(container, "BUTTON")).toHaveLength(1);
+    expect(contextTurnButtons(container)).toHaveLength(0);
   });
 
   test("ignores a deferred packaging rejection after the source session changes", async () => {
@@ -187,48 +226,43 @@ describe("MessageStream context selection session boundary", () => {
         sourceSessionId === "old-session" ? oldFork.promise : newFork.promise,
     });
 
-    const render = async (engineSessionId: string) => {
+    const render = async (engineSessionId: string, contextSelectionRequest: number) => {
       await act(async () => {
         root?.render(
           <MessageStream
-            messages={[]}
+            messages={displayMessages}
             engineSessionId={engineSessionId}
             liveTurnActive={false}
             onContextPackageCreated={() => undefined}
+            contextSelectionRequest={contextSelectionRequest}
           />,
         );
         await flushMicrotasks();
       });
     };
 
-    await render("old-session");
+    await render("old-session", 0);
+    await render("old-session", 1);
     await act(async () => {
-      reactPropsOf(findElements(container, "BUTTON")[0]).onClick();
+      reactPropsOf(contextTurnButtons(container)[0]).onClick();
       await flushMicrotasks();
     });
     await act(async () => {
-      reactPropsOf(findElements(container, "BUTTON")[1]).onClick();
-      await flushMicrotasks();
-    });
-    await act(async () => {
-      reactPropsOf(findElements(container, "BUTTON")[2]).onClick();
+      reactPropsOf(mergeButton(container)).onClick();
       await flushMicrotasks();
     });
 
-    await render("new-session");
+    await render("new-session", 1);
+    await render("new-session", 2);
     await act(async () => {
-      reactPropsOf(findElements(container, "BUTTON")[0]).onClick();
+      reactPropsOf(contextTurnButtons(container)[0]).onClick();
       await flushMicrotasks();
     });
     await act(async () => {
-      reactPropsOf(findElements(container, "BUTTON")[1]).onClick();
+      reactPropsOf(mergeButton(container)).onClick();
       await flushMicrotasks();
     });
-    await act(async () => {
-      reactPropsOf(findElements(container, "BUTTON")[2]).onClick();
-      await flushMicrotasks();
-    });
-    expect(reactPropsOf(findElements(container, "BUTTON")[2]).disabled).toBe(true);
+    expect(reactPropsOf(mergeButton(container)).disabled).toBe(true);
 
     await act(async () => {
       oldFork.reject(new Error("stale packaging failure"));
@@ -236,8 +270,8 @@ describe("MessageStream context selection session boundary", () => {
     });
 
     expect(renderedText(container)).not.toContain("stale packaging failure");
-    expect(reactPropsOf(findElements(container, "BUTTON")[2]).disabled).toBe(true);
-    expect(findElements(container, "BUTTON")).toHaveLength(3);
+    expect(reactPropsOf(mergeButton(container)).disabled).toBe(true);
+    expect(contextTurnButtons(container)).toHaveLength(1);
   });
 
   test("sends the inclusive raw-event range for a reverse continuous turn selection", async () => {
@@ -280,29 +314,37 @@ describe("MessageStream context selection session boundary", () => {
     await act(async () => {
       root?.render(
         <MessageStream
-          messages={[]}
+          messages={multiTurnDisplayMessages}
           engineSessionId="old-session"
           liveTurnActive={false}
           onContextPackageCreated={(result) => createdTitles.push(result.titleSuggestion)}
+          contextSelectionRequest={0}
         />,
       );
       await flushMicrotasks();
     });
     await act(async () => {
-      reactPropsOf(findElements(container, "BUTTON")[0]).onClick();
+      root?.render(
+        <MessageStream
+          messages={multiTurnDisplayMessages}
+          engineSessionId="old-session"
+          liveTurnActive={false}
+          onContextPackageCreated={(result) => createdTitles.push(result.titleSuggestion)}
+          contextSelectionRequest={1}
+        />,
+      );
       await flushMicrotasks();
     });
     await act(async () => {
-      const buttons = findElements(container, "BUTTON");
-      reactPropsOf(buttons[3]).onClick();
+      reactPropsOf(contextTurnButtons(container)[2]).onClick();
       await flushMicrotasks();
     });
     await act(async () => {
-      reactPropsOf(findElements(container, "BUTTON")[1]).onClick();
+      reactPropsOf(contextTurnButtons(container)[0]).onClick();
       await flushMicrotasks();
     });
     await act(async () => {
-      reactPropsOf(findElements(container, "BUTTON")[4]).onClick();
+      reactPropsOf(mergeButton(container)).onClick();
       await flushMicrotasks();
     });
 

@@ -6,6 +6,9 @@ export interface WebhookIngressConfig {
   host: string;
   port: number;
   maxBodyBytes: number;
+  healthPath?: string;
+  readyPath?: string;
+  requestTimeoutMs?: number;
 }
 
 export interface WebhookRegistration {
@@ -19,15 +22,26 @@ export class WebhookIngressServer {
   constructor(
     private readonly config: WebhookIngressConfig,
     private readonly registrations: WebhookRegistration[],
+    private readonly health: () => Record<string, unknown> = () => ({ status: "ready" }),
   ) {}
 
   async run(signal: AbortSignal): Promise<void> {
-    if (this.registrations.length === 0) return;
     const routes = new Map(
       this.registrations.map((registration) => [registration.adapter.webhookPath, registration]),
     );
     this.server = createServer((request, response) => {
       const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+      if (request.method === "GET" && pathname === (this.config.healthPath ?? "/healthz")) {
+        request.resume();
+        sendJson(response, 200, { status: "ok", ...this.health() });
+        return;
+      }
+      if (request.method === "GET" && pathname === (this.config.readyPath ?? "/readyz")) {
+        request.resume();
+        const body = this.health();
+        sendJson(response, body.status === "ready" ? 200 : 503, body);
+        return;
+      }
       const registration = routes.get(pathname);
       if (!registration) {
         sendResponse(response, 404, "Not found");
@@ -47,7 +61,7 @@ export class WebhookIngressServer {
           );
         });
     });
-    this.server.requestTimeout = 15_000;
+    this.server.requestTimeout = this.config.requestTimeoutMs ?? 15_000;
     await listen(this.server, this.config.host, this.config.port);
     const address = this.server.address() as AddressInfo;
     console.log(`[chat] webhook ingress：http://${address.address}:${address.port}`);
@@ -59,6 +73,10 @@ export class WebhookIngressServer {
       await close(this.server);
     }
   }
+}
+
+function sendJson(response: ServerResponse, status: number, body: unknown): void {
+  sendResponse(response, status, JSON.stringify(body), "application/json; charset=utf-8");
 }
 
 export class WebhookBodyTooLargeError extends Error {}

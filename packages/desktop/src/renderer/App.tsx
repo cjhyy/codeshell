@@ -160,6 +160,11 @@ function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [contextSelectionRequest, setContextSelectionRequest] = useState(0);
+  const requestContextSelection = useCallback(
+    () => setContextSelectionRequest((request) => request + 1),
+    [],
+  );
   /** Cmd+P / sidebar 搜索 — cross-project session picker (modal). */
   const [sessionSearchOpen, setSessionSearchOpen] = useState(false);
   // The GLOBAL default model — the choice that seeds *new* sessions. Lives in
@@ -1100,11 +1105,22 @@ function App() {
     setRunsInitialRunId,
   });
 
-  const delegatePetTask = (projectId: string | null, prompt: string): void => {
+  const delegatePetTask = (
+    projectId: string | null,
+    prompt: string,
+    clientMessageId: string,
+  ): void => {
     const message = prompt.trim();
     if (!message) return;
-    handleNewConversationForProject(projectId);
-    void send(message, { bucket: bucketKey(projectId, null) });
+    const { index, sessionId } = createSession(projectId, undefined, { activate: false });
+    setSessionIndices((prev) => ({
+      ...prev,
+      [projectBucketSegmentFor(projectId)]: index,
+    }));
+    void send(message, {
+      bucket: bucketKey(projectId, sessionId),
+      clientMessageId,
+    });
   };
 
   const toggleSidebar = (): void =>
@@ -1756,6 +1772,10 @@ function App() {
             // the toggle wrongly shows on those pages whenever a session is active.
             panelAvailable={activeSessionId !== null && isChatView}
             statusAvailable={!isPetView}
+            contextSelectionAvailable={
+              activeSessionId !== null && isChatView && !busy && !awaitingHydration
+            }
+            onSelectContext={requestContextSelection}
             activity={isPetView ? undefined : liveActivity}
             tasks={isPetView ? null : latestTasks}
             activeGoal={isPetView ? null : state.activeGoal}
@@ -1816,8 +1836,10 @@ function App() {
 
           <PetAutoDelegationHost
             projects={projects}
-            activeProjectId={activeProjectId}
             onDelegate={delegatePetTask}
+            onUnresolved={() =>
+              toast({ message: t("pet.delegation.unresolved"), variant: "error" })
+            }
           />
 
           {/* Chat column + dock share a relative container so a maximized panel can
@@ -1846,7 +1868,7 @@ function App() {
                     excludedSessionIds={archivedPetSessionIds}
                     onNavigate={(request) => void handleOpenPetTarget(request)}
                   />
-                  <PetChatHost defaultProjectId={activeProjectId} />
+                  <PetChatHost defaultProjectPath={activeProject?.path ?? null} />
                 </PetPage>
               ) : view.viewMode === "approvals" ? (
                 <ApprovalsView
@@ -1893,6 +1915,7 @@ function App() {
                     onContextPackageCreated={(result, options) =>
                       handleContextPackageCreated(result, activeBucket, options)
                     }
+                    contextSelectionRequest={contextSelectionRequest}
                     sendBucket={activeBucket}
                     onSend={(text, opts) =>
                       send(text, {

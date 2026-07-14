@@ -1,7 +1,7 @@
 import React, { memo, useState, useRef, useEffect } from "react";
 import { StatusDot } from "./ui/StatusDot";
 import { IconButton } from "./ui/IconButton";
-import { PanelLeft, PanelRight } from "./ui/icons";
+import { Forward, PanelLeft, PanelRight } from "lucide-react";
 import { StatusPopover } from "./topbar/StatusPopover";
 import { WorkspaceIndicator } from "./topbar/WorkspaceIndicator";
 import type { LiveActivity } from "./topbar/liveActivity";
@@ -27,6 +27,9 @@ interface Props {
   panelAvailable?: boolean;
   /** Hide session-owned status UI on first-class non-session pages. */
   statusAvailable?: boolean;
+  /** Show the compact context-selection action for the active chat. */
+  contextSelectionAvailable?: boolean;
+  onSelectContext?: () => void;
   /**
    * Snapshot of what the agent is doing right now. Only used to
    * populate the hover popover; the dot itself only needs `busy`.
@@ -73,6 +76,8 @@ function TopBarImpl({
   isFullscreen,
   panelAvailable = true,
   statusAvailable = true,
+  contextSelectionAvailable = false,
+  onSelectContext,
   activity,
   tasks,
   activeGoal,
@@ -129,6 +134,17 @@ function TopBarImpl({
         )}
       </div>
       <div className="flex items-center gap-1">
+        {contextSelectionAvailable && onSelectContext && (
+          <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+            <IconButton
+              label={t("chat.contextPackage.select")}
+              data-context-action="open"
+              onClick={onSelectContext}
+            >
+              <Forward size={14} />
+            </IconButton>
+          </span>
+        )}
         {statusAvailable && (
           <StatusBadge
             busy={busy}
@@ -145,6 +161,7 @@ function TopBarImpl({
           <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
             <IconButton
               label={panelOpen ? t("topbar.closePanel") : t("topbar.openPanel")}
+              data-panel-action="toggle"
               onClick={onTogglePanel}
               active={panelOpen}
             >
@@ -301,6 +318,8 @@ function topBarPropsEqual(a: Props, b: Props): boolean {
     a.panelOpen === b.panelOpen &&
     a.onTogglePanel === b.onTogglePanel &&
     a.statusAvailable === b.statusAvailable &&
+    a.contextSelectionAvailable === b.contextSelectionAvailable &&
+    a.onSelectContext === b.onSelectContext &&
     a.tasks === b.tasks &&
     a.activity?.lastToolName === b.activity?.lastToolName &&
     a.activity?.toolInFlight === b.activity?.toolInFlight &&

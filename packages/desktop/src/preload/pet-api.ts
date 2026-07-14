@@ -11,7 +11,7 @@ export type PetChatEvent =
       kind: "delegation-requested";
       clientMessageId: string;
       task: string;
-      preferredProjectId?: string;
+      workspacePath: string | null;
       createdAt: number;
     };
 
@@ -93,7 +93,7 @@ export type PetDispatchCommand =
       type: "chat";
       message: string;
       clientMessageId?: string;
-      preferredProjectId?: string;
+      preferredProjectPath?: string;
     };
 
 export type PetDispatchResult =
@@ -125,7 +125,7 @@ export type PetDispatchResult =
       delegation?: {
         clientMessageId: string;
         task: string;
-        preferredProjectId?: string;
+        workspacePath: string | null;
       };
     };
 

@@ -28,7 +28,7 @@ import {
   computeEffectiveDisabledLists,
   SettingsManager,
 } from "@cjhyy/code-shell-core";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
 import * as path from "node:path";
 import type {
@@ -93,6 +93,22 @@ function panelTitle(
     : (title.en ?? title.default);
 }
 
+function installedPanelRevision(installPath: string, entry: string): string {
+  const hash = createHash("sha256");
+  for (const relative of [".cs-meta.json", ".cs-plugin-manifest.json", entry]) {
+    const file = path.join(installPath, relative);
+    try {
+      const stat = statSync(file);
+      hash.update(relative).update("\0").update(String(stat.size)).update("\0");
+      if (relative.endsWith(".json")) hash.update(readFileSync(file));
+      else hash.update(String(stat.mtimeMs));
+    } catch {
+      hash.update(relative).update("\0missing\0");
+    }
+  }
+  return hash.digest("hex");
+}
+
 function discoverPluginPanels(locale: string): {
   descriptors: PluginPanelDescriptor[];
   resources: PluginPanelProtocolResource[];
@@ -107,18 +123,16 @@ function discoverPluginPanels(locale: string): {
   const descriptors: PluginPanelDescriptor[] = [];
   const resources: PluginPanelProtocolResource[] = [];
   for (const contribution of panels) {
-    const {
-      installKey: key,
-      installPath,
-      pluginName,
-      panel,
-    } = contribution;
+    const { installKey: key, installPath, pluginName, panel } = contribution;
+    const revision = installedPanelRevision(installPath, panel.entry);
     const hostSeed = createHash("sha256")
       .update(key)
       .update("\0")
       .update(installPath)
       .update("\0")
       .update(JSON.stringify(panel))
+      .update("\0")
+      .update(revision)
       .digest("hex");
     // One authority/partition per panel is stricter than sharing a plugin
     // origin: sibling panels cannot navigate into each other's entry trees.
@@ -138,6 +152,7 @@ function discoverPluginPanels(locale: string): {
       singleton: panel.singleton,
       permissions: [...panel.permissions],
       hostId,
+      revision,
     };
     descriptors.push(descriptor);
     resources.push({ descriptor, root: installPath, entry: panel.entry });
@@ -160,10 +175,7 @@ function disabledPluginNames(cwd: string): Set<string> {
 }
 
 /** Installed UI contributions for the Extensions page, including disabled ones. */
-export function listPanelExtensions(
-  cwd: string,
-  locale: string,
-): PluginPanelExtensionSummary[] {
+export function listPanelExtensions(cwd: string, locale: string): PluginPanelExtensionSummary[] {
   const disabled = disabledPluginNames(cwd);
   return discoverPluginPanels(locale).descriptors.map((panel) => {
     const disabledByPackage = disabled.has(panel.pluginName);

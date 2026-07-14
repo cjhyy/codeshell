@@ -4,7 +4,6 @@ import type {
   ChannelMessageHandler,
   OutgoingMessage,
 } from "./channel.js";
-import { dispatchSafely } from "./lifecycle.js";
 
 export interface MatrixAdapterConfig {
   homeserverUrl: string;
@@ -20,6 +19,7 @@ interface MatrixSyncResponse {
       {
         timeline?: {
           events?: Array<{
+            event_id?: string;
             type?: string;
             sender?: string;
             origin_server_ts?: number;
@@ -51,10 +51,12 @@ export class MatrixAdapter implements ChannelAdapter {
           signal,
         });
         retryMs = 1_000;
-        since = sync.next_batch ?? since;
         for (const message of toMessages(sync, this.config.botUserId)) {
-          await dispatchSafely(handler, message);
+          await handler(message);
         }
+        // Matrix tokens acknowledge the whole sync batch. Advance only after
+        // every accepted event has reached the durable inbox.
+        since = sync.next_batch ?? since;
       } catch (error) {
         if (signal.aborted) return;
         await abortableDelay(retryMs, signal);
@@ -148,6 +150,7 @@ function toMessages(sync: MatrixSyncResponse, botUserId?: string): ChannelMessag
         target: roomId,
         senderId: event.sender,
         text: event.content.body,
+        ...(event.event_id ? { messageId: event.event_id } : {}),
       });
     }
   }

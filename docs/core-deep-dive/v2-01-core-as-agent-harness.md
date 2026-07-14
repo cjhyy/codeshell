@@ -1,274 +1,384 @@
-# CodeShell Core：从 LLM Call 到 Agent Harness，一套通用编排内核如何成形
+# 从 LLM Call 到 Agent Harness：通用编排内核的设计原理
 
-> 一句话：CodeShell Core 不是一个“写代码的工具”，而是一个**通用的 Agent 编排内核**。它把“如何让一个模型在真实环境里受控运行”这件事抽成平台能力；“会写代码”只是挂在这个内核之上的一份配置（`terminal-coding` preset），不是写死在引擎里的本质。
+> 模型提供推理能力，Harness 提供运行能力。前者决定“下一步想做什么”，后者决定“这一步能否执行、如何执行，以及执行后怎样继续”。
 
-这是 CodeShell Core v2 深度长文系列的第 1 篇。它的任务不是逐行讲源码，而是先帮你建立一个全局心智模型：**什么是 Harness Agent，为什么 LLM 调用本身不等于 Agent，以及 CodeShell Core 把哪些机制抽成了可复用的平台能力**。后面四篇会分别钻进 Engine/TurnLoop、工具系统与安全、模型/上下文/记忆、协议与宿主编排；但如果你没有先建立“core 是通用编排内核”这个基调，那几篇技术深潜很容易被读窄成“一个 coding agent 的实现细节”，这就跑偏了。
+本文以 CodeShell Core 为实现样本，讨论一个更普遍的问题：**怎样把一次模型调用扩展成可控制、可观察、可恢复的 Agent 运行时**。重点不是介绍某个产品，而是沿着一次真实任务，看多轮循环、工具执行、上下文治理、安全边界、状态持久化和宿主协议为什么会自然出现。
 
-本篇与后续篇章的关系:
+这是 v2 深度长文系列的第 1 篇。后续文章会继续展开：
 
-- 第 02 篇《Engine 与 TurnLoop 深潜》——展开本篇第 4 节里"Engine 装配、TurnLoop 转圈"的内部机制。
-- 第 03 篇《Tool System 安全深潜》——展开本篇第 6 节"安全边界"。
-- 第 04 篇《模型、上下文与记忆深潜》——展开本篇第 5 节"能力边界"里 context/memory 的部分。
-- 第 05 篇《协议、宿主与长任务编排》——展开本篇第 7 节"宿主复用"。
-
----
-
-## 1. 它到底解决什么问题
-
-如果你做过“接大模型 + 给它工具用”的系统，大概率会反复撞上同一批麻烦事：
-
-- 多轮对话怎么管？上下文眼看要撑爆窗口，是直接报错，还是有人帮你压缩、摘要、续写？
-- 模型说要跑一条 shell 命令、要写一个文件，谁去执行？执行之前谁来拦一道，确保它不会一句 `rm -rf` 把你的仓库删了？
-- 同一套 agent 逻辑，既想跑在终端里，又想做成桌面 App，还想被别人当 SDK `import` 进去——难道要把循环、工具、权限写三遍？
-- 想让它“无人值守地跑一个长任务”，跑到一半进程崩了、机器睡眠了，哪些状态能续上，哪些状态必须重来？
-
-这些问题的答案，**都不在模型里，而在“模型外面那层运行壳”里**。模型负责“想”，运行壳负责“让想变成可控的、可观测的执行”，并尽量把可持久化的部分保存下来。这层运行壳，业界逐渐有了一个名字：**Agent Harness**。
-
-CodeShell Core 的回答很明确：**把这些通用机制——多轮循环、上下文压缩、权限审批、工具执行、会话持久化、长任务编排——收敛进一个“领域无关”的内核，再把“具体要当什么 agent”做成可替换的配置。** 写代码、做调研、跑运维自动化，对这个内核来说只是不同的 preset + 工具白名单 + 提示词段 + 权限默认值的组合。
-
-这一点在源码里有一条很直接的“宣言”。`packages/core/src/index.ts` 文件头第一行注释写着：
-
-```
-code-shell — general-purpose agent orchestration framework
-```
-
-不是 “coding assistant”，也不是 “AI IDE”，而是 **general-purpose agent orchestration framework**（通用 Agent 编排框架）。这不是营销话术，而是贯穿整个 core 设计的约束。`packages/core/CONTRIBUTING.md` 把它落成一条更硬的规矩：**core only carries mechanism, not policy**（核心只装机制，不装策略）。本篇剩下的篇幅，基本都在解释这句话的后果。
+- 第 02 篇：Engine 与 TurnLoop
+- 第 03 篇：工具系统与安全
+- 第 04 篇：模型、上下文与记忆
+- 第 05 篇：协议、宿主与长任务编排
 
 ---
 
-## 2. 从 LLM Call 到 Harness:为什么"调用模型"不等于"Agent"
+## 1. Agent 解决的不是“调用模型”，而是“组织一次运行”
 
-要理解 CodeShell Core 为什么长这样,得先看清楚一条演进线:**LLM Call → Research Loop → Agent Harness**。
+一次普通的 LLM Call 很简单：应用提交消息，模型返回文本。当任务所需信息已经全部放进 prompt，例如总结、翻译、分类和改写，这个接口就足够了。
+
+但只要任务需要接触外部环境，问题就变了：
+
+- 模型要求读取文件或执行命令时，谁负责真正操作？
+- 工具参数是否合法，目标路径是否越界，危险动作是否需要审批？
+- 工具执行完以后，结果如何进入下一轮推理？
+- 任务被取消、进程退出或上下文超限时，系统如何收尾与恢复？
+
+即使模型原生支持 tool use，它输出的也只是结构化意图：
+
+```text
+模型：我想调用 Bash，参数是 { command: "bun test" }
+```
+
+这不等于命令已经执行，更不等于它应该被执行。意图到副作用之间必须有一层受信任的控制面，负责校验、授权、执行、记录和反馈。这层控制面就是 Agent Harness。
+
+可以用一个简化公式概括：
+
+```text
+Agent = Model + Control Loop + Tools + State + Policy Boundaries + Host Interface
+```
+
+模型只是其中的决策组件。Agent 则是一个由模型驱动、由运行时约束的持续过程。
+
+---
+
+## 2. 最小循环，以及它为什么还不够
 
 ![从 LLM Call 到 Agent Harness 的演进](assets/v2/v2-01-llm-call-to-harness.png)
 
-### 第一阶段:LLM Call,只是一次函数调用
-
-最早一批 AI 应用,本质就是一次 **LLM call**:用户输入 prompt,应用把它拼成 messages 发给模型,模型返回一段文本,界面展示出来。问答、总结、改写、翻译、分类——只要"任务需要的信息已经全在 prompt 里",一次调用就够了。
-
-但只要任务开始依赖外部世界,这种模式立刻露出边界。它不能自己决定去哪里找资料,不能真的读取你的代码仓库,不能安全地运行命令,更没有"任务状态"——它不知道自己已经做了哪几步,也不知道下一步该基于什么结果继续。
-
-所以 LLM call 的边界**不是"模型聪不聪明",而是它没有运行时**。把模型比作大脑,LLM call 只是让大脑说一句话:它还没有手、没有眼睛、没有记忆、没有工作台,也没有安全规则。
-
-### 第二阶段:Deep Research,开始出现循环
-
-Deep Research 这类框架处在 LLM call 和通用 harness 中间。它不再只问一次,而是让模型围绕一个研究目标反复执行"搜索 → 阅读 → 记录证据 → 继续搜索 → 汇总"。模型在循环里持续决定:现在缺什么信息、该查哪里、哪些来源可信、什么时候可以停。
-
-这背后有个很现实的动机:早期主流模型上下文不够长,128K/256K 对复杂研究和大仓库远远不够。Deep Research 的循环,本质是**用外部搜索 + 多轮整理,来弥补单次上下文窗口的不足**。
-
-但 Deep Research 仍然是一个**专项 harness**:它主要服务研究任务,工具集中在搜索和网页读取,状态结构也是围绕"研究报告"设计的。它有了循环、有了工具,但没有把这套能力抽象成可以承载任意任务、接入任意宿主的通用运行壳。
-
-### 第三阶段:Harness Agent,把模型变成"可运行系统"
-
-如今主流模型的上下文窗口已经比早期大得多，部分模型甚至进入百万 token 级别。普通会话不再像过去那样轻易撞到窗口上限，这反而把真正的瓶颈推到了台前：**当模型能看很多、想很久时，系统问题不再只是“上下文够不够”，而是“如何把模型放进一个可控、可观测、可复用的运行环境里”。**
-
-这就是 Harness Agent。它不是某个单一功能,而是一组运行时能力:读取上下文、选择工具、等待审批、执行动作、接收结果、继续推理,并在必要时压缩上下文、恢复状态、把过程流式发给宿主 UI。一句话:
-
-> LLM call 是一次推理;Agent Harness 是一次受控运行。
-
-一个真正的 harness,至少需要七个部件,而 CodeShell Core 正是按这个方向拆的:
-
-| 部件 | 职责 | CodeShell 对应 |
-|------|------|----------------|
-| Engine | 装配一次 run 的模型、工具、上下文、权限、会话 | `engine/engine.ts` 的 `Engine` |
-| Turn Loop | 多轮模型调用、工具调用、停止判断 | `engine/turn-loop.ts` 的 `TurnLoop` |
-| Tool System | 工具注册、参数校验、权限判断、实际执行 | `tool-system/`(registry/executor/permission) |
-| Context Manager | 控制上下文窗口,不让长任务撑爆模型 | `context/`(manager/compaction) |
-| Session / Transcript | 记录发生过什么,支持恢复和审计 | `session/`(transcript/session-manager) |
-| Permission / Sandbox | 限制工具能力,避免 agent 失控 | `tool-system/permission.ts`、`sandbox/` |
-| Protocol / Host Adapter | 让 CLI/桌面/远程接入同一个 core | `protocol/`(client/server/transport) |
-
-注意这张表里**没有一行是"coding"**。这正是关键:harness 的七个部件全是通用机制,"会写代码"不在其中。它是后面再叠上去的一层配置。
-
----
-
-## 3. Core 把哪些机制抽成了平台能力
-
-把第 2 节那七个部件落进 CodeShell 的源码,你会看到一个分层的运行时,而不是一堆零散的工具函数。
-
-![CodeShell Core 作为分层运行时](assets/v2/v2-01-core-runtime-layers.png)
-
-整个仓库分四个包,但**只有一份"大脑"**:
-
-```
-packages/
-├── core/      Engine、工具、MCP、hooks、会话、运行、自动化、preset、LLM、
-│              模型目录、插件、能力控制、凭证、记忆、cc-orchestrator
-├── tui/       终端 CLI、Ink REPL、自绘终端渲染器、斜杠命令
-├── desktop/   Electron 主进程(服务经纪人)+ 每会话 core worker + React renderer + 手机遥控
-└── cdp/       环境无关的 CDP 浏览器动作层(不依赖 Playwright)
-```
-
-`core` 是唯一一份编排内核;`tui` 和 `desktop` 都是它的客户端;`cdp` 是给浏览器工具用的底层动作层。这就是 v1 系列那句"一套引擎三张脸"的来历——但更准确的说法是:**一套引擎,任意张脸**,因为 SDK 用户可以直接 `import { Engine }` 长出自己的第四张脸。
-
-按职责,core 内部大致是这么几束(每束对应后续某篇深潜):
-
-- **引擎核心**:`engine/`、`context/` —— turn loop 与上下文治理。这是 harness 的"心跳"。
-- **工具与安全**：`tool-system/` —— 注册表、executor、权限、路径策略、沙箱、MCP。这是 agent “能做事”前必须先穿过的关卡。
-- **模型层**:`llm/`、`model-catalog/` —— 把一个模型 tag 解析成可用的 provider 客户端,把模型差异收敛成数据。
-- **协议与会话**:`protocol/`、`session/`、`state.ts` —— RPC 接缝与持久化,让宿主解耦、让任务可恢复。
-- **行为配置**:`preset/`、`prompt/`、`hooks/`、`skills/` —— "行为即配置"的所在,本篇第 4 节细讲。
-- **长任务**:`run/`、`automation/`、`cron/`、`engine/goal.ts` —— Run/Cron/持久 Goal 的可恢复状态机。
-- **运行时长能力**:`plugins/`、`capability-control/`、`credentials/`、`session/memory.ts`、`services/`(Dream)。
-- **外部集成**:`cc-orchestrator/`、`stt/`、`review/`。
-
-这里要强调一个观感上的区别:**这不是"一堆模块堆在一起",而是一个有层次的运行时。** 一次任务从外向内穿过这些层——宿主把请求交给协议接缝,接缝交给 Engine 装配,Engine 拉起 TurnLoop 转圈,TurnLoop 在每一轮里调模型、压上下文、过工具门禁。每一层都有清晰的职责归属,这正是它能长期演进的原因(下一节会讲为什么不能把这些全塞进一个大函数)。
-
-> **设计取舍:为什么不写一个 `runAgent()` 大函数?**
-> 早期 demo 常写成一个大循环：调模型 → 有工具调用就执行 → 结果 append 回 messages → 继续。这能跑，但所有复杂性会挤进同一个地方：权限、审批、schema 校验、路径安全、Bash 沙箱、上下文压缩、用户取消、工具失败、会话恢复、UI 事件、子代理通知……每加一个能力就多一层 if/else，最后得到一个没人敢改的函数。更关键的是，这些能力的**生命周期根本不同**：模型调用关心 provider / streaming / stop reason；工具执行关心 schema / 权限 / sandbox；上下文管理关心 token 预算和历史压缩；协议关心事件、审批和 UI。它们在同一次 run 里协作，但不该由同一个函数管全部细节。拆层不是为了“架构好看”，而是为了让复杂性**有明确归属**——这样后面加 MCP、自动化、远程控制、子代理，都能沿着已有链路扩展，而不是继续往大函数里塞。
-
----
-
-## 4. Preset over Hardcoding:coding 是配置,不是本质
-
-这是整个系列最该正面阐述的一节,也是"core 不是 coding agent"这个论断最硬的证据。
-
-![Generic Core 加载 general / terminal-coding 配置卡带](assets/v2/v2-01-presets-not-hardcoding.png)
-
-如果"会写代码"是写死在引擎里的,那做一个调研 agent 或运维 agent 就得 fork 一份引擎、各自维护。CodeShell 不走这条路。它要的是:**同一个引擎,换一束配置,就变成另一种 agent。**
-
-这束配置就是 `AgentPreset`(见 `packages/core/src/preset/index.ts`),它只选四样东西:
+最小 Agent Loop 通常只有几行：
 
 ```ts
-interface AgentPreset {
-  promptSections: readonly string[];      // 系统提示段名(markdown)
-  injectGitStatus: boolean;               // 是否注入 git 状态
-  builtinTools: string[];                 // 内置工具白名单
-  defaultPermissionRules: PermissionRule[]; // 默认权限规则
+while (!finished) {
+  const input = context.build(transcript);
+  const response = await model.generate(input, tools);
+  transcript.append(response);
+
+  for (const call of response.toolCalls) {
+    const result = await executor.execute(call);
+    transcript.append(result);
+  }
+
+  finished = stopPolicy.evaluate(response, transcript);
 }
 ```
 
-core 内置两个 preset:
+它已经表达了 Agent 的基本节奏：**模型决定下一步，运行时执行下一步，执行结果再影响模型。** 搜索型研究系统、数据分析 Agent 或编码 Agent，本质上都可以从这个循环出发。
 
-- **`general`**(默认):提示段 `["base", "orchestration", "browser", "tone"]`,工具是精选清单 `GENERAL_BUILTIN_TOOLS`,git 状态注入关闭。这是给调研、运维、自动化用的"中性"形态。
-- **`terminal-coding`**(CLI 默认,`DEFAULT_CLI_PRESET`):在 `general` 的基础上多挂一个 `coding` 提示段(段序变成 `["base", "orchestration", "coding", "browser", "tone"]`),多开 `TERMINAL_CODING_EXTRA_TOOLS` 中的工作区、Notebook、LSP、Brief 等编码辅助工具,并把 `injectGitStatus` 打开。
+真正的复杂度不在 `while`，而在每个名词背后：
 
-请仔细看：**`general` 和 `terminal-coding` 的主要差别，就是上面这几样配置的差别——一个提示段、几个额外工具、一个 git 开关、几条权限默认值。不是两套引擎，而是同一个引擎的两张配置卡带。** 这就是“行为即配置”最具体的证据。你完全可以再定义一个 `research` preset、一个 `ops` preset，而完全不碰 `Engine` 和 `TurnLoop` 的任何一行代码。
+- `context` 既要让模型看到足够信息，又不能超过 token 窗口。
+- `executor` 既要执行工具，又要阻止模型越权。
+- `transcript` 既要记录事实，又不能被原样塞回每一轮上下文。
+- `stopPolicy` 既要识别正常完成，也要处理取消、错误和最大轮次。
+- 宿主既要实时展示过程，又不能直接依赖 TurnLoop 的内部实现。
 
-几个值得记住的机制细节:
+专项 Agent 往往把这些规则写进自己的循环；通用 Harness 则把它们抽成稳定的运行机制，把领域差异留给配置与扩展模块。
 
-- **工具白名单是执行机制,不是文档。** `GENERAL_BUILTIN_TOOLS` 是一份精选清单。`ToolRegistry.registerBuiltins(names)` 会按它过滤总表 `BUILTIN_TOOLS`,并**静默丢掉不在清单里的工具**。这带来一个反复踩中的坑:**新增一个内置工具,必须同时改两处——既要进 `tool-system/builtin/index.ts` 的 `BUILTIN_TOOLS` 表,也要进 `preset/index.ts` 的白名单(`GENERAL_BUILTIN_TOOLS` 或某个 preset 的 `builtinTools`)。漏一处,工具就静默不可见,模型根本看不到它,或者调用时拿到 "tool not found"。** 这是机制带来的纪律成本,也是"配置驱动"的代价之一。
-- **提示段会按激活工具门控裁剪。** `TOOL_GATED_SECTIONS` 把某些段映射到它需要的工具(例如 `browser` 段 → 浏览器工具)。当浏览器工具没被激活时,`buildPresetSystemPrompt` 会把 `browser` 段整段丢掉,让模型不去读自己用不上的指令——既省 token,也减少误导。
-
-> **设计取舍:为什么用 preset 而非 fork?**
-> fork 一份引擎来做新形态 agent,短期最快;但每个 fork 都要单独跟进 core 的所有改进(上下文压缩、权限修复、协议升级……),很快就维护不动。preset 把"变化的部分"(提示段/工具/权限)和"不变的部分"(循环/上下文/安全)切开:变化的部分是数据,不变的部分是机制。代价是多了一层间接——你不能在引擎里直接 `if (coding)`,得去 preset 表里查配置——但换来的是"加一种 agent 形态几乎不动 core"。
-
----
-
-## 5. 能力边界:为什么需要 protocol / tool / preset / context / memory 这些缝
-
-第 3 节列了 core 的分层,第 4 节讲了 preset 这层缝。这一节回答一个更本质的问题:**为什么要切这么多缝?直接把模型接到工具上、把工具接到 UI 上,不行吗?**
-
-不行,而且失败模式很具体。逐个看几条边界存在的理由:
-
-**① Tool 这层缝:不让"决定调用"和"实际执行"黏在一起。** 模型只产出 `tool_use`(我想调用某工具,参数是这些),它**不该**直接拿到执行能力。中间必须有一个统一的 `ToolExecutor` 把每次调用收口,在执行前依次过 schema 校验、权限判断、路径策略、沙箱、hooks。如果没有这层缝,工具调用就会散落成 if/else,新增工具时很难保证每条路径都被权限覆盖——业界经典误区"先堆工具,再补权限"就是这么来的:工具越多,权限越难补。正确顺序是先有统一 executor,再往里加工具。这层缝的细节是第 03 篇的主战场。
-
-**② Context 这层缝:不让模型自己管自己的上下文预算。** 模型不知道系统的 token 预算,也不知道哪些历史内容可以从 transcript 安全恢复。如果把上下文管理交给模型"自觉",长任务一定会撞窗口。CodeShell 在 `context/` 里做了分层治理(从无损持久化到有损摘要),这是 harness 层的责任,不是模型的责任。第 04 篇会展开。
-
-**③ Memory 这层缝:把"长期知识"和"会话历史原文"分开。** 一个常见误区是把 memory 当聊天记录用,把历史原文越堆越多。CodeShell 的记忆(`session/memory.ts` + Dream consolidation)是**萃取后的知识**:有抽取、去重、scope 管理、过期/删除。它和 transcript(一次任务的事实账本)是两种东西。第 04 篇会讲清楚这条边界。
-
-**④ Preset 这层缝:把"是什么 agent"做成可替换配置(第 4 节已讲)。**
-
-**⑤ Protocol 这层缝:不让 UI 直接调核心循环。** 如果 UI 直接调 `TurnLoop`,那 CLI、桌面、手机就得各自复制一套调用逻辑,而且 core 会被某个 UI 的形态绑死。CodeShell 用 `AgentClient ⇄ Transport ⇄ AgentServer` 这层 JSON-RPC 接缝,把 run/approve/cancel/stream/status 变成语义契约,UI 只消费协议。第 05 篇展开。
-
-把这五层缝合起来看,你会发现它们共同服务一个目标:**让每一种复杂性都有明确归属,且彼此可以独立演进。** 这也对应了 harness 设计的三层能力地图——MVP(能跑:Engine/TurnLoop/Tool Registry/Executor/Transcript)、Production(能被信任:权限/沙箱/路径策略/上下文管理/会话恢复/协议/可观测)、Advanced(能成平台:自动化/后台 agent/记忆管线/插件 skill/远程控制)。CodeShell Core 不是停在 MVP 的"工具列表",它把这三层都做了。
+> **LLM Call 是一次推理，Agent Harness 是一次受控运行。**
 
 ---
 
-## 6. 安全边界:能力直接暴露给模型的风险
+## 3. 一次“修复失败测试”的请求如何跑完
 
-上一节是从"可维护性"角度讲为什么要切缝;这一节单独把**安全**拎出来,因为它是 harness 区别于"一个会调工具的聊天机器人"的分水岭。
+先不列模块，直接看一条任务如何穿过运行时：
 
-核心原则只有一句:**在 agent 能做事之前,必须先学会被约束。** 一旦模型能跑 shell、能读写文件,你就不能只靠"模型应该听话"。CodeShell Core 把约束做成了几道彼此独立、职责不同的边界(细节都在第 03 篇,这里只建立心智模型):
+> 用户：运行测试，定位失败原因并修复。
 
-- **权限(permission):决定一次工具调用是否执行。** allow / ask / deny 三态,配 permission mode 和 approval backend。`ask` 时要把决定权交还给人。
-- **路径策略(path policy):管文件工具的 workspace 边界与敏感路径。** 它会对路径做 realpath 双侧解析再比较,防止有人用 symlink 把"看起来在仓库内"的路径指到仓库外去逃逸。
-- **沙箱(sandbox):限制 Bash 的执行环境。** 注意一条事实红线:**沙箱不是全平台都有的**。macOS 有 seatbelt、Linux 有 bwrap,但 **Windows 没有 OS sandbox 后端,`auto` 档会降级为 `off`**——这时只剩权限和路径策略兜底,不能假装沙箱还在。
-- **hooks:只能收紧,不能放松。** hook 的决定聚合规则是"最严者胜"(`deny > ask > allow`),低优先级处理器**永远不能放松**高优先级的 `deny`。这是一条关键不变量——别误以为可以写个 hook 把某个 deny 改成 allow。
+下面假设请求来自 TUI 或桌面宿主，并启用了编程能力。
 
-几条真实的 footgun,用来说明"为什么这些边界缺一不可":
+### 3.1 建立本轮运行边界
 
-1. **链式 Bash 绕过。** 早期版本里 `git status && rm -rf /` 这样的命令曾经绕过审批——审批只看了第一段 `git status` 就放行了。修法是:任何 Bash 授权路径都要保证只覆盖单段、非危险命令,遇到管道、多段、危险命令就拒绝匹配、重新问。这说明"权限"不能只做字符串前缀匹配。
-2. **shell hook 是受信任代码,绕过 Bash 权限/沙箱。** 你配了一个 shell hook,它会被 spawn 成子进程执行,**不走 Bash 的权限和沙箱**——配了就等于隐式信任它。护栏是超时 + 输出上限 + fail-silent(畸形/超时/异常退出都返回空,不崩 turn),但它本身就是个信任边界,别把不可信的脚本挂上去。
-3. **MCP 外部工具的输出要当不可信数据。** MCP server 是外部的,它返回的内容可能藏着 prompt injection。CodeShell 让 MCP 工具进入**同一条** executor 管线,并把输出包一层"untrusted result",而不是给 MCP 开一条权限更宽松的旁路。**别以为外部工具就该有特权**——恰恰相反,它更该被当成敌意输入处理。
+宿主提交用户消息、会话 ID、工作目录和本轮选项。Engine 解析或创建 session，并确定这次 run 使用的模型、preset、capability、工具集合和权限模式。
 
-把这些放在一起,你会看到一个 harness 和一个"接了工具的 chatbot"的根本区别:**后者默认信任模型,前者默认约束模型。** 安全不是事后补的补丁,而是 core 的地基。
+这里有一个重要细节：**运行中的权限语义不能随界面设置瞬间漂移。** 当前轮次开始后，它应使用同一份有效配置；用户在运行中修改的设置，通常从下一轮边界生效。否则同一批工具调用可能在前后半段受到不同规则约束。
 
-> 顺带澄清一条事实红线:本篇成稿时,凭证里的 cookie **尚未加密**,现状是文件权限 `0o600` 的明文存储(R-2 加密暂缓)。别把它写成"已加密"。
+会话确定后，宿主先收到 `session_started` 一类事件，因此 UI 在最终回答出现前就知道这次运行属于哪个 session。
 
----
+### 3.2 构造模型真正看到的输入
 
-## 7. 宿主复用:同一个 Core 服务 TUI / 桌面 / 手机 / SDK / 自动化
+Context 并不等于“把整个聊天记录拼起来”。运行时会组合：
 
-最后回到那张"一套引擎,任意张脸"的图。把 core 做成领域无关、并用协议接缝解耦之后,最大的收益就是**宿主复用**:改一处引擎行为,所有宿主同时受益;加一个新宿主,几乎不动 core。
+- preset 选择的系统提示段；
+- capability 提供的领域提示与动态上下文，例如当前 Git 状态；
+- transcript 中与本轮相关的消息和工具结果；
+- 当前可用的工具定义；
+- token 预算要求下的裁剪、外置结果或压缩摘要。
 
-但这里有几条**准确性红线**必须说清楚,否则很容易把宿主关系讲成绝对化的假话:
+模型收到的是为本轮构造的视图，而不是会话事实的唯一副本。
 
-**① 不是所有 `Engine.run` 都经过 protocol。** 协议接缝(`AgentClient ⇄ Transport ⇄ AgentServer`)是 TUI、headless CLI、桌面 worker、RunManager 等**主路径**的常见收口方式;但 **SDK 用户、`asyncAgentRegistry` 里的子 agent、测试和专用 runner 完全可以直接装配或派生 `Engine` 调用**,不必经过 protocol。`docs/architecture/00-overview.md` 里那句概括性的 "everything runs through the protocol seam" 不能照抄为绝对事实——更准确的说法是"主路径常经协议接缝,但存在直接嵌入 Engine 的例外"。
+### 3.3 模型先调查，工具系统负责执行
 
-**② 不能说 "desktop main 绝不运行 Engine"。** 桌面交互式聊天的主路径,确实是 Electron main 进程 spawn 一个 per-session 的 `agent-server-stdio` worker 子进程,Engine 在那个 **worker 子进程**里运行,main 只是 broker(经纪人)并持有服务。但措辞要落在"哪个进程、哪条路径"上:main 进程里也存在 automation 等**服务性路径**会接触 core 能力。所以正确说法是"交互式聊天的 Engine 跑在 worker 里",而不是"main 从不碰 core"。
+模型可能先调用 `Read`、`Grep` 或 `Bash` 读取测试和错误信息。每个工具调用都会先经过 ToolExecutor，而不是直接触达文件系统或 Shell。
 
-**③ 物理接入方式因宿主而异:**
-- **TUI**:in-process protocol——客户端和服务端在同一进程里通过协议对话,没有真正的跨进程 transport。
-- **桌面**：main 作 broker，聊天主路径由它管理的 core worker 跑 Engine，React renderer 是薄客户端，只消费 StreamEvent。
-- **手机遥控**:复用桌面那条 worker / WebSocket / approval 链路,不另起一套 agent,也不能在手机端另起一条独立的权限链。
-- **SDK / 专用 runner**:可以直接嵌入 Engine。
-- **自动化(automation/cron)**:有自己的服务性策略(无头、默认更保守的权限),不沿用交互式宿主的审批方式。
+Executor 会检查工具是否属于本轮允许集合、参数是否符合 schema、目标路径是否可访问、权限结论是 `allow`、`ask` 还是 `deny`。通过门禁后，工具实现才会运行；结果随后同时进入两条路径：
 
-**④ 长任务的可恢复边界不能泛化。** RunManager、cron job 定义、持久 goal、session 的 transcript/state 都**明确持久化**,跨进程重启可恢复;但**普通在飞的 model stream、外部 child process、后台 shell、部分同步/异步子 agent 状态并不是 restart-durable**。别把"run/cron/goal 可恢复"推广成"所有后台任务都能重启恢复"——那是错的。这条在第 05 篇会展开。
+```text
+工具结果 ──→ Transcript：成为可恢复的会话事实
+        └──→ StreamEvent：让宿主实时更新界面
+```
 
-把这四条红线背下来,你就不会在描述 CodeShell 架构时滑向绝对化。它们的共同点是:**真相总是"哪条路径、哪个进程、哪类状态",而不是一句 all-or-nothing 的断言。**
+TurnLoop 再把这个结果放进下一轮输入，让模型基于真实输出继续判断，而不是假设工具已经成功。
 
----
+### 3.4 修改代码时，控制权可能回到用户
 
-## 8. 源码阅读路线(路径级锚点)
+定位问题后，模型可能请求 `ApplyPatch`。这个工具并不属于通用循环本身，而是由编程 capability 贡献。
 
-想自己验证本篇说法,按下面顺序读:
+如果当前规则给出 `ask`，运行时会进入 `waiting-permission` 阶段，并通过 protocol 向宿主发送审批请求。此时模型没有获得文件写入权，Engine 也没有忙等；它在等待宿主把用户决定路由回来。
 
-1. **公共 API 面 / 定位宣言**:`packages/core/src/index.ts`——文件头 "general-purpose agent orchestration framework",以及对外导出的类型与符号(`Engine`、`StreamEvent`、`PermissionRule`、`LLMConfig`……)。
-2. **边界契约**:`packages/core/CONTRIBUTING.md`——"core only carries mechanism, not policy" 的原文,以及"新东西过三问"的判断法(是机制还是策略?能否外移成数据?会不会破坏不变量?)。
-3. **行为即配置的核心证据**:`packages/core/src/preset/index.ts`——`AGENT_PRESET_NAMES`、`BUILTIN_AGENT_PRESETS`、`GENERAL_BUILTIN_TOOLS`、`TERMINAL_CODING_EXTRA_TOOLS`、`DEFAULT_CLI_PRESET`。对比 `general` 与 `terminal-coding` 两个对象,看清"差别只是配置"。
-4. **内置工具总表与白名单的两处改动**:`packages/core/src/tool-system/builtin/index.ts` 的 `BUILTIN_TOOLS`(总表)对照 `preset/index.ts` 的白名单——理解"加工具要改两处"的坑。
-5. **引擎装配与循环(全局锚点,细节留给第 02 篇)**:`packages/core/src/engine/engine.ts` 的 `class Engine` 与 `Engine.run`;`packages/core/src/engine/turn-loop.ts` 的 `TurnLoop`。
-6. **协议接缝(host 主路径,细节留给第 05 篇)**:`packages/core/src/protocol/` 下的 `server`、`client`、`transport`、`factories`。
-7. **跨切面(本篇只点出,不展开)**:`packages/core/src/settings/manager.ts`(配置合并顺序与 scope)、`onboarding.ts`(模型元数据从 `data/model-metadata.json` 外移播种)、`runtime/`(worker 子进程层、env allowlist)。
+批准后，工具继续执行并记录修改结果；拒绝后，executor 返回一个明确的拒绝结果，模型可以改用其他方案或向用户解释为什么无法继续。**审批不是循环之外的弹窗，而是循环中的一种可等待状态。**
 
-另外可对照结构参考图:`assets/core-big-picture.svg`(全局分层)和 `assets/module-map.svg`(模块地图)。
+### 3.5 验证失败不会自动等于整个任务失败
 
----
+修改完成后，模型调用 `Bash` 运行 `bun test`。如果测试仍然失败，这个失败首先是工具结果，而不一定是 run 的终点。TurnLoop 会把错误输出交还模型，模型可以继续读取相关文件、再次修改并重新验证。
 
-## 9. 常见误解与边界
+只有当模型给出最终回答，或运行触发取消、模型错误、上下文无法继续压缩、最大轮次等终止条件时，这次 run 才结束。
 
-- ❌ "CodeShell 是个 coding agent,core 里内置了编程逻辑。"
-  ✅ core 是**通用 Agent 编排内核**;编程能力来自 `terminal-coding` preset(提示段 + 工具白名单 + git 开关 + 权限默认),和 `general` 的差别只是配置。
+一条典型的可观察状态线大致如下：
 
-- ❌ "所有 `Engine.run` 都经过 protocol。"
-  ✅ 协议接缝是 host 的常见主路径;SDK、子 agent、测试、专用 runner 可以直接嵌入 Engine。
+```text
+starting → model → tool → waiting-permission? → tool → model
+         → compacting? → model → finalizing → turn_complete
+```
 
-- ❌ "desktop main 绝不运行 Engine。"
-  ✅ 交互式聊天的 Engine 跑在 main 管理的 worker 子进程里；main 是 broker，且存在服务性路径会接触 core。措辞要落在“哪个进程 / 哪条路径”。
+其中 `waiting-permission` 和 `compacting` 是条件分支，不是每次运行都会经过。最终的 `turn_complete` 还会携带 `completed`、`model_error`、`aborted_tools`、`max_turns` 等终止原因，让宿主知道“结束”究竟意味着什么。
 
-- ❌ "所有后台任务都能跨进程重启恢复。"
-  ✅ 只有 RunManager / cron 定义 / 持久 goal / session transcript+state 明确持久化;在飞 stream、外部子进程、后台 shell、部分子 agent 状态不能泛化成 restart-durable。
-
-- ❌ "在 `BUILTIN_TOOLS` 加一条工具就能用了。"
-  ✅ 还要进对应 preset 的白名单(如 `GENERAL_BUILTIN_TOOLS`),否则被静默过滤掉。
-
-- ❌ "沙箱在所有平台都有。"
-  ✅ Windows 无 OS sandbox 后端,`auto` 降级为 `off`,此时靠权限与路径策略兜底。
-
-- ❌ "hook 可以放行被 deny 的操作。"
-  ✅ hook 决定聚合是"最严者胜",只能收紧不能放松。
-
-- ❌ "凭证里的 cookie 已经加密。"
-  ✅ 现状是 `0o600` 明文存储(R-2 加密暂缓)。
+这条运行故事解释了为什么一个 Agent 不能只有模型和工具：只要任务需要审批、重试、流式展示、上下文治理或恢复，运行时就必须拥有明确的状态和边界。
 
 ---
 
-## 10. 结语
+## 4. 从一次运行中抽出的四条不变量
 
-如果只带走一句话:**Agent 不是"会调用工具的 LLM",Agent 是"被 harness 管住的、可受控运行的系统"。**
+![通用 Agent Harness 的分层结构](assets/v2/v2-01-core-runtime-layers.png)
 
-CodeShell Core 把"如何让模型受控运行"这件事拆成了 Engine、TurnLoop、Tool System、Context、Session/Memory、Permission/Sandbox、Protocol/Host 这几层通用机制,再把"具体当什么 agent"留给 preset、工具白名单、提示段和权限配置去组合。正因为如此,它能用同一份核心服务 TUI、桌面、手机、SDK 和自动化;正因为如此,"会写代码"对它来说不是本质,只是一份叫 `terminal-coding` 的配置。
+上面的流程可以抽象成四条比模块名称更重要的不变量。
 
-接下来的四篇,会沿着这条主线往里钻:先是 Engine 与 TurnLoop 如何一圈圈把任务推进(第 02 篇),然后是工具系统如何在 agent 动手之前先把它约束住(第 03 篇),再是模型、上下文与记忆如何拼出"长期脑容量"(第 04 篇),最后收束到协议、宿主与长任务编排如何让同一个 core 长出多张脸(第 05 篇)。读完这一篇,你应该已经拿到了那把钥匙:**别把 core 当成一个 coding 工具去读,把它当成一个通用编排内核去读。**
+### 4.1 模型拥有决策权，但不拥有执行权
+
+模型可以提出 `tool_use`，真正的副作用必须经过统一 executor。这样才能保证新增工具不会绕过可见性、参数校验、路径策略、权限、Hook 和审计。
+
+如果每个工具各自处理安全，系统就无法证明“所有副作用都经过同样的门禁”。统一执行入口不是代码复用技巧，而是安全模型成立的前提。
+
+### 4.2 Transcript 是事实，Context 是视图，Memory 是提炼
+
+三者解决的是不同问题：
+
+```text
+Transcript：发生过什么
+Context：这一轮需要看什么
+Memory：以后值得记住什么
+```
+
+长对话中，Context 可以裁剪、摘要或外置大块工具结果，但 Transcript 仍承担恢复与审计职责。Memory 则保存从多次经历中提炼出的长期信息，而不是无限复制聊天原文。
+
+把三者分开，才能同时满足“模型输入足够短”“历史事实不丢失”和“长期知识不过度膨胀”。
+
+### 4.3 Engine 管运行，Host 管交互
+
+宿主需要的是稳定语义：开始运行、接收流式事件、展示审批、转向、取消和查询状态。它不应了解 TurnLoop 内部如何调度工具或压缩上下文。
+
+协议层把这些语义固定下来后，终端、桌面、远程界面和自动化服务可以共享同一套运行机制，同时保留各自的交互方式。
+
+### 4.4 Core 定义生命周期，Capability 定义领域能力
+
+Engine 只需要知道一种能力如何被安装、选择和调用，不需要知道“编程”“研究”或“运维”分别意味着什么。具体工具、领域提示、动态上下文和工作区行为应通过 capability 进入系统。
+
+这四条边界共同完成一件事：**让每一种复杂性拥有唯一、可测试、可替换的归属。**
+
+---
+
+## 5. 机制与策略如何在仓库中分开
+
+通用内核最重要的设计约束是：
+
+> **Core carries mechanism, not policy.**
+
+机制回答“系统如何运行”，策略回答“这次运行应该表现成什么样”。当前仓库把它们分在三个层次：
+
+| 层次       | 负责什么                     | 例子                                                               |
+| ---------- | ---------------------------- | ------------------------------------------------------------------ |
+| Core       | 稳定的生命周期与约束契约     | Engine、TurnLoop、ToolExecutor、Session、Protocol、Capability 接口 |
+| Capability | 某个领域需要的实现与默认行为 | 编程提示、ApplyPatch、LSP、Git 上下文、worktree                    |
+| Host       | 产品入口、进程组织与交互方式 | TUI 组合根、桌面 worker、renderer 审批界面                         |
+
+![Core、Capability 与 Host 的组合关系](assets/v2/v2-01-presets-not-hardcoding.png)
+
+### 5.1 Preset 是选择，Capability 是贡献
+
+Preset 只从已有能力中选择提示段、工具集合和默认权限。Core 内置的 `harness-min` 与 `general` 都是领域中性的，它们不会让 Engine 自动获得编程能力。
+
+编程包则通过 `CapabilityModule` 贡献新的实现。去掉细节后，当前结构接近：
+
+```ts
+const CODING_CAPABILITY = {
+  id: "coding",
+  defaultPreset: "terminal-coding",
+  tools: CODING_TOOLS,
+  presets: [CODING_GENERAL_PRESET, TERMINAL_CODING_PRESET],
+  promptSections: { coding },
+  dynamicContextProviders: [gitDynamicContextProvider],
+  // instruction boundary、artifact、workspace、tool service 等
+};
+```
+
+两者的区别可以概括为：
+
+- **Preset 是选择**：本次运行从已有能力中暴露哪些提示、工具和默认权限。
+- **Capability 是贡献**：向运行时加入哪些新工具、领域上下文和服务。
+
+### 5.2 Host 在组合根决定产品形态
+
+TUI 是一个产品组合根。它显式安装编程能力：
+
+```ts
+registerCapability(CODING_CAPABILITY);
+```
+
+SDK 使用者则可以按 Engine 隔离注入：
+
+```ts
+const engine = new Engine({
+  llm,
+  capabilities: [CODING_CAPABILITY],
+});
+```
+
+因此，通用运行时不需要出现 `if (coding)`。需要编程能力的宿主安装它；客服、研究或媒体 Agent 可以只使用 core，或者安装另一组 capability。
+
+这不是为了追求“插件化”形式，而是为了避免领域策略反向侵蚀通用循环。新增 LSP、Git worktree 或外部编码 Agent 适配器时，Engine 和 TurnLoop 不需要跟着理解这些概念。
+
+---
+
+## 6. 安全是执行路径，不是旁边的一层
+
+Harness 与“接了工具的聊天机器人”最关键的差别，不是工具数量，而是如何看待模型输出：**它是待审查的请求，不是天然可信的命令。**
+
+一条典型的工具执行链路如下：
+
+```text
+运行配置 / 工具可见性
+        ↓
+会话级可用性再次检查
+        ↓
+参数 schema 校验
+        ↓
+pre-tool hook（若改写参数，必须重新校验）
+        ↓
+路径策略与其他领域门禁
+        ↓
+权限分类：allow / ask / deny
+        ↓
+人工审批（仅 ask）
+        ↓
+工具执行与 OS sandbox
+        ↓
+结果记录、post-tool hook、返回模型
+```
+
+这条链路里有几处容易被忽略的细节。
+
+### 6.1 隐藏工具不等于禁止执行
+
+模型可能记住上一轮出现过的工具，也可能直接生成一个当前不可见的工具名。因此，工具集合既要在模型侧过滤，也要在 executor 侧再次校验。**可见性改善模型选择，执行门禁才建立安全边界。**
+
+### 6.2 参数改写后必须重新验证
+
+Hook 可以清洗或规范化参数，但任何改写都会让原校验结论失效。正确顺序是“校验 → 改写 → 再校验”，然后才进入路径和权限判断。
+
+### 6.3 扩展只能收紧权限
+
+多个判断合并时应遵循 `deny > ask > allow`。Hook 可以把 `allow` 收紧为 `ask` 或 `deny`，但不能把已有的 `deny` 放宽为 `allow`。否则，一个低层扩展就可能绕过宿主或用户设定的规则。
+
+### 6.4 权限、路径与 Sandbox 不能互相替代
+
+Shell 管道、重定向、命令替换和链式命令说明，只看字符串前缀不足以判断副作用。软链接和 `..` 也说明，只比较原始路径字符串不足以防止越界。
+
+权限决定“是否允许”，路径策略决定“可以触达哪里”，OS sandbox 再限制“进程最终能做什么”。三者服务于不同威胁模型，缺少任何一层都会留下空档。
+
+外部工具同样不能走旁路。MCP server、网页和第三方进程返回的内容都可能包含错误数据或提示注入，应接受同样的会话隔离、权限和结果处理。
+
+### 6.5 失败本身也是运行状态
+
+Production Harness 不能把所有异常都压成一句“执行失败”。不同失败需要不同语义：
+
+| 场景                     | 运行时行为                                | 为什么                              |
+| ------------------------ | ----------------------------------------- | ----------------------------------- |
+| 权限为 `deny` 或用户拒绝 | 不执行 handler，把拒绝作为工具结果返回    | 模型可以停止、换方案或解释原因      |
+| 可恢复的工具错误         | 记录错误结果并继续 TurnLoop               | 一次命令失败不等于整个任务失败      |
+| 用户取消 model stream    | 传播 abort，并以 `aborted_streaming` 收尾 | 宿主需要区分取消与模型故障          |
+| 用户取消工具阶段         | 停止后续执行，并以 `aborted_tools` 收尾   | 防止取消后继续产生副作用            |
+| 上下文接近上限           | 进入 `compacting`，从事实账本重建更短视图 | 保留可继续推理的空间                |
+| 模型错误或轮次耗尽       | 返回明确 terminal reason                  | 让 UI、自动化和恢复逻辑采取不同动作 |
+
+安全不是某个 `permission.ts` 文件的职责，而是从“模型能看到什么”一直延伸到“操作系统最终允许什么”，再延伸到“失败后系统怎样停止”的完整链条。
+
+---
+
+## 7. 宿主复用与恢复边界
+
+当运行机制与界面解耦后，同一个内核可以有多种接入方式：
+
+- TUI 可以在同一进程内通过 protocol client/server 交互。
+- 桌面聊天由主进程管理 worker，Engine 在 worker 中运行，renderer 只消费事件和提交控制指令。
+- SDK 和专用 runner 可以直接构造 Engine，不必强制经过 protocol。
+- 自动化与 cron 可以复用运行机制，但采用更适合无头环境的权限与恢复策略。
+
+因此，“主路径经协议”不等于“所有调用都必须经协议”。Protocol 的作用是建立宿主契约，而不是禁止 Engine 作为嵌入式 API 使用。
+
+### 7.1 可观察不等于暴露内部实现
+
+宿主不需要知道 TurnLoop 的每个局部变量，只需要消费稳定事件：session 建立、文本增量、工具开始、工具结果、审批请求和 `turn_complete`。进度层还可以把运行概括为 `starting`、`model`、`tool`、`waiting-permission`、`compacting`、`finalizing` 等阶段。
+
+这样，TUI 和桌面可以有不同界面，却对“运行到哪一步”保持同一套理解。
+
+### 7.2 可恢复不等于把进程冻结起来
+
+一个任务能否跨进程继续，取决于它是否保存了足够的语义状态：
+
+| 状态类型 | 典型内容                            | 恢复方式                 |
+| -------- | ----------------------------------- | ------------------------ |
+| 事实状态 | Transcript、工具结果、session 状态  | 必须持久化               |
+| 目标状态 | Run、Goal、Cron 定义及生命周期      | 持久化后由状态机继续推进 |
+| 派生状态 | 当前 Context、工具可见列表、UI 投影 | 从事实与配置重新构建     |
+| 瞬时状态 | model stream、外部子进程、内存回调  | 中断后重新执行或显式失败 |
+
+因此，恢复 session 不等于续接原来的网络流或子进程。可靠的长任务设计需要明确哪些状态是事实、哪些可以重建、哪些在中断后必须承认已经丢失。
+
+这也是为什么长任务最终会演化成状态机，而不是一个无限延长的函数调用。
+
+---
+
+## 8. 在仓库中如何实践
+
+增加一种 Agent 能力时，可以按下面的顺序判断落点。
+
+### 第一步：判断是机制还是策略
+
+如果换一个领域仍然成立，例如取消、审批、上下文压缩和会话恢复，才考虑进入 `packages/core/`。只服务某个领域的工具、提示和工作区逻辑，应放进独立 capability。判断标准可以直接参考 `packages/core/CONTRIBUTING.md`。
+
+### 第二步：选择扩展层
+
+- 只需要重新组合现有提示段、工具和权限：新增 preset。
+- 需要加入工具实现、动态上下文或领域服务：实现 `CapabilityModule`。
+- 只影响界面交互或进程组织：留在 `packages/tui/` 或 `packages/desktop/`，通过 protocol 与运行时通信。
+
+### 第三步：在组合根安装能力
+
+SDK 场景优先通过 `new Engine({ capabilities: [...] })` 显式注入，避免污染进程全局。产品入口可以参考 `packages/tui/src/cli/main.ts`，使用 `registerCapability(...)` 安装进程级能力。`packages/coding/src/index.ts` 是目前最完整的 capability 参考实现。
+
+### 第四步：按边界验证
+
+测试重点不应该只有“模型最后回答对不对”，还应覆盖：
+
+- 工具是否只在目标 preset 下可见；
+- executor 是否再次阻止禁用或越界调用；
+- 默认权限与审批路由是否正确；
+- 提示段是否随相关工具启停；
+- 工具失败、用户取消和上下文压缩是否产生正确状态；
+- 宿主能否收到完整且顺序正确的流式事件。
+
+这套实践的核心不是“把新功能接进来”，而是让它只接触自己应该负责的那一层。代价是排查问题时需要同时理解 preset、capability、host 和运行配置；收益是新增一个领域能力时，Engine、TurnLoop、安全链路和会话机制仍然可以原样复用。
+
+如果只带走一句话，可以是：
+
+> **Agent 不是会调用工具的 LLM，而是被 Harness 组织和约束的一次持续运行。**

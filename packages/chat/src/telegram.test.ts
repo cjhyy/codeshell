@@ -63,6 +63,70 @@ describe("TelegramAdapter", () => {
     expect(logs[0]).not.toContain("secret");
   });
 
+  test("does not advance the polling cursor until the durable handler accepts an update", async () => {
+    const abort = new AbortController();
+    const offsets: Array<number | undefined> = [];
+    let attempts = 0;
+    const adapter = new TelegramAdapter(baseConfig(), {
+      fetch: async (_url, init) => {
+        offsets.push(JSON.parse(String(init?.body)).offset);
+        return Response.json({
+          ok: true,
+          result: [
+            {
+              update_id: 41,
+              message: { message_id: 9, text: "/status", chat: { id: 123 }, from: { id: 7 } },
+            },
+          ],
+        });
+      },
+    });
+
+    await adapter.run(async () => {
+      attempts++;
+      if (attempts === 1) throw new Error("inbox full");
+      abort.abort();
+    }, abort.signal);
+
+    expect(attempts).toBe(2);
+    expect(offsets).toEqual([undefined, undefined]);
+  });
+
+  test("backs off before re-polling when the handler keeps failing", async () => {
+    const abort = new AbortController();
+    const sleeps: number[] = [];
+    let handlerCalls = 0;
+    const adapter = new TelegramAdapter(baseConfig(), {
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+      fetch: async () =>
+        Response.json({
+          ok: true,
+          result: [
+            {
+              update_id: 41,
+              message: { message_id: 9, text: "/status", chat: { id: 123 }, from: { id: 7 } },
+            },
+          ],
+        }),
+    });
+
+    await adapter.run(async () => {
+      handlerCalls++;
+      // Fail twice (offset never advances, so the same batch reprocesses),
+      // then stop. Each failure must insert a backoff sleep before re-polling.
+      if (handlerCalls >= 3) abort.abort();
+      throw new Error("inbox full");
+    }, abort.signal);
+
+    // Without a backoff the loop hot-spins; with it every handler failure
+    // sleeps at least once before the next getUpdates.
+    expect(handlerCalls).toBeGreaterThanOrEqual(2);
+    expect(sleeps.length).toBeGreaterThanOrEqual(2);
+    expect(sleeps.every((ms) => ms >= 1_000)).toBe(true);
+  });
+
   test("does not replay stale control commands after a polling restart", async () => {
     const abort = new AbortController();
     let handled = 0;

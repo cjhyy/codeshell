@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Forward, X } from "lucide-react";
 import type { Message } from "./types";
 import { ToolCard } from "./tool-cards";
@@ -15,7 +15,7 @@ import { TurnProcessGroupCard } from "./messages/TurnProcessGroupCard";
 import { FilesChangedCard } from "./messages/FilesChangedCard";
 import { LiveActivityLine } from "./messages/LiveActivityLine";
 import { buildStreamItems, reconcileStreamItems, type StreamItem } from "./messages/streamGroups";
-import { foldAgentGroups } from "./messages/agentGroup";
+import { foldAgentGroups, type RenderedStreamItem } from "./messages/agentGroup";
 import { AgentGroupCard } from "./messages/AgentGroupCard";
 import { useStickToBottom } from "./chat/stickToBottom";
 import { buildScrollTrigger } from "./chat/scrollTrigger";
@@ -31,10 +31,13 @@ import { useT } from "./i18n/I18nProvider";
 import type { SummaryForkSessionResult } from "../preload/types";
 import {
   buildSelectableContextTurns,
+  groupStreamItemsIntoContextTurns,
+  isSystemReminderText,
   selectedTurnRange,
   type SelectableContextTurn,
 } from "./contextSelection";
 import { DriveAgentJobsLoader } from "./tool-cards/DriveAgentJobsContext";
+import { SystemReminderTask } from "./messages/SystemReminderTask";
 
 // Stable fallback so memoized AskUserMessageView siblings don't see a
 // fresh onAnswer prop on every render.
@@ -104,6 +107,8 @@ interface Props {
   onContextPackageCreated?: ContextPackageCreatedHandler;
   /** Lets the chat shell replace its composer while merge-forward selection is active. */
   onContextSelectionChange?: (open: boolean) => void;
+  /** Monotonic request from the title-bar context-selection button. */
+  contextSelectionRequest?: number;
 }
 
 export function MessageStream({
@@ -119,6 +124,7 @@ export function MessageStream({
   sendEpoch,
   onContextPackageCreated,
   onContextSelectionChange,
+  contextSelectionRequest,
 }: Props) {
   const { t } = useT();
   // The LAST files_changed message = the most recent turn's file edits. Only
@@ -154,6 +160,7 @@ export function MessageStream({
   const [selectionStatus, setSelectionStatus] = useState<"idle" | "loading" | "packaging">("idle");
   const [selectionError, setSelectionError] = useState<string | null>(null);
   const selectionLoadEpochRef = useRef(0);
+  const contextSelectionRequestRef = useRef(contextSelectionRequest);
   const currentSessionIdRef = useRef(engineSessionId);
   currentSessionIdRef.current = engineSessionId;
 
@@ -191,8 +198,8 @@ export function MessageStream({
     setSelectionError(null);
   };
 
-  const openContextSelection = async () => {
-    if (!engineSessionId || liveTurnActive) return;
+  const openContextSelection = useCallback(async () => {
+    if (!engineSessionId || !onContextPackageCreated || liveTurnActive || selectionOpen) return;
     const loadEpoch = ++selectionLoadEpochRef.current;
     setSelectionOpen(true);
     setSelectionStatus("loading");
@@ -209,7 +216,18 @@ export function MessageStream({
     } finally {
       if (loadEpoch === selectionLoadEpochRef.current) setSelectionStatus("idle");
     }
-  };
+  }, [engineSessionId, liveTurnActive, onContextPackageCreated, selectionOpen]);
+
+  useEffect(() => {
+    if (
+      contextSelectionRequest === undefined ||
+      contextSelectionRequestRef.current === contextSelectionRequest
+    ) {
+      return;
+    }
+    contextSelectionRequestRef.current = contextSelectionRequest;
+    void openContextSelection();
+  }, [contextSelectionRequest, openContextSelection]);
 
   const chooseTurn = (index: number) => {
     if (selectionAnchor === null || selectionEnd === null) {
@@ -316,153 +334,148 @@ export function MessageStream({
       ),
     [messages, liveTurnActive],
   );
+  const displayGroups = useMemo(() => groupStreamItemsIntoContextTurns(items), [items]);
+
+  const renderStreamItem = (m: RenderedStreamItem): React.ReactNode => {
+    if (m.kind === "turn_process_group") {
+      return <TurnProcessGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} />;
+    }
+    if (m.kind === "tool_group") {
+      return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} />;
+    }
+    if (m.kind === "agent_group") {
+      return <AgentGroupCard key={m.id} group={m} />;
+    }
+    switch (m.kind) {
+      case "tool":
+        return <ToolCard key={m.id} message={m} turnEpoch={turnEpoch} cwd={cwd} />;
+      case "user": {
+        if (isSystemReminderText(m.text)) {
+          return <SystemReminderTask key={m.id} text={m.text} />;
+        }
+        const decoded = decodeWireForDisplay(m.text);
+        const images = decoded.images;
+        const { block: annotations, text } = extractAnnotations(decoded.text);
+        const askedAt = formatMessageTime(m.createdAt);
+        if (!text && !annotations && images.length === 0) return null;
+        return (
+          <div key={m.id} className="group flex min-w-0 max-w-full flex-col items-end px-4 py-1.5">
+            {m.isGoal && (
+              <span className="mb-0.5 flex items-center gap-1 px-1 text-[11px] font-medium text-status-running">
+                ◎ {t("msg.user.goal")}
+              </span>
+            )}
+            <div
+              className={
+                "min-w-0 max-w-[80%] rounded-xl border px-3 py-2 text-sm " +
+                (m.isGoal
+                  ? "border-status-running/50 bg-status-running/10"
+                  : "border-border bg-muted/40")
+              }
+            >
+              {annotations && <AnnotationsBlock block={annotations} />}
+              {text && (
+                <CollapsibleContent>
+                  <div className="whitespace-pre-wrap break-words">{text}</div>
+                </CollapsibleContent>
+              )}
+              {images.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2 [&>img]:h-20 [&>img]:rounded-md [&>img]:object-cover [&>img]:cursor-pointer">
+                  {images.map((img, i) => (
+                    <img
+                      key={i}
+                      src={img.dataUrl}
+                      alt={img.name || "image"}
+                      title={img.name || undefined}
+                      onClick={() =>
+                        setZoomed({
+                          items: images.map((g) => ({
+                            src: g.dataUrl,
+                            alt: g.name || "image",
+                            name: g.name || undefined,
+                          })),
+                          index: i,
+                        })
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            {askedAt && (
+              <span className="mt-0.5 px-1 text-[11px] tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+                {askedAt}
+              </span>
+            )}
+          </div>
+        );
+      }
+      case "assistant":
+        return <AssistantMessageView key={m.id} message={m} cwd={cwd ?? null} />;
+      case "thinking":
+        return <ThinkingMessageView key={m.id} message={m} />;
+      case "agent":
+        return <AgentMessageView key={m.id} message={m} />;
+      case "task_list":
+        return null;
+      case "context_boundary":
+        return <ContextBoundaryView key={m.id} message={m} />;
+      case "goal_progress":
+        return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;
+      case "ask_user":
+        return m.answer !== undefined ? (
+          <AskUserMessageView key={m.id} message={m} onAnswer={onAskUserAnswer ?? NOOP_ON_ANSWER} />
+        ) : null;
+      case "system":
+        if (m.text.trim() === "") return null;
+        return (
+          <div key={m.id} className="px-4 py-1 text-center text-xs text-muted-foreground">
+            {m.text}
+          </div>
+        );
+      case "files_changed":
+        return (
+          <FilesChangedCard
+            key={m.id}
+            message={m}
+            cwd={cwd ?? null}
+            sessionId={engineSessionId ?? null}
+            isLatest={m.id === lastFilesChangedId}
+          />
+        );
+      case "turn_end":
+        return <TurnEndMessageView key={m.id} message={m} />;
+    }
+  };
 
   return (
     <DriveAgentJobsLoader sessionId={engineSessionId} messages={messages}>
       <div className="relative flex min-w-0 max-w-full flex-1 flex-col overflow-hidden">
-        {engineSessionId && onContextPackageCreated && !liveTurnActive && !selectionOpen && (
-          <div className="flex shrink-0 justify-end border-b border-border/60 px-4 py-1.5">
+        {selectionOpen && (
+          <div className="flex shrink-0 items-center gap-3 border-b border-border bg-background px-4 py-2.5">
             <Button
               type="button"
               variant="ghost"
-              size="sm"
-              className="h-7 gap-1.5 text-muted-foreground hover:text-foreground"
-              data-context-action="open"
-              onClick={() => void openContextSelection()}
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              aria-label={t("chat.contextPackage.cancelAria")}
+              title={t("chat.contextPackage.cancel")}
+              disabled={selectionStatus === "packaging"}
+              onClick={closeContextSelection}
             >
-              <Forward size={14} />
-              {t("chat.contextPackage.select")}
+              <X size={16} />
             </Button>
-          </div>
-        )}
-        {selectionOpen && (
-          <div className="absolute inset-0 z-30 flex min-h-0 flex-col bg-background">
-            <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                aria-label={t("chat.contextPackage.cancelAria")}
-                title={t("chat.contextPackage.cancel")}
-                disabled={selectionStatus === "packaging"}
-                onClick={closeContextSelection}
-              >
-                <X size={16} />
-              </Button>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 font-medium">
-                  <Forward size={15} className="shrink-0" />
-                  <span>{t("chat.contextPackage.title")}</span>
-                </div>
-                <div className="mt-0.5 text-xs text-muted-foreground">
-                  {t("chat.contextPackage.hint")}
-                </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 font-medium">
+                <Forward size={15} className="shrink-0" />
+                <span>{t("chat.contextPackage.title")}</span>
               </div>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-              {selectionStatus === "loading" ? (
-                <div className="mx-auto max-w-2xl py-8 text-center text-sm text-muted-foreground">
-                  {t("chat.contextPackage.loading")}
-                </div>
-              ) : selectionTurns.length === 0 ? (
-                <div className="mx-auto max-w-2xl py-8 text-center text-sm text-muted-foreground">
-                  {t("chat.contextPackage.empty")}
-                </div>
-              ) : (
-                <div className="mx-auto max-w-2xl space-y-2">
-                  {selectionTurns.map((turn, index) => {
-                    const low = Math.min(selectionAnchor ?? -1, selectionEnd ?? -1);
-                    const high = Math.max(selectionAnchor ?? -1, selectionEnd ?? -1);
-                    const selected = selectionAnchor !== null && index >= low && index <= high;
-                    const decodedPreview = decodeWireForDisplay(turn.preview);
-                    const preview =
-                      decodedPreview.text.trim() ||
-                      (decodedPreview.images.length > 0
-                        ? t("chat.contextPackage.imagePreview", {
-                            count: decodedPreview.images.length,
-                          })
-                        : turn.preview);
-                    return (
-                      <button
-                        type="button"
-                        key={`${turn.fromEventId}:${turn.toEventId}`}
-                        className={
-                          "group/turn flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors " +
-                          (selected
-                            ? "border-primary bg-primary/10"
-                            : "border-border bg-card hover:bg-muted/50")
-                        }
-                        aria-label={t("chat.contextPackage.turnAria", {
-                          number: turn.turnNumber + 1,
-                        })}
-                        aria-pressed={selected}
-                        data-context-turn-index={index}
-                        onClick={() => chooseTurn(index)}
-                      >
-                        <span
-                          className={
-                            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors " +
-                            (selected
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-muted-foreground/50 bg-background group-hover/turn:border-primary/60")
-                          }
-                          aria-hidden="true"
-                        >
-                          {selected && <Check size={13} strokeWidth={3} />}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="flex items-center justify-between gap-3">
-                            <span className="text-xs font-medium text-muted-foreground">
-                              {t("chat.contextPackage.turnLabel", {
-                                number: turn.turnNumber + 1,
-                              })}
-                            </span>
-                            <span className="shrink-0 text-[11px] text-muted-foreground/80">
-                              {t("chat.contextPackage.turnEvents", {
-                                count: turn.eventIds.length,
-                              })}
-                            </span>
-                          </span>
-                          <span className="mt-1 block whitespace-pre-wrap break-words text-sm">
-                            {preview}
-                          </span>
-                          <span className="mt-1.5 block text-[11px] text-muted-foreground">
-                            {t("chat.contextPackage.turnIncludesReply")}
-                          </span>
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            <div className="shrink-0 border-t border-border bg-background px-4 py-3">
-              <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
-                <div
-                  className={
-                    "min-w-0 text-sm " +
-                    (selectionError ? "text-status-err" : "text-muted-foreground")
-                  }
-                >
-                  {selectionError
-                    ? t("chat.contextPackage.failed", { error: selectionError })
-                    : t("chat.contextPackage.selected", { count: selectedTurnCount })}
-                </div>
-                <Button
-                  type="button"
-                  className="shrink-0 gap-1.5"
-                  data-context-action="merge"
-                  disabled={
-                    selectionAnchor === null || selectionEnd === null || selectionStatus !== "idle"
-                  }
-                  onClick={() => void createContextPackage()}
-                >
-                  <Forward size={14} />
-                  {selectionStatus === "packaging"
-                    ? t("chat.contextPackage.packaging")
-                    : t("chat.contextPackage.create")}
-                </Button>
+              <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                {selectionStatus === "loading"
+                  ? t("chat.contextPackage.loading")
+                  : selectionTurns.length === 0
+                    ? t("chat.contextPackage.empty")
+                    : t("chat.contextPackage.hint")}
               </div>
             </div>
           </div>
@@ -472,146 +485,89 @@ export function MessageStream({
           ref={ref}
         >
           <div className="min-w-0 max-w-full">
-            {items.map((m) => {
-              if (m.kind === "turn_process_group") {
-                return (
-                  <TurnProcessGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} />
-                );
-              }
-              if (m.kind === "tool_group") {
-                return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} />;
-              }
-              if (m.kind === "agent_group") {
-                return <AgentGroupCard key={m.id} group={m} />;
-              }
-              switch (m.kind) {
-                case "tool":
-                  // Tool cards now display their full args/result body inline
-                  // when expanded — no separate inspector pane to feed.
-                  return <ToolCard key={m.id} message={m} turnEpoch={turnEpoch} cwd={cwd} />;
-                case "user": {
-                  // decodeWireForDisplay drops images with an empty data URL (dead
-                  // ephemeral screenshots), so a turn that was only such an image
-                  // decodes to empty text + no images.
-                  const decoded = decodeWireForDisplay(m.text);
-                  const images = decoded.images;
-                  // Pull the pinned-comment block (diff/browser/file anchors) out of
-                  // the prose so it renders as a styled card, not raw XML.
-                  const { block: annotations, text } = extractAnnotations(decoded.text);
-                  const askedAt = formatMessageTime(m.createdAt);
-                  // Nothing to show (no prose, no annotations, all images were dead) →
-                  // render no bubble rather than an empty selectable box.
-                  if (!text && !annotations && images.length === 0) return null;
+            {selectionOpen &&
+              displayGroups.map((group) => {
+                const index = group.selectionIndex;
+                if (index === null) {
                   return (
-                    <div
-                      key={m.id}
-                      className="group flex min-w-0 max-w-full flex-col items-end px-4 py-1.5"
-                    >
-                      {m.isGoal && (
-                        // Persistent-goal marker (CC /goal). This send set/advanced a goal.
-                        <span className="mb-0.5 flex items-center gap-1 px-1 text-[11px] font-medium text-status-running">
-                          ◎ {t("msg.user.goal")}
-                        </span>
-                      )}
-                      <div
-                        className={
-                          "min-w-0 max-w-[80%] rounded-xl border px-3 py-2 text-sm " +
-                          (m.isGoal
-                            ? "border-status-running/50 bg-status-running/10"
-                            : "border-border bg-muted/40")
-                        }
-                      >
-                        {annotations && <AnnotationsBlock block={annotations} />}
-                        {text && (
-                          <CollapsibleContent>
-                            <div className="whitespace-pre-wrap break-words">{text}</div>
-                          </CollapsibleContent>
-                        )}
-                        {images.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-2 [&>img]:h-20 [&>img]:rounded-md [&>img]:object-cover [&>img]:cursor-pointer">
-                            {images.map((img, i) => (
-                              <img
-                                key={i}
-                                src={img.dataUrl}
-                                alt={img.name || "image"}
-                                title={img.name || undefined}
-                                onClick={() =>
-                                  setZoomed({
-                                    items: images.map((g) => ({
-                                      src: g.dataUrl,
-                                      alt: g.name || "image",
-                                      name: g.name || undefined,
-                                    })),
-                                    index: i,
-                                  })
-                                }
-                              />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      {askedAt && (
-                        <span className="mt-0.5 px-1 text-[11px] tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
-                          {askedAt}
-                        </span>
-                      )}
-                    </div>
+                    <React.Fragment key={group.key}>
+                      {group.items.map(renderStreamItem)}
+                    </React.Fragment>
                   );
                 }
-                case "assistant":
-                  return <AssistantMessageView key={m.id} message={m} cwd={cwd ?? null} />;
-                case "thinking":
-                  return <ThinkingMessageView key={m.id} message={m} />;
-                case "agent":
-                  return <AgentMessageView key={m.id} message={m} />;
-                case "task_list":
-                  // task_list is rendered as a pinned panel above the
-                  // composer (see ChatView), not inline in the scroll stream
-                  // — that way the user keeps tasks in view as new messages
-                  // push old ones up.
-                  return null;
-                case "context_boundary":
-                  return <ContextBoundaryView key={m.id} message={m} />;
-                case "goal_progress":
-                  return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;
-                case "ask_user":
-                  // ask_user is also pinned above the composer. We still
-                  // render the resolved (answered) cards inline so the chat
-                  // history reflects the conversation.
-                  return m.answer !== undefined ? (
-                    <AskUserMessageView
-                      key={m.id}
-                      message={m}
-                      onAnswer={onAskUserAnswer ?? NOOP_ON_ANSWER}
-                    />
-                  ) : null;
-                case "system":
-                  // Empty system text = a blank centered block; skip it.
-                  if (m.text.trim() === "") return null;
-                  return (
-                    <div key={m.id} className="px-4 py-1 text-center text-xs text-muted-foreground">
-                      {m.text}
-                    </div>
-                  );
-                case "files_changed":
-                  return (
-                    <FilesChangedCard
-                      key={m.id}
-                      message={m}
-                      cwd={cwd ?? null}
-                      sessionId={engineSessionId ?? null}
-                      isLatest={m.id === lastFilesChangedId}
-                    />
-                  );
-                case "turn_end":
-                  return <TurnEndMessageView key={m.id} message={m} />;
-              }
-            })}
+                const turn = selectionTurns[index];
+                const low = Math.min(selectionAnchor ?? -1, selectionEnd ?? -1);
+                const high = Math.max(selectionAnchor ?? -1, selectionEnd ?? -1);
+                const selected = selectionAnchor !== null && index >= low && index <= high;
+                const selectable = !!turn && selectionStatus !== "loading";
+                return (
+                  <div
+                    key={group.key}
+                    className={
+                      "relative my-0.5 min-w-0 rounded-xl pl-9 transition-colors " +
+                      (selected ? "bg-primary/10 ring-1 ring-inset ring-primary/35" : "")
+                    }
+                    data-context-turn-selected={selected ? "true" : "false"}
+                  >
+                    {selectable && (
+                      <button
+                        type="button"
+                        className={
+                          "group/turn absolute left-2 top-5 z-10 flex h-5 w-5 items-center justify-center rounded-full border transition-colors " +
+                          (selected
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-muted-foreground/50 bg-background hover:border-primary")
+                        }
+                        aria-label={t("chat.contextPackage.turnAria", {
+                          number: turn.turnNumber + 1,
+                        })}
+                        aria-pressed={selected}
+                        data-context-turn-index={index}
+                        onClick={() => chooseTurn(index)}
+                      >
+                        {selected && <Check size={13} strokeWidth={3} />}
+                      </button>
+                    )}
+                    {group.items.map(renderStreamItem)}
+                  </div>
+                );
+              })}
+            {!selectionOpen && items.map(renderStreamItem)}
             {liveTurnActive && <LiveActivityLine messages={messages} running={liveTurnActive} />}
             {trailing}
           </div>
         </div>
-        {showJump && (
+        {selectionOpen && (
+          <div className="shrink-0 border-t border-border bg-background px-4 py-3">
+            <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
+              <div
+                className={
+                  "min-w-0 text-sm " +
+                  (selectionError ? "text-status-err" : "text-muted-foreground")
+                }
+              >
+                {selectionError
+                  ? t("chat.contextPackage.failed", { error: selectionError })
+                  : t("chat.contextPackage.selected", { count: selectedTurnCount })}
+              </div>
+              <Button
+                type="button"
+                className="shrink-0 gap-1.5"
+                data-context-action="merge"
+                disabled={
+                  selectionAnchor === null || selectionEnd === null || selectionStatus !== "idle"
+                }
+                onClick={() => void createContextPackage()}
+              >
+                <Forward size={14} />
+                {selectionStatus === "packaging"
+                  ? t("chat.contextPackage.packaging")
+                  : t("chat.contextPackage.create")}
+              </Button>
+            </div>
+          </div>
+        )}
+        {!selectionOpen && showJump && (
           <Button
             type="button"
             variant="solid"

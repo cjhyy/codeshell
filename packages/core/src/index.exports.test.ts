@@ -79,6 +79,8 @@ const expectedRuntimeExportsByPartition = {
     "wrapUntrustedInput",
     "runWriteJobInWorktree",
     "createOffBackend",
+    "createFakeToolContext",
+    "createToolRegistryHarness",
     "fileCache",
     "validateToolArgs",
     "asyncAgentRegistry",

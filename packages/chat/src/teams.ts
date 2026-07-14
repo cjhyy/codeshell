@@ -1,4 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { chmodSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import {
   ActivityTypes,
   CloudAdapter,
@@ -14,15 +16,24 @@ export interface TeamsAdapterConfig {
   appPassword: string;
   appType?: string;
   tenantId?: string;
+  statePath?: string;
 }
 
 export class TeamsAdapter implements WebhookChannelAdapter {
   readonly channel = "teams";
   readonly webhookPath = "/webhooks/teams";
   private readonly adapter: CloudAdapter;
+  private readonly appId: string;
   private readonly contexts = new Map<string, TurnContext>();
+  private readonly references = new Map<
+    string,
+    ReturnType<typeof TurnContext.getConversationReference>
+  >();
+  private readonly statePath?: string;
 
   constructor(config: TeamsAdapterConfig) {
+    this.appId = config.appId;
+    this.statePath = config.statePath;
     const authentication = new ConfigurationBotFrameworkAuthentication({
       MicrosoftAppType: config.appType ?? "MultiTenant",
       MicrosoftAppId: config.appId,
@@ -30,6 +41,7 @@ export class TeamsAdapter implements WebhookChannelAdapter {
       ...(config.tenantId ? { MicrosoftAppTenantId: config.tenantId } : {}),
     });
     this.adapter = new CloudAdapter(authentication);
+    this.loadReferences();
   }
 
   run(_handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
@@ -64,9 +76,17 @@ export class TeamsAdapter implements WebhookChannelAdapter {
         if (activity.type !== ActivityTypes.Message || !target || !senderId || !activity.text)
           return;
         const text = TurnContext.removeRecipientMention(activity).trim() || activity.text;
+        this.references.set(target, TurnContext.getConversationReference(activity));
+        this.saveReferences();
         this.contexts.set(target, context);
         try {
-          await handler({ channel: this.channel, target, senderId, text });
+          await handler({
+            channel: this.channel,
+            target,
+            senderId,
+            text,
+            ...(activity.id ? { messageId: activity.id } : {}),
+          });
         } finally {
           this.contexts.delete(target);
         }
@@ -76,8 +96,50 @@ export class TeamsAdapter implements WebhookChannelAdapter {
 
   async send(target: string, message: OutgoingMessage): Promise<void> {
     const context = this.contexts.get(target);
-    if (!context) throw new Error(`Teams 会话 ${target} 已离开当前 turn，无法回复`);
-    await context.sendActivity(formatOutgoingMarkdown(message.text, message.button));
+    const text = formatOutgoingMarkdown(message.text, message.button);
+    if (context) {
+      await context.sendActivity(text);
+      return;
+    }
+    const reference = this.references.get(target);
+    if (!reference) throw new Error(`Teams 会话 ${target} 尚无 conversation reference`);
+    await this.adapter.continueConversationAsync(this.appId, reference, async (turn) => {
+      await turn.sendActivity(text);
+    });
+  }
+
+  private loadReferences(): void {
+    if (!this.statePath) return;
+    try {
+      const parsed = JSON.parse(readFileSync(this.statePath, "utf-8")) as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;
+      for (const [target, reference] of Object.entries(parsed as Record<string, unknown>).slice(
+        0,
+        1_000,
+      )) {
+        if (target && reference && typeof reference === "object" && !Array.isArray(reference)) {
+          this.references.set(
+            target,
+            reference as ReturnType<typeof TurnContext.getConversationReference>,
+          );
+        }
+      }
+    } catch {
+      // First run, malformed legacy state, or an unavailable home directory.
+    }
+  }
+
+  private saveReferences(): void {
+    if (!this.statePath) return;
+    const entries = [...this.references.entries()].slice(-1_000);
+    mkdirSync(dirname(this.statePath), { recursive: true, mode: 0o700 });
+    const temporary = `${this.statePath}.${process.pid}.tmp`;
+    writeFileSync(temporary, `${JSON.stringify(Object.fromEntries(entries))}\n`, {
+      encoding: "utf-8",
+      mode: 0o600,
+    });
+    renameSync(temporary, this.statePath);
+    if (process.platform !== "win32") chmodSync(this.statePath, 0o600);
   }
 }
 

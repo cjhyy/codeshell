@@ -311,6 +311,7 @@ import {
 } from "./pet/pet-widget-window-state.js";
 import {
   getTrust,
+  getTrustCachedSync,
   setTrust,
   warmTrustCache,
   summarizeProjectTrustRisks,
@@ -390,6 +391,7 @@ let bridge: AgentBridge | null = null;
 const pluginPanelBridge = new PluginPanelBridge({
   isTrustedHost: (sender) =>
     [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
+  isWorkspaceTrusted: (cwd) => getTrustCachedSync(cwd) === "trusted",
   getAgentBridge: () => bridge,
 });
 pluginPanelBridge.registerIpc();
@@ -590,6 +592,26 @@ tunnelManager.on("status", (status: string, detail?: unknown) => {
   }
   for (const w of BrowserWindow.getAllWindows()) {
     if (!w.isDestroyed()) w.webContents.send("mobileRemote:tunnelStatus", { status, detail });
+  }
+  if (status === "connected" && typeof detail === "string") {
+    gatewayControlServer?.publish({
+      type: "tunnel.connected",
+      title: "CodeShell 公网隧道已连接",
+      text: `公网地址：${detail}`,
+      button: { text: "打开 CodeShell", url: detail },
+    });
+  } else if (status === "disconnected") {
+    gatewayControlServer?.publish({
+      type: "tunnel.disconnected",
+      title: "CodeShell 公网隧道已断开",
+      text: "公网隧道连接已断开，请在桌面端或聊天命令中重新开启。",
+    });
+  } else if (status === "error") {
+    gatewayControlServer?.publish({
+      type: "tunnel.error",
+      title: "CodeShell 公网隧道异常",
+      text: typeof detail === "string" ? detail : "公网隧道发生异常。",
+    });
   }
 });
 // Push the live online-device set to every renderer whenever a phone connects
@@ -1857,6 +1879,7 @@ async function createWindow(): Promise<BrowserWindow> {
       aggregator,
       worker: bridge,
       hostCwd: resolveNoRepoCwd(),
+      listWorkspaces: mobileProjectList,
     });
     const petReceipts = new PetReceiptStore(
       resolve(app.getPath("userData"), "pet", "attention-receipts.json"),
@@ -1877,6 +1900,7 @@ async function createWindow(): Promise<BrowserWindow> {
       dispatcher: petDispatchService,
       attention,
       windows: () => BrowserWindow.getAllWindows(),
+      delegationWindows: () => (win && !win.isDestroyed() ? [win] : []),
       ready: petInitialization,
     });
     await petInitialization;

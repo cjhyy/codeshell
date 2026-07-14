@@ -72,6 +72,12 @@ export type BackgroundWorkInfo =
       externalSessionId?: string;
       cli?: "claude" | "codex";
       cwd?: string;
+      isolation?: "current" | "worktree" | "none";
+      worktreePath?: string;
+      worktreeBranch?: string;
+      worktreeBaseRef?: string;
+      worktreeCleanup?: "auto" | "keep" | "detach" | "discard";
+      worktreeLifecycle?: "running" | "kept" | "detached" | "discarded" | "cleanup-failed";
     }>;
 
 export type WorktreeCleanupSkippedEvent = {

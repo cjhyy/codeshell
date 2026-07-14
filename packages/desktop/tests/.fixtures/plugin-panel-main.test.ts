@@ -31,6 +31,8 @@ describe("csplugin protocol", () => {
     if (root) rmSync(root, { recursive: true, force: true });
     root = "";
     pluginPanelElectronMock.protocolHandler = null;
+    pluginPanelElectronMock.dialogResponse = 1;
+    pluginPanelElectronMock.openedUrls.length = 0;
   });
 
   async function arrange(hostId: string) {
@@ -48,6 +50,7 @@ describe("csplugin protocol", () => {
       singleton: true,
       permissions: [],
       hostId,
+      revision: hostId,
     };
     api.replacePluginPanelResources([{ descriptor, root, entry: "panels/dashboard/index.html" }]);
     const prepared = await api.preparePluginPanel(descriptor.id);
@@ -126,6 +129,7 @@ function bridgeResource(permissions: string[] = []) {
       singleton: true,
       permissions: permissions as any,
       hostId: "host",
+      revision: "revision-1",
     },
     root: "/plugin",
     entry: "panels/index.html",
@@ -146,7 +150,6 @@ async function bindBridgeGuest(guestId: number, overrides: Record<string, unknow
       busy: false,
       theme: "dark",
       locale: "zh-CN",
-      trusted: true,
       ...overrides,
     },
   );
@@ -156,6 +159,7 @@ describe("PluginPanelBridge", () => {
   test("binds scope from the trusted host and exposes only permitted context", async () => {
     const bridge = new PluginPanelBridge({
       isTrustedHost: (sender) => sender === pluginPanelElectronMock.trustedSender,
+      isWorkspaceTrusted: (cwd) => cwd === "/repo",
       getAgentBridge: () => null,
     });
     bridge.registerIpc();
@@ -163,7 +167,7 @@ describe("PluginPanelBridge", () => {
     bridge.registerGuest(
       guest as any,
       pluginPanelElectronMock.ownerWindow as any,
-      bridgeResource(["context.session"]) as any,
+      bridgeResource(["context.session", "context.workspace"]) as any,
     );
 
     await bindBridgeGuest(7, { busy: true });
@@ -181,12 +185,14 @@ describe("PluginPanelBridge", () => {
       apiVersion: 1,
     });
     expect(context.sessionId).toBe("session-1");
-    expect(context.cwd).toBeUndefined();
+    expect(context.cwd).toBe("/repo");
+    expect(context.trusted).toBe(true);
   });
 
   test("defaults to zero call permissions and rejects an unbound sender", async () => {
     const bridge = new PluginPanelBridge({
       isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
       getAgentBridge: () => null,
     });
     bridge.registerIpc();
@@ -217,6 +223,7 @@ describe("PluginPanelBridge", () => {
   test("enforces payload limits and revokes a destroyed guest", async () => {
     const bridge = new PluginPanelBridge({
       isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
       getAgentBridge: () => null,
     });
     bridge.registerIpc();
@@ -245,6 +252,7 @@ describe("PluginPanelBridge", () => {
     let workerCalls = 0;
     const bridge = new PluginPanelBridge({
       isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
       getAgentBridge: () =>
         ({
           requestWorker: async () => {
@@ -270,5 +278,109 @@ describe("PluginPanelBridge", () => {
       ),
     ).rejects.toThrow(/busy/);
     expect(workerCalls).toBe(0);
+  });
+
+  test("serializes storage mutations, persists atomically, and enforces quota", async () => {
+    const storageRoot = mkdtempSync(join(tmpdir(), "csplugin-storage-"));
+    pluginPanelElectronMock.userDataPath = storageRoot;
+    try {
+      const bridge = new PluginPanelBridge({
+        isTrustedHost: () => true,
+        isWorkspaceTrusted: () => false,
+        getAgentBridge: () => null,
+        limits: { storageQuotaBytes: 256 },
+      });
+      bridge.registerIpc();
+      const guest = fakeGuest(11);
+      bridge.registerGuest(
+        guest as any,
+        pluginPanelElectronMock.ownerWindow as any,
+        bridgeResource(["storage"]) as any,
+      );
+      await bindBridgeGuest(11);
+      const call = (method: string, params: unknown) =>
+        pluginPanelElectronMock.ipcHandlers.get("plugin-panel:call")!(
+          { sender: guest },
+          method,
+          params,
+        ) as Promise<unknown>;
+
+      await Promise.all([
+        call("storage.set", { key: "left", value: 1 }),
+        call("storage.set", { key: "right", value: 2 }),
+      ]);
+      expect(await call("storage.get", { key: "left" })).toBe(1);
+      expect(await call("storage.get", { key: "right" })).toBe(2);
+      expect(await call("storage.delete", { key: "left" })).toBe(true);
+      await expect(call("storage.set", { key: "large", value: "x".repeat(512) })).rejects.toThrow(
+        /quota/,
+      );
+    } finally {
+      rmSync(storageRoot, { recursive: true, force: true });
+      pluginPanelElectronMock.userDataPath = "/tmp/codeshell-plugin-panel-test";
+    }
+  });
+
+  test("confirms external URLs and rejects unsafe schemes", async () => {
+    const bridge = new PluginPanelBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
+      getAgentBridge: () => null,
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(12);
+    bridge.registerGuest(
+      guest as any,
+      pluginPanelElectronMock.ownerWindow as any,
+      bridgeResource(["external.open"]) as any,
+    );
+    await bindBridgeGuest(12);
+    const call = (url: string) =>
+      pluginPanelElectronMock.ipcHandlers.get("plugin-panel:call")!(
+        { sender: guest },
+        "external.open",
+        { url },
+      ) as Promise<unknown>;
+    await expect(call("file:///etc/passwd")).rejects.toThrow(/https/);
+    pluginPanelElectronMock.dialogResponse = 0;
+    expect(await call("https://example.com/path")).toBe(true);
+    expect(pluginPanelElectronMock.openedUrls).toEqual(["https://example.com/path"]);
+  });
+
+  test("enforces call rate, timeout, and result size independently", async () => {
+    const pending = new Promise<never>(() => undefined);
+    const bridge = new PluginPanelBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
+      getAgentBridge: () =>
+        ({
+          requestWorker: async (_method: string, params: Record<string, unknown>) =>
+            params.task === "hang" ? pending : { ok: true, result: { text: "x".repeat(256) } },
+        }) as any,
+      limits: {
+        maxCallsPerWindow: 3,
+        rateWindowMs: 60_000,
+        callTimeoutMs: 5,
+        maxResultBytes: 64,
+      },
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(13);
+    bridge.registerGuest(
+      guest as any,
+      pluginPanelElectronMock.ownerWindow as any,
+      bridgeResource(["context.session", "agent.submitPrompt"]) as any,
+    );
+    await bindBridgeGuest(13);
+    const call = (prompt: string) =>
+      pluginPanelElectronMock.ipcHandlers.get("plugin-panel:call")!(
+        { sender: guest },
+        "agent.submitPrompt",
+        { prompt },
+      ) as Promise<unknown>;
+    await expect(call("large")).rejects.toThrow(/result is too large/);
+    await expect(call("hang")).rejects.toThrow(/timed out/);
+    await expect(call("large-again")).rejects.toThrow(/result is too large/);
+    await expect(call("rate")).rejects.toThrow(/rate limit/);
   });
 });

@@ -43,14 +43,23 @@ export const WebviewHost = React.forwardRef<
     const view = viewRef.current;
     if (!view) return;
     const registerGuest = () => {
-      const guestId = view.getWebContentsId?.();
-      if (typeof guestId !== "number" || !Number.isFinite(guestId)) return;
-      window.codeshell.registerBrowserGuest({
-        guestId,
-        bucket,
-        partition: frozenPartition,
-        engineSessionId,
-      });
+      try {
+        // The zero-delay best-effort registration may run after React attached
+        // the element but before Electron emitted dom-ready. getWebContentsId
+        // throws in that narrow window; dom-ready below is the authoritative
+        // retry, so suppress only this not-ready state instead of surfacing an
+        // uncaught renderer pageerror.
+        const guestId = view.getWebContentsId?.();
+        if (typeof guestId !== "number" || !Number.isFinite(guestId)) return;
+        window.codeshell.registerBrowserGuest({
+          guestId,
+          bucket,
+          partition: frozenPartition,
+          engineSessionId,
+        });
+      } catch {
+        // Not attached/dom-ready yet. The event listener retries safely.
+      }
     };
     const timer = window.setTimeout(registerGuest, 0);
     view.addEventListener("dom-ready", registerGuest);

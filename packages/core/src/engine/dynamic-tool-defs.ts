@@ -4,6 +4,8 @@ import { agentToolDefWithTypes } from "../tool-system/builtin/agent.js";
 import { generateImageToolDefFor } from "../tool-system/builtin/generate-image.js";
 import { generateVideoToolDefFor } from "../tool-system/builtin/generate-video.js";
 import { useCredentialToolDefFor } from "../credentials/use-credential-tool.js";
+import { delegateWorkToolDefFor } from "../tool-system/builtin/delegate-work.js";
+import type { PetWorkspaceOption } from "../pet/delegation.js";
 
 /**
  * Rewrite a single tool definition with the live, per-engine dynamic bits the
@@ -25,6 +27,7 @@ export function applyDynamicToolDef(
   t: ToolDefinition,
   agentDefinitions: AgentDefinitionRegistry | undefined,
   guardCwd: string,
+  petWorkspaces?: readonly PetWorkspaceOption[],
 ): ToolDefinition {
   if (t.name === "Agent") {
     const def = agentToolDefWithTypes(agentDefinitions);
@@ -38,6 +41,10 @@ export function applyDynamicToolDef(
   }
   if (t.name === "UseCredential") {
     return { ...t, description: useCredentialToolDefFor(guardCwd).description };
+  }
+  if (t.name === "DelegateWork") {
+    const def = delegateWorkToolDefFor(petWorkspaces);
+    return { ...t, description: def.description, inputSchema: def.inputSchema };
   }
   return t;
 }

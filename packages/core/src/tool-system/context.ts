@@ -22,6 +22,11 @@ import type { SessionManager } from "../session/session-manager.js";
 import type { SessionWorkspace } from "../types.js";
 import type { ApprovalRouter } from "./permission.js";
 import type { ChildWriterLease, LiveChildControl } from "./builtin/agent-registry.js";
+import type {
+  PetWorkspaceOption,
+  PetWorkDelegation,
+  PetWorkDelegationDecision,
+} from "../pet/delegation.js";
 
 /**
  * Narrow view of the owning Engine that tools are allowed to call back into.
@@ -203,6 +208,8 @@ export interface ToolVisibilityContext {
   settingsScope?: import("../settings/manager.js").SettingsScope;
   host?: string;
   isSubAgent?: boolean;
+  behaviorProfile?: string;
+  petWorkspaceCount?: number;
 }
 
 export interface ExternalFileChangesRecord {
@@ -230,6 +237,10 @@ export interface ToolContext {
   toolRegistry: ToolRegistry;
   /** Opaque services contributed by capability modules, keyed by capability id. */
   capabilityServices?: Readonly<Record<string, unknown>>;
+  /** Closed host-provided Workspace set for a Mimi manager turn. */
+  petWorkspaces?: readonly PetWorkspaceOption[];
+  /** Records the one structured work delegation returned with the Engine result. */
+  requestPetWorkDelegation?: (request: PetWorkDelegation) => PetWorkDelegationDecision;
   /** UI-backed AskUserQuestion handler. Undefined → headless mode. */
   askUser?: AskUserFn;
   /** Sub-agent spawner (Agent tool). Undefined → Agent tool unavailable. */

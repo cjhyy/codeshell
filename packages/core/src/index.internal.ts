@@ -161,7 +161,6 @@ export {
 export { createInProcessClient } from "./protocol/helpers.js";
 export type { ProtocolModelEntry } from "./protocol/types.js";
 
-
 // ─── LLM host extensions ─────────────────────────────────────────
 
 export { type CachedModel, defaultCacheDir } from "./llm/model-cache.js";
@@ -182,3 +181,10 @@ export type { ApprovalRequest, ApprovalResult, ApprovalScope, TaskInfo } from ".
 export { fileCache } from "./tool-system/builtin/file-cache.js";
 export { validateToolArgs } from "./tool-system/validation.js";
 export { createOffBackend } from "./tool-system/sandbox/off.js";
+export {
+  createFakeToolContext,
+  createToolRegistryHarness,
+  type FakeToolContextOptions,
+  type ToolRegistryHarness,
+  type ToolRegistryHarnessOptions,
+} from "./tool-system/testing/tool-registry-harness.js";

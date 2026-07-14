@@ -2,57 +2,38 @@ import React from "react";
 import type { PetChatEvent } from "../../preload/pet-api";
 import type { TrackedProject } from "../projects";
 
-function normalized(value: string): string {
-  return value.trim().toLocaleLowerCase();
+/** Strip trailing path separators so `/work/x` and `/work/x/` compare equal. */
+function normalizeWorkspacePath(path: string): string {
+  return path.replace(/[/\\]+$/, "");
 }
 
-function projectMatchScore(project: TrackedProject, task: string): number {
-  const haystack = normalized(task);
-  const labels = [project.displayName, project.name]
-    .filter((value): value is string => typeof value === "string")
-    .map(normalized)
-    .filter((value) => value.length >= 2);
-  return labels.reduce(
-    (score, label) => (haystack.includes(label) ? Math.max(score, label.length) : score),
-    0,
-  );
-}
-
-/** Prefer an explicitly named project, then the originating/active project. */
-export function resolvePetDelegationProjectId(
+/** Bind the LLM-selected, host-validated Workspace path to the renderer's stable project id. */
+export function projectIdForPetWorkspacePath(
   projects: readonly TrackedProject[],
-  task: string,
-  preferredProjectId: string | undefined,
-  activeProjectId: string | null,
-): string | null {
-  const scored = projects
-    .map((project) => ({ project, score: projectMatchScore(project, task) }))
-    .filter((entry) => entry.score > 0)
-    .sort((a, b) => b.score - a.score);
-  if (scored[0] && (!scored[1] || scored[0].score > scored[1].score)) {
-    return scored[0].project.id;
-  }
-  if (preferredProjectId && projects.some((project) => project.id === preferredProjectId)) {
-    return preferredProjectId;
-  }
-  if (activeProjectId && projects.some((project) => project.id === activeProjectId)) {
-    return activeProjectId;
-  }
-  return projects.length === 1 ? projects[0]!.id : null;
+  workspacePath: string | null,
+): string | null | undefined {
+  if (workspacePath === null) return null;
+  // The host validates workspacePath against the same on-disk project list the
+  // renderer tracks, so an exact match is the norm. Normalize trailing
+  // separators to tolerate a benign formatting difference between the two data
+  // sources rather than silently dropping a confirmed delegation.
+  const target = normalizeWorkspacePath(workspacePath);
+  return projects.find((project) => normalizeWorkspacePath(project.path) === target)?.id;
 }
 
 export function PetAutoDelegationHost({
   projects,
-  activeProjectId,
   onDelegate,
+  onUnresolved,
 }: {
   projects: readonly TrackedProject[];
-  activeProjectId: string | null;
-  onDelegate: (projectId: string | null, task: string) => void;
+  onDelegate: (projectId: string | null, task: string, clientMessageId: string) => void;
+  /** Called when a host-confirmed delegation cannot be routed to a tracked project. */
+  onUnresolved?: (workspacePath: string | null) => void;
 }) {
-  const latestRef = React.useRef({ projects, activeProjectId, onDelegate });
+  const latestRef = React.useRef({ projects, onDelegate, onUnresolved });
   const handledRef = React.useRef(new Set<string>());
-  latestRef.current = { projects, activeProjectId, onDelegate };
+  latestRef.current = { projects, onDelegate, onUnresolved };
 
   React.useEffect(() => {
     const pet = window.codeshell.pet;
@@ -66,13 +47,20 @@ export function PetAutoDelegationHost({
         if (oldest) handledRef.current.delete(oldest);
       }
       const latest = latestRef.current;
-      const projectId = resolvePetDelegationProjectId(
-        latest.projects,
-        event.task,
-        event.preferredProjectId,
-        latest.activeProjectId,
-      );
-      latest.onDelegate(projectId, event.task);
+      const projectId = projectIdForPetWorkspacePath(latest.projects, event.workspacePath);
+      if (projectId === undefined) {
+        // Mimi told the user the work was dispatched (the tool call succeeded
+        // main-side), but the renderer no longer tracks the selected Workspace.
+        // Surface this instead of silently dropping it so the user is not left
+        // believing a session started when none did.
+        window.codeshell.log("pet.delegation.workspace_missing", {
+          workspacePath: event.workspacePath,
+          clientMessageId: event.clientMessageId,
+        });
+        latest.onUnresolved?.(event.workspacePath);
+        return;
+      }
+      latest.onDelegate(projectId, event.task, event.clientMessageId);
     });
   }, []);
 

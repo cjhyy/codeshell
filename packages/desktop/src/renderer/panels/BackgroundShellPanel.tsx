@@ -1,5 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Ban, Bot, RefreshCw, Square, Terminal, Film, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Ban,
+  Bot,
+  RefreshCw,
+  Square,
+  Terminal,
+  Film,
+  GitBranch,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import type {
   BackgroundShellInfo,
   BackgroundWorkInfo,
@@ -317,7 +327,8 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
                   const cliLink = driveAgentLinkDetail(j);
                   const done = j.status !== "running";
                   const changed = j.changedFiles ?? [];
-                  const expandable = done && (!!j.finalText || changed.length > 0);
+                  const expandable =
+                    done && (!!j.finalText || changed.length > 0 || !!j.worktreePath);
                   const isOpen = expandedJobId === j.jobId;
                   const statusLabel =
                     j.status === "completed"
@@ -344,7 +355,11 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
                         ) : (
                           <XCircle className="h-3.5 w-3.5 shrink-0 text-status-err" />
                         )}
-                        <Film className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        {j.jobKind === "drive-agent" ? (
+                          <GitBranch className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        ) : (
+                          <Film className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        )}
                         <span
                           className="min-w-0 flex-1 truncate text-foreground"
                           title={j.description}
@@ -354,6 +369,14 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
                         {changed.length > 0 && (
                           <span className="shrink-0 text-[10px] text-muted-foreground">
                             {t("panels.shells.jobChangedFiles", { count: changed.length })}
+                          </span>
+                        )}
+                        {j.worktreeLifecycle && (
+                          <span
+                            className="shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground"
+                            title={j.worktreePath}
+                          >
+                            {t(`panels.shells.worktreeLifecycle.${j.worktreeLifecycle}`)}
                           </span>
                         )}
                         {cliLink && <DriveAgentLinkButton detail={cliLink} />}
@@ -372,6 +395,21 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
                                 </li>
                               ))}
                             </ul>
+                          )}
+                          {j.worktreePath && (
+                            <div className="space-y-0.5 border-b border-border/60 px-2 py-1.5 text-[11px] text-muted-foreground">
+                              <div className="truncate" title={j.worktreePath}>
+                                {t("panels.shells.worktreePath")}: {j.worktreePath}
+                              </div>
+                              {j.worktreeBranch && (
+                                <div className="truncate" title={j.worktreeBranch}>
+                                  {t("panels.shells.worktreeBranch")}: {j.worktreeBranch}
+                                </div>
+                              )}
+                              <div>
+                                {t("panels.shells.worktreeCleanup")}: {j.worktreeCleanup ?? "auto"}
+                              </div>
+                            </div>
                           )}
                           {j.finalText && (
                             <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words px-2 py-1.5 text-[11px] text-muted-foreground">

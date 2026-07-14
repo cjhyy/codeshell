@@ -1,16 +1,16 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type {
   PetNavigationRequest,
   PetNavigationResult,
   DesktopPetProjectionSnapshot,
 } from "./pet-state-aggregator.js";
-import { PET_AUTO_DELEGATE_MARKER } from "@cjhyy/code-shell-core";
+import type { PetWorkspaceOption, PetWorkDelegation } from "@cjhyy/code-shell-core";
 import type { InputAttachmentMeta } from "../attachment-service.js";
 
 export interface PetAutoDelegation {
   clientMessageId: string;
   task: string;
-  preferredProjectId?: string;
+  workspacePath: string | null;
 }
 
 export type PetDispatchCommand =
@@ -21,7 +21,7 @@ export type PetDispatchCommand =
       type: "chat";
       message: string;
       clientMessageId?: string;
-      preferredProjectId?: string;
+      preferredProjectPath?: string;
       attachments?: InputAttachmentMeta[];
     };
 
@@ -67,6 +67,29 @@ interface PetDispatchOptions {
     ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }>;
   };
   hostCwd: string;
+  listWorkspaces?(): Promise<Array<{ path: string; name: string }>>;
+}
+
+const NO_WORKSPACE_ID = "no-workspace";
+
+function workspaceIdForPath(path: string): string {
+  return `workspace-${createHash("sha256").update(path).digest("hex").slice(0, 16)}`;
+}
+
+function readPetWorkDelegation(result: unknown): PetWorkDelegation | null {
+  if (!result || typeof result !== "object" || Array.isArray(result)) return null;
+  const delegation = (result as { petWorkDelegation?: unknown }).petWorkDelegation;
+  if (!delegation || typeof delegation !== "object" || Array.isArray(delegation)) return null;
+  const record = delegation as Record<string, unknown>;
+  if (
+    typeof record.workspaceId !== "string" ||
+    !record.workspaceId.trim() ||
+    typeof record.objective !== "string" ||
+    !record.objective.trim()
+  ) {
+    return null;
+  }
+  return { workspaceId: record.workspaceId, objective: record.objective.trim() };
 }
 
 function boundedWorld(snapshot: DesktopPetProjectionSnapshot): Record<string, unknown> {
@@ -98,12 +121,6 @@ function boundedWorld(snapshot: DesktopPetProjectionSnapshot): Record<string, un
         createdAt: pending.createdAt,
       })),
   };
-}
-
-export function petResultRequestsDelegation(result: unknown): boolean {
-  if (!result || typeof result !== "object" || Array.isArray(result)) return false;
-  const text = (result as Record<string, unknown>).text;
-  return typeof text === "string" && text.includes(PET_AUTO_DELEGATE_MARKER);
 }
 
 export class PetDispatchService {
@@ -161,12 +178,38 @@ export class PetDispatchService {
           return { ok: false, code: "invalid-command" };
         }
         const metadata = await this.options.metadata.ensure();
-        const world = boundedWorld(this.options.aggregator.getSnapshot());
+        const listedWorkspaces = (await this.options.listWorkspaces?.()) ?? [];
+        const workspacePathById = new Map<string, string | null>([[NO_WORKSPACE_ID, null]]);
+        const petWorkspaces: PetWorkspaceOption[] = [
+          {
+            id: NO_WORKSPACE_ID,
+            name: "No workspace",
+            description: "Use only when the execution task is unrelated to every listed Workspace.",
+          },
+        ];
+        for (const workspace of listedWorkspaces.slice(0, 63)) {
+          if (!workspace.path || [...workspacePathById.values()].includes(workspace.path)) continue;
+          const id = workspaceIdForPath(workspace.path);
+          workspacePathById.set(id, workspace.path);
+          petWorkspaces.push({
+            id,
+            name: workspace.name,
+            description:
+              workspace.path === command.preferredProjectPath
+                ? `${workspace.path} (currently active)`
+                : workspace.path,
+          });
+        }
+        const world = {
+          ...boundedWorld(this.options.aggregator.getSnapshot()),
+          workspaces: petWorkspaces,
+        };
         const response = await this.options.worker.requestWorker("agent/run", {
           sessionId: metadata.petSessionId,
           task: command.message.trim(),
           ...(attachments.length > 0 ? { attachments } : {}),
           petRuntimeContext: JSON.stringify(world),
+          petWorkspaces,
           cwd: this.options.hostCwd,
           behaviorMode: "pet",
           kind: "pet",
@@ -176,19 +219,25 @@ export class PetDispatchService {
         if (!response.ok) {
           return { ok: false, code: "worker-error", message: response.message };
         }
+        const workDelegation = readPetWorkDelegation(response.result);
+        if (workDelegation && !workspacePathById.has(workDelegation.workspaceId)) {
+          return {
+            ok: false,
+            code: "worker-error",
+            message: "Mimi returned a Workspace outside the host-provided list",
+          };
+        }
         return {
           ok: true,
           type: "chat",
           petSessionId: metadata.petSessionId,
           result: response.result,
-          ...(petResultRequestsDelegation(response.result)
+          ...(workDelegation
             ? {
                 delegation: {
                   clientMessageId: command.clientMessageId ?? `pet-${randomUUID()}`,
-                  task: command.message.trim(),
-                  ...(command.preferredProjectId
-                    ? { preferredProjectId: command.preferredProjectId }
-                    : {}),
+                  task: workDelegation.objective,
+                  workspacePath: workspacePathById.get(workDelegation.workspaceId) ?? null,
                 },
               }
             : {}),

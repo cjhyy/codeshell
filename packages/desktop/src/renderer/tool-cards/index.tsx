@@ -31,28 +31,104 @@ function ToolCardImpl({ message, onSelect, selectedId, turnEpoch, cwd }: Props) 
   const selected = selectedId === message.id;
   const name = message.toolName.toLowerCase();
 
-  if (name === "bash" || name === "shell" || name === "run") {
-    return <BashToolCard message={message} onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;
-  }
-  if (name === "read" || name === "view" || name === "fileread") {
-    return <FileToolCard message={message} variant="read" onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} cwd={cwd} />;
-  }
-  if (name === "write" || name === "filewrite") {
-    return <FileToolCard message={message} variant="write" onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} cwd={cwd} />;
-  }
-  if (name === "edit" || name === "multiedit" || name === "applypatch" || name === "apply_patch") {
-    return <FileToolCard message={message} variant="edit" onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} cwd={cwd} />;
-  }
-  if (name === "grep" || name === "glob" || name === "search") {
-    return <SearchToolCard message={message} onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;
-  }
-  if (name === "webfetch" || name === "websearch" || name === "fetch") {
-    return <WebToolCard message={message} onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;
-  }
-  if (name === "agent" || name === "task" || name.startsWith("agent")) {
-    return <AgentToolCard message={message} onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;
-  }
-  return <GenericToolCard message={message} onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} cwd={cwd} />;
+  const card = (() => {
+    if (name === "bash" || name === "shell" || name === "run") {
+      return (
+        <BashToolCard
+          message={message}
+          onSelect={onSelect}
+          selected={selected}
+          turnEpoch={turnEpoch}
+        />
+      );
+    }
+    if (name === "read" || name === "view" || name === "fileread") {
+      return (
+        <FileToolCard
+          message={message}
+          variant="read"
+          onSelect={onSelect}
+          selected={selected}
+          turnEpoch={turnEpoch}
+          cwd={cwd}
+        />
+      );
+    }
+    if (name === "write" || name === "filewrite") {
+      return (
+        <FileToolCard
+          message={message}
+          variant="write"
+          onSelect={onSelect}
+          selected={selected}
+          turnEpoch={turnEpoch}
+          cwd={cwd}
+        />
+      );
+    }
+    if (
+      name === "edit" ||
+      name === "multiedit" ||
+      name === "applypatch" ||
+      name === "apply_patch"
+    ) {
+      return (
+        <FileToolCard
+          message={message}
+          variant="edit"
+          onSelect={onSelect}
+          selected={selected}
+          turnEpoch={turnEpoch}
+          cwd={cwd}
+        />
+      );
+    }
+    if (name === "grep" || name === "glob" || name === "search") {
+      return (
+        <SearchToolCard
+          message={message}
+          onSelect={onSelect}
+          selected={selected}
+          turnEpoch={turnEpoch}
+        />
+      );
+    }
+    if (name === "webfetch" || name === "websearch" || name === "fetch") {
+      return (
+        <WebToolCard
+          message={message}
+          onSelect={onSelect}
+          selected={selected}
+          turnEpoch={turnEpoch}
+        />
+      );
+    }
+    if (name === "agent" || name === "task" || name.startsWith("agent")) {
+      return (
+        <AgentToolCard
+          message={message}
+          onSelect={onSelect}
+          selected={selected}
+          turnEpoch={turnEpoch}
+        />
+      );
+    }
+    return (
+      <GenericToolCard
+        message={message}
+        onSelect={onSelect}
+        selected={selected}
+        turnEpoch={turnEpoch}
+        cwd={cwd}
+      />
+    );
+  })();
+
+  return (
+    <div className="contents" data-message-kind="tool" data-tool-name={message.toolName}>
+      {card}
+    </div>
+  );
 }
 
 export const ToolCard = memo(ToolCardImpl);

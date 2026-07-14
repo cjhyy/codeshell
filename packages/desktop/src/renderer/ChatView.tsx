@@ -62,6 +62,7 @@ interface Props {
   engineSessionId?: string | null;
   liveTurnActive?: boolean;
   onContextPackageCreated?: ContextPackageCreatedHandler;
+  contextSelectionRequest?: number;
   sendBucket?: string;
   onSend: (
     text: string,
@@ -307,6 +308,7 @@ export function ChatView({
   engineSessionId,
   liveTurnActive,
   onContextPackageCreated,
+  contextSelectionRequest,
   sendBucket,
   onSend,
   onQueueInput,
@@ -1194,6 +1196,7 @@ export function ChatView({
             sendEpoch={sendEpoch}
             onContextPackageCreated={onContextPackageCreated}
             onContextSelectionChange={setContextSelectionOpen}
+            contextSelectionRequest={contextSelectionRequest}
           />
         )
       )}

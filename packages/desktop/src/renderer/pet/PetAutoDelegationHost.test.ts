@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { TrackedProject } from "../projects";
-import { resolvePetDelegationProjectId } from "./PetAutoDelegationHost";
+import { projectIdForPetWorkspacePath } from "./PetAutoDelegationHost";
 
 const projects: TrackedProject[] = [
   { id: "codeshell", name: "codeshell", path: "/work/codeshell", addedAt: 1 },
@@ -8,18 +8,26 @@ const projects: TrackedProject[] = [
 ];
 
 describe("Pet automatic delegation", () => {
-  test("uses an explicitly named workspace before the originating workspace", () => {
-    expect(
-      resolvePetDelegationProjectId(projects, "去 website 修复登录页", "codeshell", "codeshell"),
-    ).toBe("website");
+  test("binds the LLM-selected Workspace by exact host-validated path", () => {
+    expect(projectIdForPetWorkspacePath(projects, "/work/website")).toBe("website");
+    expect(projectIdForPetWorkspacePath(projects, "/work/codeshell")).toBe("codeshell");
   });
 
-  test("falls back to the originating then active workspace without asking the user", () => {
-    expect(resolvePetDelegationProjectId(projects, "修一下登录页", "website", "codeshell")).toBe(
-      "website",
-    );
-    expect(resolvePetDelegationProjectId(projects, "修一下登录页", undefined, "codeshell")).toBe(
-      "codeshell",
-    );
+  test("preserves an explicit no-workspace selection", () => {
+    expect(projectIdForPetWorkspacePath(projects, null)).toBeNull();
+  });
+
+  test("tolerates a trailing-separator difference between host and renderer paths", () => {
+    expect(projectIdForPetWorkspacePath(projects, "/work/website/")).toBe("website");
+    expect(
+      projectIdForPetWorkspacePath(
+        [{ id: "codeshell", name: "codeshell", path: "/work/codeshell/", addedAt: 1 }],
+        "/work/codeshell",
+      ),
+    ).toBe("codeshell");
+  });
+
+  test("fails closed when the renderer no longer tracks the selected Workspace", () => {
+    expect(projectIdForPetWorkspacePath(projects, "/work/deleted")).toBeUndefined();
   });
 });

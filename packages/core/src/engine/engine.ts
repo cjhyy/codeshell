@@ -147,6 +147,7 @@ import {
   QUICK_CHAT_RESTRICTED_SYSTEM_PROMPT,
   type EngineRunOptions,
 } from "./run-types.js";
+import type { PetWorkDelegation } from "../pet/delegation.js";
 import { createSubAgentSpawner } from "./subagent-spawner.js";
 import { stripInjectedContextMessages } from "./injected-context-cache.js";
 import { AuxiliaryPipeline, sameLlmIdentity } from "./auxiliary-pipeline.js";
@@ -1184,6 +1185,7 @@ export class Engine {
     }
     const sessionKind = persistedSessionKind ?? options?.kind ?? "work";
     const petProfile = sessionKind === "pet" || options?.behaviorMode === "pet";
+    let petWorkDelegation: PetWorkDelegation | undefined;
     let runPermissionMode = petProfile
       ? "default"
       : (options?.permissionMode ?? this.config.permissionMode ?? "acceptEdits");
@@ -1380,7 +1382,17 @@ export class Engine {
         toolCtx.cwd = nextCwd;
       },
     };
-    if (petProfile) toolCtx.allowedToolNames = PET_ALLOWED_TOOL_NAMES;
+    if (petProfile) {
+      toolCtx.allowedToolNames = PET_ALLOWED_TOOL_NAMES;
+      toolCtx.petWorkspaces = options?.petWorkspaces ?? [];
+      toolCtx.requestPetWorkDelegation = (request) => {
+        if (petWorkDelegation) {
+          return { ok: false, error: "only one delegation is allowed per Mimi turn" };
+        }
+        petWorkDelegation = request;
+        return { ok: true };
+      };
+    }
 
     logger.info("engine.run", {
       task: taskText.slice(0, 200),
@@ -1858,6 +1870,8 @@ export class Engine {
         settingsScope: this.config.settingsScope ?? "project",
         host: this.config.builtinToolHost,
         isSubAgent: this.config.isSubAgent === true,
+        behaviorProfile: petProfile ? "pet" : options?.behaviorMode,
+        petWorkspaceCount: petProfile ? (options?.petWorkspaces?.length ?? 0) : 0,
       };
       toolCtx.toolVisibility = toolVisibility;
       // #7: per-turn project builtin override. The toolRegistry's builtin tool
@@ -1934,7 +1948,9 @@ export class Engine {
         // applyDynamicToolDef — forwarding only the Agent description (dropping
         // its rebuilt inputSchema) used to strip the agent_type enum, so the
         // model omitted agent_type and configured roles never applied.
-        .map((t) => applyDynamicToolDef(t, toolCtx.agentDefinitions, guardCwd));
+        .map((t) =>
+          applyDynamicToolDef(t, toolCtx.agentDefinitions, guardCwd, toolCtx.petWorkspaces),
+        );
 
       // In plan mode, only expose read-only/planning tools so the model won't
       // attempt writes. Shared with executor.ts's execution gate via
@@ -2792,6 +2808,7 @@ export class Engine {
           cacheReadTokens: usage.totalCacheReadTokens,
           cacheCreationTokens: usage.totalCacheCreationTokens,
         },
+        ...(petWorkDelegation ? { petWorkDelegation } : {}),
       };
     });
     return Promise.resolve(sessionRun).catch((err): EngineResult => {

@@ -345,6 +345,7 @@ function ResolvedPanelArea({
             <Button
               type="button"
               aria-label={t("panels.area.newTab")}
+              data-panel-action="new-tab"
               size="icon"
               variant="ghost"
               className="ml-0.5 h-7 w-7 shrink-0 text-muted-foreground"
@@ -356,7 +357,11 @@ function ResolvedPanelArea({
             {enabledPanels.map((entry) => {
               const Icon = entry.icon;
               return (
-                <DropdownMenuItem key={entry.key} onSelect={() => addTab(entry.key)}>
+                <DropdownMenuItem
+                  key={entry.key}
+                  data-panel-menu-kind={entry.key}
+                  onSelect={() => addTab(entry.key)}
+                >
                   <Icon className="mr-2 h-4 w-4" />
                   <span className="flex-1">{panelEntryTitle(entry, (key) => t(key as never))}</span>
                 </DropdownMenuItem>
@@ -391,7 +396,7 @@ function ResolvedPanelArea({
           const visibility = resolvePanelVisibility({ hidden, keepActiveBodyLive, activeTab });
           const workspacePresentation = panelWorkspacePresentation(workspace);
           return (
-            <Slot key={panelTab.id} active={activeTab}>
+            <Slot key={panelTab.id} active={activeTab} panelId={panelTab.kind}>
               <DesktopPanelLifecycleBoundary
                 entry={getPanelEntry(panelTab.kind)}
                 host={panelPluginHost}
@@ -548,11 +553,21 @@ function PanelBody({
 }
 
 /** A mounted-but-hideable container. Hidden panels keep their state/DOM. */
-function Slot({ active, children }: { active: boolean; children: React.ReactNode }) {
+function Slot({
+  active,
+  children,
+  panelId,
+}: {
+  active: boolean;
+  children: React.ReactNode;
+  panelId: PanelTab;
+}) {
   return (
     <div
       className={cn("absolute inset-0 flex min-h-0 flex-col", active ? "z-10" : "-z-10 opacity-0")}
       aria-hidden={!active}
+      data-panel-id={panelId}
+      data-panel-active={active ? "true" : "false"}
       style={active ? undefined : { pointerEvents: "none" }}
     >
       {children}

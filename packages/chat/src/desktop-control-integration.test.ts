@@ -54,6 +54,16 @@ describe("desktop control protocol integration", () => {
     const client = new DesktopControlClient(config);
     expect(await client.status()).toMatchObject({ tunnelConnected: true, onlineDeviceCount: 2 });
     expect(await client.open()).toMatchObject({ mode: "tunnel", expiresAt: 1234 });
+    const events = client.events(0, 1_000);
+    server.publish({
+      type: "tunnel.connected",
+      text: "Tunnel ready",
+      button: { text: "Open", url: "https://integration.trycloudflare.com" },
+    });
+    expect(await events).toMatchObject({
+      cursor: 1,
+      events: [{ id: 1, type: "tunnel.connected", text: "Tunnel ready" }],
+    });
     await client.close();
     expect(closes).toBe(1);
     await server.stop();

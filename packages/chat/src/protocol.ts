@@ -8,6 +8,22 @@ export interface DesktopControlDescriptor {
   startedAt: number;
 }
 
+export interface DesktopControlEvent {
+  id: number;
+  createdAt: number;
+  type: "tunnel.connected" | "tunnel.disconnected" | "tunnel.error";
+  text: string;
+  title?: string;
+  button?: { text: string; url: string };
+}
+
+export interface DesktopControlEventPage {
+  /** Changes whenever the Desktop loopback control server restarts. */
+  streamId: string;
+  events: DesktopControlEvent[];
+  cursor: number;
+}
+
 export interface MobileRemoteOpenResult {
   url: string;
   pairingUrl: string;

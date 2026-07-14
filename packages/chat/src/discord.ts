@@ -9,6 +9,8 @@ import {
   GatewayIntentBits,
   Partials,
   type ChatInputCommandInteraction,
+  type Interaction,
+  type Message,
 } from "discord.js";
 import type {
   ChannelAdapter,
@@ -52,25 +54,30 @@ export class DiscordAdapter implements ChannelAdapter {
   }
 
   async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
-    this.client.on(Events.MessageCreate, (message) => {
+    const onMessage = (message: Message) => {
       if (message.author.bot || !message.content) return;
       void dispatchSafely(handler, {
         channel: this.channel,
         target: message.channelId,
         senderId: message.author.id,
         text: message.content,
+        messageId: message.id,
       });
-    });
-    this.client.on(Events.InteractionCreate, (interaction) => {
+    };
+    const onInteraction = (interaction: Interaction) => {
       if (!interaction.isChatInputCommand() || !interaction.channelId) return;
       if (!this.commands.some(({ name }) => name === interaction.commandName)) return;
       void this.handleInteraction(interaction, handler);
-    });
+    };
+    this.client.on(Events.MessageCreate, onMessage);
+    this.client.on(Events.InteractionCreate, onInteraction);
     await this.client.login(this.config.botToken);
     if (this.commands.length > 0) await this.registerCommands();
     try {
       await waitForAbort(signal);
     } finally {
+      this.client.off(Events.MessageCreate, onMessage);
+      this.client.off(Events.InteractionCreate, onInteraction);
       this.client.destroy();
     }
   }
@@ -103,6 +110,7 @@ export class DiscordAdapter implements ChannelAdapter {
         target,
         senderId: interaction.user.id,
         text: `/${interaction.commandName}`,
+        messageId: interaction.id,
       }),
     );
     if (!state.replied) await interaction.deleteReply().catch(() => undefined);

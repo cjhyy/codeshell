@@ -33,11 +33,14 @@ export class LarkAdapter implements ChannelAdapter {
           event.sender.sender_id?.user_id ??
           event.sender.sender_id?.union_id;
         if (!text || !sender) return;
+        // dispatchSafely so a rejected delivery never escapes the Lark event
+        // dispatcher callback as an unhandled rejection.
         await dispatchSafely(handler, {
           channel: this.channel,
           target: event.message.chat_id,
           senderId: sender,
           text,
+          ...(event.message.message_id ? { messageId: event.message.message_id } : {}),
         });
       },
     });

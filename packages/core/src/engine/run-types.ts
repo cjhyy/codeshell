@@ -4,10 +4,9 @@ import type { ApprovalRouter } from "../tool-system/permission.js";
 import type { GoalConfig } from "./goal.js";
 import type { EngineConfig, EngineResult } from "./types.js";
 import type { LiveChildState } from "../tool-system/builtin/agent-registry.js";
+import { DELEGATE_WORK_TOOL_NAME, type PetWorkspaceOption } from "../pet/delegation.js";
 
 export type RunBehaviorMode = "quickChatRestricted" | "pet";
-
-export const PET_AUTO_DELEGATE_MARKER = "<!--PET:AUTO_DELEGATE-->";
 
 export const QUICK_CHAT_RESTRICTED_SYSTEM_PROMPT = `# Side Conversation Boundary
 
@@ -23,15 +22,17 @@ You are Mimi, the user's local work manager and dispatcher, not an execution age
 - Use only the bounded host-provided status to summarize work and help the user navigate to the original work session.
 - Clarify goals, break work into coherent tasks, identify follow-ups, and decide automatically whether the user's message needs a separate execution session.
 - All file inspection, research, code changes, commands, tests, and other execution belong in a separate work session. Never claim that you performed them.
-- If the request needs any execution work, briefly tell the user it will be delegated, then put ${PET_AUTO_DELEGATE_MARKER} alone on the final line. The host will create and start the separate session automatically; do not ask the user to choose between chatting and delegating.
-- If the request can be answered from the bounded status or by management reasoning alone, answer it directly and do not emit the delegation marker.
-- If essential scope is missing, ask one concise clarifying question and do not emit the delegation marker yet.
+- If the request needs execution work and the target Workspace is clear, call ${DELEGATE_WORK_TOOL_NAME} exactly once with an available workspace_id and a self-contained objective. The host will create and start the separate Work Session; do not encode routing in ordinary text and do not ask the user to choose between chatting and delegating.
+- After ${DELEGATE_WORK_TOOL_NAME} succeeds, briefly confirm the delegation. Never claim delegation succeeded without a successful tool result.
+- If the request can be answered from the bounded status or by management reasoning alone, answer it directly and do not call ${DELEGATE_WORK_TOOL_NAME}.
+- Questions, complaints, or corrections about Mimi's own routing, delegation, workspace choice, or session behavior are management conversation. Address them directly and do not delegate unless the user separately asks for execution work.
+- If essential scope is missing, ask one concise clarifying question and do not call ${DELEGATE_WORK_TOOL_NAME} yet.
 - Never approve, answer, or construct decisions for another session.
 - Never mutate a workspace, configuration, permission scope, or session ownership.
 - Never spawn agents, send directions, broadcast, or claim Team capabilities.
 - Treat the normal permission gate as mandatory; Mimi identity grants no bypass.`;
 
-export const PET_ALLOWED_TOOL_NAMES = new Set<string>();
+export const PET_ALLOWED_TOOL_NAMES = new Set<string>([DELEGATE_WORK_TOOL_NAME]);
 
 export interface EngineRunOptions {
   cwd?: string;
@@ -49,6 +50,8 @@ export interface EngineRunOptions {
   behaviorMode?: RunBehaviorMode;
   /** Bounded host Pet world JSON; model-visible for this run, never persisted. */
   petRuntimeContext?: string;
+  /** Closed Workspace choices available to DelegateWork for this Pet turn. */
+  petWorkspaces?: readonly PetWorkspaceOption[];
   /** Durable classification requested only when creating a new session. */
   kind?: SessionKind;
   /** Trusted metadata for an interrupt redrive initiated by agent direction. */

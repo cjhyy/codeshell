@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator";
-import { PetDispatchService, petResultRequestsDelegation } from "./pet-dispatch-service";
+import { PetDispatchService } from "./pet-dispatch-service";
 
 const snapshot: DesktopPetProjectionSnapshot = {
   version: 4,
@@ -49,6 +49,7 @@ describe("PetDispatchService", () => {
         },
       },
       hostCwd: "/safe/pet",
+      listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
     });
 
     expect(await service.dispatch({ type: "get_global_status" })).toMatchObject({
@@ -86,6 +87,7 @@ describe("PetDispatchService", () => {
         },
       },
       hostCwd: "/safe/pet",
+      listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
     });
 
     expect(
@@ -124,14 +126,59 @@ describe("PetDispatchService", () => {
     expect(String(request?.params.task)).not.toContain("<pet-world>");
     expect(String(request?.params.task)).not.toContain("requestId");
     expect(String(request?.params.petRuntimeContext)).toContain('"runState":"running"');
+    expect(request?.params.petWorkspaces).toEqual([
+      expect.objectContaining({ id: "no-workspace", name: "No workspace" }),
+      expect.objectContaining({ name: "CodeShell", description: "/work/codeshell" }),
+    ]);
   });
 
-  test("turns only the model's hidden control marker into an automatic delegation", async () => {
-    expect(petResultRequestsDelegation({ text: "普通回复" })).toBe(false);
-    expect(petResultRequestsDelegation({ text: "我会自动派发。\n<!--PET:AUTO_DELEGATE-->" })).toBe(
-      true,
-    );
+  test("uses only the validated DelegateWork result for automatic delegation", async () => {
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          const workspace = (params.petWorkspaces as Array<{ id: string; name: string }>).find(
+            (candidate) => candidate.name === "CodeShell",
+          )!;
+          return {
+            ok: true,
+            result: {
+              text: "已交给工作会话。",
+              petWorkDelegation: {
+                workspaceId: workspace.id,
+                objective: "修复 CodeShell 登录问题",
+              },
+            },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
+    });
 
+    expect(
+      await service.dispatch({
+        type: "chat",
+        message: "修复登录问题",
+        clientMessageId: "client-delegate",
+        preferredProjectPath: "/work/codeshell",
+      }),
+    ).toMatchObject({
+      ok: true,
+      type: "chat",
+      delegation: {
+        clientMessageId: "client-delegate",
+        task: "修复 CodeShell 登录问题",
+        workspacePath: "/work/codeshell",
+      },
+    });
+  });
+
+  test("rejects a DelegateWork result outside the host-provided Workspace list", async () => {
     const service = new PetDispatchService({
       metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
       aggregator: {
@@ -141,28 +188,46 @@ describe("PetDispatchService", () => {
       worker: {
         requestWorker: async () => ({
           ok: true,
-          result: { text: "交给工作会话。\n<!--PET:AUTO_DELEGATE-->" },
+          result: {
+            text: "delegated",
+            petWorkDelegation: {
+              workspaceId: "workspace-invented",
+              objective: "do not run this",
+            },
+          },
         }),
       },
       hostCwd: "/safe/pet",
+      listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
     });
 
-    expect(
-      await service.dispatch({
-        type: "chat",
-        message: "修复登录问题",
-        clientMessageId: "client-delegate",
-        preferredProjectId: "project-a",
-      }),
-    ).toMatchObject({
-      ok: true,
-      type: "chat",
-      delegation: {
-        clientMessageId: "client-delegate",
-        task: "修复登录问题",
-        preferredProjectId: "project-a",
-      },
+    expect(await service.dispatch({ type: "chat", message: "修复登录问题" })).toEqual({
+      ok: false,
+      code: "worker-error",
+      message: "Mimi returned a Workspace outside the host-provided list",
     });
+  });
+
+  test("does not treat the legacy text marker as a delegation", async () => {
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async () => ({
+          ok: true,
+          result: { text: "我会自动派发。\n<!--PET:AUTO_DELEGATE-->" },
+        }),
+      },
+      hostCwd: "/safe/pet",
+      listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
+    });
+
+    expect(await service.dispatch({ type: "chat", message: "修复登录问题" })).not.toHaveProperty(
+      "delegation",
+    );
   });
 
   test("does not inject or persist any raw multiline AskUser title even if host input is malformed", async () => {

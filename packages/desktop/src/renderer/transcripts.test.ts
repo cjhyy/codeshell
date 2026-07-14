@@ -5,6 +5,7 @@ import {
   archiveAllSessions,
   archiveSession,
   bucketKey,
+  createSession,
   deleteSessionLocal,
   loadSessionIndex,
   loadTranscript,
@@ -214,6 +215,23 @@ describe("transcript snapshot cursor persistence", () => {
     expect(setActiveSession("repo-a", "archived").activeSessionId).toBeNull();
     expect(setActiveSession("repo-a", "missing").activeSessionId).toBeNull();
     expect(setActiveSession("repo-a", "live").activeSessionId).toBe("live");
+  });
+
+  it("creates a background session without replacing the active conversation", () => {
+    saveSessionIndex("repo-a", {
+      activeSessionId: "current",
+      sessions: [{ id: "current", title: "Current", createdAt: 1, updatedAt: 1 }],
+    });
+
+    const created = createSession("repo-a", undefined, { activate: false });
+
+    expect(created.sessionId).not.toBe("current");
+    expect(created.index.activeSessionId).toBe("current");
+    expect(created.index.sessions.map((session) => session.id)).toEqual([
+      created.sessionId,
+      "current",
+    ]);
+    expect(loadSessionIndex("repo-a").activeSessionId).toBe("current");
   });
 
   it("hydrates context_transfer as a background package card", () => {

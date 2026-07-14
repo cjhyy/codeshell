@@ -16,17 +16,13 @@ describe("MessageStream — empty streaming assistant guard", () => {
   });
 
   test("renders assistant with non-empty streaming text", () => {
-    const messages: Message[] = [
-      { kind: "assistant", id: "a1", text: "Hel", done: false },
-    ];
+    const messages: Message[] = [{ kind: "assistant", id: "a1", text: "Hel", done: false }];
     const html = renderToStaticMarkup(<MessageStream messages={messages} />);
     expect(html).toContain("Hel");
   });
 
   test("renders done assistant with empty text (defensive)", () => {
-    const messages: Message[] = [
-      { kind: "assistant", id: "a1", text: "", done: true },
-    ];
+    const messages: Message[] = [{ kind: "assistant", id: "a1", text: "", done: true }];
     const html = renderToStaticMarkup(<MessageStream messages={messages} />);
     expect(html).not.toContain("…");
   });
@@ -55,10 +51,27 @@ describe("MessageStream — empty marker suppression (no blank blocks)", () => {
   });
 
   test("still renders a thinking message that has text", () => {
-    const messages: Message[] = [
-      { kind: "thinking", id: "t1", text: "pondering", done: true },
-    ];
+    const messages: Message[] = [{ kind: "thinking", id: "t1", text: "pondering", done: true }];
     const html = renderToStaticMarkup(<MessageStream messages={messages} />);
     expect(html).toContain("thinking");
+  });
+});
+
+describe("MessageStream — injected system reminders", () => {
+  test("renders a system reminder as folded task information, not a user bubble", () => {
+    const messages: Message[] = [
+      {
+        kind: "user",
+        id: "reminder",
+        text: "<system-reminder>background task finished</system-reminder>",
+        injected: true,
+      },
+    ];
+
+    const html = renderToStaticMarkup(<MessageStream messages={messages} />);
+    expect(html).toContain("系统任务信息");
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).not.toContain("background task finished");
+    expect(html).not.toContain("&lt;system-reminder&gt;");
   });
 });

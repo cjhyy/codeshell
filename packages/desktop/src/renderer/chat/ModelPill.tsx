@@ -50,13 +50,14 @@ export function ModelPill({ activeKey, options, onSelect, disabled }: Props) {
   }, [open]);
 
   const active = options.find((o) => o.key === activeKey) ?? null;
-  const label = active?.label ?? (activeKey ?? t("chat.model.select"));
+  const label = active?.label ?? activeKey ?? t("chat.model.select");
 
   return (
     <div className="relative" ref={ref}>
       <button
         ref={anchorRef}
         type="button"
+        data-active-model={activeKey ?? ""}
         className="cs-control inline-flex min-h-7 shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs text-foreground disabled:opacity-50"
         disabled={disabled}
         aria-label={t("chat.model.currentLabel", { label })}
@@ -87,6 +88,7 @@ export function ModelPill({ activeKey, options, onSelect, disabled }: Props) {
             options.map((o) => (
               <li
                 key={o.key}
+                data-model-key={o.key}
                 className={
                   "cs-menu-item flex cursor-pointer gap-2 px-2 py-1.5 text-sm " +
                   (o.key === activeKey ? "bg-accent" : "")
@@ -96,10 +98,16 @@ export function ModelPill({ activeKey, options, onSelect, disabled }: Props) {
                   setOpen(false);
                 }}
               >
-                <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">{o.provider}</span>
+                <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                  {o.provider}
+                </span>
                 <span className="flex-1 truncate">{o.label}</span>
                 {o.supportsVision && (
-                  <Image size={11} aria-label={t("chat.model.visionSupported")} className="opacity-60" />
+                  <Image
+                    size={11}
+                    aria-label={t("chat.model.visionSupported")}
+                    className="opacity-60"
+                  />
                 )}
               </li>
             ))
