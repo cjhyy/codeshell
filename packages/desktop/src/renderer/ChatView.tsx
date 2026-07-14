@@ -372,6 +372,7 @@ export function ChatView({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [contextSelectionOpen, setContextSelectionOpen] = useState(false);
   // Lightbox for staged attachment thumbnails (click to zoom). Mirrors
   // MessageStream's gallery zoom.
   const [zoomed, setZoomed] = useState<{ items: LightboxItem[]; index: number } | null>(null);
@@ -1192,11 +1193,12 @@ export function ChatView({
             cwd={messageCwd ?? activeProjectPath}
             sendEpoch={sendEpoch}
             onContextPackageCreated={onContextPackageCreated}
+            onContextSelectionChange={setContextSelectionOpen}
           />
         )
       )}
 
-      {(openAsk || showStickyApproval) && (
+      {!contextSelectionOpen && (openAsk || showStickyApproval) && (
         <div className="px-4">
           {openAsk && (
             <AskUserMessageView message={openAsk} onAnswer={onAskUserAnswer ?? (() => undefined)} />
@@ -1218,9 +1220,11 @@ export function ChatView({
       */}
       <div
         className={
-          isNewChat
-            ? "flex min-w-0 max-w-full flex-1 flex-col items-center justify-center px-4"
-            : "contents"
+          contextSelectionOpen
+            ? "hidden"
+            : isNewChat
+              ? "flex min-w-0 max-w-full flex-1 flex-col items-center justify-center px-4"
+              : "contents"
         }
       >
         {isNewChat && welcomeNode && (

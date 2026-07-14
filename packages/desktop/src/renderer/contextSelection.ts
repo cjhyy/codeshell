@@ -17,7 +17,7 @@ const SELECTABLE_TYPES = new Set([
   "context_transfer",
 ]);
 
-/** Build selectable complete turns from raw core events, never renderer ids. */
+/** Build selectable complete user turns from raw core events, never renderer ids. */
 export function buildSelectableContextTurns(
   events: readonly RawTranscriptEvent[],
   liveTurnActive: boolean,
@@ -27,13 +27,24 @@ export function buildSelectableContextTurns(
 
   const finish = () => {
     if (current.length === 0) return;
-    const selectable = current.filter((event) => SELECTABLE_TYPES.has(event.type));
+    // A forwarding unit starts at a real user message. Session metadata,
+    // context-transfer cards, and other preamble events are useful transcript
+    // context, but they are not a "user turn" the user can recognize and tap.
+    const userEventIndex = current.findIndex(
+      (event) => event.type === "message" && event.data.role === "user",
+    );
+    if (userEventIndex < 0) {
+      current = [];
+      return;
+    }
+    const userTurn = current.slice(userEventIndex);
+    const selectable = userTurn.filter((event) => SELECTABLE_TYPES.has(event.type));
     if (selectable.length === 0) {
       current = [];
       return;
     }
     const first = selectable[0]!;
-    const last = current[current.length - 1]!;
+    const last = userTurn[userTurn.length - 1]!;
     const previewEvent = selectable.find(
       (event) => event.type === "message" && event.data.role === "user",
     );
@@ -42,7 +53,7 @@ export function buildSelectableContextTurns(
       turnNumber: first.turnNumber,
       fromEventId: first.id,
       toEventId: last.id,
-      eventIds: current.map((event) => event.id),
+      eventIds: userTurn.map((event) => event.id),
       preview:
         typeof previewContent === "string"
           ? previewContent.slice(0, 160)

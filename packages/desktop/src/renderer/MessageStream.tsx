@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, Forward, X } from "lucide-react";
 import type { Message } from "./types";
 import { ToolCard } from "./tool-cards";
 import { AssistantMessageView } from "./messages/AssistantMessageView";
@@ -102,6 +102,8 @@ interface Props {
   sendEpoch?: number;
   /** Registers a summary fork as a normal host session after core publishes it. */
   onContextPackageCreated?: ContextPackageCreatedHandler;
+  /** Lets the chat shell replace its composer while merge-forward selection is active. */
+  onContextSelectionChange?: (open: boolean) => void;
 }
 
 export function MessageStream({
@@ -116,6 +118,7 @@ export function MessageStream({
   cwd,
   sendEpoch,
   onContextPackageCreated,
+  onContextSelectionChange,
 }: Props) {
   const { t } = useT();
   // The LAST files_changed message = the most recent turn's file edits. Only
@@ -163,6 +166,30 @@ export function MessageStream({
     setSelectionStatus("idle");
     setSelectionError(null);
   }, [engineSessionId]);
+
+  useEffect(() => {
+    onContextSelectionChange?.(selectionOpen);
+  }, [onContextSelectionChange, selectionOpen]);
+
+  useEffect(
+    () => () => {
+      onContextSelectionChange?.(false);
+    },
+    [onContextSelectionChange],
+  );
+
+  const closeContextSelection = () => {
+    if (selectionStatus === "packaging") return;
+    // Invalidate an in-flight raw-event read so cancelling cannot reopen or
+    // repopulate this selection surface after it has disappeared.
+    selectionLoadEpochRef.current += 1;
+    setSelectionOpen(false);
+    setSelectionTurns([]);
+    setSelectionAnchor(null);
+    setSelectionEnd(null);
+    setSelectionStatus("idle");
+    setSelectionError(null);
+  };
 
   const openContextSelection = async () => {
     if (!engineSessionId || liveTurnActive) return;
@@ -255,6 +282,11 @@ export function MessageStream({
     }
   };
 
+  const selectedTurnCount =
+    selectionAnchor === null || selectionEnd === null
+      ? 0
+      : Math.abs(selectionEnd - selectionAnchor) + 1;
+
   // Two-level fold (see messages/streamGroups.ts):
   //   - level 1: adjacent tool calls → ToolGroup
   //   - level 2: per turn, first-tool..last-tool span → TurnProcessGroup.
@@ -287,105 +319,158 @@ export function MessageStream({
 
   return (
     <DriveAgentJobsLoader sessionId={engineSessionId} messages={messages}>
-      <div className="relative min-w-0 max-w-full flex-1 overflow-hidden">
+      <div className="relative flex min-w-0 max-w-full flex-1 flex-col overflow-hidden">
         {engineSessionId && onContextPackageCreated && !liveTurnActive && !selectionOpen && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="absolute right-4 top-2 z-20"
-            onClick={() => void openContextSelection()}
-          >
-            {t("chat.contextPackage.select")}
-          </Button>
+          <div className="flex shrink-0 justify-end border-b border-border/60 px-4 py-1.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1.5 text-muted-foreground hover:text-foreground"
+              data-context-action="open"
+              onClick={() => void openContextSelection()}
+            >
+              <Forward size={14} />
+              {t("chat.contextPackage.select")}
+            </Button>
+          </div>
         )}
         {selectionOpen && (
-          <div className="absolute inset-x-4 top-2 z-30 max-h-[70%] overflow-auto rounded-lg border border-border bg-background p-3 shadow-lg">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <div>
-                <div className="font-medium">{t("chat.contextPackage.title")}</div>
-                <div className="text-xs text-muted-foreground">{t("chat.contextPackage.hint")}</div>
-              </div>
+          <div className="absolute inset-0 z-30 flex min-h-0 flex-col bg-background">
+            <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3">
               <Button
                 type="button"
                 variant="ghost"
-                size="sm"
-                onClick={() => setSelectionOpen(false)}
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                aria-label={t("chat.contextPackage.cancelAria")}
+                title={t("chat.contextPackage.cancel")}
+                disabled={selectionStatus === "packaging"}
+                onClick={closeContextSelection}
               >
-                {t("chat.contextPackage.cancel")}
+                <X size={16} />
               </Button>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 font-medium">
+                  <Forward size={15} className="shrink-0" />
+                  <span>{t("chat.contextPackage.title")}</span>
+                </div>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  {t("chat.contextPackage.hint")}
+                </div>
+              </div>
             </div>
-            {selectionStatus === "loading" ? (
-              <div className="py-3 text-sm text-muted-foreground">
-                {t("chat.contextPackage.loading")}
-              </div>
-            ) : selectionTurns.length === 0 ? (
-              <div className="py-3 text-sm text-muted-foreground">
-                {t("chat.contextPackage.empty")}
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {selectionTurns.map((turn, index) => {
-                  const low = Math.min(selectionAnchor ?? -1, selectionEnd ?? -1);
-                  const high = Math.max(selectionAnchor ?? -1, selectionEnd ?? -1);
-                  const selected = selectionAnchor !== null && index >= low && index <= high;
-                  return (
-                    <button
-                      type="button"
-                      key={`${turn.fromEventId}:${turn.toEventId}`}
-                      className={
-                        "flex w-full items-start gap-2 rounded-md border px-3 py-2 text-left text-sm " +
-                        (selected
-                          ? "border-primary bg-primary/10"
-                          : "border-border hover:bg-muted/50")
-                      }
-                      aria-pressed={selected}
-                      onClick={() => chooseTurn(index)}
-                    >
-                      <span
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+              {selectionStatus === "loading" ? (
+                <div className="mx-auto max-w-2xl py-8 text-center text-sm text-muted-foreground">
+                  {t("chat.contextPackage.loading")}
+                </div>
+              ) : selectionTurns.length === 0 ? (
+                <div className="mx-auto max-w-2xl py-8 text-center text-sm text-muted-foreground">
+                  {t("chat.contextPackage.empty")}
+                </div>
+              ) : (
+                <div className="mx-auto max-w-2xl space-y-2">
+                  {selectionTurns.map((turn, index) => {
+                    const low = Math.min(selectionAnchor ?? -1, selectionEnd ?? -1);
+                    const high = Math.max(selectionAnchor ?? -1, selectionEnd ?? -1);
+                    const selected = selectionAnchor !== null && index >= low && index <= high;
+                    const decodedPreview = decodeWireForDisplay(turn.preview);
+                    const preview =
+                      decodedPreview.text.trim() ||
+                      (decodedPreview.images.length > 0
+                        ? t("chat.contextPackage.imagePreview", {
+                            count: decodedPreview.images.length,
+                          })
+                        : turn.preview);
+                    return (
+                      <button
+                        type="button"
+                        key={`${turn.fromEventId}:${turn.toEventId}`}
                         className={
-                          "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border " +
+                          "group/turn flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors " +
                           (selected
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-muted-foreground/50")
+                            ? "border-primary bg-primary/10"
+                            : "border-border bg-card hover:bg-muted/50")
                         }
-                        aria-hidden="true"
+                        aria-label={t("chat.contextPackage.turnAria", {
+                          number: turn.turnNumber + 1,
+                        })}
+                        aria-pressed={selected}
+                        data-context-turn-index={index}
+                        onClick={() => chooseTurn(index)}
                       >
-                        {selected && <Check size={12} strokeWidth={3} />}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="mr-2 text-xs text-muted-foreground">
-                          #{turn.turnNumber + 1}
+                        <span
+                          className={
+                            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors " +
+                            (selected
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-muted-foreground/50 bg-background group-hover/turn:border-primary/60")
+                          }
+                          aria-hidden="true"
+                        >
+                          {selected && <Check size={13} strokeWidth={3} />}
                         </span>
-                        <span className="break-words">{turn.preview}</span>
-                      </span>
-                    </button>
-                  );
-                })}
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center justify-between gap-3">
+                            <span className="text-xs font-medium text-muted-foreground">
+                              {t("chat.contextPackage.turnLabel", {
+                                number: turn.turnNumber + 1,
+                              })}
+                            </span>
+                            <span className="shrink-0 text-[11px] text-muted-foreground/80">
+                              {t("chat.contextPackage.turnEvents", {
+                                count: turn.eventIds.length,
+                              })}
+                            </span>
+                          </span>
+                          <span className="mt-1 block whitespace-pre-wrap break-words text-sm">
+                            {preview}
+                          </span>
+                          <span className="mt-1.5 block text-[11px] text-muted-foreground">
+                            {t("chat.contextPackage.turnIncludesReply")}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="shrink-0 border-t border-border bg-background px-4 py-3">
+              <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
+                <div
+                  className={
+                    "min-w-0 text-sm " +
+                    (selectionError ? "text-status-err" : "text-muted-foreground")
+                  }
+                >
+                  {selectionError
+                    ? t("chat.contextPackage.failed", { error: selectionError })
+                    : t("chat.contextPackage.selected", { count: selectedTurnCount })}
+                </div>
+                <Button
+                  type="button"
+                  className="shrink-0 gap-1.5"
+                  data-context-action="merge"
+                  disabled={
+                    selectionAnchor === null || selectionEnd === null || selectionStatus !== "idle"
+                  }
+                  onClick={() => void createContextPackage()}
+                >
+                  <Forward size={14} />
+                  {selectionStatus === "packaging"
+                    ? t("chat.contextPackage.packaging")
+                    : t("chat.contextPackage.create")}
+                </Button>
               </div>
-            )}
-            {selectionError && (
-              <div className="mt-2 text-sm text-status-err">
-                {t("chat.contextPackage.failed", { error: selectionError })}
-              </div>
-            )}
-            <div className="mt-3 flex justify-end">
-              <Button
-                type="button"
-                size="sm"
-                disabled={
-                  selectionAnchor === null || selectionEnd === null || selectionStatus !== "idle"
-                }
-                onClick={() => void createContextPackage()}
-              >
-                {selectionStatus === "packaging"
-                  ? t("chat.contextPackage.packaging")
-                  : t("chat.contextPackage.create")}
-              </Button>
             </div>
           </div>
         )}
-        <div className="h-full min-w-0 max-w-full overflow-x-hidden overflow-y-auto" ref={ref}>
+        <div
+          className="min-h-0 min-w-0 max-w-full flex-1 overflow-x-hidden overflow-y-auto"
+          ref={ref}
+        >
           <div className="min-w-0 max-w-full">
             {items.map((m) => {
               if (m.kind === "turn_process_group") {

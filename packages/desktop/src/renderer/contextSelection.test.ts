@@ -37,6 +37,29 @@ describe("MessageStream context selection", () => {
     });
   });
 
+  it("only exposes units anchored by a user message", () => {
+    const turns = buildSelectableContextTurns(
+      [
+        event("context", "context_transfer", 0, { summary: "background" }),
+        event("context-boundary", "turn_boundary", 1),
+        event("assistant-only", "message", 1, { role: "assistant", content: "orphan" }),
+        event("assistant-boundary", "turn_boundary", 2),
+        event("u1", "message", 2, { role: "user", content: "recognizable turn" }),
+        event("a1", "message", 2, { role: "assistant", content: "answer" }),
+        event("b1", "turn_boundary", 3),
+      ],
+      false,
+    );
+
+    expect(turns).toHaveLength(1);
+    expect(turns[0]).toMatchObject({
+      fromEventId: "u1",
+      toEventId: "b1",
+      eventIds: ["u1", "a1", "b1"],
+      preview: "recognizable turn",
+    });
+  });
+
   it("returns one closed event range for a continuous turn selection", () => {
     const turns = buildSelectableContextTurns(
       [
