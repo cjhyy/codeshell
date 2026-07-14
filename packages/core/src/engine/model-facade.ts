@@ -12,7 +12,6 @@ import {
   recordLLMResponse,
 } from "../logging/session-recorder.js";
 import { sanitizeMessages } from "../logging/sanitize-messages.js";
-import { addAPIDuration, addToModelUsage, addInputTokens, addOutputTokens } from "../state.js";
 import { cacheHitRateFromUsage } from "./session-usage.js";
 import {
   createPromptPrefixFingerprint,
@@ -160,7 +159,6 @@ export class ModelFacade {
       reqId,
     );
 
-    this.recordUsage(response, latencyMs);
     this.recordResponse(response);
     return response;
   }
@@ -234,26 +232,8 @@ export class ModelFacade {
       reqId,
     );
 
-    this.recordUsage(response, latencyMs);
     this.recordResponse(response);
     return response;
-  }
-
-  /** Record API timing and token usage to bootstrap state. */
-  private recordUsage(response: LLMResponse, latencyMs: number): void {
-    addAPIDuration(latencyMs);
-    const u = response.usage;
-    if (u) {
-      addInputTokens(u.promptTokens ?? 0);
-      addOutputTokens(u.completionTokens ?? 0);
-      addToModelUsage(
-        this.client.model ?? "unknown",
-        u.promptTokens ?? 0,
-        u.completionTokens ?? 0,
-        u.cacheReadTokens ?? 0,
-        u.cacheCreationTokens ?? 0,
-      );
-    }
   }
 
   /** Optional summarize function for tool use summaries. */

@@ -29,6 +29,7 @@ import type { EngineRuntime } from "./runtime.js";
 import type { HookEventName } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
 import type { CapabilityModule } from "../capabilities/index.js";
+import type { ExtensionModule } from "../tool-system/capability-module.js";
 
 export interface EngineConfig {
   llm: LLMConfig;
@@ -50,8 +51,10 @@ export interface EngineConfig {
   preset?: AgentPresetName;
   enabledBuiltinTools?: string[];
   disabledBuiltinTools?: string[];
-  /** Product behavior installed into this Engine instance. */
+  /** Trusted optional product capabilities installed by the owning host. */
   capabilities?: readonly CapabilityModule[];
+  /** Lightweight runtime tools and queries loaded by the host process. */
+  extensionModules?: readonly ExtensionModule[];
   /**
    * When false, `Bash(run_in_background=true)` is rejected and the
    * background-shell tools are disabled (design §5.5). Set false by

@@ -293,15 +293,12 @@ binding (`packages/core/src/automation/write-run.ts:47`).
 
 ## 5. Persistent goals
 
-A goal is "keep going until this objective is met." It is stored as
-`session.state.activeGoal`, not merely passed to one turn. The engine resolves
-goal precedence as explicit `options.goal` first, then persisted active goal,
-then any default goal, and emits `goal_set` when it installs a new active goal
-(`packages/core/src/engine/engine.ts:1936`,
-`packages/core/src/engine/engine.ts:1957`,
-`packages/core/src/engine/engine.ts:1976`). `SessionManager` reads and clears
-the persisted goal from session state (`packages/core/src/session/session-manager.ts:193`,
-`packages/core/src/session/session-manager.ts:220`).
+A goal is "keep going until this objective is met." It is persisted as one
+versioned `session.state.goalLifecycle`, not merely passed to one turn. The
+engine resolves explicit `options.goal` first, then an armable active/waiting
+lifecycle, then any default goal, and emits `goal_set` only after the new
+identity is durable. Paused remains visible but does not arm; terminal never
+arms. `SessionManager` owns set/edit/pause/wait/arm/terminal/clear transitions.
 
 `GoalConfig` carries the objective plus optional token, time, turn, and
 stop-block budgets (`packages/core/src/engine/goal.ts:14`). Defaults are broad

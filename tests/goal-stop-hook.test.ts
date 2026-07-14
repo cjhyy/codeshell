@@ -55,9 +55,7 @@ describe("createGoalStopHook", () => {
   it("allows stop when the judge says the goal is met", async () => {
     const llm = fakeLLM(JSON.stringify({ met: true, waiting: false, gaps: "" }));
     const hook = createGoalStopHook({ llm, log: silentLog });
-    const res = await hook(
-      ctx({ goal: "ship it", finalText: "shipped" }),
-    );
+    const res = await hook(ctx({ goal: "ship it", finalText: "shipped" }));
     expect(res.continueSession).toBeUndefined();
   });
 
@@ -66,9 +64,7 @@ describe("createGoalStopHook", () => {
       JSON.stringify({ met: false, waiting: false, gaps: "tests still failing" }),
     );
     const hook = createGoalStopHook({ llm, log: silentLog });
-    const res = await hook(
-      ctx({ goal: "make tests pass", finalText: "I think it's fine" }),
-    );
+    const res = await hook(ctx({ goal: "make tests pass", finalText: "I think it's fine" }));
     expect(res.continueSession).toBe(true);
     expect(res.messages).toBeDefined();
     expect(res.messages!.join("\n")).toContain("tests still failing");
@@ -82,9 +78,7 @@ describe("createGoalStopHook", () => {
       JSON.stringify({ met: false, waiting: false, gaps: "tests still failing" }),
     );
     const hook = createGoalStopHook({ llm, log: silentLog });
-    const res = await hook(
-      ctx({ goal: "make tests pass", finalText: "fine" }),
-    );
+    const res = await hook(ctx({ goal: "make tests pass", finalText: "fine" }));
     expect(res.data?.goalVerdict).toEqual({ met: false, gaps: "tests still failing" });
   });
 
@@ -118,7 +112,12 @@ describe("createGoalStopHook", () => {
     let warned = false;
     const hook = createGoalStopHook({
       llm,
-      log: { ...silentLog, warn: () => { warned = true; } },
+      log: {
+        ...silentLog,
+        warn: () => {
+          warned = true;
+        },
+      },
     });
     const res = await hook(ctx({ goal: "x", finalText: "y" }));
     expect(res.continueSession).toBe(true);
@@ -235,7 +234,7 @@ describe("createGoalStopHook onMet callback (persistent goal clear)", () => {
     expect(mets).toBe(0);
   });
 
-  it("a throwing onMet does not block the met verdict", async () => {
+  it("a throwing onMet fails closed instead of reporting an unpersisted met verdict", async () => {
     const llm = fakeLLM(JSON.stringify({ met: true, waiting: false, gaps: "" }));
     const hook = createGoalStopHook({
       goal: "g",
@@ -246,6 +245,10 @@ describe("createGoalStopHook onMet callback (persistent goal clear)", () => {
       },
     });
     const res = await hook(ctx({ goal: "g", sessionId: "s1", finalText: "done" }));
-    expect((res.data as { goalVerdict?: { met: boolean } })?.goalVerdict?.met).toBe(true);
+    expect(
+      (res.data as { goalVerdict?: { met: boolean } } | undefined)?.goalVerdict,
+    ).toBeUndefined();
+    expect(res.continueSession).toBe(true);
+    expect(res.messages?.[0]).toContain("持久化完成状态失败");
   });
 });

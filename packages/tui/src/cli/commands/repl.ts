@@ -32,6 +32,7 @@ import {
   type CronRunResult,
 } from "@cjhyy/code-shell-core";
 import { resolveMaxContextTokens } from "./max-context-tokens.js";
+import { createArenaCapability } from "@cjhyy/code-shell-arena";
 
 export type EffortLevel = "low" | "medium" | "high" | "max";
 
@@ -146,6 +147,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
 
   const permissionMode = (options.permissionMode ?? "acceptEdits") as PermissionMode;
   const maxContextTokens = resolveMaxContextTokens(llmConfig, settings.context.maxTokens);
+  const extensionModules = [createArenaCapability()] as const;
 
   // ── Shared config passed into every session engine ─────────────
   const sharedCfg = {
@@ -153,6 +155,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     preset: options.preset ?? settings.agent.preset,
     enabledBuiltinTools: settings.agent.enabledBuiltinTools,
     disabledBuiltinTools: settings.agent.disabledBuiltinTools,
+    extensionModules,
     permissionMode,
     customSystemPrompt: settings.agent.customSystemPrompt,
     appendSystemPrompt: settings.agent.appendSystemPrompt,
@@ -177,11 +180,17 @@ export async function replCommand(options: ReplOptions): Promise<void> {
   // 1. Seed engine — calls populateModelPoolFromSettings() in ctor so the
   //    model pool and tool registry are fully populated. Discarded after
   //    resource extraction (never runs a task).
-  const seedEngine = new Engine({ llm: llmConfig, clientDefaults, cwd, settingsScope: "full" });
+  const seedEngine = new Engine({
+    llm: llmConfig,
+    clientDefaults,
+    cwd,
+    extensionModules,
+    settingsScope: "full",
+  });
 
   // 2. Extract shared resources from seed engine
   const modelPool = seedEngine.getModelPool();
-  const toolRegistry = seedEngine.getToolRegistry();
+  const toolRegistry = seedEngine.getRuntimeToolRegistry();
   const resolvedLlmConfig = seedEngine.getConfig().llm;
   // settingsManager was hoisted to the top of replCommand; reused here.
   // MCPManager: no-op holder satisfying EngineRuntime type; individual
@@ -267,6 +276,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
       cwd,
       runtime,
       ...sharedCfg,
+      extensionModules: [],
       // Override the REPL's interactive backend/mode with the read-only
       // contract from cron-runtime — cron is unattended.
       permissionMode: req.permissionMode,

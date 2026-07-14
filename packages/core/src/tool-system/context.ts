@@ -1,8 +1,8 @@
 /**
  * ToolContext — runtime services injected into every tool execution.
  *
- * Replaces the legacy module-level singletons (`setAskUserFn`,
- * `setArenaLLMConfig`, `setSubAgentConfig`, `setToolSearchRegistry`).
+ * Replaces the legacy module-level singleton setters used by built-ins and
+ * product capabilities.
  *
  * Each Engine instance builds its own ToolContext when run() starts and
  * passes it through ToolExecutor → ToolRegistry → executor function.
@@ -224,7 +224,7 @@ export interface ToolContext {
   setSessionWorkspace?(workspace: SessionWorkspace, stateRevision?: number): void;
   /** LLM credentials/endpoint for tools that need to make their own calls. */
   llmConfig: LLMConfig;
-  /** Active model pool (Arena reads this to pick participants). */
+  /** Active model pool for model-aware tools and product capabilities. */
   modelPool?: ModelPool;
   /** Tool registry (ToolSearch reads this to enumerate available tools). */
   toolRegistry: ToolRegistry;

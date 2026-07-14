@@ -56,6 +56,11 @@ export interface SessionWorkspaceReleaseOptions {
   releaseLiveWorkspace?: (sessionId: string) => Promise<void>;
 }
 
+export interface SessionWorkspaceMutationOptions {
+  /** Persist through the live worker so its in-memory bundle adopts the revision. */
+  setLiveWorkspace?: (sessionId: string, workspace: SessionWorkspace) => Promise<void>;
+}
+
 let sessionManagerSingleton: SessionManager | undefined;
 let sessionManagerHome: string | undefined;
 let sessionManagerForTests: SessionManager | undefined;
@@ -204,6 +209,7 @@ export async function switchSessionWorkspaceForUi(
   sessionId: string,
   cwd: string,
   target: string,
+  opts: SessionWorkspaceMutationOptions = {},
 ): Promise<SessionWorkspaceList> {
   const sm = sessions();
   requireKnownSession(sm, sessionId);
@@ -244,7 +250,8 @@ export async function switchSessionWorkspaceForUi(
     }
   }
 
-  sm.setSessionWorkspace(sessionId, next);
+  if (opts.setLiveWorkspace) await opts.setLiveWorkspace(sessionId, next);
+  else sm.setSessionWorkspace(sessionId, next);
   sm.recordWorkspaceHandoff(sessionId, from, next);
   return await listSessionWorktreesForUi(sessionId, mainRoot);
 }
@@ -298,6 +305,7 @@ export async function cleanupSessionWorktreeForUi(
   cwd: string,
   worktreePath: string,
   action: WorkspaceCleanupAction,
+  opts: SessionWorkspaceMutationOptions = {},
 ): Promise<SessionWorkspaceList> {
   if (action !== "detach" && action !== "discard") {
     throw new Error("action must be detach or discard");
@@ -334,15 +342,16 @@ export async function cleanupSessionWorktreeForUi(
     );
   }
 
-  // A discard can remove the directory but leave branch deletion for manual
-  // cleanup. That still returns normally so the active session pointer below
-  // moves back to main instead of staying on a removed directory.
-  removeWorktree(match.path, action === "discard", { prefix });
+  // Rebase the live owner before deleting its cwd. A discard can remove the
+  // directory but leave branch deletion for manual cleanup; either way the
+  // session already points at main and cannot later persist the removed root.
   if (current.kind === "worktree" && resolve(current.root) === resolve(match.path)) {
     const mainWorkspace: SessionWorkspace = { root: mainRoot, kind: "main" };
-    sm.setSessionWorkspace(sessionId, mainWorkspace);
+    if (opts.setLiveWorkspace) await opts.setLiveWorkspace(sessionId, mainWorkspace);
+    else sm.setSessionWorkspace(sessionId, mainWorkspace);
     sm.recordWorkspaceHandoff(sessionId, current, mainWorkspace);
   }
+  removeWorktree(match.path, action === "discard", { prefix });
   return await listSessionWorktreesForUi(sessionId, mainRoot);
 }
 

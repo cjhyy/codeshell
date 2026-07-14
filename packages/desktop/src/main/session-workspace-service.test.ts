@@ -209,6 +209,58 @@ describe("cleanupSessionWorktreeForUi", () => {
     removeWorktree(wt.worktreePath, true);
   });
 
+  test("switch routes persistence through a live worker callback before recording handoff", async () => {
+    const sessionId = "desktopliveswitch";
+    const sm = new SessionManager(sessionsDir);
+    sm.create(repo, "m", "p", sessionId);
+    const wt = await createWorktree(repo, "live-switch", sessionId);
+    const order: string[] = [];
+
+    const list = await switchSessionWorkspaceForUi(sessionId, repo, wt.worktreePath, {
+      setLiveWorkspace: async (id, workspace) => {
+        order.push("live-rebase");
+        expect(id).toBe(sessionId);
+        expect(sm.getSessionWorkspace(sessionId)).toEqual({ root: repo, kind: "main" });
+        sm.setSessionWorkspace(id, workspace);
+      },
+    });
+    order.push("returned");
+
+    expect(order).toEqual(["live-rebase", "returned"]);
+    expect(list.current.root).toBe(wt.worktreePath);
+    expect(sm.getSessionWorkspace(sessionId)?.root).toBe(wt.worktreePath);
+    removeWorktree(wt.worktreePath, true);
+  });
+
+  test("cleanup rebases an active session to main before removing its worktree", async () => {
+    const sessionId = "desktoplivecleanup";
+    const sm = new SessionManager(sessionsDir);
+    sm.create(repo, "m", "p", sessionId);
+    const wt = await createWorktree(repo, "live-cleanup", sessionId);
+    sm.setSessionWorkspace(sessionId, {
+      root: wt.worktreePath,
+      kind: "worktree",
+      worktree: {
+        path: wt.worktreePath,
+        branch: wt.worktreeBranch,
+        baseRef: wt.originalBranch ?? "HEAD",
+        createdBy: "codeshell",
+      },
+    });
+    let rebasedBeforeRemoval = false;
+
+    const list = await cleanupSessionWorktreeForUi(sessionId, repo, wt.worktreePath, "discard", {
+      setLiveWorkspace: async (id, workspace) => {
+        rebasedBeforeRemoval = existsSync(wt.worktreePath);
+        sm.setSessionWorkspace(id, workspace);
+      },
+    });
+
+    expect(rebasedBeforeRemoval).toBe(true);
+    expect(existsSync(wt.worktreePath)).toBe(false);
+    expect(list.current).toEqual({ root: repo, kind: "main" });
+  });
+
   test("rejects cleanup for an external worktree", async () => {
     const sessionId = "desktopexternal";
     const sm = new SessionManager(sessionsDir);

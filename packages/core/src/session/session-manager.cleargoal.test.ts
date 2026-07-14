@@ -28,8 +28,11 @@ describe("SessionManager.clearActiveGoal", () => {
     expect(sm.clearActiveGoal("s-1")).toBe(true);
     // The goal is gone from disk — a subsequent read sees nothing.
     expect(sm.readActiveGoal("s-1")).toBeUndefined();
-    expect(sm.resume("s-1").state.goalTerminal?.reason).toBe("cancelled");
-    expect(sm.resume("s-1").state.goalTerminal?.goalId).toBeString();
+    const lifecycle = sm.resume("s-1").state.goalLifecycle;
+    expect(lifecycle?.phase).toBe("terminal");
+    if (lifecycle?.phase !== "terminal") throw new Error("expected terminal Goal lifecycle");
+    expect(lifecycle.terminal.reason).toBe("user_cleared");
+    expect(lifecycle.goalId).toBeString();
   });
 
   test("returns false when the session has no goal (no-op)", () => {

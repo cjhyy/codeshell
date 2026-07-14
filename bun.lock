@@ -5,6 +5,7 @@
     "": {
       "name": "@cjhyy/code-shell",
       "dependencies": {
+        "@cjhyy/code-shell-arena": "workspace:*",
         "@cjhyy/code-shell-capability-coding": "workspace:*",
         "@cjhyy/code-shell-core": "workspace:*",
         "@cjhyy/code-shell-tui": "workspace:*",
@@ -24,6 +25,14 @@
         "tsup": "^8.3.6",
         "typescript": "^5.7.3",
         "typescript-eslint": "^8.59.0",
+      },
+    },
+    "packages/arena": {
+      "name": "@cjhyy/code-shell-arena",
+      "version": "0.7.1",
+      "dependencies": {
+        "@cjhyy/code-shell-core": "workspace:*",
+        "zod": "^3.24.2",
       },
     },
     "packages/cdp": {
@@ -85,6 +94,7 @@
       "name": "@cjhyy/code-shell-desktop",
       "version": "0.7.1",
       "dependencies": {
+        "@cjhyy/code-shell-arena": "workspace:*",
         "@cjhyy/code-shell-capability-coding": "workspace:*",
         "@cjhyy/code-shell-core": "workspace:*",
         "node-pty": "^1.1.0",
@@ -146,6 +156,7 @@
       },
       "dependencies": {
         "@alcalzone/ansi-tokenize": "^0.3.0",
+        "@cjhyy/code-shell-arena": "workspace:*",
         "@cjhyy/code-shell-capability-coding": "workspace:*",
         "@cjhyy/code-shell-core": "workspace:*",
         "auto-bind": "^5.0.1",
@@ -246,6 +257,8 @@
     "@babel/traverse": ["@babel/traverse@7.29.7", "", { "dependencies": { "@babel/code-frame": "^7.29.7", "@babel/generator": "^7.29.7", "@babel/helper-globals": "^7.29.7", "@babel/parser": "^7.29.7", "@babel/template": "^7.29.7", "@babel/types": "^7.29.7", "debug": "^4.3.1" } }, "sha512-EhlfNQtZ+NK22w5BM61ciuiq1m58ed33Wr1Xan//ZRTy6hgjnwyCffRYwzsGXdASJSUJ1guZILsErh1eQcl+zw=="],
 
     "@babel/types": ["@babel/types@7.29.7", "", { "dependencies": { "@babel/helper-string-parser": "^7.29.7", "@babel/helper-validator-identifier": "^7.29.7" } }, "sha512-4zBIxpPzowiZpusoFkyGVwakdRJUyuH5PxQ/PrqghfdFWWasvnCdPfQXHrenDai+gyLARulZjZowCOj6fjT4pA=="],
+
+    "@cjhyy/code-shell-arena": ["@cjhyy/code-shell-arena@workspace:packages/arena"],
 
     "@cjhyy/code-shell-capability-coding": ["@cjhyy/code-shell-capability-coding@workspace:packages/coding"],
 

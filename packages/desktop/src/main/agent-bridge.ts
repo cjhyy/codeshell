@@ -42,6 +42,7 @@ import {
   SessionManager,
   type PetProjectionDelta,
   type PetProjectionSnapshotResult,
+  type SessionWorkspace,
 } from "@cjhyy/code-shell-core";
 import { restoreCookiesToBrowser, type ElectronCookieLike } from "./credentials-service.js";
 import { resolveCookieCredentialForBrowser } from "./credential-action.js";
@@ -248,7 +249,13 @@ export class AgentBridge implements PetStateBridge {
     try {
       this.child = spawn(process.execPath, [agentEntry], {
         cwd: workerCwd,
-        env: { ...process.env, ELECTRON_RUN_AS_NODE: "1", CODESHELL_AGENT_STDIO: "1" },
+        env: {
+          ...process.env,
+          ELECTRON_RUN_AS_NODE: "1",
+          CODESHELL_AGENT_STDIO: "1",
+          CODE_SHELL_CAPABILITY_MODULES:
+            "@cjhyy/code-shell-arena#createArenaCapability",
+        },
         stdio: ["pipe", "pipe", "pipe"],
       });
     } catch (e) {
@@ -1199,6 +1206,22 @@ export class AgentBridge implements PetStateBridge {
         finish(err instanceof Error ? err : new Error(String(err)));
       }
     });
+  }
+
+  async setWorkspace(sessionId: string, workspace: SessionWorkspace): Promise<void> {
+    if (!this.child?.stdin || this.child.stdin.destroyed) {
+      throw new Error(`no live worker for session ${sessionId}`);
+    }
+    const response = await this.requestWorker(
+      Methods.SetWorkspace,
+      { sessionId, workspace },
+      5_000,
+    );
+    if (!response.ok) throw new Error(response.message);
+    const result = response.result as { ok?: boolean; workspace?: SessionWorkspace | null };
+    if (result.ok !== true || !result.workspace) {
+      throw new Error(`worker could not rebase workspace for session ${sessionId}`);
+    }
   }
 
   /** Feed an event produced OUTSIDE the stdio worker (e.g. an in-main automation

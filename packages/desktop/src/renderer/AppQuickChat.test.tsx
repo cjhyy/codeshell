@@ -60,21 +60,57 @@ interface SidebarProps {
 
 interface PanelAreaProps {
   bucket: string;
-  cwd: string | null;
+  projectPath?: string | null;
+  engineSessionId?: string | null;
+  busy?: boolean;
   tabs: Array<{ id: string; kind: string }>;
   setTabs: React.Dispatch<React.SetStateAction<Array<{ id: string; kind: string }>>>;
   setActiveId: React.Dispatch<React.SetStateAction<string | null>>;
-  renderQuickChatPanel?: (args: {
-    ownerBucket: string;
-    tabId: string;
-    cwd: string | null;
-  }) => React.ReactNode;
+  panelPluginHost?: {
+    getService(pluginId: string):
+      | {
+          ensure(context: Record<string, unknown>): void;
+          release(context: Record<string, unknown>): void;
+          render(context: Record<string, unknown>): React.ReactNode;
+        }
+      | undefined;
+  };
 }
 
 let chatProps: ChatProps | null = null;
 let sidebarProps: SidebarProps | null = null;
 const quickChatProps = new Map<string, QuickChatPanelProps>();
 const panelAreaProps = new Map<string, PanelAreaProps>();
+const QUICK_CHAT_PANEL_PLUGIN_ID = "codeshell.panel.quick-chat";
+
+function MockQuickChatPanelLifecycle({
+  panel,
+  tab,
+}: {
+  panel: PanelAreaProps;
+  tab: { id: string; kind: string };
+}) {
+  const service = panel.panelPluginHost?.getService(QUICK_CHAT_PANEL_PLUGIN_ID);
+  const serviceRef = React.useRef(service);
+  serviceRef.current = service;
+  const context = {
+    panelId: "quick-chat",
+    tabId: tab.id,
+    bucket: panel.bucket,
+    cwd: panel.projectPath ?? null,
+    engineSessionId: panel.engineSessionId ?? null,
+    busy: panel.busy ?? false,
+    visible: true,
+    foregroundVisible: true,
+  };
+
+  React.useEffect(() => {
+    serviceRef.current?.ensure(context);
+    return () => serviceRef.current?.release(context);
+  }, [panel.bucket, panel.projectPath, tab.id, Boolean(service)]);
+
+  return service?.render(context) ?? null;
+}
 
 mock.module("./ChatView", () => ({
   ChatView(props: ChatProps) {
@@ -120,13 +156,7 @@ mock.module("./panels/PanelArea", () => ({
         {props.tabs
           .filter((tab) => tab.kind === "quickChat")
           .map((tab) => (
-            <React.Fragment key={tab.id}>
-              {props.renderQuickChatPanel?.({
-                ownerBucket: props.bucket,
-                tabId: tab.id,
-                cwd: props.cwd,
-              })}
-            </React.Fragment>
+            <MockQuickChatPanelLifecycle key={tab.id} panel={props} tab={tab} />
           ))}
       </div>
     );

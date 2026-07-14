@@ -13,7 +13,6 @@ import {
   loadGatewayConfig,
   loginCodeShellWechat,
 } from "@cjhyy/code-shell-chat/codeshell";
-import { createChannelAdapter } from "@cjhyy/code-shell-chat/factory";
 
 export type ImGatewayChannel =
   | "telegram"
@@ -101,6 +100,10 @@ export class ImGatewayService {
 
   async start(): Promise<ImGatewayStatus> {
     if (this.active) return this.status();
+    // Adapter imports include optional third-party SDKs. Load them only when
+    // starting the gateway so status/config operations stay lightweight and
+    // do not probe a renderer-like global `window` in mixed test processes.
+    const { createChannelAdapter } = await import("@cjhyy/code-shell-chat/factory");
     const config = loadGatewayConfig({ configPath: this.configPath });
     const desktop = new DesktopControlClient(config.desktop);
     const abort = new AbortController();

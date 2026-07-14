@@ -423,27 +423,6 @@ export const SettingsSchema = z
       })
       .default({}),
 
-    arena: z
-      .object({
-        participants: z
-          .array(
-            z.union([
-              // Short form: just a model pool key
-              z.string(),
-              // Full form: explicit config (backward compat)
-              z.object({
-                name: z.string(),
-                model: z.string(),
-                provider: z.string().optional(),
-                apiKey: z.string().optional(),
-                baseUrl: z.string().optional(),
-              }),
-            ]),
-          )
-          .default([]),
-      })
-      .default({}),
-
     search: z
       .object({
         provider: z.enum(["serper", "tavily", "searxng"]).default("serper"),

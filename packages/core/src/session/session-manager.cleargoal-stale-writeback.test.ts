@@ -24,9 +24,33 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager } from "./session-manager.js";
-import { deriveLegacyGoalId, MAX_GOAL_TERMINALS, recordGoalTerminal } from "../engine/goal.js";
+import {
+  deriveLegacyGoalId,
+  goalConfigFromLifecycle,
+  type GoalConfig,
+  type GoalLifecycleTerminalReason,
+} from "../engine/goal.js";
+import type { SessionState } from "../types.js";
 
 const OBJ = "帮我继续看看还有没有问题 我已经修复了一个版本了";
+
+function activeGoal(state: SessionState): GoalConfig | undefined {
+  const lifecycle = state.goalLifecycle;
+  return lifecycle && lifecycle.phase !== "terminal"
+    ? goalConfigFromLifecycle(lifecycle)
+    : undefined;
+}
+
+function expectTerminal(
+  state: SessionState,
+  expected: { goalId?: string; reason: GoalLifecycleTerminalReason },
+): void {
+  const lifecycle = state.goalLifecycle;
+  expect(lifecycle?.phase).toBe("terminal");
+  if (lifecycle?.phase !== "terminal") throw new Error("expected terminal Goal lifecycle");
+  if (expected.goalId !== undefined) expect(lifecycle.goalId).toBe(expected.goalId);
+  expect(lifecycle.terminal.reason).toBe(expected.reason);
+}
 
 describe("clear goal vs a live run's stale-bundle write-back", () => {
   let dir: string;
@@ -53,7 +77,7 @@ describe("clear goal vs a live run's stale-bundle write-back", () => {
     // tombstone must prevent the cleared goal from being resurrected.
     sm.saveState(liveState);
     expect(sm.readActiveGoal("s-run")).toBeUndefined();
-    expect(sm.resume("s-run").state.goalTerminal?.reason).toBe("cancelled");
+    expectTerminal(sm.resume("s-run").state, { reason: "user_cleared" });
   });
 
   test("FIX invariant: clearing the LIVE bundle survives its own later saveState", () => {
@@ -65,10 +89,8 @@ describe("clear goal vs a live run's stale-bundle write-back", () => {
 
     // (2) Engine method D drops the goal on the SAME bundle the run holds
     // (Engine.activeRunSession === this instance), then persists it.
-    const liveGoal = liveState.activeGoal;
-    liveState.activeGoal = undefined;
-    recordGoalTerminal(liveState, liveGoal, "cancelled");
-    sm.saveState(liveState);
+    const liveGoal = activeGoal(liveState)!;
+    expect(sm.saveGoalTerminal(liveState, liveGoal, "cancelled")).toBe(true);
     expect(sm.readActiveGoal("s-run")).toBeUndefined();
 
     // (3) The live loop advances and saves its bundle again — still cleared,
@@ -89,125 +111,57 @@ describe("clear goal vs a live run's stale-bundle write-back", () => {
 
     // Engine terminates A on the live bundle and records an identity-bound
     // tombstone before its final whole-state writeback.
-    liveState.activeGoal = undefined;
-    liveState.goalTerminal = {
-      objective: goal.objective,
-      setAtMs: goal.setAtMs,
-      reason: "stop_blocks_exhausted",
-    };
-    sm.saveState(liveState);
+    expect(sm.saveGoalTerminal(liveState, activeGoal(liveState), "stop_blocks_exhausted")).toBe(
+      true,
+    );
     expect(sm.readActiveGoal("s-terminal")).toBeUndefined();
 
     // A stale whole-state writer must not resurrect the tombstoned goal.
     sm.saveState(staleState);
     expect(sm.readActiveGoal("s-terminal")).toBeUndefined();
-    expect(sm.resume("s-terminal").state.goalTerminal).toEqual(liveState.goalTerminal);
+    expect(sm.resume("s-terminal").state.goalLifecycle).toEqual(liveState.goalLifecycle);
   });
 
   test("detached run A terminal save preserves goal B written by another bundle", () => {
     const sm = new SessionManager(dir);
     const { state: runA } = sm.create("/Users/me/proj", "m", "p", "s-detached-ab");
-    runA.activeGoal = { objective: "goal A", goalId: "goal-a", setAtMs: 1 } as never;
-    sm.saveState(runA);
+    const goalA = { objective: "goal A", goalId: "goal-a", revision: 1, setAtMs: 1 };
+    expect(sm.saveActiveGoal(runA, goalA)).toBe(true);
 
     const { state: writerB } = sm.resume("s-detached-ab");
-    writerB.activeGoal = { objective: "goal B", goalId: "goal-b", setAtMs: 1 } as never;
-    sm.saveState(writerB);
+    expect(
+      sm.saveActiveGoal(
+        writerB,
+        { objective: "goal B", goalId: "goal-b", revision: 1, setAtMs: 1 },
+        { replaceCurrent: true },
+      ),
+    ).toBe(true);
 
-    runA.activeGoal = undefined;
-    runA.goalTerminal = {
-      objective: "goal A",
-      goalId: "goal-a",
-      setAtMs: 1,
-      reason: "completed",
-      terminatedAtMs: 10,
-    } as never;
-    sm.saveState(runA);
+    expect(sm.saveGoalTerminal(runA, goalA, "completed")).toBe(true);
 
-    expect(sm.resume("s-detached-ab").state.activeGoal).toEqual({
+    expect(activeGoal(sm.resume("s-detached-ab").state)).toMatchObject({
       objective: "goal B",
       goalId: "goal-b",
       setAtMs: 1,
     });
   });
 
-  test("terminal identity history rejects stale A after both A and B terminate", () => {
+  test("a stale A terminal cannot close the current B lifecycle", () => {
     const sm = new SessionManager(dir);
     const { state: staleA } = sm.create("/Users/me/proj", "m", "p", "s-history");
-    staleA.activeGoal = { objective: "same", goalId: "goal-a", setAtMs: 1 } as never;
-    sm.saveState(staleA);
+    const goalA = { objective: "same", goalId: "goal-a", revision: 1, setAtMs: 1 };
+    expect(sm.saveActiveGoal(staleA, goalA)).toBe(true);
+    const writerB = sm.resume("s-history").state;
+    expect(
+      sm.saveActiveGoal(
+        writerB,
+        { objective: "same", goalId: "goal-b", revision: 1, setAtMs: 1 },
+        { replaceCurrent: true },
+      ),
+    ).toBe(true);
 
-    const terminalA = sm.resume("s-history").state;
-    terminalA.activeGoal = undefined;
-    terminalA.goalTerminal = {
-      objective: "same",
-      goalId: "goal-a",
-      setAtMs: 1,
-      reason: "cancelled",
-      terminatedAtMs: 20,
-    } as never;
-    sm.saveState(terminalA);
-
-    const terminalB = sm.resume("s-history").state;
-    terminalB.activeGoal = { objective: "same", goalId: "goal-b", setAtMs: 1 } as never;
-    sm.saveState(terminalB);
-    terminalB.activeGoal = undefined;
-    terminalB.goalTerminal = {
-      objective: "same",
-      goalId: "goal-b",
-      setAtMs: 1,
-      reason: "cancelled",
-      terminatedAtMs: 20,
-    } as never;
-    sm.saveState(terminalB);
-
-    sm.saveState(staleA);
-
-    const persisted = sm.resume("s-history").state as typeof terminalB & {
-      goalTerminals?: Array<{ goalId?: string }>;
-    };
-    expect(persisted.activeGoal).toBeUndefined();
-    expect(persisted.goalTerminals?.map((terminal) => terminal.goalId)).toEqual([
-      "goal-a",
-      "goal-b",
-    ]);
-  });
-
-  test("disk new 64 terminals reject a detached old-64 whole-state writer", () => {
-    const sm = new SessionManager(dir);
-    const { state: detachedOld } = sm.create("/Users/me/proj", "m", "p", "s-new64-old64");
-    const older = Array.from({ length: MAX_GOAL_TERMINALS }, (_, index) => ({
-      objective: `old ${index}`,
-      goalId: `old-${index}`,
-      reason: "cancelled" as const,
-      terminatedAtMs: index,
-    }));
-    detachedOld.activeGoal = { objective: "disk goal 0", goalId: "new-0", setAtMs: 10 };
-    detachedOld.goalTerminals = older;
-    detachedOld.goalTerminal = older.at(-1);
-    sm.saveState(detachedOld);
-
-    const diskNew = sm.resume("s-new64-old64").state;
-    const newer = Array.from({ length: MAX_GOAL_TERMINALS }, (_, index) => ({
-      objective: `disk goal ${index}`,
-      goalId: `new-${index}`,
-      setAtMs: 10 + index,
-      reason: "completed" as const,
-      terminatedAtMs: 1_000 + index,
-    }));
-    diskNew.activeGoal = undefined;
-    diskNew.goalTerminals = newer;
-    diskNew.goalTerminal = newer.at(-1);
-    expect(sm.saveState(diskNew)).toBe(true);
-
-    expect(sm.saveState(detachedOld)).toBe(false);
-
-    const persisted = sm.resume("s-new64-old64").state;
-    expect(persisted.activeGoal).toBeUndefined();
-    expect(persisted.goalTerminal?.goalId).toBe("new-63");
-    expect(persisted.goalTerminals?.map((terminal) => terminal.goalId)).toEqual(
-      newer.map((terminal) => terminal.goalId),
-    );
+    expect(sm.saveGoalTerminal(staleA, goalA, "cancelled")).toBe(true);
+    expect(activeGoal(sm.resume("s-history").state)).toMatchObject({ goalId: "goal-b" });
   });
 
   test("two detached bundles migrate the same legacy goal to one deterministic identity", () => {
@@ -224,21 +178,18 @@ describe("clear goal vs a live run's stale-bundle write-back", () => {
 
     const migratedX = sm.resume(sessionId).state;
     const migratedY = sm.resume(sessionId).state;
-    migratedX.activeGoal!.goalId = deriveLegacyGoalId(sessionId, migratedX.activeGoal!);
-    migratedY.activeGoal!.goalId = deriveLegacyGoalId(sessionId, migratedY.activeGoal!);
+    const goalX = activeGoal(migratedX)!;
+    const goalY = activeGoal(migratedY)!;
+    expect(goalX.goalId).toBe(deriveLegacyGoalId(sessionId, goalX));
+    expect(goalX.goalId).toBe(goalY.goalId);
 
-    expect(migratedX.activeGoal!.goalId).toBe(migratedY.activeGoal!.goalId);
-
-    const migratedId = migratedX.activeGoal!.goalId!;
-    const completed = migratedX.activeGoal!;
-    migratedX.activeGoal = undefined;
-    recordGoalTerminal(migratedX, completed, "completed", 10_000);
-    expect(sm.saveState(migratedX)).toBe(true);
+    const migratedId = goalX.goalId!;
+    expect(sm.saveGoalTerminal(migratedX, goalX, "completed")).toBe(true);
 
     expect(sm.saveState(migratedY)).toBe(false);
     const persisted = sm.resume(sessionId).state;
-    expect(persisted.activeGoal).toBeUndefined();
-    expect(persisted.goalTerminal?.goalId).toBe(migratedId);
+    expect(activeGoal(persisted)).toBeUndefined();
+    expectTerminal(persisted, { goalId: migratedId, reason: "completed" });
   });
 
   test("goal terminal persistence read-merges and retries a workspace revision conflict", () => {
@@ -261,11 +212,74 @@ describe("clear goal vs a live run's stale-bundle write-back", () => {
     sm.setSessionWorkspace(sessionId, workspace);
     expect(live.stateRevision).toBe(1);
 
-    expect(sm.saveGoalTerminal(live, live.activeGoal, "completed")).toBe(true);
+    const goal = activeGoal(live)!;
+    expect(sm.saveGoalTerminal(live, goal, "completed")).toBe(true);
     const persisted = sm.resume(sessionId).state;
     expect(persisted.workspace).toEqual(workspace);
-    expect(persisted.activeGoal).toBeUndefined();
-    expect(persisted.goalTerminal).toMatchObject({ goalId: "goal-a", reason: "completed" });
+    expect(activeGoal(persisted)).toBeUndefined();
+    expectTerminal(persisted, { goalId: "goal-a", reason: "completed" });
     expect(live.stateRevision).toBe(persisted.stateRevision);
+  });
+
+  test("goal terminal conflict cannot authorize a later stale whole-state metadata overwrite", () => {
+    const sessionId = "s-terminal-summary-conflict";
+    const sm = new SessionManager(dir);
+    const { state: live } = sm.create("/Users/me/proj", "m", "p", sessionId);
+    live.summary = "summary captured by the old run";
+    live.activeGoal = { objective: "finish safely", goalId: "goal-a", setAtMs: 1 };
+    expect(sm.saveState(live)).toBe(true);
+
+    sm.updateSessionState(sessionId, { summary: "new summary from another writer" });
+
+    const goal = activeGoal(live)!;
+    expect(sm.saveGoalTerminal(live, goal, "completed")).toBe(true);
+    live.status = "completed";
+    live.turnSeq = 2;
+    expect(
+      sm.saveStateOrUpdateFields(live, {
+        status: live.status,
+        turnSeq: live.turnSeq,
+      }),
+    ).toBe(true);
+
+    const persisted = sm.resume(sessionId).state;
+    expect(persisted.summary).toBe("new summary from another writer");
+    expect(persisted.turnSeq).toBe(2);
+    expect(activeGoal(persisted)).toBeUndefined();
+    expectTerminal(persisted, { goalId: "goal-a", reason: "completed" });
+  });
+
+  test("arming a goal preserves concurrent non-goal fields and rebases the live state", () => {
+    const sessionId = "s-arm-goal-domain-update";
+    const sm = new SessionManager(dir);
+    const { state: live } = sm.create("/Users/me/proj", "m", "p", sessionId);
+    live.summary = "old summary";
+    expect(sm.saveState(live)).toBe(true);
+
+    sm.updateSessionState(sessionId, { summary: "new summary" });
+    const goal = { objective: "ship it", goalId: "goal-new", revision: 1, setAtMs: 10 };
+
+    expect(sm.saveActiveGoal(live, goal)).toBe(true);
+
+    const persisted = sm.resume(sessionId).state;
+    expect(persisted.summary).toBe("new summary");
+    expect(activeGoal(persisted)).toEqual(goal);
+    expect(live.summary).toBe("new summary");
+    expect(live.stateRevision).toBe(persisted.stateRevision);
+  });
+
+  test("arming a replacement terminally closes the latest active identity", () => {
+    const sessionId = "s-replace-goal-domain-update";
+    const sm = new SessionManager(dir);
+    const { state: live } = sm.create("/Users/me/proj", "m", "p", sessionId);
+    live.activeGoal = { objective: "old", goalId: "goal-old", revision: 2, setAtMs: 1 };
+    expect(sm.saveState(live)).toBe(true);
+
+    const replacement = { objective: "new", goalId: "goal-new", revision: 1, setAtMs: 2 };
+    expect(sm.saveActiveGoal(live, replacement, { replaceCurrent: true })).toBe(true);
+
+    const persisted = sm.resume(sessionId).state;
+    expect(activeGoal(persisted)).toEqual(replacement);
+    expect(persisted.goalTerminal).toBeUndefined();
   });
 });

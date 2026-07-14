@@ -2,7 +2,7 @@
  * Core type definitions for the code-shell orchestration framework.
  */
 
-import type { GoalConfig, GoalTerminal } from "./engine/goal.js";
+import type { GoalConfig, GoalLifecycleV1, GoalTerminal } from "./engine/goal.js";
 
 // ─── Content & Messages ───────────────────────────────────────────
 
@@ -336,7 +336,10 @@ export interface SessionState {
   title?: string;
   /** Persisted cost tracking state (survives process restart). */
   costState?: Record<string, unknown>;
+  /** Canonical persisted and runtime Goal state. */
+  goalLifecycle?: GoalLifecycleV1;
   /**
+   * Legacy persisted input only. Runtime hydration removes this field and new writers omit it.
    * Active persistent goal (CC `/goal` style). Set once, it survives across
    * messages AND manual interrupts until the judge says it's met or the user
    * clears it. Absent → no active goal. When a run supplies a new goal it
@@ -347,12 +350,13 @@ export interface SessionState {
    */
   activeGoal?: GoalConfig;
   /**
+   * Legacy persisted input only. Runtime hydration removes this field and new writers omit it.
    * Latest terminal goal instance (legacy/single-marker view). Kept alongside
    * the bounded goalTerminals identity set for backward-compatible readers.
    * Optional for backward compatibility with pre-tombstone state.json files.
    */
   goalTerminal?: GoalTerminal;
-  /** Recent terminal identities, bounded to prevent unbounded state growth. */
+  /** Legacy persisted terminal history input; runtime hydration removes it. */
   goalTerminals?: GoalTerminal[];
 }
 

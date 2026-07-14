@@ -7,6 +7,10 @@ const appSource = readFileSync(join(rendererRoot, "App.tsx"), "utf8");
 const mainSource = readFileSync(join(rendererRoot, "main.tsx"), "utf8");
 const sidebarSource = readFileSync(join(rendererRoot, "Sidebar.tsx"), "utf8");
 const viewSource = readFileSync(join(rendererRoot, "view.ts"), "utf8");
+const sessionNavigationSource = readFileSync(
+  join(rendererRoot, "app", "useSessionNavigation.ts"),
+  "utf8",
+);
 const settingsMenuSource = readFileSync(join(rendererRoot, "settings", "SettingsMenu.tsx"), "utf8");
 const petSource = readdirSync(join(rendererRoot, "pet"))
   .filter((name) => name.endsWith(".ts") || name.endsWith(".tsx"))
@@ -67,9 +71,9 @@ describe("App Pet lifecycle boundaries", () => {
   });
 
   test("selecting a normal session exits the Pet surface", () => {
-    const start = appSource.indexOf("const handleSelectSession");
-    const end = appSource.indexOf("const findSessionByEngineId", start);
-    const handler = appSource.slice(start, end);
+    const start = sessionNavigationSource.indexOf("const selectSession");
+    const end = sessionNavigationSource.indexOf("const findSessionByEngineId", start);
+    const handler = sessionNavigationSource.slice(start, end);
     expect(handler).toContain('viewMode: "chat"');
   });
 

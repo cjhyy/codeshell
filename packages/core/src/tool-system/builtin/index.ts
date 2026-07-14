@@ -65,7 +65,6 @@ import {
 } from "./mcp-tools.js";
 import { replToolDef, replTool } from "./repl.js";
 import { powershellToolDef, powershellTool } from "./powershell.js";
-import { arenaToolDef, arenaTool } from "./arena.js";
 import {
   memoryListToolDef,
   memoryListTool,
@@ -618,18 +617,6 @@ const BUILTIN_IMPLEMENTATIONS: Array<{
     },
     execute: powershellTool,
   },
-  // ─── Arena: Multi-Model Collaborative Analysis ────────────────
-  {
-    definition: {
-      ...arenaToolDef,
-      source: "builtin",
-      permissionDefault: "ask",
-      isReadOnly: true,
-      isConcurrencySafe: false,
-      timeoutMs: 1_800_000, // 30min — multi-model debate rounds take time
-    },
-    execute: arenaTool,
-  },
   // ─── Memory tools (persistent cross-session memory) ────────────
   // Save/Delete default to "ask" so user-scope modifications go through a
   // permission prompt; dream-scope is whitelisted via a PermissionRule in
@@ -893,7 +880,6 @@ const BUILTIN_EXPOSURES = new Map<string, BuiltinToolExposure>([
   [readMcpResourceToolDef.name, expose(HARNESS_TAGS)],
   [replToolDef.name, expose(GENERAL_TAGS)],
   [powershellToolDef.name, expose(GENERAL_TAGS)],
-  [arenaToolDef.name, expose(PRODUCT_FULL_TAGS)],
   [
     memoryListToolDef.name,
     expose(HARNESS_TAGS, { defaultPermissionRules: allow(memoryListToolDef.name) }),

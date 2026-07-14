@@ -197,7 +197,7 @@ export interface TurnLoopDeps {
   /** Make tools launched after an injected steer attribute side effects to that steer. */
   setOriginClientMessageId?: (clientMessageId: string | undefined) => void;
   /**
-   * Terminally clear this session's PERSISTED goal (state.activeGoal) and drop
+   * Terminally clear this session's persisted goalLifecycle and drop
    * the in-flight goal-stop hook, so complete_goal/cancel_goal both stop the
    * current run AND prevent the goal from re-inheriting on the next bare send.
    * Wired by Engine (delegates to Engine.clearGoal for the running session);
@@ -219,6 +219,8 @@ export interface TurnLoopResult {
   messages: Message[];
   /** Goal-specific forced terminal outcome; public TerminalReason stays stable. */
   goalTermination?: GoalTerminationReason;
+  /** Stop-block round captured before the loop resets its per-approach counter. */
+  goalTerminationRound?: number;
 }
 
 /**
@@ -444,18 +446,6 @@ export class TurnLoop {
       turnsRemaining: prox.turnsRemaining,
       stopBlocksRemaining: prox.stopBlocksRemaining,
       nearest: prox.nearest,
-    });
-  }
-
-  /** Emit the one terminal UI event shared by every permanent Goal exhaustion. */
-  private emitGoalExhausted(): void {
-    if (!this.config.goal) return;
-    this.config.onStream?.({
-      type: "goal_progress",
-      goalId: this.config.goal.goalId,
-      revision: this.config.goal.revision,
-      status: "exhausted",
-      round: this.stopBlockCount,
     });
   }
 
@@ -790,7 +780,6 @@ export class TurnLoop {
           ? goalBudgetTerminationReason(this.goalTracker, Date.now())
           : undefined;
         if (preTurnGoalTermination) {
-          this.emitGoalExhausted();
           this.config.onStream?.({
             type: "assistant_message",
             message: {
@@ -804,6 +793,7 @@ export class TurnLoop {
             reason: "goal_budget_exhausted",
             messages,
             goalTermination: preTurnGoalTermination,
+            goalTerminationRound: this.stopBlockCount,
           };
         }
         this.turnCount++;
@@ -1222,7 +1212,6 @@ export class TurnLoop {
             tokenBudget: this.config.goal?.tokenBudget,
             timeBudgetMs: this.config.goal?.timeBudgetMs,
           });
-          this.emitGoalExhausted();
           this.config.onStream?.({
             type: "assistant_message",
             messageId: assistantMessageId,
@@ -1237,6 +1226,7 @@ export class TurnLoop {
             reason: "goal_budget_exhausted",
             messages,
             goalTermination: budgetTermination,
+            goalTerminationRound: this.stopBlockCount,
           };
         }
 
@@ -1297,7 +1287,6 @@ export class TurnLoop {
               tokenBudget: this.goalTracker.goal.tokenBudget,
               timeBudgetMs: this.goalTracker.goal.timeBudgetMs,
             });
-            this.emitGoalExhausted();
             this.config.onStream?.({
               type: "assistant_message",
               messageId: assistantMessageId,
@@ -1311,6 +1300,7 @@ export class TurnLoop {
               reason: "goal_budget_exhausted",
               messages,
               goalTermination: postJudgeBudgetTermination,
+              goalTerminationRound: this.stopBlockCount,
             };
           }
           if (this.goalTracker && hookGoalTermination === "judge_prompt_too_large") {
@@ -1382,7 +1372,6 @@ export class TurnLoop {
               stopBlockCount: this.stopBlockCount,
               maxStopBlocks,
             });
-            this.emitGoalExhausted();
             goalTermination = "stop_blocks_exhausted";
             this.config.onStream?.({
               type: "assistant_message",
@@ -1403,12 +1392,19 @@ export class TurnLoop {
               round: this.stopBlockCount + 1,
             });
           }
+          const goalTerminationRound = goalTermination ? this.stopBlockCount : undefined;
           this.stopBlockCount = 0;
           if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
           }
           messages = this.redactConsumedSensitiveToolResults(messages);
-          return { text: finalText, reason: "completed", messages, goalTermination };
+          return {
+            text: finalText,
+            reason: "completed",
+            messages,
+            goalTermination,
+            goalTerminationRound,
+          };
         }
 
         // Tool execution phase
@@ -1816,12 +1812,12 @@ export class TurnLoop {
       messages.push({ role: "assistant", content: finalText });
     }
     messages = this.redactConsumedSensitiveToolResults(messages);
-    if (this.config.goal) this.emitGoalExhausted();
     return {
       text: finalText,
       reason: "max_turns",
       messages,
       ...(this.config.goal ? { goalTermination: "max_turns_exhausted" as const } : {}),
+      ...(this.config.goal ? { goalTerminationRound: this.stopBlockCount } : {}),
     };
   }
 

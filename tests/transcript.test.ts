@@ -99,9 +99,10 @@ describe("Transcript", () => {
       summaryHash: "abc",
     });
 
-    expect(t.getEvents("summary")[0]?.data).toEqual({
+    const transfer = t.getEvents("context_transfer")[0];
+    expect(transfer?.type).toBe("context_transfer");
+    expect(transfer?.data).toEqual({
       summary: "portable",
-      trigger: "context_transfer",
       sourceRange: { sessionId: "source", fromEventId: "a", toEventId: "z" },
       sourceEventCount: 9,
       estimatedTokens: 1500,

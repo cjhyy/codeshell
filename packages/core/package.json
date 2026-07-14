@@ -18,6 +18,10 @@
       "types": "./dist/plugins/runtime.d.ts",
       "import": "./dist/plugins/runtime.js"
     },
+    "./extension": {
+      "types": "./dist/index.extension.d.ts",
+      "import": "./dist/index.extension.js"
+    },
     "./bin/agent-server-stdio": "./dist/cli/agent-server-stdio.js"
   },
   "sideEffects": [

@@ -225,10 +225,9 @@ describe("SessionManager", () => {
       sourceEventCount: 3,
     });
     const events = result.bundle.transcript.getEvents();
-    expect(events.map((event) => event.type)).toEqual(["session_meta", "summary"]);
+    expect(events.map((event) => event.type)).toEqual(["session_meta", "context_transfer"]);
     expect(events[1]?.data).toMatchObject({
       summary: "Packaged background",
-      trigger: "context_transfer",
       sourceRange: {
         sessionId: "source",
         fromEventId: from.id,
@@ -243,7 +242,7 @@ describe("SessionManager", () => {
       {
         role: "user",
         content:
-          "<system-reminder>Previous conversation was summarized:\nPackaged background</system-reminder>",
+          "<system-reminder>Background context transferred from a selected conversation range:\nPackaged background</system-reminder>",
       },
     ]);
     expect(JSON.stringify(events)).not.toContain("selected request");

@@ -30,7 +30,12 @@ import type {
   RunStreamEvent,
   RunStreamCallback,
 } from "../packages/core/src/run/types.js";
-import type { Evaluator, EvaluatorContext, EvaluatorResult } from "../packages/core/src/run/Evaluator.js";
+import type {
+  Evaluator,
+  EvaluatorContext,
+  EvaluatorResult,
+} from "../packages/core/src/run/Evaluator.js";
+import type { RunExecutor } from "../packages/core/src/run/EngineRunner.js";
 
 // ─── Test Helpers ───────────────────────────────────────────────
 
@@ -56,22 +61,17 @@ async function waitFor(
  *   - 抛异常就模拟执行失败
  *   - 调用 hooks.onApprovalNeeded() 就模拟审批等待
  */
-function createTestManager(opts: {
-  tmpDir: string;
-  concurrency?: number;
-  evaluator?: Evaluator;
-}) {
+function createTestManager(opts: { tmpDir: string; concurrency?: number; evaluator?: Evaluator }) {
   const store = new FileRunStore(opts.tmpDir);
+  const executor: RunExecutor = {
+    async execute() {
+      throw new Error("deterministic mock executor failure");
+    },
+  };
 
   const manager = new RunManager({
     store,
-    executor: {
-      llm: {
-        provider: "openai" as any,
-        model: "test-model",
-        apiKey: "test-key",
-      },
-    },
+    executor,
     concurrency: opts.concurrency ?? 1,
     runsDir: opts.tmpDir,
     evaluator: opts.evaluator,
@@ -120,6 +120,10 @@ describe("场景 1：基本 submit + 查询", () => {
     expect(events.length).toBeGreaterThanOrEqual(2);
     expect(events[0].type).toBe("run_created");
     expect(events[1].type).toBe("run_queued");
+
+    // Let the deterministic executor settle before the per-test temp directory
+    // is removed; this keeps the test independent from queue scheduling speed.
+    await waitFor(async () => (await store.get(run.runId))?.status === "blocked");
   });
 
   it("list 支持按状态和 tag 过滤", async () => {
@@ -142,10 +146,34 @@ describe("场景 1：基本 submit + 查询", () => {
       metadata: {},
     };
 
-    await store.create({ ...base, runId: "r1", objective: "task 1", status: "completed", tags: ["feat"] });
-    await store.create({ ...base, runId: "r2", objective: "task 2", status: "running", tags: ["feat"] });
-    await store.create({ ...base, runId: "r3", objective: "task 3", status: "completed", tags: ["fix"] });
-    await store.create({ ...base, runId: "r4", objective: "task 4", status: "failed", tags: ["feat"] });
+    await store.create({
+      ...base,
+      runId: "r1",
+      objective: "task 1",
+      status: "completed",
+      tags: ["feat"],
+    });
+    await store.create({
+      ...base,
+      runId: "r2",
+      objective: "task 2",
+      status: "running",
+      tags: ["feat"],
+    });
+    await store.create({
+      ...base,
+      runId: "r3",
+      objective: "task 3",
+      status: "completed",
+      tags: ["fix"],
+    });
+    await store.create({
+      ...base,
+      runId: "r4",
+      objective: "task 4",
+      status: "failed",
+      tags: ["feat"],
+    });
 
     // 按状态过滤
     const completed = await store.list({ status: "completed" });

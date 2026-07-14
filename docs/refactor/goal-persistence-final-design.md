@@ -1,6 +1,8 @@
-# Goal 持久化最终设计
+# Goal 持久化设计（历史基线 + 2026-07-14 实施说明）
 
-> 状态：最终设计，仅供后续 TDD 实现；本文不包含实现代码。
+> 状态：**2026-07-14 已实施新版 V1 并完成复审整改。** 本文主体仍
+> 保留基于 `2082ebcd` 的历史论证，实施以本节为准：保留现有 `stateRevision` CAS、proper-lockfile、
+> edit/pause revision 和 deterministic legacy goalId；持久化权威已切为单字段 `goalLifecycle`。
 >
 > 仓库基线：`HEAD 2082ebcd780ade3c079cb4b5dbd305ef85a7a3f4`。
 >
@@ -10,7 +12,31 @@
 > 范围纪律：本轮只产出本文档，不修改源码、不 commit；不涉及 `view_image`、image history
 > 或 compaction 的 image 分支。
 
-## 0. 先给结论
+## 2026-07-14 实施说明
+
+worktree `codex/architecture-debt-goal-persistence` 已完成一致性边界与 schema migration：
+
+- `saveGoalTerminal`、`saveActiveGoal`、`markGoalWaiting` 均从最新 persisted state 开始，
+  commit 后回填 live bundle；terminal CAS retry 不再给后续 stale whole-state 保存授权。
+- Engine 的 heartbeat/final/summary/usage reset/compact usage 主路径改为 field-level 或累加型领域 API，
+  最终字段包含 `turnSeq`；运行期生产路径不再调用 whole-state `saveState`。
+- Desktop workspace switch/cleanup 在有 active worker 时经 `agent/setWorkspace` 让 worker 持久化并 rebase
+  live revision；busy session 的顶部切换/清理入口禁用。
+- `GoalLifecycleV1` 使用 `active | paused | waiting | terminal` 判别联合；`goalId`、revision 位于顶层，
+  config 不重复保存 identity/paused。waiting 在允许有限后台任务让出前提交，下一次 bare send 以同 ID arm。
+- legacy `activeGoal` / `goalTerminal` / `goalTerminals` 只在 decoder 中读取；合法 V1 优先，未知版本
+  fail-closed；下一次领域写原子迁移并删除 aliases，新 writer 只输出 `goalLifecycle`。
+- Engine 运行期只读写 `goalLifecycle`；hydrate 不重建 legacy aliases。decoder 拒绝负预算、非整数 turn
+  上限和跨 phase 字段，避免非法状态进入运行时。
+- token/time/stop-block/max-turn 四类 forced termination 先持久化 terminal，再发布 exhausted 事件；
+  commit 失败或已 obsolete 时不发布不存在的终态。
+- 两个复审 HOLD 均有直接回归：并发新 summary 不被 terminal+final 覆盖；main 进程推进 workspace revision
+  后第二轮 `turnSeq` 仍持久化为 2。
+
+与历史草案的差异：本实现不删除已经上线的跨进程锁/CAS；terminal 只保存当前生命周期，不再保存
+有界历史集合。旧 run 对新 goal 的延迟 terminal 通过 `(goalId, revision)` 变成 no-op。
+
+## 0. 历史调研结论（已由上方实施说明修正）
 
 ### 0.1 对预设“业界共识”的核查结论
 
@@ -275,19 +301,22 @@ type GoalTerminalReason =
   | "time_budget_exhausted"
   | "max_turns_exhausted";
 
+type GoalLifecycleConfig = Omit<GoalConfig, "goalId" | "revision" | "paused">;
 type GoalLifecycleV1 =
   | {
       version: 1;
       goalId: string;
-      phase: "active";
-      config: GoalConfig;
+      revision: number;
+      phase: "active" | "paused";
+      config: GoalLifecycleConfig;
       updatedAtMs: number;
     }
   | {
       version: 1;
       goalId: string;
+      revision: number;
       phase: "waiting";
-      config: GoalConfig;
+      config: GoalLifecycleConfig;
       updatedAtMs: number;
       waitingSinceMs: number;
       waitingFor: "finite_background_work";
@@ -295,8 +324,9 @@ type GoalLifecycleV1 =
   | {
       version: 1;
       goalId: string;
+      revision: number;
       phase: "terminal";
-      config: GoalConfig;
+      config: GoalLifecycleConfig;
       updatedAtMs: number;
       terminal: {
         reason: GoalTerminalReason;
@@ -321,7 +351,7 @@ interface SessionState {
    ID。
 3. `setAtMs` 继续做相对 deadline anchor，不再承担 identity；same-objective restart 是否保留
    anchor 沿用现有产品语义，但 ID 一定变化。
-4. `active` 与 `waiting` 是 armable；`terminal` 永不自动 arm。
+4. `active` 与 `waiting` 是 armable；`paused` 可见但不 arm；`terminal` 永不自动 arm。
 5. `waiting` 表示上一 run 因有限后台任务而让出，不表示 goal 完成。它不会保存 task ID；后台
    registry/notification queue 仍是任务真相，避免把短生命期 task handle 复制进 session state。
 6. terminal record 保存完整 config、reason 和时间，便于诊断；下一次显式 set 用全新 active

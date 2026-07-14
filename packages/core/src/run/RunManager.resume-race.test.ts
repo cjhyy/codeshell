@@ -17,12 +17,14 @@ import type { RunSnapshot } from "./types.js";
 // the mismatched-input rejection.
 
 const dirs: string[] = [];
+const managers: RunManager[] = [];
 function tmp(): string {
   const d = mkdtempSync(join(tmpdir(), "rm-race-"));
   dirs.push(d);
   return d;
 }
-afterEach(() => {
+afterEach(async () => {
+  await Promise.all(managers.splice(0).map((manager) => manager.shutdown()));
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 
@@ -63,7 +65,9 @@ class BlockingUpdateStore extends FileRunStore {
   }
 }
 
-function makeSuspendingManager(storeFactory: (dir: string) => FileRunStore = (dir) => new FileRunStore(dir)) {
+function makeSuspendingManager(
+  storeFactory: (dir: string) => FileRunStore = (dir) => new FileRunStore(dir),
+) {
   const dir = tmp();
   const store = storeFactory(dir);
   let reachedWaiting!: () => void;
@@ -102,12 +106,18 @@ function makeSuspendingManager(storeFactory: (dir: string) => FileRunStore = (di
       reachedWaiting();
       const approved = await suspended;
       return {
-        result: { text: approved ? "did it" : "skipped", reason: "completed", sessionId: "s", turnCount: 1 },
+        result: {
+          text: approved ? "did it" : "skipped",
+          reason: "completed",
+          sessionId: "s",
+          turnCount: 1,
+        },
         handle,
       };
     },
   };
   const mgr = new RunManager({ store, executor, runsDir: dir });
+  managers.push(mgr);
   return { mgr, store, waitingReached, getApproveCount: () => approveCount };
 }
 
@@ -148,6 +158,7 @@ function makeInputSuspendingManager() {
     },
   };
   const mgr = new RunManager({ store, executor, runsDir: dir });
+  managers.push(mgr);
   return { mgr, waitingReached, answers };
 }
 
@@ -161,18 +172,13 @@ describe("RunManager resume race (approval)", () => {
     const approvalId = pending?.approvalId ?? "missing";
 
     const input = { approvalDecision: { approvalId, approved: true, reason: "ok" } };
-    const [a, b] = await Promise.allSettled([
-      mgr.resume(runId, input),
-      mgr.resume(runId, input),
-    ]);
+    const [a, b] = await Promise.allSettled([mgr.resume(runId, input), mgr.resume(runId, input)]);
 
     const fulfilled = [a, b].filter((r) => r.status === "fulfilled");
     const rejected = [a, b].filter((r) => r.status === "rejected");
     expect(fulfilled).toHaveLength(1);
     expect(rejected).toHaveLength(1);
-    expect((rejected[0] as PromiseRejectedResult).reason.message).toContain(
-      "already in progress",
-    );
+    expect((rejected[0] as PromiseRejectedResult).reason.message).toContain("already in progress");
     // The handle's resolveApproval ran exactly once.
     expect(getApproveCount()).toBe(1);
   });
@@ -182,9 +188,7 @@ describe("RunManager resume race (approval)", () => {
     const { runId } = await mgr.submit({ objective: "x", cwd: "/tmp/proj" });
     await waitingReached;
 
-    await expect(mgr.resume(runId, { userInput: "wrong kind" })).rejects.toThrow(
-      /does not match/,
-    );
+    await expect(mgr.resume(runId, { userInput: "wrong kind" })).rejects.toThrow(/does not match/);
     // Still suspended in waiting_approval — not bounced to queued/running.
     const snap = await mgr.get(runId);
     expect(snap?.status).toBe("waiting_approval");

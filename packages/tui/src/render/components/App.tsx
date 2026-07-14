@@ -1,6 +1,5 @@
 // @ts-nocheck
 import React, { PureComponent, type ReactNode } from 'react';
-import { updateLastInteractionTime } from '@cjhyy/code-shell-core';
 import { logForDebugging } from "@cjhyy/code-shell-core";
 import { stopCapturingEarlyInput } from "@cjhyy/code-shell-core";
 import { isEnvTruthy } from "@cjhyy/code-shell-core";
@@ -455,7 +454,6 @@ function processKeysInBatch(app: App, items: ParsedInput[], _unused1: undefined,
   // Mode-1003 no-button motion is also excluded — passive cursor drift is
   // not engagement (would suppress idle notifications + defer housekeeping).
   if (items.some(i => i.kind === 'key' || i.kind === 'mouse' && !((i.button & 0x20) !== 0 && (i.button & 0x03) === 3))) {
-    updateLastInteractionTime();
   }
   for (const item of items) {
     // Terminal responses (DECRPM, DA1, OSC replies, etc.) are not user

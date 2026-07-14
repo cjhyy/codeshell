@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { EngineRuntime } from "../packages/core/src/engine/runtime.ts";
 import { ModelPool } from "../packages/core/src/llm/model-pool.ts";
+import { ToolRegistry } from "../packages/core/src/tool-system/registry.ts";
 
 describe("EngineRuntime", () => {
   it("exposes shared resources passed in at construction", () => {
@@ -31,12 +32,11 @@ describe("EngineRuntime", () => {
   });
 
   it("B1: resolveSandbox caches per (mode, cwd)", async () => {
-    const { defaultSandboxConfig } = await import(
-      "../packages/core/src/tool-system/sandbox/index.ts"
-    );
+    const { defaultSandboxConfig } =
+      await import("../packages/core/src/tool-system/sandbox/index.ts");
     const rt = new EngineRuntime({
       modelPool: {} as any,
-      toolRegistry: {} as any,
+      toolRegistry: new ToolRegistry({ builtinTools: [] }),
       settings: {} as any,
       mcpPool: {} as any,
       costTracker: {} as any,
@@ -52,7 +52,7 @@ describe("EngineRuntime", () => {
     const { Engine } = await import("../packages/core/src/engine/engine.ts");
     const rt = new EngineRuntime({
       modelPool: {} as any,
-      toolRegistry: {} as any,
+      toolRegistry: new ToolRegistry({ builtinTools: [] }),
       settings: {} as any,
       mcpPool: {} as any,
       costTracker: {} as any,

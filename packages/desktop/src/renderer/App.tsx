@@ -3,7 +3,6 @@ import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
 import type { ContextPackageCreatedOptions } from "./MessageStream";
 import { Sidebar } from "./Sidebar";
-import { revealSidebarProject } from "./sidebarSessionVisibility";
 import { PetPage } from "./pet/PetPage";
 import { useOptionalPetState } from "./pet/PetStateProvider";
 import { PetWorldPane } from "./pet/PetWorldPane";
@@ -13,86 +12,49 @@ import { PetAutoDelegationHost } from "./pet/PetAutoDelegationHost";
 import { PetPeekHost } from "./pet/PetPeekHost";
 import { TopBar } from "./TopBar";
 import dogIcon from "./assets/codeshell-dog-icon.png";
-import { timePhase } from "./perf";
 import { summarizeLiveActivity } from "./topbar/liveActivity";
 // InspectorPanel removed — tool details now live inline in the chat
 // stream's expandable tool cards (no dedicated detail pane).
 import { useToast } from "./ui/ToastProvider";
 import { useT } from "./i18n/I18nProvider";
 import {
-  applyStreamEvent,
-  bgCompletionText,
   INITIAL_STATE,
   type ActiveGoal,
   type MessagesReducerState,
   type ApprovalState,
-  type AskUserOption,
   type TaskListMessage,
 } from "./types";
 import { transcriptsReducer, type TranscriptsMap } from "./transcriptsReducer";
 import {
-  loadTranscript,
   saveTranscript,
   migrateProjectSessionBucket,
   loadSessionIndex,
   createSession,
-  deleteSessionLocal,
-  renameSessionLocal,
   archiveSession,
-  archiveAllSessions,
   loadDeletedArchivedIndices,
   bindEngineSession,
-  upsertImportedSession,
-  updateSessionRunStatus,
-  touchSession,
   setActiveSession,
   NO_REPO_KEY,
   bucketKey,
   projectBucketSegment as projectBucketSegmentFor,
   migrateBucketOverride,
   migrateProjectBucketOverrides,
-  clearBucketOverride,
-  loadPanelState,
-  clearPanelState,
-  savePanelState,
-  loadOverrideMap,
-  saveOverrideMap,
   type SessionIndex,
-  type SessionSummary,
 } from "./transcripts";
-import { planSessionDeletion } from "./sessionDeletionPlan";
 import { resolveAttachmentSessionId } from "./attachmentSession";
-import {
-  titleFromWire,
-  buildPathAttachment,
-  sha256FromDataUrl,
-  type ImageAttachment,
-} from "./chat/attachments";
-import {
-  compactOutcomeMessage,
-  compactPromptTokensWithBaseline,
-  compactWasNoop,
-} from "./chat/compactFeedback";
-import { resolveBucket, findAskUserOrigin } from "./streamRouting";
-import { resolveStopBucket } from "./stopRouting";
+import { buildPathAttachment, sha256FromDataUrl, type ImageAttachment } from "./chat/attachments";
+import { findAskUserOrigin } from "./streamRouting";
 import { statusForBucket, type SessionStatus } from "./sessionStatus";
-import { selectReplayEvents, snapshotHasUnfinishedTopLevelTurn } from "./snapshotReplay";
-import { runAfterModelSwitch } from "./modelSwitchRun";
 import { persistDefaultTextModel } from "./modelSelection";
 import { writeSettings } from "./settingsBus";
+import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
 import type {
-  AgentLifecycleEvent,
   ApprovalRequestEnvelope,
-  ApprovalResolvedEnvelope,
-  InputAttachmentMeta,
   MobilePermissionMode,
-  MobilePermissionModeEnvelope,
   MobilePermissionModeSnapshotEntry,
   PetOpenSessionRequest,
   PetPeek,
-  RunSummary,
   SummaryForkSessionResult,
-  StreamEventEnvelope,
 } from "../preload/types";
 import {
   loadProjects,
@@ -101,39 +63,17 @@ import {
   saveActiveProjectId,
   makeProjectId,
   isProjectPathRemoved,
-  markProjectPathRemoved,
   unmarkProjectPathRemoved,
-  makeCreateProjectForCwd,
   reconcileProjectsFromDisk,
   reconcileProjectsFromDiskWithRemap,
   projectLabel,
   sortProjects,
   type TrackedProject,
 } from "./projects";
-import { importAutomationRuns, type ImportableRun } from "./automation/importRuns";
 import { foldTranscript } from "./automation/foldTranscript";
-import { chooseHydrateBase } from "./automation/hydrateOrder";
-import { isCaseInsensitivePlatform } from "./automation/pathMatch";
-import { placeLiveAutomationSession } from "./automation/liveSession";
-import { planDiskRebuild, type DiskSessionMeta } from "./automation/rebuildFromDisk";
-import {
-  releaseWorkspaceForArchive,
-  releaseWorkspacesForArchiveMany,
-} from "./workspaceArchiveRelease";
-import {
-  enqueueQueuedInput,
-  dequeueQueuedInput,
-  drainQueuedInput,
-  clearQueuedInput,
-  removeQueuedInputById,
-  enqueueSerialTask,
-  canSteerQueuedItem,
-  type SerialTaskQueue,
-  type QueuedInputState,
-} from "./queuedInput";
-import { loadView, saveView, type ViewState, type ViewMode } from "./view";
+import { type SerialTaskQueue, type QueuedInputState } from "./queuedInput";
+import { loadView, saveView, type ViewState } from "./view";
 import { ApprovalsView } from "./approvals/ApprovalsView";
-import type { ApproveChoice, ApprovePathScope } from "./approvals/approvalDecision";
 import { LogsView } from "./logs/LogsView";
 // Full-page Settings — driven by viewMode === 'settings_page'.
 import { SettingsPage } from "./settings/SettingsPage";
@@ -141,54 +81,37 @@ import { RunsView } from "./runs/RunsView";
 import { AutomationView } from "./automation/AutomationView";
 import { CustomizeView } from "./customize/CustomizeView";
 import { CredentialsPage } from "./credentials/CredentialsPage";
-import { PanelArea } from "./panels/PanelArea";
-import { replacePluginPanels } from "./panels/PanelRegistry";
-import { resolveAgentPanelHostRequest } from "./panels/AgentPanelHost";
-import type { DesktopPanelPluginHost } from "./panels/DesktopPanelPlugin";
-import {
-  QUICK_CHAT_PANEL_PLUGIN_ID,
-  type QuickChatPanelPluginService,
-} from "./panels/plugins/quickChatPlugin";
-import type { OpenCliSessionEventDetail, OpenCliSessionRequest } from "./cc-room/types";
-import { resolveOpenCliSessionBucket } from "./cc-room/openCliSession";
-import { QuickChatPanel } from "./panels/QuickChatPanel";
-import type { PanelTab } from "./view";
-import { nextAnchorId, type Anchor } from "./chat/anchors";
-import {
-  addAnchorTo,
-  anchorsIn,
-  browserAnchorsOf,
-  clearAnchorBuckets,
-  removeAnchorFrom,
-  updateAnchorCommentIn,
-  type AnchorsByBucket,
-} from "./chat/anchorBuckets";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
 import { SessionSearchModal } from "./shell/SessionSearchModal";
 import { SearchBar } from "./shell/SearchBar";
 import { TrustGate } from "./workspace-trust/TrustGate";
 import { loadGitPrefs } from "./gitPrefs";
 import { createEventCoalescer } from "./streamCoalescer";
-import {
-  fromSettingsPermissionMode,
-  toCorePermissionMode,
-  type PermissionMode,
-} from "./chat/PermissionPill";
+import { fromSettingsPermissionMode, type PermissionMode } from "./chat/PermissionPill";
 import { copyContextPackageOverrides } from "./contextSelection";
 import type { ModelOption } from "./chat/ModelPill";
 import { catalogModelOptions, type ModelInstance } from "./settings/textConnections";
+import type { QuickChatSessionRef } from "./quickChatSession";
+import { replacePluginPanels } from "./panels/PanelRegistry";
+import { resolveAgentPanelHostRequest } from "./panels/AgentPanelHost";
 import {
-  isQuickChatBucket,
-  isQuickChatSessionId,
-  makeQuickChatCreationNonce,
-  makeQuickChatSessionId,
-  quickChatBucket,
-  quickChatSessionIdFromBucket,
-  quickChatTabKey,
-  type QuickChatContextMode,
-  type QuickChatSessionRef,
-} from "./quickChatSession";
-import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
+  browserPartitionForBucket,
+  EMPTY_ATTACHMENTS,
+  parsePanelBucket,
+  resolveMainComposerBucket,
+  toMobilePermissionMode,
+  type ApprovalHistoryEntry,
+  type ComposerDraftsMap,
+} from "./app/appUtils";
+import { useBucketOverrides } from "./app/useBucketOverrides";
+import { useTranscriptBuckets } from "./app/useTranscriptBuckets";
+import { useAutomationSessionImport } from "./app/useAutomationSessionImport";
+import { useSessionNavigation } from "./app/useSessionNavigation";
+import { useHostSubscriptions } from "./app/useHostSubscriptions";
+import { useRunController } from "./app/useRunController";
+import { usePanelBuckets } from "./app/usePanelBuckets";
+import { SessionPanelDock } from "./app/SessionPanelDock";
+import { AppMainView, AppShell } from "./app/AppShell";
 
 // Bucket key for sessions without a project — re-exported from transcripts.
 // We use NO_REPO_KEY everywhere instead of a local const so the renderer
@@ -196,224 +119,6 @@ import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/ag
 // imported from transcripts (the single source of truth) so App's map build
 // can't drift from Sidebar's row lookup.
 const GLOBAL_KEY = NO_REPO_KEY;
-
-function stablePromptHash(text: string): string {
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i += 1) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return `${(h >>> 0).toString(36)}-${text.length.toString(36)}`;
-}
-
-function toMobilePermissionMode(
-  mode: PermissionMode | null | undefined,
-): MobilePermissionMode | null {
-  switch (mode) {
-    case "accept_edits":
-      return "acceptEdits";
-    case "bypass":
-      return "bypassPermissions";
-    case "default":
-    case "plan":
-      return "default";
-    default:
-      return null;
-  }
-}
-
-function fromMobilePermissionMode(mode: MobilePermissionMode): PermissionMode {
-  switch (mode) {
-    case "acceptEdits":
-      return "accept_edits";
-    case "bypassPermissions":
-      return "bypass";
-    case "default":
-    default:
-      return "default";
-  }
-}
-
-interface ComposerDraftState {
-  text: string;
-  attachments: ImageAttachment[];
-}
-
-type ComposerDraftsMap = Record<string, ComposerDraftState>;
-
-const EMPTY_ATTACHMENTS: ImageAttachment[] = [];
-
-interface ApprovalHistoryEntry {
-  decision: "approve" | "deny";
-  envelope: ApprovalRequestEnvelope;
-  reason?: string;
-  at: number;
-}
-
-interface PanelBucketState {
-  open: boolean;
-  tabs: { id: string; kind: PanelTab }[];
-  activeId: string | null;
-  requestNonce: number;
-  requestKind: PanelTab | null;
-  reviewFiles?: string[];
-  reviewDiff?: string;
-  revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
-  openUrl?: { url: string; nonce: number };
-  openCliSession?: OpenCliSessionRequest;
-}
-
-function emptyPanelBucketState(): PanelBucketState {
-  return { open: false, tabs: [], activeId: null, requestNonce: 0, requestKind: null };
-}
-
-function hydratePanelBucketState(bucket: string): PanelBucketState {
-  const snap = loadPanelState<PanelTab>(bucket);
-  return { ...snap, requestNonce: 0, requestKind: null };
-}
-
-function parsePanelBucket(bucket: string): {
-  projectBucketSegment: string;
-  projectId: string | null;
-  sessionId: string | null;
-} {
-  const sep = bucket.indexOf("::");
-  const projectBucketSegment = sep >= 0 ? bucket.slice(0, sep) : bucket;
-  const rawSessionId = sep >= 0 ? bucket.slice(sep + 2) : null;
-  return {
-    projectBucketSegment: projectBucketSegment || NO_REPO_KEY,
-    projectId:
-      projectBucketSegment && projectBucketSegment !== NO_REPO_KEY ? projectBucketSegment : null,
-    sessionId: rawSessionId && rawSessionId !== "_none_" ? rawSessionId : null,
-  };
-}
-
-function browserPartitionForBucket(bucket: string): string {
-  return `persist:browser:${bucket.replace(/[^a-zA-Z0-9_:.@-]/g, "_")}`;
-}
-
-function quickChatLiveTurnActive(state: MessagesReducerState, busy: boolean): boolean {
-  const lastMessage = state.messages[state.messages.length - 1];
-  return busy && (state.streamingAssistantId !== null || lastMessage?.kind === "user");
-}
-
-function resolveMainComposerBucket(
-  requestedBucket: string | undefined,
-  renderedBucket: string,
-  activeBucket: string,
-): string {
-  // ChatView explicitly echoes the bucket it rendered with. If navigation
-  // synchronously changed the active bucket before that old render's callback
-  // fires, the echoed bucket is stale and must not override the new authority.
-  // A different explicitly requested bucket is intentional multi-session
-  // routing and remains untouched; quick chat does not use this wrapper.
-  if (requestedBucket === renderedBucket && renderedBucket !== activeBucket) {
-    return activeBucket;
-  }
-  return requestedBucket ?? activeBucket;
-}
-
-interface QuickChatPanelHostProps {
-  cwd: string | null;
-  session?: QuickChatSessionRef;
-  state: MessagesReducerState;
-  busy: boolean;
-  draft: string;
-  attachments: ImageAttachment[];
-  permissionMode: PermissionMode;
-  modelOptions: ModelOption[];
-  activeModelKey: string | null;
-  imageDetail?: "low" | "standard" | "high";
-  onPermissionChange: (bucket: string, mode: PermissionMode) => void;
-  onModelChange: (bucket: string, option: ModelOption) => void;
-  onRetry: (session: QuickChatSessionRef) => void;
-  onUseBlank: (session: QuickChatSessionRef) => void;
-  onDraftChange: (bucket: string, next: React.SetStateAction<string>) => void;
-  onAttachmentsChange: (bucket: string, next: React.SetStateAction<ImageAttachment[]>) => void;
-  onSend: (
-    session: QuickChatSessionRef,
-    text: string,
-    opts?: { attachments?: InputAttachmentMeta[]; displayText?: string },
-  ) => void;
-  onStop: (bucket: string) => void;
-  onAskUserAnswer: (requestId: string, answer: string) => void;
-  pendingApproval?: ApprovalRequestEnvelope | null;
-  onApprovalDecide?: (
-    decision: "approve" | "deny",
-    reason?: string,
-    scope?: ApproveChoice,
-    pathScope?: ApprovePathScope,
-  ) => void;
-}
-
-function QuickChatPanelHost({
-  cwd,
-  session,
-  state,
-  busy,
-  draft,
-  attachments,
-  permissionMode,
-  modelOptions,
-  activeModelKey,
-  imageDetail,
-  onPermissionChange,
-  onModelChange,
-  onRetry,
-  onUseBlank,
-  onDraftChange,
-  onAttachmentsChange,
-  onSend,
-  onStop,
-  onAskUserAnswer,
-  pendingApproval,
-  onApprovalDecide,
-}: QuickChatPanelHostProps) {
-  const { t } = useT();
-
-  if (!session) {
-    return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        {t("panels.quickChat.loading")}
-      </div>
-    );
-  }
-
-  const effectiveCwd = session.cwd ?? cwd;
-
-  return (
-    <QuickChatPanel
-      sessionId={session.sessionId}
-      creationNonce={session.creationNonce}
-      messages={state.messages}
-      turnEpoch={state.turnEpoch}
-      liveTurnActive={quickChatLiveTurnActive(state, busy)}
-      cwd={effectiveCwd}
-      busy={busy}
-      creationStatus={session.status}
-      creationError={session.error?.message}
-      contextMode={session.contextMode}
-      sourceTitle={session.sourceTitle}
-      draft={draft}
-      attachments={attachments}
-      permissionMode={permissionMode}
-      modelOptions={modelOptions}
-      activeModelKey={activeModelKey}
-      imageDetail={imageDetail}
-      onPermissionChange={(mode) => onPermissionChange(session.bucket, mode)}
-      onModelChange={(option) => onModelChange(session.bucket, option)}
-      onDraftChange={(next) => onDraftChange(session.bucket, next)}
-      onAttachmentsChange={(next) => onAttachmentsChange(session.bucket, next)}
-      onSend={(text, opts) => onSend(session, text, opts)}
-      onStop={() => onStop(session.bucket)}
-      onRetry={() => onRetry(session)}
-      onUseBlank={() => onUseBlank(session)}
-      onAskUserAnswer={onAskUserAnswer}
-      pendingApproval={pendingApproval}
-      onApprovalDecide={onApprovalDecide}
-    />
-  );
-}
 
 function App() {
   const toast = useToast();
@@ -425,8 +130,7 @@ function App() {
     peeks: petPeeks,
     removePeek,
   } = useOptionalPetState();
-  // Pet visibility is process-scoped: every app launch starts hidden and only
-  // an explicit user toggle creates the desktop window.
+  // Pet visibility is process-scoped and mirrored by the desktop host.
   const [petWidgetVisible, setPetWidgetVisible] = useState(false);
   const [transcripts, dispatch] = useReducer(transcriptsReducer, {} as TranscriptsMap);
   const [approval, setApproval] = useState<ApprovalState>(null);
@@ -471,27 +175,14 @@ function App() {
   const [imageDetail, setImageDetail] = useState<"low" | "standard" | "high" | undefined>(
     undefined,
   );
-  // Seed from localStorage so a refresh (F5) keeps each session's permission
-  // choice — without this the map reset to {} on remount and every session
-  // fell back to the default mode (a 完全访问 session silently reverted to 默认).
-  const [permissionOverrides, setPermissionOverrides] = useState<Record<string, PermissionMode>>(
-    () => loadOverrideMap<PermissionMode>("permission"),
-  );
-  /**
-   * Per-bucket model override, keyed by the SAME bucketKey() as
-   * permission/goal overrides. A session that has switched models (or whose
-   * model was pinned at first send) lives here; everything else falls back to
-   * `defaultActiveModelKey`. This is the fix for "切换模型不应改掉旧 session
-   * 的模型": each session remembers its own model, and changing the global
-   * default never overwrites an existing bucket's entry.
-   */
-  const [modelOverrides, setModelOverrides] = useState<Record<string, string>>(() =>
-    loadOverrideMap<string>("model"),
-  );
-  /** Per-bucket Goal-mode toggle (orthogonal to permission). */
-  const [goalOverrides, setGoalOverrides] = useState<Record<string, boolean>>(() =>
-    loadOverrideMap<boolean>("goal"),
-  );
+  const {
+    permissionOverrides,
+    setPermissionOverrides,
+    modelOverrides,
+    setModelOverrides,
+    goalOverrides,
+    setGoalOverrides,
+  } = useBucketOverrides();
   const [settingsRevision, setSettingsRevision] = useState(0);
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
   /** Transient: a run to pre-select when jumping into the runs view (e.g. from
@@ -513,15 +204,6 @@ function App() {
     );
     return out;
   });
-  // The durable catalog can be arbitrarily large. Keep only an opaque next
-  // cursor in React and fetch one page at a time, matching Codex's thread/list
-  // contract instead of walking every session during startup.
-  const [diskSessionCatalog, setDiskSessionCatalog] = useState<{
-    initialized: boolean;
-    loading: boolean;
-    nextCursor: string | null;
-  }>({ initialized: false, loading: false, nextCursor: null });
-  const diskSessionCatalogLoadingRef = useRef(false);
   const archivedPetSessionIds = useMemo(() => {
     const ids = new Set<string>();
     for (const index of Object.values(sessionIndices)) {
@@ -570,7 +252,6 @@ function App() {
     Record<string, ImageAttachment[]>
   >({});
   const quickChatSessionsRef = useRef<Record<string, QuickChatSessionRef>>({});
-  const quickChatLifecycleCleanupRef = useRef<Set<string>>(new Set());
   const activeBucketRef = useRef(activeBucket);
   activeBucketRef.current = activeBucket;
   quickChatSessionsRef.current = quickChatSessions;
@@ -713,9 +394,6 @@ function App() {
 
   useEffect(() => {
     let alive = true;
-    // Renderer tests and older preload snapshots may not expose the additive
-    // panel API yet. Treat that as an empty registry during a rolling update;
-    // the shipped preload declares and implements both methods.
     const compatibilityApi = window.codeshell as typeof window.codeshell & {
       listPluginPanels?: typeof window.codeshell.listPluginPanels;
       onPluginPanelsChanged?: typeof window.codeshell.onPluginPanelsChanged;
@@ -990,17 +668,6 @@ function App() {
   useEffect(() => {
     saveView(view);
   }, [view]);
-  // Persist per-bucket overrides so they survive a refresh (see the seeded
-  // useState initializers above). Each write mirrors loadOverrideMap's namespace.
-  useEffect(() => {
-    saveOverrideMap("permission", permissionOverrides);
-  }, [permissionOverrides]);
-  useEffect(() => {
-    saveOverrideMap("model", modelOverrides);
-  }, [modelOverrides]);
-  useEffect(() => {
-    saveOverrideMap("goal", goalOverrides);
-  }, [goalOverrides]);
   useEffect(() => {
     activeBucketRef.current = activeBucket;
   }, [activeBucket]);
@@ -1091,212 +758,18 @@ function App() {
   // "draft" state. A real session row only appears after the user
   // actually sends a message (see `send` below).
 
-  /** Highest main-snapshot seq replayed into each bucket (dedup across re-views). */
-  const appliedSeqRef = useRef<Map<string, number>>(new Map());
-
-  // Lazy-hydrate transcript on first view of a bucket.
-  //
-  // Manual sessions hydrate straight from localStorage. Automation (cron)
-  // sessions ran headless in the engine, so their turns live in the on-disk
-  // transcript.jsonl, not in localStorage — and once the user manually replies,
-  // the backfill importer's dedup gate stops re-importing them, permanently
-  // shadowing the headless history. So for automation sessions we fold the disk
-  // transcript and merge the localStorage tail on top (see mergeTranscripts).
-  useEffect(() => {
-    if (!activeSessionId) return;
-    if (transcripts[activeBucket]) return;
-    const local = loadTranscript(activeProjectId, activeSessionId);
-    const summary = sessionIndices[activeProjectBucketSegment]?.sessions.find(
-      (s) => s.id === activeSessionId,
-    );
-    const engineId = summary?.engineSessionId;
-    const bucket = activeBucket;
-    let cancelled = false;
-    window.codeshell.log("session.hydrate.begin", {
-      bucket,
-      uiSessionId: activeSessionId,
-      engineSessionId: engineId ?? null,
-    });
-    void (async () => {
-      let snapshotShowsRunning = false;
-      // Base projection: disk-authoritative for ANY session with an engine id.
-      // Fold the on-disk transcript and let chooseHydrateBase merge the genuine
-      // localStorage tail (disk order wins, so no orphan trailing group);
-      // sessions not yet on disk fall back to the localStorage projection.
-      let base = local;
-      if (engineId) {
-        try {
-          const disk = foldTranscript(await window.codeshell.getSessionTranscript(engineId));
-          base = chooseHydrateBase(disk, local);
-        } catch (error) {
-          window.codeshell.log("session.hydrate.fail", {
-            bucket,
-            stage: "transcript",
-            error: error instanceof Error ? error.message : String(error),
-          });
-          // disk read failed — fall back to the localStorage projection.
-        }
-      }
-      // Reconnect to the main-held snapshot. The persisted snapshotSeq lets us
-      // safely replay the tail even when localStorage already has messages:
-      // only entries past the projection cursor are folded.
-      let state = base;
-      if (engineId) {
-        try {
-          const sinceSeq = base.snapshotSeq ?? 0;
-          // Busy recovery needs the retained top-level lifecycle, including
-          // starts at/before the persisted cursor. Request the full snapshot
-          // for that decision, while selectReplayEvents still applies only the
-          // tail past sinceSeq to the reducer (no duplicate consumption).
-          const snapshot = await window.codeshell.subscribeSession(engineId, 0);
-          snapshotShowsRunning = snapshotHasUnfinishedTopLevelTurn(snapshot);
-          const { events, cursor } = selectReplayEvents(snapshot, sinceSeq);
-          if (events.length > 0) {
-            appliedSeqRef.current.set(bucket, cursor);
-            let acc = base;
-            for (const ev of events) acc = applyStreamEvent(acc, ev as StreamEvent);
-            state = { ...acc, snapshotSeq: Math.max(acc.snapshotSeq, cursor) };
-          } else {
-            appliedSeqRef.current.set(bucket, sinceSeq);
-          }
-        } catch (error) {
-          window.codeshell.log("session.hydrate.fail", {
-            bucket,
-            stage: "snapshot",
-            error: error instanceof Error ? error.message : String(error),
-          });
-          // Snapshot unavailable (no bridge / unknown session) — use base.
-        }
-        // Long-disconnect fallback: snapshot empty (evicted / worker long gone)
-        // but the on-disk transcript may still hold the full history. Fold it
-        // from disk as the last resort so the tab isn't blank for a session
-        // whose events aged out of the in-memory snapshot window.
-        if (state.messages.length === 0) {
-          try {
-            const disk = foldTranscript(await window.codeshell.getSessionTranscript(engineId));
-            if (disk.messages.length > 0) state = disk;
-          } catch (error) {
-            window.codeshell.log("session.hydrate.fail", {
-              bucket,
-              stage: "transcript_fallback",
-              error: error instanceof Error ? error.message : String(error),
-            });
-            // disk read failed — keep base.
-          }
-        }
-      }
-      // Goal state is persisted separately from the transcript. Reconcile it
-      // into the projection before hydration so objective edits and paused
-      // state survive reloads (including legacy localStorage entries that did
-      // not carry `paused`). The engine is authoritative when goalGet succeeds.
-      if (engineId && !cancelled) {
-        try {
-          const { ok, goal, goalId, paused, revision } = await window.codeshell.goalGet(engineId);
-          // `ok` was absent on early goalGet bridges; only an explicit false
-          // means the read was rejected.
-          if (ok !== false && goal) {
-            const persistedGoalId = goalId ?? state.activeGoal?.goalId;
-            const persistedRevision = revision ?? state.activeGoal?.revision;
-            const replacesLocalGoal =
-              state.activeGoal?.goalId !== undefined &&
-              goalId !== undefined &&
-              state.activeGoal.goalId !== goalId;
-            state = applyStreamEvent(state, {
-              type: replacesLocalGoal ? "goal_set" : "goal_updated",
-              goalId: persistedGoalId,
-              revision: persistedRevision,
-              objective: goal,
-              paused: paused ?? false,
-              ...(replacesLocalGoal ? { replaced: true } : {}),
-            } as StreamEvent);
-          } else if (ok !== false && state.activeGoal) {
-            state = applyStreamEvent(state, {
-              type: "goal_cleared",
-              goalId: state.activeGoal.goalId,
-              revision: state.activeGoal.revision,
-            } as StreamEvent);
-          }
-        } catch (error) {
-          window.codeshell.log("session.hydrate.fail", {
-            bucket,
-            stage: "goal",
-            error: error instanceof Error ? error.message : String(error),
-          });
-          // Goal state unavailable — retain the transcript/localStorage value.
-        }
-      }
-      if (!cancelled) {
-        dispatch({ type: "hydrate", bucket, state });
-        if (snapshotShowsRunning) {
-          setBusyForKey(bucket, true);
-          runningBucketRef.current = bucket;
-          window.codeshell.log("session.busy_restored", {
-            bucket,
-            engineSessionId: engineId ?? null,
-            source: "snapshot",
-          });
-        }
-        window.codeshell.log("session.hydrate.end", {
-          bucket,
-          messageCount: state.messages.length,
-          snapshotSeq: state.snapshotSeq,
-        });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    activeBucket,
+  const { state, awaitingHydration, appliedSeqRef, setBusyForKey } = useTranscriptBuckets({
     activeProjectId,
     activeSessionId,
+    activeBucket,
     activeProjectBucketSegment,
     sessionIndices,
     transcripts,
-  ]);
-
-  // Persist active transcript (debounced).
-  useEffect(() => {
-    if (!activeSessionId) return;
-    const handle = setTimeout(() => {
-      const s = transcripts[activeBucket];
-      if (!s) return;
-      saveTranscript(activeProjectId, activeSessionId, s);
-    }, 600);
-    return () => clearTimeout(handle);
-  }, [transcripts, activeBucket, activeProjectId, activeSessionId]);
-
-  // Display state for the active bucket. Prefer the hydrated reducer state; if
-  // this bucket hasn't been hydrated yet (just switched to it), fall back to the
-  // SYNCHRONOUS localStorage projection so the existing conversation paints on
-  // the very first render — without this, the bucket reads INITIAL_STATE (empty)
-  // for the frame(s) before the async hydrate effect dispatches, flashing the
-  // "welcome / new chat" UI on every session switch. The async effect still
-  // upgrades the bucket in place (disk-authoritative merge + main-snapshot tail)
-  // exactly as before; this only covers the pre-hydration gap. Memoized on the
-  // bucket so we don't re-read localStorage on unrelated renders.
-  const fallbackState = useMemo<MessagesReducerState>(() => {
-    if (!activeSessionId) return INITIAL_STATE;
-    const local = loadTranscript(activeProjectId, activeSessionId);
-    return local.messages.length > 0 ? local : INITIAL_STATE;
-    // activeBucket captures (projectId, sessionId); recomputing per-bucket is the intent.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeBucket]);
-  const state = transcripts[activeBucket] ?? fallbackState;
-
-  // Existing session picked from the sidebar that this renderer hasn't hydrated
-  // yet AND has no localStorage projection (ran headless / on another renderer):
-  // `state` is INITIAL_STATE for the frame(s) before the async hydrate effect
-  // dispatches, which ChatView would otherwise render as the "新建对话" welcome
-  // hero — flashing "new chat" before the real conversation paints. Flag that
-  // gap so ChatView shows a loading placeholder instead. A genuine fresh draft
-  // has activeSessionId === null (never solidified) and is excluded; a just-sent
-  // session already has its user bubble in `transcripts`, so messages.length > 0
-  // there and this stays false. (rc.2 "先闪新建页再渲染内容" fix)
-  const awaitingHydration =
-    activeSessionId !== null &&
-    transcripts[activeBucket] === undefined &&
-    state.messages.length === 0;
+    dispatch,
+    runningBucketRef,
+    busySinceRef,
+    setBusyKeys,
+  });
 
   // The "正在思考…" live line shows whenever a turn is busy. Normally
   // streamingAssistantId flips it on once stream_request_start arrives; but on
@@ -1311,312 +784,6 @@ function App() {
     // 引导打断 gap: turn cancelled, merged re-send pending on the next tick.
     // Keep the indicator lit so the user sees work is still happening. (#3)
     relayingBuckets.has(activeBucket);
-
-  const setBusyForKey = (key: string, val: boolean): void => {
-    // Track turn-start time for the manual-stop elapsed line (TODO 2.8).
-    if (val) {
-      if (!busySinceRef.current.has(key)) busySinceRef.current.set(key, Date.now());
-    } else {
-      busySinceRef.current.delete(key);
-    }
-    setBusyKeys((prev) => {
-      const had = prev.has(key);
-      if (val === had) return prev;
-      const next = new Set(prev);
-      if (val) next.add(key);
-      else next.delete(key);
-      return next;
-    });
-  };
-
-  const handleAddProject = async (): Promise<void> => {
-    window.codeshell.log("sidebar.add_clicked", {});
-    const picked = await window.codeshell.pickDir();
-    if (!picked) return;
-    const dup = projects.find((project) => project.path === picked.path);
-    if (dup) {
-      unmarkProjectPathRemoved(picked.path);
-      setActiveProjectId(dup.id);
-      return;
-    }
-    const next: TrackedProject = {
-      id: makeProjectId(),
-      name: picked.name,
-      path: picked.path,
-      addedAt: Date.now(),
-    };
-    unmarkProjectPathRemoved(next.path);
-    setProjects((prev) => [...prev, next]);
-    setActiveProjectId(next.id);
-    setSessionIndices((prev) => ({
-      ...prev,
-      [next.id]: loadSessionIndex(next.id),
-    }));
-    // Persist to disk (source of truth). The projects:changed echo re-projects
-    // and, because the path now matches our cache, keeps this same projectId.
-    void window.codeshell.projects.add({ path: next.path, name: next.name });
-    window.codeshell.log("repo.added", { id: next.id, path: next.path });
-  };
-
-  const handleRemoveProject = async (id: string): Promise<void> => {
-    const project = projects.find((candidate) => candidate.id === id);
-    if (project) {
-      markProjectPathRemoved(project.path);
-      // Soft-delete on disk so the removal persists + reaches phones live.
-      void window.codeshell.projects.remove(project.path);
-    }
-    // Archive (don't orphan) the project's sessions: persist every session as
-    // archived + stamp the project label so they remain visible/restorable in
-    // 设置→高级→已归档 under their original project name. The project row still
-    // leaves the sidebar (which iterates `projects`), but the conversations
-    // survive instead of silently vanishing from localStorage.
-    const idx = sessionIndices[projectBucketSegmentFor(id)] ?? loadSessionIndex(id);
-    if (project) {
-      await releaseWorkspacesForArchiveMany(idx.sessions, window.codeshell);
-    }
-    const archived = project ? archiveAllSessions(id, projectLabel(project)) : undefined;
-    setProjects((prev) => prev.filter((candidate) => candidate.id !== id));
-    if (activeProjectId === id) setActiveProjectId(null);
-    setSessionIndices((prev) => {
-      // Keep the index in state (now all-archived) so the archived view can
-      // list them; drop it only if there was nothing to archive.
-      if (!archived) {
-        const { [id]: _drop, ...rest } = prev;
-        return rest;
-      }
-      return { ...prev, [id]: archived };
-    });
-    window.codeshell.log("repo.removed", { id });
-  };
-
-  const handleToggleProject = (id: string): void => {
-    setCollapsedProjects((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const handlePinProject = (id: string, pinned: boolean): void => {
-    const project = projects.find((candidate) => candidate.id === id);
-    setProjects((prev) =>
-      prev.map((candidate) => (candidate.id === id ? { ...candidate, pinned } : candidate)),
-    );
-    if (project) void window.codeshell.projects.setPinned(project.path, pinned);
-  };
-
-  const handleRenameProject = (id: string, name: string): void => {
-    setProjects((prev) =>
-      prev.map((project) => (project.id === id ? { ...project, displayName: name } : project)),
-    );
-  };
-
-  const handleArchiveAllSessions = async (id: string): Promise<void> => {
-    const idx = sessionIndices[id];
-    if (!idx) return;
-    await releaseWorkspacesForArchiveMany(idx.sessions, window.codeshell);
-    setSessionIndices((prev) => {
-      const nextIdx = prev[id];
-      if (!nextIdx) return prev;
-      // Mutate every session via archiveSession() so the localStorage
-      // index stays consistent with state.
-      let working = nextIdx;
-      for (const s of nextIdx.sessions) {
-        if (!s.archived) working = archiveSession(id, s.id, true);
-      }
-      return { ...prev, [id]: working };
-    });
-  };
-
-  /**
-   * "新对话" anchored to a specific project (used by the row's pen icon).
-   * Switches active project if needed, then enters draft state.
-   */
-  const handleNewConversationForProject = (projectId: string | null): void => {
-    if (activeProjectId !== projectId) setActiveProjectId(projectId);
-    const draftBucket = bucketKey(projectId, null);
-    const previousBucket = activeBucketRef.current;
-    activeBucketRef.current = draftBucket;
-    const nextIndex = setActiveSession(projectId, null);
-    setSessionIndices((prev) => ({
-      ...prev,
-      [projectBucketSegmentFor(projectId)]: nextIndex,
-    }));
-    window.codeshell.log("session.new_draft", {
-      repoId: projectId,
-      previousBucket,
-      bucket: draftBucket,
-      source: "repo",
-    });
-    // A fresh draft must start from the default permission/goal — clear the
-    // shared per-repo "_none_" draft slot so a previous draft's choice doesn't
-    // carry over (it's a single slot shared by all drafts in this repo). (#11)
-    setPermissionOverrides((prev) => clearBucketOverride(prev, draftBucket));
-    setGoalOverrides((prev) => clearBucketOverride(prev, draftBucket));
-    // Same for model: a new draft starts on the global default, not the
-    // previous draft's per-bucket pick.
-    setModelOverrides((prev) => clearBucketOverride(prev, draftBucket));
-    // Panels too: the draft "_none_" slot is shared by every draft in this
-    // repo, so a previous draft's open panels would otherwise carry into the
-    // fresh conversation. Wipe the persisted slot AND reset the in-memory
-    // panel state — the restore effect only re-runs when `activeBucket`
-    // changes, which it won't if we're already in the draft bucket.
-    clearPanelState(draftBucket);
-    setPanelByBucket((prev) => ({ ...prev, [draftBucket]: emptyPanelBucketState() }));
-    setView((v) => ({ ...v, viewMode: "chat" }));
-  };
-
-  const handleSelectSession = (projectId: string | null, sessionId: string): void => {
-    const key = projectBucketSegmentFor(projectId);
-    // Selecting a session clears its unread mark — the user is now looking at it.
-    const selectedBucket = bucketKey(projectId, sessionId);
-    setUnreadBuckets((prev) => {
-      if (!prev.has(selectedBucket)) return prev;
-      const next = new Set(prev);
-      next.delete(selectedBucket);
-      return next;
-    });
-    setActiveProjectId(projectId);
-    setCollapsedProjects((current) => revealSidebarProject(current, projectId));
-    const nextIndex = setActiveSession(projectId, sessionId);
-    const nextBucket = nextIndex.activeSessionId ? selectedBucket : bucketKey(projectId, null);
-    activeBucketRef.current = nextBucket;
-    setSessionIndices((prev) => ({
-      ...prev,
-      [key]: nextIndex,
-    }));
-    window.codeshell.log("session.select", {
-      repoId: projectId,
-      requestedSessionId: sessionId,
-      activeSessionId: nextIndex.activeSessionId,
-      bucket: nextBucket,
-    });
-    // Make sure we're looking at chat, not settings, when the user
-    // explicitly picks a session.
-    setView((v) => ({ ...v, viewMode: "chat" }));
-  };
-
-  const findSessionByEngineId = (
-    engineSessionId: string,
-  ): { projectId: string | null; session: SessionSummary } | null => {
-    const projectsNow = loadProjects();
-    for (const projectId of [null as string | null, ...projectsNow.map((project) => project.id)]) {
-      const session = loadSessionIndex(projectId).sessions.find(
-        (s) => s.engineSessionId === engineSessionId || s.id === engineSessionId,
-      );
-      if (session) return { projectId, session };
-    }
-    return null;
-  };
-
-  const resolveProjectCwd = async (cwd: string): Promise<string> => {
-    if (!cwd) return cwd;
-    try {
-      return (await window.codeshell.projects.resolveRoot(cwd)).path;
-    } catch {
-      return cwd;
-    }
-  };
-
-  const handleOpenAutomationRunSession = async (run: RunSummary): Promise<void> => {
-    if (!run.sessionId) {
-      setRunsInitialRunId(run.runId);
-      setViewMode("runs");
-      return;
-    }
-
-    const existing = findSessionByEngineId(run.sessionId);
-    if (existing) {
-      handleSelectSession(existing.projectId, existing.session.id);
-      return;
-    }
-
-    const projectsNow = loadProjects();
-    const touchedProjectIds = new Set<string | null>();
-    const projectFactory = makeCreateProjectForCwd(projectsNow);
-    await importAutomationRuns(
-      [
-        {
-          runId: run.runId,
-          sessionId: run.sessionId,
-          cwd: await resolveProjectCwd(run.cwd),
-          objective: run.objective,
-          status: run.status,
-          finishedAt: run.finishedAt,
-          createdAt: run.createdAt,
-          source: "automation",
-          cronJobName: run.cronJobName,
-        },
-      ],
-      projectsNow,
-      {
-        caseInsensitive: isCaseInsensitivePlatform(),
-        existingEngineSessionIds: new Set(),
-        cap: 1,
-        fetchTranscript: (sid) => window.codeshell.getSessionTranscript(sid),
-        createProjectForCwd: projectFactory.createProjectForCwd,
-        writeImported: (projectId, summary, state) => {
-          saveTranscript(projectId, summary.id, state);
-          upsertImportedSession(projectId, summary);
-          touchedProjectIds.add(projectId);
-        },
-      },
-    );
-
-    if (projectFactory.changed()) setProjects(projectsNow.slice());
-    if (touchedProjectIds.size > 0) {
-      setSessionIndices((prev) => {
-        const next = { ...prev };
-        for (const rid of touchedProjectIds)
-          next[projectBucketSegmentFor(rid)] = loadSessionIndex(rid);
-        return next;
-      });
-    }
-
-    const imported = findSessionByEngineId(run.sessionId);
-    if (imported) handleSelectSession(imported.projectId, imported.session.id);
-    else {
-      setRunsInitialRunId(run.runId);
-      setViewMode("runs");
-    }
-  };
-
-  const handleOpenAutomationDiskSession = async (session: DiskSessionMeta): Promise<void> => {
-    const existing = findSessionByEngineId(session.engineSessionId);
-    if (existing) {
-      handleSelectSession(existing.projectId, existing.session.id);
-      return;
-    }
-
-    const projectsNow = loadProjects();
-    const projectFactory = makeCreateProjectForCwd(projectsNow);
-    const resolvedSession: DiskSessionMeta = {
-      ...session,
-      cwd: await resolveProjectCwd(session.cwd),
-    };
-    const [placement] = planDiskRebuild([resolvedSession], projectsNow, {
-      caseInsensitive: isCaseInsensitivePlatform(),
-      createProjectForCwd: projectFactory.createProjectForCwd,
-    });
-    if (!placement) return;
-
-    let state: MessagesReducerState;
-    try {
-      state = foldTranscript(await window.codeshell.getSessionTranscript(session.engineSessionId));
-    } catch {
-      state = foldTranscript([]);
-    }
-    saveTranscript(placement.projectId, placement.summary.id, state);
-    const nextIdx = upsertImportedSession(placement.projectId, placement.summary);
-
-    if (projectFactory.changed()) setProjects(projectsNow.slice());
-    setSessionIndices((prev) => ({
-      ...prev,
-      [projectBucketSegmentFor(placement.projectId)]: nextIdx,
-    }));
-    handleSelectSession(placement.projectId, placement.summary.id);
-  };
 
   const handleOpenPetTarget = async (request: PetOpenSessionRequest): Promise<void> => {
     await openPetTarget(window.codeshell.pet, request, {
@@ -1708,2323 +875,166 @@ function App() {
     });
   };
 
-  /**
-   * Enter draft state: clear activeSessionId so chat shows the welcome
-   * surface and no empty stub appears in the session list. A real
-   * session row only materializes when the user sends the first message
-   * (see `send` → ensureActiveSession + touchSession).
-   */
-  const handleNewConversation = (): void => {
-    const projectId = activeProjectId;
-    const draftBucket = bucketKey(projectId, null);
-    const previousBucket = activeBucketRef.current;
-    activeBucketRef.current = draftBucket;
-    const nextIndex = setActiveSession(projectId, null);
-    setSessionIndices((prev) => ({
-      ...prev,
-      [projectBucketSegmentFor(projectId)]: nextIndex,
-    }));
-    window.codeshell.log("session.new_draft", {
-      repoId: projectId,
-      previousBucket,
-      bucket: draftBucket,
-      source: "global",
-    });
-    // Reset the shared per-repo draft panel slot so a previous draft's open
-    // panels don't carry into this fresh conversation (see the longer note in
-    // handleNewConversationForProject — same reasoning, same in-memory reset).
-    clearPanelState(draftBucket);
-    setPanelByBucket((prev) => ({ ...prev, [draftBucket]: emptyPanelBucketState() }));
-    setView((v) => ({ ...v, viewMode: "chat" }));
-  };
+  const { diskSessionCatalog, loadDiskSessionCatalogPage } = useAutomationSessionImport({
+    sessionIndicesRef,
+    setSessionIndices,
+    setProjects,
+  });
 
-  const handleRenameSession = (
-    projectId: string | null,
-    sessionId: string,
-    title: string,
-  ): void => {
-    const next = renameSessionLocal(projectId, sessionId, title, true);
-    setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: next }));
-  };
-
-  const handleArchiveSession = async (
-    projectId: string | null,
-    sessionId: string,
-    archived: boolean,
-  ): Promise<void> => {
-    const summary = sessionIndices[projectBucketSegmentFor(projectId)]?.sessions.find(
-      (s) => s.id === sessionId,
-    );
-    await releaseWorkspaceForArchive(summary, archived, window.codeshell);
-    const next = archiveSession(projectId, sessionId, archived);
-    setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: next }));
-  };
-
-  const handleDeleteSession = (projectId: string | null, sessionId: string): void => {
-    // Capture source/runId BEFORE wiping the local entry — needed to also
-    // remove the on-disk session + run dirs.
-    const summary = sessionIndices[projectBucketSegmentFor(projectId)]?.sessions.find(
-      (s) => s.id === sessionId,
-    );
-    const next = deleteSessionLocal(projectId, sessionId);
-    setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: next }));
-
-    // Drop the deleted session's panel state so its (hidden) PanelArea — and the
-    // browser <webview> / terminal pty it keeps mounted — is torn down instead of
-    // leaking, and its persisted layout doesn't linger in localStorage.
-    const deletedBucket = bucketKey(projectId, sessionId);
-    clearPanelState(deletedBucket);
-    setPanelByBucket((prev) => {
-      if (!(deletedBucket in prev)) return prev;
-      const rest = { ...prev };
-      delete rest[deletedBucket];
-      return rest;
-    });
-
-    // Delete means delete: EVERY session (not just automation) must have its
-    // on-disk dir removed and its background shells reaped, else
-    // ~/.code-shell/sessions/<id>/ + orphan shells leak. The `sessions:delete`
-    // IPC does closeSession(reap shells) → deleteSession(rm dir) → forgetSession.
-    // Automation additionally cancels the in-flight run first (so it stops
-    // rewriting the dir we're about to delete) and clears any legacy run dir.
-    const plan = planSessionDeletion(
-      summary ?? { id: sessionId, title: "", createdAt: 0, updatedAt: 0 },
-    );
-    void (async () => {
-      if (plan.cancelCronJobId) {
-        await window.codeshell.cancelAutomationRun(plan.cancelCronJobId).catch((e) =>
-          window.codeshell.log("session.delete.cancel.failed", {
-            cronJobId: plan.cancelCronJobId,
-            error: String(e),
-          }),
-        );
-      }
-      await window.codeshell.deleteSession(plan.deleteEngineId).catch((e) =>
-        window.codeshell.log("session.delete.session.failed", {
-          engineId: plan.deleteEngineId,
-          error: String(e),
-        }),
-      );
-      // deleteRun is a no-op for current jobs (which write sessions/, not
-      // runs/), but still clears legacy RunManager-era run dirs.
-      if (plan.deleteRunId) {
-        await window.codeshell.deleteRun(plan.deleteRunId).catch((e) =>
-          window.codeshell.log("session.delete.run.failed", {
-            runId: plan.deleteRunId,
-            error: String(e),
-          }),
-        );
-      }
-    })();
-  };
-
-  useEffect(() => {
-    const coalescers = coalescersRef.current;
-    return () => {
-      for (const c of coalescers.values()) c.dispose();
-      coalescers.clear();
-      coalescerSeqRef.current.clear();
-    };
-  }, []);
-
-  // Backfill automation runs from disk into the sidebar on startup. Disk is
-  // the source of truth; localStorage is our projection. Runs are deduped by
-  // engineSessionId and capped to the 50 most-recent per project. Re-running
-  // is safe (idempotent) because upsertImportedSession keys on engineSessionId.
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      let runs: ImportableRun[];
-      try {
-        const raw = await window.codeshell.listRuns();
-        runs = raw.map((r) => ({
-          runId: r.runId,
-          sessionId: r.sessionId,
-          cwd: r.cwd,
-          objective: r.objective,
-          status: r.status,
-          finishedAt: r.finishedAt,
-          createdAt: r.createdAt,
-          source: r.source,
-          cronJobName: r.cronJobName,
-        }));
-      } catch {
-        return; // no runs dir / read error — nothing to backfill
-      }
-      if (cancelled || runs.length === 0) return;
-      runs = await Promise.all(
-        runs.map(async (r) => ({ ...r, cwd: await resolveProjectCwd(r.cwd) })),
-      );
-      if (cancelled) return;
-
-      // Known engineSessionIds across every repo index (manual + already-imported).
-      // A still-running automation import is intentionally NOT counted, so the
-      // next backfill re-imports it once it completes and upsertImportedSession
-      // overwrites the partial transcript in place. Manual sessions and
-      // completed/failed/cancelled imports dedupe normally.
-      const TERMINAL_RUN = new Set(["completed", "failed", "cancelled"]);
-      const dedupable = (s: SessionSummary): boolean =>
-        s.source !== "automation" || !s.runStatus || TERMINAL_RUN.has(s.runStatus);
-      const currentProjects = loadProjects();
-      const known = new Set<string>();
-      for (const project of currentProjects) {
-        for (const s of loadSessionIndex(project.id).sessions) {
-          if (s.engineSessionId && dedupable(s)) known.add(s.engineSessionId);
-        }
-      }
-      for (const s of loadSessionIndex(null).sessions) {
-        if (s.engineSessionId && dedupable(s)) known.add(s.engineSessionId);
-      }
-
-      const touchedProjectIds = new Set<string | null>();
-      const projectFactory = makeCreateProjectForCwd(currentProjects);
-      await importAutomationRuns(runs, currentProjects, {
-        caseInsensitive: isCaseInsensitivePlatform(),
-        existingEngineSessionIds: known,
-        cap: 50,
-        fetchTranscript: (sid) => window.codeshell.getSessionTranscript(sid),
-        createProjectForCwd: projectFactory.createProjectForCwd,
-        writeImported: (projectId, summary, state) => {
-          saveTranscript(projectId, summary.id, state);
-          upsertImportedSession(projectId, summary);
-          touchedProjectIds.add(projectId);
-        },
-      });
-      if (cancelled) return;
-
-      if (projectFactory.changed()) setProjects(currentProjects.slice());
-      if (touchedProjectIds.size > 0) {
-        setSessionIndices((prev) => {
-          const next = { ...prev };
-          for (const rid of touchedProjectIds)
-            next[projectBucketSegmentFor(rid)] = loadSessionIndex(rid);
-          return next;
-        });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const loadDiskSessionCatalogPage = async (cursor?: string): Promise<void> => {
-    if (diskSessionCatalogLoadingRef.current) return;
-    diskSessionCatalogLoadingRef.current = true;
-    setDiskSessionCatalog((current) => ({ ...current, loading: true }));
-    try {
-      const page = await window.codeshell.listDiskSessions({
-        limit: 50,
-        ...(cursor ? { cursor } : {}),
-      });
-      const knownIds = new Set<string>();
-      for (const index of Object.values(sessionIndicesRef.current)) {
-        for (const session of index.sessions) {
-          knownIds.add(session.id);
-          if (session.engineSessionId) knownIds.add(session.engineSessionId);
-        }
-      }
-      const missing = page.sessions.filter(
-        (session) =>
-          !knownIds.has(session.id) && !knownIds.has(session.engineSessionId || session.id),
-      );
-      const resolvedCwds = new Map<string, Promise<string>>();
-      const resolveOnce = (cwd: string): Promise<string> => {
-        const existing = resolvedCwds.get(cwd);
-        if (existing) return existing;
-        const resolving = resolveProjectCwd(cwd);
-        resolvedCwds.set(cwd, resolving);
-        return resolving;
-      };
-      const resolvedSessions = await Promise.all(
-        missing.map(async (session) => ({ ...session, cwd: await resolveOnce(session.cwd) })),
-      );
-      const projectsNow = loadProjects();
-      const projectFactory = makeCreateProjectForCwd(projectsNow);
-      const placements = planDiskRebuild(resolvedSessions, projectsNow, {
-        caseInsensitive: isCaseInsensitivePlatform(),
-        createProjectForCwd: projectFactory.createProjectForCwd,
-      });
-      const touched = new Set<string>();
-      for (const { projectId, summary } of placements) {
-        // Automation hydration may finish while this page is resolving roots.
-        // Re-check the durable index so richer metadata and archived rows win.
-        const current = loadSessionIndex(projectId);
-        const alreadyKnown = current.sessions.some(
-          (session) =>
-            session.id === summary.id ||
-            (summary.engineSessionId && session.engineSessionId === summary.engineSessionId),
-        );
-        if (alreadyKnown) continue;
-        upsertImportedSession(projectId, summary);
-        touched.add(projectBucketSegmentFor(projectId));
-      }
-      if (projectFactory.changed()) setProjects(projectsNow.slice());
-      if (touched.size > 0) {
-        setSessionIndices((prev) => {
-          const next = { ...prev };
-          for (const key of touched) next[key] = loadSessionIndex(key === GLOBAL_KEY ? null : key);
-          return next;
-        });
-      }
-      setDiskSessionCatalog({
-        initialized: true,
-        loading: false,
-        nextCursor: page.nextCursor,
-      });
-    } catch (error) {
-      // Keep the failed cursor available so the sidebar button becomes a retry
-      // instead of silently turning a temporary disk error into "no history".
-      setDiskSessionCatalog({
-        initialized: true,
-        loading: false,
-        nextCursor: cursor ?? "",
-      });
-      window.codeshell.log("sidebar.disk_catalog_page_failed", { error: String(error) });
-    } finally {
-      diskSessionCatalogLoadingRef.current = false;
-    }
-  };
-
-  useEffect(() => {
-    void loadDiskSessionCatalogPage();
-  }, []);
-
-  function getCoalescer(bucket: string) {
-    let c = coalescersRef.current.get(bucket);
-    if (!c) {
-      c = createEventCoalescer((events) => {
-        const maxSeq = coalescerSeqRef.current.get(bucket);
-        coalescerSeqRef.current.delete(bucket);
-        if (maxSeq !== undefined) {
-          const prev = appliedSeqRef.current.get(bucket) ?? 0;
-          appliedSeqRef.current.set(bucket, Math.max(prev, maxSeq));
-        }
-        dispatch({ type: "stream_batch", bucket, events, maxSeq });
-      });
-      coalescersRef.current.set(bucket, c);
-    }
-    return c;
-  }
-
-  useEffect(() => {
-    window.codeshell.log("app.mount", { codeshellKeys: Object.keys(window.codeshell ?? {}) });
-
-    const offStream = window.codeshell.onStreamEvent((env: StreamEventEnvelope) => {
-      const event = env.event;
-      if (event.type === "background_agent_completed") {
-        toast({
-          message: bgCompletionText(event),
-          variant:
-            event.status === "completed"
-              ? "success"
-              : event.status === "cancelled"
-                ? undefined
-                : "error",
-        });
-        // fall through: the reducer still appends the system message below.
-      }
-      // Multi-session routing: every envelope carries the engine sessionId.
-      // We mirror engineSessionId → bucket in a ref so stream events route to
-      // the right tab even when several runs are in flight at once. Fallback
-      // to the single runningBucketRef only for legacy / pre-bind events
-      // (engineSessionId empty or not yet in the table).
-      // Route the event to its UI bucket. On a route-table miss (e.g. after a
-      // renderer remount wiped the in-memory table while a worker kept resuming
-      // the same engine session), resolveBucket reverse-looks-up the engine
-      // sessionId in the on-disk indices instead of dropping the event.
-      const target = resolveBucket(
-        env.sessionId ?? "",
-        engineToBucketRef.current,
-        sessionIndicesRef.current,
-        runningBucketRef.current,
-      );
-      if (!target) {
-        if ((event.type === "turn_complete" || event.type === "error") && !event.agentId) {
-          const runningBucket = runningBucketRef.current;
-          if (runningBucket) {
-            setBusyForKey(runningBucket, false);
-            runningBucketRef.current = null;
-          }
-        }
-        return;
-      }
-      // Backfill the route table so subsequent events for this session take the
-      // fast path (and so turn_complete/error below can clear the right bucket).
-      if (env.sessionId && !engineToBucketRef.current.has(env.sessionId)) {
-        engineToBucketRef.current.set(env.sessionId, target);
-      }
-
-      // steer_injected: the engine just spliced a queued draft into the running
-      // turn. Now (and only now) remove it from the panel — the coalescer will
-      // also feed this event to the reducer, which renders it as a user bubble.
-      // This is the insert-time ↔ display-time decoupling: the item was visible
-      // and revocable until this confirmation arrived.
-      if (event.type === "steer_injected" && event.id) {
-        const id = event.id;
-        injectedSteerIdsRef.current.add(id);
-        steeredIdsRef.current.delete(id);
-        setQueuedInputs((prev) => removeQueuedInputById(prev, target, id));
-      }
-
-      const noisy =
-        event.type === "text_delta" ||
-        event.type === "tool_use_args_delta" ||
-        event.type === "usage_update" ||
-        event.type === "thinking_delta";
-      if (!noisy) {
-        window.codeshell.log("stream.event", {
-          type: event.type,
-          bucket: target,
-          engineSessionId: env.sessionId || null,
-        });
-      }
-      if (typeof env.seq === "number") {
-        const prev = coalescerSeqRef.current.get(target) ?? 0;
-        coalescerSeqRef.current.set(target, Math.max(prev, env.seq));
-      }
-      getCoalescer(target).push(event);
-
-      // session_started carries the authoritative engine sessionId. Persist
-      // the binding (engineSessionId == uiSessionId is the new normal, but
-      // older sessions on disk may differ) and seed the routing table.
-      if (event.type === "session_started") {
-        // session_started fires once at the start of every run() — including a
-        // run the renderer DIDN'T initiate, e.g. core waking an idle session
-        // when a background shell (download) finishes. The send() path already
-        // set busy (idempotent here); but a core-initiated wakeup never went
-        // through send(), so this is the only point the composer learns "a turn
-        // is now running" and shows the working spinner. turn_complete (below)
-        // clears it. (session_started carries no agentId, so it's always the
-        // top-level run, never a sub-agent.)
-        setBusyForKey(target, true);
-        if (isQuickChatBucket(target)) {
-          engineToBucketRef.current.set(event.sessionId, target);
-          return;
-        }
-        const sep = target.indexOf("::");
-        if (sep > 0) {
-          const projectBucketSegment = target.slice(0, sep);
-          const uiSessionId = target.slice(sep + 2);
-          const projectId = projectBucketSegment === GLOBAL_KEY ? null : projectBucketSegment;
-          if (uiSessionId && uiSessionId !== "_none_") {
-            engineToBucketRef.current.set(event.sessionId, target);
-            const nextIdx = bindEngineSession(projectId, uiSessionId, event.sessionId);
-            setSessionIndices((prev) => ({ ...prev, [projectBucketSegment]: nextIdx }));
-          }
-        }
-      }
-
-      // session_title: LLM-generated sidebar title (first turn only).
-      // Reuse the session_started bucket-parse pattern. Never clobber a
-      // manual rename (titleManual flag set by handleRenameSession).
-      if (event.type === "session_title") {
-        if (isQuickChatBucket(target)) return;
-        const sep = target.indexOf("::");
-        if (sep > 0) {
-          const projectBucketSegment = target.slice(0, sep);
-          const uiSessionId = target.slice(sep + 2);
-          const projectId = projectBucketSegment === GLOBAL_KEY ? null : projectBucketSegment;
-          if (uiSessionId && uiSessionId !== "_none_") {
-            setSessionIndices((prev) => {
-              const cur = prev[projectBucketSegment]?.sessions.find((s) => s.id === uiSessionId);
-              if (!cur || cur.titleManual) return prev; // never clobber manual rename
-              const next = renameSessionLocal(projectId, uiSessionId, event.title);
-              return { ...prev, [projectBucketSegment]: next };
-            });
-          }
-        }
-      }
-
-      // A *sub-agent's* turn_complete / error carries an agentId (engine.ts
-      // injects it into every child stream event). It must NOT clear the main
-      // bucket's busy flag, mark it unread, or terminate the automation run —
-      // the parent turn is still running and will emit its own (agentId-less)
-      // turn_complete when it actually finishes. Treating the child's
-      // turn_complete as the parent's flipped the top-bar/sidebar to "完成"
-      // (idle) mid-run while the agent kept working. The per-agent card's own
-      // done state is handled separately in the reducer via `agent_end`.
-      if ((event.type === "turn_complete" || event.type === "error") && !event.agentId) {
-        setBusyForKey(target, false);
-        // A turn just finished → its file edits have landed on disk. Nudge the
-        // Files panel to re-read the file it's previewing (and refresh its
-        // tree): the panel reads a file once on select and otherwise never sees
-        // external writes, so an AI edit to the open file would show stale until
-        // re-selected. Fire-and-forget DOM event (same channel style as
-        // codeshell:open-file); FilesPanel decides whether it's viewing an
-        // affected path.
-        window.dispatchEvent(new CustomEvent("codeshell:files-changed"));
-        // A turn finished in a bucket the user is NOT looking at → mark unread
-        // so the sidebar shows a dot. Read the active bucket from the ref (not
-        // a captured `activeBucket`): this onStreamEvent callback is registered
-        // once and would otherwise close over a stale value.
-        if (target !== activeBucketRef.current) {
-          setUnreadBuckets((prev) => {
-            if (prev.has(target)) return prev;
-            const next = new Set(prev);
-            next.add(target);
-            return next;
-          });
-        }
-        // Don't null runningBucketRef here — another concurrent send may
-        // still be using it as a fallback. The ref is only a soft hint;
-        // engineToBucketRef is the authoritative routing for in-flight runs.
-
-        // Flip a live automation session's runStatus from its frozen "running"
-        // to a terminal state. Without this it stays "running" forever, which
-        // (a) makes delete treat a long-finished run as in-flight, and (b)
-        // keeps it out of the backfill dedup skip-set. Find the owning session
-        // by engineSessionId (== local id for automation imports) and update it.
-        if (env.sessionId) {
-          const eid = env.sessionId;
-          const projectsNow = loadProjects();
-          for (const rid of [null as string | null, ...projectsNow.map((project) => project.id)]) {
-            const owner = loadSessionIndex(rid).sessions.find(
-              (s) => s.source === "automation" && s.engineSessionId === eid,
-            );
-            if (owner) {
-              const nextIdx = updateSessionRunStatus(
-                rid,
-                owner.id,
-                event.type === "error" ? "failed" : "completed",
-              );
-              setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(rid)]: nextIdx }));
-              break;
-            }
-          }
-        }
-      }
-    });
-    // Live automation session: main announces {sessionId, cwd, title} once when
-    // an in-main automation run emits session_started. Stream events carry no
-    // cwd, so without this the run can't be attributed to a project until the
-    // next startup disk-backfill. We create the sidebar session immediately
-    // (reusing the source:"automation" import machinery) and register the route
-    // so this run's subsequent stream events land in the right bucket.
-    const offAutomationSession = window.codeshell.onAutomationSession((meta) => {
-      window.codeshell.log("automation.session.announce", {
-        sessionId: meta.sessionId,
-        cwd: meta.cwd,
-      });
-      // Idempotency: if any repo already has this engine session (a prior
-      // announce, or a disk-backfilled import), don't duplicate.
-      const projectsNow = loadProjects();
-      const alreadyKnown = [
-        null as string | null,
-        ...projectsNow.map((project) => project.id),
-      ].some((rid) =>
-        loadSessionIndex(rid).sessions.some((s) => s.engineSessionId === meta.sessionId),
-      );
-      if (alreadyKnown) {
-        // Still (re)register the route in case the table was wiped by a remount.
-        const knownProjectId =
-          [null as string | null, ...projectsNow.map((project) => project.id)].find((rid) =>
-            loadSessionIndex(rid).sessions.some((s) => s.engineSessionId === meta.sessionId),
-          ) ?? null;
-        engineToBucketRef.current.set(meta.sessionId, bucketKey(knownProjectId, meta.sessionId));
-        return;
-      }
-      void (async () => {
-        const resolvedMeta = {
-          ...meta,
-          cwd: await resolveProjectCwd(meta.cwd),
-        };
-        const projectsAfterResolve = loadProjects();
-        const existingProjectId = [
-          null as string | null,
-          ...projectsAfterResolve.map((project) => project.id),
-        ].find((rid) =>
-          loadSessionIndex(rid).sessions.some((s) => s.engineSessionId === meta.sessionId),
-        );
-        if (existingProjectId !== undefined) {
-          engineToBucketRef.current.set(
-            meta.sessionId,
-            bucketKey(existingProjectId, meta.sessionId),
-          );
-          return;
-        }
-        const projectFactory = makeCreateProjectForCwd(projectsAfterResolve);
-        const placement = placeLiveAutomationSession(resolvedMeta, projectsAfterResolve, {
-          caseInsensitive: isCaseInsensitivePlatform(),
-          createProjectForCwd: projectFactory.createProjectForCwd,
-        });
-        if (!placement) return;
-        const { projectId, summary } = placement;
-        const nextIdx = upsertImportedSession(projectId, summary);
-        const bucket = bucketKey(projectId, summary.id);
-        // Register the route so this run's stream events (already arriving) bucket
-        // correctly. The session_started handler's reverse-lookup would also find
-        // it now that it's on disk, but setting the fast path is cheap.
-        engineToBucketRef.current.set(meta.sessionId, bucket);
-        // Mark the bucket busy NOW so the sidebar shows the running spinner
-        // immediately. Automation never goes through send() (it runs headless in
-        // main), so without this the run-now session would sit with no status
-        // indicator until — and only ever — turn_complete, which then clears busy
-        // and (if off-screen) flips it to the unread dot. The announce arrives
-        // before this run's session_started stream event (automation-host emits
-        // onSession() then emit() on the same ordered channel), so no turn_complete
-        // can clear this before we set it. asking>running>unread precedence then
-        // matches interactive chat.
-        setBusyForKey(bucket, true);
-        // Show the triggering prompt as the opening user message. Automation never
-        // goes through send() (it runs in main), so without this the live UI would
-        // open straight into the assistant's reply with no visible question. Only
-        // on first placement (re-announce hits the alreadyKnown early-return above),
-        // so the bubble isn't duplicated.
-        if (meta.prompt.trim()) {
-          const clientMessageId =
-            meta.clientMessageId ??
-            `automation:${meta.sessionId}:${stablePromptHash(meta.prompt.trim())}`;
-          dispatch({ type: "user_message", bucket, text: meta.prompt, clientMessageId });
-        }
-        if (projectFactory.changed()) setProjects(projectsAfterResolve.slice());
-        setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: nextIdx }));
-      })();
-    });
-    const offMobileSession = window.codeshell.onMobileSession((meta) => {
-      window.codeshell.log("mobile.session.announce", {
-        sessionId: meta.sessionId,
-        cwd: meta.cwd,
-      });
-      const projectsNow = loadProjects();
-      const knownProjectId =
-        [null as string | null, ...projectsNow.map((project) => project.id)].find((rid) =>
-          loadSessionIndex(rid).sessions.some(
-            (s) => s.engineSessionId === meta.sessionId || s.id === meta.sessionId,
-          ),
-        ) ?? undefined;
-      const known =
-        knownProjectId !== undefined
-          ? loadSessionIndex(knownProjectId).sessions.find(
-              (s) => s.engineSessionId === meta.sessionId || s.id === meta.sessionId,
-            )
-          : undefined;
-
-      let projectId: string | null;
-      let sessionId: string;
-      let nextIdx: SessionIndex;
-      const title = titleFromWire(meta.prompt || meta.title || meta.sessionId);
-
-      if (known) {
-        projectId = knownProjectId ?? null;
-        sessionId = known.id;
-        nextIdx = touchSession(projectId, sessionId, title);
-      } else {
-        const projectFactory = makeCreateProjectForCwd(projectsNow);
-        const now = Date.now();
-        const [placement] = planDiskRebuild(
-          [
-            {
-              id: meta.sessionId,
-              engineSessionId: meta.sessionId,
-              cwd: meta.cwd,
-              title,
-              updatedAt: now,
-              origin: "desktop",
-            },
-          ],
-          projectsNow,
-          {
-            caseInsensitive: isCaseInsensitivePlatform(),
-            createProjectForCwd: projectFactory.createProjectForCwd,
-          },
-        );
-        if (!placement) return;
-        projectId = placement.projectId;
-        sessionId = placement.summary.id;
-        nextIdx = upsertImportedSession(projectId, {
-          ...placement.summary,
-          title,
-          createdAt: now,
-          updatedAt: now,
-        });
-        if (projectFactory.changed()) setProjects(projectsNow.slice());
-      }
-
-      const bucket = bucketKey(projectId, sessionId);
-      engineToBucketRef.current.set(meta.sessionId, bucket);
-      setBusyForKey(bucket, true);
-      if (meta.prompt.trim()) {
-        let clientMessageId = meta.clientMessageId;
-        if (!clientMessageId) {
-          mobileAnnounceSeqRef.current += 1;
-          const fallbackTurnId = `${Date.now().toString(36)}-${mobileAnnounceSeqRef.current.toString(36)}`;
-          clientMessageId = `mobile:${meta.sessionId}:fallback-${fallbackTurnId}:${stablePromptHash(
-            meta.prompt.trim(),
-          )}`;
-        }
-        dispatch({ type: "user_message", bucket, text: meta.prompt, clientMessageId });
-      }
-      setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: nextIdx }));
-    });
-    const offApproval = window.codeshell.onApprovalRequest((env: ApprovalRequestEnvelope) => {
-      window.codeshell.log("approval.request", {
-        requestId: env.requestId,
-        toolName: env.request.toolName,
-        engineSessionId: env.sessionId ?? null,
-      });
-      let resolved = resolveBucket(
-        env.sessionId ?? "",
-        engineToBucketRef.current,
-        sessionIndicesRef.current,
-        runningBucketRef.current,
-      );
-      if (!resolved && env.sessionId && isQuickChatSessionId(env.sessionId)) {
-        resolved =
-          Object.values(quickChatSessionsRef.current).find(
-            (session) => session.sessionId === env.sessionId,
-          )?.bucket ?? null;
-        if (!resolved) {
-          // The quick-chat claim/generation is gone (closed or replaced).
-          // Never project its late approval into the active parent/child UI.
-          // Best-effort deny also releases a still-pending core request.
-          const reason = "quick chat is no longer active";
-          void window.codeshell
-            .approve(env.sessionId, env.requestId, "deny", reason)
-            .catch((error) =>
-              window.codeshell.log("quick_chat.late_approval_deny_failed", {
-                sessionId: env.sessionId,
-                requestId: env.requestId,
-                error: String(error),
-              }),
-            );
-          void window.codeshell.mobileRemote.notifyApprovalResolved({
-            requestId: env.requestId,
-            sessionId: env.sessionId,
-            approved: false,
-          });
-          return;
-        }
-      }
-      // AskUserQuestion is delivered through the same channel as tool
-      // approvals (toolName === "__ask_user__"). Route it into the chat
-      // stream as an inline AskUserMessage instead of the approval modal
-      // so the user picks an answer inline — much less disruptive than
-      // a blocking dialog.
-      if (env.request.toolName === "__ask_user__") {
-        const args = (env.request.args ?? {}) as Record<string, unknown>;
-        const question =
-          (typeof args.question === "string" && args.question) || env.request.description || "";
-        const header = typeof args.header === "string" ? args.header : undefined;
-        const multiSelect = args.multiSelect === true;
-        const optionsOnly = args.optionsOnly === true;
-        const options = Array.isArray(args.options)
-          ? (args.options as unknown[])
-              .filter(
-                (o): o is { label: string; description: string; tone?: unknown } =>
-                  !!o &&
-                  typeof o === "object" &&
-                  typeof (o as Record<string, unknown>).label === "string" &&
-                  typeof (o as Record<string, unknown>).description === "string",
-              )
-              .map((o): AskUserOption => {
-                const tone: AskUserOption["tone"] =
-                  o.tone === "ok" || o.tone === "danger" || o.tone === "neutral"
-                    ? o.tone
-                    : undefined;
-                return { label: o.label, description: o.description, ...(tone ? { tone } : {}) };
-              })
-          : undefined;
-        // Resolve the ORIGINATING session's bucket via the shared resolver
-        // (live table → on-disk index reverse lookup → runningBucket only when
-        // there's no sessionId). When a sessionId is present but unresolvable
-        // (cold table + not yet in the index), a normal persisted session keeps
-        // the legacy active-bucket fallback so the user still sees the prompt.
-        // Unknown quick-chat ids were already rejected above. Either way carry
-        // env.sessionId so the answer routes back to the originating session.
-        if (env.sessionId && !resolved) {
-          console.warn(
-            "[ask_user] could not resolve bucket for session; rendering in active bucket",
-            env.sessionId,
-          );
-        }
-        const bucket = resolved ?? activeBucketRef.current;
-        dispatch({
-          type: "ask_user",
-          bucket,
-          requestId: env.requestId,
-          engineSessionId: env.sessionId,
-          question,
-          header,
-          options,
-          multiSelect,
-          optionsOnly,
-        });
-        return;
-      }
-      // 完全访问权限 (bypass): auto-approve any request that reaches the
-      // renderer for this bucket. The engine's bypassPermissions backend
-      // already approves everything, so requests rarely surface here; this
-      // is belt-and-braces so "full access" never silently blocks on a
-      // modal. Resolve the request's OWN bucket (not the active one) —
-      // concurrent runs may target a different tab.
-      if (env.sessionId && !resolved) {
-        console.warn(
-          "[approval] could not resolve bucket for session; rendering in active bucket",
-          env.sessionId,
-        );
-      }
-      const targetBucket = resolved ?? activeBucketRef.current;
-      if (permissionForBucketRef.current(targetBucket) === "bypass") {
-        if (env.sessionId) {
-          void window.codeshell.approve(env.sessionId, env.requestId, "approve");
-        } else {
-          void window.codeshell.approve(env.requestId, "approve");
-        }
-        void window.codeshell.mobileRemote.notifyApprovalResolved({
-          requestId: env.requestId,
-          sessionId: env.sessionId,
-          approved: true,
-        });
-        return;
-      }
-      approvalBucketsRef.current.set(env.requestId, targetBucket);
-      setApprovalQueue((q) => [...q, env]);
-      setApproval((cur) => cur ?? env);
-    });
-    const offApprovalResolved = window.codeshell.onApprovalResolved(
-      (env: ApprovalResolvedEnvelope) => {
-        if (!env.requestId) return;
-        // A server-initiated resolve (e.g. a goal-mode AskUserQuestion that timed
-        // out with nobody answering) must also retire the inline ask_user card,
-        // which lives in the transcript — not just the approval modal queue below.
-        // A user-driven answer already marks it via handleAskUserAnswer, so only
-        // touch a card that's still unanswered here.
-        const origin = findAskUserOrigin(transcriptsRef.current, env.requestId);
-        if (origin && origin.answer === undefined) {
-          dispatch({
-            type: "ask_user_answered",
-            bucket: origin.bucket,
-            requestId: env.requestId,
-            answer: t("msg.ask.timedOut"),
-          });
-        }
-        approvalBucketsRef.current.delete(env.requestId);
-        setApprovalQueue((prev) => {
-          const remaining = prev.filter((e) => e.requestId !== env.requestId);
-          setApproval((cur) => {
-            if (!cur || cur.requestId === env.requestId) return remaining[0] ?? null;
-            return cur;
-          });
-          return remaining;
-        });
-      },
-    );
-    const offMobilePermissionMode = window.codeshell.onMobilePermissionMode(
-      (env: MobilePermissionModeEnvelope) => {
-        if (!env.sessionId) return;
-        const bucketFromRoute =
-          engineToBucketRef.current.get(env.sessionId) ||
-          resolveBucket(
-            env.sessionId,
-            engineToBucketRef.current,
-            sessionIndicesRef.current,
-            runningBucketRef.current,
-          );
-        let bucket = bucketFromRoute;
-        if (!bucket) {
-          for (const [projectBucketSegment, index] of Object.entries(sessionIndicesRef.current)) {
-            const summary = index.sessions.find((s) => s.id === env.sessionId);
-            if (summary) {
-              bucket = bucketKey(
-                projectBucketSegment === GLOBAL_KEY ? null : projectBucketSegment,
-                summary.id,
-              );
-              break;
-            }
-          }
-        }
-        if (!bucket) return;
-        const mode = fromMobilePermissionMode(env.mode);
-        setPermissionOverrides((prev) => {
-          if (mode === defaultPermissionModeRef.current) {
-            const { [bucket]: _removed, ...rest } = prev;
-            return rest;
-          }
-          return { ...prev, [bucket]: mode };
-        });
-      },
-    );
-    const offStatus = window.codeshell.onStatus((evt) => {
-      window.codeshell.log("status", evt as Record<string, unknown>);
-    });
-    const offLifecycle = window.codeshell.onAgentLifecycle((evt: AgentLifecycleEvent) => {
-      window.codeshell.log("lifecycle", evt as Record<string, unknown>);
-      if (evt.type === "restarted") setLifecycle("Agent restarted.");
-      else if (evt.type === "gave_up")
-        setLifecycle("Agent crashed too many times. Quit and reopen.");
-      else if (evt.type === "exited") {
-        if (evt.code === 0) setLifecycle(null);
-        else setLifecycle(`Agent exited (code ${evt.code}).`);
-        // Worker died — every in-flight run is dead with it. Clear busy
-        // for *all* buckets we have routes for, not just the latest ref.
-        const inflight = Array.from(engineToBucketRef.current.values());
-        if (inflight.length > 0) {
-          setBusyKeys((prev) => {
-            const next = new Set(prev);
-            for (const b of inflight) next.delete(b);
-            return next;
-          });
-        }
-        runningBucketRef.current = null;
-        // Do NOT clear engineToBucketRef here. The worker exits cleanly after
-        // every run (and may later respawn + resume the same engine session),
-        // so wiping the route table on exit is exactly what made resumed-
-        // session events miss their bucket and get dropped (blank UI). The
-        // bucket↔session bindings belong to the session, not the worker
-        // lifecycle, and are safe to keep — resolveBucket reconciles against
-        // on-disk indices anyway.
-      }
-    });
-    return () => {
-      offStream();
-      offAutomationSession();
-      offMobileSession();
-      offApproval();
-      offApprovalResolved();
-      offMobilePermissionMode();
-      offStatus();
-      offLifecycle();
-    };
-    // `toast` from useToast is a stable reference (memoized in ToastProvider),
-    // so listing it here does not re-register these long-lived IPC listeners.
-  }, [toast]);
-
-  useEffect(() => {
-    const off = window.codeshell.onWorktreeCleanupSkipped((event) => {
-      const count = Array.isArray(event.skipped) ? event.skipped.length : 0;
-      if (count <= 0) return;
-      toast({
-        message: t("misc.worktree.cleanupSkipped", { count }),
-        variant: "error",
-      });
-    });
-    return off;
-  }, [toast, t]);
-
-  const send = (
-    text: string,
-    sendOpts: {
-      bucket?: string;
-      clientMessageId?: string;
-      attachments?: InputAttachmentMeta[];
-      displayText?: string;
-    } = {},
-  ): Promise<void> => {
-    // createSession persists to localStorage synchronously, so reading
-    // it back via touchSession() right after sees the new entry.
-    const parsedBucket = sendOpts.bucket ? parsePanelBucket(sendOpts.bucket) : null;
-    const targetProjectId = parsedBucket ? parsedBucket.projectId : activeProjectId;
-    const targetSessionId = parsedBucket ? parsedBucket.sessionId : activeSessionId;
-    const wasDraft = targetSessionId === null;
-    const sid = targetSessionId ?? ensureActiveSession(targetProjectId);
-    const bucket = bucketKey(targetProjectId, sid);
-    const projectBucketSegment = projectBucketSegmentFor(targetProjectId);
-    const targetProject = projects.find((project) => project.id === targetProjectId) ?? null;
-    // A draft's pre-send toggles (permission/goal/model) were keyed under the
-    // SHARED draft bucket (<repo>::_none_), NOT the freshly-created real session
-    // bucket that `ensureActiveSession` just produced above. Read them from the
-    // draft bucket on first send, else the draft's Goal toggle is silently
-    // dropped (composer icon stays lit — it reads activeBucket = draft — while
-    // the send reads the empty real bucket → goal never set). The migration
-    // below then moves the override onto the real bucket for follow-ups.
-    const overrideBucket = wasDraft ? (sendOpts.bucket ?? activeBucket) : bucket;
-    const sendPermissionMode = permissionOverrides[overrideBucket] ?? defaultPermissionMode;
-    const sendGoalEnabled = goalOverrides[overrideBucket] ?? false;
-    const sendModelKey = modelOverrides[overrideBucket] ?? defaultActiveModelKey;
-    const clientMessageId = sendOpts.clientMessageId ?? newQueuedId();
-    const displayText = sendOpts.displayText ?? text;
-
-    // A draft has no sessionId, so its permission/goal overrides were keyed
-    // under the SHARED per-repo "_none_" bucket (bucketKey collapses every
-    // draft to <repo>::_none_). On the first send the draft solidifies into a
-    // real session — migrate the override onto the real bucket so the choice
-    // FOLLOWS this session, then clear the shared draft slot so it doesn't
-    // "粘连" onto the next 新对话 / other drafts in this project (#11 per-session
-    // permission stickiness).
-    if (wasDraft && bucket !== (sendOpts.bucket ?? activeBucket)) {
-      const draftBucket = sendOpts.bucket ?? activeBucket;
-      setPermissionOverrides((prev) => migrateBucketOverride(prev, draftBucket, bucket));
-      setGoalOverrides((prev) => migrateBucketOverride(prev, draftBucket, bucket));
-      setModelOverrides((prev) => migrateBucketOverride(prev, draftBucket, bucket));
-    }
-    // Pin this session's model on its first send. Capturing the model in
-    // effect right now means a LATER change to the global default won't drag
-    // this (now-existing) session onto a different model. Only seed if the
-    // bucket has no explicit override yet — never clobber a deliberate switch.
-    if (sendModelKey && modelOverrides[bucket] === undefined) {
-      const pinned = sendModelKey;
-      setModelOverrides((prev) =>
-        prev[bucket] === undefined ? { ...prev, [bucket]: pinned } : prev,
-      );
-    }
-
-    // Look up any previously-bound engine sessionId for this UI session.
-    // Pre-multi-session sessions on disk may have an engineSessionId that
-    // differs from the UI sessionId (the old auto-bound flow). For brand
-    // new sessions we use the UI sessionId directly as the engine
-    // sessionId so the engineToBucket route is populated synchronously.
-    const summary =
-      sessionIndices[projectBucketSegment]?.sessions.find((s) => s.id === sid) ??
-      loadSessionIndex(targetProjectId).sessions.find((s) => s.id === sid);
-    const engineSessionId = summary?.engineSessionId ?? sid;
-
-    window.codeshell.log("send", {
-      textLen: text.length,
-      repo: targetProject?.name ?? null,
-      bucket,
-      engineSessionId,
-      clientMessageId,
-    });
-    dispatch({
-      type: "user_message",
-      bucket,
-      text: displayText,
-      isGoal: sendGoalEnabled && !!text.trim(),
-      clientMessageId,
-    });
-    setBusyForKey(bucket, true);
-    runningBucketRef.current = bucket;
-    // Register the route NOW so concurrent sends can each find their own
-    // bucket. session_started will reinforce this with the same value (or
-    // overwrite with the engine-generated id for legacy sessions).
-    engineToBucketRef.current.set(engineSessionId, bucket);
-
-    // Touch session: bump updatedAt + adopt first user prompt as title,
-    // and persist engineSessionId so future sends in this UI session
-    // pass the same value (and the engine resumes the right convo).
-    setSessionIndices((prev) => {
-      const touched = touchSession(targetProjectId, sid, titleFromWire(displayText));
-      const next = summary?.engineSessionId
-        ? touched
-        : bindEngineSession(targetProjectId, sid, engineSessionId);
-      return { ...prev, [projectBucketSegment]: next };
-    });
-
-    const opts: {
-      cwd?: string;
-      sessionId?: string;
-      bucket?: string;
-      browserPartition?: string;
-      permissionMode?: ReturnType<typeof toCorePermissionMode>;
-      goal?: string;
-      clientMessageId?: string;
-      attachments?: InputAttachmentMeta[];
-    } = {
-      sessionId: engineSessionId,
-      bucket,
-      browserPartition: browserPartitionForBucket(bucket),
-      clientMessageId,
-    };
-    window.codeshell.registerBrowserSessionBucket({
-      sessionId: engineSessionId,
-      bucket,
-      partition: browserPartitionForBucket(bucket),
-    });
-    if (sendOpts.attachments && sendOpts.attachments.length > 0) {
-      opts.attachments = sendOpts.attachments;
-    }
-    if (sendPermissionMode !== null) {
-      opts.permissionMode = toCorePermissionMode(sendPermissionMode);
-    }
-    // Pass cwd explicitly in BOTH cases: a real project → its path; no-repo chat →
-    // the no-repo sandbox. Never leave cwd undefined — the long-lived worker
-    // would otherwise default to a stale project (see noRepoCwdRef). Falls back
-    // to undefined only if the one-time fetch hasn't resolved yet, in which case
-    // the core-side stdio worker still defaults to noRepoDir() (defense #2).
-    if (targetProject) opts.cwd = targetProject.path;
-    else if (noRepoCwdRef.current) opts.cwd = noRepoCwdRef.current;
-    // Goal mode: this send's prompt IS the goal — the engine runs
-    // loop-until-done. Goal text == prompt text (reuses the composer input).
-    // Persistent goal (CC /goal): the toggle means "make THIS message a goal".
-    // Once sent, core persists it on the session and later bare sends inherit it
-    // — so we auto-disable the toggle after establishing the goal. Otherwise a
-    // toggle left on would make every follow-up REPLACE the goal with its own
-    // text (one active goal per session), which is never what the user wants.
-    // The active goal stays visible in the TopBar popover; clear it there.
-    if (sendGoalEnabled && text.trim()) {
-      opts.goal = text;
-      setGoalOverrides((prev) => ({ ...prev, [bucket]: false }));
-    }
-    if (opts.cwd && opts.attachments && opts.attachments.length > 0) {
-      void window.codeshell
-        .markAttachmentsSent({
-          cwd: opts.cwd,
-          sessionId: engineSessionId,
-          attachments: opts.attachments,
-        })
-        .catch((err) => {
-          window.codeshell.log("attachments.mark_sent_failed", {
-            bucket,
-            error: String((err as Error)?.message ?? err),
-          });
-        });
-    }
-
-    // Pin this session's engine to its per-bucket model before the turn. The
-    // engine session may have just been created fresh (resume / first send /
-    // draft where the user picked a non-default model) on the worker's current
-    // model — without this, a session pinned to model A would silently run on
-    // the worker default. configure({sessionId,model}) → requestModelSwitch
-    // applies immediately when idle, so it lands before the turn starts. Skip
-    // when the bucket has no override (it follows the default — no switch needed).
-    // Final fallback to `activeModelKey` (= the model the UI currently shows
-    // for this session, itself defaulting to the global default). The engine
-    // session may have been created on a DIFFERENT model than the UI shows —
-    // e.g. the user changed the model from the Settings page (which only
-    // updates disk activeKey, not this renderer's per-bucket override) or the
-    // worker started on a stale pin. Without this fallback, `bucketModel`
-    // could be undefined while the engine quietly runs on its old model — the
-    // deepseek-vision rejection bug, where a "switched to gpt-5" session still
-    // ran on deepseek-v4-flash and refused the image. Always pin before the
-    // turn so the engine matches what the UI claims.
-    const bucketModel = modelOverrides[bucket] ?? sendModelKey;
-    return runAfterModelSwitch({
-      sessionId: engineSessionId,
-      model: bucketModel,
-      text,
-      opts,
-      run: window.codeshell.run,
-    })
-      .then((r) => {
-        // Belt-and-braces: clear busy for THIS run's bucket even if the
-        // stream never delivered turn_complete (e.g. error in setup, or
-        // the worker shutdown before flushing the event). Use the closed-
-        // over `bucket`, not runningBucketRef — concurrent sends may have
-        // moved the ref by the time we resolve.
-        setBusyForKey(bucket, false);
-        if (runningBucketRef.current === bucket) {
-          runningBucketRef.current = null;
-        }
-        window.codeshell.log("run.resolved", {
-          bucket,
-          result: r as unknown as Record<string, unknown>,
-        });
-        // Surface early-return failures that never produced a stream. Some
-        // RunResult reasons (image_error, model_error, prompt_too_long) are
-        // returned by the engine BEFORE any turn starts — no turn_start, no
-        // assistant_message, no turn_complete reaches the stream. Without
-        // this branch the only trace is `r.text` in the log: busy clears,
-        // nothing renders, and it reads as "卡住 / 没反应" (the deepseek-
-        // vision rejection bug). Render the engine's human-readable message
-        // as a turn_end(error) line in the stream + an error toast.
-        const result = r as { reason?: string; text?: string } | null;
-        const reason = result?.reason;
-        if (reason === "image_error" || reason === "model_error" || reason === "prompt_too_long") {
-          const detail = result?.text?.replace(/^ERROR:\s*/, "") || t("misc.app.requestRejected");
-          dispatch({ type: "turn_end", bucket, reason: "error", detail });
-          toast({ message: detail, variant: "error" });
-        }
-      })
-      .catch((err) => {
-        // Server crashed / RPC rejected / non-abort error. Without this
-        // the run promise silently rejects, busy never clears, and the
-        // composer stays disabled until the user reloads. Cancellation
-        // is now reported via a successful RunResult with reason
-        // "aborted_streaming" (see protocol/server.ts), so anything
-        // reaching here is a real failure worth logging.
-        setBusyForKey(bucket, false);
-        if (runningBucketRef.current === bucket) {
-          runningBucketRef.current = null;
-        }
-        window.codeshell.log("run.rejected", {
-          bucket,
-          error: String((err as Error)?.message ?? err),
-        });
-      });
-  };
-
-  const delegatePetTask = (projectId: string | null, prompt: string): void => {
-    const message = prompt.trim();
-    if (!message) return;
-    handleNewConversationForProject(projectId);
-    void send(message, { bucket: bucketKey(projectId, null) });
-  };
-
-  const sendQuickChat = (
-    session: QuickChatSessionRef,
-    text: string,
-    sendOpts: { attachments?: InputAttachmentMeta[]; displayText?: string } = {},
-  ): void => {
-    const prompt = text.trim();
-    const attachments = sendOpts.attachments ?? [];
-    if ((!prompt && attachments.length === 0) || session.status !== "ready") return;
-
-    const bucket = session.bucket;
-    const engineSessionId = session.sessionId;
-    const clientMessageId = newQueuedId();
-    const sendPermissionMode =
-      permissionOverrides[bucket] ??
-      permissionOverrides[session.ownerBucket] ??
-      defaultPermissionMode ??
-      "default";
-    const sendModelKey = modelOverrides[bucket] ?? defaultActiveModelKey;
-    const cwd = session.cwd ?? noRepoCwdRef.current ?? undefined;
-    const opts: {
-      cwd?: string;
-      sessionId: string;
-      bucket: string;
-      browserPartition: string;
-      permissionMode?: ReturnType<typeof toCorePermissionMode>;
-      behaviorMode?: "quickChatRestricted";
-      clientMessageId: string;
-      attachments?: InputAttachmentMeta[];
-    } = {
-      sessionId: engineSessionId,
-      bucket,
-      browserPartition: browserPartitionForBucket(bucket),
-      clientMessageId,
-      behaviorMode: "quickChatRestricted",
-    };
-    if (cwd) opts.cwd = cwd;
-    if (attachments.length > 0) opts.attachments = attachments;
-    if (sendPermissionMode !== null) {
-      opts.permissionMode = toCorePermissionMode(sendPermissionMode);
-    }
-
-    dispatch({
-      type: "user_message",
-      bucket,
-      text: sendOpts.displayText ?? prompt,
-      clientMessageId,
-    });
-    setBusyForKey(bucket, true);
-    runningBucketRef.current = bucket;
-    engineToBucketRef.current.set(engineSessionId, bucket);
-    window.codeshell.registerBrowserSessionBucket({
-      sessionId: engineSessionId,
-      bucket,
-      partition: browserPartitionForBucket(bucket),
-    });
-    if (cwd && attachments.length > 0) {
-      void window.codeshell
-        .markAttachmentsSent({
-          cwd,
-          sessionId: engineSessionId,
-          attachments,
-          quickChatClaimId: session.creationNonce,
-        })
-        .catch((err) => {
-          window.codeshell.log("quick_chat.attachments.mark_sent_failed", {
-            bucket,
-            error: String((err as Error)?.message ?? err),
-          });
-        });
-    }
-
-    void runAfterModelSwitch({
-      sessionId: engineSessionId,
-      model: sendModelKey,
-      text: prompt,
-      opts,
-      run: window.codeshell.run,
-    })
-      .then((r) => {
-        if (
-          !Object.values(quickChatSessionsRef.current).some(
-            (liveSession) => liveSession.sessionId === engineSessionId,
-          )
-        ) {
-          return;
-        }
-        setBusyForKey(bucket, false);
-        if (runningBucketRef.current === bucket) {
-          runningBucketRef.current = null;
-        }
-        window.codeshell.log("quick_chat.run.resolved", {
-          bucket,
-          sessionId: engineSessionId,
-          result: r as unknown as Record<string, unknown>,
-        });
-        const result = r as { reason?: string; text?: string } | null;
-        const reason = result?.reason;
-        if (reason === "image_error" || reason === "model_error" || reason === "prompt_too_long") {
-          const detail = result?.text?.replace(/^ERROR:\s*/, "") || t("misc.app.requestRejected");
-          dispatch({ type: "turn_end", bucket, reason: "error", detail });
-          toast({ message: detail, variant: "error" });
-        }
-      })
-      .catch((err) => {
-        setBusyForKey(bucket, false);
-        if (runningBucketRef.current === bucket) {
-          runningBucketRef.current = null;
-        }
-        window.codeshell.log("quick_chat.run.rejected", {
-          bucket,
-          sessionId: engineSessionId,
-          error: String((err as Error)?.message ?? err),
-        });
-      });
-  };
-
-  useEffect(() => {
-    if (!activeSessionId) return;
-    const queued = queuedInputs[activeBucket];
-    if (!queued || queued.length === 0) return;
-
-    if (busy) {
-      // A relay (打断重发) was requested for this bucket: don't steer — the abort
-      // is in flight and the !busy branch will drain+re-send once it lands.
-      if (relayingBuckets.has(activeBucket)) return;
-      // Step-gap steering (默认, 不打断): hand each not-yet-sent queued draft to
-      // the engine, which splices it into the running turn at its NEXT step
-      // boundary. The item STAYS in the panel (visible + revocable) — it's only
-      // removed when the engine's steer_injected event confirms it, at which
-      // point it renders as a user bubble. Send each id exactly once.
-      //
-      // Resolve the engine session from activeBucket (the bucket this effect
-      // operates on), NOT resolveActiveEngineSessionId() — the latter prefers
-      // runningBucketRef, which points at the LAST-started run. With two busy
-      // sessions (B started after A, user switches back to A and queues), that
-      // would steer A's text into B's engine session (cross-session串投).
-      const engineSessionId = resolveEngineSessionIdForBucket(activeBucket);
-      if (!engineSessionId) return; // run starting up; re-fires once it resolves
-      const bucket = activeBucket;
-      for (const item of queued) {
-        if (injectedSteerIdsRef.current.has(item.id) || steeredIdsRef.current.has(item.id)) {
-          continue;
-        }
-        if (!canSteerQueuedItem(item)) {
-          break;
-        }
-        steeredIdsRef.current.add(item.id);
-        void window.codeshell
-          .steer(engineSessionId, item.text, item.id, item.clientMessageId, item.attachments)
-          .then((res) => {
-            const accepted = (res as { result?: { accepted?: boolean } })?.result?.accepted;
-            if (accepted !== false) return;
-            if (!steeredIdsRef.current.has(item.id)) return;
-            void enqueueSerialTask(downgradeRunQueueRef.current, async () => {
-              if (!steeredIdsRef.current.has(item.id)) return;
-              steeredIdsRef.current.delete(item.id);
-              injectedSteerIdsRef.current.delete(item.id);
-              setQueuedInputs((prev) => removeQueuedInputById(prev, bucket, item.id));
-              dispatch({ type: "remove_pending_steers", bucket, steerIds: [item.id] });
-              window.codeshell.log("steer.idle_downgrade.run_started", {
-                bucket,
-                engineSessionId,
-                steerId: item.id,
-                clientMessageId: item.clientMessageId,
-              });
-              await send(item.text, {
-                bucket,
-                clientMessageId: item.clientMessageId,
-                attachments: item.attachments,
-                displayText: item.displayText,
-              });
-            });
-          })
-          .catch((err) => {
-            steeredIdsRef.current.delete(item.id);
-            window.codeshell.log("steer.enqueue_failed", {
-              bucket,
-              engineSessionId,
-              steerId: item.id,
-              clientMessageId: item.clientMessageId,
-              error: String((err as Error)?.message ?? err),
-            });
-          });
-      }
-      return;
-    }
-
-    // !busy: no live run. Either a 引导打断 relay handoff (drain the WHOLE queue
-    // as one merged re-send) or a leftover queue typed while idle (take the next
-    // item). Clear the relay marker once we fire.
-    const isRelay = relayingBuckets.has(activeBucket);
-    if (isRelay) {
-      const {
-        text,
-        displayText,
-        attachments,
-        ids,
-        state: next,
-      } = drainQueuedInput(queuedInputs, activeBucket);
-      ids.forEach((id) => {
-        steeredIdsRef.current.delete(id);
-        injectedSteerIdsRef.current.delete(id);
-      });
-      dispatch({ type: "remove_pending_steers", bucket: activeBucket, steerIds: ids });
-      setQueuedInputs(next);
-      setRelayingBuckets((prev) => {
-        if (!prev.has(activeBucket)) return prev;
-        const n = new Set(prev);
-        n.delete(activeBucket);
-        return n;
-      });
-      if (text !== null) send(text, { bucket: activeBucket, attachments, displayText });
-      return;
-    }
-    const { item, state: next } = dequeueQueuedInput(queuedInputs, activeBucket);
-    if (!item) {
-      setQueuedInputs(next);
-      return;
-    }
-    // The turn ended (busy→false). If this entry was already auto-steered into
-    // the engine but the turn finished BEFORE consuming it (no steer_injected),
-    // the entry is stranded in steerQueueBySid and would be eaten by the next
-    // run — re-sending it here as a fresh run would then double (one send +
-    // one leftover steer_injected). Revoke the stale steer first, so this
-    // send() is the single source. (cancel/turn-end does NOT clear the steer
-    // queue — same seam as the relay path's revokeSteeredForRelay.)
-    if (steeredIdsRef.current.has(item.id)) {
-      // Same as the steer path above: resolve from activeBucket so we revoke the
-      // stale steer on THIS session's engine, not runningBucketRef's.
-      const engineSessionId = resolveEngineSessionIdForBucket(activeBucket);
-      if (engineSessionId) void window.codeshell.unsteer(engineSessionId, item.id);
-      steeredIdsRef.current.delete(item.id);
-    }
-    injectedSteerIdsRef.current.delete(item.id);
-    dispatch({ type: "remove_pending_steers", bucket: activeBucket, steerIds: [item.id] });
-    setQueuedInputs(next);
-    if (item.text || (item.attachments?.length ?? 0) > 0) {
-      send(item.text, {
-        bucket: activeBucket,
-        clientMessageId: item.clientMessageId,
-        attachments: item.attachments,
-        displayText: item.displayText,
-      });
-    }
-  }, [busy, activeBucket, activeSessionId, queuedInputs, relayingBuckets]);
-
-  const newQueuedId = (): string =>
-    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `q-${queuedSeqRef.current++}`;
-
-  const queueInput = (
-    text: string,
-    queueOpts: {
-      bucket?: string;
-      clientMessageId?: string;
-      attachments?: InputAttachmentMeta[];
-      displayText?: string;
-    } = {},
-  ): void => {
-    const id = newQueuedId();
-    const clientMessageId = queueOpts.clientMessageId ?? newQueuedId();
-    const trimmed = text.trim();
-    const displayText = queueOpts.displayText?.trim();
-    const attachments = queueOpts.attachments?.filter(Boolean) ?? [];
-    if (!trimmed && !displayText && attachments.length === 0) return;
-    const bucket = queueOpts.bucket ?? activeBucket;
-    // No optimistic right-side bubble here. A queued draft lives ONLY in the
-    // left waiting panel (enqueueQueuedInput) until the engine consumes it and
-    // echoes steer_injected — the reducer then appends the real user bubble
-    // (types.ts steer_injected fallback). This matches Codex (queued = not
-    // shown in the feed; shown only once actually injected). The optimistic
-    // bubble was a workaround for TurnProcessGroupCard's missing user branch,
-    // now fixed, so it's no longer needed.
-    if (attachments.length > 0) {
-      toast({ message: t("chat.queue.attachmentsDeferred") });
-    }
-    setQueuedInputs((prev) =>
-      enqueueQueuedInput(prev, bucket, id, trimmed, clientMessageId, {
-        attachments,
-        displayText,
-      }),
-    );
-  };
-
-  // Before a relay (打断重发) aborts + re-sends the queue as a fresh run, revoke
-  // every queued draft that was ALREADY auto-steered into the engine. Otherwise
-  // the leftover steer entries survive the abort and get consumed by the new
-  // run → the same text lands twice (one relay re-send + one steer_injected).
-  // This is the queue↔relay seam: cancel() does not clear steerQueueBySid.
-  const revokeSteeredForRelay = (bucket: string = activeBucket): void => {
-    const engineSessionId = resolveEngineSessionIdForBucket(bucket);
-    if (!engineSessionId) return;
-    for (const item of queuedInputs[bucket] ?? []) {
-      if (!steeredIdsRef.current.has(item.id)) continue;
-      void window.codeshell.unsteer(engineSessionId, item.id);
-      steeredIdsRef.current.delete(item.id);
-    }
-  };
-
-  const forceSend = (
-    text: string,
-    forceOpts: {
-      bucket?: string;
-      clientMessageId?: string;
-      attachments?: InputAttachmentMeta[];
-      displayText?: string;
-    } = {},
-  ): void => {
-    const bucket = forceOpts.bucket ?? activeBucket;
-    revokeSteeredForRelay(bucket);
-    setQueuedInputs((prev) =>
-      enqueueQueuedInput(prev, bucket, newQueuedId(), text, forceOpts.clientMessageId, {
-        attachments: forceOpts.attachments,
-        displayText: forceOpts.displayText,
-      }),
-    );
-    setRelayingBuckets((prev) => new Set(prev).add(bucket));
-    stop(bucket, { relay: true });
-  };
-
-  const clearActiveQueuedInput = (): void => {
-    const ids = (queuedInputs[activeBucket] ?? []).map((i) => i.id);
-    setQueuedInputs((prev) => clearQueuedInput(prev, activeBucket));
-    const engineSessionId = resolveEngineSessionIdForBucket(activeBucket);
-    ids.forEach((id) => {
-      steeredIdsRef.current.delete(id);
-      injectedSteerIdsRef.current.delete(id);
-      // Best-effort revoke any that were already steered; consumed ones are a
-      // no-op (removed=false) and will still arrive as bubbles.
-      if (engineSessionId) void window.codeshell.unsteer(engineSessionId, id);
-    });
-    dispatch({ type: "remove_pending_steers", bucket: activeBucket, steerIds: ids });
-  };
-
-  const removeActiveQueuedInputAt = (index: number): void => {
-    const item = (queuedInputs[activeBucket] ?? [])[index];
-    if (!item) return;
-    const bucket = activeBucket;
-    // Drop BY ID, not index — the queue may shift between click and the async
-    // unsteer reply (another item could inject/remove meanwhile).
-    const drop = (): void => {
-      steeredIdsRef.current.delete(item.id);
-      injectedSteerIdsRef.current.delete(item.id);
-      dispatch({ type: "remove_pending_steers", bucket, steerIds: [item.id] });
-      setQueuedInputs((prev) => removeQueuedInputById(prev, bucket, item.id));
-    };
-    const engineSessionId = resolveEngineSessionIdForBucket(bucket);
-    if (!engineSessionId || !steeredIdsRef.current.has(item.id)) {
-      // Never steered (idle queue) — safe to drop immediately.
-      drop();
-      return;
-    }
-    // Already steered: ask the engine to revoke. If it was already consumed
-    // (removed === false) leave the panel entry — its steer_injected event will
-    // turn it into a bubble shortly (静默, no error). rpc() resolves the whole
-    // {id, result} envelope, so the flag is at .result.removed.
-    void window.codeshell.unsteer(engineSessionId, item.id).then((res) => {
-      const removed = (res as { result?: { removed?: boolean } })?.result?.removed;
-      if (removed !== false) drop();
-    });
-  };
-
-  // 全部引导(打断重发): abort the current turn and re-send the WHOLE queued draft
-  // merged into one message. Same relay-abort semantics as forceSend — the
-  // queue stays put; the !busy auto-send effect drains it as a relay re-send
-  // once the abort lands. (Non-interrupting step-boundary injection is now the
-  // QUEUE's default — see the auto-send effect — so this button is the explicit
-  // INTERRUPT entry, matching the composer 引导 button.)
-  const guideActiveQueuedInput = (): void => {
-    const queued = queuedInputs[activeBucket];
-    if (!queued || queued.length === 0) return;
-    revokeSteeredForRelay();
-    setRelayingBuckets((prev) => new Set(prev).add(activeBucket));
-    stop(activeBucket, { relay: true });
-  };
-
-  const stop = (bucketOverride?: string, opts?: { relay?: boolean }): void => {
-    // Guard: when wired as a click handler (onClick={stop}) React passes the
-    // MouseEvent as the first arg. Only honor a real string override; anything
-    // else falls through to the running/active bucket. Without this the event
-    // object reaches `bucket.indexOf` and throws — silently breaking Stop.
-    const override = typeof bucketOverride === "string" ? bucketOverride : undefined;
-    // opts.relay = 引导打断 (handoff to a queued re-send). We still draw the
-    // "你在 Ns 后停止了" marker for it now (gives elapsed + keeps the killed turn's
-    // content un-collapsed); the relayingBuckets marker set by the caller keeps
-    // liveTurnActive lit across the cancel→re-send gap. (relay no longer changes
-    // the turn_end dispatch — kept in the signature for call-site clarity.)
-    void opts;
-    // The composer Stop button belongs to the VIEWED conversation (its
-    // visibility is busy=busyKeys.has(activeBucket)), so default to activeBucket
-    // — NOT the global runningBucket ref, which points at whichever conversation
-    // sent last and would abort the wrong one when two run concurrently.
-    const bucket = resolveStopBucket(override, activeBucket, runningBucketRef.current);
-    if (!bucket) return;
-    const sep = bucket.indexOf("::");
-    const uiSessionId = sep > 0 ? bucket.slice(sep + 2) : null;
-    const projectBucketSegment = sep > 0 ? bucket.slice(0, sep) : null;
-    const projectId =
-      projectBucketSegment === GLOBAL_KEY || projectBucketSegment === null
-        ? null
-        : projectBucketSegment;
-    const summary =
-      uiSessionId && uiSessionId !== "_none_"
-        ? (sessionIndices[projectBucketSegment ?? GLOBAL_KEY]?.sessions.find(
-            (s) => s.id === uiSessionId,
-          ) ?? loadSessionIndex(projectId).sessions.find((s) => s.id === uiSessionId))
-        : undefined;
-    const engineSessionId = summary?.engineSessionId ?? uiSessionId ?? undefined;
-    window.codeshell.log("stop.click", { bucket, engineSessionId });
-    // Fire the cancel IPC, but don't wait for the round-trip — the
-    // user pressed Stop and expects the UI to reflect that NOW. Clear
-    // busy + routing optimistically; any stream events that arrive
-    // after this point are tail-end noise we can drop (the engine has
-    // already been told to abort).
-    // Manual-stop marker (TODO 2.8): a thin "你在 Ns 后停止了" line, using the
-    // turn-start time captured when busy went true. Read BEFORE setBusyForKey
-    // clears it.
-    const startedAt = busySinceRef.current.get(bucket);
-    const elapsedMs = startedAt !== undefined ? Date.now() - startedAt : undefined;
-    setBusyForKey(bucket, false);
-    if (runningBucketRef.current === bucket) runningBucketRef.current = null;
-    // Always mark the interrupted turn — even on the relay (引导接力) path. The
-    // "你在 Ns 后停止了" line gives the elapsed time AND tags the turn as stopped,
-    // which makes its TurnProcessGroup show its produced content flat (stopped →
-    // itemsVisible) instead of collapsing behind the fold header. relay still
-    // re-sends the queued input on the next busy=false tick; the turn_end just
-    // closes out the killed turn (and clears the streaming pointers, which the
-    // relay handoff needs anyway — see appendTurnEndMessage).
-    dispatch({ type: "turn_end", bucket, reason: "stopped", elapsedMs });
-    void window.codeshell.cancel(engineSessionId);
-  };
-
-  const resolveEngineSessionIdForBucket = useCallback(
-    (bucket: string): string | undefined => {
-      const quickChatSessionId = quickChatSessionIdFromBucket(bucket);
-      if (quickChatSessionId) return quickChatSessionId;
-      const { projectBucketSegment, projectId, sessionId: uiSessionId } = parsePanelBucket(bucket);
-      const summary = uiSessionId
-        ? (sessionIndices[projectBucketSegment]?.sessions.find((s) => s.id === uiSessionId) ??
-          loadSessionIndex(projectId).sessions.find((s) => s.id === uiSessionId))
-        : undefined;
-      return summary?.engineSessionId ?? uiSessionId ?? undefined;
+  useHostSubscriptions({
+    services: { toast, t, dispatch },
+    routing: {
+      coalescersRef,
+      coalescerSeqRef,
+      appliedSeqRef,
+      engineToBucketRef,
+      sessionIndicesRef,
+      runningBucketRef,
+      injectedSteerIdsRef,
+      steeredIdsRef,
+      activeBucketRef,
+      quickChatSessionsRef,
+      transcriptsRef,
     },
-    [sessionIndices],
-  );
-
-  // Resolve the engine sessionId for the currently-running bucket (same logic
-  // stop() uses). Returns undefined when nothing maps.
-  const resolveActiveEngineSessionId = (): string | undefined =>
-    resolveEngineSessionIdForBucket(runningBucketRef.current ?? activeBucket);
-
-  const setCompactingForKey = (key: string, val: boolean): void => {
-    const had = compactingBucketsRef.current.has(key);
-    if (had === val) return;
-    const next = new Set(compactingBucketsRef.current);
-    if (val) next.add(key);
-    else next.delete(key);
-    compactingBucketsRef.current = next;
-    setCompactingBuckets(next);
-  };
-
-  const compactActiveSession = (): void => {
-    if (busyKeys.has(activeBucket)) {
-      toast({ message: t("chat.compact.running"), variant: "error" });
-      return;
-    }
-    if (compactingBucketsRef.current.has(activeBucket)) {
-      toast({ message: t("chat.compact.inProgress") });
-      return;
-    }
-    const bucket = activeBucket;
-    const engineSessionId = resolveEngineSessionIdForBucket(bucket);
-    if (!engineSessionId) {
-      toast({ message: t("chat.compact.noSession"), variant: "error" });
-      return;
-    }
-    const promptTokensBefore = state.promptTokens;
-    setCompactingForKey(bucket, true);
-    void window.codeshell
-      .compactSession(engineSessionId)
-      .then((result) => {
-        const data = result.data;
-        if (compactWasNoop(data)) {
-          toast({
-            message: compactOutcomeMessage(data, t, lang),
-            variant: "success",
-          });
-          return;
-        }
-        dispatch({
-          type: "stream",
-          bucket,
-          event: {
-            type: "usage_update",
-            promptTokens: compactPromptTokensWithBaseline(data, promptTokensBefore),
-          } as StreamEvent,
-        });
-      })
-      .catch((e) => {
-        toast({
-          message: t("chat.compact.failed", {
-            error: e instanceof Error ? e.message : String(e),
-          }),
-          variant: "error",
-        });
-      })
-      .finally(() => setCompactingForKey(bucket, false));
-  };
-
-  // Extend the running goal (TODO 3.1). Fired by the "approaching limit" extend
-  // button; opts target whichever ceiling is closest (turns or stop-blocks).
-  const extendGoal = (opts: {
-    addTurns?: number;
-    addStopBlocks?: number;
-    addTokenBudget?: number;
-    addTimeBudgetMs?: number;
-  }): void => {
-    const engineSessionId = resolveEngineSessionIdForBucket(activeBucket);
-    if (!engineSessionId) return;
-    void window.codeshell
-      .goalExtend(engineSessionId, opts)
-      .catch((e) => window.codeshell.log("goal.extend.failed", { error: String(e) }));
-  };
-
-  const decideEnvelope = (
-    env: ApprovalRequestEnvelope,
-    decision: "approve" | "deny",
-    reason?: string,
-    scope?: ApproveChoice,
-    pathScope?: ApprovePathScope,
-  ): void => {
-    // Multi-session: thread engine sessionId so the worker routes the
-    // decision back to the right session's pendingApprovals map. `scope`
-    // (once/session/project) + `pathScope` (file/dir/tool, file tools) only
-    // ride along on approve; deny ignores them.
-    const approveScope = decision === "approve" ? scope : undefined;
-    const approvePathScope = decision === "approve" ? pathScope : undefined;
-    if (env.sessionId) {
-      // (sessionId, requestId, decision, reason, answer, scope, pathScope)
-      void window.codeshell.approve(
-        env.sessionId,
-        env.requestId,
-        decision,
-        reason,
-        undefined,
-        approveScope,
-        approvePathScope,
-      );
-    } else {
-      // Legacy (requestId, decision, reason, answer, scope, pathScope)
-      void window.codeshell.approve(
-        env.requestId,
-        decision,
-        reason,
-        undefined,
-        approveScope,
-        approvePathScope,
-      );
-    }
-    void window.codeshell.mobileRemote.notifyApprovalResolved({
-      requestId: env.requestId,
-      sessionId: env.sessionId,
-      approved: decision === "approve",
-    });
-    approvalBucketsRef.current.delete(env.requestId);
-    // The card itself gives instant optimistic feedback via its own local
-    // state (ApprovalCard `decided`), so the user never waits on this root-App
-    // re-render. Time the synchronous state churn anyway: if a future large
-    // session makes the App re-render janky on click, perf.approval.decide will
-    // surface it (no-op when perf logging is off). See the 2026-06-07 approval-
-    // scope spec / debugging note: IPC is fire-and-forget and the stream build
-    // is memoized, so this state update is the only synchronous work on click.
-    timePhase("approval.decide", () => {
-      // Compute the post-decision queue ONCE here. Reading `approvalQueue` from
-      // render scope inside the setApproval updater would see the STALE pre-filter
-      // value (the setApprovalQueue update above is batched and not yet committed),
-      // so with multiple queued approvals the "next" lookup could surface an
-      // already-decided one or skip the next. Derive both updates from this single
-      // filtered list instead.
-      const remaining = approvalQueue.filter((e) => e.requestId !== env.requestId);
-      setApprovalQueue(remaining);
-      setApprovalHistory((h) => [...h, { decision, envelope: env, reason, at: Date.now() }]);
-      setApproval((cur) => {
-        if (!cur || cur.requestId === env.requestId) {
-          return remaining[0] ?? null;
-        }
-        return cur;
-      });
-    });
-  };
-
-  const showWelcome = state.messages.length === 0;
-  const visibleApproval =
-    approval && approvalBucketsRef.current.get(approval.requestId) === activeBucket
-      ? approval
-      : null;
-  const approvalForBucket = (bucket: string): ApprovalRequestEnvelope | null =>
-    approvalQueue.find((env) => approvalBucketsRef.current.get(env.requestId) === bucket) ?? null;
-
-  const setViewMode = (v: ViewMode): void => {
-    setView((prev) => ({ ...prev, viewMode: v }));
-  };
-
-  // Right-side panel dock (dynamic tabs: files/browser/review/terminal). Panel
-  // state is bucket-owned below; only nonce sources stay global so repeated
-  // clicks can refire even if the same file/url is selected twice.
-  // Monotonic nonce source for revealFile, in a ref so the open-file handler
-  // (registered once) doesn't close over a stale `revealFile`.
-  const revealFileNonceRef = useRef<number>(0);
-  // A Files panel reports it has actually revealed the requested file; mark that
-  // nonce consumed so the request keeps lingering on its bucket prop (a later
-  // manually-opened Files tab reads it as already-handled and won't replay the
-  // old file) WITHOUT the timing race the old setTimeout(0) flip had.
-  const openUrlNonceRef = useRef<number>(0);
-  const openCliSessionNonceRef = useRef<number>(0);
-  // Comment anchors pinned from the panels (diff line / browser element / file
-  // line). They show as chips above the composer and ride along with the next
-  // message. Panels push them via the "codeshell:add-anchor" window event.
-  // Keyed by session bucket (anchorBuckets.ts) so switching sessions switches
-  // annotation sets; the browser surfaces echo the active bucket's browser
-  // anchors (synced to main → broadcast to popout windows below).
-  const [anchorsByBucket, setAnchorsByBucket] = useState<AnchorsByBucket>({});
-  const anchors = anchorsIn(anchorsByBucket, activeBucket);
-  // The add/remove event listeners register once; route through a ref so they
-  // always target the CURRENT bucket, not the one from their mount render.
-  const activeAnchorBucketRef = useRef(activeBucket);
-  activeAnchorBucketRef.current = activeBucket;
-  const removeAnchor = (id: string): void => {
-    setAnchorsByBucket((s) => removeAnchorFrom(s, activeAnchorBucketRef.current, id));
-  };
-  const updateAnchorComment = (id: string, comment: string): void => {
-    setAnchorsByBucket((s) => updateAnchorCommentIn(s, activeAnchorBucketRef.current, id, comment));
-  };
-  const clearAnchors = (): void => {
-    // Clear the active bucket AND the repo's draft slot — see clearAnchorBuckets.
-    setAnchorsByBucket((s) =>
-      clearAnchorBuckets(s, [activeAnchorBucketRef.current, bucketKey(activeProjectId, null)]),
-    );
-  };
-  // Panel state is owned by session bucket, not by the global App shell. This
-  // mirrors Codex's thread-owned dock model: switching sessions changes which
-  // PanelArea is visible; it never rewrites one session's browser/files/terminal
-  // state into another session.
-  const [panelByBucket, setPanelByBucket] = useState<Record<string, PanelBucketState>>(() => ({
-    [activeBucket]: hydratePanelBucketState(activeBucket),
-  }));
-
-  const updatePanelBucket = useCallback(
-    (targetBucket: string, updater: (state: PanelBucketState) => PanelBucketState) => {
-      setPanelByBucket((prev) => {
-        const current = prev[targetBucket] ?? hydratePanelBucketState(targetBucket);
-        const next = updater(current);
-        if (next === current) return prev;
-        return { ...prev, [targetBucket]: next };
-      });
+    permissions: {
+      approvalBucketsRef,
+      permissionForBucketRef,
+      defaultPermissionModeRef,
+      setApprovalQueue,
+      setApproval,
+      setPermissionOverrides,
     },
-    [],
-  );
+    sessions: { setQueuedInputs, setUnreadBuckets, setSessionIndices, setProjects },
+    activity: { mobileAnnounceSeqRef, setBusyForKey, setLifecycle, setBusyKeys },
+  });
 
-  const onRevealConsumed = useCallback(
-    (targetBucket: string, nonce: number) => {
-      updatePanelBucket(targetBucket, (state) => {
-        if (!state.revealFile || state.revealFile.nonce !== nonce || state.revealFile.consumed)
-          return state;
-        return { ...state, revealFile: { ...state.revealFile, consumed: true } };
-      });
+  const {
+    send,
+    sendQuickChat,
+    queueInput,
+    forceSend,
+    clearActiveQueuedInput,
+    removeActiveQueuedInputAt,
+    guideActiveQueuedInput,
+    stop,
+    resolveEngineSessionIdForBucket,
+    compactActiveSession,
+    extendGoal,
+    decideEnvelope,
+    showWelcome,
+    visibleApproval,
+    approvalForBucket,
+    setViewMode,
+  } = useRunController({
+    shell: { t, lang, toast, setView },
+    session: {
+      activeProjectId,
+      activeSessionId,
+      activeBucket,
+      projects,
+      sessionIndices,
+      setSessionIndices,
+      ensureActiveSession,
     },
-    [updatePanelBucket],
-  );
-
-  const updateQuickChatCreation = useCallback(
-    (
-      key: string,
-      nonce: string,
-      updater: (session: QuickChatSessionRef) => QuickChatSessionRef,
-    ): boolean => {
-      const current = quickChatSessionsRef.current[key];
-      if (!current || current.creationNonce !== nonce) return false;
-      const nextSession = updater(current);
-      const next = { ...quickChatSessionsRef.current, [key]: nextSession };
-      quickChatSessionsRef.current = next;
-      setQuickChatSessions(next);
-      return true;
+    preferences: {
+      permissionOverrides,
+      setPermissionOverrides,
+      defaultPermissionMode,
+      goalOverrides,
+      setGoalOverrides,
+      modelOverrides,
+      setModelOverrides,
+      defaultActiveModelKey,
     },
-    [],
-  );
-
-  const startQuickChatCreation = useCallback(
-    async (session: QuickChatSessionRef): Promise<void> => {
-      const { key, creationNonce: nonce, sessionId, bucket } = session;
-      try {
-        await window.codeshell.claimQuickChatSession(sessionId, nonce);
-        const claimStillActive = await window.codeshell.isQuickChatClaimActive(sessionId, nonce);
-        if (
-          !claimStillActive ||
-          !quickChatSessionsRef.current[key] ||
-          quickChatSessionsRef.current[key].creationNonce !== nonce
-        ) {
-          await window.codeshell.cleanupQuickChatSession(sessionId, nonce);
-          return;
-        }
-        if (session.contextMode === "blank" || !session.sourceSessionId) {
-          if (
-            !quickChatSessionsRef.current[key] ||
-            quickChatSessionsRef.current[key].creationNonce !== nonce
-          ) {
-            await window.codeshell.cleanupQuickChatSession(sessionId, nonce);
-            return;
-          }
-          engineToBucketRef.current.set(sessionId, bucket);
-          setModelOverrides((current) =>
-            current[session.ownerBucket] === undefined
-              ? current
-              : { ...current, [bucket]: current[session.ownerBucket] },
-          );
-          setPermissionOverrides((current) => ({
-            ...current,
-            [bucket]: current[session.ownerBucket] ?? defaultPermissionMode ?? "default",
-          }));
-          updateQuickChatCreation(key, nonce, (current) => ({ ...current, status: "ready" }));
-          return;
-        }
-
-        const result = await window.codeshell.forkSession({
-          sourceSessionId: session.sourceSessionId,
-          targetSessionId: sessionId,
-          mode: "full",
-          forkKind: "side",
-          quickChatClaimId: nonce,
-        });
-        const mainClaimStillActive = await window.codeshell.isQuickChatClaimActive(
-          result.sessionId,
-          nonce,
-        );
-        if (
-          !mainClaimStillActive ||
-          !quickChatSessionsRef.current[key] ||
-          quickChatSessionsRef.current[key].creationNonce !== nonce
-        ) {
-          await window.codeshell.cleanupQuickChatSession(result.sessionId, nonce);
-          return;
-        }
-        // Match Codex /side: inherited transcript remains in the child Engine's
-        // model context, while the side UI starts at its own conversation boundary.
-        // Never hydrate copied parent events into this renderer bucket.
-        dispatch({ type: "hydrate", bucket, state: foldTranscript([]) });
-        engineToBucketRef.current.set(result.sessionId, bucket);
-        setModelOverrides((current) =>
-          current[session.ownerBucket] === undefined
-            ? current
-            : { ...current, [bucket]: current[session.ownerBucket] },
-        );
-        setPermissionOverrides((current) => ({
-          ...current,
-          [bucket]: current[session.ownerBucket] ?? defaultPermissionMode ?? "default",
-        }));
-        updateQuickChatCreation(key, nonce, (current) => ({
-          ...current,
-          cwd: result.workspace.root,
-          status: "ready",
-          error: undefined,
-        }));
-      } catch (err) {
-        await window.codeshell.cleanupQuickChatSession(sessionId, nonce).catch(() => undefined);
-        const error = err as Error & { code?: number };
-        updateQuickChatCreation(key, nonce, (current) => ({
-          ...current,
-          status: "error",
-          error: { code: error.code, message: error.message || String(err) },
-        }));
-      }
+    runtime: {
+      setBusyForKey,
+      runningBucketRef,
+      engineToBucketRef,
+      noRepoCwdRef,
+      quickChatSessionsRef,
+      queuedInputs,
+      setQueuedInputs,
+      busy,
+      busyKeys,
+      relayingBuckets,
+      setRelayingBuckets,
+      steeredIdsRef,
+      injectedSteerIdsRef,
+      downgradeRunQueueRef,
+      queuedSeqRef,
+      busySinceRef,
+      compactingBucketsRef,
+      setCompactingBuckets,
     },
-    [defaultPermissionMode, updateQuickChatCreation],
-  );
-
-  const onOpenCliSessionConsumed = useCallback(
-    (targetBucket: string, nonce: number) => {
-      updatePanelBucket(targetBucket, (state) => {
-        if (!state.openCliSession || state.openCliSession.nonce !== nonce) return state;
-        return {
-          ...state,
-          openCliSession: { ...state.openCliSession, consumed: true },
-        };
-      });
+    transcript: { dispatch, state },
+    approvals: {
+      approval,
+      approvalQueue,
+      setApprovalQueue,
+      setApproval,
+      setApprovalHistory,
+      approvalBucketsRef,
     },
-    [updatePanelBucket],
-  );
+  });
 
-  const ensureQuickChatSession = useCallback(
-    (ownerBucket: string, tabId: string, cwd: string | null) => {
-      const key = quickChatTabKey(ownerBucket, tabId);
-      if (quickChatSessionsRef.current[key]) return;
-      const sessionId = makeQuickChatSessionId();
-      const bucket = quickChatBucket(sessionId);
-      const sourceSessionId = resolveEngineSessionIdForBucket(ownerBucket) ?? null;
-      const {
-        projectBucketSegment,
-        projectId,
-        sessionId: ownerUiSessionId,
-      } = parsePanelBucket(ownerBucket);
-      const sourceTitle = ownerUiSessionId
-        ? (sessionIndices[projectBucketSegment]?.sessions.find(
-            (item) => item.id === ownerUiSessionId,
-          )?.title ??
-          loadSessionIndex(projectId).sessions.find((item) => item.id === ownerUiSessionId)?.title)
-        : undefined;
-      const contextMode: QuickChatContextMode = sourceSessionId ? "full" : "blank";
-      const session: QuickChatSessionRef = {
-        key,
-        ownerBucket,
-        tabId,
-        sessionId,
-        bucket,
-        cwd,
-        sourceSessionId,
-        sourceTitle,
-        contextMode,
-        status: "creating",
-        creationNonce: makeQuickChatCreationNonce(),
-      };
-      quickChatSessionsRef.current = { ...quickChatSessionsRef.current, [key]: session };
-      setQuickChatSessions(quickChatSessionsRef.current);
-      void startQuickChatCreation(session);
+  const {
+    panelByBucket,
+    setPanelByBucket,
+    updatePanelBucket,
+    onRevealConsumed,
+    onOpenCliSessionConsumed,
+    ensureQuickChatSession,
+    cleanupQuickChatPanelSession,
+    restartQuickChatSession,
+    setQuickChatDraft,
+    setQuickChatAttachmentState,
+    setQuickChatPermission,
+    setQuickChatModel,
+    activePanelState,
+    panelBuckets,
+    togglePanel,
+    openPanel,
+    panelWidth,
+    beginPanelResize,
+    composerSeed,
+    composerSeedNonce,
+    startConversationalAutomation,
+    anchors,
+    anchorsByBucket,
+    removeAnchor,
+    updateAnchorComment,
+    clearAnchors,
+  } = usePanelBuckets({
+    sessions: {
+      activeBucket,
+      activeProjectId,
+      activeBucketRef,
+      sessionIndices,
+      sessionIndicesRef,
+      setSessionIndices,
     },
-    [resolveEngineSessionIdForBucket, sessionIndices, startQuickChatCreation],
-  );
-
-  const cleanupQuickChatPanelSession = useCallback((session: QuickChatSessionRef) => {
-    const claimKey = `${session.sessionId}\0${session.creationNonce}`;
-    if (quickChatLifecycleCleanupRef.current.has(claimKey)) return;
-    quickChatLifecycleCleanupRef.current.add(claimKey);
-    void window.codeshell
-      .cleanupQuickChatSession(session.sessionId, session.creationNonce)
-      .catch((error) =>
-        window.codeshell.log("quick_chat.delete_session_failed", {
-          sessionId: session.sessionId,
-          error: String(error),
-        }),
-      );
-  }, []);
-
-  const restartQuickChatSession = useCallback(
-    (session: QuickChatSessionRef, contextMode: QuickChatContextMode) => {
-      const sessionId = makeQuickChatSessionId();
-      const bucket = quickChatBucket(sessionId);
-      const next: QuickChatSessionRef = {
-        ...session,
-        sessionId,
-        bucket,
-        contextMode,
-        status: "creating",
-        error: undefined,
-        creationNonce: makeQuickChatCreationNonce(),
-      };
-      quickChatSessionsRef.current = { ...quickChatSessionsRef.current, [session.key]: next };
-      setQuickChatSessions(quickChatSessionsRef.current);
-      setPermissionOverrides((current) => {
-        const { [session.bucket]: _oldMode, ...rest } = current;
-        return {
-          ...rest,
-          [bucket]: current[session.ownerBucket] ?? defaultPermissionMode ?? "default",
-        };
-      });
-      setModelOverrides((current) => {
-        const { [session.bucket]: _oldModel, ...rest } = current;
-        return rest;
-      });
-      setQuickChatDrafts((current) => {
-        const { [session.bucket]: _oldDraft, ...rest } = current;
-        return rest;
-      });
-      setQuickChatAttachments((current) => {
-        const { [session.bucket]: _oldAttachments, ...rest } = current;
-        return rest;
-      });
-      engineToBucketRef.current.delete(session.sessionId);
-      dispatch({ type: "evict", bucket: session.bucket });
-      void window.codeshell
-        .cleanupQuickChatSession(session.sessionId, session.creationNonce)
-        .catch(() => undefined);
-      void startQuickChatCreation(next);
+    quickChat: {
+      quickChatSessions,
+      setQuickChatSessions,
+      setQuickChatDrafts,
+      setQuickChatAttachments,
+      quickChatSessionsRef,
     },
-    [defaultPermissionMode, startQuickChatCreation],
-  );
-
-  const setQuickChatDraft = useCallback((bucket: string, next: React.SetStateAction<string>) => {
-    setQuickChatDrafts((prev) => {
-      if (
-        !Object.values(quickChatSessionsRef.current).some((session) => session.bucket === bucket)
-      ) {
-        return prev;
-      }
-      const current = prev[bucket] ?? "";
-      const text = typeof next === "function" ? next(current) : next;
-      if (prev[bucket] === text) return prev;
-      if (!text) {
-        const { [bucket]: _drop, ...rest } = prev;
-        return rest;
-      }
-      return { ...prev, [bucket]: text };
-    });
-  }, []);
-
-  const setQuickChatAttachmentState = useCallback(
-    (bucket: string, next: React.SetStateAction<ImageAttachment[]>) => {
-      setQuickChatAttachments((prev) => {
-        if (
-          !Object.values(quickChatSessionsRef.current).some((session) => session.bucket === bucket)
-        ) {
-          return prev;
-        }
-        const current = prev[bucket] ?? EMPTY_ATTACHMENTS;
-        const attachments = typeof next === "function" ? next(current) : next;
-        if (attachments === current) return prev;
-        if (attachments.length === 0) {
-          const { [bucket]: _drop, ...rest } = prev;
-          return rest;
-        }
-        return { ...prev, [bucket]: attachments };
-      });
+    controls: {
+      engineToBucketRef,
+      setPermissionOverrides,
+      setModelOverrides,
+      defaultPermissionMode,
+      resolveEngineSessionIdForBucket,
+      dispatch,
+      approvalBucketsRef,
+      setApprovalQueue,
+      setApproval,
+      setBusyForKey,
     },
-    [],
-  );
-
-  const setQuickChatPermission = useCallback((bucket: string, mode: PermissionMode) => {
-    setPermissionOverrides((current) => ({ ...current, [bucket]: mode }));
-  }, []);
-
-  const setQuickChatModel = useCallback((bucket: string, option: ModelOption) => {
-    // Side-chat model choice is ephemeral and bucket-local: unlike the main
-    // composer, it must not update the global default or any sibling session.
-    setModelOverrides((current) =>
-      Object.values(quickChatSessionsRef.current).some((session) => session.bucket === bucket)
-        ? { ...current, [bucket]: option.key }
-        : current,
-    );
-  }, []);
-
-  useEffect(() => {
-    const liveQuickChatKeys = new Set<string>();
-    for (const [ownerBucket, panelState] of Object.entries(panelByBucket)) {
-      for (const tab of panelState.tabs) {
-        if (tab.kind === "quickChat") liveQuickChatKeys.add(quickChatTabKey(ownerBucket, tab.id));
-      }
-    }
-
-    const stale = Object.entries(quickChatSessions).filter(([key]) => !liveQuickChatKeys.has(key));
-    if (stale.length === 0) return;
-
-    const staleBuckets = new Set(stale.map(([, session]) => session.bucket));
-    const staleApprovalIds = new Set(
-      [...approvalBucketsRef.current.entries()]
-        .filter(([, bucket]) => staleBuckets.has(bucket))
-        .map(([requestId]) => requestId),
-    );
-    if (staleApprovalIds.size > 0) {
-      setApprovalQueue((prev) => {
-        const remaining = prev.filter((env) => !staleApprovalIds.has(env.requestId));
-        if (remaining.length === prev.length) return prev;
-        setApproval((cur) =>
-          cur && staleApprovalIds.has(cur.requestId) ? (remaining[0] ?? null) : cur,
-        );
-        return remaining;
-      });
-      for (const requestId of staleApprovalIds) approvalBucketsRef.current.delete(requestId);
-    }
-
-    const nextQuickChatSessions = { ...quickChatSessionsRef.current };
-    for (const [key] of stale) delete nextQuickChatSessions[key];
-    quickChatSessionsRef.current = nextQuickChatSessions;
-    setQuickChatSessions(nextQuickChatSessions);
-    setQuickChatDrafts((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      for (const [, session] of stale) {
-        if (session.bucket in next) {
-          delete next[session.bucket];
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-    setQuickChatAttachments((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      for (const [, session] of stale) {
-        if (session.bucket in next) {
-          delete next[session.bucket];
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-    setPermissionOverrides((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      for (const [, session] of stale) {
-        if (session.bucket in next) {
-          delete next[session.bucket];
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-    setModelOverrides((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      for (const [, session] of stale) {
-        if (session.bucket in next) {
-          delete next[session.bucket];
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-    for (const [, session] of stale) {
-      setBusyForKey(session.bucket, false);
-      if (runningBucketRef.current === session.bucket) runningBucketRef.current = null;
-      engineToBucketRef.current.delete(session.sessionId);
-      cleanupQuickChatPanelSession(session);
-      const coalescer = coalescersRef.current.get(session.bucket);
-      coalescersRef.current.delete(session.bucket);
-      coalescer?.discard();
-      coalescerSeqRef.current.delete(session.bucket);
-      appliedSeqRef.current.delete(session.bucket);
-      dispatch({ type: "evict", bucket: session.bucket });
-    }
-  }, [cleanupQuickChatPanelSession, panelByBucket, quickChatSessions]);
-
-  useEffect(
-    () => () => {
-      const sessions = Object.values(quickChatSessionsRef.current);
-      quickChatSessionsRef.current = {};
-      for (const session of sessions) {
-        cleanupQuickChatPanelSession(session);
-      }
-    },
-    [cleanupQuickChatPanelSession],
-  );
-
-  useEffect(() => {
-    setPanelByBucket((prev) => {
-      // Ensure the active bucket has state, and prune stale entries that are
-      // fully empty (closed, no tabs) and not the active one — those render no
-      // PanelArea, so keeping them would only grow the map without effect.
-      let changed = false;
-      const nextEntries: [string, PanelBucketState][] = [];
-      for (const [bucket, state] of Object.entries(prev)) {
-        if (bucket !== activeBucket && !state.open && state.tabs.length === 0) {
-          changed = true; // drop it
-          continue;
-        }
-        nextEntries.push([bucket, state]);
-      }
-      if (!prev[activeBucket]) {
-        nextEntries.push([activeBucket, hydratePanelBucketState(activeBucket)]);
-        changed = true;
-      }
-      return changed ? Object.fromEntries(nextEntries) : prev;
-    });
-  }, [activeBucket]);
-
-  // Persist only buckets whose serialized panel state actually changed, so a
-  // single-bucket edit (e.g. switching a tab) doesn't rewrite every bucket's
-  // localStorage key.
-  const savedPanelSnapshotsRef = useRef<Map<string, string>>(new Map());
-  useEffect(() => {
-    const seen = new Set<string>();
-    for (const [bucket, state] of Object.entries(panelByBucket)) {
-      seen.add(bucket);
-      const snapshot = { open: state.open, tabs: state.tabs, activeId: state.activeId };
-      const serialized = JSON.stringify(snapshot);
-      if (savedPanelSnapshotsRef.current.get(bucket) === serialized) continue;
-      savePanelState<PanelTab>(bucket, snapshot);
-      savedPanelSnapshotsRef.current.set(bucket, serialized);
-    }
-    // Forget buckets that were removed (e.g. pruned or session-deleted); their
-    // localStorage key is cleared at the removal site, so just drop the cache.
-    for (const bucket of [...savedPanelSnapshotsRef.current.keys()]) {
-      if (!seen.has(bucket)) savedPanelSnapshotsRef.current.delete(bucket);
-    }
-  }, [panelByBucket]);
-
-  const activePanelState = panelByBucket[activeBucket] ?? emptyPanelBucketState();
-
-  const panelBuckets = useMemo(() => {
-    const buckets = new Set<string>();
-    for (const [bucket, state] of Object.entries(panelByBucket)) {
-      if (state.tabs.length > 0) buckets.add(bucket);
-    }
-    if (activePanelState.open || activePanelState.tabs.length > 0) buckets.add(activeBucket);
-    return [...buckets];
-  }, [activeBucket, activePanelState.open, activePanelState.tabs.length, panelByBucket]);
-
-  const panelPluginHost: DesktopPanelPluginHost = {
-    getService(pluginId) {
-      if (pluginId !== QUICK_CHAT_PANEL_PLUGIN_ID) return undefined;
-      const service: QuickChatPanelPluginService = {
-        ensure: ({ bucket: ownerBucket, tabId, cwd }) => {
-          ensureQuickChatSession(ownerBucket, tabId, cwd);
-        },
-        release: ({ bucket: ownerBucket, tabId }) => {
-          const session = quickChatSessionsRef.current[quickChatTabKey(ownerBucket, tabId)];
-          if (session) cleanupQuickChatPanelSession(session);
-        },
-        render: (context) => {
-          const ownerBucket = context.bucket;
-          const { tabId, cwd } = context;
-          const key = quickChatTabKey(ownerBucket, tabId);
-          const quickSession = quickChatSessions[key];
-          const quickState = quickSession
-            ? (transcripts[quickSession.bucket] ?? INITIAL_STATE)
-            : INITIAL_STATE;
-          const quickBusy = quickSession ? busyKeys.has(quickSession.bucket) : false;
-          const quickApproval = quickSession ? approvalForBucket(quickSession.bucket) : null;
-          const quickCwd = cwd ?? noRepoCwdRef.current;
-          const quickPermissionMode = quickSession
-            ? (permissionOverrides[quickSession.bucket] ??
-              permissionOverrides[quickSession.ownerBucket] ??
-              defaultPermissionMode ??
-              "default")
-            : (defaultPermissionMode ?? "default");
-          const quickActiveModelKey = quickSession
-            ? (modelOverrides[quickSession.bucket] ?? defaultActiveModelKey)
-            : defaultActiveModelKey;
-          return (
-            <QuickChatPanelHost
-              cwd={quickCwd}
-              session={quickSession}
-              state={quickState}
-              busy={quickBusy}
-              draft={quickSession ? (quickChatDrafts[quickSession.bucket] ?? "") : ""}
-              attachments={
-                quickSession
-                  ? (quickChatAttachments[quickSession.bucket] ?? EMPTY_ATTACHMENTS)
-                  : EMPTY_ATTACHMENTS
-              }
-              permissionMode={quickPermissionMode}
-              modelOptions={modelOptions}
-              activeModelKey={quickActiveModelKey}
-              imageDetail={imageDetail}
-              onPermissionChange={setQuickChatPermission}
-              onModelChange={setQuickChatModel}
-              onRetry={(session) => restartQuickChatSession(session, "full")}
-              onUseBlank={(session) => restartQuickChatSession(session, "blank")}
-              onDraftChange={setQuickChatDraft}
-              onAttachmentsChange={setQuickChatAttachmentState}
-              onSend={sendQuickChat}
-              onStop={stop}
-              onAskUserAnswer={handleAskUserAnswer}
-              pendingApproval={quickApproval}
-              onApprovalDecide={
-                quickApproval
-                  ? (decision, reason, scope, pathScope) =>
-                      decideEnvelope(quickApproval, decision, reason, scope, pathScope)
-                  : undefined
-              }
-            />
-          );
-        },
-      };
-      return service;
-    },
-  };
-
-  const togglePanel = (): void =>
-    updatePanelBucket(activeBucket, (state) => {
-      const open = !state.open;
-      return {
-        ...state,
-        open,
-        requestNonce: state.requestNonce + 1,
-        requestKind: null,
-        openUrl: open ? state.openUrl : undefined,
-      };
-    });
-
-  const openPanel = (kind: PanelTab): void =>
-    updatePanelBucket(activeBucket, (state) => ({
-      ...state,
-      open: true,
-      requestNonce: state.requestNonce + 1,
-      requestKind: kind,
-    }));
+    stream: { runningBucketRef, coalescersRef, coalescerSeqRef, appliedSeqRef },
+    shell: { toast, t, setViewMode },
+  });
 
   useEffect(() => {
     const compatibilityApi = window.codeshell as typeof window.codeshell & {
@@ -4035,8 +1045,6 @@ function App() {
       return;
     }
     return compatibilityApi.onAgentPanelRequest((request) => {
-      // The request is broadcast to every renderer window. Only the window
-      // owning this session bucket may answer; main accepts the first response.
       if (request.bucket !== activeBucket && !panelByBucket[request.bucket]) return;
       const { projectId } = parsePanelBucket(request.bucket);
       const cwd = projectId
@@ -4058,78 +1066,47 @@ function App() {
     });
   }, [activeBucket, panelByBucket, projects, t, updatePanelBucket]);
 
-  // Dock width (px), persisted. The divider on the dock's left edge drags it.
-  const PANEL_MIN = 320;
-  const PANEL_MAX_FRAC = 0.7; // never let the dock eat more than 70% of the window
-  const [panelWidth, setPanelWidth] = useState<number>(() => {
-    const saved = Number(localStorage.getItem("codeshell.panelWidth"));
-    return Number.isFinite(saved) && saved >= PANEL_MIN ? saved : 480;
+  const {
+    handleAddProject,
+    handleRemoveProject,
+    handleToggleProject,
+    handlePinProject,
+    handleRenameProject,
+    handleArchiveAllSessions,
+    handleNewConversationForProject,
+    handleNewConversation,
+    handleSelectSession,
+    handleRenameSession,
+    handleArchiveSession,
+    handleDeleteSession,
+    handleOpenAutomationRunSession,
+    handleOpenAutomationDiskSession,
+  } = useSessionNavigation({
+    projects,
+    setProjects,
+    activeProjectId,
+    setActiveProjectId,
+    sessionIndices,
+    setSessionIndices,
+    setCollapsedProjects,
+    setUnreadBuckets,
+    setPermissionOverrides,
+    setModelOverrides,
+    setGoalOverrides,
+    panelByBucket,
+    setPanelByBucket,
+    activeBucketRef,
+    setView,
+    setRunsInitialRunId,
   });
-  const panelWidthRef = useRef(panelWidth);
-  const panelResizeCleanupRef = useRef<(() => void) | null>(null);
-  useEffect(() => {
-    panelWidthRef.current = panelWidth;
-  }, [panelWidth]);
-  useEffect(
-    () => () => {
-      panelResizeCleanupRef.current?.();
-    },
-    [],
-  );
-  const beginPanelResize = (startX: number, startWidth: number): void => {
-    panelResizeCleanupRef.current?.();
-    const prevUserSelect = document.body.style.userSelect;
-    const prevCursor = document.body.style.cursor;
-    let disposed = false;
-    const onMove = (ev: MouseEvent): void => {
-      // Dock is on the RIGHT, so dragging left (smaller clientX) widens it.
-      const delta = startX - ev.clientX;
-      const max = Math.max(PANEL_MIN, Math.floor(window.innerWidth * PANEL_MAX_FRAC));
-      const next = Math.min(max, Math.max(PANEL_MIN, startWidth + delta));
-      panelWidthRef.current = next;
-      setPanelWidth(next);
-    };
-    const cleanup = (persist: boolean): void => {
-      if (disposed) return;
-      disposed = true;
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-      window.removeEventListener("blur", onAbort);
-      window.removeEventListener("pointercancel", onAbort);
-      document.body.style.userSelect = prevUserSelect;
-      document.body.style.cursor = prevCursor;
-      panelResizeCleanupRef.current = null;
-      if (persist) localStorage.setItem("codeshell.panelWidth", String(panelWidthRef.current));
-    };
-    const onUp = (): void => cleanup(true);
-    const onAbort = (): void => cleanup(true);
-    document.body.style.userSelect = "none";
-    document.body.style.cursor = "col-resize";
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    window.addEventListener("blur", onAbort);
-    window.addEventListener("pointercancel", onAbort);
-    panelResizeCleanupRef.current = () => cleanup(false);
+
+  const delegatePetTask = (projectId: string | null, prompt: string): void => {
+    const message = prompt.trim();
+    if (!message) return;
+    handleNewConversationForProject(projectId);
+    void send(message, { bucket: bucketKey(projectId, null) });
   };
 
-  // Conversational automation creation: seed the chat composer with a starter
-  // prompt and switch to chat. The agent explains automation, asks what to do
-  // and when, then calls CronCreate — the user never touches cron syntax.
-  const [composerSeed, setComposerSeed] = useState("");
-  const [composerSeedNonce, setComposerSeedNonce] = useState(0);
-  const startConversationalAutomation = (): void => {
-    // Start a FRESH draft session — never pile onto whatever task/run session
-    // happened to be active. Mirrors handleNewConversation: clear
-    // activeSessionId so a brand-new session materializes on first send.
-    const projectId = activeProjectId;
-    setSessionIndices((prev) => ({
-      ...prev,
-      [projectBucketSegmentFor(projectId)]: setActiveSession(projectId, null),
-    }));
-    setComposerSeed(t("misc.app.automationSeed"));
-    setComposerSeedNonce((n) => n + 1);
-    setViewMode("chat");
-  };
   const toggleSidebar = (): void =>
     setView((p) => ({ ...p, sidebarCollapsed: !p.sidebarCollapsed }));
   // toggleInspector retained as a no-op for menu/palette wiring that
@@ -4183,181 +1160,6 @@ function App() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [paletteOpen, searchOpen, sessionSearchOpen, sessionIndices, activeProjectId, view.viewMode]);
-
-  // A chat "files changed" card asked to review its edited files: open the
-  // review panel in the dock, focused on those files.
-  useEffect(() => {
-    const onReview = (e: Event): void => {
-      const detail = (e as CustomEvent<{ files?: string[]; diff?: string }>).detail;
-      const files = detail?.files;
-      updatePanelBucket(activeBucketRef.current, (state) => ({
-        ...state,
-        open: true,
-        reviewFiles: Array.isArray(files) && files.length > 0 ? files : undefined,
-        reviewDiff: detail?.diff || undefined,
-        requestNonce: state.requestNonce + 1,
-        requestKind: "review",
-      }));
-    };
-    window.addEventListener("codeshell:review-files", onReview);
-    return () => window.removeEventListener("codeshell:review-files", onReview);
-  }, [updatePanelBucket]);
-
-  // A chat answer link (http/https) was clicked: open it in the in-app browser
-  // panel instead of the OS browser. BrowserPanel listens for the same event to
-  // open the URL in a new tab; here we just surface the dock + browser panel.
-  useEffect(() => {
-    const onOpenUrl = (e: Event): void => {
-      const detail = (e as CustomEvent<{ url?: string; bucket?: string }>).detail;
-      const url = detail?.url;
-      if (!url) return;
-      const targetBucket = detail?.bucket || activeBucketRef.current;
-      // Carry the URL down on the target bucket BEFORE surfacing the panel, so
-      // a freshly-mounted BrowserPanel navigates to it immediately.
-      const nonce = (openUrlNonceRef.current ?? 0) + 1;
-      openUrlNonceRef.current = nonce;
-      updatePanelBucket(targetBucket, (state) => ({
-        ...state,
-        open: true,
-        openUrl: { url, nonce },
-        requestNonce: state.requestNonce + 1,
-        requestKind: "browser",
-      }));
-    };
-    window.addEventListener("codeshell:open-url", onOpenUrl);
-    return () => window.removeEventListener("codeshell:open-url", onOpenUrl);
-  }, [updatePanelBucket]);
-
-  useEffect(() => {
-    const onOpenCliSession = (event: Event): void => {
-      const detail = (event as CustomEvent<Partial<OpenCliSessionEventDetail>>).detail;
-      if (
-        typeof detail?.externalSessionId !== "string" ||
-        !detail.externalSessionId.trim() ||
-        typeof detail.cwd !== "string" ||
-        !detail.cwd.trim() ||
-        typeof detail.sourceSessionId !== "string" ||
-        !detail.sourceSessionId.trim() ||
-        (detail.cliKind !== "claude-code" && detail.cliKind !== "codex")
-      ) {
-        return;
-      }
-      const targetBucket = resolveOpenCliSessionBucket(
-        detail.sourceSessionId,
-        engineToBucketRef.current,
-        sessionIndicesRef.current,
-      );
-      if (!targetBucket) {
-        toast({
-          message: t("panels.room.ownerSessionUnavailable"),
-          variant: "error",
-        });
-        return;
-      }
-      const nonce = openCliSessionNonceRef.current + 1;
-      openCliSessionNonceRef.current = nonce;
-      updatePanelBucket(targetBucket, (state) => ({
-        ...state,
-        open: true,
-        openCliSession: {
-          nonce,
-          externalSessionId: detail.externalSessionId!,
-          cliKind: detail.cliKind!,
-          cwd: detail.cwd!,
-        },
-        requestNonce: state.requestNonce + 1,
-        requestKind: "ccRoom",
-      }));
-    };
-    window.addEventListener("codeshell:open-cli-session", onOpenCliSession);
-    return () => window.removeEventListener("codeshell:open-cli-session", onOpenCliSession);
-  }, [t, toast, updatePanelBucket]);
-
-  // A chat answer's file path link was clicked: open it in the in-app Files
-  // panel. FilesPanel listens for the same event to select + reveal the file;
-  // here we just surface the dock + files panel.
-  useEffect(() => {
-    const onOpenFile = (e: Event): void => {
-      const detail = (e as CustomEvent<{ path?: string; cwd?: string | null }>).detail;
-      if (!detail?.path) return;
-      const nonce = (revealFileNonceRef.current ?? 0) + 1;
-      revealFileNonceRef.current = nonce;
-      // Fresh, un-consumed request — the targeted (or newly opened) Files panel
-      // reveals it, then reports back via onRevealConsumed so we flip `consumed`
-      // true. The request lingers on the shared prop (so a LATER manually-opened
-      // Files tab sees it already-consumed and does NOT replay it — the "new tab
-      // shows the old file" bug), but we mark it consumed only AFTER a panel has
-      // actually revealed it. The old code flipped `consumed` on a setTimeout(0),
-      // which raced the freshly-mounted panel's effect: when THIS click also
-      // created the Files tab, the flip landed before the new panel's reveal
-      // effect ran, so the first click opened an empty tab and you had to click
-      // again. Event-driven consume removes that race.
-      updatePanelBucket(activeBucketRef.current, (state) => ({
-        ...state,
-        open: true,
-        revealFile: { path: detail.path!, cwd: detail.cwd ?? null, nonce, consumed: false },
-        requestNonce: state.requestNonce + 1,
-        requestKind: "files",
-      }));
-    };
-    window.addEventListener("codeshell:open-file", onOpenFile);
-    return () => window.removeEventListener("codeshell:open-file", onOpenFile);
-  }, [updatePanelBucket]);
-
-  // A panel pinned a comment anchor (diff line / browser element / file line).
-  // Accumulate it as a chip above the composer (into the active bucket).
-  useEffect(() => {
-    const onAnchor = (e: Event): void => {
-      const anchor = (e as CustomEvent<{ anchor?: Anchor }>).detail?.anchor;
-      if (anchor) {
-        setAnchorsByBucket((s) => addAnchorTo(s, activeAnchorBucketRef.current, anchor));
-      }
-    };
-    window.addEventListener("codeshell:add-anchor", onAnchor);
-    return () => window.removeEventListener("codeshell:add-anchor", onAnchor);
-  }, []);
-
-  // A browser popout window pinned an element anchor; it arrives over IPC
-  // (no id assigned yet). Add it to the composer like a local one. Removals
-  // initiated in a popout arrive the same way (by anchor id).
-  useEffect(() => {
-    const offAdd = window.codeshell.onBrowserAnchorFromPopout((raw) => {
-      const a = raw as Omit<Anchor, "id">;
-      if (a && a.kind && a.locator) {
-        setAnchorsByBucket((s) =>
-          addAnchorTo(s, activeAnchorBucketRef.current, { ...a, id: nextAnchorId() }),
-        );
-      }
-    });
-    const offRemove = window.codeshell.onBrowserAnchorRemoveFromPopout((id) => {
-      if (typeof id === "string" && id) {
-        setAnchorsByBucket((s) => removeAnchorFrom(s, activeAnchorBucketRef.current, id));
-      }
-    });
-    const offUpdate = window.codeshell.onBrowserAnchorUpdateFromPopout((raw) => {
-      const u = raw as { id?: string; comment?: string };
-      if (u && typeof u.id === "string" && typeof u.comment === "string") {
-        setAnchorsByBucket((s) =>
-          updateAnchorCommentIn(s, activeAnchorBucketRef.current, u.id!, u.comment!),
-        );
-      }
-    });
-    return () => {
-      offAdd();
-      offRemove();
-      offUpdate();
-    };
-  }, []);
-
-  // Push the active bucket's browser anchors to main, which broadcasts them to
-  // every browser popout window — the single state-down pipe that keeps all
-  // browser surfaces showing the same annotation set (and clears them all when
-  // a message sends). The main-window BrowserPanel gets the same list as a
-  // plain prop instead.
-  const browserAnchors = useMemo(() => browserAnchorsOf(anchors), [anchors]);
-  useEffect(() => {
-    window.codeshell.syncBrowserAnchors(browserAnchors);
-  }, [browserAnchors]);
 
   useEffect(() => {
     const off = window.codeshell.onMenuEvent((evt, payload) => {
@@ -4928,11 +1730,7 @@ function App() {
     petState.projection?.sessions.filter((session) => session.runState === "running").length ?? 0;
 
   return (
-    <div
-      className={`relative flex h-screen flex-col overflow-hidden bg-background text-foreground ${platformClass}`.trim()}
-      data-sidebar={view.sidebarCollapsed ? "collapsed" : "open"}
-      data-inspector="hidden"
-    >
+    <AppShell platformClass={platformClass} sidebarCollapsed={view.sidebarCollapsed}>
       <div
         className={isSettingsPage ? "hidden" : "flex min-h-0 flex-1 flex-col"}
         aria-hidden={isSettingsPage}
@@ -5025,12 +1823,20 @@ function App() {
           {/* Chat column + dock share a relative container so a maximized panel can
           overlay the chat/composer (TODO 2.4) without covering the sidebar. */}
           <div className="relative flex min-w-0 flex-1 overflow-hidden">
-            <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-              {isChatView && lifecycle && (
-                <div className="border-b border-border bg-muted px-4 py-1.5 text-xs text-muted-foreground">
-                  {lifecycle}
-                </div>
-              )}
+            <AppMainView
+              lifecycle={isChatView ? lifecycle : null}
+              searchLayer={
+                !isPetView ? (
+                  <SearchBar
+                    open={searchOpen}
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    onClose={() => setSearchOpen(false)}
+                    matchCount={matchCount}
+                  />
+                ) : null
+              }
+            >
               {isPetView ? (
                 <PetPage>
                   <PetWorldPane
@@ -5214,16 +2020,7 @@ function App() {
                   />
                 </>
               )}
-              {!isPetView && (
-                <SearchBar
-                  open={searchOpen}
-                  value={searchQuery}
-                  onChange={setSearchQuery}
-                  onClose={() => setSearchOpen(false)}
-                  matchCount={matchCount}
-                />
-              )}
-            </main>
+            </AppMainView>
 
             {/* PanelArea stays MOUNTED across close→reopen (hidden via display:none
           when !open) so the browser <webview> and terminal pty survive a dock
@@ -5232,76 +2029,47 @@ function App() {
           is reclaimed by BrowserPanel's own idle-eviction after a few minutes.
           We still gate on having tabs so an empty dock doesn't mount stray
           panel bodies before the user has opened anything. */}
-            {panelBuckets.map((panelBucket) => {
-              const panelState = panelByBucket[panelBucket] ?? emptyPanelBucketState();
-              const isActivePanelBucket = panelBucket === activeBucket;
-              const { projectId: panelProjectId } = parsePanelBucket(panelBucket);
-              const panelProject = panelProjectId
-                ? (projects.find((project) => project.id === panelProjectId) ?? null)
-                : null;
-              const panelEngineSessionId = resolveEngineSessionIdForBucket(panelBucket) ?? null;
-              const hidden = !isActivePanelBucket || !isChatView || !panelState.open;
-              const keepActiveBodyLive = panelState.open && (!isActivePanelBucket || !isChatView);
-
-              return (
-                <PanelArea
-                  key={panelBucket}
-                  // The dock is a chat-only surface. Hidden session-owned docks stay
-                  // mounted under their own bucket so browser/files/terminal state
-                  // cannot be rewritten by another session.
-                  hidden={hidden}
-                  keepActiveBodyLive={keepActiveBodyLive}
-                  projectPath={panelProject?.path ?? null}
-                  onClose={() =>
-                    updatePanelBucket(panelBucket, (state) => ({
-                      ...state,
-                      open: false,
-                      requestNonce: state.requestNonce + 1,
-                      requestKind: null,
-                      openUrl: undefined,
-                      openCliSession: undefined,
-                    }))
-                  }
-                  requestNonce={panelState.requestNonce}
-                  requestKind={panelState.requestKind}
-                  reviewFiles={panelState.reviewFiles}
-                  reviewDiff={panelState.reviewDiff}
-                  revealFile={panelState.revealFile}
-                  onRevealConsumed={(nonce) => onRevealConsumed(panelBucket, nonce)}
-                  openUrl={panelState.openUrl}
-                  openCliSession={panelState.openCliSession}
-                  onOpenCliSessionConsumed={(nonce) => onOpenCliSessionConsumed(panelBucket, nonce)}
-                  width={panelWidth}
-                  onResizeStart={beginPanelResize}
-                  onAttachImage={(p) => void attachImageByPath(p)}
-                  browserAnchors={anchorsIn(anchorsByBucket, panelBucket)}
-                  onRemoveBrowserAnchor={isActivePanelBucket ? removeAnchor : undefined}
-                  onUpdateBrowserAnchor={isActivePanelBucket ? updateAnchorComment : undefined}
-                  engineSessionId={panelEngineSessionId}
-                  busy={busyKeys.has(panelBucket)}
-                  tabs={panelState.tabs}
-                  setTabs={(next) =>
-                    updatePanelBucket(panelBucket, (state) => {
-                      const tabs = typeof next === "function" ? next(state.tabs) : next;
-                      const activeId =
-                        state.activeId && tabs.some((tab) => tab.id === state.activeId)
-                          ? state.activeId
-                          : (tabs[0]?.id ?? null);
-                      return { ...state, tabs, activeId };
-                    })
-                  }
-                  activeId={panelState.activeId}
-                  setActiveId={(next) =>
-                    updatePanelBucket(panelBucket, (state) => ({
-                      ...state,
-                      activeId: typeof next === "function" ? next(state.activeId) : next,
-                    }))
-                  }
-                  panelPluginHost={panelPluginHost}
-                  bucket={panelBucket}
-                />
-              );
-            })}
+            <SessionPanelDock
+              panelBuckets={panelBuckets}
+              panelByBucket={panelByBucket}
+              activeBucket={activeBucket}
+              isChatView={isChatView}
+              projects={projects}
+              updatePanelBucket={updatePanelBucket}
+              onRevealConsumed={onRevealConsumed}
+              onOpenCliSessionConsumed={onOpenCliSessionConsumed}
+              panelWidth={panelWidth}
+              beginPanelResize={beginPanelResize}
+              onAttachImage={(path) => void attachImageByPath(path)}
+              anchorsByBucket={anchorsByBucket}
+              removeAnchor={removeAnchor}
+              updateAnchorComment={updateAnchorComment}
+              resolveEngineSessionIdForBucket={resolveEngineSessionIdForBucket}
+              quickChatSessions={quickChatSessions}
+              transcripts={transcripts}
+              busyKeys={busyKeys}
+              approvalForBucket={approvalForBucket}
+              noRepoCwd={noRepoCwdRef.current}
+              permissionOverrides={permissionOverrides}
+              defaultPermissionMode={defaultPermissionMode}
+              modelOverrides={modelOverrides}
+              defaultActiveModelKey={defaultActiveModelKey}
+              quickChatDrafts={quickChatDrafts}
+              quickChatAttachments={quickChatAttachments}
+              modelOptions={modelOptions}
+              imageDetail={imageDetail}
+              setQuickChatPermission={setQuickChatPermission}
+              setQuickChatModel={setQuickChatModel}
+              ensureQuickChatSession={ensureQuickChatSession}
+              cleanupQuickChatPanelSession={cleanupQuickChatPanelSession}
+              restartQuickChatSession={restartQuickChatSession}
+              setQuickChatDraft={setQuickChatDraft}
+              setQuickChatAttachmentState={setQuickChatAttachmentState}
+              sendQuickChat={sendQuickChat}
+              stop={stop}
+              handleAskUserAnswer={handleAskUserAnswer}
+              decideEnvelope={decideEnvelope}
+            />
           </div>
         </div>
 
@@ -5343,6 +2111,7 @@ function App() {
         onAction={handlePetPeekAction}
         onDismiss={(peek) => settlePetPeek(peek, "dismissed")}
       />
+
       {isSettingsPage && (
         <div className="absolute inset-0 z-50 overflow-hidden bg-background">
           <SettingsPage
@@ -5363,7 +2132,7 @@ function App() {
           />
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }
 

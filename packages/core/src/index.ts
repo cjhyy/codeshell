@@ -39,6 +39,13 @@ export type {
   Settings,
   MCPServerConfig,
 } from "./types.js";
+export type {
+  GoalConfig,
+  GoalLifecycleConfig,
+  GoalLifecyclePhase,
+  GoalLifecycleTerminalReason,
+  GoalLifecycleV1,
+} from "./engine/goal.js";
 export { SessionIndex } from "./pet/session-index.js";
 export { PendingDecisionIndex, safePendingTitle } from "./pet/pending-decision-index.js";
 export type {
@@ -160,6 +167,15 @@ export {
   createMcpAuthenticatedFetch,
 } from "./tool-system/mcp-manager.js";
 export type { AskUserFn } from "./tool-system/builtin/ask-user.js";
+export type {
+  ExtensionModule,
+  ExtensionQueryHandler,
+  ExtensionTool,
+} from "./tool-system/capability-module.js";
+export {
+  registerExtensionModules,
+  queryExtensionModules,
+} from "./tool-system/capability-module.js";
 // taskManager singleton removed in the TodoWrite refactor; task state
 // lives in the transcript now. Type re-exports stay for SDK consumers
 // that imported the old `Task` shape.
@@ -388,108 +404,6 @@ export { listInstalledPlugins, type PluginListRow } from "./plugins/installer/li
 export { updatePluginByName, type UpdateResult } from "./plugins/installer/update.js";
 export { checkPluginUpdate, type UpdateCheck } from "./plugins/installer/checkUpdate.js";
 
-// ─── Arena ───────────────────────────────────────────────────────
-
-export { Arena } from "./arena/arena.js";
-export { MODEL_PRESETS, getMaxOutputTokens } from "./arena/model-presets.js";
-export type { ModelPreset } from "./arena/model-presets.js";
-export { detectArenaMode } from "./arena/detect-mode.js";
-export {
-  getStrategy,
-  getStrategyForPlan,
-  ReviewStrategy,
-  DiscussionStrategy,
-  PlanningStrategy,
-} from "./arena/strategies/index.js";
-export { planArena } from "./arena/planner.js";
-export { collectEvidence } from "./arena/providers/index.js";
-export { selectTools, hasTools } from "./arena/tools/selector.js";
-export { ArenaLedger } from "./arena/ledger.js";
-export { registerClaims, selectClaimsForReview } from "./arena/phases/claim-registry.js";
-export { buildDigest, formatDigest } from "./arena/digest-builder.js";
-export {
-  transitionClaim,
-  resolveClaimStatus,
-  markUnderReview,
-  applyReviewResult,
-  markUnresolved,
-  isTerminal,
-  validTransitions,
-} from "./arena/transitions.js";
-export type {
-  ArenaConfig,
-  ArenaMode,
-  ArenaResultV2,
-  ArenaStrategy,
-  ArenaParticipant,
-  ArenaBaseContext,
-  ArenaFinding,
-  FindingReview,
-  ParticipantReport,
-  ArenaConsensus,
-  ArenaConsensusItem,
-  ArenaRoadmapPhase,
-  ArenaProgressEvent,
-  ArenaPlan,
-  ArenaLens,
-  ArenaLensName,
-  ArenaSourceKind,
-  ArenaArtifact,
-  ArenaQuickFact,
-  FindingKind,
-  PeerVerdict,
-  // Evidence-Driven types
-  ToolTrace,
-  EvidencePacket,
-  FindingEvidenceLink,
-  ResearchDossier,
-  ClaimStatus,
-  ClaimRecord,
-  ClaimChallenge,
-  ClaimAdjudication,
-  RequestedCheck,
-  DebateRound,
-  DebateTurn,
-  TargetedCheckTask,
-  SharedResearchLedger,
-  RoundResearchDigest,
-  ArenaExecutionLimits,
-} from "./arena/types.js";
-
-// ─── Arena: Iterate mode ────────────────────────────────────────
-// Multi-model authoring loop (tournament v1 → critique-revise rounds).
-// Use IterativeArena to produce a draft from scratch (code, PRD, design doc);
-// use Arena (above) to review an existing artifact.
-export {
-  IterativeArena,
-  defaultIterateConvergence,
-  iterateDiffRatio,
-  iterateCodeFormat,
-  iterateDocumentFormat,
-  getIterateFormat,
-} from "./arena/index.js";
-export type {
-  IterateConfig,
-  IterateResult,
-  IterateSubject,
-  IterateFormat,
-  IterateProgressEvent,
-  IterateFormatPack,
-  Draft,
-  DraftCandidate,
-  Critique,
-  CritiqueCategory,
-  CritiqueEvidence,
-  CritiqueSeverity,
-  ConvergenceSignal,
-  Round,
-  AuthorRotation,
-  StoppedReason,
-  CheckpointFn,
-  CheckpointContext,
-  CheckpointAction,
-} from "./arena/index.js";
-
 // ─── Run (Managed Agent Lifecycle) ──────────────────────────────
 
 export {
@@ -621,25 +535,6 @@ export {
   getDefaultCredentialCipher,
 } from "./credentials/index.js";
 
-// ─── State (runtime singletons shared with TUI) ──────────────────
-/** @internal Shared with the in-repo TUI/desktop hosts; not stable SDK surface. */
-
-export {
-  getSessionId,
-  switchSession,
-  getOriginalCwd,
-  setOriginalCwd,
-  getProjectRoot,
-  setProjectRoot,
-  getCwdState,
-  getIsInteractive,
-  updateLastInteractionTime,
-  flushInteractionTime,
-  markScrollActivity,
-  type AttributedCounter,
-  type ChannelEntry,
-} from "./state.js";
-
 // ─── Utils (shared primitives used by TUI) ───────────────────────
 /** @internal Shared primitives for the in-repo TUI/desktop hosts; not stable SDK surface. */
 
@@ -724,7 +619,6 @@ export {
   resolveApiKey,
   appendOnboardingResult,
   detectEnvKeys,
-  saveArenaSettingsByKeys,
   type OnboardingResult,
 } from "./onboarding.js";
 
@@ -864,18 +758,6 @@ export { createInProcessClient } from "./protocol/helpers.js";
 // buildEngineConfigFromSettings) were only used in this re-export and have been
 // dropped. Hosts spawn the file directly via `node agent-server-stdio.js`.
 export type { ProtocolModelEntry } from "./protocol/types.js";
-
-// ─── Arena (extended for TUI) ───────────────────────────────────
-/** @internal Extended Arena surface for the in-repo TUI/desktop hosts; not stable SDK surface. */
-
-export {
-  formatArenaResult,
-  printArenaResult,
-  renderProgress,
-  createProgressRenderer,
-  type OutputSink,
-} from "./arena/render/terminal.js";
-export { formatArenaResultForSession } from "./arena/render/session.js";
 
 // ─── Plugins ─────────────────────────────────────────────────────
 

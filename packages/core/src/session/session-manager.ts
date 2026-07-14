@@ -37,13 +37,19 @@ import {
   normalizeCumulativeUsageCounters,
 } from "../engine/session-usage.js";
 import {
+  armGoalLifecycle,
+  createGoalLifecycle,
+  decodeGoalLifecycle,
   deriveLegacyGoalId,
-  isGoalTerminated,
-  isSameGoalInstance,
+  goalConfigFromLifecycle,
+  isGoalLifecycleCurrent,
   isSameGoalVersion,
   mergeGoalTerminals,
-  recordGoalTerminal,
+  terminateGoalLifecycle,
+  waitGoalLifecycle,
   type GoalConfig,
+  type GoalLifecycleTerminalReason,
+  type GoalLifecycleV1,
   type GoalTerminal,
   type PersistedGoalTerminationReason,
 } from "../engine/goal.js";
@@ -63,11 +69,183 @@ type StateSaveAttempt =
   | { ok: true }
   | {
       ok: false;
-      reason: "generation_conflict" | "lock_conflict" | "revision_conflict" | "kind_conflict";
+      reason:
+        | "generation_conflict"
+        | "lock_conflict"
+        | "revision_conflict"
+        | "kind_conflict"
+        | "goal_schema_conflict";
     };
+
+/** Non-Goal fields accepted by the generic latest-state merge path. */
+export type SessionStateFieldPatch = Readonly<
+  Partial<
+    Omit<
+      SessionState,
+      "sessionId" | "goalLifecycle" | "activeGoal" | "goalTerminal" | "goalTerminals"
+    >
+  >
+>;
+
+export type GoalTerminalSaveOutcome = "persisted" | "obsolete" | "failed";
 
 function sleepSync(ms: number): void {
   Atomics.wait(syncSleepCell, 0, 0, ms);
+}
+
+function lifecycleTerminalReason(
+  reason: PersistedGoalTerminationReason,
+): GoalLifecycleTerminalReason {
+  return reason;
+}
+
+function newestLegacyTerminal(state: SessionState): GoalTerminal | undefined {
+  return mergeGoalTerminals(state.goalTerminals, state.goalTerminal).at(-1);
+}
+
+function legacyTerminalMatchesGoal(terminal: GoalTerminal, goal: GoalConfig): boolean {
+  if (terminal.goalId && goal.goalId) {
+    return (
+      terminal.goalId === goal.goalId &&
+      Math.max(1, Math.floor(terminal.revision ?? 1)) ===
+        Math.max(1, Math.floor(goal.revision ?? 1))
+    );
+  }
+  return terminal.objective === goal.objective && terminal.setAtMs === goal.setAtMs;
+}
+
+/** Decode the canonical union or derive it once from legacy aliases. */
+function hydrateGoalLifecycle(state: SessionState): SessionState {
+  const hasCanonical = Object.prototype.hasOwnProperty.call(state, "goalLifecycle");
+  const persistedLifecycle = (state as { goalLifecycle?: unknown }).goalLifecycle;
+  let lifecycle: GoalLifecycleV1 | undefined;
+  if (hasCanonical && persistedLifecycle !== undefined) {
+    lifecycle = decodeGoalLifecycle(persistedLifecycle);
+    if (!lifecycle) {
+      throw new SessionError(
+        `Session goal lifecycle is unsupported or corrupt for ${state.sessionId}`,
+      );
+    }
+  } else if (state.activeGoal) {
+    const active: GoalConfig = {
+      ...state.activeGoal,
+      goalId: state.activeGoal.goalId ?? deriveLegacyGoalId(state.sessionId, state.activeGoal),
+      revision: Math.max(1, Math.floor(state.activeGoal.revision ?? 1)),
+    };
+    const terminal = mergeGoalTerminals(state.goalTerminals, state.goalTerminal).find((candidate) =>
+      legacyTerminalMatchesGoal(candidate, active),
+    );
+    const base = createGoalLifecycle(active, active.paused === true ? "paused" : "active");
+    lifecycle = terminal
+      ? terminateGoalLifecycle(
+          base,
+          lifecycleTerminalReason(terminal.reason),
+          terminal.terminatedAtMs ?? Date.now(),
+        )
+      : base;
+  } else {
+    const terminal = newestLegacyTerminal(state);
+    if (terminal) {
+      const goal: GoalConfig = {
+        objective: terminal.objective,
+        goalId:
+          terminal.goalId ??
+          deriveLegacyGoalId(state.sessionId, {
+            objective: terminal.objective,
+            setAtMs: terminal.setAtMs,
+          }),
+        revision: Math.max(1, Math.floor(terminal.revision ?? 1)),
+        ...(terminal.setAtMs !== undefined ? { setAtMs: terminal.setAtMs } : {}),
+      };
+      lifecycle = terminateGoalLifecycle(
+        createGoalLifecycle(goal, "active", terminal.terminatedAtMs ?? Date.now()),
+        lifecycleTerminalReason(terminal.reason),
+        terminal.terminatedAtMs ?? Date.now(),
+      );
+    }
+  }
+
+  if (lifecycle) state.goalLifecycle = lifecycle;
+  else delete state.goalLifecycle;
+
+  // Legacy aliases are migration inputs only. Never reconstruct them in RAM:
+  // all runtime readers and writers consume the canonical lifecycle union.
+  delete state.activeGoal;
+  delete state.goalTerminal;
+  delete state.goalTerminals;
+  return state;
+}
+
+/** New files and runtime state contain only the canonical union. */
+function stateForPersistence(state: SessionState): SessionState {
+  const persisted = { ...state };
+  delete persisted.activeGoal;
+  delete persisted.goalTerminal;
+  delete persisted.goalTerminals;
+  return persisted;
+}
+
+/**
+ * Temporary adapter for tests/older in-repo callers that still mutate the
+ * hydrated aliases before calling whole-state saveState. Production Goal paths
+ * use the domain methods below. The adapter never writes aliases to disk.
+ */
+function adoptCompatibilityGoalMutation(state: SessionState): void {
+  const activeTouched = Object.prototype.hasOwnProperty.call(state, "activeGoal");
+  const terminalTouched =
+    Object.prototype.hasOwnProperty.call(state, "goalTerminal") ||
+    Object.prototype.hasOwnProperty.call(state, "goalTerminals");
+  if (!activeTouched && !terminalTouched) return;
+  const lifecycle = decodeGoalLifecycle(state.goalLifecycle);
+  const alias = state.activeGoal
+    ? {
+        ...state.activeGoal,
+        goalId: state.activeGoal.goalId ?? deriveLegacyGoalId(state.sessionId, state.activeGoal),
+        revision: Math.max(1, Math.floor(state.activeGoal.revision ?? 1)),
+      }
+    : undefined;
+  const terminals = mergeGoalTerminals(state.goalTerminals, state.goalTerminal);
+
+  if (!lifecycle) {
+    if (alias) {
+      state.goalLifecycle = createGoalLifecycle(alias, alias.paused === true ? "paused" : "active");
+    }
+    return;
+  }
+
+  if (alias) {
+    const sameIdentity = lifecycle.goalId === alias.goalId;
+    const sameRevision = lifecycle.revision === alias.revision;
+    const matchingTerminal = terminals.find((terminal) =>
+      legacyTerminalMatchesGoal(terminal, alias),
+    );
+    if (matchingTerminal) {
+      const base = createGoalLifecycle(alias, alias.paused === true ? "paused" : "active");
+      state.goalLifecycle = terminateGoalLifecycle(
+        base,
+        lifecycleTerminalReason(matchingTerminal.reason),
+        matchingTerminal.terminatedAtMs ?? Date.now(),
+      );
+      return;
+    }
+    if (lifecycle.phase === "terminal" && sameIdentity && sameRevision) return;
+    const canonicalGoal = goalConfigFromLifecycle(lifecycle);
+    if (!sameIdentity || !sameRevision || !isSameGoalVersion(alias, canonicalGoal)) {
+      state.goalLifecycle = createGoalLifecycle(alias, alias.paused === true ? "paused" : "active");
+    }
+    return;
+  }
+
+  const matchingTerminal = terminals.find((terminal) =>
+    legacyTerminalMatchesGoal(terminal, goalConfigFromLifecycle(lifecycle)),
+  );
+  if (matchingTerminal && lifecycle.phase !== "terminal") {
+    state.goalLifecycle = terminateGoalLifecycle(
+      lifecycle,
+      lifecycleTerminalReason(matchingTerminal.reason),
+      matchingTerminal.terminatedAtMs ?? Date.now(),
+    );
+  }
 }
 
 export interface SessionBundle {
@@ -615,7 +793,7 @@ export class SessionManager {
 
     const fallback: SessionWorkspace = { root: fallbackMainRoot, kind: "main" };
     state.workspace = fallback;
-    this.saveState(state);
+    state.stateRevision = this.updateSessionState(sessionId, { workspace: fallback });
     return {
       ok: true,
       cwd: fallbackMainRoot,
@@ -630,8 +808,8 @@ export class SessionManager {
 
   /**
    * Cheap "does this session have a persisted goal?" probe — reads only
-   * state.json, NOT the transcript (like readSessionMainRoot). A persistent goal lives ONLY
-   * in state.activeGoal; it is never appended to the transcript as an event, so
+   * state.json, NOT the transcript (like readSessionMainRoot). A persistent goal lives in
+   * the canonical goalLifecycle union; it is never appended to the transcript as an event, so
    * a session rebuilt from disk (e.g. localStorage wiped) can't recover the
    * goal from its messages. The desktop host calls this on session load to
    * re-surface the active-goal block + its Cancel button, which would otherwise
@@ -648,11 +826,12 @@ export class SessionManager {
     const stateFile = join(this.sessionsDir, sessionId, "state.json");
     if (!existsSync(stateFile)) return undefined;
     try {
-      const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
-      const goal = state.activeGoal;
-      if (!goal || isGoalTerminated(goal, state.goalTerminals, state.goalTerminal)) {
-        return undefined;
-      }
+      const state = hydrateGoalLifecycle(
+        JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState,
+      );
+      const lifecycle = state.goalLifecycle;
+      if (!lifecycle || lifecycle.phase === "terminal") return undefined;
+      const goal = goalConfigFromLifecycle(lifecycle);
       // Expose a concrete version even for legacy state.json so UI delete/edit
       // operations can send an expected fence instead of acting unconditionally.
       return {
@@ -667,8 +846,8 @@ export class SessionManager {
 
   /**
    * Disk-only "wipe this session's persistent goal" — the counterpart to
-   * readActiveGoal. Reads state.json, removes state.activeGoal, records a
-   * cancelled terminal marker, and rewrites it atomically (via saveState).
+   * readActiveGoal. Reads state.json, transitions the matching goalLifecycle
+   * to terminal(user_cleared), and rewrites it through the field-level CAS.
    * Returns true only if a goal was actually
    * present (idempotent — clearing a session with no goal is a no-op returning
    * false). Never throws on an unknown / malformed / traversal-shaped id
@@ -695,15 +874,17 @@ export class SessionManager {
       } catch {
         return false;
       }
-      const clearedGoal = state.activeGoal;
-      if (!clearedGoal) return false;
-      clearedGoal.goalId ??= deriveLegacyGoalId(sessionId, clearedGoal);
-      const revision = clearedGoal.revision ?? 1;
+      const lifecycle = state.goalLifecycle;
+      if (!lifecycle || !isGoalLifecycleCurrent(lifecycle)) return false;
+      const clearedGoal = goalConfigFromLifecycle(lifecycle);
+      const revision = lifecycle.revision;
       if (expected?.goalId !== undefined && clearedGoal.goalId !== expected.goalId) return false;
       if (expected?.revision !== undefined && revision !== expected.revision) return false;
 
-      recordGoalTerminal(state, clearedGoal, "cancelled");
-      if (isSameGoalVersion(state.activeGoal, clearedGoal)) state.activeGoal = undefined;
+      const terminal = terminateGoalLifecycle(lifecycle, "user_cleared");
+      if (!terminal) return false;
+      state.goalLifecycle = terminal;
+      hydrateGoalLifecycle(state);
       const result = this.saveStateAttempt(state);
       if (result.ok) return true;
       if (result.reason !== "revision_conflict") return false;
@@ -718,8 +899,8 @@ export class SessionManager {
    * replacement. A changed objective receives a fresh deadline anchor.
    *
    * Returns undefined when the session/goal is absent or the patch is invalid.
-   * The returned revision lets a live Engine rebase its in-memory bundle so a
-   * later whole-state heartbeat cannot overwrite this control operation.
+   * The returned state lets a live Engine rebase its in-memory bundle after
+   * this control operation.
    */
   updateActiveGoal(
     sessionId: string,
@@ -748,12 +929,10 @@ export class SessionManager {
       } catch {
         return undefined;
       }
-      const current = state.activeGoal;
-      if (!current || isGoalTerminated(current, state.goalTerminals, state.goalTerminal)) {
-        return undefined;
-      }
-      current.goalId ??= deriveLegacyGoalId(sessionId, current);
-      const currentRevision = Math.max(1, Math.floor(current.revision ?? 1));
+      const lifecycle = state.goalLifecycle;
+      if (!lifecycle || !isGoalLifecycleCurrent(lifecycle)) return undefined;
+      const current = goalConfigFromLifecycle(lifecycle);
+      const currentRevision = lifecycle.revision;
       expectedGoalId ??= current.goalId;
       expectedRevision ??= currentRevision;
       if (current.goalId !== expectedGoalId || currentRevision !== expectedRevision) {
@@ -769,7 +948,8 @@ export class SessionManager {
       };
       if (patch.paused === true) goal.paused = true;
       else if (patch.paused === false) delete goal.paused;
-      state.activeGoal = goal;
+      state.goalLifecycle = createGoalLifecycle(goal, goal.paused === true ? "paused" : "active");
+      hydrateGoalLifecycle(state);
 
       const result = this.saveStateAttempt(state);
       if (result.ok) return { goal, stateRevision: state.stateRevision!, state };
@@ -792,7 +972,7 @@ export class SessionManager {
 
     let state: SessionState;
     try {
-      state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
+      state = hydrateGoalLifecycle(JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState);
     } catch (err) {
       // A corrupt state.json (external tampering, disk corruption, or a crash
       // during the one-time create() write) must surface as a clean SessionError
@@ -818,10 +998,7 @@ export class SessionManager {
    * object. saveState serializes the read/revision-check/write section with the
    * per-session lock and returns the new persisted revision to the caller.
    */
-  updateSessionState(
-    sessionId: string,
-    partial: Readonly<Partial<Omit<SessionState, "sessionId">>>,
-  ): number {
+  updateSessionState(sessionId: string, partial: SessionStateFieldPatch): number {
     assertSafeSessionId(sessionId);
     for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
       const state = this.readPersistedState(sessionId);
@@ -882,53 +1059,112 @@ export class SessionManager {
     throw new SessionError(`Session state revision conflict for ${sessionId}`);
   }
 
+  /** @deprecated Compatibility fixture writer; runtime code must use domain updates. */
   saveState(state: SessionState, generation?: number): boolean {
+    adoptCompatibilityGoalMutation(state);
     return this.saveStateAttempt(state, generation).ok;
   }
 
   /**
    * Persist one goal terminal transition without allowing a revision race to
-   * resurrect that goal. A CAS miss is handled as a domain merge: read the
-   * newest snapshot, append the terminal by goalId, clear only a matching
-   * activeGoal, then retry. Lock/generation conflicts remain distinct failures.
+   * resurrect that goal. This is always a Goal-domain update: read the newest
+   * snapshot, transition only the matching lifecycle identity, then commit. A detached run
+   * snapshot is never used as the write candidate,
+   * so a successful terminal transition cannot publish stale summary/workspace
+   * or accounting fields. Lock/generation conflicts remain distinct failures.
    */
   saveGoalTerminal(
     state: SessionState,
     goal: GoalConfig | undefined,
     reason: PersistedGoalTerminationReason,
   ): boolean {
-    if (!goal) return false;
-    // Work on a detached candidate first. A failed lock/generation write must
-    // not make the caller's live bundle *look* cleared: Engine uses that bundle
-    // to decide whether it may report goal_met/goal_cleared to the UI.
+    return this.saveGoalTerminalOutcome(state, goal, reason) !== "failed";
+  }
+
+  /**
+   * Persist a terminal transition and distinguish a durable commit from a stale
+   * run whose Goal identity has already been replaced. Callers may publish a
+   * terminal event only for `persisted`.
+   */
+  saveGoalTerminalOutcome(
+    state: SessionState,
+    goal: GoalConfig | undefined,
+    reason: PersistedGoalTerminationReason,
+  ): GoalTerminalSaveOutcome {
+    if (!goal) return "failed";
     const terminalGoal: GoalConfig = {
       ...goal,
       goalId: goal.goalId ?? deriveLegacyGoalId(state.sessionId, goal),
       revision: goal.revision ?? 1,
     };
-    const candidate: SessionState = {
-      ...state,
-      activeGoal: state.activeGoal ? { ...state.activeGoal } : undefined,
-      goalTerminal: state.goalTerminal ? { ...state.goalTerminal } : undefined,
-      goalTerminals: state.goalTerminals?.map((terminal) => ({ ...terminal })),
-    };
-    recordGoalTerminal(candidate, terminalGoal, reason);
-    if (isSameGoalVersion(candidate.activeGoal, terminalGoal)) candidate.activeGoal = undefined;
-
-    let result = this.saveStateAttempt(candidate);
-    if (result.ok) {
-      this.rebaseLiveGoalState(state, candidate);
-      return true;
-    }
-    if (result.reason !== "revision_conflict") return false;
-
     for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
       const latest = this.readPersistedState(state.sessionId);
-      recordGoalTerminal(latest, terminalGoal, reason);
-      if (isSameGoalVersion(latest.activeGoal, terminalGoal)) latest.activeGoal = undefined;
-      result = this.saveStateAttempt(latest);
+      const lifecycle = latest.goalLifecycle;
+      if (!lifecycle) return "failed";
+      if (
+        lifecycle.goalId !== terminalGoal.goalId ||
+        lifecycle.revision !== (terminalGoal.revision ?? 1)
+      ) {
+        // A newer replacement/edit already owns the canonical slot. The stale
+        // run is obsolete, but must not mutate that newer goal.
+        this.rebaseLiveState(state, latest);
+        return "obsolete";
+      }
+      if (lifecycle.phase !== "terminal") {
+        latest.goalLifecycle = terminateGoalLifecycle(lifecycle, lifecycleTerminalReason(reason));
+        hydrateGoalLifecycle(latest);
+      }
+      const result = this.saveStateAttempt(latest);
       if (result.ok) {
-        this.rebaseLiveGoalState(state, latest);
+        this.rebaseLiveState(state, latest);
+        return "persisted";
+      }
+      if (result.reason !== "revision_conflict") return "failed";
+    }
+    return "failed";
+  }
+
+  /**
+   * Arm or migrate one active goal as a Goal-domain update. The newest state is
+   * always the write base, so unrelated fields written by another host survive.
+   * Replacement is explicit and terminally closes the latest active identity;
+   * a non-replacement write may only normalize the same legacy/current goal.
+   */
+  saveActiveGoal(
+    state: SessionState,
+    goal: GoalConfig,
+    options: { replaceCurrent?: boolean } = {},
+  ): boolean {
+    const armedGoal: GoalConfig = {
+      ...goal,
+      goalId: goal.goalId ?? deriveLegacyGoalId(state.sessionId, goal),
+      revision: goal.revision ?? 1,
+    };
+    for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
+      const latest = this.readPersistedState(state.sessionId);
+      const current = latest.goalLifecycle;
+      if (current) {
+        const sameIdentity = current.goalId === armedGoal.goalId;
+        const sameRevision = current.revision === (armedGoal.revision ?? 1);
+        if (current.phase === "terminal" && sameIdentity && sameRevision) return false;
+        if (current.phase !== "terminal" && !options.replaceCurrent && !sameIdentity) return false;
+      }
+      if (
+        current?.phase === "waiting" &&
+        current.goalId === armedGoal.goalId &&
+        current.revision === (armedGoal.revision ?? 1)
+      ) {
+        latest.goalLifecycle = armGoalLifecycle(current) ?? current;
+      } else {
+        latest.goalLifecycle = createGoalLifecycle(
+          armedGoal,
+          armedGoal.paused === true ? "paused" : "active",
+        );
+      }
+      hydrateGoalLifecycle(latest);
+      const result = this.saveStateAttempt(latest);
+      if (result.ok) {
+        this.rebaseLiveState(state, latest);
         return true;
       }
       if (result.reason !== "revision_conflict") return false;
@@ -936,18 +1172,64 @@ export class SessionManager {
     return false;
   }
 
+  /** Persist active → waiting only for the expected concrete Goal version. */
+  markGoalWaiting(state: SessionState, goal: GoalConfig): boolean {
+    const expectedGoalId = goal.goalId ?? deriveLegacyGoalId(state.sessionId, goal);
+    const expectedRevision = Math.max(1, Math.floor(goal.revision ?? 1));
+    for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
+      const latest = this.readPersistedState(state.sessionId);
+      const lifecycle = latest.goalLifecycle;
+      if (!lifecycle) return false;
+      if (lifecycle.goalId !== expectedGoalId || lifecycle.revision !== expectedRevision) {
+        this.rebaseLiveState(state, latest);
+        return false;
+      }
+      if (lifecycle.phase === "waiting") {
+        this.rebaseLiveState(state, latest);
+        return true;
+      }
+      const waiting = waitGoalLifecycle(lifecycle);
+      if (!waiting) return false;
+      latest.goalLifecycle = waiting;
+      hydrateGoalLifecycle(latest);
+      const result = this.saveStateAttempt(latest);
+      if (result.ok) {
+        this.rebaseLiveState(state, latest);
+        return true;
+      }
+      if (result.reason !== "revision_conflict") return false;
+    }
+    return false;
+  }
+
+  /** Drop a matching active goal only when its terminal identity is durable. */
+  clearTerminatedActiveGoal(state: SessionState, goal: GoalConfig): boolean {
+    for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
+      const latest = this.readPersistedState(state.sessionId);
+      const expectedGoalId = goal.goalId ?? deriveLegacyGoalId(state.sessionId, goal);
+      const lifecycle = latest.goalLifecycle;
+      if (
+        !lifecycle ||
+        lifecycle.goalId !== expectedGoalId ||
+        lifecycle.revision !== Math.max(1, Math.floor(goal.revision ?? 1))
+      ) {
+        this.rebaseLiveState(state, latest);
+        return true;
+      }
+      if (lifecycle.phase !== "terminal") return false;
+      this.rebaseLiveState(state, latest);
+      return true;
+    }
+    return false;
+  }
+
   /**
-   * Whole-state fast path with a field-level fallback for a legitimate live
-   * run's final accounting/status update. Only revision conflicts are merged;
-   * generation fencing and exhausted lock contention still fail closed.
+   * Commit only the fields owned by a live run. The detached `state` object is
+   * used solely as a live-view target for the returned revision; it is never
+   * serialized wholesale. This prevents a Goal/workspace/title domain write
+   * from authorizing a later stale metadata overwrite.
    */
-  saveStateOrUpdateFields(
-    state: SessionState,
-    partial: Readonly<Partial<Omit<SessionState, "sessionId">>>,
-  ): boolean {
-    const result = this.saveStateAttempt(state);
-    if (result.ok) return true;
-    if (result.reason !== "revision_conflict") return false;
+  saveStateOrUpdateFields(state: SessionState, partial: SessionStateFieldPatch): boolean {
     try {
       const stateRevision = this.updateSessionState(state.sessionId, partial);
       Object.assign(state, partial, { stateRevision });
@@ -961,6 +1243,11 @@ export class SessionManager {
     // state.sessionId could come from a deserialized state.json that was
     // tampered with on disk. Validate before joining.
     assertSafeSessionId(state.sessionId);
+    try {
+      hydrateGoalLifecycle(state);
+    } catch {
+      return { ok: false, reason: "goal_schema_conflict" };
+    }
     const writerGeneration = generation ?? this.registeredCloseEpochs.get(state.sessionId);
     if (
       writerGeneration !== undefined &&
@@ -982,9 +1269,11 @@ export class SessionManager {
       let persisted: SessionState | undefined;
       if (existsSync(target)) {
         try {
-          persisted = JSON.parse(readFileSync(target, "utf-8")) as SessionState;
+          persisted = hydrateGoalLifecycle(
+            JSON.parse(readFileSync(target, "utf-8")) as SessionState,
+          );
         } catch {
-          // Preserve the historical recovery behavior for malformed state.
+          return { ok: false, reason: "goal_schema_conflict" };
         }
       }
 
@@ -1009,38 +1298,9 @@ export class SessionManager {
         state.title = persisted.title;
       }
 
-      const terminal = newestGoalTerminal(state.goalTerminal, persisted?.goalTerminal);
-      let terminals = mergeGoalTerminals(
-        persisted?.goalTerminals,
-        persisted?.goalTerminal,
-        state.goalTerminals,
-        state.goalTerminal,
-      );
-      if (terminal) {
-        state.goalTerminal = terminal;
-        // The compatibility single-marker view must also remain represented in
-        // the bounded identity set even if malformed timestamps disagree.
-        if (!isGoalTerminated(terminal, terminals)) {
-          terminals = mergeGoalTerminals(terminals.slice(1), terminal);
-        }
-      }
-      if (terminals.length > 0) state.goalTerminals = terminals;
-
-      const incomingGoal = state.activeGoal;
-      const diskGoal = persisted?.activeGoal;
-      const incomingTerminated = isGoalTerminated(incomingGoal, terminals);
-      const diskTerminated = isGoalTerminated(diskGoal, terminals);
-      if (incomingGoal && !incomingTerminated) {
-        state.activeGoal = incomingGoal;
-      } else if (diskGoal && !diskTerminated && !isSameGoalVersion(diskGoal, incomingGoal)) {
-        state.activeGoal = diskGoal;
-      } else {
-        state.activeGoal = undefined;
-      }
-
       state.stateRevision = (persistedRevision ?? incomingRevision ?? 0) + 1;
       const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
-      writeFileSync(tmp, JSON.stringify(state, null, 2), "utf-8");
+      writeFileSync(tmp, JSON.stringify(stateForPersistence(state), null, 2), "utf-8");
       renameSync(tmp, target);
       return { ok: true };
     } finally {
@@ -1104,7 +1364,7 @@ export class SessionManager {
       throw new SessionError(`Session state file not found: ${sessionId}`);
     }
     try {
-      return JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
+      return hydrateGoalLifecycle(JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState);
     } catch (err) {
       throw new SessionError(
         `Session state is corrupt for ${sessionId}: ${err instanceof Error ? err.message : String(err)}`,
@@ -1112,14 +1372,11 @@ export class SessionManager {
     }
   }
 
-  private rebaseLiveGoalState(live: SessionState, persisted: SessionState): void {
-    live.stateRevision = persisted.stateRevision;
-    live.workspace = persisted.workspace;
-    if ("title" in persisted) live.title = persisted.title;
-    else delete live.title;
-    live.activeGoal = persisted.activeGoal;
-    live.goalTerminal = persisted.goalTerminal;
-    live.goalTerminals = persisted.goalTerminals;
+  private rebaseLiveState(live: SessionState, persisted: SessionState): void {
+    for (const key of Object.keys(live) as Array<keyof SessionState>) {
+      if (!(key in persisted)) delete live[key];
+    }
+    Object.assign(live, persisted);
   }
 
   private generationKey(sessionId: string): string {
@@ -1549,17 +1806,6 @@ function validateForkToolPairs(events: readonly TranscriptEvent[]): void {
   if (!sameIds(projectedUses, metadataUses) || !sameIds(projectedResults, metadataResults)) {
     throw new SessionError(`Fork tool metadata does not match provider history`);
   }
-}
-
-function newestGoalTerminal(
-  incoming: GoalTerminal | undefined,
-  persisted: GoalTerminal | undefined,
-): GoalTerminal | undefined {
-  if (!incoming) return persisted;
-  if (!persisted) return incoming;
-  const incomingAt = incoming.terminatedAtMs ?? Number.NEGATIVE_INFINITY;
-  const persistedAt = persisted.terminatedAtMs ?? Number.NEGATIVE_INFINITY;
-  return incomingAt >= persistedAt ? incoming : persisted;
 }
 
 export type SessionListEntry = SessionState & {

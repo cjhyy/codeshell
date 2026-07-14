@@ -61,6 +61,242 @@ export interface GoalConfig {
   setAtMs?: number;
 }
 
+/** Persisted V1 lifecycle. Identity/control fields live outside config exactly once. */
+export type GoalLifecycleConfig = Omit<GoalConfig, "goalId" | "revision" | "paused">;
+
+export type GoalLifecycleTerminalReason =
+  | "completed"
+  | "cancelled"
+  | "user_cleared"
+  | "stop_blocks_exhausted"
+  | "token_budget_exhausted"
+  | "time_budget_exhausted"
+  | "max_turns_exhausted";
+
+interface GoalLifecycleBaseV1 {
+  version: 1;
+  goalId: string;
+  revision: number;
+  config: GoalLifecycleConfig;
+  updatedAtMs: number;
+}
+
+export type GoalLifecycleV1 =
+  | (GoalLifecycleBaseV1 & { phase: "active" })
+  | (GoalLifecycleBaseV1 & { phase: "paused" })
+  | (GoalLifecycleBaseV1 & {
+      phase: "waiting";
+      waitingSinceMs: number;
+      waitingFor: "finite_background_work";
+    })
+  | (GoalLifecycleBaseV1 & {
+      phase: "terminal";
+      terminal: { reason: GoalLifecycleTerminalReason; atMs: number };
+    });
+
+export type GoalLifecyclePhase = GoalLifecycleV1["phase"];
+
+function goalLifecycleConfig(goal: GoalConfig): GoalLifecycleConfig {
+  const { goalId: _goalId, revision: _revision, paused: _paused, ...config } = goal;
+  return config;
+}
+
+/** Build one canonical lifecycle record from the compatibility GoalConfig view. */
+export function createGoalLifecycle(
+  goal: GoalConfig,
+  phase: Exclude<GoalLifecyclePhase, "terminal" | "waiting"> = goal.paused === true
+    ? "paused"
+    : "active",
+  nowMs = Date.now(),
+): GoalLifecycleV1 {
+  const base: GoalLifecycleBaseV1 = {
+    version: 1,
+    goalId: goal.goalId ?? randomUUID(),
+    revision: Math.max(1, Math.floor(goal.revision ?? 1)),
+    config: goalLifecycleConfig(goal),
+    updatedAtMs: nowMs,
+  };
+  return { ...base, phase };
+}
+
+/** Compatibility view consumed by Engine/protocol while persistence uses the union. */
+export function goalConfigFromLifecycle(lifecycle: GoalLifecycleV1): GoalConfig {
+  return {
+    ...lifecycle.config,
+    goalId: lifecycle.goalId,
+    revision: lifecycle.revision,
+    ...(lifecycle.phase === "paused" ? { paused: true } : {}),
+  };
+}
+
+export function isGoalLifecycleArmable(lifecycle: GoalLifecycleV1): boolean {
+  return lifecycle.phase === "active" || lifecycle.phase === "waiting";
+}
+
+export function isGoalLifecycleCurrent(lifecycle: GoalLifecycleV1): boolean {
+  return lifecycle.phase !== "terminal";
+}
+
+/** Strict persisted decoder. Unknown versions and partial unions fail closed. */
+export function decodeGoalLifecycle(value: unknown): GoalLifecycleV1 | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const candidate = value as Record<string, unknown>;
+  if (candidate.version !== 1) return undefined;
+  if (typeof candidate.goalId !== "string" || candidate.goalId.length === 0) return undefined;
+  if (
+    typeof candidate.revision !== "number" ||
+    !Number.isInteger(candidate.revision) ||
+    candidate.revision < 1
+  ) {
+    return undefined;
+  }
+  if (
+    typeof candidate.updatedAtMs !== "number" ||
+    !Number.isFinite(candidate.updatedAtMs) ||
+    candidate.updatedAtMs < 0
+  ) {
+    return undefined;
+  }
+  if (
+    !candidate.config ||
+    typeof candidate.config !== "object" ||
+    Array.isArray(candidate.config)
+  ) {
+    return undefined;
+  }
+  const config = candidate.config as Record<string, unknown>;
+  // Identity and mutable lifecycle state have one canonical owner. Reject
+  // persisted payloads that duplicate them inside config instead of silently
+  // accepting two potentially conflicting truths.
+  for (const lifecycleKey of ["goalId", "revision", "paused"]) {
+    if (Object.prototype.hasOwnProperty.call(config, lifecycleKey)) return undefined;
+  }
+  if (typeof config.objective !== "string" || config.objective.trim().length === 0)
+    return undefined;
+  for (const key of ["tokenBudget", "timeBudgetMs", "maxTurns", "maxStopBlocks"]) {
+    const field = config[key];
+    if (
+      field !== undefined &&
+      (typeof field !== "number" || !Number.isFinite(field) || field <= 0)
+    ) {
+      return undefined;
+    }
+  }
+  for (const key of ["maxTurns", "maxStopBlocks"]) {
+    const field = config[key];
+    if (field !== undefined && !Number.isInteger(field)) return undefined;
+  }
+  if (
+    config.setAtMs !== undefined &&
+    (typeof config.setAtMs !== "number" || !Number.isFinite(config.setAtMs) || config.setAtMs < 0)
+  ) {
+    return undefined;
+  }
+  const phase = candidate.phase;
+  const base = {
+    version: 1 as const,
+    goalId: candidate.goalId,
+    revision: candidate.revision,
+    config: { ...(config as GoalLifecycleConfig), objective: config.objective.trim() },
+    updatedAtMs: candidate.updatedAtMs,
+  };
+  const hasWaitingFields =
+    Object.prototype.hasOwnProperty.call(candidate, "waitingFor") ||
+    Object.prototype.hasOwnProperty.call(candidate, "waitingSinceMs");
+  const hasTerminalField = Object.prototype.hasOwnProperty.call(candidate, "terminal");
+  if (phase === "active" || phase === "paused") {
+    if (hasWaitingFields || hasTerminalField) return undefined;
+    return { ...base, phase };
+  }
+  if (phase === "waiting") {
+    if (hasTerminalField) return undefined;
+    if (
+      candidate.waitingFor !== "finite_background_work" ||
+      typeof candidate.waitingSinceMs !== "number" ||
+      !Number.isFinite(candidate.waitingSinceMs) ||
+      candidate.waitingSinceMs < 0
+    ) {
+      return undefined;
+    }
+    return {
+      ...base,
+      phase,
+      waitingFor: "finite_background_work",
+      waitingSinceMs: candidate.waitingSinceMs,
+    };
+  }
+  if (phase === "terminal") {
+    if (hasWaitingFields) return undefined;
+    if (!candidate.terminal || typeof candidate.terminal !== "object") return undefined;
+    const terminal = candidate.terminal as Record<string, unknown>;
+    if (Object.keys(terminal).some((key) => key !== "reason" && key !== "atMs")) return undefined;
+    const reasons = new Set<GoalLifecycleTerminalReason>([
+      "completed",
+      "cancelled",
+      "user_cleared",
+      "stop_blocks_exhausted",
+      "token_budget_exhausted",
+      "time_budget_exhausted",
+      "max_turns_exhausted",
+    ]);
+    if (
+      !reasons.has(terminal.reason as GoalLifecycleTerminalReason) ||
+      typeof terminal.atMs !== "number" ||
+      !Number.isFinite(terminal.atMs) ||
+      terminal.atMs < 0
+    ) {
+      return undefined;
+    }
+    return {
+      ...base,
+      phase,
+      terminal: { reason: terminal.reason as GoalLifecycleTerminalReason, atMs: terminal.atMs },
+    };
+  }
+  return undefined;
+}
+
+export function waitGoalLifecycle(
+  lifecycle: GoalLifecycleV1,
+  nowMs = Date.now(),
+): GoalLifecycleV1 | undefined {
+  if (lifecycle.phase !== "active") return undefined;
+  return {
+    ...lifecycle,
+    phase: "waiting",
+    updatedAtMs: nowMs,
+    waitingSinceMs: nowMs,
+    waitingFor: "finite_background_work",
+  };
+}
+
+export function armGoalLifecycle(
+  lifecycle: GoalLifecycleV1,
+  nowMs = Date.now(),
+): GoalLifecycleV1 | undefined {
+  if (lifecycle.phase === "active") return lifecycle;
+  if (lifecycle.phase !== "waiting") return undefined;
+  const { waitingSinceMs: _waitingSinceMs, waitingFor: _waitingFor, ...base } = lifecycle;
+  return { ...base, phase: "active", updatedAtMs: nowMs };
+}
+
+export function terminateGoalLifecycle(
+  lifecycle: GoalLifecycleV1,
+  reason: GoalLifecycleTerminalReason,
+  nowMs = Date.now(),
+): GoalLifecycleV1 | undefined {
+  if (lifecycle.phase === "terminal") return lifecycle;
+  return {
+    version: 1,
+    goalId: lifecycle.goalId,
+    revision: lifecycle.revision,
+    config: lifecycle.config,
+    phase: "terminal",
+    updatedAtMs: nowMs,
+    terminal: { reason, atMs: nowMs },
+  };
+}
+
 /** A forced stop outcome for a Goal run. Some outcomes intentionally preserve the Goal. */
 export type GoalTerminationReason =
   | "stop_blocks_exhausted"
@@ -73,7 +309,8 @@ export type GoalTerminationReason =
 export type PersistedGoalTerminationReason =
   | Exclude<GoalTerminationReason, "judge_prompt_too_large">
   | "completed"
-  | "cancelled";
+  | "cancelled"
+  | "user_cleared";
 
 /**
  * Persisted terminal marker used to prevent a stale whole-state writer from

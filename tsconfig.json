@@ -19,9 +19,12 @@
       "react/compiler-runtime": ["packages/tui/src/react-compiler-runtime-shim.ts"],
       "@cjhyy/code-shell-core": ["packages/core/src/index.ts"],
       "@cjhyy/code-shell-core/internal": ["packages/core/src/index.internal.ts"],
+      "@cjhyy/code-shell-core/extension": ["packages/core/src/index.extension.ts"],
       "@cjhyy/code-shell-core/*": ["packages/core/src/*"],
       "@cjhyy/code-shell-capability-coding": ["packages/coding/src/index.ts"],
       "@cjhyy/code-shell-capability-coding/*": ["packages/coding/src/*"],
+      "@cjhyy/code-shell-arena": ["packages/arena/src/index.ts"],
+      "@cjhyy/code-shell-arena/*": ["packages/arena/src/*"],
       "@cjhyy/code-shell-tui": ["packages/tui/src/index.ts"],
       "@cjhyy/code-shell-tui/*": ["packages/tui/src/*"]
     },

@@ -1,5 +1,5 @@
 import { spawnSync } from 'child_process'
-import { getIsInteractive, logForDebugging, isEnvDefinedFalsy, isEnvTruthy, execFileNoThrow } from '@cjhyy/code-shell-core'
+import { logForDebugging, isEnvDefinedFalsy, isEnvTruthy, execFileNoThrow } from '@cjhyy/code-shell-core'
 
 let loggedTmuxCcDisable = false
 let checkedTmuxMouseHint = false
@@ -123,7 +123,7 @@ export function isMouseClicksDisabled(): boolean {
  * set falsy.
  */
 export function isFullscreenActive(): boolean {
-  return getIsInteractive() && isFullscreenEnvEnabled()
+  return isFullscreenEnvEnabled()
 }
 
 /**

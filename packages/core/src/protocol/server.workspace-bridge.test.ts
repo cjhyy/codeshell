@@ -161,4 +161,56 @@ describe("AgentServer workspace bridge", () => {
     expect(released).toEqual(["sess-release"]);
     expect(response.result).toEqual({ ok: true, workspace: { root: "/repo", kind: "main" } });
   });
+
+  test("agent/setWorkspace rebases a live session engine", async () => {
+    const updates: Array<{ sessionId: string; workspace: unknown }> = [];
+    const engine = {
+      setAskUser() {},
+      setPlanMode() {},
+      setBrowserBridge() {},
+      setInjectCredential() {},
+      isHeadless: () => false,
+      setSessionWorkspace(sessionId: string, workspace: unknown) {
+        updates.push({ sessionId, workspace });
+        return workspace;
+      },
+      async run(_task: string, opts: { sessionId: string }): Promise<EngineResult> {
+        return {
+          text: "ok",
+          reason: "completed",
+          sessionId: opts.sessionId,
+          turnCount: 1,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        };
+      },
+    } as unknown as Engine;
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => engine,
+    });
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager });
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: Methods.Run,
+      params: { sessionId: "sess-set-workspace", task: "start" },
+    });
+    await waitFor(() => t.sent.find((m) => m.id === 1 && m.result), "session should be live");
+
+    const workspace = { root: "/repo/.worktrees/feature", kind: "worktree" };
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 2,
+      method: Methods.SetWorkspace,
+      params: { sessionId: "sess-set-workspace", workspace },
+    });
+
+    const response = await waitFor(
+      () => t.sent.find((m) => m.id === 2 && m.result),
+      "setWorkspace response should resolve",
+    );
+    expect(updates).toEqual([{ sessionId: "sess-set-workspace", workspace }]);
+    expect(response.result).toEqual({ ok: true, workspace });
+  });
 });

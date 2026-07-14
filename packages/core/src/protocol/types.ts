@@ -284,6 +284,12 @@ export interface ReleaseWorkspaceParams {
   sessionId: string;
 }
 
+/** Persist and rebase a session workspace through its owning Engine. */
+export interface SetWorkspaceParams {
+  sessionId: string;
+  workspace: SessionWorkspace;
+}
+
 /** Inject context into a session transcript. */
 export interface InjectParams {
   sessionId: string;
@@ -348,23 +354,8 @@ export interface ConfigureParams {
 
 /** Query server state. */
 export interface QueryParams {
-  type:
-    | "sessions"
-    | "tools"
-    | "config"
-    | "session_detail"
-    | "compact"
-    | "config_set"
-    | "config_get"
-    | "permission_set"
-    | "models"
-    | "providers"
-    | "arena_status"
-    | "provider_add"
-    | "provider_refresh"
-    | "provider_delete"
-    | "model_add"
-    | "model_delete";
+  /** Built-in query name or a trusted CapabilityModule query contribution. */
+  type: string;
   sessionId?: string;
   /** Used by config_set / permission_set: dotted key path or mode field */
   key?: string;
@@ -548,6 +539,8 @@ export const Methods = {
   CloseSession: "agent/closeSession",
   /** Reset a session's workspace binding to main without closing it. */
   ReleaseWorkspace: "agent/releaseWorkspace",
+  /** Persist a workspace pointer through the live session owner. */
+  SetWorkspace: "agent/setWorkspace",
   /** Extend a running goal's turn/budget ceilings mid-run (TODO 3.1). */
   GoalExtend: "agent/goalExtend",
   /** Edit or pause/resume a session's persisted goal. */

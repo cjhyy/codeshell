@@ -108,10 +108,10 @@ describe("SessionManager goal controls", () => {
 
     expect(manager.clearActiveGoal("delete-goal", { goalId: "goal-1", revision: 8 })).toBe(true);
     expect(manager.readActiveGoal("delete-goal")).toBeUndefined();
-    expect(manager.resume("delete-goal").state.goalTerminal).toMatchObject({
-      goalId: "goal-1",
-      revision: 8,
-      reason: "cancelled",
-    });
+    const lifecycle = manager.resume("delete-goal").state.goalLifecycle;
+    expect(lifecycle?.phase).toBe("terminal");
+    if (lifecycle?.phase !== "terminal") throw new Error("expected terminal Goal lifecycle");
+    expect(lifecycle).toMatchObject({ goalId: "goal-1", revision: 8 });
+    expect(lifecycle.terminal.reason).toBe("user_cleared");
   });
 });

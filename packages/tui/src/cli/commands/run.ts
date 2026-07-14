@@ -80,7 +80,9 @@ export async function runCommand(options: RunOptions): Promise<void> {
   // bail-out gate.
   const resolved = resolveLLMConfigForTag(settings, "text", (settings as any).defaults?.text);
   if (!resolved && !options.apiKey) {
-    console.error("Error: 没有可用的文本模型连接。请在「连接」页添加,或用 --api-key/--model 指定。");
+    console.error(
+      "Error: 没有可用的文本模型连接。请在「连接」页添加,或用 --api-key/--model 指定。",
+    );
     process.exit(1);
   }
   const llmConfig: LLMConfig = resolved ?? {
@@ -138,7 +140,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
 
   // 2. Extract shared resources
   const modelPool = seedEngine.getModelPool();
-  const toolRegistry = seedEngine.getToolRegistry();
+  const toolRegistry = seedEngine.getRuntimeToolRegistry();
   const resolvedLlmConfig = seedEngine.getConfig().llm;
   // Cross-model knobs (temperature/imageDetail) the seed engine derived from
   // settings — inherited by every session engine so they don't each re-read.
@@ -175,13 +177,19 @@ export async function runCommand(options: RunOptions): Promise<void> {
         // Per-session overrides from the protocol request take precedence
         ...(slice.permissionMode ? { permissionMode: slice.permissionMode } : {}),
         ...(slice.preset ? { preset: slice.preset } : {}),
-        ...(slice.customSystemPrompt !== undefined ? { customSystemPrompt: slice.customSystemPrompt } : {}),
-        ...(slice.appendSystemPrompt !== undefined ? { appendSystemPrompt: slice.appendSystemPrompt } : {}),
+        ...(slice.customSystemPrompt !== undefined
+          ? { customSystemPrompt: slice.customSystemPrompt }
+          : {}),
+        ...(slice.appendSystemPrompt !== undefined
+          ? { appendSystemPrompt: slice.appendSystemPrompt }
+          : {}),
         ...(slice.maxTurns !== undefined ? { maxTurns: slice.maxTurns } : {}),
-        ...(slice.maxContextTokens !== undefined ? { maxContextTokens: slice.maxContextTokens } : {}),
+        ...(slice.maxContextTokens !== undefined
+          ? { maxContextTokens: slice.maxContextTokens }
+          : {}),
         ...(slice.cwd ? { cwd: slice.cwd } : {}),
       }),
-    maxSessions: 1,  // one-shot run; exactly one session per invocation
+    maxSessions: 1, // one-shot run; exactly one session per invocation
     idleTtlMs: 30 * 60 * 1000,
   });
   chatManager.startIdleSweeper();
@@ -238,7 +246,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
       const body =
         notifications.length > 0
           ? `${result.text ?? ""}\n\n${buildNotificationMessage(notifications)}`
-          : result.text ?? "";
+          : (result.text ?? "");
       writeLastMessage(options.outputLastMessage, body);
     }
 
@@ -258,7 +266,9 @@ export async function runCommand(options: RunOptions): Promise<void> {
  * sensitive-path deny list. `defaultMode` is the headless-vs-REPL default.
  */
 function mergeSandboxConfig(
-  user: { mode?: string; writableRoots?: string[]; deniedReads?: string[]; network?: string } | undefined,
+  user:
+    | { mode?: string; writableRoots?: string[]; deniedReads?: string[]; network?: string }
+    | undefined,
   defaultMode: SandboxConfig["mode"],
 ): SandboxConfig {
   const base = defaultSandboxConfig(defaultMode);

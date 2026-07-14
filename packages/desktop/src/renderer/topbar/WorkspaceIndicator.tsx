@@ -80,8 +80,10 @@ export function workspaceRowDisabledReason(
   row: SessionWorkspaceWorktreeInfo,
   current: SessionWorkspace | null,
   t: TFunction,
+  sessionBusy = false,
 ): string | null {
   if (current && samePath(row.path, current.root)) return t("topbar.workspace.current");
+  if (sessionBusy) return t("topbar.workspace.sessionBusyDisabled");
   if (!row.isMain && !row.branch) return t("topbar.workspace.detachedDisabled");
   return null;
 }
@@ -341,7 +343,7 @@ export function WorkspaceIndicator({
   };
 
   const switchTo = async (target: string): Promise<boolean> => {
-    if (!sessionId || !projectPath) return false;
+    if (!sessionId || !projectPath || sessionBusy) return false;
     setBusyAction(target);
     try {
       const next = await window.codeshell.switchSessionWorkspace(sessionId, projectPath, target);
@@ -357,6 +359,7 @@ export function WorkspaceIndicator({
   };
 
   const createNew = async () => {
+    if (sessionBusy) return;
     const nextSlug = slug.trim();
     if (!nextSlug) return;
     if (await switchTo(nextSlug)) {
@@ -366,7 +369,7 @@ export function WorkspaceIndicator({
   };
 
   const cleanup = async () => {
-    if (!confirm || !sessionId || !projectPath) return;
+    if (!confirm || !sessionId || !projectPath || sessionBusy) return;
     const { row, action } = confirm;
     setBusyAction(`${action}:${row.path}`);
     try {
@@ -439,6 +442,7 @@ export function WorkspaceIndicator({
                           row={row}
                           current={workspace}
                           busy={busyAction}
+                          sessionBusy={sessionBusy}
                           sessionId={sessionId}
                           mainBranch={mainBranch}
                           onSwitch={switchTo}
@@ -455,6 +459,7 @@ export function WorkspaceIndicator({
                           row={row}
                           current={workspace}
                           busy={busyAction}
+                          sessionBusy={sessionBusy}
                           sessionId={sessionId}
                           mainBranch={mainBranch}
                           onSwitch={switchTo}
@@ -471,6 +476,7 @@ export function WorkspaceIndicator({
                           row={row}
                           current={workspace}
                           busy={busyAction}
+                          sessionBusy={sessionBusy}
                           sessionId={sessionId}
                           mainBranch={mainBranch}
                           onSwitch={switchTo}
@@ -489,6 +495,7 @@ export function WorkspaceIndicator({
                 size="sm"
                 className="w-full justify-start"
                 onClick={() => setNewOpen(true)}
+                disabled={sessionBusy}
               >
                 <Plus className="h-4 w-4" />
                 {t("topbar.workspace.newWorktree")}
@@ -520,7 +527,7 @@ export function WorkspaceIndicator({
             <Button
               type="button"
               onClick={() => void createNew()}
-              disabled={!slug.trim() || !!busyAction}
+              disabled={sessionBusy || !slug.trim() || !!busyAction}
             >
               {t("topbar.workspace.create")}
             </Button>
@@ -546,7 +553,7 @@ export function WorkspaceIndicator({
               type="button"
               variant={confirm?.action === "discard" ? "destructive" : "default"}
               onClick={() => void cleanup()}
-              disabled={!!busyAction}
+              disabled={sessionBusy || !!busyAction}
             >
               {confirm?.action === "discard"
                 ? t("topbar.workspace.discard")
@@ -563,6 +570,7 @@ export function WorkspaceRow({
   row,
   current,
   busy,
+  sessionBusy = false,
   sessionId,
   mainBranch,
   onSwitch,
@@ -572,6 +580,7 @@ export function WorkspaceRow({
   row: SessionWorkspaceWorktreeInfo;
   current: SessionWorkspace | null;
   busy: string | null;
+  sessionBusy?: boolean;
   sessionId?: string | null;
   mainBranch?: string | null;
   onSwitch: (target: string) => void;
@@ -579,8 +588,14 @@ export function WorkspaceRow({
   cleanupMenuOpen?: boolean;
 }) {
   const { t } = useT();
-  const disabledReason = workspaceRowDisabledReason(row, current, t);
-  const cleanupState = workspaceCleanupActionState(row, t);
+  const disabledReason = workspaceRowDisabledReason(row, current, t, sessionBusy);
+  const cleanupState = sessionBusy
+    ? {
+        reason: t("topbar.workspace.sessionBusyDisabled"),
+        detachDisabled: true,
+        discardDisabled: true,
+      }
+    : workspaceCleanupActionState(row, t);
   const cleanupDisabledReason = cleanupState.reason;
   const active = current ? samePath(row.path, current.root) : false;
   const ownedByCurrentSession =

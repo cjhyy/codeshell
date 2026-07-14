@@ -6,24 +6,6 @@
  * consumers should import from `@cjhyy/code-shell-core` instead.
  */
 
-// ─── State (runtime singletons shared with TUI) ──────────────────
-
-export {
-  getSessionId,
-  switchSession,
-  getOriginalCwd,
-  setOriginalCwd,
-  getProjectRoot,
-  setProjectRoot,
-  getCwdState,
-  getIsInteractive,
-  updateLastInteractionTime,
-  flushInteractionTime,
-  markScrollActivity,
-  type AttributedCounter,
-  type ChannelEntry,
-} from "./state.js";
-
 // ─── Utils (shared primitives used by TUI) ───────────────────────
 
 export {
@@ -179,16 +161,6 @@ export {
 export { createInProcessClient } from "./protocol/helpers.js";
 export type { ProtocolModelEntry } from "./protocol/types.js";
 
-// ─── Arena host rendering ────────────────────────────────────────
-
-export {
-  formatArenaResult,
-  printArenaResult,
-  renderProgress,
-  createProgressRenderer,
-  type OutputSink,
-} from "./arena/render/terminal.js";
-export { formatArenaResultForSession } from "./arena/render/session.js";
 
 // ─── LLM host extensions ─────────────────────────────────────────
 

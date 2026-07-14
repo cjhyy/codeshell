@@ -139,7 +139,7 @@ describe("TurnLoop on_stop seam", () => {
       return {};
     });
     const loop = new TurnLoop(deps, makeConfig({ goal: "ship the feature" }));
-    await loop.run([{ role: "user", content: "go" }]);
+    const result = await loop.run([{ role: "user", content: "go" }]);
     expect(seenGoal).toMatchObject({ objective: "ship the feature" });
     expect((seenGoal as { goalId?: string }).goalId).toBeString();
   });
@@ -194,7 +194,7 @@ describe("TurnLoop goal_progress events", () => {
     ]);
   });
 
-  it("emits exhausted when the block cap forces a stop", async () => {
+  it("returns exhaustion metadata when the block cap forces a stop", async () => {
     const model = scriptedModel([noTool("loop")]);
     const { deps, hooks } = makeDeps(model);
     hooks.register("on_stop", () => ({
@@ -213,14 +213,14 @@ describe("TurnLoop goal_progress events", () => {
         },
       }),
     );
-    await loop.run([{ role: "user", content: "go" }]);
+    const result = await loop.run([{ role: "user", content: "go" }]);
 
-    // 2 not_met rounds, then exhausted at the cap. An approaching_limit marker
-    // is also emitted once as the tight cap (2) is neared; filter it out to
-    // assert the verdict sequence.
+    // TurnLoop reports the forced terminal to Engine. Engine publishes exhausted
+    // only after the lifecycle commit succeeds.
     const verdicts = events.filter((e) => e.status !== "approaching_limit");
-    expect(verdicts.map((e) => e.status)).toEqual(["not_met", "not_met", "exhausted"]);
-    expect(verdicts[verdicts.length - 1]!.round).toBe(2);
+    expect(verdicts.map((e) => e.status)).toEqual(["not_met", "not_met"]);
+    expect(result.goalTermination).toBe("stop_blocks_exhausted");
+    expect(result.goalTerminationRound).toBe(2);
   });
 
   it("emits nothing when there is no goal (plain run)", async () => {
@@ -235,7 +235,7 @@ describe("TurnLoop goal_progress events", () => {
         },
       }),
     );
-    await loop.run([{ role: "user", content: "go" }]);
+    const result = await loop.run([{ role: "user", content: "go" }]);
     expect(events).toEqual([]);
   });
 
@@ -264,15 +264,16 @@ describe("TurnLoop goal_progress events", () => {
         },
       }),
     );
-    await loop.run([{ role: "user", content: "go" }]);
+    const result = await loop.run([{ role: "user", content: "go" }]);
 
     const approaching = events.filter((e) => e.status === "approaching_limit");
     expect(approaching.length).toBe(1); // announced once, not stacked
     expect(approaching[0]!.nearest).toBe("stopBlocks");
     expect(approaching[0]!.stopBlocksRemaining).toBeLessThanOrEqual(3);
-    // It must come before the terminal "exhausted".
+    // Exhaustion is returned to Engine and is not published by TurnLoop.
     const lastStatus = events[events.length - 1]!.status;
-    expect(lastStatus).toBe("exhausted");
+    expect(lastStatus).toBe("not_met");
+    expect(result.goalTermination).toBe("stop_blocks_exhausted");
   });
 });
 

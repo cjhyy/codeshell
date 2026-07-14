@@ -49,6 +49,7 @@ export const core = {
         thisSession: "本会话",
         detached: "游离 HEAD",
         detachedDisabled: "无法切换到没有分支名的游离 worktree",
+        sessionBusyDisabled: "会话正在运行，请在当前回合结束后切换或清理工作区。",
         occupied: "占用中",
         external: "外部",
         dirty: "未提交",
@@ -166,6 +167,8 @@ export const core = {
         thisSession: "This session",
         detached: "Detached HEAD",
         detachedDisabled: "Cannot switch to a detached worktree with no branch name",
+        sessionBusyDisabled:
+          "The session is running. Switch or clean up workspaces after the current turn finishes.",
         occupied: "Occupied",
         external: "External",
         dirty: "Dirty",

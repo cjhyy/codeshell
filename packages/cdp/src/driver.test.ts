@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import {
   CdpActionsDriver,
   buildExtractScript,
@@ -438,19 +438,21 @@ describe("waitForLoad NaN/negative timeout guard", () => {
     expect((await d.waitForLoad(Number.NaN)).ok).toBe(true);
   });
 
-  // The original infinite-loop case: page NEVER completes + NaN timeout. The
-  // guard makes it terminate at the default 10s deadline instead of spinning
-  // forever. Necessarily ~10s of real polling — the only path that proves
-  // termination of the never-completing case. (12s test budget.)
+  // The original infinite-loop case: page NEVER completes + NaN timeout. Use a
+  // deterministic clock so this contract does not depend on wall-clock timer
+  // fairness while the full suite is running synchronous git subprocesses.
   test("a never-completing page with NaN timeout terminates at the default deadline", async () => {
     const { send } = fakeCdp({ "Runtime.evaluate": () => ({ result: { value: "loading" } }) });
     const d = new CdpActionsDriver(send, () => ({ url: "u" }));
-    const started = Date.now();
-    const r = await d.waitForLoad(Number.NaN);
-    expect(r.ok).toBe(true);
-    expect(r.detail).toMatch(/timed out/i);
-    expect(Date.now() - started).toBeLessThan(11_500); // ~10s default, NOT forever
-  }, 12_000);
+    const dateNow = spyOn(Date, "now").mockReturnValueOnce(0).mockReturnValue(10_001);
+    try {
+      const r = await d.waitForLoad(Number.NaN);
+      expect(r.ok).toBe(true);
+      expect(r.detail).toMatch(/timed out/i);
+    } finally {
+      dateNow.mockRestore();
+    }
+  });
 });
 
 describe("scroll NaN amount guard", () => {

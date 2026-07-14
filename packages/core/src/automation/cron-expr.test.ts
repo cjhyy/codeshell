@@ -89,6 +89,34 @@ describe("nextCronTime — timezone-aware next trigger", () => {
   });
 });
 
+describe("nextCronTime — DST and calendar boundaries", () => {
+  test("skips a nonexistent spring-forward wall-clock minute", () => {
+    // America/New_York jumps from 01:59 EST to 03:00 EDT on 2026-03-08,
+    // so that day's 02:30 does not exist. The next match is March 9.
+    const beforeGap = Date.UTC(2026, 2, 8, 5, 0, 0); // Mar 8 00:00 EST
+    const next = nextCronTime(parseCronExpression("30 2 * * *"), "America/New_York", beforeGap);
+    expect(next).toBe(Date.UTC(2026, 2, 9, 6, 30, 0)); // Mar 9 02:30 EDT
+  });
+
+  test("returns the second repeated wall-clock minute after fall-back", () => {
+    // 01:30 occurs twice on 2026-11-01. Starting at the first occurrence must
+    // return the second occurrence rather than skipping to the next day.
+    const firstOneThirty = Date.UTC(2026, 10, 1, 5, 30, 0); // 01:30 EDT
+    const next = nextCronTime(
+      parseCronExpression("30 1 * * *"),
+      "America/New_York",
+      firstOneThirty,
+    );
+    expect(next).toBe(Date.UTC(2026, 10, 1, 6, 30, 0)); // 01:30 EST
+  });
+
+  test("finds February 29 across a non-leap year boundary", () => {
+    const march2027 = Date.UTC(2027, 2, 1, 0, 0, 0);
+    const next = nextCronTime(parseCronExpression("0 0 29 2 *"), "UTC", march2027);
+    expect(next).toBe(Date.UTC(2028, 1, 29, 0, 0, 0));
+  });
+});
+
 describe("dayOfMonth + dayOfWeek — Vixie/POSIX OR semantics", () => {
   // 2026-01: Jan 1 is a Thursday; the first Monday is Jan 5; Jan 15 is a Thursday.
   const refJan1 = Date.UTC(2026, 0, 1, 0, 0, 0);

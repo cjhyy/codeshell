@@ -5,7 +5,7 @@ import { PermissionClassifier } from "../packages/core/src/tool-system/permissio
 import { HookRegistry } from "../packages/core/src/hooks/registry.js";
 
 function setupExecutor(classifierRule: "allow" | "deny" | "ask") {
-  const registry = new ToolRegistry({ builtinTools: ["Read"] });
+  const registry = new ToolRegistry({ builtinTools: [] });
   let toolRan = false;
   registry.registerTool(
     { name: "Read", description: "x", inputSchema: { type: "object" } },
@@ -105,7 +105,7 @@ describe("on_permission_check hook", () => {
   });
 
   it("handler cannot relax classifier 'deny' to 'ask'", async () => {
-    const registry = new ToolRegistry({ builtinTools: ["Read"] });
+    const registry = new ToolRegistry({ builtinTools: [] });
     let toolRan = false;
     registry.registerTool(
       { name: "Read", description: "x", inputSchema: { type: "object" } },

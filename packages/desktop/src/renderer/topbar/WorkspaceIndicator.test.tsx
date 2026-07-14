@@ -218,6 +218,7 @@ describe("WorkspaceIndicator helpers", () => {
 
     expect(workspaceRowDisabledReason(mainRow, current, t)).toBe("Current workspace");
     expect(workspaceRowDisabledReason(otherRow, current, t)).toBeNull();
+    expect(workspaceRowDisabledReason(otherRow, current, t, true)).toMatch(/running|in progress/i);
   });
 
   test("marks occupied rows as cleanup-disabled with an explanatory reason", () => {
