@@ -38,7 +38,71 @@ afterEach(async () => {
   root = null;
 });
 
-describe("LinkTab OAuth recovery", () => {
+describe("LinkTab integrations", () => {
+  test("surfaces the Chat Gateway in Link and starts configured channels", async () => {
+    ensureMiniDom();
+    let starts = 0;
+    Object.assign(window, {
+      codeshell: {
+        imGateway: {
+          status: async () => ({
+            running: false,
+            configPath: "/home/user/.code-shell/im-gateway/config.json",
+            configExists: true,
+            channels: ["telegram"],
+            wechatConnected: false,
+          }),
+          start: async () => {
+            starts += 1;
+            return {
+              running: true,
+              configPath: "/home/user/.code-shell/im-gateway/config.json",
+              configExists: true,
+              channels: ["telegram"],
+              wechatConnected: false,
+            };
+          },
+          stop: async () => undefined,
+          ensureConfig: async () => "/home/user/.code-shell/im-gateway/config.json",
+          loginWechat: async () => ({
+            accountId: "wechat-owner",
+            configPath: "/home/user/.code-shell/im-gateway/config.json",
+          }),
+          cancelWechatLogin: async () => false,
+          submitWechatVerification: async () => true,
+          onEvent: () => () => undefined,
+        },
+        openInEditor: async () => "editor",
+        openPath: async (path: string) => path,
+        credentials: { list: async () => [] },
+        mcpOAuth: {
+          refresh: async () => undefined,
+          login: async () => undefined,
+          logout: async () => ({ removed: true, remoteRevoked: true }),
+        },
+      },
+    });
+
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(<LinkTab cwd="/repo" />);
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    expect(buttonWithLabel(container, "连接个人微信")).toBeDefined();
+    const start = buttonWithLabel(container, "启动");
+    expect(start).toBeDefined();
+    await act(async () => {
+      reactPropsOf(start).onClick();
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      await flushMicrotasks();
+    });
+    expect(starts).toBe(1);
+    expect(buttonWithLabel(container, "停止")).toBeDefined();
+  });
+
   test("reloads invalid_grant metadata after refresh rejection and relogs with the same id", async () => {
     ensureMiniDom();
     const figma = LINK_CATALOG.flatMap((category) => category.items).find(
@@ -63,6 +127,27 @@ describe("LinkTab OAuth recovery", () => {
     });
     Object.assign(window, {
       codeshell: {
+        imGateway: {
+          status: async () => ({
+            running: false,
+            configPath: "/home/user/.code-shell/im-gateway/config.json",
+            configExists: false,
+            channels: [],
+            wechatConnected: false,
+          }),
+          start: async () => undefined,
+          stop: async () => undefined,
+          ensureConfig: async () => "/home/user/.code-shell/im-gateway/config.json",
+          loginWechat: async () => ({
+            accountId: "wechat-owner",
+            configPath: "/home/user/.code-shell/im-gateway/config.json",
+          }),
+          cancelWechatLogin: async () => false,
+          submitWechatVerification: async () => true,
+          onEvent: () => () => undefined,
+        },
+        openInEditor: async () => "editor",
+        openPath: async (path: string) => path,
         credentials: { list: async () => [credential()] },
         mcpOAuth: {
           refresh: async () => {

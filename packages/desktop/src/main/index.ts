@@ -151,6 +151,7 @@ import {
   type PetChatControlRequest,
   type PetChatControlResult,
 } from "./im-gateway-control-server.js";
+import { ImGatewayService, registerImGatewayIpc } from "./im-gateway-service.js";
 import {
   MobileUploadService,
   type ClaimedMobileUpload,
@@ -392,6 +393,14 @@ const pluginPanelBridge = new PluginPanelBridge({
   getAgentBridge: () => bridge,
 });
 pluginPanelBridge.registerIpc();
+const imGatewayService = new ImGatewayService({
+  emit: (event) => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed()) window.webContents.send("im-gateway:event", event);
+    }
+  },
+});
+registerImGatewayIpc(ipcMain, imGatewayService);
 let petStateAggregator: PetStateAggregator | null = null;
 let petDispatchService: PetDispatchService | null = null;
 let petAttentionPolicy: PetAttentionPolicy | null = null;
@@ -4454,6 +4463,7 @@ app.on("before-quit", (event) => {
   roomManager.closeAll();
   quitCleanupPromise = (async () => {
     await Promise.allSettled([
+      imGatewayService.dispose(),
       tunnelManager.stop(),
       mobileRemote.stop(),
       gatewayControlServer?.stop(),

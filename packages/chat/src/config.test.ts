@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { chmodSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadGatewayConfig } from "./config.js";
+import { gatewayConfigTemplate, loadGatewayConfig } from "./config.js";
 import { FileWechatCredentialStore } from "./wechat-storage.js";
 
 const roots: string[] = [];
@@ -90,6 +90,28 @@ describe("loadGatewayConfig", () => {
     expect(config.channels.map(({ channel }) => channel)).toEqual(["discord", "matrix"]);
     expect(config.channels[0]?.allowedTargetIds).toEqual(["discord-channel"]);
     expect(config.channels[1]?.allowedTargetIds).toEqual(["!room:example"]);
+  });
+
+  test("ignores disabled placeholder sections in the Desktop starter template", () => {
+    const root = tempRoot();
+    const file = join(root, "config.json");
+    writeFileSync(
+      file,
+      JSON.stringify({
+        ...gatewayConfigTemplate(),
+        telegram: {
+          enabled: true,
+          botToken: "telegram-secret",
+          allowedChatIds: ["owner-chat"],
+          allowedUserIds: [],
+        },
+      }),
+      { mode: 0o600 },
+    );
+    if (process.platform !== "win32") chmodSync(file, 0o600);
+
+    const config = loadGatewayConfig({ configPath: file, env: {}, platform: "linux" });
+    expect(config.channels.map(({ channel }) => channel)).toEqual(["telegram"]);
   });
 
   test("loads a QR-authenticated personal WeChat account without putting its token in config", () => {

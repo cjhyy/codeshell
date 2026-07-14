@@ -1,11 +1,38 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { MessageCircleMore } from "lucide-react";
+import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
 import { LINK_CATALOG, type LinkIntegration } from "./link-catalog";
 import { linkOAuthPrimaryAction } from "./link-oauth-actions";
 import type { MaskedCredentialView } from "./types";
+import type { ImGatewayChannel, ImGatewayStatus, ImGatewayUiEvent } from "../../preload/types";
+
+const CHANNEL_NAMES: Record<ImGatewayChannel, string> = {
+  telegram: "Telegram",
+  discord: "Discord",
+  slack: "Slack",
+  lark: "飞书 / Lark",
+  dingtalk: "钉钉",
+  wecom: "企业微信",
+  wechat: "个人微信",
+  matrix: "Matrix",
+  mattermost: "Mattermost",
+  line: "LINE",
+  whatsapp: "WhatsApp",
+  teams: "Microsoft Teams",
+};
 
 /**
  * Link tab = 三方集成市场(Codex 风格)。目录写死在 link-catalog.ts;OAuth
@@ -96,6 +123,8 @@ export function LinkTab({ cwd: _cwd }: { cwd: string }) {
     <div className="space-y-6">
       <p className="text-sm text-muted-foreground">{t("ext.link.intro")}</p>
 
+      <ChatGatewayCard />
+
       {LINK_CATALOG.map((cat) => (
         <section key={cat.id} className="space-y-2">
           <h3 className="text-sm font-semibold">{t(cat.titleKey)}</h3>
@@ -116,6 +145,296 @@ export function LinkTab({ cwd: _cwd }: { cwd: string }) {
         </section>
       ))}
     </div>
+  );
+}
+
+function ChatGatewayCard() {
+  const { t } = useT();
+  const toast = useToast();
+  const [status, setStatus] = useState<ImGatewayStatus | null>(null);
+  const [busy, setBusy] = useState<"start" | "stop" | "config" | null>(null);
+  const [wechatBusy, setWechatBusy] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [loginId, setLoginId] = useState<string | null>(null);
+  const [qrUrl, setQrUrl] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [loginStage, setLoginStage] = useState<"waiting" | "scanned" | "verify">("waiting");
+  const [verificationCode, setVerificationCode] = useState("");
+
+  const refresh = useCallback(async () => {
+    const next = await window.codeshell.imGateway.status();
+    setStatus(next);
+    return next;
+  }, []);
+
+  useEffect(() => {
+    void refresh().catch((error) => {
+      toast({
+        message: error instanceof Error ? error.message : String(error),
+        variant: "error",
+      });
+    });
+    const unsubscribe = window.codeshell.imGateway.onEvent((event: ImGatewayUiEvent) => {
+      if (event.type === "status-changed") {
+        setStatus(event.status);
+      } else if (event.type === "wechat-qr") {
+        setLoginId(event.loginId);
+        setQrUrl(event.url);
+        setLoginStage("waiting");
+      } else if (event.type === "wechat-status") {
+        setLoginId(event.loginId);
+        if (event.status === "scaned") setLoginStage("scanned");
+      } else if (event.type === "wechat-verification-required") {
+        setLoginId(event.loginId);
+        setLoginStage("verify");
+      }
+    });
+    const poll = globalThis.setInterval(() => void refresh().catch(() => undefined), 2_000);
+    return () => {
+      globalThis.clearInterval(poll);
+      unsubscribe();
+    };
+  }, [refresh, toast]);
+
+  useEffect(() => {
+    if (!qrUrl) {
+      setQrDataUrl(null);
+      return;
+    }
+    let cancelled = false;
+    void QRCode.toDataURL(qrUrl, { width: 224, margin: 1 })
+      .then((url) => {
+        if (!cancelled) setQrDataUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setQrDataUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [qrUrl]);
+
+  const run = async (
+    kind: "start" | "stop" | "config",
+    action: () => Promise<ImGatewayStatus | void>,
+  ) => {
+    if (busy) return;
+    setBusy(kind);
+    try {
+      const next = await action();
+      if (next) setStatus(next);
+    } catch (error) {
+      toast({
+        message: error instanceof Error ? error.message : String(error),
+        variant: "error",
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const configure = () =>
+    run("config", async () => {
+      const configPath = await window.codeshell.imGateway.ensureConfig();
+      try {
+        await window.codeshell.openInEditor(configPath);
+      } catch {
+        await window.codeshell.openPath(configPath);
+      }
+      await refresh();
+    });
+
+  const loginWechat = () => {
+    if (wechatBusy) return;
+    setWechatBusy(true);
+    setLoginId(null);
+    setQrUrl(null);
+    setQrDataUrl(null);
+    setVerificationCode("");
+    setLoginStage("waiting");
+    setLoginOpen(true);
+    void window.codeshell.imGateway
+      .loginWechat()
+      .then(async () => {
+        setLoginOpen(false);
+        await refresh();
+        toast({ message: t("ext.link.gatewayWechatConnected"), variant: "success" });
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!message.includes("已取消")) {
+          toast({
+            message,
+            variant: "error",
+          });
+        }
+      })
+      .finally(() => setWechatBusy(false));
+  };
+
+  const cancelWechatLogin = () => {
+    setLoginOpen(false);
+    void window.codeshell.imGateway.cancelWechatLogin();
+  };
+
+  const submitVerification = async () => {
+    if (!loginId || !verificationCode.trim()) return;
+    try {
+      const accepted = await window.codeshell.imGateway.submitWechatVerification({
+        loginId,
+        code: verificationCode,
+      });
+      if (!accepted) {
+        toast({ message: t("ext.link.gatewayWechatVerificationExpired"), variant: "error" });
+        return;
+      }
+      setLoginStage("scanned");
+    } catch (error) {
+      toast({
+        message: error instanceof Error ? error.message : String(error),
+        variant: "error",
+      });
+    }
+  };
+
+  const hasChannels = Boolean(status?.channels.length);
+  const statusLabel = status?.running
+    ? t("ext.link.gatewayRunning")
+    : hasChannels
+      ? t("ext.link.gatewayStopped")
+      : t("ext.link.gatewayNeedsConfig");
+
+  return (
+    <section className="space-y-2">
+      <h3 className="text-sm font-semibold">{t("ext.link.gatewaySection")}</h3>
+      <div className="rounded-lg border border-border bg-card p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white">
+            <MessageCircleMore className="size-5" aria-hidden />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="text-sm font-semibold">CodeShell Chat Gateway</div>
+              <span
+                className={cn(
+                  "rounded px-1.5 py-0.5 text-[10px] font-medium",
+                  status?.running
+                    ? "bg-status-ok/10 text-status-ok"
+                    : hasChannels
+                      ? "bg-muted text-muted-foreground"
+                      : "bg-amber-500/10 text-amber-600",
+                )}
+              >
+                {statusLabel}
+              </span>
+            </div>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              {t("ext.link.gatewayDescription")}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-3 rounded-md bg-muted/50 px-3 py-2 text-xs">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-muted-foreground">{t("ext.link.gatewayChannels")}</span>
+            {status?.channels.length ? (
+              status.channels.map((channel) => (
+                <span key={channel} className="rounded bg-background px-1.5 py-0.5 text-foreground">
+                  {CHANNEL_NAMES[channel]}
+                </span>
+              ))
+            ) : (
+              <span className="text-muted-foreground">{t("ext.link.gatewayNoChannels")}</span>
+            )}
+          </div>
+          <p className="mt-1.5 text-muted-foreground">{t("ext.link.gatewayPromptHint")}</p>
+          <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground">
+            {status?.configPath ?? "~/.code-shell/im-gateway/config.json"}
+          </p>
+          {status?.configExists && status.error && !status.running && (
+            <p className="mt-1.5 text-status-err">{status.error}</p>
+          )}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {status?.running ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busy !== null}
+              onClick={() => void run("stop", () => window.codeshell.imGateway.stop())}
+            >
+              {t("ext.link.gatewayStop")}
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busy !== null || !hasChannels}
+              onClick={() => void run("start", () => window.codeshell.imGateway.start())}
+            >
+              {t("ext.link.gatewayStart")}
+            </Button>
+          )}
+          <Button size="sm" variant="outline" disabled={busy !== null} onClick={configure}>
+            {t("ext.link.gatewayConfigure")}
+          </Button>
+          <Button size="sm" variant="outline" disabled={wechatBusy} onClick={loginWechat}>
+            {status?.wechatConnected
+              ? t("ext.link.gatewayWechatReconnect")
+              : t("ext.link.gatewayWechatConnect")}
+          </Button>
+        </div>
+      </div>
+
+      <Dialog open={loginOpen} onOpenChange={(open) => !open && cancelWechatLogin()}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("ext.link.gatewayWechatTitle")}</DialogTitle>
+            <DialogDescription>
+              {loginStage === "verify"
+                ? t("ext.link.gatewayWechatVerification")
+                : loginStage === "scanned"
+                  ? t("ext.link.gatewayWechatScanned")
+                  : t("ext.link.gatewayWechatWaiting")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex min-h-56 items-center justify-center rounded-md bg-white p-2">
+            {qrDataUrl ? (
+              <img src={qrDataUrl} alt={t("ext.link.gatewayWechatQrAlt")} className="size-56" />
+            ) : (
+              <span className="text-sm text-zinc-500">{t("ext.link.gatewayWechatLoadingQr")}</span>
+            )}
+          </div>
+          {loginStage === "verify" && (
+            <Input
+              value={verificationCode}
+              inputMode="numeric"
+              autoFocus
+              placeholder={t("ext.link.gatewayWechatVerificationPlaceholder")}
+              onChange={(event) => setVerificationCode(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") void submitVerification();
+              }}
+            />
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={cancelWechatLogin}>
+              {t("ext.link.gatewayWechatCancel")}
+            </Button>
+            {loginStage === "verify" && (
+              <Button
+                variant="solid"
+                disabled={!verificationCode.trim()}
+                onClick={() => void submitVerification()}
+              >
+                {t("ext.link.gatewayWechatSubmit")}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </section>
   );
 }
 
@@ -200,9 +519,7 @@ function LinkIntegrationRow({
               }
               disabled={busy}
             >
-              {primaryAction === "login"
-                ? t("ext.link.oauthRelogin")
-                : t("ext.link.oauthRefresh")}
+              {primaryAction === "login" ? t("ext.link.oauthRelogin") : t("ext.link.oauthRefresh")}
             </Button>
             <Button variant="ghost" size="sm" onClick={() => onLogout(credential)} disabled={busy}>
               {t("ext.link.oauthLogout")}

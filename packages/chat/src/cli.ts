@@ -1,15 +1,6 @@
 #!/usr/bin/env node
 
-import {
-  chmodSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import qrcode from "qrcode-terminal";
@@ -22,12 +13,8 @@ import {
   createCodeShellRemoteCommands,
   createMimiPetChat,
 } from "./gateway.js";
-import { loginWechatWithQr } from "./wechat.js";
-import {
-  defaultWechatDataDirectory,
-  FileWechatCredentialStore,
-  type WechatCredentials,
-} from "./wechat-storage.js";
+import { loginCodeShellWechat } from "./wechat-login.js";
+import { defaultWechatDataDirectory } from "./wechat-storage.js";
 
 async function main(args = process.argv.slice(2)): Promise<void> {
   if (args[0] === "wechat" && args[1] === "login") {
@@ -81,7 +68,6 @@ interface WechatLoginCliOptions {
 }
 
 async function loginWechat(options: WechatLoginCliOptions): Promise<void> {
-  const store = new FileWechatCredentialStore(options.credentialsDir);
   const shutdown = new AbortController();
   const stop = () => shutdown.abort();
   process.once("SIGINT", stop);
@@ -89,9 +75,10 @@ async function loginWechat(options: WechatLoginCliOptions): Promise<void> {
   let scanned = false;
   console.log("[code-shell-chat] 正在生成个人微信 ClawBot 登录二维码…");
   try {
-    const result = await loginWechatWithQr({
+    const result = await loginCodeShellWechat({
+      configPath: options.configPath,
+      ...(options.customCredentialsDir ? { credentialsDir: options.credentialsDir } : {}),
       signal: shutdown.signal,
-      localTokens: store.listTokens(),
       onQrCode: (url) => {
         qrcode.generate(url, { small: true });
         console.log(`如果二维码无法扫描，请打开：${url}`);
@@ -112,58 +99,14 @@ async function loginWechat(options: WechatLoginCliOptions): Promise<void> {
       },
     });
 
-    let credentials: WechatCredentials | undefined;
-    if (result.connected && result.credentials) {
-      credentials = store.save(result.credentials);
-    } else if (result.alreadyConnected) {
-      credentials = store.load();
-      if (!credentials) {
-        throw new Error("微信端已绑定，但本机没有可用凭据；请在微信中先解除后重新登录");
-      }
-    } else {
-      throw new Error("个人微信未完成连接");
-    }
-
-    updateWechatConfig(options, credentials);
-    console.log(`✅ 个人微信已连接：${credentials.accountId}`);
-    console.log(`配置已更新：${options.configPath}`);
+    console.log(`✅ 个人微信已连接：${result.accountId}`);
+    console.log(`配置已更新：${result.configPath}`);
     console.log("现在可以启动：code-shell-chat");
   } finally {
     shutdown.abort();
     process.off("SIGINT", stop);
     process.off("SIGTERM", stop);
   }
-}
-
-function updateWechatConfig(options: WechatLoginCliOptions, credentials: WechatCredentials): void {
-  let raw: Record<string, unknown> = {};
-  if (existsSync(options.configPath)) {
-    if (process.platform !== "win32" && (statSync(options.configPath).mode & 0o077) !== 0) {
-      throw new Error(`Chat gateway 配置权限必须为 0600：${options.configPath}`);
-    }
-    const parsed = JSON.parse(readFileSync(options.configPath, "utf8"));
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new Error(`Chat gateway 配置不是 JSON object：${options.configPath}`);
-    }
-    raw = parsed as Record<string, unknown>;
-  }
-  const existing =
-    raw.wechat && typeof raw.wechat === "object" && !Array.isArray(raw.wechat)
-      ? (raw.wechat as Record<string, unknown>)
-      : {};
-  const updated = {
-    ...raw,
-    wechat: {
-      ...existing,
-      accountId: credentials.accountId,
-      ...(options.customCredentialsDir ? { credentialsDir: options.credentialsDir } : {}),
-    },
-  };
-  mkdirSync(dirname(options.configPath), { recursive: true, mode: 0o700 });
-  const temporary = `${options.configPath}.${process.pid}.tmp`;
-  writeFileSync(temporary, `${JSON.stringify(updated, null, 2)}\n`, { mode: 0o600 });
-  renameSync(temporary, options.configPath);
-  if (process.platform !== "win32") chmodSync(options.configPath, 0o600);
 }
 
 function readWechatLoginOptions(args: string[]): WechatLoginCliOptions {

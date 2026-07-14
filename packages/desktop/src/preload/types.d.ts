@@ -606,6 +606,36 @@ export interface InputAttachmentMeta {
   };
 }
 
+export type ImGatewayChannel =
+  | "telegram"
+  | "discord"
+  | "slack"
+  | "lark"
+  | "dingtalk"
+  | "wecom"
+  | "wechat"
+  | "matrix"
+  | "mattermost"
+  | "line"
+  | "whatsapp"
+  | "teams";
+
+export interface ImGatewayStatus {
+  running: boolean;
+  configPath: string;
+  configExists: boolean;
+  channels: ImGatewayChannel[];
+  wechatConnected: boolean;
+  startedAt?: number;
+  error?: string;
+}
+
+export type ImGatewayUiEvent =
+  | { type: "status-changed"; status: ImGatewayStatus }
+  | { type: "wechat-qr"; loginId: string; url: string }
+  | { type: "wechat-status"; loginId: string; status: string }
+  | { type: "wechat-verification-required"; loginId: string };
+
 export interface CodeshellApi {
   /** Read-only bounded Pet projection. */
   pet: PetApi;
@@ -1471,6 +1501,18 @@ export interface CodeshellApi {
   installUpdate(): Promise<void>;
   getUpdaterStatus(): Promise<UpdaterStatus>;
   onUpdaterStatus(cb: (status: UpdaterStatus) => void): Unsubscribe;
+
+  /** Standalone multi-channel chat package, managed by this Desktop process. */
+  imGateway: {
+    status(): Promise<ImGatewayStatus>;
+    start(): Promise<ImGatewayStatus>;
+    stop(): Promise<ImGatewayStatus>;
+    ensureConfig(): Promise<string>;
+    loginWechat(): Promise<{ accountId: string; configPath: string }>;
+    cancelWechatLogin(): Promise<boolean>;
+    submitWechatVerification(input: { loginId: string; code: string }): Promise<boolean>;
+    onEvent(cb: (event: ImGatewayUiEvent) => void): Unsubscribe;
+  };
 
   /**
    * Mobile Web Remote — Electron-hosted LAN HTTP/WebSocket controller for a

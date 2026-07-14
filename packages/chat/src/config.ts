@@ -160,6 +160,95 @@ export function defaultDesktopControlDescriptorPath(env: NodeJS.ProcessEnv = pro
   return join(resolveHome(env), ".code-shell", "im-gateway", "desktop-control.json");
 }
 
+/** Safe, disabled-by-default starter file used by the Desktop Link editor. */
+export function gatewayConfigTemplate(): Record<string, unknown> {
+  return {
+    _help:
+      "Set enabled=true for the channels you want, fill their credentials and allowlists, then start Chat Gateway in CodeShell Desktop.",
+    telegram: {
+      enabled: false,
+      botToken: "",
+      allowedChatIds: [],
+      allowedUserIds: [],
+    },
+    discord: {
+      enabled: false,
+      botToken: "",
+      allowedChannelIds: [],
+      allowedUserIds: [],
+    },
+    slack: {
+      enabled: false,
+      botToken: "",
+      appToken: "",
+      allowedChannelIds: [],
+      allowedUserIds: [],
+    },
+    lark: {
+      enabled: false,
+      appId: "",
+      appSecret: "",
+      allowedChatIds: [],
+      allowedUserIds: [],
+    },
+    dingtalk: {
+      enabled: false,
+      clientId: "",
+      clientSecret: "",
+      allowedConversationIds: [],
+      allowedUserIds: [],
+    },
+    wecom: {
+      enabled: false,
+      botId: "",
+      secret: "",
+      allowedChatIds: [],
+      allowedUserIds: [],
+    },
+    wechat: { enabled: false },
+    matrix: {
+      enabled: false,
+      homeserverUrl: "",
+      accessToken: "",
+      botUserId: "",
+      allowedRoomIds: [],
+      allowedUserIds: [],
+    },
+    mattermost: {
+      enabled: false,
+      serverUrl: "",
+      botToken: "",
+      botUserId: "",
+      allowedChannelIds: [],
+      allowedUserIds: [],
+    },
+    line: {
+      enabled: false,
+      channelSecret: "",
+      channelAccessToken: "",
+      allowedTargetIds: [],
+      allowedUserIds: [],
+    },
+    whatsapp: {
+      enabled: false,
+      accessToken: "",
+      appSecret: "",
+      verifyToken: "",
+      phoneNumberId: "",
+      allowedPhoneNumbers: [],
+    },
+    teams: {
+      enabled: false,
+      appId: "",
+      appPassword: "",
+      appType: "MultiTenant",
+      allowedConversationIds: [],
+      allowedUserIds: [],
+    },
+    webhook: { host: "127.0.0.1", port: 8787, maxBodyBytes: 1048576 },
+  };
+}
+
 export function loadGatewayConfig(opts: LoadGatewayConfigOptions = {}): GatewayConfig {
   const env = opts.env ?? process.env;
   const platform = opts.platform ?? process.platform;
@@ -588,6 +677,7 @@ function sectionEnabled(
   raw: RawSection | undefined,
   ...values: Array<string | undefined>
 ): boolean {
+  if (raw?.enabled === false) return false;
   return raw !== undefined || values.some(Boolean);
 }
 

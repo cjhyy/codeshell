@@ -1237,6 +1237,23 @@ contextBridge.exposeInMainWorld("codeshell", {
     return () => ipcRenderer.removeListener("browser:anchor-remove-from-popout", h);
   },
 
+  // ── Multi-channel Chat Gateway ───────────────────────────────────────
+  imGateway: {
+    status: () => ipcRenderer.invoke("im-gateway:status"),
+    start: () => ipcRenderer.invoke("im-gateway:start"),
+    stop: () => ipcRenderer.invoke("im-gateway:stop"),
+    ensureConfig: () => ipcRenderer.invoke("im-gateway:ensureConfig"),
+    loginWechat: () => ipcRenderer.invoke("im-gateway:wechatLogin"),
+    cancelWechatLogin: () => ipcRenderer.invoke("im-gateway:wechatCancelLogin"),
+    submitWechatVerification: (input: { loginId: string; code: string }) =>
+      ipcRenderer.invoke("im-gateway:wechatSubmitVerification", input),
+    onEvent: (cb: (event: unknown) => void): (() => void) => {
+      const handler = (_event: IpcRendererEvent, payload: unknown) => cb(payload);
+      ipcRenderer.on("im-gateway:event", handler);
+      return () => ipcRenderer.removeListener("im-gateway:event", handler);
+    },
+  },
+
   // ── Mobile Web Remote (LAN phone controller; off by default) ──────────
   mobileRemote: {
     start: (opts?: { mode?: "lan" | "tunnel" }) => ipcRenderer.invoke("mobileRemote:start", opts),
