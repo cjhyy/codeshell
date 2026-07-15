@@ -24,6 +24,7 @@ import { IM_GATEWAY_CHANNEL_NAMES } from "../imGatewayChannels";
 import { LINK_CATALOG, type LinkIntegration } from "./link-catalog";
 import { linkOAuthPrimaryAction } from "./link-oauth-actions";
 import type { MaskedCredentialView } from "./types";
+import { DataSourceCatalogSection } from "./DataSourceCatalogSection";
 import type {
   ImGatewayChannel,
   ImGatewayChannelStatus,
@@ -188,6 +189,8 @@ export function LinkTab({ cwd: _cwd }: { cwd: string }) {
       <p className="text-sm text-muted-foreground">{t("ext.link.intro")}</p>
 
       <ChatGatewayCard />
+
+      <DataSourceCatalogSection />
 
       {LINK_CATALOG.map((cat) => (
         <section key={cat.id} className="space-y-2">
