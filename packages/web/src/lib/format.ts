@@ -1,6 +1,6 @@
 /** Small display formatters shared by the session/room lists. */
-import { translate } from "@/i18n/translate";
-import { loadUILanguage, type UILanguage } from "@/uiLanguage";
+import { translate } from "../i18n/translate.js";
+import { loadUILanguage, type UILanguage } from "./uiLanguage.js";
 
 /** Last path segment of a cwd ("/Users/x/proj" → "proj"). Empty for ""/root. */
 export function basename(p: string): string {

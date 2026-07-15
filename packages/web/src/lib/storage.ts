@@ -3,8 +3,8 @@
  * device identity. Keys keep the historical `cs.*` names so an already-paired
  * phone (paired against the old inline UI) keeps working after the rebuild.
  */
-import { translate } from "@/i18n/translate";
-import { loadUILanguage } from "@/uiLanguage";
+import { translate } from "../i18n/translate.js";
+import { loadUILanguage } from "./uiLanguage.js";
 
 const K = {
   deviceId: "cs.deviceId",

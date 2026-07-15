@@ -1,4 +1,4 @@
-import type { MobileImageAttachment, MobileImageBase, MobileImageMime } from "@protocol";
+import type { MobileImageAttachment, MobileImageBase, MobileImageMime } from "@cjhyy/code-shell-server";
 
 export const MOBILE_INLINE_IMAGE_BYTES = 256 * 1024;
 export const MOBILE_INLINE_TOTAL_BYTES = 512 * 1024;

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { MobileClientEvent, MobileServerEvent } from "@protocol";
-import { deviceStore } from "@mobile/lib/storage";
-import { generateSecret } from "@mobile/lib/deviceCredential";
-import { parsePairingToken } from "@mobile/lib/pairing";
+import type { MobileClientEvent, MobileServerEvent } from "@cjhyy/code-shell-server";
+import { deviceStore } from "../lib/storage.js";
+import { generateSecret } from "../lib/deviceCredential.js";
+import { parsePairingToken } from "../lib/pairing.js";
 
 export type ConnStatus =
   | "connecting" // socket opening

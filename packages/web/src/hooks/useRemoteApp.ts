@@ -9,28 +9,28 @@ import type {
   ApprovalPathScope,
   CcDiscoveredSession,
   MobileImageBase,
-} from "@protocol";
+} from "@cjhyy/code-shell-server";
 import {
   reduceStream,
   initialChatState,
   appendUserMessage,
   type ChatState,
-} from "@/lib/streamReducer";
-import { useT } from "@/i18n";
-import { summarizeApproval, type Risk } from "@mobile/lib/riskClassify";
+} from "../lib/streamReducer.js";
+import { t } from "../i18n/translate.js";
+import { summarizeApproval, type Risk } from "../lib/riskClassify.js";
 import {
   roomMsgToEvent,
   roomHistoryToEvents,
   ccHistoryToEvents,
   extractAskUserOptions,
-} from "@/lib/messageMappers";
-import { projectForCwd } from "@mobile/lib/format";
-import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket";
+} from "../lib/messageMappers.js";
+import { projectForCwd } from "../lib/format.js";
+import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket.js";
 import {
   prepareMobileAttachments,
   type MobileComposerAttachment,
   type MobileUploadTicket,
-} from "@mobile/lib/mobileAttachments";
+} from "../lib/mobileAttachments.js";
 import {
   filterNewRoomMessages,
   clearUnreadSession,
@@ -44,7 +44,7 @@ import {
   roomMessageSeq,
   selectSessionReplayEntries,
   type SessionReplayEntry,
-} from "./remoteAppSync";
+} from "./remoteAppSync.js";
 
 /** Which external coding-CLI the CC pane drives. Mirrors desktop CCRoomView. */
 export type CcCliKind = "claude-code" | "codex";
@@ -176,7 +176,6 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
 }
 
 export function useRemoteApp(): RemoteApp {
-  const { t } = useT();
   const [chat, dispatchChat] = useReducer(chatReducer, undefined, initialChatState);
   const [sessions, setSessions] = useState<MobileSessionMeta[]>([]);
   const [unreadSessionIds, setUnreadSessionIds] = useState<Set<string>>(() => new Set());
@@ -208,7 +207,11 @@ export function useRemoteApp(): RemoteApp {
   /** socket.send via ref — onServerEvent is created BEFORE the socket (it's the
    *  socket's callback), so it can't close over `socket` directly. */
   const sendRef = useRef<
-    ((e: import("@protocol").MobileClientEvent, expectedGeneration?: number) => boolean) | null
+    | ((
+        e: import("@cjhyy/code-shell-server").MobileClientEvent,
+        expectedGeneration?: number,
+      ) => boolean)
+    | null
   >(null);
   const connectionGenerationRef = useRef(0);
   const uploadWaitersRef = useRef(
@@ -804,7 +807,6 @@ export function useRemoteApp(): RemoteApp {
       setLoadingKey,
       settleMessageAck,
       setNotice,
-      t,
     ],
   );
 
@@ -880,7 +882,7 @@ export function useRemoteApp(): RemoteApp {
         }
       }
     },
-    [addApproval, clearApproval, sessionCwdById, t],
+    [addApproval, clearApproval, sessionCwdById],
   );
 
   const requestActiveResync = useCallback(() => {
@@ -1023,7 +1025,7 @@ export function useRemoteApp(): RemoteApp {
       }
       return true;
     },
-    [beginMobileUpload, setNotice, settleMessageAck, socket, t, waitForMessageAck],
+    [beginMobileUpload, setNotice, settleMessageAck, socket, waitForMessageAck],
   );
 
   const stopRun = useCallback(() => {

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { act } from "react";
-import { ensureMiniDom, flushMicrotasks, renderHook } from "../../renderer/test-utils/renderHook";
+import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
 import { useRemoteApp } from "./useRemoteApp";
 
 class MemoryStorage {

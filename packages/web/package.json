@@ -1,0 +1,37 @@
+{
+  "name": "@cjhyy/code-shell-web",
+  "version": "0.7.1",
+  "description": "CodeShell web client logic layer — remote-app state (chatReducer + server-event fold), reconnecting WebSocket hook, pairing/device-credential/risk helpers, and the mobile i18n namespace. Browser-only (no Electron, no Node); seed of the standalone browser client.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@cjhyy/code-shell-server": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "19.2.6"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.0",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT"
+}
